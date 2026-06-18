@@ -1,31 +1,25 @@
-'use client'
+import { Navigation } from "@/components/sections/navigation";
+import { Hero } from "@/components/sections/hero";
+import { StatsSection } from "@/components/sections/stats";
+import { DestinationsSection } from "@/components/sections/destinations";
+import { ItineraryPlanner } from "@/components/sections/itinerary-planner";
+import { ExperiencesSection } from "@/components/sections/experiences";
+import { AffiliateSection } from "@/components/sections/affiliate-section";
+import { Footer } from "@/components/sections/footer";
 
 export default function Home() {
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      gap: '2rem',
-      padding: '1rem'
-    }}>
-      <div style={{
-        position: 'relative',
-        width: '6rem',
-        height: '6rem'
-      }}>
-        <img
-          src="/logo.svg"
-          alt="Z.ai Logo"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain'
-          }}
-        />
-      </div>
+    <div className="min-h-screen flex flex-col bg-background">
+      <Navigation />
+      <main className="flex-grow">
+        <Hero />
+        <StatsSection />
+        <DestinationsSection />
+        <ItineraryPlanner />
+        <ExperiencesSection />
+        <AffiliateSection />
+      </main>
+      <Footer />
     </div>
-  )
+  );
 }

@@ -1,5 +1,5 @@
-// I Feel Slovenia - Prisma schema
-// Slovenian tourism platform with destinations & AI itineraries
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
@@ -10,44 +10,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Destination {
-  id            String   @id
-  slug          String   @unique
-  name          String
-  tagline       String
-  region        String
-  type          String
-  description   String
-  highlights    String // JSON array of strings
-  bestFor       String // JSON array of strings
-  activities    String // JSON array of strings
-  bestSeason    String // JSON array of strings
-  image         String
-  lat           Float
-  lng           Float
-  rating        Float
-  budget        String
-  duration      String
-  costPerPerson Int
-  featured      Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([region])
-  @@index([type])
-  @@index([featured])
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-model ItineraryRequest {
-  id          String   @id @default(cuid())
-  budget      Int
-  days        Int
-  interests   String // JSON array
-  season      String
-  groupSize   Int
-  response    String // JSON itinerary
-  source      String // "ai" | "fallback"
-  createdAt   DateTime @default(now())
-
-  @@index([createdAt])
+model Post {
+  id        String   @id @default(cuid())
+  title     String
+  content   String?
+  published Boolean  @default(false)
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
