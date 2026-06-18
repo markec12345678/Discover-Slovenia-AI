@@ -18,7 +18,7 @@ export function Hero() {
     >
       {/* Background slika — Bled */}
       <Image
-        src="https://images.unsplash.com/photo-1502989649865-81233767fe55?w=1920&h=1080&fit=crop&q=80"
+        src="https://sfile.chatglm.cn/images-ppt/65ea408c89ea.jpg"
         alt="Blejsko jezero z otokom in gradom v ozadju"
         fill
         priority

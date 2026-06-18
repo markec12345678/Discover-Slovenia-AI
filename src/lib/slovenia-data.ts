@@ -16,8 +16,7 @@ export const DESTINATIONS: Destination[] = [
     activities: ["Pletna vožnja do otoka", "Obisk gradu", "Sprehod po soteski", "Plavanje"],
     bestFor: ["romantika", "družina", "fotografija"],
     bestSeason: ["spring", "summer", "autumn"],
-    image:
-      "https://images.unsplash.com/photo-1502989649865-81233767fe55?w=1200&h=800&fit=crop&q=80",
+    image: "https://sfile.chatglm.cn/images-ppt/65ea408c89ea.jpg",
     coords: { lat: 46.3683, lng: 14.0944 },
     rating: 4.8,
     budget: "€€",
@@ -38,8 +37,7 @@ export const DESTINATIONS: Destination[] = [
     activities: ["Pohodništvo", "Smučanje", "Kajakaštvo", "Žičnica Vogel"],
     bestFor: ["narava", "aktivnosti", "mir"],
     bestSeason: ["spring", "summer", "autumn", "winter"],
-    image:
-      "https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=1200&h=800&fit=crop&q=80",
+    image: "https://sfile.chatglm.cn/images-ppt/8a5651a06e91.jpg",
     coords: { lat: 46.2833, lng: 13.8833 },
     rating: 4.7,
     budget: "€",
@@ -60,8 +58,7 @@ export const DESTINATIONS: Destination[] = [
     activities: ["Obisk gradu", "Sprehod po starem mestu", "Kulinarična tura", "Kolo ob Ljubljanici"],
     bestFor: ["kultura", "hrana", "mesto"],
     bestSeason: ["spring", "summer", "autumn"],
-    image:
-      "https://images.unsplash.com/photo-1567361047-2d0b2e9c9f3e?w=1200&h=800&fit=crop&q=80",
+    image: "https://sfile.chatglm.cn/images-ppt/06a0b01bbd2d.jpg",
     coords: { lat: 46.0569, lng: 14.5058 },
     rating: 4.6,
     budget: "€",
@@ -82,8 +79,7 @@ export const DESTINATIONS: Destination[] = [
     activities: ["Jamska tura z vlakcem", "Obisk Predjamskega gradu", "Fotografija"],
     bestFor: ["družina", "avantura", "narava"],
     bestSeason: ["spring", "summer", "autumn", "winter"],
-    image:
-      "https://images.unsplash.com/photo-1542884748-2b87b36c6b90?w=1200&h=800&fit=crop&q=80",
+    image: "https://sfile.chatglm.cn/images-ppt/48f79b432fcb.jpg",
     coords: { lat: 45.7845, lng: 14.2045 },
     rating: 4.7,
     budget: "€€",
@@ -104,8 +100,7 @@ export const DESTINATIONS: Destination[] = [
     activities: ["Sprehod po starem mestu", "Sončni zahod", "Morska hrana", "Obisk solin"],
     bestFor: ["romantika", "kultura", "hrana"],
     bestSeason: ["spring", "summer", "autumn"],
-    image:
-      "https://images.unsplash.com/photo-1533927559590-9d6bcae3e3a0?w=1200&h=800&fit=crop&q=80",
+    image: "https://sfile.chatglm.cn/images-ppt/1ca2f342127f.jpg",
     coords: { lat: 45.5233, lng: 13.5676 },
     rating: 4.7,
     budget: "€€",
@@ -126,8 +121,7 @@ export const DESTINATIONS: Destination[] = [
     activities: ["Rafting", "Kajakaštvo", "Canyoning", "Zip-line"],
     bestFor: ["adrenalin", "narava", "poletje"],
     bestSeason: ["spring", "summer", "autumn"],
-    image:
-      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&h=800&fit=crop&q=80",
+    image: "https://sfile.chatglm.cn/images-ppt/5f720abe0af2.jpg",
     coords: { lat: 46.3447, lng: 13.7332 },
     rating: 4.8,
     budget: "€€",
@@ -148,8 +142,7 @@ export const DESTINATIONS: Destination[] = [
     activities: ["Pohodništvo", "Alpinizem", "Fotografija"],
     bestFor: ["avantura", "pohodništvo", "narava"],
     bestSeason: ["summer", "autumn"],
-    image:
-      "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1200&h=800&fit=crop&q=80",
+    image: "https://sfile.chatglm.cn/images-ppt/f1fdf5ca02fe.jpg",
     coords: { lat: 46.3794, lng: 13.8462 },
     rating: 4.9,
     budget: "€",
@@ -170,8 +163,7 @@ export const DESTINATIONS: Destination[] = [
     activities: ["Muzej", "Pohodništvo", "Kulinarična izkušnja", "Kolo ob Soči"],
     bestFor: ["zgodovina", "hrana", "narava"],
     bestSeason: ["spring", "summer", "autumn"],
-    image:
-      "https://images.unsplash.com/photo-1520637836862-4d197d17c43a?w=1200&h=800&fit=crop&q=80",
+    image: "https://sfile.chatglm.cn/images-ppt/518f556394ec.jpeg",
     coords: { lat: 46.2453, lng: 13.5864 },
     rating: 4.5,
     budget: "€€",
@@ -192,8 +184,7 @@ export const DESTINATIONS: Destination[] = [
     activities: ["Obisk Stare trte", "Smučanje Pohorje", "Vinska degustacija", "Staro mesto"],
     bestFor: ["kultura", "vino", "smučanje"],
     bestSeason: ["spring", "summer", "autumn", "winter"],
-    image:
-      "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=1200&h=800&fit=crop&q=80",
+    image: "https://sfile.chatglm.cn/images-ppt/c1a887b9c8c2.jpg",
     coords: { lat: 46.5547, lng: 15.6459 },
     rating: 4.4,
     budget: "€",
@@ -214,8 +205,7 @@ export const DESTINATIONS: Destination[] = [
     activities: ["Plavanje", "Wellness", "Igre na srečo", "Kolo ob morju"],
     bestFor: ["poletje", "wellness", "družina"],
     bestSeason: ["spring", "summer", "autumn"],
-    image:
-      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&h=800&fit=crop&q=80",
+    image: "https://sfile.chatglm.cn/images-ppt/ce5079515d70.jpg",
     coords: { lat: 45.5142, lng: 13.5922 },
     rating: 4.3,
     budget: "€€€",
@@ -236,8 +226,7 @@ export const DESTINATIONS: Destination[] = [
     activities: ["Sprehod", "Fotografija", "Opazovanje narave"],
     bestFor: ["družina", "narava", "fotografija"],
     bestSeason: ["spring", "summer", "autumn"],
-    image:
-      "https://images.unsplash.com/photo-1473773508845-188df298d2d1?w=1200&h=800&fit=crop&q=80",
+    image: "https://sfile.chatglm.cn/images-ppt/13c851e9bce1.jpg",
     coords: { lat: 46.4, lng: 14.1167 },
     rating: 4.6,
     budget: "€",
@@ -258,8 +247,7 @@ export const DESTINATIONS: Destination[] = [
     activities: ["Wellness", "Pitje mineralne vode", "Sprehodi po parku", "Masaže"],
     bestFor: ["wellness", "sprostitev", "zdravje"],
     bestSeason: ["spring", "summer", "autumn", "winter"],
-    image:
-      "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1200&h=800&fit=crop&q=80",
+    image: "https://sfile.chatglm.cn/images-ppt/3f259fe258bb.jpg",
     coords: { lat: 46.3231, lng: 15.6422 },
     rating: 4.4,
     budget: "€€€",
