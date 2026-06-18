@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sparkles,
   Clock,
@@ -41,6 +41,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { getAffiliateLinks } from "@/lib/affiliate";
 import { INTERESTS } from "@/lib/slovenia-data";
 import type { PlannerInput, Itinerary, Season } from "@/lib/types";
+import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -69,6 +70,12 @@ export function ItineraryPlanner() {
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Sinhroniziraj z globalnim store-om (za MapSection)
+  const setStoreItinerary = useAppStore((s) => s.setItinerary);
+  useEffect(() => {
+    setStoreItinerary(itinerary);
+  }, [itinerary, setStoreItinerary]);
 
   function toggleInterest(value: string) {
     setFormData((prev) => {

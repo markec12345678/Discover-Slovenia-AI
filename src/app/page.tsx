@@ -3,6 +3,7 @@ import { Hero } from "@/components/sections/hero";
 import { StatsSection } from "@/components/sections/stats";
 import { DestinationsSection } from "@/components/sections/destinations";
 import { ItineraryPlanner } from "@/components/sections/itinerary-planner";
+import { MapSection } from "@/components/sections/map-section";
 import { ExperiencesSection } from "@/components/sections/experiences";
 import { AffiliateSection } from "@/components/sections/affiliate-section";
 import { Footer } from "@/components/sections/footer";
@@ -16,6 +17,7 @@ export default function Home() {
         <StatsSection />
         <DestinationsSection />
         <ItineraryPlanner />
+        <MapSection />
         <ExperiencesSection />
         <AffiliateSection />
       </main>
