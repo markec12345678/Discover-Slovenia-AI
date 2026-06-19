@@ -43,6 +43,8 @@ model Owner {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   listings      Listing[]
+  products      Product[]
+  experiences   Experience[]
 }
 
 // Lokali (hotelir, restavracije, aktivnosti) — B2B listings za monetizacijo
@@ -71,6 +73,9 @@ model Listing {
   ownerEmail      String?
   viewCount       Int      @default(0)
   clickCount      Int      @default(0)
+  // Sponzorirane poti — lokal plača za vključitev v AI itinererje
+  sponsored       Boolean  @default(false)
+  sponsoredUntil  DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   ownerId         String?
@@ -79,6 +84,111 @@ model Listing {
   @@index([destinationId])
   @@index([category])
   @@index([plan])
+  @@index([featured])
+  @@index([ownerId])
+  @@index([sponsored])
+}
+
+// Tržnica izdelkov — lokalni kmetje, vinogradniki, obrtniki prodajajo izdelke
+// Inspiracija: Etsy + farmsaround.com + Taste Slovenia
+model Product {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String
+  longDescription String?
+  category        String // food | wine | honey | oil | craft | souvenir | other
+  destinationId   String? // povezava z destinacijo
+  destinationName String?
+  price           Float // EUR
+  compareAtPrice  Float? // originalna cena (za popuste)
+  currency        String   @default("EUR")
+  images          String // JSON array of URLs
+  // Logistika
+  stock           Int      @default(0)
+  sku             String?
+  weight          Float? // gram
+  // Atributi
+  organic         Boolean  @default(false)
+  handmade        Boolean  @default(false)
+  local           Boolean  @default(true)
+  vegan           Boolean  @default(false)
+  // Trgovanje
+  plan            String   @default("free") // free | premium
+  featured        Boolean  @default(false)
+  verified        Boolean  @default(false)
+  rating          Float    @default(0)
+  reviewCount     Int      @default(0)
+  // Shipping
+  shippingFree    Boolean  @default(false)
+  shipsEurope     Boolean  @default(true)
+  shipsWorldwide  Boolean  @default(false)
+  // Kontakt prodajalca
+  sellerName      String
+  sellerEmail     String?
+  sellerPhone     String?
+  sellerWebsite   String?
+  viewCount       Int      @default(0)
+  saleCount       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  ownerId         String?
+  owner           Owner?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([category])
+  @@index([destinationId])
+  @@index([featured])
+  @@index([ownerId])
+}
+
+// Tržnica izkušenj — vodniki, kuharji, instruktorji prodajajo izkušnje
+// Inspiracija: Airbnb Experiences + GetYourGuide + Bókun
+model Experience {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String
+  longDescription String?
+  category        String // tour | workshop | tasting | outdoor | cultural | adventure | wellness
+  destinationId   String?
+  destinationName String?
+  // Cenitev
+  pricePerPerson  Float // EUR
+  currency        String   @default("EUR")
+  // Trajanje in kapaciteta
+  durationHours   Float // npr. 2.5
+  minGroupSize    Int      @default(1)
+  maxGroupSize    Int      @default(10)
+  // Jeziki
+  languages       String // JSON array: ["sl", "en", "de"]
+  // Lokacija
+  meetingPoint    String?
+  address         String
+  // Slike in kontakt
+  images          String // JSON array of URLs
+  providerName    String
+  providerEmail   String?
+  providerPhone   String?
+  providerWebsite String?
+  // Trgovanje
+  plan            String   @default("free") // free | premium
+  featured        Boolean  @default(false)
+  verified        Boolean  @default(false)
+  rating          Float    @default(0)
+  reviewCount     Int      @default(0)
+  // Atributi
+  familyFriendly  Boolean  @default(false)
+  accessibility   Boolean  @default(false)
+  // Statistika
+  viewCount       Int      @default(0)
+  bookingCount    Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  ownerId         String?
+  owner           Owner?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([category])
+  @@index([destinationId])
   @@index([featured])
   @@index([ownerId])
 }
