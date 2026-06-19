@@ -40,6 +40,7 @@ const TYPE_OPTIONS: { value: DestinationType; label: string }[] = [
   { value: "river", label: "Reka" },
   { value: "spa", label: "Zdravilišče" },
   { value: "gorge", label: "Soteska" },
+  { value: "castle", label: "Grad" },
 ];
 
 // Možnosti za filter cene

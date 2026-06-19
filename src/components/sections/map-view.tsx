@@ -19,6 +19,7 @@ const TYPE_ICONS: Record<DestinationType, string> = {
   river: "🌊",
   spa: "💆",
   gorge: "🏞️",
+  castle: "🏰",
 };
 
 interface MapViewProps {

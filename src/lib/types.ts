@@ -1,8 +1,8 @@
 // Centralni tipi za I Feel Slovenia platformo
 // Single source of truth - brez duplikacij kot v originalnem repu
 
-export type Region = "alpine" | "coastal" | "central" | "karst" | "pannonian";
-export type DestinationType = "lake" | "city" | "mountain" | "cave" | "coast" | "river" | "spa" | "gorge";
+export type Region = "gorenjska" | "primorska" | "osrednja" | "kras" | "stajerska" | "koroska" | "prekmurje" | "dolenjska" | "bela-krajina";
+export type DestinationType = "lake" | "city" | "mountain" | "cave" | "coast" | "river" | "spa" | "gorge" | "castle";
 export type Budget = "€" | "€€" | "€€€";
 export type Season = "spring" | "summer" | "autumn" | "winter";
 

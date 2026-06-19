@@ -10,11 +10,15 @@ export type EventCategory =
   | "tradicija";
 
 export type EventRegion =
-  | "alpine"
-  | "coastal"
-  | "central"
-  | "karst"
-  | "pannonian";
+  | "gorenjska"
+  | "primorska"
+  | "osrednja"
+  | "kras"
+  | "stajerska"
+  | "koroska"
+  | "prekmurje"
+  | "dolenjska"
+  | "bela-krajina";
 
 export type PriceRange = "brezplačno" | "€" | "€€" | "€€€";
 
@@ -108,7 +112,7 @@ export const EVENTS: EventItem[] = [
     location: "Cankarjev dom, Ljubljana",
     destinationId: "ljubljana",
     category: "glasba",
-    region: "central",
+    region: "osrednja",
     image:
       "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1200&h=800&fit=crop&q=80",
     website: "https://www.ljubljanafestival.si",
@@ -124,7 +128,7 @@ export const EVENTS: EventItem[] = [
     endDate: "2025-02-18",
     location: "Stari mestni trg, Ptuj",
     category: "tradicija",
-    region: "pannonian",
+    region: "stajerska",
     image:
       "https://images.unsplash.com/photo-1517242810446-cc8951b2be40?w=1200&h=800&fit=crop&q=80",
     website: "https://www.kurentovanje.net",
@@ -140,7 +144,7 @@ export const EVENTS: EventItem[] = [
     endDate: "2025-03-23",
     location: "Planica, Kranjska Gora",
     category: "sport",
-    region: "alpine",
+    region: "gorenjska",
     image:
       "https://images.unsplash.com/photo-1551698618-1d6471fa3f5b?w=1200&h=800&fit=crop&q=80",
     website: "https://www.planica.si",
@@ -157,7 +161,7 @@ export const EVENTS: EventItem[] = [
     location: "Blejski grad, Bled",
     destinationId: "bled",
     category: "glasba",
-    region: "alpine",
+    region: "gorenjska",
     image:
       "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=1200&h=800&fit=crop&q=80",
     website: "https://www.festivalblejskihdni.si",
@@ -174,7 +178,7 @@ export const EVENTS: EventItem[] = [
     location: "Bovec in Tolmin",
     destinationId: "soca",
     category: "sport",
-    region: "alpine",
+    region: "gorenjska",
     image:
       "https://images.unsplash.com/photo-1530841379378-3c06a9c2b1c0?w=1200&h=800&fit=crop&q=80",
     website: "https://www.festivalsoca.si",
@@ -191,7 +195,7 @@ export const EVENTS: EventItem[] = [
     location: "Obala Blejskega jezera, Bled",
     destinationId: "bled",
     category: "hrana",
-    region: "alpine",
+    region: "gorenjska",
     image:
       "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=1200&h=800&fit=crop&q=80",
     website: "https://www.bled.si",
@@ -208,7 +212,7 @@ export const EVENTS: EventItem[] = [
     location: "Križanke, Ljubljana",
     destinationId: "ljubljana",
     category: "glasba",
-    region: "central",
+    region: "osrednja",
     image:
       "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&h=800&fit=crop&q=80",
     website: "https://www.ljubljanafestival.si",
@@ -225,7 +229,7 @@ export const EVENTS: EventItem[] = [
     location: "Minoritski samostan, Piran",
     destinationId: "piran",
     category: "glasba",
-    region: "coastal",
+    region: "primorska",
     image:
       "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&h=800&fit=crop&q=80",
     website: "https://www.piran.si",
@@ -240,7 +244,7 @@ export const EVENTS: EventItem[] = [
     date: "2025-08-15",
     location: "Razne vasi v Sloveniji",
     category: "tradicija",
-    region: "alpine",
+    region: "gorenjska",
     image:
       "https://images.unsplash.com/photo-1496024840928-4c417adf211d?w=1200&h=800&fit=crop&q=80",
     priceRange: "brezplačno",
@@ -254,7 +258,7 @@ export const EVENTS: EventItem[] = [
     date: "2025-09-27",
     location: "Koper in Izola",
     category: "hrana",
-    region: "coastal",
+    region: "primorska",
     image:
       "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=1200&h=800&fit=crop&q=80",
     website: "https://www.slovenia.info",
@@ -271,7 +275,7 @@ export const EVENTS: EventItem[] = [
     location: "Lent, Maribor",
     destinationId: "maribor",
     category: "tradicija",
-    region: "pannonian",
+    region: "stajerska",
     image:
       "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=1200&h=800&fit=crop&q=80",
     website: "https://www.stara-trta.si",
@@ -288,12 +292,106 @@ export const EVENTS: EventItem[] = [
     location: "Stari trg, Ljubljana in Maribor",
     destinationId: "ljubljana",
     category: "tradicija",
-    region: "central",
+    region: "osrednja",
     image:
       "https://images.unsplash.com/photo-1543393716-375f47996a4c?w=1200&h=800&fit=crop&q=80",
     website: "https://www.ljubljana.si",
     priceRange: "brezplačno",
     featured: true,
+  },
+  // === DOGODKI ZA NOVE REGIJE ===
+  {
+    id: "koroska-smucanje",
+    name: "Smučarski dnevi Ribnica na Pohorju",
+    description:
+      "Tradicionalni smučarski dogodek na Ribniškem Pohorju z glasbenim programom in lokalnimi specialitetami. Družinski dan na snegu.",
+    date: "2025-02-15",
+    endDate: "2025-02-16",
+    location: "Smučišče Ribnica na Pohorju",
+    destinationId: "slovenj-gradec",
+    category: "sport",
+    region: "koroska",
+    image:
+      "https://images.unsplash.com/photo-1551524559-8af4e6624178?w=1200&h=800&fit=crop&q=80",
+    priceRange: "€",
+    featured: false,
+  },
+  {
+    id: "prekmurje-bucka",
+    name: "Festival bučk in bučnega olja",
+    description:
+      "Edinstven festival v Prekmurju posvečen bučam in prekmurskemu bučnemu olju. Degustacije, delavnice in tradicionalna glasba.",
+    date: "2025-09-20",
+    endDate: "2025-09-21",
+    location: "Center, Murska Sobota",
+    destinationId: "murska-sobota",
+    category: "hrana",
+    region: "prekmurje",
+    image:
+      "https://images.unsplash.com/photo-1572441710534-f3b8b3b3b3b3?w=1200&h=800&fit=crop&q=80",
+    priceRange: "brezplačno",
+    featured: false,
+  },
+  {
+    id: "dolenjska-cvicek",
+    name: "Festival cvička v Novem mestu",
+    description:
+      "Praznik tradicionalnega dolenjskega vina cviček. Vinske degustacije, kulinarične stojnice in glasba ob Krki.",
+    date: "2025-09-13",
+    location: "Glavni trg, Novo mesto",
+    destinationId: "novo-mesto",
+    category: "hrana",
+    region: "dolenjska",
+    image:
+      "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=1200&h=800&fit=crop&q=80",
+    priceRange: "€",
+    featured: false,
+  },
+  {
+    id: "bela-krajina-koline",
+    name: "Bela krajina koline in opankarija",
+    description:
+      "Tradicionalne koline v Beli krajini z opankanjem (pletje koruznih venčkov) in lokalno glasbo. Avtentična belokranjska kultura.",
+    date: "2025-11-22",
+    location: "Stari trg, Črnomelj",
+    destinationId: "crnomelj",
+    category: "tradicija",
+    region: "bela-krajina",
+    image:
+      "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&h=800&fit=crop&q=80",
+    priceRange: "€€",
+    featured: false,
+  },
+  {
+    id: "koroska-music",
+    name: "Musica Cubicularis — Dvorana slovenskih glasbenikov",
+    description:
+      "Komorni glasbeni festival v Slovenj Gradcu z nastopi slovenskih in mednarodnih glasbenikov v zgodovinskih ambientih.",
+    date: "2025-07-10",
+    endDate: "2025-07-12",
+    location: "Dvorana slovenskih glasbenikov, Slovenj Gradec",
+    destinationId: "slovenj-gradec",
+    category: "glasba",
+    region: "koroska",
+    image:
+      "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&h=800&fit=crop&q=80",
+    priceRange: "€€",
+    featured: false,
+  },
+  {
+    id: "prekmurje-porabje",
+    name: "Porabje — srečanje Slovencev v sosednjih državah",
+    description:
+      "Kulturni festival v Lendavi ki povezuje Slovence iz Prekmurja, Porabja in sosednjih regij. Glasba, ples in tradicionalne jedi.",
+    date: "2025-06-14",
+    location: "Trg mladosti, Lendava",
+    destinationId: "lendava",
+    category: "kultura",
+    region: "prekmurje",
+    image:
+      "https://images.unsplash.com/photo-1496024840928-4c417adf211d?w=1200&h=800&fit=crop&q=80",
+    priceRange: "brezplačno",
+    featured: false,
   },
 ];
 

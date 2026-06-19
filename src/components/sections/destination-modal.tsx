@@ -53,6 +53,7 @@ const TYPE_LABELS: Record<DestinationType, string> = {
   river: "Reka",
   spa: "Zdravilišče",
   gorge: "Soteska",
+  castle: "Grad",
 };
 
 function regionLabel(value: string): string {
