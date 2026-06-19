@@ -192,3 +192,77 @@ model Experience {
   @@index([featured])
   @@index([ownerId])
 }
+
+// Naročila izdelkov (tržnica) — za sledenje plačil in dostave
+model Order {
+  id              String   @id @default(cuid())
+  orderNumber     String   @unique // IF-2025-001 format
+  // Kupec
+  buyerEmail      String
+  buyerName       String
+  buyerPhone      String?
+  buyerAddress    String?
+  buyerCity       String?
+  buyerPostalCode String?
+  buyerCountry    String   @default("SI")
+  // Plačilo
+  status          String   @default("pending") // pending | paid | shipped | delivered | canceled | refunded
+  paymentMethod   String   @default("stripe") // stripe | demo | bank_transfer
+  stripeSessionId String?
+  // Zneski
+  subtotal        Float // vsota izdelkov
+  shippingCost    Float   @default(0)
+  total           Float // subtotal + shipping
+  currency        String   @default("EUR")
+  // Items (JSON array: [{productId, name, price, quantity}])
+  items           String
+  // Tracking
+  trackingNumber  String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  paidAt          DateTime?
+
+  @@index([buyerEmail])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Rezervacije izkušenj — za sledenje bookingov
+model Booking {
+  id              String   @id @default(cuid())
+  bookingNumber   String   @unique // IF-EXP-001
+  // Kupec
+  guestEmail      String
+  guestName       String
+  guestPhone      String?
+  // Izkušnja
+  experienceId    String
+  experienceName  String
+  // Datum in ura
+  bookingDate     DateTime // kdaj izkušnja poteka
+  // Skupina
+  groupSize       Int
+  // Cenitev
+  pricePerPerson  Float
+  total           Float // pricePerPerson * groupSize
+  currency        String   @default("EUR")
+  // Status
+  status          String   @default("pending") // pending | confirmed | completed | canceled
+  paymentMethod   String   @default("stripe")
+  stripeSessionId String?
+  // Notes
+  notes           String? // posebne želje gosta
+  // Provider info (snapshot)
+  providerName    String
+  providerEmail   String
+  meetingPoint    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  confirmedAt     DateTime?
+
+  @@index([experienceId])
+  @@index([bookingDate])
+  @@index([guestEmail])
+  @@index([status])
+}

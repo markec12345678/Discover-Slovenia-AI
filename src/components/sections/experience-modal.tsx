@@ -40,13 +40,19 @@ import {
 interface ExperienceModalProps {
   experience: Experience | null;
   onClose: () => void;
+  onBook?: (experience: Experience) => void;
 }
 
 /**
  * ExperienceModal — podrobnosti izkušnje iz tržnice.
  * Prikazuje sliko, opis, trajanje, skupino, jezike, kontakt ponudnika in CTA.
+ * "Rezerviraj" gumb odpre BookingModal (delegirano na starša prek onBook).
  */
-export function ExperienceModal({ experience, onClose }: ExperienceModalProps) {
+export function ExperienceModal({
+  experience,
+  onClose,
+  onBook,
+}: ExperienceModalProps) {
   const [activeImage, setActiveImage] = useState(0);
 
   // Reset aktivne slike ko se spremeni izkušnja (render-phase check, brez effect-a)
@@ -363,6 +369,7 @@ export function ExperienceModal({ experience, onClose }: ExperienceModalProps) {
                 type="button"
                 size="lg"
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => onBook?.(experience)}
               >
                 <Calendar className="size-4" aria-hidden="true" />
                 Rezerviraj

@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { useCart } from "@/lib/cart-store";
 import {
   PRODUCT_CATEGORY_LABELS,
   PRODUCT_CATEGORY_ICONS,
@@ -47,6 +48,7 @@ import {
 } from "@/lib/marketplace-types";
 import { ProductModal } from "@/components/sections/product-modal";
 import { ExperienceModal } from "@/components/sections/experience-modal";
+import { BookingModal } from "@/components/booking-modal";
 
 const ALL_VALUE = "all";
 
@@ -126,6 +128,14 @@ export function MarketplaceSection() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedExperience, setSelectedExperience] =
     useState<Experience | null>(null);
+  const [bookingExperience, setBookingExperience] =
+    useState<Experience | null>(null);
+
+  // Odpri booking modal (lahko iz kartice ali iz detail modal-a)
+  const handleBookExperience = useCallback((exp: Experience) => {
+    setSelectedExperience(null); // zapri detail modal če je odprt
+    setBookingExperience(exp);
+  }, []);
 
   // Fetch izdelkov
   const fetchProducts = useCallback(async () => {
@@ -403,6 +413,7 @@ export function MarketplaceSection() {
                 key={e.id}
                 experience={e}
                 onOpen={() => setSelectedExperience(e)}
+                onBook={() => setBookingExperience(e)}
               />
             ))}
           </div>
@@ -432,6 +443,11 @@ export function MarketplaceSection() {
       <ExperienceModal
         experience={selectedExperience}
         onClose={() => setSelectedExperience(null)}
+        onBook={handleBookExperience}
+      />
+      <BookingModal
+        experience={bookingExperience}
+        onClose={() => setBookingExperience(null)}
       />
     </section>
   );
@@ -486,6 +502,7 @@ function ProductCard({
   product: Product;
   onOpen: () => void;
 }) {
+  const addItem = useCart((s) => s.addItem);
   const image = product.images[0];
   const discount = product.compareAtPrice
     ? Math.round(
@@ -493,6 +510,19 @@ function ProductCard({
           100
       )
     : 0;
+
+  const handleAddToCart = () => {
+    addItem({
+      productId: product.id,
+      name: product.name,
+      slug: product.slug,
+      price: product.price,
+      image: image ?? "",
+      sellerName: product.sellerName,
+      shippingFree: product.shippingFree,
+      currency: product.currency,
+    });
+  };
 
   return (
     <Card
@@ -627,7 +657,7 @@ function ProductCard({
             size="sm"
             className="flex-1 justify-center bg-primary text-primary-foreground hover:bg-primary/90"
             disabled={product.stock <= 0}
-            onClick={(e) => e.stopPropagation()}
+            onClick={handleAddToCart}
           >
             <ShoppingCart className="size-4" aria-hidden="true" />
             {product.stock > 0 ? "V košaro" : "Ni zaloge"}
@@ -653,9 +683,11 @@ function ProductCard({
 function ExperienceCard({
   experience,
   onOpen,
+  onBook,
 }: {
   experience: Experience;
   onOpen: () => void;
+  onBook: () => void;
 }) {
   const image = experience.images[0];
 
@@ -776,7 +808,10 @@ function ExperienceCard({
             type="button"
             size="sm"
             className="flex-1 justify-center bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onBook();
+            }}
           >
             <Calendar className="size-4" aria-hidden="true" />
             Rezerviraj
