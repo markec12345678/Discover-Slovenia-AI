@@ -23,8 +23,9 @@ const NAV_LINKS: { href: string; label: string }[] = [
   { href: "#destinacije", label: "Destinacije" },
   { href: "#načrtuj", label: "AI načrtovalec" },
   { href: "#zemljevid", label: "Zemljevid" },
-  { href: "#izkušnje", label: "Izkušnje" },
-  { href: "#rezerviraj", label: "Rezerviraj" },
+  { href: "#lokali", label: "Lokali" },
+  { href: "#dogodki", label: "Dogodki" },
+  { href: "#pridruzi-se", label: "Pridruži se" },
 ];
 
 export function Navigation() {
