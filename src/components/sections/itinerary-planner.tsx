@@ -10,7 +10,6 @@ import {
   Users,
   MapPin,
   AlertCircle,
-  ExternalLink,
   Star,
   Cloud,
   Loader2,
@@ -38,12 +37,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
-import { getAffiliateLinks } from "@/lib/affiliate";
 import { INTERESTS } from "@/lib/slovenia-data";
 import type { PlannerInput, Itinerary, Season } from "@/lib/types";
 import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { BookingPanel, type BookingData } from "@/components/sections/booking-panel";
 
 const SEASONS: { value: Season; label: string }[] = [
   { value: "spring", label: "Pomlad" },
@@ -68,6 +67,7 @@ export function ItineraryPlanner() {
     groupSize: 2,
   });
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
+  const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,6 +76,45 @@ export function ItineraryPlanner() {
   useEffect(() => {
     setStoreItinerary(itinerary);
   }, [itinerary, setStoreItinerary]);
+
+  // Pridobi booking opcije (listings, experiences, products) za vse
+  // destinacije v itinererju — potegne lokalne ponudnike iz baze.
+  useEffect(() => {
+    if (!itinerary) {
+      setBookingData(null);
+      return;
+    }
+    const destinationIds = Array.from(
+      new Set(
+        itinerary.days.flatMap((d) =>
+          d.locations.map((l) => l.destination_id)
+        )
+      )
+    );
+    if (destinationIds.length === 0) {
+      setBookingData(null);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/itinerary/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ destinationIds }),
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error("Napaka pri pridobivanju booking opcij");
+        return r.json() as Promise<BookingData>;
+      })
+      .then((data) => {
+        if (!cancelled) setBookingData(data);
+      })
+      .catch(() => {
+        if (!cancelled) setBookingData(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [itinerary]);
 
   function toggleInterest(value: string) {
     setFormData((prev) => {
@@ -414,7 +453,6 @@ export function ItineraryPlanner() {
                       </CardHeader>
                       <CardContent className="space-y-3">
                         {day.locations.map((loc, idx) => {
-                          const links = getAffiliateLinks(loc.destination_name);
                           return (
                             <div
                               key={`${loc.destination_id}-${idx}`}
@@ -448,24 +486,12 @@ export function ItineraryPlanner() {
                                   {loc.notes}
                                 </p>
                               )}
-                              <Button
-                                asChild
-                                size="sm"
-                                variant="outline"
-                                className="mt-3"
-                              >
-                                <a
-                                  href={links.hotels}
-                                  target="_blank"
-                                  rel="noopener noreferrer sponsored"
-                                >
-                                  Rezerviraj
-                                  <ExternalLink className="size-3.5" aria-hidden />
-                                </a>
-                              </Button>
                             </div>
                           );
                         })}
+
+                        {/* Booking panel za ta dan — nastanitev, aktivnosti, hrana, transport */}
+                        <BookingPanel dayPlan={day} bookingData={bookingData} />
                       </CardContent>
                     </Card>
                   ))}
