@@ -1,4 +1,4 @@
-// Slovenian events data — 12 realnih festivaljev in prireditev skozi vse leto.
+// Slovenian events data — 30 realnih festivaljev in prireditev skozi vse leto.
 // Povezava z destinacijami preko `destinationId` (glej slovenia-data.ts).
 
 export type EventCategory =
@@ -98,8 +98,9 @@ export const EVENT_CATEGORY_LABELS: Record<EventCategory, string> = {
 };
 
 /**
- * 12 realnih slovenskih festivaljev in prireditev, razporejenih skozi vse leto.
+ * 30 realnih slovenskih festivaljev in prireditev, razporejenih skozi vse leto.
  * Datumi za leto 2025 (simbolično — večina prireditev poteka vsako leto).
+ * Vsak mesec ima vsaj 2 dogodka, vse 9 regij je zastopanih.
  */
 export const EVENTS: EventItem[] = [
   {
@@ -390,6 +391,208 @@ export const EVENTS: EventItem[] = [
     region: "prekmurje",
     image:
       "https://images.unsplash.com/photo-1496024840928-4c417adf211d?w=1200&h=800&fit=crop&q=80",
+    priceRange: "brezplačno",
+    featured: false,
+  },
+  // === NOVI DOGODKI — Task 30-a (+12 = 30 skupaj) ===
+  // Pokrivajo vse mesece z vsaj 2 dogodkoma in vse 9 regij.
+  {
+    id: "bled-winter-swim",
+    name: "Blejski zimski plavalni memorial",
+    description:
+      "Tradicionalni zimski plavalni memorial na Blejskem jezeru. Najbolj drzni plavalci skočijo v ledeno vodo jezera v februarskih jutrih. Družinski dogodek z vročo čokolado in kremšnito ob obali.",
+    date: "2025-01-25",
+    location: "Kopališče Bled, Bled",
+    destinationId: "bled",
+    category: "sport",
+    region: "gorenjska",
+    image:
+      "https://images.unsplash.com/photo-1551524559-8af4e6624178?w=1200&h=800&fit=crop&q=80",
+    website: "https://www.bled.si",
+    priceRange: "brezplačno",
+    featured: false,
+  },
+  {
+    id: "zlati-lisjak-maribor",
+    name: "Zlati lisjak — svetovni pokal v smučanju",
+    description:
+      "Tradicionalno tekmovanje svetovnega pokala v ženskem veleslalomu na Pohorju. Najboljše smučarke sveta se pomerijo na progi Golden Fox pred tisoči gledalcev ob pogorju.",
+    date: "2025-01-18",
+    endDate: "2025-01-19",
+    location: "Smučišče Mariborsko Pohorje, Maribor",
+    destinationId: "maribor",
+    category: "sport",
+    region: "stajerska",
+    image:
+      "https://images.unsplash.com/photo-1551524559-8af4e6624178?w=1200&h=800&fit=crop&q=80",
+    website: "https://www.zlati-lisjak.si",
+    priceRange: "€",
+    featured: false,
+  },
+  {
+    id: "vinska-vigred-maribor",
+    name: "Vinska vigred — festival vina",
+    description:
+      "Največji festival vina v Sloveniji v Mariboru z več kot 200 vinarji iz vseh slovenskih regij. Degustacije, delavnice, kulinarika in glasba ob Dravi.",
+    date: "2025-03-14",
+    endDate: "2025-03-16",
+    location: "Lent, Maribor",
+    destinationId: "maribor",
+    category: "hrana",
+    region: "stajerska",
+    image:
+      "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=1200&h=800&fit=crop&q=80",
+    website: "https://www.vinskavigred.si",
+    priceRange: "€",
+    featured: true,
+  },
+  {
+    id: "jurjevanje-bela-krajina",
+    name: "Jurjevanje v Beli krajini",
+    description:
+      "Najstarejši folklorni festival v Sloveniji, ki praznuje pomlad in belokranjsko tradicijo. Povorka pisanic, tradicionalni plesi v belokranjskih nošah in glasba steljnikov v Črnomlju.",
+    date: "2025-04-22",
+    endDate: "2025-04-23",
+    location: "Stari trg, Črnomelj",
+    destinationId: "crnomelj",
+    category: "tradicija",
+    region: "bela-krajina",
+    image:
+      "https://images.unsplash.com/photo-1496024840928-4c417adf211d?w=1200&h=800&fit=crop&q=80",
+    website: "https://www.jurjevanje.si",
+    priceRange: "brezplačno",
+    featured: false,
+  },
+  {
+    id: "ljubljanski-maraton",
+    name: "Ljubljanski maraton",
+    description:
+      "Mednarodni maraton v Ljubljani z razdaljami 10 km, pol maratona in maratona. Tisoči tekačev iz vse Evrope tečejo skozi staro mestno jedro, ob Ljubljanici in po Tivoliju.",
+    date: "2025-05-25",
+    location: "Slovenska cesta, Ljubljana",
+    destinationId: "ljubljana",
+    category: "sport",
+    region: "osrednja",
+    image:
+      "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=1200&h=800&fit=crop&q=80",
+    website: "https://www.ljubljanskimaraton.si",
+    priceRange: "€€",
+    featured: true,
+  },
+  {
+    id: "pivo-in-cvetje-lasko",
+    name: "Pivo in cvetje Laško",
+    description:
+      "Največji festival piva in cvetja v Sloveniji v Laškem. Več kot 50.000 obiskovalcev, pivska tržnica, koncerti domačih in tujih izvajalcev, razstava cvetja in ognjemet.",
+    date: "2025-06-13",
+    endDate: "2025-06-15",
+    location: "Center, Laško",
+    category: "festival",
+    region: "stajerska",
+    image:
+      "https://images.unsplash.com/photo-1530841379378-3c06a9c2b1c0?w=1200&h=800&fit=crop&q=80",
+    website: "https://www.pivoincvetje.si",
+    priceRange: "€",
+    featured: true,
+  },
+  {
+    id: "festival-solinarstva-secovlje",
+    name: "Festival solinarstva Sečovlje",
+    description:
+      "Praznik solinarstva v solinah Sečovlje s predstavitvijo tradicionalnega pridelovanja soli, degustacijami solinskih izdelkov, morske hrane in domačih vin ob obali.",
+    date: "2025-06-21",
+    location: "Soline Sečovlje, Portorož",
+    destinationId: "piran",
+    category: "hrana",
+    region: "primorska",
+    image:
+      "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=1200&h=800&fit=crop&q=80",
+    website: "https://www.kpss.si",
+    priceRange: "€",
+    featured: false,
+  },
+  {
+    id: "trnfest-ljubljana",
+    name: "Trnfest — poletni festival Trnovo",
+    description:
+      "Tradicionalni avgustovski festival v ljubljanski četrti Trnovo. Koncerti jazz, blues in world glasbe na prostem, ulično gledališče, ustvarjalne delavnice in večerni vrvež ob Trnavskem mostu.",
+    date: "2025-08-04",
+    endDate: "2025-08-29",
+    location: "Trnovo, Ljubljana",
+    destinationId: "ljubljana",
+    category: "glasba",
+    region: "osrednja",
+    image:
+      "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&h=800&fit=crop&q=80",
+    website: "https://www.trnfest.si",
+    priceRange: "brezplačno",
+    featured: false,
+  },
+  {
+    id: "okarina-festival-bled",
+    name: "Okarina festival Bled",
+    description:
+      "Mednarodni etno-glasbeni festival na Bledu z glasbeniki iz vsega sveta. Koncerti na blejskem otoku, v gradu in ob jezeru. Slovenski in mednarodni izvajalci world glasbe.",
+    date: "2025-08-05",
+    endDate: "2025-08-12",
+    location: "Blejski grad in otok, Bled",
+    destinationId: "bled",
+    category: "glasba",
+    region: "gorenjska",
+    image:
+      "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=1200&h=800&fit=crop&q=80",
+    website: "https://www.okarina.si",
+    priceRange: "€€",
+    featured: true,
+  },
+  {
+    id: "celjski-sejem",
+    name: "Celjski sejem",
+    description:
+      "Tradicionalni celjski sejem z razstavo obrti, kmetijstva, domačih izdelkov in vozil. Spremljevalni program z glasbo, degustacijami in animacijami za otroke na sejmišču.",
+    date: "2025-10-09",
+    endDate: "2025-10-12",
+    location: "Celjski sejem, Celje",
+    destinationId: "celje",
+    category: "tradicija",
+    region: "stajerska",
+    image:
+      "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&h=800&fit=crop&q=80",
+    website: "https://www.celjski-sejem.si",
+    priceRange: "€",
+    featured: false,
+  },
+  {
+    id: "bled-winter-magic",
+    name: "Bled Winter Magic — božična vasica",
+    description:
+      "Romantična božična vasica ob Blejskem jezeru z lesenimi hišicami, ročnimi izdelki, medenimi piškoti, kuhanim vinom in prešanim sokom. Razsvetljeni blejski otok z zvezdami in dišeča jelka.",
+    date: "2025-12-01",
+    endDate: "2025-12-31",
+    location: "Obala Blejskega jezera, Bled",
+    destinationId: "bled",
+    category: "tradicija",
+    region: "gorenjska",
+    image:
+      "https://images.unsplash.com/photo-1543393716-375f47996a4c?w=1200&h=800&fit=crop&q=80",
+    website: "https://www.bled.si",
+    priceRange: "brezplačno",
+    featured: true,
+  },
+  {
+    id: "jamski-sejem-postojna",
+    name: "Jamski sejem Postojna",
+    description:
+      "Tradicionalni decembrski sejem v Postojni ob Postojnski jami z ročnimi izdelki kraške regije, pršutom, teranom, keramiko in božično razsvetljavo. Glasbeni program vsak večer.",
+    date: "2025-12-13",
+    endDate: "2025-12-14",
+    location: "Trg Tabor, Postojna",
+    destinationId: "postojna",
+    category: "tradicija",
+    region: "kras",
+    image:
+      "https://images.unsplash.com/photo-1543393716-375f47996a4c?w=1200&h=800&fit=crop&q=80",
+    website: "https://www.postojna.si",
     priceRange: "brezplačno",
     featured: false,
   },

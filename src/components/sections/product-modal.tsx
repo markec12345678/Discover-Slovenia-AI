@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Star,
   MapPin,
@@ -21,6 +21,7 @@ import {
   Sparkles,
   Scale,
   Tag,
+  Lightbulb,
 } from "lucide-react";
 import {
   Dialog,
@@ -31,6 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   PRODUCT_CATEGORY_LABELS,
   PRODUCT_CATEGORY_ICONS,
@@ -42,15 +44,22 @@ import {
 interface ProductModalProps {
   product: Product | null;
   onClose: () => void;
+  /** Opcijsko: zamenja trenutni izdelek (uporablja "Morda vam je všeč"). */
+  onSelect?: (product: Product) => void;
+}
+
+interface RecommendationsResponse {
+  products: Product[];
+  total: number;
 }
 
 /**
  * ProductModal — podrobnosti izdelka iz tržnice.
  * Prikazuje veliko sliko, opis, atribute, kontakt prodajalca in CTA.
+ * Na dnu je "Morda vam je všeč" z 4 podobnimi izdelki (ista kategorija/destinacija).
  */
-export function ProductModal({ product, onClose }: ProductModalProps) {
+export function ProductModal({ product, onClose, onSelect }: ProductModalProps) {
   const [activeImage, setActiveImage] = useState(0);
-
 
   // Reset aktivne slike ko se spremeni izdelek (render-phase check, brez effect-a)
   const prevProductId = useRef<string | undefined>(undefined);
@@ -64,6 +73,41 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
   const handleOpenChange = (open: boolean) => {
     if (!open) onClose();
   };
+
+  // Priporočila — pridobi ko se product spremeni.
+  const [recommendations, setRecommendations] = useState<Product[]>([]);
+  const [recLoading, setRecLoading] = useState(false);
+  const [recError, setRecError] = useState<boolean>(false);
+
+  const fetchRecommendations = useCallback(async (productId: string) => {
+    setRecLoading(true);
+    setRecError(false);
+    try {
+      const res = await fetch(
+        `/api/recommendations/products?productId=${encodeURIComponent(
+          productId
+        )}&limit=4`,
+        { cache: "no-store" }
+      );
+      if (!res.ok) throw new Error("Napaka pri priporočilih");
+      const data: RecommendationsResponse = await res.json();
+      setRecommendations(data.products ?? []);
+    } catch {
+      setRecError(true);
+      setRecommendations([]);
+    } finally {
+      setRecLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (product?.id) {
+      fetchRecommendations(product.id);
+    } else {
+      setRecommendations([]);
+      setRecError(false);
+    }
+  }, [product?.id, fetchRecommendations, product]);
 
   if (!product) {
     return (
@@ -396,6 +440,15 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
               </Button>
             </div>
 
+            {/* Morda vam je všeč — AI priporočila */}
+            <RecommendationsSection
+              loading={recLoading}
+              error={recError}
+              items={recommendations}
+              currentId={product.id}
+              onSelect={onSelect}
+            />
+
             {/* Source note */}
             <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
               <Package className="size-3" aria-hidden="true" />
@@ -453,6 +506,112 @@ function StatCard({
         <div className="text-sm font-semibold tabular-nums">{value}</div>
       </div>
     </div>
+  );
+}
+
+/**
+ * RecommendationsSection — "Morda vam je všeč".
+ * Prikazuje do 4 podobne izdelke (ista kategorija ali destinacija).
+ * Klik na kartico zamenja trenutni izdelek v modalu (preko onSelect).
+ */
+function RecommendationsSection({
+  loading,
+  error,
+  items,
+  currentId,
+  onSelect,
+}: {
+  loading: boolean;
+  error: boolean;
+  items: Product[];
+  currentId: string;
+  onSelect?: (product: Product) => void;
+}) {
+  const visible = items.filter((p) => p.id !== currentId).slice(0, 4);
+
+  if (loading) {
+    return (
+      <section aria-label="Morda vam je všeč">
+        <h3 className="flex items-center gap-2 text-sm font-semibold">
+          <Lightbulb className="size-4 text-primary" aria-hidden="true" />
+          Morda vam je všeč
+        </h3>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="overflow-hidden rounded-lg border border-border/60"
+            >
+              <Skeleton className="aspect-square w-full" />
+              <div className="space-y-1.5 p-2">
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  // Tiho ignoriraj napake — priporočila so "nice to have".
+  if (error || visible.length === 0) return null;
+
+  return (
+    <section aria-label="Morda vam je všeč">
+      <h3 className="flex items-center gap-2 text-sm font-semibold">
+        <Lightbulb className="size-4 text-primary" aria-hidden="true" />
+        Morda vam je všeč
+      </h3>
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {visible.map((p) => {
+          const img = p.images[0];
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onSelect?.(p)}
+              className="group flex flex-col overflow-hidden rounded-lg border border-border/60 bg-background text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+              aria-label={`Odpri ${p.name}`}
+            >
+              <div className="relative aspect-square w-full overflow-hidden bg-muted">
+                {img ? (
+                  <img
+                    src={img}
+                    alt={p.name}
+                    className="size-full object-cover transition-transform group-hover:scale-105"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex size-full items-center justify-center text-3xl">
+                    <span aria-hidden="true">
+                      {PRODUCT_CATEGORY_ICONS[p.category]}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-1 flex-col gap-1 p-2">
+                <h4 className="line-clamp-1 text-xs font-semibold">
+                  {p.name}
+                </h4>
+                <div className="mt-auto flex items-center justify-between gap-1">
+                  <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground">
+                    <Star
+                      className="size-3 fill-amber-400 text-amber-400"
+                      aria-hidden="true"
+                    />
+                    <span className="tabular-nums">{p.rating.toFixed(1)}</span>
+                  </span>
+                  <span className="text-xs font-bold text-foreground">
+                    {formatPrice(p.price, p.currency)}
+                  </span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

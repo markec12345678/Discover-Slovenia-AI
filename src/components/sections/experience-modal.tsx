@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Star,
   MapPin,
@@ -18,6 +18,7 @@ import {
   Sparkles,
   Compass,
   Languages,
+  Lightbulb,
 } from "lucide-react";
 import {
   Dialog,
@@ -28,6 +29,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   EXPERIENCE_CATEGORY_LABELS,
   EXPERIENCE_CATEGORY_ICONS,
@@ -40,16 +42,25 @@ import {
 interface ExperienceModalProps {
   experience: Experience | null;
   onClose: () => void;
+  /** Opcijsko: zamenja trenutno izkušnjo (uporablja "Morda vam je všeč"). */
+  onSelect?: (experience: Experience) => void;
+}
+
+interface RecommendationsResponse {
+  experiences: Experience[];
+  total: number;
 }
 
 /**
  * ExperienceModal — podrobnosti izkušnje iz tržnice.
  * Prikazuje sliko, opis, trajanje, skupino, jezike, kontakt ponudnika in CTA.
  * "Rezerviraj pri ponudniku" gumb preusmeri na ponudnikovo spletno stran.
+ * Na dnu je "Morda vam je všeč" z 4 podobnimi izkušnjami.
  */
 export function ExperienceModal({
   experience,
   onClose,
+  onSelect,
 }: ExperienceModalProps) {
   const [activeImage, setActiveImage] = useState(0);
 
@@ -65,6 +76,41 @@ export function ExperienceModal({
   const handleOpenChange = (open: boolean) => {
     if (!open) onClose();
   };
+
+  // Priporočila — pridobi ko se experience spremeni.
+  const [recommendations, setRecommendations] = useState<Experience[]>([]);
+  const [recLoading, setRecLoading] = useState(false);
+  const [recError, setRecError] = useState<boolean>(false);
+
+  const fetchRecommendations = useCallback(async (experienceId: string) => {
+    setRecLoading(true);
+    setRecError(false);
+    try {
+      const res = await fetch(
+        `/api/recommendations/experiences?experienceId=${encodeURIComponent(
+          experienceId
+        )}&limit=4`,
+        { cache: "no-store" }
+      );
+      if (!res.ok) throw new Error("Napaka pri priporočilih");
+      const data: RecommendationsResponse = await res.json();
+      setRecommendations(data.experiences ?? []);
+    } catch {
+      setRecError(true);
+      setRecommendations([]);
+    } finally {
+      setRecLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (experience?.id) {
+      fetchRecommendations(experience.id);
+    } else {
+      setRecommendations([]);
+      setRecError(false);
+    }
+  }, [experience?.id, fetchRecommendations, experience]);
 
   if (!experience) {
     return (
@@ -387,6 +433,15 @@ export function ExperienceModal({
               </Button>
             </div>
 
+            {/* Morda vam je všeč — AI priporočila */}
+            <RecommendationsSection
+              loading={recLoading}
+              error={recError}
+              items={recommendations}
+              currentId={experience.id}
+              onSelect={onSelect}
+            />
+
             {/* Source note */}
             <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
               <Compass className="size-3" aria-hidden="true" />
@@ -444,6 +499,111 @@ function StatCard({
         <div className="text-sm font-semibold tabular-nums">{value}</div>
       </div>
     </div>
+  );
+}
+
+/**
+ * RecommendationsSection — "Morda vam je všeč".
+ * Prikazuje do 4 podobne izkušnje (ista kategorija ali destinacija).
+ * Klik na kartico zamenja trenutno izkušnjo v modalu (preko onSelect).
+ */
+function RecommendationsSection({
+  loading,
+  error,
+  items,
+  currentId,
+  onSelect,
+}: {
+  loading: boolean;
+  error: boolean;
+  items: Experience[];
+  currentId: string;
+  onSelect?: (experience: Experience) => void;
+}) {
+  const visible = items.filter((e) => e.id !== currentId).slice(0, 4);
+
+  if (loading) {
+    return (
+      <section aria-label="Morda vam je všeč">
+        <h3 className="flex items-center gap-2 text-sm font-semibold">
+          <Lightbulb className="size-4 text-primary" aria-hidden="true" />
+          Morda vam je všeč
+        </h3>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="overflow-hidden rounded-lg border border-border/60"
+            >
+              <Skeleton className="aspect-square w-full" />
+              <div className="space-y-1.5 p-2">
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (error || visible.length === 0) return null;
+
+  return (
+    <section aria-label="Morda vam je všeč">
+      <h3 className="flex items-center gap-2 text-sm font-semibold">
+        <Lightbulb className="size-4 text-primary" aria-hidden="true" />
+        Morda vam je všeč
+      </h3>
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {visible.map((e) => {
+          const img = e.images[0];
+          return (
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => onSelect?.(e)}
+              className="group flex flex-col overflow-hidden rounded-lg border border-border/60 bg-background text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+              aria-label={`Odpri ${e.name}`}
+            >
+              <div className="relative aspect-square w-full overflow-hidden bg-muted">
+                {img ? (
+                  <img
+                    src={img}
+                    alt={e.name}
+                    className="size-full object-cover transition-transform group-hover:scale-105"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex size-full items-center justify-center text-3xl">
+                    <span aria-hidden="true">
+                      {EXPERIENCE_CATEGORY_ICONS[e.category]}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-1 flex-col gap-1 p-2">
+                <h4 className="line-clamp-1 text-xs font-semibold">
+                  {e.name}
+                </h4>
+                <div className="mt-auto flex items-center justify-between gap-1">
+                  <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground">
+                    <Star
+                      className="size-3 fill-amber-400 text-amber-400"
+                      aria-hidden="true"
+                    />
+                    <span className="tabular-nums">{e.rating.toFixed(1)}</span>
+                  </span>
+                  <span className="text-xs font-bold text-foreground">
+                    {formatPrice(e.pricePerPerson, e.currency)}
+                  </span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

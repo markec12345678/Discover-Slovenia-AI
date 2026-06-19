@@ -430,10 +430,12 @@ export function MarketplaceSection() {
       <ProductModal
         product={selectedProduct}
         onClose={() => setSelectedProduct(null)}
+        onSelect={setSelectedProduct}
       />
       <ExperienceModal
         experience={selectedExperience}
         onClose={() => setSelectedExperience(null)}
+        onSelect={setSelectedExperience}
       />
     </section>
   );

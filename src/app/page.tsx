@@ -1,6 +1,7 @@
 import { Navigation } from "@/components/sections/navigation";
 import { Hero } from "@/components/sections/hero";
 import { StatsSection } from "@/components/sections/stats";
+import { CollectionsSection } from "@/components/sections/collections";
 import { DestinationsSection } from "@/components/sections/destinations";
 import { ItineraryPlanner } from "@/components/sections/itinerary-planner";
 import { MapSection } from "@/components/sections/map-section";
@@ -23,6 +24,7 @@ export default function Home() {
       <main className="flex-grow">
         <Hero />
         <StatsSection />
+        <CollectionsSection />
         <DestinationsSection />
         <ItineraryPlanner />
         <MapSection />
