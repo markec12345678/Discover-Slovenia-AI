@@ -36,6 +36,22 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import {
   Building2,
   Plus,
   Pencil,
@@ -56,6 +72,11 @@ import {
   Rocket,
   Gift,
   Zap,
+  CreditCard,
+  DollarSign,
+  Calendar,
+  Banknote,
+  TrendingDown,
 } from "lucide-react";
 import {
   CATEGORY_LABELS,
@@ -153,18 +174,22 @@ export function AdminDashboard({
         <BetaStatusWidget />
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4">
             <TabsTrigger value="listings" className="gap-1.5">
               <Building2 className="size-4" />
-              <span className="hidden xs:inline sm:inline">Lokali</span>
+              <span className="hidden sm:inline">Lokali</span>
             </TabsTrigger>
             <TabsTrigger value="leads" className="gap-1.5">
               <Users className="size-4" />
-              <span className="hidden xs:inline sm:inline">Leadi</span>
+              <span className="hidden sm:inline">Leadi</span>
+            </TabsTrigger>
+            <TabsTrigger value="narocnine" className="gap-1.5">
+              <CreditCard className="size-4" />
+              <span className="hidden sm:inline">Naročnine</span>
             </TabsTrigger>
             <TabsTrigger value="stats" className="gap-1.5">
               <TrendingUp className="size-4" />
-              <span className="hidden xs:inline sm:inline">Statistika</span>
+              <span className="hidden sm:inline">Statistika</span>
             </TabsTrigger>
           </TabsList>
 
@@ -173,6 +198,9 @@ export function AdminDashboard({
           </TabsContent>
           <TabsContent value="leads" className="mt-6">
             <LeadsTab adminPassword={adminPassword} />
+          </TabsContent>
+          <TabsContent value="narocnine" className="mt-6">
+            <SubscriptionsTab adminPassword={adminPassword} />
           </TabsContent>
           <TabsContent value="stats" className="mt-6">
             <StatsTab adminPassword={adminPassword} />
@@ -729,7 +757,642 @@ function LeadsTab({ adminPassword }: { adminPassword: string }) {
   );
 }
 
-// === TAB 3: STATISTIKA ===
+// === TAB 3: NAROČNINE ===
+type SubscriptionPlan = "free" | "premium" | "enterprise";
+type SubscriptionStatus = "none" | "active" | "canceled" | "past_due";
+
+interface AdminSubscription {
+  id: string;
+  businessName: string;
+  name: string;
+  email: string;
+  plan: SubscriptionPlan;
+  subscriptionStatus: SubscriptionStatus;
+  subscriptionEndsAt: string | null;
+  stripeCustomerId: string | null;
+  createdAt: string;
+  monthlyRevenue: number;
+  daysUntilRenewal: number | null;
+}
+
+interface SubscriptionKpi {
+  totalMrr: number;
+  arr: number;
+  activeCount: number;
+  premiumCount: number;
+  enterpriseCount: number;
+  premiumMrr: number;
+  enterpriseMrr: number;
+  canceledCount: number;
+  pastDueCount: number;
+  noneCount: number;
+  freeCount: number;
+  totalOwners: number;
+  churnRate: number;
+}
+
+const STATUS_LABELS_NAROCNINA: Record<SubscriptionStatus, string> = {
+  active: "Aktivna",
+  past_due: "Zapadlo plačilo",
+  canceled: "Preklicana",
+  none: "Brez naročnine",
+};
+
+function statusBadgeClass(status: SubscriptionStatus): string {
+  switch (status) {
+    case "active":
+      return "bg-emerald-100 text-emerald-900 border-emerald-200 hover:bg-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800";
+    case "past_due":
+      return "bg-red-100 text-red-900 border-red-200 hover:bg-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800";
+    case "canceled":
+      return "bg-muted text-muted-foreground border-border hover:bg-muted/80";
+    default:
+      return "bg-muted/60 text-muted-foreground border-border hover:bg-muted";
+  }
+}
+
+function formatEur(amount: number): string {
+  return new Intl.NumberFormat("sl-SI", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+function SubscriptionsTab({ adminPassword }: { adminPassword: string }) {
+  const [owners, setOwners] = React.useState<AdminSubscription[]>([]);
+  const [kpi, setKpi] = React.useState<SubscriptionKpi | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+  const [planFilter, setPlanFilter] = React.useState<"all" | SubscriptionPlan>(
+    "all"
+  );
+  const [statusFilter, setStatusFilter] = React.useState<
+    "all" | SubscriptionStatus
+  >("all");
+
+  // Edit dialog state
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<AdminSubscription | null>(null);
+  const [editPlan, setEditPlan] = React.useState<SubscriptionPlan>("free");
+  const [editStatus, setEditStatus] =
+    React.useState<SubscriptionStatus>("none");
+  const [editEndsAt, setEditEndsAt] = React.useState<string>("");
+  const [saving, setSaving] = React.useState(false);
+
+  const fetchSubscriptions = React.useCallback(async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch("/api/admin/subscriptions", {
+        headers: { "x-admin-password": adminPassword },
+      });
+      if (!res.ok) {
+        const d: unknown = await res.json();
+        const msg =
+          typeof d === "object" && d !== null && "error" in d
+            ? String((d as Record<string, unknown>).error)
+            : "Napaka pri pridobivanju naročnin";
+        setErrorMsg(msg);
+        return;
+      }
+      const data: unknown = await res.json();
+      const list = (
+        typeof data === "object" && data !== null && "owners" in data
+          ? (data as Record<string, unknown>).owners
+          : []) as AdminSubscription[];
+      const k = (
+        typeof data === "object" && data !== null && "kpi" in data
+          ? (data as Record<string, unknown>).kpi
+          : null) as SubscriptionKpi | null;
+      setOwners(list);
+      setKpi(k);
+    } catch (err) {
+      console.error("[admin/subscriptions] fetch:", err);
+      setErrorMsg("Napaka pri povezavi s strežnikom");
+    } finally {
+      setLoading(false);
+    }
+  }, [adminPassword]);
+
+  React.useEffect(() => {
+    fetchSubscriptions();
+  }, [fetchSubscriptions]);
+
+  const filtered = React.useMemo(() => {
+    return owners.filter((o) => {
+      if (planFilter !== "all" && o.plan !== planFilter) return false;
+      if (statusFilter !== "all" && o.subscriptionStatus !== statusFilter)
+        return false;
+      return true;
+    });
+  }, [owners, planFilter, statusFilter]);
+
+  const handleOpenEdit = (sub: AdminSubscription) => {
+    setEditing(sub);
+    setEditPlan(sub.plan);
+    setEditStatus(sub.subscriptionStatus);
+    setEditEndsAt(
+      sub.subscriptionEndsAt
+        ? new Date(sub.subscriptionEndsAt).toISOString().slice(0, 10)
+        : ""
+    );
+    setEditOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editing) return;
+    setSaving(true);
+    try {
+      const body: Record<string, unknown> = {
+        plan: editPlan,
+        subscriptionStatus: editStatus,
+      };
+      if (editEndsAt) {
+        body.subscriptionEndsAt = new Date(editEndsAt).toISOString();
+      } else {
+        body.subscriptionEndsAt = null;
+      }
+
+      const res = await fetch(`/api/admin/subscriptions/${editing.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": adminPassword,
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const d: unknown = await res.json();
+        const msg =
+          typeof d === "object" && d !== null && "error" in d
+            ? String((d as Record<string, unknown>).error)
+            : "Napaka pri shranjevanju";
+        setErrorMsg(msg);
+        return;
+      }
+      setEditOpen(false);
+      setEditing(null);
+      fetchSubscriptions();
+    } catch (err) {
+      console.error("[admin/subscriptions] save:", err);
+      setErrorMsg("Napaka pri povezavi s strežnikom");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-xl font-bold tracking-tight">Naročnine</h2>
+        <p className="text-sm text-muted-foreground">
+          Pregled aktivnih naročnin, mesečnega prihodka (MRR) in churn-a.
+        </p>
+      </div>
+
+      {errorMsg && (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          <AlertCircle className="size-4 shrink-0 mt-0.5" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {/* KPI kartice */}
+      {loading ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  <span className="text-xs">Nalagam...</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : kpi ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <SubsKpiCard
+            icon={<Banknote className="size-5" />}
+            label="Skupni MRR"
+            value={formatEur(kpi.totalMrr)}
+            sub={`ARR: ${formatEur(kpi.arr)}/leto`}
+            color="primary"
+          />
+          <SubsKpiCard
+            icon={<CreditCard className="size-5" />}
+            label="Aktivne naročnine"
+            value={String(kpi.activeCount)}
+            sub={`Od ${kpi.totalOwners} lastnikov`}
+            color="emerald"
+          />
+          <SubsKpiCard
+            icon={<Sparkles className="size-5" />}
+            label="Premium"
+            value={String(kpi.premiumCount)}
+            sub={`${formatEur(kpi.premiumMrr)}/mes · €149/enota`}
+            color="amber"
+          />
+          <SubsKpiCard
+            icon={<Crown className="size-5" />}
+            label="Enterprise"
+            value={String(kpi.enterpriseCount)}
+            sub={`${formatEur(kpi.enterpriseMrr)}/mes · €499/enota`}
+            color="primary"
+          />
+        </div>
+      ) : null}
+
+      {/* Churn info banner */}
+      {kpi && kpi.totalOwners > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <TrendingUp className="size-3.5" />
+              Aktivne
+            </div>
+            <div className="text-lg font-bold tabular-nums mt-0.5">
+              {kpi.activeCount}
+            </div>
+          </div>
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <TrendingDown className="size-3.5" />
+              Churn rate
+            </div>
+            <div className="text-lg font-bold tabular-nums mt-0.5">
+              {kpi.churnRate}%
+            </div>
+          </div>
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <AlertCircle className="size-3.5" />
+              Zapadla plačila
+            </div>
+            <div className="text-lg font-bold tabular-nums mt-0.5">
+              {kpi.pastDueCount}
+            </div>
+          </div>
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <X className="size-3.5" />
+              Preklicane
+            </div>
+            <div className="text-lg font-bold tabular-nums mt-0.5">
+              {kpi.canceledCount}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filtri */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Filter paketa</Label>
+          <Select
+            value={planFilter}
+            onValueChange={(v) =>
+              setPlanFilter(v as "all" | SubscriptionPlan)
+            }
+          >
+            <SelectTrigger className="w-full sm:w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Vsi paketi</SelectItem>
+              <SelectItem value="free">Free</SelectItem>
+              <SelectItem value="premium">Premium</SelectItem>
+              <SelectItem value="enterprise">Enterprise</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Filter statusa</Label>
+          <Select
+            value={statusFilter}
+            onValueChange={(v) =>
+              setStatusFilter(v as "all" | SubscriptionStatus)
+            }
+          >
+            <SelectTrigger className="w-full sm:w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Vsi statusi</SelectItem>
+              <SelectItem value="active">Aktivna</SelectItem>
+              <SelectItem value="past_due">Zapadlo plačilo</SelectItem>
+              <SelectItem value="canceled">Preklicana</SelectItem>
+              <SelectItem value="none">Brez naročnine</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {(planFilter !== "all" || statusFilter !== "all") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setPlanFilter("all");
+              setStatusFilter("all");
+            }}
+            className="gap-1.5"
+          >
+            <X className="size-3.5" />
+            Ponastavi
+          </Button>
+        )}
+      </div>
+
+      {/* Tabela */}
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Nalaganje naročnin...
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-16 text-center text-muted-foreground">
+              <CreditCard className="size-8 mx-auto mb-2 opacity-50" />
+              {owners.length === 0
+                ? "Ni še lastnikov z naročninami."
+                : "Ni naročnin, ki ustrezajo filtrom."}
+            </div>
+          ) : (
+            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow>
+                    <TableHead>Podjetje</TableHead>
+                    <TableHead className="hidden md:table-cell">Email</TableHead>
+                    <TableHead>Paket</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="hidden lg:table-cell">Obnovitev</TableHead>
+                    <TableHead className="text-right">MRR</TableHead>
+                    <TableHead className="text-right">Akcije</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((o) => (
+                    <TableRow key={o.id}>
+                      <TableCell>
+                        <div className="font-medium truncate max-w-[200px]">
+                          {o.businessName || o.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground md:hidden truncate max-w-[200px]">
+                          {o.email}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                        {o.email}
+                      </TableCell>
+                      <TableCell>
+                        <PlanBadge plan={o.plan} />
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={statusBadgeClass(o.subscriptionStatus)}
+                        >
+                          {STATUS_LABELS_NAROCNINA[o.subscriptionStatus]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-sm">
+                        {o.subscriptionEndsAt ? (
+                          <div className="flex flex-col">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="size-3 text-muted-foreground" />
+                              {new Date(o.subscriptionEndsAt).toLocaleDateString(
+                                "sl-SI",
+                                {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                }
+                              )}
+                            </span>
+                            {o.daysUntilRenewal !== null && (
+                              <span className="text-xs text-muted-foreground mt-0.5">
+                                čez {o.daysUntilRenewal}{" "}
+                                {o.daysUntilRenewal === 1
+                                  ? "dan"
+                                  : o.daysUntilRenewal < 5
+                                  ? "dneva"
+                                  : "dni"}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums">
+                        {o.monthlyRevenue > 0
+                          ? formatEur(o.monthlyRevenue)
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleOpenEdit(o)}
+                          aria-label={`Uredi naročnino za ${o.businessName || o.name}`}
+                        >
+                          <Pencil className="size-4" />
+                          <span className="sr-only">Uredi</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Footer: skupni prihodek */}
+      {!loading && kpi && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 p-4">
+          <div className="flex items-center gap-2">
+            <DollarSign className="size-5 text-primary" />
+            <div>
+              <p className="text-sm font-semibold">Skupni letni prihodek (ARR)</p>
+              <p className="text-xs text-muted-foreground">
+                MRR × 12 = {formatEur(kpi.totalMrr)} × 12
+              </p>
+            </div>
+          </div>
+          <div className="text-2xl font-bold tabular-nums text-primary">
+            {formatEur(kpi.arr)}
+          </div>
+        </div>
+      )}
+
+      <div className="text-xs text-muted-foreground text-right">
+        {filtered.length} od {owners.length} lastnikov
+      </div>
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Uredi naročnino</DialogTitle>
+            <DialogDescription>
+              Admin override za &laquo;{editing?.businessName || editing?.name}&raquo;.
+              Spremembe se takoj sinhronizirajo z listings-i.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editing && (
+            <div className="space-y-4 py-2">
+              <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
+                <div>
+                  <span className="text-muted-foreground">Email:</span>{" "}
+                  <span className="font-medium">{editing.email}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Stripe Customer:</span>{" "}
+                  <span className="font-mono">
+                    {editing.stripeCustomerId ?? "—"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-plan">Paket</Label>
+                <Select
+                  value={editPlan}
+                  onValueChange={(v) => setEditPlan(v as SubscriptionPlan)}
+                >
+                  <SelectTrigger id="edit-plan" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">Free (€0)</SelectItem>
+                    <SelectItem value="premium">Premium (€149/mes)</SelectItem>
+                    <SelectItem value="enterprise">
+                      Enterprise (€499/mes)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-status">Status naročnine</Label>
+                <Select
+                  value={editStatus}
+                  onValueChange={(v) =>
+                    setEditStatus(v as SubscriptionStatus)
+                  }
+                >
+                  <SelectTrigger id="edit-status" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Brez naročnine</SelectItem>
+                    <SelectItem value="active">Aktivna</SelectItem>
+                    <SelectItem value="past_due">Zapadlo plačilo</SelectItem>
+                    <SelectItem value="canceled">Preklicana</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-endsat">
+                  Datum obnovitve (prazno = brez)
+                </Label>
+                <Input
+                  id="edit-endsat"
+                  type="date"
+                  value={editEndsAt}
+                  onChange={(e) => setEditEndsAt(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditOpen(false)}
+              disabled={saving}
+            >
+              Prekliči
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={saving}
+              className="gap-1.5"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Shranjujem...
+                </>
+              ) : (
+                <>
+                  <Check className="size-4" />
+                  Shrani
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function SubsKpiCard({
+  icon,
+  label,
+  value,
+  sub,
+  color,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub?: string;
+  color: "primary" | "amber" | "emerald";
+}) {
+  const colorClasses: Record<typeof color, string> = {
+    primary: "bg-primary/10 text-primary",
+    amber: "bg-amber-100 text-amber-900",
+    emerald: "bg-emerald-100 text-emerald-900",
+  };
+  return (
+    <Card>
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">
+              {label}
+            </p>
+            <p className="text-2xl sm:text-3xl font-bold tabular-nums mt-1">
+              {value}
+            </p>
+            {sub && (
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                {sub}
+              </p>
+            )}
+          </div>
+          <div
+            className={`flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-md ${colorClasses[color]}`}
+          >
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// === TAB 4: STATISTIKA ===
 function StatsTab({ adminPassword }: { adminPassword: string }) {
   const [listings, setListings] = React.useState<AdminListing[]>([]);
   const [leads, setLeads] = React.useState<Lead[]>([]);
