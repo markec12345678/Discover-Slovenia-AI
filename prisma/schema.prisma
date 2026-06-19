@@ -28,8 +28,24 @@ model Post {
   updatedAt DateTime @updatedAt
 }
 
+// Lastnik lokala (B2B stranka) — za samostojen pristop lastnika
+model Owner {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  passwordHash  String
+  phone         String?
+  businessName  String
+  plan          String    @default("free") // free | premium | enterprise
+  subscriptionStatus String @default("none") // none | active | canceled | past_due
+  stripeCustomerId String?
+  subscriptionEndsAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  listings      Listing[]
+}
+
 // Lokali (hotelir, restavracije, aktivnosti) — B2B listings za monetizacijo
-// B2B podatki (podjetja sama želijo biti prikazana in plačajo za to)
 model Listing {
   id              String   @id @default(cuid())
   name            String
@@ -57,9 +73,12 @@ model Listing {
   clickCount      Int      @default(0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  ownerId         String?
+  owner           Owner?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
 
   @@index([destinationId])
   @@index([category])
   @@index([plan])
   @@index([featured])
+  @@index([ownerId])
 }

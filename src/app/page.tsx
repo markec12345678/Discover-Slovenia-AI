@@ -10,6 +10,7 @@ import { EventsCalendar } from "@/components/sections/events-calendar";
 import { BlogSection } from "@/components/sections/blog";
 import { AffiliateSection } from "@/components/sections/affiliate-section";
 import { JoinUs } from "@/components/sections/join-us";
+import { PitchDeckSection } from "@/components/sections/pitch-deck";
 import { Footer } from "@/components/sections/footer";
 
 export default function Home() {
@@ -28,6 +29,7 @@ export default function Home() {
         <BlogSection />
         <AffiliateSection />
         <JoinUs />
+        <PitchDeckSection />
       </main>
       <Footer />
     </div>
