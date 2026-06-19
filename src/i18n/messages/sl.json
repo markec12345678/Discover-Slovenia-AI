@@ -1,0 +1,33 @@
+{
+  "nav": {
+    "destinations": "Destinacije",
+    "planner": "AI načrtovalec",
+    "map": "Zemljevid",
+    "listings": "Lokali",
+    "events": "Dogodki",
+    "join": "Pridruži se",
+    "cta": "Načrtuj potovanje"
+  },
+  "hero": {
+    "title": "Odkrijte Slovenijo",
+    "subtitle": "Od Blejskega jezera do Pirana. AI vam sestavi popoln itinerer v sekundah — prilagojen vašemu proračunu, letnemu času in razpoloženju.",
+    "ctaPrimary": "Načrtuj potovanje",
+    "ctaSecondary": "Razišči destinacije",
+    "badge": "12 destinacij · AI načrtovalec"
+  },
+  "footer": {
+    "tagline": "Narejeno z ❤️ v Sloveniji",
+    "affiliateDisclaimer": "Affiliate povezave — zaslužimo provizijo pri rezervacijah."
+  },
+  "common": {
+    "loading": "Nalagam...",
+    "error": "Napaka",
+    "close": "Zapri",
+    "save": "Shrani",
+    "cancel": "Prekliči",
+    "search": "Iskanje",
+    "filter": "Filter",
+    "all": "Vsi",
+    "details": "Podrobnosti"
+  }
+}

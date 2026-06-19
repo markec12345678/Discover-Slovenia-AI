@@ -1,0 +1,33 @@
+{
+  "nav": {
+    "destinations": "Reiseziele",
+    "planner": "KI-Planer",
+    "map": "Karte",
+    "listings": "Lokale Anbieter",
+    "events": "Veranstaltungen",
+    "join": "Mitmachen",
+    "cta": "Reise planen"
+  },
+  "hero": {
+    "title": "Entdecken Sie Slowenien",
+    "subtitle": "Vom Bleder See bis Piran. Die KI erstellt Ihre perfekte Reiseroute in Sekunden — angepasst an Ihr Budget, die Jahreszeit und Ihre Stimmung.",
+    "ctaPrimary": "Reise planen",
+    "ctaSecondary": "Reiseziele erkunden",
+    "badge": "12 Reiseziele · KI-Planer"
+  },
+  "footer": {
+    "tagline": "Mit ❤️ in Slowenien gemacht",
+    "affiliateDisclaimer": "Affiliate-Links — wir verdienen Provision bei Buchungen."
+  },
+  "common": {
+    "loading": "Laden...",
+    "error": "Fehler",
+    "close": "Schließen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "search": "Suche",
+    "filter": "Filter",
+    "all": "Alle",
+    "details": "Details"
+  }
+}

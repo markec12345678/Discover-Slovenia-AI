@@ -1,0 +1,72 @@
+{
+  "name": "I Feel Slovenia — AI turistična platforma",
+  "short_name": "I Feel Slovenia",
+  "description": "Odkrijte Slovenijo z AI-poganjanim načrtovalcem potovanj. 22 najlepših destinacij, zemljevid, vreme in direktna rezervacija.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2d6a3e",
+  "orientation": "portrait-primary",
+  "lang": "sl-SI",
+  "dir": "ltr",
+  "categories": ["travel", "tourism", "lifestyle", "navigation"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "AI načrtovalec",
+      "short_name": "Načrtuj",
+      "description": "Sestavi popotni itinerer z AI",
+      "url": "/?section=načrtuj",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Zemljevid",
+      "short_name": "Zemljevid",
+      "description": "Interaktivni zemljevid Slovenije",
+      "url": "/?section=zemljevid",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Tržnica",
+      "short_name": "Tržnica",
+      "description": "Lokalni slovenski izdelki",
+      "url": "/?section=trznica",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Destinacije",
+      "short_name": "Destinacije",
+      "description": "22 najlepših destinacij",
+      "url": "/?section=destinacije",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

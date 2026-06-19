@@ -1,0 +1,33 @@
+{
+  "nav": {
+    "destinations": "Destinazioni",
+    "planner": "Pianificatore AI",
+    "map": "Mappa",
+    "listings": "Attività locali",
+    "events": "Eventi",
+    "join": "Unisciti",
+    "cta": "Pianifica il viaggio"
+  },
+  "hero": {
+    "title": "Scopri la Slovenia",
+    "subtitle": "Dal lago di Bled a Pirano. L'AI crea il tuo itinerario perfetto in secondi — su misura per il tuo budget, la stagione e l'umore.",
+    "ctaPrimary": "Pianifica il viaggio",
+    "ctaSecondary": "Esplora destinazioni",
+    "badge": "12 destinazioni · Pianificatore AI"
+  },
+  "footer": {
+    "tagline": "Fatto con ❤️ in Slovenia",
+    "affiliateDisclaimer": "Link di affiliazione — guadagniamo commissioni sulle prenotazioni."
+  },
+  "common": {
+    "loading": "Caricamento...",
+    "error": "Errore",
+    "close": "Chiudi",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "search": "Cerca",
+    "filter": "Filtro",
+    "all": "Tutti",
+    "details": "Dettagli"
+  }
+}

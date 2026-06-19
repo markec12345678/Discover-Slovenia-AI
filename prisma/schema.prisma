@@ -40,6 +40,8 @@ model Owner {
   subscriptionStatus String @default("none") // none | active | canceled | past_due
   stripeCustomerId String?
   subscriptionEndsAt DateTime?
+  // Ali je bil poslan opomnik za obnovitev (cron ga resetira ob podaljšanju)
+  renewalReminderSent Boolean @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   listings      Listing[]

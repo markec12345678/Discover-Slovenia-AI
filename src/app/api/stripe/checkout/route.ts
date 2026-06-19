@@ -3,7 +3,9 @@ import { getServerSession } from "next-auth";
 import Stripe from "stripe";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { isStripeDemo } from "@/lib/stripe-server";
+import { isStripeDemo, PLAN_MONTHLY_PRICE } from "@/lib/stripe-server";
+import { sendEmail } from "@/lib/email";
+import { paymentConfirmationEmail } from "@/lib/email-templates";
 
 // POST /api/stripe/checkout — začne Stripe Checkout session (SUBSCRIPTION mode)
 // Demo mode: direktno nadgradi Owner-ja (brez Stripe klica)
@@ -74,6 +76,8 @@ export async function POST(request: Request) {
           plan,
           subscriptionStatus: "active",
           subscriptionEndsAt: subEnd,
+          // Reset renewal reminder flag ker je naročnina sveže aktivirana
+          renewalReminderSent: false,
         },
       });
 
@@ -82,6 +86,20 @@ export async function POST(request: Request) {
         where: { ownerId: owner.id },
         data: { plan },
       });
+
+      // Pošlji payment confirmation email (demo mode = takoj, ker je "plačilo" uspelo)
+      try {
+        const amount = PLAN_MONTHLY_PRICE[plan] ?? 0;
+        const { subject, html, text } = paymentConfirmationEmail(
+          owner.name,
+          plan,
+          amount,
+          subEnd
+        );
+        await sendEmail({ to: owner.email, subject, html, text });
+      } catch (emailErr) {
+        console.error("[checkout] payment email napaka:", emailErr);
+      }
 
       return NextResponse.json({
         success: true,

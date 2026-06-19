@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 import { Mountain, Menu, Sun, Moon, Compass } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -14,25 +15,32 @@ import {
   SheetTitle,
   SheetClose,
 } from "@/components/ui/sheet";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 
 /**
  * Navigacijske povezave — deljene med desktop in mobilno Sheet varianto.
  * Anchor linki kažejo na sekcije znotraj enostranske aplikacije.
+ * Label-e so lokalizirane preko next-intl `useTranslations("nav")`.
  */
-const NAV_LINKS: { href: string; label: string }[] = [
-  { href: "#destinacije", label: "Destinacije" },
-  { href: "#načrtuj", label: "AI načrtovalec" },
-  { href: "#zemljevid", label: "Zemljevid" },
-  { href: "#lokali", label: "Lokali" },
-  { href: "#dogodki", label: "Dogodki" },
-  { href: "#pridruzi-se", label: "Pridruži se" },
-];
+function useNavLinks() {
+  const t = useTranslations("nav");
+  return [
+    { href: "#destinacije", label: t("destinations") },
+    { href: "#načrtuj", label: t("planner") },
+    { href: "#zemljevid", label: t("map") },
+    { href: "#lokali", label: t("listings") },
+    { href: "#dogodki", label: t("events") },
+    { href: "#pridruzi-se", label: t("join") },
+  ];
+}
 
 export function Navigation() {
   const [mounted, setMounted] = React.useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const t = useTranslations("nav");
+  const navLinks = useNavLinks();
 
   // Cart store — itemCount() prikazujemo šele po mountu, da se izognemo
   // hydration mismatchu (Zustand persist prebere localStorage šele na klientu).
@@ -72,7 +80,7 @@ export function Navigation() {
           className="hidden items-center gap-1 lg:flex"
           aria-label="Glavna navigacija"
         >
-          {NAV_LINKS.map((link) => (
+          {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -83,8 +91,8 @@ export function Navigation() {
           ))}
         </nav>
 
-        {/* Desno: theme toggle + CTA + mobile menu */}
-        <div className="flex items-center gap-2">
+        {/* Desno: theme toggle + language switcher + CTA + mobile menu */}
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
@@ -104,12 +112,14 @@ export function Navigation() {
             )}
           </Button>
 
+          <LanguageSwitcher />
+
           <Button
             asChild
             size="sm"
             className="hidden bg-primary text-primary-foreground hover:bg-primary/90 sm:inline-flex"
           >
-            <Link href="#načrtuj">Načrtuj potovanje</Link>
+            <Link href="#načrtuj">{t("cta")}</Link>
           </Button>
 
           {/* Mobilni hamburger meni */}
@@ -138,7 +148,7 @@ export function Navigation() {
                 className="mt-2 flex flex-col gap-1 px-2"
                 aria-label="Mobilna navigacija"
               >
-                {NAV_LINKS.map((link) => (
+                {navLinks.map((link) => (
                   <SheetClose asChild key={link.href}>
                     <Link
                       href={link.href}
@@ -150,6 +160,10 @@ export function Navigation() {
                 ))}
               </nav>
 
+              <div className="mt-4 px-2">
+                <LanguageSwitcher />
+              </div>
+
               <div className="mt-auto px-4 pb-6">
                 <SheetClose asChild>
                   <Button
@@ -157,7 +171,7 @@ export function Navigation() {
                     className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                     size="lg"
                   >
-                    <Link href="#načrtuj">Načrtuj potovanje</Link>
+                    <Link href="#načrtuj">{t("cta")}</Link>
                   </Button>
                 </SheetClose>
                 <p className="mt-3 text-center text-xs text-muted-foreground">

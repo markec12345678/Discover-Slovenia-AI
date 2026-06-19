@@ -1,0 +1,33 @@
+{
+  "nav": {
+    "destinations": "Destinations",
+    "planner": "AI Planner",
+    "map": "Map",
+    "listings": "Local businesses",
+    "events": "Events",
+    "join": "Join us",
+    "cta": "Plan your trip"
+  },
+  "hero": {
+    "title": "Discover Slovenia",
+    "subtitle": "From Lake Bled to Piran. AI crafts your perfect itinerary in seconds — tailored to your budget, season and mood.",
+    "ctaPrimary": "Plan your trip",
+    "ctaSecondary": "Explore destinations",
+    "badge": "12 destinations · AI planner"
+  },
+  "footer": {
+    "tagline": "Made with ❤️ in Slovenia",
+    "affiliateDisclaimer": "Affiliate links — we earn commission on bookings."
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel",
+    "search": "Search",
+    "filter": "Filter",
+    "all": "All",
+    "details": "Details"
+  }
+}

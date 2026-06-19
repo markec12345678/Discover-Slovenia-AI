@@ -1,12 +1,19 @@
 import Link from "next/link";
-import { Mountain, Facebook, Instagram, Twitter, Heart } from "lucide-react";
+import { Mountain, Facebook, Instagram, Twitter } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 /**
  * Footer — server component.
  * 4-kolončni layout (1/2/4 responsive), levo brand + social, nato destinacije,
  * podpora in pravno. Spodaj copyright + affiliate disclaimer.
+ *
+ * Tagline in affiliate disclaimer sta lokalizirana preko next-intl
+ * `getTranslations("footer")`. Ostali teksti ostajajo v slovenščini
+ * (bodo postopoma prevedeni).
  */
-export function Footer() {
+export async function Footer() {
+  const t = await getTranslations("footer");
+
   return (
     <footer
       className="mt-auto w-full border-t border-border bg-muted/30"
@@ -90,16 +97,10 @@ export function Footer() {
         {/* Spodnja vrstica: copyright + disclaimer */}
         <div className="mt-10 flex flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <span>© 2025 I Feel Slovenia. Narejeno z</span>
-            <Heart
-              className="size-3.5 fill-accent-foreground/70 text-accent-foreground/70"
-              aria-hidden="true"
-            />
-            <span>v Sloveniji.</span>
+            <span>© 2025 I Feel Slovenia. {t("tagline")}</span>
           </p>
           <p className="max-w-md text-xs text-muted-foreground/80 sm:text-right">
-            Affiliate povezave — zaslužimo provizijo pri rezervacijah, za vas
-            brez dodatnih stroškov.
+            {t("affiliateDisclaimer")}
           </p>
         </div>
       </div>

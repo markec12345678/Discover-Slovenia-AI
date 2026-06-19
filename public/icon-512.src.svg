@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2d6a3e"/>
+      <stop offset="100%" stop-color="#1f4f2c"/>
+    </linearGradient>
+    <linearGradient id="mtn" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e8f0ea"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- stiliziran Triglav -->
+  <polygon points="256,92.16 399.36,296.96 112.64,296.96" fill="url(#mtn)" opacity="0.95"/>
+  <polygon points="256,92.16 317.44,184.32 194.56,184.32" fill="#ffffff" opacity="0.6"/>
+  <!-- valovi / Ljubljanica -->
+  <path d="M0 358.4 Q 128 317.44, 256 358.4 T 512 358.4 L 512 512 L 0 512 Z" fill="#1f4f2c" opacity="0.55"/>
+  <text x="50%" y="430.08" font-family="Georgia, serif" font-size="113" font-weight="bold" fill="#ffffff" text-anchor="middle">IFS</text>
+  <text x="50%" y="476.16" font-family="Arial, sans-serif" font-size="41" fill="#cfe5d3" text-anchor="middle" letter-spacing="2">SLOVENIJA</text>
+</svg>

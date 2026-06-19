@@ -37,6 +37,9 @@ import {
   DollarSign,
   ExternalLink,
   Ban,
+  Mail,
+  Activity,
+  Target,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -1347,6 +1350,61 @@ function SubscriptionCard({
 
 /* ====================== STATISTICS TAB ====================== */
 
+interface AnalyticsData {
+  kpi: {
+    totalViews: number;
+    totalClicks: number;
+    totalLeads: number;
+    conversionRate: number;
+    listingsCount: number;
+    productsCount: number;
+    experiencesCount: number;
+  };
+  topListings: Array<{
+    id: string;
+    name: string;
+    category: string;
+    destinationName: string | null;
+    viewCount: number;
+    clickCount: number;
+    type: "listing";
+  }>;
+  topProducts: Array<{
+    id: string;
+    name: string;
+    category: string;
+    destinationName: string | null;
+    viewCount: number;
+    saleCount: number;
+    type: "product";
+  }>;
+  topExperiences: Array<{
+    id: string;
+    name: string;
+    category: string;
+    destinationName: string | null;
+    viewCount: number;
+    bookingCount: number;
+    type: "experience";
+  }>;
+  trend: {
+    days: number;
+    dailyViews: number;
+    dailyClicks: number;
+    dailyLeads: number;
+    series: Array<{ day: number; views: number; clicks: number }>;
+  };
+  roi: {
+    plan: string;
+    monthlyPrice: number;
+    leadsDelivered: number;
+    estimatedValue: number;
+    isPositive: boolean;
+    label: string;
+    message: string;
+  };
+}
+
 function StatisticsTab({
   listings,
   loading,
@@ -1354,7 +1412,32 @@ function StatisticsTab({
   listings: Listing[];
   loading: boolean;
 }) {
-  if (loading) {
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+
+  // Fetch analytics iz API-ja
+  useEffect(() => {
+    let active = true;
+    fetch("/api/owner/analytics", { cache: "no-store" })
+      .then((r) => {
+        if (!r.ok) throw new Error("napaka");
+        return r.json();
+      })
+      .then((d: AnalyticsData) => {
+        if (active) setAnalytics(d);
+      })
+      .catch(() => {
+        // Tiha napaka — fallback na lokalne podatke
+      })
+      .finally(() => {
+        if (active) setLoadingAnalytics(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [listings.length]);
+
+  if (loading || loadingAnalytics) {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2
@@ -1365,7 +1448,7 @@ function StatisticsTab({
     );
   }
 
-  if (listings.length === 0) {
+  if (listings.length === 0 && (!analytics || analytics.kpi.totalViews === 0)) {
     return (
       <Card className="border-dashed">
         <CardContent className="py-12 text-center">
@@ -1382,141 +1465,360 @@ function StatisticsTab({
     );
   }
 
-  const totalViews = listings.reduce((sum, l) => sum + l.viewCount, 0);
-  const totalClicks = listings.reduce((sum, l) => sum + l.clickCount, 0);
-  const conversion =
-    totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) : "0.0";
+  if (!analytics) {
+    // Fallback na osnovno statistiko iz listings
+    const totalViews = listings.reduce((sum, l) => sum + l.viewCount, 0);
+    const totalClicks = listings.reduce((sum, l) => sum + l.clickCount, 0);
+    const conversion =
+      totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) : "0.0";
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <KpiCard icon={Eye} label="Skupni ogledi" value={totalViews.toLocaleString("sl-SI")} color="primary" />
+          <KpiCard icon={MousePointerClick} label="Skupni kliki" value={totalClicks.toLocaleString("sl-SI")} color="primary" />
+          <KpiCard icon={TrendingUp} label="Konverzija" value={`${conversion}%`} color="amber" />
+          <KpiCard icon={Building} label="Število lokalov" value={String(listings.length)} color="primary" />
+        </div>
+        <Alert>
+          <AlertCircle className="size-4" aria-hidden="true" />
+          <AlertTitle>Podrobna analitika trenutno ni na voljo</AlertTitle>
+          <AlertDescription>
+            Prikazujemo osnovne števce. Poskusite kasneje za polno analitiko z
+            ROI izračunom in trendi.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
-  // Top lokal po views
-  const topByViews = [...listings].sort(
-    (a, b) => b.viewCount - a.viewCount
-  )[0];
-
-  // Top 5 lokalov po klikih
-  const topByClicks = [...listings]
-    .sort((a, b) => b.clickCount - a.clickCount)
-    .slice(0, 5);
-
-  const maxClicks = Math.max(...topByClicks.map((l) => l.clickCount), 1);
+  const { kpi, topListings, topProducts, topExperiences, trend, roi } = analytics;
+  const maxSeriesViews = Math.max(...trend.series.map((s) => s.views), 1);
 
   return (
     <div className="space-y-6">
+      {/* ROI banner (top) */}
+      <div
+        className={cn(
+          "rounded-xl border p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3",
+          roi.isPositive
+            ? "border-emerald-300/60 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800/40"
+            : "border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/40"
+        )}
+      >
+        <div
+          className={cn(
+            "flex size-11 shrink-0 items-center justify-center rounded-lg",
+            roi.isPositive
+              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+              : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+          )}
+        >
+          <Target className="size-6" aria-hidden="true" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-bold text-base sm:text-lg">{roi.label}</h3>
+            <Badge
+              className={cn(
+                "border-0",
+                roi.isPositive
+                  ? "bg-emerald-500 text-white"
+                  : "bg-amber-500 text-white"
+              )}
+            >
+              {roi.plan === "free" ? "Free paket" : `${roi.monthlyPrice} €/mes`}
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">{roi.message}</p>
+        </div>
+      </div>
+
       {/* KPI kartice */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <KpiCard
           icon={Eye}
           label="Skupni ogledi"
-          value={totalViews.toLocaleString("sl-SI")}
+          value={kpi.totalViews.toLocaleString("sl-SI")}
           color="primary"
         />
         <KpiCard
           icon={MousePointerClick}
-          label="Skupni kliki"
-          value={totalClicks.toLocaleString("sl-SI")}
+          label="Kliki"
+          value={kpi.totalClicks.toLocaleString("sl-SI")}
           color="primary"
+        />
+        <KpiCard
+          icon={Mail}
+          label="Lead-i"
+          value={kpi.totalLeads.toLocaleString("sl-SI")}
+          color="amber"
         />
         <KpiCard
           icon={TrendingUp}
           label="Konverzija"
-          value={`${conversion}%`}
-          color="amber"
-        />
-        <KpiCard
-          icon={Building}
-          label="Število lokalov"
-          value={String(listings.length)}
+          value={`${kpi.conversionRate.toLocaleString("sl-SI", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`}
           color="primary"
         />
       </div>
 
-      {/* Top lokal */}
-      {topByViews && (
+      {/* Vrednost naročnine / ROI sekcija */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Crown className="size-4 text-amber-500" aria-hidden="true" />
+            Vrednost naročnine
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Plačilo */}
+            <div className="rounded-lg border border-border/60 bg-muted/40 p-4">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                <DollarSign className="size-3.5" aria-hidden="true" />
+                Plačujete
+              </div>
+              <div className="mt-1 text-2xl font-bold tabular-nums">
+                {roi.monthlyPrice.toLocaleString("sl-SI")} €
+              </div>
+              <div className="text-xs text-muted-foreground">/ mesec</div>
+            </div>
+
+            {/* Vrednost dobavljena */}
+            <div className="rounded-lg border border-border/60 bg-muted/40 p-4">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                <Gift className="size-3.5" aria-hidden="true" />
+                Dobili ste
+              </div>
+              <div
+                className={cn(
+                  "mt-1 text-2xl font-bold tabular-nums",
+                  roi.estimatedValue >= roi.monthlyPrice && roi.monthlyPrice > 0
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : ""
+                )}
+              >
+                {roi.estimatedValue.toLocaleString("sl-SI")} €
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {roi.leadsDelivered} lead-ov × 50 €
+              </div>
+            </div>
+
+            {/* Razlika */}
+            <div
+              className={cn(
+                "rounded-lg border p-4",
+                roi.isPositive
+                  ? "border-emerald-300/60 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800/40"
+                  : "border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/40"
+              )}
+            >
+              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                <Activity className="size-3.5" aria-hidden="true" />
+                Bilanca
+              </div>
+              <div
+                className={cn(
+                  "mt-1 text-2xl font-bold tabular-nums",
+                  roi.isPositive
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-amber-700 dark:text-amber-400"
+                )}
+              >
+                {roi.monthlyPrice === 0
+                  ? `+${roi.estimatedValue.toLocaleString("sl-SI")} €`
+                  : `${(roi.estimatedValue - roi.monthlyPrice >= 0 ? "+" : "")}${(roi.estimatedValue - roi.monthlyPrice).toLocaleString("sl-SI")} €`}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {roi.isPositive ? "Čisti dobiček" : "Še ne pokrito"}
+              </div>
+            </div>
+          </div>
+
+          {/* Progress bar primerjave */}
+          <div className="mt-4 space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Odmera vrednosti vs. cena paketa</span>
+              <span className="tabular-nums">
+                {roi.monthlyPrice > 0
+                  ? `${Math.min(100, Math.round((roi.estimatedValue / roi.monthlyPrice) * 100))}%`
+                  : "∞"}
+              </span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all",
+                  roi.isPositive ? "bg-emerald-500" : "bg-amber-500"
+                )}
+                style={{
+                  width: roi.monthlyPrice > 0
+                    ? `${Math.min(100, (roi.estimatedValue / roi.monthlyPrice) * 100)}%`
+                    : "100%",
+                }}
+                role="progressbar"
+                aria-valuenow={Math.min(100, roi.estimatedValue)}
+                aria-valuemin={0}
+                aria-valuemax={Math.max(roi.monthlyPrice, 1)}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Top 5 oglasov po ogledih (listings) */}
+      {topListings.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Star
-                className="size-4 fill-amber-400 text-amber-400"
-                aria-hidden="true"
-              />
-              Top lokal po ogledih
+              <Star className="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
+              Top {topListings.length} lokalov po ogledih
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
-                  <span aria-hidden="true">
-                    {CATEGORY_ICONS[topByViews.category]}
-                  </span>
+          <CardContent className="space-y-3">
+            {topListings.map((l, idx) => {
+              const maxV = Math.max(...topListings.map((x) => x.viewCount), 1);
+              const widthPct = (l.viewCount / maxV) * 100;
+              return (
+                <div key={l.id} className="space-y-1">
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                        #{idx + 1}
+                      </span>
+                      <span className="truncate">{l.name}</span>
+                      {l.destinationName && (
+                        <span className="hidden sm:inline text-xs text-muted-foreground shrink-0">
+                          · {l.destinationName}
+                        </span>
+                      )}
+                    </span>
+                    <span className="font-semibold tabular-nums shrink-0">
+                      {l.viewCount.toLocaleString("sl-SI")}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${widthPct}%` }}
+                      role="progressbar"
+                      aria-valuenow={l.viewCount}
+                      aria-valuemin={0}
+                      aria-valuemax={maxV}
+                    />
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="font-semibold truncate">{topByViews.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {CATEGORY_LABELS[topByViews.category]}
-                    {topByViews.destinationName
-                      ? ` · ${topByViews.destinationName}`
-                      : ""}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <div className="text-lg font-bold tabular-nums">
-                  {topByViews.viewCount.toLocaleString("sl-SI")}
-                </div>
-                <div className="text-xs text-muted-foreground">ogledov</div>
-              </div>
-            </div>
+              );
+            })}
           </CardContent>
         </Card>
       )}
 
-      {/* Top 5 po klikih — simple bar chart */}
+      {/* Top izdelki + izkušnje (2 koloni na desktopu) */}
+      {(topProducts.length > 0 || topExperiences.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {topProducts.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Package className="size-4 text-primary" aria-hidden="true" />
+                  Top izdelki
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {topProducts.slice(0, 5).map((p, idx) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between gap-2 text-sm py-1.5 border-b border-border/40 last:border-0"
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                        #{idx + 1}
+                      </span>
+                      <span className="truncate">{p.name}</span>
+                    </span>
+                    <span className="font-semibold tabular-nums shrink-0 text-xs">
+                      {p.viewCount.toLocaleString("sl-SI")} ogledov
+                    </span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+          {topExperiences.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Ticket className="size-4 text-primary" aria-hidden="true" />
+                  Top izkušnje
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {topExperiences.slice(0, 5).map((e, idx) => (
+                  <div
+                    key={e.id}
+                    className="flex items-center justify-between gap-2 text-sm py-1.5 border-b border-border/40 last:border-0"
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                        #{idx + 1}
+                      </span>
+                      <span className="truncate">{e.name}</span>
+                    </span>
+                    <span className="font-semibold tabular-nums shrink-0 text-xs">
+                      {e.viewCount.toLocaleString("sl-SI")} ogledov
+                    </span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Trend zadnjih 30 dni — simple bar chart */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <MousePointerClick className="size-4 text-primary" aria-hidden="true" />
-            Kliki po lokalah (top {topByClicks.length})
+            <Activity className="size-4 text-primary" aria-hidden="true" />
+            Trend zadnjih {trend.days} dni
+            <Badge variant="secondary" className="ml-1 text-[10px]">demo</Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {topByClicks.map((l, idx) => {
-            const widthPct = maxClicks > 0 ? (l.clickCount / maxClicks) * 100 : 0;
-            return (
-              <div key={l.id} className="space-y-1">
-                <div className="flex items-center justify-between gap-2 text-sm">
-                  <span className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-                      #{idx + 1}
-                    </span>
-                    <span className="truncate">{l.name}</span>
-                  </span>
-                  <span className="font-semibold tabular-nums shrink-0">
-                    {l.clickCount.toLocaleString("sl-SI")}
-                  </span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${widthPct}%` }}
-                    role="progressbar"
-                    aria-valuenow={l.clickCount}
-                    aria-valuemin={0}
-                    aria-valuemax={maxClicks}
-                  />
-                </div>
-              </div>
-            );
-          })}
+        <CardContent>
+          <div className="flex items-end gap-0.5 h-32 sm:h-40 w-full" aria-label="Trend ogledov po dnevih">
+            {trend.series.map((s) => {
+              const h = maxSeriesViews > 0 ? (s.views / maxSeriesViews) * 100 : 0;
+              return (
+                <div
+                  key={s.day}
+                  className="flex-1 rounded-t-sm bg-primary/70 hover:bg-primary transition-all"
+                  style={{ height: `${Math.max(2, h)}%` }}
+                  title={`Dan ${s.day}: ${s.views} ogledov, ${s.clicks} klikov`}
+                />
+              );
+            })}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+            <span>
+              Povprečno {trend.dailyViews.toLocaleString("sl-SI", { maximumFractionDigits: 1 })} ogledov / dan
+            </span>
+            <span>
+              {trend.dailyClicks.toLocaleString("sl-SI", { maximumFractionDigits: 1 })} klikov / dan ·{" "}
+              {trend.dailyLeads.toLocaleString("sl-SI", { maximumFractionDigits: 2 })} lead-ov / dan
+            </span>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Opomba o zgodovinski statistiki */}
+      {/* Opomba o trendu */}
       <Alert>
         <AlertCircle className="size-4" aria-hidden="true" />
-        <AlertTitle>Podrobna časovna statistika</AlertTitle>
+        <AlertTitle>Poenostavljen prikaz trenda</AlertTitle>
         <AlertDescription>
-          Prikazujemo skupne števce. Podrobna časovna statistika (po dnevih
-          zadnjih 30 dni) bo na voljo s paketoma Premium in Enterprise.
+          Dnevni prikaz je trenutno povprečje skupnih števcev (demo). Podrobna
+          časovna statistika z dnevno granulacijo bo na voljo s paketoma
+          Premium in Enterprise.
         </AlertDescription>
       </Alert>
     </div>
@@ -1532,7 +1834,7 @@ function KpiCard({
   icon: typeof Eye;
   label: string;
   value: string;
-  color: "primary" | "amber";
+  color: "primary" | "amber" | "emerald";
 }) {
   return (
     <Card className="py-0">
@@ -1543,6 +1845,8 @@ function KpiCard({
               "flex size-7 items-center justify-center rounded-md",
               color === "amber"
                 ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+                : color === "emerald"
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
                 : "bg-primary/10 text-primary"
             )}
           >

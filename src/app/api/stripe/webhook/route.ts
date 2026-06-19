@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { db } from "@/lib/db";
-import { isStripeDemo } from "@/lib/stripe-server";
+import { isStripeDemo, PLAN_MONTHLY_PRICE } from "@/lib/stripe-server";
+import { sendEmail, getAdminEmail } from "@/lib/email";
+import {
+  paymentConfirmationEmail,
+  adminAlertEmail,
+} from "@/lib/email-templates";
 
 // POST /api/stripe/webhook — Stripe webhook za subscription dogodke
 // Demo mode: samo logiraj
@@ -82,6 +87,8 @@ export async function POST(request: Request) {
               subscriptionStatus: "active",
               subscriptionEndsAt,
               stripeCustomerId: customerId ?? undefined,
+              // Reset renewal reminder flag ker je naročnina aktivirana
+              renewalReminderSent: false,
             },
           });
 
@@ -90,6 +97,31 @@ export async function POST(request: Request) {
             where: { ownerId },
             data: { plan },
           });
+
+          // Pošlji payment confirmation email (production)
+          try {
+            const ownerRec = await db.owner.findUnique({
+              where: { id: ownerId },
+              select: { name: true, email: true },
+            });
+            if (ownerRec && subscriptionEndsAt) {
+              const amount = PLAN_MONTHLY_PRICE[plan] ?? 0;
+              const { subject, html, text } = paymentConfirmationEmail(
+                ownerRec.name,
+                plan,
+                amount,
+                subscriptionEndsAt
+              );
+              await sendEmail({
+                to: ownerRec.email,
+                subject,
+                html,
+                text,
+              });
+            }
+          } catch (emailErr) {
+            console.error("[stripe/webhook] payment email napaka:", emailErr);
+          }
 
           console.log(
             `[stripe/webhook] checkout.session.completed → owner ${ownerId} nadgrajen na ${plan}`
@@ -122,6 +154,11 @@ export async function POST(request: Request) {
 
         if (status === "canceled") {
           updateData.plan = "free";
+        }
+
+        // Reset renewalReminderSent če se je renewal datum podaljšal (nova obnovitev)
+        if (subEnd && subEnd.getTime() > Date.now() + 7 * 24 * 60 * 60 * 1000) {
+          updateData.renewalReminderSent = false;
         }
 
         await db.owner.update({
@@ -163,6 +200,30 @@ export async function POST(request: Request) {
           data: { plan: "free" },
         });
 
+        // Admin alert o preklicu
+        try {
+          const ownerRec = await db.owner.findUnique({
+            where: { id: ownerId },
+            select: { email: true, businessName: true },
+          });
+          if (ownerRec) {
+            const alert = adminAlertEmail("cancellation", {
+              ownerId,
+              email: ownerRec.email,
+              businessName: ownerRec.businessName,
+              timestamp: new Date().toISOString(),
+            });
+            await sendEmail({
+              to: getAdminEmail(),
+              subject: alert.subject,
+              html: alert.html,
+              text: alert.text,
+            });
+          }
+        } catch (emailErr) {
+          console.error("[stripe/webhook] cancel alert napaka:", emailErr);
+        }
+
         console.log(
           `[stripe/webhook] customer.subscription.deleted → owner ${ownerId} preklican`
         );
@@ -180,7 +241,7 @@ export async function POST(request: Request) {
 
         const owner = await db.owner.findFirst({
           where: { stripeCustomerId: customerId },
-          select: { id: true },
+          select: { id: true, email: true, businessName: true, plan: true },
         });
 
         if (owner) {
@@ -188,6 +249,27 @@ export async function POST(request: Request) {
             where: { id: owner.id },
             data: { subscriptionStatus: "past_due" },
           });
+
+          // Admin alert o neuspelem plačilu
+          try {
+            const alert = adminAlertEmail("payment_failed", {
+              ownerId: owner.id,
+              email: owner.email,
+              businessName: owner.businessName,
+              plan: owner.plan,
+              invoiceId: invoice.id,
+              timestamp: new Date().toISOString(),
+            });
+            await sendEmail({
+              to: getAdminEmail(),
+              subject: alert.subject,
+              html: alert.html,
+              text: alert.text,
+            });
+          } catch (emailErr) {
+            console.error("[stripe/webhook] payment_failed alert napaka:", emailErr);
+          }
+
           console.log(
             `[stripe/webhook] invoice.payment_failed → owner ${owner.id} status=past_due`
           );

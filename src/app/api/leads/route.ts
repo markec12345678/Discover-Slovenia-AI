@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
+import { sendEmail, getAdminEmail } from "@/lib/email";
+import { leadNotificationEmail } from "@/lib/email-templates";
+import { db } from "@/lib/db";
 
 interface Lead {
   id: string;
@@ -111,6 +114,60 @@ export async function POST(request: Request) {
 
     // Shrani nazaj
     await writeLeads(leads);
+
+    // === EMAIL OBVEŠČANJE ===
+    // 1) Pošlji leadNotificationEmail na admin email (ADMIN_EMAIL)
+    try {
+      const { subject, html, text } = leadNotificationEmail(
+        "Admin", // ownerName (admin vloga)
+        lead.businessName,
+        lead.name,
+        lead.email,
+        lead.phone,
+        lead.plan,
+        lead.message
+      );
+      await sendEmail({
+        to: getAdminEmail(),
+        subject,
+        html,
+        text,
+      });
+    } catch (emailErr) {
+      console.error("[leads] admin email napaka:", emailErr);
+    }
+
+    // 2) Če lead-ov businessName se ujema z obstoječim Owner-jem,
+    //    pošlji leadNotificationEmail tudi lastniku (bolj verjetno povpraševanje po konkretnem lokalu)
+    try {
+      const matchingOwner = await db.owner.findFirst({
+        where: {
+          businessName: {
+            contains: lead.businessName,
+          },
+        },
+        select: { id: true, name: true, email: true, businessName: true, plan: true },
+      });
+      if (matchingOwner) {
+        const { subject, html, text } = leadNotificationEmail(
+          matchingOwner.name,
+          matchingOwner.businessName,
+          lead.name,
+          lead.email,
+          lead.phone,
+          matchingOwner.plan,
+          lead.message
+        );
+        await sendEmail({
+          to: matchingOwner.email,
+          subject,
+          html,
+          text,
+        });
+      }
+    } catch (ownerErr) {
+      console.error("[leads] owner email napaka:", ownerErr);
+    }
 
     return NextResponse.json({
       success: true,
