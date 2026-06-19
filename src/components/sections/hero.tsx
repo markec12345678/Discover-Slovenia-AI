@@ -22,10 +22,10 @@ export async function Hero() {
       className="relative flex min-h-[90vh] w-full items-center justify-center overflow-hidden"
       aria-label="Predstavitev platforme I Feel Slovenia"
     >
-      {/* Background slika — Bled */}
+      {/* Background slika — Bled ob sončnem zahodu (čista, brez watermarka) */}
       <Image
-        src="https://sfile.chatglm.cn/images-ppt/65ea408c89ea.jpg"
-        alt="Blejsko jezero z otokom in gradom v ozadju"
+        src="https://sfile.chatglm.cn/images-ppt/6e61d0d8dc53.jpg"
+        alt="Blejsko jezero z otokom, cerkvijo in gradom ob sončnem zahodu"
         fill
         priority
         sizes="100vw"
