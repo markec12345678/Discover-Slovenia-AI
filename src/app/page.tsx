@@ -5,7 +5,10 @@ import { DestinationsSection } from "@/components/sections/destinations";
 import { ItineraryPlanner } from "@/components/sections/itinerary-planner";
 import { MapSection } from "@/components/sections/map-section";
 import { ExperiencesSection } from "@/components/sections/experiences";
+import { EventsCalendar } from "@/components/sections/events-calendar";
+import { BlogSection } from "@/components/sections/blog";
 import { AffiliateSection } from "@/components/sections/affiliate-section";
+import { JoinUs } from "@/components/sections/join-us";
 import { Footer } from "@/components/sections/footer";
 
 export default function Home() {
@@ -19,7 +22,10 @@ export default function Home() {
         <ItineraryPlanner />
         <MapSection />
         <ExperiencesSection />
+        <EventsCalendar />
+        <BlogSection />
         <AffiliateSection />
+        <JoinUs />
       </main>
       <Footer />
     </div>

@@ -1,7 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Star, Clock, ArrowRight, Compass, ImageIcon } from "lucide-react";
+import {
+  Star,
+  Clock,
+  ArrowRight,
+  Compass,
+  ImageIcon,
+  Filter,
+  X,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,32 +26,80 @@ import {
   REGIONS,
   INTERESTS,
 } from "@/lib/slovenia-data";
-import type { Destination } from "@/lib/types";
+import type { Destination, DestinationType, Budget } from "@/lib/types";
 
 const ALL_VALUE = "all";
+
+// Možnosti za filter tipa destinacije
+const TYPE_OPTIONS: { value: DestinationType; label: string }[] = [
+  { value: "lake", label: "Jezero" },
+  { value: "city", label: "Mesto" },
+  { value: "mountain", label: "Gorovje" },
+  { value: "cave", label: "Jama" },
+  { value: "coast", label: "Obala" },
+  { value: "river", label: "Reka" },
+  { value: "spa", label: "Zdravilišče" },
+  { value: "gorge", label: "Soteska" },
+];
+
+// Možnosti za filter cene
+const BUDGET_OPTIONS: { value: Budget; label: string }[] = [
+  { value: "€", label: "€ — Nizka" },
+  { value: "€€", label: "€€ — Srednja" },
+  { value: "€€€", label: "€€€ — Visoka" },
+];
+
+// Možnosti za filter ocene (minimalna ocena)
+const RATING_OPTIONS: { value: string; label: string }[] = [
+  { value: "4.5", label: "4.5+" },
+  { value: "4.7", label: "4.7+" },
+  { value: "4.9", label: "4.9+" },
+];
 
 function regionLabel(value: string): string {
   return REGIONS.find((r) => r.value === value)?.label ?? value;
 }
 
 /**
- * DestinationsSection — glavna mreža destinacij s filtri in modalom.
+ * DestinationsSection — glavna mreža destinacij s 5 filtri in modalom.
  * "use client" zaradi filtrov (Select) in modala (state).
  * Podatki so uvoženi direktno iz slovenia-data.ts za hitrost (brez API klica).
  */
 export function DestinationsSection() {
   const [region, setRegion] = useState<string>(ALL_VALUE);
   const [interest, setInterest] = useState<string>(ALL_VALUE);
+  const [type, setType] = useState<string>(ALL_VALUE);
+  const [budget, setBudget] = useState<string>(ALL_VALUE);
+  const [rating, setRating] = useState<string>(ALL_VALUE);
   const [selected, setSelected] = useState<Destination | null>(null);
 
   const filtered = useMemo(() => {
+    const minRating = rating === ALL_VALUE ? 0 : Number(rating);
     return DESTINATIONS.filter((d) => {
       const regionOk = region === ALL_VALUE || d.region === region;
       const interestOk =
         interest === ALL_VALUE || d.bestFor.includes(interest);
-      return regionOk && interestOk;
+      const typeOk = type === ALL_VALUE || d.type === type;
+      const budgetOk = budget === ALL_VALUE || d.budget === budget;
+      const ratingOk = d.rating >= minRating;
+      return regionOk && interestOk && typeOk && budgetOk && ratingOk;
     });
-  }, [region, interest]);
+  }, [region, interest, type, budget, rating]);
+
+  const hasActiveFilters =
+    region !== ALL_VALUE ||
+    interest !== ALL_VALUE ||
+    type !== ALL_VALUE ||
+    budget !== ALL_VALUE ||
+    rating !== ALL_VALUE;
+
+  const clearFilters = () => {
+    setRegion(ALL_VALUE);
+    setInterest(ALL_VALUE);
+    setType(ALL_VALUE);
+    setBudget(ALL_VALUE);
+    setRating(ALL_VALUE);
+  };
 
   return (
     <section
@@ -65,32 +121,87 @@ export function DestinationsSection() {
           </p>
         </div>
 
-        {/* Filter vrstica */}
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
-          <FilterSelect
-            value={region}
-            onChange={setRegion}
-            placeholder="Vse regije"
-            ariaLabel="Filtriraj po regiji"
-            options={REGIONS.map((r) => ({ value: r.value, label: r.label }))}
-          />
-          <FilterSelect
-            value={interest}
-            onChange={setInterest}
-            placeholder="Vsi interesi"
-            ariaLabel="Filtriraj po interesu"
-            options={INTERESTS.map((i) => ({
-              value: i.value,
-              label: `${i.icon} ${i.label}`,
-            }))}
-          />
+        {/* Filter plošča */}
+        <div className="mt-8 rounded-xl border border-border/60 bg-muted/20 p-4 sm:p-5">
+          {/* Glava filtra */}
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Filter className="size-4 text-primary" aria-hidden="true" />
+              Filtri
+            </div>
+            {hasActiveFilters ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3.5" aria-hidden="true" />
+                Počisti filtre
+              </Button>
+            ) : null}
+          </div>
+
+          {/* 1. vrstica: regija, interes, tip */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <FilterSelect
+              value={region}
+              onChange={setRegion}
+              placeholder="Vse regije"
+              ariaLabel="Filtriraj po regiji"
+              options={REGIONS.map((r) => ({ value: r.value, label: r.label }))}
+            />
+            <FilterSelect
+              value={interest}
+              onChange={setInterest}
+              placeholder="Vsi interesi"
+              ariaLabel="Filtriraj po interesu"
+              options={INTERESTS.map((i) => ({
+                value: i.value,
+                label: `${i.icon} ${i.label}`,
+              }))}
+            />
+            <FilterSelect
+              value={type}
+              onChange={setType}
+              placeholder="Vsi tipi"
+              ariaLabel="Filtriraj po tipu destinacije"
+              options={TYPE_OPTIONS.map((t) => ({ value: t.value, label: t.label }))}
+            />
+          </div>
+
+          {/* 2. vrstica: cena, ocena */}
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <FilterSelect
+              value={budget}
+              onChange={setBudget}
+              placeholder="Cena (vse)"
+              ariaLabel="Filtriraj po ceni"
+              options={BUDGET_OPTIONS.map((b) => ({ value: b.value, label: b.label }))}
+            />
+            <FilterSelect
+              value={rating}
+              onChange={setRating}
+              placeholder="Ocena (vse)"
+              ariaLabel="Filtriraj po oceni"
+              options={RATING_OPTIONS.map((r) => ({ value: r.value, label: r.label }))}
+            />
+          </div>
         </div>
+
+        {/* Števec rezultatov */}
+        <p className="mt-5 text-sm text-muted-foreground">
+          Prikazujem{" "}
+          <span className="font-semibold text-foreground">{filtered.length}</span>{" "}
+          od {DESTINATIONS.length} destinacij
+        </p>
 
         {/* Grid mreža */}
         {filtered.length === 0 ? (
-          <EmptyState />
+          <EmptyState onClear={clearFilters} canClear={hasActiveFilters} />
         ) : (
-          <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((d) => (
               <DestinationCard
                 key={d.id}
@@ -131,10 +242,7 @@ function FilterSelect({
 }) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger
-        aria-label={ariaLabel}
-        className="w-full sm:w-56"
-      >
+      <SelectTrigger aria-label={ariaLabel} className="w-full">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
@@ -256,17 +364,35 @@ function DestinationCard({
   );
 }
 
-function EmptyState() {
+function EmptyState({
+  onClear,
+  canClear,
+}: {
+  onClear: () => void;
+  canClear: boolean;
+}) {
   return (
-    <div className="mt-10 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 py-16 text-center">
+    <div className="mt-6 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 py-16 text-center">
       <span className="flex size-12 items-center justify-center rounded-full bg-muted">
         <Compass className="size-6 text-muted-foreground" aria-hidden="true" />
       </span>
       <p className="text-base font-medium">Ni destinacij za izbrane filtre.</p>
       <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <ImageIcon className="size-3.5" aria-hidden="true" />
-        Poskusite spremeniti regijo ali interes.
+        Poskusite spremeniti filtre ali jih počistiti.
       </p>
+      {canClear ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onClear}
+          className="mt-2 gap-1.5"
+        >
+          <X className="size-3.5" aria-hidden="true" />
+          Počisti filtre
+        </Button>
+      ) : null}
     </div>
   );
 }
