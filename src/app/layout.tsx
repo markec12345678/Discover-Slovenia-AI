@@ -4,7 +4,6 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProviderWrapper } from "@/components/session-provider";
-import { CartDrawer } from "@/components/cart-drawer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -58,7 +57,6 @@ export default function RootLayout({
         >
           <SessionProviderWrapper>
             {children}
-            <CartDrawer />
             <Toaster />
           </SessionProviderWrapper>
         </ThemeProvider>

@@ -5,7 +5,6 @@ import {
   Star,
   MapPin,
   Clock,
-  ShoppingCart,
   Calendar,
   ShoppingBag,
   Filter,
@@ -19,6 +18,7 @@ import {
   Compass,
   Sparkles,
   Store,
+  ExternalLink,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { useCart } from "@/lib/cart-store";
+
 import {
   PRODUCT_CATEGORY_LABELS,
   PRODUCT_CATEGORY_ICONS,
@@ -48,7 +48,7 @@ import {
 } from "@/lib/marketplace-types";
 import { ProductModal } from "@/components/sections/product-modal";
 import { ExperienceModal } from "@/components/sections/experience-modal";
-import { BookingModal } from "@/components/booking-modal";
+
 
 const ALL_VALUE = "all";
 
@@ -128,14 +128,6 @@ export function MarketplaceSection() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedExperience, setSelectedExperience] =
     useState<Experience | null>(null);
-  const [bookingExperience, setBookingExperience] =
-    useState<Experience | null>(null);
-
-  // Odpri booking modal (lahko iz kartice ali iz detail modal-a)
-  const handleBookExperience = useCallback((exp: Experience) => {
-    setSelectedExperience(null); // zapri detail modal če je odprt
-    setBookingExperience(exp);
-  }, []);
 
   // Fetch izdelkov
   const fetchProducts = useCallback(async () => {
@@ -413,7 +405,6 @@ export function MarketplaceSection() {
                 key={e.id}
                 experience={e}
                 onOpen={() => setSelectedExperience(e)}
-                onBook={() => setBookingExperience(e)}
               />
             ))}
           </div>
@@ -443,11 +434,6 @@ export function MarketplaceSection() {
       <ExperienceModal
         experience={selectedExperience}
         onClose={() => setSelectedExperience(null)}
-        onBook={handleBookExperience}
-      />
-      <BookingModal
-        experience={bookingExperience}
-        onClose={() => setBookingExperience(null)}
       />
     </section>
   );
@@ -502,7 +488,6 @@ function ProductCard({
   product: Product;
   onOpen: () => void;
 }) {
-  const addItem = useCart((s) => s.addItem);
   const image = product.images[0];
   const discount = product.compareAtPrice
     ? Math.round(
@@ -511,17 +496,11 @@ function ProductCard({
       )
     : 0;
 
-  const handleAddToCart = () => {
-    addItem({
-      productId: product.id,
-      name: product.name,
-      slug: product.slug,
-      price: product.price,
-      image: image ?? "",
-      sellerName: product.sellerName,
-      shippingFree: product.shippingFree,
-      currency: product.currency,
-    });
+  // Preusmeritev na ponudnika — mi samo usmerjamo promet, ne pobiramo plačil
+  const handleVisitSeller = () => {
+    if (product.sellerWebsite) {
+      window.open(product.sellerWebsite, "_blank", "noopener,noreferrer");
+    }
   };
 
   return (
@@ -656,11 +635,11 @@ function ProductCard({
             type="button"
             size="sm"
             className="flex-1 justify-center bg-primary text-primary-foreground hover:bg-primary/90"
-            disabled={product.stock <= 0}
-            onClick={handleAddToCart}
+            disabled={!product.sellerWebsite}
+            onClick={handleVisitSeller}
           >
-            <ShoppingCart className="size-4" aria-hidden="true" />
-            {product.stock > 0 ? "V košaro" : "Ni zaloge"}
+            <ExternalLink className="size-4" aria-hidden="true" />
+            {product.sellerWebsite ? "Pri prodajalcu" : "Brez spletne"}
           </Button>
           <Button
             type="button"
@@ -683,13 +662,18 @@ function ProductCard({
 function ExperienceCard({
   experience,
   onOpen,
-  onBook,
 }: {
   experience: Experience;
   onOpen: () => void;
-  onBook: () => void;
 }) {
   const image = experience.images[0];
+
+  // Preusmeritev na ponudnika — mi samo usmerjamo promet, ne pobiramo plačil
+  const handleVisitProvider = () => {
+    if (experience.providerWebsite) {
+      window.open(experience.providerWebsite, "_blank", "noopener,noreferrer");
+    }
+  };
 
   return (
     <Card
@@ -808,13 +792,14 @@ function ExperienceCard({
             type="button"
             size="sm"
             className="flex-1 justify-center bg-primary text-primary-foreground hover:bg-primary/90"
+            disabled={!experience.providerWebsite}
             onClick={(e) => {
               e.stopPropagation();
-              onBook();
+              handleVisitProvider();
             }}
           >
-            <Calendar className="size-4" aria-hidden="true" />
-            Rezerviraj
+            <ExternalLink className="size-4" aria-hidden="true" />
+            {experience.providerWebsite ? "Pri ponudniku" : "Brez spletne"}
           </Button>
           <Button
             type="button"

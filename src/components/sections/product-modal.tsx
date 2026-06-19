@@ -37,7 +37,7 @@ import {
   formatPrice,
   type Product,
 } from "@/lib/marketplace-types";
-import { useCart } from "@/lib/cart-store";
+
 
 interface ProductModalProps {
   product: Product | null;
@@ -50,7 +50,7 @@ interface ProductModalProps {
  */
 export function ProductModal({ product, onClose }: ProductModalProps) {
   const [activeImage, setActiveImage] = useState(0);
-  const addItem = useCart((s) => s.addItem);
+
 
   // Reset aktivne slike ko se spremeni izdelek (render-phase check, brez effect-a)
   const prevProductId = useRef<string | undefined>(undefined);
@@ -365,50 +365,35 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
               />
             </section>
 
-            {/* CTA */}
+            {/* CTA — preusmeritev na prodajalca (mi ne pobiramo plačil) */}
             <div className="space-y-2">
               <Button
                 type="button"
+                asChild
                 size="lg"
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                disabled={product.stock <= 0}
-                onClick={() => {
-                  addItem({
-                    productId: product.id,
-                    name: product.name,
-                    slug: product.slug,
-                    price: product.price,
-                    image: product.images[0] ?? "",
-                    sellerName: product.sellerName,
-                    shippingFree: product.shippingFree,
-                    currency: product.currency,
-                  });
-                  // Zapri modal — košarica se odpre avtomatsko iz addItem
-                  onClose();
-                }}
               >
-                <ShoppingBag className="size-4" aria-hidden="true" />
-                {product.stock > 0 ? "Dodaj v košaro" : "Ni na zalogi"}
-              </Button>
-              {product.sellerWebsite ? (
-                <Button
-                  type="button"
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className="w-full"
-                >
+                {product.sellerWebsite ? (
                   <a
                     href={product.sellerWebsite}
                     target="_blank"
-                    rel="noopener noreferrer"
+                    rel="noopener noreferrer sponsored"
                   >
-                    <Globe className="size-4" aria-hidden="true" />
-                    Spletna stran prodajalca
                     <ExternalLink className="size-4" aria-hidden="true" />
+                    Obišči prodajalca
                   </a>
-                </Button>
-              ) : null}
+                ) : product.sellerEmail ? (
+                  <a href={`mailto:${product.sellerEmail}?subject=Povpraševanje: ${encodeURIComponent(product.name)}`}>
+                    <Mail className="size-4" aria-hidden="true" />
+                    Povpraševanje pri prodajalcu
+                  </a>
+                ) : (
+                  <span className="opacity-60 cursor-not-allowed">
+                    <Package className="size-4" aria-hidden="true" />
+                    Brez kontakt prodajalca
+                  </span>
+                )}
+              </Button>
             </div>
 
             {/* Source note */}

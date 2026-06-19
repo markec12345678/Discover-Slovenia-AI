@@ -40,18 +40,16 @@ import {
 interface ExperienceModalProps {
   experience: Experience | null;
   onClose: () => void;
-  onBook?: (experience: Experience) => void;
 }
 
 /**
  * ExperienceModal — podrobnosti izkušnje iz tržnice.
  * Prikazuje sliko, opis, trajanje, skupino, jezike, kontakt ponudnika in CTA.
- * "Rezerviraj" gumb odpre BookingModal (delegirano na starša prek onBook).
+ * "Rezerviraj pri ponudniku" gumb preusmeri na ponudnikovo spletno stran.
  */
 export function ExperienceModal({
   experience,
   onClose,
-  onBook,
 }: ExperienceModalProps) {
   const [activeImage, setActiveImage] = useState(0);
 
@@ -363,36 +361,30 @@ export function ExperienceModal({
               />
             </section>
 
-            {/* CTA */}
+            {/* CTA — preusmeritev na ponudnika (mi ne pobiramo plačil) */}
             <div className="space-y-2">
               <Button
                 type="button"
+                asChild
                 size="lg"
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={() => onBook?.(experience)}
               >
-                <Calendar className="size-4" aria-hidden="true" />
-                Rezerviraj
-              </Button>
-              {experience.providerWebsite ? (
-                <Button
-                  type="button"
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className="w-full"
-                >
+                {experience.providerWebsite ? (
                   <a
                     href={experience.providerWebsite}
                     target="_blank"
-                    rel="noopener noreferrer"
+                    rel="noopener noreferrer sponsored"
                   >
-                    <Globe className="size-4" aria-hidden="true" />
-                    Spletna stran
                     <ExternalLink className="size-4" aria-hidden="true" />
+                    Rezerviraj pri ponudniku
                   </a>
-                </Button>
-              ) : null}
+                ) : (
+                  <span className="opacity-60 cursor-not-allowed">
+                    <Calendar className="size-4" aria-hidden="true" />
+                    Brez spletne strani
+                  </span>
+                )}
+              </Button>
             </div>
 
             {/* Source note */}

@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { Mountain, Menu, Sun, Moon, Compass, ShoppingBag } from "lucide-react";
+import { Mountain, Menu, Sun, Moon, Compass } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import {
   SheetTitle,
   SheetClose,
 } from "@/components/ui/sheet";
-import { useCart } from "@/lib/cart-store";
+
 
 /**
  * Navigacijske povezave — deljene med desktop in mobilno Sheet varianto.
@@ -36,8 +36,8 @@ export function Navigation() {
 
   // Cart store — itemCount() prikazujemo šele po mountu, da se izognemo
   // hydration mismatchu (Zustand persist prebere localStorage šele na klientu).
-  const itemCount = useCart((s) => s.itemCount());
-  const openCart = useCart((s) => s.openCart);
+  const itemCount = 0;
+  const openCart = () => {};
 
   React.useEffect(() => setMounted(true), []);
 
@@ -83,27 +83,8 @@ export function Navigation() {
           ))}
         </nav>
 
-        {/* Desno: cart + theme toggle + CTA + mobile menu */}
+        {/* Desno: theme toggle + CTA + mobile menu */}
         <div className="flex items-center gap-2">
-          {/* Cart gumb z badge-om */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={openCart}
-            aria-label={`Odpri košarico${mounted && itemCount > 0 ? ` (${itemCount} ${itemCount === 1 ? "izdelek" : "izdelkov"})` : ""}`}
-            className="relative text-foreground"
-          >
-            <ShoppingBag className="size-5" aria-hidden="true" />
-            {mounted && itemCount > 0 ? (
-              <span
-                className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-white shadow-sm"
-                aria-hidden="true"
-              >
-                {itemCount > 9 ? "9+" : itemCount}
-              </span>
-            ) : null}
-          </Button>
-
           <Button
             variant="ghost"
             size="icon"
