@@ -4,12 +4,20 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { getBetaStatus } from "@/lib/beta";
 import type { ListingCategory, ListingPlan } from "@/lib/listings-types";
 
-// Omejitve števila lokalov glede na paket
-const PLAN_LIMITS: Record<ListingPlan, number> = {
+// Omejitve števila lokalov glede na paket (izven beta obdobja)
+const PLAN_LIMITS_NORMAL: Record<ListingPlan, number> = {
   free: 1,
   premium: 5,
+  enterprise: Infinity,
+};
+
+// Omejitve med beta obdobjem (bolj radodarne)
+const PLAN_LIMITS_BETA: Record<ListingPlan, number> = {
+  free: 3,
+  premium: 8,
   enterprise: Infinity,
 };
 
@@ -138,13 +146,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const limit = PLAN_LIMITS[owner.plan as ListingPlan] ?? 1;
+    // Preveri beta status — v beta načinu so limiti radodarnejši
+    const betaStatus = await getBetaStatus();
+    const limits = betaStatus.isActive ? PLAN_LIMITS_BETA : PLAN_LIMITS_NORMAL;
+
+    const limit = limits[owner.plan as ListingPlan] ?? 1;
     if (owner._count.listings >= limit) {
       return NextResponse.json(
         {
           error:
             limit === Infinity
               ? "Dosežen limit lokalov."
+              : betaStatus.isActive
+              ? `Vaš paket (${owner.plan}) omogoča med beta največ ${limit} ${
+                  limit === 1 ? "lokal" : "lokalov"
+                }. `
               : `Vaš paket (${owner.plan}) omogoča največ ${limit} ${
                   limit === 1 ? "lokal" : "lokalov"
                 }. Nadgradite naročnino za več lokalov.`,

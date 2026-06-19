@@ -8,8 +8,14 @@ export interface PricingPlan {
   highlighted: boolean; // za premium (srednji)
   cta: string; // "Začni brezplačno" / "Naroči Premium" / "Kontakt"
   badge?: string; // "Najbolj priljubljen" za premium
+  /** Ali je ta paket trenutno brezplačen (beta promo) */
+  betaFree?: boolean;
+  /** Originalna cena (prikazana prečrtana v beta-ju) */
+  originalPrice?: number;
 }
 
+// Med beta obdobjem so VSI paketi brezplačni.
+// Ko se beta konča (30+ lokalov), se cene aktivirajo.
 export const PRICING_PLANS: PricingPlan[] = [
   {
     id: "free",
@@ -25,13 +31,15 @@ export const PRICING_PLANS: PricingPlan[] = [
     ],
     highlighted: false,
     cta: "Začni brezplačno",
+    betaFree: true,
   },
   {
     id: "premium",
     name: "Premium",
-    monthlyPrice: 149,
-    yearlyPrice: 1490,
-    tagline: "Za lokale ki želijo izstopati",
+    monthlyPrice: 0, // med beta = 0
+    yearlyPrice: 0,
+    originalPrice: 149, // prikaže se prečrtano
+    tagline: "Za lokale ki želijo izstopati — BREZPLAČNO med beta",
     features: [
       "Vse iz Osnovnega +",
       "Featured na vrhu kategorije (zlat rob)",
@@ -43,15 +51,17 @@ export const PRICING_PLANS: PricingPlan[] = [
       "Prioritetna podpora",
     ],
     highlighted: true,
-    cta: "Naroči Premium",
-    badge: "Najbolj priljubljen",
+    cta: "Naroči Premium (brezplačno)",
+    badge: "BETA: BREZPLAČNO",
+    betaFree: true,
   },
   {
     id: "enterprise",
     name: "Enterprise",
-    monthlyPrice: 499,
-    yearlyPrice: 4990,
-    tagline: "Za verige in večje lokacije",
+    monthlyPrice: 0, // med beta = 0
+    yearlyPrice: 0,
+    originalPrice: 499,
+    tagline: "Za verige in večje lokacije — BREZPLAČNO med beta",
     features: [
       "Vse iz Premium +",
       "Lastna mini-stran (poddomena)",
@@ -62,7 +72,8 @@ export const PRICING_PLANS: PricingPlan[] = [
       "Custom integracije",
     ],
     highlighted: false,
-    cta: "Kontaktiraj nas",
+    cta: "Kontaktiraj nas (brezplačno)",
+    betaFree: true,
   },
 ];
 

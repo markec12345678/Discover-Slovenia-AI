@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, type FormEvent } from "react";
+import { useState, useRef, useEffect, type FormEvent } from "react";
 import {
   Check,
   Star,
@@ -17,6 +17,10 @@ import {
   Sparkles,
   PartyPopper,
   AlertCircle,
+  Rocket,
+  Gift,
+  Zap,
+  Clock,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -26,6 +30,7 @@ import {
   BUSINESS_TYPES,
   type PricingPlan,
 } from "@/lib/pricing";
+import { BETA_INFO } from "@/lib/beta";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 
 interface FormData {
   name: string;
@@ -85,6 +91,17 @@ const HERO_STATS = [
   },
 ] as const;
 
+// Ikone za beta ugodnosti (po vrstnem redu kot BETA_INFO.benefits)
+const BENEFIT_ICONS = [Gift, Sparkles, TrendingUp, ShieldCheck, Clock];
+
+interface BetaStatusResponse {
+  isActive: boolean;
+  listingCount: number;
+  remainingToMonetization: number;
+  message: string;
+  betaEndDate: string;
+}
+
 export function JoinUs() {
   const { toast } = useToast();
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
@@ -92,6 +109,16 @@ export function JoinUs() {
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
+
+  // Beta števec (client-side fetch)
+  const [betaStatus, setBetaStatus] = useState<BetaStatusResponse | null>(null);
+
+  useEffect(() => {
+    fetch("/api/beta-status")
+      .then((r) => r.json())
+      .then((d: BetaStatusResponse) => setBetaStatus(d))
+      .catch(() => {});
+  }, []);
 
   const scrollToForm = (plan?: PricingPlan["id"]) => {
     if (plan && plan !== "free") {
@@ -197,6 +224,14 @@ export function JoinUs() {
       <div className="bg-primary text-primary-foreground">
         <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20 lg:py-24">
           <div className="flex flex-col items-center text-center gap-6">
+            {/* Velik beta badge */}
+            <div className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-5 py-2 text-amber-950 shadow-lg ring-2 ring-amber-300/40">
+              <Rocket className="size-5" aria-hidden="true" />
+              <span className="text-sm font-bold sm:text-base tracking-wide">
+                BETA: Vsi paketi BREZPLAČNI — omejen čas
+              </span>
+            </div>
+
             <Badge
               variant="secondary"
               className="bg-primary-foreground/15 text-primary-foreground border-primary-foreground/25 backdrop-blur-sm"
@@ -234,9 +269,47 @@ export function JoinUs() {
               onClick={() => scrollToForm()}
               className="mt-2 bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-semibold"
             >
-              Začni zdaj
+              Začni brezplačno
               <ArrowRight className="size-4 ml-1" />
             </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* ====================== BETA UGODNOSTI ====================== */}
+      <div className="bg-amber-50/60 dark:bg-amber-950/10 border-b border-amber-200/50 dark:border-amber-900/30">
+        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-14">
+          <div className="text-center mb-8">
+            <Badge
+              variant="outline"
+              className="mb-3 border-amber-400 bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-700"
+            >
+              <Gift className="size-3.5 mr-1.5" />
+              Beta ugodnosti
+            </Badge>
+            <h3 className="text-2xl font-bold sm:text-3xl">Zakaj zdaj?</h3>
+            <p className="mt-2 text-sm text-muted-foreground max-w-2xl mx-auto">
+              Pridružite se zdaj in izkoristite beta ugodnosti. Ko dosežemo{" "}
+              <strong className="text-foreground">{BETA_INFO.threshold} aktivnih lokalov</strong>,
+              se redni cenik samodejno vklopi — vaše ugodnosti pa ostanejo.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {BETA_INFO.benefits.map((benefit, idx) => {
+              const Icon = BENEFIT_ICONS[idx] ?? Check;
+              return (
+                <div
+                  key={idx}
+                  className="flex flex-col items-start gap-2 rounded-xl border border-amber-200/60 bg-background p-4 shadow-sm dark:border-amber-900/40"
+                >
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                    <Icon className="size-5" aria-hidden="true" />
+                  </div>
+                  <p className="text-sm font-medium leading-snug">{benefit}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -251,8 +324,8 @@ export function JoinUs() {
             Izberite paket, ki vam ustreza
           </h3>
           <p className="mt-3 text-muted-foreground">
-            Brez skritih stroškov. Kadarkoli prekličete. Letno plačilo prihrani
-            2 meseca.
+            Med beta obdobjem so vsi paketi brezplačni. Brez kreditne kartice,
+            brez obveznosti. Kadarkoli prekličete.
           </p>
         </div>
 
@@ -265,6 +338,9 @@ export function JoinUs() {
             />
           ))}
         </div>
+
+        {/* Beta števec pod pricing */}
+        <BetaCounter status={betaStatus} />
       </div>
 
       {/* ====================== DELE 3 — FORMA ====================== */}
@@ -302,6 +378,7 @@ export function JoinUs() {
                   </CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
                     Izpolni spodnji obrazec in kontaktirali te bomo v 24 urah.
+                    Brez obveznosti, brez kreditne kartice.
                   </p>
                 </CardHeader>
                 <CardContent>
@@ -452,7 +529,9 @@ export function JoinUs() {
                           {PRICING_PLANS.map((p) => (
                             <SelectItem key={p.id} value={p.name}>
                               {p.name}
-                              {p.monthlyPrice > 0
+                              {p.betaFree
+                                ? " — brezplačno (beta)"
+                                : p.monthlyPrice > 0
                                 ? ` — €${p.monthlyPrice}/mes`
                                 : " — brezplačno"}
                             </SelectItem>
@@ -514,7 +593,7 @@ export function JoinUs() {
                       ) : (
                         <>
                           <Sparkles className="size-4 mr-2" />
-                          Pošlji prijavo
+                          Naroči brezplačno
                         </>
                       )}
                     </Button>
@@ -535,6 +614,72 @@ export function JoinUs() {
   );
 }
 
+/* ====================== BETA COUNTER ====================== */
+
+function BetaCounter({ status }: { status: BetaStatusResponse | null }) {
+  if (!status) {
+    return (
+      <div className="mt-10 flex items-center justify-center">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          Nalagam beta status...
+        </div>
+      </div>
+    );
+  }
+
+  if (!status.isActive) {
+    return (
+      <div className="mt-10 mx-auto max-w-2xl rounded-xl border border-primary/30 bg-primary/5 p-5 text-center">
+        <Badge className="bg-primary text-primary-foreground border-0 gap-1.5">
+          <Check className="size-3.5" aria-hidden="true" />
+          Monetizacija aktivna
+        </Badge>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Hvala vsem beta uporabnikom! Dosegli smo {BETA_INFO.threshold}{" "}
+          aktivnih lokalov in redni cenik je sedaj attiv.
+        </p>
+      </div>
+    );
+  }
+
+  const pct = Math.min(
+    100,
+    (status.listingCount / BETA_INFO.threshold) * 100
+  );
+
+  return (
+    <div className="mt-10 mx-auto max-w-2xl rounded-xl border border-amber-300/60 bg-amber-50/80 dark:bg-amber-950/20 p-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+            <Rocket className="size-5" aria-hidden="true" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              Še {status.remainingToMonetization} lokalov do vklopa monetizacije
+            </p>
+            <p className="text-xs text-amber-700/80 dark:text-amber-300/70">
+              Trenutno {status.listingCount} od {BETA_INFO.threshold} lokalov
+            </p>
+          </div>
+        </div>
+        <Badge className="bg-amber-400 text-amber-950 hover:bg-amber-400 border-0 gap-1.5 shrink-0">
+          <Zap className="size-3 fill-amber-950" aria-hidden="true" />
+          BETA AKTIVEN
+        </Badge>
+      </div>
+      <Progress
+        value={pct}
+        className="h-2.5 bg-amber-200/60 dark:bg-amber-900/40"
+      />
+      <p className="mt-2 text-xs text-amber-700/80 dark:text-amber-300/70">
+        {status.message}
+      </p>
+    </div>
+  );
+}
+
 interface PricingCardProps {
   plan: PricingPlan;
   onSelect: () => void;
@@ -542,6 +687,9 @@ interface PricingCardProps {
 
 function PricingCard({ plan, onSelect }: PricingCardProps) {
   const isHighlighted = plan.highlighted;
+  const isBetaFree = plan.betaFree === true;
+  const hasOriginalPrice =
+    isBetaFree && typeof plan.originalPrice === "number" && plan.originalPrice > 0;
 
   return (
     <div
@@ -561,7 +709,7 @@ function PricingCard({ plan, onSelect }: PricingCardProps) {
         {isHighlighted && plan.badge && (
           <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
             <Badge className="bg-amber-400 text-amber-950 hover:bg-amber-400 shadow-md border-0 font-semibold">
-              <Star className="size-3 mr-1 fill-amber-950" />
+              <Rocket className="size-3 mr-1" />
               {plan.badge}
             </Badge>
           </div>
@@ -570,7 +718,9 @@ function PricingCard({ plan, onSelect }: PricingCardProps) {
         <CardHeader className={cn(isHighlighted && "pt-7")}>
           <div className="flex items-baseline justify-between">
             <CardTitle className="text-xl">{plan.name}</CardTitle>
-            {plan.monthlyPrice === 0 ? (
+            {isBetaFree ? (
+              <span className="text-2xl font-bold text-primary">Brezplačno</span>
+            ) : plan.monthlyPrice === 0 ? (
               <span className="text-2xl font-bold text-muted-foreground">
                 Brezplačno
               </span>
@@ -578,7 +728,21 @@ function PricingCard({ plan, onSelect }: PricingCardProps) {
           </div>
 
           <div className="mt-1">
-            {plan.monthlyPrice > 0 ? (
+            {hasOriginalPrice ? (
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className="text-base text-muted-foreground line-through tabular-nums"
+                    aria-label={`Originalna cena ${plan.originalPrice} evrov na mesec`}
+                  >
+                    €{plan.originalPrice}/mes
+                  </span>
+                  <span className="text-sm font-semibold text-primary">
+                    Brezplačno med beta
+                  </span>
+                </div>
+              </div>
+            ) : plan.monthlyPrice > 0 ? (
               <>
                 <div className="flex items-baseline gap-1">
                   <span className="text-4xl font-bold tabular-nums">
@@ -626,7 +790,7 @@ function PricingCard({ plan, onSelect }: PricingCardProps) {
                 : "hover:bg-accent hover:text-accent-foreground"
             )}
           >
-            {plan.cta}
+            {isBetaFree ? "Naroči brezplačno" : plan.cta}
             <ArrowRight className="size-4 ml-1" />
           </Button>
         </CardContent>

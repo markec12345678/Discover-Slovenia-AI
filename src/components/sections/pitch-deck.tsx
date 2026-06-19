@@ -10,7 +10,15 @@ import {
   Globe,
   CheckCircle2,
   ArrowRight,
+  Rocket,
+  Gift,
+  CreditCard,
+  LogOut,
+  ShieldCheck,
+  Clock,
+  Check,
 } from "lucide-react";
+import { BETA_INFO } from "@/lib/beta";
 
 const benefits = [
   {
@@ -87,6 +95,26 @@ const testimonials = [
   },
 ];
 
+// Beta ugodnosti v final CTA
+const BETA_CTA_BENEFITS = [
+  {
+    icon: Gift,
+    text: "Brezplačni Premium paket (vrednost €149/mes)",
+  },
+  {
+    icon: CreditCard,
+    text: "Brez kreditne kartice",
+  },
+  {
+    icon: LogOut,
+    text: "Lahko odidete kadar",
+  },
+  {
+    icon: Clock,
+    text: "30 dni garancija po prekinitvi beta-ja",
+  },
+];
+
 export function PitchDeckSection() {
   return (
     <section
@@ -96,6 +124,14 @@ export function PitchDeckSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Hero */}
         <div className="mx-auto mb-16 max-w-3xl text-center">
+          {/* Velik beta badge */}
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-amber-400 px-5 py-2 text-amber-950 shadow-md ring-2 ring-amber-300/40">
+            <Rocket className="size-5" aria-hidden="true" />
+            <span className="text-sm font-bold sm:text-base tracking-wide">
+              Brezplačno med beta — brez obveznosti
+            </span>
+          </div>
+
           <Badge variant="secondary" className="mb-4">
             <TrendingUp className="mr-1.5 size-3.5" />
             Za hotele, restavracije in aktivnosti
@@ -204,38 +240,83 @@ export function PitchDeckSection() {
           </div>
         </div>
 
-        {/* Final CTA */}
-        <Card className="overflow-hidden border-primary/30">
+        {/* Final CTA — z beta ugodnostmi */}
+        <Card className="overflow-hidden border-primary/40 ring-1 ring-primary/10">
           <CardContent className="bg-primary/5 p-8 sm:p-12">
             <div className="flex flex-col items-center gap-6 text-center">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="size-5 text-primary" />
-                <span className="text-sm font-medium text-primary">
-                  Brez obveznosti · 30 dni garancije vračila
+              <div className="flex items-center gap-2 rounded-full bg-amber-400 px-4 py-1.5 text-amber-950 shadow-sm">
+                <Rocket className="size-4" aria-hidden="true" />
+                <span className="text-xs font-bold sm:text-sm tracking-wide">
+                  BETA · BREZPLAČNO · BREZ KREDITNE KARTICE
                 </span>
               </div>
+
               <h3 className="text-2xl font-bold sm:text-3xl max-w-2xl">
-                Pripravljeni pridobiti nove stranke iz vsega sveta?
+                Pridruži se BREZPLAČNO med beta — brez kreditne kartice
               </h3>
               <p className="text-muted-foreground max-w-xl">
-                Pridružite se 50+ slovenskim lokalom ki že uporabljajo našo AI
-                platformo za rast posla.
+                Pridružite se {`50+`} slovenskim lokalom ki že uporabljajo našo AI
+                platformo za rast posla. Med beta obdobjem so vsi paketi brezplačni —
+                izkoristite zdaj.
               </p>
+
+              {/* Beta ugodnosti */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl">
+                {BETA_CTA_BENEFITS.map((b, idx) => {
+                  const Icon = b.icon;
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-3 rounded-lg border border-primary/20 bg-background/80 px-4 py-3 text-left"
+                    >
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                        <Icon className="size-4" aria-hidden="true" />
+                      </div>
+                      <span className="text-sm font-medium leading-snug">
+                        {b.text}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="size-5 text-primary" aria-hidden="true" />
+                <span className="font-medium text-primary">
+                  Brez obveznosti · 30 dni garancije · {BETA_INFO.threshold} lokalov do monetizacije
+                </span>
+              </div>
+
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Button asChild size="lg">
+                <Button asChild size="lg" className="gap-1.5">
                   <a href="#pridruzi-se">
-                    Začnite zdaj
-                    <ArrowRight className="ml-2 size-4" />
+                    <Gift className="size-4" aria-hidden="true" />
+                    Pridruži se brezplačno
+                    <ArrowRight className="ml-1 size-4" aria-hidden="true" />
                   </a>
                 </Button>
                 <Button asChild size="lg" variant="outline">
-                  <a href="/admin">
-                    Admin prijava
-                  </a>
+                  <a href="/admin">Admin prijava</a>
                 </Button>
               </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <Check className="size-3 text-primary" aria-hidden="true" />
+                  Brez kreditne kartice
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <ShieldCheck className="size-3 text-primary" aria-hidden="true" />
+                  GDPR varni podatki
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="size-3 text-primary" aria-hidden="true" />
+                  24-urni odziv
+                </span>
+              </div>
+
               <p className="text-xs text-muted-foreground">
-                Demo racun za lastnike: /owner/prijava · Admin: /admin
+                Demo račun za lastnike: /owner/prijava · Admin: /admin
               </p>
             </div>
           </CardContent>

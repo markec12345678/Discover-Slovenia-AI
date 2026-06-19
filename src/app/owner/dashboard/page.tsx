@@ -23,6 +23,9 @@ import {
   ArrowRight,
   ShieldCheck,
   CalendarClock,
+  Rocket,
+  Gift,
+  Zap,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -40,9 +43,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ListingFormDialog } from "@/components/owner/listing-form";
+import { BetaBanner } from "@/components/beta-banner";
 import {
   CATEGORY_LABELS,
   CATEGORY_ICONS,
@@ -51,12 +56,28 @@ import {
   type ListingPlan,
 } from "@/lib/listings-types";
 import { PRICING_PLANS, type PricingPlan } from "@/lib/pricing";
+import { BETA_INFO } from "@/lib/beta";
 
-const PLAN_LIMITS: Record<ListingPlan, number> = {
+// Omejitve števila lokalov glede na paket in beta status
+const PLAN_LIMITS_NORMAL: Record<ListingPlan, number> = {
   free: 1,
   premium: 5,
   enterprise: Infinity,
 };
+
+const PLAN_LIMITS_BETA: Record<ListingPlan, number> = {
+  free: 3,
+  premium: 8,
+  enterprise: Infinity,
+};
+
+interface BetaStatus {
+  isActive: boolean;
+  listingCount: number;
+  remainingToMonetization: number;
+  message: string;
+  betaEndDate: string;
+}
 
 export default function OwnerDashboardPage() {
   const router = useRouter();
@@ -70,12 +91,23 @@ export default function OwnerDashboardPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Beta status (client-side fetch)
+  const [betaStatus, setBetaStatus] = useState<BetaStatus | null>(null);
+
   // Redirect na prijavo če ni prijavljen
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/owner/prijava");
     }
   }, [status, router]);
+
+  // Fetch beta status
+  useEffect(() => {
+    fetch("/api/beta-status")
+      .then((r) => r.json())
+      .then((d: BetaStatus) => setBetaStatus(d))
+      .catch(() => {});
+  }, []);
 
   const fetchListings = useCallback(async () => {
     setLoadingListings(true);
@@ -102,7 +134,9 @@ export default function OwnerDashboardPage() {
   }, [status, fetchListings]);
 
   const plan = (session?.user?.plan as ListingPlan) || "free";
-  const planLimit = PLAN_LIMITS[plan];
+  const isBetaActive = betaStatus?.isActive ?? true;
+  const planLimits = isBetaActive ? PLAN_LIMITS_BETA : PLAN_LIMITS_NORMAL;
+  const planLimit = planLimits[plan];
   const planLimitLabel =
     planLimit === Infinity ? "neomejeno" : String(planLimit);
   const listingsCount = listings.length;
@@ -177,6 +211,9 @@ export default function OwnerDashboardPage() {
 
   return (
     <main className="min-h-screen bg-muted/30 flex flex-col">
+      {/* Beta banner na vrhu */}
+      <BetaBanner />
+
       {/* Header */}
       <header className="bg-background border-b border-border sticky top-0 z-30">
         <div className="mx-auto max-w-6xl px-4 py-3 sm:py-4 flex items-center justify-between gap-3">
@@ -251,6 +288,26 @@ export default function OwnerDashboardPage() {
               </Button>
             </div>
 
+            {/* Beta info badge v listings tab */}
+            {isBetaActive && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 p-4">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                  <Rocket className="size-5" aria-hidden="true" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                    Beta: {plan === "free" ? "3 lokalci brezplačno" : plan === "premium" ? "8 lokalcev brezplačno" : "neomejeno brezplačno"}
+                    {plan === "free" && " (običajno 1)"}
+                    {plan === "premium" && " (običajno 5)"}
+                  </p>
+                  <p className="text-xs text-amber-700/80 dark:text-amber-300/70 mt-0.5">
+                    Med beta obdobjem so vsi paketi brezplačni. Vaš paket{" "}
+                    {PLAN_LABELS[plan]} vam omogoča {planLimitLabel} lokalov.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {!canAddMore && (
               <Alert className="border-amber-400/50 bg-amber-50 dark:bg-amber-950/20">
                 <Crown className="size-4 text-amber-600" aria-hidden="true" />
@@ -289,7 +346,12 @@ export default function OwnerDashboardPage() {
 
           {/* TAB 2: Naročnina */}
           <TabsContent value="narocnina" className="space-y-6">
-            <SubscriptionTab plan={plan} session={session} />
+            <SubscriptionTab
+              plan={plan}
+              session={session}
+              betaStatus={betaStatus}
+              onUpgraded={fetchListings}
+            />
           </TabsContent>
 
           {/* TAB 3: Statistika */}
@@ -529,15 +591,55 @@ function ListingCard({
 interface SubscriptionTabProps {
   plan: ListingPlan;
   session: ReturnType<typeof useSession>["data"];
+  betaStatus: BetaStatus | null;
+  onUpgraded: () => void;
 }
 
-function SubscriptionTab({ plan, session }: SubscriptionTabProps) {
+function SubscriptionTab({
+  plan,
+  session,
+  betaStatus,
+  onUpgraded,
+}: SubscriptionTabProps) {
   const subscriptionStatus =
     (session?.user?.subscriptionStatus as string) || "none";
   const isActive = subscriptionStatus === "active";
+  const isBetaActive = betaStatus?.isActive ?? true;
 
   return (
     <div className="space-y-6">
+      {/* Beta banner na vrh */}
+      {isBetaActive && (
+        <Card className="border-amber-400/60 bg-amber-50 dark:bg-amber-950/20">
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                <Rocket className="size-6" aria-hidden="true" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-base font-bold text-amber-900 dark:text-amber-200">
+                    BETA: Vaš paket je BREZPLAČEN
+                  </h3>
+                  <Badge className="bg-amber-400 text-amber-950 hover:bg-amber-400 border-0 gap-1 shrink-0">
+                    <Zap className="size-3 fill-amber-950" aria-hidden="true" />
+                    BETA
+                  </Badge>
+                </div>
+                <p className="text-sm text-amber-800 dark:text-amber-300/90 mb-3">
+                  Vsi paketi so brezplačni dokler ne dosežemo {BETA_INFO.threshold}{" "}
+                  aktivnih lokalov na platformi. Pridružite se in izkoristite
+                  ugodnosti.
+                </p>
+
+                {/* Števec do monetizacije */}
+                <BetaCounterInline betaStatus={betaStatus} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Trenutni paket */}
       <Card
         className={cn(
@@ -568,11 +670,24 @@ function SubscriptionTab({ plan, session }: SubscriptionTabProps) {
                 </CardTitle>
               </div>
               <p className="text-sm text-muted-foreground">
-                {plan === "free"
-                  ? "Brezplačni paket z 1 lokalom."
-                  : plan === "premium"
-                  ? "Premium paket z do 5 lokali in izpostavljenostjo."
-                  : "Enterprise paket z neomejenimi lokali in dodatnimi funkcijami."}
+                {isBetaActive ? (
+                  <>
+                    <span className="font-medium text-primary">
+                      BREZPLAČNO med beta.
+                    </span>{" "}
+                    {plan === "free"
+                      ? "Beta limit: 3 lokalci (običajno 1)."
+                      : plan === "premium"
+                      ? "Beta limit: 8 lokalcev (običajno 5)."
+                      : "Neomejeni lokalci."}
+                  </>
+                ) : plan === "free" ? (
+                  "Brezplačni paket z 1 lokalom."
+                ) : plan === "premium" ? (
+                  "Premium paket z do 5 lokali in izpostavljenostjo."
+                ) : (
+                  "Enterprise paket z neomejenimi lokali in dodatnimi funkcijami."
+                )}
               </p>
             </div>
             <PlanBadge plan={plan} />
@@ -594,6 +709,12 @@ function SubscriptionTab({ plan, session }: SubscriptionTabProps) {
                   ? "Zapadlo plačilo"
                   : "Brez naročnine"}
               </Badge>
+              {isBetaActive && (
+                <Badge className="bg-amber-400 text-amber-950 hover:bg-amber-400 border-0 gap-1">
+                  <Gift className="size-3" aria-hidden="true" />
+                  Brezplačno med beta
+                </Badge>
+              )}
             </div>
             <Button variant="outline" className="gap-1.5" disabled>
               <CalendarClock className="size-4" aria-hidden="true" />
@@ -606,9 +727,31 @@ function SubscriptionTab({ plan, session }: SubscriptionTabProps) {
         )}
       </Card>
 
+      {/* Nadgradnja gumbi — če free v beta-ju */}
+      {isBetaActive && plan === "free" && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Gift className="size-5" aria-hidden="true" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-bold">Nadgradi brezplačno</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Med beta obdobjem lahko brezplačno nadgradite na Premium ali
+                  Enterprise paket. Brez kreditne kartice.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Pricing cards */}
       <div>
-        <h3 className="text-lg font-bold mb-1">Nadgradi paket</h3>
+        <h3 className="text-lg font-bold mb-1">
+          {isBetaActive ? "Nadgradi paket (zdaj BREZPLAČNO)" : "Nadgradi paket"}
+        </h3>
         <p className="text-sm text-muted-foreground mb-4">
           Izberite paket, ki ustreza vašemu poslovanju.
         </p>
@@ -618,6 +761,8 @@ function SubscriptionTab({ plan, session }: SubscriptionTabProps) {
               key={p.id}
               plan={p}
               current={p.id === plan}
+              isBetaActive={isBetaActive}
+              onUpgraded={onUpgraded}
             />
           ))}
         </div>
@@ -626,17 +771,59 @@ function SubscriptionTab({ plan, session }: SubscriptionTabProps) {
   );
 }
 
+/* Beta števec inline v naročnini */
+function BetaCounterInline({ betaStatus }: { betaStatus: BetaStatus | null }) {
+  if (!betaStatus) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-amber-700/80 dark:text-amber-300/70">
+        <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+        Nalagam...
+      </div>
+    );
+  }
+
+  const pct = Math.min(
+    100,
+    (betaStatus.listingCount / BETA_INFO.threshold) * 100
+  );
+
+  return (
+    <div className="rounded-lg bg-amber-100/70 dark:bg-amber-900/30 p-3">
+      <div className="flex items-center justify-between gap-2 mb-2 text-xs">
+        <span className="font-semibold text-amber-900 dark:text-amber-200">
+          Trenutno {betaStatus.listingCount} / {BETA_INFO.threshold} lokalov na platformi
+        </span>
+        <span className="text-amber-700 dark:text-amber-300 tabular-nums shrink-0">
+          Še {betaStatus.remainingToMonetization}
+        </span>
+      </div>
+      <Progress
+        value={pct}
+        className="h-2 bg-amber-200/60 dark:bg-amber-900/50"
+      />
+      <p className="mt-2 text-xs text-amber-700/80 dark:text-amber-300/70">
+        {betaStatus.message}
+      </p>
+    </div>
+  );
+}
+
 function SubscriptionCard({
   plan,
   current,
+  isBetaActive,
+  onUpgraded,
 }: {
   plan: PricingPlan;
   current: boolean;
+  isBetaActive: boolean;
+  onUpgraded: () => void;
 }) {
   const isHighlighted = plan.highlighted;
   const { toast } = useToast();
+  const [upgrading, setUpgrading] = useState(false);
 
-  const handleUpgrade = () => {
+  const handleUpgrade = async () => {
     if (current) return;
     if (plan.id === "free") {
       toast({
@@ -645,11 +832,48 @@ function SubscriptionCard({
       });
       return;
     }
-    toast({
-      title: "Stripe — kmalu na voljo",
-      description: `Nadgradnja na ${plan.name} paket bo kmalu omogočena preko Stripe.`,
-    });
+
+    setUpgrading(true);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: plan.id }),
+      });
+      const data: unknown = await res.json();
+      if (!res.ok) {
+        const msg =
+          typeof data === "object" && data !== null && "error" in data
+            ? String((data as Record<string, unknown>).error)
+            : "Napaka pri nadgradnji.";
+        throw new Error(msg);
+      }
+      toast({
+        title: "Nadgrajeni!",
+        description: `Vaš paket je zdaj ${plan.name} ${
+          isBetaActive ? "(BREZPLAČNO med beta)" : ""
+        }.`,
+      });
+      // Osveži listings in session
+      onUpgraded();
+      // Reload page da se session refresh-a
+      window.location.reload();
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Napaka",
+        description:
+          err instanceof Error ? err.message : "Napaka pri nadgradnji.",
+      });
+    } finally {
+      setUpgrading(false);
+    }
   };
+
+  const hasOriginalPrice =
+    plan.betaFree === true &&
+    typeof plan.originalPrice === "number" &&
+    plan.originalPrice > 0;
 
   return (
     <div className={cn("relative flex", isHighlighted && "md:-mt-2 md:mb-2")}>
@@ -665,7 +889,7 @@ function SubscriptionCard({
         {isHighlighted && plan.badge && (
           <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
             <Badge className="bg-amber-400 text-amber-950 hover:bg-amber-400 shadow-md border-0 font-semibold">
-              <Star className="size-3 mr-1 fill-amber-950" />
+              <Rocket className="size-3 mr-1" />
               {plan.badge}
             </Badge>
           </div>
@@ -682,7 +906,21 @@ function SubscriptionCard({
         <CardHeader className={cn(isHighlighted && "pt-7")}>
           <CardTitle className="text-lg">{plan.name}</CardTitle>
           <div className="mt-1">
-            {plan.monthlyPrice > 0 ? (
+            {hasOriginalPrice ? (
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className="text-base text-muted-foreground line-through tabular-nums"
+                    aria-label={`Originalna cena ${plan.originalPrice} evrov na mesec`}
+                  >
+                    €{plan.originalPrice}/mes
+                  </span>
+                  <span className="text-sm font-semibold text-primary">
+                    Brezplačno med beta
+                  </span>
+                </div>
+              </div>
+            ) : plan.monthlyPrice > 0 ? (
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold tabular-nums">
                   €{plan.monthlyPrice}
@@ -713,7 +951,7 @@ function SubscriptionCard({
 
           <Button
             onClick={handleUpgrade}
-            disabled={current}
+            disabled={current || upgrading}
             variant={isHighlighted ? "default" : "outline"}
             className={cn(
               "w-full font-semibold",
@@ -728,8 +966,19 @@ function SubscriptionCard({
                 <Check className="size-4 mr-1" aria-hidden="true" />
                 Trenutni paket
               </>
+            ) : upgrading ? (
+              <>
+                <Loader2 className="size-4 mr-1 animate-spin" aria-hidden="true" />
+                Nadgrajujem...
+              </>
             ) : plan.id === "free" ? (
               plan.cta
+            ) : isBetaActive ? (
+              <>
+                <Gift className="size-4 mr-1" aria-hidden="true" />
+                Nadgradi (zdaj BREZPLAČNO)
+                <ArrowRight className="size-4 ml-1" aria-hidden="true" />
+              </>
             ) : (
               <>
                 <Sparkles className="size-4 mr-1" aria-hidden="true" />

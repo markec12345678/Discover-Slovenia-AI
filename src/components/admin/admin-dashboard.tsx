@@ -53,6 +53,9 @@ import {
   ShieldCheck,
   Sparkles,
   Crown,
+  Rocket,
+  Gift,
+  Zap,
 } from "lucide-react";
 import {
   CATEGORY_LABELS,
@@ -61,6 +64,9 @@ import {
   type ListingPlan,
 } from "@/lib/listings-types";
 import { ListingForm, type AdminListing } from "./listing-form";
+import { BetaBanner } from "@/components/beta-banner";
+import { Progress } from "@/components/ui/progress";
+import { BETA_INFO } from "@/lib/beta";
 
 // === TIP LEAD ===
 type LeadStatus = "nov" | "kontaktiran" | "zakljucen";
@@ -112,6 +118,9 @@ export function AdminDashboard({
 
   return (
     <div className="min-h-screen bg-muted/30">
+      {/* Beta banner na vrhu */}
+      <BetaBanner />
+
       {/* Top bar */}
       <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex h-14 items-center justify-between gap-2">
@@ -140,6 +149,9 @@ export function AdminDashboard({
       </header>
 
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Beta status widget na vrhu dashboard-a */}
+        <BetaStatusWidget />
+
         <Tabs value={tab} onValueChange={setTab} className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-3">
             <TabsTrigger value="listings" className="gap-1.5">
@@ -806,6 +818,9 @@ function StatsTab({ adminPassword }: { adminPassword: string }) {
         </p>
       </div>
 
+      {/* Beta status kartica */}
+      <BetaStatusCard />
+
       {/* KPI kartice */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KpiCard
@@ -923,6 +938,233 @@ function StatsTab({ adminPassword }: { adminPassword: string }) {
         </Card>
       </div>
     </div>
+  );
+}
+
+// === BETA STATUS WIDGET (na vrh dashboard-a) ===
+interface BetaStatus {
+  isActive: boolean;
+  listingCount: number;
+  remainingToMonetization: number;
+  message: string;
+  betaEndDate: string;
+}
+
+function useBetaStatus() {
+  const [status, setStatus] = React.useState<BetaStatus | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch("/api/beta-status")
+      .then((r) => r.json())
+      .then((d: BetaStatus) => {
+        if (!cancelled) {
+          setStatus(d);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { status, loading };
+}
+
+function BetaStatusWidget() {
+  const { status, loading } = useBetaStatus();
+
+  if (loading) {
+    return (
+      <Card className="mb-6 border-amber-300/50">
+        <CardContent className="p-5 flex items-center gap-3 text-muted-foreground">
+          <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+          <span className="text-sm">Nalagam beta status...</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!status) return null;
+
+  const pct = Math.min(
+    100,
+    (status.listingCount / BETA_INFO.threshold) * 100
+  );
+
+  if (!status.isActive) {
+    return (
+      <Card className="mb-6 border-primary/40 bg-primary/5">
+        <CardContent className="p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Check className="size-6" aria-hidden="true" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-base font-bold">Monetizacija aktivna</h3>
+                <Badge className="bg-primary text-primary-foreground border-0 gap-1">
+                  <ShieldCheck className="size-3" aria-hidden="true" />
+                  BETA ZAKLJUČEN
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Dosegli smo {BETA_INFO.threshold} aktivnih lokalov in redni
+                cenik je vklopljen. Beta uporabniki obdržijo svoje ugodnosti 6 mesecev.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="mb-6 border-amber-400/60 bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/10">
+      <CardContent className="p-5 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+            <Rocket className="size-6" aria-hidden="true" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <h3 className="text-base sm:text-lg font-bold text-amber-900 dark:text-amber-200">
+                BETA AKTIVEN
+              </h3>
+              <Badge className="bg-amber-400 text-amber-950 hover:bg-amber-400 border-0 gap-1">
+                <Zap className="size-3 fill-amber-950" aria-hidden="true" />
+                Vsi paketi BREZPLAČNI
+              </Badge>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-3">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                {status.listingCount} / {BETA_INFO.threshold} lokalov do monetizacije
+              </p>
+              <span className="hidden sm:inline text-amber-700/40">·</span>
+              <p className="text-xs text-amber-700/90 dark:text-amber-300/80">
+                Še {status.remainingToMonetization} {status.remainingToMonetization === 1 ? "lokal" : status.remainingToMonetization < 5 ? "lokala" : "lokalov"}
+              </p>
+            </div>
+
+            <Progress
+              value={pct}
+              className="h-2.5 bg-amber-200/60 dark:bg-amber-900/40"
+            />
+
+            <p className="mt-3 text-xs text-amber-800/90 dark:text-amber-300/80 leading-relaxed">
+              Ko dosežemo {BETA_INFO.threshold} lokalov, se monetizacija samodejno
+              vklopi. Beta uporabniki obdržijo svoje ugodnosti 6 mesecev.
+            </p>
+          </div>
+
+          <div className="hidden lg:flex flex-col items-center gap-1 shrink-0 rounded-xl bg-amber-200/40 dark:bg-amber-900/30 px-4 py-3 text-center">
+            <Gift className="size-6 text-amber-700 dark:text-amber-300" aria-hidden="true" />
+            <span className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+              Beta konča
+            </span>
+            <span className="text-xs text-amber-700 dark:text-amber-300">
+              {status.betaEndDate}
+            </span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// === BETA STATUS KOMPAKTNA KARTICA (v Statistika tab) ===
+function BetaStatusCard() {
+  const { status, loading } = useBetaStatus();
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-5 flex items-center gap-3 text-muted-foreground">
+          <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+          <span className="text-sm">Nalagam beta status...</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!status) return null;
+
+  const pct = Math.min(
+    100,
+    (status.listingCount / BETA_INFO.threshold) * 100
+  );
+
+  return (
+    <Card
+      className={
+        status.isActive
+          ? "border-amber-300/60 bg-amber-50/70 dark:bg-amber-950/20"
+          : "border-primary/40 bg-primary/5"
+      }
+    >
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Rocket
+            className={
+              status.isActive
+                ? "size-4 text-amber-600"
+                : "size-4 text-primary"
+            }
+            aria-hidden="true"
+          />
+          Beta status platforme
+        </CardTitle>
+        <CardDescription>
+          {status.isActive
+            ? "Beta obdobje je aktivno — vsi paketi so brezplačni."
+            : "Monetizacija je vklopljena."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm text-muted-foreground">
+            Lokalov na platformi
+          </span>
+          <span className="text-sm font-bold tabular-nums">
+            {status.listingCount} / {BETA_INFO.threshold}
+          </span>
+        </div>
+        <Progress
+          value={pct}
+          className={
+            status.isActive
+              ? "h-2 bg-amber-200/60 dark:bg-amber-900/40"
+              : "h-2 bg-primary/20"
+          }
+        />
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-muted-foreground">
+            {status.isActive
+              ? `Še ${status.remainingToMonetization} do monetizacije`
+              : "Beta zaključen"}
+          </span>
+          {status.isActive ? (
+            <Badge className="bg-amber-400 text-amber-950 hover:bg-amber-400 border-0 gap-1">
+              <Zap className="size-3 fill-amber-950" aria-hidden="true" />
+              BETA AKTIVEN
+            </Badge>
+          ) : (
+            <Badge className="bg-primary text-primary-foreground border-0 gap-1">
+              <Check className="size-3" aria-hidden="true" />
+              MONETIZACIJA
+            </Badge>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground pt-2 border-t border-border/60">
+          {status.message}
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 

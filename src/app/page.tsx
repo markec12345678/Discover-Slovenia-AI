@@ -12,11 +12,13 @@ import { AffiliateSection } from "@/components/sections/affiliate-section";
 import { JoinUs } from "@/components/sections/join-us";
 import { PitchDeckSection } from "@/components/sections/pitch-deck";
 import { Footer } from "@/components/sections/footer";
+import { BetaBanner } from "@/components/beta-banner";
 
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navigation />
+      <BetaBanner />
       <main className="flex-grow">
         <Hero />
         <StatsSection />

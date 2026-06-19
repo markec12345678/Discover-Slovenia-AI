@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Loader2, Lock, ShieldCheck, AlertCircle } from "lucide-react";
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
+import { BetaBanner } from "@/components/beta-banner";
 
 const STORAGE_KEY = "admin_token";
 
@@ -52,16 +53,19 @@ export default function AdminPage() {
 
   if (!password) {
     return (
-      <LoginForm
-        onLogin={(token) => {
-          try {
-            window.localStorage.setItem(STORAGE_KEY, token);
-          } catch {
-            /* ignore */
-          }
-          setPassword(token);
-        }}
-      />
+      <div className="min-h-screen bg-muted/30 flex flex-col">
+        <BetaBanner />
+        <LoginForm
+          onLogin={(token) => {
+            try {
+              window.localStorage.setItem(STORAGE_KEY, token);
+            } catch {
+              /* ignore */
+            }
+            setPassword(token);
+          }}
+        />
+      </div>
     );
   }
 
@@ -106,7 +110,7 @@ function LoginForm({ onLogin }: { onLogin: (token: string) => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
+    <div className="flex-1 flex items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="space-y-3 text-center">
           <div className="mx-auto flex size-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
