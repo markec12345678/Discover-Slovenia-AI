@@ -2,6 +2,7 @@
 
 > **AI-poganjana turistična platforma za Slovenijo** — destinacije, tržnica lokalnih izdelkov in izkušenj, B2B portali za ponudnike, interaktivni zemljevid s tisočimi POI, in pavšalni oglasni model.
 
+[![CI](https://github.com/markec12345678/i-feel-slovenia/actions/workflows/ci.yml/badge.svg)](https://github.com/markec12345678/i-feel-slovenia/actions)
 [![Next.js](https://img.shields.io/badge/Next.js-16.2-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-6.19-indigo?logo=prisma)](https://www.prisma.io/)
