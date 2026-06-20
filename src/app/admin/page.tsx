@@ -23,6 +23,10 @@ import {
   Calendar,
   LogOut,
   Sparkles,
+  Package,
+  Ticket,
+  MousePointerClick,
+  Rocket,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -410,7 +414,7 @@ function AdminDashboard({
 
       <main className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex-1">
         <Tabs defaultValue="listings" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-lg grid-cols-4">
             <TabsTrigger value="listings" className="gap-1.5">
               <Building2 className="size-4" aria-hidden="true" />
               <span className="hidden sm:inline">Lokali</span>
@@ -422,6 +426,10 @@ function AdminDashboard({
             <TabsTrigger value="stats" className="gap-1.5">
               <TrendingUp className="size-4" aria-hidden="true" />
               <span className="hidden sm:inline">Statistika</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="gap-1.5">
+              <Crown className="size-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Analytics</span>
             </TabsTrigger>
           </TabsList>
 
@@ -435,6 +443,10 @@ function AdminDashboard({
 
           <TabsContent value="stats" className="mt-6">
             <StatsTab adminPassword={adminPassword} />
+          </TabsContent>
+
+          <TabsContent value="analytics" className="mt-6">
+            <GlobalAnalyticsTab adminPassword={adminPassword} />
           </TabsContent>
         </Tabs>
       </main>
@@ -1927,6 +1939,316 @@ function KpiCard({
           <p className="text-2xl font-bold tabular-nums leading-tight">
             {value.toLocaleString("sl-SI")}
           </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============================================================================
+// GLOBAL ANALYTICS TAB — MRR, Churn, LTV, ARR, Top Performers
+// ============================================================================
+
+function GlobalAnalyticsTab({ adminPassword }: { adminPassword: string }) {
+  const [data, setData] = React.useState<AdminAnalytics | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    fetch("/api/admin/analytics", {
+      headers: { "x-admin-password": adminPassword },
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error("Napaka");
+        return r.json();
+      })
+      .then(setData)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [adminPassword]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center text-muted-foreground">
+          Napaka pri nalaganju analitike.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
+          <Crown className="size-5 text-primary" />
+          Global Analytics
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Poslovne metrike — MRR, ARR, Churn, LTV, top performerji
+        </p>
+      </div>
+
+      {/* === REVENUE KPIs === */}
+      <div>
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Prihodek</h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <AdminKpiCard label="MRR" value={`${data.mrr.toLocaleString("sl-SI")} €`} sub="mesečni prihodek" icon={<TrendingUp className="size-4" />} tone="emerald" />
+          <AdminKpiCard label="ARR" value={`${data.arr.toLocaleString("sl-SI")} €`} sub="letni prihodek" icon={<TrendingUp className="size-4" />} tone="emerald" />
+          <AdminKpiCard label="LTV" value={`${data.ltv.toLocaleString("sl-SI")} €`} sub={`povprečno ${data.avgLifetimeMonths}m doba`} icon={<Users className="size-4" />} tone="primary" />
+          <AdminKpiCard label="Churn" value={`${data.churnRate}%`} sub="odhod strank" icon={<AlertCircle className="size-4" />} tone={data.churnRate > 10 ? "destructive" : "amber"} />
+        </div>
+      </div>
+
+      {/* === SUBSCRIPTIONS === */}
+      <div>
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Naročnine</h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <AdminKpiCard label="Skupno ownerjev" value={data.totalOwners.toString()} icon={<Users className="size-4" />} />
+          <AdminKpiCard label="Premium" value={data.premiumOwners.toString()} sub={`${data.premiumOwners * 149} €/mes`} icon={<Crown className="size-4" />} tone="amber" />
+          <AdminKpiCard label="Enterprise" value={data.enterpriseOwners.toString()} sub={`${data.enterpriseOwners * 499} €/mes`} icon={<Crown className="size-4" />} tone="primary" />
+          <AdminKpiCard label="Free" value={data.freeOwners.toString()} icon={<Building2 className="size-4" />} />
+        </div>
+      </div>
+
+      {/* === LISTINGS & CONTENT === */}
+      <div>
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Vsebina</h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <AdminKpiCard label="Listings" value={data.totalListings.toString()} icon={<Building2 className="size-4" />} />
+          <AdminKpiCard label="Izdelki" value={data.totalProducts.toString()} icon={<Package className="size-4" />} />
+          <AdminKpiCard label="Izkušnje" value={data.totalExperiences.toString()} icon={<Ticket className="size-4" />} />
+          <AdminKpiCard label="Sponsored" value={data.sponsoredListings.toString()} icon={<Sparkles className="size-4" />} tone="primary" />
+        </div>
+      </div>
+
+      {/* === ENGAGEMENT === */}
+      <div>
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Engagement (30 dni)</h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <AdminKpiCard label="Ogledi" value={data.views30d.toLocaleString("sl-SI")} icon={<Eye className="size-4" />} />
+          <AdminKpiCard label="Kliki" value={data.clicks30d.toLocaleString("sl-SI")} icon={<MousePointerClick className="size-4" />} tone="primary" />
+          <AdminKpiCard label="AI priporočila" value={data.aiRecs30d.toLocaleString("sl-SI")} icon={<Sparkles className="size-4" />} tone="amber" />
+          <AdminKpiCard label="Lead-i" value={data.leads30d.toLocaleString("sl-SI")} icon={<Users className="size-4" />} tone="emerald" />
+        </div>
+      </div>
+
+      {/* === BETA STATUS === */}
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h4 className="font-bold flex items-center gap-2">
+                <Rocket className="size-5 text-primary" />
+                Beta status
+              </h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                {data.totalListings}/{data.betaThreshold} lokalov — še {data.remainingToMonetization} do monetizacije
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Projiciran MRR (pri 30 premium)</p>
+              <p className="text-2xl font-bold text-primary">{data.projectedMrr.toLocaleString("sl-SI")} €/mes</p>
+              <p className="text-xs text-muted-foreground">= {data.projectedArr.toLocaleString("sl-SI")} €/leto</p>
+            </div>
+          </div>
+          {/* Progress bar */}
+          <div className="mt-3 h-2 w-full rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all"
+              style={{ width: `${Math.min(100, (data.totalListings / data.betaThreshold) * 100)}%` }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* === TOP PERFORMERS (by ROI) === */}
+      {data.topPerformers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sparkles className="size-4 text-primary" />
+              Top performerji (po AI priporočilih)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-xs text-muted-foreground">
+                    <th className="pb-2 pr-3">Lokal</th>
+                    <th className="pb-2 pr-3">Plan</th>
+                    <th className="pb-2 pr-3 text-right">AI recs</th>
+                    <th className="pb-2 pr-3 text-right">Leads</th>
+                    <th className="pb-2 pr-3 text-right">Est. prihodek</th>
+                    <th className="pb-2 text-right">ROI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.topPerformers.map((p) => (
+                    <tr key={p.id} className="border-b border-border/40">
+                      <td className="py-2 pr-3 font-medium">{p.name}</td>
+                      <td className="py-2 pr-3">
+                        <Badge variant={p.plan === "enterprise" ? "default" : "secondary"} className="text-xs">
+                          {p.plan}
+                        </Badge>
+                      </td>
+                      <td className="py-2 pr-3 text-right tabular-nums">{p.aiRecs}</td>
+                      <td className="py-2 pr-3 text-right tabular-nums">{p.leads}</td>
+                      <td className="py-2 pr-3 text-right tabular-nums">{p.estimatedRevenue} €</td>
+                      <td className="py-2 text-right">
+                        <span className={`font-bold tabular-nums ${p.roiStatus === "positive" ? "text-emerald-600" : "text-amber-600"}`}>
+                          {p.roi > 0 ? "+" : ""}{p.roi}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* === GROWTH CHART === */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="size-4 text-primary" />
+            Rast (novi ownerji po mesecih)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-end gap-2 h-32">
+            {data.growthData.map((g, i) => {
+              const max = Math.max(...data.growthData.map((x) => x.newOwners), 1);
+              const height = (g.newOwners / max) * 100;
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="text-xs font-medium">{g.newOwners}</div>
+                  <div
+                    className="w-full rounded-t bg-primary/70 hover:bg-primary transition-colors"
+                    style={{ height: `${Math.max(4, height)}%` }}
+                  />
+                  <div className="text-[10px] text-muted-foreground">{g.month}</div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* === LISTINGS BY CATEGORY === */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Lokali po kategorijah</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {data.listingsByCategory.map((c) => {
+              const max = Math.max(...data.listingsByCategory.map((x) => x.count), 1);
+              return (
+                <div key={c.category} className="flex items-center gap-3">
+                  <span className="text-sm w-24 capitalize">{c.category}</span>
+                  <div className="flex-1 h-6 rounded bg-muted overflow-hidden">
+                    <div
+                      className="h-full bg-primary/60 flex items-center justify-end pr-2"
+                      style={{ width: `${(c.count / max) * 100}%` }}
+                    >
+                      <span className="text-xs font-bold text-primary-foreground">{c.count}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Tipi
+interface AdminAnalytics {
+  totalOwners: number;
+  premiumOwners: number;
+  enterpriseOwners: number;
+  freeOwners: number;
+  activeSubscriptions: number;
+  canceledSubscriptions: number;
+  mrr: number;
+  arr: number;
+  churnRate: number;
+  ltv: number;
+  avgLifetimeMonths: number;
+  totalListings: number;
+  featuredListings: number;
+  sponsoredListings: number;
+  verifiedListings: number;
+  listingsByCategory: { category: string; count: number }[];
+  totalProducts: number;
+  totalExperiences: number;
+  totalLeads: number;
+  leads30d: number;
+  leads7d: number;
+  joinUsLeads: number;
+  totalViews: number;
+  totalClicks: number;
+  totalAIRecs: number;
+  views30d: number;
+  clicks30d: number;
+  aiRecs30d: number;
+  topPerformers: {
+    id: string; name: string; category: string; plan: string;
+    views: number; clicks: number; aiRecs: number; leads: number;
+    estimatedRevenue: number; roi: number; roiStatus: string; owner: string;
+  }[];
+  growthData: { month: string; newOwners: number }[];
+  betaThreshold: number;
+  remainingToMonetization: number;
+  projectedMrr: number;
+  projectedArr: number;
+}
+
+function AdminKpiCard({
+  label,
+  value,
+  sub,
+  icon,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: React.ReactNode;
+  tone?: "default" | "amber" | "primary" | "emerald" | "destructive";
+}) {
+  const toneClass = {
+    default: "bg-muted/40 text-foreground",
+    amber: "bg-amber-100 text-amber-900",
+    primary: "bg-primary/10 text-primary",
+    emerald: "bg-emerald-100 text-emerald-900",
+    destructive: "bg-red-100 text-red-900",
+  }[tone];
+
+  return (
+    <Card>
+      <CardContent className="p-4 flex flex-col gap-2">
+        <div className={`flex size-8 items-center justify-center rounded-md ${toneClass}`}>
+          {icon}
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">{label}</p>
+          <p className="text-xl font-bold tabular-nums leading-tight">{value}</p>
+          {sub && <p className="text-[10px] text-muted-foreground">{sub}</p>}
         </div>
       </CardContent>
     </Card>
