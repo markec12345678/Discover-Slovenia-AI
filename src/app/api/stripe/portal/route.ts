@@ -65,7 +65,7 @@ export async function POST() {
     }
 
     const stripe = new Stripe(stripeKey, {
-      apiVersion: "2024-12-18.acacia" as Stripe.LatestApiVersion,
+      apiVersion: "2026-05-27.dahlia",
     });
 
     const baseUrl =

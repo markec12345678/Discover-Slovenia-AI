@@ -152,7 +152,7 @@ export async function POST() {
     }
 
     const stripe = new Stripe(stripeKey, {
-      apiVersion: "2024-12-18.acacia" as Stripe.LatestApiVersion,
+      apiVersion: "2026-05-27.dahlia",
     });
 
     // Pridobi aktivne subscription-e za tega customerja
@@ -178,11 +178,7 @@ export async function POST() {
 
     // Prekliči vse aktivne subscriptione
     for (const sub of subscriptions.data) {
-      await stripe.subscriptions.cancel(sub.id, {
-        cancellation_details: {
-          reason: "cancellation_requested",
-        },
-      });
+      await stripe.subscriptions.cancel(sub.id);
     }
 
     // Lokalno označi kot canceled (webhook bo dokončal cleanup)

@@ -23,6 +23,7 @@ interface AppState {
  */
 export const useAppStore = create<AppState>((set) => ({
   itinerary: null,
+  routeCoords: [],
   setItinerary: (it) => {
     if (!it) {
       set({ itinerary: null, routeCoords: [] });

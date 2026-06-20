@@ -246,7 +246,7 @@ export function MapView({ routeCoords, onOpenDestination }: MapViewProps) {
     if (!showRoute || !routeCoords || routeCoords.length < 2) return;
 
     // Polyline med vsemi točkami
-    const latlngs = routeCoords.map((c) => [c.lat, c.lng]);
+    const latlngs = routeCoords.map((c) => [c.lat, c.lng] as [number, number]);
     const polyline = L.polyline(latlngs, {
       color: "#2d6a3e",
       weight: 3,

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import ZAI from "z-ai-web-dev-sdk";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { db } from "@/lib/db";
-import type { Itinerary, PlannerInput, DayPlan } from "@/lib/types";
+import type { Itinerary, PlannerInput, DayPlan, LocationVisit } from "@/lib/types";
 
 // POST /api/itinerary - generira AI itinerer z z-ai-web-dev-sdk
 // AI prioritizira SPONZORIRANE lokale (premium/enterprise stranke ki plačajo za vključitev)
@@ -170,7 +170,7 @@ function generateFallbackItinerary(input: PlannerInput): Itinerary {
 
   for (let day = 1; day <= input.days; day++) {
     const locationsPerDay = 2;
-    const locations = [];
+    const locations: LocationVisit[] = [];
 
     for (let i = 0; i < locationsPerDay; i++) {
       const dest = ranked[destIndex % ranked.length];
