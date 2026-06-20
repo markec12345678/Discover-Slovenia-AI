@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
@@ -15,6 +16,7 @@ import {
   Star,
   Crown,
   Check,
+  CheckCircle2,
   TrendingUp,
   Loader2,
   AlertCircle,
@@ -446,6 +448,7 @@ export default function OwnerDashboardPage() {
               listings={listings}
               loading={loadingListings}
               leadsSummary={leadsSummary}
+              plan={plan}
             />
           </TabsContent>
         </Tabs>
@@ -931,10 +934,12 @@ function StatisticsTab({
   listings,
   loading,
   leadsSummary,
+  plan,
 }: {
   listings: Listing[];
   loading: boolean;
   leadsSummary: LeadsSummary | null;
+  plan: string;
 }) {
   // Top lokalci po ogledih
   const top3 = React.useMemo(
@@ -1095,6 +1100,9 @@ function StatisticsTab({
         </Card>
       </div>
 
+      {/* AI Priporočila + ROI Dashboard */}
+      <AIDashboard ownerPlan={plan} />
+
       {/* Kontakt za pomoč */}
       <Card className="border-dashed">
         <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
@@ -1119,6 +1127,200 @@ function StatisticsTab({
       </Card>
     </div>
   );
+}
+
+// ============================================================================
+// AI DASHBOARD — AI priporočila + ROI
+// ============================================================================
+
+function AIDashboard({ ownerPlan }: { ownerPlan: string }) {
+  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/owner/analytics")
+      .then((r) => r.json())
+      .then((d) => setData(d))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6 flex items-center justify-center gap-3">
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Nalagam AI statistiko…</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!data || !data.summary) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="p-6 text-center text-sm text-muted-foreground">
+          Statistika AI priporočil bo na voljo po prvem generiranem itinererju.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const s = data.summary;
+
+  return (
+    <div className="space-y-4">
+      {/* Naslov */}
+      <div className="flex items-center gap-2">
+        <Sparkles className="size-5 text-primary" />
+        <h3 className="text-lg font-bold">AI priporočila in ROI</h3>
+      </div>
+
+      {/* AI priporočila kartice */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiCard
+          label="AI priporočila (30d)"
+          value={s.aiRecommendations30d.toLocaleString("sl-SI")}
+          icon={<Sparkles className="size-4" />}
+          tone="primary"
+        />
+        <KpiCard
+          label="Lead-i (30d)"
+          value={s.leads30d.toLocaleString("sl-SI")}
+          icon={<Users className="size-4" />}
+          tone="emerald"
+        />
+        <KpiCard
+          label="Est. prihodek"
+          value={`${s.estimatedRevenue.toLocaleString("sl-SI")} €`}
+          icon={<TrendingUp className="size-4" />}
+          tone="amber"
+        />
+        <KpiCard
+          label="ROI"
+          value={`${s.roi > 0 ? "+" : ""}${s.roi}%`}
+          icon={<Target className="size-4" />}
+          tone={s.roiStatus === "positive" ? "emerald" : "default"}
+        />
+      </div>
+
+      {/* ROI banner */}
+      <Card className={s.roiStatus === "positive" ? "border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/20" : "border-amber-500/40 bg-amber-50 dark:bg-amber-950/20"}>
+        <CardContent className="p-5">
+          <div className="flex items-start gap-4">
+            <div className={`flex size-12 items-center justify-center rounded-lg ${s.roiStatus === "positive" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>
+              {s.roiStatus === "positive" ? <CheckCircle2 className="size-6" /> : <AlertCircle className="size-6" />}
+            </div>
+            <div className="flex-1">
+              <h4 className="font-bold text-base">
+                {s.roiStatus === "positive"
+                  ? `ROI pozitiven! +${s.roi}%`
+                  : "ROI še negativen — potrebno več aktivnosti"}
+              </h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                Vaših <strong>{s.monthlyCost}€</strong> naročnine = <strong>{s.estimatedRevenue}€</strong> prihodkov
+                ({s.leads30d} leadov × {s.avgLeadValue}€ povprečna rezervacija)
+              </p>
+              {s.aiRecommendations30d > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Konverzija: {s.conversionRate}% (leadov / AI priporočil)
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Zadnjih 7 dni */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-xs text-muted-foreground">Ogledi (7d)</p>
+            <p className="text-xl font-bold">{s.impressions7d}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-xs text-muted-foreground">AI priporočila (7d)</p>
+            <p className="text-xl font-bold">{s.aiRecommendations7d}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-xs text-muted-foreground">Lead-i (7d)</p>
+            <p className="text-xl font-bold">{s.leads7d}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top 5 lokalov po AI priporočilih */}
+      {data.topListings && data.topListings.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sparkles className="size-4 text-primary" />
+              Top 5 lokalov (po AI priporočilih)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {data.topListings.map((l: TopListing, i: number) => (
+              <div key={l.id} className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/30 p-2.5">
+                <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                  {i + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm truncate">{l.name}</div>
+                  <div className="text-xs text-muted-foreground">{l.destination || "—"}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-sm font-semibold">{l.aiRecs} AI</div>
+                  <div className="text-[10px] text-muted-foreground">{l.views} ogledov</div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// Tipi za analytics
+interface AnalyticsData {
+  summary: {
+    totalListings: number;
+    plan: string;
+    monthlyCost: number;
+    impressions30d: number;
+    clicks30d: number;
+    aiRecommendations30d: number;
+    leads30d: number;
+    impressions7d: number;
+    clicks7d: number;
+    aiRecommendations7d: number;
+    leads7d: number;
+    conversionRate: number;
+    estimatedRevenue: number;
+    roi: number;
+    roiStatus: string;
+    avgLeadValue: number;
+  };
+  topListings: TopListing[];
+  allListings: TopListing[];
+}
+
+interface TopListing {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  views: number;
+  clicks: number;
+  aiRecs: number;
+  leads: number;
+  featured?: boolean;
+  rating?: number;
+  destination?: string | null;
 }
 
 // ============================================================================
