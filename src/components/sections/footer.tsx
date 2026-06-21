@@ -86,10 +86,11 @@ export async function Footer() {
           <FooterColumn
             title="Pravno"
             links={[
-              { href: "#piskotki", label: "Piškotki" },
-              { href: "#pogoji", label: "Pogoji uporabe" },
-              { href: "#kontakt", label: "Kontakt" },
-              { href: "#zasebnost", label: "Zasebnost" },
+              { href: "/o-strani", label: "O strani" },
+              { href: "/kontakt", label: "Kontakt" },
+              { href: "/politika-zasebnosti", label: "Politika zasebnosti" },
+              { href: "/pogoji-uporabe", label: "Pogoji uporabe" },
+              { href: "/vir-podatkov", label: "Vir podatkov" },
             ]}
           />
         </div>

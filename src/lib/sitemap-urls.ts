@@ -94,7 +94,7 @@ function makeUrl(
 export function getAllSitemapUrls(): SitemapUrl[] {
   const urls: SitemapUrl[] = [];
 
-  // === Statične strani (9) ===
+  // === Statične strani (14) ===
   urls.push(makeUrl("/", 1.0, "Domov", "daily"));
   urls.push(makeUrl("/#destinacije", 0.9, "Sekcija", "weekly"));
   urls.push(makeUrl("/#nacrtuj", 0.9, "Sekcija", "weekly"));
@@ -104,6 +104,12 @@ export function getAllSitemapUrls(): SitemapUrl[] {
   urls.push(makeUrl("/#blog", 0.6, "Sekcija", "weekly"));
   urls.push(makeUrl("/#pridruzi-se", 0.6, "Sekcija", "monthly"));
   urls.push(makeUrl("/#partnerji", 0.6, "Sekcija", "monthly"));
+  // E-E-A-T strani (Google trust)
+  urls.push(makeUrl("/o-strani", 0.5, "O strani", "monthly"));
+  urls.push(makeUrl("/kontakt", 0.5, "Kontakt", "monthly"));
+  urls.push(makeUrl("/politika-zasebnosti", 0.3, "Politika zasebnosti", "monthly"));
+  urls.push(makeUrl("/pogoji-uporabe", 0.3, "Pogoji uporabe", "monthly"));
+  urls.push(makeUrl("/vir-podatkov", 0.4, "Vir podatkov", "monthly"));
 
   // === Things to do (22) ===
   for (const d of DESTINATIONS) {
