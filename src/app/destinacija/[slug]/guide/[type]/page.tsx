@@ -27,7 +27,7 @@ import {
   Mountain,
   Clock,
 } from "lucide-react";
-import { faqJsonLd, breadcrumbJsonLd } from "@/components/seo";
+import { faqJsonLd, breadcrumbJsonLd, hreflangForPath } from "@/components/seo";
 import { PageViewTracker } from "@/components/page-view-tracker";
 
 // 4 tipi vodnikov s podatki o ceni, trajanju in kategorijah aktivnosti
@@ -340,7 +340,7 @@ export async function generateMetadata({
       locale: "sl_SI",
     },
     alternates: {
-      canonical: `https://ifeelslovenia.si/destinacija/${dest.slug}/guide/${t}`,
+      canonical: `https://ifeelslovenia.si/destinacija/${dest.slug}/guide/${t}`, languages: hreflangForPath(`/destinacija/${dest.slug}/guide/${t}`),
     },
   };
 }

@@ -291,12 +291,14 @@ model Booking {
 // PageView tracking — za SEO indeksacijsko nadzorno ploščo
 // beleži ogled strani (path) za identifikacijo, katere URL-je je Google že indeksiral
 model PageView {
-  id        String   @id @default(cuid())
-  path      String
-  title     String?
-  referrer  String?
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  path        String
+  title       String?
+  referrer    String?
+  funnelStep  String?  // homepage_view | destination_view | itinerary_generate | newsletter_signup | listing_click
+  createdAt   DateTime @default(now())
 
   @@index([path])
   @@index([createdAt])
+  @@index([funnelStep])
 }

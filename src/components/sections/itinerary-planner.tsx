@@ -42,6 +42,7 @@ import type { PlannerInput, Itinerary, Season } from "@/lib/types";
 import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { trackFunnel } from "@/lib/funnel";
 import { BookingPanel, type BookingData } from "@/components/sections/booking-panel";
 
 const SEASONS: { value: Season; label: string }[] = [
@@ -156,6 +157,7 @@ export function ItineraryPlanner() {
       if (!res.ok) throw new Error("Napaka pri generiranju");
       const data: Itinerary = await res.json();
       setItinerary(data);
+      trackFunnel("itinerary_generate");
       toast({
         title: "Itinerer generiran!",
         description:

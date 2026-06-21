@@ -5,6 +5,7 @@ import { Mail, Loader2, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { trackFunnel } from "@/lib/funnel";
 
 export function NewsletterCapture({ variant = "inline" }: { variant?: "inline" | "compact" }) {
   const [email, setEmail] = useState("");
@@ -27,6 +28,7 @@ export function NewsletterCapture({ variant = "inline" }: { variant?: "inline" |
       const data = await res.json();
       if (data.success) {
         setDone(true);
+        trackFunnel("newsletter_signup");
         toast.success("Brezplačni vodnik je na poti!");
       } else {
         toast.error(data.error || "Napaka pri prijavi");

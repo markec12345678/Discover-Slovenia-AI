@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Star, Clock, ArrowRight, ExternalLink, Ticket, BedDouble } from "lucide-react";
-import { faqJsonLd, breadcrumbJsonLd } from "@/components/seo";
+import { faqJsonLd, breadcrumbJsonLd, destinationSchema, hreflangForPath } from "@/components/seo";
 
 export async function generateStaticParams() {
   return DESTINATIONS.map((d) => ({ slug: d.slug }));
@@ -32,7 +32,10 @@ export async function generateMetadata({
       type: "website",
       locale: "sl_SI",
     },
-    alternates: { canonical: `https://ifeelslovenia.si/destinacija/${dest.slug}/things-to-do` },
+    alternates: {
+      canonical: `https://ifeelslovenia.si/destinacija/${dest.slug}/things-to-do`,
+      languages: hreflangForPath(`/destinacija/${dest.slug}/things-to-do`),
+    },
   };
 }
 
@@ -54,16 +57,7 @@ export default async function ThingsToDoPage({
 
   const totalActivities = listings.length + experiences.length;
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "TouristDestination",
-    name: dest.name,
-    description: dest.description,
-    image: dest.image,
-    geo: { "@type": "GeoCoordinates", latitude: dest.coords.lat, longitude: dest.coords.lng },
-    aggregateRating: { "@type": "AggregateRating", ratingValue: dest.rating, reviewCount: 100 },
-    address: { "@type": "PostalAddress", addressCountry: "SI", addressRegion: dest.region },
-  };
+  const jsonLd = destinationSchema(dest);
 
   const faqs = [
     { q: `Kaj početi v ${dest.name}?`, a: `${dest.name} ponuja ${dest.highlights.length} glavnih znamenitosti: ${dest.highlights.join(", ")}. Aktivnosti vključujejo ${dest.activities.slice(0, 3).join(", ")} in več.` },

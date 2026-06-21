@@ -5,6 +5,7 @@ import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { hreflangForPath } from "@/components/seo";
 import { Calendar, Sun, Leaf, Snowflake, Cloud, ArrowRight, Sparkles, MapPin } from "lucide-react";
 
 const SEASONS = [
@@ -55,7 +56,7 @@ export async function generateMetadata({
       type: "website",
       locale: "sl_SI",
     },
-    alternates: { canonical: `https://ifeelslovenia.si/destinacija/${dest.slug}/best-time-to-visit/${s.slug}` },
+    alternates: { canonical: `https://ifeelslovenia.si/destinacija/${dest.slug}/best-time-to-visit/${s.slug}`, languages: hreflangForPath(`/destinacija/${dest.slug}/best-time-to-visit/${s.slug}`) },
   };
 }
 
