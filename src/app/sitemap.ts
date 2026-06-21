@@ -4,6 +4,7 @@ import { DESTINATIONS } from "@/lib/slovenia-data";
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ifeelslovenia.si";
 
 const DURATION_SLUGS = ["1-dan", "vikend", "3-dnevi", "5-dnevi", "7-dnevi"];
+const SEASON_SLUGS = ["pomlad", "poletje", "jesen", "zima"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
@@ -23,23 +24,30 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // "Things to do" strani (22)
   const thingsToDoPages: MetadataRoute.Sitemap = DESTINATIONS.map((d) => ({
     url: `${BASE_URL}/destinacija/${d.slug}/things-to-do`,
-    lastModified: now,
-    changeFrequency: "weekly",
-    priority: 0.8,
+    lastModified: now, changeFrequency: "weekly", priority: 0.8,
   }));
 
-  // Itinerary strani (22 × 5 trajanj = 110)
+  // Itinerary strani (22 × 5 = 110)
   const itineraryPages: MetadataRoute.Sitemap = [];
   for (const dest of DESTINATIONS) {
     for (const dur of DURATION_SLUGS) {
       itineraryPages.push({
         url: `${BASE_URL}/destinacija/${dest.slug}/itinerary/${dur}`,
-        lastModified: now,
-        changeFrequency: "monthly",
-        priority: 0.7,
+        lastModified: now, changeFrequency: "monthly", priority: 0.7,
       });
     }
   }
 
-  return [...staticPages, ...thingsToDoPages, ...itineraryPages];
+  // "Best time to visit" strani (22 × 4 sezone = 88)
+  const bestTimePages: MetadataRoute.Sitemap = [];
+  for (const dest of DESTINATIONS) {
+    for (const season of SEASON_SLUGS) {
+      bestTimePages.push({
+        url: `${BASE_URL}/destinacija/${dest.slug}/best-time-to-visit/${season}`,
+        lastModified: now, changeFrequency: "monthly", priority: 0.7,
+      });
+    }
+  }
+
+  return [...staticPages, ...thingsToDoPages, ...itineraryPages, ...bestTimePages];
 }

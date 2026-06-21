@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Star, Clock, ArrowRight, ExternalLink, Ticket, BedDouble } from "lucide-react";
+import { faqJsonLd, breadcrumbJsonLd } from "@/components/seo";
 
 export async function generateStaticParams() {
   return DESTINATIONS.map((d) => ({ slug: d.slug }));
@@ -64,9 +65,32 @@ export default async function ThingsToDoPage({
     address: { "@type": "PostalAddress", addressCountry: "SI", addressRegion: dest.region },
   };
 
+  const faqs = [
+    { q: `Kaj početi v ${dest.name}?`, a: `${dest.name} ponuja ${dest.highlights.length} glavnih znamenitosti: ${dest.highlights.join(", ")}. Aktivnosti vključujejo ${dest.activities.slice(0, 3).join(", ")} in več.` },
+    { q: `Koliko časa potrebujem za ${dest.name}?`, a: `Priporočamo ${dest.duration} za optimalno izkušnjo ${dest.name}. Cena na osebo je približno ${dest.costPerPerson}€.` },
+    { q: `Kdaj je najboljši čas za obisk ${dest.name}?`, a: `Najboljše sezone za ${dest.name} so: ${dest.bestSeason.join(", ")}. Preverite našo stran o najboljšem času za obisk za podrobnosti.` },
+    { q: `Katere aktivnosti so na voljo v ${dest.name}?`, a: `V ${dest.name} lahko ${dest.activities.join(", ")}. Preverite naš seznam lokalnih ponudnikov za rezervacije.` },
+  ];
+
+  const breadcrumbs = breadcrumbJsonLd([
+    { name: "Domov", url: "https://ifeelslovenia.si/" },
+    { name: dest.name, url: `https://ifeelslovenia.si/destinacija/${dest.slug}/things-to-do` },
+  ]);
+
   return (
     <div className="min-h-screen bg-background">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(faqs)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }} />
+
+      {/* Breadcrumbs */}
+      <div className="mx-auto max-w-5xl px-4 pt-6">
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Link href="/" className="hover:text-foreground">Domov</Link>
+          <span>/</span>
+          <span className="text-foreground">{dest.name}</span>
+        </nav>
+      </div>
 
       {/* Hero */}
       <div className="relative h-[400px] w-full overflow-hidden">
@@ -188,6 +212,40 @@ export default async function ThingsToDoPage({
             </div>
           </section>
         )}
+
+        {/* Best time to visit */}
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold mb-4">Najboljši čas za obisk {dest.name}</h2>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/destinacija/${dest.slug}/best-time-to-visit/pomlad`}>🌸 Pomlad</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/destinacija/${dest.slug}/best-time-to-visit/poletje`}>☀️ Poletje</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/destinacija/${dest.slug}/best-time-to-visit/jesen`}>🍂 Jesen</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/destinacija/${dest.slug}/best-time-to-visit/zima`}>❄️ Zima</Link>
+            </Button>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold mb-6">Pogosta vprašanja</h2>
+          <div className="space-y-3">
+            {faqs.map((faq, i) => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <h3 className="font-semibold mb-2">{faq.q}</h3>
+                  <p className="text-sm text-muted-foreground">{faq.a}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
 
         {/* CTA: AI itinerer */}
         <section className="rounded-2xl border border-primary/30 bg-primary/5 p-8 text-center">
