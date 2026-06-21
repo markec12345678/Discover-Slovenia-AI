@@ -287,3 +287,16 @@ model Booking {
   @@index([guestEmail])
   @@index([status])
 }
+
+// PageView tracking — za SEO indeksacijsko nadzorno ploščo
+// beleži ogled strani (path) za identifikacijo, katere URL-je je Google že indeksiral
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  title     String?
+  referrer  String?
+  createdAt DateTime @default(now())
+
+  @@index([path])
+  @@index([createdAt])
+}

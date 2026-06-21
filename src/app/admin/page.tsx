@@ -27,6 +27,13 @@ import {
   Ticket,
   MousePointerClick,
   Rocket,
+  Globe,
+  FileSearch,
+  ExternalLink,
+  ChevronDown,
+  Inbox,
+  Award,
+  Activity,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -82,6 +89,11 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { BetaBanner } from "@/components/beta-banner";
 import { useToast } from "@/hooks/use-toast";
 import { DESTINATIONS } from "@/lib/slovenia-data";
@@ -414,7 +426,7 @@ function AdminDashboard({
 
       <main className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex-1">
         <Tabs defaultValue="listings" className="w-full">
-          <TabsList className="grid w-full max-w-lg grid-cols-4">
+          <TabsList className="grid w-full max-w-2xl grid-cols-5">
             <TabsTrigger value="listings" className="gap-1.5">
               <Building2 className="size-4" aria-hidden="true" />
               <span className="hidden sm:inline">Lokali</span>
@@ -430,6 +442,10 @@ function AdminDashboard({
             <TabsTrigger value="analytics" className="gap-1.5">
               <Crown className="size-4" aria-hidden="true" />
               <span className="hidden sm:inline">Analytics</span>
+            </TabsTrigger>
+            <TabsTrigger value="indeksacija" className="gap-1.5">
+              <Globe className="size-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Indeksacija</span>
             </TabsTrigger>
           </TabsList>
 
@@ -447,6 +463,10 @@ function AdminDashboard({
 
           <TabsContent value="analytics" className="mt-6">
             <GlobalAnalyticsTab adminPassword={adminPassword} />
+          </TabsContent>
+
+          <TabsContent value="indeksacija" className="mt-6">
+            <IndexingTab adminPassword={adminPassword} />
           </TabsContent>
         </Tabs>
       </main>
@@ -2252,5 +2272,533 @@ function AdminKpiCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// ============================================================================
+// TAB 5: INDEKSIJA — SEO indeksacijsko poročilo
+// ============================================================================
+
+interface IndexingPageItem {
+  path: string;
+  url: string;
+  category: string;
+  views: number;
+  indexed: boolean;
+}
+
+interface IndexingTopItem {
+  path: string;
+  url: string;
+  category: string;
+  views: number;
+  pageViews: number;
+  listingImpressions: number;
+  percentage: number;
+}
+
+interface IndexingNotIndexedItem {
+  path: string;
+  url: string;
+  category: string;
+  priority: number;
+}
+
+interface IndexingCategoryStat {
+  category: string;
+  total: number;
+  indexed: number;
+  notIndexed: number;
+  views: number;
+  coverage: number;
+}
+
+interface IndexingTrendItem {
+  day: string;
+  count: number;
+}
+
+interface IndexingData {
+  totalUrls: number;
+  indexedCount: number;
+  notIndexedCount: number;
+  coveragePercent: number;
+  totalPageViews: number;
+  totalPageViewRecords: number;
+  topPage: IndexingTopItem | null;
+  pages: IndexingPageItem[];
+  top20: IndexingTopItem[];
+  notIndexed: IndexingNotIndexedItem[];
+  byCategory: IndexingCategoryStat[];
+  trend7d: IndexingTrendItem[];
+  links: {
+    searchConsole: string;
+    sitemapSubmission: string;
+    sitemapUrl: string;
+  };
+}
+
+function IndexingTab({ adminPassword }: { adminPassword: string }) {
+  const [data, setData] = React.useState<IndexingData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [showAllNotIndexed, setShowAllNotIndexed] = React.useState(false);
+
+  const fetchData = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/indexing", {
+        headers: { "x-admin-password": adminPassword },
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error("Neavtorizirano — preverite admin geslo.");
+        }
+        throw new Error("Napaka pri pridobivanju indeksacijskih podatkov.");
+      }
+      const json = (await res.json()) as IndexingData;
+      setData(json);
+    } catch (err) {
+      console.error("[admin/indexing] fetch:", err);
+      setError(err instanceof Error ? err.message : "Neznana napaka.");
+    } finally {
+      setLoading(false);
+    }
+  }, [adminPassword]);
+
+  React.useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-muted-foreground">
+        <Loader2 className="size-5 animate-spin mr-2" aria-hidden="true" />
+        Nalaganje indeksacijskih podatkov...
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          <AlertCircle className="size-4 shrink-0 mt-0.5" aria-hidden="true" />
+          <span>{error ?? "Napaka pri nalaganju."}</span>
+        </div>
+        <Button onClick={fetchData} variant="outline">
+          <Loader2 className="size-4 mr-2" aria-hidden="true" />
+          Poskusi znova
+        </Button>
+      </div>
+    );
+  }
+
+  const visibleNotIndexed = showAllNotIndexed
+    ? data.notIndexed.slice(0, 50)
+    : [];
+  const maxTrend = Math.max(...data.trend7d.map((t) => t.count), 1);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
+            <Globe className="size-5 text-primary" aria-hidden="true" />
+            Indeksacija (SEO)
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Sledenje 317 URL-jev — katere je Google že indeksiral (po ogledih).
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button asChild variant="outline" size="sm">
+            <a
+              href={data.links.searchConsole}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <ExternalLink className="size-3.5 mr-1" aria-hidden="true" />
+              Google Search Console
+            </a>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <a
+              href={data.links.sitemapSubmission}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <FileSearch className="size-3.5 mr-1" aria-hidden="true" />
+              Ping sitemap
+            </a>
+          </Button>
+        </div>
+      </div>
+
+      {/* KPI kartice */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <AdminKpiCard
+          label="Skupno URL-jev"
+          value={data.totalUrls.toString()}
+          sub="v sitemap.xml"
+          icon={<Globe className="size-4" />}
+        />
+        <AdminKpiCard
+          label="Strani z ogledi"
+          value={data.indexedCount.toString()}
+          sub={`${data.coveragePercent}% pokritosti`}
+          icon={<Check className="size-4" />}
+          tone="emerald"
+        />
+        <AdminKpiCard
+          label="Nepoiskane strani"
+          value={data.notIndexedCount.toString()}
+          sub={`${data.totalUrls > 0 ? Math.round((data.notIndexedCount / data.totalUrls) * 100) : 0}% manjka`}
+          icon={<Inbox className="size-4" />}
+          tone="amber"
+        />
+        <AdminKpiCard
+          label="Top stran"
+          value={data.topPage?.views.toString() ?? "0"}
+          sub={data.topPage?.path.slice(0, 24) ?? "—"}
+          icon={<Award className="size-4" />}
+          tone="primary"
+        />
+      </div>
+
+      {/* Coverage progress bar */}
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h4 className="font-bold flex items-center gap-2">
+                <Activity className="size-5 text-primary" aria-hidden="true" />
+                Indeksacijska pokritost
+              </h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                {data.indexedCount} od {data.totalUrls} strani ima vsaj 1 ogled
+                (proxy za &quot;Google je našel&quot;)
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-bold text-primary tabular-nums">
+                {data.coveragePercent}%
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {data.totalPageViews.toLocaleString("sl-SI")} skupno ogledov
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 h-3 w-full rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full bg-emerald-500 transition-all"
+              style={{ width: `${data.coveragePercent}%` }}
+              role="progressbar"
+              aria-valuenow={data.coveragePercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Top 20 strani po ogledih */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="size-4 text-primary" aria-hidden="true" />
+            Top 20 strani po ogledih
+          </CardTitle>
+          <CardDescription>
+            Strani z največ ogledi — kategorija, število ogledov in delež od
+            skupno.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto max-h-96 overflow-y-auto">
+            <Table>
+              <TableHeader className="sticky top-0 bg-background z-10">
+                <TableRow>
+                  <TableHead className="w-8">#</TableHead>
+                  <TableHead>Path</TableHead>
+                  <TableHead className="hidden sm:table-cell">Kategorija</TableHead>
+                  <TableHead className="text-right">Ogledi</TableHead>
+                  <TableHead className="text-right hidden md:table-cell">
+                    % skupno
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.top20.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      Ni zabeleženih ogledov. Obiščite nekaj strani ali počakajte
+                      na Googlebot.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  data.top20.map((item, i) => (
+                    <TableRow key={item.path}>
+                      <TableCell className="font-bold text-muted-foreground tabular-nums">
+                        {i + 1}
+                      </TableCell>
+                      <TableCell>
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline font-mono text-xs"
+                        >
+                          {item.path}
+                        </a>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <Badge variant="secondary" className="text-xs">
+                          {item.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums">
+                        {item.views.toLocaleString("sl-SI")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums hidden md:table-cell">
+                        {item.percentage}%
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 7-dnevni trend ogledov */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Activity className="size-4 text-primary" aria-hidden="true" />
+            Trend ogledov (zadnjih 7 dni)
+          </CardTitle>
+          <CardDescription>
+            Število zabeleženih PageView dogodkov na dan.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-end gap-2 h-32">
+            {data.trend7d.map((t, i) => {
+              const height = (t.count / maxTrend) * 100;
+              return (
+                <div
+                  key={i}
+                  className="flex-1 flex flex-col items-center gap-1"
+                >
+                  <div className="text-xs font-medium tabular-nums">
+                    {t.count}
+                  </div>
+                  <div
+                    className="w-full rounded-t bg-primary/70 hover:bg-primary transition-colors"
+                    style={{ height: `${Math.max(4, height)}%` }}
+                    title={`${t.day}: ${t.count} ogledov`}
+                  />
+                  <div className="text-[10px] text-muted-foreground">
+                    {t.day}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Po kategorijah */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Pokritost po kategorijah</CardTitle>
+          <CardDescription>
+            Koliko strani posamezne kategorije je že indeksiranih.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {data.byCategory.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              Ni podatkov.
+            </p>
+          ) : (
+            data.byCategory.map((c) => (
+              <div key={c.category} className="space-y-1">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">{c.category}</span>
+                  <span className="tabular-nums text-muted-foreground">
+                    {c.indexed}/{c.total} · {c.views.toLocaleString("sl-SI")}{" "}
+                    ogledov
+                  </span>
+                </div>
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all"
+                    style={{ width: `${c.coverage}%` }}
+                  />
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Nepoiskane strani (collapsible) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Inbox className="size-4 text-amber-500" aria-hidden="true" />
+            Nepoiskane strani (0 ogledov)
+            <Badge variant="secondary" className="ml-1">
+              {data.notIndexedCount}
+            </Badge>
+          </CardTitle>
+          <CardDescription>
+            Strani, ki jih Google še ni indeksiral. Prioriteta — pošljite jih v
+            Google Search Console za hitrejšo indeksacijo.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Collapsible
+            open={showAllNotIndexed}
+            onOpenChange={setShowAllNotIndexed}
+          >
+            <CollapsibleContent className="data-[state=closed]:hidden">
+              <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
+                {visibleNotIndexed.length === 0 ? (
+                  <div className="text-sm text-muted-foreground text-center py-6 flex flex-col items-center gap-2">
+                    <Check className="size-8 text-emerald-500" aria-hidden="true" />
+                    <span>Vse strani so indeksirane! Odlično delo.</span>
+                  </div>
+                ) : (
+                  visibleNotIndexed.map((item) => (
+                    <div
+                      key={item.path}
+                      className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/30 p-2.5"
+                    >
+                      <div className="size-8 shrink-0 rounded-md bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200 flex items-center justify-center text-xs font-bold">
+                        {item.priority.toFixed(1)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline font-mono text-xs block truncate"
+                        >
+                          {item.path}
+                        </a>
+                        <p className="text-xs text-muted-foreground">
+                          {item.category} · prioriteta {item.priority}
+                        </p>
+                      </div>
+                      <ExternalLink
+                        className="size-3.5 text-muted-foreground shrink-0"
+                        aria-hidden="true"
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+            </CollapsibleContent>
+
+            <div className="mt-4 flex justify-center">
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" size="sm">
+                  {showAllNotIndexed ? (
+                    <>
+                      <ChevronDown
+                        className="size-4 mr-1 rotate-180"
+                        aria-hidden="true"
+                      />
+                      Skrij seznam
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="size-4 mr-1" aria-hidden="true" />
+                      Prikaži seznam ({data.notIndexed.length})
+                      {data.notIndexed.length > 0 && (
+                        <span className="ml-1 text-muted-foreground">
+                          · max {Math.min(50, data.notIndexed.length)} prikazanih
+                        </span>
+                      )}
+                    </>
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+          </Collapsible>
+        </CardContent>
+      </Card>
+
+      {/* Povezave za Google */}
+      <Card className="border-primary/30 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Rocket className="size-4 text-primary" aria-hidden="true" />
+            Pospešite indeksacijo
+          </CardTitle>
+          <CardDescription>
+            Pošljite sitemap Google-u preko Search Console za hitrejšo
+            indeksacijo vseh 317 URL-jev.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button asChild variant="default" className="h-auto py-3 justify-start">
+              <a
+                href={data.links.searchConsole}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="size-4 mr-2 shrink-0" aria-hidden="true" />
+                <div className="text-left">
+                  <div className="font-semibold text-sm">
+                    Google Search Console
+                  </div>
+                  <div className="text-xs opacity-80">
+                    Dodajte spletno mesto in preverite indeksacijo
+                  </div>
+                </div>
+              </a>
+            </Button>
+            <Button asChild variant="outline" className="h-auto py-3 justify-start">
+              <a
+                href={data.links.sitemapSubmission}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FileSearch className="size-4 mr-2 shrink-0" aria-hidden="true" />
+                <div className="text-left">
+                  <div className="font-semibold text-sm">Ping sitemap</div>
+                  <div className="text-xs opacity-70">
+                    {data.links.sitemapUrl}
+                  </div>
+                </div>
+              </a>
+            </Button>
+          </div>
+          <div className="flex items-center justify-between pt-3 border-t border-border/60">
+            <div>
+              <p className="text-xs text-muted-foreground">
+                Skupno zabeleženih PageView zapisov (vse strani)
+              </p>
+              <p className="text-lg font-bold tabular-nums">
+                {data.totalPageViewRecords.toLocaleString("sl-SI")}
+              </p>
+            </div>
+            <Button onClick={fetchData} variant="ghost" size="sm">
+              <Loader2 className="size-3.5 mr-1" aria-hidden="true" />
+              Osveži
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
