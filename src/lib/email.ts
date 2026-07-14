@@ -40,7 +40,7 @@ export async function sendEmail({
     await transporter.sendMail({
       from:
         process.env.SMTP_FROM ||
-        "I Feel Slovenia <noreply@ifeelslovenia.si>",
+        "Discover Slovenia AI <noreply@discoverslovenia.ai>",
       to,
       subject,
       html,
@@ -57,14 +57,14 @@ export async function sendEmail({
 export function emailTemplate(title: string, content: string): string {
   return `<!DOCTYPE html><html><body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
     <div style="background: #2d6a3e; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-      <h1 style="margin: 0;">🇸🇮 I Feel Slovenia</h1>
+      <h1 style="margin: 0;">🇸🇮 Discover Slovenia AI</h1>
     </div>
     <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
       <h2 style="color: #1a2e1a; margin-top: 0;">${title}</h2>
       ${content}
     </div>
     <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
-      <p>I Feel Slovenia — AI turistična platforma</p>
+      <p>Discover Slovenia AI — AI turistična platforma</p>
       <p>To sporočilo ste prejeli ker ste registrirani ponudnik.</p>
     </div>
   </body></html>`;
@@ -72,7 +72,7 @@ export function emailTemplate(title: string, content: string): string {
 
 // Admin e-mail iz env (fallback)
 export function getAdminEmail(): string {
-  return process.env.ADMIN_EMAIL || "admin@ifeelslovenia.si";
+  return process.env.ADMIN_EMAIL || "admin@discoverslovenia.ai";
 }
 
 // Base URL za povezave v e-mailih

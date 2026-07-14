@@ -737,7 +737,7 @@ function SuccessView({
 
       <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
         <ShieldCheck className="size-3.5 text-primary" aria-hidden="true" />
-        <span>Varne rezervacije · I Feel Slovenia</span>
+        <span>Varne rezervacije · Discover Slovenia AI</span>
       </div>
 
       <Button

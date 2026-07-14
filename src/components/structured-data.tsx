@@ -1,4 +1,4 @@
-// Structured data (Schema.org JSON-LD) komponente za I Feel Slovenia.
+// Structured data (Schema.org JSON-LD) komponente za Discover Slovenia AI.
 // Server component — generira <script type="application/ld+json"> za različne entitete.
 
 import type { Destination } from "@/lib/types";
@@ -197,7 +197,7 @@ export function WebSiteJsonLd() {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: SITE_NAME,
-    alternateName: "I Feel Slovenia — AI turistična platforma",
+    alternateName: "Discover Slovenia AI — AI turistična platforma",
     url: BASE_URL,
     description: SITE_DESCRIPTION,
     inLanguage: "sl-SI",
@@ -225,7 +225,7 @@ export function OrganizationJsonLd() {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: SITE_NAME,
-    alternateName: "I Feel Slovenia",
+    alternateName: "Discover Slovenia AI",
     url: BASE_URL,
     logo: {
       "@type": "ImageObject",
@@ -238,9 +238,9 @@ export function OrganizationJsonLd() {
       name: "Slovenija",
     },
     sameAs: [
-      "https://www.instagram.com/ifeelslovenia",
-      "https://www.facebook.com/ifeelslovenia",
-      "https://www.youtube.com/ifeelslovenia",
+      "https://www.instagram.com/discoverslovenia",
+      "https://www.facebook.com/discoverslovenia",
+      "https://www.youtube.com/discoverslovenia",
     ],
     contactPoint: {
       "@type": "ContactPoint",

@@ -62,14 +62,14 @@ export function Navigation() {
         <Link
           href="#vrh"
           className="flex items-center gap-2 text-foreground transition-colors hover:text-primary"
-          aria-label="I Feel Slovenia — domov"
+          aria-label="Discover Slovenia AI — domov"
         >
           <span className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
             <Mountain className="size-5" aria-hidden="true" />
           </span>
           <span className="flex flex-col leading-none">
             <span className="text-sm font-bold tracking-tight sm:text-base">
-              I Feel Slovenia
+              Discover Slovenia AI
             </span>
             <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
               AI potovanja
@@ -152,7 +152,7 @@ export function Navigation() {
                   <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
                     <Compass className="size-4" aria-hidden="true" />
                   </span>
-                  I Feel Slovenia
+                  Discover Slovenia AI
                 </span>
               </SheetTitle>
 

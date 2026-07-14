@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Vir podatkov — I Feel Slovenia",
-  description: "Seznam virov podatkov, ki jih uporablja platforma I Feel Slovenia.",
-  alternates: { canonical: "https://ifeelslovenia.si/vir-podatkov" },
+  title: "Vir podatkov",
+  description: "Seznam virov podatkov, ki jih uporablja platforma Discover Slovenia AI.",
+  alternates: { canonical: "https://discoverslovenia.ai/vir-podatkov" },
 };
 
 export default function DataSourcePage() {
@@ -24,7 +24,7 @@ export default function DataSourcePage() {
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-bold mb-6">Vir podatkov</h1>
         <p className="text-muted-foreground mb-8">
-          Platforma I Feel Slovenia uporablja naslednje vire podatkov za zagotavljanje
+          Platforma Discover Slovenia AI uporablja naslednje vire podatkov za zagotavljanje
           kakovostnih informacij o slovenskih turističnih destinacijah.
         </p>
 

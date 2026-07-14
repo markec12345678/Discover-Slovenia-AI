@@ -43,7 +43,7 @@ export default function OwnerPrijavaPage() {
             className="flex items-center gap-2 text-primary font-bold text-lg"
           >
             <Building2 className="size-5" aria-hidden="true" />
-            I Feel Slovenia
+            Discover Slovenia AI
           </a>
           <a
             href="/"

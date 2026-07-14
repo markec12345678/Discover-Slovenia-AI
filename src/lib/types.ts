@@ -1,4 +1,4 @@
-// Centralni tipi za I Feel Slovenia platformo
+// Centralni tipi za Discover Slovenia AI platformo
 // Single source of truth - brez duplikacij kot v originalnem repu
 
 export type Region = "gorenjska" | "primorska" | "osrednja" | "kras" | "stajerska" | "koroska" | "prekmurje" | "dolenjska" | "bela-krajina";

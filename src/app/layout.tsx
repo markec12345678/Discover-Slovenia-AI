@@ -53,7 +53,7 @@ export default async function RootLayout({
         <link rel="icon" type="image/svg+xml" href="/logo.svg" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="I Feel Slovenia" />
+        <meta name="apple-mobile-web-app-title" content="Discover Slovenia AI" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="format-detection" content="telephone=no" />
         {/* Strukturirani podatki za SEO (WebSite + Organization) */}

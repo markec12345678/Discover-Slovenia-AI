@@ -20,7 +20,7 @@ export async function Hero() {
     <section
       id="vrh"
       className="relative flex min-h-[90vh] w-full items-center justify-center overflow-hidden"
-      aria-label="Predstavitev platforme I Feel Slovenia"
+      aria-label="Predstavitev platforme Discover Slovenia AI"
     >
       {/* Background slika — Bled ob sončnem zahodu (čista, brez watermarka) */}
       <Image

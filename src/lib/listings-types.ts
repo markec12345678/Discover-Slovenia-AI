@@ -1,4 +1,4 @@
-// Tipi za B2B listings (hotelir, restavracije, aktivnosti) — I Feel Slovenia
+// Tipi za B2B listings (hotelir, restavracije, aktivnosti) — Discover Slovenia AI
 
 export type ListingCategory =
   | "hotel"

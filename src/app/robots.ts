@@ -1,4 +1,4 @@
-// Next.js 16 robots generator — I Feel Slovenia.
+// Next.js 16 robots generator — Discover Slovenia AI.
 // Dostopen na /robots.txt.
 
 import type { MetadataRoute } from "next";

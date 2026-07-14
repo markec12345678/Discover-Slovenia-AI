@@ -318,7 +318,7 @@ export async function generateMetadata({
   const intro = buildIntro(dest.name, t, dest.tagline);
 
   return {
-    title: `${title} — Vodnik ${meta.label.toLowerCase()} | I Feel Slovenia`,
+    title: `${title} — Vodnik ${meta.label.toLowerCase()}`,
     description: `${intro.slice(0, 155)}...`,
     keywords: [
       dest.name,
@@ -333,14 +333,14 @@ export async function generateMetadata({
       dest.region,
     ].filter(Boolean),
     openGraph: {
-      title: `${title} — I Feel Slovenia`,
+      title: `${title} — Discover Slovenia AI`,
       description: `${meta.description} Vodnik za ${dest.name}.`,
       images: [{ url: dest.image, width: 1200, height: 800 }],
       type: "website",
       locale: "sl_SI",
     },
     alternates: {
-      canonical: `https://ifeelslovenia.si/destinacija/${dest.slug}/guide/${t}`, languages: hreflangForPath(`/destinacija/${dest.slug}/guide/${t}`),
+      canonical: `https://discoverslovenia.ai/destinacija/${dest.slug}/guide/${t}`, languages: hreflangForPath(`/destinacija/${dest.slug}/guide/${t}`),
     },
   };
 }
@@ -386,10 +386,10 @@ export default async function GuidePage({
 
   // JSON-LD: FAQPage + BreadcrumbList + TouristTrip
   const breadcrumbs = breadcrumbJsonLd([
-    { name: "Domov", url: "https://ifeelslovenia.si/" },
+    { name: "Domov", url: "https://discoverslovenia.ai/" },
     {
       name: dest.name,
-      url: `https://ifeelslovenia.si/destinacija/${dest.slug}/things-to-do`,
+      url: `https://discoverslovenia.ai/destinacija/${dest.slug}/things-to-do`,
     },
     { name: meta.label },
   ]);

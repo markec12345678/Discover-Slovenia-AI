@@ -1,9 +1,9 @@
-// Service worker za I Feel Slovenia.
+// Service worker za Discover Slovenia AI.
 // Cache-first za statične vire (slike, stili, skripte),
 // network-first za navigacije (z offline fallback na cache).
 // API klici se nikoli ne cachirajo.
 
-const CACHE_NAME = "ifeelslovenia-v1";
+const CACHE_NAME = "discoverslovenia-v1";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",

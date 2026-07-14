@@ -28,7 +28,7 @@ export async function GET(
           {
             cache: "no-store",
             headers: {
-              "User-Agent": "I-Feel-Slovenia/1.0 (https://ifeelslovenia.example; contact@example.com)",
+              "User-Agent": "Discover-Slovenia-AI/1.0 (https://discoverslovenia.example; contact@example.com)",
               "Accept": "application/json",
             },
           }
@@ -55,7 +55,7 @@ export async function GET(
           {
             cache: "no-store",
             headers: {
-              "User-Agent": "I-Feel-Slovenia/1.0 (https://ifeelslovenia.example; contact@example.com)",
+              "User-Agent": "Discover-Slovenia-AI/1.0 (https://discoverslovenia.example; contact@example.com)",
               "Accept": "application/json",
             },
           }

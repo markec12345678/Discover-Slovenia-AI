@@ -53,7 +53,7 @@ const SEASONS: { value: Season; label: string }[] = [
 ];
 
 /**
- * AI Itinerary Planner — jedrna funkcija platforme I Feel Slovenia.
+ * AI Itinerary Planner — jedrna funkcija platforme Discover Slovenia AI.
  * Uporabnik izpolni obrazec (dnevi, proračun, skupina, sezona, interesi),
  * AI pa sestavi personalno dogodkovno povzetek potovanja po Sloveniji.
  */

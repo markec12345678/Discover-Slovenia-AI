@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Politika zasebnosti — I Feel Slovenia",
-  description: "Politika zasebnosti platforme I Feel Slovenia. Kako ravnamo z osebnimi podatki.",
-  alternates: { canonical: "https://ifeelslovenia.si/politika-zasebnosti" },
+  title: "Politika zasebnosti",
+  description: "Politika zasebnosti platforme Discover Slovenia AI. Kako ravnamo z osebnimi podatki.",
+  alternates: { canonical: "https://discoverslovenia.ai/politika-zasebnosti" },
 };
 
 export default function PrivacyPage() {
@@ -16,7 +16,7 @@ export default function PrivacyPage() {
 
           <h2 className="text-xl font-bold">1. Splošno</h2>
           <p>
-            I Feel Slovenia ("platforma") spoštuje vašo zasebnost. Ta politika opisuje, katere
+            Discover Slovenia AI ("platforma") spoštuje vašo zasebnost. Ta politika opisuje, katere
             podatke zbiramo, kako jih uporabljamo in katere pravice imate.
           </p>
 
@@ -62,12 +62,12 @@ export default function PrivacyPage() {
           <h2 className="text-xl font-bold">8. Vaše pravice</h2>
           <p>
             V skladu z GDPR imate pravico do: vpogleda, popravka, izbrisa in prenosa svojih
-            podatkov. Za uveljavljanje pravic pišite na <a href="mailto:privacy@ifeelslovenia.si" className="underline">privacy@ifeelslovenia.si</a>.
+            podatkov. Za uveljavljanje pravic pišite na <a href="mailto:privacy@discoverslovenia.ai" className="underline">privacy@discoverslovenia.ai</a>.
           </p>
 
           <h2 className="text-xl font-bold">9. Kontakt</h2>
           <p>
-            Za vprašanja o zasebnosti: <a href="mailto:privacy@ifeelslovenia.si" className="underline">privacy@ifeelslovenia.si</a>
+            Za vprašanja o zasebnosti: <a href="mailto:privacy@discoverslovenia.ai" className="underline">privacy@discoverslovenia.ai</a>
           </p>
         </div>
       </div>

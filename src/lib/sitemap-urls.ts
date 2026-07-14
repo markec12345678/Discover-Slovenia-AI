@@ -5,7 +5,7 @@ import { DESTINATIONS } from "@/lib/slovenia-data";
 // Uporablja ga /sitemap.ts in /api/admin/indexing za poročanje o indeksaciji.
 
 export const BASE_URL =
-  process.env.NEXT_PUBLIC_BASE_URL || "https://ifeelslovenia.si";
+  process.env.NEXT_PUBLIC_BASE_URL || "https://discoverslovenia.ai";
 
 export const DURATION_SLUGS = [
   "1-dan",

@@ -27,13 +27,13 @@ export async function Footer() {
             <Link
               href="#vrh"
               className="flex items-center gap-2 text-foreground transition-colors hover:text-primary"
-              aria-label="I Feel Slovenia — domov"
+              aria-label="Discover Slovenia AI — domov"
             >
               <span className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
                 <Mountain className="size-5" aria-hidden="true" />
               </span>
               <span className="text-base font-bold tracking-tight">
-                I Feel Slovenia
+                Discover Slovenia AI
               </span>
             </Link>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
@@ -98,7 +98,7 @@ export async function Footer() {
         <div className="mt-10 flex flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-2">
             <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <span>© 2025 I Feel Slovenia. {t("tagline")}</span>
+              <span>© 2025 Discover Slovenia AI. {t("tagline")}</span>
             </p>
             <div className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
               <ShieldCheck className="size-3" />

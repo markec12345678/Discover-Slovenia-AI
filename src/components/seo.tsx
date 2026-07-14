@@ -2,7 +2,7 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { Destination } from "@/lib/types";
 
-const BASE_URL = "https://ifeelslovenia.si";
+const BASE_URL = "https://discoverslovenia.ai";
 const LANGS = ["sl", "en", "de", "it"];
 
 // === HREFLANG HELPER ===
@@ -163,7 +163,7 @@ export function articleJsonLd(article: {
     author: { "@type": "Person", name: article.author },
     publisher: {
       "@type": "Organization",
-      name: "I Feel Slovenia",
+      name: "Discover Slovenia AI",
       logo: {
         "@type": "ImageObject",
         url: `${BASE_URL}/icon-192.png`,
@@ -182,11 +182,11 @@ export function websiteSchema() {
     "@type": "WebSite",
     "@id": `${BASE_URL}/#website`,
     url: BASE_URL,
-    name: "I Feel Slovenia",
+    name: "Discover Slovenia AI",
     description: "AI-poganjana turistična platforma za Slovenijo",
     publisher: {
       "@type": "Organization",
-      name: "I Feel Slovenia",
+      name: "Discover Slovenia AI",
       url: BASE_URL,
     },
     potentialAction: {
@@ -204,7 +204,7 @@ export function organizationSchema() {
     "@context": "https://schema.org",
     "@type": "Organization",
     "@id": `${BASE_URL}/#organization`,
-    name: "I Feel Slovenia",
+    name: "Discover Slovenia AI",
     url: BASE_URL,
     logo: `${BASE_URL}/icon-512.png`,
     description: "AI turistična platforma za Slovenijo — destinacije, tržnica, B2B portali.",

@@ -190,8 +190,8 @@ export async function GET(request: Request) {
       links: {
         searchConsole: "https://search.google.com/search-console",
         sitemapSubmission:
-          "https://search.google.com/ping/submit?url=https://ifeelslovenia.si/sitemap.xml",
-        sitemapUrl: "https://ifeelslovenia.si/sitemap.xml",
+          "https://search.google.com/ping/submit?url=https://discoverslovenia.ai/sitemap.xml",
+        sitemapUrl: "https://discoverslovenia.ai/sitemap.xml",
       },
     });
   } catch (error) {

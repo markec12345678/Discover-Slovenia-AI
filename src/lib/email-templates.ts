@@ -24,13 +24,13 @@ export function welcomeEmail(
 ): { subject: string; html: string; text: string } {
   const planLabel = PLAN_LABELS_EN[plan] || "Free";
   const dashboardUrl = `${getBaseUrl()}/owner/dashboard`;
-  const subject = "Dobrodošli na platformi I Feel Slovenia! 🎉";
+  const subject = "Dobrodošli na platformi Discover Slovenia AI! 🎉";
 
   const content = `
     <p style="margin-top: 0;">Pozdravljeni <strong>${escapeHtml(ownerName)}</strong>,</p>
-    <p>Dobrodošli na platformi <strong>I Feel Slovenia</strong> — prvi AI-turistični portal za Slovenijo. Veselimo se sodelovanja z <strong>${escapeHtml(businessName)}</strong>.</p>
+    <p>Dobrodošli na platformi <strong>Discover Slovenia AI</strong> — prvi AI-turistični portal za Slovenijo. Veselimo se sodelovanja z <strong>${escapeHtml(businessName)}</strong>.</p>
 
-    <p><em>Welcome to I Feel Slovenia — the first AI-powered tourism platform for Slovenia. We are excited to partner with ${escapeHtml(businessName)}.</em></p>
+    <p><em>Welcome to Discover Slovenia AI — the first AI-powered tourism platform for Slovenia. We are excited to partner with ${escapeHtml(businessName)}.</em></p>
 
     <h3 style="color: #2d6a3e; margin-bottom: 8px;">Kaj lahko storite v nadzorni plošči?</h3>
     <ul style="padding-left: 20px; line-height: 1.8;">
@@ -50,11 +50,11 @@ export function welcomeEmail(
     </div>
 
     <p style="font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 24px;">
-      Imate vprašanja? Odgovorite na to sporočilo ali pišite na <a href="mailto:support@ifeelslovenia.si" style="color: #2d6a3e;">support@ifeelslovenia.si</a>.
+      Imate vprašanja? Odgovorite na to sporočilo ali pišite na <a href="mailto:support@discoverslovenia.ai" style="color: #2d6a3e;">support@discoverslovenia.ai</a>.
     </p>
   `;
 
-  const text = `Dobrodošli na I Feel Slovenia, ${ownerName}!
+  const text = `Dobrodošli na Discover Slovenia AI, ${ownerName}!
 
 Vaše podjetje ${businessName} je uspešno registrirano. Trenutni paket: ${planLabel}.
 
@@ -66,7 +66,7 @@ Naslednji koraki:
 Pojdi v dashboard: ${dashboardUrl}
 
 Lep pozdrav,
-Ekipa I Feel Slovenia`;
+Ekipa Discover Slovenia AI`;
 
   return { subject, html: emailTemplate("Dobrodošli! 🎉", content), text };
 }
@@ -88,12 +88,12 @@ export function paymentConfirmationEmail(
     year: "numeric",
   });
   const portalUrl = `${getBaseUrl()}/owner/dashboard`;
-  const subject = "Potrditev plačila — I Feel Slovenia";
+  const subject = "Potrditev plačila — Discover Slovenia AI";
 
   const content = `
     <p style="margin-top: 0;">Pozdravljeni <strong>${escapeHtml(ownerName)}</strong>,</p>
-    <p>Hvala za plačilo! Vaša naročnina na platformi I Feel Slovenia je uspešno aktivirana.</p>
-    <p><em>Thank you for your payment! Your subscription to I Feel Slovenia has been successfully activated.</em></p>
+    <p>Hvala za plačilo! Vaša naročnina na platformi Discover Slovenia AI je uspešno aktivirana.</p>
+    <p><em>Thank you for your payment! Your subscription to Discover Slovenia AI has been successfully activated.</em></p>
 
     <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 24px 0;">
       <table style="width: 100%; font-size: 14px;">
@@ -121,11 +121,11 @@ export function paymentConfirmationEmail(
     </div>
 
     <p style="font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 24px;">
-      Za pomoč pišite na <a href="mailto:billing@ifeelslovenia.si" style="color: #2d6a3e;">billing@ifeelslovenia.si</a>.
+      Za pomoč pišite na <a href="mailto:billing@discoverslovenia.ai" style="color: #2d6a3e;">billing@discoverslovenia.ai</a>.
     </p>
   `;
 
-  const text = `Potrditev plačila — I Feel Slovenia
+  const text = `Potrditev plačila — Discover Slovenia AI
 
 Pozdravljeni ${ownerName},
 
@@ -139,7 +139,7 @@ Naročnina se samodejno obnovi. Upravljate jo lahko v nadzorni plošči:
 ${portalUrl}
 
 Lep pozdrav,
-Ekipa I Feel Slovenia`;
+Ekipa Discover Slovenia AI`;
 
   return { subject, html: emailTemplate("Potrditev plačila ✅", content), text };
 }
@@ -166,8 +166,8 @@ export function renewalReminderEmail(
 
   const content = `
     <p style="margin-top: 0;">Pozdravljeni <strong>${escapeHtml(ownerName)}</strong>,</p>
-    <p>To je prijazni opomnik: vaša naročnina na platformi I Feel Slovenia se obnovi čez <strong>${daysLeft} dni</strong>.</p>
-    <p><em>Friendly reminder: your I Feel Slovenia subscription renews in ${daysLeft} days.</em></p>
+    <p>To je prijazni opomnik: vaša naročnina na platformi Discover Slovenia AI se obnovi čez <strong>${daysLeft} dni</strong>.</p>
+    <p><em>Friendly reminder: your Discover Slovenia AI subscription renews in ${daysLeft} days.</em></p>
 
     <div style="background: #fef9c3; border: 1px solid #fde68a; border-radius: 8px; padding: 20px; margin: 24px 0;">
       <table style="width: 100%; font-size: 14px;">
@@ -227,7 +227,7 @@ Znesek: ${amountStr} / mesec
 ${renewUrl}
 
 Lep pozdrav,
-Ekipa I Feel Slovenia`;
+Ekipa Discover Slovenia AI`;
 
   return { subject, html: emailTemplate("Opomnik za obnovitev ⏰", content), text };
 }
@@ -257,8 +257,8 @@ export function leadNotificationEmail(
 
   const content = `
     <p style="margin-top: 0;">Pozdravljeni <strong>${escapeHtml(ownerName)}</strong>,</p>
-    <p>Prejeli ste novo povpraševanje preko platforme I Feel Slovenia za <strong>${escapeHtml(businessName)}</strong>.</p>
-    <p><em>You have received a new inquiry through I Feel Slovenia for ${escapeHtml(businessName)}.</em></p>
+    <p>Prejeli ste novo povpraševanje preko platforme Discover Slovenia AI za <strong>${escapeHtml(businessName)}</strong>.</p>
+    <p><em>You have received a new inquiry through Discover Slovenia AI for ${escapeHtml(businessName)}.</em></p>
 
     <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 24px 0;">
       <table style="width: 100%; font-size: 14px;">
@@ -295,7 +295,7 @@ ${message ? `\nSporočilo:\n${message}\n` : ""}
 Odgovorite lahko neposredno na ${leadEmail}.
 
 Lep pozdrav,
-Ekipa I Feel Slovenia`;
+Ekipa Discover Slovenia AI`;
 
   return { subject, html: emailTemplate("Nov povpraševalec 📩", content), text };
 }
@@ -315,7 +315,7 @@ export function adminAlertEmail(
 ): { subject: string; html: string; text: string } {
   const meta: Record<AdminAlertType, { subject: string; title: string; icon: string }> = {
     new_signup: {
-      subject: "🔔 Nova registracija na I Feel Slovenia",
+      subject: "🔔 Nova registracija na Discover Slovenia AI",
       title: "Nova registracija ponudnika",
       icon: "🔔",
     },
@@ -346,7 +346,7 @@ export function adminAlertEmail(
 
   const content = `
     <p style="margin-top: 0;">Pozdravljen admin,</p>
-    <p>To je avtomatsko obvestilo iz platforme I Feel Slovenia.</p>
+    <p>To je avtomatsko obvestilo iz platforme Discover Slovenia AI.</p>
 
     <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 20px; margin: 24px 0;">
       <h3 style="margin: 0 0 12px 0; color: #92400e;">${m.icon} ${m.title}</h3>

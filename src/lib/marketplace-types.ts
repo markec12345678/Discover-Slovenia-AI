@@ -1,4 +1,4 @@
-// Tipi za tržnico (Products + Experiences) — I Feel Slovenia
+// Tipi za tržnico (Products + Experiences) — Discover Slovenia AI
 
 export type ProductCategory =
   | "food"

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Pogoji uporabe — I Feel Slovenia",
-  description: "Pogoji uporabe platforme I Feel Slovenia.",
-  alternates: { canonical: "https://ifeelslovenia.si/pogoji-uporabe" },
+  title: "Pogoji uporabe",
+  description: "Pogoji uporabe platforme Discover Slovenia AI.",
+  alternates: { canonical: "https://discoverslovenia.ai/pogoji-uporabe" },
 };
 
 export default function TermsPage() {
@@ -15,7 +15,7 @@ export default function TermsPage() {
           <p><strong>Zadnja posodobitev:</strong> 2025</p>
 
           <h2 className="text-xl font-bold">1. Sprejem pogojev</h2>
-          <p>Z uporabo platforme I Feel Slovenia sprejemate te pogoje uporabe.</p>
+          <p>Z uporabo platforme Discover Slovenia AI sprejemate te pogoje uporabe.</p>
 
           <h2 className="text-xl font-bold">2. Storitev</h2>
           <p>
@@ -70,7 +70,7 @@ export default function TermsPage() {
 
           <h2 className="text-xl font-bold">10. Kontakt</h2>
           <p>
-            Vprašanja: <a href="mailto:info@ifeelslovenia.si" className="underline">info@ifeelslovenia.si</a>
+            Vprašanja: <a href="mailto:info@discoverslovenia.ai" className="underline">info@discoverslovenia.ai</a>
           </p>
         </div>
       </div>

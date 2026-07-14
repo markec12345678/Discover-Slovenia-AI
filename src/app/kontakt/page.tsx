@@ -3,9 +3,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Mail, MapPin, Globe, Shield } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Kontakt — I Feel Slovenia",
-  description: "Stopite v stik z ekipo I Feel Slovenia. Email, telefon in kontaktne informacije.",
-  alternates: { canonical: "https://ifeelslovenia.si/kontakt" },
+  title: "Kontakt",
+  description: "Stopite v stik z ekipo Discover Slovenia AI. Email, telefon in kontaktne informacije.",
+  alternates: { canonical: "https://discoverslovenia.ai/kontakt" },
 };
 
 export default function ContactPage() {
@@ -22,8 +22,8 @@ export default function ContactPage() {
             <CardContent className="p-5">
               <Mail className="size-6 text-primary mb-2" />
               <h3 className="font-semibold mb-1">Email</h3>
-              <a href="mailto:info@ifeelslovenia.si" className="text-sm text-primary underline">
-                info@ifeelslovenia.si
+              <a href="mailto:info@discoverslovenia.ai" className="text-sm text-primary underline">
+                info@discoverslovenia.ai
               </a>
             </CardContent>
           </Card>
@@ -45,8 +45,8 @@ export default function ContactPage() {
             <CardContent className="p-5">
               <Shield className="size-6 text-primary mb-2" />
               <h3 className="font-semibold mb-1">Tehnična podpora</h3>
-              <a href="mailto:podpora@ifeelslovenia.si" className="text-sm text-primary underline">
-                podpora@ifeelslovenia.si
+              <a href="mailto:podpora@discoverslovenia.ai" className="text-sm text-primary underline">
+                podpora@discoverslovenia.ai
               </a>
             </CardContent>
           </Card>

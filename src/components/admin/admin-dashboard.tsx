@@ -155,7 +155,7 @@ export function AdminDashboard({
                 Admin plošča
               </h1>
               <p className="text-xs text-muted-foreground hidden sm:block">
-                I Feel Slovenia — upravljanje lokalov
+                Discover Slovenia AI — upravljanje lokalov
               </p>
             </div>
           </div>

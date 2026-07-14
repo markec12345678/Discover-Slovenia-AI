@@ -19,7 +19,7 @@ const partners = [
     icon: Car,
     description: "70% provizija — najvišja v industriji. Iskanje po 10.000+ lokacijah.",
     commission: COMMISSION_INFO.cars,
-    href: "https://www.discovercars.com/?affiliate=slovenia-demo&utm_source=ifeelslovenia",
+    href: "https://www.discovercars.com/?affiliate=slovenia-demo&utm_source=discoverslovenia",
     accent: "text-primary",
   },
   {
@@ -49,7 +49,7 @@ const partners = [
     icon: Plane,
     description: "Primerjava letov 1.200+ letalskih družb. Najnižje cene.",
     commission: COMMISSION_INFO.flights,
-    href: "https://www.skyscanner.net/?utm_source=ifeelslovenia",
+    href: "https://www.skyscanner.net/?utm_source=discoverslovenia",
     accent: "text-primary",
   },
   {

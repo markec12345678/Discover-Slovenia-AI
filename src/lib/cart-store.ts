@@ -112,7 +112,7 @@ export const useCart = create<CartState>()(
         get().items.reduce((sum, i) => sum + i.quantity, 0),
     }),
     {
-      name: "ifeelslovenia-cart",
+      name: "discoverslovenia-cart",
       // Persistiramo samo items, ne pa tudi isOpen (drawer naj se odpre samo eksplicitno)
       partialize: (state) => ({ items: state.items }) as CartState,
     }

@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     ? `\nUPORABNIK JE TRENUTNO NA STRANI: ${body.currentPage} (prilagodi odgovor kontekstu strani)`
     : "";
 
-  const systemPrompt = `Si "Slovenija AI" — prijazen, strokovni asistent za turistično platformo "I Feel Slovenia". Pomagaš uporabnikom načrtovati potovanje po Sloveniji.
+  const systemPrompt = `Si "Slovenija AI" — prijazen, strokovni asistent za turistično platformo "Discover Slovenia AI". Pomagaš uporabnikom načrtovati potovanje po Sloveniji.
 
 VEŠ VSE O SLOVENIJI:
 - 22 destinacij od Bleda do Pirana

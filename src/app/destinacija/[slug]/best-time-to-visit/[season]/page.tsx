@@ -46,7 +46,7 @@ export async function generateMetadata({
   const s = SEASONS.find((x) => x.slug === season);
   if (!dest || !s) return { title: "Stran ni najdena" };
   return {
-    title: `Najboljši čas za obisk ${dest.name} — ${s.label} | I Feel Slovenia`,
+    title: `Najboljši čas za obisk ${dest.name} — ${s.label}`,
     description: `Kdaj obiskati ${dest.name}? ${s.label} (${s.months}): ${s.desc}. Temperature ${s.temp}. Nasveti, aktivnosti in ${s.label.toLowerCase()} itinerer za ${dest.name}.`,
     keywords: [dest.name, "najboljši čas", s.label, "kdaj obiskati", "vreme", "Slovenija", dest.region],
     openGraph: {
@@ -56,7 +56,7 @@ export async function generateMetadata({
       type: "website",
       locale: "sl_SI",
     },
-    alternates: { canonical: `https://ifeelslovenia.si/destinacija/${dest.slug}/best-time-to-visit/${s.slug}`, languages: hreflangForPath(`/destinacija/${dest.slug}/best-time-to-visit/${s.slug}`) },
+    alternates: { canonical: `https://discoverslovenia.ai/destinacija/${dest.slug}/best-time-to-visit/${s.slug}`, languages: hreflangForPath(`/destinacija/${dest.slug}/best-time-to-visit/${s.slug}`) },
   };
 }
 
@@ -90,8 +90,8 @@ export default async function BestTimeToVisitPage({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Domov", item: "https://ifeelslovenia.si/" },
-      { "@type": "ListItem", position: 2, name: dest.name, item: `https://ifeelslovenia.si/destinacija/${dest.slug}/things-to-do` },
+      { "@type": "ListItem", position: 1, name: "Domov", item: "https://discoverslovenia.ai/" },
+      { "@type": "ListItem", position: 2, name: dest.name, item: `https://discoverslovenia.ai/destinacija/${dest.slug}/things-to-do` },
       { "@type": "ListItem", position: 3, name: `Najboljši čas — ${s.label}` },
     ],
   };

@@ -5,9 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Mountain, Sparkles, Globe, Shield, Users } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "O strani — I Feel Slovenia",
-  description: "I Feel Slovenia je AI-poganjana turistična platforma za Slovenijo. Spoznajte našo ekipo, misijo in kako platforma deluje.",
-  alternates: { canonical: "https://ifeelslovenia.si/o-strani" },
+  title: "O strani",
+  description: "Discover Slovenia AI je AI-poganjana turistična platforma za Slovenijo. Spoznajte našo ekipo, misijo in kako platforma deluje.",
+  alternates: { canonical: "https://discoverslovenia.ai/o-strani" },
 };
 
 export default function AboutPage() {
@@ -15,11 +15,11 @@ export default function AboutPage() {
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
         <Badge className="mb-4">O strani</Badge>
-        <h1 className="text-4xl font-bold mb-6">O I Feel Slovenia</h1>
+        <h1 className="text-4xl font-bold mb-6">O Discover Slovenia AI</h1>
 
         <div className="prose prose-slate dark:prose-invert max-w-none space-y-6">
           <p className="text-lg text-muted-foreground">
-            <strong>I Feel Slovenia</strong> je AI-poganjana turistična platforma, ki povezuje
+            <strong>Discover Slovenia AI</strong> je AI-poganjana turistična platforma, ki povezuje
             potnike z lokalnimi ponudniki v Sloveniji. Naša misija je olajšati odkrivanje
             slovenskih destinacij — od Blejskega jezera do Pirana — z umetno inteligenco,
             interaktivnim zemljevidom in direktnimi povezavami do lokalnih ponudnikov.
@@ -79,7 +79,7 @@ export default function AboutPage() {
 
           <h2 className="text-2xl font-bold mt-8">Kontakt</h2>
           <p>
-            Imate vprašanja? Pišite nam na <a href="mailto:info@ifeelslovenia.si" className="text-primary underline">info@ifeelslovenia.si</a>
+            Imate vprašanja? Pišite nam na <a href="mailto:info@discoverslovenia.ai" className="text-primary underline">info@discoverslovenia.ai</a>
             ali obiščite <Link href="/kontakt" className="text-primary underline">kontaktno stran</Link>.
           </p>
 

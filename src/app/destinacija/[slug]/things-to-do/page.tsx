@@ -23,18 +23,18 @@ export async function generateMetadata({
   const dest = getDestinationById(slug) || DESTINATIONS.find((d) => d.slug === slug);
   if (!dest) return { title: "Destinacija ni najdena" };
   return {
-    title: `Kaj početi v ${dest.name} — Vodnik ${dest.name} | I Feel Slovenia`,
+    title: `Kaj početi v ${dest.name} — Vodnik ${dest.name}`,
     description: `Odkrijte najboljše aktivnosti, atrakcije in izkušnje v ${dest.name}, ${dest.tagline}. Vodnik z ${dest.highlights.length} glavnimi znamenitosti, lokalnimi ponudniki in AI-priporočili.`,
     keywords: [dest.name, "kaj početi", "aktivnosti", "znamenitosti", "Slovenija", dest.region, ...dest.highlights],
     openGraph: {
-      title: `Kaj početi v ${dest.name} — I Feel Slovenia`,
+      title: `Kaj početi v ${dest.name} — Discover Slovenia AI`,
       description: `${dest.highlights.length} znamenitosti, lokalne restavracije, aktivnosti in izkušnje v ${dest.name}.`,
       images: [{ url: dest.image, width: 1200, height: 800 }],
       type: "website",
       locale: "sl_SI",
     },
     alternates: {
-      canonical: `https://ifeelslovenia.si/destinacija/${dest.slug}/things-to-do`,
+      canonical: `https://discoverslovenia.ai/destinacija/${dest.slug}/things-to-do`,
       languages: hreflangForPath(`/destinacija/${dest.slug}/things-to-do`),
     },
   };
@@ -70,8 +70,8 @@ export default async function ThingsToDoPage({
   const faqs = aiFaqs.map((f) => ({ q: f.question, a: f.answer }));
 
   const breadcrumbs = breadcrumbJsonLd([
-    { name: "Domov", url: "https://ifeelslovenia.si/" },
-    { name: dest.name, url: `https://ifeelslovenia.si/destinacija/${dest.slug}/things-to-do` },
+    { name: "Domov", url: "https://discoverslovenia.ai/" },
+    { name: dest.name, url: `https://discoverslovenia.ai/destinacija/${dest.slug}/things-to-do` },
   ]);
 
   return (

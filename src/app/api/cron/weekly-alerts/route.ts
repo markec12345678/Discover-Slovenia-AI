@@ -65,7 +65,7 @@ export async function GET(request: Request) {
         const html = `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="background: #2d6a3e; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-              <h1 style="margin: 0;">🇸🇮 I Feel Slovenia</h1>
+              <h1 style="margin: 0;">🇸🇮 Discover Slovenia AI</h1>
             </div>
             <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
               <h2>Pozdravljeni, ${data.name}!</h2>
@@ -82,14 +82,14 @@ export async function GET(request: Request) {
               <p>Vaši lokalci v bazi: <strong>${data.listings.length}</strong></p>
 
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://ifeelslovenia.si/owner/dashboard" 
+                <a href="https://discoverslovenia.ai/owner/dashboard" 
                    style="background: #2d6a3e; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600;">
                   Odpri dashboard →
                 </a>
               </div>
 
               <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
-                To sporočilo ste prejeli ker ste Premium/Enterprise član I Feel Slovenia platforme.
+                To sporočilo ste prejeli ker ste Premium/Enterprise član Discover Slovenia AI platforme.
               </p>
             </div>
           </div>

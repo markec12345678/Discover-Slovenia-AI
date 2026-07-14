@@ -137,7 +137,7 @@ export function PitchDeckSection() {
             Za hotele, restavracije in aktivnosti
           </Badge>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-            Zakaj se pridružiti <span className="text-primary">I Feel Slovenia</span>?
+            Zakaj se pridružiti <span className="text-primary">Discover Slovenia AI</span>?
           </h2>
           <p className="mt-5 text-lg text-muted-foreground">
             Edina platforma ki AI-poganja priporočila lokalov potnikom v Sloveniji.

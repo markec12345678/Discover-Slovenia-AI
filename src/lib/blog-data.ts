@@ -1,4 +1,4 @@
-// Slovenski blog članki — SEO vsebina za "I Feel Slovenia" platformo.
+// Slovenski blog članki — SEO vsebina za "Discover Slovenia AI" platformo.
 // 16 člankov, ki pokrivajo naravo, kulinariko, kulturo, avanturo in nasvete.
 
 export type BlogCategory =

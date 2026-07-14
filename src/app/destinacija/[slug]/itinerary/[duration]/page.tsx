@@ -43,7 +43,7 @@ export async function generateMetadata({
   const dur = DURATIONS.find((d) => d.slug === duration);
   if (!dest || !dur) return { title: "Itinerer ni najden" };
   return {
-    title: `${dur.label} itinerer za ${dest.name} — ${dur.desc} | I Feel Slovenia`,
+    title: `${dur.label} itinerer za ${dest.name} — ${dur.desc}`,
     description: `Popoln ${dur.label.toLowerCase()} itinerer za ${dest.name}, ${dest.tagline}. ${dur.desc} — AI-priporočene aktivnosti, nastanitve in restavracije za ${dur.days}-dnevni obisk.`,
     keywords: [dest.name, "itinerer", dur.label, "potovanje", "Slovenija", "načrt", dest.region],
     openGraph: {
@@ -53,7 +53,7 @@ export async function generateMetadata({
       type: "website",
       locale: "sl_SI",
     },
-    alternates: { canonical: `https://ifeelslovenia.si/destinacija/${dest.slug}/itinerary/${dur.slug}`, languages: hreflangForPath(`/destinacija/${dest.slug}/itinerary/${dur.slug}`) },
+    alternates: { canonical: `https://discoverslovenia.ai/destinacija/${dest.slug}/itinerary/${dur.slug}`, languages: hreflangForPath(`/destinacija/${dest.slug}/itinerary/${dur.slug}`) },
   };
 }
 

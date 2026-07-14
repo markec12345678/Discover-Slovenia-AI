@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   const sourceLabel = LANGUAGE_LABELS[sourceLang] || sourceLang;
   const targetLabels = targets.map((t) => `${t} (${LANGUAGE_LABELS[t] || t})`).join(", ");
 
-  const systemPrompt = `Si profesionalni prevajalec za slovensko turistično platformo "I Feel Slovenia". Prevajaš UI nize (gumbi, naslovi, opisi).
+  const systemPrompt = `Si profesionalni prevajalec za slovensko turistično platformo "Discover Slovenia AI". Prevajaš UI nize (gumbi, naslovi, opisi).
 
 VRNI SAMO JSON:
 {"en":"","de":"","it":""}

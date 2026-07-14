@@ -1,4 +1,4 @@
-// SEO helperji za I Feel Slovenia platformo.
+// SEO helperji za Discover Slovenia AI platformo.
 // Generirajo Next.js Metadata za različne entitete (destinacije, izdelki, izkušnje, listings).
 
 import type { Metadata } from "next";
@@ -6,9 +6,9 @@ import type { Metadata } from "next";
 // BASE_URL naj bo brez zaključne poševnice.
 export const BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "") ||
-  "https://ifeelslovenia.si";
+  "https://discoverslovenia.ai";
 
-export const SITE_NAME = "I Feel Slovenia";
+export const SITE_NAME = "Discover Slovenia AI";
 export const SITE_TAGLINE = "AI načrtovalec potovanj";
 export const SITE_DESCRIPTION =
   "Odkrijte Slovenijo z AI-poganjanim načrtovalcem potovanj. 22 najlepših destinacij od Bleda do Pirana, z interaktivnim zemljevidom, vremenom in direktnimi rezervacijami.";
@@ -24,7 +24,7 @@ export function destinationMetadata(dest: {
   image: string;
   slug: string;
 }): Metadata {
-  const title = `${dest.name} — ${dest.tagline} | ${SITE_NAME}`;
+  const title = `${dest.name} — ${dest.tagline}`;
   const description = dest.description.substring(0, 160);
   const url = `${BASE_URL}/destinacija/${dest.slug}`;
 
@@ -62,7 +62,7 @@ export function productMetadata(product: {
   price?: number;
   currency?: string;
 }): Metadata {
-  const title = `${product.name} | ${SITE_NAME} Tržnica`;
+  const title = `${product.name} | Tržnica`;
   const description = product.description.substring(0, 160);
   const url = `${BASE_URL}/trznica/${product.slug}`;
   const image = product.images?.[0] ?? DEFAULT_OG_IMAGE;
@@ -106,7 +106,7 @@ export function experienceMetadata(exp: {
   images: string[];
   slug: string;
 }): Metadata {
-  const title = `${exp.name} | ${SITE_NAME} Izkušnje`;
+  const title = `${exp.name} | Izkušnje`;
   const description = exp.description.substring(0, 160);
   const url = `${BASE_URL}/izkušnje/${exp.slug}`;
   const image = exp.images?.[0] ?? DEFAULT_OG_IMAGE;
@@ -151,7 +151,7 @@ export function listingMetadata(listing: {
   slug: string;
   destinationName?: string | null;
 }): Metadata {
-  const title = `${listing.name} | ${SITE_NAME}`;
+  const title = `${listing.name}`;
   const description = listing.description.substring(0, 160);
   const url = `${BASE_URL}/listing/${listing.slug}`;
   const image = listing.images?.[0] ?? DEFAULT_OG_IMAGE;

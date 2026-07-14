@@ -3,7 +3,7 @@ import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "I Feel Slovenia — destinacija";
+export const alt = "Discover Slovenia AI — destinacija";
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -26,7 +26,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "auto" }}>
           <span style={{ fontSize: 36 }}>🇸🇮</span>
-          <span style={{ fontSize: 28, fontWeight: 600, opacity: 0.9 }}>I Feel Slovenia</span>
+          <span style={{ fontSize: 28, fontWeight: 600, opacity: 0.9 }}>Discover Slovenia AI</span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <h1 style={{ fontSize: 72, fontWeight: 800, lineHeight: 1, margin: 0 }}>

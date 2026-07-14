@@ -42,7 +42,7 @@ export function getDiscoverCarsUrl(pickupLocation: string): string {
     driverage: "25",
     language: "en",
     currency: "EUR",
-    utm_source: "ifeelslovenia",
+    utm_source: "discoverslovenia",
     utm_medium: "affiliate",
   });
   return `https://www.discovercars.com/?${params.toString()}`;
@@ -61,7 +61,7 @@ export function getViatorUrl(destination: string): string {
 export function getGetYourGuideUrl(destination: string): string {
   const params = new URLSearchParams({
     partner_id: AFFILIATE_IDS.getYourGuide,
-    utm_source: "ifeelslovenia",
+    utm_source: "discoverslovenia",
   });
   return `https://www.getyourguide.com/s/${encodeURIComponent(destination)}?${params.toString()}`;
 }
@@ -70,7 +70,7 @@ export function getGetYourGuideUrl(destination: string): string {
 export function getSkyscannerUrl(destination: string): string {
   const params = new URLSearchParams({
     adults: "1",
-    utm_source: "ifeelslovenia",
+    utm_source: "discoverslovenia",
   });
   return `https://www.skyscanner.net/transport/flights-to/${encodeURIComponent(destination.toLowerCase())}/?${params.toString()}`;
 }
@@ -80,7 +80,7 @@ export function getWorldNomadsUrl(tripDays = 7): string {
   const params = new URLSearchParams({
     affiliate: AFFILIATE_IDS.worldNomads,
     trip_days: tripDays.toString(),
-    utm_source: "ifeelslovenia",
+    utm_source: "discoverslovenia",
   });
   return `https://www.worldnomads.com/travel-insurance?${params.toString()}`;
 }

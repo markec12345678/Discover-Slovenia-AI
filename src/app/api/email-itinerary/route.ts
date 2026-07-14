@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         ${tipsHtml}
         <div style="margin-top: 24px; padding: 16px; background: #f0fdf4; border-radius: 8px; text-align: center;">
           <p>Želite rezervirati nastanitev ali aktivnosti?</p>
-          <a href="https://ifeelslovenia.si/#nacrtuj" style="display: inline-block; background: #2d6a3e; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; margin-top: 8px;">Odpri platformo →</a>
+          <a href="https://discoverslovenia.ai/#nacrtuj" style="display: inline-block; background: #2d6a3e; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; margin-top: 8px;">Odpri platformo →</a>
         </div>
       `
     );
