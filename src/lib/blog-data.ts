@@ -102,7 +102,7 @@ Soška dolina je redko deževna poleti, a pozorno spremljajte vremensko napoved 
 ## Kje počivati
 
 Bovec je epicenter aktivnosti, a Cezsoča in Čezsoča ponujajo tišje nastanitve. Za avanturiste je na voljo tudi kamp Soča Rocks.`,
-    image: "https://sfile.chatglm.cn/images-ppt/5f720abe0af2.jpg",
+    image: "https://sfile.chatglm.cn/images-ppt/ed8d38609552.jpg",
     category: "avantura",
     author: "Matej Horvat",
     date: "2025-02-18",
@@ -145,7 +145,7 @@ Praznični zavitek, ki ga pripravljajo za vsako slovensko priložnost — od bo�
 
 Za pristno izkušnjo obiščite restavracije **Hiša Franko** (Kobarid), **Gostilna As** (Ljubljana) ali **Ošterija Debeluh** (Brežice). Za proračunsko varianto poizkusite lokalne **gostilne** v vaseh, kjer se recepti prenašajo skozi generacije.`,
     image:
-      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/d08bfb619a1a.jpg",
     category: "kulinarika",
     author: "Petra Kovač",
     date: "2025-01-22",
@@ -199,7 +199,7 @@ Vzpon je mogoč od **julija do septembra**. Zunaj te sezone so razmere alpske, p
 - Spoštljivo do narave: vzemite smeti s seboj.
 
 Triglav ni cilj — je pot. Uživajte v pohodu, ne le v vrhu.`,
-    image: "https://sfile.chatglm.cn/images-ppt/f1fdf5ca02fe.jpg",
+    image: "https://sfile.chatglm.cn/images-ppt/0cbde96d84ea.jpg",
     category: "avantura",
     author: "Blaž Zupan",
     date: "2025-02-03",
@@ -247,7 +247,7 @@ Piran je znan po sončnih zahodih. Najboljši razgled je s pomola ob cerkvi sv. 
 - Če imate čas, obiščite še Koper in Izolo — avtobusni prevozi vozijo vsakih 30 minut.
 - Kopalna sezona je od junija do septembra.
 - Najem kolesa (€10/dan) je odličen način za obisk cele obale.`,
-    image: "https://sfile.chatglm.cn/images-ppt/1ca2f342127f.jpg",
+    image: "https://sfile.chatglm.cn/images-ppt/5b98e63b6641.jpg",
     category: "kultura",
     author: "Maja Dolenc",
     date: "2025-03-04",
@@ -306,7 +306,7 @@ Sodobno zdravilišče z wellness centrom in največjim kompleksom savn v Sloveni
 - **Termalna letovišča** so pogosto cenejši od smučiščnih hotelov — kombinacija je smiselna.
 - **Decembrski božični sejmi** v Ljubljani in Mariboru so obvezni obisk.`,
     image:
-      "https://images.unsplash.com/photo-1551524559-8af4e6624178?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/24e0319040cc.jpg",
     category: "nasveti",
     author: "Saša Krajnc",
     date: "2025-01-08",
@@ -348,7 +348,7 @@ Soteska je odprta od aprila do oktobra. Najlepše je v **juniju in septembru**, 
 
 Vintgarska soteska je idealen dodatek k obisku Bleda. Priporočamo jutranji obisk soteske (8:00) in popoldanski Bled — grad in kremšnita. Skupaj naredite popoln enodnevni izlet.`,
     image:
-      "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/4cf4cf182837.jpg",
     category: "narava",
     author: "Lara Zupan",
     date: "2025-04-05",
@@ -401,7 +401,7 @@ Za popolno izkušnjo rezervirajte 1-dnevno vinsko-kuharično turo: jutranja degu
 - Dolenjske gostilne so pogosto zaprte ob nedeljah zvečer — preverite odpiralne ure.
 - Najboljši čas za obisk: september in oktober, ko so trgatev in koline.`,
     image:
-      "https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/4b0974438031.jpg",
     category: "kulinarika",
     author: "Petra Kovač",
     date: "2025-07-12",
@@ -455,7 +455,7 @@ Za proračunsko varianto: apartmaji v vasi Srednja vas (€50-70/noc).
 
 Bohinj pozimi ni le destinacija — je izkušnja miru in narave v njeni najbolj pristni obliki.`,
     image:
-      "https://images.unsplash.com/photo-1551524559-8af4e6624178?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/cd8b734ba670.jpg",
     category: "narava",
     author: "Lara Zupan",
     date: "2025-04-18",
@@ -511,7 +511,7 @@ Po 35 km in 3-4 urah kolesarjenja prispete v Ptuj — najstarejše mesto v Slove
 
 Kolesarjenje ob Dravi je idealen enodnevni izlet, ki združuje naravo, zgodovino in kulinariko v eni nepozabni izkušnji.`,
     image:
-      "https://images.unsplash.com/photo-1530841379378-3c06a9c2b1c0?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/528b9cc50ea4.jpg",
     category: "avantura",
     author: "Matej Horvat",
     date: "2025-05-22",
@@ -583,7 +583,7 @@ Najvzhodnejši del Pohorja, botanični rezervat z redkimi rastlinami. Pohod iz P
 
 Pohorje je celoletna destinacija, ki ponuja nekaj za vsak okus — od adrenalina na smučišču do miru v gozdu.`,
     image:
-      "https://images.unsplash.com/photo-1551524559-8af4e6624178?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/34d0335d5c60.jpg",
     category: "nasveti",
     author: "Blaž Zupan",
     date: "2025-11-08",
@@ -661,7 +661,7 @@ Slap v dolini Vrat pod Triglavom. Pada izpod stene Mojstrovke. Dostopen z avtom,
 
 Slovenski slapovi so naravna galerija, ki jo obiščete lahko v eni pustolovščini.`,
     image:
-      "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/a21f41691a36.jpg",
     category: "narava",
     author: "Lara Zupan",
     date: "2025-05-09",
@@ -735,7 +735,7 @@ Zadnja večerja v **Restavraciji JB** — vrhunec slovenske kulinarike. Po veče
 
 Ljubljana je mesto, ki ga odkrijete počasi. 48 ur je dovolj za okus — vendar boste hoteli več.`,
     image:
-      "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/650260f2f384.jpg",
     category: "kultura",
     author: "Maja Dolenc",
     date: "2025-09-05",
@@ -823,7 +823,7 @@ Pustite 2 uri, da se ohladi. Razrežite na 12 kosov.
 
 Prekmurska gibanica ni le sladica — je slovenska kulinarična dediščina v vsakem grižljaju.`,
     image:
-      "https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/1cfd5ad8d032.jpg",
     category: "kulinarika",
     author: "Petra Kovač",
     date: "2025-06-15",
@@ -923,7 +923,7 @@ Avtohtona štajerska bela sorta. Sveže, blago, s sadno aromo.
 
 Štajerska vinogradniška regija ni le vinska destinacija — je kulinarična in naravna izkušnja, ki jo boste dolgo zapomnili.`,
     image:
-      "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/2b43ef1e28ac.jpg",
     category: "kulinarika",
     author: "Petra Kovač",
     date: "2025-10-18",
@@ -1043,7 +1043,7 @@ Najvišji slovenski slap (106 m). Dostopen iz vasi Žaga pri Bovcu.
 
 Triglavski narodni park je slovenski naravni biser. Spoštujte ga, da bo ostal lep tudi za naslednje generacije.`,
     image:
-      "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/29777d33ec2d.jpeg",
     category: "narava",
     author: "Blaž Zupan",
     date: "2025-08-08",
