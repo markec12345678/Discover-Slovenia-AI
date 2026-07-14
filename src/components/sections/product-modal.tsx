@@ -51,6 +51,7 @@ interface ProductModalProps {
 interface RecommendationsResponse {
   products: Product[];
   total: number;
+  source?: "ai" | "fallback" | "cache";
 }
 
 /**
@@ -78,6 +79,7 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
   const [recommendations, setRecommendations] = useState<Product[]>([]);
   const [recLoading, setRecLoading] = useState(false);
   const [recError, setRecError] = useState<boolean>(false);
+  const [recSource, setRecSource] = useState<"ai" | "fallback" | "cache">("ai");
 
   const fetchRecommendations = useCallback(async (productId: string) => {
     setRecLoading(true);
@@ -92,6 +94,7 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
       if (!res.ok) throw new Error("Napaka pri priporočilih");
       const data: RecommendationsResponse = await res.json();
       setRecommendations(data.products ?? []);
+      setRecSource(data.source ?? "fallback");
     } catch {
       setRecError(true);
       setRecommendations([]);
@@ -447,6 +450,7 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
               items={recommendations}
               currentId={product.id}
               onSelect={onSelect}
+              source={recSource}
             />
 
             {/* Source note */}
@@ -511,8 +515,9 @@ function StatCard({
 
 /**
  * RecommendationsSection — "Morda vam je všeč".
- * Prikazuje do 4 podobne izdelke (ista kategorija ali destinacija).
+ * Prikazuje do 4 AI-priporočene podobne izdelke (GLM izbere iz 10 kandidatov).
  * Klik na kartico zamenja trenutni izdelek v modalu (preko onSelect).
+ * `source` prikaže transparenten badge (AI / fallback / cache).
  */
 function RecommendationsSection({
   loading,
@@ -520,14 +525,19 @@ function RecommendationsSection({
   items,
   currentId,
   onSelect,
+  source,
 }: {
   loading: boolean;
   error: boolean;
   items: Product[];
   currentId: string;
   onSelect?: (product: Product) => void;
+  source?: "ai" | "fallback" | "cache";
 }) {
   const visible = items.filter((p) => p.id !== currentId).slice(0, 4);
+  const isAI = source === "ai" || source === "cache";
+
+  const sourceLabel = isAI ? "AI" : "Podobni";
 
   if (loading) {
     return (
@@ -535,6 +545,10 @@ function RecommendationsSection({
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <Lightbulb className="size-4 text-primary" aria-hidden="true" />
           Morda vam je všeč
+          <Badge variant="secondary" className="ml-auto gap-1 text-[10px]">
+            <Sparkles className="size-2.5" aria-hidden="true" />
+            AI
+          </Badge>
         </h3>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -562,6 +576,14 @@ function RecommendationsSection({
       <h3 className="flex items-center gap-2 text-sm font-semibold">
         <Lightbulb className="size-4 text-primary" aria-hidden="true" />
         Morda vam je všeč
+        <Badge
+          variant={isAI ? "default" : "secondary"}
+          className="ml-auto gap-1 text-[10px]"
+          title={isAI ? "AI (GLM) je izbral ta priporočila" : "Podobni izdelki (fallback)"}
+        >
+          {isAI ? <Sparkles className="size-2.5" aria-hidden="true" /> : null}
+          {sourceLabel}
+        </Badge>
       </h3>
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {visible.map((p) => {

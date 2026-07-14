@@ -16,6 +16,7 @@ import { JoinUs } from "@/components/sections/join-us";
 import { PitchDeckSection } from "@/components/sections/pitch-deck";
 import { Footer } from "@/components/sections/footer";
 import { BetaBanner } from "@/components/beta-banner";
+import { Chatbot } from "@/components/chatbot";
 
 export default function Home() {
   return (
@@ -42,6 +43,7 @@ export default function Home() {
         <PitchDeckSection />
       </main>
       <Footer />
+      <Chatbot />
     </div>
   );
 }

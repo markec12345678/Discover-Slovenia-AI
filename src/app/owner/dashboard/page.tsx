@@ -85,6 +85,7 @@ import {
 } from "@/lib/marketplace-types";
 import { PRICING_PLANS, type PricingPlan } from "@/lib/pricing";
 import { BETA_INFO } from "@/lib/beta";
+import { InsightsPanel } from "@/components/insights-panel";
 
 // Omejitve števila lokalov glede na paket in beta status
 const PLAN_LIMITS_NORMAL: Record<ListingPlan, number> = {
@@ -1496,6 +1497,9 @@ function StatisticsTab({
 
   return (
     <div className="space-y-6">
+      {/* AI vpogledi — analiza statistike z AI */}
+      <InsightsPanel type="owner" />
+
       {/* ROI banner (top) */}
       <div
         className={cn(

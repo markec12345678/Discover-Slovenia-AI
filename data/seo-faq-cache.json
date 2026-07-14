@@ -1,0 +1,24 @@
+{
+  "bled:things-to-do": {
+    "faqs": [
+      {
+        "question": "Kdaj je najboljši čas za obisk Bleda?",
+        "answer": "Najboljši čas za obisk je od maja do septembra, ko so temperature prijetne in je jezero najprivlačnejše za aktivnosti."
+      },
+      {
+        "question": "Koliko stane ogled Bledskega otoka?",
+        "answer": "Vstop na otok stane 10 EUR odrasli, otroci do 15 let pa vstopijo brezplačno."
+      },
+      {
+        "question": "Katera so najboljša aktivnosti na Bledu?",
+        "answer": "Plovba po jezerju, plezanje na Blejski grad, hoja do Vintgarjeve soteske in kolesarjenje po okolici."
+      },
+      {
+        "question": "Kako se najlaže dostop do Bleda?",
+        "answer": "Z avtomobilom po avtocesti A2 do izhoda Bled, z vlago do postaje Lesce-Bled, ali z avtobusom iz Ljubljane."
+      }
+    ],
+    "generatedAt": 1784052816040,
+    "source": "ai"
+  }
+}

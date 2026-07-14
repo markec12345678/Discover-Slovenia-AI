@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
-import { Mountain, Menu, Sun, Moon, Compass } from "lucide-react";
+import { Mountain, Menu, Sun, Moon, Compass, Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { SmartSearch } from "@/components/smart-search";
 
 
 /**
@@ -39,6 +40,7 @@ export function Navigation() {
   const [mounted, setMounted] = React.useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [searchOpen, setSearchOpen] = React.useState(false);
   const t = useTranslations("nav");
   const navLinks = useNavLinks();
 
@@ -91,8 +93,18 @@ export function Navigation() {
           ))}
         </nav>
 
-        {/* Desno: theme toggle + language switcher + CTA + mobile menu */}
+        {/* Desno: smart search + theme toggle + language switcher + CTA + mobile menu */}
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSearchOpen(true)}
+            aria-label="AI iskanje"
+            className="text-foreground"
+          >
+            <Search className="size-5" aria-hidden="true" />
+          </Button>
+
           <Button
             variant="ghost"
             size="icon"
@@ -182,6 +194,9 @@ export function Navigation() {
           </Sheet>
         </div>
       </div>
+
+      {/* AI Smart Search — naravno-jezikovno iskanje */}
+      <SmartSearch open={searchOpen} onOpenChange={setSearchOpen} />
     </header>
   );
 }

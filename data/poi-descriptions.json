@@ -1,0 +1,17 @@
+{
+  "node-123456": {
+    "description": "Srednjeveški grad na pečini z razgledom na Blejsko jezero.",
+    "generatedAt": 1784052234018,
+    "source": "ai"
+  },
+  "node-789": {
+    "description": "Gurmetska restavracija v središču Ljubljane s prefinjeno kuhinjo in prijetno atmosfero.",
+    "generatedAt": 1784052243808,
+    "source": "ai"
+  },
+  "node-999": {
+    "description": "Impresiven slap na reki Soči, eden najvišjih in najlepših v Sloveniji.",
+    "generatedAt": 1784052244819,
+    "source": "ai"
+  }
+}

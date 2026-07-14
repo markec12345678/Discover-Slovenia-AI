@@ -88,6 +88,7 @@ import { ListingForm, type AdminListing } from "./listing-form";
 import { BetaBanner } from "@/components/beta-banner";
 import { Progress } from "@/components/ui/progress";
 import { BETA_INFO } from "@/lib/beta";
+import { InsightsPanel } from "@/components/insights-panel";
 
 // === TIP LEAD ===
 type LeadStatus = "nov" | "kontaktiran" | "zakljucen";
@@ -1483,6 +1484,9 @@ function StatsTab({ adminPassword }: { adminPassword: string }) {
 
       {/* Beta status kartica */}
       <BetaStatusCard />
+
+      {/* AI vpogledi — analiza statistike z AI */}
+      <InsightsPanel type="admin" adminPassword={adminPassword} />
 
       {/* KPI kartice */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Star, Clock, ArrowRight, ExternalLink, Ticket, BedDouble } from "lucide-react";
 import { faqJsonLd, breadcrumbJsonLd, destinationSchema, hreflangForPath } from "@/components/seo";
+import { getFaqForPage } from "@/lib/seo-faq";
 
 export async function generateStaticParams() {
   return DESTINATIONS.map((d) => ({ slug: d.slug }));
@@ -59,12 +60,14 @@ export default async function ThingsToDoPage({
 
   const jsonLd = destinationSchema(dest);
 
-  const faqs = [
-    { q: `Kaj početi v ${dest.name}?`, a: `${dest.name} ponuja ${dest.highlights.length} glavnih znamenitosti: ${dest.highlights.join(", ")}. Aktivnosti vključujejo ${dest.activities.slice(0, 3).join(", ")} in več.` },
-    { q: `Koliko časa potrebujem za ${dest.name}?`, a: `Priporočamo ${dest.duration} za optimalno izkušnjo ${dest.name}. Cena na osebo je približno ${dest.costPerPerson}€.` },
-    { q: `Kdaj je najboljši čas za obisk ${dest.name}?`, a: `Najboljše sezone za ${dest.name} so: ${dest.bestSeason.join(", ")}. Preverite našo stran o najboljšem času za obisk za podrobnosti.` },
-    { q: `Katere aktivnosti so na voljo v ${dest.name}?`, a: `V ${dest.name} lahko ${dest.activities.join(", ")}. Preverite naš seznam lokalnih ponudnikov za rezervacije.` },
-  ];
+  // AI-generirane FAQ za SEO rich snippets (z 90-dnevnim cache-om)
+  const { faqs: aiFaqs, source: faqSource } = await getFaqForPage(
+    dest.slug,
+    dest.name,
+    "things-to-do"
+  );
+
+  const faqs = aiFaqs.map((f) => ({ q: f.question, a: f.answer }));
 
   const breadcrumbs = breadcrumbJsonLd([
     { name: "Domov", url: "https://ifeelslovenia.si/" },

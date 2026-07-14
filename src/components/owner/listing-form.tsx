@@ -40,6 +40,7 @@ import {
   type Listing,
   type ListingCategory,
 } from "@/lib/listings-types";
+import { AutoTagButton } from "@/components/owner/auto-tag-button";
 
 export interface ListingFormData {
   name: string;
@@ -401,6 +402,28 @@ export function ListingFormDialog({
               className="resize-y"
             />
           </div>
+
+          {/* AI auto-tag — predlaga kategorijo in atribute iz opisa */}
+          <AutoTagButton
+            type="listing"
+            name={form.name}
+            description={form.description}
+            destinationName={form.destinationId}
+            disabled={loading}
+            onApply={(result) => {
+              update("category", result.category as ListingCategory);
+              if (result.tags.length > 0) {
+                setForm((prev) => ({
+                  ...prev,
+                  specialties: [...new Set([...prev.specialties, ...result.tags])].slice(0, 10),
+                }));
+              }
+              toast({
+                title: "AI predlogi aplicirani",
+                description: `Kategorija: ${result.category}, ${result.tags.length} tagov dodanih.`,
+              });
+            }}
+          />
 
           {/* Naslov */}
           <div className="space-y-2">

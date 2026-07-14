@@ -10,6 +10,7 @@ import {
   Loader2,
   AlertCircle,
   Navigation,
+  Sparkles,
 } from "lucide-react";
 import {
   Dialog,
@@ -87,6 +88,9 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
   const [wikiExtract, setWikiExtract] = useState<string | null>(null);
   const [wikiImage, setWikiImage] = useState<string | null>(null);
   const [wikiUrl, setWikiUrl] = useState<string | null>(null);
+  const [aiDescription, setAiDescription] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSource, setAiSource] = useState<"ai" | "fallback" | "cache">("ai");
 
   // Reset + fetch ko se poi spremeni
   useEffect(() => {
@@ -125,12 +129,49 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
         setWikiExtract(data.wikipedia?.extract ?? null);
         setWikiImage(data.wikipedia?.image ?? null);
         setWikiUrl(data.wikipedia?.url ?? null);
+
+        // Če Wikipedia nima opisa, pridobi AI opis (z cache-om)
+        if (!data.wikipedia?.extract) {
+          fetchAiDescription();
+        } else {
+          setAiDescription(null);
+        }
       } catch (e) {
         if (cancelled) return;
         console.error("[poi-modal] napaka:", e);
         setError("Podatki trenutno niso na voljo.");
       } finally {
         if (!cancelled) setLoading(false);
+      }
+    };
+
+    // Fetch AI description for POI (z enkratnim cache-iranjem)
+    const fetchAiDescription = async () => {
+      if (!poi) return;
+      setAiLoading(true);
+      try {
+        const res = await fetch("/api/pois/describe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: poi.id,
+            name: poi.name,
+            category: poi.category,
+            subcategory: poi.subcategory,
+            lat: poi.lat,
+            lng: poi.lng,
+            address: poi.address,
+          }),
+        });
+        if (!res.ok) throw new Error("Napaka");
+        const data = await res.json();
+        if (cancelled) return;
+        setAiDescription(data.description);
+        setAiSource(data.source);
+      } catch {
+        // Tiho ignoriraj — AI opis je "nice to have"
+      } finally {
+        if (!cancelled) setAiLoading(false);
       }
     };
 
@@ -262,6 +303,32 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
                   ) : null}
                 </section>
               ) : null}
+
+              {/* AI opis (samo če Wikipedia nima opisa) */}
+              {!loading && !wikiExtract && (aiLoading || aiDescription) && (
+                <section>
+                  <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                    <Sparkles className="size-3.5 text-primary" aria-hidden="true" />
+                    AI opis
+                    {aiSource === "ai" || aiSource === "cache" ? (
+                      <Badge variant="secondary" className="gap-1 text-[9px]">
+                        <Sparkles className="size-2.5" aria-hidden="true" />
+                        AI
+                      </Badge>
+                    ) : null}
+                  </h3>
+                  {aiLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                      AI generira opis...
+                    </div>
+                  ) : aiDescription ? (
+                    <p className="text-sm leading-relaxed text-foreground/90">
+                      {aiDescription}
+                    </p>
+                  ) : null}
+                </section>
+              )}
 
               {/* Kontakt info */}
               {(poi.phone || poi.website || poi.openingHours || poi.cuisine) && (

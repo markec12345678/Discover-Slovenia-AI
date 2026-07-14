@@ -43,6 +43,7 @@ import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { BookingPanel, type BookingData } from "@/components/sections/booking-panel";
+import { ItineraryRefiner } from "@/components/sections/itinerary-refiner";
 
 const SEASONS: { value: Season; label: string }[] = [
   { value: "spring", label: "Pomlad" },
@@ -434,6 +435,13 @@ export function ItineraryPlanner() {
                     </Badge>
                   </div>
                 </div>
+
+                {/* Multi-turn AI refiner — uporabnik naravnojezično spreminja itinerer */}
+                <ItineraryRefiner
+                  itinerary={itinerary}
+                  formData={formData}
+                  onRefined={(newItinerary) => setItinerary(newItinerary)}
+                />
 
                 {/* Day plans */}
                 <div className="space-y-4">
