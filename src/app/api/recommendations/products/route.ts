@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getRecommendedIds } from "@/lib/ai-recommendations";
 
 // GET /api/recommendations/products?productId=XXX&limit=4
-// Vrne do `limit` podobnih izdelkov (ista kategorija ALI ista destinacija),
-// izključi trenutni izdelek, sortira po rating in featured.
+// Vrne AI-priporočene podobne izdelke.
+// AI (GLM) izbere 4 najbolj smiselne iz 10 SQL kandidatov.
+// Rezultati so cachirani 24 ur (data/ai-rec-cache.json).
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("productId");
     const limit = Math.min(
-      Math.max(parseInt(searchParams.get("limit") || "4", 10) || 4, 1),
+      Math.max(parseInt(searchParams.get("limit") || String(4), 10) || 4, 1),
       12
     );
 
@@ -22,7 +24,7 @@ export async function GET(request: Request) {
 
     const current = await db.product.findUnique({
       where: { id: productId },
-      select: { id: true, category: true, destinationId: true },
+      select: { id: true },
     });
 
     if (!current) {
@@ -32,34 +34,30 @@ export async function GET(request: Request) {
       );
     }
 
-    // Poišči podobne: ista kategorija ALI ista destinacija, izključi trenutni.
-    const orClauses: Record<string, unknown>[] = [];
-    if (current.category) {
-      orClauses.push({ category: current.category });
-    }
-    if (current.destinationId) {
-      orClauses.push({ destinationId: current.destinationId });
+    // === AI PRIPOROČILA (z 24h cache) ===
+    const { itemIds, source } = await getRecommendedIds("product", productId);
+
+    if (itemIds.length === 0) {
+      return NextResponse.json({ products: [], total: 0, source });
     }
 
-    const where: Record<string, unknown> = {
-      id: { not: current.id },
-    };
-    if (orClauses.length > 0) {
-      where.OR = orClauses;
-    }
-
+    // Pridobi full podatke za AI-izbrane IDs (v vrstnem redu priporočila)
     const rows = await db.product.findMany({
-      where,
-      orderBy: [{ featured: "desc" }, { rating: "desc" }, { reviewCount: "desc" }],
-      take: limit,
+      where: { id: { in: itemIds } },
     });
 
-    const products = rows.map((p) => ({
+    // Ohrani vrstni red AI priporočila
+    const ordered = itemIds
+      .map((id) => rows.find((r) => r.id === id))
+      .filter((r): r is NonNullable<typeof r> => r !== null)
+      .slice(0, limit);
+
+    const products = ordered.map((p) => ({
       ...p,
       images: JSON.parse(p.images || "[]") as string[],
     }));
 
-    return NextResponse.json({ products, total: products.length });
+    return NextResponse.json({ products, total: products.length, source });
   } catch (error) {
     console.error("[recommendations/products] GET napaka:", error);
     return NextResponse.json(
