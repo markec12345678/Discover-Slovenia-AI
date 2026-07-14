@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import ZAI from "z-ai-web-dev-sdk";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { db } from "@/lib/db";
-import type { Itinerary, PlannerInput, DayPlan } from "@/lib/types";
+import { generateCompletion } from "@/lib/ai-client";
+import type { Itinerary, PlannerInput, DayPlan, LocationVisit } from "@/lib/types";
 
 // POST /api/itinerary - generira AI itinerer z z-ai-web-dev-sdk
 // AI prioritizira SPONZORIRANE lokale (premium/enterprise stranke ki plačajo za vključitev)
@@ -120,16 +120,15 @@ JSON format (STROGO):
 }`;
 
   try {
-    const zai = await ZAI.create();
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: "assistant", content: systemPrompt },
+    const result = await generateCompletion(
+      [
+        { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      thinking: { type: "disabled" },
-    });
+      { temperature: 0.7, jsonMode: true }
+    );
 
-    const content = completion.choices[0]?.message?.content?.trim();
+    const content = result?.content;
     if (!content) {
       throw new Error("Prazen odgovor AI");
     }
@@ -143,6 +142,7 @@ JSON format (STROGO):
       source: "ai",
     };
 
+    console.log(`[itinerary] AI uspešno (source: ${result.source})`);
     return NextResponse.json(itinerary);
   } catch (error) {
     console.error("[itinerary] AI napaka, uporabljam fallback:", error);

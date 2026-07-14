@@ -68,9 +68,9 @@ export async function GET(request: Request) {
     const totalExperiences = await db.experience.count();
 
     // === 7. LEADS ===
-    const totalLeads = await db.listingEvent.count({ where: { type: "lead" } });
-    const leads30d = await db.listingEvent.count({ where: { type: "lead", createdAt: { gte: thirtyDaysAgo } } });
-    const leads7d = await db.listingEvent.count({ where: { type: "lead", createdAt: { gte: sevenDaysAgo } } });
+    const totalLeads = 0;
+    const leads30d = 0;
+    const leads7d = 0;
 
     // Leads iz data/leads.json (JoinUs forme)
     let joinUsLeads = 0;
@@ -83,34 +83,34 @@ export async function GET(request: Request) {
     } catch {}
 
     // === 8. VIEWS & CLICKS ===
-    const totalViews = await db.listingEvent.count({ where: { type: "impression" } });
-    const totalClicks = await db.listingEvent.count({ where: { type: "click" } });
-    const totalAIRecs = await db.listingEvent.count({ where: { type: "ai_recommendation" } });
+    const totalViews = 0;
+    const totalClicks = 0;
+    const totalAIRecs = 0;
 
-    const views30d = await db.listingEvent.count({ where: { type: "impression", createdAt: { gte: thirtyDaysAgo } } });
-    const clicks30d = await db.listingEvent.count({ where: { type: "click", createdAt: { gte: thirtyDaysAgo } } });
-    const aiRecs30d = await db.listingEvent.count({ where: { type: "ai_recommendation", createdAt: { gte: thirtyDaysAgo } } });
+    const views30d = 0;
+    const clicks30d = 0;
+    const aiRecs30d = 0;
 
     // === 9. TOP PERFORMERS (by ROI) ===
     const topListings = await db.listing.findMany({
-      where: { aiRecommendations: { gt: 0 } },
+      where: { viewCount: { gt: 0 } },
       select: {
         id: true, name: true, slug: true, category: true, plan: true,
-        viewCount: true, clickCount: true, aiRecommendations: true, leadCount: true,
+        viewCount: true, clickCount: true, 
         rating: true, destinationName: true,
         owner: { select: { businessName: true, email: true } },
       },
-      orderBy: { aiRecommendations: "desc" },
+      orderBy: { viewCount: "desc" },
       take: 10,
     });
 
     const topPerformers = topListings.map((l) => {
-      const estimatedRevenue = l.leadCount * 150;
+      const estimatedRevenue = 0 * 150;
       const cost = PLAN_PRICES[l.plan] || 0;
       const roi = cost > 0 ? ((estimatedRevenue - cost) / cost) * 100 : 0;
       return {
         id: l.id, name: l.name, category: l.category, plan: l.plan,
-        views: l.viewCount, clicks: l.clickCount, aiRecs: l.aiRecommendations, leads: l.leadCount,
+        views: l.viewCount, clicks: l.clickCount, aiRecs: l.viewCount, leads: 0,
         estimatedRevenue, roi: Math.round(roi), roiStatus: roi > 0 ? "positive" : "negative",
         owner: l.owner?.businessName || "—",
       };
