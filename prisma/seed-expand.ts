@@ -20,12 +20,12 @@ const newListings = [
     slug: "hotel-triglav-bled",
     description: "Elegantni 4* boutique hotel s pogledom na Blejsko jezero in Triglav.",
     longDescription:
-      "Hotel Triglav Bled je eleganten boutique hotel z restavracijo z Michelin zvezdico, le 5 min sprehoda od Blejskega jezera. Ponuja panoramske poglede na Triglav in Julijce, wellness center ter vrhunsko kulinarično izkušnjo z lokalnimi sestavinami.",
+      "Hotel Triglav Bled je eleganten boutique hotel z Michelin priporočeno restavracijo 1906, le 5 min sprehoda od Blejskega jezera. Ponuja panoramske poglede na Triglav in Julijce, wellness center ter vrhunsko kulinarično izkušnjo z lokalnimi sestavinami. Restavracija 1906 ponuja tradicionalne jedi z modernim pridihom.",
     category: "hotel",
     destinationId: "bled",
     destinationName: "Bled",
-    address: "Veslaška promenada 11, 4260 Bled",
-    phone: "+386 4 529 2500",
+    address: "Kolodvorska cesta 33, 4260 Bled",
+    phone: "+386 4 575 26 10",
     email: "info@hoteltriglavbled.si",
     website: "https://www.hoteltriglavbled.si",
     images: JSON.stringify([
@@ -50,9 +50,9 @@ const newListings = [
   {
     name: "Hiša Franko",
     slug: "hisa-franko",
-    description: "Slovenska restavracija z Michelin zvezdico v Kobaridu ob Soči.",
+    description: "Restavracija Ane Roš s tremi Michelin zvezdicami v Kobaridu ob Soči.",
     longDescription:
-      "Hiša Franko vodi chef Ana Roš, ki je bila leta 2017 razglašena za najboljšo žensko chef na svetu. Restavracija ponuja inovativno tolminsko kuhinjo z lokalnimi sestavinami in 7-urno degustacijsko izkušnjo. Vinska klet z več kot 1200 etiketami.",
+      "Hiša Franko vodi chef Ana Roš, ki je bila leta 2017 razglašena za najboljšo žensko chef na svetu (The World's 50 Best Restaurants). Restavracija ima 3 Michelin zvezdice in ponuja inovativno tolminsko kuhinjo z lokalnimi sestavinami in 7-urno degustacijsko izkušnjo. Vinska klet z več kot 1200 etiketami. Ena najboljših restavracij na svetu.",
     category: "restaurant",
     destinationId: "kobarid",
     destinationName: "Kobarid",
@@ -81,18 +81,18 @@ const newListings = [
   },
   // === PRIMORSKA ===
   {
-    name: "Hotel Grand Plaza Portorož",
+    name: "Grand Hotel Portorož",
     slug: "hotel-grand-plaza-portoroz",
-    description: "Luksuzen 5* hotel v Portorožu z zasebno plažo in wellnessom.",
+    description: "4* superior hotel ob morju v Portorožu z zasebno plažo in wellness centerjem LifeClass.",
     longDescription:
-      "Hotel Grand Plaza je sodoben 5* luksuzen hotel ob morju v Portorožu. Nudi zasebno plažo, wellness center znotraj Shortino terme, rooftop bazen z morsko vodo in restavracijo z mediteransko kuhinjo. Idealen za romantiko in wellness oddih.",
+      "Grand Hotel Portorož je ekskluziven 4* superior hotel ob morju v Portorožu. Ponuja zasebno plažo, wellness center LifeClass, bazene z morsko vodo in restavracijo z mediteransko kuhinjo. Idealen za wellness oddih in romantične pobegne.",
     category: "hotel",
     destinationId: "piran",
     destinationName: "Piran",
     address: "Obala 73, 6320 Portorož",
-    phone: "+386 5 690 1100",
+    phone: "+386 5 690 11 00",
     email: "info@grandplaza-portoroz.si",
-    website: "https://www.grandplaza-portoroz.si",
+    website: "https://www.lifeclass.net",
     images: JSON.stringify([
       "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=1200&h=800&fit=crop&q=80",
       "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1200&h=800&fit=crop&q=80",
@@ -170,18 +170,18 @@ const newListings = [
   },
   // === OSREDNJA ===
   {
-    name: "Hotel City Ljubljana",
+    name: "City Hotel Ljubljana",
     slug: "hotel-city-ljubljana",
     description: "Sodoben 4* hotel v središču Ljubljane, 3 min od Prešernovega trga.",
     longDescription:
-      "Hotel City Ljubljana je sodoben 4* hotel v središču mesta z odlično lokacijo za raziskovanje Ljubljane. Nudi udobne sobe, rooftop restavracijo z mestnim pogledom, fitness in brezplačno parkirišče. 5 min do žičnice na Ljubljanski grad.",
+      "City Hotel Ljubljana je sodoben 4* superior hotel v središču mesta z odlično lokacijo za raziskovanje Ljubljane. Nudi udobne sobe, restavracijo, fitness in brezplačno WiFi. 5 min do Prešernovega trga in žičnice na Ljubljanski grad. 197 modernih sob.",
     category: "hotel",
     destinationId: "ljubljana",
     destinationName: "Ljubljana",
     address: "Dalmatinova 15, 1000 Ljubljana",
-    phone: "+386 1 425 6000",
-    email: "info@hotelcity-ljubljana.si",
-    website: "https://www.hotelcity-ljubljana.si",
+    phone: "+386 1 239 00 00",
+    email: "info@cityhotel.si",
+    website: "https://www.cityhotel.si",
     images: JSON.stringify([
       "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1200&h=800&fit=crop&q=80",
       "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=1200&h=800&fit=crop&q=80",
@@ -202,18 +202,18 @@ const newListings = [
     ownerEmail: "info@hotelcity-ljubljana.si",
   },
   {
-    name: "Restavracija As",
+    name: "Gostilna AS",
     slug: "restavracija-as",
-    description: "Michelin priporočena restavracija s sodobno slovensko kuhinjo v Ljubljani.",
+    description: "Zgodovinska gostilna v središču Ljubljane z bogato tradicijo in Michelin priporočilo.",
     longDescription:
-      "Restavracija As vodi chef Tomaž Kavčič, eden pionirjev sodobne slovenske kuhinje. Ponuja avtorske menije z lokalnimi sestavinami, ki združujejo alpsko, sredozemsko in panonsko tradicijo. Vinska karta z več kot 300 slovenskimi vineti.",
+      "Gostilna AS je legendarna ljubljanska gostilna z dolgoletno tradicijo. Ponuja širok izbor slovenskih mesnih jedi, tradicionalnih specialitet in vrhunskih vin. Michelin priporočena restavracija v umirjeni pešpoti blizu centra mesta. Družinsko vodena z osebnim pridihom.",
     category: "restaurant",
     destinationId: "ljubljana",
     destinationName: "Ljubljana",
     address: "Ciril-Metodov trg 3, 1000 Ljubljana",
-    phone: "+386 1 425 8822",
+    phone: "+386 1 425 88 22",
     email: "info@restavracija-as.si",
-    website: "https://www.restavracija-as.si",
+    website: "https://www.gostilnaas.si",
     images: JSON.stringify([
       "https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=1200&h=800&fit=crop&q=80",
       "https://images.unsplash.com/photo-1547595628-c61a29f496f0?w=1200&h=800&fit=crop&q=80",
@@ -392,18 +392,18 @@ const newListings = [
   },
   // === DOLENJSKA ===
   {
-    name: "Hotel Otočec",
+    name: "Hotel Grad Otočec",
     slug: "hotel-otocec",
     description: "Edini slovenski grad na otoku reke — luksuzen hotel z golfom in wellnessom.",
     longDescription:
-      "Hotel Otočec Grad je edini slovenski grad na otoku reke Krke, preurejen v luksuzen 4* hotel. Ponuja 18-luknjično golf igrišče, wellness center, restavracijo z vrhunsko kuhinjo in romantično vzdušje za pare.",
+      "Hotel Grad Otočec je edini slovenski grad na otoku reke Krke, preurejen v luksuzen hotel. Ponuja 18-luknjično golf igrišče, wellness center, restavracijo z vrhunsko kuhinjo in romantično vzdušje za pare. Idealna lokacija za oddih v naravi Dolenjske.",
     category: "hotel",
     destinationId: "otocec",
     destinationName: "Otočec",
-    address: "Otočec 1, 8222 Otočec",
-    phone: "+386 7 308 4000",
-    email: "info@hotel-otocec.si",
-    website: "https://www.otocec.si",
+    address: "Grajska cesta 2, 8222 Otočec",
+    phone: "+386 8 205 0300",
+    email: "booking@terme-krka.eu",
+    website: "https://grad-otocec.com",
     images: JSON.stringify([
       "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&h=800&fit=crop&q=80",
       "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1200&h=800&fit=crop&q=80",
