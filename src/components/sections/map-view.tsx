@@ -246,7 +246,7 @@ export function MapView({ routeCoords, onOpenDestination }: MapViewProps) {
     if (!showRoute || !routeCoords || routeCoords.length < 2) return;
 
     // Polyline med vsemi točkami
-    const latlngs = routeCoords.map((c) => [c.lat, c.lng] as [number, number]);
+    const latlngs = routeCoords.map((c) => [c.lat, c.lng]);
     const polyline = L.polyline(latlngs, {
       color: "#2d6a3e",
       weight: 3,
@@ -446,8 +446,8 @@ export function MapView({ routeCoords, onOpenDestination }: MapViewProps) {
         aria-label="Interaktivni zemljevid slovenskih destinacij in točk interesa"
       />
 
-      {/* Kontrolni gumbi (zgoraj desno) */}
-      <div className="absolute right-3 top-3 z-[1000] flex flex-col gap-2">
+      {/* Kontrolni gumbi (zgoraj desno) — kompaktneje da ne prekrivajo */}
+      <div className="absolute right-3 top-3 z-[1000] flex flex-col gap-1.5 max-h-[calc(100%-80px)] overflow-y-auto scroll-area-custom">
         <Button
           type="button"
           size="sm"

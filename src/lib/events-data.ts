@@ -115,7 +115,7 @@ export const EVENTS: EventItem[] = [
     category: "glasba",
     region: "osrednja",
     image:
-      "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/03c081845a5e.jpg",
     website: "https://www.ljubljanafestival.si",
     priceRange: "€€",
     featured: false,
@@ -131,7 +131,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "stajerska",
     image:
-      "https://images.unsplash.com/photo-1517242810446-cc8951b2be40?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/629581fdedb9.jpg",
     website: "https://www.kurentovanje.net",
     priceRange: "brezplačno",
     featured: true,
@@ -147,7 +147,7 @@ export const EVENTS: EventItem[] = [
     category: "sport",
     region: "gorenjska",
     image:
-      "https://images.unsplash.com/photo-1551698618-1d6471fa3f5b?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/deb81f0130ad.jpg",
     website: "https://www.planica.si",
     priceRange: "€€",
     featured: true,
@@ -164,7 +164,7 @@ export const EVENTS: EventItem[] = [
     category: "glasba",
     region: "gorenjska",
     image:
-      "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/046381eb5c16.jpg",
     website: "https://www.festivalblejskihdni.si",
     priceRange: "€€",
     featured: false,
@@ -181,7 +181,7 @@ export const EVENTS: EventItem[] = [
     category: "sport",
     region: "gorenjska",
     image:
-      "https://images.unsplash.com/photo-1530841379378-3c06a9c2b1c0?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/30b28e7406da.jpg",
     website: "https://www.festivalsoca.si",
     priceRange: "€€",
     featured: false,
@@ -198,7 +198,7 @@ export const EVENTS: EventItem[] = [
     category: "hrana",
     region: "gorenjska",
     image:
-      "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/c9048cefb05b.jpg",
     website: "https://www.bled.si",
     priceRange: "brezplačno",
     featured: true,
@@ -215,7 +215,7 @@ export const EVENTS: EventItem[] = [
     category: "glasba",
     region: "osrednja",
     image:
-      "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/12490c81f940.jpg",
     website: "https://www.ljubljanafestival.si",
     priceRange: "€€",
     featured: true,
@@ -232,7 +232,7 @@ export const EVENTS: EventItem[] = [
     category: "glasba",
     region: "primorska",
     image:
-      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/b2b645f044a8.jpg",
     website: "https://www.piran.si",
     priceRange: "€",
     featured: false,
@@ -247,7 +247,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "gorenjska",
     image:
-      "https://images.unsplash.com/photo-1496024840928-4c417adf211d?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/3ca2b48357e6.jpg",
     priceRange: "brezplačno",
     featured: false,
   },
@@ -261,7 +261,7 @@ export const EVENTS: EventItem[] = [
     category: "hrana",
     region: "primorska",
     image:
-      "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/219287b7ca7c.jpg",
     website: "https://www.slovenia.info",
     priceRange: "€",
     featured: false,
@@ -278,7 +278,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "stajerska",
     image:
-      "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/04a9c13195c0.jpg",
     website: "https://www.stara-trta.si",
     priceRange: "€",
     featured: false,
@@ -295,7 +295,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "osrednja",
     image:
-      "https://images.unsplash.com/photo-1543393716-375f47996a4c?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/5b9571e9ea4e.jpg",
     website: "https://www.ljubljana.si",
     priceRange: "brezplačno",
     featured: true,
@@ -313,7 +313,7 @@ export const EVENTS: EventItem[] = [
     category: "sport",
     region: "koroska",
     image:
-      "https://images.unsplash.com/photo-1551524559-8af4e6624178?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/1f44bed4b636.jpg",
     priceRange: "€",
     featured: false,
   },
@@ -329,7 +329,7 @@ export const EVENTS: EventItem[] = [
     category: "hrana",
     region: "prekmurje",
     image:
-      "https://images.unsplash.com/photo-1572441710534-f3b8b3b3b3b3?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/72a1f461dc3d.jpg",
     priceRange: "brezplačno",
     featured: false,
   },
@@ -344,7 +344,7 @@ export const EVENTS: EventItem[] = [
     category: "hrana",
     region: "dolenjska",
     image:
-      "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/d5a8c1cab006.jpg",
     priceRange: "€",
     featured: false,
   },
@@ -359,7 +359,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "bela-krajina",
     image:
-      "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/7c87f1c36c68.jpg",
     priceRange: "€€",
     featured: false,
   },
@@ -375,7 +375,7 @@ export const EVENTS: EventItem[] = [
     category: "glasba",
     region: "koroska",
     image:
-      "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/5a6a0c62dd70.jpeg",
     priceRange: "€€",
     featured: false,
   },
@@ -390,7 +390,7 @@ export const EVENTS: EventItem[] = [
     category: "kultura",
     region: "prekmurje",
     image:
-      "https://images.unsplash.com/photo-1496024840928-4c417adf211d?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/b11f6dd497a3.jpg",
     priceRange: "brezplačno",
     featured: false,
   },
@@ -407,7 +407,7 @@ export const EVENTS: EventItem[] = [
     category: "sport",
     region: "gorenjska",
     image:
-      "https://images.unsplash.com/photo-1551524559-8af4e6624178?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/c0365d9b8fdf.jpg",
     website: "https://www.bled.si",
     priceRange: "brezplačno",
     featured: false,
@@ -424,7 +424,7 @@ export const EVENTS: EventItem[] = [
     category: "sport",
     region: "stajerska",
     image:
-      "https://images.unsplash.com/photo-1551524559-8af4e6624178?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/c72ba4e8d642.jpg",
     website: "https://www.zlati-lisjak.si",
     priceRange: "€",
     featured: false,
@@ -441,7 +441,7 @@ export const EVENTS: EventItem[] = [
     category: "hrana",
     region: "stajerska",
     image:
-      "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/6c7af1cfed10.png",
     website: "https://www.vinskavigred.si",
     priceRange: "€",
     featured: true,
@@ -458,7 +458,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "bela-krajina",
     image:
-      "https://images.unsplash.com/photo-1496024840928-4c417adf211d?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/d1b4362b52b4.jpg",
     website: "https://www.jurjevanje.si",
     priceRange: "brezplačno",
     featured: false,
@@ -474,7 +474,7 @@ export const EVENTS: EventItem[] = [
     category: "sport",
     region: "osrednja",
     image:
-      "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/02fa729ab251.jpg",
     website: "https://www.ljubljanskimaraton.si",
     priceRange: "€€",
     featured: true,
@@ -490,7 +490,7 @@ export const EVENTS: EventItem[] = [
     category: "festival",
     region: "stajerska",
     image:
-      "https://images.unsplash.com/photo-1530841379378-3c06a9c2b1c0?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/1d31d3882a92.jpg",
     website: "https://www.pivoincvetje.si",
     priceRange: "€",
     featured: true,
@@ -506,7 +506,7 @@ export const EVENTS: EventItem[] = [
     category: "hrana",
     region: "primorska",
     image:
-      "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/5fb40989e896.jpg",
     website: "https://www.kpss.si",
     priceRange: "€",
     featured: false,
@@ -523,7 +523,7 @@ export const EVENTS: EventItem[] = [
     category: "glasba",
     region: "osrednja",
     image:
-      "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/6de38357333b.jpg",
     website: "https://www.trnfest.si",
     priceRange: "brezplačno",
     featured: false,
@@ -540,7 +540,7 @@ export const EVENTS: EventItem[] = [
     category: "glasba",
     region: "gorenjska",
     image:
-      "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/dd79e42b89f2.jpg",
     website: "https://www.okarina.si",
     priceRange: "€€",
     featured: true,
@@ -557,7 +557,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "stajerska",
     image:
-      "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/d5ab65c5a356.jpg",
     website: "https://www.celjski-sejem.si",
     priceRange: "€",
     featured: false,
@@ -574,7 +574,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "gorenjska",
     image:
-      "https://images.unsplash.com/photo-1543393716-375f47996a4c?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/7abc84c54d4f.jpg",
     website: "https://www.bled.si",
     priceRange: "brezplačno",
     featured: true,
@@ -591,7 +591,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "kras",
     image:
-      "https://images.unsplash.com/photo-1543393716-375f47996a4c?w=1200&h=800&fit=crop&q=80",
+      "https://sfile.chatglm.cn/images-ppt/87257b62e69a.jpg",
     website: "https://www.postojna.si",
     priceRange: "brezplačno",
     featured: false,

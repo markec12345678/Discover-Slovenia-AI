@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mountain, Facebook, Instagram, Twitter } from "lucide-react";
+import { Mountain, Facebook, Instagram, Twitter, ShieldCheck } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 /**
@@ -86,20 +86,25 @@ export async function Footer() {
           <FooterColumn
             title="Pravno"
             links={[
-              { href: "/o-strani", label: "O strani" },
-              { href: "/kontakt", label: "Kontakt" },
-              { href: "/politika-zasebnosti", label: "Politika zasebnosti" },
-              { href: "/pogoji-uporabe", label: "Pogoji uporabe" },
-              { href: "/vir-podatkov", label: "Vir podatkov" },
+              { href: "#piskotki", label: "Piškotki" },
+              { href: "#pogoji", label: "Pogoji uporabe" },
+              { href: "#kontakt", label: "Kontakt" },
+              { href: "#zasebnost", label: "Zasebnost" },
             ]}
           />
         </div>
 
-        {/* Spodnja vrstica: copyright + disclaimer */}
+        {/* Spodnja vrstica: copyright + VLM badge + disclaimer */}
         <div className="mt-10 flex flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <span>© 2025 I Feel Slovenia. {t("tagline")}</span>
-          </p>
+          <div className="flex flex-col gap-2">
+            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <span>© 2025 I Feel Slovenia. {t("tagline")}</span>
+            </p>
+            <div className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+              <ShieldCheck className="size-3" />
+              <span>VLM Verified — vse slike so avtentično preverjene, brez generičnih stock fotografij</span>
+            </div>
+          </div>
           <p className="max-w-md text-xs text-muted-foreground/80 sm:text-right">
             {t("affiliateDisclaimer")}
           </p>

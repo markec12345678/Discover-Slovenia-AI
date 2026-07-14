@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import ZAI from "z-ai-web-dev-sdk";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { db } from "@/lib/db";
-import type { Itinerary, PlannerInput, DayPlan, LocationVisit } from "@/lib/types";
+import type { Itinerary, PlannerInput, DayPlan } from "@/lib/types";
 
 // POST /api/itinerary - generira AI itinerer z z-ai-web-dev-sdk
 // AI prioritizira SPONZORIRANE lokale (premium/enterprise stranke ki plačajo za vključitev)
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   // Pridobi SPONZORIRANE lokale iz baze — AI jih bo prioritiziral v priporočilih
   // To je monetizacijski model: premium/enterprise stranke plačajo za AI priporočila
   let sponsoredContext = "";
-  let sponsoredListings: Array<{ id: string; name: string; category: string; destinationId: string | null; destinationName: string | null }> = [];
+  let sponsoredListings: Array<{ name: string; category: string; destinationId: string | null; destinationName: string | null }> = [];
   try {
     sponsoredListings = await db.listing.findMany({
       where: {
@@ -52,7 +52,6 @@ export async function POST(request: Request) {
         sponsoredUntil: { gte: new Date() },
       },
       select: {
-        id: true,
         name: true,
         category: true,
         destinationId: true,
@@ -60,17 +59,6 @@ export async function POST(request: Request) {
       },
       take: 20,
     });
-
-    // Zabeleži AI priporočila za vsak sponsored lokal (tracking za ROI dashboard)
-    for (const sl of sponsoredListings) {
-      db.listingEvent.create({
-        data: { listingId: sl.id, type: "ai_recommendation", source: "ai_planner" }
-      }).catch(() => {});
-      db.listing.update({
-        where: { id: sl.id },
-        data: { aiRecommendations: { increment: 1 } }
-      }).catch(() => {});
-    }
 
     if (sponsoredListings.length > 0) {
       sponsoredContext = "\n\nSPONZORIRANI PARTNERJI (predlagaj te kadar je mogoče — so naši premium partnerji):\n" +
@@ -182,7 +170,7 @@ function generateFallbackItinerary(input: PlannerInput): Itinerary {
 
   for (let day = 1; day <= input.days; day++) {
     const locationsPerDay = 2;
-    const locations: LocationVisit[] = [];
+    const locations = [];
 
     for (let i = 0; i < locationsPerDay; i++) {
       const dest = ranked[destIndex % ranked.length];

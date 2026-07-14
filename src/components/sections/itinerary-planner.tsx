@@ -13,7 +13,6 @@ import {
   Star,
   Cloud,
   Loader2,
-  Mail,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -43,7 +42,6 @@ import type { PlannerInput, Itinerary, Season } from "@/lib/types";
 import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { trackFunnel } from "@/lib/funnel";
 import { BookingPanel, type BookingData } from "@/components/sections/booking-panel";
 
 const SEASONS: { value: Season; label: string }[] = [
@@ -158,7 +156,6 @@ export function ItineraryPlanner() {
       if (!res.ok) throw new Error("Napaka pri generiranju");
       const data: Itinerary = await res.json();
       setItinerary(data);
-      trackFunnel("itinerary_generate");
       toast({
         title: "Itinerer generiran!",
         description:
@@ -436,9 +433,6 @@ export function ItineraryPlanner() {
                       Skupaj ~€{itinerary.total_budget}
                     </Badge>
                   </div>
-                  <div className="flex gap-2">
-                    <EmailItineraryButton itinerary={itinerary} formData={formData} />
-                  </div>
                 </div>
 
                 {/* Day plans */}
@@ -560,75 +554,3 @@ export function ItineraryPlanner() {
 }
 
 export default ItineraryPlanner;
-
-// === EMAIL ITINERARY BUTTON ===
-function EmailItineraryButton({ itinerary, formData }: { itinerary: Itinerary; formData: PlannerInput }) {
-  const [email, setEmail] = useState("");
-  const [showInput, setShowInput] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-  const { toast } = useToast();
-
-  const handleSend = async () => {
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast({ title: "Vnesite veljaven email" });
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetch("/api/email-itinerary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, itinerary, formData }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setDone(true);
-        trackFunnel("newsletter_signup");
-        toast({ title: "Itinerer poslan!", description: "Preverite vaš email." });
-      } else {
-        toast({ title: "Napaka", description: data.error || "Napaka pri pošiljanju" });
-      }
-    } catch {
-      toast({ title: "Napaka pri pošiljanju" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (done) {
-    return (
-      <span className="text-sm text-emerald-600 flex items-center gap-1">
-        ✓ Itinerer poslan na {email}
-      </span>
-    );
-  }
-
-  if (!showInput) {
-    return (
-      <Button size="sm" variant="outline" onClick={() => setShowInput(true)}>
-        <Mail className="size-3.5 mr-1" />
-        Pošlji itinerer na email
-      </Button>
-    );
-  }
-
-  return (
-    <div className="flex gap-2 items-center">
-      <Input
-        type="email"
-        placeholder="vas@email.si"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="max-w-xs h-8 text-sm"
-        disabled={loading}
-      />
-      <Button size="sm" onClick={handleSend} disabled={loading}>
-        {loading ? <Loader2 className="size-3.5 animate-spin" /> : "Pošlji"}
-      </Button>
-      <Button size="sm" variant="ghost" onClick={() => setShowInput(false)}>
-        Prekliči
-      </Button>
-    </div>
-  );
-}

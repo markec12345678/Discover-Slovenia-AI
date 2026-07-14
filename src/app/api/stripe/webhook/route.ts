@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   }
 
   const stripe = new Stripe(stripeKey, {
-    apiVersion: "2026-05-27.dahlia",
+    apiVersion: "2024-12-18.acacia" as Stripe.LatestApiVersion,
   });
 
   let event: Stripe.Event;
@@ -72,8 +72,8 @@ export async function POST(request: Request) {
           if (typeof cs.subscription === "string") {
             try {
               const sub = await stripe.subscriptions.retrieve(cs.subscription);
-              subscriptionEndsAt = (sub as any).current_period_end
-                ? new Date((sub as any).current_period_end * 1000)
+              subscriptionEndsAt = sub.current_period_end
+                ? new Date(sub.current_period_end * 1000)
                 : null;
             } catch (e) {
               console.error("[stripe/webhook] sub retrieve failed:", e);
@@ -139,8 +139,8 @@ export async function POST(request: Request) {
         if (!ownerId) break;
 
         const mappedStatus = mapStripeStatus(status);
-        const subEnd = (sub as any).current_period_end
-          ? new Date((sub as any).current_period_end * 1000)
+        const subEnd = sub.current_period_end
+          ? new Date(sub.current_period_end * 1000)
           : null;
 
         const updateData: Record<string, unknown> = {

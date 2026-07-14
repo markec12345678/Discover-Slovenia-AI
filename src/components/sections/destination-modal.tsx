@@ -213,7 +213,7 @@ export function DestinationModal({
                 />
                 <InfoItem
                   icon={Euro}
-                  label="Cena na osebo"
+                  label="Ocena obiska"
                   value={`${destination.costPerPerson} €`}
                 />
               </div>

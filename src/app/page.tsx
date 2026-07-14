@@ -1,10 +1,10 @@
 import { Navigation } from "@/components/sections/navigation";
 import { Hero } from "@/components/sections/hero";
+import { VlmVerifiedBadge } from "@/components/vlm-verified-badge";
 import { StatsSection } from "@/components/sections/stats";
 import { CollectionsSection } from "@/components/sections/collections";
 import { DestinationsSection } from "@/components/sections/destinations";
 import { ItineraryPlanner } from "@/components/sections/itinerary-planner";
-import { NewsletterCapture } from "@/components/newsletter-capture";
 import { MapSection } from "@/components/sections/map-section";
 import { ListingsSection } from "@/components/sections/listings";
 import { MarketplaceSection } from "@/components/sections/marketplace";
@@ -24,15 +24,13 @@ export default function Home() {
       <BetaBanner />
       <main className="flex-grow">
         <Hero />
+        <div className="flex justify-center py-4 bg-muted/30">
+          <VlmVerifiedBadge />
+        </div>
         <StatsSection />
         <CollectionsSection />
         <DestinationsSection />
         <ItineraryPlanner />
-        <section className="py-8 bg-muted/30">
-          <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-            <NewsletterCapture />
-          </div>
-        </section>
         <MapSection />
         <ListingsSection />
         <MarketplaceSection />

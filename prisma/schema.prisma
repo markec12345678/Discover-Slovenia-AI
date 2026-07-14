@@ -75,9 +75,6 @@ model Listing {
   ownerEmail      String?
   viewCount       Int      @default(0)
   clickCount      Int      @default(0)
-  // AI priporočila tracking — šteje kolikokrat je bil lokal v AI itinererjih
-  aiRecommendations Int    @default(0)
-  leadCount       Int      @default(0)
   // Sponzorirane poti — lokal plača za vključitev v AI itinererje
   sponsored       Boolean  @default(false)
   sponsoredUntil  DateTime?
@@ -85,7 +82,6 @@ model Listing {
   updatedAt       DateTime @updatedAt
   ownerId         String?
   owner           Owner?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
-  events          ListingEvent[]
 
   @@index([destinationId])
   @@index([category])
@@ -93,21 +89,6 @@ model Listing {
   @@index([featured])
   @@index([ownerId])
   @@index([sponsored])
-}
-
-// Tracking eventi za listings — impressions, clicks, AI recommendations, leads
-model ListingEvent {
-  id          String   @id @default(cuid())
-  listingId   String
-  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  type        String   // impression | click | ai_recommendation | lead
-  source      String?  // homepage | things-to-do | itinerary | search | ai_planner
-  metadata    String?  // JSON string za dodatne podatke
-  createdAt   DateTime @default(now())
-
-  @@index([listingId])
-  @@index([type])
-  @@index([createdAt])
 }
 
 // Tržnica izdelkov — lokalni kmetje, vinogradniki, obrtniki prodajajo izdelke
@@ -286,19 +267,4 @@ model Booking {
   @@index([bookingDate])
   @@index([guestEmail])
   @@index([status])
-}
-
-// PageView tracking — za SEO indeksacijsko nadzorno ploščo
-// beleži ogled strani (path) za identifikacijo, katere URL-je je Google že indeksiral
-model PageView {
-  id          String   @id @default(cuid())
-  path        String
-  title       String?
-  referrer    String?
-  funnelStep  String?  // homepage_view | destination_view | itinerary_generate | newsletter_signup | listing_click
-  createdAt   DateTime @default(now())
-
-  @@index([path])
-  @@index([createdAt])
-  @@index([funnelStep])
 }

@@ -154,3 +154,22 @@
     rgba(0, 0, 0, 0.75) 100%
   );
 }
+
+/* Leaflet z-index fix — prepreči prekrivanje z navigation bar */
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1 !important;
+}
+.leaflet-popup-pane {
+  z-index: 5 !important;
+}
+.leaflet-control {
+  z-index: 5 !important;
+}
+/* Navigation in modali naj bodo nad zemljevidom */
+header.sticky,
+[data-radix-dialog-overlay],
+[data-radix-dialog-content] {
+  z-index: 2000 !important;
+}

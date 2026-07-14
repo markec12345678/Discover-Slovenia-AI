@@ -134,7 +134,7 @@ export async function POST(request: Request) {
     }
 
     const stripe = new Stripe(stripeKey, {
-      apiVersion: "2026-05-27.dahlia",
+      apiVersion: "2024-12-18.acacia" as Stripe.LatestApiVersion,
     });
 
     // 1. Pridobi ali ustvari Stripe Customer
