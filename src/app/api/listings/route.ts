@@ -13,8 +13,10 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get("limit") || "50", 10);
     const sort = searchParams.get("sort") || "featured"; // featured | rating | newest
 
-    // Zgradi where pogoj
-    const where: Record<string, unknown> = {};
+    // Zgradi where pogoj — samo PUBLISHED lokalci so javno vidni
+    const where: Record<string, unknown> = {
+      status: "published", // Rule: AI in uporabnik vidijo samo published
+    };
     if (category && category !== "all") where.category = category;
     if (destinationId && destinationId !== "all") where.destinationId = destinationId;
     if (plan && plan !== "all") where.plan = plan;

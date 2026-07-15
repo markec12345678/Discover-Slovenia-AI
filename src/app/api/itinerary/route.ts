@@ -48,6 +48,7 @@ export async function POST(request: Request) {
   try {
     sponsoredListings = await db.listing.findMany({
       where: {
+        status: "published", // Rule: AI uporablja samo published lokale
         sponsored: true,
         sponsoredUntil: { gte: new Date() },
       },

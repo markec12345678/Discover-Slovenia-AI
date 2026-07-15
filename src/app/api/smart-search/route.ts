@@ -54,6 +54,7 @@ export async function POST(request: Request) {
   // === PRIDOBI VSE ITEME IZ BAZE ===
   const [allListings, allProducts, allExperiences] = await Promise.all([
     db.listing.findMany({
+      where: { status: "published" },
       select: {
         id: true, name: true, category: true, destinationName: true,
         description: true, rating: true, priceRange: true,
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
       take: 50,
     }).catch(() => []),
     db.product.findMany({
+      where: { status: "published" },
       select: {
         id: true, name: true, category: true, destinationName: true,
         description: true, price: true, rating: true,
@@ -71,6 +73,7 @@ export async function POST(request: Request) {
       take: 50,
     }).catch(() => []),
     db.experience.findMany({
+      where: { status: "published" },
       select: {
         id: true, name: true, category: true, destinationName: true,
         description: true, pricePerPerson: true, rating: true,

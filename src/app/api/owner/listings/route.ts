@@ -202,6 +202,9 @@ export async function POST(request: Request) {
         specialties: JSON.stringify(data.specialties),
         ownerId: session.user.id,
         ownerEmail: owner.email,
+        // Status: novi lokalci začnejo kot DRAFT (lastnik jih mora oddati v pregled)
+        status: "draft",
+        partnerStatus: "standard",
       },
     });
 

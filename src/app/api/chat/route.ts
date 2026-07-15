@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   // === GRADI KONTEKST IZ BAZE ===
   const [topListings, topProducts, topExperiences] = await Promise.all([
     db.listing.findMany({
-      where: { featured: true },
+      where: { status: "published", featured: true },
       take: 10,
       select: {
         name: true, category: true, destinationName: true,
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       orderBy: { rating: "desc" },
     }).catch(() => []),
     db.product.findMany({
-      where: { featured: true },
+      where: { status: "published", featured: true },
       take: 10,
       select: {
         name: true, category: true, destinationName: true,
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       orderBy: { rating: "desc" },
     }).catch(() => []),
     db.experience.findMany({
-      where: { featured: true },
+      where: { status: "published", featured: true },
       take: 10,
       select: {
         name: true, category: true, destinationName: true,

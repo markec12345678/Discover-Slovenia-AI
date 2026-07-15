@@ -13,9 +13,9 @@ export async function GET(
       where: { slug },
     });
 
-    if (!listing) {
+    if (!listing || listing.status !== "published") {
       return NextResponse.json(
-        { error: "Lokal ni najden" },
+        { error: "Lokal ni najden ali ni objavljen" },
         { status: 404 }
       );
     }

@@ -121,6 +121,7 @@ async function fetchProductCandidates(currentId: string): Promise<{
   const rows = await db.product.findMany({
     where: {
       id: { not: current.id },
+      status: "published",
       ...(orClauses.length > 0 ? { OR: orClauses } : {}),
     },
     orderBy: [{ featured: "desc" }, { rating: "desc" }, { reviewCount: "desc" }],
@@ -163,6 +164,7 @@ async function fetchExperienceCandidates(currentId: string): Promise<{
   const rows = await db.experience.findMany({
     where: {
       id: { not: current.id },
+      status: "published",
       ...(orClauses.length > 0 ? { OR: orClauses } : {}),
     },
     orderBy: [{ featured: "desc" }, { rating: "desc" }, { reviewCount: "desc" }],
