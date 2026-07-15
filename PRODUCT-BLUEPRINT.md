@@ -1770,50 +1770,220 @@ DB query → timeout/locked
 | SEO FAQ | ~800 | ~400 | ~8s | €0.003 | €0.00 (free) |
 | Translate | ~200 | ~200 | ~3s | €0.001 | €0.00 (free) |
 
-### 16.2 Cost Projection (scaling)
+### 16.2 Revenue Projection — 3 scenariji z predpostavkami
 
-#### Scenarij 1: 1,000 uporabnikov/dan
+> **Pomembno:** Projekcije temeljijo na predpostavkah. Vsaka številka je dokumentirana. Dejanski rezultati se bodo razlikovali.
 
-```
-┌─────────────────────────────────────────────────────┐
-│ Scenarij 1: 1,000 users/day                         │
-├─────────────────────────────────────────────────────┤
-│ AI Itinerary:    100/day × €0.015 = €1.50/day       │
-│ AI Chat:         200/day × €0.004 = €0.80/day       │
-│ Smart Search:     50/day × €0.008 = €0.40/day       │
-│ AI Refine:        30/day × €0.012 = €0.36/day       │
-│ AI Recommend:    500/day × €0.003 = €1.50/day       │
-│ POI Describe:     20/day × €0.001 = €0.02/day       │
-│ Auto-tag:          5/day × €0.002 = €0.01/day       │
-│ AI Insights:      10/day × €0.006 = €0.06/day       │
-│ SEO FAQ:           2/day × €0.003 = €0.006/day      │
-│ Translate:         5/day × €0.001 = €0.005/day      │
-├─────────────────────────────────────────────────────┤
-│ Total AI cost/day: €4.66                             │
-│ Total AI cost/month: €139.80                         │
-└─────────────────────────────────────────────────────┘
-```
+#### 📋 Skupne predpostavke (za vse scenarije)
 
-#### Scenarij 2: 10,000 uporabnikov/dan
+| Predpostavka | Vrednost | Vir/Utemeljitev |
+|-------------|---------|-----------------|
+| AI cost per itinerary | €0.015 | GLM-4 pricing (če plačljiv) |
+| AI cost per chat | €0.004 | GLM-4 pricing |
+| Cache hit rate | 60% | 24h TTL z stabilnimi query-ji |
+| Puter (trenutno) | €0 | Brezplačni tier |
+| Affiliate povprečna commission | €2/rezervacija | Booking 5% × €40 povprečno |
+| Premium cena | €149/mes | Pavšalni oglas |
+| Enterprise cena | €499/mes | Pavšalni oglas + API |
+| Affiliate click-through rate | 8% | Industry standard za travel |
+| Affiliate conversion rate | 5% | Booking.com povprečje |
+
+---
+
+#### 🟢 Scenarij 1: KONZERVATIVEN (1,000 uporabnikov/dan)
 
 ```
-┌─────────────────────────────────────────────────────┐
-│ Scenarij 2: 10,000 users/day                        │
-├─────────────────────────────────────────────────────┤
-│ Total AI cost/day: €46.60                           │
-│ Total AI cost/month: €1,398                         │
-├─────────────────────────────────────────────────────┤
-│ Prihodki (10K users):                              │
-│ - Affiliate (5% konverzija × €2 commission)        │
-│   = 500 × €2 = €1,000/day = €30,000/mes            │
-│ - MRR (100 premium × €149) = €14,900/mes            │
-│ - SKUPAJ: €44,900/mes                              │
-├─────────────────────────────────────────────────────┤
-│ AI marža: €44,900 - €1,398 = €43,502 (97% marža)   │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  SCENARIJ 1: KONZERVATIVEN                                  │
+│  1,000 visitors/day · 30,000 visitors/month                 │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  PREDPOSTAVKE:                                              │
+│  - 5% uporabnikov generira itinerer (50/dan)               │
+│  - 10% uporabnikov uporabi chat (100/dan)                  │
+│  - 3% uporabnikov išče (30/dan)                            │
+│  - 30 providerjev (beta dosežen)                           │
+│  - 10% providerjev → premium (3 premium)                   │
+│  - 0% enterprise (zgodnja faza)                            │
+│  - 2% uporabnikov klikne affiliate (20/dan)               │
+│  - 5% affiliate konverzija (1 rezervacija/dan)            │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  AI STROŠKI (če bi bili plačljivi):                        │
+│  Itinerary:  50/day × €0.015 = €0.75/day                   │
+│  Chat:      100/day × €0.004 = €0.40/day                   │
+│  Search:     30/day × €0.008 = €0.24/day                   │
+│  Refine:     15/day × €0.012 = €0.18/day                   │
+│  Recommend: 100/day × €0.003 = €0.30/day                   │
+│  Other:                       = €0.10/day                  │
+│  ─────────────────────────────────────────────              │
+│  Total AI cost/day:  €1.97                                  │
+│  Total AI cost/month: €59 (Puter: €0)                       │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  PRIHODKI:                                                  │
+│  MRR:                                                       │
+│  - 3 premium × €149 = €447/mes                             │
+│  - 0 enterprise × €499 = €0                                │
+│  MRR skupaj: €447/mes                                       │
+│                                                             │
+│  Affiliate:                                                 │
+│  - 1 rezervacija/dan × €2 = €2/day                         │
+│  - €60/mes                                                  │
+│                                                             │
+│  SKUPAJ PRIHODKI: €507/mes                                  │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ČISTI DOBIČEK: €507 - €59 = €448/mes                       │
+│  (S Puter brezplačnim: €507 - €0 = €507/mes)                │
+│                                                             │
+│  ROI: 858% (ali ∞ s Puter)                                  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 16.3 Cost Optimization strategije
+---
+
+#### 🟡 Scenarij 2: REALISTIČEN (5,000 uporabnikov/dan)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  SCENARIJ 2: REALISTIČEN                                    │
+│  5,000 visitors/day · 150,000 visitors/month                │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  PREDPOSTAVKE:                                              │
+│  - 7% uporabnikov generira itinerer (350/dan)              │
+│  - 12% uporabnikov uporabi chat (600/dan)                  │
+│  - 5% uporabnikov išče (250/dan)                           │
+│  - 60 providerjev                                           │
+│  - 12% providerjev → premium (7 premium)                   │
+│  - 3% providerjev → enterprise (2 enterprise)              │
+│  - 3% uporabnikov klikne affiliate (150/dan)               │
+│  - 5% affiliate konverzija (7.5 rezervacije/dan)           │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  AI STROŠKI (če bi bili plačljivi):                        │
+│  Itinerary:  350/day × €0.015 = €5.25/day                  │
+│  Chat:       600/day × €0.004 = €2.40/day                  │
+│  Search:     250/day × €0.008 = €2.00/day                  │
+│  Refine:     100/day × €0.012 = €1.20/day                  │
+│  Recommend:  500/day × €0.003 = €1.50/day                  │
+│  Other:                        = €0.50/day                  │
+│  ─────────────────────────────────────────────              │
+│  Total AI cost/day:  €12.85                                 │
+│  Total AI cost/month: €385 (Puter: €0)                      │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  PRIHODKI:                                                  │
+│  MRR:                                                       │
+│  - 7 premium × €149 = €1,043/mes                           │
+│  - 2 enterprise × €499 = €998/mes                          │
+│  MRR skupaj: €2,041/mes                                     │
+│                                                             │
+│  Affiliate:                                                 │
+│  - 7.5 rezervacije/dan × €2 = €15/day                      │
+│  - €450/mes                                                 │
+│                                                             │
+│  SKUPAJ PRIHODKI: €2,491/mes                                │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ČISTI DOBIČEK: €2,491 - €385 = €2,106/mes                  │
+│  (S Puter brezplačnim: €2,491 - €0 = €2,491/mes)            │
+│                                                             │
+│  ROI: 547% (ali ∞ s Puter)                                  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### 🔴 Scenarij 3: OPTIMISTIČEN (10,000 uporabnikov/dan)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  SCENARIJ 3: OPTIMISTIČEN                                   │
+│  10,000 visitors/day · 300,000 visitors/month               │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  PREDPOSTAVKE:                                              │
+│  - 10% uporabnikov generira itinerer (1,000/dan)           │
+│  - 15% uporabnikov uporabi chat (1,500/dan)                │
+│  - 8% uporabnikov išče (800/dan)                           │
+│  - 100 providerjev                                          │
+│  - 15% providerjev → premium (15 premium)                  │
+│  - 5% providerjev → enterprise (5 enterprise)              │
+│  - 5% uporabnikov klikne affiliate (500/dan)               │
+│  - 5% affiliate konverzija (25 rezervacij/dan)             │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  AI STROŠKI (če bi bili plačljivi):                        │
+│  Itinerary:  1,000/day × €0.015 = €15.00/day               │
+│  Chat:       1,500/day × €0.004 = €6.00/day                │
+│  Search:       800/day × €0.008 = €6.40/day                │
+│  Refine:       300/day × €0.012 = €3.60/day                │
+│  Recommend:  1,000/day × €0.003 = €3.00/day                │
+│  Other:                          = €1.00/day                │
+│  ─────────────────────────────────────────────              │
+│  Total AI cost/day:  €35.00                                 │
+│  Total AI cost/month: €1,050 (Puter: €0 do limit)           │
+│                                                             │
+│  ⚠️ Opomba: Pri 10K uporabnikov Puter rate limit           │
+│  verjetno dosežen → preklop na plačljiv GLM                │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  PRIHODKI:                                                  │
+│  MRR:                                                       │
+│  - 15 premium × €149 = €2,235/mes                          │
+│  - 5 enterprise × €499 = €2,495/mes                        │
+│  MRR skupaj: €4,730/mes                                     │
+│                                                             │
+│  Affiliate:                                                 │
+│  - 25 rezervacij/dan × €2 = €50/day                        │
+│  - €1,500/mes                                               │
+│                                                             │
+│  SKUPAJ PRIHODKI: €6,230/mes                                │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ČISTI DOBIČEK: €6,230 - €1,050 = €5,180/mes                │
+│                                                             │
+│  ROI: 393%                                                  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 16.3 Povzetek scenarijev
+
+| Scenarij | Uporabniki/dan | AI cost/mes | Prihodki/mes | Čisti dobitek | ROI |
+|----------|---------------|-------------|-------------|--------------|-----|
+| 🟢 Konzervativen | 1,000 | €59 | €507 | €448 | 858% |
+| 🟡 Realističen | 5,000 | €385 | €2,491 | €2,106 | 547% |
+| 🔴 Optimističen | 10,000 | €1,050 | €6,230 | €5,180 | 393% |
+
+> **Zaključek:** Tudi v konzervativnem scenariju je model profitabilen. AI stroški so neznatni (< 17% prihodkov tudi v optimističnem). Glavno tveganje ni AI cost, temveč **pridobivanje uporabnikov in providerjev**.
+
+### 16.4 Ključne predpostavke ki jih moramo validirati
+
+| Predpostavka | Kako validiramo | Kdaj |
+|-------------|-----------------|------|
+| 5-10% uporabnikov generira itinerer | Analytics tracking | Po 1 mesecu |
+| 10-15% providerjev → premium | A/B test pricing | Po 30 providerjih |
+| 5% affiliate konverzija | Booking.com stats | Po 100 klikih |
+| 60% cache hit rate | AIUsageLog | Po 1 tednu |
+| 2-5% click-through na affiliate | AnalyticsEvent | Po 1 mesecu |
+
+### 16.5 Cost Optimization strategije
 
 | Strategija | Prihranek | Implementacija |
 |-----------|-----------|---------------|
@@ -1824,7 +1994,7 @@ DB query → timeout/locked
 | **Rate limiting** | 5% | 10/hour/IP za itinerary |
 | **Batch processing** | 15% | AI insights samo 1×/teden |
 
-### 16.4 Cost Alerting
+### 16.6 Cost Alerting
 
 | Alert | Trigger | Akcija |
 |-------|---------|--------|
@@ -1832,27 +2002,6 @@ DB query → timeout/locked
 | Fallback rate > 15% | AI odpoveduje | Preklopi na backup provider |
 | AI response time > 30s | Performance | Optimiziraj prompt |
 | Cache hit rate < 50% | Slab caching | Preveri cache logiko |
-
-### 16.5 Break-even analiza
-
-```
-Break-even point:
-
-AI cost/month = Prihodki/month
-
-Scenarij 1 (1,000 users):
-  AI cost: €140/mes
-  Prihodki: €4,490/mes (10% konverzija × €149 premium)
-  = 3,200% ROI
-
-Scenarij 2 (10,000 users):
-  AI cost: €1,398/mes
-  Prihodki: €44,900/mes
-  = 3,200% ROI
-
-Zaključek: AI cost je NEZNATEN v primerjavi s prihodki.
-Model je visoko profitabilen tudi pri 10x scaling.
-```
 
 ---
 
