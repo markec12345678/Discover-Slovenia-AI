@@ -53,6 +53,42 @@ function getCategoryStyle(category: string) {
   return CATEGORY_STYLES[category] || CATEGORY_STYLES.default;
 }
 
+// Preprosta hevristika za travel time (Wanderlog inspiracija)
+// V produkciji: Google Maps Distance Matrix API
+const KNOWN_DISTANCES: Record<string, number> = {
+  "bled-vintgar": 10,
+  "bled-bohinj": 25,
+  "bled-ljubljana": 45,
+  "ljubljana-bled": 45,
+  "ljubljana-vintgar": 50,
+  "piran-portoroz": 10,
+  "soca-kobarid": 20,
+  "soca-bovec": 15,
+  "bohinj-vogel": 15,
+  "maribol-ptuj": 35,
+  "celje-maribor": 60,
+};
+
+function estimateTravelTime(from: string, to: string): string | null {
+  const key1 = `${from.toLowerCase()}-${to.toLowerCase()}`;
+  const key2 = `${to.toLowerCase()}-${from.toLowerCase()}`;
+
+  const minutes = KNOWN_DISTANCES[key1] || KNOWN_DISTANCES[key2];
+
+  if (minutes) {
+    if (minutes < 60) return `${minutes} min`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m > 0 ? `${h}h ${m}min` : `${h}h`;
+  }
+
+  // Fallback: če sta ista destinacija, ni travel time
+  if (from === to) return null;
+
+  // Default: ~30 min za neznane
+  return "~30 min";
+}
+
 // Določi ikono glede na ime destinacije/opis
 function inferCategory(visit: LocationVisit): string {
   const text = `${visit.destination_name} ${visit.notes || ""}`.toLowerCase();
@@ -112,6 +148,10 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
               const category = inferCategory(visit);
               const style = getCategoryStyle(category);
               const Icon = style.icon;
+              const nextVisit = day.locations[idx + 1];
+              // Preprosta hevristika za travel time (v produkciji: Google Maps API)
+              const travelTime = nextVisit ? estimateTravelTime(visit.destination_name, nextVisit.destination_name) : null;
+              const dayCost = day.locations.reduce((sum, v) => sum + (v.estimated_cost || 0), 0);
 
               return (
                 <div
@@ -131,18 +171,26 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
 
                   {/* Kartica */}
                   <Card className="overflow-hidden border-border/60 transition-all hover:border-primary/30 hover:shadow-md">
+                    {/* Cinematic photo (Mindtrip inspiracija) */}
+                    <div className="relative h-32 sm:h-40 overflow-hidden bg-muted">
+                      <div className={cn("absolute inset-0 bg-gradient-to-br opacity-80", style.bg)} />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Icon className={cn("size-12 opacity-20", style.color)} aria-hidden="true" />
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-white">
+                          <Clock className="size-3" aria-hidden="true" />
+                          {visit.time_slot}
+                          <span className="text-white/60">·</span>
+                          <span>{visit.duration}h</span>
+                        </div>
+                      </div>
+                    </div>
+
                     <CardContent className="p-4">
-                      {/* Vrsta 1: Čas + ime */}
+                      {/* Vrsta 1: Ime */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          {/* Čas */}
-                          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
-                            <Clock className="size-3" aria-hidden="true" />
-                            {visit.time_slot}
-                            <span className="text-muted-foreground/50">·</span>
-                            <span>{visit.duration}h</span>
-                          </div>
-
                           {/* Ime */}
                           <h4 className="text-base font-semibold leading-tight">
                             {visit.destination_name}
@@ -215,10 +263,31 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
                       </div>
                     </CardContent>
                   </Card>
+
+                  {/* Travel time do naslednje lokacije (Wanderlog inspiracija) */}
+                  {travelTime && (
+                    <div className="ml-4 flex items-center gap-1.5 py-1 text-xs text-muted-foreground">
+                      <Navigation className="size-3" aria-hidden="true" />
+                      <span>{travelTime}</span>
+                      <span className="text-muted-foreground/50">·</span>
+                      <span>do naslednje lokacije</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
+
+          {/* Day budget summary (Wanderlog inspiracija) */}
+          {dayCost > 0 && (
+            <div className="mt-4 flex items-center justify-end gap-2 text-xs text-muted-foreground">
+              <span>Dan {day.day} skupaj:</span>
+              <Badge variant="secondary" className="gap-0.5">
+                <Euro className="size-2.5" aria-hidden="true" />
+                {dayCost}
+              </Badge>
+            </div>
+          )}
         </div>
       ))}
 

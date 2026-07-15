@@ -20,6 +20,7 @@ import { Chatbot } from "@/components/chatbot";
 import { WelcomeBackWrapper } from "@/components/welcome-back-wrapper";
 import { SloveniaPassSection } from "@/components/slovenia-pass-section";
 import { DemoScenariosWrapper } from "@/components/demo-scenarios-wrapper";
+import { PreGeneratedItinerariesWrapper } from "@/components/pre-generated-itineraries-wrapper";
 
 export default function Home() {
   return (
@@ -30,6 +31,7 @@ export default function Home() {
       <main className="flex-grow">
         <Hero />
         <DemoScenariosWrapper />
+        <PreGeneratedItinerariesWrapper />
         <div className="flex justify-center py-4 bg-muted/30">
           <VlmVerifiedBadge />
         </div>

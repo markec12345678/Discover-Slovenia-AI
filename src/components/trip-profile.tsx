@@ -29,6 +29,7 @@ export interface TripProfile {
   lastVisit: string | null;
   visitCount: number;
   onboardingCompleted: boolean;
+  travelStyle?: string | null; // foodie | adventurer | budget | luxury | culture | nature
 }
 
 const DEFAULT_PROFILE: TripProfile = {
@@ -40,6 +41,7 @@ const DEFAULT_PROFILE: TripProfile = {
   lastVisit: null,
   visitCount: 0,
   onboardingCompleted: false,
+  travelStyle: null,
 };
 
 const STORAGE_KEY = "discoverslovenia_profile";
@@ -151,6 +153,16 @@ const BUDGET_OPTIONS = [
   { id: "lux", label: "Luksuz (€150+/dan)" },
 ];
 
+// Travel style matching (Layla.ai inspiracija)
+const TRAVEL_STYLES = [
+  { id: "foodie", label: "Foodie", emoji: "🍷", desc: "Lokalna hrana in vino" },
+  { id: "adventurer", label: "Adventurer", emoji: "🧗", desc: "Aktivnosti in adrenalin" },
+  { id: "nature", label: "Nature Lover", emoji: "🌿", desc: "Mir in narava" },
+  { id: "culture", label: "Culture Seeker", emoji: "🏛️", desc: "Zgodovina in kultura" },
+  { id: "budget", label: "Budget Traveler", emoji: "💸", desc: "Ceneje in pametneje" },
+  { id: "luxury", label: "Luxury", emoji: "👑", desc: "Vrhunsko in ekskluzivno" },
+];
+
 interface OnboardingModalProps {
   open: boolean;
   onComplete: (profile: Partial<TripProfile>) => void;
@@ -162,6 +174,7 @@ export function TripProfileOnboarding({ open, onComplete, onClose }: OnboardingM
   const [interests, setInterests] = useState<string[]>([]);
   const [groupType, setGroupType] = useState<string | null>(null);
   const [budgetRange, setBudgetRange] = useState<string | null>(null);
+  const [travelStyle, setTravelStyle] = useState<string | null>(null);
 
   if (!open) return null;
 
@@ -172,11 +185,12 @@ export function TripProfileOnboarding({ open, onComplete, onClose }: OnboardingM
   };
 
   const handleComplete = () => {
-    onComplete({ interests, groupType, budgetRange });
+    onComplete({ interests, groupType, budgetRange, travelStyle });
     setStep(0);
     setInterests([]);
     setGroupType(null);
     setBudgetRange(null);
+    setTravelStyle(null);
   };
 
   return (
@@ -195,7 +209,7 @@ export function TripProfileOnboarding({ open, onComplete, onClose }: OnboardingM
 
           {/* Progress dots */}
           <div className="mb-6 flex justify-center gap-2">
-            {[0, 1, 2].map((i) => (
+            {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
                 className={cn(
@@ -298,8 +312,56 @@ export function TripProfileOnboarding({ open, onComplete, onClose }: OnboardingM
             </div>
           )}
 
-          {/* Step 2: Budget */}
+          {/* Step 2: Travel style (Layla.ai inspiracija) */}
           {step === 2 && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="mb-2 flex justify-center">
+                  <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
+                    <Sparkles className="size-6 text-primary" aria-hidden="true" />
+                  </div>
+                </div>
+                <h3 className="text-lg font-bold">Kakšen popotnik si?</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  AI bo izbral ustrezne ponudnike
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {TRAVEL_STYLES.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setTravelStyle(opt.id)}
+                    className={cn(
+                      "flex flex-col items-center gap-1 rounded-xl border-2 p-3 transition-all",
+                      travelStyle === opt.id
+                        ? "border-primary bg-primary/5 scale-105"
+                        : "border-border/60 hover:border-primary/30"
+                    )}
+                  >
+                    <span className="text-2xl" aria-hidden="true">{opt.emoji}</span>
+                    <span className="text-sm font-medium">{opt.label}</span>
+                    <span className="text-[10px] text-muted-foreground text-center">{opt.desc}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>
+                  Nazaj
+                </Button>
+                <Button
+                  className="flex-1"
+                  disabled={!travelStyle}
+                  onClick={() => setStep(3)}
+                >
+                  Naprej
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Budget */}
+          {step === 3 && (
             <div className="space-y-4">
               <div className="text-center">
                 <div className="mb-2 flex justify-center">
@@ -330,7 +392,7 @@ export function TripProfileOnboarding({ open, onComplete, onClose }: OnboardingM
                 ))}
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>
+                <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>
                   Nazaj
                 </Button>
                 <Button
