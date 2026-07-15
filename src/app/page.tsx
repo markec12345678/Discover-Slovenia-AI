@@ -17,12 +17,15 @@ import { PitchDeckSection } from "@/components/sections/pitch-deck";
 import { Footer } from "@/components/sections/footer";
 import { BetaBanner } from "@/components/beta-banner";
 import { Chatbot } from "@/components/chatbot";
+import { WelcomeBackWrapper } from "@/components/welcome-back-wrapper";
+import { SloveniaPassSection } from "@/components/slovenia-pass-section";
 
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navigation />
       <BetaBanner />
+      <WelcomeBackWrapper />
       <main className="flex-grow">
         <Hero />
         <div className="flex justify-center py-4 bg-muted/30">
@@ -32,6 +35,7 @@ export default function Home() {
         <CollectionsSection />
         <DestinationsSection />
         <ItineraryPlanner />
+        <SloveniaPassSection />
         <MapSection />
         <ListingsSection />
         <MarketplaceSection />

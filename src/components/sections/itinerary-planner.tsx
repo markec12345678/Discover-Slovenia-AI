@@ -44,6 +44,9 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { BookingPanel, type BookingData } from "@/components/sections/booking-panel";
 import { ItineraryRefiner } from "@/components/sections/itinerary-refiner";
+import { SocialShare } from "@/components/social-share";
+import { TripTimeline } from "@/components/trip-timeline";
+import { BookingAssistant } from "@/components/booking-assistant";
 
 const SEASONS: { value: Season; label: string }[] = [
   { value: "spring", label: "Pomlad" },
@@ -77,6 +80,53 @@ export function ItineraryPlanner() {
   useEffect(() => {
     setStoreItinerary(itinerary);
   }, [itinerary, setStoreItinerary]);
+
+  // === WOW: Poslušaj heroQuery event iz Hero Quick Input ===
+  useEffect(() => {
+    const handleHeroQuery = (e: Event) => {
+      const query = (e as CustomEvent<string>).detail;
+      if (!query) return;
+
+      // Smart defaults glede na query
+      const lowerQuery = query.toLowerCase();
+      const newInterests: string[] = [];
+
+      if (lowerQuery.includes("narav") || lowerQuery.includes("pohod") || lowerQuery.includes("gor")) newInterests.push("narava");
+      if (lowerQuery.includes("hran") || lowerQuery.includes("jest") || lowerQuery.includes("kosil") || lowerQuery.includes("večerj")) newInterests.push("kulinarika");
+      if (lowerQuery.includes("vin") || lowerQuery.includes("pij")) newInterests.push("kulinarika");
+      if (lowerQuery.includes("avantur") || lowerQuery.includes("raft") || lowerQuery.includes("adrenalin")) newInterests.push("avantura");
+      if (lowerQuery.includes("otrok") || lowerQuery.includes("družin")) newInterests.push("družina");
+      if (lowerQuery.includes("romanti")) newInterests.push("romantika");
+
+      // Določi število dni iz query-ja
+      let days = 3;
+      const hourMatch = lowerQuery.match(/(\d+)\s*ur/);
+      const dayMatch = lowerQuery.match(/(\d+)\s*dan|(\d+)\s*dnev/);
+      if (hourMatch) days = 1;
+      else if (dayMatch) days = parseInt(dayMatch[1] || dayMatch[2], 10);
+
+      // Določi group size
+      let groupSize = 2;
+      const groupMatch = lowerQuery.match(/(\d+)\s*oseb|(\d+)\s*odrasl|(\d+)\s*ljud/);
+      if (groupMatch) groupSize = parseInt(groupMatch[1] || groupMatch[2] || groupMatch[3], 10);
+      if (lowerQuery.includes("družin") || lowerQuery.includes("otrok")) groupSize = 4;
+      if (lowerQuery.includes("sam")) groupSize = 1;
+
+      const smartInput: PlannerInput = {
+        budget: 500,
+        days,
+        interests: newInterests.length > 0 ? newInterests : ["narava", "kultura"],
+        season: "summer",
+        groupSize,
+      };
+
+      setFormData(smartInput);
+      generateItinerary(smartInput);
+    };
+
+    window.addEventListener("heroQuery", handleHeroQuery as EventListener);
+    return () => window.removeEventListener("heroQuery", handleHeroQuery as EventListener);
+  }, []);
 
   // Pridobi booking opcije (listings, experiences, products) za vse
   // destinacije v itinererju — potegne lokalne ponudnike iz baze.
@@ -552,6 +602,19 @@ export function ItineraryPlanner() {
                     </CardContent>
                   </Card>
                 )}
+
+                {/* WOW: AI Trip Timeline — vizualni dan */}
+                <TripTimeline days={itinerary.days} totalBudget={itinerary.total_budget} />
+
+                {/* WOW: Social Sharing — deli svoj AI plan */}
+                <div className="flex items-center justify-center gap-3 py-2">
+                  <SocialShare
+                    title="Moj AI dan v Sloveniji 🇸🇮"
+                    destinations={Array.from(new Set(itinerary.days.flatMap((d) => d.locations.map((l) => l.destination_name))))}
+                    description={`${itinerary.days.length}-dnevni AI načrt · €${itinerary.total_budget}`}
+                    variant="inline"
+                  />
+                </div>
               </div>
             )}
           </div>

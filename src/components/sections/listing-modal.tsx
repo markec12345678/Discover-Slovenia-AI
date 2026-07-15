@@ -26,6 +26,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PartnerBadge, type PartnerStatus } from "@/components/partner-badge";
+import { AIStory } from "@/components/ai-story";
+import { BookingAssistant } from "@/components/booking-assistant";
 import {
   CATEGORY_LABELS,
   CATEGORY_ICONS,
@@ -183,6 +185,15 @@ export function ListingModal({ listing, onClose }: ListingModalProps) {
                 </div>
               ) : null}
 
+              {/* WOW: AI Story — čustvena zgodba o lokalcu */}
+              <AIStory
+                name={listing.name}
+                category={listing.category}
+                destinationName={listing.destinationName || undefined}
+                description={listing.description}
+                longDescription={listing.longDescription || undefined}
+              />
+
               {/* Grid 2x2 info */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
                 <InfoItem
@@ -298,6 +309,19 @@ export function ListingModal({ listing, onClose }: ListingModalProps) {
                   </a>
                 </Button>
               ) : null}
+
+              {/* WOW: AI Booking Assistant — rezerviraj z AI */}
+              {listing.category !== "transport" && (
+                <div className="flex justify-center">
+                  <BookingAssistant
+                    listingName={listing.name}
+                    listingId={listing.id}
+                    partnerStatus={listing.partnerStatus as PartnerStatus}
+                    matchScore={listing.rating ? Math.round(listing.rating * 20) : 0}
+                    trigger="inline"
+                  />
+                </div>
+              )}
 
               {/* Povezana destinacija */}
               {listing.destinationId ? (
