@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { checkAdmin } from "@/lib/auth-guards";
+import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
 
 // Validni razlogi za zavrnitev
 const REJECTION_REASONS = [
@@ -72,6 +73,16 @@ export async function POST(
         approvedBy: null,
         approvedAt: null,
       },
+    });
+
+    // Audit log
+    await logAudit({
+      actorRole: "admin",
+      action: AUDIT_ACTIONS.LISTING_REJECTED,
+      resourceType: "listing",
+      resourceId: id,
+      resourceName: listing.name,
+      metadata: { reason: fullReason },
     });
 
     // Pošlji email lastniku

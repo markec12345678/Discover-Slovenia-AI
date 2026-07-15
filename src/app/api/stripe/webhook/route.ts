@@ -7,6 +7,8 @@ import {
   paymentConfirmationEmail,
   adminAlertEmail,
 } from "@/lib/email-templates";
+import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
+import { activateSponsorship } from "@/app/api/owner/sponsorship/route";
 
 // POST /api/stripe/webhook — Stripe webhook za subscription dogodke
 // Demo mode: samo logiraj
@@ -63,9 +65,30 @@ export async function POST(request: Request) {
         const cs = event.data.object as Stripe.Checkout.Session;
         const ownerId = cs.metadata?.ownerId;
         const plan = cs.metadata?.plan;
+        const sponsorshipId = cs.metadata?.sponsorshipId;
+        const listingId = cs.metadata?.listingId;
+        const level = cs.metadata?.level;
+        const type = cs.metadata?.type;
         const customerId =
           typeof cs.customer === "string" ? cs.customer : cs.customer?.id;
 
+        // === SPONSORSHIP CHECKOUT ===
+        if (type === "sponsorship" && sponsorshipId && listingId && ownerId && level) {
+          const listing = await db.listing.findUnique({
+            where: { id: listingId },
+            select: { name: true },
+          });
+
+          const endsAt = new Date();
+          endsAt.setMonth(endsAt.getMonth() + 1);
+
+          await activateSponsorship(sponsorshipId, listingId, ownerId, level, endsAt, listing?.name || "Lokal");
+
+          console.log(`[stripe/webhook] Sponsorship activated: ${sponsorshipId} (${level})`);
+          break;
+        }
+
+        // === SUBSCRIPTION CHECKOUT (existing) ===
         if (ownerId && plan && (plan === "premium" || plan === "enterprise")) {
           // Pridobi subscription za renewal date
           let subscriptionEndsAt: Date | null = null;

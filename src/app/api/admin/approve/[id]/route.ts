@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { checkAdmin } from "@/lib/auth-guards";
 import { generateCompletion } from "@/lib/ai-client";
+import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
 
 // POST /api/admin/approve/[id] — odobri lokal in ga objavi
 // Header: x-admin-password
@@ -55,6 +56,16 @@ export async function POST(
     enrichListingInBackground(id, listing.name, listing.description, listing.category).catch(
       (e) => console.error("[approve] AI enrichment napaka:", e)
     );
+
+    // 3. Audit log
+    await logAudit({
+      actorRole: "admin",
+      action: newStatus === "published" ? AUDIT_ACTIONS.LISTING_APPROVED : AUDIT_ACTIONS.LISTING_PUBLISHED,
+      resourceType: "listing",
+      resourceId: id,
+      resourceName: listing.name,
+      metadata: { publishNow, partnerStatus: updated.partnerStatus },
+    });
 
     // 3. Pošlji email lastniku (ne blokiraj)
     if (listing.ownerId) {

@@ -385,3 +385,25 @@ model AIUsageLog {
   @@index([createdAt])
   @@index([success])
 }
+
+// ============================================================================
+// AUDIT LOG — sledenje admin/owner akcij (Faza 6)
+// ============================================================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorId     String?  // Owner ID (kdo je naredil)
+  actorEmail  String?  // email (za lažje iskanje)
+  actorRole   String   // admin | owner | system | stripe
+  action      String   // listing_approved | listing_rejected | sponsorship_activated | sponsorship_cancelled | plan_changed | featured_set | etc.
+  resourceType String  // listing | sponsorship | owner | user
+  resourceId  String?  // ID entitete
+  resourceName String? // ime (za berljivost)
+  metadata    String?  // JSON: dodatni podatki
+  createdAt   DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@index([resourceType])
+  @@index([createdAt])
+}
