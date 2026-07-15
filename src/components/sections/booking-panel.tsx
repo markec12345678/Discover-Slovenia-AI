@@ -35,6 +35,7 @@ import {
   getViatorUrl,
   getSkyscannerUrl,
 } from "@/lib/affiliate";
+import { AffiliateBadge } from "@/components/partner-badge";
 import type { DayPlan } from "@/lib/types";
 
 // === LOKALNI TIPI (da ne motimo obstoječih tipov v types.ts) ===
@@ -242,6 +243,7 @@ function AffiliateCard({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 text-sm font-semibold">
           <span className="truncate">{partnerName}</span>
+          <AffiliateBadge type="generic" size="sm" />
           <ExternalLink className="size-3 shrink-0 text-muted-foreground" aria-hidden />
         </div>
         <p className="line-clamp-1 text-xs text-muted-foreground">{description}</p>

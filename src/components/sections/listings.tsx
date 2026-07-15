@@ -18,6 +18,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PartnerBadge, type PartnerStatus } from "@/components/partner-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -358,16 +359,15 @@ function ListingCard({
           {CATEGORY_LABELS[listing.category]}
         </Badge>
 
-        {/* Plan / featured badge (top-right) */}
-        {planStyles.badge}
-
-        {/* Verified badge (bottom-left) */}
-        {listing.verified ? (
-          <Badge className="absolute bottom-3 left-3 bg-primary text-primary-foreground">
-            <CheckCircle2 className="size-3" aria-hidden="true" />
-            Overjeno
-          </Badge>
-        ) : null}
+        {/* Partner badge (top-right) — samo ena glavna oznaka */}
+        {listing.partnerStatus && listing.partnerStatus !== "standard" && (
+          <div className="absolute right-3 top-3 z-10">
+            <PartnerBadge
+              status={listing.partnerStatus as PartnerStatus}
+              size="sm"
+            />
+          </div>
+        )}
       </div>
 
       {/* Body */}

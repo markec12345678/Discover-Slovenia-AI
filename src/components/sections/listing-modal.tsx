@@ -25,6 +25,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PartnerBadge, type PartnerStatus } from "@/components/partner-badge";
 import {
   CATEGORY_LABELS,
   CATEGORY_ICONS,
@@ -92,21 +93,22 @@ export function ListingModal({ listing, onClose }: ListingModalProps) {
                 {CATEGORY_LABELS[listing.category]}
               </Badge>
 
-              {/* Plan badge (top-right) */}
-              <PlanBadge plan={listing.plan} />
+              {/* Partner badge (top-right) — samo ena glavna oznaka */}
+              {listing.partnerStatus && listing.partnerStatus !== "standard" && (
+                <div className="absolute right-4 top-4 z-10">
+                  <PartnerBadge
+                    status={listing.partnerStatus as PartnerStatus}
+                    size="md"
+                  />
+                </div>
+              )}
 
-              {/* Ime + verified (bottom) */}
+              {/* Ime (bottom) */}
               <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
                 <div className="flex items-center gap-2">
                   <h2 className="text-2xl font-bold sm:text-3xl">
                     {listing.name}
                   </h2>
-                  {listing.verified ? (
-                    <CheckCircle2
-                      className="size-5 text-primary"
-                      aria-label="Overjen lokal"
-                    />
-                  ) : null}
                 </div>
                 {listing.destinationName ? (
                   <p className="mt-1 flex items-center gap-1.5 text-sm text-white/90">
@@ -163,11 +165,6 @@ export function ListingModal({ listing, onClose }: ListingModalProps) {
                 {listing.priceRange ? (
                   <Badge variant="secondary" className="font-medium">
                     {listing.priceRange}
-                  </Badge>
-                ) : null}
-                {listing.featured ? (
-                  <Badge className="bg-amber-400 text-amber-950">
-                    ★ Izpostavljeno
                   </Badge>
                 ) : null}
               </div>
@@ -323,24 +320,6 @@ export function ListingModal({ listing, onClose }: ListingModalProps) {
 }
 
 /* Pomožne komponente */
-
-function PlanBadge({ plan }: { plan: Listing["plan"] }) {
-  if (plan === "premium") {
-    return (
-      <Badge className="absolute right-4 top-4 bg-amber-400 text-amber-950 shadow-sm">
-        ★ {PLAN_LABELS[plan]}
-      </Badge>
-    );
-  }
-  if (plan === "enterprise") {
-    return (
-      <Badge className="absolute right-4 top-4 bg-primary text-primary-foreground shadow-sm">
-        ★ {PLAN_LABELS[plan]}
-      </Badge>
-    );
-  }
-  return null;
-}
 
 function InfoItem({
   icon: Icon,
