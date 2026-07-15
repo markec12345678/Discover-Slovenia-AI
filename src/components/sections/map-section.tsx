@@ -32,6 +32,7 @@ const MapView = dynamic(
 export function MapSection() {
   const [selected, setSelected] = useState<Destination | null>(null);
   const routeCoords = useAppStore((s) => s.routeCoords);
+  const routeByDay = useAppStore((s) => s.routeByDay);
 
   return (
     <section
@@ -69,7 +70,7 @@ export function MapSection() {
             </div>
           ) : null}
 
-          <MapView routeCoords={routeCoords} onOpenDestination={setSelected} />
+          <MapView routeCoords={routeCoords} routeByDay={routeByDay} onOpenDestination={setSelected} />
         </div>
 
         {/* Legend / pomoč */}

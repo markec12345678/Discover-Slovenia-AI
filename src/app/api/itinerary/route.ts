@@ -78,12 +78,14 @@ ${partnerContext}
 
 Pravila:
 1. Izberi 2-3 destinacije na dan
-2. Optimiziraj pot med lokacijami (upoštevaj regijo)
-3. Ustrezi interesom potnika
-4. Ostani znotraj proračuna (skupni < €${input.budget})
-5. Upoštevaj sezonsko ustreznost (${input.season})
-6. Časovni okvirji naj bodo realistični
-7. Kadar ustreza, v notes ali recommendations omeni predlagane partnerje (npr. "Za kosilo obiščite Restavracijo JB v Ljubljani")
+2. GRUPIRAJ destinacije po geografski bližini — Bled+Vintgar+Bohinj v enem dnevu, Ljubljana ločeno, Soča+Kobarid skupaj
+3. Optimiziraj pot med dnevi — premikaj se po regijah (Gorenjska dan 1, Primorska dan 2, itd.)
+4. Ustrezi interesom potnika
+5. Ostani znotraj proračuna (skupni < €${input.budget})
+6. Upoštevaj sezonsko ustreznost (${input.season})
+7. Časovni okvirji naj bodo realistični (upostevaj vožnjo med lokacijami ~30-45min)
+8. Kadar ustreza, v notes ali recommendations omeni predlagane partnerje (npr. "Za kosilo obiščite Restavracijo JB v Ljubljani")
+9. V notes dodaj ocenjen čas vožnje do naslednje lokacije (npr. "30 min vožnje do Bohinja")
 
 JSON format (STROGO):
 {

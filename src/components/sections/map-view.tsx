@@ -73,7 +73,9 @@ const POI_CATEGORY_OPTIONS: { value: string; label: string }[] = [
 
 interface MapViewProps {
   /** Koordinate poti (polyline) za prikaz — npr. iz AI itinererja */
-  routeCoords?: { lat: number; lng: number; name: string }[];
+  routeCoords?: { lat: number; lng: number; name: string; day?: number }[];
+  /** Koordinate grupirane po dnevih z barvami (Wanderlog color-coded) */
+  routeByDay?: { day: number; color: string; coords: { lat: number; lng: number; name: string }[] }[];
   /** Callback ko uporabnik klikne "Več informacij" na markerju */
   onOpenDestination?: (destination: Destination) => void;
 }
@@ -88,7 +90,7 @@ interface MapViewProps {
  * POI layer (default OFF): dodatni manjši markerji iz OpenStreetMap
  * po izbrani kategoriji. Klik odpre PoiModal z Wikipedia opisom.
  */
-export function MapView({ routeCoords, onOpenDestination }: MapViewProps) {
+export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
@@ -235,7 +237,7 @@ export function MapView({ routeCoords, onOpenDestination }: MapViewProps) {
     };
   }, [onOpenDestination]);
 
-  // Risanje polyline (poti)
+  // Risanje polyline (poti) — color-coded po dnevih (Wanderlog)
   useEffect(() => {
     const map = mapRef.current;
     const layer = routeLayerRef.current;
@@ -243,9 +245,96 @@ export function MapView({ routeCoords, onOpenDestination }: MapViewProps) {
 
     layer.clearLayers();
 
-    if (!showRoute || !routeCoords || routeCoords.length < 2) return;
+    if (!showRoute) return;
 
-    // Polyline med vsemi točkami
+    // Če imamo routeByDay, riši vsak dan z svojo barvo
+    if (routeByDay && routeByDay.length > 0) {
+      let globalIdx = 0;
+      routeByDay.forEach((dayRoute) => {
+        if (dayRoute.coords.length < 2) {
+          // Samo ena točka — marker brez polyline
+          dayRoute.coords.forEach((coord) => {
+            const numIcon = L.divIcon({
+              className: "route-marker",
+              html: `
+                <div style="transform: translateY(-50%);">
+                  <div style="
+                    width: 28px; height: 28px;
+                    border-radius: 50%;
+                    background: ${dayRoute.color};
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: 700;
+                    font-size: 13px;
+                    border: 2px solid white;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                  ">${globalIdx + 1}</div>
+                </div>
+              `,
+              iconSize: [28, 28],
+              iconAnchor: [14, 14],
+            });
+            const marker = L.marker([coord.lat, coord.lng], { icon: numIcon });
+            marker.bindPopup(`<strong>${coord.name}</strong><br>Dan ${dayRoute.day}`);
+            layer.addLayer(marker);
+            globalIdx++;
+          });
+          return;
+        }
+
+        const latlngs = dayRoute.coords.map((c) => [c.lat, c.lng]);
+        const polyline = L.polyline(latlngs, {
+          color: dayRoute.color,
+          weight: 4,
+          opacity: 0.8,
+          dashArray: "8, 8",
+        });
+        layer.addLayer(polyline);
+
+        // Numbered markers z barvo dneva
+        dayRoute.coords.forEach((coord) => {
+          const numIcon = L.divIcon({
+            className: "route-marker",
+            html: `
+              <div style="transform: translateY(-50%);">
+                <div style="
+                  width: 28px; height: 28px;
+                  border-radius: 50%;
+                  background: ${dayRoute.color};
+                  color: white;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-weight: 700;
+                  font-size: 13px;
+                  border: 2px solid white;
+                  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                ">${globalIdx + 1}</div>
+              </div>
+            `,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+          });
+          const marker = L.marker([coord.lat, coord.lng], { icon: numIcon });
+          marker.bindPopup(`<strong>${coord.name}</strong><br>Dan ${dayRoute.day}`);
+          layer.addLayer(marker);
+          globalIdx++;
+        });
+      });
+
+      // Fit bounds na vse točke
+      const allLatLngs = routeByDay.flatMap((d) => d.coords.map((c) => [c.lat, c.lng] as [number, number]));
+      if (allLatLngs.length > 0) {
+        map.fitBounds(L.latLngBounds(allLatLngs).pad(0.1));
+      }
+      return;
+    }
+
+    // Fallback: ena barva za vse (stara logika)
+    if (!routeCoords || routeCoords.length < 2) return;
+
     const latlngs = routeCoords.map((c) => [c.lat, c.lng]);
     const polyline = L.polyline(latlngs, {
       color: "#2d6a3e",
@@ -291,7 +380,7 @@ export function MapView({ routeCoords, onOpenDestination }: MapViewProps) {
 
     // Prilagodi zoom na pot
     map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
-  }, [showRoute, routeCoords]);
+  }, [showRoute, routeCoords, routeByDay]);
 
   // === POI fetch — ko se showPois ali poiCategory spremenita ===
   useEffect(() => {
