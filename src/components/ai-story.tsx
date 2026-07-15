@@ -11,7 +11,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { generateCompletion } from "@/lib/ai-client";
+// Note: AI generation happens via /api/ai-story endpoint (server-side)
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -61,53 +61,28 @@ export function AIStory({
   async function generateStory() {
     setLoading(true);
     try {
-      const context = [
-        `Ime: ${name}`,
-        `Kategorija: ${category}`,
-        destinationName ? `Lokacija: ${destinationName}` : "",
-        description ? `Opis: ${description}` : "",
-        longDescription ? `Podrobnosti: ${longDescription.substring(0, 200)}` : "",
-        specialties?.length ? `Specialitete: ${specialties.join(", ")}` : "",
-      ].filter(Boolean).join("\n");
+      const res = await fetch("/api/ai-story", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          category,
+          destinationName,
+          description,
+          longDescription,
+          specialties,
+        }),
+      });
 
-      const prompt = `Si Slovenian Storyteller — pripovedovalez zgodovin slovenskih lokalcev. Napiši kratko, čustveno zgodbo o tem lokalcu.
-
-VRNI SAMO JSON:
-{
-  "title": "zgodben naslov (npr. 'Med iz gozdov Bele krajine')",
-  "story": "zgodba v 2-3 stavkih (čustvena, osebna, ne marketinška)",
-  "highlights": ["zanimivost 1", "zanimivost 2", "zanimivost 3"]
-}
-
-Kontekst:
-${context}
-
-Pravila:
-- Zgodba naj bo v slovenščini
-- Naj bo čustvena in osebna (ne marketinška)
-- Omeni tradicijo, lokalno kulturo ali naravo
-- 2-3 stavki (ne več)`;
-
-      const result = await generateCompletion(
-        [
-          { role: "system", content: "Si slovenski pripovedovalec. Pišeš čustvene, avtentične zgodbe o lokalnih ponudnikih. Vedno odgovoriš z JSON." },
-          { role: "user", content: prompt },
-        ],
-        { temperature: 0.8, jsonMode: true, feature: "tag" }
-      );
-
-      if (result?.content) {
-        const jsonMatch = result.content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          setStory({
-            title: String(parsed.title || "").substring(0, 80),
-            story: String(parsed.story || "").substring(0, 300),
-            highlights: Array.isArray(parsed.highlights)
-              ? parsed.highlights.slice(0, 3).map((h: unknown) => String(h).substring(0, 100))
-              : [],
-          });
-        }
+      if (res.ok) {
+        const data = await res.json();
+        setStory({
+          title: data.title || name,
+          story: data.story || longDescription || description || "",
+          highlights: data.highlights || [],
+        });
+      } else {
+        throw new Error("AI story API failed");
       }
     } catch {
       // Fallback zgodba

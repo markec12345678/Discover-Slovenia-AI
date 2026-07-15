@@ -19,6 +19,7 @@ import { BetaBanner } from "@/components/beta-banner";
 import { Chatbot } from "@/components/chatbot";
 import { WelcomeBackWrapper } from "@/components/welcome-back-wrapper";
 import { SloveniaPassSection } from "@/components/slovenia-pass-section";
+import { DemoScenariosWrapper } from "@/components/demo-scenarios-wrapper";
 
 export default function Home() {
   return (
@@ -28,6 +29,7 @@ export default function Home() {
       <WelcomeBackWrapper />
       <main className="flex-grow">
         <Hero />
+        <DemoScenariosWrapper />
         <div className="flex justify-center py-4 bg-muted/30">
           <VlmVerifiedBadge />
         </div>
