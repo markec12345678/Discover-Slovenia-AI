@@ -2054,7 +2054,7 @@ DB query → timeout/locked
 - [ ] **XSS protection** — React auto-escaping, DOMPurify za user content
 - [ ] **CSRF protection** — SameSite cookies
 - [ ] **Secrets management** — Vsi secrets v env, ne v kodi
-- [ ] **ADMIN_PASSWORD** — Močno geslo (ne discoverslovenia2025 v prod)
+- [ ] **ADMIN_PASSWORD** — Močno geslo (min 32 znakov, random)
 - [ ] **NEXTAUTH_SECRET** — Generiran random secret
 - [ ] **Stripe webhook signature** — Verificiran
 - [ ] **Dependency audit** — `bun audit` brez kritičnih ranljivosti

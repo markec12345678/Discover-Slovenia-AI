@@ -1623,7 +1623,7 @@ DATABASE_URL="file:./db/custom.db"  # dev
 NEXTAUTH_SECRET="generiraj-random-secret"
 NEXTAUTH_URL="http://localhost:3000"  # dev
 # NEXTAUTH_URL="https://discoverslovenia.ai"  # prod
-ADMIN_PASSWORD="discoverslovenia2025"  # zamenjaj v prod!
+ADMIN_PASSWORD="CHANGE_ME_GENERATE_RANDOM"
 SUPER_ADMIN_SECRET="generiraj-random-secret"
 
 # === AI ===

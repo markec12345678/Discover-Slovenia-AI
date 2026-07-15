@@ -235,7 +235,7 @@ bun update <package>
 - [ ] Vsi API endpoints imajo input validation (Zod)
 - [ ] Rate limiting implementiran na kritičnih endpointih
 - [ ] Vsi secrets v Vercel env (ne v kodi)
-- [ ] ADMIN_PASSWORD je močan (ne discoverslovenia2025 v prod)
+- [ ] ADMIN_PASSWORD je močan (min 32 znakov, random)
 - [ ] NEXTAUTH_SECRET generiran random
 - [ ] Stripe webhook signature verification deluje
 - [ ] `bun audit` brez kritičnih ranljivosti

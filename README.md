@@ -259,7 +259,7 @@ Vsi paketi brezplačni do 30 lokalov. Ob dosegu: 30-dnevni grace period, nato sa
 DATABASE_URL=file:./db/custom.db
 
 # Auth
-ADMIN_PASSWORD=discoverslovenia2025
+ADMIN_PASSWORD=CHANGE_ME_TO_RANDOM_32_CHAR_STRING
 NEXTAUTH_SECRET=your-secret
 
 # AI (Puter — free)
