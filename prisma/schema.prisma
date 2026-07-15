@@ -10,22 +10,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+// ============================================================================
+// UPORABNIKI
+// ============================================================================
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// Registrirani uporabnik (B2C) — za shranjevanje itinererjev in preference
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  passwordHash  String
+  preferences   String?  // JSON: { interests, budget, groupSize, ... }
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  itineraries   SavedItinerary[]
+
+  @@index([email])
 }
 
 // Lastnik lokala (B2B stranka) — za samostojen pristop lastnika
@@ -37,6 +38,7 @@ model Owner {
   phone         String?
   businessName  String
   plan          String    @default("free") // free | premium | enterprise
+  role          String    @default("provider") // provider | moderator | admin | super_admin
   subscriptionStatus String @default("none") // none | active | canceled | past_due
   stripeCustomerId String?
   subscriptionEndsAt DateTime?
@@ -47,7 +49,31 @@ model Owner {
   listings      Listing[]
   products      Product[]
   experiences   Experience[]
+  sponsorships  Sponsorship[]
+
+  @@index([email])
+  @@index([plan])
+  @@index([role])
+  @@index([subscriptionStatus])
 }
+
+// Shranjeni itinererji uporabnikov (B2C)
+model SavedItinerary {
+  id          String   @id @default(cuid())
+  userId      String
+  itinerary   String   // JSON: Itinerary object
+  formData    String   // JSON: PlannerInput
+  name        String?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============================================================================
+// LOKALCI (LISTINGS)
+// ============================================================================
 
 // Lokali (hotelir, restavracije, aktivnosti) — B2B listings za monetizacijo
 model Listing {
@@ -75,13 +101,34 @@ model Listing {
   ownerEmail      String?
   viewCount       Int      @default(0)
   clickCount      Int      @default(0)
+  aiRecommendations Int    @default(0)
+  leadCount       Int      @default(0)
+
+  // === STATUS SISTEM (Faza 1) ===
+  // Workflow: draft → pending → approved → published → archived → deleted
+  status          String   @default("published") // draft | pending | approved | published | rejected | expired | archived | deleted
+  rejectionReason String?
+  submittedAt     DateTime?
+  approvedAt      DateTime?
+  approvedBy      String?  // Admin ID (Owner.id)
+
+  // === PARTNER SISTEM (Faza 1) ===
+  // AI lahko razlikuje med navadnim/preverjenim/premium/featured partnerjem
+  partnerStatus   String   @default("standard") // standard | verified | premium | featured
+  partnerSince    DateTime? // kdaj je postal partner
+  verifiedByAdmin Boolean  @default(false) // ali je admin ročno verificiral
+  premiumUntil    DateTime? // do kdaj velja premium status (lahko različno od subscription)
+
   // Sponzorirane poti — lokal plača za vključitev v AI itinererje
   sponsored       Boolean  @default(false)
   sponsoredUntil  DateTime?
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   ownerId         String?
   owner           Owner?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  events          ListingEvent[]
+  sponsorships    Sponsorship[]
 
   @@index([destinationId])
   @@index([category])
@@ -89,10 +136,31 @@ model Listing {
   @@index([featured])
   @@index([ownerId])
   @@index([sponsored])
+  @@index([status])
+  @@index([partnerStatus])
 }
 
+// Eventi za analitiko lokalov (impression/click/ai_recommendation/lead)
+model ListingEvent {
+  id         String   @id @default(cuid())
+  listingId  String
+  type       String   // impression | click | ai_recommendation | lead
+  source     String?  // npr. "homepage" | "itinerary" | "search"
+  metadata   String?  // JSON
+  createdAt  DateTime @default(now())
+
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// TRŽNICA
+// ============================================================================
+
 // Tržnica izdelkov — lokalni kmetje, vinogradniki, obrtniki prodajajo izdelke
-// Inspiracija: Etsy + farmsaround.com + Taste Slovenia
 model Product {
   id              String   @id @default(cuid())
   name            String
@@ -100,38 +168,37 @@ model Product {
   description     String
   longDescription String?
   category        String // food | wine | honey | oil | craft | souvenir | other
-  destinationId   String? // povezava z destinacijo
+  destinationId   String?
   destinationName String?
-  price           Float // EUR
-  compareAtPrice  Float? // originalna cena (za popuste)
+  price           Float
+  compareAtPrice  Float?
   currency        String   @default("EUR")
   images          String // JSON array of URLs
-  // Logistika
   stock           Int      @default(0)
   sku             String?
-  weight          Float? // gram
-  // Atributi
+  weight          Float?
   organic         Boolean  @default(false)
   handmade        Boolean  @default(false)
   local           Boolean  @default(true)
   vegan           Boolean  @default(false)
-  // Trgovanje
-  plan            String   @default("free") // free | premium
+  plan            String   @default("free")
   featured        Boolean  @default(false)
   verified        Boolean  @default(false)
   rating          Float    @default(0)
   reviewCount     Int      @default(0)
-  // Shipping
   shippingFree    Boolean  @default(false)
   shipsEurope     Boolean  @default(true)
   shipsWorldwide  Boolean  @default(false)
-  // Kontakt prodajalca
   sellerName      String
   sellerEmail     String?
   sellerPhone     String?
   sellerWebsite   String?
   viewCount       Int      @default(0)
   saleCount       Int      @default(0)
+
+  // Status sistem (Faza 1)
+  status          String   @default("published")
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   ownerId         String?
@@ -141,10 +208,10 @@ model Product {
   @@index([destinationId])
   @@index([featured])
   @@index([ownerId])
+  @@index([status])
 }
 
-// Tržnica izkušenj — vodniki, kuharji, instruktorji prodajajo izkušnje
-// Inspiracija: Airbnb Experiences + GetYourGuide + Bókun
+// Tržnica izkušenj
 model Experience {
   id              String   @id @default(cuid())
   name            String
@@ -154,36 +221,32 @@ model Experience {
   category        String // tour | workshop | tasting | outdoor | cultural | adventure | wellness
   destinationId   String?
   destinationName String?
-  // Cenitev
-  pricePerPerson  Float // EUR
+  pricePerPerson  Float
   currency        String   @default("EUR")
-  // Trajanje in kapaciteta
-  durationHours   Float // npr. 2.5
+  durationHours   Float
   minGroupSize    Int      @default(1)
   maxGroupSize    Int      @default(10)
-  // Jeziki
-  languages       String // JSON array: ["sl", "en", "de"]
-  // Lokacija
+  languages       String // JSON array
   meetingPoint    String?
   address         String
-  // Slike in kontakt
-  images          String // JSON array of URLs
+  images          String
   providerName    String
   providerEmail   String?
   providerPhone   String?
   providerWebsite String?
-  // Trgovanje
-  plan            String   @default("free") // free | premium
+  plan            String   @default("free")
   featured        Boolean  @default(false)
   verified        Boolean  @default(false)
   rating          Float    @default(0)
   reviewCount     Int      @default(0)
-  // Atributi
   familyFriendly  Boolean  @default(false)
   accessibility   Boolean  @default(false)
-  // Statistika
   viewCount       Int      @default(0)
   bookingCount    Int      @default(0)
+
+  // Status sistem (Faza 1)
+  status          String   @default("published")
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   ownerId         String?
@@ -193,13 +256,16 @@ model Experience {
   @@index([destinationId])
   @@index([featured])
   @@index([ownerId])
+  @@index([status])
 }
 
-// Naročila izdelkov (tržnica) — za sledenje plačil in dostave
+// ============================================================================
+// NAROČILA IN REZERVACIJE
+// ============================================================================
+
 model Order {
   id              String   @id @default(cuid())
-  orderNumber     String   @unique // IF-2025-001 format
-  // Kupec
+  orderNumber     String   @unique
   buyerEmail      String
   buyerName       String
   buyerPhone      String?
@@ -207,18 +273,14 @@ model Order {
   buyerCity       String?
   buyerPostalCode String?
   buyerCountry    String   @default("SI")
-  // Plačilo
-  status          String   @default("pending") // pending | paid | shipped | delivered | canceled | refunded
-  paymentMethod   String   @default("stripe") // stripe | demo | bank_transfer
+  status          String   @default("pending")
+  paymentMethod   String   @default("stripe")
   stripeSessionId String?
-  // Zneski
-  subtotal        Float // vsota izdelkov
+  subtotal        Float
   shippingCost    Float   @default(0)
-  total           Float // subtotal + shipping
+  total           Float
   currency        String   @default("EUR")
-  // Items (JSON array: [{productId, name, price, quantity}])
   items           String
-  // Tracking
   trackingNumber  String?
   notes           String?
   createdAt       DateTime @default(now())
@@ -230,32 +292,23 @@ model Order {
   @@index([createdAt])
 }
 
-// Rezervacije izkušenj — za sledenje bookingov
 model Booking {
   id              String   @id @default(cuid())
-  bookingNumber   String   @unique // IF-EXP-001
-  // Kupec
+  bookingNumber   String   @unique
   guestEmail      String
   guestName       String
   guestPhone      String?
-  // Izkušnja
   experienceId    String
   experienceName  String
-  // Datum in ura
-  bookingDate     DateTime // kdaj izkušnja poteka
-  // Skupina
+  bookingDate     DateTime
   groupSize       Int
-  // Cenitev
   pricePerPerson  Float
-  total           Float // pricePerPerson * groupSize
+  total           Float
   currency        String   @default("EUR")
-  // Status
-  status          String   @default("pending") // pending | confirmed | completed | canceled
+  status          String   @default("pending")
   paymentMethod   String   @default("stripe")
   stripeSessionId String?
-  // Notes
-  notes           String? // posebne želje gosta
-  // Provider info (snapshot)
+  notes           String?
   providerName    String
   providerEmail   String
   meetingPoint    String?
@@ -267,4 +320,68 @@ model Booking {
   @@index([bookingDate])
   @@index([guestEmail])
   @@index([status])
+}
+
+// ============================================================================
+// SPONZORSTVA (Faza 1)
+// ============================================================================
+
+model Sponsorship {
+  id              String   @id @default(cuid())
+  listingId       String
+  ownerId         String
+  level           String   // basic | premium | featured
+  amount          Float    // EUR
+  currency        String   @default("EUR")
+  status          String   @default("created") // created | paid | active | expiring | expired | cancelled | archived
+  stripePaymentId String?
+  startsAt        DateTime
+  endsAt          DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  listing         Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@index([ownerId])
+  @@index([status])
+  @@index([endsAt])
+}
+
+// ============================================================================
+// ANALITIKA (Faza 1)
+// ============================================================================
+
+// Splošni analitični eventi (user behavior)
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  type      String   // ai_itinerary | ai_chat | smart_search | affiliate_click | newsletter_signup | page_view
+  userId    String?
+  sessionId String?
+  metadata  String   // JSON
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+  @@index([sessionId])
+}
+
+// AI uporaba — za stroškovno analizo in monitoring
+model AIUsageLog {
+  id           String   @id @default(cuid())
+  feature      String   // itinerary | chat | search | refine | recommend | poi | tag | insights | faq | translate
+  source       String   // puter | z-ai-sdk | fallback | cache
+  success      Boolean
+  responseTime Int      // ms
+  costEur      Float    @default(0)
+  userId       String?
+  sessionId    String?
+  metadata     String?  // JSON
+  createdAt    DateTime @default(now())
+
+  @@index([feature])
+  @@index([source])
+  @@index([createdAt])
+  @@index([success])
 }
