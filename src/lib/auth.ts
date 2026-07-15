@@ -33,9 +33,10 @@ export const authOptions: NextAuthOptions = {
           id: owner.id,
           email: owner.email,
           name: owner.name,
-          // custom field — passing through via jwt callback
+          // custom fields — passing through via jwt callback
           businessName: owner.businessName,
           plan: owner.plan,
+          role: owner.role,
         } as any;
       },
     }),
@@ -46,16 +47,18 @@ export const authOptions: NextAuthOptions = {
         token.id = (user as any).id;
         token.businessName = (user as any).businessName;
         token.plan = (user as any).plan;
+        token.role = (user as any).role;
       }
-      // Osveži plan iz baze (v primeru nadgradnje)
+      // Osveži plan in role iz baze (v primeru nadgradnje)
       if (token.email && !token.planSynced) {
         const owner = await db.owner.findUnique({
           where: { email: token.email },
-          select: { plan: true, subscriptionStatus: true },
+          select: { plan: true, subscriptionStatus: true, role: true },
         });
         if (owner) {
           token.plan = owner.plan;
           token.subscriptionStatus = owner.subscriptionStatus;
+          token.role = owner.role;
         }
         token.planSynced = true;
       }
@@ -66,6 +69,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id;
         (session.user as any).businessName = token.businessName;
         (session.user as any).plan = token.plan;
+        (session.user as any).role = token.role;
         (session.user as any).subscriptionStatus = token.subscriptionStatus;
       }
       return session;
@@ -82,6 +86,7 @@ declare module "next-auth" {
       name: string;
       businessName?: string;
       plan?: string;
+      role?: string;
       subscriptionStatus?: string;
     };
   }
