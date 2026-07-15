@@ -52,9 +52,9 @@ function getTimeOfDay(timeSlot: string): "morning" | "afternoon" | "evening" {
   return "evening";
 }
 
-function getCategoryIcon(category?: string): typeof Coffee {
-  if (!category) return ACTIVITY_ICONS.default;
-  return ACTIVITY_ICONS[category] || ACTIVITY_ICONS.default;
+function renderCategoryIcon(category?: string, className?: string) {
+  const Icon = !category ? ACTIVITY_ICONS.default : (ACTIVITY_ICONS[category] || ACTIVITY_ICONS.default);
+  return <Icon className={className || "size-5"} aria-hidden="true" />;
 }
 
 interface TimelineStopProps {
@@ -66,7 +66,7 @@ interface TimelineStopProps {
 function TimelineStop({ visit, index, isLast }: TimelineStopProps) {
   const [saved, setSaved] = useState(false);
   const timeOfDay = getTimeOfDay(visit.time_slot);
-  
+
   const startHour = visit.time_slot.split("-")[0] || "09:00";
 
   return (
@@ -82,7 +82,7 @@ function TimelineStop({ visit, index, isLast }: TimelineStopProps) {
           "flex size-14 items-center justify-center rounded-full border-2 shadow-sm",
           TIME_COLORS[timeOfDay]
         )}>
-          {(() => { const I = getCategoryIcon(visit.category || visit.destination_id); return <I className="size-5" aria-hidden="true" />; })()}
+          {renderCategoryIcon(visit.category || visit.destination_id, "size-5")}
         </div>
         <span className="text-xs font-semibold tabular-nums text-muted-foreground">
           {startHour}
