@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
+import { rankListings, buildTransparencyContext } from "@/lib/ranking-engine";
 import type { Itinerary, PlannerInput, DayPlan, LocationVisit } from "@/lib/types";
 
 // POST /api/itinerary - generira AI itinerer z z-ai-web-dev-sdk
@@ -41,40 +42,27 @@ export async function POST(request: Request) {
       `- ${d.id} (${d.name}): ${d.type}/${d.region}, ${d.duration}, €${d.costPerPerson}/osebo, ocena ${d.rating}, aktivnosti: ${d.activities.join(", ")}. Najboljše za: ${d.bestFor.join(", ")}. Sezona: ${d.bestSeason.join(", ")}`
   ).join("\n");
 
-  // Pridobi SPONZORIRANE lokale iz baze — AI jih bo prioritiziral v priporočilih
-  // To je monetizacijski model: premium/enterprise stranke plačajo za AI priporočila
-  let sponsoredContext = "";
-  let sponsoredListings: Array<{ name: string; category: string; destinationId: string | null; destinationName: string | null }> = [];
+  // === RANKING ENGINE ===
+  // Uporabi ranking engine za pridobitev najboljših partnerjev
+  // Ranking: relevance (60%) + quality (15%) + rating (10%) + distance (10%) + premium (5%)
+  let partnerContext = "";
   try {
-    sponsoredListings = await db.listing.findMany({
-      where: {
-        status: "published", // Rule: AI uporablja samo published lokale
-        sponsored: true,
-        sponsoredUntil: { gte: new Date() },
-      },
-      select: {
-        name: true,
-        category: true,
-        destinationId: true,
-        destinationName: true,
-      },
-      take: 20,
+    const ranked = await rankListings({
+      interests: input.interests,
+      season: input.season,
     });
 
-    if (sponsoredListings.length > 0) {
-      sponsoredContext = "\n\nSPONZORIRANI PARTNERJI (predlagaj te kadar je mogoče — so naši premium partnerji):\n" +
-        sponsoredListings.map(l =>
-          `- ${l.name} (${l.category})${l.destinationName ? ` v ${l.destinationName}` : ""}`
-        ).join("\n");
+    if (ranked.length > 0) {
+      partnerContext = buildTransparencyContext(ranked, 15);
+      console.log(`[itinerary] Ranking engine: ${ranked.length} kandidatov, top: ${ranked[0].listing.name} (Q:${ranked[0].qualityScore})`);
     }
   } catch (e) {
-    // Če baza ne deluje, nadaljuj brez sponsored
-    console.error("[itinerary] sponsored fetch napaka:", e);
+    console.error("[itinerary] ranking engine napaka:", e);
   }
 
   const systemPrompt = `Si strokovni slovenski vodič za načrtovanje potovanj. Generiraš realističen itinerer za Slovenijo v JSON formatu. Odgovori SAMO z veljavnim JSON, brez dodatnega besedila ali kode.
 
-POMEMBNO: Kadar je mogoče, vključi sponzorirane partnerje v notes ali recommendations polja. To so premium lokalci ki podpirajo našo platformo.`;
+POMEMBNO: Predlagani partnerji so razvrščeni po ustreznosti in kakovosti (Q = Quality Score). Kadar je mogoče, vključi partnerje z višjim Q v notes ali recommendations polja. [SPONZORIRANO] in [FEATURED] oznake pomenijo premium partnerje.`;
 
   const userPrompt = `Generiraj ${input.days}-dnevni itinerer za Slovenijo.
 
@@ -86,7 +74,7 @@ Potnik:
 
 Razpoložljive destinacije:
 ${destContext}
-${sponsoredContext}
+${partnerContext}
 
 Pravila:
 1. Izberi 2-3 destinacije na dan
@@ -95,7 +83,7 @@ Pravila:
 4. Ostani znotraj proračuna (skupni < €${input.budget})
 5. Upoštevaj sezonsko ustreznost (${input.season})
 6. Časovni okvirji naj bodo realistični
-7. Kadar ustreza, v notes ali recommendations omeni sponzorirane partnerje (npr. "Za kosilo obiščite Restavracijo JB v Ljubljani")
+7. Kadar ustreza, v notes ali recommendations omeni predlagane partnerje (npr. "Za kosilo obiščite Restavracijo JB v Ljubljani")
 
 JSON format (STROGO):
 {
