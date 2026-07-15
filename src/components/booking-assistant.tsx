@@ -155,7 +155,7 @@ export function BookingAssistant({
               <div>
                 <h3 className="text-lg font-bold">Rezervacija potrjena!</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {listingName} je obveščen o tvoji rezervaciji.
+                  {listingName} je obveščen o tvojem povpraševanju. Kontaktiraj ga direktno za potrditev.
                 </p>
               </div>
               <div className="rounded-xl bg-muted/50 p-4 text-left space-y-2">
@@ -343,7 +343,7 @@ export function BookingAssistant({
               </Button>
 
               <p className="text-center text-[10px] text-muted-foreground">
-                Rezervacija je brezplačna. Ponudnik te kontaktira za potrditev.
+                AI te poveže z ponudnikom. Rezervacijo opraviš direktno pri njem — brez posrednikov, brez provizij.
               </p>
             </div>
           )}

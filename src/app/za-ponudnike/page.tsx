@@ -40,8 +40,28 @@ export default function ProviderLandingPage() {
             </h1>
             <p className="mt-5 text-lg text-muted-foreground">
               Discover Slovenia AI je prva AI-poganjana turistična platforma za Slovenijo.
-              Turist napiše kaj želi — AI sestavi dan in priporoči vaš lokal.
+              Turist napiše kaj želi — AI sestavi dan, priporoči vaš lokal in ga pripelje do vas.
+              Rezervacijo opravi turist direktno pri vas — brez posrednikov, brez provizij.
             </p>
+
+            {/* Social proof */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary">22</div>
+                <div className="text-xs text-muted-foreground">destinacij</div>
+              </div>
+              <div className="h-8 w-px bg-border" />
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary">25</div>
+                <div className="text-xs text-muted-foreground">partnerjev</div>
+              </div>
+              <div className="h-8 w-px bg-border" />
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary">9</div>
+                <div className="text-xs text-muted-foreground">AI funkcij</div>
+              </div>
+            </div>
+
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button asChild size="lg" className="gap-1.5">
                 <Link href="/owner/prijava">
@@ -70,7 +90,7 @@ export default function ProviderLandingPage() {
                 { icon: Sparkles, step: "1", title: "Turist vpraša", desc: "Napiše kaj želi doživeti v Sloveniji" },
                 { icon: Eye, step: "2", title: "AI najde vas", desc: "Ranking engine primerja in priporoči" },
                 { icon: MousePointerClick, step: "3", title: "Turist klikne", desc: "Vidi vaš profil, zgodbo, kontakt" },
-                { icon: Calendar, step: "4", title: "Rezervacija", desc: "Turist rezervira z AI ali pokliče" },
+                { icon: Calendar, step: "4", title: "Kontakt", desc: "Turist vas pokliče ali obišče spletno stran — rezervacija pri vas" },
               ].map((item) => {
                 const Icon = item.icon;
                 return (
