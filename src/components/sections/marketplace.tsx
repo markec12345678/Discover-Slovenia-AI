@@ -694,13 +694,6 @@ function ExperienceCard({
 }) {
   const image = experience.images[0];
 
-  // Preusmeritev na ponudnika — mi samo usmerjamo promet, ne pobiramo plačil
-  const handleVisitProvider = () => {
-    if (experience.providerWebsite) {
-      window.open(experience.providerWebsite, "_blank", "noopener,noreferrer");
-    }
-  };
-
   return (
     <Card
       className={cn(
@@ -812,30 +805,48 @@ function ExperienceCard({
           </div>
         )}
 
-        {/* CTA */}
+        {/* CTA — primarni gumb odpre modal z rezervacijo (zrcali [V košarico][Podrobnosti]) */}
         <div className="mt-1 flex items-center gap-2">
           <Button
             type="button"
             size="sm"
-            className="flex-1 justify-center bg-primary text-primary-foreground hover:bg-primary/90"
-            disabled={!experience.providerWebsite}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleVisitProvider();
-            }}
-          >
-            <ExternalLink className="size-4" aria-hidden="true" />
-            {experience.providerWebsite ? "Pri ponudniku" : "Brez spletne"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="justify-center"
+            className="flex-1 justify-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={onOpen}
           >
-            Podrobnosti
+            <Calendar className="size-4" aria-hidden="true" />
+            Rezerviraj
           </Button>
+          {experience.providerWebsite ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              asChild
+              className="justify-center gap-1.5"
+            >
+              <a
+                href={experience.providerWebsite}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ExternalLink className="size-4" aria-hidden="true" />
+                Pri ponudniku
+              </a>
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="justify-center gap-1.5"
+              disabled
+              title="Ponudnik nima spletne strani"
+            >
+              <ExternalLink className="size-4" aria-hidden="true" />
+              Pri ponudniku
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

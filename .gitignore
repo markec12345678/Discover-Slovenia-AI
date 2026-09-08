@@ -72,3 +72,6 @@ server.log
 /examples/
 /mini-services/
 /Caddyfile
+
+# AI priporočila runtime cache (regenerira se samodejno)
+/data/ai-rec-cache.json

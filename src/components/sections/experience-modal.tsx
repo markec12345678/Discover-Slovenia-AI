@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import {
   Star,
   MapPin,
@@ -19,6 +27,12 @@ import {
   Compass,
   Languages,
   Lightbulb,
+  Loader2,
+  AlertCircle,
+  User,
+  Send,
+  RotateCcw,
+  Info,
 } from "lucide-react";
 import {
   Dialog,
@@ -29,7 +43,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { trackFunnel } from "@/lib/funnel";
 import {
   EXPERIENCE_CATEGORY_LABELS,
   EXPERIENCE_CATEGORY_ICONS,
@@ -52,10 +71,86 @@ interface RecommendationsResponse {
   source?: "ai" | "fallback" | "cache";
 }
 
+/* =============================================================
+ * Rezervacijski flow (POST /api/bookings)
+ * ============================================================= */
+
+type BookingPhase = "idle" | "form" | "sending" | "success";
+
+interface BookingFormValues {
+  date: string;
+  groupSize: string;
+  name: string;
+  email: string;
+  phone: string;
+  notes: string;
+}
+
+type BookingFieldErrors = Partial<
+  Record<"date" | "groupSize" | "name" | "email" | "phone", string>
+>;
+
+interface BookingSuccessData {
+  bookingNumber: string;
+  total: number;
+  currency: string;
+  bookingDate: string;
+  meetingPoint: string | null;
+  providerName: string;
+  providerEmail: string;
+  status: string;
+}
+
+interface BookingResponse {
+  success?: boolean;
+  error?: string;
+  bookingNumber?: string;
+  total?: number;
+  status?: string;
+  bookingDate?: string;
+  currency?: string;
+  meetingPoint?: string | null;
+  providerName?: string;
+  providerEmail?: string;
+}
+
+/** Lokalni datum kot "YYYY-MM-DD" (brez UTC zamika). */
+function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** "YYYY-MM-DD" → lokalni Date ob polnoči (null, če neveljaven). */
+function parseLocalDate(s: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** ISO datum iz strežnika → slovenski dolgi zapis (brez UTC zamika dneva). */
+function formatBookingDate(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  const d = m
+    ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    : new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("sl-SI", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 /**
  * ExperienceModal — podrobnosti izkušnje iz tržnice.
  * Prikazuje sliko, opis, trajanje, skupino, jezike, kontakt ponudnika in CTA.
- * "Rezerviraj pri ponudniku" gumb preusmeri na ponudnikovo spletno stran.
+ * Primarni CTA "Rezerviraj termin" odpre rezervacijski obrazec, ki pošlje
+ * PRAVO rezervacijo prek POST /api/bookings (demo mode → takoj potrjena).
+ * "Pri ponudniku" je sekundarna povezava na ponudnikovo spletno stran.
  * Na dnu je "Morda vam je všeč" z 4 podobnimi izkušnjami.
  */
 export function ExperienceModal({
@@ -64,13 +159,19 @@ export function ExperienceModal({
   onSelect,
 }: ExperienceModalProps) {
   const [activeImage, setActiveImage] = useState(0);
+  // Faza rezervacije (za skritje X gumba med pošiljanjem — kot checkout-modal)
+  const [bookingPhase, setBookingPhase] = useState<BookingPhase>("idle");
 
-  // Reset aktivne slike ko se spremeni izkušnja (render-phase check, brez effect-a)
+  // Reset aktivne slike in rezervacije, ko se spremeni izkušnja
+  // (render-phase check, brez effect-a)
   const prevExpId = useRef<string | undefined>(undefined);
   if (prevExpId.current !== experience?.id) {
     prevExpId.current = experience?.id;
     if (activeImage !== 0) {
       setActiveImage(0);
+    }
+    if (bookingPhase !== "idle") {
+      setBookingPhase("idle");
     }
   }
 
@@ -134,7 +235,7 @@ export function ExperienceModal({
   return (
     <Dialog open={experience !== null} onOpenChange={handleOpenChange}>
       <DialogContent
-        showCloseButton
+        showCloseButton={bookingPhase !== "sending"}
         className="max-h-[90vh] max-w-3xl gap-0 overflow-hidden p-0 sm:max-w-3xl"
         aria-describedby="experience-modal-desc"
       >
@@ -410,31 +511,14 @@ export function ExperienceModal({
               />
             </section>
 
-            {/* CTA — preusmeritev na ponudnika (mi ne pobiramo plačil) */}
-            <div className="space-y-2">
-              <Button
-                type="button"
-                asChild
-                size="lg"
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                {experience.providerWebsite ? (
-                  <a
-                    href={experience.providerWebsite}
-                    target="_blank"
-                    rel="noopener noreferrer sponsored"
-                  >
-                    <ExternalLink className="size-4" aria-hidden="true" />
-                    Rezerviraj pri ponudniku
-                  </a>
-                ) : (
-                  <span className="opacity-60 cursor-not-allowed">
-                    <Calendar className="size-4" aria-hidden="true" />
-                    Brez spletne strani
-                  </span>
-                )}
-              </Button>
-            </div>
+            {/* Rezervacija — PRAVA rezervacija prek POST /api/bookings
+                (demo mode ustvari potrjeno rezervacijo) + sekundarna
+                povezava do ponudnikove spletne strani */}
+            <BookingSection
+              key={experience.id}
+              experience={experience}
+              onPhaseChange={setBookingPhase}
+            />
 
             {/* Morda vam je všeč — AI priporočila */}
             <RecommendationsSection
@@ -503,6 +587,661 @@ function StatCard({
         <div className="text-sm font-semibold tabular-nums">{value}</div>
       </div>
     </div>
+  );
+}
+
+/* =============================================================
+ * BookingSection — rezervacijski flow znotraj modala
+ * =============================================================
+ *
+ * idle:    primarni CTA "Rezerviraj termin" + sekundarni "Pri ponudniku"
+ * form:    obrazec (datum, št. oseb, ime, e-pošta, telefon, opombe)
+ * sending: obrazec zaklenjen, gumb kaže Loader2
+ * success: potrjevalni pogled (številka, cena, datum, srečanje, ponudnik)
+ *
+ * Ceno in kontakt ponudnika določi strežnik iz baze — client poslani
+ * `provider` podatki so le fallback. Client validacija zrcali strežnik.
+ */
+function BookingSection({
+  experience,
+  onPhaseChange,
+}: {
+  experience: Experience;
+  onPhaseChange?: (phase: BookingPhase) => void;
+}) {
+  const idPrefix = useId();
+
+  // Mejne vrednosti skupine — spoštuj min/maxGroupSize izkušnje,
+  // zamiljene smešne vrednosti (0, >100, min > max)
+  const minGroup = Math.max(1, Math.min(experience.minGroupSize || 1, 100));
+  const maxGroup = Math.max(
+    minGroup,
+    Math.min(experience.maxGroupSize || 100, 100)
+  );
+  const defaultGroupSize = Math.min(Math.max(2, minGroup), maxGroup);
+
+  // Datum — input dovoljuje od jutri naprej, validacija >= danes
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = toLocalDateStr(tomorrow);
+
+  const [phase, setPhaseState] = useState<BookingPhase>("idle");
+  const [errors, setErrors] = useState<BookingFieldErrors>({});
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<BookingSuccessData | null>(null);
+  const [form, setForm] = useState<BookingFormValues>({
+    date: "",
+    groupSize: String(defaultGroupSize),
+    name: "",
+    email: "",
+    phone: "",
+    notes: "",
+  });
+
+  const setPhase = (p: BookingPhase) => {
+    setPhaseState(p);
+    onPhaseChange?.(p);
+  };
+
+  // === Client validacija (zrcala strežniško) ===
+  const validate = (): BookingFieldErrors => {
+    const next: BookingFieldErrors = {};
+
+    if (!form.date.trim()) {
+      next.date = "Izberite datum rezervacije.";
+    } else {
+      const parsed = parseLocalDate(form.date);
+      if (!parsed) {
+        next.date = "Neveljaven datum rezervacije.";
+      } else if (parsed < today) {
+        next.date = "Datum rezervacije mora biti danes ali pozneje.";
+      }
+    }
+
+    const gs = Number(form.groupSize.trim());
+    if (
+      !form.groupSize.trim() ||
+      !Number.isInteger(gs) ||
+      gs < 1 ||
+      gs > 100
+    ) {
+      next.groupSize = "Vnesite veljavno število oseb.";
+    } else if (gs < minGroup || gs > maxGroup) {
+      next.groupSize = `Med ${minGroup} in ${maxGroup} oseb.`;
+    }
+
+    if (form.name.trim().length < 2) {
+      next.name = "Vnesite ime in priimek (vsaj 2 znaka).";
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      next.email = "Vnesite veljaven e-poštni naslov.";
+    }
+
+    if (form.phone.trim().length < 5) {
+      next.phone = "Vnesite telefonsko številko (vsaj 5 znakov).";
+    }
+
+    return next;
+  };
+
+  // === Submit → POST /api/bookings ===
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (phase === "sending") return;
+
+    setApiError(null);
+    const next = validate();
+    setErrors(next);
+    if (Object.keys(next).length > 0) return;
+
+    setPhase("sending");
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          experienceId: experience.id,
+          groupSize: Number(form.groupSize.trim()),
+          bookingDate: form.date,
+          guest: {
+            name: form.name.trim(),
+            email: form.email.trim(),
+            phone: form.phone.trim(),
+            notes: form.notes.trim(),
+          },
+          // Fallback za strežnik — ceno/kontakt prebere iz baze
+          provider: {
+            name: experience.providerName,
+            email: experience.providerEmail ?? undefined,
+            meetingPoint: experience.meetingPoint ?? undefined,
+          },
+        }),
+      });
+
+      const data = (await res.json().catch(() => null)) as BookingResponse | null;
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || "Rezervacija ni uspela — poskusite znova.");
+      }
+
+      const gs = Number(form.groupSize.trim());
+      setSuccess({
+        bookingNumber: data.bookingNumber ?? "—",
+        total:
+          typeof data.total === "number"
+            ? data.total
+            : Math.round(experience.pricePerPerson * gs * 100) / 100,
+        currency: data.currency ?? experience.currency,
+        bookingDate: data.bookingDate ?? form.date,
+        meetingPoint: data.meetingPoint ?? null,
+        providerName: data.providerName ?? experience.providerName,
+        providerEmail: data.providerEmail ?? experience.providerEmail ?? "",
+        status: data.status ?? "confirmed",
+      });
+      setPhase("success");
+      trackFunnel("experience_booked");
+    } catch (err) {
+      setApiError(
+        err instanceof Error
+          ? err.message
+          : "Rezervacija ni uspela — poskusite znova."
+      );
+      setPhase("form");
+    }
+  };
+
+  // === "Nova rezervacija" — reset obrazca ===
+  const handleReset = () => {
+    setForm({
+      date: "",
+      groupSize: String(defaultGroupSize),
+      name: "",
+      email: "",
+      phone: "",
+      notes: "",
+    });
+    setErrors({});
+    setApiError(null);
+    setSuccess(null);
+    setPhase("form");
+  };
+
+  // === Stepper za število oseb ===
+  const stepGroupSize = (delta: number) => {
+    const current = Number.parseInt(form.groupSize, 10);
+    const base = Number.isNaN(current) ? defaultGroupSize : current;
+    const next = Math.min(maxGroup, Math.max(minGroup, base + delta));
+    setForm((prev) => ({ ...prev, groupSize: String(next) }));
+  };
+
+  const currentGs = Number.parseInt(form.groupSize, 10);
+  const canDecrease = !Number.isNaN(currentGs) && currentGs > minGroup;
+  const canIncrease = !Number.isNaN(currentGs) && currentGs < maxGroup;
+
+  // Živi prikaz skupne cene
+  const totalPreview = Number.isNaN(currentGs)
+    ? null
+    : Math.round(experience.pricePerPerson * currentGs * 100) / 100;
+
+  const update =
+    (field: keyof BookingFormValues) =>
+    (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    };
+
+  /* --- IDLE: primarni CTA + sekundarna povezava --- */
+  if (phase === "idle") {
+    return (
+      <section aria-label="Rezervacija izkušnje" className="space-y-2">
+        <Button
+          type="button"
+          size="lg"
+          className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+          onClick={() => {
+            setApiError(null);
+            setPhase("form");
+          }}
+        >
+          <Calendar className="size-4" aria-hidden="true" />
+          Rezerviraj termin
+        </Button>
+        {experience.providerWebsite ? (
+          <Button type="button" asChild size="lg" variant="outline" className="w-full gap-2">
+            <a
+              href={experience.providerWebsite}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+            >
+              <ExternalLink className="size-4" aria-hidden="true" />
+              Pri ponudniku
+            </a>
+          </Button>
+        ) : (
+          <Button type="button" size="lg" variant="outline" className="w-full gap-2" disabled>
+            <Globe className="size-4" aria-hidden="true" />
+            Ponudnik nima spletne strani
+          </Button>
+        )}
+      </section>
+    );
+  }
+
+  /* --- SUCCESS: potrjevalni pogled (slog SuccessView iz checkout-modala) --- */
+  if (phase === "success" && success) {
+    return (
+      <section
+        aria-label="Rezervacija potrjena"
+        role="status"
+        className="flex flex-col items-center gap-4 rounded-xl border border-primary/30 bg-primary/5 p-5 text-center sm:p-6"
+      >
+        <span className="flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <CheckCircle2 className="size-9" aria-hidden="true" />
+        </span>
+
+        <div>
+          <h3 className="text-xl font-bold text-foreground">
+            Rezervacija potrjena!
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Številko rezervacije shranite — vam bo v pomoč pri komunikaciji s
+            ponudnikom.
+          </p>
+        </div>
+
+        <div className="w-full rounded-lg border border-border/60 bg-background p-4 text-left">
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">Številka rezervacije</span>
+            <span className="font-mono font-bold text-foreground">
+              {success.bookingNumber}
+            </span>
+          </div>
+          <Separator className="my-3" />
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">Skupaj</span>
+            <span className="font-bold tabular-nums text-foreground">
+              {formatPrice(success.total, success.currency)}
+            </span>
+          </div>
+          <Separator className="my-3" />
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">Datum</span>
+            <span className="font-medium text-foreground">
+              {formatBookingDate(success.bookingDate)}
+            </span>
+          </div>
+          {success.meetingPoint ? (
+            <>
+              <Separator className="my-3" />
+              <div className="flex items-start justify-between gap-3 text-sm">
+                <span className="shrink-0 text-muted-foreground">Srečanje</span>
+                <span className="text-right font-medium text-foreground">
+                  {success.meetingPoint}
+                </span>
+              </div>
+            </>
+          ) : null}
+          {success.providerName ? (
+            <>
+              <Separator className="my-3" />
+              <div className="flex items-start justify-between gap-3 text-sm">
+                <span className="shrink-0 text-muted-foreground">Ponudnik</span>
+                <span className="min-w-0 text-right">
+                  <span className="block font-medium text-foreground">
+                    {success.providerName}
+                  </span>
+                  {success.providerEmail ? (
+                    <a
+                      href={`mailto:${success.providerEmail}`}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      {success.providerEmail}
+                    </a>
+                  ) : null}
+                </span>
+              </div>
+            </>
+          ) : null}
+          <Separator className="my-3" />
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">Status</span>
+            <Badge className="bg-primary text-primary-foreground">
+              {success.status === "confirmed" ? "Potrjena" : success.status}
+            </Badge>
+          </div>
+        </div>
+
+        <Button
+          type="button"
+          size="lg"
+          onClick={handleReset}
+          className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+        >
+          <RotateCcw className="size-4" aria-hidden="true" />
+          Nova rezervacija
+        </Button>
+      </section>
+    );
+  }
+
+  /* --- FORM / SENDING: obrazec (med pošiljanjem zaklenjen) --- */
+  const sending = phase === "sending";
+
+  return (
+    <section
+      aria-label="Rezervacija izkušnje"
+      className="rounded-xl border border-primary/30 bg-primary/5 p-4 sm:p-5"
+    >
+      {/* Vrh: izkušnja + preklic */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
+            <Calendar className="size-4 text-primary" aria-hidden="true" />
+            Podatki za rezervacijo
+          </h3>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {experience.name} ·{" "}
+            {formatPrice(experience.pricePerPerson, experience.currency)} /
+            osebo
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setPhase("idle")}
+          disabled={sending}
+          className="shrink-0 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+        >
+          Prekliči
+        </button>
+      </div>
+
+      {/* Napaka iz API-ja — obrazec ostane izpolnjen */}
+      {apiError ? (
+        <div
+          role="alert"
+          className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"
+        >
+          <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <span>{apiError}</span>
+        </div>
+      ) : null}
+
+      <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-4">
+        {/* Datum + število oseb */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <Label
+              htmlFor={`${idPrefix}-date`}
+              className="mb-1.5 flex items-center gap-1.5 text-sm font-medium"
+            >
+              <Calendar className="size-3.5 text-muted-foreground" aria-hidden="true" />
+              Datum
+              <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id={`${idPrefix}-date`}
+              type="date"
+              value={form.date}
+              min={tomorrowStr}
+              disabled={sending}
+              required
+              aria-invalid={!!errors.date}
+              aria-describedby={
+                errors.date ? `${idPrefix}-date-error` : undefined
+              }
+              onChange={update("date")}
+            />
+            {errors.date ? (
+              <p
+                id={`${idPrefix}-date-error`}
+                className="mt-1 text-xs text-destructive"
+              >
+                {errors.date}
+              </p>
+            ) : null}
+          </div>
+
+          <div>
+            <Label
+              htmlFor={`${idPrefix}-group`}
+              className="mb-1.5 flex items-center gap-1.5 text-sm font-medium"
+            >
+              <Users className="size-3.5 text-muted-foreground" aria-hidden="true" />
+              Število oseb
+              <span className="text-destructive">*</span>
+            </Label>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-9 shrink-0"
+                aria-label="Zmanjšaj število oseb"
+                disabled={sending || !canDecrease}
+                onClick={() => stepGroupSize(-1)}
+              >
+                <span aria-hidden="true">−</span>
+              </Button>
+              <Input
+                id={`${idPrefix}-group`}
+                type="number"
+                inputMode="numeric"
+                className="w-20 text-center tabular-nums"
+                min={minGroup}
+                max={maxGroup}
+                step={1}
+                value={form.groupSize}
+                disabled={sending}
+                required
+                aria-invalid={!!errors.groupSize}
+                aria-describedby={
+                  errors.groupSize
+                    ? `${idPrefix}-group-error`
+                    : `${idPrefix}-group-hint`
+                }
+                onChange={update("groupSize")}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-9 shrink-0"
+                aria-label="Povečaj število oseb"
+                disabled={sending || !canIncrease}
+                onClick={() => stepGroupSize(1)}
+              >
+                <span aria-hidden="true">+</span>
+              </Button>
+              <span
+                id={`${idPrefix}-group-hint`}
+                className="text-xs text-muted-foreground"
+              >
+                {minGroup}–{maxGroup} oseb
+              </span>
+            </div>
+            {errors.groupSize ? (
+              <p
+                id={`${idPrefix}-group-error`}
+                className="mt-1 text-xs text-destructive"
+              >
+                {errors.groupSize}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Ime + telefon */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <Label
+              htmlFor={`${idPrefix}-name`}
+              className="mb-1.5 flex items-center gap-1.5 text-sm font-medium"
+            >
+              <User className="size-3.5 text-muted-foreground" aria-hidden="true" />
+              Ime in priimek
+              <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id={`${idPrefix}-name`}
+              type="text"
+              autoComplete="name"
+              placeholder="Janez Novak"
+              value={form.name}
+              disabled={sending}
+              required
+              aria-invalid={!!errors.name}
+              aria-describedby={errors.name ? `${idPrefix}-name-error` : undefined}
+              onChange={update("name")}
+            />
+            {errors.name ? (
+              <p
+                id={`${idPrefix}-name-error`}
+                className="mt-1 text-xs text-destructive"
+              >
+                {errors.name}
+              </p>
+            ) : null}
+          </div>
+
+          <div>
+            <Label
+              htmlFor={`${idPrefix}-phone`}
+              className="mb-1.5 flex items-center gap-1.5 text-sm font-medium"
+            >
+              <Phone className="size-3.5 text-muted-foreground" aria-hidden="true" />
+              Telefon
+              <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id={`${idPrefix}-phone`}
+              type="tel"
+              autoComplete="tel"
+              placeholder="+386 41 234 567"
+              value={form.phone}
+              disabled={sending}
+              required
+              aria-invalid={!!errors.phone}
+              aria-describedby={
+                errors.phone ? `${idPrefix}-phone-error` : undefined
+              }
+              onChange={update("phone")}
+            />
+            {errors.phone ? (
+              <p
+                id={`${idPrefix}-phone-error`}
+                className="mt-1 text-xs text-destructive"
+              >
+                {errors.phone}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        {/* E-pošta */}
+        <div>
+          <Label
+            htmlFor={`${idPrefix}-email`}
+            className="mb-1.5 flex items-center gap-1.5 text-sm font-medium"
+          >
+            <Mail className="size-3.5 text-muted-foreground" aria-hidden="true" />
+            E-pošta
+            <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id={`${idPrefix}-email`}
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            placeholder="ime@primer.si"
+            value={form.email}
+            disabled={sending}
+            required
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? `${idPrefix}-email-error` : undefined}
+            onChange={update("email")}
+          />
+          {errors.email ? (
+            <p
+              id={`${idPrefix}-email-error`}
+              className="mt-1 text-xs text-destructive"
+            >
+              {errors.email}
+            </p>
+          ) : null}
+        </div>
+
+        {/* Opombe (opcijsko) */}
+        <div>
+          <Label
+            htmlFor={`${idPrefix}-notes`}
+            className="mb-1.5 flex items-center gap-1.5 text-sm font-medium"
+          >
+            Opombe (opcijsko)
+          </Label>
+          <Textarea
+            id={`${idPrefix}-notes`}
+            rows={3}
+            placeholder="Alergije, želje glede termina, jezik vodenja …"
+            value={form.notes}
+            disabled={sending}
+            onChange={update("notes")}
+          />
+        </div>
+
+        {/* Živi prikaz skupne cene */}
+        {totalPreview !== null ? (
+          <div
+            className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background px-3 py-2.5 text-sm"
+            aria-live="polite"
+          >
+            <span className="text-muted-foreground">
+              {currentGs} {currentGs === 1 ? "oseba" : "oseb"} ×{" "}
+              {formatPrice(experience.pricePerPerson, experience.currency)}
+            </span>
+            <span className="font-bold tabular-nums text-foreground">
+              {formatPrice(totalPreview, experience.currency)}
+            </span>
+          </div>
+        ) : null}
+
+        <Button
+          type="submit"
+          size="lg"
+          disabled={sending}
+          className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+        >
+          {sending ? (
+            <>
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              Rezerviram…
+            </>
+          ) : (
+            <>
+              <Send className="size-4" aria-hidden="true" />
+              Potrdi rezervacijo
+            </>
+          )}
+        </Button>
+
+        {/* Screen-reader status med pošiljanjem */}
+        <p className="sr-only" role="status" aria-live="polite">
+          {sending ? "Rezervacija se pošilja, prosimo počakajte." : ""}
+        </p>
+
+        {/* Demo opomba (iskrena — kot v checkout modalu) + zasebnost */}
+        <div className="flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 p-2.5 text-[11px] leading-relaxed text-amber-900 dark:border-amber-400/40 dark:bg-amber-950/30 dark:text-amber-100">
+          <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+          <span>
+            Demo način: rezervacija se takoj potrdi, plačila se ne zaračuna.
+            Ko dodamo prave Stripe ključe, se bo vklopilo spletno plačilo.
+          </span>
+        </div>
+        <p className="text-center text-[11px] text-muted-foreground">
+          Podatke uporabimo izključno za izvedbo rezervacije.
+        </p>
+      </form>
+    </section>
   );
 }
 

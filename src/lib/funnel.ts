@@ -12,7 +12,9 @@ export type FunnelStep =
   | "itinerary_saved"
   // Novi koraki (monetizacija — tržnica):
   | "add_to_cart"
-  | "checkout_completed";
+  | "checkout_completed"
+  // Novi koraki (monetizacija — izkušnje):
+  | "experience_booked";
 
 export function trackFunnel(step: FunnelStep, path?: string) {
   // Fire-and-forget — ne blokiraj UI

@@ -22,6 +22,7 @@ export async function POST(request: Request) {
       "itinerary_saved",
       "add_to_cart",
       "checkout_completed",
+      "experience_booked",
     ];
     if (!step || !validSteps.includes(step)) {
       return NextResponse.json({ error: "Neveljaven funnel step" }, { status: 400 });
@@ -51,7 +52,7 @@ export async function GET(request: Request) {
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const [homepage, destination, itinerary, newsletter, listingClick, quizCompleted, itinerarySaved, addToCart, checkoutCompleted] = await Promise.all([
+    const [homepage, destination, itinerary, newsletter, listingClick, quizCompleted, itinerarySaved, addToCart, checkoutCompleted, experienceBooked] = await Promise.all([
       db.pageView.count({ where: { funnelStep: "homepage_view", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "destination_view", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "itinerary_generate", createdAt: { gte: thirtyDaysAgo } } }),
@@ -61,6 +62,7 @@ export async function GET(request: Request) {
       db.pageView.count({ where: { funnelStep: "itinerary_saved", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "add_to_cart", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "checkout_completed", createdAt: { gte: thirtyDaysAgo } } }),
+      db.pageView.count({ where: { funnelStep: "experience_booked", createdAt: { gte: thirtyDaysAgo } } }),
     ]);
 
     const homeToDest = homepage > 0 ? (destination / homepage) * 100 : 0;
@@ -68,6 +70,8 @@ export async function GET(request: Request) {
     const itineraryToSignup = itinerary > 0 ? (newsletter / itinerary) * 100 : 0;
     const overallConversion = homepage > 0 ? (newsletter / homepage) * 100 : 0;
     const cartToCheckout = addToCart > 0 ? (checkoutCompleted / addToCart) * 100 : 0;
+    // Delež klikov na ponudnike/izkušnje, ki se končajo z rezervacijo izkušnje
+    const experienceToBooking = listingClick > 0 ? (experienceBooked / listingClick) * 100 : 0;
 
     return NextResponse.json({
       steps: {
@@ -80,6 +84,7 @@ export async function GET(request: Request) {
         itinerary_saved: itinerarySaved,
         add_to_cart: addToCart,
         checkout_completed: checkoutCompleted,
+        experience_booked: experienceBooked,
       },
       conversionRates: {
         home_to_destination: Math.round(homeToDest * 10) / 10,
@@ -87,6 +92,7 @@ export async function GET(request: Request) {
         itinerary_to_signup: Math.round(itineraryToSignup * 10) / 10,
         overall: Math.round(overallConversion * 10) / 10,
         cart_to_checkout: Math.round(cartToCheckout * 10) / 10,
+        experience_to_booking: Math.round(experienceToBooking * 10) / 10,
       },
       period: "30d",
     });

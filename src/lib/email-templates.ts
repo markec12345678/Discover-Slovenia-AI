@@ -378,8 +378,339 @@ Admin dashboard: ${getBaseUrl()}/admin`;
 }
 
 // =========================
+// 6. ORDER CONFIRMATION EMAIL (kupec v tržnici)
+// =========================
+export interface OrderEmailItem {
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+export interface OrderConfirmationEmailData {
+  orderNumber: string;
+  buyerName: string;
+  items: OrderEmailItem[];
+  subtotal: number;
+  shipping: number;
+  total: number;
+}
+
+export function orderConfirmationEmail({
+  orderNumber,
+  buyerName,
+  items,
+  subtotal,
+  shipping,
+  total,
+}: OrderConfirmationEmailData): { subject: string; html: string; text: string } {
+  const subject = `Potrditev naročila ${orderNumber} — Discover Slovenia AI`;
+
+  // Tabelica artiklov (isti vizualni jezik kot paymentConfirmationEmail)
+  const itemRows = items
+    .map((item) => {
+      const lineTotal = item.price * item.quantity;
+      return `
+        <tr>
+          <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #1a2e1a;">${escapeHtml(item.name)}</td>
+          <td style="padding: 10px 0 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #374151; white-space: nowrap;">${item.quantity}×</td>
+          <td style="padding: 10px 0 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #374151; white-space: nowrap;">${formatEur(item.price)}</td>
+          <td style="padding: 10px 0 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: bold; white-space: nowrap;">${formatEur(lineTotal)}</td>
+        </tr>`;
+    })
+    .join("");
+
+  const shippingValue =
+    shipping === 0
+      ? `<span style="color: #2d6a3e; font-weight: bold;">Brezplačna</span>`
+      : formatEur(shipping);
+
+  const content = `
+    <p style="margin-top: 0;">Pozdravljeni <strong>${escapeHtml(buyerName)}</strong>,</p>
+    <p>Hvala za nakup! Vaše naročilo <strong>${escapeHtml(orderNumber)}</strong> je bilo uspešno oddano in plačilo je potrjeno. Spodaj je povzetek naročila.</p>
+
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 24px 0;">
+      <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+        <tr>
+          <th style="padding: 0 0 10px 0; color: #6b7280; font-size: 12px; text-transform: uppercase; border-bottom: 2px solid #2d6a3e; text-align: left;">Izdelek</th>
+          <th style="padding: 0 0 10px 12px; color: #6b7280; font-size: 12px; text-transform: uppercase; border-bottom: 2px solid #2d6a3e; text-align: center;">Kol.</th>
+          <th style="padding: 0 0 10px 12px; color: #6b7280; font-size: 12px; text-transform: uppercase; border-bottom: 2px solid #2d6a3e; text-align: right;">Cena</th>
+          <th style="padding: 0 0 10px 12px; color: #6b7280; font-size: 12px; text-transform: uppercase; border-bottom: 2px solid #2d6a3e; text-align: right;">Skupaj</th>
+        </tr>
+        ${itemRows}
+      </table>
+      <table style="width: 100%; font-size: 14px; margin-top: 16px;">
+        <tr>
+          <td style="padding: 6px 0; color: #6b7280;">Vrednost izdelkov:</td>
+          <td style="padding: 6px 0; text-align: right;">${formatEur(subtotal)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #6b7280;">Dostava:</td>
+          <td style="padding: 6px 0; text-align: right;">${shippingValue}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0 0 0; border-top: 1px solid #e5e7eb; font-weight: bold; color: #1a2e1a;">Skupaj:</td>
+          <td style="padding: 10px 0 0 0; border-top: 1px solid #e5e7eb; text-align: right; font-weight: bold; font-size: 16px; color: #2d6a3e;">${formatEur(total)}</td>
+        </tr>
+      </table>
+    </div>
+
+    <p>Naročilo obdelamo v 1–2 delovnih dneh in vam pošljemo obvestilo o odpošiljki. Številko naročila <strong>${escapeHtml(orderNumber)}</strong> navedite pri morebitnih vprašanjih.</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${getBaseUrl()}" style="background: #2d6a3e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+        Discover Slovenia AI →
+      </a>
+    </div>
+
+    <p style="font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 24px;">
+      Za vprašanja odgovorite na to sporočilo ali pišite na <a href="mailto:support@discoverslovenia.ai" style="color: #2d6a3e;">support@discoverslovenia.ai</a>.
+    </p>
+  `;
+
+  const text = `Potrditev naročila ${orderNumber} — Discover Slovenia AI
+
+Pozdravljeni ${buyerName},
+
+Hvala za nakup! Vaše naročilo ${orderNumber} je bilo uspešno oddano in plačilo je potrjeno.
+
+${items
+  .map(
+    (i) =>
+      `- ${i.name}: ${i.quantity} × ${formatEur(i.price)} = ${formatEur(i.price * i.quantity)}`
+  )
+  .join("\n")}
+
+Vrednost izdelkov: ${formatEur(subtotal)}
+Dostava: ${shipping === 0 ? "Brezplačna" : formatEur(shipping)}
+Skupaj: ${formatEur(total)}
+
+Naročilo obdelamo v 1–2 delovnih dneh. Za vprašanja odgovorite na to sporočilo.
+
+Lep pozdrav,
+Ekipa Discover Slovenia AI`;
+
+  return {
+    subject,
+    html: customerEmailTemplate("Potrditev naročila ✅", content),
+    text,
+  };
+}
+
+// =========================
+// 7. BOOKING CONFIRMATION EMAIL (gost — rezervacija izkušnje)
+// =========================
+export interface BookingConfirmationEmailData {
+  bookingNumber: string;
+  guestName: string;
+  experienceName: string;
+  bookingDate: Date;
+  groupSize: number;
+  pricePerPerson: number;
+  total: number;
+  meetingPoint?: string | null;
+  providerName: string;
+}
+
+export function bookingConfirmationEmail({
+  bookingNumber,
+  guestName,
+  experienceName,
+  bookingDate,
+  groupSize,
+  pricePerPerson,
+  total,
+  meetingPoint,
+  providerName,
+}: BookingConfirmationEmailData): { subject: string; html: string; text: string } {
+  // slovenski dolgi format: npr. "torek, 9. september 2026"
+  const dateStr = new Intl.DateTimeFormat("sl-SI", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(bookingDate);
+
+  const subject = `Potrditev rezervacije ${bookingNumber} — Discover Slovenia AI`;
+
+  const meetingPointHtml = meetingPoint
+    ? `<tr><td style="padding: 6px 0; color: #6b7280;">Kraj srečanja:</td><td style="padding: 6px 0; text-align: right; font-weight: bold;">${escapeHtml(meetingPoint)}</td></tr>`
+    : "";
+
+  const content = `
+    <p style="margin-top: 0;">Pozdravljeni <strong>${escapeHtml(guestName)}</strong>,</p>
+    <p>Vaša rezervacija izkušnje <strong>${escapeHtml(experienceName)}</strong> je <strong>potrjena</strong>! Vaša rezervacijska številka je <strong>${escapeHtml(bookingNumber)}</strong>.</p>
+
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 24px 0;">
+      <table style="width: 100%; font-size: 14px;">
+        <tr><td style="padding: 6px 0; color: #6b7280;">Izkušnja:</td><td style="padding: 6px 0; text-align: right; font-weight: bold;">${escapeHtml(experienceName)}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">Datum:</td><td style="padding: 6px 0; text-align: right; font-weight: bold;">${escapeHtml(dateStr)}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">Število oseb:</td><td style="padding: 6px 0; text-align: right; font-weight: bold;">${groupSize}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">Cena na osebo:</td><td style="padding: 6px 0; text-align: right; font-weight: bold;">${formatEur(pricePerPerson)}</td></tr>
+        ${meetingPointHtml}
+        <tr><td style="padding: 6px 0; color: #6b7280;">Ponudnik:</td><td style="padding: 6px 0; text-align: right; font-weight: bold;">${escapeHtml(providerName)}</td></tr>
+        <tr>
+          <td style="padding: 10px 0 0 0; border-top: 1px solid #e5e7eb; font-weight: bold; color: #1a2e1a;">Skupaj:</td>
+          <td style="padding: 10px 0 0 0; border-top: 1px solid #e5e7eb; text-align: right; font-weight: bold; font-size: 16px; color: #2d6a3e;">${formatEur(total)}</td>
+        </tr>
+      </table>
+    </div>
+
+    <p>Na dan izkušnje se prijavite pri ponudniku <strong>${escapeHtml(providerName)}</strong>${meetingPoint ? ` na kraju srečanja: <strong>${escapeHtml(meetingPoint)}</strong>` : ""}. Priporočamo prihod 10–15 minut pred začetkom.</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${getBaseUrl()}" style="background: #2d6a3e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+        Discover Slovenia AI →
+      </a>
+    </div>
+
+    <p style="font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 24px;">
+      Za spremembe ali vprašanja odgovorite na to sporočilo — sporočilo posredujemo ponudniku.
+    </p>
+  `;
+
+  const text = `Potrditev rezervacije ${bookingNumber} — Discover Slovenia AI
+
+Pozdravljeni ${guestName},
+
+Vaša rezervacija izkušnje ${experienceName} je potrjena! Rezervacijska številka: ${bookingNumber}.
+
+Izkušnja: ${experienceName}
+Datum: ${dateStr}
+Število oseb: ${groupSize}
+Cena na osebo: ${formatEur(pricePerPerson)}
+${meetingPoint ? `Kraj srečanja: ${meetingPoint}\n` : ""}Ponudnik: ${providerName}
+Skupaj: ${formatEur(total)}
+
+Na dan izkušnje se prijavite pri ponudniku${meetingPoint ? ` na kraju srečanja (${meetingPoint})` : ""}. Priporočamo prihod 10–15 minut pred začetkom.
+
+Za spremembe odgovorite na to sporočilo.
+
+Lep pozdrav,
+Ekipa Discover Slovenia AI`;
+
+  return {
+    subject,
+    html: customerEmailTemplate("Potrditev rezervacije 🎉", content),
+    text,
+  };
+}
+
+// =========================
+// 8. PROVIDER BOOKING NOTIFICATION EMAIL (ponudniku o novi rezervaciji)
+// =========================
+export interface ProviderBookingNotificationEmailData {
+  bookingNumber: string;
+  experienceName: string;
+  bookingDate: Date;
+  groupSize: number;
+  guestName: string;
+  guestEmail: string;
+  guestPhone: string;
+  total: number;
+}
+
+export function providerBookingNotificationEmail({
+  bookingNumber,
+  experienceName,
+  bookingDate,
+  groupSize,
+  guestName,
+  guestEmail,
+  guestPhone,
+  total,
+}: ProviderBookingNotificationEmailData): { subject: string; html: string; text: string } {
+  // slovenski dolgi format: npr. "torek, 9. september 2026"
+  const dateStr = new Intl.DateTimeFormat("sl-SI", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(bookingDate);
+
+  const subject = `Nova rezervacija ${bookingNumber} — ${experienceName}`;
+
+  const content = `
+    <p style="margin-top: 0;">Pozdravljeni,</p>
+    <p>Prejeli ste <strong>novo rezervacijo</strong> za <strong>${escapeHtml(experienceName)}</strong> prek platforme Discover Slovenia AI. Rezervacija je <strong>potrjena</strong> — gost pričakuje vaš potrditveni kontakt.</p>
+
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 24px 0;">
+      <table style="width: 100%; font-size: 14px;">
+        <tr><td style="padding: 6px 0; color: #6b7280;">Rezervacijska številka:</td><td style="padding: 6px 0; text-align: right; font-weight: bold;">${escapeHtml(bookingNumber)}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">Izkušnja:</td><td style="padding: 6px 0; text-align: right; font-weight: bold;">${escapeHtml(experienceName)}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">Datum:</td><td style="padding: 6px 0; text-align: right; font-weight: bold;">${escapeHtml(dateStr)}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">Število oseb:</td><td style="padding: 6px 0; text-align: right; font-weight: bold;">${groupSize}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">Skupaj:</td><td style="padding: 6px 0; text-align: right; font-weight: bold;">${formatEur(total)}</td></tr>
+      </table>
+    </div>
+
+    <h3 style="color: #2d6a3e; margin-bottom: 8px;">Kontakt gosta</h3>
+    <div style="background: #f9fafb; border-left: 4px solid #2d6a3e; padding: 14px 18px; margin: 20px 0; border-radius: 4px;">
+      <table style="width: 100%; font-size: 14px;">
+        <tr><td style="padding: 4px 0; color: #6b7280;">Ime:</td><td style="padding: 4px 0; text-align: right; font-weight: bold;">${escapeHtml(guestName)}</td></tr>
+        <tr><td style="padding: 4px 0; color: #6b7280;">Email:</td><td style="padding: 4px 0; text-align: right; font-weight: bold;"><a href="mailto:${escapeHtml(guestEmail)}" style="color: #2d6a3e;">${escapeHtml(guestEmail)}</a></td></tr>
+        <tr><td style="padding: 4px 0; color: #6b7280;">Telefon:</td><td style="padding: 4px 0; text-align: right; font-weight: bold;"><a href="tel:${escapeHtml(guestPhone)}" style="color: #2d6a3e;">${escapeHtml(guestPhone)}</a></td></tr>
+      </table>
+    </div>
+
+    <p>Obrnite se na gosta in potrdite podrobnosti (točen termin, kraj srečanja, potrebna oprema). Hitri odgovor (v 24 urah) močno poveča zadovoljstvo gostov in ponovne rezervacije.</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="mailto:${escapeHtml(guestEmail)}" style="background: #2d6a3e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+        Odgovori gostu →
+      </a>
+    </div>
+
+    <p style="font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 24px;">
+      Rezervacija je shranjena v bazi platforme. Za podporo pišite na <a href="mailto:support@discoverslovenia.ai" style="color: #2d6a3e;">support@discoverslovenia.ai</a>.
+    </p>
+  `;
+
+  const text = `Nova rezervacija ${bookingNumber} — ${experienceName}
+
+Pozdravljeni,
+
+Prejeli ste novo rezervacijo za ${experienceName} prek platforme Discover Slovenia AI. Rezervacija je potrjena — gost pričakuje vaš potrditveni kontakt.
+
+Rezervacijska številka: ${bookingNumber}
+Datum: ${dateStr}
+Število oseb: ${groupSize}
+Skupaj: ${formatEur(total)}
+
+Kontakt gosta:
+Ime: ${guestName}
+Email: ${guestEmail}
+Telefon: ${guestPhone}
+
+Obrnite se na gosta in potrdite podrobnosti (točen termin, kraj srečanja, potrebna oprema).
+
+Lep pozdrav,
+Ekipa Discover Slovenia AI`;
+
+  return { subject, html: emailTemplate("Nova rezervacija 🎉", content), text };
+}
+
+// =========================
 // Helpers
 // =========================
+
+// Template za končne stranke (kupci/gosti) — IDENTIČEN vizualni jezik kot
+// emailTemplate() v email.ts (zelena glava, bela vsebina, siva noga), le noga
+// je prirejena strankam (ne "registriranim ponudnikom").
+function customerEmailTemplate(title: string, content: string): string {
+  return `<!DOCTYPE html><html><body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: #2d6a3e; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+      <h1 style="margin: 0;">🇸🇮 Discover Slovenia AI</h1>
+    </div>
+    <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+      <h2 style="color: #1a2e1a; margin-top: 0;">${title}</h2>
+      ${content}
+    </div>
+    <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
+      <p>Discover Slovenia AI — AI turistična platforma</p>
+      <p>To sporočilo ste prejeli ker ste opravili nakup oz. rezervacijo prek platforme Discover Slovenia AI.</p>
+    </div>
+  </body></html>`;
+}
 
 function escapeHtml(str: string): string {
   return str

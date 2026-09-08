@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { randomId } from "@/lib/security";
+import { sendEmail, isEmailDemo } from "@/lib/email";
+import { orderConfirmationEmail } from "@/lib/email-templates";
 
 /**
  * POST /api/checkout
@@ -18,6 +20,7 @@ import { randomId } from "@/lib/security";
  *     - direktno ustvari Order s status="paid" + paidAt=now
  * - PRODUCTION mode: TODO — Stripe Checkout Session
  * - Shrani Order v bazo
+ * - Pošlje potrditveni email kupcu (ne-blokirajoče — glej /api/listing-inquiry vzorec)
  * - Vrne { success, orderNumber, total, status }
  */
 export async function POST(request: Request) {
@@ -266,10 +269,42 @@ export async function POST(request: Request) {
         });
     }
 
-    // Pošlji email kupcu (samo log za zdaj — TODO: pravi email servis)
-    console.log(
-      `[checkout] POSLAN EMAIL → ${email}: Naročilo ${order.orderNumber} potrjeno (skupaj: ${total.toFixed(2)} EUR). Demo=${isDemo}.`
-    );
+    // === Potrditveni email kupcu — NE-BLOKIRAJOČE (fire-and-forget) ===
+    // Naročilo je že varno shranjeno v bazi — morebitna napaka emaila NE sme
+    // sesuti odgovora (isti vzorec kot /api/listing-inquiry).
+    try {
+      const mail = orderConfirmationEmail({
+        orderNumber: order.orderNumber,
+        buyerName: name,
+        items: sanitizedItems.map((i) => ({
+          name: i.name,
+          quantity: i.quantity,
+          price: i.price,
+        })),
+        subtotal,
+        shipping,
+        total,
+      });
+
+      void sendEmail({
+        to: email,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+      })
+        .then((sent) => {
+          console.log(
+            `[checkout] potrditveni email za ${order.orderNumber} → ${email}: ${
+              sent ? "poslan" : "NEUSPEŠEN"
+            } (stripe demo: ${isDemo}, email demo: ${isEmailDemo()}).`
+          );
+        })
+        .catch(() => {
+          // email ne sme sesuti checkout odgovora
+        });
+    } catch (e) {
+      console.error("[checkout] priprava potrditvenega emaila:", e);
+    }
 
     return NextResponse.json({
       success: true,

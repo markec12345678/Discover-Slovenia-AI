@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { randomId } from "@/lib/security";
+import { sendEmail, isEmailDemo } from "@/lib/email";
+import {
+  bookingConfirmationEmail,
+  providerBookingNotificationEmail,
+} from "@/lib/email-templates";
 
 // POST /api/bookings — ustvari rezervacijo izkušnje (demo ali production Stripe)
 //
@@ -16,8 +21,9 @@ import { randomId } from "@/lib/security";
 // (client posredovana cena se NE zaupa — prej je bila možna €0 rezervacija).
 //
 // DEMO mode (brez realnih Stripe ključev): direktno ustvari Booking z
-// status="confirmed", confirmedAt=now. V production mode-u bo tu Stripe
-// Checkout Session (TODO).
+// status="confirmed", confirmedAt=now, ter pošlje potrditvena e-pošta
+// gostu in obvestilo ponudniku (ne-blokirajoče). V production mode-u bo tu
+// Stripe Checkout Session (TODO).
 export async function POST(request: Request) {
   try {
     // Rate limit (preprečuje spam rezervacij)
@@ -184,6 +190,77 @@ export async function POST(request: Request) {
         });
       } catch {
         // Izkušnja morda ne obstaja — ignoriraj (snapshot je že shranjen)
+      }
+
+      // === E-pošta gostu: potrditev rezervacije — NE-BLOKIRAJOČE ===
+      // Rezervacija je že varno shranjena v bazi — napaka emaila NE sme
+      // sesuti odgovora (isti vzorec kot /api/listing-inquiry).
+      try {
+        const guestMail = bookingConfirmationEmail({
+          bookingNumber: booking.bookingNumber,
+          guestName,
+          experienceName,
+          bookingDate,
+          groupSize,
+          pricePerPerson,
+          total,
+          meetingPoint,
+          providerName,
+        });
+
+        void sendEmail({
+          to: guestEmail,
+          subject: guestMail.subject,
+          html: guestMail.html,
+          text: guestMail.text,
+        })
+          .then((sent) => {
+            console.log(
+              `[bookings] potrditev ${booking.bookingNumber} → ${guestEmail}: ${
+                sent ? "poslana" : "NEUSPEŠNA"
+              } (email demo: ${isEmailDemo()}).`
+            );
+          })
+          .catch(() => {
+            // email ne sme sesuti odgovora
+          });
+      } catch (e) {
+        console.error("[bookings] priprava potrditvenega emaila:", e);
+      }
+
+      // === E-pošta ponudniku: obvestilo o novi rezervaciji — NE-BLOKIRAJOČE ===
+      // providerEmail ni nujno veljaven naslov — morebitna napaka pošiljanja
+      // prav tako ne sme sesuti odgovora.
+      try {
+        const providerMail = providerBookingNotificationEmail({
+          bookingNumber: booking.bookingNumber,
+          experienceName,
+          bookingDate,
+          groupSize,
+          guestName,
+          guestEmail,
+          guestPhone,
+          total,
+        });
+
+        void sendEmail({
+          to: providerEmail,
+          subject: providerMail.subject,
+          html: providerMail.html,
+          text: providerMail.text,
+        })
+          .then((sent) => {
+            console.log(
+              `[bookings] obvestilo ponudniku za ${booking.bookingNumber} → ${providerEmail}: ${
+                sent ? "poslano" : "NEUSPEŠNO"
+              } (email demo: ${isEmailDemo()}).`
+            );
+          })
+          .catch(() => {
+            // email ne sme sesuti odgovora
+          });
+      } catch (e) {
+        console.error("[bookings] priprava emaila ponudniku:", e);
       }
 
       return NextResponse.json({
