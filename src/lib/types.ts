@@ -42,6 +42,11 @@ export interface LocationVisit {
   duration: number;
   estimated_cost: number;
   notes: string;
+  // Dodatni (optional) podatki, ki jih AI/ranking lahko priloži lokaciji
+  // (npr. transparency partner badge, affiliate tip, kategorija aktivnosti)
+  recommendationType?: string;
+  affiliateType?: string;
+  category?: string;
 }
 
 export interface DayPlan {

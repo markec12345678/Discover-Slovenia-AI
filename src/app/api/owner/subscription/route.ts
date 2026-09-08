@@ -152,7 +152,11 @@ export async function POST() {
     }
 
     const stripe = new Stripe(stripeKey, {
-      apiVersion: "2024-12-18.acacia" as Stripe.LatestApiVersion,
+      // FIXME: stripe v22 tipi pri\u010dakujejo le LatestApiVersion ("2026-05-27.dahlia");
+      // pin ostaja na "2024-12-18.acacia" (nespremenjeno obna\u0161anje).
+      apiVersion: "2024-12-18.acacia" as NonNullable<
+        ConstructorParameters<typeof Stripe>[1]
+      >["apiVersion"],
     });
 
     // Pridobi aktivne subscription-e za tega customerja
@@ -178,11 +182,10 @@ export async function POST() {
 
     // Prekliči vse aktivne subscriptione
     for (const sub of subscriptions.data) {
-      await stripe.subscriptions.cancel(sub.id, {
-        cancellation_details: {
-          reason: "cancellation_requested",
-        },
-      });
+      // OPOMBA: stripe v22 SubscriptionCancelParams.CancellationDetails ne
+      // podpira ve\u010d polja "reason" (Stripe ga samodejno nastavi na
+      // "cancellation_requested" pri preklicu prek API-ja) \u2014 obna\u0161anje je nespremenjeno.
+      await stripe.subscriptions.cancel(sub.id);
     }
 
     // Lokalno označi kot canceled (webhook bo dokončal cleanup)

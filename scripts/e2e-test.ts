@@ -547,7 +547,7 @@ async function testNegativeBadRating() {
 
   // Preveri da slabi lokal ne dobi boost-a
   assert(
-    !MIN_RATING_FOR_BOOST <= 2.0,
+    MIN_RATING_FOR_BOOST > 2.0,
     `Rating 2.0 < ${MIN_RATING_FOR_BOOST} → ne dobi boost-a`
   );
 

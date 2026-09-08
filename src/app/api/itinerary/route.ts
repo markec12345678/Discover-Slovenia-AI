@@ -166,7 +166,7 @@ function generateFallbackItinerary(input: PlannerInput): Itinerary {
 
   for (let day = 1; day <= input.days; day++) {
     const locationsPerDay = 2;
-    const locations = [];
+    const locations: LocationVisit[] = [];
 
     for (let i = 0; i < locationsPerDay; i++) {
       const dest = ranked[destIndex % ranked.length];

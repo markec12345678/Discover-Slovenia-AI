@@ -59,7 +59,12 @@ export async function GET(request: Request) {
       : await collectOwnerStats(ownerId);
 
     // Generiraj AI insights
-    const insights = await generateInsights(stats, type);
+    // OPOMBA: type je iz query stringa (string) — runtime logika veže vse
+    // ne-"admin" vrednosti na owner vejo, zato samo zožimo tip za generateInsights.
+    const insights = await generateInsights(
+      stats,
+      type as "admin" | "owner"
+    );
 
     return NextResponse.json(insights);
   } catch (error) {
@@ -322,7 +327,10 @@ function generateFallbackInsights(stats: StatsData, type: "admin" | "owner"): In
         priority: "medium",
       });
     }
-    if (stats.ownerViews > 100 && stats.ownerClicks < stats.ownerViews * 0.05) {
+    if (
+      (stats.ownerViews ?? 0) > 100 &&
+      (stats.ownerClicks ?? 0) < (stats.ownerViews ?? 0) * 0.05
+    ) {
       insights.push({
         type: "anomaly",
         title: "Nizka CTR konverzija",

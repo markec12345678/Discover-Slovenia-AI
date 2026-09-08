@@ -26,6 +26,7 @@ export interface Listing {
   website?: string | null;
   images: string[];
   plan: ListingPlan;
+  partnerStatus?: "standard" | "verified" | "premium" | "featured";
   featured: boolean;
   verified: boolean;
   rating: number;

@@ -41,7 +41,11 @@ export async function POST(request: Request) {
   }
 
   const stripe = new Stripe(stripeKey, {
-    apiVersion: "2024-12-18.acacia" as Stripe.LatestApiVersion,
+    // FIXME: stripe v22 tipi pri\u010dakujejo le LatestApiVersion ("2026-05-27.dahlia");
+    // pin ostaja na "2024-12-18.acacia" (nespremenjeno obna\u0161anje) \u2014 cast na pri\u010dakovani tip konfiguracije.
+    apiVersion: "2024-12-18.acacia" as NonNullable<
+      ConstructorParameters<typeof Stripe>[1]
+    >["apiVersion"],
   });
 
   let event: Stripe.Event;
@@ -95,8 +99,14 @@ export async function POST(request: Request) {
           if (typeof cs.subscription === "string") {
             try {
               const sub = await stripe.subscriptions.retrieve(cs.subscription);
-              subscriptionEndsAt = sub.current_period_end
-                ? new Date(sub.current_period_end * 1000)
+              // stripe v22: current_period_end je na SubscriptionItem (items.data[0]);
+              // fallback cast za starej\u0161e API verzije, ki ga po\u0161iljajo neposredno na Subscription.
+              const periodEnd =
+                sub.items.data[0]?.current_period_end ??
+                (sub as unknown as { current_period_end?: number })
+                  .current_period_end;
+              subscriptionEndsAt = periodEnd
+                ? new Date(periodEnd * 1000)
                 : null;
             } catch (e) {
               console.error("[stripe/webhook] sub retrieve failed:", e);
@@ -162,9 +172,12 @@ export async function POST(request: Request) {
         if (!ownerId) break;
 
         const mappedStatus = mapStripeStatus(status);
-        const subEnd = sub.current_period_end
-          ? new Date(sub.current_period_end * 1000)
-          : null;
+        // stripe v22: current_period_end je na SubscriptionItem (items.data[0]);
+        // fallback cast za starej\u0161e API verzije.
+        const periodEnd =
+          sub.items.data[0]?.current_period_end ??
+          (sub as unknown as { current_period_end?: number }).current_period_end;
+        const subEnd = periodEnd ? new Date(periodEnd * 1000) : null;
 
         const updateData: Record<string, unknown> = {
           subscriptionStatus: mappedStatus,

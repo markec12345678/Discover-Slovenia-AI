@@ -65,7 +65,11 @@ export async function POST() {
     }
 
     const stripe = new Stripe(stripeKey, {
-      apiVersion: "2024-12-18.acacia" as Stripe.LatestApiVersion,
+      // FIXME: stripe v22 tipi pričakujejo le LatestApiVersion ("2026-05-27.dahlia");
+      // pin ostaja na "2024-12-18.acacia" (nespremenjeno obnašanje).
+      apiVersion: "2024-12-18.acacia" as NonNullable<
+        ConstructorParameters<typeof Stripe>[1]
+      >["apiVersion"],
     });
 
     const baseUrl =

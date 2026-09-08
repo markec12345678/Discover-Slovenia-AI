@@ -353,6 +353,21 @@ model Sponsorship {
 // ANALITIKA (Faza 1)
 // ============================================================================
 
+// Ogled strani — funnel tracking (/api/track-funnel) in page analitika
+// (/api/admin/track-pageview, /api/admin/indexing, /api/admin/leads-dashboard)
+model PageView {
+  id         String   @id @default(cuid())
+  path       String
+  funnelStep String?  // homepage_view | destination_view | itinerary_generate | newsletter_signup | listing_click
+  title      String?
+  referrer   String?
+  createdAt  DateTime @default(now())
+
+  @@index([path])
+  @@index([funnelStep])
+  @@index([createdAt])
+}
+
 // Splošni analitični eventi (user behavior)
 model AnalyticsEvent {
   id        String   @id @default(cuid())

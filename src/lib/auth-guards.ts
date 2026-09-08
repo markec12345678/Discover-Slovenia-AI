@@ -26,7 +26,8 @@ export type Resource =
   | "analytics"
   | "admin"
   | "user"
-  | "owner";
+  | "owner"
+  | "*"; // wildcard — vsi resursi (admin/super_admin)
 
 export type Action = "read" | "create" | "update" | "delete" | "approve" | "manage" | "*";
 

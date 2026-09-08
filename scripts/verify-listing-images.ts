@@ -33,6 +33,8 @@ async function verifyImage(
 
   try {
     const response = await zai.chat.completions.createVision({
+      // model je obvezen v CreateChatCompletionVisionBody tipu (GLM VLM)
+      model: "glm-4.5v",
       messages: [
         {
           role: "user",
