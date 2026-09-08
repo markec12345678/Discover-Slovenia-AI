@@ -1,7 +1,7 @@
 # Versioning Strategy
 
 > **Status:** Living document
-> **Datum:** 2025-01-15
+> **Datum:** 2026-07-15
 > **Namen:** Jasno sledenje katera dokumentacija pripada kateri izdaji
 
 ---
@@ -14,20 +14,20 @@
 └─────────────────────────────────────────────────────────────┘
 
   PRODUCT BLUEPRINT (strategic)
-  ├── v1.0 (FROZEN — 2025-01-15)
+  ├── v1.0 (FROZEN — 2026-07-15)
   ├── v1.1 (ko product owner odobri spremembe)
   └── v2.0 (major pivot)
          │
          ▼
   TECHNICAL SPECIFICATION (implementation)
-  ├── v1.0 (DRAFT — 2025-01-15)
+  ├── v1.0 (DRAFT — 2026-07-15)
   ├── v1.0 (FROZEN — ob začetku implementacije)
   ├── v1.1 (ko se spec spremeni)
   └── v2.0 (ko se arhitektura spremeni)
          │
          ▼
   ADR (architectural decisions)
-  ├── ADR-001 to ADR-015 (v1.0 — 2025-01-15)
+  ├── ADR-001 to ADR-015 (v1.0 — 2026-07-15)
   ├── ADR-016 (nova odločitev)
   └── ADR-016 nadomešča ADR-005 (če se spremeni)
          │
@@ -61,7 +61,7 @@ Format: `MAJOR.MINOR.PATCH` (npr. `1.2.3`)
 ```markdown
 # Product Blueprint v1.0
 **Status:** ✅ FROZEN
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ## Spremembe od v0.9:
 - Added: User Roles & Permissions
@@ -98,7 +98,7 @@ Format: `MAJOR.MINOR.PATCH` (npr. `1.2.3`)
 ### 4.2 Release notes template
 
 ```markdown
-# Release v1.0.0 — 2025-01-XX
+# Release v1.0.0 — 2026-07-15
 
 ## ✨ New Features
 - AI itinerar z multi-turn refinement
@@ -160,7 +160,7 @@ Format temelji na [Keep a Changelog](https://keepachangelog.com/).
 - Incident playbook
 - Versioning strategy
 
-## [1.0.0] — 2025-01-XX
+## [1.0.0] — 2026-07-15
 
 ### Added
 - Discover Slovenia AI platforma (initial release)

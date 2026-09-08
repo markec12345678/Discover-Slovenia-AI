@@ -1,7 +1,7 @@
 # Accessibility Review
 
 > **Status:** Living document
-> **Datum:** 2025-01-15
+> **Datum:** 2026-07-15
 > **Namen:** WCAG 2.1 AA compliance pred produkcijo
 
 ---

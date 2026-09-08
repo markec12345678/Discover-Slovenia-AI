@@ -1,7 +1,7 @@
 # Discover Slovenia AI — Product Blueprint
 
 > **Status:** ✅ FROZEN v1.0 — Referenčni dokument
-> **Datum zamrznitve:** 2025-01-15
+> **Datum zamrznitve:** 2026-07-15
 > **Avtor:** Product Team
 > **Namen:** Strateški dokument ki vodi vso nadaljnjo implementacijo
 > **Pravilo:** Nobena koda ne gre v produkcijo brez skladnosti s tem dokumentom

@@ -1,7 +1,7 @@
 # Database Migration Strategy
 
 > **Status:** Living document
-> **Datum:** 2025-01-15
+> **Datum:** 2026-07-15
 > **Namen:** Varna in ponovljiva migracijska strategija brez izpadov
 
 ---

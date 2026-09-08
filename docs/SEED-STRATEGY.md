@@ -1,8 +1,10 @@
 # Seed Strategy
 
 > **Status:** Living document
-> **Datum:** 2025-01-15
+> **Datum:** 2026-07-15
 > **Namen:** Ločevanje development, demo in production seed podatkov
+
+> ⚠️ **Stanje implementacije: NAČRT.** Ločevanje dev/demo/prod seed podatkov **ni implementirano** — ne obstajajo `seed-dev`/`seed-demo`/`seed-prod` skripte. Demo podatki so v `db/custom.db` (lokalno, gitignored).
 
 ---
 

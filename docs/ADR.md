@@ -1,7 +1,7 @@
 # Architecture Decision Records (ADR)
 
 > **Status:** Living document
-> **Datum:** 2025-01-15
+> **Datum:** 2026-07-15
 > **Namen:** Dokumentacija ključnih arhitekturnih odločitev z kontekstom in alternativami
 > **Pravilo:** Vsaka ADR je immutabilna enkrat sprejeta. Spremembe zahtevajo novo ADR ki referencira staro.
 
@@ -11,28 +11,28 @@
 
 | ID | Naslov | Status | Datum |
 |----|--------|--------|-------|
-| [ADR-001](#adr-001--nextjs-16-app-router) | Next.js 16 App Router | ✅ Sprejet | 2025-01-15 |
-| [ADR-002](#adr-002--prisma-orm) | Prisma ORM | ✅ Sprejet | 2025-01-15 |
-| [ADR-003](#adr-003--sqlite-za-dev-turso-za-produkcijo) | SQLite (dev) / Turso (prod) | ✅ Sprejet | 2025-01-15 |
-| [ADR-004](#adr-004--vercel-za-deployment) | Vercel za deployment | ✅ Sprejet | 2025-01-15 |
-| [ADR-005](#adr-005--glm-preko-puter-api-kot-primarni-ai) | GLM preko Puter API kot primarni AI | ✅ Sprejet | 2025-01-15 |
-| [ADR-006](#adr-006--ai-fallback-chain-puter--z-ai-sdk--rule-based) | AI fallback chain (Puter → z-ai-sdk → rule-based) | ✅ Sprejet | 2025-01-15 |
-| [ADR-007](#adr-007--ai-ranking-z-utežmi-60201010) | AI ranking z utežmi 60/20/10/10 | ✅ Sprejet | 2025-01-15 |
-| [ADR-008](#adr-008--sponsored-boost-max-10) | Sponsored boost max 10% | ✅ Sprejet | 2025-01-15 |
-| [ADR-009](#adr-009--affiliate-model-redirect-ne-payment-processing) | Affiliate model (redirect, ne payment processing) | ✅ Sprejet | 2025-01-15 |
-| [ADR-010](#adr-010--admin-approval-required-za-vse-lokalce) | Admin approval required za vse lokalce | ✅ Sprejet | 2025-01-15 |
-| [ADR-011](#adr-011--cache-first-ai-strategija) | Cache-first AI strategija | ✅ Sprejet | 2025-01-15 |
-| [ADR-012](#adr-012--free-b2c--paid-b2b-monetizacija) | Free B2C + paid B2B monetizacija | ✅ Sprejet | 2025-01-15 |
-| [ADR-013](#adr-013--pavšalni-oglas-ne-provizija) | Pavšalni oglas, ne provizija | ✅ Sprejet | 2025-01-15 |
-| [ADR-014](#adr-014--beta-do-30-lokalov-brezplačno) | Beta do 30 lokalov brezplačno | ✅ Sprejet | 2025-01-15 |
-| [ADR-015](#adr-015--transparency-first--jasno-označevanje-oglasov) | Transparency-first: jasno označevanje oglasov | ✅ Sprejet | 2025-01-15 |
+| [ADR-001](#adr-001--nextjs-16-app-router) | Next.js 16 App Router | ✅ Sprejet | 2026-07-15 |
+| [ADR-002](#adr-002--prisma-orm) | Prisma ORM | ✅ Sprejet | 2026-07-15 |
+| [ADR-003](#adr-003--sqlite-za-dev-turso-za-produkcijo) | SQLite (dev) / Turso (prod) | ✅ Sprejet | 2026-07-15 |
+| [ADR-004](#adr-004--vercel-za-deployment) | Vercel za deployment | ✅ Sprejet | 2026-07-15 |
+| [ADR-005](#adr-005--glm-preko-puter-api-kot-primarni-ai) | GLM preko Puter API kot primarni AI | ✅ Sprejet | 2026-07-15 |
+| [ADR-006](#adr-006--ai-fallback-chain-puter--z-ai-sdk--rule-based) | AI fallback chain (Puter → z-ai-sdk → rule-based) | ✅ Sprejet | 2026-07-15 |
+| [ADR-007](#adr-007--ai-ranking-z-utežmi-60201010) | AI ranking z utežmi 60/20/10/10 | ✅ Sprejet | 2026-07-15 |
+| [ADR-008](#adr-008--sponsored-boost-max-10) | Sponsored boost max 10% | ✅ Sprejet | 2026-07-15 |
+| [ADR-009](#adr-009--affiliate-model-redirect-ne-payment-processing) | Affiliate model (redirect, ne payment processing) | ✅ Sprejet | 2026-07-15 |
+| [ADR-010](#adr-010--admin-approval-required-za-vse-lokalce) | Admin approval required za vse lokalce | ✅ Sprejet | 2026-07-15 |
+| [ADR-011](#adr-011--cache-first-ai-strategija) | Cache-first AI strategija | ✅ Sprejet | 2026-07-15 |
+| [ADR-012](#adr-012--free-b2c--paid-b2b-monetizacija) | Free B2C + paid B2B monetizacija | ✅ Sprejet | 2026-07-15 |
+| [ADR-013](#adr-013--pavšalni-oglas-ne-provizija) | Pavšalni oglas, ne provizija | ✅ Sprejet | 2026-07-15 |
+| [ADR-014](#adr-014--beta-do-30-lokalov-brezplačno) | Beta do 30 lokalov brezplačno | ✅ Sprejet | 2026-07-15 |
+| [ADR-015](#adr-015--transparency-first--jasno-označevanje-oglasov) | Transparency-first: jasno označevanje oglasov | ✅ Sprejet | 2026-07-15 |
 
 ---
 
 ## ADR-001 — Next.js 16 App Router
 
 **Status:** ✅ Sprejet
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ### Kontekst
 
@@ -76,7 +76,7 @@ Platforma potrebuje framework ki podpira:
 ## ADR-002 — Prisma ORM
 
 **Status:** ✅ Sprejet
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ### Kontekst
 
@@ -120,7 +120,7 @@ Potrebujemo ORM ki:
 ## ADR-003 — SQLite za dev, Turso za produkcijo
 
 **Status:** ✅ Sprejet
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ### Kontekst
 
@@ -165,7 +165,7 @@ Potrebujemo databaso ki:
 ## ADR-004 — Vercel za deployment
 
 **Status:** ✅ Sprejet
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ### Kontekst
 
@@ -211,7 +211,7 @@ Potrebujemo hosting ki:
 ## ADR-005 — GLM preko Puter API kot primarni AI
 
 **Status:** ✅ Sprejet
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ### Kontekst
 
@@ -268,7 +268,7 @@ Ključni kriteriji:
 ## ADR-006 — AI fallback chain (Puter → z-ai-sdk → rule-based)
 
 **Status:** ✅ Sprejet
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ### Kontekst
 
@@ -323,7 +323,7 @@ Vsaka AI funkcija mora vedno vrniti rezultat — nikoli 500 error.
 ## ADR-007 — AI ranking z utežmi 60/20/10/10
 
 **Status:** ✅ Sprejet
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ### Kontekst
 
@@ -385,7 +385,7 @@ Hotel B (free, rating 4.9, relevance 0.9):
 ## ADR-008 — Sponsored boost max 10%
 
 **Status:** ✅ Sprejet
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ### Kontekst
 
@@ -423,7 +423,7 @@ Premium in Enterprise providerji plačajo za večjo vidljivost. Koliko boost-a n
 ## ADR-009 — Affiliate model (redirect, ne payment processing)
 
 **Status:** ✅ Sprejet
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ### Kontekst
 
@@ -463,7 +463,7 @@ Kako monetizirati rezervacije? Processirati plačila ali preusmerjati na partner
 ## ADR-010 — Admin approval required za vse lokalce
 
 **Status:** ✅ Sprejet
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ### Kontekst
 
@@ -505,7 +505,7 @@ Draft → Pending → Approved → Published → Archived
 ## ADR-011 — Cache-first AI strategija
 
 **Status:** ✅ Sprejet
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ### Kontekst
 
@@ -545,7 +545,7 @@ AI klici so dragi (čas + denar). Kako zmanjšati stroške in latency?
 ## ADR-012 — Free B2C + paid B2B monetizacija
 
 **Status:** ✅ Sprejet
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ### Kontekst
 
@@ -582,7 +582,7 @@ Kdo plača za platformo? Uporabniki ali ponudniki?
 ## ADR-013 — Pavšalni oglas, ne provizija
 
 **Status:** ✅ Sprejet
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ### Kontekst
 
@@ -619,7 +619,7 @@ Kako zaračunati B2B? Pavšalni oglas ali provizija na rezervacije?
 ## ADR-014 — Beta do 30 lokalov brezplačno
 
 **Status:** ✅ Sprejet
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ### Kontekst
 
@@ -657,7 +657,7 @@ Kdaj začeti zaračunavati? Takoj ali po nekem mejniku?
 ## ADR-015 — Transparency-first: jasno označevanje oglasov
 
 **Status:** ✅ Sprejet
-**Datum:** 2025-01-15
+**Datum:** 2026-07-15
 
 ### Kontekst
 

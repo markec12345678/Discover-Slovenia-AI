@@ -1,7 +1,7 @@
 # Risk Register
 
 > **Status:** Living document — posodablja se mesečno
-> **Datum:** 2025-01-15
+> **Datum:** 2026-07-15
 > **Namen:** Identifikacija in mitigacija tveganj pred in po lansiranju
 > **Pravilo:** Vsako tveganje mora imeti lastnika in datum pregleda
 

@@ -1,7 +1,7 @@
 # Discover Slovenia AI — Technical Specification
 
 > **Status:** DRAFT v1.0
-> **Datum:** 2025-01-15
+> **Datum:** 2026-07-15
 > **Avtor:** Engineering Team
 > **Namen:** Konkretna implementacijska specifikacija ki sledi Product Blueprint v1.0
 > **Pravilo:** Vsa koda mora slediti tej specifikaciji. Odstopanja zahtevajo ADR (Architecture Decision Record).

@@ -1,8 +1,10 @@
 # Security Review
 
 > **Status:** Living document
-> **Datum:** 2025-01-15
+> **Datum:** 2026-07-15
 > **Namen:** Zadnji varnostni pregled pred produkcijo
+
+> ✅ **Posodobitev 2026-09-08:** izvedena varnostna utrditev **v1.1.0** — PII zaščita (email verifikacija na orders/bookings), strežniška validacija cen, rate limiting na 16+ poteh, cron avtentikacija, timing-safe primerjave, JSON-LD/HTML escapiranje, varnostni headerji (CSP/HSTS/…) in čiščenje skrivnosti iz git zgodovine. Podrobnosti: `CHANGELOG.md` § [1.1.0]. Prej odkrite vrzeli v tem pregledu so naslovljene.
 
 ---
 

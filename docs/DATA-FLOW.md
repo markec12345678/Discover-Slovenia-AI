@@ -1,7 +1,7 @@
 # Data Flow Document
 
 > **Status:** Living document
-> **Datum:** 2025-01-15
+> **Datum:** 2026-07-15
 > **Namen:** Dokumentacija toka podatkov skozi sistem — od uporabnika do baze in nazaj
 > **Pravilo:** Vsak podatkovni tok mora biti dokumentiran z vir, destinacijo in formatom
 

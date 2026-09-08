@@ -1,7 +1,7 @@
 # Incident Playbook
 
 > **Status:** Living document
-> **Datum:** 2025-01-15
+> **Datum:** 2026-07-15
 > **Namen:** Kaj narediti ko X odpove — hiter referenčni dokument za administratorje
 
 ---

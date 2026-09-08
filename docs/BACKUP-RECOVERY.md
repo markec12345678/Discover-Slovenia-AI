@@ -1,7 +1,7 @@
 # Backup Recovery Test Plan
 
 > **Status:** Living document
-> **Datum:** 2025-01-15
+> **Datum:** 2026-07-15
 > **Namen:** Preveriti da backup ne obstaja samo, ampak da lahko iz njega obnovimo sistem
 
 ---
@@ -342,11 +342,11 @@ export async function GET() {
 
 | Test | Frekvenca | Lastnik | Naslednji test |
 |------|-----------|---------|----------------|
-| T1: DB restore | Mesečno | Engineering | 2025-02-15 |
-| T2: Data restore | Mesečno | Engineering | 2025-02-15 |
-| T3: Full restore | Četrtletno | Engineering | 2025-04-15 |
-| T4: Point-in-time | Četrtletno | Engineering | 2025-04-15 |
-| T5: External restore | Četrtletno | Engineering | 2025-04-15 |
+| T1: DB restore | Mesečno | Engineering | po prvem deployu |
+| T2: Data restore | Mesečno | Engineering | po prvem deployu |
+| T3: Full restore | Četrtletno | Engineering | po prvem deployu |
+| T4: Point-in-time | Četrtletno | Engineering | po prvem deployu |
+| T5: External restore | Četrtletno | Engineering | po prvem deployu |
 
 ---
 

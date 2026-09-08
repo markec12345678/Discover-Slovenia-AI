@@ -1,8 +1,10 @@
 # Feature Flags
 
 > **Status:** Living document
-> **Datum:** 2025-01-15
+> **Datum:** 2026-07-15
 > **Namen:** Postopno vklop/izklop funkcij brez novih deployev
+
+> ⚠️ **Stanje implementacije: NAČRT.** Sistem feature flagov **ni implementiran** — v repozitoriju ne obstajata niti `feature-flags.ts` niti `/api/feature-flags`. Ta dokument opisuje načrtovano zasnovo, trenutno stanje upravlja `process.env` (npr. `PAYMENTS_ENABLED=false`).
 
 ---
 
