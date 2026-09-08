@@ -61,6 +61,24 @@ export interface Itinerary {
   recommendations: string[];
   tips: string[];
   source: "ai" | "fallback";
+  // NOVO: dogodki, ki se zgodijo na obiskanih destinacijah (matched iz
+  // events-data.ts ob generiranju / ob ogledu deljenega potovanja)
+  events?: ItineraryEvent[];
+  // NOVO: AI pakirni seznam (AI predlog ali deterministična hevristika)
+  packingList?: string[];
+}
+
+// Dogodek, povezan z destinacijo v itinererju (subset EventItem iz events-data)
+export interface ItineraryEvent {
+  id: string;
+  name: string;
+  date: string;
+  endDate?: string;
+  location: string;
+  category: string;
+  priceRange: string;
+  description: string;
+  website?: string;
 }
 
 export interface WeatherData {

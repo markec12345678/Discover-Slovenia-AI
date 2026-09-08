@@ -51,6 +51,8 @@ import { saveItinerary, fetchSharedItinerary } from "@/lib/itinerary-share";
 import { cn } from "@/lib/utils";
 import { BookingPanel, type BookingData } from "@/components/sections/booking-panel";
 import { ItineraryRefiner } from "@/components/sections/itinerary-refiner";
+import { ItineraryEventsSection } from "@/components/itinerary-events";
+import { PackingListSection } from "@/components/packing-list";
 import { SocialShare } from "@/components/social-share";
 import { TripTimeline } from "@/components/trip-timeline";
 import { BookingAssistant } from "@/components/booking-assistant";
@@ -882,6 +884,14 @@ export function ItineraryPlanner() {
                     </CardContent>
                   </Card>
                 )}
+
+                {/* Kaj se dogaja med tvojim obiskom — lokalni dogodki (max 6) */}
+                {/* Sekcija se sama skrije, če events ni prisoten/prazen */}
+                <ItineraryEventsSection events={itinerary.events} />
+
+                {/* Kaj pakirati — packing list (lokalni čeklist, brez persista) */}
+                {/* Sekcija se sama skrije, če packingList ni prisoten/prazen */}
+                <PackingListSection items={itinerary.packingList} />
 
                 {/* WOW: AI Trip Timeline — vizualni dan */}
                 <TripTimeline days={itinerary.days} totalBudget={itinerary.total_budget} />

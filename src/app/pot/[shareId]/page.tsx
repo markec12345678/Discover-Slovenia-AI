@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { safeJsonLd } from "@/lib/security";
+import { matchEventsForItinerary } from "@/lib/events-match";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { SharedTrip } from "@/components/shared-trip";
 import type { Itinerary } from "@/lib/types";
@@ -123,6 +124,26 @@ export default async function SharedTripPage({ params }: PageProps) {
       ? saved.itinerary.total_budget
       : 0;
 
+  // === Dogodki — SVEŽE ob vsakem renderju (datumi v shranjenem JSON-u so
+  // lahko zastareli; matchEventsForItinerary upošteva današnji datum) ===
+  const events = matchEventsForItinerary(saved.itinerary.days, 6);
+
+  // === Začetni glasovi (locationKey → število) — izhodišče za UI (7-b) ===
+  let initialVotes: Record<string, number> = {};
+  try {
+    const grouped = await db.tripVote.groupBy({
+      by: ["locationKey"],
+      where: { shareId },
+      _count: { _all: true },
+    });
+    initialVotes = Object.fromEntries(
+      grouped.map((g) => [g.locationKey, g._count._all])
+    );
+  } catch (e) {
+    // Glasovanje ni kritično za prikaz strani — nadaljuj s praznimi glasovi
+    console.error("[pot] tripVote groupBy napaka:", e);
+  }
+
   // === JSON-LD: TouristTrip ===
   const dayCount = saved.itinerary.days.length;
   const destNames = saved.itinerary.days
@@ -161,13 +182,13 @@ export default async function SharedTripPage({ params }: PageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="pot-page min-h-screen bg-background">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(touristTrip) }}
       />
 
-      {/* PageView tracking — beleži ogled v PageView tabelo */}
+      {/* PageView tracking — beleži ogled v PageView tabelo (rendera null) */}
       <PageViewTracker path={`/pot/${shareId}`} title={name} />
 
       <SharedTrip
@@ -176,7 +197,17 @@ export default async function SharedTripPage({ params }: PageProps) {
         name={saved.name}
         views={views}
         createdAt={saved.createdAt.toISOString()}
+        events={events}
+        initialVotes={initialVotes}
       />
+
+      {/* === PRINT NOGICA — vidna SAMO ob tiskanju (Natisni → Shrani kot PDF) === */}
+      <p
+        className="mt-6 hidden border-t border-border pt-3 text-center text-xs text-muted-foreground print:block"
+        aria-hidden="true"
+      >
+        Izvoženo z Discover Slovenia AI · https://discoverslovenia.ai/pot/{shareId}
+      </p>
     </div>
   );
 }

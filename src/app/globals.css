@@ -173,3 +173,87 @@ header.sticky,
 [data-radix-dialog-content] {
   z-index: 2000 !important;
 }
+
+/* ============================================================
+   TISKANJE / PDF priprava — /pot/[shareId] ("Natisni → Shrani kot PDF")
+   ------------------------------------------------------------
+   Razredi (dodaja jih UI — shared-trip + page):
+   - .print-hide  → element se NE natisne (zemljevid/canvas, CTA gumbi,
+                    deljenje, glasovanje, razlage za obiskovalce)
+   - .print-card  → kartica se ne razlomi čez dve strani
+
+   Struktura (page.tsx):
+   - .pot-page    → ovojnica javne strani deljenega potovanja — vsi
+                    spodnji print predpisi so omejeni nanjo, ostale strani
+                    se tiskajo nespremenjeno
+   - nogica z URL-jem je <p> z razredi "hidden print:block" v page.tsx
+   ============================================================ */
+@media print {
+  /* Skrij vse, kar v PDF nima smisla (zemljevid je canvas-heavy) */
+  .print-hide {
+    display: none !important;
+  }
+
+  /* A4 z berljivimi robovi */
+  @page {
+    size: A4;
+    margin: 1.2cm 1.5cm;
+  }
+
+  /* Črno na belem — tudi iz dark mode (prepreči sive strani v PDF) */
+  body {
+    background: #fff !important;
+  }
+  .pot-page {
+    min-height: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .pot-page main {
+    min-height: 0 !important;
+  }
+
+  /* Enotna črno-bela paleta: brez barvnih ozadij, senc in gradientov */
+  .pot-page * {
+    color: #000 !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    border-color: #b9c4bf !important;
+  }
+  /* Elementi z inline style background (barvni krogi dneva) → beli krog */
+  .pot-page [style] {
+    background-color: transparent !important;
+  }
+
+  /* Dan (id="dan-N"), kartice in dogodki se NE razlamajo čez prelom strani
+     (dolge sekcije izpustimo — browser bi jih vseeno prelomil) */
+  .print-card,
+  .pot-page [id^="dan-"],
+  .pot-page article,
+  .pot-page [data-slot="card"] {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Promocijska noga strani se ne natisne (URL nogica je ločen <p>) */
+  .pot-page footer {
+    display: none !important;
+  }
+
+  /* Povezave naj bodo prepoznavne */
+  .pot-page a {
+    text-decoration: underline !important;
+  }
+
+  /* Povrni prirezano besedilo (line-clamp) — v PDF celoten opis */
+  .pot-page .line-clamp-2,
+  .pot-page .line-clamp-4 {
+    display: block !important;
+    -webkit-box-orient: initial;
+    -webkit-line-clamp: none !important;
+    line-clamp: none !important;
+    overflow: visible !important;
+  }
+}

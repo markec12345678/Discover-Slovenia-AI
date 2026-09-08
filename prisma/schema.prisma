@@ -77,6 +77,21 @@ model SavedItinerary {
   @@index([userId])
 }
 
+// Glasovi obiskovalcev na lokacijah deljenih potovanj (/pot/[shareId])
+// Skupinsko planiranje: vsak anonimni obiskovalec (voterId, client-generated)
+// lahko glasuje za destination_id (locationKey) na točno enem deljenem tripu
+// (shareId) — unique constraint to zagotavlja (idempotent insert).
+model TripVote {
+  id          String   @id @default(cuid())
+  shareId     String
+  locationKey String
+  voterId     String
+  createdAt   DateTime @default(now())
+
+  @@unique([shareId, locationKey, voterId])
+  @@index([shareId])
+}
+
 // ============================================================================
 // LOKALCI (LISTINGS)
 // ============================================================================

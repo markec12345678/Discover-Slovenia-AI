@@ -9,6 +9,11 @@ import {
   fetchDailyForecast,
   weatherCodeToText,
 } from "@/lib/weather-utils";
+import { matchEventsForItinerary } from "@/lib/events-match";
+import {
+  buildPackingList,
+  sanitizeAiPackingList,
+} from "@/lib/packing-list";
 
 // POST /api/itinerary - generira AI itinerer z z-ai-web-dev-sdk
 // AI prioritizira SPONZORIRANE lokale (premium/enterprise stranke ki plačajo za vključitev)
@@ -95,6 +100,7 @@ Pravila:
 7. Časovni okvirji naj bodo realistični (upostevaj vožnjo med lokacijami ~30-45min)
 8. Kadar ustreza, v notes ali recommendations omeni predlagane partnerje (npr. "Za kosilo obiščite Restavracijo JB v Ljubljani")
 9. V notes dodaj ocenjen čas vožnje do naslednje lokacije (npr. "30 min vožnje do Bohinja")
+10. "packing_list": 8-14 konkretnih stvari za ta izlet (sezona, interesi, trajanje)
 
 JSON format (STROGO):
 {
@@ -116,7 +122,8 @@ JSON format (STROGO):
   ],
   "total_budget": 500,
   "recommendations": ["Vzemi sončna očala", "Rezerviraj čoln vnaprej pri Pletna Bled"],
-  "tips": ["Začni zgodaj za manj ljudi"]
+  "tips": ["Začni zgodaj za manj ljudi"],
+  "packing_list": ["Sončna krema SPF 50", "Pohodniški čevlji", "Evrovi gotovina"]
 }`;
 
   try {
@@ -144,14 +151,36 @@ JSON format (STROGO):
 
     console.log(`[itinerary] AI uspešno (source: ${result.source})`);
 
+    // Pakirni seznam — AI predlog (validirana) ali hevristika, če AI izpusti/neveljavna
+    itinerary.packingList =
+      sanitizeAiPackingList(parsed.packing_list) ??
+      buildPackingList({
+        season: input.season,
+        interests: input.interests,
+        days: input.days,
+      });
+
     // PRAVO vreme — vreme iz AI izhoda prepišemo z realno Open-Meteo prognozo
     const enriched = await enrichWithRealWeather(itinerary);
+
+    // Dogodki na obiskanih destinacijah (neodvisno od vremena — ločeno polje)
+    enriched.events = matchEventsForItinerary(enriched.days, 6);
+
     return NextResponse.json(enriched);
   } catch (error) {
     console.error("[itinerary] AI napaka, uporabljam fallback:", error);
     const fallback = await enrichWithRealWeather(
       generateFallbackItinerary(input)
     );
+
+    // Fallback: hevristični pakirni seznam + dogodki (isti enrich kot AI pot)
+    fallback.packingList = buildPackingList({
+      season: input.season,
+      interests: input.interests,
+      days: input.days,
+    });
+    fallback.events = matchEventsForItinerary(fallback.days, 6);
+
     return NextResponse.json(fallback);
   }
 }
