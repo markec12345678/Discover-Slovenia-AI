@@ -55,3 +55,14 @@ server.log
 
 # Local lead data (file-based storage, no DB)
 /data/leads.json
+
+# VARNOST: lokalna baza, interni agent logi in uporabniški podatki se NE committajo
+/db/*.db
+/db/backups/
+/data/newsletter.json
+/data/leads.json
+/tool-results/
+/upload/
+/agent-ctx/
+/worklog.md
+/download/
