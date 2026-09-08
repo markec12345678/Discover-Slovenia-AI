@@ -20,6 +20,8 @@ export async function POST(request: Request) {
       "listing_click",
       "quiz_completed",
       "itinerary_saved",
+      "add_to_cart",
+      "checkout_completed",
     ];
     if (!step || !validSteps.includes(step)) {
       return NextResponse.json({ error: "Neveljaven funnel step" }, { status: 400 });
@@ -49,7 +51,7 @@ export async function GET(request: Request) {
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const [homepage, destination, itinerary, newsletter, listingClick, quizCompleted, itinerarySaved] = await Promise.all([
+    const [homepage, destination, itinerary, newsletter, listingClick, quizCompleted, itinerarySaved, addToCart, checkoutCompleted] = await Promise.all([
       db.pageView.count({ where: { funnelStep: "homepage_view", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "destination_view", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "itinerary_generate", createdAt: { gte: thirtyDaysAgo } } }),
@@ -57,12 +59,15 @@ export async function GET(request: Request) {
       db.pageView.count({ where: { funnelStep: "listing_click", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "quiz_completed", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "itinerary_saved", createdAt: { gte: thirtyDaysAgo } } }),
+      db.pageView.count({ where: { funnelStep: "add_to_cart", createdAt: { gte: thirtyDaysAgo } } }),
+      db.pageView.count({ where: { funnelStep: "checkout_completed", createdAt: { gte: thirtyDaysAgo } } }),
     ]);
 
     const homeToDest = homepage > 0 ? (destination / homepage) * 100 : 0;
     const destToItinerary = destination > 0 ? (itinerary / destination) * 100 : 0;
     const itineraryToSignup = itinerary > 0 ? (newsletter / itinerary) * 100 : 0;
     const overallConversion = homepage > 0 ? (newsletter / homepage) * 100 : 0;
+    const cartToCheckout = addToCart > 0 ? (checkoutCompleted / addToCart) * 100 : 0;
 
     return NextResponse.json({
       steps: {
@@ -73,12 +78,15 @@ export async function GET(request: Request) {
         listing_click: listingClick,
         quiz_completed: quizCompleted,
         itinerary_saved: itinerarySaved,
+        add_to_cart: addToCart,
+        checkout_completed: checkoutCompleted,
       },
       conversionRates: {
         home_to_destination: Math.round(homeToDest * 10) / 10,
         destination_to_itinerary: Math.round(destToItinerary * 10) / 10,
         itinerary_to_signup: Math.round(itineraryToSignup * 10) / 10,
         overall: Math.round(overallConversion * 10) / 10,
+        cart_to_checkout: Math.round(cartToCheckout * 10) / 10,
       },
       period: "30d",
     });

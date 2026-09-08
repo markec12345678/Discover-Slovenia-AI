@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
-import { Mountain, Menu, Sun, Moon, Compass, Search } from "lucide-react";
+import { Mountain, Menu, Sun, Moon, Compass, Search, ShoppingCart } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sheet";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { SmartSearch } from "@/components/smart-search";
+import { useCart } from "@/lib/cart-store";
 
 
 /**
@@ -44,10 +45,13 @@ export function Navigation() {
   const t = useTranslations("nav");
   const navLinks = useNavLinks();
 
-  // Cart store — itemCount() prikazujemo šele po mountu, da se izognemo
+  // Cart store — items prikazujemo šele po mountu, da se izognemo
   // hydration mismatchu (Zustand persist prebere localStorage šele na klientu).
-  const itemCount = 0;
-  const openCart = () => {};
+  const cartItems = useCart((s) => s.items);
+  const openCart = useCart((s) => s.openCart);
+  const cartCount = mounted
+    ? cartItems.reduce((sum, i) => sum + i.quantity, 0)
+    : 0;
 
   React.useEffect(() => setMounted(true), []);
 
@@ -93,8 +97,33 @@ export function Navigation() {
           ))}
         </nav>
 
-        {/* Desno: smart search + theme toggle + language switcher + CTA + mobile menu */}
+        {/* Desno: cart + smart search + theme toggle + language switcher + CTA + mobile menu */}
         <div className="flex items-center gap-1">
+          {/* Košarica (tržnica) */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={openCart}
+            aria-label={
+              cartCount > 0
+                ? `Odpri košarico (${cartCount} izdelkov)`
+                : "Odpri košarico"
+            }
+            className="relative text-foreground"
+          >
+            <ShoppingCart className="size-5" aria-hidden="true" />
+            {cartCount > 0 ? (
+              <span
+                className={cn(
+                  "absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground"
+                )}
+                aria-hidden="true"
+              >
+                {cartCount > 99 ? "99+" : cartCount}
+              </span>
+            ) : null}
+          </Button>
+
           <Button
             variant="ghost"
             size="icon"

@@ -9,7 +9,10 @@ export type FunnelStep =
   | "listing_click"
   // Novi koraki (Faza 0 — kviz + shranjevanje):
   | "quiz_completed"
-  | "itinerary_saved";
+  | "itinerary_saved"
+  // Novi koraki (monetizacija — tržnica):
+  | "add_to_cart"
+  | "checkout_completed";
 
 export function trackFunnel(step: FunnelStep, path?: string) {
   // Fire-and-forget — ne blokiraj UI

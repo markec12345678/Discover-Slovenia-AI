@@ -33,6 +33,9 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { useCart } from "@/lib/cart-store";
+import { trackFunnel } from "@/lib/funnel";
+import { useToast } from "@/hooks/use-toast";
 
 import {
   PRODUCT_CATEGORY_LABELS,
@@ -490,6 +493,8 @@ function ProductCard({
   product: Product;
   onOpen: () => void;
 }) {
+  const addItem = useCart((s) => s.addItem);
+  const { toast } = useToast();
   const image = product.images[0];
   const discount = product.compareAtPrice
     ? Math.round(
@@ -498,11 +503,30 @@ function ProductCard({
       )
     : 0;
 
-  // Preusmeritev na ponudnika — mi samo usmerjamo promet, ne pobiramo plačil
-  const handleVisitSeller = () => {
-    if (product.sellerWebsite) {
-      window.open(product.sellerWebsite, "_blank", "noopener,noreferrer");
+  const handleAddToCart = () => {
+    if (product.stock <= 0) {
+      toast({
+        title: "Ni na zalogi",
+        description: `${product.name} je trenutno razprodan.`,
+        variant: "destructive",
+      });
+      return;
     }
+    addItem({
+      productId: product.id,
+      name: product.name,
+      slug: product.slug,
+      price: product.price,
+      image: product.images[0] ?? "",
+      sellerName: product.sellerName,
+      shippingFree: product.shippingFree,
+      currency: product.currency,
+    });
+    trackFunnel("add_to_cart");
+    toast({
+      title: "Dodano v košarico",
+      description: product.name,
+    });
   };
 
   return (
@@ -636,12 +660,12 @@ function ProductCard({
           <Button
             type="button"
             size="sm"
-            className="flex-1 justify-center bg-primary text-primary-foreground hover:bg-primary/90"
-            disabled={!product.sellerWebsite}
-            onClick={handleVisitSeller}
+            className="flex-1 justify-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+            disabled={product.stock <= 0}
+            onClick={handleAddToCart}
           >
-            <ExternalLink className="size-4" aria-hidden="true" />
-            {product.sellerWebsite ? "Pri prodajalcu" : "Brez spletne"}
+            <ShoppingBag className="size-4" aria-hidden="true" />
+            {product.stock > 0 ? "V košarico" : "Razprodano"}
           </Button>
           <Button
             type="button"

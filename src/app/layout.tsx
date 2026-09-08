@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProviderWrapper } from "@/components/session-provider";
 import { ServiceWorkerRegister } from "@/components/sw-register";
+import { CartDrawer } from "@/components/cart-drawer";
 import {
   WebSiteJsonLd,
   OrganizationJsonLd,
@@ -72,6 +73,8 @@ export default async function RootLayout({
           >
             <SessionProviderWrapper>
               {children}
+              {/* Košarica tržnice — globalno montirana (odpre se iz navigacije ali ob dodajanju) */}
+              <CartDrawer />
               <Toaster />
             </SessionProviderWrapper>
           </ThemeProvider>

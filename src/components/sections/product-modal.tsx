@@ -39,6 +39,9 @@ import {
   formatPrice,
   type Product,
 } from "@/lib/marketplace-types";
+import { useCart } from "@/lib/cart-store";
+import { trackFunnel } from "@/lib/funnel";
+import { useToast } from "@/hooks/use-toast";
 
 
 interface ProductModalProps {
@@ -61,6 +64,34 @@ interface RecommendationsResponse {
  */
 export function ProductModal({ product, onClose, onSelect }: ProductModalProps) {
   const [activeImage, setActiveImage] = useState(0);
+  const addItem = useCart((s) => s.addItem);
+  const { toast } = useToast();
+
+  const handleAddToCart = (p: Product) => {
+    if (p.stock <= 0) {
+      toast({
+        title: "Ni na zalogi",
+        description: "Ta izdelek je trenutno razprodan.",
+        variant: "destructive",
+      });
+      return;
+    }
+    addItem({
+      productId: p.id,
+      name: p.name,
+      slug: p.slug,
+      price: p.price,
+      image: p.images[0] ?? "",
+      sellerName: p.sellerName,
+      shippingFree: p.shippingFree,
+      currency: p.currency,
+    });
+    trackFunnel("add_to_cart");
+    toast({
+      title: "Dodano v košarico",
+      description: `${p.name} — košarica se je odprla na desni.`,
+    });
+  };
 
   // Reset aktivne slike ko se spremeni izdelek (render-phase check, brez effect-a)
   const prevProductId = useRef<string | undefined>(undefined);
@@ -412,13 +443,26 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
               />
             </section>
 
-            {/* CTA — preusmeritev na prodajalca (mi ne pobiramo plačil) */}
+            {/* CTA — nakup prek naše tržnice (košarica) ali priprava do prodajalca */}
             <div className="space-y-2">
+              <Button
+                type="button"
+                size="lg"
+                disabled={product.stock <= 0}
+                className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => handleAddToCart(product)}
+              >
+                <ShoppingBag className="size-4" aria-hidden="true" />
+                {product.stock > 0
+                  ? `V košarico — ${formatPrice(product.price, product.currency)}`
+                  : "Ni na zalogi"}
+              </Button>
               <Button
                 type="button"
                 asChild
                 size="lg"
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                variant="outline"
+                className="w-full"
               >
                 {product.sellerWebsite ? (
                   <a
