@@ -10,6 +10,7 @@ import { ListingsSection } from "@/components/sections/listings";
 import { MarketplaceSection } from "@/components/sections/marketplace";
 import { ExperiencesSection } from "@/components/sections/experiences";
 import { EventsCalendar } from "@/components/sections/events-calendar";
+import { CommunityTrips } from "@/components/sections/community-trips";
 import { BlogSection } from "@/components/sections/blog";
 import { AffiliateSection } from "@/components/sections/affiliate-section";
 import { JoinUs } from "@/components/sections/join-us";
@@ -50,6 +51,10 @@ export default function Home() {
         <MarketplaceSection />
         <ExperiencesSection />
         <EventsCalendar />
+        {/* Javna galerija skupnostnih potovanj — viralni loop: deljeni načrti
+            prinesejo nov promet, ki konvertira prek tržnice/rezervacij zgoraj;
+            social proof takoj pred newsletterjem. Skrije se, če ni javnih poti. */}
+        <CommunityTrips />
         <BlogSection />
         <AffiliateSection />
         <JoinUs />

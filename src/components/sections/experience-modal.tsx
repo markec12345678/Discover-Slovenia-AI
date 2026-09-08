@@ -49,6 +49,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trackFunnel } from "@/lib/funnel";
+import { ReviewSection } from "@/components/review-section";
 import {
   EXPERIENCE_CATEGORY_LABELS,
   EXPERIENCE_CATEGORY_ICONS,
@@ -519,6 +520,9 @@ export function ExperienceModal({
               experience={experience}
               onPhaseChange={setBookingPhase}
             />
+
+            {/* UGC mnenja obiskovalcev (ločeno od demo ratinga) */}
+            <ReviewSection key={experience.id} experienceId={experience.id} />
 
             {/* Morda vam je všeč — AI priporočila */}
             <RecommendationsSection

@@ -42,6 +42,7 @@ import {
 import { useCart } from "@/lib/cart-store";
 import { trackFunnel } from "@/lib/funnel";
 import { useToast } from "@/hooks/use-toast";
+import { ReviewSection } from "@/components/review-section";
 
 
 interface ProductModalProps {
@@ -442,6 +443,9 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
                 value={product.saleCount.toLocaleString("sl-SI")}
               />
             </section>
+
+            {/* UGC mnenja obiskovalcev (ločeno od demo ratinga) */}
+            <ReviewSection key={product.id} productId={product.id} />
 
             {/* CTA — nakup prek naše tržnice (košarica) ali priprava do prodajalca */}
             <div className="space-y-2">

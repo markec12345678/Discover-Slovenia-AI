@@ -220,6 +220,9 @@ model Product {
   // Status sistem (Faza 1)
   status          String   @default("published")
 
+  // UGC recenzije obiskovalcev (ločeno od demo rating/reviewCount iz CSV-seeda)
+  reviews         Review[]
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   ownerId         String?
@@ -268,6 +271,9 @@ model Experience {
   // Status sistem (Faza 1)
   status          String   @default("published")
 
+  // UGC recenzije obiskovalcev (ločeno od demo rating/reviewCount iz CSV-seeda)
+  reviews         Review[]
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   ownerId         String?
@@ -278,6 +284,30 @@ model Experience {
   @@index([featured])
   @@index([ownerId])
   @@index([status])
+}
+
+// ============================================================================
+// UGC RECENZIJE (Faza 2)
+// ============================================================================
+
+// UGC mnenja obiskovalcev za izdelke in izkušnje tržnice — social proof.
+// NAMENOMA ločeno od Product.rating/Experience.rating (demo podatki iz
+// CSV-seeda): povprečje UGC se izračuna dinamično iz teh vrstic.
+// productId XOR experienceId (ena od obeh, obe ne) — validacija v API-ju.
+model Review {
+  id           String   @id @default(cuid())
+  productId    String?
+  experienceId String?
+  authorName   String
+  rating       Int      // 1–5
+  comment      String   // 10–1000 znakov (validirano v API-ju)
+  createdAt    DateTime @default(now())
+
+  product      Product?     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  experience   Experience?  @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([experienceId])
 }
 
 // ============================================================================
