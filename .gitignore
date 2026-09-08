@@ -66,3 +66,9 @@ server.log
 /agent-ctx/
 /worklog.md
 /download/
+
+# Z.ai sandbox ostanki (niso del projekta)
+/.zscripts/
+/examples/
+/mini-services/
+/Caddyfile
