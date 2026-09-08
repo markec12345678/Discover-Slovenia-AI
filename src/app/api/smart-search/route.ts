@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/smart-search — naravno-jezikovno iskanje po platformi
 //
@@ -34,6 +35,10 @@ interface SearchResults {
 }
 
 export async function POST(request: Request) {
+    // Rate limit AI iskanja
+    const limited = rateLimit(request, { limit: 30, windowMs: 600000, key: "smart-search" });
+    if (limited) return limited;
+
   let body: SmartSearchRequest;
   try {
     body = (await request.json()) as SmartSearchRequest;

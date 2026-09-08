@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { normalizePath } from "@/lib/sitemap-urls";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/admin/track-pageview — beleži ogled strani v PageView tabelo
 // Telo: { path: string, title?: string, referrer?: string }
@@ -11,6 +12,10 @@ import { normalizePath } from "@/lib/sitemap-urls";
 // Za sledenje listingom (z listingId) uporabljamo /api/listings/[slug]/track
 // ali /api/experiences/[slug]/track — ta endpoint je zgolj za path tracking.
 export async function POST(request: Request) {
+    // Rate limit analitike (spam zaščita)
+    const limited = rateLimit(request, { limit: 60, windowMs: 60000, key: "track-pageview" });
+    if (limited) return limited;
+
   try {
     const body: unknown = await request.json().catch(() => null);
     if (typeof body !== "object" || body === null) {

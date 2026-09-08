@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "@/lib/security";
 
 // ============================================================================
 // TIPI
@@ -217,11 +218,14 @@ export async function requireOwner() {
 
 /**
  * Preveri ali je uporabnik admin (preko admin gesla).
+ *
+ * VARNOST: constant-time (timing-safe) primerjava — preprečuje timing
+ * napade na ugibanje admin gesla. Fail-closed, če ADMIN_PASSWORD ni nastavljen.
  */
 export function checkAdmin(password: string | null | undefined): boolean {
   const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminPassword) return false;
-  return password === adminPassword;
+  if (!adminPassword || !password) return false;
+  return timingSafeEqual(password, adminPassword);
 }
 
 /**

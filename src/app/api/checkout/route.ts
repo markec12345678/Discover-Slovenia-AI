@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { rateLimit } from "@/lib/rate-limit";
+import { randomId } from "@/lib/security";
 
 /**
  * POST /api/checkout
@@ -11,7 +13,7 @@ import { db } from "@/lib/db";
  *
  * - Validira vhod (email, ime, naslov required; items ne sme biti prazen)
  * - Server-side izračuna subtotal, shipping, total (ne zaupaj clientu)
- * - Generira orderNumber: IF-2025-XXXXXX
+ * - Generira orderNumber: IF-<leto>-<naključni ID> (nerodljiv)
  * - DEMO mode (STRIPE_SECRET_KEY vsebuje "demo_placeholder"):
  *     - direktno ustvari Order s status="paid" + paidAt=now
  * - PRODUCTION mode: TODO — Stripe Checkout Session
@@ -20,6 +22,14 @@ import { db } from "@/lib/db";
  */
 export async function POST(request: Request) {
   try {
+    // Rate limit (preprečuje spam naročil)
+    const limited = rateLimit(request, {
+      limit: 10,
+      windowMs: 60 * 60_000,
+      key: "checkout",
+    });
+    if (limited) return limited;
+
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== "object") {
       return NextResponse.json(
@@ -199,10 +209,9 @@ export async function POST(request: Request) {
 
     const total = subtotal + shipping;
 
-    // --- Generiraj orderNumber ---
+    // --- Generiraj orderNumber (naključni — neurogljiv) ---
     const year = new Date().getFullYear();
-    const random = Date.now().toString().slice(-6);
-    const orderNumber = `IF-${year}-${random}`;
+    const orderNumber = `IF-${year}-${randomId(8)}`;
 
     // --- Preveri ali je Stripe v demo načinu ---
     const stripeKey = process.env.STRIPE_SECRET_KEY ?? "";

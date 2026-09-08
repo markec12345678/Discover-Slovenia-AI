@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/chat — AI chatbot z dostopom do vsebine platforme
 //
@@ -27,6 +28,10 @@ interface ChatRequest {
 }
 
 export async function POST(request: Request) {
+    // Rate limit AI klepetalnika (stroškovna zaščita)
+    const limited = rateLimit(request, { limit: 20, windowMs: 600000, key: "ai-chat" });
+    if (limited) return limited;
+
   let body: ChatRequest;
   try {
     body = (await request.json()) as ChatRequest;

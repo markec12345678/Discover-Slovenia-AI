@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateCompletion } from "@/lib/ai-client";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/translate — AI prevajalni pomočnik za developerje
 //
@@ -29,6 +30,10 @@ const LANGUAGE_LABELS: Record<string, string> = {
 };
 
 export async function POST(request: Request) {
+    // Rate limit prevajanja
+    const limited = rateLimit(request, { limit: 30, windowMs: 600000, key: "translate" });
+    if (limited) return limited;
+
   let body: TranslateRequest;
   try {
     body = (await request.json()) as TranslateRequest;

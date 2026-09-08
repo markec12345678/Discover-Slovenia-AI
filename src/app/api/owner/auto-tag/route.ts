@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { generateCompletion } from "@/lib/ai-client";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/owner/auto-tag — AI predlaga kategorijo + atribute iz opisa
 //
@@ -9,6 +12,9 @@ import { generateCompletion } from "@/lib/ai-client";
 // - tags (prosti tagi za iskanje)
 //
 // Lastnik samo potrdi predloge — prihrani čas pri onboarding-u.
+//
+// VARNOST: zahteva prijavljeno owner sejo (prej je bil endpoint odprt —
+// nezavestna AI kvota za vse) + rate limit.
 
 interface AutoTagRequest {
   type: "listing" | "product" | "experience";
@@ -40,6 +46,23 @@ const VALID_ATTRIBUTES: Record<string, string[]> = {
 };
 
 export async function POST(request: Request) {
+  // Rate limit AI klicev (5 na 10 min na IP)
+  const limited = rateLimit(request, {
+    limit: 5,
+    windowMs: 10 * 60_000,
+    key: "auto-tag",
+  });
+  if (limited) return limited;
+
+  // Zahtevaj owner sejo — endpoint je namenjen prijavljelim ponudnikom
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: "Za AI auto-tag se prijavite kot ponudnik." },
+      { status: 401 }
+    );
+  }
+
   let body: AutoTagRequest;
   try {
     body = (await request.json()) as AutoTagRequest;

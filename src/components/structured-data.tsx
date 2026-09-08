@@ -5,6 +5,7 @@ import type { Destination } from "@/lib/types";
 import type { Listing } from "@/lib/listings-types";
 import type { Product, Experience } from "@/lib/marketplace-types";
 import { BASE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/seo";
+import { safeJsonLd } from "@/lib/security";
 
 // Slovenske oznake regij za berljiv prikaz v strukturiiranih podatkih.
 const REGION_LABELS: Record<string, string> = {
@@ -28,7 +29,7 @@ function JsonLdScript({ data }: JsonLdProps) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(data) }}
     />
   );
 }

@@ -121,7 +121,13 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
       )}
 
       {/* Timeline za vsak dan */}
-      {days.map((day) => (
+      {days.map((day) => {
+        // Skupni strošek dneva (uporabljen v day budget summary spodaj)
+        const dayCost = day.locations.reduce(
+          (sum, v) => sum + (v.estimated_cost || 0),
+          0
+        );
+        return (
         <div key={day.day} className="relative">
           {/* Dan header */}
           <div className="mb-4 flex items-center gap-3">
@@ -151,7 +157,6 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
               const nextVisit = day.locations[idx + 1];
               // Preprosta hevristika za travel time (v produkciji: Google Maps API)
               const travelTime = nextVisit ? estimateTravelTime(visit.destination_name, nextVisit.destination_name) : null;
-              const dayCost = day.locations.reduce((sum, v) => sum + (v.estimated_cost || 0), 0);
 
               return (
                 <div
@@ -289,7 +294,8 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
 
       {/* AI nasveti na dnu */}
       {days[0]?.locations && days[0].locations.length > 0 && (

@@ -4,6 +4,7 @@ import path from "path";
 import { sendEmail, getAdminEmail } from "@/lib/email";
 import { leadNotificationEmail } from "@/lib/email-templates";
 import { db } from "@/lib/db";
+import { rateLimit } from "@/lib/rate-limit";
 
 interface Lead {
   id: string;
@@ -77,6 +78,10 @@ async function writeLeads(leads: Lead[]): Promise<void> {
 }
 
 export async function POST(request: Request) {
+    // Rate limit lead form
+    const limited = rateLimit(request, { limit: 10, windowMs: 3600000, key: "leads" });
+    if (limited) return limited;
+
   try {
     const body: unknown = await request.json();
 

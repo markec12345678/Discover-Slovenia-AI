@@ -4,10 +4,15 @@ import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
 import { rankListings, buildTransparencyContext } from "@/lib/ranking-engine";
 import type { Itinerary, PlannerInput, DayPlan, LocationVisit } from "@/lib/types";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/itinerary - generira AI itinerer z z-ai-web-dev-sdk
 // AI prioritizira SPONZORIRANE lokale (premium/enterprise stranke ki plačajo za vključitev)
 export async function POST(request: Request) {
+    // Rate limit AI itinererjev (drag endpoint)
+    const limited = rateLimit(request, { limit: 10, windowMs: 600000, key: "itinerary" });
+    if (limited) return limited;
+
   let input: PlannerInput;
   try {
     input = (await request.json()) as PlannerInput;

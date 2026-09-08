@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sendEmail } from "@/lib/email";
 import { welcomeEmail } from "@/lib/email-templates";
+import { rateLimit } from "@/lib/rate-limit";
 
 // Validacijska shema za welcome email
 const welcomeSchema = z.object({
@@ -14,6 +15,10 @@ const welcomeSchema = z.object({
 // POST /api/email/welcome — internal API za pošiljanje welcome emaila
 // Kliče se iz /api/owner/register po uspešni registraciji
 export async function POST(request: Request) {
+    // Rate limit emailov (relay zaščita)
+    const limited = rateLimit(request, { limit: 5, windowMs: 3600000, key: "email-welcome" });
+    if (limited) return limited;
+
   try {
     const body: unknown = await request.json().catch(() => ({}));
     const parsed = welcomeSchema.safeParse(body);

@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { checkAdmin } from "@/lib/auth-guards";
 import { generateCompletion } from "@/lib/ai-client";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
+import { rateLimit } from "@/lib/rate-limit";
+import { escapeHtml } from "@/lib/security";
 
 // POST /api/admin/approve/[id] — odobri lokal in ga objavi
 // Header: x-admin-password
@@ -18,6 +20,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limit admin akcij (brute-force zaščita)
+    const limited = rateLimit(request, { limit: 60, windowMs: 10 * 60_000, key: "admin-approve" });
+    if (limited) return limited;
+
     if (!checkAdmin(request.headers.get("x-admin-password"))) {
       return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
     }
@@ -117,7 +123,7 @@ Opis lokalca: ${description}`;
       { role: "system", content: "Si SEO strokovnjak. Vedno odgovoriš z veljavnim JSON." },
       { role: "user", content: prompt },
     ],
-    { temperature: 0.4, jsonMode: true, feature: "tag" }
+    { temperature: 0.4, jsonMode: true }
   );
 
   if (!result?.content) return;
@@ -152,19 +158,17 @@ Opis lokalca: ${description}`;
 
 // Email obvestilo o odobritvi
 async function sendApprovalEmail(email: string, name: string, listingName: string) {
-  // Uporabi obstoječi email sistem
-  const { sendEmail } = await import("@/lib/email");
-  const { emailTemplate } = await import("@/lib/email");
+  const { sendEmail, emailTemplate } = await import("@/lib/email");
 
-  await sendEmail(
-    email,
-    `✅ Vaš lokal "${listingName}" je odobren!`,
-    emailTemplate(
+  await sendEmail({
+    to: email,
+    subject: `✅ Vaš lokal "${listingName}" je odobren!`,
+    html: emailTemplate(
       "Lokal odobren in objavljen",
-      `<p>Pozdravljeni <strong>${name}</strong>,</p>
-      <p>Vaš lokal <strong>${listingName}</strong> je bil odobren in je sedaj objavljen na platformi Discover Slovenia AI.</p>
+      `<p>Pozdravljeni <strong>${escapeHtml(name)}</strong>,</p>
+      <p>Vaš lokal <strong>${escapeHtml(listingName)}</strong> je bil odobren in je sedaj objavljen na platformi Discover Slovenia AI.</p>
       <p>AI ga lahko sedaj priporoča uporabnikom v itinererjih in iskanju.</p>
       <p>Vaš profil je bil avtomatsko optimiziran z AI (SEO oznake, ključne besede).</p>`
-    )
-  );
+    ),
+  });
 }

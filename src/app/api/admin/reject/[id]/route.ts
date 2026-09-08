@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { checkAdmin } from "@/lib/auth-guards";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
+import { rateLimit } from "@/lib/rate-limit";
+import { escapeHtml } from "@/lib/security";
 
 // Validni razlogi za zavrnitev
 const REJECTION_REASONS = [
@@ -25,6 +27,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limit (brute-force zaščita)
+    const limited = rateLimit(request, { limit: 60, windowMs: 10 * 60_000, key: "admin-reject" });
+    if (limited) return limited;
+
     if (!checkAdmin(request.headers.get("x-admin-password"))) {
       return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
     }
@@ -130,18 +136,18 @@ async function sendRejectionEmail(
 ) {
   const { sendEmail, emailTemplate } = await import("@/lib/email");
 
-  await sendEmail(
-    email,
-    `Vaš lokal "${listingName}" potrebuje popravke`,
-    emailTemplate(
+  await sendEmail({
+    to: email,
+    subject: `Vaš lokal "${listingName}" potrebuje popravke`,
+    html: emailTemplate(
       "Lokal potrebuje popravke",
-      `<p>Pozdravljeni <strong>${name}</strong>,</p>
-      <p>Vaš lokal <strong>${listingName}</strong> je bil pregledan in potrebuje naslednje popravke:</p>
+      `<p>Pozdravljeni <strong>${escapeHtml(name)}</strong>,</p>
+      <p>Vaš lokal <strong>${escapeHtml(listingName)}</strong> je bil pregledan in potrebuje naslednje popravke:</p>
       <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 16px 0; border-radius: 4px;">
-        <strong>Razlog:</strong> ${reason}
+        <strong>Razlog:</strong> ${escapeHtml(reason)}
       </div>
       <p>Prosimo, da uredite lokal in ga ponovno oddate v pregled. V dashboardu kliknite "Uredi" in nato "Oddaj v pregled".</p>
       <p>Če imate vprašanja, pišite na <a href="mailto:support@discoverslovenia.ai">support@discoverslovenia.ai</a>.</p>`
-    )
-  );
+    ),
+  });
 }

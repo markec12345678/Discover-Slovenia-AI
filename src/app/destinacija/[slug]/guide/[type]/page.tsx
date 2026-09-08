@@ -1,3 +1,4 @@
+import { safeJsonLd } from "@/lib/security";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -422,15 +423,15 @@ export default async function GuidePage({
     <div className="min-h-screen bg-background">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(faqs)) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd(faqs)) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbs) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(touristTrip) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(touristTrip) }}
       />
 
       {/* PageView tracking — beleži ogled v PageView tabelo */}

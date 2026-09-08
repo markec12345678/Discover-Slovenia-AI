@@ -3,6 +3,7 @@ import { DESTINATIONS } from "@/lib/slovenia-data";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
 import type { Itinerary, PlannerInput, DayPlan, LocationVisit } from "@/lib/types";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/itinerary/refine — Multi-turn popravki obstoječega itinererja.
 //
@@ -21,6 +22,10 @@ interface RefineRequest {
 }
 
 export async function POST(request: Request) {
+    // Rate limit AI refine klicev
+    const limited = rateLimit(request, { limit: 20, windowMs: 600000, key: "itinerary-refine" });
+    if (limited) return limited;
+
   let body: RefineRequest;
   try {
     body = (await request.json()) as RefineRequest;

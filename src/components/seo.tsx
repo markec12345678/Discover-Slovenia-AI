@@ -1,4 +1,5 @@
 // Reusable JSON-LD schema generators za SEO
+import { safeJsonLd } from "@/lib/security";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { Destination } from "@/lib/types";
 
@@ -218,7 +219,7 @@ export function JsonLd({ data }: { data: object }) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(data) }}
     />
   );
 }

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { recalculatePartnerStatus } from "@/lib/quality-score";
+import { verifyCronAuth } from "@/lib/security";
 
 // GET /api/cron/recalculate-status — dnevno preračuna Quality Score in partner statuse
-// Auth: CRON_SECRET ali ADMIN_PASSWORD
+// Auth: CRON_SECRET ali ADMIN_PASSWORD (timing-safe)
 //
 // Kaj dela:
 // 1. Za vsak published lokal izračuna Quality Score
@@ -12,17 +13,8 @@ import { recalculatePartnerStatus } from "@/lib/quality-score";
 // 4. Če Featured pogoj odpade → degradira na premium
 export async function GET(request: Request) {
   try {
-    const authHeader = request.headers.get("authorization");
-    const cronSecret = process.env.CRON_SECRET;
-    const adminPassword = process.env.ADMIN_PASSWORD;
-
-    const authorized =
-      (cronSecret && authHeader === `Bearer ${cronSecret}`) ||
-      (adminPassword && request.headers.get("x-admin-password") === adminPassword);
-
-    if (!authorized) {
-      return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
-    }
+    const unauthorized = verifyCronAuth(request);
+    if (unauthorized) return unauthorized;
 
     console.log("[cron/recalculate-status] Začenjam preračun...");
 

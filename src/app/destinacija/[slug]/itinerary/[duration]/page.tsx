@@ -1,3 +1,4 @@
+import { safeJsonLd } from "@/lib/security";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -78,7 +79,7 @@ export default async function ItineraryPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
 
       <div className="relative h-[350px] w-full overflow-hidden">
         <img src={dest.image} alt={dest.name} className="size-full object-cover" />

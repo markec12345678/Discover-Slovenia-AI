@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { generateCompletion } from "@/lib/ai-client";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/pois/describe — generira AI opis za POI (z enkratnim cache-iranjem)
 //
@@ -65,6 +66,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export async function POST(request: Request) {
+    // Rate limit AI POI opisov (cache-first)
+    const limited = rateLimit(request, { limit: 60, windowMs: 600000, key: "poi-describe" });
+    if (limited) return limited;
+
   let body: DescribeRequest;
   try {
     body = (await request.json()) as DescribeRequest;

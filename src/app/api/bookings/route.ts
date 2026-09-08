@@ -1,20 +1,33 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { rateLimit } from "@/lib/rate-limit";
+import { randomId } from "@/lib/security";
 
 // POST /api/bookings — ustvari rezervacijo izkušnje (demo ali production Stripe)
 //
 // Body:
 //   {
-//     experienceId, experienceName, pricePerPerson, groupSize, bookingDate,
+//     experienceId, groupSize, bookingDate,
 //     guest: { name, email, phone, notes },
-//     provider: { name, email, meetingPoint }
+//     provider: { name, email, meetingPoint } (fallback, če iz DB manjka)
 //   }
+//
+// VARNOST: ceno, ime izkušnje in kontakt ponudnika preberemo iz baze
+// (client posredovana cena se NE zaupa — prej je bila možna €0 rezervacija).
 //
 // DEMO mode (brez realnih Stripe ključev): direktno ustvari Booking z
 // status="confirmed", confirmedAt=now. V production mode-u bo tu Stripe
 // Checkout Session (TODO).
 export async function POST(request: Request) {
   try {
+    // Rate limit (preprečuje spam rezervacij)
+    const limited = rateLimit(request, {
+      limit: 10,
+      windowMs: 60 * 60_000,
+      key: "booking-create",
+    });
+    if (limited) return limited;
+
     const body: unknown = await request.json();
     const b = (body ?? {}) as Record<string, unknown>;
 
@@ -27,21 +40,42 @@ export async function POST(request: Request) {
       );
     }
 
-    const experienceName = String(b.experienceName ?? "").trim();
-    if (!experienceName) {
+    // === Server-side preverjanje izkušnje in cene (iz DB!) ===
+    // Client poslane vrednosti se uporabijo le kot fallback, če v DB manjka podatek.
+    const dbExperience = await db.experience.findUnique({
+      where: { id: experienceId },
+      select: {
+        name: true,
+        pricePerPerson: true,
+        providerName: true,
+        providerEmail: true,
+        meetingPoint: true,
+        status: true,
+      },
+    });
+
+    if (!dbExperience || dbExperience.status === "deleted") {
       return NextResponse.json(
-        { success: false, error: "Manjka experienceName" },
-        { status: 400 }
+        { success: false, error: "Izkušnja ne obstaja" },
+        { status: 404 }
       );
     }
 
-    const pricePerPerson = Number(b.pricePerPerson);
-    if (!Number.isFinite(pricePerPerson) || pricePerPerson < 0) {
-      return NextResponse.json(
-        { success: false, error: "Neveljavna cena na osebo" },
-        { status: 400 }
-      );
-    }
+    // Cena iz baze — client ne more manipulirati
+    const pricePerPerson = dbExperience.pricePerPerson;
+    const experienceName = dbExperience.name;
+    const providerName =
+      dbExperience.providerName ||
+      String(((b.provider ?? {}) as Record<string, unknown>).name ?? "").trim() ||
+      "Neznan ponudnik";
+    const providerEmail =
+      dbExperience.providerEmail ||
+      String(((b.provider ?? {}) as Record<string, unknown>).email ?? "").trim() ||
+      "ni-na-voljo@discoverslovenia.ai";
+    const meetingPoint =
+      dbExperience.meetingPoint ||
+      String(((b.provider ?? {}) as Record<string, unknown>).meetingPoint ?? "").trim() ||
+      null;
 
     const groupSize = Number(b.groupSize);
     if (!Number.isInteger(groupSize) || groupSize < 1 || groupSize > 100) {
@@ -83,7 +117,7 @@ export async function POST(request: Request) {
     const guestName = String(guestRaw.name ?? "").trim();
     const guestEmail = String(guestRaw.email ?? "").trim();
     const guestPhone = String(guestRaw.phone ?? "").trim();
-    const notesRaw = String(guestRaw.notes ?? "").trim();
+    const notesRaw = String(guestRaw.notes ?? "").slice(0, 2000).trim();
 
     if (guestName.length < 2) {
       return NextResponse.json(
@@ -104,21 +138,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // Provider (snapshot)
-    const providerRaw = (b.provider ?? {}) as Record<string, unknown>;
-    const providerName =
-      String(providerRaw.name ?? "").trim() || "Neznan ponudnik";
-    const providerEmail =
-      String(providerRaw.email ?? "").trim() || "ni-na-voljo@ifslovenia.si";
-    const meetingPointRaw = String(providerRaw.meetingPoint ?? "").trim();
-    const meetingPoint = meetingPointRaw || null;
+    // (providerName, providerEmail, meetingPoint so že prevzeti iz DB zgoraj)
 
     // === Server-side izračun cene ===
     const total = Math.round(pricePerPerson * groupSize * 100) / 100;
     const currency = "EUR";
 
-    // === Generiraj bookingNumber ===
-    const bookingNumber = `IF-EXP-${Date.now().toString().slice(-6)}`;
+    // === Generiraj bookingNumber (nerodljiv — vključuje entropijo) ===
+    const bookingNumber = `IF-EXP-${randomId(8)}`;
 
     // === Preveri ali je Stripe v demo mode ===
     const stripeKey = process.env.STRIPE_SECRET_KEY;

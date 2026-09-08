@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/track-funnel — sledi konverzijskemu funnelu
 // Body: { step: "homepage_view" | "destination_view" | "itinerary_generate" | "newsletter_signup" | "listing_click", path?: string }
 export async function POST(request: Request) {
+    // Rate limit analitike (spam zaščita)
+    const limited = rateLimit(request, { limit: 60, windowMs: 60000, key: "track-funnel" });
+    if (limited) return limited;
+
   try {
     const { step, path } = await request.json();
 

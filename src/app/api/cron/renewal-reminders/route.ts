@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 import { renewalReminderEmail } from "@/lib/email-templates";
+import { verifyCronAuth } from "@/lib/security";
 
 // GET / POST /api/cron/renewal-reminders
 //
@@ -11,26 +12,28 @@ import { renewalReminderEmail } from "@/lib/email-templates";
 // PRIPOROČEN RAZPORED KLICANJA: dnevno (npr. ob 09:00 UTC)
 //   - Vercel Cron: dodaj v vercel.json
 //       { "crons": [{ "path": "/api/cron/renewal-reminders", "schedule": "0 9 * * *" }] }
-//   - External cron (curl): 0 9 * * * curl -X POST https://domena.si/api/cron/renewal-reminders
-//   - GitHub Actions: scheduled workflow z curl klicem
+//   - Vercel samodejno pošlje Authorization: Bearer <CRON_SECRET>, ko je
+//     CRON_SECRET nastavljen v env.
+//   - External cron (curl): 0 9 * * * curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://domena.si/api/cron/renewal-reminders
 //
-// Varnost: v produkciji zaščiti z CRON_SECRET (preveri x-cron-secret header).
-// Za demo/admin ročni klic je dovoljen brez secret-a.
+// VARNOST: endpoint zahteva CRON_SECRET (Bearer) ali admin geslo (timing-safe).
+// V produkciji brez CRON_SECRET fail-closed; v developmentu dovoljen ročni klic.
 
 const REMINDER_WINDOW_DAYS = 7;
 
-export async function GET() {
-  return runRenewalReminders();
+export async function GET(request: Request) {
+  return runRenewalReminders(request);
 }
 
-export async function POST() {
-  return runRenewalReminders();
+export async function POST(request: Request) {
+  return runRenewalReminders(request);
 }
 
-async function runRenewalReminders() {
+async function runRenewalReminders(request: Request) {
   try {
-    // V produkciji preveri secret (če je nastavljen)
-    // if (process.env.CRON_SECRET) { ... preveri header ... }
+    // Avtentikacija (prej je bil endpoint popolnoma odprt)
+    const unauthorized = verifyCronAuth(request);
+    if (unauthorized) return unauthorized;
 
     const now = new Date();
     const horizon = new Date(now);

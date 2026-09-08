@@ -111,20 +111,21 @@ export async function POST(request: Request) {
     }
 
     // Vzporedno pridobi podatke za vse destinacije
-    // Listingi: vsi lokalni z destinationId v našem seznamu, featured prvi
+    // VARNOST: samo published vsebine — draft/pending/rejected lokalci
+    // (z kontakt podatki ponudnikov) se ne smejo prikazati javno.
     const [listings, experiences, products] = await Promise.all([
       db.listing.findMany({
-        where: { destinationId: { in: destinationIds } },
+        where: { destinationId: { in: destinationIds }, status: "published" },
         orderBy: [{ featured: "desc" }, { rating: "desc" }],
         take: destinationIds.length * 3, // dovolj velik pool, nato razdelimo
       }),
       db.experience.findMany({
-        where: { destinationId: { in: destinationIds } },
+        where: { destinationId: { in: destinationIds }, status: "published" },
         orderBy: [{ featured: "desc" }, { rating: "desc" }],
         take: destinationIds.length * 3,
       }),
       db.product.findMany({
-        where: { destinationId: { in: destinationIds } },
+        where: { destinationId: { in: destinationIds }, status: "published" },
         orderBy: [{ featured: "desc" }, { rating: "desc" }],
         take: destinationIds.length * 3,
       }),

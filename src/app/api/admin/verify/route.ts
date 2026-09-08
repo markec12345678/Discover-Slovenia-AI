@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { checkAdmin } from "@/lib/auth-guards";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/admin/verify — preveri admin geslo
 // Telo: { password: string }
 // Odgovor: { success: true } | { error: string } (401)
 export async function POST(request: Request) {
+    // Rate limit admin gesla (brute-force zaščita)
+    const limited = rateLimit(request, { limit: 10, windowMs: 600000, key: "admin-verify" });
+    if (limited) return limited;
+
   try {
     const body: unknown = await request.json();
     const password =

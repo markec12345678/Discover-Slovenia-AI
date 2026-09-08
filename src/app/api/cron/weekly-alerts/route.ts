@@ -1,23 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { verifyCronAuth } from "@/lib/security";
 
 // GET /api/cron/weekly-alerts — vsak ponedeljek pošlje email vsem premium/enterprise ownerjem
 // Kliče se preko Vercel Cron ali external cron (npr. GitHub Actions)
 export async function GET(request: Request) {
   try {
-    // Preveri avtentikacijo (CRON_SECRET ali admin geslo)
-    const authHeader = request.headers.get("authorization");
-    const cronSecret = process.env.CRON_SECRET;
-    const adminPassword = process.env.ADMIN_PASSWORD;
-
-    const authorized =
-      (cronSecret && authHeader === `Bearer ${cronSecret}`) ||
-      (adminPassword && request.headers.get("x-admin-password") === adminPassword);
-
-    if (!authorized) {
-      return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
-    }
+    // Preveri avtentikacijo (CRON_SECRET Bearer ali admin geslo — timing-safe)
+    const unauthorized = verifyCronAuth(request);
+    if (unauthorized) return unauthorized;
 
     // Pridobi vse premium/enterprise lokalce z ownerjem
     const premiumListings = await db.listing.findMany({

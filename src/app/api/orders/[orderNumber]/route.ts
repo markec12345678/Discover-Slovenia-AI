@@ -1,17 +1,29 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { rateLimit } from "@/lib/rate-limit";
 
 /**
- * GET /api/orders/[orderNumber]
+ * GET /api/orders/[orderNumber]?email=kupec@primer.si
  *
  * Vrne Order podatek po orderNumber (za potrditev/status).
- * Uporablja se za order lookup (npr. po uspešnem checkoutu ali za tracking).
+ *
+ * VARNOST: ker orderNumber ni skrivnost, zahtevamo, da klicatelj navede
+ * email kupca, ki se mora ujemati z buyerEmail naročila. Brez ujemanja
+ * ne vrnemo PII podatkov (prej je bil endpoint popolnoma odprt — PII leak).
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ orderNumber: string }> }
 ) {
   try {
+    // Rate limit lookupov (preprečuje enumeracijo naročil)
+    const limited = rateLimit(request, {
+      limit: 20,
+      windowMs: 10 * 60_000,
+      key: "order-lookup",
+    });
+    if (limited) return limited;
+
     const { orderNumber } = await params;
 
     if (!orderNumber) {
@@ -21,15 +33,24 @@ export async function GET(
       );
     }
 
+    // Email verifikacija — zahtevan in mora ustrezati kupcu
+    const requestUrl = new URL(request.url);
+    const email = requestUrl.searchParams.get("email")?.toLowerCase().trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json(
+        { error: "Za ogled naročila navedite veljaven email naslov (query ?email=)." },
+        { status: 401 }
+      );
+    }
+
     const order = await db.order.findUnique({
       where: { orderNumber },
     });
 
-    if (!order) {
-      return NextResponse.json(
-        { error: "Naročilo ni najdeno." },
-        { status: 404 }
-      );
+    // Enako sporočilo za neobstoječe in tuje naročilo (brez razkrivanja)
+    const NOT_FOUND = { error: "Naročilo ni najdeno." } as const;
+    if (!order || order.buyerEmail.toLowerCase().trim() !== email) {
+      return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 
     // Parse items JSON za klienta

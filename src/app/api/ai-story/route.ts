@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { generateCompletion } from "@/lib/ai-client";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/ai-story — generira AI zgodbo za lokalca
 // Body: { name, category, destinationName?, description?, longDescription?, specialties? }
 export async function POST(request: Request) {
+    // Rate limit AI zgodb
+    const limited = rateLimit(request, { limit: 10, windowMs: 600000, key: "ai-story" });
+    if (limited) return limited;
+
   try {
     const body = await request.json();
     const { name, category, destinationName, description, longDescription, specialties } = body;
@@ -44,7 +49,7 @@ Pravila:
         { role: "system", content: "Si slovenski pripovedovalec. Pišeš čustvene, avtentične zgodbe o lokalnih ponudnikih. Vedno odgovoriš z JSON." },
         { role: "user", content: prompt },
       ],
-      { temperature: 0.8, jsonMode: true, feature: "tag" }
+      { temperature: 0.8, jsonMode: true }
     );
 
     if (result?.content) {

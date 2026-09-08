@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/newsletter/subscribe — preprost email capture
 // Shrani v data/newsletter.json (demo mode)
 // Za production: zamenjaj z Brevo/MailerLite/Resend API
 export async function POST(request: Request) {
+    // Rate limit prijav na newsletter
+    const limited = rateLimit(request, { limit: 10, windowMs: 3600000, key: "newsletter" });
+    if (limited) return limited;
+
   try {
     const { email } = await request.json();
 
