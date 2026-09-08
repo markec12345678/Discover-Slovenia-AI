@@ -46,67 +46,73 @@ const DEFAULT_PROFILE: TripProfile = {
 
 const STORAGE_KEY = "discoverslovenia_profile";
 
+/** Prebere zadnje persistirano stanje profila (morda je pisala druga instanca hooka). */
+function readStoredProfile(): TripProfile {
+  if (typeof window === "undefined") return DEFAULT_PROFILE;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return { ...DEFAULT_PROFILE, ...JSON.parse(stored) as TripProfile };
+    }
+  } catch {}
+  return DEFAULT_PROFILE;
+}
+
+/** Persistira profil (best-effort). */
+function persistProfile(profile: TripProfile) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+  } catch {
+    // Ignore (private mode / poln localStorage)
+  }
+}
+
 // Hook za uporabo profile
 export function useTripProfile() {
-  const [profile, setProfile] = useState<TripProfile>(() => {
-    if (typeof window === "undefined") return DEFAULT_PROFILE;
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        return { ...DEFAULT_PROFILE, ...JSON.parse(stored) as TripProfile };
-      }
-    } catch {}
-    return DEFAULT_PROFILE;
-  });
+  const [profile, setProfile] = useState<TripProfile>(() => readStoredProfile());
   const loaded = true; // Always loaded — lazy initializer reads from localStorage
 
   const save = useCallback((newProfile: TripProfile) => {
     setProfile(newProfile);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newProfile));
-    } catch {
-      // Ignore
-    }
+    persistProfile(newProfile);
   }, []);
 
   const updateProfile = useCallback((updates: Partial<TripProfile>) => {
-    setProfile((prev) => {
-      const updated = { ...prev, ...updates };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch {}
+    setProfile(() => {
+      // Združi z NAJNOVEJŠIM persistiranim stanjem — več instanc hooka
+      // (npr. kviz + welcome-back wrapper) lahko piše v isti ključ.
+      const updated = { ...readStoredProfile(), ...updates };
+      persistProfile(updated);
       return updated;
     });
   }, []);
 
   const addVisitedDestination = useCallback((destId: string) => {
-    setProfile((prev) => {
-      if (prev.visitedDestinations.includes(destId)) return prev;
+    setProfile(() => {
+      const base = readStoredProfile();
+      if (base.visitedDestinations.includes(destId)) return base;
       const updated = {
-        ...prev,
-        visitedDestinations: [...prev.visitedDestinations, destId],
-        visitCount: prev.visitCount + 1,
+        ...base,
+        visitedDestinations: [...base.visitedDestinations, destId],
+        visitCount: base.visitCount + 1,
         lastVisit: new Date().toISOString(),
       };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch {}
+      persistProfile(updated);
       return updated;
     });
   }, []);
 
   const completeOnboarding = useCallback((data: Partial<TripProfile>) => {
-    setProfile((prev) => {
+    setProfile(() => {
+      const base = readStoredProfile();
       const updated = {
-        ...prev,
+        ...base,
         ...data,
         onboardingCompleted: true,
-        visitCount: prev.visitCount + 1,
+        visitCount: base.visitCount + 1,
         lastVisit: new Date().toISOString(),
       };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch {}
+      persistProfile(updated);
       return updated;
     });
   }, []);
@@ -422,7 +428,8 @@ interface WelcomeBackProps {
 }
 
 export function WelcomeBackBanner({ profile, onDismiss }: WelcomeBackProps) {
-  if (!profile.onboardingCompleted || profile.visitCount < 2) return null;
+  // Prikaz že od 2. obiska (ne glede na zaključen onboarding — kviz ga zdaj zaključi)
+  if (profile.visitCount < 2) return null;
 
   const interestLabels: Record<string, string> = {
     narava: "narava",
@@ -443,6 +450,11 @@ export function WelcomeBackBanner({ profile, onDismiss }: WelcomeBackProps) {
     .map((i) => interestLabels[i] || i)
     .join(", ");
 
+  const knowsSomething =
+    topInterests.length > 0 ||
+    Boolean(profile.groupType) ||
+    profile.visitedDestinations.length > 0;
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-3 animate-in fade-in slide-in-from-top-2 duration-500">
       <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
@@ -455,9 +467,24 @@ export function WelcomeBackBanner({ profile, onDismiss }: WelcomeBackProps) {
               Dobrodošel nazaj! 👋
             </p>
             <p className="text-xs text-muted-foreground">
-              AI že ve: {topInterests}
-              {profile.groupType && ` · ${groupLabels[profile.groupType] || profile.groupType}`}
-              {profile.visitedDestinations.length > 0 && ` · ${profile.visitedDestinations.length} obiskanih destinacij`}
+              {knowsSomething ? (
+                <>
+                  AI že ve: {topInterests}
+                  {profile.groupType && ` · ${groupLabels[profile.groupType] || profile.groupType}`}
+                  {profile.visitedDestinations.length > 0 && ` · ${profile.visitedDestinations.length} obiskanih destinacij`}
+                </>
+              ) : (
+                <>
+                  Odgovori na{" "}
+                  <a
+                    href="#kviz"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    2-minutni kviz
+                  </a>
+                  , da ti AI sestavi potovanje po meri.
+                </>
+              )}
             </p>
           </div>
           <button

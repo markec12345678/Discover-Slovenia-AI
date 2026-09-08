@@ -1,3 +1,5 @@
+"use client";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +12,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { COMMISSION_INFO } from "@/lib/affiliate";
+import { trackFunnel } from "@/lib/funnel";
 
 const partners = [
   {
@@ -115,6 +118,10 @@ export function AffiliateSection() {
                       href={p.href}
                       target="_blank"
                       rel="noopener noreferrer sponsored"
+                      onClick={() => {
+                        // Fire-and-forget funnel tracking — ne blokira navigacije
+                        trackFunnel("listing_click", p.href);
+                      }}
                     >
                       Rezerviraj
                       <ExternalLink className="ml-2 size-4" />

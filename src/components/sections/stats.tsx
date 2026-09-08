@@ -1,7 +1,7 @@
 import { Users, Map, Calendar, TrendingUp } from "lucide-react";
 
 const stats = [
-  { icon: Map, value: "12", label: "Vrhunskih destinacij" },
+  { icon: Map, value: "22", label: "Vrhunskih destinacij" },
   { icon: Users, value: "2,4 mio", label: "Obiskovalcev letno" },
   { icon: Calendar, value: "4 sezone", label: "Aktivnosti vse leto" },
   { icon: TrendingUp, value: "60%", label: "Slovenije pod gozdom" },

@@ -21,16 +21,21 @@ import { WelcomeBackWrapper } from "@/components/welcome-back-wrapper";
 import { SloveniaPassSection } from "@/components/slovenia-pass-section";
 import { DemoScenariosWrapper } from "@/components/demo-scenarios-wrapper";
 import { PreGeneratedItinerariesWrapper } from "@/components/pre-generated-itineraries-wrapper";
+import { TravelStyleQuiz } from "@/components/travel-style-quiz";
+import { NewsletterSection } from "@/components/newsletter-section";
+import { FunnelTracker } from "@/components/funnel-tracker";
 
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <FunnelTracker />
       <Navigation />
       <BetaBanner />
       <WelcomeBackWrapper />
       <main className="flex-grow">
         <Hero />
         <DemoScenariosWrapper />
+        <TravelStyleQuiz />
         <PreGeneratedItinerariesWrapper />
         <div className="flex justify-center py-4 bg-muted/30">
           <VlmVerifiedBadge />
@@ -49,6 +54,7 @@ export default function Home() {
         <AffiliateSection />
         <JoinUs />
         <PitchDeckSection />
+        <NewsletterSection />
       </main>
       <Footer />
       <Chatbot />

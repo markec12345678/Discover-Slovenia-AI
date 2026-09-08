@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Star, Clock, ArrowRight, ExternalLink, Ticket, BedDouble } from "lucide-react";
 import { faqJsonLd, breadcrumbJsonLd, destinationSchema, hreflangForPath } from "@/components/seo";
 import { getFaqForPage } from "@/lib/seo-faq";
+import { PageViewTracker } from "@/components/page-view-tracker";
 
 export async function generateStaticParams() {
   return DESTINATIONS.map((d) => ({ slug: d.slug }));
@@ -75,11 +76,16 @@ export default async function ThingsToDoPage({
     { name: dest.name, url: `https://discoverslovenia.ai/destinacija/${dest.slug}/things-to-do` },
   ]);
 
+  const title = `Kaj početi v ${dest.name} — Vodnik`;
+
   return (
     <div className="min-h-screen bg-background">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd(faqs)) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbs) }} />
+
+      {/* PageView tracking — beleži ogled v PageView tabelo */}
+      <PageViewTracker path={`/destinacija/${dest.slug}/things-to-do`} title={title} />
 
       {/* Breadcrumbs */}
       <div className="mx-auto max-w-5xl px-4 pt-6">
@@ -252,7 +258,7 @@ export default async function ThingsToDoPage({
             Naš AI vam lahko sestavi popoln itinerer za {dest.name} in okolico — prilagojen vašemu proračunu, interesom in sezoni.
           </p>
           <Button asChild size="lg">
-            <Link href="/#nacrtuj">
+            <Link href="/#načrtuj">
               <Ticket className="size-4 mr-2" />
               AI načrtovalec potovanj
               <ArrowRight className="size-4 ml-2" />

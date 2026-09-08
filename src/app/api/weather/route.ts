@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { weatherCodeToIcon, weatherCodeToText } from "@/lib/weather-utils";
 
 // GET /api/weather?lat=46.37&lng=14.09
 // Uporablja Open-Meteo (brez API ključa, brezplačno)
+// Prevajanje WMO kod → slovensko besedilo/ikone je v skupnem @/lib/weather-utils
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const lat = searchParams.get("lat");
@@ -40,28 +42,4 @@ export async function GET(request: Request) {
       { status: 502 }
     );
   }
-}
-
-// WMO weather code → slovensko besedilo
-function weatherCodeToText(code: number): string {
-  if (code === 0) return "jasno";
-  if (code <= 3) return "delno oblačno";
-  if (code <= 48) return "megla";
-  if (code <= 67) return "dež";
-  if (code <= 77) return "sneg";
-  if (code <= 82) return "plohe";
-  if (code <= 86) return "snežne plohe";
-  if (code <= 99) return "nevihta";
-  return "spremenljivo";
-}
-
-function weatherCodeToIcon(code: number): string {
-  if (code === 0) return "☀️";
-  if (code <= 3) return "⛅";
-  if (code <= 48) return "🌫️";
-  if (code <= 67) return "🌧️";
-  if (code <= 77) return "❄️";
-  if (code <= 82) return "🌦️";
-  if (code <= 99) return "⛈️";
-  return "🌤️";
 }

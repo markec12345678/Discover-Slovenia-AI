@@ -99,7 +99,8 @@ export const EVENT_CATEGORY_LABELS: Record<EventCategory, string> = {
 
 /**
  * 30 realnih slovenskih festivaljev in prireditev, razporejenih skozi vse leto.
- * Datumi za leto 2025 (simbolično — večina prireditev poteka vsako leto).
+ * Datumi so usklajeni s koledarjem 2026/2027 (simbolično — večina prireditev
+ * poteka vsako leto; za aktualnost datume premaknemo naprej, ko minejejo).
  * Vsak mesec ima vsaj 2 dogodka, vse 9 regij je zastopanih.
  */
 export const EVENTS: EventItem[] = [
@@ -108,8 +109,8 @@ export const EVENTS: EventItem[] = [
     name: "Ljubljanski zimski festival",
     description:
       "Vrhunski mednarodni glasbeni festival z diskografijami klasične in komorne glasbe v Cankarjevem domu, operi in ljubljanskih cerkvah. Tradicija, ki sega v leto 1952.",
-    date: "2025-01-15",
-    endDate: "2025-01-26",
+    date: "2027-01-15",
+    endDate: "2027-01-26",
     location: "Cankarjev dom, Ljubljana",
     destinationId: "ljubljana",
     category: "glasba",
@@ -125,8 +126,8 @@ export const EVENTS: EventItem[] = [
     name: "Kurentovanje — Pustni karneval Ptuj",
     description:
       "Največji pustni karneval v Sloveniji in eden najpomembnejših etnografskih festivalov v Evropi. Povorka kurentov — starodavnih bitij z rdečimi jeziki in kravjimi zvonci — preganja zimo skozi stare ulice Ptuja.",
-    date: "2025-02-08",
-    endDate: "2025-02-18",
+    date: "2027-02-08",
+    endDate: "2027-02-18",
     location: "Stari mestni trg, Ptuj",
     category: "tradicija",
     region: "stajerska",
@@ -141,8 +142,8 @@ export const EVENTS: EventItem[] = [
     name: "Planica Nordic Festival",
     description:
       "Svetovni pokal v smučarskih poletih v slavni Planici pod Poncami. Najboljši skakalci sveta letijo preko 240 metrov na največji skakalnici na svetu, ob strani pa tekmovanja v nordijskem teku in biatlonu.",
-    date: "2025-03-21",
-    endDate: "2025-03-23",
+    date: "2027-03-21",
+    endDate: "2027-03-23",
     location: "Planica, Kranjska Gora",
     category: "sport",
     region: "gorenjska",
@@ -157,8 +158,8 @@ export const EVENTS: EventItem[] = [
     name: "Blejski danovski festival",
     description:
       "Mednarodni komorni glasbeni festival na Bledu z vrhunskimi koncerti v Blejskem gradu, na blejskem otoku in v cerkvah. Slovenski glasbeniki skupaj z mednarodnimi gosti v romantični alpski kulisi.",
-    date: "2025-04-10",
-    endDate: "2025-04-13",
+    date: "2027-04-10",
+    endDate: "2027-04-13",
     location: "Blejski grad, Bled",
     destinationId: "bled",
     category: "glasba",
@@ -174,8 +175,8 @@ export const EVENTS: EventItem[] = [
     name: "Festival Soča",
     description:
       "Športno-glasbeni festival ob smaragdni Soči z raftingom, kajakaštvom, canyoningom in adrenalinskimi izzivi čez dan. Zvečer ob reki tonejo toni alternative, reggaeja in world musica.",
-    date: "2025-05-23",
-    endDate: "2025-05-25",
+    date: "2027-05-23",
+    endDate: "2027-05-25",
     location: "Bovec in Tolmin",
     destinationId: "soca",
     category: "sport",
@@ -191,8 +192,8 @@ export const EVENTS: EventItem[] = [
     name: "Bled Days with Kremšnita",
     description:
       "Tradicionalno praznovanje blejske kremšnite — slavne smetanove torte z injem pokrovom. Degustacije slaščic, obrtna tržnica, veseli dogodki ob jezeru in veličasten ognjemet nad blejskim otokom.",
-    date: "2025-06-13",
-    endDate: "2025-06-15",
+    date: "2027-06-13",
+    endDate: "2027-06-15",
     location: "Obala Blejskega jezera, Bled",
     destinationId: "bled",
     category: "hrana",
@@ -208,8 +209,8 @@ export const EVENTS: EventItem[] = [
     name: "Ljubljana Festival",
     description:
       "Največji, najstarejši in najpomembnejši poletni kulturni festival v Sloveniji. Vrhunski koncerti simfonične glasbe, opere, baleta in gledališča na Križankah in v Cankarjevem domu z najvidnejšimi svetovnimi imeni.",
-    date: "2025-07-01",
-    endDate: "2025-08-31",
+    date: "2027-07-01",
+    endDate: "2027-08-31",
     location: "Križanke, Ljubljana",
     destinationId: "ljubljana",
     category: "glasba",
@@ -225,8 +226,8 @@ export const EVENTS: EventItem[] = [
     name: "Piran Music Nights",
     description:
       "Romantični glasbeni večeri v križnem hodniku piranskega minoritskega samostana. Jazz, komorna glasba in etno koncerti z mednarodnimi gosti ob zgodnjih poletnih nočeh ob Jadranskem morju.",
-    date: "2025-07-10",
-    endDate: "2025-08-20",
+    date: "2027-07-10",
+    endDate: "2027-08-20",
     location: "Minoritski samostan, Piran",
     destinationId: "piran",
     category: "glasba",
@@ -242,7 +243,7 @@ export const EVENTS: EventItem[] = [
     name: "Kmečki ohcet",
     description:
       "Tradicionalna prikazitev slovenske kmečke svadbe z bogatimi ljudskimi nošami, starinskimi plesi, živino in obrtmi. Avtentično praznovanje podeželskega življenja v vaseh po vsej Sloveniji.",
-    date: "2025-08-15",
+    date: "2027-08-15",
     location: "Razne vasi v Sloveniji",
     category: "tradicija",
     region: "gorenjska",
@@ -256,7 +257,7 @@ export const EVENTS: EventItem[] = [
     name: "Olive Festival",
     description:
       "Praznovanje oljčne trgatve v Slovenski Istri z degustacijami ekstra deviških oljčnih olj, domačimi istrskimi jedmi, medom, vinom in vodenimi ogledi oljčnikov ob morju.",
-    date: "2025-09-27",
+    date: "2027-09-27",
     location: "Koper in Izola",
     category: "hrana",
     region: "primorska",
@@ -271,8 +272,8 @@ export const EVENTS: EventItem[] = [
     name: "Festival Stara trta",
     description:
       "Festival ob najstarejši trti na svetu v Mariboru — vpisani v Guinnessovo knjigo rekordov. Vinogradniški dogodki, degustacije modre frankinje, kulturni program in tradicionalno martinjanje ob Dravi.",
-    date: "2025-10-03",
-    endDate: "2025-10-12",
+    date: "2026-10-03",
+    endDate: "2026-10-12",
     location: "Lent, Maribor",
     destinationId: "maribor",
     category: "tradicija",
@@ -288,8 +289,8 @@ export const EVENTS: EventItem[] = [
     name: "Božični sejmi v Ljubljani in Mariboru",
     description:
       "Romantični božični sejmi s stojnicami z ročnimi izdelki, medenimi piškoti, kuhanim vinom in prešanim sokom. Srednjeveški starem mestnem jedru Ljubljane in Maribora zasvetita z vencev in dišečimi jelkami.",
-    date: "2025-11-29",
-    endDate: "2025-12-31",
+    date: "2026-11-29",
+    endDate: "2026-12-31",
     location: "Stari trg, Ljubljana in Maribor",
     destinationId: "ljubljana",
     category: "tradicija",
@@ -306,8 +307,8 @@ export const EVENTS: EventItem[] = [
     name: "Smučarski dnevi Ribnica na Pohorju",
     description:
       "Tradicionalni smučarski dogodek na Ribniškem Pohorju z glasbenim programom in lokalnimi specialitetami. Družinski dan na snegu.",
-    date: "2025-02-15",
-    endDate: "2025-02-16",
+    date: "2027-02-15",
+    endDate: "2027-02-16",
     location: "Smučišče Ribnica na Pohorju",
     destinationId: "slovenj-gradec",
     category: "sport",
@@ -322,8 +323,8 @@ export const EVENTS: EventItem[] = [
     name: "Festival bučk in bučnega olja",
     description:
       "Edinstven festival v Prekmurju posvečen bučam in prekmurskemu bučnemu olju. Degustacije, delavnice in tradicionalna glasba.",
-    date: "2025-09-20",
-    endDate: "2025-09-21",
+    date: "2027-09-20",
+    endDate: "2027-09-21",
     location: "Center, Murska Sobota",
     destinationId: "murska-sobota",
     category: "hrana",
@@ -338,7 +339,7 @@ export const EVENTS: EventItem[] = [
     name: "Festival cvička v Novem mestu",
     description:
       "Praznik tradicionalnega dolenjskega vina cviček. Vinske degustacije, kulinarične stojnice in glasba ob Krki.",
-    date: "2025-09-13",
+    date: "2027-09-13",
     location: "Glavni trg, Novo mesto",
     destinationId: "novo-mesto",
     category: "hrana",
@@ -353,7 +354,7 @@ export const EVENTS: EventItem[] = [
     name: "Bela krajina koline in opankarija",
     description:
       "Tradicionalne koline v Beli krajini z opankanjem (pletje koruznih venčkov) in lokalno glasbo. Avtentična belokranjska kultura.",
-    date: "2025-11-22",
+    date: "2026-11-22",
     location: "Stari trg, Črnomelj",
     destinationId: "crnomelj",
     category: "tradicija",
@@ -368,8 +369,8 @@ export const EVENTS: EventItem[] = [
     name: "Musica Cubicularis — Dvorana slovenskih glasbenikov",
     description:
       "Komorni glasbeni festival v Slovenj Gradcu z nastopi slovenskih in mednarodnih glasbenikov v zgodovinskih ambientih.",
-    date: "2025-07-10",
-    endDate: "2025-07-12",
+    date: "2027-07-10",
+    endDate: "2027-07-12",
     location: "Dvorana slovenskih glasbenikov, Slovenj Gradec",
     destinationId: "slovenj-gradec",
     category: "glasba",
@@ -384,7 +385,7 @@ export const EVENTS: EventItem[] = [
     name: "Porabje — srečanje Slovencev v sosednjih državah",
     description:
       "Kulturni festival v Lendavi ki povezuje Slovence iz Prekmurja, Porabja in sosednjih regij. Glasba, ples in tradicionalne jedi.",
-    date: "2025-06-14",
+    date: "2027-06-14",
     location: "Trg mladosti, Lendava",
     destinationId: "lendava",
     category: "kultura",
@@ -401,7 +402,7 @@ export const EVENTS: EventItem[] = [
     name: "Blejski zimski plavalni memorial",
     description:
       "Tradicionalni zimski plavalni memorial na Blejskem jezeru. Najbolj drzni plavalci skočijo v ledeno vodo jezera v februarskih jutrih. Družinski dogodek z vročo čokolado in kremšnito ob obali.",
-    date: "2025-01-25",
+    date: "2027-01-25",
     location: "Kopališče Bled, Bled",
     destinationId: "bled",
     category: "sport",
@@ -417,8 +418,8 @@ export const EVENTS: EventItem[] = [
     name: "Zlati lisjak — svetovni pokal v smučanju",
     description:
       "Tradicionalno tekmovanje svetovnega pokala v ženskem veleslalomu na Pohorju. Najboljše smučarke sveta se pomerijo na progi Golden Fox pred tisoči gledalcev ob pogorju.",
-    date: "2025-01-18",
-    endDate: "2025-01-19",
+    date: "2027-01-18",
+    endDate: "2027-01-19",
     location: "Smučišče Mariborsko Pohorje, Maribor",
     destinationId: "maribor",
     category: "sport",
@@ -434,8 +435,8 @@ export const EVENTS: EventItem[] = [
     name: "Vinska vigred — festival vina",
     description:
       "Največji festival vina v Sloveniji v Mariboru z več kot 200 vinarji iz vseh slovenskih regij. Degustacije, delavnice, kulinarika in glasba ob Dravi.",
-    date: "2025-03-14",
-    endDate: "2025-03-16",
+    date: "2027-03-14",
+    endDate: "2027-03-16",
     location: "Lent, Maribor",
     destinationId: "maribor",
     category: "hrana",
@@ -451,8 +452,8 @@ export const EVENTS: EventItem[] = [
     name: "Jurjevanje v Beli krajini",
     description:
       "Najstarejši folklorni festival v Sloveniji, ki praznuje pomlad in belokranjsko tradicijo. Povorka pisanic, tradicionalni plesi v belokranjskih nošah in glasba steljnikov v Črnomlju.",
-    date: "2025-04-22",
-    endDate: "2025-04-23",
+    date: "2027-04-22",
+    endDate: "2027-04-23",
     location: "Stari trg, Črnomelj",
     destinationId: "crnomelj",
     category: "tradicija",
@@ -468,7 +469,7 @@ export const EVENTS: EventItem[] = [
     name: "Ljubljanski maraton",
     description:
       "Mednarodni maraton v Ljubljani z razdaljami 10 km, pol maratona in maratona. Tisoči tekačev iz vse Evrope tečejo skozi staro mestno jedro, ob Ljubljanici in po Tivoliju.",
-    date: "2025-05-25",
+    date: "2027-05-25",
     location: "Slovenska cesta, Ljubljana",
     destinationId: "ljubljana",
     category: "sport",
@@ -484,8 +485,8 @@ export const EVENTS: EventItem[] = [
     name: "Pivo in cvetje Laško",
     description:
       "Največji festival piva in cvetja v Sloveniji v Laškem. Več kot 50.000 obiskovalcev, pivska tržnica, koncerti domačih in tujih izvajalcev, razstava cvetja in ognjemet.",
-    date: "2025-06-13",
-    endDate: "2025-06-15",
+    date: "2027-06-13",
+    endDate: "2027-06-15",
     location: "Center, Laško",
     category: "festival",
     region: "stajerska",
@@ -500,7 +501,7 @@ export const EVENTS: EventItem[] = [
     name: "Festival solinarstva Sečovlje",
     description:
       "Praznik solinarstva v solinah Sečovlje s predstavitvijo tradicionalnega pridelovanja soli, degustacijami solinskih izdelkov, morske hrane in domačih vin ob obali.",
-    date: "2025-06-21",
+    date: "2027-06-21",
     location: "Soline Sečovlje, Portorož",
     destinationId: "piran",
     category: "hrana",
@@ -516,8 +517,8 @@ export const EVENTS: EventItem[] = [
     name: "Trnfest — poletni festival Trnovo",
     description:
       "Tradicionalni avgustovski festival v ljubljanski četrti Trnovo. Koncerti jazz, blues in world glasbe na prostem, ulično gledališče, ustvarjalne delavnice in večerni vrvež ob Trnavskem mostu.",
-    date: "2025-08-04",
-    endDate: "2025-08-29",
+    date: "2027-08-04",
+    endDate: "2027-08-29",
     location: "Trnovo, Ljubljana",
     destinationId: "ljubljana",
     category: "glasba",
@@ -533,8 +534,8 @@ export const EVENTS: EventItem[] = [
     name: "Okarina festival Bled",
     description:
       "Mednarodni etno-glasbeni festival na Bledu z glasbeniki iz vsega sveta. Koncerti na blejskem otoku, v gradu in ob jezeru. Slovenski in mednarodni izvajalci world glasbe.",
-    date: "2025-08-05",
-    endDate: "2025-08-12",
+    date: "2027-08-05",
+    endDate: "2027-08-12",
     location: "Blejski grad in otok, Bled",
     destinationId: "bled",
     category: "glasba",
@@ -550,8 +551,8 @@ export const EVENTS: EventItem[] = [
     name: "Celjski sejem",
     description:
       "Tradicionalni celjski sejem z razstavo obrti, kmetijstva, domačih izdelkov in vozil. Spremljevalni program z glasbo, degustacijami in animacijami za otroke na sejmišču.",
-    date: "2025-10-09",
-    endDate: "2025-10-12",
+    date: "2026-10-09",
+    endDate: "2026-10-12",
     location: "Celjski sejem, Celje",
     destinationId: "celje",
     category: "tradicija",
@@ -567,8 +568,8 @@ export const EVENTS: EventItem[] = [
     name: "Bled Winter Magic — božična vasica",
     description:
       "Romantična božična vasica ob Blejskem jezeru z lesenimi hišicami, ročnimi izdelki, medenimi piškoti, kuhanim vinom in prešanim sokom. Razsvetljeni blejski otok z zvezdami in dišeča jelka.",
-    date: "2025-12-01",
-    endDate: "2025-12-31",
+    date: "2026-12-01",
+    endDate: "2026-12-31",
     location: "Obala Blejskega jezera, Bled",
     destinationId: "bled",
     category: "tradicija",
@@ -584,8 +585,8 @@ export const EVENTS: EventItem[] = [
     name: "Jamski sejem Postojna",
     description:
       "Tradicionalni decembrski sejem v Postojni ob Postojnski jami z ročnimi izdelki kraške regije, pršutom, teranom, keramiko in božično razsvetljavo. Glasbeni program vsak večer.",
-    date: "2025-12-13",
-    endDate: "2025-12-14",
+    date: "2026-12-13",
+    endDate: "2026-12-14",
     location: "Trg Tabor, Postojna",
     destinationId: "postojna",
     category: "tradicija",

@@ -30,6 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { WeatherWidget } from "@/components/sections/weather-widget";
 import { ListingModal } from "@/components/sections/listing-modal";
 import { getAffiliateLinks, COMMISSION_INFO } from "@/lib/affiliate";
+import { trackFunnel } from "@/lib/funnel";
 import { REGIONS } from "@/lib/slovenia-data";
 import {
   CATEGORY_LABELS,
@@ -82,6 +83,17 @@ export function DestinationModal({
   const [nearbyListings, setNearbyListings] = useState<Listing[]>([]);
   const [loadingNearby, setLoadingNearby] = useState<boolean>(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+
+  // Funnel tracking + gamifikacija ob odprtju modal okna (Slovenia Pass posluša)
+  useEffect(() => {
+    if (!destination) return;
+    trackFunnel("destination_view", destination.id);
+    window.dispatchEvent(
+      new CustomEvent("destinationViewed", {
+        detail: { destinationId: destination.id },
+      })
+    );
+  }, [destination]);
 
   useEffect(() => {
     if (!destination) {
@@ -340,7 +352,11 @@ export function DestinationModal({
                         key={cta.partner}
                         href={cta.href}
                         target="_blank"
-                        rel="noopener noreferrer"
+                        rel="noopener noreferrer sponsored"
+                        onClick={() => {
+                          // Fire-and-forget funnel tracking — ne blokira navigacije
+                          trackFunnel("listing_click", cta.href);
+                        }}
                         className="group flex items-center gap-3 rounded-lg border bg-background p-3 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       >
                         <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">

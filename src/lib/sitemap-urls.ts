@@ -97,7 +97,7 @@ export function getAllSitemapUrls(): SitemapUrl[] {
   // === Statične strani (14) ===
   urls.push(makeUrl("/", 1.0, "Domov", "daily"));
   urls.push(makeUrl("/#destinacije", 0.9, "Sekcija", "weekly"));
-  urls.push(makeUrl("/#nacrtuj", 0.9, "Sekcija", "weekly"));
+  urls.push(makeUrl("/#načrtuj", 0.9, "Sekcija", "weekly"));
   urls.push(makeUrl("/#trznica", 0.8, "Sekcija", "daily"));
   urls.push(makeUrl("/#zemljevid", 0.7, "Sekcija", "weekly"));
   urls.push(makeUrl("/#dogodki", 0.7, "Sekcija", "weekly"));

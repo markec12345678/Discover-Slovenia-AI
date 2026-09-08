@@ -57,16 +57,22 @@ model Owner {
   @@index([subscriptionStatus])
 }
 
-// Shranjeni itinererji uporabnikov (B2C)
+// Shranjeni itinererji (B2C) — anonimno shranjevanje + javno deljenje prek /pot/[shareId]
+// userId je opcijski: itinerer lahko shrani anonimni obiskovalec (brez računa),
+// prihodnje pa ga povežemo z registriranim uporabnikom.
 model SavedItinerary {
   id          String   @id @default(cuid())
-  userId      String
+  userId      String?
   itinerary   String   // JSON: Itinerary object
-  formData    String   // JSON: PlannerInput
+  formData    String   // JSON: PlannerInput (ali null pri anonimnem shranjevanju)
   name        String?
+  // Javni ID za deljenje (URL /pot/{shareId}) — nerodljiv, lowercase alnum
+  shareId     String   @unique
+  // Število ogledov deljene strani (public statistika)
+  views       Int      @default(0)
   createdAt   DateTime @default(now())
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }

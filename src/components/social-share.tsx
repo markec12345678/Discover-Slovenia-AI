@@ -36,6 +36,8 @@ interface SocialShareProps {
   destinations?: string[];
   className?: string;
   variant?: "button" | "inline";
+  /** Deljiva povezava (npr. /pot/xxx) — privzeto trenutni URL strani */
+  url?: string;
 }
 
 const DEFAULT_TITLE = "Moj AI dan v Sloveniji 🇸🇮";
@@ -46,11 +48,16 @@ export function SocialShare({
   destinations = [],
   className,
   variant = "button",
+  url,
 }: SocialShareProps) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const shareUrl = typeof window !== "undefined" ? window.location.href : "https://discoverslovenia.ai";
+  const shareUrl =
+    url ??
+    (typeof window !== "undefined"
+      ? window.location.href
+      : "https://discoverslovenia.ai");
 
   const shareText = useMemo(() => {
     const destText = destinations.length > 0

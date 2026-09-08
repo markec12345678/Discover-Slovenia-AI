@@ -54,7 +54,7 @@ export function MapSection() {
             Odkrijte Slovenijo na zemljevidu
           </h2>
           <p className="mt-3 text-base text-muted-foreground">
-            12 destinacij razporejenih od Alp do Jadrana. Kliknite marker za
+            22 destinacij razporejenih od Alp do Jadrana. Kliknite marker za
             podrobnosti, vreme in rezervacije.
           </p>
         </div>

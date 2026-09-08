@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { hreflangForPath } from "@/components/seo";
+import { PageViewTracker } from "@/components/page-view-tracker";
 import { Calendar, Clock, Users, ArrowRight, Sparkles } from "lucide-react";
 
 const DURATIONS = [
@@ -77,9 +78,14 @@ export default async function ItineraryPage({
     image: dest.image,
   };
 
+  const title = `${dur.label} itinerer za ${dest.name}`;
+
   return (
     <div className="min-h-screen bg-background">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
+
+      {/* PageView tracking — beleži ogled v PageView tabelo */}
+      <PageViewTracker path={`/destinacija/${dest.slug}/itinerary/${dur.slug}`} title={title} />
 
       <div className="relative h-[350px] w-full overflow-hidden">
         <img src={dest.image} alt={dest.name} className="size-full object-cover" />
@@ -168,7 +174,7 @@ export default async function ItineraryPage({
                   <h3 className="font-semibold mb-1">{tt.label}</h3>
                   <p className="text-sm text-muted-foreground mb-3">{tt.desc}</p>
                   <Button asChild size="sm" variant="outline">
-                    <Link href={`/#nacrtuj`}>
+                    <Link href={`/#načrtuj`}>
                       Generiraj itinerer <ArrowRight className="size-3.5 ml-1" />
                     </Link>
                   </Button>
@@ -195,7 +201,7 @@ export default async function ItineraryPage({
             Naš AI upošteva vaš proračun, interese in sezono za popoln načrt.
           </p>
           <Button asChild size="lg">
-            <Link href="/#nacrtuj">
+            <Link href="/#načrtuj">
               <Sparkles className="size-4 mr-2" />
               Generiraj AI itinerer
             </Link>

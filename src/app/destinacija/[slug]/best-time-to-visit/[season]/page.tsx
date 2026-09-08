@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { hreflangForPath } from "@/components/seo";
+import { PageViewTracker } from "@/components/page-view-tracker";
 import { Calendar, Sun, Leaf, Snowflake, Cloud, ArrowRight, Sparkles, MapPin } from "lucide-react";
 
 const SEASONS = [
@@ -97,10 +98,15 @@ export default async function BestTimeToVisitPage({
     ],
   };
 
+  const title = `Najboljši čas za obisk ${dest.name} — ${s.label}`;
+
   return (
     <div className="min-h-screen bg-background">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }} />
+
+      {/* PageView tracking — beleži ogled v PageView tabelo */}
+      <PageViewTracker path={`/destinacija/${dest.slug}/best-time-to-visit/${s.slug}`} title={title} />
 
       {/* Breadcrumbs */}
       <div className="mx-auto max-w-4xl px-4 pt-6">
@@ -225,7 +231,7 @@ export default async function BestTimeToVisitPage({
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button asChild size="lg">
-              <Link href="/#nacrtuj">
+              <Link href="/#načrtuj">
                 <Sparkles className="size-4 mr-2" />
                 AI itinerer
               </Link>

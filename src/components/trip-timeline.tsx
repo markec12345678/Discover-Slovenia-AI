@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import {
   Clock,
   MapPin,
@@ -15,13 +16,17 @@ import {
   ShoppingBag,
   Coffee,
   Calendar,
+  Check,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PartnerBadge, type PartnerStatus } from "@/components/partner-badge";
+import { useAppStore } from "@/lib/store";
+import { saveItinerary } from "@/lib/itinerary-share";
 import { cn } from "@/lib/utils";
-import type { DayPlan, LocationVisit } from "@/lib/types";
+import type { DayPlan, LocationVisit, PlannerInput } from "@/lib/types";
 
 // ============================================================================
 // AI TRIP TIMELINE — vizualni dan z timeline layout
@@ -37,6 +42,42 @@ import type { DayPlan, LocationVisit } from "@/lib/types";
 interface TripTimelineProps {
   days: DayPlan[];
   totalBudget?: number;
+}
+
+type SaveState = "idle" | "saving" | "saved" | "error";
+
+/** Fallback formData, če store nima shranjenega vnosa obrazca. */
+function fallbackForm(it: NonNullable<ReturnType<typeof useAppStore.getState>["itinerary"]>): PlannerInput {
+  return {
+    budget: it.total_budget,
+    days: it.days.length,
+    interests: [],
+    season: "summer",
+    groupSize: 2,
+  };
+}
+
+/** Kopiranje v odložišče s fallbackom za starejše brskalnike. */
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const el = document.createElement("textarea");
+      el.value = text;
+      el.setAttribute("readonly", "");
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }
 
 // Kategorija → ikona + barva
@@ -101,6 +142,39 @@ function inferCategory(visit: LocationVisit): string {
 }
 
 export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+
+  // Shrani itinerer in kopiraj deljivo povezavo (uporabi store + helper)
+  const handleSaveItinerary = useCallback(async () => {
+    if (saveState === "saving") return;
+    const { itinerary, plannerForm } = useAppStore.getState();
+    if (!itinerary) return;
+
+    setSaveState("saving");
+    try {
+      const result = await saveItinerary(
+        itinerary,
+        plannerForm ?? fallbackForm(itinerary)
+      );
+      const shareUrl = `${window.location.origin}${result.url}`;
+      await copyToClipboard(shareUrl);
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 4000);
+    } catch (err) {
+      console.error("[trip-timeline] shranjevanje ni uspelo:", err);
+      setSaveState("error");
+      setTimeout(() => setSaveState("idle"), 4000);
+    }
+  }, [saveState]);
+
+  // "Rezerviraj" → pošlji uporabnika na booking panel tega dne
+  const handleGoToBooking = useCallback((day: number) => {
+    const target =
+      document.getElementById(`booking-panel-${day}`) ??
+      document.getElementById("načrtuj");
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
   if (!days || days.length === 0) return null;
 
   return (
@@ -229,7 +303,7 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
                       </div>
 
                       {/* Akcijski gumbi */}
-                      <div className="mt-3 flex items-center gap-2">
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -240,6 +314,7 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
                               "_blank"
                             );
                           }}
+                          aria-label={`Navigacija do ${visit.destination_name}`}
                         >
                           <Navigation className="size-3" aria-hidden="true" />
                           Navigacija
@@ -247,19 +322,37 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 gap-1 text-xs"
-                          onClick={() => {
-                            // TODO: Implement save/bookmark
-                          }}
+                          className={cn(
+                            "h-7 gap-1 text-xs",
+                            saveState === "saved" && "text-emerald-600 dark:text-emerald-400",
+                            saveState === "error" && "text-destructive"
+                          )}
+                          disabled={saveState === "saving"}
+                          onClick={handleSaveItinerary}
+                          aria-label="Shrani itinerer in kopiraj deljivo povezavo"
                         >
-                          <Bookmark className="size-3" aria-hidden="true" />
-                          Shrani
+                          {saveState === "saving" ? (
+                            <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                          ) : saveState === "saved" ? (
+                            <Check className="size-3" aria-hidden="true" />
+                          ) : (
+                            <Bookmark className="size-3" aria-hidden="true" />
+                          )}
+                          {saveState === "saving"
+                            ? "Shranjujem..."
+                            : saveState === "saved"
+                              ? "Povezava kopirana!"
+                              : saveState === "error"
+                                ? "Napaka pri shranjevanju"
+                                : "Shrani"}
                         </Button>
                         {visit.affiliateType && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 gap-1 text-xs ml-auto text-blue-600"
+                            className="h-7 gap-1 text-xs ml-auto text-primary hover:text-primary/80"
+                            onClick={() => handleGoToBooking(day.day)}
+                            aria-label={`Rezerviraj ${visit.destination_name} — odpri rezervacijske možnosti`}
                           >
                             <Sparkles className="size-3" aria-hidden="true" />
                             Rezerviraj

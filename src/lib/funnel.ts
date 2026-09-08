@@ -6,7 +6,10 @@ export type FunnelStep =
   | "destination_view"
   | "itinerary_generate"
   | "newsletter_signup"
-  | "listing_click";
+  | "listing_click"
+  // Novi koraki (Faza 0 — kviz + shranjevanje):
+  | "quiz_completed"
+  | "itinerary_saved";
 
 export function trackFunnel(step: FunnelStep, path?: string) {
   // Fire-and-forget — ne blokiraj UI

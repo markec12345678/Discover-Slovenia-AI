@@ -118,7 +118,7 @@ export function DestinationsSection() {
             Raziščite destinacije
           </h2>
           <p className="mt-3 text-base text-muted-foreground">
-            12 najlepših kotičkov Slovenije
+            22 najlepših kotičkov Slovenije
           </p>
         </div>
 

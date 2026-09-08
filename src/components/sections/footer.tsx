@@ -37,7 +37,7 @@ export async function Footer() {
               </span>
             </Link>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-              AI-poganjan načrtovalec potovanj za Slovenijo. Odkrijte 12
+              AI-poganjan načrtovalec potovanj za Slovenijo. Odkrijte 22
               najlepših destinacij — od Blejskega jezera do jadranske obale.
             </p>
             <div className="flex items-center gap-2" aria-label="Družbena omrežja">
@@ -64,10 +64,9 @@ export async function Footer() {
             title="Destinacije"
             links={[
               { href: "#destinacije", label: "Vse destinacije" },
-              { href: "#destinacije-bled", label: "Bled" },
-              { href: "#destinacije-ljubljana", label: "Ljubljana" },
-              { href: "#destinacije-piran", label: "Piran" },
-              { href: "#destinacije-triglav", label: "Triglav" },
+              { href: "#zemljevid", label: "Zemljevid" },
+              { href: "#zbirke", label: "Zbirke" },
+              { href: "#lokali", label: "Lokalni ponudniki" },
             ]}
           />
 
@@ -76,9 +75,9 @@ export async function Footer() {
             title="Podpora"
             links={[
               { href: "#načrtuj", label: "AI načrtovalec" },
-              { href: "#vreme", label: "Vreme" },
+              { href: "#kviz", label: "Kviz za popotnike" },
               { href: "#rezerviraj", label: "Rezervacije" },
-              { href: "#faq", label: "Pogosta vprašanja" },
+              { href: "#dogodki", label: "Dogodki" },
             ]}
           />
 
@@ -98,7 +97,7 @@ export async function Footer() {
         <div className="mt-10 flex flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-2">
             <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <span>© 2025 Discover Slovenia AI. {t("tagline")}</span>
+              <span>© 2026 Discover Slovenia AI. {t("tagline")}</span>
             </p>
             <div className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
               <ShieldCheck className="size-3" />

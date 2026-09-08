@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { DESTINATIONS } from "./slovenia-data";
-import type { Itinerary } from "./types";
+import type { Itinerary, PlannerInput } from "./types";
 
 interface RouteCoord {
   lat: number;
@@ -32,6 +32,10 @@ interface AppState {
   itinerary: Itinerary | null;
   setItinerary: (it: Itinerary | null) => void;
 
+  /** Zadnji vnos obrazca načrtovalnika (za shranjevanje/deljenje iz TripTimeline) */
+  plannerForm: PlannerInput | null;
+  setPlannerForm: (input: PlannerInput | null) => void;
+
   /** Izpeljane koordinate poti za zemljevid */
   routeCoords: RouteCoord[];
 
@@ -45,8 +49,10 @@ interface AppState {
  */
 export const useAppStore = create<AppState>((set) => ({
   itinerary: null,
+  plannerForm: null,
   routeCoords: [],
   routeByDay: [],
+  setPlannerForm: (input) => set({ plannerForm: input }),
   setItinerary: (it) => {
     if (!it) {
       set({ itinerary: null, routeCoords: [], routeByDay: [] });

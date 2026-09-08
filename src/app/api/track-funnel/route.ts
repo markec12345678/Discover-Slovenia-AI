@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/track-funnel — sledi konverzijskemu funnelu
-// Body: { step: "homepage_view" | "destination_view" | "itinerary_generate" | "newsletter_signup" | "listing_click", path?: string }
+// Body: { step, path? } — koraki morajo ostati skladni s FunnelStep v src/lib/funnel.ts
 export async function POST(request: Request) {
     // Rate limit analitike (spam zaščita)
     const limited = rateLimit(request, { limit: 60, windowMs: 60000, key: "track-funnel" });
@@ -12,7 +12,15 @@ export async function POST(request: Request) {
   try {
     const { step, path } = await request.json();
 
-    const validSteps = ["homepage_view", "destination_view", "itinerary_generate", "newsletter_signup", "listing_click"];
+    const validSteps = [
+      "homepage_view",
+      "destination_view",
+      "itinerary_generate",
+      "newsletter_signup",
+      "listing_click",
+      "quiz_completed",
+      "itinerary_saved",
+    ];
     if (!step || !validSteps.includes(step)) {
       return NextResponse.json({ error: "Neveljaven funnel step" }, { status: 400 });
     }
@@ -41,12 +49,14 @@ export async function GET(request: Request) {
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const [homepage, destination, itinerary, newsletter, listingClick] = await Promise.all([
+    const [homepage, destination, itinerary, newsletter, listingClick, quizCompleted, itinerarySaved] = await Promise.all([
       db.pageView.count({ where: { funnelStep: "homepage_view", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "destination_view", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "itinerary_generate", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "newsletter_signup", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "listing_click", createdAt: { gte: thirtyDaysAgo } } }),
+      db.pageView.count({ where: { funnelStep: "quiz_completed", createdAt: { gte: thirtyDaysAgo } } }),
+      db.pageView.count({ where: { funnelStep: "itinerary_saved", createdAt: { gte: thirtyDaysAgo } } }),
     ]);
 
     const homeToDest = homepage > 0 ? (destination / homepage) * 100 : 0;
@@ -55,7 +65,15 @@ export async function GET(request: Request) {
     const overallConversion = homepage > 0 ? (newsletter / homepage) * 100 : 0;
 
     return NextResponse.json({
-      steps: { homepage_view: homepage, destination_view: destination, itinerary_generate: itinerary, newsletter_signup: newsletter, listing_click: listingClick },
+      steps: {
+        homepage_view: homepage,
+        destination_view: destination,
+        itinerary_generate: itinerary,
+        newsletter_signup: newsletter,
+        listing_click: listingClick,
+        quiz_completed: quizCompleted,
+        itinerary_saved: itinerarySaved,
+      },
       conversionRates: {
         home_to_destination: Math.round(homeToDest * 10) / 10,
         destination_to_itinerary: Math.round(destToItinerary * 10) / 10,

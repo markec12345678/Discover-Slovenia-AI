@@ -35,6 +35,7 @@ import {
   getViatorUrl,
   getSkyscannerUrl,
 } from "@/lib/affiliate";
+import { trackFunnel } from "@/lib/funnel";
 import { AffiliateBadge } from "@/components/partner-badge";
 import type { DayPlan } from "@/lib/types";
 
@@ -127,6 +128,8 @@ export type BookingData = Record<string, BookingOptions>;
 interface BookingPanelProps {
   dayPlan: DayPlan;
   bookingData?: BookingData | null;
+  /** HTML id (npr. "booking-panel-1") — gumb "Rezerviraj" v TripTimeline scrolla sem */
+  id?: string;
 }
 
 // "Hotel" kategorije, ki veljajo za nastanitev
@@ -223,18 +226,24 @@ function AffiliateCard({
   partnerName,
   cta,
   description,
+  onTrack,
 }: {
   href: string;
   icon: React.ReactNode;
   partnerName: string;
   cta: string;
   description: string;
+  onTrack?: () => void;
 }) {
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer sponsored"
+      onClick={() => {
+        // Fire-and-forget funnel tracking — ne blokira navigacije
+        onTrack?.();
+      }}
       className="group flex items-center gap-3 rounded-lg border border-primary/30 bg-background p-3 transition-all hover:border-primary/60 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -465,7 +474,7 @@ function DestinationBlock({
 }
 
 // === Glavna komponenta ===
-export function BookingPanel({ dayPlan, bookingData }: BookingPanelProps) {
+export function BookingPanel({ dayPlan, bookingData, id }: BookingPanelProps) {
   const locations = dayPlan.locations;
   // Prva destinacija — za najem avta
   const firstDestination = locations[0];
@@ -508,7 +517,10 @@ export function BookingPanel({ dayPlan, bookingData }: BookingPanelProps) {
   );
 
   return (
-    <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+    <div
+      id={id}
+      className="mt-3 scroll-mt-24 rounded-xl border border-primary/20 bg-primary/5 p-4"
+    >
       <h4 className="flex items-center gap-2 text-sm font-semibold text-primary">
         <Calendar className="size-4" aria-hidden />
         Rezerviraj ta dan
@@ -578,6 +590,7 @@ export function BookingPanel({ dayPlan, bookingData }: BookingPanelProps) {
                   partnerName="Booking.com"
                   cta="Iskanje"
                   description={`Iskanje hotelov in apartmajev v ${loc.destination_name}`}
+                  onTrack={() => trackFunnel("listing_click", getBookingUrl(loc.destination_name))}
                 />
                 {listings.length > 0 ? (
                   <div className="space-y-2">
@@ -611,6 +624,7 @@ export function BookingPanel({ dayPlan, bookingData }: BookingPanelProps) {
                   partnerName="Viator"
                   cta="Iskanje"
                   description={`Oglejte si vodene ture in izkušnje v ${loc.destination_name}`}
+                  onTrack={() => trackFunnel("listing_click", getViatorUrl(loc.destination_name))}
                 />
                 {exps.length > 0 ? (
                   <div className="space-y-2">
@@ -684,6 +698,7 @@ export function BookingPanel({ dayPlan, bookingData }: BookingPanelProps) {
                 partnerName="DiscoverCars"
                 cta="Najem"
                 description={`Najem avta v ${firstDestination.destination_name} — prilagodljivi datumi prevzema`}
+                onTrack={() => trackFunnel("listing_click", getDiscoverCarsUrl(firstDestination.destination_name))}
               />
               <AffiliateCard
                 href={getSkyscannerUrl("Ljubljana")}
@@ -691,6 +706,7 @@ export function BookingPanel({ dayPlan, bookingData }: BookingPanelProps) {
                 partnerName="Skyscanner"
                 cta="Iskanje"
                 description="Leti do Ljubljane (letališče Jožeta Pučnika) — primerjava cen"
+                onTrack={() => trackFunnel("listing_click", getSkyscannerUrl("Ljubljana"))}
               />
             </DestinationBlock>
           )}

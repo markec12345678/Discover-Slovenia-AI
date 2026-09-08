@@ -10,23 +10,24 @@ import {
   Sparkles,
   Phone,
   X,
-  PartyPopper,
+  Mail,
+  Send,
+  RotateCcw,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PartnerBadge, type PartnerStatus } from "@/components/partner-badge";
 
 // ============================================================================
-// AI BOOKING ASSISTANT — konverzacijska rezervacija
+// AI BOOKING ASSISTANT — povpraševanje ponudniku (nič več simulacija!)
 // ============================================================================
 //
-// "AI ne samo svetuje, ampak uredi."
+// Uporabnik izpolni povpraševanje → POST /api/listing-inquiry
+// → ponudnik prejme e-pošto, uporabnik prejme potrditev + referenco.
 //
-// Uporabnik: "Rezerviraj kosilo za 4 osebe jutri ob 13:00"
-// AI: Gostilna Bela Krajina — 13:00 ✅ — [Potrdi rezervacijo]
+// "AI ne samo svetuje, ampak uredi."
 // ============================================================================
 
 interface BookingAssistantProps {
@@ -38,13 +39,14 @@ interface BookingAssistantProps {
   trigger?: "button" | "inline";
 }
 
-type BookingStep = "idle" | "form" | "confirming" | "confirmed";
+type BookingStep = "idle" | "form" | "sending" | "success";
 
 interface BookingData {
   date: string;
   time: string;
   partySize: number;
   name: string;
+  email: string;
   phone: string;
   notes: string;
 }
@@ -60,11 +62,14 @@ export function BookingAssistant({
   trigger = "button",
 }: BookingAssistantProps) {
   const [step, setStep] = useState<BookingStep>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [reference, setReference] = useState<string | null>(null);
   const [booking, setBooking] = useState<BookingData>({
     date: "",
     time: "",
     partySize: 2,
     name: "",
+    email: "",
     phone: "",
     notes: "",
   });
@@ -74,28 +79,71 @@ export function BookingAssistant({
   const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
   const handleStart = useCallback(() => {
-    setBooking((prev) => ({ ...prev, date: tomorrowStr }));
+    setErrorMessage(null);
+    setReference(null);
+    setBooking((prev) => ({ ...prev, date: prev.date || tomorrowStr }));
     setStep("form");
   }, [tomorrowStr]);
 
   const handleConfirm = useCallback(async () => {
-    setStep("confirming");
-    // Simulate booking (v produkciji: pošlji na /api/bookings)
-    await new Promise((r) => setTimeout(r, 2000));
-
-    // Track booking event
+    if (step === "sending") return;
+    setStep("sending");
+    setErrorMessage(null);
     try {
-      await fetch("/api/listings/" + listingId + "/track", {
+      const res = await fetch("/api/listing-inquiry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "lead", source: "booking_assistant" }),
+        body: JSON.stringify({
+          listingId,
+          name: booking.name,
+          email: booking.email,
+          phone: booking.phone,
+          date: booking.date || undefined,
+          time: booking.time || undefined,
+          groupSize: booking.partySize,
+          notes: booking.notes || undefined,
+        }),
       });
-    } catch {}
 
-    setStep("confirmed");
-  }, [listingId]);
+      const data = (await res.json().catch(() => null)) as {
+        success?: boolean;
+        reference?: string;
+        error?: string;
+      } | null;
 
-  const canConfirm = booking.date && booking.time && booking.name && booking.phone;
+      if (!res.ok || !data?.success) {
+        // Napaka — obrazec ostane izpolnjen, uporabnik lahko popravil
+        throw new Error(data?.error || "Pošiljanje povpraševanja ni uspelo — poskusi znova.");
+      }
+
+      setReference(data.reference ?? null);
+      setStep("success");
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : "Pošiljanje povpraševanja ni uspelo — poskusi znova."
+      );
+      setStep("form");
+    }
+  }, [step, listingId, booking]);
+
+  const handleReset = useCallback(() => {
+    // "Novo povpraševanje" — počisti obrazec in začni znova
+    setBooking({
+      date: tomorrowStr,
+      time: "",
+      partySize: 2,
+      name: "",
+      email: "",
+      phone: "",
+      notes: "",
+    });
+    setErrorMessage(null);
+    setReference(null);
+    setStep("form");
+  }, [tomorrowStr]);
+
+  const canConfirm =
+    booking.date && booking.time && booking.name.trim() && booking.email.trim() && booking.phone.trim();
 
   // === IDLE: Trigger button ===
   if (step === "idle") {
@@ -110,7 +158,7 @@ export function BookingAssistant({
           )}
         >
           <Sparkles className="size-3.5" aria-hidden="true" />
-          Rezerviraj z AI
+          Pošlji povpraševanje
         </button>
       );
     }
@@ -122,18 +170,18 @@ export function BookingAssistant({
         size="sm"
       >
         <Sparkles className="size-3.5" aria-hidden="true" />
-        Rezerviraj z AI
+        Pošlji povpraševanje
       </Button>
     );
   }
 
-  // === FORM / CONFIRMING / CONFIRMED: Modal overlay ===
+  // === FORM / SENDING / SUCCESS: Modal overlay ===
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
       <Card className="w-full max-w-md animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
         <CardContent className="p-6">
           {/* Close */}
-          {step !== "confirmed" && (
+          {step !== "success" && step !== "sending" && (
             <button
               type="button"
               onClick={() => setStep("idle")}
@@ -144,20 +192,30 @@ export function BookingAssistant({
             </button>
           )}
 
-          {/* === CONFIRMED === */}
-          {step === "confirmed" && (
+          {/* === SUCCESS === */}
+          {step === "success" && (
             <div className="text-center space-y-4">
               <div className="flex justify-center">
                 <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/30">
-                  <PartyPopper className="size-8 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                  <Check className="size-8 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-bold">Rezervacija potrjena!</h3>
+                <h3 className="text-lg font-bold">Povpraševanje poslano ponudniku!</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {listingName} je obveščen o tvojem povpraševanju. Kontaktiraj ga direktno za potrditev.
+                  Potrditev smo ti poslali na e-poštno. Ponudnik te bo kontaktiral v 24 h.
                 </p>
               </div>
+
+              {reference && (
+                <div className="rounded-xl bg-muted/50 p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Referenčna številka
+                  </p>
+                  <p className="font-mono text-sm font-bold text-primary">{reference}</p>
+                </div>
+              )}
+
               <div className="rounded-xl bg-muted/50 p-4 text-left space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="size-4 text-primary" aria-hidden="true" />
@@ -176,27 +234,32 @@ export function BookingAssistant({
                   <span>{booking.phone}</span>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Ponudnik te bo kontaktiral za potrditev. Za spremembe pokliči direktno.
-              </p>
+
               <Button
                 className="w-full"
-                onClick={() => setStep("idle")}
+                onClick={handleReset}
               >
-                <Check className="size-4 mr-1" aria-hidden="true" />
-                Zaključi
+                <RotateCcw className="size-4 mr-1" aria-hidden="true" />
+                Novo povpraševanje
               </Button>
+              <button
+                type="button"
+                onClick={() => setStep("idle")}
+                className="w-full text-center text-xs text-muted-foreground hover:text-foreground"
+              >
+                Zapri
+              </button>
             </div>
           )}
 
-          {/* === CONFIRMING === */}
-          {step === "confirming" && (
-            <div className="text-center space-y-4 py-8">
+          {/* === SENDING === */}
+          {step === "sending" && (
+            <div className="text-center space-y-4 py-8" role="status" aria-live="polite">
               <Loader2 className="mx-auto size-10 animate-spin text-primary" aria-hidden="true" />
               <div>
-                <h3 className="text-lg font-bold">AI potrjuje rezervacijo...</h3>
+                <h3 className="text-lg font-bold">Pošiljam povpraševanje…</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Kontakiram {listingName}
+                  Tvoje povpraševanje posredujemo ponudniku {listingName}
                 </p>
               </div>
             </div>
@@ -227,6 +290,16 @@ export function BookingAssistant({
                 </div>
               )}
 
+              {/* Napaka — obrazec ostane izpolnjen */}
+              {errorMessage && (
+                <div
+                  role="alert"
+                  className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+                >
+                  {errorMessage}
+                </div>
+              )}
+
               {/* Date */}
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
@@ -254,6 +327,7 @@ export function BookingAssistant({
                       key={slot}
                       type="button"
                       onClick={() => setBooking({ ...booking, time: slot })}
+                      aria-pressed={booking.time === slot}
                       className={cn(
                         "rounded-lg border py-2 text-xs font-medium transition-all",
                         booking.time === slot
@@ -278,15 +352,17 @@ export function BookingAssistant({
                     variant="outline"
                     size="icon"
                     className="size-8"
+                    aria-label="Zmanjšaj število oseb"
                     onClick={() => setBooking({ ...booking, partySize: Math.max(1, booking.partySize - 1) })}
                   >
                     −
                   </Button>
-                  <span className="text-lg font-bold w-8 text-center">{booking.partySize}</span>
+                  <span className="text-lg font-bold w-8 text-center" aria-live="polite">{booking.partySize}</span>
                   <Button
                     variant="outline"
                     size="icon"
                     className="size-8"
+                    aria-label="Povečaj število oseb"
                     onClick={() => setBooking({ ...booking, partySize: Math.min(20, booking.partySize + 1) })}
                   >
                     +
@@ -297,9 +373,11 @@ export function BookingAssistant({
               {/* Name + Phone */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Ime</label>
+                  <label htmlFor="booking-name" className="text-xs font-medium text-muted-foreground mb-1.5 block">Ime</label>
                   <Input
+                    id="booking-name"
                     type="text"
+                    autoComplete="name"
                     placeholder="Janez Novak"
                     value={booking.name}
                     onChange={(e) => setBooking({ ...booking, name: e.target.value })}
@@ -307,9 +385,11 @@ export function BookingAssistant({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Telefon</label>
+                  <label htmlFor="booking-phone" className="text-xs font-medium text-muted-foreground mb-1.5 block">Telefon</label>
                   <Input
+                    id="booking-phone"
                     type="tel"
+                    autoComplete="tel"
                     placeholder="+386 30 123 456"
                     value={booking.phone}
                     onChange={(e) => setBooking({ ...booking, phone: e.target.value })}
@@ -318,12 +398,31 @@ export function BookingAssistant({
                 </div>
               </div>
 
+              {/* Email */}
+              <div>
+                <label htmlFor="booking-email" className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                  <Mail className="inline size-3 mr-1" aria-hidden="true" />
+                  E-pošta (za potrditev)
+                </label>
+                <Input
+                  id="booking-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="tvoj@email.si"
+                  value={booking.email}
+                  onChange={(e) => setBooking({ ...booking, email: e.target.value })}
+                  className="text-sm"
+                />
+              </div>
+
               {/* Notes */}
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                <label htmlFor="booking-notes" className="text-xs font-medium text-muted-foreground mb-1.5 block">
                   Posebne želje (opcijsko)
                 </label>
                 <Input
+                  id="booking-notes"
                   type="text"
                   placeholder="Alergije, otroški stol, otrok rojstni dan..."
                   value={booking.notes}
@@ -338,12 +437,12 @@ export function BookingAssistant({
                 disabled={!canConfirm}
                 onClick={handleConfirm}
               >
-                <Check className="size-4" aria-hidden="true" />
-                Potrdi rezervacijo
+                <Send className="size-4" aria-hidden="true" />
+                Pošlji povpraševanje
               </Button>
 
               <p className="text-center text-[10px] text-muted-foreground">
-                AI te poveže z ponudnikom. Rezervacijo opraviš direktno pri njem — brez posrednikov, brez provizij.
+                Povpraševanje posredujemo ponudniku, ki te bo kontaktiral za potrditev — brez posrednikov, brez provizij.
               </p>
             </div>
           )}

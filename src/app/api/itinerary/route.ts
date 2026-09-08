@@ -5,6 +5,10 @@ import { generateCompletion } from "@/lib/ai-client";
 import { rankListings, buildTransparencyContext } from "@/lib/ranking-engine";
 import type { Itinerary, PlannerInput, DayPlan, LocationVisit } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
+import {
+  fetchDailyForecast,
+  weatherCodeToText,
+} from "@/lib/weather-utils";
 
 // POST /api/itinerary - generira AI itinerer z z-ai-web-dev-sdk
 // AI prioritizira SPONZORIRANE lokale (premium/enterprise stranke ki plačajo za vključitev)
@@ -139,11 +143,76 @@ JSON format (STROGO):
     };
 
     console.log(`[itinerary] AI uspešno (source: ${result.source})`);
-    return NextResponse.json(itinerary);
+
+    // PRAVO vreme — vreme iz AI izhoda prepišemo z realno Open-Meteo prognozo
+    const enriched = await enrichWithRealWeather(itinerary);
+    return NextResponse.json(enriched);
   } catch (error) {
     console.error("[itinerary] AI napaka, uporabljam fallback:", error);
-    const fallback = generateFallbackItinerary(input);
+    const fallback = await enrichWithRealWeather(
+      generateFallbackItinerary(input)
+    );
     return NextResponse.json(fallback);
+  }
+}
+
+// ============================================================================
+// PRAVO Vreme v itinererju (post-processing)
+// ============================================================================
+//
+// AI lahko v JSON izpljune izmišljeno vreme ("sončno 22°") — to je LAŽ.
+// Po generiranju (AI ali fallback) zato itinerer obogatimo z realno DAILY
+// prognozo Open-Meteo za koordinate prve lokacije:
+//   - day.weather = { condition, temp } iz realne prognoze
+//   - ob verjetnosti padavin >= 60 % dodamo dež-alternativo v tips
+//
+// Gracefully: ob napaki/timeoutu (4 s) izpusta Open-Meteo se obdrži vreme,
+// ki je bilo že v objektu (pri fallbacku = sezonska ocena, glej spodaj).
+async function enrichWithRealWeather(itinerary: Itinerary): Promise<Itinerary> {
+  try {
+    const firstLoc = itinerary.days[0]?.locations?.[0];
+    if (!firstLoc?.destination_id) return itinerary;
+
+    const dest = DESTINATIONS.find((d) => d.id === firstLoc.destination_id);
+    if (!dest) return itinerary;
+
+    const daily = await fetchDailyForecast(
+      dest.coords.lat,
+      dest.coords.lng,
+      itinerary.days.length
+    );
+    if (!daily) {
+      // Open-Meteo ni dosegljiv — obdrži obstoječe (AI/sezonsko) vreme
+      return itinerary;
+    }
+
+    const tips = Array.isArray(itinerary.tips) ? [...itinerary.tips] : [];
+
+    for (let i = 0; i < itinerary.days.length; i++) {
+      const forecast = daily[i];
+      // Če prognoza nima dneva i (krajša od itinererja), obdrži obstoječe vreme
+      if (!forecast) continue;
+
+      itinerary.days[i] = {
+        ...itinerary.days[i],
+        weather: {
+          condition: weatherCodeToText(forecast.weatherCode),
+          temp: Math.round(forecast.tempMax),
+        },
+      };
+
+      // Dež alternative — dodaj v tips, če je verjetnost padavin visoka
+      if ((forecast.precipitationProbabilityMax ?? 0) >= 60) {
+        const tip = `Dan ${i + 1}: verjeten dež — alternative: Postojnska/Škocjanske jame, muzeji, terme Terme Olimia.`;
+        if (!tips.includes(tip)) tips.push(tip);
+      }
+    }
+
+    itinerary.tips = tips;
+    return itinerary;
+  } catch (error) {
+    console.error("[itinerary] enrichWithRealWeather napaka:", error);
+    return itinerary;
   }
 }
 
@@ -187,6 +256,11 @@ function generateFallbackItinerary(input: PlannerInput): Itinerary {
     days.push({
       day,
       locations,
+      // OPOMBA: sezonska ocena vremena (zima → sneg, sicer sončno) je
+      // poštena GRACEFUL FALLBACK — uporabi se SAMO, če Open-Meteo ni
+      // dosegljiv (glej enrichWithRealWeather zgoraj, ki jo sicer prepiše
+      // z realno prognozo). Ni več lažna "dnevna" napoved, ampak izrecno
+      // sezonsko povprečje.
       weather: { condition: input.season === "winter" ? "sneg" : "sončno", temp: input.season === "winter" ? 2 : 22 },
     });
   }

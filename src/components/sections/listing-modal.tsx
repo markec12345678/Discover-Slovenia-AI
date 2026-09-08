@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Star,
   MapPin,
@@ -34,6 +34,7 @@ import {
   PLAN_LABELS,
   type Listing,
 } from "@/lib/listings-types";
+import { trackFunnel } from "@/lib/funnel";
 
 interface ListingModalProps {
   listing: Listing | null;
@@ -47,6 +48,17 @@ interface ListingModalProps {
  */
 export function ListingModal({ listing, onClose }: ListingModalProps) {
   const [activeImage, setActiveImage] = useState(0);
+
+  // Funnel tracking + gamifikacija ob odprtju modal okna (Slovenia Pass posluša)
+  useEffect(() => {
+    if (!listing) return;
+    trackFunnel("listing_click", listing.id);
+    window.dispatchEvent(
+      new CustomEvent("listingViewed", {
+        detail: { listingId: listing.id },
+      })
+    );
+  }, [listing]);
 
   // Reset aktivne slike ko se odpre nov listing
   const handleOpenChange = (open: boolean) => {
