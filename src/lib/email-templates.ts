@@ -767,6 +767,128 @@ Ekipa Discover Slovenia AI`;
 }
 
 // =========================
+// 10. COMMISSION INVOICE EMAIL (za ownerja — Faza 4b samodejni obračun)
+// =========================
+
+export type CommissionInvoiceEmailData = {
+  ownerName: string;
+  invoiceNumber: string;
+  periodStart: Date;
+  periodEnd: Date; // ekskluzivna meja — zadnji dan = end − 1 ms
+  bookingCount: number;
+  commissionBase: number;
+  rate: number;
+  amount: number;
+};
+
+export function commissionInvoiceEmail({
+  ownerName,
+  invoiceNumber,
+  periodStart,
+  periodEnd,
+  bookingCount,
+  commissionBase,
+  rate,
+  amount,
+}: CommissionInvoiceEmailData): { subject: string; html: string; text: string } {
+  const fmtDay = (d: Date) =>
+    d.toLocaleDateString("sl-SI", { day: "numeric", month: "long", year: "numeric" });
+  const periodStr = `${fmtDay(periodStart)} – ${fmtDay(
+    new Date(periodEnd.getTime() - 1)
+  )}`;
+  const amountStr = formatEur(amount);
+  const baseStr = formatEur(commissionBase);
+  const ratePercent = Math.round(rate * 100);
+  const subject = `Račun ${invoiceNumber}: provizija ${amountStr} (${periodStr})`;
+  const dashboardUrl = `${getBaseUrl()}/owner/dashboard`;
+
+  const content = `
+    <p style="margin-top: 0;">Pozdravljeni <strong>${escapeHtml(ownerName)}</strong>,</p>
+    <p>za obdobje <strong>${periodStr}</strong> vam je brezplačna AI konzultacija prinesla
+    <strong>${bookingCount} ${bookingCount === 1 ? "rezervacijo" : "rezervacije"}</strong>.
+    Skladno s provizijskim modelom (kot pri Booking.com) vam izdajemo račun za provizijo.</p>
+
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 24px 0;">
+      <div style="font-size: 13px; color: #166534; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">
+        🧾 Provizijski račun
+      </div>
+      <table style="width: 100%; font-size: 14px;">
+        <tr>
+          <td style="padding: 6px 0; color: #6b7280;">Številka računa:</td>
+          <td style="padding: 6px 0; text-align: right; font-weight: bold; font-family: monospace;">${escapeHtml(invoiceNumber)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #6b7280;">Obdobje:</td>
+          <td style="padding: 6px 0; text-align: right; font-weight: bold;">${periodStr}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #6b7280;">Rezervacije iz AI konzultacij:</td>
+          <td style="padding: 6px 0; text-align: right; font-weight: bold;">${bookingCount}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #6b7280;">Osnova (vrednost rezervacij):</td>
+          <td style="padding: 6px 0; text-align: right; font-weight: bold;">${baseStr}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #6b7280;">Provizijska stopnja:</td>
+          <td style="padding: 6px 0; text-align: right; font-weight: bold;">${ratePercent} %</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0 0 0; color: #1a2e1a; border-top: 1px solid #bbf7d0; font-weight: bold;">Znesek za plačilo:</td>
+          <td style="padding: 10px 0 0 0; text-align: right; border-top: 1px solid #bbf7d0; font-weight: bold; font-size: 18px; color: #2d6a3e;">${amountStr}</td>
+        </tr>
+      </table>
+    </div>
+
+    <p><strong>Kako deluje ta model?</strong> Turist plača polno ceno neposredno vam — provizija
+    zajema izključno rezervacije, ki jih je prinesla brezplačna AI konzultacija.
+    Rezervacije, ki pridejo od drugod, ostanejo povsem brez provizije.</p>
+
+    <div style="background: #fef9c3; border: 1px solid #fde68a; border-radius: 8px; padding: 16px 20px; margin: 24px 0; font-size: 14px; color: #92400e;">
+      💡 <strong>Želite 0&nbsp;% provizije?</strong> Premium partnerji (149&nbsp;€/mes) ne plačujejo
+      provizije na AI-prinesenih rezervacijah — poleg tega dobijo 5-odstotni rangirni boost
+      in vidnejše mesto v konzultacijah.
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${dashboardUrl}" style="background: #2d6a3e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+        Odpri račun v dashboardu →
+      </a>
+    </div>
+
+    <p style="font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 24px;">
+      Račun in zgodovina obračunov so vedno vidni v vašem dashboardu (zavihek „Provizije").
+      Status plačila bomo posodobili ob prejetem plačilu.
+    </p>
+  `;
+
+  const text = `Račun ${invoiceNumber}: provizija ${amountStr}
+
+Pozdravljeni ${ownerName},
+
+za obdobje ${periodStr} vam je brezplačna AI konzultacija prinesla ${bookingCount} ${
+    bookingCount === 1 ? "rezervacijo" : "rezervacije"
+  }.
+
+Številka računa: ${invoiceNumber}
+Osnova: ${baseStr}
+Stopnja: ${ratePercent} %
+Znesek za plačilo: ${amountStr}
+
+Turist plača polno ceno neposredno vam — provizija zajema izključno rezervacije iz AI konzultacij.
+
+Račun je viden v vašem dashboardu:
+${dashboardUrl}
+
+Želite 0 % provizije? Premium (149 EUR/mes) vključuje 0 % provizije in 5-odstotni boost.
+
+Lep pozdrav,
+Ekipa Discover Slovenia AI`;
+
+  return { subject, html: emailTemplate("Provizijski račun 🧾", content), text };
+}
+
+// =========================
 // Helpers
 // =========================
 

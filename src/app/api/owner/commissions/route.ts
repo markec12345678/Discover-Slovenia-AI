@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { randomUUID } from "crypto";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
+import {
+  COMMISSION_RATE,
+  isPremiumOwner,
+  monthRange,
+  monthLabel,
+  issueCommissionInvoice,
+} from "@/lib/commissions";
 
 // ============================================================================
 // /api/owner/commissions — provizijski model (Faza 4a, Booking-style)
@@ -19,45 +25,7 @@ import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
 // Politika: free partner → 12 %; premium/featured (aktivna naročnina) → 0 %
 // (vključeno v Premium 149 €/mes). Stopnja se zapiše (snapshot) ob izdaji.
 // Turist vedno plača polno ceno neposredno ponudniku — kot pri Booking.com.
-
-const COMMISSION_RATE = 0.12; // 12 % — free partnerji
-const PREMIUM_PLANS = ["premium", "enterprise"];
-
-type OwnerPremiumFields = {
-  id: string;
-  name: string;
-  plan: string;
-  subscriptionStatus: string;
-  subscriptionEndsAt: Date | null;
-};
-
-function isPremiumOwner(owner: OwnerPremiumFields): boolean {
-  if (!PREMIUM_PLANS.includes(owner.plan)) return false;
-  if (owner.subscriptionStatus === "canceled") return false;
-  // Pretekla naročnina ne šteje več (enak princip kot premiumUntil pri listingih)
-  if (owner.subscriptionEndsAt && owner.subscriptionEndsAt.getTime() <= Date.now()) {
-    return false;
-  }
-  return true;
-}
-
-// Koledarski mesec glede na lokalni čas (DST-varen — konstruktor Date(y, m, 1)).
-// offset 0 = tekoči mesec, -1 = prejšnji mesec.
-function monthRange(offset: number): { start: Date; end: Date } {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 1);
-  return { start, end };
-}
-
-const monthLabel = (d: Date) =>
-  new Intl.DateTimeFormat("sl-SI", { month: "long", year: "numeric" }).format(d);
-
-function invoiceNumberFor(periodStart: Date): string {
-  const ym = `${periodStart.getFullYear()}${String(periodStart.getMonth() + 1).padStart(2, "0")}`;
-  const suffix = randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
-  return `INV-${ym}-${suffix}`;
-}
+// Jedro logike (izdaja) je deljeno v src/lib/commissions.ts (tudi cron).
 
 // ============================================================================
 // GET — predogled + zgodovina računov
@@ -184,10 +152,12 @@ export async function POST(request: Request) {
     const { action, invoiceId } = body as { action?: string; invoiceId?: string };
 
     // ------------------------------------------------------------------
-    // GENERATE — provizijski račun za prejšnji koledarski mesec
+    // GENERATE — provizijski račun za prejšnji koledarski mesec (deljena logika)
     // ------------------------------------------------------------------
     if (action === "generate") {
-      if (isPremiumOwner(owner)) {
+      const result = await issueCommissionInvoice(owner);
+
+      if (result.status === "premium") {
         return NextResponse.json(
           {
             error:
@@ -196,44 +166,14 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-
-      const last = monthRange(-1);
-
-      // Idempotenca: en račun na obdobje
-      const existing = await db.commissionInvoice.findFirst({
-        where: { ownerId: owner.id, periodStart: last.start },
-        select: { id: true, invoiceNumber: true },
-      });
-      if (existing) {
+      if (result.status === "duplicate") {
         return NextResponse.json(
-          { error: `Račun za to obdobje je že izdan (${existing.invoiceNumber}).` },
+          { error: `Račun za to obdobje je že izdan (${result.invoiceNumber}).` },
           { status: 409 }
         );
       }
-
-      // Agregacija atribuiranih rezervacij v obdobju
-      const experiences = await db.experience.findMany({
-        where: { ownerId: owner.id },
-        select: { id: true },
-      });
-      const experienceIds = experiences.map((e) => e.id);
-
-      const agg = experienceIds.length
-        ? await db.booking.aggregate({
-            _count: true,
-            _sum: { total: true },
-            where: {
-              source: "consultation",
-              experienceId: { in: experienceIds },
-              createdAt: { gte: last.start, lt: last.end },
-            },
-          })
-        : { _count: 0, _sum: { total: null as number | null } };
-
-      const bookingCount = agg._count;
-      const commissionBase = agg._sum.total ?? 0;
-
-      if (bookingCount === 0) {
+      if (result.status === "no_bookings") {
+        const last = monthRange(-1);
         return NextResponse.json(
           {
             error: `Ni rezervacij iz AI konzultacij v obdobju ${monthLabel(last.start)} — nič za obračun.`,
@@ -242,44 +182,7 @@ export async function POST(request: Request) {
         );
       }
 
-      const rate = COMMISSION_RATE; // snapshot ob izdaji
-      const amount = Math.round(commissionBase * rate * 100) / 100;
-
-      const invoice = await db.commissionInvoice.create({
-        data: {
-          ownerId: owner.id,
-          invoiceNumber: invoiceNumberFor(last.start),
-          periodStart: last.start,
-          periodEnd: last.end,
-          bookingCount,
-          commissionBase,
-          rate,
-          amount,
-          status: "issued",
-        },
-      });
-
-      await logAudit({
-        actorId: owner.id,
-        actorRole: "owner",
-        action: AUDIT_ACTIONS.COMMISSION_INVOICE_ISSUED,
-        resourceType: "commission_invoice",
-        resourceId: invoice.id,
-        resourceName: invoice.invoiceNumber,
-        metadata: {
-          period: `${last.start.toISOString()} — ${last.end.toISOString()}`,
-          bookingCount,
-          commissionBase,
-          rate,
-          amount,
-        },
-      });
-
-      console.log(
-        `[commissions] Izdan ${invoice.invoiceNumber} za ${owner.name}: ${bookingCount} rezervacij, ${amount} €`
-      );
-
-      return NextResponse.json({ invoice }, { status: 201 });
+      return NextResponse.json({ invoice: result.invoice }, { status: 201 });
     }
 
     // ------------------------------------------------------------------
