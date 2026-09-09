@@ -14,6 +14,7 @@ import {
   Star,
   MessageCircle,
   Crown,
+  Percent,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,9 +45,9 @@ export default function ProviderLandingPage() {
               Discover Slovenia AI je prva AI-poganjana turistična platforma za
               Slovenijo. Turist napiše kaj želi — AI sestavi dan, priporoči vaš
               lokal in ga pripelje do vas. Rezervacijo opravi turist direktno
-              pri vas — brez posrednikov, brez provizij. Kot pri Booking.com:
-              turisti ne plačujejo nič, platformo financirajo ponudniki, ki
-              želijo prioriteto.
+              pri vas. Kot pri Booking.com: turisti ne plačujejo nič — vi
+              plačate le 12&nbsp;% provizijo, kadar vam rezervacijo prinese AI
+              konzultacija (Premium: 0&nbsp;%).
             </p>
 
             {/* Social proof */}
@@ -132,9 +133,11 @@ export default function ProviderLandingPage() {
             </h2>
             <p className="mt-4 text-muted-foreground">
               Brezplačne AI konzultacije pritegnejo več turistov — ti pa
-              rezervirajo neposredno pri vas. Vi plačate le, če želite
-              prioriteto v AI priporočilih. Skritih provizij ni: turist plača
-              samo vam.
+              rezervirajo neposredno pri vas. Vi plačate le, če vam AI prinese
+              gosta: 12&nbsp;% provizije na rezervaciji iz AI konzultacije —
+              ali 0&nbsp;% s Premium naročnino (149&nbsp;€/mes), ki vključuje
+              tudi 5-odstotni boost. Turist plača polno ceno samo vam;
+              skritih stroškov ni.
             </p>
           </div>
           <div className="mx-auto mt-12 grid max-w-4xl gap-6 sm:grid-cols-3">
@@ -147,12 +150,12 @@ export default function ProviderLandingPage() {
               {
                 icon: MousePointerClick,
                 title: "2 · AI priporoči vas",
-                desc: "Konzultacija citira vaš lokal in izkušnjo. Rezervacija poteka direktno pri vas, brez provizije — atributirana vam v analitiko.",
+                desc: "Konzultacija citira vaš lokal in izkušnjo. Rezervacija poteka direktno pri vas — atributirana vam v analitiko; provizija se obračuna le, kadar je rezervacija plod AI konzultacije.",
               },
               {
                 icon: Crown,
                 title: "3 · Vi izberete prioriteto",
-                desc: "Premium partnerji (149 €/mes) dobijo 5-odstotni rangirni boost, Premium znak in vidnejše mesto v konzultacijah.",
+                desc: "Premium partnerji (149 €/mes) dobijo 5-odstotni rangirni boost, Premium znak, vidnejše mesto v konzultacijah in 0 % provizije.",
               },
             ].map((item) => {
               const Icon = item.icon;
@@ -213,8 +216,9 @@ export default function ProviderLandingPage() {
             <h2 className="mb-3 text-center text-3xl font-bold">Paketi</h2>
             <p className="mb-12 text-center text-muted-foreground">
               Registracija in osnovni paket sta brezplačna — turisti nikoli ne
-              plačujejo. Prihodek prihaja izključno iz premium naročnin
-              ponudnikov, rezervacija pri vas pa ostane brez provizije.
+              plačujejo. Prihodek prihaja iz provizij na AI-prinesenih
+              rezervacijah (12&nbsp;%) in premium naročnin (Premium =
+              0&nbsp;% provizije).
             </p>
             <div className="grid gap-6 sm:grid-cols-3">
               {/* Free */}
@@ -227,6 +231,10 @@ export default function ProviderLandingPage() {
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />1 lokal</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />5 slik</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Osnovne analytics</li>
+                    <li className="flex items-center gap-2">
+                      <Percent className="size-4 text-primary" aria-hidden="true" />
+                      12 % provizija na rezervacije iz AI konzultacij
+                    </li>
                   </ul>
                 </CardContent>
               </Card>
@@ -238,6 +246,7 @@ export default function ProviderLandingPage() {
                   <p className="mt-2 text-3xl font-bold">€149</p>
                   <p className="text-xs text-muted-foreground">/mesec</p>
                   <ul className="mt-4 space-y-2 text-left text-sm">
+                    <li className="flex items-center gap-2 font-semibold"><Check className="size-4 text-emerald-500" />0 % provizija — vključeno</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />5 lokalov</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />20 slik</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />5% AI boost</li>
@@ -258,6 +267,7 @@ export default function ProviderLandingPage() {
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />20 lokalov</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />50 slik</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />API dostop</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />0 % provizija</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Atribucija rezervacij iz konzultacij</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />AI insights</li>
                   </ul>

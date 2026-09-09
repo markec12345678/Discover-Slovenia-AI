@@ -50,7 +50,7 @@ export default function AboutPage() {
                 <Users className="size-6 text-primary mb-2" />
                 <h3 className="font-semibold mb-1">Lokalni ponudniki</h3>
                 <p className="text-sm text-muted-foreground">
-                  Neposredne povezave do hotelov, restavracij in aktivnosti — brez provizij.
+                  Neposredne povezave do hotelov, restavracij in aktivnosti — rezervacija vedno pri ponudniku, brez dodatnih stroškov za vas.
                 </p>
               </CardContent>
             </Card>

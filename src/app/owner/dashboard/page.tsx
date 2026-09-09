@@ -42,6 +42,9 @@ import {
   Mail,
   Activity,
   Target,
+  Percent,
+  Receipt,
+  Banknote,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -306,7 +309,7 @@ export default function OwnerDashboardPage() {
       {/* Content */}
       <div className="mx-auto max-w-6xl w-full px-4 py-6 sm:py-8 flex-1">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 mb-6 gap-1">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 mb-6 gap-1">
             <TabsTrigger value="listings" className="gap-1.5 text-xs sm:text-sm">
               <Building className="size-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Moji lokalci</span>
@@ -331,6 +334,11 @@ export default function OwnerDashboardPage() {
               <TrendingUp className="size-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Statistika</span>
               <span className="sm:hidden">Statistika</span>
+            </TabsTrigger>
+            <TabsTrigger value="provizije" className="gap-1.5 text-xs sm:text-sm">
+              <Percent className="size-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Provizije</span>
+              <span className="sm:hidden">Prov.</span>
             </TabsTrigger>
           </TabsList>
 
@@ -439,6 +447,11 @@ export default function OwnerDashboardPage() {
               loading={loadingListings}
               onUpgrade={() => setActiveTab("narocnina")}
             />
+          </TabsContent>
+
+          {/* TAB 6: Provizije (Faza 4a — Booking-style) */}
+          <TabsContent value="provizije" className="space-y-4">
+            <CommissionsTab onUpgrade={() => setActiveTab("narocnina")} />
           </TabsContent>
         </Tabs>
       </div>
@@ -1683,8 +1696,8 @@ function StatisticsTab({
             <div className="flex-1 min-w-0 text-sm">
               <p className="font-medium">Želite prioriteto v AI konzultacijah?</p>
               <p className="text-muted-foreground mt-0.5">
-                Premium partnerji dobijo 5-odstotni rangirni boost in Premium
-                znak. Rezervacija pri vas ostane brez provizije.
+                Premium partnerji dobijo 5-odstotni rangirni boost, Premium
+                znak in 0&nbsp;% provizije na rezervacijah iz AI konzultacij.
               </p>
             </div>
             <Button onClick={onUpgrade} className="gap-1.5 shrink-0">
@@ -1982,6 +1995,403 @@ function StatisticsTab({
           Premium in Enterprise.
         </AlertDescription>
       </Alert>
+    </div>
+  );
+}
+
+// ============================================================================
+// TAB 6: PROVIZIJE — Booking-style obračun (Faza 4a)
+// ============================================================================
+interface CommissionInvoiceRow {
+  id: string;
+  invoiceNumber: string;
+  periodStart: string;
+  periodEnd: string;
+  bookingCount: number;
+  commissionBase: number;
+  rate: number;
+  amount: number;
+  status: string;
+  issuedAt: string;
+  paidAt: string | null;
+}
+
+interface CommissionsData {
+  rate: number;
+  isPremium: boolean;
+  commissionRateStandard: number;
+  currentMonth: {
+    monthLabel: string;
+    bookingCount: number;
+    commissionBase: number;
+    estimatedAmount: number;
+  };
+  lastMonth: {
+    monthLabel: string;
+    bookingCount: number;
+    commissionBase: number;
+    amount: number;
+    invoiceExists: boolean;
+  };
+  invoices: CommissionInvoiceRow[];
+}
+
+const fmtEur = (v: number) => `${v.toLocaleString("sl-SI")} €`;
+
+const fmtPeriod = (startIso: string, endIso: string) => {
+  const fmt = new Intl.DateTimeFormat("sl-SI", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const start = new Date(startIso);
+  // periodEnd je ekskluzivna meja — zadnji dan obdobja je end − 1 ms
+  const lastDay = new Date(new Date(endIso).getTime() - 1);
+  return `${fmt.format(start)} – ${fmt.format(lastDay)}`;
+};
+
+function CommissionsTab({ onUpgrade }: { onUpgrade: () => void }) {
+  const { toast } = useToast();
+  const [data, setData] = useState<CommissionsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [issuing, setIssuing] = useState(false);
+  const [markingId, setMarkingId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/owner/commissions", { cache: "no-store" });
+      if (!res.ok) throw new Error();
+      const d: CommissionsData = await res.json();
+      setData(d);
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Napaka",
+        description: "Ni mogoče naložiti provizij.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const handleGenerate = async () => {
+    setIssuing(true);
+    try {
+      const res = await fetch("/api/owner/commissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "generate" }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        toast({
+          variant: "destructive",
+          title: "Izdaja ni mogoča",
+          description: d.error || "Poskusite kasneje.",
+        });
+        return;
+      }
+      toast({
+        title: "Račun izdan",
+        description: `${d.invoice.invoiceNumber} — ${fmtEur(d.invoice.amount)} za plačilo.`,
+      });
+      await load();
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Napaka",
+        description: "Izdaja računa ni uspela.",
+      });
+    } finally {
+      setIssuing(false);
+    }
+  };
+
+  const handleMarkPaid = async (invoiceId: string) => {
+    setMarkingId(invoiceId);
+    try {
+      const res = await fetch("/api/owner/commissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "mark_paid", invoiceId }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        toast({
+          variant: "destructive",
+          title: "Napaka",
+          description: d.error || "Poskusite kasneje.",
+        });
+        return;
+      }
+      toast({
+        title: "Račun je plačan",
+        description: `${d.invoice.invoiceNumber} — hvala!`,
+      });
+      await load();
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Napaka",
+        description: "Označitev plačila ni uspela.",
+      });
+    } finally {
+      setMarkingId(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2
+          className="size-8 animate-spin text-muted-foreground"
+          aria-hidden="true"
+        />
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const ratePercent = Math.round(data.rate * 100);
+  const canGenerate =
+    !data.isPremium &&
+    data.lastMonth.bookingCount > 0 &&
+    !data.lastMonth.invoiceExists;
+
+  return (
+    <div className="space-y-6">
+      {/* Glava + politika */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Percent className="size-4 text-primary" aria-hidden="true" />
+            Provizije — model kot pri Booking.com
+          </CardTitle>
+          <CardDescription>
+            Turist plača polno ceno neposredno vam. Vi obračunate provizijo
+            le za rezervacije, ki jih prinese AI kanal (brezplačna konzultacija).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {data.isPremium ? (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-emerald-300/60 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800/40 p-4">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                <Crown className="size-5" aria-hidden="true" />
+              </div>
+              <div className="flex-1 min-w-0 text-sm">
+                <p className="font-semibold text-emerald-900 dark:text-emerald-200">
+                  Vaša provizijska stopnja: 0 %
+                </p>
+                <p className="text-muted-foreground mt-0.5">
+                  Provizija je vključena v vašo Premium naročnino — računov
+                  ni treba izdajati.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-border/60 bg-muted/40 p-4">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Percent className="size-5" aria-hidden="true" />
+              </div>
+              <div className="flex-1 min-w-0 text-sm">
+                <p className="font-semibold">
+                  Vaša provizijska stopnja: {ratePercent} %
+                </p>
+                <p className="text-muted-foreground mt-0.5">
+                  Provizija se obračuna le na rezervacijah, ki jih prinese AI
+                  konzultacija ({data.lastMonth.bookingCount > 0 || data.currentMonth.bookingCount > 0
+                    ? "vidne spodaj"
+                    : "še ni atribuiranih rezervacij"}
+                  ). Premium (149&nbsp;€/mes) = 0&nbsp;% provizije in 5-odstotni boost.
+                </p>
+              </div>
+              <Button
+                onClick={onUpgrade}
+                className="gap-1.5 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Crown className="size-4" aria-hidden="true" />
+                Nadgradite na Premium
+              </Button>
+            </div>
+          )}
+
+          {/* Tekoči mesec — predogled */}
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+              Tekoči mesec · {data.currentMonth.monthLabel}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="rounded-lg border border-border/60 bg-muted/40 p-4">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                  <CalendarCheck className="size-3.5" aria-hidden="true" />
+                  Rezervacije iz AI kanala
+                </div>
+                <div className="mt-1 text-2xl font-bold tabular-nums">
+                  {data.currentMonth.bookingCount.toLocaleString("sl-SI")}
+                </div>
+              </div>
+              <div className="rounded-lg border border-border/60 bg-muted/40 p-4">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                  <Banknote className="size-3.5" aria-hidden="true" />
+                  Osnova za provizijo
+                </div>
+                <div className="mt-1 text-2xl font-bold tabular-nums">
+                  {fmtEur(data.currentMonth.commissionBase)}
+                </div>
+              </div>
+              <div className="rounded-lg border border-emerald-300/60 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800/40 p-4">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                  <Percent className="size-3.5" aria-hidden="true" />
+                  Predvidena provizija ({ratePercent} %)
+                </div>
+                <div className="mt-1 text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+                  {fmtEur(data.currentMonth.estimatedAmount)}
+                </div>
+              </div>
+            </div>
+            {data.currentMonth.bookingCount === 0 && (
+              <p className="text-xs text-muted-foreground mt-2">
+                V {data.currentMonth.monthLabel} še ni rezervacij, ki bi jih
+                prinesla AI konzultacija — provizija nastane le ob dejanski
+                rezervaciji.
+              </p>
+            )}
+          </div>
+
+          {/* Izdaja računa za prejšnji mesec */}
+          <div className="rounded-lg border border-border/60 p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold flex items-center gap-2">
+                  <Receipt className="size-4 text-primary" aria-hidden="true" />
+                  Račun za {data.lastMonth.monthLabel}
+                </div>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {data.lastMonth.bookingCount > 0 ? (
+                    <>
+                      {data.lastMonth.bookingCount}{" "}
+                      {data.lastMonth.bookingCount === 1
+                        ? "rezervacija"
+                        : "rezervacije"}{" "}
+                      · osnova {fmtEur(data.lastMonth.commissionBase)} ·
+                      provizija{" "}
+                      <span className="font-semibold text-foreground">
+                        {fmtEur(data.lastMonth.amount)}
+                      </span>
+                    </>
+                  ) : (
+                    <>Ni rezervacij iz AI konzultacij v tem obdobju.</>
+                  )}
+                </p>
+                {data.lastMonth.invoiceExists && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Račun za to obdobje je že izdan — viden v seznamu spodaj.
+                  </p>
+                )}
+              </div>
+              {!data.isPremium && (
+                <Button
+                  onClick={handleGenerate}
+                  disabled={!canGenerate || issuing}
+                  className="gap-1.5 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  {issuing ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Receipt className="size-4" aria-hidden="true" />
+                  )}
+                  Izdi račun
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Zgodovina računov */}
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+              Izdani računi
+            </div>
+            {data.invoices.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                Še ni izdanih provizijskih računov. Prvi račun se izda za
+                zaključeno mesečno obdobje z vsaj eno rezervacijo iz AI
+                konzultacije.
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                {data.invoices.map((inv) => (
+                  <div
+                    key={inv.id}
+                    className="rounded-lg border border-border/60 p-4 flex flex-col sm:flex-row sm:items-center gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-sm font-semibold">
+                          {inv.invoiceNumber}
+                        </span>
+                        <Badge
+                          className={cn(
+                            "border-0",
+                            inv.status === "paid"
+                              ? "bg-emerald-500 text-white"
+                              : "bg-amber-500 text-white"
+                          )}
+                        >
+                          {inv.status === "paid" ? "Plačano" : "Za plačilo"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {fmtPeriod(inv.periodStart, inv.periodEnd)} ·{" "}
+                        {inv.bookingCount}{" "}
+                        {inv.bookingCount === 1
+                          ? "rezervacija"
+                          : "rezervacij"}{" "}
+                        · osnova {fmtEur(inv.commissionBase)} ·{" "}
+                        {Math.round(inv.rate * 100)} %
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <div className="text-lg font-bold tabular-nums">
+                          {fmtEur(inv.amount)}
+                        </div>
+                      </div>
+                      {inv.status === "issued" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleMarkPaid(inv.id)}
+                          disabled={markingId === inv.id}
+                          className="gap-1.5"
+                        >
+                          {markingId === inv.id ? (
+                            <Loader2
+                              className="size-3.5 animate-spin"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <Check className="size-3.5" aria-hidden="true" />
+                          )}
+                          Označi kot plačano
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-3">
+              Zneski se izračunajo strežno iz atribuiranih rezervacij
+              (vir: AI konzultacije). Stopnja se zapiše ob izdaji računa.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

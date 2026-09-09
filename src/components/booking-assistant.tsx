@@ -442,7 +442,7 @@ export function BookingAssistant({
               </Button>
 
               <p className="text-center text-[10px] text-muted-foreground">
-                Povpraševanje posredujemo ponudniku, ki te bo kontaktiral za potrditev — brez posrednikov, brez provizij.
+                Povpraševanje posredujemo ponudniku, ki te bo kontaktiral za potrditev — brez posrednikov, brezplačno za vas.
               </p>
             </div>
           )}

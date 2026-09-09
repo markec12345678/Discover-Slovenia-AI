@@ -50,6 +50,7 @@ model Owner {
   products      Product[]
   experiences   Experience[]
   sponsorships  Sponsorship[]
+  commissionInvoices CommissionInvoice[]
 
   @@index([email])
   @@index([plan])
@@ -562,4 +563,37 @@ model PushSubscription {
   @@index([unsubscribedAt])
   @@index([kind, unsubscribedAt])
   @@index([tripEnd])
+}
+
+// ============================================================================
+// PROVIZIJSKI RAČUNI (Faza 4a: Booking-style provizijski model)
+// ============================================================================
+// Kot pri Booking.com: turist plača polno ceno neposredno ponudniku, platforma
+// pa ponudniku OBRAČUNA provizijo le za rezervacije, ki jih prinese AI kanal
+// (Booking.source = "consultation" — atribucija iz brezplačne konzultacije).
+// Stopnja: free partner 12 %, premium/featured partner 0 % (vključeno v
+// naročnino). Stopnja se zapiše (snapshot) ob izdaji računa — poznejše
+// spremembe paketa ne vplivajo na že izdane račune.
+// periodEnd je EKSKLUSIVNA meja (prvi trenutek naslednjega meseca).
+
+model CommissionInvoice {
+  id            String    @id @default(cuid())
+  ownerId       String
+  owner         Owner     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  invoiceNumber String    @unique // INV-YYYYMM-XXXXXX
+  periodStart   DateTime  // prvi trenutek koledarskega meseca (inkluzivno)
+  periodEnd     DateTime  // prvi trenutek naslednjega meseca (ekskluzivno)
+  bookingCount  Int       @default(0) // št. atribuiranih rezervacij v obdobju
+  commissionBase Float    @default(0) // skupna vrednost atribuiranih rezervacij (EUR)
+  rate          Float     @default(0.12) // provizijska stopnja ob izdaji (snapshot)
+  amount        Float     @default(0) // commissionBase × rate (EUR)
+  status        String    @default("issued") // issued | paid
+  issuedAt      DateTime  @default(now())
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@unique([ownerId, periodStart]) // idempotenca: en račun na obdobje
+  @@index([ownerId])
+  @@index([status])
+  @@index([issuedAt])
 }

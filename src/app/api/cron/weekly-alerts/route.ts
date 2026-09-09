@@ -197,9 +197,9 @@ export async function GET(request: Request) {
                 ${
                   !isPremium
                     ? `<p style="margin: 14px 0 0 0; font-size: 14px; color: #92400e;">
-                         💡 Premium partnerji (149 €/mes) dobijo 5-odstotni rangirni boost
-                         in vidnejše mesto v konzultacijah — rezervacija pri vas ostane
-                         brez provizije.
+                         💡 Premium partnerji (149 €/mes) dobijo 5-odstotni rangirni boost,
+                         vidnejše mesto v konzultacijah in 0 % provizije na
+                         AI-prinesenih rezervacijah.
                        </p>`
                     : ""
                 }

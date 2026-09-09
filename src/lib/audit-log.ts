@@ -9,7 +9,7 @@ export interface AuditLogParams {
   actorEmail?: string;
   actorRole: "admin" | "owner" | "system" | "stripe";
   action: string;
-  resourceType: "listing" | "sponsorship" | "owner" | "user";
+  resourceType: "listing" | "sponsorship" | "owner" | "user" | "commission_invoice";
   resourceId?: string;
   resourceName?: string;
   metadata?: Record<string, unknown>;
@@ -50,4 +50,6 @@ export const AUDIT_ACTIONS = {
   PLAN_CHANGED: "plan_changed",
   OWNER_REGISTERED: "owner_registered",
   OWNER_LOGIN: "owner_login",
+  COMMISSION_INVOICE_ISSUED: "commission_invoice_issued",
+  COMMISSION_INVOICE_PAID: "commission_invoice_paid",
 } as const;
