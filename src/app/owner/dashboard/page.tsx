@@ -20,6 +20,8 @@ import {
   Building,
   MapPin,
   Sparkles,
+  MessageCircle,
+  CalendarCheck,
   ArrowRight,
   ShieldCheck,
   CalendarClock,
@@ -43,7 +45,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -140,6 +142,7 @@ export default function OwnerDashboardPage() {
   const { data: session, status } = useSession();
 
   const [listings, setListings] = useState<Listing[]>([]);
+  const [activeTab, setActiveTab] = useState("listings");
   const [loadingListings, setLoadingListings] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Listing | null>(null);
@@ -302,7 +305,7 @@ export default function OwnerDashboardPage() {
 
       {/* Content */}
       <div className="mx-auto max-w-6xl w-full px-4 py-6 sm:py-8 flex-1">
-        <Tabs defaultValue="listings" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 mb-6 gap-1">
             <TabsTrigger value="listings" className="gap-1.5 text-xs sm:text-sm">
               <Building className="size-3.5" aria-hidden="true" />
@@ -431,7 +434,11 @@ export default function OwnerDashboardPage() {
 
           {/* TAB 5: Statistika */}
           <TabsContent value="statistika" className="space-y-6">
-            <StatisticsTab listings={listings} loading={loadingListings} />
+            <StatisticsTab
+              listings={listings}
+              loading={loadingListings}
+              onUpgrade={() => setActiveTab("narocnina")}
+            />
           </TabsContent>
         </Tabs>
       </div>
@@ -1406,14 +1413,26 @@ interface AnalyticsData {
     label: string;
     message: string;
   };
+  aiChannel: {
+    citationsFromConsultations: number;
+    bookingsFromConsultations: number;
+    revenueFromConsultations: number;
+    topConsultationExperiences: Array<{
+      name: string;
+      bookings: number;
+      revenue: number;
+    }>;
+  };
 }
 
 function StatisticsTab({
   listings,
   loading,
+  onUpgrade,
 }: {
   listings: Listing[];
   loading: boolean;
+  onUpgrade: () => void;
 }) {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
@@ -1494,7 +1513,7 @@ function StatisticsTab({
     );
   }
 
-  const { kpi, topListings, topProducts, topExperiences, trend, roi } = analytics;
+  const { kpi, topListings, topProducts, topExperiences, trend, roi, aiChannel } = analytics;
   const maxSeriesViews = Math.max(...trend.series.map((s) => s.views), 1);
 
   return (
@@ -1575,6 +1594,114 @@ function StatisticsTab({
           hint="Kolikokrat vas je AI lokalnež priporočil obiskovalcem v odgovorih."
         />
       </div>
+
+      {/* Faza 3d: AI kanal — vrednost brezplačnih konzultacij za ponudnika
+          (model "ponudniki plačajo" — kot Booking.com) */}
+      <Card className="border-emerald-200/60 bg-emerald-50/50 dark:border-emerald-800/40 dark:bg-emerald-950/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <MessageCircle
+              className="size-4 text-emerald-600"
+              aria-hidden="true"
+            />
+            AI konzultacije — kanal, ki prinaša goste
+          </CardTitle>
+          <CardDescription>
+            Turisti ne plačujejo nič (kot pri Booking.com), zato jih vpraša
+            več. Vsaka konzultacija citira lokalne ponudnike — tu vidite
+            točno to, kar vam je kanal prinesel.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="rounded-lg border border-border/60 bg-background/70 p-4">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                <Sparkles
+                  className="size-3.5 text-emerald-600"
+                  aria-hidden="true"
+                />
+                Citati v konzultacijah
+              </div>
+              <div className="mt-1 text-2xl font-bold tabular-nums">
+                {aiChannel.citationsFromConsultations.toLocaleString("sl-SI")}×
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                kolikokrat vas je AI navedel v osebnih načrtih
+              </div>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background/70 p-4">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                <CalendarCheck
+                  className="size-3.5 text-emerald-600"
+                  aria-hidden="true"
+                />
+                Rezervacije iz konzultacij
+              </div>
+              <div className="mt-1 text-2xl font-bold tabular-nums">
+                {aiChannel.bookingsFromConsultations.toLocaleString("sl-SI")}
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                rezervacije, pripisane vašim izkušnjam
+              </div>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background/70 p-4">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                <Euro className="size-3.5 text-emerald-600" aria-hidden="true" />
+                Vrednost rezervacij
+              </div>
+              <div className="mt-1 text-2xl font-bold tabular-nums">
+                {aiChannel.revenueFromConsultations.toLocaleString("sl-SI")} €
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                skupna vrednost atribuiranih rezervacij
+              </div>
+            </div>
+          </div>
+
+          {aiChannel.topConsultationExperiences.length > 0 && (
+            <div className="rounded-lg border border-border/60 p-4">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+                Najuspešnejše izkušnje v tem kanalu
+              </div>
+              <ul className="space-y-1.5 text-sm">
+                {aiChannel.topConsultationExperiences.map((e) => (
+                  <li
+                    key={e.name}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <span className="truncate font-medium">{e.name}</span>
+                    <span className="text-muted-foreground tabular-nums shrink-0">
+                      {e.bookings}× · {e.revenue.toLocaleString("sl-SI")} €
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-amber-200/60 bg-amber-50/50 dark:border-amber-800/40 dark:bg-amber-950/20 p-4">
+            <div className="flex-1 min-w-0 text-sm">
+              <p className="font-medium">Želite prioriteto v AI konzultacijah?</p>
+              <p className="text-muted-foreground mt-0.5">
+                Premium partnerji dobijo 5-odstotni rangirni boost in Premium
+                znak. Rezervacija pri vas ostane brez provizije.
+              </p>
+            </div>
+            <Button onClick={onUpgrade} className="gap-1.5 shrink-0">
+              <Crown className="size-4" aria-hidden="true" />
+              Nadgradite na Premium
+            </Button>
+          </div>
+
+          {aiChannel.citationsFromConsultations === 0 &&
+            aiChannel.bookingsFromConsultations === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Še ni citatov ali rezervacij iz konzultacij — kanal je nov.
+                Popolnejši profil pomeni pogostejše citiranje.
+              </p>
+            )}
+        </CardContent>
+      </Card>
 
       {/* Vrednost naročnine / ROI sekcija */}
       <Card>

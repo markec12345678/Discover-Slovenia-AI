@@ -93,6 +93,16 @@ interface AnalyticsResponse {
     label: string;
     message: string;
   };
+  aiChannel: {
+    citationsFromConsultations: number;
+    bookingsFromConsultations: number;
+    revenueFromConsultations: number;
+    topConsultationExperiences: Array<{
+      name: string;
+      bookings: number;
+      revenue: number;
+    }>;
+  };
 }
 
 export async function GET() {
@@ -169,6 +179,56 @@ export async function GET() {
 
     const totalViews = listingViews + productViews + experienceViews;
     const totalClicks = listingClicks;
+
+    // Faza 3d (model "ponudniki plačajo" — kot Booking.com): merimo vrednost,
+    // ki jo BREZPLAČNE AI konzultacije turistov prinesejo ponudniku:
+    // 1) citati lokalov v konzultacijah (ListingEvent source="consultation")
+    // 2) rezervacije iz konzultacij z atribucijo (Booking.source="consultation")
+    const experienceIds = experiences.map((e) => e.id);
+    const [consultationCitations, consultationBookings] = await Promise.all([
+      db.listingEvent.count({
+        where: {
+          type: "ai_recommendation",
+          source: "consultation",
+          listing: { ownerId: owner.id },
+        },
+      }),
+      db.booking.findMany({
+        where: {
+          source: "consultation",
+          experienceId: { in: experienceIds },
+        },
+        select: { experienceName: true, total: true },
+      }),
+    ]);
+
+    const bookingsFromConsultations = consultationBookings.length;
+    const revenueFromConsultations = Number(
+      consultationBookings.reduce((s, b) => s + b.total, 0).toFixed(2)
+    );
+
+    // Rezervacije iz konzultacij, združene po izkušnji (top 3)
+    const byExperience = new Map<
+      string,
+      { bookings: number; revenue: number }
+    >();
+    for (const b of consultationBookings) {
+      const cur = byExperience.get(b.experienceName) ?? {
+        bookings: 0,
+        revenue: 0,
+      };
+      cur.bookings += 1;
+      cur.revenue += b.total;
+      byExperience.set(b.experienceName, cur);
+    }
+    const topConsultationExperiences = Array.from(byExperience.entries())
+      .map(([name, v]) => ({
+        name,
+        bookings: v.bookings,
+        revenue: Number(v.revenue.toFixed(2)),
+      }))
+      .sort((a, b) => b.bookings - a.bookings)
+      .slice(0, 3);
 
     // Leads: preberi leads.json in preštej tiste, kjer businessName vsebuje
     // owner.businessName (povpraševanja po tem lokalu) ALI kjer je email enak
@@ -291,6 +351,12 @@ export async function GET() {
         isPositive,
         label,
         message,
+      },
+      aiChannel: {
+        citationsFromConsultations: consultationCitations,
+        bookingsFromConsultations,
+        revenueFromConsultations,
+        topConsultationExperiences,
       },
     };
 

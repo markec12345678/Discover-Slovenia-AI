@@ -12,6 +12,8 @@ import {
   ArrowRight,
   Check,
   Star,
+  MessageCircle,
+  Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,9 +41,12 @@ export default function ProviderLandingPage() {
               <span className="text-primary">najde vas.</span>
             </h1>
             <p className="mt-5 text-lg text-muted-foreground">
-              Discover Slovenia AI je prva AI-poganjana turistična platforma za Slovenijo.
-              Turist napiše kaj želi — AI sestavi dan, priporoči vaš lokal in ga pripelje do vas.
-              Rezervacijo opravi turist direktno pri vas — brez posrednikov, brez provizij.
+              Discover Slovenia AI je prva AI-poganjana turistična platforma za
+              Slovenijo. Turist napiše kaj želi — AI sestavi dan, priporoči vaš
+              lokal in ga pripelje do vas. Rezervacijo opravi turist direktno
+              pri vas — brez posrednikov, brez provizij. Kot pri Booking.com:
+              turisti ne plačujejo nič, platformo financirajo ponudniki, ki
+              želijo prioriteto.
             </p>
 
             {/* Social proof */}
@@ -111,6 +116,64 @@ export default function ProviderLandingPage() {
         </div>
       </section>
 
+      {/* Model — kot Booking.com (Faza 3d: ponudniki plačajo, turisti ne) */}
+      <section id="model" className="py-16 sm:py-20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium">
+              <MessageCircle
+                className="size-3.5 text-primary"
+                aria-hidden="true"
+              />
+              Model kot Booking.com
+            </span>
+            <h2 className="mt-6 text-3xl font-bold">
+              Turisti ne plačujejo nič. Platformo financirajo ponudniki.
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Brezplačne AI konzultacije pritegnejo več turistov — ti pa
+              rezervirajo neposredno pri vas. Vi plačate le, če želite
+              prioriteto v AI priporočilih. Skritih provizij ni: turist plača
+              samo vam.
+            </p>
+          </div>
+          <div className="mx-auto mt-12 grid max-w-4xl gap-6 sm:grid-cols-3">
+            {[
+              {
+                icon: MessageCircle,
+                title: "1 · Turist vpraša brezplačno",
+                desc: "Osebna AI konzultacija, načrt potovanja in iskanje so vedno brezplačni — zato turistov, ki sprašujejo, sčasoma vedno več.",
+              },
+              {
+                icon: MousePointerClick,
+                title: "2 · AI priporoči vas",
+                desc: "Konzultacija citira vaš lokal in izkušnjo. Rezervacija poteka direktno pri vas, brez provizije — atributirana vam v analitiko.",
+              },
+              {
+                icon: Crown,
+                title: "3 · Vi izberete prioriteto",
+                desc: "Premium partnerji (149 €/mes) dobijo 5-odstotni rangirni boost, Premium znak in vidnejše mesto v konzultacijah.",
+              },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <Card key={item.title} className="border-primary/15">
+                  <CardContent className="p-5">
+                    <div className="mb-3 flex size-10 items-center justify-center rounded-lg bg-primary/10">
+                      <Icon className="size-5 text-primary" aria-hidden="true" />
+                    </div>
+                    <h3 className="font-bold">{item.title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {item.desc}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* Kaj dobite */}
       <section className="bg-muted/30 py-16 sm:py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -147,11 +210,11 @@ export default function ProviderLandingPage() {
       <section className="py-16 sm:py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl">
-            <h2 className="mb-3 text-center text-3xl font-bold">
-              Brezplačno v beta fazi
-            </h2>
+            <h2 className="mb-3 text-center text-3xl font-bold">Paketi</h2>
             <p className="mb-12 text-center text-muted-foreground">
-              Vsi paketi so brezplačni do 30 lokalov. Potem samodejni vklop monetizacije.
+              Registracija in osnovni paket sta brezplačna — turisti nikoli ne
+              plačujejo. Prihodek prihaja izključno iz premium naročnin
+              ponudnikov, rezervacija pri vas pa ostane brez provizije.
             </p>
             <div className="grid gap-6 sm:grid-cols-3">
               {/* Free */}
@@ -178,6 +241,8 @@ export default function ProviderLandingPage() {
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />5 lokalov</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />20 slik</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />5% AI boost</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Citiranje v AI konzultacijah</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Atribucija rezervacij iz konzultacij</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />AI insights</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Sponzorirano oznako</li>
                   </ul>
@@ -193,6 +258,7 @@ export default function ProviderLandingPage() {
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />20 lokalov</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />50 slik</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />API dostop</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Atribucija rezervacij iz konzultacij</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />AI insights</li>
                   </ul>
                 </CardContent>
