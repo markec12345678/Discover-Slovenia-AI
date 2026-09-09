@@ -1356,6 +1356,7 @@ interface AnalyticsData {
     totalViews: number;
     totalClicks: number;
     totalLeads: number;
+    totalAiRecommendations: number;
     conversionRate: number;
     listingsCount: number;
     productsCount: number;
@@ -1368,6 +1369,7 @@ interface AnalyticsData {
     destinationName: string | null;
     viewCount: number;
     clickCount: number;
+    aiRecommendations: number;
     type: "listing";
   }>;
   topProducts: Array<{
@@ -1537,8 +1539,8 @@ function StatisticsTab({
         </div>
       </div>
 
-      {/* KPI kartice */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      {/* KPI kartice (5 → ena vrstica na desktopu) */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         <KpiCard
           icon={Eye}
           label="Skupni ogledi"
@@ -1562,6 +1564,15 @@ function StatisticsTab({
           label="Konverzija"
           value={`${kpi.conversionRate.toLocaleString("sl-SI", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`}
           color="primary"
+        />
+        {/* B2B vrednost: kolikokrat je AI lokalnež priporočil lokal
+            obiskovalcem v odgovorih "Vprašaj lokalca" (Faza: AI flywheel) */}
+        <KpiCard
+          icon={Sparkles}
+          label="AI priporočila"
+          value={kpi.totalAiRecommendations.toLocaleString("sl-SI")}
+          color="emerald"
+          hint="Kolikokrat vas je AI lokalnež priporočil obiskovalcem v odgovorih."
         />
       </div>
 
@@ -1697,8 +1708,27 @@ function StatisticsTab({
                         </span>
                       )}
                     </span>
-                    <span className="font-semibold tabular-nums shrink-0">
-                      {l.viewCount.toLocaleString("sl-SI")}
+                    <span className="flex items-center gap-2.5 shrink-0">
+                      {/* AI priporočila — kolikokrat ga je AI lokalnež citiral
+                          v odgovorih (Sparkles = isti vizualni jezik kot KPI) */}
+                      {l.aiRecommendations > 0 ? (
+                        <span
+                          className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400"
+                          title="Kolikokrat vas je AI lokalnež priporočil v odgovorih"
+                        >
+                          <Sparkles
+                            className="size-3.5"
+                            aria-hidden="true"
+                          />
+                          <span className="sr-only">AI priporočil: </span>
+                          <span className="font-semibold tabular-nums">
+                            {l.aiRecommendations.toLocaleString("sl-SI")}
+                          </span>
+                        </span>
+                      ) : null}
+                      <span className="font-semibold tabular-nums">
+                        {l.viewCount.toLocaleString("sl-SI")}
+                      </span>
                     </span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
@@ -1834,11 +1864,14 @@ function KpiCard({
   label,
   value,
   color,
+  hint,
 }: {
   icon: typeof Eye;
   label: string;
   value: string;
   color: "primary" | "amber" | "emerald";
+  /** Opcijski podnapis (razlaga števca — npr. AI priporočila). */
+  hint?: string;
 }) {
   return (
     <Card className="py-0">
@@ -1859,6 +1892,11 @@ function KpiCard({
           <span className="text-[11px] uppercase tracking-wide">{label}</span>
         </div>
         <div className="mt-2 text-2xl font-bold tabular-nums">{value}</div>
+        {hint ? (
+          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+            {hint}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );

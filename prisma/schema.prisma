@@ -489,6 +489,7 @@ model LocalQuestion {
   isPublic        Boolean   @default(true) // admin lahko skrije neustrezno
   createdAt       DateTime  @default(now())
   answeredAt      DateTime?
+  recommendedPartners String? // JSON array priporočenih partnerjev iz odgovora: [{ name, kind, category, destinationName, plan }]
 
   @@index([isPublic, answeredAt])
   @@index([createdAt])

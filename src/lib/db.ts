@@ -12,6 +12,13 @@ import path from 'path'
  * Da oba najdeta isto bazo, DATABASE_URL v .env zapišemo kot
  * `file:../db/custom.db` (CLI-semantika) in tu v runtime prevedemo v
  * absolutno pot: <cwd>/prisma/../db/custom.db.
+ *
+ * PAST (sandbox): process env PREGLASI .env! Vlupina tega sandboxa ima
+ * izvoženo DATABASE_URL scaffold projekta (/home/z/my-project/db/custom.db)
+ * — zato dev skripta v package.json vedno poda EKSPliciten absoluten
+ * DATABASE_URL pred `next dev`. Brez tega strežnik tiho pade na napačno
+ * (scaffold) bazo: route handlerji javljajo "table does not exist",
+ * sekcije homepage-a pa NEMO propadejo v try/catch fallback.
  */
 function resolveDatabaseUrl(): string | undefined {
   const raw = process.env.DATABASE_URL

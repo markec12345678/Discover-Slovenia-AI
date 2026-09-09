@@ -41,6 +41,7 @@ interface AnalyticsResponse {
     totalViews: number;
     totalClicks: number;
     totalLeads: number;
+    totalAiRecommendations: number;
     conversionRate: number;
     listingsCount: number;
     productsCount: number;
@@ -53,6 +54,7 @@ interface AnalyticsResponse {
     destinationName: string | null;
     viewCount: number;
     clickCount: number;
+    aiRecommendations: number;
     type: "listing";
   }>;
   topProducts: Array<{
@@ -116,6 +118,8 @@ export async function GET() {
     }
 
     // Pridobi vse lastnikove listings, products, experiences
+    // aiRecommendations: kolikokrat je AI lokalnež ("Vprašaj lokalca")
+    // tega lokala citiral v odgovorih obiskovalcem — B2B vrednost paketa.
     const [listings, products, experiences] = await Promise.all([
       db.listing.findMany({
         where: { ownerId: owner.id },
@@ -126,6 +130,7 @@ export async function GET() {
           destinationName: true,
           viewCount: true,
           clickCount: true,
+          aiRecommendations: true,
         },
       }),
       db.product.findMany({
@@ -155,6 +160,10 @@ export async function GET() {
     // KPI: agregiraj
     const listingViews = listings.reduce((s, l) => s + l.viewCount, 0);
     const listingClicks = listings.reduce((s, l) => s + l.clickCount, 0);
+    const listingAiRecommendations = listings.reduce(
+      (s, l) => s + l.aiRecommendations,
+      0
+    );
     const productViews = products.reduce((s, p) => s + p.viewCount, 0);
     const experienceViews = experiences.reduce((s, e) => s + e.viewCount, 0);
 
@@ -190,6 +199,7 @@ export async function GET() {
         destinationName: l.destinationName ?? null,
         viewCount: l.viewCount,
         clickCount: l.clickCount,
+        aiRecommendations: l.aiRecommendations,
         type: "listing" as const,
       }));
 
@@ -263,6 +273,7 @@ export async function GET() {
         totalViews,
         totalClicks,
         totalLeads,
+        totalAiRecommendations: listingAiRecommendations,
         conversionRate,
         listingsCount: listings.length,
         productsCount: products.length,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
+import Link from "next/link";
 import {
   Bot,
   Database,
@@ -9,6 +10,7 @@ import {
   MessageCircle,
   RotateCcw,
   Sparkles,
+  Star,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +40,12 @@ import { trackFunnel } from "@/lib/funnel";
 // Transparentnost: vsak odgovor je vidno označen — "Grounded AI" ali
 // "Brez povezave z AI — izključno iz baze" (iskrenost namesto pretvarjanja).
 //
+// B2B flywheel: odgovori, ki citirajo partnerje, pod odgovorom prikažejo
+// KLIKABILNE čipe priporočenih partnerjev (vodijo na things-to-do stran
+// destinacije) — AI priporočila tako dobijo merljivo klik-pot, partnerjev
+// zvezek ★ pa pove, kdo je premium (rahla prednost pri enakovrednih
+// možnostih — razloženo v diskretni opombi pod čipi).
+//
 // Vprašanja + odgovori se shranjujejo javno (POST /api/ask-local) —
 // nedavna vprašanja pod formo so social proof + vsebinski SEO material.
 // ============================================================================
@@ -57,6 +65,26 @@ const ALL_VALUE = "all";
 /** Nad tem številom znakov odgovor dobri gumb "Pokaži več". */
 const EXPAND_THRESHOLD = 240;
 
+/** Koliko partner-čipov pokažemo pri nedavnih vprašanjih (kompaktno). */
+const RECENT_PARTNER_CHIPS = 3;
+
+/** Vrsta partnerja → berljiva oznaka (lokal, izkušnja, izdelek, dogodek). */
+const KIND_LABEL: Record<string, string> = {
+  lokal: "Lokal",
+  izkušnja: "Izkušnja",
+  izdelek: "Izdelek",
+  dogodek: "Dogodek",
+};
+
+/** Partner, citiran v AI odgovoru (iz recommendedPartners JSON). */
+interface RecommendedPartner {
+  name: string;
+  kind: string;
+  category: string | null;
+  destinationName: string | null;
+  plan: string | null;
+}
+
 interface LocalQuestionItem {
   id: string;
   question: string;
@@ -65,6 +93,7 @@ interface LocalQuestionItem {
   destinationName: string | null;
   authorName: string | null;
   answeredAt: string;
+  recommendedPartners: RecommendedPartner[] | null;
 }
 
 interface AskLocalResponse {
@@ -76,6 +105,26 @@ interface AskLocalResponse {
 interface RecentResponse {
   questions?: LocalQuestionItem[];
   error?: string;
+}
+
+/**
+ * Povezava partner-čipa: destinacija → things-to-do stran (slug iz
+ * slovenia-data), sicer (splošna vprašanja / neznana destinacija) →
+ * domača stran (odgovor je bil splošen, nadaljnja raziskava pa gre od začetka).
+ */
+function partnerUrl(partner: RecommendedPartner): string {
+  if (partner.destinationName) {
+    const dest = DESTINATIONS.find(
+      (d) => d.name === partner.destinationName
+    );
+    if (dest) return `/destinacija/${dest.slug}/things-to-do`;
+  }
+  return "/";
+}
+
+/** Ali je partner premium (plan premium/enterprise) → ★ oznaka na čipu. */
+function isPremium(partner: RecommendedPartner): boolean {
+  return partner.plan === "premium" || partner.plan === "enterprise";
 }
 
 /**
@@ -456,6 +505,26 @@ function AnswerCard({
             <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground/90">
               {item.answer}
             </p>
+
+            {/* Priporočeni partnerji — klikabilni čipi (B2B flywheel) */}
+            {item.recommendedPartners && item.recommendedPartners.length > 0 ? (
+              <div className="mt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Priporočeni partnerji
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {item.recommendedPartners.map((p) => (
+                    <PartnerChip key={`${item.id}-${p.name}`} partner={p} />
+                  ))}
+                </div>
+                {/* Transparentnost (EU princip odkrite označitve) */}
+                <p className="mt-2.5 text-xs text-muted-foreground">
+                  Oznaka ★ označuje premium partnerje — med enakovrednimi
+                  možnostmi imajo rahlo prednost. Vsa priporočila so realni,
+                  ocenjeni lokali iz naše baze.
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -524,7 +593,62 @@ function RecentQuestion({ item }: { item: LocalQuestionItem }) {
         ) : null}
         <span className="ml-auto">{relativniCas(item.answeredAt)}</span>
       </div>
+
+      {/* Partnerji, citirani v odgovoru — kompaktni čipi (max 3) */}
+      {item.recommendedPartners && item.recommendedPartners.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {item.recommendedPartners.slice(0, RECENT_PARTNER_CHIPS).map((p) => (
+            <Link
+              key={`${item.id}-recent-${p.name}`}
+              href={partnerUrl(p)}
+              className="inline-flex min-h-6 items-center gap-1 rounded-full border border-border/70 bg-background/60 px-2.5 py-0.5 text-xs font-medium text-foreground/80 transition hover:bg-accent hover:text-foreground"
+            >
+              {isPremium(p) ? (
+                <Star
+                  className="size-3 fill-emerald-500 text-emerald-500"
+                  aria-hidden="true"
+                />
+              ) : null}
+              {p.name}
+            </Link>
+          ))}
+        </div>
+      ) : null}
     </li>
+  );
+}
+
+// ============================================================================
+// PARTNER ČIP — klikabilen Link na things-to-do stran destinacije
+// ============================================================================
+
+function PartnerChip({ partner }: { partner: RecommendedPartner }) {
+  const premium = isPremium(partner);
+
+  return (
+    <Link
+      href={partnerUrl(partner)}
+      title={premium ? "Premium partner" : undefined}
+      className="inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 dark:focus-visible:ring-offset-background"
+      aria-label={`${partner.name} — ${KIND_LABEL[partner.kind] ?? partner.kind}${premium ? " (premium partner)" : ""}`}
+    >
+      {premium ? (
+        <Star
+          className="size-3.5 fill-emerald-500 text-emerald-500"
+          aria-hidden="true"
+        />
+      ) : null}
+      <span>{partner.name}</span>
+      <span
+        className={
+          premium
+            ? "rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
+            : "rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+        }
+      >
+        {KIND_LABEL[partner.kind] ?? partner.kind}
+      </span>
+    </Link>
   );
 }
 
