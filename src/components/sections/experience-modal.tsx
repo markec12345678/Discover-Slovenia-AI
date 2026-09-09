@@ -516,13 +516,13 @@ export function ExperienceModal({
                 (demo mode ustvari potrjeno rezervacijo) + sekundarna
                 povezava do ponudnikove spletne strani */}
             <BookingSection
-              key={experience.id}
+              key={`booking-${experience.id}`}
               experience={experience}
               onPhaseChange={setBookingPhase}
             />
 
             {/* UGC mnenja obiskovalcev (ločeno od demo ratinga) */}
-            <ReviewSection key={experience.id} experienceId={experience.id} />
+            <ReviewSection key={`reviews-${experience.id}`} experienceId={experience.id} />
 
             {/* Morda vam je všeč — AI priporočila */}
             <RecommendationsSection
