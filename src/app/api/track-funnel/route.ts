@@ -27,6 +27,10 @@ export async function POST(request: Request) {
       "affiliate_click",
       "trip_push_sent",
       "trip_push_click",
+      // Faza 3b-2 — plačljive konzultacije (paid zapiše strežniško)
+      "consultation_submit",
+      "consultation_paid",
+      "consultation_delivered",
     ];
     if (!step || !validSteps.includes(step)) {
       return NextResponse.json({ error: "Neveljaven funnel step" }, { status: 400 });
@@ -56,7 +60,7 @@ export async function GET(request: Request) {
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const [homepage, destination, itinerary, newsletter, listingClick, quizCompleted, itinerarySaved, addToCart, checkoutCompleted, experienceBooked, askedLocal, affiliateClick, tripPushSent, tripPushClick] = await Promise.all([
+    const [homepage, destination, itinerary, newsletter, listingClick, quizCompleted, itinerarySaved, addToCart, checkoutCompleted, experienceBooked, askedLocal, affiliateClick, tripPushSent, tripPushClick, consultationSubmit, consultationPaid, consultationDelivered] = await Promise.all([
       db.pageView.count({ where: { funnelStep: "homepage_view", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "destination_view", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "itinerary_generate", createdAt: { gte: thirtyDaysAgo } } }),
@@ -71,6 +75,9 @@ export async function GET(request: Request) {
       db.pageView.count({ where: { funnelStep: "affiliate_click", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "trip_push_sent", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "trip_push_click", createdAt: { gte: thirtyDaysAgo } } }),
+      db.pageView.count({ where: { funnelStep: "consultation_submit", createdAt: { gte: thirtyDaysAgo } } }),
+      db.pageView.count({ where: { funnelStep: "consultation_paid", createdAt: { gte: thirtyDaysAgo } } }),
+      db.pageView.count({ where: { funnelStep: "consultation_delivered", createdAt: { gte: thirtyDaysAgo } } }),
     ]);
 
     const homeToDest = homepage > 0 ? (destination / homepage) * 100 : 0;
@@ -87,6 +94,11 @@ export async function GET(request: Request) {
     const destinationToAffiliate = destination > 0 ? (affiliateClick / destination) * 100 : 0;
     // RETENCIJA: CTR dnevni opomnikov (klik na push / dostavljeni pushi)
     const tripPushCtr = tripPushSent > 0 ? (tripPushClick / tripPushSent) * 100 : 0;
+    // KONZULTACIJE: delež spraševalcev, ki oddajo konzultacijo + konverzija
+    // oddanih v plačilo + delež plačanih, ki so prejeli odgovor
+    const askedToConsultation = askedLocal > 0 ? (consultationSubmit / askedLocal) * 100 : 0;
+    const consultationToPaid = consultationSubmit > 0 ? (consultationPaid / consultationSubmit) * 100 : 0;
+    const paidToDelivered = consultationPaid > 0 ? (consultationDelivered / consultationPaid) * 100 : 0;
 
     return NextResponse.json({
       steps: {
@@ -104,6 +116,9 @@ export async function GET(request: Request) {
         affiliate_click: affiliateClick,
         trip_push_sent: tripPushSent,
         trip_push_click: tripPushClick,
+        consultation_submit: consultationSubmit,
+        consultation_paid: consultationPaid,
+        consultation_delivered: consultationDelivered,
       },
       conversionRates: {
         home_to_destination: Math.round(homeToDest * 10) / 10,
@@ -115,6 +130,9 @@ export async function GET(request: Request) {
         home_to_asked_local: Math.round(homeToAskedLocal * 10) / 10,
         destination_to_affiliate: Math.round(destinationToAffiliate * 10) / 10,
         trip_push_ctr: Math.round(tripPushCtr * 10) / 10,
+        asked_to_consultation: Math.round(askedToConsultation * 10) / 10,
+        consultation_to_paid: Math.round(consultationToPaid * 10) / 10,
+        paid_to_delivered: Math.round(paidToDelivered * 10) / 10,
       },
       period: "30d",
     });

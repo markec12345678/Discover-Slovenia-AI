@@ -17,6 +17,11 @@ export type FunnelStep =
   | "experience_booked"
   // Novi koraki (Faza 2 — Vprašaj lokalca):
   | "asked_local"
+  // Novi koraki (Faza 3b-2 — plačljive konzultacije):
+  // consultation_paid zapiše STREŽNIŠKO /api/consultations/order (plačni
+  // moment, enak princip kot affiliate_click) — klient NE sme duplicirati.
+  | "consultation_submit"
+  | "consultation_delivered"
   // Novi koraki (Faza 2 — affiliate monetizacija):
   // Zapiše ga /go/[provider] redirect STREŽNIŠKO (ne klient) — vsak klik
   // na partnerja (Booking, DiscoverCars, GetYourGuide …) šteje v funnel.

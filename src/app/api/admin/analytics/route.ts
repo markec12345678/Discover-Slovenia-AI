@@ -137,6 +137,32 @@ export async function GET(request: Request) {
     const projectedMrr = betaThreshold * 149; // če vsi premium
     const projectedArr = projectedMrr * 12;
 
+    // === 12. PLAČLJIVE KONZULTACIJE (Faza 3b-2 — B2C prihodek) ===
+    // Freemium motor: 1 brezplačno vprašanje/dan → osebna konzultacija
+    // (9,90 € / 19,90 € paket). Prihodek je DEMO dokler Stripe ni priključen
+    // (paymentMethod "demo") — števci pa so realni že zdaj.
+    const [
+      consultationOrdersTotal,
+      consultationRevenueAgg,
+      consultationsDelivered,
+      consultationCreditsAvailable,
+      consultationCreditsUsed,
+    ] = await Promise.all([
+      db.consultationOrder.count(),
+      db.consultationOrder.aggregate({
+        _sum: { amount: true },
+        where: { status: "paid" },
+      }),
+      db.consultation.count({ where: { status: "delivered" } }),
+      db.consultationCredit.count({ where: { status: "available" } }),
+      db.consultationCredit.count({ where: { status: "used" } }),
+    ]);
+    const consultationRevenue = consultationRevenueAgg._sum.amount ?? 0;
+    const consultationAvgPerDelivered =
+      consultationsDelivered > 0
+        ? consultationRevenue / consultationsDelivered
+        : 0;
+
     return NextResponse.json({
       // Subscriptions
       totalOwners,
@@ -181,6 +207,15 @@ export async function GET(request: Request) {
       remainingToMonetization,
       projectedMrr,
       projectedArr,
+      // Konzultacije (B2C freemium — Faza 3b-2)
+      consultations: {
+        ordersTotal: consultationOrdersTotal,
+        revenueEur: Math.round(consultationRevenue * 100) / 100,
+        delivered: consultationsDelivered,
+        creditsAvailable: consultationCreditsAvailable,
+        creditsUsed: consultationCreditsUsed,
+        avgRevenuePerDelivered: Math.round(consultationAvgPerDelivered * 100) / 100,
+      },
     });
   } catch (error) {
     console.error("[admin/analytics] napaka:", error);

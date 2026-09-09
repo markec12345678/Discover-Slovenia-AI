@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { randomUUID } from "node:crypto";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { EVENTS } from "@/lib/events-data";
 import { db } from "@/lib/db";
@@ -39,6 +41,79 @@ const AUTHOR_MAX = 40;
 
 /** Koliko zadnjih javnih vprašanj vrne GET. */
 const RECENT_TAKE = 8;
+
+// === DNEVNA BREZPLAČNA MEJA (Faza 3b-2) ===
+// 1 brezplačno vprašanje na obiskovalca na dan → po izčrpanju ponudimo
+// plačljivo globoko konzultacijo (freemium produkt). Meja je vezana na
+// anonimni piškotek ask_visitor (LocalQuestion.visitorId) — izbrisan
+// piškotek resetira dnevni števec (priznana meja anonimnega tierja),
+// IP rate limit (10/h) pa ostaja kot zloraba-varovalka.
+
+/** Število brezplačnih vprašanj na dan na obiskovalca. */
+const DAILY_FREE_QUESTIONS = 1;
+
+/** Ime piškotka anonimnega obiskovalca. */
+const VISITOR_COOKIE = "ask_visitor";
+
+/** Veljavnost piškotka (180 dni). */
+const VISITOR_COOKIE_MAX_AGE = 180 * 24 * 60 * 60;
+
+/** Prebere (oz. ustvari nov) ID obiskovalca iz piškotka. */
+async function getOrCreateVisitorId(): Promise<{
+  visitorId: string;
+  isNew: boolean;
+}> {
+  const store = await cookies();
+  const existing = store.get(VISITOR_COOKIE)?.value;
+  if (existing && /^[a-z0-9-]{8,64}$/i.test(existing)) {
+    return { visitorId: existing, isNew: false };
+  }
+  return { visitorId: randomUUID(), isNew: true };
+}
+
+/** Nastavi piškotek na odgovor (httpOnly — klient ga ne bere, samo strežnik). */
+function setVisitorCookie(res: NextResponse, visitorId: string): void {
+  res.cookies.set({
+    name: VISITOR_COOKIE,
+    value: visitorId,
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: VISITOR_COOKIE_MAX_AGE,
+  });
+}
+
+/**
+ * UTC trenutek polnoči v Ljubljani (DST-varen): oblikujemo trenutni
+ * ljubljanski »wal-clock« prek Intl, odštejemo sekunde od polnoči →
+ * dobljena številka je natanko tista UTC sekunda, ko je v Ljubljani
+* začel tekoči dan.
+ */
+function startOfTodayLjubljana(): Date {
+  const now = new Date();
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "Europe/Ljubljana",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    })
+      .formatToParts(now)
+      .map((p) => [p.type, p.value])
+  );
+  const asUTC = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day)
+  );
+  const secondsSinceMidnight =
+    Number(parts.hour) * 3600 + Number(parts.minute) * 60 + Number(parts.second);
+  return new Date(asUTC - secondsSinceMidnight * 1000);
+}
 
 interface AskLocalRequest {
   question?: string;
@@ -118,6 +193,28 @@ export async function POST(request: Request) {
     body = (await request.json()) as AskLocalRequest;
   } catch {
     return NextResponse.json({ error: "Neveljaven JSON" }, { status: 400 });
+  }
+
+  // === DNEVNA BREZPLAČNA MEJA (Faza 3b-2) ===
+  // 1 vprašanje/dan na obiskovalca (piškotek) — po izčrpanju klient ponudi
+  // plačljivo globoko konzultacijo. Z oznako code, da lahko UI loči
+  // dnevno mejo od ostalih 429 (IP prekoračitev).
+  const { visitorId, isNew } = await getOrCreateVisitorId();
+  const usedToday = await db.localQuestion.count({
+    where: { visitorId, createdAt: { gte: startOfTodayLjubljana() } },
+  });
+  if (usedToday >= DAILY_FREE_QUESTIONS) {
+    const res = NextResponse.json(
+      {
+        error:
+          "Za danes si že izkoristil brezplačno vprašanje — naslednje je spet jutri. Za globji, oseben načrt pa je tu osebna konzultacija.",
+        code: "daily_free_limit",
+        freeRemaining: 0,
+      },
+      { status: 429 }
+    );
+    if (isNew) setVisitorCookie(res, visitorId);
+    return res;
   }
 
   // === VALIDACIJA (ista sporočila kot client) ===
@@ -206,6 +303,8 @@ export async function POST(request: Request) {
         answeredAt: new Date(),
         // JSON array ujetih partnerjev → klikabilni čipi na frontendu
         recommendedPartners: JSON.stringify(partners),
+        // Dnevna meja: vprašanje se pripiše obiskovalcu (1/dan)
+        visitorId,
       },
     });
 
@@ -244,7 +343,7 @@ export async function POST(request: Request) {
       console.error("[ask-local] tracking napaka (odgovor ni ogrožen):", trackError);
     }
 
-    return NextResponse.json(
+    const res = NextResponse.json(
       {
         success: true,
         question: {
@@ -258,9 +357,13 @@ export async function POST(request: Request) {
           // Ujeti partnerji kot POLJE (client jih takoj rendera kot čipe)
           recommendedPartners: partners,
         },
+        // Dnevna meja: ta uspeh je porabil eno brezplačno vprašanje
+        freeRemaining: Math.max(0, DAILY_FREE_QUESTIONS - usedToday - 1),
       },
       { status: 201 }
     );
+    if (isNew) setVisitorCookie(res, visitorId);
+    return res;
   } catch (error) {
     console.error("[ask-local] napaka:", error);
     return NextResponse.json(
@@ -272,7 +375,8 @@ export async function POST(request: Request) {
 
 // GET — zadnjih 8 javnih odgovorjenih vprašanj (social proof na homepage)
 // ?destination=Bled (opcijsko). LOČEN rate limit bucket od POST (branje
-// ne sme izčrpavati kvote za spraševanje!).
+// ne sme izčrpavati kvote za spraševanje!). Vrne tudi freeRemaining
+// (dnevna brezplačna meja — 1 vprašanje/dan na obiskovalca, Faza 3b-2).
 export async function GET(request: Request) {
   const limited = rateLimit(request, {
     limit: 240,
@@ -280,6 +384,10 @@ export async function GET(request: Request) {
     key: "ask-local:get",
   });
   if (limited) return limited;
+
+  // Dnevna meja — obiskovalčev piškotek (razširimo tudi GET: prvi obisk
+  // homepagea takoj veže obiskovalca, preden sploh vpraša)
+  const { visitorId, isNew } = await getOrCreateVisitorId();
 
   try {
     const { searchParams } = new URL(request.url);
@@ -289,27 +397,33 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Neznana destinacija" }, { status: 400 });
     }
 
-    const questions = await db.localQuestion.findMany({
-      where: {
-        isPublic: true,
-        answeredAt: { not: null },
-        ...(destination ? { destinationName: destination } : {}),
-      },
-      orderBy: { answeredAt: "desc" },
-      take: RECENT_TAKE,
-      select: {
-        id: true,
-        question: true,
-        answer: true,
-        answerSource: true,
-        destinationName: true,
-        authorName: true,
-        answeredAt: true,
-        recommendedPartners: true,
-      },
-    });
+    const [questions, usedToday] = await Promise.all([
+      db.localQuestion.findMany({
+        where: {
+          isPublic: true,
+          answeredAt: { not: null },
+          ...(destination ? { destinationName: destination } : {}),
+        },
+        orderBy: { answeredAt: "desc" },
+        take: RECENT_TAKE,
+        select: {
+          id: true,
+          question: true,
+          answer: true,
+          answerSource: true,
+          destinationName: true,
+          authorName: true,
+          answeredAt: true,
+          recommendedPartners: true,
+        },
+      }),
+      // Dnevna meja — koliko vprašanj je ta obiskovalec že postavil danes
+      db.localQuestion.count({
+        where: { visitorId, createdAt: { gte: startOfTodayLjubljana() } },
+      }),
+    ]);
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       questions: questions.map((q) => ({
         id: q.id,
         question: q.question,
@@ -322,7 +436,11 @@ export async function GET(request: Request) {
         // starejši zapisi pred B2B flywheelom ga imajo praznega)
         recommendedPartners: safeParsePartners(q.recommendedPartners),
       })),
+      // 1 brezplačno vprašanje/dan — honest UI (forma pokaže stanje)
+      freeRemaining: Math.max(0, DAILY_FREE_QUESTIONS - usedToday),
     });
+    if (isNew) setVisitorCookie(res, visitorId);
+    return res;
   } catch (error) {
     console.error("[ask-local] GET napaka:", error);
     return NextResponse.json({ error: "Napaka" }, { status: 500 });

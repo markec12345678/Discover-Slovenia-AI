@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import Link from "next/link";
 import {
   Bot,
+  Clock,
   Database,
   Loader2,
   MapPin,
@@ -15,6 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConsultationDialog } from "@/components/consultations/consultation-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -99,11 +101,14 @@ interface LocalQuestionItem {
 interface AskLocalResponse {
   success?: boolean;
   question?: LocalQuestionItem;
+  freeRemaining?: number;
+  code?: string;
   error?: string;
 }
 
 interface RecentResponse {
   questions?: LocalQuestionItem[];
+  freeRemaining?: number;
   error?: string;
 }
 
@@ -157,6 +162,29 @@ export function AskLocal() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Dnevna brezplačna meja (1/dan na obiskovalca — Faza 3b-2).
+  // null = neznano še (nalaganje), 0 = za danes izkoriščeno.
+  const [freeRemaining, setFreeRemaining] = useState<number | null>(null);
+
+  // Konzultacijski čarovnik (plačljiva globja različica)
+  const [consultOpen, setConsultOpen] = useState(false);
+  const [consultPrefillDest, setConsultPrefillDest] = useState<string | null>(
+    null
+  );
+  const [consultPrefillQuestion, setConsultPrefillQuestion] = useState<
+    string | null
+  >(null);
+
+  /** Odpre konzultacijski čarovnik s kontekstom (destinacija + vprašanje). */
+  const openConsultation = (
+    prefillDest: string | null,
+    prefillQuestion: string | null
+  ) => {
+    setConsultPrefillDest(prefillDest);
+    setConsultPrefillQuestion(prefillQuestion);
+    setConsultOpen(true);
+  };
+
   // Odgovor (izstopajoča kartica) — null = forma
   const [result, setResult] = useState<LocalQuestionItem | null>(null);
 
@@ -164,13 +192,17 @@ export function AskLocal() {
   const [recent, setRecent] = useState<LocalQuestionItem[]>([]);
   const [recentLoading, setRecentLoading] = useState(true);
 
-  // Fetch GET ob mountu — social proof seznam (cache no-store)
+  // Fetch GET ob mountu — social proof seznam (cache no-store) + stanje
+  // dnevne brezplačne meje za tega obiskovalca (honest UX)
   const fetchRecent = useCallback(async () => {
     try {
       const res = await fetch("/api/ask-local", { cache: "no-store" });
       if (!res.ok) throw new Error("Napaka pri pridobivanju vprašanj");
       const data: RecentResponse = await res.json();
       setRecent((data.questions ?? []).slice(0, RECENT_TAKE));
+      if (typeof data.freeRemaining === "number") {
+        setFreeRemaining(data.freeRemaining);
+      }
     } catch {
       // Tiho — social proof je "nice to have", ne blokiraj sekcije
       setRecent([]);
@@ -219,6 +251,13 @@ export function AskLocal() {
       });
       const data: AskLocalResponse = await res.json().catch(() => ({}));
 
+      // Dnevna meja izčrpana → honest panel z vabilom na konzultacijo
+      // (kodo strežnik pošlje izrecno, da UI loči mejo od drugih napak)
+      if (res.status === 429 && data.code === "daily_free_limit") {
+        setFreeRemaining(0);
+        return;
+      }
+
       if (!res.ok || !data.success || !data.question) {
         setFormError(data.error ?? "Odgovora ni bilo mogoče pripraviti");
         return;
@@ -228,6 +267,9 @@ export function AskLocal() {
       // na začetek seznama nedavnih (obiskovalec vidi, da je objavljeno)
       setResult(data.question);
       trackFunnel("asked_local");
+      if (typeof data.freeRemaining === "number") {
+        setFreeRemaining(data.freeRemaining);
+      }
       setRecent((prev) => [data.question as LocalQuestionItem, ...prev].slice(0, RECENT_TAKE));
     } catch {
       setFormError("Vprašanja ni bilo mogoče poslati — preverite povezavo");
@@ -269,14 +311,33 @@ export function AskLocal() {
           </h2>
           <p className="mt-3 text-base text-muted-foreground">
             Odgovori temeljijo na naši bazi realnih destinacij, lokalov in
-            izkušenj — brez izmišljotin.
+            izkušenj — brez izmišljotin. Prvo vprašanje vsak dan je
+            brezplačno.
           </p>
         </div>
 
         <div className="mx-auto mt-10 max-w-3xl">
-          {/* Forma (ali odgovor, ko prispe) */}
+          {/* Forma / odgovor / dnevna meja */}
           {result ? (
-            <AnswerCard item={result} onReset={handleReset} />
+            <AnswerCard
+              item={result}
+              onReset={handleReset}
+              onConsult={() =>
+                openConsultation(
+                  result.destinationName,
+                  result.question
+                )
+              }
+            />
+          ) : freeRemaining === 0 ? (
+            <FreeLimitCard
+              onConsult={() =>
+                openConsultation(
+                  destination !== ALL_VALUE ? destination : null,
+                  question.trim() || null
+                )
+              }
+            />
           ) : (
             <Card className="gap-0 py-0">
               <CardContent className="p-4 sm:p-6">
@@ -394,6 +455,20 @@ export function AskLocal() {
                       ? "Pridobivam odgovor lokalca, prosimo počakajte."
                       : ""}
                   </p>
+
+                  {/* Diskreten upsell — vedno viden pod formo (odkritje pred
+                      prvim vprašanjem; intencijski upsell pride po odgovoru) */}
+                  <button
+                    type="button"
+                    onClick={() => openConsultation(null, null)}
+                    className="w-full rounded-lg border border-dashed border-emerald-600/40 bg-emerald-50/50 px-3 py-2.5 text-left text-xs text-emerald-900 transition hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-emerald-500/30 dark:bg-emerald-950/20 dark:text-emerald-200 dark:hover:bg-emerald-950/40"
+                  >
+                    <span className="font-semibold">
+                      Potrebuješ več kot hiter odgovor?
+                    </span>{" "}
+                    Osebna konzultacija z lokalcem — celoten načrt po meri
+                    (datumi, proračun, druščina) od 9,90 €.
+                  </button>
                 </form>
               </CardContent>
             </Card>
@@ -438,7 +513,60 @@ export function AskLocal() {
           ) : null}
         </div>
       </div>
+
+      {/* Konzultacijski čarovnik (plačljiva globja različica — Faza 3b-2) */}
+      <ConsultationDialog
+        open={consultOpen}
+        onOpenChange={setConsultOpen}
+        prefillDestination={consultPrefillDest}
+        prefillQuestion={consultPrefillQuestion}
+      />
     </section>
+  );
+}
+
+// ============================================================================
+// DNEVNA MEJA — za danes izkoriščeno brezplačno vprašanje (freemium)
+// ============================================================================
+
+function FreeLimitCard({ onConsult }: { onConsult: () => void }) {
+  return (
+    <Card className="gap-0 border-amber-300/50 py-0" aria-label="Dnevna meja brezplačnih vprašanj">
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex items-start gap-3">
+          <span
+            aria-hidden="true"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+          >
+            <Clock className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">
+              Za danes si že izkoristil brezplačno vprašanje
+            </p>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+              Naslednje brezplačno vprašanje ti je na voljo jutri — meja je
+              eno vprašanje dnevno, ker vsak odgovor piše AI, ki bere našo
+              bazo. Če potrebuješ več takoj, je tu globja osebna
+              konzultacija (plačljiva).
+            </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                onClick={onConsult}
+                className="min-h-11 gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Sparkles className="size-4" aria-hidden="true" />
+                Osebna konzultacija — od 9,90 €
+              </Button>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Spodaj lahko še vedno bereš javna vprašanja drugih obiskovalcev.
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -449,9 +577,12 @@ export function AskLocal() {
 function AnswerCard({
   item,
   onReset,
+  onConsult,
 }: {
   item: LocalQuestionItem;
   onReset: () => void;
+  /** Odpre konzultacijski čarovnik (intencijski upsell po odgovoru). */
+  onConsult: () => void;
 }) {
   const isFallback = item.answerSource === "fallback";
 
@@ -528,8 +659,30 @@ function AnswerCard({
           </div>
         </div>
 
+        {/* Intencijski upsell — točka najvišje konverzije: pravkar je dobil
+            hiter odgovor, globjega pa želi plačati */}
+        <div className="mt-4 rounded-lg border border-emerald-600/30 bg-emerald-50/60 p-3.5 dark:border-emerald-500/25 dark:bg-emerald-950/25">
+          <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+            To je bil hiter odgovor.
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-emerald-800/90 dark:text-emerald-200/90">
+            Za popoln osebni načrt — prilagojen tvojim datumom, proračunu in
+            družčini, z imeni, cenami in rezervacijskimi nasveti — priskrbi
+            globokejšo konzultacijo z istim lokalcem.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            onClick={onConsult}
+            className="mt-2.5 min-h-11 gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <Sparkles className="size-4" aria-hidden="true" />
+            Osebna konzultacija — od 9,90 €
+          </Button>
+        </div>
+
         {/* Nazaj na formo */}
-        <div className="mt-5">
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
           <Button
             type="button"
             variant="outline"
@@ -537,7 +690,7 @@ function AnswerCard({
             className="min-h-11 gap-2"
           >
             <RotateCcw className="size-4" aria-hidden="true" />
-            Novo vprašanje
+            Novo vprašanje (jutri)
           </Button>
         </div>
       </CardContent>

@@ -77,6 +77,7 @@ import {
   Calendar,
   Banknote,
   TrendingDown,
+  MessageCircle,
 } from "lucide-react";
 import {
   CATEGORY_LABELS,
@@ -1397,6 +1398,15 @@ function SubsKpiCard({
 function StatsTab({ adminPassword }: { adminPassword: string }) {
   const [listings, setListings] = React.useState<AdminListing[]>([]);
   const [leads, setLeads] = React.useState<Lead[]>([]);
+  // B2C konzultacije (Faza 3b-2) — iz /api/admin/analytics
+  const [consult, setConsult] = React.useState<{
+    ordersTotal: number;
+    revenueEur: number;
+    delivered: number;
+    creditsAvailable: number;
+    creditsUsed: number;
+    avgRevenuePerDelivered: number;
+  } | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -1404,16 +1414,20 @@ function StatsTab({ adminPassword }: { adminPassword: string }) {
     (async () => {
       setLoading(true);
       try {
-        const [lRes, leadsRes] = await Promise.all([
+        const [lRes, leadsRes, analyticsRes] = await Promise.all([
           fetch("/api/admin/listings", {
             headers: { "x-admin-password": adminPassword },
           }),
           fetch("/api/admin/leads", {
             headers: { "x-admin-password": adminPassword },
           }),
+          fetch("/api/admin/analytics", {
+            headers: { "x-admin-password": adminPassword },
+          }).catch(() => null),
         ]);
         const lData: unknown = await lRes.json();
         const leadsData: unknown = await leadsRes.json();
+        const analyticsData = analyticsRes ? await analyticsRes.json().catch(() => null) : null;
         if (cancelled) return;
         const lList = (
           typeof lData === "object" && lData !== null && "listings" in lData
@@ -1425,6 +1439,22 @@ function StatsTab({ adminPassword }: { adminPassword: string }) {
             : []) as Lead[];
         setListings(lList);
         setLeads(leadsList);
+        if (
+          typeof analyticsData === "object" &&
+          analyticsData !== null &&
+          "consultations" in analyticsData
+        ) {
+          setConsult(
+            (analyticsData as Record<string, unknown>).consultations as {
+              ordersTotal: number;
+              revenueEur: number;
+              delivered: number;
+              creditsAvailable: number;
+              creditsUsed: number;
+              avgRevenuePerDelivered: number;
+            }
+          );
+        }
       } catch (err) {
         console.error("[admin/stats] fetch:", err);
       } finally {
@@ -1515,6 +1545,66 @@ function StatsTab({ adminPassword }: { adminPassword: string }) {
           color="emerald"
         />
       </div>
+
+      {/* B2C konzultacije — plačljiva „Vprašaj lokalca" (Faza 3b-2) */}
+      {consult ? (
+        <div>
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+            <MessageCircle className="size-4 text-primary" aria-hidden="true" />
+            B2C konzultacije (freemium — 1 brezplačno vprašanje/dan)
+          </h3>
+          <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Banknote className="size-3.5" />
+                Prihodek (demo)
+              </div>
+              <div className="text-lg font-bold tabular-nums mt-0.5">
+                {consult.revenueEur.toFixed(2).replace(".", ",")} €
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                {consult.ordersTotal} naročil
+              </div>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <MessageCircle className="size-3.5" />
+                Dostavljene
+              </div>
+              <div className="text-lg font-bold tabular-nums mt-0.5">
+                {consult.delivered}
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                povprečno {consult.avgRevenuePerDelivered.toFixed(2).replace(".", ",")} € / dostava
+              </div>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Gift className="size-3.5" />
+                Krediti na voljo
+              </div>
+              <div className="text-lg font-bold tabular-nums mt-0.5">
+                {consult.creditsAvailable}
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                {consult.creditsUsed} porabljenih
+              </div>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Zap className="size-3.5" />
+                Paketa
+              </div>
+              <div className="text-lg font-bold tabular-nums mt-0.5">
+                9,90 / 19,90 €
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                1× / 3× konzultacija
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Top 5 + Kategorije */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
