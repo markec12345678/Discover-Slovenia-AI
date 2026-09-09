@@ -7,11 +7,28 @@ import { db } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Star, Clock, ArrowRight, ExternalLink, Ticket, BedDouble } from "lucide-react";
+import { Star, ArrowRight, Ticket } from "lucide-react";
 import { faqJsonLd, breadcrumbJsonLd, destinationSchema, hreflangForPath } from "@/components/seo";
 import { getFaqForPage } from "@/lib/seo-faq";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
+import {
+  SeoExperienceCard,
+  SeoListingCard,
+  type SeoListingInput,
+} from "@/components/sections/seo-conversion";
+import type { Experience } from "@/lib/marketplace-types";
+import type { PartnerStatus } from "@/components/partner-badge";
+
+/** JSON string iz Prisma → string[] (robustno ob neveljavnih podatkih). */
+function parseJsonArray(raw: string): string[] {
+  try {
+    const v: unknown = JSON.parse(raw);
+    return Array.isArray(v) ? (v as string[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 export async function generateStaticParams() {
   return DESTINATIONS.map((d) => ({ slug: d.slug }));
@@ -60,6 +77,27 @@ export default async function ThingsToDoPage({
   ]);
 
   const totalActivities = listings.length + experiences.length;
+
+  // Mapiranje v client-safe tipe (images/languages so v DB JSON string-i)
+  const seoExperiences: Experience[] = experiences.map((e) => ({
+    ...e,
+    images: parseJsonArray(e.images),
+    languages: parseJsonArray(e.languages),
+    category: e.category as Experience["category"],
+  }));
+  const seoListings: SeoListingInput[] = listings.map((l) => ({
+    id: l.id,
+    name: l.name,
+    category: l.category,
+    description: l.description,
+    address: l.address,
+    rating: l.rating,
+    reviewCount: l.reviewCount,
+    plan: l.plan,
+    featured: l.featured,
+    partnerStatus: (l.partnerStatus as PartnerStatus | null) ?? "standard",
+    destinationName: l.destinationName ?? dest.name,
+  }));
 
   const jsonLd = destinationSchema(dest);
 
@@ -137,64 +175,25 @@ export default async function ThingsToDoPage({
           </div>
         </section>
 
-        {/* Aktivnosti / Izkušnje */}
-        {experiences.length > 0 && (
+        {/* Aktivnosti / Izkušnje — REALNA rezervacijska pot (enaka kot homepage) */}
+        {seoExperiences.length > 0 && (
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-6">Aktivnosti in izkušnje v {dest.name}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {experiences.map((exp) => (
-                <Card key={exp.id} className="overflow-hidden">
-                  <img
-                    src={JSON.parse(exp.images)[0] || ""}
-                    alt={exp.name}
-                    className="aspect-video w-full object-cover"
-                  />
-                  <CardContent className="p-4">
-                    <Badge variant="secondary" className="mb-2">{exp.category}</Badge>
-                    <h3 className="font-semibold mb-1">{exp.name}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{exp.description}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-primary">od {exp.pricePerPerson}€</span>
-                      {exp.providerWebsite ? (
-                        <Button asChild size="sm" variant="outline">
-                          <a href={exp.providerWebsite} target="_blank" rel="noopener noreferrer sponsored">
-                            <ExternalLink className="size-3.5" /> Pri ponudniku
-                          </a>
-                        </Button>
-                      ) : null}
-                    </div>
-                  </CardContent>
-                </Card>
+              {seoExperiences.map((exp) => (
+                <SeoExperienceCard key={exp.id} experience={exp} />
               ))}
             </div>
           </section>
         )}
 
-        {/* Lokalci (hoteli, restavracije) */}
-        {listings.length > 0 && (
+        {/* Lokalci — REALNI lead capture (povpraševanje ponudniku) */}
+        {seoListings.length > 0 && (
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-6">Lokalci v {dest.name}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {listings.map((l) => (
-                <Card key={l.id} className={l.plan === "premium" ? "border-primary" : ""}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <Badge variant="secondary">{l.category}</Badge>
-                      {l.featured && <Badge className="bg-amber-400 text-amber-950">★ Priporočeno</Badge>}
-                    </div>
-                    <h3 className="font-semibold mb-1">{l.name}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{l.description}</p>
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="flex items-center gap-1">
-                        <Star className="size-3.5 fill-amber-400 text-amber-400" />
-                        {l.rating.toFixed(1)}
-                      </span>
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <MapPin className="size-3.5" /> {dest.name}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
+              {seoListings.map((l) => (
+                <SeoListingCard key={l.id} listing={l} />
               ))}
             </div>
           </section>

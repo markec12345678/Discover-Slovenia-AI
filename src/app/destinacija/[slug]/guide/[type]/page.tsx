@@ -31,6 +31,23 @@ import {
 import { faqJsonLd, breadcrumbJsonLd, hreflangForPath } from "@/components/seo";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
+import {
+  SeoExperienceCard,
+  SeoListingCard,
+  type SeoListingInput,
+} from "@/components/sections/seo-conversion";
+import type { Experience } from "@/lib/marketplace-types";
+import type { PartnerStatus } from "@/components/partner-badge";
+
+/** JSON string iz Prisma → string[] (robustno ob neveljavnih podatkih). */
+function parseJsonArray(raw: string): string[] {
+  try {
+    const v: unknown = JSON.parse(raw);
+    return Array.isArray(v) ? (v as string[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 // 4 tipi vodnikov s podatki o ceni, trajanju in kategorijah aktivnosti
 const GUIDE_DETAILS: Record<
@@ -386,6 +403,27 @@ export default async function GuidePage({
     }),
   ]);
 
+  // Mapiranje v client-safe tipe (images/languages so v DB JSON string-i)
+  const seoExperiences: Experience[] = experiences.map((e) => ({
+    ...e,
+    images: parseJsonArray(e.images),
+    languages: parseJsonArray(e.languages),
+    category: e.category as Experience["category"],
+  }));
+  const seoListings: SeoListingInput[] = listings.map((l) => ({
+    id: l.id,
+    name: l.name,
+    category: l.category,
+    description: l.description,
+    address: l.address,
+    rating: l.rating,
+    reviewCount: l.reviewCount,
+    plan: l.plan,
+    featured: l.featured,
+    partnerStatus: (l.partnerStatus as PartnerStatus | null) ?? "standard",
+    destinationName: l.destinationName ?? dest.name,
+  }));
+
   // JSON-LD: FAQPage + BreadcrumbList + TouristTrip
   const breadcrumbs = breadcrumbJsonLd([
     { name: "Domov", url: "https://discoverslovenia.ai/" },
@@ -589,8 +627,8 @@ export default async function GuidePage({
           </div>
         </section>
 
-        {/* Povezane izkušnje iz baze */}
-        {experiences.length > 0 && (
+        {/* Povezane izkušnje iz baze — REALNA rezervacijska pot */}
+        {seoExperiences.length > 0 && (
           <section className="mb-10">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">
@@ -604,64 +642,15 @@ export default async function GuidePage({
               </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {experiences.map((exp) => {
-                const firstImage =
-                  exp.images && exp.images.trim().startsWith("[")
-                    ? (JSON.parse(exp.images)[0] as string | undefined)
-                    : undefined;
-                return (
-                  <Card key={exp.id} className="overflow-hidden flex flex-col">
-                    {firstImage && (
-                      <img
-                        src={firstImage}
-                        alt={exp.name}
-                        className="aspect-video w-full object-cover"
-                      />
-                    )}
-                    <CardContent className="p-4 flex flex-col gap-2 flex-1">
-                      <Badge variant="secondary" className="self-start text-xs">
-                        {exp.category}
-                      </Badge>
-                      <h3 className="font-semibold text-sm line-clamp-2">
-                        {exp.name}
-                      </h3>
-                      <p className="text-xs text-muted-foreground line-clamp-2 flex-1">
-                        {exp.description}
-                      </p>
-                      <div className="flex items-center justify-between pt-1">
-                        <span className="font-bold text-primary text-sm">
-                          od {exp.pricePerPerson}€
-                        </span>
-                        {exp.providerWebsite && (
-                          <Button
-                            asChild
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 px-2"
-                          >
-                            <a
-                              href={exp.providerWebsite}
-                              target="_blank"
-                              rel="noopener noreferrer sponsored"
-                            >
-                              <ExternalLink
-                                className="size-3"
-                                aria-hidden="true"
-                              />
-                            </a>
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              {seoExperiences.map((exp) => (
+                <SeoExperienceCard key={exp.id} experience={exp} />
+              ))}
             </div>
           </section>
         )}
 
-        {/* Lokalci (hoteli, restavracije) */}
-        {listings.length > 0 && (
+        {/* Lokalci — REALNI lead capture (povpraševanje ponudniku) */}
+        {seoListings.length > 0 && (
           <section className="mb-10">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">
@@ -675,59 +664,8 @@ export default async function GuidePage({
               </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {listings.map((l) => (
-                <Card
-                  key={l.id}
-                  className={l.plan === "premium" ? "border-primary" : ""}
-                >
-                  <CardContent className="p-4 flex flex-col gap-2">
-                    <div className="flex items-start justify-between">
-                      <Badge variant="secondary" className="text-xs">
-                        {l.category === "hotel" && (
-                          <BedDouble
-                            className="size-3 mr-1"
-                            aria-hidden="true"
-                          />
-                        )}
-                        {l.category === "restaurant" && (
-                          <UtensilsCrossed
-                            className="size-3 mr-1"
-                            aria-hidden="true"
-                          />
-                        )}
-                        {l.category}
-                      </Badge>
-                      {l.featured && (
-                        <Badge className="bg-amber-400 text-amber-950 text-xs">
-                          <Star
-                            className="size-3 mr-0.5 fill-amber-950 text-amber-950"
-                            aria-hidden="true"
-                          />
-                          Priporočeno
-                        </Badge>
-                      )}
-                    </div>
-                    <h3 className="font-semibold">{l.name}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {l.description}
-                    </p>
-                    <div className="flex items-center gap-3 text-sm pt-1">
-                      <span className="flex items-center gap-1">
-                        <Star
-                          className="size-3.5 fill-amber-400 text-amber-400"
-                          aria-hidden="true"
-                        />
-                        <span className="font-medium">{l.rating.toFixed(1)}</span>
-                        <span className="text-xs text-muted-foreground">
-                          ({l.reviewCount})
-                        </span>
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {l.priceRange}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
+              {seoListings.map((l) => (
+                <SeoListingCard key={l.id} listing={l} />
               ))}
             </div>
           </section>

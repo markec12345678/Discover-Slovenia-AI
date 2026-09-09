@@ -20,5 +20,27 @@
     ],
     "generatedAt": 1784052816040,
     "source": "ai"
+  },
+  "ljubljana:things-to-do": {
+    "faqs": [
+      {
+        "question": "Kdaj je najboljši čas za obisk Ljubljane?",
+        "answer": "Najboljši čas za obisk je od maja do septembra, ko je vreme najugodnejše za sprehode in raziskovanje mesta."
+      },
+      {
+        "question": "Koliko stane ogled Ljubljane?",
+        "answer": "Brezplačne so številne znamenitosti kot je Ljubljanski grad, za muzeje in znamenitosti pa plačate od 5 do 15 EUR."
+      },
+      {
+        "question": "Katere aktivnosti so obvezne v Ljubljani?",
+        "answer": "Obvezne so vožnja s čolnom po Ljubljanici, ogled trga in mostu zmajev ter obisku Centralnega trga."
+      },
+      {
+        "question": "Kako se najlažje premikati po Ljubljani?",
+        "answer": "Mesto je majhna in pešaška, najbolje se sprehajati ali uporabljati kolesarsko vožnjo, javni prevoz je zanesljiv in poceni."
+      }
+    ],
+    "generatedAt": 1788939159434,
+    "source": "ai"
   }
 }
