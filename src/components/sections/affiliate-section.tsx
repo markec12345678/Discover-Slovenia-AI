@@ -1,5 +1,3 @@
-"use client";
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,17 +10,21 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { COMMISSION_INFO } from "@/lib/affiliate";
-import { trackFunnel } from "@/lib/funnel";
 
+// Affiliate partnerji na homepageu — vsi linki gredo prek /go/[provider]
+// redirecta, ki strežniško izmeri klik (AnalyticsEvent "affiliate_click" +
+// funnel korak) in prilepi affiliate ID-je iz env spremenljivk.
+// Nič client JS več: tracking je v celoti na strani strežnika (/go/).
 const partners = [
   {
     id: "cars",
     name: "DiscoverCars",
     label: "Najem avta",
     icon: Car,
-    description: "70% provizija — najvišja v industriji. Iskanje po 10.000+ lokacijah.",
+    description: "Iskanje po 10.000+ lokacijah. Brezplačna odpoved večinoma.",
     commission: COMMISSION_INFO.cars,
-    href: "https://www.discovercars.com/?affiliate=slovenia-demo&utm_source=discoverslovenia",
+    href: "/go/cars?dest=Ljubljana",
+    aria: "Najemi avto prek DiscoverCars — odpre partnersko povezavo",
     accent: "text-primary",
   },
   {
@@ -32,17 +34,19 @@ const partners = [
     icon: BedDouble,
     description: "28 mio nastanitev po vsem svetu. Brezplačna odpoved večinoma.",
     commission: COMMISSION_INFO.hotels,
-    href: "https://www.booking.com/?aid=slovenia-demo",
+    href: "/go/hotels?dest=Ljubljana",
+    aria: "Rezerviraj nastanitev na Booking.com — odpre partnersko povezavo",
     accent: "text-primary",
   },
   {
     id: "activities",
-    name: "Viator",
+    name: "GetYourGuide",
     label: "Aktivnosti & izleti",
     icon: Ticket,
     description: "300.000+ izkušenj in turov. Brezplačna odpoved do 24h pred.",
     commission: COMMISSION_INFO.activities,
-    href: "https://www.viator.com/?pid=slovenia-demo",
+    href: "/go/activities?dest=Bled",
+    aria: "Rezerviraj izlete in izkušnje prek GetYourGuide — odpre partnersko povezavo",
     accent: "text-primary",
   },
   {
@@ -52,7 +56,8 @@ const partners = [
     icon: Plane,
     description: "Primerjava letov 1.200+ letalskih družb. Najnižje cene.",
     commission: COMMISSION_INFO.flights,
-    href: "https://www.skyscanner.net/?utm_source=discoverslovenia",
+    href: "/go/flights?dest=Ljubljana",
+    aria: "Poišči lete prek Skyscannerja — odpre partnersko povezavo",
     accent: "text-primary",
   },
   {
@@ -62,7 +67,8 @@ const partners = [
     icon: ShieldCheck,
     description: "Zavarovanje za pustolovske aktivnosti (rafting, pohodništvo).",
     commission: COMMISSION_INFO.insurance,
-    href: "https://www.worldnomads.com/?affiliate=slovenia-demo",
+    href: "/go/insurance?days=7",
+    aria: "Skleni potno zavarovanje pri World Nomads — odpre partnersko povezavo",
     accent: "text-primary",
   },
 ];
@@ -110,6 +116,7 @@ export function AffiliateSection() {
                     {p.description}
                   </p>
 
+                  {/* /go/ redirect — kliks se izmeri strežniško (AnalyticsEvent + funnel) */}
                   <Button
                     asChild
                     className="mt-6 w-full group-hover:bg-primary/90"
@@ -117,11 +124,8 @@ export function AffiliateSection() {
                     <a
                       href={p.href}
                       target="_blank"
-                      rel="noopener noreferrer sponsored"
-                      onClick={() => {
-                        // Fire-and-forget funnel tracking — ne blokira navigacije
-                        trackFunnel("listing_click", p.href);
-                      }}
+                      rel="sponsored noopener noreferrer"
+                      aria-label={p.aria}
                     >
                       Rezerviraj
                       <ExternalLink className="ml-2 size-4" />
@@ -133,6 +137,7 @@ export function AffiliateSection() {
           })}
         </div>
 
+        {/* EU disclosure — pravno obvezna označba partnerskih povezav */}
         <p className="mt-8 text-center text-xs text-muted-foreground max-w-2xl mx-auto">
           Affiliate povezave — pri rezervacijah preko teh povezav zaslužimo
           provizijo. Za vas brez dodatnih stroškov. Hvala za podporo projektu.

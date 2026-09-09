@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { faqJsonLd, breadcrumbJsonLd, hreflangForPath } from "@/components/seo";
 import { PageViewTracker } from "@/components/page-view-tracker";
+import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
 
 // 4 tipi vodnikov s podatki o ceni, trajanju in kategorijah aktivnosti
 const GUIDE_DETAILS: Record<
@@ -809,6 +810,9 @@ export default async function GuidePage({
             ))}
           </div>
         </section>
+
+        {/* Affiliate CTA — vodniki = fokus na izkušnje in najem avta */}
+        <AffiliateCtaBlock destination={dest.name} variant="activities-cars" />
 
         {/* CTA za AI itinerer */}
         <section className="rounded-2xl border border-primary/30 bg-primary/5 p-8 text-center">

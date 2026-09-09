@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { hreflangForPath } from "@/components/seo";
 import { PageViewTracker } from "@/components/page-view-tracker";
+import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
 import { Calendar, Sun, Leaf, Snowflake, Cloud, ArrowRight, Sparkles, MapPin } from "lucide-react";
 
 const SEASONS = [
@@ -222,6 +223,9 @@ export default async function BestTimeToVisitPage({
             ))}
           </div>
         </section>
+
+        {/* Affiliate CTA — kdaj obiskati → nastanitev + najem avta */}
+        <AffiliateCtaBlock destination={dest.name} variant="hotels-cars" />
 
         {/* CTA */}
         <section className="rounded-2xl border border-primary/30 bg-primary/5 p-8 text-center">

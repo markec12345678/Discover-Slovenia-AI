@@ -16,7 +16,11 @@ export type FunnelStep =
   // Novi koraki (monetizacija — izkušnje):
   | "experience_booked"
   // Novi koraki (Faza 2 — Vprašaj lokalca):
-  | "asked_local";
+  | "asked_local"
+  // Novi koraki (Faza 2 — affiliate monetizacija):
+  // Zapiše ga /go/[provider] redirect STREŽNIŠKO (ne klient) — vsak klik
+  // na partnerja (Booking, DiscoverCars, GetYourGuide …) šteje v funnel.
+  | "affiliate_click";
 
 export function trackFunnel(step: FunnelStep, path?: string) {
   // Fire-and-forget — ne blokiraj UI

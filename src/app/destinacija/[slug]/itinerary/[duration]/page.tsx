@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { hreflangForPath } from "@/components/seo";
 import { PageViewTracker } from "@/components/page-view-tracker";
+import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
 import { Calendar, Clock, Users, ArrowRight, Sparkles } from "lucide-react";
 
 const DURATIONS = [
@@ -194,6 +195,9 @@ export default async function ItineraryPage({
             ))}
           </div>
         </section>
+
+        {/* Affiliate CTA — popotnik z itinererjem v rokah → rezervira nastanitev, avto, izkušnje */}
+        <AffiliateCtaBlock destination={dest.name} variant="full" />
 
         <section className="rounded-2xl border border-primary/30 bg-primary/5 p-8 text-center">
           <h2 className="text-xl font-bold mb-3">Želite personaliziran itinerer?</h2>

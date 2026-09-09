@@ -11,6 +11,7 @@ import { MapPin, Star, Clock, ArrowRight, ExternalLink, Ticket, BedDouble } from
 import { faqJsonLd, breadcrumbJsonLd, destinationSchema, hreflangForPath } from "@/components/seo";
 import { getFaqForPage } from "@/lib/seo-faq";
 import { PageViewTracker } from "@/components/page-view-tracker";
+import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
 
 export async function generateStaticParams() {
   return DESTINATIONS.map((d) => ({ slug: d.slug }));
@@ -250,6 +251,9 @@ export default async function ThingsToDoPage({
             ))}
           </div>
         </section>
+
+        {/* Affiliate CTA — booking intent NAD AI CTA (monetizacija organskega prometa) */}
+        <AffiliateCtaBlock destination={dest.name} variant="full" />
 
         {/* CTA: AI itinerer */}
         <section className="rounded-2xl border border-primary/30 bg-primary/5 p-8 text-center">
