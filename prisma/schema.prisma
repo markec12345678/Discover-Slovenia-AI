@@ -473,3 +473,40 @@ model AuditLog {
   @@index([resourceType])
   @@index([createdAt])
 }
+
+// ============================================================================
+// VPRAŠAJ LOKALCA — javna vprašanja obiskovalcev z grounded AI odgovori
+// (Faza 2: social proof + "zero hallucination" diferenciacija)
+// ============================================================================
+
+model LocalQuestion {
+  id              String    @id @default(cuid())
+  question        String    // 10–500 znakov, trimmed
+  answer          String?   // AI odgovor (grounded) — null dokler ni odgovorjen
+  answerSource    String?   // "ai" | "fallback" — transparentnost odgovora
+  destinationName String?   // ožji kontekst (npr. "Bled") — null = splošno vprašanje
+  authorName      String?   // prikazno ime (2–40 znakov, neobvezno)
+  isPublic        Boolean   @default(true) // admin lahko skrije neustrezno
+  createdAt       DateTime  @default(now())
+  answeredAt      DateTime?
+
+  @@index([isPublic, answeredAt])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// WEB PUSH NAROČNINE — VAPID (Faza 2: retention kanal)
+// ============================================================================
+
+model PushSubscription {
+  id              String    @id @default(cuid())
+  endpoint        String    @unique // push service URL (https)
+  p256dh          String    // keys.p256dh iz browser subscription
+  auth            String    // keys.auth iz browser subscription
+  userAgent       String?   // za debug/segmentacijo
+  createdAt       DateTime  @default(now())
+  lastSeenAt      DateTime  @default(now())
+  unsubscribedAt  DateTime? // soft-delete ko push service vrne 404/410
+
+  @@index([unsubscribedAt])
+}

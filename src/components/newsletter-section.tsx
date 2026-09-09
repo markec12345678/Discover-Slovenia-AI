@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Send, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+import { Mail, Send, CheckCircle2, Loader2, AlertCircle, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { trackFunnel } from "@/lib/funnel";
+import { PushSubscribe } from "@/components/push-subscribe";
 
 // ============================================================================
 // NEWSLETTER — "Prejmi skrite bisere Slovenije" (retention kanal)
@@ -14,6 +15,11 @@ import { trackFunnel } from "@/lib/funnel";
 //
 // POST /api/newsletter/subscribe { email } → { success, message }
 // Napake: 400/500 { error }. Funnel: newsletter_signup.
+//
+// Pod email formo je ločen (ČISTO aditiven) push blok: web push obvestila
+// (VAPID) za tiste, ki nočejo oddati emaila — isti retention cilj, drug
+// kanal. PushSubscribe variant="compact" se v nepodprtem brskalniku sam
+// skrije (render null), zato blok nikoli ne kaže praznine.
 // ============================================================================
 
 type NewsletterState = "idle" | "sending" | "success" | "already" | "error";
@@ -138,6 +144,26 @@ export function NewsletterSection() {
                   {message}
                 </p>
               )}
+
+              {/* Web push blok — ločen kanal, čisto aditiven (email logika
+                  nedotakčna). Ista Card/estetika, diskretno pod razdelilnikom. */}
+              <div className="mt-6 border-t border-primary/10 pt-6">
+                <div className="text-center">
+                  <div className="mx-auto mb-3 flex size-9 items-center justify-center rounded-full bg-primary/10">
+                    <Bell className="size-4 text-primary" aria-hidden="true" />
+                  </div>
+                  <h3 className="text-sm font-semibold sm:text-base">
+                    Želiš biti obveščen?
+                  </h3>
+                  <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                    Z obvestili v brskalniku ti lahko sporočimo nove izkušnje,
+                    dogodke ob tvojem obisku — in te spomnimo na shranjen načrt.
+                  </p>
+                </div>
+                <div className="mx-auto mt-4 max-w-xs">
+                  <PushSubscribe variant="compact" />
+                </div>
+              </div>
 
               <p className="mt-4 text-center text-xs text-muted-foreground">
                 Brez neželene pošte — odjava z enim klikom. 🌿

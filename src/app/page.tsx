@@ -11,6 +11,7 @@ import { MarketplaceSection } from "@/components/sections/marketplace";
 import { ExperiencesSection } from "@/components/sections/experiences";
 import { EventsCalendar } from "@/components/sections/events-calendar";
 import { CommunityTrips } from "@/components/sections/community-trips";
+import { AskLocal } from "@/components/sections/ask-local";
 import { BlogSection } from "@/components/sections/blog";
 import { AffiliateSection } from "@/components/sections/affiliate-section";
 import { JoinUs } from "@/components/sections/join-us";
@@ -55,6 +56,12 @@ export default function Home() {
             prinesejo nov promet, ki konvertira prek tržnice/rezervacij zgoraj;
             social proof takoj pred newsletterjem. Skrije se, če ni javnih poti. */}
         <CommunityTrips />
+        {/* "Vprašaj lokalca" — grounded AI Q&A točno za galerijo social
+            proofa in pred vsebinskimi sekcijami: javna vprašanja + odgovori
+            delujejo kot social proof (ljudje sprašujejo!) in vsebinski SEO
+            material, hkrati pa gradijo obljubo "zero hallucination"
+            (odgovori samo iz naše baze). */}
+        <AskLocal />
         <BlogSection />
         <AffiliateSection />
         <JoinUs />

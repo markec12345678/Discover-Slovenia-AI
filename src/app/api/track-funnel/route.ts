@@ -23,6 +23,7 @@ export async function POST(request: Request) {
       "add_to_cart",
       "checkout_completed",
       "experience_booked",
+      "asked_local",
     ];
     if (!step || !validSteps.includes(step)) {
       return NextResponse.json({ error: "Neveljaven funnel step" }, { status: 400 });
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const [homepage, destination, itinerary, newsletter, listingClick, quizCompleted, itinerarySaved, addToCart, checkoutCompleted, experienceBooked] = await Promise.all([
+    const [homepage, destination, itinerary, newsletter, listingClick, quizCompleted, itinerarySaved, addToCart, checkoutCompleted, experienceBooked, askedLocal] = await Promise.all([
       db.pageView.count({ where: { funnelStep: "homepage_view", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "destination_view", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "itinerary_generate", createdAt: { gte: thirtyDaysAgo } } }),
@@ -63,6 +64,7 @@ export async function GET(request: Request) {
       db.pageView.count({ where: { funnelStep: "add_to_cart", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "checkout_completed", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "experience_booked", createdAt: { gte: thirtyDaysAgo } } }),
+      db.pageView.count({ where: { funnelStep: "asked_local", createdAt: { gte: thirtyDaysAgo } } }),
     ]);
 
     const homeToDest = homepage > 0 ? (destination / homepage) * 100 : 0;
@@ -72,6 +74,8 @@ export async function GET(request: Request) {
     const cartToCheckout = addToCart > 0 ? (checkoutCompleted / addToCart) * 100 : 0;
     // Delež klikov na ponudnike/izkušnje, ki se končajo z rezervacijo izkušnje
     const experienceToBooking = listingClick > 0 ? (experienceBooked / listingClick) * 100 : 0;
+    // Delež ogledov homepagea, ki so prerasli v javno vprašanje lokalcu
+    const homeToAskedLocal = homepage > 0 ? (askedLocal / homepage) * 100 : 0;
 
     return NextResponse.json({
       steps: {
@@ -85,6 +89,7 @@ export async function GET(request: Request) {
         add_to_cart: addToCart,
         checkout_completed: checkoutCompleted,
         experience_booked: experienceBooked,
+        asked_local: askedLocal,
       },
       conversionRates: {
         home_to_destination: Math.round(homeToDest * 10) / 10,
@@ -93,6 +98,7 @@ export async function GET(request: Request) {
         overall: Math.round(overallConversion * 10) / 10,
         cart_to_checkout: Math.round(cartToCheckout * 10) / 10,
         experience_to_booking: Math.round(experienceToBooking * 10) / 10,
+        home_to_asked_local: Math.round(homeToAskedLocal * 10) / 10,
       },
       period: "30d",
     });

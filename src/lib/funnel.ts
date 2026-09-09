@@ -14,7 +14,9 @@ export type FunnelStep =
   | "add_to_cart"
   | "checkout_completed"
   // Novi koraki (monetizacija — izkušnje):
-  | "experience_booked";
+  | "experience_booked"
+  // Novi koraki (Faza 2 — Vprašaj lokalca):
+  | "asked_local";
 
 export function trackFunnel(step: FunnelStep, path?: string) {
   // Fire-and-forget — ne blokiraj UI
