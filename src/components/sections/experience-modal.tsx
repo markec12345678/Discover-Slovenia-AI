@@ -49,6 +49,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trackFunnel } from "@/lib/funnel";
+import { hasConsultationRef, clearConsultationRef } from "@/lib/consultation-ref";
 import { ReviewSection } from "@/components/review-section";
 import {
   EXPERIENCE_CATEGORY_LABELS,
@@ -710,6 +711,9 @@ function BookingSection({
           experienceId: experience.id,
           groupSize: Number(form.groupSize.trim()),
           bookingDate: form.date,
+          // Atribucija (Booking-style): rezervacija v seji po AI konzultaciji
+          // se zapiše z source "consultation" — ponudnik vidi izvor vrednosti.
+          ...(hasConsultationRef() ? { source: "consultation" } : {}),
           guest: {
             name: form.name.trim(),
             email: form.email.trim(),
@@ -746,6 +750,9 @@ function BookingSection({
       });
       setPhase("success");
       trackFunnel("experience_booked");
+      // Atribucija velja za prvo rezervacijo po konzultaciji (pošteno okno
+      // vpliva) — po njej oznako počistimo.
+      clearConsultationRef();
     } catch (err) {
       setApiError(
         err instanceof Error

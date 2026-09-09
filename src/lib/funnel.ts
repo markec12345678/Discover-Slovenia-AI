@@ -17,9 +17,7 @@ export type FunnelStep =
   | "experience_booked"
   // Novi koraki (Faza 2 — Vprašaj lokalca):
   | "asked_local"
-  // Novi koraki (Faza 3b-2 — plačljive konzultacije):
-  // consultation_paid zapiše STREŽNIŠKO /api/consultations/order (plačni
-  // moment, enak princip kot affiliate_click) — klient NE sme duplicirati.
+  // Novi koraki (Faza 3c — brezplačne konzultacije, model „ponudniki plačajo"):
   | "consultation_submit"
   | "consultation_delivered"
   // Novi koraki (Faza 2 — affiliate monetizacija):

@@ -137,31 +137,22 @@ export async function GET(request: Request) {
     const projectedMrr = betaThreshold * 149; // če vsi premium
     const projectedArr = projectedMrr * 12;
 
-    // === 12. PLAČLJIVE KONZULTACIJE (Faza 3b-2 — B2C prihodek) ===
-    // Freemium motor: 1 brezplačno vprašanje/dan → osebna konzultacija
-    // (9,90 € / 19,90 € paket). Prihodek je DEMO dokler Stripe ni priključen
-    // (paymentMethod "demo") — števci pa so realni že zdaj.
-    const [
-      consultationOrdersTotal,
-      consultationRevenueAgg,
-      consultationsDelivered,
-      consultationCreditsAvailable,
-      consultationCreditsUsed,
-    ] = await Promise.all([
-      db.consultationOrder.count(),
-      db.consultationOrder.aggregate({
-        _sum: { amount: true },
-        where: { status: "paid" },
-      }),
-      db.consultation.count({ where: { status: "delivered" } }),
-      db.consultationCredit.count({ where: { status: "available" } }),
-      db.consultationCredit.count({ where: { status: "used" } }),
-    ]);
-    const consultationRevenue = consultationRevenueAgg._sum.amount ?? 0;
-    const consultationAvgPerDelivered =
-      consultationsDelivered > 0
-        ? consultationRevenue / consultationsDelivered
-        : 0;
+    // === 12. BREZPLAČNE KONZULTACIJE (Faza 3c — model „ponudniki plačajo") ===
+    // Kot Booking.com: uporabnik ne plačuje. Merimo ANGAŽMA (dostave) in
+    // VREDNOST ZA PONUDNIKE: rezervacije, atribuirane konzultaciji
+    // (Booking.source = "consultation") — to je B2B dokaz, ki utemeljuje
+    // premium naročnino.
+    const [consultationsDelivered, consultations30d, bookingsFromConsultations] =
+      await Promise.all([
+        db.consultation.count({ where: { status: "delivered" } }),
+        db.consultation.count({
+          where: {
+            status: "delivered",
+            createdAt: { gte: new Date(Date.now() - 30 * 86400_000) },
+          },
+        }),
+        db.booking.count({ where: { source: "consultation" } }),
+      ]);
 
     return NextResponse.json({
       // Subscriptions
@@ -207,14 +198,11 @@ export async function GET(request: Request) {
       remainingToMonetization,
       projectedMrr,
       projectedArr,
-      // Konzultacije (B2C freemium — Faza 3b-2)
+      // Konzultacije (model „ponudniki plačajo" — Faza 3c)
       consultations: {
-        ordersTotal: consultationOrdersTotal,
-        revenueEur: Math.round(consultationRevenue * 100) / 100,
         delivered: consultationsDelivered,
-        creditsAvailable: consultationCreditsAvailable,
-        creditsUsed: consultationCreditsUsed,
-        avgRevenuePerDelivered: Math.round(consultationAvgPerDelivered * 100) / 100,
+        delivered30d: consultations30d,
+        bookingsFromConsultations,
       },
     });
   } catch (error) {

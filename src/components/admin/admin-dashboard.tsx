@@ -1398,14 +1398,11 @@ function SubsKpiCard({
 function StatsTab({ adminPassword }: { adminPassword: string }) {
   const [listings, setListings] = React.useState<AdminListing[]>([]);
   const [leads, setLeads] = React.useState<Lead[]>([]);
-  // B2C konzultacije (Faza 3b-2) — iz /api/admin/analytics
+  // B2C konzultacije (Faza 3c — model „ponudniki plačajo") — iz /api/admin/analytics
   const [consult, setConsult] = React.useState<{
-    ordersTotal: number;
-    revenueEur: number;
     delivered: number;
-    creditsAvailable: number;
-    creditsUsed: number;
-    avgRevenuePerDelivered: number;
+    delivered30d: number;
+    bookingsFromConsultations: number;
   } | null>(null);
   const [loading, setLoading] = React.useState(true);
 
@@ -1446,12 +1443,9 @@ function StatsTab({ adminPassword }: { adminPassword: string }) {
         ) {
           setConsult(
             (analyticsData as Record<string, unknown>).consultations as {
-              ordersTotal: number;
-              revenueEur: number;
               delivered: number;
-              creditsAvailable: number;
-              creditsUsed: number;
-              avgRevenuePerDelivered: number;
+              delivered30d: number;
+              bookingsFromConsultations: number;
             }
           );
         }
@@ -1546,60 +1540,61 @@ function StatsTab({ adminPassword }: { adminPassword: string }) {
         />
       </div>
 
-      {/* B2C konzultacije — plačljiva „Vprašaj lokalca" (Faza 3b-2) */}
+      {/* B2C konzultacije — brezplačna „Vprašaj lokalca" (Faza 3c —
+          model „ponudniki plačajo", kot Booking.com: uporabnik ne plačuje) */}
       {consult ? (
         <div>
           <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
             <MessageCircle className="size-4 text-primary" aria-hidden="true" />
-            B2C konzultacije (freemium — 1 brezplačno vprašanje/dan)
+            Osebne konzultacije (brezplačne — plačajo ponudniki)
           </h3>
           <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="rounded-lg border bg-muted/30 p-3">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Banknote className="size-3.5" />
-                Prihodek (demo)
-              </div>
-              <div className="text-lg font-bold tabular-nums mt-0.5">
-                {consult.revenueEur.toFixed(2).replace(".", ",")} €
-              </div>
-              <div className="text-[11px] text-muted-foreground">
-                {consult.ordersTotal} naročil
-              </div>
-            </div>
-            <div className="rounded-lg border bg-muted/30 p-3">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <MessageCircle className="size-3.5" />
-                Dostavljene
+                Dostavljene (skupaj)
               </div>
               <div className="text-lg font-bold tabular-nums mt-0.5">
                 {consult.delivered}
               </div>
               <div className="text-[11px] text-muted-foreground">
-                povprečno {consult.avgRevenuePerDelivered.toFixed(2).replace(".", ",")} € / dostava
+                globoke osebne konzultacije
               </div>
             </div>
             <div className="rounded-lg border bg-muted/30 p-3">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Gift className="size-3.5" />
-                Krediti na voljo
+                <TrendingUp className="size-3.5" />
+                Zadnjih 30 dni
               </div>
               <div className="text-lg font-bold tabular-nums mt-0.5">
-                {consult.creditsAvailable}
+                {consult.delivered30d}
               </div>
               <div className="text-[11px] text-muted-foreground">
-                {consult.creditsUsed} porabljenih
+                dostav v zadnjem mesecu
+              </div>
+            </div>
+            <div className="rounded-lg border border-emerald-600/40 bg-emerald-600/10 p-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CreditCard className="size-3.5" />
+                Rezervacije iz konzultacij
+              </div>
+              <div className="text-lg font-bold tabular-nums mt-0.5">
+                {consult.bookingsFromConsultations}
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                atribuirane (Booking.source)
               </div>
             </div>
             <div className="rounded-lg border bg-muted/30 p-3">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Zap className="size-3.5" />
-                Paketa
+                <Banknote className="size-3.5" />
+                Model prihodka
               </div>
-              <div className="text-lg font-bold tabular-nums mt-0.5">
-                9,90 / 19,90 €
+              <div className="text-sm font-bold mt-1">
+                B2B — ponudniki
               </div>
               <div className="text-[11px] text-muted-foreground">
-                1× / 3× konzultacija
+                uporabniki ne plačujejo (kot Booking)
               </div>
             </div>
           </div>

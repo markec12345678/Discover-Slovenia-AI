@@ -18,6 +18,7 @@ import { db } from "@/lib/db";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { safeParseConsultPartners } from "@/lib/consultation-engine";
 import type { ConsultRecommendedPartner } from "@/lib/consultation-engine";
+import { ConsultationRefSetter } from "@/components/consultation-ref-setter";
 
 // ============================================================================
 // JAVNA (zasebna-povezava) STRAN KONZULTACIJE: /konzultacija/[token]
@@ -139,6 +140,10 @@ export default async function ConsultationPage({ params }: PageProps) {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+        {/* Atribucija: obisk te strani označi sejo — naslednja rezervacija
+            se šteje kot izhodajoča iz konzultacije (Booking.source) */}
+        <ConsultationRefSetter />
+
         {/* Zasebnost opomba */}
         <div className="mb-6 flex items-start gap-2 rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-muted-foreground">
           <BadgeCheck className="mt-0.5 size-3.5 shrink-0 text-emerald-600" aria-hidden="true" />

@@ -3,15 +3,11 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
   BadgeCheck,
   Bot,
-  Check,
-  CreditCard,
   Database,
   ExternalLink,
   Loader2,
-  Lock,
   Mail,
   MessageCircle,
   Sparkles,
@@ -39,33 +35,29 @@ import {
 } from "@/components/ui/dialog";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { trackFunnel } from "@/lib/funnel";
+import { setConsultationRef } from "@/lib/consultation-ref";
 import {
   CONSULTATION_BUDGETS,
   CONSULTATION_DATES_MAX,
   CONSULTATION_INTERESTS,
   CONSULTATION_INTERESTS_MAX,
-  CONSULTATION_NAME_MAX,
-  CONSULTATION_PACKAGES,
   CONSULTATION_PARTY_MAX,
   CONSULTATION_QUESTION_MAX,
   CONSULTATION_QUESTION_MIN,
-  formatEur,
-  type ConsultationPackage,
 } from "@/lib/consultations";
 
 // ============================================================================
-// CONSULTATION DIALOG — čarovnik za plačljivo osebno konzultacijo (Faza 3b-2)
+// CONSULTATION DIALOG — čarovnik za BREZPLAČNO osebno konzultacijo
 // ============================================================================
-// Koraki: forma (podrobnosti potovanja + globje vprašanje) → [plačilo
-// paketa, ČE kreditov ni] → generiranje (AI) → rezultat z zasebno povezavo.
+// Model „ponudniki plačajo" (Faza 3c — kot Booking.com): uporabnik NE
+// plačuje. Koraki: forma (podrobnosti potovanja + globje vprašanje) →
+// generiranje (AI) → rezultat z zasebno povezavo + rezervacijskimi CTA.
 //
 // Iskrenost (princip platforme):
-//  - demo plačilo je VIDNO označeno (v produkciji Stripe; nič se ne zaračuna),
 //  - odgovor nosi badge Grounded AI / izključno iz baze,
-//  - EU transparentnost: ★ = premium partner (prednost pri enakovrednih).
-//
-// Krediti so vezani na E-POŠTO — ista e-pošta v drugem brskalniku vidi
-// svoje kredite (GET ?email= ob vsaki spremembi e-pošte v formi).
+//  - EU transparentnost: ★ = premium partner (prednost pri enakovrednih),
+//  - monetizacija poteka na strani PONUDNIKOV (citati + atribuirane
+//    rezervacije), ne na strani uporabnika.
 // ============================================================================
 
 const ALL_VALUE = "all";
@@ -93,18 +85,11 @@ interface ConsultationResult {
 interface SubmitResponse {
   success?: boolean;
   consultation?: ConsultationResult;
-  creditsRemaining?: number;
   error?: string;
   code?: string;
 }
 
-interface OrderResponse {
-  success?: boolean;
-  credits?: number;
-  error?: string;
-}
-
-export type ConsultationDialogStep = "form" | "pay" | "generating" | "result";
+export type ConsultationDialogStep = "form" | "generating" | "result";
 
 interface ConsultationDialogProps {
   open: boolean;
@@ -149,7 +134,6 @@ export function ConsultationDialog({
 
   // Forma
   const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
   const [destination, setDestination] = useState<string>(
     prefillDestination ?? ALL_VALUE
   );
@@ -159,17 +143,8 @@ export function ConsultationDialog({
   const [interests, setInterests] = useState<string[]>([]);
   const [question, setQuestion] = useState("");
 
-  // Krediti za trenutno e-pošto (honest prikaz v formi)
-  const [knownCredits, setKnownCredits] = useState<number | null>(null);
-
   // Rezultat
   const [result, setResult] = useState<ConsultationResult | null>(null);
-  const [creditsLeft, setCreditsLeft] = useState<number | null>(null);
-
-  // Izbrani paket (plačilni korak)
-  const [packageKey, setPackageKey] = useState<ConsultationPackage["key"]>(
-    "single"
-  );
 
   // Prefill ob vsakem odprtju (iz konteksta: destinacija + vprašanje)
   useEffect(() => {
@@ -177,35 +152,11 @@ export function ConsultationDialog({
       setStep("form");
       setError(null);
       setResult(null);
-      setCreditsLeft(null);
       setBusy(false);
       if (prefillDestination) setDestination(prefillDestination);
       if (prefillQuestion) setQuestion(prefillQuestion);
     }
   }, [open, prefillDestination, prefillQuestion]);
-
-  // Preveri kredite, ko uporabnik vpisuje e-pošto (debounce 600 ms)
-  useEffect(() => {
-    const trimmed = email.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) {
-      setKnownCredits(null);
-      return;
-    }
-    const t = setTimeout(async () => {
-      try {
-        const res = await fetch(
-          `/api/consultations?email=${encodeURIComponent(trimmed)}`,
-          { cache: "no-store" }
-        );
-        if (!res.ok) return;
-        const data: { credits?: number } = await res.json();
-        setKnownCredits(data.credits ?? 0);
-      } catch {
-        // tiho — prikaz kreditov je "nice to have"
-      }
-    }, 600);
-    return () => clearTimeout(t);
-  }, [email]);
 
   const toggleInterest = (value: string) => {
     setInterests((prev) =>
@@ -220,7 +171,7 @@ export function ConsultationDialog({
   /** Client validacija — zrcali strežnik. */
   const validateForm = (): string | null => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) {
-      return "Vpiši veljaven e-poštni naslov — nanj je vezan paket konzultacij.";
+      return "Vpiši veljaven e-poštni naslov — nanj prejmeš zasebno povezavo do odgovora.";
     }
     const q = question.trim();
     if (q.length < CONSULTATION_QUESTION_MIN) {
@@ -229,7 +180,7 @@ export function ConsultationDialog({
     return null;
   };
 
-  /** Pošlji konzultacijo; 402 → plačilni korak, uspeh → rezultat. */
+  /** Pošlji konzultacijo — brezplačna (dnevna meja 3/dan na e-pošto). */
   const submitConsultation = async () => {
     setBusy(true);
     setError(null);
@@ -240,7 +191,6 @@ export function ConsultationDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.trim(),
-          ...(name.trim() ? { name: name.trim() } : {}),
           question: question.trim(),
           ...(destination !== ALL_VALUE ? { destinationName: destination } : {}),
           ...(travelDates.trim() ? { travelDates: travelDates.trim() } : {}),
@@ -253,11 +203,6 @@ export function ConsultationDialog({
       });
       const data: SubmitResponse = await res.json().catch(() => ({}));
 
-      if (res.status === 402 || data.code === "no_credit") {
-        // Ni kreditov → plačilni korak (demo checkout)
-        setStep("pay");
-        return;
-      }
       if (!res.ok || !data.success || !data.consultation) {
         setError(data.error ?? "Konzultacije ni bilo mogoče poslati");
         setStep("form");
@@ -265,8 +210,10 @@ export function ConsultationDialog({
       }
 
       setResult(data.consultation);
-      setCreditsLeft(data.creditsRemaining ?? 0);
       trackFunnel("consultation_delivered");
+      // Atribucija (Booking-style): rezervacije v tej seji se štejejo kot
+      // izhajajoče iz konzultacije → ponudnik vidi vrednost (source).
+      setConsultationRef();
       setStep("result");
     } catch {
       setError("Povezava je prekinjena — poskusi znova");
@@ -286,36 +233,6 @@ export function ConsultationDialog({
     setError(null);
     setStep("generating");
     await submitConsultation();
-  };
-
-  /** Demo plačilo izbranega paketa → samodejno nadaljuj v generiranje. */
-  const handlePay = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/consultations/order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim(),
-          ...(name.trim() ? { name: name.trim() } : {}),
-          packageKey,
-        }),
-      });
-      const data: OrderResponse = await res.json().catch(() => ({}));
-      if (!res.ok || !data.success) {
-        setError(data.error ?? "Nakupa ni bilo mogoče zaključiti");
-        return;
-      }
-      setKnownCredits(data.credits ?? null);
-      // Plačilo uspešno → takoj oddaj konzultacijo (kredit je zagotovljen)
-      setStep("generating");
-      await submitConsultation();
-    } catch {
-      setError("Povezava je prekinjena — poskusi znova");
-    } finally {
-      setBusy(false);
-    }
   };
 
   const handleResetToForm = () => {
@@ -340,10 +257,8 @@ export function ConsultationDialog({
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             {step === "form" || step === "generating"
-              ? "Globok, oseben načrt za tvoje potovanje — datumi, proračun in druščina upoštevani."
-              : step === "pay"
-                ? "Izberi paket in takoj pridobi odgovor."
-                : "Tvoj osebni načrt je pripravljen."}
+              ? "Globok, oseben načrt za tvoje potovanje — brezplačno. Plačajo ponudniki, ki so citirani v odgovoru."
+              : "Tvoj osebni načrt je pripravljen."}
           </DialogDescription>
         </DialogHeader>
 
@@ -351,52 +266,31 @@ export function ConsultationDialog({
           {/* === KORAK: FORMA === */}
           {step === "form" ? (
             <form onSubmit={handleSubmit} noValidate className="space-y-4">
-              {/* E-pošta + ime */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor={`${uid}-email`}>
-                    E-pošta <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id={`${uid}-email`}
-                    type="email"
-                    autoComplete="email"
-                    maxLength={254}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={busy}
-                    placeholder="npr. ana@example.com"
-                    required
-                    aria-describedby={`${uid}-email-hint`}
-                  />
-                  <p
-                    id={`${uid}-email-hint`}
-                    className="flex items-center gap-1 text-[11px] text-muted-foreground"
-                  >
-                    <Mail className="size-3 shrink-0" aria-hidden="true" />
-                    Nanj so vezani kupljeni konzultacije.
-                    {knownCredits != null && knownCredits > 0 ? (
-                      <span className="ml-1 font-medium text-emerald-700 dark:text-emerald-400">
-                        Na voljo: {knownCredits}
-                        {knownCredits === 1 ? " konzultacija" : " konzultacije"}
-                      </span>
-                    ) : null}
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor={`${uid}-name`}>Tvoje ime (neobvezno)</Label>
-                  <Input
-                    id={`${uid}-name`}
-                    type="text"
-                    autoComplete="name"
-                    maxLength={CONSULTATION_NAME_MAX}
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    disabled={busy}
-                    placeholder="npr. Ana"
-                  />
-                </div>
+              {/* E-pošta */}
+              <div className="space-y-1.5">
+                <Label htmlFor={`${uid}-email`}>
+                  E-pošta <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id={`${uid}-email`}
+                  type="email"
+                  autoComplete="email"
+                  maxLength={254}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={busy}
+                  placeholder="npr. ana@example.com"
+                  required
+                  aria-describedby={`${uid}-email-hint`}
+                />
+                <p
+                  id={`${uid}-email-hint`}
+                  className="flex items-center gap-1 text-[11px] text-muted-foreground"
+                >
+                  <Mail className="size-3 shrink-0" aria-hidden="true" />
+                  Nanj prejmeš zasebno povezavo do odgovora (do 3 konzultacije
+                  dnevno).
+                </p>
               </div>
 
               {/* Destinacija + datumi */}
@@ -546,9 +440,7 @@ export function ConsultationDialog({
                   ) : (
                     <Sparkles className="size-4" aria-hidden="true" />
                   )}
-                  {knownCredits != null && knownCredits > 0
-                    ? "Pridobi odgovor (1 konzultacija)"
-                    : "Nadaljuj — 9,90 €"}
+                  Pridobi osebni načrt — brezplačno
                 </Button>
                 <p className="text-xs text-muted-foreground sm:ml-2">
                   Odgovor pripravi AI lokalnež izključno iz baze realnih
@@ -573,107 +465,10 @@ export function ConsultationDialog({
             </div>
           ) : null}
 
-          {/* === KORAK: PLAČILO === */}
-          {step === "pay" ? (
-            <div className="space-y-4">
-              <div className="rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2.5 text-xs text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
-                <p className="flex items-start gap-2">
-                  <Lock className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                  <span>
-                    <strong>Demo način plačila:</strong> zaračunavanje še ni
-                    aktivirano — naročilo in konzultacija se zapišejo povsem
-                    realno, denar pa se ne dviga. V produkciji poteka plačilo
-                    varno prek Stripe.
-                  </span>
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {CONSULTATION_PACKAGES.map((p) => {
-                  const selected = packageKey === p.key;
-                  return (
-                    <button
-                      key={p.key}
-                      type="button"
-                      onClick={() => setPackageKey(p.key)}
-                      aria-pressed={selected}
-                      className={`block w-full rounded-xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                        selected
-                          ? "border-emerald-600/60 bg-emerald-50 dark:border-emerald-500/50 dark:bg-emerald-950/30"
-                          : "border-border/70 hover:border-border"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className={`flex size-5 items-center justify-center rounded-full border ${
-                              selected
-                                ? "border-emerald-600 bg-emerald-600 text-white"
-                                : "border-border"
-                            }`}
-                            aria-hidden="true"
-                          >
-                            {selected ? <Check className="size-3.5" /> : null}
-                          </span>
-                          <span className="text-sm font-semibold">{p.name}</span>
-                        </div>
-                        <span className="text-lg font-bold">{formatEur(p.priceEur)}</span>
-                      </div>
-                      <p className="mt-1.5 pl-8 text-xs text-muted-foreground">
-                        {p.description}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {error ? (
-                <p
-                  role="alert"
-                  className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                >
-                  {error}
-                </p>
-              ) : null}
-
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setStep("form")}
-                  disabled={busy}
-                  className="min-h-11 gap-2"
-                >
-                  <ArrowLeft className="size-4" aria-hidden="true" />
-                  Nazaj na vprašanje
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handlePay}
-                  disabled={busy}
-                  className="min-h-11 gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  {busy ? (
-                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <CreditCard className="size-4" aria-hidden="true" />
-                  )}
-                  {busy
-                    ? "Obdelava …"
-                    : `Plačaj ${formatEur(
-                        CONSULTATION_PACKAGES.find((p) => p.key === packageKey)
-                          ?.priceEur ?? 0
-                      )} (demo) in pridobi odgovor`}
-                </Button>
-              </div>
-            </div>
-          ) : null}
-
           {/* === KORAK: REZULTAT === */}
           {step === "result" && result ? (
             <ConsultationResultView
               result={result}
-              creditsLeft={creditsLeft}
               onReset={handleResetToForm}
             />
           ) : null}
@@ -689,11 +484,9 @@ export function ConsultationDialog({
 
 function ConsultationResultView({
   result,
-  creditsLeft,
   onReset,
 }: {
   result: ConsultationResult;
-  creditsLeft: number | null;
   onReset: () => void;
 }) {
   const isFallback = result.answerSource === "fallback";
@@ -744,7 +537,7 @@ function ConsultationResultView({
             {result.answer}
           </p>
 
-          {/* Priporočeni partnerji — klikabilni čipi */}
+          {/* Priporočeni partnerji — klikabilni čipi (rezervacijski CTA) */}
           {partners.length > 0 ? (
             <div className="mt-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -785,18 +578,16 @@ function ConsultationResultView({
         </div>
       </div>
 
-      {/* Zasebna povezava + stanje kreditov */}
+      {/* Zasebna povezava */}
       <div className="rounded-lg border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
         <p className="flex items-center gap-1.5 font-medium text-foreground/80">
           <BadgeCheck className="size-3.5 text-emerald-600" aria-hidden="true" />
           Zasebna povezava — odgovor vidiš samo ti
         </p>
         <p className="mt-1">
-          Shrani si povezavo <span className="font-mono text-[11px]">/konzultacija/{result.accessToken}</span>{" "}
+          Povezavo smo ti poslali tudi po e-pošti. Shrani si{" "}
+          <span className="font-mono text-[11px]">/konzultacija/{result.accessToken}</span>{" "}
           — do odgovora se vrneš kadarkoli.
-          {creditsLeft != null && creditsLeft > 0
-            ? ` Preostale konzultacije na tvoji e-pošti: ${creditsLeft}.`
-            : null}
         </p>
       </div>
 

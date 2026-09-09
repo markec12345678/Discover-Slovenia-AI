@@ -146,6 +146,12 @@ export async function POST(request: Request) {
 
     // (providerName, providerEmail, meetingPoint so že prevzeti iz DB zgoraj)
 
+    // === Atribucija izvora (Faza 3c — model „ponudniki plačajo") ===
+    // whitelist — stranka NE more zapisati poljubnih vrednosti.
+    const sourceRaw = typeof b.source === "string" ? b.source.trim() : "";
+    const source =
+      sourceRaw === "consultation" ? "consultation" : null;
+
     // === Server-side izračun cene ===
     const total = Math.round(pricePerPerson * groupSize * 100) / 100;
     const currency = "EUR";
@@ -178,6 +184,7 @@ export async function POST(request: Request) {
           providerName,
           providerEmail,
           meetingPoint,
+          source,
           confirmedAt: new Date(),
         },
       });

@@ -363,6 +363,7 @@ model Booking {
   providerName    String
   providerEmail   String
   meetingPoint    String?
+  source          String?   // atribucija izvora: "consultation" (rezervacija iz AI konzultacije) | null
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   confirmedAt     DateTime?
@@ -371,6 +372,7 @@ model Booking {
   @@index([bookingDate])
   @@index([guestEmail])
   @@index([status])
+  @@index([source])
 }
 
 // ============================================================================
@@ -498,59 +500,20 @@ model LocalQuestion {
 }
 
 // ============================================================================
-// PLAČLJIVE „VPRAŠAJ LOKALCA" KONZULTACIJE (Faza 3b-2)
+// „VPRAŠAJ LOKALCA" KONZULTACIJE (Faza 3c: model „ponudniki plačajo")
 // ============================================================================
-// Freemium model: 1 brezplačno vprašanje/dan (števec nad LocalQuestion,
-// vezan na anonimni piškotek) → globja osebna konzultacija kot plačljiv
-// paket (krediti, vezani na e-pošto kupca — isti princip kot Order/Booking).
-// Plačilo je DEMO (paymentMethod "demo"): naročilo in krediti so realni v
-// bazi, zamenjava z varčno Stripe checkout potjo pa je kasneje le swap
-// tega enega endpointa (stripeSessionId polje je pripravljeno).
+// Kot Booking.com: uporabnik NE plačuje — globoka osebna konzultacija je
+// BREZPLAČNA (dnevna meja 3/dan na e-pošto varuje AI stroške). Monetizacija
+// poteka na strani ponudnikov: citirani premium partnerji (B2B flywheel —
+// aiRecommendations + ListingEvent) + atribucija rezervacij, ki izhajajo iz
+// konzultacije (Booking.source = "consultation") → ponudnik vidi vrednost,
+// ki jo plača prek premium naročnine.
 
-// Naročilo paketa konzultacij (demo checkout)
-model ConsultationOrder {
-  id              String    @id @default(cuid())
-  orderNumber     String    @unique // KONZ-XXXXXX
-  buyerEmail      String    // male črke, trimmed
-  buyerName       String?   // prikazno ime (2–40 znakov)
-  packageKey      String    // "single" (1×) | "pack3" (3×) — validirano proti ALLOWED_PACKAGES
-  packageName     String    // berljivo ime paketa (za prikaz)
-  credits         Int       // število podeljenih kreditov (1 | 3)
-  amount          Float    // skupni znesek (9.9 | 19.9)
-  currency        String    @default("EUR")
-  status          String    @default("paid") // demo plačilo takoj "paid"; v produkciji pending → paid (webhook)
-  paymentMethod   String    @default("demo") // "demo" (brez realnega terjatve) — pripravljeno za "stripe"
-  stripeSessionId String?   // pripravljeno za produkcijo
-  paidAt          DateTime?
-  createdAt       DateTime  @default(now())
-
-  creditRows         ConsultationCredit[] // krediti, podeljeni s tem naročilom
-
-  @@index([buyerEmail])
-  @@index([createdAt])
-}
-
-// Posamezen konzultacijski kredit (en nakup = N vrstic)
-model ConsultationCredit {
-  id         String    @id @default(cuid())
-  email      String    // lastnik kupca (isti e-mail kot naročilo)
-  orderId    String?   // ConsultationOrder.id — sledljivost izvora
-  order      ConsultationOrder? @relation(fields: [orderId], references: [id])
-  source     String    @default("purchase") // "purchase" | "bonus" (npr. promo/admin)
-  status     String    @default("available") // available | used
-  usedBy     String?   // Consultation.id, ki ga je porabil
-  usedAt     DateTime?
-  createdAt  DateTime  @default(now())
-
-  @@index([email, status])
-  @@index([orderId])
-}
-
-// Izvedena globoka konzultacija (1 kredit = 1 konzultacija)
+// Izvedena globoka konzultacija (brezplačna — uporabniški lead za rezervacije)
 model Consultation {
   id              String    @id @default(cuid())
-  accessToken     String    @unique // privatna povezava /konzultacija/{token} (cuid — nedoglediv)
-  email           String    // e-pošta kupca (re-access, vez s krediti)
+  accessToken     String    @unique // zasebna povezava /konzultacija/{token} (nedoglediv)
+  email           String    // e-pošta obiskovalca (dostavna e-pošta s povezavo)
   question        String    // 20–2000 znakov — podrobni opis potreb
   destinationName String?   // ožji kontekst (npr. "Bled") — null = vsa Slovenija
   travelDates     String?   // prosto besedilo (npr. "12.–19. julij")
@@ -562,7 +525,6 @@ model Consultation {
   recommendedPartners String? // JSON array citiranih partnerjev — isti format kot LocalQuestion
   status          String    @default("pending") // pending | delivered
   deliveredAt     DateTime?
-  orderNumber     String?   // naročilo, iz katerega je bil kredit porabljen (sledljivost prihodka)
   createdAt       DateTime  @default(now())
 
   @@index([email])

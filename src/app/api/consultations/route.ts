@@ -9,8 +9,6 @@ import {
   CONSULTATION_BUDGETS,
   CONSULTATION_INTERESTS,
   CONSULTATION_INTERESTS_MAX,
-  CONSULTATION_NAME_MAX,
-  CONSULTATION_NAME_MIN,
   CONSULTATION_PARTY_MAX,
   CONSULTATION_DATES_MAX,
   CONSULTATION_QUESTION_MAX,
@@ -25,30 +23,56 @@ import {
 } from "@/lib/consultation-engine";
 
 // ============================================================================
-// POST /api/consultations — ODDAJA plačljive globoke konzultacije
+// POST /api/consultations — BREZPLAČNA globoka osebna konzultacija
 // ============================================================================
-// Freemium motor (Faza 3b-2): globoka „Vprašaj lokalca" konzultacija,
-// ki porabi 1 kredit (ConsultationCredit, vezan na e-pošto kupca).
+// Model „ponudniki plačajo" (Faza 3c — kot Booking.com): uporabnik NE
+// plačuje za svet. Monetizacija poteka na strani ponudnikov — globoka
+// konzultacija citira premium partnerje (B2B flywheel: aiRecommendations
+// + ListingEvent) in rezervacije, ki iz nje izhajajo, so atribuirane
+// (Booking.source = "consultation") → ponudnik vidi vrednost, ki jo
+// plača prek premium naročnine.
 //
 // Pot:
 //   1. validacija (vsa polja, interesi/proračun iz fiksnih seznamov),
-//   2. poiskanje RASPOLOŽLJIVEGA kredita za e-pošto — 402 če ga ni
-//      (klient takrat ponudi nakup paketa),
+//   2. dnevna meja na e-pošto (3/dan — varuje AI stroške, ne prihodek),
 //   3. kontekst iz baze (premium-aware) → AI globok odgovor (grounded)
 //      oz. iskren programski fallback,
-//   4. kredit OZNAČEN kot uporabljen (transaction — prepreči dvojno
-//      porabo istega kredita),
-//   5. odgovor shranjen + privatni accessToken (dostop /konzultacija/{token}),
-//      B2B tracking citiranih partnerjev (aiRecommendations + ListingEvent).
-//
-// Kredit se porabi SAMO ob dostavi odgovora — tudi fallback odgovor je
-// uporaben (pošteno sestavljen iz istega konteksta, vidno označen), zato
-// velja kot dostavljena konzultacija.
+//   4. odgovor shranjen + zaseben accessToken (/konzultacija/{token}),
+//      B2B tracking citiranih partnerjev + dostavna e-pošta (fire-and-forget).
 // ============================================================================
+
+/** Dnevna meja globoke konzultacije na e-pošto (AI stroški, ne prihodek). */
+const DAILY_CONSULTATIONS = 3;
+
+/** Začetek »danes« po Ljubljani (DST-varno — isti trik kot /api/ask-local). */
+function startOfTodayLjubljana(): Date {
+  const now = new Date();
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "Europe/Ljubljana",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    })
+      .formatToParts(now)
+      .map((p) => [p.type, p.value])
+  );
+  const asUTC = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day)
+  );
+  const secondsSinceMidnight =
+    Number(parts.hour) * 3600 + Number(parts.minute) * 60 + Number(parts.second);
+  return new Date(asUTC - secondsSinceMidnight * 1000);
+}
 
 interface ConsultationRequest {
   email?: string;
-  name?: string;
   question?: string;
   destinationName?: string;
   travelDates?: string;
@@ -58,7 +82,7 @@ interface ConsultationRequest {
 }
 
 export async function POST(request: Request) {
-  // AI klic je drag + kreditni promet — zmerno omejimo po IP
+  // AI klic je drag — zmerno omejimo po IP (zloraba-varovalka)
   const limited = rateLimit(request, {
     limit: 6,
     windowMs: 3600000,
@@ -78,15 +102,7 @@ export async function POST(request: Request) {
     typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   if (!EMAIL_RE.test(email) || email.length > 254) {
     return NextResponse.json(
-      { error: "Vpišite veljaven e-poštni naslov (nanj je vezan paket konzultacij)" },
-      { status: 400 }
-    );
-  }
-
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  if (name && (name.length < CONSULTATION_NAME_MIN || name.length > CONSULTATION_NAME_MAX)) {
-    return NextResponse.json(
-      { error: `Ime mora imeti ${CONSULTATION_NAME_MIN}–${CONSULTATION_NAME_MAX} znakov` },
+      { error: "Vpišite veljaven e-poštni naslov — nanj prejmete zasebno povezavo do odgovora" },
       { status: 400 }
     );
   }
@@ -99,7 +115,7 @@ export async function POST(request: Request) {
   ) {
     return NextResponse.json(
       {
-        error: `Vprašanje mora imeti ${CONSULTATION_QUESTION_MIN}–${CONSULTATION_QUESTION_MAX} znakov (globja vprašanja dajo globje odgovore)`,
+        error: `Vprašanje mora imeti ${CONSULTATION_QUESTION_MIN}–${CONSULTATION_QUESTION_MAX} znakov (globja vprašanja dajejo globje odgovore)`,
       },
       { status: 400 }
     );
@@ -129,9 +145,7 @@ export async function POST(request: Request) {
   }
 
   const partyDescription =
-    typeof body.partyDescription === "string"
-      ? body.partyDescription.trim()
-      : "";
+    typeof body.partyDescription === "string" ? body.partyDescription.trim() : "";
   if (partyDescription.length > CONSULTATION_PARTY_MAX) {
     return NextResponse.json(
       { error: `Druščina: največ ${CONSULTATION_PARTY_MAX} znakov` },
@@ -164,23 +178,17 @@ export async function POST(request: Request) {
   }
 
   try {
-    // === KREDIT — poišči najstarejšega razpoložljivega za ta e-mail ===
-    // (FIFO: najprej porabimo kredite iz najzgodnejšega nakupa)
-    const credit = await db.consultationCredit.findFirst({
-      where: { email, status: "available" },
-      orderBy: { createdAt: "asc" },
-      include: { order: true },
+    // === DNEVNA MEJA NA E-POŠTO (3/dan — poštena varovalka AI stroškov) ===
+    const usedToday = await db.consultation.count({
+      where: { email, createdAt: { gte: startOfTodayLjubljana() } },
     });
-
-    if (!credit) {
-      // 402 Payment Required — klient odpre izbiro paketa (demo checkout)
+    if (usedToday >= DAILY_CONSULTATIONS) {
       return NextResponse.json(
         {
-          error:
-            "Za ta e-poštni naslov ni razpoložljivih konzultacij — izberite paket.",
-          code: "no_credit",
+          error: `Za danes si že izkoristil ${DAILY_CONSULTATIONS} osebne konzultacije na ta e-poštni naslov — nadaljuj jutri. Prejšnji odgovori so shranjeni na tvoji zasebni povezavi.`,
+          code: "daily_consultation_limit",
         },
-        { status: 402 }
+        { status: 429 }
       );
     }
 
@@ -204,41 +212,25 @@ export async function POST(request: Request) {
     // ekstrakcija kot ask-local)
     const partners = extractConsultPartners(answer, context.items);
 
-    // === SHRANI + OZNAČI KREDIT (transaction) ===
-    // Token: 24 znakov naključja → nedoglediv zaseben dostop
-    // (/konzultacija/{token}). Konzultacija ostane ZASEBNA (za razliko od
-    // ask-local, ki je javni social proof — tu je kupec plačal za oseben
-    // odgovor in njegovi podatki (datumi, proračun) niso javni).
-    const consultation = await db.$transaction(async (tx) => {
-      const created = await tx.consultation.create({
-        data: {
-          accessToken: randomId(24),
-          email,
-          question,
-          destinationName: input.destinationName,
-          travelDates: input.travelDates,
-          partyDescription: input.partyDescription,
-          budget: input.budget,
-          interests: JSON.stringify(interests),
-          answer,
-          answerSource,
-          recommendedPartners: JSON.stringify(partners),
-          status: "delivered",
-          deliveredAt: new Date(),
-          orderNumber: credit.order?.orderNumber ?? null,
-        },
-      });
-
-      await tx.consultationCredit.update({
-        where: { id: credit.id },
-        data: {
-          status: "used",
-          usedBy: created.id,
-          usedAt: new Date(),
-        },
-      });
-
-      return created;
+    // === SHRANI (zaseben dostop prek /konzultacija/{token}) ===
+    // Konzultacija ostaja ZASEBNA (osebni podatki kupca niso javni — za
+    // razliko od ask-local, ki je javni social proof).
+    const consultation = await db.consultation.create({
+      data: {
+        accessToken: randomId(24),
+        email,
+        question,
+        destinationName: input.destinationName,
+        travelDates: input.travelDates,
+        partyDescription: input.partyDescription,
+        budget: input.budget,
+        interests: JSON.stringify(interests),
+        answer,
+        answerSource,
+        recommendedPartners: JSON.stringify(partners),
+        status: "delivered",
+        deliveredAt: new Date(),
+      },
     });
 
     // === B2B TRACKING (aiRecommendations + ListingEvent) ===
@@ -247,22 +239,19 @@ export async function POST(request: Request) {
       context.items.filter((i) => partners.some((p) => p.name === i.name))
     );
 
-    // Preostali krediti za ta e-mail (klient jih lahko prikaže)
-    const remaining = await db.consultationCredit.count({
-      where: { email, status: "available" },
-    });
+    console.log(
+      `[consultations] dostavljena (${answerSource}) — ${consultation.id}`
+    );
 
     // === E-POŠTA: dostava z zasebno povezavo (fire-and-forget — enak
     // vzorec kot /api/checkout; e-pošta ne sme seseti odgovora) ===
-    // Kupec lahko brskalnik zapre pred kopiranjem povezave — e-pošta je
-    // edina zanesljiva pot nazaj do PLAČANE konzultacije.
+    // Obiskovalec lahko brskalnik zapre pred kopiranjem povezave — e-pošta
+    // je edina zanesljiva pot nazaj do odgovora (tudi brezplačnega).
     try {
       const mail = consultationDeliveryEmail({
         token: consultation.accessToken,
-        buyerName: credit.order?.buyerName ?? null,
         question,
         destinationName: input.destinationName,
-        creditsRemaining: remaining,
       });
       void sendEmail({
         to: email,
@@ -284,10 +273,6 @@ export async function POST(request: Request) {
       console.error("[consultations] priprava dostavnega emaila:", mailError);
     }
 
-    console.log(
-      `[consultations] dostavljena (${answerSource}) — ${consultation.id}, preostalih kreditov: ${remaining}`
-    );
-
     return NextResponse.json(
       {
         success: true,
@@ -306,7 +291,6 @@ export async function POST(request: Request) {
           recommendedPartners: partners,
           deliveredAt: consultation.deliveredAt,
         },
-        creditsRemaining: remaining,
       },
       { status: 201 }
     );
@@ -316,47 +300,5 @@ export async function POST(request: Request) {
       { error: "Konzultacije trenutno ni bilo mogoče pripraviti" },
       { status: 500 }
     );
-  }
-}
-
-// ============================================================================
-// GET /api/consultations?email=… — stanje kreditov (honest upsell UI)
-// ============================================================================
-// Klient ob odpiranju dialoga preveri, ali ta e-pošta že ima kredite
-// (npr. včeraj kupljen paket) → preskoči checkout in gre naravnost v
-// vprašanje. Namerno prek e-pošte (query) namesto piškotka: paket, kupljen
-// v drugem brskalniku/na drugi napravi, deluje enako (krediti so vezani
-// na e-pošto).
-// ============================================================================
-export async function GET(request: Request) {
-  const limited = rateLimit(request, {
-    limit: 60,
-    windowMs: 3600000,
-    key: "consultations:credits",
-  });
-  if (limited) return limited;
-
-  try {
-    const { searchParams } = new URL(request.url);
-    const email = (searchParams.get("email") ?? "").trim().toLowerCase();
-
-    if (!email) {
-      return NextResponse.json({ credits: 0, validEmail: false });
-    }
-    if (!EMAIL_RE.test(email)) {
-      return NextResponse.json(
-        { error: "Neveljaven e-poštni naslov" },
-        { status: 400 }
-      );
-    }
-
-    const credits = await db.consultationCredit.count({
-      where: { email, status: "available" },
-    });
-
-    return NextResponse.json({ credits, validEmail: true });
-  } catch (error) {
-    console.error("[consultations] GET napaka:", error);
-    return NextResponse.json({ error: "Napaka" }, { status: 500 });
   }
 }
