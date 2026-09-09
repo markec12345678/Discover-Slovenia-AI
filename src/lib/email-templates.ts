@@ -690,6 +690,190 @@ Ekipa Discover Slovenia AI`;
 }
 
 // =========================
+// 9. CONSULTATION ORDER EMAIL (kupec paketa "Vprašaj lokalca")
+// =========================
+export interface ConsultationOrderEmailData {
+  orderNumber: string;
+  buyerName?: string | null;
+  packageName: string;
+  credits: number;
+  amount: number;
+  /** true, dokler je checkout v demo načinu (iskrenost — v UI in e-pošti) */
+  isDemoPayment: boolean;
+}
+
+export function consultationOrderEmail({
+  orderNumber,
+  buyerName,
+  packageName,
+  credits,
+  amount,
+  isDemoPayment,
+}: ConsultationOrderEmailData): { subject: string; html: string; text: string } {
+  const greeting = buyerName ? `Pozdravljeni <strong>${escapeHtml(buyerName)}</strong>` : "Pozdravljeni";
+  const greetingText = buyerName ? `Pozdravljeni ${buyerName}` : "Pozdravljeni";
+
+  const subject = `Potrdilo nakupa konzultacije ${orderNumber} — Discover Slovenia AI`;
+
+  const demoNote = isDemoPayment
+    ? `
+    <p style="font-size: 13px; color: #92400e; background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 10px 14px; margin: 20px 0;">
+      ℹ️ <strong>Demo način:</strong> zaračunavanje še ni aktivirano — to potrdilo dokazuje pot nakupa, denar ni bilo odtegnjen.
+    </p>`
+    : "";
+
+  const demoNoteText = isDemoPayment
+    ? `\n(Demo način: zaračunavanje še ni aktivirano — denar ni bil odtegnjen.)\n`
+    : "";
+
+  const content = `
+    <p style="margin-top: 0;">${greeting},</p>
+    <p>Hvala za zaupanje! Vaš paket osebnih konzultacij <strong>${escapeHtml(packageName)}</strong> je uspešno aktiviran.</p>
+
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 24px 0;">
+      <table style="width: 100%; font-size: 14px;">
+        <tr>
+          <td style="padding: 6px 0; color: #6b7280;">Številka naročila:</td>
+          <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #1a2e1a;">${escapeHtml(orderNumber)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #6b7280;">Paket:</td>
+          <td style="padding: 6px 0; text-align: right;">${escapeHtml(packageName)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #6b7280;">Število konzultacij:</td>
+          <td style="padding: 6px 0; text-align: right;">${credits}×</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0 0 0; border-top: 1px solid #e5e7eb; font-weight: bold; color: #1a2e1a;">Znesek:</td>
+          <td style="padding: 10px 0 0 0; border-top: 1px solid #e5e7eb; text-align: right; font-weight: bold; font-size: 16px; color: #2d6a3e;">${formatEur(amount)}</td>
+        </tr>
+      </table>
+    </div>
+
+    <p><strong>Kako uporabite konzultacijo:</strong> na spletni strani odprite razdelek <em>„Vprašaj lokalca"</em> in v obrazec za osebno konzultacijo vpišite <strong>isti e-poštni naslov, kot s prejeli to sporočilo</strong> — kredit se samodejno porabi in odgovor pripravimo v nekaj minutah.</p>
+    ${demoNote}
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${getBaseUrl()}/#vprasi-lokalca" style="background: #2d6a3e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+        Postavite vprašanje →
+      </a>
+    </div>
+
+    <p style="font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 24px;">
+      Številko naročila <strong>${escapeHtml(orderNumber)}</strong> navedite pri morebitnih vprašanjih — odgovorite na to sporočilo ali pišite na <a href="mailto:support@discoverslovenia.ai" style="color: #2d6a3e;">support@discoverslovenia.ai</a>.
+    </p>
+  `;
+
+  const text = `Potrdilo nakupa konzultacije ${orderNumber} — Discover Slovenia AI
+
+${greetingText},
+
+Hvala za zaupanje! Vaš paket osebnih konzultacij je uspešno aktiviran.
+
+Številka naročila: ${orderNumber}
+Paket: ${packageName}
+Število konzultacij: ${credits}×
+Znesek: ${formatEur(amount)}${demoNoteText}
+Kako uporabite konzultacijo: na ${getBaseUrl()}/#vprasi-lokalca vpišite isti e-poštni naslov v obrazec za osebno konzultacijo — kredit se samodejno porabi.
+
+Lep pozdrav,
+Ekipa Discover Slovenia AI`;
+
+  return {
+    subject,
+    html: customerEmailTemplate("Potrdilo nakupa konzultacije ✅", content),
+    text,
+  };
+}
+
+// =========================
+// 10. CONSULTATION DELIVERY EMAIL (odgovor pripravljen + zasebna povezava)
+// =========================
+export interface ConsultationDeliveryEmailData {
+  /** accessToken konzultacije → /konzultacija/{token} */
+  token: string;
+  buyerName?: string | null;
+  question: string;
+  destinationName?: string | null;
+  creditsRemaining: number;
+}
+
+export function consultationDeliveryEmail({
+  token,
+  buyerName,
+  question,
+  destinationName,
+  creditsRemaining,
+}: ConsultationDeliveryEmailData): { subject: string; html: string; text: string } {
+  const greeting = buyerName ? `Pozdravljeni <strong>${escapeHtml(buyerName)}</strong>` : "Pozdravljeni";
+  const greetingText = buyerName ? `Pozdravljeni ${buyerName}` : "Pozdravljeni";
+  const link = `${getBaseUrl()}/konzultacija/${token}`;
+
+  // Vprašanje skrajšamo na 220 znakov (e-pošta je obvestilo, ne arhiv)
+  const shortQuestion =
+    question.length > 220 ? `${question.slice(0, 217).trimEnd()}…` : question;
+
+  const subject = `Vaša osebna konzultacija je pripravljena — Discover Slovenia AI`;
+
+  const creditsBlock =
+    creditsRemaining > 0
+      ? `
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px 20px; margin: 20px 0; font-size: 14px;">
+      Preostalo število konzultacij na vašem e-poštnem naslovu: <strong>${creditsRemaining}</strong> — uporabite jih kadarkoli na <a href="${getBaseUrl()}/#vprasi-lokalca" style="color: #2d6a3e;">Vprašaj lokalca</a>.
+    </div>`
+      : "";
+
+  const creditsText =
+    creditsRemaining > 0
+      ? `\nPreostalo število konzultacij na vašem e-poštnem naslovu: ${creditsRemaining} — uporabite jih kadarkoli.\n`
+      : "";
+
+  const content = `
+    <p style="margin-top: 0;">${greeting},</p>
+    <p>Vaša osebna konzultacija${destinationName ? ` za <strong>${escapeHtml(destinationName)}</strong>` : ""} je pripravljena! Lokalni vpogled, oseben načrt in praktični nasveti vas čakajo na zasebni povezavi:</p>
+
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 24px 0; font-size: 14px;">
+      <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 12px; text-transform: uppercase;">Vaše vprašanje</p>
+      <p style="margin: 0; color: #1a2e1a; font-style: italic;">${escapeHtml(shortQuestion)}</p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${link}" style="background: #2d6a3e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+        Odpri svojo konzultacijo →
+      </a>
+      <p style="font-size: 12px; color: #6b7280; margin: 12px 0 0 0; word-break: break-all;">${link}</p>
+    </div>
+    ${creditsBlock}
+    <p style="font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 24px;">
+      🔒 Ta povezava je <strong>zasebna</strong> — vsebuje vaše osebne podatke (datume, proračun). Shranite si to sporočilo in povezave ne objavljajte javno. Za vprašanja odgovorite na to sporočilo.
+    </p>
+  `;
+
+  const text = `Vaša osebna konzultacija je pripravljena — Discover Slovenia AI
+
+${greetingText},
+
+Vaša osebna konzultacija${destinationName ? ` za ${destinationName}` : ""} je pripravljena!
+
+Vaše vprašanje:
+${shortQuestion}
+
+Odpri svojo konzultacijo:
+${link}
+${creditsText}
+(Ta povezava je zasebna — shranite si to sporočilo in je ne delite javno.)
+
+Lep pozdrav,
+Ekipa Discover Slovenia AI`;
+
+  return {
+    subject,
+    html: customerEmailTemplate("Vaša konzultacija je pripravljena 📍", content),
+    text,
+  };
+}
+
+// =========================
 // Helpers
 // =========================
 

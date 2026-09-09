@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { randomId } from "@/lib/security";
+import { sendEmail, isEmailDemo } from "@/lib/email";
+import { consultationOrderEmail } from "@/lib/email-templates";
 import {
   CONSULTATION_NAME_MAX,
   CONSULTATION_NAME_MIN,
@@ -115,6 +117,37 @@ export async function POST(request: Request) {
       });
     } catch (trackError) {
       console.error("[consultations/order] funnel napaka:", trackError);
+    }
+
+    // === E-POŠTA: potrdilo nakupa (fire-and-forget — enak vzorec kot
+    // /api/checkout: e-pošta NIKOLI ne sme seseti ali zamuditi odgovora) ===
+    try {
+      const mail = consultationOrderEmail({
+        orderNumber: order.orderNumber,
+        buyerName: name || null,
+        packageName: order.packageName,
+        credits: order.credits,
+        amount: order.amount,
+        isDemoPayment: order.paymentMethod === "demo",
+      });
+      void sendEmail({
+        to: email,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+      })
+        .then((sent) => {
+          console.log(
+            `[consultations/order] potrdilo ${order.orderNumber} → ${email}: ${
+              sent ? "poslano" : "NEUSPEŠNO"
+            } (email demo: ${isEmailDemo()}).`
+          );
+        })
+        .catch(() => {
+          // email ne sme spremeniti odgovora API-ja
+        });
+    } catch (mailError) {
+      console.error("[consultations/order] priprava potrdila:", mailError);
     }
 
     const credits = await db.consultationCredit.count({

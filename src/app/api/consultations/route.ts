@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { randomId } from "@/lib/security";
+import { sendEmail, isEmailDemo } from "@/lib/email";
+import { consultationDeliveryEmail } from "@/lib/email-templates";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import {
   CONSULTATION_BUDGETS,
@@ -249,6 +251,38 @@ export async function POST(request: Request) {
     const remaining = await db.consultationCredit.count({
       where: { email, status: "available" },
     });
+
+    // === E-POŠTA: dostava z zasebno povezavo (fire-and-forget — enak
+    // vzorec kot /api/checkout; e-pošta ne sme seseti odgovora) ===
+    // Kupec lahko brskalnik zapre pred kopiranjem povezave — e-pošta je
+    // edina zanesljiva pot nazaj do PLAČANE konzultacije.
+    try {
+      const mail = consultationDeliveryEmail({
+        token: consultation.accessToken,
+        buyerName: credit.order?.buyerName ?? null,
+        question,
+        destinationName: input.destinationName,
+        creditsRemaining: remaining,
+      });
+      void sendEmail({
+        to: email,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+      })
+        .then((sent) => {
+          console.log(
+            `[consultations] dostavna povezava ${consultation.id} → ${email}: ${
+              sent ? "poslana" : "NEUSPEŠNA"
+            } (email demo: ${isEmailDemo()}).`
+          );
+        })
+        .catch(() => {
+          // email ne sme spremeniti odgovora API-ja
+        });
+    } catch (mailError) {
+      console.error("[consultations] priprava dostavnega emaila:", mailError);
+    }
 
     console.log(
       `[consultations] dostavljena (${answerSource}) — ${consultation.id}, preostalih kreditov: ${remaining}`
