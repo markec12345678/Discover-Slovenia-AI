@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/recalculate-status",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/daily-trip-push",
+      "schedule": "0 6 * * *"
     }
   ]
 }

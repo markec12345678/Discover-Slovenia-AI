@@ -25,6 +25,8 @@ export async function POST(request: Request) {
       "experience_booked",
       "asked_local",
       "affiliate_click",
+      "trip_push_sent",
+      "trip_push_click",
     ];
     if (!step || !validSteps.includes(step)) {
       return NextResponse.json({ error: "Neveljaven funnel step" }, { status: 400 });
@@ -54,7 +56,7 @@ export async function GET(request: Request) {
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const [homepage, destination, itinerary, newsletter, listingClick, quizCompleted, itinerarySaved, addToCart, checkoutCompleted, experienceBooked, askedLocal, affiliateClick] = await Promise.all([
+    const [homepage, destination, itinerary, newsletter, listingClick, quizCompleted, itinerarySaved, addToCart, checkoutCompleted, experienceBooked, askedLocal, affiliateClick, tripPushSent, tripPushClick] = await Promise.all([
       db.pageView.count({ where: { funnelStep: "homepage_view", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "destination_view", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "itinerary_generate", createdAt: { gte: thirtyDaysAgo } } }),
@@ -67,6 +69,8 @@ export async function GET(request: Request) {
       db.pageView.count({ where: { funnelStep: "experience_booked", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "asked_local", createdAt: { gte: thirtyDaysAgo } } }),
       db.pageView.count({ where: { funnelStep: "affiliate_click", createdAt: { gte: thirtyDaysAgo } } }),
+      db.pageView.count({ where: { funnelStep: "trip_push_sent", createdAt: { gte: thirtyDaysAgo } } }),
+      db.pageView.count({ where: { funnelStep: "trip_push_click", createdAt: { gte: thirtyDaysAgo } } }),
     ]);
 
     const homeToDest = homepage > 0 ? (destination / homepage) * 100 : 0;
@@ -81,6 +85,8 @@ export async function GET(request: Request) {
     // Delež ogledov destinacij, ki so prerasli v klik na affiliate partnerja
     // (zapis strežniško iz /go/[provider] — vse klike šteje enako)
     const destinationToAffiliate = destination > 0 ? (affiliateClick / destination) * 100 : 0;
+    // RETENCIJA: CTR dnevni opomnikov (klik na push / dostavljeni pushi)
+    const tripPushCtr = tripPushSent > 0 ? (tripPushClick / tripPushSent) * 100 : 0;
 
     return NextResponse.json({
       steps: {
@@ -96,6 +102,8 @@ export async function GET(request: Request) {
         experience_booked: experienceBooked,
         asked_local: askedLocal,
         affiliate_click: affiliateClick,
+        trip_push_sent: tripPushSent,
+        trip_push_click: tripPushClick,
       },
       conversionRates: {
         home_to_destination: Math.round(homeToDest * 10) / 10,
@@ -106,6 +114,7 @@ export async function GET(request: Request) {
         experience_to_booking: Math.round(experienceToBooking * 10) / 10,
         home_to_asked_local: Math.round(homeToAskedLocal * 10) / 10,
         destination_to_affiliate: Math.round(destinationToAffiliate * 10) / 10,
+        trip_push_ctr: Math.round(tripPushCtr * 10) / 10,
       },
       period: "30d",
     });

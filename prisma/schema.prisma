@@ -509,5 +509,20 @@ model PushSubscription {
   lastSeenAt      DateTime  @default(now())
   unsubscribedAt  DateTime? // soft-delete ko push service vrne 404/410
 
+  // --- Dnevni opomnik za shranjeno potovanje (Task 3b) ---
+  // kind="news": splošna naročnina (newsletter blok)
+  // kind="trip": naročnina VEZANA na deljeni načrt /pot/{shareId} —
+  //              dnevni cron pošlje dogodek + rezervacijo, dokler
+  //              tripEnd ni pretečen. tripStart pomeni trenutek prijave
+  //              (načrti nimajo absolutnih datumov — PlannerInput ima days+season).
+  kind            String    @default("news")
+  shareId         String?   // SavedItinerary.shareId (validiran ob prijavi)
+  destinationIds  String?   // JSON array destination_id iz dni načrta
+  tripStart       DateTime? // trenutek prijave (prvi dan opomnikov)
+  tripEnd         DateTime? // tripStart + days — po tem datumu cron ne pošilja več
+  lastPushAt      DateTime? // dnevni rate limit (max 1 push/24h na naročnino)
+
   @@index([unsubscribedAt])
+  @@index([kind, unsubscribedAt])
+  @@index([tripEnd])
 }

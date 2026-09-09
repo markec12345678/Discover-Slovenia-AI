@@ -17,12 +17,15 @@ import { sendPush, isPushConfigured, type PushPayload } from "@/lib/push";
 //     → 200 { success: true, stats: { sent, failed, gone, total } }
 //   GET  /api/admin/push/send
 //     header x-admin-password
-//     → 200 { active, total, unsubscribed }
+//     → 200 { active, total, unsubscribed, news, trip }
 //
-// Broadcast: vse aktivne naročnine (unsubscribedAt: null) prek
-// Promise.allSettled — ZAPOREDNO pošiljanje bi ob sto naročnikih pomenilo
-// dolgo življenjsko dobo requesta; allSettled omogoča vzporednost, en
-// odgovor na vse in statistiko ne glede na posamične odpovedi.
+// Broadcast: samo splošne (kind="news") aktivne naročnine (unsubscribedAt:
+// null). Naročnine kind="trip" so VEZANE na konkretno potovanje (dnevni
+// opomniki iz /api/cron/daily-trip-push) — uporabnik je privolil SAMO v
+// namige za svoj načrt, zato generični broadcast zanje ni pošten (spam).
+// Pošiljanje prek Promise.allSettled — ZAPOREDNO bi ob sto naročnikih
+// pomenilo dolgo življenjsko dobo requesta; allSettled omogoča vzporednost,
+// en odgovor na vse in statistiko ne glede na posamične odpovedi.
 //
 // Čiščenje: vrstice, kjer je push service vrnil 404/410 (gone), pobrišemo
 // (dead weight). Network napake NE brišejo (naročnina je morda živa).
@@ -126,9 +129,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Samo aktivne naročnine (unsubscribedAt: null, nova prva).
+    // Samo splošne aktivne naročnine — trip naročnine cilja dnevni cron.
     const subscriptions = await db.pushSubscription.findMany({
-      where: { unsubscribedAt: null },
+      where: { unsubscribedAt: null, kind: "news" },
       select: { id: true, endpoint: true, p256dh: true, auth: true },
       orderBy: { createdAt: "asc" },
     });
@@ -211,11 +214,21 @@ export async function GET(request: Request) {
     const active = await db.pushSubscription.count({
       where: { unsubscribedAt: null },
     });
+    // Razčlenitev po namenu naročnine (broadcast = "news", dnevni cron = "trip").
+    const news = await db.pushSubscription.count({
+      where: { unsubscribedAt: null, kind: "news" },
+    });
+    const trip = await db.pushSubscription.count({
+      where: { unsubscribedAt: null, kind: "trip" },
+    });
 
     return NextResponse.json({
       active,
       total,
       unsubscribed: total - active,
+      // Aktivne po namenu: news (prejema broadcast) / trip (dnevni opomniki)
+      news,
+      trip,
     });
   } catch (error) {
     console.error("[admin/push/send] GET napaka:", error);

@@ -5,6 +5,7 @@ import { safeJsonLd } from "@/lib/security";
 import { matchEventsForItinerary } from "@/lib/events-match";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { SharedTrip } from "@/components/shared-trip";
+import { TripPushCard } from "@/components/trip-push-card";
 import type { Itinerary } from "@/lib/types";
 
 // Javna stran deljenega itinererja: /pot/[shareId]
@@ -97,7 +98,9 @@ export async function generateMetadata({
   };
 }
 
-export default async function SharedTripPage({ params }: PageProps) {
+export default async function SharedTripPage({
+  params,
+}: PageProps) {
   const { shareId } = await params;
   const saved = await getSharedItinerary(shareId);
 
@@ -200,6 +203,11 @@ export default async function SharedTripPage({ params }: PageProps) {
         events={events}
         initialVotes={initialVotes}
       />
+
+      {/* === DNEVNI OPOMNIKI ZA TO POTOVANJE (retencijski motor, 3b) === */}
+      <div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6 lg:px-8">
+        <TripPushCard shareId={shareId} days={saved.itinerary.days.length} />
+      </div>
 
       {/* === PRINT NOGICA — vidna SAMO ob tiskanju (Natisni → Shrani kot PDF) === */}
       <p
