@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
-import { Mountain, Menu, Sun, Moon, Compass, Search, ShoppingCart } from "lucide-react";
+import { Mountain, Menu, Sun, Moon, Compass, Search, ShoppingCart, Building2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -37,11 +37,21 @@ function useNavLinks() {
   ];
 }
 
+/**
+ * Scroll-aware glass navigacija (pattern GYG/Airbnb):
+ * - nad herojem: prozorna, bela pisava nad fotografijo
+ * - po odscrollu: stekleno meglo ozadje + meja + senca
+ * - tanek progress bar na dnu (branje dolžine strani)
+ * P4-5: dodan "Za ponudnike" → /za-ponudnike (prej orphan stran —
+ * javni lijak na registracijo ni obstajal).
+ */
 export function Navigation() {
   const [mounted, setMounted] = React.useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [searchOpen, setSearchOpen] = React.useState(false);
+  const [scrolled, setScrolled] = React.useState(false);
+  const [progress, setProgress] = React.useState(0);
   const t = useTranslations("nav");
   const navLinks = useNavLinks();
 
@@ -55,27 +65,71 @@ export function Navigation() {
 
   React.useEffect(() => setMounted(true), []);
 
+  // Scroll listener: preklop stekla + progress branja
+  React.useEffect(() => {
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        setScrolled(y > 24);
+        const doc = document.documentElement;
+        const max = doc.scrollHeight - window.innerHeight;
+        setProgress(max > 0 ? Math.min(y / max, 1) : 0);
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const toggleTheme = () => {
     setTheme(resolvedTheme === "dark" ? "light" : "dark");
   };
 
   return (
-    <header className="sticky top-0 z-[2000] w-full border-b border-border/60 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
+    <header
+      className={cn(
+        "sticky top-0 z-[2000] w-full transition-all duration-300",
+        scrolled
+          ? "border-b border-border/70 bg-background/85 shadow-[0_4px_24px_-12px_rgba(0,0,0,0.18)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/70"
+          : "border-b border-transparent bg-transparent"
+      )}
+    >
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         {/* Logotip */}
         <Link
           href="#vrh"
-          className="flex items-center gap-2 text-foreground transition-colors hover:text-primary"
+          className={cn(
+            "group flex items-center gap-2 transition-colors",
+            scrolled
+              ? "text-foreground hover:text-primary"
+              : "text-white drop-shadow-md hover:text-white"
+          )}
           aria-label="Discover Slovenia AI — domov"
         >
-          <span className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+          <span
+            className={cn(
+              "flex size-9 items-center justify-center rounded-lg shadow-md transition-all group-hover:scale-105",
+              scrolled
+                ? "bg-primary text-primary-foreground"
+                : "bg-white/15 text-white backdrop-blur-md ring-1 ring-white/30"
+            )}
+          >
             <Mountain className="size-5" aria-hidden="true" />
           </span>
           <span className="flex flex-col leading-none">
             <span className="text-sm font-bold tracking-tight sm:text-base">
               Discover Slovenia AI
             </span>
-            <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            <span
+              className={cn(
+                "text-[10px] font-medium uppercase tracking-[0.18em]",
+                scrolled ? "text-muted-foreground" : "text-white/70"
+              )}
+            >
               AI potovanja
             </span>
           </span>
@@ -90,7 +144,12 @@ export function Navigation() {
             <Link
               key={link.href}
               href={link.href}
-              className="rounded-md px-3 py-2 text-sm font-medium text-foreground/80 transition-colors hover:bg-accent hover:text-accent-foreground"
+              className={cn(
+                "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                scrolled
+                  ? "text-foreground/80 hover:bg-accent hover:text-accent-foreground"
+                  : "text-white/85 hover:bg-white/10 hover:text-white"
+              )}
             >
               {link.label}
             </Link>
@@ -109,13 +168,19 @@ export function Navigation() {
                 ? `Odpri košarico (${cartCount} izdelkov)`
                 : "Odpri košarico"
             }
-            className="relative text-foreground"
+            className={cn(
+              "relative",
+              scrolled ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
+            )}
           >
             <ShoppingCart className="size-5" aria-hidden="true" />
             {cartCount > 0 ? (
               <span
                 className={cn(
-                  "absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground"
+                  "absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none",
+                  scrolled
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-white text-primary shadow-sm"
                 )}
                 aria-hidden="true"
               >
@@ -129,7 +194,9 @@ export function Navigation() {
             size="icon"
             onClick={() => setSearchOpen(true)}
             aria-label="AI iskanje"
-            className="text-foreground"
+            className={cn(
+              scrolled ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
+            )}
           >
             <Search className="size-5" aria-hidden="true" />
           </Button>
@@ -139,7 +206,9 @@ export function Navigation() {
             size="icon"
             onClick={toggleTheme}
             aria-label="Preklopi temo"
-            className="text-foreground"
+            className={cn(
+              scrolled ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
+            )}
           >
             {mounted ? (
               resolvedTheme === "dark" ? (
@@ -153,12 +222,37 @@ export function Navigation() {
             )}
           </Button>
 
-          <LanguageSwitcher />
+          <div className={cn(scrolled ? "" : "[&>button]:text-white [&>button:hover]:bg-white/10")}>
+            <LanguageSwitcher />
+          </div>
+
+          {/* P4-5: javni lijak na ponudnike (prej orphan /za-ponudnike) */}
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "hidden gap-1.5 md:inline-flex",
+              scrolled
+                ? "text-foreground/80 hover:text-primary"
+                : "text-white/85 hover:bg-white/10 hover:text-white"
+            )}
+          >
+            <Link href="/za-ponudnike">
+              <Building2 className="size-4" aria-hidden="true" />
+              {t("providers")}
+            </Link>
+          </Button>
 
           <Button
             asChild
             size="sm"
-            className="hidden bg-primary text-primary-foreground hover:bg-primary/90 sm:inline-flex"
+            className={cn(
+              "hidden shadow-md transition-all hover:shadow-lg sm:inline-flex",
+              scrolled
+                ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                : "bg-white text-primary hover:bg-white/90"
+            )}
           >
             <Link href="#načrtuj">{t("cta")}</Link>
           </Button>
@@ -169,7 +263,10 @@ export function Navigation() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="lg:hidden"
+                className={cn(
+                  "lg:hidden",
+                  scrolled ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
+                )}
                 aria-label="Odpri meni"
               >
                 <Menu className="size-5" aria-hidden="true" />
@@ -199,6 +296,17 @@ export function Navigation() {
                     </Link>
                   </SheetClose>
                 ))}
+                {/* P4-5: ponudniški lijak tudi v mobilnem meniju */}
+                <div className="my-2 h-px bg-border" aria-hidden="true" />
+                <SheetClose asChild>
+                  <Link
+                    href="/za-ponudnike"
+                    className="flex items-center gap-2 rounded-md px-3 py-3 text-base font-semibold text-primary transition-colors hover:bg-primary/10"
+                  >
+                    <Building2 className="size-4" aria-hidden="true" />
+                    {t("providers")}
+                  </Link>
+                </SheetClose>
               </nav>
 
               <div className="mt-4 px-2">
@@ -223,6 +331,16 @@ export function Navigation() {
           </Sheet>
         </div>
       </div>
+
+      {/* Progress bar branja — subtilneje kot običajen scroll indikator */}
+      <div
+        className={cn(
+          "absolute inset-x-0 bottom-0 h-0.5 origin-left bg-gradient-to-r from-primary via-emerald-500 to-amber-400 transition-opacity duration-300",
+          scrolled ? "opacity-100" : "opacity-0"
+        )}
+        style={{ transform: `scaleX(${progress})` }}
+        aria-hidden="true"
+      />
 
       {/* AI Smart Search — naravno-jezikovno iskanje */}
       <SmartSearch open={searchOpen} onOpenChange={setSearchOpen} />

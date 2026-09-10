@@ -147,12 +147,20 @@
 
 /* Hero gradient overlay */
 .hero-overlay {
+  /* Kinematografski tri-plastni overlay: globina zgoraj, svetlost na sredini,
+     mehak prehod v ozadje strani na dnu (brez trdega roba) */
   background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.3) 0%,
-    rgba(0, 0, 0, 0.5) 50%,
-    rgba(0, 0, 0, 0.75) 100%
-  );
+      to bottom,
+      rgba(0, 0, 0, 0.55) 0%,
+      rgba(0, 0, 0, 0.25) 34%,
+      rgba(0, 0, 0, 0.42) 72%,
+      rgba(0, 0, 0, 0.68) 100%
+    ),
+    radial-gradient(
+      ellipse 120% 70% at 50% 42%,
+      transparent 55%,
+      rgba(0, 0, 0, 0.35) 100%
+    );
 }
 
 /* Leaflet z-index fix — prepreči prekrivanje z navigation bar */
@@ -256,4 +264,118 @@ header.sticky,
     line-clamp: none !important;
     overflow: visible !important;
   }
+}
+
+/* ============================================================================
+   P4-5 VIZUALNI VRHUNEC — premium micro-interactions & cinematic hero
+   ============================================================================ */
+
+/* Kinematografski Ken Burns zoom za hero ozadje (počasen, subtilen) */
+@keyframes kenburns {
+  0% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  100% {
+    transform: scale(1.12) translate3d(-1.5%, -1%, 0);
+  }
+}
+.hero-kenburns {
+  animation: kenburns 24s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-kenburns {
+    animation: none;
+  }
+}
+
+/* Scroll cue — mehak premik navzdol v heroju */
+@keyframes scroll-cue {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(8px);
+    opacity: 0.5;
+  }
+}
+.hero-scroll-cue {
+  animation: scroll-cue 2.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-scroll-cue {
+    animation: none;
+  }
+}
+
+/* Mehak utrip za "AI analizira" indikatorje */
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(0.92);
+  }
+}
+.soft-pulse {
+  animation: soft-pulse 2s ease-in-out infinite;
+}
+
+/* Gradient poudarek besedila (npr. za ključne fraze) */
+.text-gradient-brand {
+  background-image: linear-gradient(
+    120deg,
+    oklch(0.72 0.14 155),
+    oklch(0.78 0.12 190),
+    oklch(0.75 0.11 90)
+  );
+  background-clip: text;
+  color: transparent;
+  -webkit-background-clip: text;
+}
+
+/* Tanek gradient ločnik nad sekcijami */
+.gradient-hairline {
+  background-image: linear-gradient(
+    to right,
+    transparent,
+    oklch(0.45 0.12 150 / 22%),
+    transparent
+  );
+  height: 1px;
+}
+
+/* Chat FAB dvig, ko je sticky mobilni CTA bar viden (samo mobile) */
+@media (max-width: 639px) {
+  body[data-sticky-cta="true"] .dsa-chat-fab {
+    bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  }
+  body[data-sticky-cta="true"] .dsa-chat-panel {
+    bottom: calc(9.5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Elegantnejši scrollbar za dolge sezname */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.6 0.05 150 / 35%) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: oklch(0.6 0.05 150 / 35%);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0.1 150 / 55%);
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }

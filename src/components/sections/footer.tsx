@@ -20,8 +20,8 @@ export async function Footer() {
       aria-label="Noga strani"
     >
       <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
-        {/* 4 kolone */}
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
+        {/* 5 kolon (brand + 4 navigacijske) */}
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-5">
           {/* 1. Brand */}
           <div className="flex flex-col gap-4">
             <Link
@@ -84,6 +84,17 @@ export async function Footer() {
             ]}
           />
 
+          {/* 4. Za ponudnike (P4-5: javni lijak — prej orphan stran) */}
+          <FooterColumn
+            title="Za ponudnike"
+            links={[
+              { href: "/za-ponudnike", label: "Postanite partner" },
+              { href: "/owner/prijava", label: "Prijava za partnerje" },
+              { href: "#pridruzi-se", label: "Paketi in cene" },
+              { href: "#pridruzi-se", label: "Prijavnica" },
+            ]}
+          />
+
           {/* 4. Pravno */}
           <FooterColumn
             title="Pravno"
@@ -96,8 +107,9 @@ export async function Footer() {
           />
         </div>
 
-        {/* Spodnja vrstica: copyright + VLM badge + disclaimer */}
-        <div className="mt-10 flex flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+        {/* Spodnja vrstica: gradient ločnik + copyright + VLM badge + disclaimer */}
+        <div className="gradient-hairline mt-10" aria-hidden="true" />
+        <div className="mt-6 flex flex-col gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-2">
             <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <span>© 2026 Discover Slovenia AI. {t("tagline")}</span>

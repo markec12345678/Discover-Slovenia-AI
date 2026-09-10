@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, type FormEvent } from "react";
+import Link from "next/link";
 import {
   Check,
   Star,
@@ -602,6 +603,19 @@ export function JoinUs() {
                       <ShieldCheck className="size-3.5" />
                       Vaši podatki so varni in se uporabljajo izključno za
                       kontakt.
+                    </p>
+
+                    {/* P4-5: self-service pot — kdor noče čakati na kontakt,
+                        se registrira neposredno (prej ni bilo NOBENE povezave
+                        na registracijo z javnega dela — orphan /za-ponudnike) */}
+                    <p className="text-center text-sm text-muted-foreground border-t border-border/60 pt-4">
+                      Že pripravljeni?{" "}
+                      <Link
+                        href="/za-ponudnike"
+                        className="font-semibold text-primary underline-offset-4 hover:underline"
+                      >
+                        Ustvarite partnerski račun sami →
+                      </Link>
                     </p>
                   </form>
                 </CardContent>

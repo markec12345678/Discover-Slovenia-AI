@@ -7,6 +7,8 @@ import {
   UtensilsCrossed,
   Compass,
 } from "lucide-react";
+import { SectionHeader } from "@/components/section-header";
+import { Reveal } from "@/components/reveal";
 
 const experiences = [
   {
@@ -51,34 +53,29 @@ export function ExperiencesSection() {
   return (
     <section id="izkušnje" className="py-20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            Neskončne možnosti doživetij
-          </h2>
-          <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-            Slovenija ponuja vse od alpskih vrhov do jadranske obale — na površini
-            manjši od Walesa.
-          </p>
-        </div>
+        <SectionHeader
+          eyebrow="Doživetja"
+          title="Neskončne možnosti doživetij"
+          subtitle="Slovenija ponuja vse od alpskih vrhov do jadranske obale — na površini manjši od Walesa."
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {experiences.map((exp) => {
+          {experiences.map((exp, i) => {
             const Icon = exp.icon;
             return (
-              <Card
-                key={exp.title}
-                className="border-border/60 hover:border-primary/40 transition-colors"
-              >
-                <CardContent className="p-6">
-                  <div
-                    className={`size-12 rounded-lg flex items-center justify-center mb-4 ${exp.color}`}
-                  >
-                    <Icon className="size-6" />
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">{exp.title}</h3>
-                  <p className="text-sm text-muted-foreground">{exp.description}</p>
-                </CardContent>
-              </Card>
+              <Reveal key={exp.title} delay={i * 90} y={28}>
+                <Card className="group h-full border-border/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg">
+                  <CardContent className="p-6">
+                    <div
+                      className={`size-12 rounded-lg flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 ${exp.color}`}
+                    >
+                      <Icon className="size-6" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">{exp.title}</h3>
+                    <p className="text-sm text-muted-foreground">{exp.description}</p>
+                  </CardContent>
+                </Card>
+              </Reveal>
             );
           })}
         </div>

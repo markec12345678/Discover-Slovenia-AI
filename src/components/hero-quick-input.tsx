@@ -62,11 +62,14 @@ export function HeroQuickInput() {
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      {/* Glavni input */}
+      {/* Glavni input — plavajoča steklena kartica s fokusnim žarom */}
       <div className="relative">
-        <div className="flex flex-col sm:flex-row gap-2 p-2 rounded-2xl bg-background/95 backdrop-blur-md shadow-2xl border border-white/20">
+        <div
+          className="group flex flex-col sm:flex-row gap-2 p-2 rounded-2xl bg-background/95 backdrop-blur-md border border-white/25 transition-all duration-300 focus-within:border-white/50 focus-within:shadow-[0_0_0_4px_rgba(255,255,255,0.12),0_20px_50px_-12px_rgba(0,0,0,0.5)]"
+          style={{ boxShadow: "0 20px 50px -12px rgba(0,0,0,0.45)" }}
+        >
           <div className="flex items-center gap-2 flex-1 px-3">
-            <Sparkles className="size-5 text-primary shrink-0" aria-hidden="true" />
+            <Sparkles className="size-5 text-primary shrink-0 transition-transform duration-300 group-focus-within:scale-110 group-focus-within:rotate-12" aria-hidden="true" />
             <input
               type="text"
               value={input}
@@ -80,7 +83,7 @@ export function HeroQuickInput() {
           <Button
             onClick={() => handleSubmit()}
             disabled={loading || !input.trim()}
-            className="rounded-xl shrink-0 gap-1.5"
+            className="rounded-xl shrink-0 gap-1.5 shadow-md transition-all hover:shadow-lg hover:brightness-110"
             size="lg"
           >
             {loading ? (
@@ -145,10 +148,10 @@ export function HeroQuickInput() {
         </div>
       )}
 
-      {/* Trust indicators */}
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-white/70">
+      {/* Trust indicators — raziskava P4-5: subtilni trust signali dvigujejo konverzijo */}
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium text-white/75">
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-emerald-400" aria-hidden="true" />
+          <span className="soft-pulse size-2 rounded-full bg-emerald-400" aria-hidden="true" />
           Brezplačno
         </span>
         <span className="flex items-center gap-1.5">
@@ -156,7 +159,7 @@ export function HeroQuickInput() {
           22 destinacij
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-blue-400" aria-hidden="true" />
+          <span className="size-2 rounded-full bg-sky-300" aria-hidden="true" />
           AI v slovenščini
         </span>
         <span className="flex items-center gap-1.5">
