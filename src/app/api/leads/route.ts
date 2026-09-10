@@ -1,24 +1,13 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
 import { sendEmail, getAdminEmail } from "@/lib/email";
 import { leadNotificationEmail } from "@/lib/email-templates";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 
-interface Lead {
-  id: string;
-  timestamp: string;
-  name: string;
-  email: string;
-  phone?: string;
-  businessName: string;
-  businessType: string;
-  location: string;
-  plan: string;
-  message?: string;
-  gdprConsent: boolean;
-}
+// POST /api/leads — B2B prijava lokala prek obrazca "Pridruži se" (homepage)
+//
+// P4-2a: prej append-only data/leads.json (fs write) — na Vercelu je FS
+// read-only → 500. Zdaj shranjevanje v PostgreSQL (model Lead).
 
 // Validacija
 function validateLead(data: unknown): string | null {
@@ -55,28 +44,6 @@ function validateLead(data: unknown): string | null {
   return null;
 }
 
-const LEADS_DIR = path.join(process.cwd(), "data");
-const LEADS_FILE = path.join(LEADS_DIR, "leads.json");
-
-async function readLeads(): Promise<Lead[]> {
-  try {
-    const existing = await fs.readFile(LEADS_FILE, "utf-8");
-    const parsed = JSON.parse(existing);
-    if (Array.isArray(parsed)) {
-      return parsed as Lead[];
-    }
-    return [];
-  } catch {
-    // Datoteka ne obstaja ali ni veljaven JSON — začni prazno
-    return [];
-  }
-}
-
-async function writeLeads(leads: Lead[]): Promise<void> {
-  await fs.mkdir(LEADS_DIR, { recursive: true });
-  await fs.writeFile(LEADS_FILE, JSON.stringify(leads, null, 2), "utf-8");
-}
-
 export async function POST(request: Request) {
     // Rate limit lead form
     const limited = rateLimit(request, { limit: 10, windowMs: 3600000, key: "leads" });
@@ -93,32 +60,26 @@ export async function POST(request: Request) {
 
     const data = body as Record<string, unknown>;
 
-    const lead: Lead = {
-      id: `lead_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-      timestamp: new Date().toISOString(),
-      name: String(data.name).trim(),
-      email: String(data.email).trim().toLowerCase(),
-      phone:
-        typeof data.phone === "string" && data.phone.trim()
-          ? data.phone.trim()
-          : undefined,
-      businessName: String(data.businessName).trim(),
-      businessType: String(data.businessType),
-      location: String(data.location).trim(),
-      plan: String(data.plan),
-      message:
-        typeof data.message === "string" && data.message.trim()
-          ? data.message.trim()
-          : undefined,
-      gdprConsent: true,
-    };
-
-    // Preberi obstoječe leadove in dodaj novega (append-only)
-    const leads = await readLeads();
-    leads.push(lead);
-
-    // Shrani nazaj
-    await writeLeads(leads);
+    // Shrani v DB (model Lead — P4-2a)
+    const lead = await db.lead.create({
+      data: {
+        name: String(data.name).trim(),
+        email: String(data.email).trim().toLowerCase(),
+        phone:
+          typeof data.phone === "string" && data.phone.trim()
+            ? data.phone.trim()
+            : null,
+        businessName: String(data.businessName).trim(),
+        businessType: String(data.businessType),
+        location: String(data.location).trim(),
+        plan: String(data.plan),
+        message:
+          typeof data.message === "string" && data.message.trim()
+            ? data.message.trim()
+            : null,
+        gdprConsent: true,
+      },
+    });
 
     // === EMAIL OBVEŠČANJE ===
     // 1) Pošlji leadNotificationEmail na admin email (ADMIN_EMAIL)
@@ -128,9 +89,9 @@ export async function POST(request: Request) {
         lead.businessName,
         lead.name,
         lead.email,
-        lead.phone,
+        lead.phone ?? undefined,
         lead.plan,
-        lead.message
+        lead.message ?? undefined
       );
       await sendEmail({
         to: getAdminEmail(),
@@ -159,9 +120,9 @@ export async function POST(request: Request) {
           matchingOwner.businessName,
           lead.name,
           lead.email,
-          lead.phone,
+          lead.phone ?? undefined,
           matchingOwner.plan,
-          lead.message
+          lead.message ?? undefined
         );
         await sendEmail({
           to: matchingOwner.email,
@@ -191,10 +152,14 @@ export async function POST(request: Request) {
 // GET — za preverjanje števila leadov (admin, brez občutljivih podatkov)
 export async function GET() {
   try {
-    const leads = await readLeads();
+    const count = await db.lead.count();
+    const latest = await db.lead.findFirst({
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    });
     return NextResponse.json({
-      count: leads.length,
-      latest: leads[leads.length - 1]?.timestamp ?? null,
+      count,
+      latest: latest?.createdAt?.toISOString() ?? null,
     });
   } catch {
     return NextResponse.json({ count: 0, latest: null });

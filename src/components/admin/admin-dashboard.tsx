@@ -88,6 +88,7 @@ import {
   RefreshCw,
   User,
   XCircle,
+  BadgeCheck,
 } from "lucide-react";
 import {
   CATEGORY_ICONS,
@@ -904,6 +905,7 @@ function PendingTab({
 
 // === TAB 1: LISTINGS ===
 function ListingsTab({ adminPassword }: { adminPassword: string }) {
+  const { toast } = useToast();
   const [listings, setListings] = React.useState<AdminListing[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
@@ -967,6 +969,49 @@ function ListingsTab({ adminPassword }: { adminPassword: string }) {
   const handleOpenEdit = (listing: AdminListing) => {
     setEditing(listing);
     setFormOpen(true);
+  };
+
+  // P4-2b: eksplicitna admin verifikacija (znak "Preverjen partner")
+  const [verifyingId, setVerifyingId] = React.useState<string | null>(null);
+
+  const handleToggleVerify = async (listing: AdminListing) => {
+    setVerifyingId(listing.id);
+    try {
+      const res = await fetch(`/api/admin/listings/${listing.id}/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": adminPassword,
+        },
+        body: JSON.stringify({ verify: !listing.verified }),
+      });
+      const d: unknown = await res.json();
+      const msg =
+        typeof d === "object" && d !== null && "error" in d
+          ? String((d as Record<string, unknown>).error)
+          : null;
+      if (!res.ok) {
+        setErrorMsg(msg ?? "Napaka pri verifikaciji");
+        return;
+      }
+      setErrorMsg(null);
+      setListings((prev) =>
+        prev.map((l) =>
+          l.id === listing.id ? { ...l, verified: !listing.verified } : l
+        )
+      );
+      toast({
+        title: listing.verified ? "Overitev umaknjena" : "Lokal overjen",
+        description: listing.verified
+          ? `${listing.name} nima več znaka "Preverjen partner".`
+          : `${listing.name} ima zdaj znak "Preverjen partner".`,
+      });
+    } catch (err) {
+      console.error("[admin/listings] verify:", err);
+      setErrorMsg("Napaka pri povezavi s strežnikom");
+    } finally {
+      setVerifyingId(null);
+    }
   };
 
   const handleSaved = () => {
@@ -1116,6 +1161,36 @@ function ListingsTab({ adminPassword }: { adminPassword: string }) {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => void handleToggleVerify(l)}
+                            disabled={verifyingId === l.id}
+                            title={
+                              l.verified
+                                ? "Umakni overitev (znak Preverjen partner)"
+                                : "Overi lokal (podeli znak Preverjen partner)"
+                            }
+                            aria-label={
+                              l.verified
+                                ? `Umakni overitev ${l.name}`
+                                : `Overi ${l.name}`
+                            }
+                            className={
+                              l.verified
+                                ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+                                : "text-muted-foreground"
+                            }
+                          >
+                            {verifyingId === l.id ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <BadgeCheck className="size-4" />
+                            )}
+                            <span className="sr-only">
+                              {l.verified ? "Umakni overitev" : "Overi lokal"}
+                            </span>
+                          </Button>
                           <Button
                             size="sm"
                             variant="ghost"

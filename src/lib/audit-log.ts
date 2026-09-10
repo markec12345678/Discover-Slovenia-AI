@@ -51,6 +51,9 @@ export const AUDIT_ACTIONS = {
   LISTING_PUBLISHED: "listing_published",
   LISTING_FEATURED: "listing_featured",
   LISTING_UNFEATURED: "listing_unfeatured",
+  // P4-2b: eksplicitna admin verifikacija (znak "Preverjen partner")
+  LISTING_VERIFIED: "listing_verified",
+  LISTING_UNVERIFIED: "listing_unverified",
   // P3c-9: moderacijska zanka izdelkov in izkušenj tržnice
   PRODUCT_APPROVED: "product_approved",
   PRODUCT_REJECTED: "product_rejected",

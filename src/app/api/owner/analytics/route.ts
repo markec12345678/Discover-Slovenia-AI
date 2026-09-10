@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { promises as fs } from "fs";
-import path from "path";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PLAN_MONTHLY_PRICE } from "@/lib/stripe-server";
@@ -10,31 +8,13 @@ import { PLAN_MONTHLY_PRICE } from "@/lib/stripe-server";
 //
 // Aggregira views, clicks in leads iz vseh njegovih listings/products/experiences.
 // Vrne tudi "value delivered" izračun (ROI primerjava).
+//
+// P4-2a: leads se zdaj berejo iz PostgreSQL (model Lead) — prej leads.json (fs).
 
-interface LeadRecord {
-  id: string;
-  timestamp: string;
-  name: string;
-  email: string;
-  businessName: string;
-  businessType: string;
-  location: string;
-  plan: string;
-  message?: string;
-}
-
-const LEADS_FILE = path.join(process.cwd(), "data", "leads.json");
-
-async function readLeads(): Promise<LeadRecord[]> {
-  try {
-    const raw = await fs.readFile(LEADS_FILE, "utf-8");
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed as LeadRecord[];
-    return [];
-  } catch {
-    return [];
-  }
-}
+const LEADS_SELECT_FIELDS = {
+  id: true,
+  businessName: true,
+} as const;
 
 interface AnalyticsResponse {
   kpi: {
@@ -230,9 +210,12 @@ export async function GET() {
       .sort((a, b) => b.bookings - a.bookings)
       .slice(0, 3);
 
-    // Leads: preberi leads.json in preštej tiste, kjer businessName vsebuje
-    // owner.businessName (povpraševanja po tem lokalu) ALI kjer je email enak
-    const allLeads = await readLeads();
+    // Leads: preberi iz DB (model Lead — P4-2a) in preštej tiste, kjer
+    // businessName vsebuje owner.businessName ali obratno (povpraševanja
+    // po tem lokalu). Bidirectional contains — enaka semantika kot prej.
+    const allLeads = await db.lead.findMany({
+      select: LEADS_SELECT_FIELDS,
+    });
     const ownerLeads = allLeads.filter((l) => {
       const matchesBusiness =
         l.businessName &&

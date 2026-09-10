@@ -684,3 +684,27 @@ model CommissionInvoice {
   @@index([status])
   @@index([issuedAt])
 }
+
+// ============================================================================
+// LEAD — B2B prijava lokalov prek javnega obrazca "Pridruži se" (homepage)
+// ============================================================================
+// P4-2a: prej leads.json (fs write — Vercel read-only FS → 500). Zdaj DB.
+model Lead {
+  id            String   @id @default(cuid())
+  name          String   // ime in priimek kontaktne osebe
+  email         String   // e-pošta (lowercase)
+  phone         String?  // telefon (opcijsko)
+  businessName  String   // ime lokala/panožbe
+  businessType  String   // tip lokala (restaurant, hotel, ...)
+  location      String   // kraj
+  plan          String   // želen paket (basic, premium, enterprise)
+  message       String?  // sporočilo (opcijsko)
+  gdprConsent   Boolean  @default(true)  // GDPR privolitev (obvezna)
+  status        String   @default("nov") // nov | kontaktiran | zakljucen (admin)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([businessName])
+}

@@ -1,28 +1,13 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
+import { db } from "@/lib/db";
 import { checkAdmin } from "@/lib/auth-guards";
 
 // Statusi lead-a (admin upravljanje)
 export type LeadStatus = "nov" | "kontaktiran" | "zakljucen";
 
-interface Lead {
-  id: string;
-  timestamp: string;
-  name: string;
-  email: string;
-  phone?: string;
-  businessName: string;
-  businessType: string;
-  location: string;
-  plan: string;
-  message?: string;
-  gdprConsent: boolean;
-  status?: LeadStatus; // dodano za admin upravljanje
-}
-
-const LEADS_DIR = path.join(process.cwd(), "data");
-const LEADS_FILE = path.join(LEADS_DIR, "leads.json");
+// P4-2a: prej data/leads.json (fs) — zdaj PostgreSQL (model Lead).
+// Odgovor ohranja polje "timestamp" (ISO string) za nazajnejsko
+// združljivost z admin UI (Leadi tab).
 
 const VALID_STATUSES: LeadStatus[] = ["nov", "kontaktiran", "zakljucen"];
 
@@ -33,24 +18,6 @@ function unauthorized() {
   );
 }
 
-async function readLeads(): Promise<Lead[]> {
-  try {
-    const existing = await fs.readFile(LEADS_FILE, "utf-8");
-    const parsed = JSON.parse(existing);
-    if (Array.isArray(parsed)) {
-      return parsed as Lead[];
-    }
-    return [];
-  } catch {
-    return [];
-  }
-}
-
-async function writeLeads(leads: Lead[]): Promise<void> {
-  await fs.mkdir(LEADS_DIR, { recursive: true });
-  await fs.writeFile(LEADS_FILE, JSON.stringify(leads, null, 2), "utf-8");
-}
-
 // GET /api/admin/leads — vsi leadovi (admin)
 export async function GET(request: Request) {
   const adminPassword = request.headers.get("x-admin-password");
@@ -59,11 +26,22 @@ export async function GET(request: Request) {
   }
 
   try {
-    const leads = await readLeads();
-    // Zagotovi status za stare leadove
+    const leads = await db.lead.findMany({ orderBy: { createdAt: "desc" } });
     const normalized = leads.map((l) => ({
-      ...l,
-      status: l.status && VALID_STATUSES.includes(l.status) ? l.status : "nov",
+      id: l.id,
+      timestamp: l.createdAt.toISOString(),
+      name: l.name,
+      email: l.email,
+      phone: l.phone ?? undefined,
+      businessName: l.businessName,
+      businessType: l.businessType,
+      location: l.location,
+      plan: l.plan,
+      message: l.message ?? undefined,
+      gdprConsent: l.gdprConsent,
+      status: VALID_STATUSES.includes(l.status as LeadStatus)
+        ? (l.status as LeadStatus)
+        : "nov",
     }));
     return NextResponse.json({ leads: normalized, total: normalized.length });
   } catch (error) {
@@ -108,24 +86,33 @@ export async function PUT(request: Request) {
       );
     }
 
-    const leads = await readLeads();
-    const idx = leads.findIndex((l) => l.id === id);
-    if (idx === -1) {
+    const updated = await db.lead.update({
+      where: { id },
+      data: { status: status as LeadStatus },
+    }).catch(() => null);
+    if (!updated) {
       return NextResponse.json(
         { error: "Lead ni najden" },
         { status: 404 }
       );
     }
 
-    leads[idx] = {
-      ...leads[idx],
-      status: status as LeadStatus,
-    };
-    await writeLeads(leads);
-
     return NextResponse.json({
       success: true,
-      lead: leads[idx],
+      lead: {
+        id: updated.id,
+        timestamp: updated.createdAt.toISOString(),
+        name: updated.name,
+        email: updated.email,
+        phone: updated.phone ?? undefined,
+        businessName: updated.businessName,
+        businessType: updated.businessType,
+        location: updated.location,
+        plan: updated.plan,
+        message: updated.message ?? undefined,
+        gdprConsent: updated.gdprConsent,
+        status: updated.status as LeadStatus,
+      },
       message: "Status posodobljen",
     });
   } catch (error) {

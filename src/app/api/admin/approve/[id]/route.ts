@@ -13,9 +13,11 @@ import { escapeHtml } from "@/lib/security";
 //
 // Ko admin odobri lokal:
 // 1. Status → approved → published
-// 2. partnerStatus → verified (če še ni)
-// 3. verifiedByAdmin → true
-// 4. AI avtomatsko generira: SEO meta, ključne besede, AI oznake
+// 2. AI avtomatsko generira: SEO meta, ključne besede, AI oznake
+//
+// P4-2b: odobritev NE podeli več znaka "Preverjen partner" —
+// verifikacija (verifiedByAdmin + partnerStatus=verified) je ločena
+// eksplicitna admin odločitev: POST /api/admin/listings/[id]/verify.
 //
 // P3c-9: za izdelke/izkušnje (type=product|experience) velja enaka
 // moderacijska zanka (pending → published), brez AI enrichmenta (samo lokalci).
@@ -169,6 +171,9 @@ export async function POST(
     }
 
     // 1. Posodobi status
+    // P4-2b: odobritev NE podeli več znaka "Preverjen partner"
+    // (verifiedByAdmin/partnerStatus) — to je ločena, eksplicitna admin
+    // odločitev prek POST /api/admin/listings/[id]/verify.
     const newStatus = publishNow ? "published" : "approved";
     const updated = await db.listing.update({
       where: { id },
@@ -176,8 +181,6 @@ export async function POST(
         status: newStatus,
         approvedAt: new Date(),
         approvedBy: "admin",
-        verifiedByAdmin: true,
-        partnerStatus: listing.partnerStatus === "standard" ? "verified" : listing.partnerStatus,
         partnerSince: listing.partnerSince || new Date(),
       },
     });
