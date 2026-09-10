@@ -24,10 +24,27 @@ Diagnoza (GitHub Deployments API + izolirana reprodukcija builda):
   in brez baze → exit 0 (vse build-time poizvedbe imajo try/catch fallback,
   dinamične strani se ne prerenderajo).
 
-**Kaj to pomeni za Vercel:** build bo sedaj zelen. A **runtime baze še vedno
-ne more delovati** na serverless (vzrok #2) — za Vercel je obvezna migracija
-na hosted Postgres (Pot B spodaj). Brez nje bodo dinamične strani prazne oziroma
-napake.
+**Kaj to pomeni za Vercel:** build skripta je sedaj prenosljiva med okolji
+(`scripts/copy-standalone.sh` se na Vercelu pogojno preskoči). Če deployment
+še vedno pada, je naslednji diagnostični korak **vpogled v Vercel build log**
+(lastnik projekta ima dostop do dashboarda):
+
+```bash
+npx vercel inspect dpl_4dEkkNU2LmQStfLEdPweyFPYjdwx --logs   # zadnji padli
+```
+
+Najverjetnejši preostali vzroki po_prioriteti (vpogled v log potrdi katerega):
+1. Vercel ne izvede `bun run build` ampak lastni build ukaz → preveri
+   Project Settings → Build Command (nastavi `bun run build`), pri čemer
+   `postinstall: prisma generate` pokrije generiranje klienta;
+2. namestitev odvisnosti (bun/npm) preskoči root `postinstall` → enaka
+   rešitev kot (1);
+3. manjkajoče okoljske spremenljivke v Vercel projektu (glej matriko v
+   razdelku 5).
+
+A tudi ob zelenem buildu **runtime baze ne more delovati** na serverless
+(vzrok #2 — SQLite) — za Vercel je obvezna migracija na hosted Postgres
+(Pot B spodaj). Brez nje bodo dinamične strani prazne oziroma napake.
 
 ---
 
