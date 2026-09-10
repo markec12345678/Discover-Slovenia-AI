@@ -973,6 +973,224 @@ Ekipa Discover Slovenia AI`;
 }
 
 // =========================
+// 12. DRAFT NUDGE EMAILS (P2-2b — 60-dnevni niz za osnutke lokalov)
+// =========================
+// Osnutek lokala, ki nikoli ni bil dopolnjen in oddan v pregled, dobi
+// največ 4 vljudne opomnike (dan 3 / 10 / 30 / 60 od ustvarjanja).
+// Iskrena komunikacija brez lažne urgency: zadnji email je zgolj vljuden
+// zaključek niza ("vrata ostajajo odprta") — BREZ groženj z arhiviranjem.
+
+export interface DraftNudgeEmailData {
+  ownerName: string;
+  listingName: string;
+  /** Korak niza 1–4 (dan 3 / 10 / 30 / 60 od ustvarjanja). */
+  step: number;
+  /** Odstotek popolnosti profila (prikazan v koraku 1). */
+  completionPercentage?: number;
+  /** Oznake manjkajočih OBAVEZNIH polj (prikazane v koraku 2). */
+  missingRequiredLabels?: string[];
+}
+
+export function draftNudgeEmail({
+  ownerName,
+  listingName,
+  step,
+  completionPercentage = 0,
+  missingRequiredLabels = [],
+}: DraftNudgeEmailData): { subject: string; html: string; text: string } {
+  const dashboardUrl = `${getBaseUrl()}/owner/dashboard`;
+  const pct = Math.max(0, Math.min(100, Math.round(completionPercentage)));
+
+  // CTA gumb + gola povezava kot fallback (isti vizualni jezik kot ostali emaili)
+  const cta = (label: string) => `
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${dashboardUrl}" style="background: #2d6a3e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+        ${label}
+      </a>
+      <p style="font-size: 12px; color: #6b7280; margin: 12px 0 0 0; word-break: break-all;">${dashboardUrl}</p>
+    </div>`;
+
+  let subject: string;
+  let title: string;
+  let content: string;
+  let text: string;
+
+  switch (step) {
+    case 1: {
+      // Dan 3 — prijazno: odstotek popolnosti + kje nadaljevati
+      subject = `Vaš lokal ${listingName} čaka na dopolnitev`;
+      title = "Vaš lokal čaka na dopolnitev ✏️";
+      content = `
+    <p style="margin-top: 0;">Pozdravljeni <strong>${escapeHtml(ownerName)}</strong>,</p>
+    <p>pred nekaj dnevi ste na platformi Discover Slovenia AI ustvarili osnutek lokala <strong>${escapeHtml(listingName)}</strong>. Profil je trenutno dopolnjen na <strong>${pct} %</strong> — do oddaje v pregled manjka le še nekaj podatkov.</p>
+
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 24px 0;">
+      <div style="font-size: 13px; color: #166534; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">Popolnost profila</div>
+      <p style="font-size: 24px; margin: 0; color: #2d6a3e; font-weight: bold;">${pct} %</p>
+      <div style="background: #e5e7eb; border-radius: 999px; height: 10px; margin-top: 12px; overflow: hidden;">
+        <div style="background: #2d6a3e; height: 10px; width: ${pct}%; border-radius: 999px;"></div>
+      </div>
+    </div>
+
+    <p>Vaš osnutek je varno shranjen — nadaljujete točno tam, kjer ste končali. Ko dopolnite zahtevana polja, lokal oddate v pregled; po odobritvi se začne samodejno prikazovati turistom v AI načrtih potovanj.</p>
+    ${cta("Dopolni lokal →")}
+  `;
+      text = `Vaš lokal ${listingName} čaka na dopolnitev
+
+Pozdravljeni ${ownerName},
+
+pred nekaj dnevi ste ustvarili osnutek lokala ${listingName}. Profil je trenutno dopolnjen na ${pct} % — do oddaje v pregled manjka le še nekaj podatkov.
+
+Osnutek je shranjen v vašem dashboardu, nadaljujete točno tam, kjer ste končali:
+${dashboardUrl}
+
+Lep pozdrav,
+Ekipa Discover Slovenia AI`;
+      break;
+    }
+
+    case 2: {
+      // Dan 10 — vrednostna ponudba AI kanala + manjkajoča obvezna polja
+      subject = `AI kanal čaka na ${listingName}`;
+      title = "AI kanal čaka na vaš lokal 🤖";
+      const missingList =
+        missingRequiredLabels.length > 0
+          ? `<ul style="margin: 0; padding-left: 20px; line-height: 1.8; color: #92400e;">${missingRequiredLabels
+              .map((label) => `<li>${escapeHtml(label)}</li>`)
+              .join("")}</ul>`
+          : `<p style="margin: 0; color: #92400e;">Vsi zahtevani podatki so že na mestu — lokal lahko takoj oddate v pregled.</p>`;
+      const missingText =
+        missingRequiredLabels.length > 0
+          ? `Za oddajo v pregled manjka še: ${missingRequiredLabels.join(", ")}.`
+          : "Vsi zahtevani podatki so že na mestu — lokal lahko takoj oddate v pregled.";
+      content = `
+    <p style="margin-top: 0;">Pozdravljeni <strong>${escapeHtml(ownerName)}</strong>,</p>
+    <p>vaš osnutek <strong>${escapeHtml(listingName)}</strong> čaka že <strong>10 dni</strong>. Preden ga opustite, poglejte, kaj vas kot ponudnika čaka na drugi strani:</p>
+
+    <ul style="padding-left: 20px; line-height: 1.8;">
+      <li><strong>Brezplačna vključitev v AI načrte</strong> — naš AI načrtovalec priporoča lokal turistom pri sestavljanju potovanj po Sloveniji.</li>
+      <li><strong>Brezplačne konzultacije turistov</strong> — turisti zastavljajo osebna vprašanja, AI pa citira primerne partnerje, tudi vas.</li>
+      <li><strong>Brez vstopnih stroškov</strong> — osnovna prisotnost je brezplačna; plačate le, če želite dodatno vidnost.</li>
+    </ul>
+
+    <div style="background: #fef9c3; border: 1px solid #fde68a; border-radius: 8px; padding: 20px; margin: 24px 0;">
+      <div style="font-size: 13px; color: #92400e; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">Za oddajo v pregled manjka</div>
+      ${missingList}
+    </div>
+
+    <p>Osnutek ostaja shranjen v vašem dashboardu — dopolnitev vzame le nekaj minut.</p>
+    ${cta("Dopolni in oddaj lokal →")}
+  `;
+      text = `AI kanal čaka na ${listingName}
+
+Pozdravljeni ${ownerName},
+
+vaš osnutek ${listingName} čaka že 10 dni. Kot objavljen lokal vas čaka:
+- brezplačna vključitev v AI načrte potovanj,
+- brezplačne konzultacije turistov (AI citira primerne partnerje),
+- brez vstopnih stroškov.
+
+${missingText}
+
+Osnutek ostaja shranjen v vašem dashboardu:
+${dashboardUrl}
+
+Lep pozdrav,
+Ekipa Discover Slovenia AI`;
+      break;
+    }
+
+    case 3: {
+      // Dan 30 — kratko, iskreno, korak-za-korakom
+      subject = `30 dni od ustvarjanja — ${listingName} je še vedno osnutek`;
+      title = "Vaš osnutek po 30 dneh 📋";
+      content = `
+    <p style="margin-top: 0;">Pozdravljeni <strong>${escapeHtml(ownerName)}</strong>,</p>
+    <p>od ustvarjanja osnutka <strong>${escapeHtml(listingName)}</strong> je minilo 30 dni in je še vedno nedokončan. Če ste obtičali, je to celoten postopek v treh korakih:</p>
+
+    <ol style="padding-left: 20px; line-height: 1.8;">
+      <li><strong>Odpri dashboard</strong> — osnutek čaka točno tam, kjer ste končali.</li>
+      <li><strong>Dopolni manjkajoča polja</strong> — dashboard sproti kaže, kaj manjka.</li>
+      <li><strong>Oddaj lokal v pregled</strong> — naša ekipa ga pregleda in objavi.</li>
+    </ol>
+
+    <p>Če trenutno nimate časa ali želje, lahko to sporočilo mirno ignorirate — osnutek ne nikamor.</p>
+    ${cta("Nadaljuj z dopolnjevanjem →")}
+  `;
+      text = `30 dni od ustvarjanja — ${listingName} je še vedno osnutek
+
+Pozdravljeni ${ownerName},
+
+od ustvarjanja osnutka ${listingName} je minilo 30 dni. Če ste obtičali, je to celoten postopek:
+1. Odpri dashboard — osnutek čaka točno tam, kjer ste končali.
+2. Dopolni manjkajoča polja — dashboard sproti kaže, kaj manjka.
+3. Oddaj lokal v pregled — naša ekipa ga pregleda in objavi.
+
+Če trenutno nimate časa ali želje, lahko to sporočilo mirno ignorirate.
+
+Nadaljuj v dashboardu:
+${dashboardUrl}
+
+Lep pozdrav,
+Ekipa Discover Slovenia AI`;
+      break;
+    }
+
+    case 4: {
+      // Dan 60 — ZADNJI: vljuden zaključek niza, vrata ostajajo odprta
+      subject = `Zadnjič vas spomnimo na ${listingName}`;
+      title = "Zadnji opomnik — vrata ostajajo odprta 🚪";
+      content = `
+    <p style="margin-top: 0;">Pozdravljeni <strong>${escapeHtml(ownerName)}</strong>,</p>
+    <p>pred dvema mesecema ste ustvarili osnutek <strong>${escapeHtml(listingName)}</strong>. To je <strong>zadnjič</strong>, da vas nanj spomnimo — nadaljnjih sporočil o tem osnutku ne bomo več pošiljali.</p>
+
+    <p>Vrata pa ostajajo odprta: osnutek ostaja shranjen v vašem dashboardu in ga lahko kadarkoli dopolnite ter oddate v pregled — brez rokov in brez pritiska. Enako velja, če se za nov začetek odločite kadarkoli v prihodnje.</p>
+
+    <p>Se vidimo na slovenskih potovanjih! 🇸🇮</p>
+    ${cta("Odpri moj dashboard →")}
+  `;
+      text = `Zadnjič vas spomnimo na ${listingName}
+
+Pozdravljeni ${ownerName},
+
+pred dvema mesecema ste ustvarili osnutek ${listingName}. To je zadnjič, da vas nanj spomnimo — nadaljnjih sporočil o tem osnutku ne bomo več pošiljali.
+
+Vrata ostajajo odprta: osnutek ostaja shranjen v vašem dashboardu in ga lahko kadarkoli dopolnite ter oddate v pregled — brez rokov in brez pritiska.
+
+Dashboard:
+${dashboardUrl}
+
+Lep pozdrav in hvala, da ste del platforme,
+Ekipa Discover Slovenia AI`;
+      break;
+    }
+
+    default: {
+      // Neznan korak — defenzivno (ne bi se smelo zgoditi; klic se preskoči že v lib)
+      subject = `Vaš lokal ${listingName} čaka na dopolnitev`;
+      title = "Vaš lokal čaka na dopolnitev ✏️";
+      content = `
+    <p style="margin-top: 0;">Pozdravljeni <strong>${escapeHtml(ownerName)}</strong>,</p>
+    <p>vaš osnutek <strong>${escapeHtml(listingName)}</strong> še vedno čaka na dopolnitev v vašem dashboardu.</p>
+    ${cta("Dopolni lokal →")}
+  `;
+      text = `Vaš lokal ${listingName} čaka na dopolnitev
+
+Pozdravljeni ${ownerName},
+
+vaš osnutek ${listingName} še vedno čaka na dopolnitev:
+${dashboardUrl}
+
+Lep pozdrav,
+Ekipa Discover Slovenia AI`;
+      break;
+    }
+  }
+
+  return { subject, html: emailTemplate(title, content), text };
+}
+
+// =========================
 // Helpers
 // =========================
 

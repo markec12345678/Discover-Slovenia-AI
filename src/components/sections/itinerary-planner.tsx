@@ -48,6 +48,7 @@ import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { trackFunnel } from "@/lib/funnel";
 import { saveItinerary, fetchSharedItinerary } from "@/lib/itinerary-share";
+import { addSavedTrip, deriveSavedTripName } from "@/lib/my-trips-storage";
 import { cn } from "@/lib/utils";
 import { BookingPanel, type BookingData } from "@/components/sections/booking-panel";
 import { ItineraryRefiner } from "@/components/sections/itinerary-refiner";
@@ -406,6 +407,8 @@ export function ItineraryPlanner() {
       const result = await saveItinerary(itinerary, formData);
       const absoluteUrl = `${window.location.origin}${result.url}`;
       setShareUrl(absoluteUrl);
+      // P2-3: sledi anonimno shranjen načrt za prevzem ob prijavi (localStorage)
+      addSavedTrip(result.shareId, deriveSavedTripName(itinerary));
       trackFunnel("itinerary_saved");
       toast({
         title: "Načrt shranjen!",

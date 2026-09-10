@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { PartnerBadge, type PartnerStatus } from "@/components/partner-badge";
 import { useAppStore } from "@/lib/store";
 import { saveItinerary } from "@/lib/itinerary-share";
+import { addSavedTrip, deriveSavedTripName } from "@/lib/my-trips-storage";
 import { cn } from "@/lib/utils";
 import type { DayPlan, LocationVisit, PlannerInput } from "@/lib/types";
 
@@ -157,6 +158,8 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
         plannerForm ?? fallbackForm(itinerary)
       );
       const shareUrl = `${window.location.origin}${result.url}`;
+      // P2-3: sledi anonimno shranjen načrt za prevzem ob prijavi (localStorage)
+      addSavedTrip(result.shareId, deriveSavedTripName(itinerary));
       await copyToClipboard(shareUrl);
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 4000);

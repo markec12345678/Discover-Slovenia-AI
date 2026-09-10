@@ -30,6 +30,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import {
+  getSavedTripIds,
+  removeSavedTripIds,
+} from "@/lib/my-trips-storage";
 
 // ============================================================================
 // /prijava — prijava in registracija B2C računa popotnika (P1-2b)
@@ -38,6 +42,44 @@ import { cn } from "@/lib/utils";
 // + auto-login). Če je uporabnik že prijavljen (accountType "user"), se namesto
 // obrazca prikaže stanje "Prijavljeni ste kot …" s hitrimi povezavami.
 // ============================================================================
+
+/* ====================== P2-3: PREVZEM ANONIMNIH POTOVANJ ====================== */
+
+/**
+ * Po uspešni B2C prijavi/registraciji: prevzemi anonimno shranjena potovanja
+ * (localStorage "dai:my-trips" → POST /api/user/trips/claim). Neblokirajoče —
+ * napaka prevzema NE sme preprečiti prijave. Vrne število prevzetih.
+ */
+async function claimSavedTrips(): Promise<number> {
+  try {
+    const shareIds = getSavedTripIds();
+    if (shareIds.length === 0) return 0;
+
+    let claimed = 0;
+    let responded = false;
+    try {
+      const res = await fetch("/api/user/trips/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shareIds }),
+      });
+      responded = res.ok || res.status === 400 || res.status === 403;
+      if (res.ok) {
+        const data = (await res.json().catch(() => ({}))) as {
+          claimed?: number;
+        };
+        claimed = typeof data?.claimed === "number" ? data.claimed : 0;
+      }
+    } finally {
+      // Odstrani poslane ID-je SAMO če je strežnik odgovoril — pri omrežni
+      // napaki (fetch vrže) ostanejo za retry pri naslednji prijavi.
+      if (responded) removeSavedTripIds(shareIds);
+    }
+    return claimed;
+  } catch {
+    return 0;
+  }
+}
 
 export default function PrijavaPage() {
   const router = useRouter();
@@ -220,6 +262,16 @@ function LoginForm({ router, toast }: LoginFormProps) {
         title: "Dobrodošli nazaj!",
         description: "Uspešno ste prijavljeni.",
       });
+      // P2-3: prevzem anonimno shranjenih potovanj (neblokirajoče)
+      const claimed = await claimSavedTrips();
+      if (claimed > 0) {
+        toast({
+          title: "Potovanja prevzeta v račun",
+          description: `${claimed} ${
+            claimed === 1 ? "potovanje, ki ste ga ustvarili pred prijavo, smo povezali" : "potovanj, ki ste jih ustvarili pred prijavo, smo povezali"
+          } z vašim računom.`,
+        });
+      }
       router.push("/moja-potovanja");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Napaka pri prijavi.";
@@ -460,6 +512,16 @@ function RegisterForm({ router, toast, switchToLogin }: RegisterFormProps) {
         title: "Dobrodošli!",
         description: "Vaš račun je ustvarjen. Potrdite še svojo e-pošto.",
       });
+      // P2-3: prevzem anonimno shranjenih potovanj (neblokirajoče)
+      const claimed = await claimSavedTrips();
+      if (claimed > 0) {
+        toast({
+          title: "Potovanja prevzeta v račun",
+          description: `${claimed} ${
+            claimed === 1 ? "potovanje, ki ste ga ustvarili pred prijavo, smo povezali" : "potovanj, ki ste jih ustvarili pred prijavo, smo povezali"
+          } z vašim računom.`,
+        });
+      }
       router.push("/moja-potovanja");
     } catch (err) {
       const msg =

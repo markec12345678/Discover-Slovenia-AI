@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
@@ -68,6 +68,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ListingFormDialog } from "@/components/owner/listing-form";
+import { OnboardingWizard } from "@/components/owner/onboarding-wizard";
 import { ProductFormDialog } from "@/components/owner/product-form";
 import { ExperienceFormDialog } from "@/components/owner/experience-form";
 import { BetaBanner } from "@/components/beta-banner";
@@ -94,6 +95,9 @@ import {
 import { PRICING_PLANS, type PricingPlan } from "@/lib/pricing";
 import { BETA_INFO } from "@/lib/beta";
 import { InsightsPanel } from "@/components/insights-panel";
+// P2-4: A/B test naročninskega nagovora (prelomni kalkulator v varianti B)
+import { getAbVariant, AB_TEST_NAME } from "@/lib/ab-testing";
+import { SubscriptionCalculator } from "@/components/owner/subscription-calculator";
 
 // Omejitve števila lokalov glede na paket in beta status
 const PLAN_LIMITS_NORMAL: Record<ListingPlan, number> = {
@@ -468,6 +472,15 @@ export default function OwnerDashboardPage() {
                 Dodaj lokal
               </Button>
             </div>
+
+            {/* P2-1: onboarding čarovnik — vodi novega ponudnika do prve oddaje.
+                Prikaže se nad seznamom lokalov pri 0 lokalih (ustvarjanje) ali
+                pri osnutku z manjkajočimi obveznimi polji (dopolnjevanje). */}
+            <OnboardingWizard
+              listings={listings}
+              loading={loadingListings}
+              onChanged={fetchListings}
+            />
 
             {/* Beta info badge v listings tab */}
             {isBetaActive && (
@@ -1372,6 +1385,87 @@ function SubscriptionTab({
   const isActive = subscriptionStatus === "active";
   const isBetaActive = betaStatus?.isActive ?? true;
 
+  // === P2-4: A/B test naročninskega nagovora ("subscription_pitch_v1") ===
+  // Deterministična razvrstitev (FNV-1a): isti owner (id → email → "anon")
+  // vedno dobi isto varianto — tudi med reloadi in sessioni.
+  const abSeed = session?.user?.id ?? session?.user?.email ?? "anon";
+  const abVariant = getAbVariant(abSeed);
+
+  // Fire-and-forget tracking — napaka NE sme motiti uporabnika (klic .catch)
+  const trackAbEvent = useCallback(
+    (
+      event: "impression" | "calculator_interact" | "upgrade_click",
+      plan?: string
+    ) => {
+      fetch("/api/analytics/ab-event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variant: abVariant, event, plan }),
+      }).catch(() => {});
+    },
+    [abVariant]
+  );
+
+  // Impression ob mountu zavihka — enkrat na sejo (sessionStorage guard,
+  // isti vzorec kot FunnelTracker; prepreči napihnjene števce ob preklapikanju
+  // zavihkov, kjer Radix TabsContent vsako obisk ponovno montira).
+  useEffect(() => {
+    try {
+      const key = `ab_impression_${AB_TEST_NAME}`;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch {
+      // sessionStorage nedostopen (private mode) — kljub temu sledi enkrat
+    }
+    trackAbEvent("impression");
+  }, [trackAbEvent]);
+
+  // Varianta B: prefill kalkulatorja iz statistik (prihodki prek AI kanala),
+  // če so na voljo — sicer kalkulator ostane na defaultu 500 €. Neblokirajoče.
+  const [abPrefill, setAbPrefill] = useState<{
+    eur: number;
+    fromStats: boolean;
+  } | null>(null);
+  useEffect(() => {
+    if (abVariant !== "B") return;
+    let active = true;
+    fetch("/api/owner/analytics", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: unknown) => {
+        if (!active || !d || typeof d !== "object") return;
+        const rev = (
+          d as {
+            aiChannel?: { revenueFromConsultations?: number };
+          }
+        ).aiChannel?.revenueFromConsultations;
+        if (typeof rev === "number" && rev > 0) {
+          setAbPrefill({ eur: rev, fromStats: true });
+        }
+      })
+      .catch(() => {
+        // tiho — kalkulator ostane na default 500 €
+      });
+    return () => {
+      active = false;
+    };
+  }, [abVariant]);
+
+  // Interakcija s kalkulatorjem → en event (debounce ~1 s — drsanje sicer
+  // sproži dogodek na vsakem koraku). Timer se počisti ob unmountu.
+  const interactTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleCalculatorInteract = useCallback(() => {
+    if (interactTimer.current) clearTimeout(interactTimer.current);
+    interactTimer.current = setTimeout(
+      () => trackAbEvent("calculator_interact"),
+      1000
+    );
+  }, [trackAbEvent]);
+  useEffect(() => {
+    return () => {
+      if (interactTimer.current) clearTimeout(interactTimer.current);
+    };
+  }, []);
+
   // Detajli naročnine iz API-ja (renewal date, daysUntilRenewal, canCancel, ...)
   const [subDetails, setSubDetails] = useState<{
     plan: string;
@@ -1519,6 +1613,23 @@ function SubscriptionTab({
 
   return (
     <div className="space-y-6">
+      {/* P2-4 — A/B varianta B: prelomni kalkulator NAD vsem ostalim */}
+      {abVariant === "B" && (
+        <section aria-labelledby="ab-calculator-heading" className="space-y-3">
+          <h2
+            id="ab-calculator-heading"
+            className="text-xl font-bold tracking-tight"
+          >
+            Se Vam Premium izplača? Izračunajte v 10 sekundah.
+          </h2>
+          <SubscriptionCalculator
+            prefillEur={abPrefill?.eur}
+            prefillFromStats={abPrefill?.fromStats ?? false}
+            onInteract={handleCalculatorInteract}
+          />
+        </section>
+      )}
+
       {/* Beta banner na vrh */}
       {isBetaActive && (
         <Card className="border-amber-400/60 bg-amber-50 dark:bg-amber-950/20">
@@ -1809,6 +1920,7 @@ function SubscriptionTab({
               current={p.id === plan}
               isBetaActive={isBetaActive}
               onUpgraded={onUpgraded}
+              onUpgradeClick={(planId) => trackAbEvent("upgrade_click", planId)}
             />
           ))}
         </div>
@@ -1859,11 +1971,14 @@ function SubscriptionCard({
   current,
   isBetaActive,
   onUpgraded,
+  onUpgradeClick,
 }: {
   plan: PricingPlan;
   current: boolean;
   isBetaActive: boolean;
   onUpgraded: () => void;
+  /** P2-4: non-invasive A/B tracking klika na nadgradilni gumb. */
+  onUpgradeClick?: (planId: string) => void;
 }) {
   const isHighlighted = plan.highlighted;
   const { toast } = useToast();
@@ -1878,6 +1993,10 @@ function SubscriptionCard({
       });
       return;
     }
+
+    // P2-4: A/B tracking nadgradilnega klika — fire-and-forget ob samem
+    // začetku nadgradnje; obstoječa logika teče nespremenjena naprej.
+    onUpgradeClick?.(plan.id);
 
     setUpgrading(true);
     try {

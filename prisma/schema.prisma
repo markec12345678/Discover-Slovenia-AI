@@ -200,6 +200,11 @@ model Listing {
   events          ListingEvent[]
   sponsorships    Sponsorship[]
 
+  // === P2-2: 60-dnevni email nizi za stare draft lokalce ===
+  // koraki: dan 3 / 10 / 30 / 60 od createdAt (samo status "draft", submittedAt null)
+  draftNudgeStep   Int       @default(0) // 0 = še nič, 1–4 = zadnji poslan korak
+  draftNudgeSentAt DateTime? // kdaj je bil zadnji nudge poslan
+
   @@index([destinationId])
   @@index([category])
   @@index([plan])
