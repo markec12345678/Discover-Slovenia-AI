@@ -140,7 +140,7 @@ Trije neodvisni auditi (auth/authz, booking/Stripe, AI/data) → utrjevanje v 49
 | Auth | NextAuth.js v4 (credentials, JWT seje, tokenVersion invalidacija) |
 | AI | GLM prek Puter API + z-ai-web-dev-sdk fallback |
 | Maps | Leaflet + OpenStreetMap Overpass API |
-| i18n | next-intl (sl/en/de/it) |
+| i18n | next-intl — javno **samo sl** (celoviti prevodi = roadmap C5); infrastruktura pripravljena |
 | Email | Nodemailer (demo fallback: console.log) |
 | Payments | Stripe (naročnine + provizijski računi; demo mode brez ključev) |
 | Deploy | Vercel (avtomatski deploy iz `main`) |
@@ -318,7 +318,8 @@ Vsak klic je Bearer zaščiten s `CRON_SECRET` (brez njega 401 — fail-closed).
 - Push na `main` sproži avtomatski deploy → `i-feel-slovenia.vercel.app`
 - Build: `bun install` + `bun run build` (prisma generate v postinstall)
 - **Baza: Neon PostgreSQL** (pooler, `connection_limit=1`) — `DATABASE_URL` env
-- Brez `DATABASE_URL` na Vercelu build ustvari demo SQLite bazo (`DSA_DISABLE_DEMO_DB=1` jo izklopi)
+- CI (GitHub Actions): Lint & Type Check + Build proti `postgres:16-alpine` service containerju (P4-7)
+- Zastarel demo-SQLITE mehanizem (Faza 4e) se samodejno izklopi pri postgresql shemi — glej docs/DEPLOYMENT.md razdelek 6
 
 ### Docker Compose (alternativa)
 

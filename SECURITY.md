@@ -49,10 +49,22 @@ Popravljeni varnostni sajti, najdeni v 1.0:
 | Bug: sendEmail | admin approve/reject emaila (pozicijski klic → objektni podpis) — prej nikoli pravilno dostavljeni |
 | Secrets | `NEXTAUTH_SECRET` + `CRON_SECRET` dodani v `.env`; novo močno `ADMIN_PASSWORD` |
 
-## ⚠️ Kritično — potrebno pred produkcijo
+## ⚠️ Kritično — stanje po revizijskem pregledu (2026-09-10)
 
-1. **ROTIRAJ `PUTER_AUTH_TOKEN`** — stari token je bil javno objavljen v git zgodovini (commiti 2026-06/07).
-2. **Počisti git zgodovino** — `.env`, `db/custom.db`, `tool-results/` so ŠE vedno dostopni v starih commitih:
+1. **PUTER_AUTH_TOKEN — zgodovina čista, token NI v aktivni uporabi.**
+   Zgodovina je bila očiščena z `git filter-repo` v v1.1.0 (2026-09-08).
+   Neodvisen revizijski pregled 2026-09-10 (**vseh 137 commitov, obe veji
+   `main` + `master`**; vzorci: JWT `eyJ…`, `AIza…`, `ghp_…`, `github_pat_…`,
+   `AKIA…`, `xox…`, `sk-…`, `npg_…`, `whsec_…`, URL-ji z
+   `<user>:<geslo>@`) **ni našel nobene skrivnosti**. Prek Vercel APIja je
+   potrjeno, da `PUTER_AUTH_TOKEN` ni nastavljen v produkcijskem okolju —
+   torej nekdanji (javno vidljiv) žeton ni nikjer v uporabi.
+   **Dejanje lastnika, če/ko boš AI znova aktiviral prek Puterja:** generiraj
+   NOV žeton; žetona, ki je bil kdaj javen, nikoli ne ponovno uporabi
+   (obravnavaj ga kot kompromitiranega).
+2. ~~Počisti git zgodovino~~ — **OPRAVLJENO** (v1.1.0, `git filter-repo`) in
+   neodvisno preverjeno (2026-09-10, glej točko 1). Navodila ostajajo za
+   morebitno prihodnjo izpostavitev:
    ```bash
    # lokalno (bodi previden!)
    pip install git-filter-repo
@@ -60,7 +72,11 @@ Popravljeni varnostni sajti, najdeni v 1.0:
    git push --force
    ```
 3. **Rate limiter je in-memory** — na Vercelu deluje per-instanca; za robustno produkcijo migriraj na `@upstash/ratelimit` (načrt: `docs/SECURITY-REVIEW.md` §1.7).
-4. **Datotečne shrambe** (`data/leads.json`, `data/newsletter.json`, AI cache JSON-i) niso serverless-varne — priporočam migracijo v DB.
+4. **Datotečne shrambe** — leadi so od P4-2 (2026-09-10) shranjeni v
+   PostgreSQL (model `Lead`) — serverless-varno. Še vedno datotečno (demo,
+   na Vercelu se ne ohranja): `data/newsletter.json` (prijava na novice) —
+   znana omejitev, roadmap. AI cache JSON-i (`data/ai-rec-cache.json` itd.)
+   so read-only fallback vsebina, varno.
 
 ## Known Security Measures
 
@@ -75,8 +91,8 @@ Popravljeni varnostni sajti, najdeni v 1.0:
 - Plan limiti (free=3, premium=10, enterprise=∞)
 
 ### Podatki
-- **SQLite lokalna baza** — ni izpostavljena internetu
-- **Leadi** shranjeni v `data/leads.json` (v `.gitignore`)
+- **PostgreSQL (Neon, pooler)** v produkciji — dostopna izključno prek `DATABASE_URL` (skrivnost)
+- **Leadi** shranjeni v PostgreSQL (model `Lead`, P4-2) — vpogled/upravljanje v `/admin` (zavihek Leadi)
 - **GDPR** — owner registracija zahteva privolitev
 - **Brez baze uporabniških gesel** — samo hash-i
 
@@ -102,8 +118,9 @@ Pred deploy-em na production:
 
 - [x] Zamenjaj `ADMIN_PASSWORD` z močnim geslom *(narejeno v v1.1)*
 - [x] Zamenjaj `NEXTAUTH_SECRET` z naključnim stringom *(narejeno v v1.1)*
-- [ ] **Rotiraj `PUTER_AUTH_TOKEN`** na puter.com (stari je bil javen!)
-- [ ] **Počisti git zgodovino** (filter-repo, glej zgoraj)
+- [x] **Git zgodovina** — očiščena (v1.1.0) + neodvisno preverjena 2026-09-10: brez skrivnosti
+- [x] **`PUTER_AUTH_TOKEN` ni v uporabi** (ni v Vercel env) — ob ponovni aktivaciji Puter AI generiraj NOV žeton (stari obravnavaj kot kompromitiranega)
+- [ ] Odstrani neuporabljeni `VITE_GEMINI_API_KEY` iz Vercel env (legacy iz predhodnje faze; `VITE_` spremenljivke so lahko vidne client-side ob buildu)
 - [ ] Nastavi prave Stripe ključe (`sk_live_*`)
 - [ ] Nastavi pravi SMTP strežnik
 - [ ] Migriraj rate limiting na Upstash (per-instanca ni dovolj)
@@ -120,4 +137,4 @@ Cenimo odgovorno prijavo varnostnih ranljivosti. Za legitimna poročila ponujamo
 
 ---
 
-**Zadnja posodobitev:** 2026-07 (Security Hardening v1.1)
+**Zadnja posodobitev:** 2026-09-10 (revizijski pregled zgodovine + stanje po P4-2)

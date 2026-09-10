@@ -7,6 +7,50 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.2.1] — 2026-09-10
+
+### Popravljeno (Fixed)
+
+- **CI/CD (P4-7)**: Build job sedaj testira proti `postgres:16-alpine` service
+  containerju. CI #65 je padel pri koraku "Prepare Prisma client & test DB" —
+  `DATABASE_URL` je bil še SQLite (`file:./db/ci-test.db`), `schema.prisma`
+  pa je od Faze 4f `postgresql` → Prisma zavrne `file:` URL. CI #66 zelen.
+- **Mešanje jezikov na /de, /en, /it (P4-8)**: te strani so bile delno
+  prevedene (navigacija/noga v tujem jeziku, vsebina hardcoded slovenščina).
+  Javno je zdaj **samo slovenščina**: stari URL-ji se trajno (308) preusmerijo
+  na slovensko pot (`src/proxy.ts`), hreflang alternati so umaknjeni
+  (`src/components/seo.tsx`), jezikovni preklopnik se skrije
+  (`src/components/language-switcher.tsx`). Infrastruktura (next-intl,
+  sporočila, preklopnik) ostaja — ko bodo celoviti prevodi (roadmap C5), se
+  jeziki dodajo nazaj v `src/i18n/routing.ts`.
+
+### Spremenjeno (Changed)
+
+- **Iskrena komunikacija (P4-8)**: odstranjene demo/marketing številke brez
+  izmerjene podlage — »12.000+ obiskovalcev/mes«, »32 % konverzija v kontakt«,
+  »+18 % rast mesečno«, »5.2★ povprečna ocena«, »50+ lokalov« — iz
+  `pitch-deck.tsx` in `join-us.tsx`. Namesto izmišljenih pričevanj (Ana K.,
+  Marko P., Tina R.) se zdaj oddaja razdelek **Naša obljuba**: samo mnenja z
+  dokazano rezervacijo, transparentna provizija (0 % / 12 %), znak
+  »Preverjen partner« kot eksplicitna odločitev ekipe.
+
+### Dokumentacija (Docs)
+
+- **SECURITY.md**: revizijski pregled 2026-09-10 — vsi commiti (main +
+  master) brez skrivnosti (neodvisno potrjeno čiščenje iz v1.1.0);
+  `PUTER_AUTH_TOKEN` ni nastavljen v Vercel env (preverjeno prek APIja) —
+  ob ponovni aktivaciji Puter AI generiraj NOV žeton; nov checklist: odstrani
+  neuporabljeni legacy `VITE_GEMINI_API_KEY` iz Vercel env. Razdelek "Podatki"
+  posodobljen (Neon PostgreSQL, leadi v DB od P4-2).
+- **docs/DEPLOYMENT.md**: sinhroniziran s trenutno arhitekturo — Pot B
+  (Vercel + Neon) označena kot IZVEDENA, demo SQLite mehanizem (Faza 4e) kot
+  zgodovinski/izklopljen, Pot A (Docker) opozorilo o neskladju s postgres
+  shemo (zahteva postgres service ali reverz providerja pred uporabo).
+- **README.md**: i18n status (javno samo sl), CI opis (postgres service
+  container), odstranjena zastarela trditev o demo SQLite bazi na Vercelu.
+
+---
+
 ## [1.1.0] — 2026-09-08
 
 ### Varnost (Security)

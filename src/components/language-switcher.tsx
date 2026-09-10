@@ -11,13 +11,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { type Locale, routing } from "@/i18n/routing";
+import { routing } from "@/i18n/routing";
 
 /**
- * Seznam podprtih jezikov z zastavico (emoji) in avtohtonim imenom.
+ * Seznam vseh jezikov, ki jih platforma pozna (zastavica + avtohtono ime).
  * Vrstni red = vrstni red v dropdown meniju.
  */
-const LANGUAGES: { code: Locale; flag: string; label: string }[] = [
+const LANGUAGES: { code: string; flag: string; label: string }[] = [
   { code: "sl", flag: "🇸🇮", label: "Slovenščina" },
   { code: "en", flag: "🇬🇧", label: "English" },
   { code: "de", flag: "🇩🇪", label: "Deutsch" },
@@ -25,24 +25,40 @@ const LANGUAGES: { code: Locale; flag: string; label: string }[] = [
 ];
 
 /**
- * Language Switcher — dropdown z 4 jeziki.
+ * Javno dostopni jeziki = routing.locales. P4-8: trenutno samo "sl"
+ * (celoviti prevodi so roadmap C5 — glej src/i18n/routing.ts). Ko bodo
+ * prevodi celoviti in se jeziki dodajo nazaj v routing, se preklopnik
+ * samodejno spet prikaže — brez spremembe te komponente.
+ */
+const AVAILABLE_LANGUAGES = LANGUAGES.filter((l) =>
+  (routing.locales as readonly string[]).includes(l.code)
+);
+
+/**
+ * Language Switcher — dropdown z javno dostopnimi jeziki.
  *
  * - Trenutni jezik prikazan z zastavico emoji in Globe ikono.
  * - Klik na jezik → navigacija na `/{locale}` (ali `/` za default "sl").
  * - Hash (npr. `#destinacije`) se ohrani pri preklopu, da uporabnik
  *   ostane na isti sekciji strani.
+ * - Če je na voljo samo en jezik, se preklopnik NE prikaže (P4-8) —
+ *   preklop na neobstoječo/partialno prevedeno verzijo bi bil lažen.
  *
  * Opomba: ker custom middleware rewrites URL (`/en` → `/` interno), ne
  * moremo uporabiti `@/i18n/navigation` helper-jev za `usePathname`.
  * Zato direktno konstruiramo URL z locale prefix-om.
  */
 export function LanguageSwitcher() {
-  const locale = useLocale() as Locale;
+  const locale = useLocale() as string;
   const router = useRouter();
 
-  const current = LANGUAGES.find((l) => l.code === locale) ?? LANGUAGES[0];
+  // P4-8: z enim javnim jezikom preklopnik nima pomena — se skrije.
+  if (AVAILABLE_LANGUAGES.length <= 1) return null;
 
-  const switchTo = (next: Locale) => {
+  const current =
+    AVAILABLE_LANGUAGES.find((l) => l.code === locale) ?? AVAILABLE_LANGUAGES[0];
+
+  const switchTo = (next: string) => {
     if (next === locale) return;
 
     // Ohrani hash (npr. `#destinacije`) pri preklopu jezika
@@ -72,7 +88,7 @@ export function LanguageSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[160px]">
-        {LANGUAGES.map((lang) => (
+        {AVAILABLE_LANGUAGES.map((lang) => (
           <DropdownMenuItem
             key={lang.code}
             onClick={() => switchTo(lang.code)}

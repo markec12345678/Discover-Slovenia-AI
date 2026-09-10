@@ -14,6 +14,13 @@ const HEADER_LOCALE = "x-next-intl-locale";
 const COOKIE_LOCALE = "NEXT_LOCALE";
 
 /**
+ * Legacy locale prefixi — prej javno dostopni (delno prevedene strani),
+ * umaknjeni s P4-8 dokler prevodi niso celoviti (roadmap C5).
+ * Stari URL-ji se trajno (308) preusmerijo na slovensko pot.
+ */
+const LEGACY_LOCALE_PREFIXES = ["/en", "/de", "/it"] as const;
+
+/**
  * Proxy (prej "middleware" — Next.js 16 konvencija) — custom i18n
  * middleware (nadomestek za `createMiddleware` iz next-intl).
  *
@@ -60,6 +67,21 @@ export default function middleware(request: NextRequest) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = pathname.slice("/sl".length) || "/";
     return NextResponse.redirect(redirectUrl);
+  }
+
+  // 1b. LEGACY locale prefixi (/en, /de, /it) → trajna (308) preusmeritev
+  //     na slovensko pot. P4-8: te strani so bile delno prevedene (nav in
+  //     noga v tujem jeziku, vsebina hardcoded slovenščina) — mešanje
+  //     jezikov. Javno je zdaj samo sl; hreflang alternati so umaknjeni,
+  //     kazalniki/povezave na /de… pa pripeljejo na pravo (slovensko)
+  //     vsebino in ne na 404.
+  if (LEGACY_LOCALE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    const prefix = LEGACY_LOCALE_PREFIXES.find(
+      (p) => pathname === p || pathname.startsWith(`${p}/`)
+    )!;
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = pathname.slice(prefix.length) || "/";
+    return NextResponse.redirect(redirectUrl, 308);
   }
 
   // 2. Zaznaj locale iz URL prefix-a

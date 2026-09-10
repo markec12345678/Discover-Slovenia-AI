@@ -4,10 +4,7 @@ import { useState, useRef, useEffect, type FormEvent } from "react";
 import Link from "next/link";
 import {
   Check,
-  Star,
   ArrowRight,
-  Users,
-  TrendingUp,
   Mail,
   Phone,
   Building2,
@@ -22,6 +19,7 @@ import {
   Gift,
   Zap,
   Clock,
+  TrendingUp,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -74,21 +72,26 @@ const EMPTY_FORM: FormData = {
   gdprConsent: false,
 };
 
+// P4-8 (iskrena komunikacija): prejšnje številke (»12.000+ obiskovalcev/mes«,
+// »5.2★ povprečna ocena«, »32 % konverzija v kontakt«) so bile demo/
+// marketing trditve brez izmerjene podlage — platforma je v javni beti.
+// Namesto njih samo dejstva, ki jih lahko preverimo: provizijski model,
+// ki je zapisan v ceni in pogojih, in brezplačna beta.
 const HERO_STATS = [
   {
-    icon: Users,
-    value: "12.000+",
-    label: "obiskovalcev/mes",
+    icon: Sparkles,
+    value: "0 %",
+    label: "provizije na direktnih rezervacijah",
   },
   {
-    icon: Star,
-    value: "5.2★",
-    label: "povprečna ocena",
+    icon: Zap,
+    value: "12 %",
+    label: "samo na AI rezervacijah",
   },
   {
-    icon: TrendingUp,
-    value: "32%",
-    label: "konverzija v kontakt",
+    icon: ShieldCheck,
+    value: "Brezplačno",
+    label: "med beta obdobjem",
   },
 ] as const;
 
@@ -241,11 +244,11 @@ export function JoinUs() {
               Za lokale, hotele, restavracije
             </Badge>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-              Pridruži se 50+ slovenskim lokalom
+              Postani med prvimi slovenskimi lokali
             </h2>
             <p className="max-w-2xl text-base text-primary-foreground/80 sm:text-lg">
-              AI vsak mesec priporoča vaš lokal tisočem potnikom. Bodite med
-              njimi.
+              AI priporoča vaš lokal potnikom, ki načrtujejo obisk Slovenije.
+              Bodite med njimi.
             </p>
 
             <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 mt-2">

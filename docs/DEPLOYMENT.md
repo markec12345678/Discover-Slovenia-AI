@@ -1,8 +1,10 @@
 # DEPLOYMENT — produkcijska namestitev in odločitvena analiza
 
-> **Status (Faza 4d, 2026-09-10):** odkrit in popravljen izvorni vzrok
-> propadanja vseh dosedanjih deploymentov; dodana Docker/Compose produkcijska
-> pot (E2E dokazana) in jasen postopek za Vercel + hosted Postgres.
+> **Status (Faza 4f + P4-7, 2026-09-10):** produkcija teče na **Vercel +
+> Neon PostgreSQL** (Pot B — IZVEDENA, glej razdelek 4). CI Build job od
+> P4-7 testira proti pravemu Postgresu (service container). Dokument vsebuje
+> tudi zgodovinsko analizo padcev (Faza 4d) in alternativno Docker pot (Pot A
+> — POZOR: trenutno zahteva prilagoditev, glej razdelek 3).
 
 ---
 
@@ -53,8 +55,9 @@ build padel TUDI ob odpravi računskе težave (izolirana reprodukcija:
    ni potrebno, na VPS/Docker obvezno).
 
 A tudi ob zelenem buildu **runtime baze ne more delovati** na serverless
-(vzrok #2 — SQLite) — za Vercel je obvezna migracija na hosted Postgres
-(Pot B spodaj). Brez nje bodo dinamične strani prazne oziroma napake.
+(vzrok #2 — SQLite) — za Vercel je bila obvezna migracija na hosted Postgres
+(Pot B spodaj). **To se je zgodilo:** Faza 4f (2026-09-10) — produkcija
+živi na Neon PostgreSQL (glej razdelek 4).
 
 ---
 
@@ -103,9 +106,18 @@ Ezerca"), `/en` 200 z `lang="en"` (i18n), 404 pot → pravilen 404, cron API →
 
 ---
 
-## 3. POT A (PRIPOROČENA): lastni strežnik + Docker Compose
+## 3. POT A: lastni strežnik + Docker Compose — trenutno ZAHTEVA PRILAGODITEV
 
-Aplikacija (Next.js standalone + SQLite + cron) v dveh vsebnikih; podatki v
+> ⚠️ **Omejitev po Fazi 4f (2026-09-10):** `prisma/schema.prisma` je sedaj
+> `provider = "postgresql"` (Neon v produkciji). DockerCompose nastavitev v
+> repu (`Dockerfile`, `docker-compose.yml`) še vedno pričakuje SQLite
+> (`DATABASE_URL=file:/app/db/custom.db`) — PRED uporabo Poti A jo je treba
+> prilagoditi: bodisi dodajte `postgres` service v `docker-compose.yml`
+> (priporočeno — enaka arhitektura kot produkcija), bodisi začasno preklopite
+> provider nazaj na `sqlite`. Shema ni vezana na bazo do roke — `prisma db
+> push` zgradi tabele na katerikoli izbrani bazi.
+
+Aplikacija (Next.js standalone + cron) v dveh vsebnikih; podatki v
 named volumenu. Ni odvisnosti od zunanjih DB storitev, ni stroškov.
 
 **Datoteke (vse v repozitoriju):** `Dockerfile`, `docker-compose.yml`,
@@ -174,26 +186,36 @@ kot absolutna pot, vse skrivnosti v EnvironmentFile.)
 
 ---
 
-## 4. POT B: ostanek na Vercelu + hosted Postgres (Neon/Supabase)
+## 4. POT B: Vercel + hosted Postgres — ✅ IZVEDENA (produkcija od 2026-09-10)
 
-Za primer, ko je serverless zaželen kljub SQLite arhitekturi:
+Produkcija (`i-feel-slovenia.vercel.app`) teče po tej poti (Faza 4f):
 
-1. Ustvari hosted Postgres (npr. [Neon](https://neon.tech) free tier) →
-   connection string.
-2. `prisma/schema.prisma`: `provider = "postgresql"`.
-3. Migracija obstoječih podatkov: izvozi SQLite tabele → uvoz v Postgres
+1. ~~Ustvari hosted Postgres (npr. [Neon](https://neon.tech) free tier) →
+   connection string.~~ **Narejeno** — Neon PostgreSQL (pooler,
+   `connection_limit=1`).
+2. ~~`prisma/schema.prisma`: `provider = "postgresql"`.~~ **Narejeno**
+   (Faza 4f, komentar v shemi).
+3. ~~Migracija obstoječih podatkov: izvozi SQLite tabele → uvoz v Postgres
    (skripta po tabelah glede na SetNull vrstni red; glej tudi
-   `docs/MIGRATION-STRATEGY.md`).
-4. `bunx prisma db push` proti Neon URL (nova shema) + seed.
-5. Vercel → Project Settings → Environment Variables:
-   `DATABASE_URL` (Neon), `NEXTAUTH_SECRET`, `NEXTAUTH_URL`,
-   `ADMIN_PASSWORD`, `CRON_SECRET`, `SMTP_*`, `PUTER_*` …
-6. Push na `main` — build je zdaj zelen (prisma generate v build skripti).
-   Vercel croni iz `vercel.json` se izvajajo avtomatično.
+   `docs/MIGRATION-STRATEGY.md`).~~ **Narejeno** (demo baseline: Owner 5 /
+   Listing 10 / Product 6 / Experience 10 / Booking 5).
+4. ~~`bunx prisma db push` proti Neon URL (nova shema) + seed.~~ **Narejeno.**
+5. ~~Vercel → Project Settings → Environment Variables: `DATABASE_URL`
+   (Neon), `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `ADMIN_PASSWORD`, `CRON_SECRET`,
+   `ADMIN_EMAIL` …~~ **Narejeno** (preverjeno prek Vercel APIja 2026-09-10;
+   `PUTER_AUTH_TOKEN` ni nastavljen — AI teče v fallback načinu; legacy
+   `VITE_GEMINI_API_KEY` čaka na odstranitev).
+6. ~~Push na `main` — build je zelen (prisma generate v build skripti).
+   Vercel croni iz `vercel.json` se izvajajo avtomatično.~~ **Narejeno.**
+7. CI (P4-7, 2026-09-10): Build job testira proti `postgres:16-alpine`
+   service containerju — ista arhitektura kot produkcija (prej SQLite
+   `ci-test.db`, kar je podrlo CI #65 po prehodu na postgresql shemo).
 
-**Pozor (iskreno):** korak 3 (migracija podatkov) ni trivialen in Pot B
-uvaja novo odvisnost/strošek DB servisa. Za trenutno fazo projekta je Pot A
-cenejša, enostavnejša in popolnoma pod nadzorom.
+**Zakaj je bila Pot B izbrana kljub odvisnosti na DB servis:** Vercel
+integracija (push → deploy), brez vzdrževanja strežnika, Neon free tier
+zadosti za pilo fazo. Trade-off (iskreno): morebitni stroški/limiti Neona ob
+rasti in odvisnost od zunanjega servisa — takrat presoja Pot A (z lastnim
+Postgresom v Docker Compose, glej opombo v razdelku 3).
 
 ---
 
@@ -201,7 +223,7 @@ cenejša, enostavnejša in popolnoma pod nadzorom.
 
 | Skupina | Spremenljivke | Obvezno | Opomba |
 |---|---|---|---|
-| Baza | `DATABASE_URL` | DA | Pot A: `file:/app/db/custom.db`; Pot B: Neon/Supabase URL |
+| Baza | `DATABASE_URL` | DA | Produkcija (Pot B): Neon URL; Pot A: `file:/app/db/custom.db` (glej opombo v razdelku 3) |
 | Auth | `NEXTAUTH_SECRET`, `NEXTAUTH_URL` | DA | URL = javna domena (HTTPS) |
 | Admin | `ADMIN_PASSWORD`, `ADMIN_EMAIL` | DA | močno geslo (min 32 znakov) |
 | Cron | `CRON_SECRET` | DA | Bearer za vse /api/cron/* |
@@ -212,10 +234,18 @@ cenejša, enostavnejša in popolnoma pod nadzorom.
 
 ---
 
-## 6. VERCEL DEMO NAČIN (Faza 4e) — SQLite runtime brez Postgresa
+## 6. VERCEL DEMO NAČIN (Faza 4e) — ZGODOVINSKO, nadomeščeno s Fazo 4f
 
-Za javni demo na `i-feel-slovenia.vercel.app` (brez hosted Postgresa) je
-implementirana **demo baza zgrajena med buildom**:
+> Ta mehanizem (SQLite demo baza zgrajena med buildom) je **neaktiven od
+> Faze 4f**: `scripts/build-demo-db.sh` se samodejno preskoči, ko je v shemi
+> `provider = "postgresql"`, `DATABASE_URL` na Vercelu pa kaže na Neon (ni
+> `file:` sheme → tudi `src/instrumentation.ts` se umakne). Razdelek
+> ostaja kot dokumentacija mehanizma, če se SQLite demo kdaj vrne (npr.
+> offline predstavitev).
+
+Zgodovinsko (Faza 4e, pred Neonom): za javni demo na
+`i-feel-slovenia.vercel.app` (brez hosted Postgresa) je bila implementirana
+**demo baza zgrajena med buildom**:
 
 | Korak | Kje | Kaj naredi |
 |---|---|---|
@@ -237,11 +267,13 @@ seed datoteka manjka.
 - Demo partnerji (geslo `demo1234`, domena `@demo.discoverslovenia.si`) so
   NAMENOMO javni — obiskovalcem omogočajo ogled owner dashboarda. Super_admin
   račun v javnem buildu NE obstaja.
-- Brez SMTP/AI ključev e-pošta pada v console fallback, AI pa v pravila.
+- Brez SMTP/AI ključev e-pošta pada v console fallback, AI pa v pravila
+  (SMTP ostaja demo tudi po Fazi 4f — glej docs/PILOT-TEST-PROTOCOL.md,
+  znana omejitev #1).
 
-Preklop na Pot B kasneje: nastavite `DATABASE_URL` na Postgres URL v Vercel
-env (instrumentation se samodejno umakne — ne `file:` shema) in spremenite
-`provider` v `prisma/schema.prisma` (glej razdelek 4).
+Preklop na Pot B (izvedeno — Faza 4f): nastavite `DATABASE_URL` na Postgres
+URL v Vercel env (instrumentation se samodejno umakne — ne `file:` shema) in
+spremenite `provider` v `prisma/schema.prisma` (glej razdelek 4).
 
 ---
 
@@ -258,6 +290,18 @@ env (instrumentation se samodejno umakne — ne `file:` shema) in spremenite
   produkcijska pot A.
 - E2E: Vercel-simulacija builda (brez DB, brez generate) exit 0; standalone
   runtime E2E (razdelek 2).
+
+### Faza 4f + P4-7 (2026-09-10)
+
+- **Faza 4f — Neon PostgreSQL v produkciji** (Pot B izvedena, glej razdelek 4):
+  `prisma/schema.prisma` → `provider = "postgresql"`; `DATABASE_URL` (Neon
+  pooler) v Vercel env; demo SQLite mehanizem (razdelek 6) se samodejno
+  izklopi; migracija demo podatkov narejena.
+- **P4-7 — CI/CD popravek**: Build job testira proti `postgres:16-alpine`
+  service containerju (prej `file:./db/ci-test.db` → fail CI #65, ker Prisma
+  zavrne `file:` URL pri postgresql providerju). CI #66 zelen.
+- `Dockerfile`/`docker-compose.yml` (Pot A) trenutno neskladni s postgres
+  shemo — glej opombo v razdelku 3.
 
 ### Faza 4e + 5 (2026-09-10)
 

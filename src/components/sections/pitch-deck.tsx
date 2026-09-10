@@ -17,30 +17,38 @@ import {
   ShieldCheck,
   Clock,
   Check,
+  MessageSquare,
+  Percent,
+  BadgeCheck,
 } from "lucide-react";
 import { BETA_INFO } from "@/lib/beta";
 
+// P4-8 (iskrena komunikacija): prejšnje številke (»12.000+ obiskovalcev
+// mesečno«, »32 % konverzija v kontakt«, »+18 % rast mesečno«, »5.2★
+// povprečna ocena«) so bile demo/marketing trditve brez izmerjene podlage —
+// platforma je v javni beti. Namesto njih samo dejstva, ki jih lahko
+// preverimo (provizijski model, beta prag, atribucija AI priporočil).
 const benefits = [
   {
     icon: Target,
     title: "Dosežite prave potnike",
     description:
       "AI našim uporabnikom priporoča vaš lokal v itinererjih. Ne naključnih oglasov — ampak kontekstualno priporočilo ko potnik išče vaš tip storitve.",
-    stat: "32% konverzija v kontakt",
+    stat: "AI priporočila z atribucijo",
   },
   {
     icon: Users,
-    title: "12.000+ obiskovalcev mesečno",
+    title: "Bodite med prvimi lokalci",
     description:
-      "Naša platforma privablja potnike ki načrtujejo potovanje v Slovenijo. Vi ste le en klik stran od njih.",
-    stat: "+18% rast mesečno",
+      "Platforma je v javni beti — prvih 30 lokalov gradi vsebino in povratne informacije, mi pa vam v zameno brezplačen premium dostop.",
+    stat: "Zgodnji dostop · brezplačno",
   },
   {
     icon: Zap,
     title: "AI distribucijski kanal",
     description:
       "Premium in Enterprise stranke samodejno vključene v AI-generirane itinererje. Brez dodatnega truda — AI naredi promocijo za vas.",
-    stat: "5.2★ povprečna ocena",
+    stat: "0 % provizije na direktnih rezervacijah",
   },
   {
     icon: BarChart3,
@@ -74,24 +82,26 @@ const process = [
   },
 ];
 
-const testimonials = [
+// P4-8 (iskrena komunikacija): prejšnja »pričevanja« (Ana K., Marko P.,
+// Tina R.) so bila izmišljena — takih partnerjev in izjav ni bilo. Namesto
+// lažnega social proof-a objavljamo samo zaveze, ki jih lahko preverite.
+// Mnenja gostov bodo objavljena izključno z vezavo na dejansko rezervacijo
+// (glej docs/COMPETITIVE-ANALYSIS.md, vrzeli A1/A2).
+const trustFacts = [
   {
-    quote: "Po 2 mesecih na platformi smo povečali rezervacije za 27%. AI res priporoča naš hotel!",
-    author: "Ana K.",
-    role: "Lastnica, Boutique hotel Bled",
-    rating: 5,
+    icon: MessageSquare,
+    title: "Brez izmišljenih mnenj",
+    text: "Mnenja gostov bomo objavili samo z dokazano rezervacijo. Dokler prvega ni, raje ne pokažemo nobenega.",
   },
   {
-    quote: "Končno platforma ki razume slovenski turizem. Premium se hitro povrne.",
-    author: "Marko P.",
-    role: "Manager, Restavracija Ljubljana",
-    rating: 5,
+    icon: Percent,
+    title: "Transparentna provizija",
+    text: "0 % na direktnih rezervacijah, 12 % samo na AI-generiranih. Vsak obračun vsebuje podrobnosti posamezne rezervacije.",
   },
   {
-    quote: "AI nas vključuje v itinererje potnikov ki iščejo rafting. Konverzija je neverjetna.",
-    author: "Tina R.",
-    role: "Soča Rafting",
-    rating: 5,
+    icon: BadgeCheck,
+    title: "Overjeni partneri",
+    text: "Znak »Preverjen partner« podeljuje naša ekipa po pregledu — ni samodejen ob registraciji niti ob odobritvi vsebine.",
   },
 ];
 
@@ -205,38 +215,40 @@ export function PitchDeckSection() {
           </div>
         </div>
 
-        {/* Testimonials */}
+        {/* Zaupanje — dejstva namesto izmišljenih pričevanj (P4-8) */}
         <div className="mb-20">
           <div className="mb-10 text-center">
             <Badge variant="secondary" className="mb-3">
               <Globe className="mr-1.5 size-3.5" />
-              Pričevanja
+              Naša obljuba
             </Badge>
             <h3 className="text-2xl font-bold sm:text-3xl">
-              Kaj pravijo naši partnerji
+              Zaupanje gradimo z dejstvi, ne z izmišljenimi pričevanji
             </h3>
+            <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground">
+              Platforma je mlada — namesto izmišljenih pričevanj vam pokažemo
+              zaveze, ki jih lahko preverite.
+            </p>
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            {testimonials.map((t) => (
-              <Card key={t.author} className="border-border/60">
-                <CardContent className="p-6">
-                  <div className="mb-3 flex gap-0.5">
-                    {Array.from({ length: t.rating }).map((_, i) => (
-                      <span key={i} className="text-amber-400" aria-hidden="true">
-                        ★
-                      </span>
-                    ))}
-                  </div>
-                  <blockquote className="mb-4 text-sm leading-relaxed">
-                    &ldquo;{t.quote}&rdquo;
-                  </blockquote>
-                  <div>
-                    <div className="font-semibold text-sm">{t.author}</div>
-                    <div className="text-xs text-muted-foreground">{t.role}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {trustFacts.map((fact) => {
+              const Icon = fact.icon;
+              return (
+                <Card key={fact.title} className="border-border/60">
+                  <CardContent className="p-6">
+                    <div className="mb-3 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Icon className="size-5" aria-hidden="true" />
+                    </div>
+                    <h4 className="mb-2 text-base font-semibold">
+                      {fact.title}
+                    </h4>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {fact.text}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
 
@@ -255,9 +267,8 @@ export function PitchDeckSection() {
                 Pridruži se BREZPLAČNO med beta — brez kreditne kartice
               </h3>
               <p className="text-muted-foreground max-w-xl">
-                Pridružite se {`50+`} slovenskim lokalom ki že uporabljajo našo AI
-                platformo za rast posla. Med beta obdobjem so vsi paketi brezplačni —
-                izkoristite zdaj.
+                Bodite med prvimi slovenskimi lokali na AI platformi. Med beta
+                obdobjem so vsi paketi brezplačni — izkoristite zdaj.
               </p>
 
               {/* Beta ugodnosti */}

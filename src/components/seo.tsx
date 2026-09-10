@@ -4,10 +4,15 @@ import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { Destination } from "@/lib/types";
 
 const BASE_URL = "https://discoverslovenia.ai";
-const LANGS = ["sl", "en", "de", "it"];
+// P4-8: javno samo slovenščina — /en, /de, /it so trajno (308) preusmerjeni
+// na slovensko pot (glej src/proxy.ts), zato NE objavljemo hreflang alternat
+// za neobstoječe strani. Ko bodo celoviti prevodi (roadmap C5), dodajte
+// jezike nazaj.
+const LANGS = ["sl"];
 
 // === HREFLANG HELPER ===
-// Vrne alternates.languages za Next.js metadata — hreflang za vse 4 jezike
+// Vrne alternates.languages za Next.js metadata — hreflang za javne jezike
+// (trenutno samo sl — glej P4-8 opombo zgoraj)
 export function hreflangForPath(path: string) {
   const languages: Record<string, string> = {};
   for (const lang of LANGS) {
