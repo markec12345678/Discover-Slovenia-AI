@@ -145,7 +145,9 @@ function FooterColumn({
       </h3>
       <ul className="flex flex-col gap-2">
         {links.map((link) => (
-          <li key={link.href}>
+          // key vključuje label: dve povezavi se lahko nanašata na isti
+          // href (npr. "Paketi in cene" in "Prijavnica" obe → #pridruzi-se)
+          <li key={`${link.href}-${link.label}`}>
             <Link
               href={link.href}
               className="text-sm text-muted-foreground transition-colors hover:text-primary"
