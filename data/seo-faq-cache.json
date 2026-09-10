@@ -42,5 +42,27 @@
     ],
     "generatedAt": 1788939159434,
     "source": "ai"
+  },
+  "bohinj:things-to-do": {
+    "faqs": [
+      {
+        "question": "Kdaj je najboljši čas za obisk Bohinja?",
+        "answer": "Poletje je idealno za kopanje in pohodništvo, pozno poletje in jesen pa za lepinski pohod in manj obiskovalcev."
+      },
+      {
+        "question": "Koliko stane vstop v Triglavski jezero?",
+        "answer": "Vstop v Triglavsko jezero je brezplačen, vendar plačate parkirišče ali dostop s parkirišča na Voglu."
+      },
+      {
+        "question": "Katere aktivnosti so na voljo v Bohinju?",
+        "answer": "Pohodništje na Vogel, kolesarjenje, vožnja čolnov po Bohinjskem jezeru in plezanje so najbolj priljubljene aktivnosti."
+      },
+      {
+        "question": "Kako se lahko dostopam do Bohinja z javnim prevozom?",
+        "answer": "S vlom iz Ljubljane do Bohinjske Biste, nato z avtobusom ali taksijem do Bohinja ali Bleda."
+      }
+    ],
+    "generatedAt": 1789041611708,
+    "source": "ai"
   }
 }

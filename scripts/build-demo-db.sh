@@ -21,6 +21,14 @@ if [ -z "${VERCEL:-}" ] && [ -z "${DSA_BUILD_DEMO_DB:-}" ]; then
   exit 0
 fi
 
+# Pot B (hosted Postgres, Faza 4f): ko je shema postgresql, SQLite demo fallback
+# nima smisla (file: URL bi Prisma zavrgla — provider mora biti sqlite) in ga
+# trajna Neon baza povsem nadomesti. Preskoči in nadaljuj build.
+if grep -q 'provider *= *"postgresql"' prisma/schema.prisma 2>/dev/null; then
+  echo "[demo-db] preskočen (shema = postgresql → Pot B/hosted Postgres; trajna baza v DATABASE_URL)"
+  exit 0
+fi
+
 DB_PATH="$(pwd)/db/demo-seed.db"
 mkdir -p "$(dirname "$DB_PATH")"
 rm -f "$DB_PATH" "$DB_PATH-journal"

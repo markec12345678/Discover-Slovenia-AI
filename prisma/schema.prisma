@@ -6,7 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  // 2026-09-10 (Faza 4f): migracija na Neon Postgres (Pot B — serverless Vercel).
+  // SQLite ostaja možen samo prek Pot A (Docker/VPS) — glej docs/DEPLOYMENT.md.
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
