@@ -1,13 +1,18 @@
 # 🇸🇮 Discover Slovenia AI — AI Tourism Platform
 
-> **AI-poganjana turistična platforma za Slovenijo** — AI načrtovalec potovanj, tržnica lokalnih izdelkov in izkušenj, B2B portali za ponudnike, interaktivni zemljevid, in provizijski poslovni model (kot Booking.com) z avtomatiziranim obračunom in plačilom računov.
+> **AI-poganjana turistična platforma za Slovenijo** — AI načrtovalec potovanj, tržnica lokalnih izdelkov in izkušenj, B2B portali za ponudnike, interaktivni zemljevid in pošten provizijski model: **0 % na direktnih rezervacijah, 12 % izključno na AI kanalu**.
 
 [![CI](https://github.com/markec12345678/Discover-Slovenia-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/markec12345678/Discover-Slovenia-AI/actions/workflows/ci.yml)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
-[![Prisma](https://img.shields.io/badge/Prisma-6-indigo?logo=prisma)](https://www.prisma.io/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-teal?logo=tailwindcss)](https://tailwindcss.com/)
+[![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma)](https://www.prisma.io/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-336791?logo=postgresql)](https://neon.tech/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38B2AC?logo=tailwindcss)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
+**Produkcija:** <https://i-feel-slovenia.vercel.app> (Vercel, avtomatski deploy iz `main`)
+
+**Status faz:** P0 ✅ → P1 ✅ → P2 ✅ → P3 ✅ (varnostni auditi) → P4 🟡 (priprava pilota — 10 realnih ponudnikov)
 
 ---
 
@@ -15,14 +20,14 @@
 
 - [Pregled](#pregled)
 - [Ključne funkcionalnosti](#ključne-funkcionalnosti)
+- [Varnostne plasti (P3)](#varnostne-plasti-p3)
 - [Tehnični stack](#tehnični-stack)
 - [Arhitektura](#arhitektura)
 - [Hitri začetek](#hitri-začetek)
-- [AI funkcionalnosti](#ai-funkcionalnosti)
 - [Poslovni model](#poslovni-model)
 - [Provizijski obračun](#provizijski-obračun)
+- [Approval in overitveni workflow](#approval-in-overitveni-workflow)
 - [Partner Quality Score](#partner-quality-score)
-- [Approval Workflow](#approval-workflow)
 - [Cron opravila](#cron-opravila)
 - [Namestitev](#namestitev)
 - [Dokumentacija](#dokumentacija)
@@ -32,118 +37,95 @@
 
 ## Pregled
 
-**Discover Slovenia AI** je celovita AI-poganjana turistična platforma za Slovenijo. Združuje AI načrtovalec potovanj z multi-turn pogovorom, naravnojezikovno iskanje, interaktivni zemljevid s tisočimi POI, tržnico lokalnih izdelkov in izkušenj, ter B2B portale za ponudnike in administratorje.
+**Discover Slovenia AI** je celovita AI-poganjana turistična platforma za Slovenijo. Združuje AI načrtovalca potovanj z multi-turn pogovorom, naravnojezikovno iskanje, interaktivni zemljevid s tisočimi POI, tržnico lokalnih izdelkov in izkušenj, B2C račune popotnikov z deljenimi potovanji ter B2B portale za ponudnike in administratorje.
 
 Platforma rešuje **3 ključne probleme**:
 
-1. **Za turiste** — AI generira personalizirane itinererje v sekundah, z brezplačnim načrtovanjem in direktnimi rezervacijami
-2. **Za lokalne ponudnike** — self-service portal za promocijo z AI auto-tagging, Quality Score in analytics
-3. **Za Slovenijo** — prva platforma ki povezuje AI + lokalno + državno-specifično s preverjeno partnersko mrežo
+1. **Za turiste** — AI generira personalizirane itinererje v sekundah, brezplačno načrtovanje, direktni in AI-kanal rezervaciji
+2. **Za lokalne ponudnike** — self-service portal z onboarding čarovnikom, 0 % provizije na direktnih rezervacijah (najpoštenejši model na trgu — glej [konkurenčno analizo](docs/COMPETITIVE-ANALYSIS.md))
+3. **Za Slovenijo** — prva platforma, ki povezuje AI + lokalno + državno-specifično s preverjeno partnersko mrežo
 
 ---
 
 ## Ključne funkcionalnosti
 
-### 🤖 AI funkcionalnosti (9)
+### 🤖 AI funkcionalnosti
 
 | Funkcija | Opis |
 |----------|------|
-| **AI Itinerer** | Generira dnevne načrte potovanj z GLM (Puter API), multi-turn refinement |
+| **AI Itinerer** | Generira dnevne načrte potovanj (GLM prek Puter API), multi-turn izboljšave |
 | **AI Chatbot** | Lebdeči asistent z dostopom do baze (destinacije, lokalci, izdelki, izkušnje) |
-| **Naravno-jezikovno iskanje** | "miren vikend ob reki" → AI razume in vrne matching rezultate |
-| **AI Priporočila** | GLM izbere 4 najbolj smiselne izdelke/izkušnje (24h cache) |
-| **AI POI opisi** | Generira opise za POI iz OpenStreetMap (permanent cache) |
+| **Naravno-jezikovno iskanje** | "miren vikend ob reki" → AI razume in vrne rezultate |
+| **AI Priporočila** | Model izbere 4 najbolj smiselne izdelke/izkušnje (24h cache) |
+| **AI POI opisi** | Generira opise za POI iz OpenStreetMap (trajni cache) |
 | **AI Auto-tagging** | Lastnik vnese opis → AI predlaga kategorijo + atribute + tagi |
 | **AI Vpogledi** | Analiza statistike z actionable insights za owner/admin dashboard |
 | **AI SEO FAQ** | Generira FAQ za Google rich snippets (90-dnevni cache) |
-| **AI Prevajalec** | Prevaja UI nize v en/de/it za developerje |
+| **AI Konzultacije** | Freemium globoke konzultacije z atribucijo rezervacij (30 dni) |
+
+**AI fallback veriga:** Puter → z-ai-web-dev-sdk → rule-based (nikoli 500). AI uporablja **izključno `published`** vsebine, podatki ponudnikov so zajeti v injection-safe ovojnico (`SYSTEM_DATA_GUARD`).
+
+### 🧭 B2C plast (Faza P1–P2)
+
+- **Računi popotnikov** (email verifikacija + reset gesla z razveljavitvijo sej)
+- **Moja potovanja** — shranjevanje, dnevni push opomniki, PDF izvoz, pakirni seznam
+- **Socialna plast** — javna galerija deljenih potovanj, glasovanje, komentarji, všečki
+- **30-dnevna atribucija** — konzultacija → rezervacija (strežniško overjena)
+- **A/B testiranje naročnine** z anonimno analitiko
 
 ### 🏪 Tržnica
 
-- **25 lokalov** (hoteli, restavracije, aktivnosti) — vsi z VLM-verified slikami
-- **28 izdelkov** (kulinarika, vino, med, olje, obrt, spominki)
-- **28 izkušenj** (turi, degustacije, avanture, wellness)
-- **8 zbirk** za navigacijo (zimski, poletni, romantični, družinski, itd.)
-- Realne rezervacije izkušenj s potrditvenimi e-poštami in obnovljen nakupni proces tržnice
-
-### 👥 Skupnost in Vprašaj lokalca
-
-- **UGC recenzije in javna galerija** skupnosti (Faza 2)
-- **"Vprašaj lokalca"** — grounded AI Q&A nad bazo lokalov, izdelkov in izkušenj
-- **Plačljive konzultacije** (freemium B2C, Faza 3b-2) — zasebna povezava `/konzultacija/[token]`
-- **Web push obvestila** (VAPID) + dnevni opomniki za shranjena potovanja (Faza 3b)
-- **Dogodki v načrtih potovanj, AI pakirni seznam, glasovanje skupine, PDF izvoz** (Faza 1)
+- **Lokalni partnerji** (hoteli, restavracije, aktivnosti) z VLM-verified slikami
+- **Izdelki** (kulinarika, vino, med, olje, obrt, spominki)
+- **Izkušnje** (turi, degustacije, avanture, wellness) z realnimi rezervacijami
+- **Zbirke** za navigacijo (zimske, poletne, romantične, družinske, …)
+- Nakupni proces tržnice + košarica + Stripe checkout
 
 ### 🗺️ Zemljevid
 
-- 22 destinacijskih markerjev
-- Tisoči POI iz OpenStreetMap (Overpass API)
-- Wikipedia opisi + AI generirani opisi
-- Kategorije: atrakcije, muzeji, restavracije, narava, razgledi
+- 22 destinacijskih markerjev, Leaflet + OpenStreetMap
+- Tisoči POI (Overpass API) + Wikipedia in AI opisi
+- Vremenska napoved (Open-Meteo) v načrtu potovanj
 
 ### 🏢 B2B portali
 
-**Owner Dashboard (6 tabov):**
-- Moji lokalci (CRUD + status + AI auto-tag)
-- Izdelki (CRUD + AI auto-tag)
-- Izkušnje (CRUD + AI auto-tag)
-- Naročnina (Stripe + paketi)
-- Statistika (views, clicks, AI priporočila, ROI, AI insights, vrednost AI kanala)
-- **Provizije** (predogled tekočega meseca, izdaja računov, zgodovina, PDF, plačilo s kartico)
+**Owner Dashboard:**
+- **Onboarding čarovnik** (5 korakov, 53 % → 82 % completion po P2 izboljšavah)
+- Moji lokalci / Izdelki / Izkušnje (CRUD + AI auto-tag + status moderacije)
+- Rezervacije (strežniško validirane, zaključek, prihodek)
+- Naročnina (Stripe + paketi, vrata: email verifikacija)
+- Statistika (views, clicks, AI priporočila, ROI, vrednost AI kanala)
+- **Provizije** (predogled meseca, izdaja računov, PDF, kartično plačilo)
 
-**Admin Dashboard (5 tabov):**
-- Lokali (upravljanje + featured + approve/reject)
-- Leadi (JoinUs forme)
-- Statistika (MRR, churn, LTV, conversion)
-- Analytics (AI usage, KPI dashboard)
-- Indeksacija (SEO status)
+**Admin Dashboard:**
+- **Moderacijska vrsta** — lokalci, izdelki in izkušnje v eni pending seznamu z oznako tipa
+- Overitev "Preverjen partner" — eksplicitna admin odločitev (approve znak NE podeli)
+- Leadi (homepage B2B prijave — shranjeni v PostgreSQL)
+- Statistika / Analytics (MRR, churn, LTV, AI usage) / Indeksacija (SEO)
 
-### 🔒 Approval Workflow
+### 👥 Skupnost
 
-```
-DRAFT → PENDING → APPROVED → PUBLISHED → ARCHIVED
-                 ↓
-              REJECTED (z razlogom)
-```
+- **"Vprašaj lokalca"** — grounded AI Q&A nad bazo (javna vprašanja = social proof + SEO)
+- **UGC recenzije in javna galerija** skupnosti
+- Web push obvestila (VAPID) + dnevni opomniki
 
-- Novi lokalci začnejo kot `draft`
-- Lastnik odda v pregled → `pending`
-- Admin odobri → `published` + AI auto-enrichment (SEO meta, ključne besede)
-- Admin zavrne z 8 strukturiranimi razlogi
-- AI uporablja SAMO `published` lokale
+---
 
-### ⭐ Partner Quality Score (0-100)
+## Varnostne plasti (P3)
 
-| Signal | Utež | Kaj meri |
-|--------|------|---------|
-| Profile completion | 30 | 13 polj z utežmi |
-| Image quality | 15 | Število slik (0-5+) |
-| Description quality | 15 | Kratek + dolgi opis |
-| AI tags | 10 | Specialitete/tagi |
-| Admin verification | 10 | verifiedByAdmin |
-| Rating | 10 | Uporabniške ocene |
-| Data freshness | 10 | Čas od zadnje posodobitve |
+Trije neodvisni auditi (auth/authz, booking/Stripe, AI/data) → utrjevanje v 49 datotekah:
 
-**Featured auto-qualification:** Premium + Q>90 + Verified → Featured
-
-### 🎯 AI Ranking Engine
-
-```
-Filter (published only) → Score → Rank → Transparency
-```
-
-| Dimenzija | Utež |
-|-----------|------|
-| Relevance | 60% |
-| Quality Score | 15% |
-| Rating | 10% |
-| Distance | 10% |
-| Premium Boost | 5% (max) |
-
-- Konfigurabilne uteži (env variables)
-- Max 5% premium boost — ne preglasi relevance
-- Rating < 3.5 → nobenega boost-a
-- Transparency labels za vsako priporočilo
+| Plast | Mehanizem |
+|-------|-----------|
+| **Seje** | Razveljavitveni `tokenVersion` ob resetu gesla (stara seja umre v ≤ 60 s) |
+| **IDOR/BOLA** | 20/20 lastniških dostopov blokiranih (živo testirano) |
+| **Moderacija** | VSE vsebine skozi pending → approve/reject; **re-moderacija** ob spremembi published vsebine |
+| **Booking integriteta** | Cena/meje/dedup strežniško; duplikat 409; 48-bit številke rezervacij |
+| **Stripe webhook** | Podpis + `ProcessedStripeEvent` dedup (replay-safe) + amount/payment_status verifikacija |
+| **Prompt injection** | Podatki ponudnikov v ovojnici, navodila sistemu izven konteksta |
+| **Admin** | Timing-safe primerjava gesla na vseh rutah, rate limit |
+| **Javne rute** | Izključno `published` vsebine (pending ≠ javen) |
+| **Rate limiting** | Prijava, registracija, track, verify, A/B eventi |
 
 ---
 
@@ -151,17 +133,17 @@ Filter (published only) → Score → Rank → Transparency
 
 | Plast | Tehnologija |
 |-------|------------|
-| Framework | Next.js 16 (App Router, Turbopack) |
-| Jezik | TypeScript 5 |
-| Styling | Tailwind CSS 4 + shadcn/ui (New York) |
-| Database | Prisma 6 + SQLite (dev) / Turso (prod) |
-| Auth | NextAuth.js v4 |
-| AI | GLM preko Puter API + z-ai-web-dev-sdk fallback |
+| Framework | Next.js 16 (App Router, RSC + API Routes) |
+| Jezik | TypeScript 5 (strict) |
+| Styling | Tailwind CSS 4 + shadcn/ui (New York) + Framer Motion |
+| Database | Prisma 6 + SQLite (dev) / **Neon PostgreSQL** (prod, pooler) |
+| Auth | NextAuth.js v4 (credentials, JWT seje, tokenVersion invalidacija) |
+| AI | GLM prek Puter API + z-ai-web-dev-sdk fallback |
 | Maps | Leaflet + OpenStreetMap Overpass API |
 | i18n | next-intl (sl/en/de/it) |
-| Email | Nodemailer |
-| Payments | Stripe (naročnine + enkratna plačila provizijskih računov; demo mode brez ključev) |
-| Deploy | Vercel (javni demo, avtomatski deploy iz `main`) ali Docker Compose (produkcijska priporočena pot) |
+| Email | Nodemailer (demo fallback: console.log) |
+| Payments | Stripe (naročnine + provizijski računi; demo mode brez ključev) |
+| Deploy | Vercel (avtomatski deploy iz `main`) |
 
 ---
 
@@ -169,39 +151,39 @@ Filter (published only) → Score → Rank → Transparency
 
 ```
 Browser → Vercel Edge CDN → Next.js 16 (RSC + API Routes)
-                                ├── SQLite/Turso (Prisma)
+                                ├── Neon PostgreSQL (Prisma, pooler)
                                 ├── Puter API (GLM AI)
                                 ├── OpenStreetMap (POI)
                                 ├── Open-Meteo (Weather)
-                                ├── Stripe (Payments)
+                                ├── Stripe (Payments + webhooks)
                                 └── SMTP (Email)
 ```
 
-**AI fallback chain:** Puter → z-ai-web-dev-sdk → rule-based (nikoli 500 error)
+**Podatkovni model (25 modelov):** User, Owner, SavedItinerary, TripVote, TripComment, TripLike, Listing, ListingEvent, Product, Experience, Review, Order, Booking, Sponsorship, PageView, AnalyticsEvent, AIUsageLog, AuditLog, LocalQuestion, ProcessedStripeEvent, Consultation, PushSubscription, CommissionInvoice, Lead, AbSubscription.
 
 ---
 
 ## Hitri začetek
 
 ```bash
-# 1. Install dependencies
+# 1. Namesti odvisnosti
 bun install
 
-# 2. Setup environment
+# 2. Nastavi okolje
 cp .env.example .env
-# Edit .env (ADMIN_PASSWORD, NEXTAUTH_SECRET, DATABASE_URL)
+# Uredi .env (ADMIN_PASSWORD, NEXTAUTH_SECRET, DATABASE_URL)
 
-# 3. Setup database
+# 3. Postavi bazo
 bun run db:push
 
-# 4. (opcija) demo podatki za prvi vtis — partnerji, listingi, izkušnje,
+# 4. (opcija) demo podatki — partnerji, listingi, izkušnje,
 #    izdelki, rezervacije in provizijski račun (idempotentno)
 bun run db:seed:demo
 
-# 5. Start dev server
+# 5. Zaženi dev strežnik
 bun run dev
 
-# 6. Open http://localhost:3005
+# 6. Odpri http://localhost:3000
 ```
 
 ### Testni računi (demo seed)
@@ -210,28 +192,24 @@ bun run dev
 |-------|-------|-------|
 | Owner — free partner, provizija 12 % | tina@demo.discoverslovenia.si | demo1234 |
 | Owner — premium partner, provizija 0 % | marko@demo.discoverslovenia.si | demo1234 |
-| Owner — admin (samo lokalni/demo seed) | admin@demo.discoverslovenia.si | admin-demo-2026 |
-| Admin portal | — | ADMIN_PASSWORD env |
+| Owner — admin (samo lokalni seed) | admin@demo.discoverslovenia.si | admin-demo-2026 |
+| Admin portal `/admin` | — | `ADMIN_PASSWORD` env |
 
-> Demo seed na javnem Vercel buildu NE ustvari super_admin računa
-> (`SKIP_DEMO_ADMIN=1` — varen za javni predstavitev).
+> Demo seed na javnem Vercel buildu NE ustvari super_admin računa (`SKIP_DEMO_ADMIN=1`).
 
 ---
 
 ## Poslovni model
 
-> **Pivot (Faza 3c):** primarni model je provizija — kot pri Booking.com.
+> **Primarni model:** provizija — kot pri Booking.com, a poštenejše.
 > Turist plača polno ceno neposredno ponudniku; platforma obračuna provizijo
 > **IZKLJUČNO za rezervacije iz AI kanala** (`Booking.source = "consultation"`).
-> Rezervacije iz drugih kanalov so brez provizije.
+> **Direktne rezervacije so brez provizije** (0 %) — ključna konkurenčna prednost.
 
 ### B2C (brezplačno)
 
-Uporabnik nikoli ne plača:
-- AI itinerer: brezplačen
-- AI chatbot in "Vprašaj lokalca": brezplačna osnovna raven
-- Naravno-jezikovno iskanje: brezplačno
-- Plačljive konzultacije (freemium): nadgradnja za poglobljeno načrtovanje
+Uporabnik nikoli ne plača: AI itinerer, chatbot, "Vprašaj lokalca", iskanje.
+Plačljive so le globoke konzultacije (freemium nadgradnja).
 
 ### B2B (provizijski model — primarni)
 
@@ -241,21 +219,17 @@ Uporabnik nikoli ne plača:
 | Premium | **0 %** | €149/mes |
 | Enterprise | **0 %** | €499/mes |
 
-- Znesek se izračuna strežno iz atribuiranih rezervacij (stopnja se zapiše kot snapshot ob izdaji)
-- Samodejni mesečni obračun (cron) + e-poštni račun + PDF izpis
-- **Plačilo s kartico** (Stripe Checkout) ali SEPA nakazilo
-- Tedensko poročilo "Vrednost AI kanala" za partnerje (B2B flywheel)
+- Znesek strežniško izračunan iz atribuiranih rezervacij (snapshot stopnje ob izdaji)
+- Samodejni mesečni obračun (cron) + e-poštni račun + PDF + kartično plačilo
+- Tedensko poročilo "Vrednost AI kanala"
 
 ### Beta
 
-Vsi paketi brezplačni do 30 lokalov. Ob dosegu: 30-dnevni grace period, nato samodejni vklop monetizacije.
+Vsi paketi brezplačni do 30 lokalov, nato 30-dnevni grace period.
 
 ### Affiliate
 
-- Booking.com (5% commission)
-- DiscoverCars (70% commission)
-- Viator (8% commission)
-- Skyscanner (40% commission)
+Booking.com, DiscoverCars, Viator, Skyscanner.
 
 ---
 
@@ -265,17 +239,60 @@ Vsi paketi brezplačni do 30 lokalov. Ob dosegu: 30-dnevni grace period, nato sa
 AI konzultacija → rezervacija (source=consultation) → atribucija izkušnji
    → mesečni cron (1. v mesecu) → CommissionInvoice (INV-YYYYMM-XXXXXX)
    → e-poštni račun + dashboard → plačilo (Stripe Checkout / SEPA)
-   → status: issued → paid (stripePaymentId / paidAt) + potrdilo
+   → status: issued → paid + potrdilo
 ```
 
 | Komponenta | Tehnologija |
 |------------|-------------|
 | Izdaja (ročna + cron) | `src/lib/commissions.ts` (idempotentna, snapshot stopnje) |
 | API | `/api/owner/commissions` (GET predogled, POST `generate`/`mark_paid`) |
-| Samodejni obračun | cron `/api/cron/commission-invoices` (vsak 1. v mesecu) |
-| PDF račun | `/api/owner/commissions/invoice-pdf` (pdf-lib, LiberationSans) |
-| Kartično plačilo | `/api/owner/commissions/checkout` + Stripe webhook (Faza 5) |
-| Audit | `COMMISSION_INVOICE_ISSUED` / `COMMISSION_INVOICE_PAID` sled |
+| Samodejni obračun | cron `/api/cron/commission-invoices` (1. v mesecu) |
+| PDF račun | `/api/owner/commissions/invoice-pdf` (pdf-lib) |
+| Kartično plačilo | `/api/owner/commissions/checkout` + Stripe webhook (dedup + amount check) |
+| Audit | `COMMISSION_INVOICE_ISSUED` / `COMMISSION_INVOICE_PAID` |
+
+---
+
+## Approval in overitveni workflow
+
+```
+DRAFT → PENDING → APPROVED → PUBLISHED → ARCHIVED
+                 ↓
+              REJECTED (s strukturiranim razlogom)
+```
+
+- Novi lokalci/izdelki/izkušnje začnejo kot `draft` → lastnik odda → `pending` → admin odobri → `published`
+- **Re-moderacija:** sprememba objavljene vsebine → nazaj v `pending` (javno skrito do ponovne odobritve)
+- AI in javne rute uporabljajo SAMO `published` vsebine
+
+### Znak "Preverjen partner"
+
+Eksplicitna, ločena admin odločitev — **odobritev (approve) znaka NE podeli**.
+Admin ga podeli/odvzame z gumbom Overi (BadgeCheck) v Lokali tabu, z audit sledjo
+(`LISTING_VERIFIED` / `LISTING_UNVERIFIED`). Znak pomeni: "podatke je preverila ekipa platforme".
+
+### Lead obrazec (B2B lijak)
+
+Homepage prijava ponudnika → model `Lead` (PostgreSQL) → admin Leadi tab
+(statusi: nov → kontaktiran → zaključen).
+
+---
+
+## Partner Quality Score (0–100)
+
+| Signal | Utež | Kaj meri |
+|--------|------|---------|
+| Profile completion | 30 | 13 polj z utežmi |
+| Image quality | 15 | Število slik (0–5+) |
+| Description quality | 15 | Kratek + dolgi opis |
+| AI tags | 10 | Specialitete/tagi |
+| Admin verification | 10 | verifiedByAdmin |
+| Rating | 10 | Uporabniške ocene |
+| Data freshness | 10 | Čas od zadnje posodobitve |
+
+**Featured auto-qualification:** Premium + Q>90 + Verified → Featured.
+
+**AI Ranking Engine:** Relevance 60 % / Quality 15 % / Rating 10 % / Distance 10 % / Premium boost max 5 % — konfigurabilno prek env, transparency labels ob vsakem priporočilu.
 
 ---
 
@@ -285,9 +302,10 @@ AI konzultacija → rezervacija (source=consultation) → atribucija izkušnji
 |---|---|---|
 | `0 6 * * *` | `/api/cron/daily-trip-push` | dnevni push opomniki potovanj |
 | `0 7 * * *` | `/api/cron/recalculate-status` | preračun statusov |
-| `0 8 * * 1` | `/api/cron/weekly-alerts` | tedensko B2B poročilo (vrednost AI kanala) |
 | `0 8 1 * *` | `/api/cron/commission-invoices` | mesečni obračun provizij |
+| `0 8 * * 1` | `/api/cron/weekly-alerts` | tedensko B2B poročilo |
 | `0 9 * * *` | `/api/cron/renewal-reminders` | opomniki obnov naročnin |
+| `0 10 * * *` | `/api/cron/draft-reminders` | nudge osnutkov (optimistična ključavnica) |
 
 Vsak klic je Bearer zaščiten s `CRON_SECRET` (brez njega 401 — fail-closed).
 
@@ -295,26 +313,21 @@ Vsak klic je Bearer zaščiten s `CRON_SECRET` (brez njega 401 — fail-closed).
 
 ## Namestitev
 
-### Vercel (javni demo)
+### Vercel (produkcija)
 
-- Push na `main` sproži avtomatski deploy; produkcijska URL: `i-feel-slovenia.vercel.app`
-- Build: `bun install` + `bun run build` (prisma generate je v buildu, postinstallu IN `next.config.ts`)
-- **Demo baza (Faza 4e):** build ustvari SQLite bazo s demo podatki
-  (`scripts/build-demo-db.sh`), `src/instrumentation.ts` jo ob zagonu skopira v
-  `/tmp` in preusmeri `DATABASE_URL` — vse DB poti delujejo (branje + pisanje
-  per-instanca). Pisanja (rezervacije, računi) se med instancami NE ohranjajo.
-- Izklop demo baze: env `DSA_DISABLE_DEMO_DB=1` (ob preklopu na hosted Postgres)
+- Push na `main` sproži avtomatski deploy → `i-feel-slovenia.vercel.app`
+- Build: `bun install` + `bun run build` (prisma generate v postinstall)
+- **Baza: Neon PostgreSQL** (pooler, `connection_limit=1`) — `DATABASE_URL` env
+- Brez `DATABASE_URL` na Vercelu build ustvari demo SQLite bazo (`DSA_DISABLE_DEMO_DB=1` jo izklopi)
 
-### Docker Compose (produkcijska priporočena pot — Pot A)
+### Docker Compose (alternativa)
 
 ```bash
 cp .env.example .env.docker   # izpolni skrivnosti
 docker compose up -d --build  # app + cron vsebnik, trajen volumen
-docker compose run --rm migrate bun scripts/seed-demo.ts  # (opcija) demo podatki
 ```
 
-Celoten postopek, odločitvena analiza (Vercel + hosted Postgres — Pot B) in
-vsakodnevno vzdrževanje: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
+Celoten postopek in odločitvena analiza: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 
 ---
 
@@ -324,18 +337,21 @@ vsakodnevno vzdrževanje: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 |----------|---------|
 | [PRODUCT-BLUEPRINT.md](PRODUCT-BLUEPRINT.md) | Strateški dokument (FROZEN v1.0) |
 | [TECHNICAL-SPECIFICATION.md](TECHNICAL-SPECIFICATION.md) | Implementacijska specifikacija |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Produkcijska namestitev (Docker/Vercel/Postgres, odločitvena analiza) |
-| [CHANGELOG.md](CHANGELOG.md) | Zgodovina verzij (Faze 0–5) |
-| [docs/ADR.md](docs/ADR.md) | 15 Architecture Decision Records |
-| [docs/RISK-REGISTER.md](docs/RISK-REGISTER.md) | 15 tveganj z mitigacijo |
-| [docs/DATA-FLOW.md](docs/DATA-FLOW.md) | Tok podatkov skozi sistem |
+| [docs/PILOT-TEST-PROTOCOL.md](docs/PILOT-TEST-PROTOCOL.md) | **Pilot protokol — 10 realnih ponudnikov (go/no-go, checklist)** |
+| [docs/COMPETITIVE-ANALYSIS.md](docs/COMPETITIVE-ANALYSIS.md) | **Konkurenčna analiza (GYG/Viator/Withlocals/Kimkim/Bókun/Layla)** |
+| [docs/OUTREACH-TOOLKIT.md](docs/OUTREACH-TOOLKIT.md) | Snovanje/pristopni e-maili za partnerje |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Produkcijska namestitev |
+| [CHANGELOG.md](CHANGELOG.md) | Zgodovina verzij |
+| [docs/ADR.md](docs/ADR.md) | Architecture Decision Records |
+| [docs/RISK-REGISTER.md](docs/RISK-REGISTER.md) | Tveganja z mitigacijo |
+| [docs/DATA-FLOW.md](docs/DATA-FLOW.md) | Tok podatkov |
+| [docs/SECURITY-REVIEW.md](docs/SECURITY-REVIEW.md) | Varnostni pregled |
+| [docs/ACCESSIBILITY-REVIEW.md](docs/ACCESSIBILITY-REVIEW.md) | WCAG 2.1 AA |
 | [docs/OBSERVABILITY-PLAN.md](docs/OBSERVABILITY-PLAN.md) | Monitoring in alerting |
 | [docs/MIGRATION-STRATEGY.md](docs/MIGRATION-STRATEGY.md) | Varne DB migracije |
 | [docs/SEED-STRATEGY.md](docs/SEED-STRATEGY.md) | Dev/demo/prod seed |
-| [docs/FEATURE-FLAGS.md](docs/FEATURE-FLAGS.md) | Postopno vklop funkcij |
-| [docs/BACKUP-RECOVERY.md](docs/BACKUP-RECOVERY.md) | Backup in recovery test |
-| [docs/SECURITY-REVIEW.md](docs/SECURITY-REVIEW.md) | Varnostni pregled |
-| [docs/ACCESSIBILITY-REVIEW.md](docs/ACCESSIBILITY-REVIEW.md) | WCAG 2.1 AA |
+| [docs/FEATURE-FLAGS.md](docs/FEATURE-FLAGS.md) | Postopni vklop funkcij |
+| [docs/BACKUP-RECOVERY.md](docs/BACKUP-RECOVERY.md) | Backup in recovery |
 | [docs/INCIDENT-PLAYBOOK.md](docs/INCIDENT-PLAYBOOK.md) | Kaj narediti ko X odpove |
 | [docs/VERSIONING.md](docs/VERSIONING.md) | Verzioniranje |
 
@@ -346,40 +362,44 @@ vsakodnevno vzdrževanje: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 ### Environment variables
 
 ```bash
-# Database — glej .env.example (file:../db/custom.db; na Vercelu prevzame
-# instrumentation.ts demo bazo)
+# Database — dev: SQLite; prod: Neon PostgreSQL (pooler)
 DATABASE_URL=file:../db/custom.db
+# DATABASE_URL=postgresql://…neon…/neondb?sslmode=require&pgbouncer=true&connection_limit=1
 
 # Auth
 ADMIN_PASSWORD=CHANGE_ME_TO_RANDOM_32_CHAR_STRING
-NEXTAUTH_SECRET=your-secret
-NEXTAUTH_URL=http://localhost:3005
+ADMIN_EMAIL=admin@discoverslovenia.ai
+NEXTAUTH_SECRET=GENERIRAJ_RANDOM_SECRET
+NEXTAUTH_URL=http://localhost:3000
 
 # Cron (OBVEZNO v produkciji — fail-closed 401 brez njega)
 CRON_SECRET=GENERIRAJ_RANDOM_SECRET
 
-# AI (Puter — free)
+# AI (Puter — free tier)
 PUTER_AUTH_TOKEN=your-token
 PUTER_BASE_URL=https://api.puter.com/puterai/openai/v1/
 PUTER_MODEL=z-ai/glm-5.1
 
-# Stripe (optional — demo mode brez ključev; nujno za kartično plačilo računov)
+# Stripe (optional — demo mode brez ključev)
 STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PREMIUM_PRICE_ID=price_...
+STRIPE_ENTERPRISE_PRICE_ID=price_...
 
 # Email (optional — console.log fallback)
 SMTP_HOST=localhost
 SMTP_PORT=587
+SMTP_FROM=Discover Slovenia AI <noreply@discoverslovenia.ai>
 
-# Vercel demo baza — izklop (samo, če uporabljate hosted Postgres)
-# DSA_DISABLE_DEMO_DB=1
-```
+# Web push (optional)
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:admin@example.com
 
-### Ranking configuration (optional override)
-
-```bash
-RANKING_WEIGHTS='{"relevance":60,"quality":15,"rating":10,"distance":10,"premium":5}'
-FEATURED_REQUIREMENTS='{"minPlan":"premium","minQualityScore":90,"requireAdminVerification":true}'
+# Ranking override (optional)
+# RANKING_WEIGHTS='{"relevance":60,"quality":15,"rating":10,"distance":10,"premium":5}'
+# FEATURED_REQUIREMENTS='{"minPlan":"premium","minQualityScore":90,"requireAdminVerification":true}'
 ```
 
 ---
