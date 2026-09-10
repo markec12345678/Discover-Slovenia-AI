@@ -21,6 +21,9 @@ interface AnalyticsResponse {
     totalViews: number;
     totalClicks: number;
     totalLeads: number;
+    // P4-6 (najdba #4 iz generale): gostova povpraševanja iz modalov lokalov
+    // (ListingEvent type="lead") — prej za lastnika popolnoma nevidna
+    guestInquiries: number;
     totalAiRecommendations: number;
     conversionRate: number;
     listingsCount: number;
@@ -165,7 +168,7 @@ export async function GET() {
     // 1) citati lokalov v konzultacijah (ListingEvent source="consultation")
     // 2) rezervacije iz konzultacij z atribucijo (Booking.source="consultation")
     const experienceIds = experiences.map((e) => e.id);
-    const [consultationCitations, consultationBookings] = await Promise.all([
+    const [consultationCitations, consultationBookings, guestInquiries] = await Promise.all([
       db.listingEvent.count({
         where: {
           type: "ai_recommendation",
@@ -179,6 +182,13 @@ export async function GET() {
           experienceId: { in: experienceIds },
         },
         select: { experienceName: true, total: true },
+      }),
+      // P4-6: gostova povpraševanja ("Pošlji povpraševanje" v modalu lokala)
+      db.listingEvent.count({
+        where: {
+          type: "lead",
+          listing: { ownerId: owner.id },
+        },
       }),
     ]);
 
@@ -316,6 +326,7 @@ export async function GET() {
         totalViews,
         totalClicks,
         totalLeads,
+        guestInquiries,
         totalAiRecommendations: listingAiRecommendations,
         conversionRate,
         listingsCount: listings.length,

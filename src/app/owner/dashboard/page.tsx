@@ -2165,6 +2165,7 @@ interface AnalyticsData {
     totalViews: number;
     totalClicks: number;
     totalLeads: number;
+    guestInquiries: number;
     totalAiRecommendations: number;
     conversionRate: number;
     listingsCount: number;
@@ -2360,8 +2361,8 @@ function StatisticsTab({
         </div>
       </div>
 
-      {/* KPI kartice (5 → ena vrstica na desktopu) */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+      {/* KPI kartice (6 → ena vrstica na desktopu) */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-6">
         <KpiCard
           icon={Eye}
           label="Skupni ogledi"
@@ -2374,9 +2375,16 @@ function StatisticsTab({
           value={kpi.totalClicks.toLocaleString("sl-SI")}
           color="primary"
         />
+        {/* P4-6 (najdba #4): gostova povpraševanja — prej nevidna za lastnika */}
+        <KpiCard
+          icon={MessageCircle}
+          label="Povpraševanja gostov"
+          value={(kpi.guestInquiries ?? 0).toLocaleString("sl-SI")}
+          color="sky"
+        />
         <KpiCard
           icon={Mail}
-          label="Lead-i"
+          label="B2B prijave"
           value={kpi.totalLeads.toLocaleString("sl-SI")}
           color="amber"
         />
@@ -3276,7 +3284,7 @@ function KpiCard({
   icon: typeof Eye;
   label: string;
   value: string;
-  color: "primary" | "amber" | "emerald";
+  color: "primary" | "amber" | "emerald" | "sky";
   /** Opcijski podnapis (razlaga števca — npr. AI priporočila). */
   hint?: string;
 }) {
@@ -3291,6 +3299,8 @@ function KpiCard({
                 ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
                 : color === "emerald"
                 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                : color === "sky"
+                ? "bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400"
                 : "bg-primary/10 text-primary"
             )}
           >
