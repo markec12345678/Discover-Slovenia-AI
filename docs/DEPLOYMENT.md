@@ -24,23 +24,28 @@ Diagnoza (GitHub Deployments API + izolirana reprodukcija builda):
   in brez baze → exit 0 (vse build-time poizvedbe imajo try/catch fallback,
   dinamične strani se ne prerenderajo).
 
-**Kaj to pomeni za Vercel:** build skripta je sedaj prenosljiva med okolji
-(`scripts/copy-standalone.sh` se na Vercelu pogojno preskoči). Če deployment
-še vedno pada, je naslednji diagnostični korak **vpogled v Vercel build log**
-(lastnik projekta ima dostop do dashboarda):
+**Kaj to pomeni za Vercel:** ugotovitev iz dveh zaporednih testov (commit
+`6b1e9e7` s popravljeno build skripto je na Vercelu ŠE VEDNO padel, čeprav
+ista skripta preverjeno deluje v izolaciji in na CI): **Vercel (Next.js
+preset) poganja lastni build ukaz (`next build`) in ne našega `bun run
+build`** — postinstall hook pa ni zagotovljen pri vseh namestitvenih
+upraviteljih.
+
+**Dokončna rešitev (Faza 4d, commit f9b29d7+):** `next.config.ts` ob
+nalaganju (obvezno, pred vsakim prevajanjem modulov) sam prigenerira Prisma
+klienta (`execSync("npx prisma generate")` v try/catch). E2E simulacija
+Vercela — neposreden `next build` BREZ skripte, BREZ postinstalla, BREZ
+generiranega klienta, BREZ `DATABASE_URL` → **exit 0**.
+
+Če deployment po tem še vedno pada, je naslednji diagnostični korak vpogled
+v Vercel build log (lastnik projekta ima dostop do dashboarda):
 
 ```bash
-npx vercel inspect dpl_4dEkkNU2LmQStfLEdPweyFPYjdwx --logs   # zadnji padli
+npx vercel inspect dpl_HRJaofJLbjuF9WMH4b3X7DY5LG7y --logs   # zadnji padli
 ```
 
-Najverjetnejši preostali vzroki po_prioriteti (vpogled v log potrdi katerega):
-1. Vercel ne izvede `bun run build` ampak lastni build ukaz → preveri
-   Project Settings → Build Command (nastavi `bun run build`), pri čemer
-   `postinstall: prisma generate` pokrije generiranje klienta;
-2. namestitev odvisnosti (bun/npm) preskoči root `postinstall` → enaka
-   rešitev kot (1);
-3. manjkajoče okoljske spremenljivke v Vercel projektu (glej matriko v
-   razdelku 5).
+Preostali možni vzroki: manjkajoče okoljske spremenljivke v Vercel projektu
+(glej matriko v razdelku 5) ali okrnjena namestitev odvisnosti.
 
 A tudi ob zelenem buildu **runtime baze ne more delovati** na serverless
 (vzrok #2 — SQLite) — za Vercel je obvezna migracija na hosted Postgres

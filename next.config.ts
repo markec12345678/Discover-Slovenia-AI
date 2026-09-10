@@ -1,5 +1,21 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { execSync } from "node:child_process";
+
+// ─── Prisma klient pred vsakim buildom (Vercel-varna rešitev) ─────────────
+// ZAKAJ TU: Vercel (Next.js preset) poganja LASTNI build ukaz (`next build`)
+// in ne našega `bun run build` — postinstall hook pa ni zagotovljen pri
+// vseh namestitvenih upraviteljih. `next.config.ts` se naloži OBVEZNO in
+// PREV vsakim prevajanjem modulov, zato klienta prigeneriramo tu.
+// (~200 ms; harmless kjer je klient že generiran — Docker build skripta
+// in CI ga poganjajo tudi sami. Napaka se tiho prenese — pravi vzrok se
+// pokaže kasneje z jasnejšo sporočilom.)
+try {
+  execSync("npx prisma generate", { stdio: "ignore" });
+} catch {
+  // npx manjka (npr. čisti bun okolje) ali prisma CLI ni nameščen —
+  // nadaljuj; build skripta/postinstall prevzameta odgovornost.
+}
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
