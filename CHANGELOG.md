@@ -45,6 +45,97 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.2.0] — 2026-09-10
+
+### Dodano
+
+#### Poslovni model — pivot na provizijo (kot Booking.com)
+
+- **Faza 3c — pivot "ponudniki plačajo"**: turist plača polno ceno neposredno ponudniku;
+  platforma obračuna provizijo IZKLJUČNO za rezervacije iz AI kanala
+  (`Booking.source = "consultation"`). Rezervacije od drugod ostanejo brez provizije
+- **Faza 3d — B2B sinteza**: owner analytics "vrednost AI kanala" (prikazi,
+  priporočila, klikovne stopnje) + prenovljena stran `/za-ponudnike`
+- **Faza 3e — tedensko poročilo "Vrednost AI kanala"** (cron `weekly-alerts`, B2B flywheel)
+
+#### Provizijski obračun (Faza 4a–4c)
+
+- **4a — provizijski model**: `CommissionInvoice` (idempotentna izdaja na
+  koledarski mesec, snapshot stopnje), `/api/owner/commissions` (GET predogled +
+  zgodovina, POST `generate` / `mark_paid`), nov zavihek **Provizije** v owner
+  dashboardu (KPI, predogled tekočega meseca, zgodovina računov)
+- **4b — samodejni mesečni obračun**: cron `/api/cron/commission-invoices`
+  (vsak 1. v mesecu, `vercel.json`), e-poštni račun lastniku, deljena logika v
+  `src/lib/commissions.ts` (12 % free partnerji / 0 % premium+enterprise)
+- **4c — PDF izpis provizijskega računa**: `/api/owner/commissions/invoice-pdf`
+  (pdf-lib, vključeni LiberationSans fonti — šumniki delujejo) + realistični
+  demo seed (`scripts/seed-demo.ts`: 4 partnerji, 10 listingov, 10 izkušenj,
+  6 izdelkov, 5 rezervacij)
+
+#### Faza 5 — kartično plačilo provizijskih računov
+
+- `/api/owner/commissions/checkout` — Stripe Checkout (enkratno plačilo, EUR,
+  znesek strežno preverjen iz računa; demo način brez ključev vrne 503 z razlago)
+- Webhook `checkout.session.completed` razširjen z `type=commission_invoice`:
+  idempotentno označi račun kot plačan (`paidAt`, `stripePaymentId`), audit log,
+  potrdilo o plačilu po e-pošti
+- Owner dashboard: gumb **"Plačaj s kartico"** (viden samo, kadar Stripe ni v
+  demo načinu) + obdelava povratka s Stripa (`?commission=success|cancelled`)
+
+#### Vsebina in engagement (Faza 0–2)
+
+- Faza 0: povezan obstoječi engagement loop, odstranjen lažni UX
+- Faza 1: dogodki v načrtih potovanj, AI pakirni seznam, glasovanje skupine,
+  PDF izvoz itinererja
+- Faza 2: UGC recenzije in javna galerija skupnosti; **"Vprašaj lokalca"**
+  (grounded AI Q&A nad bazo lokalov); web push obvestila (VAPID)
+- Realne rezervacije izkušenj + potrditvene e-pošte; obnovljen nakupni proces
+  tržnice
+
+#### Monetizacija in retencija (Faza 3a–3b)
+
+- Faza 3a: konverzijska pot na 322 SEO straneh + affiliate monetizacija
+  (Booking.com, DiscoverCars, Viator, Skyscanner)
+- Faza 3b: dnevni push opomniki za shranjena potovanja (cron `daily-trip-push`)
+- Faza 3b-2: plačljive konzultacije "Vprašaj lokalca" (freemium B2C) + e-poštna
+  dostava s privatno povezavo (`/konzultacija/[token]`)
+
+#### Infrastruktura (Faza 4d–4e)
+
+- **4d — produkcijska namestitev**: Docker + Compose (app + ločen cron vsebnik,
+  imenovan volumen, `docker/crontab.template`), `docs/DEPLOYMENT.md`
+  (odločitvena analiza Pot A/B), `src/proxy.ts` z varovalko proti neskončni
+  standalone zanki (Next.js 16 rewrite loop — 4763 povratnih povezav na 1
+  zahtevo prej), `src/lib/sponsorships.ts`
+- **4e — Vercel demo runtime DB**: build-time demo SQLite baza
+  (`scripts/build-demo-db.sh`: `prisma db push` + seed BREZ super_admin računa —
+  varen za javni demo), `src/instrumentation.ts` ob zagonu kopira bazo v
+  zapisljivi `/tmp` in preusmeri `DATABASE_URL` (samo na Vercelu, samo za
+  `file:` pote, izklop z `DSA_DISABLE_DEMO_DB=1`), `outputFileTracingIncludes`
+  vključi `db/` v serverless bundle — vse DB poti (npr. `/api/products`) na
+  Vercelu zdaj delujejo; pisanje je per-instanca (demo omejitev, dokumentirano)
+
+### Popravljeno
+
+- **Vercel build padci (30/30 od 15. 7. 2026)**: `prisma generate` zdaj v build
+  skripti, `postinstall` hooku IN `next.config.ts` (Vercel poganja lastni build —
+  prej klient ni bil generiran → `Module not found: .prisma/client/index-browser`)
+- Vercel projekt: `installCommand: bun install` (prej `npm install` → exit 1)
+- Vercel-varna build skripta — pogojno kopiranje standalone
+  (`scripts/copy-standalone.sh`)
+- Podvojen React key v ExperienceModal (BookingSection + ReviewSection)
+- webpack dev mode + eksplicitna vrata v dev skripti (OOM stabilnost)
+
+### Spremenjeno
+
+- B2B monetizacija: provizija 12 % na AI-prinesene rezervacije je ZDAJ primarni
+  model za free partnerje; Premium (149 €/mes) / Enterprise (499 €/mes)
+  naročnina = 0 % provizije + rangirni boost
+- `CommissionInvoice` nov atribut `stripePaymentId` (Stripe PaymentIntent za
+  uskladitev kartičnih plačil; null = ročno/SEPA)
+
+---
+
 ## [1.0.0] — 2026-07-15
 
 ### Dodano (Added)

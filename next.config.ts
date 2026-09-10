@@ -60,6 +60,13 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Vercel demo baza (Faza 4e): db/demo-seed.db se zgradi med buildom
+  // (scripts/build-demo-db.sh) in mora biti vključena v serverless bundle —
+  // nft tracer je sam ne odkrije (dostop prek fs, ne prek importov).
+  // Runtime: src/instrumentation.ts jo skopira v /tmp.
+  outputFileTracingIncludes: {
+    "/**": ["./db/**"],
+  },
   // ignoreBuildErrors odstranjen 2026-09: `tsc --noEmit` je zdaj čist (0 napak)
   reactStrictMode: false,
   images: {

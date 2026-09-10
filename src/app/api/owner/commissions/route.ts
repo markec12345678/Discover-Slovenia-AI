@@ -10,6 +10,7 @@ import {
   monthLabel,
   issueCommissionInvoice,
 } from "@/lib/commissions";
+import { isStripeDemo } from "@/lib/stripe-server";
 
 // ============================================================================
 // /api/owner/commissions — provizijski model (Faza 4a, Booking-style)
@@ -103,6 +104,9 @@ export async function GET() {
       rate,
       isPremium: premium,
       commissionRateStandard: COMMISSION_RATE,
+      // Faza 5: ali je kartično plačilo (Stripe Checkout) na voljo —
+      // dashboard skrije gumb "Plačaj s kartico" v demo načinu.
+      stripeEnabled: !isStripeDemo(),
       currentMonth: {
         monthLabel: monthLabel(current.start),
         bookingCount: currentAgg._count,

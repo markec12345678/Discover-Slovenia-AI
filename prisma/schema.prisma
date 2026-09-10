@@ -590,6 +590,9 @@ model CommissionInvoice {
   status        String    @default("issued") // issued | paid
   issuedAt      DateTime  @default(now())
   paidAt        DateTime?
+  // Stripe PaymentIntent ID, kadar je račun plačan prek kartice (Faza 5);
+  // null = ročno/SEPA označeno plačilo (mark_paid).
+  stripePaymentId String?
   createdAt     DateTime  @default(now())
 
   @@unique([ownerId, periodStart]) // idempotenca: en račun na obdobje

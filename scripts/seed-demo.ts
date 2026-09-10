@@ -84,7 +84,11 @@ async function main() {
   await cleanup();
 
   const pw = await bcrypt.hash("demo1234", 12);
-  const adminPw = await bcrypt.hash("admin-demo-2026", 12);
+  // super_admin demo račun IZPUSTIMO, ko seed poganja javni (Vercel) build —
+  // SKIP_DEMO_ADMIN=1 (glej scripts/build-demo-db.sh). Privatni Docker demo
+  // (Pot A) ga še vedno ustvari (geslo se izpiše na koncu seeda).
+  const skipAdmin = process.env.SKIP_DEMO_ADMIN === "1";
+  const adminPw = skipAdmin ? "" : await bcrypt.hash("admin-demo-2026", 12);
   const now = new Date();
   const lastMonth = previousMonth();
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 1, 12, 0, 0);
@@ -115,13 +119,19 @@ async function main() {
       businessName: "Primorska trgovina Piran", plan: "free", phone: "+386 5 678 901",
     },
   });
-  await db.owner.create({
-    data: {
-      email: `admin${DEMO_DOMAIN}`, name: "Demo Admin", passwordHash: adminPw,
-      businessName: "Discover Slovenia AI (demo)", plan: "enterprise", role: "super_admin",
-    },
-  });
-  console.log("Partnerji: ana, marko (premium), tina, luka, admin — vsi @demo.discoverslovenia.si");
+  if (!skipAdmin) {
+    await db.owner.create({
+      data: {
+        email: `admin${DEMO_DOMAIN}`, name: "Demo Admin", passwordHash: adminPw,
+        businessName: "Discover Slovenia AI (demo)", plan: "enterprise", role: "super_admin",
+      },
+    });
+  }
+  console.log(
+    skipAdmin
+      ? "Partnerji: ana, marko (premium), tina, luka — vsi @demo.discoverslovenia.si (admin izpuščen)"
+      : "Partnerji: ana, marko (premium), tina, luka, admin — vsi @demo.discoverslovenia.si"
+  );
 
   // ─── Listingi ─────────────────────────────────────────────────────────────
   const L = (data: Parameters<typeof db.listing.create>[0]["data"]) => db.listing.create({ data });
@@ -453,7 +463,11 @@ async function main() {
   console.log("\n✅ DEMO SEED DOKONČAN");
   console.log("   Prijava partnerja (free, provizija 12 %):  tina@demo.discoverslovenia.si / demo1234");
   console.log("   Prijava partnerja (premium, 0 %):          marko@demo.discoverslovenia.si / demo1234");
-  console.log("   Admin:                                    admin@demo.discoverslovenia.si / admin-demo-2026");
+  if (skipAdmin) {
+    console.log("   Admin: IZPUŠČEN (SKIP_DEMO_ADMIN=1 — varen za javni Vercel demo)");
+  } else {
+    console.log("   Admin:                                    admin@demo.discoverslovenia.si / admin-demo-2026");
+  }
 }
 
 main()

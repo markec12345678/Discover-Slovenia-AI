@@ -212,7 +212,40 @@ cenejša, enostavnejša in popolnoma pod nadzorom.
 
 ---
 
-## 6. Zgodovina sprememb (Faza 4d)
+## 6. VERCEL DEMO NAČIN (Faza 4e) — SQLite runtime brez Postgresa
+
+Za javni demo na `i-feel-slovenia.vercel.app` (brez hosted Postgresa) je
+implementirana **demo baza zgrajena med buildom**:
+
+| Korak | Kje | Kaj naredi |
+|---|---|---|
+| 1. Build | `scripts/build-demo-db.sh` (samo, ko je `VERCEL=1`) | `prisma db push` + `seed-demo.ts` (BREZ super_admin računa — `SKIP_DEMO_ADMIN=1`) → `db/demo-seed.db` |
+| 2. Bundle | `next.config.ts` → `outputFileTracingIncludes: {"/\**": ["./db/\**"]}` | nft tracer vključi `db/` v serverless bundle |
+| 3. Zagon | `src/instrumentation.ts` (1× na instanco) | skopira `db/demo-seed.db` → `/tmp/dsa-demo.db`, preusmeri `DATABASE_URL` |
+| 4. Runtime | `src/lib/db.ts` | absolutna `/tmp` pot — SQLite v zapisljivem območju |
+
+**Varovalke (kdaj se NE aktivira):** ni Vercel (`VERCEL≠1`) · `DATABASE_URL`
+ni `file:` shema (hosted Postgres — Pot B) · `DSA_DISABLE_DEMO_DB=1` ·
+seed datoteka manjka.
+
+**Omejitve (iskreno):**
+
+- **Pisanje je per-instanca in EPHEMERNO** — rezervacije/računi/prijava
+  obiskovalcev javnega demo se NE ohranjajo med hladnimi zagoni in so lahko
+  nedosledni med vzporednimi instancami. Za prave podatke uporabite Pot A
+  (Docker) ali Pot B (hosted Postgres).
+- Demo partnerji (geslo `demo1234`, domena `@demo.discoverslovenia.si`) so
+  NAMENOMO javni — obiskovalcem omogočajo ogled owner dashboarda. Super_admin
+  račun v javnem buildu NE obstaja.
+- Brez SMTP/AI ključev e-pošta pada v console fallback, AI pa v pravila.
+
+Preklop na Pot B kasneje: nastavite `DATABASE_URL` na Postgres URL v Vercel
+env (instrumentation se samodejno umakne — ne `file:` shema) in spremenite
+`provider` v `prisma/schema.prisma` (glej razdelek 4).
+
+---
+
+## 7. Zgodovina sprememb (Faza 4d)
 
 - `package.json`: `prisma generate` v build skripti + `postinstall`; build
   prek `--webpack`; kopiranje `interception-route-rewrite-manifest.js` v
@@ -225,3 +258,14 @@ cenejša, enostavnejša in popolnoma pod nadzorom.
   produkcijska pot A.
 - E2E: Vercel-simulacija builda (brez DB, brez generate) exit 0; standalone
   runtime E2E (razdelek 2).
+
+### Faza 4e + 5 (2026-09-10)
+
+- `scripts/build-demo-db.sh` + `src/instrumentation.ts` + `outputFileTracingIncludes`
+  (NOVI): Vercel demo runtime DB (razdelek 6) — odpravljeno 500 `/api/products`
+  in prazne DB sekcije na produkciji.
+- `seed-demo.ts`: `SKIP_DEMO_ADMIN=1` (javni build brez super_admin).
+- `package.json`: prenosljive poti (ne več `/home/z/Discover-Slovenia-AI`),
+  `db:seed:demo` sedaj sam izvede `prisma db push`.
+- Faza 5: `/api/owner/commissions/checkout` (Stripe enkratno plačilo) + webhook
+  `type=commission_invoice` + potrdilo po e-pošti + gumb v dashboardu.

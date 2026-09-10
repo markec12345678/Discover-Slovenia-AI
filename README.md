@@ -1,6 +1,6 @@
 # 🇸🇮 Discover Slovenia AI — AI Tourism Platform
 
-> **AI-poganjana turistična platforma za Slovenijo** — AI načrtovalec potovanj, tržnica lokalnih izdelkov in izkušenj, B2B portali za ponudnike, interaktivni zemljevid, in pavšalni oglasni model s Partner Quality Score.
+> **AI-poganjana turistična platforma za Slovenijo** — AI načrtovalec potovanj, tržnica lokalnih izdelkov in izkušenj, B2B portali za ponudnike, interaktivni zemljevid, in provizijski poslovni model (kot Booking.com) z avtomatiziranim obračunom in plačilom računov.
 
 [![CI](https://github.com/markec12345678/Discover-Slovenia-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/markec12345678/Discover-Slovenia-AI/actions/workflows/ci.yml)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
@@ -20,8 +20,11 @@
 - [Hitri začetek](#hitri-začetek)
 - [AI funkcionalnosti](#ai-funkcionalnosti)
 - [Poslovni model](#poslovni-model)
+- [Provizijski obračun](#provizijski-obračun)
 - [Partner Quality Score](#partner-quality-score)
 - [Approval Workflow](#approval-workflow)
+- [Cron opravila](#cron-opravila)
+- [Namestitev](#namestitev)
 - [Dokumentacija](#dokumentacija)
 - [Konfiguracija](#konfiguracija)
 
@@ -61,6 +64,15 @@ Platforma rešuje **3 ključne probleme**:
 - **28 izdelkov** (kulinarika, vino, med, olje, obrt, spominki)
 - **28 izkušenj** (turi, degustacije, avanture, wellness)
 - **8 zbirk** za navigacijo (zimski, poletni, romantični, družinski, itd.)
+- Realne rezervacije izkušenj s potrditvenimi e-poštami in obnovljen nakupni proces tržnice
+
+### 👥 Skupnost in Vprašaj lokalca
+
+- **UGC recenzije in javna galerija** skupnosti (Faza 2)
+- **"Vprašaj lokalca"** — grounded AI Q&A nad bazo lokalov, izdelkov in izkušenj
+- **Plačljive konzultacije** (freemium B2C, Faza 3b-2) — zasebna povezava `/konzultacija/[token]`
+- **Web push obvestila** (VAPID) + dnevni opomniki za shranjena potovanja (Faza 3b)
+- **Dogodki v načrtih potovanj, AI pakirni seznam, glasovanje skupine, PDF izvoz** (Faza 1)
 
 ### 🗺️ Zemljevid
 
@@ -71,12 +83,13 @@ Platforma rešuje **3 ključne probleme**:
 
 ### 🏢 B2B portali
 
-**Owner Dashboard (5 tabov):**
+**Owner Dashboard (6 tabov):**
 - Moji lokalci (CRUD + status + AI auto-tag)
 - Izdelki (CRUD + AI auto-tag)
 - Izkušnje (CRUD + AI auto-tag)
 - Naročnina (Stripe + paketi)
-- Statistika (views, clicks, AI priporočila, ROI, AI insights)
+- Statistika (views, clicks, AI priporočila, ROI, AI insights, vrednost AI kanala)
+- **Provizije** (predogled tekočega meseca, izdaja računov, zgodovina, PDF, plačilo s kartico)
 
 **Admin Dashboard (5 tabov):**
 - Lokali (upravljanje + featured + approve/reject)
@@ -147,8 +160,8 @@ Filter (published only) → Score → Rank → Transparency
 | Maps | Leaflet + OpenStreetMap Overpass API |
 | i18n | next-intl (sl/en/de/it) |
 | Email | Nodemailer |
-| Payments | Stripe (demo mode) |
-| Deploy | Vercel |
+| Payments | Stripe (naročnine + enkratna plačila provizijskih računov; demo mode brez ključev) |
+| Deploy | Vercel (javni demo, avtomatski deploy iz `main`) ali Docker Compose (produkcijska priporočena pot) |
 
 ---
 
@@ -176,46 +189,62 @@ bun install
 
 # 2. Setup environment
 cp .env.example .env
-# Edit .env (ADMIN_PASSWORD, PUTER_AUTH_TOKEN, DATABASE_URL)
+# Edit .env (ADMIN_PASSWORD, NEXTAUTH_SECRET, DATABASE_URL)
 
 # 3. Setup database
 bun run db:push
-bun run db:seed:dev  # Optional: seed with test data
 
-# 4. Start dev server
+# 4. (opcija) demo podatki za prvi vtis — partnerji, listingi, izkušnje,
+#    izdelki, rezervacije in provizijski račun (idempotentno)
+bun run db:seed:demo
+
+# 5. Start dev server
 bun run dev
 
-# 5. Open http://localhost:3000
+# 6. Open http://localhost:3005
 ```
 
-### Test accounts (dev seed)
+### Testni računi (demo seed)
 
 | Vloga | Email | Geslo |
 |-------|-------|-------|
-| Owner (free) | beta-test@demo.si | test123 |
-| Owner (premium) | premium@demo.si | premium123 |
-| User | user@demo.si | user123 |
-| Admin | — | ADMIN_PASSWORD env |
+| Owner — free partner, provizija 12 % | tina@demo.discoverslovenia.si | demo1234 |
+| Owner — premium partner, provizija 0 % | marko@demo.discoverslovenia.si | demo1234 |
+| Owner — admin (samo lokalni/demo seed) | admin@demo.discoverslovenia.si | admin-demo-2026 |
+| Admin portal | — | ADMIN_PASSWORD env |
+
+> Demo seed na javnem Vercel buildu NE ustvari super_admin računa
+> (`SKIP_DEMO_ADMIN=1` — varen za javni predstavitev).
 
 ---
 
 ## Poslovni model
 
+> **Pivot (Faza 3c):** primarni model je provizija — kot pri Booking.com.
+> Turist plača polno ceno neposredno ponudniku; platforma obračuna provizijo
+> **IZKLJUČNO za rezervacije iz AI kanala** (`Booking.source = "consultation"`).
+> Rezervacije iz drugih kanalov so brez provizije.
+
 ### B2C (brezplačno)
 
 Uporabnik nikoli ne plača:
 - AI itinerer: brezplačen
-- AI chatbot: brezplačen
+- AI chatbot in "Vprašaj lokalca": brezplačna osnovna raven
 - Naravno-jezikovno iskanje: brezplačno
-- Vse AI funkcije: brezplačne
+- Plačljive konzultacije (freemium): nadgradnja za poglobljeno načrtovanje
 
-### B2B (pavšalni oglas)
+### B2B (provizijski model — primarni)
 
-| Paket | Cena/mes | Lokalov | Slik | AI boost | Analytics |
-|-------|---------|---------|------|----------|-----------|
-| Free | €0 | 1 | 5 | ❌ | Osnovni |
-| Premium | €149 | 5 | 20 | 5% | Full + AI |
-| Enterprise | €499 | 20 | 50 | 5% + API | Advanced |
+| Partner | Provizija na AI-rezervacije | Naročnina |
+|---------|---------------------------|-----------|
+| Free | **12 %** | €0 |
+| Premium | **0 %** | €149/mes |
+| Enterprise | **0 %** | €499/mes |
+
+- Znesek se izračuna strežno iz atribuiranih rezervacij (stopnja se zapiše kot snapshot ob izdaji)
+- Samodejni mesečni obračun (cron) + e-poštni račun + PDF izpis
+- **Plačilo s kartico** (Stripe Checkout) ali SEPA nakazilo
+- Tedensko poročilo "Vrednost AI kanala" za partnerje (B2B flywheel)
 
 ### Beta
 
@@ -230,12 +259,73 @@ Vsi paketi brezplačni do 30 lokalov. Ob dosegu: 30-dnevni grace period, nato sa
 
 ---
 
+## Provizijski obračun
+
+```
+AI konzultacija → rezervacija (source=consultation) → atribucija izkušnji
+   → mesečni cron (1. v mesecu) → CommissionInvoice (INV-YYYYMM-XXXXXX)
+   → e-poštni račun + dashboard → plačilo (Stripe Checkout / SEPA)
+   → status: issued → paid (stripePaymentId / paidAt) + potrdilo
+```
+
+| Komponenta | Tehnologija |
+|------------|-------------|
+| Izdaja (ročna + cron) | `src/lib/commissions.ts` (idempotentna, snapshot stopnje) |
+| API | `/api/owner/commissions` (GET predogled, POST `generate`/`mark_paid`) |
+| Samodejni obračun | cron `/api/cron/commission-invoices` (vsak 1. v mesecu) |
+| PDF račun | `/api/owner/commissions/invoice-pdf` (pdf-lib, LiberationSans) |
+| Kartično plačilo | `/api/owner/commissions/checkout` + Stripe webhook (Faza 5) |
+| Audit | `COMMISSION_INVOICE_ISSUED` / `COMMISSION_INVOICE_PAID` sled |
+
+---
+
+## Cron opravila
+
+| Urnik (UTC) | Končna točka | Opis |
+|---|---|---|
+| `0 6 * * *` | `/api/cron/daily-trip-push` | dnevni push opomniki potovanj |
+| `0 7 * * *` | `/api/cron/recalculate-status` | preračun statusov |
+| `0 8 * * 1` | `/api/cron/weekly-alerts` | tedensko B2B poročilo (vrednost AI kanala) |
+| `0 8 1 * *` | `/api/cron/commission-invoices` | mesečni obračun provizij |
+| `0 9 * * *` | `/api/cron/renewal-reminders` | opomniki obnov naročnin |
+
+Vsak klic je Bearer zaščiten s `CRON_SECRET` (brez njega 401 — fail-closed).
+
+---
+
+## Namestitev
+
+### Vercel (javni demo)
+
+- Push na `main` sproži avtomatski deploy; produkcijska URL: `i-feel-slovenia.vercel.app`
+- Build: `bun install` + `bun run build` (prisma generate je v buildu, postinstallu IN `next.config.ts`)
+- **Demo baza (Faza 4e):** build ustvari SQLite bazo s demo podatki
+  (`scripts/build-demo-db.sh`), `src/instrumentation.ts` jo ob zagonu skopira v
+  `/tmp` in preusmeri `DATABASE_URL` — vse DB poti delujejo (branje + pisanje
+  per-instanca). Pisanja (rezervacije, računi) se med instancami NE ohranjajo.
+- Izklop demo baze: env `DSA_DISABLE_DEMO_DB=1` (ob preklopu na hosted Postgres)
+
+### Docker Compose (produkcijska priporočena pot — Pot A)
+
+```bash
+cp .env.example .env.docker   # izpolni skrivnosti
+docker compose up -d --build  # app + cron vsebnik, trajen volumen
+docker compose run --rm migrate bun scripts/seed-demo.ts  # (opcija) demo podatki
+```
+
+Celoten postopek, odločitvena analiza (Vercel + hosted Postgres — Pot B) in
+vsakodnevno vzdrževanje: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
+
+---
+
 ## Dokumentacija
 
 | Dokument | Vsebina |
 |----------|---------|
 | [PRODUCT-BLUEPRINT.md](PRODUCT-BLUEPRINT.md) | Strateški dokument (FROZEN v1.0) |
 | [TECHNICAL-SPECIFICATION.md](TECHNICAL-SPECIFICATION.md) | Implementacijska specifikacija |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Produkcijska namestitev (Docker/Vercel/Postgres, odločitvena analiza) |
+| [CHANGELOG.md](CHANGELOG.md) | Zgodovina verzij (Faze 0–5) |
 | [docs/ADR.md](docs/ADR.md) | 15 Architecture Decision Records |
 | [docs/RISK-REGISTER.md](docs/RISK-REGISTER.md) | 15 tveganj z mitigacijo |
 | [docs/DATA-FLOW.md](docs/DATA-FLOW.md) | Tok podatkov skozi sistem |
@@ -256,25 +346,33 @@ Vsi paketi brezplačni do 30 lokalov. Ob dosegu: 30-dnevni grace period, nato sa
 ### Environment variables
 
 ```bash
-# Database
-DATABASE_URL=file:./db/custom.db
+# Database — glej .env.example (file:../db/custom.db; na Vercelu prevzame
+# instrumentation.ts demo bazo)
+DATABASE_URL=file:../db/custom.db
 
 # Auth
 ADMIN_PASSWORD=CHANGE_ME_TO_RANDOM_32_CHAR_STRING
 NEXTAUTH_SECRET=your-secret
+NEXTAUTH_URL=http://localhost:3005
+
+# Cron (OBVEZNO v produkciji — fail-closed 401 brez njega)
+CRON_SECRET=GENERIRAJ_RANDOM_SECRET
 
 # AI (Puter — free)
 PUTER_AUTH_TOKEN=your-token
 PUTER_BASE_URL=https://api.puter.com/puterai/openai/v1/
 PUTER_MODEL=z-ai/glm-5.1
 
-# Stripe (optional)
+# Stripe (optional — demo mode brez ključev; nujno za kartično plačilo računov)
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
 # Email (optional — console.log fallback)
 SMTP_HOST=localhost
 SMTP_PORT=587
+
+# Vercel demo baza — izklop (samo, če uporabljate hosted Postgres)
+# DSA_DISABLE_DEMO_DB=1
 ```
 
 ### Ranking configuration (optional override)

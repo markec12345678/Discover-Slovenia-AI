@@ -6,6 +6,7 @@ import { sendEmail, getAdminEmail } from "@/lib/email";
 import {
   paymentConfirmationEmail,
   adminAlertEmail,
+  commissionInvoicePaidEmail,
 } from "@/lib/email-templates";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { activateSponsorship } from "@/lib/sponsorships";
@@ -75,6 +76,80 @@ export async function POST(request: Request) {
         const type = cs.metadata?.type;
         const customerId =
           typeof cs.customer === "string" ? cs.customer : cs.customer?.id;
+
+        // === COMMISSION INVOICE CHECKOUT (Faza 5 — provizijski račun) ===
+        if (type === "commission_invoice" && cs.metadata?.invoiceId) {
+          const invoice = await db.commissionInvoice.findUnique({
+            where: { id: cs.metadata.invoiceId },
+          });
+          if (!invoice) {
+            console.error(
+              `[stripe/webhook] commission_invoice: račun ${cs.metadata.invoiceId} ni najden`
+            );
+            break;
+          }
+          // Idempotenca — webhook lahko pride dvakrat (retry)
+          if (invoice.status !== "paid") {
+            const paymentIntentId =
+              typeof cs.payment_intent === "string"
+                ? cs.payment_intent
+                : cs.payment_intent?.id ?? null;
+
+            await db.commissionInvoice.update({
+              where: { id: invoice.id },
+              data: {
+                status: "paid",
+                paidAt: new Date(),
+                stripePaymentId: paymentIntentId ?? undefined,
+              },
+            });
+
+            await logAudit({
+              actorId: invoice.ownerId,
+              actorRole: "owner",
+              action: AUDIT_ACTIONS.COMMISSION_INVOICE_PAID,
+              resourceType: "commission_invoice",
+              resourceId: invoice.id,
+              resourceName: invoice.invoiceNumber,
+              metadata: {
+                amount: invoice.amount,
+                via: "stripe",
+                paymentIntentId: paymentIntentId ?? null,
+              },
+            });
+
+            // Potrdilo o plačilu (receipt) lastniku
+            try {
+              const ownerRec = await db.owner.findUnique({
+                where: { id: invoice.ownerId },
+                select: { name: true, email: true },
+              });
+              if (ownerRec) {
+                const { subject, html, text } = commissionInvoicePaidEmail({
+                  ownerName: ownerRec.name,
+                  invoiceNumber: invoice.invoiceNumber,
+                  amount: invoice.amount,
+                  paidAt: new Date(),
+                });
+                await sendEmail({
+                  to: ownerRec.email,
+                  subject,
+                  html,
+                  text,
+                });
+              }
+            } catch (emailErr) {
+              console.error(
+                "[stripe/webhook] commission receipt email napaka:",
+                emailErr
+              );
+            }
+          }
+          console.log(
+            `[stripe/webhook] commission_invoice ${invoice.invoiceNumber} plačan`
+          );
+          break;
+        }
 
         // === SPONSORSHIP CHECKOUT ===
         if (type === "sponsorship" && sponsorshipId && listingId && ownerId && level) {

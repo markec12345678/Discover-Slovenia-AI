@@ -890,6 +890,89 @@ Ekipa Discover Slovenia AI`;
 }
 
 // =========================
+// 11. COMMISSION INVOICE PAID EMAIL (potrdilo — Faza 5, Stripe plačilo)
+// =========================
+
+export type CommissionInvoicePaidEmailData = {
+  ownerName: string;
+  invoiceNumber: string;
+  amount: number;
+  paidAt: Date;
+};
+
+export function commissionInvoicePaidEmail({
+  ownerName,
+  invoiceNumber,
+  amount,
+  paidAt,
+}: CommissionInvoicePaidEmailData): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const amountStr = formatEur(amount);
+  const paidStr = paidAt.toLocaleDateString("sl-SI", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const subject = `Potrdilo: račun ${invoiceNumber} je poravnan (${amountStr})`;
+  const dashboardUrl = `${getBaseUrl()}/owner/dashboard`;
+
+  const content = `
+    <p style="margin-top: 0;">Pozdravljeni <strong>${escapeHtml(ownerName)}</strong>,</p>
+    <p>vaš provizijski račun je <strong>uspešno poravnan</strong>. Hvala za hitro plačilo!</p>
+
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 24px 0;">
+      <div style="font-size: 13px; color: #166534; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">
+        ✅ Potrdilo o plačilu
+      </div>
+      <table style="width: 100%; font-size: 14px;">
+        <tr>
+          <td style="padding: 6px 0; color: #6b7280;">Številka računa:</td>
+          <td style="padding: 6px 0; text-align: right; font-weight: bold; font-family: monospace;">${escapeHtml(invoiceNumber)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #6b7280;">Datum plačila:</td>
+          <td style="padding: 6px 0; text-align: right; font-weight: bold;">${paidStr}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0 0 0; color: #1a2e1a; border-top: 1px solid #bbf7d0; font-weight: bold;">Poravnani znesek:</td>
+          <td style="padding: 10px 0 0 0; text-align: right; border-top: 1px solid #bbf7d0; font-weight: bold; font-size: 18px; color: #2d6a3e;">${amountStr}</td>
+        </tr>
+      </table>
+    </div>
+
+    <p>Zgodovina obračunov in PDF računi so vedno na voljo v vašem dashboardu
+    (zavihek „Provizije"). Če menite, da je prišlo do napake, odgovorite na to sporočilo.</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${dashboardUrl}" style="background: #2d6a3e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+        Odpri dashboard →
+      </a>
+    </div>
+  `;
+
+  const text = `Potrdilo: račun ${invoiceNumber} je poravnan
+
+Pozdravljeni ${ownerName},
+
+vaš provizijski račun je uspešno poravnan.
+
+Številka računa: ${invoiceNumber}
+Datum plačila: ${paidStr}
+Poravnani znesek: ${amountStr}
+
+Zgodovina obračunov in PDF računi so na voljo v vašem dashboardu:
+${dashboardUrl}
+
+Lep pozdrav,
+Ekipa Discover Slovenia AI`;
+
+  return { subject, html: emailTemplate("Potrdilo o plačilu ✅", content), text };
+}
+
+// =========================
 // Helpers
 // =========================
 

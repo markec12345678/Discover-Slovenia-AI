@@ -171,6 +171,38 @@ export default function OwnerDashboardPage() {
       .catch(() => {});
   }, []);
 
+  // Faza 5: povratek s Stripe Checkout (success/cancel redirect).
+  // Prebere ?commission=..., pokaže toast, preklopi na zavihek Provizije
+  // in počisti URL (history.replaceState — brez ponovnega renderanja).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const commission = params.get("commission");
+    if (!commission) return;
+
+    if (commission === "success") {
+      setActiveTab("provizije");
+      toast({
+        title: "Plačilo uspešno",
+        description:
+          "Račun je poravnan — potrdilo po e-pošti je na poti, status se osveži samodejno.",
+      });
+    } else if (commission === "cancelled") {
+      toast({
+        title: "Plačilo preklicano",
+        description: "Račun ostaja odprt — lahko poskusite kasneje ali plačate prek SEPA.",
+      });
+    }
+
+    params.delete("commission");
+    const qs = params.toString();
+    window.history.replaceState(
+      {},
+      "",
+      `${window.location.pathname}${qs ? `?${qs}` : ""}`
+    );
+  }, [toast]);
+
   const fetchListings = useCallback(async () => {
     setLoadingListings(true);
     try {
@@ -2021,6 +2053,8 @@ interface CommissionsData {
   rate: number;
   isPremium: boolean;
   commissionRateStandard: number;
+  /** Faza 5: true, kadar je Stripe konfiguriran (gumb "Plačaj s kartico"). */
+  stripeEnabled: boolean;
   currentMonth: {
     monthLabel: string;
     bookingCount: number;
@@ -2057,6 +2091,7 @@ function CommissionsTab({ onUpgrade }: { onUpgrade: () => void }) {
   const [loading, setLoading] = useState(true);
   const [issuing, setIssuing] = useState(false);
   const [markingId, setMarkingId] = useState<string | null>(null);
+  const [checkoutId, setCheckoutId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -2109,6 +2144,37 @@ function CommissionsTab({ onUpgrade }: { onUpgrade: () => void }) {
       });
     } finally {
       setIssuing(false);
+    }
+  };
+
+  // Faza 5: kartično plačilo prek Stripe Checkout (samo, kadar Stripe ni v
+  // demo načinu — sicer API vrne 503 z razlago). Redirect na Stripe URL.
+  const handleCheckout = async (invoiceId: string) => {
+    setCheckoutId(invoiceId);
+    try {
+      const res = await fetch("/api/owner/commissions/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceId }),
+      });
+      const d = await res.json();
+      if (!res.ok || !d.url) {
+        toast({
+          variant: "destructive",
+          title: "Kartično plačilo ni na voljo",
+          description: d.error || "Poskusite kasneje.",
+        });
+        return;
+      }
+      window.location.href = d.url as string;
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Napaka",
+        description: "Povezave na plačilni sistem ni bilo mogoče vzpostaviti.",
+      });
+    } finally {
+      setCheckoutId(null);
     }
   };
 
@@ -2379,23 +2445,50 @@ function CommissionsTab({ onUpgrade }: { onUpgrade: () => void }) {
                         </a>
                       </Button>
                       {inv.status === "issued" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleMarkPaid(inv.id)}
-                          disabled={markingId === inv.id}
-                          className="gap-1.5"
-                        >
-                          {markingId === inv.id ? (
-                            <Loader2
-                              className="size-3.5 animate-spin"
-                              aria-hidden="true"
-                            />
-                          ) : (
-                            <Check className="size-3.5" aria-hidden="true" />
+                        <>
+                          {data.stripeEnabled && (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => handleCheckout(inv.id)}
+                              disabled={checkoutId === inv.id}
+                              className="gap-1.5"
+                              title="Enkratno plačilo prek Stripe Checkout"
+                            >
+                              {checkoutId === inv.id ? (
+                                <Loader2
+                                  className="size-3.5 animate-spin"
+                                  aria-hidden="true"
+                                />
+                              ) : (
+                                <CreditCard className="size-3.5" aria-hidden="true" />
+                              )}
+                              Plačaj s kartico
+                            </Button>
                           )}
-                          Označi kot plačano
-                        </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleMarkPaid(inv.id)}
+                            disabled={markingId === inv.id}
+                            className="gap-1.5"
+                            title={
+                              data.stripeEnabled
+                                ? "Ročno označi kot plačano (npr. po SEPA nakazilu)"
+                                : "Demo obračun — po SEPA nakazilu na PDF računu označi račun kot plačan"
+                            }
+                          >
+                            {markingId === inv.id ? (
+                              <Loader2
+                                className="size-3.5 animate-spin"
+                                aria-hidden="true"
+                              />
+                            ) : (
+                              <Check className="size-3.5" aria-hidden="true" />
+                            )}
+                            Označi kot plačano
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -2406,6 +2499,9 @@ function CommissionsTab({ onUpgrade }: { onUpgrade: () => void }) {
               Zneski se izračunajo strežno iz atribuiranih rezervacij
               (vir: AI konzultacije). Stopnja se zapiše ob izdaji računa. Vsak
               račun lahko prenesete ali natisnete kot PDF.
+              {data.stripeEnabled
+                ? " Izdan račun lahko poravnate tudi s kartico (Stripe)."
+                : " Kartično plačanje se omogoči, ko so konfigurirani Stripe ključi (sicer SEPA nakazilo)."}
             </p>
           </div>
         </CardContent>
