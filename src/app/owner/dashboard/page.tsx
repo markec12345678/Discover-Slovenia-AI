@@ -45,6 +45,7 @@ import {
   Percent,
   Receipt,
   Banknote,
+  FileText,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -2355,12 +2356,28 @@ function CommissionsTab({ onUpgrade }: { onUpgrade: () => void }) {
                         {Math.round(inv.rate * 100)} %
                       </p>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                       <div className="text-right">
                         <div className="text-lg font-bold tabular-nums">
                           {fmtEur(inv.amount)}
                         </div>
                       </div>
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5"
+                        title="Odpri PDF računa (novo zavihek)"
+                      >
+                        <a
+                          href={`/api/owner/commissions/invoice-pdf?id=${inv.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <FileText className="size-3.5" aria-hidden="true" />
+                          PDF
+                        </a>
+                      </Button>
                       {inv.status === "issued" && (
                         <Button
                           size="sm"
@@ -2387,7 +2404,8 @@ function CommissionsTab({ onUpgrade }: { onUpgrade: () => void }) {
             )}
             <p className="text-xs text-muted-foreground mt-3">
               Zneski se izračunajo strežno iz atribuiranih rezervacij
-              (vir: AI konzultacije). Stopnja se zapiše ob izdaji računa.
+              (vir: AI konzultacije). Stopnja se zapiše ob izdaji računa. Vsak
+              račun lahko prenesete ali natisnete kot PDF.
             </p>
           </div>
         </CardContent>

@@ -857,7 +857,8 @@ export function commissionInvoiceEmail({
     </div>
 
     <p style="font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 24px;">
-      Račun in zgodovina obračunov so vedno vidni v vašem dashboardu (zavihek „Provizije").
+      Račun in zgodovina obračunov so vedno vidni v vašem dashboardu (zavihek „Provizije") —
+      tam lahko vsak račun prenesete ali natisnete tudi kot PDF.
       Status plačila bomo posodobili ob prejetem plačilu.
     </p>
   `;
@@ -877,7 +878,7 @@ Znesek za plačilo: ${amountStr}
 
 Turist plača polno ceno neposredno vam — provizija zajema izključno rezervacije iz AI konzultacij.
 
-Račun je viden v vašem dashboardu:
+Račun je viden v vašem dashboardu (PDF za tisk na voljo v zavihku „Provizije"):
 ${dashboardUrl}
 
 Želite 0 % provizije? Premium (149 EUR/mes) vključuje 0 % provizije in 5-odstotni boost.

@@ -15,6 +15,7 @@ import {
   MessageCircle,
   Crown,
   Percent,
+  Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -235,6 +236,10 @@ export default function ProviderLandingPage() {
                       <Percent className="size-4 text-primary" aria-hidden="true" />
                       12 % provizija na rezervacije iz AI konzultacij
                     </li>
+                    <li className="flex items-center gap-2">
+                      <Receipt className="size-4 text-primary" aria-hidden="true" />
+                      Mesečni račun (PDF) po e-pošti
+                    </li>
                   </ul>
                 </CardContent>
               </Card>
@@ -247,6 +252,7 @@ export default function ProviderLandingPage() {
                   <p className="text-xs text-muted-foreground">/mesec</p>
                   <ul className="mt-4 space-y-2 text-left text-sm">
                     <li className="flex items-center gap-2 font-semibold"><Check className="size-4 text-emerald-500" />0 % provizija — vključeno</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Brez mesečnih provizijskih računov</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />5 lokalov</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />20 slik</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />5% AI boost</li>
