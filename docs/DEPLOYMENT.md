@@ -24,28 +24,33 @@ Diagnoza (GitHub Deployments API + izolirana reprodukcija builda):
   in brez baze → exit 0 (vse build-time poizvedbe imajo try/catch fallback,
   dinamične strani se ne prerenderajo).
 
-**Kaj to pomeni za Vercel:** ugotovitev iz dveh zaporednih testov (commit
-`6b1e9e7` s popravljeno build skripto je na Vercelu ŠE VEDNO padel, čeprav
-ista skripta preverjeno deluje v izolaciji in na CI): **Vercel (Next.js
-preset) poganja lastni build ukaz (`next build`) in ne našega `bun run
-build`** — postinstall hook pa ni zagotovljen pri vseh namestitvenih
-upraviteljih.
+**Ključna ugotovitev iz časovnika (Faza 4d):** vsi Vercel deploymenti (vseh
+30 od 15. 7.) padejo v **0–1 sekundi** po nastanku — pravi build (install +
+prevajanje) traja minute. Deployment se torej **sploh ne začne graditi** —
+zavrnitev je na nivoju Vercel RAČUNA/PROJEKTA, ne v kodi. Tipični vzroki:
+izčrpan build-hours kvota (Hobby plan), zamrznjen/suspendiran račun,
+neveljavna produkcjska domena ali pokvarjena projektna nastavitev.
 
-**Dokončna rešitev (Faza 4d, commit f9b29d7+):** `next.config.ts` ob
-nalaganju (obvezno, pred vsakim prevajanjem modulov) sam prigenerira Prisma
-klienta (`execSync("npx prisma generate")` v try/catch). E2E simulacija
-Vercela — neposreden `next build` BREZ skripte, BREZ postinstalla, BREZ
-generiranega klienta, BREZ `DATABASE_URL` → **exit 0**.
-
-Če deployment po tem še vedno pada, je naslednji diagnostični korak vpogled
-v Vercel build log (lastnik projekta ima dostop do dashboarda):
+**Potreben korak lastnika (ni dosegljivo iz repozitorija):** odpri Vercel
+dashboard → Deployments → zadnji padli deployment → preberi rdeče sporočilo
+o napaki (ali poženi spodnji ukaz); preveri tudi Billing/Usage:
 
 ```bash
-npx vercel inspect dpl_HRJaofJLbjuF9WMH4b3X7DY5LG7y --logs   # zadnji padli
+npx vercel inspect dpl_EQPfx2HHG2YyKFKEfa5tSBv4vS1W --logs   # zadnji padli (10:43)
 ```
 
-Preostali možni vzroki: manjkajoče okoljske spremenljivke v Vercel projektu
-(glej matriko v razdelku 5) ali okrnjena namestitev odvisnosti.
+Vsa tri popravila spodaj (prisma generate povsod, Vercel-varna build
+skripta, config hook) so VSEENO obvezna in E2E dokazana — brez njih bi
+build padel TUDI ob odpravi računskе težave (izolirana reprodukcija:
+`Module not found: .prisma/client/index-browser`):
+
+1. `prisma generate` v build skripti + `postinstall` hook (package.json);
+2. `next.config.ts` sam prigenerira klienta ob nalaganju — pokrije primer,
+   ko Vercel poganja lastni `next build` brez našega skripta (E2E
+   simulacija: neposreden `next build` brez skripte/postinstalla/generiranega
+   klienta/`DATABASE_URL` → exit 0);
+3. `scripts/copy-standalone.sh` — pogojno kopiranje standalone (na Vercelu
+   ni potrebno, na VPS/Docker obvezno).
 
 A tudi ob zelenem buildu **runtime baze ne more delovati** na serverless
 (vzrok #2 — SQLite) — za Vercel je obvezna migracija na hosted Postgres
