@@ -78,8 +78,19 @@ import {
   Banknote,
   TrendingDown,
   MessageCircle,
+  ClipboardCheck,
+  CircleCheck,
+  Clock,
+  Globe,
+  Mail,
+  MapPin,
+  Phone,
+  RefreshCw,
+  User,
+  XCircle,
 } from "lucide-react";
 import {
+  CATEGORY_ICONS,
   CATEGORY_LABELS,
   PLAN_LABELS,
   type ListingCategory,
@@ -90,6 +101,8 @@ import { BetaBanner } from "@/components/beta-banner";
 import { Progress } from "@/components/ui/progress";
 import { BETA_INFO } from "@/lib/beta";
 import { InsightsPanel } from "@/components/insights-panel";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 // === TIP LEAD ===
 type LeadStatus = "nov" | "kontaktiran" | "zakljucen";
@@ -127,6 +140,94 @@ const STATUS_STYLES: Record<LeadStatus, string> = {
   zakljucen: "bg-emerald-100 text-emerald-900 border-emerald-200 hover:bg-emerald-200",
 };
 
+// === TIP ČAKAJOCIH LOKALOV (zavihek Pregled) ===
+interface PendingOwner {
+  email: string | null;
+  name: string | null;
+  businessName: string | null;
+}
+
+interface PendingListing {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  destinationName: string | null;
+  address: string;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  description: string;
+  images: string[];
+  submittedAt: string | null;
+  submittedAgo: number | null;
+  ownerId: string | null;
+  owner: PendingOwner | null;
+}
+
+// Fallback seznam razlogov (enak seznamu v /api/admin/reject/[id])
+const REJECTION_REASON_FALLBACK: string[] = [
+  "Manjkajo fotografije",
+  "Nepopoln opis",
+  "Napačna kategorija",
+  "Podvojeni vnos",
+  "Ni povezano s turizmom",
+  "Napačni kontakt podatki",
+  "Neprimerna vsebina",
+  "Drugo",
+];
+
+// Slovenska oblika enote časa (ednina / dvojina / množina)
+function slTimeUnit(n: number, one: string, two: string, many: string): string {
+  if (n === 1) return one;
+  if (n % 100 === 2) return two;
+  return many;
+}
+
+// Formatiranje "oddano pred X" iz števila minut
+function formatSubmittedAgo(minutes: number | null): string {
+  if (minutes == null) return "neznano";
+  if (minutes < 1) return "pravkar";
+  if (minutes < 60) return `pred ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `pred ${hours} ${slTimeUnit(hours, "uro", "urama", "urami")}`;
+  }
+  const days = Math.floor(minutes / 1440);
+  return `pred ${days} ${slTimeUnit(days, "dnem", "dnevoma", "dnevi")}`;
+}
+
+// Slovenska množina za število lokalov (1 lokal, 2 lokala, 3-4 lokali, 5+ lokalov)
+function pendingCountLabel(n: number): string {
+  if (n === 1) return "1 lokal";
+  const r = n % 100;
+  if (r === 2) return `${n} lokala`;
+  if (r === 3 || r === 4) return `${n} lokali`;
+  return `${n} lokalov`;
+}
+
+// Aria opis števca čakajočih lokalov
+function pendingCountAria(n: number): string {
+  if (n === 1) return "1 lokal čaka na pregled";
+  if (n === 2) return "2 lokala čakata na pregled";
+  const r = n % 100;
+  if (r === 3 || r === 4) return `${n} lokali čakajo na pregled`;
+  return `${n} lokalov čaka na pregled`;
+}
+
+// Izlušči napako iz API odgovora (vzorec iz ostalih tabov)
+async function extractApiError(res: Response, fallback: string): Promise<string> {
+  try {
+    const d: unknown = await res.json();
+    if (typeof d === "object" && d !== null && "error" in d) {
+      return String((d as Record<string, unknown>).error);
+    }
+  } catch {
+    /* ignore */
+  }
+  return fallback;
+}
+
 interface AdminDashboardProps {
   adminPassword: string;
   onLogout: () => void;
@@ -137,7 +238,8 @@ export function AdminDashboard({
   adminPassword,
   onLogout,
 }: AdminDashboardProps) {
-  const [tab, setTab] = React.useState("listings");
+  const [tab, setTab] = React.useState("pregled");
+  const [pendingCount, setPendingCount] = React.useState<number | null>(null);
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -176,24 +278,48 @@ export function AdminDashboard({
         <BetaStatusWidget />
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="grid w-full max-w-2xl grid-cols-4">
-            <TabsTrigger value="listings" className="gap-1.5">
+          <TabsList className="grid w-full max-w-3xl grid-cols-5">
+            <TabsTrigger value="pregled" className="h-11 gap-1.5">
+              <ClipboardCheck className="size-4" />
+              <span className="hidden sm:inline">Pregled</span>
+              {pendingCount !== null && pendingCount > 0 && (
+                <Badge
+                  className="ml-0.5 h-5 min-w-5 shrink-0 justify-center rounded-full border-0 bg-amber-400 px-1.5 tabular-nums text-amber-950 hover:bg-amber-400"
+                  aria-label={pendingCountAria(pendingCount)}
+                >
+                  {pendingCount > 99 ? "99+" : pendingCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="listings" className="h-11 gap-1.5">
               <Building2 className="size-4" />
               <span className="hidden sm:inline">Lokali</span>
             </TabsTrigger>
-            <TabsTrigger value="leads" className="gap-1.5">
+            <TabsTrigger value="leads" className="h-11 gap-1.5">
               <Users className="size-4" />
               <span className="hidden sm:inline">Leadi</span>
             </TabsTrigger>
-            <TabsTrigger value="narocnine" className="gap-1.5">
+            <TabsTrigger value="narocnine" className="h-11 gap-1.5">
               <CreditCard className="size-4" />
               <span className="hidden sm:inline">Naročnine</span>
             </TabsTrigger>
-            <TabsTrigger value="stats" className="gap-1.5">
+            <TabsTrigger value="stats" className="h-11 gap-1.5">
               <TrendingUp className="size-4" />
               <span className="hidden sm:inline">Statistika</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent
+            value="pregled"
+            className="mt-6 data-[state=inactive]:hidden"
+            forceMount
+          >
+            <PendingTab
+              adminPassword={adminPassword}
+              active={tab === "pregled"}
+              onCountChange={setPendingCount}
+            />
+          </TabsContent>
 
           <TabsContent value="listings" className="mt-6">
             <ListingsTab adminPassword={adminPassword} />
@@ -209,6 +335,490 @@ export function AdminDashboard({
           </TabsContent>
         </Tabs>
       </main>
+    </div>
+  );
+}
+
+// === TAB 0: PREGLED — ČAKAJÖCI LOKALI (moderacijska vrsta) ===
+function PendingTab({
+  adminPassword,
+  active,
+  onCountChange,
+}: {
+  adminPassword: string;
+  active: boolean;
+  onCountChange: (count: number) => void;
+}) {
+  const { toast } = useToast();
+  const [pending, setPending] = React.useState<PendingListing[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+  const [approvingId, setApprovingId] = React.useState<string | null>(null);
+
+  // Zavrnitev — dialog
+  const [rejectTarget, setRejectTarget] = React.useState<PendingListing | null>(null);
+  const [rejectReason, setRejectReason] = React.useState("");
+  const [customReason, setCustomReason] = React.useState("");
+  const [rejecting, setRejecting] = React.useState(false);
+  const [reasons, setReasons] = React.useState<string[]>(REJECTION_REASON_FALLBACK);
+
+  const fetchPending = React.useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!opts?.silent) {
+        setLoading(true);
+        setErrorMsg(null);
+      }
+      try {
+        const res = await fetch("/api/admin/pending", {
+          headers: { "x-admin-password": adminPassword },
+        });
+        if (!res.ok) {
+          setErrorMsg(
+            await extractApiError(res, "Napaka pri pridobivanju lokalov v pregledu")
+          );
+          return;
+        }
+        const data: unknown = await res.json();
+        const list = (
+          typeof data === "object" && data !== null && "pending" in data
+            ? (data as Record<string, unknown>).pending
+            : []) as PendingListing[];
+        setPending(list);
+        onCountChange(list.length);
+      } catch (err) {
+        console.error("[admin/pending] fetch:", err);
+        setErrorMsg("Napaka pri povezavi s strežnikom");
+      } finally {
+        if (!opts?.silent) setLoading(false);
+      }
+    },
+    [adminPassword, onCountChange]
+  );
+
+  // Naloži takoj ob mountu (zavihek je vedno montiran prek forceMount)
+  React.useEffect(() => {
+    fetchPending();
+  }, [fetchPending]);
+
+  // Osveži ob vsaki aktivaciji zavihka
+  React.useEffect(() => {
+    if (active) fetchPending();
+  }, [active, fetchPending]);
+
+  // Ob odpiranju dialoga: ponastavi polja in pridobi veljavne razloge s strežnika
+  React.useEffect(() => {
+    if (!rejectTarget) return;
+    setRejectReason("");
+    setCustomReason("");
+    fetch(`/api/admin/reject/${encodeURIComponent(rejectTarget.id)}`, {
+      headers: { "x-admin-password": adminPassword },
+    })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const d: unknown = await res.json();
+        if (
+          typeof d === "object" &&
+          d !== null &&
+          "reasons" in d &&
+          Array.isArray((d as Record<string, unknown>).reasons)
+        ) {
+          const r = (d as Record<string, unknown>).reasons as string[];
+          if (r.length > 0) setReasons(r);
+        }
+      })
+      .catch(() => {
+        /* fallback seznam ostane */
+      });
+  }, [rejectTarget, adminPassword]);
+
+  const removeLocal = (id: string) => {
+    setPending((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handleApprove = async (listing: PendingListing) => {
+    setApprovingId(listing.id);
+    try {
+      const res = await fetch(
+        `/api/admin/approve/${encodeURIComponent(listing.id)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-password": adminPassword,
+          },
+          body: JSON.stringify({ publishNow: true }),
+        }
+      );
+      if (!res.ok) {
+        toast({
+          variant: "destructive",
+          title: "Napaka pri odobritvi",
+          description: await extractApiError(res, "Lokala ni bilo mogoče odobriti."),
+        });
+        return;
+      }
+      toast({
+        title: "Lokal odobren in objavljen",
+        description: `„${listing.name}" je sedaj objavljen. AI izboljšave in obvestilo lastniku potekata v ozadju.`,
+      });
+      removeLocal(listing.id);
+      await fetchPending({ silent: true });
+    } catch (err) {
+      console.error("[admin/approve] fetch:", err);
+      toast({
+        variant: "destructive",
+        title: "Napaka",
+        description: "Ni mogoče vzpostaviti povezave s strežnikom.",
+      });
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleConfirmReject = async (
+    e: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    e.preventDefault(); // dialog zapremo sami, po uspešni akciji
+    if (!rejectTarget || rejecting) return;
+    const isCustom = rejectReason === "Drugo";
+    if (!rejectReason || (isCustom && !customReason.trim())) return;
+
+    setRejecting(true);
+    try {
+      const res = await fetch(
+        `/api/admin/reject/${encodeURIComponent(rejectTarget.id)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-password": adminPassword,
+          },
+          body: JSON.stringify({
+            reason: rejectReason,
+            customReason: isCustom ? customReason.trim() : undefined,
+          }),
+        }
+      );
+      if (!res.ok) {
+        toast({
+          variant: "destructive",
+          title: "Napaka pri zavrnitvi",
+          description: await extractApiError(res, "Lokala ni bilo mogoče zavrniti."),
+        });
+        return;
+      }
+      toast({
+        title: "Lokal zavrnjen",
+        description: `„${rejectTarget.name}" je zavrnjen. Lastnik je obveščen po e-pošti in lahko lokal popravi ter ponovno odda.`,
+      });
+      removeLocal(rejectTarget.id);
+      setRejectTarget(null);
+      await fetchPending({ silent: true });
+    } catch (err) {
+      console.error("[admin/reject] fetch:", err);
+      toast({
+        variant: "destructive",
+        title: "Napaka",
+        description: "Ni mogoče vzpostaviti povezave s strežnikom.",
+      });
+    } finally {
+      setRejecting(false);
+    }
+  };
+
+  const rejectDisabled =
+    rejecting ||
+    !rejectReason ||
+    (rejectReason === "Drugo" && !customReason.trim());
+
+  return (
+    <div className="space-y-4">
+      {/* Glava zavihka */}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight">Lokali v pregledu</h2>
+          <p className="text-sm text-muted-foreground">
+            Novi lokalci, oddani s strani ponudnikov — odobrite ali zavrnite.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => fetchPending()}
+          disabled={loading}
+          className="h-11 w-11 shrink-0"
+          aria-label="Osveži seznam lokalov v pregledu"
+        >
+          {loading ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <RefreshCw className="size-4" />
+          )}
+        </Button>
+      </div>
+
+      {errorMsg && (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          <AlertCircle className="size-4 shrink-0 mt-0.5" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {loading && pending.length === 0 && !errorMsg ? (
+        <Card>
+          <CardContent className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
+            Nalaganje lokalov v pregledu...
+          </CardContent>
+        </Card>
+      ) : !errorMsg && pending.length === 0 ? (
+        <Card>
+          <CardContent className="py-16 text-center">
+            <CircleCheck
+              className="size-10 mx-auto mb-3 text-emerald-500"
+              aria-hidden="true"
+            />
+            <p className="text-base font-semibold">Ni lokalov v pregledu</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Vsi oddani lokalci so obdelani — novi prispevki se bodo prikazali tukaj.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+          {pending.map((l) => {
+            const catLabel =
+              CATEGORY_LABELS[l.category as ListingCategory] ?? l.category;
+            return (
+              <Card key={l.id} className="flex flex-col overflow-hidden">
+                <div className="relative aspect-video bg-muted">
+                  {l.images[0] ? (
+                    <img
+                      src={l.images[0]}
+                      alt={`Fotografija: ${l.name}`}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div
+                      className="flex h-full w-full items-center justify-center text-5xl"
+                      role="img"
+                      aria-label={catLabel}
+                    >
+                      {CATEGORY_ICONS[l.category as ListingCategory] ?? "📍"}
+                    </div>
+                  )}
+                  <Badge className="absolute right-2 top-2 gap-1 border-border bg-background/90 text-foreground backdrop-blur-sm">
+                    <Clock className="size-3" aria-hidden="true" />
+                    {formatSubmittedAgo(l.submittedAgo)}
+                  </Badge>
+                </div>
+
+                <CardContent className="flex flex-1 flex-col gap-3 p-4">
+                  <div className="space-y-1.5">
+                    <h3 className="font-semibold leading-snug">{l.name}</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {l.destinationName && (
+                        <Badge variant="secondary">{l.destinationName}</Badge>
+                      )}
+                      <Badge variant="outline">{catLabel}</Badge>
+                    </div>
+                  </div>
+
+                  {l.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-3">
+                      {l.description}
+                    </p>
+                  )}
+
+                  <div className="space-y-1.5 text-xs text-muted-foreground">
+                    {l.address && (
+                      <div className="flex items-start gap-1.5">
+                        <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                        <span className="min-w-0 break-words">{l.address}</span>
+                      </div>
+                    )}
+                    {l.phone && (
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span>{l.phone}</span>
+                      </div>
+                    )}
+                    {l.email && (
+                      <div className="flex items-center gap-1.5">
+                        <Mail className="size-3.5 shrink-0" aria-hidden="true" />
+                        <a
+                          href={`mailto:${l.email}`}
+                          className="truncate hover:text-foreground hover:underline"
+                        >
+                          {l.email}
+                        </a>
+                      </div>
+                    )}
+                    {l.website && (
+                      <div className="flex items-center gap-1.5">
+                        <Globe className="size-3.5 shrink-0" aria-hidden="true" />
+                        <a
+                          href={l.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="truncate hover:text-foreground hover:underline"
+                        >
+                          {l.website.replace(/^https?:\/\//, "")}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  {l.owner && (
+                    <div className="space-y-1 rounded-md border border-border/60 bg-muted/50 p-2.5 text-xs">
+                      <div className="flex items-center gap-1.5 font-medium text-foreground">
+                        <User className="size-3.5 shrink-0" aria-hidden="true" />
+                        Lastnik
+                      </div>
+                      <p className="text-muted-foreground">
+                        {[l.owner.name, l.owner.businessName]
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
+                      </p>
+                      {l.owner.email && (
+                        <p className="flex items-center gap-1.5 text-muted-foreground">
+                          <Mail className="size-3.5 shrink-0" aria-hidden="true" />
+                          <a
+                            href={`mailto:${l.owner.email}`}
+                            className="truncate hover:text-foreground hover:underline"
+                          >
+                            {l.owner.email}
+                          </a>
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-auto flex flex-col gap-2 pt-1 sm:flex-row">
+                    <Button
+                      className="min-h-11 flex-1"
+                      onClick={() => handleApprove(l)}
+                      disabled={approvingId !== null}
+                      aria-label={`Odobri in objavi lokal ${l.name}`}
+                    >
+                      {approvingId === l.id ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin" />
+                          Odobravanje...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="size-4" />
+                          Odobri in objavi
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="min-h-11 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setRejectTarget(l)}
+                      disabled={approvingId !== null}
+                      aria-label={`Zavrni lokal ${l.name}`}
+                    >
+                      <XCircle className="size-4" />
+                      Zavrni
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {!loading && !errorMsg && pending.length > 0 && (
+        <div className="text-xs text-muted-foreground text-right">
+          Skupaj: {pendingCountLabel(pending.length)} v pregledu
+        </div>
+      )}
+
+      {/* Dialog za zavrnitev */}
+      <AlertDialog
+        open={!!rejectTarget}
+        onOpenChange={(o) => {
+          if (!o && !rejecting) setRejectTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Zavrni lokal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {rejectTarget
+                ? `„${rejectTarget.name}" bo označen kot zavrnjen. Lastnik bo prejel razlog po e-pošti in bo lokal lahko popravil ter ponovno oddal v pregled.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4 py-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="reject-reason">Razlog za zavrnitev</Label>
+              <Select value={rejectReason} onValueChange={setRejectReason}>
+                <SelectTrigger
+                  id="reject-reason"
+                  className="h-11 w-full"
+                  aria-label="Razlog za zavrnitev"
+                >
+                  <SelectValue placeholder="Izberite razlog..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {reasons.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {rejectReason === "Drugo" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="reject-custom-reason">
+                  Pojasnitev{" "}
+                  <span className="text-destructive">(obvezno)</span>
+                </Label>
+                <Textarea
+                  id="reject-custom-reason"
+                  value={customReason}
+                  onChange={(e) => setCustomReason(e.target.value)}
+                  placeholder="Opišite, kaj je treba popraviti..."
+                  className="min-h-24"
+                  rows={3}
+                  aria-required="true"
+                />
+              </div>
+            )}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={rejecting} className="min-h-11">
+              Prekliči
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmReject}
+              disabled={rejectDisabled}
+              className="min-h-11 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {rejecting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Zavračanje...
+                </>
+              ) : (
+                <>
+                  <XCircle className="size-4" />
+                  Zavrni lokal
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

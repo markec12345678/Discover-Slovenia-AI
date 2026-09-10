@@ -36,7 +36,34 @@ export interface Listing {
   specialties: string[];
   viewCount: number;
   clickCount: number;
+  // === STATUS SISTEM (P0-1): moderacijska zanka draft → pending → published ===
+  status?: ListingStatus;
+  rejectionReason?: string | null;
+  submittedAt?: string | null;
 }
+
+// Statusi moderacijske zanke lokalov
+export type ListingStatus =
+  | "draft"
+  | "pending"
+  | "approved"
+  | "published"
+  | "rejected"
+  | "expired"
+  | "archived"
+  | "deleted";
+
+// Slovenske oznake statusov
+export const STATUS_LABELS: Record<string, string> = {
+  draft: "Osnutek",
+  pending: "V pregledu",
+  approved: "Odobren",
+  published: "Objavljen",
+  rejected: "Zavrnjen",
+  expired: "Potekel",
+  archived: "Arhiviran",
+  deleted: "Izbrisan",
+};
 
 // Slovenske oznake kategorij
 export const CATEGORY_LABELS: Record<ListingCategory, string> = {

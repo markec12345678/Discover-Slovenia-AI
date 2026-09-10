@@ -26,6 +26,14 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -114,6 +122,13 @@ function LoginForm({ router, toast }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // P0-4: pozabljeno geslo
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotSentMsg, setForgotSentMsg] = useState("");
+  const [forgotError, setForgotError] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -253,8 +268,122 @@ function LoginForm({ router, toast }: LoginFormProps) {
               </>
             )}
           </Button>
+
+          {/* P0-4: pozabljeno geslo */}
+          <button
+            type="button"
+            onClick={() => setForgotOpen(true)}
+            className="w-full text-center text-sm text-primary hover:underline focus:outline-none focus-visible:underline min-h-[44px]"
+          >
+            Pozabljeno geslo?
+          </button>
         </form>
       </CardContent>
+
+      {/* P0-4: dialog za ponastavitev gesla */}
+      <Dialog open={forgotOpen} onOpenChange={(open) => {
+        setForgotOpen(open);
+        if (!open) {
+          setForgotSent(false);
+          setForgotError(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ponastavitev gesla</DialogTitle>
+            <DialogDescription>
+              Vnesite e-pošto vašega ponudniškega računa — poslali vam povezavo
+              za nastavitev novega gesla.
+            </DialogDescription>
+          </DialogHeader>
+
+          {forgotSent ? (
+            <Alert className="border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30">
+              <ShieldCheck className="size-4 text-emerald-600" aria-hidden="true" />
+              <AlertTitle>Povezava poslana</AlertTitle>
+              <AlertDescription className="text-sm">
+                {forgotSentMsg}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setForgotError(null);
+                setForgotLoading(true);
+                try {
+                  const res = await fetch("/api/owner/forgot-password", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: forgotEmail }),
+                  });
+                  const data = await res.json().catch(() => ({}));
+                  if (!res.ok) {
+                    throw new Error(data?.error ?? "Zahteva ni uspela.");
+                  }
+                  setForgotSentMsg(data?.message ?? "Povezava je poslana.");
+                  setForgotSent(true);
+                } catch (err) {
+                  setForgotError(
+                    err instanceof Error ? err.message : "Poskusite znova."
+                  );
+                } finally {
+                  setForgotLoading(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              {forgotError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="size-4" aria-hidden="true" />
+                  <AlertDescription>{forgotError}</AlertDescription>
+                </Alert>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="forgot-email">E-pošta</Label>
+                <div className="relative">
+                  <Mail
+                    className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                    aria-hidden="true"
+                  />
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    autoComplete="email"
+                    inputMode="email"
+                    className="pl-9"
+                    placeholder="ime@primer.si"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    disabled={forgotLoading}
+                    required
+                  />
+                </div>
+              </div>
+              <Button
+                type="submit"
+                disabled={forgotLoading}
+                className="w-full gap-1.5 font-semibold"
+              >
+                {forgotLoading ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Mail className="size-4" aria-hidden="true" />
+                )}
+                Pošlji povezavo za ponastavitev
+              </Button>
+            </form>
+          )}
+
+          {forgotSent && (
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setForgotOpen(false)}>
+                Zapri
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

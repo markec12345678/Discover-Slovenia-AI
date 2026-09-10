@@ -40,6 +40,7 @@ import {
   ExternalLink,
   Ban,
   Mail,
+  Send,
   Activity,
   Target,
   Percent,
@@ -74,6 +75,7 @@ import {
   CATEGORY_LABELS,
   CATEGORY_ICONS,
   PLAN_LABELS,
+  STATUS_LABELS,
   type Listing,
   type ListingPlan,
 } from "@/lib/listings-types";
@@ -152,6 +154,8 @@ export default function OwnerDashboardPage() {
   const [editing, setEditing] = useState<Listing | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // P0-1: oddaja v pregled (draft → pending)
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
 
   // Beta status (client-side fetch)
   const [betaStatus, setBetaStatus] = useState<BetaStatus | null>(null);
@@ -257,6 +261,53 @@ export default function OwnerDashboardPage() {
     setFormOpen(true);
   };
 
+  // P0-1: oddaj lokal v pregled (draft/rejected → pending)
+  const handleSubmitForReview = async (listingId: string) => {
+    setSubmittingId(listingId);
+    try {
+      const res = await fetch("/api/owner/listings/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Manjkajoča obvezna polja izpišemo podrobno
+        const missing = Array.isArray(data?.missingRequired)
+          ? data.missingRequired.join(", ")
+          : "";
+        throw new Error(
+          data?.error
+            ? `${data.error}${missing ? `: ${missing}` : ""}`
+            : "Oddaja ni uspela."
+        );
+      }
+      toast({
+        title: "Oddano v pregled",
+        description:
+          data?.message ??
+          "Admin bo lokal pregledal v 24–48 urah. Po odobritvi ga bo AI lahko priporočal obiskovalcem.",
+      });
+      // Takoj posodobi status lokalno (brez utripanja celotnega seznama)
+      setListings((prev) =>
+        prev.map((l) =>
+          l.id === listingId
+            ? { ...l, status: "pending", rejectionReason: null }
+            : l
+        )
+      );
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Oddaja ni uspela",
+        description:
+          err instanceof Error ? err.message : "Poskusite znova.",
+      });
+    } finally {
+      setSubmittingId(null);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
@@ -341,8 +392,11 @@ export default function OwnerDashboardPage() {
 
       {/* Content */}
       <div className="mx-auto max-w-6xl w-full px-4 py-6 sm:py-8 flex-1">
+        {/* P0-4: opomnik za potrditev e-pošte */}
+        <EmailVerificationBanner />
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 mb-6 gap-1">
+          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 mb-6 gap-1">
             <TabsTrigger value="listings" className="gap-1.5 text-xs sm:text-sm">
               <Building className="size-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Moji lokalci</span>
@@ -357,6 +411,12 @@ export default function OwnerDashboardPage() {
               <Ticket className="size-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Izkušnje</span>
               <span className="sm:hidden">Izkušnje</span>
+            </TabsTrigger>
+            {/* P0-3: Booking manager za ponudnike */}
+            <TabsTrigger value="rezervacije" className="gap-1.5 text-xs sm:text-sm">
+              <CalendarCheck className="size-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Rezervacije</span>
+              <span className="sm:hidden">Rezerv.</span>
             </TabsTrigger>
             <TabsTrigger value="narocnina" className="gap-1.5 text-xs sm:text-sm">
               <Crown className="size-3.5" aria-hidden="true" />
@@ -447,6 +507,8 @@ export default function OwnerDashboardPage() {
                     listing={listing}
                     onEdit={() => handleEdit(listing)}
                     onDelete={() => setDeleteId(listing.id)}
+                    onSubmit={() => handleSubmitForReview(listing.id)}
+                    submitting={submittingId === listing.id}
                   />
                 ))}
               </div>
@@ -461,6 +523,11 @@ export default function OwnerDashboardPage() {
           {/* TAB 3: Izkušnje */}
           <TabsContent value="experiences" className="space-y-4">
             <ExperiencesTab plan={plan} isBetaActive={isBetaActive} />
+          </TabsContent>
+
+          {/* TAB 3b: Rezervacije (P0-3 — Booking manager za ponudnike) */}
+          <TabsContent value="rezervacije" className="space-y-4">
+            <BookingsTab />
           </TabsContent>
 
           {/* TAB 4: Naročnina */}
@@ -600,15 +667,44 @@ function EmptyState({
 
 /* ====================== LISTING CARD ====================== */
 
+// P0-1: barvne oznake statusov moderacijske zanke (brez modre/indigo)
+const STATUS_BADGE_CLASSES: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground border-border",
+  pending: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-800",
+  approved: "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-200 dark:border-emerald-800",
+  published: "bg-primary text-primary-foreground border-transparent",
+  rejected: "bg-red-100 text-red-900 border-red-300 dark:bg-red-950/60 dark:text-red-200 dark:border-red-800",
+  expired: "bg-muted text-muted-foreground border-border",
+  archived: "bg-muted text-muted-foreground border-border",
+  deleted: "bg-muted text-muted-foreground border-border",
+};
+
+// P0-1: ikone statusov
+const STATUS_ICONS: Record<string, typeof Pencil> = {
+  draft: Pencil,
+  pending: Clock,
+  approved: Check,
+  published: ShieldCheck,
+  rejected: AlertCircle,
+};
+
 function ListingCard({
   listing,
   onEdit,
   onDelete,
+  onSubmit,
+  submitting,
 }: {
   listing: Listing;
   onEdit: () => void;
   onDelete: () => void;
+  onSubmit: () => void;
+  submitting: boolean;
 }) {
+  const status = listing.status ?? "published";
+  const StatusIcon = STATUS_ICONS[status] ?? ShieldCheck;
+  const canSubmit = status === "draft" || status === "rejected";
+
   return (
     <Card className="overflow-hidden flex flex-col gap-0 py-0">
       {/* Slika */}
@@ -632,7 +728,18 @@ function ListingCard({
           <span aria-hidden="true">{CATEGORY_ICONS[listing.category]}</span>
           {CATEGORY_LABELS[listing.category]}
         </Badge>
-        <div className="absolute right-2 top-2 flex gap-1">
+        <div className="absolute right-2 top-2 flex flex-col items-end gap-1">
+          {/* P0-1: status moderacijske zanke */}
+          <Badge
+            className={cn(
+              "border text-xs shadow-sm backdrop-blur-sm",
+              STATUS_BADGE_CLASSES[status] ?? STATUS_BADGE_CLASSES.published
+            )}
+            aria-label={`Status: ${STATUS_LABELS[status] ?? status}`}
+          >
+            <StatusIcon className="size-3" aria-hidden="true" />
+            {STATUS_LABELS[status] ?? status}
+          </Badge>
           {listing.featured && (
             <Badge className="bg-amber-400 text-amber-950 border-0 text-xs">
               <Star className="size-3 fill-amber-950" aria-hidden="true" />
@@ -666,6 +773,33 @@ function ListingCard({
           {listing.description}
         </p>
 
+        {/* P0-1: razlog zavrnitve */}
+        {status === "rejected" && listing.rejectionReason && (
+          <div
+            className="rounded-md border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30 px-2.5 py-2"
+            role="status"
+          >
+            <p className="text-[11px] font-semibold text-red-800 dark:text-red-200 flex items-center gap-1">
+              <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
+              Zavrnjeno: {listing.rejectionReason}
+            </p>
+            <p className="text-[11px] text-red-700/80 dark:text-red-300/80 mt-0.5">
+              Popravite lokal in ga ponovno oddajte v pregled.
+            </p>
+          </div>
+        )}
+
+        {/* P0-1: namig za osnutek */}
+        {status === "draft" && (
+          <p className="text-[11px] text-muted-foreground flex items-start gap-1">
+            <Clock className="size-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+            <span>
+              Osnutek še ni viden obiskovalcem. Izpolnite profil in ga oddajte
+              v pregled.
+            </span>
+          </p>
+        )}
+
         {/* Statistika */}
         <div className="grid grid-cols-2 gap-2 mt-auto">
           <div className="rounded-md border border-border/60 bg-muted/40 px-2 py-1.5">
@@ -689,28 +823,519 @@ function ListingCard({
         </div>
 
         {/* Akcije */}
-        <div className="flex gap-2 pt-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onEdit}
-            className="flex-1 gap-1.5"
-          >
-            <Pencil className="size-3.5" aria-hidden="true" />
-            Uredi
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onDelete}
-            className="text-destructive hover:text-destructive hover:bg-destructive/5"
-            aria-label="Izbriši"
-          >
-            <Trash2 className="size-3.5" aria-hidden="true" />
-          </Button>
+        <div className="flex flex-col gap-2 pt-1">
+          {/* P0-1: oddaja v pregled (draft/rejected) */}
+          {canSubmit && (
+            <Button
+              onClick={onSubmit}
+              disabled={submitting}
+              size="sm"
+              className="gap-1.5 font-semibold w-full"
+              aria-label={`Oddaj ${listing.name} v pregled`}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                  Oddajam...
+                </>
+              ) : (
+                <>
+                  <Send className="size-3.5" aria-hidden="true" />
+                  {status === "rejected"
+                    ? "Ponovno oddaj v pregled"
+                    : "Oddaj v pregled"}
+                </>
+              )}
+            </Button>
+          )}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onEdit}
+              className="flex-1 gap-1.5"
+            >
+              <Pencil className="size-3.5" aria-hidden="true" />
+              Uredi
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onDelete}
+              className="text-destructive hover:text-destructive hover:bg-destructive/5"
+              aria-label="Izbriši"
+            >
+              <Trash2 className="size-3.5" aria-hidden="true" />
+            </Button>
+          </div>
         </div>
       </div>
     </Card>
+  );
+}
+
+/* ====================== EMAIL VERIFICATION BANNER (P0-4) ====================== */
+
+function EmailVerificationBanner() {
+  const { toast } = useToast();
+  const [state, setState] = useState<
+    "loading" | "verified" | "unverified" | "error"
+  >("loading");
+  const [resending, setResending] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/owner/verify-email", { cache: "no-store" })
+      .then(async (r) => {
+        if (!r.ok) throw new Error();
+        const d = await r.json();
+        setEmail(d.email ?? null);
+        setState(d.emailVerified ? "verified" : "unverified");
+      })
+      .catch(() => setState("error"));
+  }, []);
+
+  const resend = async () => {
+    setResending(true);
+    try {
+      const res = await fetch("/api/owner/verify-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "request" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? "Pošiljanje ni uspelo.");
+      toast({
+        title: "Povezava poslana",
+        description:
+          data?.message ?? "Preverite vaš e-poštni predal (tudi mapo neželena pošta).",
+      });
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Napaka",
+        description: err instanceof Error ? err.message : "Poskusite znova.",
+      });
+    } finally {
+      setResending(false);
+    }
+  };
+
+  if (state !== "unverified") return null;
+
+  return (
+    <Alert className="mb-6 border-amber-300/60 bg-amber-50 dark:bg-amber-950/20">
+      <Mail className="size-4 text-amber-600" aria-hidden="true" />
+      <AlertTitle>Potrdite svojo e-pošto</AlertTitle>
+      <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <span className="text-sm">
+          Na naslov <strong>{email ?? "vaš e-poštni naslov"}</strong> boste prejeli
+          provizijske račune in obvestila o rezervacijah — potrdite ga, da je vse
+          varno.
+        </span>
+        <Button
+          size="sm"
+          onClick={resend}
+          disabled={resending}
+          className="gap-1.5 shrink-0"
+        >
+          {resending ? (
+            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+          ) : (
+            <Send className="size-3.5" aria-hidden="true" />
+          )}
+          Pošlji povezavo
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+/* ====================== BOOKINGS TAB (P0-3) ====================== */
+
+interface OwnerBooking {
+  id: string;
+  bookingNumber: string;
+  guestName: string;
+  guestEmail: string;
+  guestPhone: string | null;
+  experienceName: string;
+  bookingDate: string;
+  groupSize: number;
+  pricePerPerson: number;
+  total: number;
+  currency: string;
+  status: string;
+  notes: string | null;
+  meetingPoint: string | null;
+  source: string | null;
+  createdAt: string;
+  confirmedAt: string | null;
+}
+
+interface BookingsStats {
+  total: number;
+  pending: number;
+  confirmed: number;
+  completed: number;
+  cancelled: number;
+  upcomingRevenue: number;
+  fromConsultation: number;
+}
+
+const BOOKING_STATUS_LABELS: Record<string, string> = {
+  pending: "Na čakanju",
+  confirmed: "Potrjena",
+  completed: "Zaključena",
+  cancelled: "Preklicana",
+};
+
+const BOOKING_STATUS_BADGES: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-800",
+  confirmed: "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-200 dark:border-emerald-800",
+  completed: "bg-primary text-primary-foreground border-transparent",
+  cancelled: "bg-red-100 text-red-900 border-red-300 dark:bg-red-950/60 dark:text-red-200 dark:border-red-800",
+};
+
+function formatBookingDate(dateStr: string): string {
+  return new Intl.DateTimeFormat("sl-SI", {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(dateStr));
+}
+
+function BookingsTab() {
+  const { toast } = useToast();
+  const [bookings, setBookings] = useState<OwnerBooking[]>([]);
+  const [stats, setStats] = useState<BookingsStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<string>("all");
+  const [actionId, setActionId] = useState<string | null>(null); // bookingNumber v obdelavi
+  const [cancelTarget, setCancelTarget] = useState<OwnerBooking | null>(null);
+
+  const fetchBookings = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/owner/bookings", { cache: "no-store" });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setBookings(data.bookings || []);
+      setStats(data.stats || null);
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Napaka",
+        description: "Ni mogoče naložiti rezervacij.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
+
+  const runAction = async (
+    bookingNumber: string,
+    action: "confirm" | "cancel" | "complete"
+  ) => {
+    setActionId(bookingNumber);
+    try {
+      const res = await fetch("/api/owner/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingNumber, action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? "Akcija ni uspela.");
+      toast({ title: "Uspeh", description: data?.message ?? "Status posodobljen." });
+      await fetchBookings();
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Napaka",
+        description: err instanceof Error ? err.message : "Poskusite znova.",
+      });
+    } finally {
+      setActionId(null);
+      setCancelTarget(null);
+    }
+  };
+
+  const filtered =
+    filter === "all" ? bookings : bookings.filter((b) => b.status === filter);
+
+  const now = new Date();
+  const isPast = (b: OwnerBooking) => new Date(b.bookingDate) < now;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-bold sm:text-xl">Rezervacije</h2>
+        <p className="text-sm text-muted-foreground">
+          Upravljajte rezervacije vaših izkušenj — kot v Booking extranetu.
+        </p>
+      </div>
+
+      {/* KPI vrstica */}
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="size-4" aria-hidden="true" />
+              Na čakanju
+            </div>
+            <div className="text-2xl font-bold tabular-nums">{stats.pending}</div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <CalendarCheck className="size-4" aria-hidden="true" />
+              Potrjene
+            </div>
+            <div className="text-2xl font-bold tabular-nums">{stats.confirmed}</div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Banknote className="size-4" aria-hidden="true" />
+              Prihodnji prihodek
+            </div>
+            <div className="text-2xl font-bold tabular-nums text-primary">
+              {formatPrice(stats.upcomingRevenue)}
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Sparkles className="size-4" aria-hidden="true" />
+              Iz AI kanala
+            </div>
+            <div className="text-2xl font-bold tabular-nums">
+              {stats.fromConsultation}
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              rezervacij iz brezplačne konzultacije
+            </p>
+          </Card>
+        </div>
+      )}
+
+      {/* Filtri */}
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter po statusu">
+        {[
+          { key: "all", label: `Vse (${stats?.total ?? 0})` },
+          { key: "pending", label: `Na čakanju (${stats?.pending ?? 0})` },
+          { key: "confirmed", label: `Potrjene (${stats?.confirmed ?? 0})` },
+          { key: "completed", label: `Zaključene (${stats?.completed ?? 0})` },
+          { key: "cancelled", label: `Preklicane (${stats?.cancelled ?? 0})` },
+        ].map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={
+              "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors min-h-[36px] " +
+              (filter === f.key
+                ? "bg-primary text-primary-foreground border-transparent"
+                : "bg-background text-muted-foreground hover:bg-muted border-border")
+            }
+            aria-pressed={filter === f.key}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Seznam */}
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="size-8 animate-spin text-muted-foreground" aria-hidden="true" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <Card className="p-10 text-center">
+          <CalendarCheck
+            className="size-10 mx-auto text-muted-foreground/50"
+            aria-hidden="true"
+          />
+          <p className="mt-3 font-semibold">Ni rezervacij v tej kategoriji</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Ko bo obiskovalec rezerviral vašo izkušnjo, se bo pojavila tukaj.
+          </p>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((b) => (
+            <Card key={b.id} className="p-4 sm:p-5">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                {/* Glavni podatki */}
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge
+                      className={cn(
+                        "border text-xs",
+                        BOOKING_STATUS_BADGES[b.status] ?? ""
+                      )}
+                    >
+                      {BOOKING_STATUS_LABELS[b.status] ?? b.status}
+                    </Badge>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {b.bookingNumber}
+                    </span>
+                    {b.source === "consultation" && (
+                      <Badge className="bg-primary/10 text-primary border-primary/30 text-xs gap-1">
+                        <Sparkles className="size-3" aria-hidden="true" />
+                        AI kanal
+                      </Badge>
+                    )}
+                    {isPast(b) && b.status === "confirmed" && (
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <CalendarClock className="size-3" aria-hidden="true" />
+                        Pretekla
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="font-bold leading-tight">{b.experienceName}</h3>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                      <Calendar className="size-3.5 shrink-0" aria-hidden="true" />
+                      {formatBookingDate(b.bookingDate)}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1.5 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Gost:</span>{" "}
+                      <span className="font-medium">{b.guestName}</span>
+                    </div>
+                    <div className="truncate">
+                      <span className="text-muted-foreground">E-pošta:</span>{" "}
+                      <span className="font-medium">{b.guestEmail}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Oseb:</span>{" "}
+                      <span className="font-medium">{b.groupSize}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Skupaj:</span>{" "}
+                      <span className="font-semibold text-primary">
+                        {formatPrice(b.total)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {b.notes && (
+                    <p className="text-xs text-muted-foreground bg-muted/50 rounded-md px-2.5 py-1.5">
+                      <strong className="text-foreground">Opomba gosta:</strong>{" "}
+                      {b.notes}
+                    </p>
+                  )}
+                </div>
+
+                {/* Akcije */}
+                <div className="flex sm:flex-col gap-2 sm:min-w-[170px]">
+                  {b.status === "pending" && (
+                    <Button
+                      size="sm"
+                      onClick={() => runAction(b.bookingNumber, "confirm")}
+                      disabled={actionId === b.bookingNumber}
+                      className="gap-1.5 font-semibold flex-1"
+                    >
+                      {actionId === b.bookingNumber ? (
+                        <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                      ) : (
+                        <Check className="size-3.5" aria-hidden="true" />
+                      )}
+                      Potrdi
+                    </Button>
+                  )}
+                  {b.status === "confirmed" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => runAction(b.bookingNumber, "complete")}
+                      disabled={actionId === b.bookingNumber}
+                      className="gap-1.5 flex-1"
+                    >
+                      {actionId === b.bookingNumber ? (
+                        <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                      ) : (
+                        <Check className="size-3.5" aria-hidden="true" />
+                      )}
+                      Zaključi
+                    </Button>
+                  )}
+                  {(b.status === "pending" || b.status === "confirmed") && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCancelTarget(b)}
+                      disabled={actionId === b.bookingNumber}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/5 gap-1.5 flex-1"
+                    >
+                      <Ban className="size-3.5" aria-hidden="true" />
+                      Prekliči
+                    </Button>
+                  )}
+                  {(b.status === "cancelled" || b.status === "completed") && (
+                    <p className="text-xs text-muted-foreground sm:text-right sm:pt-2">
+                      {b.status === "completed" ? "Zaključeno" : "Preklicano"} —{" "}
+                      {new Intl.DateTimeFormat("sl-SI", {
+                        day: "numeric",
+                        month: "short",
+                      }).format(new Date(b.createdAt))}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Preklic — potrditveni dialog */}
+      <AlertDialog
+        open={cancelTarget !== null}
+        onOpenChange={(open) => !open && setCancelTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Prekliči rezervacijo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Rezervacija{" "}
+              <strong>{cancelTarget?.bookingNumber}</strong> (
+              {cancelTarget?.experienceName}) bo preklicana, gost{" "}
+              {cancelTarget?.guestName} pa bo prejel obvestilo po e-pošti.
+              Dejanje je nepovratno.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionId !== null}>
+              Ne, obdrži
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (cancelTarget) {
+                  void runAction(cancelTarget.bookingNumber, "cancel");
+                }
+              }}
+              disabled={actionId !== null}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5"
+            >
+              {actionId !== null ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Ban className="size-4" aria-hidden="true" />
+              )}
+              Prekliči rezervacijo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }
 

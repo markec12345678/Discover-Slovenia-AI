@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { sendEmail, getAdminEmail } from "@/lib/email";
+import { sendEmail, getAdminEmail, getBaseUrl } from "@/lib/email";
 import { welcomeEmail, adminAlertEmail } from "@/lib/email-templates";
+import { randomId, escapeHtml } from "@/lib/security";
 
 // Validacijska shema za registracijo lastnika
 const registerSchema = z.object({
@@ -48,6 +49,10 @@ export async function POST(request: Request) {
     const passwordHash = await hash(password, 10);
 
     // Ustvari lastnika — privzeto free paket
+    // P0-4: takoj izda žeton za potrditev e-pošte (24 h)
+    const verificationToken = randomId(48);
+    const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
     const owner = await db.owner.create({
       data: {
         name: name.trim(),
@@ -57,6 +62,8 @@ export async function POST(request: Request) {
         passwordHash,
         plan: "free",
         subscriptionStatus: "none",
+        verificationToken,
+        verificationTokenExpires,
       },
       select: { id: true, email: true, name: true, businessName: true },
     });
@@ -71,6 +78,29 @@ export async function POST(request: Request) {
       await sendEmail({ to: owner.email, subject, html, text });
     } catch (emailErr) {
       console.error("[register] welcome email napaka:", emailErr);
+    }
+
+    // P0-4: pošlji povezavo za potrditev e-pošte (non-blocking)
+    try {
+      const link = `${getBaseUrl()}/owner/preverba-emaila?token=${verificationToken}`;
+      const { emailTemplate } = await import("@/lib/email");
+      await sendEmail({
+        to: owner.email,
+        subject: "Potrdite svojo e-pošto — Discover Slovenia AI",
+        html: emailTemplate(
+          "Potrdite svojo e-pošto",
+          `<p>Pozdravljeni <strong>${escapeHtml(owner.name)}</strong>,</p>
+          <p>Hvala za registracijo. Za aktivacijo vseh funkcij portala (objava lokalov, sprejem rezervacij, provizijski računi) potrdite svoj e-poštni naslov:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${link}" style="background: #2d6a3e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+              Potrdi e-pošto →
+            </a>
+          </div>
+          <p style="font-size: 13px; color: #6b7280;">Povezava velja 24 ur.</p>`
+        ),
+      });
+    } catch (verifyErr) {
+      console.error("[register] verification email napaka:", verifyErr);
     }
 
     // Obvesti admin-a o novi registraciji (non-blocking)

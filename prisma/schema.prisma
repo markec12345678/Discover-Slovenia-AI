@@ -46,6 +46,16 @@ model Owner {
   subscriptionEndsAt DateTime?
   // Ali je bil poslan opomnik za obnovitev (cron ga resetira ob podaljšanju)
   renewalReminderSent Boolean @default(false)
+
+  // === EMAIL VERIFIKACIJA + RESET GESLA (P0-4) ===
+  // emailVerified: čas potrditve e-pošte (null = nepotrjena)
+  emailVerified             DateTime?
+  verificationToken         String?
+  verificationTokenExpires  DateTime?
+  // resetToken: enkratni žeton za ponastavitev gesla (1 h veljavnost)
+  resetToken                String?
+  resetTokenExpires         DateTime?
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   listings      Listing[]
