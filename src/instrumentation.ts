@@ -34,8 +34,11 @@ export async function register() {
   if (raw && !raw.startsWith("file:")) return;
 
   try {
-    const fs = await import("node:fs");
-    const path = await import("node:path");
+    // fs/path brez statičnega "node:" uvoza — webpack dev build ga ne razreši
+    // (UnhandledSchemeError); enača pristopu serverFs() v src/lib/db.ts (c595a7e).
+    const dynamicRequire = eval("require") as NodeRequire
+    const fs = dynamicRequire("fs") as typeof import("node:fs")
+    const path = dynamicRequire("path") as typeof import("node:path");
 
     const seedPath = path.join(process.cwd(), "db", "demo-seed.db");
     const targetPath = "/tmp/dsa-demo.db";
