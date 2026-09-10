@@ -9,7 +9,15 @@ export interface AuditLogParams {
   actorEmail?: string;
   actorRole: "admin" | "owner" | "system" | "stripe";
   action: string;
-  resourceType: "listing" | "sponsorship" | "owner" | "user" | "commission_invoice";
+  // P3c-9: "product" | "experience" — moderacijska zanka tržnice
+  resourceType:
+    | "listing"
+    | "product"
+    | "experience"
+    | "sponsorship"
+    | "owner"
+    | "user"
+    | "commission_invoice";
   resourceId?: string;
   resourceName?: string;
   metadata?: Record<string, unknown>;
@@ -43,6 +51,11 @@ export const AUDIT_ACTIONS = {
   LISTING_PUBLISHED: "listing_published",
   LISTING_FEATURED: "listing_featured",
   LISTING_UNFEATURED: "listing_unfeatured",
+  // P3c-9: moderacijska zanka izdelkov in izkušenj tržnice
+  PRODUCT_APPROVED: "product_approved",
+  PRODUCT_REJECTED: "product_rejected",
+  EXPERIENCE_APPROVED: "experience_approved",
+  EXPERIENCE_REJECTED: "experience_rejected",
   SPONSORSHIP_CREATED: "sponsorship_created",
   SPONSORSHIP_ACTIVATED: "sponsorship_activated",
   SPONSORSHIP_CANCELLED: "sponsorship_cancelled",

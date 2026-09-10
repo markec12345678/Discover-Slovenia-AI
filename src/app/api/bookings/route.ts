@@ -57,10 +57,16 @@ export async function POST(request: Request) {
         providerEmail: true,
         meetingPoint: true,
         status: true,
+        // P3b-3: meje skupine iz DB — splošna meja 1–100 je samo groba varovalka
+        minGroupSize: true,
+        maxGroupSize: true,
       },
     });
 
-    if (!dbExperience || dbExperience.status === "deleted") {
+    // P3b-9: rezervirati je možno SAMO objavljene izkušnje — pending /
+    // rejected / unpublished / deleted vsi → enoten 404 (brez razlikovanja
+    // vzroka, da ne razkrivamo moderatorskega stanja).
+    if (!dbExperience || dbExperience.status !== "published") {
       return NextResponse.json(
         { success: false, error: "Izkušnja ne obstaja" },
         { status: 404 }
@@ -74,10 +80,12 @@ export async function POST(request: Request) {
       dbExperience.providerName ||
       String(((b.provider ?? {}) as Record<string, unknown>).name ?? "").trim() ||
       "Neznan ponudnik";
+    // P3b-8: providerEmail IZKLJUČNO iz DB (ali varna konstanta) — client
+    // posredovanega emaila se NE zaupa (sicer bi lahko gost preusmeril
+    // ponudnikovo obvestilo o rezervaciji na poljuben naslov). providerName /
+    // meetingPoint fallback iz clienta sta OK (samo prikaz, brez popačenja).
     const providerEmail =
-      dbExperience.providerEmail ||
-      String(((b.provider ?? {}) as Record<string, unknown>).email ?? "").trim() ||
-      "ni-na-voljo@discoverslovenia.ai";
+      dbExperience.providerEmail || "ni-na-voljo@discoverslovenia.ai";
     const meetingPoint =
       dbExperience.meetingPoint ||
       String(((b.provider ?? {}) as Record<string, unknown>).meetingPoint ?? "").trim() ||
@@ -87,6 +95,21 @@ export async function POST(request: Request) {
     if (!Number.isInteger(groupSize) || groupSize < 1 || groupSize > 100) {
       return NextResponse.json(
         { success: false, error: "Neveljavno število oseb" },
+        { status: 400 }
+      );
+    }
+
+    // P3b-3: meje te izkušnje iz DB (prej se je sprejel tudi groupSize 9 pri
+    // maxGroupSize 6 — strežnik meje izkušnje ni preverjal).
+    if (
+      groupSize < dbExperience.minGroupSize ||
+      groupSize > dbExperience.maxGroupSize
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Število oseb mora biti med ${dbExperience.minGroupSize} in ${dbExperience.maxGroupSize}`,
+        },
         { status: 400 }
       );
     }
@@ -148,16 +171,42 @@ export async function POST(request: Request) {
 
     // === Atribucija izvora (Faza 3c — model „ponudniki plačajo") ===
     // whitelist — stranka NE more zapisati poljubnih vrednosti.
+    // P3b-2: "consultation" se prizna SAMO, če v DB obstaja dostavljena
+    // konzultacija tega gosta v zadnjih 30 dneh (enako okno kot piškotek
+    // dsai_consultation_ref) — sicer bi vsak POST lahko pripisal rezervacijo
+    // AI kanalu in s tem provociral 12 % provizijski model.
     const sourceRaw = typeof b.source === "string" ? b.source.trim() : "";
-    const source =
+    let source: "consultation" | null =
       sourceRaw === "consultation" ? "consultation" : null;
+    if (source === "consultation") {
+      const consultation = await db.consultation.findFirst({
+        where: {
+          email: guestEmail.toLowerCase(),
+          createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60_000) },
+          // /api/consultations ustvari zapis ŽE s status "delivered" (v isti
+          // create klicu) — vsak API-created zapis je torej "delivered".
+          status: "delivered",
+        },
+        select: { id: true },
+      });
+      if (!consultation) {
+        source = null;
+        console.log(
+          "[bookings] source=consultation zavrnjen — ni konzultacije za",
+          guestEmail
+        );
+      }
+    }
 
     // === Server-side izračun cene ===
     const total = Math.round(pricePerPerson * groupSize * 100) / 100;
     const currency = "EUR";
 
     // === Generiraj bookingNumber (nerodljiv — vključuje entropijo) ===
-    const bookingNumber = `IF-EXP-${randomId(8)}`;
+    // P3b-10: 12 hex znakov (48-bit entropije) namesto prej 8 (32-bit).
+    // Daljši format ne seka starih številk — nasprotno: stare (8 zn.) in nove
+    // (12 zn.) so po dolžini vedno različne, @unique pa varuje unikatnost.
+    const bookingNumber = `IF-EXP-${randomId(12)}`;
 
     // === Preveri ali je Stripe v demo mode ===
     const stripeKey = process.env.STRIPE_SECRET_KEY;
@@ -165,6 +214,30 @@ export async function POST(request: Request) {
 
     // === DEMO MODE: direktno ustvari Booking z status="confirmed" ===
     if (isDemo) {
+      // === P3b-4: deduplikacija (dvojni klik / client retry) ===
+      // Ista izkušnja + gost + datum v zadnjih 10 minutah → 409 s številko
+      // PRVE rezervacije. Legitimna ponovna rezervacija istega dne po 10 min
+      // ostaje možna.
+      const dup = await db.booking.findFirst({
+        where: {
+          experienceId,
+          guestEmail,
+          bookingDate,
+          createdAt: { gte: new Date(Date.now() - 10 * 60_000) },
+        },
+        select: { id: true, bookingNumber: true },
+      });
+      if (dup) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Ta rezervacija je bila pravkar ustvarjena. Preverite svojo e-pošto za potrditev.",
+            bookingNumber: dup.bookingNumber,
+          },
+          { status: 409 }
+        );
+      }
+
       const booking = await db.booking.create({
         data: {
           bookingNumber,

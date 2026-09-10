@@ -169,25 +169,34 @@ export async function POST(request: Request) {
     }
 
     // --- Pridobi podatke iz baze (cena + zaloga + shippingFree) ---
+    // P3b-1/P3a-7: isčemo SAMO objavljene izdelke — pending/rejected/
+    // unpublished se spodaj obravnavajo kot neveljavni (400).
     const productIds = sanitizedItems.map((i) => i.productId);
     const dbProducts = await db.product.findMany({
-      where: { id: { in: productIds } },
+      where: { id: { in: productIds }, status: "published" },
       select: { id: true, shippingFree: true, price: true, stock: true },
     });
+    const dbProductMap = new Map(dbProducts.map((p) => [p.id, p]));
 
-    // Overridaj cene iz baze (ne zaupaj clientu) in preveri zalogo
+    // Overridaj cene iz baze (ne zaupaj clientu) in preveri zalogo.
+    // P3b-1/P3a-7: neznan ali neobjavljen productId → 400 — prej se je
+    // obdržala CLIENT cena (živi dokaz iz audita: naročilo po 0,01 €).
     for (const item of sanitizedItems) {
-      const dbProduct = dbProducts.find((p) => p.id === item.productId);
-      if (dbProduct) {
-        item.price = dbProduct.price;
-        if (dbProduct.stock < item.quantity) {
-          return NextResponse.json(
-            {
-              error: `Izdelek "${item.name}" ni na zalogi v zahtevani količini (na zalogi: ${dbProduct.stock}).`,
-            },
-            { status: 400 }
-          );
-        }
+      const dbProduct = dbProductMap.get(item.productId);
+      if (!dbProduct) {
+        return NextResponse.json(
+          { error: `Izdelek "${item.name}" ni na voljo.` },
+          { status: 400 }
+        );
+      }
+      item.price = dbProduct.price;
+      if (dbProduct.stock < item.quantity) {
+        return NextResponse.json(
+          {
+            error: `Izdelek "${item.name}" ni na zalogi v zahtevani količini (na zalogi: ${dbProduct.stock}).`,
+          },
+          { status: 400 }
+        );
       }
     }
 
@@ -203,18 +212,21 @@ export async function POST(request: Request) {
     // - Drugače 4.90 EUR
     let shipping = 0;
     if (subtotal > 0 && subtotal < 50) {
-      const allFree = sanitizedItems.every((i) => {
-        const dbProduct = dbProducts.find((p) => p.id === i.productId);
-        return dbProduct?.shippingFree ?? false;
-      });
+      // P3b-1: vsi izdelki so od tu naprej veljavni published DB zapisi —
+      // lookup po mapi je vedno zadet (?? false ostaja samo tipovska varovalka).
+      const allFree = sanitizedItems.every(
+        (i) => dbProductMap.get(i.productId)?.shippingFree ?? false
+      );
       shipping = allFree ? 0 : 4.9;
     }
 
     const total = subtotal + shipping;
 
     // --- Generiraj orderNumber (naključni — neurogljiv) ---
+    // P3b-10: 12 hex znakov (48-bit entropije) namesto prej 8 (32-bit) —
+    // daljši format ne seka starih številk (različna dolžina = vedno unikatno).
     const year = new Date().getFullYear();
-    const orderNumber = `IF-${year}-${randomId(8)}`;
+    const orderNumber = `IF-${year}-${randomId(12)}`;
 
     // --- Preveri ali je Stripe v demo načinu ---
     const stripeKey = process.env.STRIPE_SECRET_KEY ?? "";

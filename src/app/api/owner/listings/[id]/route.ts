@@ -149,6 +149,31 @@ export async function PUT(request: Request, { params }: RouteParams) {
       newSlug = candidate;
     }
 
+    // P3c-1: RE-MODERACIJA — vsebinska sprememba OBJAVLJENEGA (ali že
+    // oddanega) zapisa vrne lokal nazaj v admin pregled, da spremenjena
+    // vsebina ne gre javno živa brez ponovnega pregleda.
+    // DRAFT (onboarding čarovnik!) in REJECTED se NE dotakneta — zavrnjen
+    // lokal se ponovno odda prek obstoječega submit flow-a.
+    const contentChanged =
+      (data.name !== undefined && data.name.trim() !== listing.name) ||
+      (data.category !== undefined && data.category !== listing.category) ||
+      (data.description !== undefined &&
+        data.description.trim() !== listing.description) ||
+      (data.longDescription !== undefined &&
+        (data.longDescription?.trim() || null) !==
+          (listing.longDescription || null)) ||
+      (data.images !== undefined &&
+        JSON.stringify(data.images) !== listing.images) ||
+      (data.specialties !== undefined &&
+        JSON.stringify(data.specialties) !== (listing.specialties || "[]")) ||
+      (data.destinationId !== undefined &&
+        (data.destinationId || null) !== listing.destinationId);
+    const needsReModeration =
+      contentChanged &&
+      (listing.status === "published" ||
+        listing.status === "approved" ||
+        listing.status === "pending");
+
     const updated = await db.listing.update({
       where: { id },
       data: {
@@ -188,11 +213,18 @@ export async function PUT(request: Request, { params }: RouteParams) {
           specialties: JSON.stringify(data.specialties),
         }),
         // Plan, featured in verified se NE posodabljajo preko tega API-ja
+        // P3c-1: nazaj v pregled ob vsebinski spremembi
+        ...(needsReModeration && {
+          status: "pending",
+          submittedAt: new Date(),
+        }),
       },
     });
 
     return NextResponse.json({
       success: true,
+      // P3c-1: flag za UI — lokal gre nazaj v admin pregled
+      ...(needsReModeration && { reSubmission: true }),
       listing: {
         ...updated,
         images: JSON.parse(updated.images || "[]") as string[],

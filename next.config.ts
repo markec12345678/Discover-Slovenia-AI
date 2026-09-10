@@ -60,6 +60,10 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // P3: vzporedni E2E agenti — vsak svoj distDir (DIST_DIR=.next-fixa next dev …),
+  // da si dev strežniki ne tepetajo po skupnem .next/lock (izkušnja iz P2).
+  // Ne nastavljeno → privzeto ".next" (identično obnašanje kot prej).
+  ...(process.env.DIST_DIR ? { distDir: process.env.DIST_DIR } : {}),
   // Vercel demo baza (Faza 4e): db/demo-seed.db se zgradi med buildom
   // (scripts/build-demo-db.sh) in mora biti vključena v serverless bundle —
   // nft tracer je sam ne odkrije (dostop prek fs, ne prek importov).

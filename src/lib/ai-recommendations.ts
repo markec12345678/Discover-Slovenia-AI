@@ -17,6 +17,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
+import { wrapProviderData, SYSTEM_DATA_GUARD } from "@/lib/ai-context";
 
 // ============================================================================
 // TIPI
@@ -190,9 +191,12 @@ async function fetchExperienceCandidates(currentId: string): Promise<{
 // ============================================================================
 
 function buildProductPrompt(current: ProductCandidate, candidates: ProductCandidate[]): string {
+  // P3c-4: ponudniška vsebina (naslov, opis) vstopa v prompt OVITA v
+  // <podatek> oznake (wrapProviderData) — system sporočilu je prilepljen
+  // SYSTEM_DATA_GUARD, ki oznako razglaša za podatek, ne navodilo.
   const currentDesc = `TRENUTNI IZDELEK:
-- Naslov: ${current.name}
-- Opis: ${current.description}
+- Naslov: ${wrapProviderData("naziv", current.name)}
+- Opis: ${wrapProviderData("opis", current.description)}
 - Kategorija: ${current.category}
 - Regija: ${current.destinationName ?? "ni znana"}
 - Cena: €${current.price}
@@ -200,7 +204,12 @@ function buildProductPrompt(current: ProductCandidate, candidates: ProductCandid
 - Ocena: ${current.rating}/5`;
 
   const candidatesDesc = candidates
-    .map((c, i) => `  [${i}] ${c.name} — ${c.description.substring(0, 100)} (kategorija: ${c.category}, regija: ${c.destinationName ?? "neznana"}, cena: €${c.price}, ocena: ${c.rating})`)
+    .map((c, i) =>
+      wrapProviderData(
+        "kandidat-izdelek",
+        `[${i}] ${c.name} — ${c.description.substring(0, 100)} (kategorija: ${c.category}, regija: ${c.destinationName ?? "neznana"}, cena: €${c.price}, ocena: ${c.rating})`
+      )
+    )
     .join("\n");
 
   return `Si strokovnjak za slovenske lokalne izdelke in kulinariko. Uporabnik gleda izdelek in mu želimo priporočiti 4 NAJBOLJ PODOBNE ali COMPLEMENTARY izdelke iz spodnjega seznama.
@@ -220,9 +229,10 @@ Odgovor (SAMO JSON array, brez dodatnega besedila):`;
 }
 
 function buildExperiencePrompt(current: ExperienceCandidate, candidates: ExperienceCandidate[]): string {
+  // P3c-4: enaka ovijanja kot pri izdelkih (glej buildProductPrompt)
   const currentDesc = `TRENUTNA IZKUŠNJA:
-- Naslov: ${current.name}
-- Opis: ${current.description}
+- Naslov: ${wrapProviderData("naziv", current.name)}
+- Opis: ${wrapProviderData("opis", current.description)}
 - Kategorija: ${current.category}
 - Regija: ${current.destinationName ?? "ni znana"}
 - Cena: €${current.pricePerPerson}/osebo
@@ -231,7 +241,12 @@ function buildExperiencePrompt(current: ExperienceCandidate, candidates: Experie
 - Ocena: ${current.rating}/5`;
 
   const candidatesDesc = candidates
-    .map((c, i) => `  [${i}] ${c.name} — ${c.description.substring(0, 100)} (kategorija: ${c.category}, regija: ${c.destinationName ?? "neznana"}, cena: €${c.pricePerPerson}, trajanje: ${c.durationHours}h, ocena: ${c.rating})`)
+    .map((c, i) =>
+      wrapProviderData(
+        "kandidat-izkušnja",
+        `[${i}] ${c.name} — ${c.description.substring(0, 100)} (kategorija: ${c.category}, regija: ${c.destinationName ?? "neznana"}, cena: €${c.pricePerPerson}, trajanje: ${c.durationHours}h, ocena: ${c.rating})`
+      )
+    )
     .join("\n");
 
   return `Si strokovnjak za turizem in aktivnosti v Sloveniji. Uporabnik gleda izkušnjo in mu želimo priporočiti 4 NAJBOLJ PODOBNE ali COMPLEMENTARY izkušnje iz spodnjega seznama.
@@ -290,7 +305,8 @@ async function selectWithAI(
         [
           {
             role: "system",
-            content: "Si pomočnik za priporočanje slovenskih izdelkov. Vedno odgovoriš SAMO z veljavnim JSON array-om števil.",
+            // P3c-4: varnostna stavba za <podatek> ovito ponudniško vsebino
+            content: `Si pomočnik za priporočanje slovenskih izdelkov. Vedno odgovoriš SAMO z veljavnim JSON array-om števil.\n\n${SYSTEM_DATA_GUARD}`,
           },
           { role: "user", content: prompt },
         ],
@@ -327,7 +343,8 @@ async function selectWithAI(
         [
           {
             role: "system",
-            content: "Si pomočnik za priporočanje turističnih izkušenj v Sloveniji. Vedno odgovoriš SAMO z veljavnim JSON array-om števil.",
+            // P3c-4: varnostna stavba za <podatek> ovito ponudniško vsebino
+            content: `Si pomočnik za priporočanje turističnih izkušenj v Sloveniji. Vedno odgovoriš SAMO z veljavnim JSON array-om števil.\n\n${SYSTEM_DATA_GUARD}`,
           },
           { role: "user", content: prompt },
         ],

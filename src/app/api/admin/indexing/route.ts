@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { checkAdmin } from "@/lib/auth-guards";
+import { rateLimit } from "@/lib/rate-limit";
 import { getAllSitemapUrls, normalizePath } from "@/lib/sitemap-urls";
 
 // GET /api/admin/indexing — SEO indeksacijsko poročilo
 // Header: x-admin-password
+// P3a-4: timing-safe checkAdmin (prej ne-timing-safe `!==`) + rate limit.
+//
 // Vrne:
 //  - vseh 317 URL-jev iz sitemap (parse skupne logike)
 //  - za vsak URL: view count iz PageView tabele
@@ -13,8 +17,14 @@ import { getAllSitemapUrls, normalizePath } from "@/lib/sitemap-urls";
 //  - PageView tracking iz ListingEvent kjer type="impression" in source vsebuje URL path
 export async function GET(request: Request) {
   try {
-    const adminPassword = request.headers.get("x-admin-password");
-    if (adminPassword !== process.env.ADMIN_PASSWORD) {
+    const limited = rateLimit(request, {
+      limit: 60,
+      windowMs: 10 * 60_000,
+      key: "admin-indexing",
+    });
+    if (limited) return limited;
+
+    if (!checkAdmin(request.headers.get("x-admin-password"))) {
       return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
     }
 

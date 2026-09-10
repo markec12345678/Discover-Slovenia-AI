@@ -31,13 +31,22 @@ export async function POST(request: Request) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   const stripeKey = process.env.STRIPE_SECRET_KEY;
 
-  if (!webhookSecret || !stripeKey || !signature) {
+  // P3b-12: ločena odgovora — mankajoča KONFIGURACIJA je napaka strežnika
+  // (500), manjkajoči PODPIS pa napaka klica (400, ne 500).
+  if (!webhookSecret || !stripeKey) {
     console.error(
-      "[stripe/webhook] Manjkajoči konfiguracija (STRIPE_WEBHOOK_SECRET / STRIPE_SECRET_KEY / signature)"
+      "[stripe/webhook] Manjkajoča konfiguracija (STRIPE_WEBHOOK_SECRET / STRIPE_SECRET_KEY)"
     );
     return NextResponse.json(
       { error: "Webhook ni konfiguriran" },
       { status: 500 }
+    );
+  }
+  if (!signature) {
+    console.error("[stripe/webhook] Manjka stripe-signature glava");
+    return NextResponse.json(
+      { error: "Manjka podpis" },
+      { status: 400 }
     );
   }
 
@@ -64,6 +73,36 @@ export async function POST(request: Request) {
     );
   }
 
+  // === P3b-7: DEDUPLIKACIJA EVENTOV ===
+  // Stripe ob napaki retry-a dostavljanje — obdelan event.id se zapiše v
+  // ProcessedStripeEvent (PK). Unique constraint (P2002) je ATOMARNA
+  // varovalka tudi pred sočasno obdelavo istega eventa (dve instanci).
+  // Ponovitev → 200 { received, duplicate }, da Stripe ne retry-a več.
+  try {
+    await db.processedStripeEvent.create({
+      data: { id: event.id, eventType: event.type },
+    });
+  } catch (e) {
+    if ((e as { code?: string }).code === "P2002") {
+      console.log(
+        `[stripe/webhook] podvojen event ${event.id} (${event.type}) — obdelava preskočena`
+      );
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+    throw e;
+  }
+  // Best-effort čiščenje zapisov starejših od 30 dni (ne-čakajoče —
+  // kozmetika, ki ne sme vplivati na obdelavo eventa).
+  db.processedStripeEvent
+    .deleteMany({
+      where: {
+        createdAt: { lt: new Date(Date.now() - 30 * 24 * 60 * 60_000) },
+      },
+    })
+    .catch(() => {
+      // čiščenje je best-effort — napako tiho pogoltnemo
+    });
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
@@ -85,6 +124,17 @@ export async function POST(request: Request) {
           if (!invoice) {
             console.error(
               `[stripe/webhook] commission_invoice: račun ${cs.metadata.invoiceId} ni najden`
+            );
+            break;
+          }
+          // P3b-6: plačilo mora pokriti znesek računa. invoice.amount je v
+          // EUR, cs.amount_total v CENTIH → pričakovano = round(amount × 100).
+          // Premajhen znesek → ZAVRNJENO (račun ostane issued, log).
+          const expectedInvoiceCents = Math.round(invoice.amount * 100);
+          const paidInvoiceCents = cs.amount_total ?? 0;
+          if (paidInvoiceCents < expectedInvoiceCents) {
+            console.error(
+              `[stripe/webhook] commission_invoice ${invoice.invoiceNumber} ZAVRNJEN: plačano ${paidInvoiceCents} centov < znesek računa ${expectedInvoiceCents} centov`
             );
             break;
           }
@@ -153,6 +203,29 @@ export async function POST(request: Request) {
 
         // === SPONSORSHIP CHECKOUT ===
         if (type === "sponsorship" && sponsorshipId && listingId && ownerId && level) {
+          // P3b-6: plačilo mora ustrezati ceni nivoja. Cene niso izvožene kot
+          // skupna konstanta (SPONSORSHIP_PRICES je lokal v owner/sponsorship
+          // route) — zato preverjamo proti Sponsorship zapisu, ki je nastal ob
+          // create s to ceno: sponsorship.amount (EUR) × 100 = centi.
+          // Zapis ne obstaja ali premajhen znesek → ZAVRNJENO.
+          const sponsorship = await db.sponsorship.findUnique({
+            where: { id: sponsorshipId },
+            select: { amount: true },
+          });
+          const expectedSponsorshipCents = sponsorship
+            ? Math.round(sponsorship.amount * 100)
+            : null;
+          const paidSponsorshipCents = cs.amount_total ?? 0;
+          if (
+            expectedSponsorshipCents === null ||
+            paidSponsorshipCents < expectedSponsorshipCents
+          ) {
+            console.error(
+              `[stripe/webhook] sponsorship ${sponsorshipId} ZAVRNJEN: plačano ${paidSponsorshipCents} centov < pričakovano ${expectedSponsorshipCents} centov`
+            );
+            break;
+          }
+
           const listing = await db.listing.findUnique({
             where: { id: listingId },
             select: { name: true },
@@ -169,6 +242,25 @@ export async function POST(request: Request) {
 
         // === SUBSCRIPTION CHECKOUT (existing) ===
         if (ownerId && plan && (plan === "premium" || plan === "enterprise")) {
+          // P3b-6: plačilo mora biti PRAVZAPOR plačano in v pričakovanem
+          // znesku. PLAN_MONTHLY_PRICE je v EUR (149/499), cs.amount_total je
+          // v CENTIH → pričakovano = cena × 100. Neznan plan → Infinity
+          // (fail-closed). Neveljavno → NE aktiviraj (samo log + break).
+          const expectedPlanCents =
+            (PLAN_MONTHLY_PRICE[plan] ?? Number.POSITIVE_INFINITY) * 100;
+          const paidPlanCents = cs.amount_total ?? 0;
+          if (
+            cs.payment_status !== "paid" ||
+            paidPlanCents < expectedPlanCents
+          ) {
+            console.error(
+              `[stripe/webhook] subscription ${plan} za owner ${ownerId} ZAVRNJENA: payment_status=${
+                cs.payment_status ?? "neznan"
+              }, amount_total=${paidPlanCents} centov (pričakovano ≥ ${expectedPlanCents})`
+            );
+            break;
+          }
+
           // Pridobi subscription za renewal date
           let subscriptionEndsAt: Date | null = null;
           if (typeof cs.subscription === "string") {

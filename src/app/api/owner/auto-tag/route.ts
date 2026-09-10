@@ -62,6 +62,15 @@ export async function POST(request: Request) {
       { status: 401 }
     );
   }
+  // P3a-6: B2C seja (popotnik) nima dostopa do ponudniških endpointov —
+  // prej je B2C prešel session guard in porabljal AI kvoto (vzorec:
+  // listings/route.ts GET accountType check)
+  if (session.user.accountType === "user") {
+    return NextResponse.json(
+      { error: "Ta endpoint je za račune ponudnikov" },
+      { status: 403 }
+    );
+  }
 
   let body: AutoTagRequest;
   try {

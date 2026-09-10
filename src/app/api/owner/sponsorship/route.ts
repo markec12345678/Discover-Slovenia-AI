@@ -49,11 +49,23 @@ export async function POST(request: Request) {
 
     const owner = await db.owner.findUnique({
       where: { email: session.user.email },
-      select: { id: true, email: true, name: true },
+      select: { id: true, email: true, name: true, emailVerified: true },
     });
 
     if (!owner) {
       return NextResponse.json({ error: "Lastnik ni najden" }, { status: 404 });
+    }
+
+    // P3a-2: plačljive funkcije zahtevajo potrjeno e-pošto (ponovna povezava:
+    // nadzorna plošča → verify-email action "request")
+    if (!owner.emailVerified) {
+      return NextResponse.json(
+        {
+          error:
+            "Pred aktivacijo plačljivih funkcij potrdite svojo e-pošto. Povezavo za potrditev lahko ponovno zahtevate na nadzorni plošči.",
+        },
+        { status: 403 }
+      );
     }
 
     // Preveri lastništvo

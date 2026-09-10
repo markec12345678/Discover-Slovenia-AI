@@ -62,6 +62,10 @@ export async function POST(request: Request) {
         passwordHash,
         resetToken: null,
         resetTokenExpires: null,
+        // P3a-1: inkrement različice žetona — jwt callback v auth.ts ob
+        // naslednjem preverjanju (≤60 s zaradi cache-a) razveljavi vse
+        // obstoječe seje tega ownerja.
+        tokenVersion: { increment: 1 },
       },
     });
 

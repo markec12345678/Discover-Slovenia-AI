@@ -226,6 +226,11 @@ export async function POST(request: Request) {
         familyFriendly: data.familyFriendly,
         accessibility: data.accessibility,
         ownerId: session.user.id,
+        // P3c-9: moderacijska zanka — nove izkušnje gredo v pregled k adminu
+        // (default v shemi je "pending", a bodimo eksplicitni; submittedAt
+        // je obvezen za vrstni red v admin pending čakalni vrsti)
+        status: "pending",
+        submittedAt: new Date(),
       },
     });
 

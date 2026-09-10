@@ -57,9 +57,17 @@ export interface DraftNudgeOptions {
  *
  * Kandidati: status "draft", submittedAt null, ownerId ni null, lastnik ima
  * potrjeno e-pošto. Vsak poskus pošiljanja je v svojem try/catch — napaka
- * enega emaila ne sesuje celotnega niza. Stanje (draftNudgeStep,
- * draftNudgeSentAt) se posodobi SAMO ob uspešnem pošiljanju (ob napaki se
- * poskus ponovi ob naslednjem cron klicu).
+ * enega emaila ne sesuje celotnega niza.
+ *
+ * ATOMICNOST (P3c-2): vrstni red je optimistična ključavnja — NAJPREJ
+ * atomarno "claimamo" korak (updateMany z pogojem draftNudgeStep < step),
+ * ŠTELEJ nato pošljemo email. Concurrent klica istega listinga (npr. dva
+ * sočasna cron klica, live dokazano v P3-c E2) vidita natanko enega z
+ * claimed.count === 1; drugi dobi 0 in preskoči → NI VEČ dvojnega emaila.
+ * Če sendEmail po claimu odpove (false ALI throw), claim REVERTIRAMO na
+ * prejšnje stanje — s čimer ostaja izvirna semantika "SMTP fail → retry
+ * naslednji dan" (korak ni zapravljen). Stanje torej zapisujemo pred
+ * pošiljanjem, a uspešno potrdimo SAMO ob uspehu (revert sicer).
  */
 export async function runDraftNudges(
   options: DraftNudgeOptions = {}
@@ -142,25 +150,57 @@ export async function runDraftNudges(
         missingRequiredLabels: missingRequired.map((field) => field.label),
       });
 
-      const sent = await sendEmail({
-        to: owner.email,
-        subject: email.subject,
-        html: email.html,
-        text: email.text,
+      // ----- OPTIMISTIČNA KLJUČAVNJA (P3c-2) -----
+      // Claim je atomarno pogojen na dosedanji napredek: prevzame ga lahko
+      // SAMO klic, ki vidi draftNudgeStep < step. Concurrent dvojni klic
+      // (isti listing, isti korak) dobi claimed.count === 0 → preskoči.
+      // force semantika je neodvisna od tega: force preskoči STAROST, ne
+      // napredka — napredek varuje ravno ta updateMany pogoj.
+      const previousStep = listing.draftNudgeStep;
+      const previousSentAt = listing.draftNudgeSentAt;
+
+      const claimed = await db.listing.updateMany({
+        where: { id: listing.id, draftNudgeStep: { lt: step } },
+        data: { draftNudgeStep: step, draftNudgeSentAt: now },
       });
+      if (claimed.count === 0) {
+        // Drugi (sočasni) klic je prevzel korak med našim branjem in zapisom —
+        // NIČ ne pošiljamo, števec sent se ne poveča (email gre točno enkrat).
+        continue;
+      }
 
-      // Stanje zapišemo SAMO ob uspešnem pošiljanju — ob napaki (SMTP)
-      // poskus ponovimo ob naslednjem cron klicu
-      if (!sent) continue;
+      // Pošlji — sendEmail lahko vrne false (SMTP napaka, logirana v email.ts)
+      // ALI vreči; oboje obravnavamo kot neuspeh in REVERTIRAMO claim, da
+      // naslednji cron poskus (isti ali naslednji dan) znova poskusi.
+      let sent = false;
+      try {
+        sent = await sendEmail({
+          to: owner.email,
+          subject: email.subject,
+          html: email.html,
+          text: email.text,
+        });
+      } catch (sendError) {
+        console.error(
+          `[draft-nudges] sendEmail throw za listing ${listing.id} (korak ${step}) — claim se revertira:`,
+          sendError
+        );
+        sent = false;
+      }
 
-      await db.listing.update({
-        where: { id: listing.id },
-        data: {
-          draftNudgeStep: step,
-          draftNudgeSentAt: now,
-        },
-      });
+      if (!sent) {
+        // Revert claima na prejšnje stanje (korak NI zapravljen; retry ostaja)
+        await db.listing.updateMany({
+          where: { id: listing.id, draftNudgeStep: step },
+          data: {
+            draftNudgeStep: previousStep,
+            draftNudgeSentAt: previousSentAt ?? null,
+          },
+        });
+        continue;
+      }
 
+      // Uspešno poslano — claim ostane, statistika šteje SAMO uspešne pošiljke
       stats.sent += 1;
       stats.byStep[String(step)] = (stats.byStep[String(step)] ?? 0) + 1;
     } catch (error) {

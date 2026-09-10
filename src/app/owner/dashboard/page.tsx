@@ -3569,6 +3569,10 @@ function ProductCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  // P3c-9: status moderacijske zanke (vzorec badge-ov iz listings zavihka;
+  // tip Product nima status polja, API ga vrača iz DB)
+  const status = (product as { status?: string }).status ?? "published";
+  const StatusIcon = STATUS_ICONS[status] ?? ShieldCheck;
   return (
     <Card className="overflow-hidden flex flex-col gap-0 py-0">
       {/* Slika */}
@@ -3594,7 +3598,18 @@ function ProductCard({
           </span>
           {PRODUCT_CATEGORY_LABELS[product.category]}
         </Badge>
-        <div className="absolute right-2 top-2 flex gap-1">
+        <div className="absolute right-2 top-2 flex flex-col items-end gap-1">
+          {/* P3c-9: status moderacijske zanke */}
+          <Badge
+            className={cn(
+              "border text-xs shadow-sm backdrop-blur-sm",
+              STATUS_BADGE_CLASSES[status] ?? STATUS_BADGE_CLASSES.published
+            )}
+            aria-label={`Status: ${STATUS_LABELS[status] ?? status}`}
+          >
+            <StatusIcon className="size-3" aria-hidden="true" />
+            {STATUS_LABELS[status] ?? status}
+          </Badge>
           {product.featured && (
             <Badge className="bg-amber-400 text-amber-950 border-0 text-xs">
               <Star className="size-3 fill-amber-950" aria-hidden="true" />
@@ -3965,6 +3980,10 @@ function ExperienceCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  // P3c-9: status moderacijske zanke (vzorec badge-ov iz listings zavihka;
+  // tip Experience nima status polja, API ga vrača iz DB)
+  const status = (experience as { status?: string }).status ?? "published";
+  const StatusIcon = STATUS_ICONS[status] ?? ShieldCheck;
   // Prikaži prve 3 jezike kot slovenska imena (ostanek kot +N)
   const langs = (experience.languages ?? []).slice(0, 3).map(
     (code) => LANGUAGE_LABELS[code] ?? code
@@ -3996,7 +4015,18 @@ function ExperienceCard({
           </span>
           {EXPERIENCE_CATEGORY_LABELS[experience.category]}
         </Badge>
-        <div className="absolute right-2 top-2 flex gap-1">
+        <div className="absolute right-2 top-2 flex flex-col items-end gap-1">
+          {/* P3c-9: status moderacijske zanke */}
+          <Badge
+            className={cn(
+              "border text-xs shadow-sm backdrop-blur-sm",
+              STATUS_BADGE_CLASSES[status] ?? STATUS_BADGE_CLASSES.published
+            )}
+            aria-label={`Status: ${STATUS_LABELS[status] ?? status}`}
+          >
+            <StatusIcon className="size-3" aria-hidden="true" />
+            {STATUS_LABELS[status] ?? status}
+          </Badge>
           {experience.featured && (
             <Badge className="bg-amber-400 text-amber-950 border-0 text-xs">
               <Star className="size-3 fill-amber-950" aria-hidden="true" />

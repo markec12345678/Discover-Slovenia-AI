@@ -22,12 +22,14 @@ export async function GET(request: Request) {
       );
     }
 
+    // P3c-8: tudi referenčni izdelek mora biti objavljen — pending/rejected
+    // vrnejo enoten 404 (enaka javna vrata kot /api/products).
     const current = await db.product.findUnique({
       where: { id: productId },
-      select: { id: true },
+      select: { id: true, status: true },
     });
 
-    if (!current) {
+    if (!current || current.status !== "published") {
       return NextResponse.json(
         { error: "Izdelek ni najden" },
         { status: 404 }
@@ -42,8 +44,11 @@ export async function GET(request: Request) {
     }
 
     // Pridobi full podatke za AI-izbrane IDs (v vrstnem redu priporočila)
+    // P3c-8: kandidati v getRecommendedIds so že filtrirani na published —
+    // a cache (24h) lahko zastara (item je medtem umaknjen iz javnosti),
+    // zato obrambno filtriramo TUDI tukaj.
     const rows = await db.product.findMany({
-      where: { id: { in: itemIds } },
+      where: { id: { in: itemIds }, status: "published" },
     });
 
     // Ohrani vrstni red AI priporočila

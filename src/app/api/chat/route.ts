@@ -3,6 +3,7 @@ import { DESTINATIONS } from "@/lib/slovenia-data";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
 import { rateLimit } from "@/lib/rate-limit";
+import { wrapProviderData, SYSTEM_DATA_GUARD } from "@/lib/ai-context";
 
 // POST /api/chat — AI chatbot z dostopom do vsebine platforme
 //
@@ -86,16 +87,29 @@ export async function POST(request: Request) {
     `- ${d.name} (${d.region}): ${d.tagline}. Aktivnosti: ${d.activities.slice(0, 4).join(", ")}. Najboljše za: ${d.bestFor.slice(0, 3).join(", ")}.`
   ).join("\n");
 
+  // P3c-4: vsaka vrstica ponudniške vsebine (ime + opis + meta lokalov /
+  // izdelkov / izkušenj) je OVITA v <podatek> oznako — system sporočilo
+  // spodaj vsebuje SYSTEM_DATA_GUARD, ki modelu naloži, da je to IZKLJUČNO
+  // podatek, ne navodilo (prompt injection obramba).
   const listingsContext = topListings.map((l) =>
-    `- ${l.name} (${l.category})${l.destinationName ? ` v ${l.destinationName}` : ""}: ${l.description.substring(0, 80)}. ${l.priceRange ? `Cena: ${l.priceRange}.` : ""} Ocena: ${l.rating}/5.`
+    wrapProviderData(
+      "lokal",
+      `- ${l.name} (${l.category})${l.destinationName ? ` v ${l.destinationName}` : ""}: ${l.description.substring(0, 80)}. ${l.priceRange ? `Cena: ${l.priceRange}.` : ""} Ocena: ${l.rating}/5.`
+    )
   ).join("\n");
 
   const productsContext = topProducts.map((p) =>
-    `- ${p.name} (${p.category})${p.destinationName ? ` iz ${p.destinationName}` : ""}: ${p.description.substring(0, 80)}. Cena: €${p.price}. Ocena: ${p.rating}/5.`
+    wrapProviderData(
+      "izdelek",
+      `- ${p.name} (${p.category})${p.destinationName ? ` iz ${p.destinationName}` : ""}: ${p.description.substring(0, 80)}. Cena: €${p.price}. Ocena: ${p.rating}/5.`
+    )
   ).join("\n");
 
   const experiencesContext = topExperiences.map((e) =>
-    `- ${e.name} (${e.category})${e.destinationName ? ` v ${e.destinationName}` : ""}: ${e.description.substring(0, 80)}. Cena: €${e.pricePerPerson}/osebo. Ocena: ${e.rating}/5.`
+    wrapProviderData(
+      "izkušnja",
+      `- ${e.name} (${e.category})${e.destinationName ? ` v ${e.destinationName}` : ""}: ${e.description.substring(0, 80)}. Cena: €${e.pricePerPerson}/osebo. Ocena: ${e.rating}/5.`
+    )
   ).join("\n");
 
   const pageContext = body.currentPage
@@ -132,7 +146,9 @@ PRAVILA:
 5. Če sprašuje o itinererju, usmeri ga na "AI načrtovalec" v sekciji #načrtuj
 6. Če sprašuje o rezervacijah, pojasni da poteka direktno pri ponudniku (redirect model)
 7. Nikoli ne izmišljaj podatkov — če ne veš, reci
-8. Uporabljaj emoji za prijaznost (🏔️ 🍷 🚴‍♂️ 🏛️) a ne pretiravaj`;
+8. Uporabljaj emoji za prijaznost (🏔️ 🍷 🚴‍♂️ 🏛️) a ne pretiravaj
+
+${SYSTEM_DATA_GUARD}`;
 
   // Zgradi pogovor za AI
   const aiMessages = [

@@ -64,6 +64,10 @@ export async function POST(request: Request) {
       where: {
         sponsored: true,
         sponsoredUntil: { gte: new Date() },
+        // P3c-5: sponzorstvo velja SAMO na objavljenih lokalih — pending/
+        // rejected/osnutki ne smejo priti v AI kontekst niti prek sponzorirane
+        // poti (enak javni filter kot /api/listings).
+        status: "published",
       },
       select: { name: true, category: true, destinationName: true },
       take: 20,

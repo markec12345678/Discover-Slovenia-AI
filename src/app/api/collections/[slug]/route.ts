@@ -51,7 +51,12 @@ export async function GET(
 }
 
 async function fetchProducts(filters: CollectionFilters) {
-  const where: Record<string, unknown> = {};
+  // P3c-8: zbirka je javna stran — SAMO objavljeni izdelki. `status` je vedno
+  // v where, zato "praznega" where ne more biti; "ni dejanskih filtrov"
+  // preverimo ločeno (Object.keys brez statusa).
+  const where: Record<string, unknown> = { status: "published" };
+  const hasProductFilter = () =>
+    Object.keys(where).some((k) => k !== "status");
 
   // Kategorije izdelkov: uporabi productCategories, če je podan; sicer presek
   // `categories` z veljavnimi kategorijami izdelkov.
@@ -83,7 +88,7 @@ async function fetchProducts(filters: CollectionFilters) {
   if (attrs.includes("vegan")) where.vegan = true;
 
   // Če noben filter ne velja za products, vrni prazen seznam (ne vseh vrstic).
-  if (Object.keys(where).length === 0) return [];
+  if (!hasProductFilter()) return [];
 
   const rows = await db.product.findMany({
     where,
@@ -98,7 +103,11 @@ async function fetchProducts(filters: CollectionFilters) {
 }
 
 async function fetchExperiences(filters: CollectionFilters) {
-  const where: Record<string, unknown> = {};
+  // P3c-8: zbirka je javna stran — SAMO objavljene izkušnje (isti vzorec kot
+  // fetchProducts zgoraj).
+  const where: Record<string, unknown> = { status: "published" };
+  const hasExperienceFilter = () =>
+    Object.keys(where).some((k) => k !== "status");
 
   const sourceCats = filters.categories ?? [];
   const expCats = sourceCats.filter((c) =>
@@ -126,7 +135,7 @@ async function fetchExperiences(filters: CollectionFilters) {
   if (attrs.includes("accessibility")) where.accessibility = true;
 
   // Če noben filter ne velja za experiences, vrni prazen seznam.
-  if (Object.keys(where).length === 0) return [];
+  if (!hasExperienceFilter()) return [];
 
   const rows = await db.experience.findMany({
     where,

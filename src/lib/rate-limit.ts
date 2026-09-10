@@ -67,15 +67,12 @@ export function rateLimit(
   }
   const id = `${ip}:${key ?? pathname}`;
 
-  const bucket = buckets.get(id);
-  if (!bucket || bucket.resetAt <= now) {
-    buckets.set(id, { count: 1, resetAt: now + windowMs });
-    return null;
-  }
-
-  bucket.count++;
-  if (bucket.count > limit) {
-    const retryAfterSec = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
+  if (hitLimit(id, limit, windowMs)) {
+    const bucket = buckets.get(id);
+    const retryAfterSec = Math.max(
+      1,
+      Math.ceil(((bucket?.resetAt ?? now + windowMs) - now) / 1000)
+    );
     return NextResponse.json(
       {
         error: "Preveč zahtev. Prosimo, poskusite znova kasneje.",
@@ -89,4 +86,29 @@ export function rateLimit(
   }
 
   return null;
+}
+
+/**
+ * P3a-3: ključna (BREZ Request/IP) varianta sliding-window limiterja.
+ *
+ * Za mesta, ki nimajo dostopa do Request objekta (npr. NextAuth authorize
+ * callback) — ključ je poljuben niz (npr. `login:${email}`). Vene `true`,
+ * če je ključ presegel limit v oknu (zahtevo zavrnemo), sicer `false`
+ * (zahteva dovoljena in šteje v okno).
+ *
+ * Enaka logika/buckets kot rateLimit — namenoma skupna mapa, da periodično
+ * čiščenje pokriva tudi te ključe.
+ */
+export function hitLimit(key: string, limit: number, windowMs: number): boolean {
+  const now = Date.now();
+  cleanup(now);
+
+  const bucket = buckets.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    buckets.set(key, { count: 1, resetAt: now + windowMs });
+    return false;
+  }
+
+  bucket.count++;
+  return bucket.count > limit;
 }

@@ -15,7 +15,9 @@ export async function GET(request: Request) {
     const sort = searchParams.get("sort") || "featured";
 
     // Zgradi where pogoj
-    const where: Record<string, unknown> = {};
+    // P3c-8: javna tržnica sme kazati SAMO objavljene zapise (pending →
+    // admin approve → published; moderacijski vrata držijo tudi tu).
+    const where: Record<string, unknown> = { status: "published" };
     if (category && category !== "all") where.category = category;
     if (destinationId && destinationId !== "all")
       where.destinationId = destinationId;

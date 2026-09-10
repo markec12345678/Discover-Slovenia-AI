@@ -1,12 +1,21 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { checkAdmin } from "@/lib/auth-guards";
+import { rateLimit } from "@/lib/rate-limit";
 import { promises as fs } from "fs";
 import path from "path";
 
+// P3a-4: timing-safe checkAdmin (prej ne-timing-safe `!==`) + rate limit.
 export async function GET(request: Request) {
   try {
-    const adminPassword = request.headers.get("x-admin-password");
-    if (adminPassword !== process.env.ADMIN_PASSWORD) {
+    const limited = rateLimit(request, {
+      limit: 60,
+      windowMs: 10 * 60_000,
+      key: "admin-leads",
+    });
+    if (limited) return limited;
+
+    if (!checkAdmin(request.headers.get("x-admin-password"))) {
       return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
     }
 

@@ -96,6 +96,15 @@ import {
   type ListingCategory,
   type ListingPlan,
 } from "@/lib/listings-types";
+// P3c-9: oznake kategorij izdelkov/izkušenj za kartice čakalne vrste
+import {
+  PRODUCT_CATEGORY_LABELS,
+  PRODUCT_CATEGORY_ICONS,
+  EXPERIENCE_CATEGORY_LABELS,
+  EXPERIENCE_CATEGORY_ICONS,
+  type ProductCategory,
+  type ExperienceCategory,
+} from "@/lib/marketplace-types";
 import { ListingForm, type AdminListing } from "./listing-form";
 import { BetaBanner } from "@/components/beta-banner";
 import { Progress } from "@/components/ui/progress";
@@ -148,21 +157,64 @@ interface PendingOwner {
 }
 
 interface PendingListing {
+  // P3c-9: vrsta vsebine v čakalni vrsti — lokalci nimajo type polja
+  // v starejših odgovorih, zato optional z default "listing"
+  type?: "listing" | "product" | "experience";
   id: string;
   name: string;
   slug: string;
   category: string;
   destinationName: string | null;
-  address: string;
-  phone: string | null;
-  email: string | null;
-  website: string | null;
+  // Polja, ki jih izdelki/izkušnje nimajo → optional (varna izpustitev)
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
   description: string;
   images: string[];
   submittedAt: string | null;
   submittedAgo: number | null;
   ownerId: string | null;
   owner: PendingOwner | null;
+}
+
+// P3c-9: oznake vrste vsebine (badge na kartici + samostalniki za sporočila)
+type PendingItemType = NonNullable<PendingListing["type"]>;
+
+const TYPE_LABELS: Record<PendingItemType, string> = {
+  listing: "Lokal",
+  product: "Izdelek",
+  experience: "Izkušnja",
+};
+
+// Tožilnik za opise v dialogu/toastih ("zavrni izkušnjo", "popravi izdelek")
+const TYPE_NOUN_ACC: Record<PendingItemType, string> = {
+  listing: "lokal",
+  product: "izdelek",
+  experience: "izkušnjo",
+};
+
+function itemType(item: PendingListing): PendingItemType {
+  return item.type ?? "listing";
+}
+
+// P3c-9: kategorija čez vse tri tipe vsebin (lokal + izdelek + izkušnja)
+function categoryLabel(category: string): string {
+  return (
+    CATEGORY_LABELS[category as ListingCategory] ??
+    PRODUCT_CATEGORY_LABELS[category as ProductCategory] ??
+    EXPERIENCE_CATEGORY_LABELS[category as ExperienceCategory] ??
+    category
+  );
+}
+
+function categoryIcon(category: string): string {
+  return (
+    CATEGORY_ICONS[category as ListingCategory] ??
+    PRODUCT_CATEGORY_ICONS[category as ProductCategory] ??
+    EXPERIENCE_CATEGORY_ICONS[category as ExperienceCategory] ??
+    "📍"
+  );
 }
 
 // Fallback seznam razlogov (enak seznamu v /api/admin/reject/[id])
@@ -197,22 +249,22 @@ function formatSubmittedAgo(minutes: number | null): string {
   return `pred ${days} ${slTimeUnit(days, "dnem", "dnevoma", "dnevi")}`;
 }
 
-// Slovenska množina za število lokalov (1 lokal, 2 lokala, 3-4 lokali, 5+ lokalov)
+// Slovenska množina za število vsebin v pregledu (lokalci + izdelki + izkušnje)
 function pendingCountLabel(n: number): string {
-  if (n === 1) return "1 lokal";
+  if (n === 1) return "1 vsebina";
   const r = n % 100;
-  if (r === 2) return `${n} lokala`;
-  if (r === 3 || r === 4) return `${n} lokali`;
-  return `${n} lokalov`;
+  if (r === 2) return `${n} vsebini`;
+  if (r === 3 || r === 4) return `${n} vsebine`;
+  return `${n} vsebin`;
 }
 
-// Aria opis števca čakajočih lokalov
+// Aria opis števca čakajočih vsebin
 function pendingCountAria(n: number): string {
-  if (n === 1) return "1 lokal čaka na pregled";
-  if (n === 2) return "2 lokala čakata na pregled";
+  if (n === 1) return "1 vsebina čaka na pregled";
+  if (n === 2) return "2 vsebini čakata na pregled";
   const r = n % 100;
-  if (r === 3 || r === 4) return `${n} lokali čakajo na pregled`;
-  return `${n} lokalov čaka na pregled`;
+  if (r === 3 || r === 4) return `${n} vsebine čakajo na pregled`;
+  return `${n} vsebin čaka na pregled`;
 }
 
 // Izlušči napako iz API odgovora (vzorec iz ostalih tabov)
@@ -436,10 +488,11 @@ function PendingTab({
   };
 
   const handleApprove = async (listing: PendingListing) => {
+    const tt = itemType(listing);
     setApprovingId(listing.id);
     try {
       const res = await fetch(
-        `/api/admin/approve/${encodeURIComponent(listing.id)}`,
+        `/api/admin/approve/${encodeURIComponent(listing.id)}?type=${tt}`,
         {
           method: "POST",
           headers: {
@@ -453,13 +506,21 @@ function PendingTab({
         toast({
           variant: "destructive",
           title: "Napaka pri odobritvi",
-          description: await extractApiError(res, "Lokala ni bilo mogoče odobriti."),
+          description: await extractApiError(res, "Vsebine ni bilo mogoče odobriti."),
         });
         return;
       }
       toast({
-        title: "Lokal odobren in objavljen",
-        description: `„${listing.name}" je sedaj objavljen. AI izboljšave in obvestilo lastniku potekata v ozadju.`,
+        title:
+          tt === "product"
+            ? "Izdelek odobren in objavljen"
+            : tt === "experience"
+              ? "Izkušnja odobrena in objavljena"
+              : "Lokal odobren in objavljen",
+        description:
+          tt === "listing"
+            ? `„${listing.name}" je sedaj objavljen. AI izboljšave in obvestilo lastniku potekata v ozadju.`
+            : `„${listing.name}" je sedaj objavljen${tt === "experience" ? "a" : ""} v tržnici. Obvestilo lastniku poteka v ozadju.`,
       });
       removeLocal(listing.id);
       await fetchPending({ silent: true });
@@ -486,7 +547,7 @@ function PendingTab({
     setRejecting(true);
     try {
       const res = await fetch(
-        `/api/admin/reject/${encodeURIComponent(rejectTarget.id)}`,
+        `/api/admin/reject/${encodeURIComponent(rejectTarget.id)}?type=${itemType(rejectTarget)}`,
         {
           method: "POST",
           headers: {
@@ -503,13 +564,18 @@ function PendingTab({
         toast({
           variant: "destructive",
           title: "Napaka pri zavrnitvi",
-          description: await extractApiError(res, "Lokala ni bilo mogoče zavrniti."),
+          description: await extractApiError(res, "Vsebine ni bilo mogoče zavrniti."),
         });
         return;
       }
       toast({
-        title: "Lokal zavrnjen",
-        description: `„${rejectTarget.name}" je zavrnjen. Lastnik je obveščen po e-pošti in lahko lokal popravi ter ponovno odda.`,
+        title:
+          rejectTarget.type === "product"
+            ? "Izdelek zavrnjen"
+            : rejectTarget.type === "experience"
+              ? "Izkušnja zavrnjena"
+              : "Lokal zavrnjen",
+        description: `„${rejectTarget.name}" je zavrnjen. Lastnik je obveščen po e-pošti in lahko vsebino popravi ter ponovno odda.`,
       });
       removeLocal(rejectTarget.id);
       setRejectTarget(null);
@@ -536,9 +602,9 @@ function PendingTab({
       {/* Glava zavihka */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold tracking-tight">Lokali v pregledu</h2>
+          <h2 className="text-xl font-bold tracking-tight">Vsebina v pregledu</h2>
           <p className="text-sm text-muted-foreground">
-            Novi lokalci, oddani s strani ponudnikov — odobrite ali zavrnite.
+            Novi lokalci, izdelki in izkušnje, oddani s strani ponudnikov — odobrite ali zavrnite.
           </p>
         </div>
         <Button
@@ -547,7 +613,7 @@ function PendingTab({
           onClick={() => fetchPending()}
           disabled={loading}
           className="h-11 w-11 shrink-0"
-          aria-label="Osveži seznam lokalov v pregledu"
+          aria-label="Osveži seznam vsebin v pregledu"
         >
           {loading ? (
             <Loader2 className="size-4 animate-spin" />
@@ -568,7 +634,7 @@ function PendingTab({
         <Card>
           <CardContent className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
-            Nalaganje lokalov v pregledu...
+            Nalaganje vsebin v pregledu...
           </CardContent>
         </Card>
       ) : !errorMsg && pending.length === 0 ? (
@@ -578,17 +644,17 @@ function PendingTab({
               className="size-10 mx-auto mb-3 text-emerald-500"
               aria-hidden="true"
             />
-            <p className="text-base font-semibold">Ni lokalov v pregledu</p>
+            <p className="text-base font-semibold">Ni vsebin v pregledu</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Vsi oddani lokalci so obdelani — novi prispevki se bodo prikazali tukaj.
+              Vse oddane vsebine (lokalci, izdelki, izkušnje) so obdelane — novi prispevki se bodo prikazali tukaj.
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
           {pending.map((l) => {
-            const catLabel =
-              CATEGORY_LABELS[l.category as ListingCategory] ?? l.category;
+            const catLabel = categoryLabel(l.category);
+            const tt = itemType(l);
             return (
               <Card key={l.id} className="flex flex-col overflow-hidden">
                 <div className="relative aspect-video bg-muted">
@@ -605,7 +671,7 @@ function PendingTab({
                       role="img"
                       aria-label={catLabel}
                     >
-                      {CATEGORY_ICONS[l.category as ListingCategory] ?? "📍"}
+                      {categoryIcon(l.category)}
                     </div>
                   )}
                   <Badge className="absolute right-2 top-2 gap-1 border-border bg-background/90 text-foreground backdrop-blur-sm">
@@ -618,6 +684,10 @@ function PendingTab({
                   <div className="space-y-1.5">
                     <h3 className="font-semibold leading-snug">{l.name}</h3>
                     <div className="flex flex-wrap gap-1.5">
+                      {/* P3c-9: vrsta vsebine (Lokal / Izdelek / Izkušnja) */}
+                      <Badge variant="secondary" className="gap-1">
+                        {TYPE_LABELS[tt]}
+                      </Badge>
                       {l.destinationName && (
                         <Badge variant="secondary">{l.destinationName}</Badge>
                       )}
@@ -700,7 +770,7 @@ function PendingTab({
                       className="min-h-11 flex-1"
                       onClick={() => handleApprove(l)}
                       disabled={approvingId !== null}
-                      aria-label={`Odobri in objavi lokal ${l.name}`}
+                      aria-label={`Odobri in objavi ${TYPE_NOUN_ACC[tt]} ${l.name}`}
                     >
                       {approvingId === l.id ? (
                         <>
@@ -719,7 +789,7 @@ function PendingTab({
                       className="min-h-11 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
                       onClick={() => setRejectTarget(l)}
                       disabled={approvingId !== null}
-                      aria-label={`Zavrni lokal ${l.name}`}
+                      aria-label={`Zavrni ${TYPE_NOUN_ACC[tt]} ${l.name}`}
                     >
                       <XCircle className="size-4" />
                       Zavrni
@@ -747,10 +817,19 @@ function PendingTab({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Zavrni lokal?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Zavrni{" "}
+              {rejectTarget ? TYPE_NOUN_ACC[itemType(rejectTarget)] : "vsebino"}?
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {rejectTarget
-                ? `„${rejectTarget.name}" bo označen kot zavrnjen. Lastnik bo prejel razlog po e-pošti in bo lokal lahko popravil ter ponovno oddal v pregled.`
+                ? `„${rejectTarget.name}" bo ${
+                    itemType(rejectTarget) === "experience"
+                      ? "označena kot zavrnjena"
+                      : "označen kot zavrnjen"
+                  }. Lastnik bo prejel razlog po e-pošti in bo ${
+                    TYPE_NOUN_ACC[itemType(rejectTarget)]
+                  } lahko popravil ter ponovno oddal v pregled.`
                 : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>

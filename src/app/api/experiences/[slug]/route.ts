@@ -9,11 +9,13 @@ export async function GET(
   try {
     const { slug } = await params;
 
+    // P3c-8: javna detaljna stran sme kazati SAMO objavljene zapise —
+    // pending/rejected vrnejo enoten 404 (brez razkritja statusa).
     const experience = await db.experience.findUnique({
       where: { slug },
     });
 
-    if (!experience) {
+    if (!experience || experience.status !== "published") {
       return NextResponse.json(
         { error: "Izkušnja ni najdena" },
         { status: 404 }

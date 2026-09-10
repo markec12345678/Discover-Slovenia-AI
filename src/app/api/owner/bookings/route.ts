@@ -46,6 +46,14 @@ export async function GET(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Niste prijavljeni" }, { status: 401 });
   }
+  // P3a-6: B2C seja (popotnik) nima dostopa do ponudniških endpointov —
+  // prej je B2C tukaj dobil 404 (owner lookup po User ID); eksplicitna 403.
+  if (session.user.accountType === "user") {
+    return NextResponse.json(
+      { error: "Ta endpoint je za račune ponudnikov" },
+      { status: 403 }
+    );
+  }
 
   try {
     const owner = await db.owner.findUnique({
@@ -134,6 +142,13 @@ export async function PATCH(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Niste prijavljeni" }, { status: 401 });
+  }
+  // P3a-6: B2C seja — eksplicitna 403 (enako kot GET)
+  if (session.user.accountType === "user") {
+    return NextResponse.json(
+      { error: "Ta endpoint je za račune ponudnikov" },
+      { status: 403 }
+    );
   }
 
   try {

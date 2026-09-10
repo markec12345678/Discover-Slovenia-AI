@@ -218,6 +218,11 @@ export async function POST(request: Request) {
         sellerPhone: data.sellerPhone?.trim() || null,
         sellerWebsite: data.sellerWebsite?.trim() || null,
         ownerId: session.user.id,
+        // P3c-9: moderacijska zanka — novi izdelki gredo v pregled k adminu
+        // (default v shemi je "pending", a bodimo eksplicitni; submittedAt
+        // je obvezen za vrstni red v admin pending čakalni vrsti)
+        status: "pending",
+        submittedAt: new Date(),
       },
     });
 

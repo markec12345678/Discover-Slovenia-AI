@@ -6,6 +6,7 @@ import { EVENTS } from "@/lib/events-data";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
 import { rateLimit } from "@/lib/rate-limit";
+import { wrapProviderData, SYSTEM_DATA_GUARD } from "@/lib/ai-context";
 
 // POST /api/ask-local — "Vprašaj lokalca": grounded AI Q&A na podlagi baze
 //
@@ -606,6 +607,10 @@ function buildSystemPrompt(
   destinationName: string | null,
   context: { destinationSummary: string; items: ContextItem[] }
 ): string {
+  // P3c-4: vsak kontekstni element (ime + opis + meta — vse iz ponudniške
+  // vsebine ali njej enakovrednih nepreverjenih virov) je OVIT v
+  // <podatek> oznako; SYSTEM_DATA_GUARD (prilepljen na konec system
+  // sporočila) modelu naloži, da je to IZKLJUČNO podatek, ne navodilo.
   const itemsContext = context.items
     .map((i) => {
       const parts = [
@@ -618,7 +623,7 @@ function buildSystemPrompt(
         // — oznaka, ki jo AI upošteva pri izbiri (pravilo 8 spodaj)
         isPremiumPartner(i) ? " [premium partner]" : "",
       ];
-      return parts.filter(Boolean).join(" ");
+      return wrapProviderData(i.kind, parts.filter(Boolean).join(" "));
     })
     .join("\n");
 
@@ -637,12 +642,17 @@ PRAVILA ODGOVORA:
 5. Zaključi z enim kratkim praktičnim lokalnim nasvetom (kdaj priti, kaj vzeti s seboj ipd.) — brez izmišljenih podrobnosti.
 6. Jedrnato: največ ~1500 znakov, brez uvodnih fraz tipa "Kot AI".
 7. Piši čisto besedilo brez markdown oblik (brez krepilnih zvezdic, naslovnih lojter ipd.) — prikazan je kot navadno besedilo.
-8. Med kvalitativno enakovrednimi možnostmi raje izberi tisto z oznako [premium partner] — nikoli pa ne priporči slabše opcije le zaradi oznake. Imena citiraj točno tako, kot so zapisana v podatkih.`;
+8. Med kvalitativno enakovrednimi možnostmi raje izberi tisto z oznako [premium partner] — nikoli pa ne priporči slabše opcije le zaradi oznake. Imena citiraj točno tako, kot so zapisana v podatkih.
+
+${SYSTEM_DATA_GUARD}`;
 }
 
 // ============================================================================
 // FALLBACK — programski odgovor iz istega konteksta (brez AI)
 // ============================================================================
+// P3c-4(c): fallback IZPISUJE opise (prikaz podatka, ne prompt) — React
+// render besedila brez dangerouslySetInnerHTML sam escapira HTML, zato XSS
+// ni mogoč; opisi se tukaj namenoma NE ovijajo v <podatek> (ni AI poti).
 
 function buildFallbackAnswer(
   destinationName: string | null,

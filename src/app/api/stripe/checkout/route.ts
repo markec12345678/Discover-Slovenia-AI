@@ -47,6 +47,7 @@ export async function POST(request: Request) {
         subscriptionStatus: true,
         stripeCustomerId: true,
         subscriptionEndsAt: true,
+        emailVerified: true,
       },
     });
 
@@ -54,6 +55,18 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Lastnik ni najden" },
         { status: 404 }
+      );
+    }
+
+    // P3a-2: plačljive funkcije (naročnina) zahtevajo potrjeno e-pošto
+    // (ponovna povezava: nadzorna plošča → verify-email action "request")
+    if (!owner.emailVerified) {
+      return NextResponse.json(
+        {
+          error:
+            "Pred aktivacijo plačljivih funkcij potrdite svojo e-pošto. Povezavo za potrditev lahko ponovno zahtevate na nadzorni plošči.",
+        },
+        { status: 403 }
       );
     }
 

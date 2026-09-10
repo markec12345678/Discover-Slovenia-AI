@@ -42,10 +42,23 @@ export async function POST(request: Request) {
         name: true,
         businessName: true,
         stripeCustomerId: true,
+        emailVerified: true,
       },
     });
     if (!owner) {
       return NextResponse.json({ error: "Lastnik ni najden" }, { status: 404 });
+    }
+
+    // P3a-2: plačljive funkcije (provizijski račun) zahtevajo potrjeno
+    // e-pošto (ponovna povezava: nadzorna plošča → verify-email "request")
+    if (!owner.emailVerified) {
+      return NextResponse.json(
+        {
+          error:
+            "Pred aktivacijo plačljivih funkcij potrdite svojo e-pošto. Povezavo za potrditev lahko ponovno zahtevate na nadzorni plošči.",
+        },
+        { status: 403 }
+      );
     }
 
     const invoice = await db.commissionInvoice.findUnique({

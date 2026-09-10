@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
+import { checkAdmin } from "@/lib/auth-guards";
+import { rateLimit } from "@/lib/rate-limit";
 import { generateCompletion } from "@/lib/ai-client";
 
 // GET /api/ai-insights?type=admin — AI poslovni vpogledi za admin dashboard
@@ -12,6 +14,9 @@ import { generateCompletion } from "@/lib/ai-client";
 // - Priporočila (kaj izboljšati)
 // - Anomalije (nenavadni vzorci)
 // - Priložnosti (neizkoriščeni potenciali)
+//
+// P3a-4: timing-safe checkAdmin (prej ne-timing-safe `!==`) + rate limit
+// 60/10 min (drag AI endpoint).
 
 interface Insight {
   type: "trend" | "recommendation" | "anomaly" | "opportunity";
@@ -28,13 +33,22 @@ interface AIInsightsResponse {
 
 export async function GET(request: Request) {
   try {
+    // P3a-4: rate limit — AI generiranje je drag klic
+    const limited = rateLimit(request, {
+      limit: 60,
+      windowMs: 10 * 60_000,
+      key: "ai-insights",
+    });
+    if (limited) return limited;
+
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type") || "admin";
 
-    // Avtentikacija
-    const adminPassword = request.headers.get("x-admin-password");
-    if (type === "admin" && adminPassword !== process.env.ADMIN_PASSWORD) {
-      return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
+    // Avtentikacija (P3a-4: timing-safe checkAdmin iz auth-guards)
+    if (type === "admin") {
+      if (!checkAdmin(request.headers.get("x-admin-password"))) {
+        return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
+      }
     }
 
     let ownerId = "";

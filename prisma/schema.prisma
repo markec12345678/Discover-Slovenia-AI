@@ -35,6 +35,9 @@ model User {
   resetToken                String?
   resetTokenExpires         DateTime?
 
+  // === P3-audit (P3a-1): razveljavitev sej ob ponastavitvi gesla ===
+  tokenVersion Int @default(0)
+
   itineraries   SavedItinerary[]
 
   @@index([email])
@@ -64,6 +67,11 @@ model Owner {
   // resetToken: enkratni žeton za ponastavitev gesla (1 h veljavnost)
   resetToken                String?
   resetTokenExpires         DateTime?
+
+  // === P3-audit (P3a-1): razveljavitev sej ob ponastavitvi gesla ===
+  // tokenVersion se poveča ob vsaki ponastavitvi gesla; JWT callback
+  // (auth.ts) ga preverja s kratkim cachingom → stare seje umrejo v ≤60 s.
+  tokenVersion Int @default(0)
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -272,7 +280,11 @@ model Product {
   saleCount       Int      @default(0)
 
   // Status sistem (Faza 1)
-  status          String   @default("published")
+  // P3-audit (P3c-9): novi izdelki gredo v moderacijo (pending → admin approve →
+  // published) — enak flow kot Listing. Obstoječi demo zapisi ostanejo published.
+  status          String   @default("pending")
+  submittedAt     DateTime?
+  rejectionReason String?
 
   // UGC recenzije obiskovalcev (ločeno od demo rating/reviewCount iz CSV-seeda)
   reviews         Review[]
@@ -323,7 +335,11 @@ model Experience {
   bookingCount    Int      @default(0)
 
   // Status sistem (Faza 1)
-  status          String   @default("published")
+  // P3-audit (P3c-9): nove izkušnje gredo v moderacijo (pending → admin approve
+  // → published) — enak flow kot Listing. Obstoječi demo zapisi ostanejo published.
+  status          String   @default("pending")
+  submittedAt     DateTime?
+  rejectionReason String?
 
   // UGC recenzije obiskovalcev (ločeno od demo rating/reviewCount iz CSV-seeda)
   reviews         Review[]
@@ -564,6 +580,21 @@ model LocalQuestion {
 // ki jo plača prek premium naročnine.
 
 // Izvedena globoka konzultacija (brezplačna — uporabniški lead za rezervacije)
+// ============================================================================
+// P3-audit (P3b-7): DEDUPLIKACIJA STRIPE WEBHOOK DOGODKOV
+// Stripe retry-a dostavljanje — obdelani event.id se zapiše TUKAJ;
+// ponovljen event se prezgodaj zavrne. Čiščenje: starejše od 30 dni
+// (počisti se ob vsaki obdelavi).
+// ============================================================================
+
+model ProcessedStripeEvent {
+  id        String   @id // Stripe event.id (evt_...)
+  eventType String // npr. "checkout.session.completed"
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 model Consultation {
   id              String    @id @default(cuid())
   accessToken     String    @unique // zasebna povezava /konzultacija/{token} (nedoglediv)

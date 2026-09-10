@@ -6,15 +6,19 @@ import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limit";
 import { escapeHtml } from "@/lib/security";
 
-// POST /api/admin/approve/[id] — odobri lokal in ga objavi
+// POST /api/admin/approve/[id] — odobri vsebino in jo objavi
 // Header: x-admin-password
-// Body: { publishNow?: boolean } (default true)
+// Query: type = "listing" (privzeto, backward kompat) | "product" | "experience"
+// Body: { publishNow?: boolean } (default true — samo za listinge)
 //
 // Ko admin odobri lokal:
 // 1. Status → approved → published
 // 2. partnerStatus → verified (če še ni)
 // 3. verifiedByAdmin → true
 // 4. AI avtomatsko generira: SEO meta, ključne besede, AI oznake
+//
+// P3c-9: za izdelke/izkušnje (type=product|experience) velja enaka
+// moderacijska zanka (pending → published), brez AI enrichmenta (samo lokalci).
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -29,9 +33,129 @@ export async function POST(
     }
 
     const { id } = await params;
+    const type = new URL(request.url).searchParams.get("type") ?? "listing";
+    if (type !== "listing" && type !== "product" && type !== "experience") {
+      return NextResponse.json(
+        { error: `Neveljaven type "${type}"` },
+        { status: 400 }
+      );
+    }
     const body = await request.json().catch(() => ({}));
     const publishNow = body.publishNow !== false; // default true
 
+    // === P3c-9: IZDELKI TRŽNICE ===
+    if (type === "product") {
+      const product = await db.product.findUnique({ where: { id } });
+      if (!product) {
+        return NextResponse.json({ error: "Izdelek ni najden" }, { status: 404 });
+      }
+      if (product.status !== "pending") {
+        return NextResponse.json(
+          {
+            error: `Izdelek ima status "${product.status}", ne more biti odobren`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const updated = await db.product.update({
+        where: { id },
+        // submittedAt ostaja (kdaj je bil oddan v pregled)
+        data: { status: "published" },
+      });
+
+      // Audit log
+      await logAudit({
+        actorRole: "admin",
+        action: AUDIT_ACTIONS.PRODUCT_APPROVED,
+        resourceType: "product",
+        resourceId: id,
+        resourceName: product.name,
+        metadata: { type },
+      });
+
+      // Email lastniku (ne blokiraj odgovora)
+      if (product.ownerId) {
+        const owner = await db.owner.findUnique({
+          where: { id: product.ownerId },
+          select: { email: true, name: true },
+        });
+        if (owner) {
+          sendMarketplaceApprovalEmail(
+            owner.email,
+            owner.name,
+            product.name,
+            "izdelek"
+          ).catch(() => {});
+        }
+      }
+
+      console.log(`[admin/approve] izdelek ${product.name} → published`);
+
+      return NextResponse.json({
+        success: true,
+        product: updated,
+        message: "Izdelek odobren in objavljen",
+      });
+    }
+
+    // === P3c-9: IZKUŠNJE TRŽNICE ===
+    if (type === "experience") {
+      const experience = await db.experience.findUnique({ where: { id } });
+      if (!experience) {
+        return NextResponse.json({ error: "Izkušnja ni najdena" }, { status: 404 });
+      }
+      if (experience.status !== "pending") {
+        return NextResponse.json(
+          {
+            error: `Izkušnja ima status "${experience.status}", ne more biti odobrena`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const updated = await db.experience.update({
+        where: { id },
+        // submittedAt ostaja (kdaj je bila oddana v pregled)
+        data: { status: "published" },
+      });
+
+      // Audit log
+      await logAudit({
+        actorRole: "admin",
+        action: AUDIT_ACTIONS.EXPERIENCE_APPROVED,
+        resourceType: "experience",
+        resourceId: id,
+        resourceName: experience.name,
+        metadata: { type },
+      });
+
+      // Email lastniku (ne blokiraj odgovora)
+      if (experience.ownerId) {
+        const owner = await db.owner.findUnique({
+          where: { id: experience.ownerId },
+          select: { email: true, name: true },
+        });
+        if (owner) {
+          sendMarketplaceApprovalEmail(
+            owner.email,
+            owner.name,
+            experience.name,
+            "izkušnja"
+          ).catch(() => {});
+        }
+      }
+
+      console.log(`[admin/approve] izkušnja ${experience.name} → published`);
+
+      return NextResponse.json({
+        success: true,
+        experience: updated,
+        message: "Izkušnja odobrena in objavljena",
+      });
+    }
+
+    // === LOKALI (privzeto — nespremenjena obstoječa logika) ===
     const listing = await db.listing.findUnique({ where: { id } });
     if (!listing) {
       return NextResponse.json({ error: "Lokal ni najden" }, { status: 404 });
@@ -169,6 +293,38 @@ async function sendApprovalEmail(email: string, name: string, listingName: strin
       <p>Vaš lokal <strong>${escapeHtml(listingName)}</strong> je bil odobren in je sedaj objavljen na platformi Discover Slovenia AI.</p>
       <p>AI ga lahko sedaj priporoča uporabnikom v itinererjih in iskanju.</p>
       <p>Vaš profil je bil avtomatsko optimiziran z AI (SEO oznake, ključne besede).</p>`
+    ),
+  });
+}
+
+// P3c-9: email obvestilo o odobritvi izdelka/izkušnje tržnice
+async function sendMarketplaceApprovalEmail(
+  email: string,
+  name: string,
+  itemName: string,
+  kind: "izdelek" | "izkušnja"
+) {
+  const { sendEmail, emailTemplate } = await import("@/lib/email");
+
+  const isExperience = kind === "izkušnja";
+  const subject = isExperience
+    ? `✅ Vaša izkušnja "${itemName}" je odobrena!`
+    : `✅ Vaš izdelek "${itemName}" je odobren!`;
+
+  await sendEmail({
+    to: email,
+    subject,
+    html: emailTemplate(
+      isExperience ? "Izkušnja odobrena in objavljena" : "Izdelek odobren in objavljen",
+      `<p>Pozdravljeni <strong>${escapeHtml(name)}</strong>,</p>
+      <p>${
+        isExperience
+          ? `Vaša izkušnja <strong>${escapeHtml(itemName)}</strong> je bila odobrena`
+          : `Vaš izdelek <strong>${escapeHtml(itemName)}</strong> je bil odobren`
+      } in je sedaj objavljen${
+        isExperience ? "a" : ""
+      } na platformi Discover Slovenia AI.</p>
+      <p>Uporabniki jo lahko sedaj najdejo v tržnici in AI priporočilih.</p>`
     ),
   });
 }

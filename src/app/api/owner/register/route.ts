@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { sendEmail, getAdminEmail, getBaseUrl } from "@/lib/email";
 import { welcomeEmail, adminAlertEmail } from "@/lib/email-templates";
 import { randomId, escapeHtml } from "@/lib/security";
+import { rateLimit } from "@/lib/rate-limit";
 
 // Validacijska shema za registracijo lastnika
 const registerSchema = z.object({
@@ -21,6 +22,15 @@ const registerSchema = z.object({
 // POST /api/owner/register — registracija novega lastnika lokala
 export async function POST(request: Request) {
   try {
+    // P3a-9: rate limit (10/h na IP) — preprečuje masovne registracije /
+    // email bomb (enak vzorec kot user/register)
+    const limited = rateLimit(request, {
+      limit: 10,
+      windowMs: 60 * 60_000,
+      key: "owner-register",
+    });
+    if (limited) return limited;
+
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {

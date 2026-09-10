@@ -22,12 +22,14 @@ export async function GET(request: Request) {
       );
     }
 
+    // P3c-8: tudi referenčna izkušnja mora biti objavljena — pending/rejected
+    // vrnejo enoten 404 (enaka javna vrata kot /api/experiences).
     const current = await db.experience.findUnique({
       where: { id: experienceId },
-      select: { id: true },
+      select: { id: true, status: true },
     });
 
-    if (!current) {
+    if (!current || current.status !== "published") {
       return NextResponse.json(
         { error: "Izkušnja ni najdena" },
         { status: 404 }
@@ -42,8 +44,11 @@ export async function GET(request: Request) {
     }
 
     // Pridobi full podatke za AI-izbrane IDs (v vrstnem redu priporočila)
+    // P3c-8: kandidati v getRecommendedIds so že filtrirani na published —
+    // a cache (24h) lahko zastara (item je medtem umaknjen iz javnosti),
+    // zato obrambno filtriramo TUDI tukaj.
     const rows = await db.experience.findMany({
-      where: { id: { in: itemIds } },
+      where: { id: { in: itemIds }, status: "published" },
     });
 
     // Ohrani vrstni red AI priporočila

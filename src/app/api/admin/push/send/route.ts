@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendPush, isPushConfigured, type PushPayload } from "@/lib/push";
+import { checkAdmin } from "@/lib/auth-guards";
+import { rateLimit } from "@/lib/rate-limit";
 
 // ============================================================================
 // ADMIN PUSH SEND — broadcast obvestila vsem aktivnim naročninam
 // ============================================================================
 //
-// Avtentikacija: isti vzorec kot /api/admin/analytics — header
-// `x-admin-password` primerjamo s process.env.ADMIN_PASSWORD (401
-// "Neavtorizirano"; fail-closed: manjkajoč env zavrne vse).
+// Avtentikacija: P3a-4 — timing-safe checkAdmin iz @/lib/auth-guards (isti
+// vzorec kot admin/pending; prej lokalna ne-timing-safe primerjava `!==`)
+// + rate limit 60/10 min (broadcast je akcijski endpoint).
 //
 // Kontrakt (admin orodje — konzumira ga admin UI / curl):
 //   POST /api/admin/push/send
@@ -100,10 +102,9 @@ function validateSendBody(
   return { ok: true, payload: { title, body, url } };
 }
 
-/** Avtentikacija admin-a (fail-closed). */
-function checkAdmin(request: Request): NextResponse | null {
-  const adminPassword = request.headers.get("x-admin-password");
-  if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
+/** Avtentikacija admin-a (timing-safe, fail-closed). P3a-4. */
+function requireAdmin(request: Request): NextResponse | null {
+  if (!checkAdmin(request.headers.get("x-admin-password"))) {
     return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
   }
   return null;
@@ -113,7 +114,15 @@ function checkAdmin(request: Request): NextResponse | null {
 // POST — broadcast
 // ============================================================================
 export async function POST(request: Request) {
-  const unauthorized = checkAdmin(request);
+  // P3a-4: rate limit akcijskega endpointa (broadcast = drag: push pošiljanje)
+  const limited = rateLimit(request, {
+    limit: 60,
+    windowMs: 10 * 60_000,
+    key: "admin-push",
+  });
+  if (limited) return limited;
+
+  const unauthorized = requireAdmin(request);
   if (unauthorized) return unauthorized;
 
   try {
@@ -206,7 +215,15 @@ export async function POST(request: Request) {
 // GET — statistika naročnin
 // ============================================================================
 export async function GET(request: Request) {
-  const unauthorized = checkAdmin(request);
+  // P3a-4: enak rate limit kot POST (skupni ključ admin-push)
+  const limited = rateLimit(request, {
+    limit: 60,
+    windowMs: 10 * 60_000,
+    key: "admin-push",
+  });
+  if (limited) return limited;
+
+  const unauthorized = requireAdmin(request);
   if (unauthorized) return unauthorized;
 
   try {

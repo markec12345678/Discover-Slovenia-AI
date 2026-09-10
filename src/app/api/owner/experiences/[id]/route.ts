@@ -170,6 +170,25 @@ export async function PUT(request: Request, { params }: RouteParams) {
       newSlug = candidate;
     }
 
+    // P3c-9: RE-MODERACIJA — vsebinska sprememba objavljenega zapisa vrne
+    // izkušnjo nazaj v pregled (enako kot pri lokalih). Vključno z zavrnjenimi:
+    // izdelki/izkušnje nimajo ločene "oddaj v pregled" rute (kot jo imajo
+    // lokalci), zato popravek + shrani = ponovna oddaja. Pending zapisi
+    // ostanejo kot so (že v čakalni vrsti).
+    const contentChanged =
+      (data.name !== undefined && data.name.trim() !== experience.name) ||
+      (data.description !== undefined &&
+        data.description.trim() !== experience.description) ||
+      (data.longDescription !== undefined &&
+        (data.longDescription?.trim() || null) !==
+          (experience.longDescription || null)) ||
+      (data.images !== undefined &&
+        JSON.stringify(data.images) !== experience.images);
+    const needsReModeration =
+      contentChanged &&
+      (experience.status === "published" ||
+        experience.status === "rejected");
+
     const updated = await db.experience.update({
       where: { id },
       data: {
@@ -229,11 +248,18 @@ export async function PUT(request: Request, { params }: RouteParams) {
           accessibility: data.accessibility,
         }),
         // Plan, featured in verified se NE posodabljajo preko tega API-ja
+        ...(needsReModeration && {
+          status: "pending",
+          submittedAt: new Date(),
+          rejectionReason: null,
+        }),
       },
     });
 
     return NextResponse.json({
       success: true,
+      // P3c-9: flag za UI — vsebina gre nazaj v admin pregled
+      ...(needsReModeration && { reSubmission: true }),
       experience: {
         ...updated,
         images: JSON.parse(updated.images || "[]") as string[],
