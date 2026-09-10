@@ -14,7 +14,8 @@ const HEADER_LOCALE = "x-next-intl-locale";
 const COOKIE_LOCALE = "NEXT_LOCALE";
 
 /**
- * Custom i18n middleware (nadomestek za `createMiddleware` iz next-intl).
+ * Proxy (prej "middleware" — Next.js 16 konvencija) — custom i18n
+ * middleware (nadomestek za `createMiddleware` iz next-intl).
  *
  * Standardni `createMiddleware` interno rewrites-a URL na `/{locale}/...`,
  * kar zahteva `[locale]` segment v App Router-ju. Ker te aplikacije NE
@@ -32,9 +33,26 @@ const COOKIE_LOCALE = "NEXT_LOCALE";
  *
  * Admin, owner, API in static file route-i so izključeni iz middleware-a
  * preko `config.matcher` spodaj.
+ *
+ * Datoteka je preimenovana iz `middleware.ts` → `proxy.ts` (Next.js 16
+ * konvencija; stara je deprecated in sproža build opozorilo).
  */
 export default function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // 0. VAROVALKA proti standalone zanki (Next.js 16):
+  //    V standalone produkciji Next rewrite interno forwarda prek HTTP
+  //    nazaj na isti strežnik; ta notranji klic PONOVNO vstopi v proxy
+  //    (proxy bi spet rewrite → spet forward → neskončna zanka; E2E
+  //    izmerjeno 4763 samo-zahtev na en request → timeout strani).
+  //    Ker prvi prehod nastavi `x-next-intl-locale` header, ki preživi
+  //    round-trip, ga uporabimo kot marker: notranji ponovni vstop takoj
+  //    spustimo naprej. (V dev/Vercel okoljih se header ob prvem vstopu
+  //    še ni nastavil, varovalka torej nikoli ne sproži — obnašanje
+  //    nespremenjeno.)
+  if (request.headers.get(HEADER_LOCALE)) {
+    return NextResponse.next();
+  }
 
   // 1. Če uporabnik obišče `/sl` (default locale s prefix-om), redirect
   //    na `/` (brez prefix-a, ker `as-needed` ne prikazuje default prefix-a).

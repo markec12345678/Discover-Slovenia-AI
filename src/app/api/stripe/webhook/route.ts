@@ -8,7 +8,7 @@ import {
   adminAlertEmail,
 } from "@/lib/email-templates";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
-import { activateSponsorship } from "@/app/api/owner/sponsorship/route";
+import { activateSponsorship } from "@/lib/sponsorships";
 
 // POST /api/stripe/webhook — Stripe webhook za subscription dogodke
 // Demo mode: samo logiraj

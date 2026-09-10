@@ -1,0 +1,67 @@
+# =============================================================================
+# Discover-Slovenia-AI — produkcija na enem strežniku (Docker Compose)
+# =============================================================================
+# Zagon:
+#   1. cp .env.example .env.docker  → izpolni (glej docs/DEPLOYMENT.md)
+#   2. docker compose up -d --build
+#   3. docker compose logs -f app
+#
+# Shema baze se inicializira SAMO ob prvem zagonu (prazen volumen dobi
+# preddatirano bazo s shemo iz slike). Kasnejše spremembe sheme:
+#   docker compose run --rm migrate          (prisma db push v isti volumen)
+#
+# Demo podatki (opcija, glej scripts/seed-demo.ts):
+#   docker compose run --rm migrate bun scripts/seed-demo.ts
+#
+# Backup baze: glej docs/BACKUP-RECOVERY.md (SQLite v volumenu dsa-data).
+
+services:
+  # ── Aplikacija (Next.js standalone + SQLite) ────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.docker
+    environment:
+      # absolutna pot v vsebniku — traja v volumenu dsa-data
+      DATABASE_URL: file:/app/db/custom.db
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+    volumes:
+      - dsa-data:/app/db
+    depends_on: []
+
+  # ── Mini-cron (isti urniki kot vercel.json) ──────────────────────────────
+  cron:
+    build:
+      context: .
+      dockerfile: docker/cron.Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      APP_URL: http://app:3000
+    depends_on:
+      - app
+
+  # ── Vzdrževalna orodja (izvedba na zahtevo, ne teče stalno) ─────────────
+  # Uporaba: docker compose run --rm migrate [ukaz]
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build
+    profiles: ["tools"]
+    environment:
+      DATABASE_URL: file:/app/db/custom.db
+    volumes:
+      - dsa-data:/app/db
+    # privzeti ukaz: sinhroniziraj shemo; override z argumenti
+    command: bunx prisma db push
+
+volumes:
+  dsa-data:

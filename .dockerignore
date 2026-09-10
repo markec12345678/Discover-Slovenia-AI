@@ -1,0 +1,17 @@
+# .dockerignore — kaj NE gre v Docker build kontekst
+# VARNOST: .env* (skrivnosti) in db/ (lokalni podatki) NIKOLI v sliko!
+
+node_modules
+.next
+.git
+.github
+.env
+.env.*
+!.env.example
+db
+dev.log
+server.log
+*.log
+.DS_Store
+agents
+agent-ctx

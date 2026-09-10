@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isStripeDemo } from "@/lib/stripe-server";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
+import { activateSponsorship } from "@/lib/sponsorships";
 
 // ============================================================================
 // POST /api/owner/sponsorship — ustvari sponsorship checkout (demo ali Stripe)
@@ -257,60 +258,4 @@ export async function GET() {
     console.error("[owner/sponsorship GET] napaka:", error);
     return NextResponse.json({ error: "Napaka" }, { status: 500 });
   }
-}
-
-// ============================================================================
-// HELPER — aktiviraj sponzorstvo
-// ============================================================================
-
-export async function activateSponsorship(
-  sponsorshipId: string,
-  listingId: string,
-  ownerId: string,
-  level: string,
-  endsAt: Date,
-  listingName: string
-): Promise<void> {
-  // 1. Posodobi sponsorship status
-  await db.sponsorship.update({
-    where: { id: sponsorshipId },
-    data: {
-      status: "active",
-      startsAt: new Date(),
-      endsAt,
-    },
-  });
-
-  // 2. Posodobi listing — sponsored = true + sponsoredUntil
-  await db.listing.update({
-    where: { id: listingId },
-    data: {
-      sponsored: true,
-      sponsoredUntil: endsAt,
-      plan: level === "featured" ? "enterprise" : "premium",
-    },
-  });
-
-  // 3. Posodobi owner plan
-  await db.owner.update({
-    where: { id: ownerId },
-    data: {
-      plan: level === "featured" ? "enterprise" : "premium",
-      subscriptionStatus: "active",
-      subscriptionEndsAt: endsAt,
-    },
-  });
-
-  // 4. Audit log
-  await logAudit({
-    actorId: ownerId,
-    actorRole: "system",
-    action: AUDIT_ACTIONS.SPONSORSHIP_ACTIVATED,
-    resourceType: "sponsorship",
-    resourceId: sponsorshipId,
-    resourceName: listingName,
-    metadata: { level, endsAt: endsAt.toISOString() },
-  });
-
-  console.log(`[sponsorship] Aktivirana: ${listingName} (${level}) do ${endsAt.toISOString()}`);
 }

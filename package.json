@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "DATABASE_URL=file:/home/z/Discover-Slovenia-AI/db/custom.db next dev -p 3005 --webpack 2>&1 | tee dev.log",
-    "build": "next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
+    "build": "prisma generate && next build --webpack && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/ && cp .next/server/interception-route-rewrite-manifest.js .next/standalone/.next/server/",
+    "postinstall": "prisma generate",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
     "db:push": "prisma db push",

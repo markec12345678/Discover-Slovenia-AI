@@ -1,0 +1,24 @@
+# =============================================================================
+# crontab.template — urniki vseh /api/cron/* končnih točk (UTC)
+# =============================================================================
+# Natančno enaki urnikom iz vercel.json (serverless produkcija) — enako
+# obnašanje na VPS. Postopek substitucije: __CRON_SECRET__ in __APP_URL__
+# zamenja cron-entrypoint.sh ob zagonu vsebnika.
+#
+# Vsa klica so Bearer avtorizirana (CRON_SECRET — fail-closed na API strani;
+# brez njega API vrne 401, kot je dokazano v E2E testih).
+
+# dnevni push opomnik za shranjena potovanja (vsak dan 06:00 UTC)
+0 6 * * * curl -fsS -m 300 -H "Authorization: Bearer __CRON_SECRET__" __APP_URL__/api/cron/daily-trip-push > /proc/1/fd/1 2>&1
+
+# dnevni preracun statusov listingov/izkusenj (vsak dan 07:00 UTC)
+0 7 * * * curl -fsS -m 300 -H "Authorization: Bearer __CRON_SECRET__" __APP_URL__/api/cron/recalculate-status > /proc/1/fd/1 2>&1
+
+# tedensko B2B porocilo "Vrednost AI kanala" (ponedeljek 08:00 UTC)
+0 8 * * 1 curl -fsS -m 600 -H "Authorization: Bearer __CRON_SECRET__" __APP_URL__/api/cron/weekly-alerts > /proc/1/fd/1 2>&1
+
+# samodejni mesečni obračun provizij (1. dan meseca 08:00 UTC)
+0 8 1 * * curl -fsS -m 600 -H "Authorization: Bearer __CRON_SECRET__" __APP_URL__/api/cron/commission-invoices > /proc/1/fd/1 2>&1
+
+# dnevni opomniki za obnovo naročnin (vsak dan 09:00 UTC)
+0 9 * * * curl -fsS -m 300 -H "Authorization: Bearer __CRON_SECRET__" __APP_URL__/api/cron/renewal-reminders > /proc/1/fd/1 2>&1
