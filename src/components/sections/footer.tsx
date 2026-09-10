@@ -70,7 +70,7 @@ export async function Footer() {
             ]}
           />
 
-          {/* 3. Podpora */}
+          {/* 3. Podpora + račun */}
           <FooterColumn
             title="Podpora"
             links={[
@@ -78,6 +78,9 @@ export async function Footer() {
               { href: "#kviz", label: "Kviz za popotnike" },
               { href: "#rezerviraj", label: "Rezervacije" },
               { href: "#dogodki", label: "Dogodki" },
+              // P1-2b: B2C računi popotnikov
+              { href: "/moja-potovanja", label: "Moja potovanja" },
+              { href: "/prijava", label: "Prijava" },
             ]}
           />
 

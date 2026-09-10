@@ -82,6 +82,14 @@ export async function GET() {
       { status: 401 }
     );
   }
+  // P1-2b: B2C seja (popotnik) nima dostopa do ponudniških endpointov —
+  // enaka zaščita kot auth-guards requireOwner (isUserAccount)
+  if (session.user.accountType === "user") {
+    return NextResponse.json(
+      { error: "Niste prijavljeni", code: "UNAUTHORIZED" },
+      { status: 401 }
+    );
+  }
 
   try {
     const listings = await db.listing.findMany({
@@ -114,6 +122,13 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json(
       { error: "Niste prijavljeni" },
+      { status: 401 }
+    );
+  }
+  // P1-2b: B2C seja (popotnik) nima dostopa do ponudniških endpointov
+  if (session.user.accountType === "user") {
+    return NextResponse.json(
+      { error: "Niste prijavljeni", code: "UNAUTHORIZED" },
       { status: 401 }
     );
   }

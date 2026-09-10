@@ -5,6 +5,7 @@ import { safeJsonLd } from "@/lib/security";
 import { matchEventsForItinerary } from "@/lib/events-match";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { SharedTrip } from "@/components/shared-trip";
+import { TripSocial } from "@/components/trip-social";
 import { TripPushCard } from "@/components/trip-push-card";
 import type { Itinerary } from "@/lib/types";
 
@@ -147,6 +148,36 @@ export default async function SharedTripPage({
     console.error("[pot] tripVote groupBy napaka:", e);
   }
 
+  // === Začetni komentarji in všečki (P1-2a social layer) — ne-kritično:
+  // ob napaki nadaljujemo s praznimi (stran se mora izrisati). ===
+  let initialComments: {
+    id: string;
+    authorName: string;
+    text: string;
+    createdAt: string;
+  }[] = [];
+  try {
+    const comments = await db.tripComment.findMany({
+      where: { shareId },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      select: { id: true, authorName: true, text: true, createdAt: true },
+    });
+    initialComments = comments.map((c) => ({
+      ...c,
+      createdAt: c.createdAt.toISOString(),
+    }));
+  } catch (e) {
+    console.error("[pot] tripComment findMany napaka:", e);
+  }
+
+  let initialLikes = 0;
+  try {
+    initialLikes = await db.tripLike.count({ where: { shareId } });
+  } catch (e) {
+    console.error("[pot] tripLike count napaka:", e);
+  }
+
   // === JSON-LD: TouristTrip ===
   const dayCount = saved.itinerary.days.length;
   const destNames = saved.itinerary.days
@@ -203,6 +234,16 @@ export default async function SharedTripPage({
         events={events}
         initialVotes={initialVotes}
       />
+
+      {/* === KOMENTARJI IN VŠEČKI (skupinsko planiranje, P1-2a) === */}
+      <div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6 lg:px-8">
+        <TripSocial
+          shareId={shareId}
+          initialComments={initialComments}
+          initialLikes={initialLikes}
+          createdAt={saved.createdAt.toISOString()}
+        />
+      </div>
 
       {/* === DNEVNI OPOMNIKI ZA TO POTOVANJE (retencijski motor, 3b) === */}
       <div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6 lg:px-8">

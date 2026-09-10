@@ -26,6 +26,15 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // === EMAIL VERIFIKACIJA + PONASTAVITEV GESLA (P1 — isti princip kot Owner) ===
+  // emailVerified: null = nepotrjena — dokler ni potrjena, "moja potovanja"
+  // ne prikažejo konzultacij (zasebni podatki zahtevajo lastništvo e-pošte)
+  emailVerified             DateTime?
+  verificationToken         String?
+  verificationTokenExpires  DateTime?
+  resetToken                String?
+  resetTokenExpires         DateTime?
+
   itineraries   SavedItinerary[]
 
   @@index([email])
@@ -102,6 +111,33 @@ model TripVote {
   createdAt   DateTime @default(now())
 
   @@unique([shareId, locationKey, voterId])
+  @@index([shareId])
+}
+
+// Komentarji obiskovalcev na deljenih potovanjih (/pot/[shareId]) — P1
+// Skupinsko planiranje: pohitri odločanje (vprašanja, dogovori "vidimo se ob 9h").
+// Anonimno (authorName 1–60 znakov) — brez računa, enako kot glasovanje.
+model TripComment {
+  id          String   @id @default(cuid())
+  shareId     String
+  authorName  String
+  text        String   // 2–500 znakov
+  createdAt   DateTime @default(now())
+
+  @@index([shareId])
+  @@index([createdAt])
+}
+
+// Všečki (srčki) na deljenih potovanjih — P1
+// En všeček na pot na anonimni clientId (localStorage, enako kot voterId) —
+// toggle prek API-ja (insert ali delete, idempotentno prek unique).
+model TripLike {
+  id        String   @id @default(cuid())
+  shareId   String
+  clientId  String
+  createdAt DateTime @default(now())
+
+  @@unique([shareId, clientId])
   @@index([shareId])
 }
 

@@ -124,6 +124,19 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 // ============================================================================
 
 /**
+ * P1: ali je seja B2C računa popotnika (provider "user")?
+ *
+ * VARNOST: Owner in User tabele imata NEODVISNA unique omejitve na email —
+ * isti email lahko obstaja v obeh. Ker requireOwner/requireOwnership
+ * resolverata Owner zapise prek session email, bi B2C seja s "kollideranim"
+ * emailom dobila dostop do tujega ponudniškega računa. accountType v žetonu
+ * (nastavljen ob prijavi) to zanesljivo prepreči.
+ */
+function isUserAccount(session: { user?: { accountType?: string } | null } | null): boolean {
+  return session?.user?.accountType === "user";
+}
+
+/**
  * Preveri ali ima določena vloga določeno dovoljenje.
  */
 export function canPerform(role: Role, perm: Permission): boolean {
@@ -154,6 +167,12 @@ export async function getCurrentRole(request?: Request): Promise<Role> {
     return "visitor";
   }
 
+  // P1: B2C račun (popotnik) — nikoli ponudniške pravice, tudi če bi
+  // naključno kollideral z Owner emailom (glej isUserAccount)
+  if (isUserAccount(session)) {
+    return "user";
+  }
+
   // 3. Pridobi owner iz baze za aktualni role in plan
   const owner = await db.owner.findUnique({
     where: { email: session.user.email },
@@ -181,7 +200,7 @@ export async function getCurrentRole(request?: Request): Promise<Role> {
  */
 export async function requireOwner() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
+  if (!session?.user?.email || isUserAccount(session)) {
     return {
       error: NextResponse.json(
         { error: "Niste prijavljeni", code: "UNAUTHORIZED" },
@@ -238,7 +257,7 @@ export async function requireOwnership(
   resourceId: string
 ): Promise<{ authorized: boolean; ownerId: string | null }> {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
+  if (!session?.user?.email || isUserAccount(session)) {
     return { authorized: false, ownerId: null };
   }
 

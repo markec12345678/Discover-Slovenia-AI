@@ -45,6 +45,23 @@ export async function POST(request: Request) {
       );
     }
 
+    // P1 CROSS-TABLE: email ne sme pripadati B2C računu popotnika —
+    // prijava poteka prek ločenih providerjev ("credentials" vs "user"),
+    // kollision emailov pa bi mešal seje (glej auth-guards isUserAccount)
+    const existingUser = await db.user.findUnique({
+      where: { email: emailLower },
+      select: { id: true },
+    });
+    if (existingUser) {
+      return NextResponse.json(
+        {
+          error:
+            "Ta e-poštni naslov je že registriran kot račun popotnika. Uporabite drug e-poštni naslov.",
+        },
+        { status: 409 }
+      );
+    }
+
     // Hash gesla (bcrypt, 10 rund)
     const passwordHash = await hash(password, 10);
 

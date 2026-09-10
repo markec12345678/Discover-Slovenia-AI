@@ -167,6 +167,18 @@ export default function OwnerDashboardPage() {
     }
   }, [status, router]);
 
+  // P1: B2C seja (račun popotnika) nima kaj iskati na ponudniškem portalu —
+  // vse owner API rute sicer vračajo 401, tukaj pa uporabnika vljudno
+  // preusmerimo na njegov portal (Moja potovanja)
+  useEffect(() => {
+    if (status === "authenticated" && session?.user) {
+      const accountType = (session.user as { accountType?: string }).accountType;
+      if (accountType === "user") {
+        router.replace("/moja-potovanja");
+      }
+    }
+  }, [status, session, router]);
+
   // Fetch beta status
   useEffect(() => {
     fetch("/api/beta-status")

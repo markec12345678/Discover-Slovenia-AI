@@ -1,16 +1,19 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
+import { authOptions } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { randomId } from "@/lib/security";
 
-// POST /api/itinerary/save — ANONIMNO shranjevanje itinererja (brez računa)
+// POST /api/itinerary/save — shranjevanje itinererja (P1-2b: anonimno ALI na račun)
 //
 // Body:
 //   { itinerary: Itinerary, formData?: unknown, name?: string }
 //
 // Vrne javni shareId in URL (/pot/{shareId}), ki ga uporabnik deli s prijatelji.
-// Itinerer se shrani brez userId (anonimno) — v prihodnosti ga lahko povežemo
-// z registriranim uporabnikom.
+// Če je shranjevanje izvedla prijavljena B2C seja (accountType "user"), se
+// itinerer poveže z računom (userId) in se prikaže v "Moja potovanja".
+// Brez seje ostaja anonimno (userId null) — nespremenjeno delovanje.
 export async function POST(request: Request) {
   // Rate limit shranjevanj (preprečuje zlorabo DB prostora)
   const limited = rateLimit(request, {
@@ -85,13 +88,32 @@ export async function POST(request: Request) {
     // Javni ID za deljenje (lowercase hex — URL-varen)
     const shareId = randomId(10).toLowerCase();
 
+    // === P1-2b: povezava z računom popotnika, če je prijavljen (B2C) ===
+    // Anonimno shranjevanje ostaja nespremenjeno (userId null). Session
+    // pridobimo šele TU (za validacijo) — javni flow se ne dotika auth.
+    let userId: string | null = null;
+    try {
+      const session = await getServerSession(authOptions);
+      if (session?.user?.accountType === "user" && session.user.id) {
+        const user = await db.user.findUnique({
+          where: { id: session.user.id },
+          select: { id: true },
+        });
+        if (user) userId = user.id;
+      }
+    } catch (e) {
+      // Napaka pri avtentikaciji NE sme preprečiti anonimnega shranjevanja
+      console.error("[itinerary/save] session napaka (nadaljujem anonimno):", e);
+    }
+
     const saved = await db.savedItinerary.create({
       data: {
         shareId,
         itinerary: itineraryJson,
         formData: formDataJson,
         name,
-        // userId ostaja null — anonimno shranjevanje
+        // P1-2b: null = anonimno | user.id = povezano s prijavljenim popotnikom
+        userId,
       },
       select: { shareId: true, createdAt: true },
     });

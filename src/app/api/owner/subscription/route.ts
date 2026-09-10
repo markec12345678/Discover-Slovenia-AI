@@ -10,7 +10,7 @@ import { isStripeDemo, monthlyRevenueForPlan } from "@/lib/stripe-server";
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    if (!session?.user?.email || session.user.accountType === "user") {
       return NextResponse.json(
         { error: "Niste prijavljeni" },
         { status: 401 }
@@ -78,7 +78,7 @@ export async function GET() {
 export async function POST() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    if (!session?.user?.email || session.user.accountType === "user") {
       return NextResponse.json(
         { error: "Niste prijavljeni" },
         { status: 401 }
