@@ -15,9 +15,12 @@ import type { ItineraryEvent } from "@/lib/types";
 //   2. Direktne zadetke: EVENTS z destinationId v tem naboru
 //   3. Če je direktnih zadetkov < 3 → dodaj regijske zadetke (event.region
 //      se ujema z regijo katere od obiskanih destinacij)
-//   4. Razvrsti: PRIHAJAJOČI (datum >= danes) najprej, nato izpostavljeni
+//   4. FW4.2: če je podan okvir potovanja (tripWindow), pridejo NAJPREJ
+//      dogodki, ki se s potovanjem PREKRIVAJO ("med tvojim obiskom"),
+//      ostali razvrstitvi pa ostanejo kot spodaj (upcoming → featured)
+//   5. Razvrsti: PRIHAJAJOČI (datum >= danes) najprej, nato izpostavljeni
 //      (featured); prednost dogodkom v naslednjih 12 mesecih
-//   5. Preslikaj v ItineraryEvent subset + omeji na `limit`
+//   6. Preslikaj v ItineraryEvent subset + omeji na `limit`
 // ============================================================================
 
 /** Minimalna oblika dneva, ki jo potrebujemo (dovoljuje DayPlan iz JSON-a). */
@@ -39,13 +42,31 @@ function startOfToday(): number {
 
 function parseDateMs(value: unknown): number | null {
   if (typeof value !== "string" || !value) return null;
+  // FW4.2: ISO datum (YYYY-MM-DD[…]) → LOKALNA polnoč — konzistentno s
+  // trip-dates.ts (sicer UTC/local odmik v primerjavah z okvirom potovanja
+  // povzroči, da dogodek na zadnjem dnevu poti zgreši tier "med obiskom")
+  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) {
+    return new Date(
+      Number(m[1]),
+      Number(m[2]) - 1,
+      Number(m[3])
+    ).getTime();
+  }
   const t = Date.parse(value);
   return Number.isNaN(t) ? null : t;
 }
 
+/** Okvir potovanja za datumsko ujemanje (FW4.2; glej trip-dates.ts). */
+export interface TripWindow {
+  startMs: number;
+  endMs: number;
+}
+
 export function matchEventsForItinerary(
   days: MatchableDay[] | null | undefined,
-  limit = 6
+  limit = 6,
+  tripWindow?: TripWindow | null
 ): ItineraryEvent[] {
   if (!Array.isArray(days) || days.length === 0) return [];
 
@@ -85,7 +106,8 @@ export function matchEventsForItinerary(
   const todayMs = startOfToday();
   const horizonMs = todayMs + HORIZON_MS;
 
-  // 4. Razvrstitev: prihajajoči (datum >= danes) → featured → datum naraščajoče
+  // 4. Razvrstitev: prekrivajoči okvir potovanja (FW4.2, tier -1) →
+  //    prihajajoči (datum >= danes) → featured → datum naraščajoče
   type Scored = {
     event: (typeof EVENTS)[number];
     startMs: number;
@@ -101,13 +123,23 @@ export function matchEventsForItinerary(
     // Zastarel dogodek (končal se je pred več kot 60 dnevi) → izpusti
     if (endMs < todayMs - PAST_GRACE_MS) continue;
 
+    // FW4.2: prekrivanje z okvirom potovanja — dogodek teče (vsaj delno)
+    // med tvojim obiskom → NAJVIŠJA prednost (tier -1)
+    const overlapsTrip =
+      tripWindow != null && startMs <= tripWindow.endMs && endMs >= tripWindow.startMs;
+
     // "Prihajajoči": se še ni končal ali se še ni začel
     const upcoming = startMs >= todayMs || endMs >= todayMs;
     const inWindow = startMs <= horizonMs; // začne se v naslednjih ~12 mesecih
 
-    // Tier: 0 = prihajajoč + v 12-mesečnem oknu, 1 = prihajajoč (dlje),
+    // Tier: -1 = med tvojim obiskom (prekrivanje s potovanjem),
+    // 0 = prihajajoč + v 12-mesečnem oknu, 1 = prihajajoč (dlje),
     // 2 = (nedavno) pretekli featured, 3 = pretekli
-    const tier = upcoming ? (inWindow ? 0 : 1) : event.featured ? 2 : 3;
+    const tier = overlapsTrip
+      ? -1
+      : upcoming
+        ? inWindow ? 0 : 1
+        : event.featured ? 2 : 3;
 
     scored.push({ event, startMs, tier });
   }

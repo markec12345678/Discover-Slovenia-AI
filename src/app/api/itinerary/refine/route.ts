@@ -189,6 +189,13 @@ JSON format (STROGO, enak kot vhod):
     if (!Array.isArray(refinedItinerary.events)) refinedItinerary.events = current.events;
     if (!Array.isArray(refinedItinerary.packingList)) refinedItinerary.packingList = current.packingList;
 
+    // FW4.2: okvir potovanja in dodani dogodki so uporabnikovo stanje, ki ga
+    // AI JSON ne vsebuje — vedno prenesi iz originala (refine spreminja dneve,
+    // ne datumov odhoda ne izbire dogodkov)
+    refinedItinerary.tripStartDate = current.tripStartDate;
+    refinedItinerary.tripEndDate = current.tripEndDate;
+    if (!Array.isArray(refinedItinerary.addedEvents)) refinedItinerary.addedEvents = current.addedEvents;
+
     console.log(`[itinerary/refine] AI uspešno (source: ${result.source}) — ukaz: "${instruction}"`);
     return NextResponse.json({
       itinerary: refinedItinerary,

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { safeJsonLd } from "@/lib/security";
 import { matchEventsForItinerary } from "@/lib/events-match";
+import { tripWindowMs } from "@/lib/trip-dates";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { SharedTrip } from "@/components/shared-trip";
 import { TripSocial } from "@/components/trip-social";
@@ -69,7 +70,8 @@ export async function generateMetadata({
 
   if (!saved) {
     return {
-      title: "Itinerer ne obstaja | Discover Slovenia AI",
+      // template v layoutu sam pripne " | Discover Slovenia AI"
+      title: "Itinerer ne obstaja",
       robots: { index: false, follow: false },
     };
   }
@@ -89,7 +91,8 @@ export async function generateMetadata({
   const description = `${dayCount}-dnevni AI načrt potovanja po Sloveniji${destNames ? ` — ${destNames}` : ""}. Skupni proračun ~€${totalBudget}.`;
 
   return {
-    title: `${name} | Discover Slovenia AI`,
+    // template v layoutu sam pripne " | Discover Slovenia AI" (sicer se pripona podvoji)
+    title: name,
     description,
     robots: {
       // Uporabniško generiran dinamični content — NE indeksiramo sistematično,
@@ -131,7 +134,13 @@ export default async function SharedTripPage({
 
   // === Dogodki — SVEŽE ob vsakem renderju (datumi v shranjenem JSON-u so
   // lahko zastareli; matchEventsForItinerary upošteva današnji datum) ===
-  const events = matchEventsForItinerary(saved.itinerary.days, 6);
+  // FW4.2: če ima shranjen načrt okvir potovanja, gredo dogodki, ki se
+  // zgodi MED obiskom, na prvih mestih (datumski ujem)
+  const events = matchEventsForItinerary(
+    saved.itinerary.days,
+    6,
+    tripWindowMs(saved.itinerary.tripStartDate, saved.itinerary.days.length)
+  );
 
   // === Začetni glasovi (locationKey → število) — izhodišče za UI (7-b) ===
   let initialVotes: Record<string, number> = {};

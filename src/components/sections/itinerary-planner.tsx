@@ -6,6 +6,7 @@ import {
   Sparkles,
   Clock,
   Calendar,
+  CalendarDays,
   Euro,
   Users,
   MapPin,
@@ -43,7 +44,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 import { INTERESTS } from "@/lib/slovenia-data";
-import type { PlannerInput, Itinerary, Season } from "@/lib/types";
+import { formatEventDate } from "@/lib/events-data";
+import {
+  dayISOForDayNumber,
+  formatDateRangeSI,
+  formatDayLabelSI,
+  isValidStartDate,
+  parseISODateLocal,
+} from "@/lib/trip-dates";
+import type {
+  PlannerInput,
+  Itinerary,
+  ItineraryEvent,
+  Season,
+} from "@/lib/types";
 import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { trackFunnel } from "@/lib/funnel";
@@ -178,6 +192,16 @@ export function ItineraryPlanner() {
   const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // FW4.2: minimalni datum za datumski vhod (danes) — nastavljen ob mountu,
+  // da se izogne hidratacijskemu nesoglasju (server/client datum)
+  const [todayISO, setTodayISO] = useState("");
+  useEffect(() => {
+    const now = new Date();
+    setTodayISO(
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+    );
+  }, []);
 
   // === Shrani & deli ===
   const [saving, setSaving] = useState(false);
@@ -362,7 +386,35 @@ export function ItineraryPlanner() {
     if (input.interests.length === 0) {
       return "Izberite vsaj en interes.";
     }
+    // FW4.2: datum odhoda (opcijsko) — izbirnik datumov večinoma poskrbi
+    // za veljavnost; to je varnostna mreža (pretekli datum / ročni vnos)
+    if (input.startDate && !isValidStartDate(input.startDate)) {
+      return "Datum odhoda je neveljaven — izberi današnji ali prihodnji datum.";
+    }
     return null;
+  }
+
+  // FW4.2: "Dodaj v mojo pot" — dogodek iz events sekcije pripni na pot.
+  // Persistenca: itinerary.addedEvents potuje z načrtom (localStorage,
+  // deljena povezava, e-pošta) — brez dodatnih tokov.
+  function toggleAddedEvent(ev: ItineraryEvent) {
+    if (!itinerary) return;
+    const currentAdded = itinerary.addedEvents ?? [];
+    const has = currentAdded.some((a) => a.id === ev.id);
+    const next: Itinerary = {
+      ...itinerary,
+      addedEvents: has
+        ? currentAdded.filter((a) => a.id !== ev.id)
+        : [...currentAdded, ev],
+    };
+    setItinerary(next);
+    persistItineraryLocally(next, formData);
+    if (!has) {
+      toast({
+        title: "Dodano v tvojo pot ✨",
+        description: ev.name,
+      });
+    }
   }
 
   async function generateItinerary(input: PlannerInput) {
@@ -522,7 +574,10 @@ export function ItineraryPlanner() {
       className="scroll-mt-24 bg-gradient-to-b from-muted/40 to-background py-16 sm:py-20 lg:py-24"
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
+        {/* grid-cols-1 = minmax(0,1fr) — eksplicitna sled prepreči intrinsično
+            (min-content) širjenje auto sledi na mobilnem; FW4.2 pasovi
+            dogodkov s truncate sicer sprožijo horizontalni overflow */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
           {/* === LEVO — obrazec === */}
           <Card className="h-fit">
             <CardHeader>
@@ -628,6 +683,37 @@ export function ItineraryPlanner() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  {/* FW4.2: datum odhoda — poganja datumski ujem dogodkov
+                      ("med tvojim obiskom") in prikaz datumov na dnevih */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="startDate"
+                      className="flex items-center gap-2"
+                    >
+                      <Calendar className="size-4" aria-hidden />
+                      Datum odhoda
+                      <span className="font-normal text-muted-foreground">
+                        (neobvezno)
+                      </span>
+                    </Label>
+                    <Input
+                      id="startDate"
+                      name="startDate"
+                      type="date"
+                      min={todayISO || undefined}
+                      value={formData.startDate ?? ""}
+                      onChange={(e) =>
+                        setFormData((p) => ({
+                          ...p,
+                          startDate: e.target.value || undefined,
+                        }))
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Za dogodke, ki se zgodijo med tvojim obiskom.
+                    </p>
                   </div>
                 </div>
 
@@ -780,6 +866,19 @@ export function ItineraryPlanner() {
                     <Badge className="bg-primary text-primary-foreground">
                       Skupaj ~€{itinerary.total_budget}
                     </Badge>
+                    {itinerary.tripStartDate && (
+                      <Badge
+                        variant="outline"
+                        className="gap-1.5 font-normal"
+                        title="Okvir potovanja"
+                      >
+                        <Calendar className="size-3.5" aria-hidden />
+                        {formatDateRangeSI(
+                          itinerary.tripStartDate,
+                          itinerary.tripEndDate
+                        )}
+                      </Badge>
+                    )}
                   </div>
                 </div>
 
@@ -800,13 +899,39 @@ export function ItineraryPlanner() {
 
                 {/* Day plans */}
                 <div className="space-y-4">
-                  {itinerary.days.map((day) => (
+                  {itinerary.days.map((day) => {
+                    // FW4.2: ISO datum tega dneva (samo če je znan datum odhoda)
+                    const dayISO = itinerary.tripStartDate
+                      ? dayISOForDayNumber(itinerary.tripStartDate, day.day)
+                      : null;
+                    const dayMs = dayISO ? parseISODateLocal(dayISO) : null;
+
+                    // FW4.2: dodani dogodki, ki padejo NA TA DAN (iz
+                    // itinerary.addedEvents; večdnevni dogodek pokrije vsak dan,
+                    // ki ga prekriva)
+                    const addedForDay = (itinerary.addedEvents ?? []).filter(
+                      (ev) => {
+                        if (dayMs === null) return false;
+                        const evStart = parseISODateLocal(ev.date);
+                        if (evStart === null) return false;
+                        const evEnd =
+                          parseISODateLocal(ev.endDate) ?? evStart;
+                        return evStart <= dayMs && evEnd >= dayMs;
+                      }
+                    );
+
+                    return (
                     <Card key={day.day}>
                       <CardHeader>
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <CardTitle className="flex items-center gap-2 text-lg">
                             <Calendar className="size-5 text-primary" aria-hidden />
                             Dan {day.day}
+                            {dayISO && (
+                              <span className="text-sm font-normal text-muted-foreground">
+                                · {formatDayLabelSI(dayISO)}
+                              </span>
+                            )}
                           </CardTitle>
                           <Badge variant="secondary" className="gap-1.5">
                             <Cloud className="size-3.5" aria-hidden />
@@ -853,6 +978,40 @@ export function ItineraryPlanner() {
                           );
                         })}
 
+                        {/* FW4.2: dodani dogodki tega dneva ("Dodaj v mojo pot") */}
+                        {addedForDay.length > 0 && (
+                          <div className="space-y-2">
+                            {addedForDay.map((ev) => (
+                              <div
+                                key={ev.id}
+                                className="flex items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3"
+                              >
+                                <CalendarDays
+                                  className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+                                  aria-hidden
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-semibold">
+                                    {ev.name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {ev.location} ·{" "}
+                                    {formatEventDate(ev.date, ev.endDate)}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleAddedEvent(ev)}
+                                  className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                  aria-label={`Odstrani ${ev.name} iz poti`}
+                                >
+                                  <X className="size-4" aria-hidden />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
                         {/* Booking panel za ta dan — nastanitev, aktivnosti, hrana, transport */}
                         {/* id="booking-panel-{dan}" — nanj kaže gumb "Rezerviraj" v TripTimeline */}
                         <BookingPanel
@@ -862,8 +1021,81 @@ export function ItineraryPlanner() {
                         />
                       </CardContent>
                     </Card>
-                  ))}
+                    );
+                  })}
                 </div>
+
+                {/* FW4.2: "Moji dogodki" — dodani dogodki, ki ne padejo na
+                    konkreten dan (brez datuma odhoda ali izven dni potovanja) */}
+                {(() => {
+                  const mappedIds = new Set(
+                    itinerary.days.flatMap((day) => {
+                      const dayISO = itinerary.tripStartDate
+                        ? dayISOForDayNumber(itinerary.tripStartDate, day.day)
+                        : null;
+                      const dayMs = dayISO ? parseISODateLocal(dayISO) : null;
+                      if (dayMs === null) return [] as string[];
+                      return (itinerary.addedEvents ?? [])
+                        .filter((ev) => {
+                          const evStart = parseISODateLocal(ev.date);
+                          if (evStart === null) return false;
+                          const evEnd =
+                            parseISODateLocal(ev.endDate) ?? evStart;
+                          return evStart <= dayMs && evEnd >= dayMs;
+                        })
+                        .map((ev) => ev.id);
+                    })
+                  );
+                  const unmapped = (itinerary.addedEvents ?? []).filter(
+                    (ev) => !mappedIds.has(ev.id)
+                  );
+                  if (unmapped.length === 0) return null;
+                  return (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <CalendarDays className="size-5 text-primary" aria-hidden />
+                          Moji dogodki
+                        </CardTitle>
+                        <CardDescription>
+                          {itinerary.tripStartDate
+                            ? "Izven dni potovanja — pripni datum odhoda, da pridejo na konkreten dan."
+                            : "Dodaj datum odhoda, da pripneš dogodke na konkretne dneve."}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {unmapped.map((ev) => (
+                          <div
+                            key={ev.id}
+                            className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/50 p-3"
+                          >
+                            <CalendarDays
+                              className="size-4 shrink-0 text-primary"
+                              aria-hidden
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold">
+                                {ev.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {ev.location} ·{" "}
+                                {formatEventDate(ev.date, ev.endDate)}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => toggleAddedEvent(ev)}
+                              className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              aria-label={`Odstrani ${ev.name} iz poti`}
+                            >
+                              <X className="size-4" aria-hidden />
+                            </button>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
 
                 {/* Recommendations */}
                 {itinerary.recommendations.length > 0 && (
@@ -915,7 +1147,16 @@ export function ItineraryPlanner() {
 
                 {/* Kaj se dogaja med tvojim obiskom — lokalni dogodki (max 6) */}
                 {/* Sekcija se sama skrije, če events ni prisoten/prazen */}
-                <ItineraryEventsSection events={itinerary.events} />
+                {/* FW4.2: dogodki z okvirjem potovanja + "Dodaj v mojo pot" */}
+                <ItineraryEventsSection
+                  events={itinerary.events}
+                  tripStartDate={itinerary.tripStartDate}
+                  tripEndDate={itinerary.tripEndDate}
+                  addedEventIds={(itinerary.addedEvents ?? []).map(
+                    (ev) => ev.id
+                  )}
+                  onToggleEvent={toggleAddedEvent}
+                />
 
                 {/* Kaj pakirati — packing list (lokalni čeklist, brez persista) */}
                 {/* Sekcija se sama skrije, če packingList ni prisoten/prazen */}

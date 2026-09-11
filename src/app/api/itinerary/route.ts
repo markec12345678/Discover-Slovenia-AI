@@ -11,6 +11,12 @@ import {
 } from "@/lib/weather-utils";
 import { matchEventsForItinerary } from "@/lib/events-match";
 import {
+  isValidStartDate,
+  tripEndDateISO,
+  tripWindowMs,
+  formatDateRangeSI,
+} from "@/lib/trip-dates";
+import {
   buildPackingList,
   sanitizeAiPackingList,
 } from "@/lib/packing-list";
@@ -55,6 +61,23 @@ export async function POST(request: Request) {
     );
   }
 
+  // FW4.2: datum odhoda — opcijsko; če je podan, mora biti veljaven (ISO,
+  // ne v preteklosti, max ~400 dni naprej). Neveljaven → jasna napaka 400.
+  if (input.startDate !== undefined && !isValidStartDate(input.startDate)) {
+    return NextResponse.json(
+      { error: "Datum odhoda je neveljaven (ISO format, ne v preteklosti, max 400 dni naprej)" },
+      { status: 400 }
+    );
+  }
+
+  // FW4.2: okvir potovanja (za datumski events match) + končni datum
+  const tripWindow = input.startDate
+    ? tripWindowMs(input.startDate, input.days)
+    : null;
+  const tripEnd = input.startDate
+    ? tripEndDateISO(input.startDate, input.days) ?? undefined
+    : undefined;
+
   // Pripravi kontekst destinacij za AI
   const destContext = DESTINATIONS.map(
     (d) =>
@@ -88,7 +111,7 @@ POMEMBNO: Predlagani partnerji so razvrščeni po ustreznosti in kakovosti (Q = 
 Potnik:
 - Proračun: €${input.budget}
 - Interesi: ${input.interests.join(", ")}
-- Sezona: ${input.season}
+- Sezona: ${input.season}${input.startDate ? `\n- Datum potovanja: ${formatDateRangeSI(input.startDate, tripEnd)}` : ""}
 - Skupina: ${input.groupSize} oseb(a)
 
 Razpoložljive destinacije:
@@ -171,7 +194,16 @@ JSON format (STROGO):
     const enriched = await enrichWithRealWeather(itinerary);
 
     // Dogodki na obiskanih destinacijah (neodvisno od vremena — ločeno polje)
-    enriched.events = matchEventsForItinerary(enriched.days, 6);
+    // FW4.2: z okvirom potovanja — dogodki, ki se zgodijo MED obiskom,
+    // pridejo na prvih mestih
+    enriched.events = matchEventsForItinerary(enriched.days, 6, tripWindow);
+
+    // FW4.2: okvir potovanja shrani Z načrtom (svež datumski match na
+    // /pot/[shareId], prikaz datumov na dnevih, deljenje z datumi)
+    if (input.startDate) {
+      enriched.tripStartDate = input.startDate;
+      enriched.tripEndDate = tripEnd;
+    }
 
     // FW4.1: strukturne metrike (deterministično) + AI utemeljitev
     // (sanitizirana, fallback determinističen) — isto enrich mesto kot vreme
@@ -193,7 +225,13 @@ JSON format (STROGO):
       interests: input.interests,
       days: input.days,
     });
-    fallback.events = matchEventsForItinerary(fallback.days, 6);
+    fallback.events = matchEventsForItinerary(fallback.days, 6, tripWindow);
+
+    // FW4.2: okvir potovanja tudi na fallback načrtu (isti enrich kot AI pot)
+    if (input.startDate) {
+      fallback.tripStartDate = input.startDate;
+      fallback.tripEndDate = tripEnd;
+    }
 
     // FW4.1: metrike + deterministična utemeljitev (fallback nima AI rationale)
     fallback.quality = computeItineraryQuality(fallback, input);

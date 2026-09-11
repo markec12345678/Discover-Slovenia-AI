@@ -69,7 +69,7 @@ export async function generateMetadata({
   const consultation = await getConsultation(token);
   if (!consultation) return { title: "Konzultacija ni najdena" };
   return {
-    title: "Tvoja osebna konzultacija | Discover Slovenia AI",
+    title: "Tvoja osebna konzultacija",
     description: "Osebni načrt lokalca za tvoje potovanje po Sloveniji.",
     // OSEBNA vsebina — NE indexirati (vprašanje vsebuje zasebne podatke)
     robots: { index: false, follow: false },

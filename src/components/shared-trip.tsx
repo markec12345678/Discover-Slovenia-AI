@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   Calendar,
+  CalendarDays,
   Clock,
   CloudSun,
   Euro,
@@ -24,6 +25,13 @@ import { ItineraryEventsSection } from "@/components/itinerary-events";
 import { PackingListSection } from "@/components/packing-list";
 import { SocialShare } from "@/components/social-share";
 import { useAppStore, DAY_COLORS } from "@/lib/store";
+import { formatEventDate } from "@/lib/events-data";
+import {
+  dayISOForDayNumber,
+  formatDateRangeSI,
+  formatDayLabelSI,
+  parseISODateLocal,
+} from "@/lib/trip-dates";
 import type { Itinerary, ItineraryEvent, LocationVisit } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -272,6 +280,15 @@ export function SharedTrip({
               <Euro className="size-3.5" aria-hidden="true" />
               ~€{totalBudget} skupaj
             </Badge>
+            {itinerary.tripStartDate && (
+              <Badge variant="outline" className="gap-1.5 font-normal">
+                <Calendar className="size-3.5" aria-hidden="true" />
+                {formatDateRangeSI(
+                  itinerary.tripStartDate,
+                  itinerary.tripEndDate
+                )}
+              </Badge>
+            )}
             <Badge variant="outline" className="gap-1.5">
               <Sparkles className="size-3.5" aria-hidden="true" />
               {itinerary.source === "ai" ? "AI načrt" : "Predloga načrta"}
@@ -357,6 +374,22 @@ export function SharedTrip({
           {itinerary.days.map((day) => {
             const dayColor =
               DAY_COLORS[(day.day - 1) % DAY_COLORS.length] ?? "#2d6a3e";
+
+            // FW4.2: datum dneva (če je znan datum odhoda) + dodani
+            // dogodki lastnika, ki padejo na ta dan (prikaz brez urejanja)
+            const dayISO = itinerary.tripStartDate
+              ? dayISOForDayNumber(itinerary.tripStartDate, day.day)
+              : null;
+            const dayMs = dayISO ? parseISODateLocal(dayISO) : null;
+            const addedForDay = dayMs !== null
+              ? (itinerary.addedEvents ?? []).filter((ev) => {
+                  const evStart = parseISODateLocal(ev.date);
+                  if (evStart === null) return false;
+                  const evEnd = parseISODateLocal(ev.endDate) ?? evStart;
+                  return evStart <= dayMs && evEnd >= dayMs;
+                })
+              : [];
+
             return (
               <div key={day.day} className="scroll-mt-24" id={`dan-${day.day}`}>
                 {/* Dan header */}
@@ -369,7 +402,14 @@ export function SharedTrip({
                     {day.day}
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold">Dan {day.day}</h3>
+                    <h3 className="text-lg font-bold">
+                      Dan {day.day}
+                      {dayISO && (
+                        <span className="ml-2 text-sm font-normal text-muted-foreground">
+                          {formatDayLabelSI(dayISO)}
+                        </span>
+                      )}
+                    </h3>
                     {day.weather && (
                       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <CloudSun className="size-3.5" aria-hidden="true" />
@@ -401,6 +441,32 @@ export function SharedTrip({
                     );
                   })}
                 </div>
+
+                {/* FW4.2: dodani dogodki lastnika na ta dan — statični
+                    prikaz (urejanje je samo v plannerju) */}
+                {addedForDay.length > 0 && (
+                  <div className="ml-16 mt-4 space-y-2">
+                    {addedForDay.map((ev) => (
+                      <div
+                        key={ev.id}
+                        className="flex items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3"
+                      >
+                        <CalendarDays
+                          className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+                          aria-hidden="true"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold">
+                            {ev.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {ev.location} · {formatEventDate(ev.date, ev.endDate)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -413,6 +479,9 @@ export function SharedTrip({
           title="Dogodki med tvojim obiskom"
           variant="section"
           className="mb-10"
+          tripStartDate={itinerary.tripStartDate}
+          tripEndDate={itinerary.tripEndDate}
+          addedEventIds={(itinerary.addedEvents ?? []).map((ev) => ev.id)}
         />
 
         {/* === Priporočila === */}

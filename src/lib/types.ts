@@ -33,6 +33,10 @@ export interface PlannerInput {
   interests: string[];
   season: Season;
   groupSize: number;
+  // NOVO (FW4.2): datum odhoda (ISO YYYY-MM-DD) — opcijsko (nazaj
+  // kompatibilno s starejšimi načrti); poganja datumski events match,
+  // AI kontekst in prikaz datumov na dnevih
+  startDate?: string;
 }
 
 export interface LocationVisit {
@@ -73,6 +77,14 @@ export interface Itinerary {
   // NOVO (FW4.1): AI utemeljitev "Zakaj ta pot?" (1–2 povedi, sanitizirana;
   // fallback = deterministična sestava iz vnosnih želja)
   rationale?: string;
+  // NOVO (FW4.2): okvir potovanja (ISO datumi, dan 1 = tripStartDate) —
+  // omogoča svež datumski events match na /pot/[shareId] in prikaz datumov
+  // na dnevih; shranjuje se skupaj z načrtom (share/email/localStorage)
+  tripStartDate?: string;
+  tripEndDate?: string;
+  // NOVO (FW4.2): dogodki, ki si jih uporabnik dodal v svojo pot (izbira
+  // iz events sekcije) — preslikajo se na konkretne dneve potovanja
+  addedEvents?: ItineraryEvent[];
 }
 
 // Dogodek, povezan z destinacijo v itinererju (subset EventItem iz events-data)
