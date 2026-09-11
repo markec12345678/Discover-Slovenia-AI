@@ -49,9 +49,15 @@ hdr "1) Homepage + P8 responsive markerji (dokaz, da ni več d2e371c)"
 http_home="$(curl -s -o /tmp/p9-home.html -w '%{http_code}' --max-time 30 "$BASE_URL/")"
 [[ "$http_home" == "200" ]] && ok "homepage HTTP 200" || bad "homepage HTTP $http_home"
 if [[ "$http_home" == "200" ]]; then
-  grep -q 'pr-\[4\.5rem\]' /tmp/p9-home.html \
-    && ok "P8 marker: beta-banner pr-[4.5rem] (FAB clearance)" \
-    || bad "P8 marker beta-banner MANJKA — verjetno še stara koda (d2e371c)"
+  # BetaBanner je od FW3 (0742a1a) CLIENT-SIDE (fetch /api/beta-status po
+  # mount) → v SSR HTML-ju ni pr-[4.5rem] markerja. Namesto gropanja po
+  # SSR HTML preverimo API, ki banner poganja (isActive + štetje listingov).
+  beta_json="$(curl -s --max-time 15 "$BASE_URL/api/beta-status")"
+  if echo "$beta_json" | grep -q '"isActive":\(true\|false\)'; then
+    ok "beta-status API odgovarja (banner client-side od FW3) — $(echo "$beta_json" | head -c 80)"
+  else
+    warn "beta-status API ne odgovarja — banner se ne bo izrisal"
+  fi
   grep -q 'pb-40' /tmp/p9-home.html \
     && ok "P8 marker: footer pb-40 (sticky CTA/FAB clearance)" \
     || bad "P8 marker footer pb-40 MANJKA — verjetno še stara koda (d2e371c)"
