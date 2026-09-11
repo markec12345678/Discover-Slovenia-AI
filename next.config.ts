@@ -73,6 +73,21 @@ const nextConfig: NextConfig = {
   },
   // ignoreBuildErrors odstranjen 2026-09: `tsc --noEmit` je zdaj čist (0 napak)
   reactStrictMode: false,
+  // 🔴 LOW-MEMORY BUILD (2026-09-11, Render free 512 MB): `next build --webpack`
+  // tega projekta doseže ~2 GB vrhunca (tsc worker + webpack hkrati) — na
+  // pomnilniško omejenih builderjih build pada (OOM, exit 134/137; lokalno
+  // reproducirano). DSA_LOW_MEMORY_BUILD=1 vklopi obe ublažitvi SAMO tam,
+  // kjer je nastavljena (Render); Vercel/CI/lokalni build ostanejo nespremenjeni:
+  //   1. typescript.ignoreBuildErrors — vrata tipov NE izginejo: CI poganja
+  //      `bunx tsc --noEmit` (ci.yml, obstala vrata) na vsakem pushu
+  //   2. experimental.webpackMemoryOptimizations — Next-ov uradni low-memory
+  //      webpack profil (izklopi webpack persistent cache / lažji sourcemapi)
+  ...(process.env.DSA_LOW_MEMORY_BUILD === "1"
+    ? {
+        typescript: { ignoreBuildErrors: true },
+        experimental: { webpackMemoryOptimizations: true },
+      }
+    : {}),
   images: {
     remotePatterns: [
       {
