@@ -9,64 +9,65 @@ import {
   ShieldCheck,
   ExternalLink,
 } from "lucide-react";
-import { COMMISSION_INFO } from "@/lib/affiliate";
+import { PARTNER_LABELS } from "@/lib/affiliate";
 
 // Affiliate partnerji na homepageu — vsi linki gredo prek /go/[provider]
 // redirecta, ki strežniško izmeri klik (AnalyticsEvent "affiliate_click" +
-// funnel korak) in prilepi affiliate ID-je iz env spremenljivk.
-// Nič client JS več: tracking je v celoti na strani strežnika (/go/).
+// funnel korak) in prilepi affiliate ID-je iz STREŽNIŠKIH env spremenljivk
+// (fail-closed: brez nastavljenega ID-ja povezava ni predstavljena kot
+// monetizirana — glej src/lib/affiliate.ts).
+//
+// PROVIZIJSKI ODSTOTKI NISO PRIKAZANI: prejšnji "70% / 5% / 8% / 40% / PPQ"
+// je odstranjen, ker so bili zavajajoči — odstotki so delež PARTNERJEVEGA
+// dobička (ne cene rezervacije), osnova pa se določi šele z aktivacijo
+// posameznega partnerskega računa.
 const partners = [
   {
     id: "cars",
-    name: "DiscoverCars",
+    name: PARTNER_LABELS.cars,
     label: "Najem avta",
     icon: Car,
     description: "Iskanje po 10.000+ lokacijah. Brezplačna odpoved večinoma.",
-    commission: COMMISSION_INFO.cars,
     href: "/go/cars?dest=Ljubljana",
     aria: "Najemi avto prek DiscoverCars — odpre partnersko povezavo",
     accent: "text-primary",
   },
   {
     id: "hotels",
-    name: "Booking.com",
+    name: PARTNER_LABELS.hotels,
     label: "Hoteli & nastanitve",
     icon: BedDouble,
     description: "28 mio nastanitev po vsem svetu. Brezplačna odpoved večinoma.",
-    commission: COMMISSION_INFO.hotels,
     href: "/go/hotels?dest=Ljubljana",
     aria: "Rezerviraj nastanitev na Booking.com — odpre partnersko povezavo",
     accent: "text-primary",
   },
   {
     id: "activities",
-    name: "GetYourGuide",
+    name: PARTNER_LABELS.activities,
     label: "Aktivnosti & izleti",
     icon: Ticket,
     description: "300.000+ izkušenj in turov. Brezplačna odpoved do 24h pred.",
-    commission: COMMISSION_INFO.activities,
     href: "/go/activities?dest=Bled",
     aria: "Rezerviraj izlete in izkušnje prek GetYourGuide — odpre partnersko povezavo",
     accent: "text-primary",
   },
   {
     id: "flights",
-    name: "Skyscanner",
+    name: PARTNER_LABELS.flights,
     label: "Leti",
     icon: Plane,
     description: "Primerjava letov 1.200+ letalskih družb. Najnižje cene.",
-    commission: COMMISSION_INFO.flights,
     href: "/go/flights?dest=Ljubljana",
     aria: "Poišči lete prek Skyscannerja — odpre partnersko povezavo",
     accent: "text-primary",
   },
   {
     id: "insurance",
-    name: "World Nomads",
+    name: PARTNER_LABELS.insurance,
     label: "Potno zavarovanje",
     icon: ShieldCheck,
     description: "Zavarovanje za pustolovske aktivnosti (rafting, pohodništvo).",
-    commission: COMMISSION_INFO.insurance,
     href: "/go/insurance?days=7",
     aria: "Skleni potno zavarovanje pri World Nomads — odpre partnersko povezavo",
     accent: "text-primary",
@@ -85,8 +86,8 @@ export function AffiliateSection() {
             Vse za vaše potovanje na enem mestu
           </h2>
           <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-            Povežemo vas z izbranimi partnerskimi storitvami. Rezervirate
-            direktno pri njih — brez posrednikov, brez dodatnih stroškov.
+            Rezervacijo opravite neposredno pri partnerskem ponudniku.
+            Discover Slovenia vam za uporabo povezave ne zaračuna ničesar.
           </p>
         </div>
 
@@ -104,7 +105,7 @@ export function AffiliateSection() {
                       <Icon className={`size-6 ${p.accent}`} />
                     </div>
                     <Badge variant="outline" className="text-xs">
-                      {p.commission.rate}
+                      Partnerska ponudba
                     </Badge>
                   </div>
 
@@ -137,10 +138,11 @@ export function AffiliateSection() {
           })}
         </div>
 
-        {/* EU disclosure — pravno obvezna označba partnerskih povezav */}
+        {/* EU disclosure — označba partnerskih povezav */}
         <p className="mt-8 text-center text-xs text-muted-foreground max-w-2xl mx-auto">
-          Affiliate povezave — pri rezervacijah preko teh povezav zaslužimo
-          provizijo. Za vas brez dodatnih stroškov. Hvala za podporo projektu.
+          Nekatere povezave so partnerske povezave. Če prek njih opravite
+          rezervacijo, lahko Discover Slovenia prejme partnersko provizijo.
+          Cena za vas se zaradi tega ne poveča.
         </p>
       </div>
     </section>

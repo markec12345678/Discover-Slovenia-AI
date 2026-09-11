@@ -28,16 +28,14 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-
-import {
-  getBookingUrl,
-  getDiscoverCarsUrl,
-  getViatorUrl,
-  getSkyscannerUrl,
-} from "@/lib/affiliate";
 import { trackFunnel } from "@/lib/funnel";
 import { AffiliateBadge } from "@/components/partner-badge";
 import type { DayPlan } from "@/lib/types";
+
+// Partnerske povezave — vse prek /go/ redirecta (strežniško tracking +
+// strežniška affiliate konfiguracija). Klient ne drži partner ID-jev.
+const goHref = (provider: "hotels" | "cars" | "activities" | "flights", dest: string) =>
+  `/go/${provider}?dest=${encodeURIComponent(dest)}`;
 
 // === LOKALNI TIPI (da ne motimo obstoječih tipov v types.ts) ===
 // Zrcalijo API route /api/itinerary/bookings — prijazno za client.
@@ -585,12 +583,12 @@ export function BookingPanel({ dayPlan, bookingData, id }: BookingPanelProps) {
                 destinationName={loc.destination_name}
               >
                 <AffiliateCard
-                  href={getBookingUrl(loc.destination_name)}
+                  href={goHref("hotels", loc.destination_name)}
                   icon={<Hotel className="size-5" aria-hidden />}
                   partnerName="Booking.com"
                   cta="Iskanje"
                   description={`Iskanje hotelov in apartmajev v ${loc.destination_name}`}
-                  onTrack={() => trackFunnel("listing_click", getBookingUrl(loc.destination_name))}
+                  onTrack={() => trackFunnel("listing_click", goHref("hotels", loc.destination_name))}
                 />
                 {listings.length > 0 ? (
                   <div className="space-y-2">
@@ -619,12 +617,12 @@ export function BookingPanel({ dayPlan, bookingData, id }: BookingPanelProps) {
                 destinationName={loc.destination_name}
               >
                 <AffiliateCard
-                  href={getViatorUrl(loc.destination_name)}
+                  href={goHref("activities", loc.destination_name)}
                   icon={<Ticket className="size-5" aria-hidden />}
-                  partnerName="Viator"
+                  partnerName="GetYourGuide"
                   cta="Iskanje"
                   description={`Oglejte si vodene ture in izkušnje v ${loc.destination_name}`}
-                  onTrack={() => trackFunnel("listing_click", getViatorUrl(loc.destination_name))}
+                  onTrack={() => trackFunnel("listing_click", goHref("activities", loc.destination_name))}
                 />
                 {exps.length > 0 ? (
                   <div className="space-y-2">
@@ -635,7 +633,7 @@ export function BookingPanel({ dayPlan, bookingData, id }: BookingPanelProps) {
                 ) : (
                   <EmptyState
                     icon={<Ticket className="size-5" aria-hidden />}
-                    text={`V bazi še ni izkušenj za ${loc.destination_name}. Poiščite aktivnosti na Viator zgoraj.`}
+                    text={`V bazi še ni izkušenj za ${loc.destination_name}. Poiščite aktivnosti na GetYourGuide zgoraj.`}
                   />
                 )}
               </DestinationBlock>
@@ -693,20 +691,20 @@ export function BookingPanel({ dayPlan, bookingData, id }: BookingPanelProps) {
           {firstDestination && (
             <DestinationBlock destinationName={firstDestination.destination_name}>
               <AffiliateCard
-                href={getDiscoverCarsUrl(firstDestination.destination_name)}
+                href={goHref("cars", firstDestination.destination_name)}
                 icon={<Car className="size-5" aria-hidden />}
                 partnerName="DiscoverCars"
                 cta="Najem"
                 description={`Najem avta v ${firstDestination.destination_name} — prilagodljivi datumi prevzema`}
-                onTrack={() => trackFunnel("listing_click", getDiscoverCarsUrl(firstDestination.destination_name))}
+                onTrack={() => trackFunnel("listing_click", goHref("cars", firstDestination.destination_name))}
               />
               <AffiliateCard
-                href={getSkyscannerUrl("Ljubljana")}
+                href={goHref("flights", "Ljubljana")}
                 icon={<Plane className="size-5" aria-hidden />}
                 partnerName="Skyscanner"
                 cta="Iskanje"
                 description="Leti do Ljubljane (letališče Jožeta Pučnika) — primerjava cen"
-                onTrack={() => trackFunnel("listing_click", getSkyscannerUrl("Ljubljana"))}
+                onTrack={() => trackFunnel("listing_click", goHref("flights", "Ljubljana"))}
               />
             </DestinationBlock>
           )}

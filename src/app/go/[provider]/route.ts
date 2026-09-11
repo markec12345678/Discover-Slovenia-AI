@@ -1,46 +1,56 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
-import { DESTINATIONS } from "@/lib/slovenia-data";
 import {
-  getBookingUrl,
-  getDiscoverCarsUrl,
-  getGetYourGuideUrl,
-  getSkyscannerUrl,
-  getWorldNomadsUrl,
+  AFFILIATE_PROVIDERS,
+  type AffiliateProvider,
+  affiliateStatus,
+  buildPartnerUrl,
+  canonicalDest,
+  isKnownDest,
 } from "@/lib/affiliate";
 
 // GET /go/[provider]?dest=<destinacija>&days=<1-30>
 //
-// ZAKAJ /go/ (centralni affiliate redirect):
-// 1. MERJENJE — vsak klik na partnerja (Booking, DiscoverCars, GetYourGuide,
-//    Skyscanner, World Nomads) se strežniško zapiše v AnalyticsEvent
-//    (type "affiliate_click") in PageView (funnelStep "affiliate_click"),
-//    torej šteje v funnel statistiko — brez client-side JS in brez adblockerjev.
-// 2. CENTRALNA ZAMENJAVA ID-jev — affiliate partner ID-ji živijo v env
-//    spremenljivkah (affiliate.ts); zamenjava partnerja/dogovora zahteva
-//    spremembo na ENEM mestu, ne na 322 SEO straneh.
-// 3. ČISTI SEO — vsebina strani vsebuje interni /go/ href; partner URL
-//    (parameter "aid" idr.) se generira ob redirectu.
+// CENTRALNI AFFILIATE REDIRECT (FAZA 4, affiliate hardening 2026-09):
 //
-// Tracking NIKOLI ne blokira redirecta (try/catch) — obiskovalca vedno
-// pošljemo naprej k partnerju, tudi če zapis v DB pade.
+//   GET /go/cars?dest=Ljubljana
+//        |
+//        v
+//   validacija providerja (allowlist) + dest (whitelist → kanonična /
+//   fallback "Slovenija" — NIKOLI raw vnos v partner URL)
+//        |
+//        v
+//   resolve partnerja (env konfiguracija, fail-closed — brez fake ID-jev)
+//        |
+//        v
+//   zapis outbound klika (affiliate_click; monetized: true/false)
+//        |
+//        v
+//   302 redirect na partnerjev HTTPS URL iz dovoljenega hosta
+//
+// VARNOST:
+// - Partner URL se IZKLJUČNO sestavlja strežniško (buildPartnerUrl) —
+//   vhodni parametri nikoli ne morejo vpeljati svojega hosta/poti
+//   (open redirect, SSRF, path traversal, header injection onemogočeni
+//   po konstrukciji; dest gre skozi canonicalDest whitelist).
+// - Ni parametra, ki bi preglasil partnerja ali podal poljuben URL.
+//
+// TRACKING (FAZA 6) — zapis NE blokira redirecta (try/catch):
+// - AnalyticsEvent "affiliate_click" z metapodatki: provider, dest (kanonična),
+//   monetized (ali je partner dejansko konfiguriran), days, referer POT
+//   (brez query niza) — BREZ osebnih podatkov (brez IP, email, UA).
+// - PageView (funnelStep "affiliate_click") — enak vzorec kot prej.
+//
+// FAZA 7 (sub-ID): partnerji, ki podpirajo dodatne tracking parametre
+// (npr. Skyscanner utm_term), jih prejmemo iz env konfiguracije partnerja —
+// v povezave NE vlagamo nič PII (le neosebne vrednosti "discoverslovenia").
 
-const PROVIDERS = ["hotels", "cars", "activities", "flights", "insurance"] as const;
-type Provider = (typeof PROVIDERS)[number];
+const PROVIDERS = AFFILIATE_PROVIDERS;
+type Provider = AffiliateProvider;
 
 // Providerji, ki potrebujejo destinacijo za smiseln partner URL
 const DEST_REQUIRED: readonly Provider[] = ["hotels", "cars", "activities", "flights"];
-
-/** Normalizacija dest: ujemanje po slugu ALI imenu (case-insensitive) → kanonično ime iz slovenia-data (lepši URL-ji pri Booking/GetYourGuide), sicer raw trim. */
-function normalizeDest(raw: string): string {
-  const trimmed = raw.trim();
-  const needle = trimmed.toLowerCase();
-  const match = DESTINATIONS.find(
-    (d) => d.slug.toLowerCase() === needle || d.name.toLowerCase() === needle,
-  );
-  return match ? match.name : trimmed;
-}
 
 export async function GET(
   request: Request,
@@ -48,7 +58,7 @@ export async function GET(
 ) {
   const { provider } = await params;
 
-  // Neveljaven provider → 404 (povezave se generirajo interno, torej je to napaka na naši strani)
+  // Neveljaven provider → 404 (allowlist — povezave se generirajo interno)
   if (!PROVIDERS.includes(provider as Provider)) {
     return NextResponse.json(
       { error: `Neznan ponudnik: ${provider}` },
@@ -60,7 +70,6 @@ export async function GET(
   const rawDest = searchParams.get("dest") || "";
 
   // dest: 1–100 znakov po trimu; obvezen za hotels/cars/activities/flights
-  // (interni linki vedno vsebujejo dest — 400 je pošten odgovor za hrošče v generatorju)
   if (DEST_REQUIRED.includes(provider as Provider)) {
     if (!rawDest.trim()) {
       return NextResponse.json({ error: "Manjka parameter 'dest'" }, { status: 400 });
@@ -69,9 +78,14 @@ export async function GET(
   if (rawDest.length > 100) {
     return NextResponse.json({ error: "Parameter 'dest' je predolg (max 100)" }, { status: 400 });
   }
-  const dest = normalizeDest(rawDest);
 
-  // days: 1–30, default 7 — samo za insurance (World Nomads)
+  // FAZA 5: whitelist — neznan dest → kanonski fallback "Slovenija",
+  // NIKOLI raw vnos v partnerjev URL (src/lib/affiliate.ts canonicalDest).
+  const dest = canonicalDest(rawDest);
+  const knownDest = isKnownDest(rawDest);
+
+  // days: 1–30, default 7 — samo za insurance (kompatibilnost; CJ URL
+  // World Nomads povezave days ne potrebuje več)
   let days = 7;
   if (provider === "insurance") {
     const rawDays = searchParams.get("days");
@@ -84,25 +98,36 @@ export async function GET(
     }
   }
 
-  // === Tracking (NE blokira redirecta) ===
+  // === Tracking (NE blokira redirecta; brez PII) ===
   // Rate limit varuje samo DB zapis — preusmeritev vedno poteče.
   const limited = rateLimit(request, { limit: 60, windowMs: 60000, key: "go-track" });
   if (!limited) {
     try {
+      // Referer → samo POT (brez query niza, brez morebitnih žetonov v URL)
+      let refPath: string | null = null;
+      const referer = request.headers.get("referer");
+      if (referer) {
+        try {
+          refPath = new URL(referer).pathname.slice(0, 200);
+        } catch {
+          refPath = null;
+        }
+      }
       await db.analyticsEvent.create({
         data: {
           type: "affiliate_click",
           metadata: JSON.stringify({
             provider,
             dest: dest || null,
+            knownDest,
+            monetized: affiliateStatus()[provider as Provider].configured,
             days: provider === "insurance" ? days : null,
-            path: request.headers.get("referer") || null,
-            ua: (request.headers.get("user-agent") || "").slice(0, 200) || null,
+            refPath,
           }),
         },
       });
-      // Funnel zapis — ENAK vzorec kot /api/track-funnel (PageView s funnelStep),
-      // da GET funnel statistika šteje VSE affiliate klike strežniško.
+      // Funnel zapis — ENAK vzorec kot /api/track-funnel (PageView s
+      // funnelStep), da funnel statistika šteje VSE affiliate klike.
       await db.pageView.create({
         data: {
           path: `/go/${provider}`,
@@ -114,25 +139,54 @@ export async function GET(
     }
   }
 
-  // === Redirect na partnerja ===
-  let url: string;
-  switch (provider as Provider) {
-    case "hotels":
-      url = getBookingUrl(dest);
-      break;
-    case "cars":
-      url = getDiscoverCarsUrl(dest);
-      break;
-    case "activities":
-      url = getGetYourGuideUrl(dest);
-      break;
-    case "flights":
-      url = getSkyscannerUrl(dest);
-      break;
-    case "insurance":
-      url = getWorldNomadsUrl(days);
-      break;
+  // === Redirect na partnerja (fail-closed, allowlist hostov po partnerju) ===
+  const { url, monetized } = buildPartnerUrl(
+    provider as Provider,
+    dest,
+    provider === "insurance" ? days : undefined,
+  );
+
+  // Zadnja varovalka: izhod mora biti https in dovoljen partnerjev host —
+  // sicer ne preusmerimo (notranja napaka konfiguracije, ne odjemalčeva).
+  let out: URL;
+  try {
+    out = new URL(url);
+  } catch {
+    return NextResponse.json(
+      { error: "Napaka konfiguracije affiliate povezave" },
+      { status: 500 },
+    );
+  }
+  const ALLOWED_HOSTS: Record<Provider, string[]> = {
+    hotels: ["www.booking.com", "booking.com"],
+    cars: ["www.discovercars.com", "discovercars.com"],
+    activities: ["www.getyourguide.com", "getyourguide.com"],
+    flights: ["www.skyscanner.net", "skyscanner.net"],
+    // World Nomads program teče na CJ — dovolimo njihove redirect domene
+    insurance: [
+      "www.worldnomads.com",
+      "worldnomads.com",
+      "www.dpbolvw.net",
+      "dpbolvw.net",
+      "www.anrdoezrs.net",
+      "anrdoezrs.net",
+      "www.jdoqocy.com",
+      "jdoqocy.com",
+      "www.tkqlhce.com",
+      "tkqlhce.com",
+      "www.kqzyfj.com",
+      "kqzyfj.com",
+    ],
+  };
+  if (out.protocol !== "https:" || !ALLOWED_HOSTS[provider as Provider].includes(out.hostname)) {
+    return NextResponse.json(
+      { error: "Napaka konfiguracije affiliate povezave" },
+      { status: 500 },
+    );
   }
 
-  return NextResponse.redirect(url, 302);
+  const res = NextResponse.redirect(out.toString(), 302);
+  // monetized v glavi NI (ne razkrivamo poslovne konfiguracije javno);
+  // vidna je samo v interni analitiki.
+  return res;
 }

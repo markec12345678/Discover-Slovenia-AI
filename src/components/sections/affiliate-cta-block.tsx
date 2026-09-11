@@ -142,8 +142,9 @@ export function AffiliateCtaBlock({
       {/* EU disclosure (pravno obvezna označba partnerskih povezav) */}
       <p className="mt-5 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
         <Info className="size-3.5 shrink-0" aria-hidden="true" />
-        Partnerske povezave: Booking.com, DiscoverCars, GetYourGuide. Zaslužimo
-        majhen delež — za vas je cena enaka.
+        Partnerske povezave: Booking.com, DiscoverCars, GetYourGuide. Če prek
+        njih opravite rezervacijo, lahko prejmemo provizijo — cena za vas se
+        ne poveča.
       </p>
     </section>
   );

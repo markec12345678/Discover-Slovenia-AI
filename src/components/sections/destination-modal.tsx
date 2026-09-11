@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BedDouble,
   Car,
@@ -29,7 +29,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WeatherWidget } from "@/components/sections/weather-widget";
 import { ListingModal } from "@/components/sections/listing-modal";
-import { getAffiliateLinks, COMMISSION_INFO } from "@/lib/affiliate";
 import { trackFunnel } from "@/lib/funnel";
 import { REGIONS } from "@/lib/slovenia-data";
 import {
@@ -73,11 +72,6 @@ export function DestinationModal({
   destination,
   onClose,
 }: DestinationModalProps) {
-  // Pripravi affiliate povezave samo, ko imamo destinacijo
-  const links = useMemo(
-    () => (destination ? getAffiliateLinks(destination.name) : null),
-    [destination]
-  );
 
   // Lokali v bližini (B2B listings)
   const [nearbyListings, setNearbyListings] = useState<Listing[]>([]);
@@ -128,29 +122,32 @@ export function DestinationModal({
     };
   }, [destination]);
 
-  const ctas: AffiliateCta[] = links
+  // Partnerske povezave grejo IZKLJUČNO prek /go/ redirecta (strežniško
+  // tracking + strežniška affiliate konfiguracija — klient nikoli ne drži
+  // partner ID-jev). AffiliateCta badge z odstotkom provizije je ODSTRANJEN
+  // (delež partnerjevega dobička ≠ % cene — zavajajoče).
+  const ctas: AffiliateCta[] = destination
     ? [
         {
-          href: links.hotels,
+          href: `/go/hotels?dest=${encodeURIComponent(destination.name)}`,
           icon: BedDouble,
           partner: "Booking.com",
           category: "Hoteli",
         },
         {
-          href: links.cars,
+          href: `/go/cars?dest=${encodeURIComponent(destination.name)}`,
           icon: Car,
           partner: "DiscoverCars",
           category: "Najem avta",
-          badge: `${COMMISSION_INFO.cars.rate} provizija`,
         },
         {
-          href: links.activities,
+          href: `/go/activities?dest=${encodeURIComponent(destination.name)}`,
           icon: Ticket,
-          partner: "Viator",
+          partner: "GetYourGuide",
           category: "Aktivnosti",
         },
         {
-          href: links.flights,
+          href: `/go/flights?dest=${encodeURIComponent(destination.name)}`,
           icon: Plane,
           partner: "Skyscanner",
           category: "Letalske vozovnice",

@@ -32,9 +32,11 @@ export default function TermsPage() {
 
           <h2 className="text-xl font-bold">4. Affiliate povezave</h2>
           <p>
-            Platforma vsebuje affiliate povezave (Booking.com, DiscoverCars, Viator, Skyscanner,
-            WorldNomads). Pri rezervacijah preko teh povezav lahko prejmemo provizijo, za vas
-            brez dodatnih stroškov.
+            Platforma vsebuje partnerske (affiliate) povezave (Booking.com, DiscoverCars,
+            GetYourGuide, Skyscanner, World Nomads). Če prek teh povezav opravite rezervacijo,
+            lahko Discover Slovenia prejme partnersko provizijo. Cena za vas se zaradi tega
+            ne poveča; rezervacijo in morebitne storitve plačila opravite neposredno pri
+            partnerju, ki zanjo veljajo njegovi pogoji.
           </p>
 
           <h2 className="text-xl font-bold">5. Ponudniki (B2B)</h2>

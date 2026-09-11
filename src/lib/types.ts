@@ -108,14 +108,6 @@ export interface WeatherData {
   icon: string;
 }
 
-export interface AffiliateLinks {
-  hotels: string;
-  cars: string;
-  activities: string;
-  flights: string;
-  insurance: string;
-}
-
 // ============================================================================
 // FW4.1 — strukturne metrike kakovosti itinererja (deterministične)
 // ============================================================================

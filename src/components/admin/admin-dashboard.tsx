@@ -2159,6 +2159,8 @@ function SubsKpiCard({
 }
 
 // === TAB 4: STATISTIKA ===
+import { AffiliateStatsPanel } from "@/components/admin/affiliate-stats-panel";
+
 function StatsTab({ adminPassword }: { adminPassword: string }) {
   const [listings, setListings] = React.useState<AdminListing[]>([]);
   const [leads, setLeads] = React.useState<Lead[]>([]);
@@ -2275,6 +2277,9 @@ function StatsTab({ adminPassword }: { adminPassword: string }) {
 
       {/* AI vpogledi — analiza statistike z AI */}
       <InsightsPanel type="admin" adminPassword={adminPassword} />
+
+      {/* Affiliate monetizacija — kliki + konfiguriranost partnerjev (FAZA 15) */}
+      <AffiliateStatsPanel adminPassword={adminPassword} />
 
       {/* KPI kartice */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
