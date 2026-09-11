@@ -16,7 +16,7 @@
 
 > 🧊 **CODE FREEZE (P9, 2026-09-11):** razvoj za pilot je zaključen — do konca pilota NOVIH funkcij ni (samo popravki napak iz realne uporabe).
 >
-> - **Koda:** `main` = `4df3f57` (P8: koda) + `e0a0410` (P9: docs/smoke orodja — brez logike). CI ✅ (Build + Lint/TypeCheck).
+> - **Koda:** `main` = `4df3f57` (P8: koda) + P9 dokumentacijski commit (README/CHANGELOG/smoke orodja — brez logike). CI ✅ (Build + Lint/TypeCheck). Kateri commit je v produkciji, preveriš s smoke skripto (GitHub Vercel status na trenutnem `main` HEAD).
 > - **Produkcija:** 🟠 še servira `d2e371c` — deploy na zadnji `main` je bil **rate-limited** (Vercel Hobby build quota; okno se ponastavi ~2026-09-12 05:33 UTC). Po ponastavitvi: glej [runbook spodaj](#deploy-po-rate-limit-okni-p9) (Redeploy iz dashboarda — brez praznega commita).
 > - **Po deployu obvezno:** [produkcjski smoke](#produkcjski-smoke-p9--po-deployu) — `bash scripts/verify/production-smoke.sh` (varni GET preverki + markerji) + ročni brskalniški tokovi + funkcionalni pregled mobilnih tokov na 390 px.
 > - **Zavedno odloženo (pred javnim launchem, NI pilot blocker):** rate limiting je per-instance → pred javnim prometom centralizirani limiter (npr. Upstash); `requireOwnership()` admin bypass dokumentiran v kodi (0 klicalcev — past za prihodnji razvoj, ne ranljivost); realni Stripe Checkout za rezervacije šele po poslovni odločitvi po pilotu (zdaj namerno fail-closed 501 v produkciji).
