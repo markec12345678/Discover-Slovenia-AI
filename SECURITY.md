@@ -73,10 +73,10 @@ Popravljeni varnostni sajti, najdeni v 1.0:
    ```
 3. **Rate limiter je in-memory** — na Vercelu deluje per-instanca; za robustno produkcijo migriraj na `@upstash/ratelimit` (načrt: `docs/SECURITY-REVIEW.md` §1.7).
 4. **Datotečne shrambe** — leadi so od P4-2 (2026-09-10) shranjeni v
-   PostgreSQL (model `Lead`) — serverless-varno. Še vedno datotečno (demo,
-   na Vercelu se ne ohranja): `data/newsletter.json` (prijava na novice) —
-   znana omejitev, roadmap. AI cache JSON-i (`data/ai-rec-cache.json` itd.)
-   so read-only fallback vsebina, varno.
+   PostgreSQL (model `Lead`), newsletter naročniki od P6 (2026-09-11) v
+   PostgreSQL (model `NewsletterSubscriber`) — oboje serverless-varno.
+   AI cache JSON-i (`data/ai-rec-cache.json` itd.) so read-only fallback
+   vsebina, varno.
 
 ## Known Security Measures
 
@@ -88,7 +88,7 @@ Popravljeni varnostni sajti, najdeni v 1.0:
 ### Avtorizacija
 - **Owner API-ji** — preverjajo `getServerSession` + ownership (403 če ni lastnik)
 - **Admin API-ji** — preverjajo `x-admin-password` header (timing-safe, rate-limited)
-- Plan limiti (free=3, premium=10, enterprise=∞)
+- Plan limiti (normalno: free=1, premium=5, enterprise=∞; med beta: free=3, premium=8 — glej `src/app/api/owner/listings/route.ts`)
 
 ### Podatki
 - **PostgreSQL (Neon, pooler)** v produkciji — dostopna izključno prek `DATABASE_URL` (skrivnost)

@@ -42,8 +42,8 @@
 Platforma rešuje **3 ključne probleme**:
 
 1. **Za turiste** — AI generira personalizirane itinererje v sekundah, brezplačno načrtovanje, direktni in AI-kanal rezervaciji
-2. **Za lokalne ponudnike** — self-service portal z onboarding čarovnikom, 0 % provizije na direktnih rezervacijah (najpoštenejši model na trgu — glej [konkurenčno analizo](docs/COMPETITIVE-ANALYSIS.md))
-3. **Za Slovenijo** — prva platforma, ki povezuje AI + lokalno + državno-specifično s preverjeno partnersko mrežo
+2. **Za lokalne ponudnike** — self-service portal z onboarding čarovnikom, 0 % provizije na direktnih rezervacijah (glej [konkurenčno analizo](docs/COMPETITIVE-ANALYSIS.md))
+3. **Za Slovenijo** — med prvimi platformami, ki povezujejo AI + lokalno + državno-specifično s preverjeno partnersko mrežo
 
 ---
 
@@ -75,7 +75,7 @@ Platforma rešuje **3 ključne probleme**:
 
 ### 🏪 Tržnica
 
-- **Lokalni partnerji** (hoteli, restavracije, aktivnosti) z VLM-verified slikami
+- **Lokalni partnerji** (hoteli, restavracije, aktivnosti) s strežniško moderiranimi profili
 - **Izdelki** (kulinarika, vino, med, olje, obrt, spominki)
 - **Izkušnje** (turi, degustacije, avanture, wellness) z realnimi rezervacijami
 - **Zbirke** za navigacijo (zimske, poletne, romantične, družinske, …)
@@ -90,7 +90,7 @@ Platforma rešuje **3 ključne probleme**:
 ### 🏢 B2B portali
 
 **Owner Dashboard:**
-- **Onboarding čarovnik** (5 korakov, 53 % → 82 % completion po P2 izboljšavah)
+- **Onboarding čarovnik** (5 korakov; minimalna zahteva je 1 profilna fotografija, več je priporočeno)
 - Moji lokalci / Izdelki / Izkušnje (CRUD + AI auto-tag + status moderacije)
 - Rezervacije (strežniško validirane, zaključek, prihodek)
 - Naročnina (Stripe + paketi, vrata: email verifikacija)
@@ -136,7 +136,7 @@ Trije neodvisni auditi (auth/authz, booking/Stripe, AI/data) → utrjevanje v 49
 | Framework | Next.js 16 (App Router, RSC + API Routes) |
 | Jezik | TypeScript 5 (strict) |
 | Styling | Tailwind CSS 4 + shadcn/ui (New York) + Framer Motion |
-| Database | Prisma 6 + SQLite (dev) / **Neon PostgreSQL** (prod, pooler) |
+| Database | Prisma 6 + PostgreSQL — **Neon** (produkcija in razvoj; Docker alternativa: SQLite v volumenu) |
 | Auth | NextAuth.js v4 (credentials, JWT seje, tokenVersion invalidacija) |
 | AI | GLM prek Puter API + z-ai-web-dev-sdk fallback |
 | Maps | Leaflet + OpenStreetMap Overpass API |
@@ -159,7 +159,7 @@ Browser → Vercel Edge CDN → Next.js 16 (RSC + API Routes)
                                 └── SMTP (Email)
 ```
 
-**Podatkovni model (25 modelov):** User, Owner, SavedItinerary, TripVote, TripComment, TripLike, Listing, ListingEvent, Product, Experience, Review, Order, Booking, Sponsorship, PageView, AnalyticsEvent, AIUsageLog, AuditLog, LocalQuestion, ProcessedStripeEvent, Consultation, PushSubscription, CommissionInvoice, Lead, AbSubscription.
+**Podatkovni model (25 modelov):** User, Owner, SavedItinerary, TripVote, TripComment, TripLike, Listing, ListingEvent, Product, Experience, Review, Order, Booking, Sponsorship, PageView, AnalyticsEvent, AIUsageLog, AuditLog, LocalQuestion, ProcessedStripeEvent, Consultation, PushSubscription, CommissionInvoice, Lead, NewsletterSubscriber.
 
 ---
 
@@ -171,9 +171,10 @@ bun install
 
 # 2. Nastavi okolje
 cp .env.example .env
-# Uredi .env (ADMIN_PASSWORD, NEXTAUTH_SECRET, DATABASE_URL)
+# Uredi .env — OBVEZNO: DATABASE_URL (PostgreSQL, npr. brezplačni Neon),
+# ADMIN_PASSWORD, NEXTAUTH_SECRET (shema je postgresql — SQLite URL ne deluje)
 
-# 3. Postavi bazo
+# 3. Postavi bazo (prisma db push + generate)
 bun run db:push
 
 # 4. (opcija) demo podatki — partnerji, listingi, izkušnje,
@@ -186,16 +187,19 @@ bun run dev
 # 6. Odpri http://localhost:3000
 ```
 
-### Testni računi (demo seed)
+### Testni računi (demo seed — LOKALNA baza)
 
 | Vloga | Email | Geslo |
 |-------|-------|-------|
 | Owner — free partner, provizija 12 % | tina@demo.discoverslovenia.si | demo1234 |
 | Owner — premium partner, provizija 0 % | marko@demo.discoverslovenia.si | demo1234 |
-| Owner — admin (samo lokalni seed) | admin@demo.discoverslovenia.si | admin-demo-2026 |
-| Admin portal `/admin` | — | `ADMIN_PASSWORD` env |
 
-> Demo seed na javnem Vercel buildu NE ustvari super_admin računa (`SKIP_DEMO_ADMIN=1`).
+Admin dostop do portala `/admin` poteka prek `ADMIN_PASSWORD` env (ne prek NextAuth računa).
+
+> ⚠️ **Iskrena opozorila (P6 audit, 2026-09-11):**
+> - Demo seed se na Vercelu NE izvede (build skripta se izklopi pri postgresql shemi) — računa zgoraj sta namenjena **lokalni** razvojni bazi.
+> - V pilotni produkcijski bazi (Neon) ta računa (in demo admin račun) **še obstajajo** iz zgodnjega seedinga. Pred onboardingom realnih ponudnikov gesla **rotiraj** oz. račune umakni — javno dokumentirano geslo na produkcijskem računu je higienški dolg.
+> - Demo vsebina (lokalci, izdelki, izkušnje) je jasno demo — žive številke se prikazujejo dinamično iz baze (`/za-ponudnike`).
 
 ---
 
@@ -321,11 +325,13 @@ Vsak klic je Bearer zaščiten s `CRON_SECRET` (brez njega 401 — fail-closed).
 - CI (GitHub Actions): Lint & Type Check + Build proti `postgres:16-alpine` service containerju (P4-7)
 - Zastarel demo-SQLITE mehanizem (Faza 4e) se samodejno izklopi pri postgresql shemi — glej docs/DEPLOYMENT.md razdelek 6
 
-### Docker Compose (alternativa)
+### Docker Compose (alternativa — ZASTARELO)
+
+> ⚠️ Docker pot (Pot A) je bila zasnovana v SQLite eri — shema je od Faze 4f `postgresql`, zato SQLite volumen v teh skriptah ne ustreza več. Primarna podprta pot je **Vercel + Neon** (zgoraj); Docker pot osveži ob potrebi po lastnem Postgres vsebniku.
 
 ```bash
-cp .env.example .env.docker   # izpolni skrivnosti
-docker compose up -d --build  # app + cron vsebnik, trajen volumen
+cp .env.example .env.docker   # izpolni skrivnosti (PostgreSQL URL!)
+docker compose up -d --build  # app + cron vsebnik
 ```
 
 Celoten postopek in odločitvena analiza: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
@@ -363,9 +369,10 @@ Celoten postopek in odločitvena analiza: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT
 ### Environment variables
 
 ```bash
-# Database — dev: SQLite; prod: Neon PostgreSQL (pooler)
-DATABASE_URL=file:../db/custom.db
-# DATABASE_URL=postgresql://…neon…/neondb?sslmode=require&pgbouncer=true&connection_limit=1
+# Database — PostgreSQL (shema je postgresql; SQLite URL NE deluje)
+# Brezplačna možnost: https://neon.tech → npr.:
+DATABASE_URL=postgresql://user:pass@ep-xxxx-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require&pgbouncer=true&connection_limit=1
+# (Vrednost s & mora biti v .env v narekovajih, če jo Source-aš v bash!)
 
 # Auth
 ADMIN_PASSWORD=CHANGE_ME_TO_RANDOM_32_CHAR_STRING

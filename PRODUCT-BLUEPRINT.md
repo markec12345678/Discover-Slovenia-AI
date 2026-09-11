@@ -7,6 +7,8 @@
 > **Pravilo:** Nobena koda ne gre v produkcijo brez skladnosti s tem dokumentom
 >
 > **Spremembe po zamrznitvi:** Zahtevajo eksplicitno odobritev product owner-ja in version bump (v1.1, v1.2...).
+>
+> ⚠️ **DRIFT OPOZORILO (P6, 2026-09-11):** Ta dokument je zamrznjen julija 2026 in opisuje NAČRTOVANE/podatkovne razmere takrat, ne trenutnega stanja. Številke (25 lokalov, 28 izdelkov, 28 izkušenj, »VLM preverba«, »prva platforma«) so bile v P4-9/P6 korigirane na strani in v README — veljavno stanje: pilotni baseline (10 lokalov, 6 izdelkov, 10 izkušenj), ocene se prikažejo samo ob pravih mnenjih, žive številke dinamično iz baze. Za aktualni opis glej README.md.
 
 ---
 

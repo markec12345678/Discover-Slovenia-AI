@@ -74,7 +74,7 @@
 | **Jezik** | TypeScript 5 | Type safety |
 | **Styling** | Tailwind CSS 4 + shadcn/ui | Rapid UI development |
 | **DB ORM** | Prisma 6 | Type-safe queries |
-| **DB** | SQLite (dev) / Turso (prod) | Enostavno skaliranje |
+| **DB** | PostgreSQL — Neon (prod + dev) | Serverless, pooler, brezplačen tier |
 | **Auth** | NextAuth.js v4 | Credentials provider |
 | **AI** | z-ai-web-dev-sdk + Puter | GLM dostop |
 | **Email** | Nodemailer | SMTP fleksibilnost |
@@ -1572,11 +1572,11 @@ export async function requireOwner(resourceId: string, resource: "listing" | "pr
   └──────────────────┘
 
   External Services:
-  - Turso (SQLite cloud) — DB
+  - Neon PostgreSQL — DB
   - Puter API — AI
   - Stripe — Payments
   - SMTP — Email
-  - Upstash Redis — Rate limiting (prod)
+  - Upstash Redis — Rate limiting (načrtovano za javni launch; trenutno in-memory per-instanka)
 ```
 
 ### 10.2 Environment setup
@@ -1616,8 +1616,7 @@ bun run lint
 # .env.example
 
 # === DATABASE ===
-DATABASE_URL="file:./db/custom.db"  # dev
-# DATABASE_URL="libsql://..."  # prod (Turso)
+DATABASE_URL="postgresql://user:pass@ep-xxxx-pooler.region.aws.neon.tech/neondb?sslmode=require&pgbouncer=true&connection_limit=1"  # Neon (dev + prod)
 
 # === AUTH ===
 NEXTAUTH_SECRET="generiraj-random-secret"

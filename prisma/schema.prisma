@@ -708,3 +708,15 @@ model Lead {
   @@index([createdAt])
   @@index([businessName])
 }
+
+// P6: prej data/newsletter.json (fs write — na Vercelu efemeren, podatki izginejo
+// ob vsakem deployu). Zdaj PostgreSQL, enako kot Lead.
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  source    String?  // "homepage" | "itinerary_email" (kontekst prijave)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([source])
+}

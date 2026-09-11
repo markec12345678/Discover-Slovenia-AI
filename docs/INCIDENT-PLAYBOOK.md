@@ -3,6 +3,7 @@
 > **Status:** Living document
 > **Datum:** 2026-07-15
 > **Namen:** Kaj narediti ko X odpove — hiter referenčni dokument za administratorje
+> ⚠️ **DRIFT OPOZORILO (P6, 2026-09-11):** Napisano v SQLite/Turso eri. Produkcija je **Neon PostgreSQL** — Turso status URL-ji spodaj so arhivski; za DB incidente glej Neon konzolo/status (glej ADR-016).
 
 ---
 

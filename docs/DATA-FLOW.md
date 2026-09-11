@@ -25,10 +25,10 @@
 ### 1.1 Homepage visit
 
 ```
-┌──────────┐         ┌──────────┐         ┌──────────┐         ┌──────────┐
-│  Browser │ ──HTTP──▶│  Vercel  │ ──RSC──▶│  Next.js │ ──SQL──▶│  SQLite  │
-│  (User)  │         │  Edge    │         │  Server  │         │  / Turso │
-└──────────┘         └──────────┘         └──────────┘         └──────────┘
+┌──────────┐         ┌──────────┐         ┌──────────┐         ┌────────────┐
+│  Browser │ ──HTTP──▶│  Vercel  │ ──RSC──▶│  Next.js │ ──SQL──▶│ PostgreSQL │
+│  (User)  │         │  Edge    │         │  Server  │         │  (Neon)    │
+└──────────┘         └──────────┘         └──────────┘         └────────────┘
                            │                    │
                            │                    │ reads:
                            │                    │ - DESTINATIONS (static)
@@ -653,7 +653,7 @@ Browser (itinerary result)
 └─────────────────────────────────────────────────────────────┘
 
   ┌─────────────────────┐
-  │  SQLite / Turso DB  │
+  │  PostgreSQL (Neon)  │
   │  (prisma)           │
   │                     │
   │  - Owner            │
@@ -666,17 +666,19 @@ Browser (itinerary result)
   │  - AnalyticsEvent   │
   │  - AIUsageLog       │
   │  - SavedItinerary   │
+  │  - Lead (P4-2)      │
+  │  - NewsletterSub.   │
+  │    (P6)             │
   └─────────────────────┘
 
   ┌─────────────────────┐
   │  File System        │
-  │  (data/)            │
+  │  (data/ — read-only │
+  │  AI cache fallback) │
   │                     │
   │  - ai-rec-cache.json│ (24h TTL)
   │  - poi-descriptions │ (permanent)
   │  - seo-faq-cache    │ (90d TTL)
-  │  - leads.json       │ (lead storage)
-  │  - newsletter.json  │ (subscriber storage)
   └─────────────────────┘
 
   ┌─────────────────────┐

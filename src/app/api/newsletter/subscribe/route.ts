@@ -1,69 +1,72 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
+import { db } from "@/lib/db";
+import { checkAdmin } from "@/lib/auth-guards";
 import { rateLimit } from "@/lib/rate-limit";
 
-// POST /api/newsletter/subscribe — preprost email capture
-// Shrani v data/newsletter.json (demo mode)
-// Za production: zamenjaj z Brevo/MailerLite/Resend API
+// POST /api/newsletter/subscribe — prijava na newsletter
+// P6: prej data/newsletter.json (fs write — na Vercelu read-only/efemeren FS,
+// podatki so izginevali ob vsakem deployu). Zdaj PostgreSQL (NewsletterSubscriber),
+// enako kot Lead. Duplikat = idempotentna prijava.
 export async function POST(request: Request) {
     // Rate limit prijav na newsletter
     const limited = rateLimit(request, { limit: 10, windowMs: 3600000, key: "newsletter" });
     if (limited) return limited;
 
   try {
-    const { email } = await request.json();
+    const { email, source } = (await request.json()) as { email?: string; source?: string };
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: "Veljaven email je obvezen" }, { status: 400 });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    const validSource = source === "itinerary_email" ? "itinerary_email" : "homepage";
 
-    // Shrani v data/newsletter.json
-    const dataDir = path.join(process.cwd(), "data");
-    const filePath = path.join(dataDir, "newsletter.json");
-
-    try { await fs.mkdir(dataDir, { recursive: true }); } catch {}
-
-    let subscribers: Array<{ email: string; createdAt: string }> = [];
-    try {
-      const existing = await fs.readFile(filePath, "utf-8");
-      subscribers = JSON.parse(existing);
-    } catch {}
-
-    // Preveri duplikate
-    if (subscribers.some((s) => s.email === normalizedEmail)) {
+    // Idempotentna prijava (duplikat ne vrača napake)
+    const existing = await db.newsletterSubscriber.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true },
+    });
+    if (existing) {
       return NextResponse.json({ success: true, message: "Že prijavljen!" });
     }
 
-    subscribers.push({ email: normalizedEmail, createdAt: new Date().toISOString() });
-    await fs.writeFile(filePath, JSON.stringify(subscribers, null, 2), "utf-8");
-
-    // TODO: Production — klici Brevo/MailerLite/Resend API:
-    // await fetch("https://api.brevo.com/v3/contacts", {
-    //   method: "POST",
-    //   headers: { "api-key": process.env.BREVO_API_KEY, "Content-Type": "application/json" },
-    //   body: JSON.stringify({ email: normalizedEmail, listIds: [parseInt(process.env.BREVO_LIST_ID || "1")] }),
-    // });
-
-    console.log(`[newsletter] Nov subscriber: ${normalizedEmail} (skupno: ${subscribers.length})`);
+    await db.newsletterSubscriber.create({
+      data: { email: normalizedEmail, source: validSource },
+    });
 
     return NextResponse.json({ success: true, message: "Uspešno prijavljen!" });
   } catch (error) {
+    // Tekmovalni dvojni insert (isti email hkrati) → obravnavaj kot uspeh
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: string }).code === "P2002"
+    ) {
+      return NextResponse.json({ success: true, message: "Že prijavljen!" });
+    }
     console.error("[newsletter] napaka:", error);
     return NextResponse.json({ error: "Napaka pri prijavi" }, { status: 500 });
   }
 }
 
-// GET — število subscriberjev (za admin)
-export async function GET() {
+// GET — število naročnikov (admin only — x-admin-password, P6: prej javen count)
+export async function GET(request: Request) {
   try {
-    const filePath = path.join(process.cwd(), "data", "newsletter.json");
-    const data = await fs.readFile(filePath, "utf-8");
-    const subscribers = JSON.parse(data);
-    return NextResponse.json({ count: subscribers.length, latest: subscribers[subscribers.length - 1]?.createdAt || null });
-  } catch {
-    return NextResponse.json({ count: 0, latest: null });
+    if (!checkAdmin(request.headers.get("x-admin-password"))) {
+      return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
+    }
+    const [count, latest] = await Promise.all([
+      db.newsletterSubscriber.count(),
+      db.newsletterSubscriber.findFirst({
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      }),
+    ]);
+    return NextResponse.json({ count, latest: latest?.createdAt ?? null });
+  } catch (error) {
+    console.error("[newsletter] GET napaka:", error);
+    return NextResponse.json({ error: "Napaka" }, { status: 500 });
   }
 }

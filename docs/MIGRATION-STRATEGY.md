@@ -3,6 +3,7 @@
 > **Status:** Living document
 > **Datum:** 2026-07-15
 > **Namen:** Varna in ponovljiva migracijska strategija brez izpadov
+> ⚠️ **DRIFT OPOZORILO (P6, 2026-09-11):** Napisano v SQLite/Turso eri. Shema je od Faze 4f `postgresql` (Neon) — `sqlite3`/VACUUM ukazi spodaj so arhivski; migracije tečejo prek `prisma db push` (glej ADR-016).
 
 ---
 

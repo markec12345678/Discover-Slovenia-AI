@@ -5,6 +5,7 @@
 > **Namen:** Ločevanje development, demo in production seed podatkov
 
 > ⚠️ **Stanje implementacije: NAČRT.** Ločevanje dev/demo/prod seed podatkov **ni implementirano** — ne obstajajo `seed-dev`/`seed-demo`/`seed-prod` skripte. Demo podatki so v `db/custom.db` (lokalno, gitignored).
+> ⚠️ **DRIFT OPOZORILO (P6, 2026-09-11):** Demo seed se na Vercelu NE izvede (build-demo-db.sh se izklopi pri postgresql shemi); teče samo ročno na lokalni/lastni bazi. Pilotna Neon baza vsebuje ročno seedane demo partnere (rotiraj gesla pred pravim pilotom).
 
 ---
 

@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { checkAdmin } from "@/lib/auth-guards";
 import { rateLimit } from "@/lib/rate-limit";
-import { promises as fs } from "fs";
-import path from "path";
 
 // P3a-4: timing-safe checkAdmin (prej ne-timing-safe `!==`) + rate limit.
 export async function GET(request: Request) {
@@ -23,12 +21,18 @@ export async function GET(request: Request) {
     let newsletterLatest: string | null = null;
     let itineraryEmails = 0;
     try {
-      const filePath = path.join(process.cwd(), "data", "newsletter.json");
-      const data = await fs.readFile(filePath, "utf-8");
-      const subs = JSON.parse(data);
-      newsletterCount = subs.length;
-      newsletterLatest = subs[subs.length - 1]?.createdAt || null;
-      itineraryEmails = subs.filter((s: { source?: string }) => s.source === "itinerary_email").length;
+      // P6: newsletter naročniki so zdaj v PostgreSQL (prej data/newsletter.json)
+      const [count, latest, itin] = await Promise.all([
+        db.newsletterSubscriber.count(),
+        db.newsletterSubscriber.findFirst({
+          orderBy: { createdAt: "desc" },
+          select: { createdAt: true },
+        }),
+        db.newsletterSubscriber.count({ where: { source: "itinerary_email" } }),
+      ]);
+      newsletterCount = count;
+      newsletterLatest = latest?.createdAt?.toISOString() ?? null;
+      itineraryEmails = itin;
     } catch {}
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);

@@ -4,6 +4,7 @@
 > **Datum:** 2026-07-15
 > **Namen:** Identifikacija in mitigacija tveganj pred in po lansiranju
 > **Pravilo:** Vsako tveganje mora imeti lastnika in datum pregleda
+> ⚠️ **DRIFT OPOZORILO (P6, 2026-09-11):** SQLite/Turso vrstice odražajo stanje pred Fazo 4f — produkcija je **Neon PostgreSQL** (replikacija/PITR vrstice so arhivske; glej ADR-016 in Neon dokumentacijo za dejansko topologijo).
 
 ---
 

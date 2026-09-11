@@ -7,6 +7,72 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.3.0] — 2026-09-11
+
+### Spremenjeno (Changed)
+
+- **Newsletter → PostgreSQL (P6)**: prijave se shranjujejo v nov model
+  `NewsletterSubscriber` (prej `data/newsletter.json` — na Vercelu efemeren,
+  podatki so izginevali ob vsakem deployu). Pisalca (`/api/newsletter/subscribe`,
+  `/api/email-itinerary`) in bralnik (`/api/admin/leads-dashboard`) so
+  preseljeni na DB; `GET /api/newsletter/subscribe` je zdaj admin-zaščiten
+  (`x-admin-password`; prej javno izpostavljeno število naročnikov).
+
+### Dokumentacija (P6 — sinhronizacija repozitorija z realnostjo)
+
+- **README**: odstranjena trditev »VLM-verified slikami« (92/105 slik je
+  Unsplash), »prva platforma« → »med prvimi«, »najpoštenejši model na trgu«
+  umaknjen; Database = Neon PostgreSQL v vseh sekcijah (stack, quickstart,
+  env, arhitektura); namišljeni model `AbSubscription` zamenjan z realnim
+  `NewsletterSubscriber` (25 modelov); demo računi z izrecnim opozorilom,
+  da v pilotni bazi še obstajajo in da gesla rotiraj pred pravim pilotom;
+  Docker sekcion označen kot zastarel (SQLite era).
+- **.env.example**: `DATABASE_URL` privzeto PostgreSQL (Neon) namesto SQLite
+  `file:` (ki pri `postgresql` shemi ne deluje); opozorilo o narekovajih za
+  vrednosti z `&`.
+- **CONTRIBUTING**: repo URL-ji (stare ime `i-feel-slovenia`) in kontaktni
+  email posodobljeni; obljuba o neobstoječi »Contributors sekciji« umaknjena.
+- **ADR-016** (nov): PostgreSQL/Neon za dev in produkcijo — nadomešča
+  ADR-003 (SQLite/Turso), ki je označen kot nadomeščen.
+- **TECHNICAL-SPECIFICATION / DATA-FLOW / SECURITY-REVIEW / SECURITY.md**:
+  SQLite/Turso → Neon; rate-limit tabela zdaj odseva dejansko implementirane
+  limite; plan limiti poplavljeni (free=1/premium=5/enterprise=∞ normalno;
+  3/8 med beta).
+- **OUTREACH-TOOLKIT**: »Min 3, VLM-verified« → »Min 1 (priporočamo 3+),
+  lastniške fotografije«.
+- **PRODUCT-BLUEPRINT**: dodan izrecen drift banner (zamrznjen v1.0 opisuje
+  načrt, ne trenutnega stanja).
+- **6 ops dokumentov** (BACKUP-RECOVERY, MIGRATION-STRATEGY, INCIDENT-PLAYBOOK,
+  OBSERVABILITY-PLAN, SEED-STRATEGY, RISK-REGISTER): drift opozorila —
+  sqlite3/Turso postopki so arhivski, produkcija je Neon.
+- **GitHub About**: iz opisa repozitorija odstranjena trditev »VLM Verified«.
+
+---
+
+## [1.2.2] — 2026-09-11
+
+### Popravljeno (Fixed) — P4-9 iskreni polish
+
+- **Ocene samo ob pravih mnenjih**: prikaz ratingov pogojen na
+  `reviewCount > 0` na 7 mestih (listings, modal, marketplace); iz JSON-LD
+  (`aggregateRating` z izmišljenim številom mnenj) odstranjen; destinacijske
+  ocene so izrecno označene kot **uredniške ocene**.
+- **VLM badge odstranjen** s homepage in footera (trditev o »preverjenih
+  slikah« ni držala — Unsplash v seedih); lažni social linki (`href="#"`)
+  iz footera odstranjeni.
+- **Žive številke**: `/za-ponudnike` prikazuje dejansko število lokalov iz
+  baze (ne »25 partnerjev«); neobstoječa featureja (QR Karta, Quality
+  Coach) zamenjana z realnima (Povpraševanja gostov, Atribucija
+  rezervacij); paketi brez neizvedenih meja; »prva AI platforma« →
+  »med prvimi«.
+- **UX frikciji**: booking prikaz »čas po dogovoru« namesto »ob 00:00«
+  (date-only serializacija) + mikrokopija; onboarding zahteva 1 (ne 3)
+  fotografije — client in server usklajeno.
+- **Higiena**: 12 neuporabljenih odvisnosti odstranjenih, 5 mrtvih API rut
+  (−495 LOC), `tailwind.config.ts` (TW4 CSS-first) izbrisan.
+
+---
+
 ## [1.2.1] — 2026-09-10
 
 ### Popravljeno (Fixed)

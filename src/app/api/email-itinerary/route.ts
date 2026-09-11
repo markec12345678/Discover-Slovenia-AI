@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
 import { sendEmail, emailTemplate } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
 import { escapeHtml } from "@/lib/security";
@@ -109,18 +110,17 @@ export async function POST(request: Request) {
 
     if (success) {
       // Shrani kot newsletter subscriber tudi
+      // (P6: PostgreSQL — prej data/newsletter.json, na Vercelu efemeren)
       try {
-        const fs = await import("fs/promises");
-        const path = await import("path");
-        const dataDir = path.join(process.cwd(), "data");
-        const filePath = path.join(dataDir, "newsletter.json");
-        try { await fs.mkdir(dataDir, { recursive: true }); } catch {}
-        let subscribers: Array<{ email: string; createdAt: string; source?: string }> = [];
-        try { const existing = await fs.readFile(filePath, "utf-8"); subscribers = JSON.parse(existing); } catch {}
         const normalizedEmail = String(email).toLowerCase().trim();
-        if (!subscribers.some((s) => s.email === normalizedEmail)) {
-          subscribers.push({ email: normalizedEmail, createdAt: new Date().toISOString(), source: "itinerary_email" });
-          await fs.writeFile(filePath, JSON.stringify(subscribers, null, 2), "utf-8");
+        const exists = await db.newsletterSubscriber.findUnique({
+          where: { email: normalizedEmail },
+          select: { id: true },
+        });
+        if (!exists) {
+          await db.newsletterSubscriber.create({
+            data: { email: normalizedEmail, source: "itinerary_email" },
+          });
         }
       } catch {}
 

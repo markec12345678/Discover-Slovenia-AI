@@ -13,7 +13,7 @@
 |----|--------|--------|-------|
 | [ADR-001](#adr-001--nextjs-16-app-router) | Next.js 16 App Router | ✅ Sprejet | 2026-07-15 |
 | [ADR-002](#adr-002--prisma-orm) | Prisma ORM | ✅ Sprejet | 2026-07-15 |
-| [ADR-003](#adr-003--sqlite-za-dev-turso-za-produkcijo) | SQLite (dev) / Turso (prod) | ✅ Sprejet | 2026-07-15 |
+| [ADR-003](#adr-003--sqlite-za-dev-turso-za-produkcijo) | SQLite (dev) / Turso (prod) | 🔄 Nadomeščen z ADR-016 | 2026-07-15 |
 | [ADR-004](#adr-004--vercel-za-deployment) | Vercel za deployment | ✅ Sprejet | 2026-07-15 |
 | [ADR-005](#adr-005--glm-preko-puter-api-kot-primarni-ai) | GLM preko Puter API kot primarni AI | ✅ Sprejet | 2026-07-15 |
 | [ADR-006](#adr-006--ai-fallback-chain-puter--z-ai-sdk--rule-based) | AI fallback chain (Puter → z-ai-sdk → rule-based) | ✅ Sprejet | 2026-07-15 |
@@ -26,6 +26,7 @@
 | [ADR-013](#adr-013--pavšalni-oglas-ne-provizija) | Pavšalni oglas, ne provizija | ✅ Sprejet | 2026-07-15 |
 | [ADR-014](#adr-014--beta-do-30-lokalov-brezplačno) | Beta do 30 lokalov brezplačno | ✅ Sprejet | 2026-07-15 |
 | [ADR-015](#adr-015--transparency-first--jasno-označevanje-oglasov) | Transparency-first: jasno označevanje oglasov | ✅ Sprejet | 2026-07-15 |
+| [ADR-016](#adr-016--postgresql-neon-za-dev-in-produkcijo) | PostgreSQL (Neon) za dev in produkcijo | 🔄 Nadomešča ADR-003 | 2026-09-11 |
 
 ---
 
@@ -119,7 +120,7 @@ Potrebujemo ORM ki:
 
 ## ADR-003 — SQLite za dev, Turso za produkcijo
 
-**Status:** ✅ Sprejet
+**Status:** 🔄 Nadomeščen z [ADR-016](#adr-016--postgresql-neon-za-dev-in-produkcijo) (2026-09-11, Faza 4f)
 **Datum:** 2026-07-15
 
 ### Kontekst
@@ -693,10 +694,52 @@ Ali naj uporabnik ve katera priporočila so plačana?
 
 ---
 
+## ADR-016 — PostgreSQL (Neon) za dev in produkcijo
+
+**Status:** 🔄 Nadomešča ADR-003
+**Datum:** 2026-09-11
+
+### Kontekst
+
+ADR-003 je predvideval SQLite (dev) + Turso (prod). Med Fazo 4f (2026-09) se je
+izkazalo, da Vercel serverless runtime ne podpira trajne SQLite datoteke
+(read-only FS, efemerne instance), projekt pa je presegel demo obseg:
+potrebna je bila hosted relacijska baza z enako arhitekturo v CI in produkciji.
+
+### Alternatives
+
+| Opcija | Prednosti | Slabosti |
+|--------|-----------|----------|
+| **Neon PostgreSQL** | Serverless-first, pooler (PgBouncer), brezplačen tier, branching | Hladni start ob scale-to-zero |
+| Turso (libSQL) | Edge replikacija | Nezdružljivo s Prisma postgresql provider, manj zrel |
+| Supabase PostgreSQL | Zrel ekosistem | Bolj „tradicionalen“ Postgres, višji minimum |
+
+### Odločitev
+
+**Neon PostgreSQL** za razvoj in produkcijo (pooler URL s
+`connection_limit=1`, `sslmode=require`). `schema.prisma` je `postgresql`
+za vsa okolja; CI (GitHub Actions) testira proti `postgres:16-alpine`
+service containerju (P4-7). Legacy SQLite ostaja le še v Docker Pot A
+(zastarelo) in build-demo-db.sh mehanizmu, ki se samodejno izklopi pri
+postgresql shemi.
+
+### Posledice
+
+- `DATABASE_URL` je vedno `postgresql://…` (vrednost vsebuje `&` → v bash
+  source kontekstu MORA biti v narekovajih, sicer priredba tihotapi v
+  background subshell — past dokumentirana v P5-R).
+- CI Build job zahteva Postgres service container (ne more več file: URL).
+- `data/*.json` ostanejo le še read-only AI cache fallbacki (leads in
+  newsletter sta od P4-2/P6 v PostgreSQL).
+- Backup/restore doktrina: `pg_dump`/Neon snapshot (stari sqlite3 postopki
+  v BACKUP-RECOVERY.md so arhivski).
+
+---
+
 ## 📝 Kako dodati novo ADR
 
 1. Kopiraj template spodaj
-2. Dodeli naslednji ID (ADR-016, ADR-017, ...)
+2. Dodeli naslednji ID (ADR-017, ADR-018, ...)
 3. Izpolni vse sekcije
 4. Dodaj v kazalo zgoraj
 5. Commit z message: `docs(adr): ADR-0XX - [title]`

@@ -151,7 +151,7 @@ Discover Slovenia AI
 
 | Polje | Zahteva | Zakaj |
 |-------|---------|-------|
-| Slike | Min 3, VLM-verified | Kakovostne slike = več klikov |
+| Slike | Min 1 (priporočamo 3+), lastniške fotografije | Kakovostne slike = več klikov |
 | Kratek opis | Min 50 znakov | SEO + AI razumevanje |
 | Dolgi opis | Min 200 znakov | Quality Score + AI kontekst |
 | Telefon | Obvezno | Direktni kontakt od turistov |

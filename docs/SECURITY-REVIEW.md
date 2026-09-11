@@ -87,7 +87,7 @@ export default {
 | `/api/itinerary` | Manual | ⚠️ Zod |
 | `/api/chat` | Manual | ⚠️ Zod |
 | `/api/smart-search` | Manual | ⚠️ Zod |
-| `/api/newsletter` | Email regex | ✅ |
+| `/api/newsletter/subscribe` | Email regex | ✅ |
 | All admin endpoints | Admin password | ✅ |
 
 ### 1.4 SQL Injection
@@ -111,16 +111,22 @@ export default {
 
 ### 1.7 Rate Limiting
 
+Implementirano (v1.1.0+, in-memory per-instanka — na Vercelu deluje per-instanca;
+za centralizirano omejitev pred javnim launchem: Upstash, glej SECURITY.md znane omejitve):
+
 | Endpoint | Limit | Implementacija |
 |----------|-------|---------------|
-| `/api/itinerary` | 10/hour/IP | ⚠️ Dodati |
-| `/api/chat` | 20/hour/IP | ⚠️ Dodati |
-| `/api/smart-search` | 30/hour/IP | ⚠️ Dodati |
-| `/api/owner/auto-tag` | 5/hour/owner | ⚠️ Dodati |
-| `/api/leads` | 3/hour/IP | ⚠️ Dodati |
-| `/api/newsletter` | 3/hour/IP | ⚠️ Dodati |
-| `/api/owner/register` | 5/hour/IP | ⚠️ Dodati |
-| `/api/owner/session` (login) | 10/hour/IP | ⚠️ Dodati |
+| `/api/itinerary` | 10/10min/IP | ✅ In-memory |
+| `/api/chat` | 20/10min/IP | ✅ In-memory |
+| `/api/smart-search` | 30/10min/IP | ✅ In-memory |
+| `/api/owner/auto-tag` | 5/10min | ✅ In-memory |
+| `/api/leads` | 10/h/IP | ✅ In-memory |
+| `/api/newsletter/subscribe` | 10/h/IP | ✅ In-memory |
+| `/api/owner/register` | 10/h/IP | ✅ In-memory |
+| Login (owner + user provider) | 10/15min/email | ✅ In-memory (src/lib/auth.ts) |
+| Admin verify + leads-dashboard | 10/10min, 60/10min | ✅ In-memory |
+
+(`⚠️ Dodati` vrstice iz arhiva: `/api/owner/session` je bil izbrisan v P4-9.)
 
 **Implementacija (memory-based):**
 

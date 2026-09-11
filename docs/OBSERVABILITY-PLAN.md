@@ -4,6 +4,7 @@
 > **Datum:** 2026-07-15
 > **Namen:** Definicija kaj spremljamo, kako in zakaj — od razvoja do produkcije
 > **Pravilo:** Če metrike ni v tem dokumentu, se ne spremlja. Če se ne spremlja, ne moremo izboljšati.
+> ⚠️ **DRIFT OPOZORILO (P6, 2026-09-11):** Napisano v SQLite/Turso eri. DB monitoring je danes **Neon konzola** (connections, storage, cold starts) — Turso dashboard vrstice so arhivske (glej ADR-016).
 
 ---
 

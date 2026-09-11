@@ -3,6 +3,7 @@
 > **Status:** Living document
 > **Datum:** 2026-07-15
 > **Namen:** Preveriti da backup ne obstaja samo, ampak da lahko iz njega obnovimo sistem
+> ⚠️ **DRIFT OPOZORILO (P6, 2026-09-11):** Napisano v SQLite/Turso eri. Produkcijska baza je od Faze 4f **Neon PostgreSQL** — `sqlite3` ukazi spodaj so arhivski; uporabljaj `pg_dump`/Neon snapshot/restore (glej docs/DEPLOYMENT.md in ADR-016).
 
 ---
 

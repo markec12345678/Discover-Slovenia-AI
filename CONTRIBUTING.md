@@ -31,11 +31,11 @@ Sodelovanje v tem projektu pomeni strinjanje z naslednjimi načeli:
 ```bash
 # Fork repozitorij na GitHubu
 # Nato kloniraj svoj fork
-git clone https://github.com/TVOJ-USERNAME/i-feel-slovenia.git
-cd i-feel-slovenia
+git clone https://github.com/TVOJ-USERNAME/Discover-Slovenia-AI.git
+cd Discover-Slovenia-AI
 
 # Dodaj upstream remote
-git remote add upstream https://github.com/markec12345678/i-feel-slovenia.git
+git remote add upstream https://github.com/markec12345678/Discover-Slovenia-AI.git
 ```
 
 ### 2. Ustvari feature branch
@@ -248,16 +248,15 @@ Odpri [nov issue](https://github.com/markec12345678/i-feel-slovenia/issues/new) 
 
 ## 🏆 Priznanja
 
-Vsi prispevki so cenjeni! Sodelavci bodo navedeni v:
-- README.md (Contributors sekcija)
-- Vsakem release note
+Vsi prispevki so cenjeni! Sodelavci bodo navedeni v
+vsakem release noteju (CHANGELOG.md).
 
 ---
 
 ## 📞 Kontakt
 
 - **GitHub Issues** — za bug-e in feature requeste
-- **Email** — admin@ifeelslovenia.si (za zasebne zadeve)
+- **Email** — varnostne ranljivosti: glej SECURITY.md (admin@discoverslovenia.ai)
 - **Pull Requests** — za kodne prispevke
 
 ---

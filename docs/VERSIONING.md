@@ -165,11 +165,11 @@ Format temelji na [Keep a Changelog](https://keepachangelog.com/).
 ### Added
 - Discover Slovenia AI platforma (initial release)
 - 9 AI funkcij (itinerar, chat, search, priporočila, POI, tag, insights, FAQ, prevodi)
-- 25 lokalov, 28 izdelkov, 28 izkušenj
+- 25 lokalov, 28 izdelkov, 28 izkušenj (demo seed ob izdaji; sedanji pilotni baseline je 10/6/10 — žive številke na /za-ponudnike)
 - Owner dashboard (5 tabov)
 - Admin dashboard (5 tabov)
 - 322 SEO landing pages
-- 4 jeziki (sl/en/de/it)
+- 4 jeziki (sl/en/de/it — od P4-8 javno samo sl, stari URL-ji 308 preusmerjeni)
 - Stripe checkout (demo mode)
 - Programmatic SEO
 - AI ranking z utežmi 60/20/10/10
