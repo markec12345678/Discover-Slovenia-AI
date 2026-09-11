@@ -7,6 +7,81 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.5.0] — 2026-09-11
+
+### Dodano (FW2 — UX quick wins iz primerjalne analize Mindtrip.ai, `629da01`)
+
+> Vzorci, ki so 2026 standard AI travel produktov. Vrata: tsc 0, eslint 0,
+> agent-browser E2E (wishlist tok, chat persistenca čez reload, place cards,
+> QR, lightbox, booking → Moja potovanja, sponsorship vrata, push/test) +
+> mobilni 390 px brez horizontalnega scrolla.
+
+- **Place cards v AI konzultacijah**: priporočeni partnerji (izkušnje/izdelki/lokalci)
+  se v odgovoru konzultacije prikažejo kot vizualne kartice — server-side obogatitev
+  iz `published` DB vsebine (slika, ocena, cena, CTA na things-to-do) z iskrenim
+  besedilnim fallbackom za neujemajoča imena.
+- **Persistenca AI chat zgodovine** (`dai:chat-history`, FIFO 40, defenzivno branje)
+  + gumb »Počisti pogovor«.
+- **Priljubljene (wishlist)**: srčki na karticah tržnice in modalih (`localStorage`,
+  FIFO 60) + WishlistSheet v navigaciji z odpiranjem pripadajočega modal.
+- **QR koda deljene poti**: inline preklop v vrstici Deli + print-only QR blok na
+  `/pot/[shareId]` (ob tisku povezava nazaj na živo stran).
+- **Sponzorstva v owner nadzorni plošči**: Moja sponzorstva + nakupni tok (demo:
+  takojšnja aktivacija; Stripe: redirect). P3a-2 vrata `emailVerified` ostajajo
+  aktivna — iskren 403 toast.
+- **Celozaslonski lightbox galerije** (izkušnje + izdelki): tipkovnica, števec,
+  thumbnail list, pravilna plastovitost nad modalom.
+- **Moja naročila in rezervacije**: lokalno sledenje (`dai:my-orders` /
+  `dai:my-bookings`, FIFO 50) + javni lookup API, prikaz v `/moja-potovanja`.
+
+### Popravljeno (FW2)
+
+- **Mrtvi gumb »Pošlji testno obvestilo« (404 v produkciji)**: nov `/api/push/test`
+  (rate limit 5/h; endpoint mora obstajati v DB — ni poljubni relay; ključi iz DB;
+  VAPID 503 iskreno) + `.gitignore` negacija — gol vzorec `test` bi izključil ruto
+  iz deploya (verjetni vzrok izvirnega 404).
+
+---
+
+## [1.4.1] — 2026-09-11
+
+### Varnost (FW1 — kritične najdbe auditov R2/R3, `08e8369`)
+
+> E2E adversarial testi na Neonu (s cleanup skriptami): atribuirani unpaid booking
+> NE vstopi v provizijsko osnovo; dedup 409 kljub porabljeni zalogi; agregirani
+> payload 2×2 > 3 → 400; pretečeni cancel → 400; providerEmail tuji → 400;
+> dvoumen lead → fail-closed. Skripte: `fix-wave1-backfill` + `fw1-test-setup/cleanup`.
+
+- 🔴 **Commission inflation (R3)**: `Booking.paymentStatus` (unpaid|paid|refunded);
+  provizijska osnova (lib/commissions + owner GET + invoice-pdf) šteje IZKLJUČNO
+  plačane rezervacije — anonimni API obiskovalec ne more več ustvarjati provizijske
+  obveznosti ponudniku. Seeded demo rezervacije so backfillane na `paid` (dashboard
+  showcase ostane živ). Zgornja meja `bookingDate`: 18 mesecev.
+- 🔴 **Marketplace stock (R2)**: checkout agregira količine po `productId`, atomarno
+  pogojno dekrementira zalogo + `saleCount` v SERIALIZABLE transakciji s P2034
+  retry — overselling nemogoč tudi ob sočasnosti; dedup naročil (isti kupec + ista
+  košarika v 10 min → 409 s številko prvega naročila pred stock-checkom).
+- 🟠 **providerEmail cross-tenant (R3)**: experience POST/PUT zahtevata
+  `providerEmail === owner.email`; lastništvo rezervacij IZKLJUČNO prek
+  `Experience.ownerId` (OR-veja odstranjena).
+- 🟠 **Owner cancel = evazija provizije (R3)**: preklic POTRDJENE rezervacije samo
+  PRED datumom izvedbe (po preteku samo `complete`); vsak prehod v AuditLog
+  (`BOOKING_STATUS_CHANGED`).
+- 🟠 **Public API leak (R3)**: javni odgovori (listings/experiences/products/
+  collections + detajli) sanitizirani prek `lib/public-fields.ts` — `ownerEmail`,
+  `ownerId`, `rejectionReason`, `approvedBy`, `submittedAt`, `approvedAt`,
+  `draftNudge*`, `aiRecommendations` odstranjeni (števci social-proof ostajajo
+  namerno javni).
+- 🟠 **Re-moderacija poslovnih polj (R2)**: `contentChanged` zajema sedaj tudi
+  ceno, trajanje, velikost skupine, meeting point, naslov in kontakt ponudnika.
+- 🟠 **daily-trip-push unpublished (R3)**: filter `status:'published'` — javni push
+  ne pošilje več pending/zavrnjenih izkušenj turistom.
+- 🟠 **Lead routing fail-closed (R2)**: email lastniku SAMO ob nedvoumnem
+  (normaliziran exact) ujemanju `businessName` z natanko enim ownerjem; 0 ali 2+
+  zadetkov → brez samodejnega emaila (ročna obdelava).
+
+---
+
 ## [1.4.0] — 2026-09-11
 
 ### Varnost (P7 — globoki audit + popravki P0–P2)

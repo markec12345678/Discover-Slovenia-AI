@@ -12,12 +12,13 @@
 
 **Produkcija:** <https://i-feel-slovenia.vercel.app> (Vercel, avtomatski deploy iz `main`)
 
-**Status faz:** P0 ✅ → P1 ✅ → P2 ✅ → P3 ✅ (varnostni auditi) → P4 ✅ (pilotni polish) → P5 ✅ (priprava deploya) → P6 ✅ (sinhronizacija dokumentov) → P7 ✅ (varnostni audit + popravki P0–P2) → P8 ✅ (responsive 390 px + atomarna booking deduplikacija) → **P9 🟠 CODE FREEZE READY — čaka produkcjski deploy + verifikacijo**
+**Status faz:** P0 ✅ → P1 ✅ → P2 ✅ → P3 ✅ (varnostni auditi) → P4 ✅ (pilotni polish) → P5 ✅ (priprava deploya) → P6 ✅ (sinhronizacija dokumentov) → P7 ✅ (varnostni audit + popravki P0–P2) → P8 ✅ (responsive 390 px + atomarna booking deduplikacija) → P9 ✅ (code freeze + deploy runbook/smoke orodja) → R2/R3 auditi ✅ → FW1 ✅ (kritični audit popravki) → **FW2 ✅ (UX quick wins — Mindtrip Tier 1) — pilot-ready; produkcijo preveri dinamično (smoke skripta, točka 8)**
 
 > 🧊 **CODE FREEZE (P9, 2026-09-11):** razvoj za pilot je zaključen — do konca pilota NOVIH funkcij ni (samo popravki napak iz realne uporabe).
 >
-> - **Koda:** `main` = `4df3f57` (P8: koda) + P9 dokumentacijski commit (README/CHANGELOG/smoke orodja — brez logike). CI ✅ (Build + Lint/TypeCheck). Kateri commit je v produkciji, preveriš s smoke skripto (GitHub Vercel status na trenutnem `main` HEAD).
-> - **Produkcija:** 🟠 še servira `d2e371c` — deploy na zadnji `main` je bil **rate-limited** (Vercel Hobby build quota; okno se ponastavi ~2026-09-12 05:33 UTC). Po ponastavitvi: glej [runbook spodaj](#deploy-po-rate-limit-okni-p9) (Redeploy iz dashboarda — brez praznega commita).
+> - **Odstopanji od zamrznitve (odobrena, 2026-09-11):** **FW1** `08e8369` — kritični popravki auditov R2/R3 (varnost = dovoljena kategorija pod freeze) in **FW2** `629da01` — 8 UX quick wins iz primerjalne analize [Mindtrip.ai](https://mindtrip.ai/) (place cards v AI konzultacijah, persistenca chata, wishlist, QR deljenje poti, lightbox, sponsorship UI, popravek mrtvega push-test gumba, moja naročila/rezervacije). Oba valova: tsc 0, eslint 0, E2E vrata + regresija.
+> - **Koda:** `main` = `629da01` (FW2) + dokumentacijski commit (README/CHANGELOG — brez logike). CI ✅ (Build + Lint/TypeCheck). Kateri commit je v produkciji, preveriš s smoke skripto (GitHub Vercel status na trenutnem `main` HEAD, točka 8).
+> - **Produkcija:** stanje preveri dinamično — `bash scripts/verify/production-smoke.sh` (P8/FW2 markerji, anti-enumeracija, cron fail-closed ×6, Vercel commit status). Zadnji znani rate-limit reset: ~2026-09-12 05:33 UTC; če je deploy zavrnjen: [runbook spodaj](#deploy-po-rate-limit-okni-p9) (Redeploy iz dashboarda — brez praznega commita).
 > - **Po deployu obvezno:** [produkcjski smoke](#produkcjski-smoke-p9--po-deployu) — `bash scripts/verify/production-smoke.sh` (varni GET preverki + markerji) + ročni brskalniški tokovi + funkcionalni pregled mobilnih tokov na 390 px.
 > - **Zavedno odloženo (pred javnim launchem, NI pilot blocker):** rate limiting je per-instance → pred javnim prometom centralizirani limiter (npr. Upstash); `requireOwnership()` admin bypass dokumentiran v kodi (0 klicalcev — past za prihodnji razvoj, ne ranljivost); realni Stripe Checkout za rezervacije šele po poslovni odločitvi po pilotu (zdaj namerno fail-closed 501 v produkciji).
 
@@ -68,15 +69,17 @@ Platforma rešuje **3 ključne probleme**:
 | **AI Auto-tagging** | Lastnik vnese opis → AI predlaga kategorijo + atribute + tagi |
 | **AI Vpogledi** | Analiza statistike z actionable insights za owner/admin dashboard |
 | **AI SEO FAQ** | Generira FAQ za Google rich snippets (90-dnevni cache) |
-| **AI Konzultacije** | Freemium globoke konzultacije z atribucijo rezervacij (30 dni) |
+| **AI Konzultacije** | Freemium globoke konzultacije z atribucijo rezervacij (30 dni); priporočeni partnerji kot vizualne place cards (slika, ocena, cena, CTA) |
 
 **AI fallback veriga:** Puter → z-ai-web-dev-sdk → rule-based (nikoli 500). AI uporablja **izključno `published`** vsebine, podatki ponudnikov so zajeti v injection-safe ovojnico (`SYSTEM_DATA_GUARD`).
 
 ### 🧭 B2C plast (Faza P1–P2)
 
 - **Računi popotnikov** (email verifikacija + reset gesla z razveljavitvijo sej)
-- **Moja potovanja** — shranjevanje, dnevni push opomniki, PDF izvoz, pakirni seznam
-- **Socialna plast** — javna galerija deljenih potovanj, glasovanje, komentarji, všečki
+- **Moja potovanja** — shranjevanje, dnevni push opomniki, PDF izvoz, pakirni seznam + **moja naročila/rezervacije** (lokalno sledenje + javni lookup)
+- **Priljubljene (wishlist)** — srčki na karticah tržnice in modalih, localStorage, hitri dostop iz navigacije
+- **Persistenca AI chata** — zgodovina pogovora preživi refresh (lokalno, FIFO 40, gumb »Počisti pogovor«)
+- **Socialna plast** — javna galerija deljenih potovanj, glasovanje, komentarji, všečki, **QR koda deljene poti** (naslovni vnos → QR + tisk)
 - **30-dnevna atribucija** — konzultacija → rezervacija (strežniško overjena)
 - **A/B testiranje naročnine** z anonimno analitiko
 
@@ -86,6 +89,7 @@ Platforma rešuje **3 ključne probleme**:
 - **Izdelki** (kulinarika, vino, med, olje, obrt, spominki)
 - **Izkušnje** (turi, degustacije, avanture, wellness) z realnimi rezervacijami
 - **Zbirke** za navigacijo (zimske, poletne, romantične, družinske, …)
+- Celozaslonski lightbox galerij (izkušnje/izdelki: tipkovnica, števec, thumbnail list)
 - Nakupni proces tržnice + košarica + Stripe checkout
 
 ### 🗺️ Zemljevid
@@ -101,6 +105,7 @@ Platforma rešuje **3 ključne probleme**:
 - Moji lokalci / Izdelki / Izkušnje (CRUD + AI auto-tag + status moderacije)
 - Rezervacije (strežniško validirane, zaključek, prihodek)
 - Naročnina (Stripe + paketi, vrata: email verifikacija)
+- **Sponzorstva** (Moja sponzorstva + nakupni tok; demo: takojšnja aktivacija, Stripe: redirect)
 - Statistika (views, clicks, AI priporočila, ROI, vrednost AI kanala)
 - **Provizije** (predogled meseca, izdaja računov, PDF, kartično plačilo)
 
