@@ -80,6 +80,10 @@ export function PushSubscribe({ variant = "full" }: PushSubscribeProps) {
   const { toast } = useToast();
   const [status, setStatus] = useState<PushStatus>("checking");
   const [inlineError, setInlineError] = useState<string | null>(null);
+  // 503 (VAPID ni konfiguriran na strežniku) — prikažemo NEVTRALNO
+  // obvestilo namesto destructive napake: gre za konfiguracijo strežnika,
+  // ne dejanje uporabnika (FW2-C: edina sprememba tukaj je ravno to).
+  const [inlineNotice, setInlineNotice] = useState<string | null>(null);
   const compact = variant === "compact";
 
   // Popolna naročnina (endpoint + keys) za test/unsubscribe klice.
@@ -144,6 +148,7 @@ export function PushSubscribe({ variant = "full" }: PushSubscribeProps) {
     if (status !== "default") return;
     setStatus("subscribing");
     setInlineError(null);
+    setInlineNotice(null);
 
     try {
       // 1. Permission (brskalnik blokira ponovni request po denied —
@@ -229,6 +234,7 @@ export function PushSubscribe({ variant = "full" }: PushSubscribeProps) {
     if (status !== "subscribed" || !subscription) return;
     setStatus("testing");
     setInlineError(null);
+    setInlineNotice(null);
 
     try {
       const res = await fetch("/api/push/test", {
@@ -262,6 +268,13 @@ export function PushSubscribe({ variant = "full" }: PushSubscribeProps) {
         return;
       }
 
+      if (res.status === 503) {
+        // Strežnik nima VAPID ključev — honestno NEVTRALNO obvestilo
+        // (napaka ni uporabnikova; naročnina ostaja veljavna za kasneje).
+        setInlineNotice(message);
+        return;
+      }
+
       // Network/push-service napaka — naročnina ostane, pokaži honestno.
       setInlineError(message);
     } catch {
@@ -280,6 +293,7 @@ export function PushSubscribe({ variant = "full" }: PushSubscribeProps) {
     if (status !== "subscribed" || !subscription) return;
     setStatus("unsubscribing");
     setInlineError(null);
+    setInlineNotice(null);
 
     try {
       // Browser-side unsubscribe (prekine dostavo na tej napravi).
@@ -404,6 +418,12 @@ export function PushSubscribe({ variant = "full" }: PushSubscribeProps) {
           <p role="alert" className="mt-2 flex items-start gap-1.5 text-xs text-destructive">
             <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
             {inlineError}
+          </p>
+        )}
+        {inlineNotice && (
+          <p role="note" className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
+            <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+            {inlineNotice}
           </p>
         )}
       </div>

@@ -7,6 +7,7 @@ import { PageViewTracker } from "@/components/page-view-tracker";
 import { SharedTrip } from "@/components/shared-trip";
 import { TripSocial } from "@/components/trip-social";
 import { TripPushCard } from "@/components/trip-push-card";
+import { PrintQr } from "./print-qr";
 import type { Itinerary } from "@/lib/types";
 
 // Javna stran deljenega itinererja: /pot/[shareId]
@@ -257,6 +258,10 @@ export default async function SharedTripPage({
       >
         Izvoženo z Discover Slovenia AI · https://discoverslovenia.ai/pot/{shareId}
       </p>
+
+      {/* === PRINT QR (FW2-A) — QR deljive povezave v PDF izhodu; UI za
+              deljenje ima print-hide, zato ta blok nosi QR na papirju === */}
+      <PrintQr shareId={shareId} />
     </div>
   );
 }

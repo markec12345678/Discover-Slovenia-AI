@@ -9,7 +9,6 @@ import {
   MessageCircle,
   RotateCcw,
   Sparkles,
-  Star,
   MapPin,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { safeParseConsultPartners } from "@/lib/consultation-engine";
-import type { ConsultRecommendedPartner } from "@/lib/consultation-engine";
+import { ConsultationPartnerCards } from "@/components/consultation-partner-cards";
 import { ConsultationRefSetter } from "@/components/consultation-ref-setter";
 
 // ============================================================================
@@ -77,20 +76,8 @@ export async function generateMetadata({
   };
 }
 
-const KIND_LABEL: Record<string, string> = {
-  lokal: "Lokal",
-  izkušnja: "Izkušnja",
-  izdelek: "Izdelek",
-  dogodek: "Dogodek",
-};
-
-function partnerUrl(partner: ConsultRecommendedPartner): string {
-  if (partner.destinationName) {
-    const dest = DESTINATIONS.find((d) => d.name === partner.destinationName);
-    if (dest) return `/destinacija/${dest.slug}/things-to-do`;
-  }
-  return "/";
-}
+// Kind/URL logika in vizualne kartice partnerjev živijo v
+// <ConsultationPartnerCards> (RSC — obogati partnerje iz DB ob vsakem renderju).
 
 export default async function ConsultationPage({ params }: PageProps) {
   const { token } = await params;
@@ -204,43 +191,12 @@ export default async function ConsultationPage({ params }: PageProps) {
                   {c.answer}
                 </p>
 
-                {/* Priporočeni partnerji */}
+                {/* Priporočeni partnerji — vizualne kartice (mindtrip-style):
+                    obogateni iz DB (slika, ocena, cena, CTA), z besedilnim
+                    fallbackom za partnerje brez ujemanja */}
                 {partners.length > 0 ? (
                   <div className="mt-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Priporočeni partnerji
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {partners.map((p) => {
-                        const premium =
-                          p.plan === "premium" || p.plan === "enterprise";
-                        return (
-                          <Link
-                            key={`${c.id}-chip-${p.name}`}
-                            href={partnerUrl(p)}
-                            title={premium ? "Premium partner" : undefined}
-                            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            aria-label={`${p.name} — ${KIND_LABEL[p.kind] ?? p.kind}${premium ? " (premium partner)" : ""}`}
-                          >
-                            {premium ? (
-                              <Star
-                                className="size-3.5 fill-emerald-500 text-emerald-500"
-                                aria-hidden="true"
-                              />
-                            ) : null}
-                            <span>{p.name}</span>
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                              {KIND_LABEL[p.kind] ?? p.kind}
-                            </span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                    <p className="mt-2.5 text-xs text-muted-foreground">
-                      Oznaka ★ označuje premium partnerje — med enakovrednimi
-                      možnostmi imajo rahlo prednost. Vsa priporočila so
-                      realni, ocenjeni lokali in izkušnje iz naše baze.
-                    </p>
+                    <ConsultationPartnerCards partners={partners} />
                   </div>
                 ) : null}
               </div>

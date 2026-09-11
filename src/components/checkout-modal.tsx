@@ -35,6 +35,11 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useCart, formatEUR } from "@/lib/cart-store";
 import { trackFunnel } from "@/lib/funnel";
+// FW2-C: lokalna zgodovina naročil — "Moja naročila" na /moja-potovanja
+// prebere številke (lib FW2-B, ključ "dai:my-orders") in e-pošto za potrditev
+// lastništva pri javnem lookup API-ju (zahteva ?email= ujemanje s kupčevo).
+import { addOrderNumber } from "@/lib/my-orders-storage";
+import { rememberCheckoutEmail } from "@/components/my-orders-section";
 
 interface CheckoutModalProps {
   open: boolean;
@@ -178,6 +183,14 @@ export function CheckoutModal({ open, onOpenChange }: CheckoutModalProps) {
       setStatus("success");
       clearCart();
       trackFunnel("checkout_completed");
+
+      // FW2-C: številko uspešnega naročila zapišemo v lokalno zgodovino
+      // (defenzivno — poln/zasebni localStorage mirno preskoči). E-pošto si
+      // zapomnimo kot predlog za prikaz zgodovine na /moja-potovanja.
+      if (data.orderNumber) {
+        addOrderNumber(data.orderNumber);
+        rememberCheckoutEmail(buyer.email);
+      }
     } catch (err) {
       console.error("[checkout] napaka:", err);
       setErrorMessage(

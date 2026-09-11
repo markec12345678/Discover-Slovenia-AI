@@ -64,6 +64,7 @@
     "openai": "^6.46.0",
     "pdf-lib": "^1.17.1",
     "prisma": "^6.11.1",
+    "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-day-picker": "^9.8.0",
     "react-dom": "^19.0.0",
@@ -84,6 +85,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^3.0.0",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",

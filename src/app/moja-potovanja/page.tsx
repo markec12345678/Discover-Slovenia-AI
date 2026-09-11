@@ -27,6 +27,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+// FW2-C: lokalna zgodovina naročil/rezervacij (localStorage številke + javni
+// lookup API-ji) — neodvisna od /api/user/trips, zato render tudi med nalaganjem.
+import { MyOrdersSection } from "@/components/my-orders-section";
 
 // ============================================================================
 // /moja-potovanja — osebni prostor prijavljenega popotnika (P1-2b)
@@ -413,6 +416,10 @@ export default function MojaPotovanjaPage() {
             )}
           </div>
         )}
+        {/* === MOJA NAROČILA IN REZERVACIJE (FW2-C — lokalna zgodovina) === */}
+        <div className="mt-10">
+          <MyOrdersSection defaultEmail={session?.user?.email ?? ""} />
+        </div>
       </section>
 
       {/* Noga strani (lepa zaključitev kratke vsebine) */}

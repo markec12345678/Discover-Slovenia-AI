@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sheet";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { SmartSearch } from "@/components/smart-search";
+import { WishlistSheet } from "@/components/wishlist-sheet";
 import { useCart } from "@/lib/cart-store";
 
 
@@ -156,7 +157,7 @@ export function Navigation() {
           ))}
         </nav>
 
-        {/* Desno: cart + smart search + theme toggle + language switcher + CTA + mobile menu */}
+        {/* Desno: cart + wishlist + smart search + theme toggle + language switcher + CTA + mobile menu */}
         <div className="flex items-center gap-1">
           {/* Košarica (tržnica) */}
           <Button
@@ -188,6 +189,9 @@ export function Navigation() {
               </span>
             ) : null}
           </Button>
+
+          {/* Priljubljene (wishlist) — srček s števčno značko, odpre Sheet */}
+          <WishlistSheet scrolled={scrolled} />
 
           <Button
             variant="ghost"

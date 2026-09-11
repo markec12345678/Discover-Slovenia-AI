@@ -9,10 +9,12 @@ import {
   Loader2,
   Sparkles,
   Bot,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 interface ChatMessage {
@@ -24,6 +26,85 @@ interface ChatResponse {
   message: string;
   source: "puter" | "z-ai-sdk" | "fallback";
   timestamp: string;
+}
+
+// ============================================================================
+// PERSISTENCA POGOVORA — localStorage "dai:chat-history"
+// ============================================================================
+// Uporabnikova vrzel (P1/MT-B): pogovor se je ob vsakem osvežitvi ali
+// preklopu zavihka izgubil. Zdaj zgodovino shranimo lokalno (zadnjih 40
+// sporočil, FIFO) in jo ob mountu povrnemo — SAMO v useEffect (hidratacija
+// varna: prvi render na strežniku in klientu izriše enak pozdrav).
+//
+// Vzorec branja/pisanja sledi src/lib/my-trips-storage.ts: poln, ponarejen
+// ali starejši JSON NIKOLI ne sesuje aplikacije — branje vrne [] in pogovor
+// začne s svežim pozdravom.
+// ============================================================================
+
+const CHAT_HISTORY_KEY = "dai:chat-history";
+const CHAT_HISTORY_VERSION = 1;
+/** FIFO zgornja meja — zadnjih 40 sporočil (~20 parov vprašanje/odgovor). */
+const CHAT_HISTORY_MAX = 40;
+
+interface StoredChatHistory {
+  v: number;
+  messages: ChatMessage[];
+}
+
+function isValidChatMessage(m: unknown): m is ChatMessage {
+  return (
+    typeof m === "object" &&
+    m !== null &&
+    ((m as ChatMessage).role === "user" ||
+      (m as ChatMessage).role === "assistant") &&
+    typeof (m as ChatMessage).content === "string" &&
+    (m as ChatMessage).content.length > 0
+  );
+}
+
+/** Notranje: preberi shranjeno zgodovino (varno — pokvarjen JSON ne sesuje app). */
+function readChatHistory(): ChatMessage[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(CHAT_HISTORY_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) return [];
+    const { v, messages } = parsed as {
+      v?: unknown;
+      messages?: unknown;
+    };
+    // Različica sheme mora natančno ustrezati — prihvati le veljavne vnose
+    if (v !== CHAT_HISTORY_VERSION || !Array.isArray(messages)) return [];
+    return messages.filter(isValidChatMessage).slice(-CHAT_HISTORY_MAX);
+  } catch {
+    // poln ali pokvarjen localStorage — začni s svežim pozdravom
+    return [];
+  }
+}
+
+/** Notranje: zapiši zgodovino (varno — poln prostor ne sesuje app). */
+function writeChatHistory(messages: ChatMessage[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    const payload: StoredChatHistory = {
+      v: CHAT_HISTORY_VERSION,
+      messages: messages.slice(-CHAT_HISTORY_MAX),
+    };
+    window.localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(payload));
+  } catch {
+    // poln/zasebni localStorage — mirno preskoči
+  }
+}
+
+/** Notranje: izbriši shranjeno zgodovino (ob „Počisti pogovor“). */
+function clearChatHistory(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(CHAT_HISTORY_KEY);
+  } catch {
+    // neblokirajoče
+  }
 }
 
 const QUICK_PROMPTS = [
@@ -55,6 +136,23 @@ export function Chatbot() {
   const [hasNewMessage, setHasNewMessage] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  // Povrni shranjeno zgodovino (SAMO v effect — prvi render ostane enak na
+  // strežniku in klientu, zato ni hydration mismatch)
+  useEffect(() => {
+    const stored = readChatHistory();
+    if (stored.length > 0) setMessages(stored);
+  }, []);
+
+  // Persistiraj UMIRJENO stanje: med loading (računanje odgovora) ne pišemo —
+  // vmesni seznam (user sporočilo brez odgovora) se ne splača shraniti, saj
+  // se po odgovoru/napaki VEDNO zapiše končni seznam. Samo pozdrav (≤ 1)
+  // se ne shranjuje — clear action ga izbriše eksplicitno.
+  useEffect(() => {
+    if (loading || messages.length <= 1) return;
+    writeChatHistory(messages);
+  }, [messages, loading]);
 
   // Auto-scroll na dno ko pride novo sporočilo
   useEffect(() => {
@@ -72,6 +170,13 @@ export function Chatbot() {
       setHasNewMessage(false);
     }
   }, [open]);
+
+  /** Počisti pogovor (brez potrditve) + izbriši lokalno zgodovino. */
+  const handleClearConversation = () => {
+    setMessages([WELCOME_MESSAGE]);
+    clearChatHistory();
+    toast({ title: "Pogovor počiščen" });
+  };
 
   async function sendMessage(text: string) {
     const trimmed = text.trim();
@@ -176,6 +281,20 @@ export function Chatbot() {
                 Vaš osebni vodič po Sloveniji
               </p>
             </div>
+            {/* Počisti pogovor — takojšen (brez potrditve), s toast obvestilom;
+                onemogočen, dokler ni zgodovine za počistiti */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+              onClick={handleClearConversation}
+              disabled={messages.length <= 1}
+              aria-label="Počisti pogovor"
+              title="Počisti pogovor"
+            >
+              <Trash2 className="size-4" aria-hidden="true" />
+            </Button>
           </div>
 
           {/* Sporočila */}

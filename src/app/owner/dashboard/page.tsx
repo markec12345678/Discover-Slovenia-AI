@@ -98,6 +98,8 @@ import { InsightsPanel } from "@/components/insights-panel";
 // P2-4: A/B test naročninskega nagovora (prelomni kalkulator v varianti B)
 import { getAbVariant, AB_TEST_NAME } from "@/lib/ab-testing";
 import { SubscriptionCalculator } from "@/components/owner/subscription-calculator";
+// FW2-C: sponzorstva (Premium/Featured promocija lokalov) v zavihku Naročnina
+import { SponsorshipPanel } from "@/components/owner/sponsorship-panel";
 
 // Omejitve števila lokalov glede na paket in beta status
 const PLAN_LIMITS_NORMAL: Record<ListingPlan, number> = {
@@ -563,6 +565,8 @@ export default function OwnerDashboardPage() {
               betaStatus={betaStatus}
               onUpgraded={fetchListings}
             />
+            {/* FW2-C: sponzoriranje lokalov — promocija (5 % AI boost + značka) */}
+            <SponsorshipPanel listings={listings} />
           </TabsContent>
 
           {/* TAB 5: Statistika */}

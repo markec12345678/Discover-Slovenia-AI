@@ -51,6 +51,11 @@ import {
 } from "@/lib/marketplace-types";
 import { ProductModal } from "@/components/sections/product-modal";
 import { ExperienceModal } from "@/components/sections/experience-modal";
+import { WishlistHeartButton } from "@/components/wishlist-sheet";
+import {
+  WISHLIST_OPEN_EVENT,
+  type WishlistOpenDetail,
+} from "@/lib/wishlist-storage";
 
 
 const ALL_VALUE = "all";
@@ -132,6 +137,8 @@ export function MarketplaceSection() {
   const [selectedExperience, setSelectedExperience] =
     useState<Experience | null>(null);
 
+  const { toast } = useToast();
+
   // Fetch izdelkov
   const fetchProducts = useCallback(async () => {
     setProductsLoading(true);
@@ -194,6 +201,99 @@ export function MarketplaceSection() {
   useEffect(() => {
     void fetchExperiences();
   }, [fetchExperiences]);
+
+  // FW2-B: odpri vnos iz "Priljubljene" (dogodek sproži WishlistSheet v
+  // navigaciji — sorojenec te sekcije, zato custom dogodek namesto dvigovanja
+  // stanja). Preklopi ustrezen tab, scrolla na tržnico in odpre modal; če vnos
+  // ni v naloženih seznamih (filtri/limit), ga pridobi prek slug javnega API-ja.
+  const openWishlistItem = useCallback(
+    async (detail: WishlistOpenDetail) => {
+      if (detail.type === "experience") {
+        setTab("experiences");
+        document
+          .getElementById("trznica")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        const found = experiences.find((e) => e.id === detail.id);
+        if (found) {
+          setSelectedExperience(found);
+          return;
+        }
+        if (!detail.slug) {
+          toast({
+            title: "Ni več na voljo",
+            description: "Ta izkušnja je bila umaknjena s tržnice.",
+          });
+          return;
+        }
+        try {
+          const res = await fetch(
+            `/api/experiences/${encodeURIComponent(detail.slug)}`,
+            { cache: "no-store" }
+          );
+          const data = (await res.json().catch(() => null)) as {
+            experience?: Experience;
+          } | null;
+          if (data?.experience) {
+            setSelectedExperience(data.experience);
+          } else {
+            toast({
+              title: "Ni več na voljo",
+              description: "Ta izkušnja je bila umaknjena s tržnice.",
+            });
+          }
+        } catch {
+          // tiho — zastarel vnos; uporabnik ostane na tržnici
+        }
+      } else {
+        setTab("products");
+        document
+          .getElementById("trznica")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        const found = products.find((p) => p.id === detail.id);
+        if (found) {
+          setSelectedProduct(found);
+          return;
+        }
+        if (!detail.slug) {
+          toast({
+            title: "Ni več na voljo",
+            description: "Ta izdelek je bil umaknjen s tržnice.",
+          });
+          return;
+        }
+        try {
+          const res = await fetch(
+            `/api/products/${encodeURIComponent(detail.slug)}`,
+            { cache: "no-store" }
+          );
+          const data = (await res.json().catch(() => null)) as {
+            product?: Product;
+          } | null;
+          if (data?.product) {
+            setSelectedProduct(data.product);
+          } else {
+            toast({
+              title: "Ni več na voljo",
+              description: "Ta izdelek je bil umaknjen s tržnice.",
+            });
+          }
+        } catch {
+          // tiho — zastarel vnos; uporabnik ostane na tržnici
+        }
+      }
+    },
+    [experiences, products, toast]
+  );
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<WishlistOpenDetail>).detail;
+      if (!detail || typeof detail.id !== "string") return;
+      void openWishlistItem(detail);
+    };
+    window.addEventListener(WISHLIST_OPEN_EVENT, handler);
+    return () => window.removeEventListener(WISHLIST_OPEN_EVENT, handler);
+  }, [openWishlistItem]);
 
   // Počisti filtre glede na aktivni tab
   const clearFilters = () => {
@@ -554,7 +654,7 @@ function ProductCard({
           </div>
         )}
 
-        {/* Atributi (top-left) — na mobilnem največ 2, da ne prekrijejo ozke slike (~175px) */}
+        {/* Atributi + izpostavljeno (top-left) — top-right je rezerviran za srček */}
         <div className="absolute left-3 top-3 flex flex-col gap-1.5">
           {product.organic ? (
             <Badge className="bg-primary text-[10px] text-primary-foreground shadow-sm sm:text-xs">
@@ -577,16 +677,27 @@ function ProductCard({
               Vegansko
             </Badge>
           ) : null}
+          {product.featured ? (
+            <Badge className="bg-amber-400 text-[10px] text-amber-950 shadow-sm sm:text-xs">
+              <Sparkles className="size-3" aria-hidden="true" />
+              <span className="sr-only sm:hidden">Izpostavljeno</span>
+              <span className="hidden sm:inline">Izpostavljeno</span>
+            </Badge>
+          ) : null}
         </div>
 
-        {/* Featured badge (top-right) — besedilo skrito na mobilnem (samo ikona), da se ne prekriva z atributi */}
-        {product.featured ? (
-          <Badge className="absolute right-3 top-3 bg-amber-400 text-amber-950 shadow-sm">
-            <Sparkles className="size-3" aria-hidden="true" />
-            <span className="sr-only sm:hidden">Izpostavljeno</span>
-            <span className="hidden sm:inline">Izpostavljeno</span>
-          </Badge>
-        ) : null}
+        {/* Srček — shrani med priljubljene (ne odpre modala) */}
+        <WishlistHeartButton
+          entry={{
+            id: product.id,
+            type: "product",
+            name: product.name,
+            image: product.images[0] ?? null,
+            price: product.price,
+            destination: product.destinationName ?? null,
+            slug: product.slug,
+          }}
+        />
 
         {/* Discount badge (bottom-right) */}
         {discount > 0 ? (
@@ -725,22 +836,35 @@ function ExperienceCard({
           </div>
         )}
 
-        {/* Category badge (top-left) — skrčen na ozki sliki (~175px) */}
-        <Badge className="absolute left-3 top-3 max-w-[45%] bg-background/90 text-[10px] text-foreground backdrop-blur-sm sm:max-w-none sm:text-xs">
-          <span aria-hidden="true">
-            {EXPERIENCE_CATEGORY_ICONS[experience.category]}
-          </span>
-          <span className="truncate">{EXPERIENCE_CATEGORY_LABELS[experience.category]}</span>
-        </Badge>
-
-        {/* Featured badge (top-right) — besedilo skrito na mobilnem (samo ikona), da se ne prekriva s kategorijo */}
-        {experience.featured ? (
-          <Badge className="absolute right-3 top-3 bg-amber-400 text-amber-950 shadow-sm">
-            <Sparkles className="size-3" aria-hidden="true" />
-            <span className="sr-only sm:hidden">Izpostavljeno</span>
-            <span className="hidden sm:inline">Izpostavljeno</span>
+        {/* Kategorija + izpostavljeno (top-left) — top-right je rezerviran za srček */}
+        <div className="absolute left-3 top-3 flex max-w-[45%] flex-col items-start gap-1.5 sm:max-w-none">
+          <Badge className="max-w-full bg-background/90 text-[10px] text-foreground backdrop-blur-sm sm:text-xs">
+            <span aria-hidden="true">
+              {EXPERIENCE_CATEGORY_ICONS[experience.category]}
+            </span>
+            <span className="truncate">{EXPERIENCE_CATEGORY_LABELS[experience.category]}</span>
           </Badge>
-        ) : null}
+          {experience.featured ? (
+            <Badge className="bg-amber-400 text-[10px] text-amber-950 shadow-sm sm:text-xs">
+              <Sparkles className="size-3" aria-hidden="true" />
+              <span className="sr-only sm:hidden">Izpostavljeno</span>
+              <span className="hidden sm:inline">Izpostavljeno</span>
+            </Badge>
+          ) : null}
+        </div>
+
+        {/* Srček — shrani med priljubljene (ne odpre modala) */}
+        <WishlistHeartButton
+          entry={{
+            id: experience.id,
+            type: "experience",
+            name: experience.name,
+            image: experience.images[0] ?? null,
+            price: experience.pricePerPerson,
+            destination: experience.destinationName ?? null,
+            slug: experience.slug,
+          }}
+        />
 
         {/* Duration badge (bottom-right) */}
         <Badge className="absolute bottom-3 right-3 bg-background/90 text-[10px] text-foreground backdrop-blur-sm sm:text-xs">

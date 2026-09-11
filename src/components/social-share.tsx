@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import {
   Share2,
   MessageCircle,
@@ -8,7 +8,7 @@ import {
   Facebook,
   Link2,
   Check,
-  X,
+  QrCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,8 +27,17 @@ import { cn } from "@/lib/utils";
 // "Moj AI dan v Sloveniji 🇸🇮"
 // 📍 Bela krajina · 🍷 hrana · 🌿 narava · ⭐ lokalni partnerji
 //
-// Share: WhatsApp · Instagram · Facebook · Copy link
+// Share: WhatsApp · Instagram · Facebook · Copy link · QR koda
+//
+// QR (FW2-A): gumb „QR koda" razkrije sliko QR deljive povezave —
+// generira se CLIENT-SIDE (useEffect, dinamičen import `qrcode`), zato je
+// SSR/hidratacija varna (prvi render je brez slike). Ob napaki generacije
+// se razdelek tiho NE izriše (eno console.warn) — deljenje mora vedno
+// delovati.
 // ============================================================================
+
+/** Barva QR modulov — Triglav zelena (primarna barva blagovne znamke). */
+const QR_DARK = "#2d6a3e";
 
 interface SocialShareProps {
   title?: string;
@@ -42,6 +51,64 @@ interface SocialShareProps {
 
 const DEFAULT_TITLE = "Moj AI dan v Sloveniji 🇸🇮";
 
+interface QrImageProps {
+  /** Celoten URL (z izvorno domeno), ki ga QR kodira. */
+  url: string;
+}
+
+/**
+ * QR slika deljive povezave (client-side generacija). Rendera NIČ, dokler
+ * PNG ni pripravljen — ob napaki ostane skrit (deljenje ni ogroženo).
+ */
+function QrImage({ url }: QrImageProps) {
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const warnedRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        // Dinamičen import: knjižnica qrcode pride v bundle šele ob prvem
+        // prikazu QR (ne ob vsakem renderu strani z gumbom Deli).
+        const QRCode = await import("qrcode");
+        const png = await QRCode.toDataURL(url, {
+          margin: 1,
+          width: 220,
+          color: { dark: QR_DARK, light: "#ffffff" },
+        });
+        if (!cancelled) setDataUrl(png);
+      } catch (err) {
+        // Nekritično — samo eno opozorilo na mount (React StrictMode dvakrat)
+        if (!warnedRef.current) {
+          warnedRef.current = true;
+          console.warn("[social-share] QR generacija ni uspela:", err);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
+  if (!dataUrl) return null;
+
+  return (
+    <figure className="flex flex-col items-center gap-2">
+      {/* QR koda je sama po sebi povezava načrta — dekorativna slika */}
+      <img
+        src={dataUrl}
+        alt="QR koda s povezavo do načrta potovanja"
+        width={220}
+        height={220}
+        className="rounded-lg border border-border bg-white"
+      />
+      <figcaption className="text-center text-xs text-muted-foreground">
+        Skeniraj za odpiranje na telefonu
+      </figcaption>
+    </figure>
+  );
+}
+
 export function SocialShare({
   title = DEFAULT_TITLE,
   description,
@@ -52,6 +119,7 @@ export function SocialShare({
 }: SocialShareProps) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
 
   const shareUrl =
     url ??
@@ -121,40 +189,63 @@ export function SocialShare({
 
   if (variant === "inline") {
     return (
-      <div className={cn("flex items-center gap-2", className)}>
-        <span className="text-xs font-medium text-muted-foreground">Deli svoj plan:</span>
-        <button
-          type="button"
-          onClick={shareToWhatsApp}
-          className="flex size-8 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors"
-          aria-label="Deli na WhatsApp"
-        >
-          <MessageCircle className="size-4" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          onClick={shareToFacebook}
-          className="flex size-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
-          aria-label="Deli na Facebook"
-        >
-          <Facebook className="size-4" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          onClick={shareToInstagram}
-          className="flex size-8 items-center justify-center rounded-full bg-pink-500/10 text-pink-600 hover:bg-pink-500/20 transition-colors"
-          aria-label="Deli na Instagram"
-        >
-          <Instagram className="size-4" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          onClick={copyLink}
-          className="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
-          aria-label="Kopiraj povezavo"
-        >
-          {copied ? <Check className="size-4 text-emerald-600" aria-hidden="true" /> : <Link2 className="size-4" aria-hidden="true" />}
-        </button>
+      <div className={cn("flex flex-col gap-3", className)}>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">Deli svoj plan:</span>
+          <button
+            type="button"
+            onClick={shareToWhatsApp}
+            className="flex size-8 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors"
+            aria-label="Deli na WhatsApp"
+          >
+            <MessageCircle className="size-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={shareToFacebook}
+            className="flex size-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
+            aria-label="Deli na Facebook"
+          >
+            <Facebook className="size-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={shareToInstagram}
+            className="flex size-8 items-center justify-center rounded-full bg-pink-500/10 text-pink-600 hover:bg-pink-500/20 transition-colors"
+            aria-label="Deli na Instagram"
+          >
+            <Instagram className="size-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={copyLink}
+            className="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+            aria-label="Kopiraj povezavo"
+          >
+            {copied ? <Check className="size-4 text-emerald-600" aria-hidden="true" /> : <Link2 className="size-4" aria-hidden="true" />}
+          </button>
+          {/* QR toggle — razkrije QR kodo deljive povezave pod vrstico */}
+          <button
+            type="button"
+            onClick={() => setQrOpen((v) => !v)}
+            aria-expanded={qrOpen}
+            aria-label={qrOpen ? "Skrij QR kodo" : "Prikaži QR kodo"}
+            title={qrOpen ? "Skrij QR kodo" : "Prikaži QR kodo"}
+            className={cn(
+              "flex size-8 items-center justify-center rounded-full transition-colors",
+              qrOpen
+                ? "bg-primary/10 text-primary hover:bg-primary/20"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            )}
+          >
+            <QrCode className="size-4" aria-hidden="true" />
+          </button>
+        </div>
+        {qrOpen ? (
+          <div className="flex justify-center">
+            <QrImage url={shareUrl} />
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -247,6 +338,22 @@ export function SocialShare({
                 </span>
               </button>
             </div>
+
+            {/* QR koda — toggle razkrije/skrije sliko s povezavo načrta */}
+            <button
+              type="button"
+              onClick={() => setQrOpen((v) => !v)}
+              aria-expanded={qrOpen}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-border/60 p-2.5 text-sm font-medium transition-colors hover:bg-muted/50"
+            >
+              <QrCode className="size-4" aria-hidden="true" />
+              {qrOpen ? "Skrij QR kodo" : "QR koda"}
+            </button>
+            {qrOpen ? (
+              <div className="mt-3 flex justify-center">
+                <QrImage url={shareUrl} />
+              </div>
+            ) : null}
 
             <button
               type="button"

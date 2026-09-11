@@ -51,6 +51,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { trackFunnel } from "@/lib/funnel";
 import { hasConsultationRef, clearConsultationRef } from "@/lib/consultation-ref";
 import { ReviewSection } from "@/components/review-section";
+import { ImageLightbox } from "@/components/image-lightbox";
+import { WishlistHeartButton } from "@/components/wishlist-sheet";
+import { addBooking } from "@/lib/my-orders-storage";
 import {
   EXPERIENCE_CATEGORY_LABELS,
   EXPERIENCE_CATEGORY_ICONS,
@@ -161,16 +164,21 @@ export function ExperienceModal({
   onSelect,
 }: ExperienceModalProps) {
   const [activeImage, setActiveImage] = useState(0);
+  // FW2-B: celozaslonska galerija (lightbox) nad modalom
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   // Faza rezervacije (za skritje X gumba med pošiljanjem — kot checkout-modal)
   const [bookingPhase, setBookingPhase] = useState<BookingPhase>("idle");
 
-  // Reset aktivne slike in rezervacije, ko se spremeni izkušnja
+  // Reset aktivne slike, lightboxa in rezervacije, ko se spremeni izkušnja
   // (render-phase check, brez effect-a)
   const prevExpId = useRef<string | undefined>(undefined);
   if (prevExpId.current !== experience?.id) {
     prevExpId.current = experience?.id;
     if (activeImage !== 0) {
       setActiveImage(0);
+    }
+    if (lightboxOpen) {
+      setLightboxOpen(false);
     }
     if (bookingPhase !== "idle") {
       setBookingPhase("idle");
@@ -229,6 +237,12 @@ export function ExperienceModal({
   const image =
     experience.images[activeImage] ?? experience.images[0];
 
+  // Število veljavnih galerijskih slik (preskoči morebitne prazne vnose) —
+  // ulovač klikov se izriše le, če lightbox dejansko ima kaj pokazati
+  const galleryCount = experience.images.filter(
+    (src) => src.trim().length > 0
+  ).length;
+
   // Pretvori jezikovne kode v slovenska imena
   const languagesDisplay = experience.languages
     .map((l) => LANGUAGE_LABELS[l] ?? l.toUpperCase())
@@ -248,7 +262,7 @@ export function ExperienceModal({
         </DialogDescription>
 
         <div className="scroll-area-custom max-h-[88vh] overflow-y-auto">
-          {/* Velika slika */}
+          {/* Velika slika — klik odpre celozaslonsko galerijo (lightbox) */}
           <div className="relative aspect-video w-full overflow-hidden bg-muted">
             {image ? (
               <img
@@ -266,21 +280,35 @@ export function ExperienceModal({
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
-            {/* Badge kategorije */}
-            <Badge className="absolute left-4 top-4 bg-primary text-primary-foreground shadow-sm">
-              <span aria-hidden="true">
-                {EXPERIENCE_CATEGORY_ICONS[experience.category]}
-              </span>
-              {EXPERIENCE_CATEGORY_LABELS[experience.category]}
-            </Badge>
-
-            {/* Featured badge */}
-            {experience.featured ? (
-              <Badge className="absolute right-4 top-4 bg-amber-400 text-amber-950 shadow-sm">
-                <Sparkles className="size-3" aria-hidden="true" />
-                Izpostavljeno
+            {/* Badge kategorije + izpostavljeno (top-left) — top-right je rezerviran za srček (ob X gumbu) */}
+            <div className="absolute left-4 top-4 flex flex-col items-start gap-2">
+              <Badge className="bg-primary text-primary-foreground shadow-sm">
+                <span aria-hidden="true">
+                  {EXPERIENCE_CATEGORY_ICONS[experience.category]}
+                </span>
+                {EXPERIENCE_CATEGORY_LABELS[experience.category]}
               </Badge>
-            ) : null}
+              {experience.featured ? (
+                <Badge className="bg-amber-400 text-amber-950 shadow-sm">
+                  <Sparkles className="size-3" aria-hidden="true" />
+                  Izpostavljeno
+                </Badge>
+              ) : null}
+            </div>
+
+            {/* Srček — shrani med priljubljene (ne odpre lightboxa) */}
+            <WishlistHeartButton
+              variant="modal"
+              entry={{
+                id: experience.id,
+                type: "experience",
+                name: experience.name,
+                image: experience.images[0] ?? null,
+                price: experience.pricePerPerson,
+                destination: experience.destinationName ?? null,
+                slug: experience.slug,
+              }}
+            />
 
             {/* Trajanje badge */}
             <Badge className="absolute bottom-4 right-4 bg-background/90 text-foreground backdrop-blur-sm">
@@ -308,6 +336,20 @@ export function ExperienceModal({
                 </p>
               ) : null}
             </div>
+
+            {/*
+              Prosojni ulovač klikov čez celo hero sliko (zadnji v drevesu,
+              brez z-index): srček (z-[2]) leži nad njim, X gumb DialogContenta
+              (kasnejši v drevesu, isti stacking level) pa ostane klikljiv.
+            */}
+            {galleryCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => setLightboxOpen(true)}
+                aria-label={`Odpri galerijo slik (${galleryCount})`}
+                className="absolute inset-0 cursor-zoom-in"
+              />
+            ) : null}
           </div>
 
           {/* Thumbnail strip (če več slik) */}
@@ -546,6 +588,21 @@ export function ExperienceModal({
             </p>
           </div>
         </div>
+
+        {/*
+          FW2-B: celozaslonska galerija — Radix Dialog portala na body, zato
+          njegova pozicija v drevesu ne vpliva na layout modalov. Indeksi so
+          surovi (isti kot activeImage), da modal po zaprtju lightboxa pokaže
+          zadnjo gledano sliko.
+        */}
+        <ImageLightbox
+          images={experience.images}
+          activeIndex={activeImage}
+          onActiveIndexChange={setActiveImage}
+          open={lightboxOpen}
+          onOpenChange={setLightboxOpen}
+          altPrefix={experience.name}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -754,6 +811,11 @@ function BookingSection({
       });
       setPhase("success");
       trackFunnel("experience_booked");
+      // FW2-B: številko rezervacije shrani lokalno ("dai:my-bookings") —
+      // dostopna tudi po zaprtju modala, brez računa.
+      if (data.bookingNumber) {
+        addBooking(data.bookingNumber);
+      }
       // Atribucija velja za prvo rezervacijo po konzultaciji (pošteno okno
       // vpliva) — po njej oznako počistimo.
       clearConsultationRef();
