@@ -58,6 +58,8 @@ export async function GET(request: Request) {
             experienceId: { in: experienceIds },
             source: "consultation",
             createdAt: { gte: invoice.periodStart, lt: invoice.periodEnd },
+            // P7-C3 (P1): usklajeno z obračunom — brez preklicanih rezervacij
+            status: { in: ["confirmed", "completed"] },
           },
           orderBy: { createdAt: "asc" },
           select: {

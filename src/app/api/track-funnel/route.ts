@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
+import { checkAdmin } from "@/lib/auth-guards";
 
 // POST /api/track-funnel — sledi konverzijskemu funnelu
 // Body: { step, path? } — koraki morajo ostati skladni s FunnelStep v src/lib/funnel.ts
@@ -53,8 +54,9 @@ export async function POST(request: Request) {
 // GET — funnel statistika (za admin)
 export async function GET(request: Request) {
   try {
-    const adminPassword = request.headers.get("x-admin-password");
-    if (adminPassword !== process.env.ADMIN_PASSWORD) {
+    // P7-B (F3): timing-safe primerjava (prej surov !== — isto popravljal
+    // P3a-4 na 4 admin rutah, ta je bila preskočena, ker ni pod /api/admin/)
+    if (!checkAdmin(request.headers.get("x-admin-password"))) {
       return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
     }
 

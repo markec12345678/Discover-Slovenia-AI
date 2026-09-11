@@ -103,6 +103,12 @@ export async function POST(request: Request) {
       // čiščenje je best-effort — napako tiho pogoltnemo
     });
 
+  // P7-C4 (P1): marker dedup-a je bil vstavljen PRE obdelave — če obdelava
+  // pade (500), ga v spodnjem catch-u umaknemo, da Stripe retry lahko event
+  // znova obdela. Brez tega bi bil učinek plačila ZA VEDNO izgubljen:
+  // retry → P2002 → "duplicate" → 200 brez obdelave.
+  const eventId = event.id;
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
@@ -135,6 +141,15 @@ export async function POST(request: Request) {
           if (paidInvoiceCents < expectedInvoiceCents) {
             console.error(
               `[stripe/webhook] commission_invoice ${invoice.invoiceNumber} ZAVRNJEN: plačano ${paidInvoiceCents} centov < znesek računa ${expectedInvoiceCents} centov`
+            );
+            break;
+          }
+          // P7-C4 (P2): async plačila (npr. SEPA) pošljejo completed še PRED
+          // bremenitvijo — račun označimo za plačan SAMO ob payment_status
+          // "paid" (enak varovalki kot subscription veja spodaj).
+          if (cs.payment_status !== "paid") {
+            console.error(
+              `[stripe/webhook] commission_invoice ${invoice.invoiceNumber} ZAVRNJEN: payment_status=${cs.payment_status} — sredstva še niso bremenjena`
             );
             break;
           }
@@ -222,6 +237,14 @@ export async function POST(request: Request) {
           ) {
             console.error(
               `[stripe/webhook] sponsorship ${sponsorshipId} ZAVRNJEN: plačano ${paidSponsorshipCents} centov < pričakovano ${expectedSponsorshipCents} centov`
+            );
+            break;
+          }
+          // P7-C4 (P2): async plačila (SEPA ...) — aktivacija SAMO ob
+          // payment_status "paid" (sicer bi breme šele čez dni).
+          if (cs.payment_status !== "paid") {
+            console.error(
+              `[stripe/webhook] sponsorship ${sponsorshipId} ZAVRNJEN: payment_status=${cs.payment_status} — sredstva še niso bremenjena`
             );
             break;
           }
@@ -488,6 +511,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error("[stripe/webhook] napaka pri obdelavi eventa:", error);
+    // P7-C4 (P1): umakni dedup marker, da Stripe retry znova obdela event
+    // (best-effort — če brisanje ne uspe, bo retry preskočen kot duplikat).
+    await db.processedStripeEvent.delete({ where: { id: eventId } }).catch(() => {
+      // tiho — primarna napaka je že zabeležena zgoraj
+    });
     return NextResponse.json(
       { error: "Napaka pri obdelavi webhook-a" },
       { status: 500 }

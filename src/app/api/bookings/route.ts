@@ -179,7 +179,7 @@ export async function POST(request: Request) {
     let source: "consultation" | null =
       sourceRaw === "consultation" ? "consultation" : null;
     if (source === "consultation") {
-      const consultation = await db.consultation.findFirst({
+      const consultations = await db.consultation.findMany({
         where: {
           email: guestEmail.toLowerCase(),
           createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60_000) },
@@ -187,13 +187,53 @@ export async function POST(request: Request) {
           // create klicu) — vsak API-created zapis je torej "delivered".
           status: "delivered",
         },
-        select: { id: true },
+        select: { recommendedPartners: true, answer: true },
+        orderBy: { createdAt: "desc" },
+        take: 5,
       });
-      if (!consultation) {
+      // P7-C3 (P1): konzultacija mora PRAV TEGA ponudnika/izkušnjo tudi
+      // PRIPOROČITI — obstoj "delivered" konzultacije pri gostu sam po sebi
+      // ni dovolj (sicer si gost/konkurent z eno self-minted konzultacijo
+      // pripisuje 12 % provizijo na poljubni rezervaciji). Preverimo
+      // recommendedPartners (imena) in AI odgovor (vsebina).
+      const expName = experienceName.trim().toLowerCase();
+      const provName = providerName.trim().toLowerCase();
+      const attributed = consultations.some((c) => {
+        const names: string[] = [];
+        try {
+          const parsed = c.recommendedPartners
+            ? (JSON.parse(c.recommendedPartners) as unknown)
+            : [];
+          if (Array.isArray(parsed)) {
+            for (const p of parsed) {
+              if (
+                p &&
+                typeof p === "object" &&
+                typeof (p as { name?: unknown }).name === "string"
+              ) {
+                names.push((p as { name: string }).name);
+              }
+            }
+          }
+        } catch {
+          // pokvarjen JSON — ignoriramo, zanesemo na answer besedilo
+        }
+        const answer = (c.answer ?? "").toLowerCase();
+        return (
+          names.some(
+            (n) =>
+              n.trim().toLowerCase() === expName ||
+              n.trim().toLowerCase() === provName
+          ) ||
+          (expName.length >= 4 && answer.includes(expName)) ||
+          (provName.length >= 4 && answer.includes(provName))
+        );
+      });
+      if (!attributed) {
         source = null;
         console.log(
-          "[bookings] source=consultation zavrnjen — ni konzultacije za",
-          guestEmail
+          "[bookings] source=consultation zavrnjen — konzultacija gosta ni priporočila te izkušnje/ponudnika:",
+          experienceId
         );
       }
     }

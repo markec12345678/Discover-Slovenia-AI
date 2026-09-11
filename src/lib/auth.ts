@@ -1,8 +1,17 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { compare } from "bcryptjs";
+import { compare, hashSync } from "bcryptjs";
 import { db } from "@/lib/db";
 import { hitLimit } from "@/lib/rate-limit";
+
+// P7-C1 (#1): timing-enumeracija pri prijavi — če račun NE obstaja, bcrypt
+// primerjava bi bila preskočena (~0 ms) namesto izvedena (~60–100 ms) →
+// napadalec bi po času odgovora razlikoval obstoječi email. Ob miss-u
+// primerjamo proti dummy hash-u (naključeno neznano geslo, ista cikla).
+const DUMMY_HASH = hashSync(
+  `timing-equalizer-${Math.random()}-${Date.now()}`,
+  10
+);
 
 // ============================================================================
 // P3a-1: RAZVELJAVLJANJE SEJ OB PONASTAVITVI GESLA (tokenVersion)
@@ -105,7 +114,11 @@ export const authOptions: NextAuthOptions = {
           },
         });
 
-        if (!owner) return null;
+        if (!owner) {
+          // P7-C1 (#1): izenači čas odgovora z napačnim geslom obstoječega računa
+          await compare(credentials.password, DUMMY_HASH);
+          return null;
+        }
 
         const valid = await compare(credentials.password, owner.passwordHash);
         if (!valid) return null;
@@ -158,7 +171,11 @@ export const authOptions: NextAuthOptions = {
           },
         });
 
-        if (!user) return null;
+        if (!user) {
+          // P7-C1 (#1): izenači čas odgovora z napačnim geslom obstoječega računa
+          await compare(credentials.password, DUMMY_HASH);
+          return null;
+        }
 
         const valid = await compare(credentials.password, user.passwordHash);
         if (!valid) return null;

@@ -95,6 +95,9 @@ export async function issueCommissionInvoice(
           source: "consultation",
           experienceId: { in: experienceIds },
           createdAt: { gte: last.start, lt: last.end },
+          // P7-C3 (P1): preklicane rezervacije NE štejejo v provizijsko osnovo
+          // (usklajeno z lastniškimi prihodki, ki štejejo samo confirmed/completed)
+          status: { in: ["confirmed", "completed"] },
         },
       })
     : { _count: 0, _sum: { total: null as number | null } };

@@ -115,10 +115,12 @@ export async function POST(request: Request) {
     }
 
     // Preveri ali že ima aktivno sponzorstvo
+    // P7-C4 (P2): zajeti tudi "created" — sicer je bilo možno odpreti DVE
+    // checkout seji za isti lokal (prva se ne aktivira, druga prepiše endsAt).
     const existing = await db.sponsorship.findFirst({
       where: {
         listingId,
-        status: { in: ["active", "paid"] },
+        status: { in: ["active", "paid", "created"] },
       },
     });
 

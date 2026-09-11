@@ -37,9 +37,10 @@ echo "[demo-db] ustvarjam shemo → $DB_PATH"
 DATABASE_URL="file:$DB_PATH" npx prisma db push --skip-generate
 
 echo "[demo-db] sejem demo podatke (brez super_admin racuna)"
-# SKIP_DEMO_ADMIN=1: javni demo NE sme izpostaviti super_admin dostopa
-# (demo partnerji z geslom demo1234 ostanejo — varen za predstavitev).
-DATABASE_URL="file:$DB_PATH" SKIP_DEMO_ADMIN=1 bun scripts/seed-demo.ts
+# P7-A: super_admin demo racun se privzeto NE ustvari ( ADMIN_DEMO_SEED=1 bi
+# ga ustvaril z NAKLJUCNIM geslom). Partnerji dobijo nakljucna gesla, ker
+# DEV_FIXED_DEMO_PASSWORDS ni nastavljen (fiksna gesla samo lokalni dev).
+DATABASE_URL="file:$DB_PATH" bun scripts/seed-demo.ts
 
 # Preračunaj velikost za log (portabilno — du ni povsod)
 if command -v du >/dev/null 2>&1; then

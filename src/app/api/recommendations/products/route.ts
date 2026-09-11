@@ -1,12 +1,22 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getRecommendedIds } from "@/lib/ai-recommendations";
+import { rateLimit } from "@/lib/rate-limit";
 
 // GET /api/recommendations/products?productId=XXX&limit=4
 // Vrne AI-priporočene podobne izdelke.
 // AI (GLM) izbere 4 najbolj smiselne iz 10 SQL kandidatov.
-// Rezultati so cachirani 24 ur (data/ai-rec-cache.json).
+// Rezultati so cachirani 24 ur (memory + data/ai-rec-cache.json).
+// P7-C2 (F5.3): dodan rate limit (60/10 min) — prej bi lahko javni bot
+// nežnostno sprožal AI klice (cache na Vercelu ni deloval, glej lib).
 export async function GET(request: Request) {
+  const limited = rateLimit(request, {
+    limit: 60,
+    windowMs: 10 * 60_000,
+    key: "rec-products",
+  });
+  if (limited) return limited;
+
   try {
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("productId");

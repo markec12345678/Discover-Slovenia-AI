@@ -70,6 +70,8 @@ export async function GET() {
           source: "consultation" as const,
           experienceId: { in: experienceIds },
           createdAt: { gte: current.start, lt: current.end },
+          // P7-C3 (P1): preklicane rezervacije ne štejejo (usklajeno z lib/commissions.ts)
+          status: { in: ["confirmed", "completed"] },
         }
       : null;
     const lastWhere = experienceIds.length
@@ -77,6 +79,7 @@ export async function GET() {
           source: "consultation" as const,
           experienceId: { in: experienceIds },
           createdAt: { gte: last.start, lt: last.end },
+          status: { in: ["confirmed", "completed"] },
         }
       : null;
 
@@ -193,6 +196,20 @@ export async function POST(request: Request) {
     // MARK_PAID — demo obračun (produkcija: SEPA/Stripe potrditev)
     // ------------------------------------------------------------------
     if (action === "mark_paid") {
+      // P7-C3 (P0): lastnik NE sme sam označiti svojega računa za plačan
+      // brez dokaza o plačilu — sicer bi dolžnik vodil evidence prihodkov
+      // platforme. Dovoljeno SAMO v demo načinu (ni pravih Stripe ključev);
+      // v produkciji plačilo potrdi izključno Stripe webhook (kartica) oz.
+      // admin po SEPA potrditvi.
+      if (!isStripeDemo()) {
+        return NextResponse.json(
+          {
+            error:
+              "Ročna oznaka plačila je onemogočena v produkcijskem načinu — plačilo potrdi Stripe (kartica) ali administrator (SEPA).",
+          },
+          { status: 403 }
+        );
+      }
       if (!invoiceId) {
         return NextResponse.json({ error: "Manjka invoiceId" }, { status: 400 });
       }

@@ -62,12 +62,27 @@ async function runRenewalReminders(request: Request) {
 
     let sent = 0;
     let failed = 0;
+    let skippedConcurrent = 0;
 
     for (const owner of owners) {
       if (!owner.subscriptionEndsAt) continue;
 
       const msLeft = owner.subscriptionEndsAt.getTime() - now.getTime();
       const daysLeft = Math.max(1, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
+
+      // P7-C4 (P2): ATOMICNA ZAHTEVA pred pošiljanjem (vzorec draft-nudges):
+      // updateMany pod pogojem renewalReminderSent:false → count===0 pomeni,
+      // da je druga instanca (sočasni cron/ročni klic) ravno poslala.
+      // Prej: updateMany na koncu je označil TUDI neuspešne → opomnik se
+      // nikoli več ni ponovil (tiho pretečena naročnina).
+      const claimed = await db.owner.updateMany({
+        where: { id: owner.id, renewalReminderSent: false },
+        data: { renewalReminderSent: true },
+      });
+      if (claimed.count === 0) {
+        skippedConcurrent++;
+        continue;
+      }
 
       try {
         const { subject, html, text } = renewalReminderEmail(
@@ -76,26 +91,28 @@ async function runRenewalReminders(request: Request) {
           daysLeft,
           owner.subscriptionEndsAt
         );
-        await sendEmail({ to: owner.email, subject, html, text });
-        sent++;
+        const ok = await sendEmail({ to: owner.email, subject, html, text });
+        if (ok) {
+          sent++;
+        } else {
+          // sendEmail NE meče (vrne boolean) — razveljavi zahtevo, da se
+          // opomnik poskusi znova naslednji dan.
+          failed++;
+          await db.owner
+            .updateMany({ where: { id: owner.id }, data: { renewalReminderSent: false } })
+            .catch(() => {});
+        }
       } catch (err) {
         console.error(
           `[cron/renewal-reminders] napaka za ${owner.email}:`,
           err
         );
         failed++;
-        // Nadaljuj z naslednjim — ne prekini cele serije
+        // Nadaljuj z naslednjim — ne prekini cele serije; razveljavi zahtevo
+        await db.owner
+          .updateMany({ where: { id: owner.id }, data: { renewalReminderSent: false } })
+          .catch(() => {});
       }
-    }
-
-    // Označi vse obdelane kot "opomnik poslan"
-    if (owners.length > 0) {
-      await db.owner.updateMany({
-        where: {
-          id: { in: owners.map((o) => o.id) },
-        },
-        data: { renewalReminderSent: true },
-      });
     }
 
     return NextResponse.json({
@@ -103,6 +120,7 @@ async function runRenewalReminders(request: Request) {
       checked: owners.length,
       sent,
       failed,
+      skippedConcurrent,
       windowDays: REMINDER_WINDOW_DAYS,
       runAt: now.toISOString(),
     });

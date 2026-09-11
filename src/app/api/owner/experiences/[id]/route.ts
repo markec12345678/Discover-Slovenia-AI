@@ -295,6 +295,19 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   }
 
   try {
+    // P7-C3 (P1): brisanje izkušnje z rezervacijami bi pustilo sirote
+    // (Booking.experienceId ni FK) — rezervacije bi izpadle iz provizijske
+    // osnove in evidence, lastnik bi se s tem izognil obračunu. Varovalka:
+    // izbrisati je mogoče samo izkušnjo brez rezervacij.
+    const bookingCount = await db.booking.count({ where: { experienceId: id } });
+    if (bookingCount > 0) {
+      return NextResponse.json(
+        {
+          error: `Izkušnja ima ${bookingCount} rezervacij in je del evidence obračuna — brisanje ni mogoče. Kontaktni podporo.`,
+        },
+        { status: 400 }
+      );
+    }
     await db.experience.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {

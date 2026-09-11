@@ -48,10 +48,14 @@ export interface AICompletionResult {
  */
 export async function generateCompletion(
   messages: AIMessage[],
-  options?: { temperature?: number; jsonMode?: boolean }
+  options?: { temperature?: number; jsonMode?: boolean; maxTokens?: number }
 ): Promise<AICompletionResult | null> {
   const temperature = options?.temperature ?? 0.7;
   const model = process.env.PUTER_MODEL || "z-ai/glm-5.1";
+  // P7-C2 (F5.4): strežna zgornja meja izpisa — prej neomejeno (token-bomb
+  // tudi pod rate limitom). Privzeto 4096 (nad vsemi legitimnimi izpisi),
+  // klicalec lahko zahteva krajše (npr. health-check 8).
+  const maxTokens = options?.maxTokens ?? 4096;
 
   // === 1. POSKUSI PUTER API ===
   try {
@@ -61,6 +65,7 @@ export async function generateCompletion(
         model,
         messages: messages.map((m) => ({ role: m.role, content: m.content })),
         temperature,
+        max_tokens: maxTokens,
         ...(options?.jsonMode ? { response_format: { type: "json_object" } } : {}),
       });
 
@@ -80,6 +85,7 @@ export async function generateCompletion(
     const completion = await zai.chat.completions.create({
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
       thinking: { type: "disabled" },
+      max_tokens: maxTokens,
     });
 
     const content = completion.choices[0]?.message?.content?.trim();
@@ -100,7 +106,7 @@ export async function checkAIHealth(): Promise<{ puter: boolean; model: string }
   try {
     const result = await generateCompletion(
       [{ role: "user", content: "Odgovori samo z 'OK'" }],
-      { temperature: 0 }
+      { temperature: 0, maxTokens: 8 }
     );
     return { puter: result?.source === "puter", model: process.env.PUTER_MODEL || "z-ai/glm-5.1" };
   } catch {

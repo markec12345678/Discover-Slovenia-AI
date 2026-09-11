@@ -2,12 +2,20 @@
  * DEMO SEED — realistični slovenski turistični podatki za razvoj in predstavitev
  *
  * Ustvari:
- *   - 5 partnerjev (owner računi; vsi z geslom "demo1234", razen admin: "admin-demo-2026")
+ *   - 5 partnerjev (owner računi; gesla glej spodaj — P7-A pravila)
  *   - 10 listingov (hoteli, gostilne, atrakcije ...) po slovenskih destinacijah
  *   - 10 izkušenj (tours, degustacije, outdoor ...) z atribuiranimi rezervacijami
  *   - 6 izdelkov tržnice (med, olje, vino, sol ...)
  *   - nekaj rezervacij (del source="consultation" — za provizijski model)
  *   - nekaj ListingEvent zapisov (AI kanal vrednost za tedensje poročilo)
+ *
+ * GESLA (P7-A, 2026-09-11 — po upokojitvi demo računov iz produkcije):
+ *   - Remote DB (postgres/neon): NAKLJUČNA gesla, ki se NE izpišejo — demo
+ *     računi so inertni lastniki vsebine (prijava nemogoča).
+ *   - Lokalna SQLite (DATABASE_URL=file:…): fiksna gesla SAMO z
+ *     DEV_FIXED_DEMO_PASSWORDS=1 (razvojna udobja); sicer naključna + izpis.
+ *   - Admin demo račun (super_admin): SAMO z ADMIN_DEMO_SEED=1, NIKOLI s
+ *     fiksnim geslom — naključno geslo se izpiše samo na lokalni SQLite.
  *
  * Idempotentno: pred vsodbo počisti vse prejšnje demo podatke (email domene @demo.discoverslovenia.si).
  *
@@ -16,6 +24,7 @@
  */
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
 
 const db = new PrismaClient();
 
@@ -83,12 +92,26 @@ async function cleanup() {
 async function main() {
   await cleanup();
 
-  const pw = await bcrypt.hash("demo1234", 12);
-  // super_admin demo račun IZPUSTIMO, ko seed poganja javni (Vercel) build —
-  // SKIP_DEMO_ADMIN=1 (glej scripts/build-demo-db.sh). Privatni Docker demo
-  // (Pot A) ga še vedno ustvari (geslo se izpiše na koncu seeda).
-  const skipAdmin = process.env.SKIP_DEMO_ADMIN === "1";
-  const adminPw = skipAdmin ? "" : await bcrypt.hash("admin-demo-2026", 12);
+  // ─── P7-A pravila gesel ─────────────────────────────────────────────────
+  const dbUrl = process.env.DATABASE_URL ?? "";
+  const isLocalSqlite = dbUrl.startsWith("file:");
+  const isRemote = /^postgres(ql)?:\/\//.test(dbUrl);
+  const fixedPartnerPw = isLocalSqlite && process.env.DEV_FIXED_DEMO_PASSWORDS === "1";
+  const partnerPwPlain = fixedPartnerPw ? "demo1234" : crypto.randomBytes(32).toString("base64url");
+  const pw = await bcrypt.hash(partnerPwPlain, 12);
+  // super_admin demo račun: SAMO z ADMIN_DEMO_SEED=1 (privzeto NE) in NIKOLI
+  // s fiksnim geslom (P7-A: admin@demo je bil izbrisan iz produkcije).
+  const createAdmin = process.env.ADMIN_DEMO_SEED === "1";
+  const adminPwPlain = createAdmin ? crypto.randomBytes(32).toString("base64url") : "";
+  const adminPw = createAdmin ? await bcrypt.hash(adminPwPlain, 12) : "";
+  if (isRemote) {
+    console.log(
+      "POZOR: seed teče proti REMOTE (postgres) bazi — uporabljena so NAKLJUČNA, neizpisana gesla."
+    );
+    console.log(
+      "         Demo računi bodo inertni lastniki vsebine (prijava nemogoča) — tako kot v produkciji po P7-A."
+    );
+  }
   const now = new Date();
   const lastMonth = previousMonth();
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 1, 12, 0, 0);
@@ -119,7 +142,7 @@ async function main() {
       businessName: "Primorska trgovina Piran", plan: "free", phone: "+386 5 678 901",
     },
   });
-  if (!skipAdmin) {
+  if (createAdmin) {
     await db.owner.create({
       data: {
         email: `admin${DEMO_DOMAIN}`, name: "Demo Admin", passwordHash: adminPw,
@@ -128,9 +151,9 @@ async function main() {
     });
   }
   console.log(
-    skipAdmin
-      ? "Partnerji: ana, marko (premium), tina, luka — vsi @demo.discoverslovenia.si (admin izpuščen)"
-      : "Partnerji: ana, marko (premium), tina, luka, admin — vsi @demo.discoverslovenia.si"
+    createAdmin
+      ? "Partnerji: ana, marko (premium), tina, luka, admin — vsi @demo.discoverslovenia.si (admin z NAKLJUČNIM geslom)"
+      : "Partnerji: ana, marko (premium), tina, luka — vsi @demo.discoverslovenia.si (admin IZPUŠČEN — privzeto P7-A)"
   );
 
   // ─── Listingi ─────────────────────────────────────────────────────────────
@@ -461,12 +484,24 @@ async function main() {
   console.log("ListingEvent: 1 AI priporočilo iz konzultacije");
 
   console.log("\n✅ DEMO SEED DOKONČAN");
-  console.log("   Prijava partnerja (free, provizija 12 %):  tina@demo.discoverslovenia.si / demo1234");
-  console.log("   Prijava partnerja (premium, 0 %):          marko@demo.discoverslovenia.si / demo1234");
-  if (skipAdmin) {
-    console.log("   Admin: IZPUŠČEN (SKIP_DEMO_ADMIN=1 — varen za javni Vercel demo)");
+  if (fixedPartnerPw) {
+    console.log("   Prijava partnerja (free, provizija 12 %):  tina@demo.discoverslovenia.si / demo1234");
+    console.log("   Prijava partnerja (premium, 0 %):          marko@demo.discoverslovenia.si / demo1234");
+    console.log("   (fiksna gesla — SAMO lokalna SQLite + DEV_FIXED_DEMO_PASSWORDS=1)");
+  } else if (isLocalSqlite) {
+    console.log("   Partnerji: ana/marko/tina/luka @demo.discoverslovenia.si");
+    console.log(`   Naključno geslo (vsak zase, izpis samo lokalno): ${[partnerPwPlain].join(", ")}`);
   } else {
-    console.log("   Admin:                                    admin@demo.discoverslovenia.si / admin-demo-2026");
+    console.log("   Partnerji: ana/marko/tina/luka @demo.discoverslovenia.si — gesla NAKLJUČNA in neizpisana (remote DB)");
+  }
+  if (createAdmin) {
+    if (isLocalSqlite) {
+      console.log(`   Admin (super_admin): admin@demo.discoverslovenia.si / ${adminPwPlain}`);
+    } else {
+      console.log("   Admin (super_admin): admin@demo.discoverslovenia.si — geslo NAKLJUČNO in neizpisano (remote DB)");
+    }
+  } else {
+    console.log("   Admin demo račun: IZPUŠČEN (privzeto; ustvari ga samo ADMIN_DEMO_SEED=1)");
   }
 }
 

@@ -30,8 +30,17 @@ export async function sendEmail({
   text,
 }: EmailParams): Promise<boolean> {
   if (isEmailDemo()) {
+    // P7-C1 (#3): v produkciji (Vercel logi) NE izpisujemo živih žetonov —
+    // telesa vsebujejo verification/reset URL-je, ki bi pristali v strežniških
+    // logih. URL-ji se redactirajo; lokalni dev jih ohrani (edini način za
+    // klik v demo flowu brez SMTP).
+    const body = text || html;
+    const safeBody =
+      process.env.NODE_ENV === "production"
+        ? body.replace(/https?:\/\/[^\s<"')]+/g, "[URL-redactirano]")
+        : body;
     console.log(
-      `[EMAIL DEMO] To: ${to}\nSubject: ${subject}\n---\n${text || html}\n---`
+      `[EMAIL DEMO] To: ${to}\nSubject: ${subject}\n---\n${safeBody}\n---`
     );
     return true;
   }

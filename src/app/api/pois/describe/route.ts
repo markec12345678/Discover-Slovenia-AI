@@ -3,6 +3,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { generateCompletion } from "@/lib/ai-client";
 import { rateLimit } from "@/lib/rate-limit";
+import { checkAdmin } from "@/lib/auth-guards";
 
 // POST /api/pois/describe — generira AI opis za POI (z enkratnim cache-iranjem)
 //
@@ -183,13 +184,17 @@ Odgovor (SAMO opis, brez prefixa):`;
 }
 
 // GET — admin endpoint za statistiko cache-a
-export async function GET() {
+// P7-B (F4): prej javen + izdal absolutno pot datoteke cache-a (cacheFile)
+// — zdaj timing-safe admin zaščita, brez poti.
+export async function GET(request: Request) {
+  if (!checkAdmin(request.headers.get("x-admin-password"))) {
+    return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
+  }
   const store = await readCache();
   const entries = Object.values(store);
   return NextResponse.json({
     total: entries.length,
     aiGenerated: entries.filter((e) => e.source === "ai").length,
     fallback: entries.filter((e) => e.source === "fallback").length,
-    cacheFile: CACHE_FILE,
   });
 }

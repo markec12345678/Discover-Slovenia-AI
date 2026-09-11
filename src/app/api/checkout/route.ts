@@ -232,6 +232,21 @@ export async function POST(request: Request) {
     const stripeKey = process.env.STRIPE_SECRET_KEY ?? "";
     const isDemo = !stripeKey || stripeKey.includes("demo_placeholder");
 
+    // P7-C3/P7-C4 (P1): fail-closed kot /api/bookings — naročila v
+    // produkciji NE smejo biti zapisana kot "paid" brez Stripe Checkout
+    // Session-a in webhook potrditve (prej: status "paid" + lažen
+    // stripeSessionId tudi ob pravih ključih; produkcija ni bila dosegljiva
+    // iz mrtve TODO veje za return-om).
+    if (!isDemo) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Kartično plačilo tržnice še ni konfigurirano v produkcijskem načinu.",
+        },
+        { status: 501 }
+      );
+    }
+
     // Pripravi items JSON za bazo
     const itemsJson = JSON.stringify(
       sanitizedItems.map((i) => ({
@@ -246,7 +261,7 @@ export async function POST(request: Request) {
     );
 
     // === DEMO MODE ===
-    // direktno ustvari Order s status="paid"
+    // direktno ustvari Order s status="paid" (izključno demo — glej 501 varovalko zgoraj)
     const order = await db.order.create({
       data: {
         orderNumber,
@@ -258,8 +273,8 @@ export async function POST(request: Request) {
         buyerPostalCode: postalCode,
         buyerCountry: country,
         status: "paid",
-        paymentMethod: isDemo ? "demo" : "stripe",
-        stripeSessionId: isDemo ? null : `demo_session_${orderNumber}`,
+        paymentMethod: "demo",
+        stripeSessionId: null,
         subtotal,
         shippingCost: shipping,
         total,
@@ -327,12 +342,9 @@ export async function POST(request: Request) {
     });
 
     // === PRODUCTION MODE ===
-    // TODO: ko bo STRIPE_SECRET_KEY pravi:
-    // 1. const stripe = new Stripe(stripeKey)
-    // 2. Ustvari Stripe Checkout Session z line_items iz sanitizedItems
-    // 3. Shrani Order s status="pending", stripeSessionId=session.id
-    // 4. Vrni { url: session.url } za redirect
-    // 5. Webhook (stripe/webhook) posodobi status na "paid" ob uspehu
+    // (onemogočeno — 501 varovalka zgoraj; ko bo implementirano: Stripe
+    // Checkout Session z line_items iz sanitizedItems, Order s status
+    // "pending" + stripeSessionId, webhook posodobi na "paid")
   } catch (error) {
     console.error("[api/checkout] napaka:", error);
     return NextResponse.json(

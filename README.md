@@ -187,19 +187,21 @@ bun run dev
 # 6. Odpri http://localhost:3000
 ```
 
-### Testni računi (demo seed — LOKALNA baza)
+### Testni računi (demo seed — SAMO lokalna SQLite)
 
 | Vloga | Email | Geslo |
 |-------|-------|-------|
 | Owner — free partner, provizija 12 % | tina@demo.discoverslovenia.si | demo1234 |
 | Owner — premium partner, provizija 0 % | marko@demo.discoverslovenia.si | demo1234 |
 
+Fiksni gesli veljata **izključno** ob lokalu seedu SQLite z `DEV_FIXED_DEMO_PASSWORDS=1` (privzeto seed ustvari naključna gesla; proti remote/postgres bazi se gesla NE izpišejo).
+
 Admin dostop do portala `/admin` poteka prek `ADMIN_PASSWORD` env (ne prek NextAuth računa).
 
-> ⚠️ **Iskrena opozorila (P6 audit, 2026-09-11):**
-> - Demo seed se na Vercelu NE izvede (build skripta se izklopi pri postgresql shemi) — računa zgoraj sta namenjena **lokalni** razvojni bazi.
-> - V pilotni produkcijski bazi (Neon) ta računa (in demo admin račun) **še obstajajo** iz zgodnjega seedinga. Pred onboardingom realnih ponudnikov gesla **rotiraj** oz. račune umakni — javno dokumentirano geslo na produkcijskem računu je higienški dolg.
-> - Demo vsebina (lokalci, izdelki, izkušnje) je jasno demo — žive številke se prikazujejo dinamično iz baze (`/za-ponudnike`).
+> ⚠️ **Status demo računov (P7-A, 2026-09-11):**
+> - Demo seed se na Vercelu NE izvede (build skripta se izklopi pri postgresql shemi).
+> - V produkcijski bazi (Neon) so bili demo računi **upokojeni**: `admin@demo` (super_admin) je **izbrisan**; ana/marko/tina/luka imajo **rotirana naključna gesla** + razveljavljene seje. Vsa nekaj javno dokumentirana gesla (`demo1234`, `admin-demo-2026`) na produkciji **ne delujejo več** (preverjeno: 401).
+> - Vsebina (lokalci, izdelki, izkušnje) ostaja vidna — upokojeni računi so inertni lastniki demo vsebine, ki je jasno označena (žive številke se prikazujejo dinamično iz baze, `/za-ponudnike`).
 
 ---
 

@@ -45,23 +45,36 @@ const DEFAULT_LIMIT = 4;
 // ============================================================================
 // CACHE HELPERS
 // ============================================================================
+// P7-C2 (F5.3): in-memory plast (per-instanca). Na Vercelu je FS read-only —
+// writeCache tiho odpove in readCache vedno miss-a → vsak javni GET bi pomenil
+// pravi AI klic. Memory plast deluje povsod; FS ostaja best-effort za
+// lokalni dev/Docker (persistentnost med restarti).
+const memoryStore: CacheStore = {};
 
 async function readCache(): Promise<CacheStore> {
+  let fromFs: CacheStore = {};
   try {
     const raw = await fs.readFile(CACHE_FILE, "utf-8");
     const parsed = JSON.parse(raw);
-    return typeof parsed === "object" && parsed !== null ? parsed : {};
+    if (typeof parsed === "object" && parsed !== null) fromFs = parsed as CacheStore;
   } catch {
-    return {};
+    // datoteka ne obstaja / neberljiva —FS sloj preskočen (Vercel)
   }
+  // memory ima prednost (novejši zapisi v isti instanci)
+  return { ...fromFs, ...memoryStore };
 }
 
 async function writeCache(store: CacheStore): Promise<void> {
+  // store je VEDNO celotno želeno stanje (klicatelji: get/invalidate/clearAll)
+  // → memory plast zamenjamo v celoti.
+  for (const k of Object.keys(memoryStore)) delete memoryStore[k];
+  Object.assign(memoryStore, store);
+  // FS — best-effort (lokalni dev/Docker; na Vercelu tiho odpove)
   try {
     await fs.mkdir(path.dirname(CACHE_FILE), { recursive: true });
     await fs.writeFile(CACHE_FILE, JSON.stringify(store, null, 2), "utf-8");
-  } catch (error) {
-    console.error("[ai-rec] writeCache napaka:", error);
+  } catch {
+    // pričakovano na read-only FS — memory plast je avtoriteta
   }
 }
 

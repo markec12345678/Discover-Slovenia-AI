@@ -110,7 +110,19 @@ async function runCommissionInvoicing(request: Request) {
         continue;
       }
 
-      const result = await issueCommissionInvoice(owner);
+      // P7-C4 (P2): sočasni klic (cron + ročni) rase na izdaji — izgubljenec
+      // dobi P2002 na @@unique([ownerId, periodStart]) → varno štejemo kot
+      // duplikat (prej: nenačrtovana napaka sredine serije = 500 celega run-a).
+      let result: Awaited<ReturnType<typeof issueCommissionInvoice>>;
+      try {
+        result = await issueCommissionInvoice(owner);
+      } catch (e) {
+        if ((e as { code?: string }).code === "P2002") {
+          skippedDuplicate++;
+          continue;
+        }
+        throw e;
+      }
 
       if (result.status === "duplicate") {
         skippedDuplicate++;

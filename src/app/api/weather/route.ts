@@ -16,6 +16,16 @@ export async function GET(request: Request) {
     );
   }
 
+  // P7-B (F5): validacija pred interpolacijo v zunanji URL — sprejmemo samo
+  // decimalne številke (prej bi šel skozi poljuben npr. "1.0&x=Injector")
+  const COORD_RE = /^-?\d{1,3}(\.\d+)?$/;
+  if (!COORD_RE.test(lat) || !COORD_RE.test(lng)) {
+    return NextResponse.json(
+      { error: "Neveljavna koordinata" },
+      { status: 400 }
+    );
+  }
+
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=Europe/Ljubljana`;
 
