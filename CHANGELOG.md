@@ -7,6 +7,65 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.4.0] — 2026-09-11
+
+### Varnost (P7 — globoki audit + popravki P0–P2)
+
+- **Upokojitev demo računov v produkciji (P0)**: `admin@demo` (super_admin) izbrisan;
+  ana/marko/tina/luka imajo rotirana naključna gesla + razveljavljene seje. Vsa javno
+  dokumentirana gesla na produkciji vračajo 401 (preverjeno). Seed fiksnih gesel samo
+  lokalno SQLite z `DEV_FIXED_DEMO_PASSWORDS=1`.
+- **`mark_paid` provizijskega računa (P0)**: lastnik ne more več označiti svoj račun
+  za plačan brez dokaza o plačilu — 403, kadar Stripe ni v demo načinu.
+- **`/api/checkout` (P1)**: fail-closed 501 v produkciji (prej: napačen
+  `status="paid"` + lažen `stripeSessionId` tudi s pravimi ključi).
+- **Stripe webhook (P1)**: dedup marker `ProcessedStripeEvent` se ob napaki obdelave
+  umakne — Stripe retry znova obdela (prej: učinek plačila za vedno izgubljen).
+- **Provizijska osnova (P1)**: preklicane rezervacije izključene
+  (`confirmed`/`completed`); brisanje izkušnje z rezervacijami zavrnjeno (400).
+- **Atribucija (P1)**: `source=consultation` samo, če je konzultacija dejansko
+  priporočila to izkušnjo/ponudnika (ujemanje imen + vsebine odgovora).
+- **AI stroškovna zloraba (P1)**: `/api/ai-health` rate limit 12/10 min;
+  `/api/recommendations/*` rate limit 60/10 min + in-memory cache (FS cache na
+  Vercelu read-only → prej AI klic na vsak javni GET).
+- **Odstranjena osirotela javni ruti (P1)**: `/api/seo/faq` (neavtoriziran AI) in
+  `/api/email/welcome` (neavtoriziran email relay).
+- **P2 paket**: timing-safe `track-funnel`, validacija weather lat/lng,
+  `payment_status="paid"` obvezen pri commission/sponsorship webhookih, sponsorship
+  dup-check, idempotentna cron (renewal-reminders claim, commission-invoices P2002),
+  login timing izenačen (dummy bcrypt), `[EMAIL DEMO]` redakcija URL-jev z žetoni v
+  produkciji, `max_tokens` na AI klicih.
+
+### Spremenjeno (P8 — responsive + atomarna booking deduplikacija)
+
+- **Atomarna booking deduplikacija (P1)**: TOCTOU (`findFirst` → `create`) zamenjan
+  s SERIALIZABLE transakcijo + retry na P2034 (PostgreSQL; SQLite lokalno privzeta
+  raven). Sočasna duplikatna requesta ustvarita natanko ENO rezervacijo — E2E dokaz:
+  200 + 409 z isto številko, 1 vrstica v DB; bookingCount se poveča enkrat; emaila
+  se pošljeta samo na zmagovalni (200) poti — 409 pot se vrne prej pošiljanja.
+- **`issueCommissionInvoice()` (P2)**: P2002 konflikt → vrne obstoječi račun
+  (`duplicate`) namesto 500.
+- **Responsive 390 px**: homepage 70,2k → 48,7k px (−30 %); dvostolpčni mobilni
+  gridi (destinacije, tržnica, lokali, blog, zbirke), row-layout dogodkov,
+  kompakcija kartic, beta-banner/footer odmiki za sticky CTA + chat FAB,
+  `env(safe-area-inset-bottom)` na avtentikacijskih straneh. Desktop nespremenjen.
+
+### Dokumentacija (P9 — code freeze)
+
+- **README**: status CODE FREEZE READY + deploy runbook po rate-limit okni
+  (Redeploy, brez praznega commita) + 16-točkovni produkcjski smoke checklist.
+- **`requireOwnership()`**: admin/super_admin/moderator bypass dokumentiran v kodi
+  (P7-B: 0 klicalcev → past za prihodnji razvoj, ne aktivna ranljivost).
+- **`scripts/verify/production-smoke.sh`**: avtomatizirani del smoke checklista
+  (markerji, anti-enumeracija, cron × 6 z napačnim/pravim secretom, commit status;
+  opciono booking E2E z dokazom 409 dedup in newsletter).
+- **`scripts/db/p9-smoke-cleanup.ts`**: idempotenten cleanup smoke zapisov.
+- **Znane odložene postavke** (zavedno, pred javnim launchem): centralizirani rate
+  limiting (per-instance zdaj), realni Stripe Checkout po pilotu, prompt-injection
+  ovijanje na preostalih AI poteh.
+
+---
+
 ## [1.3.0] — 2026-09-11
 
 ### Spremenjeno (Changed)

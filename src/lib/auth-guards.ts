@@ -251,6 +251,15 @@ export function checkAdmin(password: string | null | undefined): boolean {
 /**
  * Preveri ali trenutni uporabnik lasti specifičen resource.
  * Za "own" scope — preveri ali je ownerId lastnika enak trenutnemu.
+ *
+ * ⚠️ PAST ZA PRIHODNJI RAZVOJ (dokumentirano v P7-B/P9, namerno NI spremenjeno):
+ * ta helper NI čista lastniška meja — vloge admin / super_admin / moderator
+ * vrnejo `authorized: true` za KATERIKOLI resource (bypass spodaj). Če boste
+ * klicali to funkcijo z namenom "nikogar ne smemo čez mejo lastnika", ste na
+ * napačnem mestu — v tem primeru uporabite eksplicitno primerjavo ownerId.
+ * Status (P7-B audit, 2026-09): 0 klicalcev v API rteh → ni aktivne
+ * ranljivosti; funkcija ostaja kot pomočnik za morebitne prihodnje "support
+ * dostope", kjer je bypass želen.
  */
 export async function requireOwnership(
   resource: "listing" | "product" | "experience",

@@ -12,7 +12,14 @@
 
 **Produkcija:** <https://i-feel-slovenia.vercel.app> (Vercel, avtomatski deploy iz `main`)
 
-**Status faz:** P0 ✅ → P1 ✅ → P2 ✅ → P3 ✅ (varnostni auditi) → P4 🟡 (priprava pilota — 10 realnih ponudnikov)
+**Status faz:** P0 ✅ → P1 ✅ → P2 ✅ → P3 ✅ (varnostni auditi) → P4 ✅ (pilotni polish) → P5 ✅ (priprava deploya) → P6 ✅ (sinhronizacija dokumentov) → P7 ✅ (varnostni audit + popravki P0–P2) → P8 ✅ (responsive 390 px + atomarna booking deduplikacija) → **P9 🟠 CODE FREEZE READY — čaka produkcjski deploy + verifikacijo**
+
+> 🧊 **CODE FREEZE (P9, 2026-09-11):** razvoj za pilot je zaključen — do konca pilota NOVIH funkcij ni (samo popravki napak iz realne uporabe).
+>
+> - **Koda:** `main` = `4df3f57` (P8: koda) + `e0a0410` (P9: docs/smoke orodja — brez logike). CI ✅ (Build + Lint/TypeCheck).
+> - **Produkcija:** 🟠 še servira `d2e371c` — deploy na zadnji `main` je bil **rate-limited** (Vercel Hobby build quota; okno se ponastavi ~2026-09-12 05:33 UTC). Po ponastavitvi: glej [runbook spodaj](#deploy-po-rate-limit-okni-p9) (Redeploy iz dashboarda — brez praznega commita).
+> - **Po deployu obvezno:** [produkcjski smoke](#produkcjski-smoke-p9--po-deployu) — `bash scripts/verify/production-smoke.sh` (varni GET preverki + markerji) + ročni brskalniški tokovi + funkcionalni pregled mobilnih tokov na 390 px.
+> - **Zavedno odloženo (pred javnim launchem, NI pilot blocker):** rate limiting je per-instance → pred javnim prometom centralizirani limiter (npr. Upstash); `requireOwnership()` admin bypass dokumentiran v kodi (0 klicalcev — past za prihodnji razvoj, ne ranljivost); realni Stripe Checkout za rezervacije šele po poslovni odločitvi po pilotu (zdaj namerno fail-closed 501 v produkciji).
 
 ---
 
@@ -326,6 +333,49 @@ Vsak klic je Bearer zaščiten s `CRON_SECRET` (brez njega 401 — fail-closed).
 - **Baza: Neon PostgreSQL** (pooler, `connection_limit=1`) — `DATABASE_URL` env
 - CI (GitHub Actions): Lint & Type Check + Build proti `postgres:16-alpine` service containerju (P4-7)
 - Zastarel demo-SQLITE mehanizem (Faza 4e) se samodejno izklopi pri postgresql shemi — glej docs/DEPLOYMENT.md razdelek 6
+- Cron: `vercel.json` (Vercel Cron kliče 6 GET rut — secret prek `Authorization: Bearer <CRON_SECRET>`)
+
+#### Deploy po rate-limit okni (P9)
+
+Hobby račun ima omejeno število buildov na 24 h. Ko je deployment zavrnjen (»Deployment rate limited — retry in 24 hours«):
+
+1. Počakaj konec okna (zadnji znani reset: **2026-09-12 05:33 UTC**).
+2. **Pot A (priporočeno, brez praznega commita):** Vercel dashboard → projekt → *Deployments* → zadnji rate-limited deployment → meni ⋯ → **Redeploy** (Production).
+3. **Pot B:** push kakršnega koli commita na `main` (sproži nov deployment).
+4. Preveri uspeh: GitHub commit status (kontekst »Vercel« = ✓ success na zadnjem SHA) **ali** `bash scripts/verify/production-smoke.sh` (točka 8 skripte).
+
+#### Produkcjski smoke (P9 — po deployu)
+
+Avtomatizirani del (varen, brez DB pisanja):
+
+```bash
+bash scripts/verify/production-smoke.sh
+# opciono (PIŠE v DB — počisti s scripts/db/p9-smoke-cleanup.ts):
+SMOKE_BOOKING=1 SMOKE_NEWSLETTER=1 CRON_SECRET=<pravi> bash scripts/verify/production-smoke.sh
+```
+
+Celoten checklist (16 točk):
+
+| # | Točka | Kako |
+|---|-------|------|
+| 1 | homepage | skripta (200 + P8 responsive markerji) |
+| 2 | destinacija/detail | skripta (`/destinacija/bled/things-to-do`) |
+| 3 | marketplace | skripta (`/za-ponudnike`, `/api/experiences` published-only) |
+| 4 | experience detail | ročno (kartica izkušnje na homepage) |
+| 5 | booking od začetka do konca | ročno UI **ali** `SMOKE_BOOKING=1` (ustvari + 409 dedup dokaz) |
+| 6 | booking lookup | skripta (anti-enumeracija 404) + ročno z pravo številko |
+| 7 | login/logout | ročno |
+| 8 | owner login | ročno |
+| 9 | owner CRUD osnovnega zapisa | ročno (draft → submit) |
+| 10 | newsletter | `SMOKE_NEWSLETTER=1` ali ročno |
+| 11 | consultation → recommendation → atribucija | ročno (preveri `source=consultation`) |
+| 12 | admin authentication | ročno (`/admin` + `ADMIN_PASSWORD`) |
+| 13 | 6 cron endpointov z napačnim/pravilnim secretom | skripta (napačen = 401 ×6; pravi = `CRON_SECRET=…`, idempotentno) |
+| 14 | AI endpointi + rate limit | skripta (`/api/ai-health` 200; `SMOKE_RATE_LIMIT=1` za 429 — glej opombo o per-instance) |
+| 15 | mobilni 390 px | ročno — **funkcionalno**, ne le vizualno |
+| 16 | production kaže zadnji `main` | skripta (GitHub Vercel commit status + markerji) |
+
+> Če je vse zeleno → **zamrznjeni repozitorij za pilot**.
 
 ### Docker Compose (alternativa — ZASTARELO)
 
