@@ -509,7 +509,7 @@ export function TravelStyleQuiz() {
                         {recommendations.map((d) => (
                           <a
                             key={d.id}
-                            href="#destinacije"
+                            href="/destinacije"
                             className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3.5 py-2 text-sm font-medium text-foreground transition-all hover:border-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           >
                             <MapPin className="size-3.5 text-primary" aria-hidden="true" />

@@ -306,7 +306,7 @@ export function DestinationModal({
                       Postanite prvi!
                     </p>
                     <a
-                      href="#pridruzi-se"
+                      href="/za-ponudnike#pridruzi-se"
                       onClick={() => onClose()}
                       className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80"
                     >
@@ -326,7 +326,7 @@ export function DestinationModal({
                       ))}
                     </div>
                     <a
-                      href="#lokali"
+                      href="/lokali"
                       onClick={() => onClose()}
                       className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80"
                     >

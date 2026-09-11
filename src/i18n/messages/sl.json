@@ -6,8 +6,13 @@
     "listings": "Lokali",
     "events": "Dogodki",
     "join": "Pridruži se",
-    "cta": "Načrtuj potovanje",
-    "providers": "Za ponudnike"
+    "cta": "Načrtuj z AI",
+    "providers": "Za ponudnike",
+    "experiences": "Doživetja",
+    "guides": "Vodiči",
+    "marketplace": "Tržnica",
+    "pass": "Slovenia Pass",
+    "trips": "Moja potovanja"
   },
   "hero": {
     "title": "Odkrijte Slovenijo",

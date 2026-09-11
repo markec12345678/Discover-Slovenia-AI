@@ -111,6 +111,54 @@ function isValidPlannerInput(v: unknown): v is PlannerInput {
 }
 
 /**
+ * FW3: Pametni defaults iz naravnega jezika (hero input / kviz / demo
+ * scenariji). Uporablja ga tako event listener (ista stran) kot mount
+ * consume iz sessionStorage (prihod z heroja homepagea na /načrtuj).
+ */
+function parseQueryToPlannerInput(query: string): PlannerInput {
+  const lowerQuery = query.toLowerCase();
+  const newInterests: string[] = [];
+
+  if (lowerQuery.includes("narav") || lowerQuery.includes("pohod") || lowerQuery.includes("gor")) newInterests.push("narava");
+  if (lowerQuery.includes("hran") || lowerQuery.includes("jest") || lowerQuery.includes("kosil") || lowerQuery.includes("večerj")) newInterests.push("kulinarika");
+  if (lowerQuery.includes("vin") || lowerQuery.includes("pij")) newInterests.push("kulinarika");
+  if (lowerQuery.includes("avantur") || lowerQuery.includes("raft") || lowerQuery.includes("adrenalin")) newInterests.push("avantura");
+  if (lowerQuery.includes("otrok") || lowerQuery.includes("družin")) newInterests.push("družina");
+  if (lowerQuery.includes("romanti")) newInterests.push("romantika");
+  if (lowerQuery.includes("kultur") || lowerQuery.includes("zgodovin") || lowerQuery.includes("mest")) newInterests.push("kultura");
+  if (lowerQuery.includes("wellness") || lowerQuery.includes("spa") || lowerQuery.includes("zdravil")) newInterests.push("wellness");
+
+  // Določi število dni iz query-ja
+  let days = 3;
+  const hourMatch = lowerQuery.match(/(\d+)\s*ur/);
+  const dayMatch = lowerQuery.match(/(\d+)\s*dan|(\d+)\s*dnev/);
+  if (hourMatch) days = 1;
+  else if (dayMatch) days = parseInt(dayMatch[1] || dayMatch[2], 10);
+
+  // Določi group size
+  let groupSize = 2;
+  const groupMatch = lowerQuery.match(/(\d+)\s*oseb|(\d+)\s*odrasl|(\d+)\s*ljud/);
+  if (groupMatch) groupSize = parseInt(groupMatch[1] || groupMatch[2] || groupMatch[3], 10);
+  if (lowerQuery.includes("družin") || lowerQuery.includes("otrok")) groupSize = 4;
+  if (lowerQuery.includes("sam")) groupSize = 1;
+
+  // Sezona iz query-ja (npr. kviz CTA: "... poleti, s partnerjem ...")
+  let season: Season = "summer";
+  if (lowerQuery.includes("pomlad")) season = "spring";
+  else if (lowerQuery.includes("polet") || lowerQuery.includes("juni") || lowerQuery.includes("julij") || lowerQuery.includes("avgust")) season = "summer";
+  else if (lowerQuery.includes("jesen")) season = "autumn";
+  else if (lowerQuery.includes("zim") || lowerQuery.includes("smuč")) season = "winter";
+
+  return {
+    budget: 500,
+    days,
+    interests: newInterests.length > 0 ? newInterests : ["narava", "kultura"],
+    season,
+    groupSize,
+  };
+}
+
+/**
  * AI Itinerary Planner — jedrna funkcija platforme Discover Slovenia AI.
  * Uporabnik izpolni obrazec (dnevi, proračun, skupina, sezona, interesi),
  * AI pa sestavi personalno dogodkovno povzetek potovanja po Sloveniji.
@@ -200,6 +248,18 @@ export function ItineraryPlanner() {
       return;
     }
 
+    // 1.5) FW3: heroQuery iz sessionStorage — uporabnik je vnesel željo v
+    // heroju na homepageu in bil navigiran na /načrtuj. Svež namen ima
+    // prednost pred obnovo zadnjega načrta iz localStorage.
+    const pendingQuery = sessionStorage.getItem("heroQuery");
+    if (pendingQuery) {
+      sessionStorage.removeItem("heroQuery");
+      const smartInput = parseQueryToPlannerInput(pendingQuery);
+      setFormData(smartInput);
+      generateItinerary(smartInput);
+      return;
+    }
+
     // 2) Obnovi zadnji načrt iz localStorage (samo če store še ni poln)
     try {
       if (!useAppStore.getState().itinerary) {
@@ -220,54 +280,15 @@ export function ItineraryPlanner() {
     }
   }, []);
 
-  // === WOW: Poslušaj heroQuery event iz Hero Quick Input ===
+  // === WOW: Poslušaj heroQuery event (ista stran — npr. kviz ali demo
+  // scenariji). Prihod s homepagea se obravnava ob mountu prek
+  // sessionStorage (zgornji efekt). ===
   useEffect(() => {
     const handleHeroQuery = (e: Event) => {
       const query = (e as CustomEvent<string>).detail;
       if (!query) return;
 
-      // Smart defaults glede na query
-      const lowerQuery = query.toLowerCase();
-      const newInterests: string[] = [];
-
-      if (lowerQuery.includes("narav") || lowerQuery.includes("pohod") || lowerQuery.includes("gor")) newInterests.push("narava");
-      if (lowerQuery.includes("hran") || lowerQuery.includes("jest") || lowerQuery.includes("kosil") || lowerQuery.includes("večerj")) newInterests.push("kulinarika");
-      if (lowerQuery.includes("vin") || lowerQuery.includes("pij")) newInterests.push("kulinarika");
-      if (lowerQuery.includes("avantur") || lowerQuery.includes("raft") || lowerQuery.includes("adrenalin")) newInterests.push("avantura");
-      if (lowerQuery.includes("otrok") || lowerQuery.includes("družin")) newInterests.push("družina");
-      if (lowerQuery.includes("romanti")) newInterests.push("romantika");
-      if (lowerQuery.includes("kultur") || lowerQuery.includes("zgodovin") || lowerQuery.includes("mest")) newInterests.push("kultura");
-      if (lowerQuery.includes("wellness") || lowerQuery.includes("spa") || lowerQuery.includes("zdravil")) newInterests.push("wellness");
-
-      // Določi število dni iz query-ja
-      let days = 3;
-      const hourMatch = lowerQuery.match(/(\d+)\s*ur/);
-      const dayMatch = lowerQuery.match(/(\d+)\s*dan|(\d+)\s*dnev/);
-      if (hourMatch) days = 1;
-      else if (dayMatch) days = parseInt(dayMatch[1] || dayMatch[2], 10);
-
-      // Določi group size
-      let groupSize = 2;
-      const groupMatch = lowerQuery.match(/(\d+)\s*oseb|(\d+)\s*odrasl|(\d+)\s*ljud/);
-      if (groupMatch) groupSize = parseInt(groupMatch[1] || groupMatch[2] || groupMatch[3], 10);
-      if (lowerQuery.includes("družin") || lowerQuery.includes("otrok")) groupSize = 4;
-      if (lowerQuery.includes("sam")) groupSize = 1;
-
-      // Sezona iz query-ja (npr. kviz CTA: "... poleti, s partnerjem ...")
-      let season: Season = "summer";
-      if (lowerQuery.includes("pomlad")) season = "spring";
-      else if (lowerQuery.includes("polet") || lowerQuery.includes("juni") || lowerQuery.includes("julij") || lowerQuery.includes("avgust")) season = "summer";
-      else if (lowerQuery.includes("jesen")) season = "autumn";
-      else if (lowerQuery.includes("zim") || lowerQuery.includes("smuč")) season = "winter";
-
-      const smartInput: PlannerInput = {
-        budget: 500,
-        days,
-        interests: newInterests.length > 0 ? newInterests : ["narava", "kultura"],
-        season,
-        groupSize,
-      };
-
+      const smartInput = parseQueryToPlannerInput(query);
       setFormData(smartInput);
       generateItinerary(smartInput);
     };

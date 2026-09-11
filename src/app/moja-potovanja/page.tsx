@@ -287,7 +287,7 @@ export default function MojaPotovanjaPage() {
                   icon={<Map className="size-8 text-primary" aria-hidden="true" />}
                   title="Nimate še shranjenih potovanj"
                   description="Načrtujte potovanje z AI načrtovalcem in ga shranite — pojavi se tukaj."
-                  ctaHref="/#načrtuj"
+                  ctaHref="/nacrtuj"
                   ctaLabel="Načrtuj potovanje"
                 />
               ) : (
@@ -426,7 +426,7 @@ export default function MojaPotovanjaPage() {
       <footer className="mt-auto border-t border-border bg-background">
         <div className="mx-auto max-w-5xl px-4 py-4 max-sm:pb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between text-xs text-muted-foreground">
           <span>Discover Slovenia AI — vaš osebni potovalni pomočnik</span>
-          <Link href="/#načrtuj" className="hover:text-primary transition-colors inline-flex items-center gap-1">
+          <Link href="/nacrtuj" className="hover:text-primary transition-colors inline-flex items-center gap-1">
             <Plus className="size-3.5" aria-hidden="true" />
             Nov načrt
           </Link>

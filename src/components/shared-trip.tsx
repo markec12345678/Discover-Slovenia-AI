@@ -491,7 +491,7 @@ export function SharedTrip({
           </p>
           <div className="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
             <Button asChild size="lg">
-              <Link href="/#načrtuj">
+              <Link href="/nacrtuj">
                 <MapPin className="size-4 mr-2" aria-hidden="true" />
                 Načrtuj svoje potovanje
               </Link>

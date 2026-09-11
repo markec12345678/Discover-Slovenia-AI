@@ -53,7 +53,7 @@ export function BetaBanner() {
             variant="secondary"
             className="h-9 px-3 text-xs sm:h-7"
           >
-            <a href="#pridruzi-se">Pridruži se</a>
+            <a href="/za-ponudnike#pridruzi-se">Pridruži se</a>
           </Button>
           <button
             type="button"

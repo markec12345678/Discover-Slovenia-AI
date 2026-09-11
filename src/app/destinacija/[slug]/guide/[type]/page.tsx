@@ -762,7 +762,7 @@ export default async function GuidePage({
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button asChild size="lg">
-              <Link href="/#načrtuj">
+              <Link href="/nacrtuj">
                 <Ticket className="size-4 mr-2" aria-hidden="true" />
                 AI načrtovalec potovanj
                 <ArrowRight className="size-4 ml-2" aria-hidden="true" />

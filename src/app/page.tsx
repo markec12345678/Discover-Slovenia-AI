@@ -1,33 +1,41 @@
 import { Navigation } from "@/components/sections/navigation";
 import { Hero } from "@/components/sections/hero";
 import { StatsSection } from "@/components/sections/stats";
-import { CollectionsSection } from "@/components/sections/collections";
 import { DestinationsSection } from "@/components/sections/destinations";
-import { ItineraryPlanner } from "@/components/sections/itinerary-planner";
-import { MapSection } from "@/components/sections/map-section";
-import { ListingsSection } from "@/components/sections/listings";
-import { MarketplaceSection } from "@/components/sections/marketplace";
 import { ExperiencesSection } from "@/components/sections/experiences";
-import { EventsCalendar } from "@/components/sections/events-calendar";
-import { CommunityTrips } from "@/components/sections/community-trips";
-import { AskLocal } from "@/components/sections/ask-local";
-import { BlogSection } from "@/components/sections/blog";
+import { ExploreHub } from "@/components/sections/explore-hub";
 import { AffiliateSection } from "@/components/sections/affiliate-section";
-import { JoinUs } from "@/components/sections/join-us";
-import { PitchDeckSection } from "@/components/sections/pitch-deck";
 import { Footer } from "@/components/sections/footer";
 import { BetaBanner } from "@/components/beta-banner";
 import { Chatbot } from "@/components/chatbot";
 import { WelcomeBackWrapper } from "@/components/welcome-back-wrapper";
-import { SloveniaPassSection } from "@/components/slovenia-pass-section";
 import { DemoScenariosWrapper } from "@/components/demo-scenarios-wrapper";
 import { PreGeneratedItinerariesWrapper } from "@/components/pre-generated-itineraries-wrapper";
-import { TravelStyleQuiz } from "@/components/travel-style-quiz";
 import { NewsletterSection } from "@/components/newsletter-section";
 import { FunnelTracker } from "@/components/funnel-tracker";
 import { StickyMobileCTA } from "@/components/sticky-mobile-cta";
+import { LegacyHashRedirect } from "@/components/legacy-hash-redirect";
 import { Reveal } from "@/components/reveal";
 
+/**
+ * Homepage — FW3: AI-first hierarhija (progresivno razkrivanje).
+ *
+ * Prej: ~22 enakovrednih sekcij ("velik turistični portal z AI funkcijo").
+ * Zdaj: AI concierge kot obljuba št. 1 + zgolj vrhunska vsebina, ostale
+ * funkcije pa živijo na lastnih straneh (/načrtuj, /destinacije, /dogodki,
+ * /zemljevid, /lokali, /vodici, /trznica, /slovenia-pass) in so odkrite
+ * prek ExploreHub ja ter navigacije.
+ *
+ * Bloki:
+ *  1. Hero — AI Concierge (naravni jezik + intent chipi)
+ *  2. Tvoj naslednji korak — vračajoči uporabniki + demo scenariji
+ *  3. Zakaj Slovenija — trust številke (bento)
+ *  4. Priljubljene destinacije — 6 kartic + CTA na vseh 22
+ *  5. Priljubljene AI poti — predgenerirani itinererji
+ *  6. Doživetja — kategorije
+ *  7. Razišči Slovenijo — hub na nivo-2 funkcije
+ *  8. Rezerviraj — booking hub (affiliate + direktne rezervacije)
+ */
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -39,42 +47,41 @@ export default function Home() {
             sta prestavljena POD hero, da ne pokvarita iluzije. */}
         <Hero />
         <BetaBanner />
+
+        {/* 2. Tvoj naslednji korak — vračajoči uporabniki (nadaljuj svojo
+            pot) + demo scenariji za pilot predstavitve. Oba preneseta
+            željo na /načrtuj prek sessionStorage. */}
         <WelcomeBackWrapper />
         <DemoScenariosWrapper />
-        <TravelStyleQuiz />
-        <PreGeneratedItinerariesWrapper />
+
+        {/* 3. Zakaj Slovenija — trust številke (22 destinacij, 0 % provizije,
+            preverjeni partnerji) */}
         <StatsSection />
-        <CollectionsSection />
+
+        {/* 4. Priljubljene destinacije — samo 6 kartic (featured), ostalih
+            16 na /destinacije (progresivno razkrivanje, ne vizualni overload) */}
         <Reveal>
-          <DestinationsSection />
+          <DestinationsSection featured />
         </Reveal>
-        <ItineraryPlanner />
-        <SloveniaPassSection />
-        <Reveal>
-          <MapSection />
-        </Reveal>
-        <Reveal>
-          <ListingsSection />
-        </Reveal>
-        <Reveal>
-          <MarketplaceSection />
-        </Reveal>
+
+        {/* 5. Priljubljene AI poti — inspiracija iz predgeneriranih
+            itinererjev (klik prenese željo na /načrtuj) */}
+        <PreGeneratedItinerariesWrapper />
+
+        {/* 6. Doživetja — kategorije (pohodi, vodne avanture, kulinarika …) */}
         <ExperiencesSection />
-        <EventsCalendar />
-        {/* Javna galerija skupnostnih potovanj — viralni loop: deljeni načrti
-            prinesejo nov promet, ki konvertira prek tržnice/rezervacij zgoraj;
-            social proof takoj pred newsletterjem. Skrije se, če ni javnih poti. */}
-        <CommunityTrips />
-        {/* "Vprašaj lokalca" — grounded AI Q&A točko za galerijo social
-            proofa in pred vsebinskimi sekcijami: javna vprašanja + odgovori
-            delujejo kot social proof (ljudje sprašujejo!) in vsebinski SEO
-            material, hkrati pa gradijo obljubo "zero hallucination"
-            (odgovori samo iz naše baze). */}
-        <AskLocal />
-        <BlogSection />
-        <AffiliateSection />
-        <JoinUs />
-        <PitchDeckSection />
+
+        {/* 7. Razišči Slovenijo — hub na zemljevid, dogodke, lokale,
+            vodiče, tržnico in Slovenia Pass (nivo 2) */}
+        <Reveal>
+          <ExploreHub />
+        </Reveal>
+
+        {/* 8. Rezerviraj — booking hub (nastanitve, aktivnosti, prevoz) */}
+        <Reveal>
+          <AffiliateSection />
+        </Reveal>
+
         <Reveal>
           <NewsletterSection />
         </Reveal>
@@ -83,6 +90,8 @@ export default function Home() {
       <Chatbot />
       {/* P4-5: mobilna konverzijska vrstica — pojavi se po prečku heroja */}
       <StickyMobileCTA />
+      {/* FW3: preusmeritev podedovanih hash povezav (/#načrtuj → /načrtuj …) */}
+      <LegacyHashRedirect />
     </div>
   );
 }

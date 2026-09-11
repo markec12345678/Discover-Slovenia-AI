@@ -197,10 +197,26 @@ export function subscribeWishlist(cb: () => void): () => void {
 
 /**
  * Odpri vnos iz wishlist-a v tržnici: sproži dogodek, na katerega posluša
- * MarketplaceSection (preklopi tab, scroll na #trznica, odpre modal).
+ * MarketplaceSection (preklopi tab, odpre modal).
  * Klicatelj (Sheet) naj se pred tem zapre.
+ *
+ * FW3: MarketplaceSection živi na /tržnica. Če uporabnik ni na tej strani,
+ * se namen shrani v sessionStorage in navigira — tržnica ga ob mountu
+ * prevzame (enak vzorec kot heroQuery → /načrtuj).
  */
+export const WISHLIST_PENDING_KEY = "dai:wishlist-pending-open";
+
 export function openFromWishlist(detail: WishlistOpenDetail): void {
   if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent<WishlistOpenDetail>(WISHLIST_OPEN_EVENT, { detail }));
+
+  if (document.getElementById("trznica")) {
+    window.dispatchEvent(new CustomEvent<WishlistOpenDetail>(WISHLIST_OPEN_EVENT, { detail }));
+  } else {
+    try {
+      sessionStorage.setItem(WISHLIST_PENDING_KEY, JSON.stringify(detail));
+    } catch {
+      // Zasebni način / poln sessionStorage — mirno preskoči
+    }
+    window.location.assign("/trznica");
+  }
 }

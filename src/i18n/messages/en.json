@@ -6,8 +6,13 @@
     "listings": "Local businesses",
     "events": "Events",
     "join": "Join us",
-    "cta": "Plan your trip",
-    "providers": "For providers"
+    "cta": "Plan with AI",
+    "providers": "For providers",
+    "experiences": "Experiences",
+    "guides": "Guides",
+    "marketplace": "Marketplace",
+    "pass": "Slovenia Pass",
+    "trips": "My trips"
   },
   "hero": {
     "title": "Discover Slovenia",

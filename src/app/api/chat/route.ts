@@ -143,7 +143,7 @@ PRAVILA:
 2. Bodisi prijazen, a jedrnat (ne več kot 3-4 odstavke)
 3. Priporočaj konkretne destinacije/lokale/izdelke iz zgornjega seznama
 4. Če uporabnik sprašuje o nečem kar ni v bazi, bodisi iskren in predlagaj alternativo
-5. Če sprašuje o itinererju, usmeri ga na "AI načrtovalec" v sekciji #načrtuj
+5. Če sprašuje o itinererju, usmeri ga na "AI načrtovalec" (/načrtuj)
 6. Če sprašuje o rezervacijah, pojasni da poteka direktno pri ponudniku (redirect model)
 7. Nikoli ne izmišljaj podatkov — če ne veš, reci
 8. Uporabljaj emoji za prijaznost (🏔️ 🍷 🚴‍♂️ 🏛️) a ne pretiravaj
@@ -201,7 +201,7 @@ function generateFallbackResponse(userMessage: string): string {
   const msg = userMessage.toLowerCase();
 
   if (msg.includes("bled")) {
-    return "Bled je najbolj prepoznavna slovenska razglednica 🏔️. Srednjeveški grad, otok s cerkvijo in kristalno čista voda. Priporočam obisk zgodaj zjutraj za manj ljudi. Za AI načrtovanje obiščite sekcijo #načrtuj.";
+    return "Bled je najbolj prepoznavna slovenska razglednica 🏔️. Srednjeveški grad, otok s cerkvijo in kristalno čista voda. Priporočam obisk zgodaj zjutraj za manj ljudi. Za AI načrtovanje obiščite strani Načrtuj.";
   }
   if (msg.includes("ljubljan")) {
     return "Ljubljana je naša prestolnica 🏛️ — mesto z gradom na hribu, Tromostovjem in živahnim starim mestnim jedrom. Za kulinarične dogodivščine preizkusite turo po Ljubljani v sekciji izkušenj.";
@@ -210,7 +210,7 @@ function generateFallbackResponse(userMessage: string): string {
     return "Piran je venecijansko obalno mesto 🌊 s ozkimi uličicami in čudovitim Trgom Tartini. Idealno za romantični izlet. Za namestitev preverite lokalne hotele v naši bazi.";
   }
   if (msg.includes("itiner") || msg.includes("načrt")) {
-    return "Za AI načrtovanje potovanja obiščite sekcijo #načrtuj. AI bo upošteval vaš proračun, interese in sezono ter sestavil popoln načrt.";
+    return "Za AI načrtovanje potovanja obiščite strani Načrtuj. AI bo upošteval vaš proračun, interese in sezono ter sestavil popoln načrt.";
   }
   if (msg.includes("víno") || msg.includes("vino") || msg.includes("kulinar")) {
     return "Slovenska kulinarika je raznolika 🍷 — od primorskih vin do prekmurske gaze. Priporočam degustacije v Vipavski dolini ali Mariboru. Preverite našo tržnico za lokalne izdelke.";
@@ -219,5 +219,5 @@ function generateFallbackResponse(userMessage: string): string {
     return "Pozdravljen! 🇸🇮 Sem Slovenija AI. Kako vam lahko pomagam pri načrtovanju potovanja po Sloveniji?";
   }
 
-  return "Sem Slovenija AI 🇸🇮. Lahko vam pomagam z informacijami o destinacijah, lokalcih, izdelkih in izkušnjah po Sloveniji. Za popoln načrt potovanja obiščite naš AI načrtovalec v sekciji #načrtuj.";
+  return "Sem Slovenija AI 🇸🇮. Lahko vam pomagam z informacijami o destinacijah, lokalcih, izdelkih in izkušnjah po Sloveniji. Za popoln načrt potovanja obiščite naš AI načrtovalec na strani Načrtuj.";
 }

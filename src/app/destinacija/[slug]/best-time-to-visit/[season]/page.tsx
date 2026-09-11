@@ -235,7 +235,7 @@ export default async function BestTimeToVisitPage({
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button asChild size="lg">
-              <Link href="/#načrtuj">
+              <Link href="/nacrtuj">
                 <Sparkles className="size-4 mr-2" />
                 AI itinerer
               </Link>

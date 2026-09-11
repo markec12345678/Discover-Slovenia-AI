@@ -43,25 +43,28 @@ export async function Footer() {
             </p>
           </div>
 
-          {/* 2. Destinacije */}
+          {/* 2. Razišči (FW3: prave strani namesto hash anchorjev) */}
           <FooterColumn
-            title="Destinacije"
+            title="Razišči"
             links={[
-              { href: "#destinacije", label: "Vse destinacije" },
-              { href: "#zemljevid", label: "Zemljevid" },
-              { href: "#zbirke", label: "Zbirke" },
-              { href: "#lokali", label: "Lokalni ponudniki" },
+              { href: "/destinacije", label: "Vse destinacije" },
+              { href: "/dozivetja", label: "Doživetja" },
+              { href: "/zemljevid", label: "Zemljevid" },
+              { href: "/dogodki", label: "Dogodki" },
+              { href: "/lokali", label: "Lokalni ponudniki" },
+              { href: "/trznica", label: "Tržnica" },
+              { href: "/vodici", label: "Vodiči" },
+              { href: "/slovenia-pass", label: "Slovenia Pass" },
             ]}
           />
 
-          {/* 3. Podpora + račun */}
+          {/* 3. Načrtuj + račun */}
           <FooterColumn
-            title="Podpora"
+            title="Načrtuj"
             links={[
-              { href: "#načrtuj", label: "AI načrtovalec" },
-              { href: "#kviz", label: "Kviz za popotnike" },
-              { href: "#rezerviraj", label: "Rezervacije" },
-              { href: "#dogodki", label: "Dogodki" },
+              { href: "/nacrtuj", label: "AI načrtovalec" },
+              { href: "/nacrtuj#kviz", label: "Kviz za popotnike" },
+              { href: "/#rezerviraj", label: "Rezervacije" },
               // P1-2b: B2C računi popotnikov
               { href: "/moja-potovanja", label: "Moja potovanja" },
               { href: "/prijava", label: "Prijava" },
@@ -74,8 +77,8 @@ export async function Footer() {
             links={[
               { href: "/za-ponudnike", label: "Postanite partner" },
               { href: "/owner/prijava", label: "Prijava za partnerje" },
-              { href: "#pridruzi-se", label: "Paketi in cene" },
-              { href: "#pridruzi-se", label: "Prijavnica" },
+              { href: "/za-ponudnike#pridruzi-se", label: "Paketi in cene" },
+              { href: "/za-ponudnike#pridruzi-se", label: "Prijavnica" },
             ]}
           />
 

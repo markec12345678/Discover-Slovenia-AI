@@ -340,7 +340,7 @@ export function ListingModal({ listing, onClose }: ListingModalProps) {
               {/* Povezana destinacija */}
               {listing.destinationId ? (
                 <a
-                  href="#destinacije"
+                  href="/destinacije"
                   onClick={() => onClose()}
                   className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary"
                 >

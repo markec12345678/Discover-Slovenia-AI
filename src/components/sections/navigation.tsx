@@ -22,19 +22,35 @@ import { useCart } from "@/lib/cart-store";
 
 
 /**
- * Navigacijske povezave — deljene med desktop in mobilno Sheet varianto.
- * Anchor linki kažejo na sekcije znotraj enostranske aplikacije.
- * Label-e so lokalizirane preko next-intl `useTranslations("nav")`.
+ * FW3 (AI-first hierarhija): navigacija ima samo 4 glavne povezave
+ * (Destinacije, Doživetja, Zemljevid, Vodiči) + primarni CTA "Načrtuj z AI"
+ * (→ /načrtuj) + diskretni "Za ponudnike". Preostale funkcije (nivo 2:
+ * Dogodki, Lokali, Tržnica, Slovenia Pass, Moja potovanja) so dostopne v
+ * mobilnem meniju in prek sekcije "Razišči Slovenijo" na homepageu —
+ * progresivno razkrivanje namesto kognitivnega overloada.
  */
 function useNavLinks() {
   const t = useTranslations("nav");
   return [
-    { href: "#destinacije", label: t("destinations") },
-    { href: "#načrtuj", label: t("planner") },
-    { href: "#zemljevid", label: t("map") },
-    { href: "#lokali", label: t("listings") },
-    { href: "#dogodki", label: t("events") },
-    { href: "#pridruzi-se", label: t("join") },
+    { href: "/destinacije", label: t("destinations") },
+    { href: "/dozivetja", label: t("experiences") },
+    { href: "/zemljevid", label: t("map") },
+    { href: "/vodici", label: t("guides") },
+  ];
+}
+
+/**
+ * Sekundarne povezave (nivo 2 — "raziskovanje") — prikazane samo v
+ * mobilnem meniju pod glavnimi povezavami, da desktop ostane minimalen.
+ */
+function useSecondaryLinks() {
+  const t = useTranslations("nav");
+  return [
+    { href: "/dogodki", label: t("events") },
+    { href: "/lokali", label: t("listings") },
+    { href: "/trznica", label: t("marketplace") },
+    { href: "/slovenia-pass", label: t("pass") },
+    { href: "/moja-potovanja", label: t("trips") },
   ];
 }
 
@@ -43,10 +59,12 @@ function useNavLinks() {
  * - nad herojem: prozorna, bela pisava nad fotografijo
  * - po odscrollu: stekleno meglo ozadje + meja + senca
  * - tanek progress bar na dnu (branje dolžine strani)
- * P4-5: dodan "Za ponudnike" → /za-ponudnike (prej orphan stran —
- * javni lijak na registracijo ni obstajal).
+ *
+ * FW3: prop `solid` prisili stekleno obliko tudi na vrhu strani — za
+ * podstrani brez fotografskega heroja (/načrtuj, /destinacije, …), kjer
+ * bi prozorna bela navigacija bila nevidna na belem ozadju.
  */
-export function Navigation() {
+export function Navigation({ solid = false }: { solid?: boolean }) {
   const [mounted, setMounted] = React.useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -55,6 +73,10 @@ export function Navigation() {
   const [progress, setProgress] = React.useState(0);
   const t = useTranslations("nav");
   const navLinks = useNavLinks();
+  const secondaryLinks = useSecondaryLinks();
+
+  // "Steklo" = odscrollano ALI vedno (podstrani brez heroja)
+  const glass = scrolled || solid;
 
   // Cart store — items prikazujemo šele po mountu, da se izognemo
   // hydration mismatchu (Zustand persist prebere localStorage šele na klientu).
@@ -94,7 +116,7 @@ export function Navigation() {
     <header
       className={cn(
         "sticky top-0 z-[2000] w-full transition-all duration-300",
-        scrolled
+        glass
           ? "border-b border-border/70 bg-background/85 shadow-[0_4px_24px_-12px_rgba(0,0,0,0.18)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/70"
           : "border-b border-transparent bg-transparent"
       )}
@@ -102,10 +124,10 @@ export function Navigation() {
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         {/* Logotip */}
         <Link
-          href="#vrh"
+          href="/"
           className={cn(
             "group flex items-center gap-2 transition-colors",
-            scrolled
+            glass
               ? "text-foreground hover:text-primary"
               : "text-white drop-shadow-md hover:text-white"
           )}
@@ -114,7 +136,7 @@ export function Navigation() {
           <span
             className={cn(
               "flex size-9 items-center justify-center rounded-lg shadow-md transition-all group-hover:scale-105",
-              scrolled
+              glass
                 ? "bg-primary text-primary-foreground"
                 : "bg-white/15 text-white backdrop-blur-md ring-1 ring-white/30"
             )}
@@ -128,7 +150,7 @@ export function Navigation() {
             <span
               className={cn(
                 "text-[10px] font-medium uppercase tracking-[0.18em]",
-                scrolled ? "text-muted-foreground" : "text-white/70"
+                glass ? "text-muted-foreground" : "text-white/70"
               )}
             >
               AI potovanja
@@ -136,7 +158,7 @@ export function Navigation() {
           </span>
         </Link>
 
-        {/* Desktop navigacija */}
+        {/* Desktop navigacija — 4 glavne povezave (FW3 hierarhija) */}
         <nav
           className="hidden items-center gap-1 lg:flex"
           aria-label="Glavna navigacija"
@@ -147,7 +169,7 @@ export function Navigation() {
               href={link.href}
               className={cn(
                 "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                scrolled
+                glass
                   ? "text-foreground/80 hover:bg-accent hover:text-accent-foreground"
                   : "text-white/85 hover:bg-white/10 hover:text-white"
               )}
@@ -171,7 +193,7 @@ export function Navigation() {
             }
             className={cn(
               "relative",
-              scrolled ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
+              glass ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
             )}
           >
             <ShoppingCart className="size-5" aria-hidden="true" />
@@ -179,7 +201,7 @@ export function Navigation() {
               <span
                 className={cn(
                   "absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none",
-                  scrolled
+                  glass
                     ? "bg-primary text-primary-foreground"
                     : "bg-white text-primary shadow-sm"
                 )}
@@ -191,7 +213,7 @@ export function Navigation() {
           </Button>
 
           {/* Priljubljene (wishlist) — srček s števčno značko, odpre Sheet */}
-          <WishlistSheet scrolled={scrolled} />
+          <WishlistSheet scrolled={glass} />
 
           <Button
             variant="ghost"
@@ -199,7 +221,7 @@ export function Navigation() {
             onClick={() => setSearchOpen(true)}
             aria-label="AI iskanje"
             className={cn(
-              scrolled ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
+              glass ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
             )}
           >
             <Search className="size-5" aria-hidden="true" />
@@ -211,7 +233,7 @@ export function Navigation() {
             onClick={toggleTheme}
             aria-label="Preklopi temo"
             className={cn(
-              scrolled ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
+              glass ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
             )}
           >
             {mounted ? (
@@ -226,7 +248,7 @@ export function Navigation() {
             )}
           </Button>
 
-          <div className={cn(scrolled ? "" : "[&>button]:text-white [&>button:hover]:bg-white/10")}>
+          <div className={cn(glass ? "" : "[&>button]:text-white [&>button:hover]:bg-white/10")}>
             <LanguageSwitcher />
           </div>
 
@@ -237,7 +259,7 @@ export function Navigation() {
             size="sm"
             className={cn(
               "hidden gap-1.5 md:inline-flex",
-              scrolled
+              glass
                 ? "text-foreground/80 hover:text-primary"
                 : "text-white/85 hover:bg-white/10 hover:text-white"
             )}
@@ -248,17 +270,18 @@ export function Navigation() {
             </Link>
           </Button>
 
+          {/* FW3: primarni CTA — vedno viden, vodi na AI planner */}
           <Button
             asChild
             size="sm"
             className={cn(
               "hidden shadow-md transition-all hover:shadow-lg sm:inline-flex",
-              scrolled
+              glass
                 ? "bg-primary text-primary-foreground hover:bg-primary/90"
                 : "bg-white text-primary hover:bg-white/90"
             )}
           >
-            <Link href="#načrtuj">{t("cta")}</Link>
+            <Link href="/nacrtuj">{t("cta")}</Link>
           </Button>
 
           {/* Mobilni hamburger meni */}
@@ -269,7 +292,7 @@ export function Navigation() {
                 size="icon"
                 className={cn(
                   "lg:hidden",
-                  scrolled ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
+                  glass ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
                 )}
                 aria-label="Odpri meni"
               >
@@ -300,7 +323,23 @@ export function Navigation() {
                     </Link>
                   </SheetClose>
                 ))}
-                {/* P4-5: ponudniški lijak tudi v mobilnem meniju */}
+
+                {/* FW3: sekundarne povezave (nivo 2) pod ločilom */}
+                <div className="my-2 h-px bg-border" aria-hidden="true" />
+                <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Razišči več
+                </p>
+                {secondaryLinks.map((link) => (
+                  <SheetClose asChild key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="rounded-md px-3 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-accent hover:text-accent-foreground"
+                    >
+                      {link.label}
+                    </Link>
+                  </SheetClose>
+                ))}
+
                 <div className="my-2 h-px bg-border" aria-hidden="true" />
                 <SheetClose asChild>
                   <Link
@@ -324,7 +363,7 @@ export function Navigation() {
                     className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                     size="lg"
                   >
-                    <Link href="#načrtuj">{t("cta")}</Link>
+                    <Link href="/nacrtuj">{t("cta")}</Link>
                   </Button>
                 </SheetClose>
                 <p className="mt-3 text-center text-xs text-muted-foreground">
@@ -340,7 +379,7 @@ export function Navigation() {
       <div
         className={cn(
           "absolute inset-x-0 bottom-0 h-0.5 origin-left bg-gradient-to-r from-primary via-emerald-500 to-amber-400 transition-opacity duration-300",
-          scrolled ? "opacity-100" : "opacity-0"
+          glass ? "opacity-100" : "opacity-0"
         )}
         style={{ transform: `scaleX(${progress})` }}
         aria-hidden="true"

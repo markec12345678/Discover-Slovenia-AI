@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Star,
   Clock,
@@ -65,8 +66,16 @@ function regionLabel(value: string): string {
  * DestinationsSection — glavna mreža destinacij s 5 filtri in modalom.
  * "use client" zaradi filtrov (Select) in modala (state).
  * Podatki so uvoženi direktno iz slovenia-data.ts za hitrost (brez API klica).
+ *
+ * FW3: prop `featured` (homepage) prikaže samo 6 priljubljenih destinacij
+ * brez filtrov + CTA "Razišči vseh 22" → /destinacije — progresivno
+ * razkrivanje namesto vizualnega overloada (velik produkt ≠ velika homepage).
  */
-export function DestinationsSection() {
+export function DestinationsSection({
+  featured = false,
+}: {
+  featured?: boolean;
+}) {
   const [region, setRegion] = useState<string>(ALL_VALUE);
   const [interest, setInterest] = useState<string>(ALL_VALUE);
   const [type, setType] = useState<string>(ALL_VALUE);
@@ -102,6 +111,13 @@ export function DestinationsSection() {
     setRating(ALL_VALUE);
   };
 
+  // FW3: featured način — samo izbranih 6 (featured: true v slovenia-data)
+  const featuredList = useMemo(
+    () => DESTINATIONS.filter((d) => d.featured),
+    []
+  );
+  const list = featured ? featuredList : filtered;
+
   return (
     <section
       id="destinacije"
@@ -115,13 +131,18 @@ export function DestinationsSection() {
             id="destinacije-title"
             className="text-3xl font-bold tracking-tight sm:text-4xl"
           >
-            Raziščite destinacije
+            {featured ? "Priljubljene destinacije" : "Raziščite destinacije"}
           </h2>
           <p className="mt-3 text-base text-muted-foreground">
-            22 najlepših kotičkov Slovenije
+            {featured
+              ? "Šest kotičkov, ki jih obiskovalci iščejo največ"
+              : "22 najlepših kotičkov Slovenije"}
           </p>
         </div>
 
+        {/* FW3: filtri + števec samo v polnem načinu (/destinacije) */}
+        {!featured ? (
+          <>
         {/* Filter plošča */}
         <div className="mt-8 rounded-xl border border-border/60 bg-muted/20 p-4 sm:p-5">
           {/* Glava filtra */}
@@ -197,13 +218,15 @@ export function DestinationsSection() {
           <span className="font-semibold text-foreground">{filtered.length}</span>{" "}
           od {DESTINATIONS.length} destinacij
         </p>
+          </>
+        ) : null}
 
         {/* Grid mreža */}
-        {filtered.length === 0 ? (
+        {list.length === 0 ? (
           <EmptyState onClear={clearFilters} canClear={hasActiveFilters} />
         ) : (
           <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
-            {filtered.map((d) => (
+            {list.map((d) => (
               <DestinationCard
                 key={d.id}
                 destination={d}
@@ -212,6 +235,18 @@ export function DestinationsSection() {
             ))}
           </div>
         )}
+
+        {/* FW3: featured način — CTA na celoten katalog destinacij */}
+        {featured ? (
+          <div className="mt-8 text-center">
+            <Button asChild variant="outline" size="lg" className="gap-1.5">
+              <Link href="/destinacije">
+                Razišči vseh 22 destinacij
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {/* Modal */}

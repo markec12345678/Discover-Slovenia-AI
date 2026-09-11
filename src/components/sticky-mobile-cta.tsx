@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Sparkles, Building2 } from "lucide-react";
 
@@ -18,7 +19,8 @@ import { Sparkles, Building2 } from "lucide-react";
  */
 export function StickyMobileCTA() {
   const t = useTranslations("nav");
-  const [visible, setVisible] = useState(false);
+  const pathname = usePathname();
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     // Pojav po prečku heroja (~85 % višine zaslona), izgine na vrhu
@@ -29,7 +31,7 @@ export function StickyMobileCTA() {
       ticking = true;
       requestAnimationFrame(() => {
         const show = window.scrollY > threshold;
-        setVisible((prev) => (prev === show ? prev : show));
+        setScrolled((prev) => (prev === show ? prev : show));
         ticking = false;
       });
     };
@@ -37,6 +39,11 @@ export function StickyMobileCTA() {
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // FW3: na strani AI načrtovalca je CTA odveč — obrazec je že pred
+  // uporabnikom (CTA ne kaže nase samega). Izpeljano stanje namesto
+  // setState znotraj efekta (cascading render lint).
+  const visible = scrolled && pathname !== "/nacrtuj";
 
   useEffect(() => {
     document.body.dataset.stickyCta = visible ? "true" : "false";
@@ -57,7 +64,7 @@ export function StickyMobileCTA() {
       <div className="border-t border-border/80 bg-background/92 px-3 pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))] pt-2.5 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.25)] backdrop-blur-xl">
         <div className="flex items-center gap-2.5">
           <Link
-            href="#načrtuj"
+            href="/nacrtuj"
             className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-md transition-transform active:scale-[0.98]"
           >
             <Sparkles className="size-4" aria-hidden="true" />

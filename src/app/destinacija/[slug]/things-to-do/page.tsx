@@ -261,7 +261,7 @@ export default async function ThingsToDoPage({
             Naš AI vam lahko sestavi popoln itinerer za {dest.name} in okolico — prilagojen vašemu proračunu, interesom in sezoni.
           </p>
           <Button asChild size="lg">
-            <Link href="/#načrtuj">
+            <Link href="/nacrtuj">
               <Ticket className="size-4 mr-2" />
               AI načrtovalec potovanj
               <ArrowRight className="size-4 ml-2" />

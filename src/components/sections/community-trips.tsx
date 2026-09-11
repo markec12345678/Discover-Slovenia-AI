@@ -249,7 +249,7 @@ export async function CommunityTrips() {
         {/* CTA — viralni loop nazaj v načrtovalnik */}
         <div className="mt-10 flex justify-center">
           <Button asChild size="lg">
-            <Link href="/#načrtuj">
+            <Link href="/nacrtuj">
               Ustvari svoj načrt
               <ArrowRight className="size-4" aria-hidden="true" />
             </Link>

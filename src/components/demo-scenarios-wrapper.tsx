@@ -1,23 +1,19 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import { DemoScenarios } from "@/components/demo-scenarios";
 
 /**
- * DemoScenariosWrapper — client wrapper ki povezuje demo klik z heroQuery eventom.
- * Ko uporabnik klikne scenarij, dispatch-a heroQuery ki ga itinerary planner posluša.
+ * DemoScenariosWrapper — FW3: klik na demo scenarij prenese željo na
+ * /načrtuj prek sessionStorage (AI planner ima tam svojo celo stran).
  */
 export function DemoScenariosWrapper() {
-  const handleSelect = (query: string) => {
-    // Scroll do AI plannerja
-    const planner = document.getElementById("načrtuj");
-    if (planner) {
-      planner.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+  const router = useRouter();
 
-    // Dispatch heroQuery event (itinerary planner posluša)
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent("heroQuery", { detail: query }));
-    }, 500);
+  const handleSelect = (query: string) => {
+    sessionStorage.setItem("heroQuery", query);
+    router.push("/nacrtuj");
   };
 
   return <DemoScenarios onSelect={handleSelect} />;

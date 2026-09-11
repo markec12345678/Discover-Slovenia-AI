@@ -353,7 +353,7 @@ function RelatedDestinationLink({ id }: { id: string }) {
         asChild
         className="mt-3 bg-primary text-primary-foreground hover:bg-primary/90"
       >
-        <a href="#destinacije">
+        <a href="/destinacije">
           Razišči destinacijo
           <ArrowRight className="size-4" />
         </a>

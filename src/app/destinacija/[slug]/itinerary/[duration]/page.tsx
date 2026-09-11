@@ -175,7 +175,7 @@ export default async function ItineraryPage({
                   <h3 className="font-semibold mb-1">{tt.label}</h3>
                   <p className="text-sm text-muted-foreground mb-3">{tt.desc}</p>
                   <Button asChild size="sm" variant="outline">
-                    <Link href={`/#načrtuj`}>
+                    <Link href={`/načrtuj`}>
                       Generiraj itinerer <ArrowRight className="size-3.5 ml-1" />
                     </Link>
                   </Button>
@@ -205,7 +205,7 @@ export default async function ItineraryPage({
             Naš AI upošteva vaš proračun, interese in sezono za popoln načrt.
           </p>
           <Button asChild size="lg">
-            <Link href="/#načrtuj">
+            <Link href="/nacrtuj">
               <Sparkles className="size-4 mr-2" />
               Generiraj AI itinerer
             </Link>

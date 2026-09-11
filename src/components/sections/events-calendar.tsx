@@ -380,7 +380,7 @@ function EventCard({ event }: { event: EventItem }) {
                   variant="ghost"
                   className="text-primary hover:bg-primary/10 hover:text-primary"
                 >
-                  <a href="#destinacije">
+                  <a href="/destinacije">
                     Razišči destinacijo
                     <ArrowRight
                       className="size-3.5 transition-transform group-hover:translate-x-0.5"

@@ -1,19 +1,19 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import { PreGeneratedItineraries } from "@/components/pre-generated-itineraries";
 
 /**
- * PreGeneratedItinerariesWrapper — povezuje pre-generated klik z heroQuery eventom.
+ * PreGeneratedItinerariesWrapper — FW3: klik na priljubljeno AI pot
+ * prenese željo na /načrtuj prek sessionStorage (planner živi tam).
  */
 export function PreGeneratedItinerariesWrapper() {
+  const router = useRouter();
+
   const handleSelect = (query: string) => {
-    const planner = document.getElementById("načrtuj");
-    if (planner) {
-      planner.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent("heroQuery", { detail: query }));
-    }, 500);
+    sessionStorage.setItem("heroQuery", query);
+    router.push("/nacrtuj");
   };
 
   return <PreGeneratedItineraries onSelect={handleSelect} />;

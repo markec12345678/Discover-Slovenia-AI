@@ -94,16 +94,20 @@ function makeUrl(
 export function getAllSitemapUrls(): SitemapUrl[] {
   const urls: SitemapUrl[] = [];
 
-  // === Statične strani (14) ===
+  // === Statične strani ===
+  // FW3: hash sekcije so postale prave strani (AI-first hierarhija) —
+  // prave URL-je Google indexira bolje kot /#anchorje.
   urls.push(makeUrl("/", 1.0, "Domov", "daily"));
-  urls.push(makeUrl("/#destinacije", 0.9, "Sekcija", "weekly"));
-  urls.push(makeUrl("/#načrtuj", 0.9, "Sekcija", "weekly"));
-  urls.push(makeUrl("/#trznica", 0.8, "Sekcija", "daily"));
-  urls.push(makeUrl("/#zemljevid", 0.7, "Sekcija", "weekly"));
-  urls.push(makeUrl("/#dogodki", 0.7, "Sekcija", "weekly"));
-  urls.push(makeUrl("/#blog", 0.6, "Sekcija", "weekly"));
-  urls.push(makeUrl("/#pridruzi-se", 0.6, "Sekcija", "monthly"));
-  urls.push(makeUrl("/#partnerji", 0.6, "Sekcija", "monthly"));
+  urls.push(makeUrl("/nacrtuj", 0.9, "AI načrtovalec", "weekly"));
+  urls.push(makeUrl("/destinacije", 0.9, "Destinacije", "weekly"));
+  urls.push(makeUrl("/dozivetja", 0.8, "Doživetja", "weekly"));
+  urls.push(makeUrl("/trznica", 0.8, "Tržnica", "daily"));
+  urls.push(makeUrl("/lokali", 0.7, "Lokalni ponudniki", "weekly"));
+  urls.push(makeUrl("/zemljevid", 0.7, "Zemljevid", "weekly"));
+  urls.push(makeUrl("/dogodki", 0.7, "Dogodki", "weekly"));
+  urls.push(makeUrl("/vodici", 0.6, "Vodiči", "weekly"));
+  urls.push(makeUrl("/slovenia-pass", 0.6, "Slovenia Pass", "monthly"));
+  urls.push(makeUrl("/za-ponudnike", 0.6, "Za ponudnike", "monthly"));
   // E-E-A-T strani (Google trust)
   urls.push(makeUrl("/o-strani", 0.5, "O strani", "monthly"));
   urls.push(makeUrl("/kontakt", 0.5, "Kontakt", "monthly"));

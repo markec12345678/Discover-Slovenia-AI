@@ -196,7 +196,7 @@ export function websiteSchema() {
     },
     potentialAction: {
       "@type": "SearchAction",
-      target: `${BASE_URL}/#destinacije?q={search_term_string}`,
+      target: `${BASE_URL}/destinacije?q={search_term_string}`,
       "query-input": "required name=search_term_string",
     },
     inLanguage: ["sl-SI", "en-US", "de-DE", "it-IT"],

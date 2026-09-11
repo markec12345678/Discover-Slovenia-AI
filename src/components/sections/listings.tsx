@@ -256,7 +256,7 @@ export function ListingsSection() {
             Želite biti tukaj? Pridruži se in izpostavite svoj lokal.
           </p>
           <a
-            href="#pridruzi-se"
+            href="/za-ponudnike#pridruzi-se"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
           >
             Pridruži se

@@ -211,7 +211,7 @@ export function Chatbot() {
         {
           role: "assistant",
           content:
-            "Oprostite, trenutno imam težave z povezavo. Poskusite znova ali pa obiščite AI načrtovalec v sekciji #načrtuj.",
+            "Oprostite, trenutno imam težave z povezavo. Poskusite znova ali pa obiščite AI načrtovalec na strani Načrtuj.",
         },
       ]);
     } finally {

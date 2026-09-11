@@ -54,6 +54,7 @@ import { ExperienceModal } from "@/components/sections/experience-modal";
 import { WishlistHeartButton } from "@/components/wishlist-sheet";
 import {
   WISHLIST_OPEN_EVENT,
+  WISHLIST_PENDING_KEY,
   type WishlistOpenDetail,
 } from "@/lib/wishlist-storage";
 
@@ -111,9 +112,14 @@ type Tab = "products" | "experiences";
  * MarketplaceSection — tržnica slovenskih izdelkov in izkušenj.
  * Tabs med izdelki in izkušnjami, filtri kategorije in sortiranja.
  * Kartice odprejo detail modal (ProductModal / ExperienceModal).
+ * FW3: prop `defaultTab` (/dozivetja) pripne zavihek izkušenj.
  */
-export function MarketplaceSection() {
-  const [tab, setTab] = useState<Tab>("products");
+export function MarketplaceSection({
+  defaultTab = "products",
+}: {
+  defaultTab?: Tab;
+}) {
+  const [tab, setTab] = useState<Tab>(defaultTab);
 
   // Filtri izdelki
   const [productCategory, setProductCategory] = useState<string>(ALL_VALUE);
@@ -293,6 +299,24 @@ export function MarketplaceSection() {
     };
     window.addEventListener(WISHLIST_OPEN_EVENT, handler);
     return () => window.removeEventListener(WISHLIST_OPEN_EVENT, handler);
+  }, [openWishlistItem]);
+
+  // FW3: prevzemi namen iz wishlist Sheet-a, če je uporabnik prišel z druge
+  // strani (sessionStorage prenos — enak vzorec kot heroQuery → /načrtuj).
+  // Ključ se po prevzemu pobriše, zato so ponovni zagoni efekta varni.
+  useEffect(() => {
+    try {
+      const pending = sessionStorage.getItem(WISHLIST_PENDING_KEY);
+      if (pending) {
+        sessionStorage.removeItem(WISHLIST_PENDING_KEY);
+        const detail = JSON.parse(pending) as WishlistOpenDetail;
+        if (detail && typeof detail.id === "string") {
+          void openWishlistItem(detail);
+        }
+      }
+    } catch {
+      // Pokvarjen zapis — ignoriraj
+    }
   }, [openWishlistItem]);
 
   // Počisti filtre glede na aktivni tab
@@ -521,7 +545,7 @@ export function MarketplaceSection() {
             Želite prodajati svoje izdelke ali izkušnje? Pridruži se tržnici.
           </p>
           <a
-            href="#pridruzi-se"
+            href="/za-ponudnike#pridruzi-se"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
           >
             Pridruži se
