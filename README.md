@@ -18,7 +18,7 @@
 >
 > - **Odstopanji od zamrznitve (odobrena, 2026-09-11):** **FW1** `08e8369` — kritični popravki auditov R2/R3 (varnost = dovoljena kategorija pod freeze) in **FW2** `629da01` — 8 UX quick wins iz primerjalne analize [Mindtrip.ai](https://mindtrip.ai/) (place cards v AI konzultacijah, persistenca chata, wishlist, QR deljenje poti, lightbox, sponsorship UI, popravek mrtvega push-test gumba, moja naročila/rezervacije). Oba valova: tsc 0, eslint 0, E2E vrata + regresija.
 > - **Koda:** `main` = `629da01` (FW2) + dokumentacijski commit (README/CHANGELOG — brez logike). CI ✅ (Build + Lint/TypeCheck). Kateri commit je v produkciji, preveriš s smoke skripto (GitHub Vercel status na trenutnem `main` HEAD, točka 8).
-> - **Produkcija:** stanje preveri dinamično — `bash scripts/verify/production-smoke.sh` (P8/FW2 markerji, anti-enumeracija, cron fail-closed ×6, Vercel commit status). Zadnji znani rate-limit reset: ~2026-09-12 05:33 UTC; če je deploy zavrnjen: [runbook spodaj](#deploy-po-rate-limit-okni-p9) (Redeploy iz dashboarda — brez praznega commita).
+> - **Produkcija:** stanje preveri dinamično — `bash scripts/verify/production-smoke.sh` (P8/FW2 markerji, anti-enumeracija, cron fail-closed ×6, Vercel commit status). ⚠️ Deploy `8f419eb` (FW2) je bil 2026-09-11 zavrnjen — kvota `api-deployments-free-per-day` 100/100; reset po API **2026-09-12 17:54 UTC (19:54 CEST)**, rolling okno se lahko sprosti prej; glej [runbook spodaj](#deploy-po-rate-limit-okni-p9).
 > - **Po deployu obvezno:** [produkcjski smoke](#produkcjski-smoke-p9--po-deployu) — `bash scripts/verify/production-smoke.sh` (varni GET preverki + markerji) + ročni brskalniški tokovi + funkcionalni pregled mobilnih tokov na 390 px.
 > - **Zavedno odloženo (pred javnim launchem, NI pilot blocker):** rate limiting je per-instance → pred javnim prometom centralizirani limiter (npr. Upstash); `requireOwnership()` admin bypass dokumentiran v kodi (0 klicalcev — past za prihodnji razvoj, ne ranljivost); realni Stripe Checkout za rezervacije šele po poslovni odločitvi po pilotu (zdaj namerno fail-closed 501 v produkciji).
 
@@ -342,12 +342,15 @@ Vsak klic je Bearer zaščiten s `CRON_SECRET` (brez njega 401 — fail-closed).
 
 #### Deploy po rate-limit okni (P9)
 
-Hobby račun ima omejeno število buildov na 24 h. Ko je deployment zavrnjen (»Deployment rate limited — retry in 24 hours«):
+Hobby račun ima dnevno kvoto deploymentov — `api-deployments-free-per-day` (100 na rolling 24 h). Ko je kvota porabljena, Vercel zavrne ustvarjanje deploymenta: commit status na GitHubu → *failure* (URL vsebuje `upgradeToPro=build-rate-limit`), prek API `payment_required`. Zavrnjen poskus **ne** ustvari deployment objekta (nič ne stane, varno za ponovne poskuse).
 
-1. Počakaj konec okna (zadnji znani reset: **2026-09-12 05:33 UTC**).
-2. **Pot A (priporočeno, brez praznega commita):** Vercel dashboard → projekt → *Deployments* → zadnji rate-limited deployment → meni ⋯ → **Redeploy** (Production).
-3. **Pot B:** push kakršnega koli commita na `main` (sproži nov deployment).
-4. Preveri uspeh: GitHub commit status (kontekst »Vercel« = ✓ success na zadnjem SHA) **ali** `bash scripts/verify/production-smoke.sh` (točka 8 skripte).
+**Dogodek 2026-09-11 17:50 UTC (push FW2 `8f419eb`):** kvota 100/100, 0 ostaja. API navaja reset **2026-09-12 17:54:28 UTC (19:54:28 CEST)**; ker je okno rolling in je bil zadnji visible deployment ustvarjen 2026-09-10 20:41 UTC, se kvota lahko sprosti tudi prej — preverjaj z brezplačnim poskusom (točka 1).
+
+1. Počakaj konec okna; preverjaj z zavrnjenim poskusom: `POST /v13/deployments` (zavrnitev = brezplačna, nič ne ustvari; odgovor vsebuje točen `limit.reset`).
+2. **Pot A (brez praznega commita):** API deployment iz Git vira: `POST https://api.vercel.com/v13/deployments` s telesom `{"name":"i-feel-slovenia","gitSource":{"type":"github","repoId":<repoId>,"ref":"main"},"target":"production"}` (enakovredno dashboard »Deploy«; zgradi trenutni `main` HEAD).
+3. **Pot B:** push kakršnega koli commita na `main` (Git integracija samodejno sproži nov deployment).
+4. ⚠️ **NE** izberi »Redeploy« na starem (npr. `d2e371c`) deploymentu — namestil bi STARO kodo; rate-limited zavrnitev namreč ne pusti deployment objekta za redeploy.
+5. Preveri uspeh: GitHub commit status (kontekst »Vercel« = ✓ success na zadnjem SHA) **ali** `bash scripts/verify/production-smoke.sh` (točka 8 skripte).
 
 #### Produkcjski smoke (P9 — po deployu)
 
