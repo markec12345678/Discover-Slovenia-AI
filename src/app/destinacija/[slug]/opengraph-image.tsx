@@ -39,7 +39,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
               </p>
               <div style={{ display: "flex", gap: "24px", marginTop: "12px" }}>
                 <span style={{ fontSize: 28, background: "rgba(255,255,255,0.2)", padding: "8px 20px", borderRadius: 12 }}>
-                  ⭐ {dest.rating}
+                  ⭐ {dest.rating} (uredniška)
                 </span>
                 <span style={{ fontSize: 28, background: "rgba(255,255,255,0.2)", padding: "8px 20px", borderRadius: 12 }}>
                   📍 {dest.region}

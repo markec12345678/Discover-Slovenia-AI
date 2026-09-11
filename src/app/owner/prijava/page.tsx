@@ -69,8 +69,8 @@ export default function OwnerPrijavaPage() {
             Portal za lastnike lokalov
           </h1>
           <p className="mt-2 text-sm text-primary-foreground/80 max-w-xl mx-auto">
-            Upravljajte svoje lokale, spremljajte statistiko in povečajte
-            vidnost med tisoči obiskovalcev.
+            Upravljajte svoje lokale, spremljajte statistiko in bodite
+            vidni obiskovalcem, ki načrtujejo potovanje z AI.
           </p>
         </div>
       </section>

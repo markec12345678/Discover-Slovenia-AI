@@ -127,7 +127,7 @@ export default async function ItineraryPage({
                 <Sparkles className="size-8 text-primary" />
                 <div>
                   <div className="text-2xl font-bold">{dest.rating}★</div>
-                  <div className="text-sm text-muted-foreground">ocena destinacije</div>
+                  <div className="text-sm text-muted-foreground">uredniška ocena destinacije</div>
                 </div>
               </CardContent>
             </Card>

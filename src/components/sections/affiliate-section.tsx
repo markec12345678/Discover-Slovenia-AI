@@ -85,8 +85,8 @@ export function AffiliateSection() {
             Vse za vaše potovanje na enem mestu
           </h2>
           <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-            Povežemo vas z najboljšimi partnerji. Rezervirate direktno pri njih —
-            brez posrednikov, brez dodatnih stroškov.
+            Povežemo vas z izbranimi partnerskimi storitvami. Rezervirate
+            direktno pri njih — brez posrednikov, brez dodatnih stroškov.
           </p>
         </div>
 

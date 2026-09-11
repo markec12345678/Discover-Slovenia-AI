@@ -91,11 +91,11 @@ export function calculateProfileCompletion(listing: Partial<Listing>): ProfileCo
     },
     {
       key: "images",
-      label: "Fotografije (min. 3)",
+      label: "Fotografije (min. 1)",
       filled: (() => {
         try {
           const imgs = JSON.parse(listing.images || "[]") as string[];
-          return imgs.length >= 3;
+          return imgs.length >= 1;
         } catch {
           return false;
         }

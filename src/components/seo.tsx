@@ -81,13 +81,9 @@ export function destinationSchema(dest: Destination) {
       addressCountry: "SI",
       addressRegion: dest.region,
     },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: dest.rating,
-      reviewCount: Math.floor(dest.rating * 50),
-      bestRating: 5,
-      worstRating: 1,
-    },
+    // OPOMBA: aggregateRating NAMENOMA izpuščen — destinacije nimajo
+    // pravih uporabniških recenzij (izmišljeni reviewCount = napihnjen
+    // social proof + tveganje za Google rich-results kazni).
     touristType: dest.bestFor.map((b) => b.charAt(0).toUpperCase() + b.slice(1)),
     availableLanguage: ["Slovenian", "English", "German", "Italian"],
     containsPlace: DESTINATIONS
@@ -136,12 +132,15 @@ export function localBusinessSchema(listing: {
     telephone: listing.phone || undefined,
     url: listing.website || undefined,
     priceRange: listing.priceRange,
-    aggregateRating: listing.rating > 0 ? {
-      "@type": "AggregateRating",
-      ratingValue: listing.rating,
-      reviewCount: listing.reviewCount,
-      bestRating: 5,
-    } : undefined,
+    aggregateRating:
+      listing.rating > 0 && listing.reviewCount > 0
+        ? {
+            "@type": "AggregateRating",
+            ratingValue: listing.rating,
+            reviewCount: listing.reviewCount,
+            bestRating: 5,
+          }
+        : undefined,
   };
 }
 

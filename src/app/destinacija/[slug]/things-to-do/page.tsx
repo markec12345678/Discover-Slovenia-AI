@@ -146,7 +146,7 @@ export default async function ThingsToDoPage({
           </h1>
           <p className="mt-3 max-w-2xl text-white/90 text-lg">{dest.tagline}</p>
           <p className="mt-2 text-white/70 text-sm">
-            {dest.highlights.length} znamenitosti · {totalActivities} aktivnosti · Ocena {dest.rating}★
+            {dest.highlights.length} znamenitosti · {totalActivities} aktivnosti · Uredniška ocena {dest.rating}★
           </p>
         </div>
       </div>

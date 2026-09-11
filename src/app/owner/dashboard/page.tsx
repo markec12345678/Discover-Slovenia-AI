@@ -1023,14 +1023,19 @@ const BOOKING_STATUS_BADGES: Record<string, string> = {
 };
 
 function formatBookingDate(dateStr: string): string {
-  return new Intl.DateTimeFormat("sl-SI", {
+  // P4-9: gost izbere samo datum (input type="date") → JS ga serializira
+  // kot UTC polnoč. Ure v tem primeru NE prikazujemo (prej je kazalo zavajujoče
+  // "ob 00:00"/"ob 02:00" odvisno od časovnega pasu) — čas ostane po dogovoru.
+  const hasTime = !/T00:00(?::00)?/i.test(dateStr);
+  const date = new Date(dateStr);
+  const formatted = new Intl.DateTimeFormat("sl-SI", {
     weekday: "short",
     day: "numeric",
     month: "long",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(dateStr));
+    ...(hasTime ? { hour: "2-digit", minute: "2-digit" } : {}),
+  }).format(date);
+  return hasTime ? formatted : `${formatted} — čas po dogovoru`;
 }
 
 function BookingsTab() {

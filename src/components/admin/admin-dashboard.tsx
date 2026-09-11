@@ -2463,7 +2463,7 @@ interface BetaStatus {
   listingCount: number;
   remainingToMonetization: number;
   message: string;
-  betaEndDate: string;
+  betaEndDate: string | null;
 }
 
 function useBetaStatus() {
@@ -2581,10 +2581,10 @@ function BetaStatusWidget() {
           <div className="hidden lg:flex flex-col items-center gap-1 shrink-0 rounded-xl bg-amber-200/40 dark:bg-amber-900/30 px-4 py-3 text-center">
             <Gift className="size-6 text-amber-700 dark:text-amber-300" aria-hidden="true" />
             <span className="text-xs font-semibold text-amber-900 dark:text-amber-200">
-              Beta konča
+              Monetizacija pri
             </span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
-              {status.betaEndDate}
+              {BETA_INFO.threshold} lokalih
             </span>
           </div>
         </div>

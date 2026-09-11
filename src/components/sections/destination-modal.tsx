@@ -470,16 +470,18 @@ function NearbyListingCard({
         <h4 className="line-clamp-1 text-sm font-semibold leading-tight">
           {listing.name}
         </h4>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Star
-            className="size-3 fill-amber-400 text-amber-400"
-            aria-hidden="true"
-          />
-          <span className="font-medium tabular-nums text-foreground">
-            {listing.rating.toFixed(1)}
-          </span>
-          <span>({listing.reviewCount})</span>
-        </div>
+        {listing.reviewCount > 0 && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Star
+              className="size-3 fill-amber-400 text-amber-400"
+              aria-hidden="true"
+            />
+            <span className="font-medium tabular-nums text-foreground">
+              {listing.rating.toFixed(1)}
+            </span>
+            <span>({listing.reviewCount})</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

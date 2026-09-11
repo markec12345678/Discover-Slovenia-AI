@@ -184,8 +184,8 @@ export function DestinationsSection() {
             <FilterSelect
               value={rating}
               onChange={setRating}
-              placeholder="Ocena (vse)"
-              ariaLabel="Filtriraj po oceni"
+              placeholder="Uredniška ocena (vse)"
+              ariaLabel="Filtriraj po uredniški oceni"
               options={RATING_OPTIONS.map((r) => ({ value: r.value, label: r.label }))}
             />
           </div>
@@ -311,7 +311,7 @@ function DestinationCard({
           </p>
         </div>
 
-        {/* Rating */}
+        {/* Rating — uredniška ocena (P4-9: jasna oznaka, ne uporabniška) */}
         <div className="flex items-center gap-1.5">
           <Star
             className="size-4 fill-amber-400 text-amber-400"
@@ -320,7 +320,7 @@ function DestinationCard({
           <span className="text-sm font-medium tabular-nums">
             {destination.rating.toFixed(1)}
           </span>
-          <span className="text-xs text-muted-foreground">/ 5</span>
+          <span className="text-xs text-muted-foreground">/ 5 · uredniška ocena</span>
         </div>
 
         {/* Budget + duration */}

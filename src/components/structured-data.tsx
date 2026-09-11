@@ -48,13 +48,9 @@ export function DestinationJsonLd({ dest }: { dest: Destination }) {
       latitude: dest.coords.lat,
       longitude: dest.coords.lng,
     },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: dest.rating,
-      reviewCount: 100,
-      bestRating: 5,
-      worstRating: 1,
-    },
+    // OPOMBA: aggregateRating NAMENOMA izpuščen — destinacije nimajo
+    // pravih uporabniških recenzij, izmišljene vrednosti v JSON-LD pa so
+    // napihnjeni social proof (tveganje za Google rich-results kazni).
     address: {
       "@type": "PostalAddress",
       addressCountry: "SI",
@@ -92,11 +88,11 @@ export function ListingJsonLd({ listing }: { listing: Listing }) {
     jsonLd.sameAs = listing.website;
   }
 
-  if (listing.rating > 0) {
+  if (listing.rating > 0 && listing.reviewCount > 0) {
     jsonLd.aggregateRating = {
       "@type": "AggregateRating",
       ratingValue: listing.rating,
-      reviewCount: listing.reviewCount || 1,
+      reviewCount: listing.reviewCount,
       bestRating: 5,
       worstRating: 1,
     };
@@ -238,11 +234,6 @@ export function OrganizationJsonLd() {
       "@type": "Country",
       name: "Slovenija",
     },
-    sameAs: [
-      "https://www.instagram.com/discoverslovenia",
-      "https://www.facebook.com/discoverslovenia",
-      "https://www.youtube.com/discoverslovenia",
-    ],
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "customer support",

@@ -9,7 +9,7 @@ interface BetaStatus {
   listingCount: number;
   remainingToMonetization: number;
   message: string;
-  betaEndDate: string;
+  betaEndDate: string | null;
 }
 
 /**

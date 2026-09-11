@@ -1,6 +1,5 @@
 import { Navigation } from "@/components/sections/navigation";
 import { Hero } from "@/components/sections/hero";
-import { VlmVerifiedBadge } from "@/components/vlm-verified-badge";
 import { StatsSection } from "@/components/sections/stats";
 import { CollectionsSection } from "@/components/sections/collections";
 import { DestinationsSection } from "@/components/sections/destinations";
@@ -44,9 +43,6 @@ export default function Home() {
         <DemoScenariosWrapper />
         <TravelStyleQuiz />
         <PreGeneratedItinerariesWrapper />
-        <div className="flex justify-center py-4 bg-muted/30">
-          <VlmVerifiedBadge />
-        </div>
         <StatsSection />
         <CollectionsSection />
         <Reveal>

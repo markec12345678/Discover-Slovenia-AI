@@ -150,8 +150,9 @@ export function PitchDeckSection() {
             Zakaj se pridružiti <span className="text-primary">Discover Slovenia AI</span>?
           </h2>
           <p className="mt-5 text-lg text-muted-foreground">
-            Edina platforma ki AI-poganja priporočila lokalov potnikom v Sloveniji.
-            Ne plačujete za oglase — plačate za rezultate.
+            Med prvimi platformami, ki AI-poganja priporočila lokalov
+            potnikom v Sloveniji. Ne plačujete za oglase — plačate za
+            rezultate.
           </p>
         </div>
 
@@ -306,9 +307,6 @@ export function PitchDeckSection() {
                     <ArrowRight className="ml-1 size-4" aria-hidden="true" />
                   </a>
                 </Button>
-                <Button asChild size="lg" variant="outline">
-                  <a href="/admin">Admin prijava</a>
-                </Button>
               </div>
 
               <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -325,10 +323,6 @@ export function PitchDeckSection() {
                   24-urni odziv
                 </span>
               </div>
-
-              <p className="text-xs text-muted-foreground">
-                Demo račun za lastnike: /owner/prijava · Admin: /admin
-              </p>
             </div>
           </CardContent>
         </Card>

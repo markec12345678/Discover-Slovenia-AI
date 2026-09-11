@@ -539,7 +539,7 @@ export default async function GuidePage({
                 className="size-3 mr-1 fill-amber-400 text-amber-400"
                 aria-hidden="true"
               />
-              {dest.rating}★
+              Uredniška ocena {dest.rating}★
             </Badge>
           </div>
         </div>

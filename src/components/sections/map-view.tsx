@@ -162,6 +162,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             <span style="display: inline-flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 600; color: #d97706;">
               <span>★</span> ${dest.rating.toFixed(1)}
             </span>
+            <span style="font-size: 12px; color: #6b7280;">uredniška</span>
             <span style="font-size: 12px; color: #6b7280;">·</span>
             <span style="font-size: 12px; color: #6b7280;">${dest.duration}</span>
             <span style="font-size: 12px; color: #6b7280;">·</span>

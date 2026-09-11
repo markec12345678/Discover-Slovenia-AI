@@ -199,8 +199,10 @@ function validateStep(step: number, form: WizardForm): string | null {
         return "Dolgi opis mora imeti vsaj 100 znakov.";
       return null;
     case 3:
-      if (form.images.length < 3)
-        return "Dodajte vsaj 3 fotografije (URL-ji slik).";
+      // P4-9: min 1 fotografija (prej 3 — telefonske fotke telefonsko težko
+      // dodati kot URL; priporočilo za več ostaja v pomoči).
+      if (form.images.length < 1)
+        return "Dodajte vsaj 1 fotografijo (URL slike).";
       return null;
     default:
       return null;
@@ -835,12 +837,12 @@ export function OnboardingWizard({
               <p
                 className={cn(
                   "text-xs",
-                  form.images.length >= 3
+                  form.images.length >= 1
                     ? "text-primary"
                     : "text-muted-foreground"
                 )}
               >
-                {form.images.length} od 3 potrebnih fotografij
+                {form.images.length} od 1 potrebne fotografije
               </p>
             </div>
             {form.images.length > 0 && (
@@ -874,7 +876,7 @@ export function OnboardingWizard({
             )}
             <p className="text-xs text-muted-foreground">
               Kvalitetne fotografije povečajo zanimanje obiskovalcev — prva
-              fotografija bo naslovna.
+              bo naslovna. Priporočamo vsaj 3 (lahko dodate tudi kasneje).
             </p>
           </div>
         )}

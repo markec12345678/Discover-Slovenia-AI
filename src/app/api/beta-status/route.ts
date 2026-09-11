@@ -15,7 +15,7 @@ export async function GET() {
       listingCount: 0,
       remainingToMonetization: 30,
       message: "Beta obdobje — vse brezplačno.",
-      betaEndDate: "2025-12-31",
+      betaEndDate: null,
     });
   }
 }

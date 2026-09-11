@@ -342,16 +342,20 @@ export function ExperienceModal({
             {/* Rating + cena */}
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div className="flex items-center gap-1.5">
-                <Star
-                  className="size-4 fill-amber-400 text-amber-400"
-                  aria-hidden="true"
-                />
-                <span className="text-sm font-semibold tabular-nums">
-                  {experience.rating.toFixed(1)}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  ({experience.reviewCount} mnenj)
-                </span>
+                {experience.reviewCount > 0 && (
+                  <>
+                    <Star
+                      className="size-4 fill-amber-400 text-amber-400"
+                      aria-hidden="true"
+                    />
+                    <span className="text-sm font-semibold tabular-nums">
+                      {experience.rating.toFixed(1)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      ({experience.reviewCount} mnenj)
+                    </span>
+                  </>
+                )}
               </div>
 
               <div className="text-right">
@@ -1010,7 +1014,13 @@ function BookingSection({
               >
                 {errors.date}
               </p>
-            ) : null}
+            ) : (
+              // P4-9: iskrena mikrokopija — čas rezervacije se dogovori
+              // neposredno z izvajalcem (obrazec zajema samo datum).
+              <p className="mt-1 text-xs text-muted-foreground">
+                Točen čas obiska dogovorite z izvajalcem po potrditvi.
+              </p>
+            )}
           </div>
 
           <div>

@@ -6,14 +6,16 @@ import { db } from "@/lib/db";
 // To rešuje "cold start problem" — noben lokal ne plača za prazno platformo.
 
 export const BETA_THRESHOLD = 30; // število lokalov za vklop monetizacije
-export const BETA_END_DATE = "2025-12-31"; // backup date če threshold ni dosežen
+// P4-9: fiksni končni datum ODSTRANJEN — beta je threshold-based
+// (konča se pri 30 aktivnih lokalih), datum "2025-12-31" je bil zastarel.
+export const BETA_END_DATE: string | null = null;
 
 export interface BetaStatus {
   isActive: boolean; // true = v beta načinu (vse brezplačno)
   listingCount: number;
   remainingToMonetization: number;
   message: string;
-  betaEndDate: string;
+  betaEndDate: string | null;
 }
 
 /**

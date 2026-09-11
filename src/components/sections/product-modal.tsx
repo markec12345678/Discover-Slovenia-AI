@@ -259,16 +259,20 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
             {/* Rating + cena */}
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div className="flex items-center gap-1.5">
-                <Star
-                  className="size-4 fill-amber-400 text-amber-400"
-                  aria-hidden="true"
-                />
-                <span className="text-sm font-semibold tabular-nums">
-                  {product.rating.toFixed(1)}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  ({product.reviewCount} mnenj)
-                </span>
+                {product.reviewCount > 0 && (
+                  <>
+                    <Star
+                      className="size-4 fill-amber-400 text-amber-400"
+                      aria-hidden="true"
+                    />
+                    <span className="text-sm font-semibold tabular-nums">
+                      {product.rating.toFixed(1)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      ({product.reviewCount} mnenj)
+                    </span>
+                  </>
+                )}
               </div>
 
               <div className="text-right">

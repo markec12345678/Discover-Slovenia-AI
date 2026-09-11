@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mountain, Facebook, Instagram, Twitter, ShieldCheck } from "lucide-react";
+import { Mountain } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 /**
@@ -40,23 +40,6 @@ export async function Footer() {
               AI-poganjan načrtovalec potovanj za Slovenijo. Odkrijte 22
               najlepših destinacij — od Blejskega jezera do jadranske obale.
             </p>
-            <div className="flex items-center gap-2" aria-label="Družbena omrežja">
-              <SocialLink
-                href="#"
-                label="Facebook"
-                icon={<Facebook className="size-4" aria-hidden="true" />}
-              />
-              <SocialLink
-                href="#"
-                label="Instagram"
-                icon={<Instagram className="size-4" aria-hidden="true" />}
-              />
-              <SocialLink
-                href="#"
-                label="Twitter"
-                icon={<Twitter className="size-4" aria-hidden="true" />}
-              />
-            </div>
           </div>
 
           {/* 2. Destinacije */}
@@ -107,17 +90,13 @@ export async function Footer() {
           />
         </div>
 
-        {/* Spodnja vrstica: gradient ločnik + copyright + VLM badge + disclaimer */}
+        {/* Spodnja vrstica: gradient ločnik + copyright + disclaimer */}
         <div className="gradient-hairline mt-10" aria-hidden="true" />
         <div className="mt-6 flex flex-col gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-2">
             <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <span>© 2026 Discover Slovenia AI. {t("tagline")}</span>
             </p>
-            <div className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
-              <ShieldCheck className="size-3" />
-              <span>VLM Verified — vse slike so avtentično preverjene, brez generičnih stock fotografij</span>
-            </div>
           </div>
           <p className="max-w-md text-xs text-muted-foreground/80 sm:text-right">
             {t("affiliateDisclaimer")}
@@ -158,29 +137,6 @@ function FooterColumn({
         ))}
       </ul>
     </nav>
-  );
-}
-
-/**
- * Ikona družbenega omrežja — okrogel gumb.
- */
-function SocialLink({
-  href,
-  label,
-  icon,
-}: {
-  href: string;
-  label: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      aria-label={label}
-      className="flex size-9 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition-colors hover:bg-primary hover:text-primary-foreground hover:border-primary"
-    >
-      {icon}
-    </Link>
   );
 }
 

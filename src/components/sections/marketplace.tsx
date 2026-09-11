@@ -602,19 +602,21 @@ function ProductCard({
           </p>
         </div>
 
-        {/* Rating */}
-        <div className="flex items-center gap-1.5">
-          <Star
-            className="size-4 fill-amber-400 text-amber-400"
-            aria-hidden="true"
-          />
-          <span className="text-sm font-medium tabular-nums">
-            {product.rating.toFixed(1)}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            ({product.reviewCount})
-          </span>
-        </div>
+        {/* Rating — samo ob pravih mnenjih (P4-9: iskrena komunikacija) */}
+        {product.reviewCount > 0 && (
+          <div className="flex items-center gap-1.5">
+            <Star
+              className="size-4 fill-amber-400 text-amber-400"
+              aria-hidden="true"
+            />
+            <span className="text-sm font-medium tabular-nums">
+              {product.rating.toFixed(1)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              ({product.reviewCount})
+            </span>
+          </div>
+        )}
 
         {/* Cena */}
         <div className="flex items-baseline gap-2">
@@ -752,19 +754,21 @@ function ExperienceCard({
           </p>
         </div>
 
-        {/* Rating */}
-        <div className="flex items-center gap-1.5">
-          <Star
-            className="size-4 fill-amber-400 text-amber-400"
-            aria-hidden="true"
-          />
-          <span className="text-sm font-medium tabular-nums">
-            {experience.rating.toFixed(1)}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            ({experience.reviewCount})
-          </span>
-        </div>
+        {/* Rating — samo ob pravih mnenjih (P4-9: iskrena komunikacija) */}
+        {experience.reviewCount > 0 && (
+          <div className="flex items-center gap-1.5">
+            <Star
+              className="size-4 fill-amber-400 text-amber-400"
+              aria-hidden="true"
+            />
+            <span className="text-sm font-medium tabular-nums">
+              {experience.rating.toFixed(1)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              ({experience.reviewCount})
+            </span>
+          </div>
+        )}
 
         {/* Cena */}
         <div className="flex items-baseline gap-1">

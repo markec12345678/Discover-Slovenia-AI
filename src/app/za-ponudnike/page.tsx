@@ -1,13 +1,11 @@
 import Link from "next/link";
 import {
   Sparkles,
-  TrendingUp,
   Eye,
   MousePointerClick,
   Phone,
   Calendar,
   Award,
-  QrCode,
   BarChart3,
   ArrowRight,
   Check,
@@ -19,14 +17,24 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { db } from "@/lib/db";
+import { BETA_THRESHOLD } from "@/lib/beta";
 
 export const metadata = {
   title: "Za ponudnike — Discover Slovenia AI",
-  description: "Ko turist vpraša AI, najde vas. Pridružite se prvi AI turistični platformi za Slovenijo.",
+  description: "Ko turist vpraša AI, najde vas. Pridružite se med prvimi AI turističnimi platformami za Slovenijo.",
   alternates: { canonical: "https://discoverslovenia.ai/za-ponudnike" },
 };
 
-export default function ProviderLandingPage() {
+export default async function ProviderLandingPage() {
+  // Iskrena številka: dejansko število lokalov na platformi (ne tržna številka).
+  let listingCount = 0;
+  try {
+    listingCount = await db.listing.count();
+  } catch {
+    listingCount = 0;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero */}
@@ -43,15 +51,15 @@ export default function ProviderLandingPage() {
               <span className="text-primary">najde vas.</span>
             </h1>
             <p className="mt-5 text-lg text-muted-foreground">
-              Discover Slovenia AI je prva AI-poganjana turistična platforma za
-              Slovenijo. Turist napiše kaj želi — AI sestavi dan, priporoči vaš
-              lokal in ga pripelje do vas. Rezervacijo opravi turist direktno
-              pri vas. Kot pri Booking.com: turisti ne plačujejo nič — vi
-              plačate le 12&nbsp;% provizijo, kadar vam rezervacijo prinese AI
-              konzultacija (Premium: 0&nbsp;%).
+              Discover Slovenia AI je med prvimi AI-poganjanimi turističnimi
+              platformami za Slovenijo. Turist napiše kaj želi — AI sestavi dan,
+              priporoči vaš lokal in ga pripelje do vas. Rezervacijo opravi
+              turist direktno pri vas. Kot pri Booking.com: turisti ne
+              plačujejo nič — vi plačate le 12&nbsp;% provizijo, kadar vam
+              rezervacijo prinese AI konzultacija (Premium: 0&nbsp;%).
             </p>
 
-            {/* Social proof */}
+            {/* Dejstva (ne tržne številke) */}
             <div className="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
               <div className="text-center">
                 <div className="text-3xl font-bold text-primary">22</div>
@@ -59,13 +67,13 @@ export default function ProviderLandingPage() {
               </div>
               <div className="h-8 w-px bg-border" />
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary">25</div>
-                <div className="text-xs text-muted-foreground">partnerjev</div>
+                <div className="text-3xl font-bold text-primary">{listingCount}</div>
+                <div className="text-xs text-muted-foreground">lokalov na platformi</div>
               </div>
               <div className="h-8 w-px bg-border" />
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary">9</div>
-                <div className="text-xs text-muted-foreground">AI funkcij</div>
+                <div className="text-3xl font-bold text-primary">0&nbsp;%</div>
+                <div className="text-xs text-muted-foreground">provizije na direktnih rezervacijah</div>
               </div>
             </div>
 
@@ -186,11 +194,11 @@ export default function ProviderLandingPage() {
           </h2>
           <div className="mx-auto grid max-w-4xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              { icon: Award, title: "Verified Badge", desc: "Preverjen partner znak zaupanja na profilu" },
+              { icon: Award, title: "Verified Badge", desc: "Znak \"Preverjen partner\" — podelijo ga naši uredniki po pregledu" },
               { icon: Sparkles, title: "AI Optimizacija", desc: "AI avtomatsko generira SEO meta, ključne besede in tage" },
               { icon: BarChart3, title: "Analytics", desc: "Ogledi, kliki, AI priporočila, kontakti, ROI" },
-              { icon: QrCode, title: "QR Karta", desc: "QR koda za mize, recepcijo, sobe — gost scan-a in vidi vaš profil" },
-              { icon: TrendingUp, title: "Quality Coach", desc: "AI svetuje kako izboljšati profil za več AI priporočil" },
+              { icon: Phone, title: "Povpraševanja gostov", desc: "Obrazec za povpraševanje na vašem profilu — vsako vidite v statistiki" },
+              { icon: Receipt, title: "Atribucija rezervacij", desc: "Rezervacije iz AI konzultacij se zapišejo vam kot izvor vrednosti" },
               { icon: Star, title: "AI Zgodba", desc: "AI napiše čustveno zgodbo o vašem podjetju" },
             ].map((item) => {
               const Icon = item.icon;
@@ -215,11 +223,15 @@ export default function ProviderLandingPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl">
             <h2 className="mb-3 text-center text-3xl font-bold">Paketi</h2>
-            <p className="mb-12 text-center text-muted-foreground">
+            <p className="mb-4 text-center text-muted-foreground">
               Registracija in osnovni paket sta brezplačna — turisti nikoli ne
               plačujejo. Prihodek prihaja iz provizij na AI-prinesenih
               rezervacijah (12&nbsp;%) in premium naročnin (Premium =
               0&nbsp;% provizije).
+            </p>
+            <p className="mb-10 text-center text-sm font-medium text-primary">
+              Med beta obdobjem so vsi paketi brezplačni — monetizacija se
+              vklopi pri {BETA_THRESHOLD} aktivnih lokalih.
             </p>
             <div className="grid gap-6 sm:grid-cols-3">
               {/* Free */}
@@ -229,9 +241,8 @@ export default function ProviderLandingPage() {
                   <p className="mt-2 text-3xl font-bold">€0</p>
                   <p className="text-xs text-muted-foreground">/mesec</p>
                   <ul className="mt-4 space-y-2 text-left text-sm">
-                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />1 lokal</li>
-                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />5 slik</li>
-                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Osnovne analytics</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Osnovni profil lokala</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Prikaz v AI konzultacijah</li>
                     <li className="flex items-center gap-2">
                       <Percent className="size-4 text-primary" aria-hidden="true" />
                       12 % provizija na rezervacije iz AI konzultacij
@@ -253,13 +264,12 @@ export default function ProviderLandingPage() {
                   <ul className="mt-4 space-y-2 text-left text-sm">
                     <li className="flex items-center gap-2 font-semibold"><Check className="size-4 text-emerald-500" />0 % provizija — vključeno</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Brez mesečnih provizijskih računov</li>
-                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />5 lokalov</li>
-                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />20 slik</li>
-                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />5% AI boost</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />5 % rangirni boost</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Premium znak</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Citiranje v AI konzultacijah</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Atribucija rezervacij iz konzultacij</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />AI insights</li>
-                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Sponzorirano oznako</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Sponzorirana oznaka</li>
                   </ul>
                 </CardContent>
               </Card>
@@ -270,12 +280,12 @@ export default function ProviderLandingPage() {
                   <p className="mt-2 text-3xl font-bold">€499</p>
                   <p className="text-xs text-muted-foreground">/mesec</p>
                   <ul className="mt-4 space-y-2 text-left text-sm">
-                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />20 lokalov</li>
-                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />50 slik</li>
-                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />API dostop</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Vse iz Premium</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />0 % provizija</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Več lokalov na enem računu</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Atribucija rezervacij iz konzultacij</li>
                     <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />AI insights</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" />Namenska podpora</li>
                   </ul>
                 </CardContent>
               </Card>
@@ -291,7 +301,7 @@ export default function ProviderLandingPage() {
             Postanite founding partner
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Prvih 10 preverjenih partnerjev je brezplačno vključenih v beta fazi.
+            Med beta obdobjem je platforma brezplačna — prvih {BETA_THRESHOLD} lokalov gradi temelje in obdrži ugodnosti.
           </p>
           <Button asChild size="lg" className="mt-8 gap-1.5">
             <Link href="/owner/prijava">

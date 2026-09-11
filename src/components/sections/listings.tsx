@@ -381,19 +381,21 @@ function ListingCard({
           </p>
         </div>
 
-        {/* Rating */}
-        <div className="flex items-center gap-1.5">
-          <Star
-            className="size-4 fill-amber-400 text-amber-400"
-            aria-hidden="true"
-          />
-          <span className="text-sm font-medium tabular-nums">
-            {listing.rating.toFixed(1)}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            ({listing.reviewCount})
-          </span>
-        </div>
+        {/* Rating — samo ob pravih mnenjih (P4-9: iskrena komunikacija) */}
+        {listing.reviewCount > 0 && (
+          <div className="flex items-center gap-1.5">
+            <Star
+              className="size-4 fill-amber-400 text-amber-400"
+              aria-hidden="true"
+            />
+            <span className="text-sm font-medium tabular-nums">
+              {listing.rating.toFixed(1)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              ({listing.reviewCount})
+            </span>
+          </div>
+        )}
 
         {/* Lokacija */}
         {location ? (
