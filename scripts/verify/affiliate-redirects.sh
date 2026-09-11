@@ -121,10 +121,14 @@ L="$(loc "$BASE_URL/go/flights?dest=..%2F..%2Fevil")"
 [[ "$L" == *"/transport/flights-to/lju/"* && "$L" != *".."* ]] && ok "flights traversal → whitelist fallback lju" || bad "flights traversal: $L"
 
 # 5d. partner override → neznan provider = 404 (allowlist)
-for P in "evil" "hotels%00" "ADMIN"; do
+for P in "evil" "ADMIN"; do
   C="$(code "$BASE_URL/go/$P?dest=Ljubljana")"
   [[ "$C" == "404" ]] && ok "neznan provider '$P' → 404" || bad "neznan provider '$P' → $C"
 done
+# %00 (null byte): strežniški edge/proxy ga ZAVRNE (400) preden sploh pride
+# do aplikacije — zavrnitev na kateri koli plasti je pravilen izid (404 ali 400)
+C="$(code "$BASE_URL/go/hotels%00")"
+[[ "$C" == "404" || "$C" == "400" ]] && ok "null byte provider → zavrnjen (404/400)" || bad "null byte provider → $C"
 
 # 5e. encoded provider path
 C="$(code "$BASE_URL/go/hotels%2F..%2Fadmin?dest=Ljubljana")"
