@@ -7,6 +7,56 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.6.0] — 2026-09-11
+
+### Spremenjeno (FW3 — AI-first hierarhija UX refaktor, `0742a1a`)
+
+> Strateška sprememba identitete: »velik turistični portal z AI funkcijo« →
+> »AI travel product z ogromnim ekosistemom za njim«. Načelo: **ne zmanjšuj
+> funkcionalnosti — zmanjšaj kognitivno obremenitev** (progresivno razkrivanje,
+> uporabnikov predlog). Vrata: tsc 0, eslint 0, agent-browser E2E (intent chip →
+> /nacrtuj → avto-generacija z razčlenjenimi interesi; vsi novi ruti 200;
+> mobilni 390 px hierarhični meni, sticky footer, 0 horizontalnega scrolla;
+> legacy hash preusmeritve; 0 konzolnih napak).
+
+- **Homepage: 22 sekcij → 8 vsebinskih blokov** — hero AI concierge,
+  »tvoj naslednji korak« (vračajoči uporabniki + demo scenariji), trust
+  statistike, 6 priljubljenih destinacij (+ CTA na vseh 22), priljubljene AI
+  poti, doživetja, hub »Razišči Slovenijo«, rezervacije. HTML se je med
+  E2E skrčil z ~992 KB na ~447 KB.
+- **Hero: 6 intent chipov** (miren vikend, romantika, družina, hrana & vino,
+  avantura, brez gužve) + gumb »Sestavi mojo pot« — submit prenese željo na
+  `/nacrtuj` prek sessionStorage; planner jo ob mountu prevzame in zgenerira
+  itinerer (razčlenitev naravnega jezika v days/interese/severno/skupino).
+- **Navigacija: 6 povezav → 4 glavne** (Destinacije, Doživetja, Zemljevid,
+  Vodiči) + primarni CTA »Načrtuj z AI« + diskretni »Za ponudnike«; mobilni
+  meni s sekundarno skupino (Dogodki, Lokali, Tržnica, Slovenia Pass, Moja
+  potovanja); nov prop `solid` za strani brez fotografskega heroja.
+- **9 novih strani** (ASCII poti — Next.js 16 ne poveže percent-encoded URL-jev
+  z ne-ASCII mapami, ugotovljeno s testom): `/nacrtuj` (planner + kviz +
+  skupnostne poti), `/destinacije` (22 + filtri + zbirke), `/dozivetja`
+  (kategorije + izkušnje), `/dogodki`, `/zemljevid`, `/lokali`, `/vodici`
+  (blog + vprašaj lokalca), `/trznica`, `/slovenia-pass`.
+- **MarketplaceSection: prop `defaultTab`** — `/dozivetja` pine zavihek
+  »Izkušnje« (SSR preverjeno `data-state="active"`).
+- **DestinationsSection: featured način** — 6 kartic brez filtrov + CTA
+  »Razišči vseh 22 destinacij«.
+- **B2B ločeno od turista**: `JoinUs` + `PitchDeck` preseljena na
+  `/za-ponudnike` (Navigation solid + popravljen podvojen naslov); turistov
+  glavni tok jih ne vidi več.
+- **LegacyHashRedirect**: varnostna mreža za podedovane `#anchor` povezave
+  (stari e-maili, kazalniki, chat odgovori) — dekodiranje percent-encoded
+  hasha, deluje ob mountu in ob `hashchange`; ohrani query parametre.
+- **WishlistSheet cross-page**: namen se prenese prek sessionStorage na
+  `/trznica` (enak vzorec kot heroQuery → `/nacrtuj`).
+- **SEO**: sitemap — hash sekcije zamenjane za prave strani (11 novih URL-jev);
+  SearchAction JSON-LD usmerjen na `/destinacije?q=`; footer povezane na
+  absolutne poti; vsa notranja »/#načrtuj« sklica posodobljena (15 datotek:
+  SSG destinacijske strani, moja-potovanja, shared-trip, chat fallbacki,
+  e-mail predloga).
+- **i18n**: novi ključi `nav.experiences/guides/marketplace/pass/trips` v
+  vseh štirih jezikih; CTA »Načrtuj z AI«.
+
 ## [1.5.0] — 2026-09-11
 
 ### Dodano (FW2 — UX quick wins iz primerjalne analize Mindtrip.ai, `629da01`)
