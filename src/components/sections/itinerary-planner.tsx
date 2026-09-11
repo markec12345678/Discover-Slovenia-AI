@@ -52,6 +52,7 @@ import { addSavedTrip, deriveSavedTripName } from "@/lib/my-trips-storage";
 import { cn } from "@/lib/utils";
 import { BookingPanel, type BookingData } from "@/components/sections/booking-panel";
 import { ItineraryRefiner } from "@/components/sections/itinerary-refiner";
+import { ItineraryQualityCard } from "@/components/itinerary-quality-card";
 import { ItineraryEventsSection } from "@/components/itinerary-events";
 import { PackingListSection } from "@/components/packing-list";
 import { SocialShare } from "@/components/social-share";
@@ -781,6 +782,9 @@ export function ItineraryPlanner() {
                     </Badge>
                   </div>
                 </div>
+
+                {/* FW4.1: strukturne metrike poti + utemeljitev — nad dnevni timeline */}
+                <ItineraryQualityCard itinerary={itinerary} input={formData} />
 
                 {/* Multi-turn AI refiner — uporabnik naravnojezično spreminja itinerer */}
                 <ItineraryRefiner

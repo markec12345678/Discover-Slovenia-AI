@@ -14,6 +14,11 @@ import {
   buildPackingList,
   sanitizeAiPackingList,
 } from "@/lib/packing-list";
+import {
+  buildFallbackRationale,
+  computeItineraryQuality,
+  sanitizeAiRationale,
+} from "@/lib/itinerary-quality";
 
 // POST /api/itinerary - generira AI itinerer z z-ai-web-dev-sdk
 // AI prioritizira SPONZORIRANE lokale (premium/enterprise stranke ki plačajo za vključitev)
@@ -101,6 +106,7 @@ Pravila:
 8. Kadar ustreza, v notes ali recommendations omeni predlagane partnerje (npr. "Za kosilo obiščite Restavracijo JB v Ljubljani")
 9. V notes dodaj ocenjen čas vožnje do naslednje lokacije (npr. "30 min vožnje do Bohinja")
 10. "packing_list": 8-14 konkretnih stvari za ta izlet (sezona, interesi, trajanje)
+11. "rationale": 1-2 povedi, napisane kot vodnik v tretji osebi: zakaj TA pot ustreza potniku — sklicuj se na njegove interese, proračun in željo po manj vožnje. Konkretno, brez marketinških fraz.
 
 JSON format (STROGO):
 {
@@ -123,7 +129,8 @@ JSON format (STROGO):
   "total_budget": 500,
   "recommendations": ["Vzemi sončna očala", "Rezerviraj čoln vnaprej pri Pletna Bled"],
   "tips": ["Začni zgodaj za manj ljudi"],
-  "packing_list": ["Sončna krema SPF 50", "Pohodniški čevlji", "Evrovi gotovina"]
+  "packing_list": ["Sončna krema SPF 50", "Pohodniški čevlji", "Evrovi gotovina"],
+  "rationale": "Pot združuje mirno naravo in lokalno kulinariko z minimalno vožnjo — Bled in Bohinj sta na isti regiji, zato je več časa na lokacijah namesto v avtu."
 }`;
 
   try {
@@ -166,6 +173,13 @@ JSON format (STROGO):
     // Dogodki na obiskanih destinacijah (neodvisno od vremena — ločeno polje)
     enriched.events = matchEventsForItinerary(enriched.days, 6);
 
+    // FW4.1: strukturne metrike (deterministično) + AI utemeljitev
+    // (sanitizirana, fallback determinističen) — isto enrich mesto kot vreme
+    enriched.quality = computeItineraryQuality(enriched, input);
+    enriched.rationale =
+      sanitizeAiRationale(parsed.rationale) ??
+      buildFallbackRationale(input, enriched.quality);
+
     return NextResponse.json(enriched);
   } catch (error) {
     console.error("[itinerary] AI napaka, uporabljam fallback:", error);
@@ -180,6 +194,10 @@ JSON format (STROGO):
       days: input.days,
     });
     fallback.events = matchEventsForItinerary(fallback.days, 6);
+
+    // FW4.1: metrike + deterministična utemeljitev (fallback nima AI rationale)
+    fallback.quality = computeItineraryQuality(fallback, input);
+    fallback.rationale = buildFallbackRationale(input, fallback.quality);
 
     return NextResponse.json(fallback);
   }

@@ -66,6 +66,13 @@ export interface Itinerary {
   events?: ItineraryEvent[];
   // NOVO: AI pakirni seznam (AI predlog ali deterministična hevristika)
   packingList?: string[];
+  // NOVO (FW4.1): strukturne metrike kakovosti — deterministično izračunane
+  // ob generiranju; starejši shranjeni načrti jih nimajo (kartica jih
+  // izračuna na mestu uporabe iz iste čiste funkcije)
+  quality?: ItineraryQuality;
+  // NOVO (FW4.1): AI utemeljitev "Zakaj ta pot?" (1–2 povedi, sanitizirana;
+  // fallback = deterministična sestava iz vnosnih želja)
+  rationale?: string;
 }
 
 // Dogodek, povezan z destinacijo v itinererju (subset EventItem iz events-data)
@@ -95,4 +102,35 @@ export interface AffiliateLinks {
   activities: string;
   flights: string;
   insurance: string;
+}
+
+// ============================================================================
+// FW4.1 — strukturne metrike kakovosti itinererja (deterministične)
+// ============================================================================
+//
+// NAČELO: VSA metrika je izračunana iz REALNIH podatkov (koordinate, cene,
+// tipi destinacij, struktura dni) — NI AI-uganjena. AI prispeva samo
+// `rationale` ("Zakaj ta pot?"), ki je vizualno/logično ločen od meritev.
+// Izračun: src/lib/itinerary-quality.ts (čista funkcija, isto na serverju
+// in clientu — stare shranjene načrte kartica izračuna na mestu uporabe).
+
+export type TempoLabel = "Miren" | "Umirjen" | "Poln";
+
+export interface ItineraryQuality {
+  /** Skupni čas vožnje v minutah (haversine med zaporednimi lokacijami × 1.3 cestni faktor ÷ 55 km/h) */
+  drivingMinutes: number;
+  /** Seštevek estimated_cost vseh lokacij (EUR) */
+  estimatedCost: number;
+  /** € / €€ / €€€ — glede na strošek na osebo na dan */
+  budgetTier: Budget;
+  /** Povprečno število lokacij na dan: ≤2 Miren, 3 Umirjen, ≥4 Poln */
+  tempo: TempoLabel;
+  /** 1–5 — delež naravnih destinacij (lake/mountain/gorge/cave/river/coast) */
+  natureScore: 1 | 2 | 3 | 4 | 5;
+  /** 1–5 — iz interesov potnika + omemb hrane v notes/recommendations */
+  foodScore: 1 | 2 | 3 | 4 | 5;
+  /** Število dni (za prikaz v kartici) */
+  days: number;
+  /** Velikost skupine (za prikaz v kartici) */
+  groupSize: number;
 }

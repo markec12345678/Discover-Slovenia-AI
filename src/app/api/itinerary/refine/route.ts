@@ -4,6 +4,10 @@ import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
 import type { Itinerary, PlannerInput, DayPlan, LocationVisit } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
+import {
+  computeItineraryQuality,
+  sanitizeAiRationale,
+} from "@/lib/itinerary-quality";
 
 // POST /api/itinerary/refine — Multi-turn popravki obstoječega itinererja.
 //
@@ -147,7 +151,8 @@ JSON format (STROGO, enak kot vhod):
   ],
   "total_budget": 500,
   "recommendations": ["Vzemi sončna očala", "Rezerviraj čoln vnaprej"],
-  "tips": ["Začni zgodaj za manj ljudi"]
+  "tips": ["Začni zgodaj za manj ljudi"],
+  "rationale": "Posodobljena utemeljitev (1-2 povedi, tretja oseba): zakaj SPREMENJENA pot bolj ustreza potniku glede na njegov ukaz."
 }`;
 
   try {
@@ -172,6 +177,17 @@ JSON format (STROGO, enak kot vhod):
       ...parsed,
       source: "ai",
     };
+
+    // FW4.1: strukturne metrike se PRERAČUNAJO na novi strukturi (stare
+    // vrednosti bi bile zastarele) + posodobljena AI utemeljitev.
+    // Sosednji bug-fix: AI JSON ne vsebuje events/packingList — prenesi
+    // iz originala, če novo-parsed nima (refine je ti polji prej izgubil).
+    refinedItinerary.quality = computeItineraryQuality(refinedItinerary, formData);
+    refinedItinerary.rationale =
+      sanitizeAiRationale(parsed.rationale) ??
+      (typeof current.rationale === "string" ? current.rationale : undefined);
+    if (!Array.isArray(refinedItinerary.events)) refinedItinerary.events = current.events;
+    if (!Array.isArray(refinedItinerary.packingList)) refinedItinerary.packingList = current.packingList;
 
     console.log(`[itinerary/refine] AI uspešno (source: ${result.source}) — ukaz: "${instruction}"`);
     return NextResponse.json({
