@@ -72,6 +72,9 @@ export async function GET() {
           createdAt: { gte: current.start, lt: current.end },
           // P7-C3 (P1): preklicane rezervacije ne štejejo (usklajeno z lib/commissions.ts)
           status: { in: ["confirmed", "completed"] },
+          // FW1 (audit R3 🔴 #1): samo PLAČANE rezervacije (glej invariant v
+          // lib/commissions.ts) — demo rezervacije so vedno "unpaid".
+          paymentStatus: "paid" as const,
         }
       : null;
     const lastWhere = experienceIds.length
@@ -80,6 +83,7 @@ export async function GET() {
           experienceId: { in: experienceIds },
           createdAt: { gte: last.start, lt: last.end },
           status: { in: ["confirmed", "completed"] },
+          paymentStatus: "paid" as const,
         }
       : null;
 

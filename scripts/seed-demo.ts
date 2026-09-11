@@ -430,11 +430,16 @@ async function main() {
   const bookingNum = () => `DEMO-${String(++bookingIdx).padStart(4, "0")}`;
 
   // Prejšnji mesec — Tina (free) → obdelava v provizijski račun (120 € osnove)
+  // FW1 (audit R3 🔴 #1): semenske atribuirane rezervacije so PLAČANE
+  // (paymentStatus "paid") — nadzorovani demo podatek, da provizijski
+  // dashboard ostane živ. ŽIVE demo rezervacije prek /api/bookings so
+  // vedno "unpaid" in v osnovo NE vstopijo (glej lib/commissions.ts).
   await B({
     bookingNumber: bookingNum(), guestEmail: "turist1@guest.demo", guestName: "Müller Familie",
     experienceId: rafting.id, experienceName: rafting.name, bookingDate: lastMonth,
     createdAt: lastMonth,
     groupSize: 2, pricePerPerson: 45, total: 90, status: "confirmed",
+    paymentStatus: "paid", paymentMethod: "demo",
     providerName: rafting.providerName, providerEmail: `tina${DEMO_DOMAIN}`,
     meetingPoint: rafting.meetingPoint, source: "consultation",
   });
@@ -443,6 +448,7 @@ async function main() {
     experienceId: kanjoning.id, experienceName: kanjoning.name, bookingDate: lastMonth,
     createdAt: lastMonth,
     groupSize: 1, pricePerPerson: 60, total: 60, status: "completed",
+    paymentStatus: "paid", paymentMethod: "demo",
     providerName: kanjoning.providerName, providerEmail: `tina${DEMO_DOMAIN}`,
     source: "consultation",
   });
@@ -452,6 +458,7 @@ async function main() {
     experienceId: kuharska.id, experienceName: kuharska.name, bookingDate: lastMonth,
     createdAt: lastMonth,
     groupSize: 2, pricePerPerson: 55, total: 110, status: "completed",
+    paymentStatus: "paid", paymentMethod: "demo",
     providerName: kuharska.providerName, providerEmail: `marko${DEMO_DOMAIN}`,
     source: "consultation",
   });
@@ -461,6 +468,7 @@ async function main() {
     experienceId: rafting.id, experienceName: rafting.name, bookingDate: now,
     createdAt: now,
     groupSize: 2, pricePerPerson: 45, total: 90, status: "confirmed",
+    paymentStatus: "paid", paymentMethod: "demo",
     providerName: rafting.providerName, providerEmail: `tina${DEMO_DOMAIN}`,
     source: "consultation",
   });

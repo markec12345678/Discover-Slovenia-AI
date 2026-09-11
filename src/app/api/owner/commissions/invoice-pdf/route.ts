@@ -60,6 +60,9 @@ export async function GET(request: Request) {
             createdAt: { gte: invoice.periodStart, lt: invoice.periodEnd },
             // P7-C3 (P1): usklajeno z obračunom — brez preklicanih rezervacij
             status: { in: ["confirmed", "completed"] },
+            // FW1 (audit R3 🔴 #1): usklajeno z obračunom — samo plačane
+            // rezervacije (glej invariant v lib/commissions.ts)
+            paymentStatus: "paid",
           },
           orderBy: { createdAt: "asc" },
           select: {

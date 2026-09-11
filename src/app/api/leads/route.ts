@@ -103,18 +103,27 @@ export async function POST(request: Request) {
       console.error("[leads] admin email napaka:", emailErr);
     }
 
-    // 2) Če lead-ov businessName se ujema z obstoječim Owner-jem,
-    //    pošlji leadNotificationEmail tudi lastniku (bolj verjetno povpraševanje po konkretnem lokalu)
+    // 2) FW1 (audit R2 🟠 #8 — lead PII k napačnemu prejemniku): email
+    //    lastniku pošljemo SAMO ob NEDVOUMNEM ujemanju imena lokala —
+    //    normaliziran (trim/lowercase) businessName mora biti ENAK imenu
+    //    natančno ENEGA ownerja. Prej je veljal `contains`, ki je za
+    //    "Gostilna Pri Ani" zadeli tako "Pri Ani Ljubljana" kot
+    //    "Pri Ani Maribor" → zasebni podatki leada (ime, email, telefon,
+    //    sporočilo) so lahko odšli napačnemu ponudniku. Fail-closed:
+    //    0 ali 2+ zadetkov → BREZ samodejnega emaila (lead ostane
+    //    zabeležen v admin/leads dashboardu za ročno obdelavo).
     try {
-      const matchingOwner = await db.owner.findFirst({
-        where: {
-          businessName: {
-            contains: lead.businessName,
-          },
-        },
+      const leadBiz = lead.businessName.trim().toLowerCase();
+      const candidates = await db.owner.findMany({
         select: { id: true, name: true, email: true, businessName: true, plan: true },
       });
-      if (matchingOwner) {
+      const matches = candidates.filter(
+        (o) =>
+          o.businessName &&
+          o.businessName.trim().toLowerCase() === leadBiz
+      );
+      if (matches.length === 1) {
+        const matchingOwner = matches[0];
         const { subject, html, text } = leadNotificationEmail(
           matchingOwner.name,
           matchingOwner.businessName,
@@ -130,6 +139,10 @@ export async function POST(request: Request) {
           html,
           text,
         });
+      } else if (matches.length > 1) {
+        console.log(
+          `[leads] fail-closed: businessName "${lead.businessName}" se ujema z ${matches.length} ownerji — email NI poslan (ročna obdelava)`
+        );
       }
     } catch (ownerErr) {
       console.error("[leads] owner email napaka:", ownerErr);

@@ -142,7 +142,16 @@ export async function GET(request: Request) {
 
     if (allDestIds.length > 0) {
       const experiences = await db.experience.findMany({
-        where: { destinationId: { in: allDestIds } },
+        where: {
+          destinationId: { in: allDestIds },
+          // FW1 (audit R3 🟠 #1 — moderacijski bypass v javnem kanalu):
+          // push je javni kanal — enak invariant kot VSI drugi javni kanali
+          // (experiences, chat, smart-search, recommendations, itinerary,
+          // ask-local): turist dobi SAMO objavljene (moderirane) izkušnje.
+          // Prej je filter manjkal → pending/zavrnjena izkušnja je lahko
+          // pristala v dnevnem pushu z imenom, ceno in CTA "Rezerviraj".
+          status: "published",
+        },
         select: { destinationId: true, name: true, pricePerPerson: true },
         orderBy: [{ featured: "desc" }, { rating: "desc" }],
         take: 60,

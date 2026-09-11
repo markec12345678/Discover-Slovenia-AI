@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
+import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
 
 // ============================================================================
 // /api/owner/bookings — Booking manager za ponudnike (P0-3)
 // ============================================================================
 // GET:  seznam rezervacij izkušenj trenutno prijavljenega lastnika
-//       (povezava prek Experience.ownerId ALI snapshot providerEmail)
 // PATCH: sprememba statusa rezervacije — { bookingNumber, action }
 //        action: "confirm" | "cancel" | "complete"
 //
@@ -15,27 +15,36 @@ import { authOptions } from "@/lib/auth";
 //   pending   → confirmed (confirm) | cancelled (cancel)
 //   confirmed → completed (complete) | cancelled (cancel)
 //   cancelled/completed → zaključena (brez sprememb)
+//
+// FW1 (audit R3 🟠, invariant): lastnik lahko prekliče POTRDJENO
+// rezervacijo SAMO PRED njenim datumom izvedbe. Po pretečenem datumu je
+// edini dovoljeni prehod "complete" — sicer bi ponudnik po izvedeni
+// storitvi tiho preklical rezervacijo in s tem izničil provizijsko osnovo
+// (evazija provizije). Preklic pretečene rezervacije zahteva admin poseg.
+// Vsak prehod se zapiše v AuditLog (prej samo console.log).
 // ============================================================================
 
-// Lastništvo rezervacije: izkušnja pripada lastniku (Experience.ownerId —
-// Booking shranjuje samo experienceId snapshot BREZ Prisma relacije)
-// ali snapshot providerEmail ustreza e-pošti lastnika.
-async function findOwnerBooking(ownerId: string, ownerEmail: string, bookingNumber: string) {
+// Lastništvo rezervacije: izključno prek Experience.ownerId.
+// FW1 (audit R3 🟠 #2): prej je veljala tudi veja
+//   booking.providerEmail === ownerEmail
+// — ker je providerEmail lastnikovo (nevalidirano) polje na izkušnji, je
+// lahko lastnik X usmeril svoje rezervacije v booking-manager lastnika Y
+// (cross-tenant read PII + cancel write). ProviderEmail snapshot na
+// bookingu ostane samo za pošiljanje emailov — NE za avtorizacijo.
+async function findOwnerBooking(ownerId: string, bookingNumber: string) {
   const booking = await db.booking.findUnique({
     where: { bookingNumber },
   });
   if (!booking) return null;
 
-  const owned =
-    booking.providerEmail === ownerEmail ||
-    (booking.experienceId
-      ? (
-          await db.experience.findUnique({
-            where: { id: booking.experienceId },
-            select: { ownerId: true },
-          })
-        )?.ownerId === ownerId
-      : false);
+  const owned = booking.experienceId
+    ? (
+        await db.experience.findUnique({
+          where: { id: booking.experienceId },
+          select: { ownerId: true },
+        })
+      )?.ownerId === ownerId
+    : false;
 
   if (!owned) return null;
   return booking;
@@ -74,16 +83,13 @@ export async function GET(request: Request) {
     });
     const ownedExperienceIds = ownedExperiences.map((e) => e.id);
 
+    // FW1 (audit R3 🟠 #2): lastništvo IZKLJUČNO prek izkušenj lastnika —
+    // OR veja po providerEmail snapshotu je odstranjena (glej zgoraj).
     const bookings = await db.booking.findMany({
       where: {
         AND: [
           statusFilter ? { status: statusFilter } : {},
-          {
-            OR: [
-              { experienceId: { in: ownedExperienceIds } },
-              { providerEmail: owner.email },
-            ],
-          },
+          { experienceId: { in: ownedExperienceIds } },
         ],
       },
       orderBy: { bookingDate: "desc" },
@@ -177,11 +183,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const booking = await findOwnerBooking(
-      owner.id,
-      owner.email,
-      bookingNumber
-    );
+    const booking = await findOwnerBooking(owner.id, bookingNumber);
     if (!booking) {
       return NextResponse.json(
         { error: "Rezervacija ni najdena ali nimate dovoljenja" },
@@ -211,6 +213,24 @@ export async function PATCH(request: Request) {
       );
     }
 
+    // FW1 (audit R3 🟠, invariant — evazija provizije): preklic POTRDJENE
+    // rezervacije je dovoljen SAMO pred datumom izvedbe. Po pretečenem
+    // datumu je potrebno rezervacijo zaključiti ("complete") — preklic po
+    // (domnevno) izvedeni storitvi bi tiho izničil provizijsko osnovo.
+    if (action === "cancel" && booking.status === "confirmed") {
+      const dayEnd = new Date(booking.bookingDate);
+      dayEnd.setHours(23, 59, 59, 999);
+      if (dayEnd < new Date()) {
+        return NextResponse.json(
+          {
+            error:
+              "Rezervacije s pretečenim datumom ni mogoče preklicati — označite jo kot zaključeno ali stopite v stik s podporo.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const updated = await db.booking.update({
       where: { id: booking.id },
       data: {
@@ -229,6 +249,26 @@ export async function PATCH(request: Request) {
       newStatus,
       providerName: owner.name,
     }).catch(() => {});
+
+    // FW1 (audit R3 🟠): vsak prehod statusa rezervacije se zapiše v
+    // AuditLog (prej samo console.log — evazija provizije prek preklica
+    // je bila brez sledi). logAudit je ne-blokirajoč (ne sesuje PATCH-a).
+    await logAudit({
+      actorId: owner.id,
+      actorEmail: owner.email,
+      actorRole: "owner",
+      action: AUDIT_ACTIONS.BOOKING_STATUS_CHANGED,
+      resourceType: "booking",
+      resourceId: booking.id,
+      resourceName: booking.bookingNumber,
+      metadata: {
+        from: booking.status,
+        to: newStatus,
+        experienceName: booking.experienceName,
+        bookingDate: booking.bookingDate.toISOString(),
+        source: booking.source,
+      },
+    });
 
     console.log(
       `[owner/bookings] ${booking.bookingNumber}: ${booking.status} → ${newStatus} (owner: ${owner.email})`

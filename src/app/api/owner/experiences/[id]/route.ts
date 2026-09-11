@@ -122,6 +122,31 @@ export async function PUT(request: Request, { params }: RouteParams) {
     }
     const data = parsed.data;
 
+    // FW1 (audit R3 🟠 #2 — providerEmail cross-tenant): isti invariant kot
+    // pri POST — kontaktni email za rezervacije sme biti izključno e-pošta
+    // prijavljenega lastnika (prej je lahko lastnik X usmeril rezervacije
+    // v booking-manager lastnika Y).
+    if (data.providerEmail !== undefined) {
+      const owner = await db.owner.findUnique({
+        where: { id: session.user.id },
+        select: { email: true },
+      });
+      if (
+        owner &&
+        data.providerEmail &&
+        data.providerEmail.trim() &&
+        data.providerEmail.trim().toLowerCase() !== owner.email.toLowerCase()
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Kontaktni e-poštni naslov za rezervacije mora biti vaš prijavni e-poštni naslov.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Validacija: max >= min (če sta podana oba ali samo en)
     const newMin = data.minGroupSize ?? experience.minGroupSize;
     const newMax = data.maxGroupSize ?? experience.maxGroupSize;
@@ -175,6 +200,12 @@ export async function PUT(request: Request, { params }: RouteParams) {
     // izdelki/izkušnje nimajo ločene "oddaj v pregled" rute (kot jo imajo
     // lokalci), zato popravek + shrani = ponovna oddaja. Pending zapisi
     // ostanejo kot so (že v čakalni vrsti).
+    // FW1 (audit R2 🟠 #4 — moderacijski bypass): prej je contentChanged
+    // preverjal SAMO name/description/longDescription/images — ponudnik je
+    // lahko na OBJAVLJENI izkušnji tiho spremenil ceno (€40 → €400),
+    // trajanje, velikost skupine in kontaktne podatke brez re-moderacije.
+    // Cena/kontakt/trajanje/velikost so od tu naprej del "vsebinske"
+    // spremembe (cena je del denarnega toka — glej /api/bookings).
     const contentChanged =
       (data.name !== undefined && data.name.trim() !== experience.name) ||
       (data.description !== undefined &&
@@ -183,7 +214,34 @@ export async function PUT(request: Request, { params }: RouteParams) {
         (data.longDescription?.trim() || null) !==
           (experience.longDescription || null)) ||
       (data.images !== undefined &&
-        JSON.stringify(data.images) !== experience.images);
+        JSON.stringify(data.images) !== experience.images) ||
+      // FW1: denarni/pogodbeni pogoji
+      (data.pricePerPerson !== undefined &&
+        data.pricePerPerson !== experience.pricePerPerson) ||
+      (data.durationHours !== undefined &&
+        data.durationHours !== experience.durationHours) ||
+      (data.minGroupSize !== undefined &&
+        data.minGroupSize !== experience.minGroupSize) ||
+      (data.maxGroupSize !== undefined &&
+        data.maxGroupSize !== experience.maxGroupSize) ||
+      // FW1: kraj srečanja + naslov (logistika izvedbe)
+      (data.meetingPoint !== undefined &&
+        (data.meetingPoint?.trim() || null) !==
+          (experience.meetingPoint || null)) ||
+      (data.address !== undefined &&
+        data.address.trim() !== experience.address) ||
+      // FW1: kontakt ponudnika (javno prikazani + partner snapshot)
+      (data.providerName !== undefined &&
+        data.providerName.trim() !== experience.providerName) ||
+      (data.providerEmail !== undefined &&
+        (data.providerEmail?.trim() || null) !==
+          (experience.providerEmail || null)) ||
+      (data.providerPhone !== undefined &&
+        (data.providerPhone?.trim() || null) !==
+          (experience.providerPhone || null)) ||
+      (data.providerWebsite !== undefined &&
+        (data.providerWebsite?.trim() || null) !==
+          (experience.providerWebsite || null));
     const needsReModeration =
       contentChanged &&
       (experience.status === "published" ||

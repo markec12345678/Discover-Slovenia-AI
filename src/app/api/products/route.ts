@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { toPublicProduct } from "@/lib/public-fields";
 
 // GET /api/products — vrne izdelke (tržnica) z opcionalnimi filtri
 // Query params: category, destinationId, plan, featured, limit, sort
@@ -51,8 +52,10 @@ export async function GET(request: Request) {
     });
 
     // Razčleni JSON polje images
+    // FW1 (audit R3 🟠): sanitiziran javni odgovor — brez ownerId/
+    // rejectionReason/submittedAt (glej public-fields.ts)
     const parsed = products.map((p) => ({
-      ...p,
+      ...toPublicProduct(p),
       images: JSON.parse(p.images || "[]") as string[],
     }));
 

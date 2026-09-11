@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { toPublicListing } from "@/lib/public-fields";
 
 // GET /api/listings — vrne lokale z opcionalnimi filtri
 // Query params: category, destinationId, plan, featured, limit, sort
@@ -41,8 +42,11 @@ export async function GET(request: Request) {
     });
 
     // Razčleni JSON polja (images, specialties)
+    // FW1 (audit R3 🟠): javni odgovor NE sme izdati ownerEmail (prijavni
+    // mail ponudnika), rejectionReason, approvedBy, ownerId, draftNudge*
+    // in B2B metrik — sanitiziramo prek toPublicListing.
     const parsed = listings.map((l) => ({
-      ...l,
+      ...toPublicListing(l),
       images: JSON.parse(l.images || "[]") as string[],
       specialties: l.specialties ? (JSON.parse(l.specialties) as string[]) : [],
     }));

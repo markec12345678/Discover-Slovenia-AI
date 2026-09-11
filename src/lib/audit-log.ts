@@ -17,6 +17,7 @@ export interface AuditLogParams {
     | "sponsorship"
     | "owner"
     | "user"
+    | "booking"
     | "commission_invoice";
   resourceId?: string;
   resourceName?: string;
@@ -66,6 +67,9 @@ export const AUDIT_ACTIONS = {
   PLAN_CHANGED: "plan_changed",
   OWNER_REGISTERED: "owner_registered",
   OWNER_LOGIN: "owner_login",
+  // FW1 (audit R3 🟠): prehodi statusov rezervacij prek owner booking
+  // managerja — forenzika proti evaziji provizije prek tihega preklica
+  BOOKING_STATUS_CHANGED: "booking_status_changed",
   COMMISSION_INVOICE_ISSUED: "commission_invoice_issued",
   COMMISSION_INVOICE_PAID: "commission_invoice_paid",
 } as const;

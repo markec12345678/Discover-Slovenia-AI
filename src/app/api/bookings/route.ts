@@ -141,6 +141,17 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    // FW1 (audit R3 🔴 #1): zgornja meja datuma (18 mesecev) — prej je bilo
+    // mogoče ustvarjati rezervacije poljubno daleč v prihodnosti (širitveni
+    // prostor za inflacijo števcev/osnov prek skript).
+    const maxDate = new Date(today);
+    maxDate.setMonth(maxDate.getMonth() + 18);
+    if (bookingDate > maxDate) {
+      return NextResponse.json(
+        { success: false, error: "Datum rezervacije je predaleč v prihodnosti (največ 18 mesecev)" },
+        { status: 400 }
+      );
+    }
 
     // Guest
     const guestRaw = (b.guest ?? {}) as Record<string, unknown>;
@@ -310,6 +321,12 @@ export async function POST(request: Request) {
                     currency,
                     status: "confirmed",
                     paymentMethod: "demo",
+                    // FW1 (audit R3 🔴 #1): demo pot NIKOLI ne zapiše "paid" —
+                    // demo rezervacija je potrjena (confirmed) a NEPLAČANA
+                    // (unpaid) in kot taka NE vstopi v provizijsko osnovo
+                    // (lib/commissions.ts). "paid" bo nastavljal izključno
+                    // Stripe webhook ob dejanskem plačilu.
+                    paymentStatus: "unpaid",
                     notes: notesRaw || null,
                     providerName,
                     providerEmail,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { toPublicProduct } from "@/lib/public-fields";
 
 // GET /api/products/[slug] — vrne posamezni izdelek + poveča viewCount
 export async function GET(
@@ -30,8 +31,10 @@ export async function GET(
       })
       .catch(() => {});
 
+    // FW1 (audit R3 🟠): sanitiziran javni odgovor — brez ownerId/
+    // rejectionReason/submittedAt (glej public-fields.ts)
     const parsed = {
-      ...product,
+      ...toPublicProduct(product),
       images: JSON.parse(product.images || "[]") as string[],
     };
 

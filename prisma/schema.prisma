@@ -428,6 +428,13 @@ model Booking {
   currency        String   @default("EUR")
   status          String   @default("pending")
   paymentMethod   String   @default("stripe")
+  // FW1 (audit R3 🔴 #1 — inflacija provizijske osnove): plačilni status je
+  // LOČEN od statusa rezervacije. Demo rezervacije (brez Stripe) so VEDNO
+  // "unpaid" in NIKOLI ne vstopijo v provizijsko osnovo — provizijsko
+  // upravičena rezervacija je izključno DEJANSKO PLAČANA transakcija, ki ni
+  // preklicana/refundirana (glej lib/commissions.ts invariant). "paid" bodo
+  // nastavljali izključno Stripe webhook (future) oz. nadzorovani demo seed.
+  paymentStatus   String   @default("unpaid") // unpaid | paid | refunded
   stripeSessionId String?
   notes           String?
   providerName    String
@@ -440,6 +447,7 @@ model Booking {
 
   @@index([experienceId])
   @@index([bookingDate])
+  @@index([paymentStatus])
   @@index([guestEmail])
   @@index([status])
   @@index([source])

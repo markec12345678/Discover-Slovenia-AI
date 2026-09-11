@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { toPublicListing } from "@/lib/public-fields";
 
 // GET /api/listings/[slug] — vrne posamezni lokal
 export async function GET(
@@ -28,8 +29,10 @@ export async function GET(
       })
       .catch(() => {});
 
+    // FW1 (audit R3 🟠): sanitiziran javni odgovor (brez ownerEmail/
+    // ownerId/rejectionReason/approvedBy/draftNudge* — glej public-fields.ts)
     const parsed = {
-      ...listing,
+      ...toPublicListing(listing),
       images: JSON.parse(listing.images || "[]") as string[],
       specialties: listing.specialties
         ? (JSON.parse(listing.specialties) as string[])

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { toPublicExperience } from "@/lib/public-fields";
 
 // GET /api/experiences — vrne izkušnje z opcionalnimi filtri
 // Query params: category, destinationId, plan, featured, limit, sort
@@ -49,9 +50,10 @@ export async function GET(request: Request) {
       take: Math.min(Math.max(limit, 1), 100),
     });
 
-    // Razčleni JSON polja (images, languages)
+    // FW1 (audit R3 🟠): sanitiziran javni odgovor — brez ownerId/
+    // rejectionReason/submittedAt (glej public-fields.ts)
     const parsed = experiences.map((e) => ({
-      ...e,
+      ...toPublicExperience(e),
       images: JSON.parse(e.images || "[]") as string[],
       languages: JSON.parse(e.languages || "[]") as string[],
     }));

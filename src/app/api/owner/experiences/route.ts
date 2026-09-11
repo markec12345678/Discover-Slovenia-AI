@@ -164,6 +164,26 @@ export async function POST(request: Request) {
       );
     }
 
+    // FW1 (audit R3 🟠 #2 — providerEmail cross-tenant): kontaktni email za
+    // rezervacije sme biti IZKLJUČNO e-pošta prijavljenega lastnika. Prej je
+    // bilo polje poljubno — lastnik X je lahko nastavil email lastnika Y in
+    // s tem usmeril svoje rezervacije v Y-jev booking manager (cross-tenant
+    // read PII + cancel write). Veljavnost potrditve ni potrebna: vrednost
+    // je enaka prijavnemu naslovu, ki je že prešel email verifikacijo.
+    if (
+      data.providerEmail &&
+      data.providerEmail.trim() &&
+      data.providerEmail.trim().toLowerCase() !== owner.email.toLowerCase()
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Kontaktni e-poštni naslov za rezervacije mora biti vaš prijavni e-poštni naslov.",
+        },
+        { status: 400 }
+      );
+    }
+
     // Preveri beta status — v beta načinu so limiti radodarnejši
     const betaStatus = await getBetaStatus();
     const limits = betaStatus.isActive ? PLAN_LIMITS_BETA : PLAN_LIMITS_NORMAL;

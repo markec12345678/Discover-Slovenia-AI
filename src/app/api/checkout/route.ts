@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { randomId } from "@/lib/security";
@@ -168,20 +169,58 @@ export async function POST(request: Request) {
       );
     }
 
+    // --- FW1 (audit R2 🔴 #1/#2): agregacija količin po produktu ---
+    // Prej je zanka preverjala VSAKO vrstico posebej proti isti
+    // (ne-dekrementirani) zalogi — payload [{X,1},{X,1}] pri stock=1 je
+    // prestal oba checka in naročil 2× zalogo. Zdaj se količine ISTEGA
+    // produkta seštejejo (kot jih deduplicira tudi UI cart-store), check
+    // in decrement pa se izvedeta nad AGREGIRANO količino.
+    if (items.length > 50) {
+      return NextResponse.json(
+        { error: "Preveč različnih izdelkov v košarici (največ 50)." },
+        { status: 400 }
+      );
+    }
+    const aggregated = new Map<
+      string,
+      {
+        productId: string;
+        name: string;
+        slug: string;
+        price: number;
+        quantity: number;
+        image?: string;
+        sellerName?: string;
+      }
+    >();
+    for (const item of sanitizedItems) {
+      const existing = aggregated.get(item.productId);
+      if (existing) {
+        existing.quantity += item.quantity;
+      } else {
+        aggregated.set(item.productId, { ...item });
+      }
+    }
+    // Deterministični vrstni red (sortirano po productId) — podlaga za
+    // dedup ključ naročila spodaj.
+    const canonicalItems = [...aggregated.values()].sort((a, b) =>
+      a.productId < b.productId ? -1 : a.productId > b.productId ? 1 : 0
+    );
+
     // --- Pridobi podatke iz baze (cena + zaloga + shippingFree) ---
     // P3b-1/P3a-7: isčemo SAMO objavljene izdelke — pending/rejected/
     // unpublished se spodaj obravnavajo kot neveljavni (400).
-    const productIds = sanitizedItems.map((i) => i.productId);
+    const productIds = canonicalItems.map((i) => i.productId);
     const dbProducts = await db.product.findMany({
       where: { id: { in: productIds }, status: "published" },
       select: { id: true, shippingFree: true, price: true, stock: true },
     });
     const dbProductMap = new Map(dbProducts.map((p) => [p.id, p]));
 
-    // Overridaj cene iz baze (ne zaupaj clientu) in preveri zalogo.
+    // Overridaj cene iz baze (ne zaupaj clientu).
     // P3b-1/P3a-7: neznan ali neobjavljen productId → 400 — prej se je
     // obdržala CLIENT cena (živi dokaz iz audita: naročilo po 0,01 €).
-    for (const item of sanitizedItems) {
+    for (const item of canonicalItems) {
       const dbProduct = dbProductMap.get(item.productId);
       if (!dbProduct) {
         return NextResponse.json(
@@ -190,7 +229,62 @@ export async function POST(request: Request) {
         );
       }
       item.price = dbProduct.price;
-      if (dbProduct.stock < item.quantity) {
+    }
+
+    // FW1: DEDUP PRE-CHECK — pred preverjanjem zaloge. Duplikatni request
+    // (dvoklik/retry) mora dobiti 409 s številko PRVEGA naročila TUDI takrat,
+    // ko je prvotno naročilo medtem porabilo zadnjo zalogo (sicer bi kupec
+    // videl zavajujoče "ni na zalogi" namesto "naročilo že obstaja").
+    // Atomarna dedup varovalka ostaja znotraj transakcije spodaj — ta
+    // pre-check je samo hitra (ne-tekmovalna) pot.
+    const dupWindowStart = new Date(Date.now() - 10 * 60_000);
+    const dedupKey = canonicalItems
+      .map((i) => `${i.productId}:${i.quantity}`)
+      .join("|");
+    const orderItemsKey = (itemsRaw: string): string => {
+      try {
+        const parsed = JSON.parse(itemsRaw) as Array<{
+          productId?: unknown;
+          quantity?: unknown;
+        }>;
+        if (!Array.isArray(parsed)) return "";
+        return parsed
+          .map((i) => `${String(i.productId)}:${Number(i.quantity)}`)
+          .sort()
+          .join("|");
+      } catch {
+        return "";
+      }
+    };
+    const findRecentDuplicate = async (): Promise<string | null> => {
+      const recent = await db.order.findMany({
+        where: { buyerEmail: email, createdAt: { gte: dupWindowStart } },
+        select: { orderNumber: true, items: true },
+      });
+      for (const r of recent) {
+        if (orderItemsKey(r.items) === dedupKey) return r.orderNumber;
+      }
+      return null;
+    };
+    const earlyDup = await findRecentDuplicate();
+    if (earlyDup) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "To naročilo je bilo pravkar ustvarjeno. Preverite svojo e-pošto za potrditev.",
+          orderNumber: earlyDup,
+        },
+        { status: 409 }
+      );
+    }
+
+    // FW1: hitri predhodni check zaloge po AGREGIRANI količini (fast-fail
+    // za boljšo UX); PRAVA varovalka je atomarni pogojni decrement v
+    // transakciji spodaj (preprečuje overselling tudi ob současnosti).
+    for (const item of canonicalItems) {
+      const dbProduct = dbProductMap.get(item.productId);
+      if (dbProduct && dbProduct.stock < item.quantity) {
         return NextResponse.json(
           {
             error: `Izdelek "${item.name}" ni na zalogi v zahtevani količini (na zalogi: ${dbProduct.stock}).`,
@@ -201,7 +295,7 @@ export async function POST(request: Request) {
     }
 
     // --- Server-side izračun zneskov ---
-    const subtotal = sanitizedItems.reduce(
+    const subtotal = canonicalItems.reduce(
       (sum, i) => sum + i.price * i.quantity,
       0
     );
@@ -214,7 +308,7 @@ export async function POST(request: Request) {
     if (subtotal > 0 && subtotal < 50) {
       // P3b-1: vsi izdelki so od tu naprej veljavni published DB zapisi —
       // lookup po mapi je vedno zadet (?? false ostaja samo tipovska varovalka).
-      const allFree = sanitizedItems.every(
+      const allFree = canonicalItems.every(
         (i) => dbProductMap.get(i.productId)?.shippingFree ?? false
       );
       shipping = allFree ? 0 : 4.9;
@@ -247,9 +341,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Pripravi items JSON za bazo
+    // Pripravi items JSON za bazo (AGREGIRANO + sortirano — kanonska oblika)
     const itemsJson = JSON.stringify(
-      sanitizedItems.map((i) => ({
+      canonicalItems.map((i) => ({
         productId: i.productId,
         name: i.name,
         slug: i.slug,
@@ -260,41 +354,136 @@ export async function POST(request: Request) {
       }))
     );
 
-    // === DEMO MODE ===
-    // direktno ustvari Order s status="paid" (izključno demo — glej 501 varovalko zgoraj)
-    const order = await db.order.create({
-      data: {
-        orderNumber,
-        buyerEmail: email,
-        buyerName: name,
-        buyerPhone: phone ?? null,
-        buyerAddress: address,
-        buyerCity: city,
-        buyerPostalCode: postalCode,
-        buyerCountry: country,
-        status: "paid",
-        paymentMethod: "demo",
-        stripeSessionId: null,
-        subtotal,
-        shippingCost: shipping,
-        total,
-        currency: "EUR",
-        items: itemsJson,
-        paidAt: new Date(),
-      },
-    });
-
-    // Posodobi saleCount za vsak izdelek (ne-blokirajoče)
-    for (const item of sanitizedItems) {
-      db.product
-        .update({
-          where: { id: item.productId },
-          data: { saleCount: { increment: item.quantity } },
-        })
-        .catch(() => {
-          // ne-blokirajoče — ne moti checkout flow
-        });
+    // === FW1 (audit R2 🔴 #1/#2/#3): ATOMICNA TRANSAKCIJA ===
+    // Zaloga se od tu naprej DEJANSKO zmanjša ob uspešnem naročilu, in sicer
+    // s POGOJNIM decrementedom (compare-and-decrement) ZNOTRAJ transakcije —
+    // atomarno tudi ob současnih checkoutih (dva vzporedna klica pri stock=1:
+    // prvi decremente uspe, drugi dobi count=0 → 400, overselling nemogoč).
+    // Dodatno: deduplikacija naročil (dvoklik/browser retry) po vzorcu iz
+    // /api/bookings (P8) — isti kupec + ista vsebina košarice v 10-minutnem
+    // oknu → 409 s številko PRVEGA naročila, brez drugega emaila/decrementa.
+    // SERIALIZABLE + retry na P2034 (PostgreSQL/Neon); SQLite (lokalna demo
+    // baza) pusti privzeto raven — pogojni decrement je varen na obeh.
+    class StockChangedError extends Error {
+      constructor(public productName: string) {
+        super(`Zaloga za "${productName}" se je medtem spremenila.`);
+      }
     }
+    const txOptions = process.env.DATABASE_URL?.startsWith("file:")
+      ? undefined
+      : {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        };
+    const createOrderAtomically = async (): Promise<{
+      duplicate: boolean;
+      orderNumber: string;
+    }> => {
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return await db.$transaction(
+            async (tx) => {
+              // 1) Dedup — isto košarico + isti kupec v 10 min → idempotentno
+              const recent = await tx.order.findMany({
+                where: { buyerEmail: email, createdAt: { gte: dupWindowStart } },
+                select: { orderNumber: true, items: true },
+              });
+              for (const r of recent) {
+                if (orderItemsKey(r.items) === dedupKey) {
+                  return { duplicate: true, orderNumber: r.orderNumber };
+                }
+              }
+              // 2) Pogojni decrement zaloga + saleCount (atomarno, v isti
+              //    transakciji kot order.create — prej fire-and-forget)
+              for (const item of canonicalItems) {
+                const res = await tx.product.updateMany({
+                  where: { id: item.productId, stock: { gte: item.quantity } },
+                  data: {
+                    stock: { decrement: item.quantity },
+                    saleCount: { increment: item.quantity },
+                  },
+                });
+                if (res.count === 0) {
+                  throw new StockChangedError(item.name);
+                }
+              }
+              // 3) Ustvari naročilo (demo: status "paid" — glej 501 varovalko)
+              const created = await tx.order.create({
+                data: {
+                  orderNumber,
+                  buyerEmail: email,
+                  buyerName: name,
+                  buyerPhone: phone ?? null,
+                  buyerAddress: address,
+                  buyerCity: city,
+                  buyerPostalCode: postalCode,
+                  buyerCountry: country,
+                  status: "paid",
+                  paymentMethod: "demo",
+                  stripeSessionId: null,
+                  subtotal,
+                  shippingCost: shipping,
+                  total,
+                  currency: "EUR",
+                  items: itemsJson,
+                  paidAt: new Date(),
+                },
+                select: { orderNumber: true },
+              });
+              return { duplicate: false, orderNumber: created.orderNumber };
+            },
+            txOptions
+          );
+        } catch (error) {
+          if (error instanceof StockChangedError) {
+            throw error; // → namenski 400 handler spodaj (brez retryja)
+          }
+          const conflict =
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            error.code === "P2034";
+          if (!conflict || attempt >= 2) {
+            // Nepričakovana napaka ali izčrpani poskusi: če je drug request
+            // vmes uspel, vrnemo duplikat (idempotenten odgovor), sicer napaka
+            // gre v splošni handler (500).
+            const lateDup = await findRecentDuplicate();
+            if (lateDup) {
+              return { duplicate: true, orderNumber: lateDup };
+            }
+            throw error;
+          }
+          await new Promise((r) => setTimeout(r, 60));
+        }
+      }
+    };
+
+    // === DEMO MODE ===
+    // direktno ustvari Order s status="paid" (izključno demo — glej 501
+    // varovalko zgoraj) — atomarno z decrementedom zaloge (glej zgoraj)
+    let outcome: { duplicate: boolean; orderNumber: string };
+    try {
+      outcome = await createOrderAtomically();
+    } catch (error) {
+      if (error instanceof StockChangedError) {
+        return NextResponse.json(
+          {
+            error: `Izdelek "${error.productName}" ni več na zalogi v zahtevani količini. Poskusite znova z manjšim številom kosov.`,
+          },
+          { status: 400 }
+        );
+      }
+      throw error;
+    }
+    if (outcome.duplicate) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "To naročilo je bilo pravkar ustvarjeno. Preverite svojo e-pošto za potrditev.",
+          orderNumber: outcome.orderNumber,
+        },
+        { status: 409 }
+      );
+    }
+    const order = { orderNumber: outcome.orderNumber, status: "paid" as const };
 
     // === Potrditveni email kupcu — NE-BLOKIRAJOČE (fire-and-forget) ===
     // Naročilo je že varno shranjeno v bazi — morebitna napaka emaila NE sme
@@ -303,7 +492,7 @@ export async function POST(request: Request) {
       const mail = orderConfirmationEmail({
         orderNumber: order.orderNumber,
         buyerName: name,
-        items: sanitizedItems.map((i) => ({
+        items: canonicalItems.map((i) => ({
           name: i.name,
           quantity: i.quantity,
           price: i.price,

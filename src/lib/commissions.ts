@@ -99,6 +99,14 @@ export async function issueCommissionInvoice(
           // P7-C3 (P1): preklicane rezervacije NE štejejo v provizijsko osnovo
           // (usklajeno z lastniškimi prihodki, ki štejejo samo confirmed/completed)
           status: { in: ["confirmed", "completed"] },
+          // FW1 (audit R3 🔴 #1 — INVARIANT provizijske upravičenosti):
+          // provizijsko upravičena rezervacija je IZKLJUČNO dejansko plačana
+          // transakcija, ki ni preklicana/refundirana. Demo rezervacije so
+          // vedno paymentStatus "unpaid" (glej /api/bookings) → anonimni
+          // API obiskovalec NE MORE več ustvarjati provizijske obveznosti
+          // ponudniku. "paid" nastavlja izključno Stripe webhook (future)
+          // oz. nadzorovani demo seed (scripts/fix-wave1-backfill).
+          paymentStatus: "paid",
         },
       })
     : { _count: 0, _sum: { total: null as number | null } };

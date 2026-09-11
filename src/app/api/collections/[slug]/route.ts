@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { toPublicProduct, toPublicExperience } from "@/lib/public-fields";
 import {
   getCollectionBySlug,
   PRODUCT_CATEGORY_VALUES,
@@ -96,8 +97,10 @@ async function fetchProducts(filters: CollectionFilters) {
     take: 50,
   });
 
+  // FW1 (audit R3 🟠): sanitiziran javni odgovor — brez ownerId/
+  // rejectionReason/submittedAt (glej public-fields.ts)
   return rows.map((p) => ({
-    ...p,
+    ...toPublicProduct(p),
     images: JSON.parse(p.images || "[]") as string[],
   }));
 }
@@ -143,8 +146,10 @@ async function fetchExperiences(filters: CollectionFilters) {
     take: 50,
   });
 
+  // FW1 (audit R3 🟠): sanitiziran javni odgovor — brez ownerId/
+  // rejectionReason/submittedAt (glej public-fields.ts)
   return rows.map((e) => ({
-    ...e,
+    ...toPublicExperience(e),
     images: JSON.parse(e.images || "[]") as string[],
     languages: JSON.parse(e.languages || "[]") as string[],
   }));
