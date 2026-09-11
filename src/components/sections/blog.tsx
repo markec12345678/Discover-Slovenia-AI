@@ -121,7 +121,7 @@ export function BlogSection() {
         {filtered.length === 0 ? (
           <BlogEmptyState />
         ) : (
-          <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
             {filtered.map((post) => (
               <BlogCard
                 key={post.slug}
@@ -176,9 +176,9 @@ function BlogCard({
       </div>
 
       {/* Body */}
-      <CardContent className="flex flex-col gap-3 p-4">
+      <CardContent className="flex flex-col gap-3 p-3 sm:p-4">
         {/* Meta */}
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground sm:gap-3 sm:text-xs">
           <span className="inline-flex items-center gap-1">
             <Calendar className="size-3" aria-hidden="true" />
             {formatDate(post.date)}
@@ -189,19 +189,19 @@ function BlogCard({
           </span>
         </div>
 
-        <h3 className="text-lg font-semibold leading-tight line-clamp-2">
+        <h3 className="line-clamp-2 text-sm font-semibold leading-tight sm:text-lg">
           {post.title}
         </h3>
-        <p className="text-sm text-muted-foreground line-clamp-2">
+        <p className="text-xs text-muted-foreground line-clamp-2 sm:text-sm">
           {post.excerpt}
         </p>
 
-        {/* CTA */}
+        {/* CTA — full-width na mobilnem za veliko tap tarčo */}
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="mt-1 justify-between self-start text-primary hover:bg-primary/10 hover:text-primary"
+          className="mt-1 w-full justify-between self-start text-primary hover:bg-primary/10 hover:text-primary sm:w-auto"
           onClick={(e) => {
             e.stopPropagation();
             onOpen();

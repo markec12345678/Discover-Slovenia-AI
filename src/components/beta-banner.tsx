@@ -32,8 +32,9 @@ export function BetaBanner() {
 
   return (
     <div className="relative z-40 w-full bg-gradient-to-r from-primary to-primary/90 text-primary-foreground">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-2 text-sm">
+      {/* pr-[4.5rem] (mobilno): deska rezervira prostor za chat FAB (fixed bottom-right), da gumba nista pod njim ob prvem prikazu; sm:px-6 ponastavi */}
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 pr-[4.5rem] py-2.5 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 items-center gap-2 text-xs sm:text-sm">
           <Sparkles className="size-4 shrink-0" aria-hidden="true" />
           <span className="font-medium">Beta obdobje:</span>
           <span className="hidden sm:inline">
@@ -41,16 +42,16 @@ export function BetaBanner() {
             <strong>{status.remainingToMonetization}</strong> lokalov do
             vklopa monetizacije.
           </span>
-          <span className="sm:hidden">
+          <span className="min-w-0 truncate sm:hidden">
             BREZPLAČNO · še {status.remainingToMonetization} lokalov
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Button
             asChild
             size="sm"
             variant="secondary"
-            className="h-7 px-3 text-xs"
+            className="h-9 px-3 text-xs sm:h-7"
           >
             <a href="#pridruzi-se">Pridruži se</a>
           </Button>

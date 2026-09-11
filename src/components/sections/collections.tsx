@@ -40,7 +40,7 @@ export function CollectionsSection() {
         </div>
 
         {/* Grid */}
-        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
           {COLLECTIONS.map((collection) => (
             <CollectionCard
               key={collection.id}
@@ -68,7 +68,7 @@ function CollectionCard({
 }) {
   return (
     <Card
-      className="group relative cursor-pointer overflow-hidden border-border/60 transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg"
+      className="group relative cursor-pointer overflow-hidden border-border/60 py-4 transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg sm:py-6"
       role="button"
       tabIndex={0}
       aria-label={`Odpri zbirko ${collection.title}`}
@@ -80,18 +80,18 @@ function CollectionCard({
         }
       }}
     >
-      <CardContent className="flex flex-col gap-3 p-5">
+      <CardContent className="flex flex-col gap-3 p-3 sm:p-5">
         <div
-          className={`flex size-12 items-center justify-center rounded-xl text-2xl ${collection.color}`}
+          className={`flex size-10 items-center justify-center rounded-xl text-xl sm:size-12 sm:text-2xl ${collection.color}`}
           aria-hidden="true"
         >
           {collection.icon}
         </div>
-        <div>
-          <h3 className="text-lg font-semibold leading-tight">
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold leading-tight sm:text-lg">
             {collection.title}
           </h3>
-          <p className="mt-1.5 text-sm leading-snug text-muted-foreground line-clamp-2">
+          <p className="mt-1.5 text-xs leading-snug text-muted-foreground line-clamp-2 sm:text-sm">
             {collection.description}
           </p>
         </div>

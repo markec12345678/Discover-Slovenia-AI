@@ -212,7 +212,7 @@ export function ListingsSection() {
 
         {/* Grid */}
         {loading ? (
-          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <ListingSkeleton key={i} />
             ))}
@@ -235,7 +235,7 @@ export function ListingsSection() {
             onClear={clearFilters}
           />
         ) : (
-          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
             {listings.map((l) => (
               <ListingCard
                 key={l.id}
@@ -353,10 +353,10 @@ function ListingCard({
           </div>
         )}
 
-        {/* Badge kategorije (top-left) */}
-        <Badge className="absolute left-3 top-3 bg-background/90 text-foreground backdrop-blur-sm">
+        {/* Badge kategorije (top-left) — skrčen na ozki sliki (~175px), da se ne prekriva s partner badgeom */}
+        <Badge className="absolute left-3 top-3 max-w-[45%] bg-background/90 text-[10px] text-foreground backdrop-blur-sm sm:max-w-none sm:text-xs">
           <span aria-hidden="true">{CATEGORY_ICONS[listing.category]}</span>
-          {CATEGORY_LABELS[listing.category]}
+          <span className="truncate">{CATEGORY_LABELS[listing.category]}</span>
         </Badge>
 
         {/* Partner badge (top-right) — samo ena glavna oznaka */}
@@ -371,12 +371,12 @@ function ListingCard({
       </div>
 
       {/* Body */}
-      <CardContent className="flex flex-col gap-3 p-4">
-        <div>
-          <h3 className="text-lg font-semibold leading-tight">
+      <CardContent className="flex flex-col gap-3 p-3 sm:p-4">
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold leading-tight sm:text-lg">
             {listing.name}
           </h3>
-          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-2 sm:text-sm">
             {listing.description}
           </p>
         </div>
@@ -388,10 +388,10 @@ function ListingCard({
               className="size-4 fill-amber-400 text-amber-400"
               aria-hidden="true"
             />
-            <span className="text-sm font-medium tabular-nums">
+            <span className="text-xs font-medium tabular-nums sm:text-sm">
               {listing.rating.toFixed(1)}
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground sm:text-xs">
               ({listing.reviewCount})
             </span>
           </div>
@@ -399,7 +399,7 @@ function ListingCard({
 
         {/* Lokacija */}
         {location ? (
-          <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+          <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground sm:text-xs">
             <MapPin
               className="mt-0.5 size-3.5 shrink-0"
               aria-hidden="true"
@@ -423,13 +423,15 @@ function ListingCard({
           ) : null}
         </div>
 
-        {/* Specialties */}
+        {/* Specialties — na mobilnem največ 2 */}
         {listing.specialties.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
-            {listing.specialties.slice(0, 3).map((s) => (
+            {listing.specialties.slice(0, 3).map((s, i) => (
               <span
                 key={s}
-                className="rounded-md bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
+                className={`rounded-md bg-muted px-2 py-0.5 text-[11px] text-muted-foreground${
+                  i === 2 ? " hidden sm:inline-block" : ""
+                }`}
               >
                 {s}
               </span>
@@ -510,7 +512,7 @@ function ListingSkeleton() {
   return (
     <Card className="gap-0 overflow-hidden py-0">
       <Skeleton className="aspect-video w-full rounded-none" />
-      <CardContent className="space-y-3 p-4">
+      <CardContent className="space-y-3 p-3 sm:p-4">
         <Skeleton className="h-5 w-3/4" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-2/3" />

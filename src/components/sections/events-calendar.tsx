@@ -262,7 +262,7 @@ function MonthGroup({
       </div>
 
       {/* Kartice dogodkov */}
-      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-2">
         {events.map((event) => (
           <EventCard key={event.id} event={event} />
         ))}
@@ -277,14 +277,15 @@ function EventCard({ event }: { event: EventItem }) {
 
   return (
     <Card className="group gap-0 overflow-hidden py-0 transition-all hover:shadow-lg">
-      <div className="flex flex-col sm:flex-row">
+      {/* Mobilni row layout (slika levo) — enak kot ≥sm; prej je bila slika čez vso širino (~500px/kartico) */}
+      <div className="flex flex-row">
         {/* Slika */}
-        <div className="relative w-full overflow-hidden bg-muted sm:w-40 sm:shrink-0">
+        <div className="relative w-28 shrink-0 overflow-hidden bg-muted sm:w-40">
           <img
             src={event.image}
             alt={`${event.name} — ${event.location}`}
             loading="lazy"
-            className="aspect-video size-full object-cover transition-transform duration-500 group-hover:scale-105 sm:aspect-square"
+            className="aspect-square size-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
           {event.featured ? (
             <Badge className="absolute right-2 top-2 bg-amber-400 text-amber-950 shadow-sm">
@@ -292,13 +293,15 @@ function EventCard({ event }: { event: EventItem }) {
                 className="size-3 fill-amber-950 text-amber-950"
                 aria-hidden="true"
               />
-              Izpostavljeno
+              {/* Besedilo ne spravi v 112px sliko — na mobilnem samo zvezdica + sr-only */}
+              <span className="sr-only sm:hidden">Izpostavljeno</span>
+              <span className="hidden sm:inline">Izpostavljeno</span>
             </Badge>
           ) : null}
         </div>
 
         {/* Vsebina */}
-        <CardContent className="flex flex-1 flex-col gap-2 p-4 sm:p-5">
+        <CardContent className="flex min-w-0 flex-1 flex-col gap-2 p-4 sm:p-5">
           {/* Kategorija */}
           <Badge
             className={`w-fit ${CATEGORY_BADGE_CLASS[event.category]}`}
@@ -308,12 +311,12 @@ function EventCard({ event }: { event: EventItem }) {
           </Badge>
 
           {/* Ime */}
-          <h4 className="text-lg font-semibold leading-tight">
+          <h4 className="text-base font-semibold leading-tight sm:text-lg">
             {event.name}
           </h4>
 
           {/* Meta: datum, lokacija, cena */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
             <span
               className="inline-flex items-center gap-1.5"
               title="Datum dogodka"

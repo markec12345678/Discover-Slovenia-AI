@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { randomId } from "@/lib/security";
@@ -258,15 +259,107 @@ export async function POST(request: Request) {
       // Ista izkušnja + gost + datum v zadnjih 10 minutah → 409 s številko
       // PRVE rezervacije. Legitimna ponovna rezervacija istega dne po 10 min
       // ostaje možna.
-      const dup = await db.booking.findFirst({
-        where: {
-          experienceId,
-          guestEmail,
-          bookingDate,
-          createdAt: { gte: new Date(Date.now() - 10 * 60_000) },
-        },
-        select: { id: true, bookingNumber: true },
-      });
+      // P8 (P1): findFirst -> create je prej potekal loceno = TOCTOU race
+      // (dva sočasna requesta oba preglesta "ni duplikata" in oba kreirata
+      // rezervacijo). Dedup + create sta zdaj ATOMARNO v SERIALIZABLE
+      // transakciji: ob konfliktu (P2034) retry; nastane natanko ENA
+      // rezervacija, sogibajoči request ob retryju vidi zmagovalno vrstico
+      // in dobi 409. SERIALIZABLE podpira PostgreSQL (Neon/produkcija);
+      // SQLite (lokalna demo baza, enouporabniška) pusti privzeto raven.
+      const txOptions = process.env.DATABASE_URL?.startsWith("file:")
+        ? undefined
+        : {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          };
+      const dupWindowStart = new Date(Date.now() - 10 * 60_000);
+      const createAtomically = async (): Promise<{
+        duplicate: boolean;
+        bookingNumber: string;
+      }> => {
+        for (let attempt = 0; ; attempt++) {
+          try {
+            return await db.$transaction(
+              async (tx) => {
+                const existing = await tx.booking.findFirst({
+                  where: {
+                    experienceId,
+                    guestEmail,
+                    bookingDate,
+                    createdAt: { gte: dupWindowStart },
+                  },
+                  select: { bookingNumber: true },
+                });
+                if (existing) {
+                  return {
+                    duplicate: true,
+                    bookingNumber: existing.bookingNumber,
+                  };
+                }
+                const created = await tx.booking.create({
+                  data: {
+                    bookingNumber,
+                    guestEmail,
+                    guestName,
+                    guestPhone,
+                    experienceId,
+                    experienceName,
+                    bookingDate,
+                    groupSize,
+                    pricePerPerson,
+                    total,
+                    currency,
+                    status: "confirmed",
+                    paymentMethod: "demo",
+                    notes: notesRaw || null,
+                    providerName,
+                    providerEmail,
+                    meetingPoint,
+                    source,
+                    confirmedAt: new Date(),
+                  },
+                  select: { bookingNumber: true },
+                });
+                return {
+                  duplicate: false,
+                  bookingNumber: created.bookingNumber,
+                };
+              },
+              txOptions
+            );
+          } catch (error) {
+            const conflict =
+              error instanceof Prisma.PrismaClientKnownRequestError &&
+              error.code === "P2034";
+            if (!conflict || attempt >= 2) {
+              // Nepričakovana napaka ali izčrpani poskusi: ce je drug request
+              // vmes uspel, vrnemo duplikat (idempotenten odgovor), sicer
+              // napaka gre v splošni handler (500).
+              const lateDup = await db.booking.findFirst({
+                where: {
+                  experienceId,
+                  guestEmail,
+                  bookingDate,
+                  createdAt: { gte: dupWindowStart },
+                },
+                select: { bookingNumber: true },
+              });
+              if (lateDup) {
+                return {
+                  duplicate: true,
+                  bookingNumber: lateDup.bookingNumber,
+                };
+              }
+              throw error;
+            }
+            await new Promise((r) => setTimeout(r, 60));
+          }
+        }
+      };
+
+      const outcome = await createAtomically();
+      const dup = outcome.duplicate
+        ? { bookingNumber: outcome.bookingNumber }
+        : null;
       if (dup) {
         return NextResponse.json(
           {
@@ -278,29 +371,10 @@ export async function POST(request: Request) {
         );
       }
 
-      const booking = await db.booking.create({
-        data: {
-          bookingNumber,
-          guestEmail,
-          guestName,
-          guestPhone,
-          experienceId,
-          experienceName,
-          bookingDate,
-          groupSize,
-          pricePerPerson,
-          total,
-          currency,
-          status: "confirmed",
-          paymentMethod: "demo",
-          notes: notesRaw || null,
-          providerName,
-          providerEmail,
-          meetingPoint,
-          source,
-          confirmedAt: new Date(),
-        },
-      });
+      // Rezervacija je bila ustvarjena (ali zavrnjena kot duplikat) znotraj
+      // transakcije zgoraj; `booking` tu nosi samo se stevilko za odgovor
+      // in potrditveni e-posti.
+      const booking = { bookingNumber: outcome.bookingNumber };
 
       // Poskusi inkrementirati bookingCount na izkušnji (če obstaja)
       try {
@@ -387,8 +461,8 @@ export async function POST(request: Request) {
         success: true,
         bookingNumber: booking.bookingNumber,
         total,
-        status: booking.status,
-        bookingDate: booking.bookingDate.toISOString(),
+        status: "confirmed" as const,
+        bookingDate: bookingDate.toISOString(),
         currency,
         meetingPoint,
         providerName,

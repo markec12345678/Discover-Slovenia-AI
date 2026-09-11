@@ -280,7 +280,8 @@ export function MarketplaceSection() {
             ) : null}
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {/* 2-col filtri na mobilnem — Select vrednosti se okrajšajo (line-clamp-1), pri ~170px ni preliva */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
             {tab === "products" ? (
               <>
                 <FilterSelect
@@ -357,7 +358,7 @@ export function MarketplaceSection() {
         {/* Grid */}
         {tab === "products" ? (
           productsLoading ? (
-            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <ProductSkeleton key={i} />
               ))}
@@ -374,7 +375,7 @@ export function MarketplaceSection() {
               label="izdelkov"
             />
           ) : (
-            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
               {products.map((p) => (
                 <ProductCard
                   key={p.id}
@@ -385,7 +386,7 @@ export function MarketplaceSection() {
             </div>
           )
         ) : experiencesLoading ? (
-          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <ExperienceSkeleton key={i} />
             ))}
@@ -402,7 +403,7 @@ export function MarketplaceSection() {
             label="izkušenj"
           />
         ) : (
-          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
             {experiences.map((e) => (
               <ExperienceCard
                 key={e.id}
@@ -553,33 +554,37 @@ function ProductCard({
           </div>
         )}
 
-        {/* Atributi (top-left) */}
+        {/* Atributi (top-left) — na mobilnem največ 2, da ne prekrijejo ozke slike (~175px) */}
         <div className="absolute left-3 top-3 flex flex-col gap-1.5">
           {product.organic ? (
-            <Badge className="bg-primary text-primary-foreground shadow-sm">
+            <Badge className="bg-primary text-[10px] text-primary-foreground shadow-sm sm:text-xs">
               <Leaf className="size-3" aria-hidden="true" />
               Ekološko
             </Badge>
           ) : null}
           {product.handmade ? (
-            <Badge className="bg-blue-600 text-white shadow-sm">
+            <Badge className="bg-blue-600 text-[10px] text-white shadow-sm sm:text-xs">
               <HandHeart className="size-3" aria-hidden="true" />
               Ročno
             </Badge>
           ) : null}
           {product.vegan ? (
-            <Badge variant="secondary" className="shadow-sm">
+            <Badge
+              variant="secondary"
+              className="hidden text-[10px] shadow-sm sm:inline-flex sm:text-xs"
+            >
               <Leaf className="size-3" aria-hidden="true" />
               Vegansko
             </Badge>
           ) : null}
         </div>
 
-        {/* Featured badge (top-right) */}
+        {/* Featured badge (top-right) — besedilo skrito na mobilnem (samo ikona), da se ne prekriva z atributi */}
         {product.featured ? (
           <Badge className="absolute right-3 top-3 bg-amber-400 text-amber-950 shadow-sm">
             <Sparkles className="size-3" aria-hidden="true" />
-            Izpostavljeno
+            <span className="sr-only sm:hidden">Izpostavljeno</span>
+            <span className="hidden sm:inline">Izpostavljeno</span>
           </Badge>
         ) : null}
 
@@ -592,12 +597,12 @@ function ProductCard({
       </div>
 
       {/* Body */}
-      <CardContent className="flex flex-col gap-3 p-4">
-        <div>
-          <h3 className="line-clamp-1 text-lg font-semibold leading-tight">
+      <CardContent className="flex flex-col gap-3 p-3 sm:p-4">
+        <div className="min-w-0">
+          <h3 className="line-clamp-1 text-sm font-semibold leading-tight sm:text-lg">
             {product.name}
           </h3>
-          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-2 sm:text-sm">
             {product.description}
           </p>
         </div>
@@ -609,10 +614,10 @@ function ProductCard({
               className="size-4 fill-amber-400 text-amber-400"
               aria-hidden="true"
             />
-            <span className="text-sm font-medium tabular-nums">
+            <span className="text-xs font-medium tabular-nums sm:text-sm">
               {product.rating.toFixed(1)}
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground sm:text-xs">
               ({product.reviewCount})
             </span>
           </div>
@@ -620,18 +625,18 @@ function ProductCard({
 
         {/* Cena */}
         <div className="flex items-baseline gap-2">
-          <span className="text-lg font-bold text-foreground">
+          <span className="text-base font-bold text-foreground sm:text-lg">
             {formatPrice(product.price, product.currency)}
           </span>
           {product.compareAtPrice ? (
-            <span className="text-sm text-muted-foreground line-through">
+            <span className="text-xs text-muted-foreground line-through sm:text-sm">
               {formatPrice(product.compareAtPrice, product.currency)}
             </span>
           ) : null}
         </div>
 
         {/* Seller name + location */}
-        <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+        <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground sm:text-xs">
           <MapPin
             className="mt-0.5 size-3.5 shrink-0"
             aria-hidden="true"
@@ -657,8 +662,8 @@ function ProductCard({
           ) : null}
         </div>
 
-        {/* CTA */}
-        <div className="mt-1 flex items-center gap-2">
+        {/* CTA — na mobilnem se gumba zložita vsak v svojo vrstico (flex-wrap), ≥sm nespremenjeno */}
+        <div className="mt-1 flex flex-wrap items-center gap-2">
           <Button
             type="button"
             size="sm"
@@ -673,7 +678,7 @@ function ProductCard({
             type="button"
             variant="outline"
             size="sm"
-            className="justify-center"
+            className="justify-center sm:flex-none max-sm:flex-1"
             onClick={onOpen}
           >
             Podrobnosti
@@ -720,36 +725,37 @@ function ExperienceCard({
           </div>
         )}
 
-        {/* Category badge (top-left) */}
-        <Badge className="absolute left-3 top-3 bg-background/90 text-foreground backdrop-blur-sm">
+        {/* Category badge (top-left) — skrčen na ozki sliki (~175px) */}
+        <Badge className="absolute left-3 top-3 max-w-[45%] bg-background/90 text-[10px] text-foreground backdrop-blur-sm sm:max-w-none sm:text-xs">
           <span aria-hidden="true">
             {EXPERIENCE_CATEGORY_ICONS[experience.category]}
           </span>
-          {EXPERIENCE_CATEGORY_LABELS[experience.category]}
+          <span className="truncate">{EXPERIENCE_CATEGORY_LABELS[experience.category]}</span>
         </Badge>
 
-        {/* Featured badge (top-right) */}
+        {/* Featured badge (top-right) — besedilo skrito na mobilnem (samo ikona), da se ne prekriva s kategorijo */}
         {experience.featured ? (
           <Badge className="absolute right-3 top-3 bg-amber-400 text-amber-950 shadow-sm">
             <Sparkles className="size-3" aria-hidden="true" />
-            Izpostavljeno
+            <span className="sr-only sm:hidden">Izpostavljeno</span>
+            <span className="hidden sm:inline">Izpostavljeno</span>
           </Badge>
         ) : null}
 
         {/* Duration badge (bottom-right) */}
-        <Badge className="absolute bottom-3 right-3 bg-background/90 text-foreground backdrop-blur-sm">
+        <Badge className="absolute bottom-3 right-3 bg-background/90 text-[10px] text-foreground backdrop-blur-sm sm:text-xs">
           <Clock className="size-3" aria-hidden="true" />
           {formatDuration(experience.durationHours)}
         </Badge>
       </div>
 
       {/* Body */}
-      <CardContent className="flex flex-col gap-3 p-4">
-        <div>
-          <h3 className="line-clamp-1 text-lg font-semibold leading-tight">
+      <CardContent className="flex flex-col gap-3 p-3 sm:p-4">
+        <div className="min-w-0">
+          <h3 className="line-clamp-1 text-sm font-semibold leading-tight sm:text-lg">
             {experience.name}
           </h3>
-          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-2 sm:text-sm">
             {experience.description}
           </p>
         </div>
@@ -761,10 +767,10 @@ function ExperienceCard({
               className="size-4 fill-amber-400 text-amber-400"
               aria-hidden="true"
             />
-            <span className="text-sm font-medium tabular-nums">
+            <span className="text-xs font-medium tabular-nums sm:text-sm">
               {experience.rating.toFixed(1)}
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground sm:text-xs">
               ({experience.reviewCount})
             </span>
           </div>
@@ -772,15 +778,15 @@ function ExperienceCard({
 
         {/* Cena */}
         <div className="flex items-baseline gap-1">
-          <span className="text-xs text-muted-foreground">od</span>
-          <span className="text-lg font-bold text-foreground">
+          <span className="text-[11px] text-muted-foreground sm:text-xs">od</span>
+          <span className="text-base font-bold text-foreground sm:text-lg">
             {formatPrice(experience.pricePerPerson, experience.currency)}
           </span>
-          <span className="text-xs text-muted-foreground">/ osebo</span>
+          <span className="text-[11px] text-muted-foreground sm:text-xs">/ osebo</span>
         </div>
 
         {/* Provider name + location */}
-        <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+        <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground sm:text-xs">
           <MapPin
             className="mt-0.5 size-3.5 shrink-0"
             aria-hidden="true"
@@ -809,8 +815,8 @@ function ExperienceCard({
           </div>
         )}
 
-        {/* CTA — primarni gumb odpre modal z rezervacijo (zrcali [V košarico][Podrobnosti]) */}
-        <div className="mt-1 flex items-center gap-2">
+        {/* CTA — primarni gumb odpre modal z rezervacijo (zrcali [V košarico][Podrobnosti]); na mobilnem zložena vrstica */}
+        <div className="mt-1 flex flex-wrap items-center gap-2">
           <Button
             type="button"
             size="sm"
@@ -826,7 +832,7 @@ function ExperienceCard({
               variant="outline"
               size="sm"
               asChild
-              className="justify-center gap-1.5"
+              className="justify-center gap-1.5 sm:flex-none max-sm:flex-1"
             >
               <a
                 href={experience.providerWebsite}
@@ -843,7 +849,7 @@ function ExperienceCard({
               type="button"
               variant="outline"
               size="sm"
-              className="justify-center gap-1.5"
+              className="justify-center gap-1.5 sm:flex-none max-sm:flex-1"
               disabled
               title="Ponudnik nima spletne strani"
             >
@@ -861,7 +867,7 @@ function ProductSkeleton() {
   return (
     <Card className="gap-0 overflow-hidden py-0">
       <Skeleton className="aspect-square w-full rounded-none" />
-      <CardContent className="space-y-3 p-4">
+      <CardContent className="space-y-3 p-3 sm:p-4">
         <Skeleton className="h-5 w-3/4" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-2/3" />
@@ -879,7 +885,7 @@ function ExperienceSkeleton() {
   return (
     <Card className="gap-0 overflow-hidden py-0">
       <Skeleton className="aspect-video w-full rounded-none" />
-      <CardContent className="space-y-3 p-4">
+      <CardContent className="space-y-3 p-3 sm:p-4">
         <Skeleton className="h-5 w-3/4" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-2/3" />

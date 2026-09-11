@@ -144,8 +144,8 @@ export function DestinationsSection() {
             ) : null}
           </div>
 
-          {/* 1. vrstica: regija, interes, tip */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {/* 1. vrstica: regija, interes, tip (2-col na mobilnem, da filtri ne zorijo v 5-stopenjski stack) */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <FilterSelect
               value={region}
               onChange={setRegion}
@@ -173,7 +173,7 @@ export function DestinationsSection() {
           </div>
 
           {/* 2. vrstica: cena, ocena */}
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-2">
             <FilterSelect
               value={budget}
               onChange={setBudget}
@@ -202,7 +202,7 @@ export function DestinationsSection() {
         {filtered.length === 0 ? (
           <EmptyState onClear={clearFilters} canClear={hasActiveFilters} />
         ) : (
-          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
             {filtered.map((d) => (
               <DestinationCard
                 key={d.id}
@@ -288,25 +288,25 @@ function DestinationCard({
           loading="lazy"
           className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
-        {/* Badge regije (top-left) */}
-        <Badge className="absolute left-3 top-3 bg-primary text-primary-foreground shadow-sm">
+        {/* Badge regije (top-left) — na ozki sliki (~175px) skrčena in odrezana, da se ne prekriva z featured */}
+        <Badge className="absolute left-3 top-3 max-w-[45%] truncate bg-primary text-[10px] text-primary-foreground shadow-sm sm:text-xs">
           {regionLabel(destination.region)}
         </Badge>
         {/* Featured badge (top-right) */}
         {destination.featured ? (
-          <Badge className="absolute right-3 top-3 bg-amber-400 text-amber-950 shadow-sm">
+          <Badge className="absolute right-3 top-3 bg-amber-400 text-[10px] text-amber-950 shadow-sm sm:text-xs">
             ★ Priporočeno
           </Badge>
         ) : null}
       </div>
 
       {/* Body */}
-      <CardContent className="flex flex-col gap-3 p-4">
-        <div>
-          <h3 className="text-lg font-semibold leading-tight">
+      <CardContent className="flex flex-col gap-3 p-3 sm:p-4">
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold leading-tight sm:text-lg">
             {destination.name}
           </h3>
-          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-2 sm:text-sm">
             {destination.tagline}
           </p>
         </div>
@@ -317,10 +317,11 @@ function DestinationCard({
             className="size-4 fill-amber-400 text-amber-400"
             aria-hidden="true"
           />
-          <span className="text-sm font-medium tabular-nums">
+          <span className="text-xs font-medium tabular-nums sm:text-sm">
             {destination.rating.toFixed(1)}
           </span>
-          <span className="text-xs text-muted-foreground">/ 5 · uredniška ocena</span>
+          {/* Oznaka skrčena na ozkih zaslonih (~175px kartica); ocena (številka) ostane vidna */}
+          <span className="hidden text-xs text-muted-foreground sm:inline">/ 5 · uredniška ocena</span>
         </div>
 
         {/* Budget + duration */}
@@ -334,12 +335,14 @@ function DestinationCard({
           </span>
         </div>
 
-        {/* Highlight chipi */}
+        {/* Highlight chipi — na mobilnem največ 2, da ne zapolnijo ozke kartice */}
         <div className="flex flex-wrap gap-1.5">
-          {destination.highlights.slice(0, 3).map((h) => (
+          {destination.highlights.slice(0, 3).map((h, i) => (
             <span
               key={h}
-              className="rounded-md bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
+              className={`rounded-md bg-muted px-2 py-0.5 text-[11px] text-muted-foreground${
+                i === 2 ? " hidden sm:inline-block" : ""
+              }`}
             >
               {h}
             </span>

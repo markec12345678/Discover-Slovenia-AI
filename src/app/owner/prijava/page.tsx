@@ -75,8 +75,8 @@ export default function OwnerPrijavaPage() {
         </div>
       </section>
 
-      {/* Auth card */}
-      <section className="flex-1 flex items-start sm:items-center justify-center px-4 py-8 sm:py-12">
+      {/* Auth card — max-sm:pb varnostni zamik za iOS home indicator (noga ne rezane ob rob zaslona) */}
+      <section className="flex-1 flex items-start sm:items-center justify-center px-4 py-8 sm:py-12 max-sm:pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
         <div className="w-full max-w-md">
           <Tabs defaultValue="prijava" className="w-full">
             <TabsList className="grid w-full grid-cols-2">

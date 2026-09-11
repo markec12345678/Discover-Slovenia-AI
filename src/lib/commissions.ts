@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
 import type { CommissionInvoice } from "@prisma/client";
@@ -112,19 +113,44 @@ export async function issueCommissionInvoice(
   const rate = COMMISSION_RATE; // snapshot ob izdaji
   const amount = Math.round(commissionBase * rate * 100) / 100;
 
-  const invoice = await db.commissionInvoice.create({
-    data: {
-      ownerId: owner.id,
-      invoiceNumber: invoiceNumberFor(last.start),
-      periodStart: last.start,
-      periodEnd: last.end,
-      bookingCount,
-      commissionBase,
-      rate,
-      amount,
-      status: "issued",
-    },
-  });
+  // P8 (🟠): findFirst → create je race-prone — sočasna izdaja (cron 1. v
+  // mesecu + ročni "generate" v dashboardu) oba preglesta "še ni računa",
+  // oba kreirata; @@unique([ownerId, periodStart]) drugega zavrne s P2002.
+  // P2002 obravnavamo kot idempotenten rezultat "duplicate" (ne 500) —
+  // enako semantiko ima že cron pot; s tem je pokrita tudi owner generate.
+  let invoice: CommissionInvoice;
+  try {
+    invoice = await db.commissionInvoice.create({
+      data: {
+        ownerId: owner.id,
+        invoiceNumber: invoiceNumberFor(last.start),
+        periodStart: last.start,
+        periodEnd: last.end,
+        bookingCount,
+        commissionBase,
+        rate,
+        amount,
+        status: "issued",
+      },
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const existing = await db.commissionInvoice.findFirst({
+        where: { ownerId: owner.id, periodStart: last.start },
+        select: { invoiceNumber: true },
+      });
+      if (existing) {
+        return {
+          status: "duplicate",
+          invoiceNumber: existing.invoiceNumber,
+        };
+      }
+    }
+    throw error;
+  }
 
   await logAudit({
     actorId: owner.id,

@@ -124,8 +124,8 @@ export default function PrijavaPage() {
         </div>
       </section>
 
-      {/* Auth card */}
-      <section className="flex-1 flex items-start sm:items-center justify-center px-4 py-8 sm:py-12">
+      {/* Auth card — max-sm:pb varnostni zamik za iOS home indicator */}
+      <section className="flex-1 flex items-start sm:items-center justify-center px-4 py-8 sm:py-12 max-sm:pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
         <div className="w-full max-w-md">
           {status === "loading" ? (
             <div className="flex items-center justify-center py-16" role="status" aria-label="Nalagam">
@@ -388,8 +388,8 @@ function LoginForm({ router, toast }: LoginFormProps) {
         </form>
       </CardContent>
 
-      {/* Namig za ponudnike */}
-      <div className="px-6 pb-6">
+      {/* Namig za ponudnike — pb varnostni zamik za iOS home indicator (desktop: env()=0 → nespremenjeno) */}
+      <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
         <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
           <Building2 className="size-4 shrink-0 mt-0.5" aria-hidden="true" />
           <p>

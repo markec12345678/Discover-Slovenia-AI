@@ -417,7 +417,7 @@ export default function MojaPotovanjaPage() {
 
       {/* Noga strani (lepa zaključitev kratke vsebine) */}
       <footer className="mt-auto border-t border-border bg-background">
-        <div className="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between text-xs text-muted-foreground">
+        <div className="mx-auto max-w-5xl px-4 py-4 max-sm:pb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between text-xs text-muted-foreground">
           <span>Discover Slovenia AI — vaš osebni potovalni pomočnik</span>
           <Link href="/#načrtuj" className="hover:text-primary transition-colors inline-flex items-center gap-1">
             <Plus className="size-3.5" aria-hidden="true" />

@@ -83,7 +83,8 @@ export default function PozabljenoGesloPage() {
         </div>
       </header>
 
-      <div className="flex-1 flex items-center justify-center px-4 py-12">
+      {/* max-sm:pb varnostni zamik za iOS home indicator (desktop: env()=0) */}
+      <div className="flex-1 flex items-center justify-center px-4 py-12 max-sm:pb-[calc(3rem+env(safe-area-inset-bottom,0px))]">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-primary/10">
