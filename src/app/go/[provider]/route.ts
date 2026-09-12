@@ -249,6 +249,20 @@ export async function GET(
       "travelpayouts.com",
       "*.tp.st",
     ],
+    // Izleti & ture — Viator: DIREKTNI program (partnerresources.viator.com)
+    // generira povezave na viator.com z pid/mcid (uradno: "any active
+    // viator.com URL"); prijava možna tudi prek ShareASale (r.cfm) ali
+    // Travelpayouts (tp.media) — vsi trije okvi dovoljeni.
+    viator: [
+      "www.viator.com",
+      "viator.com",
+      "www.shareasale.com",
+      "shareasale.com",
+      "tp.media",
+      "*.travelpayouts.com",
+      "travelpayouts.com",
+      "*.tp.st",
+    ],
   };
   /**
    * Ujemanje hosta: eksaktni vnos ALI vnadomena (*.travelpayouts.com

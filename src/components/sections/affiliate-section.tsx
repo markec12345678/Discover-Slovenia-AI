@@ -12,6 +12,7 @@ import {
   TrainFront,
   CarTaxiFront,
   TicketCheck,
+  Compass,
 } from "lucide-react";
 import { PARTNER_LABELS, insurancePartnerName } from "@/lib/affiliate";
 
@@ -54,6 +55,17 @@ const partners = [
     description: "300.000+ izkušenj in turov. Brezplačna odpoved do 24h pred.",
     href: "/go/activities?dest=Bled",
     aria: "Rezerviraj izlete in izkušnje prek GetYourGuide — odpre partnersko povezavo",
+    accent: "text-primary",
+  },
+  {
+    id: "viator",
+    name: PARTNER_LABELS.viator,
+    label: "Vodeni izleti & ture",
+    icon: Compass,
+    description:
+      "Alternativa za izlete: 300.000+ turov, brezplačna odpoved do 24h pred.",
+    href: "/go/viator?dest=Bled",
+    aria: "Rezerviraj vodene izlete prek Viatorja — odpre partnersko povezavo",
     accent: "text-primary",
   },
   {
@@ -142,8 +154,8 @@ export function AffiliateSection() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* 9 partnerjev = 3×3 na desktopu; isti vzorec kartice — brez
-              novih sekcij, brez spremembe vizualnega jezika */}
+          {/* 10 partnerjev; isti vzorec kartice — brez novih sekcij, brez
+              spremembe vizualnega jezika */}
           {partners.map((p) => {
             const Icon = p.icon;
             return (

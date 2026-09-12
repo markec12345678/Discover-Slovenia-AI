@@ -27,6 +27,7 @@ import { DESTINATIONS } from "./slovenia-data";
 //   KIWITAXI_PAP_ID                → pap (uradno dokumentiran parameter)
 //   OMIO_AFFILIATE_URL             → celoten tracking URL (dashboard povezava)
 //   TIQETS_AFFILIATE_URL           → celoten tracking URL (Awin/Travelpayouts)
+//   VIATOR_AFFILIATE_URL           → celoten tracking URL (pid/mcid iz Selectorja)
 // ============================================================================
 
 export const AFFILIATE_PROVIDERS = [
@@ -39,6 +40,7 @@ export const AFFILIATE_PROVIDERS = [
   "transfers",
   "transport",
   "tickets",
+  "viator",
 ] as const;
 export type AffiliateProvider = (typeof AFFILIATE_PROVIDERS)[number];
 
@@ -163,6 +165,10 @@ export function affiliateStatus(): Record<AffiliateProvider, PartnerStatus> {
     tickets: {
       configured: isValidHttpsUrl(process.env.TIQETS_AFFILIATE_URL?.trim() || ""),
       envVar: "TIQETS_AFFILIATE_URL",
+    },
+    viator: {
+      configured: isValidHttpsUrl(process.env.VIATOR_AFFILIATE_URL?.trim() || ""),
+      envVar: "VIATOR_AFFILIATE_URL",
     },
   };
 }
@@ -442,6 +448,34 @@ export function getTiqetsUrl(): PartnerUrlResult {
   return { url: "https://www.tiqets.com/", monetized: false };
 }
 
+/**
+ * Viator — izleti in ture (nadomestuje/glasi ob GetYourGuide; 30-dnevni
+ * piškot — NAJDALJŠA atribucijska okna v našem portfelu; večino izdelkov
+ * brezplačna odpoved do 24 h pred).
+ * Vir (URADNA dokumentacija, partnerresources.viator.com/travel-content/links):
+ * "You can create a link to any active viator.com URL" — affiliate povezava
+ * je POLJUBEN aktiven viator.com URL (produkt/destinacija/kategorija) z
+ * tracking parametri pid/mcid, generiran v računu (Viator Selector orodje).
+ * Realni primer (živi partnerski vir):
+ *   viator.com/tours/…/d905-24308P17?campaign=…&mcid=42383&pid=P00069558
+ * pid = partner račun, mcid = medijski kanal, campaign = neobvezen sub-ID.
+ * Program: 8 % končane rezervacije, piškot 30 dni, tedenska izplačila
+ * (PayPal). Prijavni okno tudi prek Travelpayouts/ShareASale.
+ * Ker Selector generira KONČEN URL (izbira strani je partnerska odločitev,
+ * destinacijski ID-ji niso derivabilni), konfiguracija sprejema CEL https
+ * URL — mi NE konstrukiramo viator poti (disciplina: samo dokumentirano).
+ * Priporočilo uporabniku: povezava na Slovenijo/Ljubljano destinacijsko stran.
+ *
+ * NOT_CONFIGURED fallback: čista Viator stran BREZ pid/mcid.
+ */
+export function getViatorUrl(): PartnerUrlResult {
+  const url = process.env.VIATOR_AFFILIATE_URL?.trim() || "";
+  if (isValidHttpsUrl(url)) {
+    return { url, monetized: true };
+  }
+  return { url: "https://www.viator.com/", monetized: false };
+}
+
 /** Centralni razrez za /go/ route (FAZA 4). */
 export function buildPartnerUrl(
   provider: AffiliateProvider,
@@ -468,6 +502,8 @@ export function buildPartnerUrl(
       return getOmioUrl();
     case "tickets":
       return getTiqetsUrl();
+    case "viator":
+      return getViatorUrl();
   }
 }
 
@@ -492,4 +528,5 @@ export const PARTNER_LABELS: Record<AffiliateProvider, string> = {
   transfers: "Kiwitaxi",
   transport: "Omio",
   tickets: "Tiqets",
+  viator: "Viator",
 } as const;

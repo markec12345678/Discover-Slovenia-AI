@@ -18,6 +18,7 @@ import {
   Star,
   ArrowRight,
   Store,
+  Compass,
 } from "lucide-react";
 import {
   Dialog,
@@ -146,6 +147,12 @@ export function DestinationModal({
           icon: Ticket,
           partner: "GetYourGuide",
           category: "Aktivnosti",
+        },
+        {
+          href: `/go/viator?dest=${encodeURIComponent(destination.name)}`,
+          icon: Compass,
+          partner: "Viator",
+          category: "Vodeni izleti",
         },
         {
           href: `/go/flights?dest=${encodeURIComponent(destination.name)}`,

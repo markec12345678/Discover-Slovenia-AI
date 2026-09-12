@@ -26,6 +26,7 @@ import {
   getKiwitaxiUrl,
   getOmioUrl,
   getTiqetsUrl,
+  getViatorUrl,
   insurancePartnerName,
   buildPartnerUrl,
   affiliateStatus,
@@ -46,6 +47,7 @@ const ENV_KEYS = [
   "KIWITAXI_PAP_ID",
   "OMIO_AFFILIATE_URL",
   "TIQETS_AFFILIATE_URL",
+  "VIATOR_AFFILIATE_URL",
 ] as const;
 
 function clearAffiliateEnv() {
@@ -439,6 +441,46 @@ describe("Tiqets (tickets)", () => {
   });
 });
 
+describe("Viator (viator)", () => {
+  // Realni format (uradno: poljuben viator.com URL + pid/mcid iz Selectorja):
+  // viator.com/tours/…/d905-24308P17?campaign=…&mcid=42383&pid=P00069558
+  test("configured: Selector URL (pid/mcid) preide nedotaknjen (monetized)", () => {
+    setEnv(
+      "VIATOR_AFFILIATE_URL",
+      "https://www.viator.com/Slovenia/d4526-ttd?campaign=discoverslovenia&mcid=42383&pid=P00069558",
+    );
+    const { url, monetized } = getViatorUrl();
+    expect(monetized).toBe(true);
+    expect(url).toContain("viator.com/Slovenia");
+    expect(url).toContain("pid=P00069558");
+    expect(url).toContain("mcid=42383");
+  });
+
+  test("configured: ShareASale r.cfm URL preide (alternativno omrežje)", () => {
+    setEnv(
+      "VIATOR_AFFILIATE_URL",
+      "https://www.shareasale.com/r.cfm?b=1&u=2&urllink=viator.com%2FSlovenia&afftrack=ds",
+    );
+    const { url, monetized } = getViatorUrl();
+    expect(monetized).toBe(true);
+    expect(new URL(url).hostname).toBe("www.shareasale.com");
+  });
+
+  test("NOT configured: čista Viator stran BREZ pid/mcid (monetized:false)", () => {
+    const { url, monetized } = getViatorUrl();
+    expect(monetized).toBe(false);
+    expect(url).toBe("https://www.viator.com/");
+    expect(url).not.toContain("pid=");
+    expect(url).not.toContain("mcid=");
+  });
+
+  test("neveljaven env → fail-closed", () => {
+    setEnv("VIATOR_AFFILIATE_URL", "http://viator.example");
+    expect(getViatorUrl().monetized).toBe(false);
+    expect(getViatorUrl().url).toBe("https://www.viator.com/");
+  });
+});
+
 // ============================================================================
 // CENTRALNI buildPartnerUrl + status
 // ============================================================================
@@ -469,16 +511,18 @@ describe("buildPartnerUrl (centralni razrez)", () => {
     }
   });
 
-  test("novi providerji (esim/transfers/transport/tickets) vračajo prave hoste", () => {
+  test("novi providerji (esim/transfers/transport/tickets/viator) vračajo prave hoste", () => {
     setEnv("AIRALO_AFFILIATE_URL", "https://airalo.sjv.io/c/1/2/3?u=https%3A%2F%2Fwww.airalo.com");
     setEnv("KIWITAXI_PAP_ID", "abc123");
     setEnv("OMIO_AFFILIATE_URL", "https://www.omio.com/affiliate-x");
     setEnv("TIQETS_AFFILIATE_URL", "https://www.awin1.com/cread.php?awinmid=1&awinaffid=2");
+    setEnv("VIATOR_AFFILIATE_URL", "https://www.viator.com/Slovenia/d4526-ttd?pid=P1&mcid=2");
     const cases: Array<[Parameters<typeof buildPartnerUrl>[0], string, boolean]> = [
       ["esim", "airalo.sjv.io", true],
       ["transfers", "kiwitaxi.com", true],
       ["transport", "www.omio.com", true],
       ["tickets", "www.awin1.com", true],
+      ["viator", "www.viator.com", true],
     ];
     for (const [provider, host, monetized] of cases) {
       const { url, monetized: m } = buildPartnerUrl(provider, "Bled", 7);
@@ -511,6 +555,7 @@ describe("affiliateStatus (fail-closed refleksija env)", () => {
       "transfers",
       "transport",
       "tickets",
+      "viator",
     ] as const) {
       expect(s[p].configured).toBe(false);
       expect(s[p].envVar.length).toBeGreaterThan(3);
@@ -528,17 +573,20 @@ describe("affiliateStatus (fail-closed refleksija env)", () => {
     expect(s.insurance.configured).toBe(false);
   });
 
-  test("novi providerji: status odraža env (Airalo/Kiwitaxi/Omio/Tiqets/SafetyWing)", () => {
+  test("novi providerji: status odraža env (Airalo/Kiwitaxi/Omio/Tiqets/Viator/SafetyWing)", () => {
     setEnv("AIRALO_AFFILIATE_URL", "https://airalo.sjv.io/c/1/2/3");
     setEnv("KIWITAXI_PAP_ID", "abc123");
     setEnv("OMIO_AFFILIATE_URL", "https://tp.media/r?marker=1");
     setEnv("TIQETS_AFFILIATE_URL", "https://www.awin1.com/cread.php?awinmid=1&awinaffid=2");
+    setEnv("VIATOR_AFFILIATE_URL", "https://www.viator.com/Slovenia/d4526-ttd?pid=P1&mcid=2");
     setEnv("SAFETYWING_AMBASSADOR_ID", "24757629");
     const s = affiliateStatus();
     expect(s.esim.configured).toBe(true);
     expect(s.transfers.configured).toBe(true);
     expect(s.transport.configured).toBe(true);
     expect(s.tickets.configured).toBe(true);
+    expect(s.viator.configured).toBe(true);
+    expect(s.viator.envVar).toBe("VIATOR_AFFILIATE_URL");
     expect(s.insurance.configured).toBe(true); // prek SafetyWing
     expect(s.insurance.envVar).toContain("SAFETYWING_AMBASSADOR_ID");
   });

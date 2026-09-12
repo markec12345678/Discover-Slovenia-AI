@@ -41,6 +41,7 @@ const PROVIDER_LABELS_SI: Record<string, string> = {
   transfers: "Kiwitaxi (transferji)",
   transport: "Omio (vlaki/avtobusi)",
   tickets: "Tiqets (vstopnice)",
+  viator: "Viator (vodeni izleti)",
 };
 
 export function AffiliateStatsPanel({ adminPassword }: { adminPassword: string }) {

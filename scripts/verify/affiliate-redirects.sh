@@ -100,12 +100,24 @@ L="$(loc "$BASE_URL/go/tickets?dest=Bled")"
   && ok "tickets: 302 → Tiqets (ali Awin/TP povezava)" \
   || bad "tickets: HTTP $C / $L"
 
+C="$(code "$BASE_URL/go/viator?dest=Bled")"
+L="$(loc "$BASE_URL/go/viator?dest=Bled")"
+[[ "$C" == "302" && ("$L" == https://www.viator.com/* || "$L" == https://www.shareasale.com/* || "$L" == https://tp.media/*) ]] \
+  && ok "viator: 302 → Viator (ali ShareASale/TP povezava)" \
+  || bad "viator: HTTP $C / $L"
+
+C="$(code "$BASE_URL/go/viator")"
+L="$(loc "$BASE_URL/go/viator")"
+[[ "$C" == "302" && "$L" == https://www.viator.com/ ]] \
+  && ok "viator brez dest: 302 → čista Viator stran (dest neobvezen)" \
+  || bad "viator brez dest: HTTP $C / $L"
+
 # -----------------------------------------------------------------------------
 hdr "2) Fail-closed — brez fake affiliate ID-jev (FAZA 17)"
 
 for PAT in "1234567" "slovenia-demo"; do
   FOUND=0
-  for P in hotels cars activities flights insurance esim transfers transport tickets; do
+  for P in hotels cars activities flights insurance esim transfers transport tickets viator; do
     L="$(loc "$BASE_URL/go/$P?dest=Ljubljana&days=7")"
     [[ "$L" == *"$PAT"* ]] && FOUND=1
   done
@@ -141,6 +153,13 @@ L="$(loc "$BASE_URL/go/transfers?dest=<script>alert(1)</script>")"
 [[ "$L" == *"/en/slovenia"* && "$L" != *script* ]] \
   && ok "transfers malign dest → državna stran (whitelist)" \
   || bad "transfers malign dest: $L"
+
+# 5a-pre2) viator: malign dest → NE vpliva na URL (full-URL provider;
+# dest se uporabi samo v strežniški analitiki, nikoli v partner URL-ju)
+L="$(loc "$BASE_URL/go/viator?dest=<script>alert(1)</script>")"
+[[ "$L" == https://www.viator.com/* && "$L" != *script* ]] \
+  && ok "viator malign dest → čist Viator URL (dest se ne prenese)" \
+  || bad "viator malign dest: $L"
 
 # 5a. open redirect: url/target parametri se IGNORIRAJO (redirect gre na partnerja)
 for PARAM in url target redirect next goto; do
