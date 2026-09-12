@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 
 interface BetaStatus {
   isActive: boolean;
@@ -18,6 +19,7 @@ interface BetaStatus {
  * Client-side fetch iz /api/beta-status
  */
 export function BetaBanner() {
+  const t = useTranslations("betaBanner");
   const [status, setStatus] = useState<BetaStatus | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -36,14 +38,14 @@ export function BetaBanner() {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 pr-[4.5rem] py-2.5 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-2 text-xs sm:text-sm">
           <Sparkles className="size-4 shrink-0" aria-hidden="true" />
-          <span className="font-medium">Beta obdobje:</span>
+          <span className="font-medium">{t("active")}</span>
           <span className="hidden sm:inline">
-            Vsi paketi BREZPLAČNI za lokalce. Še{" "}
-            <strong>{status.remainingToMonetization}</strong> lokalov do
-            vklopa monetizacije.
+            {t("remainingPrefix")}{" "}
+            <strong>{status.remainingToMonetization}</strong>{" "}
+            {t("remainingSuffix")}
           </span>
           <span className="min-w-0 truncate sm:hidden">
-            BREZPLAČNO · še {status.remainingToMonetization} lokalov
+            {t("remainingMobile", { count: status.remainingToMonetization })}
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -53,13 +55,13 @@ export function BetaBanner() {
             variant="secondary"
             className="h-9 px-3 text-xs sm:h-7"
           >
-            <a href="/za-ponudnike#pridruzi-se">Pridruži se</a>
+            <a href="/za-ponudnike#pridruzi-se">{t("join")}</a>
           </Button>
           <button
             type="button"
             onClick={() => setDismissed(true)}
             className="-m-1 rounded-md p-2 transition-colors hover:bg-primary-foreground/20 active:bg-primary-foreground/30"
-            aria-label="Zapri pasico"
+            aria-label={t("dismiss")}
           >
             <X className="size-4" />
           </button>

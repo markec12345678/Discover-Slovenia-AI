@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useState, useEffect } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Sparkles,
   Clock,
@@ -73,11 +74,12 @@ import { SocialShare } from "@/components/social-share";
 import { TripTimeline } from "@/components/trip-timeline";
 import { BookingAssistant } from "@/components/booking-assistant";
 
-const SEASONS: { value: Season; label: string }[] = [
-  { value: "spring", label: "Pomlad" },
-  { value: "summer", label: "Poletje" },
-  { value: "autumn", label: "Jesen" },
-  { value: "winter", label: "Zima" },
+// Sezone (labelKey → ključi v "planner" namespace)
+const SEASONS: { value: Season; labelKey: string }[] = [
+  { value: "spring", labelKey: "seasonSpring" },
+  { value: "summer", labelKey: "seasonSummer" },
+  { value: "autumn", labelKey: "seasonAutumn" },
+  { value: "winter", labelKey: "seasonWinter" },
 ];
 
 // Persistenca zadnjega itinererja (localStorage) + deljeni načrti (URL ?odpri=)
@@ -180,6 +182,11 @@ function parseQueryToPlannerInput(query: string): PlannerInput {
  */
 export function ItineraryPlanner() {
   const { toast } = useToast();
+  const t = useTranslations("planner");
+  const tCommon = useTranslations("common");
+  // FW4.3: locale določa jezik AI itinererja ("en" → angleški izpis;
+  // API sprejme language polje, default "sl")
+  const locale = useLocale();
 
   const [formData, setFormData] = useState<PlannerInput>({
     budget: 500,
@@ -254,10 +261,10 @@ export function ItineraryPlanner() {
           setItinerary(data.itinerary);
           setRestoredVisible(false);
           toast({
-            title: "Deljeni načrt odprt! 🇸🇮",
+            title: t("sharedOpenedToast"),
             description: data.name
-              ? `Načrt „${data.name}“ je naložen v načrtovalnik.`
-              : "Deljeni načrt je naložen v načrtovalnik.",
+              ? t("sharedOpenedWithName", { name: data.name })
+              : t("sharedOpenedNoName"),
           });
           setTimeout(() => {
             document.getElementById("načrtuj")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -265,8 +272,8 @@ export function ItineraryPlanner() {
         })
         .catch(() => {
           toast({
-            title: "Napaka",
-            description: "Deljenega načrta ni bilo mogoče odpreti.",
+            title: tCommon("error"),
+            description: t("sharedOpenError"),
             variant: "destructive",
           });
         });
@@ -375,21 +382,21 @@ export function ItineraryPlanner() {
 
   function validate(input: PlannerInput): string | null {
     if (!Number.isFinite(input.days) || input.days < 1 || input.days > 14) {
-      return "Število dni mora biti med 1 in 14.";
+      return t("validationDays");
     }
     if (!Number.isFinite(input.budget) || input.budget <= 0) {
-      return "Proračun mora biti večji od 0 €.";
+      return t("validationBudget");
     }
     if (!Number.isFinite(input.groupSize) || input.groupSize < 1 || input.groupSize > 20) {
-      return "Velikost skupine mora biti med 1 in 20.";
+      return t("validationGroupSize");
     }
     if (input.interests.length === 0) {
-      return "Izberite vsaj en interes.";
+      return t("validationInterests");
     }
     // FW4.2: datum odhoda (opcijsko) — izbirnik datumov večinoma poskrbi
     // za veljavnost; to je varnostna mreža (pretekli datum / ročni vnos)
     if (input.startDate && !isValidStartDate(input.startDate)) {
-      return "Datum odhoda je neveljaven — izberi današnji ali prihodnji datum.";
+      return t("validationStartDate");
     }
     return null;
   }
@@ -411,7 +418,7 @@ export function ItineraryPlanner() {
     persistItineraryLocally(next, formData);
     if (!has) {
       toast({
-        title: "Dodano v tvojo pot ✨",
+        title: t("addedToTripToast"),
         description: ev.name,
       });
     }
@@ -424,9 +431,12 @@ export function ItineraryPlanner() {
       const res = await fetch("/api/itinerary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
+        body: JSON.stringify({
+          ...input,
+          language: locale === "en" ? "en" : "sl",
+        }),
       });
-      if (!res.ok) throw new Error("Napaka pri generiranju");
+      if (!res.ok) throw new Error(t("errorGenerating"));
       const data: Itinerary = await res.json();
       setItinerary(data);
 
@@ -457,15 +467,15 @@ export function ItineraryPlanner() {
       persistItineraryLocally(data, input);
 
       toast({
-        title: "Itinerer generiran!",
+        title: t("generatedToast"),
         description:
           data.source === "ai"
-            ? "AI je sestavil vaš popoln načrt potovanja."
-            : "Prikazan je pripravljen predlog itinererja.",
+            ? t("generatedToastDescAI")
+            : t("generatedToastDescSample"),
       });
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : "Napaka pri generiranju itinererja";
+        err instanceof Error ? err.message : t("errorGeneratingFallback");
       setError(msg);
     } finally {
       setLoading(false);
@@ -485,14 +495,14 @@ export function ItineraryPlanner() {
       addSavedTrip(result.shareId, deriveSavedTripName(itinerary));
       trackFunnel("itinerary_saved");
       toast({
-        title: "Načrt shranjen!",
-        description: "Povezavo za deljenje lahko kopiraš spodaj.",
+        title: t("savedToast"),
+        description: t("savedToastDesc"),
       });
     } catch {
-      setShareError("Shranjevanje ni uspelo — poskusi znova");
+      setShareError(t("saveErrorInline"));
       toast({
-        title: "Napaka pri shranjevanju",
-        description: "Shranjevanje ni uspelo — poskusi znova.",
+        title: t("saveErrorToastTitle"),
+        description: t("saveErrorToastDesc"),
         variant: "destructive",
       });
     } finally {
@@ -530,7 +540,7 @@ export function ItineraryPlanner() {
     if (!itinerary || emailSending) return;
     const trimmed = email.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setEmailError("Vpiši veljaven e-poštni naslov.");
+      setEmailError(tCommon("invalidEmail"));
       return;
     }
     setEmailSending(true);
@@ -543,11 +553,11 @@ export function ItineraryPlanner() {
       });
       const data = (await res.json().catch(() => null)) as { success?: boolean; error?: string } | null;
       if (!res.ok || !data?.success) {
-        throw new Error(data?.error || "Pošiljanje ni uspelo — poskusi znova.");
+        throw new Error(data?.error || t("emailSendFailed"));
       }
       setEmailSentTo(trimmed);
     } catch (err) {
-      setEmailError(err instanceof Error ? err.message : "Pošiljanje ni uspelo — poskusi znova.");
+      setEmailError(err instanceof Error ? err.message : t("emailSendFailed"));
     } finally {
       setEmailSending(false);
     }
@@ -559,7 +569,7 @@ export function ItineraryPlanner() {
     if (vErr) {
       setError(vErr);
       toast({
-        title: "Preverite vnose",
+        title: t("validationToastTitle"),
         description: vErr,
         variant: "destructive",
       });
@@ -584,11 +594,11 @@ export function ItineraryPlanner() {
               <div className="flex items-center gap-2">
                 <Sparkles className="size-6 text-primary" aria-hidden />
                 <CardTitle className="text-2xl sm:text-3xl">
-                  AI načrtovalec potovanj
+                  {t("title")}
                 </CardTitle>
               </div>
               <CardDescription className="text-base">
-                Povej nam želje in AI sestavi popoln itinerer
+                {t("description")}
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit} noValidate>
@@ -597,7 +607,7 @@ export function ItineraryPlanner() {
                   <div className="space-y-2">
                     <Label htmlFor="days" className="flex items-center gap-2">
                       <Calendar className="size-4" aria-hidden />
-                      Število dni
+                      {t("daysLabel")}
                     </Label>
                     <Input
                       id="days"
@@ -619,7 +629,7 @@ export function ItineraryPlanner() {
                   <div className="space-y-2">
                     <Label htmlFor="budget" className="flex items-center gap-2">
                       <Euro className="size-4" aria-hidden />
-                      Proračun (€)
+                      {t("budgetLabel")}
                     </Label>
                     <Input
                       id="budget"
@@ -642,7 +652,7 @@ export function ItineraryPlanner() {
                   <div className="space-y-2">
                     <Label htmlFor="groupSize" className="flex items-center gap-2">
                       <Users className="size-4" aria-hidden />
-                      Velikost skupine
+                      {t("groupSizeLabel")}
                     </Label>
                     <Input
                       id="groupSize"
@@ -664,7 +674,7 @@ export function ItineraryPlanner() {
                   <div className="space-y-2">
                     <Label htmlFor="season" className="flex items-center gap-2">
                       <Cloud className="size-4" aria-hidden />
-                      Sezona
+                      {t("seasonLabel")}
                     </Label>
                     <Select
                       value={formData.season}
@@ -673,12 +683,12 @@ export function ItineraryPlanner() {
                       }
                     >
                       <SelectTrigger id="season" className="w-full">
-                        <SelectValue placeholder="Izberi sezono" />
+                        <SelectValue placeholder={t("seasonPlaceholder")} />
                       </SelectTrigger>
                       <SelectContent>
                         {SEASONS.map((s) => (
                           <SelectItem key={s.value} value={s.value}>
-                            {s.label}
+                            {t(s.labelKey)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -693,9 +703,9 @@ export function ItineraryPlanner() {
                       className="flex items-center gap-2"
                     >
                       <Calendar className="size-4" aria-hidden />
-                      Datum odhoda
+                      {t("startDateLabel")}
                       <span className="font-normal text-muted-foreground">
-                        (neobvezno)
+                        {t("startDateOptional")}
                       </span>
                     </Label>
                     <Input
@@ -712,13 +722,13 @@ export function ItineraryPlanner() {
                       }
                     />
                     <p className="text-xs text-muted-foreground">
-                      Za dogodke, ki se zgodijo med tvojim obiskom.
+                      {t("startDateHint")}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Interesi</Label>
+                  <Label>{t("interestsLabel")}</Label>
                   <div className="flex flex-wrap gap-2">
                     {INTERESTS.map((interest) => {
                       const selected = formData.interests.includes(interest.value);
@@ -754,12 +764,12 @@ export function ItineraryPlanner() {
                   {loading ? (
                     <>
                       <Loader2 className="size-4 animate-spin" aria-hidden />
-                      AI razmišlja...
+                      {t("generating")}
                     </>
                   ) : (
                     <>
                       <Sparkles className="size-4" aria-hidden />
-                      Generiraj itinerer ✨
+                      {t("submit")}
                     </>
                   )}
                 </Button>
@@ -778,10 +788,10 @@ export function ItineraryPlanner() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-lg font-semibold">
-                      Vaš itinerer se bo prikazal tukaj
+                      {t("emptyTitle")}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Izpolnite obrazec in kliknite »Generiraj itinerer«.
+                      {t("emptyHint")}
                     </p>
                   </div>
                 </CardContent>
@@ -810,7 +820,7 @@ export function ItineraryPlanner() {
             {!loading && error && (
               <Alert variant="destructive">
                 <AlertCircle className="size-4" aria-hidden />
-                <AlertTitle>Napaka</AlertTitle>
+                <AlertTitle>{tCommon("error")}</AlertTitle>
                 <AlertDescription className="space-y-3">
                   <p>{error}</p>
                   <Button
@@ -819,7 +829,7 @@ export function ItineraryPlanner() {
                     onClick={() => generateItinerary(formData)}
                   >
                     <AlertCircle className="size-3.5" aria-hidden />
-                    Poskusi znova
+                    {tCommon("retry")}
                   </Button>
                 </AlertDescription>
               </Alert>
@@ -835,12 +845,12 @@ export function ItineraryPlanner() {
                     className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm text-primary animate-in fade-in slide-in-from-top-1 duration-300"
                   >
                     <Sparkles className="size-4 shrink-0" aria-hidden />
-                    <span className="flex-1 font-medium">Obnovljen tvoj zadnji načrt</span>
+                    <span className="flex-1 font-medium">{t("restoredChip")}</span>
                     <button
                       type="button"
                       onClick={() => setRestoredVisible(false)}
                       className="rounded-full p-1 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      aria-label="Skrij obvestilo o obnovljenem načrtu"
+                      aria-label={t("restoredChipDismiss")}
                     >
                       <X className="size-4" aria-hidden />
                     </button>
@@ -850,7 +860,7 @@ export function ItineraryPlanner() {
                 {/* Header */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h3 className="text-2xl font-bold">
-                    Vaš {itinerary.days.length}-dnevni itinerer
+                    {t("resultTitle", { days: itinerary.days.length })}
                   </h3>
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge
@@ -861,16 +871,16 @@ export function ItineraryPlanner() {
                           : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
                       )}
                     >
-                      {itinerary.source === "ai" ? "AI" : "Predlog"}
+                      {itinerary.source === "ai" ? t("badgeAI") : t("badgeSample")}
                     </Badge>
                     <Badge className="bg-primary text-primary-foreground">
-                      Skupaj ~€{itinerary.total_budget}
+                      {t("totalBadge", { total: itinerary.total_budget })}
                     </Badge>
                     {itinerary.tripStartDate && (
                       <Badge
                         variant="outline"
                         className="gap-1.5 font-normal"
-                        title="Okvir potovanja"
+                        title={t("tripRangeTitle")}
                       >
                         <Calendar className="size-3.5" aria-hidden />
                         {formatDateRangeSI(
@@ -926,7 +936,7 @@ export function ItineraryPlanner() {
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <CardTitle className="flex items-center gap-2 text-lg">
                             <Calendar className="size-5 text-primary" aria-hidden />
-                            Dan {day.day}
+                            {t("dayTitle", { day: day.day })}
                             {dayISO && (
                               <span className="text-sm font-normal text-muted-foreground">
                                 · {formatDayLabelSI(dayISO)}
@@ -1003,7 +1013,7 @@ export function ItineraryPlanner() {
                                   type="button"
                                   onClick={() => toggleAddedEvent(ev)}
                                   className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                  aria-label={`Odstrani ${ev.name} iz poti`}
+                                  aria-label={t("removeEventAriaLabel", { name: ev.name })}
                                 >
                                   <X className="size-4" aria-hidden />
                                 </button>
@@ -1055,12 +1065,12 @@ export function ItineraryPlanner() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-lg">
                           <CalendarDays className="size-5 text-primary" aria-hidden />
-                          Moji dogodki
+                          {t("myEventsTitle")}
                         </CardTitle>
                         <CardDescription>
                           {itinerary.tripStartDate
-                            ? "Izven dni potovanja — pripni datum odhoda, da pridejo na konkreten dan."
-                            : "Dodaj datum odhoda, da pripneš dogodke na konkretne dneve."}
+                            ? t("myEventsDescOutside")
+                            : t("myEventsDescNoDate")}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-2">
@@ -1086,7 +1096,7 @@ export function ItineraryPlanner() {
                               type="button"
                               onClick={() => toggleAddedEvent(ev)}
                               className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                              aria-label={`Odstrani ${ev.name} iz poti`}
+                              aria-label={t("removeEventAriaLabel", { name: ev.name })}
                             >
                               <X className="size-4" aria-hidden />
                             </button>
@@ -1103,7 +1113,7 @@ export function ItineraryPlanner() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-lg">
                         <Star className="size-5 text-primary" aria-hidden />
-                        Priporočila
+                        {t("recommendationsTitle")}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1127,7 +1137,7 @@ export function ItineraryPlanner() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-lg">
                         <Sparkles className="size-5 text-primary" aria-hidden />
-                        Nasveti
+                        {t("tipsTitle")}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1174,14 +1184,14 @@ export function ItineraryPlanner() {
                         onClick={handleSaveShare}
                         disabled={saving || loading}
                         className="gap-1.5"
-                        aria-label="Shrani itinerer in ustvari deljivo povezavo"
+                        aria-label={t("saveShareAriaLabel")}
                       >
                         {saving ? (
                           <Loader2 className="size-4 animate-spin" aria-hidden />
                         ) : (
                           <Share2 className="size-4" aria-hidden />
                         )}
-                        {saving ? "Shranjujem..." : "Shrani in deli"}
+                        {saving ? t("saving") : t("saveShare")}
                       </Button>
                       <Button
                         type="button"
@@ -1192,10 +1202,10 @@ export function ItineraryPlanner() {
                         }}
                         className="gap-1.5"
                         aria-expanded={emailOpen}
-                        aria-label="Pošlji itinerer na e-poštni naslov"
+                        aria-label={t("emailButtonAriaLabel")}
                       >
                         <Mail className="size-4" aria-hidden />
-                        Pošlji na e-poštni naslov
+                        {t("emailButton")}
                       </Button>
                     </div>
 
@@ -1212,7 +1222,7 @@ export function ItineraryPlanner() {
                           <Input
                             readOnly
                             value={shareUrl}
-                            aria-label="Deljiva povezava do itinererja"
+                            aria-label={t("shareLinkAriaLabel")}
                             className="flex-1 font-mono text-xs"
                             onFocus={(e) => e.currentTarget.select()}
                           />
@@ -1222,19 +1232,18 @@ export function ItineraryPlanner() {
                             variant="outline"
                             onClick={copyShareLink}
                             className="gap-1.5"
-                            aria-label="Kopiraj deljivo povezavo"
+                            aria-label={t("copyAriaLabel")}
                           >
                             {copied ? (
                               <Check className="size-4 text-emerald-600" aria-hidden />
                             ) : (
                               <Copy className="size-4" aria-hidden />
                             )}
-                            {copied ? "Kopirano!" : "Kopiraj"}
+                            {copied ? t("copied") : t("copy")}
                           </Button>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Vsak, ki odpre to povezavo, bo videl tvoj načrt — tudi
-                          na telefonu.
+                          {t("shareHint")}
                         </p>
                       </div>
                     )}
@@ -1250,7 +1259,7 @@ export function ItineraryPlanner() {
                           type="email"
                           inputMode="email"
                           autoComplete="email"
-                          placeholder="tvoj@email.si"
+                          placeholder={tCommon("emailPlaceholder")}
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           aria-label="E-poštni naslov za pošiljanje itinererja"
@@ -1261,14 +1270,14 @@ export function ItineraryPlanner() {
                           type="submit"
                           disabled={emailSending || !email.trim()}
                           className="gap-1.5"
-                          aria-label="Pošlji itinerer na e-pošto"
+                          aria-label={t("emailSendAriaLabel")}
                         >
                           {emailSending ? (
                             <Loader2 className="size-4 animate-spin" aria-hidden />
                           ) : (
                             <Mail className="size-4" aria-hidden />
                           )}
-                          {emailSending ? "Pošiljam..." : "Pošlji"}
+                          {emailSending ? t("emailSending") : t("emailSend")}
                         </Button>
                       </form>
                     )}
@@ -1285,7 +1294,7 @@ export function ItineraryPlanner() {
                         className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-400 animate-in fade-in duration-300"
                       >
                         <Check className="size-4 shrink-0" aria-hidden />
-                        Itinerer poslan na {emailSentTo}!
+                        {t("emailSent", { email: emailSentTo })}
                       </p>
                     )}
                   </CardContent>
@@ -1294,9 +1303,12 @@ export function ItineraryPlanner() {
                 {/* WOW: Social Sharing — deli svoj AI plan */}
                 <div className="flex items-center justify-center gap-3 py-2">
                   <SocialShare
-                    title="Moj AI načrt potovanja po Sloveniji 🇸🇮"
+                    title={t("socialShareTitle")}
                     destinations={Array.from(new Set(itinerary.days.flatMap((d) => d.locations.map((l) => l.destination_name))))}
-                    description={`${itinerary.days.length}-dnevni AI načrt · €${itinerary.total_budget}`}
+                    description={t("socialShareDescription", {
+                      days: itinerary.days.length,
+                      total: itinerary.total_budget,
+                    })}
                     variant="inline"
                     url={shareUrl ?? undefined}
                   />

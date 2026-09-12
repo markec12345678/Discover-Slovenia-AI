@@ -13,6 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 
 // ============================================================================
 // HERO QUICK INPUT — "Kaj želiš doživeti v Sloveniji?"
@@ -26,17 +27,24 @@ import { Button } from "@/components/ui/button";
 // se vprašanje prenese prek sessionStorage.
 // ============================================================================
 
+// FW4.3: chipi so dvojni — label (gumb) + query (AI oseba­lizacijski vnos,
+// ki se pošlje v /nacrtuj). Oba sta v sporočilih (heroChips namespace),
+// da se celoten vnos prevede (label SAMO ne bi zadostoval — uporabnik
+// bi videl EN gumb, planner pa dobil SL poizvedbo).
 const QUICK_ACTIONS = [
-  { icon: Leaf, label: "Miren vikend", query: "3-dnevni miren vikend z naravo, dobro hrano in čim manj vožnje" },
-  { icon: Heart, label: "Romantično", query: "Romantični pobeg za dva z jezerom, vinom in sprehodi" },
-  { icon: Users, label: "Družina", query: "3-dnevni izlet z družino (2 odrasla, 2 otroka)" },
-  { icon: UtensilsCrossed, label: "Hrana & vino", query: "Potovanje po slovenski hrani, vinu in kulinaričnih regijah" },
-  { icon: Zap, label: "Avantura", query: "Adrenalin vikend — rafting na Soči in pohodi v gorah" },
-  { icon: Trees, label: "Brez gužve", query: "Mirni pohodi v naravi, stran od turističnih množic" },
-];
+  { icon: Leaf, labelKey: "calmWeekend", queryKey: "calmWeekendQuery" },
+  { icon: Heart, labelKey: "romantic", queryKey: "romanticQuery" },
+  { icon: Users, labelKey: "family", queryKey: "familyQuery" },
+  { icon: UtensilsCrossed, labelKey: "foodWine", queryKey: "foodWineQuery" },
+  { icon: Zap, labelKey: "adventure", queryKey: "adventureQuery" },
+  { icon: Trees, labelKey: "noCrowds", queryKey: "noCrowdsQuery" },
+] as const;
 
 export function HeroQuickInput() {
   const router = useRouter();
+  const t = useTranslations("hero");
+  const tChips = useTranslations("heroChips");
+  const tTrust = useTranslations("heroTrust");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -66,9 +74,9 @@ export function HeroQuickInput() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-              placeholder="Želim 3-dnevni miren izlet z naravo, dobro hrano in čim manj vožnje …"
+              placeholder={t("placeholder")}
               className="w-full bg-transparent py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none"
-              aria-label="Kaj želiš doživeti v Sloveniji?"
+              aria-label={t("inputAriaLabel")}
             />
           </div>
           <Button
@@ -82,8 +90,8 @@ export function HeroQuickInput() {
             ) : (
               <Sparkles className="size-4" aria-hidden="true" />
             )}
-            <span className="hidden sm:inline">{loading ? "Analiziram..." : "Sestavi mojo pot"}</span>
-            <span className="sm:hidden">{loading ? "..." : "Sestavi pot"}</span>
+            <span className="hidden sm:inline">{loading ? t("ctaLoading") : t("cta")}</span>
+            <span className="sm:hidden">{loading ? t("ctaLoadingMobile") : t("ctaMobile")}</span>
           </Button>
         </div>
       </div>
@@ -94,16 +102,17 @@ export function HeroQuickInput() {
           const Icon = action.icon;
           return (
             <button
-              key={action.label}
+              key={action.labelKey}
               type="button"
               onClick={() => {
-                setInput(action.query);
-                handleSubmit(action.query);
+                const query = tChips(action.queryKey);
+                setInput(query);
+                handleSubmit(query);
               }}
               className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/10 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-white/20 hover:border-white/50 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             >
               <Icon className="size-3.5" aria-hidden="true" />
-              {action.label}
+              {tChips(action.labelKey)}
             </button>
           );
         })}
@@ -113,19 +122,19 @@ export function HeroQuickInput() {
       <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium text-white/75">
         <span className="flex items-center gap-1.5">
           <span className="soft-pulse size-2 rounded-full bg-emerald-400" aria-hidden="true" />
-          Brezplačno
+          {tTrust("free")}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-full bg-amber-400" aria-hidden="true" />
-          22 destinacij
+          {tTrust("destinations")}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-full bg-sky-300" aria-hidden="true" />
-          AI v slovenščini
+          {tTrust("aiSlovenian")}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-full bg-violet-400" aria-hidden="true" />
-          Preverjeni partnerji
+          {tTrust("verifiedPartners")}
         </span>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { getTranslations } from "next-intl/server";
 import {
   Mountain,
   Waves,
@@ -13,57 +14,59 @@ import { Reveal } from "@/components/reveal";
 const experiences = [
   {
     icon: Mountain,
-    title: "Pohodništvo",
-    description: "Triglav, Mangart, Storžič — od lahnih sprehodov do zahtevnih vzponov.",
+    titleKey: "hikingTitle",
+    descriptionKey: "hikingDesc",
     color: "bg-primary/10 text-primary",
   },
   {
     icon: Waves,
-    title: "Vodne avanture",
-    description: "Rafting na Soči, kajak na Kolpi, smučanje na vodi v Portorožu.",
+    titleKey: "waterTitle",
+    descriptionKey: "waterDesc",
     color: "bg-accent text-accent-foreground",
   },
   {
     icon: Castle,
-    title: "Zgodovina & kultura",
-    description: "Srednjeveški gradovi, Predjama, Ljubljanski grad, muzeji Soške fronte.",
+    titleKey: "historyTitle",
+    descriptionKey: "historyDesc",
     color: "bg-primary/10 text-primary",
   },
   {
     icon: Trees,
-    title: "Narava & parki",
-    description: "Triglavski narodni park, Cerkniško jezero, slovenski gozdovi.",
+    titleKey: "natureTitle",
+    descriptionKey: "natureDesc",
     color: "bg-accent text-accent-foreground",
   },
   {
     icon: UtensilsCrossed,
-    title: "Kulinariika",
-    description: "Od kremšnite do štrukljev, od Teranov do rebule — 24 gastronomskih regij.",
+    titleKey: "foodTitle",
+    descriptionKey: "foodDesc",
     color: "bg-primary/10 text-primary",
   },
   {
     icon: Compass,
-    title: "Skrite dragulje",
-    description: "Vintgarska soteska, soline Sečovlje, Logarska dolina — izven utirjenih poti.",
+    titleKey: "gemsTitle",
+    descriptionKey: "gemsDesc",
     color: "bg-accent text-accent-foreground",
   },
 ];
 
-export function ExperiencesSection() {
+export async function ExperiencesSection() {
+  const t = await getTranslations("homeExp");
+
   return (
     <section id="izkušnje" className="py-20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader
-          eyebrow="Doživetja"
-          title="Neskončne možnosti doživetij"
-          subtitle="Slovenija ponuja vse od alpskih vrhov do jadranske obale — na površini manjši od Walesa."
+          eyebrow={t("eyebrow")}
+          title={t("title")}
+          subtitle={t("subtitle")}
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {experiences.map((exp, i) => {
             const Icon = exp.icon;
             return (
-              <Reveal key={exp.title} delay={i * 90} y={28}>
+              <Reveal key={t(exp.titleKey)} delay={i * 90} y={28}>
                 <Card className="group h-full border-border/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg">
                   <CardContent className="p-6">
                     <div
@@ -71,8 +74,8 @@ export function ExperiencesSection() {
                     >
                       <Icon className="size-6" />
                     </div>
-                    <h3 className="text-lg font-semibold mb-2">{exp.title}</h3>
-                    <p className="text-sm text-muted-foreground">{exp.description}</p>
+                    <h3 className="text-lg font-semibold mb-2">{t(exp.titleKey)}</h3>
+                    <p className="text-sm text-muted-foreground">{t(exp.descriptionKey)}</p>
                   </CardContent>
                 </Card>
               </Reveal>

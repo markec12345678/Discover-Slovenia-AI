@@ -37,6 +37,9 @@ export interface PlannerInput {
   // kompatibilno s starejšimi načrti); poganja datumski events match,
   // AI kontekst in prikaz datumov na dnevih
   startDate?: string;
+  // NOVO (FW4.3): jezik AI izpisa — "sl" (privzeto) ali "en". Client
+  // (itinerary-planner) pošlje locale; itinerer se generira v tem jeziku.
+  language?: "sl" | "en";
 }
 
 export interface LocationVisit {

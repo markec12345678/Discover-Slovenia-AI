@@ -102,11 +102,71 @@ export async function POST(request: Request) {
     console.error("[itinerary] ranking engine napaka:", e);
   }
 
-  const systemPrompt = `Si strokovni slovenski vodič za načrtovanje potovanj. Generiraš realističen itinerer za Slovenijo v JSON formatu. Odgovori SAMO z veljavnim JSON, brez dodatnega besedila ali kode.
+  // FW4.3: jezik AI izpisa — client pošlje locale ("en" → angleški
+  // itinerer za tuje obiskovalce; vse ostalo logiko ostaja enako)
+  const lang = input.language === "en" ? "en" : "sl";
+
+  const systemPrompt =
+    lang === "en"
+      ? `You are an expert travel guide for Slovenia. You generate a realistic Slovenia itinerary in JSON format. Respond ONLY with valid JSON, no additional text or code.
+
+IMPORTANT: Suggested partners are ranked by relevance and quality (Q = Quality Score). When possible, include partners with a higher Q in the notes or recommendations fields. [SPONSORED] and [FEATURED] tags denote premium partners.`
+      : `Si strokovni slovenski vodič za načrtovanje potovanj. Generiraš realističen itinerer za Slovenijo v JSON formatu. Odgovori SAMO z veljavnim JSON, brez dodatnega besedila ali kode.
 
 POMEMBNO: Predlagani partnerji so razvrščeni po ustreznosti in kakovosti (Q = Quality Score). Kadar je mogoče, vključi partnerje z višjim Q v notes ali recommendations polja. [SPONZORIRANO] in [FEATURED] oznake pomenijo premium partnerje.`;
 
-  const userPrompt = `Generiraj ${input.days}-dnevni itinerer za Slovenijo.
+  const userPrompt =
+    lang === "en"
+      ? `Generate a ${input.days}-day itinerary for Slovenia.
+
+Traveler:
+- Budget: €${input.budget}
+- Interests: ${input.interests.join(", ")}
+- Season: ${input.season}${input.startDate ? `\n- Travel date: ${formatDateRangeSI(input.startDate, tripEnd)}` : ""}
+- Group: ${input.groupSize} person(s)
+
+Available destinations:
+${destContext}
+${partnerContext}
+
+Rules:
+1. Pick 2-3 destinations per day
+2. GROUP destinations by geographic proximity — Bled+Vintgar+Bohinj in one day, Ljubljana separately, Soča+Kobarid together
+3. Optimize the route across days — move by regions (Gorenjska day 1, Primorska day 2, etc.)
+4. Match the traveler's interests
+5. Stay within budget (total < €${input.budget})
+6. Respect seasonal suitability (${input.season})
+7. Keep time frames realistic (account for ~30-45 min drives between locations)
+8. When fitting, mention suggested partners in notes or recommendations (e.g. "For lunch, visit Restaurant JB in Ljubljana")
+9. Add estimated drive time to the next location in notes (e.g. "30 min drive to Bohinj")
+10. "packing_list": 8-14 concrete items for this trip (season, interests, duration)
+11. "rationale": 1-2 sentences, written as a guide in third person: why THIS itinerary suits the traveler — reference their interests, budget and desire for less driving. Concrete, no marketing fluff.
+
+JSON format (STRICT):
+{
+  "days": [
+    {
+      "day": 1,
+      "locations": [
+        {
+          "destination_id": "bled",
+          "destination_name": "Bled",
+          "time_slot": "09:00-13:00",
+          "duration": 4,
+          "estimated_cost": 50,
+          "notes": "Morning visit, best light for photos. For lunch, visit Penzion Berc."
+        }
+      ],
+      "weather": { "condition": "sunny", "temp": 22 }
+    }
+  ],
+  "total_budget": 500,
+  "recommendations": ["Bring sunglasses", "Book the boat in advance at Pletna Bled"],
+  "tips": ["Start early to avoid crowds"],
+  "packing_list": ["Sunscreen SPF 50", "Hiking shoes", "Cash in euros"],
+  "rationale": "This itinerary combines peaceful nature and local cuisine with minimal driving — Bled and Bohinj are in the same region, so more time is spent at locations instead of in the car."
+}`
+      : `Generiraj ${input.days}-dnevni itinerer za Slovenijo.
 
 Potnik:
 - Proračun: €${input.budget}

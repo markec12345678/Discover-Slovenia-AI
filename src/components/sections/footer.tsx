@@ -7,9 +7,9 @@ import { getTranslations } from "next-intl/server";
  * 4-kolončni layout (1/2/4 responsive), levo brand + social, nato destinacije,
  * podpora in pravno. Spodaj copyright + affiliate disclaimer.
  *
- * Tagline in affiliate disclaimer sta lokalizirana preko next-intl
- * `getTranslations("footer")`. Ostali teksti ostajajo v slovenščini
- * (bodo postopoma prevedeni).
+ * FW4.3: vsi teksti (kolone, linki, brand, copyright) so v sporočilih
+ * (`footer` namespace) — sl.json vsebuje izvirne slovenske vrednosti,
+ * en.json angleške prevode. Povezave (href) ostajajo skupne.
  */
 export async function Footer() {
   const t = await getTranslations("footer");
@@ -17,7 +17,7 @@ export async function Footer() {
   return (
     <footer
       className="mt-auto w-full border-t border-border bg-muted/30"
-      aria-label="Noga strani"
+      aria-label={t("ariaLabel")}
     >
       {/* pb-40 (mobilno): vsebina noge vidna nad sticky CTA (~65px + safe-area) IN nad dvignjenim chat FAB (~140px od dna); sm:pb-24: tudi na desktopu disclaimer počisti FAB (top ~80px od dna); lg:pt-12 ohrani zgornji odmik */}
       <div className="mx-auto w-full max-w-7xl px-4 pb-40 pt-10 sm:px-6 sm:pb-24 lg:px-8 lg:pt-12 lg:pb-24">
@@ -28,68 +28,67 @@ export async function Footer() {
             <Link
               href="#vrh"
               className="flex items-center gap-2 text-foreground transition-colors hover:text-primary"
-              aria-label="Discover Slovenia AI — domov"
+              aria-label={t("brandAriaLabel")}
             >
               <span className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
                 <Mountain className="size-5" aria-hidden="true" />
               </span>
               <span className="text-base font-bold tracking-tight">
-                Discover Slovenia AI
+                {t("brandName")}
               </span>
             </Link>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-              AI-poganjan načrtovalec potovanj za Slovenijo. Odkrijte 22
-              najlepših destinacij — od Blejskega jezera do jadranske obale.
+              {t("brandDescription")}
             </p>
           </div>
 
           {/* 2. Razišči (FW3: prave strani namesto hash anchorjev) */}
           <FooterColumn
-            title="Razišči"
+            titleKey="exploreColumn"
             links={[
-              { href: "/destinacije", label: "Vse destinacije" },
-              { href: "/dozivetja", label: "Doživetja" },
-              { href: "/zemljevid", label: "Zemljevid" },
-              { href: "/dogodki", label: "Dogodki" },
-              { href: "/lokali", label: "Lokalni ponudniki" },
-              { href: "/trznica", label: "Tržnica" },
-              { href: "/vodici", label: "Vodiči" },
-              { href: "/slovenia-pass", label: "Slovenia Pass" },
+              { href: "/destinacije", key: "exploreAllDestinations" },
+              { href: "/dozivetja", key: "exploreExperiences" },
+              { href: "/zemljevid", key: "exploreMap" },
+              { href: "/dogodki", key: "exploreEvents" },
+              { href: "/lokali", key: "exploreLocal" },
+              { href: "/trznica", key: "exploreMarket" },
+              { href: "/vodici", key: "exploreGuides" },
+              { href: "/slovenia-pass", key: "explorePass" },
             ]}
           />
 
           {/* 3. Načrtuj + račun */}
           <FooterColumn
-            title="Načrtuj"
+            titleKey="planColumn"
             links={[
-              { href: "/nacrtuj", label: "AI načrtovalec" },
-              { href: "/nacrtuj#kviz", label: "Kviz za popotnike" },
-              { href: "/#rezerviraj", label: "Rezervacije" },
+              { href: "/nacrtuj", key: "planPlanner" },
+              { href: "/nacrtuj#kviz", key: "planQuiz" },
+              { href: "/#rezerviraj", key: "planBookings" },
               // P1-2b: B2C računi popotnikov
-              { href: "/moja-potovanja", label: "Moja potovanja" },
-              { href: "/prijava", label: "Prijava" },
+              { href: "/moja-potovanja", key: "planMyTrips" },
+              { href: "/prijava", key: "planLogin" },
             ]}
           />
 
           {/* 4. Za ponudnike (P4-5: javni lijak — prej orphan stran) */}
           <FooterColumn
-            title="Za ponudnike"
+            titleKey="providersColumn"
             links={[
-              { href: "/za-ponudnike", label: "Postanite partner" },
-              { href: "/owner/prijava", label: "Prijava za partnerje" },
-              { href: "/za-ponudnike#pridruzi-se", label: "Paketi in cene" },
-              { href: "/za-ponudnike#pridruzi-se", label: "Prijavnica" },
+              { href: "/za-ponudnike", key: "providersBecomePartner" },
+              { href: "/owner/prijava", key: "providersLogin" },
+              { href: "/za-ponudnike#pridruzi-se", key: "providersPricing" },
+              { href: "/za-ponudnike#pridruzi-se", key: "providersSignup" },
             ]}
           />
 
           {/* 4. Pravno */}
           <FooterColumn
-            title="Pravno"
+            titleKey="legalColumn"
             links={[
-              { href: "/zaupanje-in-varnost", label: "Zaupanje in varnost" },
-              { href: "/politika-zasebnosti", label: "Politika zasebnosti" },
-              { href: "/pogoji-uporabe", label: "Pogoji uporabe" },
-              { href: "/kontakt", label: "Kontakt" },
+              { href: "/zaupanje-in-varnost", key: "legalTrust" },
+              { href: "/politika-zasebnosti", key: "legalPrivacy" },
+              { href: "/pogoji-uporabe", key: "legalTerms" },
+              { href: "/kontakt", key: "legalContact" },
             ]}
           />
         </div>
@@ -99,7 +98,9 @@ export async function Footer() {
         <div className="mt-6 flex flex-col gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-2">
             <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <span>© 2026 Discover Slovenia AI. {t("tagline")}</span>
+              <span>
+                {t("copyright")} {t("tagline")}
+              </span>
             </p>
           </div>
           <p className="max-w-md text-xs text-muted-foreground/80 sm:text-right">
@@ -113,30 +114,34 @@ export async function Footer() {
 
 /**
  * Naslov + seznam povezav v eni koloni footera.
+ * FW4.3: naslov in povezave se prevajata prek `footer` sporočil —
+ * podamo TIPKE (titleKey / link.key), komponenta pa si prevode pridobi
+ * sama (server component → getTranslations).
  */
-function FooterColumn({
-  title,
+async function FooterColumn({
+  titleKey,
   links,
 }: {
-  title: string;
-  links: { href: string; label: string }[];
+  titleKey: string;
+  links: { href: string; key: string }[];
 }) {
+  const t = await getTranslations("footer");
   return (
-    <nav className="flex flex-col gap-3" aria-label={title}>
+    <nav className="flex flex-col gap-3" aria-label={t(titleKey)}>
       {/* VLM revizija: naslovi kolon morajo biti ločeni od linkov (hierarhija) */}
       <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground/70">
-        {title}
+        {t(titleKey)}
       </h3>
       <ul className="grid grid-cols-2 gap-x-6 gap-y-2.5 sm:flex sm:flex-col sm:gap-2">
         {links.map((link) => (
-          // key vključuje label: dve povezavi se lahko nanašata na isti
+          // key vključuje href+key: dve povezavi se lahko nanašata na isti
           // href (npr. "Paketi in cene" in "Prijavnica" obe → #pridruzi-se)
-          <li key={`${link.href}-${link.label}`}>
+          <li key={`${link.href}-${link.key}`}>
             <Link
               href={link.href}
               className="text-sm text-muted-foreground transition-colors hover:text-primary"
             >
-              {link.label}
+              {t(link.key)}
             </Link>
           </li>
         ))}

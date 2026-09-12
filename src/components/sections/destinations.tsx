@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   Star,
   Clock,
@@ -31,31 +32,31 @@ import type { Destination, DestinationType, Budget } from "@/lib/types";
 
 const ALL_VALUE = "all";
 
-// Možnosti za filter tipa destinacije
-const TYPE_OPTIONS: { value: DestinationType; label: string }[] = [
-  { value: "lake", label: "Jezero" },
-  { value: "city", label: "Mesto" },
-  { value: "mountain", label: "Gorovje" },
-  { value: "cave", label: "Jama" },
-  { value: "coast", label: "Obala" },
-  { value: "river", label: "Reka" },
-  { value: "spa", label: "Zdravilišče" },
-  { value: "gorge", label: "Soteska" },
-  { value: "castle", label: "Grad" },
+// Možnosti za filter tipa destinacije (labelKey → ključi v "homeDest" namespace)
+const TYPE_OPTIONS: { value: DestinationType; labelKey: string }[] = [
+  { value: "lake", labelKey: "typeLake" },
+  { value: "city", labelKey: "typeCity" },
+  { value: "mountain", labelKey: "typeMountain" },
+  { value: "cave", labelKey: "typeCave" },
+  { value: "coast", labelKey: "typeCoast" },
+  { value: "river", labelKey: "typeRiver" },
+  { value: "spa", labelKey: "typeSpa" },
+  { value: "gorge", labelKey: "typeGorge" },
+  { value: "castle", labelKey: "typeCastle" },
 ];
 
-// Možnosti za filter cene
-const BUDGET_OPTIONS: { value: Budget; label: string }[] = [
-  { value: "€", label: "€ — Nizka" },
-  { value: "€€", label: "€€ — Srednja" },
-  { value: "€€€", label: "€€€ — Visoka" },
+// Možnosti za filter cene (labelKey → ključi v "homeDest" namespace)
+const BUDGET_OPTIONS: { value: Budget; labelKey: string }[] = [
+  { value: "€", labelKey: "budgetLow" },
+  { value: "€€", labelKey: "budgetMid" },
+  { value: "€€€", labelKey: "budgetHigh" },
 ];
 
-// Možnosti za filter ocene (minimalna ocena)
-const RATING_OPTIONS: { value: string; label: string }[] = [
-  { value: "4.5", label: "4.5+" },
-  { value: "4.7", label: "4.7+" },
-  { value: "4.9", label: "4.9+" },
+// Možnosti za filter ocene (minimalna ocena; labelKey → "homeDest")
+const RATING_OPTIONS: { value: string; labelKey: string }[] = [
+  { value: "4.5", labelKey: "rating45" },
+  { value: "4.7", labelKey: "rating47" },
+  { value: "4.9", labelKey: "rating49" },
 ];
 
 function regionLabel(value: string): string {
@@ -76,6 +77,7 @@ export function DestinationsSection({
 }: {
   featured?: boolean;
 }) {
+  const t = useTranslations("homeDest");
   const [region, setRegion] = useState<string>(ALL_VALUE);
   const [interest, setInterest] = useState<string>(ALL_VALUE);
   const [type, setType] = useState<string>(ALL_VALUE);
@@ -131,12 +133,12 @@ export function DestinationsSection({
             id="destinacije-title"
             className="text-3xl font-bold tracking-tight sm:text-4xl"
           >
-            {featured ? "Priljubljene destinacije" : "Raziščite destinacije"}
+            {featured ? t("titleFeatured") : t("titleAll")}
           </h2>
           <p className="mt-3 text-base text-muted-foreground">
             {featured
-              ? "Šest kotičkov, ki jih obiskovalci iščejo največ"
-              : "22 najlepših kotičkov Slovenije"}
+              ? t("subtitleFeatured")
+              : t("subtitleAll")}
           </p>
         </div>
 
@@ -149,7 +151,7 @@ export function DestinationsSection({
           <div className="mb-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Filter className="size-4 text-primary" aria-hidden="true" />
-              Filtri
+              {t("filters")}
             </div>
             {hasActiveFilters ? (
               <Button
@@ -160,7 +162,7 @@ export function DestinationsSection({
                 className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
               >
                 <X className="size-3.5" aria-hidden="true" />
-                Počisti filtre
+                {t("clearFilters")}
               </Button>
             ) : null}
           </div>
@@ -170,15 +172,15 @@ export function DestinationsSection({
             <FilterSelect
               value={region}
               onChange={setRegion}
-              placeholder="Vse regije"
-              ariaLabel="Filtriraj po regiji"
+              placeholder={t("regionPlaceholder")}
+              ariaLabel={t("regionAriaLabel")}
               options={REGIONS.map((r) => ({ value: r.value, label: r.label }))}
             />
             <FilterSelect
               value={interest}
               onChange={setInterest}
-              placeholder="Vsi interesi"
-              ariaLabel="Filtriraj po interesu"
+              placeholder={t("interestPlaceholder")}
+              ariaLabel={t("interestAriaLabel")}
               options={INTERESTS.map((i) => ({
                 value: i.value,
                 label: `${i.icon} ${i.label}`,
@@ -187,9 +189,9 @@ export function DestinationsSection({
             <FilterSelect
               value={type}
               onChange={setType}
-              placeholder="Vsi tipi"
-              ariaLabel="Filtriraj po tipu destinacije"
-              options={TYPE_OPTIONS.map((t) => ({ value: t.value, label: t.label }))}
+              placeholder={t("typePlaceholder")}
+              ariaLabel={t("typeAriaLabel")}
+              options={TYPE_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))}
             />
           </div>
 
@@ -198,25 +200,23 @@ export function DestinationsSection({
             <FilterSelect
               value={budget}
               onChange={setBudget}
-              placeholder="Cena (vse)"
-              ariaLabel="Filtriraj po ceni"
-              options={BUDGET_OPTIONS.map((b) => ({ value: b.value, label: b.label }))}
+              placeholder={t("budgetPlaceholder")}
+              ariaLabel={t("budgetAriaLabel")}
+              options={BUDGET_OPTIONS.map((b) => ({ value: b.value, label: t(b.labelKey) }))}
             />
             <FilterSelect
               value={rating}
               onChange={setRating}
-              placeholder="Uredniška ocena (vse)"
-              ariaLabel="Filtriraj po uredniški oceni"
-              options={RATING_OPTIONS.map((r) => ({ value: r.value, label: r.label }))}
+              placeholder={t("ratingPlaceholder")}
+              ariaLabel={t("ratingAriaLabel")}
+              options={RATING_OPTIONS.map((r) => ({ value: r.value, label: t(r.labelKey) }))}
             />
           </div>
         </div>
 
         {/* Števec rezultatov */}
         <p className="mt-5 text-sm text-muted-foreground">
-          Prikazujem{" "}
-          <span className="font-semibold text-foreground">{filtered.length}</span>{" "}
-          od {DESTINATIONS.length} destinacij
+          {t("showing", { count: filtered.length, total: DESTINATIONS.length })}
         </p>
           </>
         ) : null}
@@ -241,7 +241,7 @@ export function DestinationsSection({
           <div className="mt-8 text-center">
             <Button asChild variant="outline" size="lg" className="gap-1.5">
               <Link href="/destinacije">
-                Razišči vseh 22 destinacij
+                {t("viewAll")}
                 <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
             </Button>
@@ -300,11 +300,12 @@ function DestinationCard({
   destination: Destination;
   onOpen: () => void;
 }) {
+  const t = useTranslations("homeDest");
   return (
     <Card
       role="button"
       tabIndex={0}
-      aria-label={`Odpri podrobnosti za ${destination.name}`}
+      aria-label={t("cardAriaLabel", { name: destination.name })}
       onClick={onOpen}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -319,7 +320,10 @@ function DestinationCard({
         {/* Slika destinacije */}
         <img
           src={destination.image}
-          alt={`${destination.name} — ${destination.tagline}`}
+          alt={t("imageAlt", {
+            name: destination.name,
+            tagline: destination.tagline,
+          })}
           loading="lazy"
           className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
@@ -330,7 +334,7 @@ function DestinationCard({
         {/* Featured badge (top-right) */}
         {destination.featured ? (
           <Badge className="absolute right-3 top-3 bg-amber-400 text-[10px] text-amber-950 shadow-sm sm:text-xs">
-            ★ Priporočeno
+            {t("featuredBadge")}
           </Badge>
         ) : null}
       </div>
@@ -356,7 +360,7 @@ function DestinationCard({
             {destination.rating.toFixed(1)}
           </span>
           {/* Oznaka skrčena na ozkih zaslonih (~175px kartica); ocena (številka) ostane vidna */}
-          <span className="hidden text-xs text-muted-foreground sm:inline">/ 5 · uredniška ocena</span>
+          <span className="hidden text-xs text-muted-foreground sm:inline">{t("ratingLabel")}</span>
         </div>
 
         {/* Budget + duration */}
@@ -395,7 +399,7 @@ function DestinationCard({
             onOpen();
           }}
         >
-          Več informacij
+          {t("moreInfo")}
           <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
         </Button>
       </CardContent>
@@ -410,15 +414,16 @@ function EmptyState({
   onClear: () => void;
   canClear: boolean;
 }) {
+  const t = useTranslations("homeDest");
   return (
     <div className="mt-6 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 py-16 text-center">
       <span className="flex size-12 items-center justify-center rounded-full bg-muted">
         <Compass className="size-6 text-muted-foreground" aria-hidden="true" />
       </span>
-      <p className="text-base font-medium">Ni destinacij za izbrane filtre.</p>
+      <p className="text-base font-medium">{t("emptyTitle")}</p>
       <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <ImageIcon className="size-3.5" aria-hidden="true" />
-        Poskusite spremeniti filtre ali jih počistiti.
+        {t("emptyHint")}
       </p>
       {canClear ? (
         <Button
@@ -429,7 +434,7 @@ function EmptyState({
           className="mt-2 gap-1.5"
         >
           <X className="size-3.5" aria-hidden="true" />
-          Počisti filtre
+          {t("clearFilters")}
         </Button>
       ) : null}
     </div>

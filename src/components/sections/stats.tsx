@@ -1,4 +1,5 @@
 import { Map, Users, Calendar, TreePine, Sparkles, Percent, BadgeCheck } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { CountUp } from "@/components/count-up";
 import { Reveal } from "@/components/reveal";
 
@@ -11,12 +12,14 @@ import { Reveal } from "@/components/reveal";
  * - Zadnji 2 kartici = strateška diferenciatorja iz konkurenčne analize
  *   (0 % na direktnih rezervacijah — najpoštenejši model na trgu)
  */
-export function StatsSection() {
+export async function StatsSection() {
+  const t = await getTranslations("stats");
+
   return (
     <section
       id="stats"
       className="relative overflow-hidden py-16 sm:py-20"
-      aria-label="Statistika platforme in Slovenije"
+      aria-label={t("sectionAriaLabel")}
     >
       {/* Mehka radialna dekoracija v ozadju */}
       <div
@@ -35,14 +38,14 @@ export function StatsSection() {
               />
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary-foreground/70">
                 <BadgeCheck className="size-4" aria-hidden="true" />
-                Pokrivali bomo celo Slovenijo
+                {t("coverageEyebrow")}
               </div>
               <div>
                 <div className="text-5xl font-bold tabular-nums tracking-tight sm:text-6xl">
                   <CountUp value={22} />
                 </div>
                 <div className="mt-1 text-sm font-medium text-primary-foreground/85 sm:text-base">
-                  vrhunskih destinacij — od Bleda do Pirana
+                  {t("destinationsLabel")}
                 </div>
               </div>
             </div>
@@ -52,7 +55,7 @@ export function StatsSection() {
             <StatCard
               icon={Users}
               value={<CountUp value={2.4} decimals={1} suffix=" mio" />}
-              label="Obiskovalcev letno"
+              label={t("visitorsLabel")}
             />
           </Reveal>
 
@@ -60,7 +63,7 @@ export function StatsSection() {
             <StatCard
               icon={TreePine}
               value={<CountUp value={60} suffix=" %" />}
-              label="Slovenije pod gozdom"
+              label={t("forestLabel")}
             />
           </Reveal>
 
@@ -68,7 +71,7 @@ export function StatsSection() {
             <StatCard
               icon={Calendar}
               value={<CountUp value={4} />}
-              label="Sezone aktivnosti"
+              label={t("seasonsLabel")}
             />
           </Reveal>
 
@@ -77,14 +80,14 @@ export function StatsSection() {
             <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50 to-emerald-50/40 p-5 dark:border-emerald-900/50 dark:from-emerald-950/40 dark:to-emerald-950/10">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">
                 <Percent className="size-4" aria-hidden="true" />
-                Najpoštenejši model
+                {t("fairEyebrow")}
               </div>
               <div>
                 <div className="text-3xl font-bold tabular-nums text-emerald-700 dark:text-emerald-400 sm:text-4xl">
-                  0&nbsp;%<span className="text-lg font-semibold text-emerald-600/80 dark:text-emerald-500/80"> provizije</span>
+                  {t("fairValue")}<span className="text-lg font-semibold text-emerald-600/80 dark:text-emerald-500/80"> {t("fairUnit")}</span>
                 </div>
                 <div className="mt-0.5 text-xs text-emerald-800/70 dark:text-emerald-300/70 sm:text-sm">
-                  na direktnih rezervacijah (konkurenca: 20–43&nbsp;%)
+                  {t("fairNote")}
                 </div>
               </div>
             </div>
@@ -95,9 +98,9 @@ export function StatsSection() {
         <Reveal delay={320}>
           <p className="mt-6 flex flex-wrap items-center justify-center gap-1.5 text-center text-sm text-muted-foreground">
             <Sparkles className="size-4 text-primary" aria-hidden="true" />
-            Provizija <strong className="font-semibold text-foreground">12&nbsp;%</strong> se obračuna
-            <strong className="font-semibold text-foreground"> izključno, kadar rezervacijo prinese AI</strong>
-            — nikoli drugače.
+            {t("commissionLead")} <strong className="font-semibold text-foreground">{t("commissionRate")}</strong> {t("commissionVerb")}
+            <strong className="font-semibold text-foreground"> {t("commissionEmphasis")}</strong>
+            {t("commissionTail")}
           </p>
         </Reveal>
       </div>

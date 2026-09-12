@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Mail, Send, CheckCircle2, Loader2, AlertCircle, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +26,8 @@ import { PushSubscribe } from "@/components/push-subscribe";
 type NewsletterState = "idle" | "sending" | "success" | "already" | "error";
 
 export function NewsletterSection() {
+  const t = useTranslations("newsletter");
+  const tCommon = useTranslations("common");
   const [email, setEmail] = useState("");
   const [state, setState] = useState<NewsletterState>("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -35,7 +38,7 @@ export function NewsletterSection() {
     const trimmed = email.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
       setState("error");
-      setMessage("Vpiši veljaven e-poštni naslov.");
+      setMessage(tCommon("invalidEmail"));
       return;
     }
 
@@ -54,21 +57,21 @@ export function NewsletterSection() {
       } | null;
 
       if (!res.ok || !data?.success) {
-        throw new Error(data?.error || "Prijava ni uspela — poskusi znova.");
+        throw new Error(data?.error || t("failed"));
       }
 
       trackFunnel("newsletter_signup");
       if (data.message?.includes("Že prijavljen")) {
         setState("already");
-        setMessage("Že prijavljen!");
+        setMessage(t("alreadySubscribed"));
       } else {
         setState("success");
-        setMessage("Prijavljen! Preveri svoj poštni predal.");
+        setMessage(t("success"));
       }
       setEmail("");
     } catch (err) {
       setState("error");
-      setMessage(err instanceof Error ? err.message : "Prijava ni uspela — poskusi znova.");
+      setMessage(err instanceof Error ? err.message : t("failed"));
     }
   }
 
@@ -83,10 +86,10 @@ export function NewsletterSection() {
                   <Mail className="size-6 text-primary" aria-hidden="true" />
                 </div>
                 <h2 id="newsletter-title" className="text-2xl font-bold sm:text-3xl">
-                  Prejmi skrite bisere Slovenije 📬
+                  {t("title")}
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Enkrat tedensko: lokali, dogodki in nasveti, ki jih ne najdeš v vodnikih
+                  {t("subtitle")}
                 </p>
               </div>
 
@@ -101,14 +104,14 @@ export function NewsletterSection() {
               ) : (
                 <form onSubmit={handleSubmit} noValidate className="mx-auto mt-6 flex max-w-md flex-col gap-2 sm:flex-row">
                   <label htmlFor="newsletter-email" className="sr-only">
-                    E-poštni naslov za prijavo na novice
+                    {t("emailLabel")}
                   </label>
                   <Input
                     id="newsletter-email"
                     type="email"
                     inputMode="email"
                     autoComplete="email"
-                    placeholder="tvoj@email.si"
+                    placeholder={tCommon("emailPlaceholder")}
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
@@ -126,14 +129,14 @@ export function NewsletterSection() {
                     type="submit"
                     disabled={state === "sending"}
                     className="gap-1.5 bg-primary"
-                    aria-label="Prijavi me na tedenske novice"
+                    aria-label={t("submitAriaLabel")}
                   >
                     {state === "sending" ? (
                       <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                     ) : (
                       <Send className="size-4" aria-hidden="true" />
                     )}
-                    {state === "sending" ? "Prijavljam..." : "Prijavi me"}
+                    {state === "sending" ? t("submitting") : t("submit")}
                   </Button>
                 </form>
               )}
@@ -153,11 +156,10 @@ export function NewsletterSection() {
                     <Bell className="size-4 text-primary" aria-hidden="true" />
                   </div>
                   <h3 className="text-sm font-semibold sm:text-base">
-                    Želiš biti obveščen?
+                    {t("pushTitle")}
                   </h3>
                   <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-muted-foreground sm:text-sm">
-                    Z obvestili v brskalniku ti lahko sporočimo nove izkušnje,
-                    dogodke ob tvojem obisku — in te spomnimo na shranjen načrt.
+                    {t("pushText")}
                   </p>
                 </div>
                 <div className="mx-auto mt-4 max-w-xs">
@@ -166,7 +168,7 @@ export function NewsletterSection() {
               </div>
 
               <p className="mt-4 text-center text-xs text-muted-foreground">
-                Brez neželene pošte — odjava z enim klikom. 🌿
+                {t("noSpam")}
               </p>
             </CardContent>
           </Card>

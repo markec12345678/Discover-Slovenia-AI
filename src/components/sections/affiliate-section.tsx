@@ -14,6 +14,7 @@ import {
   TicketCheck,
   Compass,
 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { PARTNER_LABELS, insurancePartnerName } from "@/lib/affiliate";
 
 // Affiliate partnerji na homepageu — vsi linki gredo prek /go/[provider]
@@ -30,52 +31,51 @@ const partners = [
   {
     id: "cars",
     name: PARTNER_LABELS.cars,
-    label: "Najem avta",
+    labelKey: "carsLabel",
     icon: Car,
-    description: "Iskanje po 10.000+ lokacijah. Brezplačna odpoved večinoma.",
+    descriptionKey: "carsDesc",
     href: "/go/cars?dest=Ljubljana",
-    aria: "Najemi avto prek DiscoverCars — odpre partnersko povezavo",
+    ariaKey: "carsAria",
     accent: "text-primary",
   },
   {
     id: "hotels",
     name: PARTNER_LABELS.hotels,
-    label: "Hoteli & nastanitve",
+    labelKey: "hotelsLabel",
     icon: BedDouble,
-    description: "28 mio nastanitev po vsem svetu. Brezplačna odpoved večinoma.",
+    descriptionKey: "hotelsDesc",
     href: "/go/hotels?dest=Ljubljana",
-    aria: "Rezerviraj nastanitev na Booking.com — odpre partnersko povezavo",
+    ariaKey: "hotelsAria",
     accent: "text-primary",
   },
   {
     id: "activities",
     name: PARTNER_LABELS.activities,
-    label: "Aktivnosti & izleti",
+    labelKey: "activitiesLabel",
     icon: Ticket,
-    description: "300.000+ izkušenj in turov. Brezplačna odpoved do 24h pred.",
+    descriptionKey: "activitiesDesc",
     href: "/go/activities?dest=Bled",
-    aria: "Rezerviraj izlete in izkušnje prek GetYourGuide — odpre partnersko povezavo",
+    ariaKey: "activitiesAria",
     accent: "text-primary",
   },
   {
     id: "viator",
     name: PARTNER_LABELS.viator,
-    label: "Vodeni izleti & ture",
+    labelKey: "viatorLabel",
     icon: Compass,
-    description:
-      "Alternativa za izlete: 300.000+ turov, brezplačna odpoved do 24h pred.",
+    descriptionKey: "viatorDesc",
     href: "/go/viator?dest=Bled",
-    aria: "Rezerviraj vodene izlete prek Viatorja — odpre partnersko povezavo",
+    ariaKey: "viatorAria",
     accent: "text-primary",
   },
   {
     id: "flights",
     name: PARTNER_LABELS.flights,
-    label: "Leti",
+    labelKey: "flightsLabel",
     icon: Plane,
-    description: "Primerjava letov 1.200+ letalskih družb. Najnižje cene.",
+    descriptionKey: "flightsDesc",
     href: "/go/flights?dest=Ljubljana",
-    aria: "Poišči lete prek Skyscannerja — odpre partnersko povezavo",
+    ariaKey: "flightsAria",
     accent: "text-primary",
   },
   {
@@ -83,73 +83,70 @@ const partners = [
     // Ime AKTIVNEGA partnerja (strežniško env branje — če je namesto
     // World Nomads aktiven SafetyWing, kartica ne sme lagati o partnerju)
     name: insurancePartnerName(),
-    label: "Potno zavarovanje",
+    labelKey: "insuranceLabel",
     icon: ShieldCheck,
-    description: "Zavarovanje za pustolovske aktivnosti (rafting, pohodništvo).",
+    descriptionKey: "insuranceDesc",
     href: "/go/insurance?days=7",
-    aria: "Skleni potno zavarovanje — odpre partnersko povezavo",
+    ariaKey: "insuranceAria",
     accent: "text-primary",
   },
   {
     id: "esim",
     name: PARTNER_LABELS.esim,
-    label: "eSIM za Slovenijo",
+    labelKey: "esimLabel",
     icon: Smartphone,
-    description:
-      "Internet takoj ob prihodu — brez fizične SIM kartice in brez dražjega roaminga.",
+    descriptionKey: "esimDesc",
     href: "/go/esim",
-    aria: "Kupi eSIM prek Airala — odpre partnersko povezavo",
+    ariaKey: "esimAria",
     accent: "text-primary",
   },
   {
     id: "transfers",
     name: PARTNER_LABELS.transfers,
-    label: "Transferji",
+    labelKey: "transfersLabel",
     icon: CarTaxiFront,
-    description:
-      "Letališčki in medkrajevni transferji — udobje brez najema avta.",
+    descriptionKey: "transfersDesc",
     href: "/go/transfers?dest=Ljubljana",
-    aria: "Rezerviraj transfer prek Kiwitaxija — odpre partnersko povezavo",
+    ariaKey: "transfersAria",
     accent: "text-primary",
   },
   {
     id: "transport",
     name: PARTNER_LABELS.transport,
-    label: "Vlaki & avtobusi",
+    labelKey: "transportLabel",
     icon: TrainFront,
-    description:
-      "Medkrajevni prevozi po Sloveniji — za potnike brez avta.",
+    descriptionKey: "transportDesc",
     href: "/go/transport?dest=Ljubljana",
-    aria: "Poišči vlake in avtobuse prek Omiya — odpre partnersko povezavo",
+    ariaKey: "transportAria",
     accent: "text-primary",
   },
   {
     id: "tickets",
     name: PARTNER_LABELS.tickets,
-    label: "Vstopnice",
+    labelKey: "ticketsLabel",
     icon: TicketCheck,
-    description:
-      "Vstopnice za znamenitosti (Postojna, Grad Bled …) — brez čakalnih vrst.",
+    descriptionKey: "ticketsDesc",
     href: "/go/tickets?dest=Bled",
-    aria: "Kupi vstopnice prek Tiqetsa — odpre partnersko povezavo",
+    ariaKey: "ticketsAria",
     accent: "text-primary",
   },
 ];
 
-export function AffiliateSection() {
+export async function AffiliateSection() {
+  const t = await getTranslations("affiliate");
+
   return (
     <section id="rezerviraj" className="py-20 bg-muted/30">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <Badge variant="secondary" className="mb-3">
-            Rezerviraj direktno
+            {t("badge")}
           </Badge>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            Vse za vaše potovanje na enem mestu
+            {t("title")}
           </h2>
           <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-            Rezervacijo opravite neposredno pri partnerskem ponudniku.
-            Discover Slovenia vam za uporabo povezave ne zaračuna ničesar.
+            {t("subtitle")}
           </p>
         </div>
 
@@ -169,16 +166,16 @@ export function AffiliateSection() {
                       <Icon className={`size-6 ${p.accent}`} />
                     </div>
                     <Badge variant="outline" className="text-xs">
-                      Partnerska ponudba
+                      {t("partnerBadge")}
                     </Badge>
                   </div>
 
                   <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
-                    {p.label}
+                    {t(p.labelKey)}
                   </div>
                   <h3 className="text-lg font-semibold mb-2">{p.name}</h3>
                   <p className="text-sm text-muted-foreground flex-grow">
-                    {p.description}
+                    {t(p.descriptionKey)}
                   </p>
 
                   {/* /go/ redirect — kliks se izmeri strežniško (AnalyticsEvent + funnel) */}
@@ -190,9 +187,9 @@ export function AffiliateSection() {
                       href={p.href}
                       target="_blank"
                       rel="sponsored noopener noreferrer"
-                      aria-label={p.aria}
+                      aria-label={t(p.ariaKey)}
                     >
-                      Rezerviraj
+                      {t("book")}
                       <ExternalLink className="ml-2 size-4" />
                     </a>
                   </Button>
@@ -204,9 +201,7 @@ export function AffiliateSection() {
 
         {/* EU disclosure — označba partnerskih povezav */}
         <p className="mt-8 text-center text-xs text-muted-foreground max-w-2xl mx-auto">
-          Nekatere povezave so partnerske povezave. Če prek njih opravite
-          rezervacijo, lahko Discover Slovenia prejme partnersko provizijo.
-          Cena za vas se zaradi tega ne poveča.
+          {t("disclosure")}
         </p>
       </div>
     </section>

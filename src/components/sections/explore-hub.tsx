@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import {
   Map as MapIcon,
   CalendarDays,
@@ -27,48 +28,50 @@ const HUB_ITEMS = [
   {
     href: "/zemljevid",
     icon: MapIcon,
-    title: "Zemljevid",
-    description: "Interaktivni zemljevid z bleščečimi točkami, potjo AI itinererja in POI po celotni Sloveniji.",
+    titleKey: "mapTitle",
+    descriptionKey: "mapDesc",
     accent: "bg-primary/10 text-primary",
   },
   {
     href: "/dogodki",
     icon: CalendarDays,
-    title: "Dogodki",
-    description: "Koledar festivalov, sejemov in lokalnih dogodkov — z datumom, lokacijo in kategorijo.",
+    titleKey: "eventsTitle",
+    descriptionKey: "eventsDesc",
     accent: "bg-accent text-accent-foreground",
   },
   {
     href: "/lokali",
     icon: Store,
-    title: "Lokalni ponudniki",
-    description: "Hoteli, restavracije, znamenitosti in aktivnosti preverjenih lokalnih partnerjev z direktno rezervacijo.",
+    titleKey: "localTitle",
+    descriptionKey: "localDesc",
     accent: "bg-primary/10 text-primary",
   },
   {
     href: "/vodici",
     icon: BookOpen,
-    title: "Vodiči & nasveti",
-    description: "Kaj početi na Bledu, 3 dni v Sloveniji, lokalna hrana — in vprašaj lokalca za prviroke.",
+    titleKey: "guidesTitle",
+    descriptionKey: "guidesDesc",
     accent: "bg-accent text-accent-foreground",
   },
   {
     href: "/trznica",
     icon: ShoppingBag,
-    title: "Tržnica",
-    description: "Lokalni izdelki in doživetja — med, vina, obrti, rafting in gastro doživetja neposredno od ponudnikov.",
+    titleKey: "marketTitle",
+    descriptionKey: "marketDesc",
     accent: "bg-primary/10 text-primary",
   },
   {
     href: "/slovenia-pass",
     icon: Award,
-    title: "Slovenia Pass",
-    description: "Obišči regije, zbiraj značke in odklenjene nagrade — potovanje skozi Slovenijo kot igra.",
+    titleKey: "passTitle",
+    descriptionKey: "passDesc",
     accent: "bg-accent text-accent-foreground",
   },
 ] as const;
 
-export function ExploreHub() {
+export async function ExploreHub() {
+  const t = await getTranslations("exploreHub");
+
   return (
     <section
       id="razisci"
@@ -80,16 +83,16 @@ export function ExploreHub() {
         <div className="mx-auto max-w-2xl text-center">
           <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
             <Compass className="size-3 text-primary" aria-hidden="true" />
-            Več za raziskovanje
+            {t("badge")}
           </div>
           <h2
             id="razisci-title"
             className="text-3xl font-bold tracking-tight sm:text-4xl"
           >
-            Razišči Slovenijo
+            {t("title")}
           </h2>
           <p className="mt-3 text-base text-muted-foreground">
-            Zemljevid, dogodki, lokali, vodiči in več — vse na enem mestu.
+            {t("subtitle")}
           </p>
         </div>
 
@@ -117,10 +120,10 @@ export function ExploreHub() {
                   </div>
                   <div>
                     <h3 className="text-base font-semibold sm:text-lg">
-                      {item.title}
+                      {t(item.titleKey)}
                     </h3>
                     <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                      {item.description}
+                      {t(item.descriptionKey)}
                     </p>
                   </div>
                 </Link>

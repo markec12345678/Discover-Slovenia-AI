@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 interface ChatMessage {
@@ -107,18 +108,20 @@ function clearChatHistory(): void {
   }
 }
 
-const QUICK_PROMPTS = [
-  "Kaj obiskati v Sloveniji?",
-  "Priporoči romantični vikend",
-  "Kje je najboljša hrana?",
-  "Kam z družino?",
-];
+// FW4.3: hitra vprašanja so TIPKE v sporočilih (chatbot.quickPrompt1–4) —
+// poslana vrednost je PREVEDEN niz, zato AI odgovarja v jeziku uporabnika
+// (system prompt chat API-ja dovoljuje jezik uporabnika).
+const QUICK_PROMPT_KEYS = [
+  "quickPrompt1",
+  "quickPrompt2",
+  "quickPrompt3",
+  "quickPrompt4",
+] as const;
 
-const WELCOME_MESSAGE: ChatMessage = {
-  role: "assistant",
-  content:
-    "Pozdravljen! 🇸🇮 Sem Slovenija AI — vaš osebni vodič po Sloveniji. Vprašajte me o destinacijah, lokalcih, izdelkih ali izkušnjah. Kako vam lahko pomagam?",
-};
+/** Welcome sporočilo v trenutnem jeziku (iz sporočil, ne modulni const). */
+function makeWelcome(t: (k: string) => string): ChatMessage {
+  return { role: "assistant", content: t("welcome") };
+}
 
 /**
  * Chatbot — lebdeči AI asistent z dostopom do vsebine platforme.
@@ -128,8 +131,9 @@ const WELCOME_MESSAGE: ChatMessage = {
  * Fallback: deterministični odgovori če AI odpove.
  */
 export function Chatbot() {
+  const t = useTranslations("chatbot");
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [makeWelcome(t)]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [source, setSource] = useState<"puter" | "z-ai-sdk" | "fallback">("puter");
@@ -173,9 +177,9 @@ export function Chatbot() {
 
   /** Počisti pogovor (brez potrditve) + izbriši lokalno zgodovino. */
   const handleClearConversation = () => {
-    setMessages([WELCOME_MESSAGE]);
+    setMessages([makeWelcome(t)]);
     clearChatHistory();
-    toast({ title: "Pogovor počiščen" });
+    toast({ title: t("cleared") });
   };
 
   async function sendMessage(text: string) {
@@ -210,8 +214,7 @@ export function Chatbot() {
         ...prev,
         {
           role: "assistant",
-          content:
-            "Oprostite, trenutno imam težave z povezavo. Poskusite znova ali pa obiščite AI načrtovalec na strani Načrtuj.",
+          content: t("offlineFallback"),
         },
       ]);
     } finally {
@@ -231,7 +234,7 @@ export function Chatbot() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="dsa-chat-fab fixed bottom-4 right-4 z-50 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:bottom-6 sm:right-6"
-        aria-label={open ? "Zapri chatbot" : "Odpri AI chatbot"}
+        aria-label={open ? t("fabClose") : t("fabOpen")}
         aria-expanded={open}
       >
         {open ? (
@@ -254,7 +257,7 @@ export function Chatbot() {
         <div
           className="dsa-chat-panel fixed bottom-20 right-4 z-50 flex h-[32rem] max-h-[calc(100vh-6rem)] w-[calc(100vw-2rem)] flex-col rounded-2xl border border-border bg-background shadow-2xl sm:right-6 sm:w-96"
           role="dialog"
-          aria-label="AI chatbot pogovor"
+          aria-label={t("dialogAriaLabel")}
         >
           {/* Header */}
           <div className="flex items-center gap-3 border-b border-border bg-primary/5 p-4 rounded-t-2xl">
@@ -263,7 +266,7 @@ export function Chatbot() {
             </div>
             <div className="flex-1">
               <h2 className="flex items-center gap-1.5 text-sm font-bold">
-                Slovenija AI
+                {t("headerTitle")}
                 <Badge
                   variant="secondary"
                   className={cn(
@@ -274,11 +277,11 @@ export function Chatbot() {
                   )}
                 >
                   <Sparkles className="size-2.5" aria-hidden="true" />
-                  {source === "fallback" ? "fallback" : "AI"}
+                  {source === "fallback" ? t("badgeFallback") : t("badgeAI")}
                 </Badge>
               </h2>
               <p className="text-[11px] text-muted-foreground">
-                Vaš osebni vodič po Sloveniji
+                {t("headerSubtitle")}
               </p>
             </div>
             {/* Počisti pogovor — takojšen (brez potrditve), s toast obvestilom;
@@ -290,8 +293,8 @@ export function Chatbot() {
               className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
               onClick={handleClearConversation}
               disabled={messages.length <= 1}
-              aria-label="Počisti pogovor"
-              title="Počisti pogovor"
+              aria-label={t("clear")}
+              title={t("clear")}
             >
               <Trash2 className="size-4" aria-hidden="true" />
             </Button>
@@ -329,17 +332,17 @@ export function Chatbot() {
             {messages.length === 1 && !loading && (
               <div className="space-y-2 pt-2">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Hitra vprašanja
+                  {t("quickPromptsLabel")}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {QUICK_PROMPTS.map((prompt) => (
+                  {QUICK_PROMPT_KEYS.map((key) => (
                     <button
-                      key={prompt}
+                      key={key}
                       type="button"
-                      onClick={() => sendMessage(prompt)}
+                      onClick={() => sendMessage(t(key))}
                       className="rounded-full border border-border/60 bg-background px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground active:bg-primary/10"
                     >
-                      {prompt}
+                      {t(key)}
                     </button>
                   ))}
                 </div>
@@ -351,7 +354,7 @@ export function Chatbot() {
               <div className="flex justify-start">
                 <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm bg-muted px-3.5 py-2.5">
                   <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-hidden="true" />
-                  <span className="text-xs text-muted-foreground">AI razmišlja...</span>
+                  <span className="text-xs text-muted-foreground">{t("thinking")}</span>
                 </div>
               </div>
             )}
@@ -365,18 +368,18 @@ export function Chatbot() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Vprašajte o Sloveniji..."
+                placeholder={t("inputPlaceholder")}
                 disabled={loading}
                 maxLength={500}
                 className="flex-1"
-                aria-label="Sporočilo za AI chatbot"
+                aria-label={t("inputAriaLabel")}
               />
               <Button
                 type="submit"
                 size="icon"
                 disabled={loading || !input.trim()}
                 className="shrink-0"
-                aria-label="Pošlji sporočilo"
+                aria-label={t("send")}
               >
                 {loading ? (
                   <Loader2 className="size-4 animate-spin" aria-hidden="true" />
