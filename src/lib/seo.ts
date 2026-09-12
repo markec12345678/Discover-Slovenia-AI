@@ -199,72 +199,82 @@ export function listingMetadata(listing: {
   };
 }
 
-/** Glavni (globalni) metadata za homepage — uporablja se v layout.tsx. */
-export const siteMetadata: Metadata = {
-  metadataBase: new URL(BASE_URL),
-  title: {
-    default: `${SITE_NAME} — ${SITE_TAGLINE}`,
-    template: `%s | ${SITE_NAME}`,
-  },
-  description: SITE_DESCRIPTION,
-  keywords: [
-    "Slovenija",
-    "Bled",
-    "Piran",
-    "Ljubljana",
-    "Triglav",
-    "potovanje",
-    "itinerer",
-    "načrtovanje potovanj",
-    "AI načrtovalec",
-  ],
-  authors: [{ name: SITE_NAME }],
-  creator: SITE_NAME,
-  publisher: SITE_NAME,
-  applicationName: SITE_NAME,
-  alternates: {
-    canonical: BASE_URL,
-  },
-  openGraph: {
-    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+/**
+ * Glavni (globalni) metadata — uporablja se v layout.tsx generateMetadata.
+ *
+ * MONET-10: `base` je GOSTITELJ ZAHTEVE (iz headers(), allowlist v
+ * src/lib/host.ts) — metadataBase/OG/Twitter/canonical so tako pravilni na
+ * VSAKEM gostitelju (Render, Vercel, prihodnja lastna domena) BREZ env
+ * vodovodja. Prej: statična metadataBase na mrtvi domeni → og:image in
+ * canonical so kazali na discoverslovenia.ai (HTTP 000).
+ */
+export function buildSiteMetadata(base: string): Metadata {
+  return {
+    metadataBase: new URL(base),
+    title: {
+      default: `${SITE_NAME} — ${SITE_TAGLINE}`,
+      template: `%s | ${SITE_NAME}`,
+    },
     description: SITE_DESCRIPTION,
-    url: BASE_URL,
-    siteName: SITE_NAME,
-    images: [
-      {
-        url: DEFAULT_OG_IMAGE,
-        width: 1200,
-        height: 630,
-        alt: SITE_NAME,
-      },
+    keywords: [
+      "Slovenija",
+      "Bled",
+      "Piran",
+      "Ljubljana",
+      "Triglav",
+      "potovanje",
+      "itinerer",
+      "načrtovanje potovanj",
+      "AI načrtovalec",
     ],
-    type: "website",
-    locale: "sl_SI",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
-    description: SITE_DESCRIPTION,
-    images: [DEFAULT_OG_IMAGE],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
+    authors: [{ name: SITE_NAME }],
+    creator: SITE_NAME,
+    publisher: SITE_NAME,
+    applicationName: SITE_NAME,
+    alternates: {
+      canonical: base,
+    },
+    openGraph: {
+      title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+      description: SITE_DESCRIPTION,
+      url: base,
+      siteName: SITE_NAME,
+      images: [
+        {
+          url: DEFAULT_OG_IMAGE,
+          width: 1200,
+          height: 630,
+          alt: SITE_NAME,
+        },
+      ],
+      type: "website",
+      locale: "sl_SI",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+      description: SITE_DESCRIPTION,
+      images: [DEFAULT_OG_IMAGE],
+    },
+    robots: {
       index: true,
       follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
     },
-  },
-  manifest: "/manifest.json",
-  icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
-    ],
-    apple: [{ url: "/icon-192.png", sizes: "192x192" }],
-  },
-};
+    manifest: "/manifest.json",
+    icons: {
+      icon: [
+        { url: "/favicon.svg", type: "image/svg+xml" },
+        { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+        { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      ],
+      apple: [{ url: "/icon-192.png", sizes: "192x192" }],
+    },
+  };
+}

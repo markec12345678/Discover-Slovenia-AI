@@ -188,26 +188,27 @@ export function ExperienceJsonLd({ exp }: { exp: Experience }) {
   return <JsonLdScript data={jsonLd} />;
 }
 
-/** WebSite — za homepage, označuje spletno mesto in njegove možnosti iskanja. */
-export function WebSiteJsonLd() {
+/** WebSite — za homepage, označuje spletno mesto in njegove možnosti iskanja.
+ * MONET-10: `baseUrl` = gostitelj zahteve (host-zavedni JSON-LD). */
+export function WebSiteJsonLd({ baseUrl }: { baseUrl: string }) {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: SITE_NAME,
     alternateName: "Discover Slovenia AI — AI turistična platforma",
-    url: BASE_URL,
+    url: baseUrl,
     description: SITE_DESCRIPTION,
     inLanguage: "sl-SI",
     publisher: {
       "@type": "Organization",
       name: SITE_NAME,
-      url: BASE_URL,
+      url: baseUrl,
     },
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: `${BASE_URL}/?q={search_term_string}`,
+        urlTemplate: `${baseUrl}/?q={search_term_string}`,
       },
       "query-input": "required name=search_term_string",
     },
@@ -216,17 +217,18 @@ export function WebSiteJsonLd() {
   return <JsonLdScript data={jsonLd} />;
 }
 
-/** Organization — za platformo (lastnik, kontakt, social). */
-export function OrganizationJsonLd() {
+/** Organization — za platformo (lastnik, kontakt, social).
+ * MONET-10: `baseUrl` = gostitelj zahteve (host-zavedni JSON-LD). */
+export function OrganizationJsonLd({ baseUrl }: { baseUrl: string }) {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: SITE_NAME,
     alternateName: "Discover Slovenia AI",
-    url: BASE_URL,
+    url: baseUrl,
     logo: {
       "@type": "ImageObject",
-      url: `${BASE_URL}/logo.svg`,
+      url: `${baseUrl}/logo.svg`,
     },
     description: SITE_DESCRIPTION,
     foundingDate: "2024",

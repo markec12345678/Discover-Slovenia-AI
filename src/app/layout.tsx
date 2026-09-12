@@ -12,15 +12,24 @@ import {
   WebSiteJsonLd,
   OrganizationJsonLd,
 } from "@/components/structured-data";
-import { siteMetadata } from "@/lib/seo";
+import { buildSiteMetadata } from "@/lib/seo";
+import { resolveBaseUrlFromHeaders } from "@/lib/host";
+import { headers } from "next/headers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin", "latin-ext"],
 });
 
-// Glavni metadata (metadataBase, OG, Twitter, manifest, ikone, robots).
-export const metadata: Metadata = siteMetadata;
+// Glavni metadata (metadataBase, OG, Twitter, manifest, ikone, robots) —
+// MONET-10: GOSTITELJU-PRILAGOJEN prek headers() (celoten site je že
+// dinamičen — no-store — zato nič dodatnega stroška). og:image/canonical/
+// JSON-LD tako kažejo na DEJANSKEGA gostitelja (Render/Vercel/lastna domena)
+// namesto na statično (mrtvo) discoverslovenia.ai.
+export async function generateMetadata(): Promise<Metadata> {
+  const h = await headers();
+  return buildSiteMetadata(resolveBaseUrlFromHeaders(h));
+}
 
 // Viewport — theme-color in obnašanje v mobilnem brskalniku.
 export const viewport: Viewport = {
@@ -44,6 +53,8 @@ export default async function RootLayout({
   // `<html lang>` atribut in za `NextIntlClientProvider`.
   const locale = await getLocale();
   const messages = await getMessages();
+  // Baza za host-zavedne JSON-LD komponente (ista logika kot generateMetadata).
+  const siteBase = resolveBaseUrlFromHeaders(await headers());
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -64,9 +75,9 @@ export default async function RootLayout({
           title="Discover Slovenia AI — vodniki po Sloveniji"
           href="/rss.xml"
         />
-        {/* Strukturirani podatki za SEO (WebSite + Organization) */}
-        <WebSiteJsonLd />
-        <OrganizationJsonLd />
+        {/* Strukturirani podatki za SEO (WebSite + Organization) — host-zavedni */}
+        <WebSiteJsonLd baseUrl={siteBase} />
+        <OrganizationJsonLd baseUrl={siteBase} />
       </head>
       <body
         className={`${geistSans.variable} font-sans antialiased bg-background text-foreground`}

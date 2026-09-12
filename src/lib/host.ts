@@ -50,15 +50,15 @@ export function isAllowedHost(host: string): boolean {
 }
 
 /**
- * Izpelje bazo URL-jev iz dejanske zahteve (x-forwarded-host > host),
+ * Izpelje bazo URL-jev iz glav zahteve (x-forwarded-host > host),
  * omejeno na allowlisto. Nedovoljen/nepoznan gostitelj → privzeta domena.
  *
- * Uporaba samo v strežniških route handlerjih (robots/sitemap/llms/rss);
- * stranem METADATA se ne dotika (ostanejo na statičnem metadataBase).
+ * Uporaba v strežniških route handlerjih (robots/sitemap/llms/rss) in v
+ * root generateMetadata (host-zavedni metadataBase za OG/canonical).
  */
-export function resolveBaseUrl(req: Request): string {
-  const fwd = req.headers.get("x-forwarded-host");
-  const rawHost = fwd ? fwd.split(",")[0] : req.headers.get("host");
+export function resolveBaseUrlFromHeaders(h: Headers): string {
+  const fwd = h.get("x-forwarded-host");
+  const rawHost = fwd ? fwd.split(",")[0] : h.get("host");
   const hostname = normalizeHostname(rawHost);
 
   if (!isAllowedHost(hostname)) {
@@ -72,6 +72,11 @@ export function resolveBaseUrl(req: Request): string {
   const proto = isLocal ? "http" : "https";
 
   return `${proto}://${hostname}${port}`;
+}
+
+/** Obljuba za route handlerje (Request ima .headers). */
+export function resolveBaseUrl(req: Request): string {
+  return resolveBaseUrlFromHeaders(req.headers);
 }
 
 function extractPort(rawHost: string | null): string {
