@@ -57,6 +57,13 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Discover Slovenia AI" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="format-detection" content="telephone=no" />
+        {/* RSS — svežinski signal za iskalnike + odkrivanje vsebin (MONET-10) */}
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title="Discover Slovenia AI — vodniki po Sloveniji"
+          href="/rss.xml"
+        />
         {/* Strukturirani podatki za SEO (WebSite + Organization) */}
         <WebSiteJsonLd />
         <OrganizationJsonLd />

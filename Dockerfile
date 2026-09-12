@@ -32,6 +32,17 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # ob prvem zagonu (Docker jo sam skopira v prazen named volume).
 RUN mkdir -p db && DATABASE_URL=file:/app/db/custom.db bunx prisma db push --skip-generate
 
+# METADATABASE (MONET-10): absolutni OG/canonical/JSON-LD URL-ji se spečejo
+# ob buildu. Privzeto DEJANSKA produkcjska domena (Render), ne mrtva
+# discoverslovenia.ai. Ko uporabnik priključi lastno domeno, v Render
+# dashboard nastavi NEXT_PUBLIC_BASE_URL=https://<domena> — Render jo kot
+# service env spusti v build in ARG jo prevzame (Render podaja env
+# spremenljivke Dockerfile ARG-om z istim imenom).
+# Dinamične poti (robots.txt/sitemap.xml/llms.txt/rss.xml) temu ne sledijo —
+# te berejo gostitelja ZAHTEVE (src/lib/host.ts) in so pravilne na vsakem hostu.
+ARG NEXT_PUBLIC_BASE_URL=https://i-feel-slovenia.onrender.com
+ENV NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
+
 # Produkcjski build — NE potrebuje DATABASE_URL (dinamične strani imajo
 # try/catch fallback; prisma generate zaganja sama build skripta).
 # build skripta tudi skopira public/ + .next/static + manifeste v standalone.

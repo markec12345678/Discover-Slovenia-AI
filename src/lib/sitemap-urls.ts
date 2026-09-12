@@ -1,8 +1,7 @@
-import type { MetadataRoute } from "next";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 
 // Skupni seznam vseh URL-jev, ki jih generira platforma.
-// Uporablja ga /sitemap.ts in /api/admin/indexing za poročanje o indeksaciji.
+// Uporablja ga /sitemap.xml route handler in /api/admin/indexing za poročanje o indeksaciji.
 
 export const BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL || "https://discoverslovenia.ai";
@@ -72,84 +71,79 @@ export interface SitemapUrl {
   changeFrequency: "daily" | "weekly" | "monthly";
 }
 
-function makeUrl(
-  path: string,
-  priority: number,
-  category: string,
-  changeFrequency: SitemapUrl["changeFrequency"] = "monthly",
-): SitemapUrl {
-  return {
-    url: `${BASE_URL}${path}`,
-    path,
-    category,
-    priority,
-    changeFrequency,
-  };
-}
-
 /**
  * Vrne vse URL-je, ki jih platforma generira.
- * Trenutno: 9 statičnih + 22 things-to-do + 110 itinererjev + 88 best-time + 88 vodnikov = 317
+ * Trenutno: 16 statičnih + 22 things-to-do + 110 itinererjev + 88 best-time + 88 vodnikov = 324
+ *
+ * `baseUrl` (MONET-10): dinamična pot (route handler /sitemap.xml) poda
+ * DEJANSKEGA gostitelja zahteve → Google/Bing ne zavrnejo cross-host sitemapa.
  */
-export function getAllSitemapUrls(): SitemapUrl[] {
+export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
   const urls: SitemapUrl[] = [];
+  // Lokalni ovojec — vsi URL-ji znotraj funkcije uporabljajo DEJANSKEGA
+  // gostitelja zahteve (ne statični BASE_URL iz env).
+  const add = (
+    path: string,
+    priority: number,
+    category: string,
+    changeFrequency: SitemapUrl["changeFrequency"] = "monthly",
+  ) => {
+    urls.push({
+      url: `${baseUrl}${path}`,
+      path,
+      category,
+      priority,
+      changeFrequency,
+    });
+  };
 
   // === Statične strani ===
   // FW3: hash sekcije so postale prave strani (AI-first hierarhija) —
   // prave URL-je Google indexira bolje kot /#anchorje.
-  urls.push(makeUrl("/", 1.0, "Domov", "daily"));
-  urls.push(makeUrl("/nacrtuj", 0.9, "AI načrtovalec", "weekly"));
-  urls.push(makeUrl("/destinacije", 0.9, "Destinacije", "weekly"));
-  urls.push(makeUrl("/dozivetja", 0.8, "Doživetja", "weekly"));
-  urls.push(makeUrl("/trznica", 0.8, "Tržnica", "daily"));
-  urls.push(makeUrl("/lokali", 0.7, "Lokalni ponudniki", "weekly"));
-  urls.push(makeUrl("/zemljevid", 0.7, "Zemljevid", "weekly"));
-  urls.push(makeUrl("/dogodki", 0.7, "Dogodki", "weekly"));
-  urls.push(makeUrl("/vodici", 0.6, "Vodiči", "weekly"));
-  urls.push(makeUrl("/slovenia-pass", 0.6, "Slovenia Pass", "monthly"));
-  urls.push(makeUrl("/za-ponudnike", 0.6, "Za ponudnike", "monthly"));
+  add("/", 1.0, "Domov", "daily");
+  add("/nacrtuj", 0.9, "AI načrtovalec", "weekly");
+  add("/destinacije", 0.9, "Destinacije", "weekly");
+  add("/dozivetja", 0.8, "Doživetja", "weekly");
+  add("/trznica", 0.8, "Tržnica", "daily");
+  add("/lokali", 0.7, "Lokalni ponudniki", "weekly");
+  add("/zemljevid", 0.7, "Zemljevid", "weekly");
+  add("/dogodki", 0.7, "Dogodki", "weekly");
+  add("/vodici", 0.6, "Vodiči", "weekly");
+  add("/slovenia-pass", 0.6, "Slovenia Pass", "monthly");
+  add("/za-ponudnike", 0.6, "Za ponudnike", "monthly");
   // E-E-A-T strani (Google trust)
-  urls.push(makeUrl("/o-strani", 0.5, "O strani", "monthly"));
-  urls.push(makeUrl("/kontakt", 0.5, "Kontakt", "monthly"));
-  urls.push(makeUrl("/politika-zasebnosti", 0.3, "Politika zasebnosti", "monthly"));
-  urls.push(makeUrl("/pogoji-uporabe", 0.3, "Pogoji uporabe", "monthly"));
-  urls.push(makeUrl("/vir-podatkov", 0.4, "Vir podatkov", "monthly"));
+  add("/o-strani", 0.5, "O strani", "monthly");
+  add("/kontakt", 0.5, "Kontakt", "monthly");
+  add("/politika-zasebnosti", 0.3, "Politika zasebnosti", "monthly");
+  add("/pogoji-uporabe", 0.3, "Pogoji uporabe", "monthly");
+  add("/vir-podatkov", 0.4, "Vir podatkov", "monthly");
+  // GEO (MONET-10): formati, ki jih AI agenti in iskalniki iščejo na korenu.
+  add("/llms.txt", 0.3, "GEO", "monthly");
+  add("/rss.xml", 0.3, "GEO", "daily");
 
   // === Things to do (22) ===
   for (const d of DESTINATIONS) {
-    urls.push(
-      makeUrl(`/destinacija/${d.slug}/things-to-do`, 0.8, "Things to do", "weekly"),
-    );
+    add(`/destinacija/${d.slug}/things-to-do`, 0.8, "Things to do", "weekly");
   }
 
   // === Itinererji (22 × 5 = 110) ===
   for (const d of DESTINATIONS) {
     for (const dur of DURATION_SLUGS) {
-      urls.push(
-        makeUrl(`/destinacija/${d.slug}/itinerary/${dur}`, 0.7, "Itinerer"),
-      );
+      add(`/destinacija/${d.slug}/itinerary/${dur}`, 0.7, "Itinerer");
     }
   }
 
   // === Best time to visit (22 × 4 = 88) ===
   for (const d of DESTINATIONS) {
     for (const season of SEASON_SLUGS) {
-      urls.push(
-        makeUrl(
-          `/destinacija/${d.slug}/best-time-to-visit/${season}`,
-          0.7,
-          "Best time to visit",
-        ),
-      );
+      add(`/destinacija/${d.slug}/best-time-to-visit/${season}`, 0.7, "Best time to visit");
     }
   }
 
   // === Vodniki / city clusters (22 × 4 = 88) ===
   for (const d of DESTINATIONS) {
     for (const type of GUIDE_TYPES) {
-      urls.push(
-        makeUrl(`/destinacija/${d.slug}/guide/${type}`, 0.7, "Vodnik"),
-      );
+      add(`/destinacija/${d.slug}/guide/${type}`, 0.7, "Vodnik");
     }
   }
 
@@ -158,9 +152,9 @@ export function getAllSitemapUrls(): SitemapUrl[] {
 
 /** Skupno število vseh URL-jev (za hitro poročanje brez gradnje seznama) */
 export function getTotalSitemapUrlCount(): number {
-  // 9 statičnih + 22 + 110 + 88 + 88 = 317
+  // 16 statičnih + 2 GEO (llms.txt, rss.xml) + 22 + 110 + 88 + 88 = 326
   return (
-    9 +
+    18 +
     DESTINATIONS.length +
     DESTINATIONS.length * 5 +
     DESTINATIONS.length * 4 +
@@ -176,17 +170,4 @@ export function normalizePath(input: string): string {
   if (!p.startsWith("/")) p = "/" + p;
   if (p.length > 1 && p.endsWith("/")) p = p.slice(0, -1);
   return p;
-}
-
-/** Pretvori SitemapUrl v Next.js MetadataRoute.Sitemap format */
-export function toNextSitemap(
-  urls: SitemapUrl[],
-  now: Date = new Date(),
-): MetadataRoute.Sitemap {
-  return urls.map((u) => ({
-    url: u.url,
-    lastModified: now,
-    changeFrequency: u.changeFrequency,
-    priority: u.priority,
-  }));
 }

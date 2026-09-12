@@ -210,6 +210,100 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+hdr "11) GEO/SEO infrastruktura (MONET-10) — robots/sitemap/llms/rss/OG"
+# ZGODOVINA: 12. 9. 2026 odkritih 5 tihih indeksacijskih blokad
+# (public/robots.txt konflikt → 500 v devu; cross-host sitemap; SVG OG slika;
+#  brez llms.txt/RSS; napihnjen lastmod). Ta sekcija jih trajno varuje.
+if [[ "$BASE_URL" != "https://i-feel-slovenia.vercel.app" ]]; then
+  # robots.txt — gostitelju-prilagojen, z Sitemap direktivo ISTEGA gostitelja
+  rb="$(curl -s --max-time 20 "$BASE_URL/robots.txt")"
+  rbh="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$BASE_URL/robots.txt")"
+  if [[ "$rbh" == "200" ]]; then
+    ok "robots.txt → 200 (brez konflikta public/generator)"
+    grep -q "^Allow: /$" <<<"$rb" && ok "robots: Allow / (celotno spletišče odprto)" || bad "robots: MANJKA Allow: /"
+    grep -q "Disallow: /admin" <<<"$rb" && ok "robots: /admin zaprt" || bad "robots: /admin NI zaprt"
+    grep -q "Disallow: /api/" <<<"$rb" && ok "robots: /api/ zaprt" || bad "robots: /api/ NI zaprt"
+    grep -q "^User-agent: GPTBot" <<<"$rb" && ok "robots: AI crawlerji (GPTBot+) eksplicitno dovoljeni" || warn "robots: AI crawler pravila manjkajo"
+    SM_REF="$(grep -oE '^Sitemap: .*' <<<"$rb" | head -1 | cut -d' ' -f2-)"
+    ORIGIN="$(echo "$BASE_URL" | sed -E 's#/$##')"
+    if [[ -n "$SM_REF" && "$SM_REF" == "$ORIGIN/sitemap.xml" ]]; then
+      ok "robots: Sitemap direktiva KAŽE NA TEGA GOSTITELJA ($SM_REF)"
+    else
+      bad "robots: Sitemap='$SM_REF' ≠ gostitelj $ORIGIN — cross-host blokada se je VRNILA"
+    fi
+    grep -qE '^Disallow: /\s*$' <<<"$rb" && bad "robots: 'Disallow: /' BLOKIRA CELO STRAN (zg. incident)" || ok "robots: brez popolne blokade"
+  else
+    bad "robots.txt → HTTP $rbh (konflikt/napaka strežnika)"
+  fi
+
+  # sitemap.xml — URL-ji DEJANSKEGA gostitelja (Google zavrača cross-host)
+  sm="$(curl -s --max-time 30 "$BASE_URL/sitemap.xml")"
+  smh="$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$BASE_URL/sitemap.xml")"
+  if [[ "$smh" == "200" ]]; then
+    N_URLS="$(grep -c '<loc>' <<<"$sm" || true)"
+    [[ "$N_URLS" -ge 300 ]] && ok "sitemap: $N_URLS URL-jev (≥300 pričakovanih)" || bad "sitemap: samo $N_URLS URL-jev"
+    if grep -q "<loc>$ORIGIN/</loc>" <<<"$sm"; then
+      ok "sitemap: prvi URL z ISTEGA gostitelja (cross-host popravek drži)"
+    else
+      bad "sitemap: URL-ji NISO z gostitelja $ORIGIN — Google jih bo ZAVRNIL"
+    fi
+    grep -q '<loc>'"$ORIGIN"'/llms.txt</loc>' <<<"$sm" && ok "sitemap: GEO poti (llms.txt/rss.xml) vključene" || warn "sitemap: llms.txt ni razviden"
+    grep -q '<lastmod>' <<<"$sm" && warn "sitemap: lastmod prisoten (preveri, da ni napihnjen)" || ok "sitemap: lastmod pošteno izpuščen"
+  else
+    bad "sitemap.xml → HTTP $smh"
+  fi
+
+  # llms.txt (GEO) — spec struktura
+  lh="$(curl -s -o /tmp/p9-llms.txt -w '%{http_code}' --max-time 20 "$BASE_URL/llms.txt")"
+  if [[ "$lh" == "200" && "$(head -c 2 /tmp/p9-llms.txt)" == "# " ]]; then
+    ok "llms.txt → 200, spec naslov '# Discover Slovenia AI'"
+    grep -q '## Destinacije' /tmp/p9-llms.txt && ok "llms.txt: sekcije destinacij prisotne" || bad "llms.txt: struktura sekcij manjka"
+  else
+    bad "llms.txt → HTTP $lh / napačen začetek"
+  fi
+  lfh="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$BASE_URL/llms-full.txt")"
+  [[ "$lfh" == "200" ]] && ok "llms-full.txt → 200 (polni format za agente)" || bad "llms-full.txt → $lfh"
+
+  # rss.xml — veljaven kanal
+  rh="$(curl -s -o /tmp/p9-rss.xml -w '%{http_code}' --max-time 20 "$BASE_URL/rss.xml")"
+  if [[ "$rh" == "200" ]] && grep -q '<rss version="2.0">' /tmp/p9-rss.xml; then
+    N_ITEMS="$(grep -c '<item>' /tmp/p9-rss.xml || true)"
+    ok "rss.xml → 200, RSS 2.0, $N_ITEMS itemov"
+    grep -q '<language>sl-si</language>' /tmp/p9-rss.xml && ok "rss: jezik sl-si" || warn "rss: jezikovna oznaka manjka"
+  else
+    bad "rss.xml → HTTP $rh / neveljaven RSS"
+  fi
+  # odkrivanje feed-a na homepage (v datoteko — pipefail+grep -q ubije curl s SIGPIPE)
+  curl -s --max-time 30 "$BASE_URL/" -o /tmp/p9-home-geo.html
+  grep -q 'application/rss+xml' /tmp/p9-home-geo.html \
+    && ok "homepage: <link rel=alternate RSS> prisoten" || bad "homepage: RSS odkrivanje manjka"
+
+  # OG slika — PNG (SVG ne deluje na FB/WhatsApp/Telegram)
+  og="$(curl -s -o /tmp/p9-og.png -w '%{http_code}' --max-time 20 "$BASE_URL/og-home.png")"
+  if [[ "$og" == "200" && "$(head -c 4 /tmp/p9-og.png | od -An -tx1 | tr -d ' ')" == "89504e47" ]]; then
+    ok "og-home.png → 200, veljaven PNG (social sharing fix)"
+    curl -s --max-time 30 "$BASE_URL/" -o /tmp/p9-home-og.html
+    grep -q 'og-home.png' /tmp/p9-home-og.html \
+      && ok "homepage OG meta kaže na og-home.png" || bad "homepage OG meta NE kaže na og-home.png (SVG nazaj?)"
+  else
+    bad "og-home.png → HTTP $og / ni PNG"
+  fi
+
+  # IndexNow ključ — dostopen na korenu (spec)
+  KEYFILE="$(ls /home/z/Discover-Slovenia-AI/public/ 2>/dev/null | grep -E '^[a-f0-9]{8,128}\.txt$' | head -1 || true)"
+  if [[ -n "$KEYFILE" ]]; then
+    khttp="$(curl -s -o /tmp/p9-key.txt -w '%{http_code}' --max-time 20 "$BASE_URL/$KEYFILE")"
+    [[ "$khttp" == "200" && "$(cat /tmp/p9-key.txt | tr -d '[:space:]')" == "${KEYFILE%.txt}" ]] \
+      && ok "IndexNow ključ strežen na korenu (ping pripravljen)" \
+      || warn "IndexNow ključ ni dosegljiv na $BASE_URL/$KEYFILE (HTTP $khttp)"
+  else
+    warn "IndexNow ključ ni v public/ (lokalni repozitorij)"
+  fi
+else
+  echo "  (preskočeno — Vercel še na stari kodi; GEO sekcija se aktivira po redeploy)"
+fi
+
+# -----------------------------------------------------------------------------
 hdr "ROČNI (brskalnik) — preostali checklist:"
 cat <<'MANUAL'
   [ ] booking od začetka do konca prek UI (homepage → izkušnja → modal → potrditev)

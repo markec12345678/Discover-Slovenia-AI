@@ -13,8 +13,11 @@ export const SITE_TAGLINE = "AI načrtovalec potovanj";
 export const SITE_DESCRIPTION =
   "Odkrijte Slovenijo z AI-poganjanim načrtovalcem potovanj. 22 najlepših destinacij od Bleda do Pirana, z interaktivnim zemljevidom, vremenom in direktnimi rezervacijami.";
 
-// Privzeti OG/Twitter thumbnail. Uporablja obstoječo logotip SVG, ki ga podpira večina socialnih omrežij.
-const DEFAULT_OG_IMAGE = "/logo.svg";
+// Privzeti OG/Twitter thumbnail (MONET-10): PNG 1200×630 — SVG (prejšnji
+// logo.svg) Facebook/WhatsApp/Telegram/LinkedIn NE upodabljajo v predogledih,
+// kar je tiho pokvarilo vso socialno deljenje homepage-a.
+// Datoteko generira /home/z/my-project/generate-og.py (PIL, blagovna znamka).
+const DEFAULT_OG_IMAGE = "/og-home.png";
 
 /** Metadata za posamezno destinacijo. */
 export function destinationMetadata(dest: {
