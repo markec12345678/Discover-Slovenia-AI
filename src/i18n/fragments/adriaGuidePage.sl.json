@@ -1,0 +1,49 @@
+{
+  "adriaGuidePage": {
+    "meta": {
+      "notFound": "Vodnik ni najden"
+    },
+    "breadcrumb": {
+      "aria": "Drobtine",
+      "home": "Domov",
+      "guides": "Vodiči"
+    },
+    "hero": {
+      "countriesAria": "Države na poti: {countries}",
+      "readTime": "min branja",
+      "startingPoint": "izhodišče"
+    },
+    "credit": {
+      "photo": "Foto:"
+    },
+    "route": {
+      "title": "Pot na kratko",
+      "intro": "{days}-{daysWord} ruta prek {count} {countryWord} — {km} kilometrov skupaj.",
+      "nightsOne": "nočitev",
+      "nightsTwo": "nočitvi",
+      "nightsFew": "nočitve",
+      "nightsMany": "nočitev",
+      "daysOne": "dan",
+      "daysOther": "dni"
+    },
+    "practical": {
+      "title": "Praktično pred odhodom"
+    },
+    "faq": {
+      "title": "Pogosta vprašanja"
+    },
+    "aiCta": {
+      "title": "Najprej Slovenija, potem Jadran",
+      "body": "Preden se odpravite na jug, si sestavite slovenski del poti — naš AI pripravi itinerer od Blejskega jezera do Pirana, prilagojen proračunu in sezoni.",
+      "button": "AI načrtovalec potovanj"
+    },
+    "related": {
+      "title": "Druga jadranska potovanja",
+      "meta": "{days} {daysWord} · {km} km"
+    },
+    "slovenia": {
+      "title": "Slovenska stran poti",
+      "description": "Postaje v Sloveniji s tega potovanja — vodiči, aktivnosti in praktični nasveti."
+    }
+  }
+}

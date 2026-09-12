@@ -1,0 +1,19 @@
+{
+  "vodiciPage": {
+    "meta": {
+      "title": "Vodiči in nasveti za Slovenijo",
+      "description": "Kaj početi na Bledu, 3 dni v Sloveniji, najlepši izleti in lokalna hrana — vodiči, nasveti, jadranska potovanja in odgovori lokalcev."
+    },
+    "badge": "Vodiči",
+    "title": "Vodiči in nasveti za Slovenijo",
+    "intro": "Kaj početi na Bledu, kako preživeti 3 dni po Sloveniji, najlepši izleti in kje jesti lokalno — vodiči, nasveti in odgovori lokalcev.",
+    "editorsLine": "Zgodbe in nasveti urednikov · Vprašajte lokalce",
+    "adria": {
+      "badge": "Cross-border",
+      "title": "Jadranska potovanja iz Slovenije",
+      "description": "Road trip vodniki čez mejo — Hrvaška, Bosna, Črna gora in Albanija z osebnim avtom iz Slovenije: poti, cestnine, mejne formalnosti in kam vsak večer parkirati.",
+      "countriesAria": "Potovanje skozi: {countries}",
+      "readMore": "Preberi →"
+    }
+  }
+}

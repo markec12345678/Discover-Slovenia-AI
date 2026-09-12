@@ -79,7 +79,7 @@ export interface SitemapUrl {
  * Vrne vse URL-je, ki jih platforma generira.
  * Trenutno: 19 stalnih + 22 things-to-do + 110 itinererjev + 88 best-time + 88 vodnikov
  * + 10 jadranskih vodnikov (ADRIA-1) = 337 SL URL-jev
- * + 317 EN različic (FW4.3-2: jedro lijaka na EN whitelisti) = 654 skupaj.
+ * + 328 EN različic (FW4.3-2 jedro lijaka + ADRIA-EN jadranski vodniki) = 665 skupaj.
  *
  * `baseUrl` (MONET-10): dinamična pot (route handler /sitemap.xml) poda
  * DEJANSKEGA gostitelja zahteve → Google/Bing ne zavrnejo cross-host sitemapa.
@@ -162,8 +162,9 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
   // === FW4.3-2: EN različice (samo poti na EN whitelisti — jedro lijaka)
   // ZA VSAK SL URL z EN različico se doda /en URL istih lastnosti ter
   // se OBEJEMA prilepita hreflang alternati (xhtml:link v sitemap.xml).
-  // GEO poti (/llms.txt, /rss.xml) in uredniške SL vsebine (vodici, dogodki,
-  // tržnica …) EN različice NIMAJO (proxy jih 308 preusmeri na SL). ===
+  // GEO poti (/llms.txt, /rss.xml) in uredniške SL vsebine (dogodki,
+  // tržnica …) EN različice NIMAJO (proxy jih 308 preusmeri na SL).
+  // ADRIA-EN: /vodici seznam + 10 vodnikov so NA whitelisti (full prevodi). ===
   const enUrls: SitemapUrl[] = [];
   for (const u of urls) {
     if (!isEnRoute(u.path)) continue;
@@ -192,22 +193,24 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
   return [...urls, ...enUrls];
 }
 
-/** Število EN URL-jev (FW4.3-2) — za poročanje brez gradnje seznama. */
+/** Število EN URL-jev (FW4.3-2 + ADRIA-EN) — za poročanje brez gradnje seznama. */
 export function getEnSitemapUrlCount(): number {
-  // 9 stalnih (domov, nacrtuj, destinacije + 6 info/E-E-A-T) + 22 + 110 + 88 + 88
+  // 10 stalnih (domov, nacrtuj, destinacije, vodici + 6 info/E-E-A-T) + 22
+  // + 110 + 88 + 88 + 10 jadranskih vodnikov (ADRIA-EN)
   return (
-    9 +
+    10 +
     DESTINATIONS.length +
     DESTINATIONS.length * 5 +
     DESTINATIONS.length * 4 +
-    DESTINATIONS.length * 4
+    DESTINATIONS.length * 4 +
+    ADRIA_GUIDES.length
   );
 }
 
 /** Skupno število vseh URL-jev (za hitro poročanje brez gradnje seznama) */
 export function getTotalSitemapUrlCount(): number {
   // 19 stalnih + 22 + 110 + 88 + 88 + 10 jadranskih (ADRIA-1) = 337 SL
-  // + 317 EN (FW4.3-2) = 654 skupaj
+  // + 328 EN (FW4.3-2 + ADRIA-EN) = 665 skupaj
   return (
     19 +
     DESTINATIONS.length +

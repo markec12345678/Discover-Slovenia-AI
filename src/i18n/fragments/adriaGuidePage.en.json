@@ -1,0 +1,49 @@
+{
+  "adriaGuidePage": {
+    "meta": {
+      "notFound": "Guide not found"
+    },
+    "breadcrumb": {
+      "aria": "Breadcrumb",
+      "home": "Home",
+      "guides": "Guides"
+    },
+    "hero": {
+      "countriesAria": "Countries on the route: {countries}",
+      "readTime": "min read",
+      "startingPoint": "starting point"
+    },
+    "credit": {
+      "photo": "Photo:"
+    },
+    "route": {
+      "title": "The route at a glance",
+      "intro": "A {days}-day route across {count} {countryWord} — {km} kilometres in total.",
+      "nightsOne": "night",
+      "nightsTwo": "nights",
+      "nightsFew": "nights",
+      "nightsMany": "nights",
+      "daysOne": "day",
+      "daysOther": "days"
+    },
+    "practical": {
+      "title": "Practical tips before you go"
+    },
+    "faq": {
+      "title": "Frequently asked questions"
+    },
+    "aiCta": {
+      "title": "Slovenia first, then the Adriatic",
+      "body": "Before you head south, put together the Slovenian leg of your trip — our AI builds an itinerary from Lake Bled to Piran, tailored to your budget and the season.",
+      "button": "AI travel planner"
+    },
+    "related": {
+      "title": "More Adriatic road trips",
+      "meta": "{days} {daysWord} · {km} km"
+    },
+    "slovenia": {
+      "title": "The Slovenian leg of the trip",
+      "description": "The Slovenian stops on this route — guides, activities and practical tips."
+    }
+  }
+}

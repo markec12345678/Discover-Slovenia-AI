@@ -285,7 +285,7 @@ export const ADRIA_GUIDES_PART2: AdriaGuide[] = [
         body: [
           "Prvi dan je najdaljša etapa: okoli 460 kilometrov do Splita, kar pomeni pet do šest ur z odmori. Nočitev v Splitu pot razdeli na dva človeška dneva in zvečer prinese palačo, v kateri se življenje nikoli ni ustavilo, jutranja kava na Rivi pa najboljši možni start proti jugu.",
           "Drugi dan se po avtocesti spustite do Ploč, kjer cesta zavije na Pelješki most. Po prehodu se ustavite v Stonu: solane delujejo po stoletnem redu, obzidje nad mestom je med najdaljšimi srednjeveškimi v Evropi, školjke iz Mali Stona pa so razlog, da ta postanek ni izbirni. Od tod se po obalni cesti peljete do Dubrovnika, kamor prispete še za večerjo pod obzidjem.",
-          "Tretji dan je kratek in polepšan: dobrih 90 kilometrov do meje in naprej do Kotorja. Mejo s Črno goro preidete na prehodu Karasovići–Deleliji; v sezoni se tam znvažijo kolone, zato je jutro boljši čas od popoldneva. Po prehodu se cesta spusti k morju in kmalu se pred vami odpre Boka — trenutek, ki ga boste najrajši ponovili.",
+          "Tretji dan je kratek in polepšan: dobrih 90 kilometrov do meje in naprej do Kotorja. Mejo s Črno goro preidete na prehodu Karasovići–Deleliji; v sezoni se tam zavlečejo kolone, zato je jutro boljši čas od popoldneva. Po prehodu se cesta spusti k morju in kmalu se pred vami odpre Boka — trenutek, ki ga boste najrajši ponovili.",
         ],
       },
       {
@@ -331,7 +331,7 @@ export const ADRIA_GUIDES_PART2: AdriaGuide[] = [
         body: [
           "Mejo s Črno goro preidete dvakrat in vsakokrat s kontrolo, saj država ni v schengenskem območju. Glavni prehod na tej smeri je Karasovići–Deleliji; v juliju in avgustu se pred njim naberejo zamude od pol ure naprej, ob koncih tedna pa še več. Zgodnje jutro je najbolj zanesljiva ura, povečer pa druga; čakalne čase se splača preveriti pred odhodom.",
           "Za dokumente velja preprosto pravilo: potni list je varna izbira. Osebna izkaznica se na tem prehodu za državljane Evropske unije v zadnjih letih občasno priznava, a praksa se je spreminjala, zato pogoje preverite pred odhodom — najmanj prijeten trenutek za ugotavljanje je kolona pred zaporno roko.",
-          "Najlepši meseci za Boko so junij in september: morje je toplo, večeri mirni, cene dostopnejše. Julij in avgust prineseta vrhunec vsega skupaj — tudi križark in kolon. Maj je svež in cvetoč, a morje takrat še zidi od mraza; oktober je na jadranski strani Črne gore pogosto še topel in mil.",
+          "Najlepši meseci za Boko so junij in september: morje je toplo, večeri mirni, cene dostopnejše. Julij in avgust prineseta vrhunec vsega skupaj — tudi križark in kolon. Maj je svež in cvetoč, a morje takrat še grize od mraza; oktober je na jadranski strani Črne gore pogosto še topel in mil.",
         ],
       },
       {
@@ -397,7 +397,7 @@ export const ADRIA_GUIDES_PART2: AdriaGuide[] = [
       {
         question: "Ali se splača vzpon na Obzidje Kotorja?",
         answer:
-          "Da, in to je edina stvar na tej poti, za katero ni alternativnega mnenja. Več kot tisoč stopnic se premaga v dobri uri in pol, zgoraj pa se zaliv razprostre v celoti. Pojdite zgodaj zjutraj ali proti večeru, vzemite vodo in obutev, ne pajočke.",
+          "Da, in to je edina stvar na tej poti, za katero ni alternativnega mnenja. Več kot tisoč stopnic se premaga v dobri uri in pol, zgoraj pa se zaliv razprostre v celoti. Pojdite zgodaj zjutraj ali proti večeru, vzemite vodo in obutev, ne japanke.",
       },
       {
         question: "Kako se iz Kotorja najbolje vrne v Slovenijo?",

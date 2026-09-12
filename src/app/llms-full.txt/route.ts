@@ -10,6 +10,7 @@
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { ADRIA_GUIDES, COUNTRY_LABELS } from "@/lib/adria-guides";
+import { ADRIA_GUIDES_EN, COUNTRY_LABELS_EN } from "@/lib/adria-guides-en";
 import { resolveBaseUrl } from "@/lib/host";
 import {
   GUIDE_TYPES,
@@ -121,6 +122,27 @@ export async function GET(req: Request) {
     return lines.join("\n");
   });
   parts.push(adriaSections.join("\n"));
+
+  // === Adriatic road trips (ADRIA-EN: angleški profili za agente) ===
+  const adriaEnSections = ADRIA_GUIDES_EN.map((g) => {
+    const lines = [
+      `## Adriatic road trip (EN): ${g.metaTitle}`,
+      "",
+      g.excerpt,
+      "",
+      `- Countries: ${g.countries.map((c) => COUNTRY_LABELS_EN[c] ?? c).join(", ")}`,
+      `- Duration: ${g.days} days · ${g.km.toLocaleString("en-GB")} km · ${g.readTime} min read`,
+      `- Route: ${g.route}`,
+      `- Stops: ${g.stops.map((s) => s.name + " (" + s.country + (s.nights > 0 ? ", " + s.nights + " nights" : "") + ")").join("; ")}`,
+      `- URL: ${base}/en/vodici/${g.slug}`,
+      "",
+      "Practical:",
+      ...g.practical.map((p) => `- ${p.title}: ${p.text}`),
+      "",
+    ];
+    return lines.join("\n");
+  });
+  parts.push(adriaEnSections.join("\n"));
 
   const body = parts.join("\n");
 

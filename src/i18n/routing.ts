@@ -42,11 +42,18 @@ const EN_DESTINATION_SUBROUTES = [
   /^\/destinacija\/[^/]+\/guide\/[^/]+$/,
 ];
 
+/**
+ * ADRIA-EN: jadranski vodniki — seznam + 10 detail strani (EN različice
+ * obstajajo kot full prevodi v src/lib/adria-guides-en; isti slugi).
+ */
+const EN_ADRIA_ROUTES = [/^\/vodici\/[a-z0-9-]+$/];
+
 /** Statične poti z EN različico (jedro lijaka + info/E-E-A-T strani). */
 const EN_STATIC_ROUTES = new Set([
   "/",
   "/nacrtuj",
   "/destinacije",
+  "/vodici",
   "/o-strani",
   "/kontakt",
   "/pogoji-uporabe",
@@ -62,6 +69,7 @@ const EN_STATIC_ROUTES = new Set([
  */
 export function isEnRoute(pathname: string): boolean {
   if (EN_STATIC_ROUTES.has(pathname)) return true;
+  if (EN_ADRIA_ROUTES.some((re) => re.test(pathname))) return true;
   return EN_DESTINATION_SUBROUTES.some((re) => re.test(pathname));
 }
 

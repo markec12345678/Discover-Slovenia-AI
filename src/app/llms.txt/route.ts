@@ -15,6 +15,7 @@
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { ADRIA_GUIDES, COUNTRY_LABELS } from "@/lib/adria-guides";
+import { ADRIA_GUIDES_EN, COUNTRY_LABELS_EN } from "@/lib/adria-guides-en";
 import { resolveBaseUrl } from "@/lib/host";
 import { GUIDE_TYPES, GUIDE_TYPE_META, DURATION_SLUGS } from "@/lib/sitemap-urls";
 
@@ -119,10 +120,25 @@ export async function GET(req: Request) {
     ].join("\n"),
   );
 
+  // === Adriatic road trips (ADRIA-EN: angleške različice) ===
+  sections.push(
+    [
+      "## Adriatic road trips (English)",
+      "",
+      `- [Guides hub](${base}/en/vodici): all cross-border road trip guides in English.`,
+      ...ADRIA_GUIDES_EN.map(
+        (g) =>
+          `- [${g.metaTitle}](${base}/en/vodici/${g.slug}): road trip guide — ${g.days} days, ${g.km.toLocaleString("en-GB")} km, ` +
+          `${g.countries.map((c) => COUNTRY_LABELS_EN[c] ?? c).join(", ")}. ${g.description}`,
+      ),
+      "",
+    ].join("\n"),
+  );
+
   const body = [
     "# Discover Slovenia AI",
     "",
-    "> AI načrtovalec potovanj po Sloveniji: 22 destinacij, itinererji po trajanju, vodniki po tipu potovanja, kaj početi, najboljši čas obiska, jadranska cross-border potovanja in neposredne rezervacije (hoteli, izleti, transferji, eSIM, transport, vstopnice).",
+    "> AI načrtovalec potovanj po Sloveniji: 22 destinacij, itinererji po trajanju, vodniki po tipu potovanja, kaj početi, najboljši čas obiska, jadranska cross-border potovanja in neposredne rezervacije (hoteli, izleti, transferji, eSIM, transport, vstopnice). Jedro lijaka in jadranski vodniki so na voljo tudi v angleščini (/en).",
     "",
     `Celotna vsebina v enem datotečnem formatu: [llms-full.txt](${base}/llms-full.txt)`,
     "",

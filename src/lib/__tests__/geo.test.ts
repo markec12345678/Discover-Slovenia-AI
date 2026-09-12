@@ -166,7 +166,7 @@ describe("sitemap.xml route", () => {
     expect(body).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
   });
 
-  test("FW4.3-2: hreflang alternati (xhtml:link) + EN URL-ji", async () => {
+  test("FW4.3-2 + ADRIA-EN: hreflang alternati (xhtml:link) + EN URL-ji", async () => {
     const body = await (await sitemapGET(req(RENDER))).text();
     // EN različice so v sitemapu (jedro lijaka na EN whitelisti)
     expect(body).toContain(`https://${RENDER}/en`);
@@ -180,8 +180,18 @@ describe("sitemap.xml route", () => {
     expect(body).toContain(
       `hreflang="x-default" href="https://${RENDER}/destinacija/bled/things-to-do"`,
     );
-    // EN poti, ki NISO na whitelisti (vodici), EN različice NIMAJO
-    expect(body).not.toContain("/en/vodici/");
+    // ADRIA-EN: jadranski vodniki so NA whitelisti — EN različice + hreflang
+    expect(body).toContain(`https://${RENDER}/en/vodici/kotor-crna-gora-iz-slovenije`);
+    expect(body).toContain(
+      `hreflang="sl-SI" href="https://${RENDER}/vodici/kotor-crna-gora-iz-slovenije"`,
+    );
+    expect(body).toContain(
+      `hreflang="en-US" href="https://${RENDER}/en/vodici/kotor-crna-gora-iz-slovenije"`,
+    );
+    expect(body).toContain(`https://${RENDER}/en/vodici`);
+    // EN poti, ki NISO na whitelisti (blog, dogodki), EN različice NIMAJO
+    expect(body).not.toContain("/en/blog");
+    expect(body).not.toContain("/en/dogodki");
   });
 });
 

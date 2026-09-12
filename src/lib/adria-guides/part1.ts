@@ -68,7 +68,7 @@ export const ADRIA_GUIDES_PART1: AdriaGuide[] = [
         ],
       },
       {
-        heading: "Plitvice: vlaknine, ure in množice",
+        heading: "Plitvice: vstopnine, ure in množice",
         body: [
           "Vstopnina se giblje med približno 25 in 40 evrov glede na obdobje: pozimi je park najcenejši in najbolj sam, julija in avgusta pa najdražji in najbolj poln. Karto za vrh sezone kupite po spletu, ker se dnevne kvote lahko izčrpajo, in sicer za prvi možni termin. Vstopi potekajo po urniku, ki se s sezono premika — ob vrhuncu sezone se park odpira okoli sedme — in ravno zato nočitev v bližini parka ni razvada, ampak taktika: zjutraj ste pred vrati pred prvim avtobusom.",
           "Množic ne morete izničiti, lahko pa jih obidete. Ob koncih tedna so steze polne od dopoldneva dalje, največ ljudi pa je med deseto in štirinajsto uro. Načrt je star kot park: prvi del ogleda opravite pred deveto, za drugi pa izberite daljšo različico poti okoli spodnjih jezer, kjer se gneča redči. Ogled vzame od štirih do šestih ur hoje po leseni stezi in zahteva udobne čevlje; kopalnice pustite za kasneje, saj v jezerih plavanje ni dovoljeno.",
@@ -109,7 +109,7 @@ export const ADRIA_GUIDES_PART1: AdriaGuide[] = [
       {
         heading: "Dubrovnik: Obzidje, Lokrum in zgodnje jutro",
         body: [
-          "Obzidje je razlog, da ljudje pridejo v Dubrovnik, in stvar, ki jo večina naredi narobe. Celoten obhod meri dobrih 2 000 metrov kamnite steze, poleti brez sence, vlaknina pa je med višjimi na Jadranu. Čudeža, ki bi to spremenil, ni, je pa ura: ob odprtju ste na stezi pred množicami in pred soncem, ob enajsti pa ste spodaj s kavo, medtem ko se nad vami odpirajo sončniki. Računajte dobri dve uri, vodo in pokrivalo.",
+          "Obzidje je razlog, da ljudje pridejo v Dubrovnik, in stvar, ki jo večina naredi narobe. Celoten obhod meri dobrih 2 000 metrov kamnite steze, poleti brez sence, vstopnina pa je med višjimi na Jadranu. Čudeža, ki bi to spremenil, ni, je pa ura: ob odprtju ste na stezi pred množicami in pred soncem, ob enajsti pa ste spodaj s kavo, medtem ko se nad vami odpirajo sončniki. Računajte dobri dve uri, vodo in pokrivalo.",
           "Lokrum je druga polovica dubrovniškega jutra: čoln iz starega pristanišča pelje deset minut na otoček z botaničnim vrtom, slanim jezerom in pečinami za skakanje; zadnji povratek odplove pred večerom, kar se splača zapomniti, preden se usedete v kavarno. Za spanje imejte v računu, da je staro mestno jedro najdražji del mesta: v Lapadu in Gružu ste dobrih pol ure hoje stran, nočitev pa lahko stane tretjino manj. V avgustu to ni prihranek, ampak nočitev več.",
         ],
       },
@@ -320,7 +320,7 @@ export const ADRIA_GUIDES_PART1: AdriaGuide[] = [
         text: "Hrvaška vinjeta ne obstaja: cestnine plačujete po odsekih na zaplatkah HAC, s kartico ali gotovino, in za hrvaški del tega načrta računajte s kakšnimi 40 do 50 evri. Slovenska e-vinjeta pokriva le domači del; tedenska za osebni avto stane okoli 16 evrov. Za pogoste prevoze se splača ENC-naprava.",
       },
       {
-        title: "Plitvice: vlaknina in termin",
+        title: "Plitvice: vstopnina in termin",
         text: "Med 25 in 40 evrov glede na obdobje; v juliju in avgustu karto kupite po spletu in izberite najzgodnejši termin. Ob koncih tedna vstopajte ob odprtju parka, saj se steze napolnijo pred dopoldnevom. Vstopnina vključuje vožnjo z ladjo po največjem jezeru.",
       },
       {
@@ -387,7 +387,7 @@ export const ADRIA_GUIDES_PART1: AdriaGuide[] = [
     title: "Bled, Plitvice in Split: hitri teden od Alp do Jadrana",
     metaTitle: "Bled, Plitvice in Split: hitri teden na Jadran",
     description:
-      "Sedemdnevni načrt od Bleda do Splita v eni smeri: Ljubljana, Postojnska jama, Plitvice in Zadar na poti. Vrstni red, ki ne vozi nazaj, z vlakninami.",
+      "Sedemdnevni načrt od Bleda do Splita v eni smeri: Ljubljana, Postojnska jama, Plitvice in Zadar na poti. Vrstni red, ki ne vozi nazaj, z vstopninami.",
     excerpt:
       "Teden, ki se začne ob Blejskem jezeru in konča na Rivi v Splitu — sedem dni, ena smer, brez voženj nazaj.",
     route: "Bled → Ljubljana → Postojnska jama → Plitvice → Zadar → Split",
@@ -427,7 +427,7 @@ export const ADRIA_GUIDES_PART1: AdriaGuide[] = [
         country: "HR",
         nights: 1,
         highlight:
-          "Nočitev ob parku in jutro ob odprtju: kaskade jezer, slapovi in lesene steze — vlaknina se giblje med 25 in 40 evrov glede na obdobje.",
+          "Nočitev ob parku in jutro ob odprtju: kaskade jezer, slapovi in lesene steze — vstopnina se giblje med 25 in 40 evrov glede na obdobje.",
       },
       {
         name: "Zadar",
@@ -483,7 +483,7 @@ export const ADRIA_GUIDES_PART1: AdriaGuide[] = [
     ],
     practical: [
       {
-        title: "Plitvice: vlaknina in termin",
+        title: "Plitvice: vstopnina in termin",
         text: "Med 25 in 40 evrov glede na obdobje; v juliju in avgustu karto kupite po spletu za najzgodnejši termin, saj kvote zmanjkajo. Vstopajte ob odprtju parka — ob koncih tedna se steze napolnijo pred deveto. Ogled vzame od štirih do šestih ur, zato načrtujte zanj celo jutro.",
       },
       {
