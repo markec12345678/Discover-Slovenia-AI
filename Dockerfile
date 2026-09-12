@@ -56,6 +56,13 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     PORT=3000
 
+# METADATABASE v RUNTIME (MONET-10 dopolnitev): dinamične strani (homepage
+# ipd.) izračunajo metadataBase ob ZAHTEVI iz process.env — build-stage ENV
+# torej NE zadošča. ARG se med stopnjami NE prenaša → ponovna deklaracija.
+# Render service env (dashboard) preglasi privzeto vrednost tudi BREZ rebuilda.
+ARG NEXT_PUBLIC_BASE_URL=https://i-feel-slovenia.onrender.com
+ENV NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
+
 # curl za HEALTHCHECK (ustvari se v lastni plasti — cache friendly)
 RUN apt-get update -qq && apt-get install -y -qq curl && rm -rf /var/lib/apt/lists/*
 
