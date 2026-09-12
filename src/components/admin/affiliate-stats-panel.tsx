@@ -36,7 +36,11 @@ const PROVIDER_LABELS_SI: Record<string, string> = {
   cars: "DiscoverCars (najem)",
   activities: "GetYourGuide (izkušnje)",
   flights: "Skyscanner (leti)",
-  insurance: "World Nomads (zavarovanje)",
+  insurance: "World Nomads / SafetyWing (zavarovanje)",
+  esim: "Airalo (eSIM)",
+  transfers: "Kiwitaxi (transferji)",
+  transport: "Omio (vlaki/avtobusi)",
+  tickets: "Tiqets (vstopnice)",
 };
 
 export function AffiliateStatsPanel({ adminPassword }: { adminPassword: string }) {

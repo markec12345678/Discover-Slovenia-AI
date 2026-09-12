@@ -17,6 +17,9 @@ import {
   ShoppingBasket,
   Users,
   Sparkles,
+  TrainFront,
+  CarTaxiFront,
+  Smartphone,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -34,8 +37,14 @@ import type { DayPlan } from "@/lib/types";
 
 // Partnerske povezave — vse prek /go/ redirecta (strežniško tracking +
 // strežniška affiliate konfiguracija). Klient ne drži partner ID-jev.
-const goHref = (provider: "hotels" | "cars" | "activities" | "flights", dest: string) =>
-  `/go/${provider}?dest=${encodeURIComponent(dest)}`;
+// dest je opcijsken za nove providerje (esim deluje brez njega).
+const goHref = (
+  provider: "hotels" | "cars" | "activities" | "flights" | "esim" | "transfers" | "transport" | "tickets",
+  dest?: string,
+) =>
+  dest
+    ? `/go/${provider}?dest=${encodeURIComponent(dest)}`
+    : `/go/${provider}`;
 
 // === LOKALNI TIPI (da ne motimo obstoječih tipov v types.ts) ===
 // Zrcalijo API route /api/itinerary/bookings — prijazno za client.
@@ -697,6 +706,35 @@ export function BookingPanel({ dayPlan, bookingData, id }: BookingPanelProps) {
                 cta="Najem"
                 description={`Najem avta v ${firstDestination.destination_name} — prilagodljivi datumi prevzema`}
                 onTrack={() => trackFunnel("listing_click", goHref("cars", firstDestination.destination_name))}
+              />
+              <AffiliateCard
+                href={goHref("transport", "Ljubljana")}
+                icon={<TrainFront className="size-5" aria-hidden />}
+                partnerName="Omio"
+                cta="Iskanje"
+                description="Vlaki in avtobusi med destinacijami — potovanje brez avta"
+                onTrack={() => trackFunnel("listing_click", goHref("transport", "Ljubljana"))}
+              />
+              <AffiliateCard
+                href={`/go/transfers?from=${encodeURIComponent("Ljubljana")}&dest=${encodeURIComponent(firstDestination.destination_name)}`}
+                icon={<CarTaxiFront className="size-5" aria-hidden />}
+                partnerName="Kiwitaxi"
+                cta="Transfer"
+                description={`Transfer z letališča Ljubljana do ${firstDestination.destination_name} — brez čakanja`}
+                onTrack={() =>
+                  trackFunnel(
+                    "listing_click",
+                    `/go/transfers?from=${encodeURIComponent("Ljubljana")}&dest=${encodeURIComponent(firstDestination.destination_name)}`,
+                  )
+                }
+              />
+              <AffiliateCard
+                href={goHref("esim")}
+                icon={<Smartphone className="size-5" aria-hidden />}
+                partnerName="Airalo"
+                cta="eSIM"
+                description="eSIM za Slovenijo — internet takoj ob prihodu, brez fizične SIM"
+                onTrack={() => trackFunnel("listing_click", goHref("esim"))}
               />
               <AffiliateCard
                 href={goHref("flights", "Ljubljana")}

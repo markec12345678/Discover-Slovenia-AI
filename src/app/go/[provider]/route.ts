@@ -52,6 +52,11 @@ type Provider = AffiliateProvider;
 // Providerji, ki potrebujejo destinacijo za smiseln partner URL
 const DEST_REQUIRED: readonly Provider[] = ["hotels", "cars", "activities", "flights"];
 
+// Providerji, ki sprejmejo DODATNI parameter `from` (vhodišna destinacija)
+// — trenutno samo transfers (Kiwitaxi iskalni deep-link from → to,
+// uradno dokumentiran format). Vrednost gre skozi ISTO whitelist kot dest.
+const FROM_SUPPORTED: readonly Provider[] = ["transfers"];
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ provider: string }> },
@@ -70,6 +75,8 @@ export async function GET(
   const rawDest = searchParams.get("dest") || "";
 
   // dest: 1–100 znakov po trimu; obvezen za hotels/cars/activities/flights
+  // (novi providerji — esim/transfers/transport/tickets — imajo smiseln
+  // generičen fallback BREZ dest: čiste partnerske strani)
   if (DEST_REQUIRED.includes(provider as Provider)) {
     if (!rawDest.trim()) {
       return NextResponse.json({ error: "Manjka parameter 'dest'" }, { status: 400 });
@@ -77,6 +84,19 @@ export async function GET(
   }
   if (rawDest.length > 100) {
     return NextResponse.json({ error: "Parameter 'dest' je predolg (max 100)" }, { status: 400 });
+  }
+
+  // from (samo transfers): 1–100 znakov; canonicalizacija v lib (isti
+  // whitelist kot dest — nikoli raw vnos v partner URL)
+  let rawFrom: string | null = null;
+  if (FROM_SUPPORTED.includes(provider as Provider)) {
+    const rf = searchParams.get("from") || "";
+    if (rf.trim()) {
+      if (rf.length > 100) {
+        return NextResponse.json({ error: "Parameter 'from' je predolg (max 100)" }, { status: 400 });
+      }
+      rawFrom = rf;
+    }
   }
 
   // FAZA 5: whitelist — neznan dest → kanonski fallback "Slovenija",
@@ -122,6 +142,12 @@ export async function GET(
             knownDest,
             monetized: affiliateStatus()[provider as Provider].configured,
             days: provider === "insurance" ? days : null,
+            // transfers: zapisana tudi vhodiščna destinacija (kanonična,
+            // iz whitelist — nič raw vnosa, nič PII)
+            from:
+              provider === "transfers" && rawFrom
+                ? canonicalDest(rawFrom)
+                : null,
             refPath,
           }),
         },
@@ -144,6 +170,7 @@ export async function GET(
     provider as Provider,
     dest,
     provider === "insurance" ? days : undefined,
+    rawFrom ?? undefined,
   );
 
   // Zadnja varovalka: izhod mora biti https in dovoljen partnerjev host —
@@ -162,7 +189,8 @@ export async function GET(
     cars: ["www.discovercars.com", "discovercars.com"],
     activities: ["www.getyourguide.com", "getyourguide.com"],
     flights: ["www.skyscanner.net", "skyscanner.net"],
-    // World Nomads program teče na CJ — dovolimo njihove redirect domene
+    // World Nomads program teče na CJ — dovolimo njihove redirect domene;
+    // SafetyWing (direktni Ambassador program) — safetywing.com domene.
     insurance: [
       "www.worldnomads.com",
       "worldnomads.com",
@@ -176,9 +204,65 @@ export async function GET(
       "tkqlhce.com",
       "www.kqzyfj.com",
       "kqzyfj.com",
+      "www.safetywing.com",
+      "safetywing.com",
+      "explore.safetywing.com",
+    ],
+    // eSIM — Airalo: direktni program teče na IMPACT (vanity tracking
+    // domene *.sjv.io / *.pxf.io / *.7eer.net / *.eqjw.net — uradna
+    // struktura help.impact.com); prek Travelpayouts tudi tp.media /
+    // *.travelpayouts.com / *.tp.st (support.travelpayouts.com).
+    esim: [
+      "www.airalo.com",
+      "airalo.com",
+      "*.sjv.io",
+      "*.pxf.io",
+      "*.7eer.net",
+      "*.eqjw.net",
+      "tp.media",
+      "*.travelpayouts.com",
+      "travelpayouts.com",
+      "*.tp.st",
+    ],
+    // Transferji — Kiwitaxi: direktni program, povezave vedno na
+    // kiwitaxi.com (pap parameter, uradno dokumentiran).
+    transfers: ["www.kiwitaxi.com", "kiwitaxi.com"],
+    // Transport — Omio: direktna povezava iz programa ali tp.media prek
+    // Travelpayouts (format direktne povezave ni javno dokumentiran).
+    transport: [
+      "www.omio.com",
+      "omio.com",
+      "tp.media",
+      "*.travelpayouts.com",
+      "travelpayouts.com",
+      "*.tp.st",
+    ],
+    // Vstopnice — Tiqets: program na AWIN (awin1.com/cread.php,
+    // uradno dokumentirano) ali tp.media prek Travelpayouts.
+    tickets: [
+      "www.tiqets.com",
+      "tiqets.com",
+      "www.awin1.com",
+      "awin1.com",
+      "tp.media",
+      "*.travelpayouts.com",
+      "travelpayouts.com",
+      "*.tp.st",
     ],
   };
-  if (out.protocol !== "https:" || !ALLOWED_HOSTS[provider as Provider].includes(out.hostname)) {
+  /**
+   * Ujemanje hosta: eksaktni vnos ALI vnadomena (*.travelpayouts.com
+   * ujame c91.travelpayouts.com, NE pa eviltravelpayouts.com — pika
+   * pred priponsko domeno je obvezna). Omrežne redirect domene so
+   * FIKSNA allowlista — gostuje izključno iz env konfiguracije partnerja.
+   */
+  const hostAllowed = (hostname: string, allowed: string[]): boolean =>
+    allowed.some((entry) =>
+      entry.startsWith("*.")
+        ? hostname.endsWith(entry.slice(1))
+        : hostname === entry,
+    );
+  if (out.protocol !== "https:" || !hostAllowed(out.hostname, ALLOWED_HOSTS[provider as Provider])) {
     return NextResponse.json(
       { error: "Napaka konfiguracije affiliate povezave" },
       { status: 500 },

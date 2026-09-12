@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   BedDouble,
+  TicketCheck,
   Car,
   Ticket,
   Plane,
@@ -151,6 +152,12 @@ export function DestinationModal({
           icon: Plane,
           partner: "Skyscanner",
           category: "Letalske vozovnice",
+        },
+        {
+          href: `/go/tickets?dest=${encodeURIComponent(destination.name)}`,
+          icon: TicketCheck,
+          partner: "Tiqets",
+          category: "Vstopnice",
         },
       ]
     : [];

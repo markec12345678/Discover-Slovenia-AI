@@ -8,8 +8,12 @@ import {
   Ticket,
   ShieldCheck,
   ExternalLink,
+  Smartphone,
+  TrainFront,
+  CarTaxiFront,
+  TicketCheck,
 } from "lucide-react";
-import { PARTNER_LABELS } from "@/lib/affiliate";
+import { PARTNER_LABELS, insurancePartnerName } from "@/lib/affiliate";
 
 // Affiliate partnerji na homepageu — vsi linki gredo prek /go/[provider]
 // redirecta, ki strežniško izmeri klik (AnalyticsEvent "affiliate_click" +
@@ -64,12 +68,58 @@ const partners = [
   },
   {
     id: "insurance",
-    name: PARTNER_LABELS.insurance,
+    // Ime AKTIVNEGA partnerja (strežniško env branje — če je namesto
+    // World Nomads aktiven SafetyWing, kartica ne sme lagati o partnerju)
+    name: insurancePartnerName(),
     label: "Potno zavarovanje",
     icon: ShieldCheck,
     description: "Zavarovanje za pustolovske aktivnosti (rafting, pohodništvo).",
     href: "/go/insurance?days=7",
-    aria: "Skleni potno zavarovanje pri World Nomads — odpre partnersko povezavo",
+    aria: "Skleni potno zavarovanje — odpre partnersko povezavo",
+    accent: "text-primary",
+  },
+  {
+    id: "esim",
+    name: PARTNER_LABELS.esim,
+    label: "eSIM za Slovenijo",
+    icon: Smartphone,
+    description:
+      "Internet takoj ob prihodu — brez fizične SIM kartice in brez dražjega roaminga.",
+    href: "/go/esim",
+    aria: "Kupi eSIM prek Airala — odpre partnersko povezavo",
+    accent: "text-primary",
+  },
+  {
+    id: "transfers",
+    name: PARTNER_LABELS.transfers,
+    label: "Transferji",
+    icon: CarTaxiFront,
+    description:
+      "Letališčki in medkrajevni transferji — udobje brez najema avta.",
+    href: "/go/transfers?dest=Ljubljana",
+    aria: "Rezerviraj transfer prek Kiwitaxija — odpre partnersko povezavo",
+    accent: "text-primary",
+  },
+  {
+    id: "transport",
+    name: PARTNER_LABELS.transport,
+    label: "Vlaki & avtobusi",
+    icon: TrainFront,
+    description:
+      "Medkrajevni prevozi po Sloveniji — za potnike brez avta.",
+    href: "/go/transport?dest=Ljubljana",
+    aria: "Poišči vlake in avtobuse prek Omiya — odpre partnersko povezavo",
+    accent: "text-primary",
+  },
+  {
+    id: "tickets",
+    name: PARTNER_LABELS.tickets,
+    label: "Vstopnice",
+    icon: TicketCheck,
+    description:
+      "Vstopnice za znamenitosti (Postojna, Grad Bled …) — brez čakalnih vrst.",
+    href: "/go/tickets?dest=Bled",
+    aria: "Kupi vstopnice prek Tiqetsa — odpre partnersko povezavo",
     accent: "text-primary",
   },
 ];
@@ -92,6 +142,8 @@ export function AffiliateSection() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* 9 partnerjev = 3×3 na desktopu; isti vzorec kartice — brez
+              novih sekcij, brez spremembe vizualnega jezika */}
           {partners.map((p) => {
             const Icon = p.icon;
             return (

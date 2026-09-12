@@ -64,16 +64,48 @@ done
 C="$(code "$BASE_URL/go/insurance?days=7")"
 L="$(loc "$BASE_URL/go/insurance?days=7")"
 [[ "$C" == "302" ]] && ok "insurance: HTTP 302" || bad "insurance: HTTP $C"
-[[ "$L" == https://www.worldnomads.com/* || "$L" == https://www.dpbolvw.net/* || "$L" == https://www.anrdoezrs.net/* || "$L" == https://www.jdoqocy.com/* || "$L" == https://www.tkqlhce.com/* || "$L" == https://www.kqzyfj.com/* ]] \
-  && ok "insurance: dovoljen host (worldnomads ali CJ domene)" \
+[[ "$L" == https://www.worldnomads.com/* || "$L" == https://www.dpbolvw.net/* || "$L" == https://www.anrdoezrs.net/* || "$L" == https://www.jdoqocy.com/* || "$L" == https://www.tkqlhce.com/* || "$L" == https://www.kqzyfj.com/* || "$L" == https://safetywing.com/* || "$L" == https://www.safetywing.com/* ]] \
+  && ok "insurance: dovoljen host (worldnomads / CJ / safetywing)" \
   || bad "insurance: nedovoljen host: $L"
+
+# 1b) NOVI providerji (monetizacijska razširitev): eSIM / transferji /
+#     transport / vstopnice — fail-closed čiste partnerske strani
+C="$(code "$BASE_URL/go/esim")"
+L="$(loc "$BASE_URL/go/esim")"
+[[ "$C" == "302" && "$L" == https://www.airalo.com/* ]] \
+  && ok "esim: 302 → čista Airalo stran (brez dest parametra)" \
+  || bad "esim: HTTP $C / $L"
+
+C="$(code "$BASE_URL/go/transfers?dest=Bled")"
+L="$(loc "$BASE_URL/go/transfers?dest=Bled")"
+[[ "$C" == "302" && "$L" == https://kiwitaxi.com/en/slovenia/bled* ]] \
+  && ok "transfers: 302 → Kiwitaxi waypoint deep-link (uradni format)" \
+  || bad "transfers: HTTP $C / $L"
+
+C="$(code "$BASE_URL/go/transfers?from=Piran&dest=Bled")"
+L="$(loc "$BASE_URL/go/transfers?from=Piran&dest=Bled")"
+[[ "$C" == "302" && "$L" == *"/en/search?from=Piran&to=Bled"* ]] \
+  && ok "transfers: from→to iskalni deep-link (uradni format)" \
+  || bad "transfers from/to: HTTP $C / $L"
+
+C="$(code "$BASE_URL/go/transport?dest=Ljubljana")"
+L="$(loc "$BASE_URL/go/transport?dest=Ljubljana")"
+[[ "$C" == "302" && ("$L" == https://www.omio.com/* || "$L" == https://tp.media/* || "$L" == https://*.travelpayouts.com/*) ]] \
+  && ok "transport: 302 → Omio (ali TP povezava)" \
+  || bad "transport: HTTP $C / $L"
+
+C="$(code "$BASE_URL/go/tickets?dest=Bled")"
+L="$(loc "$BASE_URL/go/tickets?dest=Bled")"
+[[ "$C" == "302" && ("$L" == https://www.tiqets.com/* || "$L" == https://www.awin1.com/* || "$L" == https://tp.media/*) ]] \
+  && ok "tickets: 302 → Tiqets (ali Awin/TP povezava)" \
+  || bad "tickets: HTTP $C / $L"
 
 # -----------------------------------------------------------------------------
 hdr "2) Fail-closed — brez fake affiliate ID-jev (FAZA 17)"
 
 for PAT in "1234567" "slovenia-demo"; do
   FOUND=0
-  for P in hotels cars activities flights insurance; do
+  for P in hotels cars activities flights insurance esim transfers transport tickets; do
     L="$(loc "$BASE_URL/go/$P?dest=Ljubljana&days=7")"
     [[ "$L" == *"$PAT"* ]] && FOUND=1
   done
@@ -99,6 +131,16 @@ done
 
 # -----------------------------------------------------------------------------
 hdr "5) SECURITY — open redirect / SSRF / XSS / traversal / override (FAZA 11)"
+
+# 5a-pre) transfers: malign from → ignoriran (whitelist), malign dest → fallback
+L="$(loc "$BASE_URL/go/transfers?from=https://evil.com&dest=Bled")"
+[[ "$L" == *"/en/slovenia/bled"* && "$L" != *evil* ]] \
+  && ok "transfers malign from → ignoriran (waypoint fallback)" \
+  || bad "transfers malign from pušča payload: $L"
+L="$(loc "$BASE_URL/go/transfers?dest=<script>alert(1)</script>")"
+[[ "$L" == *"/en/slovenia"* && "$L" != *script* ]] \
+  && ok "transfers malign dest → državna stran (whitelist)" \
+  || bad "transfers malign dest: $L"
 
 # 5a. open redirect: url/target parametri se IGNORIRAJO (redirect gre na partnerja)
 for PARAM in url target redirect next goto; do
@@ -152,6 +194,12 @@ if [[ "$L" != *"email="* && "$L" != *"user_id="* && "$L" != *"@"* ]]; then
   ok "PII parametri se ne prenesejo v partner URL"
 else
   bad "PII preide v Location: $L"
+fi
+L="$(loc "$BASE_URL/go/transfers?from=Ljubljana&dest=Bled&email=test%40example.com")"
+if [[ "$L" != *"email="* && "$L" != *"@"* ]]; then
+  ok "PII parametri se ne prenesejo v transfers URL"
+else
+  bad "PII preide v transfers Location: $L"
 fi
 
 # -----------------------------------------------------------------------------

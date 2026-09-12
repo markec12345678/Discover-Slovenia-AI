@@ -22,9 +22,24 @@ import { DESTINATIONS } from "./slovenia-data";
 //   GETYOURGUIDE_PARTNER_ID        → partner_id
 //   SKYSCANNER_MEDIA_PARTNER_ID    → mediaPartnerId
 //   WORLDNOMADS_AFFILIATE_URL      → celoten tracking URL (program teče na CJ)
+//   SAFETYWING_AMBASSADOR_ID       → referenceID (direktni Ambassador program)
+//   AIRALO_AFFILIATE_URL           → celoten tracking URL (Impact/Travelpayouts)
+//   KIWITAXI_PAP_ID                → pap (uradno dokumentiran parameter)
+//   OMIO_AFFILIATE_URL             → celoten tracking URL (dashboard povezava)
+//   TIQETS_AFFILIATE_URL           → celoten tracking URL (Awin/Travelpayouts)
 // ============================================================================
 
-export const AFFILIATE_PROVIDERS = ["hotels", "cars", "activities", "flights", "insurance"] as const;
+export const AFFILIATE_PROVIDERS = [
+  "hotels",
+  "cars",
+  "activities",
+  "flights",
+  "insurance",
+  "esim",
+  "transfers",
+  "transport",
+  "tickets",
+] as const;
 export type AffiliateProvider = (typeof AFFILIATE_PROVIDERS)[number];
 
 export interface PartnerUrlResult {
@@ -96,6 +111,15 @@ function skyscannerSlug(raw: string): string {
   return SKYSCANNER_IATA[match.slug] ?? match.slug;
 }
 
+/** Whitelist slug destinacije (za Kiwitaxi waypoint povezave) ali null. */
+function destSlug(raw: string): string | null {
+  const needle = raw.trim().toLowerCase();
+  const match = DESTINATIONS.find(
+    (d) => d.slug.toLowerCase() === needle || d.name.toLowerCase() === needle,
+  );
+  return match ? match.slug : null;
+}
+
 // ----------------------------------------------------------------------------
 // STATUS PARTNERJEV (FAZA 3 + FAZA 15)
 // ----------------------------------------------------------------------------
@@ -119,8 +143,26 @@ export function affiliateStatus(): Record<AffiliateProvider, PartnerStatus> {
       envVar: "SKYSCANNER_MEDIA_PARTNER_ID",
     },
     insurance: {
-      configured: isValidHttpsUrl(process.env.WORLDNOMADS_AFFILIATE_URL?.trim() || ""),
-      envVar: "WORLDNOMADS_AFFILIATE_URL",
+      configured:
+        isValidHttpsUrl(process.env.WORLDNOMADS_AFFILIATE_URL?.trim() || "") ||
+        Boolean(process.env.SAFETYWING_AMBASSADOR_ID?.trim()),
+      envVar: "WORLDNOMADS_AFFILIATE_URL / SAFETYWING_AMBASSADOR_ID",
+    },
+    esim: {
+      configured: isValidHttpsUrl(process.env.AIRALO_AFFILIATE_URL?.trim() || ""),
+      envVar: "AIRALO_AFFILIATE_URL",
+    },
+    transfers: {
+      configured: Boolean(process.env.KIWITAXI_PAP_ID?.trim()),
+      envVar: "KIWITAXI_PAP_ID",
+    },
+    transport: {
+      configured: isValidHttpsUrl(process.env.OMIO_AFFILIATE_URL?.trim() || ""),
+      envVar: "OMIO_AFFILIATE_URL",
+    },
+    tickets: {
+      configured: isValidHttpsUrl(process.env.TIQETS_AFFILIATE_URL?.trim() || ""),
+      envVar: "TIQETS_AFFILIATE_URL",
     },
   };
 }
@@ -248,18 +290,33 @@ export function getSkyscannerUrl(destination: string): PartnerUrlResult {
  * World Nomads — affiliate program od novembra 2022 teče na CJ (Commission
  * Junction); starejše neposredno sledenje z ?affiliate= je bilo UGASNJENO
  * (31. 1. 2023, uradna stran programa). CJ povezave so OPAQNE celotne URL-je,
-// ki se generirajo v CJ vmesniku — zato konfiguracija sprejme CEL URL.
+ * ki se generirajo v CJ vmesniku — zato konfiguracija sprejme CEL URL.
  * Vir: worldnomads.com/affiliate ("If you joined our program prior to
  * 16 November 2022, tracking will be removed on 31 January 2023, and you
  * will need to reapply via CJ").
+ *
+ * SAFETYWING ALTERNATIVA (direktni Ambassador program, brez omrežja):
+ * tracking parameter je `referenceID=<ambassador ID>` na KATERI KOLI
+ * safetywing.com povezavi — uradna Ambassador FAQ: "you can track your own
+ * SafetyWing.com URLs manually by adding ?referenceID= and your ambassador
+ * ID at the end of the URL" (primer: nomad-insurance?referenceID=24757629).
+ * Provizija: ~10 % potrošene premije, 364 dni od prijave uporabnika.
+ * WN URL ima PRECEDENCO; če ni nastavljen, se uporabi SafetyWing.
  *
  * Parametra `days` NI več moč vgraditi v CJ povezavo generično — izpuščen.
  * NOT_CONFIGURED fallback: čista stran produkta BREZ lažnega trackinga.
  */
 export function getWorldNomadsUrl(): PartnerUrlResult {
-  const url = process.env.WORLDNOMADS_AFFILIATE_URL?.trim() || "";
-  if (isValidHttpsUrl(url)) {
-    return { url, monetized: true };
+  const wn = process.env.WORLDNOMADS_AFFILIATE_URL?.trim() || "";
+  if (isValidHttpsUrl(wn)) {
+    return { url: wn, monetized: true };
+  }
+  const sw = process.env.SAFETYWING_AMBASSADOR_ID?.trim();
+  if (sw) {
+    return {
+      url: `https://safetywing.com/nomad-insurance?referenceID=${encodeURIComponent(sw)}`,
+      monetized: true,
+    };
   }
   return {
     url: "https://www.worldnomads.com/travel-insurance",
@@ -267,11 +324,130 @@ export function getWorldNomadsUrl(): PartnerUrlResult {
   };
 }
 
+/**
+ * Ime AKTIVNEGA partnerja za zavarovanje (UI prikaz — kartica ne sme
+ * lagati o partnerju, če je aktiven SafetyWing in ne World Nomads).
+ * Strežniško branje env — klient nikoli ne vidi ID-jev.
+ */
+export function insurancePartnerName(): string {
+  if (isValidHttpsUrl(process.env.WORLDNOMADS_AFFILIATE_URL?.trim() || "")) {
+    return "World Nomads";
+  }
+  if (process.env.SAFETYWING_AMBASSADOR_ID?.trim()) return "SafetyWing";
+  return "World Nomads";
+}
+
+/**
+ * Airalo — eSIM za potovanja (internet takoj ob prihodu, brez fizične SIM
+ * in brez roaminga). Program teče na IMPACT (partners.airalo.com →
+ * app.impact.com prijava); povezave iz partner dashborda so CELOTI
+ * tracking URL-ji (Impact struktura /c/{AccountID}/{AdID}/{CampaignID}?u=…,
+ * uradno dokumentirana na help.impact.com). Prek Travelpayouts:
+ * tp.media/r?marker=…&p=8310… (uradni support.travelpayouts.com članek
+ * "Data from Airalo"). Ker so omrežni URL-ji OPAQNI, konfiguracija
+ * sprejema CEL https URL — deep-link generično ni mogoč, ne da bi si
+ * izmislili parametre (naša disciplina: samo dokumentirani parametri).
+ *
+ * NOT_CONFIGURED fallback: čista Airalo stran (uporabnik izbere Slovenijo).
+ */
+export function getAiraloUrl(): PartnerUrlResult {
+  const url = process.env.AIRALO_AFFILIATE_URL?.trim() || "";
+  if (isValidHttpsUrl(url)) {
+    return { url, monetized: true };
+  }
+  return { url: "https://www.airalo.com/", monetized: false };
+}
+
+/**
+ * Kiwitaxi — letališčki in medkrajevni transferji (brez najema avta).
+ * Vir (URADNA dokumentacija za spletne mojstre,
+ * kiwitaxi.com/en/partner/webmaster/instructions/affiliate_links):
+ * tracking parameter je `pap=<partner ID>` — "You can add your partner ID
+ * to the end of any KiwiTaxi website link to turn it into your affiliate
+ * link." Oblike povezav (uradno dokumentirane):
+ *   - država:   kiwitaxi.com/en/slovenia?pap=<ID>
+ *   - kraj:     kiwitaxi.com/en/slovenia/bled?pap=<ID>   (waypoint)
+ *   - iskanje:  kiwitaxi.com/en/search?from=<A>&to=<B>&pap=<ID>
+ * (pap vedno PRIPNEMO pred morebitni fragment #transfers.)
+ * Provizija: 50 % Kiwitaxijeve provizije (~6–15 % vrednosti transferja).
+ *
+ * Destinacija gre skozi whitelist: znan slug → waypoint povezava;
+ * znan from IN to (različna, oba znana) → iskalni deep-link (from → to,
+ * npr. letališče Ljubljana → Bled); neznano → slovenska državna stran.
+ * NOT_CONFIGURED fallback: čista slovenska stran transferjev BREZ pap.
+ */
+export function getKiwitaxiUrl(destination: string, from?: string): PartnerUrlResult {
+  const pap = process.env.KIWITAXI_PAP_ID?.trim();
+  const base = "https://kiwitaxi.com/en";
+  const toKnown = isKnownDest(destination);
+  const fromKnown = from ? isKnownDest(from) : false;
+  const toName = canonicalDest(destination);
+  const fromName = from ? canonicalDest(from) : null;
+
+  let path: string;
+  if (fromKnown && toKnown && fromName && fromName !== toName) {
+    // Iskalni deep-link med dvema znanima destinacijama (uradni format)
+    path = `/search?from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}`;
+  } else if (toKnown) {
+    const slug = destSlug(destination);
+    path = slug ? `/slovenia/${slug}` : "/slovenia";
+  } else {
+    path = "/slovenia";
+  }
+
+  const joiner = path.includes("?") ? "&" : "?";
+  const url = pap
+    ? `${base}${path}${joiner}pap=${encodeURIComponent(pap)}`
+    : `${base}${path}`;
+  return { url, monetized: Boolean(pap) };
+}
+
+/**
+ * Omio — vlaki in avtobusi med destinacijami (NAJVEČJA VRZEL produkta:
+ * potovanje BREZ avta; AI načrtovalec priporoča dneve po destinacijah,
+ * monetizacija prevoza pa do zdaj ni pokrivala javnega prometa).
+ * Direktni program obstaja (omio.com/affiliate — "You will be provided with
+ * a tracking link unique to you"), FORMAT povezave pa NI javno dokumentiran
+ * (izda se po odobritvi); prek Travelpayouts: standardna tp.media
+ * povezava. Oba primera sta OPAQNA celotna URL-ja → konfiguracija sprejema
+ * CEL https URL. (Omio deep-link parametri departure_fk/arrival_fk
+ * zahtevajo njihove interne city ID-je — namerno NE podprto.)
+ *
+ * NOT_CONFIGURED fallback: čista Omio iskalna stran.
+ */
+export function getOmioUrl(): PartnerUrlResult {
+  const url = process.env.OMIO_AFFILIATE_URL?.trim() || "";
+  if (isValidHttpsUrl(url)) {
+    return { url, monetized: true };
+  }
+  return { url: "https://www.omio.com/", monetized: false };
+}
+
+/**
+ * Tiqets — vstopnice za znamenitosti BREZ čakalnih vrst (Postojna!).
+ * Program teče na AWIN (awin.com launch objava + ui.awin.com program);
+ * Awin tracking povezava je uradno dokumentirana:
+ *   awin1.com/cread.php?awinmid=<advertiser>&awinaffid=<publisher>&ued=<URL>
+ * (success.awin.com "What is deep linking"). Tiqets awinmid/awinaffid sta
+ * vidna šele v Awin dashboardu → konfiguracija sprejema CEL https URL
+ * (cread.php/awclick.php ali tp.media prek Travelpayouts).
+ *
+ * NOT_CONFIGURED fallback: čista Tiqets stran.
+ */
+export function getTiqetsUrl(): PartnerUrlResult {
+  const url = process.env.TIQETS_AFFILIATE_URL?.trim() || "";
+  if (isValidHttpsUrl(url)) {
+    return { url, monetized: true };
+  }
+  return { url: "https://www.tiqets.com/", monetized: false };
+}
+
 /** Centralni razrez za /go/ route (FAZA 4). */
 export function buildPartnerUrl(
   provider: AffiliateProvider,
   destination: string,
   days?: number,
+  from?: string,
 ): PartnerUrlResult {
   switch (provider) {
     case "hotels":
@@ -284,6 +460,14 @@ export function buildPartnerUrl(
       return getSkyscannerUrl(destination);
     case "insurance":
       return getWorldNomadsUrl();
+    case "esim":
+      return getAiraloUrl();
+    case "transfers":
+      return getKiwitaxiUrl(destination, from);
+    case "transport":
+      return getOmioUrl();
+    case "tickets":
+      return getTiqetsUrl();
   }
 }
 
@@ -304,4 +488,8 @@ export const PARTNER_LABELS: Record<AffiliateProvider, string> = {
   activities: "GetYourGuide",
   flights: "Skyscanner",
   insurance: "World Nomads",
+  esim: "Airalo",
+  transfers: "Kiwitaxi",
+  transport: "Omio",
+  tickets: "Tiqets",
 } as const;

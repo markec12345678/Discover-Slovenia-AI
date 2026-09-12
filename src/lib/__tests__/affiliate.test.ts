@@ -22,6 +22,11 @@ import {
   getGetYourGuideUrl,
   getSkyscannerUrl,
   getWorldNomadsUrl,
+  getAiraloUrl,
+  getKiwitaxiUrl,
+  getOmioUrl,
+  getTiqetsUrl,
+  insurancePartnerName,
   buildPartnerUrl,
   affiliateStatus,
   canonicalDest,
@@ -36,6 +41,11 @@ const ENV_KEYS = [
   "GETYOURGUIDE_PARTNER_ID",
   "SKYSCANNER_MEDIA_PARTNER_ID",
   "WORLDNOMADS_AFFILIATE_URL",
+  "SAFETYWING_AMBASSADOR_ID",
+  "AIRALO_AFFILIATE_URL",
+  "KIWITAXI_PAP_ID",
+  "OMIO_AFFILIATE_URL",
+  "TIQETS_AFFILIATE_URL",
 ] as const;
 
 function clearAffiliateEnv() {
@@ -254,6 +264,179 @@ describe("World Nomads", () => {
     const { monetized } = getWorldNomadsUrl();
     expect(monetized).toBe(false);
   });
+
+  test("SAFETYWING: samostojen ambassador ID → referenceID povezava (monetized)", () => {
+    setEnv("SAFETYWING_AMBASSADOR_ID", "24757629");
+    const { url, monetized } = getWorldNomadsUrl();
+    expect(monetized).toBe(true);
+    const u = new URL(url);
+    expect(u.hostname).toBe("safetywing.com");
+    expect(paramsOf(url).get("referenceID")).toBe("24757629");
+  });
+
+  test("SAFETYWING: WN URL ima PRECEDENCO pred SafetyWing", () => {
+    setEnv("WORLDNOMADS_AFFILIATE_URL", "https://www.dpbolvw.net/click-1-1");
+    setEnv("SAFETYWING_AMBASSADOR_ID", "24757629");
+    const { url } = getWorldNomadsUrl();
+    expect(new URL(url).hostname).toBe("www.dpbolvw.net");
+    expect(url).not.toContain("referenceID");
+  });
+
+  test("SAFETYWING: neveljaven ID (prazen po trimu) → fail-closed", () => {
+    setEnv("SAFETYWING_AMBASSADOR_ID", "   ");
+    const { monetized } = getWorldNomadsUrl();
+    expect(monetized).toBe(false);
+  });
+
+  test("insurancePartnerName(): odraža AKTIVNEGA partnerja", () => {
+    expect(insurancePartnerName()).toBe("World Nomads");
+    setEnv("SAFETYWING_AMBASSADOR_ID", "24757629");
+    expect(insurancePartnerName()).toBe("SafetyWing");
+    setEnv("WORLDNOMADS_AFFILIATE_URL", "https://www.dpbolvw.net/click-1-1");
+    expect(insurancePartnerName()).toBe("World Nomads");
+  });
+});
+
+// ============================================================================
+// AIRALO (eSIM) — celoten URL iz Impact/Travelpayouts dashboarda
+// ============================================================================
+
+describe("Airalo (eSIM)", () => {
+  test("configured: CEL URL preide nedotaknjen (monetized)", () => {
+    setEnv(
+      "AIRALO_AFFILIATE_URL",
+      "https://tp.media/r?marker=123456&trs=5&p=8310&u=https%3A%2F%2Fwww.airalo.com%2Fesims&campaign_id=541",
+    );
+    const { url, monetized } = getAiraloUrl();
+    expect(monetized).toBe(true);
+    expect(url).toBe(
+      "https://tp.media/r?marker=123456&trs=5&p=8310&u=https%3A%2F%2Fwww.airalo.com%2Fesims&campaign_id=541",
+    );
+  });
+
+  test("NOT configured: čista Airalo stran (monetized:false)", () => {
+    const { url, monetized } = getAiraloUrl();
+    expect(monetized).toBe(false);
+    expect(url).toBe("https://www.airalo.com/");
+  });
+
+  test("neveljaven env (http/smét) → fail-closed fallback", () => {
+    setEnv("AIRALO_AFFILIATE_URL", "http://airalo.example");
+    expect(getAiraloUrl().monetized).toBe(false);
+    setEnv("AIRALO_AFFILIATE_URL", "smet");
+    expect(getAiraloUrl().monetized).toBe(false);
+    expect(getAiraloUrl().url).toBe("https://www.airalo.com/");
+  });
+});
+
+// ============================================================================
+// KIWITAXI (transferji) — pap parameter, uradno dokumentirane oblike povezav
+// ============================================================================
+
+describe("Kiwitaxi (transfers)", () => {
+  test("configured + znan dest: waypoint povezava s pap (monetized)", () => {
+    setEnv("KIWITAXI_PAP_ID", "59942b21df77e");
+    const { url, monetized } = getKiwitaxiUrl("Bled");
+    expect(monetized).toBe(true);
+    const u = new URL(url);
+    expect(u.hostname).toBe("kiwitaxi.com");
+    expect(u.pathname).toBe("/en/slovenia/bled");
+    expect(paramsOf(url).get("pap")).toBe("59942b21df77e");
+  });
+
+  test("configured + from+to (oba znana, različna): iskalni deep-link", () => {
+    setEnv("KIWITAXI_PAP_ID", "59942b21df77e");
+    const { url } = getKiwitaxiUrl("Bled", "Piran");
+    const u = new URL(url);
+    expect(u.pathname).toBe("/en/search");
+    expect(paramsOf(url).get("from")).toBe("Piran");
+    expect(paramsOf(url).get("to")).toBe("Bled");
+    expect(paramsOf(url).get("pap")).toBe("59942b21df77e");
+  });
+
+  test("from == to → NE iskalni povezavi (waypoint)", () => {
+    setEnv("KIWITAXI_PAP_ID", "59942b21df77e");
+    const { url } = getKiwitaxiUrl("Bled", "bled");
+    expect(new URL(url).pathname).toBe("/en/slovenia/bled");
+  });
+
+  test("configured + NEZNAN dest: slovenska državna stran (whitelist)", () => {
+    setEnv("KIWITAXI_PAP_ID", "59942b21df77e");
+    const { url } = getKiwitaxiUrl("https://evil.com");
+    const u = new URL(url);
+    expect(u.pathname).toBe("/en/slovenia");
+    expect(url).not.toContain("evil.com");
+    expect(paramsOf(url).get("pap")).toBe("59942b21df77e");
+  });
+
+  test("configured + malign from: from se ignorira (whitelist)", () => {
+    setEnv("KIWITAXI_PAP_ID", "59942b21df77e");
+    const { url } = getKiwitaxiUrl("Bled", "<script>alert(1)</script>");
+    expect(url).not.toContain("script");
+    expect(new URL(url).pathname).toBe("/en/slovenia/bled");
+  });
+
+  test("NOT configured: čista slovenska stran BREZ pap", () => {
+    const { url, monetized } = getKiwitaxiUrl("Bled");
+    expect(monetized).toBe(false);
+    expect(url).toBe("https://kiwitaxi.com/en/slovenia/bled");
+    expect(url).not.toContain("pap=");
+  });
+
+  test("PII nikoli v URL (dest je izključno destinacija)", () => {
+    setEnv("KIWITAXI_PAP_ID", "59942b21df77e");
+    const { url } = getKiwitaxiUrl("Bled", "Ljubljana");
+    expect(url).not.toContain("email");
+    expect(url).not.toContain("@example");
+  });
+});
+
+// ============================================================================
+// OMIO (transport) + TIQETS (vstopnice) — celotni URL-ji iz dashboardov
+// ============================================================================
+
+describe("Omio (transport)", () => {
+  test("configured: CEL URL preide (monetized)", () => {
+    setEnv("OMIO_AFFILIATE_URL", "https://tp.media/r?marker=1&p=1111&u=https%3A%2F%2Fwww.omio.com");
+    const { url, monetized } = getOmioUrl();
+    expect(monetized).toBe(true);
+    expect(new URL(url).hostname).toBe("tp.media");
+  });
+
+  test("NOT configured: čista Omio stran (monetized:false)", () => {
+    const { url, monetized } = getOmioUrl();
+    expect(monetized).toBe(false);
+    expect(url).toBe("https://www.omio.com/");
+  });
+
+  test("neveljaven env → fail-closed", () => {
+    setEnv("OMIO_AFFILIATE_URL", "http://omio.example");
+    expect(getOmioUrl().monetized).toBe(false);
+  });
+});
+
+describe("Tiqets (tickets)", () => {
+  test("configured: Awin cread.php URL preide nedotaknjen (monetized)", () => {
+    setEnv(
+      "TIQETS_AFFILIATE_URL",
+      "https://www.awin1.com/cread.php?awinmid=13075&awinaffid=1395991&ued=https%3A%2F%2Fwww.tiqets.com%2Fen%2Fpostojna",
+    );
+    const { url, monetized } = getTiqetsUrl();
+    expect(monetized).toBe(true);
+    expect(url).toContain("awin1.com/cread.php");
+    expect(url).toContain("awinmid=13075");
+  });
+
+  test("NOT configured: čista Tiqets stran (monetized:false)", () => {
+    const { url, monetized } = getTiqetsUrl();
+    expect(monetized).toBe(false);
+    expect(url).toBe("https://www.tiqets.com/");
+  });
+
+  test("neveljaven env → fail-closed", () => {
+    setEnv("TIQETS_AFFILIATE_URL", "ftp://tiqets.example");
+    expect(getTiqetsUrl().monetized).toBe(false);
+  });
 });
 
 // ============================================================================
@@ -261,7 +444,7 @@ describe("World Nomads", () => {
 // ============================================================================
 
 describe("buildPartnerUrl (centralni razrez)", () => {
-  test("vseh 5 providerjev vrača https URL na pravem hostu", () => {
+  test("vseh 5 prvih providerjev vrača https URL na pravem hostu", () => {
     setEnv("BOOKING_AFFILIATE_ID", "1");
     setEnv("DISCOVERCARS_AFFILIATE_CODE", "2");
     setEnv("GETYOURGUIDE_PARTNER_ID", "3");
@@ -285,12 +468,50 @@ describe("buildPartnerUrl (centralni razrez)", () => {
       expect(monetized).toBe(true);
     }
   });
+
+  test("novi providerji (esim/transfers/transport/tickets) vračajo prave hoste", () => {
+    setEnv("AIRALO_AFFILIATE_URL", "https://airalo.sjv.io/c/1/2/3?u=https%3A%2F%2Fwww.airalo.com");
+    setEnv("KIWITAXI_PAP_ID", "abc123");
+    setEnv("OMIO_AFFILIATE_URL", "https://www.omio.com/affiliate-x");
+    setEnv("TIQETS_AFFILIATE_URL", "https://www.awin1.com/cread.php?awinmid=1&awinaffid=2");
+    const cases: Array<[Parameters<typeof buildPartnerUrl>[0], string, boolean]> = [
+      ["esim", "airalo.sjv.io", true],
+      ["transfers", "kiwitaxi.com", true],
+      ["transport", "www.omio.com", true],
+      ["tickets", "www.awin1.com", true],
+    ];
+    for (const [provider, host, monetized] of cases) {
+      const { url, monetized: m } = buildPartnerUrl(provider, "Bled", 7);
+      const u = new URL(url);
+      expect(u.protocol).toBe("https:");
+      expect(u.hostname).toBe(host);
+      expect(m).toBe(monetized);
+    }
+  });
+
+  test("transfers: from parameter se prenese v iskalni deep-link", () => {
+    setEnv("KIWITAXI_PAP_ID", "abc123");
+    const { url } = buildPartnerUrl("transfers", "Bled", 7, "Piran");
+    expect(new URL(url).pathname).toBe("/en/search");
+    expect(url).toContain("from=Piran");
+    expect(url).toContain("to=Bled");
+  });
 });
 
 describe("affiliateStatus (fail-closed refleksija env)", () => {
   test("brez env: VSEHI partnerji not_configured", () => {
     const s = affiliateStatus();
-    for (const p of ["hotels", "cars", "activities", "flights", "insurance"] as const) {
+    for (const p of [
+      "hotels",
+      "cars",
+      "activities",
+      "flights",
+      "insurance",
+      "esim",
+      "transfers",
+      "transport",
+      "tickets",
+    ] as const) {
       expect(s[p].configured).toBe(false);
       expect(s[p].envVar.length).toBeGreaterThan(3);
     }
@@ -305,6 +526,21 @@ describe("affiliateStatus (fail-closed refleksija env)", () => {
     expect(s.cars.configured).toBe(false);
     expect(s.activities.configured).toBe(false);
     expect(s.insurance.configured).toBe(false);
+  });
+
+  test("novi providerji: status odraža env (Airalo/Kiwitaxi/Omio/Tiqets/SafetyWing)", () => {
+    setEnv("AIRALO_AFFILIATE_URL", "https://airalo.sjv.io/c/1/2/3");
+    setEnv("KIWITAXI_PAP_ID", "abc123");
+    setEnv("OMIO_AFFILIATE_URL", "https://tp.media/r?marker=1");
+    setEnv("TIQETS_AFFILIATE_URL", "https://www.awin1.com/cread.php?awinmid=1&awinaffid=2");
+    setEnv("SAFETYWING_AMBASSADOR_ID", "24757629");
+    const s = affiliateStatus();
+    expect(s.esim.configured).toBe(true);
+    expect(s.transfers.configured).toBe(true);
+    expect(s.transport.configured).toBe(true);
+    expect(s.tickets.configured).toBe(true);
+    expect(s.insurance.configured).toBe(true); // prek SafetyWing
+    expect(s.insurance.envVar).toContain("SAFETYWING_AMBASSADOR_ID");
   });
 });
 
