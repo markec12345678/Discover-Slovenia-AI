@@ -1,0 +1,116 @@
+{
+  "quiz": {
+    "badge": "Ne veš, kje začeti? ⭐ 2-minutni kviz",
+    "title": "Kakšen popotnik si?",
+    "subtitle": "Odgovori na 5 vprašanj in AI ti sestavi popotovanje po meri",
+    "skip": "Preskoči kviz",
+    "progress": "Vprašanje {current} od {total}",
+    "percent": "{value} %",
+    "progressAria": "Napredek kviza",
+    "back": "Nazaj",
+    "backAria": "Nazaj na prejšnje vprašanje",
+    "questions": {
+      "tempo": {
+        "title": "Kakšen tempo ti ustreza?",
+        "options": {
+          "sproscen": { "label": "Sproščen", "desc": "Počasi, brez urnika" },
+          "uravnotezen": { "label": "Uravnotežen", "desc": "Mešanica miru in gibanja" },
+          "akcija": { "label": "Akcija", "desc": "Od zore do mraka" }
+        }
+      },
+      "vibe": {
+        "title": "Kaj te najbolj privlači?",
+        "options": {
+          "narava": { "label": "Narava & pohodi", "desc": "Jezera, soteske, gorovje" },
+          "hrana": { "label": "Hrana & vino", "desc": "Gostilne in degustacije" },
+          "adrenalin": { "label": "Adrenalin & šport", "desc": "Rafting, kolesarjenje, smučanje" },
+          "kultura": { "label": "Kultura & mesta", "desc": "Stara mesta, gradovi, muzeji" }
+        }
+      },
+      "season": {
+        "title": "Kdaj bi potoval(a)?",
+        "options": {
+          "spring": { "label": "Pomlad", "desc": "Cvetje in sveža zelen" },
+          "summer": { "label": "Poletje", "desc": "Kopanje in dolgi dnevi" },
+          "autumn": { "label": "Jesen", "desc": "Barve in burja v vinogradih" },
+          "winter": { "label": "Zima", "desc": "Smučanje in praznični vonj" }
+        }
+      },
+      "group": {
+        "title": "S kom potuješ?",
+        "options": {
+          "solo": { "label": "Sama/sam", "desc": "Svoboda brez kompromisov" },
+          "par": { "label": "Par", "desc": "Romantika za dva" },
+          "druzina": { "label": "Družina z otroki", "desc": "Zabava za vse starosti" },
+          "prijatelji": { "label": "Prijatelji", "desc": "Ekipa in smeh" }
+        }
+      },
+      "budget": {
+        "title": "Kakšen proračun?",
+        "options": {
+          "low": { "label": "Varčen", "desc": "Dosegljivo, a pametno" },
+          "mid": { "label": "Srednji", "desc": "Udobje brez razmetavanja" },
+          "lux": { "label": "Brez omejitev", "desc": "Vrhunske izkušnje" }
+        }
+      }
+    },
+    "styles": {
+      "narava": {
+        "label": "Narava",
+        "desc": "Mir, svež zrak in poti, ki se končajo ob jezeru. Tvoja Slovenija: Triglavski narodni park, Soča in Bohinj."
+      },
+      "hrana": {
+        "label": "Gurman",
+        "desc": "Potuješ z želodcem. Tvoja Slovenija: gostilne z lokalnimi sestavinami, vinske ceste Štajerske in Dolenjske."
+      },
+      "adrenalin": {
+        "label": "Pustolovec",
+        "desc": "Adrenalin je tvoje gorivo. Tvoja Slovenija: rafting na Soči, kanjoning v soteskah in smučanje na Voglu."
+      },
+      "kultura": {
+        "label": "Kulturnik",
+        "desc": "Zgodovina in mestna vrvež te naredita srečnega. Tvoja Slovenija: Ljubljana, Ptuj, Celje in Piran."
+      },
+      "budget": {
+        "label": "Varčen raziskovalec",
+        "desc": "Vidiš veliko, porabiš malo. Tvoja Slovenija: brezplačne poti, javni prevoz in lokalni bazarji."
+      },
+      "luxury": {
+        "label": "Luksuzni popotnik",
+        "desc": "Brez kompromisov. Tvoja Slovenija: wellness zdravilišča, vrhunske degustacije in hotelska doživetja."
+      }
+    },
+    "seasons": {
+      "spring": "pomlad",
+      "summer": "poletje",
+      "autumn": "jesen",
+      "winter": "zimo"
+    },
+    "styleLabel": "Tvoj stil potovanja",
+    "recommendations": "Priporočene destinacije",
+    "planCta": "Načrtuj moje potovanje",
+    "planCtaAria": "Načrtuj moje potovanje z AI načrtovalnikom",
+    "restart": "Ponovi kviz",
+    "restartAria": "Ponovi kviz od začetka",
+    "prompt": {
+      "template": "Načrtuj 3-dnevno potovanje za popotnika, ki obožuje {interest}, raje {season}, potuje {group}, proračun {budget}",
+      "interest": {
+        "narava": "naravo in pohode",
+        "hrana": "lokalno hrano in vino",
+        "adrenalin": "adrenalin in šport",
+        "kultura": "kulturo in mesta"
+      },
+      "group": {
+        "solo": "sama",
+        "par": "s partnerjem",
+        "druzina": "z družino",
+        "prijatelji": "s prijatelji"
+      },
+      "budget": {
+        "low": "varčen",
+        "mid": "srednji",
+        "lux": "brez omejitev"
+      }
+    }
+  }
+}

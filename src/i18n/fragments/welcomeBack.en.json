@@ -1,0 +1,21 @@
+{
+  "welcomeBack": {
+    "title": "Welcome back! 👋",
+    "knowsLabel": "The AI already knows:",
+    "visitedCount": "{count} destinations visited",
+    "quizCta": "Answer the <quizLink>2-minute quiz</quizLink> and the AI will put together a trip made to measure.",
+    "close": "Close",
+    "interests": {
+      "narava": "nature",
+      "kulinarika": "local food",
+      "avantura": "adventure",
+      "kultura": "culture"
+    },
+    "groups": {
+      "solo": "solo",
+      "par": "couple",
+      "druzina": "family",
+      "prijatelji": "friends"
+    }
+  }
+}

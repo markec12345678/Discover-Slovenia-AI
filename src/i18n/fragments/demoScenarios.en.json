@@ -1,0 +1,43 @@
+{
+  "demoScenarios": {
+    "badge": "Try it in 30 seconds",
+    "title": "What do you want to experience?",
+    "subtitle": "Click one of the options and the AI instantly builds your plan",
+    "customTitle": "Write your own",
+    "customSubtitle": "Or pick one above",
+    "tags": {
+      "twoDays": "2 days",
+      "oneDay": "1 day",
+      "nature": "nature",
+      "food": "food",
+      "today": "today",
+      "family": "family",
+      "fiveHours": "5 hours",
+      "romance": "romance",
+      "budget": "budget",
+      "local": "local"
+    },
+    "scenarios": {
+      "river": {
+        "title": "A quiet weekend by the river",
+        "query": "A quiet weekend by the river with great food"
+      },
+      "family": {
+        "title": "A family day out today",
+        "query": "A family day out with kids today, 5 hours"
+      },
+      "romantic": {
+        "title": "A romantic weekend with wine",
+        "query": "A romantic weekend with wine and great restaurants"
+      },
+      "budget": {
+        "title": "A cheaper trip without the crowds",
+        "query": "A cheap trip without the crowds, nature and peace"
+      },
+      "food": {
+        "title": "The best local food",
+        "query": "The best local food in Bela krajina, traditional cuisine"
+      }
+    }
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Sparkles, Heart, Mountain, UtensilsCrossed, Users, Clock, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -428,21 +429,24 @@ interface WelcomeBackProps {
 }
 
 export function WelcomeBackBanner({ profile, onDismiss }: WelcomeBackProps) {
+  // FW4.3-2: besedila bannerja prek fragmentov welcomeBack.{sl,en}
+  const t = useTranslations("welcomeBack");
+
   // Prikaz že od 2. obiska (ne glede na zaključen onboarding — kviz ga zdaj zaključi)
   if (profile.visitCount < 2) return null;
 
   const interestLabels: Record<string, string> = {
-    narava: "narava",
-    kulinarika: "lokalna hrana",
-    avantura: "avantura",
-    kultura: "kultura",
+    narava: t("interests.narava"),
+    kulinarika: t("interests.kulinarika"),
+    avantura: t("interests.avantura"),
+    kultura: t("interests.kultura"),
   };
 
   const groupLabels: Record<string, string> = {
-    solo: "sam/a",
-    par: "par",
-    druzina: "družina",
-    prijatelji: "prijatelji",
+    solo: t("groups.solo"),
+    par: t("groups.par"),
+    druzina: t("groups.druzina"),
+    prijatelji: t("groups.prijatelji"),
   };
 
   const topInterests = profile.interests
@@ -464,26 +468,29 @@ export function WelcomeBackBanner({ profile, onDismiss }: WelcomeBackProps) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold">
-              Dobrodošel nazaj! 👋
+              {t("title")}
             </p>
             <p className="text-xs text-muted-foreground">
               {knowsSomething ? (
                 <>
-                  AI že ve: {topInterests}
+                  {t("knowsLabel")} {topInterests}
                   {profile.groupType && ` · ${groupLabels[profile.groupType] || profile.groupType}`}
-                  {profile.visitedDestinations.length > 0 && ` · ${profile.visitedDestinations.length} obiskanih destinacij`}
+                  {profile.visitedDestinations.length > 0 &&
+                    ` · ${t("visitedCount", { count: profile.visitedDestinations.length })}`}
                 </>
               ) : (
-                <>
-                  Odgovori na{" "}
-                  <a
-                    href="#kviz"
-                    className="font-medium text-primary hover:underline"
-                  >
-                    2-minutni kviz
-                  </a>
-                  , da ti AI sestavi potovanje po meri.
-                </>
+                // next-intl v4 uradni vzorec: tag v sporočilu
+                // (<quizLink>…</quizLink>) + chunk handler.
+                t.rich("quizCta", {
+                  quizLink: (chunks) => (
+                    <a
+                      href="#kviz"
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {chunks}
+                    </a>
+                  ),
+                })
               )}
             </p>
           </div>
@@ -491,7 +498,7 @@ export function WelcomeBackBanner({ profile, onDismiss }: WelcomeBackProps) {
             type="button"
             onClick={onDismiss}
             className="rounded-full p-1.5 text-muted-foreground hover:bg-muted shrink-0"
-            aria-label="Zapri"
+            aria-label={t("close")}
           >
             <X className="size-4" aria-hidden="true" />
           </button>

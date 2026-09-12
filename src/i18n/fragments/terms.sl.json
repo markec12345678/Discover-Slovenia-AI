@@ -1,0 +1,52 @@
+{
+  "terms": {
+    "title": "Pogoji uporabe",
+    "lastUpdated": "Zadnja posodobitev:",
+    "sections": {
+      "s1": {
+        "title": "1. Sprejem pogojev",
+        "body": "Z uporabo platforme Discover Slovenia AI sprejemate te pogoje uporabe."
+      },
+      "s2": {
+        "title": "2. Storitev",
+        "body": "Platforma ponuja informacije o slovenskih turističnih destinacijah, AI načrtovanje potovanj in povezave do lokalnih ponudnikov. Platforma ne posreduje rezervacij — uporabniki rezervirajo neposredno pri ponudnikih."
+      },
+      "s3": {
+        "title": "3. AI itinererji",
+        "body": "AI-generirani itinererji so informativne narave. Platforma ne prevzema odgovornosti za točnost cen, razpoložljivost ali kakovost storitev tretjih oseb."
+      },
+      "s4": {
+        "title": "4. Affiliate povezave",
+        "body": "Platforma vsebuje partnerske (affiliate) povezave (Booking.com, DiscoverCars, GetYourGuide, Skyscanner, World Nomads, SafetyWing, Airalo, Kiwitaxi, Omio, Tiqets in Viator). Če prek teh povezav opravite rezervacijo, lahko Discover Slovenia prejme partnersko provizijo. Cena za vas se zaradi tega ne poveča; rezervacijo in morebitne storitve plačila opravite neposredno pri partnerju, ki zanjo veljajo njegovi pogoji."
+      },
+      "s5": {
+        "title": "5. Ponudniki (B2B)",
+        "body": "Registrirani ponudniki so odgovorni za točnost svojih podatkov. Pavšalna naročnina (Premium €149/mes, Enterprise €499/mes) se obračuna mesečno. Odjava je možna kadarkoli s 30-dnevnim odpovednim rokom."
+      },
+      "s6": {
+        "title": "6. Beta obdobje",
+        "body": "Med beta obdobjem (do 30 aktivnih lokalov) so vsi paketi brezplačni. Po vklopu monetizacije imajo beta uporabniki 6 mesecev brezplačnega dostopa."
+      },
+      "s7": {
+        "title": "7. Intelektualna lastnina",
+        "body": "Vsebina platforme je zaščitena z MIT licenco. Slike destinacij so pridobljene iz odprtih virov (Unsplash, OpenStreetMap). Spletna koda je odprtokodna na GitHubu."
+      },
+      "s8": {
+        "title": "8. Omejitev odgovornosti",
+        "body": "Platforma ne prevzema odgovornosti za škodo, ki bi izhajala iz uporabe informacij ali povezav do tretjih oseb."
+      },
+      "s9": {
+        "title": "9. Spremembe pogojev",
+        "body": "Pogoji se lahko posodobijo. O pomembnih spremembah bomo obvestili registrirane uporabnike po emailu."
+      },
+      "s10": {
+        "title": "10. Kontakt",
+        "body": "Vprašanja: <email>info@discoverslovenia.ai</email>"
+      }
+    },
+    "meta": {
+      "title": "Pogoji uporabe",
+      "description": "Pogoji uporabe platforme Discover Slovenia AI."
+    }
+  }
+}

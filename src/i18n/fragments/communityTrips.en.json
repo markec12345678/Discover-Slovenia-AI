@@ -1,0 +1,20 @@
+{
+  "communityTrips": {
+    "badge": "Community",
+    "title": "The community is planning",
+    "subtitle": "Public itineraries created by visitors — take a look, vote, borrow an idea.",
+    "cta": "Create your own plan",
+    "fallbackName": "Around Slovenia with AI",
+    "openButton": "Open the plan",
+    "openAria": "Open the plan: {name} ({days})",
+    "coverAlt": "Trip {name} — {destination}",
+    "created": "Created {time}",
+    "durationTitle": "Trip duration",
+    "viewsTitle": "Views of the shared page",
+    "activitiesTitle": "Total number of activities",
+    "createdTitle": "When the plan was created",
+    "daysCount": "{count, plural, one {# day} other {# days}}",
+    "viewsCount": "{count, plural, one {# view} other {# views}}",
+    "activitiesCount": "{count, plural, one {# activity} other {# activities}}"
+  }
+}

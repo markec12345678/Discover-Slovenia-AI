@@ -26,6 +26,8 @@ interface ChatMessage {
 interface ChatRequest {
   messages: ChatMessage[];
   currentPage?: string; // npr. "homepage", "destinations", "marketplace"
+  /** FW4.3-2: jezik AI odgovora ("en" → angleški systemPrompt; default "sl") */
+  language?: "sl" | "en";
 }
 
 export async function POST(request: Request) {
@@ -50,6 +52,10 @@ export async function POST(request: Request) {
   // Vzami samo zadnjih 6 sporočil (da ohranimo kontekst a ne presežemo token limit)
   const recentMessages = body.messages.slice(-6);
   const lastUserMessage = [...recentMessages].reverse().find((m) => m.role === "user")?.content || "";
+
+  // FW4.3-2: jezik AI izpisa — client pošlje locale (enak vzorec kot
+  // /api/itinerary): "en" → angleški asistent, vse ostalo ostaja slovensko.
+  const lang = body.language === "en" ? "en" : "sl";
 
   // === GRADI KONTEKST IZ BAZE ===
   const [topListings, topProducts, topExperiences] = await Promise.all([
@@ -113,10 +119,48 @@ export async function POST(request: Request) {
   ).join("\n");
 
   const pageContext = body.currentPage
-    ? `\nUPORABNIK JE TRENUTNO NA STRANI: ${body.currentPage} (prilagodi odgovor kontekstu strani)`
+    ? lang === "en"
+      ? `\nYOU ARE CURRENTLY ON THE PAGE: ${body.currentPage} (adapt your answer to the page context)`
+      : `\nUPORABNIK JE TRENUTNO NA STRANI: ${body.currentPage} (prilagodi odgovor kontekstu strani)`
     : "";
 
-  const systemPrompt = `Si "Slovenija AI" — prijazen, strokovni asistent za turistično platformo "Discover Slovenia AI". Pomagaš uporabnikom načrtovati potovanje po Sloveniji.
+  // FW4.3-2: ogledje sistemsko sporočilo glede na jezik — enaka struktura,
+  // enaka varnostna pravila (SYSTEM_DATA_GUARD, <podatek> ovijanje ostane).
+  const systemPrompt =
+    lang === "en"
+      ? `You are "Slovenia AI" — a friendly, expert assistant for the travel platform "Discover Slovenia AI". You help users plan trips around Slovenia.
+
+YOU KNOW ALL ABOUT SLOVENIA:
+- 22 destinations from Bled to Piran
+- Local providers (hotels, restaurants, activities)
+- Products (food, crafts, souvenirs)
+- Experiences (tours, tastings, adventures)
+- AI itinerary (you can advise on planning)
+
+AVAILABLE DESTINATIONS:
+${destContext}
+
+TOP LISTINGS (featured):
+${listingsContext}
+
+TOP PRODUCTS (featured):
+${productsContext}
+
+TOP EXPERIENCES (featured):
+${experiencesContext}${pageContext}
+
+RULES:
+1. Reply in English (unless the user writes in another language)
+2. Be friendly but concise (no more than 3-4 paragraphs)
+3. Recommend concrete destinations/listings/products from the list above
+4. If the user asks about something that is not in the database, be honest and suggest an alternative
+5. If they ask about an itinerary, point them to the "AI planner" (/nacrtuj)
+6. If they ask about bookings, explain that these happen directly with the provider (redirect model)
+7. Never make up data — if you don't know, say so
+8. Use emoji for friendliness (🏔️ 🍷 🚴‍♂️ 🏛️) but don't overdo it
+
+${SYSTEM_DATA_GUARD}`
+      : `Si "Slovenija AI" — prijazen, strokovni asistent za turistično platformo "Discover Slovenia AI". Pomagaš uporabnikom načrtovati potovanje po Sloveniji.
 
 VEŠ VSE O SLOVENIJI:
 - 22 destinacij od Bleda do Pirana
@@ -135,8 +179,7 @@ TOP IZDELKI (featured):
 ${productsContext}
 
 TOP IZKUŠNJE (featured):
-${experiencesContext}
-${pageContext}
+${experiencesContext}${pageContext}
 
 PRAVILA:
 1. Odgovarjaj v slovenščini (razen če uporabnik piše v drugem jeziku)
@@ -153,11 +196,14 @@ ${SYSTEM_DATA_GUARD}`;
   // Zgradi pogovor za AI
   const aiMessages = [
     { role: "system" as const, content: systemPrompt },
-    // Dodaj assistant intro za prvo sporočilo
+    // Dodaj assistant intro za prvo sporočilo (v jeziku uporabnika)
     ...(recentMessages.length === 1 && recentMessages[0].role === "user"
       ? [{
           role: "assistant" as const,
-          content: "Pozdravljen! Sem Slovenija AI 🇸🇮 — vaš osebni vodič po Sloveniji. Kako vam lahko pomagam pri načrtovanju potovanja?",
+          content:
+            lang === "en"
+              ? "Hello! I'm Slovenia AI 🇸🇮 — your personal guide to Slovenia. How can I help you plan your trip?"
+              : "Pozdravljen! Sem Slovenija AI 🇸🇮 — vaš osebni vodič po Sloveniji. Kako vam lahko pomagam pri načrtovanju potovanja?",
         }]
       : []),
     ...recentMessages.map((m) => ({
@@ -186,8 +232,8 @@ ${SYSTEM_DATA_GUARD}`;
   } catch (error) {
     console.error("[chat] AI napaka:", error);
 
-    // Fallback — preprost deterministični odgovor
-    const fallback = generateFallbackResponse(lastUserMessage);
+    // Fallback — preprost deterministični odgovor (v jeziku pogovora)
+    const fallback = generateFallbackResponse(lastUserMessage, lang);
     return NextResponse.json({
       message: fallback,
       source: "fallback",
@@ -196,9 +242,32 @@ ${SYSTEM_DATA_GUARD}`;
   }
 }
 
-// Preprost fallback — brez AI, samo pattern matching
-function generateFallbackResponse(userMessage: string): string {
+// Preprost fallback — brez AI, samo pattern matching (dvojezično)
+function generateFallbackResponse(userMessage: string, lang: "sl" | "en"): string {
   const msg = userMessage.toLowerCase();
+
+  if (lang === "en") {
+    if (msg.includes("bled")) {
+      return "Bled is Slovenia's most recognisable postcard view 🏔️ — a medieval castle, an island with a church and crystal-clear water. I recommend visiting early in the morning to avoid the crowds. For AI planning, visit the Plan page.";
+    }
+    if (msg.includes("ljubljan")) {
+      return "Ljubljana is our capital 🏛️ — a city with a castle on the hill, the Triple Bridge and a lively old town. For culinary adventures try the Ljubljana food tour in the experiences section.";
+    }
+    if (msg.includes("piran") || msg.includes("coast")) {
+      return "Piran is a Venetian coastal town 🌊 with narrow alleys and the lovely Tartini Square. Ideal for a romantic trip. For accommodation, check the local hotels in our database.";
+    }
+    if (msg.includes("itiner") || msg.includes("plan")) {
+      return "For AI trip planning, visit the Plan page. The AI will consider your budget, interests and season and put together the perfect plan.";
+    }
+    if (msg.includes("wine") || msg.includes("food") || msg.includes("culinary")) {
+      return "Slovenian cuisine is wonderfully diverse 🍷 — from coastal wines to Prekmurje classics. I recommend tastings in the Vipava Valley or Maribor. Check our marketplace for local products.";
+    }
+    if (msg.includes("hello") || msg.includes("hi") || msg.includes("hey")) {
+      return "Hello! 🇸🇮 I'm Slovenia AI. How can I help you plan your trip around Slovenia?";
+    }
+
+    return "I'm Slovenia AI 🇸🇮. I can help with information about destinations, listings, products and experiences across Slovenia. For a complete travel plan, visit our AI planner on the Plan page.";
+  }
 
   if (msg.includes("bled")) {
     return "Bled je najbolj prepoznavna slovenska razglednica 🏔️. Srednjeveški grad, otok s cerkvijo in kristalno čista voda. Priporočam obisk zgodaj zjutraj za manj ljudi. Za AI načrtovanje obiščite strani Načrtuj.";

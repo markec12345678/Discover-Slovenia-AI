@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { routing, type Locale } from "./i18n/routing";
+import { isEnRoute, routing, type Locale } from "./i18n/routing";
 
 /**
  * Header, ki ga next-intl uporablja za prenos locale-a iz middleware-a
@@ -17,8 +17,12 @@ const COOKIE_LOCALE = "NEXT_LOCALE";
  * Legacy locale prefixi — prej javno dostopni (delno prevedene strani),
  * umaknjeni s P4-8 dokler prevodi niso celoviti (roadmap C5).
  * Stari URL-ji se trajno (308) preusmerijo na slovensko pot.
+ *
+ * FW4.3-2: "en" je ODSTRANJEN s tega seznama — angleščina je zdaj javna
+ * (jedro lijaka, glej EN whitelist v src/i18n/routing.ts). /de in /it
+ * ostajata legacy (308) do celovitih prevodov.
  */
-const LEGACY_LOCALE_PREFIXES = ["/en", "/de", "/it"] as const;
+const LEGACY_LOCALE_PREFIXES = ["/de", "/it"] as const;
 
 /**
  * Proxy (prej "middleware" — Next.js 16 konvencija) — custom i18n
@@ -96,6 +100,18 @@ export default function middleware(request: NextRequest) {
       pathWithoutLocale = pathname.slice(prefix.length) || "/";
       break;
     }
+  }
+
+  // 2b. FW4.3-2 EN WHITELISTA GUARD: angleščina živi SAMO na whitelisti
+  //     (jedro lijaka — glej isEnRoute v src/i18n/routing.ts). Zahteve
+  //     /en/<pot-ki-nima-EN> (npr. /en/vodici, /en/admin, /en/blog) se
+  //     trajno (308) preusmerijo na slovensko pot: nikoli mešanja jezikov
+  //     (P4-8), nikoli 404, iskalniki sledijo na kanonično slovensko
+  //     različico.
+  if (locale === "en" && !isEnRoute(pathWithoutLocale)) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = pathWithoutLocale;
+    return NextResponse.redirect(redirectUrl, 308);
   }
 
   // 3. Nastavi `x-next-intl-locale` header za next-intl `getRequestConfig`

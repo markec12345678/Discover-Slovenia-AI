@@ -1,3 +1,6 @@
+import type { Metadata } from "next";
+import { getLocale } from "next-intl/server";
+
 import { Navigation } from "@/components/sections/navigation";
 import { Hero } from "@/components/sections/hero";
 import { StatsSection } from "@/components/sections/stats";
@@ -16,6 +19,10 @@ import { FunnelTracker } from "@/components/funnel-tracker";
 import { StickyMobileCTA } from "@/components/sticky-mobile-cta";
 import { LegacyHashRedirect } from "@/components/legacy-hash-redirect";
 import { Reveal } from "@/components/reveal";
+import { hreflangForPath } from "@/components/seo";
+import { currentBaseUrl } from "@/lib/host";
+import { localePrefix } from "@/i18n/routing";
+import { SITE_NAME } from "@/lib/seo";
 
 /**
  * Homepage — FW3: AI-first hierarhija (progresivno razkrivanje).
@@ -36,6 +43,42 @@ import { Reveal } from "@/components/reveal";
  *  7. Razišči Slovenijo — hub na nivo-2 funkcije
  *  8. Rezerviraj — booking hub (affiliate + direktne rezervacije)
  */
+const PATH = "/";
+
+// FW4.3-2: EN metapodatki homepage-a (SL pade nazaj na layout buildSiteMetadata)
+const EN_TAGLINE = "AI travel planner";
+const EN_DESCRIPTION =
+  "Discover Slovenia with an AI-powered travel planner. 22 of the most beautiful destinations from Bled to Piran, with an interactive map, weather and direct bookings.";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const base = await currentBaseUrl();
+  const isEn = locale === "en";
+  const canonical = `${base}${localePrefix(locale)}`;
+
+  return {
+    ...(isEn
+      ? {
+          title: `${SITE_NAME} — ${EN_TAGLINE}`,
+          description: EN_DESCRIPTION,
+          openGraph: {
+            title: `${SITE_NAME} — ${EN_TAGLINE}`,
+            description: EN_DESCRIPTION,
+            url: canonical,
+            locale: "en_US",
+          },
+        }
+      : {
+          // SL: pusti privzete vrednosti iz layout-a (buildSiteMetadata) —
+          // samo canonical/hreflang/og:url naredimo locale-zavedne.
+          openGraph: { url: canonical, locale: "sl_SI" },
+        }),
+    alternates: {
+      canonical,
+      languages: hreflangForPath(PATH, base),
+    },
+  };
+}
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-background">

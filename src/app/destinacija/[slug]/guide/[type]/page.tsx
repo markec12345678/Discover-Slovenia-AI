@@ -1,8 +1,16 @@
 import { safeJsonLd } from "@/lib/security";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import { getLocale, getTranslations } from "next-intl/server";
+import type {
+  Listing as DbListing,
+  Experience as DbExperience,
+} from "@prisma/client";
+import { Link } from "@/i18n/navigation";
+import { localePrefix } from "@/i18n/routing";
 import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
+import { getEnDestination, REGIONS_EN } from "@/lib/slovenia-data-en";
+import { LanguageToggle } from "@/components/language-toggle";
 import {
   GUIDE_TYPES,
   GUIDE_TYPE_META,
@@ -22,8 +30,6 @@ import {
   ArrowRight,
   Sparkles,
   Ticket,
-  ExternalLink,
-  BedDouble,
   UtensilsCrossed,
   Mountain,
   Clock,
@@ -40,6 +46,24 @@ import {
 import type { Experience } from "@/lib/marketplace-types";
 import type { PartnerStatus } from "@/components/partner-badge";
 
+/**
+ * /destinacija/[slug]/guide/[type] — programatski vodniki (22 × 4 = 88).
+ *
+ * FW4.3-2: dvojezična stran (SL + EN) po vzorcu /o-strani:
+ * - Vsa besedila prek `getTranslations("guidePage")` (server komponenta);
+ *   fragment: src/i18n/fragments/guidePage.{sl,en}.json.
+ * - Label/shortLabel/description/durationLabel/priceRange/bestFor/title/
+ *   intro/FAQ/poudarki so v `guidePage.guideTypes.<type>.*` (ključi = slugi
+ *   tipov iz sitemap-urls.ts); emoji in kategorije ostanejo v kodi.
+ * - dest.tagline/highlights na EN iz EN prekrivne plasti (getEnDestination).
+ * - DB sekcije (SeoExperienceCard/SeoListingCard — imena ponudnikov iz baze)
+ *   se na EN NE izrisujejo (P4-8: nikoli mešanja jezikov); na EN se sploh
+ *   ne povprašuje po bazi.
+ * - Notranje povezave prek `Link` iz `@/i18n/navigation` (samodejni /en
+ *   prefix). JSON-LD (FAQ/Breadcrumb/TouristTrip) uporablja ISTE vrednosti,
+ *   ki jih stran izpisuje.
+ */
+
 /** JSON string iz Prisma → string[] (robustno ob neveljavnih podatkih). */
 function parseJsonArray(raw: string): string[] {
   try {
@@ -50,14 +74,12 @@ function parseJsonArray(raw: string): string[] {
   }
 }
 
-// 4 tipi vodnikov s podatki o ceni, trajanju in kategorijah aktivnosti
+// 4 tipi vodnikov — ikona + kategorije za pridobivanje iz baze
+// (besedila: durationLabel/priceRange/bestFor so v guidePage fragmentu)
 const GUIDE_DETAILS: Record<
   GuideType,
   {
     icon: typeof Heart;
-    durationLabel: string;
-    priceRange: string;
-    bestFor: string;
     /** Priporočene kategorije Listing/Experience za pridobivanje iz baze */
     listingCategories: string[];
     experienceCategories: string[];
@@ -65,250 +87,42 @@ const GUIDE_DETAILS: Record<
 > = {
   "romanticni-pobeg": {
     icon: Heart,
-    durationLabel: "2 dni / 1 noč",
-    priceRange: "180–350 € / par",
-    bestFor: "Pari · Mladoporočenca · Obletnice",
     listingCategories: ["hotel", "restaurant", "bar"],
     experienceCategories: ["tasting", "wellness", "cultural"],
   },
   druzinski: {
     icon: Users,
-    durationLabel: "2–3 dni",
-    priceRange: "120–260 € / družina",
-    bestFor: "Družine z otroki · Večgeneracijski izleti",
     listingCategories: ["hotel", "restaurant", "activity"],
     experienceCategories: ["outdoor", "workshop", "cultural"],
   },
   budget: {
     icon: Wallet,
-    durationLabel: "1–2 dni",
-    priceRange: "30–80 € / osebo",
-    bestFor: "Študentje · Backpackerji · Proračunski popotniki",
     listingCategories: ["restaurant", "activity", "transport"],
     experienceCategories: ["outdoor", "cultural", "workshop"],
   },
   vikend: {
     icon: CalendarDays,
-    durationLabel: "Vikend (petek–nedelja)",
-    priceRange: "150–280 € / osebo",
-    bestFor: "Delavci · Prijatelji · Hitri pobeg",
     listingCategories: ["hotel", "restaurant", "activity", "bar"],
     experienceCategories: ["tour", "tasting", "outdoor", "cultural"],
   },
 };
 
-// Generiraj naslov za vsako kombinacijo
-function buildTitle(destName: string, type: GuideType): string {
-  switch (type) {
-    case "romanticni-pobeg":
-      return `Romantični pobeg v ${destName}`;
-    case "druzinski":
-      return `Družinski izlet v ${destName}`;
-    case "budget":
-      return `${destName} z omejenim proračunom`;
-    case "vikend":
-      return `Vikend v ${destName}`;
-  }
-}
+// Ikone 3 poudarjenih aktivnosti glede na tip vodnika (vrstni red h1→h3)
+const HIGHLIGHT_ICONS: Record<GuideType, typeof Heart[]> = {
+  "romanticni-pobeg": [Heart, Sparkles, UtensilsCrossed],
+  druzinski: [Mountain, Users, UtensilsCrossed],
+  budget: [MapPin, Wallet, Mountain],
+  vikend: [CalendarDays, Star, Clock],
+};
 
-// Uvodni opis, prilagojen tipu vodnika
-function buildIntro(
-  destName: string,
-  type: GuideType,
-  destTagline: string,
-): string {
-  switch (type) {
-    case "romanticni-pobeg":
-      return `${destName} — ${destTagline.toLowerCase()}. Ta vodnik je zasnovan za pare, ki iščejo zasebne trenutke: romantične sprehode ob jezeru ali morju, večerje ob svečkah, zasebne degustacije in nastanitve z razgledom. Vsi predlogi so ročno izbrani za nepozaben pobeg za dva.`;
-    case "druzinski":
-      return `Načrtujete družinski izlet v ${destName}? Ta vodnik združuje varne pohodne poti, interaktivne izkušnje za otroke, družinski prijazne restavracije z otroškimi meniji in nastanitve z družinskimi sobami. ${destName} je odlična izbira za nepozabne družinske spomine.`;
-    case "budget":
-      return `${destName} je mogoče obiskati tudi z majhnim proračunom. Ta vodnik predstavlja brezplačne atrakcije, lokalne trge, poceni prenočišča in javni transport. Predlogi so preverjeni za popotnike, ki želijo maksimalno izkušnjo z minimalnim stroškom.`;
-    case "vikend":
-      return `Popoln vikend pobeg v ${destName} — petek zvečer do nedelje popoldan. Uravnotežen program z glavnimi znamenitostmi, lokalno kulinarike in časom za sprostitev. ${destName} je dovolj blizu za kratek pobeg, dovolj bogat za poln vikend.`;
-  }
-}
-
-// 3–4 FAQ vprašanja, prilagojena tipu
-function buildFaqs(
-  destName: string,
-  type: GuideType,
-  priceRange: string,
-): { q: string; a: string }[] {
-  const base: { q: string; a: string }[] = [];
-  switch (type) {
-    case "romanticni-pobeg":
-      base.push(
-        {
-          q: `Kaj naredi ${destName} poseben za romantični pobeg?`,
-          a: `${destName} ponuja edinstveno kombinacijo narave, kulturnih znamenitosti in kulinarike. Romantični pobeg v ${destName} je popoln za obletnice, valentine ali zaroke — naglasak je na zasebnosti, razgledih in lokalnih okusih.`,
-        },
-        {
-          q: `Koliko stane romantični pobeg v ${destName}?`,
-          a: `Cena romantičnega pobega v ${destName} se običajno giblje med ${priceRange}, vključno z nastanitvo z razgledom, večerjo za dva in eno izkušnjo (npr. degustacija ali vožnja).`,
-        },
-        {
-          q: `Kdaj je najboljši čas za romantični obisk ${destName}?`,
-          a: `Pomlad (april–junij) in zgodnja jesen (september–oktober) ponujata najbolj romantično vzdušje v ${destName} — prijetne temperature, manj turistov in čudovite barve narave.`,
-        },
-        {
-          q: `Katere nastanitve v ${destName} so najbolj romantične?`,
-          a: `Za romantični pobeg priporočamo boutique hotele in nastanitve z razgledom. Preverite naše sezname lokalov v ${destName} — vsi imajo ročno izbrane ponudnike.`,
-        },
-      );
-      break;
-    case "druzinski":
-      base.push(
-        {
-          q: `Ali je ${destName} primeren za obisk z otroki?`,
-          a: `Da — ${destName} je odlična družinska destinacija z varnimi pohodnimi potmi, otroško prijaznimi restavracijami in interaktivnimi izkušnjami. Večina atrakcij je dostopnih tudi z otroškimi vozički.`,
-        },
-        {
-          q: `Koliko stane družinski izlet v ${destName}?`,
-          a: `Družinski izlet v ${destName} (2 odrasla + 2 otroka) stane običajno ${priceRange}, vključno z družinsko sobo, obroki in vstopnicami za atrakcije. Otroci do 6 let pogosto vstopajo brezplačno.`,
-        },
-        {
-          q: `Katere aktivnosti v ${destName} so primerne za otroke?`,
-          a: `${destName} ponuja različne družinske aktivnosti — od lažjih pohodov, kolesarjenja, muzejev z interaktivnimi razstavami do delavnic in degustacij. Naša AI-priporočila upoštevajo starost otrok.`,
-        },
-        {
-          q: `Kdaj je najboljši čas za družinski obisk ${destName}?`,
-          a: `Šolske počitnice (poletje, oktober, februar) so idealne za družinski obisk ${destName}. Poleti so odprte vse zunanje atrakcije, pozimi pa so na voljo smučanje in zimski festivali.`,
-        },
-      );
-      break;
-    case "budget":
-      base.push(
-        {
-          q: `Koliko stane obisk ${destName} z omejenim proračunom?`,
-          a: `Z omejenim proračunom lahko ${destName} obiščete za ${priceRange}, vključno z nastanitvo v hostelih ali zasebnih sobah, lokalno hrano na tržnicah in brezplačnimi aktivnostmi.`,
-        },
-        {
-          q: `Katere brezplačne aktivnosti so na voljo v ${destName}?`,
-          a: `${destName} ponuja številne brezplačne aktivnosti — sprehode po starem mestu, obisk cerkva, pohodne poti v okolici in javne plaže. Vstopnice za muzeje imajo pogosto popuste za študente.`,
-        },
-        {
-          q: `Kako prihraniti pri prevozu do ${destName}?`,
-          a: `Za ugoden prevoz do ${destName} priporočamo vlak ali avtobus (iskanje preko FlixBus ali slovenskih železnic). V ${destName} lahko uporabite javni mestni transport ali kolo (veliko destinacij ima sisteme izposoje).`,
-        },
-        {
-          q: `Ali najdem poceni nastanitev v ${destName}?`,
-          a: `Da — v ${destName} so na voljo hostli, zasebne sobe preko Airbnb in družinski penzioni. Cene so nižje izven sezone (november–marec, razen praznikov).`,
-        },
-      );
-      break;
-    case "vikend":
-      base.push(
-        {
-          q: `Kaj početi v ${destName} med vikendom?`,
-          a: `Vikend v ${destName} omogoča raziskovanje glavnih znamenitosti, lokalne kulinarike in vsaj ene izkušnje. Petek zvečer je idealen za prihod in sprehod, sobota za glavne atrakcije, nedelja za sprostitev.`,
-        },
-        {
-          q: `Koliko stane vikend v ${destName}?`,
-          a: `Vikend v ${destName} (2 nočitvi, 3 obroki na dan, atrakcije) stane približno ${priceRange}. Prihranite lahko z early-bird rezervacijami in lokalnimi tržnicami.`,
-        },
-        {
-          q: `Kdaj je najboljši čas za vikend pobeg v ${destName}?`,
-          a: `${destName} je odličen za vikend pobeg skozi vse leto. Pomlad in jesen ponujata najboljše vreme za raziskovanje, poleti je več dogodkov, pozimi pa manj turistov in nižje cene.`,
-        },
-        {
-          q: `Kako priti do ${destName} za vikend?`,
-          a: `${destName} je dostopen z avtomobilom, vlakom ali avtobusom. Priporočamo rezervacijo prevoza vsaj teden dni vnaprej, še posebej za petek popoldan.`,
-        },
-      );
-      break;
-  }
-  base.push({
-    q: `Ali lahko AI sestavi itinerer za ${destName}?`,
-    a: `Da — naš AI načrtovalec lahko sestavi popolnoma prilagojen itinerer za ${destName}, ki upošteva vaše interese, proračun in čas. Preizkusite ga na strani Načrtuj.`,
-  });
-  return base;
-}
-
-// Vsebinski razdelki (3 predlagane aktivnosti) glede na tip vodnika
-function buildHighlights(
-  destName: string,
-  type: GuideType,
-  destHighlights: string[],
-): { title: string; description: string; icon: typeof Heart }[] {
-  const top3 = destHighlights.slice(0, 3);
-  const fallback = (i: number) =>
-    destHighlights[i % destHighlights.length] ?? "Lokalna izkušnja";
-
-  switch (type) {
-    case "romanticni-pobeg":
-      return [
-        {
-          title: `Romantični sprehod ob ${top3[0] ?? fallback(0)}`,
-          description: `Začnite dan z umirjenim sprehodom ob ${top3[0]?.toLowerCase() ?? "naravnih lepotah"} v ${destName}. Jutranja svetloba in manj turistov ustvarjata idealno vzdušje za par.`,
-          icon: Heart,
-        },
-        {
-          title: `Zasebna izkušnja: ${top3[1] ?? fallback(1)}`,
-          description: `Popoldne si vzemite čas za zasebno izkušnjo v ${destName} — degustacija, vožnja z ladjico ali lokalna delavnica. Naša priporočila so preverjena za pare.`,
-          icon: Sparkles,
-        },
-        {
-          title: `Večerja ob svečkah v ${destName}`,
-          description: `Zaključite dan z romantično večerjo v eni izmed izbranih restavracij v ${destName}. Lokalni kuharji ponujajo sezonske menije z vino slovenskih vinogradov.`,
-          icon: UtensilsCrossed,
-        },
-      ];
-    case "druzinski":
-      return [
-        {
-          title: `Družinski obisk: ${top3[0] ?? fallback(0)}`,
-          description: `${top3[0] ?? "Glavna atrakcija"} v ${destName} je otrokom prijazna — interaktivne razstave, varne poti in pogosto delavnice za najmlajše.`,
-          icon: Mountain,
-        },
-        {
-          title: `Sprostitev ob ${top3[1] ?? fallback(1)}`,
-          description: `${top3[1] ?? "Druga atrakcija"} ponuja prostor za piknik in sprostitev. Otroci se lahko igrajo, odrasli uživajo v naravi ${destName}.`,
-          icon: Users,
-        },
-        {
-          title: `Družinska večerja v ${destName}`,
-          description: `Izberite restavracijo z otroškim menijem v ${destName}. Lokalne pice, testenine in tradicionalne slovenske jedi so priljubljene pri vseh starostih.`,
-          icon: UtensilsCrossed,
-        },
-      ];
-    case "budget":
-      return [
-        {
-          title: `Brezplačni obisk: ${top3[0] ?? fallback(0)}`,
-          description: `${top3[0] ?? "Glavna atrakcija"} v ${destName} je brezplačna za ogled od zunaj. Sprehod ob njej ponuja čudovite foto motive in kulturno izkušnjo.`,
-          icon: MapPin,
-        },
-        {
-          title: `Piknik ob ${top3[1] ?? fallback(1)}`,
-          description: `Kupite lokalne siri, kruh in sadje na tržnici v ${destName} in si organizirajte piknik. Prihranek pri obroku omogoča več za izkušnje.`,
-          icon: Wallet,
-        },
-        {
-          title: `Pohod do ${top3[2] ?? fallback(2)}`,
-          description: `${top3[2] ?? "Okolica"} je brezplačna za raziskovanje peš ali s kolesom. V ${destName} so označene pohodne poti primerne za vse ravni.`,
-          icon: Mountain,
-        },
-      ];
-    case "vikend":
-      return [
-        {
-          title: `Petek: prihod in sprehod po ${destName}`,
-          description: `Po prihodu v ${destName} se namestite in si vzemite čas za sproščen sprehod po starem mestu. Uživajte v lokalni kavi in načrtujte naslednja dva dneva.`,
-          icon: CalendarDays,
-        },
-        {
-          title: `Sobota: ${top3[0] ?? fallback(0)} in okolica`,
-          description: `Glavni dan namenite glavnim znamenitostim — ${top3[0]?.toLowerCase() ?? "atrakcije"}, lokalni muzej in kosilo v tradicionalni restavraciji v ${destName}.`,
-          icon: Star,
-        },
-        {
-          title: `Nedelja: ${top3[1] ?? fallback(1)} in odhod`,
-          description: `Zadnji dan izkoristite za ${top3[1]?.toLowerCase() ?? "sprostitev"} in nakup lokalnih spominov. Pred odhodom še ena lokalna kavica v ${destName}.`,
-          icon: Clock,
-        },
-      ];
-  }
+/**
+ * Label v levem kontekstu: SL — cela oznaka malo (kot v izvirniku),
+ * EN — samo prva črka mala (naravno sredini stavka).
+ */
+function lowerLabel(label: string, locale: string): string {
+  return locale === "sl"
+    ? label.toLowerCase()
+    : label.charAt(0).toLowerCase() + label.slice(1);
 }
 
 // generateStaticParams: 22 destinacij × 4 tipi = 88 kombinacij
@@ -330,39 +144,57 @@ export async function generateMetadata({
   const { slug, type } = await params;
   const dest =
     getDestinationById(slug) || DESTINATIONS.find((d) => d.slug === slug);
-  const t = GUIDE_TYPES.find((x) => x === type) as GuideType | undefined;
-  if (!dest || !t) return { title: "Vodnik ni najden" };
+  const guideType = GUIDE_TYPES.find((x) => x === type) as GuideType | undefined;
+  const t = await getTranslations("guidePage");
+  if (!dest || !guideType) return { title: t("metaNotFound") };
 
-  const meta = GUIDE_TYPE_META[t];
-  const title = buildTitle(dest.name, t);
-  const intro = buildIntro(dest.name, t, dest.tagline);
-  // SEO-2: canonical/hreflang na DEJANSKEM gostitelju
+  const locale = await getLocale();
+  const name = dest.name;
+  const label = t(`guideTypes.${guideType}.label`);
+  const labelLower = lowerLabel(label, locale);
+  const title = t(`guideTypes.${guideType}.title`, { name });
+  const tagline =
+    locale === "en"
+      ? (getEnDestination(dest.id)?.tagline ?? dest.tagline)
+      : dest.tagline;
+  const intro = t(`guideTypes.${guideType}.intro`, {
+    name,
+    // SL izpis privatnega uvoda je z malo začetnico (kot v izvirniku)
+    tagline: locale === "sl" ? tagline.toLowerCase() : tagline,
+  });
+  // SEO-2: canonical/hreflang na DEJANSKEM gostitelju (FW4.3-2: + locale prefix)
   const base = await currentBaseUrl();
+  const canonicalPath = `/destinacija/${dest.slug}/guide/${guideType}`;
+  const prefixed = `${localePrefix(locale)}${canonicalPath}`;
 
   return {
-    title: `${title} — Vodnik ${meta.label.toLowerCase()}`,
+    title: t("meta.title", { title, label, labelLower }),
     description: `${intro.slice(0, 155)}...`,
     keywords: [
-      dest.name,
-      meta.label,
-      "vodnik",
-      "potovanje",
-      "Slovenija",
-      t === "romanticni-pobeg" ? "romantika" : "",
-      t === "druzinski" ? "družina" : "",
-      t === "budget" ? "cenovno ugodno" : "",
-      t === "vikend" ? "vikend pobeg" : "",
-      dest.region,
+      name,
+      label,
+      t("meta.keywordGuide"),
+      t("meta.keywordTravel"),
+      t("meta.keywordSlovenia"),
+      t(`guideTypes.${guideType}.metaKeyword`),
+      locale === "en"
+        ? (REGIONS_EN[dest.region] ?? dest.region)
+        : dest.region,
     ].filter(Boolean),
     openGraph: {
       title: `${title} — Discover Slovenia AI`,
-      description: `${meta.description} Vodnik za ${dest.name}.`,
+      description: t("meta.ogDescription", {
+        description: t(`guideTypes.${guideType}.description`),
+        name,
+      }),
       images: [{ url: dest.image, width: 1200, height: 800 }],
       type: "website",
-      locale: "sl_SI",
+      locale: locale === "en" ? "en_US" : "sl_SI",
+      url: `${base}${prefixed}`,
     },
     alternates: {
-      canonical: `${base}/destinacija/${dest.slug}/guide/${t}`, languages: hreflangForPath(`/destinacija/${dest.slug}/guide/${t}`, base),
+      canonical: `${base}${prefixed}`,
+      languages: hreflangForPath(canonicalPath, base),
     },
   };
 }
@@ -375,38 +207,106 @@ export default async function GuidePage({
   const { slug, type } = await params;
   const dest =
     getDestinationById(slug) || DESTINATIONS.find((d) => d.slug === slug);
-  const t = GUIDE_TYPES.find((x) => x === type) as GuideType | undefined;
-  if (!dest || !t) notFound();
+  const guideType = GUIDE_TYPES.find((x) => x === type) as GuideType | undefined;
+  if (!dest || !guideType) notFound();
 
-  const meta = GUIDE_TYPE_META[t];
-  const details = GUIDE_DETAILS[t];
+  // FW4.3-2: vsa besedila prek fragmenta guidePage; locale iz proxy headerja
+  const t = await getTranslations("guidePage");
+  const locale = await getLocale();
+  const isEn = locale === "en";
+
+  const meta = GUIDE_TYPE_META[guideType]; // emoji (skupen za oba jezika)
+  const details = GUIDE_DETAILS[guideType];
   const Icon = details.icon;
-  const title = buildTitle(dest.name, t);
-  const intro = buildIntro(dest.name, t, dest.tagline);
-  const faqs = buildFaqs(dest.name, t, details.priceRange);
-  const highlights = buildHighlights(dest.name, t, dest.highlights);
-  // SEO-2: host-zavedni breadcrumb JSON-LD
-  const base = await currentBaseUrl();
 
-  // Pridobi povezane lokale in izkušnje iz baze (filtrirano po tipu vodnika)
-  const [listings, experiences] = await Promise.all([
-    db.listing.findMany({
-      where: {
-        destinationId: dest.id,
-        category: { in: details.listingCategories },
-      },
-      take: 6,
-      orderBy: [{ featured: "desc" }, { rating: "desc" }],
-    }),
-    db.experience.findMany({
-      where: {
-        destinationId: dest.id,
-        category: { in: details.experienceCategories },
-      },
-      take: 4,
-      orderBy: [{ featured: "desc" }, { rating: "desc" }],
-    }),
-  ]);
+  const name = dest.name;
+  const label = t(`guideTypes.${guideType}.label`);
+  const labelLower = lowerLabel(label, locale);
+  const tagline = isEn
+    ? (getEnDestination(dest.id)?.tagline ?? dest.tagline)
+    : dest.tagline;
+  const title = t(`guideTypes.${guideType}.title`, { name });
+  const intro = t(`guideTypes.${guideType}.intro`, {
+    name,
+    // SL izpis privatnega uvoda je z malo začetnico (kot v izvirniku)
+    tagline: isEn ? tagline : tagline.toLowerCase(),
+  });
+  const durationLabel = t(`guideTypes.${guideType}.durationLabel`);
+  const priceRange = t(`guideTypes.${guideType}.priceRange`);
+  const typeDescription = t(`guideTypes.${guideType}.description`);
+
+  // Poudarki destinacije — na EN iz EN prekrivne plasti
+  const destHighlights = isEn
+    ? (getEnDestination(dest.id)?.highlights ?? dest.highlights)
+    : dest.highlights;
+  const fallbackHl = t("fallbackHighlight");
+  const pickHl = (i: number) =>
+    destHighlights[i] ??
+    destHighlights[i % destHighlights.length] ??
+    fallbackHl;
+  const hl1 = pickHl(0);
+  const hl2 = pickHl(1);
+  const hl3 = pickHl(2);
+  // SL izpis uporablja male začetnice poudarkov (kot v izvirniku); EN poudarki
+  // so lastna imena in ostanejo z veliko začetnico — zato dve vrednosti.
+  const lowerHl = (s: string) => (isEn ? s : s.toLowerCase());
+  const hlParams = {
+    name,
+    hl1,
+    hl1Lower: lowerHl(hl1),
+    hl2,
+    hl2Lower: lowerHl(hl2),
+    hl3,
+  };
+
+  // Poudarjene aktivnosti (3 predlogi) glede na tip vodnika
+  const highlights = (["h1", "h2", "h3"] as const).map((hk, i) => ({
+    title: t(`guideTypes.${guideType}.${hk}.title`, hlParams),
+    description: t(`guideTypes.${guideType}.${hk}.description`, hlParams),
+    icon: HIGHLIGHT_ICONS[guideType][i],
+  }));
+
+  // FAQ — ISTI vir kot FAQPage JSON-LD (na EN prevedena vprašanja)
+  const faqParams = { name, price: priceRange };
+  const faqs = (["q1", "q2", "q3", "q4"] as const).map((qk, i) => ({
+    q: t(`faqs.${guideType}.${qk}`, faqParams),
+    a: t(`faqs.${guideType}.a${i + 1}`, faqParams),
+  }));
+  faqs.push({
+    q: t("faqs.ai.q", faqParams),
+    a: t("faqs.ai.a", faqParams),
+  });
+
+  // SEO-2: host-zavedni breadcrumb JSON-LD (FW4.3-2: EN poti z /en prefixom)
+  const base = await currentBaseUrl();
+  const canonicalPath = `/destinacija/${dest.slug}/guide/${guideType}`;
+  const prefixedPath = `${localePrefix(locale)}${canonicalPath}`;
+
+  // Pridobi povezane lokale in izkušnje iz baze (filtrirano po tipu vodnika).
+  // P4-8: DB vsebina (imena ponudnikov) je slovenska — na EN sekcij NE
+  // izrisujemo in sploh ne povprašujemo po bazi.
+  let listings: DbListing[] = [];
+  let experiences: DbExperience[] = [];
+  if (!isEn) {
+    [listings, experiences] = await Promise.all([
+      db.listing.findMany({
+        where: {
+          destinationId: dest.id,
+          category: { in: details.listingCategories },
+        },
+        take: 6,
+        orderBy: [{ featured: "desc" }, { rating: "desc" }],
+      }),
+      db.experience.findMany({
+        where: {
+          destinationId: dest.id,
+          category: { in: details.experienceCategories },
+        },
+        take: 4,
+        orderBy: [{ featured: "desc" }, { rating: "desc" }],
+      }),
+    ]);
+  }
 
   // Mapiranje v client-safe tipe (images/languages so v DB JSON string-i)
   const seoExperiences: Experience[] = experiences.map((e) => ({
@@ -429,14 +329,14 @@ export default async function GuidePage({
     destinationName: l.destinationName ?? dest.name,
   }));
 
-  // JSON-LD: FAQPage + BreadcrumbList + TouristTrip
+  // JSON-LD: FAQPage + BreadcrumbList + TouristTrip (prevedene vrednosti)
   const breadcrumbs = breadcrumbJsonLd([
-    { name: "Domov", url: `${base}/` },
+    { name: t("breadcrumbHome"), url: `${base}${localePrefix(locale)}/` },
     {
       name: dest.name,
-      url: `${base}/destinacija/${dest.slug}/things-to-do`,
+      url: `${base}${localePrefix(locale)}/destinacija/${dest.slug}/things-to-do`,
     },
-    { name: meta.label },
+    { name: label },
   ]);
 
   const touristTrip = {
@@ -451,20 +351,21 @@ export default async function GuidePage({
       address: {
         "@type": "PostalAddress",
         addressCountry: "SI",
-        addressRegion: dest.region,
+        addressRegion: isEn
+          ? (REGIONS_EN[dest.region] ?? dest.region)
+          : dest.region,
       },
     },
     offers: {
       "@type": "Offer",
-      priceRange: details.priceRange,
+      priceRange: priceRange,
       priceCurrency: "EUR",
     },
   };
 
-  const canonicalPath = `/destinacija/${dest.slug}/guide/${t}`;
-
   return (
     <div className="min-h-screen bg-background">
+      <LanguageToggle path={`/destinacija/${dest.slug}/guide/${guideType}`} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd(faqs)) }}
@@ -479,16 +380,16 @@ export default async function GuidePage({
       />
 
       {/* PageView tracking — beleži ogled v PageView tabelo */}
-      <PageViewTracker path={canonicalPath} title={title} />
+      <PageViewTracker path={prefixedPath} title={title} />
 
       {/* Breadcrumbs */}
       <div className="mx-auto max-w-5xl px-4 pt-6">
         <nav
           className="flex items-center gap-2 text-sm text-muted-foreground"
-          aria-label="Breadcrumb"
+          aria-label={t("breadcrumbAria")}
         >
           <Link href="/" className="hover:text-foreground">
-            Domov
+            {t("breadcrumbHome")}
           </Link>
           <span aria-hidden="true">/</span>
           <Link
@@ -498,7 +399,7 @@ export default async function GuidePage({
             {dest.name}
           </Link>
           <span aria-hidden="true">/</span>
-          <span className="text-foreground">{meta.label}</span>
+          <span className="text-foreground">{label}</span>
         </nav>
       </div>
 
@@ -506,20 +407,20 @@ export default async function GuidePage({
       <div className="relative h-[400px] w-full overflow-hidden mt-4">
         <img
           src={dest.image}
-          alt={`${dest.name} — ${meta.label}`}
+          alt={`${name} — ${label}`}
           className="size-full object-cover"
         />
         <div className="hero-overlay absolute inset-0" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
           <Badge className="mb-3 bg-primary text-primary-foreground">
             <Icon className="size-3.5 mr-1" aria-hidden="true" />
-            {meta.label} · {meta.emoji}
+            {label} · {meta.emoji}
           </Badge>
           <h1 className="text-3xl sm:text-5xl font-bold text-white drop-shadow-lg">
             {title}
           </h1>
           <p className="mt-3 max-w-2xl text-white/90 text-base sm:text-lg">
-            {dest.tagline}
+            {tagline}
           </p>
           <div className="mt-4 flex flex-wrap gap-2 justify-center">
             <Badge
@@ -527,14 +428,14 @@ export default async function GuidePage({
               className="bg-white/10 text-white border-white/30 backdrop-blur-sm"
             >
               <Clock className="size-3 mr-1" aria-hidden="true" />
-              {details.durationLabel}
+              {durationLabel}
             </Badge>
             <Badge
               variant="outline"
               className="bg-white/10 text-white border-white/30 backdrop-blur-sm"
             >
               <Wallet className="size-3 mr-1" aria-hidden="true" />
-              {details.priceRange}
+              {priceRange}
             </Badge>
             <Badge
               variant="outline"
@@ -544,7 +445,7 @@ export default async function GuidePage({
                 className="size-3 mr-1 fill-amber-400 text-amber-400"
                 aria-hidden="true"
               />
-              Uredniška ocena {dest.rating}★
+              {t("editorialRating", { rating: String(dest.rating) })}
             </Badge>
           </div>
         </div>
@@ -555,9 +456,9 @@ export default async function GuidePage({
         <section className="mb-10">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {GUIDE_TYPES.map((otherType) => {
-              const otherMeta = GUIDE_TYPE_META[otherType];
               const OtherIcon = GUIDE_DETAILS[otherType].icon;
-              const isActive = otherType === t;
+              const isActive = otherType === guideType;
+
               return (
                 <Link
                   key={otherType}
@@ -578,7 +479,9 @@ export default async function GuidePage({
                         }`}
                         aria-hidden="true"
                       />
-                      <p className="text-xs font-medium">{otherMeta.shortLabel}</p>
+                      <p className="text-xs font-medium">
+                        {t(`guideTypes.${otherType}.shortLabel`)}
+                      </p>
                     </CardContent>
                   </Card>
                 </Link>
@@ -591,7 +494,7 @@ export default async function GuidePage({
         <section className="mb-10">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
             <span aria-hidden="true">{meta.emoji}</span>
-            {meta.label} v {dest.name}
+            {t("introHeading", { label, name })}
           </h2>
           <p className="text-muted-foreground leading-relaxed mb-4">{intro}</p>
           <Card className="border-primary/30 bg-primary/5">
@@ -601,10 +504,11 @@ export default async function GuidePage({
                 aria-hidden="true"
               />
               <div>
-                <p className="font-semibold text-sm">{details.bestFor}</p>
+                <p className="font-semibold text-sm">
+                  {t(`guideTypes.${guideType}.bestFor`)}
+                </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Trajanje: {details.durationLabel} · Cenovni razred:{" "}
-                  {details.priceRange}
+                  {t("metaLine", { duration: durationLabel, price: priceRange })}
                 </p>
               </div>
             </CardContent>
@@ -613,7 +517,7 @@ export default async function GuidePage({
 
         {/* Poudarjene aktivnosti (3 predlogi) */}
         <section className="mb-10">
-          <h2 className="text-2xl font-bold mb-6">Poudarjene aktivnosti</h2>
+          <h2 className="text-2xl font-bold mb-6">{t("highlightsTitle")}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {highlights.map((h, i) => {
               const HIcon = h.icon;
@@ -632,16 +536,16 @@ export default async function GuidePage({
           </div>
         </section>
 
-        {/* Povezane izkušnje iz baze — REALNA rezervacijska pot */}
+        {/* Povezane izkušnje iz baze — REALNA rezervacijska pot (P4-8: samo SL) */}
         {seoExperiences.length > 0 && (
           <section className="mb-10">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">
-                Izkušnje v {dest.name} za {meta.label.toLowerCase()}
+                {t("experiencesTitle", { name, labelLower })}
               </h2>
               <Button asChild variant="outline" size="sm">
                 <Link href={`/destinacija/${dest.slug}/things-to-do`}>
-                  Vse izkušnje
+                  {t("allExperiences")}
                   <ArrowRight className="size-3.5 ml-1" aria-hidden="true" />
                 </Link>
               </Button>
@@ -654,16 +558,16 @@ export default async function GuidePage({
           </section>
         )}
 
-        {/* Lokalci — REALNI lead capture (povpraševanje ponudniku) */}
+        {/* Lokalci — REALNI lead capture (povpraševanje ponudniku; P4-8: samo SL) */}
         {seoListings.length > 0 && (
           <section className="mb-10">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">
-                Priporočeni lokalci v {dest.name}
+                {t("listingsTitle", { name })}
               </h2>
               <Button asChild variant="outline" size="sm">
                 <Link href={`/destinacija/${dest.slug}/things-to-do`}>
-                  Vsi lokalci
+                  {t("allListings")}
                   <ArrowRight className="size-3.5 ml-1" aria-hidden="true" />
                 </Link>
               </Button>
@@ -678,7 +582,7 @@ export default async function GuidePage({
 
         {/* Cross-linking — najboljši čas in things-to-do */}
         <section className="mb-10">
-          <h2 className="text-2xl font-bold mb-4">Povezani vodniki</h2>
+          <h2 className="text-2xl font-bold mb-4">{t("relatedTitle")}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Card className="hover:border-primary/40 transition-colors">
               <Link href={`/destinacija/${dest.slug}/things-to-do`}>
@@ -688,11 +592,13 @@ export default async function GuidePage({
                   </div>
                   <div>
                     <h3 className="font-semibold">
-                      Kaj početi v {dest.name}
+                      {t("thingsToDoTitle", { name })}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Vseh {dest.highlights.length} znamenitosti in aktivnosti v{" "}
-                      {dest.name}.
+                      {t("thingsToDoDesc", {
+                        count: destHighlights.length,
+                        name,
+                      })}
                     </p>
                   </div>
                   <ArrowRight
@@ -713,10 +619,10 @@ export default async function GuidePage({
                   </div>
                   <div>
                     <h3 className="font-semibold">
-                      Najboljši čas za obisk {dest.name}
+                      {t("bestTimeTitle", { name })}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Vodič po sezonah — pomlad, poletje, jesen, zima.
+                      {t("bestTimeDesc")}
                     </p>
                   </div>
                   <ArrowRight
@@ -731,7 +637,7 @@ export default async function GuidePage({
 
         {/* FAQ */}
         <section className="mb-10">
-          <h2 className="text-2xl font-bold mb-6">Pogosta vprašanja</h2>
+          <h2 className="text-2xl font-bold mb-6">{t("faqTitle")}</h2>
           <div className="space-y-3">
             {faqs.map((faq, i) => (
               <Card key={i}>
@@ -760,23 +666,23 @@ export default async function GuidePage({
         {/* CTA za AI itinerer */}
         <section className="rounded-2xl border border-primary/30 bg-primary/5 p-8 text-center">
           <h2 className="text-2xl font-bold mb-3">
-            Sestavite popoln {meta.label.toLowerCase()} v {dest.name}
+            {t("ctaTitle", { labelLower, name })}
           </h2>
           <p className="text-muted-foreground mb-5 max-w-xl mx-auto">
-            AI upošteva vaš proračun, interese in čas. {meta.description}
+            {t("ctaP", { description: typeDescription })}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button asChild size="lg">
               <Link href="/nacrtuj">
                 <Ticket className="size-4 mr-2" aria-hidden="true" />
-                AI načrtovalec potovanj
+                {t("ctaPlanner")}
                 <ArrowRight className="size-4 ml-2" aria-hidden="true" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link href={`/destinacija/${dest.slug}/itinerary/vikend`}>
                 <CalendarDays className="size-4 mr-2" aria-hidden="true" />
-                Pripravljeni itinererji
+                {t("ctaItineraries")}
               </Link>
             </Button>
           </div>
@@ -784,16 +690,18 @@ export default async function GuidePage({
 
         {/* Ostale destinacije — ista tipa vodnika */}
         <section className="mt-12">
-          <h2 className="text-2xl font-bold mb-4">{meta.label} tudi drugje</h2>
+          <h2 className="text-2xl font-bold mb-4">
+            {t("elsewhereTitle", { label })}
+          </h2>
           <p className="text-sm text-muted-foreground mb-4">
-            Raziščite {meta.label.toLowerCase()} v drugih slovenskih destinacijah:
+            {t("elsewhereDesc", { labelLower })}
           </p>
           <div className="flex flex-wrap gap-2">
             {DESTINATIONS.filter((d) => d.id !== dest.id)
               .slice(0, 10)
               .map((d) => (
                 <Button key={d.id} asChild variant="outline" size="sm">
-                  <Link href={`/destinacija/${d.slug}/guide/${t}`}>
+                  <Link href={`/destinacija/${d.slug}/guide/${guideType}`}>
                     <MapPin className="size-3.5 mr-1" aria-hidden="true" />
                     {d.name}
                   </Link>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Sparkles, Clock, Users, Heart, Mountain, UtensilsCrossed, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,51 +10,54 @@ import { cn } from "@/lib/utils";
 // ============================================================================
 // DEMO SCENARIJI — 5 "wow" vprašanj za hitri 30s test
 // ============================================================================
+// FW4.3-2: naslovi/poizvedbe/oznake živijo v fragmentih
+// demoScenarios.{sl,en}.json (ključi po id-ju scenarija) — poizvedba je
+// prevedena, zato AI načrtovalnik (language=locale) odgovarja v jeziku
+// uporabnika.
 
-const DEMO_SCENARIOS = [
+interface DemoScenario {
+  id: string;
+  icon: typeof Mountain;
+  emoji: string;
+  /** ključi oznak (demoScenarios.tags.*) v vrstni redu prikaza */
+  tagKeys: [string, string, string];
+  gradient: string;
+}
+
+const DEMO_SCENARIOS: DemoScenario[] = [
   {
     id: "river",
     icon: Mountain,
     emoji: "🌊",
-    title: "Miren vikend ob reki",
-    query: "Miren vikend ob reki z dobro hrano",
-    tags: ["2 dni", "narava", "kulinarika"],
+    tagKeys: ["twoDays", "nature", "food"],
     gradient: "from-blue-500/10 to-cyan-500/10",
   },
   {
     id: "family",
     icon: Users,
     emoji: "👨‍👩‍👧",
-    title: "Družinski izlet danes",
-    query: "Družinski izlet za otroke danes, 5 ur",
-    tags: ["danes", "družina", "5 ur"],
+    tagKeys: ["today", "family", "fiveHours"],
     gradient: "from-amber-500/10 to-orange-500/10",
   },
   {
     id: "romantic",
     icon: Heart,
     emoji: "❤️",
-    title: "Romantičen vikend z vinom",
-    query: "Romantičen vikend z vinom in dobrimi restavracijami",
-    tags: ["2 dni", "romantika", "kulinarika"],
+    tagKeys: ["twoDays", "romance", "food"],
     gradient: "from-rose-500/10 to-pink-500/10",
   },
   {
     id: "budget",
     icon: Clock,
     emoji: "💸",
-    title: "Cenejši izlet brez gužve",
-    query: "Poceni izlet brez gužve, narava in mir",
-    tags: ["1 dan", "narava", "budžetno"],
+    tagKeys: ["oneDay", "nature", "budget"],
     gradient: "from-emerald-500/10 to-green-500/10",
   },
   {
     id: "food",
     icon: UtensilsCrossed,
     emoji: "🍯",
-    title: "Najboljša lokalna hrana",
-    query: "Najboljša lokalna hrana v Beli krajini, tradicionalna kuhinja",
-    tags: ["1 dan", "kulinarika", "lokalno"],
+    tagKeys: ["oneDay", "food", "local"],
     gradient: "from-violet-500/10 to-purple-500/10",
   },
 ];
@@ -63,6 +67,7 @@ interface DemoScenariosProps {
 }
 
 export function DemoScenarios({ onSelect }: DemoScenariosProps) {
+  const t = useTranslations("demoScenarios");
   const [hovered, setHovered] = useState<string | null>(null);
 
   return (
@@ -72,14 +77,14 @@ export function DemoScenarios({ onSelect }: DemoScenariosProps) {
           <div className="mb-3 flex justify-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium">
               <Sparkles className="size-3.5 text-primary" aria-hidden="true" />
-              Preizkusi v 30 sekundah
+              {t("badge")}
             </span>
           </div>
           <h2 className="text-2xl font-bold sm:text-3xl">
-            Kaj želiš doživeti?
+            {t("title")}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Klikni eno od možnosti in AI takoj sestavi tvoj načrt
+            {t("subtitle")}
           </p>
         </div>
 
@@ -91,7 +96,7 @@ export function DemoScenarios({ onSelect }: DemoScenariosProps) {
               <button
                 key={scenario.id}
                 type="button"
-                onClick={() => onSelect?.(scenario.query)}
+                onClick={() => onSelect?.(t(`scenarios.${scenario.id}.query`))}
                 onMouseEnter={() => setHovered(scenario.id)}
                 onMouseLeave={() => setHovered(null)}
                 className={cn(
@@ -110,17 +115,17 @@ export function DemoScenarios({ onSelect }: DemoScenariosProps) {
 
                 {/* Title */}
                 <h3 className="text-sm font-bold leading-tight mb-2">
-                  {scenario.title}
+                  {t(`scenarios.${scenario.id}.title`)}
                 </h3>
 
                 {/* Tags */}
                 <div className="flex flex-wrap gap-1">
-                  {scenario.tags.map((tag) => (
+                  {scenario.tagKeys.map((tagKey) => (
                     <span
-                      key={tag}
+                      key={tagKey}
                       className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
                     >
-                      {tag}
+                      {t(`tags.${tagKey}`)}
                     </span>
                   ))}
                 </div>
@@ -145,8 +150,8 @@ export function DemoScenarios({ onSelect }: DemoScenariosProps) {
             className="group flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border/60 p-5 text-center transition-all hover:border-primary/40 hover:bg-primary/5"
           >
             <Sparkles className="size-6 text-primary/60" aria-hidden="true" />
-            <span className="text-sm font-medium">Napiši svoje</span>
-            <span className="text-xs text-muted-foreground">Ali prelijči zgoraj</span>
+            <span className="text-sm font-medium">{t("customTitle")}</span>
+            <span className="text-xs text-muted-foreground">{t("customSubtitle")}</span>
           </button>
         </div>
       </div>

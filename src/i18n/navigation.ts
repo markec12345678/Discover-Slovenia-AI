@@ -3,11 +3,27 @@ import { createNavigation } from "next-intl/navigation";
 import { routing } from "./routing";
 
 /**
- * Next-intl navigation helperji — uporabljajo se namesto `next/navigation`
- * za locale-aware navigacijo (Link, useRouter, usePathname, redirect).
+ * Locale-zavedajoče navigacijski helperji (FW4.3-2).
  *
- * `router.push(path, { locale })` samodejno doda/odstrani locale prefix
- * glede na `localePrefix: "as-needed"` konfiguracijo.
+ * `Link` (LocaleLink): enak API kot `next/link`, a SAMODEJNO doda `/en`
+ * prefix, kadar je aktiven locale "en" (default "sl" je brez prefix-a —
+ * `localePrefix: "as-needed"`). Tako uporabnik, ki brska po angleški
+ * različici, ob kliku na notranjo povezavo OSTANE v angleščini.
+ *
+ * Uporaba (nadomesti `import Link from "next/link"`):
+ *   import { Link } from "@/i18n/navigation";
+ *
+ * Deluje v client komponentah (useLocale iz NextIntlClientProvider) in v
+ * server komponentah (getLocale iz request config-a — header, ki ga nastavi
+ * src/proxy.ts).
+ *
+ * OPOMBA: `usePathname` iz tega modula NE uporabljajmo neposredno —
+ * `usePathname()` (next/navigation) vrača ZUNANJI URL, torej S `/en`
+ * prefix-om, kadar uporabnik brska angleško (proxy rewrite je klientu
+ * proziren). Za locale-URL-e vedno uporabi `localePrefix(locale)` iz
+ * routing.ts; pri delu s potmi najprej odstrani `/en` prefix (glej
+ * vzorec v language-switcher.tsx).
  */
-export const { Link, redirect, usePathname, useRouter, getPathname } =
-  createNavigation(routing);
+export const { Link, redirect, usePathname, getPathname } = createNavigation(
+  routing,
+);

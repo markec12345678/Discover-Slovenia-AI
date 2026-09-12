@@ -1,0 +1,175 @@
+{
+  "guidePage": {
+    "metaNotFound": "Vodnik ni najden",
+    "breadcrumbHome": "Domov",
+    "breadcrumbAria": "Breadcrumb",
+    "editorialRating": "Uredniška ocena {rating}★",
+    "introHeading": "{label} v {name}",
+    "metaLine": "Trajanje: {duration} · Cenovni razred: {price}",
+    "highlightsTitle": "Poudarjene aktivnosti",
+    "fallbackHighlight": "Lokalna izkušnja",
+    "experiencesTitle": "Izkušnje v {name} za {labelLower}",
+    "allExperiences": "Vse izkušnje",
+    "listingsTitle": "Priporočeni lokalci v {name}",
+    "allListings": "Vsi lokalci",
+    "relatedTitle": "Povezani vodniki",
+    "thingsToDoTitle": "Kaj početi v {name}",
+    "thingsToDoDesc": "Vseh {count} znamenitosti in aktivnosti v {name}.",
+    "bestTimeTitle": "Najboljši čas za obisk {name}",
+    "bestTimeDesc": "Vodič po sezonah — pomlad, poletje, jesen, zima.",
+    "faqTitle": "Pogosta vprašanja",
+    "ctaTitle": "Sestavite popoln {labelLower} v {name}",
+    "ctaP": "AI upošteva vaš proračun, interese in čas. {description}",
+    "ctaPlanner": "AI načrtovalec potovanj",
+    "ctaItineraries": "Pripravljeni itinererji",
+    "elsewhereTitle": "{label} tudi drugje",
+    "elsewhereDesc": "Raziščite {labelLower} v drugih slovenskih destinacijah:",
+    "meta": {
+      "title": "{title} — Vodnik {labelLower}",
+      "ogDescription": "{description} Vodnik za {name}.",
+      "keywordGuide": "vodnik",
+      "keywordTravel": "potovanje",
+      "keywordSlovenia": "Slovenija"
+    },
+    "faqs": {
+      "romanticni-pobeg": {
+        "q1": "Kaj naredi {name} poseben za romantični pobeg?",
+        "a1": "{name} ponuja edinstveno kombinacijo narave, kulturnih znamenitosti in kulinarike. Romantični pobeg v {name} je popoln za obletnice, valentine ali zaroke — naglasak je na zasebnosti, razgledih in lokalnih okusih.",
+        "q2": "Koliko stane romantični pobeg v {name}?",
+        "a2": "Cena romantičnega pobega v {name} se običajno giblje med {price}, vključno z nastanitvo z razgledom, večerjo za dva in eno izkušnjo (npr. degustacija ali vožnja).",
+        "q3": "Kdaj je najboljši čas za romantični obisk {name}?",
+        "a3": "Pomlad (april–junij) in zgodnja jesen (september–oktober) ponujata najbolj romantično vzdušje v {name} — prijetne temperature, manj turistov in čudovite barve narave.",
+        "q4": "Katere nastanitve v {name} so najbolj romantične?",
+        "a4": "Za romantični pobeg priporočamo boutique hotele in nastanitve z razgledom. Preverite naše sezname lokalov v {name} — vsi imajo ročno izbrane ponudnike."
+      },
+      "druzinski": {
+        "q1": "Ali je {name} primeren za obisk z otroki?",
+        "a1": "Da — {name} je odlična družinska destinacija z varnimi pohodnimi potmi, otroško prijaznimi restavracijami in interaktivnimi izkušnjami. Večina atrakcij je dostopnih tudi z otroškimi vozički.",
+        "q2": "Koliko stane družinski izlet v {name}?",
+        "a2": "Družinski izlet v {name} (2 odrasla + 2 otroka) stane običajno {price}, vključno z družinsko sobo, obroki in vstopnicami za atrakcije. Otroci do 6 let pogosto vstopajo brezplačno.",
+        "q3": "Katere aktivnosti v {name} so primerne za otroke?",
+        "a3": "{name} ponuja različne družinske aktivnosti — od lažjih pohodov, kolesarjenja, muzejev z interaktivnimi razstavami do delavnic in degustacij. Naša AI-priporočila upoštevajo starost otrok.",
+        "q4": "Kdaj je najboljši čas za družinski obisk {name}?",
+        "a4": "Šolske počitnice (poletje, oktober, februar) so idealne za družinski obisk {name}. Poleti so odprte vse zunanje atrakcije, pozimi pa so na voljo smučanje in zimski festivali."
+      },
+      "budget": {
+        "q1": "Koliko stane obisk {name} z omejenim proračunom?",
+        "a1": "Z omejenim proračunom lahko {name} obiščete za {price}, vključno z nastanitvijo v hostelih ali zasebnih sobah, lokalno hrano na tržnicah in brezplačnimi aktivnostmi.",
+        "q2": "Katere brezplačne aktivnosti so na voljo v {name}?",
+        "a2": "{name} ponuja številne brezplačne aktivnosti — sprehode po starem mestu, obisk cerkva, pohodne poti v okolici in javne plaže. Vstopnice za muzeje imajo pogosto popuste za študente.",
+        "q3": "Kako prihraniti pri prevozu do {name}?",
+        "a3": "Za ugoden prevoz do {name} priporočamo vlak ali avtobus (iskanje preko FlixBus ali slovenskih železnic). V {name} lahko uporabite javni mestni transport ali kolo (veliko destinacij ima sisteme izposoje).",
+        "q4": "Ali najdem poceni nastanitev v {name}?",
+        "a4": "Da — v {name} so na voljo hostli, zasebne sobe preko Airbnb in družinski penzioni. Cene so nižje izven sezone (november–marec, razen praznikov)."
+      },
+      "vikend": {
+        "q1": "Kaj početi v {name} med vikendom?",
+        "a1": "Vikend v {name} omogoča raziskovanje glavnih znamenitosti, lokalne kulinarike in vsaj ene izkušnje. Petek zvečer je idealen za prihod in sprehod, sobota za glavne atrakcije, nedelja za sprostitev.",
+        "q2": "Koliko stane vikend v {name}?",
+        "a2": "Vikend v {name} (2 nočitvi, 3 obroki na dan, atrakcije) stane približno {price}. Prihranite lahko z early-bird rezervacijami in lokalnimi tržnicami.",
+        "q3": "Kdaj je najboljši čas za vikend pobeg v {name}?",
+        "a3": "{name} je odličen za vikend pobeg skozi vse leto. Pomlad in jesen ponujata najboljše vreme za raziskovanje, poleti je več dogodkov, pozimi pa manj turistov in nižje cene.",
+        "q4": "Kako priti do {name} za vikend?",
+        "a4": "{name} je dostopen z avtomobilom, vlakom ali avtobusom. Priporočamo rezervacijo prevoza vsaj teden dni vnaprej, še posebej za petek popoldan."
+      },
+      "ai": {
+        "q": "Ali lahko AI sestavi itinerer za {name}?",
+        "a": "Da — naš AI načrtovalec lahko sestavi popolnoma prilagojen itinerer za {name}, ki upošteva vaše interese, proračun in čas. Preizkusite ga na strani Načrtuj."
+      }
+    },
+    "guideTypes": {
+      "romanticni-pobeg": {
+        "label": "Romantični pobeg",
+        "shortLabel": "Romantično",
+        "description": "Pobeg za dva — romantične aktivnosti, večerje ob svečkah, zasebne izkušnje in nastanitve z razgledom.",
+        "title": "Romantični pobeg v {name}",
+        "intro": "{name} — {tagline}. Ta vodnik je zasnovan za pare, ki iščejo zasebne trenutke: romantične sprehode ob jezeru ali morju, večerje ob svečkah, zasebne degustacije in nastanitve z razgledom. Vsi predlogi so ročno izbrani za nepozaben pobeg za dva.",
+        "durationLabel": "2 dni / 1 noč",
+        "priceRange": "180–350 € / par",
+        "bestFor": "Pari · Mladoporočenca · Obletnice",
+        "metaKeyword": "romantika",
+        "h1": {
+          "title": "Romantični sprehod ob {hl1}",
+          "description": "Začnite dan z umirjenim sprehodom ob {hl1Lower} v {name}. Jutranja svetloba in manj turistov ustvarjata idealno vzdušje za par."
+        },
+        "h2": {
+          "title": "Zasebna izkušnja: {hl2}",
+          "description": "Popoldne si vzemite čas za zasebno izkušnjo v {name} — degustacija, vožnja z ladjico ali lokalna delavnica. Naša priporočila so preverjena za pare."
+        },
+        "h3": {
+          "title": "Večerja ob svečkah v {name}",
+          "description": "Zaključite dan z romantično večerjo v eni izmed izbranih restavracij v {name}. Lokalni kuharji ponujajo sezonske menije z vino slovenskih vinogradov."
+        }
+      },
+      "druzinski": {
+        "label": "Družinski izlet",
+        "shortLabel": "Družinsko",
+        "description": "Družinski prijazne aktivnosti za vse starosti — varne pohodne poti, zabavišča, otroški meniji in interaktivne izkušnje.",
+        "title": "Družinski izlet v {name}",
+        "intro": "Načrtujete družinski izlet v {name}? Ta vodnik združuje varne pohodne poti, interaktivne izkušnje za otroke, družinski prijazne restavracije z otroškimi meniji in nastanitve z družinskimi sobami. {name} je odlična izbira za nepozabne družinske spomine.",
+        "durationLabel": "2–3 dni",
+        "priceRange": "120–260 € / družina",
+        "bestFor": "Družine z otroci · Večgeneracijski izleti",
+        "metaKeyword": "družina",
+        "h1": {
+          "title": "Družinski obisk: {hl1}",
+          "description": "{hl1} v {name} je otrokom prijazna — interaktivne razstave, varne poti in pogosto delavnice za najmlajše."
+        },
+        "h2": {
+          "title": "Sprostitev ob {hl2}",
+          "description": "{hl2} ponuja prostor za piknik in sprostitev. Otroci se lahko igrajo, odrasli uživajo v naravi {name}."
+        },
+        "h3": {
+          "title": "Družinska večerja v {name}",
+          "description": "Izberite restavracijo z otroškim menijem v {name}. Lokalne pice, testenine in tradicionalne slovenske jedi so priljubljene pri vseh starostih."
+        }
+      },
+      "budget": {
+        "label": "Cenovno ugoden obisk",
+        "shortLabel": "Budget",
+        "description": "Maksimalna izkušnja z minimalnim proračunom — brezplačne atrakcije, lokalni picnik, poceni prenočišča in javni transport.",
+        "title": "{name} z omejenim proračunom",
+        "intro": "{name} je mogoče obiskati tudi z majhnim proračunom. Ta vodnik predstavlja brezplačne atrakcije, lokalne trge, poceni prenočišča in javni transport. Predlogi so preverjeni za popotnike, ki želijo maksimalno izkušnjo z minimalnim stroškom.",
+        "durationLabel": "1–2 dni",
+        "priceRange": "30–80 € / osebo",
+        "bestFor": "Študentje · Backpackerji · Proračunski popotniki",
+        "metaKeyword": "cenovno ugodno",
+        "h1": {
+          "title": "Brezplačni obisk: {hl1}",
+          "description": "{hl1} v {name} je brezplačna za ogled od zunaj. Sprehod ob njej ponuja čudovite foto motive in kulturno izkušnjo."
+        },
+        "h2": {
+          "title": "Piknik ob {hl2}",
+          "description": "Kupite lokalne siri, kruh in sadje na tržnici v {name} in si organizirajte piknik. Prihranek pri obroku omogoča več za izkušnje."
+        },
+        "h3": {
+          "title": "Pohod do {hl3}",
+          "description": "{hl3} je brezplačna za raziskovanje peš ali s kolesom. V {name} so označene pohodne poti primerne za vse ravni."
+        }
+      },
+      "vikend": {
+        "label": "Vikend pobeg",
+        "shortLabel": "Vikend",
+        "description": "Popoln 2-dnevni pobeg — petek zvečer do nedelje popoldan. Uravnotežen program z glavnimi znamenitostmi in lokalno kulinarike.",
+        "title": "Vikend v {name}",
+        "intro": "Popoln vikend pobeg v {name} — petek zvečer do nedelje popoldan. Uravnotežen program z glavnimi znamenitostmi, lokalno kulinarike in časom za sprostitev. {name} je dovolj blizu za kratek pobeg, dovolj bogat za poln vikend.",
+        "durationLabel": "Vikend (petek–nedelja)",
+        "priceRange": "150–280 € / osebo",
+        "bestFor": "Delavci · Prijatelji · Hitri pobeg",
+        "metaKeyword": "vikend pobeg",
+        "h1": {
+          "title": "Petek: prihod in sprehod po {name}",
+          "description": "Po prihodu v {name} se namestite in si vzemite čas za sproščen sprehod po starem mestu. Uživajte v lokalni kavi in načrtujte naslednja dva dneva."
+        },
+        "h2": {
+          "title": "Sobota: {hl1} in okolica",
+          "description": "Glavni dan namenite glavnim znamenitostim — {hl1Lower}, lokalni muzej in kosilo v tradicionalni restavraciji v {name}."
+        },
+        "h3": {
+          "title": "Nedelja: {hl2} in odhod",
+          "description": "Zadnji dan izkoristite za {hl2Lower} in nakup lokalnih spominov. Pred odhodom še ena lokalna kavica v {name}."
+        }
+      }
+    }
+  }
+}

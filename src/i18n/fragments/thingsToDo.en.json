@@ -1,0 +1,32 @@
+{
+  "thingsToDo": {
+    "breadcrumbHome": "Home",
+    "heroTitle": "Things to do in {name}",
+    "heroStats": "{highlights} highlights · {activities} activities · Editorial rating {rating}★",
+    "aboutTitle": "About {name}",
+    "highlightsTitle": "Top highlights",
+    "experiencesTitle": "Activities and experiences in {name}",
+    "listingsTitle": "Locals in {name}",
+    "productsTitle": "Local products from {name}",
+    "bestTimeTitle": "Best time to visit {name}",
+    "seasons": {
+      "pomlad": "Spring",
+      "poletje": "Summer",
+      "jesen": "Autumn",
+      "zima": "Winter"
+    },
+    "faqTitle": "Frequently asked questions",
+    "planTitle": "Plan your trip to {name}",
+    "planText": "Our AI can put together the perfect itinerary for {name} and the surrounding area — tailored to your budget, interests and season.",
+    "planButton": "AI travel planner",
+    "exploreTitle": "Also explore",
+    "trackerTitle": "Things to do in {name} — Guide",
+    "meta": {
+      "notFound": "Destination not found",
+      "title": "Things to do in {name} — {name} Travel Guide",
+      "description": "Discover the best activities, attractions and experiences in {name}, {tagline}. A guide with {count} major highlights, local providers and AI-powered recommendations.",
+      "ogTitle": "Things to do in {name} — Discover Slovenia AI",
+      "ogDescription": "{count} highlights, local restaurants, activities and experiences in {name}."
+    }
+  }
+}

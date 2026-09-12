@@ -1,0 +1,88 @@
+{
+  "trustSafety": {
+    "hero": {
+      "title": "Zaupanje in varnost",
+      "subtitle": "Kako preverjamo partnerje, kako deluje AI ranking in kako varujemo vaše podatke."
+    },
+    "partner": {
+      "title": "Kako preverjamo partnerje",
+      "adminApproval": {
+        "title": "Admin odobritev",
+        "body": "Vsak lokal mora biti ročno odobren s strani naše ekipe preden je objavljen. Preverjamo: pravilnost kontaktov, ustreznost kategorije, kakovost slik in opisa. Nepotrjeni lokalci niso vidni uporabnikom in AI jih ne more priporočati."
+      },
+      "qualityScore": {
+        "title": "Partner Quality Score (0-100)",
+        "body": "Vsak lokal ima avtomatsko izračunan Quality Score iz 7 signalov: popolnost profila (30%), kakovost fotografij (15%), kakovost opisa (15%), AI tagi (10%), admin verifikacija (10%), ocene (10%), svežina podatkov (10%).",
+        "badgeVerified": "Verified (Q>40)",
+        "badgePremium": "👑 Premium (plačnik)",
+        "badgeFeatured": "⭐ Featured (Q>90 + Premium + Verified)"
+      },
+      "vlm": {
+        "title": "VLM preverba slik",
+        "body": "Vse slike na platformi so preverjene z Vision Language Modelom (VLM). Preverjamo: ujemanje z imenom lokalca, odsotnost vodnih žigov, kakovost in ustreznost vsebine."
+      }
+    },
+    "ranking": {
+      "title": "Kako deluje AI ranking",
+      "intro": "AI priporočila temeljijo na 5 dimenzijah z jasnimi utežmi. Plačilo ne more kupiti prvega mesta.",
+      "dimensions": {
+        "relevance": "Ujemanje z uporabnikovim iskanjem (destinacija, interesi, kategorija)",
+        "quality": "Kakovost profila lokalca (0-100)",
+        "rating": "Ocene uporabnikov (0-5 zvezdic)",
+        "distance": "Geografska bližina drugim lokacijam v itinererju",
+        "premiumBoost": "Maksimalno 5% boost za plačane partnerje — ne more preseči relevantnosti"
+      },
+      "warningTitle": "Pravilo: AI nikoli ne priporoča slabega lokalca samo zato, ker plača",
+      "warningText": "Lokalci z ratingom pod 3.5 ne dobijo premium boost-a. Relevance (60%) vedno dominira nad Premium (5%)."
+    },
+    "transparency": {
+      "title": "Transparentnost priporočil",
+      "intro": "Vsako AI priporočilo je jasno označeno. Uporabnik ve kaj je oglas in kaj organsko.",
+      "labels": {
+        "featured": {
+          "badge": "⭐ Featured",
+          "desc": "Preverjen partner z visoko kakovostjo profila in Premium članstvom. Quality Score > 90."
+        },
+        "premium": {
+          "badge": "👑 Premium",
+          "desc": "Partner podpira razvoj platforme in ima razširjen profil. Boost max 5%."
+        },
+        "verified": {
+          "badge": "✓ Preverjen",
+          "desc": "Podatke je preverila ekipa Discover Slovenia AI."
+        },
+        "affiliate": {
+          "badge": "🔗 Partnerska povezava",
+          "desc": "Affiliate link — Discover Slovenia AI lahko prejme provizijo. Vedno jasno označeno."
+        },
+        "organic": {
+          "badge": "(brez oznake)",
+          "desc": "Organsko priporočilo — brezplačen lokal, AI ga je priporočil glede na relevantnost."
+        }
+      }
+    },
+    "dataProtection": {
+      "title": "Varstvo podatkov",
+      "gdpr": {
+        "title": "GDPR skladnost",
+        "desc": "Politika zasebnosti, piškotki, pravica do pozabe. DPA za premium partnerje."
+      },
+      "free": {
+        "title": "Brezplačno za uporabnike",
+        "desc": "Uporabnik nikoli ne plača za AI funkcije. Monetizacija samo prek ponudnikov."
+      },
+      "noMiddlemen": {
+        "title": "Brez posrednikov",
+        "desc": "AI poveže turista z ponudnikom. Rezervacijo opravi turist direktno pri ponudniku."
+      },
+      "auditLog": {
+        "title": "Audit log",
+        "desc": "Vse admin akcije (odobritev, zavrnitev, sponzorstvo) so zabeležene in sledljive."
+      }
+    },
+    "meta": {
+      "title": "Zaupanje in varnost",
+      "description": "Kako preverjamo partnerje, kako deluje AI ranking in kako varujemo vaše podatke."
+    }
+  }
+}

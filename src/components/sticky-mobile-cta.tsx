@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Sparkles, Building2 } from "lucide-react";
@@ -19,7 +19,11 @@ import { Sparkles, Building2 } from "lucide-react";
  */
 export function StickyMobileCTA() {
   const t = useTranslations("nav");
-  const pathname = usePathname();
+  const rawPathname = usePathname() ?? "/";
+  // FW4.3-2: usePathname vrača ZUNANJI URL — odstrani `/en` prefix, da
+  // preverba nacrtuj deluje tudi na angleški različici (/en/nacrtuj).
+  const pathname =
+    rawPathname === "/en" ? "/" : rawPathname.replace(/^\/en(?=\/)/, "");
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {

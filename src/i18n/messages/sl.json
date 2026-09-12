@@ -67,11 +67,11 @@
     "forestLabel": "Slovenije pod gozdom",
     "seasonsLabel": "Sezone aktivnosti",
     "fairEyebrow": "Najpoštenejši model",
-    "fairValue": "0\u00a0%",
+    "fairValue": "0 %",
     "fairUnit": "provizije",
-    "fairNote": "na direktnih rezervacijah (konkurenca: 20–43\u00a0%)",
+    "fairNote": "na direktnih rezervacijah (konkurenca: 20–43 %)",
     "commissionLead": "Provizija",
-    "commissionRate": "12\u00a0%",
+    "commissionRate": "12 %",
     "commissionVerb": "se obračuna",
     "commissionEmphasis": "izključno, kadar rezervacijo prinese AI",
     "commissionTail": "— nikoli drugače."
@@ -345,6 +345,1023 @@
     "details": "Podrobnosti",
     "retry": "Poskusi znova",
     "emailPlaceholder": "tvoj@email.si",
-    "invalidEmail": "Vpiši veljaven e-poštni naslov."
+    "invalidEmail": "Vpiši veljaven e-poštni naslov.",
+    "readInEnglish": "Preberi v angleščini",
+    "readInSlovenian": "Preberi v slovenščini"
+  },
+  "about": {
+    "badge": "O strani",
+    "title": "O Discover Slovenia AI",
+    "intro": "<strong>Discover Slovenia AI</strong> je AI-poganjana turistična platforma, ki povezuje potnike z lokalnimi ponudniki v Sloveniji. Naša misija je olajšati odkrivanje slovenskih destinacij — od Blejskega jezera do Pirana — z umetno inteligenco, interaktivnim zemljevidom in direktnimi povezavami do lokalnih ponudnikov.",
+    "offerTitle": "Kaj ponujamo",
+    "offerCards": {
+      "plannerTitle": "AI načrtovalec potovanj",
+      "plannerDesc": "Generira personalizirane itinererje glede na proračun, interese in sezono.",
+      "destinationsTitle": "22 destinacij",
+      "destinationsDesc": "Od Alp do Jadrana — z interaktivnim zemljevidom in tisoči POI.",
+      "providersTitle": "Lokalni ponudniki",
+      "providersDesc": "Neposredne povezave do hotelov, restavracij in aktivnosti — rezervacija vedno pri ponudniku, brez dodatnih stroškov za vas.",
+      "languagesTitle": "4 jeziki",
+      "languagesDesc": "Slovenščina, angleščina, nemščina in italijanščina za globalne turiste."
+    },
+    "howTitle": "Kako delujemo",
+    "howP1": "Platforma ne pobira provizij od rezervacij. Namesto tega lokalni ponudniki plačujejo pavšalno mesečno naročnino za prisotnost na platformi. Uporabniki vedno rezervirajo neposredno pri ponudniku — brez posrednikov.",
+    "howP2": "AI načrtovalec uporablja <sdk>z-ai-web-dev-sdk</sdk> za generiranje itinererjev. Podatki o točkah interesa (POI) prihajajo iz <osm>OpenStreetMap</osm> in <wiki>Wikipedie</wiki>. Vremenski podatki iz <meteo>Open-Meteo</meteo>.",
+    "contactTitle": "Kontakt",
+    "contactP": "Imate vprašanja? Pišite nam na <email>info@discoverslovenia.ai</email> ali obiščite <contactPage>kontaktno stran</contactPage>.",
+    "dataTitle": "Podatki",
+    "dataTech": "Tehnologija:",
+    "dataAi": "AI:",
+    "dataMap": "Zemljevid:",
+    "dataDb": "Baza:",
+    "dataLicense": "Licenca:",
+    "dataRepo": "Repo:",
+    "dataValues": {
+      "tech": "Next.js 16, TypeScript, Prisma, Tailwind CSS, shadcn/ui",
+      "ai": "z-ai-web-dev-sdk (GLM)",
+      "map": "Leaflet + OpenStreetMap",
+      "db": "SQLite (Prisma ORM)",
+      "license": "MIT (odprta koda)"
+    },
+    "linkPrivacy": "Politika zasebnosti",
+    "linkTerms": "Pogoji uporabe",
+    "linkSources": "Vir podatkov",
+    "meta": {
+      "title": "O strani",
+      "description": "Discover Slovenia AI je AI-poganjana turistična platforma za Slovenijo. Spoznajte našo ekipo, misijo in kako platforma deluje."
+    }
+  },
+  "affiliateCta": {
+    "sectionAria": "Rezervacija za {destination}",
+    "title": "Rezervirajte svoj obisk {destination}",
+    "subtitle": "Povežemo vas z preverjenimi partnerji — rezervirate direktno pri njih, brez posrednikov in brez dodatnih stroškov.",
+    "disclosure": "Partnerske povezave: Booking.com, DiscoverCars, GetYourGuide. Če prek njih opravite rezervacijo, lahko prejmemo provizijo — cena za vas se ne poveča.",
+    "hotels": {
+      "label": "Nastanitev",
+      "title": "Hoteli in apartmaji",
+      "desc": "Poiščite hotele in apartmaje v {destination}.",
+      "cta": "Poišči nastanitev",
+      "aria": "Poišči nastanitev v {destination} — odpre Booking.com (partnerska povezava)"
+    },
+    "cars": {
+      "label": "Najem avta",
+      "title": "Primerjaj ponudnike",
+      "desc": "Brezplačna odpoved in primerjava ponudb na enem mestu.",
+      "cta": "Najemi avto",
+      "aria": "Najemi avto za {destination} — odpre DiscoverCars (partnerska povezava)"
+    },
+    "activities": {
+      "label": "Turi in izkušnje",
+      "title": "Vodeni izleti",
+      "desc": "Vodeni izleti in aktivnosti z lokalnimi ponudniki.",
+      "cta": "Poglej izlete",
+      "aria": "Poglej ture in izkušnje za {destination} — odpre GetYourGuide (partnerska povezava)"
+    }
+  },
+  "bestTime": {
+    "breadcrumbHome": "Domov",
+    "breadcrumbCurrent": "Najboljši čas — {season}",
+    "seasons": {
+      "pomlad": {
+        "label": "Pomlad",
+        "months": " marec–maj",
+        "desc": "Cvetenje, zmerno vreme, manj turistov"
+      },
+      "poletje": {
+        "label": "Poletje",
+        "months": " junij–avgust",
+        "desc": "Toplo, idealno za vodo in pohode"
+      },
+      "jesen": {
+        "label": "Jesen",
+        "months": " september–november",
+        "desc": "Barve lista, vino, manj gneče"
+      },
+      "zima": {
+        "label": "Zima",
+        "months": " december–februar",
+        "desc": "Smučanje, praznični sejmi, wellness"
+      }
+    },
+    "bestSeasonBadge": "✓ Najboljša sezona",
+    "heroTitle": "Najboljši čas za obisk {name}",
+    "overviewTitle": "{name} v {seasonLower}",
+    "bestCardTitle": "{season} je idealna sezona za {name}!",
+    "bestCardText": "{name} je v tej sezoni na vrhuncu — {taglineLower}.",
+    "offCardTitle": "{season} ni glavna sezona za {name}",
+    "offCardText": "Vendar je to lahko prednost — manj turistov, nižje cene in drugačen doživljaj.",
+    "allSeasonsTitle": "Vse sezone za {name}",
+    "bestBadge": "★ Najboljša",
+    "faqTitle": "Pogosta vprašanja",
+    "faq": {
+      "q1": "Kdaj je najboljši čas za obisk {name}?",
+      "a1": "{season} je odličen čas za obisk {name}. Temperature so {temp}, kar je idealno za raziskovanje. Pomlad in jesen ponujata manj turistov in nižje cene.",
+      "q2": "Kakšno je vreme v {name} {seasonLower}?",
+      "a2": "V {seasonLower} so temperature v {name} običajno {temp}. Priporočamo slojevito oblačenje.",
+      "q3": "Katere aktivnosti so na voljo v {name} {seasonLower}?",
+      "a3": "{season} v {name} ponuja različne aktivnosti — od pohodništva do kulinarike. Preverite naš seznam stvari za početi v {name}.",
+      "q4": "Ali potrebujem rezervacijo za obisk {name}?",
+      "a4": "Priporočamo rezervacijo nastanitve vsaj 2 tedna vnaprej, še posebej v sezoni. Uporabite naš AI načrtovalec za optimizacijo itinererja."
+    },
+    "ctaTitle": "Načrtujte {seasonLower} potovanje v {name}",
+    "ctaText": "AI upošteva sezono, vreme in vaše interese za popoln načrt.",
+    "ctaButton": "AI itinerer",
+    "ctaThingsToDo": "Kaj početi v {name}",
+    "exploreTitle": "Raziščite tudi",
+    "meta": {
+      "notFound": "Stran ni najdena",
+      "title": "Najboljši čas za obisk {name} — {season}",
+      "description": "Kdaj obiskati {name}? {season} ({months}): {desc}. Temperature {temp}. Nasveti, aktivnosti in {seasonLower} itinerer za {name}.",
+      "ogDescription": "{desc}. Temperature {temp}. Vodič za {name} {seasonLower}."
+    }
+  },
+  "collections": {
+    "eyebrow": "Kurirane kategorije",
+    "title": "Zbirke",
+    "subtitle": "Kurirane kategorije za vsako priložnost — od zimskih paketov do romantičnih pobegov in eko lokalnih izdelkov.",
+    "explore": "Razišči",
+    "openAria": "Odpri zbirko {title}",
+    "items": {
+      "winter": {
+        "title": "Zimski paketi",
+        "description": "Smučanje, wellness in tople kulinarike za hladne dni"
+      },
+      "summer": {
+        "title": "Poletni paketi",
+        "description": "Rafting, pohodi in osvežitev ob vodi"
+      },
+      "romantic": {
+        "title": "Romantični pobegi",
+        "description": "Za pare — gradovi, jezero, vinogradi"
+      },
+      "family": {
+        "title": "Družinsko",
+        "description": "Otrokom prijazne aktivnosti in izdelki"
+      },
+      "gourmet": {
+        "title": "Kulinarične izkušnje",
+        "description": "Degustacije vin, sirarstvo, kuharske delavnice"
+      },
+      "adventure": {
+        "title": "Adrenalin",
+        "description": "Rafting, smučanje, plezanje, zip-line"
+      },
+      "eco": {
+        "title": "Eko in lokalno",
+        "description": "Ekološki izdelki in trajnostne izkušnje"
+      },
+      "luxury": {
+        "title": "Luxury",
+        "description": "Visokokakovostne izkušnje in izdelki"
+      }
+    }
+  },
+  "communityTrips": {
+    "badge": "Skupnost",
+    "title": "Skupnost načrtuje",
+    "subtitle": "Javni itinerarji, ki so jih ustvarili obiskovalci — poglej, glasuj, kopiraj idejo.",
+    "cta": "Ustvari svoj načrt",
+    "fallbackName": "Po Sloveniji z AI",
+    "openButton": "Odpri načrt",
+    "openAria": "Odpri načrt: {name} ({days})",
+    "coverAlt": "Potovanje {name} — {destination}",
+    "created": "Nastal {time}",
+    "durationTitle": "Trajanje potovanja",
+    "viewsTitle": "Število ogledov deljene strani",
+    "activitiesTitle": "Skupno število aktivnosti",
+    "createdTitle": "Kdaj je bil načrt ustvarjen",
+    "daysCount": "{count, plural, one {# dan} two {# dneva} few {# dni} other {# dni}}",
+    "viewsCount": "{count, plural, one {# ogled} two {# ogleda} few {# ogledi} other {# ogledov}}",
+    "activitiesCount": "{count, plural, one {# aktivnost} two {# aktivnosti} few {# aktivnosti} other {# aktivnosti}}"
+  },
+  "contact": {
+    "title": "Kontakt",
+    "intro": "Imate vprašanja o platformi, sodelovanju ali tehničnih zadevah? Pišite nam.",
+    "cards": {
+      "emailTitle": "Email",
+      "locationTitle": "Lokacija",
+      "locationValue": "Slovenija 🇸🇮",
+      "languagesTitle": "Jeziki",
+      "languagesValue": "Slovenščina, English, Deutsch, Italiano",
+      "supportTitle": "Tehnična podpora"
+    },
+    "providersTitle": "Za ponudnike",
+    "providersText": "Želite postati del platforme? Registrirajte se na portalu za ponudnike.",
+    "providersLink": "Registracija ponudnika →",
+    "meta": {
+      "title": "Kontakt",
+      "description": "Stopite v stik z ekipo Discover Slovenia AI. Email, telefon in kontaktne informacije."
+    }
+  },
+  "dataSources": {
+    "title": "Vir podatkov",
+    "intro": "Platforma Discover Slovenia AI uporablja naslednje vire podatkov za zagotavljanje kakovostnih informacij o slovenskih turističnih destinacijah.",
+    "sources": {
+      "osm": {
+        "type": "POI baza",
+        "desc": "POI podatki (točke interesa) — atrakcije, muzeji, restavracije, hoteli, razgledišča, naravne znamenitosti, religiozni objekti. Licenca: ODbL."
+      },
+      "wikipedia": {
+        "type": "Opisi",
+        "desc": "Opisi destinacij in POI-jev. Licenca: CC BY-SA."
+      },
+      "openMeteo": {
+        "type": "Vreme",
+        "desc": "Vremenski podatki v realnem času. Brezplačni API brez ključa."
+      },
+      "zai": {
+        "type": "AI",
+        "desc": "AI generiranje itinererjev na podlagi uporabnikovih preferenc."
+      },
+      "booking": {
+        "type": "Nastanitev",
+        "desc": "Iskanje nastanitev. Affiliate program."
+      },
+      "discoverCars": {
+        "type": "Transport",
+        "desc": "Najem avtomobila. Affiliate program."
+      },
+      "getYourGuide": {
+        "type": "Aktivnosti",
+        "desc": "Aktivnosti in izkušnje. Affiliate program."
+      },
+      "skyscanner": {
+        "type": "Leti",
+        "desc": "Iskanje letov. Affiliate program."
+      },
+      "worldNomads": {
+        "type": "Zavarovanje",
+        "desc": "Potno zavarovanje. Affiliate program."
+      }
+    },
+    "providersTitle": "Lokalni ponudniki",
+    "providersText": "Podatki o lokalnih ponudnikih (hoteli, restavracije, aktivnosti, izdelki, izkušnje) so prispevani s strani registriranih ponudnikov preko B2B portala. Vsak ponudnik je odgovoren za točnost svojih podatkov.",
+    "meta": {
+      "title": "Vir podatkov",
+      "description": "Seznam virov podatkov, ki jih uporablja platforma Discover Slovenia AI."
+    }
+  },
+  "demoScenarios": {
+    "badge": "Preizkusi v 30 sekundah",
+    "title": "Kaj želiš doživeti?",
+    "subtitle": "Klikni eno od možnosti in AI takoj sestavi tvoj načrt",
+    "customTitle": "Napiši svoje",
+    "customSubtitle": "Ali prelijči zgoraj",
+    "tags": {
+      "twoDays": "2 dni",
+      "oneDay": "1 dan",
+      "nature": "narava",
+      "food": "kulinarika",
+      "today": "danes",
+      "family": "družina",
+      "fiveHours": "5 ur",
+      "romance": "romantika",
+      "budget": "budžetno",
+      "local": "lokalno"
+    },
+    "scenarios": {
+      "river": {
+        "title": "Miren vikend ob reki",
+        "query": "Miren vikend ob reki z dobro hrano"
+      },
+      "family": {
+        "title": "Družinski izlet danes",
+        "query": "Družinski izlet za otroke danes, 5 ur"
+      },
+      "romantic": {
+        "title": "Romantičen vikend z vinom",
+        "query": "Romantičen vikend z vinom in dobrimi restavracijami"
+      },
+      "budget": {
+        "title": "Cenejši izlet brez gužve",
+        "query": "Poceni izlet brez gužve, narava in mir"
+      },
+      "food": {
+        "title": "Najboljša lokalna hrana",
+        "query": "Najboljša lokalna hrana v Beli krajini, tradicionalna kuhinja"
+      }
+    }
+  },
+  "destinationsPage": {
+    "badge": "Destinacije",
+    "title": "Vseh 22 destinacij Slovenije",
+    "subtitle": "Od Bledega jezera in vrhov Julijcev do ozkih piranskih ulic — filtrirajte po regiji, interesi, tipu in ceni ter poiščite svoj kotiček Slovenije.",
+    "statsLine": "22 destinacij · 5 filtrov · Brez prijave",
+    "meta": {
+      "title": "Vseh 22 destinacij Slovenije",
+      "description": "Raziščite 22 najlepših slovenskih destinacij — od Bledega jezera do Pirana. Filtri po regiji, interesih, tipu in ceni."
+    }
+  },
+  "guidePage": {
+    "metaNotFound": "Vodnik ni najden",
+    "breadcrumbHome": "Domov",
+    "breadcrumbAria": "Breadcrumb",
+    "editorialRating": "Uredniška ocena {rating}★",
+    "introHeading": "{label} v {name}",
+    "metaLine": "Trajanje: {duration} · Cenovni razred: {price}",
+    "highlightsTitle": "Poudarjene aktivnosti",
+    "fallbackHighlight": "Lokalna izkušnja",
+    "experiencesTitle": "Izkušnje v {name} za {labelLower}",
+    "allExperiences": "Vse izkušnje",
+    "listingsTitle": "Priporočeni lokalci v {name}",
+    "allListings": "Vsi lokalci",
+    "relatedTitle": "Povezani vodniki",
+    "thingsToDoTitle": "Kaj početi v {name}",
+    "thingsToDoDesc": "Vseh {count} znamenitosti in aktivnosti v {name}.",
+    "bestTimeTitle": "Najboljši čas za obisk {name}",
+    "bestTimeDesc": "Vodič po sezonah — pomlad, poletje, jesen, zima.",
+    "faqTitle": "Pogosta vprašanja",
+    "ctaTitle": "Sestavite popoln {labelLower} v {name}",
+    "ctaP": "AI upošteva vaš proračun, interese in čas. {description}",
+    "ctaPlanner": "AI načrtovalec potovanj",
+    "ctaItineraries": "Pripravljeni itinererji",
+    "elsewhereTitle": "{label} tudi drugje",
+    "elsewhereDesc": "Raziščite {labelLower} v drugih slovenskih destinacijah:",
+    "meta": {
+      "title": "{title} — Vodnik {labelLower}",
+      "ogDescription": "{description} Vodnik za {name}.",
+      "keywordGuide": "vodnik",
+      "keywordTravel": "potovanje",
+      "keywordSlovenia": "Slovenija"
+    },
+    "faqs": {
+      "romanticni-pobeg": {
+        "q1": "Kaj naredi {name} poseben za romantični pobeg?",
+        "a1": "{name} ponuja edinstveno kombinacijo narave, kulturnih znamenitosti in kulinarike. Romantični pobeg v {name} je popoln za obletnice, valentine ali zaroke — naglasak je na zasebnosti, razgledih in lokalnih okusih.",
+        "q2": "Koliko stane romantični pobeg v {name}?",
+        "a2": "Cena romantičnega pobega v {name} se običajno giblje med {price}, vključno z nastanitvo z razgledom, večerjo za dva in eno izkušnjo (npr. degustacija ali vožnja).",
+        "q3": "Kdaj je najboljši čas za romantični obisk {name}?",
+        "a3": "Pomlad (april–junij) in zgodnja jesen (september–oktober) ponujata najbolj romantično vzdušje v {name} — prijetne temperature, manj turistov in čudovite barve narave.",
+        "q4": "Katere nastanitve v {name} so najbolj romantične?",
+        "a4": "Za romantični pobeg priporočamo boutique hotele in nastanitve z razgledom. Preverite naše sezname lokalov v {name} — vsi imajo ročno izbrane ponudnike."
+      },
+      "druzinski": {
+        "q1": "Ali je {name} primeren za obisk z otroki?",
+        "a1": "Da — {name} je odlična družinska destinacija z varnimi pohodnimi potmi, otroško prijaznimi restavracijami in interaktivnimi izkušnjami. Večina atrakcij je dostopnih tudi z otroškimi vozički.",
+        "q2": "Koliko stane družinski izlet v {name}?",
+        "a2": "Družinski izlet v {name} (2 odrasla + 2 otroka) stane običajno {price}, vključno z družinsko sobo, obroki in vstopnicami za atrakcije. Otroci do 6 let pogosto vstopajo brezplačno.",
+        "q3": "Katere aktivnosti v {name} so primerne za otroke?",
+        "a3": "{name} ponuja različne družinske aktivnosti — od lažjih pohodov, kolesarjenja, muzejev z interaktivnimi razstavami do delavnic in degustacij. Naša AI-priporočila upoštevajo starost otrok.",
+        "q4": "Kdaj je najboljši čas za družinski obisk {name}?",
+        "a4": "Šolske počitnice (poletje, oktober, februar) so idealne za družinski obisk {name}. Poleti so odprte vse zunanje atrakcije, pozimi pa so na voljo smučanje in zimski festivali."
+      },
+      "budget": {
+        "q1": "Koliko stane obisk {name} z omejenim proračunom?",
+        "a1": "Z omejenim proračunom lahko {name} obiščete za {price}, vključno z nastanitvijo v hostelih ali zasebnih sobah, lokalno hrano na tržnicah in brezplačnimi aktivnostmi.",
+        "q2": "Katere brezplačne aktivnosti so na voljo v {name}?",
+        "a2": "{name} ponuja številne brezplačne aktivnosti — sprehode po starem mestu, obisk cerkva, pohodne poti v okolici in javne plaže. Vstopnice za muzeje imajo pogosto popuste za študente.",
+        "q3": "Kako prihraniti pri prevozu do {name}?",
+        "a3": "Za ugoden prevoz do {name} priporočamo vlak ali avtobus (iskanje preko FlixBus ali slovenskih železnic). V {name} lahko uporabite javni mestni transport ali kolo (veliko destinacij ima sisteme izposoje).",
+        "q4": "Ali najdem poceni nastanitev v {name}?",
+        "a4": "Da — v {name} so na voljo hostli, zasebne sobe preko Airbnb in družinski penzioni. Cene so nižje izven sezone (november–marec, razen praznikov)."
+      },
+      "vikend": {
+        "q1": "Kaj početi v {name} med vikendom?",
+        "a1": "Vikend v {name} omogoča raziskovanje glavnih znamenitosti, lokalne kulinarike in vsaj ene izkušnje. Petek zvečer je idealen za prihod in sprehod, sobota za glavne atrakcije, nedelja za sprostitev.",
+        "q2": "Koliko stane vikend v {name}?",
+        "a2": "Vikend v {name} (2 nočitvi, 3 obroki na dan, atrakcije) stane približno {price}. Prihranite lahko z early-bird rezervacijami in lokalnimi tržnicami.",
+        "q3": "Kdaj je najboljši čas za vikend pobeg v {name}?",
+        "a3": "{name} je odličen za vikend pobeg skozi vse leto. Pomlad in jesen ponujata najboljše vreme za raziskovanje, poleti je več dogodkov, pozimi pa manj turistov in nižje cene.",
+        "q4": "Kako priti do {name} za vikend?",
+        "a4": "{name} je dostopen z avtomobilom, vlakom ali avtobusom. Priporočamo rezervacijo prevoza vsaj teden dni vnaprej, še posebej za petek popoldan."
+      },
+      "ai": {
+        "q": "Ali lahko AI sestavi itinerer za {name}?",
+        "a": "Da — naš AI načrtovalec lahko sestavi popolnoma prilagojen itinerer za {name}, ki upošteva vaše interese, proračun in čas. Preizkusite ga na strani Načrtuj."
+      }
+    },
+    "guideTypes": {
+      "romanticni-pobeg": {
+        "label": "Romantični pobeg",
+        "shortLabel": "Romantično",
+        "description": "Pobeg za dva — romantične aktivnosti, večerje ob svečkah, zasebne izkušnje in nastanitve z razgledom.",
+        "title": "Romantični pobeg v {name}",
+        "intro": "{name} — {tagline}. Ta vodnik je zasnovan za pare, ki iščejo zasebne trenutke: romantične sprehode ob jezeru ali morju, večerje ob svečkah, zasebne degustacije in nastanitve z razgledom. Vsi predlogi so ročno izbrani za nepozaben pobeg za dva.",
+        "durationLabel": "2 dni / 1 noč",
+        "priceRange": "180–350 € / par",
+        "bestFor": "Pari · Mladoporočenca · Obletnice",
+        "metaKeyword": "romantika",
+        "h1": {
+          "title": "Romantični sprehod ob {hl1}",
+          "description": "Začnite dan z umirjenim sprehodom ob {hl1Lower} v {name}. Jutranja svetloba in manj turistov ustvarjata idealno vzdušje za par."
+        },
+        "h2": {
+          "title": "Zasebna izkušnja: {hl2}",
+          "description": "Popoldne si vzemite čas za zasebno izkušnjo v {name} — degustacija, vožnja z ladjico ali lokalna delavnica. Naša priporočila so preverjena za pare."
+        },
+        "h3": {
+          "title": "Večerja ob svečkah v {name}",
+          "description": "Zaključite dan z romantično večerjo v eni izmed izbranih restavracij v {name}. Lokalni kuharji ponujajo sezonske menije z vino slovenskih vinogradov."
+        }
+      },
+      "druzinski": {
+        "label": "Družinski izlet",
+        "shortLabel": "Družinsko",
+        "description": "Družinski prijazne aktivnosti za vse starosti — varne pohodne poti, zabavišča, otroški meniji in interaktivne izkušnje.",
+        "title": "Družinski izlet v {name}",
+        "intro": "Načrtujete družinski izlet v {name}? Ta vodnik združuje varne pohodne poti, interaktivne izkušnje za otroke, družinski prijazne restavracije z otroškimi meniji in nastanitve z družinskimi sobami. {name} je odlična izbira za nepozabne družinske spomine.",
+        "durationLabel": "2–3 dni",
+        "priceRange": "120–260 € / družina",
+        "bestFor": "Družine z otroci · Večgeneracijski izleti",
+        "metaKeyword": "družina",
+        "h1": {
+          "title": "Družinski obisk: {hl1}",
+          "description": "{hl1} v {name} je otrokom prijazna — interaktivne razstave, varne poti in pogosto delavnice za najmlajše."
+        },
+        "h2": {
+          "title": "Sprostitev ob {hl2}",
+          "description": "{hl2} ponuja prostor za piknik in sprostitev. Otroci se lahko igrajo, odrasli uživajo v naravi {name}."
+        },
+        "h3": {
+          "title": "Družinska večerja v {name}",
+          "description": "Izberite restavracijo z otroškim menijem v {name}. Lokalne pice, testenine in tradicionalne slovenske jedi so priljubljene pri vseh starostih."
+        }
+      },
+      "budget": {
+        "label": "Cenovno ugoden obisk",
+        "shortLabel": "Budget",
+        "description": "Maksimalna izkušnja z minimalnim proračunom — brezplačne atrakcije, lokalni picnik, poceni prenočišča in javni transport.",
+        "title": "{name} z omejenim proračunom",
+        "intro": "{name} je mogoče obiskati tudi z majhnim proračunom. Ta vodnik predstavlja brezplačne atrakcije, lokalne trge, poceni prenočišča in javni transport. Predlogi so preverjeni za popotnike, ki želijo maksimalno izkušnjo z minimalnim stroškom.",
+        "durationLabel": "1–2 dni",
+        "priceRange": "30–80 € / osebo",
+        "bestFor": "Študentje · Backpackerji · Proračunski popotniki",
+        "metaKeyword": "cenovno ugodno",
+        "h1": {
+          "title": "Brezplačni obisk: {hl1}",
+          "description": "{hl1} v {name} je brezplačna za ogled od zunaj. Sprehod ob njej ponuja čudovite foto motive in kulturno izkušnjo."
+        },
+        "h2": {
+          "title": "Piknik ob {hl2}",
+          "description": "Kupite lokalne siri, kruh in sadje na tržnici v {name} in si organizirajte piknik. Prihranek pri obroku omogoča več za izkušnje."
+        },
+        "h3": {
+          "title": "Pohod do {hl3}",
+          "description": "{hl3} je brezplačna za raziskovanje peš ali s kolesom. V {name} so označene pohodne poti primerne za vse ravni."
+        }
+      },
+      "vikend": {
+        "label": "Vikend pobeg",
+        "shortLabel": "Vikend",
+        "description": "Popoln 2-dnevni pobeg — petek zvečer do nedelje popoldan. Uravnotežen program z glavnimi znamenitostmi in lokalno kulinarike.",
+        "title": "Vikend v {name}",
+        "intro": "Popoln vikend pobeg v {name} — petek zvečer do nedelje popoldan. Uravnotežen program z glavnimi znamenitostmi, lokalno kulinarike in časom za sprostitev. {name} je dovolj blizu za kratek pobeg, dovolj bogat za poln vikend.",
+        "durationLabel": "Vikend (petek–nedelja)",
+        "priceRange": "150–280 € / osebo",
+        "bestFor": "Delavci · Prijatelji · Hitri pobeg",
+        "metaKeyword": "vikend pobeg",
+        "h1": {
+          "title": "Petek: prihod in sprehod po {name}",
+          "description": "Po prihodu v {name} se namestite in si vzemite čas za sproščen sprehod po starem mestu. Uživajte v lokalni kavi in načrtujte naslednja dva dneva."
+        },
+        "h2": {
+          "title": "Sobota: {hl1} in okolica",
+          "description": "Glavni dan namenite glavnim znamenitostim — {hl1Lower}, lokalni muzej in kosilo v tradicionalni restavraciji v {name}."
+        },
+        "h3": {
+          "title": "Nedelja: {hl2} in odhod",
+          "description": "Zadnji dan izkoristite za {hl2Lower} in nakup lokalnih spominov. Pred odhodom še ena lokalna kavica v {name}."
+        }
+      }
+    }
+  },
+  "itineraryPage": {
+    "durations": {
+      "1-dan": {
+        "label": "1 dan",
+        "desc": "Hitri obisk"
+      },
+      "vikend": {
+        "label": "Vikend (2 dni)",
+        "desc": "Popoln vikend pobeg"
+      },
+      "3-dnevi": {
+        "label": "3 dni",
+        "desc": "Poglobljen obisk"
+      },
+      "5-dnevi": {
+        "label": "5 dni",
+        "desc": "Celovito doživetje"
+      },
+      "7-dnevi": {
+        "label": "7 dni",
+        "desc": "Teden raziskovanja"
+      }
+    },
+    "travelerTypes": {
+      "pari": {
+        "label": "Za pare",
+        "desc": "Romantični pobeg"
+      },
+      "druzina": {
+        "label": "Družinsko",
+        "desc": "Zabava za vse starosti"
+      },
+      "solo": {
+        "label": "Solo potnik",
+        "desc": "Samostojno raziskovanje"
+      },
+      "avanturist": {
+        "label": "Avanturist",
+        "desc": "Adrenalin in narava"
+      }
+    },
+    "headline": "{duration} itinerer za {name}",
+    "overviewTitle": "Pregled potovanja",
+    "unitDay": "dan",
+    "unitDays": "dni",
+    "costLabel": "ocena / osebo",
+    "ratingLabel": "uredniška ocena destinacije",
+    "daysTitle": "Predlagani dnevni razpored",
+    "dayLabel": "Dan {day}",
+    "dayFirst": "Prihod in raziskovanje {name}",
+    "dayLast": "Zadnji dan in odhod",
+    "dayMiddle": "Celodnevno raziskovanje",
+    "hoursLabel": "4-6 ur",
+    "perPerson": "€/osebo",
+    "travelerTypesTitle": "Itinerarji po tipu popotnika",
+    "generateButton": "Generiraj itinerer",
+    "otherDestinationsTitle": "Ostale destinacije",
+    "personalizedTitle": "Želite personaliziran itinerer?",
+    "personalizedText": "Naš AI upošteva vaš proračun, interese in sezono za popoln načrt.",
+    "personalizedButton": "Generiraj AI itinerer",
+    "meta": {
+      "notFound": "Itinerer ni najden",
+      "title": "{duration} itinerer za {name} — {desc}",
+      "description": "Popoln {durationLower} itinerer za {name}, {tagline}. {desc} — AI-priporočene aktivnosti, nastanitve in restavracije za {days}-dnevni obisk.",
+      "ogDescription": "AI-priporočeni {duration} itinerer z aktivnostmi, nastanitvami in restavracijami."
+    }
+  },
+  "plannerPage": {
+    "badge": "AI Concierge",
+    "title": "Načrtuj svojo pot po Sloveniji",
+    "subtitle": "Povej AI, kaj želiš doživeti. V nekaj sekundah dobiš osebni itinerer z realnimi lokalnimi ponudniki, zemljevidom in možnostjo rezervacije.",
+    "usp": "Brez prijave · Brezplačno · Grounded na realnih ponudnikih",
+    "meta": {
+      "title": "AI načrtovalec potovanj",
+      "description": "Povej AI, kaj želiš doživeti v Sloveniji — dnevi, proračun, družina, interesi. V nekaj sekundah dobiš osebni itinerer z zemljevidom, realnimi lokalnimi ponudniki in možnostjo rezervacije."
+    }
+  },
+  "pregenTrips": {
+    "badge": "Priljubljeni načrti",
+    "title": "Ali izberi preverjen itinerer",
+    "subtitle": "AI ga še dodatno personalizira glede na tvoje želje",
+    "planCta": "Načrtuj",
+    "dayOne": "dan",
+    "dayOther": "dneva",
+    "trips": {
+      "bled-1-day": {
+        "title": "Bled v enem dnevu",
+        "query": "En dan na Bledu — grad, otok, Vintgar in kremšnita",
+        "dest1": "Bled",
+        "dest2": "Vintgar",
+        "hl1": "Blejski grad",
+        "hl2": "Pletna vožnja",
+        "hl3": "Vintgarska soteska"
+      },
+      "ljubljana-2-days": {
+        "title": "Ljubljana vikend",
+        "query": "Dva dni v Ljubljani — kultura, hrana in grad",
+        "dest1": "Ljubljana",
+        "hl1": "Stari mestni center",
+        "hl2": "Ljubljanski grad",
+        "hl3": "Tromostovje"
+      },
+      "soca-3-days": {
+        "title": "Soča avantura",
+        "query": "Tri dni ob Soči — rafting, pohodi in lokalna hrana",
+        "dest1": "Reka Soča",
+        "dest2": "Kobarid",
+        "dest3": "Bovec",
+        "hl1": "Rafting na Soči",
+        "hl2": "Kobarid muzej",
+        "hl3": "Slap Boka"
+      },
+      "piran-coast": {
+        "title": "Obala in Piran",
+        "query": "Vikend na obali — Piran, Portorož in lokalna hrana",
+        "dest1": "Piran",
+        "dest2": "Portorož",
+        "hl1": "Tartinijev trg",
+        "hl2": "Obala",
+        "hl3": "Oljčno olje"
+      },
+      "bela-krajina": {
+        "title": "Bela krajina odkrivanje",
+        "query": "Dva dni v Beli krajini — med, hrana in narava ob Kolpi",
+        "dest1": "Črnomelj",
+        "hl1": "Lokalni med",
+        "hl2": "Tradicijska hrana",
+        "hl3": "Kolpa"
+      },
+      "triglav-park": {
+        "title": "Triglavski narodni park",
+        "query": "Tri dni v Triglavskem narodnem parku — Bohinj, Triglav in slapi",
+        "dest1": "Bohinj",
+        "dest2": "Triglav",
+        "hl1": "Bohinjsko jezero",
+        "hl2": "Vzpon na Triglav",
+        "hl3": "Slap Savica"
+      }
+    }
+  },
+  "privacy": {
+    "title": "Politika zasebnosti",
+    "lastUpdated": "Zadnja posodobitev:",
+    "sections": {
+      "s1": {
+        "title": "1. Splošno",
+        "body": "Discover Slovenia AI (\"platforma\") spoštuje vašo zasebnost. Ta politika opisuje, katere podatke zbiramo, kako jih uporabljamo in katere pravice imate."
+      },
+      "s2": {
+        "title": "2. Podatki obiskovalcev",
+        "body": "<strong>Ne zbiramo osebnih podatkov obiskovalcev</strong> brez izrecne privolitve. Spremljamo samo anonimne analitične podatke (ogledi strani, kliki) za izboljšanje platforme."
+      },
+      "s3": {
+        "title": "3. Newsletter",
+        "body": "Če se prijavite na newsletter, shranimo vaš email naslov. Uporabimo ga izključno za pošiljanje turističnih vodnikov in nasvetov. Kadarkoli se lahko odjavite."
+      },
+      "s4": {
+        "title": "4. Ponudniki (B2B)",
+        "body": "Registrirani ponudniki zagotovijo: ime, email, ime podjetja in geslo. Gesla so shranjena z bcrypt hashing (12 rounds). Poslovni podatki (naslov, telefon, spletna stran) so javno prikazani na platformi."
+      },
+      "s5": {
+        "title": "5. Leadi (JoinUs forma)",
+        "body": "Ko izpolnite obrazec \"Pridruži se\", shranimo: ime, email, telefon, ime podjetja, tip, kraj in želen paket. Te podatke uporabimo izključno za kontaktiranje v zvezi z vašo prijavo."
+      },
+      "s6": {
+        "title": "6. Piškotki",
+        "body": "Platforma uporablja nujno potrebne piškotke za delovanje (avtentikacija, jezikovne nastavitve). Ne uporabljamo marketinških ali sledilnih piškotkov."
+      },
+      "s7": {
+        "title": "7. Plačila (Stripe)",
+        "body": "Plačila se obdelujejo preko Stripe. Mi ne shranjujemo podatkov o kreditnih karticah. Stripe je PCI-DSS certificiran."
+      },
+      "s8": {
+        "title": "8. Vaše pravice",
+        "body": "V skladu z GDPR imate pravico do: vpogleda, popravka, izbrisa in prenosa svojih podatkov. Za uveljavljanje pravic pišite na <email>privacy@discoverslovenia.ai</email>."
+      },
+      "s9": {
+        "title": "9. Kontakt",
+        "body": "Za vprašanja o zasebnosti: <email>privacy@discoverslovenia.ai</email>"
+      }
+    },
+    "meta": {
+      "title": "Politika zasebnosti",
+      "description": "Politika zasebnosti platforme Discover Slovenia AI. Kako ravnamo z osebnimi podatki."
+    }
+  },
+  "quiz": {
+    "badge": "Ne veš, kje začeti? ⭐ 2-minutni kviz",
+    "title": "Kakšen popotnik si?",
+    "subtitle": "Odgovori na 5 vprašanj in AI ti sestavi popotovanje po meri",
+    "skip": "Preskoči kviz",
+    "progress": "Vprašanje {current} od {total}",
+    "percent": "{value} %",
+    "progressAria": "Napredek kviza",
+    "back": "Nazaj",
+    "backAria": "Nazaj na prejšnje vprašanje",
+    "questions": {
+      "tempo": {
+        "title": "Kakšen tempo ti ustreza?",
+        "options": {
+          "sproscen": {
+            "label": "Sproščen",
+            "desc": "Počasi, brez urnika"
+          },
+          "uravnotezen": {
+            "label": "Uravnotežen",
+            "desc": "Mešanica miru in gibanja"
+          },
+          "akcija": {
+            "label": "Akcija",
+            "desc": "Od zore do mraka"
+          }
+        }
+      },
+      "vibe": {
+        "title": "Kaj te najbolj privlači?",
+        "options": {
+          "narava": {
+            "label": "Narava & pohodi",
+            "desc": "Jezera, soteske, gorovje"
+          },
+          "hrana": {
+            "label": "Hrana & vino",
+            "desc": "Gostilne in degustacije"
+          },
+          "adrenalin": {
+            "label": "Adrenalin & šport",
+            "desc": "Rafting, kolesarjenje, smučanje"
+          },
+          "kultura": {
+            "label": "Kultura & mesta",
+            "desc": "Stara mesta, gradovi, muzeji"
+          }
+        }
+      },
+      "season": {
+        "title": "Kdaj bi potoval(a)?",
+        "options": {
+          "spring": {
+            "label": "Pomlad",
+            "desc": "Cvetje in sveža zelen"
+          },
+          "summer": {
+            "label": "Poletje",
+            "desc": "Kopanje in dolgi dnevi"
+          },
+          "autumn": {
+            "label": "Jesen",
+            "desc": "Barve in burja v vinogradih"
+          },
+          "winter": {
+            "label": "Zima",
+            "desc": "Smučanje in praznični vonj"
+          }
+        }
+      },
+      "group": {
+        "title": "S kom potuješ?",
+        "options": {
+          "solo": {
+            "label": "Sama/sam",
+            "desc": "Svoboda brez kompromisov"
+          },
+          "par": {
+            "label": "Par",
+            "desc": "Romantika za dva"
+          },
+          "druzina": {
+            "label": "Družina z otroki",
+            "desc": "Zabava za vse starosti"
+          },
+          "prijatelji": {
+            "label": "Prijatelji",
+            "desc": "Ekipa in smeh"
+          }
+        }
+      },
+      "budget": {
+        "title": "Kakšen proračun?",
+        "options": {
+          "low": {
+            "label": "Varčen",
+            "desc": "Dosegljivo, a pametno"
+          },
+          "mid": {
+            "label": "Srednji",
+            "desc": "Udobje brez razmetavanja"
+          },
+          "lux": {
+            "label": "Brez omejitev",
+            "desc": "Vrhunske izkušnje"
+          }
+        }
+      }
+    },
+    "styles": {
+      "narava": {
+        "label": "Narava",
+        "desc": "Mir, svež zrak in poti, ki se končajo ob jezeru. Tvoja Slovenija: Triglavski narodni park, Soča in Bohinj."
+      },
+      "hrana": {
+        "label": "Gurman",
+        "desc": "Potuješ z želodcem. Tvoja Slovenija: gostilne z lokalnimi sestavinami, vinske ceste Štajerske in Dolenjske."
+      },
+      "adrenalin": {
+        "label": "Pustolovec",
+        "desc": "Adrenalin je tvoje gorivo. Tvoja Slovenija: rafting na Soči, kanjoning v soteskah in smučanje na Voglu."
+      },
+      "kultura": {
+        "label": "Kulturnik",
+        "desc": "Zgodovina in mestna vrvež te naredita srečnega. Tvoja Slovenija: Ljubljana, Ptuj, Celje in Piran."
+      },
+      "budget": {
+        "label": "Varčen raziskovalec",
+        "desc": "Vidiš veliko, porabiš malo. Tvoja Slovenija: brezplačne poti, javni prevoz in lokalni bazarji."
+      },
+      "luxury": {
+        "label": "Luksuzni popotnik",
+        "desc": "Brez kompromisov. Tvoja Slovenija: wellness zdravilišča, vrhunske degustacije in hotelska doživetja."
+      }
+    },
+    "seasons": {
+      "spring": "pomlad",
+      "summer": "poletje",
+      "autumn": "jesen",
+      "winter": "zimo"
+    },
+    "styleLabel": "Tvoj stil potovanja",
+    "recommendations": "Priporočene destinacije",
+    "planCta": "Načrtuj moje potovanje",
+    "planCtaAria": "Načrtuj moje potovanje z AI načrtovalnikom",
+    "restart": "Ponovi kviz",
+    "restartAria": "Ponovi kviz od začetka",
+    "prompt": {
+      "template": "Načrtuj 3-dnevno potovanje za popotnika, ki obožuje {interest}, raje {season}, potuje {group}, proračun {budget}",
+      "interest": {
+        "narava": "naravo in pohode",
+        "hrana": "lokalno hrano in vino",
+        "adrenalin": "adrenalin in šport",
+        "kultura": "kulturo in mesta"
+      },
+      "group": {
+        "solo": "sama",
+        "par": "s partnerjem",
+        "druzina": "z družino",
+        "prijatelji": "s prijatelji"
+      },
+      "budget": {
+        "low": "varčen",
+        "mid": "srednji",
+        "lux": "brez omejitev"
+      }
+    }
+  },
+  "terms": {
+    "title": "Pogoji uporabe",
+    "lastUpdated": "Zadnja posodobitev:",
+    "sections": {
+      "s1": {
+        "title": "1. Sprejem pogojev",
+        "body": "Z uporabo platforme Discover Slovenia AI sprejemate te pogoje uporabe."
+      },
+      "s2": {
+        "title": "2. Storitev",
+        "body": "Platforma ponuja informacije o slovenskih turističnih destinacijah, AI načrtovanje potovanj in povezave do lokalnih ponudnikov. Platforma ne posreduje rezervacij — uporabniki rezervirajo neposredno pri ponudnikih."
+      },
+      "s3": {
+        "title": "3. AI itinererji",
+        "body": "AI-generirani itinererji so informativne narave. Platforma ne prevzema odgovornosti za točnost cen, razpoložljivost ali kakovost storitev tretjih oseb."
+      },
+      "s4": {
+        "title": "4. Affiliate povezave",
+        "body": "Platforma vsebuje partnerske (affiliate) povezave (Booking.com, DiscoverCars, GetYourGuide, Skyscanner, World Nomads, SafetyWing, Airalo, Kiwitaxi, Omio, Tiqets in Viator). Če prek teh povezav opravite rezervacijo, lahko Discover Slovenia prejme partnersko provizijo. Cena za vas se zaradi tega ne poveča; rezervacijo in morebitne storitve plačila opravite neposredno pri partnerju, ki zanjo veljajo njegovi pogoji."
+      },
+      "s5": {
+        "title": "5. Ponudniki (B2B)",
+        "body": "Registrirani ponudniki so odgovorni za točnost svojih podatkov. Pavšalna naročnina (Premium €149/mes, Enterprise €499/mes) se obračuna mesečno. Odjava je možna kadarkoli s 30-dnevnim odpovednim rokom."
+      },
+      "s6": {
+        "title": "6. Beta obdobje",
+        "body": "Med beta obdobjem (do 30 aktivnih lokalov) so vsi paketi brezplačni. Po vklopu monetizacije imajo beta uporabniki 6 mesecev brezplačnega dostopa."
+      },
+      "s7": {
+        "title": "7. Intelektualna lastnina",
+        "body": "Vsebina platforme je zaščitena z MIT licenco. Slike destinacij so pridobljene iz odprtih virov (Unsplash, OpenStreetMap). Spletna koda je odprtokodna na GitHubu."
+      },
+      "s8": {
+        "title": "8. Omejitev odgovornosti",
+        "body": "Platforma ne prevzema odgovornosti za škodo, ki bi izhajala iz uporabe informacij ali povezav do tretjih oseb."
+      },
+      "s9": {
+        "title": "9. Spremembe pogojev",
+        "body": "Pogoji se lahko posodobijo. O pomembnih spremembah bomo obvestili registrirane uporabnike po emailu."
+      },
+      "s10": {
+        "title": "10. Kontakt",
+        "body": "Vprašanja: <email>info@discoverslovenia.ai</email>"
+      }
+    },
+    "meta": {
+      "title": "Pogoji uporabe",
+      "description": "Pogoji uporabe platforme Discover Slovenia AI."
+    }
+  },
+  "thingsToDo": {
+    "breadcrumbHome": "Domov",
+    "heroTitle": "Kaj početi v {name}",
+    "heroStats": "{highlights} znamenitosti · {activities} aktivnosti · Uredniška ocena {rating}★",
+    "aboutTitle": "O {name}",
+    "highlightsTitle": "Glavne znamenitosti",
+    "experiencesTitle": "Aktivnosti in izkušnje v {name}",
+    "listingsTitle": "Lokalci v {name}",
+    "productsTitle": "Lokalni izdelki iz {name}",
+    "bestTimeTitle": "Najboljši čas za obisk {name}",
+    "seasons": {
+      "pomlad": "Pomlad",
+      "poletje": "Poletje",
+      "jesen": "Jesen",
+      "zima": "Zima"
+    },
+    "faqTitle": "Pogosta vprašanja",
+    "planTitle": "Načrtujte potovanje v {name}",
+    "planText": "Naš AI vam lahko sestavi popoln itinerer za {name} in okolico — prilagojen vašemu proračunu, interesom in sezoni.",
+    "planButton": "AI načrtovalec potovanj",
+    "exploreTitle": "Raziščite tudi",
+    "trackerTitle": "Kaj početi v {name} — Vodnik",
+    "meta": {
+      "notFound": "Destinacija ni najdena",
+      "title": "Kaj početi v {name} — Vodnik {name}",
+      "description": "Odkrijte najboljše aktivnosti, atrakcije in izkušnje v {name}, {tagline}. Vodnik z {count} glavnimi znamenitosti, lokalnimi ponudniki in AI-priporočili.",
+      "ogTitle": "Kaj početi v {name} — Discover Slovenia AI",
+      "ogDescription": "{count} znamenitosti, lokalne restavracije, aktivnosti in izkušnje v {name}."
+    }
+  },
+  "trustSafety": {
+    "hero": {
+      "title": "Zaupanje in varnost",
+      "subtitle": "Kako preverjamo partnerje, kako deluje AI ranking in kako varujemo vaše podatke."
+    },
+    "partner": {
+      "title": "Kako preverjamo partnerje",
+      "adminApproval": {
+        "title": "Admin odobritev",
+        "body": "Vsak lokal mora biti ročno odobren s strani naše ekipe preden je objavljen. Preverjamo: pravilnost kontaktov, ustreznost kategorije, kakovost slik in opisa. Nepotrjeni lokalci niso vidni uporabnikom in AI jih ne more priporočati."
+      },
+      "qualityScore": {
+        "title": "Partner Quality Score (0-100)",
+        "body": "Vsak lokal ima avtomatsko izračunan Quality Score iz 7 signalov: popolnost profila (30%), kakovost fotografij (15%), kakovost opisa (15%), AI tagi (10%), admin verifikacija (10%), ocene (10%), svežina podatkov (10%).",
+        "badgeVerified": "Verified (Q>40)",
+        "badgePremium": "👑 Premium (plačnik)",
+        "badgeFeatured": "⭐ Featured (Q>90 + Premium + Verified)"
+      },
+      "vlm": {
+        "title": "VLM preverba slik",
+        "body": "Vse slike na platformi so preverjene z Vision Language Modelom (VLM). Preverjamo: ujemanje z imenom lokalca, odsotnost vodnih žigov, kakovost in ustreznost vsebine."
+      }
+    },
+    "ranking": {
+      "title": "Kako deluje AI ranking",
+      "intro": "AI priporočila temeljijo na 5 dimenzijah z jasnimi utežmi. Plačilo ne more kupiti prvega mesta.",
+      "dimensions": {
+        "relevance": "Ujemanje z uporabnikovim iskanjem (destinacija, interesi, kategorija)",
+        "quality": "Kakovost profila lokalca (0-100)",
+        "rating": "Ocene uporabnikov (0-5 zvezdic)",
+        "distance": "Geografska bližina drugim lokacijam v itinererju",
+        "premiumBoost": "Maksimalno 5% boost za plačane partnerje — ne more preseči relevantnosti"
+      },
+      "warningTitle": "Pravilo: AI nikoli ne priporoča slabega lokalca samo zato, ker plača",
+      "warningText": "Lokalci z ratingom pod 3.5 ne dobijo premium boost-a. Relevance (60%) vedno dominira nad Premium (5%)."
+    },
+    "transparency": {
+      "title": "Transparentnost priporočil",
+      "intro": "Vsako AI priporočilo je jasno označeno. Uporabnik ve kaj je oglas in kaj organsko.",
+      "labels": {
+        "featured": {
+          "badge": "⭐ Featured",
+          "desc": "Preverjen partner z visoko kakovostjo profila in Premium članstvom. Quality Score > 90."
+        },
+        "premium": {
+          "badge": "👑 Premium",
+          "desc": "Partner podpira razvoj platforme in ima razširjen profil. Boost max 5%."
+        },
+        "verified": {
+          "badge": "✓ Preverjen",
+          "desc": "Podatke je preverila ekipa Discover Slovenia AI."
+        },
+        "affiliate": {
+          "badge": "🔗 Partnerska povezava",
+          "desc": "Affiliate link — Discover Slovenia AI lahko prejme provizijo. Vedno jasno označeno."
+        },
+        "organic": {
+          "badge": "(brez oznake)",
+          "desc": "Organsko priporočilo — brezplačen lokal, AI ga je priporočil glede na relevantnost."
+        }
+      }
+    },
+    "dataProtection": {
+      "title": "Varstvo podatkov",
+      "gdpr": {
+        "title": "GDPR skladnost",
+        "desc": "Politika zasebnosti, piškotki, pravica do pozabe. DPA za premium partnerje."
+      },
+      "free": {
+        "title": "Brezplačno za uporabnike",
+        "desc": "Uporabnik nikoli ne plača za AI funkcije. Monetizacija samo prek ponudnikov."
+      },
+      "noMiddlemen": {
+        "title": "Brez posrednikov",
+        "desc": "AI poveže turista z ponudnikom. Rezervacijo opravi turist direktno pri ponudniku."
+      },
+      "auditLog": {
+        "title": "Audit log",
+        "desc": "Vse admin akcije (odobritev, zavrnitev, sponzorstvo) so zabeležene in sledljive."
+      }
+    },
+    "meta": {
+      "title": "Zaupanje in varnost",
+      "description": "Kako preverjamo partnerje, kako deluje AI ranking in kako varujemo vaše podatke."
+    }
+  },
+  "welcomeBack": {
+    "title": "Dobrodošel nazaj! 👋",
+    "knowsLabel": "AI že ve:",
+    "visitedCount": "{count} obiskanih destinacij",
+    "quizCta": "Odgovori na <quizLink>2-minutni kviz</quizLink>, da ti AI sestavi potovanje po meri.",
+    "close": "Zapri",
+    "interests": {
+      "narava": "narava",
+      "kulinarika": "lokalna hrana",
+      "avantura": "avantura",
+      "kultura": "kultura"
+    },
+    "groups": {
+      "solo": "sam/a",
+      "par": "par",
+      "druzina": "družina",
+      "prijatelji": "prijatelji"
+    }
   }
 }

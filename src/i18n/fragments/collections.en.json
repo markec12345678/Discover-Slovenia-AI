@@ -1,0 +1,43 @@
+{
+  "collections": {
+    "eyebrow": "Curated categories",
+    "title": "Collections",
+    "subtitle": "Curated categories for every occasion — from winter packages to romantic escapes and eco local products.",
+    "explore": "Explore",
+    "openAria": "Open the {title} collection",
+    "items": {
+      "winter": {
+        "title": "Winter packages",
+        "description": "Skiing, wellness and hearty food for cold days"
+      },
+      "summer": {
+        "title": "Summer packages",
+        "description": "Rafting, hiking and refreshing days by the water"
+      },
+      "romantic": {
+        "title": "Romantic escapes",
+        "description": "For couples — castles, the lake, vineyards"
+      },
+      "family": {
+        "title": "Family",
+        "description": "Kid-friendly activities and products"
+      },
+      "gourmet": {
+        "title": "Culinary experiences",
+        "description": "Wine tastings, cheese-making, cooking workshops"
+      },
+      "adventure": {
+        "title": "Adrenaline",
+        "description": "Rafting, skiing, climbing, zip-line"
+      },
+      "eco": {
+        "title": "Eco & local",
+        "description": "Organic products and sustainable experiences"
+      },
+      "luxury": {
+        "title": "Luxury",
+        "description": "High-end experiences and products"
+      }
+    }
+  }
+}

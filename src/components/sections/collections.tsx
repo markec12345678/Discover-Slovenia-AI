@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,8 +11,11 @@ import { CollectionModal } from "@/components/sections/collection-modal";
 /**
  * CollectionsSection — kurirane zbirke za boljšo navigacijo in AI priporočila.
  * Grid 4/2/1 kolone. Klik na kartico odpre CollectionModal z rezultati.
+ * FW4.3-2: naslovi/opisi zbirk živijo v fragmentih collections.{sl,en}.json
+ * (ključi po id-ju zbirke).
  */
 export function CollectionsSection() {
+  const t = useTranslations("collections");
   const [active, setActive] = useState<Collection | null>(null);
 
   return (
@@ -25,17 +29,16 @@ export function CollectionsSection() {
         <div className="mx-auto max-w-2xl text-center">
           <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
             <Sparkles className="size-3 text-primary" aria-hidden="true" />
-            Kurirane kategorije
+            {t("eyebrow")}
           </div>
           <h2
             id="zbirke-title"
             className="text-3xl font-bold tracking-tight sm:text-4xl"
           >
-            Zbirke
+            {t("title")}
           </h2>
           <p className="mt-3 text-base text-muted-foreground">
-            Kurirane kategorije za vsako priložnost — od zimskih paketov do
-            romantičnih pobegov in eko lokalnih izdelkov.
+            {t("subtitle")}
           </p>
         </div>
 
@@ -66,12 +69,14 @@ function CollectionCard({
   collection: Collection;
   onOpen: () => void;
 }) {
+  const t = useTranslations("collections");
+
   return (
     <Card
       className="group relative cursor-pointer overflow-hidden border-border/60 py-4 transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg sm:py-6"
       role="button"
       tabIndex={0}
-      aria-label={`Odpri zbirko ${collection.title}`}
+      aria-label={t("openAria", { title: t(`items.${collection.id}.title`) })}
       onClick={onOpen}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -89,10 +94,10 @@ function CollectionCard({
         </div>
         <div className="min-w-0">
           <h3 className="text-base font-semibold leading-tight sm:text-lg">
-            {collection.title}
+            {t(`items.${collection.id}.title`)}
           </h3>
           <p className="mt-1.5 text-xs leading-snug text-muted-foreground line-clamp-2 sm:text-sm">
-            {collection.description}
+            {t(`items.${collection.id}.description`)}
           </p>
         </div>
         <Button
@@ -103,7 +108,7 @@ function CollectionCard({
           tabIndex={-1}
           aria-hidden="true"
         >
-          Razišči
+          {t("explore")}
           <ArrowRight
             className="size-3.5 transition-transform group-hover:translate-x-0.5"
             aria-hidden="true"

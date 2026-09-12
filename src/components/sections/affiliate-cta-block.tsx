@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BedDouble, Car, Ticket, Info, ExternalLink } from "lucide-react";
@@ -13,14 +14,17 @@ import { BedDouble, Car, Ticket, Info, ExternalLink } from "lucide-react";
 // Stil je usklajen z obstoječim "Načrtujte potovanje" CTA na SEO straneh
 // (rounded-2xl border border-primary/30 bg-primary/5), paleta primary/emerald,
 // brez modre/indigo.
+//
+// FW4.3-2: besedila živijo v fragmentih affiliateCta.{sl,en}.json —
+// `destination` je prop in se interpolira ({destination}).
 
 interface AffiliateCardConfig {
   icon: typeof BedDouble;
-  label: string;
-  title: string;
-  description: (destination: string) => string;
-  cta: string;
-  ariaLabel: (destination: string) => string;
+  labelKey: string;
+  titleKey: string;
+  descKey: string;
+  ctaKey: string;
+  ariaKey: string;
   href: (destination: string) => string;
 }
 
@@ -30,32 +34,29 @@ interface AffiliateCardConfig {
 const CARDS: Record<"hotels" | "cars" | "activities", AffiliateCardConfig> = {
   hotels: {
     icon: BedDouble,
-    label: "Nastanitev",
-    title: "Hoteli in apartmaji",
-    description: (d) => `Poiščite hotele in apartmaje v ${d}.`,
-    cta: "Poišči nastanitev",
-    ariaLabel: (d) =>
-      `Poišči nastanitev v ${d} — odpre Booking.com (partnerska povezava)`,
+    labelKey: "hotels.label",
+    titleKey: "hotels.title",
+    descKey: "hotels.desc",
+    ctaKey: "hotels.cta",
+    ariaKey: "hotels.aria",
     href: (d) => `/go/hotels?dest=${encodeURIComponent(d)}`,
   },
   cars: {
     icon: Car,
-    label: "Najem avta",
-    title: "Primerjaj ponudnike",
-    description: () => `Brezplačna odpoved in primerjava ponudb na enem mestu.`,
-    cta: "Najemi avto",
-    ariaLabel: (d) =>
-      `Najemi avto za ${d} — odpre DiscoverCars (partnerska povezava)`,
+    labelKey: "cars.label",
+    titleKey: "cars.title",
+    descKey: "cars.desc",
+    ctaKey: "cars.cta",
+    ariaKey: "cars.aria",
     href: (d) => `/go/cars?dest=${encodeURIComponent(d)}`,
   },
   activities: {
     icon: Ticket,
-    label: "Turi in izkušnje",
-    title: "Vodeni izleti",
-    description: () => `Vodeni izleti in aktivnosti z lokalnimi ponudniki.`,
-    cta: "Poglej izlete",
-    ariaLabel: (d) =>
-      `Poglej ture in izkušnje za ${d} — odpre GetYourGuide (partnerska povezava)`,
+    labelKey: "activities.label",
+    titleKey: "activities.title",
+    descKey: "activities.desc",
+    ctaKey: "activities.cta",
+    ariaKey: "activities.aria",
     href: (d) => `/go/activities?dest=${encodeURIComponent(d)}`,
   },
 };
@@ -77,24 +78,24 @@ export interface AffiliateCtaBlockProps {
   variant?: Variant;
 }
 
-export function AffiliateCtaBlock({
+export async function AffiliateCtaBlock({
   destination,
   variant = "full",
 }: AffiliateCtaBlockProps) {
+  const t = await getTranslations("affiliateCta");
   const keys = VARIANTS[variant];
 
   return (
     <section
       className="mb-10 rounded-2xl border border-primary/30 bg-primary/5 p-6 sm:p-8"
-      aria-label={`Rezervacija za ${destination}`}
+      aria-label={t("sectionAria", { destination })}
     >
       <div className="mb-6 text-center">
         <h2 className="text-2xl font-bold mb-2">
-          Rezervirajte svoj obisk {destination}
+          {t("title", { destination })}
         </h2>
         <p className="text-sm text-muted-foreground max-w-xl mx-auto">
-          Povežemo vas z preverjenimi partnerji — rezervirate direktno pri njih,
-          brez posrednikov in brez dodatnih stroškov.
+          {t("subtitle")}
         </p>
       </div>
 
@@ -116,20 +117,20 @@ export function AffiliateCtaBlock({
                   <Icon className="size-5 text-primary" aria-hidden="true" />
                 </div>
                 <div className="text-xs uppercase tracking-wide text-muted-foreground mt-1">
-                  {card.label}
+                  {t(card.labelKey)}
                 </div>
-                <h3 className="font-semibold">{card.title}</h3>
+                <h3 className="font-semibold">{t(card.titleKey)}</h3>
                 <p className="text-sm text-muted-foreground flex-1">
-                  {card.description(destination)}
+                  {t(card.descKey, { destination })}
                 </p>
                 <Button asChild className="mt-2 w-full">
                   <a
                     href={card.href(destination)}
                     target="_blank"
                     rel="sponsored noopener noreferrer"
-                    aria-label={card.ariaLabel(destination)}
+                    aria-label={t(card.ariaKey, { destination })}
                   >
-                    {card.cta}
+                    {t(card.ctaKey)}
                     <ExternalLink className="ml-2 size-4" aria-hidden="true" />
                   </a>
                 </Button>
@@ -142,9 +143,7 @@ export function AffiliateCtaBlock({
       {/* EU disclosure (pravno obvezna označba partnerskih povezav) */}
       <p className="mt-5 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
         <Info className="size-3.5 shrink-0" aria-hidden="true" />
-        Partnerske povezave: Booking.com, DiscoverCars, GetYourGuide. Če prek
-        njih opravite rezervacijo, lahko prejmemo provizijo — cena za vas se
-        ne poveča.
+        {t("disclosure")}
       </p>
     </section>
   );

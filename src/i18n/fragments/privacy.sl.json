@@ -1,0 +1,48 @@
+{
+  "privacy": {
+    "title": "Politika zasebnosti",
+    "lastUpdated": "Zadnja posodobitev:",
+    "sections": {
+      "s1": {
+        "title": "1. Splošno",
+        "body": "Discover Slovenia AI (\"platforma\") spoštuje vašo zasebnost. Ta politika opisuje, katere podatke zbiramo, kako jih uporabljamo in katere pravice imate."
+      },
+      "s2": {
+        "title": "2. Podatki obiskovalcev",
+        "body": "<strong>Ne zbiramo osebnih podatkov obiskovalcev</strong> brez izrecne privolitve. Spremljamo samo anonimne analitične podatke (ogledi strani, kliki) za izboljšanje platforme."
+      },
+      "s3": {
+        "title": "3. Newsletter",
+        "body": "Če se prijavite na newsletter, shranimo vaš email naslov. Uporabimo ga izključno za pošiljanje turističnih vodnikov in nasvetov. Kadarkoli se lahko odjavite."
+      },
+      "s4": {
+        "title": "4. Ponudniki (B2B)",
+        "body": "Registrirani ponudniki zagotovijo: ime, email, ime podjetja in geslo. Gesla so shranjena z bcrypt hashing (12 rounds). Poslovni podatki (naslov, telefon, spletna stran) so javno prikazani na platformi."
+      },
+      "s5": {
+        "title": "5. Leadi (JoinUs forma)",
+        "body": "Ko izpolnite obrazec \"Pridruži se\", shranimo: ime, email, telefon, ime podjetja, tip, kraj in želen paket. Te podatke uporabimo izključno za kontaktiranje v zvezi z vašo prijavo."
+      },
+      "s6": {
+        "title": "6. Piškotki",
+        "body": "Platforma uporablja nujno potrebne piškotke za delovanje (avtentikacija, jezikovne nastavitve). Ne uporabljamo marketinških ali sledilnih piškotkov."
+      },
+      "s7": {
+        "title": "7. Plačila (Stripe)",
+        "body": "Plačila se obdelujejo preko Stripe. Mi ne shranjujemo podatkov o kreditnih karticah. Stripe je PCI-DSS certificiran."
+      },
+      "s8": {
+        "title": "8. Vaše pravice",
+        "body": "V skladu z GDPR imate pravico do: vpogleda, popravka, izbrisa in prenosa svojih podatkov. Za uveljavljanje pravic pišite na <email>privacy@discoverslovenia.ai</email>."
+      },
+      "s9": {
+        "title": "9. Kontakt",
+        "body": "Za vprašanja o zasebnosti: <email>privacy@discoverslovenia.ai</email>"
+      }
+    },
+    "meta": {
+      "title": "Politika zasebnosti",
+      "description": "Politika zasebnosti platforme Discover Slovenia AI. Kako ravnamo z osebnimi podatki."
+    }
+  }
+}

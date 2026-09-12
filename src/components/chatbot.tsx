@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
 
 interface ChatMessage {
@@ -132,6 +132,8 @@ function makeWelcome(t: (k: string) => string): ChatMessage {
  */
 export function Chatbot() {
   const t = useTranslations("chatbot");
+  // FW4.3-2: chat API-ju povemo jezik pogovora (en → angleški asistent)
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(() => [makeWelcome(t)]);
   const [input, setInput] = useState("");
@@ -199,6 +201,7 @@ export function Chatbot() {
         body: JSON.stringify({
           messages: newMessages,
           currentPage: typeof window !== "undefined" ? window.location.pathname : undefined,
+          language: locale === "en" ? "en" : "sl",
         }),
       });
 

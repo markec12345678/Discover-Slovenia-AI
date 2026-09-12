@@ -1,0 +1,50 @@
+{
+  "dataSources": {
+    "title": "Vir podatkov",
+    "intro": "Platforma Discover Slovenia AI uporablja naslednje vire podatkov za zagotavljanje kakovostnih informacij o slovenskih turističnih destinacijah.",
+    "sources": {
+      "osm": {
+        "type": "POI baza",
+        "desc": "POI podatki (točke interesa) — atrakcije, muzeji, restavracije, hoteli, razgledišča, naravne znamenitosti, religiozni objekti. Licenca: ODbL."
+      },
+      "wikipedia": {
+        "type": "Opisi",
+        "desc": "Opisi destinacij in POI-jev. Licenca: CC BY-SA."
+      },
+      "openMeteo": {
+        "type": "Vreme",
+        "desc": "Vremenski podatki v realnem času. Brezplačni API brez ključa."
+      },
+      "zai": {
+        "type": "AI",
+        "desc": "AI generiranje itinererjev na podlagi uporabnikovih preferenc."
+      },
+      "booking": {
+        "type": "Nastanitev",
+        "desc": "Iskanje nastanitev. Affiliate program."
+      },
+      "discoverCars": {
+        "type": "Transport",
+        "desc": "Najem avtomobila. Affiliate program."
+      },
+      "getYourGuide": {
+        "type": "Aktivnosti",
+        "desc": "Aktivnosti in izkušnje. Affiliate program."
+      },
+      "skyscanner": {
+        "type": "Leti",
+        "desc": "Iskanje letov. Affiliate program."
+      },
+      "worldNomads": {
+        "type": "Zavarovanje",
+        "desc": "Potno zavarovanje. Affiliate program."
+      }
+    },
+    "providersTitle": "Lokalni ponudniki",
+    "providersText": "Podatki o lokalnih ponudnikih (hoteli, restavracije, aktivnosti, izdelki, izkušnje) so prispevani s strani registriranih ponudnikov preko B2B portala. Vsak ponudnik je odgovoren za točnost svojih podatkov.",
+    "meta": {
+      "title": "Vir podatkov",
+      "description": "Seznam virov podatkov, ki jih uporablja platforma Discover Slovenia AI."
+    }
+  }
+}

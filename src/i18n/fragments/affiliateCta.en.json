@@ -1,0 +1,29 @@
+{
+  "affiliateCta": {
+    "sectionAria": "Booking for {destination}",
+    "title": "Book your visit to {destination}",
+    "subtitle": "We connect you with trusted partners — you book directly with them, with no middlemen and no extra costs.",
+    "disclosure": "Affiliate links: Booking.com, DiscoverCars, GetYourGuide. If you book through them we may receive a commission — the price stays the same for you.",
+    "hotels": {
+      "label": "Stay",
+      "title": "Hotels and apartments",
+      "desc": "Find hotels and apartments in {destination}.",
+      "cta": "Find accommodation",
+      "aria": "Find accommodation in {destination} — opens Booking.com (affiliate link)"
+    },
+    "cars": {
+      "label": "Car rental",
+      "title": "Compare providers",
+      "desc": "Free cancellation and side-by-side comparison in one place.",
+      "cta": "Rent a car",
+      "aria": "Rent a car for {destination} — opens DiscoverCars (affiliate link)"
+    },
+    "activities": {
+      "label": "Tours and experiences",
+      "title": "Guided tours",
+      "desc": "Guided tours and activities with local providers.",
+      "cta": "See tours",
+      "aria": "See tours and experiences for {destination} — opens GetYourGuide (affiliate link)"
+    }
+  }
+}

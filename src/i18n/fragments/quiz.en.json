@@ -1,0 +1,116 @@
+{
+  "quiz": {
+    "badge": "Not sure where to start? ⭐ 2-minute quiz",
+    "title": "What kind of traveller are you?",
+    "subtitle": "Answer 5 questions and the AI will put together a trip made to measure",
+    "skip": "Skip the quiz",
+    "progress": "Question {current} of {total}",
+    "percent": "{value}%",
+    "progressAria": "Quiz progress",
+    "back": "Back",
+    "backAria": "Back to the previous question",
+    "questions": {
+      "tempo": {
+        "title": "What pace suits you?",
+        "options": {
+          "sproscen": { "label": "Relaxed", "desc": "Slowly, no schedule" },
+          "uravnotezen": { "label": "Balanced", "desc": "A mix of calm and movement" },
+          "akcija": { "label": "Action", "desc": "From dawn to dusk" }
+        }
+      },
+      "vibe": {
+        "title": "What appeals to you most?",
+        "options": {
+          "narava": { "label": "Nature & hiking", "desc": "Lakes, gorges, mountains" },
+          "hrana": { "label": "Food & wine", "desc": "Inns and tastings" },
+          "adrenalin": { "label": "Adrenaline & sport", "desc": "Rafting, cycling, skiing" },
+          "kultura": { "label": "Culture & cities", "desc": "Old towns, castles, museums" }
+        }
+      },
+      "season": {
+        "title": "When would you travel?",
+        "options": {
+          "spring": { "label": "Spring", "desc": "Blossoms and fresh greenery" },
+          "summer": { "label": "Summer", "desc": "Swimming and long days" },
+          "autumn": { "label": "Autumn", "desc": "Colours and the bora in the vineyards" },
+          "winter": { "label": "Winter", "desc": "Skiing and a festive feel" }
+        }
+      },
+      "group": {
+        "title": "Who are you travelling with?",
+        "options": {
+          "solo": { "label": "Solo", "desc": "Freedom without compromise" },
+          "par": { "label": "Couple", "desc": "Romance for two" },
+          "druzina": { "label": "Family with kids", "desc": "Fun for all ages" },
+          "prijatelji": { "label": "Friends", "desc": "The crew and laughter" }
+        }
+      },
+      "budget": {
+        "title": "What's your budget?",
+        "options": {
+          "low": { "label": "Budget", "desc": "Affordable, but smart" },
+          "mid": { "label": "Mid-range", "desc": "Comfort without splashing out" },
+          "lux": { "label": "No limits", "desc": "Top-end experiences" }
+        }
+      }
+    },
+    "styles": {
+      "narava": {
+        "label": "Nature Lover",
+        "desc": "Peace, fresh air and trails that end by a lake. Your Slovenia: Triglav National Park, the Soča and Bohinj."
+      },
+      "hrana": {
+        "label": "Foodie",
+        "desc": "You travel with your stomach. Your Slovenia: inns serving local ingredients and the wine roads of Štajerska and Dolenjska."
+      },
+      "adrenalin": {
+        "label": "Adventurer",
+        "desc": "Adrenaline is your fuel. Your Slovenia: rafting on the Soča, canyoning in the gorges and skiing on Vogel."
+      },
+      "kultura": {
+        "label": "Culture Seeker",
+        "desc": "History and the buzz of a city make you happy. Your Slovenia: Ljubljana, Ptuj, Celje and Piran."
+      },
+      "budget": {
+        "label": "Budget Explorer",
+        "desc": "You see a lot, you spend little. Your Slovenia: free trails, public transport and local markets."
+      },
+      "luxury": {
+        "label": "Luxury Traveller",
+        "desc": "No compromises. Your Slovenia: wellness spas, premium tastings and hotel experiences."
+      }
+    },
+    "seasons": {
+      "spring": "spring",
+      "summer": "summer",
+      "autumn": "autumn",
+      "winter": "winter"
+    },
+    "styleLabel": "Your travel style",
+    "recommendations": "Recommended destinations",
+    "planCta": "Plan my trip",
+    "planCtaAria": "Plan my trip with the AI planner",
+    "restart": "Retake the quiz",
+    "restartAria": "Restart the quiz from the beginning",
+    "prompt": {
+      "template": "Plan a 3-day trip for a traveller who loves {interest}, prefers {season}, travelling {group}, budget {budget}",
+      "interest": {
+        "narava": "nature and hiking",
+        "hrana": "local food and wine",
+        "adrenalin": "adrenaline and sport",
+        "kultura": "culture and cities"
+      },
+      "group": {
+        "solo": "solo",
+        "par": "with a partner",
+        "druzina": "with the family",
+        "prijatelji": "with friends"
+      },
+      "budget": {
+        "low": "budget",
+        "mid": "mid-range",
+        "lux": "unlimited"
+      }
+    }
+  }
+}

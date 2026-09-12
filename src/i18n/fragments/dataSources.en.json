@@ -1,0 +1,50 @@
+{
+  "dataSources": {
+    "title": "Data sources",
+    "intro": "Discover Slovenia AI uses the following data sources to bring you reliable information about Slovenian tourist destinations.",
+    "sources": {
+      "osm": {
+        "type": "POI database",
+        "desc": "POI data (points of interest) — attractions, museums, restaurants, hotels, viewpoints, natural landmarks, religious sites. Licence: ODbL."
+      },
+      "wikipedia": {
+        "type": "Descriptions",
+        "desc": "Descriptions of destinations and POIs. Licence: CC BY-SA."
+      },
+      "openMeteo": {
+        "type": "Weather",
+        "desc": "Real-time weather data. Free API with no key required."
+      },
+      "zai": {
+        "type": "AI",
+        "desc": "AI itinerary generation based on user preferences."
+      },
+      "booking": {
+        "type": "Accommodation",
+        "desc": "Accommodation search. Affiliate programme."
+      },
+      "discoverCars": {
+        "type": "Transport",
+        "desc": "Car rental. Affiliate programme."
+      },
+      "getYourGuide": {
+        "type": "Activities",
+        "desc": "Activities and experiences. Affiliate programme."
+      },
+      "skyscanner": {
+        "type": "Flights",
+        "desc": "Flight search. Affiliate programme."
+      },
+      "worldNomads": {
+        "type": "Insurance",
+        "desc": "Travel insurance. Affiliate programme."
+      }
+    },
+    "providersTitle": "Local providers",
+    "providersText": "Details about local providers (hotels, restaurants, activities, products, experiences) are contributed by registered providers through the B2B portal. Each provider is responsible for the accuracy of their own details.",
+    "meta": {
+      "title": "Data sources",
+      "description": "The list of data sources used by the Discover Slovenia AI platform."
+    }
+  }
+}

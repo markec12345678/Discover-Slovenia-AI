@@ -1,0 +1,175 @@
+{
+  "guidePage": {
+    "metaNotFound": "Guide not found",
+    "breadcrumbHome": "Home",
+    "breadcrumbAria": "Breadcrumb",
+    "editorialRating": "Editorial rating {rating}★",
+    "introHeading": "{label} in {name}",
+    "metaLine": "Duration: {duration} · Price range: {price}",
+    "highlightsTitle": "Featured activities",
+    "fallbackHighlight": "A local experience",
+    "experiencesTitle": "Experiences in {name} for a {labelLower}",
+    "allExperiences": "All experiences",
+    "listingsTitle": "Recommended local spots in {name}",
+    "allListings": "All local spots",
+    "relatedTitle": "Related guides",
+    "thingsToDoTitle": "Things to do in {name}",
+    "thingsToDoDesc": "All {count} sights and activities in {name}.",
+    "bestTimeTitle": "Best time to visit {name}",
+    "bestTimeDesc": "A season-by-season guide — spring, summer, autumn, winter.",
+    "faqTitle": "Frequently asked questions",
+    "ctaTitle": "Put together the perfect {labelLower} in {name}",
+    "ctaP": "The AI takes your budget, interests and time into account. {description}",
+    "ctaPlanner": "AI travel planner",
+    "ctaItineraries": "Ready-made itineraries",
+    "elsewhereTitle": "{label} elsewhere",
+    "elsewhereDesc": "Explore {labelLower} in other Slovenian destinations:",
+    "meta": {
+      "title": "{title} — {label} guide",
+      "ogDescription": "{description} A guide to {name}.",
+      "keywordGuide": "guide",
+      "keywordTravel": "travel",
+      "keywordSlovenia": "Slovenia"
+    },
+    "faqs": {
+      "romanticni-pobeg": {
+        "q1": "What makes {name} special for a romantic escape?",
+        "a1": "{name} offers a unique blend of nature, cultural sights and cuisine. A romantic escape to {name} is perfect for anniversaries, Valentine's Day or proposals — the emphasis is on privacy, views and local flavours.",
+        "q2": "How much does a romantic escape to {name} cost?",
+        "a2": "A romantic escape to {name} typically costs {price}, including a room with a view, dinner for two and one experience (for example a tasting or a boat ride).",
+        "q3": "When is the best time for a romantic visit to {name}?",
+        "a3": "Spring (April–June) and early autumn (September–October) bring the most romantic atmosphere to {name} — pleasant temperatures, fewer tourists and beautiful colours in nature.",
+        "q4": "Which places to stay in {name} are the most romantic?",
+        "a4": "For a romantic escape we recommend boutique hotels and rooms with a view. Browse our lists of local spots in {name} — every provider is hand-picked."
+      },
+      "druzinski": {
+        "q1": "Is {name} suitable for a visit with children?",
+        "a1": "Yes — {name} is an excellent family destination with safe walking trails, child-friendly restaurants and interactive experiences. Most attractions are accessible with pushchairs too.",
+        "q2": "How much does a family trip to {name} cost?",
+        "a2": "A family trip to {name} (2 adults + 2 children) usually costs {price}, including a family room, meals and attraction tickets. Children under 6 often enter free of charge.",
+        "q3": "Which activities in {name} are suitable for children?",
+        "a3": "{name} offers a variety of family activities — from easier walks and cycling to museums with interactive exhibitions, workshops and tastings. Our AI recommendations take the age of the children into account.",
+        "q4": "When is the best time for a family visit to {name}?",
+        "a4": "School holidays (summer, October, February) are ideal for a family visit to {name}. In summer all the outdoor attractions are open, while winter brings skiing and winter festivals."
+      },
+      "budget": {
+        "q1": "How much does a visit to {name} cost on a budget?",
+        "a1": "On a limited budget you can visit {name} for {price}, including a bed in a hostel or private room, local food from the markets and free activities.",
+        "q2": "Which free activities are available in {name}?",
+        "a2": "{name} offers plenty of free activities — strolls through the old town, visits to churches, walking trails in the surroundings and public beaches. Museum tickets often carry student discounts.",
+        "q3": "How can I save on transport to {name}?",
+        "a3": "For affordable travel to {name} we recommend the train or bus (search via FlixBus or Slovenian Railways). In {name} you can use local public transport or a bike (many destinations have bike-share schemes).",
+        "q4": "Can I find cheap accommodation in {name}?",
+        "a4": "Yes — {name} has hostels, private rooms via Airbnb and family guesthouses. Prices are lower out of season (November–March, apart from holidays)."
+      },
+      "vikend": {
+        "q1": "What to do in {name} over a weekend?",
+        "a1": "A weekend in {name} leaves room for the main sights, local cuisine and at least one experience. Friday evening is ideal for arriving and a stroll, Saturday for the headline attractions, Sunday for unwinding.",
+        "q2": "How much does a weekend in {name} cost?",
+        "a2": "A weekend in {name} (2 nights, 3 meals a day, attractions) costs roughly {price}. You can save with early-bird bookings and by shopping at local markets.",
+        "q3": "When is the best time for a weekend escape to {name}?",
+        "a3": "{name} works for a weekend escape all year round. Spring and autumn offer the best weather for exploring, summer brings more events, and winter means fewer tourists and lower prices.",
+        "q4": "How do I get to {name} for a weekend?",
+        "a4": "{name} is reachable by car, train or bus. We recommend booking transport at least a week in advance, especially for Friday afternoon."
+      },
+      "ai": {
+        "q": "Can the AI put together an itinerary for {name}?",
+        "a": "Yes — our AI planner can build a fully tailored itinerary for {name} that reflects your interests, budget and available time. Give it a try on the Plan page."
+      }
+    },
+    "guideTypes": {
+      "romanticni-pobeg": {
+        "label": "Romantic escape",
+        "shortLabel": "Romantic",
+        "description": "An escape for two — romantic activities, candlelit dinners, private experiences and rooms with a view.",
+        "title": "A romantic escape to {name}",
+        "intro": "{name} — {tagline}. This guide is designed for couples looking for private moments: romantic lakeside or seaside strolls, candlelit dinners, private tastings and rooms with a view. Every recommendation is hand-picked for an unforgettable escape for two.",
+        "durationLabel": "2 days / 1 night",
+        "priceRange": "€180–350 per couple",
+        "bestFor": "Couples · Newlyweds · Anniversaries",
+        "metaKeyword": "romance",
+        "h1": {
+          "title": "A romantic stroll along {hl1}",
+          "description": "Begin the day with a leisurely stroll along {hl1} in {name}. The morning light and thinner crowds make for the perfect atmosphere for two."
+        },
+        "h2": {
+          "title": "A private experience: {hl2}",
+          "description": "In the afternoon, take time for a private experience in {name} — a tasting, a boat ride or a local workshop. Our recommendations are tried and tested for couples."
+        },
+        "h3": {
+          "title": "A candlelit dinner in {name}",
+          "description": "Round off the day with a romantic dinner at one of the selected restaurants in {name}. Local chefs serve seasonal menus with wines from Slovenian vineyards."
+        }
+      },
+      "druzinski": {
+        "label": "Family trip",
+        "shortLabel": "Family",
+        "description": "Family-friendly activities for all ages — safe walking trails, attractions for children, kids' menus and interactive experiences.",
+        "title": "A family trip to {name}",
+        "intro": "Planning a family trip to {name}? This guide brings together safe walking trails, interactive experiences for children, family-friendly restaurants with kids' menus and accommodation with family rooms. {name} is a great choice for unforgettable family memories.",
+        "durationLabel": "2–3 days",
+        "priceRange": "€120–260 per family",
+        "bestFor": "Families with children · Multi-generational trips",
+        "metaKeyword": "family",
+        "h1": {
+          "title": "A family visit: {hl1}",
+          "description": "{hl1} in {name} is child-friendly — interactive displays, safe paths and often workshops for the youngest visitors."
+        },
+        "h2": {
+          "title": "Unwinding at {hl2}",
+          "description": "{hl2} offers space for a picnic and some downtime. Children can play while the grown-ups enjoy the nature of {name}."
+        },
+        "h3": {
+          "title": "A family dinner in {name}",
+          "description": "Choose a restaurant with a children's menu in {name}. Local pizzas, pasta and traditional Slovenian dishes go down well with every age."
+        }
+      },
+      "budget": {
+        "label": "Budget-friendly visit",
+        "shortLabel": "Budget",
+        "description": "Maximum experience on a minimal budget — free attractions, a local picnic, cheap beds and public transport.",
+        "title": "{name} on a budget",
+        "intro": "{name} can be enjoyed even on a small budget. This guide covers free attractions, local markets, affordable beds and public transport. Every suggestion is tried and tested for travellers who want the maximum experience at the minimum cost.",
+        "durationLabel": "1–2 days",
+        "priceRange": "€30–80 per person",
+        "bestFor": "Students · Backpackers · Budget travellers",
+        "metaKeyword": "budget-friendly",
+        "h1": {
+          "title": "A free visit: {hl1}",
+          "description": "{hl1} in {name} is free to admire from the outside. A stroll beside it offers wonderful photo opportunities and a taste of local culture."
+        },
+        "h2": {
+          "title": "A picnic by {hl2}",
+          "description": "Buy local cheese, bread and fruit at the market in {name} and lay out a picnic. What you save on a meal leaves more for experiences."
+        },
+        "h3": {
+          "title": "A walk to {hl3}",
+          "description": "{hl3} is free to explore on foot or by bike. Waymarked trails in {name} suit every level."
+        }
+      },
+      "vikend": {
+        "label": "Weekend escape",
+        "shortLabel": "Weekend",
+        "description": "The perfect two-day escape — Friday evening to Sunday afternoon. A balanced programme of headline sights and local cuisine.",
+        "title": "A weekend in {name}",
+        "intro": "The perfect weekend escape to {name} — Friday evening to Sunday afternoon. A balanced programme of headline sights, local cuisine and time to unwind. {name} is close enough for a short break and rich enough for a full weekend.",
+        "durationLabel": "Weekend (Friday–Sunday)",
+        "priceRange": "€150–280 per person",
+        "bestFor": "Working people · Friends · Quick escapes",
+        "metaKeyword": "weekend escape",
+        "h1": {
+          "title": "Friday: arrival and a stroll around {name}",
+          "description": "After arriving in {name}, settle in and take an unhurried stroll through the old town. Enjoy a local coffee and plan the two days ahead."
+        },
+        "h2": {
+          "title": "Saturday: {hl1} and the surroundings",
+          "description": "Devote the main day to the headline sights — {hl1}, the local museum and lunch at a traditional restaurant in {name}."
+        },
+        "h3": {
+          "title": "Sunday: {hl2} and departure",
+          "description": "Use the last day for {hl2} and some shopping for local keepsakes. One more local coffee in {name} before you set off home."
+        }
+      }
+    }
+  }
+}

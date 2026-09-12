@@ -1,5 +1,6 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { ADRIA_GUIDES } from "@/lib/adria-guides";
+import { isEnRoute } from "@/i18n/routing";
 
 // Skupni seznam vseh URL-jev, ki jih generira platforma.
 // Uporablja ga /sitemap.xml route handler in /api/admin/indexing za poročanje o indeksaciji.
@@ -70,12 +71,15 @@ export interface SitemapUrl {
   category: string;
   priority: number;
   changeFrequency: "daily" | "weekly" | "monthly";
+  /** FW4.3-2: hreflang alternati (samo za poti z EN različico) */
+  alternates?: { hreflang: string; url: string }[];
 }
 
 /**
  * Vrne vse URL-je, ki jih platforma generira.
- * Trenutno: 18 stalnih + 22 things-to-do + 110 itinererjev + 88 best-time + 88 vodnikov
- * + 10 jadranskih vodnikov (ADRIA-1) = 336
+ * Trenutno: 19 stalnih + 22 things-to-do + 110 itinererjev + 88 best-time + 88 vodnikov
+ * + 10 jadranskih vodnikov (ADRIA-1) = 337 SL URL-jev
+ * + 317 EN različic (FW4.3-2: jedro lijaka na EN whitelisti) = 654 skupaj.
  *
  * `baseUrl` (MONET-10): dinamična pot (route handler /sitemap.xml) poda
  * DEJANSKEGA gostitelja zahteve → Google/Bing ne zavrnejo cross-host sitemapa.
@@ -119,6 +123,7 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
   add("/politika-zasebnosti", 0.3, "Politika zasebnosti", "monthly");
   add("/pogoji-uporabe", 0.3, "Pogoji uporabe", "monthly");
   add("/vir-podatkov", 0.4, "Vir podatkov", "monthly");
+  add("/zaupanje-in-varnost", 0.4, "Zaupanje in varnost", "monthly");
   // GEO (MONET-10): formati, ki jih AI agenti in iskalniki iščejo na korenu.
   add("/llms.txt", 0.3, "GEO", "monthly");
   add("/rss.xml", 0.3, "GEO", "daily");
@@ -154,19 +159,63 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
     add(`/vodici/${g.slug}`, 0.7, "Jadranski vodnik", "weekly");
   }
 
-  return urls;
+  // === FW4.3-2: EN različice (samo poti na EN whitelisti — jedro lijaka)
+  // ZA VSAK SL URL z EN različico se doda /en URL istih lastnosti ter
+  // se OBEJEMA prilepita hreflang alternati (xhtml:link v sitemap.xml).
+  // GEO poti (/llms.txt, /rss.xml) in uredniške SL vsebine (vodici, dogodki,
+  // tržnica …) EN različice NIMAJO (proxy jih 308 preusmeri na SL). ===
+  const enUrls: SitemapUrl[] = [];
+  for (const u of urls) {
+    if (!isEnRoute(u.path)) continue;
+    const enPath = u.path === "/" ? "/en" : `/en${u.path}`;
+    const enUrl: SitemapUrl = {
+      ...u,
+      url: `${baseUrl}${enPath}`,
+      path: enPath,
+      category: `${u.category} (EN)`,
+    };
+    // hreflang gruča: sl-SI (slovenska pot), en-US (angleška pot),
+    // x-default (slovenska — privzeti jezik platforme)
+    u.alternates = [
+      { hreflang: "sl-SI", url: u.url },
+      { hreflang: "en-US", url: enUrl.url },
+      { hreflang: "x-default", url: u.url },
+    ];
+    enUrl.alternates = [
+      { hreflang: "sl-SI", url: u.url },
+      { hreflang: "en-US", url: enUrl.url },
+      { hreflang: "x-default", url: u.url },
+    ];
+    enUrls.push(enUrl);
+  }
+
+  return [...urls, ...enUrls];
+}
+
+/** Število EN URL-jev (FW4.3-2) — za poročanje brez gradnje seznama. */
+export function getEnSitemapUrlCount(): number {
+  // 9 stalnih (domov, nacrtuj, destinacije + 6 info/E-E-A-T) + 22 + 110 + 88 + 88
+  return (
+    9 +
+    DESTINATIONS.length +
+    DESTINATIONS.length * 5 +
+    DESTINATIONS.length * 4 +
+    DESTINATIONS.length * 4
+  );
 }
 
 /** Skupno število vseh URL-jev (za hitro poročanje brez gradnje seznama) */
 export function getTotalSitemapUrlCount(): number {
-  // 18 stalnih + 22 + 110 + 88 + 88 + 10 jadranskih (ADRIA-1) = 336
+  // 19 stalnih + 22 + 110 + 88 + 88 + 10 jadranskih (ADRIA-1) = 337 SL
+  // + 317 EN (FW4.3-2) = 654 skupaj
   return (
-    18 +
+    19 +
     DESTINATIONS.length +
     DESTINATIONS.length * 5 +
     DESTINATIONS.length * 4 +
     DESTINATIONS.length * 4 +
-    ADRIA_GUIDES.length
+    ADRIA_GUIDES.length +
+    getEnSitemapUrlCount()
   );
 }
 

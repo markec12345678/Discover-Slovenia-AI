@@ -3,31 +3,34 @@ import { safeJsonLd } from "@/lib/security";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { Destination } from "@/lib/types";
 import { DEFAULT_BASE_URL } from "@/lib/host";
+import { isEnRoute } from "@/i18n/routing";
 
 // SEO-2: BASE_URL ni več statičen — funkcije sprejmejo `baseUrl` (host-zavedno,
 // iz resolveBaseUrlFromHeaders/currentBaseUrl iz lib/host.ts). Privzeta vrednost
 // ostane domena (varno fallback), klicatelji v strežniških komponentah pa
 // podajo DEJANSKEGA gostitelja requesta.
-// P4-8: javno samo slovenščina — /en, /de, /it so trajno (308) preusmerjeni
-// na slovensko pot (glej src/proxy.ts), zato NE objavljemo hreflang alternat
-// za neobstoječe strani. Ko bodo celoviti prevodi (roadmap C5), dodajte
-// jezike nazaj.
-const LANGS = ["sl"];
+// FW4.3-2: angleščina je javna na EN whitelisti (jedro lijaka — isEnRoute).
+// hreflang en-US SE IZDA SAMO za poti z EN različico; ostale poti (npr.
+// /vodici/*, /blog/*) imajo samo sl-SI + x-default — Google tako ne vidi
+// alternatov, ki bi jih proxy 308 preusmeril.
+// P4-8 za /de in /it ostaja: trajno (308) preusmerjena na slovensko pot
+// (glej src/proxy.ts) — zato ZA NJIH ne objavljemo hreflang alternat.
 
 // === HREFLANG HELPER ===
-// Vrne alternates.languages za Next.js metadata — hreflang za javne jezike
-// (trenutno samo sl — glej P4-8 opombo zgoraj)
+// Vrne alternates.languages za Next.js metadata — hreflang za javne jezike.
+// `path` je vedno SLOVENSKA pot (brez /en prefix-a); helper sam odloči,
+// ali EN alternat (baseUrl + /en + path) obstaja (isEnRoute).
 export function hreflangForPath(path: string, baseUrl: string = DEFAULT_BASE_URL) {
-  const languages: Record<string, string> = {};
-  for (const lang of LANGS) {
-    if (lang === "sl") {
-      languages["sl-SI"] = `${baseUrl}${path}`;
-    } else {
-      languages[lang === "en" ? "en-US" : lang === "de" ? "de-DE" : "it-IT"] = `${baseUrl}/${lang}${path}`;
-    }
+  // Normalizirana pot brez trailling slash ("/" ostane "/")
+  const clean = path === "/" ? "/" : `/${path.replace(/^\/+|\/+$/g, "")}`;
+  const languages: Record<string, string> = {
+    "sl-SI": `${baseUrl}${clean}`,
+  };
+  if (isEnRoute(clean)) {
+    languages["en-US"] = `${baseUrl}/en${clean === "/" ? "" : clean}`;
   }
-  // x-default → slovenščina
-  languages["x-default"] = `${baseUrl}${path}`;
+  // x-default → slovenščina (privzeti jezik platforme)
+  languages["x-default"] = `${baseUrl}${clean}`;
   return languages;
 }
 

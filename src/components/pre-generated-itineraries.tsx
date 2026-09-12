@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Sparkles,
   Clock,
@@ -20,92 +21,76 @@ import { cn } from "@/lib/utils";
 //
 // Za nižji barrier — uporabnik ne mora napisati, lahko izbere
 // preverjen itinerer in ga AI še dodatno personalizira.
+//
+// FW4.3-2: naslovi/poizvedbe/destinacije/poudarki živijo v fragmentih
+// pregenTrips.{sl,en}.json (ključi po id-ju poti); budget (€xx-yy) je
+// krajevno nevtralen in ostaja v podatkih.
 // ============================================================================
 
 interface PreGeneratedTrip {
   id: string;
-  title: string;
   emoji: string;
   days: number;
-  destinations: string[];
-  highlights: string[];
+  /** število prikazanih destinacijskih chipov (dest1..destN) */
+  destinationCount: number;
   budget: string;
   interests: string[];
-  query: string;
   gradient: string;
 }
 
 const TRIPS: PreGeneratedTrip[] = [
   {
     id: "bled-1-day",
-    title: "Bled v enem dnevu",
     emoji: "🏔️",
     days: 1,
-    destinations: ["Bled", "Vintgar"],
-    highlights: ["Blejski grad", "Pletna vožnja", "Vintgarska soteska", "Kremšnita"],
+    destinationCount: 2,
     budget: "€50-80",
     interests: ["narava", "kultura"],
-    query: "En dan na Bledu — grad, otok, Vintgar in kremšnita",
     gradient: "from-blue-500/10 to-cyan-500/10",
   },
   {
     id: "ljubljana-2-days",
-    title: "Ljubljana vikend",
     emoji: "🏛️",
     days: 2,
-    destinations: ["Ljubljana"],
-    highlights: ["Stari mestni center", "Ljubljanski grad", "Tromostovje", "Kulinarična tura"],
+    destinationCount: 1,
     budget: "€100-150",
     interests: ["kultura", "kulinarika"],
-    query: "Dva dni v Ljubljani — kultura, hrana in grad",
     gradient: "from-emerald-500/10 to-green-500/10",
   },
   {
     id: "soca-3-days",
-    title: "Soča avantura",
     emoji: "🌊",
     days: 3,
-    destinations: ["Reka Soča", "Kobarid", "Bovec"],
-    highlights: ["Rafting na Soči", "Kobarid muzej", "Slap Boka", "Tolminski sir"],
+    destinationCount: 3,
     budget: "€200-300",
     interests: ["avantura", "narava"],
-    query: "Tri dni ob Soči — rafting, pohodi in lokalna hrana",
     gradient: "from-cyan-500/10 to-blue-500/10",
   },
   {
     id: "piran-coast",
-    title: "Obala in Piran",
     emoji: "🌊",
     days: 2,
-    destinations: ["Piran", "Portorož"],
-    highlights: ["Tartinijev trg", "Obala", "Oljčno olje", "Soline"],
+    destinationCount: 2,
     budget: "€120-180",
     interests: ["narava", "kulinarika"],
-    query: "Vikend na obali — Piran, Portorož in lokalna hrana",
     gradient: "from-amber-500/10 to-orange-500/10",
   },
   {
     id: "bela-krajina",
-    title: "Bela krajina odkrivanje",
     emoji: "🍯",
     days: 2,
-    destinations: ["Črnomelj"],
-    highlights: ["Lokalni med", "Tradicijska hrana", "Kolpa", "Vinogradništvo"],
+    destinationCount: 1,
     budget: "€80-120",
     interests: ["kulinarika", "narava"],
-    query: "Dva dni v Beli krajini — med, hrana in narava ob Kolpi",
     gradient: "from-violet-500/10 to-purple-500/10",
   },
   {
     id: "triglav-park",
-    title: "Triglavski narodni park",
     emoji: "🏔️",
     days: 3,
-    destinations: ["Bohinj", "Triglav"],
-    highlights: ["Bohinjsko jezero", "Vzpon na Triglav", "Slap Savica", "Planinskih koče"],
+    destinationCount: 2,
     budget: "€150-250",
     interests: ["narava", "avantura"],
-    query: "Tri dni v Triglavskem narodnem parku — Bohinj, Triglav in slapi",
     gradient: "from-emerald-500/10 to-teal-500/10",
   },
 ];
@@ -115,6 +100,7 @@ interface PreGeneratedItinerariesProps {
 }
 
 export function PreGeneratedItineraries({ onSelect }: PreGeneratedItinerariesProps) {
+  const t = useTranslations("pregenTrips");
   const [hovered, setHovered] = useState<string | null>(null);
 
   return (
@@ -124,14 +110,14 @@ export function PreGeneratedItineraries({ onSelect }: PreGeneratedItinerariesPro
           <div className="mb-3 flex justify-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium">
               <TrendingUp className="size-3.5 text-primary" aria-hidden="true" />
-              Priljubljeni načrti
+              {t("badge")}
             </span>
           </div>
           <h2 className="text-2xl font-bold sm:text-3xl">
-            Ali izberi preverjen itinerer
+            {t("title")}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            AI ga še dodatno personalizira glede na tvoje želje
+            {t("subtitle")}
           </p>
         </div>
 
@@ -142,7 +128,7 @@ export function PreGeneratedItineraries({ onSelect }: PreGeneratedItinerariesPro
               <button
                 key={trip.id}
                 type="button"
-                onClick={() => onSelect?.(trip.query)}
+                onClick={() => onSelect?.(t(`trips.${trip.id}.query`))}
                 onMouseEnter={() => setHovered(trip.id)}
                 onMouseLeave={() => setHovered(null)}
                 className={cn(
@@ -159,35 +145,35 @@ export function PreGeneratedItineraries({ onSelect }: PreGeneratedItinerariesPro
                   <div className="flex items-center gap-1.5">
                     <Badge variant="secondary" className="text-[10px] gap-0.5">
                       <Clock className="size-2.5" aria-hidden="true" />
-                      {trip.days} {trip.days === 1 ? "dan" : "dneva"}
+                      {trip.days} {trip.days === 1 ? t("dayOne") : t("dayOther")}
                     </Badge>
                   </div>
                 </div>
 
                 {/* Title */}
                 <h3 className="text-base font-bold leading-tight mb-2">
-                  {trip.title}
+                  {t(`trips.${trip.id}.title`)}
                 </h3>
 
                 {/* Destinations */}
                 <div className="flex flex-wrap gap-1 mb-3">
-                  {trip.destinations.map((dest) => (
+                  {Array.from({ length: trip.destinationCount }, (_, i) => (
                     <span
-                      key={dest}
+                      key={i}
                       className="flex items-center gap-0.5 text-[11px] text-muted-foreground"
                     >
                       <MapPin className="size-2.5" aria-hidden="true" />
-                      {dest}
+                      {t(`trips.${trip.id}.dest${i + 1}`)}
                     </span>
                   ))}
                 </div>
 
                 {/* Highlights */}
                 <div className="space-y-0.5 mb-3">
-                  {trip.highlights.slice(0, 3).map((h, i) => (
+                  {[1, 2, 3].map((i) => (
                     <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Star className="size-2.5 fill-amber-400 text-amber-400" aria-hidden="true" />
-                      {h}
+                      {t(`trips.${trip.id}.hl${i}`)}
                     </div>
                   ))}
                 </div>
@@ -200,7 +186,7 @@ export function PreGeneratedItineraries({ onSelect }: PreGeneratedItinerariesPro
                     isHovered ? "translate-x-0" : "-translate-x-2 opacity-0"
                   )}>
                     <Sparkles className="size-3" aria-hidden="true" />
-                    Načrtuj
+                    {t("planCta")}
                   </span>
                 </div>
               </button>

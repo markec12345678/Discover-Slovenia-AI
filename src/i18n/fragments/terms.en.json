@@ -1,0 +1,52 @@
+{
+  "terms": {
+    "title": "Terms of use",
+    "lastUpdated": "Last updated:",
+    "sections": {
+      "s1": {
+        "title": "1. Acceptance of terms",
+        "body": "By using the Discover Slovenia AI platform you accept these terms of use."
+      },
+      "s2": {
+        "title": "2. The service",
+        "body": "The platform provides information about Slovenian tourist destinations, AI travel planning and links to local providers. The platform does not handle bookings — users book directly with the providers."
+      },
+      "s3": {
+        "title": "3. AI itineraries",
+        "body": "AI-generated itineraries are for information only. The platform accepts no liability for the accuracy of prices, availability or the quality of third-party services."
+      },
+      "s4": {
+        "title": "4. Affiliate links",
+        "body": "The platform contains affiliate links (Booking.com, DiscoverCars, GetYourGuide, Skyscanner, World Nomads, SafetyWing, Airalo, Kiwitaxi, Omio, Tiqets and Viator). If you make a booking through one of these links, Discover Slovenia may receive an affiliate commission. The price you pay never goes up because of it; you complete the booking and any payment directly with the partner, whose terms apply."
+      },
+      "s5": {
+        "title": "5. Providers (B2B)",
+        "body": "Registered providers are responsible for the accuracy of their details. The flat subscription (Premium €149/month, Enterprise €499/month) is billed monthly. You can cancel at any time with 30 days' notice."
+      },
+      "s6": {
+        "title": "6. Beta period",
+        "body": "During the beta period (up to 30 active venues) all plans are free. Once monetisation is switched on, beta users keep 6 months of free access."
+      },
+      "s7": {
+        "title": "7. Intellectual property",
+        "body": "The platform's content is released under the MIT licence. Destination images come from open sources (Unsplash, OpenStreetMap). The website code is open source on GitHub."
+      },
+      "s8": {
+        "title": "8. Limitation of liability",
+        "body": "The platform accepts no liability for any damage arising from the use of information or links to third parties."
+      },
+      "s9": {
+        "title": "9. Changes to the terms",
+        "body": "These terms may be updated. We will notify registered users by email about important changes."
+      },
+      "s10": {
+        "title": "10. Contact",
+        "body": "Questions: <email>info@discoverslovenia.ai</email>"
+      }
+    },
+    "meta": {
+      "title": "Terms of use",
+      "description": "Terms of use of the Discover Slovenia AI platform."
+    }
+  }
+}

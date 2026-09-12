@@ -1,0 +1,43 @@
+{
+  "bestTime": {
+    "breadcrumbHome": "Domov",
+    "breadcrumbCurrent": "Najboljši čas — {season}",
+    "seasons": {
+      "pomlad": { "label": "Pomlad", "months": " marec–maj", "desc": "Cvetenje, zmerno vreme, manj turistov" },
+      "poletje": { "label": "Poletje", "months": " junij–avgust", "desc": "Toplo, idealno za vodo in pohode" },
+      "jesen": { "label": "Jesen", "months": " september–november", "desc": "Barve lista, vino, manj gneče" },
+      "zima": { "label": "Zima", "months": " december–februar", "desc": "Smučanje, praznični sejmi, wellness" }
+    },
+    "bestSeasonBadge": "✓ Najboljša sezona",
+    "heroTitle": "Najboljši čas za obisk {name}",
+    "overviewTitle": "{name} v {seasonLower}",
+    "bestCardTitle": "{season} je idealna sezona za {name}!",
+    "bestCardText": "{name} je v tej sezoni na vrhuncu — {taglineLower}.",
+    "offCardTitle": "{season} ni glavna sezona za {name}",
+    "offCardText": "Vendar je to lahko prednost — manj turistov, nižje cene in drugačen doživljaj.",
+    "allSeasonsTitle": "Vse sezone za {name}",
+    "bestBadge": "★ Najboljša",
+    "faqTitle": "Pogosta vprašanja",
+    "faq": {
+      "q1": "Kdaj je najboljši čas za obisk {name}?",
+      "a1": "{season} je odličen čas za obisk {name}. Temperature so {temp}, kar je idealno za raziskovanje. Pomlad in jesen ponujata manj turistov in nižje cene.",
+      "q2": "Kakšno je vreme v {name} {seasonLower}?",
+      "a2": "V {seasonLower} so temperature v {name} običajno {temp}. Priporočamo slojevito oblačenje.",
+      "q3": "Katere aktivnosti so na voljo v {name} {seasonLower}?",
+      "a3": "{season} v {name} ponuja različne aktivnosti — od pohodništva do kulinarike. Preverite naš seznam stvari za početi v {name}.",
+      "q4": "Ali potrebujem rezervacijo za obisk {name}?",
+      "a4": "Priporočamo rezervacijo nastanitve vsaj 2 tedna vnaprej, še posebej v sezoni. Uporabite naš AI načrtovalec za optimizacijo itinererja."
+    },
+    "ctaTitle": "Načrtujte {seasonLower} potovanje v {name}",
+    "ctaText": "AI upošteva sezono, vreme in vaše interese za popoln načrt.",
+    "ctaButton": "AI itinerer",
+    "ctaThingsToDo": "Kaj početi v {name}",
+    "exploreTitle": "Raziščite tudi",
+    "meta": {
+      "notFound": "Stran ni najdena",
+      "title": "Najboljši čas za obisk {name} — {season}",
+      "description": "Kdaj obiskati {name}? {season} ({months}): {desc}. Temperature {temp}. Nasveti, aktivnosti in {seasonLower} itinerer za {name}.",
+      "ogDescription": "{desc}. Temperature {temp}. Vodič za {name} {seasonLower}."
+    }
+  }
+}

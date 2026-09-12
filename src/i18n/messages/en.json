@@ -67,11 +67,11 @@
     "forestLabel": "of Slovenia is forest",
     "seasonsLabel": "Seasons of activity",
     "fairEyebrow": "The fairest model",
-    "fairValue": "0\u00a0%",
+    "fairValue": "0 %",
     "fairUnit": "commission",
-    "fairNote": "on direct bookings (competitors: 20–43\u00a0%)",
+    "fairNote": "on direct bookings (competitors: 20–43 %)",
     "commissionLead": "A",
-    "commissionRate": "12\u00a0%",
+    "commissionRate": "12 %",
     "commissionVerb": "commission applies",
     "commissionEmphasis": "only when the AI brings in the booking",
     "commissionTail": "— never otherwise."
@@ -345,6 +345,1023 @@
     "details": "Details",
     "retry": "Try again",
     "emailPlaceholder": "you@email.com",
-    "invalidEmail": "Enter a valid email address."
+    "invalidEmail": "Enter a valid email address.",
+    "readInEnglish": "Read in English",
+    "readInSlovenian": "Read in Slovenian"
+  },
+  "about": {
+    "badge": "About",
+    "title": "About Discover Slovenia AI",
+    "intro": "<strong>Discover Slovenia AI</strong> is an AI-powered travel platform connecting travellers with local providers across Slovenia. Our mission is to make discovering Slovenian destinations effortless — from Lake Bled to Piran — with artificial intelligence, an interactive map and direct links to local providers.",
+    "offerTitle": "What we offer",
+    "offerCards": {
+      "plannerTitle": "AI travel planner",
+      "plannerDesc": "Generates personalised itineraries based on your budget, interests and season.",
+      "destinationsTitle": "22 destinations",
+      "destinationsDesc": "From the Alps to the Adriatic — with an interactive map and thousands of POIs.",
+      "providersTitle": "Local providers",
+      "providersDesc": "Direct links to hotels, restaurants and activities — you always book with the provider, at no extra cost.",
+      "languagesTitle": "4 languages",
+      "languagesDesc": "Slovene, English, German and Italian for global travellers."
+    },
+    "howTitle": "How we work",
+    "howP1": "The platform takes no commission on bookings. Instead, local providers pay a flat monthly subscription for their presence on the platform. Users always book directly with the provider — no middlemen.",
+    "howP2": "The AI planner uses <sdk>z-ai-web-dev-sdk</sdk> to generate itineraries. Points of interest (POI) data comes from <osm>OpenStreetMap</osm> and <wiki>Wikipedia</wiki>. Weather data from <meteo>Open-Meteo</meteo>.",
+    "contactTitle": "Contact",
+    "contactP": "Questions? Write to <email>info@discoverslovenia.ai</email> or visit the <contactPage>contact page</contactPage>.",
+    "dataTitle": "Details",
+    "dataTech": "Technology:",
+    "dataAi": "AI:",
+    "dataMap": "Map:",
+    "dataDb": "Database:",
+    "dataLicense": "Licence:",
+    "dataRepo": "Repo:",
+    "dataValues": {
+      "tech": "Next.js 16, TypeScript, Prisma, Tailwind CSS, shadcn/ui",
+      "ai": "z-ai-web-dev-sdk (GLM)",
+      "map": "Leaflet + OpenStreetMap",
+      "db": "SQLite (Prisma ORM)",
+      "license": "MIT (open source)"
+    },
+    "linkPrivacy": "Privacy policy",
+    "linkTerms": "Terms of use",
+    "linkSources": "Data sources",
+    "meta": {
+      "title": "About us",
+      "description": "Discover Slovenia AI is an AI-powered travel platform for Slovenia. Meet our team, our mission and how the platform works."
+    }
+  },
+  "affiliateCta": {
+    "sectionAria": "Booking for {destination}",
+    "title": "Book your visit to {destination}",
+    "subtitle": "We connect you with trusted partners — you book directly with them, with no middlemen and no extra costs.",
+    "disclosure": "Affiliate links: Booking.com, DiscoverCars, GetYourGuide. If you book through them we may receive a commission — the price stays the same for you.",
+    "hotels": {
+      "label": "Stay",
+      "title": "Hotels and apartments",
+      "desc": "Find hotels and apartments in {destination}.",
+      "cta": "Find accommodation",
+      "aria": "Find accommodation in {destination} — opens Booking.com (affiliate link)"
+    },
+    "cars": {
+      "label": "Car rental",
+      "title": "Compare providers",
+      "desc": "Free cancellation and side-by-side comparison in one place.",
+      "cta": "Rent a car",
+      "aria": "Rent a car for {destination} — opens DiscoverCars (affiliate link)"
+    },
+    "activities": {
+      "label": "Tours and experiences",
+      "title": "Guided tours",
+      "desc": "Guided tours and activities with local providers.",
+      "cta": "See tours",
+      "aria": "See tours and experiences for {destination} — opens GetYourGuide (affiliate link)"
+    }
+  },
+  "bestTime": {
+    "breadcrumbHome": "Home",
+    "breadcrumbCurrent": "Best time — {season}",
+    "seasons": {
+      "pomlad": {
+        "label": "Spring",
+        "months": " March–May",
+        "desc": "Blooms, mild weather, fewer tourists"
+      },
+      "poletje": {
+        "label": "Summer",
+        "months": " June–August",
+        "desc": "Warm, ideal for the water and hiking"
+      },
+      "jesen": {
+        "label": "Autumn",
+        "months": " September–November",
+        "desc": "Autumn colours, wine, fewer crowds"
+      },
+      "zima": {
+        "label": "Winter",
+        "months": " December–February",
+        "desc": "Skiing, festive markets, wellness"
+      }
+    },
+    "bestSeasonBadge": "✓ Best season",
+    "heroTitle": "Best time to visit {name}",
+    "overviewTitle": "{name} in {seasonLower}",
+    "bestCardTitle": "{season} is the ideal season for {name}!",
+    "bestCardText": "{name} is at its very best this season — {taglineLower}.",
+    "offCardTitle": "{season} isn't the main season for {name}",
+    "offCardText": "But that can be an advantage — fewer tourists, lower prices and a different experience.",
+    "allSeasonsTitle": "All seasons for {name}",
+    "bestBadge": "★ Best",
+    "faqTitle": "Frequently asked questions",
+    "faq": {
+      "q1": "When is the best time to visit {name}?",
+      "a1": "{season} is a great time to visit {name}. Temperatures are {temp}, which is ideal for exploring. Spring and autumn bring fewer tourists and lower prices.",
+      "q2": "What's the weather like in {name} in {seasonLower}?",
+      "a2": "In {seasonLower}, temperatures in {name} are usually {temp}. We recommend dressing in layers.",
+      "q3": "Which activities are available in {name} in {seasonLower}?",
+      "a3": "{season} in {name} offers a range of activities — from hiking to fine food. Check our list of things to do in {name}.",
+      "q4": "Do I need a reservation to visit {name}?",
+      "a4": "We recommend booking accommodation at least 2 weeks in advance, especially in high season. Use our AI planner to optimise your itinerary."
+    },
+    "ctaTitle": "Plan your {seasonLower} trip to {name}",
+    "ctaText": "The AI takes the season, the weather and your interests into account for the perfect plan.",
+    "ctaButton": "AI itinerary",
+    "ctaThingsToDo": "Things to do in {name}",
+    "exploreTitle": "Also explore",
+    "meta": {
+      "notFound": "Page not found",
+      "title": "Best time to visit {name} — {season}",
+      "description": "When to visit {name}? {season} ({months}): {desc}. Temperatures {temp}. Tips, activities and a {seasonLower} itinerary for {name}.",
+      "ogDescription": "{desc}. Temperatures {temp}. A guide to {name} in {seasonLower}."
+    }
+  },
+  "collections": {
+    "eyebrow": "Curated categories",
+    "title": "Collections",
+    "subtitle": "Curated categories for every occasion — from winter packages to romantic escapes and eco local products.",
+    "explore": "Explore",
+    "openAria": "Open the {title} collection",
+    "items": {
+      "winter": {
+        "title": "Winter packages",
+        "description": "Skiing, wellness and hearty food for cold days"
+      },
+      "summer": {
+        "title": "Summer packages",
+        "description": "Rafting, hiking and refreshing days by the water"
+      },
+      "romantic": {
+        "title": "Romantic escapes",
+        "description": "For couples — castles, the lake, vineyards"
+      },
+      "family": {
+        "title": "Family",
+        "description": "Kid-friendly activities and products"
+      },
+      "gourmet": {
+        "title": "Culinary experiences",
+        "description": "Wine tastings, cheese-making, cooking workshops"
+      },
+      "adventure": {
+        "title": "Adrenaline",
+        "description": "Rafting, skiing, climbing, zip-line"
+      },
+      "eco": {
+        "title": "Eco & local",
+        "description": "Organic products and sustainable experiences"
+      },
+      "luxury": {
+        "title": "Luxury",
+        "description": "High-end experiences and products"
+      }
+    }
+  },
+  "communityTrips": {
+    "badge": "Community",
+    "title": "The community is planning",
+    "subtitle": "Public itineraries created by visitors — take a look, vote, borrow an idea.",
+    "cta": "Create your own plan",
+    "fallbackName": "Around Slovenia with AI",
+    "openButton": "Open the plan",
+    "openAria": "Open the plan: {name} ({days})",
+    "coverAlt": "Trip {name} — {destination}",
+    "created": "Created {time}",
+    "durationTitle": "Trip duration",
+    "viewsTitle": "Views of the shared page",
+    "activitiesTitle": "Total number of activities",
+    "createdTitle": "When the plan was created",
+    "daysCount": "{count, plural, one {# day} other {# days}}",
+    "viewsCount": "{count, plural, one {# view} other {# views}}",
+    "activitiesCount": "{count, plural, one {# activity} other {# activities}}"
+  },
+  "contact": {
+    "title": "Contact",
+    "intro": "Questions about the platform, partnerships or technical matters? Get in touch.",
+    "cards": {
+      "emailTitle": "Email",
+      "locationTitle": "Location",
+      "locationValue": "Slovenia 🇸🇮",
+      "languagesTitle": "Languages",
+      "languagesValue": "Slovenščina, English, Deutsch, Italiano",
+      "supportTitle": "Technical support"
+    },
+    "providersTitle": "For providers",
+    "providersText": "Want to become part of the platform? Register on the provider portal.",
+    "providersLink": "Provider registration →",
+    "meta": {
+      "title": "Contact",
+      "description": "Get in touch with the Discover Slovenia AI team. Email and contact information."
+    }
+  },
+  "dataSources": {
+    "title": "Data sources",
+    "intro": "Discover Slovenia AI uses the following data sources to bring you reliable information about Slovenian tourist destinations.",
+    "sources": {
+      "osm": {
+        "type": "POI database",
+        "desc": "POI data (points of interest) — attractions, museums, restaurants, hotels, viewpoints, natural landmarks, religious sites. Licence: ODbL."
+      },
+      "wikipedia": {
+        "type": "Descriptions",
+        "desc": "Descriptions of destinations and POIs. Licence: CC BY-SA."
+      },
+      "openMeteo": {
+        "type": "Weather",
+        "desc": "Real-time weather data. Free API with no key required."
+      },
+      "zai": {
+        "type": "AI",
+        "desc": "AI itinerary generation based on user preferences."
+      },
+      "booking": {
+        "type": "Accommodation",
+        "desc": "Accommodation search. Affiliate programme."
+      },
+      "discoverCars": {
+        "type": "Transport",
+        "desc": "Car rental. Affiliate programme."
+      },
+      "getYourGuide": {
+        "type": "Activities",
+        "desc": "Activities and experiences. Affiliate programme."
+      },
+      "skyscanner": {
+        "type": "Flights",
+        "desc": "Flight search. Affiliate programme."
+      },
+      "worldNomads": {
+        "type": "Insurance",
+        "desc": "Travel insurance. Affiliate programme."
+      }
+    },
+    "providersTitle": "Local providers",
+    "providersText": "Details about local providers (hotels, restaurants, activities, products, experiences) are contributed by registered providers through the B2B portal. Each provider is responsible for the accuracy of their own details.",
+    "meta": {
+      "title": "Data sources",
+      "description": "The list of data sources used by the Discover Slovenia AI platform."
+    }
+  },
+  "demoScenarios": {
+    "badge": "Try it in 30 seconds",
+    "title": "What do you want to experience?",
+    "subtitle": "Click one of the options and the AI instantly builds your plan",
+    "customTitle": "Write your own",
+    "customSubtitle": "Or pick one above",
+    "tags": {
+      "twoDays": "2 days",
+      "oneDay": "1 day",
+      "nature": "nature",
+      "food": "food",
+      "today": "today",
+      "family": "family",
+      "fiveHours": "5 hours",
+      "romance": "romance",
+      "budget": "budget",
+      "local": "local"
+    },
+    "scenarios": {
+      "river": {
+        "title": "A quiet weekend by the river",
+        "query": "A quiet weekend by the river with great food"
+      },
+      "family": {
+        "title": "A family day out today",
+        "query": "A family day out with kids today, 5 hours"
+      },
+      "romantic": {
+        "title": "A romantic weekend with wine",
+        "query": "A romantic weekend with wine and great restaurants"
+      },
+      "budget": {
+        "title": "A cheaper trip without the crowds",
+        "query": "A cheap trip without the crowds, nature and peace"
+      },
+      "food": {
+        "title": "The best local food",
+        "query": "The best local food in Bela krajina, traditional cuisine"
+      }
+    }
+  },
+  "destinationsPage": {
+    "badge": "Destinations",
+    "title": "All 22 destinations of Slovenia",
+    "subtitle": "From Lake Bled and the peaks of the Julian Alps to the narrow streets of Piran — filter by region, interests, type and price and find your own corner of Slovenia.",
+    "statsLine": "22 destinations · 5 filters · No sign-up",
+    "meta": {
+      "title": "All 22 destinations of Slovenia",
+      "description": "Explore the 22 most beautiful destinations in Slovenia — from Lake Bled to Piran. Filter by region, interests, type and price."
+    }
+  },
+  "guidePage": {
+    "metaNotFound": "Guide not found",
+    "breadcrumbHome": "Home",
+    "breadcrumbAria": "Breadcrumb",
+    "editorialRating": "Editorial rating {rating}★",
+    "introHeading": "{label} in {name}",
+    "metaLine": "Duration: {duration} · Price range: {price}",
+    "highlightsTitle": "Featured activities",
+    "fallbackHighlight": "A local experience",
+    "experiencesTitle": "Experiences in {name} for a {labelLower}",
+    "allExperiences": "All experiences",
+    "listingsTitle": "Recommended local spots in {name}",
+    "allListings": "All local spots",
+    "relatedTitle": "Related guides",
+    "thingsToDoTitle": "Things to do in {name}",
+    "thingsToDoDesc": "All {count} sights and activities in {name}.",
+    "bestTimeTitle": "Best time to visit {name}",
+    "bestTimeDesc": "A season-by-season guide — spring, summer, autumn, winter.",
+    "faqTitle": "Frequently asked questions",
+    "ctaTitle": "Put together the perfect {labelLower} in {name}",
+    "ctaP": "The AI takes your budget, interests and time into account. {description}",
+    "ctaPlanner": "AI travel planner",
+    "ctaItineraries": "Ready-made itineraries",
+    "elsewhereTitle": "{label} elsewhere",
+    "elsewhereDesc": "Explore {labelLower} in other Slovenian destinations:",
+    "meta": {
+      "title": "{title} — {label} guide",
+      "ogDescription": "{description} A guide to {name}.",
+      "keywordGuide": "guide",
+      "keywordTravel": "travel",
+      "keywordSlovenia": "Slovenia"
+    },
+    "faqs": {
+      "romanticni-pobeg": {
+        "q1": "What makes {name} special for a romantic escape?",
+        "a1": "{name} offers a unique blend of nature, cultural sights and cuisine. A romantic escape to {name} is perfect for anniversaries, Valentine's Day or proposals — the emphasis is on privacy, views and local flavours.",
+        "q2": "How much does a romantic escape to {name} cost?",
+        "a2": "A romantic escape to {name} typically costs {price}, including a room with a view, dinner for two and one experience (for example a tasting or a boat ride).",
+        "q3": "When is the best time for a romantic visit to {name}?",
+        "a3": "Spring (April–June) and early autumn (September–October) bring the most romantic atmosphere to {name} — pleasant temperatures, fewer tourists and beautiful colours in nature.",
+        "q4": "Which places to stay in {name} are the most romantic?",
+        "a4": "For a romantic escape we recommend boutique hotels and rooms with a view. Browse our lists of local spots in {name} — every provider is hand-picked."
+      },
+      "druzinski": {
+        "q1": "Is {name} suitable for a visit with children?",
+        "a1": "Yes — {name} is an excellent family destination with safe walking trails, child-friendly restaurants and interactive experiences. Most attractions are accessible with pushchairs too.",
+        "q2": "How much does a family trip to {name} cost?",
+        "a2": "A family trip to {name} (2 adults + 2 children) usually costs {price}, including a family room, meals and attraction tickets. Children under 6 often enter free of charge.",
+        "q3": "Which activities in {name} are suitable for children?",
+        "a3": "{name} offers a variety of family activities — from easier walks and cycling to museums with interactive exhibitions, workshops and tastings. Our AI recommendations take the age of the children into account.",
+        "q4": "When is the best time for a family visit to {name}?",
+        "a4": "School holidays (summer, October, February) are ideal for a family visit to {name}. In summer all the outdoor attractions are open, while winter brings skiing and winter festivals."
+      },
+      "budget": {
+        "q1": "How much does a visit to {name} cost on a budget?",
+        "a1": "On a limited budget you can visit {name} for {price}, including a bed in a hostel or private room, local food from the markets and free activities.",
+        "q2": "Which free activities are available in {name}?",
+        "a2": "{name} offers plenty of free activities — strolls through the old town, visits to churches, walking trails in the surroundings and public beaches. Museum tickets often carry student discounts.",
+        "q3": "How can I save on transport to {name}?",
+        "a3": "For affordable travel to {name} we recommend the train or bus (search via FlixBus or Slovenian Railways). In {name} you can use local public transport or a bike (many destinations have bike-share schemes).",
+        "q4": "Can I find cheap accommodation in {name}?",
+        "a4": "Yes — {name} has hostels, private rooms via Airbnb and family guesthouses. Prices are lower out of season (November–March, apart from holidays)."
+      },
+      "vikend": {
+        "q1": "What to do in {name} over a weekend?",
+        "a1": "A weekend in {name} leaves room for the main sights, local cuisine and at least one experience. Friday evening is ideal for arriving and a stroll, Saturday for the headline attractions, Sunday for unwinding.",
+        "q2": "How much does a weekend in {name} cost?",
+        "a2": "A weekend in {name} (2 nights, 3 meals a day, attractions) costs roughly {price}. You can save with early-bird bookings and by shopping at local markets.",
+        "q3": "When is the best time for a weekend escape to {name}?",
+        "a3": "{name} works for a weekend escape all year round. Spring and autumn offer the best weather for exploring, summer brings more events, and winter means fewer tourists and lower prices.",
+        "q4": "How do I get to {name} for a weekend?",
+        "a4": "{name} is reachable by car, train or bus. We recommend booking transport at least a week in advance, especially for Friday afternoon."
+      },
+      "ai": {
+        "q": "Can the AI put together an itinerary for {name}?",
+        "a": "Yes — our AI planner can build a fully tailored itinerary for {name} that reflects your interests, budget and available time. Give it a try on the Plan page."
+      }
+    },
+    "guideTypes": {
+      "romanticni-pobeg": {
+        "label": "Romantic escape",
+        "shortLabel": "Romantic",
+        "description": "An escape for two — romantic activities, candlelit dinners, private experiences and rooms with a view.",
+        "title": "A romantic escape to {name}",
+        "intro": "{name} — {tagline}. This guide is designed for couples looking for private moments: romantic lakeside or seaside strolls, candlelit dinners, private tastings and rooms with a view. Every recommendation is hand-picked for an unforgettable escape for two.",
+        "durationLabel": "2 days / 1 night",
+        "priceRange": "€180–350 per couple",
+        "bestFor": "Couples · Newlyweds · Anniversaries",
+        "metaKeyword": "romance",
+        "h1": {
+          "title": "A romantic stroll along {hl1}",
+          "description": "Begin the day with a leisurely stroll along {hl1} in {name}. The morning light and thinner crowds make for the perfect atmosphere for two."
+        },
+        "h2": {
+          "title": "A private experience: {hl2}",
+          "description": "In the afternoon, take time for a private experience in {name} — a tasting, a boat ride or a local workshop. Our recommendations are tried and tested for couples."
+        },
+        "h3": {
+          "title": "A candlelit dinner in {name}",
+          "description": "Round off the day with a romantic dinner at one of the selected restaurants in {name}. Local chefs serve seasonal menus with wines from Slovenian vineyards."
+        }
+      },
+      "druzinski": {
+        "label": "Family trip",
+        "shortLabel": "Family",
+        "description": "Family-friendly activities for all ages — safe walking trails, attractions for children, kids' menus and interactive experiences.",
+        "title": "A family trip to {name}",
+        "intro": "Planning a family trip to {name}? This guide brings together safe walking trails, interactive experiences for children, family-friendly restaurants with kids' menus and accommodation with family rooms. {name} is a great choice for unforgettable family memories.",
+        "durationLabel": "2–3 days",
+        "priceRange": "€120–260 per family",
+        "bestFor": "Families with children · Multi-generational trips",
+        "metaKeyword": "family",
+        "h1": {
+          "title": "A family visit: {hl1}",
+          "description": "{hl1} in {name} is child-friendly — interactive displays, safe paths and often workshops for the youngest visitors."
+        },
+        "h2": {
+          "title": "Unwinding at {hl2}",
+          "description": "{hl2} offers space for a picnic and some downtime. Children can play while the grown-ups enjoy the nature of {name}."
+        },
+        "h3": {
+          "title": "A family dinner in {name}",
+          "description": "Choose a restaurant with a children's menu in {name}. Local pizzas, pasta and traditional Slovenian dishes go down well with every age."
+        }
+      },
+      "budget": {
+        "label": "Budget-friendly visit",
+        "shortLabel": "Budget",
+        "description": "Maximum experience on a minimal budget — free attractions, a local picnic, cheap beds and public transport.",
+        "title": "{name} on a budget",
+        "intro": "{name} can be enjoyed even on a small budget. This guide covers free attractions, local markets, affordable beds and public transport. Every suggestion is tried and tested for travellers who want the maximum experience at the minimum cost.",
+        "durationLabel": "1–2 days",
+        "priceRange": "€30–80 per person",
+        "bestFor": "Students · Backpackers · Budget travellers",
+        "metaKeyword": "budget-friendly",
+        "h1": {
+          "title": "A free visit: {hl1}",
+          "description": "{hl1} in {name} is free to admire from the outside. A stroll beside it offers wonderful photo opportunities and a taste of local culture."
+        },
+        "h2": {
+          "title": "A picnic by {hl2}",
+          "description": "Buy local cheese, bread and fruit at the market in {name} and lay out a picnic. What you save on a meal leaves more for experiences."
+        },
+        "h3": {
+          "title": "A walk to {hl3}",
+          "description": "{hl3} is free to explore on foot or by bike. Waymarked trails in {name} suit every level."
+        }
+      },
+      "vikend": {
+        "label": "Weekend escape",
+        "shortLabel": "Weekend",
+        "description": "The perfect two-day escape — Friday evening to Sunday afternoon. A balanced programme of headline sights and local cuisine.",
+        "title": "A weekend in {name}",
+        "intro": "The perfect weekend escape to {name} — Friday evening to Sunday afternoon. A balanced programme of headline sights, local cuisine and time to unwind. {name} is close enough for a short break and rich enough for a full weekend.",
+        "durationLabel": "Weekend (Friday–Sunday)",
+        "priceRange": "€150–280 per person",
+        "bestFor": "Working people · Friends · Quick escapes",
+        "metaKeyword": "weekend escape",
+        "h1": {
+          "title": "Friday: arrival and a stroll around {name}",
+          "description": "After arriving in {name}, settle in and take an unhurried stroll through the old town. Enjoy a local coffee and plan the two days ahead."
+        },
+        "h2": {
+          "title": "Saturday: {hl1} and the surroundings",
+          "description": "Devote the main day to the headline sights — {hl1}, the local museum and lunch at a traditional restaurant in {name}."
+        },
+        "h3": {
+          "title": "Sunday: {hl2} and departure",
+          "description": "Use the last day for {hl2} and some shopping for local keepsakes. One more local coffee in {name} before you set off home."
+        }
+      }
+    }
+  },
+  "itineraryPage": {
+    "durations": {
+      "1-dan": {
+        "label": "1 day",
+        "desc": "A quick visit"
+      },
+      "vikend": {
+        "label": "Weekend (2 days)",
+        "desc": "The perfect weekend escape"
+      },
+      "3-dnevi": {
+        "label": "3 days",
+        "desc": "An in-depth visit"
+      },
+      "5-dnevi": {
+        "label": "5 days",
+        "desc": "The complete experience"
+      },
+      "7-dnevi": {
+        "label": "7 days",
+        "desc": "A week of exploring"
+      }
+    },
+    "travelerTypes": {
+      "pari": {
+        "label": "For couples",
+        "desc": "A romantic escape"
+      },
+      "druzina": {
+        "label": "Family",
+        "desc": "Fun for all ages"
+      },
+      "solo": {
+        "label": "Solo traveller",
+        "desc": "Explore at your own pace"
+      },
+      "avanturist": {
+        "label": "Adventurer",
+        "desc": "Adrenaline and nature"
+      }
+    },
+    "headline": "{duration} itinerary for {name}",
+    "overviewTitle": "Trip overview",
+    "unitDay": "day",
+    "unitDays": "days",
+    "costLabel": "estimate / person",
+    "ratingLabel": "editorial destination rating",
+    "daysTitle": "Suggested daily schedule",
+    "dayLabel": "Day {day}",
+    "dayFirst": "Arrival and exploring {name}",
+    "dayLast": "Final day and departure",
+    "dayMiddle": "A full day of exploring",
+    "hoursLabel": "4-6 hours",
+    "perPerson": "€/person",
+    "travelerTypesTitle": "Itineraries by traveller type",
+    "generateButton": "Generate itinerary",
+    "otherDestinationsTitle": "Other destinations",
+    "personalizedTitle": "Want a personalised itinerary?",
+    "personalizedText": "Our AI takes your budget, interests and season into account for the perfect plan.",
+    "personalizedButton": "Generate an AI itinerary",
+    "meta": {
+      "notFound": "Itinerary not found",
+      "title": "{duration} itinerary for {name} — {desc}",
+      "description": "The complete {durationLower} itinerary for {name}, {tagline}. {desc} — AI-recommended activities, accommodation and restaurants for a {days}-day visit.",
+      "ogDescription": "An AI-recommended {duration} itinerary with activities, accommodation and restaurants."
+    }
+  },
+  "plannerPage": {
+    "badge": "AI Concierge",
+    "title": "Plan your journey around Slovenia",
+    "subtitle": "Tell the AI what you want to experience. Within seconds you get a personal itinerary with real local providers, a map and booking options.",
+    "usp": "No sign-up · Free · Grounded in real providers",
+    "meta": {
+      "title": "AI travel planner",
+      "description": "Tell the AI what you want to experience in Slovenia — days, budget, family, interests. In seconds you get a personal itinerary with a map, real local providers and booking options."
+    }
+  },
+  "pregenTrips": {
+    "badge": "Popular itineraries",
+    "title": "Or pick a tried-and-tested itinerary",
+    "subtitle": "The AI then personalises it further around your wishes",
+    "planCta": "Plan it",
+    "dayOne": "day",
+    "dayOther": "days",
+    "trips": {
+      "bled-1-day": {
+        "title": "Bled in a day",
+        "query": "One day in Bled — castle, island, Vintgar and Bled cream cake",
+        "dest1": "Bled",
+        "dest2": "Vintgar",
+        "hl1": "Bled Castle",
+        "hl2": "Pletna boat ride",
+        "hl3": "Vintgar Gorge"
+      },
+      "ljubljana-2-days": {
+        "title": "Ljubljana weekend",
+        "query": "Two days in Ljubljana — culture, food and the castle",
+        "dest1": "Ljubljana",
+        "hl1": "Old town centre",
+        "hl2": "Ljubljana Castle",
+        "hl3": "Triple Bridge"
+      },
+      "soca-3-days": {
+        "title": "Soča adventure",
+        "query": "Three days on the Soča — rafting, hikes and local food",
+        "dest1": "Soča River",
+        "dest2": "Kobarid",
+        "dest3": "Bovec",
+        "hl1": "Rafting on the Soča",
+        "hl2": "Kobarid Museum",
+        "hl3": "Boka Waterfall"
+      },
+      "piran-coast": {
+        "title": "Coast and Piran",
+        "query": "A weekend on the coast — Piran, Portorož and local food",
+        "dest1": "Piran",
+        "dest2": "Portorož",
+        "hl1": "Tartini Square",
+        "hl2": "The waterfront",
+        "hl3": "Olive oil"
+      },
+      "bela-krajina": {
+        "title": "Exploring Bela krajina",
+        "query": "Two days in Bela krajina — honey, food and nature on the Kolpa",
+        "dest1": "Črnomelj",
+        "hl1": "Local honey",
+        "hl2": "Traditional food",
+        "hl3": "The Kolpa"
+      },
+      "triglav-park": {
+        "title": "Triglav National Park",
+        "query": "Three days in Triglav National Park — Bohinj, Triglav and waterfalls",
+        "dest1": "Bohinj",
+        "dest2": "Triglav",
+        "hl1": "Lake Bohinj",
+        "hl2": "Climbing Triglav",
+        "hl3": "Savica Waterfall"
+      }
+    }
+  },
+  "privacy": {
+    "title": "Privacy policy",
+    "lastUpdated": "Last updated:",
+    "sections": {
+      "s1": {
+        "title": "1. General",
+        "body": "Discover Slovenia AI (the \"platform\") respects your privacy. This policy describes what data we collect, how we use it and what rights you have."
+      },
+      "s2": {
+        "title": "2. Visitor data",
+        "body": "<strong>We do not collect visitors' personal data</strong> without explicit consent. We only track anonymous analytics (page views, clicks) to improve the platform."
+      },
+      "s3": {
+        "title": "3. Newsletter",
+        "body": "If you subscribe to the newsletter, we store your email address. We use it solely to send you travel guides and tips. You can unsubscribe at any time."
+      },
+      "s4": {
+        "title": "4. Providers (B2B)",
+        "body": "Registered providers supply their name, email, company name and password. Passwords are stored with bcrypt hashing (12 rounds). Business details (address, phone, website) are publicly displayed on the platform."
+      },
+      "s5": {
+        "title": "5. Leads (JoinUs form)",
+        "body": "When you fill in the \"Join us\" form, we store: name, email, phone, company name, type, town and preferred plan. We use this data solely to contact you about your enquiry."
+      },
+      "s6": {
+        "title": "6. Cookies",
+        "body": "The platform uses strictly necessary cookies to function (authentication, language preferences). We do not use marketing or tracking cookies."
+      },
+      "s7": {
+        "title": "7. Payments (Stripe)",
+        "body": "Payments are processed by Stripe. We never store credit card details. Stripe is PCI-DSS certified."
+      },
+      "s8": {
+        "title": "8. Your rights",
+        "body": "Under the GDPR you have the right to access, rectification, erasure and portability of your data. To exercise your rights, write to <email>privacy@discoverslovenia.ai</email>."
+      },
+      "s9": {
+        "title": "9. Contact",
+        "body": "For privacy questions: <email>privacy@discoverslovenia.ai</email>"
+      }
+    },
+    "meta": {
+      "title": "Privacy policy",
+      "description": "Privacy policy of the Discover Slovenia AI platform. How we handle personal data."
+    }
+  },
+  "quiz": {
+    "badge": "Not sure where to start? ⭐ 2-minute quiz",
+    "title": "What kind of traveller are you?",
+    "subtitle": "Answer 5 questions and the AI will put together a trip made to measure",
+    "skip": "Skip the quiz",
+    "progress": "Question {current} of {total}",
+    "percent": "{value}%",
+    "progressAria": "Quiz progress",
+    "back": "Back",
+    "backAria": "Back to the previous question",
+    "questions": {
+      "tempo": {
+        "title": "What pace suits you?",
+        "options": {
+          "sproscen": {
+            "label": "Relaxed",
+            "desc": "Slowly, no schedule"
+          },
+          "uravnotezen": {
+            "label": "Balanced",
+            "desc": "A mix of calm and movement"
+          },
+          "akcija": {
+            "label": "Action",
+            "desc": "From dawn to dusk"
+          }
+        }
+      },
+      "vibe": {
+        "title": "What appeals to you most?",
+        "options": {
+          "narava": {
+            "label": "Nature & hiking",
+            "desc": "Lakes, gorges, mountains"
+          },
+          "hrana": {
+            "label": "Food & wine",
+            "desc": "Inns and tastings"
+          },
+          "adrenalin": {
+            "label": "Adrenaline & sport",
+            "desc": "Rafting, cycling, skiing"
+          },
+          "kultura": {
+            "label": "Culture & cities",
+            "desc": "Old towns, castles, museums"
+          }
+        }
+      },
+      "season": {
+        "title": "When would you travel?",
+        "options": {
+          "spring": {
+            "label": "Spring",
+            "desc": "Blossoms and fresh greenery"
+          },
+          "summer": {
+            "label": "Summer",
+            "desc": "Swimming and long days"
+          },
+          "autumn": {
+            "label": "Autumn",
+            "desc": "Colours and the bora in the vineyards"
+          },
+          "winter": {
+            "label": "Winter",
+            "desc": "Skiing and a festive feel"
+          }
+        }
+      },
+      "group": {
+        "title": "Who are you travelling with?",
+        "options": {
+          "solo": {
+            "label": "Solo",
+            "desc": "Freedom without compromise"
+          },
+          "par": {
+            "label": "Couple",
+            "desc": "Romance for two"
+          },
+          "druzina": {
+            "label": "Family with kids",
+            "desc": "Fun for all ages"
+          },
+          "prijatelji": {
+            "label": "Friends",
+            "desc": "The crew and laughter"
+          }
+        }
+      },
+      "budget": {
+        "title": "What's your budget?",
+        "options": {
+          "low": {
+            "label": "Budget",
+            "desc": "Affordable, but smart"
+          },
+          "mid": {
+            "label": "Mid-range",
+            "desc": "Comfort without splashing out"
+          },
+          "lux": {
+            "label": "No limits",
+            "desc": "Top-end experiences"
+          }
+        }
+      }
+    },
+    "styles": {
+      "narava": {
+        "label": "Nature Lover",
+        "desc": "Peace, fresh air and trails that end by a lake. Your Slovenia: Triglav National Park, the Soča and Bohinj."
+      },
+      "hrana": {
+        "label": "Foodie",
+        "desc": "You travel with your stomach. Your Slovenia: inns serving local ingredients and the wine roads of Štajerska and Dolenjska."
+      },
+      "adrenalin": {
+        "label": "Adventurer",
+        "desc": "Adrenaline is your fuel. Your Slovenia: rafting on the Soča, canyoning in the gorges and skiing on Vogel."
+      },
+      "kultura": {
+        "label": "Culture Seeker",
+        "desc": "History and the buzz of a city make you happy. Your Slovenia: Ljubljana, Ptuj, Celje and Piran."
+      },
+      "budget": {
+        "label": "Budget Explorer",
+        "desc": "You see a lot, you spend little. Your Slovenia: free trails, public transport and local markets."
+      },
+      "luxury": {
+        "label": "Luxury Traveller",
+        "desc": "No compromises. Your Slovenia: wellness spas, premium tastings and hotel experiences."
+      }
+    },
+    "seasons": {
+      "spring": "spring",
+      "summer": "summer",
+      "autumn": "autumn",
+      "winter": "winter"
+    },
+    "styleLabel": "Your travel style",
+    "recommendations": "Recommended destinations",
+    "planCta": "Plan my trip",
+    "planCtaAria": "Plan my trip with the AI planner",
+    "restart": "Retake the quiz",
+    "restartAria": "Restart the quiz from the beginning",
+    "prompt": {
+      "template": "Plan a 3-day trip for a traveller who loves {interest}, prefers {season}, travelling {group}, budget {budget}",
+      "interest": {
+        "narava": "nature and hiking",
+        "hrana": "local food and wine",
+        "adrenalin": "adrenaline and sport",
+        "kultura": "culture and cities"
+      },
+      "group": {
+        "solo": "solo",
+        "par": "with a partner",
+        "druzina": "with the family",
+        "prijatelji": "with friends"
+      },
+      "budget": {
+        "low": "budget",
+        "mid": "mid-range",
+        "lux": "unlimited"
+      }
+    }
+  },
+  "terms": {
+    "title": "Terms of use",
+    "lastUpdated": "Last updated:",
+    "sections": {
+      "s1": {
+        "title": "1. Acceptance of terms",
+        "body": "By using the Discover Slovenia AI platform you accept these terms of use."
+      },
+      "s2": {
+        "title": "2. The service",
+        "body": "The platform provides information about Slovenian tourist destinations, AI travel planning and links to local providers. The platform does not handle bookings — users book directly with the providers."
+      },
+      "s3": {
+        "title": "3. AI itineraries",
+        "body": "AI-generated itineraries are for information only. The platform accepts no liability for the accuracy of prices, availability or the quality of third-party services."
+      },
+      "s4": {
+        "title": "4. Affiliate links",
+        "body": "The platform contains affiliate links (Booking.com, DiscoverCars, GetYourGuide, Skyscanner, World Nomads, SafetyWing, Airalo, Kiwitaxi, Omio, Tiqets and Viator). If you make a booking through one of these links, Discover Slovenia may receive an affiliate commission. The price you pay never goes up because of it; you complete the booking and any payment directly with the partner, whose terms apply."
+      },
+      "s5": {
+        "title": "5. Providers (B2B)",
+        "body": "Registered providers are responsible for the accuracy of their details. The flat subscription (Premium €149/month, Enterprise €499/month) is billed monthly. You can cancel at any time with 30 days' notice."
+      },
+      "s6": {
+        "title": "6. Beta period",
+        "body": "During the beta period (up to 30 active venues) all plans are free. Once monetisation is switched on, beta users keep 6 months of free access."
+      },
+      "s7": {
+        "title": "7. Intellectual property",
+        "body": "The platform's content is released under the MIT licence. Destination images come from open sources (Unsplash, OpenStreetMap). The website code is open source on GitHub."
+      },
+      "s8": {
+        "title": "8. Limitation of liability",
+        "body": "The platform accepts no liability for any damage arising from the use of information or links to third parties."
+      },
+      "s9": {
+        "title": "9. Changes to the terms",
+        "body": "These terms may be updated. We will notify registered users by email about important changes."
+      },
+      "s10": {
+        "title": "10. Contact",
+        "body": "Questions: <email>info@discoverslovenia.ai</email>"
+      }
+    },
+    "meta": {
+      "title": "Terms of use",
+      "description": "Terms of use of the Discover Slovenia AI platform."
+    }
+  },
+  "thingsToDo": {
+    "breadcrumbHome": "Home",
+    "heroTitle": "Things to do in {name}",
+    "heroStats": "{highlights} highlights · {activities} activities · Editorial rating {rating}★",
+    "aboutTitle": "About {name}",
+    "highlightsTitle": "Top highlights",
+    "experiencesTitle": "Activities and experiences in {name}",
+    "listingsTitle": "Locals in {name}",
+    "productsTitle": "Local products from {name}",
+    "bestTimeTitle": "Best time to visit {name}",
+    "seasons": {
+      "pomlad": "Spring",
+      "poletje": "Summer",
+      "jesen": "Autumn",
+      "zima": "Winter"
+    },
+    "faqTitle": "Frequently asked questions",
+    "planTitle": "Plan your trip to {name}",
+    "planText": "Our AI can put together the perfect itinerary for {name} and the surrounding area — tailored to your budget, interests and season.",
+    "planButton": "AI travel planner",
+    "exploreTitle": "Also explore",
+    "trackerTitle": "Things to do in {name} — Guide",
+    "meta": {
+      "notFound": "Destination not found",
+      "title": "Things to do in {name} — {name} Travel Guide",
+      "description": "Discover the best activities, attractions and experiences in {name}, {tagline}. A guide with {count} major highlights, local providers and AI-powered recommendations.",
+      "ogTitle": "Things to do in {name} — Discover Slovenia AI",
+      "ogDescription": "{count} highlights, local restaurants, activities and experiences in {name}."
+    }
+  },
+  "trustSafety": {
+    "hero": {
+      "title": "Trust and safety",
+      "subtitle": "How we verify partners, how AI ranking works and how we protect your data."
+    },
+    "partner": {
+      "title": "How we verify partners",
+      "adminApproval": {
+        "title": "Admin approval",
+        "body": "Every venue must be manually approved by our team before it goes live. We check: correct contact details, category fit, and the quality of photos and descriptions. Unapproved venues are invisible to users and the AI cannot recommend them."
+      },
+      "qualityScore": {
+        "title": "Partner Quality Score (0-100)",
+        "body": "Every venue gets an automatically calculated Quality Score from 7 signals: profile completeness (30%), photo quality (15%), description quality (15%), AI tags (10%), admin verification (10%), ratings (10%) and data freshness (10%).",
+        "badgeVerified": "Verified (Q>40)",
+        "badgePremium": "👑 Premium (paying)",
+        "badgeFeatured": "⭐ Featured (Q>90 + Premium + Verified)"
+      },
+      "vlm": {
+        "title": "VLM image review",
+        "body": "Every image on the platform is checked with a Vision Language Model (VLM). We verify: match with the venue's name, absence of watermarks, and the quality and appropriateness of the content."
+      }
+    },
+    "ranking": {
+      "title": "How AI ranking works",
+      "intro": "AI recommendations rest on 5 dimensions with clearly defined weights. Money cannot buy the top spot.",
+      "dimensions": {
+        "relevance": "Match with the user's search (destination, interests, category)",
+        "quality": "Quality of the venue's profile (0-100)",
+        "rating": "User ratings (0-5 stars)",
+        "distance": "Geographic proximity to other stops in the itinerary",
+        "premiumBoost": "A maximum 5% boost for paying partners — it can never outweigh relevance"
+      },
+      "warningTitle": "Our rule: the AI never recommends a poor venue just because it pays",
+      "warningText": "Venues rated below 3.5 get no premium boost. Relevance (60%) always dominates over Premium (5%)."
+    },
+    "transparency": {
+      "title": "Recommendation transparency",
+      "intro": "Every AI recommendation is clearly labelled. Users always know what is an advertisement and what is organic.",
+      "labels": {
+        "featured": {
+          "badge": "⭐ Featured",
+          "desc": "A verified partner with a high-quality profile and Premium membership. Quality Score > 90."
+        },
+        "premium": {
+          "badge": "👑 Premium",
+          "desc": "A partner supporting the platform's development with an extended profile. Boost capped at 5%."
+        },
+        "verified": {
+          "badge": "✓ Verified",
+          "desc": "Details checked by the Discover Slovenia AI team."
+        },
+        "affiliate": {
+          "badge": "🔗 Affiliate link",
+          "desc": "An affiliate link — Discover Slovenia AI may receive a commission. Always clearly labelled."
+        },
+        "organic": {
+          "badge": "(no label)",
+          "desc": "An organic recommendation — a free venue the AI recommended on relevance alone."
+        }
+      }
+    },
+    "dataProtection": {
+      "title": "Data protection",
+      "gdpr": {
+        "title": "GDPR compliance",
+        "desc": "Privacy policy, cookies, the right to be forgotten. DPAs for premium partners."
+      },
+      "free": {
+        "title": "Free for users",
+        "desc": "Users never pay for AI features. Monetisation comes only from providers."
+      },
+      "noMiddlemen": {
+        "title": "No middlemen",
+        "desc": "The AI connects travellers with providers. The traveller books directly with the provider."
+      },
+      "auditLog": {
+        "title": "Audit log",
+        "desc": "All admin actions (approvals, rejections, sponsorships) are logged and traceable."
+      }
+    },
+    "meta": {
+      "title": "Trust and safety",
+      "description": "How we verify partners, how AI ranking works and how we protect your data."
+    }
+  },
+  "welcomeBack": {
+    "title": "Welcome back! 👋",
+    "knowsLabel": "The AI already knows:",
+    "visitedCount": "{count} destinations visited",
+    "quizCta": "Answer the <quizLink>2-minute quiz</quizLink> and the AI will put together a trip made to measure.",
+    "close": "Close",
+    "interests": {
+      "narava": "nature",
+      "kulinarika": "local food",
+      "avantura": "adventure",
+      "kultura": "culture"
+    },
+    "groups": {
+      "solo": "solo",
+      "par": "couple",
+      "druzina": "family",
+      "prijatelji": "friends"
+    }
   }
 }

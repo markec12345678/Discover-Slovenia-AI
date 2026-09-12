@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Star,
   Clock,
@@ -28,6 +27,12 @@ import {
   REGIONS,
   INTERESTS,
 } from "@/lib/slovenia-data";
+import {
+  getEnDestination,
+  REGIONS_EN,
+  INTERESTS_EN,
+} from "@/lib/slovenia-data-en";
+import { Link } from "@/i18n/navigation";
 import type { Destination, DestinationType, Budget } from "@/lib/types";
 
 const ALL_VALUE = "all";
@@ -59,8 +64,30 @@ const RATING_OPTIONS: { value: string; labelKey: string }[] = [
   { value: "4.9", labelKey: "rating49" },
 ];
 
-function regionLabel(value: string): string {
+/**
+ * FW4.3-2: regija po locale — na EN preslikana prek REGIONS_EN
+ * (identifikatorji ostanejo slovenski, prikaz je angleški).
+ */
+function regionLabel(value: string, locale: string): string {
+  if (locale === "en") {
+    return (
+      REGIONS_EN[value] ??
+      REGIONS.find((r) => r.value === value)?.label ??
+      value
+    );
+  }
   return REGIONS.find((r) => r.value === value)?.label ?? value;
+}
+
+/**
+ * FW4.3-2: EN overlay za destinacijo — tekstovna polja (tagline,
+ * description, highlights, activities, duration) zamenjana z angleškimi
+ * viri iz slovenia-data-en.ts; id/slug/name/slike/cene ostanejo izvirni.
+ * Vrne isti objekt, če overlay manjka.
+ */
+function withEnOverlay(d: Destination): Destination {
+  const en = getEnDestination(d.id);
+  return en ? { ...d, ...en } : d;
 }
 
 /**
@@ -71,6 +98,9 @@ function regionLabel(value: string): string {
  * FW3: prop `featured` (homepage) prikaže samo 6 priljubljenih destinacij
  * brez filtrov + CTA "Razišči vseh 22" → /destinacije — progresivno
  * razkrivanje namesto vizualnega overloada (velik produkt ≠ velika homepage).
+ *
+ * FW4.3-2: kadar je aktiven locale "en", se za prikaz uporabi EN overlay
+ * (getEnDestination) + REGIONS_EN/INTERESTS_EN za labele filtrov.
  */
 export function DestinationsSection({
   featured = false,
@@ -78,6 +108,8 @@ export function DestinationsSection({
   featured?: boolean;
 }) {
   const t = useTranslations("homeDest");
+  const locale = useLocale();
+  const isEn = locale === "en";
   const [region, setRegion] = useState<string>(ALL_VALUE);
   const [interest, setInterest] = useState<string>(ALL_VALUE);
   const [type, setType] = useState<string>(ALL_VALUE);
@@ -119,6 +151,20 @@ export function DestinationsSection({
     []
   );
   const list = featured ? featuredList : filtered;
+
+  // FW4.3-2: na EN prikazujemo overlay (tagline/highlights/duration …);
+  // id/slug/name/slike/cene ostanejo iz slovenskega vira resnice.
+  const displayList = useMemo(
+    () => (isEn ? list.map(withEnOverlay) : list),
+    [list, isEn]
+  );
+
+  // FW4.3-2: modal prejme EN overlay destinacijo (description/activities
+  // se uporabita znotraj modala); identifikatorji ostanejo izvirni.
+  const selectedDisplay = useMemo(
+    () => (isEn && selected ? withEnOverlay(selected) : selected),
+    [selected, isEn]
+  );
 
   return (
     <section
@@ -174,7 +220,10 @@ export function DestinationsSection({
               onChange={setRegion}
               placeholder={t("regionPlaceholder")}
               ariaLabel={t("regionAriaLabel")}
-              options={REGIONS.map((r) => ({ value: r.value, label: r.label }))}
+              options={REGIONS.map((r) => ({
+                value: r.value,
+                label: isEn ? (REGIONS_EN[r.value] ?? r.label) : r.label,
+              }))}
             />
             <FilterSelect
               value={interest}
@@ -183,7 +232,9 @@ export function DestinationsSection({
               ariaLabel={t("interestAriaLabel")}
               options={INTERESTS.map((i) => ({
                 value: i.value,
-                label: `${i.icon} ${i.label}`,
+                label: `${i.icon} ${
+                  isEn ? (INTERESTS_EN[i.value] ?? i.label) : i.label
+                }`,
               }))}
             />
             <FilterSelect
@@ -226,7 +277,7 @@ export function DestinationsSection({
           <EmptyState onClear={clearFilters} canClear={hasActiveFilters} />
         ) : (
           <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
-            {list.map((d) => (
+            {displayList.map((d) => (
               <DestinationCard
                 key={d.id}
                 destination={d}
@@ -251,7 +302,7 @@ export function DestinationsSection({
 
       {/* Modal */}
       <DestinationModal
-        destination={selected}
+        destination={selectedDisplay}
         onClose={() => setSelected(null)}
       />
     </section>
@@ -301,6 +352,7 @@ function DestinationCard({
   onOpen: () => void;
 }) {
   const t = useTranslations("homeDest");
+  const locale = useLocale();
   return (
     <Card
       role="button"
@@ -329,7 +381,7 @@ function DestinationCard({
         />
         {/* Badge regije (top-left) — na ozki sliki (~175px) skrčena in odrezana, da se ne prekriva z featured */}
         <Badge className="absolute left-3 top-3 max-w-[45%] truncate bg-primary text-[10px] text-primary-foreground shadow-sm sm:text-xs">
-          {regionLabel(destination.region)}
+          {regionLabel(destination.region, locale)}
         </Badge>
         {/* Featured badge (top-right) */}
         {destination.featured ? (

@@ -1,0 +1,88 @@
+{
+  "trustSafety": {
+    "hero": {
+      "title": "Trust and safety",
+      "subtitle": "How we verify partners, how AI ranking works and how we protect your data."
+    },
+    "partner": {
+      "title": "How we verify partners",
+      "adminApproval": {
+        "title": "Admin approval",
+        "body": "Every venue must be manually approved by our team before it goes live. We check: correct contact details, category fit, and the quality of photos and descriptions. Unapproved venues are invisible to users and the AI cannot recommend them."
+      },
+      "qualityScore": {
+        "title": "Partner Quality Score (0-100)",
+        "body": "Every venue gets an automatically calculated Quality Score from 7 signals: profile completeness (30%), photo quality (15%), description quality (15%), AI tags (10%), admin verification (10%), ratings (10%) and data freshness (10%).",
+        "badgeVerified": "Verified (Q>40)",
+        "badgePremium": "👑 Premium (paying)",
+        "badgeFeatured": "⭐ Featured (Q>90 + Premium + Verified)"
+      },
+      "vlm": {
+        "title": "VLM image review",
+        "body": "Every image on the platform is checked with a Vision Language Model (VLM). We verify: match with the venue's name, absence of watermarks, and the quality and appropriateness of the content."
+      }
+    },
+    "ranking": {
+      "title": "How AI ranking works",
+      "intro": "AI recommendations rest on 5 dimensions with clearly defined weights. Money cannot buy the top spot.",
+      "dimensions": {
+        "relevance": "Match with the user's search (destination, interests, category)",
+        "quality": "Quality of the venue's profile (0-100)",
+        "rating": "User ratings (0-5 stars)",
+        "distance": "Geographic proximity to other stops in the itinerary",
+        "premiumBoost": "A maximum 5% boost for paying partners — it can never outweigh relevance"
+      },
+      "warningTitle": "Our rule: the AI never recommends a poor venue just because it pays",
+      "warningText": "Venues rated below 3.5 get no premium boost. Relevance (60%) always dominates over Premium (5%)."
+    },
+    "transparency": {
+      "title": "Recommendation transparency",
+      "intro": "Every AI recommendation is clearly labelled. Users always know what is an advertisement and what is organic.",
+      "labels": {
+        "featured": {
+          "badge": "⭐ Featured",
+          "desc": "A verified partner with a high-quality profile and Premium membership. Quality Score > 90."
+        },
+        "premium": {
+          "badge": "👑 Premium",
+          "desc": "A partner supporting the platform's development with an extended profile. Boost capped at 5%."
+        },
+        "verified": {
+          "badge": "✓ Verified",
+          "desc": "Details checked by the Discover Slovenia AI team."
+        },
+        "affiliate": {
+          "badge": "🔗 Affiliate link",
+          "desc": "An affiliate link — Discover Slovenia AI may receive a commission. Always clearly labelled."
+        },
+        "organic": {
+          "badge": "(no label)",
+          "desc": "An organic recommendation — a free venue the AI recommended on relevance alone."
+        }
+      }
+    },
+    "dataProtection": {
+      "title": "Data protection",
+      "gdpr": {
+        "title": "GDPR compliance",
+        "desc": "Privacy policy, cookies, the right to be forgotten. DPAs for premium partners."
+      },
+      "free": {
+        "title": "Free for users",
+        "desc": "Users never pay for AI features. Monetisation comes only from providers."
+      },
+      "noMiddlemen": {
+        "title": "No middlemen",
+        "desc": "The AI connects travellers with providers. The traveller books directly with the provider."
+      },
+      "auditLog": {
+        "title": "Audit log",
+        "desc": "All admin actions (approvals, rejections, sponsorships) are logged and traceable."
+      }
+    },
+    "meta": {
+      "title": "Trust and safety",
+      "description": "How we verify partners, how AI ranking works and how we protect your data."
+    }
+  }
+}

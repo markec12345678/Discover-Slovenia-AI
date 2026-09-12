@@ -1,0 +1,42 @@
+{
+  "itineraryPage": {
+    "durations": {
+      "1-dan": { "label": "1 dan", "desc": "Hitri obisk" },
+      "vikend": { "label": "Vikend (2 dni)", "desc": "Popoln vikend pobeg" },
+      "3-dnevi": { "label": "3 dni", "desc": "Poglobljen obisk" },
+      "5-dnevi": { "label": "5 dni", "desc": "Celovito doživetje" },
+      "7-dnevi": { "label": "7 dni", "desc": "Teden raziskovanja" }
+    },
+    "travelerTypes": {
+      "pari": { "label": "Za pare", "desc": "Romantični pobeg" },
+      "druzina": { "label": "Družinsko", "desc": "Zabava za vse starosti" },
+      "solo": { "label": "Solo potnik", "desc": "Samostojno raziskovanje" },
+      "avanturist": { "label": "Avanturist", "desc": "Adrenalin in narava" }
+    },
+    "headline": "{duration} itinerer za {name}",
+    "overviewTitle": "Pregled potovanja",
+    "unitDay": "dan",
+    "unitDays": "dni",
+    "costLabel": "ocena / osebo",
+    "ratingLabel": "uredniška ocena destinacije",
+    "daysTitle": "Predlagani dnevni razpored",
+    "dayLabel": "Dan {day}",
+    "dayFirst": "Prihod in raziskovanje {name}",
+    "dayLast": "Zadnji dan in odhod",
+    "dayMiddle": "Celodnevno raziskovanje",
+    "hoursLabel": "4-6 ur",
+    "perPerson": "€/osebo",
+    "travelerTypesTitle": "Itinerarji po tipu popotnika",
+    "generateButton": "Generiraj itinerer",
+    "otherDestinationsTitle": "Ostale destinacije",
+    "personalizedTitle": "Želite personaliziran itinerer?",
+    "personalizedText": "Naš AI upošteva vaš proračun, interese in sezono za popoln načrt.",
+    "personalizedButton": "Generiraj AI itinerer",
+    "meta": {
+      "notFound": "Itinerer ni najden",
+      "title": "{duration} itinerer za {name} — {desc}",
+      "description": "Popoln {durationLower} itinerer za {name}, {tagline}. {desc} — AI-priporočene aktivnosti, nastanitve in restavracije za {days}-dnevni obisk.",
+      "ogDescription": "AI-priporočeni {duration} itinerer z aktivnostmi, nastanitvami in restavracijami."
+    }
+  }
+}

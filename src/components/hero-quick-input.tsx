@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { localePrefix } from "@/i18n/routing";
 import {
   Sparkles,
   Leaf,
@@ -13,7 +15,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useTranslations } from "next-intl";
 
 // ============================================================================
 // HERO QUICK INPUT — "Kaj želiš doživeti v Sloveniji?"
@@ -42,6 +43,7 @@ const QUICK_ACTIONS = [
 
 export function HeroQuickInput() {
   const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations("hero");
   const tChips = useTranslations("heroChips");
   const tTrust = useTranslations("heroTrust");
@@ -50,14 +52,15 @@ export function HeroQuickInput() {
 
   // FW3: vprašanje se prenese na /načrtuj prek sessionStorage —
   // planner ga ob mountu samodejno prevzame in zgenerira itinerer.
+  // FW4.3-2: ohrani locale (EN uporabnik ostane na /en/nacrtuj).
   const handleSubmit = useCallback((query?: string) => {
     const text = query || input;
     if (!text.trim() || loading) return;
 
     setLoading(true);
     sessionStorage.setItem("heroQuery", text);
-    router.push("/nacrtuj");
-  }, [input, loading, router]);
+    router.push(`${localePrefix(locale)}/nacrtuj`);
+  }, [input, loading, locale, router]);
 
   return (
     <div className="w-full max-w-2xl mx-auto">

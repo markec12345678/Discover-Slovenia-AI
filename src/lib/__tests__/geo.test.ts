@@ -161,7 +161,27 @@ describe("sitemap.xml route", () => {
     expect(res.headers.get("content-type")).toContain("application/xml");
     const body = await res.text();
     expect(body.startsWith('<?xml version="1.0"')).toBe(true);
-    expect(body).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
+    // FW4.3-2: urlset ima xhtml namespace za hreflang alternate
+    expect(body).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"');
+    expect(body).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
+  });
+
+  test("FW4.3-2: hreflang alternati (xhtml:link) + EN URL-ji", async () => {
+    const body = await (await sitemapGET(req(RENDER))).text();
+    // EN različice so v sitemapu (jedro lijaka na EN whitelisti)
+    expect(body).toContain(`https://${RENDER}/en`);
+    // hreflang gruča na SL poti: sl-SI + en-US + x-default
+    expect(body).toContain(
+      `hreflang="sl-SI" href="https://${RENDER}/destinacija/bled/things-to-do"`,
+    );
+    expect(body).toContain(
+      `hreflang="en-US" href="https://${RENDER}/en/destinacija/bled/things-to-do"`,
+    );
+    expect(body).toContain(
+      `hreflang="x-default" href="https://${RENDER}/destinacija/bled/things-to-do"`,
+    );
+    // EN poti, ki NISO na whitelisti (vodici), EN različice NIMAJO
+    expect(body).not.toContain("/en/vodici/");
   });
 });
 

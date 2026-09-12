@@ -1,0 +1,43 @@
+{
+  "demoScenarios": {
+    "badge": "Preizkusi v 30 sekundah",
+    "title": "Kaj želiš doživeti?",
+    "subtitle": "Klikni eno od možnosti in AI takoj sestavi tvoj načrt",
+    "customTitle": "Napiši svoje",
+    "customSubtitle": "Ali prelijči zgoraj",
+    "tags": {
+      "twoDays": "2 dni",
+      "oneDay": "1 dan",
+      "nature": "narava",
+      "food": "kulinarika",
+      "today": "danes",
+      "family": "družina",
+      "fiveHours": "5 ur",
+      "romance": "romantika",
+      "budget": "budžetno",
+      "local": "lokalno"
+    },
+    "scenarios": {
+      "river": {
+        "title": "Miren vikend ob reki",
+        "query": "Miren vikend ob reki z dobro hrano"
+      },
+      "family": {
+        "title": "Družinski izlet danes",
+        "query": "Družinski izlet za otroke danes, 5 ur"
+      },
+      "romantic": {
+        "title": "Romantičen vikend z vinom",
+        "query": "Romantičen vikend z vinom in dobrimi restavracijami"
+      },
+      "budget": {
+        "title": "Cenejši izlet brez gužve",
+        "query": "Poceni izlet brez gužve, narava in mir"
+      },
+      "food": {
+        "title": "Najboljša lokalna hrana",
+        "query": "Najboljša lokalna hrana v Beli krajini, tradicionalna kuhinja"
+      }
+    }
+  }
+}

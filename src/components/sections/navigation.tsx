@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
 import { Mountain, Menu, Sun, Moon, Compass, Search, ShoppingCart, Building2 } from "lucide-react";

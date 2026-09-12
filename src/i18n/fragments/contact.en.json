@@ -1,0 +1,21 @@
+{
+  "contact": {
+    "title": "Contact",
+    "intro": "Questions about the platform, partnerships or technical matters? Get in touch.",
+    "cards": {
+      "emailTitle": "Email",
+      "locationTitle": "Location",
+      "locationValue": "Slovenia 🇸🇮",
+      "languagesTitle": "Languages",
+      "languagesValue": "Slovenščina, English, Deutsch, Italiano",
+      "supportTitle": "Technical support"
+    },
+    "providersTitle": "For providers",
+    "providersText": "Want to become part of the platform? Register on the provider portal.",
+    "providersLink": "Provider registration →",
+    "meta": {
+      "title": "Contact",
+      "description": "Get in touch with the Discover Slovenia AI team. Email and contact information."
+    }
+  }
+}

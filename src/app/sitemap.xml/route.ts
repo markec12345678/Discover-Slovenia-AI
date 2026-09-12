@@ -34,14 +34,23 @@ export async function GET(req: Request) {
   const base = resolveBaseUrl(req);
   const urls = getAllSitemapUrls(base);
 
+  // FW4.3-2: hreflang alternati (xhtml:link) za poti z EN različico —
+  // Google poveže SL in EN URL v isti jezikovni gruči.
   const xml =
     '<?xml version="1.0" encoding="UTF-8"?>\n' +
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" ' +
+    'xmlns:xhtml="http://www.w3.org/1999/xhtml">\n' +
     urls
       .map(
         (u) =>
           "  <url>\n" +
           `    <loc>${xmlEscape(u.url)}</loc>\n` +
+          (u.alternates ?? [])
+            .map(
+              (a) =>
+                `    <xhtml:link rel="alternate" hreflang="${a.hreflang}" href="${xmlEscape(a.url)}" />\n`,
+            )
+            .join("") +
           `    <changefreq>${u.changeFrequency}</changefreq>\n` +
           `    <priority>${u.priority.toFixed(1)}</priority>\n` +
           "  </url>",
@@ -54,7 +63,7 @@ export async function GET(req: Request) {
     headers: {
       "Content-Type": "application/xml; charset=utf-8",
       // Sitemap se spreminja samo ob deployu — urna cache je varna in
-      // prijazna do izvora (322 URL-jev, ~30 KB).
+      // prijazna do izvora (FW4.3-2: 654 URL-jev + hreflang alternati).
       "Cache-Control": "public, max-age=3600",
     },
   });

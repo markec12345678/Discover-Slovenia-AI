@@ -1,0 +1,20 @@
+{
+  "communityTrips": {
+    "badge": "Skupnost",
+    "title": "Skupnost načrtuje",
+    "subtitle": "Javni itinerarji, ki so jih ustvarili obiskovalci — poglej, glasuj, kopiraj idejo.",
+    "cta": "Ustvari svoj načrt",
+    "fallbackName": "Po Sloveniji z AI",
+    "openButton": "Odpri načrt",
+    "openAria": "Odpri načrt: {name} ({days})",
+    "coverAlt": "Potovanje {name} — {destination}",
+    "created": "Nastal {time}",
+    "durationTitle": "Trajanje potovanja",
+    "viewsTitle": "Število ogledov deljene strani",
+    "activitiesTitle": "Skupno število aktivnosti",
+    "createdTitle": "Kdaj je bil načrt ustvarjen",
+    "daysCount": "{count, plural, one {# dan} two {# dneva} few {# dni} other {# dni}}",
+    "viewsCount": "{count, plural, one {# ogled} two {# ogleda} few {# ogledi} other {# ogledov}}",
+    "activitiesCount": "{count, plural, one {# aktivnost} two {# aktivnosti} few {# aktivnosti} other {# aktivnosti}}"
+  }
+}

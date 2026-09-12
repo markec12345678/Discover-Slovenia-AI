@@ -1,0 +1,21 @@
+{
+  "welcomeBack": {
+    "title": "Dobrodošel nazaj! 👋",
+    "knowsLabel": "AI že ve:",
+    "visitedCount": "{count} obiskanih destinacij",
+    "quizCta": "Odgovori na <quizLink>2-minutni kviz</quizLink>, da ti AI sestavi potovanje po meri.",
+    "close": "Zapri",
+    "interests": {
+      "narava": "narava",
+      "kulinarika": "lokalna hrana",
+      "avantura": "avantura",
+      "kultura": "kultura"
+    },
+    "groups": {
+      "solo": "sam/a",
+      "par": "par",
+      "druzina": "družina",
+      "prijatelji": "prijatelji"
+    }
+  }
+}

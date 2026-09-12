@@ -1,0 +1,42 @@
+{
+  "itineraryPage": {
+    "durations": {
+      "1-dan": { "label": "1 day", "desc": "A quick visit" },
+      "vikend": { "label": "Weekend (2 days)", "desc": "The perfect weekend escape" },
+      "3-dnevi": { "label": "3 days", "desc": "An in-depth visit" },
+      "5-dnevi": { "label": "5 days", "desc": "The complete experience" },
+      "7-dnevi": { "label": "7 days", "desc": "A week of exploring" }
+    },
+    "travelerTypes": {
+      "pari": { "label": "For couples", "desc": "A romantic escape" },
+      "druzina": { "label": "Family", "desc": "Fun for all ages" },
+      "solo": { "label": "Solo traveller", "desc": "Explore at your own pace" },
+      "avanturist": { "label": "Adventurer", "desc": "Adrenaline and nature" }
+    },
+    "headline": "{duration} itinerary for {name}",
+    "overviewTitle": "Trip overview",
+    "unitDay": "day",
+    "unitDays": "days",
+    "costLabel": "estimate / person",
+    "ratingLabel": "editorial destination rating",
+    "daysTitle": "Suggested daily schedule",
+    "dayLabel": "Day {day}",
+    "dayFirst": "Arrival and exploring {name}",
+    "dayLast": "Final day and departure",
+    "dayMiddle": "A full day of exploring",
+    "hoursLabel": "4-6 hours",
+    "perPerson": "€/person",
+    "travelerTypesTitle": "Itineraries by traveller type",
+    "generateButton": "Generate itinerary",
+    "otherDestinationsTitle": "Other destinations",
+    "personalizedTitle": "Want a personalised itinerary?",
+    "personalizedText": "Our AI takes your budget, interests and season into account for the perfect plan.",
+    "personalizedButton": "Generate an AI itinerary",
+    "meta": {
+      "notFound": "Itinerary not found",
+      "title": "{duration} itinerary for {name} — {desc}",
+      "description": "The complete {durationLower} itinerary for {name}, {tagline}. {desc} — AI-recommended activities, accommodation and restaurants for a {days}-day visit.",
+      "ogDescription": "An AI-recommended {duration} itinerary with activities, accommodation and restaurants."
+    }
+  }
+}

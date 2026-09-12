@@ -1,0 +1,43 @@
+{
+  "collections": {
+    "eyebrow": "Kurirane kategorije",
+    "title": "Zbirke",
+    "subtitle": "Kurirane kategorije za vsako priložnost — od zimskih paketov do romantičnih pobegov in eko lokalnih izdelkov.",
+    "explore": "Razišči",
+    "openAria": "Odpri zbirko {title}",
+    "items": {
+      "winter": {
+        "title": "Zimski paketi",
+        "description": "Smučanje, wellness in tople kulinarike za hladne dni"
+      },
+      "summer": {
+        "title": "Poletni paketi",
+        "description": "Rafting, pohodi in osvežitev ob vodi"
+      },
+      "romantic": {
+        "title": "Romantični pobegi",
+        "description": "Za pare — gradovi, jezero, vinogradi"
+      },
+      "family": {
+        "title": "Družinsko",
+        "description": "Otrokom prijazne aktivnosti in izdelki"
+      },
+      "gourmet": {
+        "title": "Kulinarične izkušnje",
+        "description": "Degustacije vin, sirarstvo, kuharske delavnice"
+      },
+      "adventure": {
+        "title": "Adrenalin",
+        "description": "Rafting, smučanje, plezanje, zip-line"
+      },
+      "eco": {
+        "title": "Eko in lokalno",
+        "description": "Ekološki izdelki in trajnostne izkušnje"
+      },
+      "luxury": {
+        "title": "Luxury",
+        "description": "Visokokakovostne izkušnje in izdelki"
+      }
+    }
+  }
+}

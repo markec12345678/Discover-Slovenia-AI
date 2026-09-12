@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Sparkles,
   ArrowLeft,
@@ -33,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { trackFunnel } from "@/lib/funnel";
 import { useTripProfile } from "@/components/trip-profile";
+import { Link } from "@/i18n/navigation";
 import type { Destination, Season } from "@/lib/types";
 
 // ============================================================================
@@ -43,68 +45,65 @@ import type { Destination, Season } from "@/lib/types";
 // Varčen raziskovalec / Luksuzni popotnik) → shrani profil (useTripProfile)
 // → CTA pošlje personaliziran "heroQuery" event v AI načrtovalnik
 // (isti mehanizem kot demo-scenariji / pre-generated itinererji).
+//
+// FW4.3-2: vsa besedila (vprašanja, opcije, rezultati, personaliziran
+// prompt za načrtovalnik) živijo v fragmentih quiz.{sl,en}.json —
+// prompt se sestavi v jeziku uporabnika, zato AI odgovarja pravilno
+// (planner pošlje language=locale).
 // ============================================================================
 
 interface QuizOption {
   value: string;
-  label: string;
-  description: string;
   icon: typeof Coffee;
 }
 
 interface QuizQuestion {
   key: "tempo" | "vibe" | "season" | "group" | "budget";
-  title: string;
   options: QuizOption[];
 }
 
 const QUESTIONS: QuizQuestion[] = [
   {
     key: "tempo",
-    title: "Kakšen tempo ti ustreza?",
     options: [
-      { value: "sproscen", label: "Sproščen", description: "Počasi, brez urnika", icon: Coffee },
-      { value: "uravnotezen", label: "Uravnotežen", description: "Mešanica miru in gibanja", icon: Scale },
-      { value: "akcija", label: "Akcija", description: "Od zore do mraka", icon: Gauge },
+      { value: "sproscen", icon: Coffee },
+      { value: "uravnotezen", icon: Scale },
+      { value: "akcija", icon: Gauge },
     ],
   },
   {
     key: "vibe",
-    title: "Kaj te najbolj privlači?",
     options: [
-      { value: "narava", label: "Narava & pohodi", description: "Jezera, soteske, gorovje", icon: Mountain },
-      { value: "hrana", label: "Hrana & vino", description: "Gostilne in degustacije", icon: Wine },
-      { value: "adrenalin", label: "Adrenalin & šport", description: "Rafting, kolesarjenje, smučanje", icon: Zap },
-      { value: "kultura", label: "Kultura & mesta", description: "Stara mesta, gradovi, muzeji", icon: Landmark },
+      { value: "narava", icon: Mountain },
+      { value: "hrana", icon: Wine },
+      { value: "adrenalin", icon: Zap },
+      { value: "kultura", icon: Landmark },
     ],
   },
   {
     key: "season",
-    title: "Kdaj bi potoval(a)?",
     options: [
-      { value: "spring", label: "Pomlad", description: "Cvetje in sveža zelen", icon: Flower2 },
-      { value: "summer", label: "Poletje", description: "Kopanje in dolgi dnevi", icon: Sun },
-      { value: "autumn", label: "Jesen", description: "Barve in burja v vinogradih", icon: Leaf },
-      { value: "winter", label: "Zima", description: "Smučanje in praznični vonj", icon: Snowflake },
+      { value: "spring", icon: Flower2 },
+      { value: "summer", icon: Sun },
+      { value: "autumn", icon: Leaf },
+      { value: "winter", icon: Snowflake },
     ],
   },
   {
     key: "group",
-    title: "S kom potuješ?",
     options: [
-      { value: "solo", label: "Sama/sam", description: "Svoboda brez kompromisov", icon: User },
-      { value: "par", label: "Par", description: "Romantika za dva", icon: Heart },
-      { value: "druzina", label: "Družina z otroki", description: "Zabava za vse starosti", icon: Users },
-      { value: "prijatelji", label: "Prijatelji", description: "Ekipa in smeh", icon: UsersRound },
+      { value: "solo", icon: User },
+      { value: "par", icon: Heart },
+      { value: "druzina", icon: Users },
+      { value: "prijatelji", icon: UsersRound },
     ],
   },
   {
     key: "budget",
-    title: "Kakšen proračun?",
     options: [
-      { value: "low", label: "Varčen", description: "Dosegljivo, a pametno", icon: PiggyBank },
-      { value: "mid", label: "Srednji", description: "Udobje brez razmetavanja", icon: Wallet },
-      { value: "lux", label: "Brez omejitev", description: "Vrhunske izkušnje", icon: Gem },
+      { value: "low", icon: PiggyBank },
+      { value: "mid", icon: Wallet },
+      { value: "lux", icon: Gem },
     ],
   },
 ];
@@ -122,53 +121,48 @@ interface QuizAnswers {
 interface TravelStyleResult {
   /** ujema se z id-ji TRAVEL_STYLES v trip-profile.tsx */
   id: string;
-  label: string;
   emoji: string;
-  description: string;
+  /** ključa v fragmentu quiz.styles.* */
+  labelKey: string;
+  descKey: string;
 }
 
 const STYLE_RESULTS: Record<string, TravelStyleResult> = {
   narava: {
     id: "nature",
-    label: "Narava",
     emoji: "🌿",
-    description:
-      "Mir, svež zrak in poti, ki se končajo ob jezeru. Tvoja Slovenija: Triglavski narodni park, Soča in Bohinj.",
+    labelKey: "styles.narava.label",
+    descKey: "styles.narava.desc",
   },
   hrana: {
     id: "foodie",
-    label: "Gurman",
     emoji: "🍷",
-    description:
-      "Potuješ z želodcem. Tvoja Slovenija: gostilne z lokalnimi sestavinami, vinske ceste Štajerske in Dolenjske.",
+    labelKey: "styles.hrana.label",
+    descKey: "styles.hrana.desc",
   },
   adrenalin: {
     id: "adventurer",
-    label: "Pustolovec",
     emoji: "🧗",
-    description:
-      "Adrenalin je tvoje gorivo. Tvoja Slovenija: rafting na Soči, kanjoning v soteskah in smučanje na Voglu.",
+    labelKey: "styles.adrenalin.label",
+    descKey: "styles.adrenalin.desc",
   },
   kultura: {
     id: "culture",
-    label: "Kulturnik",
     emoji: "🏛️",
-    description:
-      "Zgodovina in mestna vrvež te naredita srečnega. Tvoja Slovenija: Ljubljana, Ptuj, Celje in Piran.",
+    labelKey: "styles.kultura.label",
+    descKey: "styles.kultura.desc",
   },
   budget: {
     id: "budget",
-    label: "Varčen raziskovalec",
     emoji: "💸",
-    description:
-      "Vidiš veliko, porabiš malo. Tvoja Slovenija: brezplačne poti, javni prevoz in lokalni bazarji.",
+    labelKey: "styles.budget.label",
+    descKey: "styles.budget.desc",
   },
   luxury: {
     id: "luxury",
-    label: "Luksuzni popotnik",
     emoji: "👑",
-    description:
-      "Brez kompromisov. Tvoja Slovenija: wellness zdravilišča, vrhunske degustacije in hotelska doživetja.",
+    labelKey: "styles.luxury.label",
+    descKey: "styles.luxury.desc",
   },
 };
 
@@ -249,33 +243,24 @@ function recommendedDestinations(styleId: string, season?: string): Destination[
 }
 
 // === Personaliziran prompt za AI načrtovalnik (heroQuery mehanizem) ===
+// FW4.3-2: besedila (interesi/sezona/skupina/proračun + predloga) pridejo
+// iz fragmentov, zato je tudi prompt v jeziku uporabnika.
 
-const INTEREST_TEXT: Record<string, string> = {
-  narava: "naravo in pohode",
-  hrana: "lokalno hrano in vino",
-  adrenalin: "adrenalin in šport",
-  kultura: "kulturo in mesta",
-};
+type QuizT = ReturnType<typeof useTranslations>;
 
-const SEASON_TEXT: Record<string, string> = {
-  spring: "pomlad",
-  summer: "poletje",
-  autumn: "jesen",
-  winter: "zimo",
-};
-
-const GROUP_TEXT: Record<string, string> = {
-  solo: "sama",
-  par: "s partnerjem",
-  druzina: "z družino",
-  prijatelji: "s prijatelji",
-};
-
-const BUDGET_TEXT: Record<string, string> = {
-  low: "varčen",
-  mid: "srednji",
-  lux: "brez omejitev",
-};
+function buildPrompt(a: QuizAnswers, t: QuizT): string {
+  const vibe = a.vibe ?? "narava";
+  const interestText = t(`prompt.interest.${vibe}`);
+  const seasonText = t(`seasons.${a.season ?? "summer"}`);
+  const groupText = t(`prompt.group.${a.group ?? "par"}`);
+  const budgetText = t(`prompt.budget.${a.budget ?? "mid"}`);
+  return t("prompt.template", {
+    interest: interestText,
+    season: seasonText,
+    group: groupText,
+    budget: budgetText,
+  });
+}
 
 // Interesi iz kviza → vrednosti INTERESTS iz slovenia-data
 function interestsFromAnswers(a: QuizAnswers): string[] {
@@ -298,18 +283,10 @@ function interestsFromAnswers(a: QuizAnswers): string[] {
   return interests.length > 0 ? interests : ["narava"];
 }
 
-function buildPrompt(a: QuizAnswers): string {
-  const vibe = a.vibe ?? "narava";
-  const interestText = INTEREST_TEXT[vibe] ?? "naravo";
-  const seasonText = SEASON_TEXT[a.season ?? "summer"] ?? "poletje";
-  const groupText = GROUP_TEXT[a.group ?? "par"] ?? "s partnerjem";
-  const budgetText = BUDGET_TEXT[a.budget ?? "mid"] ?? "srednji";
-  return `Načrtuj 3-dnevno potovanje za popotnika, ki obožuje ${interestText}, raje ${seasonText}, potuje ${groupText}, proračun ${budgetText}`;
-}
-
 // ============================================================================
 
 export function TravelStyleQuiz() {
+  const t = useTranslations("quiz");
   const { updateProfile, completeOnboarding } = useTripProfile();
 
   const [step, setStep] = useState(0); // 0..4 vprašanja, 5 = rezultat
@@ -362,7 +339,7 @@ export function TravelStyleQuiz() {
     const planner = document.getElementById("načrtuj");
     planner?.scrollIntoView({ behavior: "smooth", block: "start" });
     setTimeout(() => {
-      window.dispatchEvent(new CustomEvent("heroQuery", { detail: buildPrompt(answers) }));
+      window.dispatchEvent(new CustomEvent("heroQuery", { detail: buildPrompt(answers, t) }));
     }, 500);
   }
 
@@ -375,12 +352,12 @@ export function TravelStyleQuiz() {
             <div className="mb-3 flex justify-center">
               <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium">
                 <Sparkles className="size-3.5 text-primary" aria-hidden="true" />
-                Ne veš, kje začeti? ⭐ 2-minutni kviz
+                {t("badge")}
               </span>
             </div>
-            <h2 className="text-2xl font-bold sm:text-3xl">Kakšen popotnik si?</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl">{t("title")}</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Odgovori na 5 vprašanj in AI ti sestavi popotovanje po meri
+              {t("subtitle")}
             </p>
             <button
               type="button"
@@ -389,7 +366,7 @@ export function TravelStyleQuiz() {
               }}
               className="mt-3 rounded-sm text-xs text-muted-foreground underline underline-offset-4 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              Preskoči kviz
+              {t("skip")}
             </button>
           </div>
 
@@ -402,9 +379,9 @@ export function TravelStyleQuiz() {
                   <div className="mb-6 space-y-2">
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span className="font-medium" aria-live="polite">
-                        Vprašanje {step + 1} od {totalSteps}
+                        {t("progress", { current: step + 1, total: totalSteps })}
                       </span>
-                      <span>{Math.round(progress * 100)} %</span>
+                      <span>{t("percent", { value: Math.round(progress * 100) })}</span>
                     </div>
                     <div
                       className="h-2 overflow-hidden rounded-full bg-muted"
@@ -412,7 +389,7 @@ export function TravelStyleQuiz() {
                       aria-valuenow={Math.round(progress * 100)}
                       aria-valuemin={0}
                       aria-valuemax={100}
-                      aria-label="Napredek kviza"
+                      aria-label={t("progressAria")}
                     >
                       <div
                         className="h-full rounded-full bg-primary transition-all duration-500"
@@ -424,7 +401,7 @@ export function TravelStyleQuiz() {
                   {/* Vprašanje */}
                   <fieldset>
                     <legend className="mb-4 text-lg font-bold sm:text-xl">
-                      {currentQuestion.title}
+                      {t(`questions.${currentQuestion.key}.title`)}
                     </legend>
                     <div className="grid gap-2.5 sm:grid-cols-2">
                       {currentQuestion.options.map((option) => {
@@ -453,8 +430,12 @@ export function TravelStyleQuiz() {
                               <Icon className="size-5" aria-hidden="true" />
                             </span>
                             <span className="min-w-0 flex-1">
-                              <span className="block text-sm font-semibold leading-tight">{option.label}</span>
-                              <span className="mt-0.5 block text-xs text-muted-foreground">{option.description}</span>
+                              <span className="block text-sm font-semibold leading-tight">
+                                {t(`questions.${currentQuestion.key}.options.${option.value}.label`)}
+                              </span>
+                              <span className="mt-0.5 block text-xs text-muted-foreground">
+                                {t(`questions.${currentQuestion.key}.options.${option.value}.desc`)}
+                              </span>
                             </span>
                             <ArrowRight
                               className="ml-auto size-4 shrink-0 self-center text-muted-foreground/50 transition-all group-hover:translate-x-0.5 group-hover:text-primary"
@@ -474,10 +455,10 @@ export function TravelStyleQuiz() {
                       size="sm"
                       className="mt-5 gap-1.5 text-muted-foreground"
                       onClick={() => setStep((s) => Math.max(0, s - 1))}
-                      aria-label="Nazaj na prejšnje vprašanje"
+                      aria-label={t("backAria")}
                     >
                       <ArrowLeft className="size-4" aria-hidden="true" />
-                      Nazaj
+                      {t("back")}
                     </Button>
                   )}
                 </div>
@@ -487,27 +468,27 @@ export function TravelStyleQuiz() {
                   <div key="result" className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                     <div className="text-center">
                       <div className="mx-auto mb-4 flex size-20 items-center justify-center rounded-full bg-primary/10">
-                        <span className="text-4xl" role="img" aria-label={style.label}>
+                        <span className="text-4xl" role="img" aria-label={t(style.labelKey)}>
                           {style.emoji}
                         </span>
                       </div>
                       <p className="text-xs font-semibold uppercase tracking-widest text-primary">
-                        Tvoj stil potovanja
+                        {t("styleLabel")}
                       </p>
-                      <h3 className="mt-1 text-2xl font-bold sm:text-3xl">{style.label}</h3>
+                      <h3 className="mt-1 text-2xl font-bold sm:text-3xl">{t(style.labelKey)}</h3>
                       <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
-                        {style.description}
+                        {t(style.descKey)}
                       </p>
                     </div>
 
                     {/* Priporočene destinacije */}
                     <div className="mt-6">
                       <p className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Priporočene destinacije
+                        {t("recommendations")}
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {recommendations.map((d) => (
-                          <a
+                          <Link
                             key={d.id}
                             href="/destinacije"
                             className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3.5 py-2 text-sm font-medium text-foreground transition-all hover:border-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -516,10 +497,10 @@ export function TravelStyleQuiz() {
                             {d.name}
                             {answers.season && d.bestSeason.includes(answers.season as Season) && (
                               <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px]">
-                                {SEASON_TEXT[answers.season]}
+                                {t(`seasons.${answers.season}`)}
                               </Badge>
                             )}
-                          </a>
+                          </Link>
                         ))}
                       </div>
                     </div>
@@ -531,10 +512,10 @@ export function TravelStyleQuiz() {
                         size="lg"
                         className="w-full gap-2 bg-primary"
                         onClick={startPlanning}
-                        aria-label="Načrtuj moje potovanje z AI načrtovalnikom"
+                        aria-label={t("planCtaAria")}
                       >
                         <Sparkles className="size-4" aria-hidden="true" />
-                        Načrtuj moje potovanje
+                        {t("planCta")}
                       </Button>
                       <Button
                         type="button"
@@ -542,10 +523,10 @@ export function TravelStyleQuiz() {
                         size="sm"
                         className="w-full gap-1.5 text-muted-foreground"
                         onClick={restart}
-                        aria-label="Ponovi kviz od začetka"
+                        aria-label={t("restartAria")}
                       >
                         <RotateCcw className="size-3.5" aria-hidden="true" />
-                        Ponovi kviz
+                        {t("restart")}
                       </Button>
                     </div>
                   </div>

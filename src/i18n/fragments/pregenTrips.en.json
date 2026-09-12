@@ -1,0 +1,65 @@
+{
+  "pregenTrips": {
+    "badge": "Popular itineraries",
+    "title": "Or pick a tried-and-tested itinerary",
+    "subtitle": "The AI then personalises it further around your wishes",
+    "planCta": "Plan it",
+    "dayOne": "day",
+    "dayOther": "days",
+    "trips": {
+      "bled-1-day": {
+        "title": "Bled in a day",
+        "query": "One day in Bled — castle, island, Vintgar and Bled cream cake",
+        "dest1": "Bled",
+        "dest2": "Vintgar",
+        "hl1": "Bled Castle",
+        "hl2": "Pletna boat ride",
+        "hl3": "Vintgar Gorge"
+      },
+      "ljubljana-2-days": {
+        "title": "Ljubljana weekend",
+        "query": "Two days in Ljubljana — culture, food and the castle",
+        "dest1": "Ljubljana",
+        "hl1": "Old town centre",
+        "hl2": "Ljubljana Castle",
+        "hl3": "Triple Bridge"
+      },
+      "soca-3-days": {
+        "title": "Soča adventure",
+        "query": "Three days on the Soča — rafting, hikes and local food",
+        "dest1": "Soča River",
+        "dest2": "Kobarid",
+        "dest3": "Bovec",
+        "hl1": "Rafting on the Soča",
+        "hl2": "Kobarid Museum",
+        "hl3": "Boka Waterfall"
+      },
+      "piran-coast": {
+        "title": "Coast and Piran",
+        "query": "A weekend on the coast — Piran, Portorož and local food",
+        "dest1": "Piran",
+        "dest2": "Portorož",
+        "hl1": "Tartini Square",
+        "hl2": "The waterfront",
+        "hl3": "Olive oil"
+      },
+      "bela-krajina": {
+        "title": "Exploring Bela krajina",
+        "query": "Two days in Bela krajina — honey, food and nature on the Kolpa",
+        "dest1": "Črnomelj",
+        "hl1": "Local honey",
+        "hl2": "Traditional food",
+        "hl3": "The Kolpa"
+      },
+      "triglav-park": {
+        "title": "Triglav National Park",
+        "query": "Three days in Triglav National Park — Bohinj, Triglav and waterfalls",
+        "dest1": "Bohinj",
+        "dest2": "Triglav",
+        "hl1": "Lake Bohinj",
+        "hl2": "Climbing Triglav",
+        "hl3": "Savica Waterfall"
+      }
+    }
+  }
+}

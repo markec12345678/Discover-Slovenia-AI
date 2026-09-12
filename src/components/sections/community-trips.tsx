@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { getLocale, getTranslations } from "next-intl/server";
 import {
   ArrowRight,
   Calendar,
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { Link } from "@/i18n/navigation";
 import type { DayPlan } from "@/lib/types";
 
 // ============================================================================
@@ -27,13 +28,13 @@ import type { DayPlan } from "@/lib/types";
 // SERVER komponenta (async) — bere SavedItinerary direktno iz baze
 // (isti vzorec kot /pot/[shareId]/page.tsx), brez client fetchanja.
 // Prazna galerija (0 javnih poti) → rendera null (sekcija se skrije).
+//
+// FW4.3-2 (P4-8): vsebina galerije (imena poti, itinererji) prihaja iz
+// baze v slovenščini — na EN sekcija SE NE izrise (ne mešamo jezikov).
 // ============================================================================
 
 /** Koliko javnih potovanj prikažemo v galeriji */
 const TAKE = 8;
-
-/** Fallback ime, kadar shranjen itinerer nima imena */
-const FALLBACK_NAME = "Po Sloveniji z AI";
 
 /** Max destinacijskih badge-ov na kartici */
 const MAX_DESTINATION_BADGES = 3;
@@ -62,12 +63,12 @@ interface CommunityTrip {
 }
 
 /**
- * Relativni čas v slovenščini ("pred 3 dnevi", "pred 2 mesecema").
- * Intl.RelativeTimeFormat("sl") z numeric: "auto" da pravilne
- * slovenske dvojine/množine (včeraj/danes ipd.).
+ * Relativni čas ("pred 3 dnevi", "pred 2 mesecema" / EN ustreznice).
+ * Intl.RelativeTimeFormat z numeric: "auto" da pravilne oblike
+ * (včeraj/danes ipd.) za podani jezik.
  */
-function relativniCas(date: Date): string {
-  const rtf = new Intl.RelativeTimeFormat("sl", { numeric: "auto" });
+function relativniCas(date: Date, locale: string): string {
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   const sekunde = (date.getTime() - Date.now()) / 1000; // negativno = preteklost
   const abs = Math.abs(sekunde);
 
@@ -80,42 +81,20 @@ function relativniCas(date: Date): string {
   return rtf.format(Math.round(sekunde / (86_400 * 365)), "year");
 }
 
-/** Slovenščina za števnike dni ("1 dan" / "2 dneva" / "5 dni") */
-function formatDni(count: number): string {
-  if (count === 1) return "1 dan";
-  if (count === 2) return "2 dneva";
-  if (count === 3) return "3 dni";
-  if (count === 4) return "4 dni";
-  return `${count} dni`;
-}
-
-/** Slovenščina za števnike ogledov ("1 ogled" / "2 ogleda" / "5 ogledov") */
-function formatOgledi(count: number): string {
-  if (count === 1) return "1 ogled";
-  if (count === 2) return "2 ogleda";
-  if (count === 3) return "3 ogledi";
-  if (count === 4) return "4 ogledi";
-  return `${count} ogledov`;
-}
-
-/** Slovenščina za števnike aktivnosti ("1 aktivnost" / "4 aktivnosti") */
-function formatAktivnosti(count: number): string {
-  if (count === 1) return "1 aktivnost";
-  if (count >= 2 && count <= 4) return `${count} aktivnosti`;
-  return `${count} aktivnosti`;
-}
-
 /**
  * Izlušči podatke za kartico iz shranjenega JSON itinererja.
  * Vrne null, če je JSON pokvarjen ali brez veljavnih dni (vrstico preskočimo).
  */
-function parseTrip(row: {
-  shareId: string;
-  name: string | null;
-  views: number;
-  createdAt: Date;
-  itinerary: string;
-}): CommunityTrip | null {
+function parseTrip(
+  row: {
+    shareId: string;
+    name: string | null;
+    views: number;
+    createdAt: Date;
+    itinerary: string;
+  },
+  fallbackName: string
+): CommunityTrip | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(row.itinerary);
@@ -161,7 +140,7 @@ function parseTrip(row: {
 
   return {
     shareId: row.shareId,
-    name: row.name?.trim() || FALLBACK_NAME,
+    name: row.name?.trim() || fallbackName,
     dayCount: validDays.length,
     destinationNames,
     activityCount,
@@ -173,6 +152,13 @@ function parseTrip(row: {
 }
 
 export async function CommunityTrips() {
+  // FW4.3-2 (P4-8): galerija je zgrajena iz slovenske DB vsebine —
+  // na angleščini se ne izriše (tudi brez DB klica).
+  const locale = await getLocale();
+  if (locale === "en") return null;
+
+  const t = await getTranslations("communityTrips");
+
   // Javni itinerarji: shareId je vselej generiran ob "Shrani in deli",
   // vendar branju dodamo varnostni filter (neprazno shareId)
   let rows: {
@@ -203,8 +189,8 @@ export async function CommunityTrips() {
   }
 
   const trips = rows
-    .map(parseTrip)
-    .filter((t): t is CommunityTrip => t !== null);
+    .map((row) => parseTrip(row, t("fallbackName")))
+    .filter((trip): trip is CommunityTrip => trip !== null);
 
   // Prazna galerija → sekcija se ne rendera (legitimno stanje)
   if (trips.length === 0) return null;
@@ -223,17 +209,16 @@ export async function CommunityTrips() {
             className="mb-3 border-primary/30 text-primary"
           >
             <Sparkles className="size-3" aria-hidden="true" />
-            Skupnost
+            {t("badge")}
           </Badge>
           <h2
             id="skupnost-title"
             className="text-3xl font-bold tracking-tight sm:text-4xl"
           >
-            Skupnost načrtuje
+            {t("title")}
           </h2>
           <p className="mt-3 text-base text-muted-foreground">
-            Javni itinerarji, ki so jih ustvarili obiskovalci — poglej,
-            glasuj, kopiraj idejo.
+            {t("subtitle")}
           </p>
         </div>
 
@@ -250,7 +235,7 @@ export async function CommunityTrips() {
         <div className="mt-10 flex justify-center">
           <Button asChild size="lg">
             <Link href="/nacrtuj">
-              Ustvari svoj načrt
+              {t("cta")}
               <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
           </Button>
@@ -260,7 +245,10 @@ export async function CommunityTrips() {
   );
 }
 
-function CommunityTripCard({ trip }: { trip: CommunityTrip }) {
+async function CommunityTripCard({ trip }: { trip: CommunityTrip }) {
+  const t = await getTranslations("communityTrips");
+  const locale = await getLocale();
+
   const visibleDestinations = trip.destinationNames.slice(
     0,
     MAX_DESTINATION_BADGES
@@ -268,7 +256,10 @@ function CommunityTripCard({ trip }: { trip: CommunityTrip }) {
   const hiddenDestinations =
     trip.destinationNames.length - visibleDestinations.length;
   const href = `/pot/${trip.shareId}`;
-  const ariaLabel = `Odpri načrt: ${trip.name} (${formatDni(trip.dayCount)})`;
+  const ariaLabel = t("openAria", {
+    name: trip.name,
+    days: t("daysCount", { count: trip.dayCount }),
+  });
 
   return (
     <Card className="group h-full gap-0 overflow-hidden py-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
@@ -277,7 +268,10 @@ function CommunityTripCard({ trip }: { trip: CommunityTrip }) {
         <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted">
           <img
             src={trip.coverImage}
-            alt={`Potovanje ${trip.name} — ${trip.destinationNames[0] ?? "Slovenija"}`}
+            alt={t("coverAlt", {
+              name: trip.name,
+              destination: trip.destinationNames[0] ?? "Slovenija",
+            })}
             loading="lazy"
             className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
@@ -296,17 +290,17 @@ function CommunityTripCard({ trip }: { trip: CommunityTrip }) {
         <div className="flex items-center justify-between gap-2 text-sm">
           <span
             className="inline-flex items-center gap-1.5 font-medium text-foreground/80"
-            title="Trajanje potovanja"
+            title={t("durationTitle")}
           >
             <Calendar className="size-4 text-primary" aria-hidden="true" />
-            {formatDni(trip.dayCount)}
+            {t("daysCount", { count: trip.dayCount })}
           </span>
           <span
             className="inline-flex items-center gap-1.5 text-muted-foreground"
-            title="Število ogledov deljene strani"
+            title={t("viewsTitle")}
           >
             <Eye className="size-4 text-primary" aria-hidden="true" />
-            {formatOgledi(trip.views)}
+            {t("viewsCount", { count: trip.views })}
           </span>
         </div>
 
@@ -340,13 +334,13 @@ function CommunityTripCard({ trip }: { trip: CommunityTrip }) {
         <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
           <span
             className="inline-flex items-center gap-1.5"
-            title="Skupno število aktivnosti"
+            title={t("activitiesTitle")}
           >
             <Footprints className="size-4 text-primary" aria-hidden="true" />
-            {formatAktivnosti(trip.activityCount)}
+            {t("activitiesCount", { count: trip.activityCount })}
           </span>
-          <span title="Kdaj je bil načrt ustvarjen">
-            Nastal {relativniCas(trip.createdAt)}
+          <span title={t("createdTitle")}>
+            {t("created", { time: relativniCas(trip.createdAt, locale) })}
           </span>
         </div>
       </CardContent>
@@ -354,7 +348,7 @@ function CommunityTripCard({ trip }: { trip: CommunityTrip }) {
       <CardFooter className="p-4 pt-0 sm:p-5 sm:pt-0">
         <Button asChild variant="outline" className="w-full">
           <Link href={href} aria-label={ariaLabel}>
-            Odpri načrt
+            {t("openButton")}
             <ArrowRight
               className="size-4 transition-transform group-hover:translate-x-0.5"
               aria-hidden="true"

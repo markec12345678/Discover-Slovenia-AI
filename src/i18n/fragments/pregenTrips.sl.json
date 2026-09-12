@@ -1,0 +1,65 @@
+{
+  "pregenTrips": {
+    "badge": "Priljubljeni načrti",
+    "title": "Ali izberi preverjen itinerer",
+    "subtitle": "AI ga še dodatno personalizira glede na tvoje želje",
+    "planCta": "Načrtuj",
+    "dayOne": "dan",
+    "dayOther": "dneva",
+    "trips": {
+      "bled-1-day": {
+        "title": "Bled v enem dnevu",
+        "query": "En dan na Bledu — grad, otok, Vintgar in kremšnita",
+        "dest1": "Bled",
+        "dest2": "Vintgar",
+        "hl1": "Blejski grad",
+        "hl2": "Pletna vožnja",
+        "hl3": "Vintgarska soteska"
+      },
+      "ljubljana-2-days": {
+        "title": "Ljubljana vikend",
+        "query": "Dva dni v Ljubljani — kultura, hrana in grad",
+        "dest1": "Ljubljana",
+        "hl1": "Stari mestni center",
+        "hl2": "Ljubljanski grad",
+        "hl3": "Tromostovje"
+      },
+      "soca-3-days": {
+        "title": "Soča avantura",
+        "query": "Tri dni ob Soči — rafting, pohodi in lokalna hrana",
+        "dest1": "Reka Soča",
+        "dest2": "Kobarid",
+        "dest3": "Bovec",
+        "hl1": "Rafting na Soči",
+        "hl2": "Kobarid muzej",
+        "hl3": "Slap Boka"
+      },
+      "piran-coast": {
+        "title": "Obala in Piran",
+        "query": "Vikend na obali — Piran, Portorož in lokalna hrana",
+        "dest1": "Piran",
+        "dest2": "Portorož",
+        "hl1": "Tartinijev trg",
+        "hl2": "Obala",
+        "hl3": "Oljčno olje"
+      },
+      "bela-krajina": {
+        "title": "Bela krajina odkrivanje",
+        "query": "Dva dni v Beli krajini — med, hrana in narava ob Kolpi",
+        "dest1": "Črnomelj",
+        "hl1": "Lokalni med",
+        "hl2": "Tradicijska hrana",
+        "hl3": "Kolpa"
+      },
+      "triglav-park": {
+        "title": "Triglavski narodni park",
+        "query": "Tri dni v Triglavskem narodnem parku — Bohinj, Triglav in slapi",
+        "dest1": "Bohinj",
+        "dest2": "Triglav",
+        "hl1": "Bohinjsko jezero",
+        "hl2": "Vzpon na Triglav",
+        "hl3": "Slap Savica"
+      }
+    }
+  }
+}

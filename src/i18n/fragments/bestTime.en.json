@@ -1,0 +1,43 @@
+{
+  "bestTime": {
+    "breadcrumbHome": "Home",
+    "breadcrumbCurrent": "Best time — {season}",
+    "seasons": {
+      "pomlad": { "label": "Spring", "months": " March–May", "desc": "Blooms, mild weather, fewer tourists" },
+      "poletje": { "label": "Summer", "months": " June–August", "desc": "Warm, ideal for the water and hiking" },
+      "jesen": { "label": "Autumn", "months": " September–November", "desc": "Autumn colours, wine, fewer crowds" },
+      "zima": { "label": "Winter", "months": " December–February", "desc": "Skiing, festive markets, wellness" }
+    },
+    "bestSeasonBadge": "✓ Best season",
+    "heroTitle": "Best time to visit {name}",
+    "overviewTitle": "{name} in {seasonLower}",
+    "bestCardTitle": "{season} is the ideal season for {name}!",
+    "bestCardText": "{name} is at its very best this season — {taglineLower}.",
+    "offCardTitle": "{season} isn't the main season for {name}",
+    "offCardText": "But that can be an advantage — fewer tourists, lower prices and a different experience.",
+    "allSeasonsTitle": "All seasons for {name}",
+    "bestBadge": "★ Best",
+    "faqTitle": "Frequently asked questions",
+    "faq": {
+      "q1": "When is the best time to visit {name}?",
+      "a1": "{season} is a great time to visit {name}. Temperatures are {temp}, which is ideal for exploring. Spring and autumn bring fewer tourists and lower prices.",
+      "q2": "What's the weather like in {name} in {seasonLower}?",
+      "a2": "In {seasonLower}, temperatures in {name} are usually {temp}. We recommend dressing in layers.",
+      "q3": "Which activities are available in {name} in {seasonLower}?",
+      "a3": "{season} in {name} offers a range of activities — from hiking to fine food. Check our list of things to do in {name}.",
+      "q4": "Do I need a reservation to visit {name}?",
+      "a4": "We recommend booking accommodation at least 2 weeks in advance, especially in high season. Use our AI planner to optimise your itinerary."
+    },
+    "ctaTitle": "Plan your {seasonLower} trip to {name}",
+    "ctaText": "The AI takes the season, the weather and your interests into account for the perfect plan.",
+    "ctaButton": "AI itinerary",
+    "ctaThingsToDo": "Things to do in {name}",
+    "exploreTitle": "Also explore",
+    "meta": {
+      "notFound": "Page not found",
+      "title": "Best time to visit {name} — {season}",
+      "description": "When to visit {name}? {season} ({months}): {desc}. Temperatures {temp}. Tips, activities and a {seasonLower} itinerary for {name}.",
+      "ogDescription": "{desc}. Temperatures {temp}. A guide to {name} in {seasonLower}."
+    }
+  }
+}

@@ -1,74 +1,93 @@
+import { Fragment } from "react";
 import type { Metadata } from "next";
+import { getLocale, getTranslations } from "next-intl/server";
 
-export const metadata: Metadata = {
-  title: "Politika zasebnosti",
-  description: "Politika zasebnosti platforme Discover Slovenia AI. Kako ravnamo z osebnimi podatki.",
-  alternates: { canonical: "/politika-zasebnosti" },
-};
+import { localePrefix } from "@/i18n/routing";
+import { hreflangForPath } from "@/components/seo";
+import { currentBaseUrl } from "@/lib/host";
+import { LanguageToggle } from "@/components/language-toggle";
 
-export default function PrivacyPage() {
+/**
+ * /politika-zasebnosti — GDPR politika zasebnosti.
+ *
+ * FW4.3-2 (dvojezičnost, vzorec /o-strani):
+ * - Server komponenta; vsa besedila prek `getTranslations("privacy")`.
+ * - Sekcije s1–s9 se izrisujejo v fiksnem vrstnem redu — DOM ostane
+ *   identičen izvirniku. s2 vsebuje `<strong>` (ICU tag), s8/s9 email
+ *   prek ICU TAG-a `<email>…</email>` + chunks handler (kanonični
+ *   next-intl vzorec; fn handler za navaden `{placeholder}` vrže 500).
+ * - generateMetadata je locale-zaveden (canonical/hreflang/og:locale).
+ * - Sporočila živijo v src/i18n/fragments/privacy.{sl,en}.json.
+ */
+
+const PATH = "/politika-zasebnosti";
+
+/** Fiksni vrstni red sekcij (ključi v `privacy.sections`). */
+const SECTION_IDS = ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"] as const;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("privacy");
+  const locale = await getLocale();
+  const base = await currentBaseUrl();
+  const prefixed = `${localePrefix(locale)}${PATH}`;
+
+  return {
+    title: t("meta.title"),
+    description: t("meta.description"),
+    alternates: {
+      canonical: `${base}${prefixed}`,
+      languages: hreflangForPath(PATH, base),
+    },
+    openGraph: {
+      title: `${t("meta.title")} — Discover Slovenia AI`,
+      description: t("meta.description"),
+      url: `${base}${prefixed}`,
+      type: "website",
+      locale: locale === "en" ? "en_US" : "sl_SI",
+    },
+  };
+}
+
+export default async function PrivacyPage() {
+  const t = await getTranslations("privacy");
+
   return (
     <div className="min-h-screen bg-background">
+      <LanguageToggle path="/politika-zasebnosti" />
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
-        <h1 className="text-4xl font-bold mb-8">Politika zasebnosti</h1>
+        <h1 className="text-4xl font-bold mb-8">{t("title")}</h1>
         <div className="prose prose-slate dark:prose-invert max-w-none space-y-4 text-sm">
-          <p><strong>Zadnja posodobitev:</strong> 2025</p>
-
-          <h2 className="text-xl font-bold">1. Splošno</h2>
           <p>
-            Discover Slovenia AI ("platforma") spoštuje vašo zasebnost. Ta politika opisuje, katere
-            podatke zbiramo, kako jih uporabljamo in katere pravice imate.
+            <strong>{t("lastUpdated")}</strong> 2025
           </p>
 
-          <h2 className="text-xl font-bold">2. Podatki obiskovalcev</h2>
-          <p>
-            <strong>Ne zbiramo osebnih podatkov obiskovalcev</strong> brez izrecne privolitve.
-            Spremljamo samo anonimne analitične podatke (ogledi strani, kliki) za izboljšanje
-            platforme.
-          </p>
-
-          <h2 className="text-xl font-bold">3. Newsletter</h2>
-          <p>
-            Če se prijavite na newsletter, shranimo vaš email naslov. Uporabimo ga izključno
-            za pošiljanje turističnih vodnikov in nasvetov. Kadarkoli se lahko odjavite.
-          </p>
-
-          <h2 className="text-xl font-bold">4. Ponudniki (B2B)</h2>
-          <p>
-            Registrirani ponudniki zagotovijo: ime, email, ime podjetja in geslo. Gesla so
-            shranjena z bcrypt hashing (12 rounds). Poslovni podatki (naslov, telefon, spletna
-            stran) so javno prikazani na platformi.
-          </p>
-
-          <h2 className="text-xl font-bold">5. Leadi (JoinUs forma)</h2>
-          <p>
-            Ko izpolnite obrazec "Pridruži se", shranimo: ime, email, telefon, ime podjetja,
-            tip, kraj in želen paket. Te podatke uporabimo izključno za kontaktiranje v zvezi
-            z vašo prijavo.
-          </p>
-
-          <h2 className="text-xl font-bold">6. Piškotki</h2>
-          <p>
-            Platforma uporablja nujno potrebne piškotke za delovanje (avtentikacija, jezikovne
-            nastavitve). Ne uporabljamo marketinških ali sledilnih piškotkov.
-          </p>
-
-          <h2 className="text-xl font-bold">7. Plačila (Stripe)</h2>
-          <p>
-            Plačila se obdelujejo preko Stripe. Mi ne shranjujemo podatkov o kreditnih karticah.
-            Stripe je PCI-DSS certificiran.
-          </p>
-
-          <h2 className="text-xl font-bold">8. Vaše pravice</h2>
-          <p>
-            V skladu z GDPR imate pravico do: vpogleda, popravka, izbrisa in prenosa svojih
-            podatkov. Za uveljavljanje pravic pišite na <a href="mailto:privacy@discoverslovenia.ai" className="underline">privacy@discoverslovenia.ai</a>.
-          </p>
-
-          <h2 className="text-xl font-bold">9. Kontakt</h2>
-          <p>
-            Za vprašanja o zasebnosti: <a href="mailto:privacy@discoverslovenia.ai" className="underline">privacy@discoverslovenia.ai</a>
-          </p>
+          {SECTION_IDS.map((id) => (
+            <Fragment key={id}>
+              <h2 className="text-xl font-bold">{t(`sections.${id}.title`)}</h2>
+              {id === "s2" ? (
+                <p>
+                  {t.rich(`sections.${id}.body`, {
+                    strong: (chunks) => <strong>{chunks}</strong>,
+                  })}
+                </p>
+              ) : id === "s8" || id === "s9" ? (
+                <p>
+                  {t.rich(`sections.${id}.body`, {
+                    email: (chunks) => (
+                      <a
+                        href="mailto:privacy@discoverslovenia.ai"
+                        className="underline"
+                      >
+                        {chunks}
+                      </a>
+                    ),
+                  })}
+                </p>
+              ) : (
+                <p>{t(`sections.${id}.body`)}</p>
+              )}
+            </Fragment>
+          ))}
         </div>
       </div>
     </div>
