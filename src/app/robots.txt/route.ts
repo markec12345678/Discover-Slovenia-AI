@@ -53,7 +53,7 @@ export async function GET(req: Request) {
   const base = resolveBaseUrl(req);
 
   const body = [
-    "# Discover Slovenia AI — robots.txt (dinamično, prilagojeno gostitelju; rev2 — marker 0f35+1)",
+    "# Discover Slovenia AI — robots.txt (dinamično, prilagojeno gostitelju)",
     "# Zasebni deli (admin/lastniki/API) so zaprti za vse crawlerje.",
     "# AI iskalni agenti so dobrodošli — cilj platforme je citiranost v AI odgovorih.",
     "",
