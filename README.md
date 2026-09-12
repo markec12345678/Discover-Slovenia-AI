@@ -10,14 +10,14 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38B2AC?logo=tailwindcss)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-**Produkcija:** <https://i-feel-slovenia.vercel.app> (Vercel, avtomatski deploy iz `main`)
+**Produkcija (primarna):** <https://i-feel-slovenia.onrender.com> (Render, avtomatski deploy iz `main`) · **Sekundarna:** <https://i-feel-slovenia.vercel.app> (Vercel, rate-limit okna — glej runbook)
 
-**Status faz:** P0 ✅ → P1 ✅ → P2 ✅ → P3 ✅ (varnostni auditi) → P4 ✅ (pilotni polish) → P5 ✅ (priprava deploya) → P6 ✅ (sinhronizacija dokumentov) → P7 ✅ (varnostni audit + popravki P0–P2) → P8 ✅ (responsive 390 px + atomarna booking deduplikacija) → P9 ✅ (code freeze + deploy runbook/smoke orodja) → R2/R3 auditi ✅ → FW1 ✅ (kritični audit popravki) → FW2 ✅ (UX quick wins — Mindtrip Tier 1) → **FW3 ✅ (AI-first hierarhija UX refaktor) — pilot-ready; produkcijo preveri dinamično (smoke skripta, točka 8)**
+**Status faz:** P0 ✅ → P1 ✅ → P2 ✅ → P3 ✅ (varnostni auditi) → P4 ✅ (pilotni polish) → P5 ✅ (priprava deploya) → P6 ✅ (sinhronizacija dokumentov) → P7 ✅ (varnostni audit + popravki P0–P2) → P8 ✅ (responsive 390 px + atomarna booking deduplikacija) → P9 ✅ (code freeze + deploy runbook/smoke orodja) → R2/R3 auditi ✅ → FW1 ✅ (kritični audit popravki) → FW2 ✅ (UX quick wins — Mindtrip Tier 1) → FW3 ✅ (AI-first hierarhija UX refaktor) → **MONET ✅ (monetizacijska mreža — 10 partnerjev fail-closed, affiliate + GEO/SEO paket + mobilni UX pass)** — pilot-ready; produkcijo preveri dinamično (smoke skripta, točka 8)
 
 > 🧊 **CODE FREEZE (P9, 2026-09-11):** razvoj za pilot je zaključen — do konca pilota NOVIH funkcij ni (samo popravki napak iz realne uporabe).
 >
-> - **Odstopanji od zamrznitve (odobrena, 2026-09-11):** **FW1** `08e8369` — kritični popravki auditov R2/R3 (varnost = dovoljena kategorija pod freeze) in **FW2** `629da01` — 8 UX quick wins iz primerjalne analize [Mindtrip.ai](https://mindtrip.ai/) (place cards v AI konzultacijah, persistenca chata, wishlist, QR deljenje poti, lightbox, sponsorship UI, popravek mrtvega push-test gumba, moja naročila/rezervacije) in **FW3** `0742a1a` — AI-first hierarhija UX refaktor (uporabnikov predlog: progresivno razkrivanje; homepage 22 → 8 vsebinskih blokov, hero z 6 intent chipi, 9 novih strani — /nacrtuj, /destinacije, /dozivetja, /dogodki, /zemljevid, /lokali, /vodici, /trznica, /slovenia-pass, CTA »Načrtuj z AI« povsod, LegacyHashRedirect za podedovane povezave). Vsi valovi: tsc 0, eslint 0, E2E vrata + regresija.
-> - **Koda:** `main` = `0742a1a` (FW3) + dokumentacijski commit (README/CHANGELOG — brez logike). CI ✅ (Build + Lint/TypeCheck). Kateri commit je v produkciji, preveriš s smoke skripto (GitHub Vercel status na trenutnem `main` HEAD, točka 8).
+> - **Odstopanji od zamrznitve (odobrena):** **FW1** `08e8369` — kritični popravki auditov R2/R3 (varnost = dovoljena kategorija pod freeze); **FW2** `629da01` — 8 UX quick wins iz primerjalne analize [Mindtrip.ai](https://mindtrip.ai/); **FW3** `0742a1a` — AI-first hierarhija UX refaktor (progresivno razkrivanje; homepage 22 → 8 blokov, 9 novih strani, CTA »Načrtuj z AI« povsod); **MONET valovi (2026-09-12, uporabnikovo izrecno naročilo — priprava monetizacije):** `d76a772` + `ea4c94a` — monetizacijska mreža 10 partnerjev (hoteli/Booking, izleti/GetYourGuide+Viator, avti/DiscoverCars, leti/Skyscanner, eSIM/Airalo, transferji/Kiwitaxi, transport/Omio, vstopnice/Tiqets, zavarovanje/WN+SafetyWing) — **fail-closed: brez ID-jev se kartice sploh ne izrišejo** (affiliate suite 55/55); **GEO paket** `239e6ce`…`37a6451` — llms.txt/llms-full.txt, RSS 2.0, eksplicitna AI-crawler dovoljenja v robots.txt, IndexNow (326 URL), host-zavedni metadata (og:image/canonical/JSON-LD na dejanskem gostitelju) — 6 indeksacijskih blokad odstranjenih (nevidno za uporabnike, 20 GEO smoke točk); **Mobilni UX pass** `84fdd7e` — 44px tap tarče (2026 standard), razbremenjen mobilni header, berljivejši hero, 2-stolpčna mobilna noga (VLM revizija pred/po).
+> - **Koda:** `main` = `84fdd7e`. CI ✅ (Build + Lint/TypeCheck). Kateri commit je v produkciji, preveriš s smoke skripto (točka 8).
 > - **Produkcija:** stanje preveri dinamično — `bash scripts/verify/production-smoke.sh` (P8/FW2 markerji, anti-enumeracija, cron fail-closed ×6, Vercel commit status). ⚠️ Deploy `8f419eb` (FW2) je bil 2026-09-11 zavrnjen — kvota `api-deployments-free-per-day` 100/100; reset po API **2026-09-12 17:54 UTC (19:54 CEST)**, rolling okno se lahko sprosti prej; glej [runbook spodaj](#deploy-po-rate-limit-okni-p9).
 > - **Po deployu obvezno:** [produkcjski smoke](#produkcjski-smoke-p9--po-deployu) — `bash scripts/verify/production-smoke.sh` (varni GET preverki + markerji) + ročni brskalniški tokovi + funkcionalni pregled mobilnih tokov na 390 px.
 > - **Zavedno odloženo (pred javnim launchem, NI pilot blocker):** rate limiting je per-instance → pred javnim prometom centralizirani limiter (npr. Upstash); `requireOwnership()` admin bypass dokumentiran v kodi (0 klicalcev — past za prihodnji razvoj, ne ranljivost); realni Stripe Checkout za rezervacije šele po poslovni odločitvi po pilotu (zdaj namerno fail-closed 501 v produkciji).
@@ -155,7 +155,7 @@ Trije neodvisni auditi (auth/authz, booking/Stripe, AI/data) → utrjevanje v 49
 | i18n | next-intl — javno **samo sl** (celoviti prevodi = roadmap C5); infrastruktura pripravljena |
 | Email | Nodemailer (demo fallback: console.log) |
 | Payments | Stripe (naročnine + provizijski računi; demo mode brez ključev) |
-| Deploy | Vercel (avtomatski deploy iz `main`) |
+| Deploy | Render (primarni) + Vercel (sekundarni) — avtomatski deploy iz `main` |
 
 ---
 
@@ -331,9 +331,10 @@ Vsak klic je Bearer zaščiten s `CRON_SECRET` (brez njega 401 — fail-closed).
 
 ## Namestitev
 
-### Vercel (produkcija)
+### Render (primarna produkcija) + Vercel (sekundarna)
 
-- Push na `main` sproži avtomatski deploy → `i-feel-slovenia.vercel.app`
+- **Render:** push na `main` sproži avtomatski deploy → `i-feel-slovenia.onrender.com` (~4 min, Docker). Primarni produkcijski URL od 2026-09-12 (MONET valovi).
+- **Vercel:** push na `main` sproži avtomatski deploy → `i-feel-slovenia.vercel.app` (Hobby kvota deploymentov — glej runbook spodaj)
 - Build: `bun install` + `bun run build` (prisma generate v postinstall)
 - **Baza: Neon PostgreSQL** (pooler, `connection_limit=1`) — `DATABASE_URL` env
 - CI (GitHub Actions): Lint & Type Check + Build proti `postgres:16-alpine` service containerju (P4-7)
