@@ -9,6 +9,7 @@
 // in ni možnega razhajanja.
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { ADRIA_GUIDES, COUNTRY_LABELS } from "@/lib/adria-guides";
 import { resolveBaseUrl } from "@/lib/host";
 import {
   GUIDE_TYPES,
@@ -99,6 +100,27 @@ export async function GET(req: Request) {
     return lines.join("\n");
   });
   parts.push(destSections.join("\n"));
+
+  // === Jadranska potovanja (ADRIA-1: cross-border, srednje-globoki profili) ===
+  const adriaSections = ADRIA_GUIDES.map((g) => {
+    const lines = [
+      `## Jadransko potovanje: ${g.metaTitle}`,
+      "",
+      g.excerpt,
+      "",
+      `- Države: ${g.countries.map((c) => COUNTRY_LABELS[c] ?? c).join(", ")}`,
+      `- Trajanje: ${g.days} dni · ${g.km} km · branje ${g.readTime} min`,
+      `- Pot: ${g.route}`,
+      `- Postaje: ${g.stops.map((s) => s.name + " (" + s.country + (s.nights > 0 ? ", " + s.nights + " noči" : "") + ")").join("; ")}`,
+      `- URL: ${base}/vodici/${g.slug}`,
+      "",
+      "Praktično:",
+      ...g.practical.map((p) => `- ${p.title}: ${p.text}`),
+      "",
+    ];
+    return lines.join("\n");
+  });
+  parts.push(adriaSections.join("\n"));
 
   const body = parts.join("\n");
 

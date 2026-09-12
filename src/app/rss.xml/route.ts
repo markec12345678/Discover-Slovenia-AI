@@ -6,9 +6,12 @@
 // lastBuildDate trenutka generiranja, kar je spec-skladno in resnično.
 //
 // Vsebina: things-to-do strani vseh destinacij (najbogatejša vsebina)
-// + vodniki po tipu potovanja. URL-ji so gostitelju-prilagojeni (allowlist).
+// + vodniki po tipu potovanja + jadranski vodniki (ADRIA-1) — edini itemi
+// z RESNIČNIM <pubDate> (datum objave vsebinskega vodnika je znan).
+// URL-ji so gostitelju-prilagojeni (allowlist).
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { ADRIA_GUIDES } from "@/lib/adria-guides";
 import { resolveBaseUrl } from "@/lib/host";
 import {
   GUIDE_TYPES,
@@ -70,13 +73,29 @@ export async function GET(req: Request) {
     }
   }
 
+  // Jadranski vodniki (ADRIA-1) — edini itemi s pubDate (resničen datum objave)
+  for (const g of ADRIA_GUIDES) {
+    items.push(
+      [
+        "    <item>",
+        `      <title>${xmlEscape(g.metaTitle)}</title>`,
+        `      <link>${xmlEscape(`${base}/vodici/${g.slug}`)}</link>`,
+        `      <guid>${xmlEscape(`${base}/vodici/${g.slug}`)}</guid>`,
+        `      <description>${xmlEscape(g.description)}</description>`,
+        `      <category>Jadranski vodnik</category>`,
+        `      <pubDate>${rfc822(new Date(`${g.date}T12:00:00Z`))}</pubDate>`,
+        "    </item>",
+      ].join("\n"),
+    );
+  }
+
   const xml =
     '<?xml version="1.0" encoding="UTF-8"?>\n' +
     '<rss version="2.0">\n' +
     "  <channel>\n" +
     "    <title>Discover Slovenia AI — vodniki po Sloveniji</title>\n" +
     `    <link>${xmlEscape(base)}</link>\n` +
-    "    <description>AI načrtovalec potovanj po Sloveniji: destinacije, itinererji, vodniki, kaj početi in najboljši čas obiska.</description>\n" +
+    "    <description>AI načrtovalec potovanj po Sloveniji: destinacije, itinererji, vodniki, kaj početi, najboljši čas obiska in jadranska potovanja.</description>\n" +
     "    <language>sl-si</language>\n" +
     `    <lastBuildDate>${rfc822(new Date())}</lastBuildDate>\n` +
     `    <atom:link href="${xmlEscape(`${base}/rss.xml`)}" rel="self" type="application/rss+xml" xmlns:atom="http://www.w3.org/2005/Atom"/>\n` +

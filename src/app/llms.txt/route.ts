@@ -14,6 +14,7 @@
 // destinacij) za agente, ki želijo kontekst v enem zamihu.
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { ADRIA_GUIDES, COUNTRY_LABELS } from "@/lib/adria-guides";
 import { resolveBaseUrl } from "@/lib/host";
 import { GUIDE_TYPES, GUIDE_TYPE_META, DURATION_SLUGS } from "@/lib/sitemap-urls";
 
@@ -104,10 +105,24 @@ export async function GET(req: Request) {
     ].join("\n"),
   );
 
+  // === Jadranska potovanja (ADRIA-1: cross-border) ===
+  sections.push(
+    [
+      "## Jadranska potovanja (cross-border)",
+      "",
+      ...ADRIA_GUIDES.map(
+        (g) =>
+          `- [${g.metaTitle}](${base}/vodici/${g.slug}): road trip vodnik — ${g.days} dni, ${g.km} km, ` +
+          `${g.countries.map((c) => COUNTRY_LABELS[c] ?? c).join(", ")}. ${g.description}`,
+      ),
+      "",
+    ].join("\n"),
+  );
+
   const body = [
     "# Discover Slovenia AI",
     "",
-    "> AI načrtovalec potovanj po Sloveniji: 22 destinacij, itinererji po trajanju, vodniki po tipu potovanja, kaj početi, najboljši čas obiska in neposredne rezervacije (hoteli, izleti, transferji, eSIM, transport, vstopnice).",
+    "> AI načrtovalec potovanj po Sloveniji: 22 destinacij, itinererji po trajanju, vodniki po tipu potovanja, kaj početi, najboljši čas obiska, jadranska cross-border potovanja in neposredne rezervacije (hoteli, izleti, transferji, eSIM, transport, vstopnice).",
     "",
     `Celotna vsebina v enem datotečnem formatu: [llms-full.txt](${base}/llms-full.txt)`,
     "",

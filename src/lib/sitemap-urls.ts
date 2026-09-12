@@ -1,4 +1,5 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { ADRIA_GUIDES } from "@/lib/adria-guides";
 
 // Skupni seznam vseh URL-jev, ki jih generira platforma.
 // Uporablja ga /sitemap.xml route handler in /api/admin/indexing za poročanje o indeksaciji.
@@ -73,7 +74,8 @@ export interface SitemapUrl {
 
 /**
  * Vrne vse URL-je, ki jih platforma generira.
- * Trenutno: 16 statičnih + 22 things-to-do + 110 itinererjev + 88 best-time + 88 vodnikov = 324
+ * Trenutno: 18 stalnih + 22 things-to-do + 110 itinererjev + 88 best-time + 88 vodnikov
+ * + 10 jadranskih vodnikov (ADRIA-1) = 336
  *
  * `baseUrl` (MONET-10): dinamična pot (route handler /sitemap.xml) poda
  * DEJANSKEGA gostitelja zahteve → Google/Bing ne zavrnejo cross-host sitemapa.
@@ -147,18 +149,24 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
     }
   }
 
+  // === Jadranski vodniki (ADRIA-1: 10 cross-border) ===
+  for (const g of ADRIA_GUIDES) {
+    add(`/vodici/${g.slug}`, 0.7, "Jadranski vodnik", "weekly");
+  }
+
   return urls;
 }
 
 /** Skupno število vseh URL-jev (za hitro poročanje brez gradnje seznama) */
 export function getTotalSitemapUrlCount(): number {
-  // 16 statičnih + 2 GEO (llms.txt, rss.xml) + 22 + 110 + 88 + 88 = 326
+  // 18 stalnih + 22 + 110 + 88 + 88 + 10 jadranskih (ADRIA-1) = 336
   return (
     18 +
     DESTINATIONS.length +
     DESTINATIONS.length * 5 +
     DESTINATIONS.length * 4 +
-    DESTINATIONS.length * 4
+    DESTINATIONS.length * 4 +
+    ADRIA_GUIDES.length
   );
 }
 
