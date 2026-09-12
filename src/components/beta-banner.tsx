@@ -58,7 +58,7 @@ export function BetaBanner() {
           <button
             type="button"
             onClick={() => setDismissed(true)}
-            className="rounded-md p-1 transition-colors hover:bg-primary-foreground/20"
+            className="-m-1 rounded-md p-2 transition-colors hover:bg-primary-foreground/20 active:bg-primary-foreground/30"
             aria-label="Zapri pasico"
           >
             <X className="size-4" />

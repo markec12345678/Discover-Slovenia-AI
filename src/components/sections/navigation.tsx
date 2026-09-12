@@ -149,7 +149,7 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
             </span>
             <span
               className={cn(
-                "text-[10px] font-medium uppercase tracking-[0.18em]",
+                "hidden text-[10px] font-medium uppercase tracking-[0.18em] sm:block",
                 glass ? "text-muted-foreground" : "text-white/70"
               )}
             >
@@ -227,12 +227,14 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
             <Search className="size-5" aria-hidden="true" />
           </Button>
 
+          {/* P4-5: preklop teme — na mobilnem dostopen v meniju (razbremenjen header) */}
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
             aria-label="Preklopi temo"
             className={cn(
+              "hidden sm:inline-flex",
               glass ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
             )}
           >
@@ -248,7 +250,7 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
             )}
           </Button>
 
-          <div className={cn(glass ? "" : "[&>button]:text-white [&>button:hover]:bg-white/10")}>
+          <div className={cn("hidden sm:block", glass ? "" : "[&>button]:text-white [&>button:hover]:bg-white/10")}>
             <LanguageSwitcher />
           </div>
 
@@ -352,8 +354,22 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                 </SheetClose>
               </nav>
 
-              <div className="mt-4 px-2">
+              <div className="mt-4 flex items-center justify-between gap-3 px-4">
                 <LanguageSwitcher />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleTheme}
+                  aria-label="Preklopi temo"
+                  className="gap-2"
+                >
+                  {mounted && resolvedTheme === "dark" ? (
+                    <Sun className="size-4" aria-hidden="true" />
+                  ) : (
+                    <Moon className="size-4" aria-hidden="true" />
+                  )}
+                  {mounted && resolvedTheme === "dark" ? "Svetla" : "Temna"}
+                </Button>
               </div>
 
               <div className="mt-auto px-4 pb-6">

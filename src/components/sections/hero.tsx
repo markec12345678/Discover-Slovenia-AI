@@ -53,7 +53,7 @@ export function Hero() {
         </h1>
 
         {/* Podnaslov */}
-        <p className="mt-4 max-w-xl animate-in fade-in slide-in-from-bottom-4 text-balance text-base text-white/90 drop-shadow-sm duration-700 delay-75 sm:text-lg">
+        <p className="mt-4 max-w-xl animate-in fade-in slide-in-from-bottom-4 text-balance text-base text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)] duration-700 delay-75 sm:text-lg">
           Povej AI kaj iščeš — v slovenščini ali angleščini.
           AI sestavi popoln dan z lokalnimi partnerji.
         </p>

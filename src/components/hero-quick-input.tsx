@@ -88,8 +88,8 @@ export function HeroQuickInput() {
         </div>
       </div>
 
-      {/* Intent chipi — 6 želja po FW3 predlogu */}
-      <div className="mt-5 flex flex-wrap justify-center gap-2">
+      {/* Intent chipi — 6 želja po FW3 predlogu; py-2.5 = ~46px tap tarča (2026 standard) */}
+      <div className="mt-5 flex flex-wrap justify-center gap-2.5">
         {QUICK_ACTIONS.map((action) => {
           const Icon = action.icon;
           return (
@@ -100,7 +100,7 @@ export function HeroQuickInput() {
                 setInput(action.query);
                 handleSubmit(action.query);
               }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/10 backdrop-blur-sm px-3.5 py-2 text-sm font-medium text-white transition-all hover:bg-white/20 hover:border-white/50 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/10 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-white/20 hover:border-white/50 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             >
               <Icon className="size-3.5" aria-hidden="true" />
               {action.label}

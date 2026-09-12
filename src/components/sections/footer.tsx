@@ -21,8 +21,8 @@ export async function Footer() {
     >
       {/* pb-40 (mobilno): vsebina noge vidna nad sticky CTA (~65px + safe-area) IN nad dvignjenim chat FAB (~140px od dna); sm:pb-24: tudi na desktopu disclaimer počisti FAB (top ~80px od dna); lg:pt-12 ohrani zgornji odmik */}
       <div className="mx-auto w-full max-w-7xl px-4 pb-40 pt-10 sm:px-6 sm:pb-24 lg:px-8 lg:pt-12 lg:pb-24">
-        {/* 5 kolon (brand + 4 navigacijske) */}
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-5">
+        {/* 5 kolon (brand + 4 navigacijske); mobilno: krajši odmiki + linki v 2 stolpcih (Airbnb vzorec — prepolovljena dolžina noge) */}
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-10 lg:grid-cols-5">
           {/* 1. Brand */}
           <div className="flex flex-col gap-4">
             <Link
@@ -123,10 +123,11 @@ function FooterColumn({
 }) {
   return (
     <nav className="flex flex-col gap-3" aria-label={title}>
-      <h3 className="text-sm font-semibold tracking-wide text-foreground">
+      {/* VLM revizija: naslovi kolon morajo biti ločeni od linkov (hierarhija) */}
+      <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground/70">
         {title}
       </h3>
-      <ul className="flex flex-col gap-2">
+      <ul className="grid grid-cols-2 gap-x-6 gap-y-2.5 sm:flex sm:flex-col sm:gap-2">
         {links.map((link) => (
           // key vključuje label: dve povezavi se lahko nanašata na isti
           // href (npr. "Paketi in cene" in "Prijavnica" obe → #pridruzi-se)
