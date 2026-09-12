@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { hreflangForPath } from "@/components/seo";
+import { currentBaseUrl } from "@/lib/host";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
 import { Calendar, Sun, Leaf, Snowflake, Cloud, ArrowRight, Sparkles, MapPin } from "lucide-react";
@@ -48,6 +49,8 @@ export async function generateMetadata({
   const dest = getDestinationById(slug) || DESTINATIONS.find((d) => d.slug === slug);
   const s = SEASONS.find((x) => x.slug === season);
   if (!dest || !s) return { title: "Stran ni najdena" };
+  // SEO-2: canonical/hreflang na DEJANSKEM gostitelju
+  const base = await currentBaseUrl();
   return {
     title: `Najboljši čas za obisk ${dest.name} — ${s.label}`,
     description: `Kdaj obiskati ${dest.name}? ${s.label} (${s.months}): ${s.desc}. Temperature ${s.temp}. Nasveti, aktivnosti in ${s.label.toLowerCase()} itinerer za ${dest.name}.`,
@@ -59,7 +62,7 @@ export async function generateMetadata({
       type: "website",
       locale: "sl_SI",
     },
-    alternates: { canonical: `https://discoverslovenia.ai/destinacija/${dest.slug}/best-time-to-visit/${s.slug}`, languages: hreflangForPath(`/destinacija/${dest.slug}/best-time-to-visit/${s.slug}`) },
+    alternates: { canonical: `${base}/destinacija/${dest.slug}/best-time-to-visit/${s.slug}`, languages: hreflangForPath(`/destinacija/${dest.slug}/best-time-to-visit/${s.slug}`, base) },
   };
 }
 
@@ -76,6 +79,8 @@ export default async function BestTimeToVisitPage({
   const seasonKey = SEASON_MAP[season] || "summer";
   const isBestSeason = dest.bestSeason.includes(seasonKey as any);
   const Icon = s.icon;
+  // SEO-2: host-zavedni breadcrumb JSON-LD
+  const base = await currentBaseUrl();
   const faqs = FAQ_TEMPLATES(dest.name, s.label, s.temp);
 
   // JSON-LD: FAQPage + BreadcrumbList
@@ -93,8 +98,8 @@ export default async function BestTimeToVisitPage({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Domov", item: "https://discoverslovenia.ai/" },
-      { "@type": "ListItem", position: 2, name: dest.name, item: `https://discoverslovenia.ai/destinacija/${dest.slug}/things-to-do` },
+      { "@type": "ListItem", position: 1, name: "Domov", item: `${base}/` },
+      { "@type": "ListItem", position: 2, name: dest.name, item: `${base}/destinacija/${dest.slug}/things-to-do` },
       { "@type": "ListItem", position: 3, name: `Najboljši čas — ${s.label}` },
     ],
   };

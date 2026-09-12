@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, ArrowRight, Ticket } from "lucide-react";
 import { faqJsonLd, breadcrumbJsonLd, destinationSchema, hreflangForPath } from "@/components/seo";
+import { currentBaseUrl } from "@/lib/host";
 import { getFaqForPage } from "@/lib/seo-faq";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
@@ -42,6 +43,8 @@ export async function generateMetadata({
   const { slug } = await params;
   const dest = getDestinationById(slug) || DESTINATIONS.find((d) => d.slug === slug);
   if (!dest) return { title: "Destinacija ni najdena" };
+  // SEO-2: canonical/hreflang na DEJANSKEM gostitelju (ne statična domena)
+  const base = await currentBaseUrl();
   return {
     title: `Kaj početi v ${dest.name} — Vodnik ${dest.name}`,
     description: `Odkrijte najboljše aktivnosti, atrakcije in izkušnje v ${dest.name}, ${dest.tagline}. Vodnik z ${dest.highlights.length} glavnimi znamenitosti, lokalnimi ponudniki in AI-priporočili.`,
@@ -54,8 +57,8 @@ export async function generateMetadata({
       locale: "sl_SI",
     },
     alternates: {
-      canonical: `https://discoverslovenia.ai/destinacija/${dest.slug}/things-to-do`,
-      languages: hreflangForPath(`/destinacija/${dest.slug}/things-to-do`),
+      canonical: `${base}/destinacija/${dest.slug}/things-to-do`,
+      languages: hreflangForPath(`/destinacija/${dest.slug}/things-to-do`, base),
     },
   };
 }
@@ -77,6 +80,8 @@ export default async function ThingsToDoPage({
   ]);
 
   const totalActivities = listings.length + experiences.length;
+  // SEO-2: host-zavedni JSON-LD (breadcrumb items + destinationSchema)
+  const base = await currentBaseUrl();
 
   // Mapiranje v client-safe tipe (images/languages so v DB JSON string-i)
   const seoExperiences: Experience[] = experiences.map((e) => ({
@@ -99,7 +104,7 @@ export default async function ThingsToDoPage({
     destinationName: l.destinationName ?? dest.name,
   }));
 
-  const jsonLd = destinationSchema(dest);
+  const jsonLd = destinationSchema(dest, base);
 
   // AI-generirane FAQ za SEO rich snippets (z 90-dnevnim cache-om)
   const { faqs: aiFaqs, source: faqSource } = await getFaqForPage(
@@ -111,8 +116,8 @@ export default async function ThingsToDoPage({
   const faqs = aiFaqs.map((f) => ({ q: f.question, a: f.answer }));
 
   const breadcrumbs = breadcrumbJsonLd([
-    { name: "Domov", url: "https://discoverslovenia.ai/" },
-    { name: dest.name, url: `https://discoverslovenia.ai/destinacija/${dest.slug}/things-to-do` },
+    { name: "Domov", url: `${base}/` },
+    { name: dest.name, url: `${base}/destinacija/${dest.slug}/things-to-do` },
   ]);
 
   const title = `Kaj početi v ${dest.name} — Vodnik`;

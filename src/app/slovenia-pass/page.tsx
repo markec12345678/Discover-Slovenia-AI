@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: "Slovenia Pass — zbiraj značke",
   description:
     "Obiščite slovenske regije, zbirajte značke in odklenite nagrade — potovanje skozi Slovenijo kot igra.",
-  alternates: { canonical: "https://discoverslovenia.ai/slovenia-pass" },
+  alternates: { canonical: "/slovenia-pass" },
 };
 
 export default function SloveniaPassPage() {

@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   title: "Interaktivni zemljevid Slovenije",
   description:
     "Raziščite Slovenijo na interaktivnem zemljevidu — destinacije, lokalne ponudnike in pot svojega AI itinererja.",
-  alternates: { canonical: "https://discoverslovenia.ai/zemljevid" },
+  alternates: { canonical: "/zemljevid" },
 };
 
 export default function MapPage() {

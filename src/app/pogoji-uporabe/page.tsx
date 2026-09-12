@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Pogoji uporabe",
   description: "Pogoji uporabe platforme Discover Slovenia AI.",
-  alternates: { canonical: "https://discoverslovenia.ai/pogoji-uporabe" },
+  alternates: { canonical: "/pogoji-uporabe" },
 };
 
 export default function TermsPage() {

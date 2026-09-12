@@ -5,7 +5,7 @@ import { Mail, MapPin, Globe, Shield } from "lucide-react";
 export const metadata: Metadata = {
   title: "Kontakt",
   description: "Stopite v stik z ekipo Discover Slovenia AI. Email, telefon in kontaktne informacije.",
-  alternates: { canonical: "https://discoverslovenia.ai/kontakt" },
+  alternates: { canonical: "/kontakt" },
 };
 
 export default function ContactPage() {

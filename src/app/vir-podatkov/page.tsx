@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Vir podatkov",
   description: "Seznam virov podatkov, ki jih uporablja platforma Discover Slovenia AI.",
-  alternates: { canonical: "https://discoverslovenia.ai/vir-podatkov" },
+  alternates: { canonical: "/vir-podatkov" },
 };
 
 export default function DataSourcePage() {

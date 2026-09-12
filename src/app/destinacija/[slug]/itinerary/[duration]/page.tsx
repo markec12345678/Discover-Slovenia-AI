@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { hreflangForPath } from "@/components/seo";
+import { currentBaseUrl } from "@/lib/host";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
 import { Calendar, Clock, Users, ArrowRight, Sparkles } from "lucide-react";
@@ -45,6 +46,8 @@ export async function generateMetadata({
   const dest = getDestinationById(slug) || DESTINATIONS.find((d) => d.slug === slug);
   const dur = DURATIONS.find((d) => d.slug === duration);
   if (!dest || !dur) return { title: "Itinerer ni najden" };
+  // SEO-2: canonical/hreflang na DEJANSKEM gostitelju
+  const base = await currentBaseUrl();
   return {
     title: `${dur.label} itinerer za ${dest.name} — ${dur.desc}`,
     description: `Popoln ${dur.label.toLowerCase()} itinerer za ${dest.name}, ${dest.tagline}. ${dur.desc} — AI-priporočene aktivnosti, nastanitve in restavracije za ${dur.days}-dnevni obisk.`,
@@ -56,7 +59,7 @@ export async function generateMetadata({
       type: "website",
       locale: "sl_SI",
     },
-    alternates: { canonical: `https://discoverslovenia.ai/destinacija/${dest.slug}/itinerary/${dur.slug}`, languages: hreflangForPath(`/destinacija/${dest.slug}/itinerary/${dur.slug}`) },
+    alternates: { canonical: `${base}/destinacija/${dest.slug}/itinerary/${dur.slug}`, languages: hreflangForPath(`/destinacija/${dest.slug}/itinerary/${dur.slug}`, base) },
   };
 }
 

@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   title: "AI načrtovalec potovanj",
   description:
     "Povej AI, kaj želiš doživeti v Sloveniji — dnevi, proračun, družina, interesi. V nekaj sekundah dobiš osebni itinerer z zemljevidom, realnimi lokalnimi ponudniki in možnostjo rezervacije.",
-  alternates: { canonical: "https://discoverslovenia.ai/nacrtuj" },
+  alternates: { canonical: "/nacrtuj" },
 };
 
 export default function PlanPage() {

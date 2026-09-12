@@ -79,6 +79,20 @@ export function resolveBaseUrl(req: Request): string {
   return resolveBaseUrlFromHeaders(req.headers);
 }
 
+/**
+ * Host-zavedna baza URL-jev za strežniške komponente / generateMetadata
+ * (SEO-2, nadgradnja MONET-10): vsaka stran, ki gradi canonical, hreflang
+ * ali JSON-LD URL-je, pokliče `await currentBaseUrl()` — dobi DEJANSKEGA
+ * gostitelja requesta (allowlista, enaka varnostna logika).
+ *
+ * Uporabno SAMO znotraj request scope-a (strežniški render / route handler)
+ * — next/headers headers() vrže izven njega.
+ */
+export async function currentBaseUrl(): Promise<string> {
+  const { headers } = await import("next/headers");
+  return resolveBaseUrlFromHeaders(await headers());
+}
+
 function extractPort(rawHost: string | null): string {
   if (!rawHost) return "";
   const m = rawHost.match(/:(\d{1,5})$/);

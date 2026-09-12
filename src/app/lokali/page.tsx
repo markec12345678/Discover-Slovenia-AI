@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: "Lokalni ponudniki",
   description:
     "Hoteli, restavracije, znamenitosti in aktivnosti preverjenih lokalnih partnerjev — rezervacija direktno pri ponudniku, brez provizije.",
-  alternates: { canonical: "https://discoverslovenia.ai/lokali" },
+  alternates: { canonical: "/lokali" },
 };
 
 export default function ListingsPage() {

@@ -29,6 +29,7 @@ import {
   Clock,
 } from "lucide-react";
 import { faqJsonLd, breadcrumbJsonLd, hreflangForPath } from "@/components/seo";
+import { currentBaseUrl } from "@/lib/host";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
 import {
@@ -335,6 +336,8 @@ export async function generateMetadata({
   const meta = GUIDE_TYPE_META[t];
   const title = buildTitle(dest.name, t);
   const intro = buildIntro(dest.name, t, dest.tagline);
+  // SEO-2: canonical/hreflang na DEJANSKEM gostitelju
+  const base = await currentBaseUrl();
 
   return {
     title: `${title} — Vodnik ${meta.label.toLowerCase()}`,
@@ -359,7 +362,7 @@ export async function generateMetadata({
       locale: "sl_SI",
     },
     alternates: {
-      canonical: `https://discoverslovenia.ai/destinacija/${dest.slug}/guide/${t}`, languages: hreflangForPath(`/destinacija/${dest.slug}/guide/${t}`),
+      canonical: `${base}/destinacija/${dest.slug}/guide/${t}`, languages: hreflangForPath(`/destinacija/${dest.slug}/guide/${t}`, base),
     },
   };
 }
@@ -382,6 +385,8 @@ export default async function GuidePage({
   const intro = buildIntro(dest.name, t, dest.tagline);
   const faqs = buildFaqs(dest.name, t, details.priceRange);
   const highlights = buildHighlights(dest.name, t, dest.highlights);
+  // SEO-2: host-zavedni breadcrumb JSON-LD
+  const base = await currentBaseUrl();
 
   // Pridobi povezane lokale in izkušnje iz baze (filtrirano po tipu vodnika)
   const [listings, experiences] = await Promise.all([
@@ -426,10 +431,10 @@ export default async function GuidePage({
 
   // JSON-LD: FAQPage + BreadcrumbList + TouristTrip
   const breadcrumbs = breadcrumbJsonLd([
-    { name: "Domov", url: "https://discoverslovenia.ai/" },
+    { name: "Domov", url: `${base}/` },
     {
       name: dest.name,
-      url: `https://discoverslovenia.ai/destinacija/${dest.slug}/things-to-do`,
+      url: `${base}/destinacija/${dest.slug}/things-to-do`,
     },
     { name: meta.label },
   ]);

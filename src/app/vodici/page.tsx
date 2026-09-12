@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   title: "Vodiči in nasveti za Slovenijo",
   description:
     "Kaj početi na Bledu, 3 dni v Sloveniji, najlepši izleti in lokalna hrana — vodiči, nasveti in odgovori lokalcev.",
-  alternates: { canonical: "https://discoverslovenia.ai/vodici" },
+  alternates: { canonical: "/vodici" },
 };
 
 export default function GuidesPage() {

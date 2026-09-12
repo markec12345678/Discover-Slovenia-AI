@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   title: "Doživetja v Sloveniji",
   description:
     "Pohodništvo, vodne avanture, kultura, kulinarika in skriti biseri — doživetja neposredno pri preverjenih lokalnih ponudnikih.",
-  alternates: { canonical: "https://discoverslovenia.ai/dozivetja" },
+  alternates: { canonical: "/dozivetja" },
 };
 
 export default function ExperiencesPage() {

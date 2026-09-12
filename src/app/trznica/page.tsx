@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: "Tržnica lokalnih izdelkov in doživetij",
   description:
     "Lokalni izdelki in doživetja neposredno od slovenskih ponudnikov — med, vina, obrti, rafting in gastro doživetja.",
-  alternates: { canonical: "https://discoverslovenia.ai/trznica" },
+  alternates: { canonical: "/trznica" },
 };
 
 export default function MarketplacePage() {

@@ -121,18 +121,22 @@ export function SocialShare({
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
 
+  // SEO-2: URL v delijenem besedilu naj bo DEJANSKI gostitelj (ne mrtva
+  // domena) — window.location je na klientu vedno na voljo (event handlerji);
+  // SSR fallback pusti samo ime platforme brez domene.
   const shareUrl =
     url ??
-    (typeof window !== "undefined"
-      ? window.location.href
-      : "https://discoverslovenia.ai");
+    (typeof window !== "undefined" ? window.location.href : "");
+
+  const siteUrl =
+    typeof window !== "undefined" ? window.location.origin : "";
 
   const shareText = useMemo(() => {
     const destText = destinations.length > 0
       ? destinations.map((d) => `📍 ${d}`).join(" · ")
       : "";
-    return `${title}${destText ? `\n${destText}` : ""}${description ? `\n${description}` : ""}\n\nDiscover Slovenia AI — https://discoverslovenia.ai`;
-  }, [title, description, destinations]);
+    return `${title}${destText ? `\n${destText}` : ""}${description ? `\n${description}` : ""}\n\nDiscover Slovenia AI${siteUrl ? ` — ${siteUrl}` : ""}`;
+  }, [title, description, destinations, siteUrl]);
 
   const shareToWhatsApp = useCallback(() => {
     const url = `https://wa.me/?text=${encodeURIComponent(shareText)}`;

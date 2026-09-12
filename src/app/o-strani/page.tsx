@@ -7,7 +7,7 @@ import { Mountain, Sparkles, Globe, Shield, Users } from "lucide-react";
 export const metadata: Metadata = {
   title: "O strani",
   description: "Discover Slovenia AI je AI-poganjana turistična platforma za Slovenijo. Spoznajte našo ekipo, misijo in kako platforma deluje.",
-  alternates: { canonical: "https://discoverslovenia.ai/o-strani" },
+  alternates: { canonical: "/o-strani" },
 };
 
 export default function AboutPage() {

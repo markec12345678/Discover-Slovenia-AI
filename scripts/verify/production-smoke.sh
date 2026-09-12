@@ -299,6 +299,39 @@ if [[ "$BASE_URL" != "https://i-feel-slovenia.vercel.app" ]]; then
   else
     warn "IndexNow ključ ni v public/ (lokalni repozitorij)"
   fi
+
+  # SEO-2 (12. 9. 2026): canonical + JSON-LD na VSAKI vzorčni strani mora
+  # kazati na DEJAVNEGA gostitelja — hardcoded discoverslovenia.ai (mrtva
+  # domena) je bila odkrita na /nacrtuj, /destinacije, /destinacija/* —
+  # Google zaradi tega ne indeksira pravilno. Trajna zaščita pred regresijo.
+  SEO2_ORIGIN="$(echo "$BASE_URL" | sed -E 's#/$##')"
+  for CANON_PATH in "/nacrtuj" "/destinacije" "/dogodki" "/destinacija/bled/things-to-do" "/destinacija/bled/guide/vikend"; do
+    ch="$(curl -s --max-time 20 "$BASE_URL$CANON_PATH" | grep -oE '<link rel="canonical" href="[^"]*"' | head -1 | cut -d'"' -f4)"
+    if [[ -z "$ch" ]]; then
+      bad "canonical ($CANON_PATH): MANJKA canonical tag"
+    elif [[ "$ch" == "$SEO2_ORIGIN$CANON_PATH" ]]; then
+      ok "canonical ($CANON_PATH) → host-honest"
+    else
+      bad "canonical ($CANON_PATH)='$ch' ≠ $SEO2_ORIGIN$CANON_PATH — tuj/mrtvoj gostitelj se je VRNIL"
+    fi
+  done
+  # JSON-LD breadcrumb na destinacijski strani — brez mrtve domene
+  bl="$(curl -s --max-time 20 "$BASE_URL/destinacija/bled/things-to-do")"
+  if grep -q 'discoverslovenia.ai' <<<"$bl"; then
+    bad "things-to-do: discoverslovenia.ai (mrtva domena) ŠE V HTML/JSON-LD"
+  else
+    ok "things-to-do: JSON-LD brez mrtve domene"
+  fi
+  # TouristDestination @id je enolična identifikacija entitete (type je array
+  # ["TouristDestination","Place"], prvi "url" pa pripada containsPlace)
+  TD_ID="$(grep -oE '"@id":"[^"]*#destination"' <<<"$bl" | head -1 | cut -d'"' -f4)"
+  if [[ -n "$TD_ID" ]]; then
+    [[ "$TD_ID" == "$SEO2_ORIGIN/destinacija/bled/things-to-do#destination" ]] \
+      && ok "TouristDestination @id → host-honest" \
+      || bad "TouristDestination @id='$TD_ID' ≠ gostitelj"
+  else
+    warn "TouristDestination schema ni razviden (FAQ cache?)"
+  fi
 else
   echo "  (preskočeno — Vercel še na stari kodi; GEO sekcija se aktivira po redeploy)"
 fi

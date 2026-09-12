@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 export const metadata = {
   title: "Zaupanje in varnost — Discover Slovenia AI",
   description: "Kako preverjamo partnerje, kako deluje AI ranking in kako varujemo vaše podatke.",
-  alternates: { canonical: "https://discoverslovenia.ai/zaupanje-in-varnost" },
+  alternates: { canonical: "/zaupanje-in-varnost" },
 };
 
 export default function TrustSafetyPage() {

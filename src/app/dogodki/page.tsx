@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: "Dogodki in prireditve v Sloveniji",
   description:
     "Koledar festivalov, sejemov, športnih in kulturnih dogodkov po Sloveniji — z datumi, lokacijami in kategorijami.",
-  alternates: { canonical: "https://discoverslovenia.ai/dogodki" },
+  alternates: { canonical: "/dogodki" },
 };
 
 export default function EventsPage() {

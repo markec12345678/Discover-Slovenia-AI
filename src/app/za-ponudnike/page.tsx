@@ -31,7 +31,7 @@ export const metadata = {
   title: "Za ponudnike",
   description:
     "Ko turist vpraša AI, najde vas. Pridružite se med prvimi AI turističnimi platformami za Slovenijo.",
-  alternates: { canonical: "https://discoverslovenia.ai/za-ponudnike" },
+  alternates: { canonical: "/za-ponudnike" },
 };
 
 export default async function ProviderLandingPage() {

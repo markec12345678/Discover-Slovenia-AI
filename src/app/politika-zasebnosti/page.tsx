@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Politika zasebnosti",
   description: "Politika zasebnosti platforme Discover Slovenia AI. Kako ravnamo z osebnimi podatki.",
-  alternates: { canonical: "https://discoverslovenia.ai/politika-zasebnosti" },
+  alternates: { canonical: "/politika-zasebnosti" },
 };
 
 export default function PrivacyPage() {

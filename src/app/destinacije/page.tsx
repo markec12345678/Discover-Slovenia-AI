@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   title: "Vseh 22 destinacij Slovenije",
   description:
     "Raziščite 22 najlepših slovenskih destinacij — od Bledega jezera do Pirana. Filtri po regiji, interesih, tipu in ceni.",
-  alternates: { canonical: "https://discoverslovenia.ai/destinacije" },
+  alternates: { canonical: "/destinacije" },
 };
 
 export default function DestinationsPage() {

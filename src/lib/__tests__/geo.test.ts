@@ -18,6 +18,8 @@
 
 import { describe, test, expect } from "bun:test";
 import { isAllowedHost, resolveBaseUrl, DEFAULT_BASE_URL } from "@/lib/host";
+import { hreflangForPath, destinationSchema } from "@/components/seo";
+import { DESTINATIONS } from "@/lib/slovenia-data";
 import { getTotalSitemapUrlCount } from "@/lib/sitemap-urls";
 // Route handlerji so čiste funkcije — jih lahko pokličemo s sintetičnimi Requesti.
 import { GET as robotsGET } from "@/app/robots.txt/route";
@@ -223,5 +225,31 @@ describe("rss.xml route", () => {
     expect(body).toContain(`https://${RENDER}/destinacija/bled/guide/druzinski`);
     // XML escape: & < > morajo biti entitete; UTF-8 šumniki so veljavni
     expect(body).not.toMatch(/<description>[^<]*[&<>][^<]*<\/description>/);
+  });
+});
+
+// ─── SEO-2: host-honest canonical/hreflang/schema helperji ─────────────────
+
+describe("SEO-2 — host-zavedni SEO helperji (components/seo.tsx)", () => {
+  test("hreflangForPath: baseUrl parameter se upošteva (sl-SI + x-default)", () => {
+    const langs = hreflangForPath("/destinacija/bled/things-to-do", "https://i-feel-slovenia.onrender.com");
+    expect(langs["sl-SI"]).toBe("https://i-feel-slovenia.onrender.com/destinacija/bled/things-to-do");
+    expect(langs["x-default"]).toBe("https://i-feel-slovenia.onrender.com/destinacija/bled/things-to-do");
+    expect(JSON.stringify(langs)).not.toContain("discoverslovenia.ai");
+  });
+
+  test("destinationSchema: vsi URL-ji na podanem baseUrl (ne mrtva domena)", () => {
+    const bled = DESTINATIONS.find((d) => d.slug === "bled")!;
+    const schema = destinationSchema(bled, "https://i-feel-slovenia.onrender.com");
+    const s = JSON.stringify(schema);
+    expect(s).toContain("https://i-feel-slovenia.onrender.com/destinacija/bled/things-to-do");
+    expect(s).not.toContain("https://discoverslovenia.ai");
+    // containsPlace URL-ji so prav tako host-honest
+    expect(s).not.toMatch(/"url":"https:\/\/discoverslovenia\.ai/);
+  });
+
+  test("default fallback (brez baseUrl) ostane varna domena — ne crash", () => {
+    const langs = hreflangForPath("/x");
+    expect(langs["sl-SI"]).toContain("/x");
   });
 });

@@ -9,6 +9,7 @@ import { SharedTrip } from "@/components/shared-trip";
 import { TripSocial } from "@/components/trip-social";
 import { TripPushCard } from "@/components/trip-push-card";
 import { PrintQr } from "./print-qr";
+import { currentBaseUrl } from "@/lib/host";
 import type { Itinerary } from "@/lib/types";
 
 // Javna stran deljenega itinererja: /pot/[shareId]
@@ -110,6 +111,9 @@ export default async function SharedTripPage({
   const saved = await getSharedItinerary(shareId);
 
   if (!saved) notFound();
+
+  // SEO-2: tiskalna noga z DEJANSKO povezavo (prej mrtva domena)
+  const base = await currentBaseUrl();
 
   // Inkrementiraj števec ogledov (SAMO tu — ne v generateMetadata, ki deli
   // getSharedItinerary — sicer bi double-countal). Ne-critical: ob napaki
@@ -265,7 +269,7 @@ export default async function SharedTripPage({
         className="mt-6 hidden border-t border-border pt-3 text-center text-xs text-muted-foreground print:block"
         aria-hidden="true"
       >
-        Izvoženo z Discover Slovenia AI · https://discoverslovenia.ai/pot/{shareId}
+        Izvoženo z Discover Slovenia AI · {`${base}/pot/${shareId}`}
       </p>
 
       {/* === PRINT QR (FW2-A) — QR deljive povezave v PDF izhodu; UI za
