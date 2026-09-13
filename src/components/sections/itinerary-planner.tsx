@@ -67,6 +67,7 @@ import { addSavedTrip, deriveSavedTripName } from "@/lib/my-trips-storage";
 import { cn } from "@/lib/utils";
 import { BookingPanel, type BookingData } from "@/components/sections/booking-panel";
 import { ItineraryRefiner } from "@/components/sections/itinerary-refiner";
+import { PlannerDayNav } from "@/components/planner-day-nav";
 import { ItineraryQualityCard } from "@/components/itinerary-quality-card";
 import { ItineraryEventsSection } from "@/components/itinerary-events";
 import { PackingListSection } from "@/components/packing-list";
@@ -896,6 +897,8 @@ export function ItineraryPlanner() {
                 <ItineraryQualityCard itinerary={itinerary} input={formData} />
 
                 {/* Multi-turn AI refiner — uporabnik naravnojezično spreminja itinerer */}
+                {/* P0-4: sidro za mobilno bližnjico "Prilagodi" (PlannerDayNav) */}
+                <div id="itinerary-refiner" className="scroll-mt-[130px] lg:scroll-mt-24">
                 <ItineraryRefiner
                   itinerary={itinerary}
                   formData={formData}
@@ -906,6 +909,12 @@ export function ItineraryPlanner() {
                     persistItineraryLocally(newItinerary, formData);
                   }}
                 />
+                </div>
+
+                {/* P0-4: mobilna/tabletna navigacija po dnevih potovanja — lepljiva
+                    vrstica pod glavo (scroll-spy tabi + bližnjici Prilagodi/Shrani).
+                    Na desktopu (lg+) skrita — dvostolpčni pogled je dovolj pregleden. */}
+                <PlannerDayNav days={itinerary.days} />
 
                 {/* Day plans */}
                 <div className="space-y-4">
@@ -931,7 +940,12 @@ export function ItineraryPlanner() {
                     );
 
                     return (
-                    <Card key={day.day}>
+                    <Card
+                      key={day.day}
+                      id={`day-card-${day.day}`}
+                      data-day={day.day}
+                      className="scroll-mt-[130px] lg:scroll-mt-24"
+                    >
                       <CardHeader>
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <CardTitle className="flex items-center gap-2 text-lg">
@@ -1176,7 +1190,8 @@ export function ItineraryPlanner() {
                 <TripTimeline days={itinerary.days} totalBudget={itinerary.total_budget} />
 
                 {/* === AKCIJSKA VRSTICA: shrani/deli + e-pošta === */}
-                <Card>
+                {/* id="itinerary-actions" — cilj mobilne bližnjice "Shrani" (P0-4) */}
+                <Card id="itinerary-actions" className="scroll-mt-[130px] lg:scroll-mt-24">
                   <CardContent className="space-y-4 p-4">
                     <div className="flex flex-wrap gap-2">
                       <Button
