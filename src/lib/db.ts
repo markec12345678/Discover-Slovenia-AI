@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client'
-import path from 'path'
 
 /**
  * Prisma DB klient (singleton).
@@ -64,6 +63,41 @@ function serverFs(): typeof import('fs') | null {
   return null
 }
 
+/**
+ * `path` dostop po istem vzorcu kot serverFs() zgoraj.
+ * STATIČEN `import path from 'path'` podre EDGE prevajanje
+ * src/instrumentation.ts (Next 16 dev): instrumentacijski modul se prevaja
+ * tudi za edge runtime, kjer Node vgrajenih modulov ni mogoče razrešiti —
+ * uvoz verige instrumentation → marketplace-image-migration → db.ts je
+ * naredil VSE strani 500 v dev načinu (produkcija/nodejs runtime je bil v redu,
+ * ker se tam 'path' razreši prek server externals). Dinamičen require pusti
+ * webpack pri miru; veja se izvede SAMO na strežniku (file: DATABASE_URL).
+ */
+function serverPath(): typeof import('path') | null {
+  try {
+    const getBuiltin = (
+      process as { getBuiltinModule?: (id: string) => unknown }
+    ).getBuiltinModule
+    if (typeof getBuiltin === 'function') {
+      const p = getBuiltin.call(process, 'path') as
+        | typeof import('path')
+        | undefined
+      if (p) return p
+    }
+  } catch {
+    // nadaljuj z eval fallback
+  }
+  try {
+    const dynamicRequire = eval('require') as NodeRequire
+    if (typeof dynamicRequire === 'function') {
+      return dynamicRequire('path') as typeof import('path')
+    }
+  } catch {
+    // ESM brez require (bun dev) — vrne null
+  }
+  return null
+}
+
 function resolveDatabaseUrl(): string | undefined {
   const raw = process.env.DATABASE_URL
   if (!raw?.startsWith('file:')) return raw
@@ -79,8 +113,11 @@ function resolveDatabaseUrl(): string | undefined {
       if (raw === `file:${tmpPath}`) return raw
       const fs = serverFs()
       if (fs) {
-        const seedPath = path.join(process.cwd(), 'db', 'demo-seed.db')
-        if (fs.existsSync(seedPath)) {
+        const path = serverPath()
+        const seedPath = path
+          ? path.join(process.cwd(), 'db', 'demo-seed.db')
+          : null
+        if (seedPath && fs.existsSync(seedPath)) {
           if (!fs.existsSync(tmpPath)) {
             fs.copyFileSync(seedPath, tmpPath)
           }
@@ -94,10 +131,12 @@ function resolveDatabaseUrl(): string | undefined {
   }
 
   const filePath = raw.slice('file:'.length)
-  if (path.isAbsolute(filePath)) return raw
+  if (filePath.startsWith('/')) return raw
 
   // Interpretiraj relativno na prisma/ mapo (enako kot Prisma CLI)
-  const absolute = path.resolve(process.cwd(), 'prisma', filePath)
+  const pathMod = serverPath()
+  if (!pathMod) return raw
+  const absolute = pathMod.resolve(process.cwd(), 'prisma', filePath)
   return `file:${absolute}`
 }
 

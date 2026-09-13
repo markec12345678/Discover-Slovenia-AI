@@ -138,7 +138,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "stajerska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/629581fdedb9.jpg",
+      "/content/pustni-karneval-ptuj.jpg",
     website: "https://www.kurentovanje.net",
     priceRange: "brezplačno",
     featured: true,
@@ -154,7 +154,7 @@ export const EVENTS: EventItem[] = [
     category: "sport",
     region: "gorenjska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/deb81f0130ad.jpg",
+      "/content/planica-nordic-festival.jpg",
     website: "https://www.planica.si",
     priceRange: "€€",
     featured: true,
@@ -171,7 +171,7 @@ export const EVENTS: EventItem[] = [
     category: "glasba",
     region: "gorenjska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/046381eb5c16.jpg",
+      "/content/blejski-danovski-festival.jpg",
     website: "https://www.festivalblejskihdni.si",
     priceRange: "€€",
     featured: false,
@@ -188,7 +188,7 @@ export const EVENTS: EventItem[] = [
     category: "sport",
     region: "gorenjska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/30b28e7406da.jpg",
+      "/content/festival-soca.jpg",
     website: "https://www.festivalsoca.si",
     priceRange: "€€",
     featured: false,
@@ -205,7 +205,7 @@ export const EVENTS: EventItem[] = [
     category: "hrana",
     region: "gorenjska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/c9048cefb05b.jpg",
+      "/content/bled-days-kremsnita.jpg",
     website: "https://www.bled.si",
     priceRange: "brezplačno",
     featured: true,
@@ -222,7 +222,7 @@ export const EVENTS: EventItem[] = [
     category: "glasba",
     region: "osrednja",
     image:
-      "https://sfile.chatglm.cn/images-ppt/12490c81f940.jpg",
+      "/content/ljubljana-festival.jpg",
     website: "https://www.ljubljanafestival.si",
     priceRange: "€€",
     featured: true,
@@ -239,7 +239,7 @@ export const EVENTS: EventItem[] = [
     category: "glasba",
     region: "primorska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/b2b645f044a8.jpg",
+      "/content/piran-music-nights.jpg",
     website: "https://www.piran.si",
     priceRange: "€",
     featured: false,
@@ -254,7 +254,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "gorenjska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/3ca2b48357e6.jpg",
+      "/content/kmecji-ohcet.jpg",
     priceRange: "brezplačno",
     featured: false,
   },
@@ -268,7 +268,7 @@ export const EVENTS: EventItem[] = [
     category: "hrana",
     region: "primorska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/219287b7ca7c.jpg",
+      "/content/olive-festival.jpg",
     website: "https://www.slovenia.info",
     priceRange: "€",
     featured: false,
@@ -285,7 +285,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "stajerska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/04a9c13195c0.jpg",
+      "/content/festival-stara-trta.jpg",
     website: "https://www.stara-trta.si",
     priceRange: "€",
     featured: false,
@@ -302,7 +302,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "osrednja",
     image:
-      "https://sfile.chatglm.cn/images-ppt/5b9571e9ea4e.jpg",
+      "/content/bozicni-sejmi.jpg",
     website: "https://www.ljubljana.si",
     priceRange: "brezplačno",
     featured: true,
@@ -336,7 +336,7 @@ export const EVENTS: EventItem[] = [
     category: "hrana",
     region: "prekmurje",
     image:
-      "https://sfile.chatglm.cn/images-ppt/72a1f461dc3d.jpg",
+      "/content/prekmurje-bucka.jpg",
     priceRange: "brezplačno",
     featured: false,
   },
@@ -397,7 +397,7 @@ export const EVENTS: EventItem[] = [
     category: "kultura",
     region: "prekmurje",
     image:
-      "https://sfile.chatglm.cn/images-ppt/b11f6dd497a3.jpg",
+      "/content/prekmurje-porabje.jpg",
     priceRange: "brezplačno",
     featured: false,
   },
@@ -431,7 +431,7 @@ export const EVENTS: EventItem[] = [
     category: "sport",
     region: "stajerska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/c72ba4e8d642.jpg",
+      "/content/zlati-lisjak-maribor.jpg",
     website: "https://www.zlati-lisjak.si",
     priceRange: "€",
     featured: false,
@@ -448,7 +448,7 @@ export const EVENTS: EventItem[] = [
     category: "hrana",
     region: "stajerska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/6c7af1cfed10.png",
+      "/content/vinska-vigred-maribor.jpg",
     website: "https://www.vinskavigred.si",
     priceRange: "€",
     featured: true,
@@ -465,7 +465,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "bela-krajina",
     image:
-      "https://sfile.chatglm.cn/images-ppt/d1b4362b52b4.jpg",
+      "/content/jurjevanje-bela-krajina.jpg",
     website: "https://www.jurjevanje.si",
     priceRange: "brezplačno",
     featured: false,
@@ -481,7 +481,7 @@ export const EVENTS: EventItem[] = [
     category: "sport",
     region: "osrednja",
     image:
-      "https://sfile.chatglm.cn/images-ppt/02fa729ab251.jpg",
+      "/content/ljubljanski-maraton.jpg",
     website: "https://www.ljubljanskimaraton.si",
     priceRange: "€€",
     featured: true,
@@ -497,7 +497,7 @@ export const EVENTS: EventItem[] = [
     category: "festival",
     region: "stajerska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/1d31d3882a92.jpg",
+      "/content/pivo-in-cvetje-lasko.jpg",
     website: "https://www.pivoincvetje.si",
     priceRange: "€",
     featured: true,
@@ -513,7 +513,7 @@ export const EVENTS: EventItem[] = [
     category: "hrana",
     region: "primorska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/5fb40989e896.jpg",
+      "/content/festival-solinarstva-secovlje.jpg",
     website: "https://www.kpss.si",
     priceRange: "€",
     featured: false,
@@ -581,7 +581,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "gorenjska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/7abc84c54d4f.jpg",
+      "/content/bled-winter-magic.jpg",
     website: "https://www.bled.si",
     priceRange: "brezplačno",
     featured: true,

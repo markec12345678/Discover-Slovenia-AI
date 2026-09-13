@@ -26,7 +26,7 @@ export async function Hero() {
       {/* Background slika — Bled ob sončnem zahodu, Ken Burns zoom */}
       <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
         <Image
-          src="https://sfile.chatglm.cn/images-ppt/6e61d0d8dc53.jpg"
+          src="/content/hero-main.jpg"
           alt={t("imageAlt")}
           fill
           priority
