@@ -14,8 +14,8 @@
 // destinacij) za agente, ki želijo kontekst v enem zamihu.
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
-import { ADRIA_GUIDES, SLOVENIA_LOOP_GUIDES, COUNTRY_LABELS } from "@/lib/adria-guides";
-import { ADRIA_GUIDES_EN, SLOVENIA_LOOP_GUIDES_EN, COUNTRY_LABELS_EN } from "@/lib/adria-guides-en";
+import { ADRIA_GUIDES, SLOVENIA_LOOP_GUIDES, SLOVENIA_WINTER_GUIDES, COUNTRY_LABELS } from "@/lib/adria-guides";
+import { ADRIA_GUIDES_EN, SLOVENIA_LOOP_GUIDES_EN, SLOVENIA_WINTER_GUIDES_EN, COUNTRY_LABELS_EN } from "@/lib/adria-guides-en";
 import { resolveBaseUrl } from "@/lib/host";
 import { GUIDE_TYPES, GUIDE_TYPE_META, DURATION_SLUGS } from "@/lib/sitemap-urls";
 
@@ -106,6 +106,20 @@ export async function GET(req: Request) {
     ].join("\n"),
   );
 
+  // === Zimska potovanja po Sloveniji (SLO-WINTER-1: zimski vodniki) ===
+  sections.push(
+    [
+      "## Zimska potovanja po Sloveniji",
+      "",
+      ...SLOVENIA_WINTER_GUIDES.map(
+        (g) =>
+          `- [${g.metaTitle}](${base}/vodici/${g.slug}): zimski road trip vodnik — ${g.days} dni, ${g.km} km, ` +
+          `${g.countries.map((c) => COUNTRY_LABELS[c] ?? c).join(", ")}. ${g.description}`,
+      ),
+      "",
+    ].join("\n"),
+  );
+
   // === Potovanja po Sloveniji (SLO-LOOP-1: domači krožni vodniki) ===
   sections.push(
     [
@@ -129,6 +143,20 @@ export async function GET(req: Request) {
         (g) =>
           `- [${g.metaTitle}](${base}/vodici/${g.slug}): road trip vodnik — ${g.days} dni, ${g.km} km, ` +
           `${g.countries.map((c) => COUNTRY_LABELS[c] ?? c).join(", ")}. ${g.description}`,
+      ),
+      "",
+    ].join("\n"),
+  );
+
+  // === Slovenia in winter (SLO-WINTER-EN: angleške različice) ===
+  sections.push(
+    [
+      "## Slovenia in winter (English)",
+      "",
+      ...SLOVENIA_WINTER_GUIDES_EN.map(
+        (g) =>
+          `- [${g.metaTitle}](${base}/en/vodici/${g.slug}): winter road trip guide — ${g.days} days, ${g.km.toLocaleString("en-GB")} km, ` +
+          `${g.countries.map((c) => COUNTRY_LABELS_EN[c] ?? c).join(", ")}. ${g.description}`,
       ),
       "",
     ].join("\n"),
@@ -166,7 +194,7 @@ export async function GET(req: Request) {
   const body = [
     "# Discover Slovenia AI",
     "",
-    "> AI načrtovalec potovanj po Sloveniji: 22 destinacij, itinererji po trajanju, vodniki po tipu potovanja, kaj početi, najboljši čas obiska, krožna potovanja po Sloveniji, jadranska cross-border potovanja in neposredne rezervacije (hoteli, izleti, transferji, eSIM, transport, vstopnice). Jedro lijaka, krožni in jadranski vodniki so na voljo tudi v angleščini (/en).",
+    "> AI načrtovalec potovanj po Sloveniji: 22 destinacij, itinererji po trajanju, vodniki po tipu potovanja, kaj početi, najboljši čas obiska, krožna potovanja po Sloveniji, zimska potovanja, jadranska cross-border potovanja in neposredne rezervacije (hoteli, izleti, transferji, eSIM, transport, vstopnice). Jedro lijaka, krožni in jadranski vodniki so na voljo tudi v angleščini (/en).",
     "",
     `Celotna vsebina v enem datotečnem formatu: [llms-full.txt](${base}/llms-full.txt)`,
     "",

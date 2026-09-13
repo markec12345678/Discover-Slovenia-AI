@@ -1,12 +1,13 @@
-// ADRIA-EN + SLO-LOOP-EN — agregacija ANGLEŠKIH različic vodnikov
-// (10 jadranskih + 4 domači krožni po Sloveniji).
+// ADRIA-EN + SLO-LOOP-EN + SLO-WINTER-EN — agregacija ANGLEŠKIH različic
+// vodnikov (10 jadranskih + 4 domači krožni + 4 zimski).
 // Zrcali strukturo slovenskega modula (src/lib/adria-guides/index.ts):
 // isti slugi (hreflang pari SL ⇄ EN), iste številke/dati/avtorje/slike —
 // prevedena je izključno vsebina (naslovi, odstavki, praktične kartice, FAQ).
 //
 // Struktura: 5 datotek po 2 jadranska vodnika (guides-1-2 … guides-9-10)
-// + 4 datoteke po 1 domačem krožnem vodniku (slovenija-*) — enaka
-// agregacija v fiksnem vrstnem redu ADRIA_SLUGS (14).
+// + 4 datoteke po 1 domačem krožnem vodniku (slovenija-*) + 4 zimske
+// (slovenija-pozimi, bozicni, smuci, terme) — enaka agregacija v fiksnem
+// vrstnem redu ADRIA_SLUGS (18).
 
 import { ADRIA_GUIDES_EN_1_2 } from "./guides-1-2";
 import { ADRIA_GUIDES_EN_3_4 } from "./guides-3-4";
@@ -17,6 +18,10 @@ import { ADRIA_GUIDES_EN_SLOOP_V7 } from "./slovenija-v-7-dneh";
 import { ADRIA_GUIDES_EN_SLOOP_V10 } from "./slovenija-v-10-dneh";
 import { ADRIA_GUIDES_EN_SLOOP_VIKEND } from "./slovenija-vikend";
 import { ADRIA_GUIDES_EN_SLOOP_OTROCI } from "./slovenija-z-otroki";
+import { ADRIA_GUIDES_EN_WINTER_POZIMI } from "./slovenija-pozimi";
+import { ADRIA_GUIDES_EN_WINTER_BOZICNI } from "./bozicni-vikend-ljubljana";
+import { ADRIA_GUIDES_EN_WINTER_SMUCI } from "./smuci-vikend-iz-ljubljane";
+import { ADRIA_GUIDES_EN_WINTER_TERME } from "./zima-v-termah";
 import { ADRIA_SLUGS, type AdriaGuide, type AdriaSlug } from "../adria-guides/types";
 
 export { ADRIA_SLUGS } from "../adria-guides/types";
@@ -30,7 +35,15 @@ export const SLOVENIA_LOOP_GUIDES_EN: AdriaGuide[] = [
   ...ADRIA_GUIDES_EN_SLOOP_OTROCI,
 ];
 
-/** Vseh 14 angleških vodnikov v fiksnem vrstnem redu (ADRIA_SLUGS). */
+/** Zimski vodniki (SLO-WINTER-1, EN) v fiksnem vrstnem redu. */
+export const SLOVENIA_WINTER_GUIDES_EN: AdriaGuide[] = [
+  ...ADRIA_GUIDES_EN_WINTER_POZIMI,
+  ...ADRIA_GUIDES_EN_WINTER_BOZICNI,
+  ...ADRIA_GUIDES_EN_WINTER_SMUCI,
+  ...ADRIA_GUIDES_EN_WINTER_TERME,
+];
+
+/** Vseh 18 angleških vodnikov v fiksnem vrstnem redu (ADRIA_SLUGS). */
 export const ADRIA_GUIDES_EN: AdriaGuide[] = [
   ...ADRIA_GUIDES_EN_1_2,
   ...ADRIA_GUIDES_EN_3_4,
@@ -38,6 +51,7 @@ export const ADRIA_GUIDES_EN: AdriaGuide[] = [
   ...ADRIA_GUIDES_EN_7_8,
   ...ADRIA_GUIDES_EN_9_10,
   ...SLOVENIA_LOOP_GUIDES_EN,
+  ...SLOVENIA_WINTER_GUIDES_EN,
 ];
 
 /** EN vodnik po slugu (ali undefined). */

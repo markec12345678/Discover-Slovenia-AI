@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BookOpen, Compass, Calendar, Route } from "lucide-react";
+import { BookOpen, Compass, Calendar, Route, Snowflake } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { Navigation } from "@/components/sections/navigation";
@@ -10,8 +10,8 @@ import { BlogSection } from "@/components/sections/blog";
 import { AskLocal } from "@/components/sections/ask-local";
 import { Reveal } from "@/components/reveal";
 import { Badge } from "@/components/ui/badge";
-import { ADRIA_GUIDES, SLOVENIA_LOOP_GUIDES } from "@/lib/adria-guides";
-import { ADRIA_GUIDES_EN, SLOVENIA_LOOP_GUIDES_EN } from "@/lib/adria-guides-en";
+import { ADRIA_GUIDES, SLOVENIA_LOOP_GUIDES, SLOVENIA_WINTER_GUIDES } from "@/lib/adria-guides";
+import { ADRIA_GUIDES_EN, SLOVENIA_LOOP_GUIDES_EN, SLOVENIA_WINTER_GUIDES_EN } from "@/lib/adria-guides-en";
 import { currentBaseUrl } from "@/lib/host";
 import { localePrefix } from "@/i18n/routing";
 import { hreflangForPath } from "@/components/seo";
@@ -19,14 +19,17 @@ import { Link } from "@/i18n/navigation";
 
 /**
  * /vodici — vodiči in nasveti (FW3: AI-first hierarhija; ADRIA-1: jadranski
- * wedge; ADRIA-EN: EN različica; SLO-LOOP-1: domači krožni vodniki).
+ * wedge; ADRIA-EN: EN različica; SLO-LOOP-1: domači krožni vodniki;
+ * SLO-WINTER-1: zimski vodniki).
  *
- * Nad blogom sta zdaj DVA uredniška bloka vodnikov: najprej "Slovenija v
- * enem krogu" (SLO-LOOP-1: 4 domači krožni vodniki — 7/10 dni, vikend,
- * družinski krog), nato "Jadranska potovanja" (ADRIA-1: 10 cross-border
- * vodnikov). Pod njima Blog + "Vprašaj lokalca".
+ * Nad blogom so zdaj TRIje uredniški bloki vodnikov: najprej "Slovenija v
+ * enem krogu" (SLO-LOOP-1: 4 letni krožni vodniki) in na koncu "Jadranska
+ * potovanja" (ADRIA-1: 10 cross-border vodnikov). Nad njimi je še zimski
+ * blok "Slovenija pozimi" (SLO-WINTER-1: adventna Ljubljana, smučarski
+ * vikend, zimski krog, terme — časovno najaktualnejša vsebina). Pod njimi
+ * Blog + "Vprašaj lokalca".
  *
- * ADRIA-EN: na EN se izriše glava + oba seznama vodnikov (full prevodi);
+ * ADRIA-EN: na EN se izriše glava + vsi trije seznami vodnikov (full prevodi);
  * BlogSection in AskLocal (slovenska uredniška/DB vsebina) se NE izrišeta
  * (P4-8: nikoli mešanja jezikov).
  */
@@ -112,6 +115,7 @@ export default async function GuidesPage() {
   const locale = await getLocale();
   const guides = locale === "en" ? ADRIA_GUIDES_EN : ADRIA_GUIDES;
   const loops = locale === "en" ? SLOVENIA_LOOP_GUIDES_EN : SLOVENIA_LOOP_GUIDES;
+  const winters = locale === "en" ? SLOVENIA_WINTER_GUIDES_EN : SLOVENIA_WINTER_GUIDES;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -140,6 +144,43 @@ export default async function GuidesPage() {
               <BookOpen className="size-3.5 text-primary" aria-hidden="true" />
               {t("editorsLine")}
             </p>
+          </div>
+        </section>
+
+        {/* Slovenija pozimi — zimski vodniki (SLO-WINTER-1; najaktualnejša
+            sezonska vsebina, zato na vrhu) */}
+        <section
+          aria-labelledby="winters-list-title"
+          className="py-12 sm:py-16"
+        >
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-8 text-center">
+              <Badge variant="outline" className="mb-4 gap-1.5 px-3 py-1 text-xs">
+                <Snowflake className="size-3.5 text-primary" aria-hidden="true" />
+                ❄️ {t("winters.badge")}
+              </Badge>
+              <h2
+                id="winters-list-title"
+                className="text-balance text-2xl font-bold tracking-tight sm:text-3xl"
+              >
+                {t("winters.title")}
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-balance text-sm text-muted-foreground sm:text-base">
+                {t("winters.description")}
+              </p>
+            </div>
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {winters.map((g) => (
+                <li key={g.slug}>
+                  <GuideCard
+                    g={g}
+                    locale={locale}
+                    countriesAria={t("winters.countriesAria")}
+                    readMore={t("winters.readMore")}
+                  />
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 

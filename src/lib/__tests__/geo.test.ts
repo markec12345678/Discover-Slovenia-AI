@@ -247,10 +247,10 @@ describe("rss.xml route", () => {
     expect(body).toContain(`https://${RENDER}/rss.xml`);
   });
 
-  test("itemi: 22 things-to-do + 88 vodnikov + 14 vodnikov (10 jadranskih + 4 domači) = 124, escapano besedilo", async () => {
+  test("itemi: 22 things-to-do + 88 vodnikov + 18 vodnikov (10 jadranskih + 4 domači + 4 zimski) = 128, escapano besedilo", async () => {
     const body = await (await rssGET(req(RENDER))).text();
     const items = body.match(/<item>/g) ?? [];
-    expect(items.length).toBe(124);
+    expect(items.length).toBe(128);
     expect(body).toContain(`https://${RENDER}/destinacija/bled/things-to-do`);
     expect(body).toContain(`https://${RENDER}/destinacija/bled/guide/druzinski`);
     // ADRIA-1: jadranski vodniki z RESNIČNIM pubDate (edini itemi z njim)
@@ -258,6 +258,9 @@ describe("rss.xml route", () => {
     // SLO-LOOP-1: domači krožni vodniki (kategorija "Vodič po Sloveniji")
     expect(body).toContain(`https://${RENDER}/vodici/slovenija-v-7-dneh`);
     expect(body).toContain("<category>Vodič po Sloveniji</category>");
+    // SLO-WINTER-1: zimski vodniki (tudi "Vodič po Sloveniji" — countries ["SI"])
+    expect(body).toContain(`https://${RENDER}/vodici/bozicni-vikend-ljubljana`);
+    expect(body).toContain(`https://${RENDER}/vodici/zima-v-termah`);
     expect(body).toMatch(/<pubDate>[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4}/);
     // XML escape: & < > morajo biti entitete; UTF-8 šumniki so veljavni
     expect(body).not.toMatch(/<description>[^<]*[&<>][^<]*<\/description>/);

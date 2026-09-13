@@ -78,8 +78,9 @@ export interface SitemapUrl {
 /**
  * Vrne vse URL-je, ki jih platforma generira.
  * Trenutno: 19 stalnih + 22 things-to-do + 110 itinererjev + 88 best-time + 88 vodnikov
- * + 10 jadranskih vodnikov (ADRIA-1) = 337 SL URL-jev
- * + 328 EN različic (FW4.3-2 jedro lijaka + ADRIA-EN jadranski vodniki) = 665 skupaj.
+ * + 10 jadranskih vodnikov (ADRIA-1) + 4 domači (SLO-LOOP-1) + 4 zimski
+ *   (SLO-WINTER-1) = 345 SL URL-jev
+ * + EN različice (FW4.3-2 jedro lijaka + vsi vodniki ADRIA/LOOP/WINTER) = 681 skupaj.
  *
  * `baseUrl` (MONET-10): dinamična pot (route handler /sitemap.xml) poda
  * DEJANSKEGA gostitelja zahteve → Google/Bing ne zavrnejo cross-host sitemapa.
@@ -154,9 +155,9 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
     }
   }
 
-  // === Jadranski vodniki (ADRIA-1: 10 cross-border) ===
+  // === Vodniki (ADRIA-1 jadranski + SLO-LOOP-1 domači + SLO-WINTER-1 zimski) ===
   for (const g of ADRIA_GUIDES) {
-    add(`/vodici/${g.slug}`, 0.7, "Jadranski vodnik", "weekly");
+    add(`/vodici/${g.slug}`, 0.7, "Vodnik", "weekly");
   }
 
   // === FW4.3-2: EN različice (samo poti na EN whitelisti — jedro lijaka)
@@ -164,7 +165,8 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
   // se OBEJEMA prilepita hreflang alternati (xhtml:link v sitemap.xml).
   // GEO poti (/llms.txt, /rss.xml) in uredniške SL vsebine (dogodki,
   // tržnica …) EN različice NIMAJO (proxy jih 308 preusmeri na SL).
-  // ADRIA-EN: /vodici seznam + 10 vodnikov so NA whitelisti (full prevodi). ===
+  // ADRIA-EN + SLO-LOOP-EN + SLO-WINTER-EN: /vodici seznam + vsi vodniki so
+  // NA whitelisti (full prevodi). ===
   const enUrls: SitemapUrl[] = [];
   for (const u of urls) {
     if (!isEnRoute(u.path)) continue;
@@ -196,7 +198,7 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
 /** Število EN URL-jev (FW4.3-2 + ADRIA-EN) — za poročanje brez gradnje seznama. */
 export function getEnSitemapUrlCount(): number {
   // 10 stalnih (domov, nacrtuj, destinacije, vodici + 6 info/E-E-A-T) + 22
-  // + 110 + 88 + 88 + 10 jadranskih vodnikov (ADRIA-EN)
+  // + 110 + 88 + 88 + 18 vodnikov (ADRIA-EN + LOOP-EN + WINTER-EN)
   return (
     10 +
     DESTINATIONS.length +
@@ -209,8 +211,8 @@ export function getEnSitemapUrlCount(): number {
 
 /** Skupno število vseh URL-jev (za hitro poročanje brez gradnje seznama) */
 export function getTotalSitemapUrlCount(): number {
-  // 19 stalnih + 22 + 110 + 88 + 88 + 10 jadranskih (ADRIA-1) = 337 SL
-  // + 328 EN (FW4.3-2 + ADRIA-EN) = 665 skupaj
+  // 19 stalnih + 22 + 110 + 88 + 88 + 18 vodnikov (ADRIA+LOOP+WINTER) = 345 SL
+  // + 336 EN (FW4.3-2 + vsi vodniki) = 681 skupaj
   return (
     19 +
     DESTINATIONS.length +

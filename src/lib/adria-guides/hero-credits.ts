@@ -129,6 +129,32 @@ export const HERO_CREDITS: Record<string, HeroCredit> = {
     descurl:
       "https://commons.wikimedia.org/wiki/File:Pletna_on_lake_Bled,_Slovenia.jpg",
   },
+  // SLO-WINTER-1: 3 CC heroji (zima-v-termah.jpg je AI-generirana ilustracija —
+  // brez CC atribucije, ker ni delo Commons avtorja).
+  "slovenija-pozimi": {
+    title: "Frozen Lake Bled",
+    author: "Anita",
+    license: "CC0 1.0",
+    source: "Wikimedia Commons",
+    descurl:
+      "https://commons.wikimedia.org/wiki/File:Frozen_Lake_Bled_(156843859).jpeg",
+  },
+  "bozicni-vikend-ljubljana": {
+    title: "Ljubljana Christmas Market Lights",
+    author: "Oleg Brovko",
+    license: "CC BY-SA 2.0",
+    source: "Wikimedia Commons",
+    descurl:
+      "https://commons.wikimedia.org/wiki/File:Ljubljana_Christmas_Market_Lights_(37927553515).jpg",
+  },
+  "smuci-vikend-iz-ljubljane": {
+    title: "Skigebiet Vogel Bohinj",
+    author: "Manfred Kopka",
+    license: "CC BY-SA 3.0",
+    source: "Wikimedia Commons",
+    descurl:
+      "https://commons.wikimedia.org/wiki/File:Skigebiet_Vogel_Bohinj.jpg",
+  },
 };
 
 /** Vrne atribucijo za slug (ali undefined). */

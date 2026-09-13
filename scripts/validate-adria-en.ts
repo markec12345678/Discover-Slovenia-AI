@@ -1,9 +1,9 @@
 /**
- * ADRIA-EN + SLO-LOOP — validacijska skripta: pariteta SL ⇄ EN vodnikov
- * (10 jadranskih + 4 domači krožni od SLO-LOOP-1).
+ * ADRIA-EN + SLO-LOOP + SLO-WINTER — validacijska skripta: pariteta
+ * SL ⇄ EN vodnikov (10 jadranskih + 4 domači krožni + 4 zimski).
  *
  * Preverja (izvoz "FAIL" + nenizčen exit):
- *  1. vrstni red slugov = ADRIA_SLUGS (oba dataset-a, 14 kosov)
+ *  1. vrstni red slugov = ADRIA_SLUGS (oba dataset-a, 18 kosov)
  *  2. strukturna identiteta: days, km, readTime, date, author, heroImage,
  *     countries, route, stops (ime+država+nočitve), relatedSlugs,
  *     relatedSloveniaIds, št. sekcij/practical/FAQ
@@ -23,7 +23,7 @@ import { DESTINATIONS } from "../src/lib/slovenia-data";
 
 type Guide = (typeof ADRIA_GUIDES)[number];
 
-const EXPECTED = ADRIA_SLUGS.length; // 10 jadranskih + 4 domači (SLO-LOOP-1)
+const EXPECTED = ADRIA_SLUGS.length; // 10 jadranskih + 4 domači (SLO-LOOP-1) + 4 zimski (SLO-WINTER-1)
 const SLUG_SET = new Set<string>(ADRIA_SLUGS);
 const DEST_IDS = new Set(DESTINATIONS.map((d) => d.id));
 

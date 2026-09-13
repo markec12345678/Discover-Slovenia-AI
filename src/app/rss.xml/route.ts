@@ -6,7 +6,8 @@
 // lastBuildDate trenutka generiranja, kar je spec-skladno in resnično.
 //
 // Vsebina: things-to-do strani vseh destinacij (najbogatejša vsebina)
-// + vodniki po tipu potovanja + jadranski vodniki (ADRIA-1) — edini itemi
+// + vodniki po tipu potovanja + vodniki (ADRIA-1 jadranski + SLO-LOOP-1
+// domači + SLO-WINTER-1 zimski) — edini itemi
 // z RESNIČNIM <pubDate> (datum objave vsebinskega vodnika je znan).
 // URL-ji so gostitelju-prilagojeni (allowlist).
 
@@ -74,7 +75,7 @@ export async function GET(req: Request) {
   }
 
   // Vodniki — edini itemi s pubDate (resničen datum objave vsebine)
-  // (ADRIA-1 jadranski + SLO-LOOP-1 domači krožni)
+  // (ADRIA-1 jadranski + SLO-LOOP-1 domači krožni + SLO-WINTER-1 zimski)
   for (const g of ADRIA_GUIDES) {
     items.push(
       [
