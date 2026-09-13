@@ -177,6 +177,10 @@ model Listing {
   priceRange      String   @default("€") // € | €€ | €€€
   openingHours    String?
   specialties     String? // JSON array
+  // === PRAKTIČNI PODATKI (t12 faza 1) — kopija glavne sheme ===
+  seasons            String?
+  weatherSuitability String?
+  parking            String?
   ownerEmail      String?
   viewCount       Int      @default(0)
   clickCount      Int      @default(0)

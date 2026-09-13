@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { parseSeasons } from "@/lib/listing-practical";
 import type { ListingCategory } from "@/lib/listings-types";
 
 // Validacijska shema za posodobitev listinga
@@ -35,6 +36,18 @@ const updateSchema = z.object({
   priceRange: z.enum(["€", "€€", "€€€"]).optional(),
   openingHours: z.string().nullable().optional(),
   specialties: z.array(z.string()).optional(),
+  // === PRAKTIČNI PODATKI (t12 faza 1) — vsa tri neobvezna ===
+  seasons: z
+    .array(z.enum(["spring", "summer", "autumn", "winter"]))
+    .optional(),
+  weatherSuitability: z
+    .enum(["indoor", "outdoor", "all-weather"])
+    .nullable()
+    .optional(),
+  parking: z
+    .enum(["free", "paid", "street", "private", "none"])
+    .nullable()
+    .optional(),
 });
 
 interface RouteParams {
@@ -77,6 +90,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       specialties: listing.specialties
         ? (JSON.parse(listing.specialties) as string[])
         : [],
+      seasons: parseSeasons(listing.seasons),
     },
   });
 }
@@ -212,6 +226,18 @@ export async function PUT(request: Request, { params }: RouteParams) {
         ...(data.specialties !== undefined && {
           specialties: JSON.stringify(data.specialties),
         }),
+        // Praktični podatki (t12 faza 1) — kot openingHours/priceRange NE
+        // sprožijo vnovične moderacije (faktični metapodatki, ne vsebina)
+        ...(data.seasons !== undefined && {
+          seasons:
+            data.seasons.length > 0 ? JSON.stringify(data.seasons) : null,
+        }),
+        ...(data.weatherSuitability !== undefined && {
+          weatherSuitability: data.weatherSuitability || null,
+        }),
+        ...(data.parking !== undefined && {
+          parking: data.parking || null,
+        }),
         // Plan, featured in verified se NE posodabljajo preko tega API-ja
         // P3c-1: nazaj v pregled ob vsebinski spremembi
         ...(needsReModeration && {
@@ -231,6 +257,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
         specialties: updated.specialties
           ? (JSON.parse(updated.specialties) as string[])
           : [],
+        seasons: parseSeasons(updated.seasons),
       },
     });
   } catch (error) {

@@ -21,8 +21,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Save, X, AlertCircle } from "lucide-react";
+import { Loader2, Save, X, AlertCircle, CalendarDays, CloudSun, Car } from "lucide-react";
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import {
+  SEASON_KEYS,
+  SEASON_LABELS,
+  WEATHER_SUITABILITY_KEYS,
+  WEATHER_SUITABILITY_LABELS,
+  PARKING_KEYS,
+  PARKING_LABELS,
+  type SeasonKey,
+  type WeatherSuitability,
+  type ParkingOption,
+} from "@/lib/listing-practical";
 import type { ListingCategory, ListingPlan } from "@/lib/listings-types";
 
 // Admin Listing — razširjen tip z vsemi polji iz baze
@@ -48,6 +59,10 @@ export interface AdminListing {
   priceRange: string;
   openingHours?: string | null;
   specialties: string[];
+  // === PRAKTIČNI PODATKI (t12 faza 1) — vsa tri neobvezna ===
+  seasons?: SeasonKey[] | null;
+  weatherSuitability?: WeatherSuitability | null;
+  parking?: ParkingOption | null;
   ownerEmail?: string | null;
   viewCount: number;
   clickCount: number;
@@ -120,6 +135,11 @@ export function ListingForm({
   const [specialtiesText, setSpecialtiesText] = React.useState("");
   const [rating, setRating] = React.useState("0");
   const [reviewCount, setReviewCount] = React.useState("0");
+  // Praktični podatki (t12 faza 1)
+  const [seasons, setSeasons] = React.useState<SeasonKey[]>([]);
+  const [weatherSuitability, setWeatherSuitability] =
+    React.useState<WeatherSuitability | null>(null);
+  const [parking, setParking] = React.useState<ParkingOption | null>(null);
 
   const [loading, setLoading] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
@@ -148,6 +168,9 @@ export function ListingForm({
       setSpecialtiesText((listing.specialties ?? []).join(", "));
       setRating(String(listing.rating ?? 0));
       setReviewCount(String(listing.reviewCount ?? 0));
+      setSeasons(listing.seasons ?? []);
+      setWeatherSuitability(listing.weatherSuitability ?? null);
+      setParking(listing.parking ?? null);
     } else {
       setName("");
       setSlug("");
@@ -169,6 +192,9 @@ export function ListingForm({
       setSpecialtiesText("");
       setRating("0");
       setReviewCount("0");
+      setSeasons([]);
+      setWeatherSuitability(null);
+      setParking(null);
     }
     setErrorMsg(null);
     setLoading(false);
@@ -188,6 +214,19 @@ export function ListingForm({
   const handleSlugChange = (val: string) => {
     setSlugEdited(true);
     setSlug(slugify(val));
+  };
+
+  // t12 faza 1: sezonski čipi
+  const toggleSeason = (key: SeasonKey) => {
+    setSeasons((prev) =>
+      prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]
+    );
+  };
+
+  const toggleAllYear = () => {
+    setSeasons((prev) =>
+      prev.length === SEASON_KEYS.length ? [] : [...SEASON_KEYS]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -228,6 +267,9 @@ export function ListingForm({
       priceRange,
       openingHours: openingHours.trim(),
       specialties: specialtiesText,
+      seasons,
+      weatherSuitability,
+      parking,
       rating: parseFloat(rating) || 0,
       reviewCount: parseInt(reviewCount, 10) || 0,
       ownerEmail: listing?.ownerEmail ?? null,
@@ -349,14 +391,18 @@ export function ListingForm({
             <div className="space-y-1.5">
               <Label htmlFor="lf-destination">Destinacija</Label>
               <Select
-                value={destinationId}
-                onValueChange={(v) => setDestinationId(v)}
+                value={destinationId || "none"}
+                onValueChange={(v) => setDestinationId(v === "none" ? "" : v)}
               >
                 <SelectTrigger id="lf-destination" className="w-full">
                   <SelectValue placeholder="Brez destinacije" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">— Brez —</SelectItem>
+                  {/* POZOR: Radix SelectItem NE sme imeti praznega value
+                      ("A <Select.Item /> must have a value prop that is not
+                      an empty string") — nadomeščeni "none" sentinel, ki ga
+                      onValueChange preslika nazaj v "" (kot null v payloadu). */}
+                  <SelectItem value="none">— Brez —</SelectItem>
                   {DESTINATIONS.map((d) => (
                     <SelectItem key={d.id} value={d.id}>
                       {d.name}
@@ -508,6 +554,107 @@ export function ListingForm({
                 onChange={(e) => setOpeningHours(e.target.value)}
                 placeholder="pon–pet 9–22"
               />
+            </div>
+          </div>
+
+          {/* Praktični podatki (t12 faza 1) */}
+          <div className="space-y-4 rounded-md border p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <CalendarDays className="size-4" aria-hidden="true" />
+              Praktični podatki za popotnike
+              <span className="font-normal text-muted-foreground">
+                (neobvezno)
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Sezona obratovanja</Label>
+              <div className="flex flex-wrap gap-2" role="group">
+                <button
+                  type="button"
+                  onClick={toggleAllYear}
+                  aria-pressed={seasons.length === SEASON_KEYS.length}
+                  className={`rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
+                    seasons.length === SEASON_KEYS.length
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background hover:bg-accent"
+                  }`}
+                >
+                  Celo leto
+                </button>
+                {SEASON_KEYS.map((key) => {
+                  const active = seasons.includes(key);
+                  const label =
+                    SEASON_LABELS[key].sl.charAt(0).toUpperCase() +
+                    SEASON_LABELS[key].sl.slice(1);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => toggleSeason(key)}
+                      aria-pressed={active}
+                      className={`rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
+                        active
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background hover:bg-accent"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1.5">
+                  <CloudSun className="size-3.5" aria-hidden="true" />
+                  Ustreznost vremenu
+                </Label>
+                <Select
+                  value={weatherSuitability ?? "unset"}
+                  onValueChange={(v) =>
+                    setWeatherSuitability(
+                      v === "unset" ? null : (v as WeatherSuitability)
+                    )
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Ni podatka" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unset">Ni podatka</SelectItem>
+                    {WEATHER_SUITABILITY_KEYS.map((key) => (
+                      <SelectItem key={key} value={key}>
+                        {WEATHER_SUITABILITY_LABELS[key].formSl}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1.5">
+                  <Car className="size-3.5" aria-hidden="true" />
+                  Parkirišče
+                </Label>
+                <Select
+                  value={parking ?? "unset"}
+                  onValueChange={(v) =>
+                    setParking(v === "unset" ? null : (v as ParkingOption))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Ni podatka" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unset">Ni podatka</SelectItem>
+                    {PARKING_KEYS.map((key) => (
+                      <SelectItem key={key} value={key}>
+                        {PARKING_LABELS[key].formSl}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 

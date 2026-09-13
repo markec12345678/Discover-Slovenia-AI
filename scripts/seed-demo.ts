@@ -152,6 +152,9 @@ async function main() {
     images: imgs("mp-gostilna", "mp-gostilna-jed"), plan: "premium", featured: true, verified: true, partnerStatus: "premium",
     rating: 4.7, reviewCount: 128, priceRange: "€€", openingHours: "Pon–Ned 10:00–22:00",
     specialties: JSON.stringify(["štajerska jota", "bujtl repa", "domače sladice"]),
+    // t12 faza 1 — praktični podatki (demo primeri; preostali listingi ostanejo brez)
+    seasons: JSON.stringify(["spring", "summer", "autumn", "winter"]),
+    weatherSuitability: "indoor", parking: "free",
     ownerId: marko.id, status: "published", partnerSince: lastMonth, verifiedByAdmin: true,
   });
 
@@ -161,7 +164,10 @@ async function main() {
     category: "hotel", destinationId: "bohinj", destinationName: "Bohinj",
     address: "Ribčev Laz 45, 4265 Bohinjsko jezero", phone: "+386 4 572 33 11",
     images: imgs("mp-penzion", "mp-penzion-soba"), plan: "free", verified: true, partnerStatus: "verified",
-    rating: 4.5, reviewCount: 89, priceRange: "€€", ownerId: ana.id, status: "published",
+    rating: 4.5, reviewCount: 89, priceRange: "€€",
+    seasons: JSON.stringify(["spring", "summer", "autumn", "winter"]),
+    weatherSuitability: "all-weather", parking: "free",
+    ownerId: ana.id, status: "published",
   });
   await L({
     name: "Kmečki wellness Hudičevec", slug: "kmecki-wellness-hudicevec",
@@ -177,7 +183,10 @@ async function main() {
     category: "activity", destinationId: "soca", destinationName: "Soča",
     address: "Trg svobode 16, 5230 Bovec", phone: "+386 51 345 678",
     images: imgs("mp-rafting", "mp-rafting-akcija"), plan: "free", verified: true, partnerStatus: "verified",
-    rating: 4.8, reviewCount: 214, priceRange: "€€", ownerId: tina.id, status: "published",
+    rating: 4.8, reviewCount: 214, priceRange: "€€",
+    seasons: JSON.stringify(["spring", "summer", "autumn"]),
+    weatherSuitability: "outdoor", parking: "free",
+    ownerId: tina.id, status: "published",
   });
   await L({
     name: "Soline Piran — trgovina", slug: "soline-piran-trgovina",
@@ -217,7 +226,10 @@ async function main() {
     category: "other", destinationId: "postojna", destinationName: "Postojna",
     address: "Jamska cesta 30, 6230 Postojna",
     images: imgs("mp-jama-vlak", "mp-jama-kapniki"), plan: "free", rating: 4.5, reviewCount: 302,
-    priceRange: "€€", ownerId: luka.id, status: "published",
+    priceRange: "€€",
+    seasons: JSON.stringify(["spring", "summer", "autumn", "winter"]),
+    weatherSuitability: "indoor", parking: "paid",
+    ownerId: luka.id, status: "published",
   });
   await L({
     name: "Piran Sunset Kayak", slug: "piran-sunset-kayak",
@@ -225,7 +237,10 @@ async function main() {
     category: "activity", destinationId: "piran", destinationName: "Piran",
     address: "Pristaniška ulica 9, 6330 Piran",
     images: imgs("mp-kajak", "mp-kajak-blizu"), plan: "free", rating: 4.9, reviewCount: 66,
-    priceRange: "€€", ownerId: luka.id, status: "published",
+    priceRange: "€€",
+    seasons: JSON.stringify(["spring", "summer", "autumn"]),
+    weatherSuitability: "outdoor", parking: "street",
+    ownerId: luka.id, status: "published",
   });
   console.log("Listingi: 10 (premium gostilna + 9 free partnerjev)");
 

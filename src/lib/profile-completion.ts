@@ -1,4 +1,5 @@
 import type { Listing } from "@prisma/client";
+import { parseSeasons } from "@/lib/listing-practical";
 
 // ============================================================================
 // PROFILE COMPLETION — izračun popolnosti profila lokalca
@@ -130,6 +131,29 @@ export function calculateProfileCompletion(listing: Partial<Listing>): ProfileCo
       })(),
       required: false,
       weight: 8,
+    },
+    // === PRAKTIČNI PODATKI (t12 faza 1) — vsa tri neobvezna ===
+    // Uteži 3+1+1 dopolnijo skupno točno na 100 (prej max 95).
+    {
+      key: "seasons",
+      label: "Sezona obratovanja",
+      filled: parseSeasons(listing.seasons).length > 0,
+      required: false,
+      weight: 3,
+    },
+    {
+      key: "weatherSuitability",
+      label: "Ustreznost vremenu",
+      filled: Boolean(listing.weatherSuitability),
+      required: false,
+      weight: 1,
+    },
+    {
+      key: "parking",
+      label: "Parkirišče",
+      filled: Boolean(listing.parking),
+      required: false,
+      weight: 1,
     },
   ];
 

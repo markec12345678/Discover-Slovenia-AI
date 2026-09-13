@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { checkAdmin } from "@/lib/auth-guards";
+import {
+  parseSeasons,
+  SEASON_KEYS,
+  isValidWeatherSuitability,
+  isValidParkingOption,
+} from "@/lib/listing-practical";
 
 function unauthorized() {
   return NextResponse.json(
@@ -73,6 +79,7 @@ export async function GET(
         specialties: listing.specialties
           ? (JSON.parse(listing.specialties) as string[])
           : [],
+        seasons: parseSeasons(listing.seasons),
       },
     });
   } catch (error) {
@@ -176,6 +183,19 @@ export async function PUT(
       typeof body.specialties === "string" ? body.specialties : "";
     const specialties = parseList(specialtiesRaw);
 
+    // Praktični podatki (t12 faza 1) — strežniška validacija ključev
+    const seasons = Array.isArray(body.seasons)
+      ? (body.seasons.filter((s: unknown) =>
+          (SEASON_KEYS as readonly string[]).includes(s as string)
+        ) as string[])
+      : [];
+    const weatherSuitability = isValidWeatherSuitability(
+      body.weatherSuitability
+    )
+      ? body.weatherSuitability
+      : null;
+    const parking = isValidParkingOption(body.parking) ? body.parking : null;
+
     const updated = await db.listing.update({
       where: { id },
       data: {
@@ -214,6 +234,9 @@ export async function PUT(
             ? body.openingHours.trim()
             : null,
         specialties: specialties.length > 0 ? JSON.stringify(specialties) : null,
+        seasons: seasons.length > 0 ? JSON.stringify(seasons) : null,
+        weatherSuitability,
+        parking,
         ownerEmail:
           typeof body.ownerEmail === "string" && body.ownerEmail.trim()
             ? body.ownerEmail.trim()
@@ -226,6 +249,7 @@ export async function PUT(
         ...updated,
         images,
         specialties,
+        seasons,
       },
       success: true,
     });

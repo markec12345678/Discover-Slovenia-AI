@@ -213,6 +213,12 @@ export async function POST(request: Request) {
       `- ${d.id} (${d.name}): ${d.type}/${d.region}, ${d.duration}, €${d.costPerPerson}/osebo, ocena ${d.rating}, aktivnosti: ${d.activities.join(", ")}. Najboljše za: ${d.bestFor.join(", ")}. Sezona: ${d.bestSeason.join(", ")}`
   ).join("\n");
 
+  // FW4.3: jezik AI izpisa — client pošlje locale ("en" → angleški
+  // itinerer za tuje obiskovalce; vse ostalo logiko ostaja enako).
+  // Zdaj pred ranking klicem — partner kontekst (t12 faza 1) nosi jezikovno
+  // odvisne praktične podatke (sezona/vreme/parkiranje).
+  const lang = input.language === "en" ? "en" : "sl";
+
   // === RANKING ENGINE + WEATHER-CONTEXT (vzporedno — vreme ne doda latence) ===
   // Ranking: relevance (60%) + quality (15%) + rating (10%) + distance (10%) + premium (5%)
   // Vreme: realna napoved za tri regionalna sidra — SAMO če je podan
@@ -231,7 +237,7 @@ export async function POST(request: Request) {
   ]);
 
   if (ranked.length > 0) {
-    partnerContext = buildTransparencyContext(ranked, 15);
+    partnerContext = buildTransparencyContext(ranked, 15, lang);
     console.log(`[itinerary] Ranking engine: ${ranked.length} kandidatov, top: ${ranked[0].listing.name} (Q:${ranked[0].qualityScore})`);
   }
   if (anchorForecasts.length > 0) {
@@ -240,9 +246,7 @@ export async function POST(request: Request) {
     );
   }
 
-  // FW4.3: jezik AI izpisa — client pošlje locale ("en" → angleški
-  // itinerer za tuje obiskovalce; vse ostalo logiko ostaja enako)
-  const lang = input.language === "en" ? "en" : "sl";
+  // (lang je izračunan že pred ranking klicem — glej zgoraj)
 
   // === WEATHER-CONTEXT: pravo vreme + sestava potnikov v prompt ===
   // Oba dela sta OPCIJSKA (nazaj kompatibilno): brez startDate ni realne
@@ -307,10 +311,10 @@ export async function POST(request: Request) {
     lang === "en"
       ? `You are an expert travel guide for Slovenia. You generate a realistic Slovenia itinerary in JSON format. Respond ONLY with valid JSON, no additional text or code.
 
-IMPORTANT: Suggested partners are ranked by relevance and quality (Q = Quality Score). When possible, include partners with a higher Q in the notes or recommendations fields. [SPONSORED] and [FEATURED] tags denote premium partners.`
+IMPORTANT: Suggested partners are ranked by relevance and quality (Q = Quality Score). When possible, include partners with a higher Q in the notes or recommendations fields. [SPONSORED] and [FEATURED] tags denote premium partners. Practical info on partners (season, weather, parking) is provider-supplied — use it when choosing: a partner marked "weather: indoor" suits a rainy day, "season: summer" is out of season outside those months.`
       : `Si strokovni slovenski vodič za načrtovanje potovanj. Generiraš realističen itinerer za Slovenijo v JSON formatu. Odgovori SAMO z veljavnim JSON, brez dodatnega besedila ali kode.
 
-POMEMBNO: Predlagani partnerji so razvrščeni po ustreznosti in kakovosti (Q = Quality Score). Kadar je mogoče, vključi partnerje z višjim Q v notes ali recommendations polja. [SPONZORIRANO] in [FEATURED] oznake pomenijo premium partnerje.`;
+POMEMBNO: Predlagani partnerji so razvrščeni po ustreznosti in kakovosti (Q = Quality Score). Kadar je mogoče, vključi partnerje z višjim Q v notes ali recommendations polja. [SPONZORIRANO] in [FEATURED] oznake pomenijo premium partnerje. Praktični podatki partnerjev (sezona, vreme, parkiranje) so podatki ponudnika — uporabi jih pri izbiri: partner z "vreme: notranje" ustreza deževnemu dnevu, "sezona: poletje" pa je izven sezone neustrezen.`;
 
   const userPrompt =
     lang === "en"

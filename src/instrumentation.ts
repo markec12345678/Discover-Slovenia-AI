@@ -26,6 +26,37 @@ export async function register() {
 
   await prepareVercelDemoDb();
 
+  // Startup SHEMA migracija — t12 faza 1 (praktični podatki lokala): doda
+  // manjkajoče stolpce Listing (seasons/weatherSuitability/parking) na
+  // obstoječih bazah (Render/Neon, Vercel demo). Idempotentna,
+  // additive-only, fail-open, izklop z DSA_DISABLE_SCHEMA_MIGRATION=1.
+  // Glej src/lib/listing-practical-migration.ts.
+  if (process.env.DSA_DISABLE_SCHEMA_MIGRATION !== "1") {
+    try {
+      const { migrateListingPracticalColumns } = await import(
+        "./lib/listing-practical-migration"
+      );
+      const r = await migrateListingPracticalColumns();
+      if (r.columnsAdded.length > 0) {
+        console.log(
+          `[instrumentation] Shema migracija (Listing/praktični podatki): ` +
+            `dodani stolpci [${r.columnsAdded.join(", ")}] (${r.dialect})`
+        );
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija: stolpcev ni bilo mogoče " +
+            "preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
+        );
+      }
+    } catch (error) {
+      // Fail-open: migracija NE sme podreti zagona strežnika.
+      console.error(
+        "[instrumentation] Shema migracija (praktični podatki) ni uspela:",
+        error
+      );
+    }
+  }
+
   // Startup migracija tržnih slik (tržni val, sept 2026) — popravi demo
   // kartice v OBSTOJEČIH bazah (Render Docker volumen / Vercel demo / dev).
   // Idempotentna, fail-open, izklop z DSA_DISABLE_IMAGE_MIGRATION=1.

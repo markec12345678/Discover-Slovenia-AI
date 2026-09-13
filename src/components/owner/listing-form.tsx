@@ -10,6 +10,9 @@ import {
   Save,
   ImagePlus,
   Info,
+  CalendarDays,
+  CloudSun,
+  Car,
 } from "lucide-react";
 
 import {
@@ -36,6 +39,17 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import {
+  SEASON_KEYS,
+  SEASON_LABELS,
+  WEATHER_SUITABILITY_KEYS,
+  WEATHER_SUITABILITY_LABELS,
+  PARKING_KEYS,
+  PARKING_LABELS,
+  type SeasonKey,
+  type WeatherSuitability,
+  type ParkingOption,
+} from "@/lib/listing-practical";
+import {
   CATEGORY_LABELS,
   type Listing,
   type ListingCategory,
@@ -56,6 +70,10 @@ export interface ListingFormData {
   priceRange: "€" | "€€" | "€€€";
   openingHours: string;
   specialties: string[];
+  // === PRAKTIČNI PODATKI (t12 faza 1) — neobvezni ===
+  seasons: SeasonKey[];
+  weatherSuitability: WeatherSuitability | null;
+  parking: ParkingOption | null;
 }
 
 interface ListingFormDialogProps {
@@ -79,6 +97,9 @@ const EMPTY_FORM: ListingFormData = {
   priceRange: "€",
   openingHours: "",
   specialties: [],
+  seasons: [],
+  weatherSuitability: null,
+  parking: null,
 };
 
 /**
@@ -118,6 +139,9 @@ export function ListingFormDialog({
           priceRange: (listing.priceRange as "€" | "€€" | "€€€") || "€",
           openingHours: listing.openingHours ?? "",
           specialties: listing.specialties,
+          seasons: listing.seasons ?? [],
+          weatherSuitability: listing.weatherSuitability ?? null,
+          parking: listing.parking ?? null,
         });
       } else {
         setForm(EMPTY_FORM);
@@ -175,6 +199,24 @@ export function ListingFormDialog({
     );
   };
 
+  // t12 faza 1: sezonski čipi — preklop ene sezone (oziroma "Celo leto"
+  // izbere vse štiri)
+  const toggleSeason = (key: SeasonKey) => {
+    update(
+      "seasons",
+      form.seasons.includes(key)
+        ? form.seasons.filter((s) => s !== key)
+        : [...form.seasons, key]
+    );
+  };
+
+  const toggleAllYear = () => {
+    update(
+      "seasons",
+      form.seasons.length === SEASON_KEYS.length ? [] : [...SEASON_KEYS]
+    );
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -209,6 +251,9 @@ export function ListingFormDialog({
         priceRange: form.priceRange,
         openingHours: form.openingHours.trim() || null,
         specialties: form.specialties,
+        seasons: form.seasons,
+        weatherSuitability: form.weatherSuitability,
+        parking: form.parking,
       };
 
       const url = isEdit
@@ -488,6 +533,128 @@ export function ListingFormDialog({
                 onChange={(e) => update("openingHours", e.target.value)}
                 disabled={loading}
               />
+            </div>
+          </div>
+
+          {/* PRAKTIČNI PODATKI (t12 faza 1) — neobvezni, a izboljšajo
+              ujemanje z AI načrtovalnikom (deževen dan → notranje) */}
+          <div className="space-y-4 rounded-lg border border-border/60 bg-muted/20 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <CalendarDays className="size-4 text-primary" aria-hidden="true" />
+              Praktični podatki za popotnike
+              <span className="font-normal text-muted-foreground">
+                (neobvezno)
+              </span>
+            </div>
+
+            {/* Sezona obratovanja — čipi */}
+            <div className="space-y-2">
+              <Label>Sezona obratovanja</Label>
+              <div className="flex flex-wrap gap-2" role="group">
+                <button
+                  type="button"
+                  onClick={toggleAllYear}
+                  aria-pressed={form.seasons.length === SEASON_KEYS.length}
+                  className={`rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
+                    form.seasons.length === SEASON_KEYS.length
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background hover:bg-accent"
+                  }`}
+                  disabled={loading}
+                >
+                  Celo leto
+                </button>
+                {SEASON_KEYS.map((key) => {
+                  const active = form.seasons.includes(key);
+                  const label =
+                    SEASON_LABELS[key].sl.charAt(0).toUpperCase() +
+                    SEASON_LABELS[key].sl.slice(1);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => toggleSeason(key)}
+                      aria-pressed={active}
+                      className={`rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
+                        active
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background hover:bg-accent"
+                      }`}
+                      disabled={loading}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Popotniki in AI načrtovalnik vidijo le izbrane sezone.
+              </p>
+            </div>
+
+            {/* Vreme + parkirišče */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="lf-weather" className="flex items-center gap-1.5">
+                  <CloudSun className="size-3.5" aria-hidden="true" />
+                  Ustreznost vremenu
+                </Label>
+                <Select
+                  value={form.weatherSuitability ?? "unset"}
+                  onValueChange={(v) =>
+                    update(
+                      "weatherSuitability",
+                      v === "unset"
+                        ? null
+                        : (v as WeatherSuitability)
+                    )
+                  }
+                  disabled={loading}
+                >
+                  <SelectTrigger id="lf-weather" className="w-full">
+                    <SelectValue placeholder="Ni podatka" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unset">Ni podatka</SelectItem>
+                    {WEATHER_SUITABILITY_KEYS.map((key) => (
+                      <SelectItem key={key} value={key}>
+                        {WEATHER_SUITABILITY_LABELS[key].formSl}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  »Notranje« izbere AI načrtovalnik za deževne dneve.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lf-parking" className="flex items-center gap-1.5">
+                  <Car className="size-3.5" aria-hidden="true" />
+                  Parkirišče
+                </Label>
+                <Select
+                  value={form.parking ?? "unset"}
+                  onValueChange={(v) =>
+                    update(
+                      "parking",
+                      v === "unset" ? null : (v as ParkingOption)
+                    )
+                  }
+                  disabled={loading}
+                >
+                  <SelectTrigger id="lf-parking" className="w-full">
+                    <SelectValue placeholder="Ni podatka" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unset">Ni podatka</SelectItem>
+                    {PARKING_KEYS.map((key) => (
+                      <SelectItem key={key} value={key}>
+                        {PARKING_LABELS[key].formSl}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 

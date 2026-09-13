@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import type { Listing } from "@prisma/client";
 import { getRankingWeights, canGetPremiumBoost, MAX_PREMIUM_BOOST } from "@/lib/ranking-config";
 import { calculateQualityScore } from "@/lib/quality-score";
+import { practicalPromptFragment } from "@/lib/listing-practical";
 
 // ============================================================================
 // RANKING ENGINE
@@ -281,8 +282,17 @@ export function formatTransparency(ranked: RankedListing): string {
 /**
  * Generira transparency podatke za AI prompt.
  * AI dobi kontekst zakaj so določeni lokalci priporočeni.
+ *
+ * t12 faza 1: vrstice partnerjev nosijo tudi PRAKTIČNE PODATKE (sezona /
+ * vreme / parkiranje), vendar SAMO kadar jih je partner/admin dejansko vnesel
+ * — prazna polja ne prispejo ničesar (nikoli izmišljeni). Jezik fragmenta
+ * sledi jeziku itinererja (lang, privzeto sl).
  */
-export function buildTransparencyContext(ranked: RankedListing[], maxItems = 10): string {
+export function buildTransparencyContext(
+  ranked: RankedListing[],
+  maxItems = 10,
+  lang: "sl" | "en" = "sl"
+): string {
   if (ranked.length === 0) return "";
 
   const lines = ranked.slice(0, maxItems).map((r) => {
@@ -293,7 +303,9 @@ export function buildTransparencyContext(ranked: RankedListing[], maxItems = 10)
         ? " [FEATURED]"
         : "";
 
-    return `- ${r.listing.name}${type} — Q:${r.qualityScore}/100, R:${r.listing.rating}/5${r.listing.destinationName ? `, ${r.listing.destinationName}` : ""}`;
+    const practical = practicalPromptFragment(r.listing, lang);
+
+    return `- ${r.listing.name}${type} — Q:${r.qualityScore}/100, R:${r.listing.rating}/5${r.listing.destinationName ? `, ${r.listing.destinationName}` : ""}${practical}`;
   });
 
   return "\n\nPREDLAGANI PARTNERJI (razvrščeni po ustreznosti in kakovosti):\n" + lines.join("\n");

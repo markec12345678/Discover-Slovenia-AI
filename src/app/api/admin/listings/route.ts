@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { checkAdmin } from "@/lib/auth-guards";
+import {
+  parseSeasons,
+  SEASON_KEYS,
+  isValidWeatherSuitability,
+  isValidParkingOption,
+} from "@/lib/listing-practical";
 
 // Pomožna: preveri admin geslo iz headerja
 function unauthorized() {
@@ -67,6 +73,7 @@ export async function GET(request: Request) {
       specialties: l.specialties
         ? (JSON.parse(l.specialties) as string[])
         : [],
+      seasons: parseSeasons(l.seasons),
     }));
 
     return NextResponse.json({ listings: parsed, total: parsed.length });
@@ -156,6 +163,19 @@ export async function POST(request: Request) {
       typeof body.specialties === "string" ? body.specialties : "";
     const specialties = parseList(specialtiesRaw);
 
+    // Praktični podatki (t12 faza 1) — strežniška validacija ključev
+    const seasons = Array.isArray(body.seasons)
+      ? (body.seasons.filter((s: unknown) =>
+          (SEASON_KEYS as readonly string[]).includes(s as string)
+        ) as string[])
+      : [];
+    const weatherSuitability = isValidWeatherSuitability(
+      body.weatherSuitability
+    )
+      ? body.weatherSuitability
+      : null;
+    const parking = isValidParkingOption(body.parking) ? body.parking : null;
+
     const created = await db.listing.create({
       data: {
         name,
@@ -193,6 +213,9 @@ export async function POST(request: Request) {
             ? body.openingHours.trim()
             : null,
         specialties: specialties.length > 0 ? JSON.stringify(specialties) : null,
+        seasons: seasons.length > 0 ? JSON.stringify(seasons) : null,
+        weatherSuitability,
+        parking,
         ownerEmail:
           typeof body.ownerEmail === "string" && body.ownerEmail.trim()
             ? body.ownerEmail.trim()
@@ -206,6 +229,7 @@ export async function POST(request: Request) {
           ...created,
           images,
           specialties,
+          seasons,
         },
         success: true,
       },

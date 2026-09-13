@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { getBetaStatus } from "@/lib/beta";
+import { parseSeasons, SEASON_KEYS } from "@/lib/listing-practical";
 import type { ListingCategory, ListingPlan } from "@/lib/listings-types";
 
 // Omejitve števila lokalov glede na paket (izven beta obdobja)
@@ -71,6 +72,19 @@ const createSchema = z.object({
   priceRange: z.enum(["€", "€€", "€€€"]).default("€"),
   openingHours: z.string().nullable().optional(),
   specialties: z.array(z.string()).default([]),
+  // === PRAKTIČNI PODATKI (t12 faza 1) — vsa tri neobvezna ===
+  seasons: z
+    .array(z.enum(["spring", "summer", "autumn", "winter"]))
+    .max(SEASON_KEYS.length)
+    .optional(),
+  weatherSuitability: z
+    .enum(["indoor", "outdoor", "all-weather"])
+    .nullable()
+    .optional(),
+  parking: z
+    .enum(["free", "paid", "street", "private", "none"])
+    .nullable()
+    .optional(),
 });
 
 // GET /api/owner/listings — vrne vse lokale trenutno prijavljenega lastnika
@@ -104,6 +118,7 @@ export async function GET() {
       specialties: l.specialties
         ? (JSON.parse(l.specialties) as string[])
         : [],
+      seasons: parseSeasons(l.seasons),
     }));
 
     return NextResponse.json({ listings: parsed, total: parsed.length });
@@ -215,6 +230,13 @@ export async function POST(request: Request) {
         priceRange: data.priceRange,
         openingHours: data.openingHours?.trim() || null,
         specialties: JSON.stringify(data.specialties),
+        // Praktični podatki (t12 faza 1): prazen seznam sezon = null
+        seasons:
+          data.seasons && data.seasons.length > 0
+            ? JSON.stringify(data.seasons)
+            : null,
+        weatherSuitability: data.weatherSuitability || null,
+        parking: data.parking || null,
         ownerId: session.user.id,
         ownerEmail: owner.email,
         // Status: novi lokalci začnejo kot DRAFT (lastnik jih mora oddati v pregled)
@@ -231,6 +253,7 @@ export async function POST(request: Request) {
         specialties: listing.specialties
           ? (JSON.parse(listing.specialties) as string[])
           : [],
+        seasons: parseSeasons(listing.seasons),
       },
     });
   } catch (error) {

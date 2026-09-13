@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { toPublicListing } from "@/lib/public-fields";
+import { parseSeasons } from "@/lib/listing-practical";
 
 // GET /api/listings/[slug] — vrne posamezni lokal
 export async function GET(
@@ -37,6 +38,7 @@ export async function GET(
       specialties: listing.specialties
         ? (JSON.parse(listing.specialties) as string[])
         : [],
+      seasons: parseSeasons(listing.seasons),
     };
 
     return NextResponse.json({ listing: parsed });

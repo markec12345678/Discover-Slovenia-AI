@@ -1,5 +1,13 @@
 // Tipi za B2B listings (hotelir, restavracije, aktivnosti) — Discover Slovenia AI
 
+import type {
+  ParkingOption,
+  SeasonKey,
+  WeatherSuitability,
+} from "@/lib/listing-practical";
+
+export type { ParkingOption, SeasonKey, WeatherSuitability };
+
 export type ListingCategory =
   | "hotel"
   | "restaurant"
@@ -34,6 +42,10 @@ export interface Listing {
   priceRange: string;
   openingHours?: string | null;
   specialties: string[];
+  // === PRAKTIČNI PODATKI (t12 faza 1) — vsa tri neobvezna (null/[] = ni vnosa) ===
+  seasons?: SeasonKey[] | null;
+  weatherSuitability?: WeatherSuitability | null;
+  parking?: ParkingOption | null;
   viewCount: number;
   clickCount: number;
   // === STATUS SISTEM (P0-1): moderacijska zanka draft → pending → published ===

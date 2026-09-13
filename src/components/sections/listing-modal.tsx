@@ -15,6 +15,9 @@ import {
   Building2,
   Tag,
   Compass,
+  CalendarDays,
+  CloudSun,
+  Car,
 } from "lucide-react";
 import {
   Dialog,
@@ -34,6 +37,11 @@ import {
   PLAN_LABELS,
   type Listing,
 } from "@/lib/listings-types";
+import {
+  formatSeasonsLabel,
+  formatWeatherLabel,
+  formatParkingLabel,
+} from "@/lib/listing-practical";
 import { trackFunnel } from "@/lib/funnel";
 
 interface ListingModalProps {
@@ -48,6 +56,14 @@ interface ListingModalProps {
  */
 export function ListingModal({ listing, onClose }: ListingModalProps) {
   const [activeImage, setActiveImage] = useState(0);
+
+  // t12 faza 1: praktični podatki — SAMO realni vnosi partnerja/admina
+  // (null/prazno → vrstica se sploh ne izriše; nikoli izmišljeno)
+  const seasonsLabel = formatSeasonsLabel(listing?.seasons ?? [], "sl");
+  const weatherLabel = formatWeatherLabel(listing?.weatherSuitability, "sl");
+  const parkingLabel = formatParkingLabel(listing?.parking, "sl");
+  const hasPractical =
+    !!seasonsLabel || !!weatherLabel || !!parkingLabel;
 
   // Funnel tracking + gamifikacija ob odprtju modal okna (Slovenia Pass posluša)
   useEffect(() => {
@@ -230,7 +246,36 @@ export function ListingModal({ listing, onClose }: ListingModalProps) {
                   label="Odpiralni čas"
                   value={listing.openingHours ?? "—"}
                 />
+                {/* Praktični podatki (t12 faza 1) — samo ob realnem vnosu */}
+                {seasonsLabel ? (
+                  <InfoItem
+                    icon={CalendarDays}
+                    label="Sezona"
+                    value={seasonsLabel}
+                  />
+                ) : null}
+                {weatherLabel ? (
+                  <InfoItem
+                    icon={CloudSun}
+                    label="Ustreznost vremenu"
+                    value={weatherLabel}
+                  />
+                ) : null}
+                {parkingLabel ? (
+                  <InfoItem
+                    icon={Car}
+                    label="Parkirišče"
+                    value={parkingLabel}
+                  />
+                ) : null}
               </div>
+
+              {/* Opomba o viru praktičnih podatkov — samo kadar obstajajo */}
+              {hasPractical && (
+                <p className="text-xs text-muted-foreground">
+                  Praktične podatke je vnesel ponudnik.
+                </p>
+              )}
 
               {/* Specialties */}
               {listing.specialties.length > 0 ? (
