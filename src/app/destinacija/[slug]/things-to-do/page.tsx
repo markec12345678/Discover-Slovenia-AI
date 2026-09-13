@@ -5,7 +5,6 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
 import { getEnDestination, REGIONS_EN } from "@/lib/slovenia-data-en";
 import { LanguageToggle } from "@/components/language-toggle";
-import { db } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,10 +19,11 @@ import { localePrefix } from "@/i18n/routing";
 import {
   SeoExperienceCard,
   SeoListingCard,
-  type SeoListingInput,
 } from "@/components/sections/seo-conversion";
-import type { Experience } from "@/lib/marketplace-types";
-import type { PartnerStatus } from "@/components/partner-badge";
+import {
+  EMPTY_SEO_THINGS_TO_DO,
+  getSeoThingsToDoData,
+} from "@/lib/seo-page-data";
 
 /**
  * /destinacija/[slug]/things-to-do — programatska SEO stran (kaj početi).
@@ -38,16 +38,6 @@ import type { PartnerStatus } from "@/components/partner-badge";
  * - AffiliateCtaBlock ostaja v obeh jezikih (lastnik prevoda: T2),
  * - canonical/hreflang/og:locale so locale-zavedni.
  */
-
-/** JSON string iz Prisma → string[] (robustno ob neveljavnih podatkih). */
-function parseJsonArray(raw: string): string[] {
-  try {
-    const v: unknown = JSON.parse(raw);
-    return Array.isArray(v) ? (v as string[]) : [];
-  } catch {
-    return [];
-  }
-}
 
 export async function generateStaticParams() {
   return DESTINATIONS.map((d) => ({ slug: d.slug }));
@@ -119,44 +109,18 @@ export default async function ThingsToDoPage({
   const highlights = en?.highlights ?? dest.highlights;
   const regionBadge = isEn ? (REGIONS_EN[dest.region] ?? dest.region) : dest.region;
 
-  // Pridobi povezane lokale, izkušnje in izdelke iz baze
+  // Pridobi povezane lokale, izkušnje in izdelke iz baze — PREDPOMNJENO
+  // (glej src/lib/seo-page-data.ts: fix produkcijskih 500 pod vzporednim
+  // obremenjevanjem, 2026-09-13; identične poizvedbe kot prej).
   // (P4-8: na EN se te sekcije NE izrisujejo — vsebina v bazi je slovenska —
   // zato se na EN sploh NE povprašuje po bazi; enak vzorec kot guide/[type])
-  let listings: import("@prisma/client").Listing[] = [];
-  let experiences: import("@prisma/client").Experience[] = [];
-  let products: import("@prisma/client").Product[] = [];
-  if (!isEn) {
-    [listings, experiences, products] = await Promise.all([
-      db.listing.findMany({ where: { destinationId: dest.id }, take: 6, orderBy: { featured: "desc" } }),
-      db.experience.findMany({ where: { destinationId: dest.id }, take: 6, orderBy: { featured: "desc" } }),
-      db.product.findMany({ where: { destinationId: dest.id }, take: 4, orderBy: { featured: "desc" } }),
-    ]);
-  }
+  const { listings: seoListings, experiences: seoExperiences, products } = isEn
+    ? EMPTY_SEO_THINGS_TO_DO
+    : await getSeoThingsToDoData(dest.id, dest.name);
 
-  const totalActivities = listings.length + experiences.length;
+  const totalActivities = seoListings.length + seoExperiences.length;
   // SEO-2: host-zavedni JSON-LD (breadcrumb items + destinationSchema)
   const base = await currentBaseUrl();
-
-  // Mapiranje v client-safe tipe (images/languages so v DB JSON string-i)
-  const seoExperiences: Experience[] = experiences.map((e) => ({
-    ...e,
-    images: parseJsonArray(e.images),
-    languages: parseJsonArray(e.languages),
-    category: e.category as Experience["category"],
-  }));
-  const seoListings: SeoListingInput[] = listings.map((l) => ({
-    id: l.id,
-    name: l.name,
-    category: l.category,
-    description: l.description,
-    address: l.address,
-    rating: l.rating,
-    reviewCount: l.reviewCount,
-    plan: l.plan,
-    featured: l.featured,
-    partnerStatus: (l.partnerStatus as PartnerStatus | null) ?? "standard",
-    destinationName: l.destinationName ?? dest.name,
-  }));
 
   // FW4.3-2: JSON-LD description/tagline/highlights v jeziku strani (EN overlay)
   const jsonLd = destinationSchema(

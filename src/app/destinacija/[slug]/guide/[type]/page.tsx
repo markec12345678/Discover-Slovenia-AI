@@ -2,10 +2,6 @@ import { safeJsonLd } from "@/lib/security";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import type {
-  Listing as DbListing,
-  Experience as DbExperience,
-} from "@prisma/client";
 import { Link } from "@/i18n/navigation";
 import { localePrefix } from "@/i18n/routing";
 import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
@@ -16,7 +12,6 @@ import {
   GUIDE_TYPE_META,
   type GuideType,
 } from "@/lib/sitemap-urls";
-import { db } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,10 +36,11 @@ import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
 import {
   SeoExperienceCard,
   SeoListingCard,
-  type SeoListingInput,
 } from "@/components/sections/seo-conversion";
-import type { Experience } from "@/lib/marketplace-types";
-import type { PartnerStatus } from "@/components/partner-badge";
+import {
+  EMPTY_SEO_GUIDE,
+  getSeoGuideData,
+} from "@/lib/seo-page-data";
 
 /**
  * /destinacija/[slug]/guide/[type] — programatski vodniki (22 × 4 = 88).
@@ -63,16 +59,6 @@ import type { PartnerStatus } from "@/components/partner-badge";
  *   prefix). JSON-LD (FAQ/Breadcrumb/TouristTrip) uporablja ISTE vrednosti,
  *   ki jih stran izpisuje.
  */
-
-/** JSON string iz Prisma → string[] (robustno ob neveljavnih podatkih). */
-function parseJsonArray(raw: string): string[] {
-  try {
-    const v: unknown = JSON.parse(raw);
-    return Array.isArray(v) ? (v as string[]) : [];
-  } catch {
-    return [];
-  }
-}
 
 // 4 tipi vodnikov — ikona + kategorije za pridobivanje iz baze
 // (besedila: durationLabel/priceRange/bestFor so v guidePage fragmentu)
@@ -282,52 +268,19 @@ export default async function GuidePage({
   const canonicalPath = `/destinacija/${dest.slug}/guide/${guideType}`;
   const prefixedPath = `${localePrefix(locale)}${canonicalPath}`;
 
-  // Pridobi povezane lokale in izkušnje iz baze (filtrirano po tipu vodnika).
+  // Pridobi povezane lokale in izkušnje iz baze (filtrirano po tipu vodnika)
+  // — PREDPOMNJENO (glej src/lib/seo-page-data.ts: fix produkcijskih 500 pod
+  // vzporednim obremenjevanjem, 2026-09-13; identične poizvedbe kot prej).
   // P4-8: DB vsebina (imena ponudnikov) je slovenska — na EN sekcij NE
   // izrisujemo in sploh ne povprašujemo po bazi.
-  let listings: DbListing[] = [];
-  let experiences: DbExperience[] = [];
-  if (!isEn) {
-    [listings, experiences] = await Promise.all([
-      db.listing.findMany({
-        where: {
-          destinationId: dest.id,
-          category: { in: details.listingCategories },
-        },
-        take: 6,
-        orderBy: [{ featured: "desc" }, { rating: "desc" }],
-      }),
-      db.experience.findMany({
-        where: {
-          destinationId: dest.id,
-          category: { in: details.experienceCategories },
-        },
-        take: 4,
-        orderBy: [{ featured: "desc" }, { rating: "desc" }],
-      }),
-    ]);
-  }
-
-  // Mapiranje v client-safe tipe (images/languages so v DB JSON string-i)
-  const seoExperiences: Experience[] = experiences.map((e) => ({
-    ...e,
-    images: parseJsonArray(e.images),
-    languages: parseJsonArray(e.languages),
-    category: e.category as Experience["category"],
-  }));
-  const seoListings: SeoListingInput[] = listings.map((l) => ({
-    id: l.id,
-    name: l.name,
-    category: l.category,
-    description: l.description,
-    address: l.address,
-    rating: l.rating,
-    reviewCount: l.reviewCount,
-    plan: l.plan,
-    featured: l.featured,
-    partnerStatus: (l.partnerStatus as PartnerStatus | null) ?? "standard",
-    destinationName: l.destinationName ?? dest.name,
-  }));
+  const { listings: seoListings, experiences: seoExperiences } = isEn
+    ? EMPTY_SEO_GUIDE
+    : await getSeoGuideData(
+        dest.id,
+        dest.name,
+        details.listingCategories,
+        details.experienceCategories
+      );
 
   // JSON-LD: FAQPage + BreadcrumbList + TouristTrip (prevedene vrednosti)
   const breadcrumbs = breadcrumbJsonLd([
