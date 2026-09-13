@@ -55,8 +55,9 @@ export interface AdriaGuide {
 // Vsi slugi v valu ADRIA-1 (fiksni vrstni red po pomembnosti).
 // SLO-LOOP-1 (2026): +4 domači krožni vodniki po Sloveniji (ist format,
 // ista infrastruktura /vodici/[slug]; countries = ["SI"]).
-// SLO-WINTER-1 (2026): +4 zimski vodniki (praznična Ljubljana, smučarski
-// vikend, Slovenija pozimi, terme) — isti format, countries = ["SI"].
+// ADRIA-1 (10) + SLO-LOOP-1 (4) + SLO-WINTER-1 (4) + SLO-WINTER-2 (4) = 22.
+// SLO-WINTER-2 (2026): +4 zimski vodniki (božični Bohinj, silvestrovanje,
+// smučanje v januarju, zimske počitnice z otroki) — isti format.
 export const ADRIA_SLUGS = [
   "ljubljana-dubrovnik-road-trip",
   "slovenija-hrvaska-10-dni",
@@ -76,6 +77,10 @@ export const ADRIA_SLUGS = [
   "bozicni-vikend-ljubljana",
   "smuci-vikend-iz-ljubljane",
   "zima-v-termah",
+  "bozicni-bohinj",
+  "silvestrovanje-v-sloveniji",
+  "smucanje-v-januarju",
+  "zimske-pocitnice-z-otroki",
 ] as const;
 
 export type AdriaSlug = (typeof ADRIA_SLUGS)[number];

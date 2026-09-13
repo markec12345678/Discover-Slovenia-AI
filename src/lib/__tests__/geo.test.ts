@@ -247,10 +247,10 @@ describe("rss.xml route", () => {
     expect(body).toContain(`https://${RENDER}/rss.xml`);
   });
 
-  test("itemi: 22 things-to-do + 88 vodnikov + 18 vodnikov (10 jadranskih + 4 domači + 4 zimski) = 128, escapano besedilo", async () => {
+  test("itemi: 22 things-to-do + 88 vodnikov + 22 vodnikov (10 jadranskih + 4 domači + 8 zimskih) = 132, escapano besedilo", async () => {
     const body = await (await rssGET(req(RENDER))).text();
     const items = body.match(/<item>/g) ?? [];
-    expect(items.length).toBe(128);
+    expect(items.length).toBe(132);
     expect(body).toContain(`https://${RENDER}/destinacija/bled/things-to-do`);
     expect(body).toContain(`https://${RENDER}/destinacija/bled/guide/druzinski`);
     // ADRIA-1: jadranski vodniki z RESNIČNIM pubDate (edini itemi z njim)
@@ -261,6 +261,11 @@ describe("rss.xml route", () => {
     // SLO-WINTER-1: zimski vodniki (tudi "Vodič po Sloveniji" — countries ["SI"])
     expect(body).toContain(`https://${RENDER}/vodici/bozicni-vikend-ljubljana`);
     expect(body).toContain(`https://${RENDER}/vodici/zima-v-termah`);
+    // SLO-WINTER-2: drugi zimski val — 4 novi vodniki
+    expect(body).toContain(`https://${RENDER}/vodici/bozicni-bohinj`);
+    expect(body).toContain(`https://${RENDER}/vodici/silvestrovanje-v-sloveniji`);
+    expect(body).toContain(`https://${RENDER}/vodici/smucanje-v-januarju`);
+    expect(body).toContain(`https://${RENDER}/vodici/zimske-pocitnice-z-otroki`);
     expect(body).toMatch(/<pubDate>[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4}/);
     // XML escape: & < > morajo biti entitete; UTF-8 šumniki so veljavni
     expect(body).not.toMatch(/<description>[^<]*[&<>][^<]*<\/description>/);
