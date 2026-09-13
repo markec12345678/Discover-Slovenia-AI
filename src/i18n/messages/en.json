@@ -311,6 +311,7 @@
     "badgeSample": "Sample",
     "totalBadge": "Total ~€{total}",
     "tripRangeTitle": "Trip timeframe",
+    "crowdAlternativesLabel": "Quieter alternatives nearby:",
     "dayTitle": "Day {day}",
     "dayNavAriaLabel": "Jump between trip days",
     "qaRefine": "Adjust",

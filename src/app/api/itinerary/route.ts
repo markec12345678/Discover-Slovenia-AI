@@ -12,6 +12,10 @@ import {
   type DailyForecast,
 } from "@/lib/weather-utils";
 import { PARTY_TYPES, PARTY_PROMPT_LABELS } from "@/lib/party-types";
+import {
+  buildCrowdNotices,
+  tripOverlapsPeakWeekend,
+} from "@/lib/crowd-alternatives";
 import { matchEventsForItinerary } from "@/lib/events-match";
 import {
   isValidStartDate,
@@ -269,12 +273,29 @@ export async function POST(request: Request) {
     );
   }
   if (partyLabels) {
-    const ruleNo = extraRulesSl.length > 0 ? 13 : 12;
+    const partyRuleNo = extraRulesSl.length > 0 ? 13 : 12;
     extraRulesSl.push(
-      `${ruleNo}. Prilagodi ritem in izbor sestavi potnikov: par → mirnejši ritem in romantične večerje; družina z otroki → otrokom prijazne lokacije, krajši prevozi in načrtovani odmori; prijateljska skupina → bolj družabna in aktivna izbira; samostojni potnik → fleksibilen ritem in varna izbira.`
+      `${partyRuleNo}. Prilagodi ritem in izbor sestavi potnikov: par → mirnejši ritem in romantične večerje; družina z otroki → otrokom prijazne lokacije, krajši prevozi in načrtovani odmori; prijateljska skupina → bolj družabna in aktivna izbira; samostojni potnik → fleksibilen ritem in varna izbira.`
     );
     extraRulesEn.push(
-      `${ruleNo}. Match pace and selection to the travel party: couple → calmer pace and romantic dinners; family with kids → kid-friendly spots, shorter drives and planned breaks; group of friends → more social and active picks; solo traveller → flexible pace and safe choices.`
+      `${partyRuleNo}. Match pace and selection to the travel party: couple → calmer pace and romantic dinners; family with kids → kid-friendly spots, shorter drives and planned breaks; group of friends → more social and active picks; solo traveller → flexible pace and safe choices.`
+    );
+  }
+
+  // CROWD-ALTERNATIVES: če potovanje prekriva vrhunski vikend (julij/avgust
+  // + sobota/nedelja), AI dobi pošteno uredniško opozorilo o konicah na
+  // javno dokumentiranih točkah — JUTRANJI termini in razmislek o
+  // alternativah, ne izmišljeni statusi (post-processing doda opombe)
+  const peakWeekend =
+    input.startDate !== undefined &&
+    tripOverlapsPeakWeekend(input.startDate, input.days);
+  if (peakWeekend) {
+    const crowdRuleNo = extraRulesSl.length > 0 ? extraRulesSl.length + 12 : 12;
+    extraRulesSl.push(
+      `${crowdRuleNo}. Tvoje okno potovanja vključuje vikend v vrhunski sezoni: Bled, Vintgarska soteska, Postojnska jama, Piran in staro mestno jedro Ljubljane so takrat običajno zelo obiskani. Kjer je načrtovan kateri od teh: nastavi JUTRANJI termin (pred 9:00) in v notes omeni, da je zgodnji prihod priporočljiv; kjer je smiselno, premošči z manj obiskano destinacijo s seznama.`
+    );
+    extraRulesEn.push(
+      `${crowdRuleNo}. Your travel window includes a peak-season weekend: Bled, Vintgar Gorge, Postojna Cave, Piran and Ljubljana old town are usually very busy then. Where any of these is planned: schedule a MORNING slot (before 9:00) and note that arriving early is recommended; where sensible, swap to a less-visited destination from the list.`
     );
   }
   const extraRulesBlockSl =
@@ -453,6 +474,9 @@ JSON format (STROGO):
       sanitizeAiRationale(parsed.rationale) ??
       buildFallbackRationale(input, enriched.quality);
 
+    // CROWD-ALTERNATIVES: poštene opombe o gneči + alternative (deterministično)
+    enriched.crowdNotices = buildCrowdNotices(enriched, input, lang);
+
     return NextResponse.json(enriched);
   } catch (error) {
     console.error("[itinerary] AI napaka, uporabljam fallback:", error);
@@ -481,6 +505,9 @@ JSON format (STROGO):
     // FW4.1: metrike + deterministična utemeljitev (fallback nima AI rationale)
     fallback.quality = computeItineraryQuality(fallback, input);
     fallback.rationale = buildFallbackRationale(input, fallback.quality);
+
+    // CROWD-ALTERNATIVES: iste poštene opombe kot na AI poti
+    fallback.crowdNotices = buildCrowdNotices(fallback, input, lang);
 
     return NextResponse.json(fallback);
   }

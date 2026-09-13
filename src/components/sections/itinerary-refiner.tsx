@@ -37,6 +37,11 @@ const QUICK_SUGGESTIONS = [
   "Dodaj romantične večerne aktivnosti",
 ];
 
+// CROWD-ALTERNATIVES: predlog zamenjave zelo obiskanih točk — vidi se LE,
+// ko ima itinerer opombe o gneči (vrhunski vikend v julijski/avgustovski sezoni)
+const CROWD_SUGGESTION =
+  "Zamenjaj zelo obiskane točke z mirnejšimi alternativami v bližini";
+
 interface HistoryEntry {
   instruction: string;
   timestamp: number;
@@ -222,10 +227,17 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
           </Button>
         </form>
 
-        {/* Hitri predlogi */}
+        {/* Hitri predlogi — z gnečnim predlogom na prvem mestu, če obstaja */}
         {!loading && (
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {QUICK_SUGGESTIONS.slice(0, 6).map((suggestion) => (
+            {[
+              ...(itinerary.crowdNotices && itinerary.crowdNotices.length > 0
+                ? [CROWD_SUGGESTION]
+                : []),
+              ...QUICK_SUGGESTIONS,
+            ]
+              .slice(0, 6)
+              .map((suggestion) => (
               <button
                 key={suggestion}
                 type="button"

@@ -96,6 +96,24 @@ export async function POST(request: Request) {
     ).join("\n")
   ).join("\n\n");
 
+  // CROWD-ALTERNATIVES: poštene opombe o gneči (uredniški vzorec obiskanosti)
+  // — da prilagoditve ostanejo seznanjene z gnečo na vrhunskih točkah
+  const crowdStr =
+    current.crowdNotices && current.crowdNotices.length > 0
+      ? `\n\nOPOMBE O GNEČI (uredniško, vzorec obiskanosti — ne status):\n${current.crowdNotices
+          .map(
+            (n) =>
+              `  - Dan ${n.day} · ${n.destination_name}: ${n.reason}${
+                n.alternatives.length > 0
+                  ? ` (alternative: ${n.alternatives
+                      .map((a) => `${a.destination_name}, ~${a.distanceKm} km`)
+                      .join("; ")})`
+                  : ""
+              }`
+          )
+          .join("\n")}`
+      : "";
+
   // Zgodovina prejšnjih ukazov (za kontekst)
   const historyStr = body.history && body.history.length > 0
     ? `\n\nPREJŠNJI UKAZI (že upoštevani v trenutnem itinererju):\n${body.history.map((h, i) => `${i + 1}. ${h}`).join("\n")}`
@@ -122,7 +140,7 @@ POMEMBNO:
   const userPrompt = `TRENUTNI ITINERER:
 ${currentItineraryStr}
 ${historyStr}
-${sponsoredContext}
+${sponsoredContext}${crowdStr}
 
 RAZPOLOŽLJIVE DESTINACIJE:
 ${destContext}

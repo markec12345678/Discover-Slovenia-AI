@@ -92,6 +92,11 @@ export interface Itinerary {
   // NOVO (FW4.2): dogodki, ki si jih uporabnik dodal v svojo pot (izbira
   // iz events sekcije) — preslikajo se na konkretne dneve potovanja
   addedEvents?: ItineraryEvent[];
+  // NOVO (CROWD-ALTERNATIVES): poštene opombe o gneči — uredniška trditev o
+  // vzorcu obiskanosti (vrhunski vikend julijske/avgustovske sezone na
+  // javno dokumentiranih točkah) + alternative izračunane iz resničnih
+  // podatkov destinacij (bližina/sezona/interesi); prazno brez datuma odhoda
+  crowdNotices?: CrowdNotice[];
 }
 
 // Dogodek, povezan z destinacijo v itinererju (subset EventItem iz events-data)
@@ -105,6 +110,26 @@ export interface ItineraryEvent {
   priceRange: string;
   description: string;
   website?: string;
+}
+
+// CROWD-ALTERNATIVES: mirnejša alternativa v bližini vrhunske točke —
+// razdalja iz coords, ujemani interesi iz bestFor ∩ interesi potnika
+export interface CrowdAlternative {
+  destination_id: string;
+  destination_name: string;
+  slug: string;
+  distanceKm: number;
+  matchedInterests: string[];
+}
+
+// CROWD-ALTERNATIVES: opomba o gneči na določenem dnevu itinererja —
+// reason je uredniška trditev o vzorcu (NE status v realnem času)
+export interface CrowdNotice {
+  day: number;
+  destination_id: string;
+  destination_name: string;
+  reason: string;
+  alternatives: CrowdAlternative[];
 }
 
 export interface WeatherData {

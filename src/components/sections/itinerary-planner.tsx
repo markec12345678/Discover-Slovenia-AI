@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import {
   Card,
   CardHeader,
@@ -1035,6 +1036,45 @@ export function ItineraryPlanner() {
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-3">
+                        {/* CROWD-ALTERNATIVES: poštena opomba o gneči +
+                            mirnejše alternative izračunane iz resničnih
+                            podatkov (razdalja/sezona/interesi) — povezave
+                            vodijo na podstrani destinacij */}
+                        {(itinerary.crowdNotices ?? [])
+                          .filter((n) => n.day === day.day)
+                          .map((notice) => (
+                            <div
+                              key={`${notice.day}-${notice.destination_id}`}
+                              className="rounded-lg border border-border/70 bg-muted/40 p-3"
+                            >
+                              <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
+                                <UsersRound
+                                  className="mt-0.5 size-4 shrink-0 text-muted-foreground/70"
+                                  aria-hidden
+                                />
+                                <span>{notice.reason}</span>
+                              </p>
+                              {notice.alternatives.length > 0 && (
+                                <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-6">
+                                  <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                    {t("crowdAlternativesLabel")}
+                                  </span>
+                                  {notice.alternatives.map((alt) => (
+                                    <Link
+                                      key={alt.destination_id}
+                                      href={`/destinacija/${alt.slug}`}
+                                      className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    >
+                                      {alt.destination_name}
+                                      <span className="text-muted-foreground/70">
+                                        · {alt.distanceKm} km
+                                      </span>
+                                    </Link>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         {day.locations.map((loc, idx) => {
                           return (
                             <div

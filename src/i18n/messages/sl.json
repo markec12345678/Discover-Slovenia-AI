@@ -311,6 +311,7 @@
     "badgeSample": "Predlog",
     "totalBadge": "Skupaj ~€{total}",
     "tripRangeTitle": "Okvir potovanja",
+    "crowdAlternativesLabel": "Mirnejše alternative v bližini:",
     "dayTitle": "Dan {day}",
     "dayNavAriaLabel": "Preskok med dnevi potovanja",
     "qaRefine": "Prilagodi",
