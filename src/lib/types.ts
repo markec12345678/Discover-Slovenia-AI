@@ -40,6 +40,10 @@ export interface PlannerInput {
   // NOVO (FW4.3): jezik AI izpisa — "sl" (privzeto) ali "en". Client
   // (itinerary-planner) pošlje locale; itinerer se generira v tem jeziku.
   language?: "sl" | "en";
+  // NOVO (WEATHER-CONTEXT / t11): tip potne skupine — opcijsko; oblikuje
+  // ritem in izbor načrta (družina → krajši prevozi in otrokom prijazne
+  // lokacije, par → mirnejši tempo ...). Nazaj kompatibilno.
+  partyType?: "couple" | "family" | "friends" | "solo";
 }
 
 export interface LocationVisit {

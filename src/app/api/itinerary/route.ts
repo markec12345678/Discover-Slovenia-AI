@@ -8,7 +8,10 @@ import { rateLimit } from "@/lib/rate-limit";
 import {
   fetchDailyForecast,
   weatherCodeToText,
+  weatherCodeToTextEn,
+  type DailyForecast,
 } from "@/lib/weather-utils";
+import { PARTY_TYPES, PARTY_PROMPT_LABELS } from "@/lib/party-types";
 import { matchEventsForItinerary } from "@/lib/events-match";
 import {
   isValidStartDate,
@@ -25,6 +28,116 @@ import {
   computeItineraryQuality,
   sanitizeAiRationale,
 } from "@/lib/itinerary-quality";
+
+// ============================================================================
+// WEATHER-CONTEXT (t11): realna vremenska napoved PRED generiranjem
+// ============================================================================
+//
+// Prej je AI načrtoval "slep" — realna Open-Meteo prognoza je prišla ŠTEJ
+// generiranju (samo prepisala prikaz). Zdaj za znano okno potovanja
+// (startDate znotraj prognoznega horizonta ~16 dni) pridobimo napoved za
+// tri regionalna sidra VZPOREDNO z ranking engine (brez dodatne latence)
+// in jo podamo AI kot DEJSTVO: deževen dan → notranje aktivnosti tisti dan.
+//
+// Brez startDate napoved NE gre v prompt: "3 dnevi poleti" brez datuma se
+// načrtuje sezonsko — današnja napoved za neznani datum bi bila zavajajoča.
+// Vir ostaja pošten: realna napoved Open-Meteo po regijah, brez izmišljenih
+// statusov.
+
+interface AnchorForecast {
+  /** SL oznaka regije za prompt */
+  label: string;
+  /** EN oznaka regije za prompt */
+  labelEn: string;
+  forecast: DailyForecast[];
+}
+
+// Tri regionalna sidra — Gorenjska/alpi, osrednja Slovenija, obala.
+// Koordinate pridejo IZ slovenia-data (enosoten vir resnice o destinacijah);
+// če bi id kdaj izginil iz podatkov, se sidro tiho preskoči.
+const WEATHER_ANCHOR_DEFS = [
+  { id: "bled", label: "Gorenjska (Bled)", labelEn: "Gorenjska/Alps (Bled)" },
+  {
+    id: "ljubljana",
+    label: "Osrednja Slovenija (Ljubljana)",
+    labelEn: "Central Slovenia (Ljubljana)",
+  },
+  { id: "piran", label: "Obala (Piran)", labelEn: "Coast (Piran)" },
+] as const;
+
+/**
+ * Pridobi napovedi za vsa tri sidra (vsak fetch ima svoj 4s timeout +
+ * 15-min cache; fetchDailyForecast interno nikoli ne vrže — vrne null).
+ * Brez startDate vrne prazno (ni "realne napovedi za tvoje datume").
+ */
+async function fetchAnchorForecasts(
+  days: number,
+  startDate?: string
+): Promise<AnchorForecast[]> {
+  if (!startDate) return [];
+
+  const anchors: AnchorForecast[] = [];
+  await Promise.all(
+    WEATHER_ANCHOR_DEFS.map(async (def) => {
+      const dest = DESTINATIONS.find((d) => d.id === def.id);
+      if (!dest) return;
+      const forecast = await fetchDailyForecast(
+        dest.coords.lat,
+        dest.coords.lng,
+        days,
+        startDate
+      );
+      if (forecast) {
+        anchors.push({ label: def.label, labelEn: def.labelEn, forecast });
+      }
+    })
+  );
+  return anchors;
+}
+
+/** Ena vrstica na dan: "- Dan 1 (2026-10-03): Gorenjska (Bled): dež 75 %, 17 °C · ..." */
+function buildWeatherPromptLines(
+  anchors: AnchorForecast[],
+  lang: "sl" | "en"
+): string[] {
+  const maxLen = anchors.reduce((m, a) => Math.max(m, a.forecast.length), 0);
+  const lines: string[] = [];
+  for (let i = 0; i < maxLen; i++) {
+    const withData = anchors.filter((a) => a.forecast[i]);
+    if (withData.length === 0) continue;
+    const date = withData[0].forecast[i].date;
+    const parts = withData.map((a) => {
+      const f = a.forecast[i];
+      const cond =
+        lang === "en"
+          ? weatherCodeToTextEn(f.weatherCode)
+          : weatherCodeToText(f.weatherCode);
+      const precip =
+        f.precipitationProbabilityMax != null
+          ? ` ${f.precipitationProbabilityMax} %`
+          : "";
+      return `${lang === "en" ? a.labelEn : a.label}: ${cond}${precip}, ${Math.round(f.tempMax)} °C`;
+    });
+    lines.push(
+      `- ${lang === "en" ? `Day ${i + 1}` : `Dan ${i + 1}`} (${date}): ${parts.join(" · ")}`
+    );
+  }
+  return lines;
+}
+
+/**
+ * Deževen dan za fallback: večina sidra (≥ 2 od tistih s podatki) kaže
+ * ≥ 60 % verjetnost padavin. Konservativno — fallback ne pozna regije
+ * dneva, zato preureja samo izrazito mokre dneve.
+ */
+function isRainyDay(anchors: AnchorForecast[], dayIndex: number): boolean {
+  const withData = anchors.filter((a) => a.forecast[dayIndex]);
+  if (withData.length < 2) return false;
+  const rainy = withData.filter(
+    (a) => (a.forecast[dayIndex].precipitationProbabilityMax ?? 0) >= 60
+  ).length;
+  return rainy >= 2;
+}
 
 // POST /api/itinerary - generira AI itinerer z z-ai-web-dev-sdk
 // AI prioritizira SPONZORIRANE lokale (premium/enterprise stranke ki plačajo za vključitev)
@@ -61,6 +174,18 @@ export async function POST(request: Request) {
     );
   }
 
+  // WEATHER-CONTEXT: tip potne skupine — opcijsko (stari odjemalci ga ne
+  // pošiljajo), a če JE podan, mora biti iz dovoljenega nabora
+  if (
+    input.partyType !== undefined &&
+    !PARTY_TYPES.includes(input.partyType)
+  ) {
+    return NextResponse.json(
+      { error: "Tip potne skupine je neveljaven (couple, family, friends, solo)" },
+      { status: 400 }
+    );
+  }
+
   // FW4.2: datum odhoda — opcijsko; če je podan, mora biti veljaven (ISO,
   // ne v preteklosti, max ~400 dni naprej). Neveljaven → jasna napaka 400.
   if (input.startDate !== undefined && !isValidStartDate(input.startDate)) {
@@ -84,27 +209,78 @@ export async function POST(request: Request) {
       `- ${d.id} (${d.name}): ${d.type}/${d.region}, ${d.duration}, €${d.costPerPerson}/osebo, ocena ${d.rating}, aktivnosti: ${d.activities.join(", ")}. Najboljše za: ${d.bestFor.join(", ")}. Sezona: ${d.bestSeason.join(", ")}`
   ).join("\n");
 
-  // === RANKING ENGINE ===
-  // Uporabi ranking engine za pridobitev najboljših partnerjev
+  // === RANKING ENGINE + WEATHER-CONTEXT (vzporedno — vreme ne doda latence) ===
   // Ranking: relevance (60%) + quality (15%) + rating (10%) + distance (10%) + premium (5%)
+  // Vreme: realna napoved za tri regionalna sidra — SAMO če je podan
+  // startDate (znano okno potovanja znotraj horizonta ~16 dni)
   let partnerContext = "";
-  try {
-    const ranked = await rankListings({
+
+  const [ranked, anchorForecasts] = await Promise.all([
+    rankListings({
       interests: input.interests,
       season: input.season,
-    });
+    }).catch((e) => {
+      console.error("[itinerary] ranking engine napaka:", e);
+      return [] as Awaited<ReturnType<typeof rankListings>>;
+    }),
+    fetchAnchorForecasts(input.days, input.startDate),
+  ]);
 
-    if (ranked.length > 0) {
-      partnerContext = buildTransparencyContext(ranked, 15);
-      console.log(`[itinerary] Ranking engine: ${ranked.length} kandidatov, top: ${ranked[0].listing.name} (Q:${ranked[0].qualityScore})`);
-    }
-  } catch (e) {
-    console.error("[itinerary] ranking engine napaka:", e);
+  if (ranked.length > 0) {
+    partnerContext = buildTransparencyContext(ranked, 15);
+    console.log(`[itinerary] Ranking engine: ${ranked.length} kandidatov, top: ${ranked[0].listing.name} (Q:${ranked[0].qualityScore})`);
+  }
+  if (anchorForecasts.length > 0) {
+    console.log(
+      `[itinerary] Vreme briefing: ${anchorForecasts.length}/${WEATHER_ANCHOR_DEFS.length} sidra, ${anchorForecasts[0].forecast.length} dni${input.startDate ? ` (od ${input.startDate})` : ""}`
+    );
   }
 
   // FW4.3: jezik AI izpisa — client pošlje locale ("en" → angleški
   // itinerer za tuje obiskovalce; vse ostalo logiko ostaja enako)
   const lang = input.language === "en" ? "en" : "sl";
+
+  // === WEATHER-CONTEXT: pravo vreme + sestava potnikov v prompt ===
+  // Oba dela sta OPCIJSKA (nazaj kompatibilno): brez startDate ni realne
+  // napovedi za tvoje datume, brez partyType pa AI dobi samo številko.
+  const hasWeather = anchorForecasts.length > 0;
+  const partyLabels = input.partyType
+    ? PARTY_PROMPT_LABELS[input.partyType]
+    : null;
+
+  const partyLineSl = partyLabels ? `\n- Sestava: ${partyLabels.sl}` : "";
+  const partyLineEn = partyLabels ? `\n- Travel party: ${partyLabels.en}` : "";
+  const weatherBlockSl = hasWeather
+    ? `\nREALNA VREMENSKA NAPOVED (Open-Meteo) za tvoje datume — po regijah:\n${buildWeatherPromptLines(anchorForecasts, "sl").join("\n")}\n`
+    : "";
+  const weatherBlockEn = hasWeather
+    ? `\nREAL FORECAST (Open-Meteo) for your dates — by region:\n${buildWeatherPromptLines(anchorForecasts, "en").join("\n")}\n`
+    : "";
+
+  // Pogojna dodatna pravila — številčenje se nadaljuje od obstoječega 11
+  const extraRulesSl: string[] = [];
+  const extraRulesEn: string[] = [];
+  if (hasWeather) {
+    extraRulesSl.push(
+      "12. Upoštevaj REALNO napoved zgoraj: kadar je verjetnost padavin ≥ 60 % za regijo, kjer ta dan potuješ, načrtuj notranje in vremensko neodvisne aktivnosti (jame, muzeji, terme, degustacije, mestna jedra) — tisti dan brez pohodov, sotesk ali plaž. Vreme v polju \"weather\" dneva naj se ujema z realno napovedjo za regijo, kjer dan poteka."
+    );
+    extraRulesEn.push(
+      "12. Follow the REAL forecast above: when precipitation probability is ≥ 60% for the region you plan that day, choose indoor/weather-independent activities (caves, museums, thermal spas, tastings, old towns) — no hikes, gorges or beaches that day. The \"weather\" field of each day must match the real forecast for that day's region."
+    );
+  }
+  if (partyLabels) {
+    const ruleNo = extraRulesSl.length > 0 ? 13 : 12;
+    extraRulesSl.push(
+      `${ruleNo}. Prilagodi ritem in izbor sestavi potnikov: par → mirnejši ritem in romantične večerje; družina z otroki → otrokom prijazne lokacije, krajši prevozi in načrtovani odmori; prijateljska skupina → bolj družabna in aktivna izbira; samostojni potnik → fleksibilen ritem in varna izbira.`
+    );
+    extraRulesEn.push(
+      `${ruleNo}. Match pace and selection to the travel party: couple → calmer pace and romantic dinners; family with kids → kid-friendly spots, shorter drives and planned breaks; group of friends → more social and active picks; solo traveller → flexible pace and safe choices.`
+    );
+  }
+  const extraRulesBlockSl =
+    extraRulesSl.length > 0 ? `\n${extraRulesSl.join("\n")}` : "";
+  const extraRulesBlockEn =
+    extraRulesEn.length > 0 ? `\n${extraRulesEn.join("\n")}` : "";
 
   const systemPrompt =
     lang === "en"
@@ -123,8 +299,8 @@ Traveler:
 - Budget: €${input.budget}
 - Interests: ${input.interests.join(", ")}
 - Season: ${input.season}${input.startDate ? `\n- Travel date: ${formatDateRangeSI(input.startDate, tripEnd)}` : ""}
-- Group: ${input.groupSize} person(s)
-
+- Group: ${input.groupSize} person(s)${partyLineEn}
+${weatherBlockEn}
 Available destinations:
 ${destContext}
 ${partnerContext}
@@ -140,7 +316,7 @@ Rules:
 8. When fitting, mention suggested partners in notes or recommendations (e.g. "For lunch, visit Restaurant JB in Ljubljana")
 9. Add estimated drive time to the next location in notes (e.g. "30 min drive to Bohinj")
 10. "packing_list": 8-14 concrete items for this trip (season, interests, duration)
-11. "rationale": 1-2 sentences, written as a guide in third person: why THIS itinerary suits the traveler — reference their interests, budget and desire for less driving. Concrete, no marketing fluff.
+11. "rationale": 1-2 sentences, written as a guide in third person: why THIS itinerary suits the traveler — reference their interests, budget and desire for less driving. Concrete, no marketing fluff.${extraRulesBlockEn}
 
 JSON format (STRICT):
 {
@@ -172,8 +348,8 @@ Potnik:
 - Proračun: €${input.budget}
 - Interesi: ${input.interests.join(", ")}
 - Sezona: ${input.season}${input.startDate ? `\n- Datum potovanja: ${formatDateRangeSI(input.startDate, tripEnd)}` : ""}
-- Skupina: ${input.groupSize} oseb(a)
-
+- Skupina: ${input.groupSize} oseb(a)${partyLineSl}
+${weatherBlockSl}
 Razpoložljive destinacije:
 ${destContext}
 ${partnerContext}
@@ -189,7 +365,7 @@ Pravila:
 8. Kadar ustreza, v notes ali recommendations omeni predlagane partnerje (npr. "Za kosilo obiščite Restavracijo JB v Ljubljani")
 9. V notes dodaj ocenjen čas vožnje do naslednje lokacije (npr. "30 min vožnje do Bohinja")
 10. "packing_list": 8-14 konkretnih stvari za ta izlet (sezona, interesi, trajanje)
-11. "rationale": 1-2 povedi, napisane kot vodnik v tretji osebi: zakaj TA pot ustreza potniku — sklicuj se na njegove interese, proračun in željo po manj vožnje. Konkretno, brez marketinških fraz.
+11. "rationale": 1-2 povedi, napisane kot vodnik v tretji osebi: zakaj TA pot ustreza potniku — sklicuj se na njegove interese, proračun in željo po manj vožnje. Konkretno, brez marketinških fraz.${extraRulesBlockSl}
 
 JSON format (STROGO):
 {
@@ -251,7 +427,12 @@ JSON format (STROGO):
       });
 
     // PRAVO vreme — vreme iz AI izhoda prepišemo z realno Open-Meteo prognozo
-    const enriched = await enrichWithRealWeather(itinerary);
+    // (WEATHER-CONTEXT: poravnano z datumom odhoda + jezikom izpisa)
+    const enriched = await enrichWithRealWeather(
+      itinerary,
+      input.startDate,
+      lang
+    );
 
     // Dogodki na obiskanih destinacijah (neodvisno od vremena — ločeno polje)
     // FW4.2: z okvirom potovanja — dogodki, ki se zgodijo MED obiskom,
@@ -275,8 +456,12 @@ JSON format (STROGO):
     return NextResponse.json(enriched);
   } catch (error) {
     console.error("[itinerary] AI napaka, uporabljam fallback:", error);
+    // WEATHER-CONTEXT: fallback prejme sidrne napovedi — deževni dnevi
+    // dobijo notranje/prilagodljive destinacije (glej generateFallbackItinerary)
     const fallback = await enrichWithRealWeather(
-      generateFallbackItinerary(input)
+      generateFallbackItinerary(input, anchorForecasts),
+      input.startDate,
+      lang
     );
 
     // Fallback: hevristični pakirni seznam + dogodki (isti enrich kot AI pot)
@@ -313,7 +498,16 @@ JSON format (STROGO):
 //
 // Gracefully: ob napaki/timeoutu (4 s) izpusta Open-Meteo se obdrži vreme,
 // ki je bilo že v objektu (pri fallbacku = sezonska ocena, glej spodaj).
-async function enrichWithRealWeather(itinerary: Itinerary): Promise<Itinerary> {
+//
+// WEATHER-CONTEXT: napoved je zdaj poravnana z datumom odhoda (startDate —
+// prej je dan i dobil "i-ti dan od danes", tudi za potovanje čez teden) in
+// izpisana v jeziku itinererja (lang). Vpliv na SAMO IZBIRO destinacij se
+// zgodi prej, v promptu (glej fetchAnchorForecasts zgoraj).
+async function enrichWithRealWeather(
+  itinerary: Itinerary,
+  startDate?: string,
+  lang: "sl" | "en" = "sl"
+): Promise<Itinerary> {
   try {
     const firstLoc = itinerary.days[0]?.locations?.[0];
     if (!firstLoc?.destination_id) return itinerary;
@@ -324,7 +518,8 @@ async function enrichWithRealWeather(itinerary: Itinerary): Promise<Itinerary> {
     const daily = await fetchDailyForecast(
       dest.coords.lat,
       dest.coords.lng,
-      itinerary.days.length
+      itinerary.days.length,
+      startDate
     );
     if (!daily) {
       // Open-Meteo ni dosegljiv — obdrži obstoječe (AI/sezonsko) vreme
@@ -341,7 +536,10 @@ async function enrichWithRealWeather(itinerary: Itinerary): Promise<Itinerary> {
       itinerary.days[i] = {
         ...itinerary.days[i],
         weather: {
-          condition: weatherCodeToText(forecast.weatherCode),
+          condition:
+            lang === "en"
+              ? weatherCodeToTextEn(forecast.weatherCode)
+              : weatherCodeToText(forecast.weatherCode),
           temp: Math.round(forecast.tempMax),
         },
       };
@@ -362,7 +560,19 @@ async function enrichWithRealWeather(itinerary: Itinerary): Promise<Itinerary> {
 }
 
 // Pametni fallback - deterministični itinerer iz statičnih podatkov
-function generateFallbackItinerary(input: PlannerInput): Itinerary {
+//
+// WEATHER-CONTEXT: če so na voljo realne sidrne napovedi (samo z datumom
+// odhoda znotraj prognoznega horizonta), deževni dnevi — večina sidra
+// ≥ 60 % verjetnosti padavin — dobijo prednostno NOTRANJE/prilagodljive
+// destinacije (jame, terme, mestna jedra). Razvrstitev izhaja IZ tipa
+// destinacije v slovenia-data — poštena, deterministična, brez izmišljenih
+// statusov. Brez napovedi je zaporedje izbire IDENTIČNO prejšnjemu.
+const INDOOR_TYPES = new Set(["cave", "spa", "city"]);
+
+function generateFallbackItinerary(
+  input: PlannerInput,
+  anchors: AnchorForecast[] = []
+): Itinerary {
   // Filtriraj sezonsko ustrezne destinacije
   const suitable = DESTINATIONS.filter((d) => d.bestSeason.includes(input.season));
   const pool = suitable.length >= input.days * 2 ? suitable : DESTINATIONS;
@@ -373,18 +583,41 @@ function generateFallbackItinerary(input: PlannerInput): Itinerary {
     d.rating / 10;
 
   const ranked = [...pool].sort((a, b) => score(b) - score(a));
+  const indoor = ranked.filter((d) => INDOOR_TYPES.has(d.type));
+
+  // Zaporedni izbor z razstrupljanjem (brez vremena: isto zaporedje kot prej)
+  const used = new Set<string>();
+  const pickDest = (preferred: typeof ranked) => {
+    for (const d of preferred) {
+      if (!used.has(d.id)) {
+        used.add(d.id);
+        return d;
+      }
+    }
+    // primarna zalogovnica izčrpana → splošni niz po vrsti
+    for (const d of ranked) {
+      if (!used.has(d.id)) {
+        used.add(d.id);
+        return d;
+      }
+    }
+    // vse porabljene → reset (zaporedje ostane deterministično)
+    used.clear();
+    const d = ranked[0];
+    if (d) used.add(d.id);
+    return d;
+  };
 
   const days: DayPlan[] = [];
   let totalCost = 0;
-  let destIndex = 0;
 
   for (let day = 1; day <= input.days; day++) {
+    const rainy = isRainyDay(anchors, day - 1);
     const locationsPerDay = 2;
     const locations: LocationVisit[] = [];
 
     for (let i = 0; i < locationsPerDay; i++) {
-      const dest = ranked[destIndex % ranked.length];
-      destIndex++;
+      const dest = pickDest(rainy ? indoor : ranked);
       const cost = dest.costPerPerson * input.groupSize;
       totalCost += cost;
       const startHour = 9 + i * 5;
@@ -394,7 +627,11 @@ function generateFallbackItinerary(input: PlannerInput): Itinerary {
         time_slot: `${String(startHour).padStart(2, "0")}:00-${String(startHour + 4).padStart(2, "0")}:00`,
         duration: 4,
         estimated_cost: cost,
-        notes: dest.tagline,
+        // Deževen dan: transparenten razlog notranje izbire (resnična
+        // večinska napoved sidr — ne izmišljen status)
+        notes: rainy
+          ? `${dest.tagline} — deževen dan, zato notranja/prilagodljiva izbira`
+          : dest.tagline,
       });
     }
 

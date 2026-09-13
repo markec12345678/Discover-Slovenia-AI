@@ -8,6 +8,7 @@ import {
   computeItineraryQuality,
   sanitizeAiRationale,
 } from "@/lib/itinerary-quality";
+import { PARTY_PROMPT_LABELS } from "@/lib/party-types";
 
 // POST /api/itinerary/refine — Multi-turn popravki obstoječega itinererja.
 //
@@ -100,6 +101,12 @@ export async function POST(request: Request) {
     ? `\n\nPREJŠNJI UKAZI (že upoštevani v trenutnem itinererju):\n${body.history.map((h, i) => `${i + 1}. ${h}`).join("\n")}`
     : "";
 
+  // WEATHER-CONTEXT: sestava potnikov (opcijsko) — da prilagoditve
+  // ohranjajo isti ritem kot osnovni načrt (družina → otrokom prijazno ...)
+  const partyTypeLine = formData?.partyType
+    ? `\n- Upoštevaj sestavo potnikov: ${PARTY_PROMPT_LABELS[formData.partyType].sl}`
+    : "";
+
   const systemPrompt = `Si strokovni slovenski vodič za načrtovanje potovanj. Uporabnik ima že generiran itinerer in želi, da ga POSODOBIŠ glede na njegov ukaz. Odgovori SAMO z veljavnim JSON, brez dodatnega besedila.
 
 POMEMBNO:
@@ -109,6 +116,7 @@ POMEMBNO:
 - Upoštevaj proračun: €${formData?.budget ?? "neznan"}
 - Upoštevaj sezono: ${formData?.season ?? "nezdana"}
 - Upoštevaj interese: ${formData?.interests?.join(", ") ?? "neznan"}
+- Upoštevaj velikost skupine: ${formData?.groupSize ?? "nezdana"}${partyTypeLine}
 - Kadar ustreza, vključi sponzorirane partnerje v notes ali recommendations`;
 
   const userPrompt = `TRENUTNI ITINERER:

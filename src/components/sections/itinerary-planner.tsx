@@ -10,6 +10,7 @@ import {
   CalendarDays,
   Euro,
   Users,
+  UsersRound,
   MapPin,
   AlertCircle,
   Star,
@@ -45,6 +46,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 import { INTERESTS } from "@/lib/slovenia-data";
+import { PARTY_TYPES, type PartyType } from "@/lib/party-types";
 import { formatEventDate } from "@/lib/events-data";
 import {
   dayISOForDayNumber,
@@ -81,6 +83,14 @@ const SEASONS: { value: Season; labelKey: string }[] = [
   { value: "summer", labelKey: "seasonSummer" },
   { value: "autumn", labelKey: "seasonAutumn" },
   { value: "winter", labelKey: "seasonWinter" },
+];
+
+// WEATHER-CONTEXT: tip potne skupine (labelKey → ključi v "planner" namespace)
+const PARTY_OPTIONS: { value: PartyType; labelKey: string }[] = [
+  { value: "couple", labelKey: "partyCouple" },
+  { value: "family", labelKey: "partyFamily" },
+  { value: "friends", labelKey: "partyFriends" },
+  { value: "solo", labelKey: "partySolo" },
 ];
 
 // Persistenca zadnjega itinererja (localStorage) + deljeni načrti (URL ?odpri=)
@@ -124,7 +134,9 @@ function isValidPlannerInput(v: unknown): v is PlannerInput {
     typeof p.season === "string" &&
     ["spring", "summer", "autumn", "winter"].includes(p.season) &&
     typeof p.groupSize === "number" &&
-    p.groupSize >= 1
+    p.groupSize >= 1 &&
+    (p.partyType === undefined ||
+      (PARTY_TYPES as readonly string[]).includes(p.partyType))
   );
 }
 
@@ -160,6 +172,13 @@ function parseQueryToPlannerInput(query: string): PlannerInput {
   if (lowerQuery.includes("družin") || lowerQuery.includes("otrok")) groupSize = 4;
   if (lowerQuery.includes("sam")) groupSize = 1;
 
+  // WEATHER-CONTEXT: tip potne skupine iz naravnega jezika (hero/kviz/demo)
+  let partyType: PlannerInput["partyType"];
+  if (lowerQuery.includes("družin") || lowerQuery.includes("otrok")) partyType = "family";
+  else if (lowerQuery.includes("partner") || lowerQuery.includes("romanti") || lowerQuery.includes("zakonc")) partyType = "couple";
+  else if (lowerQuery.includes("prijatel")) partyType = "friends";
+  else if (/\bsam[oi]?\b|\bsolo\b/.test(lowerQuery)) partyType = "solo";
+
   // Sezona iz query-ja (npr. kviz CTA: "... poleti, s partnerjem ...")
   let season: Season = "summer";
   if (lowerQuery.includes("pomlad")) season = "spring";
@@ -173,6 +192,7 @@ function parseQueryToPlannerInput(query: string): PlannerInput {
     interests: newInterests.length > 0 ? newInterests : ["narava", "kultura"],
     season,
     groupSize,
+    ...(partyType ? { partyType } : {}),
   };
 }
 
@@ -378,6 +398,19 @@ export function ItineraryPlanner() {
           ? prev.interests.filter((i) => i !== value)
           : [...prev.interests, value],
       };
+    });
+  }
+
+  // WEATHER-CONTEXT: tip potne skupine (opcijsko) — "Sam" sinhronizira
+  // tudi številko skupine (1 oseba); ostale izbire številke ne spreminjajo
+  function togglePartyType(value: PartyType) {
+    setFormData((prev) => {
+      const next: PlannerInput = {
+        ...prev,
+        partyType: prev.partyType === value ? undefined : value,
+      };
+      if (next.partyType === "solo") next.groupSize = 1;
+      return next;
     });
   }
 
@@ -670,6 +703,44 @@ export function ItineraryPlanner() {
                       }
                       required
                     />
+                  </div>
+
+                  {/* WEATHER-CONTEXT: tip potne skupine — oblikuje ritem in
+                      izbor načrta (opcijsno); "Sam" sinhronizira številko */}
+                  <div className="space-y-2">
+                    <Label>
+                      <UsersRound className="size-4" aria-hidden />
+                      {t("partyTypeLabel")}
+                      <span className="font-normal text-muted-foreground">
+                        {t("partyTypeOptional")}
+                      </span>
+                    </Label>
+                    <div
+                      role="group"
+                      aria-label={t("partyTypeLabel")}
+                      className="flex flex-wrap gap-1.5"
+                    >
+                      {PARTY_OPTIONS.map((option) => {
+                        const selected = formData.partyType === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => togglePartyType(option.value)}
+                            aria-pressed={selected}
+                            className={cn(
+                              "inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
+                              "min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                              selected
+                                ? "border-primary bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+                                : "border-border bg-muted text-muted-foreground hover:bg-muted/70"
+                            )}
+                          >
+                            {t(option.labelKey)}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div className="space-y-2">
