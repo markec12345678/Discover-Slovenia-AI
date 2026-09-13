@@ -133,7 +133,13 @@
     "foodTitle": "Gastronomy",
     "foodDesc": "From kremšnita to štruklji, from Teran to rebula — 24 gastronomic regions.",
     "gemsTitle": "Hidden gems",
-    "gemsDesc": "Vintgar Gorge, the Sečovlje salt pans, Logar Valley — off the beaten path."
+    "gemsDesc": "Vintgar Gorge, the Sečovlje salt pans, Logar Valley — off the beaten path.",
+    "hikingAlt": "Hiking trail below Mount Triglav",
+    "waterAlt": "Waterfalls of Slovenia among mossy rocks",
+    "historyAlt": "Ptuj castle above the old town",
+    "natureAlt": "Lake Bohinj with mountains in the background",
+    "foodAlt": "Traditional Slovenian dishes on the table",
+    "gemsAlt": "Vintgar Gorge with its turquoise river"
   },
   "exploreHub": {
     "badge": "More to explore",
@@ -188,10 +194,14 @@
     "transportAria": "Find trains and buses through Omio — opens a partner link",
     "ticketsLabel": "Tickets",
     "ticketsDesc": "Tickets for attractions (Postojna, Bled Castle …) — no waiting in line.",
-    "ticketsAria": "Buy tickets through Tiqets — opens a partner link"
+    "ticketsAria": "Buy tickets through Tiqets — opens a partner link",
+    "stayGroup": "Stay",
+    "moveGroup": "Getting there",
+    "experienceGroup": "Experiences",
+    "essentialsGroup": "Travel essentials"
   },
   "newsletter": {
-    "title": "Get Slovenia's hidden gems 📬",
+    "title": "Get Slovenia's hidden gems",
     "subtitle": "Once a week: local spots, events and tips you won't find in guidebooks",
     "emailLabel": "Email address for the newsletter signup",
     "submit": "Sign me up",
@@ -202,10 +212,10 @@
     "failed": "Signup failed — please try again.",
     "pushTitle": "Want to get notified?",
     "pushText": "With browser notifications we can tell you about new experiences, events during your visit — and remind you about your saved plan.",
-    "noSpam": "No spam — unsubscribe in one click. 🌿"
+    "noSpam": "No spam — unsubscribe in one click."
   },
   "footer": {
-    "tagline": "Made with ❤️ in Slovenia",
+    "tagline": "Made in Slovenia",
     "affiliateDisclaimer": "Affiliate links — we earn commission on bookings.",
     "ariaLabel": "Page footer",
     "brandAriaLabel": "Discover Slovenia AI — home",
@@ -917,7 +927,8 @@
         "dest2": "Vintgar",
         "hl1": "Bled Castle",
         "hl2": "Pletna boat ride",
-        "hl3": "Vintgar Gorge"
+        "hl3": "Vintgar Gorge",
+        "alt": "Lake Bled with the island and castle on the cliff"
       },
       "ljubljana-2-days": {
         "title": "Ljubljana weekend",
@@ -925,7 +936,8 @@
         "dest1": "Ljubljana",
         "hl1": "Old town centre",
         "hl2": "Ljubljana Castle",
-        "hl3": "Triple Bridge"
+        "hl3": "Triple Bridge",
+        "alt": "Ljubljana — old town on the banks of the Ljubljanica"
       },
       "soca-3-days": {
         "title": "Soča adventure",
@@ -935,7 +947,8 @@
         "dest3": "Bovec",
         "hl1": "Rafting on the Soča",
         "hl2": "Kobarid Museum",
-        "hl3": "Boka Waterfall"
+        "hl3": "Boka Waterfall",
+        "alt": "The emerald Soča river between Alpine peaks"
       },
       "piran-coast": {
         "title": "Coast and Piran",
@@ -944,7 +957,8 @@
         "dest2": "Portorož",
         "hl1": "Tartini Square",
         "hl2": "The waterfront",
-        "hl3": "Olive oil"
+        "hl3": "Olive oil",
+        "alt": "Piran — Venetian coastal town with St George's church"
       },
       "bela-krajina": {
         "title": "Exploring Bela krajina",
@@ -952,7 +966,8 @@
         "dest1": "Črnomelj",
         "hl1": "Local honey",
         "hl2": "Traditional food",
-        "hl3": "The Kolpa"
+        "hl3": "The Kolpa",
+        "alt": "Jurjevanje festival in Bela krajina — folk dancers in white costumes"
       },
       "triglav-park": {
         "title": "Triglav National Park",
@@ -961,7 +976,8 @@
         "dest2": "Triglav",
         "hl1": "Lake Bohinj",
         "hl2": "Climbing Triglav",
-        "hl3": "Savica Waterfall"
+        "hl3": "Savica Waterfall",
+        "alt": "Triglav — Slovenia's highest peak above the Seven Lakes Valley"
       }
     }
   },

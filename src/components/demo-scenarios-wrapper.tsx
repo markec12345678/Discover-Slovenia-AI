@@ -20,5 +20,11 @@ export function DemoScenariosWrapper() {
     router.push(`${localePrefix(locale)}/nacrtuj`);
   };
 
-  return <DemoScenarios onSelect={handleSelect} />;
+  // "Napiši svoje" — načrtovalnik brez predhodne poizvedbe (prej tihi
+  // scrollIntoView no-op, odkar FW3 planner živi na /načrtuj).
+  const handleCustom = () => {
+    router.push(`${localePrefix(locale)}/nacrtuj`);
+  };
+
+  return <DemoScenarios onSelect={handleSelect} onCustom={handleCustom} />;
 }

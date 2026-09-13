@@ -121,22 +121,24 @@ export function HeroQuickInput() {
         })}
       </div>
 
-      {/* Trust indicators — raziskava P4-5: subtilni trust signali dvigujejo konverzijo */}
+      {/* Trust indicators — raziskava P4-5: subtilni trust signali dvigujejo konverzijo
+          PREMIUM-VIZ: pike poenotene v enoten bel ton (prej 4 barvne —
+          sky/vijolična izven palete) */}
       <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium text-white/75">
         <span className="flex items-center gap-1.5">
-          <span className="soft-pulse size-2 rounded-full bg-emerald-400" aria-hidden="true" />
+          <span className="soft-pulse size-2 rounded-full bg-white/80" aria-hidden="true" />
           {tTrust("free")}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-amber-400" aria-hidden="true" />
+          <span className="size-2 rounded-full bg-white/70" aria-hidden="true" />
           {tTrust("destinations")}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-sky-300" aria-hidden="true" />
+          <span className="size-2 rounded-full bg-white/70" aria-hidden="true" />
           {tTrust("aiSlovenian")}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-violet-400" aria-hidden="true" />
+          <span className="size-2 rounded-full bg-white/70" aria-hidden="true" />
           {tTrust("verifiedPartners")}
         </span>
       </div>

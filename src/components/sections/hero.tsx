@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Sparkles, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { HeroQuickInput } from "@/components/hero-quick-input";
 
@@ -40,10 +40,10 @@ export async function Hero() {
 
       {/* Vsebina */}
       <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-4 pb-24 pt-20 text-center sm:px-6 lg:px-8">
-        {/* Badge */}
+        {/* Badge — PREMIUM-VIZ: en signal manj (brez Sparkles ikone),
+            zastavica + besedilo sta dovolj */}
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-700">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-medium text-white shadow-sm backdrop-blur-md sm:text-sm">
-            <Sparkles className="size-3.5 text-amber-300" aria-hidden="true" />
             <span aria-hidden="true">🇸🇮</span>
             <span>{t("badge")}</span>
           </span>

@@ -75,18 +75,19 @@ export async function StatsSection() {
             />
           </Reveal>
 
-          {/* Diferenciator kartica — 0 % provizija (konkurenčna prednost) */}
+          {/* Diferenciator kartica — 0 % provizija (konkurenčna prednost;
+              PREMIUM-VIZ: smaragdni gradient → zbirna paleta) */}
           <Reveal delay={260}>
-            <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50 to-emerald-50/40 p-5 dark:border-emerald-900/50 dark:from-emerald-950/40 dark:to-emerald-950/10">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">
+            <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-primary/25 bg-primary/5 p-5">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
                 <Percent className="size-4" aria-hidden="true" />
                 {t("fairEyebrow")}
               </div>
               <div>
-                <div className="text-3xl font-bold tabular-nums text-emerald-700 dark:text-emerald-400 sm:text-4xl">
-                  {t("fairValue")}<span className="text-lg font-semibold text-emerald-600/80 dark:text-emerald-500/80"> {t("fairUnit")}</span>
+                <div className="text-3xl font-bold tabular-nums text-primary sm:text-4xl">
+                  {t("fairValue")}<span className="text-lg font-semibold text-primary/80"> {t("fairUnit")}</span>
                 </div>
-                <div className="mt-0.5 text-xs text-emerald-800/70 dark:text-emerald-300/70 sm:text-sm">
+                <div className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
                   {t("fairNote")}
                 </div>
               </div>

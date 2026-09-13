@@ -143,7 +143,9 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
           >
             <Mountain className="size-5" aria-hidden="true" />
           </span>
-          <span className="flex flex-col leading-none">
+          {/* Besedna znamka — na zelo ozkih zaslonih (<360px) se skrije,
+              ostane gorski znak (prej 2px horizontalni preliv na 320px) */}
+          <span className="flex max-[359px]:hidden flex-col leading-none">
             <span className="text-sm font-bold tracking-tight sm:text-base">
               Discover Slovenia AI
             </span>

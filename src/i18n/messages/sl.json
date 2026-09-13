@@ -133,7 +133,13 @@
     "foodTitle": "Kulinariika",
     "foodDesc": "Od kremšnite do štrukljev, od Teranov do rebule — 24 gastronomskih regij.",
     "gemsTitle": "Skrite dragulje",
-    "gemsDesc": "Vintgarska soteska, soline Sečovlje, Logarska dolina — izven utirjenih poti."
+    "gemsDesc": "Vintgarska soteska, soline Sečovlje, Logarska dolina — izven utirjenih poti.",
+    "hikingAlt": "Pohodniška pot pod Triglavom",
+    "waterAlt": "Slapovi Slovenije med snežinskimi skalami",
+    "historyAlt": "Ptujski grad nad starim mestnim jedrom",
+    "natureAlt": "Bohinjsko jezero z gorami v ozadju",
+    "foodAlt": "Tradicionalne slovenske jedi na mizi",
+    "gemsAlt": "Vintgarska soteska s turkizno reko"
   },
   "exploreHub": {
     "badge": "Več za raziskovanje",
@@ -188,10 +194,14 @@
     "transportAria": "Poišči vlake in avtobuse prek Omiya — odpre partnersko povezavo",
     "ticketsLabel": "Vstopnice",
     "ticketsDesc": "Vstopnice za znamenitosti (Postojna, Grad Bled …) — brez čakalnih vrst.",
-    "ticketsAria": "Kupi vstopnice prek Tiqetsa — odpre partnersko povezavo"
+    "ticketsAria": "Kupi vstopnice prek Tiqetsa — odpre partnersko povezavo",
+    "stayGroup": "Bivanje",
+    "moveGroup": "Na pot",
+    "experienceGroup": "Doživetja",
+    "essentialsGroup": "Varna pot"
   },
   "newsletter": {
-    "title": "Prejmi skrite bisere Slovenije 📬",
+    "title": "Prejmi skrite bisere Slovenije",
     "subtitle": "Enkrat tedensko: lokali, dogodki in nasveti, ki jih ne najdeš v vodnikih",
     "emailLabel": "E-poštni naslov za prijavo na novice",
     "submit": "Prijavi me",
@@ -202,10 +212,10 @@
     "failed": "Prijava ni uspela — poskusi znova.",
     "pushTitle": "Želiš biti obveščen?",
     "pushText": "Z obvestili v brskalniku ti lahko sporočimo nove izkušnje, dogodke ob tvojem obisku — in te spomnimo na shranjen načrt.",
-    "noSpam": "Brez neželene pošte — odjava z enim klikom. 🌿"
+    "noSpam": "Brez neželene pošte — odjava z enim klikom."
   },
   "footer": {
-    "tagline": "Narejeno z ❤️ v Sloveniji",
+    "tagline": "Narejeno v Sloveniji",
     "affiliateDisclaimer": "Affiliate povezave — zaslužimo provizijo pri rezervacijah.",
     "ariaLabel": "Noga strani",
     "brandAriaLabel": "Discover Slovenia AI — domov",
@@ -917,7 +927,8 @@
         "dest2": "Vintgar",
         "hl1": "Blejski grad",
         "hl2": "Pletna vožnja",
-        "hl3": "Vintgarska soteska"
+        "hl3": "Vintgarska soteska",
+        "alt": "Blejsko jezero z otokom in gradom na skali"
       },
       "ljubljana-2-days": {
         "title": "Ljubljana vikend",
@@ -925,7 +936,8 @@
         "dest1": "Ljubljana",
         "hl1": "Stari mestni center",
         "hl2": "Ljubljanski grad",
-        "hl3": "Tromostovje"
+        "hl3": "Tromostovje",
+        "alt": "Ljubljana — staro mestno jedro ob Ljubljanici"
       },
       "soca-3-days": {
         "title": "Soča avantura",
@@ -935,7 +947,8 @@
         "dest3": "Bovec",
         "hl1": "Rafting na Soči",
         "hl2": "Kobarid muzej",
-        "hl3": "Slap Boka"
+        "hl3": "Slap Boka",
+        "alt": "Smaragdna reka Soča med alpskimi vrhovi"
       },
       "piran-coast": {
         "title": "Obala in Piran",
@@ -944,7 +957,8 @@
         "dest2": "Portorož",
         "hl1": "Tartinijev trg",
         "hl2": "Obala",
-        "hl3": "Oljčno olje"
+        "hl3": "Oljčno olje",
+        "alt": "Piran — beneško obmorsko mesto z cerkvijo sv. Jurija"
       },
       "bela-krajina": {
         "title": "Bela krajina odkrivanje",
@@ -952,7 +966,8 @@
         "dest1": "Črnomelj",
         "hl1": "Lokalni med",
         "hl2": "Tradicijska hrana",
-        "hl3": "Kolpa"
+        "hl3": "Kolpa",
+        "alt": "Jurjevanje v Beli krajini — ljudski plesi v belih nošah"
       },
       "triglav-park": {
         "title": "Triglavski narodni park",
@@ -961,7 +976,8 @@
         "dest2": "Triglav",
         "hl1": "Bohinjsko jezero",
         "hl2": "Vzpon na Triglav",
-        "hl3": "Slap Savica"
+        "hl3": "Slap Savica",
+        "alt": "Triglav — najvišji vrh Slovenije nad dolino Sedem jezer"
       }
     }
   },

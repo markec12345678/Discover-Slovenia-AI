@@ -1,18 +1,10 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Car,
-  Plane,
   BedDouble,
+  Plane,
   Ticket,
   ShieldCheck,
   ExternalLink,
-  Smartphone,
-  TrainFront,
-  CarTaxiFront,
-  TicketCheck,
-  Compass,
 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { PARTNER_LABELS, insurancePartnerName } from "@/lib/affiliate";
@@ -27,56 +19,87 @@ import { PARTNER_LABELS, insurancePartnerName } from "@/lib/affiliate";
 // je odstranjen, ker so bili zavajajoči — odstotki so delež PARTNERJEVEGA
 // dobička (ne cene rezervacije), osnova pa se določi šele z aktivacijo
 // posameznega partnerskega računa.
-const partners = [
-  {
-    id: "cars",
-    name: PARTNER_LABELS.cars,
-    labelKey: "carsLabel",
-    icon: Car,
-    descriptionKey: "carsDesc",
-    href: "/go/cars?dest=Ljubljana",
-    ariaKey: "carsAria",
-    accent: "text-primary",
-  },
+//
+// PREMIUM-VIZ (P2): prej 10 enakih "PARTNER"-kartic v mreži (občutek
+// affiliate marketplace-a), zdaj umirjene tematske skupine (Bivanje /
+// Na pot / Doživetja / Varna pot) v urejeniških vrsticah. VSI href-i,
+// rel/atributi, aria oznake, razkritje in strežniško sledenje so
+// NESPREMENJENI — sprememba je čisto predstavitev.
+
+interface Partner {
+  id: string;
+  name: string;
+  labelKey: string;
+  descriptionKey: string;
+  href: string;
+  ariaKey: string;
+}
+
+/** Vsi partnerji — popolnoma isti href-i kot prej (sledenje nespremenjeno). */
+const partners: Partner[] = [
   {
     id: "hotels",
     name: PARTNER_LABELS.hotels,
     labelKey: "hotelsLabel",
-    icon: BedDouble,
     descriptionKey: "hotelsDesc",
     href: "/go/hotels?dest=Ljubljana",
     ariaKey: "hotelsAria",
-    accent: "text-primary",
-  },
-  {
-    id: "activities",
-    name: PARTNER_LABELS.activities,
-    labelKey: "activitiesLabel",
-    icon: Ticket,
-    descriptionKey: "activitiesDesc",
-    href: "/go/activities?dest=Bled",
-    ariaKey: "activitiesAria",
-    accent: "text-primary",
-  },
-  {
-    id: "viator",
-    name: PARTNER_LABELS.viator,
-    labelKey: "viatorLabel",
-    icon: Compass,
-    descriptionKey: "viatorDesc",
-    href: "/go/viator?dest=Bled",
-    ariaKey: "viatorAria",
-    accent: "text-primary",
   },
   {
     id: "flights",
     name: PARTNER_LABELS.flights,
     labelKey: "flightsLabel",
-    icon: Plane,
     descriptionKey: "flightsDesc",
     href: "/go/flights?dest=Ljubljana",
     ariaKey: "flightsAria",
-    accent: "text-primary",
+  },
+  {
+    id: "cars",
+    name: PARTNER_LABELS.cars,
+    labelKey: "carsLabel",
+    descriptionKey: "carsDesc",
+    href: "/go/cars?dest=Ljubljana",
+    ariaKey: "carsAria",
+  },
+  {
+    id: "transfers",
+    name: PARTNER_LABELS.transfers,
+    labelKey: "transfersLabel",
+    descriptionKey: "transfersDesc",
+    href: "/go/transfers?dest=Ljubljana",
+    ariaKey: "transfersAria",
+  },
+  {
+    id: "transport",
+    name: PARTNER_LABELS.transport,
+    labelKey: "transportLabel",
+    descriptionKey: "transportDesc",
+    href: "/go/transport?dest=Ljubljana",
+    ariaKey: "transportAria",
+  },
+  {
+    id: "activities",
+    name: PARTNER_LABELS.activities,
+    labelKey: "activitiesLabel",
+    descriptionKey: "activitiesDesc",
+    href: "/go/activities?dest=Bled",
+    ariaKey: "activitiesAria",
+  },
+  {
+    id: "viator",
+    name: PARTNER_LABELS.viator,
+    labelKey: "viatorLabel",
+    descriptionKey: "viatorDesc",
+    href: "/go/viator?dest=Bled",
+    ariaKey: "viatorAria",
+  },
+  {
+    id: "tickets",
+    name: PARTNER_LABELS.tickets,
+    labelKey: "ticketsLabel",
+    descriptionKey: "ticketsDesc",
+    href: "/go/tickets?dest=Bled",
+    ariaKey: "ticketsAria",
   },
   {
     id: "insurance",
@@ -84,51 +107,50 @@ const partners = [
     // World Nomads aktiven SafetyWing, kartica ne sme lagati o partnerju)
     name: insurancePartnerName(),
     labelKey: "insuranceLabel",
-    icon: ShieldCheck,
     descriptionKey: "insuranceDesc",
     href: "/go/insurance?days=7",
     ariaKey: "insuranceAria",
-    accent: "text-primary",
   },
   {
     id: "esim",
     name: PARTNER_LABELS.esim,
     labelKey: "esimLabel",
-    icon: Smartphone,
     descriptionKey: "esimDesc",
     href: "/go/esim",
     ariaKey: "esimAria",
-    accent: "text-primary",
+  },
+];
+
+/** Tematske skupine — vizualna struktira, ne funkcionalna. */
+const GROUPS: {
+  id: string;
+  titleKey: string;
+  icon: typeof BedDouble;
+  partnerIds: string[];
+}[] = [
+  {
+    id: "stay",
+    titleKey: "stayGroup",
+    icon: BedDouble,
+    partnerIds: ["hotels"],
   },
   {
-    id: "transfers",
-    name: PARTNER_LABELS.transfers,
-    labelKey: "transfersLabel",
-    icon: CarTaxiFront,
-    descriptionKey: "transfersDesc",
-    href: "/go/transfers?dest=Ljubljana",
-    ariaKey: "transfersAria",
-    accent: "text-primary",
+    id: "move",
+    titleKey: "moveGroup",
+    icon: Plane,
+    partnerIds: ["flights", "cars", "transfers", "transport"],
   },
   {
-    id: "transport",
-    name: PARTNER_LABELS.transport,
-    labelKey: "transportLabel",
-    icon: TrainFront,
-    descriptionKey: "transportDesc",
-    href: "/go/transport?dest=Ljubljana",
-    ariaKey: "transportAria",
-    accent: "text-primary",
+    id: "experience",
+    titleKey: "experienceGroup",
+    icon: Ticket,
+    partnerIds: ["activities", "viator", "tickets"],
   },
   {
-    id: "tickets",
-    name: PARTNER_LABELS.tickets,
-    labelKey: "ticketsLabel",
-    icon: TicketCheck,
-    descriptionKey: "ticketsDesc",
-    href: "/go/tickets?dest=Bled",
-    ariaKey: "ticketsAria",
-    accent: "text-primary",
+    id: "essentials",
+    titleKey: "essentialsGroup",
+    icon: ShieldCheck,
+    partnerIds: ["insurance", "esim"],
   },
 ];
 
@@ -136,71 +158,80 @@ export async function AffiliateSection() {
   const t = await getTranslations("affiliate");
 
   return (
-    <section id="rezerviraj" className="py-20 bg-muted/30">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <Badge variant="secondary" className="mb-3">
+    <section id="rezerviraj" className="scroll-mt-20 bg-muted/30 py-16 sm:py-20">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-[0.22em] text-primary">
             {t("badge")}
-          </Badge>
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+          </span>
+          <h2 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
             {t("title")}
           </h2>
-          <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
+          <p className="mt-3 text-balance text-base text-muted-foreground">
             {t("subtitle")}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* 10 partnerjev; isti vzorec kartice — brez novih sekcij, brez
-              spremembe vizualnega jezika */}
-          {partners.map((p) => {
-            const Icon = p.icon;
+        {/* Tematske skupine — urejeniške vrstice z las ločnicami */}
+        <div className="mt-12 space-y-10">
+          {GROUPS.map((group) => {
+            const GroupIcon = group.icon;
+            const groupPartners = group.partnerIds
+              .map((id) => partners.find((p) => p.id === id))
+              .filter((p): p is Partner => p !== undefined);
+            if (groupPartners.length === 0) return null;
             return (
-              <Card
-                key={p.id}
-                className="group hover:shadow-lg transition-shadow border-border/60"
-              >
-                <CardContent className="p-6 flex flex-col h-full">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="size-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Icon className={`size-6 ${p.accent}`} />
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {t("partnerBadge")}
-                    </Badge>
-                  </div>
-
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
-                    {t(p.labelKey)}
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">{p.name}</h3>
-                  <p className="text-sm text-muted-foreground flex-grow">
-                    {t(p.descriptionKey)}
-                  </p>
-
-                  {/* /go/ redirect — kliks se izmeri strežniško (AnalyticsEvent + funnel) */}
-                  <Button
-                    asChild
-                    className="mt-6 w-full group-hover:bg-primary/90"
-                  >
-                    <a
-                      href={p.href}
-                      target="_blank"
-                      rel="sponsored noopener noreferrer"
-                      aria-label={t(p.ariaKey)}
+              <div key={group.id}>
+                <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                  <GroupIcon className="size-4" aria-hidden="true" />
+                  {t(group.titleKey)}
+                </div>
+                <ul className="divide-y divide-border/70 border-y border-border/70">
+                  {groupPartners.map((p) => (
+                    <li
+                      key={p.id}
+                      className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
                     >
-                      {t("book")}
-                      <ExternalLink className="ml-2 size-4" />
-                    </a>
-                  </Button>
-                </CardContent>
-              </Card>
+                      <div className="min-w-0 sm:max-w-md">
+                        <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          {t(p.labelKey)}
+                        </div>
+                        <div className="mt-0.5 text-base font-semibold text-foreground">
+                          {p.name}
+                        </div>
+                        <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
+                          {t(p.descriptionKey)}
+                        </p>
+                      </div>
+
+                      {/* /go/ redirect — kliks se izmeri strežniško (AnalyticsEvent + funnel) */}
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 gap-1.5 self-start sm:self-center"
+                      >
+                        <a
+                          href={p.href}
+                          target="_blank"
+                          rel="sponsored noopener noreferrer"
+                          aria-label={t(p.ariaKey)}
+                        >
+                          {t("book")}
+                          <ExternalLink className="size-3.5" aria-hidden="true" />
+                        </a>
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             );
           })}
         </div>
 
-        {/* EU disclosure — označba partnerskih povezav */}
-        <p className="mt-8 text-center text-xs text-muted-foreground max-w-2xl mx-auto">
+        {/* EU disclosure — označba partnerskih povezav (nespremenjeno) */}
+        <p className="mt-8 text-center text-xs leading-relaxed text-muted-foreground">
           {t("disclosure")}
         </p>
       </div>
