@@ -96,6 +96,39 @@ export const HERO_CREDITS: Record<string, HeroCredit> = {
     descurl:
       "https://commons.wikimedia.org/wiki/File:Panoramic_view_of_the_Golden_Horn_beach,_Bol,_Croatia_(PPL3-Alternative_Theo_Allofs).jpg",
   },
+  // === SLO-LOOP-1 (domači krožni vodniki) ===
+  "slovenija-v-7-dneh": {
+    title: "Soča River Panorama",
+    author: "MarcusObal",
+    license: "CC BY-SA 3.0",
+    source: "Wikimedia Commons",
+    descurl:
+      "https://commons.wikimedia.org/wiki/File:So%C4%8Da_River_Panorama.jpg",
+  },
+  "slovenija-v-10-dneh": {
+    title: "Piran harbour with the church of St. George",
+    author: "Isiwal",
+    license: "CC BY-SA 4.0",
+    source: "Wikimedia Commons",
+    descurl:
+      "https://commons.wikimedia.org/wiki/File:Piran_harbour_Tartini_trg.jpg",
+  },
+  "slovenija-vikend": {
+    title: "Ljubljana Castle From Three Bridge",
+    author: "RajashreeTalukadar",
+    license: "CC BY-SA 4.0",
+    source: "Wikimedia Commons",
+    descurl:
+      "https://commons.wikimedia.org/wiki/File:Ljubljana_Castle_From_Three_Bridge.jpg",
+  },
+  "slovenija-z-otroki": {
+    title: "Pletna on lake Bled",
+    author: "Naturpuur",
+    license: "CC BY 4.0",
+    source: "Wikimedia Commons",
+    descurl:
+      "https://commons.wikimedia.org/wiki/File:Pletna_on_lake_Bled,_Slovenia.jpg",
+  },
 };
 
 /** Vrne atribucijo za slug (ali undefined). */

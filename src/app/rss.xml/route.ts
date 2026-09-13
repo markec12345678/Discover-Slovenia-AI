@@ -11,7 +11,7 @@
 // URL-ji so gostitelju-prilagojeni (allowlist).
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
-import { ADRIA_GUIDES } from "@/lib/adria-guides";
+import { ADRIA_GUIDES, isSloveniaLoop } from "@/lib/adria-guides";
 import { resolveBaseUrl } from "@/lib/host";
 import {
   GUIDE_TYPES,
@@ -73,7 +73,8 @@ export async function GET(req: Request) {
     }
   }
 
-  // Jadranski vodniki (ADRIA-1) — edini itemi s pubDate (resničen datum objave)
+  // Vodniki — edini itemi s pubDate (resničen datum objave vsebine)
+  // (ADRIA-1 jadranski + SLO-LOOP-1 domači krožni)
   for (const g of ADRIA_GUIDES) {
     items.push(
       [
@@ -82,7 +83,7 @@ export async function GET(req: Request) {
         `      <link>${xmlEscape(`${base}/vodici/${g.slug}`)}</link>`,
         `      <guid>${xmlEscape(`${base}/vodici/${g.slug}`)}</guid>`,
         `      <description>${xmlEscape(g.description)}</description>`,
-        `      <category>Jadranski vodnik</category>`,
+        `      <category>${xmlEscape(isSloveniaLoop(g) ? "Vodič po Sloveniji" : "Jadranski vodnik")}</category>`,
         `      <pubDate>${rfc822(new Date(`${g.date}T12:00:00Z`))}</pubDate>`,
         "    </item>",
       ].join("\n"),
@@ -95,7 +96,7 @@ export async function GET(req: Request) {
     "  <channel>\n" +
     "    <title>Discover Slovenia AI — vodniki po Sloveniji</title>\n" +
     `    <link>${xmlEscape(base)}</link>\n` +
-    "    <description>AI načrtovalec potovanj po Sloveniji: destinacije, itinererji, vodniki, kaj početi, najboljši čas obiska in jadranska potovanja.</description>\n" +
+    "    <description>AI načrtovalec potovanj po Sloveniji: destinacije, itinererji, vodniki, kaj početi, najboljši čas obiska, krožna potovanja po Sloveniji in jadranska potovanja.</description>\n" +
     "    <language>sl-si</language>\n" +
     `    <lastBuildDate>${rfc822(new Date())}</lastBuildDate>\n` +
     `    <atom:link href="${xmlEscape(`${base}/rss.xml`)}" rel="self" type="application/rss+xml" xmlns:atom="http://www.w3.org/2005/Atom"/>\n` +

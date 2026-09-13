@@ -10,8 +10,8 @@ import { BlogSection } from "@/components/sections/blog";
 import { AskLocal } from "@/components/sections/ask-local";
 import { Reveal } from "@/components/reveal";
 import { Badge } from "@/components/ui/badge";
-import { ADRIA_GUIDES } from "@/lib/adria-guides";
-import { ADRIA_GUIDES_EN } from "@/lib/adria-guides-en";
+import { ADRIA_GUIDES, SLOVENIA_LOOP_GUIDES } from "@/lib/adria-guides";
+import { ADRIA_GUIDES_EN, SLOVENIA_LOOP_GUIDES_EN } from "@/lib/adria-guides-en";
 import { currentBaseUrl } from "@/lib/host";
 import { localePrefix } from "@/i18n/routing";
 import { hreflangForPath } from "@/components/seo";
@@ -19,15 +19,14 @@ import { Link } from "@/i18n/navigation";
 
 /**
  * /vodici — vodiči in nasveti (FW3: AI-first hierarhija; ADRIA-1: jadranski
- * wedge; ADRIA-EN: EN različica).
+ * wedge; ADRIA-EN: EN različica; SLO-LOOP-1: domači krožni vodniki).
  *
- * Blog (zgodbe in vodičniki s filtri po kategorijah) je preseljen s
- * homepagea. Nad njim je "Jadranska potovanja" (ADRIA-1): cross-border
- * vodniki, ki iz slovenske blagovne znamke zajamejo jadranske poizvedbe.
- * Pod njim je "Vprašaj lokalca" — za obiskovalce, ki raje vprašajo kot
- * iščejo.
+ * Nad blogom sta zdaj DVA uredniška bloka vodnikov: najprej "Slovenija v
+ * enem krogu" (SLO-LOOP-1: 4 domači krožni vodniki — 7/10 dni, vikend,
+ * družinski krog), nato "Jadranska potovanja" (ADRIA-1: 10 cross-border
+ * vodnikov). Pod njima Blog + "Vprašaj lokalca".
  *
- * ADRIA-EN: na EN se izriše glava + jadranski vodniki (full prevodi);
+ * ADRIA-EN: na EN se izriše glava + oba seznama vodnikov (full prevodi);
  * BlogSection in AskLocal (slovenska uredniška/DB vsebina) se NE izrišeta
  * (P4-8: nikoli mešanja jezikov).
  */
@@ -42,6 +41,54 @@ const COUNTRY_FLAG: Record<string, string> = {
 
 function fmtKm(km: number, locale: string): string {
   return km.toLocaleString(locale === "en" ? "en-GB" : "sl-SI");
+}
+
+/** Kartica vodnika na seznamu (skupna za domače kroge in jadranske). */
+function GuideCard({
+  g,
+  locale,
+  countriesAria,
+  readMore,
+}: {
+  g: (typeof ADRIA_GUIDES)[number];
+  locale: string;
+  countriesAria: string;
+  readMore: string;
+}) {
+  return (
+    <Link
+      href={`/vodici/${g.slug}`}
+      className="group flex h-full flex-col rounded-xl border bg-background p-5 transition-colors hover:border-primary/40 hover:shadow-sm"
+    >
+      <div
+        className="mb-2 flex items-center gap-1.5 text-lg"
+        aria-label={countriesAria}
+      >
+        {g.countries.map((c) => (
+          <span key={c}>{COUNTRY_FLAG[c]}</span>
+        ))}
+      </div>
+      <h3 className="font-semibold leading-snug group-hover:text-primary">
+        {g.metaTitle}
+      </h3>
+      <p className="mt-2 line-clamp-3 flex-1 text-sm leading-relaxed text-muted-foreground">
+        {g.excerpt}
+      </p>
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t pt-3 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1">
+          <Calendar className="size-3.5 text-primary" aria-hidden="true" />
+          {g.days} {locale === "en" ? (g.days === 1 ? "day" : "days") : g.days === 1 ? "dan" : "dni"}
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Route className="size-3.5 text-primary" aria-hidden="true" />
+          {fmtKm(g.km, locale)} km
+        </span>
+        <span className="ml-auto font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+          {readMore}
+        </span>
+      </div>
+    </Link>
+  );
 }
 
 const PATH = "/vodici";
@@ -64,6 +111,7 @@ export default async function GuidesPage() {
   const t = await getTranslations("vodiciPage");
   const locale = await getLocale();
   const guides = locale === "en" ? ADRIA_GUIDES_EN : ADRIA_GUIDES;
+  const loops = locale === "en" ? SLOVENIA_LOOP_GUIDES_EN : SLOVENIA_LOOP_GUIDES;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -95,10 +143,46 @@ export default async function GuidesPage() {
           </div>
         </section>
 
+        {/* Slovenija v enem krogu — domači vodniki (SLO-LOOP-1) */}
+        <section
+          aria-labelledby="sloops-list-title"
+          className="bg-accent/40 py-12 sm:py-16"
+        >
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-8 text-center">
+              <Badge variant="outline" className="mb-4 gap-1.5 px-3 py-1 text-xs">
+                <Compass className="size-3.5 text-primary" aria-hidden="true" />
+                🇸🇮 {t("loops.badge")}
+              </Badge>
+              <h2
+                id="sloops-list-title"
+                className="text-balance text-2xl font-bold tracking-tight sm:text-3xl"
+              >
+                {t("loops.title")}
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-balance text-sm text-muted-foreground sm:text-base">
+                {t("loops.description")}
+              </p>
+            </div>
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {loops.map((g) => (
+                <li key={g.slug}>
+                  <GuideCard
+                    g={g}
+                    locale={locale}
+                    countriesAria={t("loops.countriesAria")}
+                    readMore={t("loops.readMore")}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
         {/* Jadranska potovanja — cross-border vodniki (ADRIA-1 / ADRIA-EN) */}
         <section
           aria-labelledby="adria-list-title"
-          className="bg-accent/40 py-12 sm:py-16"
+          className="py-12 sm:py-16"
         >
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div className="mb-8 text-center">
@@ -119,40 +203,14 @@ export default async function GuidesPage() {
             <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {guides.map((g) => (
                 <li key={g.slug}>
-                  <Link
-                    href={`/vodici/${g.slug}`}
-                    className="group flex h-full flex-col rounded-xl border bg-background p-5 transition-colors hover:border-primary/40 hover:shadow-sm"
-                  >
-                    <div
-                      className="mb-2 flex items-center gap-1.5 text-lg"
-                      aria-label={t("adria.countriesAria", {
-                        countries: g.countries.join(", "),
-                      })}
-                    >
-                      {g.countries.map((c) => (
-                        <span key={c}>{COUNTRY_FLAG[c]}</span>
-                      ))}
-                    </div>
-                    <h3 className="font-semibold leading-snug group-hover:text-primary">
-                      {g.metaTitle}
-                    </h3>
-                    <p className="mt-2 line-clamp-3 flex-1 text-sm leading-relaxed text-muted-foreground">
-                      {g.excerpt}
-                    </p>
-                    <div className="mt-4 flex flex-wrap items-center gap-3 border-t pt-3 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1">
-                        <Calendar className="size-3.5 text-primary" aria-hidden="true" />
-                        {g.days} {locale === "en" ? (g.days === 1 ? "day" : "days") : g.days === 1 ? "dan" : "dni"}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Route className="size-3.5 text-primary" aria-hidden="true" />
-                        {fmtKm(g.km, locale)} km
-                      </span>
-                      <span className="ml-auto font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                        {t("adria.readMore")}
-                      </span>
-                    </div>
-                  </Link>
+                  <GuideCard
+                    g={g}
+                    locale={locale}
+                    countriesAria={t("adria.countriesAria", {
+                      countries: g.countries.join(", "),
+                    })}
+                    readMore={t("adria.readMore")}
+                  />
                 </li>
               ))}
             </ul>

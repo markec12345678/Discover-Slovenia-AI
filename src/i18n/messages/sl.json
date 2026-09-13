@@ -1384,6 +1384,7 @@
     "route": {
       "title": "Pot na kratko",
       "intro": "{days}-{daysWord} ruta prek {count} {countryWord} — {km} kilometrov skupaj.",
+      "introLoop": "{days}-dnevni krog po Sloveniji — {km} kilometrov skupaj.",
       "nightsOne": "nočitev",
       "nightsTwo": "nočitvi",
       "nightsFew": "nočitve",
@@ -1402,24 +1403,39 @@
       "body": "Preden se odpravite na jug, si sestavite slovenski del poti — naš AI pripravi itinerer od Blejskega jezera do Pirana, prilagojen proračunu in sezoni.",
       "button": "AI načrtovalec potovanj"
     },
+    "aiCtaLoop": {
+      "title": "Krog po meri",
+      "body": "Ta krog je izhodišče — naš AI pripravi itinerer po Sloveniji, prilagojen vašemu proračunu, sezoni in dnevu odhoda.",
+      "button": "AI načrtovalec potovanj"
+    },
     "related": {
       "title": "Druga jadranska potovanja",
+      "titleLoop": "Povezana potovanja",
       "meta": "{days} {daysWord} · {km} km"
     },
     "slovenia": {
       "title": "Slovenska stran poti",
-      "description": "Postaje v Sloveniji s tega potovanja — vodiči, aktivnosti in praktični nasveti."
+      "description": "Postaje v Sloveniji s tega potovanja — vodiči, aktivnosti in praktični nasveti.",
+      "titleLoop": "Destinacije na krogu",
+      "descriptionLoop": "Vse postaje s kroga — vodiči, aktivnosti in praktični nasveti za vsako."
     }
   },
   "vodiciPage": {
     "meta": {
       "title": "Vodiči in nasveti za Slovenijo",
-      "description": "Kaj početi na Bledu, 3 dni v Sloveniji, najlepši izleti in lokalna hrana — vodiči, nasveti, jadranska potovanja in odgovori lokalcev."
+      "description": "Kaj početi na Bledu, 3 dni v Sloveniji, najlepši izleti in lokalna hrana — vodiči, nasveti, krožna potovanja po Sloveniji, jadranski road tripi in odgovori lokalcev."
     },
     "badge": "Vodiči",
     "title": "Vodiči in nasveti za Slovenijo",
     "intro": "Kaj početi na Bledu, kako preživeti 3 dni po Sloveniji, najlepši izleti in kje jesti lokalno — vodiči, nasveti in odgovori lokalcev.",
     "editorsLine": "Zgodbe in nasveti urednikov · Vprašajte lokalce",
+    "loops": {
+      "badge": "Domači krog",
+      "title": "Slovenija v enem krogu",
+      "description": "Krožna potovanja po Sloveniji z lastnim avtom — teden ali deset dni po Alpah, Soči, Krasu in obali, vikend Ljubljana–Bled in družinski krog z otroki: poti, vinjeta, vstopnine in kje spati.",
+      "countriesAria": "Krožno potovanje po Sloveniji",
+      "readMore": "Preberi →"
+    },
     "adria": {
       "badge": "Cross-border",
       "title": "Jadranska potovanja iz Slovenije",

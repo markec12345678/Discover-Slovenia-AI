@@ -9,8 +9,8 @@
 // in ni možnega razhajanja.
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
-import { ADRIA_GUIDES, COUNTRY_LABELS } from "@/lib/adria-guides";
-import { ADRIA_GUIDES_EN, COUNTRY_LABELS_EN } from "@/lib/adria-guides-en";
+import { ADRIA_GUIDES, SLOVENIA_LOOP_GUIDES, COUNTRY_LABELS } from "@/lib/adria-guides";
+import { ADRIA_GUIDES_EN, SLOVENIA_LOOP_GUIDES_EN, COUNTRY_LABELS_EN } from "@/lib/adria-guides-en";
 import { resolveBaseUrl } from "@/lib/host";
 import {
   GUIDE_TYPES,
@@ -102,8 +102,29 @@ export async function GET(req: Request) {
   });
   parts.push(destSections.join("\n"));
 
+  // === Krožna potovanja po Sloveniji (SLO-LOOP-1: srednje-globoki profili) ===
+  const loopSections = SLOVENIA_LOOP_GUIDES.map((g) => {
+    const lines = [
+      `## Krožno potovanje po Sloveniji: ${g.metaTitle}`,
+      "",
+      g.excerpt,
+      "",
+      `- Države: ${g.countries.map((c) => COUNTRY_LABELS[c] ?? c).join(", ")}`,
+      `- Trajanje: ${g.days} dni · ${g.km} km · branje ${g.readTime} min`,
+      `- Pot: ${g.route}`,
+      `- Postaje: ${g.stops.map((s) => s.name + " (" + s.country + (s.nights > 0 ? ", " + s.nights + " noči" : "") + ")").join("; ")}`,
+      `- URL: ${base}/vodici/${g.slug}`,
+      "",
+      "Praktično:",
+      ...g.practical.map((p) => `- ${p.title}: ${p.text}`),
+      "",
+    ];
+    return lines.join("\n");
+  });
+  parts.push(loopSections.join("\n"));
+
   // === Jadranska potovanja (ADRIA-1: cross-border, srednje-globoki profili) ===
-  const adriaSections = ADRIA_GUIDES.map((g) => {
+  const adriaSections = ADRIA_GUIDES.filter((g) => g.countries.length > 1 || g.countries[0] !== "SI").map((g) => {
     const lines = [
       `## Jadransko potovanje: ${g.metaTitle}`,
       "",
@@ -123,8 +144,29 @@ export async function GET(req: Request) {
   });
   parts.push(adriaSections.join("\n"));
 
+  // === Slovenia loops (SLO-LOOP-EN: angleški profili za agente) ===
+  const loopEnSections = SLOVENIA_LOOP_GUIDES_EN.map((g) => {
+    const lines = [
+      `## Slovenia loop (EN): ${g.metaTitle}`,
+      "",
+      g.excerpt,
+      "",
+      `- Countries: ${g.countries.map((c) => COUNTRY_LABELS_EN[c] ?? c).join(", ")}`,
+      `- Duration: ${g.days} days · ${g.km.toLocaleString("en-GB")} km · ${g.readTime} min read`,
+      `- Route: ${g.route}`,
+      `- Stops: ${g.stops.map((s) => s.name + " (" + s.country + (s.nights > 0 ? ", " + s.nights + " nights" : "") + ")").join("; ")}`,
+      `- URL: ${base}/en/vodici/${g.slug}`,
+      "",
+      "Practical:",
+      ...g.practical.map((p) => `- ${p.title}: ${p.text}`),
+      "",
+    ];
+    return lines.join("\n");
+  });
+  parts.push(loopEnSections.join("\n"));
+
   // === Adriatic road trips (ADRIA-EN: angleški profili za agente) ===
-  const adriaEnSections = ADRIA_GUIDES_EN.map((g) => {
+  const adriaEnSections = ADRIA_GUIDES_EN.filter((g) => g.countries.length > 1 || g.countries[0] !== "SI").map((g) => {
     const lines = [
       `## Adriatic road trip (EN): ${g.metaTitle}`,
       "",

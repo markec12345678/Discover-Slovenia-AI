@@ -1,8 +1,9 @@
 /**
- * ADRIA-EN — validacijska skripta: pariteta SL ⇄ EN jadranskih vodnikov.
+ * ADRIA-EN + SLO-LOOP — validacijska skripta: pariteta SL ⇄ EN vodnikov
+ * (10 jadranskih + 4 domači krožni od SLO-LOOP-1).
  *
  * Preverja (izvoz "FAIL" + nenizčen exit):
- *  1. vrstni red slugov = ADRIA_SLUGS (obed datasets, 10 kosov)
+ *  1. vrstni red slugov = ADRIA_SLUGS (oba dataset-a, 14 kosov)
  *  2. strukturna identiteta: days, km, readTime, date, author, heroImage,
  *     countries, route, stops (ime+država+nočitve), relatedSlugs,
  *     relatedSloveniaIds, št. sekcij/practical/FAQ
@@ -11,14 +12,20 @@
  *     vrednosti (dnev/km/readTime izpisane v EN besedilu)
  *  5. hevristični sken slovenskih besed v EN besedilu (funkcijske besede,
  *     ki se v angleščini ne pojavljajo)
+ *  6. SLO-LOOP: vsota nočitev = days − 1; relatedSlugs veljavni
  *
  * Uporaba: bun scripts/validate-adria-en.ts
  */
 import { ADRIA_GUIDES } from "../src/lib/adria-guides";
 import { ADRIA_GUIDES_EN } from "../src/lib/adria-guides-en";
 import { ADRIA_SLUGS } from "../src/lib/adria-guides/types";
+import { DESTINATIONS } from "../src/lib/slovenia-data";
 
 type Guide = (typeof ADRIA_GUIDES)[number];
+
+const EXPECTED = ADRIA_SLUGS.length; // 10 jadranskih + 4 domači (SLO-LOOP-1)
+const SLUG_SET = new Set<string>(ADRIA_SLUGS);
+const DEST_IDS = new Set(DESTINATIONS.map((d) => d.id));
 
 let errors = 0;
 function fail(msg: string) {
@@ -27,8 +34,8 @@ function fail(msg: string) {
 }
 
 // --- 1. slugi v vrstnem redu ---
-if (ADRIA_GUIDES.length !== 10) fail(`SL dataset ima ${ADRIA_GUIDES.length} vodnikov, pričakovanih 10`);
-if (ADRIA_GUIDES_EN.length !== 10) fail(`EN dataset ima ${ADRIA_GUIDES_EN.length} vodnikov, pričakovanih 10`);
+if (ADRIA_GUIDES.length !== EXPECTED) fail(`SL dataset ima ${ADRIA_GUIDES.length} vodnikov, pričakovanih ${EXPECTED}`);
+if (ADRIA_GUIDES_EN.length !== EXPECTED) fail(`EN dataset ima ${ADRIA_GUIDES_EN.length} vodnikov, pričakovanih ${EXPECTED}`);
 ADRIA_SLUGS.forEach((slug, i) => {
   if (ADRIA_GUIDES[i]?.slug !== slug) fail(`SL[${i}] slug "${ADRIA_GUIDES[i]?.slug}" ≠ ADRIA_SLUGS "${slug}"`);
   if (ADRIA_GUIDES_EN[i]?.slug !== slug) fail(`EN[${i}] slug "${ADRIA_GUIDES_EN[i]?.slug}" ≠ ADRIA_SLUGS "${slug}"`);
@@ -62,6 +69,12 @@ for (let i = 0; i < ADRIA_SLUGS.length; i++) {
   for (const k of ["sections", "practical", "faqs"] as const) {
     if (sl[k].length !== en[k].length) fail(`${tag} ${k}: SL ${sl[k].length} ≠ EN ${en[k].length}`);
   }
+
+  // --- 6. SLO-LOOP: nočitve + veljavnost related ---
+  const nightsSum = sl.stops.reduce((a, s) => a + s.nights, 0);
+  if (nightsSum !== sl.days - 1) fail(`${tag} vsota nočitev ${nightsSum} ≠ days−1 (${sl.days - 1})`);
+  for (const rs of sl.relatedSlugs) if (!SLUG_SET.has(rs)) fail(`${tag} relatedSlug "${rs}" ni v ADRIA_SLUGS`);
+  for (const rid of sl.relatedSloveniaIds) if (!DEST_IDS.has(rid)) fail(`${tag} relatedSloveniaId "${rid}" ni veljaven ID destinacije`);
 
   // --- 3. EN tekstne higiene ---
   const textFields = [en.title, en.metaTitle, en.description, en.excerpt, en.heroAlt];
@@ -126,4 +139,4 @@ if (errors > 0) {
   console.error(`\nADRIA-EN VALIDACIJA: ${errors} NAPAK`);
   process.exit(1);
 }
-console.log("ADRIA-EN VALIDACIJA: 10/10 vodnikov OK — pariteta SL ⇄ EN, tekstne higiene in hevristika čisti.");
+console.log(`ADRIA-EN VALIDACIJA: ${EXPECTED}/${EXPECTED} vodnikov OK — pariteta SL ⇄ EN, tekstne higiene, nočitve in hevristika čisti.`);

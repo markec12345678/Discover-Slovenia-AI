@@ -53,6 +53,8 @@ export interface AdriaGuide {
 }
 
 // Vsi slugi v valu ADRIA-1 (fiksni vrstni red po pomembnosti).
+// SLO-LOOP-1 (2026): +4 domači krožni vodniki po Sloveniji (ist format,
+// ista infrastruktura /vodici/[slug]; countries = ["SI"]).
 export const ADRIA_SLUGS = [
   "ljubljana-dubrovnik-road-trip",
   "slovenija-hrvaska-10-dni",
@@ -64,6 +66,10 @@ export const ADRIA_SLUGS = [
   "albanija-z-avtom-iz-slovenije",
   "sarajevo-mostar-iz-slovenije",
   "hrvaski-otoki-iz-slovenije",
+  "slovenija-v-7-dneh",
+  "slovenija-v-10-dneh",
+  "slovenija-vikend",
+  "slovenija-z-otroki",
 ] as const;
 
 export type AdriaSlug = (typeof ADRIA_SLUGS)[number];

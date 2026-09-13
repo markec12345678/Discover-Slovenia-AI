@@ -18,6 +18,7 @@ import {
   ADRIA_GUIDES,
   getAdriaGuideBySlug,
   getRelatedAdriaGuides,
+  isSloveniaLoop,
   COUNTRY_LABELS,
 } from "@/lib/adria-guides";
 import { ADRIA_GUIDES_EN, getAdriaGuideBySlugEn, COUNTRY_LABELS_EN } from "@/lib/adria-guides-en";
@@ -39,15 +40,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 /**
- * /vodici/[slug] — jadranski (cross-border) vodniki (ADRIA-1, ADRIA-EN).
+ * /vodici/[slug] — vodniki: 10 jadranskih (ADRIA-1, ADRIA-EN) + 4 domači
+ * krožni po Sloveniji (SLO-LOOP-1).
  *
- * PRAVE SSR strani (ne modal): 10 vodnikov ~100 strani vsebine, ki iz
- * obstoječe blagovne znamke zajamejo jadranske poizvedbe (HR/BA/ME/AL)
- * in prek povezav vračajo promet v slovenski del platforme.
+ * PRAVE SSR strani (ne modal): ~100 strani vsebine, ki iz obstoječe
+ * blagovne znamke zajamejo jadranske poizvedbe (HR/BA/ME/AL) in — od
+ * SLO-LOOP-1 — tudi domače poizvedbe ("Slovenija v 7 dneh", "vikend na
+ * Bledu", "Slovenija z otroki"), ter prek povezav vračajo promet v jedro.
  *
  * ADRIA-EN: EN različice (full prevodi, isti slugi) živijo na
  * /en/vodici/[slug] — dataset izbira getLocale(); UI krom prek
  * adriaGuidePage fragmenta; povezave prek LocaleLink (auto /en prefix).
+ *
+ * SLO-LOOP-1: za domače kroge (countries = ["SI"]) se uporabijo Loop
+ * različice UI besedil (route.introLoop, related.titleLoop, aiCtaLoop,
+ * slovenia.titleLoop) — vse prek isSloveniaLoop(guide).
  */
 
 const COUNTRY_FLAG: Record<string, string> = {
@@ -153,6 +160,8 @@ export default async function AdriaGuidePage({
 
   const t = await getTranslations("adriaGuidePage");
   const labels = locale === "en" ? COUNTRY_LABELS_EN : COUNTRY_LABELS;
+  // SLO-LOOP-1: domači krog (countries = ["SI"]) → Loop različice UI besedil
+  const isLoop = isSloveniaLoop(guide);
 
   const base = await currentBaseUrl();
   const path = `/vodici/${guide.slug}`;
@@ -284,13 +293,18 @@ export default async function AdriaGuidePage({
           <section aria-labelledby="adria-route" className="mb-12">
             <h2 id="adria-route" className="mb-2 text-2xl font-bold">{t("route.title")}</h2>
             <p className="mb-6 text-muted-foreground">
-              {t("route.intro", {
-                days: guide.days,
-                daysWord: daysLabel(guide.days, locale),
-                count: guide.countries.length,
-                countryWord: countryWord(guide.countries.length, locale),
-                km: fmtKm(guide.km, locale),
-              })}
+              {isLoop
+                ? t("route.introLoop", {
+                    days: guide.days,
+                    km: fmtKm(guide.km, locale),
+                  })
+                : t("route.intro", {
+                    days: guide.days,
+                    daysWord: daysLabel(guide.days, locale),
+                    count: guide.countries.length,
+                    countryWord: countryWord(guide.countries.length, locale),
+                    km: fmtKm(guide.km, locale),
+                  })}
             </p>
             <ol className="relative">
               {guide.stops.map((stop, i) => (
@@ -396,14 +410,16 @@ export default async function AdriaGuidePage({
 
           {/* CTA: AI itinerer — vrača promet v jedro platforme */}
           <section className="mt-12 rounded-2xl border border-primary/30 bg-primary/5 p-8 text-center">
-            <h2 className="mb-3 text-2xl font-bold">{t("aiCta.title")}</h2>
+            <h2 className="mb-3 text-2xl font-bold">
+              {isLoop ? t("aiCtaLoop.title") : t("aiCta.title")}
+            </h2>
             <p className="mx-auto mb-5 max-w-xl text-muted-foreground">
-              {t("aiCta.body")}
+              {isLoop ? t("aiCtaLoop.body") : t("aiCta.body")}
             </p>
             <Button asChild size="lg">
               <Link href="/nacrtuj">
                 <Ticket className="mr-2 size-4" aria-hidden="true" />
-                {t("aiCta.button")}
+                {isLoop ? t("aiCtaLoop.button") : t("aiCta.button")}
                 <ArrowRight className="ml-2 size-4" aria-hidden="true" />
               </Link>
             </Button>
@@ -412,7 +428,9 @@ export default async function AdriaGuidePage({
           {/* Sorodni jadranski vodniki */}
           {related.length > 0 && (
             <section aria-labelledby="adria-related" className="mt-12">
-              <h2 id="adria-related" className="mb-6 text-2xl font-bold">{t("related.title")}</h2>
+              <h2 id="adria-related" className="mb-6 text-2xl font-bold">
+                {isLoop ? t("related.titleLoop") : t("related.title")}
+              </h2>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {related.map((r) => {
                   const rGuide =
@@ -449,10 +467,10 @@ export default async function AdriaGuidePage({
           {sloveniaDests.length > 0 && (
             <section aria-labelledby="adria-slo" className="mt-12">
               <h2 id="adria-slo" className="mb-2 text-2xl font-bold">
-                {t("slovenia.title")}
+                {isLoop ? t("slovenia.titleLoop") : t("slovenia.title")}
               </h2>
               <p className="mb-6 text-muted-foreground">
-                {t("slovenia.description")}
+                {isLoop ? t("slovenia.descriptionLoop") : t("slovenia.description")}
               </p>
               <div className="flex flex-wrap gap-2">
                 {sloveniaDests.map((d) => (

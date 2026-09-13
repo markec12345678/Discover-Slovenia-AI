@@ -1384,6 +1384,7 @@
     "route": {
       "title": "The route at a glance",
       "intro": "A {days}-day route across {count} {countryWord} — {km} kilometres in total.",
+      "introLoop": "A {days}-day loop around Slovenia — {km} kilometres in total.",
       "nightsOne": "night",
       "nightsTwo": "nights",
       "nightsFew": "nights",
@@ -1402,24 +1403,39 @@
       "body": "Before you head south, put together the Slovenian leg of your trip — our AI builds an itinerary from Lake Bled to Piran, tailored to your budget and the season.",
       "button": "AI travel planner"
     },
+    "aiCtaLoop": {
+      "title": "A loop made to measure",
+      "body": "This loop is only the starting point — our AI builds a Slovenia itinerary around your budget, the season and your departure day.",
+      "button": "AI travel planner"
+    },
     "related": {
       "title": "More Adriatic road trips",
+      "titleLoop": "Related trips",
       "meta": "{days} {daysWord} · {km} km"
     },
     "slovenia": {
       "title": "The Slovenian leg of the trip",
-      "description": "The Slovenian stops on this route — guides, activities and practical tips."
+      "description": "The Slovenian stops on this route — guides, activities and practical tips.",
+      "titleLoop": "Destinations on the loop",
+      "descriptionLoop": "Every stop on the loop — guides, activities and practical tips for each."
     }
   },
   "vodiciPage": {
     "meta": {
       "title": "Slovenia travel guides and tips",
-      "description": "What to do at Lake Bled, 3 days in Slovenia, the best trips and local food — travel guides, tips, Adriatic road trips and answers from locals."
+      "description": "What to do at Lake Bled, 3 days in Slovenia, the best trips and local food — guides, tips, loops around Slovenia, Adriatic road trips and answers from locals."
     },
     "badge": "Guides",
     "title": "Slovenia travel guides and tips",
     "intro": "What to do at Lake Bled, how to spend 3 days in Slovenia, the finest trips and where to eat like a local — guides, tips and answers from the people who live here.",
     "editorsLine": "Editorial stories and tips · Ask the locals",
+    "loops": {
+      "badge": "Domestic loop",
+      "title": "Slovenia in one loop",
+      "description": "Circular road trips around Slovenia with your own car — a week or ten days across the Alps, the Soča, the Karst and the coast, a Ljubljana–Bled weekend and a family loop with kids: routes, e-vignette, tickets and where to sleep.",
+      "countriesAria": "A circular trip around Slovenia",
+      "readMore": "Read →"
+    },
     "adria": {
       "badge": "Cross-border",
       "title": "Adriatic road trips from Slovenia",
