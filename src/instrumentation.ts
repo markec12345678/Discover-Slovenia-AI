@@ -1,5 +1,6 @@
 // Next.js instrumentation — teče ENKRAT ob zagonu strežnika (pred prvo zahtevo).
-// Uporablja se za pripravo Vercel demo baze (Faza 4e).
+// Uporablja se za pripravo Vercel demo baze (Faza 4e) in za enkratne
+// startup migracije podatkov (npr. tržne slike, spodaj).
 //
 // Vercel serverless ne more poganjati trajne SQLite baze:
 //   - datotečni sistem lambde je EPHEMEREN (piše izginejo ob hladnem zagonu),
@@ -23,6 +24,34 @@ export async function register() {
   // Instrumentacija teče tudi v edge runtimu — SQLite/Prisma samo za nodejs.
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
+  await prepareVercelDemoDb();
+
+  // Startup migracija tržnih slik (tržni val, sept 2026) — popravi demo
+  // kartice v OBSTOJEČIH bazah (Render Docker volumen / Vercel demo / dev).
+  // Idempotentna, fail-open, izklop z DSA_DISABLE_IMAGE_MIGRATION=1.
+  // Glej src/lib/marketplace-image-migration.ts za podrobnosti.
+  if (process.env.DSA_DISABLE_IMAGE_MIGRATION !== "1") {
+    try {
+      const { migrateMarketplaceImages } = await import(
+        "./lib/marketplace-image-migration"
+      );
+      const r = await migrateMarketplaceImages();
+      const total = r.listingsUpdated + r.experiencesUpdated + r.productsUpdated;
+      if (total > 0) {
+        console.log(
+          `[instrumentation] Tržne slike migrirane: ${r.listingsUpdated} lokalov, ` +
+            `${r.experiencesUpdated} doživetij, ${r.productsUpdated} izdelkov` +
+            ` (${r.skipped} preskočenih — brez CDN slik ali neznanih slugov)`
+        );
+      }
+    } catch (error) {
+      // Fail-open: migracija NE sme podreti zagona strežnika.
+      console.error("[instrumentation] Migracija tržnih slik ni uspela:", error);
+    }
+  }
+}
+
+async function prepareVercelDemoDb() {
   // Samo Vercel serverless (VERCEL=1 je v buildu IN v runtime okolju).
   if (process.env.VERCEL !== "1") return;
 

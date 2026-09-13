@@ -30,30 +30,13 @@ const db = new PrismaClient();
 
 const DEMO_DOMAIN = "@demo.discoverslovenia.si";
 
-// Slike — isti CDN kot src/lib/slovenia-data.ts (provjerjene, javno dostopne)
-const IMG = [
-  "https://sfile.chatglm.cn/images-ppt/807d1fbe824a.jpg",
-  "https://sfile.chatglm.cn/images-ppt/ac493803c4e0.jpg",
-  "https://sfile.chatglm.cn/images-ppt/06a0b01bbd2d.jpg",
-  "https://sfile.chatglm.cn/images-ppt/0e69d67205a0.jpg",
-  "https://sfile.chatglm.cn/images-ppt/1ca2f342127f.jpg",
-  "https://sfile.chatglm.cn/images-ppt/217561ec8261.jpg",
-  "https://sfile.chatglm.cn/images-ppt/4214e73010ea.jpg",
-  "https://sfile.chatglm.cn/images-ppt/5f720abe0af2.jpg",
-  "https://sfile.chatglm.cn/images-ppt/76344bd842e2.jpg",
-  "https://sfile.chatglm.cn/images-ppt/824e16866694.jpg",
-  "https://sfile.chatglm.cn/images-ppt/8f3aa8e1a6c3.jpg",
-  "https://sfile.chatglm.cn/images-ppt/9cd8cbe421b4.jpg",
-  "https://sfile.chatglm.cn/images-ppt/a50accb13d5e.jpg",
-  "https://sfile.chatglm.cn/images-ppt/b44193c1c8f2.jpg",
-  "https://sfile.chatglm.cn/images-ppt/bfc1494a06a6.jpg",
-  "https://sfile.chatglm.cn/images-ppt/ce5079515d70.jpg",
-  "https://sfile.chatglm.cn/images-ppt/e3f47a3c4190.jpg",
-  "https://sfile.chatglm.cn/images-ppt/e63eaac243b6.jpg",
-  "https://sfile.chatglm.cn/images-ppt/f1fdf5ca02fe.jpg",
-  "https://sfile.chatglm.cn/images-ppt/03fcfaa925cc.jpg",
-];
-const img = (...idx: number[]) => JSON.stringify(idx.map((i) => IMG[i % IMG.length]));
+// Slike — AI-generirane, VLM-potrjeno ujemanje z opisom entitete (tržni val,
+// sept 2026). Prejšnja različica je dodeljevala slike PO INDEKSU iz skupnega
+// CDN seznama → kartice so prikazovale napačne vnose (npr. kavarna z gozdno
+// slike Dravograda, kajak tura z goro Triglav). Lokalne datoteke v
+// public/content/marketplace/ (brez CDN odvisnosti; AI-generirano, ne CC).
+const MKT = (id: string) => `/content/marketplace/${id}.jpg`;
+const imgs = (...ids: string[]) => JSON.stringify(ids.map(MKT));
 
 /** Predhodni mesec (DST-varno) — za rezervacije, ki se obračunajo v provizijskem računu */
 function previousMonth(now = new Date()) {
@@ -166,7 +149,7 @@ async function main() {
     category: "restaurant", destinationId: "ptuj", destinationName: "Ptuj",
     address: "Slovenska ulica 12, 2250 Ptuj", phone: "+386 2 748 12 34",
     email: `marko${DEMO_DOMAIN}`, website: "https://pri-lipovcu.demo.si",
-    images: img(0, 5), plan: "premium", featured: true, verified: true, partnerStatus: "premium",
+    images: imgs("mp-gostilna", "mp-gostilna-jed"), plan: "premium", featured: true, verified: true, partnerStatus: "premium",
     rating: 4.7, reviewCount: 128, priceRange: "€€", openingHours: "Pon–Ned 10:00–22:00",
     specialties: JSON.stringify(["štajerska jota", "bujtl repa", "domače sladice"]),
     ownerId: marko.id, status: "published", partnerSince: lastMonth, verifiedByAdmin: true,
@@ -177,7 +160,7 @@ async function main() {
     description: "Družinski penzion ob Bohinjskem jezeru s pogledom na Komarno Ruto.",
     category: "hotel", destinationId: "bohinj", destinationName: "Bohinj",
     address: "Ribčev Laz 45, 4265 Bohinjsko jezero", phone: "+386 4 572 33 11",
-    images: img(1, 6), plan: "free", verified: true, partnerStatus: "verified",
+    images: imgs("mp-penzion", "mp-penzion-soba"), plan: "free", verified: true, partnerStatus: "verified",
     rating: 4.5, reviewCount: 89, priceRange: "€€", ownerId: ana.id, status: "published",
   });
   await L({
@@ -185,7 +168,7 @@ async function main() {
     description: "Sauna, kopel v hladnem potoku in masaže na kmetiji pod Pohorjem.",
     category: "wellness", destinationId: "maribor", destinationName: "Maribor",
     address: "Hudičevec 8, 2312 Orehova vas", phone: "+386 40 123 456",
-    images: img(2, 7), plan: "free", rating: 4.9, reviewCount: 42,
+    images: imgs("mp-wellness-kmetija", "mp-savna"), plan: "free", rating: 4.9, reviewCount: 42,
     priceRange: "€€", ownerId: ana.id, status: "published",
   });
   await L({
@@ -193,7 +176,7 @@ async function main() {
     description: "Vodeni rafting, kajak in kanjoning na Soči z licenciranimi vodniki.",
     category: "activity", destinationId: "soca", destinationName: "Soča",
     address: "Trg svobode 16, 5230 Bovec", phone: "+386 51 345 678",
-    images: img(3, 8), plan: "free", verified: true, partnerStatus: "verified",
+    images: imgs("mp-rafting", "mp-rafting-akcija"), plan: "free", verified: true, partnerStatus: "verified",
     rating: 4.8, reviewCount: 214, priceRange: "€€", ownerId: tina.id, status: "published",
   });
   await L({
@@ -201,7 +184,7 @@ async function main() {
     description: "Piranska sol, solni cvet in lokalni izdelki iz Sečoveljskih solin.",
     category: "shop", destinationId: "piran", destinationName: "Piran",
     address: "Župančičeva ulica 3, 6330 Piran", phone: "+386 5 678 901",
-    images: img(4, 9), plan: "free", rating: 4.6, reviewCount: 57,
+    images: imgs("mp-soline", "mp-sol-izdelki"), plan: "free", rating: 4.6, reviewCount: 57,
     priceRange: "€", ownerId: luka.id, status: "published",
   });
   await L({
@@ -209,7 +192,7 @@ async function main() {
     description: "Degustacije štajerskih vin v srednjeveški kleti pod mestnim jedrom.",
     category: "bar", destinationId: "ptuj", destinationName: "Ptuj",
     address: "Kremenkova ulica 2, 2250 Ptuj", phone: "+386 2 748 55 66",
-    images: img(10, 11), plan: "free", rating: 4.7, reviewCount: 73,
+    images: imgs("mp-vinska-klet", "mp-degustacija"), plan: "free", rating: 4.7, reviewCount: 73,
     priceRange: "€€", ownerId: marko.id, status: "published",
   });
   await L({
@@ -217,7 +200,7 @@ async function main() {
     description: "Certificirani gorski vodnik za vzpone na Triglav in vzponne smeri.",
     category: "activity", destinationId: "triglav", destinationName: "Triglav",
     address: "Kranjska Gora 80, 4280 Kranjska Gora",
-    images: img(12, 13), plan: "free", rating: 5.0, reviewCount: 31,
+    images: imgs("mp-vodnik", "mp-koca"), plan: "free", rating: 5.0, reviewCount: 31,
     priceRange: "€€€", ownerId: tina.id, status: "published",
   });
   await L({
@@ -225,7 +208,7 @@ async function main() {
     description: "Kavarna s domačimi sladicami na starem mestnem jedru Ljubljane.",
     category: "bar", destinationId: "ljubljana", destinationName: "Ljubljana",
     address: "Krojaška ulica 5, 1000 Ljubljana",
-    images: img(14, 15), plan: "free", rating: 4.4, reviewCount: 156,
+    images: imgs("mp-kavarna", "mp-torta"), plan: "free", rating: 4.4, reviewCount: 156,
     priceRange: "€", ownerId: ana.id, status: "published",
   });
   await L({
@@ -233,7 +216,7 @@ async function main() {
     description: "Uradna prodajna točka vstopnic za Postojnsko jamo z lokalnim vodenjem.",
     category: "other", destinationId: "postojna", destinationName: "Postojna",
     address: "Jamska cesta 30, 6230 Postojna",
-    images: img(16, 17), plan: "free", rating: 4.5, reviewCount: 302,
+    images: imgs("mp-jama-vlak", "mp-jama-kapniki"), plan: "free", rating: 4.5, reviewCount: 302,
     priceRange: "€€", ownerId: luka.id, status: "published",
   });
   await L({
@@ -241,7 +224,7 @@ async function main() {
     description: "Kajak izleti ob sončnem zahodu ob piranski obali.",
     category: "activity", destinationId: "piran", destinationName: "Piran",
     address: "Pristaniška ulica 9, 6330 Piran",
-    images: img(18, 19), plan: "free", rating: 4.9, reviewCount: 66,
+    images: imgs("mp-kajak", "mp-kajak-blizu"), plan: "free", rating: 4.9, reviewCount: 66,
     priceRange: "€€", ownerId: luka.id, status: "published",
   });
   console.log("Listingi: 10 (premium gostilna + 9 free partnerjev)");
@@ -256,7 +239,7 @@ async function main() {
     pricePerPerson: 45, durationHours: 2.5, minGroupSize: 2, maxGroupSize: 8,
     languages: JSON.stringify(["sl", "en", "de", "it"]),
     meetingPoint: "Soča Avanture center, Trg svobode 16, Bovec",
-    address: "Trg svobode 16, 5230 Bovec", images: img(3, 8),
+    address: "Trg svobode 16, 5230 Bovec", images: imgs("mp-rafting", "mp-rafting-akcija"),
     providerName: "Soča Avanture d.o.o.", providerEmail: `tina${DEMO_DOMAIN}`,
     providerPhone: "+386 51 345 678", plan: "free", verified: true,
     rating: 4.8, reviewCount: 214, familyFriendly: true, bookingCount: 6,
@@ -269,7 +252,7 @@ async function main() {
     pricePerPerson: 60, durationHours: 3, minGroupSize: 2, maxGroupSize: 6,
     languages: JSON.stringify(["sl", "en"]),
     meetingPoint: "Soča Avanture center, Bovec",
-    address: "Trg svobode 16, 5230 Bovec", images: img(8, 3),
+    address: "Trg svobode 16, 5230 Bovec", images: imgs("mp-kanjoning", "mp-korita"),
     providerName: "Soča Avanture d.o.o.", providerEmail: `tina${DEMO_DOMAIN}`,
     plan: "free", rating: 4.9, reviewCount: 98, bookingCount: 4,
     ownerId: tina.id, status: "published",
@@ -281,7 +264,7 @@ async function main() {
     pricePerPerson: 28, durationHours: 1.5, minGroupSize: 2, maxGroupSize: 12,
     languages: JSON.stringify(["sl", "en", "de"]),
     meetingPoint: "Vinski klet Ptuj, Kremenkova ulica 2",
-    address: "Kremenkova ulica 2, 2250 Ptuj", images: img(10, 11),
+    address: "Kremenkova ulica 2, 2250 Ptuj", images: imgs("mp-vinska-klet", "mp-degustacija"),
     providerName: "Gostilna Pri Lipovcu", providerEmail: `marko${DEMO_DOMAIN}`,
     plan: "premium", featured: true, rating: 4.7, reviewCount: 73, bookingCount: 9,
     ownerId: marko.id, status: "published",
@@ -293,7 +276,7 @@ async function main() {
     pricePerPerson: 220, durationHours: 20, minGroupSize: 2, maxGroupSize: 4,
     languages: JSON.stringify(["sl", "en"]),
     meetingPoint: "Aljažev dom, Vrata",
-    address: "Kranjska Gora 80, 4280 Kranjska Gora", images: img(12, 13),
+    address: "Kranjska Gora 80, 4280 Kranjska Gora", images: imgs("mp-vodnik", "mp-koca"),
     providerName: "Planinski vodnik Milan", providerEmail: `tina${DEMO_DOMAIN}`,
     plan: "free", rating: 5.0, reviewCount: 31, bookingCount: 2,
     ownerId: tina.id, status: "published",
@@ -305,7 +288,7 @@ async function main() {
     pricePerPerson: 35, durationHours: 3, minGroupSize: 1, maxGroupSize: 10,
     languages: JSON.stringify(["sl", "en"]),
     meetingPoint: "Kmetija Novak, Ribčev Laz",
-    address: "Ribčev Laz 45, 4265 Bohinjsko jezero", images: img(1, 6),
+    address: "Ribčev Laz 45, 4265 Bohinjsko jezero", images: imgs("mp-sir", "mp-sir-miza"),
     providerName: "Kmečki wellness Hudičevec", providerEmail: `ana${DEMO_DOMAIN}`,
     plan: "free", rating: 4.9, reviewCount: 42, familyFriendly: true, bookingCount: 5,
     ownerId: ana.id, status: "published",
@@ -317,7 +300,7 @@ async function main() {
     pricePerPerson: 85, durationHours: 6, minGroupSize: 1, maxGroupSize: 4,
     languages: JSON.stringify(["sl", "en", "hr"]),
     meetingPoint: "Kmečki wellness Hudičevec, Orehova vas",
-    address: "Hudičevec 8, 2312 Orehova vas", images: img(2, 7),
+    address: "Hudičevec 8, 2312 Orehova vas", images: imgs("mp-wellness-kmetija", "mp-savna"),
     providerName: "Kmečki wellness Hudičevec", providerEmail: `ana${DEMO_DOMAIN}`,
     plan: "free", rating: 4.9, reviewCount: 28, bookingCount: 7,
     ownerId: ana.id, status: "published",
@@ -329,7 +312,7 @@ async function main() {
     pricePerPerson: 39, durationHours: 2, minGroupSize: 2, maxGroupSize: 8,
     languages: JSON.stringify(["sl", "en", "it"]),
     meetingPoint: "Pristanišče Piran",
-    address: "Pristaniška ulica 9, 6330 Piran", images: img(18, 19),
+    address: "Pristaniška ulica 9, 6330 Piran", images: imgs("mp-kajak-blizu", "mp-kajak"),
     providerName: "Primorska trgovina Piran", providerEmail: `luka${DEMO_DOMAIN}`,
     plan: "free", rating: 4.9, reviewCount: 66, bookingCount: 8,
     ownerId: luka.id, status: "published",
@@ -341,7 +324,7 @@ async function main() {
     pricePerPerson: 18, durationHours: 1.5, minGroupSize: 1, maxGroupSize: 15,
     languages: JSON.stringify(["sl", "en", "it"]),
     meetingPoint: "Soline Piran, trgovina",
-    address: "Župančičeva ulica 3, 6330 Piran", images: img(4, 9),
+    address: "Župančičeva ulica 3, 6330 Piran", images: imgs("mp-soline", "mp-sol-izdelki"),
     providerName: "Primorska trgovina Piran", providerEmail: `luka${DEMO_DOMAIN}`,
     plan: "free", rating: 4.6, reviewCount: 57, familyFriendly: true, bookingCount: 3,
     ownerId: luka.id, status: "published",
@@ -353,7 +336,7 @@ async function main() {
     pricePerPerson: 55, durationHours: 4, minGroupSize: 2, maxGroupSize: 8,
     languages: JSON.stringify(["sl", "en"]),
     meetingPoint: "Gostilna Pri Lipovcu, Ptuj",
-    address: "Slovenska ulica 12, 2250 Ptuj", images: img(0, 5),
+    address: "Slovenska ulica 12, 2250 Ptuj", images: imgs("mp-kuharska", "mp-gostilna-jed"),
     providerName: "Gostilna Pri Lipovcu", providerEmail: `marko${DEMO_DOMAIN}`,
     plan: "premium", rating: 4.8, reviewCount: 41, bookingCount: 6,
     ownerId: marko.id, status: "published",
@@ -365,7 +348,7 @@ async function main() {
     pricePerPerson: 32, durationHours: 1.5, minGroupSize: 1, maxGroupSize: 20,
     languages: JSON.stringify(["sl", "en", "de", "it"]),
     meetingPoint: "Glavni vhod, Jamska cesta 30",
-    address: "Jamska cesta 30, 6230 Postojna", images: img(16, 17),
+    address: "Jamska cesta 30, 6230 Postojna", images: imgs("mp-jama-vlak", "mp-jama-kapniki"),
     providerName: "Postojnska jama — partner", providerEmail: `luka${DEMO_DOMAIN}`,
     plan: "free", rating: 4.5, reviewCount: 302, familyFriendly: true, accessibility: true, bookingCount: 11,
     ownerId: luka.id, status: "published",
@@ -378,7 +361,7 @@ async function main() {
     name: "Piranski solni cvet 250 g", slug: "piranski-solni-cvet-250",
     description: "Ročno pobran solni cvet iz Sečoveljskih solin.",
     category: "other", destinationId: "piran", destinationName: "Piran",
-    price: 12.9, images: img(4), stock: 40, organic: true, handmade: true,
+    price: 12.9, images: imgs("mp-solni-cvet"), stock: 40, organic: true, handmade: true,
     sellerName: "Primorska trgovina Piran", sellerEmail: `luka${DEMO_DOMAIN}`,
     ownerId: luka.id, status: "published",
   });
@@ -386,7 +369,7 @@ async function main() {
     name: "Kranjski med cvetni 500 g", slug: "kranjski-med-cvetni-500",
     description: "Nefiltriran cvetni med kranjske sivke iz Bohinja.",
     category: "honey", destinationId: "bohinj", destinationName: "Bohinj",
-    price: 14.5, images: img(1), stock: 25, organic: true,
+    price: 14.5, images: imgs("mp-med"), stock: 25, organic: true,
     sellerName: "Kmečki wellness Hudičevec", sellerEmail: `ana${DEMO_DOMAIN}`,
     ownerId: ana.id, status: "published",
   });
@@ -394,7 +377,7 @@ async function main() {
     name: "Štajersko bučno olje 250 ml", slug: "stajersko-bucno-olje-250",
     description: "Hladno stiskano bučno olje iz štajerske buče.",
     category: "oil", destinationId: "ptuj", destinationName: "Ptuj",
-    price: 16.9, compareAtPrice: 19.9, images: img(0), stock: 30, organic: true,
+    price: 16.9, compareAtPrice: 19.9, images: imgs("mp-bucno-olje"), stock: 30, organic: true,
     sellerName: "Gostilna Pri Lipovcu", sellerEmail: `marko${DEMO_DOMAIN}`,
     ownerId: marko.id, status: "published",
   });
@@ -402,7 +385,7 @@ async function main() {
     name: "Refosk premium 0,75 l", slug: "refosk-premium-075",
     description: "Sortni refošk iz istrskih vinogradov, fermentiran v inoxu.",
     category: "wine", destinationId: "piran", destinationName: "Piran",
-    price: 22.0, images: img(18), stock: 18, vegan: true,
+    price: 22.0, images: imgs("mp-refosk"), stock: 18, vegan: true,
     sellerName: "Primorska trgovina Piran", sellerEmail: `luka${DEMO_DOMAIN}`,
     ownerId: luka.id, status: "published",
   });
@@ -410,7 +393,7 @@ async function main() {
     name: "Volnena pletenina — kapa Triglav", slug: "volnena-kapa-triglav",
     description: "Ročno pletena volnena kapa z motivom Triglava.",
     category: "craft", destinationId: "triglav", destinationName: "Triglav",
-    price: 29.0, images: img(12), stock: 12, handmade: true,
+    price: 29.0, images: imgs("mp-kapa"), stock: 12, handmade: true,
     sellerName: "Soča Avanture d.o.o.", sellerEmail: `tina${DEMO_DOMAIN}`,
     ownerId: tina.id, status: "published",
   });
@@ -418,7 +401,7 @@ async function main() {
     name: "Darilni paket 'Soča' (3 izdelki)", slug: "darilni-paket-soca",
     description: "Nahrbtnik: lokalni sir, med in zeliščni čaj iz Soče doline.",
     category: "souvenir", destinationId: "soca", destinationName: "Soča",
-    price: 34.9, images: img(3), stock: 15, local: true,
+    price: 34.9, images: imgs("mp-darilni"), stock: 15, local: true,
     sellerName: "Soča Avanture d.o.o.", sellerEmail: `tina${DEMO_DOMAIN}`,
     ownerId: tina.id, status: "published",
   });
