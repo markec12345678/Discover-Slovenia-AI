@@ -143,6 +143,9 @@
   },
   "exploreHub": {
     "badge": "Več za raziskovanje",
+    "groupPlan": "Načrtuj",
+    "groupExperience": "Doživi",
+    "groupMore": "Več",
     "title": "Razišči Slovenijo",
     "subtitle": "Zemljevid, dogodki, lokali, vodiči in več — vse na enem mestu.",
     "mapTitle": "Zemljevid",

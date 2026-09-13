@@ -143,6 +143,9 @@
   },
   "exploreHub": {
     "badge": "More to explore",
+    "groupPlan": "Plan",
+    "groupExperience": "Experience",
+    "groupMore": "More",
     "title": "Explore Slovenia",
     "subtitle": "Map, events, local businesses, guides and more — all in one place.",
     "mapTitle": "Map",
