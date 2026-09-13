@@ -1,5 +1,11 @@
 // Slovenian events data — 30 realnih festivaljev in prireditev skozi vse leto.
 // Povezava z destinacijami preko `destinationId` (glej slovenia-data.ts).
+//
+// SLIKE: dogodki z `/content/*.jpg` so AI-generirane (z-ai image generation,
+// sept 2026) po VLM auditu, ki je ugotovil neujemanje starejših CDN slik z
+// besedilom (npr. Bled Castle namesto zimskemu festivalju, atletska dvorana
+// namesto plavanju v Blejskem jezeru). Narejene so iz opisa dogodka, VLM
+// potrjeno ujemanje ≥ 9/10. Brez atribucije (AI, ne CC).
 
 export type EventCategory =
   | "festival"
@@ -116,7 +122,7 @@ export const EVENTS: EventItem[] = [
     category: "glasba",
     region: "osrednja",
     image:
-      "https://sfile.chatglm.cn/images-ppt/03c081845a5e.jpg",
+      "/content/ljubljanski-zimski-festival.jpg",
     website: "https://www.ljubljanafestival.si",
     priceRange: "€€",
     featured: false,
@@ -314,7 +320,7 @@ export const EVENTS: EventItem[] = [
     category: "sport",
     region: "koroska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/1f44bed4b636.jpg",
+      "/content/koroska-smucanje.jpg",
     priceRange: "€",
     featured: false,
   },
@@ -345,7 +351,7 @@ export const EVENTS: EventItem[] = [
     category: "hrana",
     region: "dolenjska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/d5a8c1cab006.jpg",
+      "/content/dolenjska-cvicek.jpg",
     priceRange: "€",
     featured: false,
   },
@@ -360,7 +366,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "bela-krajina",
     image:
-      "https://sfile.chatglm.cn/images-ppt/7c87f1c36c68.jpg",
+      "/content/bela-krajina-koline.jpg",
     priceRange: "€€",
     featured: false,
   },
@@ -376,7 +382,7 @@ export const EVENTS: EventItem[] = [
     category: "glasba",
     region: "koroska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/5a6a0c62dd70.jpeg",
+      "/content/koroska-music.jpg",
     priceRange: "€€",
     featured: false,
   },
@@ -408,7 +414,7 @@ export const EVENTS: EventItem[] = [
     category: "sport",
     region: "gorenjska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/c0365d9b8fdf.jpg",
+      "/content/bled-winter-swim.jpg",
     website: "https://www.bled.si",
     priceRange: "brezplačno",
     featured: false,
@@ -524,7 +530,7 @@ export const EVENTS: EventItem[] = [
     category: "glasba",
     region: "osrednja",
     image:
-      "https://sfile.chatglm.cn/images-ppt/6de38357333b.jpg",
+      "/content/trnfest-ljubljana.jpg",
     website: "https://www.trnfest.si",
     priceRange: "brezplačno",
     featured: false,
@@ -541,7 +547,7 @@ export const EVENTS: EventItem[] = [
     category: "glasba",
     region: "gorenjska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/dd79e42b89f2.jpg",
+      "/content/okarina-festival-bled.jpg",
     website: "https://www.okarina.si",
     priceRange: "€€",
     featured: true,
@@ -558,7 +564,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "stajerska",
     image:
-      "https://sfile.chatglm.cn/images-ppt/d5ab65c5a356.jpg",
+      "/content/celjski-sejem.jpg",
     website: "https://www.celjski-sejem.si",
     priceRange: "€",
     featured: false,
@@ -592,7 +598,7 @@ export const EVENTS: EventItem[] = [
     category: "tradicija",
     region: "kras",
     image:
-      "https://sfile.chatglm.cn/images-ppt/87257b62e69a.jpg",
+      "/content/jamski-sejem-postojna.jpg",
     website: "https://www.postojna.si",
     priceRange: "brezplačno",
     featured: false,

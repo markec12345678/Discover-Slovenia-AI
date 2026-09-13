@@ -2,6 +2,10 @@ import type { Destination } from "./types";
 
 // Single source of truth za slovenske destinacije.
 // 12 najboljših destinacij, pokriva vse regije.
+// SLIKE: `/content/*.jpg` so AI-generirane (z-ai image generation, sept 2026)
+// po VLM auditu — stara CDN slika za Dravograd je prikazovala turkizno reko
+// v gozdnati dolini (Soča-style) namesto mesta ob sotočju treh rek. Nova slika
+// je narejena iz opisa, VLM potrjeno ujemanje 9/10. Brez atribucije (AI, ne CC).
 export const DESTINATIONS: Destination[] = [
   {
     id: "bled",
@@ -355,7 +359,7 @@ export const DESTINATIONS: Destination[] = [
     activities: ["Pohodništvo", "Ribolov", "Kolo ob Dravi", "Fotografija narave"],
     bestFor: ["narava", "mir", "pohodništvo"],
     bestSeason: ["spring", "summer", "autumn"],
-    image: "https://sfile.chatglm.cn/images-ppt/bfc1494a06a6.jpg",
+    image: "/content/dravograd.jpg",
     coords: { lat: 46.5864, lng: 15.0019 },
     rating: 4.1,
     budget: "€",
