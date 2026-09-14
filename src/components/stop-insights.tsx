@@ -84,6 +84,10 @@ const L = {
     en: "Before visiting, check opening hours, prices and availability on the location's official site.",
   },
   details: { sl: "Podrobnosti o lokaciji", en: "Location details" },
+  methodNote: {
+    sl: "Razdalje v razlagah so približek — izračun iz koordinat (cestni faktor 1,3), ne navigacijski podatek.",
+    en: "Distances in the reasons are estimates computed from coordinates (road factor 1.3) — not navigation data.",
+  },
 } as const;
 
 function label(key: keyof typeof L, locale: string): string {
@@ -106,18 +110,27 @@ export function StopInsights({ visit, locale }: StopInsightsProps) {
     <div className="mt-2.5 space-y-2">
       {/* FAZA 4-1 — Zakaj je to priporočeno? (dejstva, ne marketing) */}
       {visit.reason && (
-        <p className="flex items-start gap-1.5 rounded-md bg-muted/50 px-2.5 py-1.5 text-xs leading-relaxed text-muted-foreground">
-          <HelpCircle
-            className="mt-0.5 size-3.5 shrink-0 text-primary/70"
-            aria-hidden="true"
-          />
-          <span>
-            <span className="font-medium text-foreground/80">
-              {label("why", locale)}
-            </span>{" "}
-            {visit.reason}
-          </span>
-        </p>
+        <div className="space-y-1">
+          <p className="flex items-start gap-1.5 rounded-md bg-muted/50 px-2.5 py-1.5 text-xs leading-relaxed text-muted-foreground">
+            <HelpCircle
+              className="mt-0.5 size-3.5 shrink-0 text-primary/70"
+              aria-hidden="true"
+            />
+            <span>
+              <span className="font-medium text-foreground/80">
+                {label("why", locale)}
+              </span>{" "}
+              {visit.reason}
+            </span>
+          </p>
+          {/* P1-1 (recenzija): če razlaga navaja razdaljo, je metoda izračuna
+              eksplicitno povedana — približek iz koordinat, ne navigacija. */}
+          {/\bkm\b/i.test(visit.reason) && (
+            <p className="pl-9 text-[10px] leading-relaxed text-muted-foreground/80">
+              {label("methodNote", locale)}
+            </p>
+          )}
+        </div>
       )}
 
       {/* FAZA 4-3 — Praktični podatki: SAMO obstoječi (zložljivo, mobilno prijazno) */}

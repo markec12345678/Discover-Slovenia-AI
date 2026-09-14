@@ -192,37 +192,41 @@ export function buildStopReason(
   }
 
   // 2) Ustreznost tipu skupine — SAMO kadar bestFor dejansko vsebuje značko
+  //    (P1-1: vir je vedno povedan — oznaka lokacije v podatkovnem naboru,
+  //    ne ocena "to je odlično za družino")
   const partyTag = ctx.partyType ? PARTY_TAG[ctx.partyType] : undefined;
   if (partyTag && dest.bestFor.includes(partyTag)) {
     parts.push(
       ctx.partyType === "family"
         ? isEn
-          ? "family-friendly"
-          : "primerno za družine"
+          ? "family-friendly (location tag)"
+          : "primerno za družine (oznaka lokacije)"
         : isEn
-        ? "suitable for couples"
-        : "primerno za pare"
+        ? "suitable for couples (location tag)"
+        : "primerno za pare (oznaka lokacije)"
     );
   }
 
-  // 3) Razdalja — do prejšnjega postanka (ali najbližjega v dnevu)
+  // 3) Razdalja — do prejšnjega postanka (ali najbližjega v dnevu).
+  //    P1-1 (recenzija): to je IZRAČUN iz koordinat (haversine × 1,3), ne
+  //    navigacijski podatek — formulacija je eksplicitno približek.
   if (previous) {
     const km = roadKmBetween(previous, visit);
     if (km !== null) {
       if (km <= 30) {
         parts.push(
-          isEn ? `only ${km} km from the previous stop` : `samo ${km} km od prejšnjega postanka`
+          isEn ? `only ~${km} km from the previous stop` : `samo približno ${km} km od prejšnjega postanka`
         );
       } else if (km <= 70) {
         parts.push(
-          isEn ? `${km} km from the previous stop` : `${km} km od prejšnjega postanka`
+          isEn ? `~${km} km from the previous stop` : `približno ${km} km od prejšnjega postanka`
         );
       } else {
         // Pošteno opozorilo — to je točno vrzel, ki jo je odkril geo validator
         parts.push(
           isEn
-            ? `${km} km from the previous stop (long drive — consider adjusting this day)`
-            : `${km} km od prejšnjega postanka (daljša vožnja — razmisli o prilagoditvi dneva)`
+            ? `~${km} km from the previous stop (long drive — consider adjusting this day)`
+            : `približno ${km} km od prejšnjega postanka (daljša vožnja — razmisli o prilagoditvi dneva)`
         );
       }
     }

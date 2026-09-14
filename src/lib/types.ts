@@ -247,11 +247,59 @@ export type QuickActionId =
 
 /** Elemenarna sprememba, ki jo je prinesla hitra akcija (za prikaz + analitiko). */
 export interface RefineChange {
-  kind: "stop_removed" | "stop_replaced" | "day_reordered" | "day_simplified" | "unchanged";
+  kind:
+    | "stop_removed"
+    | "stop_replaced"
+    | "day_reordered"
+    | "day_simplified"
+    | "unchanged"
+    /** P0.3 (recenzija): akcija se NI izvedla — za varen popravek manjkajo
+     * preverljivi podatki (neznan destination_id, ni geo-ustrezne alternative).
+     * Itinerer ostane nespremenjen; reason pove zakaj (pošteno, brez ugibanj). */
+    | "cannot_transform";
   day: number;
   destination_id?: string;
   destination_name?: string;
   replacement_id?: string;
   replacement_name?: string;
   km?: number;
+  /** Samo pri cannot_transform: strojno berljiv razlog (missing_destination_data |
+   * no_nearby_alternative) — za analitiko in prikaz. */
+  reason?: string;
+}
+
+// ============================================================================
+// P0.1 (recenzija) — validacijski dokaz po vsaki spremembi
+// ============================================================================
+//
+// Recenzentova zahteva: "deterministični fallback, ki spremeni dan, še ni isto
+// kot validator, ki dokaže, da je novi dan izvedljiv." Zato vsak refine
+// odgovor (AI in deterministična pot) vsebuje struktuirani dokaz:
+//   before → mutation (changes) → after, s statusom pass | warn | still_failing
+// in opombo, če dan po spremembi ostaja geografsko obremenjen.
+
+/** Stanje enega dneva (ali celega potovanja) v geo-validaciji. */
+export interface GeoValidationSnapshot {
+  km: number;
+  /** "ok" (0 opozoril) | "warn" | "error" — enake ravni kot GeoValidation. */
+  worst: "ok" | "warn" | "error";
+  /** Število opozoril (warn + error). */
+  issues: number;
+  /** Število ERROR opozoril (ni realno izvedljivo). */
+  errors: number;
+}
+
+/** Struktuirani validacijski dokaz refine odgovora (P0.1). */
+export interface RefineValidation {
+  /** Obseg dokaza: "day" (hitra akcija na določen dan) | "trip" (prosti ukaz). */
+  scope: "day" | "trip";
+  /** Pri hitri akciji: številka dneva (pri trip: izpuščeno). */
+  day?: number;
+  before: GeoValidationSnapshot;
+  after: GeoValidationSnapshot;
+  /** "pass" = po spremembi 0 opozoril; "warn" = ostajajo opozorila (a izvedljivo);
+   * "still_failing" = po spremembi še vedno ≥1 ERROR (ni realno izvedljivo). */
+  status: "pass" | "warn" | "still_failing";
+  /** Lokalizirana opomba, kadar status ≠ "pass" (prikaže se v toastu). */
+  statusNote?: string;
 }

@@ -255,10 +255,11 @@ export function ItineraryPlanner() {
     trackPlannerEvent("planner_started", { locale });
   }
 
-  // FAZA 4 (pilotna analitika): user_abandoned_after_result — rezultat je bil
-  // prikazan, uporabnik pa ni ne prilagodil ne shranil načrta in zapušča
-  // stran (pagehide / unmount po ≥ 45 s od prikaza). keepalive fetch preživi
-  // zapiranje zavihka.
+  // FAZA 4 (pilotna analitika, P1-3 preimenovano): result_session_ended_without_action
+  // — PROXY signal: rezultat je bil prikazan, sledeni dogodek (prilagoditev /
+  // shranjevanje) pa ni bil zaznan v merjenem oknu (pagehide / unmount po
+  // ≥ 45 s od prikaza). NE pomeni nezadovoljstvo. keepalive fetch preživi
+  // zapiranje zavihka; eid na strežniku prepreči dvojni zapis.
   useEffect(() => {
     if (!itinerary) return;
     const onHide = () => fireAbandonedIfUnengaged();
@@ -500,6 +501,12 @@ export function ItineraryPlanner() {
     };
     setItinerary(next);
     persistItineraryLocally(next, formData);
+    // P0.2 (recenzija): dodani/odstranjeni dogodek spremeni načrt — zastareli
+    // deljeni link se umakne (enak vzorec kot pri refine)
+    if (shareUrl) {
+      setShareUrl(null);
+      setCopied(false);
+    }
     if (!has) {
       toast({
         title: t("addedToTripToast"),
@@ -1109,9 +1116,15 @@ export function ItineraryPlanner() {
                   formData={formData}
                   onRefined={(newItinerary) => {
                     setItinerary(newItinerary);
-                    // Refiniran načrt se shrani lokalno (deljiva povezava ostane ista 
+                    // Refiniran načrt se shrani lokalno (deljiva povezava ostane ista
                     // dokler uporabnik znova klikne "Shrani in deli")
                     persistItineraryLocally(newItinerary, formData);
+                    // P0.2 (recenzija): deljiva povezava kaže na STARO različico —
+                    // javna /pot/[shareId] mora biti identična urejeni različici, zato
+                    // se ob vsaki spremembi načrta zastareli link umakne (uporabnik
+                    // znova klikne "Shrani in deli" za svež, sinhroniziran link).
+                    setShareUrl(null);
+                    setCopied(false);
                   }}
                 />
                 </div>

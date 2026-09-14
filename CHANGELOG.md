@@ -7,6 +7,55 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.7.1] — 2026-09-15
+
+### Popravljeno (P0/P1 po recenziji Faze 4 — "preveri")
+
+> Recenzentova ključna ugotovitev: "deterministični fallback, ki spremeni dan,
+> še ni isto kot validator, ki dokaže, da je novi dan izvedljiv." Ta različica
+> zapira to vrzel: po vsaki spremembi se izvede POPOLN ponovni izračun in
+> ponovna validacija celotnega itinerarja, odgovor pa nosi struktuirani dokaz.
+
+- **P0.1 — validacijski dokaz vsakega refine odgovora:** `POST /api/itinerary/refine`
+  (AI in deterministična pot) zdaj vrača `validation { scope, day, before, after,
+  status, statusNote }` iz ISTE geo-validacijske plasti kot prikaz —
+  before (km/worst/issues/errors) → mutation (`changes`) → after. Status:
+  `pass` | `warn` | `still_failing`; če dan po spremembi še vedno ni realno
+  izvedljiv, uporabnik to izve takoj v toastu (destructive) — ne samo
+  "uspešen 200 in lep nov tekst". Analitika `day_adjusted` nosi `geo_status`,
+  `km_before`, `km_after`.
+- **P0.2 — popolna sinhronizacija po spremembi:** budget (`total_budget`) se
+  po vsakem refine-u preračuna iz DEJANSKIH postankov (prej: AI JSON številka
+  izračunana za staro strukturo); `events` in `crowdNotices` se preračunata na
+  novi strukturi (prej: podedovani/izgubljeni); zastarela deljiva povezava se
+  ob refine-u/dodajanju dogodka umakne — javna `/pot/[shareId]` je vedno
+  identična urejeni različici (uporabnik znova shrani za svež link).
+  Zemljevid je že bil čista funkcija stanja (store → routeCoords).
+- **P0.3 — varovalke "cannot_safely_transform":** hitre akcije, ki računajo iz
+  koordinat/tipov/oznak, se nad dnevom z neznanim destinacijskim ID-jem (AI
+  halucinacija) NE izvedejo — vrnejo `changes[].kind = "cannot_transform"` z
+  razlogom (`missing_destination_data` / `no_nearby_alternative` / `no_candidate`)
+  in pošteno opombo, nič se ne ugiba. Zamenjave so GEO-ZAVEDNE: kandidat mora
+  biti ≤ 80 km od najbližjega ostalega postanka dneva (prag poravnan z
+  legKm.warn — zamenjava ne sme uvesti noge, ki bi jo validator sam označil;
+  en postanek v dnevu → geo-pogoj nima smisla).
+- **P1.1 — transparentnost razlag:** razdalje v "Zakaj ta postanek" so
+  eksplicitno približek ("približno 42 km" / "~42 km") + opomba metode pod
+  razlago ("izračun iz koordinat, cestni faktor 1,3 — ne navigacijski
+  podatek"); oznake skupin navajajo vir ("primerno za družine (oznaka
+  lokacije)").
+- **P1.2 — analitika:** vsak dogodek nosi `eid` (clientEventId) s strežniško
+  deduplikacijo (`type + eid` → drugi poskus vrne `deduped: true` brez nove
+  vrstice; brez spremembe sheme); nova dokumentacija vseh 19 dogodkov z
+  definicijami (kdaj, enkrat/večkrat, props, pomen, metrika):
+  [docs/ANALYTICS-EVENTS.md](docs/ANALYTICS-EVENTS.md).
+- **P1.3 — nevtralna semantika opustitve:** `user_abandoned_after_result` →
+  `result_session_ended_without_action` (proxy signal, ne dokaz
+  nezadovoljstva — dokumentirano podcenjevanje: mobilni pagehide, zemljevid
+  v novem zavihku, izguba povezave).
+
+---
+
 ## [1.7.0] — 2026-09-14
 
 ### Dodano (FAZA 4 — tri izboljšave po Pilot Validation Gate, uporabnikovo naročilo)

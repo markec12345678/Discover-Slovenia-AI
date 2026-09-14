@@ -117,11 +117,13 @@ potrjevanja) → zdaj »Predlog poti · pred obiskom preveri urnike in cene«.
 **Dogodki neuspeha:**
 `planner_error` · `empty_result` · `invalid_location` (ID izven dataseta — AI
 halucinacija) · `unrealistic_day` (dan > 250 cestnih km — prag geo validatorja,
-haversine × 1,3) · `save_failed` · `refine_failed` · `user_abandoned_after_result`
+haversine × 1,3) · `save_failed` · `refine_failed` · `result_session_ended_without_action`
 
 **Definicija opustitve (dokumentirana):** rezultat prikazan → 45 s brez refine-a
 ali shranjevanja → uporabnik zapusti stran (pagehide/unmount, keepalive fetch preživi
-zapiranje zavihka) → `user_abandoned_after_result` { sekunde gledanja, dni, vir }.
+zapiranje zavihka) → `result_session_ended_without_action` { sekunde gledanja, dni, vir }
+(P1-3: preimenovano iz `user_abandoned_after_result` — proxy signal, NE dokaz
+nezadovoljstva; definicije vseh dogodkov: docs/ANALYTICS-EVENTS.md).
 Refine/shranitev stanje označi kot angažirano in opustitev prekliče.
 
 **Priključene točke:** planner (started/submitted/result/error/empty/invalid/

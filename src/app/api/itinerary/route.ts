@@ -31,6 +31,7 @@ import {
 import {
   buildFallbackRationale,
   computeItineraryQuality,
+  recomputeTotalBudget,
   sanitizeAiRationale,
 } from "@/lib/itinerary-quality";
 import { validateItineraryGeo } from "@/lib/geo-validation";
@@ -478,25 +479,31 @@ JSON format (STROGO):
 
     // FW4.1: strukturne metrike (deterministično) + AI utemeljitev
     // (sanitizirana, fallback determinističen) — isto enrich mesto kot vreme
-    enriched.quality = computeItineraryQuality(enriched, input);
-    enriched.rationale =
+    //
+    // P0.2 (recenzija): total_budget se PRERAČUNA iz dejanskih postankov —
+    // AI JSON prinese svojo številko, ki pa ni preverjena; prikaz mora
+    // temeljiti na postankih, ki so DEJANSKO v načrtu (isti vzorec kot
+    // fallback in refine).
+    const budgetSynced = recomputeTotalBudget(enriched);
+    budgetSynced.quality = computeItineraryQuality(budgetSynced, input);
+    budgetSynced.rationale =
       sanitizeAiRationale(parsed.rationale) ??
-      buildFallbackRationale(input, enriched.quality, lang);
+      buildFallbackRationale(input, budgetSynced.quality, lang);
 
     // P0.2 GEO-VALIDACIJA: izvedljivost nad končno strukturo (deterministično,
     // iz realnih koordinat — km/dan, zaporedne razdalje, obseg dneva, urnik,
     // duplikati, manjkajoči ID-ji). Sporočila locena prek lang.
-    enriched.geoValidation = validateItineraryGeo(enriched, lang);
+    budgetSynced.geoValidation = validateItineraryGeo(budgetSynced, lang);
 
     // CROWD-ALTERNATIVES: poštene opombe o gneči + alternative (deterministično)
-    enriched.crowdNotices = buildCrowdNotices(enriched, input, lang);
+    budgetSynced.crowdNotices = buildCrowdNotices(budgetSynced, input, lang);
 
     // FAZA 4-1 ("Zakaj je to priporočeno?"): vsak postanek dobi kratko,
     // podatkovno utemeljeno razlago (interesi, tip skupine, razdalja,
     // vreme, sezona — izključno dejstva, brez marketinga). Deterministično
     // na obeh poteh — AI izbira postankov, razlago pa sestavijo isti
     // preverljivi podatki.
-    const withReasons = buildStopReasons(enriched, input, lang);
+    const withReasons = buildStopReasons(budgetSynced, input, lang);
 
     return NextResponse.json(withReasons);
   } catch (error) {

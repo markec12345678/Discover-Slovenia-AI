@@ -1,5 +1,6 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
+import { recomputeTotalBudget } from "@/lib/itinerary-quality";
 import type {
   DayPlan,
   Itinerary,
@@ -11,6 +12,7 @@ import type {
 import {
   INDOOR_TYPES,
   NATURE_TYPES,
+  ROAD_FACTOR,
   destinationById,
   dayDrivingKm,
   haversineKm,
@@ -92,6 +94,16 @@ export const QUICK_ACTIONS: {
 /** Prag (cestnih km na dan), nad katerim "manj vožnje" odstrani oddaljen postanek. */
 const LONG_DAY_KM = 100;
 
+/**
+ * P0.3 (recenzija): največja cestna razdalja (km) od najbližjega ostalega
+ * postanka dneva, da kandidat za zamenjavo šteje za "isto območje".
+ * Poravnan z geo-validacijskim pragom legKm.warn (80 km): zamenjava NE SME
+ * uvesti noge, ki bi jo validator sam označil kot opozorilo — popravek, ki
+ * doda novo geografsko breme, ni popravek. Dnevu z enim samim postankom ni
+ * s čim primerjati — geo-pogoj se preskoči (trivialna geografija).
+ */
+const CANDIDATE_MAX_KM = 80;
+
 interface QuickActionResult {
   itinerary: Itinerary;
   changes: RefineChange[];
@@ -109,14 +121,30 @@ function seasonFits(dest: (typeof DESTINATIONS)[number], season: PlannerInput["s
   return dest.bestSeason.includes(season);
 }
 
-/** Kandidati za zamenjavo: neuporabljeni, sezonsko ustrezni, najboljši interesni ujem. */
+/**
+ * Kandidati za zamenjavo: neuporabljeni, sezonsko ustrezni, najboljši interesni
+ * ujem. P0.3 (recenzija): GEO-ZAVEDNO — kandidat mora biti v istem območju
+ * (≤ CANDIDATE_MAX_KM do najbližjega ostalega postanka dneva), sicer zamenjava
+ * ni popravek, ampak novo geografsko breme. Dnevu z enim samim postankom ni
+ * s čim primerjati — geo-pogoj se preskoči (en postanek = trivialna geografija).
+ */
 function replacementCandidates(
   usedIds: Set<string>,
   input: Pick<PlannerInput, "interests" | "season">,
-  filter: (d: (typeof DESTINATIONS)[number]) => boolean
+  filter: (d: (typeof DESTINATIONS)[number]) => boolean,
+  nearTo: LocationVisit[],
+  exclude?: LocationVisit
 ): (typeof DESTINATIONS)[number][] {
   return DESTINATIONS.filter(
-    (d) => !usedIds.has(d.id) && seasonFits(d, input.season) && filter(d)
+    (d) =>
+      !usedIds.has(d.id) &&
+      seasonFits(d, input.season) &&
+      filter(d) &&
+      (nearTo.length === 0 ||
+        (() => {
+          const km = nearestOtherKm(d.id, nearTo, exclude ?? null);
+          return km !== null && km <= CANDIDATE_MAX_KM;
+        })())
   ).sort((a, b) => interestScore(b, input.interests) - interestScore(a, input.interests));
 }
 
@@ -155,15 +183,67 @@ function reslots(day: DayPlan): DayPlan {
   };
 }
 
-/** Preračuna total_budget iz vseh dni (po odstranitvi/zamenjavi postankov). */
+/** Preračuna total_budget iz vseh dni (po odstranitvi/zamenjavi postankov) —
+ * P0.2: skupni vir resnice je recomputeTotalBudget (itinerary-quality.ts). */
 function recomputeBudget(it: Itinerary): Itinerary {
-  const total = it.days.reduce(
-    (sum, d) =>
-      sum +
-      d.locations.reduce((s, l) => s + (Number.isFinite(l.estimated_cost) ? l.estimated_cost : 0), 0),
-    0
+  return recomputeTotalBudget(it);
+}
+
+/**
+ * P0.3 (recenzija): cestna razdalja med dvema ID-jema destinacij (null, če
+ * kateri od ID-jev ni v datasetu — nikoli ne ugibamo).
+ */
+function roadKmBetweenIds(a: string, b: string): number | null {
+  const da = destinationById(a);
+  const db = destinationById(b);
+  if (!da || !db) return null;
+  return Math.round(
+    haversineKm(da.coords.lat, da.coords.lng, db.coords.lat, db.coords.lng) *
+      ROAD_FACTOR
   );
-  return { ...it, total_budget: total };
+}
+
+/**
+ * P0.3 (recenzija): razdalja kandidata do NAJBLIŽJEGA ostalega postanka dneva
+ * (null, če dneva ni s čim primerjati ali koordinate manjkajo).
+ */
+function nearestOtherKm(
+  candidateId: string,
+  dayLocations: LocationVisit[],
+  exclude?: LocationVisit | null
+): number | null {
+  let best: number | null = null;
+  for (const other of dayLocations) {
+    if (exclude && other === exclude) continue;
+    const km = roadKmBetweenIds(candidateId, other.destination_id);
+    if (km !== null && (best === null || km < best)) best = km;
+  }
+  return best;
+}
+
+/**
+ * P0.3 (recenzija): prvi postanek dneva, katerega destination_id NI v datasetu
+ * (AI halucinacija) — nad takim dnevom akcija, ki računa iz koordinat/tipov,
+ * ne sme "popravljati" brez podatkov (cannot_safely_transform).
+ */
+function unknownStopIn(day: DayPlan): LocationVisit | null {
+  return day.locations.find((l) => !destinationById(l.destination_id)) ?? null;
+}
+
+/** Poštena opomba o nezmožnosti varne transformacije (SL/EN). */
+function cannotTransformNote(
+  reason: "missing_destination_data" | "no_nearby_alternative",
+  day: number,
+  isEn: boolean
+): string {
+  if (reason === "missing_destination_data") {
+    return isEn
+      ? `Day ${day}: I don't have enough verified data about this day's stops (an unknown destination) to safely make this change — nothing was modified.`
+      : `Dan ${day}: za varno izvedbo te spremembe nimam dovolj preverjenih podatkov o postankih tega dne (neznan kraj) — ničesar nisem spremenil.`;
+  }
+  return isEn
+    ? `Day ${day}: no suitable unused destination is close enough to this day's other stops (within ~${CANDIDATE_MAX_KM} km) — a far-away swap would only add driving, so nothing was changed.`
+    : `Dan ${day}: nobena neuporabljena ustrezna destinacija ni dovolj blizu ostalim postankom tega dne (okvir ~${CANDIDATE_MAX_KM} km) — zamenjava oddaljene lokacije bi vožnjo le povečala, zato ničesar nisem spremenil.`;
 }
 
 /**
@@ -256,6 +336,24 @@ export function applyQuickAction(
   switch (action) {
     // ------------------------------------------------------------------
     case "less_driving": {
+      // P0.3 (recenzija): neznan postanek (AI halucinacija) → razdalj NI
+      // mogoče preveriti → "manj vožnje" ne sme trditi izboljšave brez dokaza
+      const unknown = unknownStopIn(target);
+      if (unknown) {
+        changes.push({
+          kind: "cannot_transform",
+          day,
+          destination_id: unknown.destination_id,
+          destination_name: unknown.destination_name,
+          reason: "missing_destination_data",
+        });
+        return {
+          itinerary,
+          changes,
+          note: cannotTransformNote("missing_destination_data", day, isEn),
+        };
+      }
+
       const kmBefore = dayDrivingKm(target.locations) ?? 0;
       let removed: LocationVisit | null = null;
 
@@ -303,9 +401,59 @@ export function applyQuickAction(
 
     // ------------------------------------------------------------------
     case "rain_suitable": {
-      const replacements = replacementCandidates(usedIds, input, (d) =>
-        INDOOR_TYPES.has(d.type)
+      // P0.3 (recenzija): neznan postanek → tipa (notranje/zunanje) ni mogoče
+      // preveriti → dež-varnost dneva ni mogoče izvesti s preverljivimi podatki
+      const unknown = unknownStopIn(target);
+      if (unknown) {
+        changes.push({
+          kind: "cannot_transform",
+          day,
+          destination_id: unknown.destination_id,
+          destination_name: unknown.destination_name,
+          reason: "missing_destination_data",
+        });
+        return {
+          itinerary,
+          changes,
+          note: cannotTransformNote("missing_destination_data", day, isEn),
+        };
+      }
+
+      // Zunanji postanki dneva (tip je znan — dataset)
+      const outdoorCount = target.locations.filter((loc) => {
+        const dest = destinationById(loc.destination_id);
+        return dest ? !INDOOR_TYPES.has(dest.type) : false;
+      }).length;
+
+      if (outdoorCount === 0) {
+        note = isEn
+          ? `Day ${day} already has indoor-suitable stops.`
+          : `Postanki dneva ${day} so že primerni za slabše vreme.`;
+        break;
+      }
+
+      // P0.3 (recenzija): GEO-ZAVEDNI kandidati — zamenjava mora biti v istem
+      // območju (≤ 80 km do najbližjega ostalega postanka dneva; prag
+      // poravnan z legKm.warn — zamenjava ne sme uvesti novega opozorila)
+      const replacements = replacementCandidates(
+        usedIds,
+        input,
+        (d) => INDOOR_TYPES.has(d.type),
+        target.locations
       );
+      if (replacements.length === 0) {
+        changes.push({
+          kind: "cannot_transform",
+          day,
+          reason: "no_nearby_alternative",
+        });
+        return {
+          itinerary,
+          changes,
+          note: cannotTransformNote("no_nearby_alternative", day, isEn),
+        };
+      }
+
       const newLocs: LocationVisit[] = [];
       let swapCount = 0;
 
@@ -330,17 +478,11 @@ export function applyQuickAction(
       }
       target = { ...target, locations: newLocs };
 
-      if (swapCount > 0) {
-        note = isEn
-          ? `Swapped ${swapCount} outdoor stop${swapCount > 1 ? "s" : ""} on Day ${day} for indoor picks (caves, towns, thermal spas).`
-          : swapCount === 1
-          ? `Zamenjan 1 zunanji postanek dneva ${day} z notranjo izbiro (jame, mestna jedra, terme).`
-          : `Zamenjanih ${swapCount} zunanjih postankov dneva ${day} z notranjimi izbirami (jame, mestna jedra, terme).`;
-      } else {
-        note = isEn
-          ? `Day ${day} already has indoor-suitable stops.`
-          : `Postanki dneva ${day} so že primerni za slabše vreme.`;
-      }
+      note = isEn
+        ? `Swapped ${swapCount} outdoor stop${swapCount > 1 ? "s" : ""} on Day ${day} for indoor picks near the day's route (caves, towns, thermal spas).`
+        : swapCount === 1
+        ? `Zamenjan 1 zunanji postanek dneva ${day} z notranjo izbiro v bližini poti (jame, mestna jedra, terme).`
+        : `Zamenjanih ${swapCount} zunanjih postankov dneva ${day} z notranjimi izbirami v bližini poti (jame, mestna jedra, terme).`;
       break;
     }
 
@@ -398,17 +540,32 @@ export function applyQuickAction(
     case "more_nature":
     case "more_food":
     case "family_friendly": {
+      // P0.3 (recenzija): neznan postanek → oznak (narava/hrana/družina) ni
+      // mogoče preveriti → zamenjava ne sme trditi ustreznosti brez podatkov
+      const unknown = unknownStopIn(target);
+      if (unknown) {
+        changes.push({
+          kind: "cannot_transform",
+          day,
+          destination_id: unknown.destination_id,
+          destination_name: unknown.destination_name,
+          reason: "missing_destination_data",
+        });
+        return {
+          itinerary,
+          changes,
+          note: cannotTransformNote("missing_destination_data", day, isEn),
+        };
+      }
+
       const tag =
         action === "more_food" ? "hrana" : action === "family_friendly" ? "družina" : null;
 
-      // Filter kandidatov glede na akcijo
-      const candidates = replacementCandidates(
-        usedIds,
-        input,
+      // Filter kandidatov glede na akcijo (P0.3: geo-zavedno — v istem območju)
+      const actionFilter =
         action === "more_nature"
-          ? (d) => NATURE_TYPES.has(d.type)
-          : (d) => d.bestFor.includes(tag!)
-      );
+          ? (d: (typeof DESTINATIONS)[number]) => NATURE_TYPES.has(d.type)
+          : (d: (typeof DESTINATIONS)[number]) => d.bestFor.includes(tag!);
 
       // Postanki, ki NAJMANJ ustrezajo poudarku akcije (zunanji za naravo /
       // brez "hrana" / brez "družina") — najšibkejši interes je prvi kandidat
@@ -431,43 +588,69 @@ export function applyQuickAction(
         (l) => weaknessOf(l) < 100 // ne menjaj postankov, ki že ustrezajo
       );
 
-      if (swapTarget && candidates.length > 0) {
-        const cand = candidates[0];
-        target = {
-          ...target,
-          locations: target.locations.map((l) =>
-            l === swapTarget ? visitFrom(cand, l, input.groupSize, isEn) : l
-          ),
-        };
-        changes.push({
-          kind: "stop_replaced",
-          day,
-          destination_id: swapTarget.destination_id,
-          destination_name: swapTarget.destination_name,
-          replacement_id: cand.id,
-          replacement_name: cand.name,
-        });
-        note =
-          action === "more_nature"
-            ? isEn
-              ? `Swapped ${swapTarget.destination_name} for ${cand.name} (a natural destination) on Day ${day}.`
-              : `Zamenjan postanek ${swapTarget.destination_name} za ${cand.name} (naravna destinacija) v dnevu ${day}.`
-            : action === "more_food"
-            ? isEn
-              ? `Swapped ${swapTarget.destination_name} for ${cand.name} (a food-focused stop) on Day ${day}.`
-              : `Zamenjan postanek ${swapTarget.destination_name} za ${cand.name} (kulinarični postanek) v dnevu ${day}.`
-            : isEn
-            ? `Swapped ${swapTarget.destination_name} for ${cand.name} (family-friendly) on Day ${day}.`
-            : `Zamenjan postanek ${swapTarget.destination_name} za ${cand.name} (prijazen za družine) v dnevu ${day}.`;
-      } else if (!swapTarget) {
+      if (!swapTarget) {
         note = isEn
           ? `Day ${day} already matches this focus.`
           : `Dan ${day} že ustreza temu poudarku.`;
-      } else {
-        note = isEn
-          ? `No unused suitable destination is left for this swap.`
-          : `Za to zamenjavo ni več neuporabljene ustrezne destinacije.`;
+        break;
       }
+
+      const candidates = replacementCandidates(
+        usedIds,
+        input,
+        actionFilter,
+        target.locations,
+        swapTarget
+      );
+
+      if (candidates.length === 0) {
+        // P0.3 (recenzija): loči "ni nobene alternative" od "alternative so,
+        // a preveč oddaljene" — oboje je pošteno poročano, ničesar se ne ugiba
+        const anyCandidate = DESTINATIONS.filter(
+          (d) =>
+            !usedIds.has(d.id) &&
+            seasonFits(d, input.season) &&
+            actionFilter(d)
+        );
+        const reason: "no_nearby_alternative" | "no_candidate" =
+          anyCandidate.length > 0 ? "no_nearby_alternative" : "no_candidate";
+        changes.push({ kind: "cannot_transform", day, reason });
+        note =
+          reason === "no_nearby_alternative"
+            ? cannotTransformNote("no_nearby_alternative", day, isEn)
+            : isEn
+              ? `No unused suitable destination is left for this swap.`
+              : `Za to zamenjavo ni več neuporabljene ustrezne destinacije.`;
+        break;
+      }
+
+      const cand = candidates[0];
+      target = {
+        ...target,
+        locations: target.locations.map((l) =>
+          l === swapTarget ? visitFrom(cand, l, input.groupSize, isEn) : l
+        ),
+      };
+      changes.push({
+        kind: "stop_replaced",
+        day,
+        destination_id: swapTarget.destination_id,
+        destination_name: swapTarget.destination_name,
+        replacement_id: cand.id,
+        replacement_name: cand.name,
+      });
+      note =
+        action === "more_nature"
+          ? isEn
+            ? `Swapped ${swapTarget.destination_name} for ${cand.name} (a natural destination) on Day ${day}.`
+            : `Zamenjan postanek ${swapTarget.destination_name} za ${cand.name} (naravna destinacija) v dnevu ${day}.`
+          : action === "more_food"
+          ? isEn
+            ? `Swapped ${swapTarget.destination_name} for ${cand.name} (a food-focused stop) on Day ${day}.`
+            : `Zamenjan postanek ${swapTarget.destination_name} za ${cand.name} (kulinarični postanek) v dnevu ${day}.`
+          : isEn
+          ? `Swapped ${swapTarget.destination_name} for ${cand.name} (family-friendly) on Day ${day}.`
+          : `Zamenjan postanek ${swapTarget.destination_name} za ${cand.name} (prijazen za družine) v dnevu ${day}.`;
       break;
     }
   }

@@ -275,3 +275,26 @@ export function formatDrivingMinutes(minutes: number): string {
   if (m === 0) return `${h} h`;
   return `${h} h ${m} min`;
 }
+
+/**
+ * P0.2 (recenzija): preračun total_budget iz DEJANSKIH postankov itinererja.
+ *
+ * Uporablja se po vsaki spremembi strukture (refine AI + deterministična pot):
+ * AI JSON prinese svojo številko total_budget, ki pa je bila izračunana za
+ * STARO strukturo (ali je preprosto napačna) — budget, ki temelji na starih
+ * postankih, je napačen prikaz. Enak izračun kot fallback generacija in
+ * applyQuickAction: seštevek estimated_cost vseh dni, defenzivno na
+ * neveljavnih vrednostih. Čista funkcija, vrne kopijo.
+ */
+export function recomputeTotalBudget(itinerary: Itinerary): Itinerary {
+  const total = (itinerary.days ?? []).reduce(
+    (sum, d) =>
+      sum +
+      (d.locations ?? []).reduce(
+        (s, l) => s + (Number.isFinite(l.estimated_cost) ? l.estimated_cost : 0),
+        0
+      ),
+    0
+  );
+  return { ...itinerary, total_budget: total };
+}

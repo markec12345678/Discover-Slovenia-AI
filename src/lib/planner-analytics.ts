@@ -10,11 +10,24 @@
 //       → (day_adjusted / planner_refined / map_opened / weather_alternative_used)
 //       → itinerary_saved
 //   + odpovedi: planner_error, empty_result, invalid_location, unrealistic_day,
-//     save_failed, refine_failed, user_abandoned_after_result
+//     save_failed, refine_failed, result_session_ended_without_action
 //
 // Dogodki gredo v AnalyticsEvent (type = "planner_<ime>"), sessionId je
 // anonimni UUID v localStorageju (brez PII). Fire-and-forget — nikoli ne
 // blokira UI; keepalive pokrije dogodke ob zapiranju strani.
+//
+// P1-2 (recenzija): vsak dogodek nosi eid (clientEventId — UUID generiran
+// OB izstrelu). Strežnik ga zapiše v metadata in z njim DEDUPLICIRA
+// (podvojeni poskusi ob počasnem omrežju / keepalive retry ne ustvarijo
+// dvojne vrstice).
+//
+// P1-3 (recenzija): result_session_ended_without_action (prej
+// user_abandoned_after_result) je PROXY signal, NE dokaz nezadovoljstva:
+//   "Rezultat je bil prikazan, vendar v merjenem oknu (~45 s) ni bil zaznan
+//    naslednji sledeni dogodek (refine/shrani)."
+// Znano podcenjevanje: mobilni brskalniki lahko izpustijo pagehide, odprtje
+// zemljevida v novem zavihku se ne sledi, izguba povezave izgleda kot konec.
+// Docs: docs/ANALYTICS-EVENTS.md.
 // ============================================================================
 
 export type PlannerEventName =
@@ -38,7 +51,9 @@ export type PlannerEventName =
   | "unrealistic_day"
   | "save_failed"
   | "refine_failed"
-  | "user_abandoned_after_result";
+  // P1-3: proxy signal — rezultat prikazan, sledeni dogodek ni bil zaznan
+  // v merjenem oknu (NE pomeni "uporabnik ni bil zadovoljen")
+  | "result_session_ended_without_action";
 
 export type PlannerEventProps = Record<
   string,
@@ -63,15 +78,21 @@ function getSessionId(): string {
   }
 }
 
-/** Fire-and-forget dogodek — POST /api/analytics/event (nikoli ne vrže). */
+/** Fire-and-forget dogodek — POST /api/analytics/event (nikoli ne vrže).
+ *  P1-2: eid (clientEventId) omogoča strežniško deduplikacijo. */
 export function trackPlannerEvent(
   name: PlannerEventName,
   props: PlannerEventProps = {}
 ): void {
   try {
+    const eid =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `e-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     const body = JSON.stringify({
       name,
       props,
+      eid,
       path:
         typeof window !== "undefined" ? window.location.pathname : undefined,
       sid: getSessionId(),
@@ -88,11 +109,14 @@ export function trackPlannerEvent(
 }
 
 // ---------------------------------------------------------------------------
-// user_abandoned_after_result — rezultat prikazan, uporabnik ni ne prilagodil
-// ne shranil, zapustil je stran. Dokumentirana definicija:
+// result_session_ended_without_action — PROXY signal (P1-3, prej
+// user_abandoned_after_result). Rezultat prikazan, sledeni dogodek (refine /
+// shranjevanje) ni bil zaznan v merjenem oknu. Dokumentirana definicija:
 //   - ob prikazu rezultata se zapiše {at, engaged:false} (sessionStorage)
 //   - refine/shrani označi engaged:true
 //   - ob pagehide/unmount (po ≥ 45 s od prikaza) neangažiran rezultat → dogodek
+//   - NE pomeni nezadovoljstvo: lahko je branje, zavihek z zemljevidom,
+//     izguba povezave ali mobilni brskalnik brez pagehide (podcenjevanje)
 // ---------------------------------------------------------------------------
 
 const RESULT_STATE_KEY = "dsa_planner_result_state";
@@ -140,8 +164,8 @@ export function markResultEngaged(): void {
 }
 
 /**
- * Ali naj se izstreli user_abandoned_after_result? (eno-shot — pobriše stanje,
- * da se nešteje dvakrat). Pokliče se ob pagehide/unmount/ponovnem mountu.
+ * Ali naj se izstreli result_session_ended_without_action? (eno-shot — pobriše
+ * stanje, da se nešteje dvakrat). Pokliče se ob pagehide/unmount/ponovnem mountu.
  */
 export function fireAbandonedIfUnengaged(): void {
   const state = readResultState();
@@ -151,7 +175,7 @@ export function fireAbandonedIfUnengaged(): void {
   }
   const age = Date.now() - state.at;
   if (age >= ABANDON_AFTER_MS) {
-    trackPlannerEvent("user_abandoned_after_result", {
+    trackPlannerEvent("result_session_ended_without_action", {
       seconds_viewed: Math.round(age / 1000),
       days: state.days,
       source: state.source,

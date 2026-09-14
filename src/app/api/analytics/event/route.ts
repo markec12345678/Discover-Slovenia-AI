@@ -4,13 +4,17 @@ import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/analytics/event — dogodki pilotne analitike načrtovalca (Faza 4).
 //
-// Sprejme { name, props?, path?, sid? } in zapiše vrstico v AnalyticsEvent
+// Sprejme { name, props?, path?, sid?, eid? } in zapiše vrstico v AnalyticsEvent
 // (type = "planner_<name>", sessionId = anonimni UUID iz klienta, metadata =
-// JSON { props, path }). Whitelist imen je STREŽNIŠKA — klient ne more
+// JSON { props, path, eid }). Whitelist imen je STREŽNIŠKA — klient ne more
 // zapisati poljubnega tipa dogodka (isti vzorec varnosti kot track-funnel).
 //
-// Brez PII: sessionId je naključeni UUID, props so izključno številke/nizi
-// iz produktnega konteksta (dni, km, vir, provider ...).
+// P1-2 (recenzija): eid (clientEventId) — deduplikacija. Isti eid + isti tip
+// dogodka se NE zapiše dvakrat (retry ob počasnem omrežju, keepalive dvojni
+// pošilji). Brez spremembe sheme: eid živi znotraj metadata JSON.
+//
+// Brez PII: sessionId je naključni UUID, props so izključno številke/nizi
+// iz produktnega konteksta (dni, km, vir, provider ...). Docs: docs/ANALYTICS-EVENTS.md.
 
 const VALID_EVENTS = new Set([
   // Uspešna pot
@@ -33,12 +37,17 @@ const VALID_EVENTS = new Set([
   "unrealistic_day",
   "save_failed",
   "refine_failed",
-  "user_abandoned_after_result",
+  // P1-3 (recenzija): preimenovano iz user_abandoned_after_result — proxy
+  // signal "rezultat prikazan, sledeni dogodek ni bil zaznan v merjenem oknu"
+  "result_session_ended_without_action",
 ]);
 
 /** Omejitev velikosti props (proti zlorabi analitičnega endpointa). */
 const MAX_PROPS_KEYS = 12;
 const MAX_PROP_VALUE_LEN = 120;
+
+/** Veljaven eid: [A-Za-z0-9-]{8,64} (UUID iz klienta; neveljaven → brez dedupa). */
+const EID_RE = /^[A-Za-z0-9-]{8,64}$/;
 
 export async function POST(request: Request) {
   // Rate limit analitike (spam zaščita) — enak vzorec kot track-funnel
@@ -55,6 +64,7 @@ export async function POST(request: Request) {
       props?: unknown;
       path?: unknown;
       sid?: unknown;
+      eid?: unknown;
     } | null;
 
     const name = typeof body?.name === "string" ? body.name : "";
@@ -78,12 +88,30 @@ export async function POST(request: Request) {
 
     const path = typeof body?.path === "string" ? body.path.slice(0, 200) : undefined;
     const sid = typeof body?.sid === "string" ? body.sid.slice(0, 64) : undefined;
+    const eid =
+      typeof body?.eid === "string" && EID_RE.test(body.eid) ? body.eid : undefined;
+
+    // P1-2: deduplikacija po eid — počasna omrežja/keepalive retry lahko istega
+    // dogodka pošljejo dvakrat; drugi poskus vrne uspeh BREZ nove vrstice.
+    const eventType = `planner_${name}`;
+    if (eid) {
+      const duplicate = await db.analyticsEvent.findFirst({
+        where: {
+          type: eventType,
+          metadata: { contains: `"eid":"${eid}"` },
+        },
+        select: { id: true },
+      });
+      if (duplicate) {
+        return NextResponse.json({ success: true, deduped: true });
+      }
+    }
 
     await db.analyticsEvent.create({
       data: {
-        type: `planner_${name}`,
+        type: eventType,
         sessionId: sid,
-        metadata: JSON.stringify({ props, path }),
+        metadata: JSON.stringify({ props, path, eid }),
       },
     });
 

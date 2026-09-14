@@ -86,6 +86,10 @@ const L = {
     en: (i: string) => `Applied: "${i}"`,
   },
   toastPartial: { sl: "Delna posodobitev", en: "Partial update" },
+  toastStillFailing: {
+    sl: "Posodobljeno — a dan še vedno ni izvedljiv",
+    en: "Updated — but the day is still not doable",
+  },
   toastFailed: { sl: "Posodobitev ni uspela", en: "Update failed" },
   toastFailedDesc: {
     sl: "Napaka pri posodobitvi",
@@ -175,6 +179,15 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
           destination: ch.destination_id,
           replacement: ch.replacement_id,
         });
+      } else if (ch.kind === "cannot_transform") {
+        // P0.3 (recenzija): akcija zavrnjena zaradi pomanjkljivih podatkov —
+        // merjeno ločeno (načrt NI bil spremenjen)
+        trackPlannerEvent("refine_failed", {
+          via: "quick_action",
+          action,
+          day,
+          reason: ch.reason ?? "cannot_transform",
+        });
       }
     }
     if (action === "rain_suitable" && changes.some((c) => c.kind === "stop_replaced")) {
@@ -215,6 +228,29 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
         onRefined(data.itinerary);
         markResultEngaged();
 
+        // P0.1 (recenzija): struktuirani validacijski dokaz strežnika —
+        // before/after geo stanje + status pass | warn | still_failing.
+        // Toast NI samo "uspešen 200 in lep nov tekst": če dan po spremembi
+        // še vedno ni realno izvedljiv, uporabnik to izve TAKOJ.
+        const validation = data.validation as
+          | {
+              scope: "day" | "trip";
+              day?: number;
+              status: "pass" | "warn" | "still_failing";
+              statusNote?: string;
+              before: { km: number; worst: string; issues: number; errors: number };
+              after: { km: number; worst: string; issues: number; errors: number };
+            }
+          | undefined;
+        // Učinkovite spremembe: AI pot ne poroča changes[] (načrt je bil
+        // zamenjan kot celota) → šteje kot sprememba; deterministična pot
+        // poroča changes[], kjer cannot_transform NI sprememba (pošteno)
+        const effectiveChanges = Array.isArray(data.changes)
+          ? data.changes.filter(
+              (c: { kind?: string }) => c.kind !== "cannot_transform"
+            ).length
+          : 1;
+
         if (quick) {
           // Hitra akcija — deterministična ali AI izvedba
           trackPlannerEvent("planner_refined", {
@@ -222,12 +258,16 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
             action: quick.action,
             day: quick.day,
             source: data.source,
-            changes: data.changes?.length ?? 0,
+            changes: effectiveChanges,
           });
           trackPlannerEvent("day_adjusted", {
             action: quick.action,
             day: quick.day,
             source: data.source,
+            // P0.1: geo dokaz v analitiko (isti vir kot prikaz)
+            geo_status: validation?.status ?? "unknown",
+            km_before: validation?.before?.km,
+            km_after: validation?.after?.km,
           });
           if (Array.isArray(data.changes)) {
             reportChanges(data.changes, quick.action, quick.day);
@@ -235,16 +275,30 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
 
           recordHistory(trimmed, data.source || "ai");
 
-          if ((data.changes?.length ?? 0) > 0 && data.note) {
+          const statusNote = validation?.statusNote;
+          const toastDescription = [data.note, statusNote]
+            .filter(Boolean)
+            .join(" — ");
+          // P0.1: povratna informacija OBVEZNO tudi na AI poti (prej: AI pot ni
+          // vrnila note → brez toast-a → "uspešen 200 in lep tekst" brez dokaza)
+          if (effectiveChanges > 0 && (data.note || statusNote)) {
             toast({
-              title: L.toastUpdated[isEn ? "en" : "sl"],
-              description: data.note,
+              title:
+                validation?.status === "still_failing"
+                  ? L.toastStillFailing[isEn ? "en" : "sl"]
+                  : L.toastUpdated[isEn ? "en" : "sl"],
+              description: toastDescription,
+              variant:
+                validation?.status === "still_failing" ? "destructive" : "default",
             });
-          } else if (data.note) {
-            // Akcija se je izvedla, a ničesar ni bilo mogoče spremeniti — pošteno
+          } else if (data.note || statusNote) {
+            // Akcija se ni izvedla (cannot_transform / ničesar ni bilo mogoče
+            // spremeniti) — pošteno, z razlago
             toast({
               title: L.toastQuickNoChange[isEn ? "en" : "sl"],
-              description: data.note,
+              description: toastDescription,
+              variant:
+                validation?.status === "still_failing" ? "destructive" : "default",
             });
           }
         } else {
@@ -252,6 +306,7 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
           trackPlannerEvent("planner_refined", {
             via: "free_text",
             source: data.source,
+            geo_status: validation?.status ?? "unknown",
           });
           recordHistory(trimmed, data.source || "ai");
 
@@ -266,7 +321,14 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
           } else {
             toast({
               title: `${L.toastUpdated[isEn ? "en" : "sl"]} ✨`,
-              description: L.toastUpdatedDesc[isEn ? "en" : "sl"](trimmed),
+              description: [
+                L.toastUpdatedDesc[isEn ? "en" : "sl"](trimmed),
+                validation?.statusNote,
+              ]
+                .filter(Boolean)
+                .join(" — "),
+              variant:
+                validation?.status === "still_failing" ? "destructive" : "default",
             });
           }
         }

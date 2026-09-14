@@ -9,13 +9,20 @@ import type {
   LocationVisit,
   QuickActionId,
   RefineChange,
+  RefineValidation,
+  GeoValidation,
+  GeoValidationSnapshot,
 } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
 import {
   computeItineraryQuality,
+  recomputeTotalBudget,
   sanitizeAiRationale,
 } from "@/lib/itinerary-quality";
 import { validateItineraryGeo } from "@/lib/geo-validation";
+import { buildCrowdNotices } from "@/lib/crowd-alternatives";
+import { matchEventsForItinerary } from "@/lib/events-match";
+import { tripWindowMs } from "@/lib/trip-dates";
 import { PARTY_PROMPT_LABELS } from "@/lib/party-types";
 import { applyQuickAction, QUICK_ACTIONS } from "@/lib/refine-actions";
 import { buildStopReasons } from "@/lib/stop-insights";
@@ -44,6 +51,74 @@ interface RefineRequest {
 }
 
 const VALID_ACTIONS = new Set<string>(QUICK_ACTIONS.map((a) => a.id));
+
+// ---------------------------------------------------------------------------
+// P0.1 (recenzija) — struktuirani validacijski dokaz vsakega refine odgovora
+// ---------------------------------------------------------------------------
+//
+// "Deterministični fallback, ki spremeni dan, še ni isto kot validator, ki
+// dokaže, da je novi dan izvedljiv." Zato vsak odgovor (AI + deterministična
+// pot) vsebuje before → mutation (changes) → after iz ISTE validacijske plasti
+// kot prikaz, s statusom pass | warn | still_failing in opombo, če dan/pot po
+// spremembi še vedno ni realno izvedljiva (NE samo "uspešen 200 in lep tekst").
+
+type Lang = "sl" | "en";
+
+function snapshotFor(geo: GeoValidation, day?: number): GeoValidationSnapshot {
+  if (day !== undefined) {
+    const metrics = geo.days.find((d) => d.day === day);
+    const issues = geo.issues.filter((i) => i.day === day);
+    const errors = issues.filter((i) => i.level === "error").length;
+    return {
+      km: metrics?.km ?? 0,
+      worst: errors > 0 ? "error" : issues.length > 0 ? "warn" : "ok",
+      issues: issues.length,
+      errors,
+    };
+  }
+  return {
+    km: geo.tripKm,
+    worst: geo.worst,
+    issues: geo.issues.length,
+    errors: geo.issues.filter((i) => i.level === "error").length,
+  };
+}
+
+function buildValidationEvidence(
+  before: GeoValidation,
+  after: GeoValidation,
+  scope: "day" | "trip",
+  day: number | undefined,
+  lang: Lang
+): RefineValidation {
+  const beforeSnap = snapshotFor(before, day);
+  const afterSnap = snapshotFor(after, day);
+  const status: RefineValidation["status"] =
+    afterSnap.errors > 0 ? "still_failing" : afterSnap.issues > 0 ? "warn" : "pass";
+
+  let statusNote: string | undefined;
+  if (status === "still_failing") {
+    statusNote =
+      scope === "day"
+        ? lang === "en"
+          ? `Day ${day}: still not realistically doable after this change — see the feasibility warnings below the plan.`
+          : `Dan ${day}: po spremembi je še vedno ni realno izvedljivo — poglej opozorila o izvedljivosti pod načrtom.`
+        : lang === "en"
+          ? `The itinerary still has error-level feasibility warnings after this change — see the panel below the plan.`
+          : `Načrt ima po spremembi še vedno opozorila ravni ERROR o izvedljivosti — poglej ploščo pod načrtom.`;
+  } else if (status === "warn") {
+    statusNote =
+      scope === "day"
+        ? lang === "en"
+          ? `Day ${day} is doable after the change, but ${afterSnap.issues} warning(s) remain — see the feasibility panel.`
+          : `Dan ${day} je po spremembi izvedljiv, a ostaja ${afterSnap.issues} opozoril — poglej ploščo izvedljivosti.`
+        : lang === "en"
+          ? `Doable after the change, but ${afterSnap.issues} warning(s) remain — see the feasibility panel.`
+          : `Po spremembi je izvedljivo, a ostaja ${afterSnap.issues} opozoril — poglej ploščo izvedljivosti.`;
+  }
+
+  return { scope, day, before: beforeSnap, after: afterSnap, status, statusNote };
+}
 
 export async function POST(request: Request) {
     // Rate limit AI refine klicev
@@ -101,6 +176,19 @@ export async function POST(request: Request) {
     groupSize: 2,
     language: isEn ? "en" : "sl",
   };
+  const refineInput: PlannerInput = formData ?? currentAsFallbackInput;
+
+  // P0.2 (recenzija): datumska konteksta za PONOVEN izračun dogodkov in opomb
+  // o gneči po spremembi — startDate iz obrazca, sicer okvir, shranjen s
+  // trenutnim načrtom (refine spreminja postanke, ne datumov odhoda).
+  const refineInputWithDates: PlannerInput = {
+    ...refineInput,
+    startDate: refineInput.startDate ?? current.tripStartDate ?? undefined,
+  };
+  const refineTripWindow = tripWindowMs(
+    refineInputWithDates.startDate ?? null,
+    current.days.length
+  );
 
   // Pripravi kontekst destinacij
   const destContext = DESTINATIONS.map(
@@ -308,13 +396,12 @@ JSON format (STROGO, enak kot vhod):
 
     // FW4.1: strukturne metrike se PRERAČUNAJO na novi strukturi (stare
     // vrednosti bi bile zastarele) + posodobljena AI utemeljitev.
-    // Sosednji bug-fix: AI JSON ne vsebuje events/packingList — prenesi
-    // iz originala, če novo-parsed nima (refine je ti polji prej izgubil).
+    // Sosednji bug-fix: AI JSON ne vsebuje packingList — prenesi
+    // iz originala, če novo-parsed nima (refine jo je prej izgubil).
     refinedItinerary.quality = computeItineraryQuality(refinedItinerary, formData);
     refinedItinerary.rationale =
       sanitizeAiRationale(parsed.rationale) ??
       (typeof current.rationale === "string" ? current.rationale : undefined);
-    if (!Array.isArray(refinedItinerary.events)) refinedItinerary.events = current.events;
     if (!Array.isArray(refinedItinerary.packingList)) refinedItinerary.packingList = current.packingList;
 
     // FW4.2: okvir potovanja in dodani dogodki so uporabnikovo stanje, ki ga
@@ -324,20 +411,43 @@ JSON format (STROGO, enak kot vhod):
     refinedItinerary.tripEndDate = current.tripEndDate;
     if (!Array.isArray(refinedItinerary.addedEvents)) refinedItinerary.addedEvents = current.addedEvents;
 
+    // ------------------------------------------------------------------
+    // P0.2 (recenzija): POPOLNA sinhronizacija po spremembi — budget, dogodki,
+    // gneča, geo-validacija in razlage se PRERAČUNAJO na NOVI strukturi.
+    // Prej: total_budget je prišel iz AI JSON (izračunan za staro strukturo),
+    // events podedovan iz staroga načrta (dogodki na odstranjenih destinacijah),
+    // crowdNotices pa izpuščeni (AI JSON jih ne vsebuje → izgubljeni).
+    // ------------------------------------------------------------------
+    const synced = recomputeTotalBudget(refinedItinerary);
+    synced.events = matchEventsForItinerary(synced.days, 6, refineTripWindow);
+    synced.crowdNotices = buildCrowdNotices(synced, refineInputWithDates, isEn ? "en" : "sl");
+
     // P0.2 GEO-VALIDACIJA: preračunaj na novi strukturi (stare vrednosti bi
     // bile zastarele — refine lahko prestavi postanke med dnevi/dnevi sami)
-    refinedItinerary.geoValidation = validateItineraryGeo(refinedItinerary, isEn ? "en" : "sl");
+    synced.geoValidation = validateItineraryGeo(synced, isEn ? "en" : "sl");
 
     console.log(`[itinerary/refine] AI uspešno (source: ${result.source}) — ukaz: "${instruction}"`);
 
     // FAZA 4-1: razlage postankov se PRERAČUNAJO na novi strukturi (nove
     // lokacije / nov zaporedni red → nove razdalje, nov kontekst)
-    const withReasons = buildStopReasons(refinedItinerary, formData ?? currentAsFallbackInput, isEn ? "en" : "sl");
+    const withReasons = buildStopReasons(synced, refineInput, isEn ? "en" : "sl");
+
+    // P0.1 (recenzija): validacijski dokaz — before/after iz ISTE plasti kot
+    // prikaz (prosti ukaz → obseg celega potovanja)
+    const beforeGeo = validateItineraryGeo(current, isEn ? "en" : "sl");
+    const validation = buildValidationEvidence(
+      beforeGeo,
+      synced.geoValidation,
+      "trip",
+      undefined,
+      isEn ? "en" : "sl"
+    );
 
     return NextResponse.json({
       itinerary: withReasons,
       instruction,
       source: result.source,
+      validation,
     });
   } catch (error) {
     console.error("[itinerary/refine] AI napaka:", error);
@@ -347,12 +457,23 @@ JSON format (STROGO, enak kot vhod):
     // načinu). Ni nov AI sistem: čiste transformacije nad istim datasetom
     // destinacij, vsaka sprememba poročana v `changes`.
     if (action && day) {
-      const refineInput: PlannerInput = formData ?? currentAsFallbackInput;
       const result = applyQuickAction(
         current,
         refineInput,
         action,
         day,
+        isEn ? "en" : "sl"
+      );
+      // P0.2 (recenzija): dogodki + opombe o gneči se preračunata tudi na
+      // deterministični poti (zamenjava/odstranitev postanka spremeni oba)
+      result.itinerary.events = matchEventsForItinerary(
+        result.itinerary.days,
+        6,
+        refineTripWindow
+      );
+      result.itinerary.crowdNotices = buildCrowdNotices(
+        result.itinerary,
+        refineInputWithDates,
         isEn ? "en" : "sl"
       );
       // P0.2 GEO-VALIDACIJA: tudi deterministična hitra akcija spremeni
@@ -366,8 +487,21 @@ JSON format (STROGO, enak kot vhod):
         refineInput,
         isEn ? "en" : "sl"
       );
+
+      // P0.1 (recenzija): before → mutation → after iz ISTE validacijske plasti
+      // kot prikaz — dokaz, da je dan po spremembi izvedljiv (ali opozorilo,
+      // da NI — nikoli samo "uspešen 200 in lep nov tekst")
+      const beforeGeo = validateItineraryGeo(current, isEn ? "en" : "sl");
+      const validation = buildValidationEvidence(
+        beforeGeo,
+        result.itinerary.geoValidation,
+        "day",
+        day,
+        isEn ? "en" : "sl"
+      );
+
       console.log(
-        `[itinerary/refine] Hitra akcija "${action}" (dan ${day}) deterministično: ${result.changes.length} sprememb`
+        `[itinerary/refine] Hitra akcija "${action}" (dan ${day}) deterministično: ${result.changes.length} sprememb, geo ${validation.before.worst}→${validation.after.worst} (${validation.status})`
       );
       return NextResponse.json({
         itinerary: withReasons,
@@ -378,6 +512,7 @@ JSON format (STROGO, enak kot vhod):
         day,
         changes: result.changes satisfies RefineChange[],
         note: result.note,
+        validation,
       });
     }
 
