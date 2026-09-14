@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import {
   Sparkles,
   Clock,
   Calendar,
   CalendarDays,
+  Car,
   Euro,
   Users,
   UsersRound,
@@ -71,7 +72,9 @@ import {
   markResultEngaged,
   fireAbandonedIfUnengaged,
 } from "@/lib/planner-analytics";
-import { dayDrivingKm, destinationById } from "@/lib/stop-insights";
+import { destinationById } from "@/lib/stop-insights";
+import { validateItineraryGeo } from "@/lib/geo-validation";
+import { GeoValidationPanel } from "@/components/geo-validation-panel";
 import { StopInsights } from "@/components/stop-insights";
 import { saveItinerary, fetchSharedItinerary } from "@/lib/itinerary-share";
 import { addSavedTrip, deriveSavedTripName } from "@/lib/my-trips-storage";
@@ -229,6 +232,18 @@ export function ItineraryPlanner() {
   const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // P0.2 GEO-VALIDACIJA: izvedljivost poti za prikaz (panel + dnevne značke).
+  // Shranjeno polje (API/refine) ali preračun na mestu uporabe za stare
+  // shranjene načrte — ISTA čista funkcija kot na strežniku.
+  const geoValidation = useMemo(
+    () =>
+      itinerary
+        ? (itinerary.geoValidation ??
+          validateItineraryGeo(itinerary, locale === "en" ? "en" : "sl"))
+        : null,
+    [itinerary, locale]
+  );
 
   // FAZA 4 (pilotna analitika): planner_started — prva interakcija z obrazcem
   // (katerikoli vnos ali oddaja) se zabeleži le enkrat na življenjsko dobo
@@ -529,8 +544,7 @@ export function ItineraryPlanner() {
         trackPlannerEvent("empty_result", { days: data.days?.length ?? 0 });
       }
 
-      // Pilotna analitika: neveljavne lokacije (ID-ji zunaj dataseta) in
-      // geografsko nerealistični dnevi (> 250 cestnih km — prag validatorja)
+      // Pilotna analitika: neveljavne lokacije (ID-ji zunaj dataseta)
       for (const day of data.days ?? []) {
         for (const loc of day.locations ?? []) {
           if (!destinationById(loc.destination_id)) {
@@ -540,9 +554,24 @@ export function ItineraryPlanner() {
             });
           }
         }
-        const km = dayDrivingKm(day.locations ?? []);
-        if (km !== null && km > 250) {
-          trackPlannerEvent("unrealistic_day", { day: day.day, km });
+      }
+
+      // P0.2 GEO-VALIDACIJA (analitika): nerealistični dnevi zdaj iz ISTE
+      // validacijske plasti kot prikaz — ne več samo prag "> 250 km", ampak
+      // rule + km + source za vsak ERROR (ni realno izvedljivo). Warn raven
+      // (naporno, a mogoče) NE šteje kot unrealistic_day.
+      const geoForAnalytics =
+        data.geoValidation ??
+        validateItineraryGeo(data, locale === "en" ? "en" : "sl");
+      for (const issue of geoForAnalytics.issues) {
+        if (issue.level === "error") {
+          trackPlannerEvent("unrealistic_day", {
+            day: issue.day,
+            rule: issue.rule,
+            km:
+              geoForAnalytics.days.find((d) => d.day === issue.day)?.km ?? 0,
+            source: data.source,
+          });
         }
       }
 
@@ -1068,6 +1097,10 @@ export function ItineraryPlanner() {
                 {/* FW4.1: strukturne metrike poti + utemeljitev — nad dnevni timeline */}
                 <ItineraryQualityCard itinerary={itinerary} input={formData} />
 
+                {/* P0.2 GEO-VALIDACIJA: poštena preverba izvedljivosti — opozorila
+                    po dnevih (km, obseg, urnik) z pozivom k prilagoditvi */}
+                <GeoValidationPanel itinerary={itinerary} />
+
                 {/* Multi-turn AI refiner — uporabnik naravnojezično spreminja itinerer */}
                 {/* P0-4: sidro za mobilno bližnjico "Prilagodi" (PlannerDayNav) */}
                 <div id="itinerary-refiner" className="scroll-mt-[130px] lg:scroll-mt-24">
@@ -1111,6 +1144,17 @@ export function ItineraryPlanner() {
                       }
                     );
 
+                    // P0.2 GEO-VALIDACIJA: stanje tega dne (za značko v glavi dneva)
+                    const dayGeo = geoValidation?.days.find(
+                      (d) => d.day === day.day
+                    );
+                    const dayIssues = geoValidation?.issues.filter(
+                      (i) => i.day === day.day
+                    );
+                    const dayHasError = dayIssues?.some((i) => i.level === "error");
+                    const dayHasWarn =
+                      !dayHasError && (dayIssues?.length ?? 0) > 0;
+
                     return (
                     <Card
                       key={day.day}
@@ -1133,6 +1177,27 @@ export function ItineraryPlanner() {
                             <Cloud className="size-3.5" aria-hidden />
                             {day.weather.condition} · {day.weather.temp}°C
                           </Badge>
+                          {/* P0.2 GEO-VALIDACIJA: dnevna značka izvedljivosti —
+                              ~km + raven (rdeča = ni realno izvedljivo,
+                              jantbar = napak dan); brez značke = v redu */}
+                          {dayGeo && dayGeo.km > 0 && (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "gap-1.5 font-normal",
+                                dayHasError
+                                  ? "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400"
+                                  : dayHasWarn
+                                    ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                                    : "text-muted-foreground"
+                              )}
+                              title={t("geoValidation.title")}
+                            >
+                              <Car className="size-3.5" aria-hidden />
+                              ~{dayGeo.km} km
+                              {dayHasError ? " · !" : dayHasWarn ? " · ⚠" : ""}
+                            </Badge>
+                          )}
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-3">

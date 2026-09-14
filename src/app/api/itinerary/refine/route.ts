@@ -15,6 +15,7 @@ import {
   computeItineraryQuality,
   sanitizeAiRationale,
 } from "@/lib/itinerary-quality";
+import { validateItineraryGeo } from "@/lib/geo-validation";
 import { PARTY_PROMPT_LABELS } from "@/lib/party-types";
 import { applyQuickAction, QUICK_ACTIONS } from "@/lib/refine-actions";
 import { buildStopReasons } from "@/lib/stop-insights";
@@ -323,6 +324,10 @@ JSON format (STROGO, enak kot vhod):
     refinedItinerary.tripEndDate = current.tripEndDate;
     if (!Array.isArray(refinedItinerary.addedEvents)) refinedItinerary.addedEvents = current.addedEvents;
 
+    // P0.2 GEO-VALIDACIJA: preračunaj na novi strukturi (stare vrednosti bi
+    // bile zastarele — refine lahko prestavi postanke med dnevi/dnevi sami)
+    refinedItinerary.geoValidation = validateItineraryGeo(refinedItinerary, isEn ? "en" : "sl");
+
     console.log(`[itinerary/refine] AI uspešno (source: ${result.source}) — ukaz: "${instruction}"`);
 
     // FAZA 4-1: razlage postankov se PRERAČUNAJO na novi strukturi (nove
@@ -348,6 +353,12 @@ JSON format (STROGO, enak kot vhod):
         refineInput,
         action,
         day,
+        isEn ? "en" : "sl"
+      );
+      // P0.2 GEO-VALIDACIJA: tudi deterministična hitra akcija spremeni
+      // strukturo dneva — preračunaj (isto čisto funkcijo kot AI pot)
+      result.itinerary.geoValidation = validateItineraryGeo(
+        result.itinerary,
         isEn ? "en" : "sl"
       );
       const withReasons = buildStopReasons(

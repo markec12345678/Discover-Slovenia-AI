@@ -102,6 +102,13 @@ export interface Itinerary {
   // javno dokumentiranih točkah) + alternative izračunane iz resničnih
   // podatkov destinacij (bližina/sezona/interesi); prazno brez datuma odhoda
   crowdNotices?: CrowdNotice[];
+  // NOVO (P0.2 GEO-VALIDACIJA): geografska/časovna izvedljivost poti —
+  // deterministično preverjena plast NAD generiranim načrtom (km na dan,
+  // zaporedne razdalje, obseg dneva, časovna združljivost urnika, duplikati,
+  // manjkajoče koordinate). Izračun: src/lib/geo-validation.ts (čista funkcija
+  // — isto na serverju in clientu; stari shranjeni načrti brez tega polja
+  // ga panel izračuna na mestu uporabe).
+  geoValidation?: GeoValidation;
 }
 
 // Dogodek, povezan z destinacijo v itinererju (subset EventItem iz events-data)
@@ -135,6 +142,50 @@ export interface CrowdNotice {
   destination_name: string;
   reason: string;
   alternatives: CrowdAlternative[];
+}
+
+// ============================================================================
+// P0.2 — GEO-VALIDACIJA: geografska/časovna izvedljivost itinererja
+// ============================================================================
+//
+// Deterministična plast NAD generacijo (AI ali fallback): metrike po dnevih
+// (km, vožnja, aktivnosti, obseg) + opozorila po uporabnikovih pravilih iz
+// pilot validacije. Brez lažne natančnosti (zaokrožitve na 5, "~" ocene).
+// Glej src/lib/geo-validation.ts.
+
+export type GeoIssueLevel = "warn" | "error";
+
+export type GeoRuleId =
+  | "day_km"
+  | "day_stops"
+  | "leg_distance"
+  | "day_overload"
+  | "schedule_gap"
+  | "schedule_overlap"
+  | "duplicate_stop"
+  | "missing_coords";
+
+export interface DayGeoMetrics {
+  day: number;
+  stops: number;
+  km: number;
+  drivingMinutes: number;
+  activityMinutes: number;
+  loadMinutes: number;
+}
+
+export interface GeoValidationIssue {
+  day: number;
+  level: GeoIssueLevel;
+  rule: GeoRuleId;
+  message: string;
+}
+
+export interface GeoValidation {
+  days: DayGeoMetrics[];
+  issues: GeoValidationIssue[];
+  tripKm: number;
+  worst: "ok" | "warn" | "error";
 }
 
 export interface WeatherData {

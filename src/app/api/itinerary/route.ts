@@ -33,6 +33,7 @@ import {
   computeItineraryQuality,
   sanitizeAiRationale,
 } from "@/lib/itinerary-quality";
+import { validateItineraryGeo } from "@/lib/geo-validation";
 import { buildStopReasons } from "@/lib/stop-insights";
 
 // ============================================================================
@@ -482,6 +483,11 @@ JSON format (STROGO):
       sanitizeAiRationale(parsed.rationale) ??
       buildFallbackRationale(input, enriched.quality, lang);
 
+    // P0.2 GEO-VALIDACIJA: izvedljivost nad končno strukturo (deterministično,
+    // iz realnih koordinat — km/dan, zaporedne razdalje, obseg dneva, urnik,
+    // duplikati, manjkajoči ID-ji). Sporočila locena prek lang.
+    enriched.geoValidation = validateItineraryGeo(enriched, lang);
+
     // CROWD-ALTERNATIVES: poštene opombe o gneči + alternative (deterministično)
     enriched.crowdNotices = buildCrowdNotices(enriched, input, lang);
 
@@ -523,6 +529,10 @@ JSON format (STROGO):
     // (P4-8: jezik itinererja)
     fallback.quality = computeItineraryQuality(fallback, input);
     fallback.rationale = buildFallbackRationale(input, fallback.quality, lang);
+
+    // P0.2 GEO-VALIDACIJA: isto preverjanje izvedljivosti kot na AI poti —
+    // fallback itinerar mora biti enako preverljiv kot AI izpisa.
+    fallback.geoValidation = validateItineraryGeo(fallback, lang);
 
     // CROWD-ALTERNATIVES: iste poštene opombe kot na AI poti
     fallback.crowdNotices = buildCrowdNotices(fallback, input, lang);
