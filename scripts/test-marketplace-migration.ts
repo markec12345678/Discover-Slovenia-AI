@@ -15,7 +15,11 @@
  */
 import { PrismaClient } from "../node_modules/.prisma/client-test";
 
-const TEST_DB = "/home/z/Discover-Slovenia-AI/db/migration-test.db";
+// TEST_DB: absolutna pot izpeljana iz lege skripte (bun import.meta.dir) —
+// prenosljiva (prej hardcoded /home/z/…). Vrsto modula .prisma/client-test
+// pokriva scripts/client-test.d.ts (ambientna deklaracija), da `next build`
+// (tsc prek **/*.ts) ne pada tam, kjer testni klient ni generiran.
+const TEST_DB = `${import.meta.dir}/../db/migration-test.db`;
 const db = new PrismaClient({
   datasources: { db: { url: `file:${TEST_DB}` } },
 });

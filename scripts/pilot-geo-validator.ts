@@ -203,6 +203,16 @@ const FALSE_PRECISION = /\b\d{2,3}\s*min\s*(vožnje|drive|pota)\b|\b\d+,\d\s*h\s
 // Glavni program
 // ---------------------------------------------------------------------------
 
+interface DayReport {
+  day: number;
+  stops: string[];
+  regions: string[];
+  km: number;
+  activityH: number;
+  transferH: number;
+  issues: Issue[];
+}
+
 const files = ["scenario-1", "scenario-2", "scenario-3", "scenario-4", "scenario-5", "scenario-6", "scenario-7", "scenario-8", "scenario-9", "scenario-10", "scenario-10-en"];
 const report: Record<string, unknown>[] = [];
 let totalErrors = 0;
@@ -215,7 +225,7 @@ for (const f of files) {
   const itinerary = (data.json as ItineraryJson | undefined) ?? data;
   if (!itinerary?.days?.length) continue;
 
-  const dayReports = [];
+  const dayReports: DayReport[] = [];
   let tripKm = 0;
   for (const day of itinerary.days) {
     const v = validateDay(day);

@@ -12,6 +12,11 @@
  * Uporaba: bun run scripts/pilot-scenarios.ts
  */
 
+// Modul, ne globalna skripta: izolira skop (TS2451 — kolizija `const BASE` s
+// pilot-audit.ts) in omogoča top-level await (TS1375). `export {}` ne vpliva
+// na izvajanje z bun.
+export {};
+
 const BASE = "https://i-feel-slovenia.onrender.com";
 const OUT = "scripts/pilot-results";
 const TIMEOUT = 90_000;

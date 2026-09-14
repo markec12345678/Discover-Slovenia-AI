@@ -19,6 +19,11 @@
  * Skripta NE spreminja aplikacijske kode — je validacijsko orodje (faza 1 pravilo).
  */
 
+// Modul, ne globalna skripta: izolira skop (TS2451 — kolizija `const BASE` s
+// pilot-scenarios.ts) in omogoča top-level await (TS1375). `export {}` ne vpliva
+// na izvajanje z bun.
+export {};
+
 const BASE = "https://i-feel-slovenia.onrender.com";
 const TIMEOUT_MS = 30_000;
 const RESULTS_DIR = "scripts/pilot-results";

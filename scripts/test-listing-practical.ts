@@ -26,7 +26,10 @@ import {
   practicalPromptFragment,
 } from "../src/lib/listing-practical";
 
-const TEST_DB = "/home/z/Discover-Slovenia-AI/db/migration-test.db";
+// TEST_DB: absolutna pot izpeljana iz lege skripte (bun import.meta.dir) —
+// prenosljiva (prej hardcoded /home/z/…). Vrsto modula .prisma/client-test
+// pokriva scripts/client-test.d.ts (ambientna deklaracija).
+const TEST_DB = `${import.meta.dir}/../db/migration-test.db`;
 const db = new PrismaClient({
   datasources: { db: { url: `file:${TEST_DB}` } },
 });
