@@ -7,6 +7,40 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.8.1] — 2026-09-15
+
+### Dodano (F5.5 — odpiralni časi v validacijski plasti)
+
+> MindTrip pariteta ( njihov citirani primer: »Louvre je zaprt ob torkih«)
+> po naših pravilih poštenosti: SAMO preverjeni vnosi z uradnimi viri,
+> vir je vedno v sporočilu, brez datuma odhoda NE trdimo ničesar.
+
+- **Destination.opening ( opcijsko, 5 preverjenih vnosov):** Vintgarska
+  soteska zaprta nov–mar ( vintgar.si — closureLevel=destination → ERROR);
+  Ptujski grad zaprt ob ponedeljkih ( pmpo.si — mainAttraction → WARN);
+  Postojnska jama / Kobariški muzej / Stari grad Celje odprti vsak dan
+  ( uradni viri — opomba brez opozoril). Piranski pomorski muzej PRESKOČEN
+  ( samo sekundarni vir — data honesty).
+- **Geo-validacija pravili 9+10:** closed_month + closed_weekday — SAMO z
+  znanim datumom odhoda; sporočilo vsebuje zapise in VIR; SL+EN.
+- **Generiranje:** fallback deterministično izloči mesečno zaprte
+  destinacije iz bazena ( preventiva — dokazano: december + preferred
+  vintgar → izostane); AI dobi destContext vrstico z virom + izrecno
+  pravilo; varnostna mreža = validator ( dokazano: AI je kljub pravilu
+  razporedil Vintgar decembra → validator javil closed_month ERROR).
+- **StopInsights:** vrstica »Odpiralni čas: … ( vir: X)« v praktičnih
+  podatkih — samo obstoječi vnosi.
+- **Dnevna značka:** pokaže se tudi pri km=0 z opozorilom ( poprejšnji
+  km-pogoj skril »!« za en-postankovne dneve).
+
+### Validacija
+
+- tsc 0, eslint 0; čisti testi 9/9 ( december ERROR/brez datuma nič/avgust
+  OK/ponedeljek WARN/torek OK/EN/Postojna vedno odprta/worst ravni);
+- produkcija: fallback preventiva + Ptuj ponedeljek WARN s virom; UI dokaz
+  prek ?odpri= ( shranjen zimski načrt → panel + značka »!« + praktični
+  podatki z virom); 0 konzolnih napak; 390 px brez prelivov.
+
 ## [1.8.0] — 2026-09-15
 
 ### Dodano (FAZA 5 — primerjalni razvojni sprint po analizi vs MindTrip)

@@ -33,7 +33,7 @@
 | 2 | »Start Anywhere« ni obstajal ( nič URL/YouTube vnosa v kodi) | Prilepi povezavo do videa → lokacije → itinerer ( unikaten feature) | ✅ **F5.4 implementirano** ( deterministično!) |
 | 3 | ICS/koledarski izvoz ni obstajal ( print le na share strani; pdf-lib samo za račune lastnikov) | »Vzemi načrt s sabo« ( app/tisk) | ✅ **F5.2 implementirano** |
 | 4 | Budget = samo vnosev atrakcij ( `recomputeTotalBudget` = seštevek `estimated_cost`) — brez goriva/vinjet | Stroškovna razčlenitev vožnje ( cestnine, poraba) | ✅ **F5.3 implementirano** ( gorivo + slovenska e-vinjeta, viri razkriti) |
-| 5 | Odpiralni časi destinacij ne obstajajo ( namerna data honesty odločitev; `Destination` vtip nima polj) | MindTrip upošteva dneve zaprtja ( Louvre/torek) | ⏸ **Zavestno odloženo** ( iz java OSM Overpass POI plasti; za 22 destinacij bi zahtevalo ročno potrditev — lažje pasti kot zmaga) |
+| 5 | Odpiralni časi destinacij niso obstajali ( namerna data honesty odločitev) | MindTrip upošteva dneve zaprtja ( Louvre/torek) | ✅ **F5.5 implementirano** ( 5 preverjenih vnosov z viri + pravili closed_month/closed_weekday; ostalih 17 po potrebi) |
 | 6 | Živi cene + rezervacije hotelov/poletov | Layla ( živi cene) / Mindtrip ( Expedia + v-chat letalske karte) | ⏸ **Roadmap** ( zahteva partner API ključe; sandbox/preprod nima pogojev; naša tržnica je lokalni monopol) |
 | 7 | Community layer ( avtorji vodnikov, »Shranjeno pri 23«) | MindTrip hybrid AI + social | ⏸ **Roadmap** ( potrebuje uporabnike; imamo community-trips temelj) |
 | 8 | Mobilna aplikacija ( iOS/Android) | Mindtrip app, Layla app | ⏸ **Roadmap** ( PWA bi bil vmesni korak) |
@@ -106,9 +106,12 @@
 
 ## 6. Roadmap ( odkrito zapisano, po vplivu)
 
-1. **Odpiralni časi/dnevi za 22 destinacij** — vir: OSM ( že integriran
-   POI Overpass layer) + ročna potrditev; validacija urnika v
-   geo-plasti ( »destinacija zaprta ob torkih« = MindTrip-pariteta).
+1. ~~**Odpiralni časi/dnevi**~~ ✅ **IZVEDENO v F5.5 (1.8.1)** — 5 preverjenih
+   vnosov z uradnimi viri ( vintgar.si, postojnska-jama.eu, kobariski-muzej.si,
+   visitcelje.eu, pmpo.si); geo-validacija pravili closed_month/closed_weekday
+   ( samo z znanim datumom; vir v sporočilu); fallback preventiva + AI pravilo
+   + validator kot varnostna mreža. Preostanek ( ostalih 17 destinacij):
+   po potrebi po isti metodi — uradni vir + potrditev.
 2. **Cestni routing ( OSRM/Directions)** — realna geometrija poti namesto
    ravnih črt; izboljša km/minute v VSEH plasteh ( kvaliteta, geo,
    stroški).
