@@ -142,7 +142,11 @@ export function useTripProfile() {
 
 const INTEREST_OPTIONS = [
   { id: "narava", label: "Narava", icon: Mountain },
-  { id: "kulinarika", label: "Lokalna hrana", icon: UtensilsCrossed },
+  // TAG-ALIGN (P1, recenzija Faze 4): "kulinarika" → kanonični "hrana"
+  // (ujema se z bestFor destinacij in vrednostjo žetona v plannerju).
+  // Stari shranjeni profili z "kulinarika" se pri prikazu preslikajo
+  // (glej interestLabels spodaj).
+  { id: "hrana", label: "Lokalna hrana", icon: UtensilsCrossed },
   { id: "avantura", label: "Avantura", icon: Sparkles },
   { id: "kultura", label: "Kultura", icon: Heart },
 ];
@@ -437,7 +441,10 @@ export function WelcomeBackBanner({ profile, onDismiss }: WelcomeBackProps) {
 
   const interestLabels: Record<string, string> = {
     narava: t("interests.narava"),
-    kulinarika: t("interests.kulinarika"),
+    // TAG-ALIGN: novi kanonični ID + preslikava starega "kulinarika"
+    // (profili, shranjeni pred 1.7.2) — isti prikaz.
+    hrana: t("interests.hrana"),
+    kulinarika: t("interests.hrana"),
     avantura: t("interests.avantura"),
     kultura: t("interests.kultura"),
   };

@@ -156,52 +156,72 @@ function isValidPlannerInput(v: unknown): v is PlannerInput {
  * FW3: Pametni defaults iz naravnega jezika (hero input / kviz / demo
  * scenariji). Uporablja ga tako event listener (ista stran) kot mount
  * consume iz sessionStorage (prihod z heroja homepagea na /načrtuj).
+ *
+ * TAG-ALIGN (P1, recenzija Faze 4): interesi se zdaj potiskajo v
+ * KANONIČNIH vrednostih INTERESTS ("hrana", ne "kulinarika") — pred
+ * popravkom žeton "Hrana & vino" ni bil izbran (chip se ni prižgal) in
+ * fallback ocenjevalnik na API strani je vrednost tiho ignoriral
+ * (bestFor destinacij vsebuje "hrana"). Dodana je tudi pokritost
+ * angleških ključnih besed (EN je poln locale; hero sprejema EN vnose).
  */
 function parseQueryToPlannerInput(query: string): PlannerInput {
   const lowerQuery = query.toLowerCase();
   const newInterests: string[] = [];
 
-  if (lowerQuery.includes("narav") || lowerQuery.includes("pohod") || lowerQuery.includes("gor")) newInterests.push("narava");
-  if (lowerQuery.includes("hran") || lowerQuery.includes("jest") || lowerQuery.includes("kosil") || lowerQuery.includes("večerj")) newInterests.push("kulinarika");
-  if (lowerQuery.includes("vin") || lowerQuery.includes("pij")) newInterests.push("kulinarika");
-  if (lowerQuery.includes("avantur") || lowerQuery.includes("raft") || lowerQuery.includes("adrenalin")) newInterests.push("avantura");
-  if (lowerQuery.includes("otrok") || lowerQuery.includes("družin")) newInterests.push("družina");
+  if (
+    lowerQuery.includes("narav") || lowerQuery.includes("pohod") || lowerQuery.includes("gor") ||
+    lowerQuery.includes("nature") || lowerQuery.includes("hik") || lowerQuery.includes("mountain")
+  ) newInterests.push("narava");
+  if (
+    lowerQuery.includes("hran") || lowerQuery.includes("jest") || lowerQuery.includes("kosil") || lowerQuery.includes("večerj") ||
+    lowerQuery.includes("food") || lowerQuery.includes("dinner") || lowerQuery.includes("lunch") || lowerQuery.includes("restaurant") || /\b(?:eat|eating)\b/.test(lowerQuery)
+  ) newInterests.push("hrana");
+  if (lowerQuery.includes("vin") || lowerQuery.includes("pij") || lowerQuery.includes("wine")) newInterests.push("hrana");
+  if (
+    lowerQuery.includes("avantur") || lowerQuery.includes("raft") || lowerQuery.includes("adrenalin") ||
+    lowerQuery.includes("adventure")
+  ) newInterests.push("avantura");
+  if (lowerQuery.includes("otrok") || lowerQuery.includes("družin") || lowerQuery.includes("family") || /\bkids?\b/.test(lowerQuery)) newInterests.push("družina");
   if (lowerQuery.includes("romanti")) newInterests.push("romantika");
-  if (lowerQuery.includes("kultur") || lowerQuery.includes("zgodovin") || lowerQuery.includes("mest")) newInterests.push("kultura");
+  if (
+    lowerQuery.includes("kultur") || lowerQuery.includes("zgodovin") || lowerQuery.includes("mest") ||
+    lowerQuery.includes("culture") || lowerQuery.includes("history") || lowerQuery.includes("city")
+  ) newInterests.push("kultura");
   if (lowerQuery.includes("wellness") || lowerQuery.includes("spa") || lowerQuery.includes("zdravil")) newInterests.push("wellness");
 
-  // Določi število dni iz query-ja
+  // Določi število dni iz query-ja (SL + EN)
   let days = 3;
-  const hourMatch = lowerQuery.match(/(\d+)\s*ur/);
-  const dayMatch = lowerQuery.match(/(\d+)\s*dan|(\d+)\s*dnev/);
+  const hourMatch = lowerQuery.match(/(\d+)\s*(?:ur|hours?)/);
+  const dayMatch = lowerQuery.match(/(\d+)\s*(?:dan|dnev|days?)/);
   if (hourMatch) days = 1;
-  else if (dayMatch) days = parseInt(dayMatch[1] || dayMatch[2], 10);
+  else if (dayMatch) days = parseInt(dayMatch[1], 10);
 
-  // Določi group size
+  // Določi group size (SL + EN)
   let groupSize = 2;
-  const groupMatch = lowerQuery.match(/(\d+)\s*oseb|(\d+)\s*odrasl|(\d+)\s*ljud/);
-  if (groupMatch) groupSize = parseInt(groupMatch[1] || groupMatch[2] || groupMatch[3], 10);
-  if (lowerQuery.includes("družin") || lowerQuery.includes("otrok")) groupSize = 4;
-  if (lowerQuery.includes("sam")) groupSize = 1;
+  const groupMatch = lowerQuery.match(/(\d+)\s*(?:oseb|odrasl|ljud|people|persons?|adults?)/);
+  if (groupMatch) groupSize = parseInt(groupMatch[1], 10);
+  if (lowerQuery.includes("družin") || lowerQuery.includes("otrok") || lowerQuery.includes("family") || /\bkids?\b/.test(lowerQuery)) groupSize = 4;
+  if (lowerQuery.includes("sam") || /\b(?:solo|alone|myself)\b/.test(lowerQuery)) groupSize = 1;
 
   // WEATHER-CONTEXT: tip potne skupine iz naravnega jezika (hero/kviz/demo)
   let partyType: PlannerInput["partyType"];
-  if (lowerQuery.includes("družin") || lowerQuery.includes("otrok")) partyType = "family";
-  else if (lowerQuery.includes("partner") || lowerQuery.includes("romanti") || lowerQuery.includes("zakonc")) partyType = "couple";
-  else if (lowerQuery.includes("prijatel")) partyType = "friends";
-  else if (/\bsam[oi]?\b|\bsolo\b/.test(lowerQuery)) partyType = "solo";
+  if (lowerQuery.includes("družin") || lowerQuery.includes("otrok") || lowerQuery.includes("family") || /\bkids?\b/.test(lowerQuery)) partyType = "family";
+  else if (lowerQuery.includes("partner") || lowerQuery.includes("romanti") || lowerQuery.includes("zakonc") || /\b(?:couple|wife|husband)\b/.test(lowerQuery)) partyType = "couple";
+  else if (lowerQuery.includes("prijatel") || /\bfriends?\b/.test(lowerQuery)) partyType = "friends";
+  else if (/\bsam[oi]?\b|\bsolo\b|\balone\b|\bmyself\b/.test(lowerQuery)) partyType = "solo";
 
-  // Sezona iz query-ja (npr. kviz CTA: "... poleti, s partnerjem ...")
+  // Sezona iz query-ja (npr. kviz CTA: "... poleti, s partnerjem ...") — SL + EN
   let season: Season = "summer";
-  if (lowerQuery.includes("pomlad")) season = "spring";
-  else if (lowerQuery.includes("polet") || lowerQuery.includes("juni") || lowerQuery.includes("julij") || lowerQuery.includes("avgust")) season = "summer";
-  else if (lowerQuery.includes("jesen")) season = "autumn";
-  else if (lowerQuery.includes("zim") || lowerQuery.includes("smuč")) season = "winter";
+  if (lowerQuery.includes("pomlad") || lowerQuery.includes("spring")) season = "spring";
+  else if (lowerQuery.includes("polet") || lowerQuery.includes("juni") || lowerQuery.includes("julij") || lowerQuery.includes("avgust") || lowerQuery.includes("summer") || /\bjune\b|\bjuly\b|\baugust\b/.test(lowerQuery)) season = "summer";
+  else if (lowerQuery.includes("jesen") || lowerQuery.includes("autumn") || /\bfall\b/.test(lowerQuery)) season = "autumn";
+  else if (lowerQuery.includes("zim") || lowerQuery.includes("smuč") || lowerQuery.includes("winter") || /\bski/.test(lowerQuery)) season = "winter";
 
   return {
     budget: 500,
     days,
-    interests: newInterests.length > 0 ? newInterests : ["narava", "kultura"],
+    // TAG-ALIGN: dedupe (npr. "hrana in vino" sproži dva pogoja za isti interes)
+    interests: newInterests.length > 0 ? Array.from(new Set(newInterests)) : ["narava", "kultura"],
     season,
     groupSize,
     ...(partyType ? { partyType } : {}),

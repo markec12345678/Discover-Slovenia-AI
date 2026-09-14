@@ -7,6 +7,43 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.7.2] — 2026-09-15
+
+### Popravljeno (TAG-ALIGN — neusklajenost oznak interesov, P1 po sledeh recenzije Faze 4)
+
+> Vrzeli, odkrita med produkcijo 1.7.1: uporabnikova izbira "Hrana & vino" je
+> bila na deterministični (produkcijski!) poti TIHO IGNORIRANA — NLP parser in
+> onboarding sta potiskala ID `kulinarika`, fallback ocenjevalnik pa išče
+> bestFor `hrana`. Dokaz: po popravku se vrstni red kandidatov spremeni iz
+> čistega rating poreda (triglav/bled 0,5) na poverjen izbor
+> (piran/ljubljana/kobarid 1,5/1,4).
+
+- **Normalizacija interesov na strežniški meji:** nova deljena
+  `normalizeInterests()` (src/lib/slovenia-data.ts) preslika zgodovinske
+  sinonime (`kulinarika`, `gastronomija`) na kanonične vrednosti INTERESTS in
+  odstrani duplikate. Pokličejo jo `POST /api/itinerary` (AI in fallback pot —
+  tudi AI prompt dobi čistejši vnos) in `POST /api/itinerary/refine`
+  (hitre akcije, npr. "Več hrane", ocenjujejo kandidate z istim bestFor
+  ujemanjem). Aditivno: neznan ID ostane nespremenjen (ocenjevalnik ga varno
+  prezre, AI pa ga lahko uporabi).
+- **NLP parser (hero/kviz/demo) pošilja kanonične vrednosti:** "hrana", ne več
+  "kulinarika" — žeton "Hrana & vino" se v obrazcu PRIŽGE (prej se ni) in
+  izbira dejansko vpliva na izbor destinacij. Dedupe ("hrana in vino" je sprožil
+  dva pogoja za isti interes).
+- **Angleške ključne besede v NLP parserju:** EN je poln locale, hero pa
+  sprejema angleške vpise — doslej so padli na privzete vrednosti. Zdaj:
+  interesi (food/wine/dinner/nature/hike/adventure/family/culture/history…),
+  dnevi ("3 days"), ure ("5 hours"), skupina ("2 people/adults"), tip poti
+  (couple/friends/solo) in sezona (spring/summer/autumn|fall/winter/ski/june…).
+- **Onboarding profil usklajen:** ID možnosti "Lokalna hrana" je zdaj `hrana`
+  (kanonični); stari shranjeni profili z `kulinarika` se pri prikazu preslikajo
+  (isti napis) — brez vidne spremembe za obstoječe uporabnike.
+- **Revizijski pregled besednjaka:** vsi žetoni INTERESTS imajo ≥ 1 destinacijo
+  z ujemajočim bestFor (8/8 ✓); preostali viri (kviz, demo scenariji) so bili
+  že kanonični.
+
+---
+
 ## [1.7.1] — 2026-09-15
 
 ### Popravljeno (P0/P1 po recenziji Faze 4 — "preveri")

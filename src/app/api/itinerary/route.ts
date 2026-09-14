@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { DESTINATIONS } from "@/lib/slovenia-data";
+import { DESTINATIONS, normalizeInterests } from "@/lib/slovenia-data";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
@@ -210,6 +210,12 @@ export async function POST(request: Request) {
   const tripEnd = input.startDate
     ? tripEndDateISO(input.startDate, input.days) ?? undefined
     : undefined;
+
+  // TAG-ALIGN (P1, recenzija Faze 4): normalizacija interesov na meji —
+  // "kulinarika" (NLP parser, stari shranjeni načrti, onboarding profil)
+  // → kanonični "hrana", ki se ujema z bestFor destinacij. Pred popravkom
+  // je fallback ocenjevalnik izbire "Hrana & vino" tiho ignoriral.
+  input = { ...input, interests: normalizeInterests(input.interests) };
 
   // Pripravi kontekst destinacij za AI
   const destContext = DESTINATIONS.map(

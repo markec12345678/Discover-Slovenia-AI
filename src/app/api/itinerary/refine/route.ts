@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { DESTINATIONS } from "@/lib/slovenia-data";
+import { DESTINATIONS, normalizeInterests } from "@/lib/slovenia-data";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
 import type {
@@ -176,7 +176,13 @@ export async function POST(request: Request) {
     groupSize: 2,
     language: isEn ? "en" : "sl",
   };
-  const refineInput: PlannerInput = formData ?? currentAsFallbackInput;
+  // TAG-ALIGN (P1, recenzija Faze 4): normalizacija interesov na meji —
+  // hitre akcije (npr. "Več hrane") ocenjujejo kandidate z istim bestFor
+  // ujemanjem kot generacija; "kulinarika" iz starih shranjenih načrtov
+  // se tu preslika na kanonični "hrana" (AI prompt pa dobi čistejši vnos).
+  const refineInput: PlannerInput = formData
+    ? { ...formData, interests: normalizeInterests(formData.interests ?? []) }
+    : currentAsFallbackInput;
 
   // P0.2 (recenzija): datumska konteksta za PONOVEN izračun dogodkov in opomb
   // o gneči po spremembi — startDate iz obrazca, sicer okvir, shranjen s

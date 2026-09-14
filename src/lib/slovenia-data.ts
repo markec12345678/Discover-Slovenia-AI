@@ -511,3 +511,35 @@ export const INTERESTS: { value: string; label: string; icon: string }[] = [
   { value: "družina", label: "Družina", icon: "👨‍👩‍👧" },
   { value: "wellness", label: "Wellness", icon: "💆" },
 ];
+
+// TAG-ALIGN (P1, recenzija Faze 4): zgodovinski/vstranski ID-ji interesov,
+// ki se nikoli niso ujemali z bestFor oznakami destinacij. "kulinarika" je
+// ID onboarding profila in NLP parserja — fallback ocenjevalnik išče bestFor
+// "hrana", zato je bila izbira "Hrana & vino" tiho ignorirana (na produkciji
+// brez AI žetonov JE fallback pot primarna). Preslikava je aditivna: neznan
+// ID ostane nespremenjen (AI prompt ga lahko še vedno uporabi, ocenjevalnik
+// ga varno prezre).
+const INTEREST_ALIASES: Record<string, string> = {
+  kulinarika: "hrana",
+  gastronomija: "hrana",
+  "lokalna hrana": "hrana",
+};
+
+/**
+ * TAG-ALIGN: normalizacija seznama interesov na kanonične vrednosti INTERESTS
+ * (te se ujemajo z bestFor destinacij). Odstrani duplikate, ohrani vrstni
+ * red. Pokliče se na strežniški meji (API) — ulovi VSE vire: NLP parser,
+ * stari shranjeni načrti (localStorage), kviz, onboarding profil, ročni klici.
+ */
+export function normalizeInterests(interests: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of interests) {
+    const value = INTEREST_ALIASES[raw] ?? raw;
+    if (!seen.has(value)) {
+      seen.add(value);
+      out.push(value);
+    }
+  }
+  return out;
+}
