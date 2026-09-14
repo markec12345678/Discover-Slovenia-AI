@@ -32,6 +32,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { trackFunnel } from "@/lib/funnel";
+import { trackPlannerEvent } from "@/lib/planner-analytics";
 import { AffiliateBadge } from "@/components/partner-badge";
 import type { DayPlan } from "@/lib/types";
 
@@ -250,6 +251,21 @@ function AffiliateCard({
       onClick={() => {
         // Fire-and-forget funnel tracking — ne blokira navigacije
         onTrack?.();
+        // FAZA 4 (pilotna analitika): affiliate_clicked z dejanskim ponudnikom
+        // in destinacijo iz /go/ povezave (strežnik dodate zapiše funnel klik;
+        // to je produktni kontekst pilota — kateri ponudnik/kraji se uporabljajo)
+        try {
+          const seg = href.split("/"); // ["", "go", "hotels?dest=Bled"]
+          const provider = seg[2]?.split("?")[0] ?? "unknown";
+          const dest = new URLSearchParams(href.split("?")[1] ?? "").get("dest");
+          trackPlannerEvent("affiliate_clicked", {
+            provider,
+            dest: dest ?? "none",
+            partner_name: partnerName,
+          });
+        } catch {
+          // analitika nikoli ne sme prekiniti navigacije
+        }
       }}
       className="group flex items-center gap-3 rounded-lg border border-primary/30 bg-background p-3 transition-all hover:border-primary/60 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
@@ -322,6 +338,14 @@ function ListingCard({ listing }: { listing: BookingListing }) {
             href={contact.href}
             target={contact.href.startsWith("http") ? "_blank" : undefined}
             rel={contact.href.startsWith("http") ? "noopener noreferrer" : undefined}
+            onClick={() => {
+              // FAZA 4 (pilotna analitika): odpiranje ponudnika (kontakt/obisk)
+              trackPlannerEvent("provider_detail_opened", {
+                provider: listing.name,
+                provider_id: listing.id,
+                category: listing.category,
+              });
+            }}
           >
             Obišči
             <ExternalLink className="size-3.5" aria-hidden />

@@ -33,6 +33,7 @@ import {
   computeItineraryQuality,
   sanitizeAiRationale,
 } from "@/lib/itinerary-quality";
+import { buildStopReasons } from "@/lib/stop-insights";
 
 // ============================================================================
 // WEATHER-CONTEXT (t11): realna vremenska napoved PRED generiranjem
@@ -484,7 +485,14 @@ JSON format (STROGO):
     // CROWD-ALTERNATIVES: poštene opombe o gneči + alternative (deterministično)
     enriched.crowdNotices = buildCrowdNotices(enriched, input, lang);
 
-    return NextResponse.json(enriched);
+    // FAZA 4-1 ("Zakaj je to priporočeno?"): vsak postanek dobi kratko,
+    // podatkovno utemeljeno razlago (interesi, tip skupine, razdalja,
+    // vreme, sezona — izključno dejstva, brez marketinga). Deterministično
+    // na obeh poteh — AI izbira postankov, razlago pa sestavijo isti
+    // preverljivi podatki.
+    const withReasons = buildStopReasons(enriched, input, lang);
+
+    return NextResponse.json(withReasons);
   } catch (error) {
     console.error("[itinerary] AI napaka, uporabljam fallback:", error);
     // WEATHER-CONTEXT: fallback prejme sidrne napovedi — deževni dnevi
@@ -519,7 +527,10 @@ JSON format (STROGO):
     // CROWD-ALTERNATIVES: iste poštene opombe kot na AI poti
     fallback.crowdNotices = buildCrowdNotices(fallback, input, lang);
 
-    return NextResponse.json(fallback);
+    // FAZA 4-1: razlage postankov (ista deterministična obogatitev kot AI pot)
+    const withReasons = buildStopReasons(fallback, input, lang);
+
+    return NextResponse.json(withReasons);
   }
 }
 

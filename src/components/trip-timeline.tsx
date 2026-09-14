@@ -26,6 +26,7 @@ import { PartnerBadge, type PartnerStatus } from "@/components/partner-badge";
 import { useAppStore } from "@/lib/store";
 import { saveItinerary } from "@/lib/itinerary-share";
 import { addSavedTrip, deriveSavedTripName } from "@/lib/my-trips-storage";
+import { trackPlannerEvent } from "@/lib/planner-analytics";
 import { cn } from "@/lib/utils";
 import type { DayPlan, LocationVisit, PlannerInput } from "@/lib/types";
 
@@ -312,6 +313,12 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
                           size="sm"
                           className="h-7 gap-1 text-xs"
                           onClick={() => {
+                            // FAZA 4 (pilotna analitika): uporabnik je odprl
+                            // zemljevid za postanek svoje poti
+                            trackPlannerEvent("map_opened", {
+                              via: "timeline_navigation",
+                              destination: visit.destination_name,
+                            });
                             window.open(
                               `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(visit.destination_name + " Slovenia")}`,
                               "_blank"

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import {
   Sparkles,
@@ -65,6 +65,14 @@ import type {
 import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { trackFunnel } from "@/lib/funnel";
+import {
+  trackPlannerEvent,
+  markResultRendered,
+  markResultEngaged,
+  fireAbandonedIfUnengaged,
+} from "@/lib/planner-analytics";
+import { dayDrivingKm, destinationById } from "@/lib/stop-insights";
+import { StopInsights } from "@/components/stop-insights";
 import { saveItinerary, fetchSharedItinerary } from "@/lib/itinerary-share";
 import { addSavedTrip, deriveSavedTripName } from "@/lib/my-trips-storage";
 import { cn } from "@/lib/utils";
@@ -221,6 +229,30 @@ export function ItineraryPlanner() {
   const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // FAZA 4 (pilotna analitika): planner_started — prva interakcija z obrazcem
+  // (katerikoli vnos ali oddaja) se zabeleži le enkrat na življenjsko dobo
+  // komponente. Ref (ne state) — brez ponovnega renderiranja.
+  const startedFiredRef = useRef(false);
+  function fireStartedOnce() {
+    if (startedFiredRef.current) return;
+    startedFiredRef.current = true;
+    trackPlannerEvent("planner_started", { locale });
+  }
+
+  // FAZA 4 (pilotna analitika): user_abandoned_after_result — rezultat je bil
+  // prikazan, uporabnik pa ni ne prilagodil ne shranil načrta in zapušča
+  // stran (pagehide / unmount po ≥ 45 s od prikaza). keepalive fetch preživi
+  // zapiranje zavihka.
+  useEffect(() => {
+    if (!itinerary) return;
+    const onHide = () => fireAbandonedIfUnengaged();
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      fireAbandonedIfUnengaged();
+    };
+  }, [itinerary]);
 
   // FW4.2: minimalni datum za datumski vhod (danes) — nastavljen ob mountu,
   // da se izogne hidratacijskemu nesoglasju (server/client datum)
@@ -391,6 +423,7 @@ export function ItineraryPlanner() {
   }, [itinerary]);
 
   function toggleInterest(value: string) {
+    fireStartedOnce();
     setFormData((prev) => {
       const isSelected = prev.interests.includes(value);
       return {
@@ -405,6 +438,7 @@ export function ItineraryPlanner() {
   // WEATHER-CONTEXT: tip potne skupine (opcijsko) — "Sam" sinhronizira
   // tudi številko skupine (1 oseba); ostale izbire številke ne spreminjajo
   function togglePartyType(value: PartyType) {
+    fireStartedOnce();
     setFormData((prev) => {
       const next: PlannerInput = {
         ...prev,
@@ -460,6 +494,15 @@ export function ItineraryPlanner() {
   }
 
   async function generateItinerary(input: PlannerInput) {
+    fireStartedOnce();
+    trackPlannerEvent("planner_submitted", {
+      days: input.days,
+      interests: input.interests.length,
+      season: input.season,
+      partyType: input.partyType ?? "none",
+      has_start_date: Boolean(input.startDate),
+      locale,
+    });
     setLoading(true);
     setError(null);
     try {
@@ -471,9 +514,51 @@ export function ItineraryPlanner() {
           language: locale === "en" ? "en" : "sl",
         }),
       });
-      if (!res.ok) throw new Error(t("errorGenerating"));
+      if (!res.ok) {
+        trackPlannerEvent("planner_error", { status: res.status, stage: "response" });
+        throw new Error(t("errorGenerating"));
+      }
       const data: Itinerary = await res.json();
+
+      // Pilotna analitika: prazen rezultat (defenzivno — API vrne 200)
+      const totalStops = data.days?.reduce(
+        (n, d) => n + (d.locations?.length ?? 0),
+        0
+      ) ?? 0;
+      if (totalStops === 0) {
+        trackPlannerEvent("empty_result", { days: data.days?.length ?? 0 });
+      }
+
+      // Pilotna analitika: neveljavne lokacije (ID-ji zunaj dataseta) in
+      // geografsko nerealistični dnevi (> 250 cestnih km — prag validatorja)
+      for (const day of data.days ?? []) {
+        for (const loc of day.locations ?? []) {
+          if (!destinationById(loc.destination_id)) {
+            trackPlannerEvent("invalid_location", {
+              day: day.day,
+              destination_id: loc.destination_id,
+            });
+          }
+        }
+        const km = dayDrivingKm(day.locations ?? []);
+        if (km !== null && km > 250) {
+          trackPlannerEvent("unrealistic_day", { day: day.day, km });
+        }
+      }
+
       setItinerary(data);
+
+      // Pilotna analitika: rezultat prikazan + začetek merjenja opustitve
+      trackPlannerEvent("planner_result_rendered", {
+        days: data.days?.length ?? 0,
+        stops: totalStops,
+        source: data.source,
+        locale,
+      });
+      markResultRendered({
+        days: data.days?.length ?? 0,
+        source: data.source,
+      });
 
       // Ponastavi stanje shranjevanja/deljenja — nov načrt, nove povezave
       setShareUrl(null);
@@ -509,6 +594,7 @@ export function ItineraryPlanner() {
             : t("generatedToastDescSample"),
       });
     } catch (err) {
+      trackPlannerEvent("planner_error", { stage: "network_or_parse" });
       const msg =
         err instanceof Error ? err.message : t("errorGeneratingFallback");
       setError(msg);
@@ -529,11 +615,20 @@ export function ItineraryPlanner() {
       // P2-3: sledi anonimno shranjen načrt za prevzem ob prijavi (localStorage)
       addSavedTrip(result.shareId, deriveSavedTripName(itinerary));
       trackFunnel("itinerary_saved");
+      // FAZA 4 (pilotna analitika): shranjen načrt = navezava na rezultat
+      // (prekine merjenje opustitve) + ločen dogodek z metadatami
+      markResultEngaged();
+      trackPlannerEvent("itinerary_saved", {
+        days: itinerary.days.length,
+        source: itinerary.source,
+        locale,
+      });
       toast({
         title: t("savedToast"),
         description: t("savedToastDesc"),
       });
     } catch {
+      trackPlannerEvent("save_failed", { locale });
       setShareError(t("saveErrorInline"));
       toast({
         title: t("saveErrorToastTitle"),
@@ -651,12 +746,13 @@ export function ItineraryPlanner() {
                       min={1}
                       max={14}
                       value={formData.days}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        fireStartedOnce();
                         setFormData((p) => ({
                           ...p,
                           days: Number(e.target.value),
-                        }))
-                      }
+                        }));
+                      }}
                       required
                     />
                   </div>
@@ -674,12 +770,13 @@ export function ItineraryPlanner() {
                       max={5000}
                       step={50}
                       value={formData.budget}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        fireStartedOnce();
                         setFormData((p) => ({
                           ...p,
                           budget: Number(e.target.value),
-                        }))
-                      }
+                        }));
+                      }}
                       required
                     />
                   </div>
@@ -696,12 +793,13 @@ export function ItineraryPlanner() {
                       min={1}
                       max={20}
                       value={formData.groupSize}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        fireStartedOnce();
                         setFormData((p) => ({
                           ...p,
                           groupSize: Number(e.target.value),
-                        }))
-                      }
+                        }));
+                      }}
                       required
                     />
                   </div>
@@ -751,9 +849,10 @@ export function ItineraryPlanner() {
                     </Label>
                     <Select
                       value={formData.season}
-                      onValueChange={(v: Season) =>
-                        setFormData((p) => ({ ...p, season: v }))
-                      }
+                      onValueChange={(v: Season) => {
+                        fireStartedOnce();
+                        setFormData((p) => ({ ...p, season: v }));
+                      }}
                     >
                       <SelectTrigger id="season" className="w-full">
                         <SelectValue placeholder={t("seasonPlaceholder")} />
@@ -787,12 +886,13 @@ export function ItineraryPlanner() {
                       type="date"
                       min={todayISO || undefined}
                       value={formData.startDate ?? ""}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        fireStartedOnce();
                         setFormData((p) => ({
                           ...p,
                           startDate: e.target.value || undefined,
-                        }))
-                      }
+                        }));
+                      }}
                     />
                     <p className="text-xs text-muted-foreground">
                       {t("startDateHint")}
@@ -1109,6 +1209,9 @@ export function ItineraryPlanner() {
                                   {loc.notes}
                                 </p>
                               )}
+                              {/* FAZA 4-1 + 4-3: "Zakaj je to priporočeno?" + */}
+                              {/* praktični podatki (samo obstoječi) */}
+                              <StopInsights visit={loc} locale={locale} />
                             </div>
                           );
                         })}

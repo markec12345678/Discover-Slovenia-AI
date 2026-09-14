@@ -6,6 +6,7 @@ import { Footer } from "@/components/sections/footer";
 import { Chatbot } from "@/components/chatbot";
 import { StickyMobileCTA } from "@/components/sticky-mobile-cta";
 import { MapSection } from "@/components/sections/map-section";
+import { MapOpenedTracker } from "@/components/map-opened-tracker";
 import { Badge } from "@/components/ui/badge";
 
 /**
@@ -56,6 +57,8 @@ export default function MapPage() {
 
         {/* Interaktivni zemljevid s potjo AI itinererja */}
         <MapSection />
+        {/* Faza 4 (pilotna analitika): map_opened ob prihodu na stran zemljevida */}
+        <MapOpenedTracker />
       </main>
       <Footer />
       <Chatbot />

@@ -58,6 +58,11 @@ export interface LocationVisit {
   recommendationType?: string;
   affiliateType?: string;
   category?: string;
+  // FAZA 4-1 ("Zakaj je to priporočeno?"): kratka, podatkovno utemeljena
+  // razlaga izbire postanka — sestavljena IZKLJUČNO iz dejstev (ugemanje
+  // interesov, tip skupine, razdalja do sosednjega postanka, vremenska
+  // ustreznost, sezona). Brez marketinških fraz. Glej src/lib/stop-insights.ts
+  reason?: string;
 }
 
 export interface DayPlan {
@@ -169,4 +174,33 @@ export interface ItineraryQuality {
   days: number;
   /** Velikost skupine (za prikaz v kartici) */
   groupSize: number;
+}
+
+// ============================================================================
+// FAZA 4-2 — "Prilagodi ta dan": hitre akcije prek obstoječega refine mehanizma
+// ============================================================================
+//
+// Šest kanoničnih akcij (Manj vožnje / Primerno za dež / Počasnejši tempo /
+// Več narave / Več hrane / Za družino). AI pot jih obdela kot naravnojezični
+// ukaz; fallback pot (deterministično, brez novega AI sistema) jih obdela z
+// čistimi transformacijami nad istim datasetom destinacij — glej
+// src/lib/refine-actions.ts.
+
+export type QuickActionId =
+  | "less_driving"
+  | "rain_suitable"
+  | "slower_pace"
+  | "more_nature"
+  | "more_food"
+  | "family_friendly";
+
+/** Elemenarna sprememba, ki jo je prinesla hitra akcija (za prikaz + analitiko). */
+export interface RefineChange {
+  kind: "stop_removed" | "stop_replaced" | "day_reordered" | "day_simplified" | "unchanged";
+  day: number;
+  destination_id?: string;
+  destination_name?: string;
+  replacement_id?: string;
+  replacement_name?: string;
+  km?: number;
 }

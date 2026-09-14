@@ -7,6 +7,56 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.7.0] — 2026-09-14
+
+### Dodano (FAZA 4 — tri izboljšave po Pilot Validation Gate, uporabnikovo naročilo)
+
+> Gate je potrdil stabilen osnovni tok (URL audit 733/733 × 4 kroge, mobilna
+> zlata pot, owner tok). Razvojni cikel omejen na tri izboljšave + pilotna
+> analitika. Načelo: podatkovno utemeljeno in pošteno — brez marketinških
+> razlag, brez generičnega "Verified", brez izmišljenih statusov.
+> Podrobnosti: [docs/PHASE-4-IMPROVEMENTS.md](docs/PHASE-4-IMPROVEMENTS.md).
+
+- **»Zakaj je to priporočeno?«** — vsak postanek itinererja nosi kratko
+  razlago, sestavljeno izključno iz dejstev (ugemani interesi, tip skupine,
+  cestna razdalja do prejšnjega postanka z odkritim opozorilom pri >70 km,
+  vremenska ustreznost, sezona; največ 4 dejstva; SL+EN). Čista funkcija
+  `buildStopReasons` obogati obe poti generiranja in vsak refine; prikaz v
+  plannerju in na deljeni povezavi. AI-haluciniran ID destinacije → brez
+  razlage (ni podatkov = ni izmišljenega) + dogodek `invalid_location`.
+- **»Prilagodi ta dan«** — šest hitrih akcij (Manj vožnje, Primerno za dež,
+  Počasnejši tempo, Več narave, Več hrane, Za družino) na izbrani dan prek
+  OBSTOJEČEGA `/api/itinerary/refine` (nova opcijska polja `action`+`day`).
+  AI pot jih obdela kot naravnojezikovni ukaz; fallback pot jih izvede
+  DETERMINISTIČNO (čiste transformacije nad datasetom destinacij — ni nov AI
+  sistem) in deluje tudi brez AI žetona: nearest-neighbor preureditev dneva,
+  odstranitev najbolj oddaljenega postanka pri >100 km, zamenjave zunanjih
+  aktivnosti z notranjimi ipd. Vsaka sprememba poročana v `changes[]`.
+  Refiner komponenta prevedena v EN (prej trdo slovenska).
+- **»Preveri praktične podatke«** — zložljiv blok na vsakem postanku s SAMO
+  obstoječimi podatki (trajanje, okvirna cena, sezona, vremenska ustreznost,
+  vir + zadnja posodobitev dataseta) in opozorilom, da uporabnik pred obiskom
+  preveri urnike in cene. Brez generičnega "Verified" znaka. Popravljena
+  tudi noga deljene poti (prej utrjena trditev »vsi kraji preverjeni«).
+- **Pilotna analitika** — 19 dogodkov zlate poti (`planner_started` →
+  `planner_submitted` → `planner_result_rendered` → `day_adjusted` /
+  `planner_refined` / `stop_replaced` / `stop_removed` /
+  `weather_alternative_used` / `map_opened` / `provider_detail_opened` /
+  `affiliate_clicked` → `itinerary_saved`; neuspehi: `planner_error`,
+  `empty_result`, `invalid_location`, `unrealistic_day`, `save_failed`,
+  `refine_failed`, `user_abandoned_after_result`). Nov endpoint
+  `POST /api/analytics/event` s strežniško whitelist, rate limitom 60/min in
+  zapisom v obstoječi model `AnalyticsEvent` (brez spremembe sheme); anonimni
+  sessionId (UUID, localStorage), brez PII; opustitev rezultata se meri po
+  45 s brez navezave ob zapuščanju strani (keepalive).
+- **Validacija:** tsc 0, eslint 0; `scripts/phase4-verify.ts` 9/9 lokalno;
+  vseh 6 akcij deterministično s siljenim fallbackom (103 km → 0 km dan,
+  Triglav→Piran hrana, Slovenj Gradec→Postojnska jama družina); agent-browser
+  390 px: razlage, praktični podatki, vsi čipi, klik akcije, 0 horizontalnega
+  preliva.
+
+---
+
 ## [1.6.0] — 2026-09-11
 
 ### Spremenjeno (FW3 — AI-first hierarhija UX refaktor, `0742a1a`)

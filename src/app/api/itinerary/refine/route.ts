@@ -2,13 +2,22 @@ import { NextResponse } from "next/server";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
-import type { Itinerary, PlannerInput, DayPlan, LocationVisit } from "@/lib/types";
+import type {
+  Itinerary,
+  PlannerInput,
+  DayPlan,
+  LocationVisit,
+  QuickActionId,
+  RefineChange,
+} from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
 import {
   computeItineraryQuality,
   sanitizeAiRationale,
 } from "@/lib/itinerary-quality";
 import { PARTY_PROMPT_LABELS } from "@/lib/party-types";
+import { applyQuickAction, QUICK_ACTIONS } from "@/lib/refine-actions";
+import { buildStopReasons } from "@/lib/stop-insights";
 
 // POST /api/itinerary/refine — Multi-turn popravki obstoječega itinererja.
 //
@@ -24,7 +33,16 @@ interface RefineRequest {
   formData: PlannerInput;
   instruction: string;
   history?: string[]; // prejšnji ukazi za kontekst
+  // FAZA 4-2 ("Prilagodi ta dan"): kanonična hitra akcija + številka dneva.
+  // Opcijsko — klasični naravnojezikovni refine deluje nespremenjeno.
+  // Ko je podana, jo fallback pot obdela DETERMINISTIČNO (glej
+  // src/lib/refine-actions.ts) — tudi brez AI žetona se akcija dejansko
+  // izvede; AI pot dobi isto akcijo kot del naravnojezičnega ukaza.
+  action?: QuickActionId;
+  day?: number;
 }
+
+const VALID_ACTIONS = new Set<string>(QUICK_ACTIONS.map((a) => a.id));
 
 export async function POST(request: Request) {
     // Rate limit AI refine klicev
@@ -56,9 +74,32 @@ export async function POST(request: Request) {
   const current = body.itinerary;
   const formData = body.formData;
 
+  // FAZA 4-2: validacija hitre akcije (če je podana)
+  const action =
+    typeof body.action === "string" && VALID_ACTIONS.has(body.action)
+      ? (body.action as QuickActionId)
+      : undefined;
+  const day =
+    typeof body.day === "number" && Number.isInteger(body.day) && body.day >= 1 && body.day <= 14
+      ? body.day
+      : undefined;
+
   // FW4.3/P4-8 (EN-fallback fix): jezik — prej SL prompt + SL opomba tudi
   // za EN uporabnike (refine je vračal slovenske odgovore EN potnikom)
   const isEn = formData?.language === "en";
+
+  // FAZA 4-1/4-2: defenzivni vhod za obogatitev razlag in hitre akcije, če
+  // klient ne pošlje formData (naš UI ga vedno pošlje — to je samo varnostna
+  // mreža za ročne klice; v tem primeru razlaga izpusti interpolacijo
+  // interesov, kar je še vedno pošteno)
+  const currentAsFallbackInput: PlannerInput = formData ?? {
+    budget: current.total_budget,
+    days: current.days.length,
+    interests: [],
+    season: "summer",
+    groupSize: 2,
+    language: isEn ? "en" : "sl",
+  };
 
   // Pripravi kontekst destinacij
   const destContext = DESTINATIONS.map(
@@ -283,13 +324,51 @@ JSON format (STROGO, enak kot vhod):
     if (!Array.isArray(refinedItinerary.addedEvents)) refinedItinerary.addedEvents = current.addedEvents;
 
     console.log(`[itinerary/refine] AI uspešno (source: ${result.source}) — ukaz: "${instruction}"`);
+
+    // FAZA 4-1: razlage postankov se PRERAČUNAJO na novi strukturi (nove
+    // lokacije / nov zaporedni red → nove razdalje, nov kontekst)
+    const withReasons = buildStopReasons(refinedItinerary, formData ?? currentAsFallbackInput, isEn ? "en" : "sl");
+
     return NextResponse.json({
-      itinerary: refinedItinerary,
+      itinerary: withReasons,
       instruction,
       source: result.source,
     });
   } catch (error) {
     console.error("[itinerary/refine] AI napaka:", error);
+
+    // FAZA 4-2: hitra akcija (action + day) ima DETERMINISTIČNO izvedbo —
+    // izvede se tudi brez AI žetona (na produkciji je AI pogosto v fallback
+    // načinu). Ni nov AI sistem: čiste transformacije nad istim datasetom
+    // destinacij, vsaka sprememba poročana v `changes`.
+    if (action && day) {
+      const refineInput: PlannerInput = formData ?? currentAsFallbackInput;
+      const result = applyQuickAction(
+        current,
+        refineInput,
+        action,
+        day,
+        isEn ? "en" : "sl"
+      );
+      const withReasons = buildStopReasons(
+        result.itinerary,
+        refineInput,
+        isEn ? "en" : "sl"
+      );
+      console.log(
+        `[itinerary/refine] Hitra akcija "${action}" (dan ${day}) deterministično: ${result.changes.length} sprememb`
+      );
+      return NextResponse.json({
+        itinerary: withReasons,
+        instruction,
+        source: "fallback",
+        applied: true,
+        action,
+        day,
+        changes: result.changes satisfies RefineChange[],
+        note: result.note,
+      });
+    }
 
     // Fallback: vrni originalni itinerer z opombo (jezikovno pravilno — P4-8)
     return NextResponse.json({

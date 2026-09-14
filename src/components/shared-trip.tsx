@@ -10,6 +10,7 @@ import {
   CloudSun,
   Euro,
   Eye,
+  HelpCircle,
   Lightbulb,
   Map as MapIcon,
   MapPin,
@@ -606,7 +607,9 @@ export function SharedTrip({
         {/* === SEO noga === */}
         <footer className="border-t border-border pt-6 text-center text-sm text-muted-foreground">
           <p>
-            Načrt generiran z AI · vsi kraji preverjeni ·{" "}
+            {/* FAZA 4-3: prej "vsi kraji preverjeni" — trditev brez dejanskega
+                postopka potrjevanja; pošteno sporočilo namesto nje */}
+            Predlog poti · pred obiskom preveri urnike in cene ·{" "}
             <Link
               href="/"
               className="font-medium text-primary hover:underline"
@@ -646,6 +649,21 @@ function LocationCard({ visit, vote }: LocationCardProps) {
         {visit.notes && (
           <p className="mt-2 line-clamp-4 text-sm text-muted-foreground">
             {visit.notes}
+          </p>
+        )}
+
+        {/* FAZA 4-1: "Zakaj je to priporočeno?" — podatkovno utemeljena
+            razlaga potuje z načrtom tudi na deljeni povezavi */}
+        {visit.reason && (
+          <p className="mt-2 flex items-start gap-1.5 rounded-md bg-muted/50 px-2.5 py-1.5 text-xs leading-relaxed text-muted-foreground">
+            <HelpCircle
+              className="mt-0.5 size-3.5 shrink-0 text-primary/70"
+              aria-hidden="true"
+            />
+            <span>
+              <span className="font-medium text-foreground/80">Zakaj ta postanek:</span>{" "}
+              {visit.reason}
+            </span>
           </p>
         )}
 
