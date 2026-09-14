@@ -1507,25 +1507,43 @@ export function ItineraryPlanner() {
                           </Badge>
                           {/* P0.2 GEO-VALIDACIJA: dnevna značka izvedljivosti —
                               ~km + raven (rdeča = ni realno izvedljivo,
-                              jantbar = napak dan); brez značke = v redu */}
-                          {dayGeo && dayGeo.km > 0 && (
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "gap-1.5 font-normal",
-                                dayHasError
-                                  ? "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400"
-                                  : dayHasWarn
-                                    ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                                    : "text-muted-foreground"
-                              )}
-                              title={t("geoValidation.title")}
-                            >
-                              <Car className="size-3.5" aria-hidden />
-                              ~{dayGeo.km} km
-                              {dayHasError ? " · !" : dayHasWarn ? " · ⚠" : ""}
-                            </Badge>
-                          )}
+                              jantbar = napak dan); brez značke = v redu.
+                              F5.5: pri km=0 ( npr. en sam postanek) se značka
+                              pokaže, če dan nosi opozorilo ( zaprtje atrakcije
+                              na ta datum) — samo "!", brez zavajajočega "~0 km". */}
+                          {dayGeo &&
+                            (dayGeo.km > 0 || dayHasError || dayHasWarn) && (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "gap-1.5 font-normal",
+                                  dayHasError
+                                    ? "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400"
+                                    : dayHasWarn
+                                      ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                                      : "text-muted-foreground"
+                                )}
+                                title={t("geoValidation.title")}
+                              >
+                                {dayGeo.km > 0 && (
+                                  <>
+                                    <Car className="size-3.5" aria-hidden />
+                                    ~{dayGeo.km} km
+                                  </>
+                                )}
+                                {dayGeo.km > 0
+                                  ? dayHasError
+                                    ? " · !"
+                                    : dayHasWarn
+                                      ? " · ⚠"
+                                      : ""
+                                  : dayHasError
+                                    ? "!"
+                                    : dayHasWarn
+                                      ? "⚠"
+                                      : ""}
+                              </Badge>
+                            )}
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-3">
