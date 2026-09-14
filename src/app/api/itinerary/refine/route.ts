@@ -56,6 +56,10 @@ export async function POST(request: Request) {
   const current = body.itinerary;
   const formData = body.formData;
 
+  // FW4.3/P4-8 (EN-fallback fix): jezik — prej SL prompt + SL opomba tudi
+  // za EN uporabnike (refine je vračal slovenske odgovore EN potnikom)
+  const isEn = formData?.language === "en";
+
   // Pripravi kontekst destinacij
   const destContext = DESTINATIONS.map(
     (d) =>
@@ -88,11 +92,11 @@ export async function POST(request: Request) {
     console.error("[itinerary/refine] sponsored fetch napaka:", e);
   }
 
-  // Serijaliziraj trenutni itinerer za AI
+  // Serijaliziraj trenutni itinerer za AI (jezikovno pravilna oznaka dneva)
   const currentItineraryStr = current.days.map((day: DayPlan) =>
-    `Dan ${day.day} (${day.weather.condition}, ${day.weather.temp}°C):\n` +
+    `${isEn ? `Day ${day.day}` : `Dan ${day.day}`} (${day.weather.condition}, ${day.weather.temp}°C):\n` +
     day.locations.map((loc: LocationVisit) =>
-      `  - ${loc.time_slot} | ${loc.destination_name} | ${loc.duration}h | €${loc.estimated_cost} | ${loc.notes || "brez opomb"}`
+      `  - ${loc.time_slot} | ${loc.destination_name} | ${loc.duration}h | €${loc.estimated_cost} | ${loc.notes || (isEn ? "no notes" : "brez opomb")}`
     ).join("\n")
   ).join("\n\n");
 
@@ -116,16 +120,28 @@ export async function POST(request: Request) {
 
   // Zgodovina prejšnjih ukazov (za kontekst)
   const historyStr = body.history && body.history.length > 0
-    ? `\n\nPREJŠNJI UKAZI (že upoštevani v trenutnem itinererju):\n${body.history.map((h, i) => `${i + 1}. ${h}`).join("\n")}`
+    ? `\n\n${isEn ? "PREVIOUS INSTRUCTIONS (already reflected in the current itinerary):" : "PREJŠNJI UKAZI (že upoštevani v trenutnem itinererju):"}\n${body.history.map((h, i) => `${i + 1}. ${h}`).join("\n")}`
     : "";
 
   // WEATHER-CONTEXT: sestava potnikov (opcijsko) — da prilagoditve
   // ohranjajo isti ritem kot osnovni načrt (družina → otrokom prijazno ...)
   const partyTypeLine = formData?.partyType
-    ? `\n- Upoštevaj sestavo potnikov: ${PARTY_PROMPT_LABELS[formData.partyType].sl}`
+    ? `\n- ${isEn ? "Respect the travel party" : "Upoštevaj sestavo potnikov"}: ${PARTY_PROMPT_LABELS[formData.partyType][isEn ? "en" : "sl"]}`
     : "";
 
-  const systemPrompt = `Si strokovni slovenski vodič za načrtovanje potovanj. Uporabnik ima že generiran itinerer in želi, da ga POSODOBIŠ glede na njegov ukaz. Odgovori SAMO z veljavnim JSON, brez dodatnega besedila.
+  const systemPrompt = isEn
+    ? `You are an expert Slovenian travel guide. The user already has a generated itinerary and wants you to UPDATE it according to their instruction. Respond ONLY with valid JSON, no additional text.
+
+IMPORTANT:
+- Keep the same JSON structure as the input itinerary
+- Keep the number of days the same unless the instruction explicitly asks for a change
+- Keep time frames and prices realistic
+- Respect the budget: €${formData?.budget ?? "unknown"}
+- Respect the season: ${formData?.season ?? "unknown"}
+- Respect the interests: ${formData?.interests?.join(", ") ?? "unknown"}
+- Respect the group size: ${formData?.groupSize ?? "unknown"}${partyTypeLine}
+- When suitable, include sponsored partners in notes or recommendations`
+    : `Si strokovni slovenski vodič za načrtovanje potovanj. Uporabnik ima že generiran itinerer in želi, da ga POSODOBIŠ glede na njegov ukaz. Odgovori SAMO z veljavnim JSON, brez dodatnega besedila.
 
 POMEMBNO:
 - Ohrani enako strukturo JSON kot vhodni itinerer
@@ -137,7 +153,51 @@ POMEMBNO:
 - Upoštevaj velikost skupine: ${formData?.groupSize ?? "nezdana"}${partyTypeLine}
 - Kadar ustreza, vključi sponzorirane partnerje v notes ali recommendations`;
 
-  const userPrompt = `TRENUTNI ITINERER:
+  const userPrompt = isEn
+    ? `CURRENT ITINERARY:
+${currentItineraryStr}
+${historyStr}
+${sponsoredContext}${crowdStr}
+
+AVAILABLE DESTINATIONS:
+${destContext}
+
+USER INSTRUCTION:
+"${instruction}"
+
+Update rules:
+1. Change the itinerary according to the instruction (add/remove/replace locations)
+2. Keep the total budget within €${formData?.budget ?? 1000} (unless the instruction says otherwise)
+3. If the instruction asks for "cheaper" — swap expensive picks for cheaper alternatives
+4. If the instruction asks to "add X" — include X on a suitable day
+5. If the instruction says "replace X with Y" — swap them
+6. If the instruction asks for "kid-friendly" — choose family-friendly destinations
+7. Keep or improve quality (ratings, relevance)
+
+JSON format (STRICT, same as input):
+{
+  "days": [
+    {
+      "day": 1,
+      "locations": [
+        {
+          "destination_id": "bled",
+          "destination_name": "Bled",
+          "time_slot": "09:00-13:00",
+          "duration": 4,
+          "estimated_cost": 50,
+          "notes": "Morning visit."
+        }
+      ],
+      "weather": { "condition": "sunny", "temp": 22 }
+    }
+  ],
+  "total_budget": 500,
+  "recommendations": ["Bring sunglasses", "Book the boat in advance"],
+  "tips": ["Start early to avoid crowds"],
+  "rationale": "Updated rationale (1-2 sentences, third person): why the CHANGED trip suits the traveler better given their instruction."
+}`
+    : `TRENUTNI ITINERER:
 ${currentItineraryStr}
 ${historyStr}
 ${sponsoredContext}${crowdStr}
@@ -231,12 +291,14 @@ JSON format (STROGO, enak kot vhod):
   } catch (error) {
     console.error("[itinerary/refine] AI napaka:", error);
 
-    // Fallback: vrni originalni itinerer z opombo
+    // Fallback: vrni originalni itinerer z opombo (jezikovno pravilno — P4-8)
     return NextResponse.json({
       itinerary: current,
       instruction,
       source: "fallback",
-      warning: "AI posodobitev ni uspela — prikazan je originalni itinerer.",
+      warning: isEn
+        ? "AI update failed — the original itinerary is shown."
+        : "AI posodobitev ni uspela — prikazan je originalni itinerer.",
     }, { status: 200 });
   }
 }

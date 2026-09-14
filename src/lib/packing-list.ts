@@ -20,6 +20,9 @@ export interface PackingListInput {
   interests: string[];
   groupType?: string;
   days: number;
+  // FW4.3/P4-8 (EN-fallback fix): jezik izpisa — "sl" (privzeto) ali "en".
+  // Fallback pot brez AI je prej izpisovala slovensko tudi za EN uporabnike.
+  lang?: "sl" | "en";
 }
 
 /** Max število elementov na pakirnem seznamu (berljivost). */
@@ -54,6 +57,25 @@ const ALWAYS_ITEMS = [
   "Zložljiva torba za spominke",
 ];
 
+// --- EN različice (P4-8: EN uporabnik na fallback poti ne sme videti SL) ---
+const SEASON_ITEMS_EN: Record<string, string[]> = {
+  winter: [
+    "Warm layers of clothing",
+    "Hat and gloves",
+    "Snow-appropriate footwear",
+    "Cold-weather face cream",
+  ],
+  summer: ["Sunscreen SPF 50", "Swimwear", "Sun hat"],
+  spring: ["Light windproof jacket", "Layers for changeable weather"],
+  autumn: ["Rain jacket", "Closed hiking shoes"],
+};
+
+const ALWAYS_ITEMS_EN = [
+  "Euros in cash (smaller local spots)",
+  "No adapter needed (EU sockets)",
+  "Foldable bag for souvenirs",
+];
+
 /** Kratek, berljiv hevristični seznam — glede komentar zgoraj za pravila. */
 export function buildPackingList(input: PackingListInput): string[] {
   const season = (input?.season ?? "").toString().trim().toLowerCase();
@@ -62,41 +84,64 @@ export function buildPackingList(input: PackingListInput): string[] {
     : [];
   const groupType = (input?.groupType ?? "").toString().trim().toLowerCase();
   const days = Number.isFinite(input?.days) ? Number(input.days) : 0;
+  const isEn = input?.lang === "en";
+  const seasonItems = isEn ? SEASON_ITEMS_EN : SEASON_ITEMS;
+  const alwaysItems = isEn ? ALWAYS_ITEMS_EN : ALWAYS_ITEMS;
 
   const haystack = [...interests, groupType].join(" ");
   const items: string[] = [];
 
   // === Sezona ===
-  if (SEASON_ITEMS[season]) items.push(...SEASON_ITEMS[season]);
+  if (seasonItems[season]) items.push(...seasonItems[season]);
   if (season === "spring" || season === "autumn") {
-    items.push("Sončna krema (tudi pomladi/jeseni UV)");
+    items.push(
+      isEn
+        ? "Sunscreen (spring/autumn UV too)"
+        : "Sončna krema (tudi pomladi/jeseni UV)"
+    );
   } else if (season === "summer") {
-    items.push("Rajčke za vroče popoldne");
+    items.push(isEn ? "Shorts for hot afternoons" : "Rajčke za vroče popoldne");
   } else if (season === "winter") {
-    items.push("Termično spodnje perilo");
+    items.push(isEn ? "Thermal base layers" : "Termično spodnje perilo");
   }
 
   // === Interesi ===
-  if (/narav|pohod|gore?|planin/.test(haystack)) {
-    items.push("Pohodniški čevlji", "Camelbak/voda");
+  if (/narav|pohod|gore?|planin|nature|hike|hiking|mountain/.test(haystack)) {
+    items.push(
+      ...(isEn
+        ? ["Hiking boots", "Water bottle or hydration pack"]
+        : ["Pohodniški čevlji", "Camelbak/voda"])
+    );
   }
-  if (/avantur|adrenalin|raft|kajak|canyon|bike|kolo/.test(haystack)) {
-    items.push("Hitro sušeča se obleka");
+  if (/avantur|adrenalin|raft|kajak|canyon|bike|kolo|adventur/.test(haystack)) {
+    items.push(isEn ? "Quick-dry clothing" : "Hitro sušeča se obleka");
   }
-  if (/kulinar|hran|jest|gastro|vino/.test(haystack)) {
-    items.push("Rahel prtljačni prostor za lokalne dobrote");
+  if (/kulinar|hran|jest|gastro|vino|food|cuisine|wine/.test(haystack)) {
+    items.push(
+      isEn
+        ? "A little spare luggage room for local treats"
+        : "Rahel prtljačni prostor za lokalne dobrote"
+    );
   }
-  if (/dru[žz]in|otrok|family/.test(haystack)) {
-    items.push("Otroški pripomočki (igrice za vožnjo, vlažilne robčice)");
+  if (/dru[žz]in|otrok|family|kids|children/.test(haystack)) {
+    items.push(
+      isEn
+        ? "Kids' kit (car games, wet wipes)"
+        : "Otroški pripomočki (igrice za vožnjo, vlažilne robčice)"
+    );
   }
 
   // === Dolžina potovanja ===
   if (days > 5) {
-    items.push("Power bank", "Pralni servis med potovanjem");
+    items.push(
+      ...(isEn
+        ? ["Power bank", "Laundry service mid-trip"]
+        : ["Power bank", "Pralni servis med potovanjem"])
+    );
   }
 
   // === Vedno ===
-  items.push(...ALWAYS_ITEMS);
+  items.push(...alwaysItems);
 
   // Deduplikacija (ohrani vrstni red) + kap
   const seen = new Set<string>();

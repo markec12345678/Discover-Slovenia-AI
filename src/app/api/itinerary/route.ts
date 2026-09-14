@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
 import { rankListings, buildTransparencyContext } from "@/lib/ranking-engine";
@@ -443,12 +444,14 @@ JSON format (STROGO):
     console.log(`[itinerary] AI uspešno (source: ${result.source})`);
 
     // Pakirni seznam — AI predlog (validirana) ali hevristika, če AI izpusti/neveljavna
+    // (P4-8: hevristika spoštuje jezik itinererja)
     itinerary.packingList =
       sanitizeAiPackingList(parsed.packing_list) ??
       buildPackingList({
         season: input.season,
         interests: input.interests,
         days: input.days,
+        lang,
       });
 
     // PRAVO vreme — vreme iz AI izhoda prepišemo z realno Open-Meteo prognozo
@@ -476,7 +479,7 @@ JSON format (STROGO):
     enriched.quality = computeItineraryQuality(enriched, input);
     enriched.rationale =
       sanitizeAiRationale(parsed.rationale) ??
-      buildFallbackRationale(input, enriched.quality);
+      buildFallbackRationale(input, enriched.quality, lang);
 
     // CROWD-ALTERNATIVES: poštene opombe o gneči + alternative (deterministično)
     enriched.crowdNotices = buildCrowdNotices(enriched, input, lang);
@@ -493,10 +496,12 @@ JSON format (STROGO):
     );
 
     // Fallback: hevristični pakirni seznam + dogodki (isti enrich kot AI pot)
+    // (P4-8: jezik itinererja — EN uporabnik dobi EN seznam)
     fallback.packingList = buildPackingList({
       season: input.season,
       interests: input.interests,
       days: input.days,
+      lang,
     });
     fallback.events = matchEventsForItinerary(fallback.days, 6, tripWindow);
 
@@ -507,8 +512,9 @@ JSON format (STROGO):
     }
 
     // FW4.1: metrike + deterministična utemeljitev (fallback nima AI rationale)
+    // (P4-8: jezik itinererja)
     fallback.quality = computeItineraryQuality(fallback, input);
-    fallback.rationale = buildFallbackRationale(input, fallback.quality);
+    fallback.rationale = buildFallbackRationale(input, fallback.quality, lang);
 
     // CROWD-ALTERNATIVES: iste poštene opombe kot na AI poti
     fallback.crowdNotices = buildCrowdNotices(fallback, input, lang);
@@ -576,8 +582,12 @@ async function enrichWithRealWeather(
       };
 
       // Dež alternative — dodaj v tips, če je verjetnost padavin visoka
+      // (P4-8: EN uporabnik dobi EN tip)
       if ((forecast.precipitationProbabilityMax ?? 0) >= 60) {
-        const tip = `Dan ${i + 1}: verjeten dež — alternative: Postojnska/Škocjanske jame, muzeji, terme Terme Olimia.`;
+        const tip =
+          lang === "en"
+            ? `Day ${i + 1}: rain likely — alternatives: Postojna/Škocjan Caves, museums, Terme Olimia thermal spa.`
+            : `Dan ${i + 1}: verjeten dež — alternative: Postojnska/Škocjanske jame, muzeji, terme Terme Olimia.`;
         if (!tips.includes(tip)) tips.push(tip);
       }
     }
@@ -604,6 +614,12 @@ function generateFallbackItinerary(
   input: PlannerInput,
   anchors: AnchorForecast[] = []
 ): Itinerary {
+  // P4-8 (EN-fallback fix): jezik vsega determinističnega besedila — prej
+  // je fallback izpisoval slovensko tudi za EN uporabnike (mešanje jezikov)
+  const isEn = input.language === "en";
+  const taglineOf = (d: (typeof DESTINATIONS)[number]): string =>
+    isEn ? (DESTINATIONS_EN[d.id]?.tagline ?? d.tagline) : d.tagline;
+
   // Filtriraj sezonsko ustrezne destinacije
   const suitable = DESTINATIONS.filter((d) => d.bestSeason.includes(input.season));
   const pool = suitable.length >= input.days * 2 ? suitable : DESTINATIONS;
@@ -659,10 +675,10 @@ function generateFallbackItinerary(
         duration: 4,
         estimated_cost: cost,
         // Deževen dan: transparenten razlog notranje izbire (resnična
-        // večinska napoved sidr — ne izmišljen status)
+        // večinska napoved sidr — ne izmišljen status); P4-8: EN različica
         notes: rainy
-          ? `${dest.tagline} — deževen dan, zato notranja/prilagodljiva izbira`
-          : dest.tagline,
+          ? `${taglineOf(dest)} — ${isEn ? "rainy day, so an indoor/flexible pick" : "deževen dan, zato notranja/prilagodljiva izbira"}`
+          : taglineOf(dest),
       });
     }
 
@@ -681,16 +697,28 @@ function generateFallbackItinerary(
   return {
     days,
     total_budget: totalCost,
-    recommendations: [
-      "Rezerviraj nastanitev vsaj 2 tedna vnaprej",
-      "Prenesi offline zemljevid za pohode",
-      "Vzemi plastenke za vodo — pitna voda je povsod",
-    ],
-    tips: [
-      "Začni zgodaj zjutraj za manj ljudi in boljšo svetlobo",
-      "V gorah preveri vreme isti dan",
-      "Lokalni marketi imajo najboljše cene za prigrizke",
-    ],
+    recommendations: isEn
+      ? [
+          "Book accommodation at least 2 weeks ahead",
+          "Download an offline map for hiking",
+          "Bring water bottles — tap water is drinkable everywhere",
+        ]
+      : [
+          "Rezerviraj nastanitev vsaj 2 tedna vnaprej",
+          "Prenesi offline zemljevid za pohode",
+          "Vzemi plastenke za vodo — pitna voda je povsod",
+        ],
+    tips: isEn
+      ? [
+          "Start early in the morning for fewer crowds and better light",
+          "Check the mountain weather on the day itself",
+          "Local shops have the best prices for snacks",
+        ]
+      : [
+          "Začni zgodaj zjutraj za manj ljudi in boljšo svetlobo",
+          "V gorah preveri vreme isti dan",
+          "Lokalni marketi imajo najboljše cene za prigrizke",
+        ],
     source: "fallback",
   };
 }

@@ -236,12 +236,25 @@ export function sanitizeAiRationale(raw: unknown): string | null {
 /**
  * Deterministična utemeljitev, kadar AI ne prispeva svoje.
  * Sestavljena iz vnosnih želja + strukturnih dejstev poti — brez izmišljenih
- * trditev.
+ * trditev. P4-8 (EN-fallback fix): lang "en" izpiše angleško (fallback pot
+ * prej mešala jezike za EN uporabnike).
  */
 export function buildFallbackRationale(
   input: PlannerInput,
-  quality: ItineraryQuality
+  quality: ItineraryQuality,
+  lang: "sl" | "en" = "sl"
 ): string {
+  if (lang === "en") {
+    const interests =
+      input.interests.length > 0
+        ? `with wishes: ${input.interests.slice(0, 3).join(", ")}`
+        : "based on general preferences";
+    const driving =
+      quality.drivingMinutes > 0
+        ? `total driving ~${formatDrivingMinutes(quality.drivingMinutes)}`
+        : "destinations are right next to each other";
+    return `The trip is planned for a ${input.days}-day journey ${interests}. Destinations are chosen by interest match, seasonal suitability and geographic proximity (${driving}).`;
+  }
   const interests =
     input.interests.length > 0
       ? `z željami: ${input.interests.slice(0, 3).join(", ")}`
