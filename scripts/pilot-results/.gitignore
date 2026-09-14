@@ -1,0 +1,2 @@
+scripts/pilot-results/*.json
+!.gitignore
