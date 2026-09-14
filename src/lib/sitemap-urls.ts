@@ -77,10 +77,10 @@ export interface SitemapUrl {
 
 /**
  * Vrne vse URL-je, ki jih platforma generira.
- * Trenutno: 19 stalnih + 22 things-to-do + 110 itinererjev + 88 best-time + 88 vodnikov
+ * Trenutno: 19 stalnih + 22 hub destinacij (GEO-A) + 22 things-to-do + 110 itinererjev + 88 best-time + 88 vodnikov
  * + 10 jadranskih vodnikov (ADRIA-1) + 4 domači (SLO-LOOP-1) + 8 zimskih
- *   (SLO-WINTER-1 + SLO-WINTER-2) = 349 SL URL-jev
- * + EN različice (FW4.3-2 jedro lijaka + vsi vodniki ADRIA/LOOP/WINTER) = 689 skupaj.
+ *   (SLO-WINTER-1 + SLO-WINTER-2) = 371 SL URL-jev
+ * + EN različice (FW4.3-2 jedro lijaka + vsi vodniki ADRIA/LOOP/WINTER) = 733 skupaj.
  *
  * `baseUrl` (MONET-10): dinamična pot (route handler /sitemap.xml) poda
  * DEJANSKEGA gostitelja zahteve → Google/Bing ne zavrnejo cross-host sitemapa.
@@ -128,6 +128,14 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
   // GEO (MONET-10): formati, ki jih AI agenti in iskalniki iščejo na korenu.
   add("/llms.txt", 0.3, "GEO", "monthly");
   add("/rss.xml", 0.3, "GEO", "daily");
+
+  // === Destinacijski hub (GEO-A, 22) ===
+  // Nadrejena stran destinacije — do 2026-09-14 je bila 404, kljub temu da
+  // so jo linkali llms.txt/llms-full.txt (22×) in JSON-LD. Zdaj je povezovalni
+  // vozeli → višja prioriteta kot podstrani (0.9 kot /destinacije seznam).
+  for (const d of DESTINATIONS) {
+    add(`/destinacija/${d.slug}`, 0.9, "Destinacija hub", "weekly");
+  }
 
   // === Things to do (22) ===
   for (const d of DESTINATIONS) {
@@ -195,12 +203,13 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
   return [...urls, ...enUrls];
 }
 
-/** Število EN URL-jev (FW4.3-2 + ADRIA-EN) — za poročanje brez gradnje seznama. */
+/** Število EN URL-jev (FW4.3-2 + ADRIA-EN + GEO-A) — za poročanje brez gradnje seznama. */
 export function getEnSitemapUrlCount(): number {
   // 10 stalnih (domov, nacrtuj, destinacije, vodici + 6 info/E-E-A-T) + 22
-  // + 110 + 88 + 88 + 22 vodnikov (ADRIA-EN + LOOP-EN + WINTER-EN)
+  // hub (GEO-A) + 22 + 110 + 88 + 88 + 22 vodnikov (ADRIA-EN + LOOP-EN + WINTER-EN)
   return (
     10 +
+    DESTINATIONS.length +
     DESTINATIONS.length +
     DESTINATIONS.length * 5 +
     DESTINATIONS.length * 4 +
@@ -211,10 +220,11 @@ export function getEnSitemapUrlCount(): number {
 
 /** Skupno število vseh URL-jev (za hitro poročanje brez gradnje seznama) */
 export function getTotalSitemapUrlCount(): number {
-  // 19 stalnih + 22 + 110 + 88 + 88 + 22 vodnikov (ADRIA+LOOP+WINTER) = 349 SL
-  // + 340 EN (FW4.3-2 + vsi vodniki) = 689 skupaj
+  // 19 stalnih + 22 hub (GEO-A) + 22 + 110 + 88 + 88 + 22 vodnikov (ADRIA+LOOP+WINTER) = 371 SL
+  // + 362 EN (FW4.3-2 + GEO-A hub + vsi vodniki) = 733 skupaj
   return (
     19 +
+    DESTINATIONS.length +
     DESTINATIONS.length +
     DESTINATIONS.length * 5 +
     DESTINATIONS.length * 4 +

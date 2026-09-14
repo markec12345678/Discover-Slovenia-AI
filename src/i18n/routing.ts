@@ -36,6 +36,10 @@ export type Locale = (typeof routing.locales)[number];
 
 /** Destinacijske pod-poti, ki so EN-različice (×22 destinacij). */
 const EN_DESTINATION_SUBROUTES = [
+  // GEO-A: nadrejena hub stran (do 2026-09-14 je bila 404 — zdaj živi,
+  // zato je tudi njena EN različica na whitelisti; 308 proxy preusmeritev
+  // je padla na slovensko 404 stran)
+  /^\/destinacija\/[^/]+$/,
   /^\/destinacija\/[^/]+\/things-to-do$/,
   /^\/destinacija\/[^/]+\/itinerary\/[^/]+$/,
   /^\/destinacija\/[^/]+\/best-time-to-visit\/[^/]+$/,

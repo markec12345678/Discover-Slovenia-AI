@@ -1479,5 +1479,66 @@
       "countriesAria": "Potovanje skozi: {countries}",
       "readMore": "Preberi →"
     }
+  },
+  "destinationPage": {
+    "breadcrumbHome": "Domov",
+    "breadcrumbDestinations": "Destinacije",
+    "meta": {
+      "notFound": "Destinacija ni najdena",
+      "title": "{name} — {tagline} | Vodnik po Sloveniji",
+      "description": "{name}: {tagline}. Priporočen čas obiska {duration}. Znamenitosti: {highlights}. Pripravljeni itinererji, vodniki po tipu potovanja in najboljši čas obiska.",
+      "ogTitle": "{name} — vodnik po destinaciji",
+      "ogDescription": "{name}: {tagline}. Kaj početi, itinererji po trajanju in najboljši čas obiska."
+    },
+    "heroStats": "{highlights} znamenitosti · {duration} · {budget}",
+    "aboutTitle": "O {name}",
+    "facts": {
+      "duration": "Priporočen čas obiska",
+      "budget": "Cenovni razred",
+      "person": "osebo",
+      "bestFor": "Primeren za",
+      "season": "Najboljša sezona"
+    },
+    "highlightsTitle": "Glavne znamenitosti",
+    "thingsToDo": {
+      "title": "Kaj početi v {name}",
+      "text": "Podrobna stran z aktivnostmi, lokalnimi ponudniki, izkušnjami in pogostimi vprašanji — {highlights} glavnih znamenitosti na enem mestu.",
+      "button": "Odpri vodnik {name}"
+    },
+    "itineraries": {
+      "title": "Pripravljeni itinererji za {name}"
+    },
+    "durations": {
+      "d1": "1 dan",
+      "weekend": "Vikend (2 dneva)",
+      "d3": "3 dni",
+      "d5": "5 dni",
+      "d7": "7 dni"
+    },
+    "guides": {
+      "title": "Vodniki po tipu potovanja — {name}"
+    },
+    "bestTime": {
+      "title": "Najboljši čas za obisk {name}"
+    },
+    "seasons": {
+      "pomlad": "Pomlad",
+      "poletje": "Poletje",
+      "jesen": "Jesen",
+      "zima": "Zima"
+    },
+    "plan": {
+      "title": "Načrtujte potovanje v {name}",
+      "text": "Naš AI vam lahko sestavi popoln itinerer za {name} in okolico — prilagojen vašim interesom, datumom, vremenu in sestavi potne skupine.",
+      "button": "AI načrtovalec potovanj"
+    },
+    "nearby": {
+      "title": "Blizu — regija {region}"
+    },
+    "explore": {
+      "title": "Raziščite tudi",
+      "all": "Vse destinacije"
+    },
+    "trackerTitle": "{name} — Destinacija"
   }
 }

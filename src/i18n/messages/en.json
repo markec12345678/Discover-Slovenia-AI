@@ -1479,5 +1479,66 @@
       "countriesAria": "Trip through: {countries}",
       "readMore": "Read →"
     }
+  },
+  "destinationPage": {
+    "breadcrumbHome": "Home",
+    "breadcrumbDestinations": "Destinations",
+    "meta": {
+      "notFound": "Destination not found",
+      "title": "{name} — {tagline} | Slovenia Travel Guide",
+      "description": "{name}: {tagline}. Recommended visit length: {duration}. Highlights: {highlights}. Ready-made itineraries, travel guides by trip type and the best time to visit.",
+      "ogTitle": "{name} — destination guide",
+      "ogDescription": "{name}: {tagline}. Things to do, itineraries by length and the best time to visit."
+    },
+    "heroStats": "{highlights} highlights · {duration} · {budget}",
+    "aboutTitle": "About {name}",
+    "facts": {
+      "duration": "Recommended visit length",
+      "budget": "Budget",
+      "person": "person",
+      "bestFor": "Great for",
+      "season": "Best season"
+    },
+    "highlightsTitle": "Top highlights",
+    "thingsToDo": {
+      "title": "Things to do in {name}",
+      "text": "The detailed guide with activities, local providers, experiences and FAQs — {highlights} top highlights in one place.",
+      "button": "Open the {name} guide"
+    },
+    "itineraries": {
+      "title": "Ready-made itineraries for {name}"
+    },
+    "durations": {
+      "d1": "1 day",
+      "weekend": "Weekend (2 days)",
+      "d3": "3 days",
+      "d5": "5 days",
+      "d7": "7 days"
+    },
+    "guides": {
+      "title": "Guides by trip type — {name}"
+    },
+    "bestTime": {
+      "title": "Best time to visit {name}"
+    },
+    "seasons": {
+      "pomlad": "Spring",
+      "poletje": "Summer",
+      "jesen": "Autumn",
+      "zima": "Winter"
+    },
+    "plan": {
+      "title": "Plan your trip to {name}",
+      "text": "Our AI can build a complete itinerary for {name} and the surrounding area — tailored to your interests, dates, the weather forecast and who you travel with.",
+      "button": "AI trip planner"
+    },
+    "nearby": {
+      "title": "Nearby — the {region} region"
+    },
+    "explore": {
+      "title": "Also explore",
+      "all": "All destinations"
+    },
+    "trackerTitle": "{name} — Destination"
   }
 }

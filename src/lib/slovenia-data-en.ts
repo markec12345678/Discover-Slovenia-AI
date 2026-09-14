@@ -221,6 +221,36 @@ export const INTERESTS_EN: Record<string, string> = {
   wellness: "Wellness",
 };
 
+/**
+ * GEO-A: bestFor oznake destinacij (slovenia-data.ts) v angleščini.
+ * Popolno pokritje VSEH 20 vrednosti, ki se pojavijo v DESTINATIONS —
+ * hub stran jih izpiše kot žetone, zato na EN ne sme ostati niti ena
+ * slovenska beseda (P4-8: nikoli mešanja jezikov). Varnost: neznan
+ * ključ pade nazaj na izvirnik (identiteta, ne izmišljena oznaka).
+ */
+export const BEST_FOR_EN: Record<string, string> = {
+  narava: "Nature",
+  kultura: "Culture",
+  hrana: "Food & Wine",
+  avantura: "Adventure",
+  adrenalin: "Adrenaline",
+  romantika: "Romance",
+  "družina": "Family",
+  wellness: "Wellness",
+  poletje: "Summer",
+  mir: "Peace & Quiet",
+  zgodovina: "History",
+  vino: "Wine",
+  pohodništvo: "Hiking",
+  mesto: "City Break",
+  fotografija: "Photography",
+  zdravje: "Health",
+  sprostitev: "Relaxation",
+  smučanje: "Skiing",
+  festival: "Festivals",
+  aktivnosti: "Activities",
+};
+
 /** Varno iskanje EN overlay-ja (undefined, če manjka). */
 export function getEnDestination(id: string): DestinationEn | undefined {
   return DESTINATIONS_EN[id];
