@@ -90,6 +90,16 @@ export const DESTINATIONS: Destination[] = [
     duration: "1 dan",
     costPerPerson: 30,
     featured: true,
+    // F5.5: uradna stran — »Vedno odprto. Postojnska jama je odprta vse dni
+    // v letu, tudi ob nedeljah, praznikih in tudi v slabem vremenu.« ( vir:
+    // postojnska-jama.eu, preverjeno 2026-09). Vodeni ogledi čez dan; pozimi
+    // redkejši odhodi. Brez dni zaprtja.
+    opening: {
+      note: "Odprta vse dni v letu ( vodeni ogledi čez dan; pozimi redkejši odhodi)",
+      noteEn: "Open every day of the year ( guided tours through the day; fewer winter departures)",
+      closureLevel: "mainAttraction",
+      source: "postojnska-jama.eu",
+    },
   },
   {
     id: "piran",
@@ -174,6 +184,15 @@ export const DESTINATIONS: Destination[] = [
     duration: "1 dan",
     costPerPerson: 25,
     featured: false,
+    // F5.5: Kobariški muzej — uradna stran: »Muzej je odprt vse dni v letu.
+    // januar–marec 10:00–17:00« ( jul–avg do 19:00; vir kobariski-muzej.si +
+    // soca-valley.com, preverjeno 2026-09). Brez dni zaprtja.
+    opening: {
+      note: "Kobariški muzej odprt vsak dan ( jan–mar 10–17, jul–avg do 19)",
+      noteEn: "Kobarid Museum open daily ( Jan–Mar 10–17, Jul–Aug until 19)",
+      closureLevel: "mainAttraction",
+      source: "kobariski-muzej.si",
+    },
   },
   {
     id: "maribor",
@@ -237,6 +256,19 @@ export const DESTINATIONS: Destination[] = [
     duration: "1 dan",
     costPerPerson: 10,
     featured: false,
+    // F5.5 ( NAJPLESNEJŠI primer): uradna stran — »The Vintgar Gorge is open
+    // to visitors between April and October« ( vir vintgar.si, preverjeno
+    // 2026-09; odprtve po zimskem zaprtju se datumsko razlikujejo po letih —
+    // npr. 2024: 19. april). NOVEMBER–MAREC ZAPRTO ( led/sneg) — zaprtje na
+    // ravni DESTINACIJE ( soteska JE kraj), zato geo-validacija javlja ERROR,
+    // ko zimski načrt vsebuje ta postanek.
+    opening: {
+      note: "Odprta april–oktober ( poleti 8–18, spomladi/jeseni 9–16); pozimi zaprta",
+      noteEn: "Open April–October ( summer 8–18, spring/autumn 9–16); closed in winter",
+      closedMonths: [11, 12, 1, 2, 3],
+      closureLevel: "destination",
+      source: "vintgar.si",
+    },
   },
   {
     id: "rogaska",
@@ -280,6 +312,18 @@ export const DESTINATIONS: Destination[] = [
     duration: "1 dan",
     costPerPerson: 18,
     featured: false,
+    // F5.5 ( MindTrip »Louvre je zaprt ob torkih« pariteta): Pokrajinski
+    // muzej Ptuj–Ormož — Ptujski grad: »Odprto od torka do nedelje od 10. do
+    // 18. ure. Ponedeljki zaprto.« ( uradna objava muzeja, pmpo.si, apr 2026;
+    // poletni urnik). Staro mestno jedro je dostopno vedno — zaprtje je na
+    // ravni GLAVNE ZNAMENITOSTI ( WARN, ne ERROR).
+    opening: {
+      note: "Ptujski grad zaprt ob ponedeljkih ( tor–ned 10–18, poletni urnik)",
+      noteEn: "Ptuj Castle closed on Mondays ( Tue–Sun 10–18, summer schedule)",
+      closedWeekdays: [1],
+      closureLevel: "mainAttraction",
+      source: "pmpo.si",
+    },
   },
   {
     id: "celje",
@@ -301,6 +345,15 @@ export const DESTINATIONS: Destination[] = [
     duration: "1 dan",
     costPerPerson: 15,
     featured: false,
+    // F5.5: »Stari grad Celje je odprt vsak dan v letu!« ( gradovislovenije.si
+    // + visitcelje.eu, preverjeno 2026-09; urnik se spreminja po mesecih —
+    // jan 10–16, feb 9–17, mar 10–18, apr 9–19). Brez dni zaprtja.
+    opening: {
+      note: "Stari grad odprt vsak dan ( urnik po mesecih: jan 10–16 … apr 9–19)",
+      noteEn: "Old Castle open daily ( monthly hours: Jan 10–16 … Apr 9–19)",
+      closureLevel: "mainAttraction",
+      source: "visitcelje.eu",
+    },
   },
   // === PRIMORSKA — dodatne destinacije ===
   {

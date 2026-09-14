@@ -6,6 +6,31 @@ export type DestinationType = "lake" | "city" | "mountain" | "cave" | "coast" | 
 export type Budget = "€" | "€€" | "€€€";
 export type Season = "spring" | "summer" | "autumn" | "winter";
 
+/**
+ * F5.5 ( odpiralni časi): preverjeni podatki o obratovalnem času destinacije.
+ * Obstaja SAMO za destinacije, kjer so bili urnik/dnevi zaprtja preverjeni
+ * na uradnih virih ( data honesty — prazno ≠ izmišljeno). Vir je prikazan
+ * uporabniku; geo-validacija iz njega izpelje opozorila (samo z znanim
+ * datumom odhoda).
+ */
+export interface DestinationOpening {
+  /** Kratko zabeleženo obdobje/urnik ( SL) — prikazano uporabniku. */
+  note: string;
+  /** EN različica opombe. */
+  noteEn: string;
+  /** Meseci ( 1–12), ko je ZAPRTO ( npr. Vintgar pozimi). */
+  closedMonths?: number[];
+  /** Dnevi v tednu po JS getDay() ( 0=ned, 1=pon … 6=sob), ko je zaprto. */
+  closedWeekdays?: number[];
+  /** destination = celoten kraj zaprt (ERROR); mainAttraction = zaprta glavna
+   *  znamenitost, kraj sam je dostopen (WARN). */
+  closureLevel: "destination" | "mainAttraction";
+  /** Vir ( prikazan uporabniku — uradna domena). */
+  source: string;
+  /** URL vira ( opcijsko, za dokumentacijo). */
+  sourceUrl?: string;
+}
+
 export interface Destination {
   id: string;
   slug: string;
@@ -25,6 +50,8 @@ export interface Destination {
   duration: string;
   costPerPerson: number;
   featured: boolean;
+  /** F5.5: preverjeni odpiralni časi ( SAMO kjer vir obstaja — opcijsko). */
+  opening?: DestinationOpening;
 }
 
 export interface PlannerInput {
@@ -168,7 +195,10 @@ export type GeoRuleId =
   | "schedule_gap"
   | "schedule_overlap"
   | "duplicate_stop"
-  | "missing_coords";
+  | "missing_coords"
+  // F5.5: odpiralni časi ( samo z znanim datumom; vir v sporočilu)
+  | "closed_month"
+  | "closed_weekday";
 
 export interface DayGeoMetrics {
   day: number;

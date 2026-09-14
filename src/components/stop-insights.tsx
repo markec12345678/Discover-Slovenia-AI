@@ -30,9 +30,11 @@ import type { LocationVisit } from "@/lib/types";
 //     pred obiskom preveri urnike in cene. NI generičnega "Verified"
 //     značka — dokler ni dejanskega postopka potrjevanja.
 //
-// Parkiranje/odpiralni časi za destinacije NE obstajajo v datasetu (obstajajo
-// samo pri partnerjih/lokalih, kjer se prikazujejo tam) — zato se tu NE
-// prikazujejo. Prazno ≠ izmišljeno.
+// F5.5 ( odpiralni časi): ODPIRALNI ČASI zdaj OBSTAJAJO v datasetu za 5
+// destinacij, kjer so bili urnik/dnevi zaprtja preverjeni na uradnih virih
+// ( vintgar.si, postojnska-jama.eu, kobariski-muzej.si, visitcelje.eu,
+// pmpo.si) — prikažejo se SAMO tam, skupaj z virom. Parkiranje ŠE VEDNO ne
+// obstaja v datasetu ( samo pri partnerjih/lokalih) — prazno ≠ izmišljeno.
 //
 // Datum "posodobljeno" sledi DESTINATIONS_DATA_AS_OF iz stop-insights.ts
 // (git-zabeležena zadnja sprememba dataseta destinacij).
@@ -62,6 +64,7 @@ const L = {
   duration: { sl: "Trajanje", en: "Duration" },
   price: { sl: "Okvirna cena", en: "Estimate" },
   season: { sl: "Sezona", en: "Season" },
+  opening: { sl: "Odpiralni čas", en: "Opening hours" },
   weather: { sl: "Vremenska ustreznost", en: "Weather fit" },
   weatherIndoor: {
     sl: "notranja aktivnost — primerna tudi ob dežju",
@@ -102,6 +105,13 @@ export function StopInsights({ visit, locale }: StopInsightsProps) {
   const price = dest?.costPerPerson;
   const seasons = dest?.bestSeason ?? [];
   const suitability = dest ? weatherSuitabilityOf(dest.type) : null;
+  // F5.5: preverjeni odpiralni časi ( SAMO obstoječi vnos — z virom)
+  const opening = dest?.opening;
+  const openingNote = opening
+    ? lang === "en"
+      ? opening.noteEn
+      : opening.note
+    : null;
 
   // Praktični podatki se prikažejo, če obstoja KATERIKOLI zapis o destinaciji
   if (!visit.reason && !dest) return null;
@@ -208,6 +218,26 @@ export function StopInsights({ visit, locale }: StopInsightsProps) {
                       : suitability === "mixed"
                       ? label("weatherMixed", locale)
                       : label("weatherOutdoor", locale)}
+                  </dd>
+                </div>
+              </div>
+            )}
+
+            {/* F5.5: odpiralni čas — SAMO kjer je vnos preverjen ( vir vedno
+                prikazan; data honesty: prazno = ni podatka, ne "odprto") */}
+            {openingNote && opening && (
+              <div className="flex items-start gap-1.5">
+                <Calendar className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                <div>
+                  <dt className="sr-only">{label("opening", locale)}</dt>
+                  <dd>
+                    <span className="font-medium text-foreground/80">
+                      {label("opening", locale)}:
+                    </span>{" "}
+                    {openingNote}{" "}
+                    <span className="text-muted-foreground/80">
+                      ({label("source", locale).toLowerCase()}: {opening.source})
+                    </span>
                   </dd>
                 </div>
               </div>

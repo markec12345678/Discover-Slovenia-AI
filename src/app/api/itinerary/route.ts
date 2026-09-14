@@ -20,6 +20,7 @@ import {
 import { matchEventsForItinerary } from "@/lib/events-match";
 import {
   isValidStartDate,
+  parseISODateLocal,
   tripEndDateISO,
   tripWindowMs,
   formatDateRangeSI,
@@ -241,9 +242,11 @@ export async function POST(request: Request) {
   }
 
   // Pripravi kontekst destinacij za AI
+  // F5.5: vrstica o odpiralnih časih ( SAMO preverjeni vnosi — vir AI pove
+  // izrecno, da ne ugiba o urnikih; brez vnosa destinacija nima omejitve)
   const destContext = DESTINATIONS.map(
     (d) =>
-      `- ${d.id} (${d.name}): ${d.type}/${d.region}, ${d.duration}, €${d.costPerPerson}/osebo, ocena ${d.rating}, aktivnosti: ${d.activities.join(", ")}. Najboljše za: ${d.bestFor.join(", ")}. Sezona: ${d.bestSeason.join(", ")}`
+      `- ${d.id} (${d.name}): ${d.type}/${d.region}, ${d.duration}, €${d.costPerPerson}/osebo, ocena ${d.rating}, aktivnosti: ${d.activities.join(", ")}. Najboljše za: ${d.bestFor.join(", ")}. Sezona: ${d.bestSeason.join(", ")}${d.opening ? `. Odpiralni čas (vir ${d.opening.source}): ${d.opening.note}` : ""}`
   ).join("\n");
 
   // FW4.3: jezik AI izpisa — client pošlje locale ("en" → angleški
@@ -335,6 +338,20 @@ export async function POST(request: Request) {
       `${crowdRuleNo}. Your travel window includes a peak-season weekend: Bled, Vintgar Gorge, Postojna Cave, Piran and Ljubljana old town are usually very busy then. Where any of these is planned: schedule a MORNING slot (before 9:00) and note that arriving early is recommended; where sensible, swap to a less-visited destination from the list.`
     );
   }
+  // F5.5 ( odpiralni časi): AI izrecno upošteva preverjena zaprtja —
+  // neizvedljivi postanki ( Vintgar pozimi) ali zaprtje glavne atrakcije
+  // na določen dan v tednu ( Ptujski grad ob ponedeljkih). Podatki so v
+  // destContext z virom; to pravilo jih naredi OBVEZUJOČE za urnik.
+  {
+    const openRuleNo = extraRulesSl.length > 0 ? extraRulesSl.length + 12 : 12;
+    extraRulesSl.push(
+      `${openRuleNo}. destinacije imajo v seznamu zabeležene odpiralne čase z virom (npr. Vintgarska soteska je zaprta novembra–marca; Ptujski grad je zaprt ob ponedeljkih). Če je datum potovanja znan, NE načrtuj destinacije v obdobju, ko je zaprta, in izogibaj se dnevom zaprtja glavnih atrakcij — podatek je preverjen, ne predlog.`
+    );
+    extraRulesEn.push(
+      `${openRuleNo}. Destinations list verified opening hours with a source (e.g. Vintgar Gorge is closed November–March; Ptuj Castle is closed on Mondays). When the travel date is known, do NOT schedule a destination during its closure period and avoid weekdays when a main sight is closed — this is verified data, not a suggestion.`
+    );
+  }
+
   const extraRulesBlockSl =
     extraRulesSl.length > 0 ? `\n${extraRulesSl.join("\n")}` : "";
   const extraRulesBlockEn =
@@ -696,6 +713,36 @@ function generateFallbackItinerary(
   const suitable = DESTINATIONS.filter((d) => d.bestSeason.includes(input.season));
   const pool = suitable.length >= input.days * 2 ? suitable : DESTINATIONS;
 
+  // F5.5 ( odpiralni časi): če je datum odhoda znan, mesečno zaprtje na
+  // ravni DESTINACIJE ( Vintgar nov–mar) izloči destinacijo iz bazena —
+  // deterministično PREPREČIMO neizvedljiv postanek, ne zgolj opozorimo.
+  // Zaprtje na ravni ATRAKCIJE ( Ptujski grad ob ponedeljkih) NE izloča —
+  // mesto je odprto, validator pošteno opozori (WARN) glede dneva.
+  const closedInTripMonths = new Set<string>();
+  if (input.startDate) {
+    const startMs = parseISODateLocal(input.startDate);
+    if (startMs !== null) {
+      const months = new Set<number>();
+      for (let i = 0; i < input.days; i++) {
+        months.add(new Date(startMs + i * 86400000).getMonth() + 1);
+      }
+      for (const d of DESTINATIONS) {
+        if (
+          d.opening?.closureLevel === "destination" &&
+          d.opening.closedMonths?.some((m) => months.has(m))
+        ) {
+          closedInTripMonths.add(d.id);
+        }
+      }
+    }
+  }
+  const openPool = closedInTripMonths.size > 0
+    ? pool.filter((d) => !closedInTripMonths.has(d.id))
+    : pool;
+  // Če bi s filtrom ostalo premalo ( robn primer), ostane izvorni pool —
+  // validator tak načrt pošteno označi ( ERROR) in refine ga lahko popravi.
+  const effectivePool = openPool.length >= input.days ? openPool : pool;
+
   // Ocenjevalnik: ujemanje interesov + F5.4 pohitritev za izrecno zaželene
   // destinacije ( iz prilepljene povezave — "Start Anywhere"). Pohitritev
   // ( +2,5) dominira nad oceno/všečnostjo, a NE nad sezonskim filtrom in
@@ -705,7 +752,7 @@ function generateFallbackItinerary(
     d.rating / 10 +
     (input.preferredDestinations?.includes(d.id) ? 2.5 : 0);
 
-  const ranked = [...pool].sort((a, b) => score(b) - score(a));
+  const ranked = [...effectivePool].sort((a, b) => score(b) - score(a));
   const indoor = ranked.filter((d) => INDOOR_TYPES.has(d.type));
 
   // Zaporedni izbor z razstrupljanjem (brez vremena: isto zaporedje kot prej)

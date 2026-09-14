@@ -15,6 +15,11 @@
 //   6. isti kraj dvakrat isti dan    (WARN)
 //   7. manjkajoče koordinate         (ERROR)
 //   8. brez lažne natančnosti        (zaokroževanje na 5 km/5 min, "~" prefix)
+//   9. zaprtje v mesecu obiska      (F5.5: npr. Vintgar nov–mar — ERROR na
+//                                    ravni destinacije, WARN na ravni atrakcije;
+//                                    samo z znanim datumom; vir v sporočilu)
+//  10. dan v tednu = dan zaprtja    (F5.5: npr. Ptujski grad ob ponedeljkih —
+//                                    WARN; samo z znanim datumom; vir v sporočilu)
 //
 // NAČELO POŠTENOSTI (enako kot itinerary-quality.ts / crowd-alternatives.ts):
 // - VSE metrike so DETERMINISTIČNO izračunane iz realnih koordinat destinacij
@@ -27,6 +32,7 @@
 // ============================================================================
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { dayISOForDayNumber, parseISODateLocal } from "@/lib/trip-dates";
 import type { Itinerary } from "@/lib/types";
 
 /** Cestni faktor — dejanske ceste so ~1,3× daljše od ravne črte (Slovenija). */
@@ -54,7 +60,12 @@ export type GeoRuleId =
   | "schedule_gap"
   | "schedule_overlap"
   | "duplicate_stop"
-  | "missing_coords";
+  | "missing_coords"
+  // F5.5 ( odpiralni časi, MindTrip pariteta — »Louvre je zaprt ob torkih«):
+  // zaprtje destinacije/atribacije na dan obiska ( SAMO z znanim datumom
+  // odhoda — brez datuma NE trdimo ničesar)
+  | "closed_month"
+  | "closed_weekday";
 
 export interface DayGeoMetrics {
   day: number;
@@ -94,6 +105,19 @@ export interface GeoValidation {
 // ---------------------------------------------------------------------------
 
 const COORDS = new Map(DESTINATIONS.map((d) => [d.id, d.coords]));
+
+/** F5.5: odpiralni podatki (SAMO preverjeni vnosi — glej slovenia-data.ts). */
+const OPENING = new Map(
+  DESTINATIONS.filter((d) => d.opening).map((d) => [d.id, d.opening!])
+);
+
+const DEST_BY_ID = new Map(DESTINATIONS.map((d) => [d.id, d]));
+
+/** Imena dni v tednu ( getDay konvencija: 0=ned … 6=sob) — za sporočila. */
+const WEEKDAY_LABELS: Record<Lang, string[]> = {
+  sl: ["nedeljo", "ponedeljek", "torek", "sredo", "četrtek", "petek", "soboto"],
+  en: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+};
 
 function haversineKm(
   a: { lat: number; lng: number },
@@ -194,6 +218,35 @@ function msgMissingCoords(lang: Lang, name: string, id: string): string {
     : `"${name}" (${id}) ne morem preveriti — neznana destinacija, razdalje tega dne so lahko podcenjene`;
 }
 
+function msgClosedMonth(
+  lang: Lang,
+  name: string,
+  note: string,
+  source: string,
+  isDestinationLevel: boolean
+): string {
+  return lang === "en"
+    ? isDestinationLevel
+      ? `${name} is closed in this period (${note}; source: ${source}) — the stop as planned is not possible, swap it for an open destination`
+      : `${name} is closed in this period (${note}; source: ${source}) — check whether the main sight is open on your date`
+    : isDestinationLevel
+      ? `${name} je v tem obdobju zaprta (${note}; vir: ${source}) — postanek, kot je načrtovan, ni možen; zamenjaj ga z odprto destinacijo`
+      : `${name} je v tem obdobju zaprta (${note}; vir: ${source}) — preveri, ali je glavna znamenitost na tvoj datum odprta`;
+}
+
+function msgClosedWeekday(
+  lang: Lang,
+  name: string,
+  weekday: number,
+  note: string,
+  source: string
+): string {
+  const day = WEEKDAY_LABELS[lang][weekday] ?? String(weekday);
+  return lang === "en"
+    ? `This day falls on a ${day}, when the main sight at ${name} is closed (${note}; source: ${source}) — the town itself is open, but plan the castle/museum for another day`
+    : `Ta dan je ${day}, ko je glavna znamenitost v ${name} zaprta (${note}; vir: ${source}) — samo kraj je odprt, grad/muzej pa preveri za drug dan`;
+}
+
 // ---------------------------------------------------------------------------
 // Glavna čista funkcija
 // ---------------------------------------------------------------------------
@@ -206,9 +259,28 @@ export function validateItineraryGeo(
   const dayMetrics: DayGeoMetrics[] = [];
   const issues: GeoValidationIssue[] = [];
 
+  // F5.5: datum tega dneva ( dan N = tripStartDate + N-1) — SAMO z znanim
+  // datumom odhoda. Brez datuma pravili odpiralnih časov NE veljata
+  // ( neznani datum = ni poštene trditve o dnevu v tednu/mesecu).
+  const tripStart =
+    typeof itinerary.tripStartDate === "string"
+      ? itinerary.tripStartDate
+      : null;
+
   for (const day of days) {
     const stops = Array.isArray(day.locations) ? day.locations : [];
     const dayNo = typeof day.day === "number" ? day.day : 0;
+
+    // Datum dneva za pravili odpiralnih časov ( izven zanke over stops —
+    // izračun enkrat na dan)
+    const dayDateMs = tripStart
+      ? (() => {
+          const iso = dayISOForDayNumber(tripStart, dayNo);
+          return iso ? parseISODateLocal(iso) : null;
+        })()
+      : null;
+    const dayMonth = dayDateMs !== null ? new Date(dayDateMs).getMonth() + 1 : null;
+    const dayWeekday = dayDateMs !== null ? new Date(dayDateMs).getDay() : null;
 
     // --- pravilo 7: manjkajoče koordinate (neznan ID → ne moremo računati) ---
     for (const s of stops) {
@@ -223,6 +295,54 @@ export function validateItineraryGeo(
             s.destination_id
           ),
         });
+      }
+    }
+
+    // --- pravili 9 + 10 ( F5.5): odpiralni časi — zaprtje meseca/dneva v
+    //     tednu. SAMO z znanim datumom + SAMO za preverjene vnose. Raven
+    //     zaprtja: destination → ERROR ( soteska JE kraj), mainAttraction →
+    //     WARN ( mesto odprto, grad/muzej zaprt). Vir je VEDNO v sporočilu. ---
+    if (dayMonth !== null) {
+      for (const s of stops) {
+        const opening = OPENING.get(s.destination_id);
+        const dest = DEST_BY_ID.get(s.destination_id);
+        if (!opening || !dest) continue;
+        const name = s.destination_name ?? dest.name;
+
+        if (
+          opening.closedMonths &&
+          opening.closedMonths.includes(dayMonth)
+        ) {
+          issues.push({
+            day: dayNo,
+            level: opening.closureLevel === "destination" ? "error" : "warn",
+            rule: "closed_month",
+            message: msgClosedMonth(
+              lang,
+              name,
+              lang === "en" ? opening.noteEn : opening.note,
+              opening.source,
+              opening.closureLevel === "destination"
+            ),
+          });
+        } else if (
+          dayWeekday !== null &&
+          opening.closedWeekdays &&
+          opening.closedWeekdays.includes(dayWeekday)
+        ) {
+          issues.push({
+            day: dayNo,
+            level: "warn",
+            rule: "closed_weekday",
+            message: msgClosedWeekday(
+              lang,
+              name,
+              dayWeekday,
+              lang === "en" ? opening.noteEn : opening.note,
+              opening.source
+            ),
+          });
+        }
       }
     }
 
