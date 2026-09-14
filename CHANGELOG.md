@@ -7,6 +7,52 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.8.0] — 2026-09-15
+
+### Dodano (FAZA 5 — primerjalni razvojni sprint po analizi vs MindTrip)
+
+> Celotna analiza z viri: COMPETITIVE-ANALYSIS.md. Štiri vrzeli, odkrite z
+> web-researchom neodvisnih recenzij (aitravel.tools, layla.ai tier list,
+> voyaige.to, monkeytravel.app) + revizijo lastne kode, zaprte v enem sprintu.
+
+- **F5.1 — Zemljevid poti NA strani načrtovalnika** (`trip-map-panel.tsx`):
+  MindTrip-ova jedro prednost ( split map+itinerary workspace) prevedena na
+  naš /nacrtuj — barvne polyline po dnevih, oštevilčeni markerji znotraj
+  dneva, interaktivna legenda dni (vklop/izklop), dvosmerna sinhronizacija
+  (klik markerja → scroll+highlight kartice postanka; gumb na kartici → pan
+  zemljevida na marker). Prej je zemljevid živel le na /zemljevid in
+  /pot/[shareId].
+- **F5.2 — Koledarski izvoz .ics** (`lib/ics-export.ts`): vsak postanek →
+  VEVENT (RFC 5545, escape + folding, SL/EN). Brez knjižnice in brez
+  strežniškega klica (Blob download). Iskrena opomba ob načrtih brez datuma
+  odhoda (datumi relativni — zapisano v dogodkih). Gumb v akcijski vrstici.
+- **F5.3 — Stroški vožnje: gorivo + e-vinjeta** (`lib/trip-costs.ts`):
+  DriveCosts v ItineraryQuality (ista čista funkcija na strežniku in
+  clientu): km × 6,5 l/100 km × 1,60 €/l + slovenska e-vinjeta po dolžini
+  potovanja (1 d 8,10 € / ≤10 d 12,80 € / ≤62 d 32,00 € / letna 106,80 € —
+  AMZS/DARS). Vse predpostavke in viri razkriti v "Kako smo izračunali";
+  vinjeta pogojna (le avtoceste); 0 km → brez vrstice (ne izmišljujemo).
+- **F5.4 — "Začni s povezavo" (MindTrip "Start Anywhere")**:
+  `POST /api/itinerary/ingest` + `lib/url-ingest.ts` + UI v obrazcu.
+  DETERMINISTIČNO prepoznavanje destinacij s prilepljene povezave
+  (YouTube/blog; SL+EN sinónimi, diakritika-neobčutljivo, word-boundway,
+  naslov ×2) — deluje brez AI žetonov. Predlog {dni, interesi (iz bestFor,
+  kanonični), preferredDestinations} → samodejna generacija; zadetki s
+  številom omemb prikazani PRED generiranjem. Integracija:
+  PlannerInput.preferredDestinations (sanitizirano; fallback pohitritev
+  +2,5 — nad oceno, NE nad sezono/dežem; AI prompt vrstica). SSRF
+  zaščita, timeout 8 s, max 1 MB, rate limit 10/min; 0 zadetkov → 422
+  (nič izmišljevanja).
+- **Analitika:** 3 novi dogodki (ingest_url_attempted, ingest_url_success,
+  ics_download) — whitelist (klient+strežnik) in docs/ANALYTICS-EVENTS.md.
+- **Dokumentacija:** COMPETITIVE-ANALYSIS.md (celotna analiza z viri,
+  roadmap za odložene vrzeli: živi ceni, odpiralni časi, PWA, community).
+
+### Popravljeno
+
+- Vgnezden `<form>` v obrazcu načrtovalnika (ingest UI) → hidratacijska
+  napaka; preoblikovano na div + onKeyDown Enter obravnava.
+
 ## [1.7.2] — 2026-09-15
 
 ### Popravljeno (TAG-ALIGN — neusklajenost oznak interesov, P1 po sledeh recenzije Faze 4)

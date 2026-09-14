@@ -217,6 +217,29 @@ export async function POST(request: Request) {
   // je fallback ocenjevalnik izbire "Hrana & vino" tiho ignoriral.
   input = { ...input, interests: normalizeInterests(input.interests) };
 
+  // F5.4 ("Začni s povezavo"): zaželene destinacije iz prilepljene povezave —
+  // opcijsko; sanitizacija na meji ( samo znani ID-ji, največ 8, dedupe).
+  // Neznan ID se tiho očisti ( fallback ocenjevalnik bi ga preskočil že tako;
+  // AI prompt ne nosi smeti). Nazaj kompatibilno: brez polja = enako kot prej.
+  if (Array.isArray(input.preferredDestinations)) {
+    const seenIds = new Set<string>();
+    const cleanPreferred: string[] = [];
+    for (const id of input.preferredDestinations) {
+      if (
+        typeof id === "string" &&
+        !seenIds.has(id) &&
+        DESTINATIONS.some((d) => d.id === id)
+      ) {
+        seenIds.add(id);
+        cleanPreferred.push(id);
+      }
+    }
+    input =
+      cleanPreferred.length > 0
+        ? { ...input, preferredDestinations: cleanPreferred.slice(0, 8) }
+        : { ...input, preferredDestinations: undefined };
+  }
+
   // Pripravi kontekst destinacij za AI
   const destContext = DESTINATIONS.map(
     (d) =>
@@ -326,6 +349,21 @@ IMPORTANT: Suggested partners are ranked by relevance and quality (Q = Quality S
 
 POMEMBNO: Predlagani partnerji so razvrščeni po ustreznosti in kakovosti (Q = Quality Score). Kadar je mogoče, vključi partnerje z višjim Q v notes ali recommendations polja. [SPONZORIRANO] in [FEATURED] oznake pomenijo premium partnerje. Praktični podatki partnerjev (sezona, vreme, parkiranje) so podatki ponudnika — uporabi jih pri izbiri: partner z "vreme: notranje" ustreza deževnemu dnevu, "sezona: poletje" pa je izven sezone neustrezen.`;
 
+  // F5.4: zaželene destinacije — AI prompt izrecno navodilo ( fallback pot
+  // jih že dobi prek ocenjevalnika; AI pot jih potrebuje v besedilu).
+  const preferredLineEn =
+    input.preferredDestinations && input.preferredDestinations.length > 0
+      ? `\n- Destinations the user explicitly wants to include (recognized from a link they pasted): ${input.preferredDestinations
+          .map((id) => DESTINATIONS.find((d) => d.id === id)?.name ?? id)
+          .join(", ")} — include them where feasible ( season and geography permitting)`
+      : "";
+  const preferredLineSl =
+    input.preferredDestinations && input.preferredDestinations.length > 0
+      ? `\n- Destinacije, ki jih uporabnik izrecno želi vključiti ( prepoznane s prilepljene povezave): ${input.preferredDestinations
+          .map((id) => DESTINATIONS.find((d) => d.id === id)?.name ?? id)
+          .join(", ")} — jih vključi, kjer je izvedljivo ( sezona in geografija dovoljujeta)`
+      : "";
+
   const userPrompt =
     lang === "en"
       ? `Generate a ${input.days}-day itinerary for Slovenia.
@@ -334,7 +372,7 @@ Traveler:
 - Budget: €${input.budget}
 - Interests: ${input.interests.join(", ")}
 - Season: ${input.season}${input.startDate ? `\n- Travel date: ${formatDateRangeSI(input.startDate, tripEnd)}` : ""}
-- Group: ${input.groupSize} person(s)${partyLineEn}
+- Group: ${input.groupSize} person(s)${partyLineEn}${preferredLineEn}
 ${weatherBlockEn}
 Available destinations:
 ${destContext}
@@ -383,7 +421,7 @@ Potnik:
 - Proračun: €${input.budget}
 - Interesi: ${input.interests.join(", ")}
 - Sezona: ${input.season}${input.startDate ? `\n- Datum potovanja: ${formatDateRangeSI(input.startDate, tripEnd)}` : ""}
-- Skupina: ${input.groupSize} oseb(a)${partyLineSl}
+- Skupina: ${input.groupSize} oseb(a)${partyLineSl}${preferredLineSl}
 ${weatherBlockSl}
 Razpoložljive destinacije:
 ${destContext}
@@ -658,10 +696,14 @@ function generateFallbackItinerary(
   const suitable = DESTINATIONS.filter((d) => d.bestSeason.includes(input.season));
   const pool = suitable.length >= input.days * 2 ? suitable : DESTINATIONS;
 
-  // Ocenjevalnik: ujemanje interesov
+  // Ocenjevalnik: ujemanje interesov + F5.4 pohitritev za izrecno zaželene
+  // destinacije ( iz prilepljene povezave — "Start Anywhere"). Pohitritev
+  // ( +2,5) dominira nad oceno/všečnostjo, a NE nad sezonskim filtrom in
+  // deževno-logiko — vreme in sezona ostajata iskreni prednost.
   const score = (d: (typeof DESTINATIONS)[number]) =>
     d.bestFor.filter((b) => input.interests.includes(b)).length +
-    d.rating / 10;
+    d.rating / 10 +
+    (input.preferredDestinations?.includes(d.id) ? 2.5 : 0);
 
   const ranked = [...pool].sort((a, b) => score(b) - score(a));
   const indoor = ranked.filter((d) => INDOOR_TYPES.has(d.type));

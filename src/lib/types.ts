@@ -44,6 +44,11 @@ export interface PlannerInput {
   // ritem in izbor načrta (družina → krajši prevozi in otrokom prijazne
   // lokacije, par → mirnejši tempo ...). Nazaj kompatibilno.
   partyType?: "couple" | "family" | "friends" | "solo";
+  // NOVO (F5.4 "Začni s povezavo" / url-ingest): destinacije, ki jih je
+  // uporabnik izrecno prepoznal na prilepljeni povezavi (YouTube/blog).
+  // Opcijsko — fallback ocenjevalnik jih premakne na vrh izbora, AI prompt
+  // pa dobi izrecno navodilo, da jih upošteva. Nazaj kompatibilno.
+  preferredDestinations?: string[];
 }
 
 export interface LocationVisit {
@@ -225,6 +230,35 @@ export interface ItineraryQuality {
   days: number;
   /** Velikost skupine (za prikaz v kartici) */
   groupSize: number;
+  /**
+   * NOVO (F5.3): stroški vožnje — gorivo + e-vinjeta (ocene, ne rezervacija).
+   * Opcijsko polje: starejši shranjeni načrti ga nimajo → kartica ga izračuna
+   * na mestu uporabe iz ISTE čiste funkcije (computeTripDriveCosts).
+   * Strukturirano (vignetteDays številka) — oznake se lokalizira v UI.
+   */
+  driveCosts?: DriveCosts;
+}
+
+/**
+ * F5.3 — ocena stroškov vožnje (deterministično, iz km poti):
+ * gorivo (km × poraba × cena/l) + slovenska e-vinjeta (izbrana po dolžini
+ * potovanja). Vse predpostavke so razkrite v UI ("Kako smo izračunali")
+ * z viri (AMZS/DARS, regulirana cena goriva) — skladno z načelom: ocena,
+ * ki pove svoje meje. Vinjeta je pogojna (samo ob uporabi avtocest).
+ */
+export interface DriveCosts {
+  /** Skupni kilometri poti (haversine × 1.3, zaokroženo na 5) */
+  km: number;
+  /** Ocenjena poraba goriva v litrih (zaokroženo na 1) */
+  fuelLiters: number;
+  /** Ocenjeni strošek goriva v EUR (zaokroženo) */
+  fuelEur: number;
+  /** Veljavnost vinjete v dnevih: 1, 10, 62 (dvomesečna) ali 365 (letna) */
+  vignetteDays: 1 | 10 | 62 | 365;
+  /** Cena izbrane vinjete v EUR (vozila do 3,5 t) */
+  vignetteEur: number;
+  /** Skupaj gorivo + vinjeta (EUR) */
+  totalEur: number;
 }
 
 // ============================================================================

@@ -30,6 +30,11 @@ const VALID_EVENTS = new Set([
   "provider_detail_opened",
   "affiliate_clicked",
   "weather_alternative_used",
+  // F5.4 "Začni s povezavo" ( url ingest)
+  "ingest_url_attempted",
+  "ingest_url_success",
+  // F5.2: izvoz načrta v koledar (.ics)
+  "ics_download",
   // Neuspehi
   "planner_error",
   "empty_result",

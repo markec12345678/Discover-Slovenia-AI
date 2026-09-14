@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useLocale } from "next-intl";
 import {
   Car,
   ChevronDown,
   Euro,
+  Fuel,
   Gauge,
   HelpCircle,
   Lightbulb,
@@ -22,7 +24,12 @@ import {
   computeItineraryQuality,
   formatDrivingMinutes,
 } from "@/lib/itinerary-quality";
-import type { Itinerary, PlannerInput } from "@/lib/types";
+import {
+  computeTripDriveCosts,
+  FUEL_CONSUMPTION_L_PER_100,
+  FUEL_PRICE_EUR_PER_L,
+} from "@/lib/trip-costs";
+import type { DriveCosts, Itinerary, PlannerInput } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -81,12 +88,22 @@ export function ItineraryQualityCard({
   className,
 }: ItineraryQualityCardProps) {
   const [howOpen, setHowOpen] = useState(false);
+  const locale = useLocale();
+  const isEn = locale === "en";
 
   // Metrike: shranjene (API) ali izračunane na mestu uporabe (stari načrti) —
   // ista čista funkcija, enak rezultat.
   const quality = useMemo(
     () => itinerary.quality ?? computeItineraryQuality(itinerary, input),
     [itinerary, input]
+  );
+
+  // F5.3: stroški vožnje ( gorivo + e-vinjeta) — shranjeno ali izračun na
+  // mestu uporabe ( ISTA čista funkcija kot v API); null → brez vrstice
+  // ( ne izmišljujemo, če koordinate niso znane).
+  const driveCosts: DriveCosts | null = useMemo(
+    () => quality.driveCosts ?? computeTripDriveCosts(itinerary) ?? null,
+    [quality, itinerary]
   );
 
   // Utemeljitev: AI (sanitizirana) ali deterministična sestava; za stare
@@ -142,6 +159,26 @@ export function ItineraryQualityCard({
     },
   ];
 
+  // F5.3: vinjeta — veljavnost po dolžini potovanja ( oznaka lokalizirana)
+  const vignetteLabel =
+    driveCosts == null
+      ? ""
+      : isEn
+        ? driveCosts.vignetteDays === 1
+          ? "1-day"
+          : driveCosts.vignetteDays === 10
+            ? "10-day"
+            : driveCosts.vignetteDays === 62
+              ? "2-month"
+              : "annual"
+        : driveCosts.vignetteDays === 1
+          ? "1-dnevna"
+          : driveCosts.vignetteDays === 10
+            ? "10-dnevna"
+            : driveCosts.vignetteDays === 62
+              ? "dvomesečna"
+              : "letna";
+
   return (
     <Card className={cn("overflow-hidden", className)}>
       <CardContent className="space-y-4 p-4 sm:p-5">
@@ -177,6 +214,30 @@ export function ItineraryQualityCard({
               </dd>
             </div>
           ))}
+
+          {/* F5.3 (primerjalna analiza MindTrip): STROŠKI VOŽNJE — gorivo +
+              e-vinjeta. Ocena, ne rezervacija: vsaka predpostavka je razkrita
+              v "Kako smo izračunali" ( viri AMZS/DARS, regulirana cena goriva).
+              Prikazano ločeno od vnosev atrakcij ( ki ostanejo v "Predvidenem
+              strošku") — mešanje obeh bi zavajalo. */}
+          {driveCosts && (
+            <div className="min-w-0">
+              <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Fuel className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                <span className="truncate">
+                  {isEn ? "Fuel + motorway vignette" : "Gorivo + avtocestna vinjeta"}
+                </span>
+              </dt>
+              <dd className="mt-1 flex items-baseline gap-1.5 text-sm font-semibold">
+                ≈ {driveCosts.totalEur} €
+                <span className="text-[11px] font-normal text-muted-foreground">
+                  ({isEn
+                    ? `fuel ${driveCosts.fuelEur} € + ${vignetteLabel} vignette ${driveCosts.vignetteEur} €`
+                    : `gorivo ${driveCosts.fuelEur} € + ${vignetteLabel} vinjeta ${driveCosts.vignetteEur} €`})
+                </span>
+              </dd>
+            </div>
+          )}
         </dl>
 
         {/* Utemeljitev — AI ali deterministična; jasno ločena od meritev */}
@@ -219,6 +280,46 @@ export function ItineraryQualityCard({
                 {m.how}
               </p>
             ))}
+            {driveCosts && (
+              <p>
+                <span className="font-medium text-foreground/80">
+                  {isEn ? "Fuel + vignette" : "Gorivo + vinjeta"}:
+                </span>{" "}
+                {isEn ? (
+                  <>
+                    ≈ {driveCosts.km} km of driving × {FUEL_CONSUMPTION_L_PER_100} l/100 km
+                    × {FUEL_PRICE_EUR_PER_L.toFixed(2)} €/l (regulated NMB-95
+                    price band, gov.si/AMZS) ≈ {driveCosts.fuelEur} €. E-vignette
+                    for vehicles up to 3.5 t: {vignetteLabel} {driveCosts.vignetteEur} €
+                    (DARS/AMZS price list, valid for the whole trip length of{" "}
+                    {driveCosts.vignetteDays === 1
+                      ? "1 day"
+                      : `${driveCosts.vignetteDays === 62 ? "up to 2 months" : driveCosts.vignetteDays === 365 ? "a year" : "up to 10 days"}`}
+                    ). The vignette is only needed if you use motorways — local
+                    roads are free and usually only minutes slower. Verify
+                    current prices at evinjeta.dars.si before buying.
+                  </>
+                ) : (
+                  <>
+                    ≈ {driveCosts.km} km vožnje × {FUEL_CONSUMPTION_L_PER_100} l/100 km
+                    × {FUEL_PRICE_EUR_PER_L.toFixed(2)} €/l ( regulirana cena
+                    NMB-95, pas gov.si/AMZS) ≈ {driveCosts.fuelEur} €. E-vinjeta
+                    za vozila do 3,5 t: {vignetteLabel} {driveCosts.vignetteEur} €
+                    ( cenik DARS/AMZS; pokriva {driveCosts.vignetteDays === 1
+                      ? "1 dan potovanja"
+                      : driveCosts.vignetteDays === 10
+                        ? "do 10 dni potovanja"
+                        : driveCosts.vignetteDays === 62
+                          ? "do 2 meseca potovanja"
+                          : "celo leto"}
+                    ). Vinjeta je potrebna LE ob vožnji po avtocestah —
+                    obcestne ceste so brezplačne in običajno le nekaj minut
+                    počasnejše. Pred nakupom preveri aktualne cene na
+                    evinjeta.dars.si.
+                  </>
+                )}
+              </p>
+            )}
             <p className="pt-1 border-t border-border/60">
               Vrednosti so izračunane iz realnih podatkov poti (koordinate,
               cene, tipi destinacij) — niso ocena AI.

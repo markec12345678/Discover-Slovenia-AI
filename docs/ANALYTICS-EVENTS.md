@@ -35,6 +35,9 @@
 | `provider_detail_opened` | klik na partnerja/ponudnika v booking panelu | vsak klik | `provider` | monetizacijska izpostavljenost |
 | `affiliate_clicked` | klik na affiliate povezavo | vsak klik | `provider` | monetizacija (12 % kanal) |
 | `itinerary_saved` | uspešno „Shrani in deli" | vsako shranjevanje | `days`, `stops`, `source`, `locale` | konverzija zlate poti; skupaj s `planner_result_rendered` → save rate |
+| `ingest_url_attempted` | uporabnik odda povezavo v „Začni s povezavo“ (F5.4) | vsak poskus | `host` (gostitelj, max 60 znakov — brez poti/query), `locale` | zanimanje za „Start Anywhere“ vnos; skupaj z `ingest_url_success` → stopnja uspešnosti prepoznavanja |
+| `ingest_url_success` | strežnik prepozna ≥ 1 destinacijo s povezave | vsak uspešen ingest | `matches` (število zadetkov), `days` (predlog dni), `locale` | kakovost prepoznavanja; predlog dni vs. dejansko generiranje |
+| `ics_download` | klik „Koledar (.ics)“ — datoteka se dejansko ustvari | vsak prenos | `days`, `has_dates`, `locale` | vrednost koledarskega izvoza (F5.2); `has_dates` loči načrte z/s brez datuma odhoda |
 
 ## Neuspehi in opustitvi
 

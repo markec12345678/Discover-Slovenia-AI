@@ -1,4 +1,5 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { computeTripDriveCosts } from "@/lib/trip-costs";
 import type {
   Budget,
   Itinerary,
@@ -212,6 +213,9 @@ export function computeItineraryQuality(
     ),
     days: days.length,
     groupSize,
+    // F5.3: stroški vožnje (gorivo + vinjeta) — ocena iz km poti; null,
+    // če koordinate niso znane (ne izmišljujemo).
+    driveCosts: computeTripDriveCosts(itinerary) ?? undefined,
   };
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import {
@@ -8,11 +9,14 @@ import {
   Clock,
   Calendar,
   CalendarDays,
+  CalendarArrowDown,
   Car,
   Euro,
   Users,
   UsersRound,
   MapPin,
+  LocateFixed,
+  Link2,
   AlertCircle,
   Star,
   Cloud,
@@ -88,6 +92,16 @@ import { PackingListSection } from "@/components/packing-list";
 import { SocialShare } from "@/components/social-share";
 import { TripTimeline } from "@/components/trip-timeline";
 import { BookingAssistant } from "@/components/booking-assistant";
+import { buildItineraryICS, icsFileName } from "@/lib/ics-export";
+import type { IngestMatch } from "@/lib/url-ingest";
+
+// F5.1: zemljevid poti na strani načrtovalnika — Leaflet je client-only
+// ( dostopa do window), zato dinamičen uvoz brez SSR ( isti vzorec kot
+// map-view prek map-section).
+const TripMapPanel = dynamic(
+  () => import("@/components/trip-map-panel").then((m) => m.TripMapPanel),
+  { ssr: false }
+);
 
 // Sezone (labelKey → ključi v "planner" namespace)
 const SEASONS: { value: Season; labelKey: string }[] = [
@@ -265,6 +279,18 @@ export function ItineraryPlanner() {
     [itinerary, locale]
   );
 
+  // F5.1: kilometri po dnevih ( iz geo-validacije) za legendo zemljevida —
+  // enak vir resnice kot značke ~km na karticah dni.
+  const dayKm = useMemo(() => {
+    const map: Record<number, number> = {};
+    for (const d of geoValidation?.days ?? []) {
+      if (typeof d.day === "number" && typeof d.km === "number") {
+        map[d.day] = d.km;
+      }
+    }
+    return map;
+  }, [geoValidation]);
+
   // FAZA 4 (pilotna analitika): planner_started — prva interakcija z obrazcem
   // (katerikoli vnos ali oddaja) se zabeleži le enkrat na življenjsko dobo
   // komponente. Ref (ne state) — brez ponovnega renderiranja.
@@ -300,6 +326,20 @@ export function ItineraryPlanner() {
     );
   }, []);
 
+  // === F5.4 "Začni s povezavo": prilepi YouTube/blog → prepoznaj destinacije ===
+  const [ingestUrl, setIngestUrl] = useState("");
+  const [ingestLoading, setIngestLoading] = useState(false);
+  const [ingestError, setIngestError] = useState<string | null>(null);
+  const [ingestMatches, setIngestMatches] = useState<IngestMatch[] | null>(null);
+  const [ingestSourceTitle, setIngestSourceTitle] = useState<string | null>(null);
+
+  // F5.1: programatski fokus zemljevida ( gumb na kartici postanka)
+  const [mapFocus, setMapFocus] = useState<{
+    day: number;
+    indexInDay: number;
+    nonce: number;
+  } | null>(null);
+
   // === Shrani & deli ===
   const [saving, setSaving] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -319,6 +359,9 @@ export function ItineraryPlanner() {
   // Sinhroniziraj z globalnim store-om (za MapSection + TripTimeline "Shrani")
   const setStoreItinerary = useAppStore((s) => s.setItinerary);
   const setPlannerForm = useAppStore((s) => s.setPlannerForm);
+  // F5.1: izpeljana pot po dnevih ( barve/koordinate) za TripMapPanel —
+  // isti izvor kot raziskovalni zemljevid na /zemljevid
+  const routeByDay = useAppStore((s) => s.routeByDay);
   useEffect(() => {
     setStoreItinerary(itinerary);
   }, [itinerary, setStoreItinerary]);
@@ -764,6 +807,139 @@ export function ItineraryPlanner() {
     await generateItinerary(formData);
   }
 
+  // === F5.4 "Začni s povezavo" — prepoznaj destinacije na prilepljenem viru ===
+  // Deterministično (strežnik brez AI): zadetki se pokažejo PRED generiranjem,
+  // nato se izpolnijo dnevi/interesi + zaželene destinacije in SAMODEJNO
+  // generira ( en klik od povezave do načrta).
+  // NE React.FormEvent handler — kliče se tudi iz onClick/onKeyDown gumba.
+  async function handleIngestSubmit() {
+    const trimmed = ingestUrl.trim();
+    if (!trimmed || ingestLoading) return;
+
+    setIngestLoading(true);
+    setIngestError(null);
+    setIngestMatches(null);
+    trackPlannerEvent("ingest_url_attempted", {
+      host: (() => {
+        try {
+          return new URL(trimmed).hostname.slice(0, 60);
+        } catch {
+          return "invalid";
+        }
+      })(),
+      locale,
+    });
+    try {
+      const res = await fetch("/api/itinerary/ingest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmed }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | {
+            matches?: IngestMatch[];
+            suggestion?: {
+              interests?: string[];
+              days?: number;
+              preferredDestinations?: string[];
+            };
+            pageTitle?: string | null;
+            error?: string;
+          }
+        | null;
+
+      if (!res.ok || !data?.matches?.length) {
+        throw new Error(data?.error || t("ingestError"));
+      }
+
+      setIngestMatches(data.matches);
+      setIngestSourceTitle(data.pageTitle ?? null);
+      trackPlannerEvent("ingest_url_success", {
+        matches: data.matches.length,
+        days: data.suggestion?.days ?? 3,
+        locale,
+      });
+
+      // Izpolni obrazec iz predloga ( ohrani budget/skupino/sezono uporabnika;
+      // interesi in dnevi pridejo iz vira — uporabnik jih lahko poprej spremeni)
+      const nextInput: PlannerInput = {
+        ...formData,
+        days: data.suggestion?.days ?? formData.days,
+        interests:
+          data.suggestion?.interests && data.suggestion.interests.length > 0
+            ? data.suggestion.interests
+            : formData.interests,
+        preferredDestinations: data.suggestion?.preferredDestinations,
+      };
+      setFormData(nextInput);
+      setIngestUrl("");
+      toast({
+        title: t("ingestSuccessToast"),
+        description: t("ingestSuccessToastDesc", {
+          names: data.matches
+            .slice(0, 3)
+            .map((m) => m.name)
+            .join(", "),
+        }),
+      });
+      // Samodejna generacija — od povezave do načrta v enem koraku
+      await generateItinerary(nextInput);
+    } catch (err) {
+      setIngestError(
+        err instanceof Error ? err.message : t("ingestError")
+      );
+    } finally {
+      setIngestLoading(false);
+    }
+  }
+
+  // === F5.2: ICS izvoz — načrt v koledar ( Apple/Google/Outlook) ===
+  function handleIcsDownload() {
+    if (!itinerary) return;
+    const ics = buildItineraryICS(itinerary, {
+      lang: locale === "en" ? "en" : "sl",
+      url: shareUrl ?? undefined,
+    });
+    if (!ics) {
+      toast({
+        title: t("icsEmptyToastTitle"),
+        description: t("icsEmptyToastDesc"),
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const blob = new Blob([ics], {
+        type: "text/calendar;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = icsFileName(itinerary);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      trackPlannerEvent("ics_download", {
+        days: itinerary.days.length,
+        has_dates: Boolean(itinerary.tripStartDate),
+        locale,
+      });
+      toast({
+        title: t("icsToastTitle"),
+        description: itinerary.tripStartDate
+          ? t("icsToastDesc")
+          : t("icsToastDescNoDates"),
+      });
+    } catch {
+      toast({
+        title: tCommon("error"),
+        description: t("icsError"),
+        variant: "destructive",
+      });
+    }
+  }
+
   return (
     <section
       id="načrtuj"
@@ -789,6 +965,96 @@ export function ItineraryPlanner() {
             </CardHeader>
             <form onSubmit={handleSubmit} noValidate>
               <CardContent className="space-y-5">
+                {/* F5.4 "Začni s povezavo" — MindTrip "Start Anywhere" po
+                    slovensko: prilepi YouTube/TikTok/blog povezavo, strežnik
+                    deterministično prepozna destinacije in izpolni obrazec.
+                    POZOR: NI <form> — HTML ne dovoljuje ugnezdenih formov
+                    ( zunanji planner form), zato Enter obravnavamo prek
+                    onKeyDown na vhodu. */}
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="ingest-url"
+                      className="flex items-center gap-1.5 text-xs font-medium text-primary"
+                    >
+                      <Link2 className="size-3.5 shrink-0" aria-hidden />
+                      {t("ingestLabel")}
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="ingest-url"
+                        type="url"
+                        inputMode="url"
+                        autoComplete="off"
+                        placeholder={t("ingestPlaceholder")}
+                        value={ingestUrl}
+                        onChange={(e) => {
+                          fireStartedOnce();
+                          setIngestUrl(e.target.value);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void handleIngestSubmit();
+                          }
+                        }}
+                        disabled={ingestLoading}
+                        aria-describedby="ingest-hint"
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={ingestLoading || !ingestUrl.trim()}
+                        onClick={() => void handleIngestSubmit()}
+                        className="gap-1.5"
+                        aria-label={t("ingestButtonAria")}
+                      >
+                        {ingestLoading ? (
+                          <Loader2 className="size-4 animate-spin" aria-hidden />
+                        ) : (
+                          <LocateFixed className="size-4" aria-hidden />
+                        )}
+                        <span className="hidden sm:inline">{t("ingestButton")}</span>
+                      </Button>
+                    </div>
+                    <p id="ingest-hint" className="text-[11px] leading-relaxed text-muted-foreground">
+                      {t("ingestHint")}
+                    </p>
+                    {ingestError && (
+                      <p role="alert" className="text-xs text-destructive">
+                        {ingestError}
+                      </p>
+                    )}
+                  </div>
+                  {/* Zadetki — vidni PRED generiranjem ( preverljivost) */}
+                  {ingestMatches && ingestMatches.length > 0 && (
+                    <div className="mt-2 space-y-1.5 border-t border-primary/15 pt-2">
+                      {ingestSourceTitle && (
+                        <p className="truncate text-[11px] text-muted-foreground">
+                          {t("ingestSource", { title: ingestSourceTitle })}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          {t("ingestDetected")}
+                        </span>
+                        {ingestMatches.slice(0, 8).map((m) => (
+                          <Link
+                            key={m.id}
+                            href={`/destinacija/${m.slug}`}
+                            className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-background px-2 py-0.5 text-xs text-foreground transition-colors hover:border-primary/60 hover:bg-primary/10"
+                          >
+                            {m.name}
+                            <span className="text-muted-foreground">×{m.count}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="days" className="flex items-center gap-2">
@@ -1128,6 +1394,35 @@ export function ItineraryPlanner() {
                     po dnevih (km, obseg, urnik) z pozivom k prilagoditvi */}
                 <GeoValidationPanel itinerary={itinerary} />
 
+                {/* F5.1 (primerjalna analiza MindTrip): ZEMLJEVID POTI NA
+                    STRANI NAČRTOVALCA — oštevilčeni markerji po dnevih z barvami,
+                    interaktivna legenda dni ( vklop/izklop) in dvosmerna
+                    sinhronizacija s karticami postankov. Prej je zemljevid živel
+                    le na /zemljevid in /pot/[shareId]. */}
+                {routeByDay.length > 0 && (
+                  <TripMapPanel
+                    routeByDay={routeByDay}
+                    dayKm={dayKm}
+                    focusRequest={mapFocus}
+                    onStopSelect={(day, indexInDay) => {
+                      // Klik markerja → scroll na kartico postanka + highlight
+                      const el = document.getElementById(
+                        `stop-row-${day}-${indexInDay}`
+                      );
+                      if (el) {
+                        el.scrollIntoView({
+                          behavior: "smooth",
+                          block: "center",
+                        });
+                        el.classList.add("ring-2", "ring-primary/60");
+                        setTimeout(() => {
+                          el.classList.remove("ring-2", "ring-primary/60");
+                        }, 1800);
+                      }
+                    }}
+                  />
+                )}
+
                 {/* Multi-turn AI refiner — uporabnik naravnojezično spreminja itinerer */}
                 {/* P0-4: sidro za mobilno bližnjico "Prilagodi" (PlannerDayNav) */}
                 <div id="itinerary-refiner" className="scroll-mt-[130px] lg:scroll-mt-24">
@@ -1277,7 +1572,8 @@ export function ItineraryPlanner() {
                           return (
                             <div
                               key={`${loc.destination_id}-${idx}`}
-                              className="rounded-lg border bg-card/50 p-4"
+                              id={`stop-row-${day.day}-${idx}`}
+                              className="rounded-lg border bg-card/50 p-4 transition-shadow"
                             >
                               <div className="flex flex-wrap items-start justify-between gap-2">
                                 <div className="space-y-0.5">
@@ -1300,6 +1596,31 @@ export function ItineraryPlanner() {
                                   <Badge className="bg-accent text-accent-foreground">
                                     €{loc.estimated_cost}
                                   </Badge>
+                                  {/* F5.1: dvosmerna sinhronizacija — gumb na
+                                      kartici postanka premakne zemljevid poti
+                                      na ta postanek ( MindTrip workspace feel) */}
+                                  {routeByDay.length > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setMapFocus({
+                                          day: day.day,
+                                          indexInDay: idx,
+                                          nonce: Date.now(),
+                                        })
+                                      }
+                                      className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                      aria-label={t("mapFocusAria", {
+                                        name: loc.destination_name,
+                                      })}
+                                      title={t("mapFocusTitle")}
+                                    >
+                                      <LocateFixed
+                                        className="size-4"
+                                        aria-hidden
+                                      />
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                               {loc.notes && (
@@ -1533,6 +1854,18 @@ export function ItineraryPlanner() {
                       >
                         <Mail className="size-4" aria-hidden />
                         {t("emailButton")}
+                      </Button>
+                      {/* F5.2: načrt v koledar (.ics) — Apple Koledar /
+                          Google Calendar / Outlook, brez strežniškega klica */}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleIcsDownload}
+                        className="gap-1.5"
+                        aria-label={t("icsButtonAria")}
+                      >
+                        <CalendarArrowDown className="size-4" aria-hidden />
+                        {t("icsButton")}
                       </Button>
                     </div>
 
