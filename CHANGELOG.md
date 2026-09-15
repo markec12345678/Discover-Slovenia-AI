@@ -61,6 +61,27 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
   kot `load_env` (iz .env) — vrstni red obrnjen; VERCEL_PROJECT_ID/
   VERCEL_PROJECT_NAME dodana v `.env` (skripte zdaj delujejo brez argumentov).
 
+### Popravljeno (1.15.0)
+
+- **PAST skip-worktree ( odkrita ŽIVE — prvi Vercel deploy d0d227a je padel):**
+  na `prisma/schema.prisma` je bil postavljen GIT SKIP-WORKTREE bit ( namenjen
+  lokalnemu `provider = "sqlite"` overrideju sandboxa). Posledica: `git add -A`
+  je F11 modele ( TripPoll/TripPollVote) TIHO izpustil iz commita — Vercel
+  build je padel z `Property 'tripPollVote' does not exist on PrismaClient`,
+  ker je prisma generate poganjal nad STARO shemo. Popravek: bit odstranjen,
+  modeli commit-ani z `provider = "postgresql"` ( produkcijska konvencija),
+  lokalni sqlite override povrnjen + bit znova nastavljen ( dokumentirano v
+  worklog: pred vsakim commitom `git ls-files -t | grep ^S`).
+- **`src/lib/trip-poll-migration.ts` — NOVA startup shema migracija ( po
+  vzorcu listing-practical-migration):** ustvari tabeli TripPoll +
+  TripPollVote (+ indeksi + FK cascade) ob zagonu strežnika na VSAKI bazi,
+  ki ju še nima ( Vercel/Neon nima ročnega db push; Render tudi ne).
+  Idempotentna ( CREATE IF NOT EXISTS + preverjanje obstoja), additive-only,
+  fail-open, skupna zastavica `DSA_DISABLE_SCHEMA_MIGRATION=1`. Lokalno
+  dokazano: 2× prazen seznam na obstoječi bazi; DROP + migracija → tabele
+  ustvarjeni + `tripPoll.count()` dela. Poganja se iz
+  `src/instrumentation.ts` ( nodejs runtime).
+
 ### Varnost (1.15.0)
 
 - `authorClientId` nikoli ne zapusti strežnika v DTO (samo `isAuthor`
