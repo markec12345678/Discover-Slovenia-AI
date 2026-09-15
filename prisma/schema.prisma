@@ -177,6 +177,42 @@ model TripLike {
   @@index([shareId])
 }
 
+// Skupinske ANKETE na deljenih potovanjih (/pot/[shareId]) — F11, MindTrip
+// vrzel #2. Brez-računa glasovanje: poljubno vprašanje z 2–6 možnostmi
+// (npr. "Kateri dan?", "Hotel ali Apartma?"). options = JSON string array
+// (prisma primitivni tip ne podpira list). Avtor (authorClientId = localStorage
+// ID, enak kot voterId) lahko anketo zapre; zaprta anketa prikaže rezultate.
+model TripPoll {
+  id             String   @id @default(cuid())
+  shareId        String
+  question       String   // 2–200 znakov
+  options        String   // JSON array: 2–6 opcij, vsaka 1–80 znakov
+  authorName     String?  // prikazno ime avtorja (1–60), opcijsko
+  authorClientId String   // ID ustvarjalca — edini lahko zaključi izbriše
+  closed         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  votes          TripPollVote[]
+
+  @@index([shareId])
+  @@index([createdAt])
+}
+
+// Glas v anketi — unique([pollId, voterId]) = 1 glas na obiskovalca;
+// prestavitev glasu = update optionIdx (zadnji glas velja).
+model TripPollVote {
+  id        String   @id @default(cuid())
+  pollId    String
+  voterId   String
+  optionIdx Int
+  createdAt DateTime @default(now())
+
+  poll      TripPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, voterId])
+  @@index([pollId])
+}
+
 // ============================================================================
 // LOKALCI (LISTINGS)
 // ============================================================================
