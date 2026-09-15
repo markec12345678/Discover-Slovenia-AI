@@ -72,6 +72,13 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
   brskalniku — po izčrpani dnevne kvote se iskreno izriše fallback
   itinerer (0 napak); `/api/ai-health` javi `openrouter` aktivega;
   OpenRouter full verify (4/4 testi) zelen iz sandboxa.
+- **CI ai-smoke run #4 (2026-09-15, 15:31Z): ZELEN** — OpenRouter job:
+  key-info 200 (free_tier=true), chat/jsonMode 429 dnevna meja →
+  iskrena opozorila (korak NEODVISNO zelen); Gemini job: chat 200
+  »SLOVENIJA-OK« (živi dokaz), jsonMode/vision 429 (RPM/kvota po
+  današnjih testih) → retry po 20 s → opozorila. Popravljeni vzroki
+  run #3: bash past `$10` → `$1` (unbound variable) in manjkajoči RPM
+  premori med koraki (429 pri dveh klicih 200 ms narazen).
 
 ### Popravljeno
 
