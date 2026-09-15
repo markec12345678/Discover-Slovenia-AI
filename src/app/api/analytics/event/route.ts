@@ -33,6 +33,9 @@ const VALID_EVENTS = new Set([
   // F5.4 "Začni s povezavo" ( url ingest)
   "ingest_url_attempted",
   "ingest_url_success",
+  // F8 "Začni s sliko" ( image ingest — VLM branje + deterministično ujemanje)
+  "ingest_image_attempted",
+  "ingest_image_success",
   // F5.2: izvoz načrta v koledar (.ics)
   "ics_download",
   // F5.7 (PWA): namestitev aplikacije (gumb v navigaciji)

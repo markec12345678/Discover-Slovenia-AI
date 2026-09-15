@@ -402,7 +402,22 @@
       "legendAria": "Filtering days on the map",
       "mapAria": "Map of Slovenia with the itinerary stops",
       "hintRoads": "Lines follow the actual roads (OSRM/OpenStreetMap). Click a number to jump to the stop; day chips hide/show individual days."
-    }
+    },
+    "ingestTabLink": "Link",
+    "ingestTabImage": "Image",
+    "ingestImageLabel": "Start from an image (photo, screenshot …)",
+    "ingestImageButton": "Detect",
+    "ingestImageButtonAria": "Detect destinations from the image",
+    "ingestImageHint": "Upload or paste a photo/screenshot about Slovenia — AI reads the names on it; matching to destinations is deterministic (same as links).",
+    "ingestImageDrop": "Drop an image here (JPEG, PNG, WebP; up to ~4.5 MB)",
+    "ingestImageBrowse": "Choose an image",
+    "ingestImagePaste": "… or paste from clipboard (Ctrl/Cmd+V)",
+    "ingestImageRemove": "Remove image",
+    "ingestImageMethod": "image detection: AI reading + deterministic matching",
+    "ingestImageError": "The image could not be recognized.",
+    "ingestImageSuccessToast": "Destinations recognized from the image",
+    "ingestImageSuccessToastDesc": "From the image: {names} — building your plan …",
+    "ingestImageSource": "Source: your image"
   },
   "common": {
     "loading": "Loading...",

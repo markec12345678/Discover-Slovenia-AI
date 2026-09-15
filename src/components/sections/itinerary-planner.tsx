@@ -17,6 +17,7 @@ import {
   MapPin,
   LocateFixed,
   Link2,
+  ImagePlus,
   AlertCircle,
   Star,
   Cloud,
@@ -333,6 +334,16 @@ export function ItineraryPlanner() {
   const [ingestError, setIngestError] = useState<string | null>(null);
   const [ingestMatches, setIngestMatches] = useState<IngestMatch[] | null>(null);
   const [ingestSourceTitle, setIngestSourceTitle] = useState<string | null>(null);
+
+  // === F8 "Začni s sliko": nalaganje/prilepljanje fotografije → VLM prebere
+  // imena, ujemanje z destinacijami je deterministično (ista funkcija kot
+  // pri povezavah — glej /api/itinerary/ingest-image). ===
+  const [ingestMode, setIngestMode] = useState<"link" | "image">("link");
+  const [ingestImage, setIngestImage] = useState<string | null>(null); // data URL
+  const [ingestImageName, setIngestImageName] = useState<string>("");
+  const [ingestImageDragging, setIngestImageDragging] = useState(false);
+  const [ingestIsVlm, setIngestIsVlm] = useState(false); // metoda zadnjega zadetka
+  const ingestImageInputRef = useRef<HTMLInputElement | null>(null);
 
   // F5.1: programatski fokus zemljevida ( gumb na kartici postanka)
   const [mapFocus, setMapFocus] = useState<{
@@ -820,6 +831,7 @@ export function ItineraryPlanner() {
     setIngestLoading(true);
     setIngestError(null);
     setIngestMatches(null);
+    setIngestIsVlm(false);
     trackPlannerEvent("ingest_url_attempted", {
       host: (() => {
         try {
@@ -888,6 +900,124 @@ export function ItineraryPlanner() {
     } catch (err) {
       setIngestError(
         err instanceof Error ? err.message : t("ingestError")
+      );
+    } finally {
+      setIngestLoading(false);
+    }
+  }
+
+  // === F8 "Začni s sliko" — File → data URL (validacija vrste/velikosti na
+  // clientu; strežnik vseeno ponovno validira). Vrača null ob napaki (napaka
+  // se izpiše prek ingestError, ne prek throw — enak prikaz kot pri povezavah).
+  function acceptIngestImage(file: File | null): boolean {
+    if (!file) return false;
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      setIngestError(
+        file.type
+          ? `Nepodprta vrsta: ${file.type}. Sprejmem JPEG, PNG ali WebP.`
+          : "Neprepoznana vrsta slike. Sprejmem JPEG, PNG ali WebP."
+      );
+      return false;
+    }
+    if (file.size > 4.5 * 1024 * 1024) {
+      setIngestError("Slika je prevelika (največ ~4,5 MB).");
+      return false;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setIngestImage(reader.result);
+        setIngestImageName(file.name || "slika");
+        setIngestError(null);
+        setIngestMatches(null);
+      }
+    };
+    reader.onerror = () => setIngestError(t("ingestImageError"));
+    reader.readAsDataURL(file);
+    return true;
+  }
+
+  // Prilepljanje slike (paste) na celotnem vnosnem okviru — uporabnik kopira
+  // screenshot in ga prilepi direktno, brez iskanja datoteke.
+  function handleIngestPaste(e: React.ClipboardEvent<HTMLDivElement>) {
+    if (ingestMode !== "image") return;
+    const item = [...(e.clipboardData?.items ?? [])].find((it) =>
+      it.type.startsWith("image/")
+    );
+    if (item) {
+      const file = item.getAsFile();
+      if (file && acceptIngestImage(file)) e.preventDefault();
+    }
+  }
+
+  // === F8: prepoznaj destinacije na sliki — POST /api/itinerary/ingest-image.
+  // Strežnik: VLM prebere imena ( strogi ekstraktor), nato SESTAVNI
+  // deterministični matcher poveže z našimi 22 destinacijami (ista funkcija
+  // kot pri povezavah). Metoda je razkrita (method: "vlm").
+  async function handleIngestImageSubmit() {
+    if (!ingestImage || ingestLoading) return;
+
+    setIngestLoading(true);
+    setIngestError(null);
+    setIngestMatches(null);
+    setIngestIsVlm(false);
+    trackPlannerEvent("ingest_image_attempted", { locale });
+    try {
+      const res = await fetch("/api/itinerary/ingest-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: ingestImage }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | {
+            matches?: IngestMatch[];
+            suggestion?: {
+              interests?: string[];
+              days?: number;
+              preferredDestinations?: string[];
+            };
+            method?: "vlm";
+            vlmChars?: number;
+            error?: string;
+          }
+        | null;
+
+      if (!res.ok || !data?.matches?.length) {
+        throw new Error(data?.error || t("ingestImageError"));
+      }
+
+      setIngestMatches(data.matches);
+      setIngestSourceTitle(null); // vir je uporabnikova slika (ni naslova)
+      setIngestIsVlm(data.method === "vlm");
+      trackPlannerEvent("ingest_image_success", {
+        matches: data.matches.length,
+        days: data.suggestion?.days ?? 3,
+        locale,
+      });
+
+      const nextInput: PlannerInput = {
+        ...formData,
+        days: data.suggestion?.days ?? formData.days,
+        interests:
+          data.suggestion?.interests && data.suggestion.interests.length > 0
+            ? data.suggestion.interests
+            : formData.interests,
+        preferredDestinations: data.suggestion?.preferredDestinations,
+      };
+      setFormData(nextInput);
+      toast({
+        title: t("ingestImageSuccessToast"),
+        description: t("ingestImageSuccessToastDesc", {
+          names: data.matches
+            .slice(0, 3)
+            .map((m) => m.name)
+            .join(", "),
+        }),
+      });
+      await generateItinerary(nextInput);
+    } catch (err) {
+      setIngestError(
+        err instanceof Error ? err.message : t("ingestImageError")
       );
     } finally {
       setIngestLoading(false);
@@ -966,63 +1096,255 @@ export function ItineraryPlanner() {
             </CardHeader>
             <form onSubmit={handleSubmit} noValidate>
               <CardContent className="space-y-5">
-                {/* F5.4 "Začni s povezavo" — MindTrip "Start Anywhere" po
-                    slovensko: prilepi YouTube/TikTok/blog povezavo, strežnik
-                    deterministično prepozna destinacije in izpolni obrazec.
+                {/* F5.4 "Začni s povezavo" + F8 "Začni s sliko" — MindTrip
+                    "Start Anywhere" po slovensko: prilepi YouTube/TikTok/blog
+                    povezavo (deterministično) ALI naloži/prilepi fotografijo
+                    (AI prebere imena, ujemanje spet deterministično) — strežnik
+                    prepozna destinacije in izpolni obrazec.
                     POZOR: NI <form> — HTML ne dovoljuje ugnezdenih formov
                     ( zunanji planner form), zato Enter obravnavamo prek
                     onKeyDown na vhodu. */}
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <div
+                  className="rounded-lg border border-primary/20 bg-primary/5 p-3"
+                  onPaste={handleIngestPaste}
+                >
                   <div className="space-y-2">
-                    <label
-                      htmlFor="ingest-url"
-                      className="flex items-center gap-1.5 text-xs font-medium text-primary"
+                    {/* Zavihek vira: Povezava | Slika (F8) */}
+                    <div
+                      role="tablist"
+                      aria-label={t("ingestLabel")}
+                      className="flex items-center gap-1"
                     >
-                      <Link2 className="size-3.5 shrink-0" aria-hidden />
-                      {t("ingestLabel")}
-                    </label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="ingest-url"
-                        type="url"
-                        inputMode="url"
-                        autoComplete="off"
-                        placeholder={t("ingestPlaceholder")}
-                        value={ingestUrl}
-                        onChange={(e) => {
-                          fireStartedOnce();
-                          setIngestUrl(e.target.value);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            void handleIngestSubmit();
-                          }
-                        }}
-                        disabled={ingestLoading}
-                        aria-describedby="ingest-hint"
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={ingestLoading || !ingestUrl.trim()}
-                        onClick={() => void handleIngestSubmit()}
-                        className="gap-1.5"
-                        aria-label={t("ingestButtonAria")}
-                      >
-                        {ingestLoading ? (
-                          <Loader2 className="size-4 animate-spin" aria-hidden />
-                        ) : (
-                          <LocateFixed className="size-4" aria-hidden />
-                        )}
-                        <span className="hidden sm:inline">{t("ingestButton")}</span>
-                      </Button>
+                      {(
+                        [
+                          { id: "link", label: t("ingestTabLink"), icon: Link2 },
+                          {
+                            id: "image",
+                            label: t("ingestTabImage"),
+                            icon: ImagePlus,
+                          },
+                        ] as const
+                      ).map(({ id, label, icon: Icon }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          role="tab"
+                          aria-selected={ingestMode === id}
+                          onClick={() => {
+                            setIngestMode(id);
+                            setIngestError(null);
+                          }}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                            ingestMode === id
+                              ? "bg-primary text-primary-foreground"
+                              : "text-primary hover:bg-primary/10"
+                          )}
+                        >
+                          <Icon className="size-3.5 shrink-0" aria-hidden />
+                          {label}
+                        </button>
+                      ))}
                     </div>
-                    <p id="ingest-hint" className="text-[11px] leading-relaxed text-muted-foreground">
-                      {t("ingestHint")}
-                    </p>
+
+                    {ingestMode === "link" ? (
+                      <>
+                        <label
+                          htmlFor="ingest-url"
+                          className="flex items-center gap-1.5 text-xs font-medium text-primary"
+                        >
+                          <Link2 className="size-3.5 shrink-0" aria-hidden />
+                          {t("ingestLabel")}
+                        </label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="ingest-url"
+                            type="url"
+                            inputMode="url"
+                            autoComplete="off"
+                            placeholder={t("ingestPlaceholder")}
+                            value={ingestUrl}
+                            onChange={(e) => {
+                              fireStartedOnce();
+                              setIngestUrl(e.target.value);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                void handleIngestSubmit();
+                              }
+                            }}
+                            disabled={ingestLoading}
+                            aria-describedby="ingest-hint"
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={ingestLoading || !ingestUrl.trim()}
+                            onClick={() => void handleIngestSubmit()}
+                            className="gap-1.5"
+                            aria-label={t("ingestButtonAria")}
+                          >
+                            {ingestLoading ? (
+                              <Loader2
+                                className="size-4 animate-spin"
+                                aria-hidden
+                              />
+                            ) : (
+                              <LocateFixed className="size-4" aria-hidden />
+                            )}
+                            <span className="hidden sm:inline">
+                              {t("ingestButton")}
+                            </span>
+                          </Button>
+                        </div>
+                        <p
+                          id="ingest-hint"
+                          className="text-[11px] leading-relaxed text-muted-foreground"
+                        >
+                          {t("ingestHint")}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <label
+                          htmlFor="ingest-image-input"
+                          className="flex items-center gap-1.5 text-xs font-medium text-primary"
+                        >
+                          <ImagePlus className="size-3.5 shrink-0" aria-hidden />
+                          {t("ingestImageLabel")}
+                        </label>
+                        <input
+                          ref={ingestImageInputRef}
+                          id="ingest-image-input"
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="sr-only"
+                          tabIndex={-1}
+                          onChange={(e) => {
+                            fireStartedOnce();
+                            acceptIngestImage(e.target.files?.[0] ?? null);
+                            // Ponastavi, da lahko ista datoteka znova izbere
+                            e.target.value = "";
+                          }}
+                        />
+                        {ingestImage ? (
+                          <div className="flex items-center gap-3 rounded-md border border-primary/25 bg-background p-2">
+                            {/* next/image ni potreben — lokalni data URL
+                                predogled, ki se NE persistira */}
+                            <img
+                              src={ingestImage}
+                              alt={ingestImageName || "predogled slike"}
+                              className="size-14 shrink-0 rounded object-cover"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-medium">
+                                {ingestImageName}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {t("ingestImageMethod")}
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={ingestLoading}
+                              onClick={() => void handleIngestImageSubmit()}
+                              className="gap-1.5"
+                              aria-label={t("ingestImageButtonAria")}
+                            >
+                              {ingestLoading ? (
+                                <Loader2
+                                  className="size-4 animate-spin"
+                                  aria-hidden
+                                />
+                              ) : (
+                                <LocateFixed className="size-4" aria-hidden />
+                              )}
+                              <span className="hidden sm:inline">
+                                {t("ingestImageButton")}
+                              </span>
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              disabled={ingestLoading}
+                              onClick={() => {
+                                setIngestImage(null);
+                                setIngestImageName("");
+                                setIngestMatches(null);
+                                setIngestIsVlm(false);
+                              }}
+                              aria-label={t("ingestImageRemove")}
+                              className="size-7 shrink-0"
+                            >
+                              <X className="size-4" aria-hidden />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() =>
+                              ingestImageInputRef.current?.click()
+                            }
+                            onKeyDown={(e) => {
+                              if (
+                                e.key === "Enter" ||
+                                e.key === " "
+                              ) {
+                                e.preventDefault();
+                                ingestImageInputRef.current?.click();
+                              }
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              setIngestImageDragging(true);
+                            }}
+                            onDragLeave={() => setIngestImageDragging(false)}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              setIngestImageDragging(false);
+                              fireStartedOnce();
+                              acceptIngestImage(
+                                e.dataTransfer.files?.[0] ?? null
+                              );
+                            }}
+                            aria-describedby="ingest-image-hint"
+                            className={cn(
+                              "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed p-4 text-center transition-colors",
+                              ingestImageDragging
+                                ? "border-primary bg-primary/10"
+                                : "border-primary/30 hover:border-primary/60 hover:bg-primary/5"
+                            )}
+                          >
+                            <ImagePlus
+                              className="size-5 text-primary"
+                              aria-hidden
+                            />
+                            <span className="text-xs font-medium text-primary">
+                              {t("ingestImageBrowse")}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground">
+                              {t("ingestImageDrop")}
+                            </span>
+                          </div>
+                        )}
+                        <p
+                          id="ingest-image-hint"
+                          className="text-[11px] leading-relaxed text-muted-foreground"
+                        >
+                          {t("ingestImageHint")}{" "}
+                          <span className="whitespace-nowrap">
+                            {t("ingestImagePaste")}
+                          </span>
+                        </p>
+                      </>
+                    )}
                     {ingestError && (
                       <p role="alert" className="text-xs text-destructive">
                         {ingestError}
@@ -1048,9 +1370,16 @@ export function ItineraryPlanner() {
                             className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-background px-2 py-0.5 text-xs text-foreground transition-colors hover:border-primary/60 hover:bg-primary/10"
                           >
                             {m.name}
-                            <span className="text-muted-foreground">×{m.count}</span>
+                            <span className="text-muted-foreground">
+                              ×{m.count}
+                            </span>
                           </Link>
                         ))}
+                        {ingestIsVlm && (
+                          <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                            {t("ingestImageMethod")}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}

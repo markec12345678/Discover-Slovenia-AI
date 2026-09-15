@@ -402,7 +402,22 @@
       "legendAria": "Filtriranje dni na zemljevidu",
       "mapAria": "Zemljevid poti po Sloveniji s postanki itinererja",
       "hintRoads": "Linije poteka po realnih cestah (OSRM/OpenStreetMap). Klikni številko za skok na postanek; žetoni dni skrijejo/prikažejo posamezne dni."
-    }
+    },
+    "ingestTabLink": "Povezava",
+    "ingestTabImage": "Slika",
+    "ingestImageLabel": "Začni s sliko (fotografija, screenshot …)",
+    "ingestImageButton": "Prepoznaj",
+    "ingestImageButtonAria": "Prepoznaj destinacije s slike",
+    "ingestImageHint": "Naloži ali prilepi fotografijo/screenshot o Sloveniji — AI prebere imena na njej, ujemanje z destinacijami je deterministično (enako kot pri povezavah).",
+    "ingestImageDrop": "Spusti sliko sem (JPEG, PNG, WebP; do ~4,5 MB)",
+    "ingestImageBrowse": "Izberi sliko",
+    "ingestImagePaste": "… ali prilepi iz odložišča (Ctrl/Cmd+V)",
+    "ingestImageRemove": "Odstrani sliko",
+    "ingestImageMethod": "prepoznavanje slike: AI branje + deterministično ujemanje",
+    "ingestImageError": "Slike ni bilo mogoče prepoznati.",
+    "ingestImageSuccessToast": "Prepoznal sem destinacije na sliki",
+    "ingestImageSuccessToastDesc": "Iz slike: {names} — sestavljam načrt …",
+    "ingestImageSource": "Vir: tvoja slika"
   },
   "common": {
     "loading": "Nalagam...",

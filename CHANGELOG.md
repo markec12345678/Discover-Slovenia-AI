@@ -7,6 +7,60 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.11.0] — 2026-09-15
+
+### Dodano (F8 — ZAČNI SLIKO: fotografija/screenshot → destinacije → načrt)
+
+> Odgovor na MindTrip "Start Anywhere" s slikami (App Store: "share images")
+> — vrzel #1 iz sekcije 10 konkurenčne analize. F5.4 je pokril povezave
+> (tekstovno, deterministično); F8 razširi isti vnos na fotografije in
+> screenshot-e (Instagram post, okvir videa, infografika potovanja).
+
+- **`POST /api/itinerary/ingest-image`** (strežniško, z-ai-web-dev-sdk
+  NIKOLI na clientu): sprejme data URL (JPEG/PNG/WebP, do ~4,5 MB), pokliče
+  VLM s STROGIM ekstraktorjem ("izpiši VSa imena krajev/orientirjev/vidno
+  besedilo, po eno na vrstico, brez komentarjev; če nič → NONE"), nato pa
+  VLM izpis poda ISTI deterministični matcher kot povezave
+  (`matchDestinationsInText`) — AI torej LE PREBERE sliko, IZBIRA
+  destinacij je deterministična. Brez zadetkov → 422 z iskrenim sporočilom
+  (nič "podobnih" ne izmišljujemo); VLM nedosegljiv → 502 z nasvetom
+  ("poskusi kasneje ali uporabi povezavo").
+- **Varnost/zasebnost**: slika se obdela v pomnilniku in pozabi (nikamor
+  se ne shranjuje); VLM znaki se ne vračajo v odgovoru (samo
+  `method: "vlm"` + `vlmChars` za razkritje metode); rate limit 6/min na
+  IP (nižji od 10/min pri povezavah — VLM dražji); timeout 45 s
+  (Promise.race); validacija vrste/velikosti na strežniku (client je le
+  prvi filter).
+- **UI v načrtovalniku**: zavihka "Povezava | Slika" na vnosnem okvirju;
+  slikovni način ponuja izbiro datoteke, drag & drop cono in PRILEPLJANJE
+  iz odložišča (Ctrl/Cmd+V na okvirju — screenshot brez iskanja datoteke);
+  predogled s paličko + ime datoteke + razkrita metoda; gumb "Prepoznaj";
+  zadetki se pokažejo PRED generiranjem (isti chips prikaz kot pri
+  povezavah) + amber badge metode "prepoznavanje slike: AI branje +
+  deterministično ujemanje". Samodejna generacija po uspehu (en klik od
+  slike do načrta).
+- **Analitika**: `ingest_image_attempted` (locale), `ingest_image_success`
+  (matches, days, locale) — whitelist client + strežnik +
+  docs/ANALYTICS-EVENTS.md; primerjava uspešnosti slika vs. povezava.
+- **SL + EN** (15 novih ključev `planner.ingestImage*`).
+
+### Verifikacija (F8)
+
+- tsc 0 napak v src/; eslint 0 napak.
+- Route validacija: napačen format → 400; nepodprta vrsta (GIF) → 400.
+- Pipeline (simuliran VLM izpis "Lake Bled/Bled/Bled Island/Plitvice/
+  Split/Vintgar"): ujame bled x4 + vintgar x1; hrvaški Plitvice/Split
+  pošteno NE ujeta (nista v našem nizu); interesi + dnevi izpeljani.
+- UI (agent-browser, SL): zavihka se preklopita; upload datoteke →
+  predogled z imenom + metodo; VLM 429 (sandbox rate limit) → iskrena
+  napaka prikazana v UI, strežnik 502.
+- Iskrena omejitev: VLM klic v tem sandbox oknu stalno 429 (rate limit
+  storitve) — E2E uspešne poti (slika → zadetki → načrt) potrjena z
+  simuliranim VLM izpisom na istem matcherju + UI tok do API klica;
+  ponovna živa verifikacija priporočena ko storitev spet sprejema.
+
+---
+
 ## [1.10.1] — 2026-09-15
 
 ### Popravljeno

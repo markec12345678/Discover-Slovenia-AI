@@ -47,6 +47,10 @@ export type PlannerEventName =
   // F5.4 "Začni s povezavo" ( url ingest — MindTrip "Start Anywhere")
   | "ingest_url_attempted"
   | "ingest_url_success"
+  // F8 "Začni s sliko" ( image ingest — MindTrip "Start Anywhere" s slikami;
+  // VLM prebere imena, ujemanje je deterministično)
+  | "ingest_image_attempted"
+  | "ingest_image_success"
   // F5.2: izvoz načrta v koledar (.ics)
   | "ics_download"
   // F5.7 (PWA): namestitev aplikacije (gumb v navigaciji)

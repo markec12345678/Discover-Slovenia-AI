@@ -252,7 +252,7 @@ na EN straneh → `nav.tagline` = "AI trips"). /pot/* ostaja SL-only
 
 | # | Vrzel | Odločitev |
 |---|---|---|
-| 1 | Mindtrip Start Anywhere zdaj sprejema SLIKE ( App Store, »share images«) | ⏸ Roadmap — naš URL ingest ( F5.4) je tekstovni; slikovni vnos zahteva VLM integracijo, primerno po živi uporabi URL vnosa |
+| 1 | Mindtrip Start Anywhere zdaj sprejema SLIKE ( App Store, »share images«) | ✅ **F8 implementirano ( 1.11.0)** — zavihek »Slika« na /nacrtuj: upload/drag&drop/paste (Ctrl+V) → VLM STROGI ekstraktor prebere imena → ISTI deterministični matcher kot povezave poveže z našimi 22 destinacijami; metoda razkrita ( amber badge), slika se pozabi ( pomnilnik), 422 brez zadetkov / 502 VLM nedosegljiv — iskreno. Glej sekcijo 12. |
 | 2 | Skupinsko glasovanje ( MonkeyTravel »voting«, WePlanify pollsi) | ⏸ Roadmap — zahteva uporabniške račune; deljena povezava je naš trenutni skupinski mehanizem |
 | 3 | Potni dnevnik/spomini ( Stippl travel reel, photobook) | ⏸ Zavestno odloženo — vsebinska smer, ne jedro načrtovanja |
 | 4 | živi ceni partnerjev | ⏸ Roadmap item 4 ( čakamo ključe) — Mindtrip Flights/Stays pomenita, da se ta vrzel povečuje, a zahteva GDS partnerstvo |
@@ -288,3 +288,32 @@ Faze 5) je sedaj delno zaprta — na naš način: brez računov, s korektivno
 ( ne promocijsko) vsebino in z analitiko, ki meri, koliko avtorjev
 zapiše verdikt ( `has_verdict` — metrika, koliko skupnost izraža naš
 poštenostni diferencator).
+
+---
+
+# F8 (september 2026) — Start Anywhere s slikami
+
+> Vrzel #1 iz sekcije 10: MindTrip "Start Anywhere" sprejema slike (App
+> Store: "share images"). F5.4 je pokril povezave; F8 zapre slikovno pot.
+
+## 12. F8 odgovor na MindTrip "share images"
+
+| MindTrip slikovni vnos | Naš odgovor (F8, 1.11.0) |
+|---|---|
+| Slika → destinacije (nediferencirano) | Slika → VLM STROGI ekstraktor izpiše imena (brez komentarja; "NONE" če nič) → ISTI deterministični matcher kot povezave izbere iz naših 22 destinacij — AI LE PREBRE, ne IZBIRA |
+| Metoda nerazkrita | Amber badge: "prepoznavanje slike: AI branje + deterministično ujemanje"; `method: "vlm"` v odgovoru |
+| Brez ústreznih zadetkov? | Iskren 422 ("nisem prepoznal nobene slovenske destinacije") — NE izmišljujemo "podobnih" (preverjeno: Plitvice/Split na sliki NE ujeta, ker nista v našem nizu) |
+| Zasebnost slike | Slika se obdela v pomnilniku in POZABI (nikamor shranjena); VLM znaki se ne vračajo |
+| Vnos | Upload + drag&drop + PRILEPLJANJE iz odložišča (Ctrl/Cmd+V na okvirju — screenshot brez iskanja datoteke) |
+| Merjenje | `ingest_image_attempted` / `ingest_image_success` — stopnja uspešnosti + primerjava slika vs. povezava |
+
+**Iskrene omejitve (zapisane v CHANGELOG):** VLM storitev je lahko
+nedosegljiva (502 z nasvetom "poskusi kasneje ali uporabi povezavo") —
+povezave ostanejo vedno delujoče (deterministične, brez AI); v tem
+sandbox oknu je bila živa VLM verifikacija rate-limited (429), uspešna
+pot pa potrjena z enakovrednim simuliranim VLM izpisom na istem
+matcherju.
+
+**Sklep F8:** vrzel #1 zaprta na naš način — AI za branje, determinizem
+za odločanje, iskrenost za omejitve. "Start Anywhere" zdaj sprejema
+povezave IN slike; obe poti končata v istem preverljivem ujemanju.
