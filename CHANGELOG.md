@@ -7,6 +7,75 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.10.0] — 2026-09-15
+
+### Dodano (F7 — SKUPNOSTNI VODNIKI: avtor poti zapiše izkušnjo, ne promocijo)
+
+> Odgovor na MindTrip "community guides (realni avtorji, »Saved by 23«)" —
+> roadmap item 5 (temelj: community-trips + lastništvo). Naš vodnik NI
+> promocijska vsebina, temveč KOREKTIVNA: jedro je polje "kaj bi storil
+> drugače" — popotni popravki načrta, ki jih NOBEN tekmec ne zbere
+> (MindTrip-ovi vodniki so uredniško-reklamni). Izraz istega
+> poštenostnega diferencatorja kot geo-validacija in odkrite metode.
+
+- **Avtorstvo BREZ računa** (anonymous-first, enako kot glasovanje/komentarji):
+  POST `/api/itinerary/save` ob shranjevanju izda TAJNI `editToken`
+  (32 hex; v DB SAMO SHA-256 hash; plain žeton živi izključno v localStorage
+  shranjevalnika). Prijavljeni lastnik (SavedItinerary.userId) lahko ureja
+  tudi prek seje — pokrije stare pote; ANONIMNE stare pote (brez žetona)
+  avtorstva NE morejo zahtevati (iskrena omejitev — žetona ni mogoče izdati
+  počasi). Pot posameznika ne more "pograbiti" (E2E: napačen žeton → 403).
+- **`model TripGuide`**: authorName (1–60), intro "zakaj ta pot" (2–500),
+  verdict "kaj bi storil drugače" (0–500, jedro diferencatorja), tips ≤ 6
+  (vsak {dan 1–14 | splošen, besedilo 2–280}), lang (sl | en).
+  Upsert po shareId — ponovna oddaja = urejanje (E2E preverjeno:
+  prefill + sprememba + `is_new: false` v analitiki).
+- **`PUT /api/trip-guide`** (edini javni vstop): validacija ENAKA klientni
+  (dolžine, dnevi, tipi), rate limit 20/h, hash primerjava žetona,
+  session fallback za prijavljene lastnike. 404 za neobstoječo pot,
+  403 za ne-lastnike, 400 za napačne formate (vse E2E).
+- **`src/components/trip-guide.tsx`** na `/pot/[shareId]`: PRIKAZ vsem
+  (badge Vodnik, avtor + relativni čas, intro, nasveti z dnevnimi značkami,
+  verdikt v amber bloku — vse se natisne z načrtom) + AVTORSTVO samo
+  lastniku (CTA "To pot si ustvaril ti — napiši vodnik" → obrazec z
+  števci znakov, izbirnik dneva na nasvet, dodajanje/odstranjevanje vrstic).
+  Ime avtorja si deli localStorage ključ s komentarji (konsistentna
+  identiteta). SSR prikaz (RSC bere vodnik direktno — viden tudi brez JS).
+- **Galerija skupnosti** (`/nacrtuj`): poti z vodnikom dobijo badge
+  "Vodnik" (BookOpen) + PREDNOST v razvrstitvi znotraj okna zadnjih 24
+  shranitev (staranja NE mešamo — galerija ostane "skupnost zdaj").
+- **Analitika** `guide_saved`: tips_count, has_verdict (meri, koliko
+  avtorjev piše korektivni verdikt — metrika diferencatorja), day_count,
+  lang, is_new. Whitelist client + strežnik + docs.
+
+### Popravljeno
+
+- **`itinerary-quality.ts` hardening**: priročeni/shranjeni itinerarji brez
+  polja `recommendations` (npr. ročno sestavljen JSON) niso več sesuli
+  strani /pot (`TypeError: recommendations is not iterable` v BudgetPanel
+  fallback poti) — obravnavamo kot prazen seznam.
+
+### Verifikacija (F7)
+
+- tsc 0 napak (naše datoteke), eslint 0; phase4-verify 13/13, pwa-test
+  36/36 (brez regresij); 13 strani 200.
+- E2E (agent-browser, DOM): shranjevanje → žeton v localStorage → CTA
+  lastnika → obrazec → objava → prikaz vsem → SSR čez reload → urejanje
+  (prefill + sprememba + is_new:false) → visitor brez urejanja → napačen
+  žeton 403 → stara pot 403/ni CTA → neobstoječa 404 → proračun 400 →
+  badge v galeriji + prednostni sort → analitika v DB (props potrjeni).
+- VLM (glm-5v): prikaz vodnika 5/5 elementov (badge, avtor, intro, nasveti,
+  amber verdikt) "no layout problems". Obrazec: VLM storitev je bila v tem
+  oknu rate-limited (429) — obrazec preverjen z DOM sondami (vrednosti
+  polj, prefill, oddaja, validacija) + 390px prelivni audit (0 notranjih
+  prelivov, kartica 358 px).
+- Omejitve (iskrene): /pot strani so SL-only (P4-8 whitelist — NE mešamo
+  jezikov, DB vsebina je slovenska); vodnik ene poti = en avtor (žeton/
+  seja), brez skupinskega urejanja; stari anonimni zapisi brez žetona
+  vodnika ne morejo imeti.
+
+---
+
 ## [1.9.0] — 2026-09-15
 
 ### Dodano (F6.1 — PAMETEN PAKIRNI SEZNAM: napoved + dejanski postanki → predmeti z razlogi)

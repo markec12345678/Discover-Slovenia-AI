@@ -98,6 +98,10 @@ model SavedItinerary {
   name        String?
   // Javni ID za deljenje (URL /pot/{shareId}) — nerodljiv, lowercase alnum
   shareId     String   @unique
+  // F7 (vodniki): SHA-256 hash editnega žetona — plain žeton vrne POST
+  // /api/itinerary/save izključno shranjevalniku (localStorage). Null pri
+  // starih poteh (pred F7) — te NE morejo zahtevati avtorstva vodnika.
+  editTokenHash String?
   // Število ogledov deljene strani (public statistika)
   views       Int      @default(0)
   createdAt   DateTime @default(now())
@@ -105,6 +109,30 @@ model SavedItinerary {
   user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// Vodnik avtorja na deljenem potovanju — F7 skupnostni vodniki.
+// Odgovor na MindTrip "community guides (realni avtorji)": naš vodnik ni
+// promocijski, temveč KOREKTIVNI — "verdict" (kaj bi storil drugače) je
+// izraz našega poštenostnega diferencatorja.
+// Avtor = imetnik editToken (iz odgovora shranjevanja) ali prijavljeni
+// uporabnik, ki je pot shranil (userId). 1 : 1 s SavedItinerary (shareId unique).
+model TripGuide {
+  id          String   @id @default(cuid())
+  shareId     String   @unique
+  // Avtorsko ime (psevdonim) — 1–60 znakov, enaka pravila kot TripComment
+  authorName  String
+  // "Zakaj ta pot" — 2–500 znakov
+  intro       String
+  // "Kaj bi storil drugače" — 0–500 znakov (opcijsko, a jedro diferencatorja)
+  verdict     String?
+  // JSON: [{ day: number|null, text: string }] — največ 6 nasvetov,
+  // day = številka dneva (1..14) ali null (splošen nasvet)
+  tips        String
+  // Jezik vodnika (avtorjeva izbira po UI locale) — "sl" | "en"
+  lang        String   @default("sl")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // Glasovi obiskovalcev na lokacijah deljenih potovanj (/pot/[shareId])

@@ -194,8 +194,13 @@ function computeFoodScore(
   input: Pick<PlannerInput, "interests">,
   itinerary: Itinerary
 ): 1 | 2 | 3 | 4 | 5 {
+  // Hardening: priročeni/shranjeni itinerarji lahko nimajo recommendations
+  // (npr. ročno sestavljeni JSON) — obravnavamo kot prazen seznam.
+  const recommendations = Array.isArray(itinerary.recommendations)
+    ? itinerary.recommendations
+    : [];
   const haystack = [
-    ...itinerary.recommendations,
+    ...recommendations,
     ...itinerary.days.flatMap((d) => (d.locations ?? []).map((l) => l.notes)),
   ]
     .join(" ")

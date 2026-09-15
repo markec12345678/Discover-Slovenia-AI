@@ -9,6 +9,11 @@ export interface SaveItineraryResult {
   shareId: string;
   /** Relativna pot, npr. "/pot/abc123" */
   url: string;
+  /**
+   * F7 (vodniki): tajni žeton za urejanje vodnika — shranjen v localStorage
+   * pod editTokenStorageKey(shareId). Shranjevalnik ga uporabi na /pot strani.
+   */
+  editToken?: string;
 }
 
 export interface SharedItineraryResult {
@@ -19,9 +24,35 @@ export interface SharedItineraryResult {
 }
 
 /**
+ * F7 (vodniki): localStorage ključ za tajni žeton vodnika dane poti.
+ * Žeton obstaja SAMO v brskalniku tistega, ki je pot shranil — obiskovalci
+ * deljene povezave ga nimajo (vidijo le prikaz vodnika, ne obrazca).
+ */
+const editTokenStorageKey = (shareId: string) => `dsa_edit_token_${shareId}`;
+
+/** F7: preberi tajni žeton vodnika (null = ta brskalnik ni lastnik/pot je stara). */
+export function getEditToken(shareId: string): string | null {
+  if (typeof window === "undefined" || !shareId) return null;
+  try {
+    return window.localStorage.getItem(editTokenStorageKey(shareId));
+  } catch {
+    return null; // zasebni način — vodnik ni mogoč, prikaz pa da
+  }
+}
+
+/** F7: shrani tajni žeton vodnika (kliče se ob uspešnem shranjevanju). */
+function storeEditToken(shareId: string, editToken: string): void {
+  try {
+    window.localStorage.setItem(editTokenStorageKey(shareId), editToken);
+  } catch {
+    // zasebni način — žeton izgubi, vodnik ne bo mogoč (iskrena omejitev)
+  }
+}
+
+/**
  * Shrani itinerer na strežnik in vrne deljivo povezavo.
  * Meta: POST /api/itinerary/save { itinerary, formData, name? }
- *       → { success, shareId, url: "/pot/xxx" }
+ *       → { success, shareId, url: "/pot/xxx", editToken }
  */
 export async function saveItinerary(
   itinerary: Itinerary,
@@ -54,14 +85,18 @@ export async function saveItinerary(
     success?: boolean;
     shareId?: string;
     url?: string;
+    editToken?: string;
   };
   if (!data?.success || !data?.url || !data?.shareId) {
     throw new Error("Shranjevanje ni uspelo — poskusi znova.");
   }
+  // F7: žeton vodnika takoj v localStorage — lastnik ga lahko uporabi
+  // na svoji deljeni strani (isti brskalnik)
+  if (data.editToken) storeEditToken(data.shareId, data.editToken);
   // F5.7: takoj "ogrej" offline predpomnilnik — sveže shranjen načrt je
   // s tem na voljo tudi brez povezave (offline.html ga izriše iz cache-a).
   warmOfflinePlanCache(data.shareId);
-  return { shareId: data.shareId, url: data.url };
+  return { shareId: data.shareId, url: data.url, editToken: data.editToken };
 }
 
 /**

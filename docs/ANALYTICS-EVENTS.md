@@ -42,6 +42,7 @@
 | `pwa_install_accepted` | uporabnik SPREJME namestitveni dialog | vsaka sprejeta namestitev | `locale` | namestitve PWA (offline načrti v žepu); delež = accepted / prompted |
 | `packing_item_checked` | odkljuk predmeta na pametnem pakirnem seznamu (F6.1) | vsak odkljuk (le smer `true`) | `category`, `method` (`forecast`/`season`), `items` | angažma s seznamom; `method` pove, iz katere plasti (napoved vs sezona) uporabnik resno pakira |
 | `budget_goal_set` | nastavitev/primerjava osebnega proračunskega cilja (F6.2) | vsaka potrditev cilja | `goal_eur`, `plan_total_eur`, `group_size` | proračunska angažma; razlika goal−plan pove cenovno občutljivost obiskovalcev |
+| `guide_saved` | shranjen/urejen skupnostni vodnik na deljeni poti (F7) | vsako uspešno oddajanje (upsert) vodnika | `tips_count`, `has_verdict`, `day_count`, `lang`, `is_new` | avtorstvo skupnosti; `has_verdict` meri, koliko avtorjev piše korektivni »kaj bi storil drugače« (naš diferencator) |
 
 ## Neuspehi in opustitvi
 

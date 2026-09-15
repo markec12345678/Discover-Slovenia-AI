@@ -15,6 +15,8 @@
     "createdTitle": "Kdaj je bil načrt ustvarjen",
     "daysCount": "{count, plural, one {# dan} two {# dneva} few {# dni} other {# dni}}",
     "viewsCount": "{count, plural, one {# ogled} two {# ogleda} few {# ogledi} other {# ogledov}}",
-    "activitiesCount": "{count, plural, one {# aktivnost} two {# aktivnosti} few {# aktivnosti} other {# aktivnosti}}"
+    "activitiesCount": "{count, plural, one {# aktivnost} two {# aktivnosti} few {# aktivnosti} other {# aktivnosti}}",
+    "guideBadge": "Vodnik",
+    "guideTitle": "Ta pot ima objavljen avtorski vodnik (nasveti in izkušnje avtorja)"
   }
 }

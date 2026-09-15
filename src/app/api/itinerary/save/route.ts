@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
@@ -14,6 +15,10 @@ import { randomId } from "@/lib/security";
 // Če je shranjevanje izvedla prijavljena B2C seja (accountType "user"), se
 // itinerer poveže z računom (userId) in se prikaže v "Moja potovanja".
 // Brez seje ostaja anonimno (userId null) — nespremenjeno delovanje.
+//
+// F7 (vodniki): odgovor vsebuje TAJNI editToken (32 hex). Client ga shrani v
+// localStorage in z njim pozneje doda/ureja vodnik na /pot/{shareId}.
+// V DB hranimo SAMO SHA-256 hash — izliv deljene povezave ne razkrije žetona.
 export async function POST(request: Request) {
   // Rate limit shranjevanj (preprečuje zlorabo DB prostora)
   const limited = rateLimit(request, {
@@ -87,6 +92,10 @@ export async function POST(request: Request) {
 
     // Javni ID za deljenje (lowercase hex — URL-varen)
     const shareId = randomId(10).toLowerCase();
+    // F7: tajni žeton za urejanje vodnika — v DB samo hash, plain vrnemo
+    // izključno v odgovoru shranjevalniku (client ga da v localStorage)
+    const editToken = randomId(32).toLowerCase();
+    const editTokenHash = createHash("sha256").update(editToken).digest("hex");
 
     // === P1-2b: povezava z računom popotnika, če je prijavljen (B2C) ===
     // Anonimno shranjevanje ostaja nespremenjeno (userId null). Session
@@ -112,6 +121,7 @@ export async function POST(request: Request) {
         itinerary: itineraryJson,
         formData: formDataJson,
         name,
+        editTokenHash,
         // P1-2b: null = anonimno | user.id = povezano s prijavljenim popotnikom
         userId,
       },
@@ -122,6 +132,8 @@ export async function POST(request: Request) {
       success: true,
       shareId: saved.shareId,
       url: `/pot/${saved.shareId}`,
+      // F7: tajni žeton vodnika (SAMO za shranjevalnikova oči — nikoli v javne poglede)
+      editToken,
       createdAt: saved.createdAt.toISOString(),
     });
   } catch (error) {

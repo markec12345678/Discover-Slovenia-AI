@@ -56,6 +56,8 @@ export type PlannerEventName =
   | "packing_item_checked"
   // F6.2: nastavitev osebnega proračunskega cilja v primerjavo z načrtom
   | "budget_goal_set"
+  // F7: shranjen/urejen skupnostni vodnik na deljeni poti (avtor = lastnik)
+  | "guide_saved"
   // Neuspehi
   | "planner_error"
   | "empty_result"

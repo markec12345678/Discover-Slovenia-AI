@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import {
   ArrowRight,
+  BookOpen,
   Calendar,
   Eye,
   Footprints,
@@ -33,8 +34,15 @@ import type { DayPlan } from "@/lib/types";
 // baze v slovenščini — na EN sekcija SE NE izrise (ne mešamo jezikov).
 // ============================================================================
 
-/** Koliko javnih potovanj prikažemo v galeriji */
+/** Koliko javnih potovanj PRIKAŽEMO v galeriji */
 const TAKE = 8;
+
+/**
+ * F7 (vodniki): okno zadnjih shranitev, iz katerega iščemo — vodniki
+ * (avtorski vsebini) dobijo prednost pri razvrstitvi znotraj tega okna.
+ * Staranja NE mešamo: galerija ostane "skupnost (načrtuje) zdaj".
+ */
+const FETCH_WINDOW = 24;
 
 /** Max destinacijskih badge-ov na kartici */
 const MAX_DESTINATION_BADGES = 3;
@@ -60,6 +68,8 @@ interface CommunityTrip {
   createdAt: Date;
   /** URL slike prve destinacije (cover kartice), če obstaja */
   coverImage: string | null;
+  /** F7: pot ima objavljen avtorski vodnik (badge + prednost pri sortu) */
+  hasGuide: boolean;
 }
 
 /**
@@ -93,7 +103,8 @@ function parseTrip(
     createdAt: Date;
     itinerary: string;
   },
-  fallbackName: string
+  fallbackName: string,
+  guidedShareIds: ReadonlySet<string>
 ): CommunityTrip | null {
   let parsed: unknown;
   try {
@@ -148,6 +159,7 @@ function parseTrip(
     createdAt: row.createdAt,
     coverImage:
       DESTINATION_IMAGE_BY_ID.get(destinationIds[0] ?? "") ?? null,
+    hasGuide: guidedShareIds.has(row.shareId),
   };
 }
 
@@ -169,11 +181,14 @@ export async function CommunityTrips() {
     itinerary: string;
   }[] = [];
 
+  // F7: katere od teh poti imajo objavljen avtorski vodnik
+  let guidedShareIds = new Set<string>();
+
   try {
     rows = await db.savedItinerary.findMany({
       where: { shareId: { not: "" } },
       orderBy: { createdAt: "desc" },
-      take: TAKE,
+      take: FETCH_WINDOW,
       select: {
         shareId: true,
         name: true,
@@ -182,6 +197,15 @@ export async function CommunityTrips() {
         itinerary: true,
       },
     });
+
+    // F7: vodniki za okno zadnjih poti (ne-kritično — ob napaki brez badge-ov)
+    if (rows.length > 0) {
+      const guides = await db.tripGuide.findMany({
+        where: { shareId: { in: rows.map((r) => r.shareId) } },
+        select: { shareId: true },
+      });
+      guidedShareIds = new Set(guides.map((g) => g.shareId));
+    }
   } catch (e) {
     // Galerija ni kritična za homepage — ob napaki se skrijemo
     console.error("[community-trips] branje SavedItinerary napaka:", e);
@@ -189,8 +213,15 @@ export async function CommunityTrips() {
   }
 
   const trips = rows
-    .map((row) => parseTrip(row, t("fallbackName")))
-    .filter((trip): trip is CommunityTrip => trip !== null);
+    .map((row) => parseTrip(row, t("fallbackName"), guidedShareIds))
+    .filter((trip): trip is CommunityTrip => trip !== null)
+    // F7: poti Z vodnikom dobijo prednost (avtorska vsebina je dragocena),
+    // znotraj skupin pa ostane vrstni red po časovnem descending
+    .sort((a, b) => {
+      if (a.hasGuide !== b.hasGuide) return a.hasGuide ? -1 : 1;
+      return b.createdAt.getTime() - a.createdAt.getTime();
+    })
+    .slice(0, TAKE);
 
   // Prazna galerija → sekcija se ne rendera (legitimno stanje)
   if (trips.length === 0) return null;
@@ -304,10 +335,22 @@ async function CommunityTripCard({ trip }: { trip: CommunityTrip }) {
           </span>
         </div>
 
-        {/* Ime poti */}
-        <h3 className="text-lg font-semibold leading-tight line-clamp-1">
-          {trip.name}
-        </h3>
+        {/* Ime poti + badge vodnika (F7) */}
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="text-lg font-semibold leading-tight line-clamp-1">
+            {trip.name}
+          </h3>
+          {trip.hasGuide ? (
+            <Badge
+              className="shrink-0 border-primary/30 bg-primary/10 text-primary"
+              variant="outline"
+              title={t("guideTitle")}
+            >
+              <BookOpen className="size-3" aria-hidden="true" />
+              {t("guideBadge")}
+            </Badge>
+          ) : null}
+        </div>
 
         {/* Destinacije */}
         {visibleDestinations.length > 0 ? (

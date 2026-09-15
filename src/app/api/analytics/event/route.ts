@@ -42,6 +42,8 @@ const VALID_EVENTS = new Set([
   "packing_item_checked",
   // F6.2: nastavitev osebnega proračunskega cilja
   "budget_goal_set",
+  // F7: shranjen/urejen skupnostni vodnik na deljeni poti
+  "guide_saved",
   // Neuspehi
   "planner_error",
   "empty_result",

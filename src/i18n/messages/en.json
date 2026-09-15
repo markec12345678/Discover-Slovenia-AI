@@ -602,7 +602,9 @@
     "createdTitle": "When the plan was created",
     "daysCount": "{count, plural, one {# day} other {# days}}",
     "viewsCount": "{count, plural, one {# view} other {# views}}",
-    "activitiesCount": "{count, plural, one {# activity} other {# activities}}"
+    "activitiesCount": "{count, plural, one {# activity} other {# activities}}",
+    "guideBadge": "Guide",
+    "guideTitle": "This trip has a published author guide (tips and first-hand experience)"
   },
   "contact": {
     "title": "Contact",

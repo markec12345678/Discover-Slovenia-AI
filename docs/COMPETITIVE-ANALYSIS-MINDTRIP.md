@@ -35,7 +35,7 @@
 | 4 | Budget = samo vnosev atrakcij ( `recomputeTotalBudget` = seštevek `estimated_cost`) — brez goriva/vinjet | Stroškovna razčlenitev vožnje ( cestnine, poraba) | ✅ **F5.3 implementirano** ( gorivo + slovenska e-vinjeta, viri razkriti) |
 | 5 | Odpiralni časi destinacij niso obstajali ( namerna data honesty odločitev) | MindTrip upošteva dneve zaprtja ( Louvre/torek) | ✅ **F5.5 implementirano** ( 5 preverjenih vnosov z viri + pravili closed_month/closed_weekday; ostalih 17 po potrebi) |
 | 6 | Živi cene + rezervacije hotelov/poletov | Layla ( živi cene) / Mindtrip ( Expedia + v-chat letalske karte) | ⏸ **Roadmap** ( zahteva partner API ključe; sandbox/preprod nima pogojev; naša tržnica je lokalni monopol) |
-| 7 | Community layer ( avtorji vodnikov, »Shranjeno pri 23«) | MindTrip hybrid AI + social | ⏸ **Roadmap** ( potrebuje uporabnike; imamo community-trips temelj) |
+| 7 | Community layer ( avtorji vodnikov, »Shranjeno pri 23«) | MindTrip hybrid AI + social | ✅ **F7 ( 1.10.0)**: avtor = lastnik poti brez računa ( editToken), korektivni vodnik z »kaj bi storil drugače« — sekcija 11 |
 | 8 | Mobilna aplikacija ( iOS/Android) | Mindtrip app, Layla app | 🟡 **Delno zaprto v F5.7** ( PWA: namestitev na domači zaslon Chrome/Android/iOS, offline načrti + zemljevid; native app še vedno roadmap —dokumentirano odloženo) |
 | 9 | Chat ni »itinerary copilot« ( ločena Q&A + refiner) | MindTrip = chat-first načrtovanje | ⚖️ **Delno zaprto že prej** ( NLP hero + refiner več-turn); chat-first preoblikovanje bi pomenilo redesign zlate poti → meritve naj odločijo |
 | 10 | Ravne črte med točkami ( nižje) brez road routing | MindTrip približno enako ( ocene) | ✅ **F5.6 implementirano** ( OSRM realne razdalje/časi/geometrija; hevristika je pretiravala čas na avtocestah in podcenjevala km v gorah — izmerjeno; zemljevid zdaj riše prave ceste; diskutabilnost odločena zMeritvami) |
@@ -155,7 +155,12 @@
    te vrste).
 4. **Živi ceni partnerjev** ( ko pridejo ključi) — največja komercialna
    vrzel vs Layla/Mindtrip.
-5. **Community vodniki** ( temelj: community-trips + ownerji).
+5. ~~**Community vodniki**~~ ✅ **IZVEDENO v F7 ( 1.10.0)** — avtorski
+   vodnik na deljeni poti BREZ računa (tajni editToken iz shranjevanja,
+   SHA-256 v DB, localStorage lastnika), jedro = "kaj bi storil drugače"
+   ( korektivni, ne promocijski — MindTrip-ovi vodniki so uredniško-
+   reklamni); nasveti vezani na dneve, verdikt v amber bloku, badge +
+   prednost v galeriji skupnosti; analitika has_verdict meri diferencator.
 
 ## 7. Sklep — kje se nahajamo
 
@@ -247,3 +252,30 @@ in `budget_goal_set` ( goal_eur, plan_total_eur, group_size) — docs/ANALYTICS-
 **Sklep F6:** zaprli sva največjo funkcionalno vrzel do Stippla ( pakiranje
 + proračun) na naš način — z razlogi, viri in razkritimi metodami. Naš
 vodilni diferencator ( poštenost) je zdaj izražen še v teh dveh plasteh.
+
+---
+
+# F7 ( september 2026) — skupnostni vodniki
+
+> Roadmap item 5 ( "temelj: community-trips + ownerji") — izveden kot
+> naslednja zmaga po F6, ker item 4 ( živi ceni) še čaka partnerske ključe.
+
+## 11. F7 odgovor na MindTrip "community guides"
+
+| MindTrip vodniki | Naš odgovor ( F7, 1.10.0) |
+|---|---|
+| Realni avtorji, »Saved by 23« | Avtor = LASTNIK poti ( tajni editToken iz shranjevanja, SHA-256 v DB — brez računa, anonymous-first kot glasovanje/komentarji) |
+| Uredniško-reklamna vsebina ( "best of") | KOREKTIVNA vsebina: "kaj bi storil drugače" — popotni popravki načrta, ki jih noben tekmec ne zbere |
+| Vodnik kot ločena stran | Vodnik ŽIVI na deljenem načrtu ( kontekst poti + nasveti vezani na dneve "Dan 1: …"), tiska se z načrtom |
+| Avtorji potrebujejo račun/profil | Avtor izpolni vodnik na svoji povezavi ( isti brskalnik) — nič novega za naučiti |
+| Razkrivanje po "Saved by" | Galerija skupnosti: badge "Vodnik" + prednost v oknu zadnjih 24 ( ne mešamo staranja) |
+
+**Iskrene omejitve ( zapisane v CHANGELOG):** /pot strani so SL-only
+( P4-8 jezikovna whitelist); stari anonimni zapisi ( pred F7) vodnika ne
+morejo imeti — žetona ni mogoče izdati počasi; vodnik = en avtor na pot.
+
+**Sklep F7:** MindTrip-ova "hybrid AI + social" prednost ( vrzel #7 iz
+Faze 5) je sedaj delno zaprta — na naš način: brez računov, s korektivno
+( ne promocijsko) vsebino in z analitiko, ki meri, koliko avtorjev
+zapiše verdikt ( `has_verdict` — metrika, koliko skupnost izraža naš
+poštenostni diferencator).

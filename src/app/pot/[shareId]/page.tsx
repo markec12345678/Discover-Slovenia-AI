@@ -6,6 +6,7 @@ import { matchEventsForItinerary } from "@/lib/events-match";
 import { tripWindowMs } from "@/lib/trip-dates";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { SharedTrip } from "@/components/shared-trip";
+import { TripGuide, type GuideData } from "@/components/trip-guide";
 import { TripSocial } from "@/components/trip-social";
 import { TripPushCard } from "@/components/trip-push-card";
 import { PrintQr } from "./print-qr";
@@ -192,6 +193,24 @@ export default async function SharedTripPage({
     console.error("[pot] tripLike count napaka:", e);
   }
 
+  // === F7: avtorski vodnik poti (ne-kritično — ob napaki nadaljujemo brez) ===
+  let initialGuide: GuideData | null = null;
+  try {
+    const guide = await db.tripGuide.findUnique({ where: { shareId } });
+    if (guide) {
+      initialGuide = {
+        authorName: guide.authorName,
+        intro: guide.intro,
+        verdict: guide.verdict,
+        tips: JSON.parse(guide.tips) as GuideData["tips"],
+        lang: guide.lang,
+        updatedAt: guide.updatedAt.toISOString(),
+      };
+    }
+  } catch (e) {
+    console.error("[pot] tripGuide findUnique napaka:", e);
+  }
+
   // === JSON-LD: TouristTrip ===
   const dayCount = saved.itinerary.days.length;
   const destNames = saved.itinerary.days
@@ -248,6 +267,17 @@ export default async function SharedTripPage({
         events={events}
         initialVotes={initialVotes}
       />
+
+      {/* === F7: AVTORJSKI VODNIK (skupnostni vodniki) — prikaz vsem,
+          avtorstvo le lastniku (editToken v localStorage); prazna kartica
+          se skrije, če vodnika ni in obiskovalec ni lastnik === */}
+      <div className="mx-auto max-w-5xl px-4 pb-10 pt-2 sm:px-6 lg:px-8">
+        <TripGuide
+          shareId={shareId}
+          dayCount={saved.itinerary.days.length}
+          initialGuide={initialGuide}
+        />
+      </div>
 
       {/* === KOMENTARJI IN VŠEČKI (skupinsko planiranje, P1-2a) === */}
       <div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6 lg:px-8">
