@@ -493,3 +493,153 @@ natisnjena stran pa je naš brezplačni "photobook". E2E v brskalniku
 ( polni cikel): odpri obrazec → izberi dan → izpolni ( kraj, zvezdice,
 besedilo, ime) → oddaj → uredi → izbriši; 390 px brez prekrivanja;
 API kontrakt 13/13 ( vključno 403 za tuje vpise, 400/404 validacije).
+
+---
+
+# F13 raziskovalna runda ( oktober 2026) — Mindtrip, forumi, nove ideje
+
+> Naročilo uporabnika: »raziskuj o Mindtrip in ostalih najboljših na
+> svetu, beri forume, developerske forume, turistične forume, da dobiš
+> ideje«. Metoda: 13 spletnih iskanj + 14 poglobljenih branj ( 2 Reddit
+> niti s komentarji, 2 Hacker News niti s polnim drevesom komentarjev,
+> 6 člankov MonkeyEatingMango vključno z njihovo merjeno študijo,
+> Travel Anywhere študija halucinacij, blog kazala za odkrivanje virov;
+> HN iskan prek Algolia API). Reddit po 3. strani blokira ( "network
+> security") — iskreno zapisano; ključni niti sta bili prebrani pred
+> blokado.
+
+## 18. Viri ( kaj smo prebrali v tej rundi)
+
+| Vir | Tip | Ključna ugotovitev |
+|---|---|---|
+| r/AI_travel_tips — »Tried Layla, Mindtrip, Odessia and Fortrip« ( 27d) | forum | Layla: izplača cel načrt v 10 s BREZ vprašanja o tempu; Mindtrip: najlepši, skupinski komentarji+glasovanje, a NIKOLI ne opomni na smiselnost vrstnega reda mest; Fortrip: ujel vrstni red → 200 $ prihranka ( hotelove cene po dnevih) |
+| isti thread, komentarji | forum | »AI itinerarji so preveč generični… manjka človeški dotik: kaj je precenjeno, kdaj obiskat, skrite točke, napake za izogniti«; »bivši vodnik: AI planner ni potreba — zgradil sem itinerary CHECK orodje« |
+| HN — Show HN: Ikuyo ( 301 točk, 98 komentarjev, avg 2026) | dev forum | »20 nas v skupini, vsak ima mnenje, nihče noče odločati«; »vse kar zahteva račun od soputnikov je trda prodaja«; »ne delaj počasne kot Wanderlog — moral sem naredit Android app ker njihova ni optimizirana«; strah pred dark pattern plačilom; logistika-zabava mode toggle ideja |
+| HN — »Travel planning: the most common bad startup idea« ( 236 točk, 164 komentarjev) | dev forum | »dobra skupinska programska oprema potrebuje GLASOVANJE«; »najboljši travel planner je Gmail — potrditve same priredo v koledar«; »agregacija iskanj nameščanj + komentarji več strani — plačal bi za to«; sanjarjenje = off-label uporaba ( pogostejša od pravih potovanj) |
+| MonkeyEatingMango — »43 % AI-dnevnikov nosi napako: 356-potna študija« ( 8. 9. 2026, posod. 14. 9.) | merjena študija | 2 735 dni: 22,7 % zaprto ob uri, 16,6 % obisk čez zapiralni čas, 0,5 % trajno zaprto ( Tjapukai 2021, Wajima 2024), 5,1 % duplikati ( dan 9+ = 21,1 %; večmestno 45,2 %), 9,5 % cik-cak dan ( median +3,4 km; najslabše +40 km); skupaj 43,2 % dni s vsaj eno napako; 81 checkov pred izdajo; »neozdravljivo označimo, ne skrijemo« |
+| MonkeyEatingMango — »Mindtrip Review 2026: Features, Price, Login Wall« ( 16. 8. 2026) | neodvisni test | Mindtrip PRED vsem zahteva Google/Apple račun — CENITVEK pa tudi ( preverjeno avg 2026); monetizacija usmerja v rezervacije ( oblikuje priporočila); Reddit citat: »lepše karte, a kupiš sam — nihče ti ne pomaga, če gre kaj narobe« |
+| MonkeyEatingMango — »Best AI Travel Planners 2026: 10 Tools Ranked« ( 16. 8., posod. 31. 8. 2026) | primerjava | Layla ~$49/let ( pregled zastonj), Wanderlog $39,99/let, Tripsy $59/let, iplan.ai $4–10/mes, ChatGPT $20/mes, MEM $4,99 enkratni izvoz; »AI ocene stroškov odstopajo 20–30 %; splošni chatboti izmišljujejo lokale« |
+| MonkeyEatingMango — »Best Travel Itinerary Apps 2026: Generated, Built, or Assembled« ( 17. 8. 2026) | taksonomija | TRI vrste izdelkov: generator ( MEM), platno za gradnjo ( Wanderlog), sestavljalnik rezervacij ( TripIt $49/let Pro); »noben od treh ne počne vseh treh del dobro« |
+| MonkeyEatingMango — »Best Road Trip Planner Apps 2026« ( 17. 8. 2026) | primerjava | Roadtrippers: zastonj = 3 postanke/1 pot, plačano $35,99–59,99/let; road-trip potrebuje: PREVERJENE čase etap, izleti z dejanskim odstopanjem km, načrtovana postanka za hrano pred dolgimi etapami |
+| Travel Anywhere — »Does ChatGPT Make Up Hotels?« ( 27. 8. 2026) | študija virlov | Tow Center ( 3. 2025): napake citiranja Perplexity 37 %, ChatGPT Search 67 %, Grok 3 94 %; primer Weldborough Hot Springs ( 1. 2026, CNN/ABC): AI izmišljen izvir → lastnik gostilne 5 klicev/dan za navodila; JCB ( 1. 2026): »izmišljene odpiralne ure/restavracije« = značilne GenAI napake; »vsak AI hotel ime je LEAD ( namig), ne rezervacija, dokler ga ne potrdita dve platformi« |
+| BBC — »The perils of letting AI plan your next trip« ( 29. 9. 2025, prek iskanja) | raziskava | 37 % uporabnikov AI: premalo informacij; ~33 %: netočnosti |
+| CNET — »Mindtrip's AI Flight Agent« ( 6. 5. 2026) | novice | Agentic letalski agent za »zapletene scenarije« ( multi-city, fleksibilni datumi) — Sabre + PayPal |
+| stardrift.ai — »Travel Apps That Pull Existing Bookings« ( 25. 8. 2026, prek iskanja) | primerjava | »Mindtrip nima povezave z nabiralnikom — vsaka rezervacija ročna«; »načrti ostanejo ne-zavezujoči: imena brez datumov« |
+
+## 19. Kaj številke 2026 povedo — in kje smo GLEDE na njih
+
+**Ugotovitev #1: naš diferenciator je postal GLAVNA industrijska
+zgodba leta 2026.** MonkeyEatingMango ( nov tekmec, spodaj) je zgradil
+celoten marketing okrog telemetrije napak: »43 % dni nosi napako«,
+»81 checkov pred izdajo«, »neozdravljive napake označimo, ne
+skrijemo«, »pokaži delo, vključno s tem, kje šepa«. To je NATANKO
+naša »Prazno ≠ izmišljeno« filozofija — a oni so jo OBJAVILI kot
+študijo z merjenimi številkami, mi pa smo jo izrazili v funkcijah
+( geo-validacija, refine dokazi), ne v javni telemetriji.
+
+| Napaka iz študije ( MEM, 9/2026) | Naš status |
+|---|---|
+| Zaprto ob uri ( 22,7 % dni) | ✅ imamo pravila closed_month/closed_weekday za 5 ključnih destinacij + preventivni fallback + varnostna mreža ( F5.5) |
+| Obisk čez zapiralni čas | ✅ geo-validacija preverja obsege dni ( F5) |
+| Trajno zaprte točke | ✅ naših 22 destinacij je ročno vzdržanih ( vir-podatkov stran); tujih POI ne izmišljujemo |
+| Duplikati ( dan 9+ 21,1 %) | 🟡 naš ranker ne ponavlja znotraj načrta ( enkraten izbor destinacij) — a nimamo eksplicitnega duplikat-checka za uvožene/tuje načrte |
+| Cik-cak dan ( 9,5 %) | ✅ OSRM realne ceste + geo-validacija km/worst ( F5.6) — a nimamo gumba »preuredi dan optimalno« |
+| Sončni vzhod ob poldnevu | 🟡 plan-QA pokriva delno ( urniki časovnih okvirjev) |
+
+**Ugotovitev #2: halucinacije so zdaj KVANTIFICIRANE v javnosti.**
+Tow Center 37/67/94 %, BBC 37 %/33 %, JCB »izmišljene odpiralne ure«,
+Weldborough primer z imenom in priimkom. To ni več »nekateri pravijo«
+— to so citirane številke. Naša stran /vir-podatkov lahko te številke
+citira ( z viri) kot utemeljitev, ZAKAJ računamo deterministično.
+
+**Ugotovitev #3: Mindtripova šibkost ni več samo »flow vodi v
+rezervacijo« — dodali se sta login wall ( tudi za CENIK!) in
+»nikogaršnja hrbtenica« ob kupovanju.** Njegova prednost ostaja
+zapiranje zanke rezervacij ( Sabre/PayPal leta, Stays pogovorno) in
+skupinsko sodelovanje ( skupni klepet + glasovanje za hotele — naša
+F11 ankete so pariteta, brez računov).
+
+**Ugotovitev #4: cene naročnin 2026.** Layla ~$49, Wanderlog $39,99,
+Tripsy $59, Roadtrippers $35,99–59,99, Stippl €24,99, ChatGPT $20/mes.
+Mi: brezplačno z 12 % lokalno provizijo — cenovna prednost ostaja, a
+konkurent MEM zaganja »$4,99 enkrat za izvoz« mikro-monetizacijo
+( nov vzorec, spremljaj).
+
+## 20. Nova konkurenca: MonkeyEatingMango ( filozofski dvojnik)
+
+Prvi tekmec, ki govori NAŠ jezik: brez prijave, generator ( ne klepet),
+iskrene omejitve, telemetrija napak kot marketing, lokalna valuta,
+otroške starosti za tempo. 2 757+ načrtov, 171 držav, 1 188 mest
+( 9/2026). **Kjer mi ostajamo pred njimi:**
+
+| MonkeyEatingMango | Discover Slovenia AI |
+|---|---|
+| Splošen ( 171 držav, enak glob) | Slovenija 22 destinacij z ročno preverjenimi odpiralnimi časi + viri |
+| Brez skupine ( ni sodelovanja, ne glasovanja) | F11 ankete + F7 vodniki + F12 dnevnik BREZ računov na deljeni povezavi |
+| Ni offline | PWA z offline načrti IN offline zemljevidom poti |
+| Ni lokalne tržnice | BookingPanel z realnimi slovenskimi ponudniki ( 12 %) |
+| Validator šele po generaciji | Geo-validacija PRED/PO z dokazom + refine varovalke |
+| $4,99 izvoz | .ics + PDF + tisk zastonj |
+
+**Kaj od njih vzamemo ( iskreno):** objavljeno študijo napak kot vzorec
+komunikacije; otroke/starosti kot vprašanje tempa; »detour z
+dejanskim odstopanjem km« pri road-trip priporočilih.
+
+## 21. Ugotovitve s forumov ( Reddit + HN) — bolečine uporabnikov
+
+1. **Skupinska odločiteljska paraliza** ( Reddit ×2, HN ×3): »20 nas v
+   skupini, vsak ima mnenje, nihče noče odločati«; »težava je
+   dogovoriti SKUPINO o terminu in lokaciji, ne narediti načrta«;
+   »dobra skupinska programska oprema potrebuje glasovanje«. → F11 je
+   PRAVILNA stava; odprta možnost: glasovanje O ZAČETKU ( termin/kraj)
+   še PRED generacijo načrta.
+2. **Pace/tempo ni vprašanje, je pritožba** ( Reddit ×2, r/SlowTravelEurope):
+   Layla »izpljunila 12-dnevni načrt v 10 s, ne da bi vprašala, če
+   bi raje manj mest počasneje«; počasna potovanja = lastna skupnost.
+   → v planner manjka eksplicitno vprašanje tempa ( hitro/umerjeno/počasi).
+3. **Vrstni red mest/dneva NIKDAR ni preverjen** ( Reddit, MEM študija):
+   Mindtrip »ni nikoli podvomil o vrstnem redu«; cik-cak je 8–10 dni
+   na 100 dni NEODVISNO od dolžine. → imamo OSRM+validacijo; manjka
+   en klik »optimalno zaporedje dneva« ( 2-opt na 3–6 postankov).
+4. **Sanjarjenje = pogostejša od potovanj** ( HN): »ljudje uporabljajo
+   travel planner kot beg iz vsakdanjika — pogosteje kot potujejo«.
+   → naši SEO vodniči/destinacijske strani že služijo temu; lahko
+   merimo ( analitika: ogledi destinacij brez generacije).
+5. **Ne zaupaj, dokler ne vidiš vzorca** ( HN ×4): strah pred dark
+   pattern plačilom, pred login wallom, pred »recaptcha podivjal«.
+   → naše brez-račun načrtovalnik + jasne cene je pravilno; ohrani.
+6. **Agregacija rezervacij/iskanj** ( HN ×3, stardrift): »plačal bi za
+   orodje, ki zbiera iskanja namestitev + komentarji več strani«;
+   Gmail = najboljši planner ( potrditve same). → vrzel #5 ostaja
+   odložena ( zasebnost), iskreno zapisano.
+7. **Wanderlog POČASNOST** ( HN): »literally had to create an Android
+   app because their app isn't optimized«. → naša hitrost ( čiste
+   funkcije, nobenih težkih odvisnosti) je konkurenčna prednost;
+   varujmo jo.
+8. **Road-trip plast** ( MEM članek): preverjeni časi etap ✅ ( OSRM),
+   detour z km odstopanja 🟡 ( imamo stops-along-way API — manjka
+   prikaz »+X km izven poti«), načrtovani postanki za hrano pred
+   etapami > 2 h 🟡.
+
+## 22. Idejni backlog F13+ ( prioritiziran po vplivu/strošku)
+
+| # | Ideja | Zakaj ( vir) | Strošek | Odločitev |
+|---|---|---|---|---|
+| 1 | **»Preveri svoj načrt«** — uporabnik prilepi/naloži KATERIKOLI načrt ( ChatGPT/Mindtrip/Layla izvoz, ali naš) → deterministični validator vrne poročilo ( razdalje/realnost, duplikati, odpiralni časi za naših 22, cik-cak dnevi, stroški vožnje) z ŽETONI virov | Reddit: »če že poznaš mesta, rabiš nekoga, ki preveri vrstni red/datume«; HN: bivši vodik zgradil CHECK orodje; MEM: 81 checkov = marketing. Vsa logika ŽE obstaja ( geo-validacija, plan-QA, url-ingest parser, OSRM) | nizek ( API + UI; 0 AI žetonov) | 🟢 glavni kandidat F13 |
+| 2 | **Javna telemetrija validatorja** — stran »Koliko napak ujame naš preverjevalnik« z našimi realnimi številkami + citati javnih študij ( Tow 37/67/94 %, BBC 37/33 %, MEM 43,2 %) z viri | MEM je naredil to za 356 potovanj in postal referenca; mi imamo lastne QA dnevnike ( geo-validacija issues pred/po) | nizek ( statičen vsebina + analitika štetja) | 🟢 spremljava F13 |
+| 3 | **Vprašanje tempa v plannerju** — hitro/umerjeno/počasi ( + otroci/starosti?) vpliva na št. postankov/dan | Reddit ×2 ( Layla 10 s brez vprašanja; r/SlowTravelEurope) | zelo nizek ( 1 vprašanje + parameter v rankerju) | 🟢 lahka zmaga |
+| 4 | **»Optimalno zaporedje dneva«** — en gumb na dnevu: 2-opt preureditev postankov ( deterministično, prikaz prihranka km/min pred/po) | MEM: cik-cak = 8–10/100 dni, »najmanjša napaka, ki obstaja« ( 3 točke v napačnem redu) | nizek ( čista funkcija + prikaz) | 🟢 kandidat |
+| 5 | **Detour prikaz km** — pri »Postanki na poti« dodaj »+X km izven rute« na vsak predlog | MEM road-trip članek: »suggestion needs the actual extra distance attached« | nizek ( OSRM že povezan) | 🟡 naslednji sprint |
+| 6 | **Postanki za hrano na dolgih etapah** — če etapa > 2 h, predlagaj kosilo ( iz naših POI/lokalov) pred najdaljšo etapo dneva | MEM: »realize 6 hours in that lunch should've happened two hours ago« | srednji | 🟡 |
+| 7 | **Glasovanje PRED načrtom** ( termin/kraj) v toku shranjevanja osnutka | HN: odločitve SKUPINE so težava #1 | srednji ( nov UI tok) | 🟡 čaka povpraševanje |
+| 8 | Import rezervacij ( TripIt-style) | HN ×3; stardrift: Mindtrip nima povezave z nabiralnikom | visok + zasebnost | ⏸ ostaja odloženo ( vrzel #5) |
+
+**Sklep F13 raziskave:** forumi potrdijo obe naši stavi — ( 1) skupina
+BREZ računov je pravi bolečinski primanjkljaj ( F11 je zadetek v
+srce), ( 2) poštenost/dokazljivost je postala merljiva industrijska
+valuta ( MEM študija, Tow Center, BBC). Kje zaostajamo po forumih:
+tempo vprašanje, optimalni vrstni red dneva, detour km — vse tri so
+deterministične in poceni. Največja NOVA priložnost: »Preveri svoj
+načrt« ( check orodje za tuje izvoze) — samo poštenje, 0 AI stroškov,
+direktna reklama našega diferenciatorja uporabnikom, ki so že drugje
+dobili svoj načrt.
