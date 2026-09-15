@@ -62,6 +62,10 @@ export type PlannerEventName =
   | "budget_goal_set"
   // F7: shranjen/urejen skupnostni vodnik na deljeni poti (avtor = lastnik)
   | "guide_saved"
+  // F9 "Pogovor z načrtom": zastavljeno vprašanje o načrtu (source
+  // "computed" = deterministični odgovor; "puter"/"z-ai-sdk" = AI fraziranje
+  // dejstev; "fallback" = iskren zavrnitev ugibanja)
+  | "plan_qa_asked"
   // Neuspehi
   | "planner_error"
   | "empty_result"

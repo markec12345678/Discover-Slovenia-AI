@@ -210,7 +210,11 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           itinerary,
-          formData,
+          // P4-8 (isti razred buga kot nav.tagline): formData STATE nima polja
+          // language (vstavi se šele ob generiranju fetch-u) — brez tega je
+          // refine na EN straneh poganjal SL prompt + SL validacijske opombe.
+          // Vstavimo ga iz locale strani, da je refine vedno v jeziku uporabnika.
+          formData: { ...formData, language: isEn ? "en" : "sl" },
           instruction: trimmed,
           history: history.map((h) => h.instruction),
           ...(quick ? { action: quick.action, day: quick.day } : {}),

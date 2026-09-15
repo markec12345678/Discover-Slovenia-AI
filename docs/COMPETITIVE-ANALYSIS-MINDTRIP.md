@@ -37,7 +37,7 @@
 | 6 | Živi cene + rezervacije hotelov/poletov | Layla ( živi cene) / Mindtrip ( Expedia + v-chat letalske karte) | ⏸ **Roadmap** ( zahteva partner API ključe; sandbox/preprod nima pogojev; naša tržnica je lokalni monopol) |
 | 7 | Community layer ( avtorji vodnikov, »Shranjeno pri 23«) | MindTrip hybrid AI + social | ✅ **F7 ( 1.10.0)**: avtor = lastnik poti brez računa ( editToken), korektivni vodnik z »kaj bi storil drugače« — sekcija 11 |
 | 8 | Mobilna aplikacija ( iOS/Android) | Mindtrip app, Layla app | 🟡 **Delno zaprto v F5.7** ( PWA: namestitev na domači zaslon Chrome/Android/iOS, offline načrti + zemljevid; native app še vedno roadmap —dokumentirano odloženo) |
-| 9 | Chat ni »itinerary copilot« ( ločena Q&A + refiner) | MindTrip = chat-first načrtovanje | ⚖️ **Delno zaprto že prej** ( NLP hero + refiner več-turn); chat-first preoblikovanje bi pomenilo redesign zlate poti → meritve naj odločijo |
+| 9 | Chat ni »itinerary copilot« ( ločena Q&A + refiner) | MindTrip = chat-first načrtovanje | ✅ **F9 ( 1.12.0)**: „Vprašaj o načrtu“ — vprašanja o načrtu odgovarja NAJPREJ deterministično (~12 namenov, SL+EN, iste čiste funkcije kot prikaz), neznana pa AI IZ LISTA DEJSTEV (strogo prizemljeno); iskren fallback ne ugiba; zgodovina se čisti ob spremembi načrta — sekcija 13 |
 | 10 | Ravne črte med točkami ( nižje) brez road routing | MindTrip približno enako ( ocene) | ✅ **F5.6 implementirano** ( OSRM realne razdalje/časi/geometrija; hevristika je pretiravala čas na avtocestah in podcenjevala km v gorah — izmerjeno; zemljevid zdaj riše prave ceste; diskutabilnost odločena zMeritvami) |
 
 ## 4. Kaj je Faza 5 dostavila ( 7 funkcij, vse na isti poštenosti)
@@ -317,3 +317,42 @@ matcherju.
 **Sklep F8:** vrzel #1 zaprta na naš način — AI za branje, determinizem
 za odločanje, iskrenost za omejitve. "Start Anywhere" zdaj sprejema
 povezave IN slike; obe poti končata v istem preverljivem ujemanju.
+
+---
+
+# F9 (september 2026) — Pogovor z načrtom
+
+> Vrzel #9 iz sekcije 3: MindTrip je "chat-first" (pogovor Z načrtom),
+> naša NLP hero + multi-turn refinersta pokrila generacijo in SPREMEMBE,
+> manjkala pa je Q&A plast (vprašanja O načrtu). Sveža spletna
+> raziskava v tem sandbox oknu ni bila mogoča (web_search 429 — ista
+> storitev kot VLM prejšnje seje); ocena MindTrip-ovega jedra temelji na
+> dokumentirani raziskavi iz sekcije 8 ("Start chatting", vizualni
+> načrti, real-world omejitve) — iskreno zapisano.
+
+## 13. F9 odgovor na MindTrip "chat-first"
+
+| MindTrip chat | Naš odgovor (F9, 1.12.0) |
+|---|---|
+| Klepet kot edini vmesnik (vprašanja IN ukazi skupaj) | DVE jasno ločeni plasti: "Vprašaj o načrtu" (Q&A) + "Prilagodi itinerer" (ukazi) — vprašanje ≠ ukaz; uporabnik vedno ve, kaj se bo spremenilo |
+| Odgovori "zaupanja vredni" | ŽETON VIRA pri vsakem odgovoru: "izračunano" (deterministično, brez AI) / "AI · samo fraziranje dejstev" / "brez ugibanja" (iskren zavrnitev) |
+| AI izumlja številke | Številke PRIHAJAJO iz istih čistih funkcij kot prikaz (geo-validacija km, stroški AMZS/DARS, obsegi dni); AI dobi LIST DEJSTEV s strogim navodilom "odgovarjaj IZKLJUČNO iz dejstev" |
+| Deluje samo z AI | ~12 namenov deluje BREZ AI žetonov (kot hitre akcije): vožnja/km, stroški, najbolj natrpan dan, posamezen dan, vreme, pakiranje, opozorila, postanki, družina, pomoč |
+| Vreme iz klepeta | Živa Open-Meteo napoved PORAVNANA z datumi potovanja (samo znotraj ~16 dni — sicer pošteno "ocene načrta, ne živa napoved") |
+| Zastareli odgovori po spremembi | Zgodovina klepeta se POČISTI ob spremembi načrta — odgovori vedno veljajo za trenutni načrt |
+| Ne preverja dneva vprašanja | "Kaj je na dan 7?" na 3-dnevnem načrtu → iskrena popravka ("dneva 7 ni"), ne izmišljen dan |
+
+**Bonus odkritje med verifikacijo:** latentni mešani-jezikovni bug
+(isti razred kot nav.tagline iz 1.10.1) — `formData` state v plannerju
+nima polja `language`, zato sta ask IN obstoječi refine na EN straneh
+poganjala SL poti. Odkrit z browser E2E (EN odgovori so prišli v
+slovenščini), popravljen pri obeh potrošnikih.
+
+**Merjenje:** `plan_qa_asked` (intent, source, locale, via) —
+`source=computed` delež pove, koliko vprašanj pokrijeta deterministični
+nameni brez AI; `intent` razkrije, kaj uporabnike res zanima.
+
+**Sklep F9:** vrzel #9 zaprta na naš način — pogovor, v katerem AI LE
+sfrazi, determinizem računa, vsak odgovor nosi vir, neznano pa se
+iskreno zavrne. MindTrip-ova "chat-first" prednost je zdaj pariteta;
+naša razlika ostaja: dokazljivost vs. zaupanje.

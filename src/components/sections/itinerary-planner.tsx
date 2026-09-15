@@ -86,6 +86,7 @@ import { addSavedTrip, deriveSavedTripName } from "@/lib/my-trips-storage";
 import { cn } from "@/lib/utils";
 import { BookingPanel, type BookingData } from "@/components/sections/booking-panel";
 import { ItineraryRefiner } from "@/components/sections/itinerary-refiner";
+import { PlanCopilot } from "@/components/plan-copilot";
 import { PlannerDayNav } from "@/components/planner-day-nav";
 import { ItineraryQualityCard } from "@/components/itinerary-quality-card";
 import { ItineraryEventsSection } from "@/components/itinerary-events";
@@ -1757,6 +1758,13 @@ export function ItineraryPlanner() {
                     }}
                   />
                 )}
+
+                {/* F9 "Pogovor z načrtom" (MindTrip chat-first pariteta, naša
+                    pot): vprašanja o načrtu odgovarja NAJPREJ deterministično
+                    (iste čiste funkcije kot prikaz), AI pa LE sfrazi list
+                    dejstev. Ukazi za SPREMEMBE ostanejo v refinerju spodaj —
+                    vprašanje ≠ ukaz, obe plasti sta jasno ločeni. */}
+                <PlanCopilot itinerary={itinerary} formData={formData} />
 
                 {/* Multi-turn AI refiner — uporabnik naravnojezično spreminja itinerer */}
                 {/* P0-4: sidro za mobilno bližnjico "Prilagodi" (PlannerDayNav) */}

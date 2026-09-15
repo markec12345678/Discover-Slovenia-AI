@@ -7,6 +7,104 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.12.0] — 2026-09-16
+
+### Dodano (F9 — POGOVOR Z NAČRTOM: vprašanja o načrtu, odgovori izračunani)
+
+> Odgovor na MindTrip-ovo "chat-first" prednost (vrzel #9 iz sekcije 3
+> konkurenčne analize — ⚖️ delno zaprta prek NLP hero + multi-turn
+> refinerja; ta sprint doda manjkajočo Q&A plast). Sveža spletna
+> raziskava v tem sandbox oknu NI bila mogoča (z-ai web_search 429 —
+> ista storitev kot VLM prejšnje seje); analiza temelji na obstoječi
+> dokumentirani raziskavi (6 poizvedb + 2 globoka branja, sekcija 1) —
+> iskreno zapisano.
+
+- **`src/lib/plan-facts.ts`** (čista funkcija): deterministični LIST
+  DEJSTEV o načrtu — km/minute PO DNEVIH iz geo-validacije (ISTA plast
+  kot prikaz), stroški vožnje iz `computeTripDriveCosts` (F5.3, AMZS/
+  DARS), seštevki cen atrakcij, obsegi dni (vožnja + aktivnosti),
+  najbolj natrpan / najlažji dan, opozorila o zaprtju (F5.5), metoda
+  razdalj razkrita ("osrm" / "heuristic"). + tekstovni izpis lista za
+  AI kontekst (`renderFactsSheet`).
+- **`src/lib/plan-qa.ts`** (čista funkcija): ujemanje NAMENOV vprašanj
+  (SL+EN, diakritika-neobčutljivo, vrstni red po specifičnosti; sklici
+  na dneve: "dan 2", "2. dan", "zadnji dan", "day 3"): ~12 namenov —
+  vožnja/km (skupaj + po dnevu), stroški (skupaj + na osebo + vožnja +
+  primerjava s ciljem), najbolj natrpan dan, vreme (ocena načrta ALI
+  živa napoved), posamezen dan, pakiranje (F6.1 z razlogi), opozorila
+  izvedljivosti, postanki, družinska ustreznost (bestFor "družina"),
+  pomoč, dan izven obsega (iskrena popravka: "načrt ima samo 3 dni —
+  dneva 7 ni"). Slovenska DVOJINA pravilna ("2 postanka", "na 2 dni").
+- **`POST /api/itinerary/ask`**: vrstni red obravnave — (1)
+  DETERMINISTIČNO (namen → odgovor iz dejstev; deluje brez AI žetonov,
+  kot hitre akcije; vir `computed`); (2) AI SAMO če namen ni prepoznan:
+  vprašanje + list dejstev → LLM s STROGIM prizemljenim sistemskim
+  navodilom (odgovarjaj IZKLJUČNO iz dejstev, če ni odgovora povej,
+  ne predlagaj novih destinacij, max 4 povedi, razkrivaj meje); (3)
+  iskren fallback ob nedosegljivem AI ("ne bom ugibal" + primeri
+  vprašanj). Vremenski namen: živa Open-Meteo napoved, poravnana z
+  datumi potovanja (samo znotraj ~16-dnevnega horizonta — sicer
+  pošteno povedano). Rate limit 20/10 min; validacija (400 za
+  manjkajoč itinerer / predolgo vprašanje).
+- **UI `src/components/plan-copilot.tsx`**: kartica "Vprašaj o načrtu"
+  nad refinerjem na /nacrtuj (in /en/nacrtuj) — mehurčki vprašanj/
+  odgovorov, ŽETON VIRA pri vsakem odgovoru (emerald "izračunano" /
+  amber "AI · samo fraziranje dejstev" / siv "brez ugibanja"), predlogi
+  vprašanj kot žetoni (klik = vprašanje), input z Enter, `role="log"`
+  + `aria-live="polite"`, `max-h-80` z drsenjem. POŠTENOSTNA MEHANIKA:
+  zgodovina klepeta se POČISTI, ko se načrt spremeni (refine/nova
+  generacija) — odgovori vedno veljajo za trenutni načrt (vidno
+  preverjeno: hitra akcija "Manj vožnje" → spredaj so spet predlogi).
+- **Razločitev vprašanje ≠ ukaz**: vprašanja odgovarja PlanCopilot,
+  SPREMEMBE načrta še vedno ItineraryRefiner (ukazi) — dve plasti,
+  jasno ločeni (MindTrip ju meša v enem chatu).
+- **Analitika**: `plan_qa_asked` (`intent`, `source`, `locale`, `via`
+  input/chip) — whitelist client + strežnik + docs/ANALYTICS-EVENTS.md;
+  `source=computed` delež = pokritost determinističnih namenov brez
+  AI žetonov.
+
+### Popravljeno
+
+- **Mešanje jezikov na EN straneh (isti razred buga kot nav.tagline v
+  1.10.1)**: `formData` STATE v plannerju nima polja `language`
+  (vstavi se šele ob generiranju fetch-u) → `POST /api/itinerary/ask`
+  IN obstoječi `POST /api/itinerary/refine` sta na EN straneh poganjala
+  SL poti (SL odgovori, SL prompti, SL validacijske opombe). Popravljen
+  pri OBEH potrošnikih: fetch body vstavi `language` iz locale strani
+  (itinerary-refiner.tsx, plan-copilot.tsx). Refine na EN straneh je
+  imel ta bug od prej (nerazkrit, ker se je EN verifikacija prej
+  osredotočala na prikaz, ne na refine pot) — zdaj odkrit in popravljen.
+
+### Verifikacija (F9)
+
+- tsc: 0 napak v src/; eslint: 0 napak (novi/posodobljeni fajli).
+- Čista funkcija (17 vprašanj SL+EN): vsi nameni ujeta pravilno;
+  "Kaj je na dan 7?" na 2-dnevnem načrtu → iskrena popravka
+  "dneva 7 ni"; EN "What should I pack?" ujet (po popravku vzorca);
+  nesmisel ("Kateri film je najboljši?") → null → AI pot.
+- API (curl): SL deterministično (busiest), EN deterministično
+  (cost_total), živa napoved (tripStartDate +4 dni: "Dan 1: delno
+  oblačno, 19.6 °C · 18 % padavin" — resnični Open-Meteo), neznano
+  vprašanje → AI 429 (sandbox) → iskren fallback 200, manjkajoč
+  itinerer → 400.
+- Browser E2E (agent-browser): SL /nacrtuj — generacija → kartica se
+  izriše, žeton predloga "Kateri dan je najbolj natrpan?" → odgovor z
+  žetonom "izračunano"; prosti vnos "Koliko km in ur vožnje imamo
+  skupaj?" → "Celotna pot: ~285 km, ~5 h 15 min na 3 dnevi …" (ocena,
+  haversine × 1.3 razkrito); nesmisel → žeton "brez ugibanja" + iskren
+  odgovor; hitra akcija "Manj vožnje" → zgodovina se počisti (predlogi
+  spet spredaj). EN /en/nacrtuj — pred popravkom so bili odgovori SL
+  (bug!) → po popravku čisti EN ("The busiest day is day 3: 2 stops
+  … 'Slower pace'"). 390 px: 0 horizontalnega preliva (docW=winW=390),
+  kartica 358 px, klepet 324 px, 0 notranjih prelivov; 0 konzolnih
+  napak.
+- Iskrena omejitev: živi AI klic (pot 2) je v tem oknu stalno 429 —
+  potrjena z ekvivalentnim curl testom do meje AI klica + iskrenim
+  fallbackom (pot 3) v browserju; ponovna živa verifikacija AI poti
+  priporočena, ko storitev spet sprejema (kot pri F8).
+
+---
+
 ## [1.11.0] — 2026-09-15
 
 ### Dodano (F8 — ZAČNI SLIKO: fotografija/screenshot → destinacije → načrt)

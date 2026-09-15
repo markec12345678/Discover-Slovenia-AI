@@ -45,6 +45,7 @@
 | `packing_item_checked` | odkljuk predmeta na pametnem pakirnem seznamu (F6.1) | vsak odkljuk (le smer `true`) | `category`, `method` (`forecast`/`season`), `items` | angažma s seznamom; `method` pove, iz katere plasti (napoved vs sezona) uporabnik resno pakira |
 | `budget_goal_set` | nastavitev/primerjava osebnega proračunskega cilja (F6.2) | vsaka potrditev cilja | `goal_eur`, `plan_total_eur`, `group_size` | proračunska angažma; razlika goal−plan pove cenovno občutljivost obiskovalcev |
 | `guide_saved` | shranjen/urejen skupnostni vodnik na deljeni poti (F7) | vsako uspešno oddajanje (upsert) vodnika | `tips_count`, `has_verdict`, `day_count`, `lang`, `is_new` | avtorstvo skupnosti; `has_verdict` meri, koliko avtorjev piše korektivni »kaj bi storil drugače« (naš diferencator) |
+| `plan_qa_asked` | zastavljeno vprašanje v „Vprašaj o načrtu“ (F9) | vsako poslano vprašanje (vnos ali žeton predloga) | `intent` (npr. `busiest`, `cost_total`, `day_plan`, `out_of_range`, `ai`, `unknown`, `error`), `source` (`computed`/`puter`/`z-ai-sdk`/`fallback`/`error`), `locale`, `via` (`input`/`chip`) | pogovorna angažma nad načrtom (MindTrip chat-first pariteta); `source=computed` delež pove, koliko vprašanj pokrijeta deterministični nameni BREZ AI žetonov; `intent` pove, kaj uporabnike zanima (vožnja, stroški, natrpanost …) |
 
 ## Neuspehi in opustitvi
 

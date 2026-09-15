@@ -47,6 +47,8 @@ const VALID_EVENTS = new Set([
   "budget_goal_set",
   // F7: shranjen/urejen skupnostni vodnik na deljeni poti
   "guide_saved",
+  // F9 "Pogovor z načrtu": zastavljeno vprašanje o načrtu
+  "plan_qa_asked",
   // Neuspehi
   "planner_error",
   "empty_result",
