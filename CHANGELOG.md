@@ -41,6 +41,13 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 - **`GET /api/ai-health`**: pošteno poročilo PO PROVIDERJU (konfiguriran /
   živ klic / model / odzivni čas / kratek opis napake brez skrivnosti);
   `active` = prvi živ provider v verigi.
+- **THINKING proračuni (naučeno iz živega testa)**: gemini-3.6-flash je
+  thinking model — izhodni proračun se deli z notranjim razmišljanjem
+  (izmerjeno: trivialen poziv = 154 thinking + 7 vidnih žetonov). Zato:
+  tla 512 žetonov za Gemini klice v ai-client, `AI_MAX_TOKENS` v ask
+  600 → 1024, vision ekstraktor 2048; `reasoning_effort: "low"` za
+  mehanične naloge (health sonda, fraziranje v ask, ekstrakcija imen) —
+  podprtost parametra živo preverjena.
 - **PlanCopilot**: vir "gemini" dobi isti amber "AI · fraziranje dejstev"
   žeton kot puter/z-ai (širitev union tipa).
 - **Env profesionalno (povsod)**: `.env` (lokalno, gitignored) +
@@ -55,16 +62,25 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ### Iskrene omejitve (zapisano med verifikacijo)
 
+- **ŽIVI test ključa IZ GITHUB RUNNERJA (US, Azure centralus): 4/4 ZELENO**
+  (workflow „AI Provider Smoke Test“, zagon 2026-09-15): (1) chat completion
+  HTTP 200, vsebina „SLOVENIJA-OK“, usage 16+7/177 (thinking 154);
+  (2) jsonMode `response_format` HTTP 200 z veljavnim JSON — generacijske
+  rute so na Geminiju VARNE; (3) vision `image_url` HTTP 200 — F8 slikovni
+  vnos ima dokazano produkcijsko pot; (4) `reasoning_effort: "low"`
+  PODPRT. Prvi zagon je odkril umik gemini-2.5-flash (404 za nove ključe)
+  in thinking proračune (max_tokens 16 → prazna vsebina) — oba popravljena
+  v istem sprintu (model 3.6 + tla 512).
 - Sandbox egress (Hong Kong) je GEO-BLOKIRAN za Gemini API (veljavni
   modeli → HTTP 400 `User location is not supported`; ključ sam je
   VELJAVEN — avtentikacija uspe, seznam modelov pride skozi). Lokalna
-  verifikacija zato dokazuje VERIGO in fallback (ai-health iskreno
-  pokaže geo-napako; generacija pade na z-ai/determinizem), ŽIVI test
-  ključa pa poteče iz GitHub runnerja (US) prek ai-smoke.yml — rezultat
-  zapisan v delovnem dnevniku.
+  verifikacija zato dokazuje VERIGO in fallback: ai-health iskreno pokaže
+  geo-napako, generacija pade na z-ai/determinizem (server log: „Gemini
+  napaka: 400 → nadaljujemo na Puter/z-ai“ → fallback itinerer se izriše),
+  ingest-image vrne iskren 502 (preverjeno v brskalniku, SL sporočilo).
 - V tem sandbox oknu je bil z-ai VLM/chat še vedno 429 (rate limit
   celotnega okna, kot v F8/F9) — fallback poti so bile preverjene
-  prek determinističnih plastí in simulacij.
+  prek determinističnih plasti in živih brskalniških E2E.
 - `gemini-2.5-flash` na novem ključu vrača 404 ("no longer available to
   new users") — zato je privzeti model 3.6; kdorkoli preglasi
   `GEMINI_MODEL` naj uporabi trenutno veljavno ime.

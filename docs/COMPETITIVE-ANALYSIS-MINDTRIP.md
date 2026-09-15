@@ -378,8 +378,15 @@ naša razlika ostaja: dokazljivost vs. zaupanje.
 | "Zaupaj nam" | Privzeti model javen (`gemini-3.6-flash`), odkrita odločitev (2.5-flash umaknjen za nove ključe — živi 404), skrivnost nikoli v repozitoriju |
 
 **Iskrena omejitve:** sandbox egress (HK) je geo-blokiran za Gemini
-API (400 `User location is not supported`); živi test ključa teče iz
-GitHub runnerja (US) prek `.github/workflows/ai-smoke.yml`, na
-Vercel/Render pa se nastavi `GEMINI_API_KEY` kot strežniški env.
+API (400 `User location is not supported`) — a živi test IZ GITHUB
+RUNNERJA (US, Azure centralus, 2026-09-15) je **4/4 ZELEN**: chat
+completion (200, „SLOVENIJA-OK"), jsonMode response_format (200,
+veljaven JSON — generacijske rute varne), vision image_url (200 — F8
+produkcijska pot), reasoning_effort podprt. Ob tem odkrito zapisana
+izkušnja: gemini-2.5-flash je umaknjen za nove ključe (404) → privzeti
+model gemini-3.6-flash; thinking modeli delijo izhodni proračun z
+razmišljanjem (154 od 177 žetonov na trivialnem pozivu) → tla 512
+žetonov v ai-client. Na Vercel/Render se nastavi `GEMINI_API_KEY` kot
+strežniški env (navodila v .env.example / DEPLOYMENT.md).
 **Sklep F10:** diferenciator "dokazljivost" se razširi na plast, ki jo
 konkurenti skrivajo — tudi pod kapoto je videti, kaj se dogaja.

@@ -44,6 +44,10 @@ export interface AICompletionOptions {
   temperature?: number;
   jsonMode?: boolean;
   maxTokens?: number;
+  /** Gemini thinking napor (podprt prek compat plasti — živo preverjeno z
+   *  GitHub runnerja 2026-09-15). "low" pripraden za majhne/mehanične klice
+   *  (health, fraziranje, prevodi); kompleksna generacija pusti privzeto. */
+  reasoningEffort?: "low" | "medium" | "high";
 }
 
 export interface AIVisionResult {
@@ -178,6 +182,9 @@ export async function generateCompletion(
         messages: mapped,
         temperature,
         max_tokens: geminiMaxTokens,
+        ...(options?.reasoningEffort
+          ? { reasoning_effort: options.reasoningEffort }
+          : {}),
         ...(options?.jsonMode
           ? { response_format: { type: "json_object" as const } }
           : {}),
@@ -258,7 +265,9 @@ export async function generateVisionCompletion(
   imageDataUrl: string,
   options?: { maxTokens?: number }
 ): Promise<AIVisionResult | null> {
-  // Tla 512 (isti razlog kot pri generateCompletion — thinking proračun)
+  // Tla 512 (isti razlog kot pri generateCompletion — thinking proračun);
+  // reasoning_effort "low": ekstrakcija imen je mehanična naloga, globoko
+  // razmišljanje bi le poravnilo proračun (podprtost živo preverjena).
   const maxTokens = Math.max(options?.maxTokens ?? 1024, 512);
 
   // === 1. GEMINI (image_url del v OpenAI-compat formatu) ===
@@ -277,6 +286,7 @@ export async function generateVisionCompletion(
           },
         ],
         max_tokens: maxTokens,
+        reasoning_effort: "low",
       });
       const content = completion.choices[0]?.message?.content?.trim();
       if (content) {
@@ -392,6 +402,7 @@ export async function checkAIHealth(): Promise<AIHealthReport> {
         })),
         temperature: 0,
         max_tokens: 512,
+        reasoning_effort: "low",
       })
     : Promise.reject(new Error("not-configured"));
 

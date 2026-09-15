@@ -179,7 +179,9 @@ Odgovor (samo iz dejstev zgoraj):`;
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      { temperature: 0.3, maxTokens: AI_MAX_TOKENS }
+      // F10: reasoningEffort "low" — fraziranje dejstev je mehanična naloga;
+      // globoko razmišljanje bi le poravnilo proračun (Gemini thinking).
+      { temperature: 0.3, maxTokens: AI_MAX_TOKENS, reasoningEffort: "low" }
     );
 
     const content = result?.content?.trim();
