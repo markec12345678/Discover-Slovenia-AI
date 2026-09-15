@@ -86,6 +86,34 @@ export async function register() {
       );
     }
 
+    // Startup SHEMA migracija — F12 (1.16.0): ustvari tabelo TripDiaryEntry
+    // (skupinski potni dnevnik) na obstoječih bazah. Idempotentna (IF NOT
+    // EXISTS), additive-only, fail-open — skupna zastavica. Glej
+    // src/lib/trip-diary-migration.ts.
+    try {
+      const { migrateTripDiaryTable } = await import(
+        "./lib/trip-diary-migration"
+      );
+      const r = await migrateTripDiaryTable();
+      if (r.tablesCreated.length > 0) {
+        console.log(
+          `[instrumentation] Shema migracija (F12 dnevnik): ustvarjene ` +
+            `tabele [${r.tablesCreated.join(", ")}] (${r.dialect})`
+        );
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija (F12 dnevnik): tabel ni bilo " +
+            "mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
+        );
+      }
+    } catch (error) {
+      // Fail-open: migracija NE sme podreti zagona strežnika.
+      console.error(
+        "[instrumentation] Shema migracija (F12 dnevnik) ni uspela:",
+        error,
+      );
+    }
+
     // Startup SHEMA migracija — SOCIALNA PLAST deljenih potovanj (P1 + F7,
     // 1.15.0): Neon baza je bila sinhronizirana v Fazi 4f — vsi kasnejši
     // stolpci (SavedItinerary.formData/editTokenHash/userId) in tabele
