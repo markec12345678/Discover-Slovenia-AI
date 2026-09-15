@@ -2,14 +2,11 @@ import { NextResponse } from "next/server";
 import { checkAIHealth } from "@/lib/ai-client";
 import { rateLimit } from "@/lib/rate-limit";
 
-// GET /api/ai-health — zdravje AI providerjev (F10: Gemini → Puter → z-ai).
-// P7-C2 (F5.1): prej BREZ rate limita — vsak javni GET je izvedel pravi AI
-// completion (neomejen strošek). Zdaj 12 klicev / 10 min na IP.
-//
-// Odgovor je POŠTEN po providerjih: konfiguriranost, živ klic, model,
-// odzivni čas in kratek opis napake (brez skrivnosti). Gemini ima sicer
-// circuit breaker v generacijski verigi, a health preizkus BEZ breakerja
-// teče — uspeh ga pošteno resetira (detektor okrevanja).
+// GET /api/ai-health — zdravje AI providerjev (1.14.0: veriga
+// OpenRouter → Gemini → Puter → z-ai). Odgovor je POŠTEN po providerjih:
+// konfiguriranost, živ klic, model, odzivni čas in opis napake (brez
+// skrivnosti). OpenRouter/Gemini circuit breakerja health BEZ obvoza
+// resetira (detektor okrevanja). Rate limit: 12 klicev / 10 min na IP.
 export async function GET(request: Request) {
   const limited = rateLimit(request, {
     limit: 12,
@@ -23,6 +20,7 @@ export async function GET(request: Request) {
     status: report.active === "none" ? "down" : report.active === "z-ai-sdk" ? "fallback" : "ok",
     provider: report.active,
     providers: {
+      openrouter: report.openrouter,
       gemini: report.gemini,
       puter: report.puter,
       zai: report.zai,

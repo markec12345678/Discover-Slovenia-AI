@@ -7,6 +7,80 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.14.0] — 2026-09-15
+
+### Dodano (1.14.0 — OPENROUTER KOT PRIMARNI AI PROVIDER + OPS SUITE)
+
+> Uporabnik je priskrbel še OpenRouter API ključ (free tier) kot REZERVO
+> oz. primarnega: "eden openrouter naj bo primarni, ostala dva ko
+> routeru zmanjka" — in zahteval čim več skript + žive teste. Odgovor:
+> veriga OpenRouter → Gemini → Puter → z-ai z živo izbranimi :free
+> modeli + 12-skriptna DevOps suite (`scripts/ops/`), ki avtomatizira
+> VSE, kar se da avtomatizirati (GitHub secreti prek sealed boxa, živi
+> CI klici, Vercel/Render env set z merge zaščito, doctor revizija).
+
+- **`src/lib/ai-client.ts` — NOVA veriga OPENROUTER → GEMINI → PUTER →
+  z-ai → fallback.** OpenRouter prek OpenAI-compat API (paket `openai`
+  že odvisnost — 0 novih namestitev). Deluje iz VSAJ regije (razliko od
+  Gemini API, ki iz sandboxa vrača 400 geo-blok / 429 kvoto) — RAZVOJNI
+  SANDBOX SEDAJ IMA ŽIVO AI POT (dokazano: health `provider:
+  "openrouter"` latencija ~20 s).
+- **Živo izbrani :free modeli** (testirano 2026-09-15 z realnim
+  itinererJSON pozivom): primarni `nex-agi/nex-n2.5-pro:free` (čist
+  JSON + odlična slovenščina — "Dnevni pobeg na Bled", 436 žetonov),
+  notranji fallback `nex-agi/nex-n2.5-mini:free`. Zavrnjeni po živih
+  testih: `openrouter/free` auto-router (izbral content-safety
+  klasifikator — nepredvidljivo), `google/gemma-4-*:free` (geo-blok —
+  OR posreduje lokacijo odjemalca Google AI Studiu),
+  `google/gemini-2.5-flash:free` (umaknjen, 404), `z-ai/glm-5.2:free`
+  (provider error), `nemotron-3-super/ultra` (leaka razmišljanje v
+  vsebino + overload). VISION na :free NEDELJUJE (vsi vision modeli →
+  provider error) — F8 slikovni vnos ostaja na Gemini → z-ai verigi.
+- **DNEVNA MEJA free tierja (~50 zahtev/dan brez kredita)** — živo
+  odkrita med E2E testom (429 `free-models-per-day`): aplikacija se
+  ravna NATANKO po uporabnikovi naročbi — "ostala dva, ko routeru
+  zmanjka": veriga pošteno pade na Gemini (produkcija US/EU) ali z-ai
+  (sandbox), končno determinističen fallback (E2E dokazano: fallback
+  itinerer se izriše). Documented tudi izhod: $10 kredita odpre
+  1000/dan.
+- **Circuit breaker za OpenRouter** (3 napake → 5 min odmora, health
+  resetira) + atribucijska glavi `HTTP-Referer`/`X-Title` (uradna OR
+  priporočila). Health (`/api/ai-health`) zdaj poroča po VSEH štirih
+  providerjih.
+- **`scripts/ops/` — 12-skriptna DevOps suite** (+ README s tabelo,
+  varnostjo in iskrenim "česa skripta ne more"): `lib.sh` (skupni
+  helperji, maskiranje tajnosti), `openrouter-verify.sh` (4 živi testi),
+  `gemini-verify.sh` (poštena interpretacija geo-bloka 400/429),
+  `github-secret-set.sh` (libsodium sealed box — UPORABljENO za novi
+  secret OPENROUTER_API_KEY), `github-secret-verify.sh`,
+  `github-workflow-run.sh` (dispatch + poll + koraki jobov),
+  `vercel-env-set.sh` (idempotenten upsert na 3 environmente),
+  `render-env-set.sh` (MERGE ZAŠČITA — Render PUT nadomesti celoto,
+  skripta prebere obstoječe in pošlje spojeno), `dev-health.sh`,
+  `deploy-check.sh`, `doctor.sh` (8-plastna revizija),
+  `setup-all.sh` (orkester).
+- **`.github/workflows/ai-smoke.yml`** — nov job `openrouter` (key-info
+  veljavnost, chat, jsonMode, sonda fallback mini) pred gemini jobom;
+  429 `free-models-per-day` se obravnava POŠTENO (opozorilo — ključ je
+  dokazano veljaven prek key-info 200 + živih dokazov, ne napaka).
+- **Env/docs**: `.env` + `.env.example` (OPENROUTER sekcija z navodili
+  za pridobitev/nastavitev + realne omejitve free tierja),
+  `docs/DEPLOYMENT.md` (matrika: primarni OR / sekundarni GEMINI /
+  terciarni PUTER), `SECURITY.md` (ključ nikoli v repu, maskiranje,
+  sealed box), CHANGELOG.
+- **E2E verifikacija**: generacija itinererja skozi celo verigo v
+  brskalniku — po izčrpani dnevne kvote se iskreno izriše fallback
+  itinerer (0 napak); `/api/ai-health` javi `openrouter` aktivega;
+  OpenRouter full verify (4/4 testi) zelen iz sandboxa.
+
+### Popravljeno
+
+- Health ruta: skripte/README uporabljajo pravilen `/api/ai-health`.
+- `plan-copilot.tsx`: vir AI odgovora razširjen z `"openrouter"`
+  (badge enak kot ostali AI providerji — "AI · samo fraziranje dejstev").
+
+---
+
 ## [1.13.0] — 2026-09-16
 
 ### Dodano (F10 — PRODUKCIJSKA AI PLAST: Gemini v verigi providerjev)

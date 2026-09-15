@@ -390,3 +390,35 @@ razmišljanjem (154 od 177 žetonov na trivialnem pozivu) → tla 512
 strežniški env (navodila v .env.example / DEPLOYMENT.md).
 **Sklep F10:** diferenciator "dokazljivost" se razširi na plast, ki jo
 konkurenti skrivajo — tudi pod kapoto je videti, kaj se dogaja.
+
+---
+
+# 1.14.0 (september 2026) — OpenRouter kot primarni + ops avtomatizacija
+
+## 15. OpenRouter primarni: "kaj se zgodi, ko zmanjka kvote" — odgovor ŽE OB NAMESTITVI
+
+| Vprašanje konkurenta | Naš odgovor (1.14.0) |
+|---|---|
+| MindTrip: plačljiva infrastruktura, uporabnik ne vidi meja | VERIGA 4 providerjev: OpenRouter (free) → Gemini (free) → Puter → z-ai → determinističen fallback. "Ko routeru zmanjka" (dnevna meja ~50/dan) prevzame Gemini/z-ai — NATANKO uporabniška naročba |
+| AI odpoved v razvoju = blokiran tim | OpenRouter deluje iz VSAJ regije (ni Google geo-bloka) — razvojni sandbox ima ŽIVO AI pot (health: `provider: openrouter`) |
+| Deployment "zaupaj in upaj" | 12-skriptna ops suite (`scripts/ops/`): živi testi ključev, GitHub secreti prek sealed boxa, dispatch CI + čakanje rezultata, Vercel/Render env set z MERGE zaščito, 8-plastni doctor |
+| Katere modele uporabljate in zakaj | JAVNO dnevnik živih testov: `nex-agi/nex-n2.5-pro:free` izbran po realnem itinererJSON pozivu ("Dnevni pobeg na Bled", čista slovenščina, 436 žetonov); zavrnjeni IN Z RAZLOGOM: openrouter/free (izbral content-safety klasifikator), gemma-4:free (geo-blok posredovan), glm-5.2:free (provider error), nemotron (leaka razmišljanje) |
+
+**Iskrena odkritja (živo, 2026-09-15):**
+- OpenRouter :free vision modeli NEDELJUJEJO (vsi provider error) — F8
+  slikovni vnos ostaja na Gemini (produkcija) + z-ai VLM (sandbox).
+- DNEVNA MEJA free tierja je REALNA: ~50 zahtev/dan brez kredita
+  (429 `free-models-per-day`); E2E test je dokazal, da aplikacija takrat
+  pošteno pade po verigi do determinističnega fallbacka (itinerer se
+  izriše, 0 napak). Izhod ob rasti: $10 kredita → 1000/dan.
+- Google za geo-blokirane regije kdaj vrača 429 "kvota" namesto 400
+  "location" — gemini-verify.sh obe varianti obravnava pošteno
+  (ključ veljaven, regija/kvota blokirana, CI je avtoriteta).
+- PyNaCl sealed box recept za GitHub secret-e ima past
+  (`base64.b64encoder` ne obstaja) — popravljeno in uporabljeno
+  ŽIVE za nastavitev OPENROUTER_API_KEY.
+
+**Sklep 1.14.0:** "Poštenost kot znamka" se razširi na OPERACIJE —
+namestitev, testiranje in vzdrževanje AI plasti sta avtomatizirani do
+meje, ki jo postavljajo samo uporabnikovi žetoni (Vercel/Render), vse
+drugo pa poganja en ukaz (`scripts/ops/setup-all.sh`).

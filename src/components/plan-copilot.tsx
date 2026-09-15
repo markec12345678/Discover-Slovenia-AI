@@ -40,9 +40,15 @@ interface PlanCopilotProps {
 interface ChatMessage {
   role: "user" | "assistant";
   text: string;
-  /** "computed" = čisto izračunano · "gemini"/"puter"/"z-ai-sdk" = AI iz
-   *  dejstev · "fallback" = iskren zavrnitev ugibanja */
-  source?: "computed" | "gemini" | "puter" | "z-ai-sdk" | "fallback";
+  /** "computed" = čisto izračunano · "openrouter"/"gemini"/"puter"/
+   *  "z-ai-sdk" = AI iz dejstev · "fallback" = iskrena zavrnitev ugibanja */
+  source?:
+    | "computed"
+    | "openrouter"
+    | "gemini"
+    | "puter"
+    | "z-ai-sdk"
+    | "fallback";
   ts: number;
 }
 
@@ -93,7 +99,12 @@ function sourceBadge(
         "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
     };
   }
-  if (source === "gemini" || source === "puter" || source === "z-ai-sdk") {
+  if (
+    source === "openrouter" ||
+    source === "gemini" ||
+    source === "puter" ||
+    source === "z-ai-sdk"
+  ) {
     return {
       label: L.badgeAi[isEn ? "en" : "sl"],
       icon: Sparkles,

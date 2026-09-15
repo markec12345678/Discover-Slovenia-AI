@@ -210,6 +210,12 @@ Produkcija (`i-feel-slovenia.vercel.app`) teče po tej poti (Faza 4f):
    Ključ je že shranjen kot GitHub Actions secret (ai-smoke.yml ga živo
    preverja); na Vercel/Render ga vnesi v dashboardu. Ob tem ODSTRANI
    legacy `VITE_GEMINI_API_KEY` (client-side izpostavljen — SECURITY.md).
+   **1.14.0 (2026-09-15): dodaj `OPENROUTER_API_KEY` (PRIMARNI)** — veriga
+   je sedaj OpenRouter → Gemini → Puter → z-ai; deluje iz vseh regij
+   (tudi tam, kjer je Google geo-blokiran). GitHub secret je nastavljen;
+   za Vercel/Render uporabi pripravljeno skripto
+   `scripts/ops/vercel-env-set.sh` / `render-env-set.sh` (glej
+   `scripts/ops/README.md`).
 6. ~~Push na `main` — build je zelen (prisma generate v build skripti).
    Vercel croni iz `vercel.json` se izvajajo avtomatično.~~ **Narejeno.**
 7. CI (P4-7, 2026-09-10): Build job testira proti `postgres:16-alpine`
@@ -233,8 +239,9 @@ Postgresom v Docker Compose, glej opombo v razdelku 3).
 | Admin | `ADMIN_PASSWORD`, `ADMIN_EMAIL` | DA | močno geslo (min 32 znakov) |
 | Cron | `CRON_SECRET` | DA | Bearer za vse /api/cron/* |
 | E-pošta | `SMTP_HOST/PORT/SECURE/USER/PASS/FROM` | za e-pošto | brez SMTP: console fallback |
-| AI (primarni) | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_BASE_URL` | DA (F10) | Google AI Studio free tier; OpenAI-compat končna točka; veriga Gemini → Puter → z-ai-sdk → deterministični fallback. Nastavi na Vercelu/Renderu; GitHub CI preverja prek Actions secreta + `.github/workflows/ai-smoke.yml`. Regija: Vercel/Render (US/EU) so podprte — sandbox razvoj je lahko geo-blokiran (circuit breaker prevzame) |
-| AI (sekundarni) | `PUTER_AUTH_TOKEN`, `PUTER_BASE_URL`, `PUTER_MODEL` | ne | nadomestni provider, če Gemini ni nastavljen/nedosegljiv |
+| AI (primarni) | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `OPENROUTER_FALLBACK_MODEL`, `OPENROUTER_BASE_URL` | DA (1.14.0) | OpenRouter free tier (`nex-agi/nex-n2.5-pro:free` + notranji fallback mini; JSON mode podprt); deluje iz VSAJ regije (ni Google geo-bloka). Dnevna meja free tierja ~50 zahtev (brez kredita) — takrat veriga pošteno pade na Gemini (produkcija US/EU) ali z-ai (dev). GitHub CI preverja prek Actions secreta + `.github/workflows/ai-smoke.yml`; namestitev: `scripts/ops/vercel-env-set.sh` / `render-env-set.sh` |
+| AI (sekundarni) | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_BASE_URL` | DA (F10) | Google AI Studio free tier; OpenAI-compat končna točka; vision pot (F8 slikovni vnos) teče IZKLJUČNO po njej (OpenRouter :free vision NEDELJUJE — živo testirano). Vercel/Render (US/EU) regije so podprte — sandbox razvoj je geo-blokiran (circuit breaker prevzame) |
+| AI (terciarni) | `PUTER_AUTH_TOKEN`, `PUTER_BASE_URL`, `PUTER_MODEL` | ne | nadomestni provider v verigi |
 | Plačila | `STRIPE_*` | ne | demo mode brez ključev |
 | Push | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | ne | |
 

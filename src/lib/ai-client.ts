@@ -1,29 +1,37 @@
 import OpenAI from "openai";
 
 /**
- * AI Client — več-provider veriga (F10, 1.13.0)
+ * AI Client — več-provider veriga (F10 + 1.14.0)
  *
  * Vrstni red (prvi uspešni zmaga):
- *   1. GEMINI   — Google AI Studio prek OpenAI-compat končne točke
- *                (GEMINI_API_KEY; brezplačna stopnja — primarno za
- *                produkcijo na Vercel/Render, kjer je regija podprta)
- *   2. PUTER    — brezplačni OpenAI-compatible API (PUTER_AUTH_TOKEN)
- *   3. z-ai-sdk — z-ai-web-dev-sdk (razvojni sandbox)
- *   → null      — klicalec uporabi lasten determinističen fallback
+ *   0. OPENROUTER — PRIMARNI (OPENROUTER_API_KEY; brezplačna stopnja,
+ *                deluje iz VSAJ regije vključno z razvojnim sandboxom —
+ *                ni Google geo-bloka). Modeli :free (živo izbrani
+ *                2026-09-15: nex-agi/nex-n2.5-pro:free = čist JSON +
+ *                odlična slovenščina; mini = notranji fallback).
+ *   1. GEMINI    — Google AI Studio prek OpenAI-compat končne točke
+ *                (GEMINI_API_KEY; brezplačna stopnja — regije Vercel/
+ *                Render so podprte, sandbox je geo-blokiran)
+ *   2. PUTER     — brezplačni OpenAI-compatible API (PUTER_AUTH_TOKEN)
+ *   3. z-ai-sdk  — z-ai-web-dev-sdk (razvojni sandbox)
+ *   → null       — klicalec uporabi lasten determinističen fallback
  *
- * ZAKAJ OpenAI-compat za Gemini: paket `openai` je ŽE odvisnost projekta,
- * Gemini pa izpostavlja vmesnik /v1beta/openai/ (chat/completions z
- * enakimi tipi sporočil, vključno z image_url za vision). Nič nove
+ * VISION (generateVisionCompletion) je ločena veriga: GEMINI → z-ai —
+ * OpenRouter :free vision modeli ŽIVO TESTIRANI in NEDELJUJO (vsi
+ * provider error; gemma-4:free tudi geo-blokiran) — vision ostaja na
+ * Geminiju (produkcija) + z-ai VLM (sandbox).
+ *
+ * ZAKAJ OpenAI-compat: paket `openai` je ŽE odvisnost projekta, vsi trije
+ * zunanji providerji pa izpostavljajo /chat/completions z enakimi tipi
+ * sporočil (vključno z image_url za vision pri Geminiju). Nič novih
  * odvisnosti, enak vmesnik, enaki tipi.
  *
- * CIRCUIT BREAKER (Gemini): 3 zaporedne napake → 5 minut odmora, da
- * geo-blokirana/nedosegljiva regija (npr. razvojni sandbox) NE obdavči
- * vsakega klica z zamudo neuspešnega poskusa. Uspešna preverjava
- * zdravja (ai-health) breaker pošteno RESETIRA.
+ * CIRCUIT BREAKER (OpenRouter + Gemini): 3 zaporedne napake → 5 minut
+ * odmora, da mrtvi provider NE obdavči vsakega klica s zamudo. Uspešna
+ * preverjava zdravja (ai-health) breaker pošteno RESETIRA.
  *
- * Varnost: GEMINI_API_KEY je STREŽNIŠKI env (nikoli NEXT_PUBLIC_/VITE_).
- * Legacy `VITE_GEMINI_API_KEY` (client-side, vidna ob buildu) je iz
- * predhodne faze in se NE uporablja — glej SECURITY.md.
+ * Varnost: vsi ključi so STREŽNIŠKI env (nikoli NEXT_PUBLIC_/VITE_).
+ * Legacy `VITE_GEMINI_API_KEY` se NE uporablja — glej SECURITY.md.
  */
 
 // ─── Skupni tipi ──────────────────────────────────────────────────────────
@@ -33,7 +41,12 @@ export interface AIMessage {
   content: string;
 }
 
-export type AIProviderSource = "gemini" | "puter" | "z-ai-sdk" | "fallback";
+export type AIProviderSource =
+  | "openrouter"
+  | "gemini"
+  | "puter"
+  | "z-ai-sdk"
+  | "fallback";
 
 export interface AICompletionResult {
   content: string;
@@ -53,6 +66,83 @@ export interface AICompletionOptions {
 export interface AIVisionResult {
   content: string;
   source: "gemini" | "z-ai-sdk";
+}
+
+// ─── Provider 0: OPENROUTER (PRIMARNI) ───────────────────────────────────
+
+const OPENROUTER_DEFAULT_BASE_URL = "https://openrouter.ai/api/v1/";
+// :free modeli so ŽIVO testirani 2026-09-15 (ključ is_free_tier, 0 porabe):
+//   ✅ nex-agi/nex-n2.5-pro:free   — čist JSON + odlična slovenščina
+//   ✅ nex-agi/nex-n2.5-mini:free  — hitri notranji fallback (isti model,
+//                                    manjši, hitrejši)
+//   ✅ nvidia/nemotron-3-ultra...  — a LEAKA razmišljanje v vsebino +
+//                                    "Service overloaded" → NE v verigi
+//   ❌ google/gemma-4-*:free       — geo-blokiran (OR posreduje lokacijo
+//                                    odjemalca Google AI Studiu)
+//   ❌ google/gemini-2.5-flash:free — umaknjen z free tierja (404)
+//   ❌ z-ai/glm-5.2:free           — "Provider returned error"
+//   ❌ openrouter/free (auto-router) — izbral content-safety klasifikator
+//                                      → NEPREDVIDLJIVO, pinamo model
+const OPENROUTER_DEFAULT_MODEL = "nex-agi/nex-n2.5-pro:free";
+const OPENROUTER_DEFAULT_FALLBACK_MODEL = "nex-agi/nex-n2.5-mini:free";
+const OPENROUTER_TIMEOUT_MS = 60_000; // free tier ima višje čakalne vrste
+
+let openrouterClient: OpenAI | null = null;
+
+function openrouterModels(): string[] {
+  const primary = process.env.OPENROUTER_MODEL || OPENROUTER_DEFAULT_MODEL;
+  const fallback =
+    process.env.OPENROUTER_FALLBACK_MODEL ??
+    OPENROUTER_DEFAULT_FALLBACK_MODEL;
+  // Prazna vrednost env = izklop notranjega fallbacka (ena izbira).
+  return fallback ? [primary, fallback] : [primary];
+}
+
+function getOpenRouterClient(): OpenAI | null {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey || apiKey === "YOUR_OPENROUTER_API_KEY") return null;
+  if (!openrouterClient) {
+    openrouterClient = new OpenAI({
+      baseURL: process.env.OPENROUTER_BASE_URL || OPENROUTER_DEFAULT_BASE_URL,
+      apiKey,
+      timeout: OPENROUTER_TIMEOUT_MS,
+      maxRetries: 1,
+      // OpenRouter atribucija (uradna priporočila) — brezplačna
+      // vidnost aplikacije na openrouter.ai/stats.
+      defaultHeaders: {
+        "HTTP-Referer":
+          process.env.APP_URL || "https://discover-slovenia.si",
+        "X-Title": "Discover-Slovenia-AI",
+      },
+    });
+  }
+  return openrouterClient;
+}
+
+// Circuit breaker (enak vzorec kot Gemini)
+const OR_BREAKER_FAILURES = 3;
+const OR_BREAKER_COOLDOWN_MS = 5 * 60_000;
+let orFailures = 0;
+let orCooldownUntil = 0;
+
+function openrouterBreakerOpen(): boolean {
+  return Date.now() < orCooldownUntil;
+}
+
+function openrouterRecordFailure(): void {
+  orFailures += 1;
+  if (orFailures >= OR_BREAKER_FAILURES) {
+    orCooldownUntil = Date.now() + OR_BREAKER_COOLDOWN_MS;
+    orFailures = 0;
+    console.warn(
+      `[ai-client] OpenRouter: ${OR_BREAKER_FAILURES} zaporedne napake → odmor ${OR_BREAKER_COOLDOWN_MS / 60_000} min (circuit breaker)`
+    );
+  }
+}
+
+function openrouterRecordSuccess(): void {
+  orFailures = 0;
+  orCooldownUntil = 0;
 }
 
 // ─── Provider 1: GEMINI (OpenAI-compat) ──────────────────────────────────
@@ -152,7 +242,8 @@ function puterModel(): string {
 // ─── Generacija (veriga) ─────────────────────────────────────────────────
 
 /**
- * Generira AI chat completion po verigi Gemini → Puter → z-ai-sdk.
+ * Generira AI chat completion po verigi
+ * OpenRouter → Gemini → Puter → z-ai-sdk.
  * Če vsi odpovejo, vrne null (klicalec naj uporabi lasten fallback).
  */
 export async function generateCompletion(
@@ -166,6 +257,45 @@ export async function generateCompletion(
   const maxTokens = options?.maxTokens ?? 4096;
 
   const mapped = messages.map((m) => ({ role: m.role, content: m.content }));
+
+  // === 0. OPENROUTER (primarni; :free modeli NISO thinking → brez tal) ===
+  // Notranja fallback struktura: če primarni model odpove (rate limit,
+  // overload), isti provider poskusi še rezervni model, ŠELE nato gre
+  // napaka v breaker in verigo naprej na Gemini.
+  const openrouter = getOpenRouterClient();
+  if (openrouter && !openrouterBreakerOpen()) {
+    let lastOrError: unknown = null;
+    for (const model of openrouterModels()) {
+      try {
+        const completion = await openrouter.chat.completions.create({
+          model,
+          messages: mapped,
+          temperature,
+          max_tokens: maxTokens,
+          ...(options?.jsonMode
+            ? { response_format: { type: "json_object" as const } }
+            : {}),
+        });
+        const content = completion.choices[0]?.message?.content?.trim();
+        if (content) {
+          openrouterRecordSuccess();
+          return { content, source: "openrouter" };
+        }
+        throw new Error(`empty OpenRouter content (${model})`);
+      } catch (error) {
+        lastOrError = error;
+        console.error(
+          `[ai-client] OpenRouter napaka (${model}):`,
+          describeError(error)
+        );
+      }
+    }
+    openrouterRecordFailure();
+    console.error(
+      "[ai-client] OpenRouter: vsi modeli odpovedali → nadaljujemo na Gemini/Puter/z-ai",
+      lastOrError ? describeError(lastOrError) : ""
+    );
+  }
 
   // === 1. GEMINI (OpenAI-compat) ===
   // Gemini 3.x thinking modeli porabijo del IZHODNEGA proračuna za notranje
@@ -371,22 +501,37 @@ export interface AIProviderHealth {
 export interface AIHealthReport {
   /** Provider, ki bi ZDAJ servisal generacijo (prvi živ). */
   active: AIProviderSource | "none";
+  openrouter: AIProviderHealth;
   gemini: AIProviderHealth;
   puter: AIProviderHealth;
   zai: AIProviderHealth;
 }
 
 /**
- * Preveri vse tri providerje Z PARALELNO (vsak s svojo timeout mejo 12 s),
- * z minimalnim completionom ("Odgovori samo z 'OK'", maxTokens 8).
+ * Preveri vse štiri providerje Z PARALELNO (vsak s svojo timeout mejo 12 s),
+ * z minimalnim completionom ("Odgovori samo z 'OK'", maxTokens 512).
  *
- * Pommbno: preizkusi Geminija BEZ circuit breakerja — uspeh breaker
- * resetira (health check je pošten detektor okrevanja).
+ * Pomembno: preizkusi OpenRouter in Geminija BEZ circuit breakerja — uspeh
+ * breaker resetira (health check je pošten detektor okrevanja).
  */
 export async function checkAIHealth(): Promise<AIHealthReport> {
   const probeMessages: AIMessage[] = [
     { role: "user", content: "Odgovori samo z 'OK'" },
   ];
+
+  const openrouter = getOpenRouterClient();
+  const orStart = Date.now();
+  const orProbe = openrouter
+    ? openrouter.chat.completions.create({
+        model: openrouterModels()[0],
+        messages: probeMessages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+        temperature: 0,
+        max_tokens: 512,
+      })
+    : Promise.reject(new Error("not-configured"));
 
   const gemini = getGeminiClient();
   const geminiStart = Date.now();
@@ -431,11 +576,39 @@ export async function checkAIHealth(): Promise<AIHealthReport> {
     });
   })();
 
-  const [geminiRes, puterRes, zaiRes] = await Promise.allSettled([
-  geminiProbe,
-  puterProbe,
-  zaiProbe,
+  const [orRes, geminiRes, puterRes, zaiRes] = await Promise.allSettled([
+    orProbe,
+    geminiProbe,
+    puterProbe,
+    zaiProbe,
   ]);
+
+  // ── OpenRouter ──
+  let openrouterHealth: AIProviderHealth;
+  if (!openrouter) {
+    openrouterHealth = {
+      configured: false,
+      ok: false,
+      model: openrouterModels()[0],
+    };
+  } else if (orRes.status === "fulfilled") {
+    const ok = Boolean(orRes.value.choices[0]?.message?.content?.trim());
+    if (ok) openrouterRecordSuccess(); // health uspeh → breaker reset
+    openrouterHealth = {
+      configured: true,
+      ok,
+      model: orRes.value.model || openrouterModels()[0],
+      latencyMs: Date.now() - orStart,
+      ...(ok ? {} : { error: "empty content" }),
+    };
+  } else {
+    openrouterHealth = {
+      configured: true,
+      ok: false,
+      model: openrouterModels()[0],
+      error: describeError(orRes.reason),
+    };
+  }
 
   // ── Gemini ──
   let geminiHealth: AIProviderHealth;
@@ -512,12 +685,19 @@ export async function checkAIHealth(): Promise<AIHealthReport> {
     };
   }
 
-  // Aktivni provider = prvi ŽIV v verigi (breaker pri Geminiju se je prav
-  // ravnokar ponastavil ob uspehu, zato je odločitev skladna s generacijo)
+  // Aktivni provider = prvi ŽIV v verigi (break pri OpenRouter/Gemini sta
+  // se prav ravnokar ponastavila ob uspehu, zato je odločitev skladna)
   let active: AIHealthReport["active"] = "none";
-  if (geminiHealth.ok) active = "gemini";
+  if (openrouterHealth.ok) active = "openrouter";
+  else if (geminiHealth.ok) active = "gemini";
   else if (puterHealth.ok) active = "puter";
   else if (zaiHealth.ok) active = "z-ai-sdk";
 
-  return { active, gemini: geminiHealth, puter: puterHealth, zai: zaiHealth };
+  return {
+    active,
+    openrouter: openrouterHealth,
+    gemini: geminiHealth,
+    puter: puterHealth,
+    zai: zaiHealth,
+  };
 }
