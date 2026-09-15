@@ -120,7 +120,7 @@ Pred deploy-em na production:
 - [x] Zamenjaj `NEXTAUTH_SECRET` z naključnim stringom *(narejeno v v1.1)*
 - [x] **Git zgodovina** — očiščena (v1.1.0) + neodvisno preverjena 2026-09-10: brez skrivnosti
 - [x] **`PUTER_AUTH_TOKEN` ni v uporabi** (ni v Vercel env) — ob ponovni aktivaciji Puter AI generiraj NOV žeton (stari obravnavaj kot kompromitiranega)
-- [ ] Odstrani neuporabljeni `VITE_GEMINI_API_KEY` iz Vercel env (legacy iz predhodnje faze; `VITE_` spremenljivke so lahko vidne client-side ob buildu)
+- [ ] Odstrani neuporabljeni `VITE_GEMINI_API_KEY` iz Vercel env (legacy iz predhodnje faze; `VITE_` spremenljivke so lahko vidne client-side ob buildu). **F10 (1.13.0): naslednik je strežniški `GEMINI_API_KEY`** — shranjen kot GitHub Actions secret (enkripcija libsodium sealed box, API `actions/secrets`), v kodi ga bere IZKLJUČNO strežniški `src/lib/ai-client.ts`; nikoli ni v repozitoriju (.env* je gitignored). Ob nastavitvi na Vercel/Render: ime `GEMINI_API_KEY` (brez VITE_/NEXT_PUBLIC_ prefiksa).
 - [ ] Nastavi prave Stripe ključe (`sk_live_*`)
 - [ ] Nastavi pravi SMTP strežnik
 - [ ] Migriraj rate limiting na Upstash (per-instanca ni dovolj)

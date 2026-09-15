@@ -7,6 +7,70 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.13.0] — 2026-09-16
+
+### Dodano (F10 — PRODUKCIJSKA AI PLAST: Gemini v verigi providerjev)
+
+> Uporabnik je priskrbel brezplačni Google AI Studio ključ (velja do
+> pridobitve uporabnikov) in zahteval profesionalno vgradnjo povsod —
+> koda, GitHub, Vercel/Render env. Odgovor: enotna provider veriga v
+> `src/lib/ai-client.ts`, ki jo sedaj deli VSAH 15+ AI poti projekta
+> (generacija itinererja, refine, ask, chat, nasveti, prevodi, auto-tag,
+> SEO FAQ, konzultacije …) + živi test ključa iz GitHub runnerja (US —
+> podprta regija; sandbox razvoj je geo-blokiran, iskreno spodaj).
+
+- **`src/lib/ai-client.ts` — veriga GEMINI → PUTER → z-ai-sdk → fallback**:
+  Gemini prek OpenAI-compat končne točke
+  (`generativelanguage.googleapis.com/v1beta/openai/`) — paket `openai`
+  je ŽE odvisnost projekta, nič novega se ne namesti; isti vmesnik, isti
+  tipi, podpira tudi `image_url` (vision). Privzeti model
+  `gemini-3.6-flash` (Google 2026 je umaknil `gemini-2.5-flash` za nove
+  uporabnike — odkrito z živim 404 odgovorom; preglasi se z
+  `GEMINI_MODEL`).
+- **CIRCUIT BREAKER** (Gemini): 3 zaporedne napake → 5 minut odmora —
+  geo-blokirana/nedosegljiva regija NE obdavči vsakega klica z zamudo.
+  Uspešen health check breaker pošteno RESETIRA (detektor okrevanja).
+- **`generateVisionCompletion()`** (ista datoteka): vision veriga Gemini
+  (image_url) → z-ai VLM. F8 slikovni vnos dobi PRODUKCIJSKO pot (prej:
+  samo z-ai VLM, ki sandboxa zunaj ne obstaja).
+- **`POST /api/itinerary/ingest-image`**: uporablja novo vision verigo;
+  odgovor sedaj razkrije `via: "gemini" | "z-ai-sdk"` (kdo je bral sliko)
+  — UI pokaže amber badge z providerjem (novega i18n ključa
+  `planner.ingestImageMethodVia` SL+EN). Ujemanje destinacij ostaja
+  DETERMINISTIČNO (nezadeto).
+- **`GET /api/ai-health`**: pošteno poročilo PO PROVIDERJU (konfiguriran /
+  živ klic / model / odzivni čas / kratek opis napake brez skrivnosti);
+  `active` = prvi živ provider v verigi.
+- **PlanCopilot**: vir "gemini" dobi isti amber "AI · fraziranje dejstev"
+  žeton kot puter/z-ai (širitev union tipa).
+- **Env profesionalno (povsod)**: `.env` (lokalno, gitignored) +
+  `.env.example` (dokumentirana sekcija GEMINI z navodili za Vercel/
+  Render + varnostnim opozorilom o VITE_ legacy); **GitHub Actions
+  secret `GEMINI_API_KEY`** nastavljen prek APIja (libsodium sealed box,
+  nikoli v repozitoriju); **`.github/workflows/ai-smoke.yml`** — ročni
+  (workflow_dispatch) živi test IZ GITHUB RUNNERJA: chat completion +
+  vision image_url, natanko tisto, kar uporablja ai-client; `docs/
+  DEPLOYMENT.md` matrika env posodobljena; `SECURITY.md` checklist
+  posodobljen (naslednik legacy `VITE_GEMINI_API_KEY`).
+
+### Iskrene omejitve (zapisano med verifikacijo)
+
+- Sandbox egress (Hong Kong) je GEO-BLOKIRAN za Gemini API (veljavni
+  modeli → HTTP 400 `User location is not supported`; ključ sam je
+  VELJAVEN — avtentikacija uspe, seznam modelov pride skozi). Lokalna
+  verifikacija zato dokazuje VERIGO in fallback (ai-health iskreno
+  pokaže geo-napako; generacija pade na z-ai/determinizem), ŽIVI test
+  ključa pa poteče iz GitHub runnerja (US) prek ai-smoke.yml — rezultat
+  zapisan v delovnem dnevniku.
+- V tem sandbox oknu je bil z-ai VLM/chat še vedno 429 (rate limit
+  celotnega okna, kot v F8/F9) — fallback poti so bile preverjene
+  prek determinističnih plastí in simulacij.
+- `gemini-2.5-flash` na novem ključu vrača 404 ("no longer available to
+  new users") — zato je privzeti model 3.6; kdorkoli preglasi
+  `GEMINI_MODEL` naj uporabi trenutno veljavno ime.
+
+---
+
 ## [1.12.0] — 2026-09-16
 
 ### Dodano (F9 — POGOVOR Z NAČRTOM: vprašanja o načrtu, odgovori izračunani)

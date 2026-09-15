@@ -414,6 +414,7 @@
     "ingestImagePaste": "… or paste from clipboard (Ctrl/Cmd+V)",
     "ingestImageRemove": "Remove image",
     "ingestImageMethod": "image detection: AI reading + deterministic matching",
+    "ingestImageMethodVia": "image detection: AI reading ({provider}) + deterministic matching",
     "ingestImageError": "The image could not be recognized.",
     "ingestImageSuccessToast": "Destinations recognized from the image",
     "ingestImageSuccessToastDesc": "From the image: {names} — building your plan …",

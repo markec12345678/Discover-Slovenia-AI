@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { matchDestinationsInText } from "@/lib/url-ingest";
+import { generateVisionCompletion } from "@/lib/ai-client";
 
 // ============================================================================
 // POST /api/itinerary/ingest-image — "Začni s sliko" (F8, MindTrip "Start
@@ -20,22 +21,23 @@ import { matchDestinationsInText } from "@/lib/url-ingest";
 // podatkovnega niza. Če ni zadetkov, rečemo TO (422) — nič "podobnih"
 // lokacij ne izmišljujemo.
 //
-// Poštenost v odgovoru: `method: "vlm"` + `vlmChars` — UI razkrije, da je
-// prepoznavanje potekalo po AI poti (za razliko od povezav, kjer je
-// besedilno ujemanje čisto deterministično). VLM znaki SE NE vračajo
-// (zasebnost — slika se obdela v pomnilniku in pozabi).
+// Poštenost v odgovoru: `method: "vlm"` + `via` (kateri vision provider
+// je sliko dejansko bral — F10: Gemini v produkciji, z-ai VLM v sandbox
+// razvoju) + `vlmChars` — UI razkrije, da je prepoznavanje potekalo po AI
+// poti (za razliko od povezav, kjer je besedilno ujemanje čisto
+// deterministično). VLM znaki SE NE vračajo (zasebnost — slika se obdela
+// v pomnilniku in pozabi).
 //
 // Varnost:
 //  - sprejmemo SAMO data URL s podprto vrsto (jpeg/png/webp) + base64
 //  - največ 6 MB base64 (~4,5 MB dekodirano)
 //  - rate limit 6 klicev/min na IP (odprta javna pot, dražji od HTML
 //    prenosov — zato nižji kot 10/min pri povezavah)
-//  - slika se NE shranjuje nikamor; VLM dobi base64 v pomnilniku
-//  - timeout 45 s na VLM klic
+//  - slika se NE shranjuje nikamor; vision klic dobi base64 v pomnilniku
+//    (timeout 45 s — v ai-client generateVisionCompletion)
 // ============================================================================
 
 const MAX_BASE64_CHARS = 6 * 1024 * 1024; // ~4,5 MB dekodirane slike
-const VLM_TIMEOUT_MS = 45_000;
 
 /** Podprte vrste slik (MIME → prijazno ime za napake). */
 const SUPPORTED_MIME: Record<string, string> = {
@@ -120,69 +122,34 @@ export async function POST(request: Request) {
     );
   }
 
-  // === VLM klic (STREŽNIŠKO — z-ai-web-dev-sdk nikoli na clientu) ===
-  // Dinamičen uvoz (isti vzorec kot src/lib/ai-client.ts fallback veja).
-  // Timeout z Promise.race — SDK ne sprejema AbortSignal opcije.
-  // Tip `model` je v .d.ts obvezen, a runtime (in uradni CLI) ga ne pošilja —
-  // storitev sama izbere vision model; cast je dokumentiran.
-  let vlmText: string;
-  try {
-    const ZAI = (await import("z-ai-web-dev-sdk")).default;
-    const zai = await ZAI.create();
+  // === Vision klic (STREŽNIŠKO — F10 veriga v ai-client: Gemini → z-ai VLM)
+  // ===
+  // generateVisionCompletion poskusi Geminija (OpenAI-compat image_url;
+  // produkcija na Vercel/Render, regija kjer API deluje) in ob napaki pade
+  // na z-ai VLM (razvojni sandbox). Oba poganjata ISTI strog ekstraktor
+  // prompt zgoraj; ujemanje spodaj ostaja DETERMINISTIČNO — provider samo
+  // PREBRE sliko, ne izbira destinacij.
+  const vision = await generateVisionCompletion(
+    VLM_PROMPT,
+    `data:${parsed.mime};base64,${parsed.base64}`,
+    { maxTokens: 1024 }
+  );
 
-    const visionBody = {
-      messages: [
-        {
-          role: "user" as const,
-          content: [
-            { type: "text" as const, text: VLM_PROMPT },
-            {
-              type: "image_url" as const,
-              image_url: {
-                url: `data:${parsed.mime};base64,${parsed.base64}`,
-              },
-            },
-          ],
-        },
-      ],
-      thinking: { type: "disabled" as const },
-    };
-
-    const completion = await Promise.race([
-      zai.chat.completions.createVision(
-        visionBody as Parameters<
-          typeof zai.chat.completions.createVision
-        >[0]
-      ),
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("VLM_TIMEOUT")),
-          VLM_TIMEOUT_MS
-        )
-      ),
-    ]);
-
-    const content = completion.choices[0]?.message?.content?.trim();
-    if (!content) {
-      throw new Error("empty VLM content");
-    }
-    vlmText = content;
-  } catch (err) {
-    const isTimeout =
-      err instanceof Error && err.message.includes("VLM_TIMEOUT");
+  if (!vision) {
     console.error(
-      "[ingest-image] VLM napaka:",
-      err instanceof Error ? err.message : err
+      "[ingest-image] vision napaka: vsi providerji (Gemini + z-ai VLM) odpovedali"
     );
     return NextResponse.json(
       {
-        error: isTimeout
-          ? "Prepoznavanje slike se ni odzvalo v 45 sekundah."
-          : "Slike ni bilo mogoče prepoznati (AI storitev trenutno ni dosegljiva). Poskusi kasneje ali uporabi povezavo.",
+        error:
+          "Slike ni bilo mogoče prepoznati (AI storitev trenutno ni dosegljiva). Poskusi kasneje ali uporabi povezavo.",
       },
       { status: 502 }
     );
   }
+
+  const vlmText = vision.content;
+  const visionVia = vision.source; // poštenost: kdo je bral sliko
 
   // Poštena "nič" iz VLM (NONE) → obravnavamo kot prazno besedilo
   const isNone = /^none\b/i.test(vlmText.trim());
@@ -198,6 +165,7 @@ export async function POST(request: Request) {
         error:
           "Na sliki nisem prepoznal nobene slovenske destinacije iz našega podatkovnega niza.",
         method: "vlm" as const,
+        via: visionVia,
         vlmChars: vlmText.length,
       },
       { status: 422 }
@@ -207,6 +175,7 @@ export async function POST(request: Request) {
   return NextResponse.json(
     {
       method: "vlm" as const,
+      via: visionVia,
       vlmChars: vlmText.length,
       matches: result.matches,
       suggestion: result.suggestion,

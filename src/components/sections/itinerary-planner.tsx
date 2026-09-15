@@ -344,6 +344,9 @@ export function ItineraryPlanner() {
   const [ingestImageName, setIngestImageName] = useState<string>("");
   const [ingestImageDragging, setIngestImageDragging] = useState(false);
   const [ingestIsVlm, setIngestIsVlm] = useState(false); // metoda zadnjega zadetka
+  const [ingestVia, setIngestVia] = useState<"gemini" | "z-ai-sdk" | null>(
+    null
+  ); // F10: kateri vision provider je bral sliko (poštenost)
   const ingestImageInputRef = useRef<HTMLInputElement | null>(null);
 
   // F5.1: programatski fokus zemljevida ( gumb na kartici postanka)
@@ -962,6 +965,7 @@ export function ItineraryPlanner() {
     setIngestError(null);
     setIngestMatches(null);
     setIngestIsVlm(false);
+    setIngestVia(null);
     trackPlannerEvent("ingest_image_attempted", { locale });
     try {
       const res = await fetch("/api/itinerary/ingest-image", {
@@ -978,6 +982,7 @@ export function ItineraryPlanner() {
               preferredDestinations?: string[];
             };
             method?: "vlm";
+            via?: "gemini" | "z-ai-sdk";
             vlmChars?: number;
             error?: string;
           }
@@ -990,6 +995,7 @@ export function ItineraryPlanner() {
       setIngestMatches(data.matches);
       setIngestSourceTitle(null); // vir je uporabnikova slika (ni naslova)
       setIngestIsVlm(data.method === "vlm");
+      setIngestVia(data.via ?? null);
       trackPlannerEvent("ingest_image_success", {
         matches: data.matches.length,
         days: data.suggestion?.days ?? 3,
@@ -1279,6 +1285,7 @@ export function ItineraryPlanner() {
                                 setIngestImageName("");
                                 setIngestMatches(null);
                                 setIngestIsVlm(false);
+                                setIngestVia(null);
                               }}
                               aria-label={t("ingestImageRemove")}
                               className="size-7 shrink-0"
@@ -1378,7 +1385,9 @@ export function ItineraryPlanner() {
                         ))}
                         {ingestIsVlm && (
                           <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
-                            {t("ingestImageMethod")}
+                            {ingestVia
+                              ? t("ingestImageMethodVia", { provider: ingestVia })
+                              : t("ingestImageMethod")}
                           </span>
                         )}
                       </div>

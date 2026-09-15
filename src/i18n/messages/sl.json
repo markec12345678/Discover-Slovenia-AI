@@ -414,6 +414,7 @@
     "ingestImagePaste": "… ali prilepi iz odložišča (Ctrl/Cmd+V)",
     "ingestImageRemove": "Odstrani sliko",
     "ingestImageMethod": "prepoznavanje slike: AI branje + deterministično ujemanje",
+    "ingestImageMethodVia": "prepoznavanje slike: AI branje ({provider}) + deterministično ujemanje",
     "ingestImageError": "Slike ni bilo mogoče prepoznati.",
     "ingestImageSuccessToast": "Prepoznal sem destinacije na sliki",
     "ingestImageSuccessToastDesc": "Iz slike: {names} — sestavljam načrt …",

@@ -356,3 +356,30 @@ nameni brez AI; `intent` razkrije, kaj uporabnike res zanima.
 sfrazi, determinizem računa, vsak odgovor nosi vir, neznano pa se
 iskreno zavrne. MindTrip-ova "chat-first" prednost je zdaj pariteta;
 naša razlika ostaja: dokazljivost vs. zaupanje.
+
+---
+
+# F10 (september 2026) — produkcjska AI plast (Gemini)
+
+> Ni nova funkcija vrzeli, temveč INFRASTRUKTURA, ki jo ves obstoječi
+> AI sloj (F5.4 ujemanje povezav, F8 slikovni vnos, F9 fraziranje,
+> generacija, refine, nasveti, prevodi) sedaj deli v produkciji —
+> doslej je bila edina zunanja AI pot z-ai-web-dev-sdk (razvojni
+> sandbox) in nikoli konfiguriran Puter. Uporabnik je priskrbel
+> brezplačni Google AI Studio ključ (velja do pridobitve uporabnikov).
+
+## 14. F10 — veriga providerjev kot odgovor na "kakšen AI je pod kapoto"
+
+| Vprašanje konkurenta | Naš odgovor (F10, 1.13.0) |
+|---|---|
+| MindTrip: lastni AI sklad (nedokumentiran) | VERIGA, ne čarovnija: Gemini → Puter → z-ai-sdk → deterministični fallback; enoten vmesnik v `ai-client.ts`, ki ga deli 15+ poti |
+| Odpoved AI = mrtvi izdelek | Circuit breaker (3 napake → 5 min odmora) + pošten fallback; ai-health razkrije stanje PO providerju |
+| Slikovni vnos vezan na eno storitev | F8 vision pot ima zdaj Geminija (image_url) in z-ai VLM — v odgovoru razkrit `via` |
+| "Zaupaj nam" | Privzeti model javen (`gemini-3.6-flash`), odkrita odločitev (2.5-flash umaknjen za nove ključe — živi 404), skrivnost nikoli v repozitoriju |
+
+**Iskrena omejitve:** sandbox egress (HK) je geo-blokiran za Gemini
+API (400 `User location is not supported`); živi test ključa teče iz
+GitHub runnerja (US) prek `.github/workflows/ai-smoke.yml`, na
+Vercel/Render pa se nastavi `GEMINI_API_KEY` kot strežniški env.
+**Sklep F10:** diferenciator "dokazljivost" se razširi na plast, ki jo
+konkurenti skrivajo — tudi pod kapoto je videti, kaj se dogaja.

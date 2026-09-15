@@ -205,6 +205,11 @@ Produkcija (`i-feel-slovenia.vercel.app`) teče po tej poti (Faza 4f):
    `ADMIN_EMAIL` …~~ **Narejeno** (preverjeno prek Vercel APIja 2026-09-10;
    `PUTER_AUTH_TOKEN` ni nastavljen — AI teče v fallback načinu; legacy
    `VITE_GEMINI_API_KEY` čaka na odstranitev).
+   **F10 (2026-09-15): dodaj `GEMINI_API_KEY`** (strežniški env, nikoli
+   `VITE_`/`NEXT_PUBLIC_`) — AI veriga postane Gemini → Puter → z-ai-sdk.
+   Ključ je že shranjen kot GitHub Actions secret (ai-smoke.yml ga živo
+   preverja); na Vercel/Render ga vnesi v dashboardu. Ob tem ODSTRANI
+   legacy `VITE_GEMINI_API_KEY` (client-side izpostavljen — SECURITY.md).
 6. ~~Push na `main` — build je zelen (prisma generate v build skripti).
    Vercel croni iz `vercel.json` se izvajajo avtomatično.~~ **Narejeno.**
 7. CI (P4-7, 2026-09-10): Build job testira proti `postgres:16-alpine`
@@ -228,7 +233,8 @@ Postgresom v Docker Compose, glej opombo v razdelku 3).
 | Admin | `ADMIN_PASSWORD`, `ADMIN_EMAIL` | DA | močno geslo (min 32 znakov) |
 | Cron | `CRON_SECRET` | DA | Bearer za vse /api/cron/* |
 | E-pošta | `SMTP_HOST/PORT/SECURE/USER/PASS/FROM` | za e-pošto | brez SMTP: console fallback |
-| AI | `PUTER_AUTH_TOKEN`, `PUTER_BASE_URL`, `PUTER_MODEL` | za AI konzultacije | |
+| AI (primarni) | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_BASE_URL` | DA (F10) | Google AI Studio free tier; OpenAI-compat končna točka; veriga Gemini → Puter → z-ai-sdk → deterministični fallback. Nastavi na Vercelu/Renderu; GitHub CI preverja prek Actions secreta + `.github/workflows/ai-smoke.yml`. Regija: Vercel/Render (US/EU) so podprte — sandbox razvoj je lahko geo-blokiran (circuit breaker prevzame) |
+| AI (sekundarni) | `PUTER_AUTH_TOKEN`, `PUTER_BASE_URL`, `PUTER_MODEL` | ne | nadomestni provider, če Gemini ni nastavljen/nedosegljiv |
 | Plačila | `STRIPE_*` | ne | demo mode brez ključev |
 | Push | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | ne | |
 

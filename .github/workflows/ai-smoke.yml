@@ -1,0 +1,99 @@
+name: AI Provider Smoke Test
+
+# F10 (1.13.0): ŽIVI test GEMINI_API_KEY iz GitHub runnerja (US regija —
+# podprta, za razliko od razvojnega sandboxa, ki je geo-blokiran z stran
+# Googla). Zagon: ROČNO (workflow_dispatch) prek GitHub UI ali APIja:
+#   POST /repos/{owner}/{repo}/actions/workflows/ai-smoke.yml/dispatches
+#   {"ref": "main"}
+# Namen: dokaz, da ključ in obe končni točki (chat + vision) delujeta,
+# PRED deployom na Vercel/Render. Testira NATANNO tisto, kar uporablja
+# src/lib/ai-client.ts (OpenAI-compat končna točka).
+#
+# Ključ je Actions secret GEMINI_API_KEY — GitHub ga v logih samodejno
+# maskira; v log se izpisujejo samo HTTP kode in vsebina odgovora.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  gemini:
+    name: Gemini (OpenAI-compat) — živi klic
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: 💬 Test chat completion (generacijska pot)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GEMINI_API_KEY:-}" ]; then
+            echo "::error::Secret GEMINI_API_KEY ni nastavljen (Settings → Secrets and variables → Actions)"
+            exit 1
+          fi
+          echo "→ POST /v1beta/openai/chat/completions (model: gemini-3.6-flash)"
+          HTTP_CODE=$(curl -sS -o /tmp/gemini-smoke.json -w "%{http_code}" -m 45 \
+            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" \
+            -H "Authorization: Bearer ${GEMINI_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "model": "gemini-3.6-flash",
+              "messages": [{"role": "user", "content": "Odgovori samo z besedilom: SLOVENIJA-OK"}],
+              "max_tokens": 16,
+              "temperature": 0
+            }')
+          echo "← HTTP ${HTTP_CODE}"
+          if [ "${HTTP_CODE}" != "200" ]; then
+            echo "::error::Gemini API odgovoril s HTTP ${HTTP_CODE}"
+            cat /tmp/gemini-smoke.json
+            exit 1
+          fi
+          CONTENT=$(jq -r '.choices[0].message.content // empty' /tmp/gemini-smoke.json)
+          echo "← vsebina: ${CONTENT}"
+          if [ -z "${CONTENT}" ]; then
+            echo "::error::Prazna vsebina odgovora"
+            cat /tmp/gemini-smoke.json
+            exit 1
+          fi
+          echo "::notice::Gemini chat completion deluje (pot generacije itinererjev)"
+
+      - name: 🖼️ Test vision image_url (pot F8 slikovnega vnosa)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -euo pipefail
+          # 1×1 PNG, generiran na mestu (brez zaupanja v prilepljen base64)
+          PIXEL=$(python3 -c '
+          import base64, zlib, struct
+          def chunk(t, d):
+              c = t + d
+              return struct.pack(">I", len(d)) + c + struct.pack(">I", zlib.crc32(c) & 0xffffffff)
+          png = (b"\x89PNG\r\n\x1a\n"
+                 + chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0))
+                 + chunk(b"IDAT", zlib.compress(b"\x00\xff\x00\x00"))
+                 + chunk(b"IEND", b""))
+          print(base64.b64encode(png).decode())
+          ')
+          echo "→ POST /v1beta/openai/chat/completions z image_url delom"
+          HTTP_CODE=$(curl -sS -o /tmp/gemini-vision.json -w "%{http_code}" -m 45 \
+            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" \
+            -H "Authorization: Bearer ${GEMINI_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"model\": \"gemini-3.6-flash\",
+              \"messages\": [{
+                \"role\": \"user\",
+                \"content\": [
+                  {\"type\": \"text\", \"text\": \"Odgovori samo z besedilom: VISION-OK\"},
+                  {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,${PIXEL}\"}}
+                ]
+              }],
+              \"max_tokens\": 16
+            }")
+          echo "← HTTP ${HTTP_CODE}"
+          if [ "${HTTP_CODE}" != "200" ]; then
+            echo "::error::Gemini vision odgovoril s HTTP ${HTTP_CODE}"
+            cat /tmp/gemini-vision.json
+            exit 1
+          fi
+          echo "::notice::Gemini vision (image_url) deluje — F8 slikovni vnos ima produkcijsko pot"
