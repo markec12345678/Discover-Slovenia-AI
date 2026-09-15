@@ -101,6 +101,11 @@ export interface DayPlan {
   day: number;
   locations: LocationVisit[];
   weather: { condition: string; temp: number };
+  // F5.6 (road routing): poenostavljena geometrija poti dneva PO REALNIH
+  // CESTAH ([lat, lng] točke, OSRM/OpenStreetMap) — za zemljevid poti na
+  // /nacrtuj. Opcijsko: stari načrti in hevristični izračuni (OSRM ni
+  // dosegljiv) ga nimajo → zemljevid izriše ravne črte (kot doslej).
+  routeGeometry?: [number, number][];
 }
 
 export interface Itinerary {
@@ -221,6 +226,13 @@ export interface GeoValidation {
   issues: GeoValidationIssue[];
   tripKm: number;
   worst: "ok" | "warn" | "error";
+  /**
+   * F5.6 (road routing): od kod so razdalje/časi — "osrm" (realne ceste),
+   * "heuristic" (haversine × 1,3 ÷ 55 km/h) ali "mixed". Opcijsko: stari
+   * shranjeni načrti brez OSRM obogatitve ga nimajo → panel izpiše
+   * hevristiko (nazaj kompatibilno, pošteno razkrito).
+   */
+  method?: RoutingMethod;
 }
 
 export interface WeatherData {
@@ -244,7 +256,7 @@ export interface WeatherData {
 export type TempoLabel = "Miren" | "Umirjen" | "Poln";
 
 export interface ItineraryQuality {
-  /** Skupni čas vožnje v minutah (haversine med zaporednimi lokacijami × 1.3 cestni faktor ÷ 55 km/h) */
+  /** Skupni čas vožnje v minutah (realne ceste prek OSRM, kadar je bil indeks nog podan; sicer haversine × 1.3 ÷ 55 km/h — glej routingMethod) */
   drivingMinutes: number;
   /** Seštevek estimated_cost vseh lokacij (EUR) */
   estimatedCost: number;
@@ -267,7 +279,16 @@ export interface ItineraryQuality {
    * Strukturirano (vignetteDays številka) — oznake se lokalizira v UI.
    */
   driveCosts?: DriveCosts;
+  /**
+   * F5.6 (road routing): metoda izračuna vožnje/kilometrov — "osrm"
+   * (realne ceste), "heuristic" ali "mixed". Opcijsko: stari načrti brez
+   * tega polja so izračunani hevristično (kartica izpiše staro razlago).
+   */
+  routingMethod?: RoutingMethod;
 }
+
+/** F5.6 (road routing): vir razdalj/časov — razkrit v UI. */
+export type RoutingMethod = "osrm" | "heuristic" | "mixed";
 
 /**
  * F5.3 — ocena stroškov vožnje (deterministično, iz km poti):
@@ -277,7 +298,7 @@ export interface ItineraryQuality {
  * ki pove svoje meje. Vinjeta je pogojna (samo ob uporabi avtocest).
  */
 export interface DriveCosts {
-  /** Skupni kilometri poti (haversine × 1.3, zaokroženo na 5) */
+  /** Skupni kilometri poti (realne ceste prek OSRM, kadar je bil indeks nog podan; sicer haversine × 1.3 — zaokroženo na 5) */
   km: number;
   /** Ocenjena poraba goriva v litrih (zaokroženo na 1) */
   fuelLiters: number;

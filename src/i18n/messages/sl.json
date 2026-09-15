@@ -338,7 +338,9 @@
       "adjustCta": "Prilagodi ta dan ↓",
       "methodTitle": "Kako smo preverili?",
       "methodNote": "Ocene so izračunane iz geografskih koordinat destinacij (razdalja po zraku × 1,3 za dejanske ceste, povprečno 55 km/h) — niso podatki o prometu v realnem času. Časi vožnje so zaokroženi.",
-      "levelsNote": "{warn} opozoril (naporno, a mogoče) in {error} hujših opozoril (ni realno izvedljivo)."
+      "levelsNote": "{warn} opozoril (naporno, a mogoče) in {error} hujših opozoril (ni realno izvedljivo).",
+      "methodNoteOsrm": "Razdalje in časi vožnje so REALNE CESTNE vrednosti (usmerjanje OSRM / OpenStreetMap) med zaporednimi postanki — niso podatki o prometu v realnem času. Časi so zaokroženi na 5 minut.",
+      "methodNoteMixed": "Razdalje in časi so večinoma realne cestne vrednosti (OSRM / OpenStreetMap); noge brez cestnih podatkov so ocenjene (premica × 1,3, 55 km/h). Niso podatki o prometu v realnem času."
     },
     "saveShare": "Shrani in deli",
     "saving": "Shranjujem...",
@@ -397,7 +399,8 @@
       "dayLabel": "Dan",
       "hint": "Klikni številko za skok na postanek; žetoni dni skrijejo/prikažejo posamezne dni.",
       "legendAria": "Filtriranje dni na zemljevidu",
-      "mapAria": "Zemljevid poti po Sloveniji s postanki itinererja"
+      "mapAria": "Zemljevid poti po Sloveniji s postanki itinererja",
+      "hintRoads": "Linije poteka po realnih cestah (OSRM/OpenStreetMap). Klikni številko za skok na postanek; žetoni dni skrijejo/prikažejo posamezne dni."
     }
   },
   "common": {

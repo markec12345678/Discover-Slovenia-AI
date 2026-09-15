@@ -1,10 +1,16 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { computeTripDriveCosts } from "@/lib/trip-costs";
+import {
+  legIndexMethod,
+  legKey,
+  type LegRouteIndex,
+} from "@/lib/road-routing";
 import type {
   Budget,
   Itinerary,
   ItineraryQuality,
   PlannerInput,
+  RoutingMethod,
   TempoLabel,
 } from "@/lib/types";
 
@@ -85,25 +91,45 @@ function haversineKm(
  * Skupni čas vožnje (minute): seštevek razdalj med VSA zaporednima
  * lokacijama na poti (tudi prek meje dni — tam pač pelješ do naslednje
  * izhodiščne točke), × cestni faktor ÷ povprečna hitrost.
+ * F5.6: kadar je podan indeks nog (realne ceste, OSRM), se namesto
+ * haversine ocene uporabi leg.min vsake noge — isto zaporedje točk.
  */
-function computeDrivingMinutes(days: Itinerary["days"]): number {
-  const coords = days.flatMap((d) =>
-    (d.locations ?? [])
-      .map((l) => DESTINATIONS.find((x) => x.id === l.destination_id)?.coords)
-      .filter((c): c is { lat: number; lng: number } => !!c)
+function computeDrivingMinutes(
+  days: Itinerary["days"],
+  legs?: LegRouteIndex
+): { minutes: number; usedLegs: LegRouteIndex } {
+  const visits = days.flatMap((d) =>
+    (d.locations ?? []).map((l) => ({
+      id: typeof l.destination_id === "string" ? l.destination_id : "",
+      coords: DESTINATIONS.find((x) => x.id === l.destination_id)?.coords,
+    }))
   );
-  if (coords.length < 2) return 0;
+  const known = visits.filter(
+    (v): v is { id: string; coords: { lat: number; lng: number } } => !!v.coords
+  );
+  const usedLegs: LegRouteIndex = new Map();
+  if (known.length < 2) return { minutes: 0, usedLegs };
 
-  let km = 0;
-  for (let i = 1; i < coords.length; i++) {
-    km += haversineKm(
-      coords[i - 1].lat,
-      coords[i - 1].lng,
-      coords[i].lat,
-      coords[i].lng
-    );
+  let minutes = 0;
+  for (let i = 1; i < known.length; i++) {
+    const leg = legs?.get(legKey(known[i - 1].id, known[i].id));
+    if (leg) {
+      minutes += leg.min;
+      usedLegs.set(legKey(known[i - 1].id, known[i].id), leg);
+    } else {
+      minutes +=
+        (haversineKm(
+          known[i - 1].coords.lat,
+          known[i - 1].coords.lng,
+          known[i].coords.lat,
+          known[i].coords.lng
+        ) *
+          ROAD_FACTOR *
+          60) /
+        AVG_SPEED_KMH;
+    }
   }
-  return Math.round(((km * ROAD_FACTOR) / AVG_SPEED_KMH) * 60);
+  return { minutes: Math.round(minutes), usedLegs };
 }
 
 /** Seštevek stroškov vseh lokacij (EUR, defenzivno — neveljavne vrednosti → 0). */
@@ -192,7 +218,9 @@ function computeFoodScore(
  */
 export function computeItineraryQuality(
   itinerary: Itinerary,
-  input: PlannerInput
+  input: PlannerInput,
+  /** F5.6: indeks nog (realne ceste, OSRM) — opcijsko; brez njega hevristika. */
+  legs?: LegRouteIndex
 ): ItineraryQuality {
   const days = Array.isArray(itinerary.days) ? itinerary.days : [];
   const groupSize =
@@ -200,9 +228,10 @@ export function computeItineraryQuality(
       ? input.groupSize
       : 1;
   const estimatedCost = computeEstimatedCost(days);
+  const driving = computeDrivingMinutes(days, legs);
 
   return {
-    drivingMinutes: computeDrivingMinutes(days),
+    drivingMinutes: driving.minutes,
     estimatedCost,
     budgetTier: computeBudgetTier(estimatedCost, groupSize, days.length),
     tempo: computeTempo(days),
@@ -215,7 +244,15 @@ export function computeItineraryQuality(
     groupSize,
     // F5.3: stroški vožnje (gorivo + vinjeta) — ocena iz km poti; null,
     // če koordinate niso znane (ne izmišljujemo).
-    driveCosts: computeTripDriveCosts(itinerary) ?? undefined,
+    // F5.6: km iz indeksa nog (realne ceste), kadar je podan.
+    driveCosts: computeTripDriveCosts(itinerary, legs) ?? undefined,
+    // F5.6: metoda izračuna vožnje (razkritje v UI — "Kako smo izračunali").
+    // Brez indeksa polje manjka → kartica izpiše staro hevristično razlago.
+    ...(legs && driving.usedLegs.size > 0
+      ? { routingMethod: legIndexMethod(driving.usedLegs) }
+      : legs
+        ? { routingMethod: "heuristic" as RoutingMethod }
+        : {}),
   };
 }
 

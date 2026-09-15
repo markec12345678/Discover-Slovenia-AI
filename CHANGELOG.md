@@ -7,6 +7,66 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.8.2] — 2026-09-15
+
+### Dodano (F5.6 — cestni routing OSRM: realne razdalje, časi in geometrija)
+
+> Roadmap item 2 iz primerjalne analize MindTrip (»ravne črte brez road
+> routing«). Zapre tudi koreninski vzrok iz PILOT-VALIDATION-GATE (Test 3):
+> hevristika haversine × 1,3 ÷ 55 km/h je lagala v OBEH smerih hkrati —
+> izmerjeno na realnih poteh: ČAS na avtocestah pretiraval (LJ→Piran
+> 133 min hevristika → 85 min realno; urniki, ki SO izvedljivi, so bili
+> označeni kot nemogoči), KILOMETRI v gorah podcenjevali (Postojna→Črnomelj
+> 105 km hevristika → 155 km realno; Bohinj→Triglav→Dravograd→Gradec dan
+> je bil LAŽJE izgledal, kot je).
+
+- **`src/lib/road-routing.ts` (čisto, client-varno):** tipi nog
+  (LegRoute/LegRouteIndex/RoutingMethod), legKey, heuristicLeg (nazaj
+  kompatibilen fallback), legIndexMethod, dayRouteGeometry (konatenacija
+  geometrij nog v polyline dneva).
+- **`src/lib/road-routing-server.ts` (strežniško):** OSRM klient — javni
+  router.project-osrm.org (OpenStreetMap, profil driving), EN zahtevek na
+  par točk, predpomnilnik TTL 24 h / 600 vnosov (matrika 22×21 ≈ 462 parov
+  se napolni enkrat), timeout 2,5 s, sočasnost 4, stikalna varovalka
+  (4 zaporedne napake → 10 min brez omrežja), VEDNO fail-open na hevristiko
+  — nikoli izjema, nikoli zamuda čez proračun. Omrežna niansa peskovnika:
+  undici global fetch (Happy Eyeballs) ETIMEDOUT-a na OSRM → zahtevek teče
+  prek node:https z family:4 (dokazano deluje v Node in Bun).
+- **Vse plasti pijejo iz indeksa nog (opcijski 3. parameter, nazaj
+  kompatibilno):** geo-validation (pravila 1/3/4/5 zdaj na realnih km/min),
+  itinerary-quality (drivingMinutes, driveCosts), trip-costs (km za
+  gorivo/vinjeto), stop-insights (razdalje v razlagah postankov) — čiste
+  funkcije ostanejo čiste (injektiran indeks; brez njega stara hevristika
+  za client/stare načrte).
+- **Razkritje metode (znamka poštenosti):** `geoValidation.method` +
+  `quality.routingMethod` = osrm/heuristic/mixed; kartica kvalitete
+  (»Seštevek realnih cestnih razdalj in časov vožnje … OSRM/OpenStreetMap«
+  + km v razdelitvi goriva), geo panel (»REALNE CESTNE vrednosti …«),
+  zemljevid (»Linije poteka po realnih cestah«) — SL+EN.
+- **Zemljevid poti riše PRAVE CESTE:** `days[].routeGeometry`
+  (poenostavljena OSRM geometrija, [lat,lng]) → TripMapPanel polna črta
+  po cesti (črtkana premica samo še kot fallback brez geometrije);
+  refine/quick-akcija preračuna geometrijo na novi strukturi (stara bi
+  risala ceste, ki jih ni več).
+- **Pred/po dokaz (`scripts/road-routing-before-after.ts`):** LJ→Piran
+  LAŽNI schedule_gap WARN odstranjen (85 min realno v 2 h vrzeli);
+  Postojna→Črnomelj prava nerazumljivost ODKRTA (155 km, +50 km, ki jih
+  hevristika skrjevala) — nemogoči dnevi ostajajo odkriti 2/2.
+
+### Validacija
+
+- tsc 0, eslint 0; čisti testi 21/21 + živi OSRM 8/8
+  (`scripts/road-routing-test.ts --live`: mock-injektirani fetcher,
+  varovalka, predpomnilnik, mešani indeksi, geometrije);
+- faza 4 regresija 9/9; E2E peskovnik: map 2 polylines 0 črtkanih (realne
+  ceste), VLM potrditev (»lines follow actual road curves … no glitch«),
+  razkritja živa v UI, 390 px 0 preliv, 0 konzolnih/page napak;
+- API dokaz: geoValidation.method=osrm, quality.routingMethod=osrm,
+  routeGeometry 77 točk dneva 1; AI haluciniran ID (`socca`) ostane
+  pošteno ujet (missing_coords ERROR — varnostna mreža nad AI).
+
+---
+
 ## [1.8.1] — 2026-09-15
 
 ### Dodano (F5.5 — odpiralni časi v validacijski plasti)

@@ -38,7 +38,7 @@
 | 7 | Community layer ( avtorji vodnikov, »Shranjeno pri 23«) | MindTrip hybrid AI + social | ⏸ **Roadmap** ( potrebuje uporabnike; imamo community-trips temelj) |
 | 8 | Mobilna aplikacija ( iOS/Android) | Mindtrip app, Layla app | ⏸ **Roadmap** ( PWA bi bil vmesni korak) |
 | 9 | Chat ni »itinerary copilot« ( ločena Q&A + refiner) | MindTrip = chat-first načrtovanje | ⚖️ **Delno zaprto že prej** ( NLP hero + refiner več-turn); chat-first preoblikovanje bi pomenilo redesign zlate poti → meritve naj odločijo |
-| 10 | Ravne črte med točkami ( nižje) brez road routing | MindTrip približno enako ( ocene) | ⏸ Naša haversine × 1,3 je Isto-reda ocena; OSRM/Directions API = produkcijska nadgradnja, a za 22 znanih točk v Sloveniji diskutabilno |
+| 10 | Ravne črte med točkami ( nižje) brez road routing | MindTrip približno enako ( ocene) | ✅ **F5.6 implementirano** ( OSRM realne razdalje/časi/geometrija; hevristika je pretiravala čas na avtocestah in podcenjevala km v gorah — izmerjeno; zemljevid zdaj riše prave ceste; diskutabilnost odločena zMeritvami) |
 
 ## 4. Kaj je Faza 5 dostavila ( 4 funkcije, vse na isti poštenosti)
 
@@ -112,9 +112,11 @@
    ( samo z znanim datumom; vir v sporočilu); fallback preventiva + AI pravilo
    + validator kot varnostna mreža. Preostanek ( ostalih 17 destinacij):
    po potrebi po isti metodi — uradni vir + potrditev.
-2. **Cestni routing ( OSRM/Directions)** — realna geometrija poti namesto
-   ravnih črt; izboljša km/minute v VSEH plasteh ( kvaliteta, geo,
-   stroški).
+2. ~~**Cestni routing ( OSRM/Directions)**~~ ✅ **ZAPRTO v F5.6 ( 1.8.2)** —
+   realna geometrija poti namesto ravnih črt; km/minute v VSEH plasteh
+   ( kvaliteta, geo, stroški, razlage) + zemljevid po pravih cestah;
+   odkrito tudi: hevristika je lagala v OBEH smerih ( avtoceste −48 min,
+   gore +50 km na dnevu) — primerjalna prednost, ne samo pariteta.
 3. **PWA ( offline načrt)** → vmesni korak do mobilne app.
 4. **Živi ceni partnerjev** ( ko pridejo ključi) — največja komercialna
    vrzel vs Layla/Mindtrip.

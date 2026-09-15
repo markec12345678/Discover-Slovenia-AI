@@ -26,6 +26,8 @@ import { tripWindowMs } from "@/lib/trip-dates";
 import { PARTY_PROMPT_LABELS } from "@/lib/party-types";
 import { applyQuickAction, QUICK_ACTIONS } from "@/lib/refine-actions";
 import { buildStopReasons } from "@/lib/stop-insights";
+import { dayRouteGeometry } from "@/lib/road-routing";
+import { buildLegRouteIndex } from "@/lib/road-routing-server";
 
 // POST /api/itinerary/refine — Multi-turn popravki obstoječega itinererja.
 //
@@ -404,7 +406,10 @@ JSON format (STROGO, enak kot vhod):
     // vrednosti bi bile zastarele) + posodobljena AI utemeljitev.
     // Sosednji bug-fix: AI JSON ne vsebuje packingList — prenesi
     // iz originala, če novo-parsed nima (refine jo je prej izgubil).
-    refinedItinerary.quality = computeItineraryQuality(refinedItinerary, formData);
+    // F5.6: realne ceste (OSRM) — isti indeks nog za kvaliteto, geo,
+    // razlage in geometrijo (predpomnilnik → drugi klic za isti par je zdarma).
+    const legs = await buildLegRouteIndex(refinedItinerary);
+    refinedItinerary.quality = computeItineraryQuality(refinedItinerary, formData, legs);
     refinedItinerary.rationale =
       sanitizeAiRationale(parsed.rationale) ??
       (typeof current.rationale === "string" ? current.rationale : undefined);
@@ -430,17 +435,25 @@ JSON format (STROGO, enak kot vhod):
 
     // P0.2 GEO-VALIDACIJA: preračunaj na novi strukturi (stare vrednosti bi
     // bile zastarele — refine lahko prestavi postanke med dnevi/dnevi sami)
-    synced.geoValidation = validateItineraryGeo(synced, isEn ? "en" : "sl");
+    // F5.6: noge iz OSRM indeksa — realne cestne razdalje/časi.
+    synced.geoValidation = validateItineraryGeo(synced, isEn ? "en" : "sl", legs);
 
     console.log(`[itinerary/refine] AI uspešno (source: ${result.source}) — ukaz: "${instruction}"`);
 
     // FAZA 4-1: razlage postankov se PRERAČUNAJO na novi strukturi (nove
     // lokacije / nov zaporedni red → nove razdalje, nov kontekst)
-    const withReasons = buildStopReasons(synced, refineInput, isEn ? "en" : "sl");
+    // F5.6: razdalje iz OSRM nog + SVEŽA geometrija dneva (stara bi risala
+    // ceste, ki jih na novi strukturi ni več).
+    const withReasons = buildStopReasons(synced, refineInput, isEn ? "en" : "sl", legs);
+    withReasons.days = withReasons.days.map((d) => ({
+      ...d,
+      routeGeometry: dayRouteGeometry(d.locations, legs) ?? undefined,
+    }));
 
     // P0.1 (recenzija): validacijski dokaz — before/after iz ISTE plasti kot
-    // prikaz (prosti ukaz → obseg celega potovanja)
-    const beforeGeo = validateItineraryGeo(current, isEn ? "en" : "sl");
+    // prikaz (prosti ukaz → obseg celega potovanja). F5.6: before z realnimi
+    // cestami iz ISTEGA indeksa (predpomniljeni pari) — poštena primerjava.
+    const beforeGeo = validateItineraryGeo(current, isEn ? "en" : "sl", legs);
     const validation = buildValidationEvidence(
       beforeGeo,
       synced.geoValidation,
@@ -484,20 +497,29 @@ JSON format (STROGO, enak kot vhod):
       );
       // P0.2 GEO-VALIDACIJA: tudi deterministična hitra akcija spremeni
       // strukturo dneva — preračunaj (isto čisto funkcijo kot AI pot)
+      // F5.6: realne ceste (OSRM) — predpomniljeni pari iz generiranja.
+      const legs = await buildLegRouteIndex(result.itinerary);
       result.itinerary.geoValidation = validateItineraryGeo(
         result.itinerary,
-        isEn ? "en" : "sl"
+        isEn ? "en" : "sl",
+        legs
       );
       const withReasons = buildStopReasons(
         result.itinerary,
         refineInput,
-        isEn ? "en" : "sl"
+        isEn ? "en" : "sl",
+        legs
       );
+      // F5.6: sveža geometrija po spremembi strukture (stara bi bila napačna)
+      withReasons.days = withReasons.days.map((d) => ({
+        ...d,
+        routeGeometry: dayRouteGeometry(d.locations, legs) ?? undefined,
+      }));
 
       // P0.1 (recenzija): before → mutation → after iz ISTE validacijske plasti
       // kot prikaz — dokaz, da je dan po spremembi izvedljiv (ali opozorilo,
-      // da NI — nikoli samo "uspešen 200 in lep nov tekst")
-      const beforeGeo = validateItineraryGeo(current, isEn ? "en" : "sl");
+      // da NI — nikoli samo "uspešen 200 in lep nov tekst"). F5.6: realne ceste.
+      const beforeGeo = validateItineraryGeo(current, isEn ? "en" : "sl", legs);
       const validation = buildValidationEvidence(
         beforeGeo,
         result.itinerary.geoValidation,

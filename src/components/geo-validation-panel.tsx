@@ -232,7 +232,16 @@ export function GeoValidationPanel({
             </span>
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-2 space-y-1.5 text-xs leading-relaxed text-muted-foreground">
-            <p>{t("geoValidation.methodNote")}</p>
+            {/* F5.6 (road routing): razkritje metode — realne ceste (OSRM),
+                mešano ali hevristika; nikoli ne pretvarjamo, da je ocena
+                realna cesta (in obratno). */}
+            <p>
+              {geo.method === "osrm"
+                ? t("geoValidation.methodNoteOsrm")
+                : geo.method === "mixed"
+                  ? t("geoValidation.methodNoteMixed")
+                  : t("geoValidation.methodNote")}
+            </p>
             <p className="border-t border-border/60 pt-1.5">
               {t("geoValidation.levelsNote", {
                 warn: warnCount,

@@ -37,6 +37,8 @@ import {
 } from "@/lib/itinerary-quality";
 import { validateItineraryGeo } from "@/lib/geo-validation";
 import { buildStopReasons } from "@/lib/stop-insights";
+import { dayRouteGeometry } from "@/lib/road-routing";
+import { buildLegRouteIndex } from "@/lib/road-routing-server";
 
 // ============================================================================
 // WEATHER-CONTEXT (t11): realna vremenska napoved PRED generiranjem
@@ -546,7 +548,15 @@ JSON format (STROGO):
     // temeljiti na postankih, ki so DEJANSKO v načrtu (isti vzorec kot
     // fallback in refine).
     const budgetSynced = recomputeTotalBudget(enriched);
-    budgetSynced.quality = computeItineraryQuality(budgetSynced, input);
+
+    // F5.6 (ROAD ROUTING): realne cestne razdalje/časi (OSRM) za VSE plasti —
+    // kvaliteta, geo-validacija, stroški, razlage postankov, geometrija za
+    // zemljevid. Best-effort: ob nedosegljivem OSRM hevristika (razkrito v
+    // geoValidation.method / quality.routingMethod). NIKOLI ne vrže in ne
+    // zavlačuje mimo ~3 s (sočasnost 4 × timeout 2,5 s).
+    const legs = await buildLegRouteIndex(budgetSynced);
+
+    budgetSynced.quality = computeItineraryQuality(budgetSynced, input, legs);
     budgetSynced.rationale =
       sanitizeAiRationale(parsed.rationale) ??
       buildFallbackRationale(input, budgetSynced.quality, lang);
@@ -554,7 +564,8 @@ JSON format (STROGO):
     // P0.2 GEO-VALIDACIJA: izvedljivost nad končno strukturo (deterministično,
     // iz realnih koordinat — km/dan, zaporedne razdalje, obseg dneva, urnik,
     // duplikati, manjkajoči ID-ji). Sporočila locena prek lang.
-    budgetSynced.geoValidation = validateItineraryGeo(budgetSynced, lang);
+    // F5.6: noge iz OSRM indeksa — realne cestne razdalje/časi.
+    budgetSynced.geoValidation = validateItineraryGeo(budgetSynced, lang, legs);
 
     // CROWD-ALTERNATIVES: poštene opombe o gneči + alternative (deterministično)
     budgetSynced.crowdNotices = buildCrowdNotices(budgetSynced, input, lang);
@@ -563,8 +574,16 @@ JSON format (STROGO):
     // podatkovno utemeljeno razlago (interesi, tip skupine, razdalja,
     // vreme, sezona — izključno dejstva, brez marketinga). Deterministično
     // na obeh poteh — AI izbira postankov, razlago pa sestavijo isti
-    // preverljivi podatki.
-    const withReasons = buildStopReasons(budgetSynced, input, lang);
+    // preverljivi podatki. F5.6: razdalje iz OSRM nog, kadar so na voljo.
+    const withReasons = buildStopReasons(budgetSynced, input, lang, legs);
+
+    // F5.6: geometrija poti po realnih cestah (za zemljevid na /nacrtuj) —
+    // po razlagah, da ohranimo isti vrstni red enrichinga (struktura se ne
+    // spremeni, samo doda routeGeometry polje, kadar OSRM Geometrija obstaja).
+    withReasons.days = withReasons.days.map((d) => ({
+      ...d,
+      routeGeometry: dayRouteGeometry(d.locations, legs) ?? undefined,
+    }));
 
     return NextResponse.json(withReasons);
   } catch (error) {
@@ -594,19 +613,26 @@ JSON format (STROGO):
     }
 
     // FW4.1: metrike + deterministična utemeljitev (fallback nima AI rationale)
-    // (P4-8: jezik itinererja)
-    fallback.quality = computeItineraryQuality(fallback, input);
+    // (P4-8: jezik itinererja) + F5.6 realne ceste (ista obogatitev kot AI pot)
+    const legs = await buildLegRouteIndex(fallback);
+    fallback.quality = computeItineraryQuality(fallback, input, legs);
     fallback.rationale = buildFallbackRationale(input, fallback.quality, lang);
 
     // P0.2 GEO-VALIDACIJA: isto preverjanje izvedljivosti kot na AI poti —
     // fallback itinerar mora biti enako preverljiv kot AI izpisa.
-    fallback.geoValidation = validateItineraryGeo(fallback, lang);
+    // F5.6: noge iz OSRM indeksa — realne cestne razdalje/časi.
+    fallback.geoValidation = validateItineraryGeo(fallback, lang, legs);
 
     // CROWD-ALTERNATIVES: iste poštene opombe kot na AI poti
     fallback.crowdNotices = buildCrowdNotices(fallback, input, lang);
 
     // FAZA 4-1: razlage postankov (ista deterministična obogatitev kot AI pot)
-    const withReasons = buildStopReasons(fallback, input, lang);
+    // F5.6: razdalje iz OSRM nog + geometrija dneva za zemljevid.
+    const withReasons = buildStopReasons(fallback, input, lang, legs);
+    withReasons.days = withReasons.days.map((d) => ({
+      ...d,
+      routeGeometry: dayRouteGeometry(d.locations, legs) ?? undefined,
+    }));
 
     return NextResponse.json(withReasons);
   }

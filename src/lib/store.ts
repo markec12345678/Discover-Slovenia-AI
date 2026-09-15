@@ -9,6 +9,16 @@ interface RouteCoord {
   day?: number; // Dan v itinererju (za color-coded prikaz)
 }
 
+/** F5.6: pot dneva po realnih cestah (OSRM) — [lat, lng] točke. */
+interface DayRoute {
+  day: number;
+  color: string;
+  coords: RouteCoord[];
+  /** Geometrija po realnih cestah (iz days[].routeGeometry) — kadar
+   *  obstaja, zemljevid nariše PRAVO cesto namesto ravne črte. */
+  geometry?: [number, number][];
+}
+
 // Barve za dni (Wanderlog inspiracija)
 const DAY_COLORS = [
   "#2d6a3e", // Dan 1 — zelena (primary)
@@ -40,7 +50,7 @@ interface AppState {
   routeCoords: RouteCoord[];
 
   /** Koordinate grupirane po dnevih (za color-coded prikaz) */
-  routeByDay: { day: number; color: string; coords: RouteCoord[] }[];
+  routeByDay: DayRoute[];
 }
 
 /**
@@ -61,7 +71,7 @@ export const useAppStore = create<AppState>((set) => ({
 
     // Izpelji koordinate poti iz itinererja — grupirano po dnevih
     const allCoords: RouteCoord[] = [];
-    const byDay: { day: number; color: string; coords: RouteCoord[] }[] = [];
+    const byDay: DayRoute[] = [];
     const seen = new Set<string>();
 
     it.days.forEach((dayPlan) => {
@@ -86,6 +96,8 @@ export const useAppStore = create<AppState>((set) => ({
           day: dayPlan.day,
           color: DAY_COLORS[(dayPlan.day - 1) % DAY_COLORS.length],
           coords: dayCoords,
+          // F5.6: geometrija po realnih cestah (OSRM) — samo kadar jo ima dan
+          geometry: dayPlan.routeGeometry,
         });
       }
     });

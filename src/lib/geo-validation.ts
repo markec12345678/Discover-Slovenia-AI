@@ -24,7 +24,10 @@
 // NAČELO POŠTENOSTI (enako kot itinerary-quality.ts / crowd-alternatives.ts):
 // - VSE metrike so DETERMINISTIČNO izračunane iz realnih koordinat destinacij
 //   (haversine × 1,3 cestni faktor ÷ 55 km/h povprečje) — niso prometne
-//   informacije v realnem času in se nikoli ne predstavljajo kot take.
+//   informaciji v realnem času in se nikoli ne predstavljajo kot take.
+// - F5.6 (road routing): kadar klicnik poda indeks nog (src/lib/road-routing.ts),
+//   se za razdalje/čase uporabijo REALNE CESTE (OSRM/OpenStreetMap) — katera
+//   metoda je bila uporabljena, je razkrito v geoValidation.method.
 // - Kjer podatka ni (neparsable time_slot, neznan destination_id), se pravilo
 //   preskoči ali označi kot missing_coords — NE izmišljujemo si vrednosti.
 // - Čista funkcija: isto obnašanje na serverju (API ob generiranju/refinu)
@@ -33,7 +36,12 @@
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { dayISOForDayNumber, parseISODateLocal } from "@/lib/trip-dates";
-import type { Itinerary } from "@/lib/types";
+import {
+  legIndexMethod,
+  legKey,
+  type LegRouteIndex,
+} from "@/lib/road-routing";
+import type { Itinerary, RoutingMethod } from "@/lib/types";
 
 /** Cestni faktor — dejanske ceste so ~1,3× daljše od ravne črte (Slovenija). */
 const ROAD_FACTOR = 1.3;
@@ -97,6 +105,14 @@ export interface GeoValidation {
   tripKm: number;
   /** Najhujšja raven: "ok" (0 opozoril) | "warn" | "error". */
   worst: "ok" | "warn" | "error";
+  /**
+   * F5.6 (road routing): od kod so razdalje/časi — "osrm" (realne ceste),
+   * "heuristic" (haversine × 1,3 ÷ 55 km/h) ali "mixed". Opcijsko: stari
+   * shranjeni načrti brez OSRM obogatitve ga nimajo → panel izpiše
+   * hevristiko (nazaj kompatibilno, pošteno razkrito).
+   * (Zrcali types.ts GeoValidation.method — strukturno enako.)
+   */
+  method?: RoutingMethod;
 }
 
 // ---------------------------------------------------------------------------
@@ -253,11 +269,15 @@ function msgClosedWeekday(
 
 export function validateItineraryGeo(
   itinerary: Itinerary,
-  lang: Lang = "sl"
+  lang: Lang = "sl",
+  /** F5.6: indeks nog (realne ceste, OSRM) — opcijsko; brez njega hevristika. */
+  legs?: LegRouteIndex
 ): GeoValidation {
   const days = Array.isArray(itinerary.days) ? itinerary.days : [];
   const dayMetrics: DayGeoMetrics[] = [];
   const issues: GeoValidationIssue[] = [];
+  // F5.6: metoda razdalj (razkritje v odgovoru) — štejemo porabljene noge.
+  const usedLegs: LegRouteIndex = new Map();
 
   // F5.5: datum tega dneva ( dan N = tripStartDate + N-1) — SAMO z znanim
   // datumom odhoda. Brez datuma pravili odpiralnih časov NE veljata
@@ -347,17 +367,28 @@ export function validateItineraryGeo(
     }
 
     // --- zaporedne noge: razdalje, vožnja, urnik ---
-    let kmStraight = 0;
+    let kmStraight = 0; // hevristična razdalja (rezerva, kadar ni indeksa)
     let driveH = 0;
+    let dayKm = 0; // F5.6: seštevek km nog (realne ceste, kadar so na voljo)
     for (let i = 0; i < stops.length - 1; i++) {
       const a = COORDS.get(stops[i].destination_id);
       const b = COORDS.get(stops[i + 1].destination_id);
       if (!a || !b) continue;
+      const leg = legs?.get(
+        legKey(stops[i].destination_id, stops[i + 1].destination_id)
+      );
       const straight = haversineKm(a, b);
-      const roadKm = round5(straight * ROAD_FACTOR);
-      const legH = (straight * ROAD_FACTOR) / AVG_SPEED_KMH;
+      const roadKm = leg ? leg.km : round5(straight * ROAD_FACTOR);
+      const legH = leg ? leg.min / 60 : (straight * ROAD_FACTOR) / AVG_SPEED_KMH;
       kmStraight += straight;
       driveH += legH;
+      dayKm += roadKm;
+      if (leg) {
+        usedLegs.set(
+          legKey(stops[i].destination_id, stops[i + 1].destination_id),
+          leg
+        );
+      }
 
       // pravilo 3: zaporedna razdalja
       if (roadKm > THRESHOLDS.legKm.error) {
@@ -437,7 +468,7 @@ export function validateItineraryGeo(
       }
     }
 
-    const roadKmDay = round5(kmStraight * ROAD_FACTOR);
+    const roadKmDay = dayKm > 0 ? round5(dayKm) : round5(kmStraight * ROAD_FACTOR);
     const drivingMinutes = round5(driveH * 60);
     const activityMinutes = round5(
       stops.reduce((s, x) => s + (Number.isFinite(x.duration) ? x.duration : 0), 0) * 60
@@ -535,5 +566,17 @@ export function validateItineraryGeo(
       ? "warn"
       : "ok";
 
-  return { days: dayMetrics, issues, tripKm, worst };
+  // F5.6: metoda razdalj tega izračuna (razkritje v UI). Brez indeksa
+  // (client, stari načrti) polje manjka → panel izpiše hevristiko.
+  let method: RoutingMethod | undefined;
+  if (legs && usedLegs.size > 0) method = legIndexMethod(usedLegs);
+  else if (legs) method = "heuristic";
+
+  return {
+    days: dayMetrics,
+    issues,
+    tripKm,
+    worst,
+    ...(method ? { method } : {}),
+  };
 }

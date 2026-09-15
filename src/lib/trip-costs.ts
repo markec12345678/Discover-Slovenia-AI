@@ -1,4 +1,5 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { legKey, type LegRouteIndex } from "@/lib/road-routing";
 import type { DriveCosts, Itinerary } from "@/lib/types";
 
 // ============================================================================
@@ -78,36 +79,55 @@ export function pickVignetteDays(days: number): DriveCosts["vignetteDays"] {
 // --- Čisti izračun ---------------------------------------------------------
 
 /**
- * Skupni kilometri poti (haversine med ZAPOREDNIMI postanki × cestni
- * faktor, zaokroženo na 5 — brez lažne natančnosti). Enaka logika kot
- * geo-validation dnevni km, a čez celo pot.
+ * Skupni kilometri poti (zaporedni postanki: realne ceste prek indeksa nog
+ * OSRM, kadar je podan; sicer haversine × cestni faktor; zaokroženo na 5 —
+ * brez lažne natančnosti). Enaka logika kot geo-validation dnevni km, a čez
+ * celo pot (tudi prehode med dnevi).
  */
-export function computeDrivingKm(days: Itinerary["days"]): number {
-  const coords = days.flatMap((d) =>
-    (d.locations ?? [])
-      .map((l) => DESTINATIONS.find((x) => x.id === l.destination_id)?.coords)
-      .filter((c): c is { lat: number; lng: number } => !!c)
+export function computeDrivingKm(
+  days: Itinerary["days"],
+  legs?: LegRouteIndex
+): number {
+  const visits = days.flatMap((d) =>
+    (d.locations ?? []).map((l) => ({
+      id: typeof l.destination_id === "string" ? l.destination_id : "",
+      coords: DESTINATIONS.find((x) => x.id === l.destination_id)?.coords,
+    }))
   );
-  if (coords.length < 2) return 0;
+  const known = visits.filter(
+    (v): v is { id: string; coords: { lat: number; lng: number } } => !!v.coords
+  );
+  if (known.length < 2) return 0;
   let km = 0;
-  for (let i = 1; i < coords.length; i++) {
-    km += haversineKm(
-      coords[i - 1].lat,
-      coords[i - 1].lng,
-      coords[i].lat,
-      coords[i].lng
-    );
+  for (let i = 1; i < known.length; i++) {
+    const leg = legs?.get(legKey(known[i - 1].id, known[i].id));
+    if (leg) {
+      km += leg.km; // realna cesta (OSRM) — faktor je že v merjeni poti
+    } else {
+      // hevristika (noga ni v indeksu) — enaka formula kot brez indeksa
+      km +=
+        haversineKm(
+          known[i - 1].coords.lat,
+          known[i - 1].coords.lng,
+          known[i].coords.lat,
+          known[i].coords.lng
+        ) * ROAD_FACTOR;
+    }
   }
-  return Math.round((km * ROAD_FACTOR) / 5) * 5;
+  return Math.round(km / 5) * 5;
 }
 
 /**
  * Ocena stroškov vožnje za celo pot (gorivo + vinjeta).
  * Čista funkcija: Itinerary + število dni → DriveCosts.
+ * F5.6: z indeksom nog (OSRM) km temeljijo na realnih cestah.
  */
-export function computeTripDriveCosts(itinerary: Itinerary): DriveCosts | null {
+export function computeTripDriveCosts(
+  itinerary: Itinerary,
+  legs?: LegRouteIndex
+): DriveCosts | null {
   const days = Array.isArray(itinerary.days) ? itinerary.days : [];
-  const km = computeDrivingKm(days);
+  const km = computeDrivingKm(days, legs);
   if (km <= 0) return null; // brez znanih koordinat → brez ocene (ne izmišljujemo)
 
   const fuelLiters = Math.round((km / 100) * FUEL_CONSUMPTION_L_PER_100);

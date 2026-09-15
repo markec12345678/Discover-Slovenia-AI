@@ -36,7 +36,7 @@ interface RouteCoord {
 
 export interface TripMapPanelProps {
   /** Pot grupirana po dnevih z barvami ( iz Zustand store) */
-  routeByDay: { day: number; color: string; coords: RouteCoord[] }[];
+  routeByDay: { day: number; color: string; coords: RouteCoord[]; geometry?: [number, number][] }[];
   /** Kilometri po dnevih ( iz geo-validacije — poštena ocena) */
   dayKm?: Record<number, number>;
   /** Klik markerja → povej plannerju, naj scrolla na kartico postanka */
@@ -65,6 +65,13 @@ export function TripMapPanel({
   }, [onStopSelect]);
 
   const totalDays = routeByDay.length;
+
+  // F5.6: ali ima vsaj en dan geometrijo po realnih cestah ( OSRM) —
+  // za pošteno opombo pod zemljevidom (ne pretvarjamo se, da je ravna
+  // črta resnična cesta, in obratno).
+  const hasRoadGeometry = routeByDay.some(
+    (d) => d.geometry && d.geometry.length >= 2
+  );
 
   // Vidni dnevi ( privzeto vsi). Žeton "Vsi" = vsi vklopljeni.
   const [hiddenDays, setHiddenDays] = useState<Set<number>>(new Set());
@@ -110,8 +117,17 @@ export function TripMapPanel({
       const layer = L.layerGroup();
       const markers: L.Marker[] = [];
 
-      // Polyline dneva ( če ima ≥ 2 točki)
-      if (dayRoute.coords.length >= 2) {
+      // Polyline dneva ( če ima ≥ 2 točki).
+      // F5.6 (road routing): kadar ima dan geometrijo po REALNIH cestah
+      // ( OSRM/OpenStreetMap), narišemo PRAVO cesto (polna črta); sicer
+      // ravno črto med postanki ( črtkana — kot doslej).
+      if (dayRoute.geometry && dayRoute.geometry.length >= 2) {
+        L.polyline(dayRoute.geometry, {
+          color: dayRoute.color,
+          weight: 4,
+          opacity: 0.8,
+        }).addTo(layer);
+      } else if (dayRoute.coords.length >= 2) {
         const latlngs = dayRoute.coords.map(
           (c) => [c.lat, c.lng] as [number, number]
         );
@@ -310,7 +326,9 @@ export function TripMapPanel({
           className="h-[300px] w-full overflow-hidden rounded-lg border border-border/60 sm:h-[380px]"
         />
 
-        <p className="text-xs text-muted-foreground">{t("hint")}</p>
+        <p className="text-xs text-muted-foreground">
+          {hasRoadGeometry ? t("hintRoads") : t("hint")}
+        </p>
       </CardContent>
     </Card>
   );

@@ -124,7 +124,19 @@ export function ItineraryQualityCard({
       label: "Vožnja",
       value: formatDrivingMinutes(quality.drivingMinutes),
       icon: Car,
-      how: "Seštevek cestnih razdalj (geografske koordinate × 1,3 za dejanske ceste, povprečje 55 km/h) med zaporednimi lokacijami na poti.",
+      // F5.6 (road routing): razkritje metode — realne ceste (OSRM) ali
+      // hevristika (haversine × 1,3); nikoli ne pretvarjamo, da je ocena
+      // realna cesta (in obratno).
+      how:
+        quality.routingMethod === "osrm"
+          ? isEn
+            ? "Sum of actual road distances and drive times between consecutive stops (OSRM / OpenStreetMap)."
+            : "Seštevek realnih cestnih razdalj in časov vožnje med zaporednimi postanki (OSRM / OpenStreetMap)."
+          : quality.routingMethod === "mixed"
+            ? isEn
+              ? "Mostly actual road distances (OSRM / OpenStreetMap); some legs without road data use a straight-line estimate (× 1.3, 55 km/h)."
+              : "Večinoma realne cestne razdalje (OSRM / OpenStreetMap); noge brez cestnih podatkov so ocenjene po premici (× 1,3, 55 km/h)."
+            : "Seštevek cestnih razdalj (geografske koordinate × 1,3 za dejanske ceste, povprečje 55 km/h) med zaporednimi lokacijami na poti.",
       neutral: true,
     },
     {
@@ -287,7 +299,13 @@ export function ItineraryQualityCard({
                 </span>{" "}
                 {isEn ? (
                   <>
-                    ≈ {driveCosts.km} km of driving × {FUEL_CONSUMPTION_L_PER_100} l/100 km
+                    ≈ {driveCosts.km} km of driving
+                    {quality.routingMethod === "osrm"
+                      ? " on actual roads (OSRM/OpenStreetMap)"
+                      : quality.routingMethod === "mixed"
+                        ? " (mostly actual roads, OSRM)"
+                        : ""}{" "}
+                    × {FUEL_CONSUMPTION_L_PER_100} l/100 km
                     × {FUEL_PRICE_EUR_PER_L.toFixed(2)} €/l (regulated NMB-95
                     price band, gov.si/AMZS) ≈ {driveCosts.fuelEur} €. E-vignette
                     for vehicles up to 3.5 t: {vignetteLabel} {driveCosts.vignetteEur} €
@@ -301,7 +319,13 @@ export function ItineraryQualityCard({
                   </>
                 ) : (
                   <>
-                    ≈ {driveCosts.km} km vožnje × {FUEL_CONSUMPTION_L_PER_100} l/100 km
+                    ≈ {driveCosts.km} km vožnje
+                    {quality.routingMethod === "osrm"
+                      ? " po realnih cestah (OSRM/OpenStreetMap)"
+                      : quality.routingMethod === "mixed"
+                        ? " (večinoma realne ceste, OSRM)"
+                        : ""}{" "}
+                    × {FUEL_CONSUMPTION_L_PER_100} l/100 km
                     × {FUEL_PRICE_EUR_PER_L.toFixed(2)} €/l ( regulirana cena
                     NMB-95, pas gov.si/AMZS) ≈ {driveCosts.fuelEur} €. E-vinjeta
                     za vozila do 3,5 t: {vignetteLabel} {driveCosts.vignetteEur} €
@@ -321,8 +345,9 @@ export function ItineraryQualityCard({
               </p>
             )}
             <p className="pt-1 border-t border-border/60">
-              Vrednosti so izračunane iz realnih podatkov poti (koordinate,
-              cene, tipi destinacij) — niso ocena AI.
+              {isEn
+                ? "Values are computed from real trip data (coordinates, prices, destination types) — not AI guesses."
+                : "Vrednosti so izračunane iz realnih podatkov poti (koordinate, cene, tipi destinacij) — niso ocena AI."}
             </p>
           </CollapsibleContent>
         </Collapsible>

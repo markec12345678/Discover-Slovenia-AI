@@ -1,5 +1,6 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
+import { legKey, type LegRouteIndex } from "@/lib/road-routing";
 import type { Itinerary, LocationVisit, PlannerInput } from "@/lib/types";
 
 // ============================================================================
@@ -63,11 +64,19 @@ export function destinationById(id: string) {
   return DESTINATIONS.find((d) => d.id === id);
 }
 
-/** Dejanska cestna razdalja (km) med dvema lokacijama itinererja. */
-export function roadKmBetween(a: LocationVisit, b: LocationVisit): number | null {
+/** Dejanska cestna razdalja (km) med dvema lokacijama itinererja.
+ *  F5.6: z indeksom nog (OSRM) je to realna cestna razdalja; brez njega
+ *  hevristika (haversine × 1,3). */
+export function roadKmBetween(
+  a: LocationVisit,
+  b: LocationVisit,
+  legs?: LegRouteIndex
+): number | null {
   const da = destinationById(a.destination_id);
   const db = destinationById(b.destination_id);
   if (!da || !db) return null;
+  const leg = legs?.get(legKey(a.destination_id, b.destination_id));
+  if (leg) return leg.km;
   return Math.round(
     haversineKm(da.coords.lat, da.coords.lng, db.coords.lat, db.coords.lng) *
       ROAD_FACTOR
@@ -119,6 +128,9 @@ interface ReasonContext {
   rainyDays: Set<number>;
   /** Jezik razlage. */
   lang: "sl" | "en";
+  /** F5.6: indeks nog (realne ceste, OSRM) — opcijsko; razdalje v razlagah
+   *  so potem realne cestne razdalje. */
+  legs?: LegRouteIndex;
 }
 
 const SEASON_LABELS: Record<string, { sl: string; en: string }> = {
@@ -208,10 +220,11 @@ export function buildStopReason(
   }
 
   // 3) Razdalja — do prejšnjega postanka (ali najbližjega v dnevu).
-  //    P1-1 (recenzija): to je IZRAČUN iz koordinat (haversine × 1,3), ne
-  //    navigacijski podatek — formulacija je eksplicitno približek.
+  //    P1-1 (recenzija): to je IZRAČUN iz koordinat — haversine × 1,3 hevristika
+  //    ali (F5.6) realna cestna razdalja iz indeksa nog (OSRM) — nikoli
+  //    navigacijski podatek v realnem času; formulacija je eksplicitno približek.
   if (previous) {
-    const km = roadKmBetween(previous, visit);
+    const km = roadKmBetween(previous, visit, ctx.legs);
     if (km !== null) {
       if (km <= 30) {
         parts.push(
@@ -231,7 +244,7 @@ export function buildStopReason(
       }
     }
   } else if (nearestOther) {
-    const km = roadKmBetween(nearestOther, visit);
+    const km = roadKmBetween(nearestOther, visit, ctx.legs);
     if (km !== null && km <= 25) {
       parts.push(
         isEn ? "close to the other stops of this day" : "blizu ostalih postankov tega dneva"
@@ -275,7 +288,9 @@ export function buildStopReasons(
     PlannerInput,
     "interests" | "season" | "partyType" | "language"
   >,
-  lang: "sl" | "en" = "sl"
+  lang: "sl" | "en" = "sl",
+  /** F5.6: indeks nog (realne ceste, OSRM) — opcijsko; brez njega hevristika. */
+  legs?: LegRouteIndex
 ): Itinerary {
   const rainyDays = new Set<number>();
   const ctx: ReasonContext = {
@@ -284,6 +299,7 @@ export function buildStopReasons(
     season: input.season,
     rainyDays,
     lang,
+    legs,
   };
 
   // Deževni dnevi iz pogoja (po enrichingu z realno napovedjo)
@@ -298,8 +314,7 @@ export function buildStopReasons(
       const nearestOther =
         day.locations.length > 1
           ? day.locations
-              .filter((_, j) => j !== locIdx)
-              .map((other) => ({ other, km: roadKmBetween(other, loc) }))
+              .map((other) => ({ other, km: roadKmBetween(other, loc, legs) }))
               .filter((x) => x.km !== null)
               .sort((a, b) => (a.km ?? 0) - (b.km ?? 0))[0]?.other ?? null
           : null;

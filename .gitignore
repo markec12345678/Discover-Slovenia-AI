@@ -73,6 +73,10 @@ server.log
 /examples/
 /mini-services/
 /Caddyfile
+/sandbox-keepalive.sh
+/sandbox-logs/
+/scripts/pilot-results/
+/dev-fore.log
 
 # AI priporočila runtime cache (regenerira se samodejno)
 /data/ai-rec-cache.json
