@@ -253,7 +253,7 @@ na EN straneh → `nav.tagline` = "AI trips"). /pot/* ostaja SL-only
 | # | Vrzel | Odločitev |
 |---|---|---|
 | 1 | Mindtrip Start Anywhere zdaj sprejema SLIKE ( App Store, »share images«) | ✅ **F8 implementirano ( 1.11.0)** — zavihek »Slika« na /nacrtuj: upload/drag&drop/paste (Ctrl+V) → VLM STROGI ekstraktor prebere imena → ISTI deterministični matcher kot povezave poveže z našimi 22 destinacijami; metoda razkrita ( amber badge), slika se pozabi ( pomnilnik), 422 brez zadetkov / 502 VLM nedosegljiv — iskreno. Glej sekcijo 12. |
-| 2 | Skupinsko glasovanje ( MonkeyTravel »voting«, WePlanify pollsi) | ⏸ Roadmap — zahteva uporabniške račune; deljena povezava je naš trenutni skupinski mehanizem |
+| 2 | Skupinsko glasovanje ( MonkeyTravel »voting«, WePlanify pollsi) | ✅ **F11 implementirano ( 1.15.0)** — ankete BREZ računov na deljeni povezavi (/pot/[shareId]): poljubno vprašanje + 2–6 možnosti, en glas na obiskovalca (anonimni clientId), prestavitev glasu, avtor ankete (isti brskalnik — brez računov) jo zaključi ali izbriše. Glej sekcijo 16. |
 | 3 | Potni dnevnik/spomini ( Stippl travel reel, photobook) | ⏸ Zavestno odloženo — vsebinska smer, ne jedro načrtovanja |
 | 4 | živi ceni partnerjev | ⏸ Roadmap item 4 ( čakamo ključe) — Mindtrip Flights/Stays pomenita, da se ta vrzel povečuje, a zahteva GDS partnerstvo |
 | 5 | Gmail/Maps uvoz rezervacij ( Wanderlog) | ⏸ Odloženo — zasebnostno občutljivo, ni v naši smeri |
@@ -422,3 +422,40 @@ konkurenti skrivajo — tudi pod kapoto je videti, kaj se dogaja.
 namestitev, testiranje in vzdrževanje AI plasti sta avtomatizirani do
 meje, ki jo postavljajo samo uporabnikovi žetoni (Vercel/Render), vse
 drugo pa poganja en ukaz (`scripts/ops/setup-all.sh`).
+
+---
+
+# F11 ( september 2026) — skupinske ankete brez računov
+
+> Vrzel #2 iz sekcije 10, zaprta kot zadnja zmaga 1.15.0. Obenem je
+> uporabnik priskrbel VERCEL_TOKEN — zadnja "ročna" meja iz sklepa 1.14.0
+> ("samo uporabnikovi žetoni") je odstranjena: GEMINI_API_KEY +
+> OPENROUTER_API_KEY sta živi potisnjena na Vercel ( production + preview +
+> development), opuščena VITE_GEMINI_API_KEY pa izbrisana.
+
+## 16. F11 odgovor na MindTrip/WePlanify "voting"
+
+| MindTrip / WePlanify pollsi | Naš odgovor ( F11, 1.15.0) |
+|---|---|
+| Glasovanje zahteva račun/Google prijavo | ANKETA BREZ RAČUNOV na deljeni povezavi — isti anonimni clientId ( localStorage) kot glasovanje za lokacije, všečki in komentarji: en obiskovalec = ena identiteta povsod |
+| Fiksne vrste anket ( datumi, hoteli) | POLJUBNO vprašanje ( 2–200 znakov) + 2–6 možnosti — "Kateri dan odpotujemo?", "Hotel ali apartma?", "Kremšnita v Bledu ali v Ljubljani?" |
+| Glas se ne more spremeniti | PRESTAVITEV glasu: zadnji klik velja ( upsert na unique[ pollId, voterId]) — skupina lahko presuša mnenje, števci se pravilno preštejejo |
+| Zapiranje anket samo moderatorju | Avtor = ustvarjalčev brskalnik ( authorClientId, enak anonimni pristop kot editToken pri F7 vodnikih): zaključi/znova odpri/izbriše SAMO on ( 403 drugače) |
+| Rezultati skriti do konca | REZULTATI VIDNI ŽIVE: odstotki + števci + progress fill na vsaki možnosti, moj glas označen ( kljukica) |
+
+**Iskrene omejitve ( zapisane v CHANGELOG):**
+- En glas na OBISKOVALCA ne na OSEBO — kdor pobriše localStorage, glasuje
+  znova ( enako velja za všečke/komentarje; nadzor stroškov plačanih API-jev
+  tega ne upravičuje).
+- Rate-limit: 20 novih anket/h na IP, 60 glasov/h — za resne zlorabe bo
+  treba Turnstile ( enako izhodišče kot pri komentarjih).
+- Max 10 ODPRTIH anket na potovanje ( zaprte ne štejejo) — meja proti smeti.
+- /pot strani ostajajo SL-only ( P4-8) — ankete so v slovenščini, enako
+  kot vodniki in komentarji na deljeni povezavi.
+
+**Sklep F11:** vrzel #2 je zaprta BREZ žrtvovanja anonimnega pristopa —
+razliko od MindTripa se skupina odloča brez prijave, z živimi rezultati
+in s poštenimi mejami. E2E v brskalniku ( 10/10): ustvari anketo, glasuj,
+prestavi glas, zaključi ( možnosti se zaklenejo), znova odpri, glas
+preživi ponovni nalagalnik ( localStorage → strežnik), izbriši; 390 px
+brez prekrivanja ( VLM potrditev).

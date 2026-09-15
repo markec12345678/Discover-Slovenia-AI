@@ -37,8 +37,8 @@ while [ $# -gt 0 ]; do
 done
 [ ${#ARGS[@]} -ge 1 ] || die "Uporaba: $0 [--token x] [--project ime] [--target production] IME[=VREDNOST] …"
 
-[ -n "${VERCEL_TOKEN:-}" ] || die "Manjka VERCEL_TOKEN (https://vercel.com/account/tokens)."
 load_env
+[ -n "${VERCEL_TOKEN:-}" ] || die "Manjka VERCEL_TOKEN (https://vercel.com/account/tokens — ali v .env)."
 
 TEAM_PARAM=""
 if [ -n "${VERCEL_TEAM_ID:-}" ]; then TEAM_PARAM="?teamId=${VERCEL_TEAM_ID}"; fi

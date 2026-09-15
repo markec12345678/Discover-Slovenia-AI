@@ -7,6 +7,69 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.15.0] — 2026-09-16
+
+### Dodano (1.15.0 — F11 SKUPINSKE ANKETE BREZ RAČUNOV + VERCEL ŽIVO)
+
+> Zadnja nerešena točka iz naročila 1.14.0 ("NERESENO: F11 skupinske
+> ankete — MindTrip vrzel #2") + uporabnik je priskrbel VERCEL_TOKEN:
+> sklep 1.14.0 ("namestitev avtomatizirana do meje uporabnikovih žetonov")
+> je postal zastarel — žetoni so zdaj na voljo, ključi so ŽIVO potisnjeni
+> na Vercel. Vrzel #2 iz sekcije 10 COMPETITIVE-ANALYSIS je zaprta.
+
+- **F11: Skupinske ankete na deljeni povezavi (`/pot/[shareId]`) — brez
+  računov.** Poljubno vprašanje (2–200 znakov) + 2–6 možnosti; en glas na
+  obiskovalca (anonimni clientId iz localStorage — ENAKA identiteta kot
+  glasovanje za lokacije, všečki in komentarji); prestavitev glasu (zadnji
+  klik velja — upsert na `unique([pollId, voterId])`); rezultati živi
+  (odstotki + števci + progress fill, moj glas označen); avtor ankete
+  (authorClientId — isti brskalnik) jo lahko zaključi (409 za kasnejše
+  glasove), znova odpri ali izbriše (403 za ostale).
+- **`prisma/schema.prisma` — 2 nova modela:** `TripPoll` (vprašanje,
+  options kot JSON string, authorName opcijsko, authorClientId, closed) +
+  `TripPollVote` (optionIdx; unique(pollId, voterId) = 1 glas; cascade
+  delete z anketo). `db:push` izveden.
+- **`src/app/api/poll/route.ts`** (GET/POST/PATCH/DELETE, rate-limit,
+  validacija vseh mej, max 10 odprtih anket/trip) **+
+  `src/app/api/poll/vote/route.ts`** (POST — upsert/prestavitev glasu,
+  409 na zaključeni anketi). Kontrakt preizkušen s curl 12/12: create →
+  vote → prestavi (total ostane 2) → 403 ne-avtor PATCH/DELETE → zaključi
+  → 409 glas → znova odpri → izbriši (glasovi kaskadno pobrisani).
+- **`src/components/trip-polls.tsx`** — TripPolls panel: obrazec z
+  dinamičnimi možnostmi (dodaj/odstrani do 6), ime se zapomni (skupno s
+  komentarji), optimistično glasovanje z revertom, slovenske oblike
+  (ednina/dvojina/množina: "1 glas", "2 glasa", "5 glasov"), relativni
+  čas s sanity capom. Integriran v `/pot/[shareId]/page.tsx` (RSC
+  začetno stanje brez myVote — dopolni se na klientu z voterId; med
+  TripGuide in TripSocial). Ne tiska se (print:hidden).
+- **E2E v brskalniku (agent-browser) 10/10:** hidracija (717 fiberjev —
+  odkrit in oboden agent-browser quirk: navigacija v isti seji v dev
+  načinu pusti HMR runtime v čudnem stanju, svež brskalnik hidrira
+  pravilno), ustvari anketo prek UI (+toast), glasuj (števec "1 glas"),
+  prestavi glas, zaključi ("Zaključena" badge + onemogočene možnosti),
+  znova odpri, glas preživi ponovni nalagalnik, izbriši (prazno stanje),
+  390 px BREZ prekrivanja (VLM potrditev posnetka), 0 konzolnih napak.
+- **VERCEL_TOKEN (uporabnikov) — zadnja "ročna" meja odstranjena.**
+  `scripts/ops/vercel-env-set.sh` živo uporabljen: GEMINI_API_KEY +
+  OPENROUTER_API_KEY potisnjena na projekt `i-feel-slovenia`
+  (production + preview + development, encrypted); opuščena
+  VITE_GEMINI_API_KEY (stari client-side pristop, omenjena le v komentarju
+  ai-client.ts) izbrisana. ENV se uporabi ob naslednjem deployu — ta
+  push ga sproži; health na produkciji naj preklopi iz `provider:"none"`
+  na `provider:"openrouter"`.
+- **Popavek skripte:** `vercel-env-set.sh` je preverjal VERCEL_TOKEN PREJ
+  kot `load_env` (iz .env) — vrstni red obrnjen; VERCEL_PROJECT_ID/
+  VERCEL_PROJECT_NAME dodana v `.env` (skripte zdaj delujejo brez argumentov).
+
+### Varnost (1.15.0)
+
+- `authorClientId` nikoli ne zapusti strežnika v DTO (samo `isAuthor`
+  boolean); PATCH/DELETE zahtevata ujemanje clientId z avtorjem (403),
+  glasovi se brišejo SAMO kaskadno z anketo; vsa polja validirana
+  (regex/dolžine), rate-limit na vseh 5 končnih točkah.
+
+---
+
 ## [1.14.0] — 2026-09-15
 
 ### Dodano (1.14.0 — OPENROUTER KOT PRIMARNI AI PROVIDER + OPS SUITE)

@@ -7,6 +7,7 @@ import { tripWindowMs } from "@/lib/trip-dates";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { SharedTrip } from "@/components/shared-trip";
 import { TripGuide, type GuideData } from "@/components/trip-guide";
+import { TripPolls } from "@/components/trip-polls";
 import { TripSocial } from "@/components/trip-social";
 import { TripPushCard } from "@/components/trip-push-card";
 import { PrintQr } from "./print-qr";
@@ -193,6 +194,71 @@ export default async function SharedTripPage({
     console.error("[pot] tripLike count napaka:", e);
   }
 
+  // === F11: skupinske ankete (ne-kritično — ob napaki nadaljujemo brez) ===
+  // Server-side izhodišče (brez myVote — ta se dopolni na klientu z voterId)
+  let initialPolls: {
+    id: string;
+    question: string;
+    options: string[];
+    authorName: string | null;
+    closed: boolean;
+    createdAt: string;
+    counts: number[];
+    total: number;
+  }[] = [];
+  try {
+    const pollRows = await db.tripPoll.findMany({
+      where: { shareId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        question: true,
+        options: true,
+        authorName: true,
+        closed: true,
+        createdAt: true,
+      },
+    });
+    initialPolls = await Promise.all(
+      pollRows.map(async (p) => {
+        let options: string[] = [];
+        try {
+          const parsed = JSON.parse(p.options) as unknown;
+          if (Array.isArray(parsed)) {
+            options = parsed.filter(
+              (o): o is string => typeof o === "string" && o.trim().length > 0
+            );
+          }
+        } catch {
+          // pokvarjen JSON → prazna lista
+        }
+        const votes = await db.tripPollVote.findMany({
+          where: { pollId: p.id },
+          select: { optionIdx: true },
+        });
+        const counts = new Array<number>(options.length).fill(0);
+        for (const v of votes) {
+          if (v.optionIdx >= 0 && v.optionIdx < counts.length) {
+            counts[v.optionIdx] += 1;
+          }
+        }
+        return {
+          id: p.id,
+          question: p.question,
+          options,
+          authorName: p.authorName,
+          closed: p.closed,
+          createdAt: p.createdAt.toISOString(),
+          counts,
+          total: votes.length,
+        };
+      })
+    );
+  } catch (e) {
+    console.error("[pot] tripPoll findMany napaka:", e);
+  }
+
   // === F7: avtorski vodnik poti (ne-kritično — ob napaki nadaljujemo brez) ===
   let initialGuide: GuideData | null = null;
   try {
@@ -276,6 +342,15 @@ export default async function SharedTripPage({
           shareId={shareId}
           dayCount={saved.itinerary.days.length}
           initialGuide={initialGuide}
+        />
+      </div>
+
+      {/* === F11: SKUPINSKE ANKETE (brez-računa glasovanje, MindTrip vrzel #2) === */}
+      <div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6 lg:px-8">
+        <TripPolls
+          shareId={shareId}
+          initialPolls={initialPolls}
+          createdAt={saved.createdAt.toISOString()}
         />
       </div>
 
