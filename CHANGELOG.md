@@ -54,9 +54,19 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
   OPENROUTER_API_KEY potisnjena na projekt `i-feel-slovenia`
   (production + preview + development, encrypted); opuščena
   VITE_GEMINI_API_KEY (stari client-side pristop, omenjena le v komentarju
-  ai-client.ts) izbrisana. ENV se uporabi ob naslednjem deployu — ta
-  push ga sproži; health na produkciji naj preklopi iz `provider:"none"`
-  na `provider:"openrouter"`.
+  ai-client.ts) izbrisana.
+- **PRODUKCIJA ŽIVO (i-feel-slovenia.vercel.app) — veriga AI deluje
+  NATANKO po naročilu:** `/api/ai-health` → OpenRouter 429
+  (`free-models-per-day`, dnevna meja izčrpana od testiranj) → **Gemini
+  prevzel in ODGOVORIL** (gemini-3.6-flash, 1293 ms) — "ko routeru
+  zmanjka" na živi produkciji. Po ponastavitvi dnevnega okna (ponoči UTC)
+  se OpenRouter samodejno vrne kot primarni.
+- **PRODUKCIJSKI E2E F11 (živo na Neon Postgres):** shranjevanje poti
+  (200, `a276e2ec3b`), stran `/pot/a276e2ec3b` se izriše (176 kB,
+  "Skupinske ankete" prisotne), ustvari anketo (201, isAuthor: true),
+  dva obiskovalca glasujeta (števca [1,1]), GET z myVote/isAuthor
+  pravilnima — migraciji sta zagnali ob hladnem zagonu lambde in
+  sinhronizirali Neon (glej Popravljeno spodaj).
 - **Popavek skripte:** `vercel-env-set.sh` je preverjal VERCEL_TOKEN PREJ
   kot `load_env` (iz .env) — vrstni red obrnjen; VERCEL_PROJECT_ID/
   VERCEL_PROJECT_NAME dodana v `.env` (skripte zdaj delujejo brez argumentov).
@@ -81,6 +91,18 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
   dokazano: 2× prazen seznam na obstoječi bazi; DROP + migracija → tabele
   ustvarjeni + `tripPoll.count()` dela. Poganja se iz
   `src/instrumentation.ts` ( nodejs runtime).
+- **`src/lib/shared-trip-schema-migration.ts` — NEON ZAOSTAL V FAZI 4f
+  ( odkrito ŽIVE):** produkcijska baza je bila sinhronizirana z
+  `prisma db push` nazadnje pri b4f89f6 — vsi kasnejši dodatki na njej
+  manjkajo ( P1: TripVote/TripComment/TripLike + SavedItinerary.formData/
+  userId; F7: TripGuide + editTokenHash). Živi dokaz: POST
+  /api/itinerary/save → 500 na produkciji, 200 lokalno. Migracija ob
+  zagonu doda vse ( additive-only, idempotentno, fail-open) — po deployu
+  6b1fc55 produkcija popravljena ( save 200, E2E zgoraj). Iskrena opomba:
+  avtoritativna alternativa za lastnika ostaja `prisma db push` z
+  DATABASE_URL iz Vercel Settings; preostale post-4f tabele ( P0
+  moderacija, Lead, Newsletter …) NISO pokrite — dodaj jih v TABLES seznam
+  modula, ko njihove poti postanejo kritične.
 
 ### Varnost (1.15.0)
 
