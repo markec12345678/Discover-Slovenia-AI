@@ -239,6 +239,15 @@ načrta in prizna meje:**
 **Meritve ( analitika):** `packing_item_checked` ( category, method, items)
 in `budget_goal_set` ( goal_eur, plan_total_eur, group_size) — docs/ANALYTICS-EVENTS.md.
 
+**Verifikacija F6 ( doključena 1.10.1):** EN preveritev na /en/nacrtuj
+( obe sekciji v angleščini, razlogi "Day 3: rain in forecast" /
+"Day 3: Postojnska jama (cave)", stepper €347/3 = €116, Compare
+"Plan fits — €53 under your budget of €400", razkrivnost EN z AMZS/DARS);
+390 px — 0 prelivov ( obe sekciji 358 px), 0 konzolnih napak. Ob tem
+popravljen mešani jezik v navigaciji ( hardcoded tagline "AI potovanja"
+na EN straneh → `nav.tagline` = "AI trips"). /pot/* ostaja SL-only
+( jezikovna whitelist — DB vsebina je slovenska, ne mešamo).
+
 ## 10. Ostale najdene vrzeli ( odločitve)
 
 | # | Vrzel | Odločitev |

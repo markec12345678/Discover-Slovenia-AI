@@ -156,7 +156,7 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                 glass ? "text-muted-foreground" : "text-white/70"
               )}
             >
-              AI potovanja
+              {t("tagline")}
             </span>
           </span>
         </Link>

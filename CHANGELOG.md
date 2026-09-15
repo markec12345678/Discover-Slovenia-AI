@@ -7,6 +7,40 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.10.1] — 2026-09-15
+
+### Popravljeno
+
+- **Navigacijski tagline i18n**: podnaslov logotipa "AI potovanja" je bil
+  hardcoded slovenščina — na EN straneh se je pokazal slovenski niz
+  (mešanje jezikov, nasprotje P4-8 pravila "nikoli mešanja jezikov").
+  Zdaj `nav.tagline` ključ v SL ("AI potovanja") in EN ("AI trips")
+  sporočilih; navigacija ga bere prek `useTranslations("nav")`.
+
+### Verifikacija (F6 — dokončana EN preveritev)
+
+- **EN locale (prej prekinjena)**: /en/nacrtuj generiranje → obe F6 sekciji
+  se izrišeta v angleščini ("What to pack" s kategorijami CLOTHING /
+  FOR THE WEATHER / FOR ACTIVITIES / TECH / HEALTH & SUN / DOCUMENTS &
+  MONEY, razlogi "Day 3: rain in forecast", "Day 2: Triglav (mountain)",
+  "Day 3: Postojnska jama (cave)"; "Trip budget" z vrsticami Activities
+  on the plan / Driving (fuel + vignette) / Plan total). Interakcije:
+  stepper 2→3 osebe preračuna €347/3 = €116 na osebo; vnos cilja 400 € +
+  Compare → "Plan fits — €53 under your budget of €400."; razkrivnost
+  "How was this calculated — and what it does NOT include" se odpre z
+  enakimi viri (AMZS/DARS) in izrecno vrstico o nočitev/hrani/nakupi.
+- **390 px mobilni (iPhone 12 viewport)**: 0 horizontalnega preliva na
+  strani (edini elementi čez rob so Leaflet ploščice — normalno obrezane
+  znotraj vsebnika zemljevida); F6 sekciji 358 px široki, 0 notranjih
+  prelivov; 0 napak v konzoli.
+- SL regresija: tagline na `/` ostaja "AI potovanja" (preverjeno v DOM).
+- tsc 0 napak v `src/` (prejšnje napake v `skills/` niso projektne).
+- VLM preverjanje 390 px posnetkov v tem oknu NI uspelo (API 429
+  rate-limit) — preverjeno z DOM prelivnimi sondami (natančnejše za
+  prelivanje) + 0 konzolnih napak.
+
+---
+
 ## [1.10.0] — 2026-09-15
 
 ### Dodano (F7 — SKUPNOSTNI VODNIKI: avtor poti zapiše izkušnjo, ne promocijo)
