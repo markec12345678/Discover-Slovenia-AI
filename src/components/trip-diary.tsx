@@ -705,8 +705,10 @@ export function TripDiary({
     return [...dayGroups, ...generalGroup];
   }, [entries, dayLabels]);
 
+  // Dnevnik se NATISNE (to je naš "photobook") — skriti so samo obrazec,
+  // kontrole in interaktivne zvezdice (spodaj s print:hidden).
   return (
-    <Card className="print-hide print:hidden overflow-hidden">
+    <Card className="overflow-hidden">
       <CardContent className="p-4 sm:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -723,7 +725,7 @@ export function TripDiary({
             onClick={() => setFormOpen((o) => !o)}
             aria-expanded={formOpen}
             aria-controls="diary-form"
-            className="gap-1.5"
+            className="gap-1.5 print:hidden"
           >
             {formOpen ? (
               <>
@@ -752,7 +754,7 @@ export function TripDiary({
           <form
             id="diary-form"
             onSubmit={(e) => void submitEntry(e)}
-            className="mb-6 space-y-3 rounded-lg border border-border bg-muted/30 p-4"
+            className="mb-6 space-y-3 rounded-lg border border-border bg-muted/30 p-4 print:hidden"
           >
             <div className="grid gap-3 sm:grid-cols-2">
               {/* Dan (samo če načrt ima dneve) */}

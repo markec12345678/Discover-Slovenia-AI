@@ -214,6 +214,29 @@ model TripPollVote {
 }
 
 // ============================================================================
+// F12: SKUPINSKI POTNI DNEVNIK (vrzel #3 — Stippl "travel reel/photobook",
+// naš pošteni tekstovni pristop BREZ slik: zasebnost + ni stroškov shrambe).
+// Vpisi na deljeni povezavi /pot/[shareId] — isti brez-računa vzorec kot
+// ankete/komentarji (authorClientId = localStorage ID). dayIndex = 1-based
+// dan iz načrta (null = splošen vpis); placeName je prost tekst (kraj);
+// rating 1–5 (null = brez ocene). Natisnjena stran = naš "photobook".
+model TripDiaryEntry {
+  id             String   @id @default(cuid())
+  shareId        String
+  authorName     String?  // prikazno ime (1–60), opcijsko
+  authorClientId String   // ID pisca — edini lahko ureja izbriše
+  dayIndex       Int?     // 1-based dan načrta (null = splošno)
+  placeName      String?  // kraj spomina (1–80), prost tekst
+  rating         Int?     // 1–5 zvezdic (null = brez ocene)
+  text           String   // 2–2000 znakov — spomin sam
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  @@index([shareId])
+  @@index([shareId, authorClientId])
+}
+
+// ============================================================================
 // LOKALCI (LISTINGS)
 // ============================================================================
 

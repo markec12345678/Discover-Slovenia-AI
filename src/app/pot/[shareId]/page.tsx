@@ -7,6 +7,7 @@ import { tripWindowMs } from "@/lib/trip-dates";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { SharedTrip } from "@/components/shared-trip";
 import { TripGuide, type GuideData } from "@/components/trip-guide";
+import { TripDiary, type DiaryEntry } from "@/components/trip-diary";
 import { TripPolls } from "@/components/trip-polls";
 import { TripSocial } from "@/components/trip-social";
 import { TripPushCard } from "@/components/trip-push-card";
@@ -259,6 +260,59 @@ export default async function SharedTripPage({
     console.error("[pot] tripPoll findMany napaka:", e);
   }
 
+  // === F12: potni dnevnik (ne-kritično — ob napaki nadaljujemo brez) ===
+  // Server-side izhodišče (brez isAuthor — ta se dopolni na klientu)
+  let initialDiary: Omit<DiaryEntry, "isAuthor">[] = [];
+  try {
+    const diaryRows = await db.tripDiaryEntry.findMany({
+      where: { shareId },
+      orderBy: { createdAt: "asc" },
+      take: 200,
+      select: {
+        id: true,
+        dayIndex: true,
+        placeName: true,
+        rating: true,
+        text: true,
+        authorName: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+    initialDiary = diaryRows.map((r) => ({
+      id: r.id,
+      dayIndex: r.dayIndex,
+      placeName: r.placeName,
+      rating: r.rating,
+      text: r.text,
+      authorName: r.authorName,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString(),
+    }));
+  } catch (e) {
+    console.error("[pot] tripDiaryEntry findMany napaka:", e);
+  }
+
+  // === F12: oznake dni za dnevnik — "Dan N — destinacije" (index = N-1) ===
+  // Iz načrta (po filtriranju veljavnih dni); vrzeli (ne-sekvenčni day.day)
+  // zapolnimo z "Dan N", da izbirnik ostane konsistenten z SharedTrip sidri.
+  const dayLabels: string[] = [];
+  for (const d of saved.itinerary.days) {
+    const dayNum =
+      Number.isInteger(d.day) && d.day > 0 ? d.day : dayLabels.length + 1;
+    const dests = (d.locations ?? [])
+      .map((l) => l.destination_name)
+      .filter((n): n is string => typeof n === "string" && n.length > 0)
+      .slice(0, 3)
+      .join(" → ");
+    while (dayLabels.length < dayNum) {
+      dayLabels.push(`Dan ${dayLabels.length + 1}`);
+    }
+    dayLabels[dayNum - 1] = dests
+      ? `Dan ${dayNum} — ${dests}`
+      : `Dan ${dayNum}`;
+  }
+
   // === F7: avtorski vodnik poti (ne-kritično — ob napaki nadaljujemo brez) ===
   let initialGuide: GuideData | null = null;
   try {
@@ -360,6 +414,17 @@ export default async function SharedTripPage({
           shareId={shareId}
           initialComments={initialComments}
           initialLikes={initialLikes}
+          createdAt={saved.createdAt.toISOString()}
+        />
+      </div>
+
+      {/* === F12: POTNI DNEVNIK (vrzel #3 — skupinski spomini brez računov;
+          natisnjena stran = naš "photobook", zavestno brez fotografij) === */}
+      <div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6 lg:px-8">
+        <TripDiary
+          shareId={shareId}
+          initialEntries={initialDiary}
+          dayLabels={dayLabels}
           createdAt={saved.createdAt.toISOString()}
         />
       </div>

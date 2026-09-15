@@ -7,6 +7,70 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.16.0] — 2026-09-16
+
+### Dodano (1.16.0 — F12 SKUPINSKI POTNI DNEVNIK BREZ RAČUNOV)
+
+> Vrzel #3 iz sekcije 10 COMPETITIVE-ANALYSIS (Stippl "travel reel /
+> photobook") — prej "zavestno odloženo", zdaj izvedeno NAŠ način:
+> tekstovni dnevnik brez račun in brez fotografij. Iskrena izpeljava:
+> upload zasebnih fotografij bi pomenil zasebnostno obvezo + stroške
+> shrambe; natisnjena stran (Natisni → PDF) pa je naš "photobook".
+
+- **F12: Potni dnevnik na deljeni povezavi (`/pot/[shareId]`) — brez
+  računov.** Vsak obiskovalec (anonimni clientId iz localStorage — ENAKA
+  identiteta kot glasovanje/ankete/komentarji) zapiše spomin: **dan iz
+  načrta** (izbirnik z oznakami "Dan N — destinacije", skupine po dnevih),
+  **kraj** (opcijsko, prost tekst), **ocena 1–5 zvezdic** (opcijsko,
+  dostopna UI) in **besedilo** (2–2000 znakov). Avtor vpisa (isti
+  brskalnik) ga ureja ali izbriše (403 za ostale); "Urejeno" opomba.
+- **`prisma/schema.prisma` — nov model `TripDiaryEntry`** (shareId,
+  authorName?, authorClientId, dayIndex?, placeName?, rating?, text,
+  createdAt, updatedAt; 2 indeksa). `db:push` izveden.
+  POZOR (pouček): lokalni `db:push` je ob driftu tiho RESETIRAL dev bazo
+  (vse tabele prazne) — demo potovanja so bila obnovljena ročno;
+  produkcija (Neon) ni bila prizadeta.
+- **`src/lib/trip-diary-migration.ts`** — startup shema migracija (isti
+  vzorec kot F11): ustvari tabelo TripDiaryEntry + indeksa na Neonu ob
+  zagonu (idempotentna, additive-only, fail-open; DSA_DISABLE_SCHEMA_MIGRATION
+  =1 izklop). Preizkušeno: obstoječa tabela → no-op ×2; DROP → obnovitev.
+  Vključena v `src/instrumentation.ts`.
+- **`src/app/api/diary/route.ts`** (GET/POST/PATCH/DELETE, rate-limit:
+  GET 240/h, POST 20/h, PATCH/DELETE 30/h; validacija vseh mej; max 200
+  vpisov/trip, max 20/avtor). Kontrakt preizkušen s curl **13/13**: prazen
+  GET → create (dan/kraj/ocena) → isAuthor true/false → PATCH svoj (text
+  se posodobi, updatedAt > createdAt) → PATCH/DELETE tuj → 403 → rating 9
+  → 400 → prazen text → 400 → napačen shareId → 404 → izbris svojega →
+  prazno stanje.
+- **`src/components/trip-diary.tsx`** — TripDiary panel: obrazec (dan iz
+  načrta / splošno, kraj z ikono, zvezdice 1–5 klikabilne, števec znakov,
+  ime deljeno s komentarji/anketami), razvrstitev po dnevih z glavo skupine
+  ("Dan N — destinacije · X spominov"), kartice z avtorjem, relativnim
+  časom, krajem in zvezdicami; optimistično dodajanje/urejanje/brisanje z
+  revertom; slovenske oblike ("1 spomin, 2 spomina, 5 spominov").
+  **Natisne se** (PDF = photobook) — skriti so samo obrazec, kontrole in
+  interaktivne zvezdice (print:hidden); iskren razlog "brez fotografij"
+  zapisan v UI.
+- **Integracija v `/pot/[shareId]/page.tsx`:** RSC naloži začetne vpise
+  (brez isAuthor — dopolni se na klientu) + zgradi dayLabels iz načrta
+  (robustno tudi za ne-sekvenčne dneve); panel po TripSocial (spominski
+  zaključek strani).
+- **E2E v brskalniku (agent-browser) — polni cikel:** sveža seja → panel
+  viden (prazno stanje) → odpri obrazec → izberi "Dan 1 — Bled → Vintgar"
+  → izpolni (kraj, 5 zvezdic, besedilo, ime) → oddaj (+toast "Spomin je
+  zapisan", skupina "Dan 1", zvezdice izrisane) → Uredi (besedilo se
+  spremeni + toast + API updatedAt) → Izbriši (+toast + prazno stanje).
+  390 px BREZ prekrivanja (scrollWidth točno 390), 0 napak v dev.log.
+
+### Varnost (1.16.0)
+
+- Validacija vseh vhodov API-ja (dolžine, range, regex clientId/cuid);
+  authorClientId NIKOLI v DTO (samo isAuthor bool) — enak vzorec kot F11.
+- Rate-limit na vseh 4 metodah; zgornji meji 200/trip + 20/avtor
+  (preprečevanje smeti na javni strani).
+
+---
+
 ## [1.15.0] — 2026-09-16
 
 ### Dodano (1.15.0 — F11 SKUPINSKE ANKETE BREZ RAČUNOV + VERCEL ŽIVO)

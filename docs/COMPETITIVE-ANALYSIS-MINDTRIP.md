@@ -254,7 +254,7 @@ na EN straneh → `nav.tagline` = "AI trips"). /pot/* ostaja SL-only
 |---|---|---|
 | 1 | Mindtrip Start Anywhere zdaj sprejema SLIKE ( App Store, »share images«) | ✅ **F8 implementirano ( 1.11.0)** — zavihek »Slika« na /nacrtuj: upload/drag&drop/paste (Ctrl+V) → VLM STROGI ekstraktor prebere imena → ISTI deterministični matcher kot povezave poveže z našimi 22 destinacijami; metoda razkrita ( amber badge), slika se pozabi ( pomnilnik), 422 brez zadetkov / 502 VLM nedosegljiv — iskreno. Glej sekcijo 12. |
 | 2 | Skupinsko glasovanje ( MonkeyTravel »voting«, WePlanify pollsi) | ✅ **F11 implementirano ( 1.15.0)** — ankete BREZ računov na deljeni povezavi (/pot/[shareId]): poljubno vprašanje + 2–6 možnosti, en glas na obiskovalca (anonimni clientId), prestavitev glasu, avtor ankete (isti brskalnik — brez računov) jo zaključi ali izbriše. Glej sekcijo 16. |
-| 3 | Potni dnevnik/spomini ( Stippl travel reel, photobook) | ⏸ Zavestno odloženo — vsebinska smer, ne jedro načrtovanja |
+| 3 | Potni dnevnik/spomini ( Stippl travel reel, photobook) | ✅ **F12 implementirano ( 1.16.0)** — TEKSTOVNI potni dnevnik BREZ računov na deljeni povezavi (/pot/[shareId]): spomin na dan iz načrta + kraj + ocena 1–5; natisnjena stran = naš "photobook"; ZAVESTNO brez fotografij (zasebnost + stroški). Glej sekcijo 17. |
 | 4 | živi ceni partnerjev | ⏸ Roadmap item 4 ( čakamo ključe) — Mindtrip Flights/Stays pomenita, da se ta vrzel povečuje, a zahteva GDS partnerstvo |
 | 5 | Gmail/Maps uvoz rezervacij ( Wanderlog) | ⏸ Odloženo — zasebnostno občutljivo, ni v naši smeri |
 
@@ -459,3 +459,37 @@ in s poštenimi mejami. E2E v brskalniku ( 10/10): ustvari anketo, glasuj,
 prestavi glas, zaključi ( možnosti se zaklenejo), znova odpri, glas
 preživi ponovni nalagalnik ( localStorage → strežnik), izbriši; 390 px
 brez prekrivanja ( VLM potrditev).
+
+---
+
+# F12 ( september 2026) — potni dnevnik brez računov
+
+> Vrzel #3: Stippl promovira "travel reel / photobook" ( foto-video
+> spomini). Prej "zavestno odloženo — vsebinska smer" ( sekcija 10).
+> Zdaj izvedeno NAŠ način: zaključek socialne plasti deljene povezave.
+
+## 17. F12 odgovor na Stippl "travel reel / photobook"
+
+| Stippl travel reel / photobook | Naš odgovor ( F12, 1.16.0) |
+|---|---|
+| Foto/video spomini — upload v oblak | TEKSTOVNI dnevnik: spomin = dan iz načrta + kraj + ocena 1–5 + besedilo ( 2–2000). ZAVESTNO brez fotografij — zasebnost ( upload pomeni zasebne fotografije v naši bazi) + ni stroškov shrambe; razlog zapisan v UI |
+| Zahteva račun ( Stippl login) | BREZ RAČUNOV na deljeni povezavi — isti anonimni clientId ( localStorage) kot ostale socialne funkcije: en obiskovalec = ena identiteta povsod |
+| Photobook = plačljivi izdelek | Natisnjena stran = naš "photobook": dnevnik se NATISNE ( print:hidden samo na obrazec/kontrole), PDF že obstaja ( gumb Natisni + QR kode FW2-A) |
+| Spomini ločeni od načrta | Vsak spomin je POVEZAN z dnevom načrta ( izbirnik "Dan N — destinacije", skupine po dnevih) — dnevnik raste iz itinererja, ne vzporedno z njim |
+| Urejanje odvisno od naročnine | Avtor vpisa ( isti brskalnik) ureja/briše BREZ omejitev; "Urejeno" opomba ob spremenjenih spominih |
+
+**Iskrene omejitve ( zapisane v CHANGELOG):**
+- Max 200 vpisov na potovanje, max 20 na avtorja — meja proti smeti na
+  javni strani ( 429 nadmejno).
+- Brez slik pomeni tudi brez VLM opisovanja fotografij — zavestna
+  žrtev: video/foto reel je Stipplov diferenciator, naš je poštenost.
+- Rate-limit: 20 novih vpisov/h, 30 urejanj/brisanj/h na IP.
+- /pot strani ostajajo SL-only ( P4-8) — dnevnik je v slovenščini,
+  enako kot vodniki, ankete in komentarji.
+
+**Sklep F12:** vrzel #3 je zaprta brez žrtvovanja zasebnosti — razliko
+od Stippla se spomini pišejo brez prijave in brez nalaganja fotografij,
+natisnjena stran pa je naš brezplačni "photobook". E2E v brskalniku
+( polni cikel): odpri obrazec → izberi dan → izpolni ( kraj, zvezdice,
+besedilo, ime) → oddaj → uredi → izbriši; 390 px brez prekrivanja;
+API kontrakt 13/13 ( vključno 403 za tuje vpise, 400/404 validacije).
