@@ -43,7 +43,7 @@ export function normalizeText(raw: string): string {
  * potrebuje pozicije — en sam vir resnice za vzorce).
  */
 export const PATTERNS: Record<string, string[]> = {
-  bled: ["bled", "lake bled", "bledsko jezero", "blejsko jezero", "blejski otok", "bled island"],
+  bled: ["bled", "lake bled", "bledsko jezero", "blejsko jezero", "blejski otok", "bled island", "blejski grad", "bled castle"],
   bohinj: ["bohinj", "lake bohinj", "bohinjsko jezero", "vogel"],
   ljubljana: ["ljubljana", "ljubljanski grad", "presernov trg", "triple bridge", "trojni most", "metelkova", "tivoli park ljubljana"],
   postojna: ["postojna", "postojnska jama", "postojna cave", "predjama", "predjamski grad", "predjama castle"],
@@ -91,8 +91,10 @@ export interface IngestResult {
   suggestion: IngestSuggestion;
 }
 
-/** Preslikava bestFor oznak → kanonični interesi ( INTERESTS). */
-const BESTFOR_TO_INTEREST: Record<string, string> = {
+/** Preslikava bestFor oznak → kanonični interesi ( INTERESTS).
+ *  F14 ("Uvozi shranjene točke"): izvoženo tudi za pins-ingest — en vir
+ *  resnice za preslikavo interesov iz zadetih destinacij. */
+export const BESTFOR_TO_INTEREST: Record<string, string> = {
   narava: "narava",
   kultura: "kultura",
   hrana: "hrana",

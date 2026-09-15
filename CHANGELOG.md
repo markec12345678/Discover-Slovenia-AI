@@ -7,6 +7,67 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.18.0] — 2026-09-16
+
+### Dodano (1.18.0 — F14 "UVOZI SHRANJENE TOČKE": GOOGLE MAPS PINS BREZ RAČUNOV)
+
+> Druge raziskovalne runde zaključek ( sekcije 24–26 COMPETITIVE-ANALYSIS):
+> Mindtripova najnovejša uporabniška funkcija "Google Pins" ( uvoz
+> shranjenih točk Google Zemljevidov) je bila EDINA akcijska vrzel med
+> primerljivimi funkcijami ( ostale zahtevajo račune/plačila/partnerje —
+> zavestno odložene). Zaprta v istem sprintu, deterministično.
+
+- **F14: tretji zavihek vnosa "Točke" v načrtovalniku** ( ob "Povezava"
+  F5.4 in "Slika" F8). Uporabnik prilepi ali naloži svoje shranjene
+  točke Google Zemljevidov v TREH oblikah: Google Takeout JSON
+  ( GeoJSON FeatureCollection), KML izvoz ali navaden besedilni seznam
+  ( vsaka vrstica = ena točka; oznake "1.", "-", "•" se ovenejo).
+- **Deterministično ujemanje ( 0 AI žetonov)** — dve metodi, obe javni:
+  ( a) PO IMENU: isti PATTERNS kot "Začni s povezavo" ( en vir resnice;
+  na priliko dodana vzorca "blejski grad"/"bled castle"), najdaljši
+  vzorec zmaga; ( b) PO KOORDINATAH: kadar izvoz vsebuje lat/lng,
+  zmaga najbližja destinacija v polmeru 25 km — hotelske/restavracijske
+  točke ("Vila Bled", "Gostilna pri Tinetu") se pripnejo pravilno tudi
+  brez imena destinacije. Koordinate imajo prednost pred imenom
+  ( "Hotel Triglav Bled" na Bledu → bled, ne triglav — preizkušeno).
+- **Izhod = enak tok kot povezave/slike**: zadetki se izrišejo PRED
+  generiranjem ( žetoni ×N + meta vrstica "Skupaj N točk ( oblika) ·
+  M ne prepoznanih — izven naših 22 destinacij"), nato se izpolni
+  obrazec ( dnevi ~2 destinaciji/dan 1–7, interesi iz bestFor,
+  preferredDestinations max 8 — mehanizem F5.4) in SAMODEJNO generira.
+- **API `POST /api/itinerary/ingest-pins`**: validacija ( 3–200 000
+  znakov, 413/400/422 — poštena zavrnitev ob 0 točkah oz. 0 zadetkih,
+  brez izmišljanja "podobnih" lokacij), rate limit 10/min, 0 omrežnih
+  klicev ( čisto parsovanje), meji MAX_PINS 2000 / 2 MB datoteke.
+- **Analitika**: `ingest_pins_attempted` / `ingest_pins_success`
+  ( meta: matches/pins/format/locale) — dodana NA strežnik VALID_EVENTS
+  PRED klientom ( nauk F13: drugače 400).
+- **i18n SL+EN** ( 19 ključev): zavihek, namig z navodilom Takeout,
+  meta vrstica poštenosti, toast-a, aria oznake.
+- **Testi**: `scripts/test-pins.ts` — 20/20 zelenih ( sintetični Takeout
+  GeoJSON s hotelskimi točkami + Dunajem, KML, besedilni seznam z
+  glavo in oznakami, pokvarjen JSON → fallback besedilo, [0,0]
+  koordinate → ime, MAX_PINS, diakritika, najdaljši-vzorec odločitev).
+- **E2E brskalnik ( 390 px, sveža seja)**: SL tok — Točke → prilepi
+  seznam → Prepoznaj → zadetki Bled/Piran/Postojnska jama + "1 ne
+  prepoznanih" ( Dunaj) → samodejna generacija ( AI uspešno prek
+  z-ai-sdk, Dan 1 izrisan); NALAGANJE DATOTEKE — Saved-Places-test.json
+  ( 3 točke: Vila Bled / Gostilna pri Tinetu brez imena destinacije /
+  Schönbrunn) → "Google izvoz JSON" + koordinatni zadetek Piran brez
+  imenskega vzorca; EN tok (/en/nacrtuj) — zavihki Link/Image/Places +
+  prevodi; scrollWidth točno 390 ( 0 prekoračitev); VLM NO DEFECTS ×1;
+  0 napak strani; analytics 200 ( ne 400).
+
+### Spremenjeno (1.18.0)
+
+- `src/lib/url-ingest.ts`: `BESTFOR_TO_INTEREST` izvožen ( en vir
+  resnice za preslikavo interesov — pins-ingest ga deli s povezavami);
+  PATTERNS za bled dopolnjen z "blejski grad"/"bled castle" ( izboljša
+  TUDI url-ingest in F13 plan-check — naslov YouTube videa "Blejski
+  grad" se zdaj prepozna).
+
+---
+
 ## [1.17.0] — 2026-09-16
 
 ### Dodano (1.17.0 — F13 "PREVERI SVOJ NAČRT": DETERMINISTIČNI VALIDATOR TUJIH NAČRTOV)

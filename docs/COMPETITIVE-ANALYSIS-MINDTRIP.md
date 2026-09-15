@@ -675,3 +675,106 @@ diferenciator, ki ga MEM prodaja kot marketing, mi izdamo kot orodje.
 #5, zasebnost), glasovanje PRED načrtom (#7), postanki za hrano (#6),
 detour km na predloge (#5) — naslednji kandidati po prioritetah sekcije
 22 so #2 javna telemetrija validatorja in #3 vprašanje tempa.
+
+---
+
+# F14 analiza ( september 2026) — "kaj se manjka kot Mindtrip" ( 2. raziskovalna runda)
+
+> Naročilo uporabnika: »analiziraj kaj se manjka kot mindtrip«. Metoda:
+> 14 spletnih iskanj + 7 poglobljenih branj ( mindtrip.ai domača stran
+> v živo 15. 9. 2026, PRNewswire/BusinessWire/AP objave, PhocusWire,
+> travelanywhere.blog primerjava avg 2026, monkeytravel + MEM recenzije,
+> App Store listing). Vse trditve imajo vir + datum.
+
+## 24. Kaj Mindtrip ima DANES — in kaj je NOVEGA od naše zadnje runde
+
+**Ugotovitev #0: Mindtrip je postal BOOKING-FIRST platforma.** Domača
+stran, piškotek ( prizna deljenje podatkov »z partnerskimi podjetji za
+rezervacije in analitiko«), Sabre+PayPal letalske proge ( maj 2026),
+Mindtrip Stays ( julij 2026: Expedia/Booking.com/Priceline/Nuitee/Agoda)
+in ~30+ B2B DMO pogodb — vse usmerja v transakcije. Monetizacija izbira
+priporočila, priporočila oblikujejo načrt ( naslednji kritični stebrič
+naše diferenciacije).
+
+**Funkcije Mindtripa danes ( vir: mindtrip.ai, branje 15. 9. 2026):**
+
+| Funkcija | Od kdaj | Naš ekvivalent |
+|---|---|---|
+| Klepet-prvi načrtovalnik s karticami prizorišč | start | F9 „Vprašaj o načrtu“ ( deterministično prvi) |
+| Start Anywhere® ( povezava → itinerer) | okt 2025 | ✅ F5.4 — zdaj tudi slika ( F8); Mindtrip dodal še foto/screenshot/PDF |
+| **Google Pins** — uvoz shranjenih točk Google Zemljevidov | »New« 2025/26 | ✅ **F14 spodaj ( 1.18.0, deterministično)** |
+| Collections — tematski seznami »someday« s prijatelji | »New« | 🟡 priljubljene so lokalne ( localStorage); skupinska varianta kasneje |
+| Events — lokalni dogodki po »vibe« + vstopnice | nov 2025 | 🟡 FW4.2 dogodki BREZ vstopnic ( tekme ≥ zanimivosti načrta) |
+| Receipts — potrdila na receipts@mindtrip.ai | 2026 | ⏸ zavestno odloženo ( zasebnost, enaka odločitev kot F12 slike) |
+| Letalski agent ( Sabre + PayPal, Pay-in-4) | maj 2026 | ⏸ zavestno odloženo ( brez-račun dizajn; 8 % zaupanje v AI rezervacije — Expedia/YouGov, mar 2026) |
+| Mindtrip Stays ( 5 ponudnikov, opozorila na padec cen) | jul 2026 | ⏸ odloženo ( partner API; naša tržnica = lokalni monopol, 12 %) |
+| Avto + izleti »Coming soon« | načrt | — |
+| Skupinski klepet + @Mindtrip mediation + komentarji/všečki | sep 2024 | ✅ F11 ankete + komentarji + F12 dnevnik — **brez računov** |
+| **Strukturirano glasovanje** | NE OBSTAJA | ✅ F11 ( monkeytravel.app se trži kot »edini z glasovanjem« — Mindtrip ga nima) |
+| iOS aplikacija 4.7/782 | jun 2025 | 🟡 PWA ( offline načrti + zemljevid — iOS app NIMA offline) |
+| Android aplikacija | **NE OBSTAJA** ( samo kopije neznanih razvijalcev) | ✅ PWA namestitev na Android |
+| Community vodniki + plačani Creators | 2026 | ✅ F7 vodniki lastnikov brez računov |
+| B2B DMO embed (~ 30+ ZDA, Madeira, Norveška) + Answer Intelligence | 2025–26 | ⏳ strateška opcija ( STO/ regijski DMO) |
+| Cena | brezplačno za potrošnike ( avg 2026) | brezplačno + 12 % lokalna provizija |
+
+**Najnovejše ( sep 2026):** samo B2B DMO pogodbe ( South Dakota 10. 9.,
+Meet Minneapolis 2. 9., San Diego 28. 8., Santa Fe 12. 8., Carlsbad
+5. 8.) — NOVA potrošniška funkcija NI bila najdena ( iskreno zapisano:
+»ni najdeno« ≠ »ne obstaja«).
+
+## 25. Analiza vrzeli — kaj se MANJKA ( z odločitvami)
+
+| # | Mindtrip ima | Naš status | Težavnost | Odločitev ( utemeljena) |
+|---|---|---|---|---|
+| 1 | **Google Pins uvoz** | ⏳ → ✅ | nizka | **F14 IZVEDENO v tem sprintu** ( spodaj) — edina vrzel, ki jo lahko zapremo brez žrtvovanja principov |
+| 2 | Agentic letalske rezervacije | manjka | visoka | ⏸ zavestno odloženo — plačila zahtevajo račun + orožja; 8 % potnikov zaupa AI rezervacijam ( Expedia/YouGov 3. 2026) |
+| 3 | Stays ( živi hoteli) | manjka | srednja | ⏸ odloženo ( partner ključi) — a BookingPanel ŽE povezuje lokalne ponudnike z globokimi povezavami |
+| 4 | Opozorila na padec cen | manjka | srednja | ⏸ push obveščanje obstaja ( 3b), cenovni feed pa zahteva partnerja |
+| 5 | Events + vstopnice | delno | srednja | 🟡 FW4.2 dogodki že v načrtu; vstopnice = partner ( odloženo) |
+| 6 | Collections ( »someday«) | delno | srednja | 🟡 lokalne priljubljene + F7 skupnost pokrivata 80 % potrebe |
+| 7 | Receipts | manjka | srednja | ⏸ zavestno ( zasebnost — enak razlog kot zavrnjene fotografije v F12) |
+| 8 | Plačani Creators | F7 brez računov | visoka | naše: 22 ročno preverjenih destinacij > obseg UGC |
+| 9 | B2B DMO embed | mankak | srednja | ⏳ STRATEŠKA OPCIJA — naš deterministični motor je idealen za vdelavo ( STO, regijski DMO); zavedna odločitev po F-seriji |
+| 10 | Native iOS app | PWA | visoka | ⏸ PWA z offline ( iOS app Mindtripa NIMA offline) — dokumentirano odloženo od F5.7 |
+| 11 | Skupinski klepet | F11/F12 | nizka | ✅ NE — strukturirane odločitve ( ankete z živimi rezultati) rešijo paralizo skupine bolje kot klepet ( HN: »dobra skupinska OPREMA potrebuje glasovanje«) |
+| 12 | Večjezičnost klepeta | SL/EN | nizka | zavestno — fokus Slovenija |
+
+**Kaj MI imamo, Mindtrip pa NE ( iskrena inventura — brez protidokaza v
+14 iskanjih):** offline načrti IN offline zemljevid ( PWA), strukturirano
+glasovanje/ankete/dnevnik BREZ računov, validacija lastnih ( geo dokaz
+pred/po) IN tujih načrtov ( F13 — citira študije, ki jih kategorija
+noče objaviti), realne ceste z dokazljivimi km/min, odpiralni časi z
+viri, stroški gorivo + e-vinjeta, lokalna tržnica ( 12 %), Android
+podpora ( prek PWA — Mindtrip je nima).
+
+**Sklep analize:** vrzeli #2–#7 so zavestne odločitve ( zasebnost,
+brez-račun, partner API-ji) — vsaka bi razstavila naš diferenciator
+»poštenost brez računov«. Edina akcijska vrzel je bila #1 ( Google
+Pins) — zaprta kot F14 v ISTEM sprintu. #9 ( DMO) je strateška priložnost
+za zavedno načrtovanje, ne reaktivno lovljenje.
+
+## 26. F14 — »Uvozi shranjene točke« ( 1.18.0): naš odgovor na Google Pins
+
+| Mindtrip »Google Pins« | Naš F14 |
+|---|---|
+| Zahteva Google/Apple račun ( login wall) | BREZ računov — enak anonimni pristop kot celoten načrtovalnik |
+| Uvoz shranjenih točk Google Maps | TRI oblike vnosa: Google Takeout JSON ( GeoJSON), KML, navaden besedilni seznam ( prilepi/naloži .json/.kml/.txt) |
+| Ujemanje ( AI, nedokumentirano) | DETERMINISTIČNO, 0 AI žetonov: ( a) po IMENU — isti PATTERNS kot F5.4 povezave ( izvoženi, en vir resnice), najdaljši vzorec zmaga; ( b) po KOORDINATAH — najbližja destinacija v polmeru 25 km ( hotelske/restavracijske točke!), razdalja vedno prikazana |
+| Zbirka »someday« | Neposredno v načrt: zadetki se izrišejo PRED generiranjem ( preverljivost ×N), nato samodejna generacija prek preferredDestinations ( mehanizem F5.4 — ranker pohitri 2,5×) |
+| Ni javne razdelitve poznano/neznano | POŠTENOST: »Skupaj N točk ( oblika) · M ne prepoznanih — izven naših 22 destinacij«; 0 zadetkov → jasna zavrnitev 422, nič izmišljanja |
+
+**Iskrene omejitve ( zapisane v UI/dokumentaciji):**
+- Polmer 25 km pomeni, da točka v Kranjski Gori pade na Sočo ( 17,4 km
+  do najbližje) — semantika »blizu«, razdalja je vedno vidna.
+- Ena točka = ena destinacija ( fizična točka je na enem kraju;
+  večdestinacijska imena odločijo koordinate oz. najdaljši vzorec).
+- Meje: 2000 točk, 200 KB besedila, rate limit 10/min; datoteka ≤ 2 MB.
+- Testna pokritost: `scripts/test-pins.ts` — 20/20 zelenih ( 3 oblike +
+  Dunaj/Schönbrunn ne-zadetki, pokvarjen JSON fallback, 0,0 koordinate
+  → ime, MAX_PINS meja, diakritika, »Hotel Triglav Bled« → koordinate
+  odločijo pravilno).
+
+**Zakaj je to pomembno:** Google Maps »Saved« je največji neizkoriščeni
+vir namere potnikov ( vsak ima 10–50 shranjenih točk). Mindtrip ga je
+dodal ZA računom; mi smo ga odprli brez računa, deterministično in z
+javno metodologijo — zadnja »Start Anywhere« vrzel je zaprta.

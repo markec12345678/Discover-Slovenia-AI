@@ -51,6 +51,10 @@ export type PlannerEventName =
   // VLM prebere imena, ujemanje je deterministično)
   | "ingest_image_attempted"
   | "ingest_image_success"
+  // F14 "Uvozi shranjene točke" ( pins ingest — Mindtrip "Google Pins";
+  // 0 AI žetonov, ujemanje po imenu/koordinatah)
+  | "ingest_pins_attempted"
+  | "ingest_pins_success"
   // F5.2: izvoz načrta v koledar (.ics)
   | "ics_download"
   // F5.7 (PWA): namestitev aplikacije (gumb v navigaciji)

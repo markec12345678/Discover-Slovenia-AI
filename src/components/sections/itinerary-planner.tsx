@@ -15,9 +15,11 @@ import {
   Users,
   UsersRound,
   MapPin,
+  MapPinned,
   LocateFixed,
   Link2,
   ImagePlus,
+  FileUp,
   AlertCircle,
   Star,
   Cloud,
@@ -40,6 +42,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -339,7 +342,7 @@ export function ItineraryPlanner() {
   // === F8 "Začni s sliko": nalaganje/prilepljanje fotografije → VLM prebere
   // imena, ujemanje z destinacijami je deterministično (ista funkcija kot
   // pri povezavah — glej /api/itinerary/ingest-image). ===
-  const [ingestMode, setIngestMode] = useState<"link" | "image">("link");
+  const [ingestMode, setIngestMode] = useState<"link" | "image" | "pins">("link");
   const [ingestImage, setIngestImage] = useState<string | null>(null); // data URL
   const [ingestImageName, setIngestImageName] = useState<string>("");
   const [ingestImageDragging, setIngestImageDragging] = useState(false);
@@ -348,6 +351,18 @@ export function ItineraryPlanner() {
     null
   ); // F10: kateri vision provider je bral sliko (poštenost)
   const ingestImageInputRef = useRef<HTMLInputElement | null>(null);
+
+  // === F14 "Uvozi shranjene točke": Google Maps pins ( Mindtrip "Google
+  // Pins") — prilepi Takeout JSON / KML / besedilni seznam; ujemanje po imenu
+  // ali po koordinatah ( ≤ 25 km) je deterministično ( 0 AI žetonov). ===
+  const [ingestPins, setIngestPins] = useState("");
+  const [ingestPinsName, setIngestPinsName] = useState<string | null>(null);
+  const [ingestPinsMeta, setIngestPinsMeta] = useState<{
+    format: "geojson" | "kml" | "text";
+    total: number;
+    unmatched: number;
+  } | null>(null);
+  const ingestPinsInputRef = useRef<HTMLInputElement | null>(null);
 
   // F5.1: programatski fokus zemljevida ( gumb na kartici postanka)
   const [mapFocus, setMapFocus] = useState<{
@@ -1031,6 +1046,139 @@ export function ItineraryPlanner() {
     }
   }
 
+  // === F14 "Uvozi shranjene točke" — File → besedilo ( validacija vrste/
+  // velikosti na clientu; strežnik vseeno ponovno validira dolžino).
+  // Sprejmemo .json ( Takeout), .kml/.xml in .txt — vse se bere kot tekst.
+  function acceptIngestPinsFile(file: File | null): boolean {
+    if (!file) return false;
+    const name = file.name || "";
+    const okExt = /\.(json|kml|xml|txt)$/i.test(name);
+    if (!okExt) {
+      setIngestError(
+        "Nepodprta datoteka. Sprejmem .json (Google izvoz), .kml ali .txt."
+      );
+      return false;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setIngestError("Datoteka je prevelika (največ ~2 MB).");
+      return false;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setIngestPins(reader.result);
+        setIngestPinsName(file.name || "datoteka");
+        setIngestError(null);
+        setIngestMatches(null);
+        setIngestPinsMeta(null);
+      }
+    };
+    reader.onerror = () => setIngestError(t("ingestPinsError"));
+    reader.readAsText(file);
+    return true;
+  }
+
+  // === F14: prepoznaj destinacije iz shranjenih točk — POST
+  // /api/itinerary/ingest-pins. 0 AI žetonov: ujemanje po imenu ( isti vzorci
+  // kot pri povezavah) ali po koordinatah ( najbližja destinacija ≤ 25 km).
+  // Ne prepoznane točke so javno prikazane ( pinsUnmatched) — poštenost.
+  async function handleIngestPinsSubmit() {
+    const trimmed = ingestPins.trim();
+    if (!trimmed || ingestLoading) return;
+
+    setIngestLoading(true);
+    setIngestError(null);
+    setIngestMatches(null);
+    setIngestPinsMeta(null);
+    setIngestIsVlm(false);
+    trackPlannerEvent("ingest_pins_attempted", { locale });
+    try {
+      const res = await fetch("/api/itinerary/ingest-pins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pinsText: trimmed }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | {
+            format?: "geojson" | "kml" | "text";
+            pinsTotal?: number;
+            pinsUnmatched?: number;
+            matches?: {
+              id: string;
+              name: string;
+              slug: string;
+              pinCount: number;
+            }[];
+            suggestion?: {
+              interests?: string[];
+              days?: number;
+              preferredDestinations?: string[];
+            };
+            error?: string;
+          }
+        | null;
+
+      if (!res.ok || !data?.matches?.length) {
+        throw new Error(data?.error || t("ingestPinsError"));
+      }
+
+      // Enak prikaz kot pri povezavah ( zvezdica ×N = št. točk) + meta vrstica
+      setIngestMatches(
+        data.matches.map((m) => ({
+          id: m.id,
+          name: m.name,
+          slug: m.slug,
+          count: m.pinCount,
+        }))
+      );
+      setIngestSourceTitle(
+        ingestPinsName ? t("ingestPinsSourceFile", { name: ingestPinsName }) : t("ingestPinsSourcePaste")
+      );
+      setIngestPinsMeta({
+        format: data.format ?? "text",
+        total: data.pinsTotal ?? 0,
+        unmatched: data.pinsUnmatched ?? 0,
+      });
+      trackPlannerEvent("ingest_pins_success", {
+        matches: data.matches.length,
+        pins: data.pinsTotal ?? 0,
+        format: data.format ?? "text",
+        locale,
+      });
+
+      // Izpolni obrazec iz predloga ( enak vzorec kot pri povezavah/slikah)
+      const nextInput: PlannerInput = {
+        ...formData,
+        days: data.suggestion?.days ?? formData.days,
+        interests:
+          data.suggestion?.interests && data.suggestion.interests.length > 0
+            ? data.suggestion.interests
+            : formData.interests,
+        preferredDestinations: data.suggestion?.preferredDestinations,
+      };
+      setFormData(nextInput);
+      setIngestPins("");
+      setIngestPinsName(null);
+      toast({
+        title: t("ingestPinsSuccessToast"),
+        description: t("ingestPinsSuccessToastDesc", {
+          names: data.matches
+            .slice(0, 3)
+            .map((m) => m.name)
+            .join(", "),
+        }),
+      });
+      // Samodejna generacija — od točk do načrta v enem koraku
+      await generateItinerary(nextInput);
+    } catch (err) {
+      setIngestError(
+        err instanceof Error ? err.message : t("ingestPinsError")
+      );
+    } finally {
+      setIngestLoading(false);
+    }
+  }
+
   // === F5.2: ICS izvoz — načrt v koledar ( Apple/Google/Outlook) ===
   function handleIcsDownload() {
     if (!itinerary) return;
@@ -1130,6 +1278,11 @@ export function ItineraryPlanner() {
                             label: t("ingestTabImage"),
                             icon: ImagePlus,
                           },
+                          {
+                            id: "pins",
+                            label: t("ingestTabPins"),
+                            icon: MapPinned,
+                          },
                         ] as const
                       ).map(({ id, label, icon: Icon }) => (
                         <button
@@ -1212,6 +1365,103 @@ export function ItineraryPlanner() {
                           className="text-[11px] leading-relaxed text-muted-foreground"
                         >
                           {t("ingestHint")}
+                        </p>
+                      </>
+                    ) : ingestMode === "pins" ? (
+                      <>
+                        {/* F14: shranjene točke Google Zemljevidov ( Mindtrip
+                            "Google Pins") — Takeout JSON / KML / besedilni
+                            seznam; 0 AI žetonov, ujemanje po imenu/koordinatah */}
+                        <label
+                          htmlFor="ingest-pins"
+                          className="flex items-center gap-1.5 text-xs font-medium text-primary"
+                        >
+                          <MapPinned className="size-3.5 shrink-0" aria-hidden />
+                          {t("ingestPinsLabel")}
+                        </label>
+                        <input
+                          ref={ingestPinsInputRef}
+                          id="ingest-pins-file"
+                          type="file"
+                          accept=".json,.kml,.xml,.txt,application/json,text/plain"
+                          className="sr-only"
+                          tabIndex={-1}
+                          onChange={(e) => {
+                            fireStartedOnce();
+                            acceptIngestPinsFile(e.target.files?.[0] ?? null);
+                            // Ponastavi, da lahko ista datoteka znova izbere
+                            e.target.value = "";
+                          }}
+                        />
+                        <Textarea
+                          id="ingest-pins"
+                          value={ingestPins}
+                          onChange={(e) => {
+                            fireStartedOnce();
+                            setIngestPins(e.target.value);
+                            setIngestPinsName(null);
+                          }}
+                          placeholder={t("ingestPinsPlaceholder")}
+                          disabled={ingestLoading}
+                          rows={4}
+                          className="min-h-[80px] resize-y text-xs"
+                          aria-describedby="ingest-pins-hint"
+                        />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={ingestLoading}
+                            onClick={() =>
+                              ingestPinsInputRef.current?.click()
+                            }
+                            className="gap-1.5"
+                            aria-label={t("ingestPinsFileAria")}
+                          >
+                            <FileUp className="size-4" aria-hidden />
+                            <span className="hidden sm:inline">
+                              {t("ingestPinsFile")}
+                            </span>
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={ingestLoading || !ingestPins.trim()}
+                            onClick={() => void handleIngestPinsSubmit()}
+                            className="gap-1.5"
+                            aria-label={t("ingestPinsButtonAria")}
+                          >
+                            {ingestLoading ? (
+                              <Loader2
+                                className="size-4 animate-spin"
+                                aria-hidden
+                              />
+                            ) : (
+                              <LocateFixed className="size-4" aria-hidden />
+                            )}
+                            <span className="hidden sm:inline">
+                              {t("ingestPinsButton")}
+                            </span>
+                          </Button>
+                          {ingestPinsName && (
+                            <span className="inline-flex min-w-0 items-center gap-1 truncate rounded-full border border-primary/30 bg-background px-2 py-0.5 text-[11px] text-muted-foreground">
+                              <FileUp
+                                className="size-3 shrink-0"
+                                aria-hidden
+                              />
+                              <span className="truncate">
+                                {ingestPinsName}
+                              </span>
+                            </span>
+                          )}
+                        </div>
+                        <p
+                          id="ingest-pins-hint"
+                          className="text-[11px] leading-relaxed text-muted-foreground"
+                        >
+                          {t("ingestPinsHint")}
                         </p>
                       </>
                     ) : (
@@ -1365,6 +1615,24 @@ export function ItineraryPlanner() {
                       {ingestSourceTitle && (
                         <p className="truncate text-[11px] text-muted-foreground">
                           {t("ingestSource", { title: ingestSourceTitle })}
+                        </p>
+                      )}
+                      {/* F14: poštena meta vrstica — koliko točk je bilo
+                          prepoznanih, koliko izven našega nabora ( nič
+                          skrivanja) */}
+                      {ingestPinsMeta && (
+                        <p className="text-[11px] leading-relaxed text-muted-foreground">
+                          {t("ingestPinsMeta", {
+                            total: ingestPinsMeta.total,
+                            unmatched: ingestPinsMeta.unmatched,
+                            format: t(
+                              ingestPinsMeta.format === "geojson"
+                                ? "ingestPinsFormatGeojson"
+                                : ingestPinsMeta.format === "kml"
+                                  ? "ingestPinsFormatKml"
+                                  : "ingestPinsFormatText"
+                            ),
+                          })}
                         </p>
                       )}
                       <div className="flex flex-wrap items-center gap-1.5">
