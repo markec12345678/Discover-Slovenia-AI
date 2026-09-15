@@ -8,6 +8,7 @@ import {
   round5,
   type LegRouteIndex,
 } from "@/lib/road-routing";
+import { pathKm, bestOrder } from "@/lib/route-order";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { DriveCosts, Itinerary, LocationVisit } from "@/lib/types";
 
@@ -360,67 +361,6 @@ export function findCrossDayDuplicates(
   return [...byDest.entries()]
     .filter(([, v]) => v.days.length >= 2)
     .map(([id, v]) => ({ id, name: v.name, days: v.days.slice().sort((a, b) => a - b) }));
-}
-
-function pathKm(ids: string[], dist: (a: string, b: string) => number): number {
-  let km = 0;
-  for (let i = 1; i < ids.length; i++) km += dist(ids[i - 1], ids[i]);
-  return km;
-}
-
-/** Optimalno zaporedje odprte poti: ≤7 točk izčrpno ( permutacije), sicer 2-opt. */
-function bestOrder(
-  ids: string[],
-  dist: (a: string, b: string) => number
-): { order: string[]; km: number } {
-  const n = ids.length;
-  if (n <= 7) {
-    // Heapov algoritem po permutacijah — 7! = 5040, milisekunde
-    let best = ids.slice();
-    let bestKm = pathKm(ids, dist);
-    const arr = ids.slice();
-    const c = new Array<number>(n).fill(0);
-    let i = 1;
-    while (i < n) {
-      if (c[i] < i) {
-        const k = i % 2 === 0 ? 0 : c[i];
-        [arr[i], arr[k]] = [arr[k], arr[i]];
-        const km = pathKm(arr, dist);
-        if (km < bestKm) {
-          bestKm = km;
-          best = arr.slice();
-        }
-        c[i] += 1;
-        i = 1;
-      } else {
-        c[i] = 0;
-        i += 1;
-      }
-    }
-    return { order: best, km: bestKm };
-  }
-  // 2-opt na odprti poti ( do konvergence, max 60 potez)
-  const order = ids.slice();
-  let improved = true;
-  let guard = 0;
-  while (improved && guard < 60) {
-    improved = false;
-    guard += 1;
-    for (let a = 0; a < n - 1 && !improved; a++) {
-      for (let b = a + 1; b < n && !improved; b++) {
-        const before = pathKm(order, dist);
-        const candidate = order
-          .slice(0, a)
-          .concat(order.slice(a, b + 1).reverse(), order.slice(b + 1));
-        const after = pathKm(candidate, dist);
-        if (after < before - 0.01) {
-          order.splice(0, n, ...candidate);
-          improved = true;
-        }
-      }
-    }
-  }
-  return { order, km: pathKm(order, dist) };
 }
 
 /** Meji za predlaganje preureditve: ≥ 20 km IN ≥ 12 % ( prek muh). */

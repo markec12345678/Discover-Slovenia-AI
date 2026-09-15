@@ -57,6 +57,9 @@ const VALID_EVENTS = new Set([
   // ( worst = najhujša raven poročila; brez AI žetonov)
   "plan_check_submitted",
   "plan_check_completed",
+  // F16 "Optimalno zaporedje dneva": preureditev postankov dneva z
+  // 2-opt/izčrpnim optimizatorjem (deterministično, 0 AI; saved_km = ocena)
+  "day_optimized",
   // Neuspehi
   "planner_error",
   "empty_result",

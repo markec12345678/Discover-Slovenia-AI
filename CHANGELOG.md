@@ -7,6 +7,78 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.20.0] — 2026-09-16
+
+### Dodano (1.20.0 — F16 "OPTIMALNO ZAPOREDJE DNEVA": EN GUMB, 2-OPT, 0 AI)
+
+> Backlog ideja #4 ( sekcija 22): "en gumb na dnevu: 2-opt preureditev
+> postankov ( deterministično, prikaz prihranka km pred/po)". Vir: MEM
+> študija — cik-cak je 8–10 dni na 100 NEODVISNO od dolžine; "3 točke v
+> napačnem redu" = najmanjša napaka, ki obstaja ( median +3,4 km);
+> Reddit: "Mindtrip ni nikoli podvomil o vrstnem redu."
+
+- **Gumb "Optimalno zaporedje · prihrani ~X km"** na kartici dneva v
+  načrtovalniku ( za seznamom postankov). Prikaže se SAMO kadar
+  deterministični izračun obeta smiseln prihranek ( ≥ 5 km OCENE IN
+  ≥ 5 % dneva) — po preureditvi je dan optimalen in gumb izgine sam
+  ( poštena samo-čisteca UI). Dan z 1–2 postankoma ali z neznanim
+  ID-jem gumba ne dobi ( ne ugibamo razdalj).
+- **NOVO skupno `src/lib/route-order.ts`** — en vir resnice za
+  optimizator: `pathKm` + `bestOrder` ( ≤ 7 točk IZČRPNO po
+  permutacijah — 7! = 5040, milisekunde; sicer 2-opt do konvergence,
+  max 60 potez) + `optimizeDayOrder` ( preureditev postankov ENEGA
+  dneva). F13 plan-check.ts sedaj UVAŽA ista dva algoritma iz
+  route-order ( odstranjili smo privatni dvojnik — refaktor brez
+  spremembe vedenja, regresija checkZigzag potrjena).
+- **Termini = PERMUTACIJA izvirnih nizov** ( ključna odločitev po
+  testu): urejeni termini dneva ostanejo na ISTIH urah ( jutro/kosilo/
+  večer + vmiki za vožnjo), postanki se preuredijo MEDNJH — brez novih
+  prekrivanj in vrzeli. Prva iteracija je računala konce iz trajanj
+  postankov → test je ulovil PREKRIVANJA ( bled 16:00–20:00 +
+  vintgar 18:30–20:30) → trajanja so ocene AI in se z zaporedjem ne
+  smejo mešati. Nerazpoznaven termin → vsak postanek obdrži svojega.
+- **Po preureditvi ( pošteno razkritje)**: `routeGeometry` ( OSRM
+  črte zemljevida) ter shranjeni `quality`/`geoValidation` so vezani
+  na STARO zaporedje → se umaknejo in kartice jih preračunajo na
+  mestu uporabe z hevristiko ( premica × 1,3 ÷ 55 km/h — ISTA formula
+  kot geo-validacija brez OSRM; metoda razkrita v panelu, enaka pot
+  kot pri starih obnovljenih načrtih). Zemljevid izriše premice.
+- **Persistenca + deljenje**: novi red se shrani ( localStorage),
+  zastareli deljeni povezavi se umakne ( enak vzorec kot refine);
+  `markResultEngaged()` ( ni "opustitev").
+- **Analitika**: nov dogodek `day_optimized` ( meta: day, stops,
+  saved_km, before_km, after_km, locale) — dodan NA strežnik
+  VALID_EVENTS PREJ klientom ( nauk F13; curl 200/400 preverjeno).
+- **i18n SL+EN** ( 7 ključev): gumb, prihranek, aria, toast-a,
+  "dan je že optimalen".
+
+### Preizkušeno (1.20.0)
+
+- `scripts/test-day-order.ts` — 20/20 zelenih: cik-cak dan
+  ( Bled→Piran→Vintgar→Ljubljana: 340→185 km, vintgar takoj za bledom,
+  termini-permutacija brez prekrivanj, multiset id-jev/terminov/cen
+  ohranjen), že optimalen dan ( Lj→Bled→Vintgar: saved 0, zaporedje
+  nespremenjeno — izenačitve ne premaknejo), 2-opt veja ( 8 točk),
+  robni primeri ( 1/2 postanka → null, neznan ID → null, nerazpoznan
+  termin → svoj, duration 0), determinizem ( isti vhod → identičen
+  izhod). `scripts/test-pins.ts` regresija 20/20.
+- F13 regresija: POST /api/plan-check — zigzag ( 225 km z OSRM nogami)
+  + duplikati prek dnevov še vedno delujeta po refaktorju v route-order.
+- E2E brskalnik ( sveži seji, 390 px): SL — localStorage cik-cak →
+  gumb SAMO na cik-cak dnevu ( "prihrani ~155 km", značka ~340 km) →
+  klik → toast "Zaporedje optimizirano", postanki Piran→Ljubljana→Bled→
+  Vintgar, značka ~185 km, gumb izginil, persistenca v localStorage
+  ( novi red + termini 08:00/12:30/16:00/18:30), quality/geoValidation
+  počiščena, analytics 200; EN — isti tok ( "Optimal order · saves
+  ~155 km" → "Order optimized"); scrollWidth 390 ( 0 prekoračitev);
+  0 napak strani; VLM: gumb viden, črtkast okvir, sredinsko besedilo,
+  pravilna ikona.
+- INCIDENT ( znan iz Taska 29): dev strežnik 4× umrl med E2E
+  ( sandbox reaper, brez napake v dnevniku) — rešitev: zagon + test v
+  isti bash seji.
+
+---
+
 ## [1.19.0] — 2026-09-16
 
 ### Dodano (1.19.0 — F15 "Vprašanje tempa": POČASI/UMERJENO/HITRO V NAČRTOVALNIKU)

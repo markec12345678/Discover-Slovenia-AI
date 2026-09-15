@@ -21,6 +21,7 @@ import {
   Link2,
   ImagePlus,
   FileUp,
+  Waypoints,
   AlertCircle,
   Star,
   Cloud,
@@ -71,11 +72,13 @@ import type {
   PlannerInput,
   Itinerary,
   ItineraryEvent,
+  DayPlan,
   Season,
 } from "@/lib/types";
 import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { trackFunnel } from "@/lib/funnel";
+import { optimizeDayOrder } from "@/lib/route-order";
 import {
   trackPlannerEvent,
   markResultRendered,
@@ -634,6 +637,67 @@ export function ItineraryPlanner() {
         description: ev.name,
       });
     }
+  }
+
+  // F16 (backlog #4): optimalno zaporedje postankov dneva — 2-opt/izčrpna
+  // preureditev, deterministično (0 AI). Pošteno: km so hevristična ocena
+  // (ista formula kot geo-validacija brez OSRM), prikazano z "~".
+  // Po preureditvi kvaliteta/geo-validacija/osrm-geometrija odpadejo (bile
+  // so vezane na staro zaporedje) → kartice jih preračunajo na mestu
+  // uporabe (hevristika, razkrito) — enaka pot kot stari obnovljeni načrti.
+  function applyOptimalOrder(day: DayPlan) {
+    if (!itinerary) return;
+    const res = optimizeDayOrder(day.locations);
+    if (!res) return;
+    if (res.savedKm < 5) {
+      // Dan je (skoraj) optimalen — sporočimo, ne spreminjamo ničesar
+      toast({
+        title: t("optimizeAlreadyTitle"),
+        description: t("optimizeAlreadyDesc"),
+      });
+      return;
+    }
+    const nextDays = itinerary.days.map((d) =>
+      d.day === day.day
+        ? {
+            ...d,
+            locations: res.locations,
+            // OSRM geometrija je vezana na STARO zaporedje — pošteno jo
+            // umaknemo (zemljevid izriše premice, kot pri starih načrtih)
+            routeGeometry: undefined,
+          }
+        : d
+    );
+    const next: Itinerary = {
+      ...itinerary,
+      days: nextDays,
+      // P0.2/FW4.1: strukturne metrike so bile izračunane (na strežniku,
+      // z OSRM nogami) za STARO zaporedje — umaknemo jih, da se kartice
+      // preračunajo na mestu uporabe za NOVO (metoda: hevristika, razkrito)
+      quality: undefined,
+      geoValidation: undefined,
+    };
+    setItinerary(next);
+    persistItineraryLocally(next, formData);
+    markResultEngaged();
+    // P0.2 (recenzija): strukturna sprememba — zastareli deljeni link se
+    // umakne (enak vzorec kot pri refine / dodajanju dogodka)
+    if (shareUrl) {
+      setShareUrl(null);
+      setCopied(false);
+    }
+    trackPlannerEvent("day_optimized", {
+      day: day.day,
+      stops: day.locations.length,
+      saved_km: res.savedKm,
+      before_km: res.beforeKm,
+      after_km: res.afterKm,
+      locale,
+    });
+    toast({
+      title: t("optimizeToastTitle"),
+      description: t("optimizeToastDesc", { km: res.savedKm }),
+    });
   }
 
   async function generateItinerary(input: PlannerInput) {
@@ -2343,6 +2407,44 @@ export function ItineraryPlanner() {
                             </div>
                           );
                         })}
+
+                        {/* F16 (backlog #4): OPTIMALNO ZAPOREDJE — gumb se
+                            pokaže SAMO kadar deterministični izračun obeta
+                            smiseln prihranek (≥ 5 km ocene); po preureditvi
+                            je dan optimalen → gumb izgine sam (pošteno). */}
+                        {(() => {
+                          const opt =
+                            day.locations.length >= 3
+                              ? optimizeDayOrder(day.locations)
+                              : null;
+                          if (
+                            !opt ||
+                            opt.savedKm < 5 ||
+                            opt.savedKm / Math.max(opt.beforeKm, 1) < 0.05
+                          ) {
+                            return null;
+                          }
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => applyOptimalOrder(day)}
+                              className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              aria-label={t("optimizeOrderAria", {
+                                day: day.day,
+                                km: opt.savedKm,
+                              })}
+                            >
+                              <Waypoints
+                                className="size-4 shrink-0"
+                                aria-hidden
+                              />
+                              {t("optimizeOrderButton")}
+                              <span className="text-xs font-normal text-primary">
+                                · {t("optimizeOrderSaving", { km: opt.savedKm })}
+                              </span>
+                            </button>
+                          );
+                        })()}
 
                         {/* FW4.2: dodani dogodki tega dneva ("Dodaj v mojo pot") */}
                         {addedForDay.length > 0 && (

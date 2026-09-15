@@ -810,3 +810,32 @@ izgovor za skrivanje meritev.
 zaporedje dneva ( 2-opt gumb — logika ŽE obstaja v plan-check.ts),
 #5 detour km, #6 postanki za hrano. Po sekciji 24–25: DMO embed
 ostaja strateška opcija, rezervacije/receipts ostajajo zavestno odložene.
+
+## 28. F16 — »Optimalno zaporedje dneva« ( 1.20.0): backlog #4 zaprt
+
+> Backlog ( sekcija 22) #4: »🟢 kandidat — en gumb na dnevu: 2-opt
+> preureditev postankov ( deterministično, prikaz prihranka km pred/po)«.
+> Vir: MEM študija ( cik-cak 8–10 dni na 100, »3 točke v napačnem redu«
+> = najmanjša napaka, ki obstaja) + Reddit ( »Mindtrip ni nikoli podvomil
+> o vrstnem redu«). Dostavljeno v enem sprintu, 0 AI žetonov.
+
+**Kaj je dostavljeno ( 1.20.0):**
+
+| Aspekt | Izvedba |
+|---|---|
+| Gumb na kartici dneva | »Optimalno zaporedje · prihrani ~X km« — SAMO kadar izračun obeta ≥ 5 km in ≥ 5 %; po preureditvi gumb izgine sam ( dan je optimalen) |
+| Algoritem | ≤ 7 točk IZČRPNO ( permutacije), sicer 2-opt — zdaj v skupnem route-order.ts, ki ga UVAŽA tudi F13 plan-check ( odstranjen privatni dvojnik) |
+| Razdalje | hevristika ( premica × 1,3 ÷ 55 km/h) — ISTA kot geo-validacija brez OSRM; km vedno »~« ocena |
+| Termini | PERMUTACIJA izvirnih nizov — ure IZGLEDAJO enake ( jutro/kosilo/večer), postanki se preuredijo MEDNJH; brez novih prekrivanj ( test je ulovil prvo iteracijo, ki je računala konce iz trajanj) |
+| Po preureditvi | OSRM geometrija + shranjena kvaliteta/geo-validacija ( vezane na staro zaporedje) odpadejo → kartice preračunajo hevristično ( metoda razkrita) |
+| Analitika | day_optimized ( day/stops/saved_km/before/after/locale) — strežnik VALID_EVENTS pred klientom |
+
+**Zakaj pomembno:** to je tretja deterministična »check-and-fix« plast
+nad AI izpisi ( F13 validator → tujni načrti, F14 pins → namena, F16 →
+lastni dnevi). Generator, ki se SAMO-opravi, je naš znak: km padejo
+( 340→185 v testu), zaporedje se preuredi, nič se ne prikriva.
+
+**Ostalo v backlogu po tej dostavi:** #2 javna telemetrija validatorja
+( 🟢 — spremljava F13), #5 detour km pri postankih na poti, #6 postanki
+za hrano na dolgih etapah. Zavestno odložene ostajajo: rezervacije
+( vrzel #5 zasebnost), DMO embed ( strateška opcija).

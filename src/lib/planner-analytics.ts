@@ -74,6 +74,9 @@ export type PlannerEventName =
   // (brez AI žetonov; worst = najhujša raven poročila)
   | "plan_check_submitted"
   | "plan_check_completed"
+  // F16 "Optimalno zaporedje dneva": uporabnik preuredi postanke dneva z
+  // 2-opt/izčrpnim optimizatorjem (deterministično, 0 AI; saved_km = ocena)
+  | "day_optimized"
   // Neuspehi
   | "planner_error"
   | "empty_result"
