@@ -13,6 +13,7 @@ import {
   type DailyForecast,
 } from "@/lib/weather-utils";
 import { PARTY_TYPES, PARTY_PROMPT_LABELS } from "@/lib/party-types";
+import { PACES, PACE_PROMPT_LABELS, PACE_FALLBACK } from "@/lib/pace-types";
 import {
   buildCrowdNotices,
   tripOverlapsPeakWeekend,
@@ -197,6 +198,15 @@ export async function POST(request: Request) {
     );
   }
 
+  // F15 (backlog #3): tempo potovanja — opcijsko (nazaj kompatibilno);
+  // če JE podan, mora biti iz dovoljenega nabora
+  if (input.pace !== undefined && !PACES.includes(input.pace)) {
+    return NextResponse.json(
+      { error: "Tempo potovanja je neveljaven (slow, balanced, fast)" },
+      { status: 400 }
+    );
+  }
+
   // FW4.2: datum odhoda — opcijsko; če je podan, mora biti veljaven (ISO,
   // ne v preteklosti, max ~400 dni naprej). Neveljaven → jasna napaka 400.
   if (input.startDate !== undefined && !isValidStartDate(input.startDate)) {
@@ -296,6 +306,11 @@ export async function POST(request: Request) {
 
   const partyLineSl = partyLabels ? `\n- Sestava: ${partyLabels.sl}` : "";
   const partyLineEn = partyLabels ? `\n- Travel party: ${partyLabels.en}` : "";
+  // F15: tempo potovanja v prompt (opcijsko — brez polja AI dobi privzeti
+  // umerjen ritem, kot doslej)
+  const paceLabels = input.pace ? PACE_PROMPT_LABELS[input.pace] : null;
+  const paceLineSl = paceLabels ? `\n- Tempo potovanja: ${paceLabels.sl}` : "";
+  const paceLineEn = paceLabels ? `\n- Travel pace: ${paceLabels.en}` : "";
   const weatherBlockSl = hasWeather
     ? `\nREALNA VREMENSKA NAPOVED (Open-Meteo) za tvoje datume — po regijah:\n${buildWeatherPromptLines(anchorForecasts, "sl").join("\n")}\n`
     : "";
@@ -322,6 +337,28 @@ export async function POST(request: Request) {
     extraRulesEn.push(
       `${partyRuleNo}. Match pace and selection to the travel party: couple → calmer pace and romantic dinners; family with kids → kid-friendly spots, shorter drives and planned breaks; group of friends → more social and active picks; solo traveller → flexible pace and safe choices.`
     );
+  }
+  // F15 (backlog #3): izrecno pravilo o tempu — gostota dneva je odgovor
+  // na pritožbo s forumov ("planner ne vpraša, če bi raje manj mest")
+  if (input.pace) {
+    const paceRuleNo = extraRulesSl.length > 0 ? extraRulesSl.length + 12 : 12;
+    if (input.pace === "slow") {
+      extraRulesSl.push(
+        `${paceRuleNo}. Potnik želi POČASEN tempo: 1–2 postanka na dan, vsakemu mestu posveči več časa (daljši termini), brez ožiganja — kakovost pred količino.`
+      );
+      extraRulesEn.push(
+        `${paceRuleNo}. The traveller wants a SLOW pace: 1-2 stops per day, give each place more time (longer slots), no rushing — quality over quantity.`
+      );
+    } else if (input.pace === "fast") {
+      extraRulesSl.push(
+        `${paceRuleNo}. Potnik želi HITER tempo: 3–4 postanke na dan, termini naj ostanejo realistični (upoštevaj vožnjo), a načrt zajame čim več mest.`
+      );
+      extraRulesEn.push(
+        `${paceRuleNo}. The traveller wants a FAST pace: 3-4 stops per day, keep time slots realistic (account for driving) but cover as many places as sensible.`
+      );
+    }
+    // "balanced" = dosedanje pravilo 1 (2–3 na dan) že pomeni umerjen ritem;
+    // brez dodatnega pravila ostane prompt čist.
   }
 
   // CROWD-ALTERNATIVES: če potovanje prekriva vrhunski vikend (julij/avgust
@@ -391,7 +428,7 @@ Traveler:
 - Budget: €${input.budget}
 - Interests: ${input.interests.join(", ")}
 - Season: ${input.season}${input.startDate ? `\n- Travel date: ${formatDateRangeSI(input.startDate, tripEnd)}` : ""}
-- Group: ${input.groupSize} person(s)${partyLineEn}${preferredLineEn}
+- Group: ${input.groupSize} person(s)${partyLineEn}${paceLineEn}${preferredLineEn}
 ${weatherBlockEn}
 Available destinations:
 ${destContext}
@@ -440,7 +477,7 @@ Potnik:
 - Proračun: €${input.budget}
 - Interesi: ${input.interests.join(", ")}
 - Sezona: ${input.season}${input.startDate ? `\n- Datum potovanja: ${formatDateRangeSI(input.startDate, tripEnd)}` : ""}
-- Skupina: ${input.groupSize} oseb(a)${partyLineSl}${preferredLineSl}
+- Skupina: ${input.groupSize} oseb(a)${partyLineSl}${paceLineSl}${preferredLineSl}
 ${weatherBlockSl}
 Razpoložljive destinacije:
 ${destContext}
@@ -807,21 +844,26 @@ function generateFallbackItinerary(
   const days: DayPlan[] = [];
   let totalCost = 0;
 
+  // F15 (backlog #3): gostota dneva iz tempa potovanja — slow → 2 × 5 h,
+  // balanced → 2 × 4 h (dosedanji izpis, nespremenjeno), fast → 3 × 3 h.
+  // Deterministično: isti vhod → isti načrt (0 AI žetonov).
+  const pacePlan = PACE_FALLBACK[input.pace ?? "balanced"];
+
   for (let day = 1; day <= input.days; day++) {
     const rainy = isRainyDay(anchors, day - 1);
-    const locationsPerDay = 2;
+    const locationsPerDay = pacePlan.stopsPerDay;
     const locations: LocationVisit[] = [];
 
     for (let i = 0; i < locationsPerDay; i++) {
       const dest = pickDest(rainy ? indoor : ranked);
       const cost = dest.costPerPerson * input.groupSize;
       totalCost += cost;
-      const startHour = 9 + i * 5;
+      const startHour = 9 + i * pacePlan.spacingHours;
       locations.push({
         destination_id: dest.id,
         destination_name: dest.name,
-        time_slot: `${String(startHour).padStart(2, "0")}:00-${String(startHour + 4).padStart(2, "0")}:00`,
-        duration: 4,
+        time_slot: `${String(startHour).padStart(2, "0")}:00-${String(startHour + pacePlan.durationHours).padStart(2, "0")}:00`,
+        duration: pacePlan.durationHours,
         estimated_cost: cost,
         // Deževen dan: transparenten razlog notranje izbire (resnična
         // večinska napoved sidr — ne izmišljen status); P4-8: EN različica

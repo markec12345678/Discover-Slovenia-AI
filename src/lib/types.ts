@@ -71,6 +71,11 @@ export interface PlannerInput {
   // ritem in izbor načrta (družina → krajši prevozi in otrokom prijazne
   // lokacije, par → mirnejši tempo ...). Nazaj kompatibilno.
   partyType?: "couple" | "family" | "friends" | "solo";
+  // NOVO (F15 / backlog #3): tempo potovanja — opcijsko; oblikuje GOSTOTO
+  // načrta (slow → manj postankov, več časa na mestu; fast → več postankov
+  // na dan). Vir: forumi (Reddit ×2 — "plannerji ne vprašajo za tempo").
+  // Nazaj kompatibilno: brez polja = "balanced" (dosedanji izpis).
+  pace?: "slow" | "balanced" | "fast";
   // NOVO (F5.4 "Začni s povezavo" / url-ingest): destinacije, ki jih je
   // uporabnik izrecno prepoznal na prilepljeni povezavi (YouTube/blog).
   // Opcijsko — fallback ocenjevalnik jih premakne na vrh izbora, AI prompt

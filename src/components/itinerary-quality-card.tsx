@@ -24,6 +24,7 @@ import {
   computeItineraryQuality,
   formatDrivingMinutes,
 } from "@/lib/itinerary-quality";
+import { INTEREST_LABELS_EN } from "@/lib/stop-insights";
 import {
   computeTripDriveCosts,
   FUEL_CONSUMPTION_L_PER_100,
@@ -110,18 +111,41 @@ export function ItineraryQualityCard({
   // načrte brez rationale pade na prazno (ne izmišljujemo).
   const rationale = typeof itinerary.rationale === "string" ? itinerary.rationale : null;
 
-  // Vrstica "3 dni · 2 osebi · narava + hrana"
+  // Vrstica "3 dni · 2 osebi · narava + hrana" (F15: EN različica)
   const metaParts = [
-    `${quality.days} ${quality.days === 1 ? "dan" : quality.days === 2 ? "dneva" : "dni"}`,
-    `${quality.groupSize} ${quality.groupSize === 1 ? "oseba" : quality.groupSize === 2 ? "osebi" : "oseb"}`,
+    `${quality.days} ${
+      isEn
+        ? quality.days === 1 ? "day" : "days"
+        : quality.days === 1 ? "dan" : quality.days === 2 ? "dneva" : "dni"
+    }`,
+    `${quality.groupSize} ${
+      isEn
+        ? quality.groupSize === 1 ? "person" : "people"
+        : quality.groupSize === 1 ? "oseba" : quality.groupSize === 2 ? "osebi" : "oseb"
+    }`,
   ];
-  const interestPreview = input.interests.slice(0, 3).join(" + ");
+  // Interesi v meta vrstici: SL kanonične vrednosti → EN preslikava
+  // (F15: prej je EN stran kazala surove ključe "narava + kultura")
+  const interestPreview = (isEn
+    ? input.interests.slice(0, 3).map((i) => INTEREST_LABELS_EN[i] ?? i)
+    : input.interests.slice(0, 3)
+  ).join(" + ");
   if (interestPreview) metaParts.push(interestPreview);
+
+  // F15: vrednost tempa je shranjena kot SL oznaka (TempoLabel) — na EN
+  // strani jo preslikamo (obstoječa vrzel, vidna zdaj, ko je tempo izbira)
+  const tempoValue = isEn
+    ? quality.tempo === "Miren"
+      ? "Relaxed"
+      : quality.tempo === "Umirjen"
+        ? "Balanced"
+        : "Full"
+    : quality.tempo;
 
   const metrics: MetricDef[] = [
     {
       key: "driving",
-      label: "Vožnja",
+      label: isEn ? "Driving" : "Vožnja",
       value: formatDrivingMinutes(quality.drivingMinutes),
       icon: Car,
       // F5.6 (road routing): razkritje metode — realne ceste (OSRM) ali
@@ -136,38 +160,48 @@ export function ItineraryQualityCard({
             ? isEn
               ? "Mostly actual road distances (OSRM / OpenStreetMap); some legs without road data use a straight-line estimate (× 1.3, 55 km/h)."
               : "Večinoma realne cestne razdalje (OSRM / OpenStreetMap); noge brez cestnih podatkov so ocenjene po premici (× 1,3, 55 km/h)."
-            : "Seštevek cestnih razdalj (geografske koordinate × 1,3 za dejanske ceste, povprečje 55 km/h) med zaporednimi lokacijami na poti.",
+            : isEn
+              ? "Sum of straight-line distances between consecutive stops (× 1.3 for actual roads, 55 km/h average)."
+              : "Seštevek cestnih razdalj (geografske koordinate × 1,3 za dejanske ceste, povprečje 55 km/h) med zaporednimi lokacijami na poti.",
       neutral: true,
     },
     {
       key: "cost",
-      label: "Predviden strošek",
+      label: isEn ? "Est. cost" : "Predviden strošek",
       value: `${quality.budgetTier}`,
       icon: Euro,
-      how: `Seštevek cen vseh lokacij na poti (≈ €${Math.round(quality.estimatedCost)}${input.budget ? ` od ${input.budget} € proračuna` : ""}) — €€€ pomeni nad 160 € na osebo na dan.`,
+      how: isEn
+        ? `Sum of all location prices on the route (≈ €${Math.round(quality.estimatedCost)}${input.budget ? ` of €${input.budget} budget` : ""}) — €€€ means above €160 per person per day.`
+        : `Seštevek cen vseh lokacij na poti (≈ €${Math.round(quality.estimatedCost)}${input.budget ? ` od ${input.budget} € proračuna` : ""}) — €€€ pomeni nad 160 € na osebo na dan.`,
       neutral: true,
     },
     {
       key: "tempo",
-      label: "Tempo",
-      value: quality.tempo,
+      label: isEn ? "Pace" : "Tempo",
+      value: tempoValue,
       icon: Gauge,
-      how: "Povprečno število obiskov na dan: do 2 = miren, 3 = umirjen, 4 ali več = poln program.",
+      how: isEn
+        ? "Average stops per day: up to 2 = relaxed, 3 = balanced, 4 or more = a full schedule."
+        : "Povprečno število obiskov na dan: do 2 = miren, 3 = umirjen, 4 ali več = poln program.",
       neutral: true,
     },
     {
       key: "nature",
-      label: "Narava",
+      label: isEn ? "Nature" : "Narava",
       value: `${quality.natureScore}/5`,
       icon: Trees,
-      how: "Delež naravnih destinacij na poti (jezerske, gorske, rečne, jame, soteske, obala) med vsemi obiskanimi.",
+      how: isEn
+        ? "Share of natural destinations on the route (lakes, mountains, rivers, caves, gorges, coast) among all visits."
+        : "Delež naravnih destinacij na poti (jezerske, gorske, rečne, jame, soteske, obala) med vsemi obiskanimi.",
     },
     {
       key: "food",
-      label: "Hrana",
+      label: isEn ? "Food" : "Hrana",
       value: `${quality.foodScore}/5`,
       icon: Wine,
-      how: "Kombinacija kulinaričnih želja potnika in restavracij/gostiln/vinotek, ki jih pot vključuje.",
+      how: isEn
+        ? "Combination of the traveller's culinary wishes and the restaurants/inns/wine bars the route includes."
+        : "Kombinacija kulinaričnih želja potnika in restavracij/gostiln/vinotek, ki jih pot vključuje.",
     },
   ];
 
@@ -197,7 +231,7 @@ export function ItineraryQualityCard({
         {/* Glava — "Tvoja pot" + meta vrstica */}
         <div>
           <p className="text-sm font-medium text-muted-foreground">
-            Tvoja pot
+            {isEn ? "Your trip" : "Tvoja pot"}
           </p>
           <h4 className="mt-0.5 text-base font-semibold leading-snug">
             {metaParts.join(" · ")}
@@ -260,7 +294,9 @@ export function ItineraryQualityCard({
               aria-hidden="true"
             />
             <div className="min-w-0">
-              <p className="text-xs font-medium text-primary">Zakaj ta pot?</p>
+              <p className="text-xs font-medium text-primary">
+                {isEn ? "Why this route?" : "Zakaj ta pot?"}
+              </p>
               <p className="mt-0.5 text-sm leading-relaxed text-foreground/85">
                 {rationale}
               </p>
@@ -276,7 +312,7 @@ export function ItineraryQualityCard({
           >
             <span className="inline-flex items-center gap-1.5">
               <HelpCircle className="size-3.5" aria-hidden="true" />
-              Kako smo izračunali?
+              {isEn ? "How did we compute this?" : "Kako smo izračunali?"}
             </span>
             <ChevronDown
               className="size-3.5 transition-transform duration-200 group-data-[state=open]:rotate-180"

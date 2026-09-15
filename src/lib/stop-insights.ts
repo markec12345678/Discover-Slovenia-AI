@@ -142,8 +142,9 @@ const SEASON_LABELS: Record<string, { sl: string; en: string }> = {
 
 /** Vrednosti interesov so SL (isti nabor kot INTERESTS) — za EN razlago
  *  se preslikajo v ustrezne angleške izraze (znani enum, ni prevajanja
- *  prostega besedila). */
-const INTEREST_LABELS_EN: Record<string, string> = {
+ *  prostega besedila). F15: izvoženo — uporablja ga tudi quality card
+ *  (meta vrstica na EN strani). */
+export const INTEREST_LABELS_EN: Record<string, string> = {
   narava: "nature",
   kultura: "culture",
   hrana: "food & wine",

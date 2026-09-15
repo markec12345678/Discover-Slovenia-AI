@@ -290,6 +290,20 @@ export function buildFallbackRationale(
   quality: ItineraryQuality,
   lang: "sl" | "en" = "sl"
 ): string {
+  // F15: tempo v utemeljitvi — SAMO kadar je izrecno izbran (slow/fast);
+  // "balanced" ali neizbrano ne spremeni besedila (nazaj kompatibilno).
+  const paceNoteEn =
+    input.pace === "slow"
+      ? " The slow pace means fewer stops with more time at each."
+      : input.pace === "fast"
+      ? " The fast pace packs more places into each day."
+      : "";
+  const paceNoteSl =
+    input.pace === "slow"
+      ? " Počasen tempo pomeni manj postankov z več časa na vsakem."
+      : input.pace === "fast"
+      ? " Hiter tempo zajame več mest v vsakem dnevu."
+      : "";
   if (lang === "en") {
     const interests =
       input.interests.length > 0
@@ -299,7 +313,7 @@ export function buildFallbackRationale(
       quality.drivingMinutes > 0
         ? `total driving ~${formatDrivingMinutes(quality.drivingMinutes)}`
         : "destinations are right next to each other";
-    return `The trip is planned for a ${input.days}-day journey ${interests}. Destinations are chosen by interest match, seasonal suitability and geographic proximity (${driving}).`;
+    return `The trip is planned for a ${input.days}-day journey ${interests}. Destinations are chosen by interest match, seasonal suitability and geographic proximity (${driving}).${paceNoteEn}`;
   }
   const interests =
     input.interests.length > 0
@@ -309,7 +323,7 @@ export function buildFallbackRationale(
     quality.drivingMinutes > 0
       ? `skupna vožnja ~${formatDrivingMinutes(quality.drivingMinutes)}`
       : "destinacije so v neposredni bližini";
-  return `Pot je sestavljena za ${input.days}-dnevno potovanje ${interests}. Destinacije so izbrane po ujemanju s interesi, sezonski ustreznosti in geografski bližini (${driving}).`;
+  return `Pot je sestavljena za ${input.days}-dnevno potovanje ${interests}. Destinacije so izbrane po ujemanju s interesi, sezonski ustreznosti in geografski bližini (${driving}).${paceNoteSl}`;
 }
 
 /** "1h 35 min" / "45 min" / "—" (0 min → ni vožnje med znanimi točkami). */

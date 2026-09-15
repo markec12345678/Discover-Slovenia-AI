@@ -24,6 +24,7 @@ import { buildCrowdNotices } from "@/lib/crowd-alternatives";
 import { matchEventsForItinerary } from "@/lib/events-match";
 import { tripWindowMs } from "@/lib/trip-dates";
 import { PARTY_PROMPT_LABELS } from "@/lib/party-types";
+import { PACE_PROMPT_LABELS } from "@/lib/pace-types";
 import { applyQuickAction, QUICK_ACTIONS } from "@/lib/refine-actions";
 import { buildStopReasons } from "@/lib/stop-insights";
 import { dayRouteGeometry } from "@/lib/road-routing";
@@ -267,6 +268,13 @@ export async function POST(request: Request) {
     ? `\n- ${isEn ? "Respect the travel party" : "Upoštevaj sestavo potnikov"}: ${PARTY_PROMPT_LABELS[formData.partyType][isEn ? "en" : "sl"]}`
     : "";
 
+  // F15 (backlog #3): tempo (opcijsko) — prilagoditve ohranjajo gostoto
+  // osnovnega načrta (počasen → brez dodajanja postankov, hiter → brez redčenja)
+  const paceLine =
+    formData?.pace && formData.pace in PACE_PROMPT_LABELS
+      ? `\n- ${isEn ? "Respect the travel pace" : "Upoštevaj tempo potovanja"}: ${PACE_PROMPT_LABELS[formData.pace][isEn ? "en" : "sl"]}`
+      : "";
+
   const systemPrompt = isEn
     ? `You are an expert Slovenian travel guide. The user already has a generated itinerary and wants you to UPDATE it according to their instruction. Respond ONLY with valid JSON, no additional text.
 
@@ -277,7 +285,7 @@ IMPORTANT:
 - Respect the budget: €${formData?.budget ?? "unknown"}
 - Respect the season: ${formData?.season ?? "unknown"}
 - Respect the interests: ${formData?.interests?.join(", ") ?? "unknown"}
-- Respect the group size: ${formData?.groupSize ?? "unknown"}${partyTypeLine}
+- Respect the group size: ${formData?.groupSize ?? "unknown"}${partyTypeLine}${paceLine}
 - When suitable, include sponsored partners in notes or recommendations`
     : `Si strokovni slovenski vodič za načrtovanje potovanj. Uporabnik ima že generiran itinerer in želi, da ga POSODOBIŠ glede na njegov ukaz. Odgovori SAMO z veljavnim JSON, brez dodatnega besedila.
 
@@ -288,7 +296,7 @@ POMEMBNO:
 - Upoštevaj proračun: €${formData?.budget ?? "neznan"}
 - Upoštevaj sezono: ${formData?.season ?? "nezdana"}
 - Upoštevaj interese: ${formData?.interests?.join(", ") ?? "neznan"}
-- Upoštevaj velikost skupine: ${formData?.groupSize ?? "nezdana"}${partyTypeLine}
+- Upoštevaj velikost skupine: ${formData?.groupSize ?? "nezdana"}${partyTypeLine}${paceLine}
 - Kadar ustreza, vključi sponzorirane partnerje v notes ali recommendations`;
 
   const userPrompt = isEn

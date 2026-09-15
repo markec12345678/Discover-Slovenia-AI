@@ -12,6 +12,7 @@ import {
   CalendarArrowDown,
   Car,
   Euro,
+  Gauge,
   Users,
   UsersRound,
   MapPin,
@@ -57,6 +58,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 import { INTERESTS } from "@/lib/slovenia-data";
 import { PARTY_TYPES, type PartyType } from "@/lib/party-types";
+import { PACES, type Pace } from "@/lib/pace-types";
 import { formatEventDate } from "@/lib/events-data";
 import {
   dayISOForDayNumber,
@@ -125,6 +127,13 @@ const PARTY_OPTIONS: { value: PartyType; labelKey: string }[] = [
   { value: "solo", labelKey: "partySolo" },
 ];
 
+// F15 (backlog #3): tempo potovanja — gostota načrta (labelKey → "planner")
+const PACE_OPTIONS: { value: Pace; labelKey: string }[] = [
+  { value: "slow", labelKey: "paceSlow" },
+  { value: "balanced", labelKey: "paceBalanced" },
+  { value: "fast", labelKey: "paceFast" },
+];
+
 // Persistenca zadnjega itinererja (localStorage) + deljeni načrti (URL ?odpri=)
 const LAST_ITINERARY_KEY = "discoverslovenia_last_itinerary";
 const MAX_PERSIST_CHARS = 250 * 1024; // 250 KB
@@ -168,7 +177,8 @@ function isValidPlannerInput(v: unknown): v is PlannerInput {
     typeof p.groupSize === "number" &&
     p.groupSize >= 1 &&
     (p.partyType === undefined ||
-      (PARTY_TYPES as readonly string[]).includes(p.partyType))
+      (PARTY_TYPES as readonly string[]).includes(p.partyType)) &&
+    (p.pace === undefined || (PACES as readonly string[]).includes(p.pace))
   );
 }
 
@@ -230,6 +240,12 @@ function parseQueryToPlannerInput(query: string): PlannerInput {
   else if (lowerQuery.includes("prijatel") || /\bfriends?\b/.test(lowerQuery)) partyType = "friends";
   else if (/\bsam[oi]?\b|\bsolo\b|\balone\b|\bmyself\b/.test(lowerQuery)) partyType = "solo";
 
+  // F15 (backlog #3): tempo iz naravnega jezika — forumi: "plannerji ne
+  // vprašajo, če bi raje manj mest počasneje". Zadetek pošljemo v formo.
+  let pace: PlannerInput["pace"];
+  if (lowerQuery.includes("počasi") || lowerQuery.includes("počasnej") || lowerQuery.includes("mirn") || /\b(?:slow|relaxed|chill)\b/.test(lowerQuery)) pace = "slow";
+  else if (lowerQuery.includes("hitr") || lowerQuery.includes("intenziv") || /\b(?:fast|intensive)\b|see a lot|čim več/.test(lowerQuery)) pace = "fast";
+
   // Sezona iz query-ja (npr. kviz CTA: "... poleti, s partnerjem ...") — SL + EN
   let season: Season = "summer";
   if (lowerQuery.includes("pomlad") || lowerQuery.includes("spring")) season = "spring";
@@ -245,6 +261,7 @@ function parseQueryToPlannerInput(query: string): PlannerInput {
     season,
     groupSize,
     ...(partyType ? { partyType } : {}),
+    ...(pace ? { pace } : {}),
   };
 }
 
@@ -559,6 +576,16 @@ export function ItineraryPlanner() {
     });
   }
 
+  // F15 (backlog #3): tempo potovanja (opcijsko) — toggle: klik na izbrano
+  // ga počisti (nazaj na privzeti umerjen ritem, kot pri partyType)
+  function togglePace(value: Pace) {
+    fireStartedOnce();
+    setFormData((prev) => ({
+      ...prev,
+      pace: prev.pace === value ? undefined : value,
+    }));
+  }
+
   function validate(input: PlannerInput): string | null {
     if (!Number.isFinite(input.days) || input.days < 1 || input.days > 14) {
       return t("validationDays");
@@ -616,6 +643,7 @@ export function ItineraryPlanner() {
       interests: input.interests.length,
       season: input.season,
       partyType: input.partyType ?? "none",
+      pace: input.pace ?? "none",
       has_start_date: Boolean(input.startDate),
       locale,
     });
@@ -1770,6 +1798,49 @@ export function ItineraryPlanner() {
                         );
                       })}
                     </div>
+                  </div>
+
+                  {/* F15 (backlog #3): tempo potovanja — gostota načrta.
+                      Odgovor na pritožbo s forumov: plannerji ne vprašajo,
+                      če bi uporabnik raje manj mest počasneje. Opcijsko:
+                      brez izbire = umerjen ritem (dosedanja logika). */}
+                  <div className="space-y-2">
+                    <Label>
+                      <Gauge className="size-4" aria-hidden />
+                      {t("paceLabel")}
+                      <span className="font-normal text-muted-foreground">
+                        {t("paceOptional")}
+                      </span>
+                    </Label>
+                    <div
+                      role="group"
+                      aria-label={t("paceLabel")}
+                      className="flex flex-wrap gap-1.5"
+                    >
+                      {PACE_OPTIONS.map((option) => {
+                        const selected = formData.pace === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => togglePace(option.value)}
+                            aria-pressed={selected}
+                            className={cn(
+                              "inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
+                              "min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                              selected
+                                ? "border-primary bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+                                : "border-border bg-muted text-muted-foreground hover:bg-muted/70"
+                            )}
+                          >
+                            {t(option.labelKey)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t("paceHint")}
+                    </p>
                   </div>
 
                   <div className="space-y-2">

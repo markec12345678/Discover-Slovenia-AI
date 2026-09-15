@@ -7,6 +7,68 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.19.0] — 2026-09-16
+
+### Dodano (1.19.0 — F15 "Vprašanje tempa": POČASI/UMERJENO/HITRO V NAČRTOVALNIKU)
+
+> Backlog ideja #3 ( sekcija 22 COMPETITIVE-ANALYSIS), vir Reddit ×2
+> ( r/AI_travel_tips + r/SlowTravelEurope): Layla "izpljune 12-dnevni
+> načrt v 10 s, ne da bi vprašala, če bi raje manj mest počasneje";
+> počasna potovanja = lastna skupnost. "Tempo NI vprašanje, je pritožba."
+> Dostavljeno kot "zelo nizka težavnost" zmaga, kot je backlog obetal.
+
+- **Vprašanje "Kakšen tempo?" v obrazcu načrtovalnika** ( za "Kdo
+  potuje?"): trije čipi — Počasi / Umerjeno / Hitro ( SL) oz. Slow /
+  Balanced / Fast ( EN), opcijsko ( brez izbire = dosedanji umerjen
+  ritem, popolnoma nazaj kompatibilno — stari odjemalci/naročila
+  nespremenjeni). Namig pod čipi pošteno razloži razliko.
+- **Novo skupno `src/lib/pace-types.ts`** ( en vzorec kot party-types):
+  PACES + isPace validacija, PACE_PROMPT_LABELS ( SL+EN za AI prompt) in
+  PACE_FALLBACK — deterministična gostota dneva: slow → 2 postanka × 5 h
+  ( 9–14, 15–20), balanced → 2 × 4 h ( dosedanji izpis), fast → 3 × 3 h
+  ( 9–12, 13–16, 17–20).
+- **AI pot**: vrstica "Tempo potovanja: počasen/hiter" v promptu potnika
+  + izrecno pravilo ( slow: 1–2 postanka, daljši termini, brez ožiganja;
+  fast: 3–4 postanki, termini realistični). Preizkušeno: slow → 2
+  postanka z daljšimi termini, fast → 3 postanke/dan.
+- **Fallback pot**: gostota iz PACE_FALLBACK — deterministično, isti
+  vhod → isti načrt, 0 AI žetonov.
+- **Refine pot**: prilagoditve ohranjajo tempo ( "Upoštevaj tempo
+  potovanja: …" v promptu — počasen načrt se ob "dodaj X" ne zgosti).
+- **Rationale**: fallback utemeljitev pove tempo, kadar je izbran
+  ( "Počasen tempo pomeni manj postankov z več časa na vsakem.").
+- **NL parsing ( hero/kviz)**: "počasi/mirno/slow/relaxed" → slow,
+  "hitro/intenzivno/fast/see a lot/čim več" → fast — enaka pokritost
+  SL+EN kot obstoječa polja.
+- **Analitika**: `planner_submitted` nosi nov prop `pace` ( "none" brez
+  izbire) — brez novih dogodkov ( obstoječi dogodek, nov prop).
+- **POPRAVEK ( obstoječa vrzel, vidna zdaj): i18n kvalitetne kartice**
+  "Tvoja pot" — na EN strani so se izrisovale SL oznake: vrednost tempa
+  ( Miren/Umirjen/Poln → Relaxed/Balanced/Full), oznake metrik ( Vožnja →
+  Driving, Narava → Nature, Hrana → Food …), "Tvoja pot" → "Your trip",
+  meta vrstica ( 3 dni/2 osebi → 3 days/2 people + interesi preslikani
+  prek izvoženega INTEREST_LABELS_EN — "narava + kultura" → "nature +
+  culture"), "Zakaj ta pot?" → "Why this route?", "Kako smo izračunali?"
+  → "How did we compute this?" ter vsi "how" razlogi.
+- **Zavestno NE ( iskrenost)**: tempo ne pošilja ocen duplikatov
+  vremena — validator ( geo-validacija) že pošteno opozarja ob > 4
+  postankih/dan; hitri tempo ( 3–4) ostaja znotraj pragov.
+
+### Preizkušeno (1.19.0)
+
+- curl: neveljaven pace → 400 ( "Tempo potovanja je neveljaven");
+  brez pace → 200 identično prej; slow → 2 postanka/daljši termini;
+  fast → 3 postanke/dan ( AI pot, z-ai-sdk aktiven).
+- E2E brskalnik ( sveže seje, 390 px): SL — čipi izrisani SSR, "Počasi"
+  klik → aria-pressed true, generacija → Dan 1 + kvalitetna kartica
+  "Tempo: Miren"; EN — "What pace?", Fast klik → "Pace: Balanced",
+  "Your trip · 3 days · 2 people · nature + culture"; scrollWidth 390
+  ( 0 prekoračitev); 0 napak strani v sveži seji; analytics 200; VLM ×2
+  NO DEFECTS ( "X ikone" = UI close gumbi, slike vse naložene — DOM
+  preverba complete && naturalWidth > 0 za vse).
+
+---
+
 ## [1.18.0] — 2026-09-16
 
 ### Dodano (1.18.0 — F14 "UVOZI SHRANJENE TOČKE": GOOGLE MAPS PINS BREZ RAČUNOV)

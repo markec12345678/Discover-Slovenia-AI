@@ -778,3 +778,35 @@ za zavedno načrtovanje, ne reaktivno lovljenje.
 vir namere potnikov ( vsak ima 10–50 shranjenih točk). Mindtrip ga je
 dodal ZA računom; mi smo ga odprli brez računa, deterministično in z
 javno metodologijo — zadnja »Start Anywhere« vrzel je zaprta.
+
+## 27. F15 — »Vprašanje tempa« ( 1.19.0): backlog #3 zaprt
+
+> Backlog ( sekcija 22) je #3 označil kot »🟢 lahka zmaga — zelo nizek
+> strošek ( 1 vprašanje + parameter v rankerju)«. Vir: Reddit ×2 —
+> »Layla izpljune 12-dnevni načrt v 10 s, ne da bi vprašala, če bi raje
+> manj mest počasneje« ( r/AI_travel_tips) + r/SlowTravelEurope
+> ( počasna potovanja = lastna skupnost). Dostavljeno v enem sprintu.
+
+**Kaj je dostavljeno ( 1.19.0):**
+
+| Aspekt | Izvedba |
+|---|---|
+| Vprašanje v obrazcu | »Kakšen tempo?« — čipi Počasi / Umerjeno / Hitro ( SL+EN), opcijsko, s poštenim namigom |
+| AI pot | Vrstica v promptu + izrecno pravilo: slow → 1–2 postanka z daljšimi termini; fast → 3–4 postanki ( termini realistični) |
+| Fallback pot | PACE_FALLBACK — deterministična gostota: slow 2×5 h, balanced 2×4 h ( dosedanji izpis), fast 3×3 h; 0 AI žetonov |
+| Refine | Prilagoditve ohranjajo tempo ( počasen načrt se ob »dodaj X« ne zgosti) |
+| NL vhod ( hero/kviz) | »počasi/mirno/slow/relaxed« → slow; »hitro/intenzivno/fast/čim več« → fast |
+| Analitika | planner_submitted nov prop pace ( brez novih dogodkov) |
+| Obstoječa napaka | POPRAVLJENA i18n kvalitetne kartice ( EN stran je kazala SL oznake — vrednost tempa, oznake metrik, naslovi, interesi) |
+
+**Zavestno NE ( iskrenost):** prilagoditev pragov validatorja —
+geo-validacija že pošteno opozarja ob > 4 postankih/dan ( warn) in > 5
+( error); hitri tempo ( 3–4 postanka) ostaja ZNOTRAJ pragov, zato
+načrt »hitro« ne proizvaja lažnih opozoril. Tempo je vhod v načrt, ne
+izgovor za skrivanje meritev.
+
+**Ostalo v backlogu po tej dostavi:** #2 javna telemetrija validatorja
+( 🟢 spremljava F13 — statična vsebina + štetje analitike), #4 optimalno
+zaporedje dneva ( 2-opt gumb — logika ŽE obstaja v plan-check.ts),
+#5 detour km, #6 postanki za hrano. Po sekciji 24–25: DMO embed
+ostaja strateška opcija, rezervacije/receipts ostajajo zavestno odložene.
