@@ -85,6 +85,38 @@ export async function register() {
         error
       );
     }
+
+    // Startup SHEMA migracija — SOCIALNA PLAST deljenih potovanj (P1 + F7,
+    // 1.15.0): Neon baza je bila sinhronizirana v Fazi 4f — vsi kasnejši
+    // stolpci (SavedItinerary.formData/editTokenHash/userId) in tabele
+    // (TripVote/TripComment/TripLike/TripGuide) na njej manjkajo (živi
+    // dokaz: POST /api/itinerary/save → 500 na produkciji, 200 lokalno).
+    // Idempotentna, additive-only, fail-open — skupna zastavica.
+    // Glej src/lib/shared-trip-schema-migration.ts.
+    try {
+      const { migrateSharedTripSchema } = await import(
+        "./lib/shared-trip-schema-migration"
+      );
+      const r = await migrateSharedTripSchema();
+      if (r.columnsAdded.length > 0 || r.tablesCreated.length > 0) {
+        console.log(
+          `[instrumentation] Shema migracija (socialna plast): dodani ` +
+            `stolpci [${r.columnsAdded.join(", ") || "-"}], ustvarjene ` +
+            `tabele [${r.tablesCreated.join(", ") || "-"}] (${r.dialect})`
+        );
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija (socialna plast): stanja ni " +
+            "bilo mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
+        );
+      }
+    } catch (error) {
+      // Fail-open: migracija NE sme podreti zagona strežnika.
+      console.error(
+        "[instrumentation] Shema migracija (socialna plast) ni uspela:",
+        error
+      );
+    }
   }
 
   // Startup migracija tržnih slik (tržni val, sept 2026) — popravi demo
