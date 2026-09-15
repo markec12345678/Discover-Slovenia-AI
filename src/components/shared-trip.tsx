@@ -24,7 +24,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ItineraryEventsSection } from "@/components/itinerary-events";
 import { warmOfflinePlanCache } from "@/lib/itinerary-share";
-import { PackingListSection } from "@/components/packing-list";
+import { SmartPackingSection } from "@/components/packing-smart";
+import { BudgetPanel } from "@/components/budget-panel";
 import { SocialShare } from "@/components/social-share";
 import { useAppStore, DAY_COLORS } from "@/lib/store";
 import { formatEventDate } from "@/lib/events-data";
@@ -549,11 +550,16 @@ export function SharedTrip({
           </section>
         )}
 
-        {/* === Kaj pakirati === */}
-        {/* packingList je del shranjenega itinererja; če ga ni, se ne renderira */}
-        <PackingListSection
-          items={itinerary.packingList}
-          title="Kaj pakirati"
+        {/* === F6.2: proračun načrta (na osebo + osebni cilj) === */}
+        <BudgetPanel
+          itinerary={itinerary}
+          variant="section"
+          className="mb-10"
+        />
+
+        {/* === F6.1: Kaj pakirati (iz napovedi/postankov načrta) === */}
+        <SmartPackingSection
+          itinerary={itinerary}
           variant="section"
           className="mb-10"
         />

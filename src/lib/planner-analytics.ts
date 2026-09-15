@@ -52,6 +52,10 @@ export type PlannerEventName =
   // F5.7 (PWA): namestitev aplikacije (gumb v navigaciji)
   | "pwa_install_prompted"
   | "pwa_install_accepted"
+  // F6.1: odkljuk predmeta na pametnem pakirnem seznamu
+  | "packing_item_checked"
+  // F6.2: nastavitev osebnega proračunskega cilja v primerjavo z načrtom
+  | "budget_goal_set"
   // Neuspehi
   | "planner_error"
   | "empty_result"

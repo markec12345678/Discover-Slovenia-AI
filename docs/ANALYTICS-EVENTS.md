@@ -40,6 +40,8 @@
 | `ics_download` | klik „Koledar (.ics)“ — datoteka se dejansko ustvari | vsak prenos | `days`, `has_dates`, `locale` | vrednost koledarskega izvoza (F5.2); `has_dates` loči načrte z/s brez datuma odhoda |
 | `pwa_install_prompted` | klik na gumb namestitve v navigaciji → sistemski namestitveni dialog (F5.7) | vsak klik | `locale` | zanimanje za namestitev PWA; skupaj s `pwa_install_accepted` → stopnja sprejema |
 | `pwa_install_accepted` | uporabnik SPREJME namestitveni dialog | vsaka sprejeta namestitev | `locale` | namestitve PWA (offline načrti v žepu); delež = accepted / prompted |
+| `packing_item_checked` | odkljuk predmeta na pametnem pakirnem seznamu (F6.1) | vsak odkljuk (le smer `true`) | `category`, `method` (`forecast`/`season`), `items` | angažma s seznamom; `method` pove, iz katere plasti (napoved vs sezona) uporabnik resno pakira |
+| `budget_goal_set` | nastavitev/primerjava osebnega proračunskega cilja (F6.2) | vsaka potrditev cilja | `goal_eur`, `plan_total_eur`, `group_size` | proračunska angažma; razlika goal−plan pove cenovno občutljivost obiskovalcev |
 
 ## Neuspehi in opustitvi
 

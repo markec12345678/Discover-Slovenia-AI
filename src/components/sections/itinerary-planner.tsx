@@ -88,7 +88,8 @@ import { ItineraryRefiner } from "@/components/sections/itinerary-refiner";
 import { PlannerDayNav } from "@/components/planner-day-nav";
 import { ItineraryQualityCard } from "@/components/itinerary-quality-card";
 import { ItineraryEventsSection } from "@/components/itinerary-events";
-import { PackingListSection } from "@/components/packing-list";
+import { SmartPackingSection } from "@/components/packing-smart";
+import { BudgetPanel } from "@/components/budget-panel";
 import { SocialShare } from "@/components/social-share";
 import { TripTimeline } from "@/components/trip-timeline";
 import { BookingAssistant } from "@/components/booking-assistant";
@@ -1390,6 +1391,11 @@ export function ItineraryPlanner() {
                 {/* FW4.1: strukturne metrike poti + utemeljitev — nad dnevni timeline */}
                 <ItineraryQualityCard itinerary={itinerary} input={formData} />
 
+                {/* F6.2: proračun načrta + razdelitev na osebo + osebni cilj —
+                    stroški iz DEJANSKEGA načrta (atrakcije + vožnja F5.3),
+                    odkrito povedano, česa ocena NE vključuje */}
+                <BudgetPanel itinerary={itinerary} input={formData} />
+
                 {/* P0.2 GEO-VALIDACIJA: poštena preverba izvedljivosti — opozorila
                     po dnevih (km, obseg, urnik) z pozivom k prilagoditvi */}
                 <GeoValidationPanel itinerary={itinerary} />
@@ -1833,9 +1839,9 @@ export function ItineraryPlanner() {
                   onToggleEvent={toggleAddedEvent}
                 />
 
-                {/* Kaj pakirati — packing list (lokalni čeklist, brez persista) */}
-                {/* Sekcija se sama skrije, če packingList ni prisoten/prazen */}
-                <PackingListSection items={itinerary.packingList} />
+                {/* F6.1: pameten pakirni seznam — iz dnevne napovedi + dejanskih
+                    postankov (razlogi, metoda razkrita, persist odkljukov) */}
+                <SmartPackingSection itinerary={itinerary} input={formData} />
 
                 {/* WOW: AI Trip Timeline — vizualni dan */}
                 <TripTimeline days={itinerary.days} totalBudget={itinerary.total_budget} />

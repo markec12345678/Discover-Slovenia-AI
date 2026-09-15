@@ -173,3 +173,77 @@ offline zemljevidom poti). **Strateško zaostajanje** ostaja v rezervacijah
 utemeljitvijo. Naslednja največja zmaga po mnenju analize: **živi ceni
 partnerjev** ( item 4 roadmap — čakamo ključe) ali **community vodniki**
 ( item 5 — temelj obstaja).
+
+---
+
+# Faza 6 ( september 2026) — sveža raziskava + odgovora
+
+> Metoda: 6 spletnih poizvedb ( z-ai web_search, okt/sept 2026), globje
+> branje monkeytravel.app primerjave ( 7 orodij, posodobljeno 7. sept 2026)
+> in stippl.io »Stippl vs Wanderlog« ( posodobljeno 4. sept 2026).
+
+## 8. Kaj se je premaknilo pri tekmecih (pomlad–jesen 2026)
+
+| Tekmec | Sprememba (vir, datum) | Pomen zame |
+|---|---|---|
+| **Mindtrip Flights** | Lanciran maj 2026 — »prva all-in-one agentic AI letalska rezervacija« ( Sabre + PayPal partnerstvo; monkeytravel, 7. 9. 2026) | Rezervacijska vrzel se JE poglobila — a zahteva GDS partnerstvo, ne AI kakovost |
+| **Mindtrip Stays** | Julij 2026 — pogovorno iskanje hotelov namesto filtrnih plošč ( isti vir) | Enako — booking-first design ( njihova šibkost: »flow vodi v rezervacijo«) |
+| **Layla → Expedia** | Expedia Group je KUPIL Laylo ( 31. julij 2026; isti vir) | Neodvisnost je redka lastnost — naša 12 % lokalna provizija je zdaj še bolj razločna |
+| **Wanderlog Pro** | $39,99/let; free tier kapira AI na ~5 sporočil načrt ( preverjeno feb 2026) | Naš AI je BREZ kapljivega limita — cenovna prednost |
+| **Stippl PRO** | €24,99/let — AI itinerer + **budget planner, expense splitting, packing list** ( stippl.io, 4. 9. 2026) | NJEGOV jedro diferencatorja = proračun + pakiranje → F6.1/F6.2 odgovora spodaj |
+| **Google Canvas** | Day-by-day planner v AI Mode ( US, širjenje 2026; isti vir) | Neposreden tekmac za strukturo — a brez skupine/deljenja |
+| **ChatGPT ( Expedia/Booking appsi)** | Žive cene v pogovoru — a SAMO izven EU/UK/CH ( monkeytravel) | EU je zaščiteno — naša evropska pozicija |
+
+**Skupni smeri 2026:** ( 1) rezervacije v pogovoru ( Mindtrip), ( 2) all-in-one
+upravljanje potovanja — proračun/pakiranje/stroški ( Stippl), ( 3) kolaboracija
+( Wanderlog neomejeno brezplačno). **Naša pozicija:** edini specializiran
+ Slovenija produkt z dokazljivo geografijo + poštenimi podatki.
+
+## 9. F6 odgovora ( zgrajeno v tem sprintu)
+
+### F6.1 — Pameten pakirni seznam ( src/lib/packing-smart.ts + komponenta)
+
+**Stippl-ova packing list je "trip-specific"; naša je DOKAZLJIVA:**
+
+- vsak predmet ima RAZLOG iz konkretnega dneva/stopa: »Dan 3: dež v
+  napovedi« ( dežna jakna), »Dan 1: Bled; Dan 2: Piran ( voda na načrtu)«
+  ( kopalke), »Dan 3: Postojnska jama« ( topla plast — v jamah 8–12 °C
+  vse leto)
+- metoda RAZKRITA: badge »iz dnevne napovedi« ( emerald) ali »sezonska«
+  ( amber) + opomba, kdaj napoved ne obstaja ( odhod > 16 dni) —
+  konkurenti ne razkrivajo NIKOLI
+- deluje za VSE stare shranjene načrte ( čista funkcija na clientu, nič
+  API sprememb) — Stippl zahteva svojo app
+- odkljuki persistirani čez reload in preklop jezika ( stabilni ID-ji,
+  `useSyncExternalStore` — hidracijsko varno)
+
+### F6.2 — Proračunski panel ( src/components/budget-panel.tsx)
+
+**Stippl-ov budget planner upravlja vnose uporabnika; naš IZRAČUNA iz
+načrta in prizna meje:**
+
+- vrstice iz REALNIH podatkov: seštevek cen atrakcij na načrtu + gorivo +
+  e-vinjeta ( F5.3), skupaj, razdelitev na osebo ( stepper 1–12)
+- osebni proračunski cilj ( persistiran) → »Načrt je 15 € nad tvojim
+  proračunom« ali »izide« — podobno Stippl-ovemu tracking, a brez vnosa
+  stroškov na terenu ( namerno: naš načrt nima teh podatkov in NE ugibamo)
+- zložljivo »Kako smo izračunali — in česar NE vključuje«: predpostavke,
+  viri ( AMZS/DARS) in IZRECNO nočitev/hrana/nakupi niso v oceni —
+  iskrenost kot znamka, konkurenti te vrstice nimajo
+
+**Meritve ( analitika):** `packing_item_checked` ( category, method, items)
+in `budget_goal_set` ( goal_eur, plan_total_eur, group_size) — docs/ANALYTICS-EVENTS.md.
+
+## 10. Ostale najdene vrzeli ( odločitve)
+
+| # | Vrzel | Odločitev |
+|---|---|---|
+| 1 | Mindtrip Start Anywhere zdaj sprejema SLIKE ( App Store, »share images«) | ⏸ Roadmap — naš URL ingest ( F5.4) je tekstovni; slikovni vnos zahteva VLM integracijo, primerno po živi uporabi URL vnosa |
+| 2 | Skupinsko glasovanje ( MonkeyTravel »voting«, WePlanify pollsi) | ⏸ Roadmap — zahteva uporabniške račune; deljena povezava je naš trenutni skupinski mehanizem |
+| 3 | Potni dnevnik/spomini ( Stippl travel reel, photobook) | ⏸ Zavestno odloženo — vsebinska smer, ne jedro načrtovanja |
+| 4 | živi ceni partnerjev | ⏸ Roadmap item 4 ( čakamo ključe) — Mindtrip Flights/Stays pomenita, da se ta vrzel povečuje, a zahteva GDS partnerstvo |
+| 5 | Gmail/Maps uvoz rezervacij ( Wanderlog) | ⏸ Odloženo — zasebnostno občutljivo, ni v naši smeri |
+
+**Sklep F6:** zaprli sva največjo funkcionalno vrzel do Stippla ( pakiranje
++ proračun) na naš način — z razlogi, viri in razkritimi metodami. Naš
+vodilni diferencator ( poštenost) je zdaj izražen še v teh dveh plasteh.

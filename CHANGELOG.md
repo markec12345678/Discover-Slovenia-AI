@@ -7,6 +7,87 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.9.0] — 2026-09-15
+
+### Dodano (F6.1 — PAMETEN PAKIRNI SEZNAM: napoved + dejanski postanki → predmeti z razlogi)
+
+> Odgovor na Stippl-ov jedro diferencatorja ("trip-integrated packing
+> list"): naš seznam ne ugiba — gradi iz DVEH realnih virov, ki jih načrt
+> že ima (dnevna napoved Open-Meteo priložena dnevom + tipi DEJANSKIH
+> postankov iz baze destinacij), in vsak predmet nosi razlog ter razkrito
+> metodo. Deluje za VSE načrte, tudi stare shranjene (ista čista funkcija
+> na clientu — nič sprememb API).
+
+- **`src/lib/packing-smart.ts`** (čista deterministička): dnevi z dežem →
+  dežna jakna (razlog "Dan 3: dež v napovedi"); sneg → zimska oprema;
+  temp razpon ≥ 12 °C → sloji; min ≤ 5 °C → termično perilo; vročina ≥
+  25 °C → SPF 50. Postanki po tipu: jezero/obala/reka → kopalke ("Dan 1:
+  Bled; Dan 2: Piran (voda na načrtu)"), soteska/gora → pohodniška
+  obutev + flaša vode, jama → topla plast ("8–12 °C vse leto"), mesto →
+  superge; interesi/tip skupine (družina → otroški pripomočki), dolžina
+  (> 5 dni → power bank + pralni servis), vedno (gotovina, EU vtičnice,
+  dokumenti). Iskrena METODA: "forecast" (napoved priložena načrtu) ali
+  "season" (sezonska priporočila — odhod > 16 dni naprej ali brez datuma;
+  detekcija po signaturi fallback vremena + horizon preverba) — razkrita
+  v badge-u in opombi. Kategorije (obleka/vreme/aktivnost/tehnika/zdravje/
+  dokumenti/otroci), količine ("× 4"), kap 18, dedup.
+- **`src/components/packing-smart.tsx`**: kartica s kategorijkimi glavami
+  (ikone), checkbox + label + količina + siva vrstica razloga, progress
+  badge ("2/12 spakirano"), badge metode (emerald "iz dnevne napovedi" /
+  amber "sezonska"), gumb "Počisti odkljukane". Odkljuki se PERSISTIRAJO
+  (localStorage `dsa_packing_check` — podpis po ID-jih; nov seznam →
+  reset) prek **`src/lib/ui-persist.ts`** (zunanja shramba +
+  `useSyncExternalStore`: hidracijsko varno, strežniški snapshot prazen,
+  referenčno stabilni snapshot-i). Nadomešča legacy PackingListSection na
+  /nacrtuj in /pot/[shareId]; SL + EN.
+
+### Dodano (F6.2 — PRORAČUNSKI PANEL: stroški načrta + razdelitev na osebo + osebni cilj)
+
+> Odgovor na Stippl-ov budget planner + expense splitting — poštenejše:
+> stroški so izračunani IZ DEJANSKEGA NAČRTA (seštevek cen atrakcij +
+  gorivo + e-vinjeta iz F5.3) in odkrito povedano, česa ocena NE vključuje
+> (nočitev/hrana — načrt teh postavk nima, zato ne ugibamo).
+
+- **`src/components/budget-panel.tsx`**: vrstice "Atrakcije na načrtu /
+  Vožnja (gorivo + vinjeta) / Skupaj (načrt)" (iz `ItineraryQuality` —
+  ista čista funkcija kot API, deluje tudi za stare načrte brez quality),
+  razdelitev na osebo s stepperjem 1–12 ("158 € / osebo"), osebni
+  proračunski cilj (persistiran `dsa_budget_goal` prek ui-persist) s
+  primerjalno vrstico ("Načrt je 15 € nad tvojim proračunom (300 €)" —
+  amber/evil emerald) in zložljivo razkrivnostjo "Kako smo izračunali —
+  in česar NE vključuje" (predpostavke, viri AMZS/DARS, izrecna vrstica
+  o nočitev/hrani/nakupi). SL + EN; /nacrtuj + /pot/[shareId].
+
+### Dodano (analitika F6)
+
+- `packing_item_checked` (props: category, method, items) — angažma s
+  seznamom + iz katere plasti (napoved vs sezona) uporabnik pakira.
+- `budget_goal_set` (props: goal_eur, plan_total_eur, group_size) —
+  cenovna občutljivost obiskovalcev.
+- Whitelist (strežniška + klientska) + docs/ANALYTICS-EVENTS.md.
+
+### Tekmeci 2026 (sveža raziskava — docs/COMPETITIVE-ANALYSIS-MINDTRIP.md)
+
+- Mindtrip Flights (maj 2026, Sabre+PayPal) in Stays (jul 2026) —
+  rezervacije v pogovoru; Laylo je kupil Expedia (jul 2026); Wanderlog
+  Pro $39,99/let z unlimited AI; Stippl PRO €24,99 z budget/packing/
+  expenses; Google Canvas (US). Naša F6 odgovora: pakirni seznam iz
+  napovedi+postankov (nad Stippl-ovo generično listo) in proračun iz
+  načrta z odkrito metodo.
+
+### Verifikacija (F6)
+
+- tsc 0 napak (naše datoteke), eslint 0 napak.
+- E2E brskalnik: SL+EN generiranje → obe sekciji se izrišeta z razlogi
+  iz napovedi ("Dan 3: dež v napovedi") in postankov ("Postojnska jama");
+  kids-kit pri družini; odkljuki persistirani čez reload IN preklop
+  jezika (stabilni ID-ji); goal primerjava + stepper 2→3 osebe (158 →
+  105 €/osebo); analitika zapisana v DB (preverjeno z Prisma poizvedbo);
+  390 px brez preliva; VLM potrditve treh screenshotov.
+- Regresije: phase4-verify 13/13 ✓, pwa-test 36/36 ✓.
+
+---
+
 ## [1.8.3] — 2026-09-15
 
 ### Dodano (F5.7 — PWA: načrti BREZ POVEZAVE, namestitev, offline zemljevid)
