@@ -55,6 +55,36 @@ export async function register() {
         error
       );
     }
+
+    // Startup SHEMA migracija — F11 (1.15.0): ustvari tabeli TripPoll +
+    // TripPollVote na obstoječih bazah (Vercel/Neon nima ročnega db push;
+    // skip-worktree past je modele enkrat zadržala pred commitom).
+    // Idempotentna (IF NOT EXISTS), additive-only, fail-open — skupna
+    // zastavica DSA_DISABLE_SCHEMA_MIGRATION. Glej
+    // src/lib/trip-poll-migration.ts.
+    try {
+      const { migrateTripPollTables } = await import(
+        "./lib/trip-poll-migration"
+      );
+      const r = await migrateTripPollTables();
+      if (r.tablesCreated.length > 0) {
+        console.log(
+          `[instrumentation] Shema migracija (F11 ankete): ustvarjene ` +
+            `tabele [${r.tablesCreated.join(", ")}] (${r.dialect})`
+        );
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija (F11 ankete): tabel ni bilo " +
+            "mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
+        );
+      }
+    } catch (error) {
+      // Fail-open: migracija NE sme podreti zagona strežnika.
+      console.error(
+        "[instrumentation] Shema migracija (F11 ankete) ni uspela:",
+        error
+      );
+    }
   }
 
   // Startup migracija tržnih slik (tržni val, sept 2026) — popravi demo
