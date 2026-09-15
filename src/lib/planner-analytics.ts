@@ -66,6 +66,10 @@ export type PlannerEventName =
   // "computed" = deterministični odgovor; "puter"/"z-ai-sdk" = AI fraziranje
   // dejstev; "fallback" = iskren zavrnitev ugibanja)
   | "plan_qa_asked"
+  // F13 "Preveri svoj načrt": oddano besedilo TUJEGA načrta v validator
+  // (brez AI žetonov; worst = najhujša raven poročila)
+  | "plan_check_submitted"
+  | "plan_check_completed"
   // Neuspehi
   | "planner_error"
   | "empty_result"

@@ -36,8 +36,13 @@ export function normalizeText(raw: string): string {
  * zato so tukaj vpisana v izvirniku). Vključujejo EN imena (Lake Bled,
 // Isonzo …) in pogoste različice. Večbesedni vzorci imajo prednost pred
  * kratkimi ( npr. "postojnska jama" pred "postojna" — obe štejeta).
+ *
+ * F13 ("Preveri svoj načrt"): izvoženo tudi za plan-check parser, ki
+ * isto bazo vzorcev uporablja za razpoznavo postankov PO DNEVIH in
+ * V VRSTNEM REDU omembe ( url-ingest šteje omembe, plan-check pa
+ * potrebuje pozicije — en sam vir resnice za vzorce).
  */
-const PATTERNS: Record<string, string[]> = {
+export const PATTERNS: Record<string, string[]> = {
   bled: ["bled", "lake bled", "bledsko jezero", "blejsko jezero", "blejski otok", "bled island"],
   bohinj: ["bohinj", "lake bohinj", "bohinjsko jezero", "vogel"],
   ljubljana: ["ljubljana", "ljubljanski grad", "presernov trg", "triple bridge", "trojni most", "metelkova", "tivoli park ljubljana"],

@@ -218,6 +218,65 @@
     "pushText": "With browser notifications we can tell you about new experiences, events during your visit — and remind you about your saved plan.",
     "noSpam": "No spam — unsubscribe in one click."
   },
+  "planCheck": {
+    "sectionAriaLabel": "Check your plan — free travel plan validation",
+    "eyebrow": "Free · no account · 0 AI tokens",
+    "title": "Check your plan",
+    "subtitle": "Paste a plan you got from ChatGPT, Mindtrip or Layla — we deterministically verify real-road distances, opening closures, duplicates and stop order. A report with cited sources, zero guesswork.",
+    "inputLabel": "Travel plan text",
+    "placeholder": "Paste your plan text …\n\nDay 1: Bled — lake and castle\n9:00–11:00 walk around the lake\n\nDay 2: Ljubljana — old town …",
+    "hint": "We only verify stops from our 22 destinations — we don't guess the rest.",
+    "tryExample": "Try an example (with deliberate mistakes)",
+    "checking": "Checking …",
+    "submit": "Check the plan",
+    "errors": {
+      "generic": "The check failed — please try again.",
+      "network": "Connection failed. Check your internet and try again."
+    },
+    "verdict": {
+      "errorTitle": "The plan has {count, plural, one {# serious issue} other {# serious issues}}",
+      "warnTitle": "{count, plural, one {# warning} other {# warnings}} worth a closer look",
+      "okTitle": "We found no issues in our checks",
+      "stats": "Serious: {errors} · Warnings: {warns} · Reorder suggestions: {zigzags} · Duplicates: {duplicates}"
+    },
+    "parsed": {
+      "title": "What we read from your plan",
+      "methodOsrm": "Real roads (OSRM)",
+      "methodHeuristic": "Distance estimate",
+      "stops": "Stops",
+      "days": "Days",
+      "km": "Total driving",
+      "startDate": "Start date",
+      "noDate": "not found",
+      "noHeadersNote": "We found no day headers in the text (e.g. \"Day 1\") — we checked as if all stops were on a single day."
+    },
+    "dayLabel": "Day",
+    "issues": {
+      "title": "Validator findings"
+    },
+    "zigzag": {
+      "title": "Stop order can be improved",
+      "saving": "reordering saves ~{saved} km ({current} km → {optimized} km)",
+      "order": "Suggested order:",
+      "note": "We optimize the open path between stops (2-opt over real roads). If your day starts or ends elsewhere (e.g. a hotel), adjust the order."
+    },
+    "duplicates": {
+      "title": "Same place on multiple days",
+      "line": "— days {days} (a revisit? Fine if intentional)",
+      "note": "A 356-plan AI study found duplicate visits on 5.1% of days — so we surface them, not hide them."
+    },
+    "costs": {
+      "title": "Estimated driving costs",
+      "line": "Total ~{km} km — fuel ~€{fuelEur} + e-vignette €{vignetteEur} (vehicles up to 3.5 t).",
+      "note": "Estimates are based on published price lists (AMZS/DARS) at implementation time; the vignette is only needed for motorway driving."
+    },
+    "sources": {
+      "title": "Why we check this way (sources)",
+      "limitation": "Honesty note: we can only verify stops matching our 22 destinations. Places outside that set we simply don't know — and we don't invent them.",
+      "limitationDuration": "We don't extract activity durations from text — the day-load estimate counts driving only.",
+      "zeroAi": "The check is 100% deterministic: 0 AI tokens, pure computation."
+    }
+  },
   "footer": {
     "tagline": "Made in Slovenia",
     "affiliateDisclaimer": "Affiliate links — we earn commission on bookings.",

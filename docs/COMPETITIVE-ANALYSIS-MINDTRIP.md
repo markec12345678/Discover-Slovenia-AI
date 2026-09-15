@@ -643,3 +643,35 @@ deterministične in poceni. Največja NOVA priložnost: »Preveri svoj
 načrt« ( check orodje za tuje izvoze) — samo poštenje, 0 AI stroškov,
 direktna reklama našega diferenciatorja uporabnikom, ki so že drugje
 dobili svoj načrt.
+## 23. F13 odgovor na backlog idejo #1: "Preveri svoj načrt" ( 1.17.0)
+
+> Backlog ( sekcija 22) je bil jasen: 🟢 glavni kandidat F13 = CHECK
+> orodje za tuje izvoze, 0 AI žetonov, "direktna reklama našega
+> diferenciatorja uporabnikom, ki so že drugje dobili svoj načrt".
+> Dostavljeno v 1.17.0 — v enem sprintu na isti debeli infrastrukturi,
+> ki poganja naš generator.
+
+**Kaj je dostavljeno:**
+
+| Backlog obljuba | Izvedba |
+|---|---|
+| Uporabnik prilepi/naloži KATERIKOLI načrt | Sekcija na glavni strani ( SL+EN, brez računa, demo z namernimi napakami) |
+| Deterministični validator | Parser ( dnevi SL+EN, vrstni red omembe, termini, začetni datum, tolerance slovenskih končnic) → obstoječa geo-validacija + OSRM realne ceste |
+| Razdalje/realnost | km/dan, zaporedne noge, obseg dneva ( samo vožnja — trajanj ne izluščimo, iskreno zapisano) |
+| Duplikati | znotraj dneva ( obstoječe pravilo) + **NOVO prek dnevov** ( MEM 5,1 % dni) |
+| Odpiralni časi za naših 22 | closed_month/closed_weekday SAMO z znanim datumom ( "Ptuj ob ponedeljkih" — demo to sproži) |
+| Cik-cak dnevi | **NOVO: optimalna preureditev** ( izčrpno ≤7 postankov, sicer 2-opt; predlog samo pri ≥ 20 km IN ≥ 12 % prihranka) |
+| Stroški vožnje | gorivo + e-vinjeta ( F5.3, enake predpostavke razkrite v UI) |
+| ŽETONI virov | MEM 43,2 % ( 356 poti), BBC 37 %/33 %, Tow Center 37–94 %, naša /vir-podatkov — vsi s povezavo v poročilu |
+
+**Zakaj je to pomembneje od "še ene funkcije":** to je prvi dotik
+uporabnika, ki NI naš uporabnik — oseba z gotovim ChatGPT/Mindtrip
+načrtom, ki išče nekoga, ki ji reče, ali drži voda. Forumi ( sekcija 21)
+so pokazali točno ta primanjkljaj. Vsako poročilo konča z žetoni virov
+in izjavo o omejitvah ( "preverimo samo naših 22; ostalih ne ugibamo") —
+diferenciator, ki ga MEM prodaja kot marketing, mi izdamo kot orodje.
+
+**Kaj namerno NI v F13 ( ostaja v backlogu):** uvoz rezervacij ( vrzel
+#5, zasebnost), glasovanje PRED načrtom (#7), postanki za hrano (#6),
+detour km na predloge (#5) — naslednji kandidati po prioritetah sekcije
+22 so #2 javna telemetrija validatorja in #3 vprašanje tempa.

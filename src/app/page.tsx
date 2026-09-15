@@ -4,6 +4,7 @@ import { getLocale } from "next-intl/server";
 import { Navigation } from "@/components/sections/navigation";
 import { Hero } from "@/components/sections/hero";
 import { StatsSection } from "@/components/sections/stats";
+import { PlanCheckSection } from "@/components/sections/plan-check-section";
 import { DestinationsSection } from "@/components/sections/destinations";
 import { ExperiencesSection } from "@/components/sections/experiences";
 import { ExploreHub } from "@/components/sections/explore-hub";
@@ -100,6 +101,13 @@ export default function Home() {
         {/* 3. Zakaj Slovenija — trust številke (22 destinacij, 0 % provizije,
             preverjeni partnerji) */}
         <StatsSection />
+
+        {/* 3.5 F13 "Preveri svoj načrt" — validator TUJIH načrtov
+            (ChatGPT/Mindtrip/Layla izvozi): diferenciator pred vsemi, ki
+            zahtevajo račun; 0 AI žetonov, poročilo z viri */}
+        <Reveal>
+          <PlanCheckSection />
+        </Reveal>
 
         {/* 4. Priljubljene destinacije — samo 6 kartic (featured), ostalih
             16 na /destinacije (progresivno razkrivanje, ne vizualni overload) */}

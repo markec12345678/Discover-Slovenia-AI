@@ -218,6 +218,65 @@
     "pushText": "Z obvestili v brskalniku ti lahko sporočimo nove izkušnje, dogodke ob tvojem obisku — in te spomnimo na shranjen načrt.",
     "noSpam": "Brez neželene pošte — odjava z enim klikom."
   },
+  "planCheck": {
+    "sectionAriaLabel": "Preveri svoj načrt — brezplačno preverjanje potovalnega načrta",
+    "eyebrow": "Brezplačno · brez prijave · 0 AI žetonov",
+    "title": "Preveri svoj načrt",
+    "subtitle": "Prilepi načrt, ki si ga dobil od ChatGPTja, Mindtripa ali Layle — deterministično preverimo razdalje po realnih cestah, zaprtja obiskovanih krajev, duplikate in vrstni red postankov. Poročilo s citiranimi viri, brez ugibanj.",
+    "inputLabel": "Besedilo potovalnega načrta",
+    "placeholder": "Prilepi besedilo načrta …\n\nDan 1: Bled — jezero in grad\n9:00–11:00 sprehod ob jezeru\n\nDan 2: Ljubljana — staro mesto …",
+    "hint": "Preverimo samo postanke iz naših 22 destinacij — ostalih ne ugibamo.",
+    "tryExample": "Preizkusi primer (z namernimi napakami)",
+    "checking": "Preverjam …",
+    "submit": "Preveri načrt",
+    "errors": {
+      "generic": "Preverjanje ni uspelo — poskusi znova.",
+      "network": "Povezava ni uspela. Preveri internet in poskusi znova."
+    },
+    "verdict": {
+      "errorTitle": "Načrt ima {count, plural, one {# hujše opozorilo} two {# hujši opozorili} few {# hujša opozorila} other {# hujših opozoril}}",
+      "warnTitle": "{count, plural, one {# opozorilo} two {# opozorili} few {# opozorila} other {# opozoril}} za podrobnejši pregled",
+      "okTitle": "Pri naših preverilih nismo našli težav",
+      "stats": "Hujša opozorila: {errors} · Opozorila: {warns} · Predlogi preureditve: {zigzags} · Duplikati: {duplicates}"
+    },
+    "parsed": {
+      "title": "Kaj smo prebrali iz načrta",
+      "methodOsrm": "Realne ceste (OSRM)",
+      "methodHeuristic": "Ocena razdalj",
+      "stops": "Postanki",
+      "days": "Dnevi",
+      "km": "Vožnja skupaj",
+      "startDate": "Začetni datum",
+      "noDate": "ni podatka",
+      "noHeadersNote": "V besedilu nismo našli glav dni (npr. »Dan 1«, »Day 2«) — preverjali smo, kot da so vsi postanki v enem dnevu."
+    },
+    "dayLabel": "Dan",
+    "issues": {
+      "title": "Opozorila validatorja"
+    },
+    "zigzag": {
+      "title": "Vrstni red postankov je mogoče izboljšati",
+      "saving": "preureditev prihrani ~{saved} km ({current} km → {optimized} km)",
+      "order": "Predlagani vrstni red:",
+      "note": "Optimalni vrstni red izračunamo kot odprto pot med postanki (2-opt po realnih cestah). Če dan začenjaš ali končuješ drugje (npr. hotel), vrstni red prilagodi."
+    },
+    "duplicates": {
+      "title": "Isti kraj v več dnevih",
+      "line": "— dnevi {days} (ponovni obisk? Če je namenjen, je to v redu)",
+      "note": "Študija 356 AI-načrtov je v 5,1 % dni našla podvojene obiske — zato jih prikažemo, ne skrijemo."
+    },
+    "costs": {
+      "title": "Ocena stroškov vožnje",
+      "line": "Skupaj ~{km} km — gorivo ~{fuelEur} € + e-vinjeta {vignetteEur} € (vozila do 3,5 t).",
+      "note": "Ocene temeljijo na objavljenih cenikih (AMZS/DARS) ob času implementacije; vinjeta je potrebna le ob vožnji po avtocestah."
+    },
+    "sources": {
+      "title": "Zakaj tako preverjamo (viri)",
+      "limitation": "Pošteno: preverimo lahko samo postanke, ki se ujemajo z našimi 22 destinacijami. Krajev izven tega niza ne poznamo — in jih ne izmišljujemo.",
+      "limitationDuration": "Trajanj aktivnosti iz besedila ne izluščimo — ocena obsega dneva šteje samo vožnjo.",
+      "zeroAi": "Preverjanje je 100 % deterministično: 0 AI žetonov, samo izračun."
+    }
+  },
   "footer": {
     "tagline": "Narejeno v Sloveniji",
     "affiliateDisclaimer": "Affiliate povezave — zaslužimo provizijo pri rezervacijah.",

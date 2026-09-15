@@ -49,6 +49,10 @@ const VALID_EVENTS = new Set([
   "guide_saved",
   // F9 "Pogovor z načrtu": zastavljeno vprašanje o načrtu
   "plan_qa_asked",
+  // F13 "Preveri svoj načrt": oddano besedilo tujega načrta v validator
+  // ( worst = najhujša raven poročila; brez AI žetonov)
+  "plan_check_submitted",
+  "plan_check_completed",
   // Neuspehi
   "planner_error",
   "empty_result",

@@ -1,0 +1,107 @@
+import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
+import {
+  parsePlanText,
+  checkParsedPlan,
+  toItinerary,
+  type PlanCheckLang,
+} from "@/lib/plan-check";
+import { buildLegRouteIndex } from "@/lib/road-routing-server";
+
+// ============================================================================
+// POST /api/plan-check — "Preveri svoj načrt" (F13)
+// ============================================================================
+//
+// Uporabnik prilepi KATERIKOLI načrt ( ChatGPT/Mindtrip/Layla izvoz, ali
+// svojega) → deterministično poročilo:
+//   - parser: dnevi + postanki (ista baza vzorcev kot url-ingest, SL+EN,
+//     tolerantna na končnice) + opcijski termini in začetni datum
+//   - geo-validacija ( km/dan, noge, obseg, urnik, duplikati, zaprtja —
+//     samo z znanim datumom)
+//   - duplikati prek dnevov + cik-cak preureditev ( 2-opt/izčrpno)
+//   - stroški vožnje ( gorivo + e-vinjeta)
+//
+// 0 AI žetonov ( čista logika + OSRM realne ceste, kot pri generiranju).
+// Odprta javna pot → rate limit 10/min na IP ( enako kot ingest).
+//
+// Poštenost: preverimo SAMO postanke iz naših 22 destinacij — če jih ne
+// prepoznamo, vrnemo 422 in REČEMO ( ne izmišljujemo "podobnih" krajev).
+// ============================================================================
+
+const MIN_TEXT_CHARS = 50;
+const MAX_TEXT_CHARS = 20000;
+
+export async function POST(request: Request) {
+  // Odprta javna pot ( brez prijave) → dosleden rate limit
+  const limited = rateLimit(request, {
+    limit: 10,
+    windowMs: 60000,
+    key: "plan-check",
+  });
+  if (limited) return limited;
+
+  let body: { text?: unknown; lang?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Neveljaven JSON." }, { status: 400 });
+  }
+
+  const text = typeof body.text === "string" ? body.text : "";
+  const lang: PlanCheckLang = body.lang === "en" ? "en" : "sl";
+
+  if (text.trim().length < MIN_TEXT_CHARS) {
+    return NextResponse.json(
+      {
+        error:
+          lang === "en"
+            ? `Paste the full plan text (at least ${MIN_TEXT_CHARS} characters).`
+            : `Prilepi celotno besedilo načrta (vsaj ${MIN_TEXT_CHARS} znakov).`,
+      },
+      { status: 400 }
+    );
+  }
+  if (text.length > MAX_TEXT_CHARS) {
+    return NextResponse.json(
+      {
+        error:
+          lang === "en"
+            ? `The plan is too long (limit ${MAX_TEXT_CHARS} characters).`
+            : `Načrt je predolg (omejitev ${MAX_TEXT_CHARS} znakov).`,
+      },
+      { status: 413 }
+    );
+  }
+
+  // 1) Parser ( čista funkcija, brez omrežja)
+  const parsed = parsePlanText(text);
+
+  if (parsed.totalStops === 0) {
+    // Poštena zavrnitev — NIČ izmišljevanja "podobnih" lokacij
+    return NextResponse.json(
+      {
+        error:
+          lang === "en"
+            ? "I could not recognize any of our 22 curated Slovenian destinations in this text — so I won't guess. I can only verify stops I have real data for (Bled, Ljubljana, Piran, Soča valley …)."
+            : "V tem besedilu nisem prepoznal nobene od naših 22 skrbno vzdrževanih slovenskih destinacij — zato ne ugibam. Preverim lahko samo postanke, za katere imamo prave podatke (Bled, Ljubljana, Piran, Soška dolina …).",
+        dayHeadersFound: parsed.dayHeadersFound,
+      },
+      { status: 422 }
+    );
+  }
+
+  // 2) OSRM noge ( realne ceste, predpomnilnik + varovalka; fail-open na
+  //    hevristiko — poročilo metodo razkrije v validation.method)
+  let legs;
+  try {
+    legs = await buildLegRouteIndex(toItinerary(parsed));
+  } catch (e) {
+    // noge niso kritične — nadaljuj brez njih ( hevristika)
+    console.error("[plan-check] buildLegRouteIndex napaka:", e);
+  }
+
+  // 3) Celotno poročilo ( validator + dodatna preverjanja + viri)
+  const report = checkParsedPlan(parsed, lang, legs);
+
+  return NextResponse.json(report, { status: 200 });
+}

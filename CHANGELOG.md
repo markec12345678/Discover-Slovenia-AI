@@ -7,6 +7,79 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.17.0] — 2026-09-16
+
+### Dodano (1.17.0 — F13 "PREVERI SVOJ NAČRT": DETERMINISTIČNI VALIDATOR TUJIH NAČRTOV)
+
+> Glavni kandidat #1 raziskovalne runde ( sekcije 18–22 COMPETITIVE-
+> ANALYSIS). Ugotovitev forumov (Reddit r/AI_travel_tips, HN): uporabniki,
+> ki so ŽE dobili načrt od ChatGPTja/Mindtripa/Layle, zamigujejo nekoga,
+> ki ga PREVERI — "bivši vodik je zato zgradil CHECK orodje", Monkey-
+> EatingMango pa je 81 checkov naredil marketing. Naš odgovor: 0 AI
+> žetonov, cela obstoječa infrastruktura ( geo-validacija P0.2 + OSRM
+> F5.6 + stroški F5.3 + vzorci url-ingest F5.4) + 2 NOVI preverjanji.
+
+- **F13: Sekcija "Preveri svoj načrt" na glavni strani** ( za trust
+  številkami, id=`#preveri-nacrt`, SL+EN i18n). Uporabnik prilepi KATERI
+  KOLI načrt ( ChatGPT/Mindtrip/Layla izvoz ali svoj) → POST
+  `/api/plan-check` → poročilo: verdikt ( hujša/opozorila), prepoznani
+  dnevi s postanki ( preverljivost — pokažemo, kaj smo prebrali), metoda
+  razdalj (OSRM realne ceste / ocena), opozorila validatorja, predlogi
+  preureditve, duplikati prek dnevov, ocena stroškov vožnje in ŽETONI
+  VIROV ( študija MEM 43,2 %, BBC 37 %/33 %, Tow Center 37–94 %, naša
+  metodologija /vir-podatkov). Gumb "Preizkusi primer (z namernimi
+  napakami)" za demo. Brez računa, brez shranjevanja.
+- **`src/lib/plan-check.ts` ( čista funkcija, 0 AI žetonov):**
+  - **Parser:** "Dan 1"/"Day 2:"/"3. dan" glave ( markdown tolerantne,
+    vrstni red omembe = vrstni red postankov; uvod PRED prvo glavo se ne
+    šteje), termini iz vrstic ("9:00–11:00 Bled" → time_slot), začetni
+    datum ( ISO / 20.9.2026 / 20. september 2026 / September 20, 2026 —
+    leto obvezno, brez leta ne ugibamo) in **toleranca slovenskih
+    končnic** ( "v Ljubljani", "iz Bleda", "v Piranu", "Ptujskem gradu":
+    deblo brez končnega samoglasnika/-ec + do 3 črke; "soca" NE ujame
+    "soccer").
+  - **Validator:** obstoječa `validateItineraryGeo` ( km/dan, zaporedne
+    noge, obseg dneva — samo vožnja, ker trajanj iz besedila ne
+    izluščimo, urnik če so termini, duplikati znotraj dneva,
+    closed_month/closed_weekday SAMO z znanim datumom).
+  - **NOVO — duplikati PREK dnevov** ( MEM: 5,1 % dni, večmestno 45,2 %):
+    isti kraj v ≥2 dnevih → prikaz z dnevi, ne obtožba ("ponovni obisk?
+    Če je namenjen, je to v redu").
+  - **NOVO — cik-cak dan** ( MEM: 9,5 % dni, median +3,4 km): optimalna
+    preureditev odprte poti ( do 7 postankov izčrpno po permutacijah,
+    sicer 2-opt; OSRM noge kdor so na voljo) → predlog SAMO če prihranek
+    ≥ 20 km IN ≥ 12 % ( proti muham hevristike).
+  - **Stroški vožnje** (`computeTripDriveCosts`: gorivo + e-vinjeta).
+- **`src/app/api/plan-check/route.ts`:** validacija ( 50–20000 znakov,
+  413/400/422), rate-limit 10/min na IP ( enako kot ingest), OSRM noge
+  z buildLegRouteIndex ( fail-open na hevristiko, metoda razkrita v
+  poročilu), **poštena zavrnitev 422** ob 0 prepoznanih destinacijah
+  ("ne ugibam — preverim lahko samo postanke, za katere imamo prave
+  podatke").
+- **`src/lib/url-ingest.ts`:** `PATTERNS` izvožen ( en sam vir resnice za
+  vzorce — url-ingest šteje omembe, plan-check pa rabí pozicije).
+- **Analytics:** `plan_check_submitted` + `plan_check_completed` ( worst
+  prop) dodana v `PlannerEventName` in server-side VALID_EVENTS (400 →
+  200).
+- **E2E ( agent-browser, sveža seja, 390px):** SL: preizkusi primer →
+  poročilo ( "3 opozorila za podrobnejši pregled" — pravilna slovenska
+  množina, Ptuj ob ponedeljku, Piran→Ljubljana ~120 km, duplikat Piran
+  2+3, ~795 km / gorivo ~83 € + vinjeta 12,80 €, 4 viri s pravimi URL);
+  EN (/en): "Check your plan" + EN poročilo; 0 napak v konzoli, 0
+  horizontalnega preliva ( 390px), sekcija centrirana na desktopu
+  ( 768px max-w); VLM pregled obeh zaslonov: NO DEFECTS. API curl: 200
+  ( method=osrm — realne ceste!), 400/413-pot, 422-pot ( Francija →
+  iskrena zavrnitev).
+
+### Poštenost (izpostavljeno v UI)
+
+- Preverimo SAMO postanke, ki se padejo na naših 22 destinacij — ostalih
+  ne ugibamo ( to stoji ob besedilu ZA vedno).
+- Trajanj aktivnosti iz besedila ne izluščimo → ocena obsega dneva šteje
+  samo vožnjo.
+- Optimalni vrstni red je odprta pot med postanki — če dan začenjaš/
+  končuješ drugje ( hotel), vrstni red prilagodi.
+
 ## [1.16.0] — 2026-09-16
 
 ### Dodano (1.16.0 — F12 SKUPINSKI POTNI DNEVNIK BREZ RAČUNOV)
