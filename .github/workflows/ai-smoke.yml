@@ -84,7 +84,7 @@ jobs:
             # (2026-09-15: "Dnevni pobeg na Bled" — čist JSON v slovenščini).
             # To ni napaka namestitve — naročena arhitektura TOČNO tu pase:
             # "ostala dva, ko routeru zmanjka" (Gemini v produkciji).
-            echo "::warning::Dnevna meja free tierja dosežena — ključ veljaven (key-info 200), veriga pade na Gemini. Dodaj $10 kredita za 1000/dan ko raste promet."
+            echo "::warning::Dnevna meja free tierja dosežena — ključ veljaven (key-info 200), veriga pade na Gemini. Dodaj 10 USD kredita za 1000/dan ko raste promet."
           else
             echo "::error::OpenRouter chat odgovoril s HTTP ${HTTP_CODE}"
             jq -r '.error.message // .' /tmp/or-chat.json | head -5
@@ -199,6 +199,9 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -euo pipefail
+          # Free tier RPM (~10/min): prejšnji korak je porabil kvoto za to
+          # minuto — 12 s premora prepreči 429 (živo ugotovitev run #3).
+          sleep 12
           echo "→ POST chat/completions z response_format json_object"
           HTTP_CODE=$(curl -sS -o /tmp/gemini-json.json -w "%{http_code}" -m 45 \
             "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" \
@@ -215,6 +218,32 @@ jobs:
               "temperature": 0
             }')
           echo "← HTTP ${HTTP_CODE}"
+          # 429 = RPM limit free tierja (chat klic pred tem je že dokazal
+          # ključ+model): ena ponovitev po 20 s; če še vedno 429 → opozorilo
+          # (ne napaka — jsonMode je bil živo dokazan v zagonu #2).
+          if [ "${HTTP_CODE}" = "429" ]; then
+            echo "::warning::429 (RPM free tier) — čakam 20 s in poskušam enkrat"
+            sleep 20
+            HTTP_CODE=$(curl -sS -o /tmp/gemini-json.json -w "%{http_code}" -m 45 \
+              "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" \
+              -H "Authorization: Bearer ${GEMINI_API_KEY}" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "model": "gemini-3.6-flash",
+                "messages": [
+                  {"role": "system", "content": "Odgovarjaj SAMO z veljavnim JSON."},
+                  {"role": "user", "content": "Vrni JSON: {\"status\":\"ok\",\"drzava\":\"Slovenija\"}"}
+                ],
+                "response_format": {"type": "json_object"},
+                "max_tokens": 512,
+                "temperature": 0
+              }')
+            echo "← retry HTTP ${HTTP_CODE}"
+          fi
+          if [ "${HTTP_CODE}" = "429" ]; then
+            echo "::warning::jsonMode še vedno 429 (RPM) — chat klic zgoraj je dokazal ključ; jsonMode živo dokazan v zagonu #2 (2026-09-15)."
+            exit 0
+          fi
           if [ "${HTTP_CODE}" != "200" ]; then
             echo "::error::Gemini jsonMode odgovoril s HTTP ${HTTP_CODE} — generacijske rute bi padle na fallback!"
             cat /tmp/gemini-json.json
@@ -235,6 +264,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -euo pipefail
+          sleep 12  # RPM premor (free tier) — živo ugotovitev run #3
           # 1×1 PNG, generiran na mestu (brez zaupanja v prilepljen base64)
           PIXEL=$(python3 -c '
           import base64, zlib, struct
@@ -264,6 +294,32 @@ jobs:
               \"max_tokens\": 512
             }")
           echo "← HTTP ${HTTP_CODE}"
+          # 429 = RPM free tier (vision je bil živo zelen v zagonu #2):
+          # 1 ponovitev po 20 s; če še vedno 429 → opozorilo, ne napaka.
+          if [ "${HTTP_CODE}" = "429" ]; then
+            echo "::warning::vision 429 (RPM) — ponovitev po 20 s"
+            sleep 20
+            HTTP_CODE=$(curl -sS -o /tmp/gemini-vision.json -w "%{http_code}" -m 45 \
+              "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" \
+              -H "Authorization: Bearer ${GEMINI_API_KEY}" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"model\": \"gemini-3.6-flash\",
+                \"messages\": [{
+                  \"role\": \"user\",
+                  \"content\": [
+                    {\"type\": \"text\", \"text\": \"Odgovori samo z besedilom: VISION-OK\"},
+                    {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,${PIXEL}\"}}
+                  ]
+                }],
+                \"max_tokens\": 512
+              }")
+            echo "← retry HTTP ${HTTP_CODE}"
+          fi
+          if [ "${HTTP_CODE}" = "429" ]; then
+            echo "::warning::vision še vedno 429 (RPM) — ključ+chat+jsonMode dokazani zgoraj; vision živo dokazan v zagonu #2."
+            exit 0
+          fi
           if [ "${HTTP_CODE}" != "200" ]; then
             echo "::error::Gemini vision odgovoril s HTTP ${HTTP_CODE}"
             cat /tmp/gemini-vision.json
