@@ -7,6 +7,81 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.21.0] — 2026-09-16
+
+### Dodano (1.21.0 — F17 "JAVNA TELEMETRIJA VALIDATORJA": ŠTETI, NE OBLJUBLJATI)
+
+> Backlog ideja #2 ( sekcija 22): "stran »Koliko napak ujame naš
+> preverjevalnik« z našimi realnimi številkami + citati javnih študij
+> ( Tow 37/67/94 %, BBC 37/33 %, MEM 43,2 %) z viri. MEM je naredil to
+> za 356 potovanj in postal referenca; mi imamo lastne QA dnevnike."
+> Spremljava F13 — poštenost kot marketing: prvi vtis za obiskovalca,
+> ki že ima načrt od ChatGPTja/Mindtripa.
+
+- **Nova sekcija na glavni strani ( SL+EN, takoj za "Preveri svoj
+  načrt")**: "Koliko napak ujame naš preverjevalnik?" — ŽIVE številke
+  ( 6 kartic: preverjeni načrti z datumom "štejemo od", najdena
+  opozorila z razcepom hujša/opozorila, povprečje na načrt, cik-cak
+  dnevi s ~km odvečne vožnje, duplikati prek dnevov, prebrani dnevi s
+  postanki) + razčlenitev po pravilih ( horizontalni stolpci, top 6,
+  vsa 10 pravil GeoRuleId poimenovana v obeh jezikih) + JAVNE ŠTUDIJE
+  ( MEM 43,2 % — 356 poti; BBC 37 %/33 %; Tow Center 37–94 % — ISTI
+  viri in URL-ji kot poročilo F13) + kartica "Kako štejemo ( pošteno)"
+  s povezavama na /vir-podatkov in #preveri-nacrt.
+- **Strežniško štetje odpovedi NE pozna**: `POST /api/plan-check` ob
+  USPEŠNO izračunanem poročilu zapiše dogodek
+  `planner_plan_check_reported` ( await + try/catch fail-open — napaka
+  pisanja NE vrže poročila). Štejejo se SAMO dokončana preverjanja
+  ( 200); 422 zavrnitve ("ne ugibam") se NE štejejo. Klientski
+  `plan_check_submitted`/`completed` ostajata za lijak — javni števec
+  pije IZKLJUČNO iz strežniškega dogodka.
+- **NOVO `src/lib/validator-stats.ts`** ( čiste funkcije): `buildPlanCheckReportProps`
+  ( poročilo → števke: dnevi, postanki, opozorila po vrsti
+  GeoRuleId, duplikati, cik-cak + prihranek km, worst, metoda — BREZ
+  besedila načrta/IP/PII) + `aggregateValidatorStats` ( vrstice →
+  javni agregat: since = datum prvega dogodka, worstCounts, avg na 1
+  decimalko, rules padajoče; pokvarjene vrstice preskoči — fail-open).
+- **NOVO `GET /api/plan-check/stats`** ( javno, brez prijave, rate
+  limit 30/min): agregat + 60-sekundni lokalni predpomnilnik ( stran
+  ne tolče baze; mogoč zaostanek minute je odkrito zapisan na strani).
+  Napaka baze → 503, stran pokaže "trenutno ni na voljo" — javne
+  študije ostanejo ( fail-open vsebinsko).
+- **Pošteno prazno stanje**: ko je število 0, stran iskreno pove
+  "številke bodo rasla s vsakim poročilom" — NE domnevamo zgodovine
+  nazaj ( štetje se prične z 1.21.0, "since" je datum prvega dogodka).
+- **i18n**: nov imenski prostor `validatorTelemetry` ( 49 ključev,
+  SL+EN simetrija), vključno z oznakami vseh 10 pravil validatorja;
+  format datuma "since" lokaliziran ( sl-SI / en-GB).
+- **Testi**: `scripts/test-validator-stats.ts` — 22 preverjanj
+  ( števke iz sintetičnega + pravega demo poročila, brez-PII nabor
+  ključev, agregacija/razvrščanje/worstCounts/avg, fail-open
+  pokvarjene vrstice, negativne/NaN/∞ vrednosti → 0). Regresiji
+  `test-day-order` + `test-pins` ostajata zeleni.
+- **Dokumentacija dogodkov**: `docs/ANALYTICS-EVENTS.md` dopolnjen z
+  `plan_check_submitted`/`plan_check_completed` ( F13, prej
+  nedokumentirana), `day_optimized` ( F16, enako) in novim strežniškim
+  `planner_plan_check_reported` ( vir javne telemetrije, piše ga
+  IZKLJUČNO strežnik).
+
+### E2E dokazi (1.21.0 — lokalno, 390 px)
+
+- API: POST demo SL ( 200 → 3 opozorila: closed_weekday + day_km +
+  leg_distance, duplikat Piran) + POST EN ( 200) + POST tuji kraji
+  ( 422 — NE šteje) → GET /api/plan-check/stats: plansChecked = 2
+  ( 422 izključen), since, rules padajoče, avg 1,5; drugi GET v 60 s →
+  isti odgovor ( predpomnilnik).
+- Zlati tok v brskalniku ( EN, sveža seja): klik "Try an example" →
+  klik "Check the plan" → dogodek v DB ( 2 → 3) → sveže številke na
+  strani: kartica "3", "counting since 15 September 2026",
+  "0 critical · 6 warnings".
+- SL+EN sekcija: naslov/kartice/studije/metoda/rules OK; zaporedje
+  sekcij stats → preveri-nacrt → telemetrija-validatorja; povezave
+  ( 3 študije + /vir-podatkov + #preveri-nacrt; EN → /en/vir-podatkov);
+  scrollWidth = 390 ( ni prelitev); 0 napak strani; VLM pregled ×2:
+  NO DEFECTS.
+
+---
+
 ## [1.20.0] — 2026-09-16
 
 ### Dodano (1.20.0 — F16 "OPTIMALNO ZAPOREDJE DNEVA": EN GUMB, 2-OPT, 0 AI)

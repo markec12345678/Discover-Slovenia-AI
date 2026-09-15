@@ -1,0 +1,69 @@
+{
+  "validatorTelemetry": {
+    "sectionAriaLabel": "Javna telemetrija preverjevalnika načrtov",
+    "eyebrow": "Telemetrija · javne številke · 0 AI žetonov",
+    "title": "Koliko napak ujame naš preverjevalnik?",
+    "subtitle": "Vsak drug vam obljublja natančnost. Mi jo štejemo: vsako dokončano preverjanje načrta se zabeleži na strežniku, vsako opozorilo po vrsti — in številke so javne za vse.",
+    "liveTitle": "Naša števila (šteta na strežniku, brez osebnih podatkov)",
+    "stats": {
+      "plansLabel": "Preverjeni načrti",
+      "plansSince": "štejemo od {date}",
+      "noSince": "štejemo od namestitve 1.21.0",
+      "issuesLabel": "Najdena opozorila",
+      "issuesSplit": "{errors} hujših · {warns} opozoril",
+      "avgLabel": "Opozorila na načrt",
+      "avgSub": "povprečje na preverjen načrt",
+      "zigzagLabel": "Cik-cak dnevi",
+      "zigzagSaved": "~{km} km odvečne vožnje",
+      "duplicatesLabel": "Duplikati prek dnevov",
+      "duplicatesSub": "isti kraj v ≥ 2 dnevih",
+      "daysLabel": "Prebrani dnevi",
+      "daysSub": "{stops} prepoznanih postankov"
+    },
+    "rules": {
+      "title": "Katera pravila se največkrat sprožijo",
+      "subtitle": "Po vrsti opozorila (hujša in opozorila skupaj); prikazanih največ 6 najpogostejših.",
+      "day_km": "Preveč kilometrov na dan",
+      "day_stops": "Preveč postankov na dan",
+      "leg_distance": "Predolga etapa med postankoma",
+      "day_overload": "Preobsežen dan (aktivnost + vožnja)",
+      "schedule_gap": "Urnik ni izvedljiv (premalo časa za vožnjo)",
+      "schedule_overlap": "Prekrivajoči se termini",
+      "duplicate_stop": "Isti kraj dvakrat isti dan",
+      "missing_coords": "Neznana lokacija (manjkajoče koordinate)",
+      "closed_month": "Zaprtje v mesecu obiska",
+      "closed_weekday": "Zaprtje na dan v tednu obiska"
+    },
+    "studies": {
+      "title": "Javne študije o napakah AI načrtov",
+      "subtitle": "Najpogosteje citirane neodvisne številke — z viri.",
+      "mem": {
+        "label": "MonkeyEatingMango: 43,2 % dni AI-načrtov nosi napako",
+        "note": "Študija 356 potovanj (9/2026): 43,2 % dni vsebuje vsaj eno napako; 9,5 % dni je cik-cak."
+      },
+      "bbc": {
+        "label": "BBC: 37 % uporabnikov AI-načrtov manjka podatkov",
+        "note": "Anketa (9/2025): ~33 % jih je naletelo na netočne podatke."
+      },
+      "tow": {
+        "label": "Tow Center: 37–94 % napak citiranja pri AI iskalnikih",
+        "note": "Pregled AI iskalnikov: delež napačnih citatov se giblje od 37 do 94 %."
+      },
+      "note": "Njihove številke so njihove, naše so naše. Javne študije merijo AI-načrte nasplošno; naše števijo, kaj naš preverjevalnik dejansko najde pri slovenskih načrtih — odkar štejemo."
+    },
+    "method": {
+      "title": "Kako štejemo (pošteno)",
+      "counting": "Šteje se samo dokončano preverjanje — dogodek zapiše strežnik ob izračunu poročila, ne ob kliku.",
+      "start": "Štetje se prične z različico 1.21.0; zgodovine ne domnevamo nazaj.",
+      "privacy": "Brez osebnih podatkov: shranimo samo števke (dnevi, postanki, vrste opozoril) — nikoli besedila načrta.",
+      "cache": "Stran bere številke iz 60-sekundnega predpomnilnika, zato lahko zaostanejo za minuto.",
+      "dataLink": "Metodologija in viri podatkov",
+      "cta": "Preveri svoj načrt ↑"
+    },
+    "states": {
+      "loading": "Nalagam javne številke preverjevalnika …",
+      "unavailable": "Telemetrija trenutno ni na voljo — javne študije spodaj veljajo neodvisno od nje.",
+      "empty": "Od namestitve štetja še ni bilo dokončanih preverjanj — številke bodo rasla s vsakim poročilom. Medtem povedo javne študije spodaj, zakaj štejemo."
+    }
+  }
+}

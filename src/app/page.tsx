@@ -5,6 +5,7 @@ import { Navigation } from "@/components/sections/navigation";
 import { Hero } from "@/components/sections/hero";
 import { StatsSection } from "@/components/sections/stats";
 import { PlanCheckSection } from "@/components/sections/plan-check-section";
+import { ValidatorTelemetrySection } from "@/components/sections/validator-telemetry-section";
 import { DestinationsSection } from "@/components/sections/destinations";
 import { ExperiencesSection } from "@/components/sections/experiences";
 import { ExploreHub } from "@/components/sections/explore-hub";
@@ -107,6 +108,14 @@ export default function Home() {
             zahtevajo račun; 0 AI žetonov, poročilo z viri */}
         <Reveal>
           <PlanCheckSection />
+        </Reveal>
+
+        {/* 3.6 F17 "Javna telemetrija validatorja" — kaj naš preverjevalnik
+            DEJANSKO ujame (lastne strežniškoštete številke, javne od 1.21.0)
+            + citati javnih študij (MEM/BBC/Tow) — poštenost kot marketing,
+            nadaljevanje zgodbe "preveri → glej dokaz" */}
+        <Reveal>
+          <ValidatorTelemetrySection />
         </Reveal>
 
         {/* 4. Priljubljene destinacije — samo 6 kartic (featured), ostalih

@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
+import { db } from "@/lib/db";
 import {
   parsePlanText,
   checkParsedPlan,
   toItinerary,
   type PlanCheckLang,
 } from "@/lib/plan-check";
+import {
+  buildPlanCheckReportProps,
+  PLAN_CHECK_REPORTED_TYPE,
+} from "@/lib/validator-stats";
 import { buildLegRouteIndex } from "@/lib/road-routing-server";
 
 // ============================================================================
@@ -26,6 +31,10 @@ import { buildLegRouteIndex } from "@/lib/road-routing-server";
 //
 // Poštenost: preverimo SAMO postanke iz naših 22 destinacij — če jih ne
 // prepoznamo, vrnemo 422 in REČEMO ( ne izmišljujemo "podobnih" krajev).
+//
+// F17 ( javna telemetrija): ob USPEŠNO izračunanem poročilu strežnik
+// zapiše agregatni dogodek ( samo števke, brez besedila načrta/PII) —
+// fail-open: napaka pisanja NE vrže poročila. 422 zavrnitve se NE štejejo.
 // ============================================================================
 
 const MIN_TEXT_CHARS = 50;
@@ -102,6 +111,23 @@ export async function POST(request: Request) {
 
   // 3) Celotno poročilo ( validator + dodatna preverjanja + viri)
   const report = checkParsedPlan(parsed, lang, legs);
+
+  // 4) F17 — javna telemetrija: en dogodek na DOKONČANO preverjanje
+  //    ( številke za javno stran "Koliko napak ujame naš preverjevalnik").
+  //    await je namenoma ( serverless: obljuba preživi samo do odgovora).
+  try {
+    await db.analyticsEvent.create({
+      data: {
+        type: PLAN_CHECK_REPORTED_TYPE,
+        metadata: JSON.stringify({
+          props: buildPlanCheckReportProps(report),
+          path: "/api/plan-check",
+        }),
+      },
+    });
+  } catch (e) {
+    console.error("[plan-check] telemetry write napaka:", e); // fail-open
+  }
 
   return NextResponse.json(report, { status: 200 });
 }

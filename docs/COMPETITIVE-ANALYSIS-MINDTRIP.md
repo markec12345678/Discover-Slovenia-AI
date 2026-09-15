@@ -839,3 +839,39 @@ lastni dnevi). Generator, ki se SAMO-opravi, je naš znak: km padejo
 ( 🟢 — spremljava F13), #5 detour km pri postankih na poti, #6 postanki
 za hrano na dolgih etapah. Zavestno odložene ostajajo: rezervacije
 ( vrzel #5 zasebnost), DMO embed ( strateška opcija).
+
+## 29. F17 — »Javna telemetrija validatorja« (1.21.0): backlog #2 zaprt
+
+> Backlog ( sekcija 22) #2: »🟢 spremljava F13 — stran ›Koliko napak
+> ujame naš preverjevalnik‹ z našimi realnimi številkami + citati javnih
+> študij ( Tow 37/67/94 %, BBC 37/33 %, MEM 43,2 %) z viri.« Vir: MEM
+> je 356 preverjenih potovanj objavil kot odprte številke in S TEM
+> postal referenca dejstva »AI načrti nosijo napake«. Naša verzija:
+> štejemo LASTNA preverjanja, javno, odkrito — in citiramo NJIHOVE
+> študije ločeno od naših števil ( »njihove so njihove, naše so naše«).
+
+**Kaj je dostavljeno ( 1.21.0):**
+
+| Aspekt | Izvedba |
+|---|---|
+| Sekcija na glavni strani | »Koliko napak ujame naš preverjevalnik?« takoj za F13 — ŽIVE številke ( 6 kartic + razčlenitev po pravilih) + JAVNE ŠTUDIJE z viri + »Kako štejemo ( pošteno)« |
+| Štetje | STREŽNIŠKI dogodek `planner_plan_check_reported` ob IZRAČUNU poročila ( imun na izgubljene klientske klice); 422 zavrnitve se NE štejejo; klientska dogodka F13 ostajata za lijak |
+| Javni API | `GET /api/plan-check/stats` ( brez prijave, rate limit, 60 s predpomnilnik, fail-open 503) — `src/lib/validator-stats.ts` čiste funkcije |
+| Zasebnost | Dogodek vsebuje SAMO števke ( dnevi, postanki, vrste opozoril, worst, metoda) — nikoli besedila načrta/IP; na strani zapisano |
+| Poštenost praznega | »štejemo od {datum prvega dogodka}« — zgodovine NE domnevamo nazaj; ob 0 preverjanjih iskrena oznaka |
+| Dvojezičnost | 49 novih i18n ključev; OZNAKE VSEH 10 pravil GeoRuleId v SL+EN ( doslej so bila imena pravil vidna samo v sporočilih poročila) |
+| Dokumenti | ANALYTICS-EVENTS.md dopolnjen ( 3 prej nedokumentirane dogodke + 1 nov strežniški) |
+
+**Zakaj pomembno:** F13 je rekel »preverimo tvoj načrt«, F17 pa doda
+»in pokažimo, KAJ pri tem dejansko najdemo« — zaprta zanka dokaza.
+To je natančno MEM-ov recept ( odprte številke → referenca), samo
+(pošteno) manjše: naše štetje se prične z 1.21.0 in to PIŠE na strani.
+Konkurenti ( Mindtrip, Layla, ChatGPT) nobenega javnega števca napak
+nimajo — pri njih je natančnost marketinška trditev, pri nas
+števka z datumom začetka.
+
+**Ostalo v backlogu po tej dostavi:** #5 detour km pri »Postanki na
+poti« ( 🟡 naslednji sprint), #6 postanki za hrano na dolgih etapah
+( 🟡). Zavestno odložene ostajajo: rezervacije ( vrzel #5 zasebnost),
+DMO embed ( strateška opcija), glasovanje pred načrtom ( #7 — čaka
+povpraševanje).

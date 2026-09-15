@@ -48,6 +48,20 @@
 | `budget_goal_set` | nastavitev/primerjava osebnega proračunskega cilja (F6.2) | vsaka potrditev cilja | `goal_eur`, `plan_total_eur`, `group_size` | proračunska angažma; razlika goal−plan pove cenovno občutljivost obiskovalcev |
 | `guide_saved` | shranjen/urejen skupnostni vodnik na deljeni poti (F7) | vsako uspešno oddajanje (upsert) vodnika | `tips_count`, `has_verdict`, `day_count`, `lang`, `is_new` | avtorstvo skupnosti; `has_verdict` meri, koliko avtorjev piše korektivni »kaj bi storil drugače« (naš diferencator) |
 | `plan_qa_asked` | zastavljeno vprašanje v „Vprašaj o načrtu“ (F9) | vsako poslano vprašanje (vnos ali žeton predloga) | `intent` (npr. `busiest`, `cost_total`, `day_plan`, `out_of_range`, `ai`, `unknown`, `error`), `source` (`computed`/`puter`/`z-ai-sdk`/`fallback`/`error`), `locale`, `via` (`input`/`chip`) | pogovorna angažma nad načrtom (MindTrip chat-first pariteta); `source=computed` delež pove, koliko vprašanj pokrijeta deterministični nameni BREZ AI žetonov; `intent` pove, kaj uporabnike zanima (vožnja, stroški, natrpanost …) |
+| `plan_check_submitted` | oddaja besedila v „Preveri svoj načrt“ (F13) | vsak poskus | `chars`, `lang` | zanimanje za preverjanje TUJIH načrtov (ChatGPT/Mindtrip/Layla izvozi); skupaj z `plan_check_completed` → stopnja uspešnosti |
+| `plan_check_completed` | strežnik vrne poročilo (200) ali pošteno zavrnitev (422) v klientu | vsak odgovor | `worst` (`error`/`warn`/`ok`/`unknown`) | kakovost preverjenih načrtov; NE meša se z javnim števcem (ta pije iz strežniškega `planner_plan_check_reported`) |
+| `day_optimized` | klik gumba „Optimalno zaporedje“ na kartici dneva (F16) | vsaka preureditev | `day`, `stops`, `saved_km`, `before`, `after`, `locale` | vrednost deterministične 2-opt plasti nad lastnimi dnevi (0 AI žetonov); `saved_km` = prihranek ocene km |
+
+## Strežniški dogodki (piše jih IZKLJUČNO strežnik — klient jih NE more oddati)
+
+Ti dogodki NISO v klientni whitelisti (`VALID_EVENTS`) namerno —
+zapisuje jih strežnik direktno v `AnalyticsEvent` ob dogodku, ki se
+zanesljivo zgodi na strežniku (fail-open: napaka pisanja ne vrže
+glavne odpovedi). Eid/oddedup ni potreben — en zapis na zahtevo.
+
+| Dogodek | Kje se zapiše | Kdaj | Props (metadata) | Pomen |
+|---|---|---|---|---|
+| `planner_plan_check_reported` | `POST /api/plan-check` (F17) | ob USPEŠNO izračunanem poročilu (200; 422 se NE šteje) | `lang`, `days`, `stops`, `issuesTotal`, `issuesError`, `issuesWarn`, `rules` (števci po `GeoRuleId`), `duplicates`, `zigzagDays`, `zigzagSavedKm`, `worst`, `method` — SAMO števke, BREZ besedila načrta/PII | vir JAVNE telemetrije validatorja (`GET /api/plan-check/stats`, sekcija „Koliko napak ujame naš preverjevalnik“); strežniško štetje = imun na izgubljene klientske klice |
 
 ## Neuspehi in opustitvi
 

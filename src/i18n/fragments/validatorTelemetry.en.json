@@ -1,0 +1,69 @@
+{
+  "validatorTelemetry": {
+    "sectionAriaLabel": "Public itinerary-validator telemetry",
+    "eyebrow": "Telemetry · public numbers · 0 AI tokens",
+    "title": "How many mistakes does our validator catch?",
+    "subtitle": "Everyone else promises accuracy. We count it: every completed plan check is recorded server-side, every issue by type — and the numbers are public for all.",
+    "liveTitle": "Our numbers (counted server-side, no personal data)",
+    "stats": {
+      "plansLabel": "Plans checked",
+      "plansSince": "counting since {date}",
+      "noSince": "counting since the 1.21.0 release",
+      "issuesLabel": "Issues found",
+      "issuesSplit": "{errors} critical · {warns} warnings",
+      "avgLabel": "Issues per plan",
+      "avgSub": "average per checked plan",
+      "zigzagLabel": "Zig-zag days",
+      "zigzagSaved": "~{km} km of wasted driving",
+      "duplicatesLabel": "Cross-day duplicates",
+      "duplicatesSub": "same place on ≥ 2 days",
+      "daysLabel": "Days parsed",
+      "daysSub": "{stops} recognized stops"
+    },
+    "rules": {
+      "title": "Which rules trigger most often",
+      "subtitle": "By issue type (critical and warnings together); top 6 shown.",
+      "day_km": "Too many kilometres per day",
+      "day_stops": "Too many stops per day",
+      "leg_distance": "Overly long leg between stops",
+      "day_overload": "Overloaded day (activity + driving)",
+      "schedule_gap": "Schedule not feasible (too little time to drive)",
+      "schedule_overlap": "Overlapping time slots",
+      "duplicate_stop": "Same place twice in one day",
+      "missing_coords": "Unknown location (missing coordinates)",
+      "closed_month": "Closed in the month of visit",
+      "closed_weekday": "Closed on the weekday of visit"
+    },
+    "studies": {
+      "title": "Public studies on AI itinerary errors",
+      "subtitle": "The most-cited independent numbers — with sources.",
+      "mem": {
+        "label": "MonkeyEatingMango: 43.2% of AI-plan days carry a fault",
+        "note": "A 356-trip study (9/2026): 43.2% of days contain at least one fault; 9.5% of days zig-zag."
+      },
+      "bbc": {
+        "label": "BBC: 37% of AI-plan users found too little information",
+        "note": "Survey (9/2025): ~33% encountered inaccuracies."
+      },
+      "tow": {
+        "label": "Tow Center: 37–94% citation-error rates in AI search",
+        "note": "AI search review: the share of wrong citations ranges from 37 to 94%."
+      },
+      "note": "Their numbers are theirs, ours are ours. Public studies measure AI plans in general; ours count what our validator actually finds on Slovenian plans — since we started counting."
+    },
+    "method": {
+      "title": "How we count (honestly)",
+      "counting": "Only a completed check counts — the event is written by the server when the report is computed, not on click.",
+      "start": "Counting starts with version 1.21.0; we do not back-fill history.",
+      "privacy": "No personal data: we store only counts (days, stops, issue types) — never the plan text.",
+      "cache": "The page reads numbers from a 60-second cache, so they may lag by a minute.",
+      "dataLink": "Methodology and data sources",
+      "cta": "Check your plan ↑"
+    },
+    "states": {
+      "loading": "Loading the validator's public numbers …",
+      "unavailable": "Telemetry is temporarily unavailable — the public studies below stand independently of it.",
+      "empty": "No completed checks since counting started — the numbers will grow with every report. Until then, the public studies below explain why we count."
+    }
+  }
+}
