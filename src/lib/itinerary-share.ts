@@ -58,7 +58,38 @@ export async function saveItinerary(
   if (!data?.success || !data?.url || !data?.shareId) {
     throw new Error("Shranjevanje ni uspelo — poskusi znova.");
   }
+  // F5.7: takoj "ogrej" offline predpomnilnik — sveže shranjen načrt je
+  // s tem na voljo tudi brez povezave (offline.html ga izriše iz cache-a).
+  warmOfflinePlanCache(data.shareId);
   return { shareId: data.shareId, url: data.url };
+}
+
+/**
+ * F5.7 (PWA offline): "ogrej" offline predpomnilnik za ta načrt.
+ *
+ * Fire-and-forget GET na /api/itinerary/shared/[shareId]?warm=1 — service
+ * worker (dai-plans-v1) odgovor shrani, offline.html ga nato izriše BREZ
+ * strežnika. `warm=1` pomeni BREZ štetja ogleda (iskrena števca — ogled
+ * šteje samo pravi ogled strani/plannerja, ne ogrevanje predpomnilnika).
+ * Nikoli ne vrže in ne blokira klicatelja.
+ */
+export function warmOfflinePlanCache(shareId: string): void {
+  if (typeof window === "undefined" || !shareId) return;
+  try {
+    fetch(
+      `/api/itinerary/shared/${encodeURIComponent(shareId)}?warm=1`
+    )
+      .then((r) => {
+        // Premečkaj telo, da se povezava sprosti (SW je že kloniral).
+        void r.text().catch(() => {});
+        return null;
+      })
+      .catch(() => {
+        // offline/napaka — predpomnilnik se ogreje ob naslednji priložnosti
+      });
+  } catch {
+    // tiho (zasebni način)
+  }
 }
 
 /**

@@ -1,23 +1,115 @@
-// Service worker za Discover Slovenia AI.
-// Cache-first za statične vire (slike, stili, skripte),
-// network-first za navigacije (z offline fallback na cache).
-// API klici se nikoli ne cachirajo.
+// Service worker za Discover Slovenia AI — F5.7 (PWA offline načrt).
+//
+// STRATEGIJE (po vrsti ujemanja):
+//   1. /api/itinerary/shared/*  → network-first + offline fallback iz cache-a
+//      (načrti za "vzemi s sabo" — deljeni itinererji so javni in stabilni;
+//       online vedno svež, offline zadnji viden primer)
+//   2. OSM zemljevidni TILE-i   → cache-first (dai-tiles, LRU limit)
+//      (zemljevid poti dela OFFLINE za že videna območja — Slovenija ima
+//       v gorah (Triglav, Soča) slab signal)
+//   3. Druge slike (CDN)        → cache-first (dai-img, LRU limit)
+//   4. Lastni statični viri     → cache-first (dai-shell: chunk-i, stili,
+//      fonti, ikone — hashed, nespremenljivi znotraj builda)
+//   5. Navigacije (HTML)        → network-first; 200 se cachira;
+//      OFFLINE fallback: zadnji viden HTML → sicer /offline.html
+//      (samoizpolnitvena stran z seznamom načrtov iz localStorage +
+//       cache-a — brez strežnika)
+//   6. Ostalo (RSC payload-i)   → network-first z cache fallbackom
+//      (RSC mora ostati svež ONLINE — cache-first bi serviral odmrl
+//       payload po spremembi vsebine)
+//
+// NIKOLI se ne cachira: ostali /api/* (avtentikacija, generiranje, košarica
+// — vedno sveže), /admin, /owner, non-GET.
+//
+// Čiščenje: activate pobriše VSE cache-e, ki niso na whitelisti — vključno
+// z legacy "discoverslovenia-v1" (pred F5.7).
+//
+// LRU limit-i (trim po vstavljanju; Cache API nima časovnih žigov, zato
+// brišemo NAJSTAREJŠE po vrstnem redu vstavljanja — praksa v Chrome/FF):
+//   dai-shell 400 vnosov (chunk-i + HTML strani)
+//   dai-plans 40 vnosov (načrti: HTML /pot/* + JSON, ≤250 KB/kos)
+//   dai-tiles 600 vnosov (OSM tile-i ~15–30 KB/kos → ~15 MB)
+//   dai-img   120 vnosov (unsplash/CDN slike destinacij)
+//
 // Web push: `push` + `notificationclick` handlerja (obvestila z VAPID).
-
+//
 // DEV preklop: sw-register.tsx v developmentu registrira "/sw.js?dev=1".
 // V dev je caching IZKLOPLJEN (fetch passthrough — drugače bi SW cache-al
-// stale HMR chunk-e), push handlerji pa ostanejo AKTIVNI (testiranje
+// stale HMR chunk-e in podrl hidracijo: dev chunk-i imajo STABILNE URL-je
+// brez content-hash-a), push handlerji pa ostanejo AKTIVNI (testiranje
 // obvestil). V produkciji (čist "/sw.js") velja polna caching logika.
+
 const DEV_MODE = self.location.search.includes("dev=1");
 
-const CACHE_NAME = "discoverslovenia-v1";
+// Verzije cache-a — bump ob spremembi precache seznama ali strategije.
+const SHELL_CACHE = "dai-shell-v2";
+const PLANS_CACHE = "dai-plans-v1";
+const TILES_CACHE = "dai-tiles-v1";
+const IMG_CACHE = "dai-img-v1";
+const CACHE_WHITELIST = [SHELL_CACHE, PLANS_CACHE, TILES_CACHE, IMG_CACHE];
+
+const MAX_ENTRIES = {
+  [SHELL_CACHE]: 400,
+  [PLANS_CACHE]: 40,
+  [TILES_CACHE]: 600,
+  [IMG_CACHE]: 120,
+};
+
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
   "/icon-192.png",
   "/icon-512.png",
   "/logo.svg",
+  "/offline.html",
 ];
+
+// Relativna pot deljenega itinererja (JSON) — "offline načrt" jedro.
+const SHARED_ITINERARY_PREFIX = "/api/itinerary/shared/";
+// Stran deljenega potovanja (HTML) — drugi del jedra.
+const SHARE_PAGE_PREFIX = "/pot/";
+
+/** Ali je zahtevek OSM tile (Leaflet)? (a|b|c.)tile.openstreetmap.org */
+function isOsmTileHost(hostname) {
+  return (
+    hostname === "tile.openstreetmap.org" ||
+    hostname.endsWith(".tile.openstreetmap.org")
+  );
+}
+
+/** LRU trim: če cache preseže limit, pobriši najstarejše vnose. */
+function trimCache(cacheName, maxEntries) {
+  caches
+    .open(cacheName)
+    .then((cache) =>
+      cache.keys().then((keys) => {
+        if (keys.length <= maxEntries) return;
+        const excess = keys.length - maxEntries;
+        // keys() je v praksi vrstni red vstavljanja → prvi = najstarejši.
+        // (Spec ne zagotavlja vrstnega reda; odveč bi bil le manj optimalen
+        //  izbor — nikoli pa ne pokvari podatkov.)
+        return Promise.all(
+          keys.slice(0, excess).map((key) => cache.delete(key))
+        );
+      })
+    )
+    .catch(() => {
+      // nekritično
+    });
+}
+
+/** Dodeli odgovor v cache (samo status 200). Vrne originalni odgovor. */
+function cacheResponse(cacheName, request, response) {
+  if (response && response.status === 200) {
+    const clone = response.clone();
+    caches
+      .open(cacheName)
+      .then((cache) => cache.put(request, clone))
+      .then(() => trimCache(cacheName, MAX_ENTRIES[cacheName]))
+      .catch(() => {});
+  }
+  return response;
+}
 
 // Namestitev: predpomni statične vire in takoj prevzemi nadzor.
 // V DEV preskočimo tudi install-time precache (poleg fetch passthrough-a)
@@ -26,7 +118,7 @@ self.addEventListener("install", (event) => {
   if (!DEV_MODE) {
     event.waitUntil(
       caches
-        .open(CACHE_NAME)
+        .open(SHELL_CACHE)
         .then((cache) =>
           // addAll odpade, če en vir manjka — uporabimo vsak posebej.
           Promise.all(
@@ -42,7 +134,8 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// Aktivacija: počisti stare cache verzije in prevzemi kliente.
+// Aktivacija: počisti VSE ne-whitelistane cache-e (tudi legacy
+// "discoverslovenia-v1" izpred F5.7) in prevzemi kliente.
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
@@ -50,7 +143,7 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => key !== CACHE_NAME)
+            .filter((key) => !CACHE_WHITELIST.includes(key))
             .map((key) => caches.delete(key))
         )
       )
@@ -72,13 +165,71 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
-  // Skip cross-origin in API zahtevke (vedno fresh).
-  if (url.origin !== self.location.origin) return;
+  // -------------------------------------------------------------------------
+  // 1) DELJENI ITINERERJI (JSON) — network-first z offline fallbackom.
+  //    MORA biti PRED generičnim /api/ skipom!
+  // -------------------------------------------------------------------------
+  if (
+    url.origin === self.location.origin &&
+    url.pathname.startsWith(SHARED_ITINERARY_PREFIX)
+  ) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => cacheResponse(PLANS_CACHE, request, response))
+        .catch(() =>
+          caches
+            .match(request)
+            .then(
+              (cached) =>
+                cached ||
+                new Response(JSON.stringify({ error: "offline" }), {
+                  status: 503,
+                  headers: { "Content-Type": "application/json" },
+                })
+            )
+        )
+    );
+    return;
+  }
+
+  // Cross-origin:
+  if (url.origin !== self.location.origin) {
+    // OSM zemljevidni tile-i → cache-first (OFFLINE ZEMLJEVID za videna
+    // območja). Leaflet jih nalaga kot <img> (destination: "image").
+    if (request.destination === "image" && isOsmTileHost(url.hostname)) {
+      event.respondWith(
+        caches.match(request).then((cached) => {
+          if (cached) return cached;
+          return fetch(request).then((response) =>
+            cacheResponse(TILES_CACHE, request, response)
+          );
+        })
+      );
+      return;
+    }
+    // Druge slike (unsplash in podobni CDN-i) → cache-first z LRU cap-om.
+    if (request.destination === "image") {
+      event.respondWith(
+        caches.match(request).then((cached) => {
+          if (cached) return cached;
+          return fetch(request).then((response) =>
+            cacheResponse(IMG_CACHE, request, response)
+          );
+        })
+      );
+      return;
+    }
+    // Ostalo cross-origin (zunanji API klici klienta) — NE vmešavaj se.
+    return;
+  }
+
+  // Same-origin API/admin/owner (izven shared itinererjev zgoraj) — vedno
+  // sveže, nikoli iz cache-a (avtentikacija, generiranje, košarica ...).
   if (url.pathname.startsWith("/api/")) return;
   if (url.pathname.startsWith("/admin")) return;
   if (url.pathname.startsWith("/owner")) return;
 
-  // Cache-first za statične vire (slike, stili, skripti, fonti).
+  // Cache-first za lastne statične vire (slike, stili, skripti, fonti).
   if (
     request.destination === "image" ||
     request.destination === "style" ||
@@ -88,51 +239,56 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;
-        return fetch(request).then((response) => {
-          // Pomni samo uspešne odgovore.
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        });
+        return fetch(request).then((response) =>
+          cacheResponse(SHELL_CACHE, request, response)
+        );
       })
     );
     return;
   }
 
-  // Network-first za navigacije (HTML) z offline fallback.
+  // -------------------------------------------------------------------------
+  // 5) NAVIGACIJE (HTML) — network-first z offline fallbackom:
+  //    zadnji viden HTML → sicer /offline.html (samoizpolnitvena stran).
+  //    /pot/* (deljena potovanja) se shrani v PLANS cache ("offline načrt"),
+  //    ostale strani v SHELL cache (približek app shell).
+  // -------------------------------------------------------------------------
   if (request.mode === "navigate" || request.destination === "document") {
+    const isSharePage = url.pathname.startsWith(SHARE_PAGE_PREFIX);
+    const navCache = isSharePage ? PLANS_CACHE : SHELL_CACHE;
+
     event.respondWith(
       fetch(request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
+        .then((response) => cacheResponse(navCache, request, response))
         .catch(() =>
-          caches.match(request).then((cached) => cached || caches.match("/"))
+          caches
+            .match(request)
+            .then((cached) => {
+              if (cached) return cached;
+              // /pot/* povezave z query parametri (npr. ?utm_...) — poskusi
+              // brez search dela (isti HTML vir).
+              if (isSharePage && url.search) {
+                return caches.match(new Request(url.pathname));
+              }
+              return null;
+            })
+            .then((cached) => cached || caches.match("/offline.html"))
         )
     );
     return;
   }
 
-  // Privzeto: cache-first z network fallback.
+  // -------------------------------------------------------------------------
+  // 6) OSTALO (RSC payload-i, rss, ostali GET) — network-first z cache
+  //    fallbackom: ONLINE vedno sveže (cache-first bi serviral odmrl RSC),
+  //    OFFLINE pa zadnji viden primer.
+  // -------------------------------------------------------------------------
   event.respondWith(
-    caches.match(request).then((cached) => {
-      return (
-        cached ||
-        fetch(request).then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-      );
-    })
+    fetch(request)
+      .then((response) => cacheResponse(SHELL_CACHE, request, response))
+      .catch(() =>
+        caches.match(request).then((cached) => cached || Response.error())
+      )
   );
 });
 
@@ -188,9 +344,44 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
-// Sporočanje klientom ob update-jih.
+// Sporočanje klientom ob update-jih + debug vmesnik (cache stanje).
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
+    return;
+  }
+  // GET_CACHE_INFO: { type } → odgovor prek MessageChannel porta
+  // (uporabno za E2E teste in debugiranje v konzoli).
+  if (event.data && event.data.type === "GET_CACHE_INFO") {
+    event.waitUntil(
+      caches
+        .keys()
+        .then((names) =>
+          Promise.all(
+            names.map((name) =>
+              caches
+                .open(name)
+                .then((cache) =>
+                  cache.keys().then((keys) => ({
+                    name: name,
+                    entries: keys.length,
+                  }))
+                )
+            )
+          )
+        )
+        .then((info) => {
+          const port = (event.ports && event.ports[0]) || null;
+          if (port) {
+            port.postMessage({ caches: info });
+          } else {
+            self.clients.matchAll().then((clients) => {
+              clients.forEach((client) =>
+                client.postMessage({ type: "CACHE_INFO", caches: info })
+              );
+            });
+          }
+        })
+    );
   }
 });

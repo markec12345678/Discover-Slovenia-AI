@@ -49,6 +49,9 @@ export type PlannerEventName =
   | "ingest_url_success"
   // F5.2: izvoz načrta v koledar (.ics)
   | "ics_download"
+  // F5.7 (PWA): namestitev aplikacije (gumb v navigaciji)
+  | "pwa_install_prompted"
+  | "pwa_install_accepted"
   // Neuspehi
   | "planner_error"
   | "empty_result"

@@ -38,6 +38,8 @@
 | `ingest_url_attempted` | uporabnik odda povezavo v „Začni s povezavo“ (F5.4) | vsak poskus | `host` (gostitelj, max 60 znakov — brez poti/query), `locale` | zanimanje za „Start Anywhere“ vnos; skupaj z `ingest_url_success` → stopnja uspešnosti prepoznavanja |
 | `ingest_url_success` | strežnik prepozna ≥ 1 destinacijo s povezave | vsak uspešen ingest | `matches` (število zadetkov), `days` (predlog dni), `locale` | kakovost prepoznavanja; predlog dni vs. dejansko generiranje |
 | `ics_download` | klik „Koledar (.ics)“ — datoteka se dejansko ustvari | vsak prenos | `days`, `has_dates`, `locale` | vrednost koledarskega izvoza (F5.2); `has_dates` loči načrte z/s brez datuma odhoda |
+| `pwa_install_prompted` | klik na gumb namestitve v navigaciji → sistemski namestitveni dialog (F5.7) | vsak klik | `locale` | zanimanje za namestitev PWA; skupaj s `pwa_install_accepted` → stopnja sprejema |
+| `pwa_install_accepted` | uporabnik SPREJME namestitveni dialog | vsaka sprejeta namestitev | `locale` | namestitve PWA (offline načrti v žepu); delež = accepted / prompted |
 
 ## Neuspehi in opustitvi
 

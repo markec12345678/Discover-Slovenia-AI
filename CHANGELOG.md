@@ -7,6 +7,63 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.8.3] — 2026-09-15
+
+### Dodano (F5.7 — PWA: načrti BREZ POVEZAVE, namestitev, offline zemljevid)
+
+> Roadmap item 3 iz primerjalne analize MindTrip (PWA kot vmesni korak do
+> mobilne app). Slovenija-specifičen argument: mobile signal v gorah
+> (Triglav, Soča, Pohorje) je slab — "vzemi načrt s sabo" je RESNIČNA
+> potreba, ne luksus. .ics izvoz (F5.2) je vzel načrt v koledar; PWA ga
+> vzame v ŽEP — z zemljevidom poti.
+
+- **`public/sw.js` (v2 — popolna prenova strategij):** štirje namenski
+  cache-i (dai-shell-v2 / dai-plans-v1 / dai-tiles-v1 / dai-img-v1) z LRU
+  limit-i (400/40/600/120) in brisanjem legacy discoverslovenia-v1 ob
+  aktivaciji. Deljeni itinererji (JSON `/api/itinerary/shared/*`) dobijo
+  network-first + offline fallback; `/pot/*` HTML se shranjuje v plans
+  cache; OSM tile-i (zemljevid poti!) cache-first → zemljevid dela offline
+  za že videna območja; navigacije offline padejo na `/offline.html`;
+  ostali /api/*, /admin, /owner NIKOLI iz cache-a; RSC payload-i
+  network-first (svež online, cache offline). DEV_MODE (?dev=1) ostaja
+  passthrough — dev chunk-i imajo stabilne URL-je brez hash-a (zamrznilo
+  bi jih in podrlo hidracijo).
+- **`public/offline.html` (novo, samoizpolnitvena stran):** brez strežnika
+  in brez zunanjih virov (inline CSS/SVG, dark mode, responzivno). Izpiše
+  shranjene načrte iz localStorage ("dai:my-trips") + zadnji ne-shranjen
+  načrt (načrtovalnik), Vsak načrt IZRISE v celoti (dnevi, postanki, časi,
+  cene, nasveti) iz SW cache-a (?warm=1 URL). Dvojezično (NEXT_LOCALE
+  cookie, SL privzeto). HTML-escape vseh dinamičnih vrednosti (XSS).
+  Iskrena zavrnitev: načrt, ki ni bil odprt na napravi, to pove.
+- **Ogrevanje predpomnilnika (»offline ready« takoj po shranjevanju):**
+  `warmOfflinePlanCache()` (lib/itinerary-share.ts) — po uspešnem
+  shranjevanju IN ob obisku /pot/* enkrat pridobi JSON v SW cache
+  (fire-and-forget). `?warm=1` NE šteje ogleda (iskren views števec —
+  API vrne saved.views brez incrementa).
+- **`src/components/pwa/pwa-header-icons.tsx` (novo):** badge "Brez
+  povezave" (viden SAMO offline — amber wifi-off, VLM preverjen) + toast
+  ob prehodu offline/online + gumb za namestitev (beforeinstallprompt →
+  prompt(); iOS Safari → Sheet z navodili "Dodaj na domači zaslon" —
+  iPadOS 13+ detekcija vključena). React 19 idiomi: useSyncExternalStore
+  za navigator.onLine/display-mode/UA (hidracijsko-varno), refs za
+  first-run varovalko toast-a.
+- **`src/components/pwa/pwa-update-toast.tsx` (novo):** toast "Nova
+  različica aplikacije" z gumbom Osveži (SKIP_WAITING → enkraten reload,
+  varovano pred zanko).
+- **`sw-register.tsx`:** ob novi verziji SW razpošlje window dogodek
+  "dai:sw-update" (toast komponenta znotraj providerjev ga ulovi).
+- **`public/manifest.json`:** `id: "/"`, opis z offline obljubo,
+  screenshots za Chrome "richer install UI" (wide 1280×720 +
+  narrow 540×720, form_factor) — posneti iz živega UI (VLM preverjeni).
+- **Analitika (2 nova dogodka, whitelist):** `pwa_install_prompted`,
+  `pwa_install_accepted` (brez PII).
+- **Testi: `scripts/pwa-test.ts` — 36/36 ✓** (SW strategije v mock okolju
+  s lažnimi caches/fetch: network-first/cache-first/offline fallback/
+  query-stripping/LRU purge/500-ne-cachira + pogodbe manifest/
+  offline.html/sw.js). E2E sandbox: hidracija + zemljevid + toasti +
+  badge preverjeni; produkcijski offline dokaz: Vercel (glej README
+  odstopanja).
+
 ## [1.8.2] — 2026-09-15
 
 ### Dodano (F5.6 — cestni routing OSRM: realne razdalje, časi in geometrija)

@@ -16,6 +16,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { PwaHeaderIcons } from "@/components/pwa/pwa-header-icons";
 import { SmartSearch } from "@/components/smart-search";
 import { WishlistSheet } from "@/components/wishlist-sheet";
 import { useCart } from "@/lib/cart-store";
@@ -181,8 +182,10 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
           ))}
         </nav>
 
-        {/* Desno: cart + wishlist + smart search + theme toggle + language switcher + CTA + mobile menu */}
+        {/* Desno: offline/install (PWA) + cart + wishlist + smart search + theme toggle + language switcher + CTA + mobile menu */}
         <div className="flex items-center gap-1">
+          {/* F5.7 PWA: badge "Brez povezave" (samo offline) + gumb za namestitev */}
+          <PwaHeaderIcons scrolled={glass} />
           {/* Košarica (tržnica) */}
           <Button
             variant="ghost"

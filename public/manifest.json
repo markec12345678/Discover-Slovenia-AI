@@ -1,7 +1,8 @@
 {
+  "id": "/",
   "name": "Discover Slovenia AI — AI turistična platforma",
   "short_name": "Discover Slovenia AI",
-  "description": "Odkrijte Slovenijo z AI-poganjanim načrtovalcem potovanj. 22 najlepših destinacij, zemljevid, vreme in direktna rezervacija.",
+  "description": "Odkrijte Slovenijo z AI-poganjanim načrtovalcem potovanj. 22 najlepših destinacij, zemljevid po realnih cestah in načrti, ki ostanejo dostopni tudi brez povezave.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -67,6 +68,21 @@
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "/pwa-shot-home-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "AI načrtovalec potovanj z zemljevidom po realnih cestah"
+    },
+    {
+      "src": "/pwa-shot-planner-narrow.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Načrt potovanja na mobilnem zaslonu — dostopen tudi brez povezave"
+    }
+  ],
   "prefer_related_applications": false
 }

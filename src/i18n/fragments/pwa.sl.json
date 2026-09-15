@@ -1,0 +1,22 @@
+{
+  "pwa": {
+    "install": "Namesti aplikacijo",
+    "installAria": "Namesti aplikacijo (deluje tudi brez povezave)",
+    "installIosTitle": "Namestitev na iPhone/iPad",
+    "installIosHint": "Safari ne omogoča gumba za namestitev — uporabite meni Deli:",
+    "installIosStep1": "Tapnite gumb Deli (kvadrat s puščico gor) v vrstici Safari",
+    "installIosStep2": "Izberite »Dodaj na domači zaslon«",
+    "installIosStep3": "Potrdite — aplikacija se odpre čez cel zaslon, načrti pa ostanejo dostopni tudi brez povezave",
+    "installDoneTitle": "Aplikacija je nameščena",
+    "installDoneBody": "Discover Slovenia AI je zdaj na vašem domačem zaslonu — načrti so na voljo tudi brez povezave.",
+    "offline": "Brez povezave",
+    "offlineAria": "Brez povezave — načrti so na voljo",
+    "offlineToastTitle": "Brez povezave",
+    "offlineToastBody": "Načrti, shranjeni na tej napravi, ostajajo dostopni. Nova generiranja potrebujejo povezavo.",
+    "onlineToastTitle": "Povezava je vzpostavljena",
+    "onlineToastBody": "Vsi podatki se znova osvežujejo.",
+    "updateTitle": "Nova različica aplikacije",
+    "updateBody": "Pripravili smo posodobitev. Osvežite stran, da dejansko stopi v veljavo.",
+    "updateAction": "Osveži"
+  }
+}

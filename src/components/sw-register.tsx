@@ -8,6 +8,11 @@
 // (transparenten passthrough, HMR chunk-i ostanejo sveži) ampak OBDELA
 // push/notificationclick dogodke. V produkciji (brez parametra) velja
 // polna caching logika.
+//
+// F5.7: ob odkriti NOVI verziji SW (installing → installed && controller)
+// odpošljemo window dogodek "dai:sw-update" — posluša ga PwaUpdateToast
+// (znotraj providerjev; ta komponenta je zunaj NextIntlClientProvider in
+// prevodov ne more uporabljati).
 
 import { useEffect } from "react";
 
@@ -41,8 +46,14 @@ export function ServiceWorkerRegister() {
               installing.state === "installed" &&
               navigator.serviceWorker.controller
             ) {
-              // Nova različica je pripravljena — obvesti aplikacijo.
+              // Nova različica je pripravljena — obvesti aplikacijo
+              // (toast z gumbom "Osveži" — glej pwa-update-toast.tsx).
               console.info("[SW] Nova različica pripravljena.");
+              window.dispatchEvent(
+                new CustomEvent("dai:sw-update", {
+                  detail: { waiting: reg.waiting ?? installing },
+                })
+              );
             }
           });
         });

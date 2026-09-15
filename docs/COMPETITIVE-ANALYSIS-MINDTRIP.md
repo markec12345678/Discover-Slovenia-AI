@@ -36,11 +36,11 @@
 | 5 | Odpiralni časi destinacij niso obstajali ( namerna data honesty odločitev) | MindTrip upošteva dneve zaprtja ( Louvre/torek) | ✅ **F5.5 implementirano** ( 5 preverjenih vnosov z viri + pravili closed_month/closed_weekday; ostalih 17 po potrebi) |
 | 6 | Živi cene + rezervacije hotelov/poletov | Layla ( živi cene) / Mindtrip ( Expedia + v-chat letalske karte) | ⏸ **Roadmap** ( zahteva partner API ključe; sandbox/preprod nima pogojev; naša tržnica je lokalni monopol) |
 | 7 | Community layer ( avtorji vodnikov, »Shranjeno pri 23«) | MindTrip hybrid AI + social | ⏸ **Roadmap** ( potrebuje uporabnike; imamo community-trips temelj) |
-| 8 | Mobilna aplikacija ( iOS/Android) | Mindtrip app, Layla app | ⏸ **Roadmap** ( PWA bi bil vmesni korak) |
+| 8 | Mobilna aplikacija ( iOS/Android) | Mindtrip app, Layla app | 🟡 **Delno zaprto v F5.7** ( PWA: namestitev na domači zaslon Chrome/Android/iOS, offline načrti + zemljevid; native app še vedno roadmap —dokumentirano odloženo) |
 | 9 | Chat ni »itinerary copilot« ( ločena Q&A + refiner) | MindTrip = chat-first načrtovanje | ⚖️ **Delno zaprto že prej** ( NLP hero + refiner več-turn); chat-first preoblikovanje bi pomenilo redesign zlate poti → meritve naj odločijo |
 | 10 | Ravne črte med točkami ( nižje) brez road routing | MindTrip približno enako ( ocene) | ✅ **F5.6 implementirano** ( OSRM realne razdalje/časi/geometrija; hevristika je pretiravala čas na avtocestah in podcenjevala km v gorah — izmerjeno; zemljevid zdaj riše prave ceste; diskutabilnost odločena zMeritvami) |
 
-## 4. Kaj je Faza 5 dostavila ( 4 funkcije, vse na isti poštenosti)
+## 4. Kaj je Faza 5 dostavila ( 7 funkcij, vse na isti poštenosti)
 
 ### F5.1 — Zemljevid poti NA strani načrtovalnika ( `trip-map-panel.tsx`)
 - Kompaktni Leaflet panel v rezultatnem stolpcu `/nacrtuj`: barvne
@@ -101,8 +101,35 @@
 - `ingest_url_success / ingest_url_attempted` → stopnja uspešnosti
   prepoznavanja ( cilj: > 60 % na realnih virih).
 - `ics_download / planner_result_rendered` → delež »vzemi s sabo«.
+- `pwa_install_accepted / pwa_install_prompted` → stopnja sprejema
+  namestitve PWA ( F5.7; cilj: > 30 % na Android/Chrome).
 - Prihodnje ( po zlati poti podatkov): delež marker-klikov na zemljevidu
   ( sedaj sinhronizirani, ne sledeni ločeno — potencialna F6).
+
+### F5.7 — PWA: načrti brez povezave ( `public/sw.js` v2 + `public/offline.html` + `src/components/pwa/*`)
+- **Štirje namenski cache-i z LRU limit-i** ( shell 400 / plans 40 / tiles
+  600 / img 120) + brisanje legacy discoverslovenia-v1 ob aktivaciji.
+- **Offline načrt = dve plasti**: ( 1) `/pot/*` HTML + deljeni JSON v
+  dai-plans-v1 ( network-first, offline fallback) — obisk deljene
+  povezave naredi načrt offline-dostopen; ( 2) offline.html — izris
+  NAČRTOV IZ LOCALSTORAGE + SW CACHE BREZ strežnika ( dnevi, postanki,
+  časi, cene, nasveti), dvojezično ( NEXT_LOCALE), samoizpolnitveno
+  ( 0 zunanjih virov), HTML-escape vseh vrednosti ( XSS).
+- **Ogrevanje takoj po shranjevanju** ( `warmOfflinePlanCache`): nov
+  načrt je offline-ready v trenutku shranjevanja; `?warm=1` NE šteje
+  ogleda ( iskren views števec — API vrne saved.views brez incrementa).
+- **Offline ZEMLJEVID poti**: OSM tile-i cache-first — za območja, ki
+  jih je uporabnik že odpral ( Triglav/Soča — slab signal v gorah).
+- **UX plast**: badge „Brez povezave“ ( samo offline, VLM preverjen),
+  toast-i ob prehodu offline/online, gumb za namestitev ( Chrome/
+  Android prompt + iOS Sheet navodila — iPadOS 13+ detekcija), toast
+  „Nova različica“ z gumbom Osveži ( enkraten reload, varovano pred
+  zanko).
+- **Mehanika zaupanja**: 500 se NE cachira; ostali /api/*, /admin,
+  /owner NIKOLI iz cache-a; DEV_MODE (?dev=1) passthrough — dev chunk-i
+  brez hash-a bi se zamrznili in podrla hidracija; RSC network-first
+  ( svež online, cache offline). Manifest: id + screenshots ( wide/narrow
+  form_factor) za Chrome „richer install UI“.
 
 ## 6. Roadmap ( odkrito zapisano, po vplivu)
 
@@ -117,7 +144,15 @@
    ( kvaliteta, geo, stroški, razlage) + zemljevid po pravih cestah;
    odkrito tudi: hevristika je lagala v OBEH smerih ( avtoceste −48 min,
    gore +50 km na dnevu) — primerjalna prednost, ne samo pariteta.
-3. **PWA ( offline načrt)** → vmesni korak do mobilne app.
+3. ~~**PWA ( offline načrt)**~~ ✅ **ZAPRTO v F5.7 ( 1.8.3)** — namestitev
+   na domači zaslon ( manifest id + screenshots za Chrome „richer install
+   UI“), SW v2 s štirimi namenskimi cache-i, offline.html z izrisom
+   shranjenih načrtov BREZ strežnika, offline zemljevid poti ( OSM tile-i
+   cache-first), ogrevanje predpomnilnika ob shranjevanju/obisku,
+   badge + toast-i za povezavo, iOS navodila za namestitev, 36/36 testov
+   strategij. Slovenija-argument: signal v gorah je slab — offline je
+   RESNIČNA potreba ( MindTrip/Layla imata app, a NE offline načrtov
+   te vrste).
 4. **Živi ceni partnerjev** ( ko pridejo ključi) — največja komercialna
    vrzel vs Layla/Mindtrip.
 5. **Community vodniki** ( temelj: community-trips + ownerji).
@@ -127,9 +162,14 @@
 **Vodilni v poštenosti in dokazljivosti** ( geo-validacija, refine dokazi,
 data honesty) — to je naš diferencator, ki ga ne more kopirati API ključ.
 **Do Faze 5 zaostajali v vizualnem workspace-u in »vzemi s sabo« tokov —
-te vrzeli smo sedaj zaprli** ( zemljevid na plannerju, .ics, Start
-Anywhere, stroški vožnje). **Strateško zaostajanje** ostaja v rezervacijah
-živih cen ( partner API) in mobilni app — odloženo zavestno, s pisano
-utemeljitvijo. Naslednja največja zmaga po mnenju analize: **odpiralni
-časi v validacijski plasti** ( item 1 roadmap) — naravno nadaljevanje
-našega diferencatorja.
+te vrzeli smo zaprli** ( zemljevid na plannerju, .ics, Start Anywhere,
+stroški vožnje). **F5.5–F5.7 so dodale še tri plasti istega diferencatorja**:
+odpiralni časi v validaciji, REALNE ceste ( OSRM — natančnostna prednost
+nad MindTrip-ovimi ocenami) in offline načrti v žepu ( PWA — vrzel, ki
+jo MindTrip/Layla pokrivata z native app, a BREZ offline načrtov te
+vrste: naša offline.html izriše shranjene načrte BREZ strežnika, z
+offline zemljevidom poti). **Strateško zaostajanje** ostaja v rezervacijah
+živih cen ( partner API) in native app — odloženo zavestno, s pisano
+utemeljitvijo. Naslednja največja zmaga po mnenju analize: **živi ceni
+partnerjev** ( item 4 roadmap — čakamo ključe) ali **community vodniki**
+( item 5 — temelj obstaja).

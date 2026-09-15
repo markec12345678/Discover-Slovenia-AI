@@ -1,0 +1,22 @@
+{
+  "pwa": {
+    "install": "Install app",
+    "installAria": "Install the app (works offline too)",
+    "installIosTitle": "Installing on iPhone/iPad",
+    "installIosHint": "Safari doesn't offer an install button — use the Share menu:",
+    "installIosStep1": "Tap the Share button (square with an arrow up) in Safari's toolbar",
+    "installIosStep2": "Choose “Add to Home Screen”",
+    "installIosStep3": "Confirm — the app opens full screen and your plans stay available offline",
+    "installDoneTitle": "App installed",
+    "installDoneBody": "Discover Slovenia AI is now on your home screen — plans remain available even without a connection.",
+    "offline": "Offline",
+    "offlineAria": "Offline — saved plans still available",
+    "offlineToastTitle": "You're offline",
+    "offlineToastBody": "Plans saved on this device remain available. New generations need a connection.",
+    "onlineToastTitle": "Back online",
+    "onlineToastBody": "All data is refreshing again.",
+    "updateTitle": "New app version",
+    "updateBody": "An update is ready. Refresh the page to apply it.",
+    "updateAction": "Refresh"
+  }
+}

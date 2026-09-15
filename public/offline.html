@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Discover Slovenia AI — brez povezave</title>
+<style>
+  :root {
+    --primary: #2d6a3e;
+    --primary-soft: #e7f0ea;
+    --text: #1a2419;
+    --text-muted: #5c6b5e;
+    --bg: #ffffff;
+    --card: #f7faf8;
+    --border: #dce7de;
+    --amber: #b45309;
+    --amber-soft: #fef3e2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary: #4c9a63;
+      --primary-soft: #1d2b21;
+      --text: #e8efe9;
+      --text-muted: #9db0a1;
+      --bg: #141a15;
+      --card: #1c241d;
+      --border: #2c3a2e;
+      --amber: #fbbf24;
+      --amber-soft: #2d2313;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+  header.page { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .mark {
+    width: 44px; height: 44px; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--primary); color: #fff; border-radius: 10px;
+  }
+  h1 { font-size: 1.35rem; margin: 0; }
+  .brand-sub { font-size: .8rem; color: var(--text-muted); letter-spacing: .04em; }
+
+  .banner {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--amber-soft); border: 1px solid var(--amber);
+    border-radius: 12px; padding: 14px 16px; margin: 0 0 20px;
+  }
+  .banner svg { flex: none; margin-top: 2px; color: var(--amber); }
+  .banner p { margin: 0; font-size: .95rem; }
+
+  section { margin-top: 28px; }
+  h2 { font-size: 1.05rem; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  h2 .count {
+    font-size: .75rem; background: var(--primary-soft); color: var(--primary);
+    border-radius: 999px; padding: 2px 10px; font-weight: 600;
+  }
+
+  .plan {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px; margin-bottom: 14px;
+  }
+  .plan-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .plan-name { font-weight: 700; font-size: 1rem; }
+  .plan-date { font-size: .8rem; color: var(--text-muted); }
+  .plan-meta { font-size: .85rem; color: var(--text-muted); margin: 4px 0 0; }
+  .plan-link { font-size: .85rem; color: var(--primary); font-weight: 600; text-decoration: none; }
+  .plan-link:hover { text-decoration: underline; }
+
+  .day { border: 1px solid var(--border); border-radius: 10px; margin-top: 12px; overflow: hidden; }
+  .day-head {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--primary-soft); color: var(--primary);
+    padding: 8px 12px; font-weight: 700; font-size: .85rem;
+  }
+  .day-weather { font-weight: 500; font-size: .78rem; }
+  .stop {
+    display: flex; gap: 10px; padding: 10px 12px;
+    border-top: 1px solid var(--border); font-size: .9rem;
+  }
+  .stop + .stop { border-top: 1px solid var(--border); }
+  .stop-time { flex: none; font-variant-numeric: tabular-nums; color: var(--primary); font-weight: 700; min-width: 88px; }
+  .stop-main { flex: 1; min-width: 0; }
+  .stop-name { font-weight: 600; }
+  .stop-sub { color: var(--text-muted); font-size: .8rem; margin-top: 2px; }
+
+  .empty {
+    background: var(--card); border: 1px dashed var(--border);
+    border-radius: 12px; padding: 20px 16px; text-align: center;
+    color: var(--text-muted); font-size: .92rem;
+  }
+  .tips { margin: 10px 0 0; padding-left: 20px; font-size: .85rem; color: var(--text-muted); }
+  .tips li { margin-bottom: 4px; }
+
+  .actions { display: flex; gap: 10px; margin-top: 32px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    border-radius: 10px; padding: 11px 20px; font-size: .95rem; font-weight: 600;
+    text-decoration: none; cursor: pointer; border: 1px solid transparent;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-outline { background: transparent; color: var(--text); border-color: var(--border); }
+
+  footer.note { margin-top: 40px; font-size: .78rem; color: var(--text-muted); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="page">
+    <div class="mark" aria-hidden="true">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>
+    </div>
+    <div>
+      <h1 id="t-title">Brez povezave</h1>
+      <div class="brand-sub">Discover Slovenia AI</div>
+    </div>
+  </header>
+
+  <div class="banner" role="status">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></svg>
+    <p id="t-banner">Trenutno ni internetne povezave. Vači shranjeni načrti so spodaj na voljo tudi brez povezave — zemljevid poti pa deluje za območja, ki ste jih že odprli.</p>
+  </div>
+
+  <section aria-labelledby="t-plans-title">
+    <h2 id="t-plans-title"><span id="t-plans">Moji načrti</span> <span class="count" id="plans-count">0</span></h2>
+    <div id="plans-list"></div>
+  </section>
+
+  <section id="last-section" aria-labelledby="t-last-title" hidden>
+    <h2 id="t-last-title"><span id="t-last">Zadnji načrt (ne shranjen)</span></h2>
+    <div id="last-plan"></div>
+  </section>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="btn-retry" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9 9 0 0 0 6-2.3L21 16"/><path d="M21 21v-5h-5"/></svg>
+      <span id="t-retry">Poskusi znova</span>
+    </button>
+    <a class="btn btn-outline" href="/" id="btn-home"><span id="t-home">Domov</span></a>
+  </div>
+
+  <footer class="note" id="t-footnote">
+    Prikazani so načrti, shranjeni na tej napravi (vir: vaš brskalnik). Številke
+    se brez povezave ne posodabljajo — za sveže podatke se povežite.
+  </footer>
+</div>
+
+<script>
+/* <![CDATA[ */
+(function () {
+  "use strict";
+
+  // --- Jezik: NEXT_LOCALE cookie (nastavi ga locale proxy) — default SL. ---
+  var LANG = "sl";
+  try {
+    var m = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/);
+    if (m && decodeURIComponent(m[1]).trim().toLowerCase() === "en") LANG = "en";
+  } catch (e) { /* privatni način */ }
+
+  var I18N = {
+    sl: {
+      title: "Brez povezave",
+      banner: "Trenutno ni internetne povezave. Vaši shranjeni načrti so spodaj na voljo tudi brez povezave — zemljevid poti pa deluje za območja, ki ste jih že odprli.",
+      plans: "Moji načrti", last: "Zadnji načrt (ne shranjen)",
+      retry: "Poskusi znova", home: "Domov",
+      day: "Dan", budget: "skupni proračun", stops: "postankov",
+      empty: "Na tej napravi še ni shranjenih načrtov. Načrt shranite (gumb »Shrani in deli« na strani načrtovalnika), preden odpotujete brez povezave.",
+      notCached: "Ta načrt še ni bil odprt na tej napravi — odprite ga online, da bo na voljo brez povezave.",
+      openFull: "Odpri polno stran",
+      tips: "Nasveti", saved: "shranjeno", generated: "ustvarjeno",
+      minutes: "min", weather: "vreme", budgetCur: "€",
+      footnote: "Prikazani so načrti, shranjeni na tej napravi (vir: vaš brskalnik). Številke se brez povezave ne posodabljajo — za sveže podatke se povežite.",
+      langAttr: "sl"
+    },
+    en: {
+      title: "You're offline",
+      banner: "You are currently offline. Your saved plans below remain available without a connection — the route map also works for areas you have already opened.",
+      plans: "My plans", last: "Latest plan (not saved)",
+      retry: "Try again", home: "Home",
+      day: "Day", budget: "total budget", stops: "stops",
+      empty: "No plans saved on this device yet. Save a plan (the “Save & share” button in the planner) before you travel offline.",
+      notCached: "This plan hasn't been opened on this device yet — open it online to make it available offline.",
+      openFull: "Open full page",
+      tips: "Tips", saved: "saved", generated: "generated",
+      minutes: "min", weather: "weather", budgetCur: "€",
+      footnote: "Shown are plans stored on this device (source: your browser). Numbers do not refresh while offline — reconnect for fresh data.",
+      langAttr: "en"
+    }
+  };
+  var T = I18N[LANG];
+
+  document.documentElement.setAttribute("lang", T.langAttr);
+  document.title = "Discover Slovenia AI — " + T.title;
+  document.getElementById("t-title").textContent = T.title;
+  document.getElementById("t-banner").textContent = T.banner;
+  document.getElementById("t-plans").textContent = T.plans;
+  document.getElementById("t-last").textContent = T.last;
+  document.getElementById("t-retry").textContent = T.retry;
+  document.getElementById("t-home").textContent = T.home;
+  document.getElementById("t-footnote").textContent = T.footnote;
+
+  document.getElementById("btn-retry").addEventListener("click", function () {
+    window.location.reload();
+  });
+
+  // --- Varna pomožna: HTML escape (načrti vsebujejo AI/USER besedilo). ---
+  function esc(v) {
+    return String(v == null ? "" : v)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function fmtDate(iso, fallback) {
+    try {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return fallback || "";
+      return new Intl.DateTimeFormat(LANG === "en" ? "en-GB" : "sl-SI", {
+        day: "numeric", month: "short", year: "numeric"
+      }).format(d);
+    } catch (e) { return fallback || ""; }
+  }
+  function fmtMoney(n) {
+    var v = typeof n === "number" && isFinite(n) ? Math.round(n) : null;
+    return v == null ? "" : "≈ " + v + " " + T.budgetCur;
+  }
+
+  // --- Renderer enega itinererja (isti JSON kot /api/itinerary/shared). ---
+  function renderItinerary(itin) {
+    if (!itin || !Array.isArray(itin.days) || itin.days.length === 0) return "";
+    var html = "";
+    var stopCount = 0;
+    itin.days.forEach(function (day) {
+      if (!day || !Array.isArray(day.locations) || day.locations.length === 0) return;
+      var weather = "";
+      if (day.weather && typeof day.weather.condition === "string") {
+        weather = esc(day.weather.condition) +
+          (typeof day.weather.temp === "number" ? " · " + day.weather.temp + " °C" : "");
+      }
+      html += '<div class="day"><div class="day-head"><span>' + esc(T.day) + " " +
+        esc(day.day) + "</span>" +
+        (weather ? '<span class="day-weather">' + weather + "</span>" : "") +
+        "</div>";
+      day.locations.forEach(function (loc) {
+        if (!loc || typeof loc.destination_name !== "string") return;
+        stopCount++;
+        var dur = typeof loc.duration === "number" ? loc.duration + " " + T.minutes : "";
+        var cost = typeof loc.estimated_cost === "number" && loc.estimated_cost > 0
+          ? "≈ " + loc.estimated_cost + " " + T.budgetCur : "";
+        html += '<div class="stop"><div class="stop-time">' +
+          esc(loc.time_slot || "") + '</div><div class="stop-main"><div class="stop-name">' +
+          esc(loc.destination_name) + "</div>" +
+          (dur || cost ? '<div class="stop-sub">' + esc(dur) + (dur && cost ? " · " : "") +
+            esc(cost) + "</div>" : "") +
+          "</div></div>";
+      });
+      html += "</div>";
+    });
+    if (stopCount === 0) return "";
+    return html;
+  }
+
+  function renderPlanCard(opts) {
+    var meta = [];
+    if (opts.daysCount) meta.push(opts.daysCount + "× " + T.day.toLowerCase());
+    if (opts.stopsCount) meta.push(opts.stopsCount + " " + T.stops);
+    if (opts.totalBudget != null) meta.push(fmtMoney(opts.totalBudget) + " " + T.budget);
+    return '<div class="plan"><div class="plan-head"><div class="plan-name">' +
+      esc(opts.name) + '</div><div class="plan-date">' + esc(opts.dateLabel) + "</div></div>" +
+      (meta.length ? '<p class="plan-meta">' + esc(meta.join(" · ")) + "</p>" : "") +
+      opts.body +
+      (opts.tipsHtml || "") +
+      (opts.linkHref
+        ? '<p style="margin:10px 0 0"><a class="plan-link" href="' + esc(opts.linkHref) + '">' +
+          esc(T.openFull) + " →</a></p>"
+        : "") +
+      "</div>";
+  }
+
+  function tipsHtml(itin) {
+    var tips = itin && Array.isArray(itin.tips) ? itin.tips.slice(0, 3) : [];
+    if (!tips.length) return "";
+    var items = tips
+      .map(function (t) { return "<li>" + esc(t) + "</li>"; })
+      .join("");
+    return '<p style="margin:12px 0 0;font-weight:600;font-size:.85rem">' +
+      esc(T.tips) + ':</p><ul class="tips">' + items + "</ul>";
+  }
+
+  function countStops(itin) {
+    var n = 0;
+    (itin && itin.days || []).forEach(function (d) {
+      if (d && Array.isArray(d.locations)) n += d.locations.length;
+    });
+    return n;
+  }
+
+  // --- 1) Shranjeni načrti: localStorage "dai:my-trips" → cache JSON. ---
+  function readMyTrips() {
+    try {
+      var raw = window.localStorage.getItem("dai:my-trips");
+      if (!raw) return [];
+      var arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return [];
+      return arr.filter(function (e) {
+        return e && typeof e === "object" &&
+          typeof e.shareId === "string" &&
+          e.shareId.length >= 5 && e.shareId.length <= 20;
+      });
+    } catch (e) { return []; }
+  }
+
+  var plansList = document.getElementById("plans-list");
+  var plansCount = document.getElementById("plans-count");
+
+  function renderEmpty() {
+    plansCount.textContent = "0";
+    plansList.innerHTML = '<div class="empty">' + esc(T.empty) + "</div>";
+  }
+
+  // Poišči prijazno ime: sledi localStorage ime, sicer prvi postanki JSON-a.
+  function deriveName(data, fallback) {
+    if (data && data.name && typeof data.name === "string" && data.name.trim()) {
+      return data.name.trim();
+    }
+    var names = [];
+    (data && data.itinerary && data.itinerary.days || []).forEach(function (d) {
+      (d && d.locations || []).forEach(function (l) {
+        if (l && typeof l.destination_name === "string" &&
+            names.indexOf(l.destination_name) === -1 && l.destination_name.trim()) {
+          names.push(l.destination_name);
+        }
+      });
+    });
+    if (names.length) return names.slice(0, 3).join(" · ");
+    return fallback;
+  }
+
+  function fetchCachedPlan(shareId) {
+    // SW (dai-plans cache) servisira zadnji viden primer tudi brez povezave.
+    // ?warm=1 — isti URL kot "ogrevanje" iz app (ujemanje cache ključa) in
+    // brez štetja ogleda, če povezava vendarle obstaja.
+    return window.fetch(
+      "/api/itinerary/shared/" + encodeURIComponent(shareId) + "?warm=1"
+    )
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; });
+  }
+
+  function renderSavedPlans() {
+    var trips = readMyTrips().slice(-10).reverse(); // najnovejših 10
+    if (!trips.length) { renderEmpty(); return; }
+
+    var remaining = trips.length;
+    var cards = new Array(trips.length);
+    plansCount.textContent = String(trips.length);
+
+    function flush() {
+      if (remaining > 0) return;
+      // Odstrani prazne (niso bile nikoli odprti) + preslikaj v HTML
+      var html = cards.filter(Boolean).join("");
+      plansList.innerHTML = html || '<div class="empty">' + esc(T.empty) + "</div>";
+    }
+
+    trips.forEach(function (trip, idx) {
+      fetchCachedPlan(trip.shareId).then(function (data) {
+        if (data && data.itinerary) {
+          var body = renderItinerary(data.itinerary);
+          if (body) {
+            cards[idx] = renderPlanCard({
+              name: deriveName(data, trip.name || trip.shareId),
+              dateLabel: (T.saved + " " + fmtDate(trip.savedAt, "")).trim(),
+              daysCount: (data.itinerary.days || []).length,
+              stopsCount: countStops(data.itinerary),
+              totalBudget: typeof data.itinerary.total_budget === "number"
+                ? data.itinerary.total_budget : null,
+              body: body,
+              tipsHtml: tipsHtml(data.itinerary),
+              linkHref: "/pot/" + encodeURIComponent(trip.shareId)
+            });
+          }
+        }
+        if (!cards[idx]) {
+          // Iskren zavrnitev: načrt obstaja v seznamu, a ni v cache-u.
+          cards[idx] = '<div class="plan"><div class="plan-head"><div class="plan-name">' +
+            esc(trip.name || trip.shareId) + '</div><div class="plan-date">' +
+            esc((T.saved + " " + fmtDate(trip.savedAt, "")).trim()) +
+            '</div></div><p class="plan-meta" style="color:var(--amber)">' +
+            esc(T.notCached) + "</p></div>";
+        }
+        remaining--;
+        flush();
+      });
+    });
+  }
+
+  // --- 2) Zadnji (ne shranjen) načrt: localStorage načrtovalnika. ---
+  function renderLastItinerary() {
+    try {
+      var raw = window.localStorage.getItem("discoverslovenia_last_itinerary");
+      if (!raw) return;
+      var parsed = JSON.parse(raw);
+      var itin = parsed && parsed.itinerary;
+      var body = renderItinerary(itin);
+      if (!body) return;
+      document.getElementById("last-section").hidden = false;
+      document.getElementById("last-plan").innerHTML = renderPlanCard({
+        name: deriveName({ itinerary: itin }, LANG === "en" ? "Latest plan" : "Zadnji načrt"),
+        dateLabel: (T.generated + " " + fmtDate(parsed && parsed.savedAt, "")).trim(),
+        daysCount: (itin.days || []).length,
+        stopsCount: countStops(itin),
+        totalBudget: typeof itin.total_budget === "number" ? itin.total_budget : null,
+        body: body,
+        tipsHtml: tipsHtml(itin),
+        linkHref: null
+      });
+    } catch (e) { /* poln/pokvarjen localStorage — preskoči */ }
+  }
+
+  renderSavedPlans();
+  renderLastItinerary();
+})();
+/* ]]> */
+</script>
+</body>
+</html>

@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ItineraryEventsSection } from "@/components/itinerary-events";
+import { warmOfflinePlanCache } from "@/lib/itinerary-share";
 import { PackingListSection } from "@/components/packing-list";
 import { SocialShare } from "@/components/social-share";
 import { useAppStore, DAY_COLORS } from "@/lib/store";
@@ -123,6 +124,13 @@ export function SharedTrip({
   useEffect(() => {
     setItinerary(itinerary);
   }, [itinerary, setItinerary]);
+
+  // F5.7 (PWA offline): "ogrej" predpomnilnik za ta načrt — obisk deljene
+  // povezave naredi načrt dostopen brez povezave (JSON + ta HTML sta že v
+  // dai-plans-v1 pri SW). Brez štetja ogleda (?warm=1).
+  useEffect(() => {
+    if (shareId) warmOfflinePlanCache(shareId);
+  }, [shareId]);
 
   // Mount: zagotovi voterId + naloži lokalno oddane glasove
   useEffect(() => {

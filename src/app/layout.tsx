@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProviderWrapper } from "@/components/session-provider";
 import { ServiceWorkerRegister } from "@/components/sw-register";
+import { PwaUpdateToast } from "@/components/pwa/pwa-update-toast";
 import { CartDrawer } from "@/components/cart-drawer";
 import {
   WebSiteJsonLd,
@@ -94,6 +95,8 @@ export default async function RootLayout({
               {/* Košarica tržnice — globalno montirana (odpre se iz navigacije ali ob dodajanju) */}
               <CartDrawer />
               <Toaster />
+              {/* F5.7 PWA: toast ob novi verziji SW (znotraj providerjev — prevodi) */}
+              <PwaUpdateToast />
             </SessionProviderWrapper>
           </ThemeProvider>
         </NextIntlClientProvider>

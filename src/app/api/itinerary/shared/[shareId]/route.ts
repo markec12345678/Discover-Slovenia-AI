@@ -6,6 +6,10 @@ import { rateLimit } from "@/lib/rate-limit";
 //
 // Poveča števec ogledov (views) in vrne itinerer BREZ formData
 // (vhodni podatki načrtovalnika so zasebni).
+//
+// F5.7 (PWA offline): ?warm=1 = "ogrevanje" offline predpomnilnika —
+// enak odgovor (SW ga shrani v dai-plans-v1), vendar BREZ štetja ogleda
+// (iskren števec: ogled šteje samo pravi ogled strani/plannerja).
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ shareId: string }> }
@@ -45,14 +49,19 @@ export async function GET(
       );
     }
 
-    // Inkrementiraj števec ogledov (ne-critical — napaka se tiho ignorira)
-    try {
-      await db.savedItinerary.update({
-        where: { shareId },
-        data: { views: { increment: 1 } },
-      });
-    } catch (e) {
-      console.error("[itinerary/shared] views increment napaka:", e);
+    // Inkrementiraj števec ogledov (ne-critical — napaka se tiho ignorira).
+    // ?warm=1 (offline predpomnilnik) NE šteje — ni pravi ogled.
+    const isWarm =
+      new URL(request.url).searchParams.get("warm") === "1";
+    if (!isWarm) {
+      try {
+        await db.savedItinerary.update({
+          where: { shareId },
+          data: { views: { increment: 1 } },
+        });
+      } catch (e) {
+        console.error("[itinerary/shared] views increment napaka:", e);
+      }
     }
 
     // Parse itinererja — neveljaven JSON ne sme sesuti celotnega odgovora
@@ -71,7 +80,7 @@ export async function GET(
       name: saved.name,
       itinerary,
       createdAt: saved.createdAt.toISOString(),
-      views: saved.views + 1,
+      views: isWarm ? saved.views : saved.views + 1,
     });
   } catch (error) {
     console.error("[itinerary/shared] GET napaka:", error);
