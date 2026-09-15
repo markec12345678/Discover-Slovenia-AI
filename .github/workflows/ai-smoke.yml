@@ -5,12 +5,17 @@ name: AI Provider Smoke Test
 # Googla). Zagon: ROČNO (workflow_dispatch) prek GitHub UI ali APIja:
 #   POST /repos/{owner}/{repo}/actions/workflows/ai-smoke.yml/dispatches
 #   {"ref": "main"}
-# Namen: dokaz, da ključ in obe končni točki (chat + vision) delujeta,
-# PRED deployom na Vercel/Render. Testira NATANNO tisto, kar uporablja
-# src/lib/ai-client.ts (OpenAI-compat končna točka).
+# Namen: dokaz, da ključ in VSE končne točke (chat + jsonMode + vision),
+# ki jih uporablja src/lib/ai-client.ts, delujejo PRED deployom na
+# Vercel/Render.
+#
+# Izkušnja iz prvega zagona (2026-09-15): gemini-3.6-flash je THINKING
+# model — max_tokens 16 je porabil za notranje razmišljanje (finish_reason
+# "length", completion_tokens 0). Zato so proračuni tu 512+ (v ai-client
+# so tla 512 iz istega razloga).
 #
 # Ključ je Actions secret GEMINI_API_KEY — GitHub ga v logih samodejno
-# maskira; v log se izpisujejo samo HTTP kode in vsebina odgovora.
+# maskira; v log se izpisujejo samo HTTP kode, usage in vsebina odgovora.
 
 on:
   workflow_dispatch:
@@ -39,10 +44,11 @@ jobs:
             -d '{
               "model": "gemini-3.6-flash",
               "messages": [{"role": "user", "content": "Odgovori samo z besedilom: SLOVENIJA-OK"}],
-              "max_tokens": 16,
+              "max_tokens": 512,
               "temperature": 0
             }')
           echo "← HTTP ${HTTP_CODE}"
+          echo "← usage: $(jq -c '.usage // empty' /tmp/gemini-smoke.json)"
           if [ "${HTTP_CODE}" != "200" ]; then
             echo "::error::Gemini API odgovoril s HTTP ${HTTP_CODE}"
             cat /tmp/gemini-smoke.json
@@ -56,6 +62,42 @@ jobs:
             exit 1
           fi
           echo "::notice::Gemini chat completion deluje (pot generacije itinererjev)"
+
+      - name: 🧾 Test jsonMode response_format (pot generacije JSON)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -euo pipefail
+          echo "→ POST chat/completions z response_format json_object"
+          HTTP_CODE=$(curl -sS -o /tmp/gemini-json.json -w "%{http_code}" -m 45 \
+            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" \
+            -H "Authorization: Bearer ${GEMINI_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "model": "gemini-3.6-flash",
+              "messages": [
+                {"role": "system", "content": "Odgovarjaj SAMO z veljavnim JSON."},
+                {"role": "user", "content": "Vrni JSON: {\"status\":\"ok\",\"drzava\":\"Slovenija\"}"}
+              ],
+              "response_format": {"type": "json_object"},
+              "max_tokens": 512,
+              "temperature": 0
+            }')
+          echo "← HTTP ${HTTP_CODE}"
+          if [ "${HTTP_CODE}" != "200" ]; then
+            echo "::error::Gemini jsonMode odgovoril s HTTP ${HTTP_CODE} — generacijske rute bi padle na fallback!"
+            cat /tmp/gemini-json.json
+            exit 1
+          fi
+          CONTENT=$(jq -r '.choices[0].message.content // empty' /tmp/gemini-json.json)
+          echo "← vsebina: ${CONTENT}"
+          if [ -z "${CONTENT}" ]; then
+            echo "::error::jsonMode: prazna vsebina"
+            exit 1
+          fi
+          echo "${CONTENT}" | jq -e '.status' > /dev/null || {
+            echo "::error::jsonMode: odgovor ni veljaven JSON objekt"; exit 1; }
+          echo "::notice::Gemini jsonMode (response_format) deluje — generacija JSON varna"
 
       - name: 🖼️ Test vision image_url (pot F8 slikovnega vnosa)
         env:
@@ -74,7 +116,7 @@ jobs:
                  + chunk(b"IEND", b""))
           print(base64.b64encode(png).decode())
           ')
-          echo "→ POST /v1beta/openai/chat/completions z image_url delom"
+          echo "→ POST chat/completions z image_url delom"
           HTTP_CODE=$(curl -sS -o /tmp/gemini-vision.json -w "%{http_code}" -m 45 \
             "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" \
             -H "Authorization: Bearer ${GEMINI_API_KEY}" \
@@ -88,7 +130,7 @@ jobs:
                   {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,${PIXEL}\"}}
                 ]
               }],
-              \"max_tokens\": 16
+              \"max_tokens\": 512
             }")
           echo "← HTTP ${HTTP_CODE}"
           if [ "${HTTP_CODE}" != "200" ]; then
@@ -97,3 +139,29 @@ jobs:
             exit 1
           fi
           echo "::notice::Gemini vision (image_url) deluje — F8 slikovni vnos ima produkcijsko pot"
+
+      # INFORMACIJSKA sonda (ne podre joba): ali compat plast sprejema
+      # reasoning_effort? Če DA, ga lahko prihodnje dodamo v ai-client za
+      # še manjše thinking proračune; če NE, ostajamo pri tlacet 512.
+      - name: 🔬 Sonda reasoning_effort (informacijsko)
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -euo pipefail
+          HTTP_CODE=$(curl -sS -o /tmp/gemini-reasoning.json -w "%{http_code}" -m 45 \
+            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" \
+            -H "Authorization: Bearer ${GEMINI_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "model": "gemini-3.6-flash",
+              "messages": [{"role": "user", "content": "Reply: OK"}],
+              "reasoning_effort": "low",
+              "max_tokens": 512
+            }')
+          echo "← HTTP ${HTTP_CODE} (reasoning_effort: low)"
+          if [ "${HTTP_CODE}" == "200" ]; then
+            echo "::notice::reasoning_effort je PODPRT — kandidat za optimizacijo ai-client"
+          else
+            echo "::warning::reasoning_effort NI podprt — ai-client ostaja pri tlacet 512 žetonov"
+          fi

@@ -164,6 +164,12 @@ export async function generateCompletion(
   const mapped = messages.map((m) => ({ role: m.role, content: m.content }));
 
   // === 1. GEMINI (OpenAI-compat) ===
+  // Gemini 3.x thinking modeli porabijo del IZHODNEGA proračuna za notranje
+  // razmišljanje (živo preverjeno z GitHub runnerja 2026-09-15: max_tokens
+  // 16 → finish_reason "length", completion_tokens 0) — zato ima učinkoviti
+  // proračun TLA 512 žetonov, da majhni klici (health, ask) ne ostanejo brez
+  // vidne vsebine. P7-C2 zgornja meja ostaja (tala ne odprejo token-bombe).
+  const geminiMaxTokens = Math.max(maxTokens, 512);
   const gemini = getGeminiClient();
   if (gemini && !geminiBreakerOpen()) {
     try {
@@ -171,7 +177,7 @@ export async function generateCompletion(
         model: geminiModel(),
         messages: mapped,
         temperature,
-        max_tokens: maxTokens,
+        max_tokens: geminiMaxTokens,
         ...(options?.jsonMode
           ? { response_format: { type: "json_object" as const } }
           : {}),
@@ -252,7 +258,8 @@ export async function generateVisionCompletion(
   imageDataUrl: string,
   options?: { maxTokens?: number }
 ): Promise<AIVisionResult | null> {
-  const maxTokens = options?.maxTokens ?? 1024;
+  // Tla 512 (isti razlog kot pri generateCompletion — thinking proračun)
+  const maxTokens = Math.max(options?.maxTokens ?? 1024, 512);
 
   // === 1. GEMINI (image_url del v OpenAI-compat formatu) ===
   const gemini = getGeminiClient();
@@ -373,6 +380,9 @@ export async function checkAIHealth(): Promise<AIHealthReport> {
 
   const gemini = getGeminiClient();
   const geminiStart = Date.now();
+  // 512 (ne 8): thinking modeli porabijo proračun za notranje razmišljanje
+  // — s 8 žetoni bi odgovor bil vedno prazen (finish_reason "length"),
+  // health pa bi lažno javil odpoved delujočega providerja.
   const geminiProbe = gemini
     ? gemini.chat.completions.create({
         model: geminiModel(),
@@ -381,7 +391,7 @@ export async function checkAIHealth(): Promise<AIHealthReport> {
           content: m.content,
         })),
         temperature: 0,
-        max_tokens: 8,
+        max_tokens: 512,
       })
     : Promise.reject(new Error("not-configured"));
 

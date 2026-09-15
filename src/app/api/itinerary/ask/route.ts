@@ -47,8 +47,10 @@ interface AskRequest {
 
 const QUESTION_MAX = 500;
 
-/** Zgornja meja AI izpisa (kratki pogovorni odgovori, ne eseji). */
-const AI_MAX_TOKENS = 600;
+/** Zgornja meja AI izpisa (kratki pogovorni odgovori, ne eseji).
+ * F10: 600 → 1024 — Gemini thinking modeli porabijo del proračuna za
+ * notranje razmišljanje; 600 je pri 4-povednih odgovorih rezalo vsebino. */
+const AI_MAX_TOKENS = 1024;
 
 export async function POST(request: Request) {
   const limited = rateLimit(request, {
