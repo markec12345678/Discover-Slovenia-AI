@@ -102,6 +102,13 @@ const nextConfig: NextConfig = {
         hostname: "plus.unsplash.com",
       },
       {
+        // NAMENOMA ostane (1.28.0, revizija #12): varnostna mreža, NE mrtva
+        // konfiguracija. Marketplace startup migracija (slike CDN →
+        // /content/) je fail-open — če bi na kateri produkciji kdaj spodletela,
+        // bi vrstice v DB še vedno kazale na sfile.chatglm.cn in next/image
+        // brez tega vnosa ne bi izrisal teh slik. Vercel produkcijska DB je
+        // preverjena čista (0 sfile URL-jev); Render je bil ob preverbi v
+        // hladnem zagonu. Odstrani šele, ko je OBE produkciji dokazano čisti.
         protocol: "https",
         hostname: "sfile.chatglm.cn",
       },

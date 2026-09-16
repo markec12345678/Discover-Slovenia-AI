@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 
 /**
  * Rate limiting — preprost in-memory sliding window (per IP + endpoint).
  *
  * Namen: zaščita javnih (zlasti AI) endpointov pred zlorabo/brute-force.
  * Omejitve: na serverless (Vercel) deluje per-instanca — za robustno
- * produkcijo priporočam Upstash Redis (glej docs/SECURITY-REVIEW.md §1.7).
+ * produkcijo priporočam Upstash Redis (glej docs/SECURITY-REVIEW.md §1.7
+ * »Pot do centralizacije« za točen načrt in zavrnjene alternative).
  */
 
 interface Bucket {
@@ -32,6 +34,44 @@ export function getClientIp(request: Request): string {
   const fwd = request.headers.get("x-forwarded-for");
   if (fwd) return fwd.split(",")[0].trim();
   return request.headers.get("x-real-ip") ?? "unknown";
+}
+
+/**
+ * IP klienta prek next/headers() — za kontekste BREZ Request objekta
+ * (npr. NextAuth authorize() callback, ki ne prejme Requesta).
+ *
+ * ASYNC: v Next.js 16 headers() vrne Promise (uradna API sprememba).
+ * Vrne `null`, če glave niso dostopne (klic izven request scope-a) —
+ * klicalec MORA imeti fallback (glej buildLoginRateKey). Zaupanje
+ * x-forwarded-for je identično getClientIp() zgoraj (platforma/proxy
+ * nastavi glavo; enak model kot vsi ostali rate limiti).
+ */
+export async function getClientIpFromHeaders(): Promise<string | null> {
+  try {
+    const h = await headers();
+    const fwd = h.get("x-forwarded-for");
+    if (fwd) return fwd.split(",")[0].trim();
+    return h.get("x-real-ip") ?? null;
+  } catch {
+    // headers() izven request scope-a (npr. teoretični klic ob zagonu) —
+    // pošteno vrnemo null, klicalec pade na email-only ključ.
+    return null;
+  }
+}
+
+/**
+ * KLJUČ login rate limita — HIBRID ip+email (1.28.0, uporabnikova revizija #7).
+ *
+ * Prej `login:<email>`: napadalec je z 10 poskusi (iz KATEREGA KOLI IP)
+ * blokiral prijavo žrtvi — trivialen DoS. Zdaj `login:<ip>:<email>`:
+ *   - ugibanje gesla iz enega IP na en račun je še vedno omejeno (10/15 min),
+ *   - žrtvina prijava iz drugega IP ni prizadeta (ločeno vedro),
+ *   - DoS vektor »blokiraj žrtvi login« je odstranjen.
+ * Fallback brez IP (headers() nedosegljiv): star vedenje `login:<email>`.
+ */
+export function buildLoginRateKey(email: string, ip: string | null): string {
+  const e = email.toLowerCase().trim();
+  return ip ? `login:${ip}:${e}` : `login:${e}`;
 }
 
 export interface RateLimitOptions {

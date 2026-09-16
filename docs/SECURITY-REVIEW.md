@@ -112,7 +112,7 @@ export default {
 ### 1.7 Rate Limiting
 
 Implementirano (v1.1.0+, in-memory per-instanka — na Vercelu deluje per-instanca;
-za centralizirano omejitev pred javnim launchem: Upstash, glej SECURITY.md znane omejitve):
+za centralizirano omejitev pred javnim launchem: glej »Pot do centralizacije« spodaj):
 
 | Endpoint | Limit | Implementacija |
 |----------|-------|---------------|
@@ -123,7 +123,7 @@ za centralizirano omejitev pred javnim launchem: Upstash, glej SECURITY.md znane
 | `/api/leads` | 10/h/IP | ✅ In-memory |
 | `/api/newsletter/subscribe` | 10/h/IP | ✅ In-memory |
 | `/api/owner/register` | 10/h/IP | ✅ In-memory |
-| Login (owner + user provider) | 10/15min/email | ✅ In-memory (src/lib/auth.ts) |
+| Login (owner + user provider) | 10/15min/ip+email | ✅ In-memory (src/lib/auth.ts; 1.28.0 hibrid — prej email-only, DoS vektor) |
 | Admin verify + leads-dashboard | 10/10min, 60/10min | ✅ In-memory |
 
 (`⚠️ Dodati` vrstice iz arhiva: `/api/owner/session` je bil izbrisan v P4-9.)
@@ -182,6 +182,38 @@ export async function POST(request: Request) {
   // ... normal logic
 }
 ```
+
+**Pot do centralizacije (odložena odločitev — točen načrt, 1.28.0):**
+
+Status: pilot teče na per-instanca limitih (zavedno sprejeto — glej znane
+omejitve). Ko bo čas pred javnim prometom, JE brezplačna pot, ki ne zahteva
+arhitekturnega predraziskovanja:
+
+1. **Upstash Redis free tier** (10.000 ukazov/dan — za pilot zadostuje):
+   samo 2 env spremenljivki (`UPSTASH_REDIS_REST_URL`,
+   `UPSTASH_REDIS_REST_TOKEN`), dostop prek navadnega `fetch` (REST, 0 novih
+   odvisnosti), vzorec fixed-window `INCR` + `EXPIRE`.
+2. **Refactor, ki ga takrat zahteva** (točen obseg, da ni raziskovanja):
+   `rateLimit()`/`hitLimit()` sta sinhroni → centraliziran števec je omrežni
+   klic = async → `rateLimit` postane async in **~79 klicnih mest** v
+   `src/app/api/**` dobi `await` (mehansko, enak vzorec povsod); ob napaki
+   omrežja fail-open na obstoječi in-memory bucket (strateška odločitev:
+   rate limit NI razlog za padec strani).
+3. **Zakaj NI implementirano danes**: brez računa pri ponudniku spremembe
+   ni mogoče preveriti živo (smo pod zavezo »ne izdaj nepreverjenih
+   trditev« — enako pravilo kot pri AI plasteh); async refactor 79 mest brez
+   živega store-a bi bil nepreverjena infrastruktura v produkciji.
+
+Zavrnjene alternative (z razlogi):
+- **Postgres/Neon kot limit store** — vsaka zahteva bi pisala v DB;
+  `connection_limit=1` na Neon poolerju je že pri vzporednem obremenjevanju
+  dokumentirano povzročal HTTP 500 (SEO-CACHE incident, 2026-09).
+- **Vercel WAF / platformni rate limiting** — plačljivi načrti.
+
+Ublažitvi, ki že živita neodvisno od centralizacije (1.28.0):
+- login limit je na **ip+email** hibridu → DoS vektor (blokada žrtvine
+  prijave) odstranjen tudi na per-instanca rešitvi;
+- admin geslo je timing-safe na VSEH poteh (`checkAdmin`/`verifyCronAuth`).
 
 ### 1.8 Secrets Management
 

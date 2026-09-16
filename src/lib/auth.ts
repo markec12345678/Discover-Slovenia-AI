@@ -2,7 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare, hashSync } from "bcryptjs";
 import { db } from "@/lib/db";
-import { hitLimit } from "@/lib/rate-limit";
+import { hitLimit, buildLoginRateKey, getClientIpFromHeaders } from "@/lib/rate-limit";
 
 // P7-C1 (#1): timing-enumeracija pri prijavi — če račun NE obstaja, bcrypt
 // primerjava bi bila preskočena (~0 ms) namesto izvedena (~60–100 ms) →
@@ -90,11 +90,16 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // P3a-3: rate limit prijave PO KLJUČU (authorize nima Request/IP) —
-        // 10 poskusov na email v 15 min. Vrnjeni null da enoten NextAuth 401
-        // (ne razkriva rate limita posebej); bcrypt primerjava se preskoči
-        // (= CPU zaščita pred brute-force).
-        const loginKey = `login:${credentials.email.toLowerCase().trim()}`;
+        // P3a-3 + 1.28.0 (revizija #7): rate limit prijave PO KLJUČU
+        // ip+email (hibrid — prej email-only je omogočal trivialen DoS
+        // žrtve). authorize() nima Request objekta → IP prek next/headers()
+        // s fallbackom na email-only. 10 poskusov na ip+email v 15 min.
+        // Vrnjeni null da enoten NextAuth 401 (ne razkriva rate limita
+        // posebej); bcrypt primerjava se preskoči (= CPU zaščita).
+        const loginKey = buildLoginRateKey(
+          credentials.email,
+          await getClientIpFromHeaders()
+        );
         if (hitLimit(loginKey, 10, 15 * 60_000)) {
           console.log(`[auth] prijavni rate limit zadet (${loginKey}) — bcrypt preskočen`);
           return null;
@@ -153,8 +158,12 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // P3a-3: enak rate limit kot za providerja "credentials"
-        const loginKey = `login:${credentials.email.toLowerCase().trim()}`;
+        // P3a-3 + 1.28.0 (revizija #7): enak HIBRIDNI (ip+email) rate
+        // limit kot za providerja "credentials" — DoS žrtve odstranjen
+        const loginKey = buildLoginRateKey(
+          credentials.email,
+          await getClientIpFromHeaders()
+        );
         if (hitLimit(loginKey, 10, 15 * 60_000)) {
           console.log(`[auth] prijavni rate limit zadet (${loginKey}) — bcrypt preskočen`);
           return null;

@@ -154,9 +154,12 @@ export function canPerform(role: Role, perm: Permission): boolean {
  */
 export async function getCurrentRole(request?: Request): Promise<Role> {
   // 1. Preveri admin password (header-based auth za admin endpointe)
+  // VARNOST (1.28.0, uporabnikova revizija #8): timing-safe prek checkAdmin()
+  // — prej navaden `===` (edino preostalo mesto z napačno politiko; vse
+  // ostale admin poti so že uporabljale checkAdmin/verifyCronAuth).
+  // Semantika enaka: fail-closed brez ADMIN_PASSWORD, enak 401 potek.
   if (request) {
-    const adminPassword = request.headers.get("x-admin-password");
-    if (adminPassword && adminPassword === process.env.ADMIN_PASSWORD) {
+    if (checkAdmin(request.headers.get("x-admin-password"))) {
       return "admin";
     }
   }
