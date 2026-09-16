@@ -113,3 +113,35 @@ jobs:
           ADMIN_PASSWORD: "ci-test"
           STRIPE_SECRET_KEY: "sk_test_demo_placeholder"
           SMTP_HOST: "localhost"
+
+      # ── CI-FUNC (1.31.0): FUNKCIONALNI DIM ─────────────────────────────
+      # Prvič v zgodovini CI-ja se aplikacija DEJANSKO zažene: standalone
+      # produkcijski strežnik (isti izpis kot `bun run start` na VPS/Docker,
+      # Faza 4d) proti istemu Postgres service containerju.
+      # functional-smoke.sh nato obliva ključne rute (SSR strani SL+EN,
+      # robots/sitemap + vzorčne globoke strani, /api/health s startup
+      # migracijami, /api/listings, 404) IN ponesreči tudi fallback pot
+      # načrtovalnika: CI namerno NIMA AI ključev → POST /api/itinerary
+      # sproži DETERMINISTIČNO fallback pot (ista produkcijska pot ob
+      # odpovedi AI) — brez omrežne odvisnosti, ~5 s.
+      # HOSTNAME=0.0.0.0: GH runner ima HOSTNAME env (docker id), ki bi ga
+      # standalone server.js sicer poskusil vezati — eksplicitno prepišemo.
+      - name: 🚀 Functional smoke (zagon + ključne rute + fallback načrt)
+        run: |
+          set -euo pipefail
+          NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 \
+            bun .next/standalone/server.js > server.log 2>&1 &
+          SERVER_PID=$!
+          cleanup() { kill "$SERVER_PID" 2>/dev/null || true; }
+          trap cleanup EXIT
+          if ! bash scripts/ops/functional-smoke.sh http://127.0.0.1:3000; then
+            echo "::error::Functional smoke neuspešen — server.log (zadnjih 60 vrstic):"
+            tail -60 server.log || true
+            exit 1
+          fi
+        env:
+          NEXTAUTH_SECRET: "ci-test-secret"
+          NEXTAUTH_URL: "http://127.0.0.1:3000"
+          ADMIN_PASSWORD: "ci-test"
+          STRIPE_SECRET_KEY: "sk_test_demo_placeholder"
+          SMTP_HOST: "localhost"

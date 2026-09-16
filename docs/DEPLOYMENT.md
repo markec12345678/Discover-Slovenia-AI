@@ -306,6 +306,32 @@ Pravila:
 - CI drift check poganja replay migracij v prazen `dsa_test` service
   container (postgres) in zahteva prazno razliko do `schema.prisma`.
 
+### 4b. PROD-MONITOR + CI-FUNC (1.31.0): samodejni nadzor produkcije
+
+Zadnja vrzela elementa "startup migracije fail-open" zaprta: `/api/health`
+sicer izpostavi spodletele startup korake (503 degraded, FAIL-MODE 1.27.0),
+a do 1.31.0 jih nihče ni samodejno gledal.
+
+- **`.github/workflows/prod-monitor.yml`** vsake 3 ure (UTC) požene
+  `scripts/ops/functional-smoke.sh --get-only` proti **obema** produkcijama
+  (Vercel primarna + Render sekundarna z velikodušnim `--ready-timeout 240`
+  za hladne zagoni free tierja). Preverja: `/api/health` (degraded = rdeče),
+  SSR strani SL+EN, sitemap s pragom ≥ 650 URL (regresija SEO površine),
+  3 vzorčne globoke strani, `/api/listings` (živa DB), 404.
+- **Alarm**: ob neuspehu scheduled run-a GitHub pošlje e-pošto lastniku repa
+  (Settings → Notifications → Actions). Ročni zagon: workflow_dispatch.
+- **CI funkcionalni dim**: isti skript teče v CI build jobu po `next build`
+  (zagon standalone strežnika proti Postgres service containerju) — vsak
+  push/PR zdaj dokazuje, da aplikacija DEJANSKO deluje, ne samo builda;
+  POST `/api/itinerary` tam brez AI ključev deterministično sproži fallback
+  pot (produkcijska pot ob odpovedi AI).
+- Ročni zagon proti katerikoli instanci:
+
+```bash
+bash scripts/ops/functional-smoke.sh http://localhost:3000            # full (s POST)
+bash scripts/ops/functional-smoke.sh https://i-feel-slovenia.vercel.app --get-only
+```
+
 ---
 
 ## 5. Matrika okoljskih spremenljivk (produkcija)

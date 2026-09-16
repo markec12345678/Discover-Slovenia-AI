@@ -1,0 +1,54 @@
+name: Production Health Monitor
+
+# PROD-MONITOR (1.31.0): samodejni nadzor OBEH produkcij — zapolni zadnjo
+# vrzel elementa "startup migracije fail-open": /api/health sicer IZPOSTAVI
+# spodletele startup korake (503 degraded, FAIL-MODE 1.27.0), a doslej
+# nihče ni samodejno gledal. Zdaj GitHub Actions vsake 3 ure požene
+# functional-smoke.sh --get-only (read-only, brez POST — ne porabi rate
+# limit kvote uporabnikov) proti obema deploymentoma:
+#
+#   · Vercel  — PRIMARNA produkcija (DEPLOYMENT.md:191)
+#   · Render  — SEKUNDARNA (free tier: hladni zagoni do ~60 s → velikodušen
+#               ready-timeout 240 s; vztrajna napaka po njem = pravi alarm)
+#
+# Kaj se preverja: /api/health (alarm če degraded/503 — spodletela startup
+# migracija), SSR strani SL+EN, sitemap z pragom ≥ 650 URL (SEO regresija),
+# 3 vzorčne globoke strani, /api/listings (živa DB povezljivost), 404.
+#
+# ALARM: ob neuspehu scheduled run-a GitHub pošlje e-pošto lastniku repa
+# (Settings → Notifications → Actions). Ročni zagon: workflow_dispatch.
+# Zagon proti sebi: scripts/ops/functional-smoke.sh <url> --get-only
+#
+# Zavedanje: per-instance serverless posnetek — "degraded" enega merjenja
+# pomeni "nekaj hladnih zagonov je padlo" (glej src/app/api/health/route.ts);
+# prav to želimo videti zgodaj, še preden uporabniki poročajo.
+
+on:
+  schedule:
+    - cron: "0 */3 * * *" # vsake 3 ure (UTC)
+  workflow_dispatch:
+
+jobs:
+  vercel:
+    name: Vercel (PRIMARNA produkcija)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: 📥 Checkout (functional-smoke.sh)
+        uses: actions/checkout@v4
+
+      - name: 🩺 Health + funkcionalni dim (GET-only)
+        run: bash scripts/ops/functional-smoke.sh https://i-feel-slovenia.vercel.app --get-only --ready-timeout 120
+
+  render:
+    name: Render (SEKUNDARNA — hladni zagoni)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout (functional-smoke.sh)
+        uses: actions/checkout@v4
+
+      - name: 🩺 Health + funkcionalni dim (GET-only, retry za hladni zagon)
+        run: bash scripts/ops/functional-smoke.sh https://i-feel-slovenia.onrender.com --get-only --ready-timeout 240
