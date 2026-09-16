@@ -1,14 +1,17 @@
 /**
- * Testi zagoniske baseline migracije (MIGR-HISTORY 1.30.0).
+ * Testi zagoniske baseline migracije (MIGR-HISTORY 1.30.0, poostritev 1.32.0).
  *
  * Najpomembnejši test je varovalka CHECKSUM: BASELINE_CHECKSUM konstanta mora
  * biti natanko sha256(prisma/migrations/20260916000000_baseline/migration.sql)
  * — tiha sprememba baseline datoteke (ki bi povzročila drift glede na
  * produkcijo) takoj pade na rdečem testu.
  *
- * Preostali testi pokrivajo logiko resolvePrismaBaselineWith z lažnim
- * odjemalcem: narečja, idempotentnost, dirkalno varnost in fallback pot ob
- * neuspešnem unique indeksu.
+ * Poostritev (revizija 1.32.0, uporabnikovi trditvi 1+2):
+ *   · obstoječa vrstica se preveri po CHECKSUMU — napačen checksum →
+ *     checksum-mismatch (ne "already", ki bi lagal o varnih vratih);
+ *   · dvojne vrstice → duplicate;
+ *   · neuspešen unique indeks → index-failed in NO INSERT (dirkalno-nevarna
+ *     WHERE NOT EXISTS pot je umaknjena).
  */
 
 import { describe, expect, test } from "bun:test";
@@ -91,16 +94,47 @@ describe("prisma-baseline-migration", () => {
     expect(calls.exec).toHaveLength(0);
   });
 
-  test("postgres + baseline že zabeležen → already, brez INSERT", async () => {
+  test("postgres + baseline že zabeležen z PRAVIM checksumom → already, brez INSERT", async () => {
     const { db, calls } = makeDb({
       pragmaThrows: true,
       info: [{ table_name: "SavedItinerary" }],
-      existing: [{ "?column?": 1 }],
+      existing: [{ checksum: BASELINE_CHECKSUM }],
     });
     const r = await resolvePrismaBaselineWith(db as unknown as SchemaDb);
     expect(r.dialect).toBe("postgres");
     expect(r.action).toBe("already");
-    expect(r.detail).toContain("že zabeležen");
+    expect(r.detail).toContain("se ujema");
+    expect(r.detail).toContain(BASELINE_CHECKSUM.slice(0, 8));
+    expect(calls.exec.filter((s) => s.startsWith("INSERT"))).toHaveLength(0);
+  });
+
+  test("postgres + baseline z NAPAČNIM checksumom → checksum-mismatch (degraded), brez INSERT — ne lagamo o varnih vratih", async () => {
+    const { db, calls } = makeDb({
+      pragmaThrows: true,
+      info: [{ table_name: "SavedItinerary" }],
+      existing: [{ checksum: "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" }],
+    });
+    const r = await resolvePrismaBaselineWith(db as unknown as SchemaDb);
+    expect(r.dialect).toBe("postgres");
+    expect(r.action).toBe("checksum-mismatch");
+    expect(r.detail).toContain("drift");
+    expect(r.detail).toContain("NISO varna");
+    expect(calls.exec.filter((s) => s.startsWith("INSERT"))).toHaveLength(0);
+  });
+
+  test("postgres + dvojne vrstice baseline-a → duplicate (degraded), brez INSERT", async () => {
+    const { db, calls } = makeDb({
+      pragmaThrows: true,
+      info: [{ table_name: "SavedItinerary" }],
+      existing: [
+        { checksum: BASELINE_CHECKSUM },
+        { checksum: BASELINE_CHECKSUM },
+      ],
+    });
+    const r = await resolvePrismaBaselineWith(db as unknown as SchemaDb);
+    expect(r.dialect).toBe("postgres");
+    expect(r.action).toBe("duplicate");
+    expect(r.detail).toContain("2 vrstic");
     expect(calls.exec.filter((s) => s.startsWith("INSERT"))).toHaveLength(0);
   });
 
@@ -142,7 +176,7 @@ describe("prisma-baseline-migration", () => {
     expect(r.detail).toContain("sočasn");
   });
 
-  test("neuspešen unique indeks → fallback INSERT z WHERE NOT EXISTS (brez ON CONFLICT)", async () => {
+  test("neuspešen unique indeks → index-failed (degraded) in NO INSERT — dirkalno-nevarna WHERE NOT EXISTS pot je umaknjena", async () => {
     const { db, calls } = makeDb({
       pragmaThrows: true,
       info: [],
@@ -153,12 +187,31 @@ describe("prisma-baseline-migration", () => {
           : 1,
     });
     const r = await resolvePrismaBaselineWith(db as unknown as SchemaDb);
-    expect(r.action).toBe("recorded");
-    expect(r.detail).toContain("brez unique varovalke");
+    expect(r.dialect).toBe("postgres");
+    expect(r.action).toBe("index-failed");
+    expect(r.detail).toContain("NI zapisan");
+    expect(r.detail).toContain("idempotenten");
 
+    // KLJUČNA trditev revizije: brez unique varovalke NE vstavljamo ničesar
+    const insert = calls.exec.find((s) => s.startsWith("INSERT"));
+    expect(insert).toBeUndefined();
+  });
+
+  test("index-failed je samozdravilen: prehodna napaka indeksa + uspešen naslednji zagon → recorded", async () => {
+    // Prvi zagon: indeks odpove → nič ni zapisanega (zgornji test). Drugi
+    // zagon: indeks uspe, vrstice še ni → normalna ON CONFLICT vstavitev.
+    // (Simuliramo samo drugi zagon — prvi je pokrit zgoraj.)
+    const { db, calls } = makeDb({
+      pragmaThrows: true,
+      info: [],
+      existing: [],
+      exec: () => 1,
+    });
+    const r = await resolvePrismaBaselineWith(db as unknown as SchemaDb);
+    expect(r.action).toBe("recorded");
     const insert = calls.exec.find((s) => s.startsWith("INSERT"));
     expect(insert).toBeDefined();
-    expect(insert!).toContain("WHERE NOT EXISTS");
-    expect(insert!).not.toContain("ON CONFLICT");
+    expect(insert!).toContain('ON CONFLICT ("migration_name") DO NOTHING');
+    expect(insert!).not.toContain("WHERE NOT EXISTS");
   });
 });

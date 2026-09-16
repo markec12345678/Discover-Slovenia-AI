@@ -38,7 +38,23 @@
  *     na migration_name + INSERT … ON CONFLICT DO NOTHING — dve instanci ne
  *     moreta zapisati dvojnika (Prisma sama nikoli ne piše podvojenih imen,
  *     indeks le utrdi njeno lastno invarianto);
- *   - FAIL-OPEN: napaka se zalogira, zagon strežnika se nadaljuje;
+ *   - POOSTRITEV (revizija 1.32.0, uporabnikove trditvi 1+2):
+ *     · obstoječa vrstica se preveri tudi po CHECKSUMU — ujemanje z
+ *       BASELINE_CHECKSUM je pogoj za "already"; odstopanje pomeni, da bi
+ *       `prisma migrate deploy` odkril drift, zato poročamo
+ *       checksum-mismatch (degraded → /api/health 503) in NE lagamo, da
+ *       so vrata varna;
+ *     · če unique indeks ni bil ustvarjen, baseline NE zapišemo — prejšnja
+ *       WHERE NOT EXISTS vstavitev je bila dirkalno-nevarna (ozko okno
+ *       dvojne vstavitve med sočasnimi zagoni). Namesto tega poročamo
+ *       index-failed (degraded) in zahtevamo varno ponovno izvedbo — če
+ *       je bila vzročna napaka prehodna, se naslednji hladni
+ *       zagon sam ozdravi (idempotentno); če ni (npr. že obstoječi
+ *       dvojniki), je potrebna ročna preverba;
+ *     · dvojne vrstice z istim imenom (možne samo iz preteklih
+ *       eksperimentov) poročamo kot duplicate (degraded).
+ *   - FAIL-OPEN: napaka se zalogira, zagon strežnika se nadaljuje (a
+ *     degraded stanja zdaj postanejo VIDNA na /api/health — 503);
  *   - Izklop: DSA_DISABLE_BASELINE_RESOLVE=1.
  */
 
@@ -63,8 +79,25 @@ type SchemaDb = Pick<PrismaClient, "$queryRawUnsafe" | "$executeRawUnsafe">;
 
 export interface BaselineResolveResult {
   dialect: "sqlite" | "postgres" | "unknown";
-  /** recorded = vrstica zapisana · already = je že obstajala · skipped = ni postgres. */
-  action: "recorded" | "already" | "skipped";
+  /**
+   * recorded = vrstica zapisana · already = je že obstajala (checksum se
+   * ujema) · skipped = ni postgres.
+   *
+   * DEGRADED stanja (revizija 1.32.0) — instrumentation jih preslika v
+   * status "failed" → /api/health 503 (vidno, ne tiho):
+   *   · checksum-mismatch — obstoječa vrstica ima NAPAČEN checksum
+   *     (migrate deploy bi odkril drift);
+   *   · duplicate — več vrstic z istim imenom (podvojeni vnosi);
+   *   · index-failed — unique varovalka ni bila ustvarjena, zato vrstice
+   *     NISMO zapisali (dirkalno-nevarna pot umaknjena).
+   */
+  action:
+    | "recorded"
+    | "already"
+    | "skipped"
+    | "checksum-mismatch"
+    | "duplicate"
+    | "index-failed";
   /** Čitljivi opis za console + /api/health (brez poverilnic). */
   detail: string;
 }
@@ -135,8 +168,11 @@ export async function resolvePrismaBaselineWith(
   await client.$executeRawUnsafe(CREATE_MIGRATIONS_TABLE);
 
   // 2) Unique varovalka proti dvojnikom ob sočasnih hladnih zagonih.
-  //    Če vzpostavitev spodleti (npr. že obstoječi dvojniki iz prejšnjih
-  //    eksperimentov), nadaljujemo z best-effort vstavitvijo (spodaj).
+  //    Če vzpostavitev spodleti, NE zapišemo baseline-a (revizija 1.32.0):
+  //    WHERE NOT EXISTS vstavitev ima ozko dirkalno okno (dve instanci
+  //    vstavita dve vrstici) — takšno stanje bi bilo TEŽJE popravljivo
+  //    (ročno brisanje dvojnikov) kot eno izpuščeno vstavitev, ki jo
+  //    naslednji hladni zagon idempotentno ponovi.
   let uniqueOk = true;
   try {
     await client.$executeRawUnsafe(
@@ -148,31 +184,75 @@ export async function resolvePrismaBaselineWith(
   }
 
   // 3) Že zabeležen? (vsak kasnejši hladni zagon konča tukaj — tri
-  //    brez-učinkovne izjave, nič pisanja)
+  //    brez-učinkovne izjave, nič pisanja). POOSTRITEV (revizija 1.32.0):
+  //    obstoj SAMO ni dovolj — preverimo tudi checksum in število vrstic,
+  //    sicer bi "already" lahko lagal o varnih db:deploy vratih nad
+  //    vrstico, ki jo prisma migrate deploy zavrne kot spremenjeno.
   const existing = (await client.$queryRawUnsafe(
-    `SELECT 1 FROM "_prisma_migrations" WHERE "migration_name" = '${BASELINE_MIGRATION_ID}' LIMIT 1`
+    `SELECT "checksum" FROM "_prisma_migrations" WHERE "migration_name" = '${BASELINE_MIGRATION_ID}'`
   )) as unknown[];
   if (Array.isArray(existing) && existing.length > 0) {
+    if (existing.length > 1) {
+      return {
+        dialect,
+        action: "duplicate",
+        detail:
+          `${existing.length} vrstic za ${BASELINE_MIGRATION_ID} v ` +
+          `_prisma_migrations (pričakovana 1) — podvojeni vnosi lomijo ` +
+          `migrate deploy; ročno počisti dvojnike (obstavi le eno) in ` +
+          `ponovno zaženi (idempotentno)`,
+      };
+    }
+    const row = existing[0] as { checksum?: unknown } | undefined;
+    const rowChecksum =
+      row && typeof row.checksum === "string" ? row.checksum : String(row?.checksum ?? "");
+    if (rowChecksum !== BASELINE_CHECKSUM) {
+      return {
+        dialect,
+        action: "checksum-mismatch",
+        detail:
+          `baseline vrstica obstaja s checksumom ${rowChecksum.slice(0, 8) || "(prazen)"}…, ` +
+          `pričakovan pa je ${BASELINE_CHECKSUM.slice(0, 8)}… — prisma migrate ` +
+          `deploy bi odkril odstopanje (drift). Preveri, kako je vrstica ` +
+          `nastala (ročni eksperiment? spremenjen baseline?), jo popravi ` +
+          `(UPDATE checksum ali DELETE + ponoven zagon) — vrata NISO varna`,
+      };
+    }
     return {
       dialect,
       action: "already",
-      detail: `baseline ${BASELINE_MIGRATION_ID} že zabeležen — zgodovina sinhrona, db:deploy vrata varna`,
+      detail:
+        `baseline ${BASELINE_MIGRATION_ID} že zabeležen, checksum ` +
+        `${BASELINE_CHECKSUM.slice(0, 8)}… se ujema — zgodovina sinhrona, ` +
+        `db:deploy vrata varna`,
+    };
+  }
+
+  // 3b) Brez unique varovalke NE vstavljamo (revizija 1.32.0): prejšnja
+  //     WHERE NOT EXISTS pot je bila dirkalno nevarna. Poročamo degraded in
+  //     zahtevamo varno ponovno izvedbo — idempotenten naslednji zagon bo
+  //     vstavitev izvedel, če je indeks takrat uspel (prehodna napaka),
+  //     sicer je potrebna ročna preverba (dvojniki? pravice?).
+  if (!uniqueOk) {
+    return {
+      dialect,
+      action: "index-failed",
+      detail:
+        `unique indeks _prisma_migrations_migration_name_key ni bil ustvarjen ` +
+        `(dvojniki? pravice?) — baseline NI zapisan (dirkalno-nevarna ` +
+        `WHERE NOT EXISTS vstavitev je umaknjena). Preveri tabelo ročno in ` +
+        `ponovno zaženi — korak je idempotenten`,
     };
   }
 
   // 4) Vstavi vrstico, ki bi jo zapisal `migrate resolve --applied`.
   //    ON CONFLICT (unique indeks iz koraka 2) pokrije dirko dveh sočasnih
-  //    zagonov; brez indeksa uporabimo enostavni INSERT … WHERE NOT EXISTS
-  //    (ozko okno, best-effort — dokumentirano v detail spodaj).
+  //    zagonov — to je ZDAJ edina vstavitvena pot (garantiran uniqueOk).
   const id = crypto.randomUUID();
   const inserted = await client.$executeRawUnsafe(
-    uniqueOk
-      ? `INSERT INTO "_prisma_migrations" ("id","checksum","finished_at","migration_name","logs","rolled_back_at","started_at","applied_steps_count")
-           VALUES ('${id}','${BASELINE_CHECKSUM}',now(),'${BASELINE_MIGRATION_ID}',NULL,NULL,now(),0)
-           ON CONFLICT ("migration_name") DO NOTHING`
-      : `INSERT INTO "_prisma_migrations" ("id","checksum","finished_at","migration_name","logs","rolled_back_at","started_at","applied_steps_count")
-           SELECT '${id}','${BASELINE_CHECKSUM}',now(),'${BASELINE_MIGRATION_ID}',NULL,NULL,now(),0
-           WHERE NOT EXISTS (SELECT 1 FROM "_prisma_migrations" WHERE "migration_name" = '${BASELINE_MIGRATION_ID}')`
+    `INSERT INTO "_prisma_migrations" ("id","checksum","finished_at","migration_name","logs","rolled_back_at","started_at","applied_steps_count")
+         VALUES ('${id}','${BASELINE_CHECKSUM}',now(),'${BASELINE_MIGRATION_ID}',NULL,NULL,now(),0)
+         ON CONFLICT ("migration_name") DO NOTHING`
   );
 
   if (inserted > 0) {
@@ -181,8 +261,7 @@ export async function resolvePrismaBaselineWith(
       action: "recorded",
       detail:
         `baseline ${BASELINE_MIGRATION_ID} zabeležen v _prisma_migrations ` +
-        `(checksum ${BASELINE_CHECKSUM.slice(0, 8)}…) — db:deploy vrata so zdaj varna` +
-        (uniqueOk ? "" : " [brez unique varovalke — indeks ni bil ustvarjen]"),
+        `(checksum ${BASELINE_CHECKSUM.slice(0, 8)}…) — db:deploy vrata so zdaj varna`,
     };
   }
 

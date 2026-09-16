@@ -288,6 +288,18 @@ export async function register() {
         console.log(
           `[instrumentation] Migration baseline zabeležen: ${r.detail}`
         );
+      } else if (
+        r.action === "checksum-mismatch" ||
+        r.action === "duplicate" ||
+        r.action === "index-failed"
+      ) {
+        // POOSTRITEV (revizija 1.32.0): degraded stanja baseline zgodovine
+        // niso več tiha — zvok v logih + status failed na /api/health (503),
+        // ker "already/ok" nad napačnim checksumom bi lagal o varnih
+        // db:deploy vratih (migrate deploy bi odkril drift).
+        console.error(
+          `[instrumentation] Baseline resolve DEGRADED (${r.action}): ${r.detail}`
+        );
       }
       recordStartupStep({
         name: "migrate:baseline",
@@ -296,7 +308,9 @@ export async function register() {
             ? "unknown"
             : r.action === "skipped"
               ? "skipped"
-              : "ok",
+              : r.action === "recorded" || r.action === "already"
+                ? "ok"
+                : "failed", // checksum-mismatch | duplicate | index-failed
         detail: r.detail,
       });
     } catch (error) {

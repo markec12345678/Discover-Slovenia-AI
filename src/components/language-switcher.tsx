@@ -95,6 +95,10 @@ export function LanguageSwitcher() {
     // bi pri soft navigaciji izračunal PRAZNO drevesno razliko in vsebine
     // sploh ne zamenjal. Trdi skok zagotovi poln SSR v novem jeziku in
     // počisti Router Cache (standarden vzorec za preklop locale-a).
+    // (eslint-disable: pravilo @next/next/no-location-assign-relative-destination
+    // iz eslint-config-next 16.3.5 tu lažno pozitivno svaruje — hard navigacija
+    // je NAMENJENA, glej zgornji komentar.)
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.assign(`${target}${hash}`);
   };
 

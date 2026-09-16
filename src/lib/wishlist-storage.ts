@@ -217,6 +217,11 @@ export function openFromWishlist(detail: WishlistOpenDetail): void {
     } catch {
       // Zasebni način / poln sessionStorage — mirno preskoči
     }
+    // Trda navigacija iz NE-React konteksta (storage modul, brez hookov):
+    // router.push ni na voljo, pending detail preživi v sessionStorage.
+    // (eslint-disable: pravilo iz eslint-config-next 16.3.5 tu ne more
+    // ponuditi useRouter — kontekst ni React komponenta.)
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.assign("/trznica");
   }
 }

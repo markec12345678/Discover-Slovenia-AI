@@ -12,6 +12,15 @@ name: AI Provider Smoke Test
 # Namen: dokaz, da ključa in VSE končne točke, ki jih uporablja
 # src/lib/ai-client.ts, delujejo PRED deployom na Vercel/Render.
 #
+# TEDENSKI RITAM (revizija 1.32.0, trditev "ci funkcionalni test ne preverja
+# dejanskega AI delovanja"): vsak ponedeljek ob 07:00 UTC se test zažene
+# SAMODEJNO (~5 klicev/teden — zanemarljivo za free tier kvote). Razlog:
+# funkcionalni dim v CI namerno nima AI ključev (preverja deterministicno
+# fallback pot), produkcijski monitor pa je GET-only — TAKO bi iztekel ali
+# rotiran API ključ v Vercel/Render env živel TIHO (produkcija bi nemoteno
+# padala na fallback). Tedenski živi klic naredi to nemogoče: rdeči run =
+# e-poštni alarm lastniku.
+#
 # Izkušnja iz prvega zagona (2026-09-15): gemini-3.6-flash je THINKING
 # model — max_tokens 16 je porabil za notranje razmišljanje (finish_reason
 # "length", completion_tokens 0). Zato so proračuni tu 512+ (v ai-client
@@ -22,6 +31,10 @@ name: AI Provider Smoke Test
 # kode, usage in vsebina odgovora.
 
 on:
+  schedule:
+    # PO 07:00 UTC = PO 09:00 po slovenskem času (zunaj jutranjega
+    # vrha prometa; GitHub Actions ima sicer ~15 min jitter na cron).
+    - cron: "0 7 * * 1"
   workflow_dispatch:
 
 jobs:

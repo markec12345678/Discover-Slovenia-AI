@@ -16,6 +16,18 @@
 #          https://i-feel-slovenia.vercel.app --get-only --ready-timeout 120
 #      --get-only preskoči POST (ne porablja rate limit kvote uporabnikov).
 #
+# POOSTRITVE (revizija 1.32.0, uporabnikove trditve 7b/8/9):
+#   · MONITOR-RETRY: prehodne napake GET preverjanj (000/5xx — Render free
+#     preobremenitev, hladni zagon) dobijo ENO ponovitev po 5 s — trajna
+#     napaka vztraja tudi po njej (rdeče), enkratni blisk pa ne sproži
+#     lažnega e-poštnega alarma 3-urnega monitorja;
+#   · HEALTH 3 VZORCI: /api/health posnetek je PER-INSTANCA (serverless) —
+#     trije vzorci s 5 s razmikom povečajo možnost zadetja različnih hladnih
+#     instanc (popolne pokritosti zunanji monitor ne more doseči);
+#   · SITEMAP: pravi XML parser (python3; fallback grep), <loc> mora biti
+#     absoluten http(s) URL, 5 vzorčnih globokih strani (prej 3) mora
+#     vsebovati </html> — poln SSR dokument, ne prirezana/prazna lupina.
+#
 # ZAGON PROTI KATEREMU KOLI ŽIVEEMU STREŽNIKU (dev/prod):
 #   functional-smoke.sh [BASE_URL] [--ready-timeout S] [--get-only]
 #                       [--min-sitemap-urls N]
@@ -27,7 +39,8 @@
 #                        lokalno/produkcija ~733 URL — padec pod prag = alarm)
 #
 # IZHOD: 0 = vsa preverjanja zelena · 1 = vsaj eno rdeče (z razlogom)
-# Odvisnosti: curl, jq (oba na GH Actions runnerjih in v razvojnem sandboxu)
+# Odvisnosti: curl, jq (oba na GH Actions runnerjih in v razvojnem sandboxu);
+#             python3 opcijsko (polna XML preverba sitemapa; fallback = grep)
 # ============================================================================
 source "$(dirname "$0")/lib.sh"
 
@@ -66,10 +79,21 @@ VERSION_NOTE=""
 ok_check()  { PASS=$((PASS + 1)); ok "$1"; }
 bad_check() { FAIL=$((FAIL + 1)); err "$1"; }
 
-# GET -> izpiše HTTP kodo, telo v datoteko (000 = strežnik nedosegljiv)
+# GET -> izpiše HTTP kodo, telo v datoteko (000 = strežnik nedosegljiv).
+# MONITOR-RETRY (revizija 1.32.0): prehodne napake (000/5xx) dobijo eno
+# ponovitev po 5 s. Pri /api/health je 503 veljaven "degraded" odgovor —
+# ponovitev ne spremeni izida, samo potrdi, da vztraja. 4xx se NE ponavlja
+# (namerno stanje, npr. pričakovani 404). Trajna napaka ostane rdeča tudi po
+# ponovitvi — prava okvara namreč vztraja, enkratni blisk pa ne.
 fetch() { # $1=pot, $2=izhodna datoteka
   local code
   code=$(curl -sS -m 60 -o "$2" -w "%{http_code}" "${BASE_URL}$1" 2>/dev/null) || code=000
+  case "$code" in
+    000|5*)
+      sleep 5
+      code=$(curl -sS -m 60 -o "$2" -w "%{http_code}" "${BASE_URL}$1" 2>/dev/null) || code=000
+      ;;
+  esac
   echo "$code"
 }
 
@@ -119,49 +143,108 @@ code=$(fetch "/robots.txt" "$TMP/robots.txt")
 [ "$code" = "200" ] && ok_check "200" || bad_check "GET /robots.txt → ${code} (pričakovano 200)"
 
 # ── 6/11: sitemap + vzorčne globoke strani (SEO površina) ─────────────────
+# POOSTRITEV (revizija 1.32.0, "sitemap test ima precej šibko preverjanje"):
+#   · pravi XML parser (python3 ElementTree) namesto samo grep "<urlset>";
+#   · vsak <loc> mora biti absoluten http(s) URL;
+#   · 5 vzorčnih globokih strani (prej 3), enakomerno razporejenih;
+#   · vzorci morajo vsebovati </html> — poln SSR dokument, ne prazna lupina
+#     ali prirezan odgovor (mehke napake na 200 bi sicer tiho prišle skozi).
 step "6/11 — GET /sitemap.xml (SEO površina, prag ≥ ${MIN_SITEMAP_URLS} URL)"
 code=$(fetch "/sitemap.xml" "$TMP/sitemap.xml")
-if [ "$code" = "200" ] && grep -q "<urlset" "$TMP/sitemap.xml"; then
-  urls=$(grep -c "<loc>" "$TMP/sitemap.xml" || true)
+if [ "$code" != "200" ] || [ ! -s "$TMP/sitemap.xml" ]; then
+  bad_check "GET /sitemap.xml → ${code} (pričakovano 200 + neprazno telo)"
+else
+  urls=0
+  if command -v python3 >/dev/null 2>&1; then
+    # Polna XML preverba: veljavnost dokumenta + absolutnost <loc> + števec
+    if python3 - "$TMP/sitemap.xml" >"$TMP/sm-meta.txt" 2>"$TMP/sm-err.txt" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+
+root = ET.parse(sys.argv[1]).getroot()
+locs = [
+    el.text.strip()
+    for el in root.iter()
+    if (el.tag.endswith("}loc") or el.tag == "loc") and el.text and el.text.strip()
+]
+bad = [u for u in locs if not (u.startswith("http://") or u.startswith("https://"))]
+print(f"{len(locs)} {len(bad)}")
+PY
+    then
+      urls=$(awk '{print $1}' "$TMP/sm-meta.txt")
+      bad_locs=$(awk '{print $2}' "$TMP/sm-meta.txt")
+      if [ "${bad_locs:-0}" -gt 0 ]; then
+        bad_check "sitemap: ${bad_locs} vrednosti <loc> ni absoluten http(s) URL"
+      fi
+      if grep -q "<urlset" "$TMP/sitemap.xml"; then
+        : # pričakovana oblika (dodatna mehka preverba)
+      else
+        bad_check "sitemap je veljaven XML, a brez <urlset> korena (ne-standardna oblika?)"
+      fi
+    else
+      bad_check "sitemap NI veljaven XML: $(head -c 200 "$TMP/sm-err.txt")"
+    fi
+  else
+    # Fallback brez python3: enaka groba preverjava kot prej (1.31.0)
+    if grep -q "<urlset" "$TMP/sitemap.xml"; then
+      urls=$(grep -c "<loc>" "$TMP/sitemap.xml" || true)
+    else
+      bad_check "sitemap brez <urlset> (python3 ni na voljo za polno XML preverbo)"
+    fi
+  fi
+
   if [ "${urls:-0}" -ge "$MIN_SITEMAP_URLS" ]; then
     ok_check "200, ${urls} URL-jev (≥ ${MIN_SITEMAP_URLS})"
-    # Vzorčenje 3 globokih strani (prva/srednja/zadnja) — realne vsebine,
-    # ne samo lupina sitemapa. Poti so RELATIVNE (sitemap generira URL-je
-    # z gostiteljem zahteve → deluje na localhost in produkciji enako).
+    # Vzorčenje 5 globokih strani (1. ~25 % ~50 % ~75 % ~ zadnja) — realne
+    # vsebine, ne samo lupina sitemapa. Poti so RELATIVNE (sitemap generira
+    # URL-je z gostiteljem zahteve → deluje na localhost in produkciji enako).
     grep -o "<loc>[^<]*</loc>" "$TMP/sitemap.xml" | sed 's/<[^>]*>//g' | sed 's|^\s*https\?://[^/]*||' > "$TMP/sitemap-paths.txt" || true
     total_lines=$(wc -l < "$TMP/sitemap-paths.txt" | tr -d ' ')
-    for idx in 1 $(( total_lines / 2 )) ${total_lines}; do
+    for idx in 1 $(( total_lines / 4 )) $(( total_lines / 2 )) $(( 3 * total_lines / 4 )) ${total_lines}; do
       [ "$idx" -ge 1 ] && [ "$idx" -le "$total_lines" ] || continue
       p=$(sed -n "${idx}p" "$TMP/sitemap-paths.txt")
       [ -n "$p" ] || continue
       scode=$(fetch "$p" "$TMP/sample.html")
-      [ "$scode" = "200" ] && ok_check "vzorec [${idx}/${total_lines}] ${p} → 200" \
-                              || bad_check "vzorec ${p} → ${scode} (pričakovano 200)"
+      if [ "$scode" = "200" ] && grep -q "</html>" "$TMP/sample.html"; then
+        ok_check "vzorec [${idx}/${total_lines}] ${p} → 200 + poln SSR dokument"
+      elif [ "$scode" = "200" ]; then
+        bad_check "vzorec ${p} → 200 BREZ </html> (prirezan ali prazen odgovor?)"
+      else
+        bad_check "vzorec ${p} → ${scode} (pričakovano 200)"
+      fi
     done
   else
     bad_check "sitemap ima ${urls:-0} URL-jev — pod pragom ${MIN_SITEMAP_URLS} (regresija SEO površine?)"
   fi
-else
-  bad_check "GET /sitemap.xml → ${code} (pričakovano 200 + <urlset>)"
 fi
 
 # ── 7/11: /api/health (startup migracije — srce FAIL-MODE vidnosti) ──────
-step "7/11 — GET /api/health (startup koraki)"
-code=$(fetch "/api/health" "$TMP/health.json")
-hstatus=$(jq -r '.status // empty' "$TMP/health.json" 2>/dev/null || true)
-hversion=$(jq -r '.version // empty' "$TMP/health.json" 2>/dev/null || true)
-VERSION_NOTE="${hversion:-?}"
-if [ "$code" = "200" ] && [ "$hstatus" = "ok" ]; then
-  ok_check "status ok (v${hversion:-?})"
-elif [ "$code" = "200" ] && [ "$hstatus" = "no-data" ]; then
-  warn "health: no-data — instrumentacija na tej instanci ni stekla (redko, npr. predictivni zagon); štejem kot ok"
-  PASS=$((PASS + 1))
-elif [ "$code" = "503" ]; then
-  bad_check "health DEGRADED (503) — spodleteli/neznani startup koraki:"
-  jq -r '.startup[] | select(.status == "failed" or .status == "unknown") | "        · \(.name): \(.status) — \(.detail // "brez detajla")"' "$TMP/health.json" 2>/dev/null || true
-else
-  bad_check "GET /api/health → ${code}, status: ${hstatus:-/} (pričakovano 200 + ok)"
-fi
+# PER-INSTANCE (revizija 1.32.0): posnetek startup korakov je PER-INSTANCA
+# (serverless hladni zagon) — en GET vzorči le instanco, ki ji je usmerjevalnik
+# izročil zahtevo. Trije vzorci s 5 s razmikom povečajo možnost zadetja
+# različnih instanc; popolne pokritosti zunanji monitor NE more doseči
+# (znana meja) — kompenzirana s 3-urnim ritmom (instance se menjavajo) in
+# ostalimi preverjanji (slaba instanca pade tudi na /api/listings ali SSR
+# straneh). Katerikoli DEGRADED vzorec je rdeč — to je pravi alarm.
+step "7/11 — GET /api/health (startup koraki; 3 vzorci)"
+for s in 1 2 3; do
+  code=$(fetch "/api/health" "$TMP/health.json")
+  hstatus=$(jq -r '.status // empty' "$TMP/health.json" 2>/dev/null || true)
+  hversion=$(jq -r '.version // empty' "$TMP/health.json" 2>/dev/null || true)
+  VERSION_NOTE="${hversion:-${VERSION_NOTE:-?}}"
+  if [ "$code" = "200" ] && [ "$hstatus" = "ok" ]; then
+    ok_check "vzorec ${s}/3: status ok (v${hversion:-?})"
+  elif [ "$code" = "200" ] && [ "$hstatus" = "no-data" ]; then
+    warn "vzorec ${s}/3: health no-data — instrumentacija na tej instanci ni stekla (redko, npr. predictivni zagon); štejem kot ok"
+    PASS=$((PASS + 1))
+  elif [ "$code" = "503" ]; then
+    bad_check "vzorec ${s}/3: health DEGRADED (503) — spodleteli/neznani startup koraki:"
+    jq -r '.startup[] | select(.status == "failed" or .status == "unknown") | "        · \(.name): \(.status) — \(.detail // "brez detajla")"' "$TMP/health.json" 2>/dev/null || true
+  else
+    bad_check "vzorec ${s}/3: GET /api/health → ${code}, status: ${hstatus:-/} (pričakovano 200 + ok)"
+  fi
+  [ "$s" -lt 3 ] && sleep 5
+done
 
 # ── 8/11: /api/listings (živa DB povezljivost) ────────────────────────────
 step "8/11 — GET /api/listings (DB povezljivost)"
