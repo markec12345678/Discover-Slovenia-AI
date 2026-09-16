@@ -240,6 +240,18 @@ baselineom trenutne produkcije; CI Build job ima **drift vrata**
 **Enkratna uvedba na produkciji (koordinacija, ~1 min):**
 
 ```bash
+# PREFERIRANA POT — skripta (1.27.1) vse naredi v enem zagonu:
+#   validira URL → zamenja sqlite shemo na committed postgres → resolve
+#   → status → povrne sqlite (tudi ob napaki). URL dobiš v Vercel/Render
+#   dashboardu (Settings → Environment Variables → DATABASE_URL):
+./scripts/ops/migrate-baseline.sh "<neon-url>"
+```
+
+Ročno (ekvivalentno — PAST: ne deluje iz klona z lokalno SQLITE shemo,
+ker Prisma zahteva `file:` protokol → P1012; najprej povrni committed
+postgres `schema.prisma` ali uporabi skripto zgoraj):
+
+```bash
 # 1. Baseline označi kot že uporabljen (shema JE že v produkciji —
 #    brez tega bi migrate deploy poskušal ustvarjati obstoječe tabele):
 DATABASE_URL="<neon-url>" bunx prisma migrate resolve --applied 20260916000000_baseline
@@ -247,6 +259,10 @@ DATABASE_URL="<neon-url>" bunx prisma migrate resolve --applied 20260916000000_b
 # 2. Preveri (prazno = sinhrono):
 DATABASE_URL="<neon-url>" bunx prisma migrate status
 ```
+
+> `migrate resolve --applied` NE spreminja sheme — vstavi le eno vrstico
+> v `_prisma_migrations` (varno ob živem prometu). Po tem so `db:deploy`
+> vrata varna; CI drift vrata so aktivna neodvisno od tega koraka.
 
 **Vsak nadaljnji deploy:** po vsaki shemska spremembi ustvari migracijo
 lokalno (proti PRANEMU shadow postgresu, ne proti produkciji):
