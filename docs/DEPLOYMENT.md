@@ -237,10 +237,24 @@ baselineom trenutne produkcije; CI Build job ima **drift vrata**
 (`prisma migrate diff --from-migrations --to-schema-datamodel
 --exit-code`) — sprememba `schema.prisma` BREZ migracije = rdeči CI.
 
-**Enkratna uvedba na produkciji (koordinacija, ~1 min):**
+**Enkratna uvedba na produkciji — SAMODEJNA (1.30.0, nič dejanj):**
+startup korak `migrate:baseline` (instrumentation.ts →
+`src/lib/prisma-baseline-migration.ts`) ob prvem zagonu po deployu SAM
+zapiše baseline vrstico v `_prisma_migrations` — enakovredno
+`prisma migrate resolve --applied` (checksum = sha256(migration.sql),
+`applied_steps_count` 0, `finished_at` nastavljen; oblika eksperimentalno
+preverjena z vrženo bazo). Samo postgres (sqlite dev/Docker/demo ostaja
+na db push poti), idempotenten, ne dotika uporabniške sheme,
+dirkalno-varen za sočasne hladne zagoni (unique indeks na
+`migration_name` + `INSERT … ON CONFLICT DO NOTHING`), fail-open.
+Izklop: `DSA_DISABLE_BASELINE_RESOLVE=1`. Uspeh preveriš na javnem
+`/api/health` → `startup[]` → `migrate:baseline` (`ok`, detail
+"zabeležen" oz. "že zabeležen").
+
+Ročna alternativa (ekvivalentno — za audite ali pred-1.30 baze):
 
 ```bash
-# PREFERIRANA POT — skripta (1.27.1) vse naredi v enem zagonu:
+# Skripta (1.27.1) vse naredi v enem zagonu:
 #   validira URL → zamenja sqlite shemo na committed postgres → resolve
 #   → status → povrne sqlite (tudi ob napaki). URL dobiš v Vercel/Render
 #   dashboardu (Settings → Environment Variables → DATABASE_URL):

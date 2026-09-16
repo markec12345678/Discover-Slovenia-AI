@@ -267,6 +267,55 @@ export async function register() {
     });
   }
 
+  // Startup MIGRACIJA ZGODOVINE — baseline resolve (MIGR-HISTORY, 1.30.0):
+  // produkcija (Neon Postgres) je bila ustanovljena z db push BREZ
+  // _prisma_migrations zgodovine; ta korak ob zagonu zapiše baseline vrstico
+  // (enakovredno `prisma migrate resolve --applied` — oblika eksperimentalno
+  // preverjena) in s tem odpre VARNA db:deploy vrata — brez ročnega ukaza,
+  // ki bi potreboval produkcijski URL (poverilnico, ki je ni v CI/agent
+  // okolju). SAMO postgres (sqlite ostaja na db push poti), idempotenten,
+  // ne dotika se uporabniške sheme, dirkalno-varen (ON CONFLICT), fail-open.
+  // Izklop: DSA_DISABLE_BASELINE_RESOLVE=1. Ročna alternativa ostaja:
+  // scripts/ops/migrate-baseline.sh (isti učinek, za potrebe audita).
+  // Glej src/lib/prisma-baseline-migration.ts.
+  if (process.env.DSA_DISABLE_BASELINE_RESOLVE !== "1") {
+    try {
+      const { resolvePrismaBaseline } = await import(
+        "./lib/prisma-baseline-migration"
+      );
+      const r = await resolvePrismaBaseline();
+      if (r.action === "recorded") {
+        console.log(
+          `[instrumentation] Migration baseline zabeležen: ${r.detail}`
+        );
+      }
+      recordStartupStep({
+        name: "migrate:baseline",
+        status:
+          r.dialect === "unknown"
+            ? "unknown"
+            : r.action === "skipped"
+              ? "skipped"
+              : "ok",
+        detail: r.detail,
+      });
+    } catch (error) {
+      // Fail-open: resolve NE sme podreti zagona strežnika.
+      console.error("[instrumentation] Baseline resolve ni uspel:", error);
+      recordStartupStep({
+        name: "migrate:baseline",
+        status: "failed",
+        detail: String(error),
+      });
+    }
+  } else {
+    recordStartupStep({
+      name: "migrate:baseline",
+      status: "skipped",
+      detail: "DSA_DISABLE_BASELINE_RESOLVE=1",
+    });
+  }
+
   // Startup migracija tržnih slik (tržni val, sept 2026) — popravi demo
   // kartice v OBSTOJEČIH bazah (Render Docker volumen / Vercel demo / dev).
   // Idempotentna, fail-open, izklop z DSA_DISABLE_IMAGE_MIGRATION=1.
