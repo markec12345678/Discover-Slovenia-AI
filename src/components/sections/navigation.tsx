@@ -224,7 +224,7 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
             variant="ghost"
             size="icon"
             onClick={() => setSearchOpen(true)}
-            aria-label="AI iskanje"
+            aria-label={t("searchAria")}
             className={cn(
               glass ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
             )}
