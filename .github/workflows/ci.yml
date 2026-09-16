@@ -32,6 +32,12 @@ jobs:
       - name: 🔧 Type check
         run: bunx tsc --noEmit
 
+      # CI-TESTS (1.27.0): 73+ unit testov v vsakem pushu/PR — prej je CI lahko
+      # postal zelen tudi s pokvarjeno testno suito (testi so obstajali samo
+      # lokalno). Testi so čisti (0 DB, 0 env) — tečejo v ~200 ms.
+      - name: 🧪 Unit tests
+        run: bun test
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -79,6 +85,20 @@ jobs:
 
       - name: 📦 Install dependencies
         run: bun install --frozen-lockfile
+
+      # MIGR-HISTORY (1.27.0): drift vrata — prisma/migrations (postgres)
+      # morajo ostati sinhroni s committed schema.prisma. Prej je seva
+      # živela samo prek db push (brez zgodovine). --exit-code => rdeči CI,
+      # če kdo spremeni shemo brez migracije.
+      # Shadow = še prazen dsa_test (replay baseline vanj; db push sledi za njim
+      # in je nato no-op oz. izenači morebitne mikrorazlike).
+      - name: 📜 Migration drift check (migrations ⇄ schema)
+        run: |
+          bunx prisma migrate diff \
+            --from-migrations prisma/migrations \
+            --to-schema-datamodel prisma/schema.prisma \
+            --shadow-database-url postgresql://ci:ci@localhost:5432/dsa_test \
+            --exit-code
 
       - name: 🗄️ Prepare Prisma client & test DB (Postgres)
         run: |

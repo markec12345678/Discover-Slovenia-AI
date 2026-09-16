@@ -1,0 +1,6 @@
+# MIGR-HISTORY (1.27.0): prisma/migrations zgodovina za PRODUKCIJSKI postgres (Neon).
+# Lokalni dev ostaja na sqlite + db push (schema.prisma je lokalno skip-worktree).
+# Baseline = trenutna produkcija; na produkciji ga ENKRAT oznaci z:
+#   DATABASE_URL="<neon>" bunx prisma migrate resolve --applied 20260916000000_baseline
+# Nato vsak deploy: bun run db:deploy (prisma migrate deploy).
+provider = "postgresql"

@@ -228,6 +228,54 @@ zadosti za pilo fazo. Trade-off (iskreno): morebitni stroški/limiti Neona ob
 rasti in odvisnost od zunanjega servisa — takrat presoja Pot A (z lastnim
 Postgresom v Docker Compose, glej opombo v razdelku 3).
 
+### 4a. MIGR-HISTORY (1.27.0): prisma/migrations zgodovina + deploy vrata
+
+Do 1.26.0 je produkcijska shema živela brez migration zgodovine
+(`db push` + additive startup migracije v `instrumentation.ts` —
+fail-open). Od 1.27.0 obstaja `prisma/migrations/` (postgres) z
+baselineom trenutne produkcije; CI Build job ima **drift vrata**
+(`prisma migrate diff --from-migrations --to-schema-datamodel
+--exit-code`) — sprememba `schema.prisma` BREZ migracije = rdeči CI.
+
+**Enkratna uvedba na produkciji (koordinacija, ~1 min):**
+
+```bash
+# 1. Baseline označi kot že uporabljen (shema JE že v produkciji —
+#    brez tega bi migrate deploy poskušal ustvarjati obstoječe tabele):
+DATABASE_URL="<neon-url>" bunx prisma migrate resolve --applied 20260916000000_baseline
+
+# 2. Preveri (prazno = sinhrono):
+DATABASE_URL="<neon-url>" bunx prisma migrate status
+```
+
+**Vsak nadaljnji deploy:** po vsaki shemska spremembi ustvari migracijo
+lokalno (proti PRANEMU shadow postgresu, ne proti produkciji):
+
+```bash
+# shema se spremeni v prisma/schema.prisma (committed = postgres) →
+git stash list   # preveri: lokalni sqlite override ne sme priti v commit
+bunx prisma migrate dev --name <opis>   # zahteva postgres URL (shadow)
+```
+
+…in pred prometom na produkciji:
+
+```bash
+DATABASE_URL="<neon-url>" bun run db:deploy   # prisma migrate deploy
+```
+
+Pravila:
+- **Lokalni dev ostaja na sqlite + `db:push`** (schema.prisma je lokalno
+  skip-worktree). `db:migrate` (`migrate dev`) je namenjen IZKLJUČNO
+  ustvarjanju novih migracij proti postgresu — migrate dev na sqlite
+  shemi bo pravilno zavrgel (provider mismatch z migration_lock.toml).
+- Startup migracije v `instrumentation.ts` ostajajo idempotentne in
+  NEŠKODLJIVE vzporedno z migrate deploy (obe plasti preverita pred
+  spremembo); njihov izid je viden na `/api/health` (FAIL-MODE). Ko je
+  zgodovina uveljavljena, naslednje shemske spremembe pridejo IZKLJUČNO
+  kot migracije — startup plast se ne razširja več.
+- CI drift check poganja replay migracij v prazen `dsa_test` service
+  container (postgres) in zahteva prazno razliko do `schema.prisma`.
+
 ---
 
 ## 5. Matrika okoljskih spremenljivk (produkcija)

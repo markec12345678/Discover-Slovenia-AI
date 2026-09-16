@@ -19,12 +19,25 @@
 // naredijo obiskovalci javnega demo spletišča, se NE ohranijo med instancami.
 // Za produkcijske podatke uporabite Docker (Pot A) ali hosted Postgres (Pot B)
 // — glej docs/DEPLOYMENT.md.
+//
+// FAIL-MODE (1.27.0): vsak startup korak POSNAME svojo posledico (ok / failed
+// / skipped / unknown) v src/lib/startup-migration-status, ki jo izpostavi
+// javni /api/health. Obnašanje korakov je NEspremenjeno (še vedno fail-open —
+// migracija ne sme podreti strežnika); sprememba je VIDNOST, ne politika.
+// Dolgoročno (MIGR-HISTORY, prisma migrate deploy vrata) večina teh migracij
+// odmre — dokler obstajajo, pa je njihov izid končno opazovan.
+
+import {
+  recordStartupStep,
+  type StartupStepStatus,
+} from "./lib/startup-migration-status";
 
 export async function register() {
   // Instrumentacija teče tudi v edge runtimu — SQLite/Prisma samo za nodejs.
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
-  await prepareVercelDemoDb();
+  const demo = await prepareVercelDemoDb();
+  recordStartupStep({ name: "vercel-demo-db", ...demo });
 
   // Startup SHEMA migracija — t12 faza 1 (praktični podatki lokala): doda
   // manjkajoče stolpce Listing (seasons/weatherSuitability/parking) na
@@ -42,11 +55,27 @@ export async function register() {
           `[instrumentation] Shema migracija (Listing/praktični podatki): ` +
             `dodani stolpci [${r.columnsAdded.join(", ")}] (${r.dialect})`
         );
+        recordStartupStep({
+          name: "schema:listing-practical",
+          status: "ok",
+          detail: `dodani stolpci: ${r.columnsAdded.join(", ")} (${r.dialect})`,
+        });
       } else if (r.dialect === "unknown") {
         console.warn(
           "[instrumentation] Shema migracija: stolpcev ni bilo mogoče " +
             "preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
         );
+        recordStartupStep({
+          name: "schema:listing-practical",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja stolpcev ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:listing-practical",
+          status: "ok",
+          detail: "stolpci že prisotni",
+        });
       }
     } catch (error) {
       // Fail-open: migracija NE sme podreti zagona strežnika.
@@ -54,6 +83,11 @@ export async function register() {
         "[instrumentation] Shema migracija (praktični podatki) ni uspela:",
         error
       );
+      recordStartupStep({
+        name: "schema:listing-practical",
+        status: "failed",
+        detail: String(error),
+      });
     }
 
     // Startup SHEMA migracija — F11 (1.15.0): ustvari tabeli TripPoll +
@@ -72,11 +106,27 @@ export async function register() {
           `[instrumentation] Shema migracija (F11 ankete): ustvarjene ` +
             `tabele [${r.tablesCreated.join(", ")}] (${r.dialect})`
         );
+        recordStartupStep({
+          name: "schema:trip-poll",
+          status: "ok",
+          detail: `ustvarjene tabele: ${r.tablesCreated.join(", ")} (${r.dialect})`,
+        });
       } else if (r.dialect === "unknown") {
         console.warn(
           "[instrumentation] Shema migracija (F11 ankete): tabel ni bilo " +
             "mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
         );
+        recordStartupStep({
+          name: "schema:trip-poll",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja tabel ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:trip-poll",
+          status: "ok",
+          detail: "tabele že prisotne",
+        });
       }
     } catch (error) {
       // Fail-open: migracija NE sme podreti zagona strežnika.
@@ -84,6 +134,11 @@ export async function register() {
         "[instrumentation] Shema migracija (F11 ankete) ni uspela:",
         error
       );
+      recordStartupStep({
+        name: "schema:trip-poll",
+        status: "failed",
+        detail: String(error),
+      });
     }
 
     // Startup SHEMA migracija — F12 (1.16.0): ustvari tabelo TripDiaryEntry
@@ -100,11 +155,27 @@ export async function register() {
           `[instrumentation] Shema migracija (F12 dnevnik): ustvarjene ` +
             `tabele [${r.tablesCreated.join(", ")}] (${r.dialect})`
         );
+        recordStartupStep({
+          name: "schema:trip-diary",
+          status: "ok",
+          detail: `ustvarjene tabele: ${r.tablesCreated.join(", ")} (${r.dialect})`,
+        });
       } else if (r.dialect === "unknown") {
         console.warn(
           "[instrumentation] Shema migracija (F12 dnevnik): tabel ni bilo " +
             "mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
         );
+        recordStartupStep({
+          name: "schema:trip-diary",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja tabele ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:trip-diary",
+          status: "ok",
+          detail: "tabela že prisotna",
+        });
       }
     } catch (error) {
       // Fail-open: migracija NE sme podreti zagona strežnika.
@@ -112,6 +183,11 @@ export async function register() {
         "[instrumentation] Shema migracija (F12 dnevnik) ni uspela:",
         error,
       );
+      recordStartupStep({
+        name: "schema:trip-diary",
+        status: "failed",
+        detail: String(error),
+      });
     }
 
     // Startup SHEMA migracija — SOCIALNA PLAST deljenih potovanj (P1 + F7,
@@ -132,11 +208,29 @@ export async function register() {
             `stolpci [${r.columnsAdded.join(", ") || "-"}], ustvarjene ` +
             `tabele [${r.tablesCreated.join(", ") || "-"}] (${r.dialect})`
         );
+        recordStartupStep({
+          name: "schema:shared-trip",
+          status: "ok",
+          detail:
+            `dodani stolpci: ${r.columnsAdded.join(", ") || "-"}; ` +
+            `ustvarjene tabele: ${r.tablesCreated.join(", ") || "-"} (${r.dialect})`,
+        });
       } else if (r.dialect === "unknown") {
         console.warn(
           "[instrumentation] Shema migracija (socialna plast): stanja ni " +
             "bilo mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
         );
+        recordStartupStep({
+          name: "schema:shared-trip",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja sheme ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:shared-trip",
+          status: "ok",
+          detail: "shema že prisotna",
+        });
       }
     } catch (error) {
       // Fail-open: migracija NE sme podreti zagona strežnika.
@@ -144,7 +238,33 @@ export async function register() {
         "[instrumentation] Shema migracija (socialna plast) ni uspela:",
         error
       );
+      recordStartupStep({
+        name: "schema:shared-trip",
+        status: "failed",
+        detail: String(error),
+      });
     }
+  } else {
+    recordStartupStep({
+      name: "schema:listing-practical",
+      status: "skipped",
+      detail: "DSA_DISABLE_SCHEMA_MIGRATION=1",
+    });
+    recordStartupStep({
+      name: "schema:trip-poll",
+      status: "skipped",
+      detail: "DSA_DISABLE_SCHEMA_MIGRATION=1",
+    });
+    recordStartupStep({
+      name: "schema:trip-diary",
+      status: "skipped",
+      detail: "DSA_DISABLE_SCHEMA_MIGRATION=1",
+    });
+    recordStartupStep({
+      name: "schema:shared-trip",
+      status: "skipped",
+      detail: "DSA_DISABLE_SCHEMA_MIGRATION=1",
+    });
   }
 
   // Startup migracija tržnih slik (tržni val, sept 2026) — popravi demo
@@ -164,31 +284,62 @@ export async function register() {
             `${r.experiencesUpdated} doživetij, ${r.productsUpdated} izdelkov` +
             ` (${r.skipped} preskočenih — brez CDN slik ali neznanih slugov)`
         );
+        recordStartupStep({
+          name: "data:marketplace-images",
+          status: "ok",
+          detail: `${total} posodobljenih (${r.listingsUpdated} lokalov, ${r.experiencesUpdated} doživetij, ${r.productsUpdated} izdelkov)`,
+        });
+      } else {
+        recordStartupStep({
+          name: "data:marketplace-images",
+          status: "ok",
+          detail: "0 posodobitev (vse že migrirano ali brez CDN virov)",
+        });
       }
     } catch (error) {
       // Fail-open: migracija NE sme podreti zagona strežnika.
       console.error("[instrumentation] Migracija tržnih slik ni uspela:", error);
+      recordStartupStep({
+        name: "data:marketplace-images",
+        status: "failed",
+        detail: String(error),
+      });
     }
+  } else {
+    recordStartupStep({
+      name: "data:marketplace-images",
+      status: "skipped",
+      detail: "DSA_DISABLE_IMAGE_MIGRATION=1",
+    });
   }
 }
 
-async function prepareVercelDemoDb() {
+async function prepareVercelDemoDb(): Promise<{
+  status: StartupStepStatus;
+  detail?: string;
+}> {
   // Samo Vercel serverless (VERCEL=1 je v buildu IN v runtime okolju).
-  if (process.env.VERCEL !== "1") return;
+  if (process.env.VERCEL !== "1") {
+    return { status: "skipped", detail: "ni Vercel (dev/Docker/VPS — pričakovano)" };
+  }
 
   // Eksplicitni izklop (npr. ko preklopite na hosted Postgres).
-  if (process.env.DSA_DISABLE_DEMO_DB === "1") return;
+  if (process.env.DSA_DISABLE_DEMO_DB === "1") {
+    return { status: "skipped", detail: "DSA_DISABLE_DEMO_DB=1" };
+  }
 
   // Ne posegaj, če je konfiguriran hosted Postgres (Pot B) ali URL brez file:.
   const raw = process.env.DATABASE_URL;
-  if (raw && !raw.startsWith("file:")) return;
+  if (raw && !raw.startsWith("file:")) {
+    return { status: "skipped", detail: "hosted Postgres (Pot B) — demo DB se ne uporablja" };
+  }
 
   try {
     // fs/path brez statičnega "node:" uvoza — webpack dev build ga ne razreši
     // (UnhandledSchemeError); enača pristopu serverFs() v src/lib/db.ts (c595a7e).
     const dynamicRequire = eval("require") as NodeRequire
     const fs = dynamicRequire("fs") as typeof import("node:fs")
-    const path = dynamicRequire("path") as typeof import("node:path");
+    const path = dynamicRequire("path") as typeof import("node:path")
 
     const seedPath = path.join(process.cwd(), "db", "demo-seed.db");
     const targetPath = "/tmp/dsa-demo.db";
@@ -198,7 +349,7 @@ async function prepareVercelDemoDb() {
         "[instrumentation] db/demo-seed.db manjka — demo baza ni aktivirana " +
           "(build brez demo koraka?). Nadaljujem z obstoječo konfiguracijo."
       );
-      return;
+      return { status: "skipped", detail: "db/demo-seed.db manjka (build brez demo koraka)" };
     }
 
     // Kopiraj samo enkrat na instanco (register teče enkrat na zagon strežnika).
@@ -211,9 +362,11 @@ async function prepareVercelDemoDb() {
       `[instrumentation] Vercel demo baza aktivna: ${targetPath} ` +
         "(pisanje je per-instanca/ephemeral — glej docs/DEPLOYMENT.md)"
     );
+    return { status: "ok", detail: `demo baza aktivna: ${targetPath}` };
   } catch (error) {
     // Fail-open: če kopija odpove, aplikacija pade nazaj na obstoječ
     // DATABASE_URL (enako obnašanju pred Fazo 4e).
     console.error("[instrumentation] Demo DB priprava ni uspela:", error);
+    return { status: "failed", detail: String(error) };
   }
 }

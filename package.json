@@ -1,6 +1,6 @@
 {
   "name": "nextjs_tailwind_shadcn_ts",
-  "version": "1.26.0",
+  "version": "1.27.0",
   "private": true,
   "scripts": {
     "dev": "bash -c 'set -a; source .env; set +a; next dev -p 3000 --webpack 2>&1 | tee dev.log'",
@@ -8,9 +8,11 @@
     "postinstall": "prisma generate",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
+    "test": "bun test",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset",
     "db:seed:demo": "bash -c 'set -a; source .env; set +a; npx prisma db push --skip-generate && bun scripts/seed-demo.ts'"
   },
