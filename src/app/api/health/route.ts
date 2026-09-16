@@ -21,7 +21,10 @@
 
 import { NextResponse } from "next/server";
 import { getStartupMigrationReport } from "@/lib/startup-migration-status";
-import { version } from "../../../../package.json";
+// Default uvoz (ne poimenovan) — Next.js opozorilo: poimenovani izvozi iz
+// JSON modulov bodo kmalu odstranjeni ("only default export is available
+// soon"), kar bi prelomilo ta endpoint.
+import pkg from "../../../../package.json";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -37,7 +40,7 @@ export async function GET() {
   return NextResponse.json(
     {
       status,
-      version,
+      version: pkg.version,
       startup,
       checkedAt: new Date().toISOString(),
     },
