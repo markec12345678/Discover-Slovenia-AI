@@ -40,6 +40,14 @@ const VALID_EVENTS = new Set([
   // deterministično ujemanje po imenu/koordinatah, 0 AI žetonov)
   "ingest_pins_attempted",
   "ingest_pins_success",
+  // D3 "Začni s PDF-jem" ( pdf ingest — unpdf izlušči besedilo, ISTO
+  // deterministično ujemanje kot povezava/slika)
+  "ingest_pdf_attempted",
+  "ingest_pdf_success",
+  // D2 "Poslušaj svoj načrt" ( audio TTS — zahteva/priprava/napaka)
+  "itinerary_audio_requested",
+  "itinerary_audio_ready",
+  "itinerary_audio_failed",
   // F5.2: izvoz načrta v koledar (.ics)
   "ics_download",
   // F5.7 (PWA): namestitev aplikacije (gumb v navigaciji)
@@ -60,6 +68,14 @@ const VALID_EVENTS = new Set([
   // F16 "Optimalno zaporedje dneva": preureditev postankov dneva z
   // 2-opt/izčrpnim optimizatorjem (deterministično, 0 AI; saved_km = ocena)
   "day_optimized",
+  // Backlog #5 "Postanki na poti": razširitev predlogov + dodan postanek
+  // (detour km iz OSRM plasti)
+  "leg_suggestions_expanded",
+  "leg_suggestion_added",
+  // Backlog #6 "Kosilo na dolgi etapi": svetovalni predlog kosila (kind =
+  // arrive | depart | enroute | honest) in zavrnitev
+  "meal_suggestion_shown",
+  "meal_suggestion_dismissed",
   // Neuspehi
   "planner_error",
   "empty_result",

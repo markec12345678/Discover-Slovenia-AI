@@ -90,6 +90,11 @@ export type PlannerEventName =
   // ovinkom (detour km iz OSRM plasti; count = št. prikazanih predlogov)
   | "leg_suggestions_expanded"
   | "leg_suggestion_added"
+  // Backlog #6 "Kosilo na dolgi etapi": svetovalni predlog kosila (kind =
+  // arrive | depart | enroute | honest; leg_min/day_drive_min = kontekst
+  // sprožilca ≥ 75 min etapa ali ≥ 120 min dan)
+  | "meal_suggestion_shown"
+  | "meal_suggestion_dismissed"
   // Neuspehi
   | "planner_error"
   | "empty_result"

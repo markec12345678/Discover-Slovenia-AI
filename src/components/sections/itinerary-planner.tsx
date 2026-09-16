@@ -115,6 +115,8 @@ import {
   PlannerLegSuggestions,
   type StopSuggestion,
 } from "@/components/planner-leg-suggestions";
+import { PlannerMealStop } from "@/components/planner-meal-stop";
+import { pickMealStop, type MealSuggestion } from "@/lib/meal-stops";
 import { PlannerStatusStrip } from "@/components/planner-status-strip";
 import { PlannerSummaryBar } from "@/components/planner-summary-bar";
 import { buildItineraryAudioScript } from "@/lib/planner-audio";
@@ -407,6 +409,19 @@ export function ItineraryPlanner() {
       ),
     [itinerary]
   );
+
+  // Backlog #6 "Kosilo na dolgi etapi": največ EN svetovalni predlog na dan —
+  // čista funkcija nad time_slot postankov + OSRM nogami (stari načrti →
+  // hevristika, isti vir kot povezovalniki). Sprožilec: najdaljša etapa
+  // ≥ 75 min ali skupna vožnja dneva ≥ 120 min (glej meal-stops.ts).
+  const mealByDay = useMemo(() => {
+    const map = new Map<number, MealSuggestion>();
+    for (const day of itinerary?.days ?? []) {
+      const s = pickMealStop(day, itinerary?.legs);
+      if (s) map.set(day.day, s);
+    }
+    return map;
+  }, [itinerary]);
 
   // D2 (nabor #2): zvočni povzetek — skript se sestavi ČISTO iz podatkov
   // načrta (ista čista funkcija na clientu; km iz geo-validacije, enak vir
@@ -3173,6 +3188,14 @@ export function ItineraryPlanner() {
                           // UI sprint (točka C): lokalna sličica destinacije —
                           // SAMO obstoječi /content viri (brez novih odvisnosti)
                           const dest = destinationById(loc.destination_id);
+                          // Backlog #6: predlog kosila tega dne (en na dan),
+                          // vezan na konkretno etapo (fromId→toId)
+                          const meal = mealByDay.get(day.day) ?? null;
+                          const mealHere =
+                            meal !== null &&
+                            prev !== null &&
+                            meal.fromId === prev.destination_id &&
+                            meal.toId === loc.destination_id;
                           return (
                             <React.Fragment key={`${loc.destination_id}-${idx}`}>
                               {/* Točka D: povezovalnik med zaporednima postankoma
@@ -3183,6 +3206,13 @@ export function ItineraryPlanner() {
                                   to={loc}
                                   legs={itinerary.legs}
                                 />
+                              )}
+                              {/* Backlog #6: svetovalni predlog kosila — SAMO na
+                                  etapi, ki jo je izbrala čista logika (največ
+                                  ena na dan; ne mutira načrta, zato ni odvisna
+                                  od urejanja/postavljanja slotov) */}
+                              {prev && mealHere && meal && (
+                                <PlannerMealStop suggestion={meal} />
                               )}
                               {/* Backlog #5: predlogi postankov na tej etapi
                                   (zložen žeton → lazy nalaganje, +X km
