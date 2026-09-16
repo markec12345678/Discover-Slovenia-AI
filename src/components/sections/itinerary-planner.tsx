@@ -38,6 +38,8 @@ import {
   Moon,
   Sun,
   X,
+  Volume2,
+  FileText,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -111,6 +113,7 @@ import type { IngestMatch } from "@/lib/url-ingest";
 import { PlannerStopLeg } from "@/components/planner-stop-leg";
 import { PlannerStatusStrip } from "@/components/planner-status-strip";
 import { PlannerSummaryBar } from "@/components/planner-summary-bar";
+import { buildItineraryAudioScript } from "@/lib/planner-audio";
 
 // F5.1: zemljevid poti na strani načrtovalnika — Leaflet je client-only
 // ( dostopa do window), zato dinamičen uvoz brez SSR ( isti vzorec kot
@@ -265,7 +268,7 @@ function parseQueryToPlannerInput(query: string): PlannerInput {
   // Določi število dni iz query-ja (SL + EN)
   let days = 3;
   const hourMatch = lowerQuery.match(/(\d+)\s*(?:ur|hours?)/);
-  const dayMatch = lowerQuery.match(/(\d+)\s*(?:dan|dnev|days?)/);
+  const dayMatch = lowerQuery.match(/(\d+)\s*(?:dan|dnev|dni|days?)/);
   if (hourMatch) days = 1;
   else if (dayMatch) days = parseInt(dayMatch[1], 10);
 
@@ -357,6 +360,28 @@ export function ItineraryPlanner() {
     return map;
   }, [geoValidation]);
 
+  // D2 (nabor #2): zvočni povzetek — skript se sestavi ČISTO iz podatkov
+  // načrta (ista čista funkcija na clientu; km iz geo-validacije, enak vir
+  // kot značke ~km dni). Null, če načrta ni. Ključ razveljavi stari zvok ob
+  // spremembi načrta/locale/skupine.
+  const audioScript = useMemo(
+    () =>
+      itinerary
+        ? buildItineraryAudioScript({
+            itinerary,
+            dayKm,
+            groupSize: formData.groupSize,
+            locale: locale === "en" ? "en" : "sl",
+          })
+        : null,
+    [itinerary, dayKm, formData.groupSize, locale]
+  );
+  const audioKey = useMemo(
+    () =>
+      audioScript ? `${locale}:${formData.groupSize}:${audioScript.chars}` : null,
+    [audioScript, locale, formData.groupSize]
+  );
+
   // FAZA 4 (pilotna analitika): planner_started — prva interakcija z obrazcem
   // (katerikoli vnos ali oddaja) se zabeleži le enkrat na življenjsko dobo
   // komponente. Ref (ne state) — brez ponovnega renderiranja.
@@ -402,7 +427,9 @@ export function ItineraryPlanner() {
   // === F8 "Začni s sliko": nalaganje/prilepljanje fotografije → VLM prebere
   // imena, ujemanje z destinacijami je deterministično (ista funkcija kot
   // pri povezavah — glej /api/itinerary/ingest-image). ===
-  const [ingestMode, setIngestMode] = useState<"link" | "image" | "pins">("link");
+  const [ingestMode, setIngestMode] = useState<
+    "link" | "image" | "pdf" | "pins"
+  >("link");
   const [ingestImage, setIngestImage] = useState<string | null>(null); // data URL
   const [ingestImageName, setIngestImageName] = useState<string>("");
   const [ingestImageDragging, setIngestImageDragging] = useState(false);
@@ -423,6 +450,24 @@ export function ItineraryPlanner() {
     unmatched: number;
   } | null>(null);
   const ingestPinsInputRef = useRef<HTMLInputElement | null>(null);
+
+  // === D3 (nabor #2, Mindtrip "Start Anywhere" s PDF): pobršurani vodnik /
+  // izvožen itinerar / potrdilo — besedilna plast (unpdf, 0 AI) → ISTO
+  // deterministično ujemanje kot pri povezavah in slikah. ===
+  const [ingestPdf, setIngestPdf] = useState<string | null>(null); // data URL
+  const [ingestPdfName, setIngestPdfName] = useState<string>("");
+  const [ingestPdfDragging, setIngestPdfDragging] = useState(false);
+  const ingestPdfInputRef = useRef<HTMLInputElement | null>(null);
+
+  // === D2 (nabor #2, Mindtrip audio): "Poslušaj svoj načrt" — zvočni
+  // povzetek (TTS). Skript sestavimo deterministično iz podatkov načrta
+  // (0 AI); zvok generira /api/itinerary/tts ob kliku (ne predhodno). ===
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  // Ključ (dolžina skripta + skupina) — sprememba načrta razveljavi stari zvok
+  const [audioUrlKey, setAudioUrlKey] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // F5.1: programatski fokus zemljevida ( gumb na kartici postanka)
   const [mapFocus, setMapFocus] = useState<{
@@ -853,6 +898,12 @@ export function ItineraryPlanner() {
       setEmailSentTo(null);
       setEmailError(null);
       setRestoredVisible(false);
+
+      // D2: nov načrt → stari zvok ni več veljaven (ključ se spremeni;
+      // objektni URL počisti efekt ob spremembi audioUrl)
+      setAudioUrl(null);
+      setAudioUrlKey(null);
+      setAudioError(null);
 
       // Funnel tracking + gamifikacijski dogodek (Slovenia Pass posluša)
       trackFunnel("itinerary_generate");
@@ -1334,6 +1385,125 @@ export function ItineraryPlanner() {
     }
   }
 
+  // === D3 "Začni s PDF-jem" — File → data URL ( validacija vrste/velikosti
+  // na clientu; strežnik vseeno ponovno validira magijo %PDF-). Ista
+  // ovratija kot pri slikah: napaka se izpiše prek ingestError. ===
+  function acceptIngestPdf(file: File | null): boolean {
+    if (!file) return false;
+    const isPdf =
+      file.type === "application/pdf" || /\.pdf$/i.test(file.name || "");
+    if (!isPdf) {
+      setIngestError(
+        "Nepodprta datoteka. Sprejmem samo PDF ( pobršurani vodik, izvožen itinerar …)."
+      );
+      return false;
+    }
+    if (file.size > 6 * 1024 * 1024) {
+      setIngestError("PDF je prevelik (največ ~6 MB).");
+      return false;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setIngestPdf(reader.result);
+        setIngestPdfName(file.name || "PDF");
+        setIngestError(null);
+        setIngestMatches(null);
+      }
+    };
+    reader.onerror = () => setIngestError(t("ingestPdfError"));
+    reader.readAsDataURL(file);
+    return true;
+  }
+
+  // === D3: prepoznaj destinacije v PDF-ju — POST /api/itinerary/ingest-pdf.
+  // Strežnik: unpdf izvleče besedilno plast ( 0 AI), nato SESTAVNI
+  // deterministični matcher poveže z našimi destinacijami (ista funkcija
+  // kot pri povezavah/slikah/točkah). Skeniran PDF → poštena napaka z
+  // nasvetom (zavihek Slika). ===
+  async function handleIngestPdfSubmit() {
+    if (!ingestPdf || ingestLoading) return;
+
+    setIngestLoading(true);
+    setIngestError(null);
+    setIngestMatches(null);
+    setIngestIsVlm(false);
+    setIngestVia(null);
+    trackPlannerEvent("ingest_pdf_attempted", { locale });
+    try {
+      const res = await fetch("/api/itinerary/ingest-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdf: ingestPdf }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | {
+            matches?: IngestMatch[];
+            suggestion?: {
+              interests?: string[];
+              days?: number;
+              preferredDestinations?: string[];
+            };
+            method?: "pdf";
+            pages?: number;
+            pdfChars?: number;
+            error?: string;
+          }
+        | null;
+
+      if (!res.ok || !data?.matches?.length) {
+        throw new Error(data?.error || t("ingestPdfError"));
+      }
+
+      setIngestMatches(data.matches);
+      setIngestSourceTitle(
+        ingestPdfName
+          ? t("ingestPdfSourceFile", {
+              name: ingestPdfName,
+              pages: data.pages ?? 0,
+            })
+          : t("ingestPdfSource")
+      );
+      trackPlannerEvent("ingest_pdf_success", {
+        matches: data.matches.length,
+        pages: data.pages ?? 0,
+        days: data.suggestion?.days ?? 3,
+        locale,
+      });
+
+      // Izpolni obrazec iz predloga ( enak vzorec kot pri ostalih virih)
+      const nextInput: PlannerInput = {
+        ...formData,
+        days: data.suggestion?.days ?? formData.days,
+        interests:
+          data.suggestion?.interests && data.suggestion.interests.length > 0
+            ? data.suggestion.interests
+            : formData.interests,
+        preferredDestinations: data.suggestion?.preferredDestinations,
+      };
+      setFormData(nextInput);
+      setIngestPdf(null);
+      setIngestPdfName("");
+      toast({
+        title: t("ingestPdfSuccessToast"),
+        description: t("ingestPdfSuccessToastDesc", {
+          names: data.matches
+            .slice(0, 3)
+            .map((m) => m.name)
+            .join(", "),
+        }),
+      });
+      // Samodejna generacija — od PDF-ja do načrta v enem koraku
+      await generateItinerary(nextInput);
+    } catch (err) {
+      setIngestError(
+        err instanceof Error ? err.message : t("ingestPdfError")
+      );
+    } finally {
+      setIngestLoading(false);
+    }
+  }
+
   // === F5.2: ICS izvoz — načrt v koledar ( Apple/Google/Outlook) ===
   function handleIcsDownload() {
     if (!itinerary) return;
@@ -1380,6 +1550,85 @@ export function ItineraryPlanner() {
       });
     }
   }
+
+  // === D2 "Poslušaj svoj načrt": POST /api/itinerary/tts → WAV blob →
+  // predvajalnik pod akcijsko vrstico. Skript pride IZ CLIENTA (deterministično
+  // sestavljen — 0 AI na poti do zvoka); TTS ga samo izgovori. Stari zvok se
+  // razveljavi, ko se načrt spremeni (audioKey). ===
+  async function handleListenClick() {
+    if (!audioScript || audioLoading) return;
+    // že imamo svež zvok → preklopi predvajanje (istogumbna UX)
+    if (audioUrl && audioUrlKey === audioKey && audioRef.current) {
+      const el = audioRef.current;
+      if (el.paused) void el.play().catch(() => undefined);
+      else el.pause();
+      return;
+    }
+
+    setAudioLoading(true);
+    setAudioError(null);
+    trackPlannerEvent("itinerary_audio_requested", {
+      locale,
+      chars: audioScript.chars,
+      days: itinerary?.days.length ?? 0,
+    });
+    try {
+      const res = await fetch("/api/itinerary/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: audioScript.text,
+          locale: locale === "en" ? "en" : "sl",
+        }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(data?.error || t("listenError"));
+      }
+      const blob = await res.blob();
+      if (blob.size === 0) throw new Error(t("listenError"));
+      // počisti starega (sprememba načrta → nov objekt URL)
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      const url = URL.createObjectURL(blob);
+      setAudioUrl(url);
+      setAudioUrlKey(audioKey);
+      trackPlannerEvent("itinerary_audio_ready", {
+        locale,
+        bytes: blob.size,
+        chunks: res.headers.get("X-Audio-Chunks") ?? "",
+      });
+      // samodejno predvajanje ob prvi pripravi (naslednji render postavi src)
+      requestAnimationFrame(() => {
+        audioRef.current?.play().catch(() => undefined);
+      });
+    } catch (err) {
+      trackPlannerEvent("itinerary_audio_failed", { locale });
+      setAudioError(
+        err instanceof Error ? err.message : t("listenError")
+      );
+    } finally {
+      setAudioLoading(false);
+    }
+  }
+
+  // Čiščenje objektnih URL-jev (pomnilnik). NAMENOMO NE čistimo ob vsakem
+  // remontu komponente ( React effect cleanup) — v razvoju Fast Refresh
+  // remonta isto komponento in bi preklical PRAV GENERIRAN zvok ( opaženo
+  // v E2E: media error 4 po rebuildu). Čistimo OB MENJAVI ( handler zgoraj
+  // prekliče starega pred novim) in ob pravem koncu strani ( pagehide).
+  // Enkratna puščica ob client-side navigaciji z načrtovalca je neškodljiva
+  // ( brskalnik jo sprosti ob uničenju dokumenta).
+  useEffect(() => {
+    const onHide = () => {
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    };
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+    };
+  }, [audioUrl]);
 
   // UI sprint: stanja nalaganja/napake/prazno kot spremenljivke — uporabljena
   // na obeh mestih (uvodni prostor brez načrta + urejanje z obstoječim načrtom)
@@ -1555,6 +1804,11 @@ export function ItineraryPlanner() {
                             icon: ImagePlus,
                           },
                           {
+                            id: "pdf",
+                            label: t("ingestTabPdf"),
+                            icon: FileText,
+                          },
+                          {
                             id: "pins",
                             label: t("ingestTabPins"),
                             icon: MapPinned,
@@ -1641,6 +1895,141 @@ export function ItineraryPlanner() {
                           className="text-[11px] leading-relaxed text-muted-foreground"
                         >
                           {t("ingestHint")}
+                        </p>
+                      </>
+                    ) : ingestMode === "pdf" ? (
+                      <>
+                        {/* D3 (nabor #2, Mindtrip "Start Anywhere" s PDF):
+                            pobršurani vodik / izvožen itinerar — besedilna
+                            plast ( 0 AI) → isto deterministično ujemanje. */}
+                        <label
+                          htmlFor="ingest-pdf-input"
+                          className="flex items-center gap-1.5 text-xs font-medium text-primary"
+                        >
+                          <FileText className="size-3.5 shrink-0" aria-hidden />
+                          {t("ingestPdfLabel")}
+                        </label>
+                        <input
+                          ref={ingestPdfInputRef}
+                          id="ingest-pdf-input"
+                          type="file"
+                          accept="application/pdf,.pdf"
+                          className="sr-only"
+                          tabIndex={-1}
+                          onChange={(e) => {
+                            fireStartedOnce();
+                            acceptIngestPdf(e.target.files?.[0] ?? null);
+                            // Ponastavi, da lahko ista datoteka znova izbere
+                            e.target.value = "";
+                          }}
+                        />
+                        {ingestPdf ? (
+                          <div className="flex items-center gap-3 rounded-md border border-primary/25 bg-background p-2">
+                            <div className="flex size-14 shrink-0 items-center justify-center rounded bg-primary/10">
+                              <FileText className="size-6 text-primary" aria-hidden />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-medium">
+                                {ingestPdfName}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {t("ingestPdfMethod")}
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={ingestLoading}
+                              onClick={() => void handleIngestPdfSubmit()}
+                              className="gap-1.5"
+                              aria-label={t("ingestPdfButtonAria")}
+                            >
+                              {ingestLoading ? (
+                                <Loader2
+                                  className="size-4 animate-spin"
+                                  aria-hidden
+                                />
+                              ) : (
+                                <LocateFixed className="size-4" aria-hidden />
+                              )}
+                              <span className="hidden sm:inline">
+                                {t("ingestPdfButton")}
+                              </span>
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              disabled={ingestLoading}
+                              onClick={() => {
+                                setIngestPdf(null);
+                                setIngestPdfName("");
+                                setIngestMatches(null);
+                              }}
+                              aria-label={t("ingestPdfRemove")}
+                              className="size-7 shrink-0"
+                            >
+                              <X className="size-4" aria-hidden />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() =>
+                              ingestPdfInputRef.current?.click()
+                            }
+                            onKeyDown={(e) => {
+                              if (
+                                e.key === "Enter" ||
+                                e.key === " "
+                              ) {
+                                e.preventDefault();
+                                ingestPdfInputRef.current?.click();
+                              }
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              setIngestPdfDragging(true);
+                            }}
+                            onDragLeave={() => setIngestPdfDragging(false)}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              setIngestPdfDragging(false);
+                              fireStartedOnce();
+                              acceptIngestPdf(
+                                e.dataTransfer.files?.[0] ?? null
+                              );
+                            }}
+                            aria-describedby="ingest-pdf-hint"
+                            className={cn(
+                              "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed p-4 text-center transition-colors",
+                              ingestPdfDragging
+                                ? "border-primary bg-primary/10"
+                                : "border-primary/30 hover:border-primary/60 hover:bg-primary/5"
+                            )}
+                          >
+                            <FileText
+                              className="size-5 text-primary"
+                              aria-hidden
+                            />
+                            <span className="text-xs font-medium text-primary">
+                              {t("ingestPdfBrowse")}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground">
+                              {t("ingestPdfDrop")}
+                            </span>
+                          </div>
+                        )}
+                        <p
+                          id="ingest-pdf-hint"
+                          className="text-[11px] leading-relaxed text-muted-foreground"
+                        >
+                          {t("ingestPdfHint")}{" "}
+                          <span className="whitespace-nowrap">
+                            {t("ingestPdfScanned")}
+                          </span>
                         </p>
                       </>
                     ) : ingestMode === "pins" ? (
@@ -2881,7 +3270,57 @@ export function ItineraryPlanner() {
                         <CalendarArrowDown className="size-4" aria-hidden />
                         {t("icsButton")}
                       </Button>
+                      {/* D2 (nabor #2, Mindtrip audio): zvočni povzetek načrta.
+                          Skript se sestavi deterministično ( 0 AI) iz
+                          podatkov načrta; TTS ga izgovori na strežniku. */}
+                      {audioScript && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => void handleListenClick()}
+                          disabled={audioLoading || loading}
+                          className="gap-1.5"
+                          aria-label={t("listenButtonAria")}
+                          aria-expanded={Boolean(
+                            audioUrl && audioUrlKey === audioKey
+                          )}
+                        >
+                          {audioLoading ? (
+                            <Loader2
+                              className="size-4 animate-spin"
+                              aria-hidden
+                            />
+                          ) : (
+                            <Volume2 className="size-4" aria-hidden />
+                          )}
+                          {audioLoading
+                            ? t("listenGenerating")
+                            : t("listenButton")}
+                        </Button>
+                      )}
                     </div>
+
+                    {/* D2: zvočni predvajalnik + poštena opomba ( računalniški
+                        glas, povzetek po dnevih — ne branje celotnih kartic) */}
+                    {audioError && (
+                      <p role="alert" className="text-sm text-destructive">
+                        {audioError}
+                      </p>
+                    )}
+                    {audioUrl && audioUrlKey === audioKey && (
+                      <div className="space-y-1.5 animate-in fade-in slide-in-from-bottom-1 duration-300">
+                        <audio
+                          ref={audioRef}
+                          controls
+                          preload="none"
+                          src={audioUrl}
+                          className="h-10 w-full max-w-md"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {t("listenHint")}
+                        </p>
+                      </div>
+                    )}
 
                     {shareError && (
                       <p role="alert" className="text-sm text-destructive">

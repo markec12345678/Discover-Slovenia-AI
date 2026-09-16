@@ -55,6 +55,15 @@ export type PlannerEventName =
   // 0 AI žetonov, ujemanje po imenu/koordinatah)
   | "ingest_pins_attempted"
   | "ingest_pins_success"
+  // D3 (nabor #2, Mindtrip "Start Anywhere" s PDF): besedilna plast PDF-ja
+  // (unpdf/pdf.js, 0 AI) → isto deterministično ujemanje kot ostali viri
+  | "ingest_pdf_attempted"
+  | "ingest_pdf_success"
+  // D2 (nabor #2, Mindtrip audio): zvočni povzetek načrta (TTS; skript je
+  // sestavljen deterministično iz podatkov načrta, 0 AI žetonov)
+  | "itinerary_audio_requested"
+  | "itinerary_audio_ready"
+  | "itinerary_audio_failed"
   // F5.2: izvoz načrta v koledar (.ics)
   | "ics_download"
   // F5.7 (PWA): namestitev aplikacije (gumb v navigaciji)

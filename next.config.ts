@@ -48,8 +48,11 @@ const securityHeaders = [
       // slike: local + data URI + vsi https (unsplash, OSM tiles, sfile CDN)
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
+      // D2 (zvočni povzetek): <audio> z blob: URL ( WAV iz /api/itinerary/tts)
+      // — blob je istega dokumenta ( brez omrežja), zato varen vir za media
+      "media-src 'self' blob:",
       // API klici: lastni origin + zunanji (Open-Meteo preko proxy, Puter)
-      "connect-src 'self' https: wss:",
+      "connect-src 'self' blob: https: wss:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
