@@ -27,7 +27,7 @@ import { PARTY_PROMPT_LABELS } from "@/lib/party-types";
 import { PACE_PROMPT_LABELS } from "@/lib/pace-types";
 import { applyQuickAction, QUICK_ACTIONS } from "@/lib/refine-actions";
 import { buildStopReasons } from "@/lib/stop-insights";
-import { dayRouteGeometry } from "@/lib/road-routing";
+import { dayRouteGeometry, serializeLegs } from "@/lib/road-routing";
 import { buildLegRouteIndex } from "@/lib/road-routing-server";
 
 // POST /api/itinerary/refine — Multi-turn popravki obstoječega itinererja.
@@ -457,6 +457,8 @@ JSON format (STROGO, enak kot vhod):
       ...d,
       routeGeometry: dayRouteGeometry(d.locations, legs) ?? undefined,
     }));
+    // UI sprint (točka D): sveže noge za povezovalnike na clientu
+    withReasons.legs = serializeLegs(legs);
 
     // P0.1 (recenzija): validacijski dokaz — before/after iz ISTE plasti kot
     // prikaz (prosti ukaz → obseg celega potovanja). F5.6: before z realnimi
@@ -523,6 +525,8 @@ JSON format (STROGO, enak kot vhod):
         ...d,
         routeGeometry: dayRouteGeometry(d.locations, legs) ?? undefined,
       }));
+      // UI sprint (točka D): sveže noge tudi na deterministični poti
+      withReasons.legs = serializeLegs(legs);
 
       // P0.1 (recenzija): before → mutation → after iz ISTE validacijske plasti
       // kot prikaz — dokaz, da je dan po spremembi izvedljiv (ali opozorilo,

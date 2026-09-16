@@ -151,6 +151,21 @@ export interface Itinerary {
   // — isto na serverju in clientu; stari shranjeni načrti brez tega polja
   // ga panel izračuna na mestu uporabe).
   geoValidation?: GeoValidation;
+  // NOVO (UI sprint, točka D smeri): cestne noge med zaporednimi postanki,
+  // serializirane iz strežniškega indeksa (ključ "idA|idB" → km/min/vir).
+  // Za povezovalnike "🚗 ~X km · ~Y min" na dnevni časovni liniji — isti vir
+  // številk kot značke ~km dni (geo-validacija uporablja isti indeks).
+  // Opcijsko: stari shranjeni/deljeni načrti brez polja → client hevristika
+  // (ista formula kot fallback geo-validacije, pošteno razkrito z "~").
+  legs?: Record<string, LegSummary>;
+}
+
+/** UI sprint: povzetek cestne noge (km/min/vir, brez geometrije) — serializacijska
+ *  podoblika LegRoute iz src/lib/road-routing.ts. */
+export interface LegSummary {
+  km: number;
+  min: number;
+  source: "osrm" | "heuristic";
 }
 
 // Dogodek, povezan z destinacijo v itinererju (subset EventItem iz events-data)

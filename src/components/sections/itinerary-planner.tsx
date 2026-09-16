@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import {
@@ -30,6 +31,12 @@ import {
   Mail,
   Check,
   Copy,
+  ChevronDown,
+  CloudSun,
+  HelpCircle,
+  MessageCircle,
+  Moon,
+  Sun,
   X,
 } from "lucide-react";
 
@@ -87,7 +94,6 @@ import {
 } from "@/lib/planner-analytics";
 import { destinationById } from "@/lib/stop-insights";
 import { validateItineraryGeo } from "@/lib/geo-validation";
-import { GeoValidationPanel } from "@/components/geo-validation-panel";
 import { StopInsights } from "@/components/stop-insights";
 import { saveItinerary, fetchSharedItinerary } from "@/lib/itinerary-share";
 import { addSavedTrip, deriveSavedTripName } from "@/lib/my-trips-storage";
@@ -96,15 +102,15 @@ import { BookingPanel, type BookingData } from "@/components/sections/booking-pa
 import { ItineraryRefiner } from "@/components/sections/itinerary-refiner";
 import { PlanCopilot } from "@/components/plan-copilot";
 import { PlannerDayNav } from "@/components/planner-day-nav";
-import { ItineraryQualityCard } from "@/components/itinerary-quality-card";
 import { ItineraryEventsSection } from "@/components/itinerary-events";
 import { SmartPackingSection } from "@/components/packing-smart";
-import { BudgetPanel } from "@/components/budget-panel";
 import { SocialShare } from "@/components/social-share";
 import { TripTimeline } from "@/components/trip-timeline";
-import { BookingAssistant } from "@/components/booking-assistant";
 import { buildItineraryICS, icsFileName } from "@/lib/ics-export";
 import type { IngestMatch } from "@/lib/url-ingest";
+import { PlannerStopLeg } from "@/components/planner-stop-leg";
+import { PlannerStatusStrip } from "@/components/planner-status-strip";
+import { PlannerSummaryBar } from "@/components/planner-summary-bar";
 
 // F5.1: zemljevid poti na strani načrtovalnika — Leaflet je client-only
 // ( dostopa do window), zato dinamičen uvoz brez SSR ( isti vzorec kot
@@ -136,6 +142,40 @@ const PACE_OPTIONS: { value: Pace; labelKey: string }[] = [
   { value: "balanced", labelKey: "paceBalanced" },
   { value: "fast", labelKey: "paceFast" },
 ];
+
+// UI sprint (nabor #2 — dodatek raziskave): segment dneva Jutro/Popoldan/
+// Večer iz obstoječega time_slot polja. "HH:MM-…" → košarica po začetni uri;
+// besedilni sloti po ključnih besedah; neznano → null (brez segmentacije —
+// nazaj kompatibilno s starimi načrti). NE spreminja podatkovne plasti.
+type DaySegment = "morning" | "afternoon" | "evening";
+
+const SEGMENT_LABEL_KEYS: Record<DaySegment, string> = {
+  morning: "segMorning",
+  afternoon: "segAfternoon",
+  evening: "segEvening",
+};
+
+const SEGMENT_ICONS: Record<DaySegment, typeof Sun> = {
+  morning: Sun,
+  afternoon: CloudSun,
+  evening: Moon,
+};
+
+function segmentOfSlot(slot: string): DaySegment | null {
+  if (!slot) return null;
+  const hourMatch = slot.match(/^(\d{1,2}):(\d{2})/);
+  if (hourMatch) {
+    const hour = parseInt(hourMatch[1], 10);
+    if (hour < 12) return "morning";
+    if (hour < 17) return "afternoon";
+    return "evening";
+  }
+  const lower = slot.toLowerCase();
+  if (/(jutr|zjutraj|morning)/.test(lower)) return "morning";
+  if (/(popoldan|afternoon)/.test(lower)) return "afternoon";
+  if (/(večer|vecer|zvečer|zvecer|evening|night)/.test(lower)) return "evening";
+  return null;
+}
 
 // Persistenca zadnjega itinererja (localStorage) + deljeni načrti (URL ?odpri=)
 const LAST_ITINERARY_KEY = "discoverslovenia_last_itinerary";
@@ -406,6 +446,15 @@ export function ItineraryPlanner() {
 
   // === Obnovljeni načrt (localStorage) ===
   const [restoredVisible, setRestoredVisible] = useState(false);
+
+  // === UI sprint (smer naborov #1+#2): NL vrstica kot primarni vnos, obrazec
+  // se po generiranju zloži (Uredi ga znova odpre), zavihka pogovorne
+  // površine ob zemljevidu (spremeni/vprašaj) in zložena skupina "Več" ===
+  const [nlQuery, setNlQuery] = useState("");
+  const [formExpanded, setFormExpanded] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [chatTab, setChatTab] = useState<"refine" | "ask">("refine");
+  const [moreOpen, setMoreOpen] = useState(false);
 
   // Sinhroniziraj z globalnim store-om (za MapSection + TripTimeline "Shrani")
   const setStoreItinerary = useAppStore((s) => s.setItinerary);
@@ -700,6 +749,17 @@ export function ItineraryPlanner() {
     });
   }
 
+  // UI sprint (točka B smeri): naravnojezikovni vnos kot PRIMARNA pot —
+  // ISTA čista funkcija kot hero/kviz (parseQueryToPlannerInput) in isto
+  // generiranje kot obrazec. Brez nove logike, brez drugega AI sistema.
+  function handleNlSubmit() {
+    const query = nlQuery.trim();
+    if (!query || loading) return;
+    const smartInput = parseQueryToPlannerInput(query);
+    setFormData(smartInput);
+    void generateItinerary(smartInput);
+  }
+
   async function generateItinerary(input: PlannerInput) {
     fireStartedOnce();
     trackPlannerEvent("planner_submitted", {
@@ -769,6 +829,9 @@ export function ItineraryPlanner() {
       }
 
       setItinerary(data);
+      // UI sprint (točka B): obrazec se po uspešni generaciji zloži v
+      // povzetek parametrov — delovna površina načrta prevzame zaslon
+      setFormExpanded(false);
 
       // Pilotna analitika: rezultat prikazan + začetek merjenja opustitve
       trackPlannerEvent("planner_result_rendered", {
@@ -1318,16 +1381,78 @@ export function ItineraryPlanner() {
     }
   }
 
+  // UI sprint: stanja nalaganja/napake/prazno kot spremenljivke — uporabljena
+  // na obeh mestih (uvodni prostor brez načrta + urejanje z obstoječim načrtom)
+  const loadingSkeleton = (
+    <div className="space-y-4">
+      <Skeleton className="h-10 w-2/3" />
+      {Array.from({ length: 3 }).map((_, i) => (
+        <Card key={i}>
+          <CardHeader>
+            <Skeleton className="h-6 w-32" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const errorAlert = (
+    <Alert variant="destructive">
+      <AlertCircle className="size-4" aria-hidden />
+      <AlertTitle>{tCommon("error")}</AlertTitle>
+      <AlertDescription className="space-y-3">
+        <p>{error}</p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => generateItinerary(formData)}
+        >
+          <AlertCircle className="size-3.5" aria-hidden />
+          {tCommon("retry")}
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
+
+  const emptyCard = (
+    <Card className="h-full border-dashed">
+      <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-4 py-16 text-center">
+        <div className="rounded-full bg-primary/10 p-6">
+          <Sparkles className="size-10 text-primary" aria-hidden />
+        </div>
+        <div className="space-y-1">
+          <p className="text-lg font-semibold">{t("emptyTitle")}</p>
+          <p className="text-sm text-muted-foreground">{t("emptyHint")}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <section
       id="načrtuj"
       className="scroll-mt-24 bg-gradient-to-b from-muted/40 to-background py-16 sm:py-20 lg:py-24"
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* grid-cols-1 = minmax(0,1fr) — eksplicitna sled prepreči intrinsično
-            (min-content) širjenje auto sledi na mobilnem; FW4.2 pasovi
-            dogodkov s truncate sicer sprožijo horizontalni overflow */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
+        {/* UI sprint (smer naborov #1+#2): obrazec (NL-first) je viden PRED
+            generiranjem oz. v načinu urejanja; po uspešni generaciji se zloži
+            v PlannerSummaryBar, delovna površina načrta pa prevzame cel
+            zaslon (Trip header → Zemljevid+Pogovor → Stanje → Dnevi → Več). */}
+        {(!itinerary || formExpanded) && (
+          <div
+            className={cn(
+              // grid-cols-1 = minmax(0,1fr) — eksplicitna sled prepreči
+              // intrinsično (min-content) širjenje auto sledi na mobilnem
+              "grid grid-cols-1 gap-6",
+              formExpanded
+                ? "mx-auto w-full max-w-3xl"
+                : "lg:grid-cols-2 lg:gap-8"
+            )}
+          >
           {/* === LEVO — obrazec === */}
           <Card className="h-fit">
             <CardHeader>
@@ -1343,6 +1468,65 @@ export function ItineraryPlanner() {
             </CardHeader>
             <form onSubmit={handleSubmit} noValidate>
               <CardContent className="space-y-5">
+                {/* UI sprint (točka B smeri): NARAVNI JEZIK kot primarni vnos
+                    (»Start chatting« model, potrjen z naborom #2) — ista čista
+                    funkcija kot hero (parseQueryToPlannerInput); obrazec spodaj
+                    ostaja za podrobnejše nastavitve. NI nov klebet — le vnos. */}
+                <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <label
+                    htmlFor="planner-nl"
+                    className="flex items-center gap-1.5 text-xs font-medium text-primary"
+                  >
+                    <Sparkles className="size-3.5 shrink-0" aria-hidden />
+                    {t("nlLabel")}
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="planner-nl"
+                      type="text"
+                      autoComplete="off"
+                      placeholder={t("nlPlaceholder")}
+                      value={nlQuery}
+                      onChange={(e) => {
+                        fireStartedOnce();
+                        setNlQuery(e.target.value);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleNlSubmit();
+                        }
+                      }}
+                      disabled={loading}
+                      aria-describedby="planner-nl-hint"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={loading || !nlQuery.trim()}
+                      onClick={handleNlSubmit}
+                      className="gap-1.5"
+                      aria-label={t("nlAriaLabel")}
+                    >
+                      {loading ? (
+                        <Loader2 className="size-4 animate-spin" aria-hidden />
+                      ) : (
+                        <Sparkles className="size-4" aria-hidden />
+                      )}
+                      <span className="hidden sm:inline">
+                        {t("nlSubmit")}
+                      </span>
+                    </Button>
+                  </div>
+                  <p
+                    id="planner-nl-hint"
+                    className="text-[11px] leading-relaxed text-muted-foreground"
+                  >
+                    {t("nlHint")}
+                  </p>
+                </div>
+
                 {/* F5.4 "Začni s povezavo" + F8 "Začni s sliko" — MindTrip
                     "Start Anywhere" po slovensko: prilepi YouTube/TikTok/blog
                     povezavo (deterministično) ALI naloži/prilepi fotografijo
@@ -1755,7 +1939,11 @@ export function ItineraryPlanner() {
                   )}
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                {/* UI sprint (točka B): OSNOVNE ŠTEVILKE poti — najmanjši
+                    napon za ročno pot (dnevi, proračun, skupina); sezona,
+                    datum, tip skupine, tempo in interesi so zloženi v
+                    "Podrobne nastavitve" — vsi kontrolniki ostanejo. */}
+                <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-2">
                     <Label htmlFor="days" className="flex items-center gap-2">
                       <Calendar className="size-4" aria-hidden />
@@ -1825,7 +2013,30 @@ export function ItineraryPlanner() {
                       required
                     />
                   </div>
+                </div>
 
+                {/* UI sprint (točka B smeri): NAPREDNI parametri — zloženi,
+                    a vsi prisotni (en klik). NL vrstica zgoraj pokriva
+                    glavno pot; obrazec ne sme biti vprašalnik. */}
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setAdvancedOpen((v) => !v)}
+                    aria-expanded={advancedOpen}
+                    className="flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    {t("advancedToggle")}
+                    <ChevronDown
+                      className={cn(
+                        "size-4 shrink-0 transition-transform",
+                        advancedOpen && "rotate-180"
+                      )}
+                      aria-hidden
+                    />
+                  </button>
+                  {advancedOpen && (
+                    <div className="space-y-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
                   {/* WEATHER-CONTEXT: tip potne skupine — oblikuje ritem in
                       izbor načrta (opcijsno); "Sam" sinhronizira številko */}
                   <div className="space-y-2">
@@ -1963,9 +2174,9 @@ export function ItineraryPlanner() {
                       {t("startDateHint")}
                     </p>
                   </div>
-                </div>
+                      </div>
 
-                <div className="space-y-2">
+                      <div className="space-y-2">
                   <Label>{t("interestsLabel")}</Label>
                   <div className="flex flex-wrap gap-2">
                     {INTERESTS.map((interest) => {
@@ -1990,9 +2201,12 @@ export function ItineraryPlanner() {
                       );
                     })}
                   </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
-              <CardFooter className="flex-col items-stretch">
+              <CardFooter className="flex-col items-stretch gap-2">
                 <Button
                   type="submit"
                   className="w-full bg-primary"
@@ -2011,71 +2225,48 @@ export function ItineraryPlanner() {
                     </>
                   )}
                 </Button>
+                {/* UI sprint: izhod iz urejanja BREZ regeneriranja — načrt
+                    ostane, obrazec se zloži nazaj v povzetek parametrov */}
+                {formExpanded && itinerary && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    onClick={() => setFormExpanded(false)}
+                    aria-label={t("summaryCloseAria")}
+                  >
+                    <X className="size-4" aria-hidden />
+                    {t("summaryClose")}
+                  </Button>
+                )}
               </CardFooter>
             </form>
           </Card>
 
-          {/* === DESNO — rezultat === */}
-          <div className="lg:min-h-[600px]">
-            {/* Empty state */}
-            {!loading && !error && !itinerary && (
-              <Card className="h-full border-dashed">
-                <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-4 py-16 text-center">
-                  <div className="rounded-full bg-primary/10 p-6">
-                    <Sparkles className="size-10 text-primary" aria-hidden />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-lg font-semibold">
-                      {t("emptyTitle")}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {t("emptyHint")}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+          {/* UI sprint: uvodni prostor (prazno / nalaganje / napaka) — viden
+              samo, dokler načrta (še) ni; po generiranju ga zamenja delovna
+              površina načrta čez celo širino. */}
+          {!itinerary && (
+            <div className="lg:min-h-[600px]">
+              {loading ? loadingSkeleton : error ? errorAlert : emptyCard}
+            </div>
+          )}
+          </div>
+        )}
 
-            {/* Loading skeletons */}
-            {loading && (
-              <div className="space-y-4">
-                <Skeleton className="h-10 w-2/3" />
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Card key={i}>
-                    <CardHeader>
-                      <Skeleton className="h-6 w-32" />
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <Skeleton className="h-16 w-full" />
-                      <Skeleton className="h-16 w-full" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+        {/* UI sprint (točka B): urejanje z OBSTOJEČIM načrtom — nalaganje ali
+            napaka se pokažeta pod obrazcem (načrt ostaja v spominu) */}
+        {formExpanded && itinerary && (loading || error) && (
+          <div className="mt-6 space-y-4">
+            {loading ? loadingSkeleton : errorAlert}
+          </div>
+        )}
 
-            {/* Error state */}
-            {!loading && error && (
-              <Alert variant="destructive">
-                <AlertCircle className="size-4" aria-hidden />
-                <AlertTitle>{tCommon("error")}</AlertTitle>
-                <AlertDescription className="space-y-3">
-                  <p>{error}</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => generateItinerary(formData)}
-                  >
-                    <AlertCircle className="size-3.5" aria-hidden />
-                    {tCommon("retry")}
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Success state */}
-            {!loading && !error && itinerary && (
-              <div className="space-y-5">
+        {/* === DELOVNA POVRŠINA (uspeh) — UI sprint: rezultat je GLAVNI
+            prostor (Trip header → Zemljevid+Pogovor → Stanje → Dnevi → Več),
+            ne desni stolpec ob obrazcu. Vsa logika nespremenjena. === */}
+        {!loading && !error && itinerary && (
+          <div className={cn("space-y-5", formExpanded && "mt-8")}>
                 {/* Obnovljeni načrt chip */}
                 {restoredVisible && (
                   <div
@@ -2130,74 +2321,164 @@ export function ItineraryPlanner() {
                   </div>
                 </div>
 
-                {/* FW4.1: strukturne metrike poti + utemeljitev — nad dnevni timeline */}
-                <ItineraryQualityCard itinerary={itinerary} input={formData} />
-
-                {/* F6.2: proračun načrta + razdelitev na osebo + osebni cilj —
-                    stroški iz DEJANSKEGA načrta (atrakcije + vožnja F5.3),
-                    odkrito povedano, česa ocena NE vključuje */}
-                <BudgetPanel itinerary={itinerary} input={formData} />
-
-                {/* P0.2 GEO-VALIDACIJA: poštena preverba izvedljivosti — opozorila
-                    po dnevih (km, obseg, urnik) z pozivom k prilagoditvi */}
-                <GeoValidationPanel itinerary={itinerary} />
-
-                {/* F5.1 (primerjalna analiza MindTrip): ZEMLJEVID POTI NA
-                    STRANI NAČRTOVALCA — oštevilčeni markerji po dnevih z barvami,
-                    interaktivna legenda dni ( vklop/izklop) in dvosmerna
-                    sinhronizacija s karticami postankov. Prej je zemljevid živel
-                    le na /zemljevid in /pot/[shareId]. */}
-                {routeByDay.length > 0 && (
-                  <TripMapPanel
-                    routeByDay={routeByDay}
-                    dayKm={dayKm}
-                    focusRequest={mapFocus}
-                    onStopSelect={(day, indexInDay) => {
-                      // Klik markerja → scroll na kartico postanka + highlight
-                      const el = document.getElementById(
-                        `stop-row-${day}-${indexInDay}`
-                      );
-                      if (el) {
-                        el.scrollIntoView({
-                          behavior: "smooth",
-                          block: "center",
-                        });
-                        el.classList.add("ring-2", "ring-primary/60");
-                        setTimeout(() => {
-                          el.classList.remove("ring-2", "ring-primary/60");
-                        }, 1800);
-                      }
-                    }}
-                  />
-                )}
-
-                {/* F9 "Pogovor z načrtom" (MindTrip chat-first pariteta, naša
-                    pot): vprašanja o načrtu odgovarja NAJPREJ deterministično
-                    (iste čiste funkcije kot prikaz), AI pa LE sfrazi list
-                    dejstev. Ukazi za SPREMEMBE ostanejo v refinerju spodaj —
-                    vprašanje ≠ ukaz, obe plasti sta jasno ločeni. */}
-                <PlanCopilot itinerary={itinerary} formData={formData} />
-
-                {/* Multi-turn AI refiner — uporabnik naravnojezično spreminja itinerer */}
-                {/* P0-4: sidro za mobilno bližnjico "Prilagodi" (PlannerDayNav) */}
-                <div id="itinerary-refiner" className="scroll-mt-[130px] lg:scroll-mt-24">
-                <ItineraryRefiner
-                  itinerary={itinerary}
+                {/* UI sprint (točka B smeri): obrazec zložen v POVZETEK
+                    parametrov — "Uredi" ga znova odpre nad delovno površino. */}
+                <PlannerSummaryBar
                   formData={formData}
-                  onRefined={(newItinerary) => {
-                    setItinerary(newItinerary);
-                    // Refiniran načrt se shrani lokalno (deljiva povezava ostane ista
-                    // dokler uporabnik znova klikne "Shrani in deli")
-                    persistItineraryLocally(newItinerary, formData);
-                    // P0.2 (recenzija): deljiva povezava kaže na STARO različico —
-                    // javna /pot/[shareId] mora biti identična urejeni različici, zato
-                    // se ob vsaki spremembi načrta zastareli link umakne (uporabnik
-                    // znova klikne "Shrani in deli" za svež, sinhroniziran link).
-                    setShareUrl(null);
-                    setCopied(false);
+                  onEdit={() => {
+                    setFormExpanded(true);
+                    requestAnimationFrame(() => {
+                      document
+                        .getElementById("načrtuj")
+                        ?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        });
+                    });
                   }}
                 />
+
+                {/* UI sprint (točki A+F smeri, potrditev nabora #2): ZEMLJEVID
+                    + POGOVOR v eni delovni površini ("activity cards, notes
+                    and map in one workspace"). Pogovor je PRITRJEN poti:
+                    zavihek "Spremeni načrt" (ItineraryRefiner — mutacije) in
+                    "Vprašaj" (PlanCopilot — dejstva, deterministično prvi).
+                    NE drug klebet sistem — obstoječi komponenti, nespremenjeni.
+                    P0-4: sidro mobilne bližnjice "Prilagodi" ostaja na isti
+                    lokaciji (id="itinerary-refiner"). */}
+                <div
+                  className={cn(
+                    "grid gap-4",
+                    routeByDay.length > 0 && "lg:grid-cols-[1.6fr_1fr]"
+                  )}
+                >
+                  <div className="min-w-0">
+                    {/* F5.1 (primerjalna analiza MindTrip): ZEMLJEVID POTI NA
+                        STRANI NAČRTOVALCA — oštevilčeni markerji po dnevih z
+                        barvami, interaktivna legenda dni ( vklop/izklop) in
+                        dvosmerna sinhronizacija s karticami postankov. */}
+                    {routeByDay.length > 0 && (
+                      <TripMapPanel
+                        routeByDay={routeByDay}
+                        dayKm={dayKm}
+                        focusRequest={mapFocus}
+                        onStopSelect={(day, indexInDay) => {
+                          // Klik markerja → scroll na kartico postanka + highlight
+                          const el = document.getElementById(
+                            `stop-row-${day}-${indexInDay}`
+                          );
+                          if (el) {
+                            el.scrollIntoView({
+                              behavior: "smooth",
+                              block: "center",
+                            });
+                            el.classList.add("ring-2", "ring-primary/60");
+                            setTimeout(() => {
+                              el.classList.remove("ring-2", "ring-primary/60");
+                            }, 1800);
+                          }
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  <div
+                    id="itinerary-refiner"
+                    className="min-w-0 scroll-mt-[130px] space-y-3 lg:scroll-mt-24"
+                  >
+                    <div className="rounded-lg border bg-card/60 p-3">
+                      <p className="flex items-center gap-1.5 text-sm font-semibold">
+                        <MessageCircle
+                          className="size-4 shrink-0 text-primary"
+                          aria-hidden
+                        />
+                        {t("railPrompt")}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t("railExamples")}
+                      </p>
+                      <div
+                        role="tablist"
+                        aria-label={t("railPrompt")}
+                        className="mt-3 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1"
+                      >
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={chatTab === "refine"}
+                          onClick={() => setChatTab("refine")}
+                          className={cn(
+                            "inline-flex min-h-[36px] items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            chatTab === "refine"
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          <Waypoints
+                            className="size-3.5 shrink-0"
+                            aria-hidden
+                          />
+                          {t("railTabRefine")}
+                        </button>
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={chatTab === "ask"}
+                          onClick={() => setChatTab("ask")}
+                          className={cn(
+                            "inline-flex min-h-[36px] items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            chatTab === "ask"
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          <HelpCircle
+                            className="size-3.5 shrink-0"
+                            aria-hidden
+                          />
+                          {t("railTabAsk")}
+                        </button>
+                      </div>
+                    </div>
+                    {chatTab === "refine" ? (
+                      /* F9 "Pogovor z načrtom": ukazi za SPREMEMBE — refiner.
+                          vprašanje ≠ ukaz, obe plasti sta jasno ločeni. */
+                      <ItineraryRefiner
+                        itinerary={itinerary}
+                        formData={formData}
+                        onRefined={(newItinerary) => {
+                          setItinerary(newItinerary);
+                          // Refiniran načrt se shrani lokalno (deljiva povezava ostane ista
+                          // dokler uporabnik znova klikne "Shrani in deli")
+                          persistItineraryLocally(newItinerary, formData);
+                          // P0.2 (recenzija): deljiva povezava kaže na STARO različico —
+                          // javna /pot/[shareId] mora biti identična urejeni različici, zato
+                          // se ob vsaki spremembi načrta zastareli link umakne (uporabnik
+                          // znova klikne "Shrani in deli" za svež, sinhroniziran link).
+                          setShareUrl(null);
+                          setCopied(false);
+                        }}
+                      />
+                    ) : (
+                      /* F9: vprašanja o načrtu — PlanCopilot (odgovarja
+                          NAJPREJ deterministično, AI le sfrazi list dejstev) */
+                      <PlanCopilot itinerary={itinerary} formData={formData} />
+                    )}
+                  </div>
                 </div>
+
+                {/* UI sprint (točki A/C smeri): KOMPAKTNO stanje poti — km,
+                    čas vožnje, strošek in izvedljivost v štirih ploščicah;
+                    kartice kakovosti/proračuna/geo-validacije so zložene pod
+                    gumbom "Podrobnosti izračunov" (isti izračuni kot prej,
+                    korak dlje od prvega zaslona). */}
+                {geoValidation && (
+                  <PlannerStatusStrip
+                    itinerary={itinerary}
+                    input={formData}
+                    geoValidation={geoValidation}
+                  />
+                )}
 
                 {/* P0-4: mobilna/tabletna navigacija po dnevih potovanja — lepljiva
                     vrstica pod glavo (scroll-spy tabi + bližnjici Prilagodi/Shrani).
@@ -2342,69 +2623,126 @@ export function ItineraryPlanner() {
                             </div>
                           ))}
                         {day.locations.map((loc, idx) => {
+                          // UI sprint (točka D smeri): premik med postanki in
+                          // segment dneva — izračun nad obstoječimi poli
+                          const prev = idx > 0 ? day.locations[idx - 1] : null;
+                          const seg = segmentOfSlot(loc.time_slot);
+                          const prevSeg = prev
+                            ? segmentOfSlot(prev.time_slot)
+                            : null;
+                          // UI sprint (nabor #2): glava segmenta se pokaže ob
+                          // prehodu (Jutro → Popoldan → Večer) ali na prvem
+                          // postanku dneva; neznani sloti → brez glave
+                          const showSegHeader =
+                            seg !== null && (prev === null || seg !== prevSeg);
+                          const SegIcon = seg ? SEGMENT_ICONS[seg] : null;
+                          // UI sprint (točka C): lokalna sličica destinacije —
+                          // SAMO obstoječi /content viri (brez novih odvisnosti)
+                          const dest = destinationById(loc.destination_id);
                           return (
-                            <div
-                              key={`${loc.destination_id}-${idx}`}
-                              id={`stop-row-${day.day}-${idx}`}
-                              className="rounded-lg border bg-card/50 p-4 transition-shadow"
-                            >
-                              <div className="flex flex-wrap items-start justify-between gap-2">
-                                <div className="space-y-0.5">
-                                  <div className="text-sm font-semibold text-primary">
-                                    {loc.time_slot}
-                                  </div>
-                                  <p className="flex items-center gap-1.5 text-lg font-semibold">
-                                    <MapPin
-                                      className="size-4 text-muted-foreground"
-                                      aria-hidden
-                                    />
-                                    {loc.destination_name}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className="gap-1">
-                                    <Clock className="size-3" aria-hidden />
-                                    {loc.duration}h
-                                  </Badge>
-                                  <Badge className="bg-accent text-accent-foreground">
-                                    €{loc.estimated_cost}
-                                  </Badge>
-                                  {/* F5.1: dvosmerna sinhronizacija — gumb na
-                                      kartici postanka premakne zemljevid poti
-                                      na ta postanek ( MindTrip workspace feel) */}
-                                  {routeByDay.length > 0 && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setMapFocus({
-                                          day: day.day,
-                                          indexInDay: idx,
-                                          nonce: Date.now(),
-                                        })
-                                      }
-                                      className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                      aria-label={t("mapFocusAria", {
-                                        name: loc.destination_name,
-                                      })}
-                                      title={t("mapFocusTitle")}
-                                    >
-                                      <LocateFixed
-                                        className="size-4"
-                                        aria-hidden
-                                      />
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                              {loc.notes && (
-                                <p className="mt-2 text-sm text-muted-foreground">
-                                  {loc.notes}
-                                </p>
+                            <React.Fragment key={`${loc.destination_id}-${idx}`}>
+                              {/* Točka D: povezovalnik med zaporednima postankoma
+                                  (🚗 ~X km · ~Y min — isti vir kot značka dneva) */}
+                              {prev && (
+                                <PlannerStopLeg
+                                  from={prev}
+                                  to={loc}
+                                  legs={itinerary.legs}
+                                />
                               )}
-                              {/* FAZA 4-1 + 4-3: "Zakaj je to priporočeno?" + */}
-                              {/* praktični podatki (samo obstoječi) */}
-                              <StopInsights visit={loc} locale={locale} />
-                            </div>
+                              {showSegHeader && seg && SegIcon && (
+                                <div className="flex items-center gap-2 py-1">
+                                  <span
+                                    className="h-px flex-1 border-t border-border/70"
+                                    aria-hidden
+                                  />
+                                  <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                    <SegIcon className="size-3.5" aria-hidden />
+                                    {t(SEGMENT_LABEL_KEYS[seg])}
+                                  </span>
+                                  <span
+                                    className="h-px flex-1 border-t border-border/70"
+                                    aria-hidden
+                                  />
+                                </div>
+                              )}
+                              <div
+                                id={`stop-row-${day.day}-${idx}`}
+                                className="rounded-lg border bg-card/50 p-4 transition-shadow"
+                              >
+                                <div className="flex items-start gap-3">
+                                  {dest?.image && (
+                                    <div className="relative size-16 shrink-0 overflow-hidden rounded-md sm:size-20">
+                                      <Image
+                                        src={dest.image}
+                                        alt=""
+                                        fill
+                                        sizes="(max-width: 640px) 64px, 80px"
+                                        className="object-cover"
+                                      />
+                                    </div>
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-start justify-between gap-2">
+                                      <div className="space-y-0.5">
+                                        <div className="text-sm font-semibold text-primary">
+                                          {loc.time_slot}
+                                        </div>
+                                        <p className="flex items-center gap-1.5 text-lg font-semibold">
+                                          <MapPin
+                                            className="size-4 text-muted-foreground"
+                                            aria-hidden
+                                          />
+                                          {loc.destination_name}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="gap-1">
+                                          <Clock className="size-3" aria-hidden />
+                                          {loc.duration}h
+                                        </Badge>
+                                        <Badge className="bg-accent text-accent-foreground">
+                                          €{loc.estimated_cost}
+                                        </Badge>
+                                        {/* F5.1: dvosmerna sinhronizacija — gumb na
+                                            kartici postanka premakne zemljevid poti
+                                            na ta postanek ( MindTrip workspace feel) */}
+                                        {routeByDay.length > 0 && (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setMapFocus({
+                                                day: day.day,
+                                                indexInDay: idx,
+                                                nonce: Date.now(),
+                                              })
+                                            }
+                                            className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            aria-label={t("mapFocusAria", {
+                                              name: loc.destination_name,
+                                            })}
+                                            title={t("mapFocusTitle")}
+                                          >
+                                            <LocateFixed
+                                              className="size-4"
+                                              aria-hidden
+                                            />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {loc.notes && (
+                                      <p className="mt-2 text-sm text-muted-foreground">
+                                        {loc.notes}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                {/* FAZA 4-1 + 4-3: "Zakaj je to priporočeno?" + */}
+                                {/* praktični podatki (samo obstoječi) */}
+                                <StopInsights visit={loc} locale={locale} />
+                              </div>
+                            </React.Fragment>
                           );
                         })}
 
@@ -2434,13 +2772,17 @@ export function ItineraryPlanner() {
                                 km: opt.savedKm,
                               })}
                             >
-                              <Waypoints
-                                className="size-4 shrink-0"
+                              {/* UI sprint (točka E smeri): prihranek kot
+                                  kontekstna priložnost ("✨ Našel sem krajšo
+                                  pot — prihraniš približno X km") — prag in
+                                  izračun F16 nespremenjena (≥ 5 km / ≥ 5 %). */}
+                              <Sparkles
+                                className="size-4 shrink-0 text-primary"
                                 aria-hidden
                               />
-                              {t("optimizeOrderButton")}
+                              {t("optimizeContextual")}
                               <span className="text-xs font-normal text-primary">
-                                · {t("optimizeOrderSaving", { km: opt.savedKm })}
+                                · {t("optimizeContextualSaving", { km: opt.savedKm })}
                               </span>
                             </button>
                           );
@@ -2493,145 +2835,6 @@ export function ItineraryPlanner() {
                   })}
                 </div>
 
-                {/* FW4.2: "Moji dogodki" — dodani dogodki, ki ne padejo na
-                    konkreten dan (brez datuma odhoda ali izven dni potovanja) */}
-                {(() => {
-                  const mappedIds = new Set(
-                    itinerary.days.flatMap((day) => {
-                      const dayISO = itinerary.tripStartDate
-                        ? dayISOForDayNumber(itinerary.tripStartDate, day.day)
-                        : null;
-                      const dayMs = dayISO ? parseISODateLocal(dayISO) : null;
-                      if (dayMs === null) return [] as string[];
-                      return (itinerary.addedEvents ?? [])
-                        .filter((ev) => {
-                          const evStart = parseISODateLocal(ev.date);
-                          if (evStart === null) return false;
-                          const evEnd =
-                            parseISODateLocal(ev.endDate) ?? evStart;
-                          return evStart <= dayMs && evEnd >= dayMs;
-                        })
-                        .map((ev) => ev.id);
-                    })
-                  );
-                  const unmapped = (itinerary.addedEvents ?? []).filter(
-                    (ev) => !mappedIds.has(ev.id)
-                  );
-                  if (unmapped.length === 0) return null;
-                  return (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                          <CalendarDays className="size-5 text-primary" aria-hidden />
-                          {t("myEventsTitle")}
-                        </CardTitle>
-                        <CardDescription>
-                          {itinerary.tripStartDate
-                            ? t("myEventsDescOutside")
-                            : t("myEventsDescNoDate")}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        {unmapped.map((ev) => (
-                          <div
-                            key={ev.id}
-                            className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/50 p-3"
-                          >
-                            <CalendarDays
-                              className="size-4 shrink-0 text-primary"
-                              aria-hidden
-                            />
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-semibold">
-                                {ev.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {ev.location} ·{" "}
-                                {formatEventDate(ev.date, ev.endDate)}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => toggleAddedEvent(ev)}
-                              className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                              aria-label={t("removeEventAriaLabel", { name: ev.name })}
-                            >
-                              <X className="size-4" aria-hidden />
-                            </button>
-                          </div>
-                        ))}
-                      </CardContent>
-                    </Card>
-                  );
-                })()}
-
-                {/* Recommendations */}
-                {itinerary.recommendations.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <Star className="size-5 text-primary" aria-hidden />
-                        {t("recommendationsTitle")}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {itinerary.recommendations.map((r, i) => (
-                          <li key={i} className="flex gap-2 text-sm">
-                            <span className="text-primary" aria-hidden>
-                              •
-                            </span>
-                            <span>{r}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Tips */}
-                {itinerary.tips.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <Sparkles className="size-5 text-primary" aria-hidden />
-                        {t("tipsTitle")}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {itinerary.tips.map((t, i) => (
-                          <li key={i} className="flex gap-2 text-sm">
-                            <span className="text-primary" aria-hidden>
-                              •
-                            </span>
-                            <span>{t}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Kaj se dogaja med tvojim obiskom — lokalni dogodki (max 6) */}
-                {/* Sekcija se sama skrije, če events ni prisoten/prazen */}
-                {/* FW4.2: dogodki z okvirjem potovanja + "Dodaj v mojo pot" */}
-                <ItineraryEventsSection
-                  events={itinerary.events}
-                  tripStartDate={itinerary.tripStartDate}
-                  tripEndDate={itinerary.tripEndDate}
-                  addedEventIds={(itinerary.addedEvents ?? []).map(
-                    (ev) => ev.id
-                  )}
-                  onToggleEvent={toggleAddedEvent}
-                />
-
-                {/* F6.1: pameten pakirni seznam — iz dnevne napovedi + dejanskih
-                    postankov (razlogi, metoda razkrita, persist odkljukov) */}
-                <SmartPackingSection itinerary={itinerary} input={formData} />
-
-                {/* WOW: AI Trip Timeline — vizualni dan */}
-                <TripTimeline days={itinerary.days} totalBudget={itinerary.total_budget} />
 
                 {/* === AKCIJSKA VRSTICA: shrani/deli + e-pošta === */}
                 {/* id="itinerary-actions" — cilj mobilne bližnjice "Shrani" (P0-4) */}
@@ -2771,6 +2974,181 @@ export function ItineraryPlanner() {
                   </CardContent>
                 </Card>
 
+                {/* UI sprint (točki A/5 smeri): "VEČ O TVOJI POTI" — napredne
+                    podrobnosti na korak dlje (priporočila, nasveti, dogodki,
+                    pakirni seznam, časovni pregled); primarna delovna površina
+                    ostane čista. Vsebina razdelkov je nespremenjena. */}
+                <Card>
+                  <button
+                    type="button"
+                    onClick={() => setMoreOpen((v) => !v)}
+                    aria-expanded={moreOpen}
+                    className="flex w-full items-center gap-3 rounded-xl p-4 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-6"
+                  >
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+                      <Sparkles className="size-4 text-primary" aria-hidden />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-lg font-semibold">
+                        {t("moreTitle")}
+                      </span>
+                      <span className="block text-sm text-muted-foreground">
+                        {t("moreDesc")}
+                      </span>
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "size-5 shrink-0 text-muted-foreground transition-transform",
+                        moreOpen && "rotate-180"
+                      )}
+                      aria-hidden
+                    />
+                  </button>
+                  {moreOpen && (
+                    <CardContent className="space-y-4">
+                {/* FW4.2: "Moji dogodki" — dodani dogodki, ki ne padejo na
+                    konkreten dan (brez datuma odhoda ali izven dni potovanja) */}
+                {(() => {
+                  const mappedIds = new Set(
+                    itinerary.days.flatMap((day) => {
+                      const dayISO = itinerary.tripStartDate
+                        ? dayISOForDayNumber(itinerary.tripStartDate, day.day)
+                        : null;
+                      const dayMs = dayISO ? parseISODateLocal(dayISO) : null;
+                      if (dayMs === null) return [] as string[];
+                      return (itinerary.addedEvents ?? [])
+                        .filter((ev) => {
+                          const evStart = parseISODateLocal(ev.date);
+                          if (evStart === null) return false;
+                          const evEnd =
+                            parseISODateLocal(ev.endDate) ?? evStart;
+                          return evStart <= dayMs && evEnd >= dayMs;
+                        })
+                        .map((ev) => ev.id);
+                    })
+                  );
+                  const unmapped = (itinerary.addedEvents ?? []).filter(
+                    (ev) => !mappedIds.has(ev.id)
+                  );
+                  if (unmapped.length === 0) return null;
+                  return (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <CalendarDays className="size-5 text-primary" aria-hidden />
+                          {t("myEventsTitle")}
+                        </CardTitle>
+                        <CardDescription>
+                          {itinerary.tripStartDate
+                            ? t("myEventsDescOutside")
+                            : t("myEventsDescNoDate")}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {unmapped.map((ev) => (
+                          <div
+                            key={ev.id}
+                            className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/50 p-3"
+                          >
+                            <CalendarDays
+                              className="size-4 shrink-0 text-primary"
+                              aria-hidden
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold">
+                                {ev.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {ev.location} ·{" "}
+                                {formatEventDate(ev.date, ev.endDate)}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => toggleAddedEvent(ev)}
+                              className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              aria-label={t("removeEventAriaLabel", { name: ev.name })}
+                            >
+                              <X className="size-4" aria-hidden />
+                            </button>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+
+                {/* Recommendations */}
+                {itinerary.recommendations.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Star className="size-5 text-primary" aria-hidden />
+                        {t("recommendationsTitle")}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2">
+                        {itinerary.recommendations.map((r, i) => (
+                          <li key={i} className="flex gap-2 text-sm">
+                            <span className="text-primary" aria-hidden>
+                              •
+                            </span>
+                            <span>{r}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Tips */}
+                {itinerary.tips.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Sparkles className="size-5 text-primary" aria-hidden />
+                        {t("tipsTitle")}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2">
+                        {itinerary.tips.map((t, i) => (
+                          <li key={i} className="flex gap-2 text-sm">
+                            <span className="text-primary" aria-hidden>
+                              •
+                            </span>
+                            <span>{t}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Kaj se dogaja med tvojim obiskom — lokalni dogodki (max 6) */}
+                {/* Sekcija se sama skrije, če events ni prisoten/prazen */}
+                {/* FW4.2: dogodki z okvirjem potovanja + "Dodaj v mojo pot" */}
+                <ItineraryEventsSection
+                  events={itinerary.events}
+                  tripStartDate={itinerary.tripStartDate}
+                  tripEndDate={itinerary.tripEndDate}
+                  addedEventIds={(itinerary.addedEvents ?? []).map(
+                    (ev) => ev.id
+                  )}
+                  onToggleEvent={toggleAddedEvent}
+                />
+
+                {/* F6.1: pameten pakirni seznam — iz dnevne napovedi + dejanskih
+                    postankov (razlogi, metoda razkrita, persist odkljukov) */}
+                <SmartPackingSection itinerary={itinerary} input={formData} />
+
+                {/* WOW: AI Trip Timeline — vizualni dan */}
+                <TripTimeline days={itinerary.days} totalBudget={itinerary.total_budget} />
+                    </CardContent>
+                  )}
+                </Card>
+
                 {/* WOW: Social Sharing — deli svoj AI plan */}
                 <div className="flex items-center justify-center gap-3 py-2">
                   <SocialShare
@@ -2784,10 +3162,8 @@ export function ItineraryPlanner() {
                     url={shareUrl ?? undefined}
                   />
                 </div>
-              </div>
-            )}
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

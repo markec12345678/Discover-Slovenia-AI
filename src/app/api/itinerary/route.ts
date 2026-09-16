@@ -38,7 +38,7 @@ import {
 } from "@/lib/itinerary-quality";
 import { validateItineraryGeo } from "@/lib/geo-validation";
 import { buildStopReasons } from "@/lib/stop-insights";
-import { dayRouteGeometry } from "@/lib/road-routing";
+import { dayRouteGeometry, serializeLegs } from "@/lib/road-routing";
 import { buildLegRouteIndex } from "@/lib/road-routing-server";
 
 // ============================================================================
@@ -622,6 +622,10 @@ JSON format (STROGO):
       routeGeometry: dayRouteGeometry(d.locations, legs) ?? undefined,
     }));
 
+    // UI sprint (točka D): noge serializiramo v itinerer — povezovalniki med
+    // postanki na clientu uporabijo ISTE številke kot značke ~km dni.
+    withReasons.legs = serializeLegs(legs);
+
     return NextResponse.json(withReasons);
   } catch (error) {
     console.error("[itinerary] AI napaka, uporabljam fallback:", error);
@@ -670,6 +674,9 @@ JSON format (STROGO):
       ...d,
       routeGeometry: dayRouteGeometry(d.locations, legs) ?? undefined,
     }));
+
+    // UI sprint (točka D): noge tudi na fallback poti (isti vir številk)
+    withReasons.legs = serializeLegs(legs);
 
     return NextResponse.json(withReasons);
   }

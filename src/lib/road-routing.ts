@@ -128,6 +128,22 @@ export function legIndexMethod(index: LegRouteIndex): RoutingMethod {
 }
 
 /**
+ * UI sprint (točka D smeri): indeks nog → plain objekt (brez geometrije) za
+ * serializacijo v itinerer (Itinerary.legs). Client uporabi km/min za
+ * povezovalnike med postanki; hevristika ostaja odkrita prek "source".
+ */
+export function serializeLegs(
+  index: LegRouteIndex
+): Record<string, { km: number; min: number; source: LegSource }> {
+  const out: Record<string, { km: number; min: number; source: LegSource }> =
+    {};
+  for (const [key, leg] of index) {
+    out[key] = { km: leg.km, min: leg.min, source: leg.source };
+  }
+  return out;
+}
+
+/**
  * Sestavi geometrijo poti enega dneva iz geometrij nog indeksa
  * (zaporedje postankov dneva). Vrne null, če katera noga nima geometrije
  * (hevristika) ali dan nima vsaj 2 znanih postankov — client potem
