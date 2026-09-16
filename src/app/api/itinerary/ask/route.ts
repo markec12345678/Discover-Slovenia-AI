@@ -75,6 +75,16 @@ export async function POST(request: Request) {
     );
   }
 
+  // CAP-FIX (revizija 1.33.0, 16-c P2 — token-bomb): itinerer je client-
+  // supplied in neomejen → list facts sheet v promptu. Zdaj: JSON ≤ 100 KB
+  // (enako mejo ima itinerary/save za persistenco).
+  if (JSON.stringify(itinerary).length >= 100_000) {
+    return NextResponse.json(
+      { error: "Itinerer je prevelok za analizo" },
+      { status: 400 }
+    );
+  }
+
   const question =
     typeof body.question === "string" ? body.question.trim() : "";
   if (question.length < 3) {

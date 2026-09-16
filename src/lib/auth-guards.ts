@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "@/lib/security";
+import { rateLimit } from "@/lib/rate-limit";
 
 // ============================================================================
 // TIPI
@@ -249,6 +250,36 @@ export function checkAdmin(password: string | null | undefined): boolean {
   const adminPassword = process.env.ADMIN_PASSWORD;
   if (!adminPassword || !password) return false;
   return timingSafeEqual(password, adminPassword);
+}
+
+/**
+ * requireAdmin — SKUPNA vrata za admin endpointe (revizija 1.33.0, auditorska
+ * ugotovitev 16-a P2): rate limit + timing-safe preverba gesla v enem klicu.
+ *
+ * Zakaj: checkAdmin je timing-safe, a NE šteje poskusov — vsak admin route,
+ * ki ga klice brez lastnega rateLimit(), je NEOMEJEN brute-force oracle
+ * (401 vs 200 ugibanje gesla). Zdaj vse te rute delijo EN bucket na IP
+ * (key "admin-any" — napadalec si z izbiro različnih rut ne pomnoži kvote).
+ *
+ * Limit 60/10 min: legit admin dashboard naredi ~6-10 zahtev na osvežitev —
+ * 60 pomeni 6+ osvežitev na 10 min, kar za pokriva; vsako ugibanje gesla
+ * pa šteje v isti bucket. Že rate-limited admin rute (verify 10/10min,
+ * approve 60/10min, ...) obdržijo svoje limite (dvojno štetje bi jih le
+ * zategnilo) — requireAdmin uporabljaj samo na rutah BREZ lastnega limita.
+ *
+ * Vrne `null`, če je klic avtoriziran; sicer 429 (preveč poskusov) ali 401.
+ */
+export function requireAdmin(request: Request): NextResponse | null {
+  const limited = rateLimit(request, {
+    limit: 60,
+    windowMs: 10 * 60_000,
+    key: "admin-any",
+  });
+  if (limited) return limited;
+  if (!checkAdmin(request.headers.get("x-admin-password"))) {
+    return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
+  }
+  return null;
 }
 
 /**

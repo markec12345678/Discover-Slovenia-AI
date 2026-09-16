@@ -62,6 +62,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // INFO-FIX (revizija 1.33.0, 16-e P3): x-powered-by: Next.js glava v
+  // produkciji razkriva tehnologijo brez koristi — izklop.
+  poweredByHeader: false,
   output: "standalone",
   // P3: vzporedni E2E agenti — vsak svoj distDir (DIST_DIR=.next-fixa next dev …),
   // da si dev strežniki ne tepetajo po skupnem .next/lock (izkušnja iz P2).

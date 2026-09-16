@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { safeExternalHref } from "@/lib/external-url";
 import {
   Star,
   MapPin,
@@ -462,7 +463,7 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
                   ) : null}
                   {product.sellerWebsite ? (
                     <a
-                      href={product.sellerWebsite}
+                      href={safeExternalHref(product.sellerWebsite)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -516,7 +517,7 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
               >
                 {product.sellerWebsite ? (
                   <a
-                    href={product.sellerWebsite}
+                    href={safeExternalHref(product.sellerWebsite)}
                     target="_blank"
                     rel="noopener noreferrer sponsored"
                   >

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { safeWebsiteSchema } from "@/lib/external-url";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -31,7 +32,7 @@ const updateSchema = z.object({
   address: z.string().min(3, "Naslov je obveznen").optional(),
   phone: z.string().nullable().optional(),
   email: z.string().nullable().optional(),
-  website: z.string().nullable().optional(),
+  website: safeWebsiteSchema,
   images: z.array(z.string()).optional(),
   priceRange: z.enum(["€", "€€", "€€€"]).optional(),
   openingHours: z.string().nullable().optional(),

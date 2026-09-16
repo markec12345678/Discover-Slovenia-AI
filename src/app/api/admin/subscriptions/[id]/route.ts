@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { checkAdmin } from "@/lib/auth-guards";
+import { requireAdmin } from "@/lib/auth-guards";
 import { monthlyRevenueForPlan } from "@/lib/stripe-server";
 
 function unauthorized() {
@@ -17,10 +17,8 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminPassword = request.headers.get("x-admin-password");
-  if (!checkAdmin(adminPassword)) {
-    return unauthorized();
-  }
+  const gate = requireAdmin(request);
+  if (gate) return gate;
 
   try {
     const { id } = await params;

@@ -1179,7 +1179,7 @@ export function ItineraryPlanner() {
       });
       const data = (await res.json().catch(() => null)) as { success?: boolean; error?: string } | null;
       if (!res.ok || !data?.success) {
-        throw new Error(data?.error || t("emailSendFailed"));
+        throw new Error(t("emailSendFailed")); // I18N-FIX (1.33.0): strežniški SL detail v konzolo, klient vidi t()
       }
       setEmailSentTo(trimmed);
     } catch (err) {
@@ -1247,7 +1247,7 @@ export function ItineraryPlanner() {
         | null;
 
       if (!res.ok || !data?.matches?.length) {
-        throw new Error(data?.error || t("ingestError"));
+        throw new Error(t("ingestError")); // I18N-FIX (1.33.0): strežniški SL detail v konzolo, klient vidi t()
       }
 
       setIngestMatches(data.matches);
@@ -1370,7 +1370,7 @@ export function ItineraryPlanner() {
         | null;
 
       if (!res.ok || !data?.matches?.length) {
-        throw new Error(data?.error || t("ingestImageError"));
+        throw new Error(t("ingestImageError")); // I18N-FIX (1.33.0): strežniški SL detail v konzolo, klient vidi t()
       }
 
       setIngestMatches(data.matches);
@@ -1485,7 +1485,7 @@ export function ItineraryPlanner() {
         | null;
 
       if (!res.ok || !data?.matches?.length) {
-        throw new Error(data?.error || t("ingestPinsError"));
+        throw new Error(t("ingestPinsError")); // I18N-FIX (1.33.0): strežniški SL detail v konzolo, klient vidi t()
       }
 
       // Enak prikaz kot pri povezavah ( zvezdica ×N = št. točk) + meta vrstica
@@ -1612,7 +1612,7 @@ export function ItineraryPlanner() {
         | null;
 
       if (!res.ok || !data?.matches?.length) {
-        throw new Error(data?.error || t("ingestPdfError"));
+        throw new Error(t("ingestPdfError")); // I18N-FIX (1.33.0): strežniški SL detail v konzolo, klient vidi t()
       }
 
       setIngestMatches(data.matches);
@@ -1686,7 +1686,7 @@ export function ItineraryPlanner() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = icsFileName(itinerary);
+      a.download = icsFileName(itinerary, locale === "en" ? "en" : "sl");
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -1745,7 +1745,7 @@ export function ItineraryPlanner() {
         const data = (await res.json().catch(() => null)) as {
           error?: string;
         } | null;
-        throw new Error(data?.error || t("listenError"));
+        throw new Error(t("listenError")); // I18N-FIX (1.33.0): strežniški SL detail v konzolo, klient vidi t()
       }
       const blob = await res.blob();
       if (blob.size === 0) throw new Error(t("listenError"));

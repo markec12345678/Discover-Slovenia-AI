@@ -19,8 +19,14 @@ export async function GET(
     let wikiUrl: string | null = null;
 
     // Helper: pridobi Wikipedia extract + thumbnail
+    // SSRF-FIX (revizija 1.33.0, auditorska ugotovitev 16-b P1): `lang` pride
+    // iz javnega query parametra `wikipedia=<lang>:<Title>` — prej je bil
+    // nevrednoten in interpoliran naravnost v URL (možen `evil.com/Bled.`
+    // aliasing / `[::ffff:127.0.0.1]` loopback). Zdaj: 2-3 črke + naslov
+    // encodan po komponenti (brez `../`, `?`, `#` prelomov poti).
     async function fetchWiki(lang: string, title: string) {
-      const titleForApi = title.replace(/ /g, "_");
+      if (!/^[a-z]{2,3}$/.test(lang)) return;
+      const titleForApi = encodeURIComponent(title.replace(/ /g, "_"));
       wikiUrl = `https://${lang}.wikipedia.org/wiki/${titleForApi}`;
       try {
         const extractRes = await fetch(
@@ -50,8 +56,12 @@ export async function GET(
     // Pridobi Wikipedia opis preko Wikidata
     if (wikidata) {
       try {
+        // SSRF-FIX (1.33.0): wikidata ID je javni query param — dovolimo samo
+        // kanonično obliko Q<števke> (prej je lahko vseboval poti/poizvedbe).
+        const wdId = wikidata.trim();
+        if (!/^Q\d{1,12}$/.test(wdId)) throw new Error("neveljaven wikidata ID");
         const wdRes = await fetch(
-          `https://www.wikidata.org/wiki/Special:EntityData/${wikidata}.json`,
+          `https://www.wikidata.org/wiki/Special:EntityData/${wdId}.json`,
           {
             cache: "no-store",
             headers: {
@@ -62,7 +72,7 @@ export async function GET(
         );
         if (wdRes.ok) {
           const wdData = await wdRes.json();
-          const entity = wdData.entities[wikidata];
+          const entity = wdData.entities[wdId];
           const sitelinks = entity.sitelinks || {};
           const wikiSl = sitelinks.slwiki;
           const wikiEn = sitelinks.enwiki;

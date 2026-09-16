@@ -206,9 +206,11 @@ ${SYSTEM_DATA_GUARD}`;
               : "Pozdravljen! Sem Slovenija AI 🇸🇮 — vaš osebni vodič po Sloveniji. Kako vam lahko pomagam pri načrtovanju potovanja?",
         }]
       : []),
+    // CAP-FIX (revizija 1.33.0, 16-b P2): sporočila so client-supplied —
+    // 2000 znakov na sporočilo (zadostuje za povpraševanje; prej neomejeno).
     ...recentMessages.map((m) => ({
       role: m.role as "user" | "assistant",
-      content: m.content,
+      content: String(m.content ?? "").slice(0, 2000),
     })),
   ];
 

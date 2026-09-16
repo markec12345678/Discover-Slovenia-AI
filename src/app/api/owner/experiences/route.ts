@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { safeWebsiteSchema } from "@/lib/external-url";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -77,7 +78,7 @@ const createSchema = z.object({
   providerName: z.string().min(2, "Ime ponudnika je obvezno"),
   providerEmail: z.string().nullable().optional(),
   providerPhone: z.string().nullable().optional(),
-  providerWebsite: z.string().nullable().optional(),
+  providerWebsite: safeWebsiteSchema,
   familyFriendly: z.boolean().default(false),
   accessibility: z.boolean().default(false),
 });

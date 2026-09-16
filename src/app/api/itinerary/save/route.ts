@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { randomId } from "@/lib/security";
+import { sanitizeItinerary } from "@/lib/itinerary-sanitize";
 
 // POST /api/itinerary/save — shranjevanje itinererja (P1-2b: anonimno ALI na račun)
 //
@@ -68,8 +69,22 @@ export async function POST(request: Request) {
       }
     }
 
+    // SANITIZE-FIX (revizija 1.33.0, 16-c P2 — type confusion na deljeni
+    // povezavi): prej je save zaupal klientovi strukturi (samo days/locations
+    // array + 200KB) — `notes: {}` je nato na /pot/[shareId] SSR vrgel
+    // "Objects are not valid as a React child" → 500 za vsakega odjemalca
+    // povezave. Zdaj isto-ravninski shape guard kot pri AI izhodu: vsa
+    // besedila typeof string + kap, numerika clamp ≥ 0, seznami array stringov.
+    const sanitized = sanitizeItinerary(itinerary);
+    if (sanitized.days.length === 0) {
+      return NextResponse.json(
+        { error: "Itinerer nima veljavnih dni/lokacij" },
+        { status: 400 }
+      );
+    }
+
     // Omeji velikost shranjenega JSON (preprečuje zlorabo)
-    const itineraryJson = JSON.stringify(itinerary);
+    const itineraryJson = JSON.stringify(sanitized);
     if (itineraryJson.length >= 200_000) {
       return NextResponse.json(
         { error: "Itinerer je prevelik" },

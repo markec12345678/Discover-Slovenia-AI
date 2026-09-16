@@ -578,7 +578,46 @@
     "listenButtonAria": "Listen to an audio summary of your itinerary (computer voice)",
     "listenGenerating": "Preparing audio …",
     "listenError": "Audio could not be prepared.",
-    "listenHint": "Audio summary of your itinerary (computer voice — TTS): days, stops and approximate kilometers."
+    "listenHint": "Audio summary of your itinerary (computer voice — TTS): days, stops and approximate kilometers.",
+    "timeline": {
+      "daysPlan": "{count}-day plan",
+      "dayLabel": "Day {day}",
+      "navigate": "Directions",
+      "navigateAria": "Directions to {name}",
+      "save": "Save",
+      "saving": "Saving...",
+      "saved": "Link copied!",
+      "saveError": "Error saving",
+      "saveAria": "Save itinerary and copy shareable link",
+      "book": "Book",
+      "bookAria": "Book {name} — open booking options",
+      "toNextStop": "to the next stop",
+      "dayTotal": "Day {day} total:",
+      "aiTipTitle": "AI tip",
+      "tipOneDay": "For a perfect day, start early (before 9:00) to avoid the crowds.",
+      "tipMultiDay": "Group your stops by region — Bled + Bohinj together, then the Soča valley the next day."
+    },
+    "smartSearch": {
+      "title": "AI search",
+      "description": "Natural-language search across destinations, venues, products and experiences",
+      "placeholder": "Describe what you're looking for... e.g. 'a quiet riverside weekend'",
+      "queryAria": "Search query",
+      "clearAria": "Clear search",
+      "examplesTitle": "Example questions",
+      "examples": [
+        "a quiet riverside weekend",
+        "where to go with kids on a rainy day",
+        "romantic dinner near Bled",
+        "an adventure in the mountains",
+        "local wine and cheese",
+        "a family trip to the coast"
+      ],
+      "noResults": "No results found for \"{query}\"",
+      "destinations": "Destinations",
+      "listings": "Venues",
+      "products": "Products",
+      "experiences": "Experiences"
+    }
   },
   "common": {
     "loading": "Loading...",

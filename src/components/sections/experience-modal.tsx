@@ -41,6 +41,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { safeExternalHref } from "@/lib/external-url";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -531,7 +532,7 @@ export function ExperienceModal({
                   ) : null}
                   {experience.providerWebsite ? (
                     <a
-                      href={experience.providerWebsite}
+                      href={safeExternalHref(experience.providerWebsite)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -887,7 +888,7 @@ function BookingSection({
         {experience.providerWebsite ? (
           <Button type="button" asChild size="lg" variant="outline" className="w-full gap-2">
             <a
-              href={experience.providerWebsite}
+              href={safeExternalHref(experience.providerWebsite)}
               target="_blank"
               rel="noopener noreferrer sponsored"
             >

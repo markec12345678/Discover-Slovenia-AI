@@ -269,7 +269,7 @@ else
   code=$(curl -sS -m 120 -o "$TMP/itinerary.json" -w "%{http_code}" -X POST \
     "${BASE_URL}/api/itinerary" \
     -H "Content-Type: application/json" \
-    -d '{"budget":"medium","days":2,"interests":["narava"],"season":"poletje","groupSize":2}' \
+    -d '{"budget":1200,"days":2,"interests":["narava"],"season":"summer","groupSize":2}' \
     2>/dev/null) || code=000
   idays=$(jq -r '.days | length' "$TMP/itinerary.json" 2>/dev/null || echo 0)
   iloc0=$(jq -r '.days[0].locations | length' "$TMP/itinerary.json" 2>/dev/null || echo 0)

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useState, useCallback, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import {
   Search,
   Loader2,
@@ -31,14 +32,8 @@ interface SearchResult {
   source: "ai" | "fallback";
 }
 
-const EXAMPLE_QUERIES = [
-  "miren vikend ob reki",
-  "kam z otroki če dežuje",
-  "romantična večerja blizu Bleda",
-  "avantura v gorah",
-  "lokalna vina in sir",
-  "družinski izlet na obalo",
-];
+// I18N-FIX (revizija 1.33.0, 16-d P2): primeri so bili hardkodirani SL —
+// zdaj pridejo iz sporočil (planner.smartSearch.examples) po lokalu.
 
 interface SmartSearchProps {
   open: boolean;
@@ -55,6 +50,8 @@ interface SmartSearchProps {
  * Rezultati so grupirani po kategoriji z AI-jevo razlago "zakaj".
  */
 export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSearchProps) {
+  const t = useTranslations("planner.smartSearch");
+  const exampleQueries = t.raw("examples") as string[];
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult | null>(null);
@@ -106,10 +103,8 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
   return (
     <Dialog open={open} onOpenChange={(v) => v ? onOpenChange(v) : handleClose()}>
       <DialogContent className="max-w-2xl gap-0 p-0 sm:rounded-2xl">
-        <DialogTitle className="sr-only">AI iskanje</DialogTitle>
-        <DialogDescription className="sr-only">
-          Naravno-jezikovno iskanje po destinacijah, lokalcih, izdelkih in izkušnjah
-        </DialogDescription>
+        <DialogTitle className="sr-only">{t("title")}</DialogTitle>
+        <DialogDescription className="sr-only">{t("description")}</DialogDescription>
 
         {/* Search bar */}
         <div className="flex items-center gap-2 border-b border-border p-4">
@@ -120,10 +115,10 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Opiši kar iščeš... npr. 'miren vikend ob reki'"
+            placeholder={t("placeholder")}
             autoFocus
             className="flex-1 border-0 bg-transparent px-0 text-base shadow-none focus-visible:ring-0"
-            aria-label="Iskalni niz"
+            aria-label={t("queryAria")}
           />
           {loading && (
             <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden="true" />
@@ -133,7 +128,7 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
               type="button"
               onClick={() => setQuery("")}
               className="rounded-full p-1 text-muted-foreground hover:bg-muted"
-              aria-label="Počisti iskanje"
+              aria-label={t("clearAria")}
             >
               <X className="size-4" aria-hidden="true" />
             </button>
@@ -145,10 +140,10 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
           {!query.trim() && (
             <div className="p-4">
               <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Primera vprašanj
+                {t("examplesTitle")}
               </p>
               <div className="flex flex-wrap gap-2">
-                {EXAMPLE_QUERIES.map((example) => (
+                {exampleQueries.map((example) => (
                   <button
                     key={example}
                     type="button"
@@ -166,7 +161,7 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
           {query.trim() && !loading && !hasResults && (
             <div className="p-8 text-center text-sm text-muted-foreground">
               <Search className="mx-auto mb-2 size-8 opacity-40" aria-hidden="true" />
-              Ni najdenih rezultatov za "{query}"
+              {t("noResults", { query })}
             </div>
           )}
 
@@ -203,7 +198,7 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
               {results.destinations.length > 0 && (
                 <ResultGroup
                   icon={<MapPin className="size-4 text-primary" aria-hidden="true" />}
-                  label="Destinacije"
+                  label={t("destinations")}
                   items={results.destinations.map((d) => ({
                     id: d.id,
                     title: d.name,
@@ -221,7 +216,7 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
               {results.listings.length > 0 && (
                 <ResultGroup
                   icon={<Store className="size-4 text-primary" aria-hidden="true" />}
-                  label="Lokalci"
+                  label={t("listings")}
                   items={results.listings.map((l) => ({
                     id: l.id,
                     title: l.name,
@@ -236,7 +231,7 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
               {results.products.length > 0 && (
                 <ResultGroup
                   icon={<Package className="size-4 text-primary" aria-hidden="true" />}
-                  label="Izdelki"
+                  label={t("products")}
                   items={results.products.map((p) => ({
                     id: p.id,
                     title: p.name,
@@ -251,7 +246,7 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
               {results.experiences.length > 0 && (
                 <ResultGroup
                   icon={<Compass className="size-4 text-primary" aria-hidden="true" />}
-                  label="Izkušnje"
+                  label={t("experiences")}
                   items={results.experiences.map((e) => ({
                     id: e.id,
                     title: e.name,

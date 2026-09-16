@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Clock,
   MapPin,
@@ -145,6 +146,9 @@ function inferCategory(visit: LocationVisit): string {
 
 export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  // I18N-FIX (revizija 1.33.0, 16-d P2): komponenta je viden del rezultatov
+  // načrtovalnika — prej 100 % hardkodirana SL tudi na /en/nacrtuj.
+  const t = useTranslations("planner.timeline");
 
   // Shrani itinerer in kopiraj deljivo povezavo (uporabi store + helper)
   const handleSaveItinerary = useCallback(async () => {
@@ -188,7 +192,7 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
         <div className="flex items-center justify-center gap-4 rounded-xl bg-primary/5 border border-primary/20 p-4">
           <div className="flex items-center gap-2">
             <Calendar className="size-5 text-primary" aria-hidden="true" />
-            <span className="font-semibold">{days.length}-dnevni načrt</span>
+            <span className="font-semibold">{t("daysPlan", { count: days.length })}</span>
           </div>
           <div className="h-6 w-px bg-border" />
           <div className="flex items-center gap-2">
@@ -213,7 +217,7 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
               {day.day}
             </div>
             <div>
-              <h3 className="text-lg font-bold">Dan {day.day}</h3>
+              <h3 className="text-lg font-bold">{t("dayLabel", { day: day.day })}</h3>
               {day.weather && (
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Cloud className="size-3.5" aria-hidden="true" />
@@ -324,10 +328,10 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
                               "_blank"
                             );
                           }}
-                          aria-label={`Navigacija do ${visit.destination_name}`}
+                          aria-label={t("navigateAria", { name: visit.destination_name })}
                         >
                           <Navigation className="size-3" aria-hidden="true" />
-                          Navigacija
+                          {t("navigate")}
                         </Button>
                         <Button
                           variant="ghost"
@@ -339,7 +343,7 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
                           )}
                           disabled={saveState === "saving"}
                           onClick={handleSaveItinerary}
-                          aria-label="Shrani itinerer in kopiraj deljivo povezavo"
+                          aria-label={t("saveAria")}
                         >
                           {saveState === "saving" ? (
                             <Loader2 className="size-3 animate-spin" aria-hidden="true" />
@@ -349,12 +353,12 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
                             <Bookmark className="size-3" aria-hidden="true" />
                           )}
                           {saveState === "saving"
-                            ? "Shranjujem..."
+                            ? t("saving")
                             : saveState === "saved"
-                              ? "Povezava kopirana!"
+                              ? t("saved")
                               : saveState === "error"
-                                ? "Napaka pri shranjevanju"
-                                : "Shrani"}
+                                ? t("saveError")
+                                : t("save")}
                         </Button>
                         {visit.affiliateType && (
                           <Button
@@ -362,10 +366,10 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
                             size="sm"
                             className="h-7 gap-1 text-xs ml-auto text-primary hover:text-primary/80"
                             onClick={() => handleGoToBooking(day.day)}
-                            aria-label={`Rezerviraj ${visit.destination_name} — odpri rezervacijske možnosti`}
+                            aria-label={t("bookAria", { name: visit.destination_name })}
                           >
                             <Sparkles className="size-3" aria-hidden="true" />
-                            Rezerviraj
+                            {t("book")}
                           </Button>
                         )}
                       </div>
@@ -378,7 +382,7 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
                       <Navigation className="size-3" aria-hidden="true" />
                       <span>{travelTime}</span>
                       <span className="text-muted-foreground/50">·</span>
-                      <span>do naslednje lokacije</span>
+                      <span>{t("toNextStop")}</span>
                     </div>
                   )}
                 </div>
@@ -389,7 +393,7 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
           {/* Day budget summary (Wanderlog inspiracija) */}
           {dayCost > 0 && (
             <div className="mt-4 flex items-center justify-end gap-2 text-xs text-muted-foreground">
-              <span>Dan {day.day} skupaj:</span>
+              <span>{t("dayTotal", { day: day.day })}</span>
               <Badge variant="secondary" className="gap-0.5">
                 <Euro className="size-2.5" aria-hidden="true" />
                 {dayCost}
@@ -400,17 +404,15 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
         );
       })}
 
-      {/* AI nasveti na dnu */}
+      {/* AI nasvet na dnu (lokaliziran) */}
       {days[0]?.locations && days[0].locations.length > 0 && (
         <div className="ml-16 rounded-xl border border-primary/20 bg-primary/5 p-4">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="size-4 text-primary" aria-hidden="true" />
-            <span className="text-sm font-semibold">AI nasvet</span>
+            <span className="text-sm font-semibold">{t("aiTipTitle")}</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            {days.length === 1
-              ? "Za popoln dan začni zgodaj (pred 9:00) da izogneš se množicam."
-              : "Premikaj se po regijah — Bled + Bohinj istočasno, nato Soča naslednji dan."}
+            {days.length === 1 ? t("tipOneDay") : t("tipMultiDay")}
           </p>
         </div>
       )}

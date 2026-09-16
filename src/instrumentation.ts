@@ -36,6 +36,45 @@ export async function register() {
   // Instrumentacija teče tudi v edge runtimu — SQLite/Prisma samo za nodejs.
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
+  // PLACEHOLDER-GUARD (revizija 1.33.0, 16-e P2): .env.example ima javno
+  // znane nadomestne vrednosti (CHANGE_ME_TO_RANDOM_32_CHAR_STRING,
+  // GENERIRAJ_RANDOM_SECRET) — kopiraj-prilepi deploy bi jih sprejel kot
+  // veljavne skrivnosti (admin geslo, cron bearer, session forging). Tukaj
+  // jih zavrnemo v PRODUKCIJI: startup korak failed → /api/health 503
+  // (vidno, ne tiho — enaka filozofija kot baseline resolve). V dev/CI brez
+  // skrb: tam so nadomestki legitimni.
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL === "1") {
+    const PLACEHOLDERS = ["CHANGE_ME_TO_RANDOM_32_CHAR_STRING", "GENERIRAJ_RANDOM_SECRET"];
+    const checks: Array<[string, string | undefined, number]> = [
+      ["ADMIN_PASSWORD", process.env.ADMIN_PASSWORD, 16],
+      ["CRON_SECRET", process.env.CRON_SECRET, 16],
+      ["NEXTAUTH_SECRET", process.env.NEXTAUTH_SECRET, 16],
+    ];
+    const bad: string[] = [];
+    for (const [name, value, minLen] of checks) {
+      if (!value) continue; // manjkajočo skrivnost že pokriva fail-closed logika
+      if (PLACEHOLDERS.includes(value) || value.length < minLen) bad.push(name);
+    }
+    if (bad.length > 0) {
+      console.error(
+        `[instrumentation] PLACEHOLDER-SKRIVNOSTI v produkciji: ${bad.join(", ")} ` +
+          `— vrednosti iz .env.example / prekratke. Zamenjaj jih in REDEPLOY. ` +
+          `(admin/cron/auth so sicer fail-closed, a to ni stanje za promet.)`
+      );
+      recordStartupStep({
+        name: "config:secrets",
+        status: "failed",
+        detail: `placeholder/kratke skrivnosti: ${bad.join(", ")} — zamenjaj v env in redeploy`,
+      });
+    } else {
+      recordStartupStep({
+        name: "config:secrets",
+        status: "ok",
+        detail: "avtentikacijske skrivnosti presegle placeholder preverbo",
+      });
+    }
+  }
+
   const demo = await prepareVercelDemoDb();
   recordStartupStep({ name: "vercel-demo-db", ...demo });
 

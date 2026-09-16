@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 // GET /api/pois — vrne POI-je (Points of Interest) iz OpenStreetMap Overpass API
 // Brezplačni podatki, brez API ključa
@@ -145,6 +146,14 @@ function parseElement(el: any): Poi | null {
 }
 
 export async function GET(request: Request) {
+  // RATE-FIX (revizija 1.33.0, 16-b P2): vsak klic je ŽIV klic proti
+  // Overpass API (cache: "no-store") — javni proxy brez limita pomeni, da
+  // lahko en uporabnik spravi naš IP na Overpass ban-list (IP-based!) in
+  // mapa se pokvari za VSE uporabnike. 30/min na IP je dovolj za interaktivni
+  // zoom/pan zemljevida.
+  const limited = rateLimit(request, { limit: 30, windowMs: 60_000, key: "pois-overpass" });
+  if (limited) return limited;
+
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category") || "all";
@@ -192,7 +201,7 @@ export async function GET(request: Request) {
       total: pois.length,
       category,
       source: "OpenStreetMap",
-      cached: true,
+      cached: false, // OVERPASS živi klic (no-store) — prej zavajujoče true
     });
   } catch (error) {
     console.error("[pois] napaka:", error);

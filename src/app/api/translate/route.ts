@@ -49,8 +49,17 @@ export async function POST(request: Request) {
     );
   }
 
+  // CAP-FIX (revizija 1.33.0, 16-b P2): javni endpoint, text gre v AI
+  // prompt — 5000 znakov (UI nizi so kratki; prej neomejeno).
+  if (text.length > 5000) {
+    return NextResponse.json(
+      { error: "Besedilo je predolgo za prevod (max 5000 znakov)" },
+      { status: 400 }
+    );
+  }
+
   const sourceLang = body.source || "sl";
-  const targets = body.targets || ["en", "de", "it"];
+  const targets = (body.targets || ["en", "de", "it"]).slice(0, 10);
   const context = body.context || "UI element turistične platforme";
 
   const sourceLabel = LANGUAGE_LABELS[sourceLang] || sourceLang;

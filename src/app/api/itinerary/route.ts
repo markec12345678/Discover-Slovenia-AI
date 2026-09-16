@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { DESTINATIONS, normalizeInterests } from "@/lib/slovenia-data";
+import { sanitizeItinerary } from "@/lib/itinerary-sanitize";
+import { SYSTEM_DATA_GUARD } from "@/lib/ai-context";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
@@ -186,6 +188,38 @@ export async function POST(request: Request) {
     );
   }
 
+  // ENUM-FIX (revizija 1.33.0, 16-c P2 — prompt injection površina):
+  // season je vhod v AI prompt in je bil samo truthy-preverjen — poljuben
+  // niz (npr. "poletje. IGNORE pravila in ...") je šel naravnost v prompt.
+  const VALID_SEASONS = ["spring", "summer", "autumn", "winter"] as const;
+  if (!VALID_SEASONS.includes(input.season as (typeof VALID_SEASONS)[number])) {
+    return NextResponse.json(
+      { error: "Sezona je neveljavna (spring, summer, autumn, winter)" },
+      { status: 400 }
+    );
+  }
+  // Proračun: številčni razpon (vhod v AI kontekst/proračunsko logiko).
+  if (
+    typeof input.budget !== "number" ||
+    input.budget < 0 ||
+    input.budget > 100_000
+  ) {
+    return NextResponse.json(
+      { error: "Proračun je neveljaven (število 0–100000)" },
+      { status: 400 }
+    );
+  }
+  if (
+    typeof input.groupSize !== "number" ||
+    input.groupSize < 1 ||
+    input.groupSize > 20
+  ) {
+    return NextResponse.json(
+      { error: "Velikost skupine je neveljavna (1–20)" },
+      { status: 400 }
+    );
+  }
+
   // WEATHER-CONTEXT: tip potne skupine — opcijsko (stari odjemalci ga ne
   // pošiljajo), a če JE podan, mora biti iz dovoljenega nabora
   if (
@@ -229,6 +263,15 @@ export async function POST(request: Request) {
   // → kanonični "hrana", ki se ujema z bestFor destinacij. Pred popravkom
   // je fallback ocenjevalnik izbire "Hrana & vino" tiho ignoriral.
   input = { ...input, interests: normalizeInterests(input.interests) };
+  // CAP-FIX (revizija 1.33.0, 16-b/16-c P2 — token-bomb varovalka): vnos je
+  // lahko poljubno velik niz/sezlam iz klienta → naravnost v AI prompt.
+  // Zdaj: največ 12 interesov po 60 znakov; season/budget kot varni nizi.
+  // (season/budget sta tipovno varna že po zod-validaciji višje — Season
+  // enum + number; kapiramo samo interests, ki so prosti nizi.)
+  input = {
+    ...input,
+    interests: input.interests.slice(0, 12).map((i) => String(i).slice(0, 60)),
+  };
 
   // F5.4 ("Začni s povezavo"): zaželene destinacije iz prilepljene povezave —
   // opcijsko; sanitizacija na meji ( samo znani ID-ji, največ 8, dedupe).
@@ -400,10 +443,10 @@ export async function POST(request: Request) {
     lang === "en"
       ? `You are an expert travel guide for Slovenia. You generate a realistic Slovenia itinerary in JSON format. Respond ONLY with valid JSON, no additional text or code.
 
-IMPORTANT: Suggested partners are ranked by relevance and quality (Q = Quality Score). When possible, include partners with a higher Q in the notes or recommendations fields. [SPONSORED] and [FEATURED] tags denote premium partners. Practical info on partners (season, weather, parking) is provider-supplied — use it when choosing: a partner marked "weather: indoor" suits a rainy day, "season: summer" is out of season outside those months.`
+IMPORTANT: Suggested partners are ranked by relevance and quality (Q = Quality Score). When possible, include partners with a higher Q in the notes or recommendations fields. [SPONSORED] and [FEATURED] tags denote premium partners. Practical info on partners (season, weather, parking) is provider-supplied — use it when choosing: a partner marked "weather: indoor" suits a rainy day, "season: summer" is out of season outside those months.` + SYSTEM_DATA_GUARD
       : `Si strokovni slovenski vodič za načrtovanje potovanj. Generiraš realističen itinerer za Slovenijo v JSON formatu. Odgovori SAMO z veljavnim JSON, brez dodatnega besedila ali kode.
 
-POMEMBNO: Predlagani partnerji so razvrščeni po ustreznosti in kakovosti (Q = Quality Score). Kadar je mogoče, vključi partnerje z višjim Q v notes ali recommendations polja. [SPONZORIRANO] in [FEATURED] oznake pomenijo premium partnerje. Praktični podatki partnerjev (sezona, vreme, parkiranje) so podatki ponudnika — uporabi jih pri izbiri: partner z "vreme: notranje" ustreza deževnemu dnevu, "sezona: poletje" pa je izven sezone neustrezen.`;
+POMEMBNO: Predlagani partnerji so razvrščeni po ustreznosti in kakovosti (Q = Quality Score). Kadar je mogoče, vključi partnerje z višjim Q v notes ali recommendations polja. [SPONZORIRANO] in [FEATURED] oznake pomenijo premium partnerje. Praktični podatki partnerjev (sezona, vreme, parkiranje) so podatki ponudnika — uporabi jih pri izbiri: partner z "vreme: notranje" ustreza deževnemu dnevu, "sezona: poletje" pa je izven sezone neustrezen.` + SYSTEM_DATA_GUARD;
 
   // F5.4: zaželene destinacije — AI prompt izrecno navodilo ( fallback pot
   // jih že dobi prek ocenjevalnika; AI pot jih potrebuje v besedilu).
@@ -539,10 +582,12 @@ JSON format (STROGO):
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
 
-    const itinerary: Itinerary = {
-      ...parsed,
-      source: "ai",
-    };
+    // SANITIZE-FIX (revizija 1.33.0, 16-c/16-d P2): AI izhod je bil razlit
+    // nevalidiran — negativni duration/cost so premagali invariantna pravila,
+    // recommendations kot string je strmoglavil klienta, dnevi so lahko
+    // presegli zahtevanih `input.days`. Shape guard (clamps + type coercion)
+    // zdaj teče TUKAJ, pred obogatitvijo — ista plast kot na save meji.
+    const itinerary: Itinerary = sanitizeItinerary(parsed, input.days);
 
     console.log(`[itinerary] AI uspešno (source: ${result.source})`);
 

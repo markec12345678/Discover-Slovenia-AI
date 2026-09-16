@@ -47,6 +47,17 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  // RATE-FIX (revizija 1.33.0, 16-a P3): limit je prej štel samo akcijo
+  // "request" — potrditvena veja ("confirm", javen token guess) je bila
+  // neomejena. Zdaj šteje VSE POST klice (192-bitni token naredi brute-force
+  // neizvedljiv, a števec je dosleden).
+  const limited0 = rateLimit(request, {
+    limit: 10,
+    windowMs: 15 * 60_000,
+    key: "user-verify-email",
+  });
+  if (limited0) return limited0;
+
   try {
     const body = await request.json().catch(() => ({}));
     const { action, token } = body ?? {};

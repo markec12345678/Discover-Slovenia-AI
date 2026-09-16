@@ -203,8 +203,10 @@ export async function POST() {
     });
   } catch (error) {
     console.error("[owner/subscription] POST napaka:", error);
-    const message =
-      error instanceof Error ? error.message : "Napaka pri preklicu naročnine";
-    return NextResponse.json({ error: message }, { status: 500 });
+    // INFO-LEAK FIX (1.33.0): statično sporočilo (detajli v server logu).
+    return NextResponse.json(
+      { error: "Napaka pri preklicu naročnine" },
+      { status: 500 }
+    );
   }
 }

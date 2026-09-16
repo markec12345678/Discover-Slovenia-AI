@@ -64,8 +64,10 @@ export async function POST(
     }
 
     // Sestavi polni razlog
+    // CAP-FIX (revizija 1.33.0, 16-a P3): customReason je brez meje šel v
+    // rejectionReason (String?) — zdaj kapiran na 500 znakov.
     const fullReason = reason === "Drugo" && customReason
-      ? `Drugo: ${customReason}`
+      ? `Drugo: ${String(customReason).slice(0, 500)}`
       : reason;
 
     // === P3c-9: IZDELKI TRŽNICE ===

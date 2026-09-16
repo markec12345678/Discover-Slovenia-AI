@@ -578,7 +578,46 @@
     "listenButtonAria": "Poslušaj zvočni povzetek svojega načrta (računalniški glas)",
     "listenGenerating": "Pripravljam zvok …",
     "listenError": "Zvoka ni bilo mogoče pripraviti.",
-    "listenHint": "Zvočni povzetek načrta (računalniški glas — TTS): dnevi, postanki in približni kilometri."
+    "listenHint": "Zvočni povzetek načrta (računalniški glas — TTS): dnevi, postanki in približni kilometri.",
+    "timeline": {
+      "daysPlan": "{count}-dnevni načrt",
+      "dayLabel": "Dan {day}",
+      "navigate": "Navigacija",
+      "navigateAria": "Navigacija do {name}",
+      "save": "Shrani",
+      "saving": "Shranjujem...",
+      "saved": "Povezava kopirana!",
+      "saveError": "Napaka pri shranjevanju",
+      "saveAria": "Shrani itinerer in kopiraj deljivo povezavo",
+      "book": "Rezerviraj",
+      "bookAria": "Rezerviraj {name} — odpri rezervacijske možnosti",
+      "toNextStop": "do naslednje lokacije",
+      "dayTotal": "Dan {day} skupaj:",
+      "aiTipTitle": "AI nasvet",
+      "tipOneDay": "Za popoln dan začni zgodaj (pred 9:00) da izogneš se množicam.",
+      "tipMultiDay": "Premikaj se po regijah — Bled + Bohinj istočasno, nato Soča naslednji dan."
+    },
+    "smartSearch": {
+      "title": "AI iskanje",
+      "description": "Naravno-jezikovno iskanje po destinacijah, lokalcih, izdelkih in izkušnjah",
+      "placeholder": "Opiši kar iščeš... npr. 'miren vikend ob reki'",
+      "queryAria": "Iskalni niz",
+      "clearAria": "Počisti iskanje",
+      "examplesTitle": "Primera vprašanj",
+      "examples": [
+        "miren vikend ob reki",
+        "kam z otroki če dežuje",
+        "romantična večerja blizu Bleda",
+        "avantura v gorah",
+        "lokalna vina in sir",
+        "družinski izlet na obalo"
+      ],
+      "noResults": "Ni najdenih rezultatov za \"{query}\"",
+      "destinations": "Destinacije",
+      "listings": "Lokalci",
+      "products": "Izdelki",
+      "experiences": "Izkušnje"
+    }
   },
   "common": {
     "loading": "Nalagam...",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { safeExternalHref } from "@/lib/external-url";
 import {
   Star,
   MapPin,
@@ -319,7 +320,7 @@ export function ListingModal({ listing, onClose }: ListingModalProps) {
                     ) : null}
                     {listing.website ? (
                       <a
-                        href={listing.website}
+                        href={safeExternalHref(listing.website)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -358,7 +359,7 @@ export function ListingModal({ listing, onClose }: ListingModalProps) {
                   className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   <a
-                    href={listing.website}
+                    href={safeExternalHref(listing.website)}
                     target="_blank"
                     rel="noopener noreferrer"
                   >

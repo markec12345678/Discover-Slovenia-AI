@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 import { db } from "@/lib/db";
 
 // Tip rezultata — uporabljen v booking-panel.tsx
@@ -96,15 +97,28 @@ export type BookingData = Record<string, BookingOptions>;
 //  - products  (limit 3, featured first)
 // Če destinacija nima ničesar, vrne prazne arraye.
 export async function POST(request: Request) {
+  // RATE+CAP-FIX (revizija 1.33.0, 16-b P2): javna ruta brez limita +
+  // neomejen destinationIds array → poceni DB-load vektor (IN-poizvedba s
+  // poljubno velikimi stringi × 3 tabele). Zdaj: 60/10 min + max 32 ID-jev
+  // po 64 znakov (načrt ima največ 14 dni × nekaj destinacij — 32 je čez).
+  const limited = rateLimit(request, {
+    limit: 60,
+    windowMs: 10 * 60_000,
+    key: "itinerary-bookings",
+  });
+  if (limited) return limited;
+
   try {
     const body = (await request.json()) as { destinationIds?: unknown };
     const raw = Array.isArray(body?.destinationIds) ? body.destinationIds : [];
     // Sanitiziraj — sprejmi samo unikatne, ne-prazne string IDje
     const destinationIds = Array.from(
       new Set(
-        raw.filter((x): x is string => typeof x === "string" && x.length > 0)
+        raw
+          .filter((x): x is string => typeof x === "string" && x.length > 0)
+          .map((x) => x.slice(0, 64))
       )
-    );
+    ).slice(0, 32);
 
     if (destinationIds.length === 0) {
       return NextResponse.json({} as BookingData);

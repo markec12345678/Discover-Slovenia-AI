@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { checkAdmin } from "@/lib/auth-guards";
+import { requireAdmin } from "@/lib/auth-guards";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
 
 // GET /api/admin/sponsorships — seznam vseh sponzorstev (admin)
 // Header: x-admin-password
 export async function GET(request: Request) {
   try {
-    if (!checkAdmin(request.headers.get("x-admin-password"))) {
-      return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
-    }
+    const unauthorized = requireAdmin(request);
+    if (unauthorized) return unauthorized;
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status"); // active | expired | all
@@ -76,9 +75,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    if (!checkAdmin(request.headers.get("x-admin-password"))) {
-      return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
-    }
+    const unauthorized = requireAdmin(request);
+    if (unauthorized) return unauthorized;
 
     const body = await request.json();
     const { listingId, ownerId, level, durationDays = 30 } = body;

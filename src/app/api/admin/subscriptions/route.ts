@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { checkAdmin } from "@/lib/auth-guards";
+import { requireAdmin } from "@/lib/auth-guards";
 import { monthlyRevenueForPlan } from "@/lib/stripe-server";
 
 function unauthorized() {
@@ -13,10 +13,8 @@ function unauthorized() {
 // GET /api/admin/subscriptions — vsi ownerji z njihovimi naročninami
 // Vrne: { owners: [...], kpi: { totalMrr, active, premium, enterprise, canceled, free, arr } }
 export async function GET(request: Request) {
-  const adminPassword = request.headers.get("x-admin-password");
-  if (!checkAdmin(adminPassword)) {
-    return unauthorized();
-  }
+  const gate = requireAdmin(request);
+  if (gate) return gate;
 
   try {
     const owners = await db.owner.findMany({

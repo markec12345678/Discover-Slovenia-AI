@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { safeExternalHref } from "@/lib/external-url";
 import {
   Calendar,
   Hotel,
@@ -157,7 +158,7 @@ function getContactLink(listing: BookingListing): {
   href: string;
   label: string;
 } | null {
-  if (listing.website) return { href: listing.website, label: "Spletna stran" };
+  if (listing.website) return { href: safeExternalHref(listing.website), label: "Spletna stran" };
   if (listing.email) return { href: `mailto:${listing.email}`, label: "Pošlji povpraševanje" };
   if (listing.phone) return { href: `tel:${listing.phone}`, label: "Pokliči" };
   return null;
@@ -168,7 +169,7 @@ function getExperienceContact(exp: BookingExperience): {
   label: string;
 } | null {
   if (exp.providerWebsite)
-    return { href: exp.providerWebsite, label: "Spletna stran" };
+    return { href: safeExternalHref(exp.providerWebsite), label: "Spletna stran" };
   if (exp.providerEmail)
     return { href: `mailto:${exp.providerEmail}`, label: "Pošlji povpraševanje" };
   if (exp.providerPhone)
@@ -180,7 +181,7 @@ function getProductContact(p: BookingProduct): {
   href: string;
   label: string;
 } | null {
-  if (p.sellerWebsite) return { href: p.sellerWebsite, label: "Spletna stran" };
+  if (p.sellerWebsite) return { href: safeExternalHref(p.sellerWebsite), label: "Spletna stran" };
   if (p.sellerEmail)
     return { href: `mailto:${p.sellerEmail}`, label: "Pošlji povpraševanje" };
   return null;

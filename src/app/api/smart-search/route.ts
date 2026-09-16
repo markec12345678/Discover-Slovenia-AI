@@ -54,6 +54,15 @@ export async function POST(request: Request) {
     );
   }
 
+  // CAP-FIX (revizija 1.33.0, 16-b P2): query gre v AI prompt — 300 znakov
+  // (iskalni nizi so kratki; prej neomejeno).
+  if (query.length > 300) {
+    return NextResponse.json(
+      { error: "Iskalni niz je predolg (max 300 znakov)" },
+      { status: 400 }
+    );
+  }
+
   const limit = Math.min(Math.max(body.limit ?? 3, 1), 5);
 
   // === PRIDOBI VSE ITEME IZ BAZE ===

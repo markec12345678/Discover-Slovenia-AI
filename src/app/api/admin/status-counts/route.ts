@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { checkAdmin } from "@/lib/auth-guards";
+import { requireAdmin } from "@/lib/auth-guards";
 
 // GET /api/admin/status-counts — števci lokalov po statusu
 // Header: x-admin-password
 export async function GET(request: Request) {
   try {
-    if (!checkAdmin(request.headers.get("x-admin-password"))) {
-      return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
-    }
+    const unauthorized = requireAdmin(request);
+    if (unauthorized) return unauthorized;
 
     // Group by status
     const statusGroups = await db.listing.groupBy({

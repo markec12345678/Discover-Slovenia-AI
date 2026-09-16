@@ -536,13 +536,11 @@ export async function POST(request: Request) {
     // "pending" + stripeSessionId, webhook posodobi na "paid")
   } catch (error) {
     console.error("[api/checkout] napaka:", error);
+    // INFO-LEAK FIX (revizija 1.33.0, 16-b P2): raw Prisma/DB napake so
+    // lahko vsebovale dele povezovalnih nizov / imena omejitev — javni
+    // endpoint zdaj vrača statično sporočilo; podrobnosti ostanejo v logu.
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Napaka pri obdelavi naročila.",
-      },
+      { error: "Napaka pri obdelavi naročila." },
       { status: 500 }
     );
   }

@@ -17,13 +17,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Manjkata name in category" }, { status: 400 });
     }
 
+    // CAP-FIX (revizija 1.33.0, 16-b P2): vsa polja so client-supplied in
+    // grejo v AI prompt — kapirana (prej je bil neomejen le longDescription).
+    const safeName = String(name).slice(0, 80);
+    const safeCategory = String(category).slice(0, 60);
+    const safeDest = destinationName ? ` ${String(destinationName).slice(0, 80)}` : "";
+    const safeDesc = description ? String(description).slice(0, 300) : "";
+    const safeLong = longDescription ? String(longDescription).slice(0, 200) : "";
+    const safeSpec = Array.isArray(specialties)
+      ? specialties.slice(0, 10).map((sp: unknown) => String(sp ?? "").slice(0, 60))
+      : [];
     const context = [
-      `Ime: ${name}`,
-      `Kategorija: ${category}`,
-      destinationName ? `Lokacija: ${destinationName}` : "",
-      description ? `Opis: ${description}` : "",
-      longDescription ? `Podrobnosti: ${longDescription?.substring(0, 200)}` : "",
-      specialties?.length ? `Specialitete: ${specialties.join(", ")}` : "",
+      `Ime: ${safeName}`,
+      `Kategorija: ${safeCategory}`,
+      destinationName ? `Lokacija:${safeDest}` : "",
+      description ? `Opis: ${safeDesc}` : "",
+      longDescription ? `Podrobnosti: ${safeLong}` : "",
+      safeSpec.length ? `Specialitete: ${safeSpec.join(", ")}` : "",
     ].filter(Boolean).join("\n");
 
     const prompt = `Si Slovenian Storyteller — pripovedovalec zgodovin slovenskih lokalcev. Napiši kratko, čustveno zgodbo o tem lokalcu.

@@ -85,9 +85,33 @@ export async function POST(request: Request) {
     );
   }
 
+  // HARDENING (revizija 1.33.0, auditorski ugotovitvi 16-b/16-c P2):
+  // 1. id je ključ PERMANENTNEGA cross-user diska — javni klic brez oblike
+  //    pomeni, da lahko napadalec zastrupi cache za katerega koli POI ID-ja
+  //    (spam opisi za vse obiskovalce) ali napihne data/poi-descriptions.json
+  //    z megabajtnimi ključi. Zdaj: samo [A-Za-z0-9-], ≤ 64 znakov.
+  // 2. name/subcategory/address grejo v AI prompt in fallback opis —
+  //    kapirano (token-bomb + dolžina shranjenega opisa).
+  // 3. lat/lng morata biti števili (prej: body.lat.toFixed je metalo
+  //    neobdelan TypeError → 500, če je klient poslal string).
+  const poiId = String(body.id);
+  if (!/^[A-Za-z0-9-]{1,64}$/.test(poiId)) {
+    return NextResponse.json(
+      { error: "Neveljaven POI id (pričakovani OSM identifikator)" },
+      { status: 400 }
+    );
+  }
+  const name = String(body.name).slice(0, 120);
+  const subcategory =
+    typeof body.subcategory === "string" ? body.subcategory.slice(0, 80) : undefined;
+  const address =
+    typeof body.address === "string" ? body.address.slice(0, 200) : undefined;
+  const lat = typeof body.lat === "number" && Number.isFinite(body.lat) ? body.lat : null;
+  const lng = typeof body.lng === "number" && Number.isFinite(body.lng) ? body.lng : null;
+
   // 1. Preveri cache
   const store = await readCache();
-  const cached = store[body.id];
+  const cached = store[poiId];
   if (cached) {
     return NextResponse.json({
       description: cached.description,
@@ -98,13 +122,13 @@ export async function POST(request: Request) {
 
   // 2. Generiraj AI opis
   const categoryLabel = CATEGORY_LABELS[body.category] || "zanimivost";
-  const locationStr = body.address ? ` (${body.address})` : "";
-  const coordsStr = body.lat && body.lng ? ` koordinate ${body.lat.toFixed(4)}, ${body.lng.toFixed(4)}` : "";
+  const locationStr = address ? ` (${address})` : "";
+  const coordsStr = lat !== null && lng !== null ? ` koordinate ${lat.toFixed(4)}, ${lng.toFixed(4)}` : "";
 
   const prompt = `Generiraj kratek (1 stavek, max 120 znakov) informativen opis za slovensko turistično točko.
 
-IME: ${body.name}
-KATEGORIJA: ${categoryLabel}${body.subcategory ? ` (${body.subcategory})` : ""}
+IME: ${name}
+KATEGORIJA: ${categoryLabel}${subcategory ? ` (${subcategory})` : ""}
 LOKACIJA: ${locationStr || "Slovenija"}${coordsStr}
 
 Pravila:
@@ -143,20 +167,20 @@ Odgovor (SAMO opis, brez prefixa):`;
 
     if (!description) {
       // Fallback opis
-      description = `${body.name} — ${categoryLabel} v Sloveniji.`;
+      description = `${name} — ${categoryLabel} v Sloveniji.`;
     }
 
     const source = result?.source === "fallback" ? "fallback" : "ai";
 
     // 3. Shrani v cache (permanentno)
-    store[body.id] = {
+    store[poiId] = {
       description,
       generatedAt: Date.now(),
       source,
     };
     await writeCache(store);
 
-    console.log(`[poi-describe] AI opis za "${body.name}" (source: ${result?.source})`);
+    console.log(`[poi-describe] AI opis za "${name}" (source: ${result?.source})`);
 
     return NextResponse.json({
       description,
@@ -167,8 +191,8 @@ Odgovor (SAMO opis, brez prefixa):`;
     console.error("[poi-describe] AI napaka:", error);
 
     // Fallback opis
-    const fallbackDesc = `${body.name} — ${categoryLabel} v Sloveniji.`;
-    store[body.id] = {
+    const fallbackDesc = `${name} — ${categoryLabel} v Sloveniji.`;
+    store[poiId] = {
       description: fallbackDesc,
       generatedAt: Date.now(),
       source: "fallback",

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { checkAdmin } from "@/lib/auth-guards";
+import { requireAdmin } from "@/lib/auth-guards";
 import {
   parseSeasons,
   SEASON_KEYS,
@@ -57,10 +57,8 @@ function parseList(input: string | null | undefined): string[] {
 
 // GET /api/admin/listings — vsi lokalci (admin)
 export async function GET(request: Request) {
-  const adminPassword = request.headers.get("x-admin-password");
-  if (!checkAdmin(adminPassword)) {
-    return unauthorized();
-  }
+  const gate = requireAdmin(request);
+  if (gate) return gate;
 
   try {
     const listings = await db.listing.findMany({
@@ -88,10 +86,8 @@ export async function GET(request: Request) {
 
 // POST /api/admin/listings — ustvari nov lokal
 export async function POST(request: Request) {
-  const adminPassword = request.headers.get("x-admin-password");
-  if (!checkAdmin(adminPassword)) {
-    return unauthorized();
-  }
+  const gate = requireAdmin(request);
+  if (gate) return gate;
 
   try {
     const body: Record<string, unknown> = await request.json();

@@ -205,10 +205,16 @@ export function buildItineraryICS(
   return lines.join("\r\n");
 }
 
-/** Ime datoteke za prenos: pot-slovenija-<dni>d-<hash>.ics */
-export function icsFileName(itinerary: Itinerary): string {
+/**
+ * Ime datoteke za prenos.
+ * I18N-FIX (revizija 1.33.0, 16-d P3): ime je bilo vedno SL
+ * ("pot-slovenija-…") tudi pri EN izvozu — zdaj sledi jeziku izvoza.
+ */
+export function icsFileName(itinerary: Itinerary, lang: "sl" | "en" = "sl"): string {
   const days = itinerary.days?.length ?? 0;
   const firstStop =
     itinerary.days?.[0]?.locations?.[0]?.destination_id ?? "plan";
-  return `pot-slovenija-${days}d-${firstStop}.ics`;
+  return lang === "en"
+    ? `trip-slovenia-${days}d-${firstStop}.ics`
+    : `pot-slovenija-${days}d-${firstStop}.ics`;
 }

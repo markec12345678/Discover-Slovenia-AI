@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { checkAdmin } from "@/lib/auth-guards";
+import { requireAdmin } from "@/lib/auth-guards";
 import {
   parseSeasons,
   SEASON_KEYS,
@@ -56,10 +56,8 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminPassword = request.headers.get("x-admin-password");
-  if (!checkAdmin(adminPassword)) {
-    return unauthorized();
-  }
+  const gate = requireAdmin(request);
+  if (gate) return gate;
 
   try {
     const { id } = await params;
@@ -96,10 +94,8 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminPassword = request.headers.get("x-admin-password");
-  if (!checkAdmin(adminPassword)) {
-    return unauthorized();
-  }
+  const gate = requireAdmin(request);
+  if (gate) return gate;
 
   try {
     const { id } = await params;
@@ -267,10 +263,8 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminPassword = request.headers.get("x-admin-password");
-  if (!checkAdmin(adminPassword)) {
-    return unauthorized();
-  }
+  const gate = requireAdmin(request);
+  if (gate) return gate;
 
   try {
     const { id } = await params;

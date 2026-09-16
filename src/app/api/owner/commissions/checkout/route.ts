@@ -175,8 +175,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ url: checkoutSession.url });
   } catch (error) {
     console.error("[owner/commissions/checkout] napaka:", error);
-    const message =
-      error instanceof Error ? error.message : "Napaka pri checkout-u";
-    return NextResponse.json({ error: message }, { status: 500 });
+    // INFO-LEAK FIX (1.33.0): statično sporočilo (detajli v server logu).
+    return NextResponse.json({ error: "Napaka pri checkout-u" }, { status: 500 });
   }
 }

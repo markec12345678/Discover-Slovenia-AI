@@ -35,10 +35,22 @@ const HORIZON_MS = 365 * DAY_MS;
 /** Dogodki, ki so se končali pred več kot toliko dnevi, ne pridejo v poštev. */
 const PAST_GRACE_MS = 60 * DAY_MS;
 
-/** Danes ob 00:00 lokalnega časa — referenca za "prihajajoče". */
+/**
+ * Danes ob 00:00 — referenca za "prihajajoče".
+ * TZ-FIX (revizija 1.33.0, 16-d P3): prej je uporabljal SERVERSKI lokalni
+ * čas (na Vercelu UTC) — meja "prihajajoče vs preteklo" je bila ob robnih
+ * urah zamaknjena za 1–2 h glede na slovenski dan obiskovalca. Zdaj isti
+ * vzorec kot weather-utils.ts: koledarski dan v pasu Europe/Ljubljana.
+ */
 function startOfToday(): number {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const iso = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Ljubljana",
+  }).format(new Date()); // YYYY-MM-DD
+  const [y, m, d] = iso.split("-").map(Number);
+  // Datum v slovenskem pasu predstavimo kot UTC polnoč ISTEGA koledarskega
+  // dne — parseDateMs spodaj dela enako (lokalna polnoč ISO datuma), torej
+  // sta obe strani primerjave v isti (koledarski) referenci.
+  return new Date(Date.UTC(y, m - 1, d)).getTime();
 }
 
 function parseDateMs(value: unknown): number | null {

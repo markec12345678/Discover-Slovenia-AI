@@ -22,3 +22,8 @@
 
 # dnevni opomniki za obnovo naročnin (vsak dan 09:00 UTC)
 0 9 * * * curl -fsS -m 300 -H "Authorization: Bearer __CRON_SECRET__" __APP_URL__/api/cron/renewal-reminders > /proc/1/fd/1 2>&1
+
+# dnevni opomniki za nedokončane osnutke (vsak dan 10:00 UTC)
+# FIX (revizija 1.33.0, 16-e P2): vercel.json ima 6 cronov, ta template
+# pa le 5 — draft-reminders je mankal (neskladje z glavo "natančno enaki").
+0 10 * * * curl -fsS -m 300 -H "Authorization: Bearer __CRON_SECRET__" __APP_URL__/api/cron/draft-reminders > /proc/1/fd/1 2>&1

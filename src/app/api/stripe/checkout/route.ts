@@ -202,8 +202,8 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("[stripe/checkout] napaka:", error);
-    const message =
-      error instanceof Error ? error.message : "Napaka pri checkout-u";
-    return NextResponse.json({ error: message }, { status: 500 });
+    // INFO-LEAK FIX (1.33.0): Stripe SDK sporočila lahko razkrivajo
+    // request ID-je in podrobnosti parametrov — statično sporočilo klientu.
+    return NextResponse.json({ error: "Napaka pri checkout-u" }, { status: 500 });
   }
 }

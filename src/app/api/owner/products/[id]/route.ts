@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { safeWebsiteSchema } from "@/lib/external-url";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -35,7 +36,7 @@ const updateSchema = z.object({
   sellerName: z.string().min(2, "Ime prodajalca je obvezno").optional(),
   sellerEmail: z.string().nullable().optional(),
   sellerPhone: z.string().nullable().optional(),
-  sellerWebsite: z.string().nullable().optional(),
+  sellerWebsite: safeWebsiteSchema,
 });
 
 interface RouteParams {

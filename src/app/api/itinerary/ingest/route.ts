@@ -26,7 +26,12 @@ const FETCH_TIMEOUT_MS = 8000;
 const MAX_TEXT_CHARS = 400000; // ~100 k besed je čez vsak relevanten vir
 
 /** Zasebni/imenski doseg — SSRF zaščita na ravni imena ( DNS rebinding je
- *  izven obsega: odgovor se ne vrača uporabniku, vpliv je omejen). */
+ *  izven obsega: odgovor se ne vrača uporabniku, vpliv je omejen).
+ *  HARDENING (revizija 1.33.0, 16-b P2): pokrita še IPv6-mapped IPv4
+ *  oblika — `new URL("http://[::ffff:127.0.0.1]/").hostname` vrne
+ *  "[::ffff:7f00:1]", ki prej ni ujel nobenega bloka (loopback dostop!).
+ *  Zdaj vsak hostname z ":" (vsak IPv6 literál) preverimo po HEX delih,
+ *  ne po decimalnih oktetih. */
 function isBlockedHostname(hostname: string): boolean {
   const h = hostname.toLowerCase().replace(/\.$/, "");
   if (
@@ -48,8 +53,37 @@ function isBlockedHostname(hostname: string): boolean {
     if (a === 169 && b === 254) return true;
     return false;
   }
-  // IPv6 loopback / link-local / unique local
-  if (h === "::1" || h === "[::1]" || h.startsWith("fe80") || h.startsWith("fc") || h.startsWith("fd")) {
+  // IPv6 (vse oblike z ":" — vključno z [::ffff:127.0.0.1] mapped v4 in
+  // link-local/unique-local predpokami). HEX različica oktetov vdelana v
+  // IPv6 besedilo (npr. 7f00:1 = 127.0.0.1) se tako ujame prav tako.
+  if (h.includes(":")) {
+    if (
+      h === "::" ||
+      h === "::1" ||
+      h === "[::1]" ||
+      h.includes(":ffff:") || // mapped IPv4 — vedno zasebni doseg iz našega vidika
+      h.includes("fe80") ||
+      h.startsWith("fc") ||
+      h.startsWith("fd") ||
+      h.startsWith("[fc") ||
+      h.startsWith("[fd") ||
+      h.startsWith("[fe8")
+    ) {
+      return true;
+    }
+    // Vdelan IPv4 konec (npr. "::ffff:127.0.0.1" v redki text obliki)
+    const tail = h.match(/:(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\]?$/);
+    if (tail) {
+      const a = parseInt(tail[1], 10);
+      const b = parseInt(tail[2], 10);
+      if (a === 127 || a === 0 || a === 10) return true;
+      if (a === 192 && b === 168) return true;
+      if (a === 172 && b >= 16 && b <= 31) return true;
+      if (a === 169 && b === 254) return true;
+    }
+    // Preostali IPv6 literali ne moremo zanesljivo razvrstiti brez DNS
+    // resolucije — konzervativno blokiramo vse, kar ni eksplicitno javni
+    // vzorec (produktni promet je izključno IPv4/hostname URLs).
     return true;
   }
   return false;
@@ -144,27 +178,56 @@ export async function POST(request: Request) {
   }
 
   // Pridobi stran ( timeout + omejitev velikosti)
+  // SSRF-FIX (revizija 1.33.0, 16-b P2): redirect: "manual" + ponovna
+  // validacija GNI vsakega skoka — prej je "follow" spravil preverjen
+  // javni URL čez 30x preusmeritev na npr. http://169.254.169.254/.
+  // (3 hops največ — več je nadstandard za legitime vire.)
   let html = "";
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    const res = await fetch(url.toString(), {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: {
-        // Iskren identifiket bot-a ( vljudnost do virov) + kompatibilnost
-        "User-Agent":
-          "Mozilla/5.0 (compatible; DiscoverSloveniaAI/1.0; +https://i-feel-slovenia.vercel.app)",
-        Accept: "text/html,application/xhtml+xml",
-        "Accept-Language": "sl,en",
-      },
-    });
-    clearTimeout(timer);
-    if (!res.ok) {
-      return NextResponse.json(
-        {
-          error: `Vir ni dosegljiv ( HTTP ${res.status}). Preveri povezavo ali poskusi drug vir.`,
+    let currentUrl = url;
+    let res: Response | null = null;
+    for (let hop = 0; hop < 3; hop++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      res = await fetch(currentUrl.toString(), {
+        signal: controller.signal,
+        redirect: "manual",
+        headers: {
+          // Iskren identifiket bot-a ( vljudnost do virov) + kompatibilnost
+          "User-Agent":
+            "Mozilla/5.0 (compatible; DiscoverSloveniaAI/1.0; +https://i-feel-slovenia.vercel.app)",
+          Accept: "text/html,application/xhtml+xml",
+          "Accept-Language": "sl,en",
         },
+      });
+      clearTimeout(timer);
+      // Preusmeritev? Validiraj cilj GNI in sledi mu ročno
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get("location");
+        if (!loc) break;
+        const nextUrl = new URL(loc, currentUrl); // relativne lokacije razreši
+        if (nextUrl.protocol !== "http:" && nextUrl.protocol !== "https:") break;
+        if (isBlockedHostname(nextUrl.hostname)) {
+          return NextResponse.json(
+            { error: "Zasebni naslovi niso podprti." },
+            { status: 400 }
+          );
+        }
+        currentUrl = nextUrl;
+        continue;
+      }
+      break; // 2xx/4xx/5xx — obdelaj spodaj
+    }
+    if (!res) {
+      return NextResponse.json({ error: "Vir ni dosegljiv." }, { status: 502 });
+    }
+    if (!res.ok) {
+      // ORACLE-FIX (1.33.0): brez odpiranja HTTP status kode internih
+      // storitev (prehodno dosegljiv vs nedosegljiv = port skener) —
+      // splošno sporočilo, koda ostane samo v server logu.
+      console.warn(`[ingest] upstream odgovoril ${res.status} za ${currentUrl.hostname}`);
+      return NextResponse.json(
+        { error: "Vir ni dosegljiv. Preveri povezavo ali poskusi drug vir." },
         { status: 502 }
       );
     }

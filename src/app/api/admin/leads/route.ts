@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { checkAdmin } from "@/lib/auth-guards";
+import { requireAdmin } from "@/lib/auth-guards";
 
 // Statusi lead-a (admin upravljanje)
 export type LeadStatus = "nov" | "kontaktiran" | "zakljucen";
@@ -11,19 +11,10 @@ export type LeadStatus = "nov" | "kontaktiran" | "zakljucen";
 
 const VALID_STATUSES: LeadStatus[] = ["nov", "kontaktiran", "zakljucen"];
 
-function unauthorized() {
-  return NextResponse.json(
-    { error: "Neavtoriziran dostop" },
-    { status: 401 }
-  );
-}
-
 // GET /api/admin/leads — vsi leadovi (admin)
 export async function GET(request: Request) {
-  const adminPassword = request.headers.get("x-admin-password");
-  if (!checkAdmin(adminPassword)) {
-    return unauthorized();
-  }
+  const gate = requireAdmin(request);
+  if (gate) return gate;
 
   try {
     const leads = await db.lead.findMany({ orderBy: { createdAt: "desc" } });
@@ -56,10 +47,8 @@ export async function GET(request: Request) {
 // PUT /api/admin/leads — posodobi status lead-a
 // Telo: { id: string, status: "nov" | "kontaktiran" | "zakljucen" }
 export async function PUT(request: Request) {
-  const adminPassword = request.headers.get("x-admin-password");
-  if (!checkAdmin(adminPassword)) {
-    return unauthorized();
-  }
+  const gate = requireAdmin(request);
+  if (gate) return gate;
 
   try {
     const body: unknown = await request.json();

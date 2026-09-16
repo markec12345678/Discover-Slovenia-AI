@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { checkAdmin } from "@/lib/auth-guards";
+import { requireAdmin } from "@/lib/auth-guards";
 
 // GET /api/admin/pending — seznam vsebin, ki čakajo na odobritev
 // Header: x-admin-password
@@ -12,9 +12,8 @@ import { checkAdmin } from "@/lib/auth-guards";
 // (?? createdAt) asc čez vse tipe — najstarejša oddaja prva na vrsti.
 export async function GET(request: Request) {
   try {
-    if (!checkAdmin(request.headers.get("x-admin-password"))) {
-      return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
-    }
+    const unauthorized = requireAdmin(request);
+    if (unauthorized) return unauthorized;
 
     const ownerSelect = {
       select: { email: true, name: true, businessName: true },

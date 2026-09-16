@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { sendEmail, emailTemplate } from "@/lib/email";
+import { sendEmail, emailTemplate, getBaseUrl } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
 import { escapeHtml } from "@/lib/security";
 import type { Itinerary } from "@/lib/types";
@@ -33,6 +33,20 @@ export async function POST(request: Request) {
 
     const it = itinerary as Itinerary;
 
+    // I18N-FIX (revizija 1.33.0, 16-d P2): email ovojnica je bila VEDNO SL —
+    // tudi za EN uporabnika (formData.language je že prihajal v body-ju, a
+    // neuporabljen). Zdaj dvojezična veja po istem vzorcu kot /api/itinerary.
+    const isEn =
+      (formData && typeof formData === "object" &&
+        (formData as { language?: unknown }).language === "en") ||
+      false;
+
+    // DEAD-DOMAIN-FIX (16-d P2): CTA je kazal na https://discoverslovenia.ai
+    // (DNS-obstoječa, iz sitemap/robots odstranjena v MONET-10) — vsak klik
+    // v emailu je umrl. Zdaj getBaseUrl() (NEXTAUTH_URL/VERCEL_URL obstaneta
+    // pravilno nastavljena na obeh produkcijah).
+    const ctaUrl = `${getBaseUrl()}/nacrtuj`;
+
     // Omeji velikost payloada (preprečuje megabajtske maile / DoS)
     if (it.days.length > 14) {
       return NextResponse.json({ error: "Itinerer je predolg za pošiljanje (max 14 dni)" }, { status: 400 });
@@ -59,21 +73,21 @@ export async function POST(request: Request) {
           .join("");
         return `
       <div style="margin-bottom: 24px; padding: 16px; background: #f8faf8; border-radius: 8px; border-left: 4px solid #2d6a3e;">
-        <h3 style="margin: 0 0 12px 0; color: #1a2e1a;">Dan ${dayNum}</h3>
+        <h3 style="margin: 0 0 12px 0; color: #1a2e1a;">${isEn ? `Day ${dayNum}` : `Dan ${dayNum}`}</h3>
         ${locations}
       </div>`;
       })
       .join("");
 
     const recsHtml = it.recommendations?.length
-      ? `<div style="margin-top: 20px;"><h3 style="color: #1a2e1a;">Priporočila</h3><ul>${it.recommendations
+      ? `<div style="margin-top: 20px;"><h3 style="color: #1a2e1a;">${isEn ? "Recommendations" : "Priporočila"}</h3><ul>${it.recommendations
           .slice(0, 20)
           .map((r) => `<li style="margin-bottom: 4px;">${escapeHtml(r)}</li>`)
           .join("")}</ul></div>`
       : "";
 
     const tipsHtml = it.tips?.length
-      ? `<div style="margin-top: 20px;"><h3 style="color: #1a2e1a;">Nasveti</h3><ul>${it.tips
+      ? `<div style="margin-top: 20px;"><h3 style="color: #1a2e1a;">${isEn ? "Tips" : "Nasveti"}</h3><ul>${it.tips
           .slice(0, 20)
           .map((t) => `<li style="margin-bottom: 4px;">${escapeHtml(t)}</li>`)
           .join("")}</ul></div>`
@@ -82,29 +96,43 @@ export async function POST(request: Request) {
     const days = Number(it.days.length) || 1;
     const totalBudget = escapeHtml(it.total_budget);
 
+    const title = isEn
+      ? `Your ${days}-day Slovenia itinerary`
+      : `Vaš ${days}-dnevni itinerer za Slovenijo`;
+
     const html = emailTemplate(
-      `Vaš ${days}-dnevni itinerer za Slovenijo`,
+      title,
       `
-        <p>Zdravo!</p>
-        <p>Tukaj je vaš AI-generiran itinerer za Slovenijo${
-          formData
-            ? ` (${escapeHtml(formData.days)} dni, proračun €${escapeHtml(formData.budget)}, sezona: ${escapeHtml(formData.season)})`
-            : ""
-        }.</p>
-        <p style="font-size: 18px; font-weight: bold; color: #2d6a3e;">Skupni strošek: €${totalBudget}</p>
+        <p>${isEn ? "Hi there!" : "Zdravo!"}</p>
+        <p>${
+          isEn
+            ? `Here is your AI-generated itinerary for Slovenia${
+                formData
+                  ? ` (${escapeHtml(formData.days)} days, budget €${escapeHtml(formData.budget)}, season: ${escapeHtml(formData.season)})`
+                  : ""
+              }.`
+            : `Tukaj je vaš AI-generiran itinerer za Slovenijo${
+                formData
+                  ? ` (${escapeHtml(formData.days)} dni, proračun €${escapeHtml(formData.budget)}, sezona: ${escapeHtml(formData.season)})`
+                  : ""
+              }.`
+        }</p>
+        <p style="font-size: 18px; font-weight: bold; color: #2d6a3e;">${isEn ? "Total cost" : "Skupni strošek"}: €${totalBudget}</p>
         ${daysHtml}
         ${recsHtml}
         ${tipsHtml}
         <div style="margin-top: 24px; padding: 16px; background: #f0fdf4; border-radius: 8px; text-align: center;">
-          <p>Želite rezervirati nastanitev ali aktivnosti?</p>
-          <a href="https://discoverslovenia.ai/nacrtuj" style="display: inline-block; background: #2d6a3e; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; margin-top: 8px;">Odpri platformo →</a>
+          <p>${isEn ? "Want to book accommodation or activities?" : "Želite rezervirati nastanitev ali aktivnosti?"}</p>
+          <a href="${ctaUrl}" style="display: inline-block; background: #2d6a3e; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; margin-top: 8px;">${isEn ? "Open the platform →" : "Odpri platformo →"}</a>
         </div>
       `
     );
 
     const success = await sendEmail({
       to: String(email),
-      subject: `Vaš ${days}-dnevni itinerer za Slovenijo 🇸🇮`,
+      subject: isEn
+        ? `Your ${days}-day Slovenia itinerary 🇸🇮`
+        : `Vaš ${days}-dnevni itinerer za Slovenijo 🇸🇮`,
       html,
     });
 

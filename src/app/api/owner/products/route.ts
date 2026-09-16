@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { safeWebsiteSchema } from "@/lib/external-url";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -81,7 +82,7 @@ const createSchema = z.object({
   sellerName: z.string().min(2, "Ime prodajalca je obvezno"),
   sellerEmail: z.string().nullable().optional(),
   sellerPhone: z.string().nullable().optional(),
-  sellerWebsite: z.string().nullable().optional(),
+  sellerWebsite: safeWebsiteSchema,
 });
 
 // GET /api/owner/products — vrne vse izdelke trenutno prijavljenega lastnika
