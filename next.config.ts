@@ -36,23 +36,44 @@ const securityHeaders = [
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains",
   },
-  // CSP — dovoljuje Next.js hydration skripte, Leaflet tile serverje in
-  // slike iz dovoljenih CDN-ov; frame-ancestors prepreči embedding.
+  // CSP (revizija #9, trditev 7 — ostrenje s površino, ki jo klient DEJANSKO
+  // uporablja; prej: unsafe-eval + https:/wss: wildcardji tudi v produkciji):
+  //
+  //   script-src 'unsafe-inline' — NAMENOMO ostane: Next.js App Router
+  //     izrisuje inline hydration skripte (self.__next_f.push). Nonce-CSP bi
+  //     zahteval middleware + popolnoma dinamično izrisovanje (konec statične
+  //     optimizacije) — arhitekturna sprememba, ne hardening. Dokumentiran
+  //     trade-off.
+  //   script-src 'unsafe-eval' — SAMO dev (React Refresh/HMR). Produkcija ga
+  //     ne potrebuje (noben dependency ne evaluje) → odstranjen.
+  //   connect-src — vsi klientni fetchi so same-origin (/api/… proxyji za
+  //     zunanje servise; audirano 2026-09, 0 zunanjih fetch/WebSocket/XHR v
+  //     klientnih komponentah) → 'self' blob:; dev doda ws:/wss: za HMR.
+  //   img-src https: — NAMENOMO ostane: zunanje slike iz DB (consultation
+  //     partnerji, logotipi ponudnikov …) se strežejo prek surovega <img> —
+  //     gostiteljev ni mogoče enumerirati. Meji sta moderacija + write-time
+  //     validacija URL-jev (external-url.ts), ne CSP.
+  //   frame-ancestors 'none' prepreči embedding (strožje od XFO DENY).
   {
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
       // Next.js App Router potrebuje inline skripte za hydration
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      `script-src 'self' 'unsafe-inline'${
+        process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""
+      }`,
       "style-src 'self' 'unsafe-inline'",
-      // slike: local + data URI + vsi https (unsplash, OSM tiles, sfile CDN)
+      // slike: local + data URI + vsi https (unsplash, OSM tiles, zunanje iz DB)
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
       // D2 (zvočni povzetek): <audio> z blob: URL ( WAV iz /api/itinerary/tts)
       // — blob je istega dokumenta ( brez omrežja), zato varen vir za media
       "media-src 'self' blob:",
-      // API klici: lastni origin + zunanji (Open-Meteo preko proxy, Puter)
-      "connect-src 'self' blob: https: wss:",
+      // API klici: SAMO lastni origin — zunanje API-je (Open-Meteo, AI
+      // providerji) klient nikoli ne kliče direktno (server-side proxy).
+      `connect-src 'self' blob:${
+        process.env.NODE_ENV === "development" ? " ws: wss:" : ""
+      }`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

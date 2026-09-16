@@ -5,6 +5,13 @@
 > **Namen:** Zadnji varnostni pregled pred produkcijo
 
 > ✅ **Posodobitev 2026-09-08:** izvedena varnostna utrditev **v1.1.0** — PII zaščita (email verifikacija na orders/bookings), strežniška validacija cen, rate limiting na 16+ poteh, cron avtentikacija, timing-safe primerjave, JSON-LD/HTML escapiranje, varnostni headerji (CSP/HSTS/…) in čiščenje skrivnosti iz git zgodovine. Podrobnosti: `CHANGELOG.md` § [1.1.0]. Prej odkrite vrzeli v tem pregledu so naslovljene.
+>
+> ✅ **Posodobitev 2026-09-16 (revizija #9):** tabela 1.1 in vrstici »Rate
+> limiting na auth« / »Brute force protection« usklajeni z DEJANSKIM stanjem
+> kode (prejšnje ⚠️ Implementirati je bil dokumentacijski drift — headerji so
+> v `next.config.ts` aktivni od v1.1.0, prijavni rate limit pa hibridni
+> ip+email). CSP nadalje ostren v **v1.35.0** (odstranjen `unsafe-eval` v
+> produkciji, `connect-src` zožen na `'self' blob:`).
 
 ---
 
@@ -12,14 +19,21 @@
 
 ### 1.1 HTTP Security Headers
 
-| Header | Vrednost | Status |
+| Header | Vrednost (dejanska, next.config.ts) | Status |
 |--------|---------|--------|
-| Content-Security-Policy | strict | ⚠️ Implementirati |
-| Strict-Transport-Security | max-age=31536000; includeSubDomains | ⚠️ Implementirati |
-| X-Frame-Options | DENY | ⚠️ Implementirati |
-| X-Content-Type-Options | nosniff | ⚠️ Implementirati |
-| Referrer-Policy | strict-origin-when-cross-origin | ⚠️ Implementirati |
-| Permissions-Policy | camera=(), microphone=(), geolocation=() | ⚠️ Implementirati |
+| Content-Security-Policy | default-src 'self'; script-src 'self' 'unsafe-inline' (prod; dev doda 'unsafe-eval'); style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' blob: (prod); media-src 'self' blob:; frame-ancestors 'none'; base-uri/form-action/object-src | ✅ Implementirano (v1.1.0; ostrenje v1.35.0) |
+| Strict-Transport-Security | max-age=63072000; includeSubDomains | ✅ Implementirano |
+| X-Frame-Options | DENY | ✅ Implementirano |
+| X-Content-Type-Options | nosniff | ✅ Implementirano |
+| Referrer-Policy | strict-origin-when-cross-origin | ✅ Implementirano |
+| Permissions-Policy | camera=(), microphone=(), geolocation=(self), payment=() | ✅ Implementirano |
+
+> ⚠️ Trade-off (zavestno, dokumentirano v next.config.ts):
+> `script-src 'unsafe-inline'` je potreben za Next.js App Router hydration
+> inline skripte (nonce-CSP bi zahteval middleware + konec statične
+> optimizacije); `img-src https:` pokriva zunanje slike iz DB (surovi
+> `<img>` — gostiteljev ni mogoče enumerirati; meji sta moderacija +
+> write-time URL validacija).
 
 **Implementacija:**
 
@@ -73,8 +87,8 @@ export default {
 | Session expiry | ⚠️ 30 dni (default) | |
 | Admin auth | ✅ ADMIN_PASSWORD header | |
 | Owner auth | ✅ NextAuth session | |
-| Rate limiting na auth | ⚠️ Dodati | 5 poskusov/IP |
-| Brute force protection | ⚠️ Dodati | Lockout po 5 napakah |
+| Rate limiting na auth | ✅ Hibridni ip+email: 10 poskusov / 15 min (oba providerja) | |
+| Brute force protection | ✅ Rate limit (10/15 min) + bcrypt cikla tudi ob neobstoječem računu + timing-izenačitev (DUMMY_HASH) | |
 | 2FA | ❌ Ni implementirano | Za admin (kasneje) |
 
 ### 1.3 Input Validation
@@ -271,7 +285,7 @@ bun update <package>
 
 ## 2. Security Audit Checklist (pred deploy)
 
-- [ ] Security headers konfigurirani (next.config.ts)
+- [x] Security headers konfigurirani (next.config.ts — od v1.1.0; CSP ostren v1.35.0)
 - [ ] Vsi API endpoints imajo input validation (Zod)
 - [ ] Rate limiting implementiran na kritičnih endpointih
 - [ ] Vsi secrets v Vercel env (ne v kodi)

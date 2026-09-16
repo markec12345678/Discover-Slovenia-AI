@@ -25,21 +25,39 @@ const DUMMY_HASH = hashSync(
 // Stara seja torej umre v ≤ ~60 s po ponastavitvi (fiksni TTL od zadnjega
 // DB branja; cache ZADETEK ne podaljšuje življenjske dobe).
 const TOKEN_VERSION_TTL_MS = 60_000;
-const versionCache = new Map<string, { v: number; at: number }>();
+interface OwnerState {
+  plan: string;
+  role: string;
+  subscriptionStatus: string | null;
+}
+const versionCache = new Map<
+  string,
+  { v: number; at: number; owner: OwnerState | null }
+>();
 
-async function getDbTokenVersion(
+// Revizija #9 (trditev 6): getDbSessionState poleg tokenVersion vrne tudi
+// aktualni owner plan/role/subscriptionStatus IZ ISTE POIZVEDBE (0 dodatnih
+// DB klicev). jwt callback ob vsakem svežem branju (potekel 60-s cache)
+// osveži te vrednosti v žetonu — okno zastarelosti je tako ≤ 60 s, enako
+// oknu razveljavitve seje. Prej jih je planSynced po prvem syncu ZAMRZNIL
+// do izteka žetona (30 dni): demotion admin→provider v DB ne bi ujel že
+// izdanega žetona (latenten footgun — ni bil izkoriščen: getCurrentRole/
+//  requireOwner/requireOwnership vsi ponovno berejo DB, 0 potrošnikov
+// session.user.role za avtorizacijo, ampak meja zdaj ne visi več na nji).
+async function getDbSessionState(
   accountType: string | undefined,
   id: string
-): Promise<number | null> {
+): Promise<{ v: number | null; owner: OwnerState | null }> {
   const key = `${accountType}:${id}`;
   const now = Date.now();
   const cached = versionCache.get(key);
   if (cached && now - cached.at < TOKEN_VERSION_TTL_MS) {
-    return cached.v;
+    return { v: cached.v, owner: cached.owner };
   }
 
   // Potekel cache (ali prvi klic) — sveže branje iz DB.
   let v: number | null = null;
+  let owner: OwnerState | null = null;
   if (accountType === "user") {
     const user = await db.user.findUnique({
       where: { id },
@@ -47,16 +65,28 @@ async function getDbTokenVersion(
     });
     v = user?.tokenVersion ?? null;
   } else {
-    const owner = await db.owner.findUnique({
+    const ownerRow = await db.owner.findUnique({
       where: { id },
-      select: { tokenVersion: true },
+      select: {
+        tokenVersion: true,
+        plan: true,
+        role: true,
+        subscriptionStatus: true,
+      },
     });
-    v = owner?.tokenVersion ?? null;
+    v = ownerRow?.tokenVersion ?? null;
+    owner = ownerRow
+      ? {
+          plan: ownerRow.plan,
+          role: ownerRow.role,
+          subscriptionStatus: ownerRow.subscriptionStatus,
+        }
+      : null;
   }
 
   // Račun je bil izbrisan → verzija -1 (nikoli se ne ujema z žetonom).
-  versionCache.set(key, { v: v ?? -1, at: now });
-  return v ?? -1;
+  versionCache.set(key, { v: v ?? -1, at: now, owner });
+  return { v: v ?? -1, owner };
 }
 
 // Preprosto čiščenje cache-a (vsakih 5 min pobriši >10 min stare vnose) —
@@ -218,7 +248,7 @@ export const authOptions: NextAuthOptions = {
         // velja (geslo ni bilo ponastavljeno / račun ni bil izbrisan).
         // Kratki cache (60 s) ščiti DB pred hladnim branjem ob vsakem klicu.
         cleanupVersionCache();
-        const current = await getDbTokenVersion(
+        const current = await getDbSessionState(
           token.accountType as string,
           token.id as string
         );
@@ -227,13 +257,13 @@ export const authOptions: NextAuthOptions = {
         // uvedbi; razveljavitev udari šele, ko reset inkrementira verzijo.
         const tokenVersion =
           typeof token.tokenVersion === "number" ? token.tokenVersion : 0;
-        if (current === null || current !== tokenVersion) {
+        if (current.v === null || current.v !== tokenVersion) {
           // RAZVELJAVI sejo: vrni žeton BREZ identitete — session callback
           // potem izpostavi prazno sejo, vsi guardi (session?.user?.id)
           // vrnejo 401. NextAuth interne (jti/iat/exp) ostanejo nedotaknjene.
           console.log(
             `[auth] seja razveljavljena (${token.accountType}:${token.id}, ` +
-              `različica žetona ${String(token.tokenVersion)} ≠ DB ${String(current)})`
+              `različica žetona ${String(token.tokenVersion)} ≠ DB ${String(current.v)})`
           );
           token.id = undefined;
           token.email = undefined;
@@ -248,9 +278,23 @@ export const authOptions: NextAuthOptions = {
           token.planSynced = undefined;
           return token;
         }
+        // Revizija #9 (trditev 6): osveži plan/role/subscriptionStatus ob
+        // vsakem branju stanja (isto branje kot tokenVersion zgoraj — 0
+        // dodatnih poizvedb). Tudi ob zadetku cache-a so vrednosti največ
+        // 60 s stare — okno zastarelosti je tako ≤ 60 s, enako oknu
+        // razveljavitve seje. Pripis je idempotenten (iste vrednosti →
+        // nič spremembe obnašanja).
+        if (current.owner && token.accountType !== "user") {
+          token.plan = current.owner.plan;
+          token.subscriptionStatus = current.owner.subscriptionStatus ?? undefined;
+          token.role = current.owner.role;
+        }
       }
-      // Osveži plan in role iz baze (v primeru nadgradnje) — SAMO za ownerje
-      if (token.email && token.accountType !== "user" && !token.planSynced) {
+      // Zgodovinski žetoni BREZ accountType (izdani pred P1 — 30-dnevna
+      // veljavnost jih je davno potekla; obravnavani kot owner): enkratna
+      // email-osnovana osvežitev ostaja samo zanje. Moderni žetoni imajo
+      // accountType in gredo čez zvezni piggyback sync zgoraj.
+      if (token.email && !token.accountType && !token.planSynced) {
         const owner = await db.owner.findUnique({
           where: { email: token.email },
           select: { plan: true, subscriptionStatus: true, role: true },
