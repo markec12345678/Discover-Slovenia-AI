@@ -1,17 +1,110 @@
 import { NextResponse } from "next/server";
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
+import { rateLimit } from "@/lib/rate-limit";
+import { getRoadLeg } from "@/lib/road-routing-server";
+import {
+  DESTINATION_COORDS,
+  heuristicLeg,
+  round5,
+} from "@/lib/road-routing";
+import type { RoutingMethod } from "@/lib/types";
 
-// GET /api/itinerary/stops-along-way?from=bled&to=bohinj
-// Vrne POI-je in destinacije med dvema točkama (Roadtrippers inspiracija)
+// GET /api/itinerary/stops-along-way?from=bled&to=bohinj&exclude=…&lang=sl
 //
-// Preprosta hevristika: najde destinacije ki so "na poti" med dvema
-// V produkciji: Google Maps Directions API + midpoint search
+// BACKLOG #5 (COMPETITIVE-ANALYSIS-MINDTRIP.md §22) — "Postanki na poti" z
+// POŠTENIM detourjem: MEM road-trip članek — "suggestion needs the actual
+// extra distance attached". Za vsak predlog izračunamo
+//
+//     detour = road(A→s) + road(s→B) − road(A→B)
+//
+// iz ISTE OSRM plasti kot značke ~km dni (F5.6 predpomnilnik + varovalka;
+// ob napaki hevristika, razkrito v `source`). Nič izmišljenih številk.
+//
+// Kandidati: destinacije v pasu okrog odseka A→B (razdalja točke od odseka,
+// ne samo od midpointa — Sprint 5 hevristika je spuščala postanke blizu
+// krajišč), brez že uporabljenih (exclude = VSI postanki trenutnega načrta).
+// Omejitev omrežja: največ 4 kandidati × 2 OSRM para (+1 direktna noga,
+// ponavadi že v predpomnilniku od generiranja) — vljudno do javnega demo
+// strežnika (sočasnost 4, timeout 2,5 s, varovalka 4 napake → 10 min).
+
+/** Max razdalja (km) od odseka A→B, da kandidat šteje za "na poti". */
+const CORRIDOR_KM = 30;
+/** Max št. kandidatov, za katere izračunamo detour (vljudnost do OSRM). */
+const MAX_CANDIDATES = 4;
+/** Max predlogov v odgovoru. */
+const MAX_SUGGESTIONS = 3;
+/** Onkaj tega ovinka predlog ni več "postanek na poti", ampak drugo
+ *  potovanje (Bled→Bohinj je ~5 km; Triglav od tam je +70 km ovinka). */
+const MAX_DETOUR_KM = 50;
+
+/** Haversine razdalja v km (ista formula kot čiste plasti). */
+function haversineKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/**
+ * Razdalja točke P od ODSEKA A→B v km (lokalna ploskev — za razdalje znotraj
+ * Slovenije dovolj natančno za koridor predfilter). Projekcija izven odseka
+ * → razdalja do najbližjega krajišča (klasična point-to-segment).
+ */
+function pointToSegmentKm(
+  p: { lat: number; lng: number },
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number }
+): number {
+  // lokalne enote: ~111 km na stopinjo (lat), lng prilagojen s cos(lat)
+  const kx = Math.cos(((a.lat + b.lat) / 2) * (Math.PI / 180)) * 111;
+  const ky = 111;
+  const ax = a.lng * kx;
+  const ay = a.lat * ky;
+  const bx = b.lng * kx;
+  const by = b.lat * ky;
+  const px = p.lng * kx;
+  const py = p.lat * ky;
+
+  const dx = bx - ax;
+  const dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  if (len2 === 0) return haversineKm(p.lat, p.lng, a.lat, a.lng);
+
+  // projekcijski parameter, prišit na [0, 1]
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2));
+  const cx = ax + t * dx;
+  const cy = ay + t * dy;
+  return Math.hypot(px - cx, py - cy);
+}
 
 export async function GET(request: Request) {
   try {
+    // Backlog #5: javni endpoint (expand klik) — enak vzorec varovanja kot
+    // tts/ingest poti (60 s okno je za klikanje radodarno, a varovalka je).
+    const limited = rateLimit(request, { limit: 20, windowMs: 60_000 });
+    if (limited) return limited;
+
     const { searchParams } = new URL(request.url);
     const fromId = searchParams.get("from");
     const toId = searchParams.get("to");
+    const lang = searchParams.get("lang") === "en" ? "en" : "sl";
+    const excludeIds = new Set(
+      (searchParams.get("exclude") ?? "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    );
 
     if (!fromId || !toId) {
       return NextResponse.json(
@@ -30,44 +123,117 @@ export async function GET(request: Request) {
       );
     }
 
-    // Izračunaj midpoint
-    const midLat = (from.coords.lat + to.coords.lat) / 2;
-    const midLng = (from.coords.lng + to.coords.lng) / 2;
+    // ------------------------------------------------------------------
+    // 1) Koridor predfilter: destinacije znotraj pasu okrog odseka, brez
+    //    krajišč in brez že načrtovanih postankov
+    // ------------------------------------------------------------------
+    const candidates = DESTINATIONS.filter(
+      (d) =>
+        d.id !== fromId &&
+        d.id !== toId &&
+        !excludeIds.has(d.id) &&
+        pointToSegmentKm(d.coords, from.coords, to.coords) <= CORRIDOR_KM
+    )
+      .sort(
+        (x, y) =>
+          pointToSegmentKm(x.coords, from.coords, to.coords) -
+          pointToSegmentKm(y.coords, from.coords, to.coords)
+      )
+      .slice(0, MAX_CANDIDATES);
 
-    // Najdi destinacije v bližini midpoint (radij ~30km)
-    const nearbyRadius = 0.3; // približno 30km v stopinjah
-    const stops = DESTINATIONS.filter((d) => {
-      if (d.id === fromId || d.id === toId) return false;
-      const dist = Math.sqrt(
-        Math.pow(d.coords.lat - midLat, 2) +
-        Math.pow(d.coords.lng - midLng, 2)
+    if (candidates.length === 0) {
+      return NextResponse.json({
+        from: { id: from.id, name: from.name },
+        to: { id: to.id, name: to.name },
+        stops: [],
+        totalStops: 0,
+        method: "osrm" as const,
+      });
+    }
+
+    // ------------------------------------------------------------------
+    // 2) POŠTEN detour: road(A→s) + road(s→B) − road(A→B) iz OSRM plasti
+    //    (predpomnilnik → omrežje → hevristika; vir razkrit po paru)
+    // ------------------------------------------------------------------
+    const legOf = async (
+      aId: string,
+      bId: string
+    ): Promise<{ km: number; min: number; source: "osrm" | "heuristic" }> => {
+      const real = await getRoadLeg(aId, bId);
+      if (real) return { km: real.km, min: real.min, source: "osrm" };
+      const a = DESTINATION_COORDS.get(aId)!;
+      const b = DESTINATION_COORDS.get(bId)!;
+      const h = heuristicLeg(a, b);
+      return { km: h.km, min: h.min, source: "heuristic" };
+    };
+
+    const direct = await legOf(fromId, toId);
+
+    // Kandidati zaporedno (z vzporednim parom znotraj vsakega) — največ 2
+    // sočasna OSRM klica na klik, vljudno do javnega demo strežnika.
+    const stops: {
+      id: string;
+      name: string;
+      tagline: string;
+      image: string;
+      category: (typeof DESTINATIONS)[number]["type"];
+      region: (typeof DESTINATIONS)[number]["region"];
+      detourKm: number;
+      detourMin: number;
+      source: "osrm" | "heuristic";
+    }[] = [];
+    for (const d of candidates) {
+      const [toStop, fromStop] = await Promise.all([
+        legOf(fromId, d.id),
+        legOf(d.id, toId),
+      ]);
+      const detourKm = Math.max(0, round5(toStop.km + fromStop.km - direct.km));
+      const detourMin = Math.max(
+        0,
+        round5(toStop.min + fromStop.min - direct.min)
       );
-      return dist < nearbyRadius;
-    }).map((d) => ({
-      id: d.id,
-      name: d.name,
-      tagline: d.tagline,
-      image: d.image,
-      category: d.type,
-      region: d.region,
-      distanceFromMidpoint: Math.round(
-        Math.sqrt(
-          Math.pow(d.coords.lat - midLat, 2) +
-          Math.pow(d.coords.lng - midLng, 2)
-        ) * 111 // približno km
-      ),
-      coords: d.coords,
-    }));
+      const tagline =
+        lang === "en"
+          ? (DESTINATIONS_EN[d.id]?.tagline ?? d.tagline)
+          : d.tagline;
+      stops.push({
+        id: d.id,
+        name: d.name,
+        tagline,
+        image: d.image,
+        category: d.type,
+        region: d.region,
+        detourKm,
+        detourMin,
+        source: (toStop.source === "osrm" && fromStop.source === "osrm"
+          ? "osrm"
+          : "heuristic") as "osrm" | "heuristic",
+      });
+    }
 
-    // Sortiraj po razdalji od midpoint
-    stops.sort((a, b) => a.distanceFromMidpoint - b.distanceFromMidpoint);
+    // najmanjši ovinek naprej (voznikovo dejansko odločevalno merilo) in
+    // zgolj smiselni ovinki (≤ MAX_DETOUR_KM) — številka ostaja poštena,
+    // odločitev je voznikova
+    stops.sort((a, b) => a.detourKm - b.detourKm);
+    const sensible = stops.filter((s) => s.detourKm <= MAX_DETOUR_KM);
+    const shown = sensible.slice(0, MAX_SUGGESTIONS);
+
+    const sources = new Set(shown.map((s) => s.source));
+    const method: RoutingMethod =
+      shown.length === 0
+        ? "osrm"
+        : sources.size === 1 && sources.has("osrm")
+          ? "osrm"
+          : sources.size === 1
+            ? "heuristic"
+            : "mixed";
 
     return NextResponse.json({
-      from: { id: from.id, name: from.name, coords: from.coords },
-      to: { id: to.id, name: to.name, coords: to.coords },
-      midpoint: { lat: midLat, lng: midLng },
-      stops: stops.slice(0, 5), // max 5 suggestions
-      totalStops: stops.length,
+      from: { id: from.id, name: from.name },
+      to: { id: to.id, name: to.name },
+      stops: shown,
+      totalStops: sensible.length,
+      method,
     });
   } catch (error) {
     console.error("[stops-along-way] napaka:", error);

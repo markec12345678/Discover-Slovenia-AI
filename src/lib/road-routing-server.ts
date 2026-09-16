@@ -269,6 +269,39 @@ async function mapLimit<T, R>(
   return results;
 }
 
+/**
+ * ENA cestna noga za poljuben par destinacij (po ID-jih): predpomnilnik →
+ * OSRM → null (klicnik uporabi hevristiko). Backlog #5 "Postanki na poti":
+ * detour izračun (A→s + s→B − A→B) potrebuje realne cestne razdalje za
+ * pare, ki niso (nujno) del itinererja — ta getter deli predpomnilnik in
+ * varovalko z buildLegRouteIndex ( isti vir kot značke ~km dni).
+ *
+ * Vrne null, če kateri ID ni v datasetu ALI OSRM ni na voljo — NIKOLI ne
+ * vrže, NIKOLI ne ugiba.
+ */
+export async function getRoadLeg(
+  aId: string,
+  bId: string
+): Promise<LegRoute | null> {
+  const a = DESTINATION_COORDS.get(aId);
+  const b = DESTINATION_COORDS.get(bId);
+  if (!a || !b) return null;
+
+  const key = legKey(aId, bId);
+  const cached = cacheGet(key);
+  if (cached) return cached;
+  if (breakerOpen()) return null;
+
+  const leg = await fetchOsrmLeg(a, b, defaultOsrmJsonFetcher);
+  if (leg) {
+    cacheSet(key, leg);
+    noteSuccess();
+    return leg;
+  }
+  noteFailure();
+  return null;
+}
+
 export interface BuildLegIndexOptions {
   /** Injektirano za teste (privzeto node:https family:4 pridobivalec). */
   fetchJson?: OsrmJsonFetcher;

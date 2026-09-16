@@ -86,6 +86,10 @@ export type PlannerEventName =
   // F16 "Optimalno zaporedje dneva": uporabnik preuredi postanke dneva z
   // 2-opt/izčrpnim optimizatorjem (deterministično, 0 AI; saved_km = ocena)
   | "day_optimized"
+  // Backlog #5 "Postanki na poti": predlogi med postanki dneva s POŠTENIM
+  // ovinkom (detour km iz OSRM plasti; count = št. prikazanih predlogov)
+  | "leg_suggestions_expanded"
+  | "leg_suggestion_added"
   // Neuspehi
   | "planner_error"
   | "empty_result"

@@ -111,9 +111,15 @@ import { TripTimeline } from "@/components/trip-timeline";
 import { buildItineraryICS, icsFileName } from "@/lib/ics-export";
 import type { IngestMatch } from "@/lib/url-ingest";
 import { PlannerStopLeg } from "@/components/planner-stop-leg";
+import {
+  PlannerLegSuggestions,
+  type StopSuggestion,
+} from "@/components/planner-leg-suggestions";
 import { PlannerStatusStrip } from "@/components/planner-status-strip";
 import { PlannerSummaryBar } from "@/components/planner-summary-bar";
 import { buildItineraryAudioScript } from "@/lib/planner-audio";
+import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
+import type { LocationVisit } from "@/lib/types";
 
 // F5.1: zemljevid poti na strani načrtovalnika — Leaflet je client-only
 // ( dostopa do window), zato dinamičen uvoz brez SSR ( isti vzorec kot
@@ -178,6 +184,35 @@ function segmentOfSlot(slot: string): DaySegment | null {
   if (/(popoldan|afternoon)/.test(lower)) return "afternoon";
   if (/(večer|vecer|zvečer|zvecer|evening|night)/.test(lower)) return "evening";
   return null;
+}
+
+/**
+ * Backlog #5: enakomerna prerazporeditev časovnih okvirjev dneva čez
+ * 9:00–19:00 (korak 30 min) po vstavitvi/odstranitvi postanka — čista
+ * funkcija, isti HH:MM format kot fallback generator (segmenti
+ * Jutro/Popoldan/Večer ostanejo berljivi). En sam postanek ohrani svoj
+ * okvir (ni česa prerazporejati).
+ */
+function spreadDaySlots(locations: LocationVisit[]): LocationVisit[] {
+  const n = locations.length;
+  if (n <= 1) return locations;
+  const startH = 9;
+  const spanH = 10; // 9:00 → 19:00
+  const per =
+    n === 2 ? 5 : Math.max(1.5, Math.round((spanH / n) * 2) / 2); // korak 30 min
+  const fmt = (h: number) => {
+    const hh = Math.floor(h);
+    const mm = Math.round((h - hh) * 60);
+    return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+  };
+  return locations.map((loc, i) => {
+    const s = startH + i * per;
+    return {
+      ...loc,
+      time_slot: `${fmt(s)}-${fmt(s + per)}`,
+      duration: Math.max(1, Math.round(per)),
+    };
+  });
 }
 
 // Persistenca zadnjega itinererja (localStorage) + deljeni načrti (URL ?odpri=)
@@ -359,6 +394,19 @@ export function ItineraryPlanner() {
     }
     return map;
   }, [geoValidation]);
+
+  // Backlog #5: VSI destinacijski ID-ji trenutnega načrta — predlogi
+  // "Postanki na poti" jih izpustijo (ne predlagamo že načrtovanega) in se
+  // po Dodaj takoj skrijejo iz razširjene sezname.
+  const usedDestinationIds = useMemo(
+    () =>
+      new Set(
+        (itinerary?.days ?? []).flatMap((d) =>
+          d.locations.map((l) => l.destination_id)
+        )
+      ),
+    [itinerary]
+  );
 
   // D2 (nabor #2): zvočni povzetek — skript se sestavi ČISTO iz podatkov
   // načrta (ista čista funkcija na clientu; km iz geo-validacije, enak vir
@@ -791,6 +839,103 @@ export function ItineraryPlanner() {
     toast({
       title: t("optimizeToastTitle"),
       description: t("optimizeToastDesc", { km: res.savedKm }),
+    });
+  }
+
+  // Backlog #5 (1.24.0): "Postanki na poti" — vstavitev predlaganega
+  // postanka NA DANO MESTO (za postankom, ob katerem je bil predlog) in na
+  // DAN DAN. DETERMINISTIČNO na clientu (0 AI, 0 omrežja) po VZORCU F16:
+  // strukturne metrike (quality/geoValidation/routeGeometry) so vezane na
+  // staro sestavo → jih pošteno umaknemo in pustimo preračunati na mestu
+  // uporabe (hevristika, razkrito). Nov obisk nosi ceno iz dataseta
+  // (costPerPerson × skupina) in tagline; časovni okvirji dneva se
+  // prerazporedijo čez 9:00–19:00 (enakomerno, korak 30 min).
+  function applySuggestedStop(
+    day: DayPlan,
+    afterId: string,
+    suggestion: StopSuggestion
+  ) {
+    if (!itinerary) return;
+    const dest = destinationById(suggestion.id);
+    // Neznan ID (izven dataseta) — pošteno ne ugibamo (P0.3 vzorec)
+    if (!dest) {
+      toast({
+        title: t("legSugError"),
+        description: suggestion.name,
+      });
+      return;
+    }
+    const dayIdx = itinerary.days.findIndex((d) => d.day === day.day);
+    if (dayIdx === -1) return;
+
+    const groupSize = formData?.groupSize || 2;
+    const isEn = locale === "en";
+    const tagline = isEn
+      ? DESTINATIONS_EN[dest.id]?.tagline ?? dest.tagline
+      : dest.tagline;
+    const visit: LocationVisit = {
+      destination_id: dest.id,
+      destination_name: dest.name,
+      time_slot: "",
+      duration: 0,
+      estimated_cost: dest.costPerPerson * groupSize,
+      notes: tagline,
+    };
+
+    const locations = [...itinerary.days[dayIdx].locations];
+    const insertAt = Math.min(
+      locations.length,
+      Math.max(
+        0,
+        locations.findIndex((l) => l.destination_id === afterId) + 1
+      )
+    );
+    locations.splice(insertAt, 0, visit);
+    const respread = spreadDaySlots(locations);
+
+    const nextDays = itinerary.days.map((d, i) =>
+      i === dayIdx
+        ? {
+            ...d,
+            locations: respread,
+            // OSRM geometrija/noge so vezane na STARO sestavo — pošteno
+            // umaknjeno (zemljevid/povezovalniki padejo na oceno, kot pri
+            // starih načrtih)
+            routeGeometry: undefined,
+          }
+        : d
+    );
+    const next: Itinerary = {
+      ...itinerary,
+      days: nextDays,
+      // Ista poštenost kot F16: strežniško izračunane metrike so zastarele
+      quality: undefined,
+      geoValidation: undefined,
+      // nove pare povezovalnikov nimajo OSRM nog → odstranimo indeks,
+      // da vsak povezovalnik pade na odkrito hevristiko (ne mešamo virov)
+      legs: undefined,
+    };
+    setItinerary(next);
+    persistItineraryLocally(next, formData);
+    markResultEngaged();
+    if (shareUrl) {
+      setShareUrl(null);
+      setCopied(false);
+    }
+    trackPlannerEvent("leg_suggestion_added", {
+      day: day.day,
+      destination_id: dest.id,
+      detour_km: suggestion.detourKm,
+      detour_min: suggestion.detourMin,
+      source: suggestion.source,
+      locale,
+    });
+    toast({
+      title: t("legSugAddedTitle"),
+      description: t("legSugAddedDesc", {
+        name: dest.name,
+        day: day.day,
+      }),
     });
   }
 
@@ -3037,6 +3182,25 @@ export function ItineraryPlanner() {
                                   from={prev}
                                   to={loc}
                                   legs={itinerary.legs}
+                                />
+                              )}
+                              {/* Backlog #5: predlogi postankov na tej etapi
+                                  (zložen žeton → lazy nalaganje, +X km
+                                  izven rute iz OSRM plasti; Dodaj je
+                                  determinističen, F16 vzorec) */}
+                              {prev && (
+                                <PlannerLegSuggestions
+                                  day={day.day}
+                                  from={prev}
+                                  to={loc}
+                                  usedIds={usedDestinationIds}
+                                  onAdd={(s) =>
+                                    applySuggestedStop(
+                                      day,
+                                      prev.destination_id,
+                                      s
+                                    )
+                                  }
                                 />
                               )}
                               {showSegHeader && seg && SegIcon && (
