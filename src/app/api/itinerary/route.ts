@@ -442,7 +442,7 @@ Rules:
 5. Stay within budget (total < €${input.budget})
 6. Respect seasonal suitability (${input.season})
 7. Keep time frames realistic (account for ~30-45 min drives between locations)
-8. When fitting, mention suggested partners in notes or recommendations (e.g. "For lunch, visit Restaurant JB in Ljubljana")
+8. When fitting, mention suggested partners from the PREDLAGANI PARTNERJI list in notes or recommendations (e.g. "For lunch, visit [a partner from the list]"). NEVER invent restaurant, hotel or venue names — venue names may appear ONLY from the suggested partners list; when that list is absent, notes and recommendations must not name specific venues
 9. Add estimated drive time to the next location in notes (e.g. "30 min drive to Bohinj")
 10. "packing_list": 8-14 concrete items for this trip (season, interests, duration)
 11. "rationale": 1-2 sentences, written as a guide in third person: why THIS itinerary suits the traveler — reference their interests, budget and desire for less driving. Concrete, no marketing fluff.${extraRulesBlockEn}
@@ -459,14 +459,14 @@ JSON format (STRICT):
           "time_slot": "09:00-13:00",
           "duration": 4,
           "estimated_cost": 50,
-          "notes": "Morning visit, best light for photos. For lunch, visit Penzion Berc."
+          "notes": "Morning visit, best light for photos. ~35 min drive to Bohinj."
         }
       ],
       "weather": { "condition": "sunny", "temp": 22 }
     }
   ],
   "total_budget": 500,
-  "recommendations": ["Bring sunglasses", "Book the boat in advance at Pletna Bled"],
+  "recommendations": ["Bring sunglasses", "Book the traditional pletna boat ride in advance"],
   "tips": ["Start early to avoid crowds"],
   "packing_list": ["Sunscreen SPF 50", "Hiking shoes", "Cash in euros"],
   "rationale": "This itinerary combines peaceful nature and local cuisine with minimal driving — Bled and Bohinj are in the same region, so more time is spent at locations instead of in the car."
@@ -491,7 +491,7 @@ Pravila:
 5. Ostani znotraj proračuna (skupni < €${input.budget})
 6. Upoštevaj sezonsko ustreznost (${input.season})
 7. Časovni okvirji naj bodo realistični (upostevaj vožnjo med lokacijami ~30-45min)
-8. Kadar ustreza, v notes ali recommendations omeni predlagane partnerje (npr. "Za kosilo obiščite Restavracijo JB v Ljubljani")
+8. Kadar ustreza, v notes ali recommendations omeni predlagane partnerje s seznama PREDLAGANI PARTNERJI (npr. "Za kosilo obiščite [partnerja s seznama]"). NIKOLI ne izmišljuj imen restavracij, hotelov ali lokalov — imena lokalov se smejo pojaviti SAMO s seznama predlaganih partnerjev; če seznama ni, notes in recommendations ne smeta vsebovati imen konkretnih lokalov
 9. V notes dodaj ocenjen čas vožnje do naslednje lokacije (npr. "30 min vožnje do Bohinja")
 10. "packing_list": 8-14 konkretnih stvari za ta izlet (sezona, interesi, trajanje)
 11. "rationale": 1-2 povedi, napisane kot vodnik v tretji osebi: zakaj TA pot ustreza potniku — sklicuj se na njegove interese, proračun in željo po manj vožnje. Konkretno, brez marketinških fraz.${extraRulesBlockSl}
@@ -508,14 +508,14 @@ JSON format (STROGO):
           "time_slot": "09:00-13:00",
           "duration": 4,
           "estimated_cost": 50,
-          "notes": "Jutranji obisk, najboljša svetloba za fotografije. Za kosilo obiščite Penzion Berc."
+          "notes": "Jutranji obisk, najboljša svetloba za fotografije. ~35 min vožnje do Bohinja."
         }
       ],
       "weather": { "condition": "sončno", "temp": 22 }
     }
   ],
   "total_budget": 500,
-  "recommendations": ["Vzemi sončna očala", "Rezerviraj čoln vnaprej pri Pletna Bled"],
+  "recommendations": ["Vzemi sončna očala", "Rezerviraj vožnjo s pletno vnaprej"],
   "tips": ["Začni zgodaj za manj ljudi"],
   "packing_list": ["Sončna krema SPF 50", "Pohodniški čevlji", "Evrovi gotovina"],
   "rationale": "Pot združuje mirno naravo in lokalno kulinariko z minimalno vožnjo — Bled in Bohinj sta na isti regiji, zato je več časa na lokacijah namesto v avtu."

@@ -231,9 +231,11 @@ export async function POST(request: Request) {
     console.error("[itinerary/refine] sponsored fetch napaka:", e);
   }
 
-  // Serijaliziraj trenutni itinerer za AI (jezikovno pravilna oznaka dneva)
+  // Serijaliziraj trenutni itinerer za AI (jezikovno pravilna oznaka dneva).
+  // Varovalka: stari/pokvarjeni shranjeni načrti brez weather polja ne
+  // onesnažijo prompta z "undefined" (neznano vrednost izrecno označimo).
   const currentItineraryStr = current.days.map((day: DayPlan) =>
-    `${isEn ? `Day ${day.day}` : `Dan ${day.day}`} (${day.weather.condition}, ${day.weather.temp}°C):\n` +
+    `${isEn ? `Day ${day.day}` : `Dan ${day.day}`} (${day.weather?.condition ?? (isEn ? "n/a" : "ni podatka")}, ${day.weather?.temp ?? "?"}°C):\n` +
     day.locations.map((loc: LocationVisit) =>
       `  - ${loc.time_slot} | ${loc.destination_name} | ${loc.duration}h | €${loc.estimated_cost} | ${loc.notes || (isEn ? "no notes" : "brez opomb")}`
     ).join("\n")
@@ -286,7 +288,7 @@ IMPORTANT:
 - Respect the season: ${formData?.season ?? "unknown"}
 - Respect the interests: ${formData?.interests?.join(", ") ?? "unknown"}
 - Respect the group size: ${formData?.groupSize ?? "unknown"}${partyTypeLine}${paceLine}
-- When suitable, include sponsored partners in notes or recommendations`
+- When suitable, include sponsored partners in notes or recommendations — but NEVER invent restaurant, hotel or venue names: venue names may appear ONLY if they come from the sponsored partners list above; when that list is absent, notes and recommendations must not name specific venues`
     : `Si strokovni slovenski vodič za načrtovanje potovanj. Uporabnik ima že generiran itinerer in želi, da ga POSODOBIŠ glede na njegov ukaz. Odgovori SAMO z veljavnim JSON, brez dodatnega besedila.
 
 POMEMBNO:
@@ -297,7 +299,7 @@ POMEMBNO:
 - Upoštevaj sezono: ${formData?.season ?? "nezdana"}
 - Upoštevaj interese: ${formData?.interests?.join(", ") ?? "neznan"}
 - Upoštevaj velikost skupine: ${formData?.groupSize ?? "nezdana"}${partyTypeLine}${paceLine}
-- Kadar ustreza, vključi sponzorirane partnerje v notes ali recommendations`;
+- Kadar ustreza, vključi sponzorirane partnerje v notes ali recommendations — vendar NIKOLI ne izmišljuj imen restavracij, hotelov ali lokalov: imena lokalov se smejo pojaviti SAMO s seznama sponzoriranih partnerjev zgoraj; če tega seznama ni, notes in recommendations ne smeta vsebovati imen konkretnih lokalov`;
 
   const userPrompt = isEn
     ? `CURRENT ITINERARY:
@@ -375,7 +377,7 @@ JSON format (STROGO, enak kot vhod):
           "time_slot": "09:00-13:00",
           "duration": 4,
           "estimated_cost": 50,
-          "notes": "Jutranji obisk. Za kosilo obiščite Penzion Berc."
+          "notes": "Jutranji obisk."
         }
       ],
       "weather": { "condition": "sončno", "temp": 22 }

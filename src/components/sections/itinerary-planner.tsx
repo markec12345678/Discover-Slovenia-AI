@@ -3086,10 +3086,15 @@ export function ItineraryPlanner() {
                               </span>
                             )}
                           </CardTitle>
-                          <Badge variant="secondary" className="gap-1.5">
-                            <Cloud className="size-3.5" aria-hidden />
-                            {day.weather.condition} · {day.weather.temp}°C
-                          </Badge>
+                          {/* Varovalka obnove: stari/pokvarjeni načrti brez
+                              weather polja (localStorage) ne sesujejo rendera —
+                              enak vzorec kot trip-timeline/shared-trip. */}
+                          {day.weather && (
+                            <Badge variant="secondary" className="gap-1.5">
+                              <Cloud className="size-3.5" aria-hidden />
+                              {day.weather.condition} · {day.weather.temp}°C
+                            </Badge>
+                          )}
                           {/* P0.2 GEO-VALIDACIJA: dnevna značka izvedljivosti —
                               ~km + raven (rdeča = ni realno izvedljivo,
                               jantbar = napak dan); brez značke = v redu.
