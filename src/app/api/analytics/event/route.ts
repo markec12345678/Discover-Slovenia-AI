@@ -88,12 +88,35 @@ const VALID_EVENTS = new Set([
   "result_session_ended_without_action",
 ]);
 
-/** Omejitev velikosti props (proti zlorabi analitičnega endpointa). */
+/** Omejitve velikosti props (proti zlorabi analitičnega endpointa).
+ *
+ * Revizija #9 (trditev 5): prej sta bili omejeni samo ŠTEVILKO ključev in
+ * dolžina VREDNOSTI — ne pa dolžina ključa samega in velikost celotnega
+ * bodyja. Napadalec je lahko 60×/min/IP pošiljal { name: "planner_started",
+ * props: { "<MB-dolg ključ>": 1, ... } } → request.json() je parsal celoten
+ * payload (CPU/ram) NEODVISNO od kasnejših omejitev, ogromni ključi pa so
+ * se nespremenjeni zapisali v metadata JSON (bloat DB).
+ *
+ * MAX_BODY_BYTES (8 KB) je radodaren strop za legitimne dogodke: 12 ključev
+ * × (64 znakov ključ + 120 znakov vrednosti) + path 200 + sid 64 + eid 64
+ * ≈ ~3 KB. Vse nad tem je zloraba, ne produktni promet.
+ */
 const MAX_PROPS_KEYS = 12;
+const MAX_PROP_KEY_LEN = 64;
 const MAX_PROP_VALUE_LEN = 120;
+const MAX_BODY_BYTES = 8 * 1024;
 
 /** Veljaven eid: [A-Za-z0-9-]{8,64} (UUID iz klienta; neveljaven → brez dedupa). */
 const EID_RE = /^[A-Za-z0-9-]{8,64}$/;
+
+/** Oblika klientnega payload-a (vrednosti se validirajo po vrsti spodaj). */
+interface AnalyticsEventBody {
+  name?: unknown;
+  props?: unknown;
+  path?: unknown;
+  sid?: unknown;
+  eid?: unknown;
+}
 
 export async function POST(request: Request) {
   // Rate limit analitike (spam zaščita) — enak vzorec kot track-funnel
@@ -105,13 +128,24 @@ export async function POST(request: Request) {
   if (limited) return limited;
 
   try {
-    const body = (await request.json().catch(() => null)) as {
-      name?: unknown;
-      props?: unknown;
-      path?: unknown;
-      sid?: unknown;
-      eid?: unknown;
-    } | null;
+    // Revizija #9 (trditev 5): MEJA VELIKOSTI BODYJA PRED parsiranjem.
+    // Dvojna preverba: content-length glava (zavrne pred branjem toka) in
+    // dejanska dolžina prebranega besedila (pokrije chunked pošiljke brez
+    // glave). Brez tega je request.json() parsal poljubno velik payload.
+    const declaredLength = Number(request.headers.get("content-length") || 0);
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: "Telo zahteve je preveliko" }, { status: 413 });
+    }
+    const raw = await request.text().catch(() => "");
+    if (raw.length > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: "Telo zahteve je preveliko" }, { status: 413 });
+    }
+    let body: AnalyticsEventBody | null = null;
+    try {
+      body = raw ? (JSON.parse(raw) as AnalyticsEventBody) : null;
+    } catch {
+      body = null; // neveljaven JSON → enaka pot kot prej (400 spodaj)
+    }
 
     const name = typeof body?.name === "string" ? body.name : "";
     if (!name || !VALID_EVENTS.has(name)) {
@@ -123,6 +157,10 @@ export async function POST(request: Request) {
     if (body?.props && typeof body.props === "object" && !Array.isArray(body.props)) {
       const entries = Object.entries(body.props as Record<string, unknown>);
       for (const [key, value] of entries.slice(0, MAX_PROPS_KEYS)) {
+        // Revizija #9 (trditev 5): tudi DOLŽINA KLJUČA je omejena — prej se je
+        // ključ poljubne dolžine nespremenjen zapisal v metadata JSON.
+        // Predolg ključ se tiho izpusti (enak vzorec kot null/objekti).
+        if (key.length > MAX_PROP_KEY_LEN) continue;
         if (typeof value === "number" || typeof value === "boolean") {
           props[key] = value;
         } else if (typeof value === "string") {

@@ -7,6 +7,75 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.35.0] — 2026-09-16
+
+### Popravljeno (1.35.0 — revizija #9: 4 nove trditve + dokumentacijski drift, vsi potrjeni in fixani)
+
+> Drugi nabor uporabnikovih trditev (analitika, JWT zastarelost, CSP, URL
+> validator). Vse štiri + ugotovitev o driftu varnostnega pregleda so bile
+> RESNIČNE — vsaka potrjena v kodi pred popravkom.
+
+- **🟡 P2 — ANALITIKA: neomejena dolžina ključev in velikost bodyja**
+  (`/api/analytics/event`): `MAX_PROPS_KEYS`/`MAX_PROP_VALUE_LEN` sta omejila
+  število ključev in dolžino vrednosti, NE PA dolžine KLJUČA in velikosti
+  celotnega bodyja — `request.json()` je parsal poljuben payload (CPU/ram)
+  NEODVISNO od kasnejših omejitev, ogromni ključi pa so se nespremenjeni
+  zapisali v metadata JSON (DB bloat). Dodano: `MAX_PROP_KEY_LEN = 64`
+  (predolgi ključi se tiho izpustijo — enak vzorec kot null/objekti) +
+  `MAX_BODY_BYTES = 8 KB` z dvojno preverbo (glava `content-length` zavrne
+  PRED branjem toka; dejanska dolžina prebranega besedila pokrije chunked
+  pošiljke brez glave) → 413. Legitimni dogodki so ~3 KB — 8 KB je
+  radodaren strop.
+- **🟡 P2 — JWT ROLE/PLAN ZAMRZNJEN po prvem syncu** (`src/lib/auth.ts`):
+  `planSynced` je po prvi osvežitvi ZAMRZNIL `role`/`plan`/
+  `subscriptionStatus` do izteka žetona (30 dni) — demotion admin→provider
+  v DB ne bi ujel že izdanega žetona. LATENTEN footgun (NI bil izkoriščen:
+  endpoint-by-endpoint preverba je potrdila, da `getCurrentRole`/
+  `requireOwner`/`requireOwnership` vsi ponovno berejo DB in da NI nobenega
+  potrošnika `session.user.role` za avtorizacijo — ne strežniškega ne
+  klientnega), a meja ni več odvisna od discipline bodočih rut: osvežitev
+  sedaj PIGGYBACK na obstoječem branju tokenVersion (isto DB poizvedbo —
+  0 dodatnih klicev), okno zastarelosti ≤ 60 s (enako oknu razveljavitve
+  seje). Enokratna email-osnovana osvežitev ostaja SAMO za zgodovinske
+  žetone brez `accountType` (pred P1 — davno potekli).
+- **🟡 P2 — CSP ŠIBKEJŠI OD VIDEZA** (`next.config.ts`): `unsafe-eval` je
+  bil aktiven TUDI v produkciji (potreben samo za dev React Refresh) in
+  `connect-src` je dovoljeval `https: wss:` (vsak HTTPS origin). Popravljeno
+  po dejanski klientni površini (audit: 0 zunanjih fetch/WebSocket/XHR v
+  klientnih komponentah — vsi zunanji servisi gredo čez server-side proxy):
+  `unsafe-eval` SAMO v dev (produkcija brez), `connect-src 'self' blob:` v
+  produkciji (dev doda `ws: wss:` za HMR). ZAVESTNO ostajata in sta zdaj
+  dokumentirana kot trade-off: `script-src 'unsafe-inline'` (Next.js App
+  Router hydration inline skripte; nonce-CSP bi zahteval middleware + konec
+  statične optimizacije) in `img-src https:` (zunanje slike iz DB se
+  strežejo prek surovega `<img>` — gostiteljev ni mogoče enumerirati; meji
+  sta moderacija + write-time URL validacija).
+- **🟡 P2 — URL VALIDATOR NI PRAVI PARSER** (`src/lib/external-url.ts`):
+  `safeWebsiteSchema` je preverjal samo predpono `/^https?:\/\//` — brez
+  hostname, userinfo, porta in kontrolnih znakov po normalizaciji. Novo
+  skupno merilo `isSafeHttpUrl()` za OBA meji (write zod refine + read
+  `safeExternalHref`): pravi `new URL()` parse + protokol http(s) +
+  neprazen hostname + BREZ username/password (phishing indikator
+  `https://zaupanja-vreden-izgled.com@evil.com`) + zavrnitev presledkov/
+  kotir/kontrolnih znakov PRED parsiranjem. `http://` ostaja dovoljen zaradi
+  obstoječih DB vrstic (ni naša varnostna lastnost).
+- **📄 DOKUMENTACIJSKI DRIFT** (`docs/SECURITY-REVIEW.md`): tabela 1.1 je
+  še vedno kazala "⚠️ Implementirati" za VSE varnostne headerje (dejansko
+  aktivni od v1.1.0) + "Rate limiting na auth ⚠️ Dodati" (dejansko hibridni
+  ip+email 10/15 min) + odkljukana checklista pred deploy. Usklajeno z
+  dejanskim stanjem (vključno z dejansko HSTS vrednostjo 63072000, ne
+  31536000) + nov posodobitveni banner z datumom.
+
+### Verificirano (1.35.0)
+
+- `bunx tsc --noEmit`: 0 napak. `bun run lint`: čisto.
+- Funkcionalni testi nove meje: 8 KB body → 413; predolg ključ → izpust;
+  `https://user:pass@evil.com` → zavrnjen; `https://ok.si` → sprejet.
+- CSP preverjen na dev strežniku (glava vsebuje `unsafe-eval` + `ws:`) —
+  produkcija brez (pogojni izraz po NODE_ENV; CI bo potrdil z buildom).
+
+---
+
 ## [1.34.0] — 2026-09-16
 
 ### Popravljeno (1.34.0 — revizija #8: 4 uporabniške trditve, vse potrjene in fixane)
