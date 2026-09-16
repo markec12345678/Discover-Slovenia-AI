@@ -255,18 +255,24 @@ export function checkAdmin(password: string | null | undefined): boolean {
  * Preveri ali trenutni uporabnik lasti specifičen resource.
  * Za "own" scope — preveri ali je ownerId lastnika enak trenutnemu.
  *
- * ⚠️ PAST ZA PRIHODNJI RAZVOJ (dokumentirano v P7-B/P9, namerno NI spremenjeno):
- * ta helper NI čista lastniška meja — vloge admin / super_admin / moderator
- * vrnejo `authorized: true` za KATERIKOLI resource (bypass spodaj). Če boste
- * klicali to funkcijo z namenom "nikogar ne smemo čez mejo lastnika", ste na
- * napačnem mestu — v tem primeru uporabite eksplicitno primerjavo ownerId.
- * Status (P7-B audit, 2026-09): 0 klicalcev v API rteh → ni aktivne
- * ranljivosti; funkcija ostaja kot pomočnik za morebitne prihodnje "support
- * dostope", kjer je bypass želen.
+ * VARNOST (1.29.0, uporabnikova revizija #9 — P7-B/P9 footgun):
+ * ta helper je zdaj VARNA LASTNIŠKA MEJA po privzetem. Prej so vloge
+ * admin / super_admin / moderator dobile `authorized: true` za KATERIKOLI
+ * resource (bypass) — tiho, brez opt-in klicnega mesta. Novo vedenje:
+ *
+ *   - privzeto (brez opts): STROGA lastniška preverba za VSE — tudi osebje
+ *     gre čez isto primerjavo ownerId kot vsi drugi (fail-closed);
+ *   - opts.allowStaffAccess: true → izrecni, viden opt-in za prihodnje
+ *     "support dostope", kjer je bypass želen (vsako takšno mesto je
+ *     zdaj vidno v grep po allowStaffAccess).
+ *
+ * Status (P7-B audit, 2026-09): 0 klicalcev v API rteh → sprememba
+ * ne spreminja obnašanja nobene obstoječe poti.
  */
 export async function requireOwnership(
   resource: "listing" | "product" | "experience",
-  resourceId: string
+  resourceId: string,
+  opts?: { allowStaffAccess?: boolean }
 ): Promise<{ authorized: boolean; ownerId: string | null }> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email || isUserAccount(session)) {
@@ -282,8 +288,14 @@ export async function requireOwnership(
     return { authorized: false, ownerId: null };
   }
 
-  // Admin in moderator lahko dostopajo do vsega
-  if (owner.role === "admin" || owner.role === "super_admin" || owner.role === "moderator") {
+  // Osebje (admin/super_admin/moderator) samo z IZRICNIM opt-in klicnega
+  // mesta — privzeto gredo čez isto lastniško preverbo kot vsi drugi.
+  if (
+    opts?.allowStaffAccess === true &&
+    (owner.role === "admin" ||
+      owner.role === "super_admin" ||
+      owner.role === "moderator")
+  ) {
     return { authorized: true, ownerId: owner.id };
   }
 

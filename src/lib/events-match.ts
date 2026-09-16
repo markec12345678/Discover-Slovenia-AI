@@ -1,4 +1,5 @@
 import { EVENTS } from "@/lib/events-data";
+import { EVENTS_EN } from "@/lib/events-data-en";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { ItineraryEvent } from "@/lib/types";
 
@@ -66,7 +67,9 @@ export interface TripWindow {
 export function matchEventsForItinerary(
   days: MatchableDay[] | null | undefined,
   limit = 6,
-  tripWindow?: TripWindow | null
+  tripWindow?: TripWindow | null,
+  /** 1.29.0 (revizija #13): "en" → ime/opis iz EVENTS_EN prekrivne plasti. */
+  lang: "sl" | "en" = "sl"
 ): ItineraryEvent[] {
   if (!Array.isArray(days) || days.length === 0) return [];
 
@@ -157,15 +160,21 @@ export function matchEventsForItinerary(
   });
 
   // 5. Preslikava v ItineraryEvent subset
-  return scored.slice(0, Math.max(0, limit)).map(({ event }) => ({
-    id: event.id,
-    name: event.name,
-    date: event.date,
-    endDate: event.endDate,
-    location: event.location,
-    category: event.category,
-    priceRange: event.priceRange,
-    description: event.description,
-    website: event.website,
-  }));
+  // 1.29.0 (revizija #13): EN prekrivna plast — dogodki v EN načrtu dobijo
+  // prevedeno ime/opis; identifikatorji/datumi/ključi ostanejo skupni
+  // (isti vzorec kot DESTINATIONS_EN v stop-insights/refine-actions).
+  return scored.slice(0, Math.max(0, limit)).map(({ event }) => {
+    const en = lang === "en" ? EVENTS_EN[event.id] : undefined;
+    return {
+      id: event.id,
+      name: en?.name ?? event.name,
+      date: event.date,
+      endDate: event.endDate,
+      location: event.location,
+      category: event.category,
+      priceRange: event.priceRange,
+      description: en?.description ?? event.description,
+      website: event.website,
+    };
+  });
 }

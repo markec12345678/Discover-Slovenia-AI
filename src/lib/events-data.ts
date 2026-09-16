@@ -60,6 +60,22 @@ export const SLOVENIAN_MONTHS_SHORT: string[] = [
   "dec",
 ];
 
+// Angleški meseci — kratke oblike (1.29.0, revizija #13: EN dogodki)
+export const ENGLISH_MONTHS_SHORT: string[] = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
 export const SLOVENIAN_MONTHS_FULL: string[] = [
   "Januar",
   "Februar",
@@ -608,38 +624,48 @@ export const EVENTS: EventItem[] = [
 // ===================== POMOŽNE FUNKCIJE =====================
 
 /**
- * Vrne slovensko formatiran datum za dogodek.
- * - enodnevni: "15. jul 2025"
- * - večdnevni isti mesec: "15. – 17. jul 2025"
- * - večdnevni različen mesec: "15. jul – 15. avg 2025"
+ * Vrne formatiran datum za dogodek (jezikovno odvisen — 1.29.0, revizija #13).
+ * SL (privzeto):
+ * - enodnevni: "15. jan 2027"
+ * - večdnevni isti mesec: "15. – 17. jan 2027"
+ * - večdnevni različen mesec: "15. jan – 15. feb 2027"
+ * EN: enak razpon logike, brez pik po številkah dni: "15 Jan 2027",
+ * "15 – 17 Jan 2027", "15 Jan – 15 Feb 2027".
  */
-export function formatEventDate(date: string, endDate?: string): string {
+export function formatEventDate(
+  date: string,
+  endDate?: string,
+  lang: "sl" | "en" = "sl"
+): string {
+  const isEn = lang === "en";
+  const months = isEn ? ENGLISH_MONTHS_SHORT : SLOVENIAN_MONTHS_SHORT;
   const start = new Date(date);
   const startDay = start.getDate();
-  const startMonth = SLOVENIAN_MONTHS_SHORT[start.getMonth()];
+  const startMonth = months[start.getMonth()];
   const startYear = start.getFullYear();
+  const d = (n: number) => (isEn ? `${n}` : `${n}.`);
 
   if (!endDate) {
-    return `${startDay}. ${startMonth} ${startYear}`;
+    return `${d(startDay)} ${startMonth} ${startYear}`;
   }
 
   const end = new Date(endDate);
   const endDay = end.getDate();
-  const endMonth = SLOVENIAN_MONTHS_SHORT[end.getMonth()];
+  const endMonth = months[end.getMonth()];
   const endYear = end.getFullYear();
 
   // Isto leto in isti mesec
   if (startYear === endYear && start.getMonth() === end.getMonth()) {
-    return `${startDay}. – ${endDay}. ${startMonth} ${startYear}`;
+    return `${d(startDay)} – ${d(endDay)} ${startMonth} ${startYear}`;
   }
 
   // Isto leto, različen mesec
   if (startYear === endYear) {
-    return `${startDay}. ${startMonth} – ${endDay}. ${endMonth} ${startYear}`;
+    return `${d(startDay)} ${startMonth} – ${d(endDay)} ${endMonth} ${startYear}`;
   }
 
   // Različno leto
-  return `${startDay}. ${startMonth} ${startYear} – ${endDay}. ${endMonth} ${endYear}`;
+  return `${d(startDay)} ${startMonth} ${startYear} – ${d(endDay)} ${endMonth} ${endYear}`;
 }
 
 /** Vrne dogodke za podani mesec (0 = januar, 11 = december). */

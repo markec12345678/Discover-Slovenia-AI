@@ -568,7 +568,7 @@ JSON format (STROGO):
     // Dogodki na obiskanih destinacijah (neodvisno od vremena — ločeno polje)
     // FW4.2: z okvirom potovanja — dogodki, ki se zgodijo MED obiskom,
     // pridejo na prvih mestih
-    enriched.events = matchEventsForItinerary(enriched.days, 6, tripWindow);
+    enriched.events = matchEventsForItinerary(enriched.days, 6, tripWindow, lang);
 
     // FW4.2: okvir potovanja shrani Z načrtom (svež datumski match na
     // /pot/[shareId], prikaz datumov na dnevih, deljenje z datumi)
@@ -645,7 +645,7 @@ JSON format (STROGO):
       days: input.days,
       lang,
     });
-    fallback.events = matchEventsForItinerary(fallback.days, 6, tripWindow);
+    fallback.events = matchEventsForItinerary(fallback.days, 6, tripWindow, lang);
 
     // FW4.2: okvir potovanja tudi na fallback načrtu (isti enrich kot AI pot)
     if (input.startDate) {

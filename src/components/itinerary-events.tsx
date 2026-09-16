@@ -19,6 +19,7 @@ import {
   EVENT_CATEGORY_LABELS,
   formatEventDate,
 } from "@/lib/events-data";
+import { EVENT_CATEGORY_LABELS_EN } from "@/lib/events-data-en";
 import { eventOverlapsTrip, tripDuringPhraseSI } from "@/lib/trip-dates";
 import type { ItineraryEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -67,13 +68,69 @@ const CATEGORY_ICON: Record<string, LucideIcon> = {
 
 const FALLBACK_BADGE_CLASS = "bg-muted text-foreground";
 
-function categoryLabel(category: string): string {
-  const labels = EVENT_CATEGORY_LABELS as Record<string, string>;
+/** Jezik sekcije (1.29.0, revizija #13) — privzeto SL (/pot stran). */
+export type EventsLang = "sl" | "en";
+
+// UI nizi — komponenta je skupna plannerju (next-intl, EN prek locale) in
+// /pot strani (SL-only) → jezik nosi eksplicitni prop, ne globalni intl.
+const STRINGS: Record<
+  EventsLang,
+  {
+    defaultTitle: string;
+    duringBadge: string;
+    duringBadgeTitle: string;
+    dateTitle: string;
+    locationTitle: string;
+    admissionTitle: string;
+    free: string;
+    inYourTrip: string;
+    addToMyTrip: string;
+    inTrip: string;
+    website: string;
+    yourTripSubtitle: (range: string) => string;
+  }
+> = {
+  sl: {
+    defaultTitle: "Kaj se dogaja med tvojim obiskom",
+    duringBadge: "Med tvojim obiskom",
+    duringBadgeTitle: "Dogodek se zgodi med tvojim obiskom",
+    dateTitle: "Datum dogodka",
+    locationTitle: "Lokacija dogodka",
+    admissionTitle: "Vstopnina",
+    free: "Brezplačno",
+    inYourTrip: "V tvoji poti",
+    addToMyTrip: "Dodaj v mojo pot",
+    inTrip: "V poti",
+    website: "Spletna stran",
+    yourTripSubtitle: (range) => `Tvoja pot je ${range}`,
+  },
+  en: {
+    defaultTitle: "What's on during your visit",
+    duringBadge: "During your visit",
+    duringBadgeTitle: "This event takes place during your visit",
+    dateTitle: "Event date",
+    locationTitle: "Event location",
+    admissionTitle: "Admission",
+    free: "Free",
+    inYourTrip: "In your trip",
+    addToMyTrip: "Add to my trip",
+    inTrip: "In trip",
+    website: "Website",
+    yourTripSubtitle: (range) => `Your trip runs ${range}`,
+  },
+};
+
+function categoryLabel(category: string, lang: EventsLang): string {
+  const labels = (
+    lang === "en" ? EVENT_CATEGORY_LABELS_EN : EVENT_CATEGORY_LABELS
+  ) as Record<string, string>;
   return labels[category] ?? category;
 }
 
 interface EventMiniCardProps {
   event: ItineraryEvent;
+  /** 1.29.0: jezik kartice (nizi + format datuma) */
+  lang: EventsLang;
   /** FW4.2: dogodek se prekriva z okvirjem potovanja */
   duringVisit?: boolean;
   /** FW4.2: dogodek je v uporabnikovi poti (addedEvents) */
@@ -82,7 +139,8 @@ interface EventMiniCardProps {
   onToggle?: (event: ItineraryEvent) => void;
 }
 
-function EventMiniCard({ event, duringVisit, added, onToggle }: EventMiniCardProps) {
+function EventMiniCard({ event, lang, duringVisit, added, onToggle }: EventMiniCardProps) {
+  const s = STRINGS[lang];
   const badgeClass =
     CATEGORY_BADGE_CLASS[event.category] ?? FALLBACK_BADGE_CLASS;
   const CategoryIcon = CATEGORY_ICON[event.category] ?? CalendarDays;
@@ -102,14 +160,14 @@ function EventMiniCard({ event, duringVisit, added, onToggle }: EventMiniCardPro
             <Badge
               variant="outline"
               className="gap-1 border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-              title="Dogodek se zgodi med tvojim obiskom"
+              title={s.duringBadgeTitle}
             >
-              Med tvojim obiskom
+              {s.duringBadge}
             </Badge>
           )}
           <Badge className={cn("shrink-0 gap-1", badgeClass)}>
             <CategoryIcon className="size-3" aria-hidden="true" />
-            {categoryLabel(event.category)}
+            {categoryLabel(event.category, lang)}
           </Badge>
         </div>
       </div>
@@ -119,28 +177,28 @@ function EventMiniCard({ event, duringVisit, added, onToggle }: EventMiniCardPro
         <time
           dateTime={event.date}
           className="inline-flex items-center gap-1.5"
-          title="Datum dogodka"
+          title={s.dateTitle}
         >
           <CalendarDays className="size-4 text-primary" aria-hidden="true" />
           <span className="font-medium text-foreground/80">
-            {formatEventDate(event.date, event.endDate)}
+            {formatEventDate(event.date, event.endDate, lang)}
           </span>
         </time>
         <span
           className="inline-flex items-center gap-1.5"
-          title="Lokacija dogodka"
+          title={s.locationTitle}
         >
           <MapPin className="size-4 text-primary" aria-hidden="true" />
           {event.location}
         </span>
         <span
           className="inline-flex items-center gap-1.5"
-          title="Vstopnina"
+          title={s.admissionTitle}
         >
           <Ticket className="size-4 text-primary" aria-hidden="true" />
           {isFree ? (
             <span className="font-medium text-emerald-700 dark:text-emerald-400">
-              Brezplačno
+              {s.free}
             </span>
           ) : (
             <span className="font-medium text-foreground/80">
@@ -173,19 +231,19 @@ function EventMiniCard({ event, duringVisit, added, onToggle }: EventMiniCardPro
               {added ? (
                 <>
                   <Check className="size-4" aria-hidden="true" />
-                  V tvoji poti
+                  {s.inYourTrip}
                 </>
               ) : (
                 <>
                   <Plus className="size-4" aria-hidden="true" />
-                  Dodaj v mojo pot
+                  {s.addToMyTrip}
                 </>
               )}
             </button>
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
               <Check className="size-4" aria-hidden="true" />
-              V poti
+              {s.inTrip}
             </span>
           )}
           {event.website && (
@@ -195,7 +253,7 @@ function EventMiniCard({ event, duringVisit, added, onToggle }: EventMiniCardPro
               rel="noopener noreferrer"
               className="ml-auto inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
             >
-              Spletna stran
+              {s.website}
               <ExternalLink className="size-3.5" aria-hidden="true" />
             </a>
           )}
@@ -209,7 +267,7 @@ function EventMiniCard({ event, duringVisit, added, onToggle }: EventMiniCardPro
           rel="noopener noreferrer"
           className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
         >
-          Spletna stran
+          {s.website}
           <ExternalLink className="size-3.5" aria-hidden="true" />
         </a>
       )}
@@ -222,6 +280,8 @@ interface ItineraryEventsSectionProps {
   events?: ItineraryEvent[];
   /** Naslov sekcije — planner: "Kaj se dogaja med tvojim obiskom", /pot: "Dogodki med tvojim obiskom" */
   title?: string;
+  /** 1.29.0 (revizija #13): jezik sekcije — privzeto "sl" (/pot stran) */
+  lang?: EventsLang;
   /** "card" = naslov znotraj kartice (planner), "section" = h2 nad karticami (/pot) */
   variant?: "card" | "section";
   /** Dodatni razred za koren sekcije (npr. mb-10 na /pot) */
@@ -237,7 +297,8 @@ interface ItineraryEventsSectionProps {
 
 export function ItineraryEventsSection({
   events,
-  title = "Kaj se dogaja med tvojim obiskom",
+  title,
+  lang = "sl",
   variant = "card",
   className,
   tripStartDate,
@@ -245,6 +306,9 @@ export function ItineraryEventsSection({
   addedEventIds,
   onToggleEvent,
 }: ItineraryEventsSectionProps) {
+  const s = STRINGS[lang];
+  const sectionTitle = title ?? s.defaultTitle;
+
   // Prazna/undefined sekcija se ne renderira
   if (!events || events.length === 0) return null;
 
@@ -258,6 +322,7 @@ export function ItineraryEventsSection({
         <EventMiniCard
           key={event.id}
           event={event}
+          lang={lang}
           duringVisit={
             tripStartDate
               ? eventOverlapsTrip(
@@ -275,17 +340,22 @@ export function ItineraryEventsSection({
     </div>
   );
 
-  // FW4.2: podnaslov z okvirjem potovanja (samo če so datumi znani)
+  // FW4.2: podnaslov z okvirjem potovanja (samo če so datumi znani) —
+  // SL: slovenska sklonska fraza (tripDuringPhraseSI); EN: EN format datuma
   const duringSubtitle = tripStartDate
-    ? `Tvoja pot je ${tripDuringPhraseSI(tripStartDate, tripEndDate)}`
+    ? lang === "en"
+      ? s.yourTripSubtitle(
+          formatEventDate(tripStartDate, tripEndDate, "en")
+        )
+      : `Tvoja pot je ${tripDuringPhraseSI(tripStartDate, tripEndDate)}`
     : null;
 
   if (variant === "section") {
     return (
-      <section className={className} aria-label={title}>
+      <section className={className} aria-label={sectionTitle}>
         <h2 className="mb-1 flex items-center gap-2 text-xl font-bold sm:text-2xl">
           <CalendarDays className="size-5 text-primary" aria-hidden="true" />
-          {title}
+          {sectionTitle}
         </h2>
         {duringSubtitle && (
           <p className="mb-4 text-sm text-muted-foreground">{duringSubtitle}</p>
@@ -296,12 +366,12 @@ export function ItineraryEventsSection({
   }
 
   return (
-    <section className={className} aria-label={title}>
+    <section className={className} aria-label={sectionTitle}>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <CalendarDays className="size-5 text-primary" aria-hidden="true" />
-            {title}
+            {sectionTitle}
           </CardTitle>
           {duringSubtitle && (
             <CardDescription>{duringSubtitle}</CardDescription>

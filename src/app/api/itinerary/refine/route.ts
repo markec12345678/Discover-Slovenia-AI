@@ -440,7 +440,7 @@ JSON format (STROGO, enak kot vhod):
     // crowdNotices pa izpuščeni (AI JSON jih ne vsebuje → izgubljeni).
     // ------------------------------------------------------------------
     const synced = recomputeTotalBudget(refinedItinerary);
-    synced.events = matchEventsForItinerary(synced.days, 6, refineTripWindow);
+    synced.events = matchEventsForItinerary(synced.days, 6, refineTripWindow, isEn ? "en" : "sl");
     synced.crowdNotices = buildCrowdNotices(synced, refineInputWithDates, isEn ? "en" : "sl");
 
     // P0.2 GEO-VALIDACIJA: preračunaj na novi strukturi (stare vrednosti bi
@@ -500,7 +500,8 @@ JSON format (STROGO, enak kot vhod):
       result.itinerary.events = matchEventsForItinerary(
         result.itinerary.days,
         6,
-        refineTripWindow
+        refineTripWindow,
+        isEn ? "en" : "sl"
       );
       result.itinerary.crowdNotices = buildCrowdNotices(
         result.itinerary,

@@ -146,7 +146,11 @@ export default async function SharedTripPage({
   const events = matchEventsForItinerary(
     saved.itinerary.days,
     6,
-    tripWindowMs(saved.itinerary.tripStartDate, saved.itinerary.days.length)
+    tripWindowMs(saved.itinerary.tripStartDate, saved.itinerary.days.length),
+    // 1.29.0 (revizija #13): /pot stran je SL-only površina (celoten
+    // SharedTrip izpis je slovenski) → dogodki eksplicitno v SL; EN
+    // prekrivna plast se uporabi samo v plannerju (/en/nacrtuj).
+    "sl"
   );
 
   // === Začetni glasovi (locationKey → število) — izhodišče za UI (7-b) ===

@@ -3767,8 +3767,10 @@ export function ItineraryPlanner() {
                 {/* Kaj se dogaja med tvojim obiskom — lokalni dogodki (max 6) */}
                 {/* Sekcija se sama skrije, če events ni prisoten/prazen */}
                 {/* FW4.2: dogodki z okvirjem potovanja + "Dodaj v mojo pot" */}
+                {/* 1.29.0 (revizija #13): EN locale → prevedena sekcija (EVENTS_EN) */}
                 <ItineraryEventsSection
                   events={itinerary.events}
+                  lang={locale === "en" ? "en" : "sl"}
                   tripStartDate={itinerary.tripStartDate}
                   tripEndDate={itinerary.tripEndDate}
                   addedEventIds={(itinerary.addedEvents ?? []).map(
