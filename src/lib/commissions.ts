@@ -34,20 +34,88 @@ export function isPremiumOwner(owner: OwnerPremiumFields): boolean {
   return true;
 }
 
-// Koledarski mesec glede na lokalni čas (DST-varen — Date(y, m, 1)).
-// offset 0 = tekoči mesec, -1 = prejšnji mesec. periodEnd je EKSKLUSIVEN.
+// ─── Časovni pas obračuna: Europe/Ljubljana ─────────────────────────────
+// FIX (revizija #8, P1): prej so bile meje meseca računane po KRAJEVNEM
+// času procesa (`new Date(y, m, 1)`) — na Vercelu/Render (UTC) je bil 1.
+// september 00:30 po Ljubljani še 31. avgust po UTC → rezervacija je padla
+// v NAPAČEN obračunski mesec (12 % provizije, bookingCount, commissionBase,
+// račun, dashboard, cron). Dokumentacija obljublja koledarski mesec po
+// Ljubljani — sedaj ga koda dejansko zagotavlja (isti princip kot
+// startOfTodayLjubljana v /api/ask-local in /api/consultations).
+const LJ_TZ = "Europe/Ljubljana";
+
+/** Stenska ura trenutka `ts` v pasu Europe/Ljubljana. */
+function ljParts(ts: number): {
+  y: number;
+  m: number;
+  d: number;
+  h: number;
+  min: number;
+  s: number;
+} {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: LJ_TZ,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+      hourCycle: "h23",
+    })
+      .formatToParts(new Date(ts))
+      .map((p) => [p.type, p.value])
+  );
+  return {
+    y: Number(parts.year),
+    m: Number(parts.month),
+    d: Number(parts.day),
+    h: Number(parts.hour),
+    min: Number(parts.minute),
+    s: Number(parts.second),
+  };
+}
+
+/**
+ * UTC-trenutek lokalne polnoči (00:00 Europe/Ljubljana) na 1. dnevu
+ * meseca `m0` (0-based) leta `y`. DST-varen: prehoda CET/CEST v Sloveniji
+ * sta ob 02:00/03:00 po lokalni uri — lokalna polnoč VEDNO obstaja in
+ * ima enoten zamik.
+ */
+function ljMonthStartUtc(y: number, m0: number): Date {
+  // Kandidat: UTC-polnoč 1. dneva meseca; izmerimo dejanski zamik LJ
+  // (stena tega trenutka je 01:00/02:00 po Ljubljani) in ga odštejemo.
+  const guess = Date.UTC(y, m0, 1);
+  const p = ljParts(guess);
+  const wallAsUtc = Date.UTC(p.y, p.m - 1, p.d, p.h, p.min, p.s);
+  const offsetMs = wallAsUtc - guess; // +3_600_000 (CET) ali +7_200_000 (CEST)
+  return new Date(guess - offsetMs);
+}
+
+// Koledarski mesec glede na Europe/Ljubljana (DST-varen — glej zgoraj).
+// offset 0 = tekoči mesec, -1 = prejšnji mesec. periodEnd je EKSKLUZIVEN.
 export function monthRange(offset: number): { start: Date; end: Date } {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 1);
-  return { start, end };
+  const now = ljParts(Date.now());
+  const m0 = now.m - 1 + offset; // Date.UTC sam premakne leto čez 12/-1
+  return {
+    start: ljMonthStartUtc(now.y, m0),
+    end: ljMonthStartUtc(now.y, m0 + 1),
+  };
 }
 
 export const monthLabel = (d: Date) =>
-  new Intl.DateTimeFormat("sl-SI", { month: "long", year: "numeric" }).format(d);
+  new Intl.DateTimeFormat("sl-SI", {
+    month: "long",
+    year: "numeric",
+    timeZone: LJ_TZ, // revizija #8: oznaka meseca po LJ stenski uri
+  }).format(d);
 
 export function invoiceNumberFor(periodStart: Date): string {
-  const ym = `${periodStart.getFullYear()}${String(periodStart.getMonth() + 1).padStart(2, "0")}`;
+  // Y/M iz stenske ure po Ljubljani (ne po času procesa — revizija #8)
+  const p = ljParts(periodStart.getTime());
+  const ym = `${p.y}${String(p.m).padStart(2, "0")}`;
   const suffix = randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
   return `INV-${ym}-${suffix}`;
 }
@@ -72,9 +140,15 @@ export async function issueCommissionInvoice(
 
   const last = monthRange(-1);
 
-  // Idempotenca: en račun na obdobje
+  // Idempotenca: en račun na obdobje. TOLERANTNA poizvedba (gte start,
+  // lt end namesto točne enakosti): zgodovinski računi, izdani pred
+  // LJ-popravkom (z UTC-polnočno mejo meseca), padejo V obdobje in se
+  // še vedno prepoznajo kot duplikat — ni dvojne izdaje čez prelom.
   const existing = await db.commissionInvoice.findFirst({
-    where: { ownerId: owner.id, periodStart: last.start },
+    where: {
+      ownerId: owner.id,
+      periodStart: { gte: last.start, lt: last.end },
+    },
     select: { invoiceNumber: true },
   });
   if (existing) {
@@ -146,8 +220,13 @@ export async function issueCommissionInvoice(
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
+      // Tolerantno (isti razlog kot prva poizvedba): zmagovalec Race-a je
+      // lahko zapisal staro (UTC) ali novo (LJ) mejo — prepoznamo obe.
       const existing = await db.commissionInvoice.findFirst({
-        where: { ownerId: owner.id, periodStart: last.start },
+        where: {
+          ownerId: owner.id,
+          periodStart: { gte: last.start, lt: last.end },
+        },
         select: { invoiceNumber: true },
       });
       if (existing) {

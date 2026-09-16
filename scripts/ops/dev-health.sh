@@ -41,8 +41,16 @@ check_url "/en/nacrtuj" "EN planner" || RC=1
 check_url "/api/ai-health" "AI health" || RC=1
 
 # AI health — razlaga providerjev
+# Opomba (revizija #8): /api/ai-health zahteva CRON_SECRET/admin — na DEV
+# strežniku (NODE_ENV=development) verifyCronAuth dovoli klic brez secreta;
+# če ga imaš nastavljenega, se pripne samodejno (npr. za produkcijo podoben
+# zagon).
 step "AI veriga (GET /api/ai-health)"
-HEALTH="$(curl -sS -m 60 "${BASE}/api/ai-health" 2>/dev/null || echo '{}')"
+if [ -n "${CRON_SECRET:-}" ]; then
+  HEALTH="$(curl -sS -m 60 -H "Authorization: Bearer ${CRON_SECRET}" "${BASE}/api/ai-health" 2>/dev/null || echo '{}')"
+else
+  HEALTH="$(curl -sS -m 60 "${BASE}/api/ai-health" 2>/dev/null || echo '{}')"
+fi
 if [ -n "$HEALTH" ] && printf '%s' "$HEALTH" | jq -e '.providers' >/dev/null 2>&1; then
   ACTIVE="$(printf '%s' "$HEALTH" | jq -r '.provider // "none"')"
   STATUS="$(printf '%s' "$HEALTH" | jq -r '.status // "?"')"
@@ -53,7 +61,7 @@ if [ -n "$HEALTH" ] && printf '%s' "$HEALTH" | jq -e '.providers' >/dev/null 2>&
     warn "NO provider živ — generacija pade na determinističen fallback."
   fi
 else
-  warn "AI health ni odgovoril z JSON (morda rate-limit 12/10 min — počakaj)."
+  warn "AI health ni odgovoril z JSON (morda rate-limit 12/10 min — počakaj; v produkciji tudi 401 brez CRON_SECRET)."
 fi
 
 exit $RC

@@ -2851,6 +2851,9 @@ const fmtPeriod = (startIso: string, endIso: string) => {
     day: "numeric",
     month: "long",
     year: "numeric",
+    // Revizija #8 (P1): obdobje računa je definirano po Europe/Ljubljana —
+    // tudi pri lastniku, ki brska iz drugega pasu, izpišemo pravi dan.
+    timeZone: "Europe/Ljubljana",
   });
   const start = new Date(startIso);
   // periodEnd je ekskluzivna meja — zadnji dan obdobja je end − 1 ms

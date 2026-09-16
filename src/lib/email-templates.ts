@@ -792,7 +792,15 @@ export function commissionInvoiceEmail({
   amount,
 }: CommissionInvoiceEmailData): { subject: string; html: string; text: string } {
   const fmtDay = (d: Date) =>
-    d.toLocaleDateString("sl-SI", { day: "numeric", month: "long", year: "numeric" });
+    d.toLocaleDateString("sl-SI", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      // Revizija #8 (P1): periodStart je Ljubljanska polnoč (UTC-trenutek,
+      // npr. 2026-08-31T22:00Z) — brez LJ pasu bi UTC proces izpisal
+      // napačen dan obdobja v e-pošti z računom.
+      timeZone: "Europe/Ljubljana",
+    });
   const periodStr = `${fmtDay(periodStart)} – ${fmtDay(
     new Date(periodEnd.getTime() - 1)
   )}`;

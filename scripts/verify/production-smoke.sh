@@ -107,17 +107,35 @@ fi
 
 # -----------------------------------------------------------------------------
 hdr "7) AI endpoint + (optional) rate limit"
-c="$(code "$BASE_URL/api/ai-health")"
-[[ "$c" == "200" ]] && ok "GET /api/ai-health 200" || bad "GET /api/ai-health → $c"
-if [[ "${SMOKE_RATE_LIMIT:-0}" == "1" ]]; then
-  codes=""
-  for i in $(seq 1 14); do
-    codes="$codes $(code "$BASE_URL/api/ai-health")"
-  done
-  if grep -q '429' <<<"$codes"; then
-    ok "rate limit aktiven (429 v seriji 14 klicev):$(tr ' ' '\n' <<<"$codes" | sort | uniq -c | tr '\n' ' ')"
+# /api/ai-health od 1.34.0 (revizija #8) zahteva CRON_SECRET/admin — javni
+# health je lahko "prebujal" mrtvega providerja (health uspeh resetira
+# circuit breaker). Brez secreta je 401 pričakovan in PRAVILEN (fail-closed).
+health_code() {
+  if [[ -n "$CRON_SECRET" ]]; then
+    code -H "Authorization: Bearer $CRON_SECRET" "$BASE_URL/api/ai-health"
   else
-    warn "ni 429 v 14 klicih — limit je PER-INSTANCE (Vercel več instanc lahko zaobide); glej README 'odložene postavke'"
+    code "$BASE_URL/api/ai-health"
+  fi
+}
+c="$(health_code)"
+if [[ -n "$CRON_SECRET" ]]; then
+  [[ "$c" == "200" ]] && ok "GET /api/ai-health 200 (avtoriziran)" || bad "GET /api/ai-health → $c (s pravim CRON_SECRET)"
+else
+  [[ "$c" == "401" ]] && ok "GET /api/ai-health → 401 brez secreta (fail-closed, revizija #8)" || bad "GET /api/ai-health → $c (pričakovano 401 — javni dostop mora biti zaprt)"
+fi
+if [[ "${SMOKE_RATE_LIMIT:-0}" == "1" ]]; then
+  if [[ -z "$CRON_SECRET" ]]; then
+    warn "SMOKE_RATE_LIMIT brez CRON_SECRET: neavtorizirani klici se zavrnejo z 401 PRED limiterjem — preskočeno"
+  else
+    codes=""
+    for i in $(seq 1 14); do
+      codes="$codes $(health_code)"
+    done
+    if grep -q '429' <<<"$codes"; then
+      ok "rate limit aktiven (429 v seriji 14 klicev):$(tr ' ' '\n' <<<"$codes" | sort | uniq -c | tr '\n' ' ')"
+    else
+      warn "ni 429 v 14 klicih — limit je PER-INSTANCE (Vercel več instanc lahko zaobide); glej README 'odložene postavke'"
+    fi
   fi
 else
   echo "  (preskočeno — SMOKE_RATE_LIMIT=1 za preizkus)"

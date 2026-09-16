@@ -70,10 +70,18 @@ const fmtDateLong = (d: Date) =>
     day: "numeric",
     month: "long",
     year: "numeric",
+    // Revizija #8 (P1): periodStart je Ljubljanska polnoč (npr.
+    // 2026-08-31T22:00Z) — brez LJ pasu bi UTC proces izpisal "31. avgust"
+    // namesto "1. september" (napačno obdobje na računu).
+    timeZone: "Europe/Ljubljana",
   }).format(d);
 
 const fmtDateShort = (d: Date) =>
-  new Intl.DateTimeFormat("sl-SI", { day: "numeric", month: "numeric" }).format(d);
+  new Intl.DateTimeFormat("sl-SI", {
+    day: "numeric",
+    month: "numeric",
+    timeZone: "Europe/Ljubljana", // isti poslovni dokument — enak pas kot obdobje
+  }).format(d);
 
 // ─── Nalaganje pisav (public/fonts — vključene tudi v standalone build) ─────
 let fontsCache: { regular: Uint8Array; bold: Uint8Array } | null = null;

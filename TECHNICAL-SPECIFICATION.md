@@ -510,7 +510,7 @@ ALTER TABLE Owner ADD COLUMN role TEXT DEFAULT 'provider';
 | GET | `/api/pois/describe` | AI opis POI | 20/min |
 | GET | `/api/weather` | Vreme (Open-Meteo) | 60/min |
 | GET | `/api/beta-status` | Status beta | 100/min |
-| GET | `/api/ai-health` | AI health check | 10/min |
+| GET | `/api/ai-health` | AI health check (CRON_SECRET/admin, rev. #8) | 12/10 min |
 
 #### AI API (brez avt., z rate limit)
 

@@ -30,8 +30,9 @@
 
 ### Diagnoza
 ```bash
-# 1. Preveri AI health
-curl https://discoverslovenia.ai/api/ai-health
+# 1. Preveri AI health (od 1.34.0 zahteva CRON_SECRET — brez njega 401)
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  https://discoverslovenia.ai/api/ai-health
 
 # 2. Preveri Puter API
 curl -H "Authorization: Bearer $PUTER_AUTH_TOKEN" \

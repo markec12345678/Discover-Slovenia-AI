@@ -29,11 +29,36 @@ function cleanup(now: number) {
   }
 }
 
-/** IP naslov klienta (za Vercel/proxy: x-forwarded-for). */
+/**
+ * IP naslov klienta — ZAUPAN izvor samo.
+ *
+ * Revizija #8 (P2 — rate-limit bypass): prej smo vzeli PRVI (levi) vnos
+ * x-forwarded-for — ta je CLIENT-CONTROLLABLE (odjemalec ga lahko pošlje
+ * sam) → z vrtenjem lažnih XFF vrednosti (1.1.1.1, 2.2.2.2, …) je vsak
+ * klic padel v svoje vedro in limit bil izigran. Zdaj:
+ *   1. x-real-ip — nastavi platforma/proxy (Vercel), ne odjemalec;
+ *   2. ZADNJI (desni) vnos x-forwarded-for — overjen proxy DODA pravi IP
+ *      odjemalca na konec verige (client spoof ostane levo);
+ *   3. "unknown" — brez obeh: vsi nezadolženi klienti delijo skupno vedro
+ *      (fail-closed smer — raje preveč omejeno kot izigrano).
+ * Opomba: če je pred aplikacijo več proxyjev (npr. CDN), je desni vnos
+ * IP najbližjega proxyja — vrtenje IP-jev s strani klienta v tem primeru
+ * NE more več ustvarjati novih vedr.
+ */
 export function getClientIp(request: Request): string {
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
+
   const fwd = request.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
-  return request.headers.get("x-real-ip") ?? "unknown";
+  if (fwd) {
+    const hops = fwd
+      .split(",")
+      .map((h) => h.trim())
+      .filter(Boolean);
+    if (hops.length > 0) return hops[hops.length - 1]; // desni = zaupan proxy dodan
+  }
+
+  return "unknown";
 }
 
 /**
@@ -42,16 +67,26 @@ export function getClientIp(request: Request): string {
  *
  * ASYNC: v Next.js 16 headers() vrne Promise (uradna API sprememba).
  * Vrne `null`, če glave niso dostopne (klic izven request scope-a) —
- * klicalec MORA imeti fallback (glej buildLoginRateKey). Zaupanje
- * x-forwarded-for je identično getClientIp() zgoraj (platforma/proxy
- * nastavi glavo; enak model kot vsi ostali rate limiti).
+ * klicalec MORA imeti fallback (glej buildLoginRateKey). Model zaupanja
+ * je IDENTIČEN getClientIp() zgoraj (revizija #8: x-real-ip → desni XFF
+ * → null; Levi/client-vpisani XFF se ne upošteva več).
  */
 export async function getClientIpFromHeaders(): Promise<string | null> {
   try {
     const h = await headers();
+    const realIp = h.get("x-real-ip");
+    if (realIp) return realIp.trim();
+
     const fwd = h.get("x-forwarded-for");
-    if (fwd) return fwd.split(",")[0].trim();
-    return h.get("x-real-ip") ?? null;
+    if (fwd) {
+      const hops = fwd
+        .split(",")
+        .map((x) => x.trim())
+        .filter(Boolean);
+      if (hops.length > 0) return hops[hops.length - 1];
+    }
+
+    return null;
   } catch {
     // headers() izven request scope-a (npr. teoretični klic ob zagonu) —
     // pošteno vrnemo null, klicalec pade na email-only ključ.

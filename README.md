@@ -398,7 +398,7 @@ Celoten checklist (16 točk):
 | 11 | consultation → recommendation → atribucija | ročno (preveri `source=consultation`) |
 | 12 | admin authentication | ročno (`/admin` + `ADMIN_PASSWORD`) |
 | 13 | 6 cron endpointov z napačnim/pravilnim secretom | skripta (napačen = 401 ×6; pravi = `CRON_SECRET=…`, idempotentno) |
-| 14 | AI endpointi + rate limit | skripta (`/api/ai-health` 200; `SMOKE_RATE_LIMIT=1` za 429 — glej opombo o per-instance) |
+| 14 | AI endpointi + rate limit | skripta (`/api/ai-health`: s `CRON_SECRET=…` → 200, brez → 401 fail-closed (rev. #8); `SMOKE_RATE_LIMIT=1` za 429 — glej opombo o per-instance) |
 | 15 | mobilni 390 px | ročno — **funkcionalno**, ne le vizualno |
 | 16 | production kaže zadnji `main` | skripta (GitHub Vercel commit status + markerji) |
 

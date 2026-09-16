@@ -68,6 +68,15 @@ function parseArgs(): { set: string; mode: string; conc: number; outPrefix: stri
   return { set, mode, conc, outPrefix };
 }
 
+// Revizija #8: /api/ai-health zahteva CRON_SECRET — pripni Bearer SAMO za
+// ta endpoint (cron rutam ga ne smemo poslati nevzeljno: sprozila bi opravila).
+function aiHealthAuthHeaders(url: string): Record<string, string> {
+  if (url.includes("/api/ai-health") && process.env.CRON_SECRET) {
+    return { authorization: `Bearer ${process.env.CRON_SECRET}` };
+  }
+  return {};
+}
+
 async function fetchCheck(
   url: string,
   opts: { redirect?: RequestRedirect; wantBody?: boolean } = {}
@@ -79,7 +88,7 @@ async function fetchCheck(
       method: "GET",
       redirect: opts.redirect ?? (isGo ? "manual" : "follow"),
       signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { "user-agent": "PilotValidationGate/1.0 (+audit)" },
+      headers: { "user-agent": "PilotValidationGate/1.0 (+audit)", ...aiHealthAuthHeaders(url) },
     });
     const timeMs = Date.now() - started;
     const contentType = res.headers.get("content-type") ?? undefined;
@@ -161,7 +170,17 @@ function summarize(results: CheckResult[], label: string): void {
     `skupaj: ${total} | 200: ${ok200} | 3xx: ${redirects} | 404: ${notFound} | 5xx: ${serverErr} | omrežne napake: ${networkErr}`
   );
   console.log(`časi: p50 ${p(0.5)} ms | p90 ${p(0.9)} ms | max ${times[times.length - 1] ?? 0} ms`);
-  const bad = results.filter((r) => r.status !== 200 && !(r.status >= 300 && r.status < 400));
+  // Brez CRON_SECRET je 401 na /api/ai-health pričakovan (fail-closed, revizija #8)
+  const expectedAuth =
+    !process.env.CRON_SECRET
+      ? (r: CheckResult) => r.status === 401 && r.url.includes("/api/ai-health")
+      : () => false;
+  const bad = results.filter(
+    (r) =>
+      r.status !== 200 &&
+      !(r.status >= 300 && r.status < 400) &&
+      !expectedAuth(r)
+  );
   if (bad.length > 0) {
     console.log("Odstopanja:");
     for (const b of bad.slice(0, 40)) {
@@ -342,7 +361,10 @@ if (set === "core") {
   const results = await runPool(targets, conc, async (t) => {
     const started = Date.now();
     try {
-      const res = await fetch(t.url, { signal: AbortSignal.timeout(60_000) });
+      const res = await fetch(t.url, {
+        signal: AbortSignal.timeout(60_000),
+        headers: aiHealthAuthHeaders(t.url),
+      });
       const body = res.status >= 400 ? await res.text().catch(() => "") : "";
       return {
         url: t.url,

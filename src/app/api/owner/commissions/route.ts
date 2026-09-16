@@ -98,8 +98,14 @@ export async function GET() {
         where: { ownerId: owner.id },
         orderBy: { periodStart: "desc" },
       }),
+      // Tolerantno iskanje računa prejšnjega meseca (gte/lt po obdobju, ne
+      // točna enakost): pokrije tudi zgodovinske UTC-meje izdane pred
+      // Ljubljanskim popravkom mesečnih mej (revizija #8).
       db.commissionInvoice.findFirst({
-        where: { ownerId: owner.id, periodStart: last.start },
+        where: {
+          ownerId: owner.id,
+          periodStart: { gte: last.start, lt: last.end },
+        },
         select: { id: true },
       }),
     ]);

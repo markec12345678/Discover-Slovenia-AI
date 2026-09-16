@@ -31,7 +31,21 @@ for path in "/" "/en" "/en/nacrtuj"; do
 done
 
 step "AI veriga v produkciji"
-HEALTH="$(curl -sS -m 60 "${URL}/api/ai-health" 2>/dev/null || echo '{}')"
+# /api/ai-health od 1.34.0 (revizija #8) zahteva CRON_SECRET (Bearer) ali
+# admin geslo — javni health je lahko "prebujal" mrtvega providerja (reset
+# circuit breakerja). Secret: SAMO eksplicitna env (iz .env se NE bere).
+AI_AUTH=()
+if [ -n "${CRON_SECRET:-}" ]; then
+  AI_AUTH=(-H "Authorization: Bearer ${CRON_SECRET}")
+elif [ -n "${ADMIN_PASSWORD:-}" ]; then
+  AI_AUTH=(-H "x-admin-password: ${ADMIN_PASSWORD}")
+fi
+if [ ${#AI_AUTH[@]} -gt 0 ]; then
+  HEALTH="$(curl -sS -m 60 "${AI_AUTH[@]}" "${URL}/api/ai-health" 2>/dev/null || echo '{}')"
+else
+  HEALTH="{}"
+  warn "CRON_SECRET/ADMIN_PASSWORD nista podana — AI health preskočen (vrne 401 brez njiju)."
+fi
 if printf '%s' "$HEALTH" | jq -e '.providers' >/dev/null 2>&1; then
   ACTIVE="$(printf '%s' "$HEALTH" | jq -r '.provider // "none"')"
   info "Aktivni provider: ${ACTIVE}"

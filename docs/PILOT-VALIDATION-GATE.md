@@ -33,7 +33,8 @@
 ## Znana odprta stanja OB ZAMRZNITVI (niso kode)
 
 1. **AI v produkciji = fallback način** — `PUTER_AUTH_TOKEN` ni nastavljen na Renderu;
-   `ai-health` odgovarja `{"status":"fallback"}`. Načrtovalec torej poganja
+   `ai-health` odgovarja `{"status":"fallback"}` (od 1.34.0 klic zahteva
+   `CRON_SECRET` — glej INCIDENT-PLAYBOOK). Načrtovalec torej poganja
    deterministični ranking engine (pošteno označen z badge »Predlog«, ne »AI«).
    Konfiguracijska odločitev uporabnika, ne kode.
 2. **Render free kapaciteta** — vzporedna obremenitev (~12 konkurentnih zahtevkov na
