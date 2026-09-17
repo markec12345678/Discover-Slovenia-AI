@@ -7,6 +7,33 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.41.0] — 2026-09-18
+
+### Dodano (1.41.0 — GEO-ODGOVORI: AI odgovor, ki se izriše na zemljevidu)
+
+- **Mini zemljevid v AI klepetu** (Mindtripov "generative spatial" vzorec v naši izvedbi): ko uporabnik vpraša "kje lahko jedem v Ljubljani" / "where to eat in Bled", odgovor poleg besedila prinese **oštevilčene pine na mini Leaflet zemljevidu** znotraj klepeta + seznam krajev z odpiralnimi časi — odgovor na vprašanje KJE je prostorski, ne samo tekstoven.
+- **Geo-intent zaznavanje** (`src/lib/geo-intent.ts`): deterministično prepoznavanje lokacije (22 T1 destinacij, ročno vzgojeni STEMI s slovenskimi skloni — "v Ljubljani", "na Bledu", "pri Črnomlju" — + EN različice) in kategorij krajev (hrana / pijača / tržnica / nastanitev / storitve; exact + stem ujemanje, lažni zadetki preverjeni: "social"⇏Soča, "summer"⇏šum).
+- **Živi OSM kraji** (`src/lib/overpass.ts`, T3 plast): Overpass iskanje okoli destinacije (2,5 km) po kategorijah; **retry ×3 + mirror failover (kumi) + časovni proračun 8 s** — počasen Overpass ne zadržuje klepeta (graceful degradation); **in-memory cache 10 min** varuje javni API; isti zanesljivi konektor zdaj poganja tudi `/api/pois` (prej en sam ranljiv endpoint).
+- **AI uzemljen v kraje**: OSM kraji se vpletejo v sistemski prompt (oviti v `<podatek>`, označeni kot skupnostni vir) → AI priporoča PRAVE gostilne po imenu, ne izmišljene — besedilo in zemljevid kažeta isto stvar.
+- **Značke porekla na pinih** (diferenciator, ki ga Mindtrip nima): zeleni pini = "Preverjeno" (T1 naši podatki, povezava na stran destinacije), jantarni pini = "OSM" (skupnostni vir, poštena opomba "pred obiskom preveri odpiralne čase") — zemljevid, ki prizna, od kod so podatki.
+- **Fullscreen overlay** ("Povečaj"): velik zemljevid čez cel zaslon z zoom kontrolami + seznamom (Escape/X zapirata, zaklep drsenja ozadja) — mobilna izkušnja, ki jo Mindtripov desktop split-pane ne pokriva.
+- **T1 pini iz odgovora**: destinacije, omenjene v AI odgovoru, se izrišejo kot zeleni pini — odgovor se dobesedno izriše prostorsko tudi pri splošnih vprašanjih ("kaj videti v Sloveniji" → Bled, Piran …).
+- **Lazy Leaflet**: mini zemljevid se naloži šele ob prvem geo odgovoru (React.lazy) — ostale strani ne plačajo ~140 KB bundla.
+- **Persistenca + telemetrija**: kraji se shranijo v localStorage zgodovino klepeta (validirani); dogodka `chat_geo_answered` (osm_count/t1_count — doseg funkcije) in `map_opened {via: "chat_geo"}`; quickPrompt3 zdaj demo vprašanje geo funkcije ("Kje lahko jedem v Ljubljani?").
+
+### Verifikacija (1.41.0)
+
+- tsc čisto, eslint čisto (vseh 8 spremenjenih datotek).
+- Geo-intent: 12 testnih poizvedb (skloni, EN, lažni zadetki) — vsi pravilni; T1 matching iz odgovora + dedupe potrjena.
+- Overpass knjižnica: 2× uspešna živa klic (14 pravih ljubljanskih gostiln z odpiralnimi časi — To Je To balkan žar, Slovenska hiša Figovec, Burek Olimpija …) ob obdobjih delujočega omrežja; sandbox omrežje do overpass-api.de je valovito nedosegljivo (bun fetch ConnectionRefused v ~60 % — IPv6/DNS vedenje; retry + mirror to ublažita, produkcija (Vercel/Node) ni prizadeta).
+- E2E brskalnik: T1 pin pot v živo ("kje lahko jedem v Ljubljani" → NA ZEMLJEVIDU · 2, mini mapa s pinoma, Ljubljana ★4.6 / Ptuj ★4.5 povezavi, legenda, STO citati pod zemljevidom); OSM vrstice (Gostilna As OSM regional Mo-Su 10:00-23:00 …) preverjene prek API-oblikovane poti (network intercept z enako obliko odgovora, kot jo strežnik pošilja + localStorage persistenca); overlay odprt/zaprt (X + Escape + odklep drsenja), tiles po fixu invalidateSize (3 klici 150/500/1200 ms) čez celo višino (VLM potrditev).
+- Mobilno 390 px: 0 px preliva (docW=innerW), panel 358 px, mini mapa 160 px, overlay fullscreen 390×844.
+- EN lokal: "On the map · 4", "Enlarge", "Verified" prevedeni; SL zgodovina se povrne neodvisno od jezika.
+- Telemetrija v DB: `planner_chat_geo_answered {osm_count, t1_count}` + `planner_map_opened {via: "chat_geo"}` zapisana.
+- VLM presoje: klepet z zemljevidom 8.5/10 ("bridges conversational AI and practical navigation"), pini 9/10, končna QA 8/10 (poštena opomba: split-pane je za večdnevno raziskovanje — to pokrivata /zemljevid in zemljevid načrtovalnika; kompaktne WHERE poizvedbe so zdaj v klepetu).
+
+---
+
 ## [1.40.0] — 2026-09-18
 
 ### Dodano (1.40.0 — OPCIJA-3: transakcijska globina — rezervacija kot prvorazredni državljan načrtovalnika)

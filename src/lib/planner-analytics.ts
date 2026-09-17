@@ -44,6 +44,9 @@ export type PlannerEventName =
   | "provider_detail_opened"
   | "affiliate_clicked"
   | "booking_cta_clicked"
+  // GEO-ODGOVORI (Task 29): AI klepet odgovori s kraji na zemljevidu
+  // (OSM v bližini + T1 destinacije iz odgovora) — doseg funkcije
+  | "chat_geo_answered"
   | "weather_alternative_used"
   // F5.4 "Začni s povezavo" ( url ingest — MindTrip "Start Anywhere")
   | "ingest_url_attempted"

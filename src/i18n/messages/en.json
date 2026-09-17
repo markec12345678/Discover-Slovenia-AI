@@ -326,7 +326,7 @@
     "quickPromptsLabel": "Quick questions",
     "quickPrompt1": "What should I visit in Slovenia?",
     "quickPrompt2": "Recommend a romantic weekend",
-    "quickPrompt3": "Where's the best food?",
+    "quickPrompt3": "Where can I eat in Ljubljana?",
     "quickPrompt4": "Where to go with the family?",
     "inputPlaceholder": "Ask about Slovenia...",
     "inputAriaLabel": "Message for the AI chatbot",
@@ -341,7 +341,18 @@
     "badgeAI": "AI",
     "badgeFallback": "fallback",
     "sourcesLabel": "Official sources (STO)",
-    "sourceMap": "map"
+    "sourceMap": "map",
+    "placesLabel": "On the map",
+    "mapExpand": "Enlarge map",
+    "mapExpandShort": "Enlarge",
+    "mapClose": "Close map",
+    "mapOverlayAria": "Map of recommended places",
+    "provenanceT1": "Verified",
+    "provenanceT1Title": "Our verified destination data",
+    "provenanceT1Legend": "verified (our data)",
+    "provenanceOsmTitle": "OpenStreetMap — community data, not officially verified",
+    "provenanceOsmLegend": "OpenStreetMap (community)",
+    "osmNote": "Opening hours are community data — verify before visiting."
   },
   "planner": {
     "title": "AI trip planner",

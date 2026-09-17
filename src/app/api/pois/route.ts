@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
+import { overpassFetch } from "@/lib/overpass";
 
 // GET /api/pois — vrne POI-je (Points of Interest) iz OpenStreetMap Overpass API
 // Brezplačni podatki, brez API ključa
@@ -169,24 +170,15 @@ export async function GET(request: Request) {
       out center tags 1000;
     `;
 
-    // Pošlji na Overpass API
-    const overpassUrl = "https://overpass-api.de/api/interpreter";
-    const res = await fetch(overpassUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json",
-        "User-Agent": "I-Feel-Slovenia/1.0 (tourism platform)",
-      },
-      body: "data=" + encodeURIComponent(overpassQuery),
-      cache: "no-store",
-    });
-
-    if (!res.ok) {
-      throw new Error(`Overpass API: ${res.status}`);
+    // Pošlji na Overpass API — prek skupnega konektorja z retry + mirror
+    // failoverjem (src/lib/overpass.ts; prej en sam ranljiv konektor).
+    // Proračun 15 s: uporabnik je plast POI izrecno vklopil (drugi profil
+    // latence kot klepet, kjer je proračun 8 s).
+    const data = await overpassFetch(overpassQuery, { budgetMs: 15000 });
+    if (!data) {
+      throw new Error("Overpass API: nedosegljiv (vsi konektorji)");
     }
 
-    const data = await res.json();
     const elements = data.elements || [];
 
     const pois: Poi[] = [];

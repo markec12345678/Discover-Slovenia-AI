@@ -32,6 +32,9 @@ const VALID_EVENTS = new Set([
   // OPCIJA-3 (transakcijska globina): klik rezervacijskega CTA (status_strip /
   // day_header / stop_card) — meri, kdaj v poti uporabniki želijo dejanje
   "booking_cta_clicked",
+  // GEO-ODGOVORI (Task 29): AI klepet je izrisal kraje na zemljevidu
+  // (props: osm_count, t1_count) — doseg "generative spatial" odgovorov
+  "chat_geo_answered",
   "weather_alternative_used",
   // F5.4 "Začni s povezavo" ( url ingest)
   "ingest_url_attempted",

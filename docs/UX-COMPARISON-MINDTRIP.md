@@ -157,6 +157,23 @@ spletnega UI-ja danes ni mogoče videti.
 > dejanje. VLM: 9/10 "prvorazredna akcija". S tem so VSE tri opcije iz
 > te primerjave izkoriščene (1.38 okno, 1.39 duša, 1.40 transakcije).
 
+> **STANJE GEO-ODGOVOROV (1.41.0, 18. 9. 2026):** Mindtripov najbolj
+> prepoznavni vzorec — "AI priporoči hrano → pini se izrišejo na
+> zemljevidu" — je zdaj tudi pri nas, v naši izvedbi: (a) mini
+> Leaflet zemljevid z oštevilčenimi pini ZNOTRAJ klepeta (mobilno-first;
+> njihov split-pane je desktop rešitev) + fullscreen overlay "Povečaj";
+> (b) živi OSM kraji okoli destinacije (Overpass z retry+mirror in
+> 10-min predpomnjenjem) se vpletejo v AI prompt → AI priporoča PRAVE
+> gostilne po imenu; (c) ZNAČKE POREKLA na pinih (zeleni "Preverjeno"
+> T1 / jantarni "OSM" skupnostni) — diferenciator, ki ga Mindtrip nima:
+> zemljevid, ki prizna, od kod so podatki; (d) T1 destinacije iz
+> odgovora se izrišejo kot zeleni pini — odgovor se dobesedno izriše
+> prostorsko. VLM: 8.5/10 klepet, 8/10 končna QA ("bridges conversational
+> AI and practical navigation"). Njihova prednost, ki ostaja: persistent
+> velik zemljevid ob klepetu za večdnevno raziskovanje — pri nas to
+> pokrivata /zemljevid in zemljevid načrtovalnika; klepet je za hitre
+> WHERE poizvedbe.
+
 ## 7. Arhiv materiala
 
 - Screenshoti: `/tmp/ux-audit/` (mt-shot-1..6 = Mindtrip iOS uradno,

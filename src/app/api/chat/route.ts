@@ -6,6 +6,12 @@ import { rateLimit } from "@/lib/rate-limit";
 import { wrapProviderData, SYSTEM_DATA_GUARD } from "@/lib/ai-context";
 import { buildStoGrounding } from "@/lib/rag/ground";
 import type { StoCitation } from "@/lib/rag/types";
+import {
+  detectGeoIntent,
+  matchDestinationsInText,
+  type ChatPlace,
+} from "@/lib/geo-intent";
+import { fetchOverpassNearby } from "@/lib/overpass";
 
 // POST /api/chat — AI chatbot z dostopom do vsebine platforme
 //
@@ -144,6 +150,53 @@ export async function POST(request: Request) {
   // model kot ponudniška vsebina (prompt injection obramba).
   const stoGrounding = buildStoGrounding(lastUserMessage, lang, 5);
 
+  // GEO-ODGOVORI (Task 29, 1.41.0): če uporabnik išče KRAJ (hrana,
+  // pijača, tržnica, nastanitev, storitve) okoli prepoznane destinacije,
+  // poiščemo realne kraje po OpenStreetMap (T3 — splet v živo) in jih
+  // (a) vpletemo v sistemski prompt, da AI priporoča PRAVE gostilne,
+  // (b) pošljemo klientu kot `places` → mini zemljevid v klepetu.
+  // Overpass klic zgolj ob lokaciji + kategoriji (varuje javni API), s
+  // 6 s timeoutom — počasen OSM ne zadrži klepeta (graceful degradation).
+  const geoIntent = detectGeoIntent(lastUserMessage);
+  const osmPlaces: ChatPlace[] =
+    geoIntent.location && geoIntent.categories.length > 0
+      ? await fetchOverpassNearby(
+          { lat: geoIntent.location.lat, lng: geoIntent.location.lng },
+          geoIntent.categories
+        )
+      : [];
+
+  // Kontekst OSM krajev za AI (SL/EN) — ovit v <podatek> kot vsa zunanja
+  // vsebina; izrecno označeno kot skupnostni vir, ne uradni podatek.
+  const osmContext =
+    osmPlaces.length > 0 && geoIntent.location
+      ? lang === "en"
+        ? `\n\nPLACES NEAR ${geoIntent.location.name.toUpperCase()} (OpenStreetMap — community data, NOT officially verified; do not present as official):
+${wrapProviderData(
+  "osm-kraji",
+  osmPlaces
+    .map(
+      (p) =>
+        `- ${p.name}${p.detail ? ` (${p.detail})` : ""}${p.openingHours ? ` — open: ${p.openingHours}` : ""}`
+    )
+    .join("\n")
+)}
+These places answer the user's WHERE question — recommend 2–4 most suitable ones BY NAME from this list (never invent names).
+`
+        : `\n\nKRAJI V BLIŽINI ${geoIntent.location.name.toUpperCase()} (OpenStreetMap — skupnostni vir, NI uradno preverjeno; ne predstavljaj kot uradno):
+${wrapProviderData(
+  "osm-kraji",
+  osmPlaces
+    .map(
+      (p) =>
+        `- ${p.name}${p.detail ? ` (${p.detail})` : ""}${p.openingHours ? ` — odprto: ${p.openingHours}` : ""}`
+    )
+    .join("\n")
+)}
+Ti kraji so odgovor na uporabnikovo vprašanje KJE — priporočaj 2–4 najbolj smiselne PO IMENU iz tega seznama (nikoli ne izmišljuj imen).
+`
+      : "";
+
   // FW4.3-2: ogledje sistemsko sporočilo glede na jezik — enaka struktura,
   // enaka varnostna pravila (SYSTEM_DATA_GUARD, <podatek> ovijanje ostane).
   const systemPrompt =
@@ -167,7 +220,7 @@ TOP PRODUCTS (featured):
 ${productsContext}
 
 TOP EXPERIENCES (featured):
-${experiencesContext}${pageContext}${stoGrounding.context}
+${experiencesContext}${pageContext}${stoGrounding.context}${osmContext}
 
 RULES:
 1. Reply in English (unless the user writes in another language)
@@ -200,7 +253,7 @@ TOP IZDELKI (featured):
 ${productsContext}
 
 TOP IZKUŠNJE (featured):
-${experiencesContext}${pageContext}${stoGrounding.context}
+${experiencesContext}${pageContext}${stoGrounding.context}${osmContext}
 
 PRAVILA:
 1. Odgovarjaj v slovenščini (razen če uporabnik piše v drugem jeziku)
@@ -249,16 +302,34 @@ ${SYSTEM_DATA_GUARD}`;
       throw new Error("Prazen odgovor AI");
     }
 
-    console.log(`[chat] AI odgovor (source: ${result.source}) — vprašanje: "${lastUserMessage.substring(0, 60)}..."${stoGrounding.active ? ` [T2 uzemljenje: ${stoGrounding.citations.length} uradnih virov STO]` : ""}`);
+    console.log(`[chat] AI odgovor (source: ${result.source}) — vprašanje: "${lastUserMessage.substring(0, 60)}..."${stoGrounding.active ? ` [T2 uzemljenje: ${stoGrounding.citations.length} uradnih virov STO]` : ""}${osmPlaces.length > 0 ? ` [GEO: ${geoIntent.location?.name} · ${osmPlaces.length} OSM krajev]` : ""}`);
 
     // DATA-LAYERS-RAG: citati T2 (samo kadar je bilo uzemljenje aktivno —
     // prazen seznam pomeni "AI ni dobil uradnih virov za to vprašanje").
     const sources: StoCitation[] = stoGrounding.active ? stoGrounding.citations : [];
 
+    // GEO-ODGOVORI: poleg OSM krajev (odgovor na "kje") na zemljevid
+    // dodamo še T1 destinacije, omenjene v AI odgovoru — odgovor se
+    // dobesedno izriše prostorsko (zeleni pini = naši preverjeni podatki).
+    // Lokacija iz vprašanja je VEDNO prvi zeleni pin (sidro iskanja) —
+    // povezava na stran destinacije iz zemljevida.
+    const t1Places: ChatPlace[] = matchDestinationsInText(content);
+    const queryLocationPlace = geoIntent.location
+      ? matchDestinationsInText(geoIntent.location.name).find(
+          (p) => `t1-${geoIntent.location!.id}` === p.id
+        ) ?? null
+      : null;
+    const places: ChatPlace[] = [
+      ...(queryLocationPlace ? [queryLocationPlace] : []),
+      ...osmPlaces,
+      ...t1Places.filter((p) => p.id !== queryLocationPlace?.id),
+    ].slice(0, 16);
+
     return NextResponse.json({
       message: content,
       source: result.source,
       sources,
+      places,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -270,6 +341,7 @@ ${SYSTEM_DATA_GUARD}`;
       message: fallback,
       source: "fallback",
       sources: [] as StoCitation[],
+      places: [] as ChatPlace[],
       timestamp: new Date().toISOString(),
     });
   }

@@ -326,7 +326,7 @@
     "quickPromptsLabel": "Hitra vprašanja",
     "quickPrompt1": "Kaj obiskati v Sloveniji?",
     "quickPrompt2": "Priporoči romantični vikend",
-    "quickPrompt3": "Kje je najboljša hrana?",
+    "quickPrompt3": "Kje lahko jedem v Ljubljani?",
     "quickPrompt4": "Kam z družino?",
     "inputPlaceholder": "Vprašajte o Sloveniji...",
     "inputAriaLabel": "Sporočilo za AI chatbot",
@@ -341,7 +341,18 @@
     "badgeAI": "AI",
     "badgeFallback": "fallback",
     "sourcesLabel": "Uradni viri (STO)",
-    "sourceMap": "zemljevid"
+    "sourceMap": "zemljevid",
+    "placesLabel": "Na zemljevidu",
+    "mapExpand": "Povečaj zemljevid",
+    "mapExpandShort": "Povečaj",
+    "mapClose": "Zapri zemljevid",
+    "mapOverlayAria": "Zemljevid priporočenih krajev",
+    "provenanceT1": "Preverjeno",
+    "provenanceT1Title": "Naši preverjeni podatki o destinaciji",
+    "provenanceT1Legend": "preverjeno (naši podatki)",
+    "provenanceOsmTitle": "OpenStreetMap — skupnostni vir, ni uradno preverjeno",
+    "provenanceOsmLegend": "OpenStreetMap (skupnostni vir)",
+    "osmNote": "Odpiralni časi so skupnostni podatek — pred obiskom preverite."
   },
   "planner": {
     "title": "AI načrtovalec potovanj",

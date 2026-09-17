@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import {
   MessageCircle,
   X,
@@ -12,6 +12,13 @@ import {
   Trash2,
   Landmark,
   MapPin,
+  Maximize2,
+  Utensils,
+  Coffee,
+  ShoppingBasket,
+  BedDouble,
+  Info,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +28,27 @@ import { useTranslations, useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Link } from "@/i18n/navigation";
 import type { StoCitation } from "@/lib/rag/types";
+import type { ChatPlace, PlaceCategory } from "@/lib/geo-intent";
+import { trackPlannerEvent } from "@/lib/planner-analytics";
+
+// GEO-ODGOVORI: Leaflet vgreteni ŠTEKNO — komponenta se naloži šele, ko
+// prvi AI odgovor prinese kraje (ostale strani ne plačajo ~140 KB bundla).
+const ChatMiniMap = lazy(() => import("@/components/chat-mini-map"));
+
+/** Barve pinov po plasteh zaupanja — usklajeno s chat-mini-map.tsx. */
+const PLACE_PIN_COLORS: Record<"t1" | "osm", string> = {
+  t1: "#2d6a3e", // zeleni — preverjeni podatki (T1)
+  osm: "#b45309", // jantarni — OpenStreetMap skupnostni vir (T3)
+};
+
+/** Ikone kategorij krajev (Mindtrip: fork ikona na pinu; mi v seznamu). */
+const CATEGORY_ICONS: Record<PlaceCategory, React.ComponentType<{ className?: string }>> = {
+  food: Utensils,
+  drinks: Coffee,
+  market: ShoppingBasket,
+  stay: BedDouble,
+  service: Info,
+};
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -28,13 +56,32 @@ interface ChatMessage {
   /** DATA-LAYERS-RAG: uradni viri STO, poslani AI-ju ob tem odgovoru
    * (opcijsko — starejša/lokalna zgodovina jih nima). */
   sources?: StoCitation[];
+  /** GEO-ODGOVORI: kraji iz AI odgovora (OSM v bližini + T1 destinacije
+   * iz odgovora) — izrišejo se kot mini zemljevid s pini (opcijsko). */
+  places?: ChatPlace[];
 }
 
 interface ChatResponse {
   message: string;
   source: "puter" | "z-ai-sdk" | "fallback";
   sources?: StoCitation[];
+  places?: ChatPlace[];
   timestamp: string;
+}
+
+/** Validacija enega ChatPlace iz localStorage (pokvarjen JSON ne sesuje app). */
+function isValidChatPlace(p: unknown): p is ChatPlace {
+  if (typeof p !== "object" || p === null) return false;
+  const c = p as ChatPlace;
+  return (
+    typeof c.name === "string" &&
+    c.name.length > 0 &&
+    typeof c.lat === "number" &&
+    Number.isFinite(c.lat) &&
+    typeof c.lng === "number" &&
+    Number.isFinite(c.lng) &&
+    (c.provenance === "t1" || c.provenance === "osm")
+  );
 }
 
 // ============================================================================
@@ -71,15 +118,22 @@ function isValidChatMessage(m: unknown): m is ChatMessage {
     // sources so opcijske — če obstajajo, morajo biti array objektov z
     // url+naslovom (vsak element sam po sebi validiran v render zaradi
     // map/filter guardov spodaj)
-    (m as ChatMessage).sources === undefined ||
-    (Array.isArray((m as ChatMessage).sources) &&
-      (m as ChatMessage).sources!.every(
-        (s) =>
-          typeof s === "object" &&
-          s !== null &&
-          typeof (s as StoCitation).url === "string" &&
-          typeof (s as StoCitation).title === "string"
-      ))
+    ((m as ChatMessage).sources === undefined ||
+      (Array.isArray((m as ChatMessage).sources) &&
+        (m as ChatMessage).sources!.every(
+          (s) =>
+            typeof s === "object" &&
+            s !== null &&
+            typeof (s as StoCitation).url === "string" &&
+            typeof (s as StoCitation).title === "string"
+        ))
+    ) &&
+    // GEO-ODGOVORI: places so opcijske — če obstajajo, je vsak element
+    // validiran s svojim varovanim preverjalnikom ( ime + koordinati + vir)
+    ((m as ChatMessage).places === undefined ||
+      (Array.isArray((m as ChatMessage).places) &&
+        (m as ChatMessage).places!.every(isValidChatPlace))
+    )
   );
 }
 
@@ -143,6 +197,149 @@ function makeWelcome(t: (k: string) => string): ChatMessage {
   return { role: "assistant", content: t("welcome") };
 }
 
+// ============================================================================
+// GEO-ODGOVORI — pododeli za izris krajev AI odgovora
+// ============================================================================
+
+/** Ena vrstica seznama krajev — oštevilčena kot pin na zemljevidu. */
+function PlaceRow({ place, index }: { place: ChatPlace; index: number }) {
+  const t = useTranslations("chatbot");
+  const Icon = CATEGORY_ICONS[place.category] ?? Info;
+  const color = PLACE_PIN_COLORS[place.provenance] ?? PLACE_PIN_COLORS.osm;
+
+  const number = (
+    <span
+      aria-hidden
+      className="flex size-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+      style={{ backgroundColor: color }}
+    >
+      {index + 1}
+    </span>
+  );
+
+  const meta: string[] = [];
+  if (place.detail) meta.push(place.detail);
+  if (place.budget) meta.push(place.budget);
+
+  const nameEl = (
+    <span className="truncate font-medium text-foreground">{place.name}</span>
+  );
+
+  return (
+    <li className="flex items-start gap-1.5">
+      {number}
+      <div className="min-w-0 flex-1">
+        <p className="flex items-center gap-1.5 text-[11px] leading-snug">
+          {/* T1 kraj s slugom → stran destinacije (dejanje iz zemljevida) */}
+          {place.provenance === "t1" && place.slug ? (
+            <Link
+              href={`/destinacija/${place.slug}`}
+              className="truncate font-medium text-foreground underline decoration-transparent underline-offset-2 transition-colors hover:decoration-primary"
+            >
+              {place.name}
+              {place.rating ? ` ★${place.rating}` : ""}
+            </Link>
+          ) : (
+            nameEl
+          )}
+          {/* Značka porekla — naš diferenciator: zemljevid, ki prizna vir */}
+          <span
+            className={cn(
+              "shrink-0 rounded px-1 py-px text-[9px] font-semibold uppercase",
+              place.provenance === "t1"
+                ? "bg-primary/10 text-primary"
+                : "bg-muted text-muted-foreground"
+            )}
+            title={
+              place.provenance === "t1"
+                ? t("provenanceT1Title")
+                : t("provenanceOsmTitle")
+            }
+          >
+            {place.provenance === "t1" ? t("provenanceT1") : "OSM"}
+          </span>
+        </p>
+        {(meta.length > 0 || place.openingHours) && (
+          <p className="mt-0.5 flex items-center gap-1 text-[10px] leading-snug text-muted-foreground">
+            <Icon className="size-3 shrink-0" aria-hidden />
+            <span className="truncate">{meta.join(" · ") || "\u00a0"}</span>
+            {place.openingHours && (
+              <span className="flex shrink-0 items-center gap-0.5" title={place.openingHours}>
+                <Clock className="size-3" aria-hidden />
+                <span className="max-w-24 truncate">{place.openingHours}</span>
+              </span>
+            )}
+          </p>
+        )}
+      </div>
+    </li>
+  );
+}
+
+interface GeoPlacesSectionProps {
+  places: ChatPlace[];
+  onExpand: (places: ChatPlace[]) => void;
+}
+
+/** Oddelek "Na zemljevidu" pod AI odgovorom: glava + mini mapa + seznam + legenda. */
+function GeoPlacesSection({ places, onExpand }: GeoPlacesSectionProps) {
+  const t = useTranslations("chatbot");
+  const hasOsm = places.some((p) => p.provenance === "osm");
+
+  return (
+    <div className="mt-2.5 border-t border-border/60 pt-2.5">
+      {/* Glava: label + števec + gumb za povečavo */}
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <p className="flex min-w-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <MapPin className="size-3 shrink-0" aria-hidden />
+          <span className="truncate">
+            {t("placesLabel")} · {places.length}
+          </span>
+        </p>
+        <button
+          type="button"
+          onClick={() => onExpand(places)}
+          className="flex min-h-6 shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          aria-label={t("mapExpand")}
+          title={t("mapExpand")}
+        >
+          <Maximize2 className="size-3" aria-hidden />
+          {t("mapExpandShort")}
+        </button>
+      </div>
+
+      {/* Mini zemljevid — lazy Leaflet (nalaga se ob prvem geo odgovoru) */}
+      <Suspense
+        fallback={
+          <div className="h-40 w-full animate-pulse rounded-lg bg-muted" aria-hidden />
+        }
+      >
+        <ChatMiniMap places={places} />
+      </Suspense>
+
+      {/* Seznam krajev — drsljiv pri dolgih seznamih */}
+      <ul className="mt-2 max-h-44 space-y-1.5 overflow-y-auto pr-1">
+        {places.map((p, i) => (
+          <PlaceRow key={p.id} place={p} index={i} />
+        ))}
+      </ul>
+
+      {/* Legenda porekla — T1 zeleni / OSM jantarni (iskrenost o viru) */}
+      <p className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: PLACE_PIN_COLORS.t1 }} />
+          {t("provenanceT1Legend")}
+        </span>
+        <span className="flex items-center gap-1">
+          <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: PLACE_PIN_COLORS.osm }} />
+          {t("provenanceOsmLegend")}
+        </span>
+      </p>
+      {hasOsm && <p className="mt-1 text-[10px] italic text-muted-foreground">{t("osmNote")}</p>}
+    </div>
+  );
+}
+
 /**
  * Chatbot — lebdeči AI asistent z dostopom do vsebine platforme.
  *
@@ -160,6 +357,8 @@ export function Chatbot() {
   const [loading, setLoading] = useState(false);
   const [source, setSource] = useState<"puter" | "z-ai-sdk" | "fallback">("puter");
   const [hasNewMessage, setHasNewMessage] = useState(false);
+  // GEO-ODGOVORI: kraji trenutno povečanega zemljevida (fullscreen overlay)
+  const [mapOverlay, setMapOverlay] = useState<ChatPlace[] | null>(null);
   // UX-CMP #6 (Mindtrip primerjava, 17. 9. 2026 / pilot audit 🟡): chat FAB
   // (fiksni, spodaj desno, z-50) je pri 320 px prekrival ZADNJI gumb dneva
   // v dnevní navigaciji, dokler ta še ni prilepljena na vrh. Standardni
@@ -231,6 +430,22 @@ export function Chatbot() {
     }
   }, [open]);
 
+  // GEO-ODGOVORI: fullscreen zemljevid — Escape zapre + zaklenjeno
+  // drsenje ozadja (isti vzorec kot image-lightbox)
+  useEffect(() => {
+    if (!mapOverlay) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMapOverlay(null);
+    };
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [mapOverlay]);
+
   /** Počisti pogovor (brez potrditve) + izbriši lokalno zgodovino. */
   const handleClearConversation = () => {
     setMessages([makeWelcome(t)]);
@@ -263,12 +478,28 @@ export function Chatbot() {
 
       const data: ChatResponse = await res.json();
       setSource(data.source);
+      const places = data.places ?? [];
       setMessages((prev) => [
         ...prev,
         // DATA-LAYERS-RAG: priloži citate uradnih virov (T2) — značke
         // pod odgovorom, kadar je AI dobil uzemljenje za to vprašanje.
-        { role: "assistant" as const, content: data.message, sources: data.sources ?? [] },
+        // GEO-ODGOVORI: priloži kraje — mini zemljevid s pini.
+        {
+          role: "assistant" as const,
+          content: data.message,
+          sources: data.sources ?? [],
+          places,
+        },
       ]);
+
+      // Telemetrija: geo odgovor je bil izrisan (meri doseg funkcije:
+      // koliko odgovorov prinese pine — ločeno po plasti porekla)
+      if (places.length > 0) {
+        trackPlannerEvent("chat_geo_answered", {
+          osm_count: places.filter((p) => p.provenance === "osm").length,
+          t1_count: places.filter((p) => p.provenance === "t1").length,
+        });
+      }
 
       if (!open) setHasNewMessage(true);
     } catch {
@@ -393,6 +624,20 @@ export function Chatbot() {
                 >
                   <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
 
+                  {/* GEO-ODGOVORI: mini zemljevid s pini — AI odgovor se
+                      izriše prostorsko (kje je hrana/pijača/tržnica …) */}
+                  {msg.role === "assistant" && msg.places && msg.places.length > 0 ? (
+                    <GeoPlacesSection
+                      places={msg.places}
+                      onExpand={(places) => {
+                        setMapOverlay(places);
+                        // Obstojeci dogodek map_opened z novo dimenzijo via
+                        // (zemljevid_page | chat_geo) — brez novega eventa
+                        trackPlannerEvent("map_opened", { via: "chat_geo" });
+                      }}
+                    />
+                  ) : null}
+
                   {/* DATA-LAYERS-RAG: značke uradnih virov (T2) — veriga
                       "podatek → AI → vir → dejanje": citat STO + morebitna
                       geopovezava na našo stran destinacije (zemljevid). */}
@@ -494,6 +739,52 @@ export function Chatbot() {
               </Button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* GEO-ODGOVORI: fullscreen zemljevid — mobilna izkušnja "velikega
+          zemljevida" (Mindtrip split-pane je desktop rešitev; naša večina
+          uporabnikov je mobilnih). Escape ali X zapreta. */}
+      {mapOverlay && (
+        <div
+          className="fixed inset-0 z-[70] flex flex-col bg-background"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("mapOverlayAria")}
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-border p-3">
+            <p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold">
+              <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
+              <span className="truncate">
+                {t("placesLabel")}
+                <span className="ml-1 font-normal text-muted-foreground">· {mapOverlay.length}</span>
+              </span>
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              onClick={() => setMapOverlay(null)}
+              aria-label={t("mapClose")}
+            >
+              <X className="size-5" aria-hidden />
+            </Button>
+          </div>
+          <div className="min-h-0 flex-1 p-2">
+            <Suspense
+              fallback={<div className="h-full w-full animate-pulse rounded-lg bg-muted" aria-hidden />}
+            >
+              <ChatMiniMap places={mapOverlay} variant="overlay" />
+            </Suspense>
+          </div>
+          <div className="max-h-52 overflow-y-auto border-t border-border p-3">
+            <ul className="space-y-1.5">
+              {mapOverlay.map((p, i) => (
+                <PlaceRow key={p.id} place={p} index={i} />
+              ))}
+            </ul>
+          </div>
         </div>
       )}
     </>
