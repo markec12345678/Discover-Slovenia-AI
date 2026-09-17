@@ -570,7 +570,14 @@ JSON format (STROGO):
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      { temperature: 0.7, jsonMode: true }
+      // 1.48.2: velika JSON generacija na free tieru traja 60–79 s
+      // (direktna meritev 2026-09-17, 3/3 vzorci ≥ 60 s — enak ključ in
+      // model kot ta veriga). Privzeti 60-s budilnik je vsak drugi klic
+      // tiho rezal v deterministični fallback PO enaki čakalni dobi.
+      // Proračun 120 s: uporabnik po ~isti potrpežljivosti dobi PRAVI AI
+      // načrt; najslabša časovnica ostane vezana (timeout → preskok na
+      // Gemini/fallback, brez podvajanj — glej ai-client 1.48.2).
+      { temperature: 0.7, jsonMode: true, timeoutMs: 120_000 }
     );
 
     const content = result?.content;

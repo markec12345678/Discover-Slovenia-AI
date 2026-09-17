@@ -7,6 +7,19 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.48.2] — 2026-09-17
+
+### Spremenjeno (1.48.2 — per-klic časovni proračun AI: free tier realnost na zlati poti načrtovalnika)
+
+- **Problem (dokazan z direktno merjitvijo, ne sklepom)**: direktni klici OpenRouter z itinerary-velikim JSON promptom (enak ključ + model kot produkcijska veriga, 2026-09-17): **60 s / 61 s / 79 s — 3/3 vzorci NA ali ČEZ privzeti 60-s budilnik** (`OPENROUTER_TIMEOUT_MS`). Produkcijski simptomi v skladu: Render itinerary 101 s → fallback, 110 s → ai; Vercel 136 s → ai. Čakalne vrste `:free` za velike generacije so globlje od privzetega proračuna — budilnik je rezal približno vsak drugi klic v deterministični fallback, uporabnik pa je čakal PRAV TOLIKO ČASA (fallback pride šele po koncu OR poskusov, ne prej — čakanje brez dobička).
+- **`AICompletionOptions.timeoutMs` (ai-client.ts)**: per-klic proračun poskusa OpenRouter (privzeto ostaja 60 s), implementiran prek SDK v6 `RequestOptions` (per-request `timeout`) — singleton odjemalec ostaja nedotaknjen za vse ostale klice (klepet, health, ask-local …).
+- **Vezana najslabša časovnica (2 varovali)**: (1) ob izrecnem `timeoutMs` se IZKLOPI SDK auto-retry (`maxRetries: 0`) — notranji fallback model je ŽE naša retry plast, SDK podvajanje bi tiho podvojilo najslabšo časovnico; (2) ob `APIConnectionTimeoutError` se rezervni model PRESKOČI (`break`) — čakalna vrsta `:free` je SKUPNA vsem modelom, rezervni bi čakal v isti vrsti (sicer 2× proračun × 2 modela = do 4× čas). Hitre napake (429/5xx, provider error) notranji fallback poskusi ŠE VEDNO — tam drug model dejansko pomeni drugo vrsto.
+- **Itinerary route**: `timeoutMs: 120_000` — pokrije izmerjene latenčnosti (do 79 s) z ~50 % variančne rezerve; UX: uporabnik po ~isti potrpežljivosti dobi PRAVI AI načrt namesto rezerve. Klepet ostaja na privzetih 60 s — osveščena odločitev (krajša čakalna vrsta pred poštenim fallbackom je za hitre klice boljši UX), ne opustitev.
+- **Pripadajoče odkritje (dokumentirano, izven dosega kode)**: `nex-agi/nex-n2.5-pro:free` ob ZELO VELIKIH promptih (route systemPrompt z destinacijami/pravili/RAG kontekstom) včasih vrne HTTP 200 s PRAZNO vsebino — 2/2 lokalnih klicev danes (direkti klici z manjšim promptom: 3/3 z vsebino). Veriga to obravnava pošteno (naslednji provider → fallback); na Renderu (brez sekundarnega providerja) tak dogodek pomeni fallback — **utemeljuje priporočilo `GEMINI_API_KEY` na Render kot sekundarnega**.
+- **Verifikacija**: tsc 0 (src; 2 predhodni napaki samo v `skills/`, izven projekta), eslint 0, bun test 145/145; lokalna end-to-end 2× (HTTP 200, pravi 3-/4-dnevni načrti skozi novo pot kode — OR empty-content danes → rešitev prek z-ai v peskovniku, na Renderu bi pripadla fallback: veriga poštena na obeh koncih). TIMEOUT veja (break pred rezervnim modelom) tipovno preverjena, danes neizvršana (empty-content je odrezal prej budilnikom) — logika enovito preprosta.
+
+---
+
 ## [1.48.1] — 2026-09-17
 
 ### Spremenjeno (1.48.1 — llms.txt/llms-full.txt GEO: ozaveščenost dvojezičnega zemljevida)
