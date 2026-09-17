@@ -204,4 +204,54 @@ Po 30 lokalih → monetizacija
 
 ---
 
+## 8. Okno priložnosti: Mindtrip (OPP-1, september 2026)
+
+**Kontekst:** Mindtripov spletni načrtovalec (mindtrip.ai) je 17. 9. 2026 padel
+(302 → "Under Construction"); iOS aplikacija živi, web pa je nedosegljiv več
+dni. Njihovi (bivši) spletni uporabniki iščejo alternative — dokler se web ne
+pobere, je to časovno okno. Popolna analiza: `docs/UX-COMPARISON-MINDTRIP.md`
+(§6 strateški sklep).
+
+**Naš položaj (iskren, ne oportunističen):** nismo globalni nadomestek
+Mindtripa — smo specialist za Slovenijo. Vsa sporočila MORAJO ostati na tej
+razlagi; napadalno "Mindtrip je mrtev, pridi k nam" bi škodovalo znamki
+iskrenosti in hitro zastarelo.
+
+### 8.1 Pripravljena vsebina (živi)
+
+- **`/primerjava`** (SL + `/en/primerjava`): iskrena uredniška primerjava
+  specialista z generalisti (Mindtrip, Layla, Wanderlog, ChatGPT) — prizna
+  njihove prednosti, dokumentira pasti (20–30 % cenovna odstopanja, zaprti
+  objekti), FAQPage JSON-LD, v sitemapu in llms.txt. To je ciljna stran za
+  vse spodnje kanale.
+
+### 8.2 Kanali in sporočila (po prioriteti)
+
+| Kanal | Cilj | Sporocilo (suženj) | Napor |
+|-------|------|--------------------|-------|
+| Reddit r/travel, r/Slovenia, r/travelbloggers | EN iskalci alternativ | "Če je bil Mindtrip vaš načrtovalec in načrtujete Slovenijo: obstaja specialist, ki deluje brez prijave. [primerjava]" — samo kjer je naravno (rule: ne spamati) | 15 min/dan |
+| X/Twitter iskanje "mindtrip down/alternative" | EN frustrirani uporabniki | isti suženj kot Reddit, odgovor na njihovo objavo | 10 min/dan |
+| Slovenijski FB skupine (Slovenija potovanja ipd.) | SL domači uporabniki | "AI načrtovalec PO sloveniji, brez prijave, v slovenščini — tukaj je iskrena primerjava kaj zmore in česa ne." | 10 min/dan |
+| Odgovori na članke "Mindtrip alternatives" (Product Hunt, blogi iz raziskave OPP-1) | dolg rep | komentar/predlog našega /primerjava kot Slovenija-specialist | 1× na teden |
+
+### 8.3 Pravila (varnost znamke)
+
+1. **Nikoli ne trdimo, da smo "nadomestek Mindtripa"** — samo "specialist za
+   Slovenijo" kot del odgovora.
+2. **Ne veselimo se njihove padca javno** — empatija: "upam, da se poberejo".
+3. Vsako sporočilo vodi na `/primerjava`, ne na domačo stran (kontekst
+   primerjave omili "reklamnost").
+4. Ko se njihov web pobere, odsek 8.2 umaknemo; `/primerjava` ostane
+   (evergreen vsebina, FAQ5 se preuredi brez omembe nedosegljivosti).
+
+### 8.4 Merjenje
+
+- PageView `/primerjava` (PageViewTracker je vklopljen) — dnevni trend.
+- `/api/analytics/funnel` — konverzija primerjava → /nacrtuj → generiran
+  načrt.
+- Kadar 7-dnevni trend pade pod 5 ogledov/dan in se Mindtrip web pobere,
+   sekcijo arhiviramo v CHANGELOG.
+
+---
+
 **Konec Outreach Toolkit.**

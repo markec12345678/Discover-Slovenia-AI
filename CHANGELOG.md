@@ -7,6 +7,67 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.38.0] — 2026-09-17
+
+### Dodano (1.38.0 — OPP-1: izkoriščanje okna priložnosti po padcu Mindtripovega weba)
+
+> Taktična objava istega dne, ko je UX-COMPARISON §6 identificiral okno:
+> mindtrip.ai je padel 17. 9. 2026 (302 → construction), njihovi spletni
+> uporabniki iščejo alternative. Namesto frontalnega napada na konkurenčno
+> poizvedbo "mindtrip alternative" (Product Hunt, veliki blogi — nedosegljivo
+> kratkoročno) ciljamo dolg rep: "ai trip planner no signup",
+> "ai trip planner slovenia" + iskren kot specialista.
+
+- **Nova stran `/primerjava`** (SL) + **`/en/primerjava`** (EN, dodana na
+  EN whitelisto `EN_STATIC_ROUTES`): iskrena uredniška primerjava specialista
+  za Slovenijo s splošnimi AI načrtovalci (Mindtrip, Layla, Wanderlog,
+  ChatGPT). Struktura: (1) 4 kartice kje so GENERALISTI boljši (iskrenost
+  najprej), (2) 3 dokumentirane pasti generalistov (20–30 % cenovna
+  odstopanja iz recenzij, zaprti objekti, generični POI seznami),
+  (3) primerjalna tabela 8 vrstic z statusnimi ikonami — vključno z vrstico
+  "Potovanja izven Slovenije", kjer MI izgubimo (X ikona; poštenost kot
+  diferenciator), (4) 3 primeri iz prakse (Vintgar pozimi, pravi km/min,
+  cene z viri), (5) odsek "Kdaj NI pravi za vas", (6) CTA → /nacrtuj +
+  /destinacije, (7) FAQ 5 vprašanj (vidna vsebina 1:1 z JSON-LD — Google
+  pravila). Vzorec /o-strani (server komponenta, LanguageToggle,
+  canonical z locale prefix-om, hreflang sl-SI/en-US/x-default, og:locale).
+- **SEO/GEO integracija**: sitemap +1 SL in +1 EN URL (372/735 skupaj,
+  števci posodobljeni), hreflang gruča na obeh; llms.txt Ključne strani
+  +1 vrstica; PageViewTracker za merjenje konverzije okna.
+- **Notranje povezave**: footer stolpec "Načrtuj" + povezava
+  "Primerjava načrtovalcev" (SL) / "Planner comparison" (EN).
+- **i18n**: nov imenski prostor `comparison` (79 ključev × 2 jezika,
+  simetrično; fragments/comparison.{sl,en}.json → merge v messages).
+- **Outreach**: `docs/OUTREACH-TOOLKIT.md` nov §8 "Okno priložnosti:
+  Mindtrip" — kanali (Reddit/X/FB/odgovori na članke), varovalna pravila
+  znamke (nikoli "nadomestek", empatija, vodenje na /primerjava),
+  merjenje (PageView + funnel) in izstopni pogoj.
+- **Verifikacija**: tsc čisto (samo predzgodovinski napaki v skills/
+  primerih), eslint čisto; SSR curl: obe različici 200 z pravim jezikom,
+  canonical/hreflang/og:locale pravilni, FAQPage JSON-LD 5 vprašanj
+  parsable; sitemap vsebuje oba URL-ja; browser E2E: jezikovni preklop
+  deluje obojestransko (SL↔EN), CTA SL → /nacrtuj in EN → /en/nacrtuj,
+  tabela semantična (columnheader/rowheader) in na 390 px drsljiva
+  znotraj obrobljenega vsebnika (docW 390 = innerW 390, ni preliva
+  dokumenta), CTA gumbi naloženi full-width; 0 konzolnih/stranskih
+  napak; VLM presoje: desktop **8.5/10** (»anti-marketing page that
+  feels like a blog post from a knowledgeable local«, trust 9/10,
+  konverzija 9/10), mobilno **9/10** (tabela Pass, CTA Pass, brez
+  prekrivanja).
+
+### Spremenjeno (1.38.0)
+
+- `src/i18n/routing.ts` — "/primerjava" na EN whitelisti (proxy 308 guard
+  samodejno pokriva /en/primerjava).
+- `src/lib/sitemap-urls.ts` — add("/primerjava", 0.6) + števci
+  (20 stalnih SL, 11 stalnih EN).
+- `src/app/llms.txt/route.ts` — Ključne strani + vrstica.
+- `src/components/sections/footer.tsx` — povezava v stolpcu Načrtuj.
+- `docs/UX-COMPARISON-MINDTRIP.md` §6 — status implementacije okna.
+- `docs/OUTREACH-TOOLKIT.md` — nov §8 (OPP-1 play).
+
+---
+
 ## [1.37.0] — 2026-09-17
 
 ### Dodano (1.37.0 — UX-CMP: implementacija 6 popravkov iz UI/UX primerjave z Mindtripom)

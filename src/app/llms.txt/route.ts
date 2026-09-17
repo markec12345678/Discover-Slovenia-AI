@@ -45,6 +45,7 @@ export async function GET(req: Request) {
       `- [Doživetja](${base}/dozivetja): izkušnje in aktivnosti z neposrednimi rezervacijami.`,
       `- [Tržnica](${base}/trznica): lokalni izdelki in darila slovenskih ponudnikov.`,
       `- [Vodiči](${base}/vodici): vodniki po tipih potovanj.`,
+      `- [Primerjava AI načrtovalcev](${base}/primerjava): iskrena primerjava splošnih AI načrtovalcev (Mindtrip, Layla, Wanderlog) s specializom za Slovenijo — brez prijave, slovenščina in angleščina, geo-validacija, lokalne rezervacije.`,
       `- [O strani](${base}/o-strani): metodologija, viri podatkov in uredniška načela (E-E-A-T).`,
       `- [RSS](${base}/rss.xml): kanal novih vodnikov in strani.`,
       "",

@@ -128,6 +128,13 @@ spletnega UI-ja danes ni mogoče videti.
   alternativ, hitri popravki #1 (prazni state) in #2 (toast) imata
   najvišji ROI — prvi vtis je tam, kjer VLM vidi našo največjo luknjo.
 
+> **STANJE OKNA (1.38.0, isti dan):** okno je izkoriščeno s stranjem
+> `/primerjava` (SL+EN) — iskrena primerjava specialista z generalisti,
+> cilja dolg rep ("ai trip planner no signup", "mindtrip alternative
+> slovenia") brez frontalnega napada. Outreach play (kanali, varovala,
+> merjenje, izstopni pogoj): OUTREACH-TOOLKIT §8. Ko se njihov web
+> pobere, se outreach umakne; stran ostane kot evergreen vsebina.
+
 ## 7. Arhiv materiala
 
 - Screenshoti: `/tmp/ux-audit/` (mt-shot-1..6 = Mindtrip iOS uradno,

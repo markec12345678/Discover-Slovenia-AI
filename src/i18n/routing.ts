@@ -58,6 +58,10 @@ const EN_STATIC_ROUTES = new Set([
   "/nacrtuj",
   "/destinacije",
   "/vodici",
+  // OPP-1: iskrena primerjava AI načrtovalcev (lov na "mindtrip alternative"
+  // dolg rep po njihovem padcu weba 17. 9. 2026) — tudi EN, ker je ta
+  // poizvedba pretežno angleška
+  "/primerjava",
   "/o-strani",
   "/kontakt",
   "/pogoji-uporabe",

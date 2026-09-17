@@ -118,6 +118,9 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
   add("/vodici", 0.6, "Vodiči", "weekly");
   add("/slovenia-pass", 0.6, "Slovenia Pass", "monthly");
   add("/za-ponudnike", 0.6, "Za ponudnike", "monthly");
+  // OPP-1: iskrena primerjava AI načrtovalcev — lov na "mindtrip alternative"
+  // / "ai trip planner no signup" dolg rep (njihov web padel 17. 9. 2026)
+  add("/primerjava", 0.6, "Primerjava", "monthly");
   // E-E-A-T strani (Google trust)
   add("/o-strani", 0.5, "O strani", "monthly");
   add("/kontakt", 0.5, "Kontakt", "monthly");
@@ -205,10 +208,10 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
 
 /** Število EN URL-jev (FW4.3-2 + ADRIA-EN + GEO-A) — za poročanje brez gradnje seznama. */
 export function getEnSitemapUrlCount(): number {
-  // 10 stalnih (domov, nacrtuj, destinacije, vodici + 6 info/E-E-A-T) + 22
+  // 11 stalnih (domov, nacrtuj, destinacije, vodici, primerjava + 6 info/E-E-A-T) + 22
   // hub (GEO-A) + 22 + 110 + 88 + 88 + 22 vodnikov (ADRIA-EN + LOOP-EN + WINTER-EN)
   return (
-    10 +
+    11 +
     DESTINATIONS.length +
     DESTINATIONS.length +
     DESTINATIONS.length * 5 +
@@ -220,10 +223,10 @@ export function getEnSitemapUrlCount(): number {
 
 /** Skupno število vseh URL-jev (za hitro poročanje brez gradnje seznama) */
 export function getTotalSitemapUrlCount(): number {
-  // 19 stalnih + 22 hub (GEO-A) + 22 + 110 + 88 + 88 + 22 vodnikov (ADRIA+LOOP+WINTER) = 371 SL
-  // + 362 EN (FW4.3-2 + GEO-A hub + vsi vodniki) = 733 skupaj
+  // 20 stalnih + 22 hub (GEO-A) + 22 + 110 + 88 + 88 + 22 vodnikov (ADRIA+LOOP+WINTER) = 372 SL
+  // + 363 EN (FW4.3-2 + GEO-A hub + vsi vodniki + primerjava) = 735 skupaj
   return (
-    19 +
+    20 +
     DESTINATIONS.length +
     DESTINATIONS.length +
     DESTINATIONS.length * 5 +
