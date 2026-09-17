@@ -7,6 +7,33 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.36.3] — 2026-09-17
+
+### Popravljeno (1.36.3 — VERCEL-DEMO-PAY: demo plačila na sekundarni produkciji + `vercel-env-set --sync`)
+
+> Brez sprememb aplikacijske kode — operativna uveljavitev EDINE preostale
+> dashboard točke iz 1.36.2 („Vercel: nastavitev zahteva dashboard/token“).
+
+- **Vercel `DSA_DEMO_PAYMENTS=1`** nastavljena prek Vercel API (target
+  production + preview; vseh 8 prejšnjih spremenljivk ohranjenih — 9/9
+  po operaciji) + novi producijski deploy iz `main`a (57aee9a).
+  Before/after dokaz: booking probe pred = 501 (plačila zaprta —
+  fail-closed 1.36.0), po = 200 demo-potrjeno (IF-EXP-e238a1458925, €56;
+  testna rezervacija pobrisana, bookingCount revertiran 12→11).
+  **OBE produkciji (Render primarna + Vercel sekundarna) imata zdaj
+  demo plačila aktivna.**
+- **`scripts/ops/vercel-env-set.sh --sync`**: enaka ugotovitev kot za
+  Render v 1.36.2 — env sprememba na Vercelu NE sproži deploya samodejno.
+  `--sync` zdaj pridobi gitSource (`link.repoId` + `link.productionBranch`
+  prek `GET /v9/projects/{id}`) in sproži `POST /v13/deployments`
+  (`target:"production"`); brez `--sync` se vrednost uporabi šele ob
+  naslednjem push deployu. Skripta živo testirana (upsert obstoječe
+  spremenljivke + sprožen deploy dokazan prek API statusa do READY).
+- **DEPLOYMENT.md §5 + README**: vrstica „Plačila“ usklajena z dejanskim
+  stanjem (obe platformi AKTIVNI).
+
+---
+
 ## [1.36.2] — 2026-09-17
 
 ### Popravljeno (1.36.2 — PROD-DEPLOY: uveljavitev 1.36.0 na Neon + Render demo plačila)
