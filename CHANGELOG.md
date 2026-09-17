@@ -7,6 +7,17 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.48.3] — 2026-09-17
+
+### Popravljeno (1.48.3 — prazni AI dnevi klasificirani kot neuspeh generacije → deterministična rezerva)
+
+- **Problem (živ dokaz, Vercel 2026-09-17 ~21:16, 1.48.2)**: `POST /api/itinerary` → HTTP 200, `source: "ai"`, `days: []`, `total_budget: 0` — :free model je vrnil POPOLN JSON z neveljavno strukturo dni; `sanitizeItinerary` je legitimno porezal VSE dneve (shape guard deluje pravilno), razlaga/priporočila pa so preživeli. Rezultat: uporabniku se izriše PRAZEN načrt z AI badgeom — slabše od deterministične rezerve, ki obstaja prav za take primere.
+- **Popravek**: stražar v itinerary route takoj po sanitize — `itinerary.days.length === 0` vrže `AI izhod brez veljavnih dni` → OBSTOJEČA catch pot (ista kot "Prazen odgovor AI") nemudoma zgradi deterministični fallback. Nič nove logike — samo iskrena klasifikacija praznega izhoda.
+- **Zakaj v rundi in ne v `sanitizeItinerary`**: sanitize teče tudi na SAVE meji klientovih načrtov, kjer sprememba semantike ni zahtevana; generacijska pot je tista, ki potrebuje klasifikacijo neuspeha.
+- **Verifikacija**: tsc 0 (src), eslint 0, bun test 145/145; catch→fallback pot verificirana v kodi (vrstica 695 → `generateFallbackItinerary`).
+
+---
+
 ## [1.48.2] — 2026-09-17
 
 ### Spremenjeno (1.48.2 — per-klic časovni proračun AI: free tier realnost na zlati poti načrtovalnika)

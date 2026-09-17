@@ -596,6 +596,19 @@ JSON format (STROGO):
     // zdaj teče TUKAJ, pred obogatitvijo — ista plast kot na save meji.
     const itinerary: Itinerary = sanitizeItinerary(parsed, input.days);
 
+    // 1.48.3: :free modeli VSAKIH TOLIKO vrnejo popoln JSON z neveljavno
+    // strukturo dni — sanitizeItinerary legitimno poreže VSE dneve, razlaga/
+    // priporočila pa preživijo. Živ dokaz (Vercel 2026-09-17 ~21:16):
+    // source "ai" + days [] + total_budget 0 → uporabniku se izriše PRAZEN
+    // načrt, kar je slabše od deterministične rezerve, ki jo imamo prav za
+    // take primere. Prazni dnevi torej KLASIFICIRAMO kot neuspeh generacije
+    // → obstoječa catch pot zgradi fallback (isti mehanizem kot
+    // "Prazen odgovor AI"). Stražar je v rundi (ne v sanitizeItinerary),
+    // ker sanitize teče tudi na SAVE meji klientovih načrtov.
+    if (itinerary.days.length === 0) {
+      throw new Error("AI izhod brez veljavnih dni (sanitize porezal vse)");
+    }
+
     console.log(`[itinerary] AI uspešno (source: ${result.source})`);
 
     // Pakirni seznam — AI predlog (validirana) ali hevristika, če AI izpusti/neveljavna
