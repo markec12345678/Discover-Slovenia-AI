@@ -7,6 +7,24 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.47.0] — 2026-09-17
+
+### Spremenjeno (1.47.0 — ZEMLJEVID ČIPI: uskladitev POI filtra /zemljevid s čip vzorcem klepeta)
+
+- **Problem (naslednji kandidat iz 1.46)**: POI filter na `/zemljevid` je bil enojni `Select` z le 5/8 kategorij — **hrana, nastanitve in trgovine so bile skrite pred uporabniki**, čeprav jih `/api/pois` že podpira (CATEGORY_QUERIES). Vsak preklop je pomenil nov Overpass klic (brez cache), števcev ni bilo, praznega stanja ni bilo — natanko vzorc, ki smo ga v 1.46 izboljšali v klepetu, ni segal na glavni zemljevid.
+- **Multi-select čipi s števci (enak vzorec kot klepet 1.46)**: 8 kategorij — privzetih 5 (Atrakcije/Muzeji/Narava/Razgledišča/Religiozno) + novo izpostavljenih 3 (Hrana & pijača/Nastanitve/Trgovine — preštevilčne, zavestno NE privzete, enak argument kot `ALL_QUERY` v API-ju: izrecna izbira). Ikone Lucide se prekrivajo namenoma s klepetom tam, kjer je semantika ista (restaurant↔food: `Utensils`, hotel↔stay: `BedDouble`). Čip pokaže števec šele, ko je kategorija dejansko naložena (iskreno — med nalaganjem spinner, nenaložene brez števca).
+- **Fetch arhitektura s skupnim cache-om**: prvi vklop plaste = EN klic `category=all` pokrije vseh 5 privzetih kategorij (isti obseg kot prej, ne 5 ločenih klicev na Overpass); vklop dodatne kategorije = 1 posamičen klic samo če še ni v cache-u; **izklop kategorije = čisto skrivanje (0 omrežnih klicev)** — identičen vzorec kot čipi klepeta, ki delujejo nad že pridobljenimi kraji. Cache (ref) **preživi izklop plaste**: ponovni vklop = instant, 0 klicev.
+- **Lazy upgrade delnega seznama**: kadar je aktivna IZKLJUČNO ena privzeta kategorija, se njen delni seznam (limit 200 skupaj iz "all" klica) nadgradi s posamičnim klicem (polnih 200) — števec na čipu se pošteno posodobi (npr. 3→5), brez regresije proti prejšnjemu vedenju enojne kategorije.
+- **Prazno stanje + reset (vzorec iz klepeta)**: izklop vseh kategorij → 0 pinov + iskren opis "Vse kategorije so izklopljene — POI-ji niso prikazani." + gumb "Prikaži privzeto" (vrne 5 privzetih IZ CACHE — instant, ne pa vseh 8, ker bi to sprožilo 3 dodatne Overpass klice).
+- **Legenda vira v info vrstici**: "N POI · OSM" — brskalni zemljevid odkrito prizna vir skupnostnih podatkov (zelene destinacije = uredniške, barvni POI pini = OSM). Pin barve po kategoriji so ZAVESTNO ohranjene: na brskalnem zemljevidu (brez konteksta "AI je to rekel") je kategorija glavna informacija pina; v klepetu je glavna informacija poreklo — dve površini, dve hierarhiji.
+- **Telemetrija**: nov dogodek `map_poi_filtered` (category, enabled 0/1, surface "map") — komplement `chat_geo_filtered`: meri, ali multi-select čipi pomagajo tudi na brskalnem zemljevidu, in katere kategorije uporabniki dejansko iščejo (hrana/nastanitve so bile prej nedosegljive UI-ju). Dodan v planner-analytics + strežniško whitelist /api/analytics/event.
+- **E2E verifikacija (agent-browser + network route mock — Overpass v peskovniku obnovljivo nezavezen)**: 8 čipov se izriše (5 s števci iz "all", 3 brez), badge "22 destinacij · 8 POI · OSM"; izklop Muzejev → 6 pinov; vklop Hrane → posamičen fetch → 8 pinov + števec 2; izklop vseh → 0 pinov + prazno stanje; "Prikaži privzeto" → instant 8 iz cache (brez spinnerja); lazy upgrade samo Atrakcije → 3→5; izklop/vklop plaste → instant 5 iz cache; REAL klik na čipu (ne JS) deluje; telemetrija 11 dogodkov z eksaktnim zaporedjem (category/enabled/surface/eid); mobilno 390 px — panel 332 px, 0 px preliva, ovijanje v 3 vrstice; 0 konzolnih/page napak; napakova pot v živo (Overpass 502 → iskren error badge).
+- **UJETA NAPAKA MED E2E**: panel čipov je bil po pomoti ugnezden ZNOTRAJ kontrolnega stolpca (desno zgoraj) — njegov `absolute bottom-12 left-3` se je razrešil proti 117-px stolpcu namesto proti zemljevidu (čipi stisnjeni v 1 stolpec). Popravljen v vrstnika (otrok `div.relative` = zemljevid); nato mobilni test potrdil 332-px panel. Testno pravilo za naslednje: `snapshot` agent-browserja lahko pomakne stran tako, da element potegne pod lepljivo glavo — za interakcijske teste uporabi JS `.click()` ali `scrollIntoView` pred vsakim klikom.
+- **VLM presoja**: desktop **9/10** ("vizualno čista, intuitivna, ne ovira preglednosti zemljevida"), mobilno **8/10** (čisto ovijanje, dotikalni cilji ustrezni; edina opomba: blok zavzema precej prostora — zavestno dejanje vklopa POI plasti).
+- **Zavestne odločitve**: (1) NE spreminjam pin barv POI na brskalnem zemljevidu (kategorija > poreklo tu — glej zgoraj); (2) reset vrača privzetih 5, ne vseh 8 (hitrost > popolnost); (3) SL napisi ostanejo hardcodirani konsistentno z ostalo komponento (/zemljevid je SL-only stran; EN je backlog skupaj z ostalo stranjo). Verifikacija: tsc 0, eslint 0.
+
+---
+
 ## [1.46.0] — 2026-09-20
 
 ### Dodano (1.46.0 — KATEGORIJA ČIPI: Mindtrip raziskava → tripartitna odločitev → multi-select filtri geo odgovorov)

@@ -204,6 +204,16 @@ spletnega UI-ja danes ni mogoče videti.
 > AI poti s citati (odložena od 1.42): 429 val končno prešel — veriga vprašanje →
 > grounding → AI → citat [1,4] → turkizni pini ŽIVO potrjena (glej CHANGELOG 1.46.0).
 
+> **RAZŠIRITEV NA GLAVNI ZEMLJEVID (1.47.0):** čip vzorec iz 1.46 sedaj sega tudi na `/zemljevid`
+> (brskalni zemljevid POI-jev) — prej enojni Select s 5/8 kategorij (hrana/nastanitve/trgovine
+> skrite, čeprav jih API podpira). Multi-select čipi z iskrenimi števci (8 kategorij), skupni
+> cache po kategorijah (izklop = skrivanje, 0 klicev; ponovni vklop plaste = instant), prazno
+> stanje z »Prikaži privzeto«, info vrstica »N POI · OSM«. Ena zavestna odločitev nasproti
+> klepetu: POI pini na brskalnem zemljevidu OHRANJOJO barve po kategoriji (ne po poreklu) —
+> na zemljevidu brez konteksta »AI je to rekel« je kategorija glavna informacija pina; v
+> klepetu je glavna informacija poreklo. Dve površini, dve hierarhiji istega sistema.
+> Telemetrija `map_poi_filtered` meri uporabnost (komplement `chat_geo_filtered`).
+
 ## 7. Arhiv materiala
 
 - Screenshoti: `/tmp/ux-audit/` (mt-shot-1..6 = Mindtrip iOS uradno,

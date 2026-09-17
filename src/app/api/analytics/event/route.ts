@@ -40,6 +40,10 @@ const VALID_EVENTS = new Set([
   // 1.46 (kategorija čipi): preklop kategorije v filtru geo odgovora
   // (props: category, enabled 0|1, surface chat|overlay)
   "chat_geo_filtered",
+  // 1.47 (zemljevid čipi): preklop kategorije POI filtra na /zemljevid
+  // (props: category, enabled 0|1, surface "map") — komplement
+  // chat_geo_filtered za brskalni zemljevid
+  "map_poi_filtered",
   // 1.42 (GEO → NAČRT): kraj iz AI klepeta dodan v načrt potovanja
   // (props: provenance t1|osm, category, day, stashed?)
   "chat_place_added",

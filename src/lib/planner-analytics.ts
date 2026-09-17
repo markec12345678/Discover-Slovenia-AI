@@ -51,6 +51,12 @@ export type PlannerEventName =
   // geo odgovora (props: category, enabled 0|1, surface chat|overlay)
   // — meri, ali filtri pomagajo pri mešanih odgovorih (hrana+pijača+…)
   | "chat_geo_filtered"
+  // 1.47 (zemljevid čipi): preklop kategorije POI filtra na /zemljevid
+  // (props: category, enabled 0|1, surface "map") — komplement
+  // chat_geo_filtered: meri, ali multi-select čipi pomagajo tudi na
+  // brskalnem zemljevidu, in katere kategorije uporabniki iščejo
+  // (hrana/nastanitve so bile prej skrite pred uporabniki)
+  | "map_poi_filtered"
   // 1.42 (GEO → NAČRT): kraj iz AI klepeta dodan v načrt (provenance
   // t1|osm; day; stashed=1, če je čakal v sessionStorage na prvi načrt)
   | "chat_place_added"
