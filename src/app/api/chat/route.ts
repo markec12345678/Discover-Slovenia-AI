@@ -5,6 +5,7 @@ import { generateCompletion } from "@/lib/ai-client";
 import { rateLimit } from "@/lib/rate-limit";
 import { wrapProviderData, SYSTEM_DATA_GUARD } from "@/lib/ai-context";
 import { buildStoGrounding } from "@/lib/rag/ground";
+import { maybeRefreshStoIndex } from "@/lib/rag/freshness";
 import type { StoCitation } from "@/lib/rag/types";
 import {
   detectGeoIntent,
@@ -32,6 +33,11 @@ import { fetchOverpassNearby } from "@/lib/overpass";
 // v sistemski prompt vpletejo do 5 relevantnih uradnih virov STO z
 // navodilom za citiranje [n]; odgovor klientu prinese `sources` (citate)
 // za značke virov + geopovezavo na našo destinacijo (zemljevid/dejanje).
+//
+// 1.45.0 (§7 trojna svežina): indeks, po katerem išče buildStoGrounding,
+// je baseline (git) ali sveži overlay — fire-and-forget osvežitev spodaj
+// NIKOLI ne blokira odgovora (strežemo kar imemo, svežina od naslednje
+// zahteve); tedensko pa jo predgreje /api/cron/sto-reingest.
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -49,6 +55,10 @@ export async function POST(request: Request) {
     // Rate limit AI klepetalnika (stroškovna zaščita)
     const limited = rateLimit(request, { limit: 20, windowMs: 600000, key: "ai-chat" });
     if (limited) return limited;
+
+    // 1.45.0: fire-and-forget osvežitev T2 virov STO (7-dnevni TTL, ne blokira —
+    // glej komentar zgoraj). Ob 429/napaki strežemo baseline; nov poskus po 6 h.
+    maybeRefreshStoIndex();
 
   let body: ChatRequest;
   try {

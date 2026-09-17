@@ -169,6 +169,8 @@ docker compose logs cron                   # izidi cron klicev (sent/issued/…)
 | `0 8 * * 1` | `/api/cron/weekly-alerts` | tedensko B2B poročilo |
 | `0 8 1 * *` | `/api/cron/commission-invoices` | mesečni obračun provizij |
 | `0 9 * * *` | `/api/cron/renewal-reminders` | opomniki obnov |
+| `0 10 * * *` | `/api/cron/draft-reminders` | nudge osnutkov (optimistična ključavnica) |
+| `30 7 * * 2` | `/api/cron/sto-reingest` | tedenska osvežitev virov STO + raport odmika (1.45.0) |
 
 Vsak klic je Bearer zaščiten s `CRON_SECRET` (brez njega API vrne 401 —
 fail-closed, E2E dokazano).

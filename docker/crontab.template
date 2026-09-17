@@ -27,3 +27,6 @@
 # FIX (revizija 1.33.0, 16-e P2): vercel.json ima 6 cronov, ta template
 # pa le 5 — draft-reminders je mankal (neskladje z glavo "natančno enaki").
 0 10 * * * curl -fsS -m 300 -H "Authorization: Bearer __CRON_SECRET__" __APP_URL__/api/cron/draft-reminders > /proc/1/fd/1 2>&1
+
+# tedenska osvežitev T2 virov STO + raport odmika (torek 07:30 UTC; 1.45.0)
+30 7 * * 2 curl -fsS -m 300 -H "Authorization: Bearer __CRON_SECRET__" __APP_URL__/api/cron/sto-reingest > /proc/1/fd/1 2>&1

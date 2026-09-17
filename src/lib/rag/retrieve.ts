@@ -26,7 +26,26 @@ import type {
   StoSourcesCache,
 } from "./types";
 
-const CACHE = cacheJson as unknown as StoSourcesCache;
+/**
+ * BASELINE — git verzioniran snapshot (scripts/ingest-sto.ts). Uredniška
+ * resnica: vedno prisoten, deluje tudi brez omrežja, nikoli NI izgubljen.
+ * Nad njim lahko leži runtime overlay (freshness.ts → installStoOverlay)
+ * s svežimi zapisi STO — baseline ostaja nedotaknjen.
+ */
+const BASELINE = cacheJson as unknown as StoSourcesCache;
+
+/** Trenutno veljavna generacija (baseline ali nameščeni overlay). */
+interface CurrentGeneration {
+  records: StoSourceRecord[];
+  fetchedAt: string;
+  source: "baseline" | "overlay";
+}
+
+let current: CurrentGeneration = {
+  records: BASELINE.records,
+  fetchedAt: BASELINE.fetchedAt,
+  source: "baseline",
+};
 
 /** Stop-besede (SL + EN) — pogoste besede brez diskriminativne vrednosti. */
 const STOPWORDS = new Set([
@@ -98,7 +117,7 @@ function tokenInText(token: string, normalizedText: string): boolean {
   return false;
 }
 
-/** Vnaprej pripravljeni normalizirani zapisi (enkrat na modul). */
+/** Vnaprej pripravljeni normalizirani zapisi (znova zgrajeni ob menjavi generacije). */
 interface IndexedRecord {
   record: StoSourceRecord;
   titleN: string;
@@ -106,12 +125,36 @@ interface IndexedRecord {
   descN: string;
 }
 
-const INDEX: IndexedRecord[] = CACHE.records.map((r) => ({
-  record: r,
-  titleN: normalizeText(`${r.title}`),
-  sectionN: normalizeText(r.section),
-  descN: normalizeText(r.description),
-}));
+function buildIndex(records: StoSourceRecord[]): IndexedRecord[] {
+  return records.map((r) => ({
+    record: r,
+    titleN: normalizeText(`${r.title}`),
+    sectionN: normalizeText(r.section),
+    descN: normalizeText(r.description),
+  }));
+}
+
+/** Atomarna menjava: indeks se zamenja kot celota (bralci nikoli ne vidé polovicne sestave). */
+let INDEX: IndexedRecord[] = buildIndex(current.records);
+
+/**
+ * Namesti runtime overlay (sveži zapisi STO) NAD baseline.
+ * Pokliče izključno freshness.ts po sanity gate-u — klicatelji iskanja tega
+ * ne potrebujejo poznati. Zamenjava je sinhrona in takoj veljavna za vse
+ * nadaljnje klice searchStoSources/stoIndexStats v tem procesu.
+ */
+export function installStoOverlay(cache: StoSourcesCache): void {
+  current = { records: cache.records, fetchedAt: cache.fetchedAt, source: "overlay" };
+  INDEX = buildIndex(cache.records);
+}
+
+/**
+ * Baseline snapshot (samo za branje) — freshness.ts ga rabi za sanity gate
+ * in raport odmika. Klicatelj NE SME spreminjati vrnjenih tabel.
+ */
+export function getStoBaselineCache(): StoSourcesCache {
+  return { fetchedAt: BASELINE.fetchedAt, files: BASELINE.files, records: BASELINE.records };
+}
 
 /** Normalizirana imena destinacij za geopovezavo (T2 → T1). */
 const DEST_INDEX = DESTINATIONS.map((d) => ({
@@ -185,8 +228,19 @@ export function searchStoSources(query: string, opts: SearchOptions = {}): StoSe
 }
 
 /** Metadata indeksa (za javno transparentnost — /api/ai/sources). */
-export function stoIndexStats(): { total: number; fetchedAt: string; byLang: Record<string, number> } {
+export function stoIndexStats(): {
+  total: number;
+  fetchedAt: string;
+  byLang: Record<string, number>;
+  /** Katera generacija trenutno streže: "baseline" (git snapshot) ali "overlay" (sveži prenos STO). */
+  source: "baseline" | "overlay";
+} {
   const byLang: Record<string, number> = {};
-  for (const r of CACHE.records) byLang[r.lang] = (byLang[r.lang] ?? 0) + 1;
-  return { total: CACHE.records.length, fetchedAt: CACHE.fetchedAt, byLang };
+  for (const r of current.records) byLang[r.lang] = (byLang[r.lang] ?? 0) + 1;
+  return {
+    total: current.records.length,
+    fetchedAt: current.fetchedAt,
+    byLang,
+    source: current.source,
+  };
 }

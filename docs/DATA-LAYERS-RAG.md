@@ -127,6 +127,44 @@ T1+T2+T3 ──► enoten preverjen podatkovni sloj (RAG)
 ## 6. Kasnejše razširitve (izven obsega)
 
 - stories-de + it/fr (ko povpraševanje upraviči)
-- tedenski cron re-ingest z diff poročilom
 - NiST številke v validator-telemetrijo (javna statistika prihodov)
 - vektorski embeddingi (če indeks zraste)
+
+## 7. Trojna svežina (1.45.0)
+
+Problem: `data/sto-sources.json` je pečen v build (statičen uvoz) — STO
+objavi nov članek, naš snapshot ostane star in uzemljenje zamudi. Ročni
+redak se ne spomni vsak teden.
+
+Rešitev je TROJNA arhitektura svežosti, ki ne ogrozi uredniške kontrole
+(§3.1: snapshot je verzioniran v git, ker diff pokaže, kaj se je pri STO
+spremenilo):
+
+1. **BASELINE (git)** — `data/sto-sources.json`, vedno prisoten, offline-varen.
+   Uredniška resnica: edini vir, ki ga lahko spreminja samo človek + commit.
+2. **OVERLAY (runtime, pomnilnik)** — `src/lib/rag/freshness.ts`: svež
+   prenos vseh treh llms.txt datotek (vzporedno, 10 s budget) nameščen NAD
+   baseline po **sanity gate-u** (vse 3 datoteke OK + število zapisov ≥
+   max(100, 50 % baseline) — delni prenos ali patološko skrčenje STO ne
+   more tiho pokvariti iskanja). Nikoli ne piše na disk; ob napaki strežemo
+   prejšnjo generacijo in poskusimo znova šele po 6 h.
+   - **Lazy pot**: `maybeRefreshStoIndex()` (fire-and-forget, 7-dnevni TTL)
+     na vročih poteh (/api/chat, /api/ai/sources) — NE blokira odgovora:
+     strežemo kar imamo, svežina velja od naslednje zahteve. Na Vercelu se
+     vsaka instanca pozdravi sama; na Render/sandbox strežniku živi proces.
+   - **Cron pot**: `/api/cron/sto-reingest` (vercel.json, torek 07:30 UTC)
+     — prisili osvežitev, jo POČAKA in javi **odmik od baseline** (dodani/
+     odstranjeni viri + primeri naslovov). Raport odmika je uredniški
+     signal: `bun run scripts/ingest-sto.ts` → `git diff` → commit.
+3. **Parser deljen** — `src/lib/rag/sto-llms.ts` je SKUPEN razčlenjevalnik
+   za oba potoka (uredniški ingest in runtime overlay); skripta
+   `scripts/ingest-sto.ts` je tanek ovoj. Ekvivalenca dokazana enotsko
+   (664/664 zapisov, identični id-ji, odmik +0/−0 ob istodnevnem prenosu).
+
+Transparentnost: `/api/ai/sources` razkriva polje `source`
+(`"baseline" | "overlay"`) + `fetchedAt` trenutno veljavne generacije —
+kdor želi, preveri, kaj točno strežemo.
+
+Varnost/etika (nespremenjeno §4): cron prenaša SAMO metapodatke, ki jih STO
+objavlja za AI porabo; overlay nikoli ne piše na disk; endpoint zaščiten z
+`verifyCronAuth` (CRON_SECRET Bearer, timing-safe, fail-closed v produkciji).

@@ -7,6 +7,23 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.45.0] — 2026-09-18
+
+### Dodano (1.45.0 — T2 SVEŽINA: trojna arhitektura svežosti uradnih virov STO)
+
+- **Problem**: `data/sto-sources.json` (T2 plast, 664 zapisov) je pečen v build (statičen uvoz) — ko STO objavi nov članek na slovenia.info, naš snapshot ostane star in AI uzemljenje zamudi. Ročni redak se ne spomni vsak teden; ob padcu Mindtripovega weba (17. 9.) je zvezdnost virov naša konkurenčna prednost, svežost pa njeno gorivo.
+- **Trojna arhitektura svežosti (docs/DATA-LAYERS-RAG.md §7)** — uredniška kontrola NIKOLI ni ogrožena: (1) **BASELINE** — git verzioniran snapshot, vedno prisoten, offline-varen, spreminja ga samo človek + commit; (2) **OVERLAY** — `src/lib/rag/freshness.ts`: runtime pomnilniška plast SVEŽEGA prenosa STO nad baseline-om, nameščena po sanity gate-u; (3) **CRON** — `/api/cron/sto-reingest` (vercel.json `30 7 * * 2`, torek 07:30 UTC = 09:30 Ljubljana — razmaknjeno od vseh 6 obstoječih cronov): prisili osvežitev, jo počaka in javi **raport odmika** od baseline (število dodanih/odstranjenih virov + do 5 primerov naslovov) — uredniški signal za `bun run scripts/ingest-sto.ts` → `git diff` → commit.
+- **Sanity gate (poštena obramba pred pokvarjenimi prenosi)**: overlay sprejet SAMO, če so vse 3 llms.txt datoteke prenesene OK in število zapisov ≥ max(100, 50 % baseline) — delni prenos (omrežna napaka, HTML namesto txt, prazna datoteka = 0 zapisov šteje kot neuspeh) ali patološko skrčenje STO ne more TIHO pokvariti iskanja. Ob zavrnitvi strežemo prejšnjo generacijo; razlog pošteno razločen (`rejected-sanity` za delne, `failed` za ničelne prenose).
+- **Lazy pot na vročih točkah NE BLOKIRA**: `maybeRefreshStoIndex()` (fire-and-forget, single-flight, 7-dnevni TTL, ob neuspehu ponovni poskus šele po 6 h) ob vsakem klicu /api/chat in /api/ai/sources — strežemo kar imamo, svežina velja od naslednje zahteve; na Vercelu se vsaka instanca pozdravi sama, na Render/sandbox strežniku živi proces, ki ga cron predgreje. Klepet NI odgovoril počasneje (dokazano E2E).
+- **Deljen parser (konec razhajanja)**: `src/lib/rag/sto-llms.ts` — SKUPEN razčlenjevalnik llms.txt za uredniški ingest IN runtime overlay (namenoma brez `@/` uvozov, da ga uvozi goli bun skript); `scripts/ingest-sto.ts` je zdaj tanek ovoj z istimi varovali (delen prenos → snapshot NI pisan; prazen cache → ohrani starega). Ekvivalenca dokazana enotsko: živi prenos istega dne = 664/664 zapisov, identični id-ji na preseku, odmik +0/−0.
+- **Transparentnost kot blagovna znamka**: `/api/ai/sources` razkriva novo polje `source` (`"baseline"` | `"overlay"`) + `fetchedAt` trenutno veljavne generacije — kdor želi, neposredno preveri, kaj točno strežemo (dodatek v odgovoru, združljiv nazaj).
+- **Določljivost iskanja ohranjena**: `retrieve.ts` dobi atomarno menjavo generacije (`installStoOverlay` — indeks se zamenja kot celota, bralci nikoli ne vidijo polovične sestave); enotski testi 1.39/1.44 so nespremenjeni in zeleni (iskanje je čista funkcija nad trenutno generacijo).
+- **Etika nespremenjena (§4)**: prenašamo SAMO metapodatke (naslov/opis/povezava), ki jih STO objavlja z izrecnim namenom za AI porabo; overlay nikoli ne piše na disk; cron endpoint zaščiten z `verifyCronAuth` (CRON_SECRET Bearer, timing-safe, fail-closed v produkciji, dev dovoljeno).
+- **Verifikacija**: tsc 0 (samo predzgodovinske napake skills/, niso del aplikacije), eslint 0; enotsko 19/19 — baseline izhodišče, živi prenos 3/3 datotek + parser ekvivalenca (id-ji identični), prisiljena namestitev overlay (stats.source/total/fetchedAt/drift), TTL gating (ni ponovnega poskusa ob svežem), sanity gate (delni prenos 1/3 zavrnjen, prejšnja generacija ostane), popolna odpoved (razlog `failed`, iskanje dela naprej); E2E HTTP — cron rute vrne polni raport (uspešna namestitev 664 zapisov, odmik +0/−0) IN varovalka v živo: med omrežnim valom je prenos uspel 1/3 → zavrnjen s `rejected-sanity`, baseline nedotaknjen, naslednji poskusi 3× uspešni; `/api/ai/sources` po osvežitvi streže `source:"overlay"` s svežim `fetchedAt`, iskanje „Piran soline“ vrača zadetke; /api/chat z vgrajenim sprožilcem odgovarja nespremenjeno (fallback pot zaradi znanih z-ai 429 valov, ne glede na to spremembo); 0 konzolnih napak.
+- **Omejitev okolja (pošteno)**: z-ai chat completions so še vedno na 429 valu (isti vzorec od 1.42 dalje) — živa preverba AI poti s citati T2 ostaja odložena do okna; svežinska plast je od AI poti neodvisna (dokazano z živimi klici cron/ai/sources nad baseline in overlay).
+
+---
+
 ## [1.44.0] — 2026-09-18
 
 ### Dodano (1.44.0 — T2 → PIN: citani uradni viri STO kot turkizni pini na mini zemljevidu klepeta)
