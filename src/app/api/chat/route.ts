@@ -9,6 +9,7 @@ import type { StoCitation } from "@/lib/rag/types";
 import {
   detectGeoIntent,
   matchDestinationsInText,
+  stoHitToPlace,
   type ChatPlace,
 } from "@/lib/geo-intent";
 import { fetchOverpassNearby } from "@/lib/overpass";
@@ -302,11 +303,32 @@ ${SYSTEM_DATA_GUARD}`;
       throw new Error("Prazen odgovor AI");
     }
 
-    console.log(`[chat] AI odgovor (source: ${result.source}) — vprašanje: "${lastUserMessage.substring(0, 60)}..."${stoGrounding.active ? ` [T2 uzemljenje: ${stoGrounding.citations.length} uradnih virov STO]` : ""}${osmPlaces.length > 0 ? ` [GEO: ${geoIntent.location?.name} · ${osmPlaces.length} OSM krajev]` : ""}`);
-
     // DATA-LAYERS-RAG: citati T2 (samo kadar je bilo uzemljenje aktivno —
     // prazen seznam pomeni "AI ni dobil uradnih virov za to vprašanje").
     const sources: StoCitation[] = stoGrounding.active ? stoGrounding.citations : [];
+
+    // T2 → PIN (1.44): zemljevid odseva ODGOVOR — na mini zemljevid se kot
+    // turkizen pin izriše SAMO uradni vir, ki ga je AI DEJANSKO CITIRAL
+    // (»… [2]« v besedilu). Parsiranje je deterministično (0 AI žetonov):
+    //   1. izlušči oštevilčene reference [n] iz odgovora,
+    //   2. preslikaj na zadetke groundinga (isto zaporedje kot [1]…[n]),
+    //   3. obdrži samo tiste z geopovezavo (33/664 zapisov ima destinacijo),
+    //   4. izposoji koordinate destinacije + determinističen odmik 180–350 m
+    //      (pošteno: članek je O kraju — pin sedi ob njem, ne na njem).
+    // Ni citatov v odgovoru → ni T2 pinov (fallback pot citatov nikoli ne
+    // napiše — zemljevid ne laže o tem, kaj je AI dejal).
+    const citedIdx = new Set(
+      [...content.matchAll(/\[(\d{1,2})\]/g)]
+        .map((m) => parseInt(m[1], 10))
+        .filter((n) => n >= 1 && n <= stoGrounding.hits.length)
+    );
+    const t2Places: ChatPlace[] = (
+      stoGrounding.active
+        ? stoGrounding.hits
+            .map((h, i) => (citedIdx.has(i + 1) ? stoHitToPlace(h) : null))
+            .filter((p): p is ChatPlace => p !== null)
+        : []
+    ).slice(0, 3);
 
     // GEO-ODGOVORI: poleg OSM krajev (odgovor na "kje") na zemljevid
     // dodamo še T1 destinacije, omenjene v AI odgovoru — odgovor se
@@ -319,11 +341,18 @@ ${SYSTEM_DATA_GUARD}`;
           (p) => `t1-${geoIntent.location!.id}` === p.id
         ) ?? null
       : null;
+    // OSM budget: kadar so prisotni T2 pini (redki, visoke vrednosti —
+    // uradni viri), OSM popusti s 14 na 12, da turkizni pini ne izpadejo
+    // zgolj zaradi .slice(0, 16) gostote (živa hrana ostane jedro odgovora).
+    const osmBudget = t2Places.length > 0 ? 12 : 16;
     const places: ChatPlace[] = [
       ...(queryLocationPlace ? [queryLocationPlace] : []),
-      ...osmPlaces,
+      ...osmPlaces.slice(0, osmBudget),
       ...t1Places.filter((p) => p.id !== queryLocationPlace?.id),
+      ...t2Places,
     ].slice(0, 16);
+
+    console.log(`[chat] AI odgovor (source: ${result.source}) — vprašanje: "${lastUserMessage.substring(0, 60)}..."${stoGrounding.active ? ` [T2 uzemljenje: ${stoGrounding.citations.length} uradnih virov STO${t2Places.length > 0 ? `, ${t2Places.length} citiranih na zemljevidu` : ""}]` : ""}${osmPlaces.length > 0 ? ` [GEO: ${geoIntent.location?.name} · ${osmPlaces.length} OSM krajev]` : ""}`);
 
     return NextResponse.json({
       message: content,

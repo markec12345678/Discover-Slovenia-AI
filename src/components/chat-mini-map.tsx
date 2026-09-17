@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 const PIN_COLORS = {
   t1: "#2d6a3e", // zeleni — naši preverjeni podatki (T1)
   osm: "#b45309", // jantarni — OpenStreetMap skupnostni vir (T3)
+  t2: "#0f766e", // turkizni — uradni vir STO (T2, 1.44): članek, ne lokal
 } as const;
 
 export interface ChatMiniMapProps {
@@ -73,13 +74,18 @@ export function ChatMiniMap({ places, variant = "compact", className }: ChatMini
 
     places.forEach((place, idx) => {
       const color = PIN_COLORS[place.provenance] ?? PIN_COLORS.osm;
+      // 1.44: T2 uradni vir — ZAOBLJEN KVADRAT namesto kroga (oblikovna
+      // razločnost za barvno slepe + vizualni jezik "institucionalni vir,
+      // ne lokal"); koordinate že nosijo determinističen odmik 180–350 m
+      // od destinacije (članek je O kraju — pin sedi ob njem, ne na njem).
+      const isT2 = place.provenance === "t2";
       const icon = L.divIcon({
         className: "chat-map-marker",
         html: `
           <div style="transform: translateY(-50%);">
             <div style="
               width: 24px; height: 24px;
-              border-radius: 50%;
+              border-radius: ${isT2 ? "6px" : "50%"};
               background: ${color};
               color: white;
               display: flex;

@@ -49,9 +49,10 @@ import { useAppStore } from "@/lib/store";
 const ChatMiniMap = lazy(() => import("@/components/chat-mini-map"));
 
 /** Barve pinov po plasteh zaupanja — usklajeno s chat-mini-map.tsx. */
-const PLACE_PIN_COLORS: Record<"t1" | "osm", string> = {
+const PLACE_PIN_COLORS: Record<"t1" | "osm" | "t2", string> = {
   t1: "#2d6a3e", // zeleni — preverjeni podatki (T1)
   osm: "#b45309", // jantarni — OpenStreetMap skupnostni vir (T3)
+  t2: "#0f766e", // turkizni — uradni vir STO (T2, 1.44): članek, ne lokal
 };
 
 /** Ikone kategorij krajev (Mindtrip: fork ikona na pinu; mi v seznamu). */
@@ -61,6 +62,8 @@ const CATEGORY_ICONS: Record<PlaceCategory, React.ComponentType<{ className?: st
   market: ShoppingBasket,
   stay: BedDouble,
   service: Info,
+  // 1.44: T2 uradni vir — Landmark (institucionalni vir, ne lokal)
+  source: Landmark,
 };
 
 interface ChatMessage {
@@ -219,11 +222,19 @@ function PlaceRow({
   const t = useTranslations("chatbot");
   const Icon = CATEGORY_ICONS[place.category] ?? Info;
   const color = PLACE_PIN_COLORS[place.provenance] ?? PLACE_PIN_COLORS.osm;
+  // 1.44: T2 uradni vir je ČLANEK, ne fizični postanek — ne more se dodati
+  // v načrt (+ gumba ni); povezava vodi na izvirnik na slovenia.info.
+  const isT2 = place.provenance === "t2";
 
   const number = (
     <span
       aria-hidden
-      className="flex size-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+      className={cn(
+        "flex size-4 shrink-0 items-center justify-center text-[9px] font-bold text-white",
+        // T2 pin ima na zemljevidu zaobljen kvadrat — seznam zrcali obliko
+        // (barvna razločnost za barvno slepe: oblika + barva, ne samo barva)
+        isT2 ? "rounded-[4px]" : "rounded-full"
+      )}
       style={{ backgroundColor: color }}
     >
       {index + 1}
@@ -252,6 +263,17 @@ function PlaceRow({
               {place.name}
               {place.rating ? ` ★${place.rating}` : ""}
             </Link>
+          ) : isT2 && place.sourceUrl ? (
+            /* 1.44: T2 uradni članek STO → izvirnik na slovenia.info */
+            <a
+              href={place.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="truncate font-medium text-foreground underline decoration-transparent underline-offset-2 transition-colors hover:decoration-primary"
+              title={`${place.name} — slovenia.info`}
+            >
+              {place.name}
+            </a>
           ) : (
             nameEl
           )}
@@ -261,15 +283,23 @@ function PlaceRow({
               "shrink-0 rounded px-1 py-px text-[9px] font-semibold uppercase",
               place.provenance === "t1"
                 ? "bg-primary/10 text-primary"
-                : "bg-muted text-muted-foreground"
+                : isT2
+                  ? "bg-teal-600/10 text-teal-700 dark:bg-teal-500/15 dark:text-teal-400"
+                  : "bg-muted text-muted-foreground"
             )}
             title={
               place.provenance === "t1"
                 ? t("provenanceT1Title")
-                : t("provenanceOsmTitle")
+                : isT2
+                  ? t("provenanceT2Title")
+                  : t("provenanceOsmTitle")
             }
           >
-            {place.provenance === "t1" ? t("provenanceT1") : "OSM"}
+            {place.provenance === "t1"
+              ? t("provenanceT1")
+              : isT2
+                ? "STO"
+                : "OSM"}
           </span>
         </p>
         {(meta.length > 0 || place.openingHours) && (
@@ -287,8 +317,10 @@ function PlaceRow({
       </div>
       {/* 1.42 (GEO → NAČRT): "+" — kraj iz AI odgovora neposredno v načrt.
           Po dodajanju ✓ (disabled) — dejanje je enkratno, dedupe varuje
-          addChatPlaceToItinerary ("Že v načrtu" toast). */}
-      {onAdd && (
+          addChatPlaceToItinerary ("Že v načrtu" toast).
+          1.44: T2 viri so članki — dejanja "Dodaj v načrt" ni (ne morejo
+          biti postanek). */}
+      {onAdd && !isT2 && (
         <button
           type="button"
           onClick={() => onAdd(place)}
@@ -335,6 +367,7 @@ function GeoPlacesSection({
 }: GeoPlacesSectionProps) {
   const t = useTranslations("chatbot");
   const hasOsm = places.some((p) => p.provenance === "osm");
+  const hasT2 = places.some((p) => p.provenance === "t2");
 
   return (
     <div className="mt-2.5 border-t border-border/60 pt-2.5">
@@ -380,7 +413,7 @@ function GeoPlacesSection({
         ))}
       </ul>
 
-      {/* Legenda porekla — T1 zeleni / OSM jantarni (iskrenost o viru) */}
+      {/* Legenda porekla — T1 zeleni / OSM jantarni / T2 turkizni (iskrenost o viru) */}
       <p className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-muted-foreground">
         <span className="flex items-center gap-1">
           <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: PLACE_PIN_COLORS.t1 }} />
@@ -390,8 +423,15 @@ function GeoPlacesSection({
           <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: PLACE_PIN_COLORS.osm }} />
           {t("provenanceOsmLegend")}
         </span>
+        {hasT2 && (
+          <span className="flex items-center gap-1">
+            <span aria-hidden className="size-2 rounded-[2px]" style={{ backgroundColor: PLACE_PIN_COLORS.t2 }} />
+            {t("provenanceT2Legend")}
+          </span>
+        )}
       </p>
       {hasOsm && <p className="mt-1 text-[10px] italic text-muted-foreground">{t("osmNote")}</p>}
+      {hasT2 && <p className="mt-1 text-[10px] italic text-muted-foreground">{t("stoNote")}</p>}
     </div>
   );
 }
@@ -633,6 +673,7 @@ export function Chatbot() {
         trackPlannerEvent("chat_geo_answered", {
           osm_count: places.filter((p) => p.provenance === "osm").length,
           t1_count: places.filter((p) => p.provenance === "t1").length,
+          t2_count: places.filter((p) => p.provenance === "t2").length,
         });
       }
 

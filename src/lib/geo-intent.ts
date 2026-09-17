@@ -1,5 +1,6 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { Destination } from "@/lib/types";
+import type { StoSearchHit } from "@/lib/rag/types";
 
 // ============================================================================
 // GEO-INTENT — "Geo odgovori" (Task 29, 1.41.0)
@@ -34,14 +35,19 @@ export type PlaceCategory =
   | "drinks"
   | "market"
   | "stay"
-  | "service";
+  | "service"
+  /** 1.44: T2 uradni vir (članek STO) — NI fizični kraj; nikoli ne nastane
+   *  iz uporabnikovega besedila (CATEGORY_MATCHERS ga ne more izdelati),
+   *  nastavi ga samo stoHitToPlace. Pomeni: povezava na izvirnik, ne postanek. */
+  | "source";
 
 /** Poreklo geo podatka — vtičeno v našo T1/T2/T3 arhitekturo zaupanja. */
-export type PlaceProvenance = "t1" | "osm";
+export type PlaceProvenance = "t1" | "osm" | "t2";
 
 /**
  * En kraj na zemljevidu klepeta. OSM kraji imajo lat/lng iz Overpassa;
- * T1 destinacije iz našega dataseta (coords, rating, budget, slug).
+ * T1 destinacije iz našega dataseta (coords, rating, budget, slug);
+ * T2 uradni viri (1.44) izposojo koordinate povezane destinacije + vir.
  */
 export interface ChatPlace {
   id: string;
@@ -62,6 +68,10 @@ export interface ChatPlace {
   budget?: string;
   /** T1: slug za povezavo na stran destinacije. */
   slug?: string;
+  /** T2: URL izvirnika na slovenia.info (odpre se v novem zavihku). */
+  sourceUrl?: string;
+  /** T2: id povezane T1 destinacije (za odmik pinov z istimi koordinatami). */
+  sourceDestinationId?: string;
 }
 
 export interface GeoIntent {
@@ -226,6 +236,10 @@ const CATEGORY_MATCHERS: Record<PlaceCategory, StemMatcher> = {
     ],
     pairs: ["tourist info", "tourist information"], // turistični urad
   },
+  // 1.44: "source" NIMA matcherja — uporabniško besedilo ne more izdelati
+  // te kategorije (nastavi jo samo stoHitToPlace za citane T2 vire); prazen
+  // vnos drži Record izčrpan in matcherHits() nikoli ne zadene.
+  source: { exact: [], stems: [] },
 };
 
 /** Normalizacija: lowercase + strip diakritike + ločila → presledki. */
@@ -369,5 +383,66 @@ export function destinationToPlace(d: Destination): ChatPlace {
     rating: d.rating,
     budget: d.budget,
     slug: d.slug,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// T2 → PIN (1.44): citiran uradni vir STO kot turkizen pin na mini zemljevidu
+// ---------------------------------------------------------------------------
+
+/**
+ * Determinističen odmik v METRIH iz hasha id-ja (FNV-1a lite) — T2 članek
+ * si izposoja koordinate povezane destinacije, ki bi se brez odmika
+ * natanko prekrila s T1 pinom (ali sidrom iskanja). Odmik 180–350 m je
+ * na zoomu 13–15 (fitBounds maxZoom 15) vidno ločen, a še vedno
+ * "ob destinaciji" — semantično pošteno: članek je O kraju.
+ *
+ * Determinističnost: isti vir → isti odmik (stabilno med renderi/sesijami).
+ */
+function hashOffsetMeters(id: string): { dLatM: number; dLngM: number } {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  const angle = ((h % 360) * Math.PI) / 180;
+  const dist = 180 + ((h >>> 8) % 171); // 180–350 m
+  return { dLatM: Math.sin(angle) * dist, dLngM: Math.cos(angle) * dist };
+}
+
+const METERS_PER_DEG_LAT = 111_320;
+
+/**
+ * T2 zadetek (citan uradni vir STO s geopovezavo) → ChatPlace.
+ *
+ * POŠTENOST: naslov članka je lahko npr. "Piran – mestni utrip" — pin
+ * sedi ob destinaciji Piran (izposojene koordinate + determinističen
+ * odmik), turkizna barva + značka STO pa izrecno povedeta, da je to
+ * URADNI ČLANEK, ne restavracija ali atrakcija. Ne more se dodati v
+ * načrt (category "source" ni fizični postanek) — povezava vodi na
+ * izvirnik na slovenia.info.
+ *
+ * @param hit zadetek iz buildStoGrounding (mora imeti .destination)
+ */
+export function stoHitToPlace(hit: StoSearchHit): ChatPlace | null {
+  const dest = hit.destination;
+  if (!dest) return null;
+  const anchor = DESTINATIONS.find((d) => d.id === dest.id);
+  if (!anchor) return null; // neznana destinacija → ne ugibamo
+  const { dLatM, dLngM } = hashOffsetMeters(hit.record.id);
+  const dLat = dLatM / METERS_PER_DEG_LAT;
+  const dLng =
+    dLngM /
+    (METERS_PER_DEG_LAT * Math.cos((anchor.coords.lat * Math.PI) / 180));
+  return {
+    id: `t2-${hit.record.id}`,
+    name: hit.record.title,
+    lat: anchor.coords.lat + dLat,
+    lng: anchor.coords.lng + dLng,
+    category: "source",
+    provenance: "t2",
+    detail: hit.record.section,
+    sourceUrl: hit.record.url,
+    sourceDestinationId: anchor.id,
   };
 }

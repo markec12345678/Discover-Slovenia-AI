@@ -162,6 +162,10 @@ const CATEGORY_OSM_FILTERS: Record<PlaceCategory, string[]> = {
     "nwr[amenity=toilets]",
     "nwr[amenity=parking]",
   ],
+  // 1.44: "source" (T2 uradni članek STO) se NE isče po OSM — nikoli ne
+  // nastane iz uporabnikovega besedila (CATEGORY_MATCHERS) in nikoli ni
+  // kandidat za Overpass; prazen seznam drži Record izčrpan (TypeScript).
+  source: [],
 };
 
 /** Preslikava OSM tagov v našo kategorijo + podatek za "detail". */

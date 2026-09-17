@@ -46,11 +46,15 @@ const CATEGORY_DEFAULTS: Record<
   market: { duration: 0.75, costPerPerson: 10 },
   stay: { duration: 1, costPerPerson: 0 }, // cene nastanitev ne ocenjujemo
   service: { duration: 0.25, costPerPerson: 0 },
+  // 1.44: T2 uradni vir ni fizični postanek — dodajanje ga ZAVRE
+  // (spodnji guard v addChatPlaceToItinerary); vrednost je formalna,
+  // da Record<PlaceCategory> ostane izčrpen.
+  source: { duration: 0, costPerPerson: 0 },
 };
 
 export type AddChatPlaceResult =
   | { ok: true; itinerary: Itinerary; day: number }
-  | { ok: false; reason: "no-days" | "duplicate" };
+  | { ok: false; reason: "no-days" | "duplicate" | "not-a-stop" };
 
 export type RemoveChatPlaceResult =
   | { ok: true; itinerary: Itinerary; day: number; name: string }
@@ -76,8 +80,12 @@ export function isValidChatPlace(p: unknown): p is ChatPlace {
       c.category === "drinks" ||
       c.category === "market" ||
       c.category === "stay" ||
-      c.category === "service") &&
-    (c.provenance === "t1" || c.provenance === "osm")
+      c.category === "service" ||
+      // 1.44: T2 uradni vir (članek STO) — veljavna vrstica zgodovine
+      // klepeta (pin na mini zemljevidu), a NE fizični postanek: gumba
+      // "+" ni in addChatPlaceToItinerary ga zavrne (reason "not-a-stop").
+      c.category === "source") &&
+    (c.provenance === "t1" || c.provenance === "osm" || c.provenance === "t2")
   );
 }
 
@@ -202,6 +210,13 @@ export function addChatPlaceToItinerary(
   opts: { locale: string; groupSize?: number }
 ): AddChatPlaceResult {
   if (!it.days || it.days.length === 0) return { ok: false, reason: "no-days" };
+
+  // 1.44: T2 uradni vir je ČLANEK, ne fizični kraj — ničesar ne dodajamo
+  // (obramba v globini: UI gumba "+" že skriva za t2, a tudi direktni
+  // klic s ponarejenim mestom ne more vpisati članka kot postanka).
+  if (place.provenance === "t2" || place.category === "source") {
+    return { ok: false, reason: "not-a-stop" };
+  }
 
   const isEn = opts.locale === "en";
   const groupSize = opts.groupSize && opts.groupSize >= 1 ? opts.groupSize : 2;
@@ -396,6 +411,8 @@ export function persistLastItinerary(
 
 /** Odloži kraj, ko še ni načrta (sessionStorage — izgubi ob zaprtju zavihka). */
 export function stashChatPlace(place: ChatPlace): void {
+  // 1.44: T2 članki se ne odlažajo — niso postanki, čakajoči na načrt
+  if (place.provenance === "t2" || place.category === "source") return;
   try {
     const existing = readStashedChatPlaces();
     // dedupe tudi v odložišču

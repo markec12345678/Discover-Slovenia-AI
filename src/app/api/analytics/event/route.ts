@@ -33,7 +33,8 @@ const VALID_EVENTS = new Set([
   // day_header / stop_card) — meri, kdaj v poti uporabniki želijo dejanje
   "booking_cta_clicked",
   // GEO-ODGOVORI (Task 29): AI klepet je izrisal kraje na zemljevidu
-  // (props: osm_count, t1_count) — doseg "generative spatial" odgovorov
+  // (props: osm_count, t1_count, t2_count [1.44 — citani uradni viri STO])
+  // — doseg "generative spatial" odgovorov
   "chat_geo_answered",
   // 1.42 (GEO → NAČRT): kraj iz AI klepeta dodan v načrt potovanja
   // (props: provenance t1|osm, category, day, stashed?)
