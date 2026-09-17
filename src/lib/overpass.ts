@@ -166,6 +166,9 @@ const CATEGORY_OSM_FILTERS: Record<PlaceCategory, string[]> = {
   // nastane iz uporabnikovega besedila (CATEGORY_MATCHERS) in nikoli ni
   // kandidat za Overpass; prazen seznam drži Record izčrpan (TypeScript).
   source: [],
+  // 1.46: "destination" (T1 destinacija) prav tako NI Overpass kategorija —
+  // nastane samo iz destinationToPlace (naša baza, ne OSM).
+  destination: [],
 };
 
 /** Preslikava OSM tagov v našo kategorijo + podatek za "detail". */

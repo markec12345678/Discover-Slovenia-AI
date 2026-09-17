@@ -47,6 +47,10 @@ export type PlannerEventName =
   // GEO-ODGOVORI (Task 29): AI klepet odgovori s kraji na zemljevidu
   // (OSM v bližini + T1 destinacije iz odgovora) — doseg funkcije
   | "chat_geo_answered"
+  // 1.46 (kategorija čipi): uporabnik je preklopil kategorijo v filtru
+  // geo odgovora (props: category, enabled 0|1, surface chat|overlay)
+  // — meri, ali filtri pomagajo pri mešanih odgovorih (hrana+pijača+…)
+  | "chat_geo_filtered"
   // 1.42 (GEO → NAČRT): kraj iz AI klepeta dodan v načrt (provenance
   // t1|osm; day; stashed=1, če je čakal v sessionStorage na prvi načrt)
   | "chat_place_added"

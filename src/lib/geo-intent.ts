@@ -36,6 +36,12 @@ export type PlaceCategory =
   | "market"
   | "stay"
   | "service"
+  /** 1.46: T1 destinacija (sidro iskanja ali omemba v odgovoru) — VEDNO
+   *  iz destinationToPlace, NIKOLI iz uporabnikovega besedila (prazen
+   *  matcher). Prej si T1 pini izposojajo "stay" (kozmetično) — s čipi po
+   *  kategorijah (1.46) bi filter "nastanitev" lažno pokazal Bled kot
+   *  hotel; "destination" je poštena lastna kategorija. */
+  | "destination"
   /** 1.44: T2 uradni vir (članek STO) — NI fizični kraj; nikoli ne nastane
    *  iz uporabnikovega besedila (CATEGORY_MATCHERS ga ne more izdelati),
    *  nastavi ga samo stoHitToPlace. Pomeni: povezava na izvirnik, ne postanek. */
@@ -240,6 +246,10 @@ const CATEGORY_MATCHERS: Record<PlaceCategory, StemMatcher> = {
   // te kategorije (nastavi jo samo stoHitToPlace za citane T2 vire); prazen
   // vnos drži Record izčrpan in matcherHits() nikoli ne zadene.
   source: { exact: [], stems: [] },
+  // 1.46: "destination" prav tako NIMA matcherja — nastavi ga samo
+  // destinationToPlace (T1 sidro/omembe); uporabnikovo besedilo ne more
+  // proizvesti "destinacije" kot iskalne kategorije za Overpass.
+  destination: { exact: [], stems: [] },
 };
 
 /** Normalizacija: lowercase + strip diakritike + ločila → presledki. */
@@ -377,8 +387,11 @@ export function destinationToPlace(d: Destination): ChatPlace {
     name: d.name,
     lat: d.coords.lat,
     lng: d.coords.lng,
-    // T1 pin je splošen "kraj" — barva vizualno izhaja iz provenance (zeleni)
-    category: "stay",
+    // 1.46: lastna kategorija "destination" — prej "stay" (kozmetično,
+    // ker barva izhaja iz provenance). S kategorija čipi (1.46) filter
+    // "nastanitev" ne bi smel pokazati Bleda kot hotela — destinacija je
+    // obisk kraja, ne spanje v njem.
+    category: "destination",
     provenance: "t1",
     rating: d.rating,
     budget: d.budget,

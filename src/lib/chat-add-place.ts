@@ -46,6 +46,10 @@ const CATEGORY_DEFAULTS: Record<
   market: { duration: 0.75, costPerPerson: 10 },
   stay: { duration: 1, costPerPerson: 0 }, // cene nastanitev ne ocenjujemo
   service: { duration: 0.25, costPerPerson: 0 },
+  // 1.46: T1 destinacija kot postanek — obisk kraja (Bled, Piran …) traja
+  // ~2 h (grad + jezero / staro mesto); vstopnine so različne (grad, jama,
+  // naravne so brezplačne) → hevristične cene NE podajamo.
+  destination: { duration: 2, costPerPerson: 0 },
   // 1.44: T2 uradni vir ni fizični postanek — dodajanje ga ZAVRE
   // (spodnji guard v addChatPlaceToItinerary); vrednost je formalna,
   // da Record<PlaceCategory> ostane izčrpen.
@@ -81,6 +85,10 @@ export function isValidChatPlace(p: unknown): p is ChatPlace {
       c.category === "market" ||
       c.category === "stay" ||
       c.category === "service" ||
+      // 1.46: T1 destinacija (sidro iskanja / omemba v odgovoru) — prej si
+      // je izposojala "stay"; združljivo nazaj: STARE zgodovine klepeta s
+      // "stay" T1 vrsticami ostanejo veljavne, NOVE pišejo "destination".
+      c.category === "destination" ||
       // 1.44: T2 uradni vir (članek STO) — veljavna vrstica zgodovine
       // klepeta (pin na mini zemljevidu), a NE fizični postanek: gumba
       // "+" ni in addChatPlaceToItinerary ga zavrne (reason "not-a-stop").

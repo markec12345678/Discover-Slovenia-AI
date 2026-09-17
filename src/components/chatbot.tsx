@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useRef, useEffect, lazy, Suspense } from "react";
+import { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import {
   MessageCircle,
   X,
@@ -62,9 +62,102 @@ const CATEGORY_ICONS: Record<PlaceCategory, React.ComponentType<{ className?: st
   market: ShoppingBasket,
   stay: BedDouble,
   service: Info,
+  // 1.46: T1 destinacija — MapPin (obisk kraja, ne spanje/nakup/storitev)
+  destination: MapPin,
   // 1.44: T2 uradni vir — Landmark (institucionalni vir, ne lokal)
   source: Landmark,
 };
+
+// ============================================================================
+// KATEGORIJA ČIPI (1.46) — multi-select filter geo odgovora
+// ============================================================================
+// Mindtrip raziskava (Wayback + iOS screenshots + recenzije, 20. 9. 2026):
+// njihov zemljevid iskanja ima horizontalne čipe "For you / Restaurants /
+// Things to do / Events / Stays" (enojni izbor, personaliziran). Naša izvedba
+// je NAMENOMA drugačna na tri načine:
+//  1. MULTI-SELECT s števci — mešani odgovor ("hrana in pijača v Piranu")
+//     potrebuje kombinacije (hrana+pijača skupaj), ne zamenjavo;
+//  2. BREZ "For you" — ne sledimo uporabnikom (brez računov, brez
+//     profilov); čipi so pošteni števci dejansno prisotnih kategorij;
+//  3. Pini OHRANJOJO barvo porekla (T1/OSM/T2) — kategorija je v čipu
+//     in ikoni vrstice, poreklo na pinu (Mindtrip: enotno beli pini z
+//     ikonami — lepa, a barvno slepo neprijazna kombinacija brez "vira").
+// ============================================================================
+
+/** i18n ključi imen kategorij (čipi + aria). */
+const CATEGORY_LABEL_KEYS: Record<PlaceCategory, string> = {
+  food: "catFood",
+  drinks: "catDrinks",
+  market: "catMarket",
+  stay: "catStay",
+  destination: "catDestination",
+  service: "catService",
+  source: "catSource",
+};
+
+/** Fiksni vrstni red čipov (hrana → viri) — predvidljiv za uporabnika. */
+const CATEGORY_ORDER: PlaceCategory[] = [
+  "food",
+  "drinks",
+  "market",
+  "stay",
+  "destination",
+  "service",
+  "source",
+];
+
+/** Števci kategorij v geo odgovoru — [kategorija, število krajev]. */
+function categoryCountsOf(places: ChatPlace[]): Map<PlaceCategory, number> {
+  const m = new Map<PlaceCategory, number>();
+  for (const p of places) m.set(p.category, (m.get(p.category) ?? 0) + 1);
+  return m;
+}
+
+/**
+ * Vrstica čipov kategorij — toggle vključen/izključen (multi-select).
+ * Izrisana SAMO kadar so v odgovoru ≥2 kategoriji (ene kategorije ni
+ * kaj filtrirati — čip bi bil šum).
+ */
+function CategoryChips({
+  counts,
+  disabled,
+  onToggle,
+}: {
+  counts: ReadonlyMap<PlaceCategory, number>;
+  disabled: ReadonlySet<PlaceCategory>;
+  onToggle: (cat: PlaceCategory) => void;
+}) {
+  const t = useTranslations("chatbot");
+  const present = CATEGORY_ORDER.filter((c) => (counts.get(c) ?? 0) > 0);
+  if (present.length < 2) return null;
+  return (
+    <div role="group" aria-label={t("catFilterAria")} className="flex flex-wrap gap-1">
+      {present.map((cat) => {
+        const Icon = CATEGORY_ICONS[cat] ?? Info;
+        const on = !disabled.has(cat);
+        return (
+          <button
+            key={cat}
+            type="button"
+            onClick={() => onToggle(cat)}
+            aria-pressed={on}
+            title={t(CATEGORY_LABEL_KEYS[cat])}
+            className={cn(
+              "flex min-h-7 shrink-0 items-center gap-1 rounded-full border px-2 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              on
+                ? "border-primary/30 bg-primary/10 text-foreground"
+                : "border-border/60 bg-transparent text-muted-foreground opacity-60"
+            )}
+          >
+            <Icon className="size-3 shrink-0" aria-hidden />
+            <span className="truncate">{t(CATEGORY_LABEL_KEYS[cat])}</span>
+            <span className="shrink-0 tabular-nums opacity-70">{counts.get(cat)}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -351,14 +444,19 @@ function PlaceRow({
 
 interface GeoPlacesSectionProps {
   places: ChatPlace[];
-  onExpand: (places: ChatPlace[]) => void;
+  /** 1.46: prenos filtrov v fullscreen overlay (povečava nadaljuje, kar
+   *  je uporabnik že filtriral — koherenten prehod majhen→velik pogled). */
+  onExpand: (places: ChatPlace[], disabledCats: ReadonlySet<PlaceCategory>) => void;
   /** 1.42: dejanje "Dodaj v načrt" za vsako vrstico. */
   onAddPlace?: (place: ChatPlace) => void;
   /** 1.42: ID-ji krajev, že dodanih v načrt (✓ stanje). */
   addedPlaceIds?: ReadonlySet<string>;
 }
 
-/** Oddelek "Na zemljevidu" pod AI odgovorom: glava + mini mapa + seznam + legenda. */
+/** Oddelek "Na zemljevidu" pod AI odgovorom: glava + čipi kategorij +
+ *  mini mapa + seznam + legenda. Čipi (1.46) filtrirajo SEZNAM IN PINE —
+ *  ista filtrirana množica poganja oba, zato sta številke vrstic in pinov
+ *  vedno usklajeni. */
 function GeoPlacesSection({
   places,
   onExpand,
@@ -366,22 +464,51 @@ function GeoPlacesSection({
   addedPlaceIds,
 }: GeoPlacesSectionProps) {
   const t = useTranslations("chatbot");
+  // 1.46: izklopljene kategorije (multi-select; prazna množica = vse)
+  const [disabledCats, setDisabledCats] = useState<ReadonlySet<PlaceCategory>>(
+    new Set()
+  );
+  const counts = useMemo(() => categoryCountsOf(places), [places]);
+  const filtered = useMemo(
+    () => places.filter((p) => !disabledCats.has(p.category)),
+    [places, disabledCats]
+  );
   const hasOsm = places.some((p) => p.provenance === "osm");
   const hasT2 = places.some((p) => p.provenance === "t2");
+  const filtering = disabledCats.size > 0;
+
+  const toggleCat = (cat: PlaceCategory) => {
+    const wasDisabled = disabledCats.has(cat);
+    setDisabledCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+    // Telemetrija: preklop filtra (meri, ali so čipi uporabni — če jih
+    // nihče ne preklopi, jih v 1.47 odstranimo; če jih, vemo KATERE)
+    trackPlannerEvent("chat_geo_filtered", {
+      category: cat,
+      enabled: wasDisabled ? 1 : 0,
+      surface: "chat",
+    });
+  };
 
   return (
     <div className="mt-2.5 border-t border-border/60 pt-2.5">
-      {/* Glava: label + števec + gumb za povečavo */}
+      {/* Glava: label + števec (iskren ob filtru: vidno/-skupaj) + povečava */}
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <p className="flex min-w-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
           <MapPin className="size-3 shrink-0" aria-hidden />
           <span className="truncate">
-            {t("placesLabel")} · {places.length}
+            {t("placesLabel")}
+            {" · "}
+            {filtering ? `${filtered.length}/${places.length}` : places.length}
           </span>
         </p>
         <button
           type="button"
-          onClick={() => onExpand(places)}
+          onClick={() => onExpand(places, disabledCats)}
           className="flex min-h-6 shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           aria-label={t("mapExpand")}
           title={t("mapExpand")}
@@ -391,27 +518,48 @@ function GeoPlacesSection({
         </button>
       </div>
 
-      {/* Mini zemljevid — lazy Leaflet (nalaga se ob prvem geo odgovoru) */}
-      <Suspense
-        fallback={
-          <div className="h-40 w-full animate-pulse rounded-lg bg-muted" aria-hidden />
-        }
-      >
-        <ChatMiniMap places={places} />
-      </Suspense>
+      {/* 1.46: čipi kategorij — multi-select filter nad seznamom in pini */}
+      <div className="mb-1.5">
+        <CategoryChips counts={counts} disabled={disabledCats} onToggle={toggleCat} />
+      </div>
 
-      {/* Seznam krajev — drsljiv pri dolgih seznamih */}
-      <ul className="mt-2 max-h-44 space-y-1.5 overflow-y-auto pr-1">
-        {places.map((p, i) => (
-          <PlaceRow
-            key={p.id}
-            place={p}
-            index={i}
-            added={addedPlaceIds?.has(p.id)}
-            onAdd={onAddPlace}
-          />
-        ))}
-      </ul>
+      {filtered.length === 0 ? (
+        /* Iskren prazen stanje: vsi čipi izklopljeni → ponudi ponastavitev */
+        <p className="flex items-center justify-between gap-2 rounded-md border border-dashed border-border/60 px-2 py-1.5 text-[10px] text-muted-foreground">
+          <span className="italic">{t("catEmpty")}</span>
+          <button
+            type="button"
+            onClick={() => setDisabledCats(new Set())}
+            className="shrink-0 rounded-md px-1.5 py-0.5 font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            {t("catEmptyReset")}
+          </button>
+        </p>
+      ) : (
+        <>
+          {/* Mini zemljevid — lazy Leaflet (nalaga se ob prvem geo odgovoru) */}
+          <Suspense
+            fallback={
+              <div className="h-40 w-full animate-pulse rounded-lg bg-muted" aria-hidden />
+            }
+          >
+            <ChatMiniMap places={filtered} />
+          </Suspense>
+
+          {/* Seznam krajev — drsljiv pri dolgih seznamih */}
+          <ul className="mt-2 max-h-44 space-y-1.5 overflow-y-auto pr-1">
+            {filtered.map((p, i) => (
+              <PlaceRow
+                key={p.id}
+                place={p}
+                index={i}
+                added={addedPlaceIds?.has(p.id)}
+                onAdd={onAddPlace}
+              />
+            ))}
+          </ul>
+        </>
+      )}
 
       {/* Legenda porekla — T1 zeleni / OSM jantarni / T2 turkizni (iskrenost o viru) */}
       <p className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-muted-foreground">
@@ -455,6 +603,11 @@ export function Chatbot() {
   const [hasNewMessage, setHasNewMessage] = useState(false);
   // GEO-ODGOVORI: kraji trenutno povečanega zemljevida (fullscreen overlay)
   const [mapOverlay, setMapOverlay] = useState<ChatPlace[] | null>(null);
+  // 1.46: izklopljene kategorije v fullscreen overlayju — DEDI se iz čipov
+  // kompaktnega oddelka ob povečavi (koherenten prehod), nato neodvisno
+  const [overlayDisabled, setOverlayDisabled] = useState<
+    ReadonlySet<PlaceCategory>
+  >(() => new Set<PlaceCategory>());
   // 1.42 (GEO → NAČRT): kraji, dodani v načrt IZ TEGO pogovora (✓ na
   // gumbu; po osvežitvi stanje izgubi — dedupe v addChatPlaceToItinerary
   // pošteno odgovori "Že v načrtu", zato ni vztrajen)
@@ -674,6 +827,12 @@ export function Chatbot() {
           osm_count: places.filter((p) => p.provenance === "osm").length,
           t1_count: places.filter((p) => p.provenance === "t1").length,
           t2_count: places.filter((p) => p.provenance === "t2").length,
+          // 1.46: katere kategorije so v odgovoru (npr. "food:5,drinks:2,
+          // destination:1,source:2") — pove, katere čipe uporabniki sploh
+          // vidijo (telemetrična slepota prej: samo poreklo, ne kategorija)
+          cat_counts: [...categoryCountsOf(places).entries()]
+            .map(([cat, n]) => `${cat}:${n}`)
+            .join(","),
         });
       }
 
@@ -805,8 +964,11 @@ export function Chatbot() {
                   {msg.role === "assistant" && msg.places && msg.places.length > 0 ? (
                     <GeoPlacesSection
                       places={msg.places}
-                      onExpand={(places) => {
+                      onExpand={(places, disabledCats) => {
                         setMapOverlay(places);
+                        // 1.46: overlay podeduje filter kompaktnega pogleda
+                        // (povečava nadaljuje, kar je uporabnik filtriral)
+                        setOverlayDisabled(new Set(disabledCats));
                         // Obstojeci dogodek map_opened z novo dimenzijo via
                         // (zemljevid_page | chat_geo) — brez novega eventa
                         trackPlannerEvent("map_opened", { via: "chat_geo" });
@@ -922,7 +1084,9 @@ export function Chatbot() {
 
       {/* GEO-ODGOVORI: fullscreen zemljevid — mobilna izkušnja "velikega
           zemljevida" (Mindtrip split-pane je desktop rešitev; naša večina
-          uporabnikov je mobilnih). Escape ali X zapreta. */}
+          uporabnikov je mobilnih). Escape ali X zapreta.
+          1.46: čipi kategorij + legenda porekla (isti kot kompakten pogled —
+          prej je legendi manjkala tukaj, audit vrzel #8). */}
       {mapOverlay && (
         <div
           className="fixed inset-0 z-[70] flex flex-col bg-background"
@@ -935,7 +1099,12 @@ export function Chatbot() {
               <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
               <span className="truncate">
                 {t("placesLabel")}
-                <span className="ml-1 font-normal text-muted-foreground">· {mapOverlay.length}</span>
+                <span className="ml-1 font-normal text-muted-foreground">
+                  {" · "}
+                  {overlayDisabled.size > 0
+                    ? `${mapOverlay.filter((p) => !overlayDisabled.has(p.category)).length}/${mapOverlay.length}`
+                    : mapOverlay.length}
+                </span>
               </span>
             </p>
             <Button
@@ -950,24 +1119,86 @@ export function Chatbot() {
             </Button>
           </div>
           <div className="min-h-0 flex-1 p-2">
-            <Suspense
-              fallback={<div className="h-full w-full animate-pulse rounded-lg bg-muted" aria-hidden />}
-            >
-              <ChatMiniMap places={mapOverlay} variant="overlay" />
-            </Suspense>
-          </div>
-          <div className="max-h-52 overflow-y-auto border-t border-border p-3">
-            <ul className="space-y-1.5">
-              {mapOverlay.map((p, i) => (
-                <PlaceRow
-                  key={p.id}
-                  place={p}
-                  index={i}
-                  added={addedPlaceIds.has(p.id)}
-                  onAdd={handleAddPlace}
+            {mapOverlay.filter((p) => !overlayDisabled.has(p.category)).length > 0 ? (
+              <Suspense
+                fallback={<div className="h-full w-full animate-pulse rounded-lg bg-muted" aria-hidden />}
+              >
+                <ChatMiniMap
+                  places={mapOverlay.filter((p) => !overlayDisabled.has(p.category))}
+                  variant="overlay"
                 />
-              ))}
-            </ul>
+              </Suspense>
+            ) : (
+              /* Iskren prazen stanje (vsi čipi izklopljeni) — tudi tukaj */
+              <div className="flex h-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/60 text-center">
+                <p className="px-4 text-xs text-muted-foreground">{t("catEmpty")}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setOverlayDisabled(new Set())}
+                >
+                  {t("catEmptyReset")}
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="border-t border-border">
+            {/* 1.46: čipi — izven drsljivega seznama, da so vedno vidni */}
+            <div className="px-3 pt-2">
+              <CategoryChips
+                counts={categoryCountsOf(mapOverlay)}
+                disabled={overlayDisabled}
+                onToggle={(cat) => {
+                  const wasDisabled = overlayDisabled.has(cat);
+                  setOverlayDisabled((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(cat)) next.delete(cat);
+                    else next.add(cat);
+                    return next;
+                  });
+                  trackPlannerEvent("chat_geo_filtered", {
+                    category: cat,
+                    enabled: wasDisabled ? 1 : 0,
+                    surface: "overlay",
+                  });
+                }}
+              />
+            </div>
+            <div className="max-h-52 overflow-y-auto p-3 pt-2">
+              <ul className="space-y-1.5">
+                {mapOverlay
+                  .filter((p) => !overlayDisabled.has(p.category))
+                  .map((p, i) => (
+                    <PlaceRow
+                      key={p.id}
+                      place={p}
+                      index={i}
+                      added={addedPlaceIds.has(p.id)}
+                      onAdd={handleAddPlace}
+                    />
+                  ))}
+              </ul>
+            </div>
+            {/* Legenda porekla — ista kot v kompaktnem pogledu (1.46: prej
+                je v overlayju manjkala — uporabnik ni vedel, kaj barve
+                pinov pomenijo, ko je zemljevid povečal) */}
+            <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-t border-border/60 px-3 py-2 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: PLACE_PIN_COLORS.t1 }} />
+                {t("provenanceT1Legend")}
+              </span>
+              <span className="flex items-center gap-1">
+                <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: PLACE_PIN_COLORS.osm }} />
+                {t("provenanceOsmLegend")}
+              </span>
+              {mapOverlay.some((p) => p.provenance === "t2") && (
+                <span className="flex items-center gap-1">
+                  <span aria-hidden className="size-2 rounded-[2px]" style={{ backgroundColor: PLACE_PIN_COLORS.t2 }} />
+                  {t("provenanceT2Legend")}
+                </span>
+              )}
+            </p>
           </div>
         </div>
       )}

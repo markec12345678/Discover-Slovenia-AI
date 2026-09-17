@@ -184,6 +184,26 @@ spletnega UI-ja danes ni mogoče videti.
 > doda ob prvi generaciji — iskanje pred načrtovanjem ne gre izgubljeno.
 > Mindtripov "+" je izenačen; naša razlika: poreklo na vsakem postanku.
 
+> **STANJE KATEGORIZACIJE ZEMLJEVIDA (1.46.0, 20. 9. 2026):** po uporabnikovem naročilu
+> raziskana Mindtripova interakcija AI bota z zemljevidom pri iskanju hrane/trgov/POI
+> (Wayback snapshot 2026-09-13, 4 dnevi pred ugasnitvijo + 10 iOS App Store screenshotov
+> z dvema neodvisnima VLM prehodoma + 6 realnih web screenshotov aitravel.tools + 38
+> recenzij). Njihov vzorec (POTRJENO): horizontalni čipi kategorij na zemljevidu iskanja
+> ("For you / Restaurants / Things to do / Events / Stays"), enotno BELI pini z line-art
+> ikono kategorije notri (brez kategorij-specifičnih barv; hoteli s ceno na pinu),
+> rezultati združeni po kategoriji z bold headerji, chat→map real-time v split workspaceu;
+> "Markets" lastne kategorije NI (tržnice pod Restaurants/Events). **Tripartitna
+> odločitev**: (a) čipi = manjkali → **izboljšana kopija** — multi-select s števci
+> (kombinacije, ne zamenjava), brez "For you" (ne sledimo uporabnikom), v klepetu IN
+> fullscreen overlayju z dedovanjem filtra; (b) pini po kategoriji = **zavrnjeno
+> kopiranje** — naša barva+oblika po plasti POREKLA (zeleni/jantarni/turkiz) je
+> diferenciator, ki ga Mindtrip nima ("zemljevid, ki prizna vir"); (c) chat→map in
+> tržnice = **že imamo / boljše** (first-class "market" kategorija s slovenskimi
+> matcherji). Nova kategorija "destination" za T1 pini (prej kozmetični "stay" — s filtri
+> bi "nastanitev" lažno pokazala Bled kot hotel). VLM presoja čipov: 9/10. Živa preverba
+> AI poti s citati (odložena od 1.42): 429 val končno prešel — veriga vprašanje →
+> grounding → AI → citat [1,4] → turkizni pini ŽIVO potrjena (glej CHANGELOG 1.46.0).
+
 ## 7. Arhiv materiala
 
 - Screenshoti: `/tmp/ux-audit/` (mt-shot-1..6 = Mindtrip iOS uradno,
