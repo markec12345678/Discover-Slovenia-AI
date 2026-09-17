@@ -7,6 +7,30 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.43.0] — 2026-09-18
+
+### Dodano (1.43.0 — GEO → NAČRT, simetrija: en klik za odstranitev klepet postanka)
+
+- **Gumb „Odstrani“ na kartici postanka, dodanega iz klepeta** (značka „Iz klepeta“ dobi brata): 1.42 je dodajanje naredila z enim klikom („+“ v klepetu), odstranjevanje pa je zahtevalo AI pot „Spremeni načrt“ — asimetrija v pravkar izdani funkciji (napačen klik = pripet postanek brez enostavne poti ven). Zdaj: X ikona + „Odstrani“ ob znački, destruktivna raba šele ob hoverju (muted → destructive), tooltip pojasni kontekst, aria-label z imenom kraja.
+- **Velja SAMO za klepet postanke** (`category === "chat"`): uporabnik jih je dodal sam (eksplicitna intencija) → en klik ven je pošten; AI generirani postanki OSTAJAJO pod „Spremeni načrt“ (celotna preureditev načrta z razlogi) — dosledna ločnica „uporabnikova dejanja so reverzibilna z enim klikom, AI sestave skozi refiner“.
+- **Čista funkcija `removeChatPlaceFromItinerary`** (`src/lib/chat-add-place.ts`, zrcalo `addChatPlaceToItinerary`): poišče postanak po `destination_id` + `category === "chat"` (nikoli ne pobriše rednega postanka z istim ID-jem), ga odstrani iz dneva, vrne `{itinerary, day, name}`; `{ok: false, reason: "not-found"}` za tuje ID-je.
+- **Poštena invalidacija F16 vzorca** (ista kot dodajanje): `quality`/`geoValidation`/`legs` (strežniške metrike vezane na staro sestavo) in `routeGeometry` dneva (OSRM geometrija) se umaknejo → kartice preračunajo na mestu uporabe (hevristika, razkrito „~“); zastarel deljeni link se umakne (P0.2 vzorec).
+- **Telemetrija `chat_place_removed`** (provenance `t1`/`osm` iz predpone sintetičnega ID-ja, `day`, `locale`): komplement `chat_place_added` — razmerje doda/odstrani je neposredna metrika kakovosti AI priporočil (visok odstrezek = slaba priporočila). Whitelist na strežniku + PlannerEventName tip + ANALYTICS-EVENTS.md vrstica. AI postanki še vedno tečejo skozi `stop_removed` (refine pot) — ločni dogajki, ločene metrike.
+- i18n: 4 ključi planner ns × SL/EN (gumb, aria z imenom, tooltip, toast „Odstranjeno iz načrta“).
+
+### Verifikacija (1.43.0)
+
+- tsc čisto; eslint čisto.
+- E2E brskalnik (SL): obnovljen načrt z OSM klepet postankom (Gostilna Pirat, Piran — `osm-node-999001`, lastne koordinate, notes s poreklom) → značka „Iz klepeta“ + gumb „Odstrani“ (aria „Odstrani Gostilna Pirat, Piran iz načrta“) SAMO na klepet postanku — Ljubljana/Bled kartice gumba nimajo (število gumbov v dokumentu = 1); klik → postanek izgine (tudi povezovalnik „Vožnja od Ljubljana do Gostilna Pirat“), Ljubljana/Bled ostanejo, localStorage posodobljen (`osm-node-999001` izgine).
+- E2E (EN lokal): T1 klepet postanek (Piran, `category: "chat"`) → „From chat“ + „Remove Piran from the plan“; klik → toast „Removed from the plan“ + „Piran“ + localStorage posodobljen.
+- Telemetrija v DB: `planner_chat_place_removed` z `provenance: "osm", day: 1, locale: "sl"` IN `provenance: "t1", day: 1, locale: "en"` — obe poti porekla pravilno izvedeni; testne vrstice pobrisane.
+- DOM meritve: gumb 80×27 px, znotraj meja kartice (`inCardBounds: true`), flex-wrap vrstica značk deluje.
+- Mobilno 390 px: 0 px preliva (`scrollWidth === clientWidth === 390`), noga se naravno premika z vsebino.
+- VLM presoja: NI USPELA — z-ai vision API vrača 429 (isti rate-limit val kot v 1.42); vizualna kakovost potrjena z DOM meritvami + strukturnim pregledom, VLM bo ob naslednjem oknu.
+- Dev server 1× OOM restart med testiranjem (znan vzorec, `setsid nohup bun run dev`).
+
+---
+
 ## [1.42.0] — 2026-09-18
 
 ### Dodano (1.42.0 — GEO → NAČRT: "Dodaj v načrt" iz AI klepeta, Mindtripov "+" v naši izvedbi)

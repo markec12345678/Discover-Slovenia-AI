@@ -52,6 +52,10 @@ export type AddChatPlaceResult =
   | { ok: true; itinerary: Itinerary; day: number }
   | { ok: false; reason: "no-days" | "duplicate" };
 
+export type RemoveChatPlaceResult =
+  | { ok: true; itinerary: Itinerary; day: number; name: string }
+  | { ok: false; reason: "not-found" };
+
 // ---------------------------------------------------------------------------
 // Validacija (ista oblika kot chatbot.tsx persistenca — enkraten vir)
 // ---------------------------------------------------------------------------
@@ -290,6 +294,54 @@ export function addChatPlaceToItinerary(
     legs: undefined,
   };
   return { ok: true, itinerary: next, day };
+}
+
+// ---------------------------------------------------------------------------
+// 1.43: en klik za odstranitev postanka, dodanega iz klepeta
+// ---------------------------------------------------------------------------
+
+/**
+ * Odstrani postanek, dodan iz AI klepeta (category === "chat"), iz itinererja.
+ *
+ * Nadomesti asimetrijo 1.42: dodajanje je bil en klik ("+"), odstranjevanje
+ * pa je zahtevalo AI refine pot. Samo KLEPET postanki so en-klik odstranljivi
+ * — uporabnik jih je dodal sam (eksplicitna intencija), AI generirani
+ * postanki ostanejo pod "Spremeni načrt" (celotna preureditev načrta).
+ *
+ * Ista poštena invalidacija kot addChatPlaceToItinerary: strežniške metrike
+ * (quality/geoValidation/legs) in OSRM geometrija dneva so vezane na STARO
+ * sestavo → jih umaknemo, kartice preračunajo na mestu uporabe.
+ */
+export function removeChatPlaceFromItinerary(
+  it: Itinerary,
+  destinationId: string
+): RemoveChatPlaceResult {
+  for (const d of it.days) {
+    const idx = d.locations.findIndex(
+      (l) => l.category === "chat" && l.destination_id === destinationId
+    );
+    if (idx === -1) continue;
+    const name = d.locations[idx].destination_name;
+    const nextDays = it.days.map((x) =>
+      x.day === d.day
+        ? {
+            ...x,
+            locations: x.locations.filter((_, i) => i !== idx),
+            // OSRM geometrija je vezana na staro sestavo dneva → umaknjena
+            routeGeometry: undefined,
+          }
+        : x
+    );
+    const next: Itinerary = {
+      ...it,
+      days: nextDays,
+      quality: undefined,
+      geoValidation: undefined,
+      legs: undefined,
+    };
+    return { ok: true, itinerary: next, day: d.day, name };
+  }
+  return { ok: false, reason: "not-found" };
 }
 
 // ---------------------------------------------------------------------------

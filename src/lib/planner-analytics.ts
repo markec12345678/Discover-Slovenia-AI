@@ -50,6 +50,10 @@ export type PlannerEventName =
   // 1.42 (GEO → NAČRT): kraj iz AI klepeta dodan v načrt (provenance
   // t1|osm; day; stashed=1, če je čakal v sessionStorage na prvi načrt)
   | "chat_place_added"
+  // 1.43: postanek, dodan iz klepeta, odstranjen z enim klikom s kartice
+  // postanka (provenance t1|osm; day) — komplement chat_place_added:
+  // razmerje doda/odstrani pove, kako dobro AI priporoča kraje
+  | "chat_place_removed"
   | "weather_alternative_used"
   // F5.4 "Začni s povezavo" ( url ingest — MindTrip "Start Anywhere")
   | "ingest_url_attempted"

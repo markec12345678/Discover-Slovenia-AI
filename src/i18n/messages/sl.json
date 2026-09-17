@@ -665,7 +665,11 @@
     "chatStashTitle": "Dodano iz AI klepeta",
     "chatStashDesc": "{names}",
     "chatStopBadge": "Iz klepeta",
-    "chatStopBadgeTitle": "Postanek je dodan iz AI klepeta — poreklo je zapisano v opombi"
+    "chatStopBadgeTitle": "Postanek je dodan iz AI klepeta — poreklo je zapisano v opombi",
+    "chatStopRemove": "Odstrani",
+    "chatStopRemoveAria": "Odstrani {name} iz načrta",
+    "chatStopRemoveTitle": "Ta postanek je bil dodan iz AI klepeta — z enim klikom ga odstraniš iz načrta",
+    "chatStopRemovedTitle": "Odstranjeno iz načrta"
   },
   "common": {
     "loading": "Nalagam...",

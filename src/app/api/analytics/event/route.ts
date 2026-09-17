@@ -38,6 +38,9 @@ const VALID_EVENTS = new Set([
   // 1.42 (GEO → NAČRT): kraj iz AI klepeta dodan v načrt potovanja
   // (props: provenance t1|osm, category, day, stashed?)
   "chat_place_added",
+  // 1.43: postanek, dodan iz klepeta, odstranjen z enim klikom s kartice
+  // postanka (props: provenance t1|osm, day, locale?)
+  "chat_place_removed",
   "weather_alternative_used",
   // F5.4 "Začni s povezavo" ( url ingest)
   "ingest_url_attempted",

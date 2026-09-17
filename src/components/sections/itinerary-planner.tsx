@@ -88,9 +88,11 @@ import type {
 import { useAppStore } from "@/lib/store";
 // 1.42 (GEO → NAČRT): dodajanje kraja iz AI klepeta — CustomEvent listener
 // + consume odloženih krajev (sessionStorage) + skupna logika vstavljanja
+// 1.43: simetričen EN KLIK za odstranitev (gumb na kartici postanka)
 import {
   CHAT_ADD_PLACE_EVENT,
   addChatPlaceToItinerary,
+  removeChatPlaceFromItinerary,
   readStashedChatPlaces,
   isValidChatPlace,
   LAST_ITINERARY_KEY,
@@ -806,6 +808,35 @@ export function ItineraryPlanner() {
     // Samo-ohranjen efekt: readStashedChatPlaces POČISTI ključ, zato
     // ponovni zagoni (setItinerary → nov itinerer) niso nevarni
   }, [itinerary]);
+
+  // === 1.43 (GEO → NAČRT): odstranitev postanka, dodanega iz klepeta —
+  // EN KLIK na kartici postanka. Simetrija z 1.42: dodajanje "+" je bil en
+  // klik, odstranjevanje pa je doslej zahtevalo AI "Spremeni načrt". Velja
+  // SAMO za klepet postanke (category === "chat", eksplicitna uporabnikova
+  // intencija) — AI generirani postanki ostanejo pod refinerjem. ===
+  function removeChatStop(loc: LocationVisit) {
+    if (!itinerary) return;
+    const result = removeChatPlaceFromItinerary(itinerary, loc.destination_id);
+    if (!result.ok) return;
+    setItinerary(result.itinerary);
+    persistItineraryLocally(result.itinerary, formData);
+    markResultEngaged();
+    // Strukturna sprememba — zastarel deljeni link se umakne (vzorec F16)
+    if (shareUrl) {
+      setShareUrl(null);
+      setCopied(false);
+    }
+    trackPlannerEvent("chat_place_removed", {
+      // OSM sintetični ID-ji imajo predpono "osm-" — ostali so T1 destinacije
+      provenance: loc.destination_id.startsWith("osm-") ? "osm" : "t1",
+      day: result.day,
+      locale,
+    });
+    toast({
+      title: t("chatStopRemovedTitle"),
+      description: result.name,
+    });
+  }
 
   // Pridobi booking opcije (listings, experiences, products) za vse
   // destinacije v itinererju — potegne lokalne ponudnike iz baze.
@@ -3572,16 +3603,35 @@ export function ItineraryPlanner() {
                                         {/* 1.42 (GEO → NAČRT): postanek, dodan
                                             iz AI klepeta (T1 destinacija ali
                                             OSM gostilna) — kontekst, od kod
-                                            je nepričakovani večerni postanek */}
+                                            je nepričakovani večerni postanek.
+                                            1.43: poleg značke EN KLIK za
+                                            odstranitev (simetrija z gumbom
+                                            "+" v klepetu — prej je edina pot
+                                            bila AI "Spremeni načrt"). */}
                                         {loc.category === "chat" && (
-                                          <Badge
-                                            variant="outline"
-                                            className="gap-1 border-primary/40 bg-primary/5 text-primary"
-                                            title={t("chatStopBadgeTitle")}
-                                          >
-                                            <MessageCircle className="size-3" aria-hidden />
-                                            {t("chatStopBadge")}
-                                          </Badge>
+                                          <>
+                                            <Badge
+                                              variant="outline"
+                                              className="gap-1 border-primary/40 bg-primary/5 text-primary"
+                                              title={t("chatStopBadgeTitle")}
+                                            >
+                                              <MessageCircle className="size-3" aria-hidden />
+                                              {t("chatStopBadge")}
+                                            </Badge>
+                                            <button
+                                              type="button"
+                                              onClick={() => removeChatStop(loc)}
+                                              className="inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                              aria-label={t(
+                                                "chatStopRemoveAria",
+                                                { name: loc.destination_name }
+                                              )}
+                                              title={t("chatStopRemoveTitle")}
+                                            >
+                                              <X className="size-3" aria-hidden />
+                                              {t("chatStopRemove")}
+                                            </button>
+                                          </>
                                         )}
                                         {/* OPCIJA-3 (transakcijska globina):
                                             KONKRETNO DEJANJE na postanku —

@@ -665,7 +665,11 @@
     "chatStashTitle": "Added from AI chat",
     "chatStashDesc": "{names}",
     "chatStopBadge": "From chat",
-    "chatStopBadgeTitle": "Stop added from the AI chat — its source is noted in the description"
+    "chatStopBadgeTitle": "Stop added from the AI chat — its source is noted in the description",
+    "chatStopRemove": "Remove",
+    "chatStopRemoveAria": "Remove {name} from the plan",
+    "chatStopRemoveTitle": "This stop was added from the AI chat — one click removes it from the plan",
+    "chatStopRemovedTitle": "Removed from the plan"
   },
   "common": {
     "loading": "Loading...",

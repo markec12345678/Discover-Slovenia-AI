@@ -53,6 +53,7 @@
 | `day_optimized` | klik gumba „Optimalno zaporedje“ na kartici dneva (F16) | vsaka preureditev | `day`, `stops`, `saved_km`, `before`, `after`, `locale` | vrednost deterministične 2-opt plasti nad lastnimi dnevi (0 AI žetonov); `saved_km` = prihranek ocene km |
 | `chat_geo_answered` (1.41) | AI klepet odgovori z ≥ 1 krajem na mini zemljevidu | vsak geo odgovor | `osm_count`, `t1_count` | doseg „generative spatial“ odgovorov (kje je hrana/pijača/tržnica) po plasti porekla |
 | `chat_place_added` (1.42) | klik „+“ na kraju v AI klepetu, ki ga doda v načrt | vsak uspešen dodatek (tudi consume iz sessionStorage) | `provenance` (`t1`/`osm`), `category`, `day?`, `stashed?` (=1, če je čakal na prvi načrt), `locale` | zaključek zanke „pogovor → dejanje“ (Mindtripov „+“); `stashed` delež pove, koliko uporabnikov išče kraje PRED ustvarjanjem načrta |
+| `chat_place_removed` (1.43) | klik „Odstrani“ na kartici postanka, dodanega iz klepeta | vsak uspešen en-klik odstranitev | `provenance` (`t1`/`osm`), `day`, `locale` | komplement `chat_place_added`: razmerje doda/odstrani pove, kako dobro AI priporoča kraje (visok odstotek odstranitev = slaba priporočila); samo klepet postanki — AI generirani gredo skozi `stop_removed` (refine pot) |
 
 ## Strežniški dogodki (piše jih IZKLJUČNO strežnik — klient jih NE more oddati)
 
