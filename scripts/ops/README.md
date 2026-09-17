@@ -17,7 +17,7 @@ pridobiti uporabnik, skripta ne more namesto tebe prijaviti v tvoj račun).
 | `github-secret-verify.sh` | Seznam secretov + preverba prisotnosti | po set; v CI | git remote z žetonom |
 | `github-workflow-run.sh` | Sproži `ai-smoke.yml` in POČAKAJ rezultat (živi dokaz obeh ključev iz podprte regije) | pred deployom; po menjavi ključev | secret-i nastavljeni |
 | `vercel-env-set.sh` | Nastavi env spremenljivko na Vercel (production+preview+development, idempotentno) | po deploy-setupu | `VERCEL_TOKEN`, project id |
-| `render-env-set.sh` | Nastavi env na Render Z MERGE ZAŠČITO (ne zbriše ostalih!) | po deploy-setupu | `RENDER_API_KEY`, service id |
+| `render-env-set.sh` | Nastavi env na Render Z MERGE ZAŠČITO (ne zbriše ostalih!); `--sync` sproži nov deploy (1.36.2: novi `/v1` API + POST /deploys) | po deploy-setupu | `RENDER_API_KEY`, service id |
 | `dev-health.sh` | Zdravje lokalnega strežnika + razlaga AI verige | med razvojem | tečeč `bun run dev` |
 | `deploy-check.sh` | Produkcijski smoke test (rute + AI health) | po vsakem deployu | URL produkcije |
 | `migrate-baseline.sh` | Enkratna uvedba migration baseline-a na Neon (1.27.1; danes samodejno prek startup koraka `migrate:baseline`) | samo za pred-1.30 baze / audite | Neon URL iz dashboarda |

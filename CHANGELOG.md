@@ -7,6 +7,41 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.36.2] — 2026-09-17
+
+### Popravljeno (1.36.2 — PROD-DEPLOY: uveljavitev 1.36.0 na Neon + Render demo plačila)
+
+> Brez sprememb aplikacijske kode — operativna uveljavitev + popravek ops
+> skripte. S tem sta ZAKLJUČENI obe odprti točki iz 1.36.0/1.36.1
+> („PRED DEPLOYEM" iz commit sporočila 1.36.0).
+
+- **Neon migracija UVELJAVLJENA**: `20260916100000_restrict_money_fks`
+  zagnana prek `scripts/ops/migrate-deploy.sh` (direktni — ne pooler —
+  povezovalni niz, kot priporoča Prisma za DDL). Dokaz:
+  `_prisma_migrations` = {baseline, restrict_money_fks},
+  `pg_constraint.confdeltype = 'r'` (RESTRICT) za OBA
+  `Sponsorship_ownerId_fkey` + `CommissionInvoice_ownerId_fkey`.
+  FK RESTRICT defense-in-depth za denarne zapise je zdaj živ tudi na
+  nivoju baze (API ščiti iz 1.36.0 so bili živi že od prej).
+- **Render `DSA_DEMO_PAYMENTS=1`** nastavljena prek
+  `render-env-set.sh --sync` (merge zaščita: vseh 9 prejšnjih
+  spremenljivk ohranjenih) + redeploy. Before/after dokaz: booking probe
+  pred = 501 (plačila zaprta — fail-closed 1.36.0), po = 200 demo-
+  potrjeno (rezervacije spet delujejo na primarni produkciji). Testna
+  rezervacija pobrisana (bookingCount revertiran).
+- **`scripts/ops/render-env-set.sh` API drift popravek**: Render je
+  ukinil staro pot `/api/v1/*` (404) — skripta prevezana na `/v1/*`
+  z novo obliko odgovorov (services = `[{cursor, service}]`,
+  env-vars = `[{cursor, envVar}]`). Ugotovitev iz prakse: PUT
+  `?sync=true` NE sproži deploya — `--sync` zdaj eksplicitno pokliče
+  `POST /deploys` (4/4 korak).
+- **Vercel**: ostaja brez zastavice (plačila zaprta, 501) — nastavitev
+  zahteva Vercel dashboard/token (dokumentirano v DEPLOYMENT.md §5).
+- **DEPLOYMENT.md §5**: vrstica Plačila dopolnjena z dejanskim stanjem
+  produkcije (Render = zastavica aktivna, Vercel = zaprto).
+
+---
+
 ## [1.36.1] — 2026-09-17
 
 ### Dodano (1.36.1 — DEPLOY-MIGR: orodje za produkcijsko uveljavitev 1.36.0 migracije)
