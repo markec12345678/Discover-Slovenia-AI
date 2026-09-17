@@ -108,6 +108,13 @@ spletnega UI-ja danes ni mogoče videti.
 | 5 | **Barvna identiteta:** živozelena = »generic SaaS« (VLM) | 🟢 nizka | odločitev lastnika — emerald globlji ton bi ohranil identiteto, a to je okus |
 | 6 | **FAB prekriva dnevni bar pri 320 px** (znano iz pilot audita) | 🟢 nizka | premik FAB ob scrollu |
 
+> **STANJE IMPLEMENTACIJE (1.37.0, 17. 9. 2026): VSEH 6 POPRAVKOV JE
+> IZVEDENIH.** Uporabnik je po predstavitvi poročila odobril nadaljevanje
+> (»odlično nadaljuj«); implementacija + verifikacija (tsc/lint čisto,
+> browser E2E, SSR i18n preverbe, VLM re-presoja: prazno stanje 8/10,
+> »embarrassingly empty« razrešeno) je dokumentirana v CHANGELOG 1.37.0.
+> Podrobnosti po točkah: CHANGELOG razdelek 1.37.0.
+
 ## 6. Strateški sklep
 
 - **Funkcijsko smo na nivoju ali pred njimi** (validacija, realne ceste,

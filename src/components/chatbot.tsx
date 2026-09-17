@@ -140,6 +140,13 @@ export function Chatbot() {
   const [loading, setLoading] = useState(false);
   const [source, setSource] = useState<"puter" | "z-ai-sdk" | "fallback">("puter");
   const [hasNewMessage, setHasNewMessage] = useState(false);
+  // UX-CMP #6 (Mindtrip primerjava, 17. 9. 2026 / pilot audit 🟡): chat FAB
+  // (fiksni, spodaj desno, z-50) je pri 320 px prekrival ZADNJI gumb dneva
+  // v dnevní navigaciji, dokler ta še ni prilepljena na vrh. Standardni
+  // Material vzorec: FAB se OB DRSENJU DOL skrije, OB DRSENJU GOR (ali
+  // pri vrhu strani) pa vrne — vsebina je vedno nad gumbom. Samo mobilno
+  // (< sm); desktop FAB ostane vedno viden.
+  const [fabHidden, setFabHidden] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -166,6 +173,33 @@ export function Chatbot() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, loading]);
+
+  // UX-CMP #6: skrivanje FAB ob drsenju dol (samo mobilni via max-sm
+  // razredov spodaj; logika beži na vseh velikostih, vizualno se aplicira
+  // le < 640 px). Odpren panel FAB vedno pokaže.
+  useEffect(() => {
+    if (open) {
+      setFabHidden(false);
+      return;
+    }
+    let lastY = window.scrollY;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const delta = y - lastY;
+        // prag 8 px filtrira micro-scroll; y > 120 pomeni "pod herojem"
+        if (delta > 8 && y > 120) setFabHidden(true);
+        else if (delta < -8 || y <= 120) setFabHidden(false);
+        lastY = y;
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [open]);
 
   // Focus na input ko se odpre
   useEffect(() => {
@@ -232,13 +266,19 @@ export function Chatbot() {
 
   return (
     <>
-      {/* Lebdeči gumb (spodaj desno) */}
+      {/* Lebdeči gumb (spodaj desno) — UX-CMP #6: ob drsenju dol se na
+          mobilnem skrije (vsebina > gumb), ob drsenju gor se vrne */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="dsa-chat-fab fixed bottom-4 right-4 z-50 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:bottom-6 sm:right-6"
+        className={cn(
+          "dsa-chat-fab fixed bottom-4 right-4 z-50 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:bottom-6 sm:right-6",
+          fabHidden &&
+            "max-sm:pointer-events-none max-sm:translate-y-24 max-sm:opacity-0"
+        )}
         aria-label={open ? t("fabClose") : t("fabOpen")}
         aria-expanded={open}
+        tabIndex={fabHidden ? -1 : 0}
       >
         {open ? (
           <X className="size-6" aria-hidden="true" />

@@ -7,6 +7,77 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.37.0] — 2026-09-17
+
+### Dodano (1.37.0 — UX-CMP: implementacija 6 popravkov iz UI/UX primerjave z Mindtripom)
+
+> Implementacija vseh 6 prioritiziranih šibkosti iz
+> `docs/UX-COMPARISON-MINDTRIP.md` §5 (VLM presoja glm-4.5v, 17. 9. 2026).
+> Štiritje: prvi vtis (prazen načrtovalnik), jasnost (toast), gostota
+> kartic, hub zemljevida, barvna identiteta, mobilni FAB.
+
+- **#1 🔴 Prazni state načrtovalnika** (VLM: »embarrassingly empty …
+  suggests the app is broken«): desna polovica zdaj prikazuje STATIČEN
+  demo predogled dneva (Bled → Vintgar → Bohinj) iz uredniškega dataseta —
+  prave slike, časi, cene (€25/€10/€15) in etapne razdalje (10 min · 4 km,
+  25 min · 17 km) + CTA »Poskusi ta primer«, ki ta primer dejansko
+  generira (NL poizvedba → `parseQueryToPlannerInput` → isti AI tok kot
+  hero/demo scenariji). Predogled je dekorativen (`aria-hidden`,
+  `pointer-events` nevtralen), CTA izven njega. VLM presoja po popravku:
+  **8/10, »the 'embarrassingly empty' critique is resolved«, brez
+  vizualnih napak**. Nove i18n tipke `planner.emptyDemo*` (SL+EN).
+- **#2 🟡 Toast ob generiranju prekriva svež načrt**: uspešni toast
+  (»Načrt generiran …«) je ODSTRANJEN — pojavil se je točno ob izrisu
+  delovne površine in je (fiksno spodaj desno) prekrival dneve kartic.
+  Povratna informacija je že v rezultatu (načrt zamenja skelet, statusni
+  trak, obnovitveni chip za deljene načrte ostaja). Napake še vedno
+  javljajo toasti (`variant="destructive"`).
+- **#3 🟡 Kartice postankov besedilno težke** (razlaga + praktični
+  nasveti vedno razprti): `StopInsights` zdaj EN zložljiv blok
+  (collapse-by-default, vzorec F4.3) s povzetkom »Zakaj ta postanek:« +
+  prvim stavkom razlage v njem (iskrenost ostane vidna na prvi potezi);
+  celotna razlaga, metoda izračuna km, praktični podatki (trajanje,
+  cena, sezona, odpiralni čas z virom) in opozorilo so en klik stran.
+- **#4 🟢 Hub zemljevida** (`/zemljevid`, VLM: »veliko belega prostora
+  nad karto, generični gumbi«): (a) statistika iz dataseta nad karto —
+  **22 destinacij · 9 regij · povprečna ocena 4,5** (štetje iz
+  `DESTINATIONS`, nič ročnih številk; številke poudarjene po VLM
+  povratni informaciji); (b) legenda pod karto preoblikovana v čipe;
+  (c) gostejši vertikalni ritem (py-16→py-12, mb-10→mb-5); (d) ODSTRANJENA
+  duplikatna glava — stran ima že lastni hero, zato nov prop `hideHeader`
+  izpusti notranjo glavo sekcije; (e) vsi nizi sekcije zdaj dvojezični
+  (vzorec `L` iz stop-insights; prej hardcoded SL tudi na EN — loading
+  indikator jezikovno nevtralen).
+- **#5 🟢 Barvna identiteta** (VLM: »generic SaaS green«): primarna
+  paleta pomaknjena v GLOBLJI EMERALD — svetla: `oklch(0.45 0.12 150)` →
+  `oklch(0.43 0.105 158)`, temna: `oklch(0.65 0.13 150)` →
+  `oklch(0.67 0.115 160)` (usklajeno: `--ring`, `--sidebar-*`,
+  `--chart-1`, `gradient-hairline`). Triglavska identiteta ostaja, vtis
+  je bogatejši; kontrast belega na primarni se izboljša (~5,2:1).
+- **#6 🟢 FAB prekriva dnevni bar pri 320 px** (pilot audit 🟡): chat
+  FAB se na mobilnem (< 640 px) OB DRSENJU DOL skrije in OB DRSENJU GOR
+  (ali pri vrhu strani) vrne (Material vzorec; prag 8 px, rAF throttle,
+  `max-sm:` razredi, `tabIndex` -1 ko skrit; odprt pogovor FAB vedno
+  pokaže). Desktop FAB ostane vedno viden.
+
+### Verifikacija (1.37.0)
+
+- `tsc --noEmit` čisto; `eslint .` čisto; dev strežnik zdrav.
+- Browser (agent-browser): prazno stanje prikazuje predogled (čip, 3
+  postanki, 2 etapi, napis, CTA); klik CTA → AI načrt generiran (dan 1,
+  zemljevid zavihki, statusni trak) z **0 toasti**; `StopInsights` 3×
+  `<details>` vsi zaprti, razpiranje prikaže vse praktične podatke;
+  `/zemljevid` brez notranje glave, statistika + legenda čipi; primarna
+  barva `oklch(0.43 0.105 158)`; FAB na 390 px: opacity 1 → drsenje dol →
+  opacity 0 + `pointer-events:none` → drsenje gor → vrnjen; 390 px brez
+  horizontalnega scrolla; 0 konzolnih napak. SSR: EN/SL načrtovalnik
+  vsebuje vse `emptyDemo*` ključe pravilno jezikovno.
+- VLM (glm-4.5v) presoji: prazno stanje 8/10 (»canonical itinerary card
+  layout … resolves the empty-state anti-pattern«), statistika zemljevida
+  »excellent … immediate social proof and scale«.
+
+---
+
 ## [1.36.3] — 2026-09-17
 
 ### Popravljeno (1.36.3 — VERCEL-DEMO-PAY: demo plačila na sekundarni produkciji + `vercel-env-set --sync`)

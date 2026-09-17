@@ -116,46 +116,76 @@ export function StopInsights({ visit, locale }: StopInsightsProps) {
   // Praktični podatki se prikažejo, če obstoja KATERIKOLI zapis o destinaciji
   if (!visit.reason && !dest) return null;
 
+  // UX-CMP #3 (Mindtrip primerjava, 17. 9. 2026): kartice postankov so bile
+  // besedilno težke — razlaga in praktični nasveti so bili VEDNO razprti.
+  // Zdaj je CEL blok zložljiv (collapse-by-default, enak vzorec kot prej
+  // samo pri praktičnih podatkih), v povzetku pa ostane PRVI STAVEK
+  // razlage — iskrenost ("zakaj priporočeno") ostane vidna na prvi
+  // potezi, podrobnosti pa so en klik stran.
+  const fullReason = visit.reason?.trim() ?? "";
+  const hasWhy = fullReason.length > 0;
+  const TEASER_MAX = 110;
+  const cut = fullReason.lastIndexOf(" ", TEASER_MAX);
+  const teaser =
+    fullReason.length <= TEASER_MAX
+      ? fullReason
+      : (cut > 60 ? fullReason.slice(0, cut) : fullReason.slice(0, TEASER_MAX)) +
+        "…";
+
   return (
-    <div className="mt-2.5 space-y-2">
-      {/* FAZA 4-1 — Zakaj je to priporočeno? (dejstva, ne marketing) */}
-      {visit.reason && (
-        <div className="space-y-1">
-          <p className="flex items-start gap-1.5 rounded-md bg-muted/50 px-2.5 py-1.5 text-xs leading-relaxed text-muted-foreground">
-            <HelpCircle
-              className="mt-0.5 size-3.5 shrink-0 text-primary/70"
-              aria-hidden="true"
-            />
-            <span>
+    <details className="group mt-2.5 text-xs">
+      <summary className="flex cursor-pointer select-none list-none items-start gap-1.5 rounded-md bg-muted/50 px-2.5 py-1.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 [&::-webkit-details-marker]:hidden">
+        <HelpCircle
+          className="mt-0.5 size-3.5 shrink-0 text-primary/70"
+          aria-hidden="true"
+        />
+        <span className="min-w-0 flex-1 leading-relaxed">
+          {hasWhy ? (
+            <>
               <span className="font-medium text-foreground/80">
                 {label("why", locale)}
               </span>{" "}
-              {visit.reason}
+              {teaser}
+            </>
+          ) : (
+            <span className="font-medium text-foreground/80">
+              {label("practical", locale)}
             </span>
-          </p>
-          {/* P1-1 (recenzija): če razlaga navaja razdaljo, je metoda izračuna
-              eksplicitno povedana — približek iz koordinat, ne navigacija. */}
-          {/\bkm\b/i.test(visit.reason) && (
-            <p className="pl-9 text-[10px] leading-relaxed text-muted-foreground/80">
-              {label("methodNote", locale)}
-            </p>
           )}
-        </div>
-      )}
+        </span>
+        <ChevronDown
+          className="mt-0.5 size-3.5 shrink-0 transition-transform group-open:rotate-180"
+          aria-hidden="true"
+        />
+      </summary>
 
-      {/* FAZA 4-3 — Praktični podatki: SAMO obstoječi (zložljivo, mobilno prijazno) */}
-      {dest && (
-        <details className="group text-xs">
-          <summary className="inline-flex cursor-pointer select-none list-none items-center gap-1 rounded-md px-1 py-0.5 font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 [&::-webkit-details-marker]:hidden">
-            <ChevronDown
-              className="size-3.5 transition-transform group-open:rotate-180"
-              aria-hidden="true"
-            />
-            <Info className="size-3.5" aria-hidden="true" />
-            {label("practical", locale)}
-          </summary>
+      <div className="mt-1.5 space-y-2 pl-1">
+        {/* FAZA 4-1 — Zakaj je to priporočeno? (dejstva, ne marketing);
+            celotna razlaga, če je bila v povzetku prirezana */}
+        {hasWhy && teaser !== fullReason && (
+          <div className="space-y-1">
+            <p className="leading-relaxed text-muted-foreground">
+              {fullReason}
+            </p>
+            {/* P1-1 (recenzija): če razlaga navaja razdaljo, je metoda
+                izračuna eksplicitno povedana — približek iz koordinat,
+                ne navigacija. */}
+            {/\bkm\b/i.test(fullReason) && (
+              <p className="text-[10px] leading-relaxed text-muted-foreground/80">
+                {label("methodNote", locale)}
+              </p>
+            )}
+          </div>
+        )}
+        {hasWhy && teaser === fullReason && /\bkm\b/i.test(fullReason) && (
+          <p className="text-[10px] leading-relaxed text-muted-foreground/80">
+            {label("methodNote", locale)}
+          </p>
+        )}
 
-          <dl className="mt-1.5 grid grid-cols-1 gap-x-4 gap-y-1.5 rounded-md border border-border/60 bg-card/40 p-2.5 text-muted-foreground sm:grid-cols-2">
+        {/* FAZA 4-3 — Praktični podatki: SAMO obstoječi (zložljivo, mobilno prijazno) */}
+        {dest && (
+          <dl className="grid grid-cols-1 gap-x-4 gap-y-1.5 rounded-md border border-border/60 bg-card/40 p-2.5 text-muted-foreground sm:grid-cols-2">
             {duration && (
               <div className="flex items-start gap-1.5">
                 <Clock className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
@@ -256,9 +286,11 @@ export function StopInsights({ visit, locale }: StopInsightsProps) {
               </div>
             </div>
           </dl>
+        )}
 
-          {/* Opozorilo + povezava na podrobnosti destinacije */}
-          <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground/90">
+        {/* Opozorilo + povezava na podrobnosti destinacije */}
+        {dest && (
+          <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground/90">
             <TriangleAlert
               className="mt-0.5 size-3 shrink-0 text-amber-600/80"
               aria-hidden="true"
@@ -273,8 +305,8 @@ export function StopInsights({ visit, locale }: StopInsightsProps) {
               </Link>
             </span>
           </p>
-        </details>
-      )}
-    </div>
+        )}
+      </div>
+    </details>
   );
 }

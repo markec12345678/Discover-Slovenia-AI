@@ -55,8 +55,10 @@ export default function MapPage() {
           </div>
         </section>
 
-        {/* Interaktivni zemljevid s potjo AI itinererja */}
-        <MapSection />
+        {/* Interaktivni zemljevid s potjo AI itinererja — hideHeader: stran
+            ima ŽE lastno glavo zgoraj, notranja glava sekcije bi bila
+            duplikat (UX-CMP #4: manj mrtvega prostora) */}
+        <MapSection hideHeader />
         {/* Faza 4 (pilotna analitika): map_opened ob prihodu na stran zemljevida */}
         <MapOpenedTracker />
       </main>
