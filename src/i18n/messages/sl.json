@@ -18,7 +18,7 @@
   },
   "hero": {
     "title": "Kaj želiš doživeti v Sloveniji?",
-    "subtitle": "Povej AI kaj iščeš — v slovenščini ali angleščini. AI sestavi popoln dan z lokalnimi partnerji.",
+    "subtitle": "Povej AI, kaj iščeš — v slovenščini ali angleščini. Nasveti so preverjeni na slovenskih tleh, ne prepisani iz tujih vodičev.",
     "badge": "AI Concierge za Slovenijo",
     "placeholder": "Želim 3-dnevni miren izlet z naravo, dobro hrano in čim manj vožnje …",
     "cta": "Sestavi mojo pot",
@@ -31,7 +31,10 @@
     "imageAlt": "Blejsko jezero z otokom, cerkvijo in gradom ob sončnem zahodu",
     "inputAriaLabel": "Kaj želiš doživeti v Sloveniji?",
     "scrollCue": "Odkrij več",
-    "scrollCueAriaLabel": "Pomakni se navzdol do statistik"
+    "scrollCueAriaLabel": "Pomakni se navzdol do statistik",
+    "trustNoAccount": "Brez računa",
+    "trustVerified": "km in cene preverjeni",
+    "trustUpdated": "posodobljeno september 2026"
   },
   "heroChips": {
     "calmWeekend": "Miren vikend",
@@ -76,7 +79,10 @@
     "commissionRate": "12 %",
     "commissionVerb": "se obračuna",
     "commissionEmphasis": "izključno, kadar rezervacijo prinese AI",
-    "commissionTail": "— nikoli drugače."
+    "commissionTail": "— nikoli drugače.",
+    "freshnessUpdated": "Podatki posodobljeni: september 2026",
+    "freshnessSources": "števila obiskovalcev: STO/SURS",
+    "freshnessLink": "seznam virov"
   },
   "homeDest": {
     "titleFeatured": "Priljubljene destinacije",
@@ -333,7 +339,9 @@
     "fabClose": "Zapri chatbot",
     "dialogAriaLabel": "AI chatbot pogovor",
     "badgeAI": "AI",
-    "badgeFallback": "fallback"
+    "badgeFallback": "fallback",
+    "sourcesLabel": "Uradni viri (STO)",
+    "sourceMap": "zemljevid"
   },
   "planner": {
     "title": "AI načrtovalec potovanj",
@@ -887,6 +895,10 @@
       "worldNomads": {
         "type": "Zavarovanje",
         "desc": "Potno zavarovanje. Affiliate program."
+      },
+      "sloveniaInfo": {
+        "type": "Uradni viri (RAG)",
+        "desc": "Uradna turistična vsebina I feel Slovenia (Slovenska turistična organizacija) — 664 strukturiranih virov iz slovenia.info llms.txt indeksa, ki jih AI uporablja kot uzemljenje odgovorov s citati. Posodobljeno: september 2026."
       }
     },
     "providersTitle": "Lokalni ponudniki",

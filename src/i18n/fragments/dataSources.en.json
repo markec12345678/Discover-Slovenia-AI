@@ -38,6 +38,10 @@
       "worldNomads": {
         "type": "Insurance",
         "desc": "Travel insurance. Affiliate programme."
+      },
+      "sloveniaInfo": {
+        "type": "Official sources (RAG)",
+        "desc": "Official tourism content from I feel Slovenia (Slovenian Tourist Board) — 664 structured sources from the slovenia.info llms.txt index, used by the AI as grounded answer context with citations. Updated: September 2026."
       }
     },
     "providersTitle": "Local providers",

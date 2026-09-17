@@ -391,8 +391,11 @@ function DestinationCard({
         ) : null}
       </div>
 
-      {/* Body */}
-      <CardContent className="flex flex-col gap-3 p-3 sm:p-4">
+      {/* Body — OPCIJA-2 (gostota): en compact metapodatkovni pas
+          (★ ocena · budget · trajanje) namesto dveh ločenih vrstic —
+          Mindtripovo zgoščeno "sličica + metapodatki + status" v ozki
+          kartici, brez uredniškega nereda. */}
+      <CardContent className="flex flex-col gap-2 p-3 sm:p-4">
         <div className="min-w-0">
           <h3 className="text-base font-semibold leading-tight sm:text-lg">
             {destination.name}
@@ -402,24 +405,26 @@ function DestinationCard({
           </p>
         </div>
 
-        {/* Rating — uredniška ocena (P4-9: jasna oznaka, ne uporabniška) */}
-        <div className="flex items-center gap-1.5">
-          <Star
-            className="size-4 fill-amber-400 text-amber-400"
-            aria-hidden="true"
-          />
-          <span className="text-xs font-medium tabular-nums sm:text-sm">
-            {destination.rating.toFixed(1)}
+        {/* Compact pas: ocena + budget + trajanje v eni vrstici */}
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
+          <span className="inline-flex items-center gap-1">
+            <Star
+              className="size-3.5 fill-amber-400 text-amber-400"
+              aria-hidden="true"
+            />
+            <span className="font-semibold tabular-nums">
+              {destination.rating.toFixed(1)}
+            </span>
+            <span className="sr-only">{t("ratingLabel")}</span>
           </span>
-          {/* Oznaka skrčena na ozkih zaslonih (~175px kartica); ocena (številka) ostane vidna */}
-          <span className="hidden text-xs text-muted-foreground sm:inline">{t("ratingLabel")}</span>
-        </div>
-
-        {/* Budget + duration */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Badge variant="secondary" className="font-medium">
+          <span aria-hidden="true" className="text-border">·</span>
+          <Badge
+            variant="secondary"
+            className="h-5 px-1.5 font-medium text-[11px]"
+          >
             {destination.budget}
           </Badge>
+          <span aria-hidden="true" className="text-border">·</span>
           <span className="inline-flex items-center gap-1 text-muted-foreground">
             <Clock className="size-3" aria-hidden="true" />
             {destination.duration}

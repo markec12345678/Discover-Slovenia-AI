@@ -10,6 +10,8 @@ import {
   Sparkles,
   Bot,
   Trash2,
+  Landmark,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,15 +19,21 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslations, useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
+import { Link } from "@/i18n/navigation";
+import type { StoCitation } from "@/lib/rag/types";
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  /** DATA-LAYERS-RAG: uradni viri STO, poslani AI-ju ob tem odgovoru
+   * (opcijsko — starejša/lokalna zgodovina jih nima). */
+  sources?: StoCitation[];
 }
 
 interface ChatResponse {
   message: string;
   source: "puter" | "z-ai-sdk" | "fallback";
+  sources?: StoCitation[];
   timestamp: string;
 }
 
@@ -59,7 +67,19 @@ function isValidChatMessage(m: unknown): m is ChatMessage {
     ((m as ChatMessage).role === "user" ||
       (m as ChatMessage).role === "assistant") &&
     typeof (m as ChatMessage).content === "string" &&
-    (m as ChatMessage).content.length > 0
+    (m as ChatMessage).content.length > 0 &&
+    // sources so opcijske — če obstajajo, morajo biti array objektov z
+    // url+naslovom (vsak element sam po sebi validiran v render zaradi
+    // map/filter guardov spodaj)
+    (m as ChatMessage).sources === undefined ||
+    (Array.isArray((m as ChatMessage).sources) &&
+      (m as ChatMessage).sources!.every(
+        (s) =>
+          typeof s === "object" &&
+          s !== null &&
+          typeof (s as StoCitation).url === "string" &&
+          typeof (s as StoCitation).title === "string"
+      ))
   );
 }
 
@@ -243,7 +263,12 @@ export function Chatbot() {
 
       const data: ChatResponse = await res.json();
       setSource(data.source);
-      setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
+      setMessages((prev) => [
+        ...prev,
+        // DATA-LAYERS-RAG: priloži citate uradnih virov (T2) — značke
+        // pod odgovorom, kadar je AI dobil uzemljenje za to vprašanje.
+        { role: "assistant" as const, content: data.message, sources: data.sources ?? [] },
+      ]);
 
       if (!open) setHasNewMessage(true);
     } catch {
@@ -367,6 +392,43 @@ export function Chatbot() {
                   )}
                 >
                   <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+
+                  {/* DATA-LAYERS-RAG: značke uradnih virov (T2) — veriga
+                      "podatek → AI → vir → dejanje": citat STO + morebitna
+                      geopovezava na našo stran destinacije (zemljevid). */}
+                  {msg.role === "assistant" && msg.sources && msg.sources.length > 0 ? (
+                    <div className="mt-2.5 border-t border-border/60 pt-2.5">
+                      <p className="mb-1.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <Landmark className="size-3" aria-hidden="true" />
+                        {t("sourcesLabel")}
+                      </p>
+                      <ul className="space-y-1.5">
+                        {msg.sources.map((s) => (
+                          <li key={s.url} className="flex flex-wrap items-center gap-1.5">
+                            <a
+                              href={s.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="max-w-full truncate rounded-md bg-background px-2 py-1 text-[11px] font-medium text-foreground underline decoration-border underline-offset-2 transition-colors hover:decoration-primary"
+                              title={`${s.title} — slovenia.info`}
+                            >
+                              {s.title}
+                            </a>
+                            {s.destinationSlug ? (
+                              <Link
+                                href={`/destinacija/${s.destinationSlug}`}
+                                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary transition-colors hover:bg-primary/20"
+                                onClick={() => setOpen(true)}
+                              >
+                                <MapPin className="size-3" aria-hidden="true" />
+                                {t("sourceMap")}
+                              </Link>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ))}

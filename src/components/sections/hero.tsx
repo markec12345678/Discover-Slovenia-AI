@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ShieldCheck } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { HeroQuickInput } from "@/components/hero-quick-input";
 
@@ -63,6 +63,19 @@ export async function Hero() {
         <div className="mt-8 w-full animate-in fade-in slide-in-from-bottom-5 duration-700 delay-150">
           <HeroQuickInput />
         </div>
+
+        {/* OPCIJA-2 (duša): mikro-vrstica zaupanja pod vnosom — iskrena
+            social proof namesto vanity metrik. Tri stvari, ki jih lahko
+            obiskovalec PREVERI (brez računa, preverjeni km/cene, datum
+            posodobitve) + topel ločilni pikčasti ritem. */}
+        <p className="mt-5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-white/85 drop-shadow-[0_1px_8px_rgba(0,0,0,0.5)] sm:text-sm">
+          <ShieldCheck className="size-3.5 text-amber-300" aria-hidden="true" />
+          <span>{t("trustNoAccount")}</span>
+          <span aria-hidden="true" className="text-amber-300/80">·</span>
+          <span>{t("trustVerified")}</span>
+          <span aria-hidden="true" className="text-amber-300/80">·</span>
+          <span>{t("trustUpdated")}</span>
+        </p>
       </div>
 
       {/* Scroll cue — namig na 20+ sekcij vsebine pod herojem */}

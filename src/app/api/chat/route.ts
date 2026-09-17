@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
 import { rateLimit } from "@/lib/rate-limit";
 import { wrapProviderData, SYSTEM_DATA_GUARD } from "@/lib/ai-context";
+import { buildStoGrounding } from "@/lib/rag/ground";
+import type { StoCitation } from "@/lib/rag/types";
 
 // POST /api/chat — AI chatbot z dostopom do vsebine platforme
 //
@@ -17,6 +19,12 @@ import { wrapProviderData, SYSTEM_DATA_GUARD } from "@/lib/ai-context";
 //
 // Kontekst se gradi iz baze in pošlje GLM-ju.
 // Omejitev: samo 10 najboljših listings/products/experiences (da token limit ne pade).
+//
+// DATA-LAYERS-RAG (Task 27): T2 plast "Uradni viri" — ob vsakem vprašanju
+// se po leksičnem iskanju po slovenia.info llms.txt indeksu (664 zapisov)
+// v sistemski prompt vpletejo do 5 relevantnih uradnih virov STO z
+// navodilom za citiranje [n]; odgovor klientu prinese `sources` (citate)
+// za značke virov + geopovezavo na našo destinacijo (zemljevid/dejanje).
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -130,6 +138,12 @@ export async function POST(request: Request) {
       : `\nUPORABNIK JE TRENUTNO NA STRANI: ${wrapProviderData("stran", currentPage, 200)} (prilagodi odgovor kontekstu strani)`
     : "";
 
+  // DATA-LAYERS-RAG: T2 uzemljenje — uradni viri STO (slovenia.info),
+  // poiskani po zadnjem uporabnikovem vprašanju. Vsebina je ovita v
+  // <podatek> (wrapProviderData znotraj ground.ts) — isti varnostni
+  // model kot ponudniška vsebina (prompt injection obramba).
+  const stoGrounding = buildStoGrounding(lastUserMessage, lang, 5);
+
   // FW4.3-2: ogledje sistemsko sporočilo glede na jezik — enaka struktura,
   // enaka varnostna pravila (SYSTEM_DATA_GUARD, <podatek> ovijanje ostane).
   const systemPrompt =
@@ -153,7 +167,7 @@ TOP PRODUCTS (featured):
 ${productsContext}
 
 TOP EXPERIENCES (featured):
-${experiencesContext}${pageContext}
+${experiencesContext}${pageContext}${stoGrounding.context}
 
 RULES:
 1. Reply in English (unless the user writes in another language)
@@ -164,6 +178,7 @@ RULES:
 6. If they ask about bookings, explain that these happen directly with the provider (redirect model)
 7. Never make up data — if you don't know, say so
 8. Use emoji for friendliness (🏔️ 🍷 🚴‍♂️ 🏛️) but don't overdo it
+9. When a fact comes from an OFFICIAL SOURCE above, cite it like [1] or [2] — never invent citation numbers
 
 ${SYSTEM_DATA_GUARD}`
       : `Si "Slovenija AI" — prijazen, strokovni asistent za turistično platformo "Discover Slovenia AI". Pomagaš uporabnikom načrtovati potovanje po Sloveniji.
@@ -185,7 +200,7 @@ TOP IZDELKI (featured):
 ${productsContext}
 
 TOP IZKUŠNJE (featured):
-${experiencesContext}${pageContext}
+${experiencesContext}${pageContext}${stoGrounding.context}
 
 PRAVILA:
 1. Odgovarjaj v slovenščini (razen če uporabnik piše v drugem jeziku)
@@ -196,6 +211,7 @@ PRAVILA:
 6. Če sprašuje o rezervacijah, pojasni da poteka direktno pri ponudniku (redirect model)
 7. Nikoli ne izmišljaj podatkov — če ne veš, reci
 8. Uporabljaj emoji za prijaznost (🏔️ 🍷 🚴‍♂️ 🏛️) a ne pretiravaj
+9. Kadar dejstvo izhaja iz URADNIH VIROV zgoraj, ga citiraj kot [1] ali [2] — nikoli ne izmisli številk citatov
 
 ${SYSTEM_DATA_GUARD}`;
 
@@ -233,11 +249,16 @@ ${SYSTEM_DATA_GUARD}`;
       throw new Error("Prazen odgovor AI");
     }
 
-    console.log(`[chat] AI odgovor (source: ${result.source}) — vprašanje: "${lastUserMessage.substring(0, 60)}..."`);
+    console.log(`[chat] AI odgovor (source: ${result.source}) — vprašanje: "${lastUserMessage.substring(0, 60)}..."${stoGrounding.active ? ` [T2 uzemljenje: ${stoGrounding.citations.length} uradnih virov STO]` : ""}`);
+
+    // DATA-LAYERS-RAG: citati T2 (samo kadar je bilo uzemljenje aktivno —
+    // prazen seznam pomeni "AI ni dobil uradnih virov za to vprašanje").
+    const sources: StoCitation[] = stoGrounding.active ? stoGrounding.citations : [];
 
     return NextResponse.json({
       message: content,
       source: result.source,
+      sources,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -248,6 +269,7 @@ ${SYSTEM_DATA_GUARD}`;
     return NextResponse.json({
       message: fallback,
       source: "fallback",
+      sources: [] as StoCitation[],
       timestamp: new Date().toISOString(),
     });
   }

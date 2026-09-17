@@ -38,6 +38,10 @@
       "worldNomads": {
         "type": "Zavarovanje",
         "desc": "Potno zavarovanje. Affiliate program."
+      },
+      "sloveniaInfo": {
+        "type": "Uradni viri (RAG)",
+        "desc": "Uradna turistična vsebina I feel Slovenia (Slovenska turistična organizacija) — 664 strukturiranih virov iz slovenia.info llms.txt indeksa, ki jih AI uporablja kot uzemljenje odgovorov s citati. Posodobljeno: september 2026."
       }
     },
     "providersTitle": "Lokalni ponudniki",

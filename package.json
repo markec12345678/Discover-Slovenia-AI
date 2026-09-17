@@ -1,6 +1,6 @@
 {
   "name": "nextjs_tailwind_shadcn_ts",
-  "version": "1.38.0",
+  "version": "1.39.0",
   "private": true,
   "scripts": {
     "dev": "bash -c 'set -a; source .env; set +a; next dev -p 3000 --webpack 2>&1 | tee dev.log'",
@@ -8,6 +8,7 @@
     "postinstall": "prisma generate",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
+    "sto:ingest": "bun run scripts/ingest-sto.ts",
     "test": "bun test",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",

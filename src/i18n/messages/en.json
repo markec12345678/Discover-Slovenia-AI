@@ -18,7 +18,7 @@
   },
   "hero": {
     "title": "What do you want to experience in Slovenia?",
-    "subtitle": "Tell the AI what you're looking for — in English or Slovenian. It puts together a perfect day with local partners.",
+    "subtitle": "Tell the AI what you're looking for — in English or Slovenian. Every tip is verified on Slovenian ground, never copied from generic guides.",
     "badge": "AI Concierge for Slovenia",
     "placeholder": "I'd like a 3-day relaxing trip with nature, great food and as little driving as possible …",
     "cta": "Build my trip",
@@ -31,7 +31,10 @@
     "imageAlt": "Lake Bled with its island, church and castle at sunset",
     "inputAriaLabel": "What do you want to experience in Slovenia?",
     "scrollCue": "Discover more",
-    "scrollCueAriaLabel": "Scroll down to the statistics"
+    "scrollCueAriaLabel": "Scroll down to the statistics",
+    "trustNoAccount": "No account needed",
+    "trustVerified": "verified distances & prices",
+    "trustUpdated": "updated September 2026"
   },
   "heroChips": {
     "calmWeekend": "Relaxed weekend",
@@ -76,7 +79,10 @@
     "commissionRate": "12 %",
     "commissionVerb": "commission applies",
     "commissionEmphasis": "only when the AI brings in the booking",
-    "commissionTail": "— never otherwise."
+    "commissionTail": "— never otherwise.",
+    "freshnessUpdated": "Data refreshed: September 2026",
+    "freshnessSources": "visitor figures: STO/SURS",
+    "freshnessLink": "list of sources"
   },
   "homeDest": {
     "titleFeatured": "Popular destinations",
@@ -333,7 +339,9 @@
     "fabClose": "Close chatbot",
     "dialogAriaLabel": "AI chatbot conversation",
     "badgeAI": "AI",
-    "badgeFallback": "fallback"
+    "badgeFallback": "fallback",
+    "sourcesLabel": "Official sources (STO)",
+    "sourceMap": "map"
   },
   "planner": {
     "title": "AI trip planner",
@@ -887,6 +895,10 @@
       "worldNomads": {
         "type": "Insurance",
         "desc": "Travel insurance. Affiliate programme."
+      },
+      "sloveniaInfo": {
+        "type": "Official sources (RAG)",
+        "desc": "Official tourism content from I feel Slovenia (Slovenian Tourist Board) — 664 structured sources from the slovenia.info llms.txt index, used by the AI as grounded answer context with citations. Updated: September 2026."
       }
     },
     "providersTitle": "Local providers",

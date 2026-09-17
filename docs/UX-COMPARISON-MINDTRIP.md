@@ -135,6 +135,18 @@ spletnega UI-ja danes ni mogoče videti.
 > merjenje, izstopni pogoj): OUTREACH-TOOLKIT §8. Ko se njihov web
 > pobere, se outreach umakne; stran ostane kot evergreen vsebina.
 
+> **STANJE OPCIJE 2 (1.39.0, 18. 9. 2026):** vizualna duša je
+> implementirana — topel hero (jantarni sončnodnevni žar v prekrivki),
+> mikro-vrstica zaupanja pod iskalnim poljem (Brez računa · preverjeno ·
+> posodobljeno), compact metapodatkovni pas v karticah destinacij
+> (★ocena · budget · trajanje v eni vrstici) in iskrena vrstica svežine
+> s povezavo na /vir-podatkov. VLM re-presoja: hero 8/10 duša ("toplo,
+> vabljivo — zlata ura"), kartice 8/10 gostota. Hkrati je v isti izdaji
+> zrasla T2 podatkovna plast (uradni viri STO — glej
+> docs/DATA-LAYERS-RAG.md), ki "dušo" podpira z substanco: AI odgovori
+> citirajo uradne vire z značkami in geopovezavami. Opcija 3
+> (transakcijska globina) ostaja edina neizkoriščena.
+
 ## 7. Arhiv materiala
 
 - Screenshoti: `/tmp/ux-audit/` (mt-shot-1..6 = Mindtrip iOS uradno,

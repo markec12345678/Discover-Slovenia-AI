@@ -7,6 +7,96 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.39.0] — 2026-09-18
+
+### Dodano (1.39.0 — DATA-LAYERS-RAG: uradni viri STO (T2) + OPCIJA-2 vizualna duša)
+
+> Dve naročeni delovni nalogi v eni izdaji: (1) OPCIJA-2 "duša izdelka" —
+> toplota, gostota, iskrena avtoriteta (VLM 1.37: "lacks soul and visual
+> confidence"); (2) integracija Info Slovenija (STO) kot strukturiran RAG
+> vir — arhitektura treh plasti zaupanja v docs/DATA-LAYERS-RAG.md.
+
+#### T2 plast "Uradni viri" (STO / slovenia.info)
+
+- **Raziskava in arhitektura** (`docs/DATA-LAYERS-RAG.md`): STO objavlja
+  JAVNE llms.txt datoteke z izrecnim namenom "for AI assistants, search
+  engines, and large language models" (56 uradnih povezav SL, 56 EN,
+  552 uredniških zgodb EN). Organizacija po PLASTEH ZAUPANJANJA (ne po
+  izvoru): T1 Naši podatki (preverjeno) / T2 Uradni viri (STO, z
+  atribucijo) / T3 Splet v živo (preveri pred obiskom). Etika: samo
+  metapodatki, ki jih STO objavlja za AI porabo; atribucija vedno vidna;
+  nikoli "v sodelovanju s STO".
+- **Ekstrakcija** (`scripts/ingest-sto.ts`, `bun run sto:ingest`): pridobi
+  sto-llms-{sl,en}.txt + sto-llms-stories-en.txt → razčleni markdown
+  povezave → normaliziraj → `data/sto-sources.json` (664 zapisov,
+  verzioniran v git — diff pokaže spremembe pri STO; uredniška kontrola).
+- **Indeksiranje/iskanje** (`src/lib/rag/retrieve.ts`): leksično iskanje
+  BM25-lite brez vektorske baze — normalizacija diakritikov, SL+EN
+  stop-besede, uteži naslov×3/sekcija×2/opis×1, jezikovna prednost ×1,4,
+  dedupe po naslovu, ujemanje po skupni predponi ≥4 znakov in ≥2/3
+  krajšega (pokriva slovenske izpeljanke: "termalne"→"terme",
+  "otroki"→"otroci").
+- **Uzemljenje** (`src/lib/rag/ground.ts`): `buildStoGrounding(query,
+  lang)` → top-5 virov formatiranih kot oštevilčen kontekst z navodilom
+  za citiranje [n]; vsebina gre skozi `wrapProviderData` (isti
+  prompt-injection varnostni model kot ponudniška vsebina).
+- **Integracija klepetalnika** (`/api/chat`): sistemski prompt dobi odsek
+  "URADNI VIRI — I feel Slovenia (STO)" + pravilo 9 (citiraj [n], nikoli
+  ne izmisli številk); odgovor nosi `sources[]` (citate) za UI.
+- **UI veriga vir → dejanje** (`chatbot.tsx`): značke "Uradni viri (STO)"
+  pod AI odgovorom — chip z naslovom vira (povezava na slovenia.info) +
+  GEOPOVEZAVA: kadar se naslov STO vira ujema z našo destinacijo (npr.
+  "Piran in soline"), chip "zemljevid" vodi na /destinacija/[slug].
+  Veriga: podatki → AI → vir → zemljevid → dejanje. Persistenca
+  pogovora razširjena (sources validirane pri branju localStorage).
+- **Javna transparentnost** (`GET /api/ai/sources?q=&lang=&limit=`):
+  isto iskanje po T2 brez AI klica (rate limit 30/min) — kdor želi
+  preveriti, kateri uradni viri živijo v AI kontekstu, to stori neposredno.
+- **Viri** (`/vir-podatkov`): nov vnos "I feel Slovenia (STO) —
+  slovenia.info" (T2 skupina, 664 virov, RAG opis) na drugem mestu
+  seznama; dataSources i18n fragmenti SL+EN.
+
+#### OPCIJA-2 — vizualna duša
+
+- **Topel hero** (`globals.css` .hero-overlay): četrta plast — jantarni
+  sončnodnevni žar ob obzorju (radial rgba(217,119,6,0.22) na spodnji
+  tretjini) nad fotografijo Bleda ob sončnem zahodu; "zlati trenutek"
+  namesto hladne črne vinjete.
+- **Mikro-vrstica zaupanja pod iskalnim poljem** (hero): "Brez računa ·
+  km in cene preverjeni · posodobljeno september 2026" — tri stvari, ki
+  jih obiskovalec lahko PREVERI (iskren social proof namesto vanity
+  metrik); toplejša podnaslovna kopija ("preverjeni na slovenskih tleh,
+  ne prepisani iz tujih vodičev").
+- **Gostota kartic destinacij** (destinations.tsx): ocena + budget +
+  trajanje združeni v EN compact pas (★4.8 · €€ · ⏱1-2 dni) namesto dveh
+  vrstic — prihranek ~30px na kartico, Mindtripova zgoščenost brez
+  nereda; sr-only oznaka "uredniška ocena" ohranjena za bralnike zaslona.
+- **Iskrena vrstica svežine** (stats.tsx): "Podatki posodobljeni:
+  september 2026 · števila obiskovalcev: STO/SURS · seznam virov ↗" —
+  povezava na /vir-podatkov zaključi verigo zaupanja "trditev → dokaz".
+
+### Verifikacija (1.39.0)
+
+- tsc čisto; eslint čisto; dev server restart (znani OOM vzorec).
+- E2E brskalnik: mikro-vrstica zaupanja + vrstica svežine + povezava na
+  /vir-podatkov prisotni; kartice: 6 kompaktnih, prva (Bled) ★4.8 · €€ ·
+  1-2 dni v enem pasu; mobilno 390px: 0px horizontalnega preliva, sticky
+  footer OK; 0 konzolnih napak (samo znano scroll-behavior opozorilo).
+- RAG E2E: `curl /api/chat` "najboljše terme … družino z otroki" →
+  source z-ai-sdk, 5 citatov, odgovor vsebuje [1] in [4], dev.log vrstica
+  "[T2 uzemljenje: 5 uradnih virov STO]"; brskalnik: "Kam z družino?" →
+  chips (Družinske počitnice, Kolesarjenje, Aquafun) + [1] v odgovoru;
+  "Kaj moram videti v Piranu?" → chip "Piran in soline" + 3× "zemljevid"
+  → /destinacija/piran (geopovezava T2→T1 deluje).
+- /api/ai/sources: ?q=termalne+kopeli&lang=sl → Aquafun (8.4), Terme in
+  zdravilišča (7.0), Termalna Panonska (4.2) — kakovostno rangiranje;
+  brez q → metadata + hint; /vir-podatkov vsebuje STO vnos.
+- VLM presoje (glm-5v-turbo): hero 8/10 duša ("toplo, vabljivo … zlata
+  ura"; mikro-vrstica 9/10 "izjemno učinkovita"); kartice 8/10 gostota
+  ("zgoščene, dobro strukturirane"); (prej: "lacks soul").
+
+---
+
 ## [1.38.0] — 2026-09-17
 
 ### Dodano (1.38.0 — OPP-1: izkoriščanje okna priložnosti po padcu Mindtripovega weba)
