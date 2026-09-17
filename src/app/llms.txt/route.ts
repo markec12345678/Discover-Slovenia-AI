@@ -41,7 +41,10 @@ export async function GET(req: Request) {
       "",
       `- [Načrtuj potovanje (AI)](${base}/nacrtuj): AI načrtovalec, ki iz destinacij, datumov in interesov sestavi popoln itinerer z razdaljami, cenami in alternativami.`,
       `- [Destinacije](${base}/destinacije): vseh ${DESTINATIONS.length} slovenskih destinacij z regijo, tipom, cenovnim razredom in najboljšo sezono.`,
-      `- [Zemljevid](${base}/zemljevid): interaktivni zemljevid Slovenije z vsemi destinacijami.`,
+      `- [Zemljevid](${base}/zemljevid): interaktivni zemljevid Slovenije — vseh ${DESTINATIONS.length} destinacij plus točke zanimivosti iz OpenStreetMap (znamenitosti, muzeji, narava, razgledi, sakralni objekti, hrana in pijača, nastanitve, trgovine).`,
+      // 1.48.1: EN zemljevid je od 1.48 na EN whitelisti — GEO ozaveščenost
+      // (del istega kandidata "llms.txt ozaveščanje EN zemljevida" iz workloga)
+      `- [Map — English](${base}/en/zemljevid): interactive map of Slovenia — all ${DESTINATIONS.length} destinations plus points of interest from OpenStreetMap (attractions, museums, nature, viewpoints, religious sites, food & drink, stays, shops).`,
       `- [Doživetja](${base}/dozivetja): izkušnje in aktivnosti z neposrednimi rezervacijami.`,
       `- [Tržnica](${base}/trznica): lokalni izdelki in darila slovenskih ponudnikov.`,
       `- [Vodiči](${base}/vodici): vodniki po tipih potovanj.`,
@@ -195,7 +198,13 @@ export async function GET(req: Request) {
   const body = [
     "# Discover Slovenia AI",
     "",
-    "> AI načrtovalec potovanj po Sloveniji: 22 destinacij, itinererji po trajanju, vodniki po tipu potovanja, kaj početi, najboljši čas obiska, krožna potovanja po Sloveniji, zimska potovanja, jadranska cross-border potovanja in neposredne rezervacije (hoteli, izleti, transferji, eSIM, transport, vstopnice). Jedro lijaka, krožni in jadranski vodniki so na voljo tudi v angleščini (/en).",
+    "> AI načrtovalec potovanj po Sloveniji: " +
+        `${DESTINATIONS.length} destinacij, interaktivni zemljevid s točkami zanimivosti (OpenStreetMap), itinererji po trajanju, ` +
+        "vodniki po tipu potovanja, kaj početi, najboljši čas obiska, krožna " +
+        "potovanja po Sloveniji, zimska potovanja, jadranska cross-border " +
+        "potovanja in neposredne rezervacije (hoteli, izleti, transferji, eSIM, " +
+        "transport, vstopnice). Jedro lijaka, zemljevid, krožni in jadranski " +
+        "vodniki so na voljo tudi v angleščini (/en).",
     "",
     `Celotna vsebina v enem datotečnem formatu: [llms-full.txt](${base}/llms-full.txt)`,
     "",

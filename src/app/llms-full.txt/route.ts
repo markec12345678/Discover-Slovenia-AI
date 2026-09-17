@@ -45,7 +45,8 @@ export async function GET(req: Request) {
       "## Navodila za agenta",
       "",
       "- Vsi URL-ji so absolutni in javno dostopni (HTML, brez prijave).",
-      "- Jezik vsebine: slovenščina (uporabniki: slovensko govoreči).",
+      "- Jezik vsebine: slovenščina (uporabniki: slovensko govoreči); angleške " +
+      "različice (/en): jedro strani, zemljevid in cestni vodniki.",
       "- Cene so v EUR; \`€\` = cenovni razred (€ nizki, €€ srednji, €€€ visoki).",
       "- Za rezervacije uporabljaj strani platforme (hoteli, izleti, transferji, eSIM, transport, vstopnice).",
       "",
@@ -53,7 +54,9 @@ export async function GET(req: Request) {
       "",
       `- Načrtuj potovanje (AI načrtovalec): ${base}/nacrtuj`,
       `- Vse destinacije: ${base}/destinacije`,
-      `- Zemljevid: ${base}/zemljevid`,
+      // 1.48.1: POI (OpenStreetMap) v opisu + EN različica zemljevida (1.48)
+      `- Zemljevid (destinacije + točke zanimivosti iz OpenStreetMap): ${base}/zemljevid`,
+      `- Map in English (destinations + OpenStreetMap POIs): ${base}/en/zemljevid`,
       `- Doživetja in rezervacije: ${base}/dozivetja`,
       `- O strani / metodologija: ${base}/o-strani`,
       "",

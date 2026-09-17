@@ -7,6 +7,19 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.48.1] — 2026-09-17
+
+### Spremenjeno (1.48.1 — llms.txt/llms-full.txt GEO: ozaveščenost dvojezičnega zemljevida)
+
+- **Problem (kandidat iz workloga 1.47/1.48)**: vrstica Zemljevid v llms.txt je bila opisno zastarela ("interaktivni zemljevid Slovenije z vsemi destinacijami" — nič o POI plasteh iz 1.47) in `/en/zemljevid` (1.48) ni bil omenjen nikjer — kljub temu da llms.txt že ima tri EN sekcije vodnikov. GEO datoteka je bila zadnja površina, ki novih zmožnosti zemljevida ni odražala.
+- **llms.txt (Ključne strani)**: SL vrstica obogatena — iskren opis 8 POI kategorij (znamenitosti, muzeji, narava, razgledi, sakralni objekti, hrana in pijača, nastanitve, trgovine) z virom OpenStreetMap + števec destinacij interpoliran iz `DESTINATIONS.length`; nova EN vrstica `- [Map — English](${base}/en/zemljevid)` tik za SL vrstico (dvojezični par) z EN imeni kategorij. Zgornji povzetek omenja "interaktivni zemljevid s točkami zanimivosti (OpenStreetMap)" in EN trditev je razširjena: "Jedro lijaka, zemljevid, krožni in jadranski vodniki so na voljo tudi v angleščini (/en)."
+- **llms-full.txt**: navodila agentu pošteno posodobljena — "Jezik vsebine: slovenščina (uporabniki: slovensko govoreči); angleške različice (/en): jedro strani, zemljevid in cestni vodniki." (prej samo slovenščina, kar od EN vodnikov ni bilo več res); obe vrstici v Ključne strani obogateni z OSM opisom + dodana EN vrstica zemljevida.
+- **Samo-vzdržnost**: hardcode "22 destinacij" v povzetku llms.txt zamenjal interpoliran `DESTINATIONS.length` — isti vzorec samo-vzdržnih števcev kot sitemap števec v 1.48 (EN_STATIC_ROUTES.size).
+- **Verifikacija**: curl diff obeh route na dev (HTTP 200; llms.txt 55 336 → 55 792 B, llms-full.txt 160 094 → 160 306 B — spremenjene vrstice so natanko pričakovane, nič drugega); tsc 0 (src), eslint 0, bun test 145/145.
+- **Opomba (peskovnik)**: dev strežnik se je med sejami tiho ugašal — vzrok: proces z živim staršem v orodni verigi se pobriše ob koncu klica orodja (nohup in goli `setsid … &` ne pomagata, saj ne reparentata); rešitev: `setsid --fork bun run dev > dev.log 2>&1 < /dev/null` (dvojni fork → sirota pri PID 1 — isti vzorec preživetja kot agent-browser, PPID 1 dokazan).
+
+---
+
 ## [1.48.0] — 2026-09-17
 
 ### Dodano (1.48.0 — EN PREVOD /zemljevid: zemljevid na EN whitelisti, popolna dvojezičnost površine)
