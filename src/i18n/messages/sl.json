@@ -352,7 +352,15 @@
     "provenanceT1Legend": "preverjeno (naši podatki)",
     "provenanceOsmTitle": "OpenStreetMap — skupnostni vir, ni uradno preverjeno",
     "provenanceOsmLegend": "OpenStreetMap (skupnostni vir)",
-    "osmNote": "Odpiralni časi so skupnostni podatek — pred obiskom preverite."
+    "osmNote": "Odpiralni časi so skupnostni podatek — pred obiskom preverite.",
+    "addPlace": "Dodaj v načrt",
+    "addPlaceAria": "Dodaj {name} v načrt",
+    "addPlaceDone": "Dodano v načrt",
+    "addPlaceAddedTitle": "Dodano v načrt",
+    "addPlaceAddedDesc": "{name} · Dan {day} — poglejte ga na strani Načrtuj",
+    "addPlaceDuplicateTitle": "Že v načrtu",
+    "addPlaceNoPlanTitle": "Ni še načrta",
+    "addPlaceNoPlanDesc": "{name} smo shranili — ustvarite načrt na strani Načrtuj in dodali ga bomo samodejno."
   },
   "planner": {
     "title": "AI načrtovalec potovanj",
@@ -650,7 +658,14 @@
     "bookingCtaDayAria": "Pojdi na rezervacije za {day}. dan ({count} ponudb)",
     "bookingCtaStop": "Vstopnice",
     "bookingCtaStopAria": "Rezerviraj izkušnje ali vstopnice za {name}",
-    "bookingCtaStopTitle": "Rezerviraj izkušnje, vstopnice ali nastanitev za ta postanek"
+    "bookingCtaStopTitle": "Rezerviraj izkušnje, vstopnice ali nastanitev za ta postanek",
+    "chatPlaceAddedTitle": "Dodano v načrt",
+    "chatPlaceAddedDesc": "{name} · Dan {day}",
+    "chatPlaceDuplicateTitle": "Kraj je že v načrtu",
+    "chatStashTitle": "Dodano iz AI klepeta",
+    "chatStashDesc": "{names}",
+    "chatStopBadge": "Iz klepeta",
+    "chatStopBadgeTitle": "Postanek je dodan iz AI klepeta — poreklo je zapisano v opombi"
   },
   "common": {
     "loading": "Nalagam...",

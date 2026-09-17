@@ -100,6 +100,11 @@ export interface LocationVisit {
   // interesov, tip skupine, razdalja do sosednjega postanka, vremenska
   // ustreznost, sezona). Brez marketinških fraz. Glej src/lib/stop-insights.ts
   reason?: string;
+  // 1.42 (GEO → NAČRT): koordinate OSM kraja, dodanega iz AI klepeta —
+  // kadar destination_id NI v T1 datasetu (osm-node-…), zemljevid poti in
+  // povezovalniki uporabijo te koordinate namesto dataseta
+  lat?: number;
+  lng?: number;
 }
 
 export interface DayPlan {

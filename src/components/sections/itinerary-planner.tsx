@@ -86,6 +86,16 @@ import type {
   Season,
 } from "@/lib/types";
 import { useAppStore } from "@/lib/store";
+// 1.42 (GEO → NAČRT): dodajanje kraja iz AI klepeta — CustomEvent listener
+// + consume odloženih krajev (sessionStorage) + skupna logika vstavljanja
+import {
+  CHAT_ADD_PLACE_EVENT,
+  addChatPlaceToItinerary,
+  readStashedChatPlaces,
+  isValidChatPlace,
+  LAST_ITINERARY_KEY,
+} from "@/lib/chat-add-place";
+import type { ChatPlace } from "@/lib/geo-intent";
 import { useToast } from "@/hooks/use-toast";
 import { trackFunnel } from "@/lib/funnel";
 import { optimizeDayOrder } from "@/lib/route-order";
@@ -219,7 +229,8 @@ function spreadDaySlots(locations: LocationVisit[]): LocationVisit[] {
 }
 
 // Persistenca zadnjega itinererja (localStorage) + deljeni načrti (URL ?odpri=)
-const LAST_ITINERARY_KEY = "discoverslovenia_last_itinerary";
+// KLJUČ je uvožen iz src/lib/chat-add-place.ts (enkraten vir — isti ključ
+// bere/piseta klepet in planner).
 const MAX_PERSIST_CHARS = 250 * 1024; // 250 KB
 
 interface PersistedItinerary {
@@ -692,6 +703,109 @@ export function ItineraryPlanner() {
     window.addEventListener("heroQuery", handleHeroQuery as EventListener);
     return () => window.removeEventListener("heroQuery", handleHeroQuery as EventListener);
   }, []);
+
+  // === 1.42 (GEO → NAČRT): klepet → planner. AI klepet (plavajoči widget,
+  // montiran tudi tukaj) pošlje CustomEvent s krajem; planner ga PREVZAME
+  // (preventDefault) SAMO kadar ima že itinerer — sicer klepet gre po svoji
+  // poti (stash + "Ni še načrta"). Listener se veže na sveže dependencyje,
+  // ker potrebuje trenutni itinerary/formData/shareUrl. ===
+  useEffect(() => {
+    const handleChatAddPlace = (e: Event) => {
+      const place = (e as CustomEvent<ChatPlace>).detail;
+      if (!isValidChatPlace(place)) return;
+      if (!itinerary) return; // nimamo načrta — ne prevzamemo (klepet stasha)
+      e.preventDefault(); // "jaz prevzamem" — dispatchEvent vrne false
+
+      const result = addChatPlaceToItinerary(itinerary, place, {
+        locale,
+        groupSize: formData?.groupSize,
+      });
+      if (!result.ok) {
+        toast({
+          title: t("chatPlaceDuplicateTitle"),
+          description: place.name,
+        });
+        return;
+      }
+
+      setItinerary(result.itinerary);
+      persistItineraryLocally(result.itinerary, formData);
+      markResultEngaged();
+      // Strukturna sprememba — zastarel deljeni link se umakne (vzorec F16)
+      if (shareUrl) {
+        setShareUrl(null);
+        setCopied(false);
+      }
+      trackPlannerEvent("chat_place_added", {
+        provenance: place.provenance,
+        category: place.category,
+        day: result.day,
+        locale,
+      });
+      toast({
+        title: t("chatPlaceAddedTitle"),
+        description: t("chatPlaceAddedDesc", {
+          name: place.name,
+          day: result.day,
+        }),
+      });
+    };
+
+    window.addEventListener(CHAT_ADD_PLACE_EVENT, handleChatAddPlace);
+    return () =>
+      window.removeEventListener(CHAT_ADD_PLACE_EVENT, handleChatAddPlace);
+  }, [itinerary, formData, shareUrl, locale]);
+
+  // === 1.42 (GEO → NAČRT): consume odloženih krajev. Uporabnik je na kateri
+  // koli strani kliknil "+", načrta še ni bilo → kraj je čakal v
+  // sessionStorage (vzorec heroQuery). Takoj ko itinerer obstaja (obnova iz
+  // localStorage ALI prva generacija), kraje dodamo in javimo z enim toastom.
+  // Branje POČISTI ključ → efek se sam-ohrani ob vsaki spremembi itinererja. ===
+  useEffect(() => {
+    if (!itinerary) return;
+    const stashed = readStashedChatPlaces();
+    if (stashed.length === 0) return;
+
+    let current = itinerary;
+    const addedNames: string[] = [];
+    let addedCount = 0;
+    for (const place of stashed) {
+      const result = addChatPlaceToItinerary(current, place, {
+        locale,
+        groupSize: formData?.groupSize,
+      });
+      if (result.ok) {
+        current = result.itinerary;
+        addedNames.push(place.name);
+        addedCount++;
+        trackPlannerEvent("chat_place_added", {
+          provenance: place.provenance,
+          category: place.category,
+          day: result.day,
+          stashed: 1,
+          locale,
+        });
+      }
+    }
+    if (addedCount === 0) return;
+
+    setItinerary(current);
+    persistItineraryLocally(current, formData);
+    markResultEngaged();
+    if (shareUrl) {
+      setShareUrl(null);
+      setCopied(false);
+    }
+    toast({
+      title: t("chatStashTitle"),
+      description: t("chatStashDesc", {
+        names: addedNames.join(", "),
+        count: addedCount,
+      }),
+    });
+    // Samo-ohranjen efekt: readStashedChatPlaces POČISTI ključ, zato
+    // ponovni zagoni (setItinerary → nov itinerer) niso nevarni
+  }, [itinerary]);
 
   // Pridobi booking opcije (listings, experiences, products) za vse
   // destinacije v itinererju — potegne lokalne ponudnike iz baze.
@@ -3443,7 +3557,11 @@ export function ItineraryPlanner() {
                                           {loc.destination_name}
                                         </p>
                                       </div>
-                                      <div className="flex items-center gap-2">
+                                      {/* flex-wrap: na mobilnem se značke
+                                          (trajanje + cena + iz klepeta +
+                                          vstopnice + fokus) prestavijo v
+                                          novo vrstico namesto preliva */}
+                                      <div className="flex flex-wrap items-center gap-2">
                                         <Badge variant="outline" className="gap-1">
                                           <Clock className="size-3" aria-hidden />
                                           {loc.duration}h
@@ -3451,6 +3569,20 @@ export function ItineraryPlanner() {
                                         <Badge className="bg-accent text-accent-foreground">
                                           €{loc.estimated_cost}
                                         </Badge>
+                                        {/* 1.42 (GEO → NAČRT): postanek, dodan
+                                            iz AI klepeta (T1 destinacija ali
+                                            OSM gostilna) — kontekst, od kod
+                                            je nepričakovani večerni postanek */}
+                                        {loc.category === "chat" && (
+                                          <Badge
+                                            variant="outline"
+                                            className="gap-1 border-primary/40 bg-primary/5 text-primary"
+                                            title={t("chatStopBadgeTitle")}
+                                          >
+                                            <MessageCircle className="size-3" aria-hidden />
+                                            {t("chatStopBadge")}
+                                          </Badge>
+                                        )}
                                         {/* OPCIJA-3 (transakcijska globina):
                                             KONKRETNO DEJANJE na postanku —
                                             kadar ima destinacija tega postanka

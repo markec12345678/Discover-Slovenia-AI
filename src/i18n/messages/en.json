@@ -352,7 +352,15 @@
     "provenanceT1Legend": "verified (our data)",
     "provenanceOsmTitle": "OpenStreetMap — community data, not officially verified",
     "provenanceOsmLegend": "OpenStreetMap (community)",
-    "osmNote": "Opening hours are community data — verify before visiting."
+    "osmNote": "Opening hours are community data — verify before visiting.",
+    "addPlace": "Add to plan",
+    "addPlaceAria": "Add {name} to your plan",
+    "addPlaceDone": "Added to plan",
+    "addPlaceAddedTitle": "Added to your plan",
+    "addPlaceAddedDesc": "{name} · Day {day} — see it on the Plan page",
+    "addPlaceDuplicateTitle": "Already in your plan",
+    "addPlaceNoPlanTitle": "No plan yet",
+    "addPlaceNoPlanDesc": "We saved {name} — create a plan on the Plan page and we'll add it automatically."
   },
   "planner": {
     "title": "AI trip planner",
@@ -650,7 +658,14 @@
     "bookingCtaDayAria": "Go to booking options for day {day} ({count} offers)",
     "bookingCtaStop": "Tickets",
     "bookingCtaStopAria": "Book experiences or tickets for {name}",
-    "bookingCtaStopTitle": "Book experiences, tickets or accommodation for this stop"
+    "bookingCtaStopTitle": "Book experiences, tickets or accommodation for this stop",
+    "chatPlaceAddedTitle": "Added to your plan",
+    "chatPlaceAddedDesc": "{name} · Day {day}",
+    "chatPlaceDuplicateTitle": "This place is already in your plan",
+    "chatStashTitle": "Added from AI chat",
+    "chatStashDesc": "{names}",
+    "chatStopBadge": "From chat",
+    "chatStopBadgeTitle": "Stop added from the AI chat — its source is noted in the description"
   },
   "common": {
     "loading": "Loading...",

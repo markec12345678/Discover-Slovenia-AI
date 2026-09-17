@@ -7,6 +7,36 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.42.0] — 2026-09-18
+
+### Dodano (1.42.0 — GEO → NAČRT: "Dodaj v načrt" iz AI klepeta, Mindtripov "+" v naši izvedbi)
+
+- **Gumb "+" na vsakem kraju iz AI odgovora** (vrstica seznama v klepetu in v fullscreen zemljevidu): kraj iz pogovora — T1 destinacija ALI OSM gostilna — se z enim klikom doda v načrt potovanja. Zanka "pogovor → dejanje" je zaprta: 1.41 je odgovor izrisala prostorsko (mini zemljevid), 1.42 ga pretvori v postanek načrta. Po dodajanju gumb postane ✓ (onemogočen); dedupe po ID-ju ali normaliziranem imenu pošteno odgovori "Že v načrtu".
+- **Pametna izbira dneva** (`src/lib/chat-add-place.ts`): kraj pade v DAN, katerega postanki so mu najbližji (haversine po koordinatah vseh postankov) — večerja v Ljubljani pristane v dnevu z Ljubljano, ne v zadnjem dnevu po mantro. Časovni okvir se pripne ZA ZADNJI postanek dneva (konec + 30 min, 12:00–23:30, nikoli prekrivanje slotov, ob odrezanem koncu se start zamakne); obstoječi časi uporabnika se NE prerazporejajo.
+- **T1 kraj → polna integracija**: dataset ID, ocena, tagline v opombi, cena (costPerPerson × skupina), povezava na stran destinacije, booking čipi, pin na zemljevidu poti — enak status kot vsak drug postanek.
+- **OSM kraj → prvi "tuje" telo v načrtu**: sintetični `destination_id` (`osm-node-…`) + LASTNE koordinate (`LocationVisit.lat/lng`, novo) + opomba s POREKLOM ("Dodano iz AI klepeta · vir: OpenStreetMap (skupnostni podatki) · ocena stroška: ~20 €/osebo (tipično povprečje)" — ocena je razkrita hevristika po kategoriji) + značka "Iz klepeta" na kartici (kontekst, od kod nepričakovani večerni postanek).
+- **Tri poti dodajanja, ena logika** (ista čista funkcija `addChatPlaceToItinerary`): (A) `/načrtuj` — planner je montiran in prevzame CustomEvent (`chat:add-place`, preventDefault → `dispatchEvent` vrne false); (B) katera koli druga stran — klepet doda neposredno v Zustand store + localStorage (ista oblika zapisa kot planner); (C) ni še načrta — kraj se ODLOŽI v sessionStorage (vzorec heroQuery) s toastom "Ni še načrta — {name} smo shranili", ob ustvaritvi/obnovi načrta pa se vsi odloženi kraji samodejno dodajo z toastom "Dodano iz AI klepeta".
+- **Zemljevid poti prizna OSM postanke**: `store.ts` izpeljava poti pade na `loc.lat/lng`, kadar ID ni v T1 datasetu → gostilna iz klepeta dobi oštevilčen pin na svoji barvi dneva; `PlannerStopLeg` povezovalnik (~km · ~min) prav tako pade na lastne koordinate (hevristika, odkrito "~").
+- **Poštenost F16 vzorca**: strežniško izračunane metrike (quality/geoValidation/legs/routeGeometry) so vezane na staro sestavo → ob dodajanju se umaknejo in preračunajo na mestu uporabe; zastarel deljeni link se umakne.
+- **Telemetrija**: `chat_place_added` (provenance t1/osm, category, day, stashed=1 kadar je čakal na prvi načrt, locale) — whitelist na strežniku + PlannerEventName tip; dokumentirano v ANALYTICS-EVENTS.md.
+- i18n: 8 ključev chatbot ns + 7 ključev planner ns × SL/EN (gumb, aria, toasti za vse tri poti + duplikat, značka).
+
+### Verifikacija (1.42.0)
+
+- tsc čisto (samo 2 predzgodovinski napaki v skills/, izven projekta); eslint čisto.
+- Enotski test logike slotov: 7/7 (vključno popravek prekrivajočih se slotov: dva zaporedna dodatka zdaj 19:30-21:00 → 21:30-23:30, brez prekrivanja; skrajni robni primer se pošteno skrajša).
+- E2E brskalnik — Flow A (planner montiran): T1 "Dodaj Piran v načrt" → postanek 19:30-21:30 z značko "Iz klepeta" + Vstopnice čipom + pinom na zemljevidu poti (3→4 pini) + persistenca localStorage (kategorija "chat", formData ohranjen).
+- E2E — Flow B (druga stran, načrt obstaja): domov + "+" → toast "Dodano v načrt — Ptuj · Dan 1 — poglejte ga na strani Načrtuj" + localStorage + store posodobljen brez plannerja.
+- E2E — Flow C (brez načrta): domov, prazen localStorage + "+" → sessionStorage stash + toast "Ni še načrta — Piran smo shranili — ustvarite načrt …"; navigacija na /načrtuj + generacija → toast "Dodano iz AI klepeta — Gostilna Pirat, Piran" + oba postanka v dnevu.
+- E2E — duplikat: ponoven "+" po reloadu → brez podvojenega postanka (dedupe), toast "Kraj je že v načrtu".
+- OSM postanek v načrtu: kartica z opombo "regional · Mo-Su 11:00-23:00 · Dodano iz AI klepeta · vir: OpenStreetMap (skupnostni podatki) · ocena stroška: ~20 €/osebo"; 4 pini na zemljevidu poti; 3 povezovalniki z ocenami km/min.
+- Telemetrija v DB: 7× `planner_chat_place_added` z vsemi dimenzijami (provenance/category/day/stashed/locale/path) — Flow A, B in C vsi zapisani.
+- Mobilno 390 px: 0 px preliva (popravek: flex-wrap na vrstici značk kartice postanka — "Iz klepeta" značka je prej povzročila 70 px preliva), panel 358 px, gumbi "+" dosegljivi.
+- VLM presoja: NI USPELA — z-ai vision API je obdobje testiranja vračal 429 (rate limit, isti val kot prazni AI odgovori v klepetu); funkcionalnost je potrjena z E2E + strukturnimi pregledi, vizualna presoja bo naslednjič.
+- OPOMBA: AI valovi (z-ai-sdk "Prazen odgovor AI") so med testiranjem povzročili fallback odgovore brez krajev — geo odgovori so pri testih doseženi prek zgodnejšega vala + network intercept z enako obliko odgovora; produkcija ni prizadeta (1.41 dokumentirana enaka omejitev sandboxa).
+
+---
+
 ## [1.41.0] — 2026-09-18
 
 ### Dodano (1.41.0 — GEO-ODGOVORI: AI odgovor, ki se izriše na zemljevidu)

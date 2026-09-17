@@ -174,6 +174,16 @@ spletnega UI-ja danes ni mogoče videti.
 > pokrivata /zemljevid in zemljevid načrtovalnika; klepet je za hitre
 > WHERE poizvedbe.
 
+> **NADGRADNJA GEO → NAČRT (1.42.0, 18. 9. 2026):** zanka "pogovor →
+> dejanje" je ZAPRTA — vsak kraj iz AI odgovora (T1 destinacija ali OSM
+> gostilna) ima gumb "+", ki ga doda kot postanek v načrt: pametna izbira
+> dneva (najbližji obstoječim postankom), časovni okvir za zadnjim
+> postankom (brez prekrivanj), OSM kraj prinese lastne koordinate → pin na
+> zemljevidu poti + povezovalnik ~km/~min, opomba s POREKLOM in razkrita
+> ocena stroška. Brez načrta se kraj odloži (sessionStorage) in samodejno
+> doda ob prvi generaciji — iskanje pred načrtovanjem ne gre izgubljeno.
+> Mindtripov "+" je izenačen; naša razlika: poreklo na vsakem postanku.
+
 ## 7. Arhiv materiala
 
 - Screenshoti: `/tmp/ux-audit/` (mt-shot-1..6 = Mindtrip iOS uradno,

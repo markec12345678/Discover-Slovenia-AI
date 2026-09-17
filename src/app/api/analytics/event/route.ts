@@ -35,6 +35,9 @@ const VALID_EVENTS = new Set([
   // GEO-ODGOVORI (Task 29): AI klepet je izrisal kraje na zemljevidu
   // (props: osm_count, t1_count) — doseg "generative spatial" odgovorov
   "chat_geo_answered",
+  // 1.42 (GEO → NAČRT): kraj iz AI klepeta dodan v načrt potovanja
+  // (props: provenance t1|osm, category, day, stashed?)
+  "chat_place_added",
   "weather_alternative_used",
   // F5.4 "Začni s povezavo" ( url ingest)
   "ingest_url_attempted",

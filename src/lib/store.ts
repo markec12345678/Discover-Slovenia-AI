@@ -88,6 +88,24 @@ export const useAppStore = create<AppState>((set) => ({
           allCoords.push(coord);
           dayCoords.push(coord);
           seen.add(loc.destination_id);
+        } else if (
+          // 1.42 (GEO → NAČRT): OSM kraj iz AI klepeta — lastne koordinate
+          // (destination_id "osm-node-…" ni v T1 datasetu, pin pa živi na
+          // zemljevidu poti kot vsak drug postanek dneva)
+          typeof loc.lat === "number" &&
+          typeof loc.lng === "number" &&
+          Number.isFinite(loc.lat) &&
+          Number.isFinite(loc.lng)
+        ) {
+          const coord: RouteCoord = {
+            lat: loc.lat,
+            lng: loc.lng,
+            name: loc.destination_name,
+            day: dayPlan.day,
+          };
+          allCoords.push(coord);
+          dayCoords.push(coord);
+          seen.add(loc.destination_id);
         }
       });
 

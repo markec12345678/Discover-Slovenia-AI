@@ -19,6 +19,8 @@ import {
   BedDouble,
   Info,
   Clock,
+  Plus,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +32,17 @@ import { Link } from "@/i18n/navigation";
 import type { StoCitation } from "@/lib/rag/types";
 import type { ChatPlace, PlaceCategory } from "@/lib/geo-intent";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
+// 1.42 (GEO → NAČRT): dodajanje kraja iz klepeta v načrt — skupna logika
+// (CustomEvent ko je planner montiran / neposredno sicer / stash brez načrta)
+import {
+  CHAT_ADD_PLACE_EVENT,
+  addChatPlaceToItinerary,
+  stashChatPlace,
+  readLastItinerary,
+  persistLastItinerary,
+  isValidChatPlace,
+} from "@/lib/chat-add-place";
+import { useAppStore } from "@/lib/store";
 
 // GEO-ODGOVORI: Leaflet vgreteni ŠTEKNO — komponenta se naloži šele, ko
 // prvi AI odgovor prinese kraje (ostale strani ne plačajo ~140 KB bundla).
@@ -69,20 +82,8 @@ interface ChatResponse {
   timestamp: string;
 }
 
-/** Validacija enega ChatPlace iz localStorage (pokvarjen JSON ne sesuje app). */
-function isValidChatPlace(p: unknown): p is ChatPlace {
-  if (typeof p !== "object" || p === null) return false;
-  const c = p as ChatPlace;
-  return (
-    typeof c.name === "string" &&
-    c.name.length > 0 &&
-    typeof c.lat === "number" &&
-    Number.isFinite(c.lat) &&
-    typeof c.lng === "number" &&
-    Number.isFinite(c.lng) &&
-    (c.provenance === "t1" || c.provenance === "osm")
-  );
-}
+// isValidChatPlace živi v src/lib/chat-add-place.ts (enkraten vir —
+// uporabljata ga klepet za persistenco zgodovine in planner za dogodek)
 
 // ============================================================================
 // PERSISTENCA POGOVORA — localStorage "dai:chat-history"
@@ -202,7 +203,19 @@ function makeWelcome(t: (k: string) => string): ChatMessage {
 // ============================================================================
 
 /** Ena vrstica seznama krajev — oštevilčena kot pin na zemljevidu. */
-function PlaceRow({ place, index }: { place: ChatPlace; index: number }) {
+function PlaceRow({
+  place,
+  index,
+  added = false,
+  onAdd,
+}: {
+  place: ChatPlace;
+  index: number;
+  /** 1.42: kraj je že dodan v načrt (✓ namesto +). */
+  added?: boolean;
+  /** 1.42: dejanje "Dodaj v načrt" (Mindtripov "+", po našem modelu). */
+  onAdd?: (place: ChatPlace) => void;
+}) {
   const t = useTranslations("chatbot");
   const Icon = CATEGORY_ICONS[place.category] ?? Info;
   const color = PLACE_PIN_COLORS[place.provenance] ?? PLACE_PIN_COLORS.osm;
@@ -272,6 +285,34 @@ function PlaceRow({ place, index }: { place: ChatPlace; index: number }) {
           </p>
         )}
       </div>
+      {/* 1.42 (GEO → NAČRT): "+" — kraj iz AI odgovora neposredno v načrt.
+          Po dodajanju ✓ (disabled) — dejanje je enkratno, dedupe varuje
+          addChatPlaceToItinerary ("Že v načrtu" toast). */}
+      {onAdd && (
+        <button
+          type="button"
+          onClick={() => onAdd(place)}
+          disabled={added}
+          className={cn(
+            "flex size-7 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            added
+              ? "bg-primary/15 text-primary"
+              : "border border-border/60 text-muted-foreground hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+          )}
+          aria-label={
+            added
+              ? t("addPlaceDone")
+              : t("addPlaceAria", { name: place.name })
+          }
+          title={added ? t("addPlaceDone") : t("addPlace")}
+        >
+          {added ? (
+            <Check className="size-3.5" aria-hidden />
+          ) : (
+            <Plus className="size-3.5" aria-hidden />
+          )}
+        </button>
+      )}
     </li>
   );
 }
@@ -279,10 +320,19 @@ function PlaceRow({ place, index }: { place: ChatPlace; index: number }) {
 interface GeoPlacesSectionProps {
   places: ChatPlace[];
   onExpand: (places: ChatPlace[]) => void;
+  /** 1.42: dejanje "Dodaj v načrt" za vsako vrstico. */
+  onAddPlace?: (place: ChatPlace) => void;
+  /** 1.42: ID-ji krajev, že dodanih v načrt (✓ stanje). */
+  addedPlaceIds?: ReadonlySet<string>;
 }
 
 /** Oddelek "Na zemljevidu" pod AI odgovorom: glava + mini mapa + seznam + legenda. */
-function GeoPlacesSection({ places, onExpand }: GeoPlacesSectionProps) {
+function GeoPlacesSection({
+  places,
+  onExpand,
+  onAddPlace,
+  addedPlaceIds,
+}: GeoPlacesSectionProps) {
   const t = useTranslations("chatbot");
   const hasOsm = places.some((p) => p.provenance === "osm");
 
@@ -320,7 +370,13 @@ function GeoPlacesSection({ places, onExpand }: GeoPlacesSectionProps) {
       {/* Seznam krajev — drsljiv pri dolgih seznamih */}
       <ul className="mt-2 max-h-44 space-y-1.5 overflow-y-auto pr-1">
         {places.map((p, i) => (
-          <PlaceRow key={p.id} place={p} index={i} />
+          <PlaceRow
+            key={p.id}
+            place={p}
+            index={i}
+            added={addedPlaceIds?.has(p.id)}
+            onAdd={onAddPlace}
+          />
         ))}
       </ul>
 
@@ -359,6 +415,12 @@ export function Chatbot() {
   const [hasNewMessage, setHasNewMessage] = useState(false);
   // GEO-ODGOVORI: kraji trenutno povečanega zemljevida (fullscreen overlay)
   const [mapOverlay, setMapOverlay] = useState<ChatPlace[] | null>(null);
+  // 1.42 (GEO → NAČRT): kraji, dodani v načrt IZ TEGO pogovora (✓ na
+  // gumbu; po osvežitvi stanje izgubi — dedupe v addChatPlaceToItinerary
+  // pošteno odgovori "Že v načrtu", zato ni vztrajen)
+  const [addedPlaceIds, setAddedPlaceIds] = useState<ReadonlySet<string>>(
+    () => new Set<string>()
+  );
   // UX-CMP #6 (Mindtrip primerjava, 17. 9. 2026 / pilot audit 🟡): chat FAB
   // (fiksni, spodaj desno, z-50) je pri 320 px prekrival ZADNJI gumb dneva
   // v dnevní navigaciji, dokler ta še ni prilepljena na vrh. Standardni
@@ -452,6 +514,79 @@ export function Chatbot() {
     clearChatHistory();
     toast({ title: t("cleared") });
   };
+
+  /**
+   * 1.42 (GEO → NAČRT): Mindtripov "+" na kartici kraja — dejanje iz AI
+   *  odgovora neposredno v načrt potovanja. DETERMINISTIČNO (0 AI žetonov),
+   *  kraj obdrži poreklo (T1/OSM) in pade v dan, ki je kraju najbližje.
+   *
+   *  Poti (ista logika, različna okolja — glej src/lib/chat-add-place.ts):
+   *   A) /načrtuj — planner je montiran, prevzame CustomEvent (preventDefault)
+   *   B) druga stran — dodamo neposredno v Zustand store + localStorage
+   *   C) ni še načrta — kraj odložimo (sessionStorage, heroQuery vzorec)
+   *      in ga samodejno dodamo, ko uporabnik ustvari/obnovi načrt
+   */
+  function handleAddPlace(place: ChatPlace) {
+    const evt = new CustomEvent<ChatPlace>(CHAT_ADD_PLACE_EVENT, {
+      detail: place,
+      cancelable: true,
+    });
+    // dispatchEvent vrne false, če je listener poklical preventDefault →
+    // planner (na /načrtuj) je dogodek prevzel in pokaže svoj toast
+    const handledByPlanner = !window.dispatchEvent(evt);
+    if (handledByPlanner) {
+      setAddedPlaceIds((prev) => new Set(prev).add(place.id));
+      return;
+    }
+
+    // B) planner ni na strani — načrt iz store-a oz. localStorage
+    const persisted = readLastItinerary();
+    const current =
+      useAppStore.getState().itinerary ?? persisted?.itinerary ?? null;
+    if (!current) {
+      // C) ni še načrta — odloži + pošteno obvestilo (ne izgubimo kraja)
+      stashChatPlace(place);
+      setAddedPlaceIds((prev) => new Set(prev).add(place.id));
+      trackPlannerEvent("chat_place_added", {
+        provenance: place.provenance,
+        category: place.category,
+        stashed: 1,
+      });
+      toast({
+        title: t("addPlaceNoPlanTitle"),
+        description: t("addPlaceNoPlanDesc", { name: place.name }),
+      });
+      return;
+    }
+
+    const result = addChatPlaceToItinerary(current, place, {
+      locale,
+      groupSize: persisted?.formData?.groupSize,
+    });
+    if (!result.ok) {
+      toast({
+        title: t("addPlaceDuplicateTitle"),
+        description: place.name,
+      });
+      return;
+    }
+
+    useAppStore.getState().setItinerary(result.itinerary);
+    persistLastItinerary(result.itinerary, persisted?.formData);
+    setAddedPlaceIds((prev) => new Set(prev).add(place.id));
+    trackPlannerEvent("chat_place_added", {
+      provenance: place.provenance,
+      category: place.category,
+      day: result.day,
+    });
+    toast({
+      title: t("addPlaceAddedTitle"),
+      description: t("addPlaceAddedDesc", {
+        name: place.name,
+        day: result.day,
+      }),
+    });
+  }
 
   async function sendMessage(text: string) {
     const trimmed = text.trim();
@@ -635,6 +770,8 @@ export function Chatbot() {
                         // (zemljevid_page | chat_geo) — brez novega eventa
                         trackPlannerEvent("map_opened", { via: "chat_geo" });
                       }}
+                      onAddPlace={handleAddPlace}
+                      addedPlaceIds={addedPlaceIds}
                     />
                   ) : null}
 
@@ -781,7 +918,13 @@ export function Chatbot() {
           <div className="max-h-52 overflow-y-auto border-t border-border p-3">
             <ul className="space-y-1.5">
               {mapOverlay.map((p, i) => (
-                <PlaceRow key={p.id} place={p} index={i} />
+                <PlaceRow
+                  key={p.id}
+                  place={p}
+                  index={i}
+                  added={addedPlaceIds.has(p.id)}
+                  onAdd={handleAddPlace}
+                />
               ))}
             </ul>
           </div>
