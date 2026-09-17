@@ -290,6 +290,24 @@ bunx prisma migrate dev --name <opis>   # zahteva postgres URL (shadow)
 …in pred prometom na produkciji:
 
 ```bash
+# Skripta (1.36.1) vse naredi v enem zagonu:
+#   validira URL → status PRED (read-only) → zamenja sqlite shemo na
+#   committed postgres → migrate deploy → status PO (dokaz sinhronosti) →
+#   povrne sqlite (tudi ob napaki/prekinitvi — trap EXIT).
+#   --status = SAMO read-only vpogled (produkcija ni spremenjena).
+# URL dobiš v Vercel/Render dashboardu (Settings → Environment
+# Variables → DATABASE_URL):
+./scripts/ops/migrate-deploy.sh "<neon-url>"
+
+# Read-only preverba, kaj čaka (brez vsake spremembe):
+./scripts/ops/migrate-deploy.sh --status "<neon-url>"
+```
+
+Ročno (ekvivalentno — PAST: ne deluje iz klona z lokalno SQLITE shemo,
+ker Prisma zahteva `file:` protokol → P1012; najprej povrni committed
+postgres `schema.prisma` ali uporabi skripto zgoraj):
+
+```bash
 DATABASE_URL="<neon-url>" bun run db:deploy   # prisma migrate deploy
 ```
 
@@ -347,7 +365,7 @@ bash scripts/ops/functional-smoke.sh https://i-feel-slovenia.vercel.app --get-on
 | AI (sekundarni) | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_BASE_URL` | DA (F10) | Google AI Studio free tier; OpenAI-compat končna točka; vision pot (F8 slikovni vnos) teče IZKLJUČNO po njej (OpenRouter :free vision NEDELJUJE — živo testirano). Vercel/Render (US/EU) regije so podprte — sandbox razvoj je geo-blokiran (circuit breaker prevzame) |
 | AI (terciarni) | `PUTER_AUTH_TOKEN`, `PUTER_BASE_URL`, `PUTER_MODEL` | ne | nadomestni provider v verigi |
 | Deploy orodja | `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, `VERCEL_PROJECT_NAME` | ne (1.15.0) | Uporabnikov token (https://vercel.com/account/tokens) + Project ID — omogoča `scripts/ops/vercel-env-set.sh` in `deploy-check.sh` BREZ argumentov. Živo uporabljeno 1.15.0: GEMINI_API_KEY + OPENROUTER_API_KEY potisnjena na `i-feel-slovenia` (production/preview/development); opuščena `VITE_GEMINI_API_KEY` izbrisana. VARNOST: hranimo SAMO v lokalnem .env (gitignored) — NIKOLI v repozitoriju |
-| Plačila | `STRIPE_*` | ne | demo mode brez ključev |
+| Plačila | `STRIPE_*` | ne | brez ključev demo SAMO z `DSA_DEMO_PAYMENTS=1` (1.36.0 fail-closed: prej je pomotoma unset `STRIPE_SECRET_KEY` v produkciji tiho vklopil demo vejo — brezplačne nadgradnje/»paid« naročila; zdaj brez ključa in brez zastavice plačilni tokovi vračajo 503/501) |
 | Push | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | ne | |
 
 ---

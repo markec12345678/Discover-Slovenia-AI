@@ -7,6 +7,42 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.36.1] — 2026-09-17
+
+### Dodano (1.36.1 — DEPLOY-MIGR: orodje za produkcijsko uveljavitev 1.36.0 migracije)
+
+> Brez sprememb aplikacijske kode — samo operativna skripta in dokumentacija,
+> ki zapreta vrzel med commitom 1.36.0 in njegovim uveljavljanjem na Neon
+> produkciji (obe platformi sta bili medtem že samodejno deployani na 1.36.0;
+> API raven ščitov iz 1.36.0 je živa, FK RESTRICT migracija pa čaka na
+> uveljavitev s to skripto).
+
+- **`scripts/ops/migrate-deploy.sh`** — varni `prisma migrate deploy` na Neon
+  TUDI iz klona z lokalno SQLITE shemo (P1012 past): validacija URL → status
+  PRED (read-only) → flip na committed postgres shemo (trap EXIT povrne tudi
+  ob napaki/prekinitvi) → `migrate deploy` → status PO (dokaz sinhronosti);
+  `--status` = SAMO read-only vpogled (produkcija ni spremenjena);
+  `--schema` zastavica na vseh klicih (deluje iz kateregakoli CWD).
+  Trenutno čakajoča migracija: `20260916100000_restrict_money_fks`
+  (FK Cascade → Restrict na `Sponsorship.owner` + `CommissionInvoice.owner`).
+- **Dokumentacija `DSA_DEMO_PAYMENTS`** (1.36.0 fail-closed vedenje je bilo
+  za operaterja nedokumentirano): `.env.example` (komentirana zastavica z
+  razlago), DEPLOYMENT.md §5 matrika (vrstica Plačila), README env blok —
+  brez `STRIPE_SECRET_KEY` in brez zastavice so vsi plačilni tokovi na
+  produkciji ZAPRTI (503/501 z jasnim sporočilom); demo vejo vkloneš
+  izrecno z `DSA_DEMO_PAYMENTS=1` na Vercel/Render (lokalni dev je demo sam
+  od sebe).
+- **DEPLOYMENT.md §4**: `migrate-deploy.sh` kot PRIMARNA pot za uveljavitev
+  migracij na produkcijo; ročni `DATABASE_URL=… bun run db:deploy` ostaja
+  kot dokumentirana PAST alternativa (ne deluje iz sqlite klona).
+- **README**: zastarela verzija-vrstica „Koda: main = 1.31.0 …" usklajena z
+  1.36.x (REVIZIJA-10 + DEPLOY-MIGR); namestitveni razdelek (migracijska
+  skripta + trenutno čakajoča migracija) in Stripe env blok dopolnjena.
+- **scripts/ops/README.md**: tabeli dodan `migrate-deploy.sh` + retroaktivno
+  `migrate-baseline.sh` (manjkal v tabeli od 1.27.1).
+
+---
+
 ## [1.36.0] — 2026-09-16
 
 ### Popravljeno (1.36.0 — revizija #10: adversarial audit celotnega poslovnega toka)

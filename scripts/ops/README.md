@@ -20,6 +20,8 @@ pridobiti uporabnik, skripta ne more namesto tebe prijaviti v tvoj račun).
 | `render-env-set.sh` | Nastavi env na Render Z MERGE ZAŠČITO (ne zbriše ostalih!) | po deploy-setupu | `RENDER_API_KEY`, service id |
 | `dev-health.sh` | Zdravje lokalnega strežnika + razlaga AI verige | med razvojem | tečeč `bun run dev` |
 | `deploy-check.sh` | Produkcijski smoke test (rute + AI health) | po vsakem deployu | URL produkcije |
+| `migrate-baseline.sh` | Enkratna uvedba migration baseline-a na Neon (1.27.1; danes samodejno prek startup koraka `migrate:baseline`) | samo za pred-1.30 baze / audite | Neon URL iz dashboarda |
+| `migrate-deploy.sh` | Varni `prisma migrate deploy` na Neon IZ KLONA Z LOKALNO SQLITE SHEMEMO (1.36.1: validacija URL → status → flip na committed postgres → deploy → status → povrnitev; `--status` = read-only) | po vsaki shemski spremembi pred prometom | Neon URL iz dashboarda |
 | `setup-all.sh` | Orkester: vse zgoraj + navodila za ročna koraka | nov stroj / nov ključ | — |
 
 ## Hitri začetek
