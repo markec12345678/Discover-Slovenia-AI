@@ -1,10 +1,32 @@
 // Strežniški Stripe helper — skupna logika za demo detekcijo in Stripe instanco.
 // "use server" ni potreben — to je pure modul.
 
-// Preveri ali je Stripe v demo načinu (placeholder ključi ali manjkajoči)
-export function isStripeDemo(): boolean {
+/**
+ * Ali je konfiguriran PRAVI Stripe ključ (prisoten in ni placeholder)?
+ */
+export function isStripeConfigured(): boolean {
   const key = process.env.STRIPE_SECRET_KEY;
-  return !key || key.includes("demo_placeholder");
+  return !!key && !key.includes("demo_placeholder");
+}
+
+/**
+ * Ali so demo plačilni tokovi dovoljeni?
+ *
+ * FAIL-CLOSED (revizija 1.36.0, 19-e P2 19e-1 + MF-4): prej je bilo demo
+ * zaznavanje čisto odvisno od ODSOTNOSTI ključa — v produkciji z pomotoma
+ * unset STRIPE_SECRET_KEY bi vsi plačilni tokovi tiho prešli v demo vejo
+ * (brezplačne nadgradnje plana, naročila/rezervacije kot "paid",
+ * aktivacije sponzorstev, mark_paid self-marking). Zdaj demo v produkciji
+ * zahteva IZRECNI pristanek: DSA_DEMO_PAYMENTS=1. Brez ključa in brez
+ * zastavice v produkciji isStripeDemo() vrne false — klici potem odpovejo
+ * z jasno 503/501 napako namesto tihega fake plačila.
+ */
+export function isStripeDemo(): boolean {
+  if (isStripeConfigured()) return false;
+  if (process.env.NODE_ENV === "production") {
+    return process.env.DSA_DEMO_PAYMENTS === "1";
+  }
+  return true;
 }
 
 // Mesečni prihodek po paketu (EUR)

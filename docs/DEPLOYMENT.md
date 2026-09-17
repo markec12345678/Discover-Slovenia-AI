@@ -314,7 +314,7 @@ a do 1.31.0 jih nihče ni samodejno gledal.
 
 - **`.github/workflows/prod-monitor.yml`** vsake 3 ure (UTC) požene
   `scripts/ops/functional-smoke.sh --get-only` proti **obema** produkcijama
-  (Vercel primarna + Render sekundarna z velikodušnim `--ready-timeout 240`
+  (Render primarna + Vercel sekundarna — usklajeno z README 2026-09-12; velikodušen `--ready-timeout 240` za hladne zagone
   za hladne zagoni free tierja). Preverja: `/api/health` (degraded = rdeče),
   SSR strani SL+EN, sitemap s pragom ≥ 650 URL (regresija SEO površine),
   3 vzorčne globoke strani, `/api/listings` (živa DB), 404.

@@ -20,6 +20,7 @@ import {
   extractConsultPartners,
   generateConsultationAnswer,
   trackConsultationPartnerExposure,
+  type ConsultRecommendedPartner,
 } from "@/lib/consultation-engine";
 
 // ============================================================================
@@ -179,10 +180,34 @@ export async function POST(request: Request) {
 
   try {
     // === DNEVNA MEJA NA E-POŠTO (3/dan — poštena varovalka AI stroškov) ===
-    const usedToday = await db.consultation.count({
+    // RC-1 (revizija 1.36.0, P2): prej je bila meja count → AI klic (SEKUNDE)
+    // → create — dva paralelna POST-a sta oba prebrala isto število in oba
+    // pognala drag AI klic (meja 3/dan razbijljiva na 6+/dan). Zdaj: vrstica
+    // se ustvari NAJPREJ (status "pending" — ATOMARNO si prideli kvoto), šele
+    // nato preštejemo vključno z njo; če je čez mejo, svojo vrstico pobrišemo
+    // in vrnemo 429. AI klic teče šele za potrjeno kvoto; ob napaki AI se
+    // pending vrstica pobriše (kvota se sprosti).
+    const pendingConsultation = await db.consultation.create({
+      data: {
+        accessToken: randomId(24),
+        email,
+        question,
+        destinationName: destinationName || null,
+        travelDates: travelDates || null,
+        partyDescription: partyDescription || null,
+        budget: budget || null,
+        interests: JSON.stringify(interests),
+        status: "pending",
+      },
+    });
+
+    const usedTodayIncludingThis = await db.consultation.count({
       where: { email, createdAt: { gte: startOfTodayLjubljana() } },
     });
-    if (usedToday >= DAILY_CONSULTATIONS) {
+    if (usedTodayIncludingThis > DAILY_CONSULTATIONS) {
+      await db.consultation
+        .delete({ where: { id: pendingConsultation.id } })
+        .catch(() => undefined);
       return NextResponse.json(
         {
           error: `Za danes si že izkoristil ${DAILY_CONSULTATIONS} osebne konzultacije na ta e-poštni naslov — nadaljuj jutri. Prejšnji odgovori so shranjeni na tvoji zasebni povezavi.`,
@@ -202,29 +227,35 @@ export async function POST(request: Request) {
       interests,
     };
 
-    const context = await buildConsultationContext(input.destinationName);
-    const { answer, answerSource } = await generateConsultationAnswer(
-      input,
-      context
-    );
+    let answer = "";
+    let answerSource = "";
+    let partners: ConsultRecommendedPartner[] = [];
+    try {
+      const context = await buildConsultationContext(input.destinationName);
+      const generated = await generateConsultationAnswer(input, context);
+      answer = generated.answer;
+      answerSource = generated.answerSource;
 
-    // Ujeti partnerji (samo iz konteksta, podanega AI — ista disciplinirana
-    // ekstrakcija kot ask-local)
-    const partners = extractConsultPartners(answer, context.items);
+      // Ujeti partnerji (samo iz konteksta, podanega AI — ista disciplinirana
+      // ekstrakcija kot ask-local)
+      partners = extractConsultPartners(answer, context.items);
+      await trackConsultationPartnerExposure(
+        context.items.filter((i) => partners.some((p) => p.name === i.name))
+      ).catch(() => undefined);
+    } catch (aiError) {
+      // AI napaka → sprosti zahtevano kvoto (pending vrstica ven)
+      await db.consultation
+        .delete({ where: { id: pendingConsultation.id } })
+        .catch(() => undefined);
+      throw aiError;
+    }
 
     // === SHRANI (zaseben dostop prek /konzultacija/{token}) ===
     // Konzultacija ostaja ZASEBNA (osebni podatki kupca niso javni — za
     // razliko od ask-local, ki je javni social proof).
-    const consultation = await db.consultation.create({
+    await db.consultation.update({
+      where: { id: pendingConsultation.id },
       data: {
-        accessToken: randomId(24),
-        email,
-        question,
-        destinationName: input.destinationName,
-        travelDates: input.travelDates,
-        partyDescription: input.partyDescription,
-        budget: input.budget,
-        interests: JSON.stringify(interests),
         answer,
         answerSource,
         recommendedPartners: JSON.stringify(partners),
@@ -233,14 +264,8 @@ export async function POST(request: Request) {
       },
     });
 
-    // === B2B TRACKING (aiRecommendations + ListingEvent) ===
-    // Stranski učinek — nikoli ne sesuje odgovora.
-    await trackConsultationPartnerExposure(
-      context.items.filter((i) => partners.some((p) => p.name === i.name))
-    );
-
     console.log(
-      `[consultations] dostavljena (${answerSource}) — ${consultation.id}`
+      `[consultations] dostavljena (${answerSource}) — ${pendingConsultation.id}`
     );
 
     // === E-POŠTA: dostava z zasebno povezavo (fire-and-forget — enak
@@ -249,7 +274,7 @@ export async function POST(request: Request) {
     // je edina zanesljiva pot nazaj do odgovora (tudi brezplačnega).
     try {
       const mail = consultationDeliveryEmail({
-        token: consultation.accessToken,
+        token: pendingConsultation.accessToken,
         question,
         destinationName: input.destinationName,
       });
@@ -261,7 +286,7 @@ export async function POST(request: Request) {
       })
         .then((sent) => {
           console.log(
-            `[consultations] dostavna povezava ${consultation.id} → ${email}: ${
+            `[consultations] dostavna povezava ${pendingConsultation.id} → ${email}: ${
               sent ? "poslana" : "NEUSPEŠNA"
             } (email demo: ${isEmailDemo()}).`
           );
@@ -273,23 +298,24 @@ export async function POST(request: Request) {
       console.error("[consultations] priprava dostavnega emaila:", mailError);
     }
 
+    const deliveredAt = new Date();
     return NextResponse.json(
       {
         success: true,
         consultation: {
-          id: consultation.id,
-          accessToken: consultation.accessToken,
-          email: consultation.email,
-          question: consultation.question,
-          destinationName: consultation.destinationName,
-          travelDates: consultation.travelDates,
-          partyDescription: consultation.partyDescription,
-          budget: consultation.budget,
+          id: pendingConsultation.id,
+          accessToken: pendingConsultation.accessToken,
+          email,
+          question,
+          destinationName: input.destinationName,
+          travelDates: input.travelDates,
+          partyDescription: input.partyDescription,
+          budget: input.budget,
           interests,
-          answer: consultation.answer,
-          answerSource: consultation.answerSource,
+          answer,
+          answerSource,
           recommendedPartners: partners,
-          deliveredAt: consultation.deliveredAt,
+          deliveredAt,
         },
       },
       { status: 201 }

@@ -153,62 +153,96 @@ export async function POST(request: Request) {
             );
             break;
           }
-          // Idempotenca — webhook lahko pride dvakrat (retry)
-          if (invoice.status !== "paid") {
-            const paymentIntentId =
-              typeof cs.payment_intent === "string"
-                ? cs.payment_intent
-                : cs.payment_intent?.id ?? null;
+          // Idempotenca — webhook lahko pride dvakrat (retry).
+          // RC-4 (revizija 1.36.0, P2): prej read-then-write (invoice.status
+          // prebrano zgoraj → update brez pogoja) — sočasna dostava istega
+          // dogodka je lahko izpisala DVE potrdili + DVA audit zapisa. Zdaj:
+          // POGOJNI update (WHERE status: "issued") — točno en potrdilni učinek.
+          const paymentIntentId =
+            typeof cs.payment_intent === "string"
+              ? cs.payment_intent
+              : cs.payment_intent?.id ?? null;
 
-            await db.commissionInvoice.update({
-              where: { id: invoice.id },
-              data: {
-                status: "paid",
-                paidAt: new Date(),
-                stripePaymentId: paymentIntentId ?? undefined,
-              },
-            });
+          const markPaid = await db.commissionInvoice.updateMany({
+            where: { id: invoice.id, status: "issued" },
+            data: {
+              status: "paid",
+              paidAt: new Date(),
+              stripePaymentId: paymentIntentId ?? undefined,
+            },
+          });
 
-            await logAudit({
-              actorId: invoice.ownerId,
-              actorRole: "owner",
-              action: AUDIT_ACTIONS.COMMISSION_INVOICE_PAID,
-              resourceType: "commission_invoice",
-              resourceId: invoice.id,
-              resourceName: invoice.invoiceNumber,
-              metadata: {
-                amount: invoice.amount,
-                via: "stripe",
-                paymentIntentId: paymentIntentId ?? null,
-              },
-            });
-
-            // Potrdilo o plačilu (receipt) lastniku
-            try {
-              const ownerRec = await db.owner.findUnique({
-                where: { id: invoice.ownerId },
-                select: { name: true, email: true },
-              });
-              if (ownerRec) {
-                const { subject, html, text } = commissionInvoicePaidEmail({
-                  ownerName: ownerRec.name,
-                  invoiceNumber: invoice.invoiceNumber,
-                  amount: invoice.amount,
-                  paidAt: new Date(),
-                });
-                await sendEmail({
-                  to: ownerRec.email,
-                  subject,
-                  html,
-                  text,
-                });
-              }
-            } catch (emailErr) {
+          if (markPaid.count === 0) {
+            // Že plačan (retry ali DRUGA seja). Pri DRUGEM payment intent-u
+            // gre za dvakratno bremenitev istega računa — zapišemo v audit
+            // za uskladitev (refund), ne pa tiho preskočimo (prej: denaro
+            // vzeto dvakrat, zabeleženo enkrat).
+            if (
+              invoice.status === "paid" &&
+              paymentIntentId &&
+              invoice.stripePaymentId &&
+              invoice.stripePaymentId !== paymentIntentId
+            ) {
               console.error(
-                "[stripe/webhook] commission receipt email napaka:",
-                emailErr
+                `[stripe/webhook] commission_invoice ${invoice.invoiceNumber}: DETEKCIJA DVAKRATNEGA PLAČILA (prvi PI ${invoice.stripePaymentId}, nov PI ${paymentIntentId}) — potrebna ročna uskladitev/refund.`
               );
+              await logAudit({
+                actorId: invoice.ownerId,
+                actorRole: "owner",
+                action: "commission_invoice_double_payment",
+                resourceType: "commission_invoice",
+                resourceId: invoice.id,
+                resourceName: invoice.invoiceNumber,
+                metadata: {
+                  amount: invoice.amount,
+                  firstPaymentIntentId: invoice.stripePaymentId,
+                  secondPaymentIntentId: paymentIntentId,
+                  note: "Dvakratna bremenitev istega računa (dve seji) — uskladiti refund.",
+                },
+              }).catch(() => undefined);
             }
+            break;
+          }
+
+          await logAudit({
+            actorId: invoice.ownerId,
+            actorRole: "owner",
+            action: AUDIT_ACTIONS.COMMISSION_INVOICE_PAID,
+            resourceType: "commission_invoice",
+            resourceId: invoice.id,
+            resourceName: invoice.invoiceNumber,
+            metadata: {
+              amount: invoice.amount,
+              via: "stripe",
+              paymentIntentId: paymentIntentId ?? null,
+            },
+          });
+
+          // Potrdilo o plačilu (receipt) lastniku
+          try {
+            const ownerRec = await db.owner.findUnique({
+              where: { id: invoice.ownerId },
+              select: { name: true, email: true },
+            });
+            if (ownerRec) {
+              const { subject, html, text } = commissionInvoicePaidEmail({
+                ownerName: ownerRec.name,
+                invoiceNumber: invoice.invoiceNumber,
+                amount: invoice.amount,
+                paidAt: new Date(),
+              });
+              await sendEmail({
+                to: ownerRec.email,
+                subject,
+                html,
+                text,
+              });
+            }
+          } catch (emailErr) {
+            console.error(
+              "[stripe/webhook] commission receipt email napaka:",
+              emailErr
+            );
           }
           console.log(
             `[stripe/webhook] commission_invoice ${invoice.invoiceNumber} plačan`

@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import Stripe from "stripe";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { isStripeDemo, PLAN_MONTHLY_PRICE } from "@/lib/stripe-server";
+import { isStripeConfigured, isStripeDemo, PLAN_MONTHLY_PRICE } from "@/lib/stripe-server";
 import { sendEmail } from "@/lib/email";
 import { paymentConfirmationEmail } from "@/lib/email-templates";
 
@@ -13,7 +13,14 @@ import { paymentConfirmationEmail } from "@/lib/email-templates";
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    // F1 (revizija 1.36.0, 19-b P2): Owner in User tabeli imata neodvisni
+    // unique omejitvi na email — B2C seja s kollideranim emailom bi brez
+    // tega guard-a dobila dostop do tujega ponudniškega računa (vsaka
+    // ostala owner ruta ta guard ima; tu je manjkal).
+    if (
+      !session?.user?.email ||
+      session.user.accountType === "user"
+    ) {
       return NextResponse.json(
         { error: "Niste prijavljeni" },
         { status: 401 }
@@ -124,7 +131,18 @@ export async function POST(request: Request) {
     }
 
     // === PRODUCTION MODE (z realnimi Stripe ključi) ===
+    // 19e-1 (1.36.0): production brez ključa in brez DSA_DEMO_PAYMENTS=1 →
+    // jasna 503 (fail-closed), ne tiha demo nadgradnja.
     const stripeKey = process.env.STRIPE_SECRET_KEY;
+    if (!isStripeConfigured()) {
+      return NextResponse.json(
+        {
+          error:
+            "Plačila niso konfigurirana (STRIPE_SECRET_KEY manjka). Nastavite Stripe ključe ali DSA_DEMO_PAYMENTS=1 za demo način.",
+        },
+        { status: 503 }
+      );
+    }
     if (!stripeKey) {
       return NextResponse.json(
         { error: "Stripe ni konfiguriran" },

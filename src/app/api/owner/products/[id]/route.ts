@@ -21,8 +21,20 @@ const updateSchema = z.object({
   longDescription: z.string().nullable().optional(),
   destinationId: z.string().nullable().optional(),
   destinationName: z.string().nullable().optional(),
-  price: z.number().min(0, "Cena mora biti pozitivna").optional(),
-  compareAtPrice: z.number().min(0).nullable().optional(),
+  price: z
+    .number()
+    // 19-f-7 (revizija 1.36.0, P3): prej min(0) — 0 je šel skozi kljub
+    // sporočilu "pozitivna" (€0 izkušnja → €0 provizijski račun), brez
+    // zgornje meje pa je 1e308 naredil Infinity skupno vrednost rezervacije.
+    .min(0.01, "Cena mora biti pozitivna (vsaj 0,01 €)")
+    .max(100_000, "Cena je pretirana (max 100.000 €)")
+    .optional(),
+  compareAtPrice: z
+    .number()
+    .min(0.01)
+    .max(100_000)
+    .nullable()
+    .optional(),
   stock: z.number().int().min(0).optional(),
   weight: z.number().min(0).nullable().optional(),
   images: z.array(z.string()).optional(),
@@ -154,6 +166,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
     // izdelki/izkušnje nimajo ločene "oddaj v pregled" rute (kot jo imajo
     // lokalci), zato popravek + shrani = ponovna oddaja. Pending zapisi
     // ostanejo kot so (že v čakalni vrsti).
+    // 19-f-4 (revizija 1.36.0, P2): FW1 re-moderacijska razširitev iz
+    // izkušenj (tiha €40→€400 sprememba cene) NI bila prenesena na izdelke —
+    // cena/zaloga/prodajalec na OBJAVLJENEM izdelku so šli takoj v živo
+    // (checkout bere DB ceno). Od tu naprej del "vsebinske" spremembe.
     const contentChanged =
       (data.name !== undefined && data.name.trim() !== product.name) ||
       (data.description !== undefined &&
@@ -162,7 +178,17 @@ export async function PUT(request: Request, { params }: RouteParams) {
         (data.longDescription?.trim() || null) !==
           (product.longDescription || null)) ||
       (data.images !== undefined &&
-        JSON.stringify(data.images) !== product.images);
+        JSON.stringify(data.images) !== product.images) ||
+      // 19-f-4: denarni/pogodbeni pogoji
+      (data.price !== undefined && data.price !== product.price) ||
+      (data.compareAtPrice !== undefined &&
+        (data.compareAtPrice ?? null) !== (product.compareAtPrice ?? null)) ||
+      (data.stock !== undefined && data.stock !== product.stock) ||
+      // 19-f-4: kontakt prodajalca
+      (data.sellerName !== undefined &&
+        data.sellerName.trim() !== product.sellerName) ||
+      (data.sellerEmail !== undefined &&
+        (data.sellerEmail?.trim() || null) !== (product.sellerEmail || null));
     const needsReModeration =
       contentChanged &&
       (product.status === "published" || product.status === "rejected");

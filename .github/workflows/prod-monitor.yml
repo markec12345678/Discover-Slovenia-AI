@@ -7,9 +7,9 @@ name: Production Health Monitor
 # functional-smoke.sh --get-only (read-only, brez POST — ne porabi rate
 # limit kvote uporabnikov) proti obema deploymentoma:
 #
-#   · Vercel  — PRIMARNA produkcija (DEPLOYMENT.md:191)
-#   · Render  — SEKUNDARNA (free tier: hladni zagoni do ~60 s → velikodušen
-#               ready-timeout 240 s; vztrajna napaka po njem = pravi alarm)
+#   · Render  — PRIMARNA produkcija (README: od 2026-09-12, MONET valovi;
+#               Docker, ~4 min; 19e-6 usklajeno z README/DEPLOYMENT)
+#   · Vercel  — SEKUNDARNA (rate-limit okna — glej runbook)
 #
 # Kaj se preverja: /api/health (alarm če degraded/503 — spodletela startup
 # migracija), SSR strani SL+EN, sitemap z pragom ≥ 650 URL (SEO regresija),

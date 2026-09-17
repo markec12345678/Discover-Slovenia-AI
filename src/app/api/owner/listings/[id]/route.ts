@@ -290,6 +290,33 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   }
 
   try {
+    // 19-f-2 (revizija 1.36.0, P1): Listing DELETE kaskadno uničuje
+    // Sponsorship zapise (onDelete: Cascade) — vključno z denarno evidenco
+    // (amount, stripePaymentId) plačanih sponzorstev. Lastnik bi z brisanjem
+    // lokala tiho izbrisal sled plačanega sponzorstva. Varovalka (enak
+    // vzorec kot experience/booking guard): brisanje je mogoče samo, če
+    // lokal nima sponzorstev z denarnim sledom. Zastoji brez plačila
+    // ("created") in preklicani pred plačilom ("cancelled" brez PI)
+    // kaskadajo neškodljivo — ni denarne evidence za izgubiti.
+    const moneySponsorships = await db.sponsorship.count({
+      where: {
+        listingId: id,
+        OR: [
+          { status: { in: ["paid", "active", "expiring", "expired", "archived"] } },
+          { stripePaymentId: { not: null } },
+        ],
+      },
+    });
+    if (moneySponsorships > 0) {
+      return NextResponse.json(
+        {
+          error:
+            `Lokal ima ${moneySponsorships} sponzorstev z denarno evidenco — ` +
+            "brisanje ni mogoče (finančni zapisi morajo ostati). Kontaktirajte podporo.",
+        },
+        { status: 400 }
+      );
+    }
     await db.listing.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {

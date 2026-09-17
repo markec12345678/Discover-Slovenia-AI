@@ -118,10 +118,16 @@ export async function POST(request: Request) {
     )
   ).join("\n");
 
-  const pageContext = body.currentPage
+  // 19c-1 (revizija 1.36.0, P2): currentPage je client niz, ki gre v
+  // SYSTEM prompt — prej surov in neomejen (obšel je SYSTEM_DATA_GUARD,
+  // ki pokriva samo <podatek> vsebino; bil je tudi token-bomb vektor).
+  // Zdaj: typeof preverka + 200 znakov + ovito v <podatek>.
+  const currentPage =
+    typeof body.currentPage === "string" ? body.currentPage.slice(0, 200) : "";
+  const pageContext = currentPage
     ? lang === "en"
-      ? `\nYOU ARE CURRENTLY ON THE PAGE: ${body.currentPage} (adapt your answer to the page context)`
-      : `\nUPORABNIK JE TRENUTNO NA STRANI: ${body.currentPage} (prilagodi odgovor kontekstu strani)`
+      ? `\nYOU ARE CURRENTLY ON THE PAGE: ${wrapProviderData("stran", currentPage, 200)} (adapt your answer to the page context)`
+      : `\nUPORABNIK JE TRENUTNO NA STRANI: ${wrapProviderData("stran", currentPage, 200)} (prilagodi odgovor kontekstu strani)`
     : "";
 
   // FW4.3-2: ogledje sistemsko sporočilo glede na jezik — enaka struktura,
@@ -208,8 +214,11 @@ ${SYSTEM_DATA_GUARD}`;
       : []),
     // CAP-FIX (revizija 1.33.0, 16-b P2): sporočila so client-supplied —
     // 2000 znakov na sporočilo (zadostuje za povpraševanje; prej neomejeno).
+    // 19c-2 (revizija 1.36.0, P2): role je bil samo TS cast — klient je
+    // lahko poslal role:"system" in prepisal pravila ZA SVOJO SEJO. Zdaj:
+    // whitelist (neznani vlogi postanejo "user").
     ...recentMessages.map((m) => ({
-      role: m.role as "user" | "assistant",
+      role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
       content: String(m.content ?? "").slice(0, 2000),
     })),
   ];
