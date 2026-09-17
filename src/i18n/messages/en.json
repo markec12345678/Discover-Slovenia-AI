@@ -632,7 +632,14 @@
       "listings": "Venues",
       "products": "Products",
       "experiences": "Experiences"
-    }
+    },
+    "bookingCtaStrip": "Book accommodation, experiences and transport",
+    "bookingOffersCount": "{count, plural, one {# offer} other {# offers}}",
+    "bookingCtaDay": "Book",
+    "bookingCtaDayAria": "Go to booking options for day {day} ({count} offers)",
+    "bookingCtaStop": "Tickets",
+    "bookingCtaStopAria": "Book experiences or tickets for {name}",
+    "bookingCtaStopTitle": "Book experiences, tickets or accommodation for this stop"
   },
   "common": {
     "loading": "Loading...",

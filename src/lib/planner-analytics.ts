@@ -43,6 +43,7 @@ export type PlannerEventName =
   | "map_opened"
   | "provider_detail_opened"
   | "affiliate_clicked"
+  | "booking_cta_clicked"
   | "weather_alternative_used"
   // F5.4 "Začni s povezavo" ( url ingest — MindTrip "Start Anywhere")
   | "ingest_url_attempted"

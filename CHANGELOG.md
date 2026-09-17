@@ -7,6 +7,66 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.40.0] — 2026-09-18
+
+### Dodano (1.40.0 — OPCIJA-3: transakcijska globina — rezervacija kot prvorazredni državljan načrtovalnika)
+
+> Zadnja od treh opcij po UX primerjavi z Mindtripom (1 = okno
+> priložnosti ✅ 1.38, 2 = vizualna duša ✅ 1.39, 3 = transakcijska
+> globina ✅ ta izdaja). Vrzel: BookingPanel sicer ŽIVI na dnu vsake
+> dnevne kartice (zavihki Nastanitev/Aktivnosti/Hrana/Transport +
+> lokalni ponudniki + affiliate), a je bil edini dostop prek dolgega
+> scrolla čez vse postanke dneva — na mobilnem 500–750 px. Mindtrip ima
+> "Book" kot prvorazredno akcijo; mi imamo zdaj TRI dotikalne točke.
+
+- **Vrstica "Rezerviraj" v statusnem traku** (planner-status-strip.tsx):
+  full-width CTA pod ploščicami stanja (km/čas/strošek/izvedljivost) —
+  VIDNA TAKOJ po generiranju, pred scrollom skozi dneve; pokaže
+  skupno število ponudb (listings+izkušnje+izdelki prek vseh dni,
+  ICU plural "10 ponudb") in scrolla na booking panel prvega dne.
+  Prikaže se SAMO kadar obstajajo ponudbe — prazna tržnica ni CTA
+  (iskrenost).
+- **Gumb "Rezerviraj" v glavi vsake dnevne kartice**
+  (itinerary-planner.tsx): Ticket ikona + število ponudb tega dneva
+  (npr. "Rezerviraj 3") — en klik do booking panela dneva; kompakten
+  (125 px na mobilnem), shrink-0, ne moti hierarhije glave
+  (VLM: 9/10 "odlično izvedena prvorazredna akcija").
+- **Čip "Vstopnice" na karticah postankov** (itinerary-planner.tsx):
+  kadar ima destinacija postanka rezervabilne izkušnje ali ponudnike,
+  se ob značkah trajanja/cene pokaže kompakten čip → scroll na booking
+  panel dneva. KONKRETNO DEJANJE na nivoju postanka (Mindtripova
+  "Book" kartica, po našem modelu: lokalni ponudniki + affiliate,
+  iskreno).
+- **Telemetrija**: nov dogodek `booking_cta_clicked` (PlannerEventName
+  union + strežniški VALID_EVENTS whitelist v /api/analytics/event) s
+  props {placement: status_strip|day_header|stop_card, day?,
+  destination?, offers?} — meri, KDAJ v poti uporabniki želijo dejanje.
+  E2E verificirano (dogodek se zapiše v AnalyticsEvent z metadato).
+- **i18n**: 7 novih ključev planner ns × SL+EN (bookingCtaStrip,
+  bookingOffersCount z ICU plurali, bookingCtaDay/Aria, bookingCtaStop/
+  AriA/Title).
+- **Dev DB seed**: prazna razvojna baza (0 ponudnikov) je bila
+  nerazvidna za testiranje — zagnan scripts/seed-demo.ts na custom.db
+  (isti demo podatki kot Vercel produkcija: partnerji, listingi,
+  izkušnje, izdelki).
+
+### Verifikacija (1.40.0)
+
+- tsc čisto; eslint čisto.
+- E2E brskalnik: po generiranju načrta vse tri točke vidne (strip
+  "Rezerviraj nastanitev, izkušnje in transport — 10 ponudb", 3×
+  dnevni gumb "Rezerviraj N", 4× čip "Vstopnice"); klik stripa scrolla
+  booking-panel-1 v vidno polje (top 96 px); mobilno 390 px: 0 px
+  preliva, dnevni gumb 125 px, strip full-width po načrtu; EN lokal:
+  "Book accommodation… 10 offers" + 3× "Book" + 4× "Tickets".
+- Analytics: booking_cta_clicked (status_strip/day_header) → uspešno
+  zapisan v AnalyticsEvent (preverjeno z direktnim SQLite queryjem;
+  testni vrstici pobrisani).
+- VLM presoja (glm-5v-turbo): glava dnevnega gumba 9/10 — "nepogrešljiv,
+  strategsko umeščen, prvorazredna akcija".
+
+---
+
 ## [1.39.0] — 2026-09-18
 
 ### Dodano (1.39.0 — DATA-LAYERS-RAG: uradni viri STO (T2) + OPCIJA-2 vizualna duša)

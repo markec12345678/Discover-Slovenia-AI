@@ -29,6 +29,9 @@ const VALID_EVENTS = new Set([
   "map_opened",
   "provider_detail_opened",
   "affiliate_clicked",
+  // OPCIJA-3 (transakcijska globina): klik rezervacijskega CTA (status_strip /
+  // day_header / stop_card) — meri, kdaj v poti uporabniki želijo dejanje
+  "booking_cta_clicked",
   "weather_alternative_used",
   // F5.4 "Začni s povezavo" ( url ingest)
   "ingest_url_attempted",

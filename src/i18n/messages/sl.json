@@ -632,7 +632,14 @@
       "listings": "Lokalci",
       "products": "Izdelki",
       "experiences": "Izkušnje"
-    }
+    },
+    "bookingCtaStrip": "Rezerviraj nastanitev, izkušnje in transport",
+    "bookingOffersCount": "{count, plural, one {# ponudba} two {# ponudbi} few {# ponudbe} other {# ponudb}}",
+    "bookingCtaDay": "Rezerviraj",
+    "bookingCtaDayAria": "Pojdi na rezervacije za {day}. dan ({count} ponudb)",
+    "bookingCtaStop": "Vstopnice",
+    "bookingCtaStopAria": "Rezerviraj izkušnje ali vstopnice za {name}",
+    "bookingCtaStopTitle": "Rezerviraj izkušnje, vstopnice ali nastanitev za ta postanek"
   },
   "common": {
     "loading": "Nalagam...",

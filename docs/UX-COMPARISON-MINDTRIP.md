@@ -144,8 +144,18 @@ spletnega UI-ja danes ni mogoče videti.
 > vabljivo — zlata ura"), kartice 8/10 gostota. Hkrati je v isti izdaji
 > zrasla T2 podatkovna plast (uradni viri STO — glej
 > docs/DATA-LAYERS-RAG.md), ki "dušo" podpira z substanco: AI odgovori
-> citirajo uradne vire z značkami in geopovezavami. Opcija 3
-> (transakcijska globina) ostaja edina neizkoriščena.
+> citirajo uradne vire z značkami in geopovezavami.
+
+> **STANJE OPCIJE 3 (1.40.0, 18. 9. 2026):** transakcijska globina je
+> implementirana — rezervacija je zdaj prvorazredni državljan
+> načrtovalnika s TRI dotikalnimi točkami: (1) vrstica "Rezerviraj" v
+> statusnem traku (vidna takoj po generiranju, s številom ponudb),
+> (2) gumb "Rezerviraj N" v glavi vsake dnevne kartice, (3) čip
+> "Vstopnice" na karticah postankov z rezervabilnimi ponudbami. Vse
+> tri vodijo na obstoječi BookingPanel (lokalni ponudniki + affiliate).
+> Telemetrija booking_cta_clicked meri, kdaj v poti uporabniki želijo
+> dejanje. VLM: 9/10 "prvorazredna akcija". S tem so VSE tri opcije iz
+> te primerjave izkoriščene (1.38 okno, 1.39 duša, 1.40 transakcije).
 
 ## 7. Arhiv materiala
 

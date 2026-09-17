@@ -40,6 +40,7 @@ import {
   X,
   Volume2,
   FileText,
+  Ticket,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -3127,6 +3128,18 @@ export function ItineraryPlanner() {
                     itinerary={itinerary}
                     input={formData}
                     geoValidation={geoValidation}
+                    bookingOfferCount={
+                      bookingData
+                        ? Object.values(bookingData).reduce(
+                            (sum, o) =>
+                              sum +
+                              o.listings.length +
+                              o.experiences.length +
+                              o.products.length,
+                            0
+                          )
+                        : 0
+                    }
                   />
                 )}
 
@@ -3168,6 +3181,18 @@ export function ItineraryPlanner() {
                     const dayHasError = dayIssues?.some((i) => i.level === "error");
                     const dayHasWarn =
                       !dayHasError && (dayIssues?.length ?? 0) > 0;
+
+                    // OPCIJA-3: število rezervabilnih ponudb tega dneva
+                    // (listings + izkušnje + izdelki prek vseh postankov) —
+                    // poganja gumb "Rezerviraj" v glavi dneva.
+                    const dayOffers = day.locations.reduce(
+                      (sum, l) =>
+                        sum +
+                        (bookingData?.[l.destination_id]?.listings.length ?? 0) +
+                        (bookingData?.[l.destination_id]?.experiences.length ?? 0) +
+                        (bookingData?.[l.destination_id]?.products.length ?? 0),
+                      0
+                    );
 
                     return (
                     <Card
@@ -3235,6 +3260,39 @@ export function ItineraryPlanner() {
                                       : ""}
                               </Badge>
                             )}
+                          {/* OPCIJA-3 (transakcijska globina): rezervacija v
+                              GLAVI dneva — en klik od tukaj do booking
+                              panela tega dne (prej: samo dolg scroll čez vse
+                              postanke). Prikaže se SAMO kadar dan ima ponudbe. */}
+                          {dayOffers > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                trackPlannerEvent("booking_cta_clicked", {
+                                  placement: "day_header",
+                                  day: day.day,
+                                  offers: dayOffers,
+                                });
+                                document
+                                  .getElementById(`booking-panel-${day.day}`)
+                                  ?.scrollIntoView({
+                                    behavior: "smooth",
+                                    block: "start",
+                                  });
+                              }}
+                              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary transition-colors hover:border-primary/50 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              aria-label={t("bookingCtaDayAria", {
+                                day: day.day,
+                                count: dayOffers,
+                              })}
+                            >
+                              <Ticket className="size-3.5" aria-hidden />
+                              {t("bookingCtaDay")}
+                              <span className="rounded-full bg-primary/15 px-1.5 py-px text-[10px] font-bold tabular-nums">
+                                {dayOffers}
+                              </span>
+                            </button>
+                          )}
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-3">
@@ -3393,6 +3451,54 @@ export function ItineraryPlanner() {
                                         <Badge className="bg-accent text-accent-foreground">
                                           €{loc.estimated_cost}
                                         </Badge>
+                                        {/* OPCIJA-3 (transakcijska globina):
+                                            KONKRETNO DEJANJE na postanku —
+                                            kadar ima destinacija tega postanka
+                                            rezervabilne ponudnike/izkušnje,
+                                            čip pokaže eno-bližnico do booking
+                                            panela dneva (Mindtripova "Book"
+                                            kartica, po našem modelu: lokalni
+                                            ponudniki + affiliate, iskreno). */}
+                                        {(bookingData?.[loc.destination_id]
+                                          ?.experiences.length ?? 0) +
+                                          (bookingData?.[loc.destination_id]
+                                            ?.listings.length ?? 0) >
+                                          0 && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              trackPlannerEvent(
+                                                "booking_cta_clicked",
+                                                {
+                                                  placement: "stop_card",
+                                                  day: day.day,
+                                                  destination:
+                                                    loc.destination_name,
+                                                }
+                                              );
+                                              document
+                                                .getElementById(
+                                                  `booking-panel-${day.day}`
+                                                )
+                                                ?.scrollIntoView({
+                                                  behavior: "smooth",
+                                                  block: "start",
+                                                });
+                                            }}
+                                            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary transition-colors hover:border-primary/50 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                            aria-label={t(
+                                              "bookingCtaStopAria",
+                                              { name: loc.destination_name }
+                                            )}
+                                            title={t("bookingCtaStopTitle")}
+                                          >
+                                            <Ticket
+                                              className="size-3"
+                                              aria-hidden
+                                            />
+                                            {t("bookingCtaStop")}
+                                          </button>
+                                        )}
                                         {/* F5.1: dvosmerna sinhronizacija — gumb na
                                             kartici postanka premakne zemljevid poti
                                             na ta postanek ( MindTrip workspace feel) */}
