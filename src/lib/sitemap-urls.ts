@@ -1,6 +1,6 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { ADRIA_GUIDES } from "@/lib/adria-guides";
-import { isEnRoute } from "@/i18n/routing";
+import { isEnRoute, EN_STATIC_ROUTES } from "@/i18n/routing";
 
 // Skupni seznam vseh URL-jev, ki jih generira platforma.
 // Uporablja ga /sitemap.xml route handler in /api/admin/indexing za poročanje o indeksaciji.
@@ -208,10 +208,11 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
 
 /** Število EN URL-jev (FW4.3-2 + ADRIA-EN + GEO-A) — za poročanje brez gradnje seznama. */
 export function getEnSitemapUrlCount(): number {
-  // 11 stalnih (domov, nacrtuj, destinacije, vodici, primerjava + 6 info/E-E-A-T) + 22
-  // hub (GEO-A) + 22 + 110 + 88 + 88 + 22 vodnikov (ADRIA-EN + LOOP-EN + WINTER-EN)
+  // stalne poti IZ whitelistE (EN_STATIC_ROUTES.size — samo-vzdrževno ob
+  // dodajanju poti; 1.48: /zemljevid je 12. član) + 22 hub (GEO-A) + 22
+  // + 110 + 88 + 88 + 22 vodnikov (ADRIA-EN + LOOP-EN + WINTER-EN)
   return (
-    11 +
+    EN_STATIC_ROUTES.size +
     DESTINATIONS.length +
     DESTINATIONS.length +
     DESTINATIONS.length * 5 +
@@ -224,7 +225,7 @@ export function getEnSitemapUrlCount(): number {
 /** Skupno število vseh URL-jev (za hitro poročanje brez gradnje seznama) */
 export function getTotalSitemapUrlCount(): number {
   // 20 stalnih + 22 hub (GEO-A) + 22 + 110 + 88 + 88 + 22 vodnikov (ADRIA+LOOP+WINTER) = 372 SL
-  // + 363 EN (FW4.3-2 + GEO-A hub + vsi vodniki + primerjava) = 735 skupaj
+  // + EN (FW4.3-2 + GEO-A hub + vsi vodniki + primerjava + zemljevid 1.48) = 736 skupaj
   return (
     20 +
     DESTINATIONS.length +

@@ -8,6 +8,7 @@ import {
   useCallback,
   type ComponentType,
 } from "react";
+import { useLocale } from "next-intl";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
@@ -29,6 +30,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import { cn } from "@/lib/utils";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
 import type { Destination, DestinationType } from "@/lib/types";
@@ -70,6 +72,56 @@ interface Poi {
   address?: string;
 }
 
+// === Dvojezični nizi zemljevida (1.48) — T (prevodi), ker je L že Leaflet ===
+// (locale je stabilen za življenjsko dobo komponente: sprememba jezika =
+// navigacija = remount; vseeno je v deps Effectov, da so popup-i iz LEAFLET
+// template stringov vedno vezani na trenutni jezik)
+const T = {
+  catAttraction: { sl: "Atrakcije", en: "Attractions" },
+  catMuseum: { sl: "Muzeji", en: "Museums" },
+  catNatural: { sl: "Narava", en: "Nature" },
+  catViewpoint: { sl: "Razgledišča", en: "Viewpoints" },
+  catReligious: { sl: "Religiozno", en: "Religious" },
+  catRestaurant: { sl: "Hrana & pijača", en: "Food & drink" },
+  catHotel: { sl: "Nastanitve", en: "Stays" },
+  catShop: { sl: "Trgovine", en: "Shops" },
+  allDestinations: { sl: "Vse destinacije", en: "All destinations" },
+  reset: { sl: "Ponastavi", en: "Reset" },
+  hideRoute: { sl: "Skrij pot", en: "Hide route" },
+  showRoute: { sl: "Pokaži pot", en: "Show route" },
+  hidePois: { sl: "Skrij POI", en: "Hide POI" },
+  showPois: { sl: "Pokaži POI", en: "Show POI" },
+  chipsAria: {
+    sl: "Filtriranje POI kategorij",
+    en: "Filter POI categories",
+  },
+  emptyText: {
+    sl: "Vse kategorije so izklopljene — POI-ji niso prikazani.",
+    en: "All categories are off — no POIs are shown.",
+  },
+  emptyReset: { sl: "Prikaži privzeto", en: "Show defaults" },
+  loadingPois: { sl: "Nalagam POI-je…", en: "Loading POIs…" },
+  errorPois: {
+    sl: "POI-jev ni mogoče naložiti. Poskusite pozneje.",
+    en: "POIs could not be loaded. Try again later.",
+  },
+  mapAria: {
+    sl: "Interaktivni zemljevid slovenskih destinacij in točk interesa",
+    en: "Interactive map of Slovenian destinations and points of interest",
+  },
+  infoDestUnit: { sl: "destinacij", en: "destinations" },
+  infoClickMarker: { sl: "Klikni marker", en: "Tap a marker" },
+  editorial: { sl: "uredniška", en: "editorial" },
+  moreInfo: { sl: "Več informacij →", en: "More info →" },
+  details: { sl: "Podrobnosti →", en: "Details →" },
+  day: {
+    sl: (n: number) => `Dan ${n}`,
+    en: (n: number) => `Day ${n}`,
+  },
+} as const;
+
+type MapLang = keyof typeof T.allDestinations;
+
 // === POI kategorije za čipe (1.47) ===
 // Uskladitev s čip vzorcem klepeta (1.46): multi-select + iskreni števci +
 // prazno stanje. Prej: enojni Select z 5/8 kategorij — hrana, nastanitve
@@ -78,25 +130,26 @@ interface Poi {
 // ista (restaurant↔food: Utensils, hotel↔stay: BedDouble).
 const POI_CATEGORIES: {
   value: string;
-  label: string;
+  /** Dvojezična oznaka (L vzorec) — razreši se ob renderu z label[lang]. */
+  label: { sl: string; en: string };
   icon: ComponentType<{ className?: string }>;
   /** Privzeto vklopljene kategorije naložimo z ENIM klicem category=all
    *  (hrana/nastanitve/trgovine so preštevilčne — izrecna izbira). */
   default: boolean;
 }[] = [
-  { value: "attraction", label: "Atrakcije", icon: Ticket, default: true },
-  { value: "museum", label: "Muzeji", icon: Landmark, default: true },
-  { value: "natural", label: "Narava", icon: Trees, default: true },
-  { value: "viewpoint", label: "Razgledišča", icon: Eye, default: true },
-  { value: "religious", label: "Religiozno", icon: Church, default: true },
+  { value: "attraction", label: T.catAttraction, icon: Ticket, default: true },
+  { value: "museum", label: T.catMuseum, icon: Landmark, default: true },
+  { value: "natural", label: T.catNatural, icon: Trees, default: true },
+  { value: "viewpoint", label: T.catViewpoint, icon: Eye, default: true },
+  { value: "religious", label: T.catReligious, icon: Church, default: true },
   {
     value: "restaurant",
-    label: "Hrana & pijača",
+    label: T.catRestaurant,
     icon: Utensils,
     default: false,
   },
-  { value: "hotel", label: "Nastanitve", icon: BedDouble, default: false },
-  { value: "shop", label: "Trgovine", icon: ShoppingBag, default: false },
+  { value: "hotel", label: T.catHotel, icon: BedDouble, default: false },
+  { value: "shop", label: T.catShop, icon: ShoppingBag, default: false },
 ];
 
 const DEFAULT_POI_CATS = POI_CATEGORIES.filter((c) => c.default).map(
@@ -130,6 +183,8 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
   const poiLayerRef = useRef<L.LayerGroup | null>(null);
   const [showRoute, setShowRoute] = useState(true);
+  // 1.48: dvojezičnost (vzorec L iz map-section — prej hardcoded SL tudi na /en)
+  const lang: MapLang = useLocale() === "en" ? "en" : "sl";
 
   // === POI state (1.47: multi-select čipi po kategorijah) ===
   const [showPois, setShowPois] = useState(false);
@@ -227,19 +282,25 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         title: dest.name,
       }).addTo(map);
 
+      // 1.48: EN overlay za tagline/duration (fallback na SL, če vnosa
+      // ni v slovenia-data-en); budget (€) in ime sta jezikovno nevtralna
+      const en = DESTINATIONS_EN[dest.slug];
+      const tagline = lang === "en" ? (en?.tagline ?? dest.tagline) : dest.tagline;
+      const duration = lang === "en" ? (en?.duration ?? dest.duration) : dest.duration;
+
       // Popup z informacijami
       const popupHtml = `
         <div style="min-width: 220px; max-width: 260px; font-family: sans-serif;">
           <img src="${dest.image}" alt="${dest.name}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px 8px 0 0; margin: -13px -20px 8px -20px; width: calc(100% + 40px);" loading="lazy" />
           <div style="font-weight: 700; font-size: 16px; color: #1a2e1a; margin-bottom: 4px;">${dest.name}</div>
-          <div style="font-size: 13px; color: #6b7280; margin-bottom: 8px; line-height: 1.4;">${dest.tagline}</div>
+          <div style="font-size: 13px; color: #6b7280; margin-bottom: 8px; line-height: 1.4;">${tagline}</div>
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
             <span style="display: inline-flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 600; color: #d97706;">
               <span>★</span> ${dest.rating.toFixed(1)}
             </span>
-            <span style="font-size: 12px; color: #6b7280;">uredniška</span>
+            <span style="font-size: 12px; color: #6b7280;">${T.editorial[lang]}</span>
             <span style="font-size: 12px; color: #6b7280;">·</span>
-            <span style="font-size: 12px; color: #6b7280;">${dest.duration}</span>
+            <span style="font-size: 12px; color: #6b7280;">${duration}</span>
             <span style="font-size: 12px; color: #6b7280;">·</span>
             <span style="font-size: 12px; color: #6b7280;">${dest.budget}</span>
           </div>
@@ -255,7 +316,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             cursor: pointer;
             font-family: sans-serif;
           ">
-            Več informacij →
+            ${T.moreInfo[lang]}
           </button>
         </div>
       `;
@@ -275,7 +336,9 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
       markersRef.current = [];
       poiLayerRef.current = null;
     };
-  }, []);
+    // lang v deps: Leaflet popup-i so template stringi, vezani ob bindanju —
+    // ob (teoretični) spremembi jezika se zemljevid pobriše in znova nariše
+  }, [lang]);
 
   // Event delegation za CTA gumbe v popupih (destinacije + POI)
   useEffect(() => {
@@ -353,7 +416,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
               iconAnchor: [14, 14],
             });
             const marker = L.marker([coord.lat, coord.lng], { icon: numIcon });
-            marker.bindPopup(`<strong>${coord.name}</strong><br>Dan ${dayRoute.day}`);
+            marker.bindPopup(`<strong>${coord.name}</strong><br>${T.day[lang](dayRoute.day)}`);
             layer.addLayer(marker);
             globalIdx++;
           });
@@ -394,7 +457,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             iconAnchor: [14, 14],
           });
           const marker = L.marker([coord.lat, coord.lng], { icon: numIcon });
-          marker.bindPopup(`<strong>${coord.name}</strong><br>Dan ${dayRoute.day}`);
+          marker.bindPopup(`<strong>${coord.name}</strong><br>${T.day[lang](dayRoute.day)}`);
           layer.addLayer(marker);
           globalIdx++;
         });
@@ -456,7 +519,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
 
     // Prilagodi zoom na pot
     map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
-  }, [showRoute, routeCoords, routeByDay]);
+  }, [showRoute, routeCoords, routeByDay, lang]);
 
   // === POI fetch — kategorija-po-kategorija s skupnim cache-om (1.47) ===
   // Prvi vklop plaste: EN klic category=all pokrije vseh 5 privzetih
@@ -498,7 +561,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
       setCacheVersion((v) => v + 1);
     } catch (e) {
       console.error("[map-view/pois] napaka:", e);
-      setPoiError("POI-jev ni mogoče naložiti. Poskusite pozneje.");
+      setPoiError(T.errorPois[lang]);
     } finally {
       poiInflightRef.current.delete("__all__");
       setLoadingCats((prev) => {
@@ -507,7 +570,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         return next;
       });
     }
-  }, []);
+  }, [lang]);
 
   const ensureCategory = useCallback(async (cat: string) => {
     if (poiInflightRef.current.has(cat)) return;
@@ -526,7 +589,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
       setCacheVersion((v) => v + 1);
     } catch (e) {
       console.error("[map-view/pois] napaka:", e);
-      setPoiError("POI-jev ni mogoče naložiti. Poskusite pozneje.");
+      setPoiError(T.errorPois[lang]);
     } finally {
       poiInflightRef.current.delete(cat);
       setLoadingCats((prev) => {
@@ -535,7 +598,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         return next;
       });
     }
-  }, []);
+  }, [lang]);
 
   // Sproži ustrezne prenose ob vklopu plaste / spremembi filtrov
   useEffect(() => {
@@ -644,7 +707,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             font-size: 11px;
             font-weight: 600;
             margin-bottom: 10px;
-          ">${meta.icon} ${meta.label}</span>
+          ">${meta.icon} ${meta.label[lang]}</span>
           <button data-poi-id="${escapeAttr(poi.id)}" class="map-poi-cta" style="
             width: 100%;
             padding: 6px 10px;
@@ -656,7 +719,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             font-weight: 600;
             cursor: pointer;
             font-family: sans-serif;
-          ">Podrobnosti →</button>
+          ">${T.details[lang]}</button>
         </div>
       `;
 
@@ -665,7 +728,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         className: "poi-popup",
       });
     });
-  }, [pois, showPois]);
+  }, [pois, showPois, lang]);
 
   const handleResetView = () => {
     mapRef.current?.setView([46.15, 14.47], 8);
@@ -693,7 +756,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         ref={containerRef}
         className="h-[500px] w-full sm:h-[600px] lg:h-full lg:min-h-[600px]"
         role="application"
-        aria-label="Interaktivni zemljevid slovenskih destinacij in točk interesa"
+        aria-label={T.mapAria[lang]}
       />
 
       {/* Kontrolni gumbi (zgoraj desno) — kompaktneje da ne prekrivajo */}
@@ -706,7 +769,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
           className="shadow-md"
         >
           <MapPin className="size-4" />
-          Vse destinacije
+          {T.allDestinations[lang]}
         </Button>
         <Button
           type="button"
@@ -716,7 +779,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
           className="shadow-md"
         >
           <Navigation className="size-4" />
-          Ponastavi
+          {T.reset[lang]}
         </Button>
         {routeCoords && routeCoords.length >= 2 ? (
           <Button
@@ -727,7 +790,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             className="shadow-md"
           >
             {showRoute ? <X className="size-4" /> : <Navigation className="size-4" />}
-            {showRoute ? "Skrij pot" : "Pokaži pot"}
+            {showRoute ? T.hideRoute[lang] : T.showRoute[lang]}
           </Button>
         ) : null}
 
@@ -745,7 +808,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
           ) : (
             <EyeOff className="size-4" />
           )}
-          {showPois ? "Skrij POI" : "Pokaži POI"}
+          {showPois ? T.hidePois[lang] : T.showPois[lang]}
         </Button>
       </div>
 
@@ -758,7 +821,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         <div className="absolute bottom-12 left-3 z-[1000] max-w-[calc(100%-1.5rem)] rounded-md border border-border bg-background/95 p-1.5 shadow-md backdrop-blur sm:max-w-[calc(100%-9rem)]">
           <div
             role="group"
-            aria-label="Filtriranje POI kategorij"
+            aria-label={T.chipsAria[lang]}
             className="flex flex-wrap gap-1"
           >
             {POI_CATEGORIES.map(({ value, label, icon: Icon }) => {
@@ -772,7 +835,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
                   type="button"
                   onClick={() => toggleCat(value)}
                   aria-pressed={on}
-                  title={label}
+                  title={label[lang]}
                   className={cn(
                     "flex min-h-7 shrink-0 items-center gap-1 rounded-full border px-2 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     on
@@ -785,7 +848,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
                   ) : (
                     <Icon className="size-3 shrink-0" aria-hidden />
                   )}
-                  <span className="truncate">{label}</span>
+                  <span className="truncate">{label[lang]}</span>
                   {loaded && !loading ? (
                     <span className="shrink-0 tabular-nums opacity-70">
                       {count}
@@ -799,14 +862,14 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
           {activeCats.size === 0 ? (
             <div className="mt-1 flex items-center justify-between gap-2 border-t border-border/60 pt-1">
               <p className="text-[10px] leading-snug text-muted-foreground">
-                Vse kategorije so izklopljene — POI-ji niso prikazani.
+                {T.emptyText[lang]}
               </p>
               <button
                 type="button"
                 onClick={resetCats}
                 className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium text-foreground transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                Prikaži privzeto
+                {T.emptyReset[lang]}
               </button>
             </div>
           ) : null}
@@ -817,7 +880,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
       {loadingCats.size > 0 ? (
         <div className="absolute left-3 top-3 z-[1000] flex items-center gap-2 rounded-lg border border-border bg-background/95 px-3 py-1.5 text-xs shadow-md backdrop-blur">
           <Loader2 className="size-3.5 animate-spin text-primary" aria-hidden="true" />
-          <span className="font-medium">Nalagam POI-je…</span>
+          <span className="font-medium">{T.loadingPois[lang]}</span>
         </div>
       ) : null}
 
@@ -832,7 +895,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
       <div className="absolute bottom-3 left-3 z-[1000] rounded-lg border border-border bg-background/95 px-3 py-2 text-xs shadow-md backdrop-blur">
         <div className="flex items-center gap-2">
           <Star className="size-3.5 fill-amber-400 text-amber-400" />
-          <span className="font-medium">{DESTINATIONS.length} destinacij</span>
+          <span className="font-medium">{DESTINATIONS.length} {T.infoDestUnit[lang]}</span>
           {showPois && pois.length > 0 ? (
             <>
               <span className="text-muted-foreground">·</span>
@@ -843,7 +906,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
           ) : null}
           {!showPois ? (
             <Badge variant="outline" className="text-[10px]">
-              Klikni marker
+              {T.infoClickMarker[lang]}
             </Badge>
           ) : null}
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale } from "next-intl";
 import {
   MapPin,
   ExternalLink,
@@ -41,22 +42,55 @@ interface Poi {
   address?: string;
 }
 
-// === Meta podatki o kategorijah (ikona, barva, slovenski naziv) ===
+// === Meta podatki o kategorijah (ikona, barva, dvojezični naziv — 1.48) ===
 // Dovoljene izjeme od "NO indigo/blue" pravila — semantične barve kategorij.
+// label je { sl, en } (L vzorec) — razrešitev z label[lang] ob renderu
+// (enkljiv potrobnik: map-view popup badge).
 export const CATEGORY_META: Record<
   string,
-  { icon: string; color: string; label: string }
+  { icon: string; color: string; label: { sl: string; en: string } }
 > = {
-  attraction: { icon: "🎯", color: "#d97706", label: "Atrakcija" },
-  museum: { icon: "🏛️", color: "#7c3aed", label: "Muzej" },
-  restaurant: { icon: "🍽️", color: "#dc2626", label: "Restavracija" },
-  hotel: { icon: "🏨", color: "#0891b2", label: "Nastanitev" },
-  viewpoint: { icon: "👁️", color: "#059669", label: "Razgledišče" },
-  natural: { icon: "🌿", color: "#16a34a", label: "Narava" },
-  religious: { icon: "⛪", color: "#9333ea", label: "Religiozno" },
-  shop: { icon: "🛍️", color: "#ea580c", label: "Trgovina" },
-  other: { icon: "📍", color: "#6b7280", label: "Drugo" },
+  attraction: { icon: "🎯", color: "#d97706", label: { sl: "Atrakcija", en: "Attraction" } },
+  museum: { icon: "🏛️", color: "#7c3aed", label: { sl: "Muzej", en: "Museum" } },
+  restaurant: { icon: "🍽️", color: "#dc2626", label: { sl: "Restavracija", en: "Restaurant" } },
+  hotel: { icon: "🏨", color: "#0891b2", label: { sl: "Nastanitev", en: "Stay" } },
+  viewpoint: { icon: "👁️", color: "#059669", label: { sl: "Razgledišče", en: "Viewpoint" } },
+  natural: { icon: "🌿", color: "#16a34a", label: { sl: "Narava", en: "Nature" } },
+  religious: { icon: "⛪", color: "#9333ea", label: { sl: "Religiozno", en: "Religious" } },
+  shop: { icon: "🛍️", color: "#ea580c", label: { sl: "Trgovina", en: "Shop" } },
+  other: { icon: "📍", color: "#6b7280", label: { sl: "Drugo", en: "Other" } },
 };
+
+// === Dvojezični nizi PoiModal (1.48) — L vzorec ===
+const L = {
+  unavailable: {
+    sl: "Podatki trenutno niso na voljo.",
+    en: "Data is currently unavailable.",
+  },
+  srDesc: {
+    sl: (name: string) =>
+      `Podrobnosti točke interesa ${name}: kategorija, opis iz Wikipedije, kontaktne informacije in koordinate. Vir podatkov: OpenStreetMap.`,
+    en: (name: string) =>
+      `Details for point of interest ${name}: category, description from Wikipedia, contact information and coordinates. Data source: OpenStreetMap.`,
+  },
+  about: { sl: "O objektu", en: "About" },
+  readMore: {
+    sl: "Preberi več na Wikipediji",
+    en: "Read more on Wikipedia",
+  },
+  aiTitle: { sl: "AI opis", en: "AI description" },
+  aiGenerating: {
+    sl: "AI generira opis...",
+    en: "AI is generating a description...",
+  },
+  contact: { sl: "Kontakt in informacije", en: "Contact & information" },
+  phone: { sl: "Telefon", en: "Phone" },
+  website: { sl: "Spletna stran", en: "Website" },
+  hours: { sl: "Odprtje", en: "Opening hours" },
+  cuisine: { sl: "Kuhinja", en: "Cuisine" },
+  data: { sl: "Podatki:", en: "Data:" },
+  descSource: { sl: "· opis:", en: "· description:" },
+} as const;
 
 function getCategoryMeta(category: string) {
   return CATEGORY_META[category] ?? CATEGORY_META.other;
@@ -91,6 +125,8 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
   const [aiDescription, setAiDescription] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSource, setAiSource] = useState<"ai" | "fallback" | "cache">("ai");
+  // 1.48: dvojezičnost (L vzorec — prej hardcoded SL tudi na /en)
+  const lang = useLocale() === "en" ? "en" : "sl";
 
   // Reset + fetch ko se poi spremeni
   useEffect(() => {
@@ -139,7 +175,7 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
       } catch (e) {
         if (cancelled) return;
         console.error("[poi-modal] napaka:", e);
-        setError("Podatki trenutno niso na voljo.");
+        setError(L.unavailable[lang]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -179,7 +215,7 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
     return () => {
       cancelled = true;
     };
-  }, [poi]);
+  }, [poi, lang]);
 
   const meta = poi ? getCategoryMeta(poi.category) : null;
   // Slika: prioriteta poi.image, nato Wikipedia thumbnail
@@ -202,8 +238,7 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
         >
           <DialogTitle className="sr-only">{poi.name}</DialogTitle>
           <DialogDescription id="poi-modal-desc" className="sr-only">
-            Podrobnosti točke interesa {poi.name}: kategorija, opis iz Wikipedije,
-            kontaktne informacije in koordinate. Vir podatkov: OpenStreetMap.
+            {L.srDesc[lang](poi.name)}
           </DialogDescription>
 
           {/* Scrollable container */}
@@ -240,7 +275,7 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
                   <span aria-hidden="true" className="mr-1">
                     {meta.icon}
                   </span>
-                  {meta.label}
+                  {meta.label[lang]}
                 </Badge>
                 <h2 className="text-2xl font-bold sm:text-3xl">{poi.name}</h2>
                 <p className="text-xs capitalize text-white/80">
@@ -285,7 +320,7 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
               ) : wikiExtract ? (
                 <section>
                   <h3 className="mb-2 text-sm font-semibold text-foreground">
-                    O objektu
+                    {L.about[lang]}
                   </h3>
                   <p className="text-sm leading-relaxed text-foreground/90">
                     {wikiExtract}
@@ -297,7 +332,7 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
                       rel="noopener noreferrer"
                       className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80"
                     >
-                      Preberi več na Wikipediji
+                      {L.readMore[lang]}
                       <ExternalLink className="size-3.5" aria-hidden="true" />
                     </a>
                   ) : null}
@@ -309,7 +344,7 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
                 <section>
                   <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
                     <Sparkles className="size-3.5 text-primary" aria-hidden="true" />
-                    AI opis
+                    {L.aiTitle[lang]}
                     {aiSource === "ai" || aiSource === "cache" ? (
                       <Badge variant="secondary" className="gap-1 text-[9px]">
                         <Sparkles className="size-2.5" aria-hidden="true" />
@@ -320,7 +355,7 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
                   {aiLoading ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-                      AI generira opis...
+                      {L.aiGenerating[lang]}
                     </div>
                   ) : aiDescription ? (
                     <p className="text-sm leading-relaxed text-foreground/90">
@@ -334,13 +369,13 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
               {(poi.phone || poi.website || poi.openingHours || poi.cuisine) && (
                 <section>
                   <h3 className="mb-3 text-sm font-semibold text-foreground">
-                    Kontakt in informacije
+                    {L.contact[lang]}
                   </h3>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {poi.phone ? (
                       <ContactItem
                         icon={Phone}
-                        label="Telefon"
+                        label={L.phone[lang]}
                         value={poi.phone}
                         href={`tel:${poi.phone.replace(/\s+/g, "")}`}
                       />
@@ -348,7 +383,7 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
                     {poi.website ? (
                       <ContactItem
                         icon={Globe}
-                        label="Spletna stran"
+                        label={L.website[lang]}
                         value={prettyUrl(poi.website)}
                         href={poi.website}
                         external
@@ -357,14 +392,14 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
                     {poi.openingHours ? (
                       <ContactItem
                         icon={Clock}
-                        label="Odprtje"
+                        label={L.hours[lang]}
                         value={poi.openingHours}
                       />
                     ) : null}
                     {poi.cuisine ? (
                       <ContactItem
                         icon={MapPin}
-                        label="Kuhinja"
+                        label={L.cuisine[lang]}
                         value={poi.cuisine}
                       />
                     ) : null}
@@ -383,7 +418,7 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
               {/* Source attribution */}
               <div className="border-t border-border pt-4">
                 <p className="text-xs text-muted-foreground">
-                  Podatki:{" "}
+                  {L.data[lang]}{" "}
                   <a
                     href={`https://www.openstreetmap.org/?mlat=${poi.lat}&mlon=${poi.lng}#map=16/${poi.lat}/${poi.lng}`}
                     target="_blank"
@@ -395,7 +430,7 @@ export function PoiModal({ poi, onClose }: PoiModalProps) {
                   {wikiLink ? (
                     <>
                       {" "}
-                      · opis:{" "}
+                      {L.descSource[lang]}{" "}
                       <a
                         href={wikiLink}
                         target="_blank"

@@ -53,7 +53,7 @@ const EN_DESTINATION_SUBROUTES = [
 const EN_ADRIA_ROUTES = [/^\/vodici\/[a-z0-9-]+$/];
 
 /** Statične poti z EN različico (jedro lijaka + info/E-E-A-T strani). */
-const EN_STATIC_ROUTES = new Set([
+export const EN_STATIC_ROUTES = new Set([
   "/",
   "/nacrtuj",
   "/destinacije",
@@ -68,6 +68,12 @@ const EN_STATIC_ROUTES = new Set([
   "/politika-zasebnosti",
   "/vir-podatkov",
   "/zaupanje-in-varnost",
+  // 1.48: zemljevid je v GLAVNI navigaciji z že prevedeno oznako ("Map") —
+  // EN uporabnik bi sicer kliknil angleški gumb in pristal na slovenski
+  // strani (308 nazaj na /zemljevid). Zemljevid je ravno za tuje turiste
+  // najbolj uporabna površina (vsebina: imena POI + OSM so jezikovno
+  // nevtralni). Komponente: L vzorec (map-section je bil že dvojezičen).
+  "/zemljevid",
 ]);
 
 /**
