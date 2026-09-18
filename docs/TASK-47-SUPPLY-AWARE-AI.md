@@ -407,9 +407,9 @@ Končna vrata: `bun test` **745/745** (+99), `eslint` 0, `tsc --noEmit` 0 napak 
 ## 23. KONČNO POROČILO
 
 ```
-COMMIT SHA:        (glej spodaj po commitu)
+COMMIT SHA:        2d32d9106ea7c429b17966df8e27c803f9270d28
 BRANCH:            main
-ORIGIN/MAIN:       pushan (glej spodaj)
+ORIGIN/MAIN:       2d32d9106ea7c429b17966df8e27c803f9270d28 (pushan 19. 9. 2026)
 
 TESTS:             745/745 (646 obstoječih + 99 novih; 0 regresij)
 LINT:              eslint 0 (0 errors, 0 warnings)
