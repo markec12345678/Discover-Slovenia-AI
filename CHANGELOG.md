@@ -7,6 +7,27 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.49.4] — 2026-09-18
+
+### Popravljeno (1.49.4 — TASK 44 §10–§26: pogodbe + živa preverba vira + 2 odkriti vrzeli)
+
+- **RESNA VRZEL odkrita in popravljena (§19 — uredniški ingest brez sanity vrat)**: `scripts/ingest-kiwitaxi.ts` je zapisal git baseline IZ PRETRGANIH CSV prenosov (34 rut proti 1494 — 97 % padec) BREZ zavrnitve; cron/overlay pot sanity vrata ima (`passesKiwiSanityGate` v `/api/cron/kiwitaxi-reingest`), uredniška skripta pa ne. Chunked prenos ob prekinitvi pusti vidno-zdravo, a odsekano datoteko (brez Content-Length opozorila). Popravek: vrata so zdaj PRED zapisom baseline-a (kandidat ≥ max(absolutni minimum, 50 % baseline-a), sicer izstop non-zero); regresijski test pokriva točen živi scenarij.
+- **Živa ponovna preverba vira (§19, 17:25 UTC)**: vsi 4 CSV-ji preneseni v polni velikosti (places 62,79 MB / routes 11,85 MB / transfers 41,45 MB — ≡ dokumentirano); sheme primerjane dobesedno ≡ Task 43; **re-ingest iz polnih podatkov = BITNO IDENTIČEN baseline-u** (0 novih/odstranjenih rut, 0 sprememb cen — edina razlika `fetchedAt`). Pogodba vira je NESPREMENJENA; osvežen `fetchedAt` commitan kot dokaz.
+- **§10 Availability contract (6 testov)**: »price exists → available=true« je NEMOGOČ — source-scan (niz `live_available` v celotni kiwitaxi kodi ne obstaja), dataset-wide (1494/1494 rut → `not_supported`), sanitize (cena ne ustvari razpoložljivosti; `not_supported` se v AI kontekst ne prenaša).
+- **§11 Geo semantike (9 testov)**: WKT (MULTI/POINT/LINESTRING/invalid/NaN/Infinity/hex/out-of-range zavrnjeni); pin-v-bbox invariant na vseh 1316 pinih; EU/SI geografska sanity; geoPrecision NIKOLI `exact` (vedno `city`); reversed-coordinates = dokumentirana struktura meja (vir živo preverjen lng-first).
+- **§12 Security adversarial (10 testov + utrditev)**: bookingUrl VEDNO naša `/go` konstrukcija (dataset-wide); sourceUrl VEDNO `https://kiwitaxi.com/en/…`; **KODIRANI malicious URL popravek** — `%2e%2e`/`%2F%2F`/`%40`/`%3A`/neveljavni `%ZZ` so prej tihotapili charset filter, zdaj dekodirna preverba zavrne (legitimni `%3E` format vira nepoškodovan — 1494/1494); HTML/script imena očiščena; dolgi ID/URL/ime kapirani; oversized WKT fail-safe.
+- **§13 Redirect contract (8 route-level testov + utrditev)**: valid → 302 kiwitaxi.com (brez pap — fail-closed); **`product=0` popravek** (prej je šel skozi `^\d{1,10}$` regex — zdaj > 0, konzistentno z mapper `parseInt10`); malicious → 400; missing → 302 destinacijska oblika; unknown provider → 404; open-redirekt invariant (https + allowlist host) — vse preizkušeno tudi na PRODUKCIJSKEM standalone strežniku.
+- **§14/§15 AI FIXED invariant (8 testov + živo)**: imutabilnost (ID/naslov/cena/geo točno), duplicate zavrnjen, več transferjev vsak enkrat, transfer+OSM POI sožitje, multi-dan brez razmnoževanja, lažni provider zavrnjen; **production build: POST /api/itinerary izda `kiwitaxi:410` z natanko ceno €77 NATANČNO enkrat**.
+- **§16 i18n**: `/en/zemljevid` živo E2E — Transfers 48, popup, ProductModal (Published data / from €33 per transfer / published price, not a live quote), Add to my plan — vsi nizi prevedeni (0 hardkodiranih SL v EN).
+- **§17 Mobile**: 390 px in 375 px — 0 px horizontalnega preliva (domov SL + zemljevid SL/EN), modal paše viewport, footer prisoten.
+- **§18 Production lifecycle**: build (DSA_LOW_MEMORY_BUILD=1) → standalone (port 3001) → `/` `/zemljevid` `/en/zemljevid` 200 → supply search 48/14 ms → `/go` 302/400/404 → AI itinerer 200 s FIXED transferjem → RSS 256 MB; dataset (2,18 MB) v bundle.
+- **§20 Registry**: EN centralni `PROVIDER_REGISTRY` (source-scan: UI/selection/sanitize brez hardcodiranih providerjev; dovoljena izvencа z drift-guard testi dokumentirana).
+- **§22 Performance (izmerjeno, nič izmišljenega)**: dataset 1494 rut / 308 krajev / 9614 transferjev / 1316 pinov; hladen load 20 ms / topel 0,0008 ms; viewporti: LJU 109/10 ms, Bled 6,5/9 ms, Piran 33/6 ms, SI-wide 8/8 ms (48 produktov); gruče 3 (4+20+22); build peak NOT MEASURED (zgornja meja 2560 MB brez OOM).
+- **Testi**: 390/390 (+46: `task44-hardening.test.ts` — availability/geo/security/redirect/AI/ingest-regresija/registry), eslint 0, tsc 0 v src.
+- **docs/TASK-44-AUDIT.md**: končni revizijski dokument z GREEN/YELLOW/RED po sekcijah.
+
+---
+
 ## [1.49.3] — 2026-09-18
 
 ### Popravljeno (1.49.3 — TASK 44 dopolnitev: negativni predpomnilnik okvar OSM + coalescing)

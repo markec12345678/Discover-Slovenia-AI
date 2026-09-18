@@ -18,11 +18,13 @@
  * objavljene (ne živi citat), deep link vedno prek /go z pap parametrom.
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 import { ingestKiwiTaxi } from "../src/lib/supply/providers/kiwitaxi/ingest";
+import { passesKiwiSanityGate } from "../src/lib/supply/providers/kiwitaxi/mapper";
+import type { KiwiTaxiDataset } from "../src/lib/supply/providers/kiwitaxi/types";
 
 async function main() {
   const cacheArg = process.argv.find((a) => a.startsWith("--cache="));
@@ -61,7 +63,37 @@ async function main() {
     `  ↳ rut s pinom (prevzemno območje ima poligon): ${ds.counts.pinnedRoutes}/${ds.counts.routes}`
   );
 
+  // TASK 44 §19 (utrjevanje 1.49.4): SANITY VRATA tudi za uredniško skripto.
+  //
+  // Živo odkrita vrzel (18. 9. 2026): cron/overlay pot ima vrata
+  // (passesKiwiSanityGate v /api/cron/kiwitaxi-reingest), TA skripta pa je
+  // zapisala git baseline IZ S pretrganih/delnih CSV-jev (34 rut proti
+  // 1494 v baseline-u — 97 % padec — BREZ zavrnitve; chunked prenos ob
+  // prekinitvi pusti popolnoma veljavno-glavno, a odsekano datoteko).
+  // Vrata so ISTA kot pri cron: kandidat ≥ max(absolutni minimum, 50 %
+  // trenutnega baseline-a) — sicer izstop NON-ZERO in baseline ostane
+  // nedotaknjen (urednik prej pogleda vzrok).
   const outPath = resolve(process.cwd(), "data/kiwitaxi-routes.json");
+  let baseline: KiwiTaxiDataset | null = null;
+  if (existsSync(outPath)) {
+    try {
+      baseline = JSON.parse(readFileSync(outPath, "utf-8")) as KiwiTaxiDataset;
+    } catch {
+      baseline = null; // pokvarjen baseline → samo absolutne meje
+    }
+  }
+  if (!passesKiwiSanityGate(ds, baseline)) {
+    console.error(
+      `[ingest-kiwitaxi] SANITY VRATA ZAVRNILA kandidata ` +
+        `(rut ${ds.counts.routes} / baseline ${baseline?.counts.routes ?? "?"}, ` +
+        `krajev ${ds.counts.places}, transferjev ${ds.counts.transfers}) — ` +
+        `sumljivo DEJNI/PRETRGAN prenos; baseline NI pisan. ` +
+        `Ponovi prenos (prenosi so ~12/63/41 MB — povpr. uredniško 5+ min) ali ` +
+        `preveri vir ročno.`
+    );
+    process.exit(1);
+  }
+
   await mkdir(dirname(outPath), { recursive: true });
   writeFileSync(outPath, JSON.stringify(ds, null, 2) + "\n", "utf-8");
 

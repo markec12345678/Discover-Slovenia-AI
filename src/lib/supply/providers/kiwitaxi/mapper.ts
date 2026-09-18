@@ -109,6 +109,17 @@ function cleanName(raw: string): string | null {
  * DOVOLJEN je SAMO konservativen charset BREZ sheme/hosta — absolutizacija
  * na https://kiwitaxi.com je varna po konstrukciji (ne more oditi na
 // tuj host). Zavrne: absolutne URL-je, „//…", „..", „?", „#", „@", „:".
+ *
+ * TASK 44 §12 (1.49.4): KODIRANE oblike nevarnih znakov — po charset
+ * preverbi ENKRAT dekodiramo (%XX) in znova pregledamo isti nabor
+ * („..", „//", „:", „@", „\"). Sicer bi %2e%2e/%2F%2F/%40/%3A pretihotapili
+ * prvi filter (host ostane kiwitaxi.com — nevarnost je nizka, a spec
+ * zahteva fail-closed tudi za kodirane poskuse). Legitimni format vira
+ * uporablja %3E („→") — dekodiranje ga spremeni v „>", ki v naboru ni
+ * prepovedan; vseh 1494 realnih poti mineva (preverjeno). Dvojno
+ * kodiranje (%252e) po enkratni dekodiravi ostane „%2e" brez surovega
+ * „.." — strežniki dekodirajo enkrat, ne dvakrat (dokumentirana meja).
+ * Neveljavna %ZZ sekvenca → decodeURIComponent vrže → zavrnjeno.
  */
 function cleanRouteUrlPath(raw: string): string | null {
   const s = raw.trim();
@@ -118,6 +129,24 @@ function cleanRouteUrlPath(raw: string): string | null {
   if (s.includes("@") || s.includes(":") || s.includes("\\")) return null;
   // /segment/segment — segmenti iz dovoljenega charseta (ne prazen).
   if (!/^\/[A-Za-z0-9+~._%-]+(\/[A-Za-z0-9+~._%-]+)*$/.test(s)) return null;
+  // §12: dekodirana oblika mora obležati ISTEMU naboru nevarnih znakov.
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(s);
+  } catch {
+    return null; // %ZZ / samoten % → fail-closed
+  }
+  if (
+    decoded.includes("..") ||
+    decoded.includes("//") ||
+    decoded.includes(":") ||
+    decoded.includes("@") ||
+    decoded.includes("\\") ||
+    decoded.includes("?") ||
+    decoded.includes("#")
+  ) {
+    return null;
+  }
   return s;
 }
 

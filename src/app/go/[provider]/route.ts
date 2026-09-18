@@ -108,15 +108,16 @@ export async function GET(
   }
 
   // product (samo transfers, TASK 43): NUMERIČNI ID transferja — samo
-  // števke (1–10); sicer 400. ID pride iz našega dataseta (adapterjev
+  // števke (1–10) IN > 0 (konzistentno z mapper parseInt10: ID 0 pri viru
+  // ne obstaja); sicer 400. ID pride iz našega dataseta (adapterjev
   // bookingUrl) — tu je NEODVISNA meja (raw query niz je nezaupan vhod).
   let productId: string | undefined;
   if (PRODUCT_SUPPORTED.includes(provider as Provider)) {
     const rp = searchParams.get("product") || "";
     if (rp) {
-      if (!/^\d{1,10}$/.test(rp)) {
+      if (!/^\d{1,10}$/.test(rp) || Number(rp) === 0) {
         return NextResponse.json(
-          { error: "Parameter 'product' mora biti numerični ID (1–10 števk)" },
+          { error: "Parameter 'product' mora biti numerični ID (1–10 števk, > 0)" },
           { status: 400 }
         );
       }
