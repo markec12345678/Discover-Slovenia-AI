@@ -15,6 +15,7 @@
 
 import type { Itinerary, LocationVisit } from "@/lib/types";
 import type { ProviderProduct } from "./types";
+import { availabilityNote } from "./availability-note";
 
 export type AddProductResult =
   | { ok: true; kind: "stop"; itinerary: Itinerary; day: number }
@@ -170,6 +171,20 @@ export function insertProductStop(
       ? `Added from the supply map · source: ${product.license?.source ?? product.provider}`
       : `Dodano z zemljevida ponudbe · vir: ${product.license?.source ?? product.provider}`
   );
+  // TASK 47 (§6/§13): ISKRENA razpoložljivost je del provenance vsakega
+  // supply postanka — negotovost ostane negotovost (nikoli „na voljo za
+  // tvoj datum", kadar vir tega ne potrjuje).
+  // ODVOJENA semantika (kanonski model): ODSOTNO polje pomeni not_supported
+  // — pri KOMERCIALNEM viru (affiliate_redirect/api_bookable) to izpišemo
+  // kot „preveri pri ponudniku"; lokalni viri (info_only) koncepta nimajo
+  // → brez vrstice.
+  const avail =
+    availabilityNote(product.availability?.status, opts.locale) ??
+    (product.bookingMode === "affiliate_redirect" ||
+    product.bookingMode === "api_bookable"
+      ? availabilityNote("not_supported", opts.locale)
+      : undefined);
+  if (avail) notesParts.push(avail);
 
   const visit: LocationVisit = {
     destination_id: product.id, // "osm:node-123" / "viator:…"

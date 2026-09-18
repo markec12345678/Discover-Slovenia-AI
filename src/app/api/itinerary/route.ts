@@ -45,11 +45,16 @@ import {
   buildSelectedProductsContext,
   buildSelectionRecommendations,
 } from "@/lib/supply/sanitize";
-import { insertProductStop } from "@/lib/supply/stop-insert";
-import type {
-  ProviderProduct,
-  SelectedProviderProduct,
-} from "@/lib/supply/types";
+// TASK 47 (1.52.0): supply-aware AI — kanonski supply kontekst + revalidacija
+import {
+  fetchAiSupplyContext,
+  buildAiSupplyContext,
+} from "@/lib/supply/ai-context";
+import {
+  buildKnownSupplyIndex,
+  revalidateSupplyStops,
+} from "@/lib/supply/itinerary-supply-validation";
+import { applyFixedSelectedProducts } from "@/lib/supply/apply-fixed";
 import { dayRouteGeometry, serializeLegs } from "@/lib/road-routing";
 import { buildLegRouteIndex } from "@/lib/road-routing-server";
 
@@ -342,13 +347,18 @@ export async function POST(request: Request) {
     lang
   );
 
-  // === RANKING ENGINE + WEATHER-CONTEXT (vzporedno — vreme ne doda latence) ===
+  // === RANKING ENGINE + WEATHER-CONTEXT + TASK 47 SUPPLY CONTEXT ===
+  // (vzporedno — supply iskanje je hitro: kiwitaxi v pomnilniku ~2 ms,
+  // viator/gyg capability gate ~1 ms, OSM cat-gated → 0 klicev na Overpass;
+  // vreme ne doda latence)
   // Ranking: relevance (60%) + quality (15%) + rating (10%) + distance (10%) + premium (5%)
   // Vreme: realna napoved za tri regionalna sidra — SAMO če je podan
   // startDate (znano okno potovanja znotraj horizonta ~16 dni)
+  // Supply: REAL SUPPLY → ProviderProduct → AiSupplyProduct projekcija
+  // (§10 — obstoječi searchSupply runner, AI nikoli ne pozna provider API-jev)
   let partnerContext = "";
 
-  const [ranked, anchorForecasts] = await Promise.all([
+  const [ranked, anchorForecasts, aiSupply] = await Promise.all([
     rankListings({
       interests: input.interests,
       season: input.season,
@@ -357,6 +367,12 @@ export async function POST(request: Request) {
       return [] as Awaited<ReturnType<typeof rankListings>>;
     }),
     fetchAnchorForecasts(input.days, input.startDate),
+    // NIKOLI ne vrže (interna varovalka — odpoved supply = prazen kontekst)
+    fetchAiSupplyContext({
+      pax: input.groupSize,
+      date: input.startDate,
+      locale: lang,
+    }),
   ]);
 
   if (ranked.length > 0) {
@@ -368,6 +384,21 @@ export async function POST(request: Request) {
       `[itinerary] Vreme briefing: ${anchorForecasts.length}/${WEATHER_ANCHOR_DEFS.length} sidra, ${anchorForecasts[0].forecast.length} dni${input.startDate ? ` (od ${input.startDate})` : ""}`
     );
   }
+
+  // TASK 47 (§22 — minimalna observabilnost, brez novega sistema): 
+  // strukturirana vrstica o supply kontekstu. BREZ žetonov, BREZ celih
+  // payloadov, BREZ PII — samo števila/znani provider slug-i.
+  const fixedCount = cleanSelectedProducts.filter(
+    (p) => p.selectionState === "fixed"
+  ).length;
+  console.log(
+    `[itinerary] supply-aware: context=${aiSupply.total} (capped ${aiSupply.products.length}) providers=${aiSupply.providers.join(",") || "-"} degraded=${aiSupply.degraded.join(",") || "-"} fixed=${fixedCount}`
+  );
+
+  // TASK 47 (§3/§4/§5/§6/§14): strukturiran blok kanonske ponudbe v prompt —
+  // PREFERRED/SUGGESTED semantika, cena z enoto, ločena razpoložljivost,
+  // prioritetna lestvica. Prazna ponudba → prazen blok (ni spremembe).
+  const aiSupplyBlock = buildAiSupplyContext(aiSupply.products, lang);
 
   // (lang je izračunan že pred ranking klicem — glej zgoraj)
 
@@ -505,7 +536,7 @@ Traveler:
 - Season: ${input.season}${input.startDate ? `\n- Travel date: ${formatDateRangeSI(input.startDate, tripEnd)}` : ""}
 - Group: ${input.groupSize} person(s)${partyLineEn}${paceLineEn}${preferredLineEn}
 ${weatherBlockEn}
-${selectedProductsBlock}Available destinations:
+${selectedProductsBlock}${aiSupplyBlock}Available destinations:
 ${destContext}
 ${partnerContext}
 
@@ -554,7 +585,7 @@ Potnik:
 - Sezona: ${input.season}${input.startDate ? `\n- Datum potovanja: ${formatDateRangeSI(input.startDate, tripEnd)}` : ""}
 - Skupina: ${input.groupSize} oseb(a)${partyLineSl}${paceLineSl}${preferredLineSl}
 ${weatherBlockSl}
-${selectedProductsBlock}Razpoložljive destinacije:
+${selectedProductsBlock}${aiSupplyBlock}Razpoložljive destinacije:
 ${destContext}
 ${partnerContext}
 
@@ -628,14 +659,31 @@ JSON format (STROGO):
     // zdaj teče TUKAJ, pred obogatitvijo — ista plast kot na save meji.
     const itinerary: Itinerary = sanitizeItinerary(parsed, input.days);
 
+    // TASK 47 (§7/§12/§17): STREŽNIŠKA REVALIDACIJA SUPPLY REFERENC.
+    // AI izhod nikoli ni zaupan: vsak postanek, ki se sklicuje na supply
+    // (destination_id „{provider}:{id}" z registriranim providerjem), mora
+    // obstajati v znanem kanonskem supplyju (uporabnikove izbire ∪ strežni
+    // kontekst). Neznan sklic → ODSTRANJEN (poročilo v dropped[], NIKOLI
+    // silent, NIKOLI fallback produkt). Znan → REBIND na kanonske vrednosti
+    // (naslov, cena z enoto v notes, geo, iskrena razpoložljivost) — AI
+    // pusti SAMO itinerary semantiko (dan/urnik/trajanje).
+    const knownSupply = buildKnownSupplyIndex(cleanSelectedProducts, aiSupply.products);
+    const supplyValidated = revalidateSupplyStops(itinerary, knownSupply, lang);
+    if (supplyValidated.dropped.length > 0) {
+      console.warn(
+        `[itinerary] supply revalidation: ODSTRANJENIH ${supplyValidated.dropped.length} haluciniranih supply postankov: ${supplyValidated.dropped.map((d) => d.id).join(", ")}`
+      );
+    }
+
     // F1 (Supply Map): DETERMINISTIČNA UTRDITEV FIXED izbir. AI je dobil
     // strukturirana pravila v promptu, a :free modeli so nepredvidljivi —
     // če je FIXED produkt (z geo, ne-nastanitev) AI izpustil, ga vstavimo
     // z isto mehaniko kot fallback (najbližji dan, večernji slot). AI
     // NIKOLI ne more izničiti uporabnikove eksplicitne izbire; že
     // vključeni produkti (isti destination_id) se preskočijo (dedupe).
+    // (TASK 47: ekstrahirano v @/lib/supply/apply-fixed — vedenje identično.)
     const withFixedStops = applyFixedSelectedProducts(
-      itinerary,
+      supplyValidated.itinerary,
       cleanSelectedProducts,
       lang
     );
@@ -653,7 +701,7 @@ JSON format (STROGO):
       throw new Error("AI izhod brez veljavnih dni (sanitize porezal vse)");
     }
 
-    console.log(`[itinerary] AI uspešno (source: ${result.source})`);
+    console.log(`[itinerary] AI uspešno (source: ${result.source}; supply rebound=${supplyValidated.rebound} dropped=${supplyValidated.dropped.length})`);
 
     // Pakirni seznam — AI predlog (validirana) ali hevristika, če AI izpusti/neveljavna
     // (P4-8: hevristika spoštuje jezik itinererja)
@@ -1044,54 +1092,4 @@ function generateFallbackItinerary(
         ],
     source: "fallback",
   };
-}
-
-// ============================================================================
-// F1 (Supply Map, 1.49.0): DETERMINISTIČNA UTRDITEV FIXED IZBIR
-// ============================================================================
-// FIXED izdelki (izbrani na zemljevidu ponudbe) morajo ostati v načrtu
-// NEGLEDE na AI (nepredvidljivost :free modelov) — če jih AI ni vključil,
-// jih vstavimo z isto mehaniko kot chat-add-place (najbližji dan po
-// haversine, večernji slot, poštena opomba vira). Nastanitve in produkti
-// brez geo ostanejo v recommendations (AI jih omeni — prompt pravila).
-// ============================================================================
-function applyFixedSelectedProducts(
-  it: Itinerary,
-  products: SelectedProviderProduct[],
-  lang: "sl" | "en"
-): Itinerary {
-  const fixed = products.filter(
-    (p) =>
-      p.selectionState === "fixed" &&
-      p.type !== "accommodation" &&
-      typeof p.lat === "number" &&
-      typeof p.lng === "number" &&
-      Number.isFinite(p.lat) &&
-      Number.isFinite(p.lng)
-  );
-  if (fixed.length === 0 || it.days.length === 0) return it;
-
-  const destCoords = new Map(DESTINATIONS.map((d) => [d.id, d.coords]));
-  let current = it;
-  for (const p of fixed) {
-    const product: ProviderProduct = {
-      id: `${p.provider}:${p.providerProductId}`,
-      provider: p.provider,
-      providerProductId: p.providerProductId,
-      type: p.type,
-      title: p.title,
-      lat: p.lat,
-      lng: p.lng,
-      price: p.price,
-      bookingMode: p.provider === "osm" ? "info_only" : "affiliate_redirect",
-      lastUpdated: new Date().toISOString(),
-      license: { source: p.source },
-    };
-    const result = insertProductStop(current, product, {
-      locale: lang,
-      destinationCoords: destCoords,
-    });
-    if (result.ok && result.kind === "stop") current = result.itinerary;
-  }
-  return current;
 }
