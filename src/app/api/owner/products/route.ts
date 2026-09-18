@@ -67,8 +67,17 @@ const createSchema = z.object({
   longDescription: z.string().nullable().optional(),
   destinationId: z.string().nullable().optional(),
   destinationName: z.string().nullable().optional(),
-  price: z.number().min(0, "Cena mora biti pozitivna"),
-  compareAtPrice: z.number().min(0).nullable().optional(),
+  price: z
+    .number()
+    // 19-f-7 (revizija 1.36.0, P3): glej products/[id] — min 0,01 / max 100.000
+    .min(0.01, "Cena mora biti pozitivna (vsaj 0,01 €)")
+    .max(100_000, "Cena je pretirana (max 100.000 €)"),
+  compareAtPrice: z
+    .number()
+    .min(0.01)
+    .max(100_000)
+    .nullable()
+    .optional(),
   stock: z.number().int().min(0).default(0),
   weight: z.number().min(0).nullable().optional(),
   images: z.array(z.string()).default([]),

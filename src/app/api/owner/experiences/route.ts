@@ -67,7 +67,11 @@ const createSchema = z.object({
   longDescription: z.string().nullable().optional(),
   destinationId: z.string().nullable().optional(),
   destinationName: z.string().nullable().optional(),
-  pricePerPerson: z.number().min(0, "Cena na osebo mora biti pozitivna"),
+  pricePerPerson: z
+    .number()
+    // 19-f-7 (revizija 1.36.0, P3): prej min(0) — glej products/[id]
+    .min(0.01, "Cena na osebo mora biti pozitivna (vsaj 0,01 €)")
+    .max(100_000, "Cena je pretirana (max 100.000 €)"),
   durationHours: z.number().min(0.5, "Trajanje mora biti vsaj 0.5 ure"),
   minGroupSize: z.number().int().min(1).default(1),
   maxGroupSize: z.number().int().min(1).default(10),

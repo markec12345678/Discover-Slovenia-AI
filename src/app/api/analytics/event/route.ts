@@ -29,6 +29,27 @@ const VALID_EVENTS = new Set([
   "map_opened",
   "provider_detail_opened",
   "affiliate_clicked",
+  // OPCIJA-3 (transakcijska globina): klik rezervacijskega CTA (status_strip /
+  // day_header / stop_card) — meri, kdaj v poti uporabniki želijo dejanje
+  "booking_cta_clicked",
+  // GEO-ODGOVORI (Task 29): AI klepet je izrisal kraje na zemljevidu
+  // (props: osm_count, t1_count, t2_count [1.44 — citani uradni viri STO],
+  // cat_counts [1.46 — "food:5,drinks:2,destination:1,source:2"])
+  // — doseg "generative spatial" odgovorov
+  "chat_geo_answered",
+  // 1.46 (kategorija čipi): preklop kategorije v filtru geo odgovora
+  // (props: category, enabled 0|1, surface chat|overlay)
+  "chat_geo_filtered",
+  // 1.47 (zemljevid čipi): preklop kategorije POI filtra na /zemljevid
+  // (props: category, enabled 0|1, surface "map") — komplement
+  // chat_geo_filtered za brskalni zemljevid
+  "map_poi_filtered",
+  // 1.42 (GEO → NAČRT): kraj iz AI klepeta dodan v načrt potovanja
+  // (props: provenance t1|osm, category, day, stashed?)
+  "chat_place_added",
+  // 1.43: postanek, dodan iz klepeta, odstranjen z enim klikom s kartice
+  // postanka (props: provenance t1|osm, day, locale?)
+  "chat_place_removed",
   "weather_alternative_used",
   // F5.4 "Začni s povezavo" ( url ingest)
   "ingest_url_attempted",

@@ -18,7 +18,7 @@
   },
   "hero": {
     "title": "Kaj želiš doživeti v Sloveniji?",
-    "subtitle": "Povej AI kaj iščeš — v slovenščini ali angleščini. AI sestavi popoln dan z lokalnimi partnerji.",
+    "subtitle": "Povej AI, kaj iščeš — v slovenščini ali angleščini. Nasveti so preverjeni na slovenskih tleh, ne prepisani iz tujih vodičev.",
     "badge": "AI Concierge za Slovenijo",
     "placeholder": "Želim 3-dnevni miren izlet z naravo, dobro hrano in čim manj vožnje …",
     "cta": "Sestavi mojo pot",
@@ -31,7 +31,10 @@
     "imageAlt": "Blejsko jezero z otokom, cerkvijo in gradom ob sončnem zahodu",
     "inputAriaLabel": "Kaj želiš doživeti v Sloveniji?",
     "scrollCue": "Odkrij več",
-    "scrollCueAriaLabel": "Pomakni se navzdol do statistik"
+    "scrollCueAriaLabel": "Pomakni se navzdol do statistik",
+    "trustNoAccount": "Brez računa",
+    "trustVerified": "km in cene preverjeni",
+    "trustUpdated": "posodobljeno september 2026"
   },
   "heroChips": {
     "calmWeekend": "Miren vikend",
@@ -76,7 +79,10 @@
     "commissionRate": "12 %",
     "commissionVerb": "se obračuna",
     "commissionEmphasis": "izključno, kadar rezervacijo prinese AI",
-    "commissionTail": "— nikoli drugače."
+    "commissionTail": "— nikoli drugače.",
+    "freshnessUpdated": "Podatki posodobljeni: september 2026",
+    "freshnessSources": "števila obiskovalcev: STO/SURS",
+    "freshnessLink": "seznam virov"
   },
   "homeDest": {
     "titleFeatured": "Priljubljene destinacije",
@@ -298,6 +304,7 @@
     "planColumn": "Načrtuj",
     "planPlanner": "AI načrtovalec",
     "planQuiz": "Kviz za popotnike",
+    "planComparison": "Primerjava načrtovalcev",
     "planBookings": "Rezervacije",
     "planMyTrips": "Moja potovanja",
     "planLogin": "Prijava",
@@ -319,7 +326,7 @@
     "quickPromptsLabel": "Hitra vprašanja",
     "quickPrompt1": "Kaj obiskati v Sloveniji?",
     "quickPrompt2": "Priporoči romantični vikend",
-    "quickPrompt3": "Kje je najboljša hrana?",
+    "quickPrompt3": "Kje lahko jedem v Ljubljani?",
     "quickPrompt4": "Kam z družino?",
     "inputPlaceholder": "Vprašajte o Sloveniji...",
     "inputAriaLabel": "Sporočilo za AI chatbot",
@@ -332,7 +339,41 @@
     "fabClose": "Zapri chatbot",
     "dialogAriaLabel": "AI chatbot pogovor",
     "badgeAI": "AI",
-    "badgeFallback": "fallback"
+    "badgeFallback": "fallback",
+    "sourcesLabel": "Uradni viri (STO)",
+    "sourceMap": "zemljevid",
+    "placesLabel": "Na zemljevidu",
+    "mapExpand": "Povečaj zemljevid",
+    "mapExpandShort": "Povečaj",
+    "mapClose": "Zapri zemljevid",
+    "mapOverlayAria": "Zemljevid priporočenih krajev",
+    "provenanceT1": "Preverjeno",
+    "provenanceT1Title": "Naši preverjeni podatki o destinaciji",
+    "provenanceT1Legend": "preverjeno (naši podatki)",
+    "provenanceOsmTitle": "OpenStreetMap — skupnostni vir, ni uradno preverjeno",
+    "provenanceOsmLegend": "OpenStreetMap (skupnostni vir)",
+    "osmNote": "Odpiralni časi so skupnostni podatek — pred obiskom preverite.",
+    "provenanceT2Title": "Uradni vir — Slovenska turistična organizacija (slovenia.info)",
+    "provenanceT2Legend": "uradni vir STO (članek)",
+    "stoNote": "Turkizni pini so uradni članki STO — povezava odpre izvirnik na slovenia.info.",
+    "catFilterAria": "Filtriraj kraje po kategoriji",
+    "catFood": "Hrana",
+    "catDrinks": "Pijača",
+    "catMarket": "Tržnice in trgovine",
+    "catStay": "Nastanitev",
+    "catDestination": "Destinacije",
+    "catService": "Storitve",
+    "catSource": "Uradni viri",
+    "catEmpty": "Vse kategorije so izklopljene — prikažite vsaj eno.",
+    "catEmptyReset": "Prikaži vse",
+    "addPlace": "Dodaj v načrt",
+    "addPlaceAria": "Dodaj {name} v načrt",
+    "addPlaceDone": "Dodano v načrt",
+    "addPlaceAddedTitle": "Dodano v načrt",
+    "addPlaceAddedDesc": "{name} · Dan {day} — poglejte ga na strani Načrtuj",
+    "addPlaceDuplicateTitle": "Že v načrtu",
+    "addPlaceNoPlanTitle": "Ni še načrta",
+    "addPlaceNoPlanDesc": "{name} smo shranili — ustvarite načrt na strani Načrtuj in dodali ga bomo samodejno."
   },
   "planner": {
     "title": "AI načrtovalec potovanj",
@@ -432,6 +473,11 @@
     "errorGeneratingFallback": "Napaka pri generiranju itinererja",
     "emptyTitle": "Vaš itinerer se bo prikazal tukaj",
     "emptyHint": "Izpolnite obrazec in kliknite »Generiraj itinerer«.",
+    "emptyDemoChip": "Primer načrta",
+    "emptyDemoDayLabel": "Dan 1 · Gorenjska",
+    "emptyDemoCaption": "Tako izgleda povzetek dneva — časi, cene in razdalje med postanki.",
+    "emptyDemoCta": "Poskusi ta primer",
+    "emptyDemoQuery": "Bled, Vintgarska soteska in Bohinj — 1 dan v naravi",
     "restoredChip": "Obnovljen tvoj zadnji načrt",
     "restoredChipDismiss": "Skrij obvestilo o obnovljenem načrtu",
     "resultTitle": "Vaš {days}-dnevni itinerer",
@@ -618,7 +664,25 @@
       "listings": "Lokalci",
       "products": "Izdelki",
       "experiences": "Izkušnje"
-    }
+    },
+    "bookingCtaStrip": "Rezerviraj nastanitev, izkušnje in transport",
+    "bookingOffersCount": "{count, plural, one {# ponudba} two {# ponudbi} few {# ponudbe} other {# ponudb}}",
+    "bookingCtaDay": "Rezerviraj",
+    "bookingCtaDayAria": "Pojdi na rezervacije za {day}. dan ({count} ponudb)",
+    "bookingCtaStop": "Vstopnice",
+    "bookingCtaStopAria": "Rezerviraj izkušnje ali vstopnice za {name}",
+    "bookingCtaStopTitle": "Rezerviraj izkušnje, vstopnice ali nastanitev za ta postanek",
+    "chatPlaceAddedTitle": "Dodano v načrt",
+    "chatPlaceAddedDesc": "{name} · Dan {day}",
+    "chatPlaceDuplicateTitle": "Kraj je že v načrtu",
+    "chatStashTitle": "Dodano iz AI klepeta",
+    "chatStashDesc": "{names}",
+    "chatStopBadge": "Iz klepeta",
+    "chatStopBadgeTitle": "Postanek je dodan iz AI klepeta — poreklo je zapisano v opombi",
+    "chatStopRemove": "Odstrani",
+    "chatStopRemoveAria": "Odstrani {name} iz načrta",
+    "chatStopRemoveTitle": "Ta postanek je bil dodan iz AI klepeta — z enim klikom ga odstraniš iz načrta",
+    "chatStopRemovedTitle": "Odstranjeno iz načrta"
   },
   "common": {
     "loading": "Nalagam...",
@@ -881,6 +945,10 @@
       "worldNomads": {
         "type": "Zavarovanje",
         "desc": "Potno zavarovanje. Affiliate program."
+      },
+      "sloveniaInfo": {
+        "type": "Uradni viri (RAG)",
+        "desc": "Uradna turistična vsebina I feel Slovenia (Slovenska turistična organizacija) — 664 strukturiranih virov iz slovenia.info llms.txt indeksa, ki jih AI uporablja kot uzemljenje odgovorov s citati. Posodobljeno: september 2026."
       }
     },
     "providersTitle": "Lokalni ponudniki",
@@ -1894,5 +1962,116 @@
       "unavailable": "Telemetrija trenutno ni na voljo — javne študije spodaj veljajo neodvisno od nje.",
       "empty": "Od namestitve štetja še ni bilo dokončanih preverjanj — številke bodo rasla s vsakim poročilom. Medtem povedo javne študije spodaj, zakaj štejemo."
     }
+  },
+  "comparison": {
+    "meta": {
+      "title": "Primerjava AI načrtovalcev potovanj za Slovenijo",
+      "description": "Iskrena primerjava splošnih AI načrtovalcev (Mindtrip, Layla, Wanderlog) s specializom za Slovenijo. Načrtujte brez prijave, v slovenščini ali angleščini."
+    },
+    "badge": "Iskrena primerjava · brez prijave",
+    "title": "Kateri AI načrtovalec potovanj je pravi za Slovenijo?",
+    "intro": "Ta primerjava ni marketinška brošura. Naše uredniško načelo je iskrenost — zato priznamo, kje so splošni načrtovalci boljši od nas, in pokažemo, kje specialist za Slovenijo vrne več. Odločitev prepustimo vam.",
+    "updated": "Posodobljeno: 17. september 2026. Primerjave staréjo — preverite datum pred odločitvijo.",
+    "generalistsTitle": "Kaj splošni AI načrtovalci delajo odlično",
+    "generalistsIntro": "Mindtrip, Layla, Wanderlog, ChatGPT in sorodniki so dobri izdelki. Za naslednje primere so pravilna izbira:",
+    "generalists": {
+      "coverageTitle": "Globalna pokritost",
+      "coverageDesc": "Načrt za Tokio, Lizbono in Patagonijo v istem klepetu. Mi pokrivamo samo Slovenijo.",
+      "bookingTitle": "Letalske karte in hoteli",
+      "bookingDesc": "Integracije z velikimi rezervacijskimi sistemi po celem svetu. Pri nas rezervirate lokalna doživetja in izdelke, ne lete.",
+      "collabTitle": "Skupinsko načrtovanje",
+      "collabDesc": "Sodelovanje v realnem času z družino ali prijatelji. Mi ponujamo deljenje načrta z anketo, ne skupinsko urejanje.",
+      "scaleTitle": "Zrelost in obseg",
+      "scaleDesc": "Milijoni uporabnikov in velike baze recenzij. Mi smo mlada platforma z ozkim, a globokim fokusom."
+    },
+    "problemsTitle": "Kje generalisti pri slovenskih potovanjih razočarajo",
+    "problemsIntro": "To niso izmišljene pasti — dokumentirane so v recenzijah AI načrtovalcev (2025–2026) in v naših lastnih testiranjih:",
+    "problems": {
+      "priceTitle": "Cene oddaljene od realnosti",
+      "priceDesc": "Recenzenti Mindtripa poročajo o cenovnih odstopanjih do 20–30 %. Za mestni oddih je to nadležnost; za vikend s proračunom 300 € je to razlika med dvema dnevoma.",
+      "closedTitle": "Zaprti objekti v načrtu",
+      "closedDesc": "Klasična past: AI vključi atrakcijo v dan, ko je ta zaprta (znan primer: »Louvre je zaprt ob torkih«). Brez preverjanja odpiralnih časov tega ne more vedeti.",
+      "genericTitle": "Generični seznami znamenitosti",
+      "genericDesc": "Isti seznam top-10 za vsakogar. Slovenija je majhna, a lokalna globina — kdaj na Vintgar brez vrste, kje je kremšnita res tista — zahteva specializirane, urejene podatke."
+    },
+    "tableTitle": "Primerjava na dlani",
+    "table": {
+      "caption": "Primerjava splošnih AI načrtovalcev potovanj s platformo Discover Slovenia AI",
+      "colWhat": "Kaj primerjamo",
+      "colGeneral": "Splošni načrtovalci",
+      "colOurs": "Discover Slovenia AI",
+      "rows": {
+        "focus": {
+          "label": "Fokus",
+          "general": "Cel svet",
+          "ours": "Samo Slovenija — globoko in preverjeno"
+        },
+        "account": {
+          "label": "Račun za shranjevanje načrta",
+          "general": "Pogosto zahtevan (Google/Apple)",
+          "ours": "Ni potreben — anonimno shranjevanje in deljenje"
+        },
+        "validation": {
+          "label": "Preverjanje časov in cen",
+          "general": "Ni sistematično",
+          "ours": "Viri + opozorila »preveri pred obiskom« + geo-validacija"
+        },
+        "feasibility": {
+          "label": "Izvedljivost dneva (razdalje, časi)",
+          "general": "Redko preverjena",
+          "ours": "Pravi km in minute iz cestnega usmerjanja, opozorilo ob pretesnem dnevu"
+        },
+        "language": {
+          "label": "Slovenščina",
+          "general": "Angleščina ali strojni prevod",
+          "ours": "Jedro izdelka v slovenščini (in angleščini)"
+        },
+        "booking": {
+          "label": "Rezervacije",
+          "general": "Globalni leti in hoteli",
+          "ours": "Lokalna doživetja in tržnica s slovenskimi ponudniki"
+        },
+        "offline": {
+          "label": "Načrt brez povezave",
+          "general": "Pogosto le v aplikacijah",
+          "ours": "Da — namestite kot aplikacijo (PWA)"
+        },
+        "beyond": {
+          "label": "Potovanja izven Slovenije",
+          "general": "Da — cel svet",
+          "ours": "Ne — odkrito priporočimo generalista"
+        }
+      },
+      "note": "Tabela je poštena do obeh strani: zadnja vrstica je priznanje, ne pomanjkljivost, ki bi jo skrivali."
+    },
+    "practiceTitle": "Kaj to pomeni v praksi",
+    "practice": {
+      "ex1Title": "December, 15:40, Vintgarska soteska",
+      "ex1Desc": "Generalist lahko sotesko mirno vključi v pozno popoldanski načrt. Naš načrtovalec ve, da pozimi ob 16:00 zapira, in vas opozori, naj jo prestavite dopoldan — z virom podatka.",
+      "ex2Title": "Bled → Bohinj »približno 30 minut«?",
+      "ex2Desc": "Ocene časa »iz spomina modela« znajo odstopati. Povezovalniki med postanki pri nas nosijo dejanske kilometre in minute iz usmerjanja po pravih cestah — vključno z zimskimi odseki.",
+      "ex3Title": "Koliko vas bo dan res stal?",
+      "ex3Desc": "Cene vstopnic in lokalnih specialitet črpamo iz urejenega dataseta z viri — vsota na dnevni kartici nekaj pomeni. Kadar podatka ni, to povemo in dodamo opozorilo."
+    },
+    "notForYouTitle": "Kdaj Discover Slovenia AI NI pravi za vas",
+    "notForYouBody": "Če načrtujete potovanje čez mejo, potrebujete letalske karte ali hotel v tujini — izberite generalista (Layla, Wanderlog ali klepet s ChatGPT/Gemini). To je v redu; tudi mi njih uporabljamo za tuja potovanja. Radi pa vas vidimo na slovenskem delu poti.",
+    "ctaTitle": "Poskusite brez prijave",
+    "ctaBody": "Od vprašanja do načrta: 30 sekund. Zahtevan račun: nič. Jezik: slovenščina ali angleščina.",
+    "ctaPrimary": "Sestavi moj načrt",
+    "ctaSecondary": "Razišči destinacije",
+    "faqTitle": "Pogosta vprašanja",
+    "faq": {
+      "q1": "Ali potrebujem račun, da načrtujem potovanje?",
+      "a1": "Ne. Načrt ustvarite, shranite in delite povsem brez prijave — deluje anonimno. Prosti račun je neobvezen in doda le zgodovino potovanj na strani Moja potovanja.",
+      "q2": "Koliko stane uporaba?",
+      "a2": "Načrtovalec, itinererji, vodiči in deljenje so brezplačni. Platforma zasluži z rezervacijami lokalnih doživetij in prodajo na tržnici — ne z vašimi podatki.",
+      "q3": "Kaj če potujem izven Slovenije?",
+      "a3": "Iskreno: za čezmejna potovanja uporabite generalista (na primer Layla, Wanderlog, Mindtrip) ali klepet z AI. Mi pokrivamo samo Slovenijo — a jo pokrivamo globoko, s preverjenimi lokalnimi podatki.",
+      "q4": "Kako zanesljivi so vaši podatki?",
+      "a4": "Podatke za destinacije urejamo uredniško, cene in odpiralni časi imajo vire, vsak načrt pa gre skozi geo-validacijo z opozorili. Kadar nismo prepričani, piše »preveri pred obiskom«. Metodologija je javna na strani Vir podatkov.",
+      "q5": "Do zdaj sem uporabljal(a) Mindtrip — zakaj preklopiti?",
+      "a5": "Mindtrip je dober generalist; njihova aplikacija za iOS ostaja na voljo, njihova spletna stran pa je bila septembra 2026 ob pisanju nedosegljiva. Za slovenska potovanja pri nas dobite: načrtovanje brez prijave, slovenščino kot jedro izdelka, preverjene lokalne podatke in rezervacije pri lokalnih ponudnikih. Presodite sami — poskus brez prijave traja 30 sekund."
+    },
+    "sources": "Primerjava temelji na javno dostopnih recenzijah (2025–2026) in uredniški analizi platforme (september 2026). Več: <linkSources>vir podatkov</linkSources> · <linkTrust>zaupanje in varnost</linkTrust> · <linkAbout>o strani</linkAbout>"
   }
 }

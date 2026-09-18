@@ -4,6 +4,16 @@ import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
 import { rateLimit } from "@/lib/rate-limit";
 import { wrapProviderData, SYSTEM_DATA_GUARD } from "@/lib/ai-context";
+import { buildStoGrounding } from "@/lib/rag/ground";
+import { maybeRefreshStoIndex } from "@/lib/rag/freshness";
+import type { StoCitation } from "@/lib/rag/types";
+import {
+  detectGeoIntent,
+  matchDestinationsInText,
+  stoHitToPlace,
+  type ChatPlace,
+} from "@/lib/geo-intent";
+import { fetchOverpassNearby } from "@/lib/overpass";
 
 // POST /api/chat — AI chatbot z dostopom do vsebine platforme
 //
@@ -17,6 +27,17 @@ import { wrapProviderData, SYSTEM_DATA_GUARD } from "@/lib/ai-context";
 //
 // Kontekst se gradi iz baze in pošlje GLM-ju.
 // Omejitev: samo 10 najboljših listings/products/experiences (da token limit ne pade).
+//
+// DATA-LAYERS-RAG (Task 27): T2 plast "Uradni viri" — ob vsakem vprašanju
+// se po leksičnem iskanju po slovenia.info llms.txt indeksu (664 zapisov)
+// v sistemski prompt vpletejo do 5 relevantnih uradnih virov STO z
+// navodilom za citiranje [n]; odgovor klientu prinese `sources` (citate)
+// za značke virov + geopovezavo na našo destinacijo (zemljevid/dejanje).
+//
+// 1.45.0 (§7 trojna svežina): indeks, po katerem išče buildStoGrounding,
+// je baseline (git) ali sveži overlay — fire-and-forget osvežitev spodaj
+// NIKOLI ne blokira odgovora (strežemo kar imemo, svežina od naslednje
+// zahteve); tedensko pa jo predgreje /api/cron/sto-reingest.
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -34,6 +55,10 @@ export async function POST(request: Request) {
     // Rate limit AI klepetalnika (stroškovna zaščita)
     const limited = rateLimit(request, { limit: 20, windowMs: 600000, key: "ai-chat" });
     if (limited) return limited;
+
+    // 1.45.0: fire-and-forget osvežitev T2 virov STO (7-dnevni TTL, ne blokira —
+    // glej komentar zgoraj). Ob 429/napaki strežemo baseline; nov poskus po 6 h.
+    maybeRefreshStoIndex();
 
   let body: ChatRequest;
   try {
@@ -118,11 +143,70 @@ export async function POST(request: Request) {
     )
   ).join("\n");
 
-  const pageContext = body.currentPage
+  // 19c-1 (revizija 1.36.0, P2): currentPage je client niz, ki gre v
+  // SYSTEM prompt — prej surov in neomejen (obšel je SYSTEM_DATA_GUARD,
+  // ki pokriva samo <podatek> vsebino; bil je tudi token-bomb vektor).
+  // Zdaj: typeof preverka + 200 znakov + ovito v <podatek>.
+  const currentPage =
+    typeof body.currentPage === "string" ? body.currentPage.slice(0, 200) : "";
+  const pageContext = currentPage
     ? lang === "en"
-      ? `\nYOU ARE CURRENTLY ON THE PAGE: ${body.currentPage} (adapt your answer to the page context)`
-      : `\nUPORABNIK JE TRENUTNO NA STRANI: ${body.currentPage} (prilagodi odgovor kontekstu strani)`
+      ? `\nYOU ARE CURRENTLY ON THE PAGE: ${wrapProviderData("stran", currentPage, 200)} (adapt your answer to the page context)`
+      : `\nUPORABNIK JE TRENUTNO NA STRANI: ${wrapProviderData("stran", currentPage, 200)} (prilagodi odgovor kontekstu strani)`
     : "";
+
+  // DATA-LAYERS-RAG: T2 uzemljenje — uradni viri STO (slovenia.info),
+  // poiskani po zadnjem uporabnikovem vprašanju. Vsebina je ovita v
+  // <podatek> (wrapProviderData znotraj ground.ts) — isti varnostni
+  // model kot ponudniška vsebina (prompt injection obramba).
+  const stoGrounding = buildStoGrounding(lastUserMessage, lang, 5);
+
+  // GEO-ODGOVORI (Task 29, 1.41.0): če uporabnik išče KRAJ (hrana,
+  // pijača, tržnica, nastanitev, storitve) okoli prepoznane destinacije,
+  // poiščemo realne kraje po OpenStreetMap (T3 — splet v živo) in jih
+  // (a) vpletemo v sistemski prompt, da AI priporoča PRAVE gostilne,
+  // (b) pošljemo klientu kot `places` → mini zemljevid v klepetu.
+  // Overpass klic zgolj ob lokaciji + kategoriji (varuje javni API), s
+  // 6 s timeoutom — počasen OSM ne zadrži klepeta (graceful degradation).
+  const geoIntent = detectGeoIntent(lastUserMessage);
+  const osmPlaces: ChatPlace[] =
+    geoIntent.location && geoIntent.categories.length > 0
+      ? await fetchOverpassNearby(
+          { lat: geoIntent.location.lat, lng: geoIntent.location.lng },
+          geoIntent.categories
+        )
+      : [];
+
+  // Kontekst OSM krajev za AI (SL/EN) — ovit v <podatek> kot vsa zunanja
+  // vsebina; izrecno označeno kot skupnostni vir, ne uradni podatek.
+  const osmContext =
+    osmPlaces.length > 0 && geoIntent.location
+      ? lang === "en"
+        ? `\n\nPLACES NEAR ${geoIntent.location.name.toUpperCase()} (OpenStreetMap — community data, NOT officially verified; do not present as official):
+${wrapProviderData(
+  "osm-kraji",
+  osmPlaces
+    .map(
+      (p) =>
+        `- ${p.name}${p.detail ? ` (${p.detail})` : ""}${p.openingHours ? ` — open: ${p.openingHours}` : ""}`
+    )
+    .join("\n")
+)}
+These places answer the user's WHERE question — recommend 2–4 most suitable ones BY NAME from this list (never invent names).
+`
+        : `\n\nKRAJI V BLIŽINI ${geoIntent.location.name.toUpperCase()} (OpenStreetMap — skupnostni vir, NI uradno preverjeno; ne predstavljaj kot uradno):
+${wrapProviderData(
+  "osm-kraji",
+  osmPlaces
+    .map(
+      (p) =>
+        `- ${p.name}${p.detail ? ` (${p.detail})` : ""}${p.openingHours ? ` — odprto: ${p.openingHours}` : ""}`
+    )
+    .join("\n")
+)}
+Ti kraji so odgovor na uporabnikovo vprašanje KJE — priporočaj 2–4 najbolj smiselne PO IMENU iz tega seznama (nikoli ne izmišljuj imen).
+`
+      : "";
 
   // FW4.3-2: ogledje sistemsko sporočilo glede na jezik — enaka struktura,
   // enaka varnostna pravila (SYSTEM_DATA_GUARD, <podatek> ovijanje ostane).
@@ -147,7 +231,7 @@ TOP PRODUCTS (featured):
 ${productsContext}
 
 TOP EXPERIENCES (featured):
-${experiencesContext}${pageContext}
+${experiencesContext}${pageContext}${stoGrounding.context}${osmContext}
 
 RULES:
 1. Reply in English (unless the user writes in another language)
@@ -158,6 +242,7 @@ RULES:
 6. If they ask about bookings, explain that these happen directly with the provider (redirect model)
 7. Never make up data — if you don't know, say so
 8. Use emoji for friendliness (🏔️ 🍷 🚴‍♂️ 🏛️) but don't overdo it
+9. When a fact comes from an OFFICIAL SOURCE above, cite it like [1] or [2] — never invent citation numbers
 
 ${SYSTEM_DATA_GUARD}`
       : `Si "Slovenija AI" — prijazen, strokovni asistent za turistično platformo "Discover Slovenia AI". Pomagaš uporabnikom načrtovati potovanje po Sloveniji.
@@ -179,7 +264,7 @@ TOP IZDELKI (featured):
 ${productsContext}
 
 TOP IZKUŠNJE (featured):
-${experiencesContext}${pageContext}
+${experiencesContext}${pageContext}${stoGrounding.context}${osmContext}
 
 PRAVILA:
 1. Odgovarjaj v slovenščini (razen če uporabnik piše v drugem jeziku)
@@ -190,6 +275,7 @@ PRAVILA:
 6. Če sprašuje o rezervacijah, pojasni da poteka direktno pri ponudniku (redirect model)
 7. Nikoli ne izmišljaj podatkov — če ne veš, reci
 8. Uporabljaj emoji za prijaznost (🏔️ 🍷 🚴‍♂️ 🏛️) a ne pretiravaj
+9. Kadar dejstvo izhaja iz URADNIH VIROV zgoraj, ga citiraj kot [1] ali [2] — nikoli ne izmisli številk citatov
 
 ${SYSTEM_DATA_GUARD}`;
 
@@ -208,8 +294,11 @@ ${SYSTEM_DATA_GUARD}`;
       : []),
     // CAP-FIX (revizija 1.33.0, 16-b P2): sporočila so client-supplied —
     // 2000 znakov na sporočilo (zadostuje za povpraševanje; prej neomejeno).
+    // 19c-2 (revizija 1.36.0, P2): role je bil samo TS cast — klient je
+    // lahko poslal role:"system" in prepisal pravila ZA SVOJO SEJO. Zdaj:
+    // whitelist (neznani vlogi postanejo "user").
     ...recentMessages.map((m) => ({
-      role: m.role as "user" | "assistant",
+      role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
       content: String(m.content ?? "").slice(0, 2000),
     })),
   ];
@@ -224,11 +313,62 @@ ${SYSTEM_DATA_GUARD}`;
       throw new Error("Prazen odgovor AI");
     }
 
-    console.log(`[chat] AI odgovor (source: ${result.source}) — vprašanje: "${lastUserMessage.substring(0, 60)}..."`);
+    // DATA-LAYERS-RAG: citati T2 (samo kadar je bilo uzemljenje aktivno —
+    // prazen seznam pomeni "AI ni dobil uradnih virov za to vprašanje").
+    const sources: StoCitation[] = stoGrounding.active ? stoGrounding.citations : [];
+
+    // T2 → PIN (1.44): zemljevid odseva ODGOVOR — na mini zemljevid se kot
+    // turkizen pin izriše SAMO uradni vir, ki ga je AI DEJANSKO CITIRAL
+    // (»… [2]« v besedilu). Parsiranje je deterministično (0 AI žetonov):
+    //   1. izlušči oštevilčene reference [n] iz odgovora,
+    //   2. preslikaj na zadetke groundinga (isto zaporedje kot [1]…[n]),
+    //   3. obdrži samo tiste z geopovezavo (33/664 zapisov ima destinacijo),
+    //   4. izposoji koordinate destinacije + determinističen odmik 180–350 m
+    //      (pošteno: članek je O kraju — pin sedi ob njem, ne na njem).
+    // Ni citatov v odgovoru → ni T2 pinov (fallback pot citatov nikoli ne
+    // napiše — zemljevid ne laže o tem, kaj je AI dejal).
+    const citedIdx = new Set(
+      [...content.matchAll(/\[(\d{1,2})\]/g)]
+        .map((m) => parseInt(m[1], 10))
+        .filter((n) => n >= 1 && n <= stoGrounding.hits.length)
+    );
+    const t2Places: ChatPlace[] = (
+      stoGrounding.active
+        ? stoGrounding.hits
+            .map((h, i) => (citedIdx.has(i + 1) ? stoHitToPlace(h) : null))
+            .filter((p): p is ChatPlace => p !== null)
+        : []
+    ).slice(0, 3);
+
+    // GEO-ODGOVORI: poleg OSM krajev (odgovor na "kje") na zemljevid
+    // dodamo še T1 destinacije, omenjene v AI odgovoru — odgovor se
+    // dobesedno izriše prostorsko (zeleni pini = naši preverjeni podatki).
+    // Lokacija iz vprašanja je VEDNO prvi zeleni pin (sidro iskanja) —
+    // povezava na stran destinacije iz zemljevida.
+    const t1Places: ChatPlace[] = matchDestinationsInText(content);
+    const queryLocationPlace = geoIntent.location
+      ? matchDestinationsInText(geoIntent.location.name).find(
+          (p) => `t1-${geoIntent.location!.id}` === p.id
+        ) ?? null
+      : null;
+    // OSM budget: kadar so prisotni T2 pini (redki, visoke vrednosti —
+    // uradni viri), OSM popusti s 14 na 12, da turkizni pini ne izpadejo
+    // zgolj zaradi .slice(0, 16) gostote (živa hrana ostane jedro odgovora).
+    const osmBudget = t2Places.length > 0 ? 12 : 16;
+    const places: ChatPlace[] = [
+      ...(queryLocationPlace ? [queryLocationPlace] : []),
+      ...osmPlaces.slice(0, osmBudget),
+      ...t1Places.filter((p) => p.id !== queryLocationPlace?.id),
+      ...t2Places,
+    ].slice(0, 16);
+
+    console.log(`[chat] AI odgovor (source: ${result.source}) — vprašanje: "${lastUserMessage.substring(0, 60)}..."${stoGrounding.active ? ` [T2 uzemljenje: ${stoGrounding.citations.length} uradnih virov STO${t2Places.length > 0 ? `, ${t2Places.length} citiranih na zemljevidu` : ""}]` : ""}${osmPlaces.length > 0 ? ` [GEO: ${geoIntent.location?.name} · ${osmPlaces.length} OSM krajev]` : ""}`);
 
     return NextResponse.json({
       message: content,
       source: result.source,
+      sources,
+      places,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -239,6 +379,8 @@ ${SYSTEM_DATA_GUARD}`;
     return NextResponse.json({
       message: fallback,
       source: "fallback",
+      sources: [] as StoCitation[],
+      places: [] as ChatPlace[],
       timestamp: new Date().toISOString(),
     });
   }

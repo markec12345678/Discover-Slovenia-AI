@@ -231,13 +231,32 @@ export async function PATCH(request: Request) {
       }
     }
 
-    const updated = await db.booking.update({
-      where: { id: booking.id },
+    // 19-f-1/RC-2 (revizija 1.36.0, P2): prehod je bil validiran na STALE
+    // branju in zapisan NEPOGOJNO — dvoklik = 2 gostujoči maili + 2 audit
+    // zapisa; sočasen cancel+complete = last-write-wins (completed→cancelled
+    // bi uničil provizijsko osnovo). Zdaj: POGOJNI update (WHERE status =
+    // prebrani status) — če se je status medtem spremenil, 409 brez učinka.
+    const updated = await db.booking.updateMany({
+      where: { id: booking.id, status: booking.status },
       data: {
         status: newStatus,
         confirmedAt:
           newStatus === "confirmed" ? new Date() : booking.confirmedAt,
       },
+    });
+    if (updated.count === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Status rezervacije se je medtem spremenil (sočasen vnos?) — osvežite pregled in poskusite znova.",
+        },
+        { status: 409 }
+      );
+    }
+    // updateMany vrne samo count — za odgovor (nazaj preberemo svež zapis,
+    // da klient dobi isti shape kot prej).
+    const updatedBooking = await db.booking.findUnique({
+      where: { id: booking.id },
     });
 
     // E-pošta gostu o spremembi statusa — NE-BLOKIRAJOČE
@@ -276,7 +295,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({
       success: true,
-      booking: updated,
+      booking: updatedBooking,
       message:
         newStatus === "confirmed"
           ? "Rezervacija potrjena. Gost je bil obveščen po e-pošti."

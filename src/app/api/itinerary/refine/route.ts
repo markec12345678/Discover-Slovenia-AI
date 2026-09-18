@@ -25,7 +25,7 @@ import { validateItineraryGeo } from "@/lib/geo-validation";
 import { buildCrowdNotices } from "@/lib/crowd-alternatives";
 import { matchEventsForItinerary } from "@/lib/events-match";
 import { tripWindowMs } from "@/lib/trip-dates";
-import { PARTY_PROMPT_LABELS } from "@/lib/party-types";
+import { PARTY_PROMPT_LABELS, isPartyType } from "@/lib/party-types";
 import { PACE_PROMPT_LABELS } from "@/lib/pace-types";
 import { applyQuickAction, QUICK_ACTIONS } from "@/lib/refine-actions";
 import { buildStopReasons } from "@/lib/stop-insights";
@@ -155,6 +155,67 @@ export async function POST(request: Request) {
   const current = body.itinerary;
   const formData = body.formData;
 
+  // 19c-4 (revizija 1.36.0, P2): formData (season, interests, budget,
+  // groupSize, partyType, pace) gre v SYSTEM prompt — prej surovi client
+  // vnosi (zrcali /api/itinerary, ki to validira; refine je bil preskočen).
+  // Isti vzorec: enum sezona, numerične meje, kapirani interesi.
+  if (formData !== null && typeof formData === "object") {
+    const fd = formData as unknown as Record<string, unknown>;
+    const VALID_SEASONS = ["spring", "summer", "autumn", "winter"];
+    if (
+      fd.season !== undefined &&
+      (typeof fd.season !== "string" || !VALID_SEASONS.includes(fd.season))
+    ) {
+      return NextResponse.json(
+        { error: "Sezona je neveljavna (spring, summer, autumn, winter)" },
+        { status: 400 }
+      );
+    }
+    if (
+      fd.budget !== undefined &&
+      (typeof fd.budget !== "number" ||
+        !Number.isFinite(fd.budget) ||
+        fd.budget < 0 ||
+        fd.budget > 100_000)
+    ) {
+      return NextResponse.json(
+        { error: "Proračun je neveljaven (število 0–100000)" },
+        { status: 400 }
+      );
+    }
+    if (
+      fd.groupSize !== undefined &&
+      (typeof fd.groupSize !== "number" ||
+        !Number.isInteger(fd.groupSize) ||
+        fd.groupSize < 1 ||
+        fd.groupSize > 20)
+    ) {
+      return NextResponse.json(
+        { error: "Velikost skupine je neveljavna (1–20)" },
+        { status: 400 }
+      );
+    }
+    if (
+      fd.interests !== undefined &&
+      (!Array.isArray(fd.interests) ||
+        fd.interests.length > 12 ||
+        fd.interests.some(
+          (i) => typeof i !== "string" || i.length > 60
+        ))
+    ) {
+      return NextResponse.json(
+        { error: "Interesi: največ 12 po 60 znakov" },
+        { status: 400 }
+      );
+    }
+    if (fd.partyType !== undefined && !isPartyType(fd.partyType)) {
+      return NextResponse.json(
+        { error: "Neveljaven tip potne skupine" },
+        { status: 400 }
+      );
+    }
+  }
+
   // FAZA 4-2: validacija hitre akcije (če je podana)
   const action =
     typeof body.action === "string" && VALID_ACTIONS.has(body.action)
@@ -283,9 +344,12 @@ export async function POST(request: Request) {
 
   // WEATHER-CONTEXT: sestava potnikov (opcijsko) — da prilagoditve
   // ohranjajo isti ritem kot osnovni načrt (družina → otrokom prijazno ...)
-  const partyTypeLine = formData?.partyType
-    ? `\n- ${isEn ? "Respect the travel party" : "Upoštevaj sestavo potnikov"}: ${PARTY_PROMPT_LABELS[formData.partyType][isEn ? "en" : "sl"]}`
-    : "";
+  // 19c-4: "in" varovalka (PARTY_PROMPT_LABELS[partyType] je prej metalo
+  // TypeError 500 za neveljaven partyType — pace ima enako varovalko že od prej).
+  const partyTypeLine =
+    formData?.partyType && formData.partyType in PARTY_PROMPT_LABELS
+      ? `\n- ${isEn ? "Respect the travel party" : "Upoštevaj sestavo potnikov"}: ${PARTY_PROMPT_LABELS[formData.partyType][isEn ? "en" : "sl"]}`
+      : "";
 
   // F15 (backlog #3): tempo (opcijsko) — prilagoditve ohranjajo gostoto
   // osnovnega načrta (počasen → brez dodajanja postankov, hiter → brez redčenja)

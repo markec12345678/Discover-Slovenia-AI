@@ -1,0 +1,113 @@
+{
+  "comparison": {
+    "meta": {
+      "title": "AI Trip Planner Comparison for Slovenia — No Signup",
+      "description": "An honest comparison of general AI planners (Mindtrip, Layla, Wanderlog) vs. a Slovenia specialist. Plan without an account, in English or Slovenian."
+    },
+    "badge": "An honest comparison · no signup",
+    "title": "Which AI trip planner is right for Slovenia?",
+    "intro": "This is not a marketing brochure. Our editorial principle is honesty — so we admit where general planners beat us, and show where a Slovenia specialist gives you more. The decision is yours.",
+    "updated": "Updated: 17 September 2026. Comparisons age — check the date before deciding.",
+    "generalistsTitle": "What general AI planners do well",
+    "generalistsIntro": "Mindtrip, Layla, Wanderlog, ChatGPT and peers are good products. For these cases, they are the right choice:",
+    "generalists": {
+      "coverageTitle": "Global coverage",
+      "coverageDesc": "Tokyo, Lisbon and Patagonia in the same chat. We cover Slovenia only.",
+      "bookingTitle": "Flights and hotels",
+      "bookingDesc": "Integrations with major booking systems worldwide. With us you book local experiences and products, not flights.",
+      "collabTitle": "Group planning",
+      "collabDesc": "Real-time collaboration with family or friends. We offer itinerary sharing with polls, not collaborative editing.",
+      "scaleTitle": "Maturity and scale",
+      "scaleDesc": "Millions of users and large review bases. We are a young platform with a narrow but deep focus."
+    },
+    "problemsTitle": "Where generalists disappoint on Slovenia trips",
+    "problemsIntro": "These are not invented pitfalls — they are documented in AI planner reviews (2025–2026) and in our own testing:",
+    "problems": {
+      "priceTitle": "Prices far from reality",
+      "priceDesc": "Mindtrip reviewers report price deviations of 20–30 %. For a city break that is an annoyance; for a €300 weekend budget it is the difference between two days.",
+      "closedTitle": "Closed venues in the plan",
+      "closedDesc": "The classic trap: the AI includes an attraction on a day it is closed (the famous “Louvre is closed on Tuesdays”). Without checking opening hours, it cannot know.",
+      "genericTitle": "Generic top-10 lists",
+      "genericDesc": "The same list for everyone. Slovenia is small, but local depth — when Vintgar Gorge has no queue, where the authentic kremšnita is — requires specialized, curated data."
+    },
+    "tableTitle": "The comparison at a glance",
+    "table": {
+      "caption": "Comparison of general AI trip planners with the Discover Slovenia AI platform",
+      "colWhat": "What we compare",
+      "colGeneral": "General planners",
+      "colOurs": "Discover Slovenia AI",
+      "rows": {
+        "focus": {
+          "label": "Focus",
+          "general": "The whole world",
+          "ours": "Slovenia only — deep and verified"
+        },
+        "account": {
+          "label": "Account needed to save a plan",
+          "general": "Often required (Google/Apple)",
+          "ours": "Not needed — anonymous saving and sharing"
+        },
+        "validation": {
+          "label": "Checking hours and prices",
+          "general": "Not systematic",
+          "ours": "Sources + “verify before visiting” warnings + geo-validation"
+        },
+        "feasibility": {
+          "label": "Day feasibility (distances, times)",
+          "general": "Rarely checked",
+          "ours": "Real km and minutes from road routing; a warning when the day is too tight"
+        },
+        "language": {
+          "label": "Slovenian language",
+          "general": "English or machine translation",
+          "ours": "Slovenian is core to the product (and English)"
+        },
+        "booking": {
+          "label": "Bookings",
+          "general": "Global flights and hotels",
+          "ours": "Local experiences and a marketplace of Slovenian providers"
+        },
+        "offline": {
+          "label": "Plan offline",
+          "general": "Often app-only",
+          "ours": "Yes — install as an app (PWA)"
+        },
+        "beyond": {
+          "label": "Trips outside Slovenia",
+          "general": "Yes — the whole world",
+          "ours": "No — we honestly recommend a generalist"
+        }
+      },
+      "note": "The table is fair to both sides: the last row is an admission, not a flaw we would hide."
+    },
+    "practiceTitle": "What this means in practice",
+    "practice": {
+      "ex1Title": "December, 15:40, Vintgar Gorge",
+      "ex1Desc": "A generalist may happily slot the gorge into a late-afternoon plan. Our planner knows it closes at 16:00 in winter and warns you to move it to the morning — with the data source.",
+      "ex2Title": "Bled → Bohinj in “about 30 minutes”?",
+      "ex2Desc": "Time estimates “from the model's memory” can be off. Our stop-to-stop connectors carry actual kilometres and minutes from real-road routing — including winter sections.",
+      "ex3Title": "What will the day really cost?",
+      "ex3Desc": "Ticket and local-specialty prices come from a curated dataset with sources — the sum on a day card means something. When data is missing, we say so and add a warning."
+    },
+    "notForYouTitle": "When Discover Slovenia AI is NOT right for you",
+    "notForYouBody": "If you are planning a cross-border trip, need flights or a hotel abroad — pick a generalist (Layla, Wanderlog, or a ChatGPT/Gemini chat). That is fine; we use them for our own foreign trips too. We would love to see you on the Slovenian leg.",
+    "ctaTitle": "Try it without an account",
+    "ctaBody": "From question to itinerary: 30 seconds. Required account: none. Language: Slovenian or English.",
+    "ctaPrimary": "Build my itinerary",
+    "ctaSecondary": "Explore destinations",
+    "faqTitle": "Frequently asked questions",
+    "faq": {
+      "q1": "Do I need an account to plan a trip?",
+      "a1": "No. You create, save and share itineraries entirely without signing up — it works anonymously. A free account is optional and only adds trip history under My trips.",
+      "q2": "How much does it cost?",
+      "a2": "The planner, itineraries, guides and sharing are free. The platform earns from local experience bookings and marketplace sales — not from your data.",
+      "q3": "What if I am travelling outside Slovenia?",
+      "a3": "Honestly: for cross-border trips use a generalist (for example Layla, Wanderlog, Mindtrip) or an AI chat. We cover Slovenia only — but we cover it deeply, with verified local data.",
+      "q4": "How reliable is your data?",
+      "a4": "Destination data is editorially curated, prices and opening hours carry sources, and every itinerary goes through geo-validation with warnings. When we are not sure, it says “verify before visiting”. The methodology is public on the Data sources page.",
+      "q5": "I have been using Mindtrip — why switch?",
+      "a5": "Mindtrip is a good generalist; their iOS app remains available, though their website was unreachable as of September 2026 when this was written. For Slovenia trips you get here: planning without an account, Slovenian as a core language, verified local data, and bookings with local providers. Judge for yourself — a no-signup try takes 30 seconds."
+    },
+    "sources": "Based on publicly available reviews (2025–2026) and the platform's editorial analysis (September 2026). More: <linkSources>data sources</linkSources> · <linkTrust>trust and safety</linkTrust> · <linkAbout>about</linkAbout>"
+  }
+}

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { randomId } from "@/lib/security";
 import { sendEmail, isEmailDemo } from "@/lib/email";
+import { isStripeDemo } from "@/lib/stripe-server";
 import {
   bookingConfirmationEmail,
   providerBookingNotificationEmail,
@@ -133,8 +134,31 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // 19-f-8 (revizija 1.36.0, P3): "danes" po stenski uri strežnika (UTC na
+    // Vercelu) je ljubljansko mejo "veljaven datum" zamaknil za 1–2 uri
+    // (rezervacija za današnji dan v LJ večer je bila zavrnjena kot pretekla).
+    // Isti princip kot 1.34.0 fix obračunskega meseca in
+    // startOfTodayLjubljana v consultations/ask-local.
+    const LJ_TZ = "Europe/Ljubljana";
+    const today = (() => {
+      const parts = Object.fromEntries(
+        new Intl.DateTimeFormat("en-US", {
+          timeZone: LJ_TZ,
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        })
+          .formatToParts(new Date())
+          .map((p) => [p.type, p.value])
+      );
+      return new Date(
+        Date.UTC(
+          Number(parts.year),
+          Number(parts.month) - 1,
+          Number(parts.day)
+        )
+      );
+    })();
     if (bookingDate < today) {
       return NextResponse.json(
         { success: false, error: "Datum rezervacije mora biti v prihodnosti" },
@@ -261,8 +285,10 @@ export async function POST(request: Request) {
     const bookingNumber = `IF-EXP-${randomId(12)}`;
 
     // === Preveri ali je Stripe v demo mode ===
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
-    const isDemo = !stripeKey || stripeKey.includes("demo_placeholder");
+    // 19e-1 (revizija 1.36.0, P2): skupni fail-closed helper — demo v
+    // produkciji zahteva DSA_DEMO_PAYMENTS=1 (prej: unset ključ v produkciji
+    // bi tiho potrdil rezervacijo brez plačila).
+    const isDemo = isStripeDemo();
 
     // === DEMO MODE: direktno ustvari Booking z status="confirmed" ===
     if (isDemo) {

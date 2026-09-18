@@ -4,7 +4,7 @@
 # =============================================================================
 # Raba:
 #   bash scripts/verify/production-smoke.sh
-#     CRON_SECRET=...     bash scripts/verify/production-smoke.sh   # + cron × 6 s pravim secretom (DELIBERATNO — sproži prava cron opravila, idempotentna)
+#     CRON_SECRET=...     bash scripts/verify/production-smoke.sh   # + cron × 7 s pravim secretom (DELIBERATNO — sproži prava cron opravila, idempotentna)
 #     SMOKE_BOOKING=1     bash scripts/verify/production-smoke.sh   # PIŠE v DB → počisti s p9-smoke-cleanup.ts
 #     SMOKE_NEWSLETTER=1  bash scripts/verify/production-smoke.sh   # 1 NewsletterSubscriber vrstica
 #     SMOKE_RATE_LIMIT=1  bash scripts/verify/production-smoke.sh   # 14 klicev /api/ai-health (max_tokens=8 → zanemarljiv AI strošek)
@@ -22,13 +22,14 @@ set -uo pipefail
 
 BASE_URL="${BASE_URL:-https://i-feel-slovenia.vercel.app}"
 REPO_SLUG="markec12345678/Discover-Slovenia-AI"
-SIX_CRONS=(
+ALL_CRONS=(
   daily-trip-push
   recalculate-status
   commission-invoices
   weekly-alerts
   renewal-reminders
   draft-reminders
+  sto-reingest
 )
 
 # CRON_SECRET: SAMO eksplicitna env spremenljivka (glej glavo skripte)
@@ -88,16 +89,16 @@ c="$(code "$BASE_URL/api/bookings/IF-EXP-0000000000?email=smoke-p9%40dsa-test.in
 [[ "$c" == "404" ]] && ok "lookup neobstoječe rezervacije → 404 (enak odgovor kot napačen email)" || bad "lookup → $c (pričakovan 404)"
 
 # -----------------------------------------------------------------------------
-hdr "5) Cron × 6 (GET) — NAPAČEN secret (fail-closed 401)"
-for ep in "${SIX_CRONS[@]}"; do
+hdr "5) Cron × 7 (GET) — NAPAČEN secret (fail-closed 401)"
+for ep in "${ALL_CRONS[@]}"; do
   c="$(code -H "Authorization: Bearer napačen-secret-p9" "$BASE_URL/api/cron/$ep")"
   [[ "$c" == "401" ]] && ok "$ep → 401 brez pravega secreta" || bad "$ep → $c (pričakovano 401!)"
 done
 
 # -----------------------------------------------------------------------------
-hdr "6) Cron × 6 (GET) — PRAVI secret (samo če CRON_SECRET eksplicitno podan)"
+hdr "6) Cron × 7 (GET) — PRAVI secret (samo če CRON_SECRET eksplicitno podan)"
 if [[ -n "$CRON_SECRET" ]]; then
-  for ep in "${SIX_CRONS[@]}"; do
+  for ep in "${ALL_CRONS[@]}"; do
     c="$(code --max-time 120 -H "Authorization: Bearer $CRON_SECRET" "$BASE_URL/api/cron/$ep")"
     [[ "$c" == "200" ]] && ok "$ep → 200 (idempotentno)" || bad "$ep → $c"
   done

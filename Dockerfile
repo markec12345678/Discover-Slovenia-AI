@@ -28,9 +28,20 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Začetna (prazna) baza s celotno shemo — uporabljena kot semeforo
+# Začetna (prazna) baza s celotno shemo — uporabljena kot semafor
 # ob prvem zagonu (Docker jo sam skopira v prazen named volume).
-RUN mkdir -p db && DATABASE_URL=file:/app/db/custom.db bunx prisma db push --skip-generate
+# 19e-2 (revizija 1.36.0, P3): PROVIDER-GUARD — db push ima smisel SAMO za
+# sqlite shemo. Committana shema je lahko postgresql (Neon konvencija, glej
+# DEPLOYMENT.md) — proti njej DATABASE_URL=file:... prisma db push pade z
+# Validation Error (build crka). V tem primeru demo-semafor preskočimo:
+# Docker/VPS pot je združljiva SAMO s sqlite shemo (README §Render dokumentira
+# neskladje); postgres deployi uporabljajo DATABASE_URL ob zagonu.
+RUN if grep -q 'provider = "sqlite"' prisma/schema.prisma; then \
+      mkdir -p db && DATABASE_URL=file:/app/db/custom.db bunx prisma db push --skip-generate; \
+    else \
+      echo "schema provider != sqlite — demo DB seed preskočen (postgres/Neon deploy: DATABASE_URL ob zagonu)"; \
+      mkdir -p db && touch db/custom.db; \
+    fi
 
 # METADATABASE (MONET-10): absolutni OG/canonical/JSON-LD URL-ji se spečejo
 # ob buildu. Privzeto DEJANSKA produkcjska domena (Render), ne mrtva

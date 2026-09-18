@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import Stripe from "stripe";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { isStripeDemo } from "@/lib/stripe-server";
+import { isStripeConfigured, isStripeDemo } from "@/lib/stripe-server";
 
 // POST /api/stripe/portal — ustvari Stripe Customer Portal session
 // (za upravljanje naročnine — cancel, update card, see invoices)
@@ -12,7 +12,13 @@ import { isStripeDemo } from "@/lib/stripe-server";
 export async function POST() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    // F1 (revizija 1.36.0, 19-b P2): email kolizija User/Owner — brez tega
+    // guard-a bi B2C seja dobila Stripe billing portal TUJEGA ownerja
+    // (preklic naročnine, zamenjava kartice).
+    if (
+      !session?.user?.email ||
+      session.user.accountType === "user"
+    ) {
       return NextResponse.json(
         { error: "Niste prijavljeni" },
         { status: 401 }
@@ -57,6 +63,17 @@ export async function POST() {
     }
 
     const stripeKey = process.env.STRIPE_SECRET_KEY;
+    // 19e-1 (1.36.0): fail-closed — produkcija brez ključa (in brez
+    // DSA_DEMO_PAYMENTS=1) ne sme tiho pasti v demo odgovor.
+    if (!isStripeConfigured()) {
+      return NextResponse.json(
+        {
+          error:
+            "Plačila niso konfigurirana (STRIPE_SECRET_KEY manjka). Nastavite Stripe ključe ali DSA_DEMO_PAYMENTS=1 za demo način.",
+        },
+        { status: 503 }
+      );
+    }
     if (!stripeKey) {
       return NextResponse.json(
         { error: "Stripe ni konfiguriran" },

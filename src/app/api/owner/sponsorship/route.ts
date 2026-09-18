@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import Stripe from "stripe";
+import { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { isStripeDemo } from "@/lib/stripe-server";
+import { isStripeConfigured, isStripeDemo } from "@/lib/stripe-server";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { activateSponsorship } from "@/lib/sponsorships";
 
@@ -117,37 +118,79 @@ export async function POST(request: Request) {
     // Preveri ali že ima aktivno sponzorstvo
     // P7-C4 (P2): zajeti tudi "created" — sicer je bilo možno odpreti DVE
     // checkout seji za isti lokal (prva se ne aktivira, druga prepiše endsAt).
-    const existing = await db.sponsorship.findFirst({
-      where: {
-        listingId,
-        status: { in: ["active", "paid", "created"] },
-      },
-    });
-
-    if (existing) {
-      return NextResponse.json(
-        { error: "Lokal že ima aktivno sponzorstvo", existingId: existing.id },
-        { status: 400 }
-      );
-    }
-
+    // RC-3 (revizija 1.36.0, P2): findFirst → create je bila TOCTOU luknja —
+    // dva sočasna POST-a sta oba prebrala "ni obstoječega" in oba kreirala
+    // plačljivi Stripe seji (dvakratna bremenitev). Zdaj: SERIALIZABLE
+    // transakcija + retry na P2034 (enak vzorec kot /api/bookings P8) —
+    // kreator zmagovalca vidi sogibateljev zapis ob retryju → 400.
+    const existingWhere = {
+      listingId,
+      status: { in: ["active", "paid", "created"] as string[] },
+    };
+    const txOptions = process.env.DATABASE_URL?.startsWith("file:")
+      ? undefined
+      : {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        };
     const amount = SPONSORSHIP_PRICES[level];
     const startsAt = new Date();
     const endsAt = new Date();
     endsAt.setMonth(endsAt.getMonth() + 1); // 1 mesec
 
-    // Ustvari sponsorship zapis (status: created)
-    const sponsorship = await db.sponsorship.create({
-      data: {
-        listingId,
-        ownerId: owner.id,
-        level,
-        amount,
-        status: "created",
-        startsAt,
-        endsAt,
-      },
-    });
+    let sponsorship: { id: string } | null = null;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        sponsorship = await db.$transaction(
+          async (tx) => {
+            const existing = await tx.sponsorship.findFirst({
+              where: existingWhere,
+              select: { id: true },
+            });
+            if (existing) {
+              return null;
+            }
+            return await tx.sponsorship.create({
+              data: {
+                listingId,
+                ownerId: owner.id,
+                level,
+                amount,
+                status: "created",
+                startsAt,
+                endsAt,
+              },
+              select: { id: true },
+            });
+          },
+          txOptions
+        );
+        break;
+      } catch (error) {
+        const conflict =
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2034";
+        if (!conflict || attempt >= 2) {
+          // Zadnja možnost: če je sogibatelj vmes uspel, vrni njegov odgovor
+          const lateExisting = await db.sponsorship.findFirst({
+            where: existingWhere,
+            select: { id: true },
+          });
+          if (lateExisting) {
+            sponsorship = null;
+            break;
+          }
+          throw error;
+        }
+        await new Promise((r) => setTimeout(r, 60));
+      }
+    }
+
+    if (!sponsorship) {
+      return NextResponse.json(
+        { error: "Lokal že ima aktivno sponzorstvo" },
+        { status: 400 }
+      );
+    }
 
     await logAudit({
       actorId: owner.id,
@@ -174,6 +217,17 @@ export async function POST(request: Request) {
     }
 
     // === PRODUCTION MODE — Stripe Checkout ===
+    // 19e-1 (1.36.0): fail-closed — produkcija brez ključa in brez
+    // DSA_DEMO_PAYMENTS=1 ne sme tiho aktivirati sponzorstva brez plačila.
+    if (!isStripeConfigured()) {
+      return NextResponse.json(
+        {
+          error:
+            "Plačila niso konfigurirana (STRIPE_SECRET_KEY manjka). Nastavite Stripe ključe ali DSA_DEMO_PAYMENTS=1 za demo način.",
+        },
+        { status: 503 }
+      );
+    }
     const stripeKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeKey) {
       return NextResponse.json(

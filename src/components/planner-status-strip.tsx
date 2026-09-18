@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   AlertCircle,
+  BedDouble,
   Car,
   ChevronDown,
   Clock,
@@ -15,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { ItineraryQualityCard } from "@/components/itinerary-quality-card";
 import { BudgetPanel } from "@/components/budget-panel";
 import { GeoValidationPanel } from "@/components/geo-validation-panel";
+import { trackPlannerEvent } from "@/lib/planner-analytics";
 import { cn } from "@/lib/utils";
 import type {
   GeoValidation,
@@ -27,6 +29,10 @@ interface PlannerStatusStripProps {
   input: PlannerInput;
   /** Isti memo kot planner (dnevne značke) — en vir resnice za km/čase. */
   geoValidation: GeoValidation;
+  /** OPCIJA-3: skupno število rezervabilnih ponudb (listings+izkušnje+
+   *  izdelki) prek vseh dni — poganja vrstico "Rezerviraj" pod ploščicami.
+   *  0 ali undefined = vrstica se ne prikaže (prazna tržnica ni CTA). */
+  bookingOfferCount?: number;
 }
 
 /**
@@ -40,6 +46,7 @@ export function PlannerStatusStrip({
   itinerary,
   input,
   geoValidation,
+  bookingOfferCount = 0,
 }: PlannerStatusStripProps) {
   const t = useTranslations("planner");
   const [open, setOpen] = useState(false);
@@ -144,6 +151,34 @@ export function PlannerStatusStrip({
           </div>
         ))}
       </div>
+
+      {/* OPCIJA-3 (transakcijska globina): rezervacija kot PRVORAZREDNI
+          državljan delovne površine — vrstica pod ploščicami stanja, VIDNA
+          TAKOJ po generiranju (ne šele po scrollu skozi vse dneve). Vodi na
+          booking panel prvega dne (nadaljnji dnevni paneli ostanejo na
+          svojih mestih). Prikaže se SAMO kadar obstajajo ponudbe — prazna
+          tržnica bi bila nepošten CTA. */}
+      {bookingOfferCount > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            trackPlannerEvent("booking_cta_clicked", {
+              placement: "status_strip",
+              offers: bookingOfferCount,
+            });
+            document
+              .getElementById("booking-panel-1")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary transition-colors hover:border-primary/50 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <BedDouble className="size-4 shrink-0" aria-hidden />
+          {t("bookingCtaStrip")}
+          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold">
+            {t("bookingOffersCount", { count: bookingOfferCount })}
+          </span>
+        </button>
+      )}
 
       {/* Zložene podrobnosti — iste kartice kot prej, korak dlje */}
       <Button

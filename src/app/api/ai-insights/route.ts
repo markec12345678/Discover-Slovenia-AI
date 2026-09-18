@@ -44,6 +44,13 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type") || "admin";
 
+    // 19c-6 (revizija 1.36.0, P3): neznan type je prej padel SKOZI obe
+    // auth veji (niti admin niti owner) in vseeno sprožil drag AI klic z
+    // prazno statistiko — neavtoriziran strošek. Zdaj: 404.
+    if (type !== "admin" && type !== "owner") {
+      return NextResponse.json({ error: "Neznan tip" }, { status: 404 });
+    }
+
     // Avtentikacija (P3a-4: timing-safe checkAdmin iz auth-guards)
     if (type === "admin") {
       if (!checkAdmin(request.headers.get("x-admin-password"))) {
@@ -54,7 +61,12 @@ export async function GET(request: Request) {
     let ownerId = "";
     if (type === "owner") {
       const session = await getServerSession(authOptions);
-      if (!session?.user?.email) {
+      // F1 (revizija 1.36.0, 19-b P2): email kolizija User/Owner — brez
+      // tega guard-a bi B2C seja brala tuje ponudniške statistike.
+      if (
+        !session?.user?.email ||
+        session.user.accountType === "user"
+      ) {
         return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
       }
       const owner = await db.owner.findUnique({

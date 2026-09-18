@@ -88,6 +88,29 @@ export async function POST(request: Request) {
       );
     }
 
+    // 19-f-5 (revizija 1.36.0, P2): validacija — prej je bil level prost
+    // niz (owner ruta whitelistira!), durationDays neomejen (negativen →
+    // aktivno sponzorstvo s pretečenim endsAt — nemogoče stanje), ownerId
+    // pa brez obstoj/konsistency checka (P2003 → 500, ali finančni zapis
+    // na NAPAČNEM ownerju).
+    const VALID_LEVELS = ["basic", "premium", "featured"] as const;
+    if (typeof level !== "string" || !VALID_LEVELS.includes(level as (typeof VALID_LEVELS)[number])) {
+      return NextResponse.json(
+        { error: `Neveljaven level sponzorstva (dovoljeno: ${VALID_LEVELS.join(" | ")})` },
+        { status: 400 }
+      );
+    }
+    if (
+      typeof durationDays !== "number" ||
+      !Number.isInteger(durationDays) ||
+      durationDays < 1 ||
+      durationDays > 365
+    ) {
+      return NextResponse.json(
+        { error: "Trajanje mora biti celo število dni med 1 in 365" },
+        { status: 400 }
+      );
+    }
     const listing = await db.listing.findUnique({
       where: { id: listingId },
       select: { id: true, name: true, ownerId: true },
@@ -95,6 +118,22 @@ export async function POST(request: Request) {
 
     if (!listing) {
       return NextResponse.json({ error: "Lokal ni najden" }, { status: 404 });
+    }
+
+    // Sponzorstvo pripada lastniku LOKALA — ownerId iz zahteve se mora
+    // ujemati (prej bi admin pripisal zapis poljubnemu ownerju).
+    const ownerRecord = await db.owner.findUnique({
+      where: { id: ownerId },
+      select: { id: true },
+    });
+    if (!ownerRecord) {
+      return NextResponse.json({ error: "Owner ni najden" }, { status: 404 });
+    }
+    if (listing.ownerId !== ownerId) {
+      return NextResponse.json(
+        { error: "Owner se ne ujema z lastnikom lokala" },
+        { status: 400 }
+      );
     }
 
     const startsAt = new Date();

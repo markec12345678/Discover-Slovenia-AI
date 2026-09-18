@@ -5,8 +5,19 @@ import { isEnRoute, routing, type Locale } from "./i18n/routing";
 /**
  * Header, ki ga next-intl uporablja za prenos locale-a iz middleware-a
  * v `getRequestConfig` (glej `RequestLocale.js` v next-intl dist).
+ * FIKSNO ime (next-intl kontrakt) — zato ga ob vstopu STRIPAMO (glej 0b):
+ * zunanji klient bi z njim sicer vsilil locale mimo EN whitelisti.
  */
 const HEADER_LOCALE = "x-next-intl-locale";
+
+/**
+ * INTERNI marker za varovalko proti standalone zanki (korak 0). Naključno
+ * ime (19e-3, revizija 1.36.0): prej je bila zanka-varovalka vezana na
+ * HEADER_LOCALE, ki ga lahko pošlje ZUNANJI klient — s tem je preskočil
+ * EN whitelist guard + vsilil locale (mešane jezike). Ugibljivo ime +
+ * strip ob vstopu = marker ostane čisto interni (proxy → rewrite round-trip).
+ */
+const HEADER_INTERNAL_PASS = "x-dsa-proxy-qk7f42";
 
 /**
  * Cookie za persistenco locale-a med requesti.
@@ -56,14 +67,25 @@ export default function middleware(request: NextRequest) {
   //    nazaj na isti strežnik; ta notranji klic PONOVNO vstopi v proxy
   //    (proxy bi spet rewrite → spet forward → neskončna zanka; E2E
   //    izmerjeno 4763 samo-zahtev na en request → timeout strani).
-  //    Ker prvi prehod nastavi `x-next-intl-locale` header, ki preživi
-  //    round-trip, ga uporabimo kot marker: notranji ponovni vstop takoj
-  //    spustimo naprej. (V dev/Vercel okoljih se header ob prvem vstopu
+  //    Ker prvi prehod nastavi interni marker header (HEADER_INTERNAL_PASS),
+  //    ki preživi round-trip, ga uporabimo kot marker: notranji ponovni vstop
+  //    takoj spustimo naprej. (V dev/Vercel okoljih se header ob prvem vstopu
   //    še ni nastavil, varovalka torej nikoli ne sproži — obnašanje
   //    nespremenjeno.)
-  if (request.headers.get(HEADER_LOCALE)) {
+  //    19e-3 (1.36.0): prej je bil marker x-next-intl-locale — UGASLJIVO ime,
+  //    ki ga lahko pošlje zunanji klient (preskoči guard). Zdaj naključno ime.
+  if (request.headers.get(HEADER_INTERNAL_PASS)) {
     return NextResponse.next();
   }
+
+  // 0b. 19e-3 (revizija 1.36.0, P3): STRIP zunanje poslanih internih headerjev.
+  //     Zunanji vnos ne sme niti označiti request kot "že viden" (zanka-
+  //     varovalka zgoraj) niti vsiliti locale next-intl-u mimo EN whitelisti
+  //     in /sl redirectov. Korak 3 gradi na očiščenih headerjih; naslednji
+  //     rewrite s tem nosi SAMO strežniško nastavljen locale.
+  const externalHeaders = new Headers(request.headers);
+  externalHeaders.delete(HEADER_LOCALE);
+  externalHeaders.delete(HEADER_INTERNAL_PASS);
 
   // 1. Če uporabnik obišče `/sl` (default locale s prefix-om), redirect
   //    na `/` (brez prefix-a, ker `as-needed` ne prikazuje default prefix-a).
@@ -115,8 +137,10 @@ export default function middleware(request: NextRequest) {
   }
 
   // 3. Nastavi `x-next-intl-locale` header za next-intl `getRequestConfig`
-  const requestHeaders = new Headers(request.headers);
+  //    (+ interni marker za zanka-varovalko iz koraka 0)
+  const requestHeaders = new Headers(externalHeaders);
   requestHeaders.set(HEADER_LOCALE, locale);
+  requestHeaders.set(HEADER_INTERNAL_PASS, "1");
 
   // 4. Rewrita URL (odstrani locale prefix) in posreduje header
   const rewriteUrl = request.nextUrl.clone();

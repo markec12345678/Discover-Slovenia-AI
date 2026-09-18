@@ -169,6 +169,8 @@ docker compose logs cron                   # izidi cron klicev (sent/issued/…)
 | `0 8 * * 1` | `/api/cron/weekly-alerts` | tedensko B2B poročilo |
 | `0 8 1 * *` | `/api/cron/commission-invoices` | mesečni obračun provizij |
 | `0 9 * * *` | `/api/cron/renewal-reminders` | opomniki obnov |
+| `0 10 * * *` | `/api/cron/draft-reminders` | nudge osnutkov (optimistična ključavnica) |
+| `30 7 * * 2` | `/api/cron/sto-reingest` | tedenska osvežitev virov STO + raport odmika (1.45.0) |
 
 Vsak klic je Bearer zaščiten s `CRON_SECRET` (brez njega API vrne 401 —
 fail-closed, E2E dokazano).
@@ -290,6 +292,24 @@ bunx prisma migrate dev --name <opis>   # zahteva postgres URL (shadow)
 …in pred prometom na produkciji:
 
 ```bash
+# Skripta (1.36.1) vse naredi v enem zagonu:
+#   validira URL → status PRED (read-only) → zamenja sqlite shemo na
+#   committed postgres → migrate deploy → status PO (dokaz sinhronosti) →
+#   povrne sqlite (tudi ob napaki/prekinitvi — trap EXIT).
+#   --status = SAMO read-only vpogled (produkcija ni spremenjena).
+# URL dobiš v Vercel/Render dashboardu (Settings → Environment
+# Variables → DATABASE_URL):
+./scripts/ops/migrate-deploy.sh "<neon-url>"
+
+# Read-only preverba, kaj čaka (brez vsake spremembe):
+./scripts/ops/migrate-deploy.sh --status "<neon-url>"
+```
+
+Ročno (ekvivalentno — PAST: ne deluje iz klona z lokalno SQLITE shemo,
+ker Prisma zahteva `file:` protokol → P1012; najprej povrni committed
+postgres `schema.prisma` ali uporabi skripto zgoraj):
+
+```bash
 DATABASE_URL="<neon-url>" bun run db:deploy   # prisma migrate deploy
 ```
 
@@ -314,7 +334,7 @@ a do 1.31.0 jih nihče ni samodejno gledal.
 
 - **`.github/workflows/prod-monitor.yml`** vsake 3 ure (UTC) požene
   `scripts/ops/functional-smoke.sh --get-only` proti **obema** produkcijama
-  (Vercel primarna + Render sekundarna z velikodušnim `--ready-timeout 240`
+  (Render primarna + Vercel sekundarna — usklajeno z README 2026-09-12; velikodušen `--ready-timeout 240` za hladne zagone
   za hladne zagoni free tierja). Preverja: `/api/health` (degraded = rdeče),
   SSR strani SL+EN, sitemap s pragom ≥ 650 URL (regresija SEO površine),
   3 vzorčne globoke strani, `/api/listings` (živa DB), 404.
@@ -343,11 +363,11 @@ bash scripts/ops/functional-smoke.sh https://i-feel-slovenia.vercel.app --get-on
 | Admin | `ADMIN_PASSWORD`, `ADMIN_EMAIL` | DA | močno geslo (min 32 znakov) |
 | Cron | `CRON_SECRET` | DA | Bearer za vse /api/cron/* |
 | E-pošta | `SMTP_HOST/PORT/SECURE/USER/PASS/FROM` | za e-pošto | brez SMTP: console fallback |
-| AI (primarni) | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `OPENROUTER_FALLBACK_MODEL`, `OPENROUTER_BASE_URL` | DA (1.14.0) | OpenRouter free tier (`nex-agi/nex-n2.5-pro:free` + notranji fallback mini; JSON mode podprt); deluje iz VSAJ regije (ni Google geo-bloka). Dnevna meja free tierja ~50 zahtev (brez kredita) — takrat veriga pošteno pade na Gemini (produkcija US/EU) ali z-ai (dev). GitHub CI preverja prek Actions secreta + `.github/workflows/ai-smoke.yml`; namestitev: `scripts/ops/vercel-env-set.sh` / `render-env-set.sh` |
-| AI (sekundarni) | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_BASE_URL` | DA (F10) | Google AI Studio free tier; OpenAI-compat končna točka; vision pot (F8 slikovni vnos) teče IZKLJUČNO po njej (OpenRouter :free vision NEDELJUJE — živo testirano). Vercel/Render (US/EU) regije so podprte — sandbox razvoj je geo-blokiran (circuit breaker prevzame) |
+| AI (primarni) | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `OPENROUTER_FALLBACK_MODEL`, `OPENROUTER_BASE_URL` | DA (1.14.0) | OpenRouter free tier (`nex-agi/nex-n2.5-pro:free` + notranji fallback mini; JSON mode podprt); deluje iz VSAJ regije (ni Google geo-bloka). Dnevna meja free tierja ~50 zahtev (brez kredita) — takrat veriga pošteno pade na Gemini (produkcija US/EU) ali z-ai (dev). GitHub CI preverja prek Actions secreta + `.github/workflows/ai-smoke.yml`; namestitev: `scripts/ops/vercel-env-set.sh` / `render-env-set.sh`. **DEJANSKO STANJE (živo preverjeno 2026-09-17, 1.48.1): OBE produkciji NASTAVLJENI in DELUJETA.** Vercel: `/api/chat` → `source: openrouter` z 5 T2 viri + 3 kraji, 21 s; `/api/itinerary` → `source: ai`, 136 s. Render (primarna): `OPENROUTER_API_KEY` nameščen 2026-09-17 z `render-env-set.sh --sync` (merge-safe: obstoječih 10 ohranjenih → 11; redeploy `dep-dam49…` v ~4 min) — živi dokazi po namestitvi: `/api/chat` → `source: openrouter` (75 s, uzemljena slovenska vsebina: Bohinj/Triglav, Soča/Vintgar, Postojnska jama); `/api/itinerary` → `source: ai` (110 s; 3-dnevni načrt Ljubljana → Vintgar → Bled / Bohinj / Triglav s preverjenimi odpiralnimi časi, OSRM 175 km, geoValidation worst=ok). OPOMBA (free tier, posodobljeno 1.48.2): čakalne vrste `:free` za VELIKE generacije so izmerjeno 60–79 s (3/3 direktnih vzorcev 2026-09-17, isti ključ/model kot produkcija) — 1.48.2 zato podaljša proračun itineraryja na 120 s (`AICompletionOptions.timeoutMs`) z VEZANO najslabšo časovnico (ob SDK timeoutu preskok rezervnega modela — čakalna vrsta je skupna; ob izrecnem proračunu SDK auto-retry izklopljen); ob prekoračitvi posamezen klic pošteno pade v deterministični fallback (badge »Predlog«) — naslednji klic znova poskusi AI (circuit breaker šteje samo 3 ZAPOREDNE napake). LOČEN pojavi: `nex-agi :free` ob zelo velikih promptih včasih vrne 200 s prazno vsebino (2/2 lokalno 2026-09-17; manjši prompti 3/3 z vsebino) — na Renderu (brez sekundarnega) tak dogodek pomeni fallback; `GEMINI_API_KEY` na Render bi ga ujel kot sekundarnega (1 ukaz: `render-env-set.sh --sync GEMINI_API_KEY=<vrednost>`). Zgodovina vrzeli (2026-09-12 → 2026-09-17): ključi so bili 1.15.0 potisnjeni SAMO na Vercel → Render je 5 dni streže fallback; ujet šele z živo preverbo zlatih poti (Task 39) |
+| AI (sekundarni) | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_BASE_URL` | DA (F10) | Google AI Studio free tier; OpenAI-compat končna točka; vision pot (F8 slikovni vnos) teče IZKLJUČNO po njej (OpenRouter :free vision NEDELJUJE — živo testirano). Vercel/Render (US/EU) regije so podprte — sandbox razvoj je geo-blokiran (circuit breaker prevzame). Stanje: nastavljen na Vercel (1.15.0); na Render še ni (OpenRouter samostojno pokrije primarno verigo — po želji dodaj z `render-env-set.sh --sync GEMINI_API_KEY=<vrednost>`) |
 | AI (terciarni) | `PUTER_AUTH_TOKEN`, `PUTER_BASE_URL`, `PUTER_MODEL` | ne | nadomestni provider v verigi |
 | Deploy orodja | `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, `VERCEL_PROJECT_NAME` | ne (1.15.0) | Uporabnikov token (https://vercel.com/account/tokens) + Project ID — omogoča `scripts/ops/vercel-env-set.sh` in `deploy-check.sh` BREZ argumentov. Živo uporabljeno 1.15.0: GEMINI_API_KEY + OPENROUTER_API_KEY potisnjena na `i-feel-slovenia` (production/preview/development); opuščena `VITE_GEMINI_API_KEY` izbrisana. VARNOST: hranimo SAMO v lokalnem .env (gitignored) — NIKOLI v repozitoriju |
-| Plačila | `STRIPE_*` | ne | demo mode brez ključev |
+| Plačila | `STRIPE_*` | ne | brez ključev demo SAMO z `DSA_DEMO_PAYMENTS=1` (1.36.0 fail-closed: prej je pomotoma unset `STRIPE_SECRET_KEY` v produkciji tiho vklopil demo vejo — brezplačne nadgradnje/»paid« naročila; zdaj brez ključa in brez zastavice plačilni tokovi vračajo 503/501). **Dejansko stanje (1.36.3, 2026-09-17):** Render = `DSA_DEMO_PAYMENTS=1` AKTIVNA (1.36.2, `render-env-set.sh --sync`) in Vercel = `DSA_DEMO_PAYMENTS=1` AKTIVNA (1.36.3, `vercel-env-set.sh --sync`) — demo rezervacije delujejo na OBEH produkcijah |
 | Push | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | ne | |
 
 ---

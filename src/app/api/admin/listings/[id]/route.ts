@@ -279,6 +279,27 @@ export async function DELETE(
       );
     }
 
+    // 19-f-2 (revizija 1.36.0, P1): enaka varovalka kot owner DELETE —
+    // brisanje lokala s sponzorstvi z denarnim sledom bi kaskadno uničilo
+    // finančno evidenco (Sponsorship → onDelete: Cascade).
+    const moneySponsorships = await db.sponsorship.count({
+      where: {
+        listingId: id,
+        OR: [
+          { status: { in: ["paid", "active", "expiring", "expired", "archived"] } },
+          { stripePaymentId: { not: null } },
+        ],
+      },
+    });
+    if (moneySponsorships > 0) {
+      return NextResponse.json(
+        {
+          error: `Lokal ima ${moneySponsorships} sponzorstev z denarno evidenco — brisanje ni mogoče.`,
+        },
+        { status: 400 }
+      );
+    }
+
     await db.listing.delete({ where: { id } });
 
     return NextResponse.json({

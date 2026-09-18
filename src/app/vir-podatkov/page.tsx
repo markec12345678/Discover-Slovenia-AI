@@ -23,6 +23,7 @@ const PATH = "/vir-podatkov";
 /** Viri podatkov — ime/URL invariantna, prevodi po `sources.<id>.*`. */
 const SOURCES = [
   { id: "osm", name: "OpenStreetMap", url: "https://www.openstreetmap.org" },
+  { id: "sloveniaInfo", name: "I feel Slovenia (STO) — slovenia.info", url: "https://www.slovenia.info" },
   { id: "wikipedia", name: "Wikipedia / Wikidata", url: "https://www.wikimedia.org" },
   { id: "openMeteo", name: "Open-Meteo", url: "https://open-meteo.com" },
   { id: "zai", name: "z-ai-web-dev-sdk (GLM)", url: "https://z.ai" },

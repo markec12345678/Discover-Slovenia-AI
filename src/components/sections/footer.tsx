@@ -63,6 +63,8 @@ export async function Footer() {
             links={[
               { href: "/nacrtuj", key: "planPlanner" },
               { href: "/nacrtuj#kviz", key: "planQuiz" },
+              // OPP-1: iskrena primerjava načrtovalcev (discoverability + interne povezave za SEO)
+              { href: "/primerjava", key: "planComparison" },
               { href: "/#rezerviraj", key: "planBookings" },
               // P1-2b: B2C računi popotnikov
               { href: "/moja-potovanja", key: "planMyTrips" },

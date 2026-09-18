@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import Stripe from "stripe";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { isStripeDemo } from "@/lib/stripe-server";
+import { isStripeConfigured, isStripeDemo } from "@/lib/stripe-server";
 
 // ============================================================================
 // POST /api/owner/commissions/checkout — Stripe Checkout za provizijski račun
@@ -97,6 +97,17 @@ export async function POST(request: Request) {
     }
 
     // === PRODUCTION MODE ===
+    // 19e-1 (1.36.0): fail-closed — produkcija brez ključa in brez
+    // DSA_DEMO_PAYMENTS=1 (demo veja zgoraj se ne sproži) → jasna 503.
+    if (!isStripeConfigured()) {
+      return NextResponse.json(
+        {
+          error:
+            "Plačila niso konfigurirana (STRIPE_SECRET_KEY manjka). Nastavite Stripe ključe ali DSA_DEMO_PAYMENTS=1 za demo način.",
+        },
+        { status: 503 }
+      );
+    }
     const stripeKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeKey) {
       return NextResponse.json(
@@ -132,6 +143,34 @@ export async function POST(request: Request) {
         where: { id: owner.id },
         data: { stripeCustomerId: customerId },
       });
+    }
+
+    // RC-4 (revizija 1.36.0, P2): prej je vsak klic ustvaril NOVO sejo —
+    // dva zavihka = dve plačljivi seji = možna dvakratna bremenitev (drugo
+    // plačilo je webhook tiho preskočil). Zdaj: obstoječa ODPRTA seja za ta
+    // račun (metadata.invoiceId) se PONOVNO UPORABI — druga seja zanjo ne
+    // more biti odprta, dokler je ta odprta; zaprta/expired seje se ustvari
+    // nova. Stripe je skupno stanje vseh instanc (brez sheme).
+    try {
+      const sessions = await stripe.checkout.sessions.list({
+        customer: customerId,
+        limit: 20,
+      });
+      const open = sessions.data.find(
+        (s) =>
+          s.status === "open" &&
+          s.metadata?.type === "commission_invoice" &&
+          s.metadata?.invoiceId === invoice.id
+      );
+      if (open?.url) {
+        return NextResponse.json({ url: open.url, reused: true });
+      }
+    } catch (listError) {
+      // Seznam sej ni kritičen — ob napaki ustvarimo novo (staro vedenje).
+      console.error(
+        "[owner/commissions/checkout] sessions.list napaka:",
+        listError
+      );
     }
 
     const checkoutSession = await stripe.checkout.sessions.create({

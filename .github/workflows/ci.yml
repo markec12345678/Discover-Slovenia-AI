@@ -108,9 +108,14 @@ jobs:
       - name: 🔨 Build
         run: bun run build
         env:
-          NEXTAUTH_SECRET: "ci-test-secret"
+          # 1.48.2 CI FIX: vrednosti MORAJO biti ≥ 16 znakov — startup korak
+          # config:secrets (1.33.0 placeholder-guard) zavrne krajše tudi v
+          # CI, ker standalone build teče kot production (NODE_ENV). Do tega
+          # popravka je bil CI tiho rdeč 27 h (16 commitov, od 4c2faf1).
+          # Vrednosti so javne/naključne — CI je ephemeral, nič ne varujejo.
+          NEXTAUTH_SECRET: "ci-smoke-nextauth-secret-0123456789"
           NEXTAUTH_URL: "http://localhost:3000"
-          ADMIN_PASSWORD: "ci-test"
+          ADMIN_PASSWORD: "ci-smoke-admin-0123456789abcdef"
           STRIPE_SECRET_KEY: "sk_test_demo_placeholder"
           SMTP_HOST: "localhost"
 
@@ -140,8 +145,10 @@ jobs:
             exit 1
           fi
         env:
-          NEXTAUTH_SECRET: "ci-test-secret"
+          # 1.48.2 CI FIX: ≥ 16 znakov (config:secrets 1.33.0 guard) — glej
+          # komentar pri Build koraku zgoraj.
+          NEXTAUTH_SECRET: "ci-smoke-nextauth-secret-0123456789"
           NEXTAUTH_URL: "http://127.0.0.1:3000"
-          ADMIN_PASSWORD: "ci-test"
+          ADMIN_PASSWORD: "ci-smoke-admin-0123456789abcdef"
           STRIPE_SECRET_KEY: "sk_test_demo_placeholder"
           SMTP_HOST: "localhost"

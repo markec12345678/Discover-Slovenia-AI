@@ -12,6 +12,42 @@
 > v `next.config.ts` aktivni od v1.1.0, prijavni rate limit pa hibridni
 > ip+email). CSP nadalje ostren v **v1.35.0** (odstranjen `unsafe-eval` v
 > produkciji, `connect-src` zožen na `'self' blob:`).
+>
+> ✅ **Posodobitev 2026-09-16 (revizija #10 — adversarial audit poslovnega
+> toka, v1.36.0):** 6 ločenih auditov (money-flow, multi-tenant, AI trust
+> meje, race conditions, produkcija/framework, impossible states). Zaprto:
+> listing DELETE varovalka pred uničenjem finančne evidence sponzorstev (P1);
+> `isStripeDemo()` fail-closed (produkcija zahteva `DSA_DEMO_PAYMENTS=1`
+> ali prave Stripe ključe — prej je unset ključ tiho aktiviral fake-plačila);
+> pogojni statusni prehodi rezervacij (updateMany WHERE status, 409 ob
+> současnosti); sponsorship TOCTOU (SERIALIZABLE tx); dnevna kvota konzultacij
+> atomarno zahtevana PRED AI klicem (pending vrstica); accountType guard na
+> stripe/checkout, stripe/portal, ai-insights (email kolizija User/Owner);
+> smart-search wrap+GUARD (edina DB-kontekst AI ruta brez obrambe — ranking
+> poisoning); chat currentPage cap+wrap + role whitelist; refine formData
+> validacija; pois/describe cache ključ id+hash(imena) + GUARD; commission
+> checkout ponovna uporaba odprte Stripe seje + pogojni mark-paid z detekcijo
+> dvakratnega plačila; products re-moderacija razširjena na ceno/zalogo/
+> prodajalca; admin/sponsorships validacija; cene min 0,01/max 100.000;
+> booking „danes" po Europe/Ljubljana; dedup ključ naročil usklajen; prag
+> poštnine v centih; poll-vote atomarni upsert; i18n interni marker
+> neugibljiv + strip zunanjih x-next-intl-locale; FK Restrict na
+> CommissionInvoice.owner in Sponsorship.owner (migracija
+> 20260916100000_restrict_money_fks — **pred deployem zagnati
+> `DATABASE_URL=<neon> bun run db:deploy`**); Dockerfile provider-guard.
+>
+> ⚠️ **Znani dolgovi (revizija #10, odloženi namerno — relevantni šele pred
+> uvozom pravih plačil):** (D1) preklic rezervacije PO izdanem provizijskem
+> računu nima clawbacka/dobropisa; (D2) atribucija „consultation" temelji na
+> substring omembi imena v AI odgovoru (največ 5 zadnjih konzultacij) —
+> izpustljiva in napihljiva, nadomestiti s persistiranimi partner ID-ji ob
+> konzultaciji; (D3) Stripe `async_payment_succeeded` dogodek ni obdelan —
+> SEPA plačila provizijskih računov se ne označijo samodejno (kartice delujejo);
+> (D4) model zmogljivosti/slotov za izkušnje ne obstaja (sočasne rezervacije
+> istega termina so možne po zasnovi); (D5) rate limiter je pomnilniški,
+> fiksno-okenski in per-instanca (meja se pomnoži z instancami/hostname-i —
+> dokumentirano, načrtovan Upstash); (D6) reviews nimajo unique/capa na
+> (izdelek, avtor) brez nakupa.
 
 ---
 

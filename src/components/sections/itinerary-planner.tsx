@@ -40,6 +40,7 @@ import {
   X,
   Volume2,
   FileText,
+  Ticket,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,18 @@ import type {
   Season,
 } from "@/lib/types";
 import { useAppStore } from "@/lib/store";
+// 1.42 (GEO → NAČRT): dodajanje kraja iz AI klepeta — CustomEvent listener
+// + consume odloženih krajev (sessionStorage) + skupna logika vstavljanja
+// 1.43: simetričen EN KLIK za odstranitev (gumb na kartici postanka)
+import {
+  CHAT_ADD_PLACE_EVENT,
+  addChatPlaceToItinerary,
+  removeChatPlaceFromItinerary,
+  readStashedChatPlaces,
+  isValidChatPlace,
+  LAST_ITINERARY_KEY,
+} from "@/lib/chat-add-place";
+import type { ChatPlace } from "@/lib/geo-intent";
 import { useToast } from "@/hooks/use-toast";
 import { trackFunnel } from "@/lib/funnel";
 import { optimizeDayOrder } from "@/lib/route-order";
@@ -218,7 +231,8 @@ function spreadDaySlots(locations: LocationVisit[]): LocationVisit[] {
 }
 
 // Persistenca zadnjega itinererja (localStorage) + deljeni načrti (URL ?odpri=)
-const LAST_ITINERARY_KEY = "discoverslovenia_last_itinerary";
+// KLJUČ je uvožen iz src/lib/chat-add-place.ts (enkraten vir — isti ključ
+// bere/piseta klepet in planner).
 const MAX_PERSIST_CHARS = 250 * 1024; // 250 KB
 
 interface PersistedItinerary {
@@ -353,6 +367,28 @@ function parseQueryToPlannerInput(query: string): PlannerInput {
  * Uporabnik izpolni obrazec (dnevi, proračun, skupina, sezona, interesi),
  * AI pa sestavi personalno dogodkovno povzetek potovanja po Sloveniji.
  */
+// UX-CMP #1 (Mindtrip primerjava, 17. 9. 2026): statični demo predogled
+// za PRAZNO stanje načrtovalnika — prej je desna polovica kazala samo
+// ikono in »itinerer se bo prikazal tukaj« (VLM: »suggests the app is
+// broken«). Zdaj prvi ogled pokaže POLN izdelek (Mindtripov vzorec):
+// mini dan Bled → Vintgar → Bohinj iz uredniškega dataseta (prave slike,
+// cene, razdalje) + gumb, ki ta primer dejansko generira.
+const DEMO_PREVIEW_STOPS = [
+  { id: "bled", time: "09:00–12:00", hours: 3 },
+  { id: "vintgar", time: "13:00–15:00", hours: 2 },
+  { id: "bohinj", time: "16:00–19:00", hours: 3 },
+] as const;
+
+/** Etapne oznake med postanki (približki iz KNOWN_DISTANCES logike). */
+const DEMO_PREVIEW_LEGS = ["10 min · 4 km", "25 min · 17 km"] as const;
+
+/** Imena za EN prikaz (SL imena pridejo iz DESTINATIONS dataseta). */
+const DEMO_PREVIEW_NAMES_EN: Record<string, string> = {
+  bled: "Bled",
+  vintgar: "Vintgar Gorge",
+  bohinj: "Lake Bohinj",
+};
+
 export function ItineraryPlanner() {
   const { toast } = useToast();
   const t = useTranslations("planner");
@@ -669,6 +705,138 @@ export function ItineraryPlanner() {
     window.addEventListener("heroQuery", handleHeroQuery as EventListener);
     return () => window.removeEventListener("heroQuery", handleHeroQuery as EventListener);
   }, []);
+
+  // === 1.42 (GEO → NAČRT): klepet → planner. AI klepet (plavajoči widget,
+  // montiran tudi tukaj) pošlje CustomEvent s krajem; planner ga PREVZAME
+  // (preventDefault) SAMO kadar ima že itinerer — sicer klepet gre po svoji
+  // poti (stash + "Ni še načrta"). Listener se veže na sveže dependencyje,
+  // ker potrebuje trenutni itinerary/formData/shareUrl. ===
+  useEffect(() => {
+    const handleChatAddPlace = (e: Event) => {
+      const place = (e as CustomEvent<ChatPlace>).detail;
+      if (!isValidChatPlace(place)) return;
+      if (!itinerary) return; // nimamo načrta — ne prevzamemo (klepet stasha)
+      e.preventDefault(); // "jaz prevzamem" — dispatchEvent vrne false
+
+      const result = addChatPlaceToItinerary(itinerary, place, {
+        locale,
+        groupSize: formData?.groupSize,
+      });
+      if (!result.ok) {
+        toast({
+          title: t("chatPlaceDuplicateTitle"),
+          description: place.name,
+        });
+        return;
+      }
+
+      setItinerary(result.itinerary);
+      persistItineraryLocally(result.itinerary, formData);
+      markResultEngaged();
+      // Strukturna sprememba — zastarel deljeni link se umakne (vzorec F16)
+      if (shareUrl) {
+        setShareUrl(null);
+        setCopied(false);
+      }
+      trackPlannerEvent("chat_place_added", {
+        provenance: place.provenance,
+        category: place.category,
+        day: result.day,
+        locale,
+      });
+      toast({
+        title: t("chatPlaceAddedTitle"),
+        description: t("chatPlaceAddedDesc", {
+          name: place.name,
+          day: result.day,
+        }),
+      });
+    };
+
+    window.addEventListener(CHAT_ADD_PLACE_EVENT, handleChatAddPlace);
+    return () =>
+      window.removeEventListener(CHAT_ADD_PLACE_EVENT, handleChatAddPlace);
+  }, [itinerary, formData, shareUrl, locale]);
+
+  // === 1.42 (GEO → NAČRT): consume odloženih krajev. Uporabnik je na kateri
+  // koli strani kliknil "+", načrta še ni bilo → kraj je čakal v
+  // sessionStorage (vzorec heroQuery). Takoj ko itinerer obstaja (obnova iz
+  // localStorage ALI prva generacija), kraje dodamo in javimo z enim toastom.
+  // Branje POČISTI ključ → efek se sam-ohrani ob vsaki spremembi itinererja. ===
+  useEffect(() => {
+    if (!itinerary) return;
+    const stashed = readStashedChatPlaces();
+    if (stashed.length === 0) return;
+
+    let current = itinerary;
+    const addedNames: string[] = [];
+    let addedCount = 0;
+    for (const place of stashed) {
+      const result = addChatPlaceToItinerary(current, place, {
+        locale,
+        groupSize: formData?.groupSize,
+      });
+      if (result.ok) {
+        current = result.itinerary;
+        addedNames.push(place.name);
+        addedCount++;
+        trackPlannerEvent("chat_place_added", {
+          provenance: place.provenance,
+          category: place.category,
+          day: result.day,
+          stashed: 1,
+          locale,
+        });
+      }
+    }
+    if (addedCount === 0) return;
+
+    setItinerary(current);
+    persistItineraryLocally(current, formData);
+    markResultEngaged();
+    if (shareUrl) {
+      setShareUrl(null);
+      setCopied(false);
+    }
+    toast({
+      title: t("chatStashTitle"),
+      description: t("chatStashDesc", {
+        names: addedNames.join(", "),
+        count: addedCount,
+      }),
+    });
+    // Samo-ohranjen efekt: readStashedChatPlaces POČISTI ključ, zato
+    // ponovni zagoni (setItinerary → nov itinerer) niso nevarni
+  }, [itinerary]);
+
+  // === 1.43 (GEO → NAČRT): odstranitev postanka, dodanega iz klepeta —
+  // EN KLIK na kartici postanka. Simetrija z 1.42: dodajanje "+" je bil en
+  // klik, odstranjevanje pa je doslej zahtevalo AI "Spremeni načrt". Velja
+  // SAMO za klepet postanke (category === "chat", eksplicitna uporabnikova
+  // intencija) — AI generirani postanki ostanejo pod refinerjem. ===
+  function removeChatStop(loc: LocationVisit) {
+    if (!itinerary) return;
+    const result = removeChatPlaceFromItinerary(itinerary, loc.destination_id);
+    if (!result.ok) return;
+    setItinerary(result.itinerary);
+    persistItineraryLocally(result.itinerary, formData);
+    markResultEngaged();
+    // Strukturna sprememba — zastarel deljeni link se umakne (vzorec F16)
+    if (shareUrl) {
+      setShareUrl(null);
+      setCopied(false);
+    }
+    trackPlannerEvent("chat_place_removed", {
+      // OSM sintetični ID-ji imajo predpono "osm-" — ostali so T1 destinacije
+      provenance: loc.destination_id.startsWith("osm-") ? "osm" : "t1",
+      day: result.day,
+      locale,
+    });
+    toast({
+      title: t("chatStopRemovedTitle"),
+      description: result.name,
+    });
+  }
 
   // Pridobi booking opcije (listings, experiences, products) za vse
   // destinacije v itinererju — potegne lokalne ponudnike iz baze.
@@ -1082,13 +1250,13 @@ export function ItineraryPlanner() {
       // Persistenca — zadnji načrt preživi osvežitev strani
       persistItineraryLocally(data, input);
 
-      toast({
-        title: t("generatedToast"),
-        description:
-          data.source === "ai"
-            ? t("generatedToastDescAI")
-            : t("generatedToastDescSample"),
-      });
+      // UX-CMP #2 (Mindtrip primerjava): uspešni toast ob generiranju je
+      // ODSTRANJEN — pojavil se je TIK ob izrisu delovne površine in je
+      // (fiksno, spodaj desno) prekrival sveže generirane dneve kartic.
+      // Povratna informacija je že v samem rezultatu: načrt zamenja skelet,
+      // statusni trak se animira, obnovitveni chip pa ostaja za deljene
+      // načrte (kjer je obveščanje res potrebno). Napake še vedno javljajo
+      // toasti (variant="destructive") — te uporabnik MORA videti.
     } catch (err) {
       trackPlannerEvent("planner_error", { stage: "network_or_parse" });
       const msg =
@@ -1829,14 +1997,93 @@ export function ItineraryPlanner() {
 
   const emptyCard = (
     <Card className="h-full border-dashed">
-      <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-4 py-16 text-center">
-        <div className="rounded-full bg-primary/10 p-6">
-          <Sparkles className="size-10 text-primary" aria-hidden />
-        </div>
-        <div className="space-y-1">
+      <CardContent className="flex min-h-[400px] flex-col gap-5 py-10">
+        <div className="space-y-1 text-center">
           <p className="text-lg font-semibold">{t("emptyTitle")}</p>
           <p className="text-sm text-muted-foreground">{t("emptyHint")}</p>
         </div>
+
+        {/* UX-CMP #1: statičen demo predogled dneva (dekorativen, ne
+            interaktiven — klikabilen je samo CTA spodaj; slike/cene so iz
+            uredniškega dataseta, nič izmišljenega) */}
+        <div
+          className="relative rounded-xl border border-border/70 bg-card p-4 shadow-sm"
+          aria-hidden="true"
+        >
+          <span className="absolute -top-2.5 left-3 rounded-full border border-border bg-background px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+            {t("emptyDemoChip")}
+          </span>
+          <div className="mb-3 flex items-center gap-2.5">
+            <span className="flex size-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+              1
+            </span>
+            <span className="text-sm font-semibold">
+              {t("emptyDemoDayLabel")}
+            </span>
+          </div>
+          <div>
+            {DEMO_PREVIEW_STOPS.map((stop, i) => {
+              const dest = destinationById(stop.id);
+              const name =
+                locale === "en"
+                  ? DEMO_PREVIEW_NAMES_EN[stop.id]
+                  : dest?.name ?? stop.id;
+              return (
+                <div key={stop.id}>
+                  {i > 0 && (
+                    <div className="flex items-center gap-1.5 py-1 pl-6 text-[11px] text-muted-foreground">
+                      <Waypoints className="size-3 shrink-0" aria-hidden />
+                      {DEMO_PREVIEW_LEGS[i - 1]}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-background/60 p-2">
+                    <div className="relative size-12 shrink-0 overflow-hidden rounded-md bg-muted">
+                      {dest?.image && (
+                        <Image
+                          src={dest.image}
+                          alt=""
+                          fill
+                          sizes="48px"
+                          className="object-cover"
+                        />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {stop.time} · {stop.hours}h
+                      </p>
+                    </div>
+                    {typeof dest?.costPerPerson === "number" && (
+                      <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+                        €{dest.costPerPerson}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <p className="text-center text-xs text-muted-foreground">
+          {t("emptyDemoCaption")}
+        </p>
+
+        <Button
+          className="mt-auto w-full"
+          size="lg"
+          onClick={() => {
+            // Isti vstop kot demo scenariji / hero: NL poizvedba →
+            // parseQueryToPlannerInput → generateItinerary (1 dan, narava).
+            const input = parseQueryToPlannerInput(t("emptyDemoQuery"));
+            setFormData(input);
+            generateItinerary(input);
+          }}
+        >
+          <Sparkles className="size-4" aria-hidden />
+          {t("emptyDemoCta")}
+        </Button>
       </CardContent>
     </Card>
   );
@@ -3026,6 +3273,18 @@ export function ItineraryPlanner() {
                     itinerary={itinerary}
                     input={formData}
                     geoValidation={geoValidation}
+                    bookingOfferCount={
+                      bookingData
+                        ? Object.values(bookingData).reduce(
+                            (sum, o) =>
+                              sum +
+                              o.listings.length +
+                              o.experiences.length +
+                              o.products.length,
+                            0
+                          )
+                        : 0
+                    }
                   />
                 )}
 
@@ -3067,6 +3326,18 @@ export function ItineraryPlanner() {
                     const dayHasError = dayIssues?.some((i) => i.level === "error");
                     const dayHasWarn =
                       !dayHasError && (dayIssues?.length ?? 0) > 0;
+
+                    // OPCIJA-3: število rezervabilnih ponudb tega dneva
+                    // (listings + izkušnje + izdelki prek vseh postankov) —
+                    // poganja gumb "Rezerviraj" v glavi dneva.
+                    const dayOffers = day.locations.reduce(
+                      (sum, l) =>
+                        sum +
+                        (bookingData?.[l.destination_id]?.listings.length ?? 0) +
+                        (bookingData?.[l.destination_id]?.experiences.length ?? 0) +
+                        (bookingData?.[l.destination_id]?.products.length ?? 0),
+                      0
+                    );
 
                     return (
                     <Card
@@ -3134,6 +3405,39 @@ export function ItineraryPlanner() {
                                       : ""}
                               </Badge>
                             )}
+                          {/* OPCIJA-3 (transakcijska globina): rezervacija v
+                              GLAVI dneva — en klik od tukaj do booking
+                              panela tega dne (prej: samo dolg scroll čez vse
+                              postanke). Prikaže se SAMO kadar dan ima ponudbe. */}
+                          {dayOffers > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                trackPlannerEvent("booking_cta_clicked", {
+                                  placement: "day_header",
+                                  day: day.day,
+                                  offers: dayOffers,
+                                });
+                                document
+                                  .getElementById(`booking-panel-${day.day}`)
+                                  ?.scrollIntoView({
+                                    behavior: "smooth",
+                                    block: "start",
+                                  });
+                              }}
+                              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary transition-colors hover:border-primary/50 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              aria-label={t("bookingCtaDayAria", {
+                                day: day.day,
+                                count: dayOffers,
+                              })}
+                            >
+                              <Ticket className="size-3.5" aria-hidden />
+                              {t("bookingCtaDay")}
+                              <span className="rounded-full bg-primary/15 px-1.5 py-px text-[10px] font-bold tabular-nums">
+                                {dayOffers}
+                              </span>
+                            </button>
+                          )}
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-3">
@@ -3284,7 +3588,11 @@ export function ItineraryPlanner() {
                                           {loc.destination_name}
                                         </p>
                                       </div>
-                                      <div className="flex items-center gap-2">
+                                      {/* flex-wrap: na mobilnem se značke
+                                          (trajanje + cena + iz klepeta +
+                                          vstopnice + fokus) prestavijo v
+                                          novo vrstico namesto preliva */}
+                                      <div className="flex flex-wrap items-center gap-2">
                                         <Badge variant="outline" className="gap-1">
                                           <Clock className="size-3" aria-hidden />
                                           {loc.duration}h
@@ -3292,6 +3600,87 @@ export function ItineraryPlanner() {
                                         <Badge className="bg-accent text-accent-foreground">
                                           €{loc.estimated_cost}
                                         </Badge>
+                                        {/* 1.42 (GEO → NAČRT): postanek, dodan
+                                            iz AI klepeta (T1 destinacija ali
+                                            OSM gostilna) — kontekst, od kod
+                                            je nepričakovani večerni postanek.
+                                            1.43: poleg značke EN KLIK za
+                                            odstranitev (simetrija z gumbom
+                                            "+" v klepetu — prej je edina pot
+                                            bila AI "Spremeni načrt"). */}
+                                        {loc.category === "chat" && (
+                                          <>
+                                            <Badge
+                                              variant="outline"
+                                              className="gap-1 border-primary/40 bg-primary/5 text-primary"
+                                              title={t("chatStopBadgeTitle")}
+                                            >
+                                              <MessageCircle className="size-3" aria-hidden />
+                                              {t("chatStopBadge")}
+                                            </Badge>
+                                            <button
+                                              type="button"
+                                              onClick={() => removeChatStop(loc)}
+                                              className="inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                              aria-label={t(
+                                                "chatStopRemoveAria",
+                                                { name: loc.destination_name }
+                                              )}
+                                              title={t("chatStopRemoveTitle")}
+                                            >
+                                              <X className="size-3" aria-hidden />
+                                              {t("chatStopRemove")}
+                                            </button>
+                                          </>
+                                        )}
+                                        {/* OPCIJA-3 (transakcijska globina):
+                                            KONKRETNO DEJANJE na postanku —
+                                            kadar ima destinacija tega postanka
+                                            rezervabilne ponudnike/izkušnje,
+                                            čip pokaže eno-bližnico do booking
+                                            panela dneva (Mindtripova "Book"
+                                            kartica, po našem modelu: lokalni
+                                            ponudniki + affiliate, iskreno). */}
+                                        {(bookingData?.[loc.destination_id]
+                                          ?.experiences.length ?? 0) +
+                                          (bookingData?.[loc.destination_id]
+                                            ?.listings.length ?? 0) >
+                                          0 && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              trackPlannerEvent(
+                                                "booking_cta_clicked",
+                                                {
+                                                  placement: "stop_card",
+                                                  day: day.day,
+                                                  destination:
+                                                    loc.destination_name,
+                                                }
+                                              );
+                                              document
+                                                .getElementById(
+                                                  `booking-panel-${day.day}`
+                                                )
+                                                ?.scrollIntoView({
+                                                  behavior: "smooth",
+                                                  block: "start",
+                                                });
+                                            }}
+                                            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary transition-colors hover:border-primary/50 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                            aria-label={t(
+                                              "bookingCtaStopAria",
+                                              { name: loc.destination_name }
+                                            )}
+                                            title={t("bookingCtaStopTitle")}
+                                          >
+                                            <Ticket
+                                              className="size-3"
+                                              aria-hidden
+                                            />
+                                            {t("bookingCtaStop")}
+                                          </button>
+                                        )}
                                         {/* F5.1: dvosmerna sinhronizacija — gumb na
                                             kartici postanka premakne zemljevid poti
                                             na ta postanek ( MindTrip workspace feel) */}

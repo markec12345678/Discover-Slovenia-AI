@@ -28,8 +28,18 @@ interface PlannerStopLegProps {
 export function PlannerStopLeg({ from, to, legs }: PlannerStopLegProps) {
   const t = useTranslations("planner");
 
-  const a = DESTINATION_COORDS.get(from.destination_id);
-  const b = DESTINATION_COORDS.get(to.destination_id);
+  // 1.42 (GEO → NAČRT): OSM kraj iz klepeta ni v datasetu → njegove lastne
+  // koordinate (loc.lat/lng). Brez obeh → brez lažnega povezovalnika.
+  const a =
+    DESTINATION_COORDS.get(from.destination_id) ??
+    (typeof from.lat === "number" && typeof from.lng === "number"
+      ? { lat: from.lat, lng: from.lng }
+      : undefined);
+  const b =
+    DESTINATION_COORDS.get(to.destination_id) ??
+    (typeof to.lat === "number" && typeof to.lng === "number"
+      ? { lat: to.lat, lng: to.lng }
+      : undefined);
   // Neznani ID-ji (izven dataseta) — brez lažnega povezovalnika
   if (!a || !b) return null;
 

@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
+import { createHash } from "node:crypto";
 import { generateCompletion } from "@/lib/ai-client";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkAdmin } from "@/lib/auth-guards";
+import { SYSTEM_DATA_GUARD, wrapProviderData } from "@/lib/ai-context";
 
 // POST /api/pois/describe — generira AI opis za POI (z enkratnim cache-iranjem)
 //
@@ -109,9 +111,20 @@ export async function POST(request: Request) {
   const lat = typeof body.lat === "number" && Number.isFinite(body.lat) ? body.lat : null;
   const lng = typeof body.lng === "number" && Number.isFinite(body.lng) ? body.lng : null;
 
+  // 19c-5 (revizija 1.36.0, P2): cache ključ vključuje hash IMENA. Cache je
+  // permanenten in javno zapisljiv (first-write-wins) — z ID-jem samim bi
+  // napadalec z ukrojjenim imenom zastrupil opis, ki ga nato berejo VSI
+  // obiskovalci modala za ta POI. UI vedno pošlje kanonično OSM ime →
+  // ključ id+hash(kanonično ime) ne more pasti na napadalčev vnos z drugim
+  // imenom; enak vnos imena pa generira pravilen opis iz pravih podatkov.
+  const cacheKey = `${poiId}:${createHash("sha256")
+    .update(name)
+    .digest("hex")
+    .slice(0, 12)}`;
+
   // 1. Preveri cache
   const store = await readCache();
-  const cached = store[poiId];
+  const cached = store[cacheKey];
   if (cached) {
     return NextResponse.json({
       description: cached.description,
@@ -121,15 +134,18 @@ export async function POST(request: Request) {
   }
 
   // 2. Generiraj AI opis
+  // 19c-5: ime/naslov/podkategorija so client vnosi v prompt — oviti v
+  // <podatek> + SYSTEM_DATA_GUARD v sistemskem sporočilu (enak vzorec kot
+  // ostale AI rute; prej surovi v user promptu).
   const categoryLabel = CATEGORY_LABELS[body.category] || "zanimivost";
   const locationStr = address ? ` (${address})` : "";
   const coordsStr = lat !== null && lng !== null ? ` koordinate ${lat.toFixed(4)}, ${lng.toFixed(4)}` : "";
 
   const prompt = `Generiraj kratek (1 stavek, max 120 znakov) informativen opis za slovensko turistično točko.
 
-IME: ${name}
+IME: ${wrapProviderData("poi-ime", name, 120)}
 KATEGORIJA: ${categoryLabel}${subcategory ? ` (${subcategory})` : ""}
-LOKACIJA: ${locationStr || "Slovenija"}${coordsStr}
+LOKACIJA: ${wrapProviderData("poi-lokacija", locationStr || "Slovenija", 200)}${coordsStr}
 
 Pravila:
 - 1 stavek, max 120 znakov
@@ -150,7 +166,9 @@ Odgovor (SAMO opis, brez prefixa):`;
       [
         {
           role: "system",
-          content: "Si pomočnik za generiranje kratkih opisov slovenskih turističnih točk. Odgovoriš SAMO z opisom, brez dodatnega besedila.",
+          content:
+            "Si pomočnik za generiranje kratkih opisov slovenskih turističnih točk. Odgovoriš SAMO z opisom, brez dodatnega besedila. " +
+            SYSTEM_DATA_GUARD,
         },
         { role: "user", content: prompt },
       ],
@@ -173,7 +191,7 @@ Odgovor (SAMO opis, brez prefixa):`;
     const source = result?.source === "fallback" ? "fallback" : "ai";
 
     // 3. Shrani v cache (permanentno)
-    store[poiId] = {
+    store[cacheKey] = {
       description,
       generatedAt: Date.now(),
       source,
@@ -192,7 +210,7 @@ Odgovor (SAMO opis, brez prefixa):`;
 
     // Fallback opis
     const fallbackDesc = `${name} — ${categoryLabel} v Sloveniji.`;
-    store[poiId] = {
+    store[cacheKey] = {
       description: fallbackDesc,
       generatedAt: Date.now(),
       source: "fallback",

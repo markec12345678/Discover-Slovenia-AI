@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  type ComponentType,
+} from "react";
+import { useLocale } from "next-intl";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
@@ -9,20 +17,22 @@ import {
   X,
   Star,
   Loader2,
-  Layers,
   Eye,
   EyeOff,
+  Ticket,
+  Landmark,
+  Trees,
+  Church,
+  Utensils,
+  BedDouble,
+  ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
+import { cn } from "@/lib/utils";
+import { trackPlannerEvent } from "@/lib/planner-analytics";
 import type { Destination, DestinationType } from "@/lib/types";
 import {
   PoiModal,
@@ -62,14 +72,89 @@ interface Poi {
   address?: string;
 }
 
-// === POI kategorije za Select ===
-const POI_CATEGORY_OPTIONS: { value: string; label: string }[] = [
-  { value: "attraction", label: "Atrakcije" },
-  { value: "museum", label: "Muzeji" },
-  { value: "natural", label: "Narava" },
-  { value: "viewpoint", label: "Razgledišča" },
-  { value: "religious", label: "Religiozno" },
+// === Dvojezični nizi zemljevida (1.48) — T (prevodi), ker je L že Leaflet ===
+// (locale je stabilen za življenjsko dobo komponente: sprememba jezika =
+// navigacija = remount; vseeno je v deps Effectov, da so popup-i iz LEAFLET
+// template stringov vedno vezani na trenutni jezik)
+const T = {
+  catAttraction: { sl: "Atrakcije", en: "Attractions" },
+  catMuseum: { sl: "Muzeji", en: "Museums" },
+  catNatural: { sl: "Narava", en: "Nature" },
+  catViewpoint: { sl: "Razgledišča", en: "Viewpoints" },
+  catReligious: { sl: "Religiozno", en: "Religious" },
+  catRestaurant: { sl: "Hrana & pijača", en: "Food & drink" },
+  catHotel: { sl: "Nastanitve", en: "Stays" },
+  catShop: { sl: "Trgovine", en: "Shops" },
+  allDestinations: { sl: "Vse destinacije", en: "All destinations" },
+  reset: { sl: "Ponastavi", en: "Reset" },
+  hideRoute: { sl: "Skrij pot", en: "Hide route" },
+  showRoute: { sl: "Pokaži pot", en: "Show route" },
+  hidePois: { sl: "Skrij POI", en: "Hide POI" },
+  showPois: { sl: "Pokaži POI", en: "Show POI" },
+  chipsAria: {
+    sl: "Filtriranje POI kategorij",
+    en: "Filter POI categories",
+  },
+  emptyText: {
+    sl: "Vse kategorije so izklopljene — POI-ji niso prikazani.",
+    en: "All categories are off — no POIs are shown.",
+  },
+  emptyReset: { sl: "Prikaži privzeto", en: "Show defaults" },
+  loadingPois: { sl: "Nalagam POI-je…", en: "Loading POIs…" },
+  errorPois: {
+    sl: "POI-jev ni mogoče naložiti. Poskusite pozneje.",
+    en: "POIs could not be loaded. Try again later.",
+  },
+  mapAria: {
+    sl: "Interaktivni zemljevid slovenskih destinacij in točk interesa",
+    en: "Interactive map of Slovenian destinations and points of interest",
+  },
+  infoDestUnit: { sl: "destinacij", en: "destinations" },
+  infoClickMarker: { sl: "Klikni marker", en: "Tap a marker" },
+  editorial: { sl: "uredniška", en: "editorial" },
+  moreInfo: { sl: "Več informacij →", en: "More info →" },
+  details: { sl: "Podrobnosti →", en: "Details →" },
+  day: {
+    sl: (n: number) => `Dan ${n}`,
+    en: (n: number) => `Day ${n}`,
+  },
+} as const;
+
+type MapLang = keyof typeof T.allDestinations;
+
+// === POI kategorije za čipe (1.47) ===
+// Uskladitev s čip vzorcem klepeta (1.46): multi-select + iskreni števci +
+// prazno stanje. Prej: enojni Select z 5/8 kategorij — hrana, nastanitve
+// in trgovine so bile skrite pred uporabniki, čeprav jih /api/pois že
+// podpira. Ikone se prekrivajo namenoma s klepetom tam, kjer je semantika
+// ista (restaurant↔food: Utensils, hotel↔stay: BedDouble).
+const POI_CATEGORIES: {
+  value: string;
+  /** Dvojezična oznaka (L vzorec) — razreši se ob renderu z label[lang]. */
+  label: { sl: string; en: string };
+  icon: ComponentType<{ className?: string }>;
+  /** Privzeto vklopljene kategorije naložimo z ENIM klicem category=all
+   *  (hrana/nastanitve/trgovine so preštevilčne — izrecna izbira). */
+  default: boolean;
+}[] = [
+  { value: "attraction", label: T.catAttraction, icon: Ticket, default: true },
+  { value: "museum", label: T.catMuseum, icon: Landmark, default: true },
+  { value: "natural", label: T.catNatural, icon: Trees, default: true },
+  { value: "viewpoint", label: T.catViewpoint, icon: Eye, default: true },
+  { value: "religious", label: T.catReligious, icon: Church, default: true },
+  {
+    value: "restaurant",
+    label: T.catRestaurant,
+    icon: Utensils,
+    default: false,
+  },
+  { value: "hotel", label: T.catHotel, icon: BedDouble, default: false },
+  { value: "shop", label: T.catShop, icon: ShoppingBag, default: false },
 ];
+
+const DEFAULT_POI_CATS = POI_CATEGORIES.filter((c) => c.default).map(
+  (c) => c.value
+);
 
 interface MapViewProps {
   /** Koordinate poti (polyline) za prikaz — npr. iz AI itinererja */
@@ -87,8 +172,9 @@ interface MapViewProps {
  * Prikazuje vseh 22 destinacij kot markerje z custom ikonami,
  * popup-i z informacijami in izbirno polyline za pot.
  *
- * POI layer (default OFF): dodatni manjši markerji iz OpenStreetMap
- * po izbrani kategoriji. Klik odpre PoiModal z Wikipedia opisom.
+ * POI layer (default OFF): dodatni manjši markerji iz OpenStreetMap,
+ * filtrirani z multi-select čipi kategorij (usklajeno s klepetom, 1.47).
+ * Klik odpre PoiModal z Wikipedia opisom.
  */
 export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -97,16 +183,60 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
   const poiLayerRef = useRef<L.LayerGroup | null>(null);
   const [showRoute, setShowRoute] = useState(true);
+  // 1.48: dvojezičnost (vzorec L iz map-section — prej hardcoded SL tudi na /en)
+  const lang: MapLang = useLocale() === "en" ? "en" : "sl";
 
-  // === POI state ===
+  // === POI state (1.47: multi-select čipi po kategorijah) ===
   const [showPois, setShowPois] = useState(false);
-  const [poiCategory, setPoiCategory] = useState<string>("attraction");
-  const [pois, setPois] = useState<Poi[]>([]);
-  const [loadingPois, setLoadingPois] = useState(false);
+  /** Aktivne (vklopljene) kategorije — izklop = skrivanje, ne brisanje. */
+  const [activeCats, setActiveCats] = useState<ReadonlySet<string>>(
+    () => new Set(DEFAULT_POI_CATS)
+  );
+  /** Kategorije z ongoing prenosom (spinner na čipu + globalni loader). */
+  const [loadingCats, setLoadingCats] = useState<ReadonlySet<string>>(
+    new Set()
+  );
   const [poiError, setPoiError] = useState<string | null>(null);
+  // Cache POI-jev po kategoriji — NAMENOMA ref, ne state: preživi izklop
+  // plaste (ponovni vklop = instant iz cache-a, 0 omrežnih klicev) in
+  // preklope filtrov. complete=false = delni seznam iz skupnega "all"
+  // klica; complete=true = naloženo posamično (poln seznam). Mutacije
+  // sporoča cacheVersion, da se izpeljana useMemo rekonstituirata.
+  const poiCacheRef = useRef<Map<string, { pois: Poi[]; complete: boolean }>>(
+    new Map()
+  );
+  /** Dvojni klic istega categoryja med letom (rapid toggling). */
+  const poiInflightRef = useRef<Set<string>>(new Set());
+  const [cacheVersion, setCacheVersion] = useState(0);
   // Ref za dostop do najnovejših POI-jev iz event handlerja (closure safe)
   const poisRef = useRef<Poi[]>([]);
   const [selectedPoi, setSelectedPoi] = useState<Poi | null>(null);
+
+  /** Prikazani POI-ji = aktivne kategorije ∩ cache (0 klicev ob filtru). */
+  const pois = useMemo<Poi[]>(() => {
+    void cacheVersion; // odvisnost: recompute po vsaki mutaciji cache-a
+    if (!showPois) return [];
+    const out: Poi[] = [];
+    for (const cat of activeCats) {
+      out.push(...(poiCacheRef.current.get(cat)?.pois ?? []));
+    }
+    return out;
+  }, [showPois, activeCats, cacheVersion]);
+
+  /** Iskreni števci čipov — koliko POI-jev je dejansko naloženih po kategoriji. */
+  const catCounts = useMemo<ReadonlyMap<string, number>>(() => {
+    void cacheVersion;
+    const m = new Map<string, number>();
+    for (const c of POI_CATEGORIES) {
+      m.set(c.value, poiCacheRef.current.get(c.value)?.pois.length ?? 0);
+    }
+    return m;
+  }, [cacheVersion]);
+
+  // Cache spremeni izpeljeni seznam → posodobi ref za event handlerje
+  useEffect(() => {
+    poisRef.current = pois;
+  }, [pois]);
 
   // Inicializiraj zemljevid (enkrat)
   useEffect(() => {
@@ -152,19 +282,25 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         title: dest.name,
       }).addTo(map);
 
+      // 1.48: EN overlay za tagline/duration (fallback na SL, če vnosa
+      // ni v slovenia-data-en); budget (€) in ime sta jezikovno nevtralna
+      const en = DESTINATIONS_EN[dest.slug];
+      const tagline = lang === "en" ? (en?.tagline ?? dest.tagline) : dest.tagline;
+      const duration = lang === "en" ? (en?.duration ?? dest.duration) : dest.duration;
+
       // Popup z informacijami
       const popupHtml = `
         <div style="min-width: 220px; max-width: 260px; font-family: sans-serif;">
           <img src="${dest.image}" alt="${dest.name}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px 8px 0 0; margin: -13px -20px 8px -20px; width: calc(100% + 40px);" loading="lazy" />
           <div style="font-weight: 700; font-size: 16px; color: #1a2e1a; margin-bottom: 4px;">${dest.name}</div>
-          <div style="font-size: 13px; color: #6b7280; margin-bottom: 8px; line-height: 1.4;">${dest.tagline}</div>
+          <div style="font-size: 13px; color: #6b7280; margin-bottom: 8px; line-height: 1.4;">${tagline}</div>
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
             <span style="display: inline-flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 600; color: #d97706;">
               <span>★</span> ${dest.rating.toFixed(1)}
             </span>
-            <span style="font-size: 12px; color: #6b7280;">uredniška</span>
+            <span style="font-size: 12px; color: #6b7280;">${T.editorial[lang]}</span>
             <span style="font-size: 12px; color: #6b7280;">·</span>
-            <span style="font-size: 12px; color: #6b7280;">${dest.duration}</span>
+            <span style="font-size: 12px; color: #6b7280;">${duration}</span>
             <span style="font-size: 12px; color: #6b7280;">·</span>
             <span style="font-size: 12px; color: #6b7280;">${dest.budget}</span>
           </div>
@@ -180,7 +316,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             cursor: pointer;
             font-family: sans-serif;
           ">
-            Več informacij →
+            ${T.moreInfo[lang]}
           </button>
         </div>
       `;
@@ -200,7 +336,9 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
       markersRef.current = [];
       poiLayerRef.current = null;
     };
-  }, []);
+    // lang v deps: Leaflet popup-i so template stringi, vezani ob bindanju —
+    // ob (teoretični) spremembi jezika se zemljevid pobriše in znova nariše
+  }, [lang]);
 
   // Event delegation za CTA gumbe v popupih (destinacije + POI)
   useEffect(() => {
@@ -278,7 +416,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
               iconAnchor: [14, 14],
             });
             const marker = L.marker([coord.lat, coord.lng], { icon: numIcon });
-            marker.bindPopup(`<strong>${coord.name}</strong><br>Dan ${dayRoute.day}`);
+            marker.bindPopup(`<strong>${coord.name}</strong><br>${T.day[lang](dayRoute.day)}`);
             layer.addLayer(marker);
             globalIdx++;
           });
@@ -319,7 +457,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             iconAnchor: [14, 14],
           });
           const marker = L.marker([coord.lat, coord.lng], { icon: numIcon });
-          marker.bindPopup(`<strong>${coord.name}</strong><br>Dan ${dayRoute.day}`);
+          marker.bindPopup(`<strong>${coord.name}</strong><br>${T.day[lang](dayRoute.day)}`);
           layer.addLayer(marker);
           globalIdx++;
         });
@@ -381,51 +519,136 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
 
     // Prilagodi zoom na pot
     map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
-  }, [showRoute, routeCoords, routeByDay]);
+  }, [showRoute, routeCoords, routeByDay, lang]);
 
-  // === POI fetch — ko se showPois ali poiCategory spremenita ===
+  // === POI fetch — kategorija-po-kategorija s skupnim cache-om (1.47) ===
+  // Prvi vklop plaste: EN klic category=all pokrije vseh 5 privzetih
+  // kategorij (isti obseg kot prej — ne 5 ločenih klicev na Overpass).
+  // Vklop dodatne kategorije (hrana/nastanitve/trgovine) = 1 posamičen
+  // klic, samo če še ni v cache-u. Izklop kategorije = čisto skrivanje
+  // (0 klicev) — enak vzorec kot čipi v klepetu (1.46), kjer filter dela
+  // nad že pridobljenimi kraji. Lazy upgrade: kadar je aktivna IZKLJUČNO
+  // ena privzeta kategorija, se njen delni seznam iz "all" klica nadgradi
+  // s posamičnim (polnih 200 — enako kot prejšnje vedenje ene kategorije).
+  const ensureDefaultLayer = useCallback(async () => {
+    if (poiInflightRef.current.has("__all__")) return;
+    if (DEFAULT_POI_CATS.some((c) => poiCacheRef.current.has(c))) return;
+    poiInflightRef.current.add("__all__");
+    setLoadingCats((prev) => {
+      const next = new Set(prev);
+      for (const c of DEFAULT_POI_CATS) next.add(c);
+      return next;
+    });
+    setPoiError(null);
+    try {
+      const res = await fetch(`/api/pois?category=all&limit=200`, {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: { pois: Poi[] } = await res.json();
+      const byCat = new Map<string, Poi[]>();
+      for (const p of data.pois ?? []) {
+        const list = byCat.get(p.category);
+        if (list) list.push(p);
+        else byCat.set(p.category, [p]);
+      }
+      for (const cat of DEFAULT_POI_CATS) {
+        poiCacheRef.current.set(cat, {
+          pois: byCat.get(cat) ?? [],
+          complete: false,
+        });
+      }
+      setCacheVersion((v) => v + 1);
+    } catch (e) {
+      console.error("[map-view/pois] napaka:", e);
+      setPoiError(T.errorPois[lang]);
+    } finally {
+      poiInflightRef.current.delete("__all__");
+      setLoadingCats((prev) => {
+        const next = new Set(prev);
+        for (const c of DEFAULT_POI_CATS) next.delete(c);
+        return next;
+      });
+    }
+  }, [lang]);
+
+  const ensureCategory = useCallback(async (cat: string) => {
+    if (poiInflightRef.current.has(cat)) return;
+    if (poiCacheRef.current.get(cat)?.complete) return;
+    poiInflightRef.current.add(cat);
+    setLoadingCats((prev) => new Set(prev).add(cat));
+    setPoiError(null);
+    try {
+      const res = await fetch(
+        `/api/pois?category=${encodeURIComponent(cat)}&limit=200`,
+        { cache: "no-store" }
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: { pois: Poi[] } = await res.json();
+      poiCacheRef.current.set(cat, { pois: data.pois ?? [], complete: true });
+      setCacheVersion((v) => v + 1);
+    } catch (e) {
+      console.error("[map-view/pois] napaka:", e);
+      setPoiError(T.errorPois[lang]);
+    } finally {
+      poiInflightRef.current.delete(cat);
+      setLoadingCats((prev) => {
+        const next = new Set(prev);
+        next.delete(cat);
+        return next;
+      });
+    }
+  }, [lang]);
+
+  // Sproži ustrezne prenose ob vklopu plaste / spremembi filtrov
   useEffect(() => {
     if (!showPois) {
-      setPois([]);
-      poisRef.current = [];
       setPoiError(null);
       return;
     }
-
-    let cancelled = false;
-    const fetchPois = async () => {
-      setLoadingPois(true);
-      setPoiError(null);
-      try {
-        const res = await fetch(
-          `/api/pois?category=${encodeURIComponent(
-            poiCategory
-          )}&limit=200`,
-          { cache: "no-store" }
-        );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data: { pois: Poi[]; total: number } = await res.json();
-        if (cancelled) return;
-        const list = data.pois ?? [];
-        setPois(list);
-        poisRef.current = list;
-      } catch (e) {
-        console.error("[map-view/pois] napaka:", e);
-        if (!cancelled) {
-          setPois([]);
-          poisRef.current = [];
-          setPoiError("POI-jev ni mogoče naložiti. Poskusite pozneje.");
-        }
-      } finally {
-        if (!cancelled) setLoadingPois(false);
+    const active = [...activeCats];
+    const anyDefaultActive = active.some((c) => DEFAULT_POI_CATS.includes(c));
+    if (
+      anyDefaultActive &&
+      !DEFAULT_POI_CATS.some((c) => poiCacheRef.current.has(c))
+    ) {
+      void ensureDefaultLayer();
+    }
+    const single = active.length === 1;
+    for (const cat of active) {
+      const entry = poiCacheRef.current.get(cat);
+      if (!entry && !DEFAULT_POI_CATS.includes(cat)) {
+        // dodatna kategorija (hrana/nastanitve/trgovine) — posamičen klic
+        void ensureCategory(cat);
+      } else if (entry && single && !entry.complete) {
+        // lazy upgrade delnega seznama iz "all" klica
+        void ensureCategory(cat);
       }
-    };
+    }
+  }, [showPois, activeCats, ensureDefaultLayer, ensureCategory]);
 
-    void fetchPois();
-    return () => {
-      cancelled = true;
-    };
-  }, [showPois, poiCategory]);
+  const toggleCat = (cat: string) => {
+    const wasOn = activeCats.has(cat);
+    setActiveCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+    // Telemetrija (komplement chat_geo_filtered s klepeta): meri, ali
+    // multi-select čipi pomagajo tudi na brskalnem zemljevidu — in katere
+    // kategorije uporabniki dejansko iščejo (hrana/nastanitve).
+    trackPlannerEvent("map_poi_filtered", {
+      category: cat,
+      enabled: wasOn ? 0 : 1,
+      surface: "map",
+    });
+  };
+
+  /** Prazno stanje → nazaj na privzetih 5 kategorij (iz cache-a, instant). */
+  const resetCats = () => {
+    setActiveCats(new Set(DEFAULT_POI_CATS));
+  };
 
   // === Render POI markerjev — ko se pois ali showPois spremenita ===
   useEffect(() => {
@@ -484,7 +707,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             font-size: 11px;
             font-weight: 600;
             margin-bottom: 10px;
-          ">${meta.icon} ${meta.label}</span>
+          ">${meta.icon} ${meta.label[lang]}</span>
           <button data-poi-id="${escapeAttr(poi.id)}" class="map-poi-cta" style="
             width: 100%;
             padding: 6px 10px;
@@ -496,7 +719,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             font-weight: 600;
             cursor: pointer;
             font-family: sans-serif;
-          ">Podrobnosti →</button>
+          ">${T.details[lang]}</button>
         </div>
       `;
 
@@ -505,7 +728,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         className: "poi-popup",
       });
     });
-  }, [pois, showPois]);
+  }, [pois, showPois, lang]);
 
   const handleResetView = () => {
     mapRef.current?.setView([46.15, 14.47], 8);
@@ -533,7 +756,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         ref={containerRef}
         className="h-[500px] w-full sm:h-[600px] lg:h-full lg:min-h-[600px]"
         role="application"
-        aria-label="Interaktivni zemljevid slovenskih destinacij in točk interesa"
+        aria-label={T.mapAria[lang]}
       />
 
       {/* Kontrolni gumbi (zgoraj desno) — kompaktneje da ne prekrivajo */}
@@ -546,7 +769,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
           className="shadow-md"
         >
           <MapPin className="size-4" />
-          Vse destinacije
+          {T.allDestinations[lang]}
         </Button>
         <Button
           type="button"
@@ -556,7 +779,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
           className="shadow-md"
         >
           <Navigation className="size-4" />
-          Ponastavi
+          {T.reset[lang]}
         </Button>
         {routeCoords && routeCoords.length >= 2 ? (
           <Button
@@ -567,7 +790,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             className="shadow-md"
           >
             {showRoute ? <X className="size-4" /> : <Navigation className="size-4" />}
-            {showRoute ? "Skrij pot" : "Pokaži pot"}
+            {showRoute ? T.hideRoute[lang] : T.showRoute[lang]}
           </Button>
         ) : null}
 
@@ -585,49 +808,84 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
           ) : (
             <EyeOff className="size-4" />
           )}
-          {showPois ? "Skrij POI" : "Pokaži POI"}
+          {showPois ? T.hidePois[lang] : T.showPois[lang]}
         </Button>
-
-        {/* POI category filter — prikaže se samo ko je POI layer vklopljen */}
-        {showPois ? (
-          <div className="flex items-center gap-1.5 rounded-md border border-border bg-background/95 p-1.5 shadow-md backdrop-blur">
-            <Layers
-              className="size-3.5 shrink-0 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <Select
-              value={poiCategory}
-              onValueChange={(v) => setPoiCategory(v)}
-            >
-              <SelectTrigger
-                size="sm"
-                className="h-7 w-[120px] border-0 bg-transparent px-1 text-xs shadow-none focus:ring-0"
-                aria-label="Kategorija POI-jev"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {POI_CATEGORY_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : null}
       </div>
 
+      {/* POI category chips (1.47) — multi-select s števci, usklajeno s
+          čip vzorcem klepeta. Prikazani samo ko je POI layer vklopljen.
+          NAMENOMA vrstnik kontrolnega stolpca (ne njegov otrok): absolute
+          bottom-12 left-3 se mora razrešiti proti ZEMLJEVIDU (div.relative),
+          ne proti ozkemu stolpcu z gumbi desno zgoraj. */}
+      {showPois ? (
+        <div className="absolute bottom-12 left-3 z-[1000] max-w-[calc(100%-1.5rem)] rounded-md border border-border bg-background/95 p-1.5 shadow-md backdrop-blur sm:max-w-[calc(100%-9rem)]">
+          <div
+            role="group"
+            aria-label={T.chipsAria[lang]}
+            className="flex flex-wrap gap-1"
+          >
+            {POI_CATEGORIES.map(({ value, label, icon: Icon }) => {
+              const on = activeCats.has(value);
+              const loading = loadingCats.has(value);
+              const loaded = poiCacheRef.current.has(value);
+              const count = catCounts.get(value) ?? 0;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => toggleCat(value)}
+                  aria-pressed={on}
+                  title={label[lang]}
+                  className={cn(
+                    "flex min-h-7 shrink-0 items-center gap-1 rounded-full border px-2 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    on
+                      ? "border-primary/30 bg-primary/10 text-foreground"
+                      : "border-border/60 bg-transparent text-muted-foreground opacity-60"
+                  )}
+                >
+                  {loading ? (
+                    <Loader2 className="size-3 shrink-0 animate-spin" aria-hidden />
+                  ) : (
+                    <Icon className="size-3 shrink-0" aria-hidden />
+                  )}
+                  <span className="truncate">{label[lang]}</span>
+                  {loaded && !loading ? (
+                    <span className="shrink-0 tabular-nums opacity-70">
+                      {count}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+          {/* Prazno stanje — iskren opis + reset (vzorec iz klepeta 1.46) */}
+          {activeCats.size === 0 ? (
+            <div className="mt-1 flex items-center justify-between gap-2 border-t border-border/60 pt-1">
+              <p className="text-[10px] leading-snug text-muted-foreground">
+                {T.emptyText[lang]}
+              </p>
+              <button
+                type="button"
+                onClick={resetCats}
+                className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium text-foreground transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {T.emptyReset[lang]}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* Loading spinner za POI fetch (zgornji levi kot, ne blokira zemljevida) */}
-      {loadingPois ? (
+      {loadingCats.size > 0 ? (
         <div className="absolute left-3 top-3 z-[1000] flex items-center gap-2 rounded-lg border border-border bg-background/95 px-3 py-1.5 text-xs shadow-md backdrop-blur">
           <Loader2 className="size-3.5 animate-spin text-primary" aria-hidden="true" />
-          <span className="font-medium">Nalagam POI-je…</span>
+          <span className="font-medium">{T.loadingPois[lang]}</span>
         </div>
       ) : null}
 
       {/* Error badge za POI (zgornji levi, pod spinnerjem) */}
-      {!loadingPois && poiError && showPois ? (
+      {loadingCats.size === 0 && poiError && showPois ? (
         <div className="absolute left-3 top-12 z-[1000] max-w-[220px] rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 shadow-md dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
           {poiError}
         </div>
@@ -637,18 +895,18 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
       <div className="absolute bottom-3 left-3 z-[1000] rounded-lg border border-border bg-background/95 px-3 py-2 text-xs shadow-md backdrop-blur">
         <div className="flex items-center gap-2">
           <Star className="size-3.5 fill-amber-400 text-amber-400" />
-          <span className="font-medium">{DESTINATIONS.length} destinacij</span>
+          <span className="font-medium">{DESTINATIONS.length} {T.infoDestUnit[lang]}</span>
           {showPois && pois.length > 0 ? (
             <>
               <span className="text-muted-foreground">·</span>
               <Badge variant="outline" className="text-[10px]">
-                {pois.length} POI
+                {pois.length} POI · OSM
               </Badge>
             </>
           ) : null}
           {!showPois ? (
             <Badge variant="outline" className="text-[10px]">
-              Klikni marker
+              {T.infoClickMarker[lang]}
             </Badge>
           ) : null}
         </div>

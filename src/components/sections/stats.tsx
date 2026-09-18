@@ -1,7 +1,8 @@
-import { Map, Users, Calendar, TreePine, Sparkles, Percent, BadgeCheck } from "lucide-react";
+import { Map, Users, Calendar, TreePine, Sparkles, Percent, BadgeCheck, Leaf } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { CountUp } from "@/components/count-up";
 import { Reveal } from "@/components/reveal";
+import { Link } from "@/i18n/navigation";
 
 /**
  * StatsSection — bento grid z animiranimi številkami.
@@ -102,6 +103,27 @@ export async function StatsSection() {
             {t("commissionLead")} <strong className="font-semibold text-foreground">{t("commissionRate")}</strong> {t("commissionVerb")}
             <strong className="font-semibold text-foreground"> {t("commissionEmphasis")}</strong>
             {t("commissionTail")}
+          </p>
+        </Reveal>
+
+        {/* OPCIJA-2 (duša): iskrena vrstica svežine — namesto vanity
+            metrik ("10.000 uporabnikov") tri stvari, ki jih obiskovalec
+            lahko preveri: datum posodobitve, viri številk in uredniški
+            pregled. Povezava na /vir-podatkov zaključi verigo zaupanja
+            "trditev → dokaz". */}
+        <Reveal delay={380}>
+          <p className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs text-muted-foreground sm:text-sm">
+            <Leaf className="size-3.5 text-accent-foreground/70" aria-hidden="true" />
+            <span>{t("freshnessUpdated")}</span>
+            <span aria-hidden="true">·</span>
+            <span>{t("freshnessSources")}</span>
+            <span aria-hidden="true">·</span>
+            <Link
+              href="/vir-podatkov"
+              className="font-medium underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-foreground"
+            >
+              {t("freshnessLink")}
+            </Link>
           </p>
         </Reveal>
       </div>

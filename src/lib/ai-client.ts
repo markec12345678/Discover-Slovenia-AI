@@ -30,6 +30,14 @@ import OpenAI from "openai";
  * odmora, da mrtvi provider NE obdavči vsakega klica s zamudo. Uspešna
  * preverjava zdravja (ai-health) breaker pošteno RESETIRA.
  *
+ * 1.48.2: per-klic časovni proračun (timeoutMs). Free tier čakalne vrste
+ * za VELIKE generacije so izmerjeno 60–79 s (3/3 direktnih vzorcev
+ * 2026-09-17, isti ključ/model kot produkcijska veriga) — privzeti 60-s
+ * budilnik jih je rezal približno vsakemu drugemu klicu itineraryja v
+ * fallback. Itinerary zdaj podaljša proračun (120 s); ob timeoutu se
+ * preskoči notranji fallback model (ista čakalna vrsta) in izklopi SDK
+ * auto-retry — najslabša časovnica ostane VEZANA na en proračun.
+ *
  * Varnost: vsi ključi so STREŽNIŠKI env (nikoli NEXT_PUBLIC_/VITE_).
  * Legacy `VITE_GEMINI_API_KEY` se NE uporablja — glej SECURITY.md.
  */
@@ -61,6 +69,18 @@ export interface AICompletionOptions {
    *  GitHub runnerja 2026-09-15). "low" pripraden za majhne/mehanične klice
    *  (health, fraziranje, prevodi); kompleksna generacija pusti privzeto. */
   reasoningEffort?: "low" | "medium" | "high";
+  /**
+   * 1.48.2: per-klic časovni proračun za OpenRouter poskus (privzeto 60 s).
+   * Direktna meritev free tierja 2026-09-17 (enak ključ + model kot
+   * produkcijska veriga, itinerary-velik JSON prompt): 60 s / 61 s / 79 s —
+   * 3/3 vzorcev NA ali ČEZ privzeti budilnik. Velike generacije (načrtovalec
+   * poti) podaljšajo proračun (120 s); hitri klici (klepet, health) ostanejo
+   * na privzetih 60 s — krajša čakalna vrsta pred poštenim fallbackom je
+   * ZA NJIH boljši UX. Ob izrecnem proračunu se izklopi SDK auto-retry
+   * (notranji fallback model je že naša retry plast), ob SDK timeoutu pa se
+   * preskoči rezervni model (čaka v isti :free vrsti).
+   */
+  timeoutMs?: number;
 }
 
 export interface AIVisionResult {
@@ -262,20 +282,37 @@ export async function generateCompletion(
   // Notranja fallback struktura: če primarni model odpove (rate limit,
   // overload), isti provider poskusi še rezervni model, ŠELE nato gre
   // napaka v breaker in verigo naprej na Gemini.
+  // 1.48.2 IZJEMA — TIMEOUT: budilnik klica je potonil v čakalni vrsti
+  // :free tierja (globa vrste je SKUPNA vsem modelom), zato rezervnega
+  // modela ob timeoutu NE preverjamo — sicer bi najslabša časovnica
+  // znašala 2× proračun × 2 modela (do 4× čas). Hitre napake (429/5xx,
+  // provider error) notranji fallback poskusi ŠE VEDNO — tam je drug
+  // model dejansko drugačna vrsta.
+  const orTimeout = options?.timeoutMs ?? OPENROUTER_TIMEOUT_MS;
   const openrouter = getOpenRouterClient();
   if (openrouter && !openrouterBreakerOpen()) {
     let lastOrError: unknown = null;
     for (const model of openrouterModels()) {
       try {
-        const completion = await openrouter.chat.completions.create({
-          model,
-          messages: mapped,
-          temperature,
-          max_tokens: maxTokens,
-          ...(options?.jsonMode
-            ? { response_format: { type: "json_object" as const } }
-            : {}),
-        });
+        const completion = await openrouter.chat.completions.create(
+          {
+            model,
+            messages: mapped,
+            temperature,
+            max_tokens: maxTokens,
+            ...(options?.jsonMode
+              ? { response_format: { type: "json_object" as const } }
+              : {}),
+          },
+          // 1.48.2: per-klic proračun (SDK RequestOptions, v6). Ob izrecnem
+          // timeoutMs IZKLJUČIMO SDK auto-retry (maxRetries 0): naša retry
+          // plast je notranji fallback model — SDK podvajanje bi tiho
+          // podvojilo najslabšo časovnico (timeout + retry = 2× proračun).
+          {
+            timeout: orTimeout,
+            ...(options?.timeoutMs ? { maxRetries: 0 } : {}),
+          }
+        );
         const content = completion.choices[0]?.message?.content?.trim();
         if (content) {
           openrouterRecordSuccess();
@@ -284,6 +321,12 @@ export async function generateCompletion(
         throw new Error(`empty OpenRouter content (${model})`);
       } catch (error) {
         lastOrError = error;
+        if (error instanceof OpenAI.APIConnectionTimeoutError) {
+          console.error(
+            `[ai-client] OpenRouter TIMEOUT po ${orTimeout / 1000} s (${model}) — čakalna vrsta :free globlja od proračuna; rezervni model preskočen (ista vrsta), nadaljujem na Gemini/Puter/z-ai`
+          );
+          break; // 1.48.2: NE poskusi rezervnega modela — ista čakalna vrsta
+        }
         console.error(
           `[ai-client] OpenRouter napaka (${model}):`,
           describeError(error)

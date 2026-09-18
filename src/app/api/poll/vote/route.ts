@@ -129,20 +129,16 @@ export async function POST(request: Request) {
     }
 
     // Upsert: obstoječ glas se prestavi (zadnji glas velja)
-    const existing = await db.tripPollVote.findUnique({
+    // RC-7 (revizija 1.36.0, P3): prej findUnique → create — dva sočasna
+    // prva glasa sta oba prebrala "obstoj" in oba kreirala; en P2002 je
+    // bil neobdelan → 500. Zdaj: atomarni upsert (enak končni stanje kot
+    // zaporedna izvedba; enak vzorec idempotence kot trip-vote).
+    await db.tripPollVote.upsert({
       where: { pollId_voterId: { pollId, voterId } },
-      select: { id: true, optionIdx: true },
+      create: { pollId, voterId, optionIdx },
+      update: { optionIdx },
     });
-
-    if (!existing) {
-      await db.tripPollVote.create({ data: { pollId, voterId, optionIdx } });
-    } else if (existing.optionIdx !== optionIdx) {
-      await db.tripPollVote.update({
-        where: { id: existing.id },
-        data: { optionIdx },
-      });
-    }
-    // ista opcija → no-op (idempotentno)
+    // ista opcija → update na isto vrednost (idempotentno)
 
     const result = await tally(pollId, voterId);
     if (!result) {

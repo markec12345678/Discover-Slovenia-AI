@@ -43,6 +43,27 @@ export type PlannerEventName =
   | "map_opened"
   | "provider_detail_opened"
   | "affiliate_clicked"
+  | "booking_cta_clicked"
+  // GEO-ODGOVORI (Task 29): AI klepet odgovori s kraji na zemljevidu
+  // (OSM v bližini + T1 destinacije iz odgovora) — doseg funkcije
+  | "chat_geo_answered"
+  // 1.46 (kategorija čipi): uporabnik je preklopil kategorijo v filtru
+  // geo odgovora (props: category, enabled 0|1, surface chat|overlay)
+  // — meri, ali filtri pomagajo pri mešanih odgovorih (hrana+pijača+…)
+  | "chat_geo_filtered"
+  // 1.47 (zemljevid čipi): preklop kategorije POI filtra na /zemljevid
+  // (props: category, enabled 0|1, surface "map") — komplement
+  // chat_geo_filtered: meri, ali multi-select čipi pomagajo tudi na
+  // brskalnem zemljevidu, in katere kategorije uporabniki iščejo
+  // (hrana/nastanitve so bile prej skrite pred uporabniki)
+  | "map_poi_filtered"
+  // 1.42 (GEO → NAČRT): kraj iz AI klepeta dodan v načrt (provenance
+  // t1|osm; day; stashed=1, če je čakal v sessionStorage na prvi načrt)
+  | "chat_place_added"
+  // 1.43: postanek, dodan iz klepeta, odstranjen z enim klikom s kartice
+  // postanka (provenance t1|osm; day) — komplement chat_place_added:
+  // razmerje doda/odstrani pove, kako dobro AI priporoča kraje
+  | "chat_place_removed"
   | "weather_alternative_used"
   // F5.4 "Začni s povezavo" ( url ingest — MindTrip "Start Anywhere")
   | "ingest_url_attempted"

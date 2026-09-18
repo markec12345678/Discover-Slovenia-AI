@@ -5,6 +5,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { randomId } from "@/lib/security";
 import { sendEmail, isEmailDemo } from "@/lib/email";
 import { orderConfirmationEmail } from "@/lib/email-templates";
+import { isStripeDemo } from "@/lib/stripe-server";
 
 /**
  * POST /api/checkout
@@ -238,8 +239,14 @@ export async function POST(request: Request) {
     // Atomarna dedup varovalka ostaja znotraj transakcije spodaj — ta
     // pre-check je samo hitra (ne-tekmovalna) pot.
     const dupWindowStart = new Date(Date.now() - 10 * 60_000);
+    // MF-6 (revizija 1.36.0, P3): ključ dedupa se zdaj sortira ENAKO kot
+    // orderItemsKey spodaj (leksikografsko po "id:qty" nizu) — prej je bil
+    // vrstni red po productId, shranjeni ključ pa sortiran po nizu; za
+    // prefix-ID-je ("abc" vs "abc1") se vrstni red razlikuje → dvoklik
+    // bi lahko ustvaril duplikat naročila.
     const dedupKey = canonicalItems
       .map((i) => `${i.productId}:${i.quantity}`)
+      .sort()
       .join("|");
     const orderItemsKey = (itemsRaw: string): string => {
       try {
@@ -295,17 +302,22 @@ export async function POST(request: Request) {
     }
 
     // --- Server-side izračun zneskov ---
-    const subtotal = canonicalItems.reduce(
-      (sum, i) => sum + i.price * i.quantity,
+    // MF-1 (revizija 1.36.0, P3): seštevanje v floatih je prag poštnine
+    // lahko zaneslo čez mejo (14.20 + 17.90 + 17.90 = 49.99999999999999 < 50
+    // → pravemu €50,00 košariki zaračunana €4,90 poštnina). Zdaj: celoti
+    // v CENTIH (round na izdelek), deljeni nazaj za shranjevanje.
+    const subtotalCents = canonicalItems.reduce(
+      (sum, i) => sum + Math.round(i.price * 100) * i.quantity,
       0
     );
+    const subtotal = subtotalCents / 100;
 
     // Shipping logika (enaka kot v cart-store):
     // - Brezplačno če subtotal >= 50 EUR
     // - Brezplačno če vsi izdelki imajo shippingFree
     // - Drugače 4.90 EUR
     let shipping = 0;
-    if (subtotal > 0 && subtotal < 50) {
+    if (subtotal > 0 && subtotalCents < 5000) {
       // P3b-1: vsi izdelki so od tu naprej veljavni published DB zapisi —
       // lookup po mapi je vedno zadet (?? false ostaja samo tipovska varovalka).
       const allFree = canonicalItems.every(
@@ -323,8 +335,12 @@ export async function POST(request: Request) {
     const orderNumber = `IF-${year}-${randomId(12)}`;
 
     // --- Preveri ali je Stripe v demo načinu ---
-    const stripeKey = process.env.STRIPE_SECRET_KEY ?? "";
-    const isDemo = !stripeKey || stripeKey.includes("demo_placeholder");
+    // 19e-1 (revizija 1.36.0, P2): prej INLINE detekcija po odstopnosti
+    // ključa — v produkciji z unset STRIPE_SECRET_KEY bi se naročilo tiho
+    // zapisalo kot "paid". Zdaj skupni fail-closed helper: demo v produkciji
+    // zahteva izrecni DSA_DEMO_PAYMENTS=1, sicer 501 (enak odgovor kot ob
+    // prisotnem ključu — tržnica še nima produkcijske plačilne poti).
+    const isDemo = isStripeDemo();
 
     // P7-C3/P7-C4 (P1): fail-closed kot /api/bookings — naročila v
     // produkciji NE smejo biti zapisana kot "paid" brez Stripe Checkout
