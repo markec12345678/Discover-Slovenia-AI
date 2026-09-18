@@ -40,6 +40,15 @@ import {
 } from "@/lib/itinerary-quality";
 import { validateItineraryGeo } from "@/lib/geo-validation";
 import { buildStopReasons } from "@/lib/stop-insights";
+import {
+  sanitizeSelectedProviderProducts,
+  buildSelectedProductsContext,
+} from "@/lib/supply/sanitize";
+import { insertProductStop } from "@/lib/supply/stop-insert";
+import type {
+  ProviderProduct,
+  SelectedProviderProduct,
+} from "@/lib/supply/types";
 import { dayRouteGeometry, serializeLegs } from "@/lib/road-routing";
 import { buildLegRouteIndex } from "@/lib/road-routing-server";
 
@@ -296,6 +305,19 @@ export async function POST(request: Request) {
         : { ...input, preferredDestinations: undefined };
   }
 
+  // F1 (Supply Map, 1.49.0): izbrani produkti z zemljevida ponudbe —
+  // STRUKTURIRAN vnos (provider/id/tip/geo/cena/selectionState). Meja
+  // zaupanja: whitelist providerjev (register), enumi, kapice; bookingUrl
+  // se NAMENOMA odstrani (rezervacija teče prek /go, ne prek prompta).
+  // Neveljavni vnosi se tiho očistijo — ista filozofija kot zgoraj.
+  const cleanSelectedProducts = sanitizeSelectedProviderProducts(
+    (input as { selectedProviderProducts?: unknown }).selectedProviderProducts
+  );
+  input =
+    cleanSelectedProducts.length > 0
+      ? { ...input, selectedProviderProducts: cleanSelectedProducts }
+      : { ...input, selectedProviderProducts: undefined };
+
   // Pripravi kontekst destinacij za AI
   // F5.5: vrstica o odpiralnih časih ( SAMO preverjeni vnosi — vir AI pove
   // izrecno, da ne ugiba o urnikih; brez vnosa destinacija nima omejitve)
@@ -309,6 +331,15 @@ export async function POST(request: Request) {
   // Zdaj pred ranking klicem — partner kontekst (t12 faza 1) nosi jezikovno
   // odvisne praktične podatke (sezona/vreme/parkiranje).
   const lang = input.language === "en" ? "en" : "sl";
+
+  // F1 (Supply Map): strukturiran blok izbranih produktov za AI prompt —
+  // FIXED/PREFERRED/SUGGESTED semantika + izrecno pravilo, da AI NE SME
+  // zamenjati FIXED izbire s podobnim lokalom (uporabnikova izbira je
+  // obvezna). Prazna izbira → prazen blok (ni spremembe obnašanja).
+  const selectedProductsBlock = buildSelectedProductsContext(
+    cleanSelectedProducts,
+    lang
+  );
 
   // === RANKING ENGINE + WEATHER-CONTEXT (vzporedno — vreme ne doda latence) ===
   // Ranking: relevance (60%) + quality (15%) + rating (10%) + distance (10%) + premium (5%)
@@ -473,7 +504,7 @@ Traveler:
 - Season: ${input.season}${input.startDate ? `\n- Travel date: ${formatDateRangeSI(input.startDate, tripEnd)}` : ""}
 - Group: ${input.groupSize} person(s)${partyLineEn}${paceLineEn}${preferredLineEn}
 ${weatherBlockEn}
-Available destinations:
+${selectedProductsBlock}Available destinations:
 ${destContext}
 ${partnerContext}
 
@@ -522,7 +553,7 @@ Potnik:
 - Sezona: ${input.season}${input.startDate ? `\n- Datum potovanja: ${formatDateRangeSI(input.startDate, tripEnd)}` : ""}
 - Skupina: ${input.groupSize} oseb(a)${partyLineSl}${paceLineSl}${preferredLineSl}
 ${weatherBlockSl}
-Razpoložljive destinacije:
+${selectedProductsBlock}Razpoložljive destinacije:
 ${destContext}
 ${partnerContext}
 
@@ -596,6 +627,18 @@ JSON format (STROGO):
     // zdaj teče TUKAJ, pred obogatitvijo — ista plast kot na save meji.
     const itinerary: Itinerary = sanitizeItinerary(parsed, input.days);
 
+    // F1 (Supply Map): DETERMINISTIČNA UTRDITEV FIXED izbir. AI je dobil
+    // strukturirana pravila v promptu, a :free modeli so nepredvidljivi —
+    // če je FIXED produkt (z geo, ne-nastanitev) AI izpustil, ga vstavimo
+    // z isto mehaniko kot fallback (najbližji dan, večernji slot). AI
+    // NIKOLI ne more izničiti uporabnikove eksplicitne izbire; že
+    // vključeni produkti (isti destination_id) se preskočijo (dedupe).
+    const withFixedStops = applyFixedSelectedProducts(
+      itinerary,
+      cleanSelectedProducts,
+      lang
+    );
+
     // 1.48.3: :free modeli VSAKIH TOLIKO vrnejo popoln JSON z neveljavno
     // strukturo dni — sanitizeItinerary legitimno poreže VSE dneve, razlaga/
     // priporočila pa preživijo. Živ dokaz (Vercel 2026-09-17 ~21:16):
@@ -613,7 +656,7 @@ JSON format (STROGO):
 
     // Pakirni seznam — AI predlog (validirana) ali hevristika, če AI izpusti/neveljavna
     // (P4-8: hevristika spoštuje jezik itinererja)
-    itinerary.packingList =
+    withFixedStops.packingList =
       sanitizeAiPackingList(parsed.packing_list) ??
       buildPackingList({
         season: input.season,
@@ -624,8 +667,9 @@ JSON format (STROGO):
 
     // PRAVO vreme — vreme iz AI izhoda prepišemo z realno Open-Meteo prognozo
     // (WEATHER-CONTEXT: poravnano z datumom odhoda + jezikom izpisa)
+    // F1: enriched izhodišče = načrt Z urejenimi FIXED postanki.
     const enriched = await enrichWithRealWeather(
-      itinerary,
+      withFixedStops,
       input.startDate,
       lang
     );
@@ -696,11 +740,15 @@ JSON format (STROGO):
     console.error("[itinerary] AI napaka, uporabljam fallback:", error);
     // WEATHER-CONTEXT: fallback prejme sidrne napovedi — deževni dnevi
     // dobijo notranje/prilagodljive destinacije (glej generateFallbackItinerary)
-    const fallback = await enrichWithRealWeather(
+    let fallback = await enrichWithRealWeather(
       generateFallbackItinerary(input, anchorForecasts),
       input.startDate,
       lang
     );
+
+    // F1 (Supply Map): FIXED izbire tudi na deterministični poti — fallback
+    // ne pozna AI prompta, zato jih vstavimo naravnost (ista mehanika).
+    fallback = applyFixedSelectedProducts(fallback, cleanSelectedProducts, lang);
 
     // Fallback: hevristični pakirni seznam + dogodki (isti enrich kot AI pot)
     // (P4-8: jezik itinererja — EN uporabnik dobi EN seznam)
@@ -984,4 +1032,54 @@ function generateFallbackItinerary(
         ],
     source: "fallback",
   };
+}
+
+// ============================================================================
+// F1 (Supply Map, 1.49.0): DETERMINISTIČNA UTRDITEV FIXED IZBIR
+// ============================================================================
+// FIXED izdelki (izbrani na zemljevidu ponudbe) morajo ostati v načrtu
+// NEGLEDE na AI (nepredvidljivost :free modelov) — če jih AI ni vključil,
+// jih vstavimo z isto mehaniko kot chat-add-place (najbližji dan po
+// haversine, večernji slot, poštena opomba vira). Nastanitve in produkti
+// brez geo ostanejo v recommendations (AI jih omeni — prompt pravila).
+// ============================================================================
+function applyFixedSelectedProducts(
+  it: Itinerary,
+  products: SelectedProviderProduct[],
+  lang: "sl" | "en"
+): Itinerary {
+  const fixed = products.filter(
+    (p) =>
+      p.selectionState === "fixed" &&
+      p.type !== "accommodation" &&
+      typeof p.lat === "number" &&
+      typeof p.lng === "number" &&
+      Number.isFinite(p.lat) &&
+      Number.isFinite(p.lng)
+  );
+  if (fixed.length === 0 || it.days.length === 0) return it;
+
+  const destCoords = new Map(DESTINATIONS.map((d) => [d.id, d.coords]));
+  let current = it;
+  for (const p of fixed) {
+    const product: ProviderProduct = {
+      id: `${p.provider}:${p.providerProductId}`,
+      provider: p.provider,
+      providerProductId: p.providerProductId,
+      type: p.type,
+      title: p.title,
+      lat: p.lat,
+      lng: p.lng,
+      price: p.price,
+      bookingMode: p.provider === "osm" ? "info_only" : "affiliate_redirect",
+      lastUpdated: new Date().toISOString(),
+      license: { source: p.source },
+    };
+    const result = insertProductStop(current, product, {
+      locale: lang,
+      destinationCoords: destCoords,
+    });
+    if (result.ok && result.kind === "stop") current = result.itinerary;
+  }
+  return current;
 }

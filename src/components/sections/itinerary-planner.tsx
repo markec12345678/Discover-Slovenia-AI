@@ -98,6 +98,8 @@ import {
   LAST_ITINERARY_KEY,
 } from "@/lib/chat-add-place";
 import type { ChatPlace } from "@/lib/geo-intent";
+// F1 (Supply Map): odstranjevanje izbranih produktov (čipi nad gumbom)
+import { removeSelectedProduct } from "@/lib/supply/selection";
 import { useToast } from "@/hooks/use-toast";
 import { trackFunnel } from "@/lib/funnel";
 import { optimizeDayOrder } from "@/lib/route-order";
@@ -603,6 +605,9 @@ export function ItineraryPlanner() {
   // Sinhroniziraj z globalnim store-om (za MapSection + TripTimeline "Shrani")
   const setStoreItinerary = useAppStore((s) => s.setItinerary);
   const setPlannerForm = useAppStore((s) => s.setPlannerForm);
+  // F1 (Supply Map): izbrani produkti z zemljevida ponudbe (sessionStorage
+  // persistenca prek selection-persist — preživi osvežitev strani).
+  const selectedProducts = useAppStore((s) => s.selectedProducts);
   // F5.1: izpeljana pot po dnevih ( barve/koordinate) za TripMapPanel —
   // isti izvor kot raziskovalni zemljevid na /zemljevid
   const routeByDay = useAppStore((s) => s.routeByDay);
@@ -1147,12 +1152,18 @@ export function ItineraryPlanner() {
     setLoading(true);
     setError(null);
     try {
+      // F1 (Supply Map): izbrani produkti z zemljevida ponudbe — AI prejme
+      // STRUKTURIRAN objekt (FIXED/PREFERRED/SUGGESTED); strežnik sanitizira.
+      const selectedProducts = useAppStore.getState().selectedProducts;
       const res = await fetch("/api/itinerary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...input,
           language: locale === "en" ? "en" : "sl",
+          ...(selectedProducts.length > 0
+            ? { selectedProviderProducts: selectedProducts }
+            : {}),
         }),
       });
       if (!res.ok) {
@@ -3003,6 +3014,43 @@ export function ItineraryPlanner() {
                 </div>
               </CardContent>
               <CardFooter className="flex-col items-stretch gap-2">
+                {/* F1 (Supply Map): izbrani produkti z zemljevida — AI jih
+                    prejme strukturirano; tu so vidni kot odstranljivi čipi. */}
+                {selectedProducts.length > 0 ? (
+                  <div className="rounded-lg border border-border bg-muted/40 p-2.5">
+                    <p className="text-[11px] font-semibold text-foreground">
+                      {t("supplySelectedTitle", { count: selectedProducts.length })}
+                    </p>
+                    <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
+                      {t("supplySelectedHint")}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {selectedProducts.map((p) => {
+                        const key = `${p.provider}:${p.providerProductId}`;
+                        return (
+                          <span
+                            key={key}
+                            className="inline-flex max-w-full items-center gap-1 rounded-full border border-primary/30 bg-primary/5 py-0.5 pl-2 pr-1 text-[11px] font-medium text-foreground"
+                            title={`${p.title} · ${p.source}`}
+                          >
+                            <span className="truncate">{p.title}</span>
+                            <span className="shrink-0 rounded-full bg-primary/10 px-1 text-[9px] uppercase text-primary">
+                              {p.selectionState}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeSelectedProduct(p.provider, p.providerProductId)}
+                              aria-label={t("supplySelectedRemoveAria", { name: p.title })}
+                              className="shrink-0 rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <X className="size-3" aria-hidden />
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
                 <Button
                   type="submit"
                   className="w-full bg-primary"
@@ -3600,23 +3648,31 @@ export function ItineraryPlanner() {
                                         <Badge className="bg-accent text-accent-foreground">
                                           €{loc.estimated_cost}
                                         </Badge>
-                                        {/* 1.42 (GEO → NAČRT): postanek, dodan
-                                            iz AI klepeta (T1 destinacija ali
-                                            OSM gostilna) — kontekst, od kod
-                                            je nepričakovani večerni postanek.
-                                            1.43: poleg značke EN KLIK za
-                                            odstranitev (simetrija z gumbom
-                                            "+" v klepetu — prej je edina pot
-                                            bila AI "Spremeni načrt"). */}
-                                        {loc.category === "chat" && (
+                                        {/* 1.42 (GEO → NAČRT) + F1 (Supply
+                                            Map): postanek, dodan iz AI
+                                            klepeta ALI z zemljevida ponudbe
+                                            — kontekst, od kod je nepričakovani
+                                            večerni postanek. 1.43/F1: poleg
+                                            značke EN KLIK za odstranitev. */}
+                                        {(loc.category === "chat" || loc.category === "supply") && (
                                           <>
                                             <Badge
                                               variant="outline"
                                               className="gap-1 border-primary/40 bg-primary/5 text-primary"
-                                              title={t("chatStopBadgeTitle")}
+                                              title={
+                                                loc.category === "supply"
+                                                  ? t("supplyStopBadgeTitle")
+                                                  : t("chatStopBadgeTitle")
+                                              }
                                             >
-                                              <MessageCircle className="size-3" aria-hidden />
-                                              {t("chatStopBadge")}
+                                              {loc.category === "supply" ? (
+                                                <MapPin className="size-3" aria-hidden />
+                                              ) : (
+                                                <MessageCircle className="size-3" aria-hidden />
+                                              )}
+                                              {loc.category === "supply"
+                                                ? t("supplyStopBadge")
+                                                : t("chatStopBadge")}
                                             </Badge>
                                             <button
                                               type="button"

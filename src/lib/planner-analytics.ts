@@ -57,6 +57,15 @@ export type PlannerEventName =
   // brskalnem zemljevidu, in katere kategorije uporabniki iščejo
   // (hrana/nastanitve so bile prej skrite pred uporabniki)
   | "map_poi_filtered"
+  // F1 (Supply Map, 1.49.0): viewport poizvedba supply sloja (props: zoom,
+  // cats, products, degraded, ms) — strežniški dvojnik: supply_query
+  | "supply_map_query"
+  // F1: odprt modal produkta s zemljevida ponudbe (props: provider, type,
+  // has_price, has_geo)
+  | "supply_product_viewed"
+  // F1: "Dodaj v moj načrt" iz supply modal/kartice (props: provider, type,
+  // has_geo, has_price, stashed)
+  | "supply_add_to_plan"
   // 1.42 (GEO → NAČRT): kraj iz AI klepeta dodan v načrt (provenance
   // t1|osm; day; stashed=1, če je čakal v sessionStorage na prvi načrt)
   | "chat_place_added"

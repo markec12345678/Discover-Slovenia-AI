@@ -44,6 +44,15 @@ const VALID_EVENTS = new Set([
   // (props: category, enabled 0|1, surface "map") — komplement
   // chat_geo_filtered za brskalni zemljevid
   "map_poi_filtered",
+  // F1 (Supply Map, 1.49.0): viewport poizvedba supply sloja (props:
+  // zoom, cats, products, degraded, ms — strežniški dvojnik je supply_query)
+  "supply_map_query",
+  // F1: odprt modal produkta s zemljevida ponudbe (props: provider, type,
+  // has_price, has_geo)
+  "supply_product_viewed",
+  // F1: "Dodaj v moj načrt" iz supply modal/kartice (props: provider, type,
+  // has_geo, has_price, stashed 0|1)
+  "supply_add_to_plan",
   // 1.42 (GEO → NAČRT): kraj iz AI klepeta dodan v načrt potovanja
   // (props: provenance t1|osm, category, day, stashed?)
   "chat_place_added",

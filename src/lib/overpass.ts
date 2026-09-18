@@ -1,3 +1,4 @@
+import https from "node:https";
 import type { ChatPlace, PlaceCategory } from "@/lib/geo-intent";
 
 // ============================================================================
@@ -62,6 +63,67 @@ interface OverpassJSON {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
+ * EN HTTPS POST na Overpass konektor — node:https z family:4.
+ *
+ * FORENZIKA (ista kot OSRM/Task 12): Bun/undici fetch na overpass-api.de
+ * v peskovniku PADE ("Unable to connect" — Happy Eyeballs), medtem ko
+ * node:https z family:4 povezuje zanesljivo (deluje v Node in Bun; na
+ * Vercelu dela oboje). Vrne parsed JSON ali null — NIKOLI ne vrže.
+ */
+function overpassHttpPost(
+  url: string,
+  body: string,
+  timeoutMs: number
+): Promise<OverpassJSON | null> {
+  return new Promise((resolve) => {
+    const u = new URL(url);
+    const req = https.request(
+      {
+        hostname: u.hostname,
+        path: u.pathname + u.search,
+        method: "POST",
+        family: 4, // sandbox forenzika — glej komentar zgoraj
+        timeout: timeoutMs,
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+          "User-Agent": USER_AGENT,
+          "Content-Length": Buffer.byteLength(body),
+        },
+      },
+      (res) => {
+        // 429/5xx/4xx → null (klicnik poskusi naslednji konektor)
+        if (res.statusCode !== 200) {
+          res.resume(); // izprazni socket
+          resolve(null);
+          return;
+        }
+        let raw = "";
+        res.setEncoding("utf8");
+        res.on("data", (chunk: string) => {
+          raw += chunk;
+          if (raw.length > 10_000_000) req.destroy(); // 10 MB varovalka
+        });
+        res.on("end", () => {
+          try {
+            resolve(JSON.parse(raw) as OverpassJSON);
+          } catch {
+            resolve(null);
+          }
+        });
+      }
+    );
+    req.on("timeout", () => {
+      req.destroy();
+      resolve(null);
+    });
+    req.on("error", () => resolve(null));
+    req.write(body);
+    req.end();
+  });
+}
+
+/**
  * Overpass POST z retry + mirror failoverjem. Vrne parsan JSON ali null
  * (klicnik nadaljuje brez krajev — klepet nikoli ne crkne zaradi zemljevida).
  *
@@ -69,17 +131,38 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * Časovni proračun (`budgetMs`, default 8 s za klepet / 15 s za POI plasti):
  * pred vsakim poskusom preverimo, ali je za smiseln poskus (≥ 1,5 s)
  * še ostalo časa — počasen Overpass tako ne zadržuje odgovora klepeta.
+ *
+ * `attemptTimeoutMs` (default 5 s): zgornja meja ENEGA poskusa. Supply
+ * poizvedbe (nwr z bboxom + več kategorij) so težje od klepetovih
+ * around-poizvedb — živo izmerjeno ~10 s na overpass-api.de — zato
+ * adapter poda višjo mejo (12 s) in širši proračun.
+ *
+ * `retryDelayMs` (default 400 ms) + `maxMainAttempts` (default 3): peskovnik
+ * ima znano MUHO omrežja do overpass-api.de — povezave PLAHAJOJO (ECONNREFUSED
+ * v sekundnih oknih, ~50 %). Ozko okno 4 poskusov × 400 ms lahko celo padne
+ * v enega od njih; supply adapter zato razširi okno (5 glavnih poskusov,
+ * premor 1 s) in ulovi dobro okno. Klepetovi parametri ostanejo hiter.
  */
 export async function overpassFetch(
   query: string,
-  opts: { budgetMs?: number } = {}
+  opts: {
+    budgetMs?: number;
+    attemptTimeoutMs?: number;
+    retryDelayMs?: number;
+    maxMainAttempts?: number;
+  } = {}
 ): Promise<OverpassJSON | null> {
   const deadline = Date.now() + (opts.budgetMs ?? 8000);
+  const attemptTimeout = opts.attemptTimeoutMs ?? ATTEMPT_TIMEOUT_MS;
+  const retryDelay = opts.retryDelayMs ?? RETRY_DELAY_MS;
+  const mainAttempts = opts.maxMainAttempts ?? MAIN_ATTEMPTS;
   const attempts: Array<{ url: string }> = [];
-  for (let i = 0; i < MAIN_ATTEMPTS; i++) {
+  for (let i = 0; i < mainAttempts; i++) {
     attempts.push({ url: OVERPASS_ENDPOINTS[0] });
   }
   attempts.push({ url: OVERPASS_ENDPOINTS[1] });
+
+  const body = "data=" + encodeURIComponent(query);
 
   for (let i = 0; i < attempts.length; i++) {
     const { url } = attempts[i];
@@ -87,40 +170,16 @@ export async function overpassFetch(
     const remaining = deadline - Date.now();
     if (remaining < 1500) return null;
 
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Accept: "application/json",
-          "User-Agent": USER_AGENT,
-        },
-        body: "data=" + encodeURIComponent(query),
-        cache: "no-store",
-        signal: AbortSignal.timeout(Math.min(ATTEMPT_TIMEOUT_MS, remaining)),
-      });
+    const data = await overpassHttpPost(
+      url,
+      body,
+      Math.min(attemptTimeout, remaining)
+    );
+    if (data) return data;
 
-      // 429 = rate limit / 5xx = preobremenjen strežnik — počakaj in
-      // poskusi naslednji konektor (mirror); ostali 4xx brez retry-a
-      // (napaka v poizvedbi)
-      if (res.status === 429 || res.status >= 500) {
-        if (i < attempts.length - 1) {
-          await sleep(RETRY_DELAY_MS);
-          continue;
-        }
-        return null;
-      }
-      if (!res.ok) return null;
-
-      return (await res.json()) as OverpassJSON;
-    } catch {
-      // Timeout / TCP refused / DNS — naslednji poskus (zadnji → null)
-      if (i < attempts.length - 1) {
-        await sleep(RETRY_DELAY_MS);
-        continue;
-      }
-      return null;
-    }
+    // 429 = rate limit / 5xx = preobremenjen strežnik / napaka omrežja —
+    // premor in poskusi naslednji konektor (mirror); zadnji → null
+    if (i < attempts.length - 1) await sleep(retryDelay);
   }
   return null;
 }

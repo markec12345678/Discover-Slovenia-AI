@@ -1,6 +1,8 @@
 // Centralni tipi za Discover Slovenia AI platformo
 // Single source of truth - brez duplikacij kot v originalnem repu
 
+import type { SelectedProviderProduct } from "./supply/types";
+
 export type Region = "gorenjska" | "primorska" | "osrednja" | "kras" | "stajerska" | "koroska" | "prekmurje" | "dolenjska" | "bela-krajina";
 export type DestinationType = "lake" | "city" | "mountain" | "cave" | "coast" | "river" | "spa" | "gorge" | "castle";
 export type Budget = "€" | "€€" | "€€€";
@@ -81,6 +83,13 @@ export interface PlannerInput {
   // Opcijsko — fallback ocenjevalnik jih premakne na vrh izbora, AI prompt
   // pa dobi izrecno navodilo, da jih upošteva. Nazaj kompatibilno.
   preferredDestinations?: string[];
+  // NOVO (F1 Supply Map, 1.49.0): produkti, izbrani na zemljevidu ponudbe
+  // (structured — provider, id, tip, geo, cena, selectionState
+  // FIXED/PREFERRED/SUGGESTED). AI jih prejme KOT STRUKTURIRAN objekt;
+  // FIXED izbire so obvezne (AI ne zamenja izbranega hotela z drugim).
+  // Sanitizacija na strežniku: src/lib/supply/sanitize.ts. Nazaj
+  // kompatibilno: brez polja = dosedanje vedenje.
+  selectedProviderProducts?: SelectedProviderProduct[];
 }
 
 export interface LocationVisit {

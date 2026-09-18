@@ -19,31 +19,19 @@
         "type": "AI",
         "desc": "AI generiranje itinererjev na podlagi uporabnikovih preferenc."
       },
-      "booking": {
-        "type": "Nastanitev",
-        "desc": "Iskanje nastanitev. Affiliate program."
-      },
-      "discoverCars": {
-        "type": "Transport",
-        "desc": "Najem avtomobila. Affiliate program."
-      },
-      "getYourGuide": {
-        "type": "Aktivnosti",
-        "desc": "Aktivnosti in izkušnje. Affiliate program."
-      },
-      "skyscanner": {
-        "type": "Leti",
-        "desc": "Iskanje letov. Affiliate program."
-      },
-      "worldNomads": {
-        "type": "Zavarovanje",
-        "desc": "Potno zavarovanje. Affiliate program."
-      },
       "sloveniaInfo": {
         "type": "Uradni viri (RAG)",
         "desc": "Uradna turistična vsebina I feel Slovenia (Slovenska turistična organizacija) — 664 strukturiranih virov iz slovenia.info llms.txt indeksa, ki jih AI uporablja kot uzemljenje odgovorov s citati. Posodobljeno: september 2026."
       }
     },
+    "supplyTitle": "Ponudniki potovanj (supply register)",
+    "supplyIntro": "Status vsakega ponudnika se izpelje neposredno iz našega ponudniškega registra — enega vira resnice, ki poganja tudi zemljevid ponudbe. Naše načelo iskrenosti: povezava partnerja NI zaloga — živa ponudba (cene, razpoložljivost) se prikaže šele, ko je dostop do API-ja dejansko odobren in priključen.",
+    "supplyGroup": {
+      "local": "Lokalni viri (odprti podatki)",
+      "own": "Lastna tržnica",
+      "commercial": "Komercialni partnerji"
+    },
+    "supplyDocs": "Uradna dokumentacija",
     "providersTitle": "Lokalni ponudniki",
     "providersText": "Podatki o lokalnih ponudnikih (hoteli, restavracije, aktivnosti, izdelki, izkušnje) so prispevani s strani registriranih ponudnikov preko B2B portala. Vsak ponudnik je odgovoren za točnost svojih podatkov.",
     "meta": {

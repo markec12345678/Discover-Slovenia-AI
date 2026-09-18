@@ -682,7 +682,12 @@
     "chatStopRemove": "Remove",
     "chatStopRemoveAria": "Remove {name} from the plan",
     "chatStopRemoveTitle": "This stop was added from the AI chat — one click removes it from the plan",
-    "chatStopRemovedTitle": "Removed from the plan"
+    "chatStopRemovedTitle": "Removed from the plan",
+    "supplySelectedTitle": "Selected products ({count})",
+    "supplySelectedHint": "The AI will treat selected products as mandatory (it will not swap them for similar ones).",
+    "supplySelectedRemoveAria": "Remove {name} from selection",
+    "supplyStopBadge": "Map",
+    "supplyStopBadgeTitle": "Stop added from the supply map"
   },
   "common": {
     "loading": "Loading...",
@@ -926,31 +931,19 @@
         "type": "AI",
         "desc": "AI itinerary generation based on user preferences."
       },
-      "booking": {
-        "type": "Accommodation",
-        "desc": "Accommodation search. Affiliate programme."
-      },
-      "discoverCars": {
-        "type": "Transport",
-        "desc": "Car rental. Affiliate programme."
-      },
-      "getYourGuide": {
-        "type": "Activities",
-        "desc": "Activities and experiences. Affiliate programme."
-      },
-      "skyscanner": {
-        "type": "Flights",
-        "desc": "Flight search. Affiliate programme."
-      },
-      "worldNomads": {
-        "type": "Insurance",
-        "desc": "Travel insurance. Affiliate programme."
-      },
       "sloveniaInfo": {
         "type": "Official sources (RAG)",
         "desc": "Official tourism content from I feel Slovenia (Slovenian Tourist Board) — 664 structured sources from the slovenia.info llms.txt index, used by the AI as grounded answer context with citations. Updated: September 2026."
       }
     },
+    "supplyTitle": "Travel providers (supply registry)",
+    "supplyIntro": "Each provider's status is derived directly from our provider registry — a single source of truth that also powers the supply map. Our honesty principle: a partner link is NOT inventory — live offers (prices, availability) appear only once API access is actually approved and connected.",
+    "supplyGroup": {
+      "local": "Local sources (open data)",
+      "own": "Our marketplace",
+      "commercial": "Commercial partners"
+    },
+    "supplyDocs": "Official documentation",
     "providersTitle": "Local providers",
     "providersText": "Details about local providers (hotels, restaurants, activities, products, experiences) are contributed by registered providers through the B2B portal. Each provider is responsible for the accuracy of their own details.",
     "meta": {

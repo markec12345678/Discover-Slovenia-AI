@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { DESTINATIONS } from "./slovenia-data";
 import type { Itinerary, PlannerInput } from "./types";
+import type { SelectedProviderProduct } from "./supply/types";
+import { readPersistedSelection } from "./supply/selection-persist";
 
 interface RouteCoord {
   lat: number;
@@ -46,6 +48,12 @@ interface AppState {
   plannerForm: PlannerInput | null;
   setPlannerForm: (input: PlannerInput | null) => void;
 
+  /** F1 (Supply Map): produkti, ki jih je uporabnik izbral na zemljevidu
+   *  ponudbe — strukturirani za AI kontekst (FIXED/PREFERRED/SUGGESTED).
+   *  Hibernate iz sessionStorage ob prvem dostopu (preživi osvežitev). */
+  selectedProducts: SelectedProviderProduct[];
+  setSelectedProducts: (items: SelectedProviderProduct[]) => void;
+
   /** Izpeljane koordinate poti za zemljevid */
   routeCoords: RouteCoord[];
 
@@ -62,7 +70,9 @@ export const useAppStore = create<AppState>((set) => ({
   plannerForm: null,
   routeCoords: [],
   routeByDay: [],
+  selectedProducts: readPersistedSelection(),
   setPlannerForm: (input) => set({ plannerForm: input }),
+  setSelectedProducts: (items) => set({ selectedProducts: items }),
   setItinerary: (it) => {
     if (!it) {
       set({ itinerary: null, routeCoords: [], routeByDay: [] });

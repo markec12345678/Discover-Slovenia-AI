@@ -324,11 +324,12 @@ export function addChatPlaceToItinerary(
 // ---------------------------------------------------------------------------
 
 /**
- * Odstrani postanek, dodan iz AI klepeta (category === "chat"), iz itinererja.
+ * Odstrani postanek, dodan iz klepeta (category === "chat") oz. z zemljevida
+ * ponudbe (category === "supply", F1 1.49.0), iz itinererja.
  *
  * Nadomesti asimetrijo 1.42: dodajanje je bil en klik ("+"), odstranjevanje
- * pa je zahtevalo AI refine pot. Samo KLEPET postanki so en-klik odstranljivi
- * — uporabnik jih je dodal sam (eksplicitna intencija), AI generirani
+ * pa je zahtevalo AI refine pot. Samo UPORABNIŠKO dodani postanki (chat /
+ * supply — eksplicitna intencija) so en-klik odstranljivi — AI generirani
  * postanki ostanejo pod "Spremeni načrt" (celotna preureditev načrta).
  *
  * Ista poštena invalidacija kot addChatPlaceToItinerary: strežniške metrike
@@ -341,7 +342,9 @@ export function removeChatPlaceFromItinerary(
 ): RemoveChatPlaceResult {
   for (const d of it.days) {
     const idx = d.locations.findIndex(
-      (l) => l.category === "chat" && l.destination_id === destinationId
+      (l) =>
+        (l.category === "chat" || l.category === "supply") &&
+        l.destination_id === destinationId
     );
     if (idx === -1) continue;
     const name = d.locations[idx].destination_name;

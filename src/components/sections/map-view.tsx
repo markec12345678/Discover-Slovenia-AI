@@ -5,12 +5,14 @@ import {
   useMemo,
   useRef,
   useState,
-  useCallback,
   type ComponentType,
 } from "react";
 import { useLocale } from "next-intl";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import {
   MapPin,
   Navigation,
@@ -34,10 +36,14 @@ import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import { cn } from "@/lib/utils";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
 import type { Destination, DestinationType } from "@/lib/types";
-import {
-  PoiModal,
-  CATEGORY_META,
-} from "@/components/sections/poi-modal";
+import { useAppStore } from "@/lib/store";
+import { taxonomyOf, DEFAULT_SUPPLY_TYPES } from "@/lib/supply/taxonomy";
+import type { ProductType, ProviderProduct } from "@/lib/supply/types";
+import { useSupplyQuery } from "@/lib/supply/use-supply-query";
+import { SUPPLY_MIN_ZOOM } from "@/lib/supply/zoom";
+import { addProductToSelection } from "@/lib/supply/selection";
+import { ProductModal } from "@/components/supply/product-modal";
+import { ProviderPanel } from "@/components/supply/provider-panel";
 
 // Emojis za različne tipe destinacij
 const TYPE_ICONS: Record<DestinationType, string> = {
@@ -52,26 +58,6 @@ const TYPE_ICONS: Record<DestinationType, string> = {
   castle: "🏰",
 };
 
-// === Lokalni tip Poi (po API specifikaciji) ===
-interface Poi {
-  id: string;
-  osmId: number;
-  name: string;
-  category: string;
-  subcategory: string;
-  lat: number;
-  lng: number;
-  description?: string;
-  website?: string;
-  phone?: string;
-  openingHours?: string;
-  cuisine?: string;
-  wikidata?: string;
-  wikipedia?: string;
-  image?: string;
-  address?: string;
-}
-
 // === Dvojezični nizi zemljevida (1.48) — T (prevodi), ker je L že Leaflet ===
 // (locale je stabilen za življenjsko dobo komponente: sprememba jezika =
 // navigacija = remount; vseeno je v deps Effectov, da so popup-i iz LEAFLET
@@ -83,7 +69,7 @@ const T = {
   catViewpoint: { sl: "Razgledišča", en: "Viewpoints" },
   catReligious: { sl: "Religiozno", en: "Religious" },
   catRestaurant: { sl: "Hrana & pijača", en: "Food & drink" },
-  catHotel: { sl: "Nastanitve", en: "Stays" },
+  catAccommodation: { sl: "Nastanitve", en: "Stays" },
   catShop: { sl: "Trgovine", en: "Shops" },
   allDestinations: { sl: "Vse destinacije", en: "All destinations" },
   reset: { sl: "Ponastavi", en: "Reset" },
@@ -118,23 +104,27 @@ const T = {
     sl: (n: number) => `Dan ${n}`,
     en: (n: number) => `Day ${n}`,
   },
+  // F1 (Supply Map):
+  zoomHint: {
+    sl: "Približajte zemljevid za lokalne točke (z ≥ 10).",
+    en: "Zoom in for local places (z ≥ 10).",
+  },
+  degradedHint: {
+    sl: "Vir OSM trenutno ni dosegljiv — destinacije ostajajo.",
+    en: "The OSM source is unreachable — destinations remain.",
+  },
 } as const;
 
 type MapLang = keyof typeof T.allDestinations;
 
-// === POI kategorije za čipe (1.47) ===
-// Uskladitev s čip vzorcem klepeta (1.46): multi-select + iskreni števci +
-// prazno stanje. Prej: enojni Select z 5/8 kategorij — hrana, nastanitve
-// in trgovine so bile skrite pred uporabniki, čeprav jih /api/pois že
-// podpira. Ikone se prekrivajo namenoma s klepetom tam, kjer je semantika
-// ista (restaurant↔food: Utensils, hotel↔stay: BedDouble).
+// === Kategorije čipov (1.47 → F1 kanonska taksonomija) ===
+// Vrednosti so zdaj KANONSKI ProductType iz supply taksonomije ("hotel" →
+// "accommodation") — isti čipi, isti imenik, novi vir (supply API).
+// Ikone se prekrivajo namenoma s klepetom tam, kjer je semantika ista.
 const POI_CATEGORIES: {
-  value: string;
-  /** Dvojezična oznaka (L vzorec) — razreši se ob renderu z label[lang]. */
+  value: ProductType;
   label: { sl: string; en: string };
   icon: ComponentType<{ className?: string }>;
-  /** Privzeto vklopljene kategorije naložimo z ENIM klicem category=all
-   *  (hrana/nastanitve/trgovine so preštevilčne — izrecna izbira). */
   default: boolean;
 }[] = [
   { value: "attraction", label: T.catAttraction, icon: Ticket, default: true },
@@ -148,13 +138,16 @@ const POI_CATEGORIES: {
     icon: Utensils,
     default: false,
   },
-  { value: "hotel", label: T.catHotel, icon: BedDouble, default: false },
+  {
+    value: "accommodation",
+    label: T.catAccommodation,
+    icon: BedDouble,
+    default: false,
+  },
   { value: "shop", label: T.catShop, icon: ShoppingBag, default: false },
 ];
 
-const DEFAULT_POI_CATS = POI_CATEGORIES.filter((c) => c.default).map(
-  (c) => c.value
-);
+const DEFAULT_POI_CATS: ProductType[] = DEFAULT_SUPPLY_TYPES;
 
 interface MapViewProps {
   /** Koordinate poti (polyline) za prikaz — npr. iz AI itinererja */
@@ -172,71 +165,79 @@ interface MapViewProps {
  * Prikazuje vseh 22 destinacij kot markerje z custom ikonami,
  * popup-i z informacijami in izbirno polyline za pot.
  *
- * POI layer (default OFF): dodatni manjši markerji iz OpenStreetMap,
- * filtrirani z multi-select čipi kategorij (usklajeno s klepetom, 1.47).
- * Klik odpre PoiModal z Wikipedia opisom.
+ * F1 (Supply Map, 1.49.0): POI plast je zdaj SUPPLY sloj — viewport →
+ * bbox → /api/supply/search (ne več fiksni bbox cele Slovenije!), z
+ * grozdenjem (leaflet.markercluster), zoom gatingom in kanoničnimi
+ * ProviderProduct markerji (modal + "Dodaj v moj načrt").
  */
 export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
-  const poiLayerRef = useRef<L.LayerGroup | null>(null);
+  const poiLayerRef = useRef<L.MarkerClusterGroup | null>(null);
   const [showRoute, setShowRoute] = useState(true);
   // 1.48: dvojezičnost (vzorec L iz map-section — prej hardcoded SL tudi na /en)
   const lang: MapLang = useLocale() === "en" ? "en" : "sl";
 
-  // === POI state (1.47: multi-select čipi po kategorijah) ===
+  // === SUPPLY state (F1) ===
   const [showPois, setShowPois] = useState(false);
-  /** Aktivne (vklopljene) kategorije — izklop = skrivanje, ne brisanje. */
-  const [activeCats, setActiveCats] = useState<ReadonlySet<string>>(
+  /** Aktivne (vklopljene) kategorije — izklop = skrivanje. */
+  const [activeCats, setActiveCats] = useState<ReadonlySet<ProductType>>(
     () => new Set(DEFAULT_POI_CATS)
   );
-  /** Kategorije z ongoing prenosom (spinner na čipu + globalni loader). */
-  const [loadingCats, setLoadingCats] = useState<ReadonlySet<string>>(
-    new Set()
+  /** Trenutni viewport (posodobi se ob moveend/zoomend). */
+  const [viewport, setViewport] = useState<{
+    bbox: [number, number, number, number] | null;
+    zoom: number;
+  }>({ bbox: null, zoom: 8 });
+  const [selectedProduct, setSelectedProduct] = useState<ProviderProduct | null>(null);
+
+  const selectedProducts = useAppStore((s) => s.selectedProducts);
+  const selectedIds = useMemo(
+    () =>
+      new Set(
+        selectedProducts.map((p) => `${p.provider}:${p.providerProductId}`)
+      ),
+    [selectedProducts]
   );
-  const [poiError, setPoiError] = useState<string | null>(null);
-  // Cache POI-jev po kategoriji — NAMENOMA ref, ne state: preživi izklop
-  // plaste (ponovni vklop = instant iz cache-a, 0 omrežnih klicev) in
-  // preklope filtrov. complete=false = delni seznam iz skupnega "all"
-  // klica; complete=true = naloženo posamično (poln seznam). Mutacije
-  // sporoča cacheVersion, da se izpeljana useMemo rekonstituirata.
-  const poiCacheRef = useRef<Map<string, { pois: Poi[]; complete: boolean }>>(
-    new Map()
-  );
-  /** Dvojni klic istega categoryja med letom (rapid toggling). */
-  const poiInflightRef = useRef<Set<string>>(new Set());
-  const [cacheVersion, setCacheVersion] = useState(0);
-  // Ref za dostop do najnovejših POI-jev iz event handlerja (closure safe)
-  const poisRef = useRef<Poi[]>([]);
-  const [selectedPoi, setSelectedPoi] = useState<Poi | null>(null);
 
-  /** Prikazani POI-ji = aktivne kategorije ∩ cache (0 klicev ob filtru). */
-  const pois = useMemo<Poi[]>(() => {
-    void cacheVersion; // odvisnost: recompute po vsaki mutaciji cache-a
-    if (!showPois) return [];
-    const out: Poi[] = [];
-    for (const cat of activeCats) {
-      out.push(...(poiCacheRef.current.get(cat)?.pois ?? []));
-    }
-    return out;
-  }, [showPois, activeCats, cacheVersion]);
+  // Viewport → bbox → supply query (debounce v hooku; zoom gating strežniško).
+  const cats = useMemo(() => [...activeCats].sort(), [activeCats]);
+  const supply = useSupplyQuery({
+    enabled: showPois,
+    cats,
+    zoom: viewport.zoom,
+    bbox: viewport.bbox,
+    locale: lang,
+  });
 
-  /** Iskreni števci čipov — koliko POI-jev je dejansko naloženih po kategoriji. */
-  const catCounts = useMemo<ReadonlyMap<string, number>>(() => {
-    void cacheVersion;
-    const m = new Map<string, number>();
-    for (const c of POI_CATEGORIES) {
-      m.set(c.value, poiCacheRef.current.get(c.value)?.pois.length ?? 0);
-    }
-    return m;
-  }, [cacheVersion]);
-
-  // Cache spremeni izpeljeni seznam → posodobi ref za event handlerje
+  // Ref za dostop do najnovejših produktov iz event handlerja (closure safe)
+  const productsRef = useRef<ProviderProduct[]>([]);
   useEffect(() => {
-    poisRef.current = pois;
-  }, [pois]);
+    productsRef.current = supply.products;
+  }, [supply.products]);
+
+  /** Najbližja destinacija centru karte (affiliate dest za provider kartice). */
+  const nearestDestSlug = useMemo(() => {
+    const map = mapRef.current;
+    if (!map) return "slovenija";
+    const c = map.getCenter();
+    let best = { slug: "slovenija", dist: Number.POSITIVE_INFINITY };
+    for (const d of DESTINATIONS) {
+      const R = 6371;
+      const dLat = ((d.coords.lat - c.lat) * Math.PI) / 180;
+      const dLng = ((d.coords.lng - c.lng) * Math.PI) / 180;
+      const s =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((c.lat * Math.PI) / 180) *
+          Math.cos((d.coords.lat * Math.PI) / 180) *
+          Math.sin(dLng / 2) ** 2;
+      const dist = 2 * R * Math.asin(Math.sqrt(s));
+      if (dist < best.dist) best = { slug: d.slug, dist };
+    }
+    return best.slug;
+  }, [viewport]);
 
   // Inicializiraj zemljevid (enkrat)
   useEffect(() => {
@@ -259,7 +260,28 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
 
     mapRef.current = map;
     routeLayerRef.current = L.layerGroup().addTo(map);
-    poiLayerRef.current = L.layerGroup().addTo(map);
+    // F1: grozdenje (markercluster) — tisoči pinov se združujejo v skupke;
+    // pri z15+ se grozdenje izklopi (posamezni pini na uličnem nivoju).
+    // chunkedLoading NAMENOMA izklopljen: asinhrona čakalna vrsta se križa z
+    // clearLayers ob menjavi viewporta (živo ugotovljeno v E2E — markerji
+    // ostanejo v vrsti, DOM pa prazen); naši količine (≤ 400) so majhne.
+    poiLayerRef.current = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      disableClusteringAtZoom: 15,
+      maxClusterRadius: 60,
+      spiderfyOnMaxZoom: true,
+    }).addTo(map);
+
+    // F1: viewport sledenje — moveend/zoomend posodobi stanje → supply hook.
+    const syncViewport = () => {
+      const b = map.getBounds();
+      setViewport({
+        bbox: [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()],
+        zoom: map.getZoom(),
+      });
+    };
+    map.on("moveend zoomend", syncViewport);
+    syncViewport();
 
     // Dodaj markerje za vse destinacije
     DESTINATIONS.forEach((dest) => {
@@ -331,6 +353,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
 
     // Cleanup
     return () => {
+      map.off("moveend zoomend");
       map.remove();
       mapRef.current = null;
       markersRef.current = [];
@@ -340,7 +363,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     // ob (teoretični) spremembi jezika se zemljevid pobriše in znova nariše
   }, [lang]);
 
-  // Event delegation za CTA gumbe v popupih (destinacije + POI)
+  // Event delegation za CTA gumbe v popupih (destinacije + produkti)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -348,13 +371,13 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     const handlePopupClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
 
-      // POI CTA → odpri PoiModal
+      // Produkt CTA → odpri ProductModal
       if (target.classList.contains("map-poi-cta")) {
         const id = target.getAttribute("data-poi-id");
-        const poi = poisRef.current.find((p) => p.id === id);
-        if (poi) {
+        const product = productsRef.current.find((p) => p.id === id);
+        if (product) {
           map.closePopup();
-          setSelectedPoi(poi);
+          setSelectedProduct(product);
         }
         return;
       }
@@ -521,146 +544,29 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
   }, [showRoute, routeCoords, routeByDay, lang]);
 
-  // === POI fetch — kategorija-po-kategorija s skupnim cache-om (1.47) ===
-  // Prvi vklop plaste: EN klic category=all pokrije vseh 5 privzetih
-  // kategorij (isti obseg kot prej — ne 5 ločenih klicev na Overpass).
-  // Vklop dodatne kategorije (hrana/nastanitve/trgovine) = 1 posamičen
-  // klic, samo če še ni v cache-u. Izklop kategorije = čisto skrivanje
-  // (0 klicev) — enak vzorec kot čipi v klepetu (1.46), kjer filter dela
-  // nad že pridobljenimi kraji. Lazy upgrade: kadar je aktivna IZKLJUČNO
-  // ena privzeta kategorija, se njen delni seznam iz "all" klica nadgradi
-  // s posamičnim (polnih 200 — enako kot prejšnje vedenje ene kategorije).
-  const ensureDefaultLayer = useCallback(async () => {
-    if (poiInflightRef.current.has("__all__")) return;
-    if (DEFAULT_POI_CATS.some((c) => poiCacheRef.current.has(c))) return;
-    poiInflightRef.current.add("__all__");
-    setLoadingCats((prev) => {
-      const next = new Set(prev);
-      for (const c of DEFAULT_POI_CATS) next.add(c);
-      return next;
-    });
-    setPoiError(null);
-    try {
-      const res = await fetch(`/api/pois?category=all&limit=200`, {
-        cache: "no-store",
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: { pois: Poi[] } = await res.json();
-      const byCat = new Map<string, Poi[]>();
-      for (const p of data.pois ?? []) {
-        const list = byCat.get(p.category);
-        if (list) list.push(p);
-        else byCat.set(p.category, [p]);
-      }
-      for (const cat of DEFAULT_POI_CATS) {
-        poiCacheRef.current.set(cat, {
-          pois: byCat.get(cat) ?? [],
-          complete: false,
-        });
-      }
-      setCacheVersion((v) => v + 1);
-    } catch (e) {
-      console.error("[map-view/pois] napaka:", e);
-      setPoiError(T.errorPois[lang]);
-    } finally {
-      poiInflightRef.current.delete("__all__");
-      setLoadingCats((prev) => {
-        const next = new Set(prev);
-        for (const c of DEFAULT_POI_CATS) next.delete(c);
-        return next;
-      });
-    }
-  }, [lang]);
-
-  const ensureCategory = useCallback(async (cat: string) => {
-    if (poiInflightRef.current.has(cat)) return;
-    if (poiCacheRef.current.get(cat)?.complete) return;
-    poiInflightRef.current.add(cat);
-    setLoadingCats((prev) => new Set(prev).add(cat));
-    setPoiError(null);
-    try {
-      const res = await fetch(
-        `/api/pois?category=${encodeURIComponent(cat)}&limit=200`,
-        { cache: "no-store" }
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: { pois: Poi[] } = await res.json();
-      poiCacheRef.current.set(cat, { pois: data.pois ?? [], complete: true });
-      setCacheVersion((v) => v + 1);
-    } catch (e) {
-      console.error("[map-view/pois] napaka:", e);
-      setPoiError(T.errorPois[lang]);
-    } finally {
-      poiInflightRef.current.delete(cat);
-      setLoadingCats((prev) => {
-        const next = new Set(prev);
-        next.delete(cat);
-        return next;
-      });
-    }
-  }, [lang]);
-
-  // Sproži ustrezne prenose ob vklopu plaste / spremembi filtrov
+  // === Render SUPPLY markerjev (F1) — grozdeniMarkerCluster sloj ===
+  // Products pridejo IZ supply hook-a (viewport poizvedba) — vsak marker je
+  // kanonski ProviderProduct; klik (popup CTA) odpre ProductModal.
+  //
+  // MARKERCLUSTER MUHA (živo ugotovljena v E2E): clearLayers() + addLayer()
+  // v istem ciklu pusti sloj s plastmi, a DOM PRAZEN (interno stanje
+  // gručenja se ne pregradi brez dogodka zemljevida). Zanesljiva pot:
+  // skupino SNEMI z zemljevida, počisti, serijsko dodaj markerje
+  // (addLayers), skupino VRNI nazaj — onAdd sili celoten izris.
   useEffect(() => {
-    if (!showPois) {
-      setPoiError(null);
-      return;
-    }
-    const active = [...activeCats];
-    const anyDefaultActive = active.some((c) => DEFAULT_POI_CATS.includes(c));
-    if (
-      anyDefaultActive &&
-      !DEFAULT_POI_CATS.some((c) => poiCacheRef.current.has(c))
-    ) {
-      void ensureDefaultLayer();
-    }
-    const single = active.length === 1;
-    for (const cat of active) {
-      const entry = poiCacheRef.current.get(cat);
-      if (!entry && !DEFAULT_POI_CATS.includes(cat)) {
-        // dodatna kategorija (hrana/nastanitve/trgovine) — posamičen klic
-        void ensureCategory(cat);
-      } else if (entry && single && !entry.complete) {
-        // lazy upgrade delnega seznama iz "all" klica
-        void ensureCategory(cat);
-      }
-    }
-  }, [showPois, activeCats, ensureDefaultLayer, ensureCategory]);
-
-  const toggleCat = (cat: string) => {
-    const wasOn = activeCats.has(cat);
-    setActiveCats((prev) => {
-      const next = new Set(prev);
-      if (next.has(cat)) next.delete(cat);
-      else next.add(cat);
-      return next;
-    });
-    // Telemetrija (komplement chat_geo_filtered s klepeta): meri, ali
-    // multi-select čipi pomagajo tudi na brskalnem zemljevidu — in katere
-    // kategorije uporabniki dejansko iščejo (hrana/nastanitve).
-    trackPlannerEvent("map_poi_filtered", {
-      category: cat,
-      enabled: wasOn ? 0 : 1,
-      surface: "map",
-    });
-  };
-
-  /** Prazno stanje → nazaj na privzetih 5 kategorij (iz cache-a, instant). */
-  const resetCats = () => {
-    setActiveCats(new Set(DEFAULT_POI_CATS));
-  };
-
-  // === Render POI markerjev — ko se pois ali showPois spremenita ===
-  useEffect(() => {
+    const map = mapRef.current;
     const layer = poiLayerRef.current;
     if (!layer) return;
 
-    layer.clearLayers();
+    if (!showPois || supply.products.length === 0) {
+      layer.clearLayers();
+      return;
+    }
 
-    if (!showPois || pois.length === 0) return;
-
-    pois.forEach((poi) => {
-      const meta = CATEGORY_META[poi.category] ?? CATEGORY_META.other;
+    const markers: L.Marker[] = [];
+    supply.products.forEach((product) => {
+      if (product.lat == null || product.lng == null) return;
+      const meta = taxonomyOf(product.type);
       const icon = L.divIcon({
         className: "poi-marker",
         html: `
@@ -686,15 +592,15 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         popupAnchor: [0, -14],
       });
 
-      const marker = L.marker([poi.lat, poi.lng], {
+      const marker = L.marker([product.lat, product.lng], {
         icon,
-        title: poi.name,
-      }).addTo(layer);
+        title: product.title,
+      });
 
       const popupHtml = `
         <div style="min-width: 180px; max-width: 220px; font-family: sans-serif;">
           <div style="font-weight: 700; font-size: 14px; color: #1a2e1a; margin-bottom: 6px; line-height: 1.3;">
-            ${escapeHtml(poi.name)}
+            ${escapeHtml(product.title)}
           </div>
           <span style="
             display: inline-flex;
@@ -708,7 +614,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             font-weight: 600;
             margin-bottom: 10px;
           ">${meta.icon} ${meta.label[lang]}</span>
-          <button data-poi-id="${escapeAttr(poi.id)}" class="map-poi-cta" style="
+          <button data-poi-id="${escapeAttr(product.id)}" class="map-poi-cta" style="
             width: 100%;
             padding: 6px 10px;
             background: ${meta.color};
@@ -727,8 +633,43 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         maxWidth: 240,
         className: "poi-popup",
       });
+      markers.push(marker);
     });
-  }, [pois, showPois, lang]);
+
+    if (markers.length === 0) {
+      layer.clearLayers();
+      return;
+    }
+
+    // Zanesljiv izris: snemi → počisti → serijsko dodaj → vrni nazaj.
+    if (map) map.removeLayer(layer);
+    layer.clearLayers();
+    layer.addLayers(markers);
+    if (map) map.addLayer(layer);
+  }, [supply.products, showPois, lang]);
+
+  const toggleCat = (cat: ProductType) => {
+    const wasOn = activeCats.has(cat);
+    setActiveCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+    // Telemetrija (komplement chat_geo_filtered s klepeta): meri, ali
+    // multi-select čipi pomagajo tudi na brskalnem zemljevidu — in katere
+    // kategorije uporabniki dejansko iščejo (hrana/nastanitve).
+    trackPlannerEvent("map_poi_filtered", {
+      category: cat,
+      enabled: wasOn ? 0 : 1,
+      surface: "map",
+    });
+  };
+
+  /** Prazno stanje → nazaj na privzetih 5 kategorij. */
+  const resetCats = () => {
+    setActiveCats(new Set(DEFAULT_POI_CATS));
+  };
 
   const handleResetView = () => {
     mapRef.current?.setView([46.15, 14.47], 8);
@@ -748,6 +689,13 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
   const togglePois = () => {
     setShowPois((s) => !s);
   };
+
+  /** Dodajanje iz ProviderPanel/ProductCard (isti tok kot modal). */
+  const handleAddProduct = (product: ProviderProduct) => {
+    addProductToSelection(product, { locale: lang });
+  };
+
+  const zoomTooLow = showPois && Math.floor(viewport.zoom) < SUPPLY_MIN_ZOOM;
 
   return (
     <div className="relative h-full w-full">
@@ -794,7 +742,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
           </Button>
         ) : null}
 
-        {/* POI layer toggle */}
+        {/* POI (supply) layer toggle */}
         <Button
           type="button"
           size="sm"
@@ -810,13 +758,22 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
           )}
           {showPois ? T.hidePois[lang] : T.showPois[lang]}
         </Button>
+
+        {/* F1: ProviderPanel — viri, statusi, ponudba v pogledu */}
+        <ProviderPanel
+          lang={lang}
+          products={supply.products}
+          loading={supply.loading}
+          degraded={supply.degraded}
+          nearestDestSlug={nearestDestSlug}
+          selectedIds={selectedIds}
+          onOpenProduct={(p) => setSelectedProduct(p)}
+          onAddProduct={handleAddProduct}
+        />
       </div>
 
-      {/* POI category chips (1.47) — multi-select s števci, usklajeno s
-          čip vzorcem klepeta. Prikazani samo ko je POI layer vklopljen.
-          NAMENOMA vrstnik kontrolnega stolpca (ne njegov otrok): absolute
-          bottom-12 left-3 se mora razrešiti proti ZEMLJEVIDU (div.relative),
-          ne proti ozkemu stolpcu z gumbi desno zgoraj. */}
+      {/* POI category chips — multi-select s števci (iskreni: iz supply
+          counts), usklajeno s čip vzorcem klepeta. */}
       {showPois ? (
         <div className="absolute bottom-12 left-3 z-[1000] max-w-[calc(100%-1.5rem)] rounded-md border border-border bg-background/95 p-1.5 shadow-md backdrop-blur sm:max-w-[calc(100%-9rem)]">
           <div
@@ -826,9 +783,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
           >
             {POI_CATEGORIES.map(({ value, label, icon: Icon }) => {
               const on = activeCats.has(value);
-              const loading = loadingCats.has(value);
-              const loaded = poiCacheRef.current.has(value);
-              const count = catCounts.get(value) ?? 0;
+              const count = supply.products.filter((p) => p.type === value).length;
               return (
                 <button
                   key={value}
@@ -843,13 +798,9 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
                       : "border-border/60 bg-transparent text-muted-foreground opacity-60"
                   )}
                 >
-                  {loading ? (
-                    <Loader2 className="size-3 shrink-0 animate-spin" aria-hidden />
-                  ) : (
-                    <Icon className="size-3 shrink-0" aria-hidden />
-                  )}
+                  <Icon className="size-3 shrink-0" aria-hidden />
                   <span className="truncate">{label[lang]}</span>
-                  {loaded && !loading ? (
+                  {on && !supply.loading ? (
                     <span className="shrink-0 tabular-nums opacity-70">
                       {count}
                     </span>
@@ -876,18 +827,25 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         </div>
       ) : null}
 
-      {/* Loading spinner za POI fetch (zgornji levi kot, ne blokira zemljevida) */}
-      {loadingCats.size > 0 ? (
+      {/* Loading spinner za supply poizvedbo (zgornji levi, ne blokira) */}
+      {supply.loading && showPois ? (
         <div className="absolute left-3 top-3 z-[1000] flex items-center gap-2 rounded-lg border border-border bg-background/95 px-3 py-1.5 text-xs shadow-md backdrop-blur">
           <Loader2 className="size-3.5 animate-spin text-primary" aria-hidden="true" />
           <span className="font-medium">{T.loadingPois[lang]}</span>
         </div>
       ) : null}
 
-      {/* Error badge za POI (zgornji levi, pod spinnerjem) */}
-      {loadingCats.size === 0 && poiError && showPois ? (
-        <div className="absolute left-3 top-12 z-[1000] max-w-[220px] rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 shadow-md dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
-          {poiError}
+      {/* Zoom hint (supply zahteva približanje) */}
+      {zoomTooLow && !supply.loading ? (
+        <div className="absolute left-3 top-3 z-[1000] max-w-[240px] rounded-lg border border-border bg-background/95 px-3 py-1.5 text-xs text-muted-foreground shadow-md backdrop-blur">
+          {T.zoomHint[lang]}
+        </div>
+      ) : null}
+
+      {/* Error/degraded badge (zgornji levi) */}
+      {!supply.loading && supply.error && showPois ? (
+        <div className="absolute left-3 top-12 z-[1000] max-w-[240px] rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 shadow-md dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+          {T.degradedHint[lang]}
         </div>
       ) : null}
 
@@ -896,11 +854,11 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         <div className="flex items-center gap-2">
           <Star className="size-3.5 fill-amber-400 text-amber-400" />
           <span className="font-medium">{DESTINATIONS.length} {T.infoDestUnit[lang]}</span>
-          {showPois && pois.length > 0 ? (
+          {showPois && supply.products.length > 0 ? (
             <>
               <span className="text-muted-foreground">·</span>
               <Badge variant="outline" className="text-[10px]">
-                {pois.length} POI · OSM
+                {supply.products.length} POI · OSM
               </Badge>
             </>
           ) : null}
@@ -912,8 +870,11 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         </div>
       </div>
 
-      {/* PoiModal — odpre se ko uporabnik klikne POI marker */}
-      <PoiModal poi={selectedPoi} onClose={() => setSelectedPoi(null)} />
+      {/* ProductModal — odpre se ko uporabnik klikne produkt marker/kartico */}
+      <ProductModal
+        product={selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+      />
     </div>
   );
 }
