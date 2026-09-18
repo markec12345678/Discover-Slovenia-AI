@@ -289,3 +289,146 @@ Source-scan CELE mape `providers/getyourguide/` (test): NI `sample`, NI `DEMO_`,
 | Kanonski model | **NESPREMENJEN** (0 gyg* polj) |
 
 **FINAL:** Tretji realni provider je arhitekturno, pogodbeno in varnostno ŽIV (adapter + geo-semantika po krogih + normalizacija + veriga do bookinga), iskreno NOT_CONFIGURED na podatkovnem sloju (brez žetona — 0 lažnih podatkov, 0 klicev na vir). OSM + KiwiTaxi + Viator + GetYourGuide delujejo hkrati (testi + živo). Kanonska abstrakcija ostaja provider-agnostic (priklop = 1 vrstica; dokazano pri TRETJEM providerju). Supply engine je pripravljen za nadaljnje providerje.
+
+---
+
+# DRUGA FAZA (spec §20–§33) — regresija, izolacija, disciplina, i18n, mobile, performance
+
+**Datum:** 19. 9. 2026 (nadaljevanje po commitu 91332df; vrata 646/646)
+**Verzija:** 1.51.1
+**Prejšnji checkpoint:** 91332df (prva faza §1–§19; 601/601 testov)
+
+---
+
+## 24. Regresija kombinacij (§20) — GREEN
+
+`getyourguide-regression.test.ts` — **kombinacijska matrika vseh 11 kombinacij** skozi `searchSupply` (isti runner kot produkcija): 4 samotne (OSM / KiwiTaxi / Viator / GetYourGuide) + 6 parov (OSM+KT, OSM+VT, OSM+GYG, KT+VT, KT+GYG, VT+GYG) + vse 4 hkrati. Vsaka kombinacija: vsak ponudnik prispeva pin, `degraded=[]`, 0 duplikatov.
+
+- **Viator NOT_CONFIGURED ne vpliva na KiwiTaxi:** realni Viator adapter (brez `VIATOR_API_KEY`, note `not-configured`, NI degraded) + realni KiwiTaxi adapter (dataset) → KT produkti ŽIVI z realnimi ID-ji.
+- **GYG odpoved (500) ne pokvari OSM+KT:** `degraded=["getyourguide"]`, OSM+KT produkti živi.
+- Živo: Transferji 48 + Aktivnosti 0 soobstajata na zemljevidu (SL + EN).
+
+## 25. Izolacija odpovedi — POPOLNA matrika (§21) — GREEN
+
+Dopolnjena matrika (prej 7 razredov, zdaj **9 + 2**): GYG `{400, 401, 403, 429, 500, malformed, network, timeout}` × `{OSM 200, KT 200, Viator 200}` → `degraded=["getyourguide"]`, sosedi živi; GYG 200 prazen → NI degraded; **točen scenarij §21:** `OSM=200, KT=200 (realni dataset), Viator=not-configured (realni), GYG=timeout` → produkti OSM+KT, `degraded=["getyourguide"]` — **NE „whole supply failed"** (odgovor je vedno uspešen s seznamom degraded — `Promise.allSettled` izolacija v runnerju).
+
+## 26. Varnost — dopolnitve (§22) — GREEN
+
+Nad 38 obstoječih utrditvenih testov (1.51.0): ogromen seznam slik (10.000) in lokacij (10.000) → preslikava uspe brez sesutja; 1.000 veljavnih tur v enem odgovoru → vsi preslikani (kap da runner); kodiran URL (`https%3A%2F%2Fevil…`) → zavrnjen; `data` kot seznam (ne objekt) → `invalid-response`; mešani tipi v `data.tours` → samo veljavni; /go oversize ID (11 števk, 20 števk) / `0` / `-5` → **400**. Booking redirect fail-closed (9 živih primerov spodaj §28).
+
+## 27. Redirect / booking (§23) — GREEN (živo, 19. 9. 2026)
+
+| Primer | Rezultat |
+|---|---|
+| `/go/getyourguide` (BREZ produkta) | 302 → `https://www.getyourguide.com/` (fail-closed; z `GETYOURGUIDE_PARTNER_ID` → monetizirana domača stran) |
+| `/go/getyourguide?product=66985` (veljaven, hladen predpomnilnik) | 302 → čista povezava (NE izmišljujemo globoke povezave produkta) |
+| `?product=12345678901` (oversize) | **400** |
+| `?product=0` / `?product=-5` | **400** |
+| `?product=%6Aavascript%3A…` | **400** |
+| `?product=%2E%2E%2Fevil` | **400** |
+| `?url=https://attacker.example&product=…` | 302 → ČISTA povezava (param `url` NE obstaja v arhitekturi — open redirect nemogoč) |
+| `/go/getyourguide2` | **404** (allowlist) |
+| `/go/transfers?product=601746` (KT regresija) | 302 → `kiwitaxi.com/en/transfers/601746` |
+
+Monetizacija ni konfigurirana → `monetized:false`, čista povezava (iskreno; LIVE DATA ni, ker API dostop ni konfiguriran — nič ne prikazujemo kot živo).
+
+## 28. Request disciplina (§24) — GREEN
+
+- **Uradni rate limit:** 130 klicev/min + 5-minutna blokada (pogodba) → naša instanca `maxCallsPerMin 60` (konzervativno pod; test + registrska vrednost).
+- **Timeout:** klientova dira 8 s (test: hanging fetch → `GygApiError kind "timeout"` v < 1 s, NE obesi); runner dira 10 s.
+- **AbortSignal:** preklic odjemalca se širi do vira (test: zunanji abort → kind `"aborted"` — NI napaka vira); use-supply-query prekliče zastarelo poizvedbo ob novi (debounce 500 ms na moveend/zoomend, seq varovalka).
+- **Coalescing:** sočasni ENAKI poizvedbi delita 1 izvedbo; **sub-mrežni pan (< 0,02° bbox zaokrožitve) deli ključ** → 1 klic vira (test z dvema sočasnima bbox-oma, ki se razlikujeta za 0,005°).
+- **Duplicate suppression:** zaporedna identična poizvedba = NOV klic — **POGODBENA ODLOČITEV** (vir: »please do not scrape the API in an attempt to cache its output« → `cacheTtlMs 0`; iskreno dokumentirano, NE kraja pomena).
+- **Viewport/zoom gating:** brez bbox → `no-bbox` (0 klicev); zoom < 10 → adapter NE klican (runner); kategorije brez activity/tour → `cat-gated` (0 klicev) — živo potrjeno v telemetriji.
+- Map panning NE ustvarja nepotrebnih klicev: debounce 500 ms + abort + coalescing + sub-mrežna zaokrožitev; rezultatov NE cachamo (pogodba vira).
+
+## 29. Internationalizacija (§25) — GREEN
+
+Testi + živo: SL izdelek ima vse opombe slovenske (od-cena/razpoložljivost/Trajanje), EN izdelek vse angleške (from price/availability confirmed/Duration); **NI SL besedila v EN izpilu in obratno** (negativne trditve v testih); enota „per group" semantika v obeh jezikih; registrarna `accessNote` dvojezična (provider panel). Živo EN: Transfers 48 / Activities 0 / modal „per transfer" / „Published data" / „Add to selection" / FIXED note „published price, not a live quote".
+
+## 30. Mobile (§26) — GREEN (živo, 19. 9. 2026)
+
+| Mera | 390 px | 375 px |
+|---|---|---|
+| /zemljevid (SL) horizontalni preliv | **0 px** | **0 px** |
+| /zemljevid (EN) + modal odprt | **0 px** (modal ODPRT, deluje) | — |
+| / (domov, SL, footer) | — | **0 px**, footer na dnu vsebine |
+| /nacrtuj z 2 FIXED izdelki | **0 px** („Izbrani produkti (2) … obvezne") | — |
+| Gruče / popup / pin / čipi | delujejo (27-pin gruča se razpre) | delujejo |
+
+0 napak strani in konzole vseh mobilnih preverbah.
+
+## 31. Performance (§27) — ISKRENE meritve (19. 9. 2026, dev strežnik)
+
+| Meritev | Vrednost |
+|---|---|
+| **GYG živi vir** | **NOT MEASURED** — API dostop NI konfiguriran (NE simuliramo) |
+| GYG gate path (`cats=activity,tour`) | hladna ruta (prevod) 4,95 s / **toplo 17 ms**; 0 klicev na vir; note `not-configured`; NI degraded |
+| Viator gate path | 7 ms, 0 klicev (not-configured) |
+| KiwiTaxi (ŽIV, dataset) — LJU | hladna 37 ms / topla 221 ms — 48 produktov |
+| KiwiTaxi — Bled | 12–759 ms (1 izpad 6,3 s = dev-prevod; produkcijski standalone 12–48 ms po Tasku 44) — 48 produktov |
+| KiwiTaxi — Piran | hladna 105 ms / topla 36 ms — 48 produktov |
+| KiwiTaxi — SI-wide (z12) | hladna 224 ms / topla 83 ms — 48 produktov (zoom kap) |
+| OSM (Overpass) | ta seja: DOSTOPEN — prvi fetch na bbox ~21 s (Overpass počasen iz peskovnika), nato predpomnjen; prejšnje seje: nedosegljiv → negativni predpomnilnik 60 s (Task 44-b) |
+| Browser render (/zemljevid, dev) | DCL 772 ms · load 1484 ms · FCP 844 ms |
+| Browser supply round-trip | hladen (OSM Overpass) ~21 s · topel isti bbox hiter · Transferji 48 pinov → gruče → modal |
+| Markerji/gruče v pogledu | 48 transfer pinov (z12), 2–3 gruče, razprti do 27 pinov |
+
+Zahteva „largest useful viewport": SI-wide z12 = 48 produktov (zoom kap — po dizajnu), 224 ms hladno. Vse meritve so dejanske (curl `time_total` + `performance` API); NIČ ni simulirano.
+
+## 32. Test suite (§28) — 646/646
+
+Nova datoteka `getyourguide-regression.test.ts` (**45 testov**):
+- **§20 matrika** (13): 11 kombinacij + Viator-not-configured-ne-vpliva-na-KT (realna adapterja) + GYG-500-ne-pokvari-OSM+KT.
+- **§21 izolacija** (11): 9 razredov odpovedi × živi sosedi (vključno NOVO 403 + timeout), prazen ≠ degraded, točen scenarij naročnika (realni KT + realni not-configured Viator + GYG timeout).
+- **§22 varnost** (7): ogromni seznami (slike/lokacije/ture), kodiran URL, unexpected JSON (data-seznam, mešani tipi), /go oversize/ničelni/negativni ID.
+- **§23 redirect** (2): /go brez produkta → fail-closed (± partner_id).
+- **§24 disciplina** (5): klient timeout < 1 s, AbortSignal → „aborted", sub-mrežni pan coalescing (1 klic), zaporedna = nov klic (pogodbena iskrenost), registrske meje (60 < 130).
+- **§25 i18n** (5): EN vse angleško / SL vse slovensko (negativne trditve obeh smeri), per-group semantika, trajanja, dvojezična accessNote.
+- **§28 regresija** (3): realni KT dataset + realni GYG v eni poizvedbi (ločena ID prostora), OSM lokalni fuzzy dedupe intakten, pogodbene glave ločene (GYG ne pušča Viator glav).
+
+Obstoječi: 601 (1.51.0: 103 GYG + 498 prej) — skupaj **646 testov, 40 336 expect**. `bun test` 646/646 · `eslint` 0 · `tsc --noEmit` 0 napak v src (3 predhodne izven: skills/×2 + tailwind.config.ts — nedotaknjene).
+
+## 33. Real data gate (§29) — NOT CONFIGURED (veljaven izid)
+
+`[ ] actual official source` — **DA** (OpenAPI + wiki, živo preverjeno 18. 9. 2026)
+`[ ] active access` — **NE** (živi 401 errorCode 2420; partner manager izda žeton)
+`[ ] real products / IDs / geo / prices` — **NOT CONFIGURED** (plast prazna, 0 klicev)
+`[ ] correct price/availability semantics` — implementirano + testirano (uradni primer t66985)
+`[ ] map / ProductModal / Add-to-plan / AI FIXED` — arhitektura živa (kanonska pot + AI FIXED živi dokaz: podvojen GYG FIXED → točno 1× v 3-dnevnem itinererju z iskreno ceno/virom)
+`[ ] secure booking` — /go veriga GREEN (fail-closed)
+`[ ] failure isolation / security / SL / EN / mobile` — GREEN
+
+**Veljavni rezultat:** NOT CONFIGURED (brez poverilnic ni živih podatkov — in mi jih NE izmišljujemo).
+
+## 34. NO FAKE DATA (§30) — GREEN
+
+Source-scan (test ①–④ iz 1.51.0): mapa `providers/getyourguide/` NE vsebuje sample/DEMO/fallback/hardcoded produktov NI statičnih podatkovnih datotek; NI demo fixture, ki bi bil označen LIVE. Plast je ali živa (z žetonom) ali iskreno prazna — nič vmes.
+
+## 35. AI FIXED — ŽIVI dokaz (druga faza)
+
+POST `/api/itinerary` (200, 17,2 s): vhod = **PODVOJEN** GYG FIXED (`getyourguide:66985` 2×) + KT FIXED (`kiwitaxi:47235`) → izhod: `getyourguide:66985` NATANČNO 1× (dan 2: „cena: od 29 € (per person) · Dodano z zemljevida ponudbe · vir: GetYourGuide Partner API") + `kiwitaxi:47235` NATANČNO 1× (dan 1: „cena: od 137 € (per transfer) … vir: KiwiTaxi Partner Data API (CSV)"). Imutabilnost + dedupe + soobstajanje dokazani skozi realni AI klic pri TRETJEM komercialnem providerju.
+
+## 36. Sledenje naprej (YELLOW — nespremenjeno + dopolnjeno)
+
+1. **API žeton** (lastnik): partner.getyourguide.com → partner manager → `GETYOURGUIDE_API_TOKEN` v env → živi podatki BREZ spremembe kode (aktivacijska knjiga §22 prve faze).
+2. Po aktivaciji: žive pin pozicije, gostota po SI, dejanska enota radija (domneva km), obnašanje 429 (310 s blokada), tier (BASIC: teaser).
+3. Affiliate `GETYOURGUIDE_PARTNER_ID` (ločeno od API žetona) za monetizacijo fallback povezav.
+4. Prihodnje (NE širiti scope-a): produkt DETAIL (READ tier) za točno razpoložljivost/ceno v modalu.
+
+## 37. KONČNA VRATA (druga faza)
+
+| Vrata | Rezultat |
+|---|---|
+| `bun test` | **646/646** (+45 v tej fazi; 40 336 expect) |
+| `bun run lint` | **0 napak** |
+| `tsc --noEmit` (src) | **0 napak** |
+| Živa E2E | SL+EN zemljevid (Transferji 48 / Aktivnosti 0), zoom gating, gruče, popup, modal, FIXED izbira (SL+EN note), AI FIXED (2× → 1×), /go 9 primerov, mobile 390/375 px = 0 px preliva, 0 napak |
+| KiwiTaxi regresija | **GREEN** (48 živo v vseh pogledih + realni-dataset test) |
+| Viator regresija | **GREEN** (not-configured iskren; ne vpliva na KT — test + živo) |
+| OSM regresija | **GREEN** (lokalni fuzzy intakten test + živi pins) |
+| AI FIXED | **GREEN** (živi dokaz z GYG itemom) |
+| Security | **GREEN** (45 novih + obstoječih 38 utrditvenih + živa /go veriga) |
+| Kanonski model | **NESPREMENJEN** (0 gyg* polj — source-scan) |
+
+**FINAL (celoten Task 46, §1–§33):** GetYourGuide je TRETJI realni supply provider — pogodba živo preverjena, adapter 100 % implementiran (geo po krogih + post-filter, kanonska normalizacija, varnostna meja, /go veriga, AI FIXED), podatkovni sloj pa **ISKRENO NOT CONFIGURED** (brez žetona: 0 klicev na vir, 0 izmišljenih podatkov). OSM + KiwiTaxi + Viator + GetYourGuide soobstajajo v istem supply engine-u (11 kombinacij + živo); `ProviderProduct` NESPREMENJEN; abstrakcija ostaja provider-agnostic (priklop = 1 factory vrstica — dokazano pri tretjem). Supply engine je pripravljen za četrti provider (NI dodan — spoštovana meja naročnika).

@@ -7,6 +7,33 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.51.1] — 2026-09-19
+
+### Dodano (1.51.1 — TASK 46 §20–§33: regresija + izolacija + disciplina + i18n + revizijski dokument druge faze)
+
+- **`getyourguide-regression.test.ts` (45 novih testov, skupaj 646/646)** — druga faza specifikacije Taska 46: §20 kombinacijska matrika VSEH 11 kombinacij {OSM, KiwiTaxi, Viator, GYG} skozi `searchSupply` (vsak prispeva pin, 0 degraded, 0 duplikatov; Viator-not-configured NE vpliva na KT — realna adapterja; GYG-500 NE pokvari OSM+KT); §21 POPOLNA matrika izolacije (400/401/**403**/429/500/malformed/network/**timeout** × živi sosedi → `degraded=["getyourguide"]`; prazen ≠ degraded; TOČEN scenarij naročnika: realni KT dataset + realni not-configured Viator + GYG timeout → OSM+KT produkti, NE „whole supply failed"); §22 ogromni seznami (10.000 slik/lokacij, 1.000 tur), kodiran URL, unexpected JSON oblike, /go oversize/ničelni ID → 400; §23 /go brez produkta → fail-closed; §24 klient timeout <1 s + AbortSignal → „aborted" + sub-mrežni pan (<0,02°) coalescing = 1 klic + zaporedna = nov klic (POGODBENA iskrenost — vir prepoveduje predpomnilnik izpisa) + registrske meje (60 < 130/min vira); §25 i18n EN/SL vseh opomb z negativnimi trditvami (NI SL v EN in obratno); §28 realni KT dataset + realni GYG v ENI poizvedbi + OSM lokalni fuzzy dedupe intakten + pogodbene glave ločene.
+- **Živi E2E dokazi (19. 9. 2026)**: AI FIXED s PODVOJENIM GYG FIXED (66985 2×) + KT FIXED → `getyourguide:66985` NATANČNO 1× (dan 2, „cena: od 29 € (per person) · Dodano z zemljevida ponudbe · vir: GetYourGuide Partner API") + `kiwitaxi:47235` 1× (dan 1) — imutabilnost + dedupe skozi REALNI AI klic pri tretjem komercialnem providerju; /go veriga živo (brez produkta 302 fail-closed / oversize+0+negativni 400 / javascript: 400 / url= napad nemogoč / unknown 404 / KT regresija 302); SL+EN zemljevid (Transferji 48 ŽIVIH + Aktivnosti 0 iskreno; zoom-gating namig; gruče 27 pinov; modal; FIXED izbira z EN note „published price, not a live quote"); mobilni 390 px (mapa+modal+planner „Izbrani produkti (2)" = 0 px preliva) + 375 px (mapa+domov = 0 px, footer); 0 napak strani.
+- **Iskrene performance meritve (§27)**: GYG živi vir = NOT MEASURED (dostop ni konfiguriran — NE simuliramo); GYG gate path toplo 17 ms / 0 klicev; KiwiTaxi LJU 37 ms / Bled 12–759 ms / Piran 105 ms / SI-wide 224 ms (48 produktov; 6,3 s izpad = dev-prevod, produkcija 12–48 ms po Tasku 44); OSM Overpass ta seja dosegljiv (~21 s prvi fetch na bbox, nato predpomnjen); browser DCL 772 ms / FCP 844 ms (dev).
+- **Popravek iskrenosti verzije**: commit 91332df (prva faza) je nosil sporočilo 1.51.0, a `package.json`/`CHANGELOG` NISTA bila posodobljena (razkrit ob nadaljevanju) — ta izdaja dodaja ZAMUDNJENI vnos 1.51.0 + vnos 1.51.1 in postavlja `package.json` na 1.51.1.
+- **docs/TASK-46-GETYOURGUIDE.md** dopolnjen s §24–§37 (druga faza: kombinacije, izolacija, varnost, redirect, disciplina, i18n, mobile, performance, testi, real-data gate, YELLOW, končna vrata). Rumene ostanejo: API žeton (partner manager) → živi inventar brez spremembe kode.
+
+---
+
+## [1.51.0] — 2026-09-18
+
+### Dodano (1.51.0 — TASK 46 §1–§19: GETYOURGUIDE — tretji realni supply provider; commit 91332df)
+
+- **GetYourGuide Partner API adapter** — `src/lib/supply/providers/getyourguide/**`: pogodba ŽIVO preverjena (OpenAPI spec code.getyourguide.com + uradni GitHub wiki + živi 401 errorCode 2420). **NI mock, NI fake inventar, NI samo affiliate redirect.** Geo iskanje PO KROGU (`coordinates[]=[lat,lng,radius]` — enota radija v specifikaciji UNKNOWN → dokumentirana domneva km + post-filter pinov na bbox); glave `X-ACCESS-TOKEN` + `Accept: application/json`; verzija v poti `/1/tours`; `cnt_language=en` (sl NI podprt); valuta EUR potrjena iz `_metadata.exchange`; cena iz `price.description` PROSTEGA BESEDILA vira (individual/per person → per_person; per group… → total + opomba); `fromPrice:true`; razpoložljivost `unknown` (endpoint nad BASIC tierjem); ocena samo pri `number_of_ratings > 0`; slike `pictures[0]` https + `[format_id]`→132 + copyright→imageCredit; `tour.url` predpomnilnik 24 h za /go (uradna Option 1 booking povezava z partner_id).
+- **CAPABILITY GATE (iskren)**: `GETYOURGUIDE_API_TOKEN` NI izdan (živi dokaz 401; izda partner manager — NI self-serve, razlika od Viatorja) → plast iskreno PRAZNA (note `not-configured`, 0 klicev na vir). Ko žeton pride v env, živi podatki stečejo BREZ spremembe kode.
+- **Predpomnilnik PO POGODBI VIRA**: »please do not scrape the API in an attempt to cache its output« → BREZ rezultatnega predpomnilnika (`cacheTtlMs 0` → supply odgovor `no-store` — dokumentirana posledica); sočasni klici delijo izvedbo (coalescing); negativni predpomnilnik okvar 60 s, **429 → 310 s** (dokumentirana 5-minutna blokada vira); uradni limit 130/min → naša meja 60/min.
+- **Rate limit blokada + timeout + AbortSignal** v klientu (8 s); DI fetch za teste.
+- **Kanonski model NESPREMENJEN** (0 gyg* polj — source-scan test); priklop = 1 factory vrstica (4. aktivni adapter); `/go/getyourguide?product={tour_id}` validator `^\d{1,10}$` + ALLOWED_HOSTS (getyourguide.com + uradni test domeni); affiliate builder `getGetYourGuideProductUrl` (predpomnilnik → partner_id → čista povezava fail-closed).
+- **Testi: 601/601 (+103)** — contract (40) + adapter (25) + hardening (38) + posodobljeni invarianti. Ujet in popravljen bug pred produkcijo: `number_of_ratings: Infinity` ušel v reviewCount (Number.isFinite v mapperju).
+- **docs/TASK-46-GETYOURGUIDE.md** (§1–§23 prve faze). Živa E2E: GYG not-configured iskren (0 klicev), /go veriga, KT 48 regresija, browser 390 px 0 px preliva.
+- **OPOMBA (iskrenost)**: ta commit je nosil sporočilo 1.51.0, a `package.json`/`CHANGELOG` nista bila posodobljena (razkrito v naslednji seji; popravek v 1.51.1).
+
+---
+
 ## [1.50.0] — 2026-09-18
 
 ### Dodano (1.50.0 — TASK 45: VIATOR — drugi realni supply provider)
