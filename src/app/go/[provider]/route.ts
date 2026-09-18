@@ -57,11 +57,14 @@ const DEST_REQUIRED: readonly Provider[] = ["hotels", "cars", "activities", "fli
 // uradno dokumentiran format). Vrednost gre skozi ISTO whitelist kot dest.
 const FROM_SUPPORTED: readonly Provider[] = ["transfers"];
 
-// Providerji, ki sprejmejo parameter `product` (TASK 43 + 45): ID produkta
-// pri partnerju. Validacija je PO PROVIDERJU (različni ID prostori vira):
+// Providerji, ki sprejmejo parameter `product` (TASK 43 + 45 + 46): ID
+// produkta pri partnerju. Validacija je PO PROVIDERJU (različni ID prostori
+// vira):
 //  - transfers (KiwitTaxi): NUMERIČNI ID transferja ^\d{1,10}$ in > 0;
 //  - viator (Task 45): ALFANUMERIČNI productCode ^[A-Za-z0-9]{3,20}$
-//    (uradni primeri: "227717P1", "62330P2").
+//    (uradni primeri: "227717P1", "62330P2");
+//  - getyourguide (Task 46): NUMERIČNI tour_id ^\d{1,10}$ in > 0 (spec
+//    TourId: integer — uradni primer: 66985).
 // ID prihaja iz NAŠEGA adapterja (bookingUrl — ne iz surovega vnosa
 // uporabnika); tu je NEODVISNA meja zaupanja. Poljuben URL/parameter
 // injection je onemogočen po konstrukciji (isti fail-closed princip kot
@@ -69,6 +72,7 @@ const FROM_SUPPORTED: readonly Provider[] = ["transfers"];
 const PRODUCT_VALIDATORS: Partial<Record<Provider, (raw: string) => boolean>> = {
   transfers: (raw) => /^\d{1,10}$/.test(raw) && Number(raw) > 0,
   viator: (raw) => /^[A-Za-z0-9]{3,20}$/.test(raw),
+  getyourguide: (raw) => /^\d{1,10}$/.test(raw) && Number(raw) > 0,
 };
 const PRODUCT_SUPPORTED: readonly Provider[] = Object.keys(
   PRODUCT_VALIDATORS
@@ -302,6 +306,20 @@ export async function GET(
       "*.travelpayouts.com",
       "travelpayouts.com",
       "*.tp.st",
+    ],
+    // Izleti & ture — GetYourGuide (Task 46, PRODUKT deep-link pot): vir
+    // vrača tour.url na www.getyourguide.com z našim partner_id (uradna
+    // Option 1 booking povezava — Making-a-booking wiki). Dovoljeni še
+    // uradni test domeni iz OpenAPI specifikacije (*.gygtest.net /
+    // *.gygtest.com — integracijski testi prek GETYOURGUIDE_API_BASE) ter
+    // CDN domena za slike (ne uporabljamo za redirect, a je ista družina
+    // gostiteljev vira). Program teče DIREKTNO (partner_id na lastni
+    // domeni) — brez omrežnih redirect domen.
+    getyourguide: [
+      "www.getyourguide.com",
+      "getyourguide.com",
+      "*.gygtest.net",
+      "*.gygtest.com",
     ],
   };
   /**

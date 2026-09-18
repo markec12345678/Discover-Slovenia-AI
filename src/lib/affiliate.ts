@@ -3,6 +3,7 @@ import { DESTINATIONS } from "./slovenia-data";
 // (polni ga viator adapter iz odgovorov vira). Lazy require bi bil alternativa,
 // a je mapper čist modul brez težjih odvisnosti (samo tipe uvaža).
 import { lookupViatorProductUrl } from "./supply/providers/viator/mapper";
+import { lookupGygTourUrl } from "./supply/providers/getyourguide/mapper";
 
 // ============================================================================
 // AFFILIATE MONETIZACIJA — strežniška konfiguracija (fail-closed)
@@ -45,6 +46,7 @@ export const AFFILIATE_PROVIDERS = [
   "transport",
   "tickets",
   "viator",
+  "getyourguide",
 ] as const;
 export type AffiliateProvider = (typeof AFFILIATE_PROVIDERS)[number];
 
@@ -169,6 +171,10 @@ export function affiliateStatus(): Record<AffiliateProvider, PartnerStatus> {
     tickets: {
       configured: isValidHttpsUrl(process.env.TIQETS_AFFILIATE_URL?.trim() || ""),
       envVar: "TIQETS_AFFILIATE_URL",
+    },
+    getyourguide: {
+      configured: Boolean(process.env.GETYOURGUIDE_PARTNER_ID?.trim()),
+      envVar: "GETYOURGUIDE_PARTNER_ID",
     },
     viator: {
       configured: isValidHttpsUrl(process.env.VIATOR_AFFILIATE_URL?.trim() || ""),
@@ -520,6 +526,44 @@ export function getViatorUrl(productId?: string): PartnerUrlResult {
 }
 
 /**
+ * GetYourGuide — PRODUKT DEEP-LINK (/go/getyourguide?product={tour_id},
+ * TASK 46): SAMO veljaven tour_id (celo število 1–10 števk — nemogoče
+ * vbrizgati pot/parametre). URL pride IZ našega strežniškega
+ * predpomnilnika (polni ga GYG adapter iz tour.url vira — uradna
+ * Option 1 booking povezava, ki jo vir SAMODEJNO opremi z našim
+ * partner_id) NIKOLI iz vhoda. Zgrešen predpomnilnik (hladen strežnik /
+ * zastarel vnos) → fail-closed veriga spodaj; NE izmišljujemo URL-ja
+ * produkta, ki ga ne poznamo.
+ *
+ * Fallback veriga (fail-closed):
+ *  1. GETYOURGUIDE_PARTNER_ID (obstoječi affiliate env) → domača stran
+ *     z partner_id (monetized: true — uradna oblika affiliate povezave);
+ *  2. čista https://www.getyourguide.com/ (monetized: false — NE lažemo
+ *     o sledenju).
+ */
+export function getGetYourGuideProductUrl(productId?: string): PartnerUrlResult {
+  if (productId != null && /^\d{1,10}$/.test(productId) && Number(productId) > 0) {
+    const cached = lookupGygTourUrl(productId);
+    if (cached && isValidHttpsUrl(cached)) {
+      // Vir samodejno priključi partner_id na tour.url (uradna Option 1
+      // povezava) → povezava je monetizirana, kadar je prišla iz vira.
+      return { url: cached, monetized: true };
+    }
+    // Zgrešen predpomnilnik → iskreno nadaljevalno verigo; NE
+    // izmišljujemo URL-ja produkta, ki ga ne poznamo.
+  }
+
+  const pid = process.env.GETYOURGUIDE_PARTNER_ID?.trim();
+  if (pid) {
+    return {
+      url: `https://www.getyourguide.com/?partner_id=${encodeURIComponent(pid)}`,
+      monetized: true,
+    };
+  }
+  return { url: "https://www.getyourguide.com/", monetized: false };
+}
+
+/**
  * buildPartnerUrl — centralni izgrajevalnik partnerskih URL-jev (edini
  * vir; /go/[provider] rutа je tanek plašč nad tem). productId (opcijsko,
  * TASK 43): NUMERIČNI ID transferja — sprejme ga SAMO „transfers“ (Kiwitaxi
@@ -554,6 +598,8 @@ export function buildPartnerUrl(
       return getTiqetsUrl();
     case "viator":
       return getViatorUrl(productId);
+    case "getyourguide":
+      return getGetYourGuideProductUrl(productId);
   }
 }
 
@@ -579,4 +625,5 @@ export const PARTNER_LABELS: Record<AffiliateProvider, string> = {
   transport: "Omio",
   tickets: "Tiqets",
   viator: "Viator",
+  getyourguide: "GetYourGuide",
 } as const;

@@ -202,9 +202,16 @@ describe("TASK 45 §2/§3: capability gate — brez VIATOR_API_KEY", () => {
     expect(res.products).toEqual([]);
   });
 
-  test("③ defaultAdapters() vključuje viator (tovarna priklopljena — 3 adapterji)", () => {
+  test("③ defaultAdapters() vključuje viator (tovarna priklopljena — 4 adapterji)", () => {
+    // Task 46: + getyourguide (tretji realni adapter). Red je iz registra
+    // (activeProviders) — tovarna le preslika slug → factory.
     const adapters = defaultAdapters();
-    expect(adapters.map((a) => a.entry.slug).sort()).toEqual(["kiwitaxi", "osm", "viator"]);
+    expect(adapters.map((a) => a.entry.slug).sort()).toEqual([
+      "getyourguide",
+      "kiwitaxi",
+      "osm",
+      "viator",
+    ]);
   });
 
   test("④ SOURCE CONTRACT: adapter NE vsebuje izmišljenega inventory fallbacka (živi virs)", () => {

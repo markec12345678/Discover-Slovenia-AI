@@ -67,9 +67,13 @@ describe("TASK 44: GET /api/supply/search — route integracija (realni dataset)
     const osm = body.adapters.find((a) => a.slug === "osm");
     expect(osm?.note).toBe("cat-gated");
 
-    // Cache-Control iz registra aktivnih adapterjev (OSM TTL 10 min →
-    // s-maxage=60, kiwitaxi 24 h → ne spremeni skupnega TTL).
-    expect(res.headers.get("cache-control")).toContain("s-maxage");
+    // Cache-Control iz registra aktivnih adapterjev. TASK 46: aktiviral se
+    // je getyourguide z cacheTtlMs 0 (pogodba vira: »access the API in
+    // real-time; do not scrape … to cache its output«) → dizajn pretvori
+    // CEL odgovor v no-store (iskrenost živega vira nad CDN priročnostjo;
+    // OSM 10 min + kiwitaxi 24 h imata SVOJA adapterjska predpomnilnika,
+    // brskalnik ima debounce 500 ms — vpliv na UX je minimalen).
+    expect(res.headers.get("cache-control")).toBe("no-store");
 
     // Požri morebitni fire-and-forget rep — če bi analitika (iz kakršnega
     // koli razloga) vrgla SINHRONO izjemo zunaj notranjega catch-a, bi ta

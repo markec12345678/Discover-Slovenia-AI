@@ -136,15 +136,26 @@ describe("ProviderProduct contract (točka 1)", () => {
 
 describe("ProviderRegistry contract (točka 2)", () => {
   test("goRoute vrednosti registra ≡ AFFILIATE_PROVIDERS (affiliate.ts) — EN besednjak", () => {
+    // TASK 46 izjema (dokumentirana): poleg goRoute kartic obstajajo PRODUKT
+    // deep-link poti (/go/{route}?product=…), ki jih NE poganja goRoute
+    // registra, ampak adapter bookingUrl (ProviderProduct.bookingUrl — mapa
+    // ponudbe). Take poti sodosegljive iz kanonične površine supply plasti
+    // (kartice/modali) — NE so mrtev vstop. Danes: getyourguide (Task 46;
+    // kartica GYG ostaja na obstoječi „activities" poti z dest iskanjem).
+    const PRODUCT_ONLY_ROUTES = new Set(["getyourguide"]); // Task 46
     const registryRoutes = new Set<string>(
       PROVIDER_REGISTRY.flatMap((p) => (p.goRoute ? [p.goRoute as string] : []))
     );
     const affiliate = new Set<string>(AFFILIATE_PROVIDERS);
     // Vsak goRoute iz registra mora obstajati v affiliate.ts (sicer 404 /go link)
     for (const r of registryRoutes) expect(affiliate.has(r)).toBe(true);
-    // Vsak affiliate provider mora biti dosegljiv iz vsaj enega registra
-    for (const a of affiliate) expect(registryRoutes.has(a)).toBe(true);
-    expect(registryRoutes.size).toBe(affiliate.size);
+    // Vsak affiliate provider mora biti dosegljiv iz registra (goRoute) ALI
+    // biti produkt pot (bookingUrl iz adapterja — dokumentirana izjema).
+    for (const a of affiliate) {
+      if (PRODUCT_ONLY_ROUTES.has(a)) continue;
+      expect(registryRoutes.has(a)).toBe(true);
+    }
+    expect(registryRoutes.size).toBe(affiliate.size - PRODUCT_ONLY_ROUTES.size);
   });
 
   test("envKeys.affiliate imena ≡ affiliateStatus() envVar imena (drift varovalka)", () => {
@@ -296,15 +307,26 @@ describe("Per-provider rate limit (točka 3)", () => {
 // ---------------------------------------------------------------------------
 
 describe("supplyResponseCacheControl (točka 13)", () => {
+  test("REALNO STANJE (Task 46): aktiven real-time vir GYG (TTL 0 po pogodbi vira) → no-store", () => {
+    // GYG pogodba: »please do not scrape the API in an attempt to cache its
+    // output« → cacheTtlMs 0 → dizajn: vsak AKTIVNI adapter s TTL 0 pretvori
+    // CEL odgovor v no-store (iskrenost živega vira nad priročnostjo CDNa).
+    expect(supplyResponseCacheControl(PROVIDER_REGISTRY)).toBe("no-store");
+  });
+
   test("samo OSM (TTL 10 min) → kratek skupni s-maxage=60", () => {
-    const cc = supplyResponseCacheControl(PROVIDER_REGISTRY);
+    // Izoliran scenarij: OSM kot edini aktiven vir (zgodovinsko stanje F1).
+    const osmOnly = PROVIDER_REGISTRY.filter(
+      (p) => p.slug === "osm" || p.slug === "kiwitaxi"
+    );
+    const cc = supplyResponseCacheControl(osmOnly);
     expect(cc).toContain("s-maxage=60");
     expect(cc).toContain("public");
   });
 
   test("AKTIVEN živi vir (cacheTtlMs=0) → no-store (cache NI globalni TTL)", () => {
     const withLive = [
-      ...PROVIDER_REGISTRY,
+      ...PROVIDER_REGISTRY.filter((p) => p.slug !== "getyourguide"),
       { ...getProvider("viator")!, active: true, cacheTtlMs: 0 },
     ];
     expect(supplyResponseCacheControl(withLive)).toBe("no-store");
@@ -315,8 +337,9 @@ describe("supplyResponseCacheControl (točka 13)", () => {
   });
 
   test("najkrajši TTL med aktivnimi določa s-maxage (ne fiksni 60)", () => {
+    // Brez real-time GYG (TTL 0) — čist scenarij najkrajšega TTL-ja.
     const withShort = [
-      ...PROVIDER_REGISTRY,
+      ...PROVIDER_REGISTRY.filter((p) => p.slug !== "getyourguide"),
       { ...getProvider("fsq")!, active: true, cacheTtlMs: 20_000 },
     ];
     const cc = supplyResponseCacheControl(withShort);

@@ -312,21 +312,54 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     slug: "getyourguide",
     labels: { sl: "GetYourGuide", en: "GetYourGuide" },
     group: "commercial",
+    // TASK 46 (1.51.0): TRETJI realni adapter. Pogodba GetYourGuide Partner
+    // API (OpenAPI spec + uradni wiki) je ŽIVO preverjena 18. 9. 2026 in
+    // implementirana v src/lib/supply/providers/getyourguide/**. DOSTOP:
+    // GETYOURGUIDE_API_TOKEN še NI izdan (živi dokaz: klic z neveljavnim
+    // žetonom = HTTP 401 errorCode 2420; žeton izda partner manager po
+    // odobritvi — NI self-serve) → adapter je PRIKLJUČEN v iskreno
+    // PRAZNEM stanju (vrne [] + „not-configured"; NIČ izmišljenih
+    // podatkov, NE simuliramo živega API-ja). Ko žeton pride v env, živi
+    // podatki stečejo BREZ spremembe kode.
+    // GEO: vir isče PO KROGU (coordinates[]=[lat,lng,radius]) — enota
+    // radija v specifikaciji NI dokumentirana (adapter domneva km +
+    // post-filter pinov na bbox). cacheTtlMs 0: vir IZRECNO odvrača od
+    // predpomnjenja izpisa iskanj (»access the API in real-time«) —
+    // vpliv: odgovor /api/supply/search postane no-store (dizajn: vsak
+    // aktivni adapter s TTL 0 → no-store).
     inventoryAccess: ["affiliate_deep_link"],
     status: "affiliate",
-    active: false,
-    types: ["activity", "tour", "ticket"],
-    goRoute: "activities",
-    capabilities: { ...NO_INVENTORY_CAPS },
-    envKeys: { affiliate: ["GETYOURGUIDE_PARTNER_ID"], api: [] },
+    active: true, // priklopljen na /api/supply/search (runtime capability gate v adapterju)
+    types: ["activity", "tour"], // sloji, ki SPROŽIJO adapter; tipi produktov so iskreni (tudi ticket/transfer)
+    goRoute: "activities", // kartica affiliate povezave (obstoječe); produkt deep-link = /go/getyourguide
+    capabilities: {
+      geo: true, // tour.coordinates — predstavitvena lokacija (geoPrecision: city)
+      price: true, // StartingPrice (values.amount + description enote vira)
+      availability: false, // iskanje NE vrača razpoložljivosti (endpoint je nad BASIC tierjem)
+      images: true, // pictures[0] + [format_id] 132 (imageCredit: copyright vira)
+      reviews: true, // overall_rating + number_of_ratings (samo pri recenzijah)
+      map: true,
+      booking: true, // affiliate_redirect (/go/getyourguide?product={tour_id})
+      affiliate: true,
+    },
+    envKeys: {
+      affiliate: ["GETYOURGUIDE_PARTNER_ID"],
+      api: ["GETYOURGUIDE_API_TOKEN", "GETYOURGUIDE_API_BASE"],
+    },
     minZoom: 10,
+    // Vir: »please do not scrape the API in an attempt to cache its
+    // output« → živi vir BREZ predpomnilnika rezultatov (0; sočasni
+    // klici delijo izvedbo — coalescing, ne cache).
     cacheTtlMs: 0,
-    timeoutMs: 15_000,
-    maxCallsPerMin: 0,
+    // En klic /1/tours × 8 s klientova dira + margin.
+    timeoutMs: 10_000,
+    // Vir: privzeto 130 klicev/min (ob presegu 5-minutna blokada!) — naša
+    // globalna meja instance 60/min je konservativno pod limitom vira.
+    maxCallsPerMin: 60,
     docsUrl: "https://github.com/getyourguide/partner-api-spec",
     accessNote: {
-      sl: "Partner API zahteva odobritev (portal) — danes samo affiliate povezava",
-      en: "Partner API requires approval (portal) — today affiliate link only",
+      sl: "Partner API (OpenAPI, odobritev prek partner portala) — pogodba živo preverjena; API žeton še ni izdan. Danes samo affiliate povezava, sloj je pripravljen in iskreno prazen.",
+      en: "Partner API (OpenAPI, approval via partner portal) — contract verified live; API token not yet issued. Today affiliate link only, layer is ready and honestly empty.",
     },
   },
   {
