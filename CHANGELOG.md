@@ -7,6 +7,17 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.49.3] — 2026-09-18
+
+### Popravljeno (1.49.3 — TASK 44 dopolnitev: negativni predpomnilnik okvar OSM + coalescing)
+
+- **Živo odkrita vrzel §7 (po zaključku glavnega audita)**: končna verifikacija je odkrila, da supply poizvedbe s širokim bboxom (državni pogled, z10) vračajo odgovor po **~19 s** — kljub temu da je KiwiTaxi adapter odgovoril v 5 ms. Forenzika (direktni testi konektorjev): `overpass-api.de` zavrne povezavo (ECONNREFUSED, ~300 ms × 5 glavnih poskusov ≈ 6,5 s) + kumi mirror je »črna luknja« (TCP poveže, ne odgovori → 12 s timeout poskusa) ≈ **18,8 s do okvare** — in ker okvara NI bila predpomnjena, je VSAKA ponovljena poizvedba plačala celotno zaporedje znova (tudi 2 vzporedna identična zahtevka brskalnika sta se NEODVISNO obesila). Izolacija §6 je sicer držala (degraded: `["osm"]`, 48 KiwiTaxi produktov živih, odgovor iskren) — zamuda plasti pa ~19 s namesto ~5 ms. V produkciji enak vzorec nastopi ob izpadih Overpassa (dokumentirana »znana okna nedosegljivosti«): potencialno do 45 s proračuna na poizvedbo.
+- **Popravek (osm-adapter.ts, brez spremembe kanonskega modela ali budget uglaševanja)**: (1) **negativni predpomnilnik okvar** — okvara zapomni ključ (zaokrožen bbox + kategorije) za 60 s; ponovljene poizvedbe v oknu degradirajo TAKOJ in NE tolčejo javnega Overpassa znova; po preteku okna naslednja poizvedba ponovno poskusi (samoizterjava — dokazano s testom). Podatkov NE predpomnimo — samo stanje okvare (prazna plast ostane iskreno »degraded«, ne »prazno na novo«). Per-ključ (NE globalni odklopnik): 429/504 na eni poizvedbi ne blokira drugih viewportov — dokumentirana odločitev. (2) **coalescing sočasnih poizvedb** — klici z istim ključem se pridružijo obstoječi obljubi (EN fetch na vir, ne N — vljudnost do javne infrastrukture); preklic prvega odjemalca prekine skupni poskus (pritrujeni vidi okvaro → degraded; naslednja poizvedba poskusi znova).
+- **Živa izmera po popravku (dev strežnik)**: hladna poizvedba 18,68 s (plača okvaro ENKRAT) → ponovitve **23–32 ms** (~800×) → 3 sočasne poizvedbe po oknu 12–23 ms; brskalnik E2E: viewport sprememba znotraj okna = 22 ms.
+- **Testi**: 344/344 (336 → 344; +8 novih: takojšnja degradacija v oknu / per-ključ izolacija / samoizterjava po TTL / end-to-end izterjava / coalescing 1 fetch / coalescing ob okvari / runner integracija skozi searchSupply / pozitivni cache regresija), eslint 0, tsc 0 v src, E2E: 48 transferjev → gruče → popup → ProductModal (od €100, razredi vozil, »objavljena cena, ni živi citat«) → Dodaj v moj načrt (strukturiran FIXED item v sessionStorage), mobilni 390 px 0 px preliva.
+
+---
+
 ## [1.49.2] — 2026-09-18
 
 ### Popravljeno (1.49.2 — TASK 44: PRODUCTION HARDENING / SUPPLY ENGINE PROOF)

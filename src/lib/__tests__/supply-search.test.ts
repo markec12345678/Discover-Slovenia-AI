@@ -3,13 +3,16 @@
 // (integration z vbrizganimi test adapterji — NI fake inventarja v
 //  produkcijski kodi; mock adapterji živijo samo v testih)
 // ============================================================================
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test, beforeEach } from "bun:test";
 import {
   normalizeOsmElement,
   buildSupplyOverpassQuery,
   osmCacheKey,
   roundBboxOutward,
+  createOsmAdapter,
+  clearOsmCache,
 } from "@/lib/supply/osm-adapter";
+import type { OsmAdapterDeps } from "@/lib/supply/osm-adapter";
 import { parseSupplyQuery, searchSupply } from "@/lib/supply/search";
 import { getProvider } from "@/lib/supply/registry";
 import type { SupplyAdapter } from "@/lib/supply/adapter";
@@ -622,5 +625,223 @@ describe("TASK 44 §6: provider isolation matrix (OSM × KiwiTaxi)", () => {
         expect(r.products.some((p) => p.provider === slug)).toBe(false);
       }
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TASK 44 (1.49.3): NEGATIVNI PREDPOMNILNIK OKVAR + COALESCING (osm-adapter)
+//
+// Živa forenzika dev strežnika (18. 9. 2026): overpass-api.de ECONNREFUSED
+// (~300 ms × 5 poskusov) + kumi mirror črna luknja (12 s timeout) ≈ 18,8 s
+// DO okvare — plačano ob VSAKI ponovljeni poizvedbi (tudi 2 vzporedna
+// identična zahtevka brskalnika sta se NEODVISNO obesila). Regresija:
+// okvara se zapomni za okno (TTL), sočasni klici z istim ključem se
+// pridružijo obstoječi obljubi (EN fetch, ne N).
+// ---------------------------------------------------------------------------
+
+describe("TASK 44 (1.49.3): osm failure cache + coalescing", () => {
+  const VQ: SupplyQuery = {
+    zoom: 12,
+    cats: ["attraction"],
+    locale: "sl",
+    bbox: [46, 14, 46.4, 14.6],
+  };
+
+  const OSM_ELEMENT = {
+    type: "node",
+    id: 101,
+    lat: 46.1,
+    lon: 14.1,
+    tags: { name: "Testni grad", tourism: "attraction" },
+  };
+
+  beforeEach(() => {
+    clearOsmCache(); // modulsko stanje (cache + failureUntil + inflight)
+  });
+
+  /** Lažni overpassFetch s števcem klicev (TEST-ONLY). */
+  function makeFetch(behavior: {
+    fail: boolean;
+    delayMs?: number;
+  }): { fetch: NonNullable<OsmAdapterDeps["fetch"]>; calls: () => number } {
+    let n = 0;
+    const fetch = (async () => {
+      n++;
+      if (behavior.delayMs) await new Promise((r) => setTimeout(r, behavior.delayMs));
+      return behavior.fail ? null : { elements: [OSM_ELEMENT] };
+    }) as NonNullable<OsmAdapterDeps["fetch"]>;
+    return { fetch, calls: () => n };
+  }
+
+  /** search() ki pričakuje okvaro overpass-unreachable. */
+  async function expectUnreachable(adapter: SupplyAdapter): Promise<void> {
+    let threw = false;
+    try {
+      await adapter.search(VQ);
+    } catch (e) {
+      threw = (e as Error).message === "overpass-unreachable";
+    }
+    expect(threw).toBe(true);
+  }
+
+  test("① okvara → ponovljena poizvedba v oknu degradira TAKOJ (brez novega klica na vir)", async () => {
+    const { fetch, calls } = makeFetch({ fail: true });
+    const adapter = createOsmAdapter(undefined, { fetch, failureTtlMs: 60_000 });
+
+    await expectUnreachable(adapter);
+    expect(calls()).toBe(1);
+
+    // Druga IDENTIČNA poizvedba — vir se NE pokliče znova (ključni invariant:
+    // pred popravkom je VSAKA poizvedba plačala celotno ~18,8 s zaporedje).
+    const t0 = Date.now();
+    await expectUnreachable(adapter);
+    expect(calls()).toBe(1);
+    expect(Date.now() - t0).toBeLessThan(50); // takojšnja degradacija
+  });
+
+  test("② okvara enega ključa NE blokira drugega viewporta (per-ključ, ne globalno)", async () => {
+    const { fetch, calls } = makeFetch({ fail: true });
+    const adapter = createOsmAdapter(undefined, { fetch, failureTtlMs: 60_000 });
+
+    await expectUnreachable(adapter); // viewport A pade
+    expect(calls()).toBe(1);
+
+    // Viewport B (drug bbox → drug ključ) ima pravico do SVEŽEGA poskusa —
+    // 429/504 na eni poizvedbi ne sme blokirati vseh viewportov.
+    const other: SupplyQuery = { ...VQ, bbox: [45.9, 13.8, 46.3, 14.2] };
+    let threw = false;
+    try {
+      await adapter.search(other);
+    } catch (e) {
+      threw = (e as Error).message === "overpass-unreachable";
+    }
+    expect(threw).toBe(true);
+    expect(calls()).toBe(2); // sledil je nov poskus — negativni cache NI globalen
+  });
+
+  test("③ okvara je samo OKNO — po preteku TTL vir ponovno poskusi (samoizterjava)", async () => {
+    const { fetch, calls } = makeFetch({ fail: true });
+    // Kratek TTL (30 ms) — po čakanju 60 ms mora adapter znova poskusiti.
+    const adapter = createOsmAdapter(undefined, { fetch, failureTtlMs: 30 });
+
+    await expectUnreachable(adapter);
+    expect(calls()).toBe(1);
+
+    await new Promise((r) => setTimeout(r, 60));
+    await expectUnreachable(adapter);
+    expect(calls()).toBe(2); // okno je preteklo → svež poskus (NE trajna blokada)
+  });
+
+  test("④ izterjava po oknu: vir spet deluje → produkti se VRNEJO (end-to-end)", async () => {
+    let fail = true;
+    let n = 0;
+    const fetch = (async () => {
+      n++;
+      return fail ? null : { elements: [OSM_ELEMENT] };
+    }) as NonNullable<OsmAdapterDeps["fetch"]>;
+    const adapter = createOsmAdapter(undefined, { fetch, failureTtlMs: 30 });
+
+    await expectUnreachable(adapter); // okvara
+    fail = false; // vir ozdravi
+    await new Promise((r) => setTimeout(r, 60)); // okno preteče
+
+    const products = await adapter.search(VQ);
+    expect(n).toBe(2); // drugi poskus je sledil
+    expect(products).toHaveLength(1);
+    expect(products[0].title).toBe("Testni grad");
+    expect(products[0].provider).toBe("osm");
+  });
+
+  test("⑤ coalescing: 3 sočasne IDENTIČNE poizvedbe → EN sam fetch na vir", async () => {
+    const { fetch, calls } = makeFetch({ fail: false, delayMs: 40 });
+    const adapter = createOsmAdapter(undefined, { fetch });
+
+    const runs = await Promise.all([
+      adapter.search(VQ),
+      adapter.search(VQ),
+      adapter.search(VQ),
+    ]);
+    expect(calls()).toBe(1); // EN kos Overpass dela, ne 3 (vljudnost do javnega vira)
+    for (const products of runs) {
+      expect(products).toHaveLength(1);
+      expect(products[0].id).toBe("osm:node-101");
+    }
+  });
+
+  test("⑥ coalescing deluje tudi ob okvari — pridruženi klic vidi isto okvaro", async () => {
+    const { fetch, calls } = makeFetch({ fail: true, delayMs: 20 });
+    const adapter = createOsmAdapter(undefined, { fetch, failureTtlMs: 60_000 });
+
+    // Obe sočasni poizvedbi se pridružita ISTI obljubi → EN fetch.
+    const outcomes = await Promise.allSettled([
+      adapter.search(VQ),
+      adapter.search(VQ),
+    ]);
+    expect(calls()).toBe(1);
+    expect(outcomes.every((o) => o.status === "rejected")).toBe(true);
+    // Po zaporedju okvare je ključ v negativnem oknu — naslednja je takojšnja.
+    const t0 = Date.now();
+    await expectUnreachable(adapter);
+    expect(calls()).toBe(1);
+    expect(Date.now() - t0).toBeLessThan(50);
+  });
+
+  test("⑦ runner integracija: osm(fail) + kiwitaxi(ok) — drugi klic skozi searchSupply je TAKOJŠNJI", async () => {
+    const { fetch, calls } = makeFetch({ fail: true });
+    const osmReal = createOsmAdapter(
+      { ...getProvider("osm")!, maxCallsPerMin: 0 }, // brez rate-limit okna v testu
+      { fetch, failureTtlMs: 60_000 }
+    );
+    // Lokalni kiwitaxi mock (isti vzorec kot §6 matrika — TEST-ONLY).
+    const ktEntry = { ...getProvider("kiwitaxi")!, timeoutMs: 60, maxCallsPerMin: 0 };
+    const kiwi: SupplyAdapter = {
+      entry: ktEntry,
+      lastRunCached: () => false,
+      async search() {
+        return [
+          mkProduct({
+            id: "kiwitaxi:49540",
+            provider: "kiwitaxi",
+            providerProductId: "49540",
+            type: "transfer",
+            title: "Ljubljana Airport → Bled",
+            price: { amount: 77, currency: "EUR", unit: "per_transfer", fromPrice: true },
+            bookingMode: "affiliate_redirect",
+          }),
+        ];
+      },
+    };
+    const RQ: SupplyQuery = { ...VQ, cats: ["attraction", "transfer"] };
+
+    // Prvi klic: OSM pade (degraded), KiwiTaxi produkti ŽIVI — izolacija §6.
+    const r1 = await searchSupply(RQ, [osmReal, kiwi]);
+    expect(r1.degraded).toEqual(["osm"]);
+    expect(r1.products.every((p) => p.provider === "kiwitaxi")).toBe(true);
+    expect(r1.adapters.find((a) => a.slug === "osm")?.note).toBe("adapter-error");
+    expect(calls()).toBe(1);
+
+    // Drugi klic (enak viewport): negativno okno → OSM degradira TAKOJ,
+    // vir ni ponovno klican, KiwiTaxi plast ostane živa.
+    const t0 = Date.now();
+    const r2 = await searchSupply(RQ, [osmReal, kiwi]);
+    expect(calls()).toBe(1); // ← ni ponovnega klica na mrtvi vir
+    expect(r2.degraded).toEqual(["osm"]);
+    expect(r2.products).toHaveLength(1);
+    expect(Date.now() - t0).toBeLessThan(100);
+  });
+
+  test("⑧ uspešni zadetek ostane POZITIVNO cachiran (regresija obstoječega vedenja)", async () => {
+    const { fetch, calls } = makeFetch({ fail: false });
+    const adapter = createOsmAdapter(undefined, { fetch });
+
+    const first = await adapter.search(VQ);
+    expect(first).toHaveLength(1);
+    expect(adapter.lastRunCached()).toBe(false);
+    expect(calls()).toBe(1);
+
+    const second = await adapter.search(VQ);
+    expect(second).toHaveLength(1);
+    expect(adapter.lastRunCached()).toBe(true); // pozitivni cache še dela
+    expect(calls()).toBe(1); // brez novega klica
   });
 });

@@ -250,17 +250,68 @@ export function normalizeOsmElement(
 /** Počisti predpomnilnik (testi / admin). */
 export function clearOsmCache(): void {
   cache.clear();
+  failureUntil.clear();
+  inflight.clear();
   lastCached = false;
   lastSkipped = 0;
 }
 
 // ---------------------------------------------------------------------------
+// TASK 44 dopolnitev (1.49.3): NEGATIVNI predpomnilnik okvar + združevanje
+// sočasnih poizvedb (živa forenzika dev strežnika, 18. 9. 2026).
+//
+// Ugotovitev: overpass-api.de ECONNREFUSED (~300 ms × 5 glavnih poskusov)
+// + kumi mirror "črna luknja" (TCP poveže, ne odgovori → 12 s timeout)
+// ≈ 18,8 s do okvare — in ker okvara NI bila predpomnjena, je VSAKA supply
+// poizvedba plačala celoten vzorec znova (tudi 2 vzporedni identična
+// zahtevka brskalnika sta se NEODVISNO obesila). Izolacija je sicer držala
+// (degraded: ["osm"], KiwiTaxi nemoten, odgovor iskren), a je zamuda
+// plasti znašala ~19 s namesto ~5 ms.
+//
+// Utrditev (brez spremembe kanonskega modela ali budget uglaševanja):
+//  1) FAILURE CACHE (per ključ): okvara zapomni ključ za 60 s → ponovljene
+//     poizvedbe v oknu TAKOJ degradirajo (0 ms) in ne tolčejo javnega
+//     Overpassa znova; po preteku okna naslednja poizvedba ponovno
+//     poskusi (samoizterjava). Podatkov NE predpomnimo — samo stanje okvare
+//     (prazna plast ostane iskreno "degraded", ne "prazno na novo").
+//     Ključ = isti kot pozitivni cache (zaokrožen bbox + kategorije) —
+//     drug viewport = svež poskus; globalni vezilni odklopnik NAMENOMA
+//     ni uveden (429/504 na ENI poizvedbi ne sme blokirati vseh viewportov).
+//  2) IN-FLIGHT COALESCING: sočasne poizvedbe z istim ključem se pridružijo
+//     obstoječi obljubi — EN kos Overpass dela, ne N. Preklic prvega
+//     odjemalca prekine skupni poskus (pritrujeni odjemalec vidi okvaro →
+//     degraded; naslednja poizvedba poskusi znova) — dokumentirana meja.
+// ---------------------------------------------------------------------------
+
+/** Okno negativnega predpomnilnika (ms). */
+const OSM_FAILURE_TTL_MS = 60_000;
+
+/** Kdaj (epoha ms) sme ključ znova poskusiti Overpass. */
+const failureUntil = new Map<string, number>();
+
+/** Trenutno izvajajoče se poizvedbe po ključu (coalescing). */
+const inflight = new Map<string, Promise<ProviderProduct[]>>();
+
+// ---------------------------------------------------------------------------
 // ADAPTER — edini AKTIVEN v F1 (register: osm.active === true)
 // ---------------------------------------------------------------------------
 
-export function createOsmAdapter(entry?: ProviderRegistryEntry): SupplyAdapter {
+/** Odvisnosti adapterja (testi vbrizgajo lažni fetch + kratek TTL okvar —
+ *  produkcijska pot uporablja overpassFetch iz @/lib/overpass). */
+export interface OsmAdapterDeps {
+  fetch?: typeof overpassFetch;
+  /** TTL negativnega predpomnilnika (ms); privzeto 60 s. */
+  failureTtlMs?: number;
+}
+
+export function createOsmAdapter(
+  entry?: ProviderRegistryEntry,
+  deps?: OsmAdapterDeps
+): SupplyAdapter {
   const registryEntry = entry ?? getProvider("osm")!;
   const ttlMs = registryEntry.cacheTtlMs;
+  const fetchImpl = deps?.fetch ?? overpassFetch;
+  const failureTtlMs = deps?.failureTtlMs ?? OSM_FAILURE_TTL_MS;
 
   return {
     entry: registryEntry,
@@ -271,6 +322,7 @@ export function createOsmAdapter(entry?: ProviderRegistryEntry): SupplyAdapter {
       lastCached = false;
       lastSkipped = 0;
       if (!q.bbox) return []; // brez viewporta ni lokalne poizvedbe
+      const bbox = q.bbox; // const veza: ozkočen tip preživi v execute zaprtju
 
       // Samo kategorije z OSM filtri; zoom prag kategorij je že
       // apliciran v search.ts (typesVisibleAtZoom) — tu je še en varovalni
@@ -288,54 +340,82 @@ export function createOsmAdapter(entry?: ProviderRegistryEntry): SupplyAdapter {
         return hit.products;
       }
 
-      // Omejitev markerjev za zoom (zoom gating) + 20 % buffer za
-      // dedupe/normalizacijo — Overpass `out ... N` limite elemente.
-      const limit = Math.min(
-        Math.round(
-          Math.max(40, Math.min(800, (z - 6) * 90)) * 1.2
-        ),
-        800
-      );
-      const query = buildSupplyOverpassQuery(q.bbox, cats, limit);
-      if (!query) return [];
-
-      // Požrešnost pod nadzorom: supply nwr poizvedbe (bbox + več
-      // kategorij) so živo izmerjeno ~10 s na overpass-api.de — poskusna
-      // meja 12 s, skupni proračun 45 s. Peskovniško omrežje do Overpass
-      // PLAHAJE (ECONNREFUSED v sekundnih oknih) — 5 glavnih poskusov s
-      // premorom 1 s razširi okno prek slabih intervalov (klepetovi
-      // around-poizvedbe ostanejo na 3 × 400 ms).
-      const data = await overpassFetch(query, {
-        budgetMs: 45_000,
-        attemptTimeoutMs: 12_000,
-        retryDelayMs: 1_000,
-        maxMainAttempts: 5,
-        signal: q.signal, // AUDIT 42: preklic odjemalca prekine poskuse
-      });
-      if (!data) {
-        // Overpass nedosegljiv (vsi konektorji) — MEHKA NAPAKA: runner jo
-        // zabeleži v degraded[], zemljevid pa ostane funkcionalen
-        // (destinacije iz dataseta + iskren badge). NE cachamo praznine.
-        throw new Error("overpass-unreachable");
+      // TASK 44 (1.49.3): negativno okno — okvara tega ključa je še SVEŽA
+      // → takojšnja degradacija (0 ms), brez novega zaporedja poskusov.
+      const blockedUntil = failureUntil.get(key);
+      if (blockedUntil != null) {
+        if (Date.now() < blockedUntil) throw new Error("overpass-unreachable");
+        failureUntil.delete(key); // okno je preteklo → svež poskus
       }
 
-      const now = new Date().toISOString();
-      const products: ProviderProduct[] = [];
-      for (const el of (data.elements ?? []) as OverpassElement[]) {
-        const product = normalizeOsmElement(el, now);
-        if (product) products.push(product);
-        else lastSkipped++; // partial result — iskrena telemetrija
-      }
+      // TASK 44 (1.49.3): sočasna identična poizvedba že teče → pridruži se
+      // (en kos Overpass dela; oba klicalca delita uspeh ALI okvaro).
+      const running = inflight.get(key);
+      if (running) return running;
 
-      // Predpomnilnik (uspešni zadetki samo — ne napak/praznin po napaki).
-      if (products.length > 0) {
-        if (cache.size >= CACHE_MAX) {
-          const toDelete = [...cache.keys()].slice(0, 10);
-          for (const k of toDelete) cache.delete(k);
+      const execute = async (): Promise<ProviderProduct[]> => {
+        // Omejitev markerjev za zoom (zoom gating) + 20 % buffer za
+        // dedupe/normalizacijo — Overpass `out ... N` limite elemente.
+        const limit = Math.min(
+          Math.round(
+            Math.max(40, Math.min(800, (z - 6) * 90)) * 1.2
+          ),
+          800
+        );
+        const query = buildSupplyOverpassQuery(bbox, cats, limit);
+        if (!query) return [];
+
+        // Požrešnost pod nadzorom: supply nwr poizvedbe (bbox + več
+        // kategorij) so živo izmerjeno ~10 s na overpass-api.de — poskusna
+        // meja 12 s, skupni proračun 45 s. Peskovniško omrežje do Overpass
+        // PLAHAJE (ECONNREFUSED v sekundnih oknih) — 5 glavnih poskusov s
+        // premorom 1 s razširi okno prek slabih intervalov (klepetovi
+        // around-poizvedbe ostanejo na 3 × 400 ms).
+        const data = await fetchImpl(query, {
+          budgetMs: 45_000,
+          attemptTimeoutMs: 12_000,
+          retryDelayMs: 1_000,
+          maxMainAttempts: 5,
+          signal: q.signal, // AUDIT 42: preklic odjemalca prekine poskuse
+        });
+        if (!data) {
+          // Overpass nedosegljiv (vsi konektorji) — MEHKA NAPAKA: runner jo
+          // zabeleži v degraded[], zemljevid pa ostane funkcionalen
+          // (destinacije iz dataseta + iskren badge). NE cachamo praznine.
+          // TASK 44 (1.49.3): zapomni okvaro za failureTtlMs —
+          // ponovljena poizvedba v oknu degradira TAKOJ (brez 18,8 s
+          // ponovljenega zaporedja poskusov na mrtvem viru).
+          failureUntil.set(key, Date.now() + failureTtlMs);
+          throw new Error("overpass-unreachable");
         }
-        cache.set(key, { expires: Date.now() + ttlMs, products });
+
+        const now = new Date().toISOString();
+        const products: ProviderProduct[] = [];
+        for (const el of (data.elements ?? []) as OverpassElement[]) {
+          const product = normalizeOsmElement(el, now);
+          if (product) products.push(product);
+          else lastSkipped++; // partial result — iskrena telemetrija
+        }
+
+        // Predpomnilnik (uspešni zadetki samo — ne napak/praznin po napaki).
+        if (products.length > 0) {
+          if (cache.size >= CACHE_MAX) {
+            const toDelete = [...cache.keys()].slice(0, 10);
+            for (const k of toDelete) cache.delete(k);
+          }
+          cache.set(key, { expires: Date.now() + ttlMs, products });
+        }
+        return products;
+      };
+
+      // Coalescing: registriraj obljubo, sprosti ključ ob zaključku.
+      const run = execute();
+      inflight.set(key, run);
+      try {
+        return await run;
+      } finally {
+        inflight.delete(key);
       }
-      return products;
     },
   };
 }
