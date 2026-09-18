@@ -42,6 +42,7 @@ import { taxonomyOf, DEFAULT_SUPPLY_TYPES } from "@/lib/supply/taxonomy";
 import type { ProductType, ProviderProduct } from "@/lib/supply/types";
 import { useSupplyQuery } from "@/lib/supply/use-supply-query";
 import { SUPPLY_MIN_ZOOM } from "@/lib/supply/zoom";
+import { getProvider } from "@/lib/supply/registry";
 import { addProductToSelection } from "@/lib/supply/selection";
 import { ProductModal } from "@/components/supply/product-modal";
 import { ProviderPanel } from "@/components/supply/provider-panel";
@@ -114,8 +115,8 @@ const T = {
     en: "Zoom in for local places (z ≥ 10).",
   },
   degradedHint: {
-    sl: "Vir OSM trenutno ni dosegljiv — destinacije ostajajo.",
-    en: "The OSM source is unreachable — destinations remain.",
+    sl: "Nekateri viri trenutno niso dosegljivi — destinacije ostajajo.",
+    en: "Some sources are unreachable right now — destinations remain.",
   },
 } as const;
 
@@ -705,6 +706,15 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     addProductToSelection(product, { locale: lang });
   };
 
+  /** Imena DEJANSKIH virov v trenutnem rezultatu (TASK 44 §9: badge ne
+   *  sme trditi "OSM", ko so med produkti tudi drugi providerji). */
+  const sourcesLabel = useMemo(() => {
+    const slugs = [...new Set(supply.products.map((p) => p.provider))];
+    return slugs
+      .map((s) => (s === "osm" ? "OSM" : (getProvider(s)?.labels[lang] ?? s)))
+      .join(" · ");
+  }, [supply.products, lang]);
+
   const zoomTooLow = showPois && Math.floor(viewport.zoom) < SUPPLY_MIN_ZOOM;
 
   return (
@@ -867,8 +877,8 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
           {showPois && supply.products.length > 0 ? (
             <>
               <span className="text-muted-foreground">·</span>
-              <Badge variant="outline" className="text-[10px]">
-                {supply.products.length} POI · OSM
+              <Badge variant="outline" className="max-w-[220px] truncate text-[10px]">
+                {supply.products.length} POI · {sourcesLabel}
               </Badge>
             </>
           ) : null}

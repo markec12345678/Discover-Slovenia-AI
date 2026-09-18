@@ -295,6 +295,30 @@ describe("kiwitaxi adapter — viewport filtriranje", () => {
     expect(valid).toHaveLength(1);
   });
 
+  test("TASK 44 §4: slab zapis NA SREDINI dataseta NE uniči plasti (fail-safe)", async () => {
+    // isKiwiTaxiDataset vzorči prvo+zadnjo ruto — slab ZGORNJI sredinski
+    // zapis ne sme niti zavrniti dataseta niti podreti iskanja: bralna
+    // plast (filterValidRoutes) ga izlušči POIZVEDBO za poizvedbo.
+    const routes = [
+      fixtureRoute({ id: 101 }),
+      fixtureRoute({ id: 102 }),
+      { ...fixtureRoute({ id: 103 }), fromLat: NaN, fromLng: NaN } as unknown as KiwiRoute, // slab sredinski
+      fixtureRoute({ id: 104 }),
+      fixtureRoute({ id: 105 }),
+    ];
+    installKiwitaxiDataset(fixtureDataset(routes));
+    const adapter = createKiwiTaxiAdapter(getProvider("kiwitaxi")!);
+    const res = await searchSupply(
+      { zoom: 12, cats: ["transfer"], locale: "sl", bbox: VIEW_LJU },
+      [adapter]
+    );
+    // 4 od 5 rut preživi; NaN sredinski zapis je tiho izločen, plast ŽIVI.
+    expect(res.products.length).toBe(4);
+    expect(res.degraded).toEqual([]);
+    expect(res.products.every((p) => p.id !== "kiwitaxi:103")).toBe(true);
+    resetKiwitaxiDataset();
+  });
+
   test("isKiwiTaxiDataset: pravi baseline iz gita je veljaven", () => {
     const baseline = kiwitaxiDatasetStats();
     // Baseline je prisoten (git verzioniran) in strežen
@@ -329,7 +353,9 @@ describe("kiwitaxi skozi searchSupply runner", () => {
       [spy]
     );
     expect(called).toBe(0); // transfer NI med kategorijami → brez klica
-    expect(res.adapters.find((a) => a.slug === "kiwitaxi")?.note).toBe("zoom-gated");
+    // TASK 44: izvedba je padla zaradi KATEGORIJ (zoom 12 ≥ minZoom 10) —
+    // iskrena oznaka je cat-gated, ne zavajuči "zoom-gated".
+    expect(res.adapters.find((a) => a.slug === "kiwitaxi")?.note).toBe("cat-gated");
   });
 
   test("§9: zoom < minZoom (10) → adapter NE kliče vira", async () => {

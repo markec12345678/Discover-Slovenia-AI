@@ -148,7 +148,20 @@ export const db =
   globalForPrisma.prisma ??
   new PrismaClient({
     datasourceUrl: resolveDatabaseUrl(),
-    log: process.env.NODE_ENV === 'production' ? ['error'] : ['query', 'error'],
+    // TASK 44 (production hardening): query log v dev je IZKLOPLJEN.
+    //
+    // FORENZIKA (živo dokazano 18. 9. 2026, A/B na hladnem startu):
+    // `log: ['query','error']` je povzročal PREKINITVENE 500 na
+    // /api/supply/search (~13 % hitrih zaporednih poizvedb) — per-query
+    // LOG callback prisma library enginea (napi → JS) ob sočasnosti
+    // (recompile/CPU obremenitev) vrže raw »SyntaxError: Unexpected end of
+    // JSON input« IZVEN try/catch pisalne poti; Next dev ga pripiše
+    // odprti zahtevi → 500. A/B dokaz: log ON = 8 napak/30; log OFF =
+    // 0/30 (enak scenarij). Produkcija (log:['error']) ni bila nikoli
+    // prizadeta (25× burst = 0 napak na standalone buildu).
+    //
+    // Za začasno debugiranje poizvedb: DSA_PRISMA_QUERY_LOG=1.
+    log: process.env.DSA_PRISMA_QUERY_LOG === '1' ? ['query', 'error'] : ['error'],
   })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db

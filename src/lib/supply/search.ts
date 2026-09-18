@@ -252,10 +252,15 @@ export async function searchSupply(
     }
   }
 
-  // Neizvedeni aktivni adapterji (zoom prag / kategorije) — transparentno
-  // poročamo, da se niso pognali ZARADI gatinga (ne kot napaka).
+  // Neizvedeni aktivni adapterji — transparentno poročamo RAZLOG izpada
+  // izvedbe (ne kot napako). TASK 44: razločeni vzroki — "zoom-gated"
+  // (zoom pod pragom adapterja ALI pod globalnim SUPPLY_MIN_ZOOM, ki
+  // požene prazne kategorije) in "cat-gated" (adapterjevi tipi se ne
+  // sekajo z vidnimi kategorijami — npr. cats=transfer ne pokliče OSM).
   for (const a of adapters) {
     if (runnable.includes(a) || rateLimited.includes(a)) continue;
+    const z = Math.floor(zoom);
+    const gated = z < a.entry.minZoom || visibleCats.length === 0 ? "zoom-gated" : "cat-gated";
     adaptersInfo.push({
       slug: a.entry.slug,
       status: a.entry.status,
@@ -263,7 +268,7 @@ export async function searchSupply(
       ms: 0,
       count: 0,
       cached: false,
-      note: "zoom-gated",
+      note: gated,
     });
   }
   for (const a of rateLimited) {

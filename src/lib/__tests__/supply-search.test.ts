@@ -437,14 +437,15 @@ describe("searchSupply runner", () => {
   });
 
   test("kategorija, ki je adapter ne podpira → adapter se NE kliče", async () => {
-    // OSM adapter ne pokriva tipa "flight" → zoom-gated (ne izvedba).
+    // OSM adapter ne pokriva tipa "flight" → cat-gated (TASK 44: ločeno od
+    // zoom-gated — zoom 14 je nad pragom, izvedba je padla ZARADI kategorij).
     const adapter = makeMockAdapter("osm", [mkProduct({ type: "attraction" })]);
     const r = await searchSupply(
       { zoom: 14, cats: ["flight"], locale: "sl", bbox: [46, 14, 46.2, 14.2] },
       [adapter]
     );
     expect(r.products.length).toBe(0);
-    expect(r.adapters[0].note).toBe("zoom-gated");
+    expect(r.adapters[0].note).toBe("cat-gated");
   });
 
   test("prazne kategorije → privzeti nabor (kompatibilnost)", async () => {
@@ -465,5 +466,161 @@ describe("searchSupply runner", () => {
     expect(r.duplicates).toBe(1);
     expect(r.counts.byType.attraction).toBe(1);
     expect(r.counts.byProvider.osm).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TASK 44 §6 — PROVIDER ISOLATION MATRIX (realna supply pipeline)
+// ---------------------------------------------------------------------------
+// Šest scenarijev iz naročnikove specifikacije: OSM×KiwiTaxi križno z
+// 200/timeout/malformed/empty. Ob odpovedi ENEGA providerja:
+//  (a) drugi provider OSTANE uporaben (produkti se vračajo),
+//  (b) mapa ostane uporabna (odgovor 200, ne prazna čez vse),
+//  (c) response IZRECNO označi degraded (slug padlega vira),
+//  (d) NE nastane false-positive availability (padli vir ne prispeva
+//      produktov; razpoložljivost preživelih ostane poštena).
+// (mock adapterji so TEST-ONLY sintetika — jasno označeno)
+// ---------------------------------------------------------------------------
+
+describe("TASK 44 §6: provider isolation matrix (OSM × KiwiTaxi)", () => {
+  const KT_PRODUCTS: ProviderProduct[] = [
+    mkProduct({
+      id: "kiwitaxi:49540",
+      provider: "kiwitaxi",
+      providerProductId: "49540",
+      type: "transfer",
+      title: "Ljubljana Airport → Bled",
+      price: { amount: 77, currency: "EUR", unit: "per_transfer", fromPrice: true },
+      availability: { status: "not_supported" },
+      bookingMode: "affiliate_redirect",
+      bookingUrl: "/go/transfers?product=49540",
+    }),
+  ];
+  const OSM_PRODUCTS: ProviderProduct[] = [
+    mkProduct({
+      id: "osm:node-42",
+      providerProductId: "node-42",
+      type: "attraction",
+      title: "Blejski grad",
+      availability: { status: "not_supported" },
+    }),
+  ];
+
+  function osmAdapter(
+    mode: "ok" | "timeout" | "malformed" | "empty"
+  ): SupplyAdapter {
+    const entry = { ...getProvider("osm")!, timeoutMs: 60, maxCallsPerMin: 0 };
+    return {
+      entry,
+      lastRunCached: () => false,
+      async search(_q: SupplyQuery): Promise<ProviderProduct[]> {
+        if (mode === "timeout")
+          return new Promise<ProviderProduct[]>(() => {}); // obesi → runner dira
+        if (mode === "malformed") throw new Error("SyntaxError: Unexpected end");
+        if (mode === "empty") return [];
+        return OSM_PRODUCTS;
+      },
+    };
+  }
+
+  function kiwiAdapter(
+    mode: "ok" | "timeout" | "malformed" | "empty"
+  ): SupplyAdapter {
+    const entry = { ...getProvider("kiwitaxi")!, timeoutMs: 60, maxCallsPerMin: 0 };
+    return {
+      entry,
+      lastRunCached: () => false,
+      async search(_q: SupplyQuery): Promise<ProviderProduct[]> {
+        if (mode === "timeout")
+          return new Promise<ProviderProduct[]>(() => {}); // obesi → runner dira
+        if (mode === "malformed") throw new Error("SyntaxError: Unexpected end");
+        if (mode === "empty") return [];
+        return KT_PRODUCTS;
+      },
+    };
+  }
+
+  const Q: SupplyQuery = {
+    zoom: 12,
+    cats: ["attraction", "transfer"],
+    locale: "sl",
+    bbox: [46, 14, 46.4, 14.6],
+  };
+
+  test("① OSM=200 + KiwiTaxi=200 → oba vira živa, mešani produkti", async () => {
+    const r = await searchSupply({ ...Q }, [osmAdapter("ok"), kiwiAdapter("ok")]);
+    expect(r.degraded).toEqual([]);
+    expect(r.products).toHaveLength(2);
+    expect(r.counts.byProvider).toEqual({ osm: 1, kiwitaxi: 1 });
+    // (d) iskrena razpoložljivost ostaja not_supported — ni lažnega "na voljo"
+    expect(r.products.every((p) => p.availability?.status === "not_supported")).toBe(true);
+  });
+
+  test("② OSM=200 + KiwiTaxi=timeout → kiwitaxi degraded, OSM produkti ŽIVI", async () => {
+    const r = await searchSupply({ ...Q }, [osmAdapter("ok"), kiwiAdapter("timeout")]);
+    expect(r.degraded).toEqual(["kiwitaxi"]);
+    expect(r.products).toHaveLength(1);
+    expect(r.products[0].provider).toBe("osm");
+    const kt = r.adapters.find((a) => a.slug === "kiwitaxi");
+    expect(kt?.ok).toBe(false);
+    expect(kt?.note).toBe("timeout");
+  });
+
+  test("③ OSM=200 + KiwiTaxi=malformed → kiwitaxi degraded (adapter-error), OSM živi", async () => {
+    const r = await searchSupply({ ...Q }, [osmAdapter("ok"), kiwiAdapter("malformed")]);
+    expect(r.degraded).toEqual(["kiwitaxi"]);
+    expect(r.products.every((p) => p.provider === "osm")).toBe(true);
+    expect(r.adapters.find((a) => a.slug === "kiwitaxi")?.note).toBe("adapter-error");
+  });
+
+  test("④ OSM=200 + KiwiTaxi=empty → NI degraded (prazno je pošten stanje), OSM živi", async () => {
+    const r = await searchSupply({ ...Q }, [osmAdapter("ok"), kiwiAdapter("empty")]);
+    expect(r.degraded).toEqual([]); // prazen sloj NI napaka vira
+    expect(r.products).toHaveLength(1);
+    const kt = r.adapters.find((a) => a.slug === "kiwitaxi");
+    expect(kt?.ok).toBe(true);
+    expect(kt?.count).toBe(0);
+  });
+
+  test("⑤ OSM=timeout + KiwiTaxi=200 → OSM degraded, transfer plast ŽIVA", async () => {
+    const r = await searchSupply({ ...Q }, [osmAdapter("timeout"), kiwiAdapter("ok")]);
+    expect(r.degraded).toEqual(["osm"]);
+    expect(r.products).toHaveLength(1);
+    expect(r.products[0].provider).toBe("kiwitaxi");
+    expect(r.products[0].availability?.status).toBe("not_supported");
+    expect(r.adapters.find((a) => a.slug === "osm")?.note).toBe("timeout");
+  });
+
+  test("⑥ OSM=malformed + KiwiTaxi=200 → OSM degraded, komercialna plast nespremenjena", async () => {
+    const r = await searchSupply({ ...Q }, [osmAdapter("malformed"), kiwiAdapter("ok")]);
+    expect(r.degraded).toEqual(["osm"]);
+    expect(r.products.every((p) => p.provider === "kiwitaxi")).toBe(true);
+    expect(r.products[0].price?.unit).toBe("per_transfer"); // semantike nedotaknjene
+  });
+
+  test("(b) mapa ostane uporabna v VSEH šestih scenarijih — odgovor nikoli ni sesut", async () => {
+    const scenarios: Array<[ReturnType<typeof osmAdapter>, ReturnType<typeof kiwiAdapter>]> = [
+      [osmAdapter("ok"), kiwiAdapter("ok")],
+      [osmAdapter("ok"), kiwiAdapter("timeout")],
+      [osmAdapter("ok"), kiwiAdapter("malformed")],
+      [osmAdapter("ok"), kiwiAdapter("empty")],
+      [osmAdapter("timeout"), kiwiAdapter("ok")],
+      [osmAdapter("malformed"), kiwiAdapter("ok")],
+    ];
+    for (const [osm, kiwi] of scenarios) {
+      const r = await searchSupply({ ...Q }, [osm, kiwi]);
+      expect(r.query).toBeDefined();
+      expect(Array.isArray(r.products)).toBe(true);
+      expect(r.generatedAt).toBeTruthy();
+      // (c) degraded je vedno IZRECEN in TOČEN (nikoli false-positive napaka)
+      for (const slug of r.degraded) {
+        const info = r.adapters.find((a) => a.slug === slug);
+        expect(info?.ok).toBe(false);
+      }
+      // (d) noben produkt iz padlega vira ne pušča v rezultatih
+      for (const slug of r.degraded) {
+        expect(r.products.some((p) => p.provider === slug)).toBe(false);
+      }
+    }
   });
 });

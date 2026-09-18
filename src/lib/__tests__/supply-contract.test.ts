@@ -686,3 +686,187 @@ describe("SSRF/injection zaščita (točka 15)", () => {
     expect(out.length).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// TASK 44 — §5 CANONICAL MODEL CONTRACT PROOF (Supply Engine dokaz)
+// ---------------------------------------------------------------------------
+// Namera: DOKAZATI, da priključitev naslednjega providerja (Viator, GYG,
+// Tiqets, Booking …) NE zahteva spremembe kanonskega modela. Dva dokaza:
+//   A) SOURCE SCAN — polja ProviderProduct/PriceInfo/SelectedProviderProduct
+//      NE vsebujejo imen ponudnikov (onesnaženje modela bi se videlo tu).
+//   B) FORWARD-COMPAT — hipotetični provider "viator" gre skozi CEL pot
+//      (adapter → searchSupply → dedupe → sanitize → AI kontekst) z
+//      NIČELNIMI spremembami modela — če se to prevede in požene, je
+//      pogodba dokazana.
+// ---------------------------------------------------------------------------
+import { readFileSync } from "node:fs";
+
+describe("TASK 44 §5: kanonski model je provider-agnostic (source scan)", () => {
+  const SRC = readFileSync(new URL("../supply/types.ts", import.meta.url), "utf-8");
+
+  /** Izlušči imena POLJ iz interface telesa (brez komentarjev/metod). */
+  function fieldNames(interfaceName: string): string[] {
+    const re = new RegExp(`interface ${interfaceName} \\{([\\s\\S]*?)^\\}`, "m");
+    const body = SRC.match(re)?.[1] ?? "";
+    return (body.match(/^\s{2}(\w+)\??:/gm) ?? []).map((l) => l.trim().replace(/[?:]/g, ""));
+  }
+
+  // Ponudniška imena kot PREDPONA sestavljenega imena polja (kiwiRouteType,
+  // viatorData …). POZOR: "booking" je KANONSKI pojem (bookingMode,
+  // bookingUrl — rezervacijski način/URL, ne Booking.com) — zato je
+  // booking dovoljen SAMO v teh dveh dokumentiranih kanonskih oblikah.
+  const PROVIDER_TOKENS =
+    /^(kiwi|viator|gyg|getyourguide|tiqets|discovercars|skyscanner|omio|airalo|worldnomads|safetywing|travelpayouts|fsq)[A-Z_]/i;
+  const CANONICAL_BOOKING_FIELDS = new Set(["bookingMode", "bookingUrl"]);
+
+  test("ProviderProduct nima NOBENEGA polja poimenovanega po ponudniku", () => {
+    const fields = fieldNames("ProviderProduct");
+    expect(fields.length).toBeGreaterThan(15); // polna oblika (ne prazna regex zadetka)
+    const polluted = fields.filter((f) => PROVIDER_TOKENS.test(f));
+    expect(polluted).toEqual([]);
+    // booking* so NATANKO kanonska rezervacijska polja (dokumentirano).
+    const bookingFields = fields.filter((f) => /^booking[A-Z]/.test(f));
+    expect(bookingFields.every((f) => CANONICAL_BOOKING_FIELDS.has(f))).toBe(true);
+  });
+
+  test("PriceInfo / SupplyQuery / SelectedProviderProduct ostajajo čisti", () => {
+    for (const iface of ["PriceInfo", "SupplyQuery", "SelectedProviderProduct", "AdapterRunInfo"]) {
+      const polluted = fieldNames(iface).filter(
+        (f) => PROVIDER_TOKENS.test(f) || (/^booking[A-Z]/.test(f) && !CANONICAL_BOOKING_FIELDS.has(f))
+      );
+      expect(polluted).toEqual([]);
+    }
+  });
+
+  test("kiwiTaxi-specifica živi SAMO znotraj providers/kiwitaxi (ne v core)", () => {
+    // Adapter factory v search.ts je RAZŠIRITVENA TOČKA po zasnovi (tako se
+    // provider priključi) — ne onesnaženje. Preverimo, da core datoteke ne
+    // vsebujejo structurne logike specifične za KiwiTaxi.
+    const core = readFileSync(new URL("../supply/search.ts", import.meta.url), "utf-8");
+    const structuralKiwi = core.match(/kiwi/gi)?.length ?? 0;
+    // dovoljeni: 1 uvoz + 1 vrstica factory registracije (+ komentarji)
+    expect(structuralKiwi).toBeLessThanOrEqual(4);
+  });
+});
+
+describe("TASK 44 §5: FORWARD-COMPAT — nov provider (viator) BREZ spremembe modela", () => {
+  // HIPOTETIČNI adapter naslednjega providerja — uporablja SAMO kanonske
+  // tipe. Če bi model potreboval spremembo, se ta test NE bi prevedel.
+  function createMockViatorAdapter(): SupplyAdapter {
+    const entry = {
+      ...getProvider("viator")!,
+      active: true,
+      minZoom: 10,
+      maxCallsPerMin: 0,
+      timeoutMs: 100,
+    };
+    return {
+      entry,
+      lastRunCached: () => false,
+      async search(q: SupplyQuery) {
+        if (!q.bbox) return [];
+        return [
+          mkProduct({
+            id: "viator:7402SHARED",
+            provider: "viator",
+            providerProductId: "7402SHARED",
+            type: "tour",
+            subcategory: "shared_tour",
+            title: "Lake Bled & Vintgar Gorge Tour",
+            geoPrecision: "destination_center" as const,
+            price: { amount: 79, currency: "EUR" as const, unit: "per_person" as const },
+            availability: { status: "unknown" as const },
+            bookingMode: "affiliate_redirect" as const,
+            bookingUrl: "/go/viator?product=7402SHARED",
+            sourceUrl: "https://www.viator.com/tours/Bled",
+            license: { source: "Viator" },
+          }),
+          mkProduct({
+            id: "viator:9101PRIV",
+            provider: "viator",
+            providerProductId: "9101PRIV",
+            type: "activity",
+            title: "Private Triglav Hike",
+            price: { amount: 240, currency: "EUR" as const, unit: "total" as const, fromPrice: false },
+            bookingMode: "affiliate_redirect" as const,
+          }),
+        ];
+      },
+    };
+  }
+
+  test("celotna pot: adapter → searchSupply → dedupe izolacija → sanitize → AI kontekst", async () => {
+    const viator = createMockViatorAdapter();
+    const kiwiProduct = mkProduct({
+      id: "kiwitaxi:49540",
+      provider: "kiwitaxi",
+      providerProductId: "49540",
+      type: "transfer",
+      title: "Ljubljana Airport → Bled",
+      price: { amount: 77, currency: "EUR", unit: "per_transfer", fromPrice: true },
+      bookingMode: "affiliate_redirect",
+      bookingUrl: "/go/transfers?product=49540",
+    });
+    const kiwiAdapter = adapterWith("kiwitaxi", { products: [kiwiProduct] });
+
+    // 1) searchSupply z dvema providerjema hkrati (isti runner, isti model)
+    const res = await searchSupply(
+      { zoom: 12, cats: ["tour", "activity", "transfer"], locale: "sl", bbox: [46, 14, 46.4, 14.6] },
+      [viator, kiwiAdapter]
+    );
+    expect(res.products.map((p) => p.provider).sort()).toEqual(["kiwitaxi", "viator", "viator"]);
+    expect(res.degraded).toEqual([]);
+
+    // 2) dedupe izolacija: isti naslov/geo pri različnih providerjih = 2 produkta
+    const osmTwins = dedupeProducts([
+      kiwiProduct,
+      { ...kiwiProduct, id: "viator:x", provider: "viator", providerProductId: "x" },
+    ]);
+    expect(osmTwins.products).toHaveLength(2);
+
+    // 3) sanitize iz OBA strukturnih virov (server-side meja AI vhodu)
+    const clean = sanitizeSelectedProviderProducts([
+      {
+        provider: "viator",
+        providerProductId: "7402SHARED",
+        type: "tour",
+        title: "Lake Bled & Vintgar Gorge Tour",
+        lat: 46.36,
+        lng: 14.11,
+        price: { amount: 79, currency: "EUR", unit: "per_person" },
+        source: "Viator",
+        selectionState: "fixed",
+      },
+      {
+        provider: "kiwitaxi",
+        providerProductId: "49540",
+        type: "transfer",
+        title: "Ljubljana Airport → Bled",
+        price: { amount: 77, currency: "EUR", unit: "per_transfer", fromPrice: true },
+        source: "KiwiTaxi Partner Data API (CSV)",
+        selectionState: "fixed",
+      },
+    ]);
+    expect(clean).toHaveLength(2);
+
+    // 4) AI kontekst izpiše OBA iz različnih virov s pravilnimi enotami
+    const ctx = buildSelectedProductsContext(clean, "en");
+    expect(ctx).toContain("[FIXED] Lake Bled & Vintgar Gorge Tour — provider: viator");
+    expect(ctx).toContain("€79 (per person)");
+    expect(ctx).toContain("[FIXED] Ljubljana Airport → Bled — provider: kiwitaxi");
+    expect(ctx).toContain("from €77 (per transfer)");
+  });
+
+  test("registry: nov provider se priključi z VNOSOM v register (ne s spremembo modela)", () => {
+    // Obrazec vnosa: slug v unionu + vpis v PROVIDER_REGISTRY + factory
+    // vrstica. Model (ProviderProduct) se NE dotakne — to je edina pogodba.
+    const viatorEntry = getProvider("viator")!;
+    expect(viatorEntry.group).toBe("commercial");
+    expect(viatorEntry.types).toContain("tour");
+    // Pogodbena meja: supplyResponseCacheControl izpelja TTL iz REGISTRA
+    // (ne iz if (provider === …) vej) — dodajanje viator-ja ne more
+    // spremeniti cache semantike obstoječih.
+    const cc = supplyResponseCacheControl([getProvider("osm")!, viatorEntry]);
+    expect(cc).toContain("s-maxage");
+  });
+});

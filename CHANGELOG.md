@@ -7,6 +7,26 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.49.2] — 2026-09-18
+
+### Popravljeno (1.49.2 — TASK 44: PRODUCTION HARDENING / SUPPLY ENGINE PROOF)
+
+- **KOREN PREKINITVENIH 500 na /api/supply/search v dev (živo odkrito in A/B dokazano)**: pod hitrim zaporednim prometom je ~13 % poizvedb padlo s 500 `SyntaxError: Unexpected end of JSON input` (živo: 8/30 na hladnem startu). Forenzika po izključitvi: prisma v izolaciji (node+bun, 1000+ zapisov, logging vklopljen, mešana obremenitev) = 0 napak; zapis v routi izklopljen = 0/90; uvoz brez zapisa = 0/30 → **vzrok: prisma `log: ['query','error']` v dev** — per-query LOG callback library enginea (napi → JS) ob sočasnosti (recompile/CPU) vrže raw SyntaxError IZVEN try/catch pisalne poti; Next dev ga pripiše odprti zahtevi → 500. Popravek: `db.ts` privzeto `log: ['error']` (opt-in debug prek `DSA_PRISMA_QUERY_LOG=1`); A/B po popravku = 0/30 + 0/40. Produkcija ni bila nikoli prizadeta (25× burst na standalone = 0 napak, `log:['error']` po NODE_ENV).
+- **Telemetrija supply poizvedbe odvojena od odgovora** (`/api/supply/search`): zapis `supply_query` je sedaj fire-and-forget (`void … .catch()`), ~10 ms krajša kritična pot na poizvedbo; odpoved pisanja (iz kateregakoli vzroka) ne more doseči odjemalca. Sekundarno utrjevanje istega vzroka; koren je zgoraj.
+- **Iskrenost telemetrije adapterjev**: runner ločeno označuje `zoom-gated` (zoom pod pragom/plastjo) od `cat-gated` (adapterjevi tipi se ne sekajo z vidnimi kategorijami — npr. `cats=transfer` ne pokliče OSM). Prej so obe izvedbi padli zavazujoče pod »zoom-gated«.
+- **Zemljevid — badge virov**: spodnji info badge je preneal trditi »OSM« — sedaj izpiše DEJANSKE vire v rezultatu (npr. »48 POI · KiwiTaxi«); degraded hint je generičen (ne krivi OSM).
+- **Dataset integrity (§4 audirano, 100 % čisto)**: 1494 rut / 308 krajev / 9614 transferjev — 0 podvojenih ID-jev, 0 manjkajočih cen, 0 NaN/Infinity, 0 izven-mejnih koordinat, 0 slabih URL-jev (max dolžina imena 51/80, poti 81/200), pin vedno znotraj svojega bbox-a, 929 rut se dotika SI, 1316 pinov, cene €33–€1620. Deklarirane številke ≡ dejanske. Nov regresijski test: slab zres NA SREDINI dataseta ne uniči plasti (fail-safe bralna plast).
+- **Canonical model contract DOKAZAN (§5)**: source-scan (nobeno polje ProviderProduct/PriceInfo/SupplyQuery ni poimenovano po ponudniku) + FORWARD-COMPAT dokaz — hipotetični viator adapter gre skozi CELO pot (searchSupply → dedupe izolacija → sanitize → AI kontekst) z NIČELNIMI spremembami modela. Priključitev naslednjega providerja = 1 union slug + 1 register vnos + 1 factory vrstica.
+- **Provider isolation matrika (§6)**: 6 scenarijev (OSM×KiwiTaxi × 200/timeout/malformed/empty) + meta-test: ob odpovedi enega vir drugi živi, mapa uporabna, degraded izrecen in točen, produkti padlega vira ne puščajo v rezultatih, razpoložljivost ostane poštena (brez false-positive).
+- **Viewport/zoom performance (§7, živo izmerjeno)**: Bled/LJU/Koper/Maribor/Austrija z10–z15 → 3–4 ms adapter / 9–17 ms skupaj; z<10 = 0 produktov (zoom-gated); 6°×6° bbox pri z12 zavrnjen (`invalid-bbox-area`); meje (Maribor 27, Avstrija 14 — pravilno samo rute, katerih prevzemno območje se preseka z viewportom); odgovor max ~53 kB (brskalnik NIKOLI ne prejme 2,18 MB dataseta).
+- **Clustering (§8, sintetični TEST-ONLY stres)**: 10/50/100/500/1000 markerjev → 5/4/5/11/26 ms addLayers; produkcijski strežniški kapi (400 po zoom-u + 48 po adapterju) so daleč pod območjem; E2E: 48 pinov → gruče → razprtje → popup → modal delujejo.
+- **Clean-start reproducibility (§2)**: čisto drevo (2758798) → test 336/336 → eslint 0 → tsc 0 v src (3 predhodne napake IZVEN src: 2 v `skills/`, 1 `tailwind.config.ts` — obstoječe, niso del aplikacije) → **production build USPEŠEN** (DSA_LOW_MEMORY_BUILD=1) → standalone zagon → supply search 48/12 ms → /zemljevid 200 → /go 302 → dataset v bundle (outputFileTracingIncludes) → 25× burst 0 napak → 197 MB RSS (dev ~1,4–1,9 GB). Lokalni SQLite hack dokumentiran (schema.prisma postgresql v repu = produkcijska konvencija; lokalni dev sqlite prek skip-worktree vzorca — ne vpliva na production konfiguracijo).
+- **OOM fix trajen (§3)**: fs lazy load (hladen 8,4 ms / topel 0,001 ms; proces z datasetom ~47 MB RSS); webpack graf brez 2,18 MB JSON; dev strežnik po hladnem startu + 40 zahtev stabilen (0 napak, 0 SyntaxError).
+- **Product semantics (§9, živo SL+EN)**: »od €51 / na prevoz / objavljena cena, ni živi citat« (SL) in »from €137 per transfer / published price, not a live quote« (EN); badge Objavljeni podatki/Published data; vir KiwiTaxi Partner Data API (CSV); koordinate pina; /go/transfers?product=… → 302 kiwitaxi.com (fail-closed, monetizacija NEKONFIGURIRANA); zloben product param → 400; Dodaj v moj načrt → strukturiran FIXED item (provider/id/type/per_transfer/fixed) v sessionStorage.
+- **Testi**: 336/336 (317 → 336; +19 novih: hardening source-contract + route integracija + isolation matrika + middle-record fail-safe + forward-compat dokaz), eslint 0, tsc 0 v src, mobilni 390 px 0 px preliva (domov + zemljevid), 0 napak strani v E2E.
+
+---
+
 ## [1.49.1] — 2026-09-18
 
 ### Popravljeno (1.49.1 — TASK 43 utrjevanje: OOM v dev/sandbox + sqlite lokalni runtime)
