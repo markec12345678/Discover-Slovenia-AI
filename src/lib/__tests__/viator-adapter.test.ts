@@ -22,7 +22,7 @@ import { resetViatorDestinations } from "@/lib/supply/providers/viator/destinati
 import { clearViatorProductUrls, lookupViatorProductUrl } from "@/lib/supply/providers/viator/mapper";
 import { getProvider } from "@/lib/supply/registry";
 import { searchSupply, defaultAdapters } from "@/lib/supply/search";
-import { runAdapter } from "@/lib/supply/adapter";
+import { runAdapter, type SupplyAdapter } from "@/lib/supply/adapter";
 import { toSelectedProduct } from "@/lib/supply/selection";
 import {
   sanitizeSelectedProviderProducts,
@@ -30,7 +30,7 @@ import {
 } from "@/lib/supply/sanitize";
 import { insertProductStop } from "@/lib/supply/stop-insert";
 import { getViatorUrl } from "@/lib/affiliate";
-import type { ProviderProduct, SupplyQuery, SupplyAdapter } from "@/lib/supply/types";
+import type { ProviderProduct, SupplyQuery } from "@/lib/supply/types";
 import type { Itinerary } from "@/lib/types";
 
 // ---------------------------------------------------------------------------

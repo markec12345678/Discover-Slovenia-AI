@@ -298,7 +298,7 @@ describe("TASK 45 §15: modal podprtje (naslov/opis/vir/booking)", () => {
   test("productUrl predpomnilnik se napolni (za /go razrešitev) — NEVELJAVEN URL se NE shrani", () => {
     clearViatorProductUrls();
     viatorSummaryToProduct(officialSummary(), MAP_CTX);
-    expect(lookupViatorProductUrl("227717P1")).toBe(officialSummary().productUrl);
+    expect(lookupViatorProductUrl("227717P1")).toBe(officialSummary().productUrl ?? null);
     // Neveljaven productCode/URL (defenzivno):
     rememberViatorProductUrl("bad code!", "https://www.viator.com/x");
     rememberViatorProductUrl("62330P2", "http://insecure.example.com/");

@@ -25,6 +25,16 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.50.1] — 2026-09-18
+
+### Popravljeno (1.50.1 — TASK 45 dopolnitev: iskrenost vrat tsc)
+
+- **2 tipizacijski napaki v testih, ki jih vrata niso ulovila ob zaključku Taska 45** (commit 8d84766): (1) `viator-adapter.test.ts` je uvažal `SupplyAdapter` iz `@/lib/supply/types`, tip pa je izvožen iz `@/lib/supply/adapter` (vsi ostali testi uporabljajo pravilno pot); (2) `viator-contract.test.ts:301` je v `toBe()` podal `officialSummary().productUrl`, ki je po pogodbi vira opcijsko polje (`productUrl?: string`) → `string | undefined` ni združljivo s pričakovanim `string | null` (popravek: `?? null`). `bun test` tipizacije NE preverja, zato sta obe testni datoteki minevali — `tsc --noEmit` pa je odkril obe napaki v `src/`. Oba popravljeni; **runtime koda NI bila prizadeta** (samo testni datoteki), zato obnašanje v produkciji nespremenjeno.
+- **Popravljen zapis vrati v docs/TASK-45-AUDIT.md §9** — tabela je ob commitu trdila »tsc 0 napak (src)«, kar tedaj NI držalo; zdaj ima iskren opis odkritja + popravka (lucida: vrata morajo biti reveribilno preverljiva).
+- **Ponovna verifikacija po popravku**: `bun test` **455/455**, `bun run lint` **0 napak**, `tsc --noEmit` **0 napak v src** (3 predhodne izven: skills/×2 + tailwind.config.ts — nedotaknjene); živi dimnik: `/api/supply/search` cats=activity → viator `not-configured` (0 klicev) + cats=transfer → KiwiTaxi 48 (regresija čista); E2E brskalnik: /zemljevid → Pokaži POI → Transferji + Aktivnosti (iskren 0) → zoom z≥10 → gruče → marker → popup → ProductModal (Bohinj → Ljubljana, razredi vozil, vir, badge Objavljeni podatki) → Dodaj med izbrane → sessionStorage FIXED item (kiwitaxi/47235, od €137, per_transfer, fixed); `/go/viator` 302/400/400 (fail-closed), `/go/transfers` 302 regresija.
+
+---
+
 ## [1.49.4] — 2026-09-18
 
 ### Popravljeno (1.49.4 — TASK 44 §10–§26: pogodbe + živa preverba vira + 2 odkriti vrzeli)

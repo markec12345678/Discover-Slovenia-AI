@@ -272,7 +272,7 @@ IZKLOPLJENA v UI — naročnik §9) IN zoom ≥ minZoom 10. Živo dokazano
 |---|---|
 | `bun test` | **455/455** (390 prej + 65 novih; 2 posodobljeni registrska testa za novo stanje) |
 | `bun run lint` | **0 napak** |
-| `tsc --noEmit` (src) | **0 napak** (3 predhodne izven src: skills/×2 + tailwind.config.ts — nedotaknjene, dokumentirane od Taska 44) |
+| `tsc --noEmit` (src) | **0 napak** (3 predhodne izven src: skills/×2 + tailwind.config.ts — nedotaknjene, dokumentirane od Taska 44). POPRAVEK po commitu 8d84766: ob zaključku Taska 45 sta v testih obstajali 2 tipizacijski napaki, ki jih vrata niso ulovila (`SupplyAdapter` uvožen iz `types` namesto `adapter` v `viator-adapter.test.ts`; `productUrl?: string` → prehod `undefined` v `toBe` v `viator-contract.test.ts:301`) — bun test tipizacijo NE preverja, zato sta testi minevala. Oba popravljeni in ponovno verificirana (455/455, eslint 0, tsc 0 v src); runtime koda NI bila prizadeta (samo testne datoteke). |
 | Dev strežnik | zagnan, 0 napak v dev.log (živi E2E zgoraj) |
 | Produkcija | NI buildana v tem tasku (change je v strežniški knjižnici + 2 UI čipa; build varnost: isti vzorci kot Task 43/44 — lazy poti, brez novih velikih datasetov; naslednji build bo del rednega cikla) |
 
