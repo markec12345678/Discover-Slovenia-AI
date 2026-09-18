@@ -171,9 +171,11 @@ export function isViatorProductSummary(v: unknown): v is ViatorProductSummary {
   if (!v || typeof v !== "object") return false;
   const p = v as Partial<ViatorProductSummary>;
   return (
+    // §22 meja zaupanja: productCode MORA prestati /go validacijski format
+    // (alfanumerični 3–20) — kodo z ločili/URL metaznaki/predolgo NE
+    // spustimo v inventar (njen bookingUrl bi itak padel na /go 400).
     typeof p.productCode === "string" &&
-    p.productCode.length > 0 &&
-    p.productCode.length <= 40 &&
+    isViatorProductCode(p.productCode) &&
     typeof p.title === "string" &&
     p.title.trim().length > 0
   );

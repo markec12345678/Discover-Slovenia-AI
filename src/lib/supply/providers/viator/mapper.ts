@@ -39,6 +39,7 @@
 
 import type { ProviderProduct } from "../../types";
 import type { ViatorProductSummary, ViatorImage } from "./types";
+import { isViatorProductSummary } from "./types";
 import type { ResolvedPin } from "./destinations";
 
 /** Kapika rezultatov adapterja (gostota pod nadzorom). */
@@ -56,6 +57,29 @@ const AVAILABILITY_NOTE = {
 } as const;
 
 // ---------------------------------------------------------------------------
+// ČIŠČENJE BESEDILA NEZaupANEGA VIRA (§22 — isti vzorec kot kiwitaxi
+// cleanName / Task 44 §12: React escaping je DRUGA plast, adapter meja je
+// PRVA — namerno OBA). Naslov in opis sta prosti besedili komercialnega
+// API-ja, ki ga ne nadzorujemo: kontrolni znaki + HTML/JS injekcijski
+// znaki stran, presledki zložijo, kap dolžine.
+// ---------------------------------------------------------------------------
+
+const TITLE_MAX_LEN = 200;
+const DESCRIPTION_MAX_LEN = 1200;
+
+/** Očisti prosti tekst vira (kontrolni znaki + injekcijski znakovni nabor). */
+function cleanViatorText(raw: string, maxLen: number): string {
+  return raw
+    // kontrolni znaki (vključno DEL) — lomijo izris/notes/dnevnike
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    // HTML/js injekcijski znaki (enak nabor kot kiwitaxi cleanName)
+    .replace(/[<>"'`{}$\\]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLen);
+}
+
+// ---------------------------------------------------------------------------
 // IZBIRA SLIKE (naslovnna, https, razumna velikost)
 // ---------------------------------------------------------------------------
 
@@ -64,7 +88,10 @@ const MAX_IMAGE_DIM = 674;
 function pickImageUrl(images: ViatorImage[] | undefined): string | undefined {
   if (!Array.isArray(images) || images.length === 0) return undefined;
   const cover = images.find((i) => i?.isCover === true) ?? images[0];
-  const variants = (cover?.variants ?? []).filter(
+  // §22: variants je NEZAUPAN vhod — nepravi tip (objekt/niz/številka)
+  // NE sme sesetje preslikave (Array.isArray pred .filter).
+  const variants = Array.isArray(cover?.variants) ? cover!.variants : [];
+  const safe = variants.filter(
     (v) =>
       v &&
       typeof v.url === "string" &&
@@ -75,9 +102,9 @@ function pickImageUrl(images: ViatorImage[] | undefined): string | undefined {
       v.height > 0 &&
       v.width <= MAX_IMAGE_DIM
   );
-  if (variants.length === 0) return undefined;
+  if (safe.length === 0) return undefined;
   // Največja dovoljena varianta (ostrina pri modalu, varčnost pri prenosu).
-  const best = variants.reduce((a, b) => (b.width > a.width ? b : a));
+  const best = safe.reduce((a, b) => (b.width > a.width ? b : a));
   return best.url;
 }
 
@@ -110,11 +137,36 @@ export function canonicalType(itineraryType: string | undefined): "activity" | "
 const PRODUCT_URL_TTL_MS = 24 * 60 * 60 * 1000;
 const PRODUCT_URL_MAX = 500;
 
+/**
+ * §22 meja zaupanja za productUrl NEZAUPANEGA vira: https + host
+ * viator.com/www.viator.com (uradna pogodba vira). Vse ostalo
+ * (http, javascript:, data:, tuj https host) → null (vir ODSOTEN —
+ * NE izmišljujemo, NE predpomnimo).
+ */
+export function viatorSourceUrl(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined;
+  const url = raw.trim();
+  if (url.length === 0 || url.length > 500) return undefined;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return undefined;
+    if (parsed.hostname !== "www.viator.com" && parsed.hostname !== "viator.com") {
+      return undefined;
+    }
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 let productUrls = new Map<string, { url: string; at: number }>();
 
 export function rememberViatorProductUrl(productCode: string, url: string): void {
   if (!/^[A-Za-z0-9]{3,20}$/.test(productCode)) return;
-  if (!/^https:\/\//i.test(url)) return;
+  // §22: ISTA meja zaupanja kot viatorSourceUrl (javni vhod te funkcije je
+  // lahko test/admin — NE zaupamo nizu URL-ja).
+  const safe = viatorSourceUrl(url);
+  if (!safe) return;
   if (productUrls.size >= PRODUCT_URL_MAX) {
     // FIFO: odstrani najstarejši vnos.
     let oldestKey: string | null = null;
@@ -127,7 +179,7 @@ export function rememberViatorProductUrl(productCode: string, url: string): void
     }
     if (oldestKey) productUrls.delete(oldestKey);
   }
-  productUrls.set(productCode, { url, at: Date.now() });
+  productUrls.set(productCode, { url: safe, at: Date.now() });
 }
 
 export function lookupViatorProductUrl(productCode: string): string | null {
@@ -163,7 +215,7 @@ export function viatorSummaryToProduct(
 ): ProviderProduct | null {
   const { locale, fetchedAt } = ctx;
 
-  const title = summary.title.trim().slice(0, 200);
+  const title = cleanViatorText(summary.title, TITLE_MAX_LEN);
   if (title.length === 0) return null;
 
   // === Cena (od-cena; valuta EUR po zahtevi; ne pretvarjamo) ===
@@ -190,7 +242,7 @@ export function viatorSummaryToProduct(
   const durationMin = summary.duration?.fixedDurationInMinutes;
   const descParts: string[] = [];
   if (typeof summary.description === "string" && summary.description.trim().length > 0) {
-    descParts.push(summary.description.trim());
+    descParts.push(cleanViatorText(summary.description, DESCRIPTION_MAX_LEN));
   }
   if (typeof durationMin === "number" && Number.isFinite(durationMin) && durationMin > 0) {
     descParts.push(
@@ -200,7 +252,7 @@ export function viatorSummaryToProduct(
     );
   }
   const description =
-    descParts.length > 0 ? descParts.join("\n\n").slice(0, 1200) : undefined;
+    descParts.length > 0 ? descParts.join("\n\n").slice(0, DESCRIPTION_MAX_LEN) : undefined;
 
   // === Slika ===
   const image = pickImageUrl(summary.images);
@@ -210,11 +262,11 @@ export function viatorSummaryToProduct(
   const subcategory = flags.includes("PRIVATE_TOUR") ? "private_tour" : undefined;
 
   // === sourceUrl / bookingUrl ===
-  const productUrl =
-    typeof summary.productUrl === "string" &&
-    /^https:\/\/[^\s]+$/i.test(summary.productUrl.trim())
-      ? summary.productUrl.trim()
-      : undefined;
+  // §22 meja zaupanja: productUrl NEZAUPANEGA vira mora biti https NA
+  // viator.com gostitelju (uradna pogodba: povezave vira so vedno
+  // viator.com z pid/mcid). Tuj host NE razrešimo NE predpomnimo —
+  // (/go host allowlist je zadnja varovalka, TA pa prva).
+  const productUrl = viatorSourceUrl(summary.productUrl);
   // Predpomni affiliate globoko povezavo za /go razrešitev (strežniško).
   if (productUrl) rememberViatorProductUrl(summary.productCode, productUrl);
 
@@ -269,7 +321,9 @@ export function viatorSummaryToProduct(
   return product;
 }
 
-/** Preslikaj seznama povzetkov (fail-safe: slab zapis odpade, ne sesuje). */
+/** Preslikaj seznam povzetkov (fail-safe: slab zapis odpade, NE sesuje —
+ *  §22: vsak VHOD preverimo tudi tu (meja adapterja velja za VSAKEGA
+ *  klicatelja, ne samo za adapterjevo pot). */
 export function mapViatorSummaries(
   summaries: ViatorProductSummary[],
   ctx: { locale: "sl" | "en"; fetchedAt: string },
@@ -278,6 +332,10 @@ export function mapViatorSummaries(
   const products: ProviderProduct[] = [];
   let skipped = 0;
   for (const s of summaries) {
+    if (!isViatorProductSummary(s)) {
+      skipped++;
+      continue;
+    }
     const p = viatorSummaryToProduct(s, { ...ctx, pin: pinOf(s) });
     if (p) products.push(p);
     else skipped++;
