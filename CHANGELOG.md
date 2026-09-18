@@ -7,6 +7,38 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.49.1] — 2026-09-18
+
+### Popravljeno (1.49.1 — TASK 43 utrjevanje: OOM v dev/sandbox + sqlite lokalni runtime)
+
+- **Problem (živo dokazano 18. 9. 2026, svež start po praznem .next)**: statični uvoz `data/kiwitaxi-routes.json` (2,18 MB / 96.966 vrstic) v modulni graf je pognal webpack dev prevajanje čez ~2,5 GB vrhunca → OOM kill jedra (dmesg dokazi: `anon-rss:2562288kB`, nato še trije nadaljnji killi ob kopičenju prevodov rut). Prejšnja E2E seja je delala na toplem .next cache-ju — svež klon/start je bil nestabilen.
+- **Popravek**: `dataset.ts` baseline sedaj LENOBNO bere datoteko prek `fs` ob prvem dostopu (read-once pomnilniški cache) — ISTI vzorec kot `db/demo-seed.db` (instrumentation.ts). Webpack graf ne vsebuje več 2,18 MB JSON; `outputFileTracingIncludes` razširjen z `./data/**`, da standalone Docker/Vercel bundle datoteko vključi (nft tracer sam ne odkrije fs dostopa). Sklad API (`getKiwitaxiBaseline` sync) je nespremenjen — cron/adapter/skripta/testi delujejo nespremenjeno (317/317).
+- **Lokalni runtime (sandbox)**: `prisma/schema.prisma` po mergu s produkcijo (acec8bb) ostaja `postgresql` v repu (produkcijska konvencija), lokalni dev pa spet teče na sqlite prek dokumentiranega vzorca iz `prisma/migrations/migration_lock.toml` („lokalni dev ostaja na sqlite + db push, schema.prisma je lokalno skip-worktree"). Svež zagon: `sed` swap provider → `git update-index --skip-worktree` → `bun run db:push` (podatki db/custom.db ostanejo).
+- **Dev stabilnost v pomnilniško omejenem okolju (4 GB cgroup)**: `DSA_LOW_MEMORY_BUILD=1` (obstoječi profil — webpackMemoryOptimizations) + `NODE_OPTIONS=--max-old-space-size=1792` za `bun run dev`, ko brskalnik E2E teče vzporedno (~1,2 GB) — brez tega jedro ubije next-server (največji proces) ob skupnem presegu. Postopek: predogret poti brez brskalnika (~45 s), nato E2E z enim zavihkom.
+- **Verifikacija (svež start)**: `/`, `/zemljevid`, `/nacrtuj`, `/api/supply/search`, `/api/itinerary` prevedeni brez OOM; transfer sloj 48 produktov / 17 ms / cached; E2E brskalnik: čip Transferji 48, popup, ProductModal (od €48 / na prevoz / razredi vozil / vir / koordinate), /go href pravilen, FIXED čip na načrtovalniku, FIXED transfer v AI itinererju (API: `kiwitaxi:49540`, „cena: od 48 € (per transfer) · Dodano z zemljevida ponudbe · vir: KiwiTaxi Partner Data API (CSV)"), mobilni 390 px brez horizontalnega preliva (domov + zemljevid).
+
+---
+
+## [1.49.0] — 2026-09-18
+
+### Dodano (1.49.0 — TASK 43: PRVI REALNI KOMERČALNI PROVIDER — KiwiTaxi transfer sloj)
+
+- **F2 realizacija (Task 43, naročnikova specifikacija)**: prvi REALEN komercialni provider priklopljen v obstoječo F1 arhitekturo BREZ sprememb kanonskega modela in invariant: `ProviderRegistry → SupplyAdapter → ProviderProduct → /api/supply/search → Map → ProductModal → Add to my plan → AI itinerary → /go`. Ni posebnega „KiwiTaxi UI sistema" — provider je SAMO adapter.
+- **Vir (živo preverjen dvakrat — audit 18. 9. + Task 43)**: javni KiwiTaxi Partner Data API CSV (dokumentiran `security_token`, skupen vsem; TSV format; WKT `POLYGON((lng lat,…))` krajev; `payment_type=partial` cene EUR na ruta×razred; rate limit 429 → sekvencialni ingest z eksponentnimi pavzami). Obseg: 992 rut iz SI + 611 prihodov V SI = **1494 rut / 9614 transferjev / 308 krajev / 1316 pinov (88 %)**; realne cene €33–€1620 (LJU→Bled Economy €77 — živo dokazano).
+- **Ingestion pipeline (naročnik §10 — server-side, NIKOLI browser)**: `src/lib/supply/providers/kiwitaxi/{types,wkt,mapper,ingest,validate,dataset,adapter}.ts` + uredniška skripta `bun run kiwitaxi:ingest` → `data/kiwitaxi-routes.json` (git verzioniran baseline, 2,18 MB — STO vzorec) + TEDENSKI CRON `/api/cron/kiwitaxi-reingest` (vercel.json sreda 07:32 UTC, docker crontab; sanity vrata ≥ max(50 %, absolutni minimum); overlay SAMO v pomnilniku — nikoli na disk; raport odmika kot uredniški signal).
+- **Geo iskrenost (§4)**: pin = centroid PREVZEMNEGA območja iz WKT (zaklepna točka izvzeta iz povprečja — ujetá s testom), `geoPrecision: "city"` — NIKOLI route centroid, nikoli „exact". Kraj brez poligona → produkt brez koordinat (13,5 % rut nima pina — pošteno).
+- **Semantike**: cena `fromPrice: true` + `unit: "per_transfer"` + note „objavljena cena, ni živi citat"; `availability: not_supported` (CSV koncepta nima — cena NI dokaz razpoložljivosti); brez slike (ruta nima fotografije — razredi jo imajo, a ne predstavljajo produkta); brez ocene (vira ni); imena `name_en` v obeh jezikih (vir nima SL — ne prevajamo).
+- **Novi SupplyStatus „static"** („Objavljeni podatki"): izpeljan v registru → statusLabel/statusBadgeClass/vir-podatkov badge — iskrena ločitev od „live" (živi API) in „affiliate" (samo povezava). Registry: kiwitaxi `active: true, inventoryAccess: [static_content, affiliate_deep_link], cacheTtlMs: 24 h, timeoutMs: 2 s, maxCallsPerMin: 0`.
+- **Gating (§9 — živo dokazano)**: transfer sloj se NE povprašuje, dokler uporabnik NE vklopi čipa „Transferji" (default: off) IN zoom ≥ 10 — brez tega se adapter sploh ne pokliče (E2E: 0 klicev brez čipa/zooma; 48 produktov z vklopom; 17–33 ms toplo).
+- **Deep link veriga (§8)**: ProductModal „Preveri ponudbo" → `/go/transfers?product={cheapestTransferId}` → `getKiwitaxiUrl` novi `productId` param (NATANKO `^\d{1,10}$` — vse ostalo 400/ignore) → `https://kiwitaxi.com/en/transfers/{id}?pap=` (fail-closed brez pap: čist URL). Render meja: modal izrise SAMO relativne `/go/` poti. `affiliate_click` telemetrija + `productId`.
+- **Add to plan → AI (§13/§14, E2E dokazano)**: izbira = strukturiran FIXED transfer item (provider/providerProductId/type/title/lat/lng/price per_transfer) → sessionStorage → planner FIXED čip → `/api/itinerary` (sanitize pusti koordinate, odstrani bookingUrl) → AI kontekst „transfer = TRANSPORTNA OMEJITEV / do NOT add redundant car rentals, bus transfers" + DETERMINISTIČNA vstavitev postanka tudi na fallback poti: **E2E: „Ljubljana Airport → Lake Bled · 1h · €77 · cena: od 77 € (per transfer) · vir: KiwiTaxi Partner Data API (CSV)"** v 3-dnevnem itinererju, brez podvojenega airport transferja.
+- **Varnost (§16)**: mapper zavrne absolutne/scheme/protocol-relative/query/hash/.. URL-je (charset allowlist), ne-kanonične `/transfers/` poti, NaN/Infinity/hex/negativne/čez-kap cene, kontrolne + HTML/JS znake v imenih, izven-mejne koordinate; kapike (2000 točk WKT, 80 znakov ime, 12 razredov/ruto, 5000 rut, 30k transferjev); bralna validacija dataseta + `filterValidRoutes` na adapterju; dedupe: komercialni vir NIKOLI združen z OSM (isti naslov + iste koordinate = DVA produkta — testirano).
+- **Fail-safe (§15 — testirano)**: dataset manjka → prazen sloj + note (OSM plast OSTANE, NI degraded); pokvarjen overlay → namestitev zavrnjena (baseline ostane); adapter vrže → `degraded:[kiwitaxi]`, OSM nadaljuje.
+- **Sledenje in dokazi**: 59 novih testov (WKT/TSV/mapper/sanity/adapter/viewport/zoom-gating/kap/dedupe-izolacija/AI-FIXED//go-produkt/ingest) — **317/317 skupaj** (258 → 317), tsc 0 src, eslint 0; E2E brskalnik: čip Transferji 48, modal (naslov/cena od €77/na prevoz/badge „Objavljeni podatki"/Preveri ponudbo sponsored/Dodaj v moj načrt), FIXED čip v plannerju, transfer postanek v itinererju, mobilno 390 px 0 px preliva.
+- **Monetizacijska iskrenost (§18)**: podatkovna plast = ŽIVA (realni vir, realne cene, realni prikaz, realni AI vpliv); booking monetizacija = NI KONFIGURIRANA (dokler `KIWITAXI_PAP_ID` ni nastavljen povezave ostanejo čiste partnerske, `monetized: false` v analitiki — nikoli lažni tracking).
+
+---
+
 ## [1.48.3] — 2026-09-17
 
 ### Popravljeno (1.48.3 — prazni AI dnevi klasificirani kot neuspeh generacije → deterministična rezerva)

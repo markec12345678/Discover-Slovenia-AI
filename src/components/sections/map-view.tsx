@@ -28,6 +28,7 @@ import {
   Utensils,
   BedDouble,
   ShoppingBag,
+  CarTaxiFront,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +72,9 @@ const T = {
   catRestaurant: { sl: "Hrana & pijača", en: "Food & drink" },
   catAccommodation: { sl: "Nastanitve", en: "Stays" },
   catShop: { sl: "Trgovine", en: "Shops" },
+  // TASK 43: transfer sloj (KiwiTaxi) — izrecna izbira (default: false):
+  // sloj se prikaže SAMO ko ga uporabnik vklopi (naročniška zahteva §9).
+  catTransfer: { sl: "Transferji", en: "Transfers" },
   allDestinations: { sl: "Vse destinacije", en: "All destinations" },
   reset: { sl: "Ponastavi", en: "Reset" },
   hideRoute: { sl: "Skrij pot", en: "Hide route" },
@@ -145,6 +149,12 @@ const POI_CATEGORIES: {
     default: false,
   },
   { value: "shop", label: T.catShop, icon: ShoppingBag, default: false },
+  {
+    value: "transfer",
+    label: T.catTransfer,
+    icon: CarTaxiFront,
+    default: false,
+  },
 ];
 
 const DEFAULT_POI_CATS: ProductType[] = DEFAULT_SUPPLY_TYPES;

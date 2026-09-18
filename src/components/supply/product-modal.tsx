@@ -81,6 +81,11 @@ const L = {
   imageCredit: { sl: "Slika", en: "Image" },
   addPlan: { sl: "Dodaj v moj načrt", en: "Add to my plan" },
   addPlanAcc: { sl: "Dodaj med izbrane (načrtuvalnik bo upošteval)", en: "Add to selection (the planner will account for it)" },
+  checkOffer: { sl: "Preveri ponudbo", en: "Check offer" },
+  checkOfferAcc: {
+    sl: "Preveri ponudbo in rezerviraj pri partnerju (odpre externo stran)",
+    en: "Check the offer and book with the partner (opens an external site)",
+  },
   added: { sl: "Dodano ✓", en: "Added ✓" },
   addedStop: { sl: "Dodano kot postanek ✓", en: "Added as a stop ✓" },
   addedSelection: { sl: "Dodano k izbiri (AI ga bo upošteval)", en: "Added to selection (AI will account for it)" },
@@ -231,6 +236,19 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
   const wikiLink = wikiUrl ?? buildWikiLinkFromTag(product.wikipedia);
   // Click-XSS meja: http(s) ali "#" — rel=noopener NE nevtralizira javascript:
   const sourceHref = safeExternalHref(product.sourceUrl);
+
+  // TASK 43 (naročnik §8): „Preveri ponudbo" → /go/[provider]?product=…
+  // bookingUrl KONSTRUIRA naš adapter (nikoli surov provider URL) — toda
+  // render plast je NEODVISNA meja: SAMO relativna pot, ki se začne z
+  // „/go/", brez sheme/hosta/protokola-relativnih oblik. Vse ostalo →
+  // brez gumba (rezervacija ostaja samo prek strežniške /go verige).
+  const offerHref =
+    product.bookingMode === "affiliate_redirect" &&
+    product.bookingUrl &&
+    /^\/go\/[a-z]+\?[^\s]*$/i.test(product.bookingUrl) &&
+    !/[<>"'`\\]/.test(product.bookingUrl)
+      ? product.bookingUrl
+      : null;
 
   const handleAdd = () => {
     const result = addProductToSelection(product, { locale: lang });
@@ -483,15 +501,30 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
               </div>
             ) : null}
 
-            {/* Akcija: Dodaj v moj načrt */}
+            {/* Akcija: Preveri ponudbo (komercialni produkti — TASK 43) +
+                Dodaj v moj načrt */}
+            {offerHref ? (
+              <a
+                href={offerHref}
+                rel="sponsored noopener noreferrer"
+                referrerPolicy="no-referrer"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-semibold text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label={L.checkOfferAcc[lang]}
+              >
+                <ExternalLink className="size-4" aria-hidden="true" />
+                {L.checkOffer[lang]}
+              </a>
+            ) : null}
             <Button
               type="button"
               onClick={handleAdd}
               disabled={addedState !== null || isSelected}
               className={cn(
                 "w-full gap-2",
+                !offerHref && "h-11",
                 addedState && "bg-accent text-accent-foreground"
               )}
+              variant={offerHref ? "outline" : "default"}
               aria-label={L.addPlanAcc[lang]}
             >
               {addedState || isSelected ? (

@@ -1,6 +1,6 @@
 {
   "name": "nextjs_tailwind_shadcn_ts",
-  "version": "1.48.3",
+  "version": "1.49.0",
   "private": true,
   "scripts": {
     "dev": "bash -c 'set -a; source .env; set +a; next dev -p 3000 --webpack 2>&1 | tee dev.log'",
@@ -15,7 +15,8 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset",
-    "db:seed:demo": "bash -c 'set -a; source .env; set +a; npx prisma db push --skip-generate && bun scripts/seed-demo.ts'"
+    "db:seed:demo": "bash -c 'set -a; source .env; set +a; npx prisma db push --skip-generate && bun scripts/seed-demo.ts'",
+    "kiwitaxi:ingest": "bun run scripts/ingest-kiwitaxi.ts"
   },
   "dependencies": {
     "@pdf-lib/fontkit": "^1.1.1",

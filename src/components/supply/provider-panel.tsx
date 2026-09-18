@@ -63,8 +63,8 @@ const L = {
   active: { sl: "aktiven sloj", en: "active layer" },
   notActive: { sl: "ni sloja", en: "no layer" },
   statusLegend: {
-    sl: "Status pove, KAJ dejansko imamo: živ inventar, iskanje, samo povezavo partnerja ali lokalne odprte podatke. Affiliate povezava NI inventar.",
-    en: "The status tells what we actually have: live inventory, search, a partner link only, or local open data. An affiliate link is NOT inventory.",
+    sl: "Status pove, KAJ dejansko imamo: živi inventar, objavljene podatke, iskanje, samo povezavo partnerja ali lokalne odprte podatke. Affiliate povezava NI inventar.",
+    en: "The status tells what we actually have: live inventory, published data, search, a partner link only, or local open data. An affiliate link is NOT inventory.",
   },
 } as const;
 
@@ -88,6 +88,10 @@ function statusBadgeClass(status: ProviderRegistryEntry["status"]): string {
       return "border-emerald-600/40 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300";
     case "live":
       return "border-green-600/40 bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300";
+    case "static":
+      // Objavljeni statični inventar (KiwiTaxi CSV) — ločen od živega API-ja
+      // in od „samo povezave“ (iskrenost: cene so realne, a ne živi citat).
+      return "border-cyan-600/40 bg-cyan-50 text-cyan-800 dark:bg-cyan-950/30 dark:text-cyan-300";
     case "search":
       return "border-teal-600/40 bg-teal-50 text-teal-800 dark:bg-teal-950/30 dark:text-teal-300";
     case "affiliate":

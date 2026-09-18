@@ -69,6 +69,9 @@ export async function generateMetadata(): Promise<Metadata> {
 const STATUS_BADGE_CLASS: Record<ProviderRegistryEntry["status"], string> = {
   local: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
   live: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
+  // TASK 43: objavljeni statični inventar (KiwiTaxi CSV) — lastna barva,
+  // ločena od „live“ (živi API) in „affiliate“ (samo povezava).
+  static: "bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300",
   search: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
   affiliate: "bg-muted text-muted-foreground",
   planned: "bg-muted/60 text-muted-foreground/80",

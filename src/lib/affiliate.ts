@@ -374,24 +374,49 @@ export function getAiraloUrl(): PartnerUrlResult {
  *   - država:   kiwitaxi.com/en/slovenia?pap=<ID>
  *   - kraj:     kiwitaxi.com/en/slovenia/bled?pap=<ID>   (waypoint)
  *   - iskanje:  kiwitaxi.com/en/search?from=<A>&to=<B>&pap=<ID>
+ *   - transfer: kiwitaxi.com/en/transfers/{id}?pap=<ID>   (produkt deep
+ *               link iz Partner Data API — transfers.csv url stolpec;
+ *               preizkušen v živo: /transfers/{id} → 301 → /en/transfers/{id})
  * (pap vedno PRIPNEMO pred morebitni fragment #transfers.)
  * Provizija: 50 % Kiwitaxijeve provizije (~6–15 % vrednosti transferja).
  *
  * Destinacija gre skozi whitelist: znan slug → waypoint povezava;
  * znan from IN to (različna, oba znana) → iskalni deep-link (from → to,
  * npr. letališče Ljubljana → Bled); neznano → slovenska državna stran.
+ *
+ * TASK 43 (product deep-link): productId je NUMERIČNI ID transferja pri
+ * KiwiTaxi (iz našega ingested dataseta — cheapestTransferId rute). Ko je
+ * podan, ima PREDNOST pred destinacijskimi oblikami: vodi NA TOČEN transfer
+ * (razred vozila + cena). Varnost: /go/[provider] rutа sprejme SAMO
+ * ^\d{1,10}$ — izključeno je poljuben URL/parameter injection (naročniška
+ * zahteva §8: „Ne dovoli arbitrary URL-ja iz raw provider data“).
  * NOT_CONFIGURED fallback: čista slovenska stran transferjev BREZ pap.
  */
-export function getKiwitaxiUrl(destination: string, from?: string): PartnerUrlResult {
+export function getKiwitaxiUrl(
+  destination: string,
+  from?: string,
+  productId?: string
+): PartnerUrlResult {
   const pap = process.env.KIWITAXI_PAP_ID?.trim();
   const base = "https://kiwitaxi.com/en";
+
+  // Produkt deep-link: NATANKO numerični ID (meja zaupanja — vse ostalo
+  // se zavrže in pade na destinacijske oblike). Path je po konstrukciji
+  // varen (samo števke — brez hosta/sheme/parametrov iz zunanjega vnosa).
+  const safeProductId =
+    typeof productId === "string" && /^\d{1,10}$/.test(productId)
+      ? productId
+      : null;
+
   const toKnown = isKnownDest(destination);
   const fromKnown = from ? isKnownDest(from) : false;
   const toName = canonicalDest(destination);
   const fromName = from ? canonicalDest(from) : null;
 
   let path: string;
-  if (fromKnown && toKnown && fromName && fromName !== toName) {
+  if (safeProductId) {
+    path = `/transfers/${safeProductId}`;
+  } else if (fromKnown && toKnown && fromName && fromName !== toName) {
     // Iskalni deep-link med dvema znanima destinacijama (uradni format)
     path = `/search?from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}`;
   } else if (toKnown) {
@@ -476,12 +501,19 @@ export function getViatorUrl(): PartnerUrlResult {
   return { url: "https://www.viator.com/", monetized: false };
 }
 
-/** Centralni razrez za /go/ route (FAZA 4). */
+/**
+ * buildPartnerUrl — centralni izgrajevalnik partnerskih URL-jev (edini
+ * vir; /go/[provider] rutа je tanek plašč nad tem). productId (opcijsko,
+ * TASK 43): NUMERIČNI ID transferja — sprejme ga SAMO „transfers“ (Kiwitaxi
+ * produkt deep-link); ostali providerji ga ignorirajo (izrecno — nikoli
+ * ne more vplivati na pot drugih partnerjev).
+ */
 export function buildPartnerUrl(
   provider: AffiliateProvider,
   destination: string,
   days?: number,
   from?: string,
+  productId?: string,
 ): PartnerUrlResult {
   switch (provider) {
     case "hotels":
@@ -497,7 +529,7 @@ export function buildPartnerUrl(
     case "esim":
       return getAiraloUrl();
     case "transfers":
-      return getKiwitaxiUrl(destination, from);
+      return getKiwitaxiUrl(destination, from, productId);
     case "transport":
       return getOmioUrl();
     case "tickets":

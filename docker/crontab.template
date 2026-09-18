@@ -30,3 +30,6 @@
 
 # tedenska osvežitev T2 virov STO + raport odmika (torek 07:30 UTC; 1.45.0)
 30 7 * * 2 curl -fsS -m 300 -H "Authorization: Bearer __CRON_SECRET__" __APP_URL__/api/cron/sto-reingest > /proc/1/fd/1 2>&1
+
+# tedenska osvežitev KiwiTaxi transfer sloja + raport odmika (sreda 07:32 UTC; 1.49.0 Task 43)
+32 7 * * 3 curl -fsS -m 300 -H "Authorization: Bearer __CRON_SECRET__" __APP_URL__/api/cron/kiwitaxi-reingest > /proc/1/fd/1 2>&1

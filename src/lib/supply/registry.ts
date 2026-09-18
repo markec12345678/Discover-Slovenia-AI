@@ -9,14 +9,13 @@
 //
 // STATUSI SO DEJANSKO STANJE (september 2026, docs/TRAVEL-SUPPLY-MAP-AUDIT.md
 // + docs/PROVIDER-APPLICATIONS.md):
-//  - Edini AKTIVEN adapter danes: osm (lokalni vir).
-//  - Komercialni providerji: status "affiliate" (globoka povezava prek
-//    /go/[provider]) — DOKLER partner dostop ni dejansko odobren.
+//  - AKTIVNA adapterja: osm (lokalni vir) in kiwitaxi (Task 43: prvi realni
+//    komercialni — objavljeni CSV inventar, status "static").
+//  - Ostali komercialni providerji: status "affiliate" (globoka povezava
+//    prek /go/[provider]) — DOKLER partner dostop ni dejansko odobren.
 //    NIKOLI ne predstavljamo affiliate URL-ja kot inventarja.
 //  - fsq: odprti podatki (Apache-2.0), adapter pripravljen po ingestu
-//    (F2) — podatek NI nameščen → neaktiven.
-//  - kiwitaxi: javni CSV vir je s strani audita POTRJEN (živo preizkušen
-//    18. 9. 2026) — adapter na vrsti v F2 po ponovni preverbi sistema.
+//    — podatek NI nameščen → neaktiven.
 // ============================================================================
 
 import type {
@@ -326,21 +325,33 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     slug: "kiwitaxi",
     labels: { sl: "KiwiTaxi", en: "KiwiTaxi" },
     group: "commercial",
-    inventoryAccess: ["affiliate_deep_link"],
-    status: "affiliate",
-    active: false,
+    // TASK 43 (1.49.0): PRVI REALNI komercialni adapter — objavljeni CSV
+    // inventar po strežniškem ingestu (data/kiwitaxi-routes.json) + globoka
+    // povezava (/go/transfers). Statika: cene so objavljene, NE živi citat.
+    inventoryAccess: ["static_content", "affiliate_deep_link"],
+    status: "static",
+    active: true,
     types: ["transfer"],
     goRoute: "transfers",
-    capabilities: { ...NO_INVENTORY_CAPS },
+    capabilities: {
+      geo: true,
+      price: true,
+      availability: false, // CSV nima koncepta razpoložljivosti
+      images: false, // ruta nima slike (razredi jo imajo — ne predstavlja produkta)
+      reviews: false,
+      map: true,
+      booking: true,
+      affiliate: true,
+    },
     envKeys: { affiliate: ["KIWITAXI_PAP_ID"], api: [] },
     minZoom: 10,
-    cacheTtlMs: 0,
-    timeoutMs: 15_000,
-    maxCallsPerMin: 0,
+    cacheTtlMs: 24 * 60 * 60 * 1000, // statičen dataset — dolg TTL je pošten
+    timeoutMs: 2_000, // čisti v-pomnilniku filter (brez omrežja)
+    maxCallsPerMin: 0, // brez odhodnega prometa ob poizvedbi
     docsUrl: "https://kiwitaxi.com/en/partner/webmaster/instructions/api",
     accessNote: {
-      sl: "JAVNI CSV vir potrjen (audit 18. 9. 2026: kraje/rute/cene za SI) — adapter prvi na vrsti v F2",
-      en: "PUBLIC CSV source confirmed (audit 18 Sep 2026: places/routes/prices for SI) — first adapter queued for F2",
+      sl: "Objavljeni podatki partnerja (CSV ingest): realne cene transferjev, niso živi citat. Razpoložljivost se pri ponudniku preveri ob rezervaciji.",
+      en: "Partner published data (CSV ingest): real transfer prices, not live quotes. Availability is confirmed with the provider at booking.",
     },
   },
   {
@@ -531,8 +542,9 @@ export function localProviders(): ProviderRegistryEntry[] {
 }
 
 /**
- * Uporabniku prijazen status (badge): local | live | search | affiliate |
- * planned. Izpeljano IZKLJUČNO iz registra — UI nikoli ne barva po svoje.
+ * Uporabniku prijazen status (badge): local | live | static | search |
+ * affiliate | planned. Izpeljano IZKLJUČNO iz registra — UI nikoli ne barva
+ * po svoje.
  */
 export function statusLabel(status: SupplyStatus): { sl: string; en: string } {
   switch (status) {
@@ -540,6 +552,8 @@ export function statusLabel(status: SupplyStatus): { sl: string; en: string } {
       return { sl: "Lokalni vir", en: "Local source" };
     case "live":
       return { sl: "Živa ponudba", en: "Live inventory" };
+    case "static":
+      return { sl: "Objavljeni podatki", en: "Published data" };
     case "search":
       return { sl: "Iskanje", en: "Search" };
     case "affiliate":

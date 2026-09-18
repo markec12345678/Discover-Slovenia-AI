@@ -171,6 +171,7 @@ docker compose logs cron                   # izidi cron klicev (sent/issued/…)
 | `0 9 * * *` | `/api/cron/renewal-reminders` | opomniki obnov |
 | `0 10 * * *` | `/api/cron/draft-reminders` | nudge osnutkov (optimistična ključavnica) |
 | `30 7 * * 2` | `/api/cron/sto-reingest` | tedenska osvežitev virov STO + raport odmika (1.45.0) |
+| `30 7 * * 3` | `/api/cron/kiwitaxi-reingest` | tedenska osvežitev KiwiTaxi transfer dataseta + raport odmika (1.49.0; prenos ~115 MB CSV — maxDuration 300 s; odpoved fail-closed na git baseline) |
 
 Vsak klic je Bearer zaščiten s `CRON_SECRET` (brez njega API vrne 401 —
 fail-closed, E2E dokazano).

@@ -28,12 +28,28 @@ import { dedupeProducts } from "./dedupe";
 import { clampZoom, maxProductsForZoom, typesVisibleAtZoom } from "./zoom";
 import { runAdapter, type SupplyAdapter } from "./adapter";
 import { createOsmAdapter } from "./osm-adapter";
+import { createKiwiTaxiAdapter } from "./providers/kiwitaxi/adapter";
+
+/**
+ * Tovarna adapterjev po slug-u (iz registra: AKTIVNI). Adapter, ki nima
+ * svojega podatka (dataset ni nameščen), se pošteno izprazni — nikoli
+ * „na silo" priklopljen inventar.
+ */
+const ADAPTER_FACTORIES: Partial<
+  Record<string, (entry: ProviderRegistryEntry) => SupplyAdapter>
+> = {
+  osm: createOsmAdapter,
+  kiwitaxi: createKiwiTaxiAdapter, // TASK 43: prvi realni komercialni adapter
+};
 
 /** Privzeti adapterji (iz registra: aktivni). */
 export function defaultAdapters(): SupplyAdapter[] {
   return activeProviders()
-    .filter((p) => p.slug === "osm")
-    .map((p) => createOsmAdapter(p));
+    .map((p) => {
+      const factory = ADAPTER_FACTORIES[p.slug];
+      return factory ? factory(p) : null;
+    })
+    .filter((a): a is SupplyAdapter => a != null);
 }
 
 // ---------------------------------------------------------------------------

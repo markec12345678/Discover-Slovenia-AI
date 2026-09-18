@@ -57,6 +57,14 @@ const DEST_REQUIRED: readonly Provider[] = ["hotels", "cars", "activities", "fli
 // uradno dokumentiran format). Vrednost gre skozi ISTO whitelist kot dest.
 const FROM_SUPPORTED: readonly Provider[] = ["transfers"];
 
+// Providerji, ki sprejmejo parameter `product` (TASK 43): NUMERIČNI ID
+// produkta/transferja pri partnerju. Trenutno samo transfers (Kiwitaxi
+// transfer deep-link /en/transfers/{id}?pap= — ID prihaja iz NAŠEGA
+// ingested dataseta, ne iz surovega vnosa uporabnika). Validacija tukaj:
+// NATANKO ^\d{1,10}$ — sicer 400; poljuben URL/parameter injection je
+// onemogočen po konstrukciji (isti fail-closed princip kot dest/from).
+const PRODUCT_SUPPORTED: readonly Provider[] = ["transfers"];
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ provider: string }> },
@@ -96,6 +104,23 @@ export async function GET(
         return NextResponse.json({ error: "Parameter 'from' je predolg (max 100)" }, { status: 400 });
       }
       rawFrom = rf;
+    }
+  }
+
+  // product (samo transfers, TASK 43): NUMERIČNI ID transferja — samo
+  // števke (1–10); sicer 400. ID pride iz našega dataseta (adapterjev
+  // bookingUrl) — tu je NEODVISNA meja (raw query niz je nezaupan vhod).
+  let productId: string | undefined;
+  if (PRODUCT_SUPPORTED.includes(provider as Provider)) {
+    const rp = searchParams.get("product") || "";
+    if (rp) {
+      if (!/^\d{1,10}$/.test(rp)) {
+        return NextResponse.json(
+          { error: "Parameter 'product' mora biti numerični ID (1–10 števk)" },
+          { status: 400 }
+        );
+      }
+      productId = rp;
     }
   }
 
@@ -148,6 +173,9 @@ export async function GET(
               provider === "transfers" && rawFrom
                 ? canonicalDest(rawFrom)
                 : null,
+            // transfers (Task 43): ID izbranega transferja (numeričen,
+            // validiran — pripas klikov na nivoju produkta)
+            productId: provider === "transfers" ? productId ?? null : null,
             refPath,
           }),
         },
@@ -171,6 +199,7 @@ export async function GET(
     dest,
     provider === "insurance" ? days : undefined,
     rawFrom ?? undefined,
+    productId,
   );
 
   // Zadnja varovalka: izhod mora biti https in dovoljen partnerjev host —

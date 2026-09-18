@@ -95,8 +95,11 @@ const nextConfig: NextConfig = {
   // (scripts/build-demo-db.sh) in mora biti vključena v serverless bundle —
   // nft tracer je sam ne odkrije (dostop prek fs, ne prek importov).
   // Runtime: src/instrumentation.ts jo skopira v /tmp.
+  // TASK 43 (1.49.1): ./data/** — kiwitaxi-routes.json baseline (2,18 MB)
+  // se bere prek fs ob prvem dostopu (NE statični import — webpack OOM,
+  // dokazano 18. 9. 2026); isti vzorec kot demo-seed.db zgoraj.
   outputFileTracingIncludes: {
-    "/**": ["./db/**"],
+    "/**": ["./db/**", "./data/**"],
   },
   // ignoreBuildErrors odstranjen 2026-09: `tsc --noEmit` je zdaj čist (0 napak)
   reactStrictMode: false,

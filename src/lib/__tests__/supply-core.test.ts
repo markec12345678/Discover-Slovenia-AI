@@ -57,14 +57,38 @@ describe("supply registry — invarianti", () => {
     }
   });
 
-  test("aktivni adapterji so SAMO lokalni viri (F1)", () => {
-    // F1: edini aktivni adapter je OSM — komercialni se priklapljajo šele
-    // po DEJANSKO pridobljenem dostopu (nikoli "na silo").
+  test("aktivni adapterji: lokalni vir + SAMO dokazano priklopljeni komercialni (Task 43)", () => {
+    // F1: aktivni so izključno adapterji z DEJANSKO prisotnim podatkom
+    // (nikoli "na silo"). Po Task 43: osm (lokalni) + kiwitaxi (prvi realni
+    // komercialni — statičen CSV dataset, ki je verzioniran v gitu).
     const active = activeProviders();
-    expect(active.length).toBe(1);
-    expect(active[0].slug).toBe("osm");
-    expect(active[0].group).toBe("local");
-    expect(active[0].status).toBe("local");
+    expect(active.length).toBe(2);
+    expect(active.map((p) => p.slug).sort()).toEqual(["kiwitaxi", "osm"]);
+
+    const osm = active.find((p) => p.slug === "osm")!;
+    expect(osm.group).toBe("local");
+    expect(osm.status).toBe("local");
+
+    // Task 43 invariante za kiwitaxi: statičen inventar (NE živ), cene,
+    // geo, mapa — a BREZ razpoložljivosti (CSV je nima) in brez lažnega
+    // „live" statusa.
+    const kt = active.find((p) => p.slug === "kiwitaxi")!;
+    expect(kt.group).toBe("commercial");
+    expect(kt.status).toBe("static");
+    expect(kt.inventoryAccess).toContain("static_content");
+    expect(kt.inventoryAccess).toContain("affiliate_deep_link");
+    expect(kt.capabilities.geo).toBe(true);
+    expect(kt.capabilities.price).toBe(true);
+    expect(kt.capabilities.availability).toBe(false);
+    expect(kt.capabilities.map).toBe(true);
+    expect(kt.types).toEqual(["transfer"]);
+    // Vsi ostali komercialni providerji ostajajo NEAKTIVNI (dokler nimajo
+    // dokazanega dostopa do inventarja — affiliate povezava NI inventar).
+    for (const p of PROVIDER_REGISTRY) {
+      if (p.group === "commercial" && p.slug !== "kiwitaxi") {
+        expect(p.active).toBe(false);
+      }
+    }
   });
 
   test("lokalni viri so ločena skupina od komercialnih", () => {

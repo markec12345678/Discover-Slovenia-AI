@@ -99,8 +99,11 @@ export type InventoryAccess =
 
 /** Uporabniku prijazen status ponudbe (izpeljan iz InventoryAccess).
  *  "planned": vir/API je preverjen v auditu, a dostop ŠE NI priključen
- *  (niti inventar niti affiliate povezava) — iskrena oznaka brez obljub. */
-export type SupplyStatus = "live" | "search" | "affiliate" | "local" | "planned";
+ *  (niti inventar niti affiliate povezava) — iskrena oznaka brez obljub.
+ *  "static" (Task 43): objavljeni statični inventar po ingestu (npr.
+ *  KiwiTaxi CSV — realne cene, ki NISO živi citat) — iskrena ločitev od
+ *  „live“ (živi API) in „affiliate“ (samo povezava). */
+export type SupplyStatus = "live" | "search" | "static" | "affiliate" | "local" | "planned";
 
 /** Natančnost geo podatka (iskrenost pina na zemljevidu). */
 export type GeoPrecision =
