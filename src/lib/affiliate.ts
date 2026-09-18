@@ -1,4 +1,8 @@
 import { DESTINATIONS } from "./slovenia-data";
+// TASK 45: Viator produkt deep-link — strežniški predpomnilnik productUrl-jev
+// (polni ga viator adapter iz odgovorov vira). Lazy require bi bil alternativa,
+// a je mapper čist modul brez težjih odvisnosti (samo tipe uvaža).
+import { lookupViatorProductUrl } from "./supply/providers/viator/mapper";
 
 // ============================================================================
 // AFFILIATE MONETIZACIJA — strežniška konfiguracija (fail-closed)
@@ -493,7 +497,21 @@ export function getTiqetsUrl(): PartnerUrlResult {
  *
  * NOT_CONFIGURED fallback: čista Viator stran BREZ pid/mcid.
  */
-export function getViatorUrl(): PartnerUrlResult {
+export function getViatorUrl(productId?: string): PartnerUrlResult {
+  // TASK 45 — PRODUKT DEEP-LINK (/go/viator?product={productCode}):
+  // SAMO veljaven productCode (alfanumerični 3–20, brez ločil — nemogoče
+  // vbrizgati pot/parametre). URL pride IZ našega strežniškega
+  // predpomnilnika (polni ga adapter iz productUrl-jev vira), NIKOLI iz
+  // vhoda. productUrl affiliate-tier ključa ŽE vsebuje pid/mcid → monetized.
+  if (productId != null && /^[A-Za-z0-9]{3,20}$/.test(productId)) {
+    const cached = lookupViatorProductUrl(productId);
+    if (cached && isValidHttpsUrl(cached)) {
+      return { url: cached, monetized: true };
+    }
+    // Zgrešen predpomnilnik (hladen strežnik/zastarel vnos) → iskro nadaljevalno
+    // verigo; NE izmišljujemo URL-ja produkta, ki ga ne poznamo.
+  }
+
   const url = process.env.VIATOR_AFFILIATE_URL?.trim() || "";
   if (isValidHttpsUrl(url)) {
     return { url, monetized: true };
@@ -535,7 +553,7 @@ export function buildPartnerUrl(
     case "tickets":
       return getTiqetsUrl();
     case "viator":
-      return getViatorUrl();
+      return getViatorUrl(productId);
   }
 }
 

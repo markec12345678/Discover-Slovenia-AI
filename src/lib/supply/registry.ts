@@ -262,21 +262,50 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     slug: "viator",
     labels: { sl: "Viator", en: "Viator" },
     group: "commercial",
+    // TASK 45 (1.50.0): DRUGI realni adapter. Pogodba Viator Partner API
+    // v2.0 je ŽIVO preverjena (docs.viator.com + Golden Path, 18. 9. 2026)
+    // in implementirana v src/lib/supply/providers/viator/**. DOSTOP:
+    // VIATOR_API_KEY še NI izdan (živi dokaz: sandbox brez ključa =
+    // HTTP 401) → adapter je PRIKLJUČEN v iskreno PRAZNEM stanju (vrne []
+    // + „not-configured"; NIČ izmišljenih podatkov, NE simuliramo živega
+    // API-ja). Ko ključ (self-serve: partnerski račun → Tools → Affiliate
+    // API) pride v env, živi podatki stečejo BREZ spremembe kode.
+    // inventoryAccess ostaja DEJANSKO stanje: danes samo affiliate
+    // globoka povezava (/go/viator).
     inventoryAccess: ["affiliate_deep_link"],
     status: "affiliate",
-    active: false,
-    types: ["activity", "tour", "ticket"],
+    active: true, // priklopljen na /api/supply/search (runtime capability gate v adapterju)
+    types: ["activity", "tour"],
     goRoute: "viator",
-    capabilities: { ...NO_INVENTORY_CAPS },
-    envKeys: { affiliate: ["VIATOR_AFFILIATE_URL"], api: [] },
+    capabilities: {
+      geo: true, // centri destinacij (geoPrecision: destination_center)
+      price: true, // pricing.summary.fromPrice („od"-cena)
+      availability: false, // Basic Access NIMA /availability/check (iskreno)
+      images: true, // naslovnne slike vira (imageCredit: © Viator)
+      reviews: true, // combinedAverageRating + totalReviews (samo pri recenzijah)
+      map: true,
+      booking: true, // affiliate_redirect (/go/viator?product={code})
+      affiliate: true,
+    },
+    envKeys: {
+      affiliate: ["VIATOR_AFFILIATE_URL"],
+      api: ["VIATOR_API_KEY", "VIATOR_API_BASE"],
+    },
     minZoom: 10,
-    cacheTtlMs: 0,
-    timeoutMs: 15_000,
-    maxCallsPerMin: 0,
+    // Žive iskalne cene → konservativnih 10 min (dokumentacija vira
+    // dovoljuje 15–30 min polling vsebinskih delt; negativni predpomnilnik
+    // okvar 60 s je v adapterju — Task 44-b vzorec).
+    cacheTtlMs: 10 * 60 * 1000,
+    // Najslabši primer: taksonomija + ≤ 3 sekvencialna iskanja × 8 s
+    // klientove dirе = 32 s (tipično < 1 s/klic).
+    timeoutMs: 35_000,
+    // Naša globalna meja instance: 20 izvedb adapterja/min (≤ 60 klicev
+    // vira — dovoljena meja vira je ~150/10 s na endpoint).
+    maxCallsPerMin: 20,
     docsUrl: "https://docs.viator.com/partner-api/technical/",
     accessNote: {
-      sl: "Partner API (brezplačni affiliate tier) — prijava potrebna; danes samo affiliate povezava",
-      en: "Partner API (free affiliate tier) — application needed; today affiliate link only",
+      sl: "Partner API (Basic Access) — pogodba živo preverjena; API ključ še ni izdan (self-serve po registraciji). Danes samo affiliate povezava, sloj je pripravljen in iskreno prazen.",
+      en: "Partner API (Basic Access) — contract verified live; API key not yet issued (self-serve after sign-up). Today affiliate link only, layer is ready and honestly empty.",
     },
   },
   {

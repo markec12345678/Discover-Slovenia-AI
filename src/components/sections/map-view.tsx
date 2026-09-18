@@ -29,6 +29,8 @@ import {
   BedDouble,
   ShoppingBag,
   CarTaxiFront,
+  Compass,
+  Bus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +75,10 @@ const T = {
   catRestaurant: { sl: "Hrana & pijača", en: "Food & drink" },
   catAccommodation: { sl: "Nastanitve", en: "Stays" },
   catShop: { sl: "Trgovine", en: "Shops" },
+  // TASK 45: aktivnosti/ture (Viator Partner API) — izrecna izbira
+  // (default: false; naročniška zahteva §9: sloj OFF → 0 API klicev).
+  catActivity: { sl: "Aktivnosti", en: "Activities" },
+  catTour: { sl: "Ture", en: "Tours" },
   // TASK 43: transfer sloj (KiwiTaxi) — izrecna izbira (default: false):
   // sloj se prikaže SAMO ko ga uporabnik vklopi (naročniška zahteva §9).
   catTransfer: { sl: "Transferji", en: "Transfers" },
@@ -154,6 +160,20 @@ const POI_CATEGORIES: {
     value: "transfer",
     label: T.catTransfer,
     icon: CarTaxiFront,
+    default: false,
+  },
+  // TASK 45: Viator plasti (aktivnosti + ture) — kanonska taksonomija,
+  // privzeto IZKLOPLJENO (isti vzorec kot Transferji iz Taska 43).
+  {
+    value: "activity",
+    label: T.catActivity,
+    icon: Compass,
+    default: false,
+  },
+  {
+    value: "tour",
+    label: T.catTour,
+    icon: Bus,
     default: false,
   },
 ];

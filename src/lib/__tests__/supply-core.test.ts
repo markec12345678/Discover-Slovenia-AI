@@ -40,14 +40,18 @@ describe("supply registry — invarianti", () => {
     }
   });
 
-  test("AFFILIATE-only providerji NIMAJMO inventarskih zmožnosti", () => {
+  test("AFFILIATE-only providerji NIMAJMO inventarskih zmožnosti (izjema: adapter z runtime gate — Task 45)", () => {
     // Ključno pravilo naročnika: affiliate URL NI inventar. Provider, ki ima
-    // SAMO affiliate_deep_link dostop, ne sme trditi geo/cene/razpoložljivosti.
+    // SAMO affiliate_deep_link dostop, ne sme trditi geo/cene/razpoložljivosti
+    // — RAZEN če ima IMPLEMENTIRAN adapter za živo preverjeno pogodbo, ki je
+    // zaščiten z runtime capability gate (viator, Task 45: brez VIATOR_API_KEY
+    // vrne iskreno PRAZEN sloj — zmožnosti opisujejo pogodbo, ne stanje).
+    const RUNTIME_GATED_ADAPTERS = new Set(["viator"]); // Task 45
     for (const p of PROVIDER_REGISTRY) {
       const onlyAffiliate =
         p.inventoryAccess.length === 1 &&
         p.inventoryAccess[0] === "affiliate_deep_link";
-      if (onlyAffiliate) {
+      if (onlyAffiliate && !RUNTIME_GATED_ADAPTERS.has(p.slug)) {
         expect(p.capabilities.geo).toBe(false);
         expect(p.capabilities.price).toBe(false);
         expect(p.capabilities.availability).toBe(false);
@@ -57,13 +61,15 @@ describe("supply registry — invarianti", () => {
     }
   });
 
-  test("aktivni adapterji: lokalni vir + SAMO dokazano priklopljeni komercialni (Task 43)", () => {
+  test("aktivni adapterji: lokalni vir + dokazano priklopljeni komercialni (Task 43+45)", () => {
     // F1: aktivni so izključno adapterji z DEJANSKO prisotnim podatkom
     // (nikoli "na silo"). Po Task 43: osm (lokalni) + kiwitaxi (prvi realni
     // komercialni — statičen CSV dataset, ki je verzioniran v gitu).
+    // Po Task 45: + viator (drugi realni adapter — ŽIVO preverjena pogodba,
+    // runtime capability gate: brez VIATOR_API_KEY plast iskreno PRAZNA).
     const active = activeProviders();
-    expect(active.length).toBe(2);
-    expect(active.map((p) => p.slug).sort()).toEqual(["kiwitaxi", "osm"]);
+    expect(active.length).toBe(3);
+    expect(active.map((p) => p.slug).sort()).toEqual(["kiwitaxi", "osm", "viator"]);
 
     const osm = active.find((p) => p.slug === "osm")!;
     expect(osm.group).toBe("local");
@@ -82,10 +88,35 @@ describe("supply registry — invarianti", () => {
     expect(kt.capabilities.availability).toBe(false);
     expect(kt.capabilities.map).toBe(true);
     expect(kt.types).toEqual(["transfer"]);
+
+    // Task 45 invariante za viator: ŽIVO preverjena pogodba, status
+    // iskreno „affiliate" (API ključ še ni izdan → NI lažnega „live"),
+    // zmožnosti po pogodbi (cena/geo/slike/ocene), BREZ razpoložljivosti
+    // (Basic Access nima /availability/check), env ključ + runtime gate.
+    const vt = active.find((p) => p.slug === "viator")!;
+    expect(vt.group).toBe("commercial");
+    expect(vt.status).toBe("affiliate"); // iskren status DANEŠ
+    expect(vt.inventoryAccess).toEqual(["affiliate_deep_link"]); // dejanski dostop
+    expect(vt.capabilities.geo).toBe(true);
+    expect(vt.capabilities.price).toBe(true);
+    expect(vt.capabilities.availability).toBe(false); // Basic Access: NE
+    expect(vt.capabilities.images).toBe(true);
+    expect(vt.capabilities.reviews).toBe(true);
+    expect(vt.capabilities.map).toBe(true);
+    expect(vt.types).toEqual(["activity", "tour"]); // kanonska taksonomija
+    expect(vt.envKeys.api).toContain("VIATOR_API_KEY");
+    expect(vt.minZoom).toBeGreaterThanOrEqual(10); // viewport gating
+    expect(vt.cacheTtlMs).toBeGreaterThan(0); // živi vir, a TTL (NE no-store regresija)
+
     // Vsi ostali komercialni providerji ostajajo NEAKTIVNI (dokler nimajo
-    // dokazanega dostopa do inventarja — affiliate povezava NI inventar).
+    // dokazanega dostopa do inventarja — affiliate povezava NI inventar;
+    // izjema viator: adapter z runtime gate, Task 45).
     for (const p of PROVIDER_REGISTRY) {
-      if (p.group === "commercial" && p.slug !== "kiwitaxi") {
+      if (
+        p.group === "commercial" &&
+        p.slug !== "kiwitaxi" &&
+        p.slug !== "viator"
+      ) {
         expect(p.active).toBe(false);
       }
     }

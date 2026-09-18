@@ -57,13 +57,22 @@ const DEST_REQUIRED: readonly Provider[] = ["hotels", "cars", "activities", "fli
 // uradno dokumentiran format). Vrednost gre skozi ISTO whitelist kot dest.
 const FROM_SUPPORTED: readonly Provider[] = ["transfers"];
 
-// Providerji, ki sprejmejo parameter `product` (TASK 43): NUMERIČNI ID
-// produkta/transferja pri partnerju. Trenutno samo transfers (Kiwitaxi
-// transfer deep-link /en/transfers/{id}?pap= — ID prihaja iz NAŠEGA
-// ingested dataseta, ne iz surovega vnosa uporabnika). Validacija tukaj:
-// NATANKO ^\d{1,10}$ — sicer 400; poljuben URL/parameter injection je
-// onemogočen po konstrukciji (isti fail-closed princip kot dest/from).
-const PRODUCT_SUPPORTED: readonly Provider[] = ["transfers"];
+// Providerji, ki sprejmejo parameter `product` (TASK 43 + 45): ID produkta
+// pri partnerju. Validacija je PO PROVIDERJU (različni ID prostori vira):
+//  - transfers (KiwitTaxi): NUMERIČNI ID transferja ^\d{1,10}$ in > 0;
+//  - viator (Task 45): ALFANUMERIČNI productCode ^[A-Za-z0-9]{3,20}$
+//    (uradni primeri: "227717P1", "62330P2").
+// ID prihaja iz NAŠEGA adapterja (bookingUrl — ne iz surovega vnosa
+// uporabnika); tu je NEODVISNA meja zaupanja. Poljuben URL/parameter
+// injection je onemogočen po konstrukciji (isti fail-closed princip kot
+// dest/from) + izhodni host allowlist.
+const PRODUCT_VALIDATORS: Partial<Record<Provider, (raw: string) => boolean>> = {
+  transfers: (raw) => /^\d{1,10}$/.test(raw) && Number(raw) > 0,
+  viator: (raw) => /^[A-Za-z0-9]{3,20}$/.test(raw),
+};
+const PRODUCT_SUPPORTED: readonly Provider[] = Object.keys(
+  PRODUCT_VALIDATORS
+) as Provider[];
 
 export async function GET(
   request: Request,
@@ -107,17 +116,18 @@ export async function GET(
     }
   }
 
-  // product (samo transfers, TASK 43): NUMERIČNI ID transferja — samo
-  // števke (1–10) IN > 0 (konzistentno z mapper parseInt10: ID 0 pri viru
-  // ne obstaja); sicer 400. ID pride iz našega dataseta (adapterjev
-  // bookingUrl) — tu je NEODVISNA meja (raw query niz je nezaupan vhod).
+  // product (transfers/viator, Task 43/45): ID produkta pri partnerju —
+  // validator PO PROVIDERJU (števke za transfers, alfanumerični productCode
+  // za viator); sicer 400. ID pride iz našega adapterja (bookingUrl) — tu
+  // je NEODVISNA meja (raw query niz je nezaupan vhod).
   let productId: string | undefined;
-  if (PRODUCT_SUPPORTED.includes(provider as Provider)) {
+  const productValidator = PRODUCT_VALIDATORS[provider as Provider];
+  if (productValidator) {
     const rp = searchParams.get("product") || "";
     if (rp) {
-      if (!/^\d{1,10}$/.test(rp) || Number(rp) === 0) {
+      if (!productValidator(rp)) {
         return NextResponse.json(
-          { error: "Parameter 'product' mora biti numerični ID (1–10 števk, > 0)" },
+          { error: "Parameter 'product' mora biti veljaven ID produkta pri partnerju" },
           { status: 400 }
         );
       }
@@ -174,9 +184,9 @@ export async function GET(
               provider === "transfers" && rawFrom
                 ? canonicalDest(rawFrom)
                 : null,
-            // transfers (Task 43): ID izbranega transferja (numeričen,
-            // validiran — pripas klikov na nivoju produkta)
-            productId: provider === "transfers" ? productId ?? null : null,
+            // transfers/viator (Task 43/45): ID izbranega produkta
+            // (validiran — pripas klikov na nivoju produkta)
+            productId: productId ?? null,
             refPath,
           }),
         },

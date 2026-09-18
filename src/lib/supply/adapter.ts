@@ -45,6 +45,12 @@ export interface SupplyAdapter {
   search(q: SupplyQuery): Promise<ProviderProduct[]>;
   /** Ali je bil ZADNJI uspešen zadetek iz predpomnilnika (telemetrija). */
   lastRunCached(): boolean;
+  /**
+   * TASK 45: opomba ZADNJE izvedbe (telemetrija iskrenosti — npr.
+   * „not-configured", „no-dataset", „capped"). Opcijsko: runner jo
+   * prenese v AdapterRunInfo.note, da vidi tudi odjemalec/admin.
+   */
+  lastRunNote?(): string | undefined;
   /** Št. elementov vira, ki jih je ZADNJI zagon zavrgel ob normalizaciji
    *  (brez imena/geo/tipa) — opcijsko, za iskren "partial result". */
   lastRunSkipped?(): number;
@@ -118,6 +124,9 @@ export async function runAdapter(
         ms: Date.now() - started,
         count: products.length,
         cached: adapter.lastRunCached(),
+        // TASK 45: opomba adapterja (iskrenost „not-configured"/„capped"…)
+        // — prej se je izgubila (vidni sta bili samo napaki runnerja).
+        note: adapter.lastRunNote?.() ?? undefined,
         skipped: adapter.lastRunSkipped?.() ?? undefined,
       },
       products,

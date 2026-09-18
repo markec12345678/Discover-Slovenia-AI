@@ -29,6 +29,7 @@ import { clampZoom, maxProductsForZoom, typesVisibleAtZoom } from "./zoom";
 import { runAdapter, type SupplyAdapter } from "./adapter";
 import { createOsmAdapter } from "./osm-adapter";
 import { createKiwiTaxiAdapter } from "./providers/kiwitaxi/adapter";
+import { createViatorAdapter } from "./providers/viator/adapter";
 
 /**
  * Tovarna adapterjev po slug-u (iz registra: AKTIVNI). Adapter, ki nima
@@ -40,6 +41,7 @@ const ADAPTER_FACTORIES: Partial<
 > = {
   osm: createOsmAdapter,
   kiwitaxi: createKiwiTaxiAdapter, // TASK 43: prvi realni komercialni adapter
+  viator: createViatorAdapter, // TASK 45: drugi realni adapter (runtime capability gate)
 };
 
 /** Privzeti adapterji (iz registra: aktivni). */

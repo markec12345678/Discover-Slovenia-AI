@@ -7,6 +7,24 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.50.0] — 2026-09-18
+
+### Dodano (1.50.0 — TASK 45: VIATOR — drugi realni supply provider)
+
+- **Viator Partner API adapter (Basic Access tier)** — `src/lib/supply/providers/viator/**`: pogodba ŽIVO preverjena 18. 9. 2026 (docs.viator.com prebrana v polnosti + uradni Golden Path; auth `exp-api-key` + `Accept: application/json;version=2.0`; POST `/products/search` po `destinationId`; GET `/destinations` s centri; 429 `Retry-After`; jezik sl NI podprt → `en-US`). **NI mock, NI fake inventar, NI samo affiliate redirect** — adapter, kanonska preslikava, viewport logika, /go veriga in testi so realni.
+- **CAPABILITY GATE (iskren)**: projekt še NIMA partnerskega računa → `VIATOR_API_KEY` ni nastavljen (živi dokaz: sandbox = HTTP 401 Invalid API Key) → plast Aktivnosti/Ture je iskreno PRAZNA z opombo `not-configured` (telemetrija + provider panel; 0 klicev na vir). Ključ je SELF-SERVE (partnerski račun → Tools → Affiliate API → Start your development) — ko pride v env, živi podatki stečejo BREZ spremembe kode. Dokumentirano v docs/TASK-45-AUDIT.md §2/§7.
+- **Kanonski model NESPREMENJEN** (glavni gate): 0 viator* polj v `ProviderProduct`; priklop = 1 factory vrstica (forward-compat dokaz Taska 44 drži); taksonomija activity/tour obstajata od F1 (0 novih tipov); edina razširitev: opcijski `SupplyAdapter.lastRunNote?()` (telemetrija iskrenosti — nazaj kompatibilno).
+- **Viewport semantika (dokumentirana omejitev vira)**: iskanje PO DESTINACIJI (ne bbox) — 1–3 mestne poizvedbe oz. 1 državna + post-filter pinov; pin = center primarne destinacije produkta → `geoPrecision: "destination_center"` (NIKOLI točen meeting point); dedupe po productCode; kap 48; zoom ≥ 10 + čipa default OFF → 0 klicev, ko sloj izklopljen (živo dokazano).
+- **Cena/razpoložljivost (pogodbena semantika)**: `fromPrice` (uradni spec: »najnižja možna cena, po navadi na odraslo osebo«) → `per_person` + `fromPrice` + odkrivajoča opomba (kategorija PER_PERSON/UNIT je samo v produktu DETAIL); ne-EUR → brez cene (ne pretvarjamo); **cena ≠ razpoložljivost** — Basic Access NIMA `/availability/check` → `unknown` + opomba (regresijski test).
+- **Predpomnilnik po pogodbi vira**: taksonomija destinacij 7 dni (»refreshed weekly«); iskalni rezultati 10 min; negativni predpomnilnik okvar 60 s (vir z 401/429/5xx NE dobi zaporednih klicev — Task 44-b vzorec); coalescing sočasnih poizvedb; productUrl predpomnilnik 24 h za /go.
+- **/go/viator?product={productCode}**: validacija `^[A-Za-z0-9]{3,20}$` po providerju (transfers ostane numerični — regresijsko testirano); razrešitev globokih povezav IZKLJUČNO iz strežniškega predpomnilnika (URL vira z vgrajenim pid/mcid → monetized:true); zgrešek → `VIATOR_AFFILIATE_URL` → čista povezava (fail-closed, monetized:false); zlobni product → 400 (živo: javascript:/../21 znakov); analitika `affiliate_click` z productId razširjena na viator.
+- **Zemljevid UI**: čipa **Aktivnosti/Ture** (Activities/Tours) — kanonska taksonomija, default IZKLOPLJENO (naročnikova zahteva §9); ProductModal/provider-panel 100 % provider-agnostic (badge iz registra; »Dostopnost neznana« že podprta).
+- **Register (iskren)**: viator `active: true` (adapter priklopljen; runtime gate), `status: "affiliate"` (dejansko stanje), `inventoryAccess: ["affiliate_deep_link"]` (samo to IMAMO), zmožnosti po pogodbi (Brez razpoložljivosti — Basic Access), `envKeys.api: [VIATOR_API_KEY, VIATOR_API_BASE]`, `maxCallsPerMin: 20` (vljudnost do vira).
+- **Testi: 455/455 (+65)** — `viator-contract.test.ts` (33: kanonska čistost, real-data-only, geo, cena, fail-safe, taksonomija, klient) + `viator-adapter.test.ts` (32: capability gate, viewport/zoom gating, cache/negativni/coalescing, izolacija, FIXED invariant, /go route) + 2 posodobljeni registrski invarianti. Živa E2E: Aktivnosti 0 (not-configured) + Transferji 48 soobstojata, /go veriga 302/400, provider panel iskren, mobilni 390 px 0 px preliva, EN čipi.
+- **docs/TASK-45-AUDIT.md**: 10 sekcij — živo preverjena pogodba (endpointi/sheme/cene/jeziki/rate limiti/predpomnjenje/atribucija/no-index politika), capability gate klasifikacija, arhitektura, testi, E2E dokazi, aktivacijska knjiga (self-serve ključ), omejitve, YELLOW sledenje.
+
+---
+
 ## [1.49.4] — 2026-09-18
 
 ### Popravljeno (1.49.4 — TASK 44 §10–§26: pogodbe + živa preverba vira + 2 odkriti vrzeli)
