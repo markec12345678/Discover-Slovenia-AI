@@ -569,7 +569,9 @@ model Sponsorship {
   updatedAt       DateTime @updatedAt
 
   listing         Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  // 19-f-3 (revizija 1.36.0): finančna evidenca — brisanje Owner-ja NE sme
+  // kaskadno uničiti plačanih sponzorstev (stripePaymentId). GDPR izbris = anonymizacija.
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Restrict)
 
   @@index([listingId])
   @@index([ownerId])
@@ -768,7 +770,9 @@ model PushSubscription {
 model CommissionInvoice {
   id            String    @id @default(cuid())
   ownerId       String
-  owner         Owner     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  // 19-f-3 (revizija 1.36.0): računovodski zapis (10+ let retention) —
+  // brisanje Owner-ja ne sme pobrisati izdanih/plačanih računov.
+  owner         Owner     @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   invoiceNumber String    @unique // INV-YYYYMM-XXXXXX
   periodStart   DateTime  // prvi trenutek koledarskega meseca (inkluzivno)
   periodEnd     DateTime  // prvi trenutek naslednjega meseca (ekskluzivno)
