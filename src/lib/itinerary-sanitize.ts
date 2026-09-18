@@ -73,6 +73,17 @@ function sanitizeLocation(raw: unknown): LocationVisit | null {
   const destination_name = asStr(loc.destination_name, MAX_NAME_CHARS);
   // Brez imena je postanek neuporaben (zemljevid/UX) — izpusti ga.
   if (!destination_name) return null;
+
+  // AUDIT 42 (42-d RED #1): koordinate postanka (supply/chat pini) so se
+  // TU IZPUSTILE — AI-odmev_fixed izdelki so izgubili pince, vsi shranjeni/
+  // deljeni načrti (/pot/[shareId]) pa ZADETNO vse ne-T1 postanke. Zdaj:
+  // končna števila + clamp (±90/±180) — enaka semantika kot vstop v
+  // stop-insert.ts. Nezaupanja vredni vnosi (NaN/neskončnost/rob) odpadejo.
+  const latNum = asNum(loc.lat);
+  const lngNum = asNum(loc.lng);
+  const hasLat = Number.isFinite(latNum) && Math.abs(latNum) <= 90;
+  const hasLng = Number.isFinite(lngNum) && Math.abs(lngNum) <= 180;
+
   return {
     destination_id,
     destination_name,
@@ -82,6 +93,8 @@ function sanitizeLocation(raw: unknown): LocationVisit | null {
     duration: clamp(asNum(loc.duration), MIN_DURATION_H, MAX_DURATION_H),
     estimated_cost: clamp(asNum(loc.estimated_cost), 0, MAX_COST_EUR),
     notes: asStr(loc.notes, MAX_NOTES_CHARS),
+    ...(hasLat ? { lat: latNum } : {}),
+    ...(hasLng ? { lng: lngNum } : {}),
     ...(typeof loc.recommendationType === "string"
       ? { recommendationType: loc.recommendationType.slice(0, 40) }
       : {}),

@@ -71,6 +71,7 @@ const STATUS_BADGE_CLASS: Record<ProviderRegistryEntry["status"], string> = {
   live: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
   search: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
   affiliate: "bg-muted text-muted-foreground",
+  planned: "bg-muted/60 text-muted-foreground/80",
 };
 
 /** Skupine registra (lokalni odprti viri / lastna tržnica / partnerji). */

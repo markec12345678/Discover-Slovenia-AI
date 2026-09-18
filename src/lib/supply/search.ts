@@ -23,7 +23,7 @@ import type {
 } from "./types";
 import { isProductType } from "./taxonomy";
 import { DEFAULT_SUPPLY_TYPES } from "./taxonomy";
-import { activeProviders } from "./registry";
+import { activeProviders, type ProviderRegistryEntry } from "./registry";
 import { dedupeProducts } from "./dedupe";
 import { clampZoom, maxProductsForZoom, typesVisibleAtZoom } from "./zoom";
 import { runAdapter, type SupplyAdapter } from "./adapter";
@@ -36,18 +36,75 @@ export function defaultAdapters(): SupplyAdapter[] {
     .map((p) => createOsmAdapter(p));
 }
 
+// ---------------------------------------------------------------------------
+// STREŽNIŠKI OMEJEVALNIK KLICOV NA PROVIDERJA (audit 42, točka 3 — rate
+// limit v pogodbi adapterja). Drseče okno v pomnilniku (vzorec rate-limit.ts,
+// per-instanca). maxCallsPerMin = 0 → neomejeno.
+// ---------------------------------------------------------------------------
+const providerCallTimes = new Map<string, number[]>();
+
+export function providerRateLimited(entry: ProviderRegistryEntry): boolean {
+  const cap = entry.maxCallsPerMin;
+  if (!cap || cap <= 0) return false;
+  const now = Date.now();
+  const win = providerCallTimes.get(entry.slug) ?? [];
+  const fresh = win.filter((t) => now - t < 60_000);
+  if (fresh.length >= cap) {
+    providerCallTimes.set(entry.slug, fresh);
+    return true;
+  }
+  fresh.push(now);
+  providerCallTimes.set(entry.slug, fresh);
+  return false;
+}
+
+/** Počisti okna (testi). */
+export function clearProviderRateLimits(): void {
+  providerCallTimes.clear();
+}
+
+// ---------------------------------------------------------------------------
+// CACHE-CONTROL ODGOVORA (audit 42, točka 13 — cache NI globalni TTL):
+// izpeljan IZklJUČNO iz registrov AKTIVNIH adapterjev. Vsak aktivni vir z
+// cacheTtlMs=0 (živa razpoložljivost!) → no-store; sicer kratek skupni
+// s-maxage = min(60 s, najkrajši TTL med aktivnimi) + stale-while-revalidate.
+// ---------------------------------------------------------------------------
+export function supplyResponseCacheControl(
+  entries: ProviderRegistryEntry[]
+): string {
+  const active = entries.filter((e) => e.active);
+  if (active.length === 0) return "no-store";
+  if (active.some((e) => e.cacheTtlMs <= 0)) return "no-store";
+  const minTtlSec = Math.min(...active.map((e) => Math.floor(e.cacheTtlMs / 1000)));
+  const sMaxage = Math.max(1, Math.min(60, minTtlSec));
+  return `public, s-maxage=${sMaxage}, stale-while-revalidate=${Math.max(60, sMaxage * 5)}`;
+}
+
 /** Parsing + validacija query nizov (route tanek plašč nad tem). */
 export interface ParsedSupplyQuery {
   ok: true;
   query: SupplyQuery;
-} 
+}
 export type ParsedSupplyQueryResult =
   | ParsedSupplyQuery
   | { ok: false; error: string };
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-/** Največja površina viewporta (deg²) — ~6°×6° (celotna Slovenija ×4). */
-const MAX_BBOX_AREA = 36;
+
+/** Največja površina viewporta (deg²) PO ZOOM RAVNI (audit 42, 42-e F5 —
+ *  prej fletna meja 36 deg²: sestavljeni zoom=14 + 6°×6° bbox je gnal
+ *  drago državno poizvedbo). Realne višine viewportov po zoomu:
+ *  z≤9 državni (~6°), z10–11 ~3–4°, z12–13 ~1–2°, z14+ ulični <0.5°.
+ *  Meje so RADODARNE (2× tipično), da legitimni široki zasloni minejo. */
+function maxBboxAreaForZoom(z: number): number {
+  if (z < 10) return 36;
+  if (z < 12) return 16;
+  if (z < 14) return 9;
+  return 4;
+}
+
+/** Največje št. kategorij (dedupe + kap — audit 42, 42-e F4). */
+const MAX_CATS = 32;
 
 export function parseSupplyQuery(params: {
   bbox?: string | null;
@@ -58,6 +115,9 @@ export function parseSupplyQuery(params: {
   locale?: string | null;
 }): ParsedSupplyQueryResult {
   const locale: "sl" | "en" = params.locale === "en" ? "en" : "sl";
+
+  // Zoom NAJPREJ — meja površine je odvisna od njega.
+  const zoom = clampZoom(Number(params.zoom ?? "8"));
 
   let bbox: [number, number, number, number] | undefined;
   if (params.bbox) {
@@ -71,17 +131,21 @@ export function parseSupplyQuery(params: {
     const [s, w, n, e] = parts;
     if (s >= n || w >= e) return { ok: false, error: "bbox" };
     if (s < -90 || n > 90 || w < -180 || e > 180) return { ok: false, error: "bbox" };
-    if ((n - s) * (e - w) > MAX_BBOX_AREA) return { ok: false, error: "bbox-area" };
+    if ((n - s) * (e - w) > maxBboxAreaForZoom(zoom)) return { ok: false, error: "bbox-area" };
     bbox = [s, w, n, e];
   }
 
-  const zoom = clampZoom(Number(params.zoom ?? "8"));
-
   let cats: ProductType[] = [];
   if (params.cats) {
+    const seen = new Set<string>();
     for (const raw of params.cats.split(",")) {
       const t = raw.trim();
-      if (t && isProductType(t)) cats.push(t);
+      // DEDUPE kategorij (ponovitve napihujejo cache ključ + echo) in KAP
+      // (nosilnost ~32 tipov je čez vse realne rabе).
+      if (t && isProductType(t) && !seen.has(t) && seen.size < MAX_CATS) {
+        seen.add(t);
+        cats.push(t);
+      }
     }
     if (cats.length === 0) return { ok: false, error: "cats" };
   }
@@ -129,15 +193,21 @@ export async function searchSupply(
   const degraded: ProviderSlug[] = [];
   let all: ProviderProduct[] = [];
 
-  // 2+3) Izvedba AKTIVNIH adapterjev izolirano.
-  const runnable = adapters.filter((a) => {
+  // 2+3) Izvedba AKTIVNIH adapterjev izolirano (zoom prag → kategorije →
+  // strežniški rate limit). Rate-limited NI napaka vira (note, ne degraded).
+  const runnable: SupplyAdapter[] = [];
+  const rateLimited: SupplyAdapter[] = [];
+  for (const a of adapters) {
     const z = Math.floor(zoom);
-    if (z < a.entry.minZoom) return false;
-    // Adapter se kliče, če prekriva vsaj eno VIDNO kategorijo (ali so
-    // kategorije prazne zaradi nizkega zoom-a → nikomur ni treba teči).
-    if (visibleCats.length === 0) return false;
-    return a.entry.types.some((t) => visibleCats.includes(t));
-  });
+    if (z < a.entry.minZoom) continue;
+    if (visibleCats.length === 0) continue;
+    if (!a.entry.types.some((t) => visibleCats.includes(t))) continue;
+    if (providerRateLimited(a.entry)) {
+      rateLimited.push(a);
+      continue;
+    }
+    runnable.push(a);
+  }
 
   if (runnable.length > 0) {
     const settled = await Promise.allSettled(
@@ -169,7 +239,7 @@ export async function searchSupply(
   // Neizvedeni aktivni adapterji (zoom prag / kategorije) — transparentno
   // poročamo, da se niso pognali ZARADI gatinga (ne kot napaka).
   for (const a of adapters) {
-    if (runnable.includes(a)) continue;
+    if (runnable.includes(a) || rateLimited.includes(a)) continue;
     adaptersInfo.push({
       slug: a.entry.slug,
       status: a.entry.status,
@@ -178,6 +248,17 @@ export async function searchSupply(
       count: 0,
       cached: false,
       note: "zoom-gated",
+    });
+  }
+  for (const a of rateLimited) {
+    adaptersInfo.push({
+      slug: a.entry.slug,
+      status: a.entry.status,
+      ok: true,
+      ms: 0,
+      count: 0,
+      cached: false,
+      note: "rate-limited",
     });
   }
 

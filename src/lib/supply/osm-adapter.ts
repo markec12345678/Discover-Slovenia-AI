@@ -16,6 +16,7 @@
 // ============================================================================
 
 import { overpassFetch } from "@/lib/overpass";
+import { isSafeHttpUrl } from "@/lib/external-url";
 import { TAXONOMY } from "./taxonomy";
 import type { ProductType, ProviderProduct, SupplyQuery } from "./types";
 import { getProvider } from "./registry";
@@ -31,6 +32,46 @@ const CACHE_MAX = 60;
 
 const cache = new Map<string, OsmCacheEntry>();
 let lastCached = false;
+let lastSkipped = 0;
+
+/** AUDIT 42, točka 15 (SSRF/XSS): OSM tagi so JAVNO URE LJIVI — vsak
+ *  `website`/`image` tag lahko hrani javascript:/data: URI ali zloben
+ *  gostitelj. Meja zaupanja na NORMALIZACIJI (ista plast kot render
+ *  safeExternalHref v ProductModalu — namerno OBA meji):
+ *  - sourceUrl: samo http(s) (isSafeHttpUrl) — sicer izpustimo.
+ *  - image: samo http(s) URL; wikimedia_commons „File:X.jpg“ je ime
+ *    datoteke, NE URL — prevedemo v Commons Special:FilePath (s kreditom
+ *    „Wikimedia Commons“); tags.image sprejmemo le z http(s) in kreditom
+ *    „OpenStreetMap contributor“ (hotlink + atribucija, NIKOLI kopija). */
+function safeOsmUrl(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const trimmed = raw.trim();
+  return isSafeHttpUrl(trimmed) ? trimmed : undefined;
+}
+
+function osmImage(
+  tags: Record<string, string>
+): { url?: string; credit?: string } {
+  const raw = tags.image?.trim();
+  if (raw && isSafeHttpUrl(raw)) {
+    return { url: raw, credit: "OpenStreetMap contributor" };
+  }
+  const commons = tags.wikimedia_commons?.trim();
+  if (commons) {
+    // Konvencija OSM: „File:Ime.jpg“ (ali „Category:…“ — slednjo izpustimo,
+    // kategorija ni slika). Special:FilePath streži datoteko neposredno.
+    const m = commons.match(/^File:(.+\.(?:jpe?g|png|gif|webp|svg|tiff?))$/i);
+    if (m) {
+      return {
+        url: `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(
+          m[1]
+        )}?width=800`,
+        credit: "Wikimedia Commons",
+      };
+    }
+  }
+  return {};
+}
 
 /** Zaokroži bbox NAVZVEN na 0.02° (~1.5 km) — sosednje pan/skok ploščice
  *  zadene isti cache ključ, robovi nikoli ne odrežejo pinov. */
@@ -111,7 +152,9 @@ export function osmTagsToProductType(
     tags.tourism === "hostel" ||
     tags.tourism === "guest_house" ||
     tags.tourism === "apartment" ||
-    tags.tourism === "motel"
+    tags.tourism === "motel" ||
+    tags.tourism === "camp_site" || // AUDIT 42, točka 1 — kampi
+    tags.tourism === "chalet"
   ) {
     return { type: "accommodation", subcategory: tags.tourism };
   }
@@ -149,8 +192,9 @@ interface OverpassElement {
 
 /**
  * Normalizacija ENEGA Overpass elementa → ProviderProduct (ali null).
- * Preslikava je poštena: polja, ki jih OSM nima (cena, ocena,
- * razpoložljivost), OSTANEJO NEIZPOLNJENA — nikoli ne izmišljujemo.
+ * Preslikava je poštena: polja, ki jih OSM nima (cena, ocena), OSTANEJO
+ * NEIZPOLNJENA — nikoli ne izmišljujemo. Razpoložljivost je izrecno
+ * not_supported (ODSM koncepta „dostopnost“ nima — audit 42, točka 11).
  */
 export function normalizeOsmElement(
   el: OverpassElement,
@@ -174,6 +218,8 @@ export function normalizeOsmElement(
     .filter(Boolean)
     .join(" ");
 
+  const image = osmImage(tags);
+
   return {
     id: `osm:${el.type}-${el.id}`,
     provider: "osm",
@@ -186,9 +232,11 @@ export function normalizeOsmElement(
     lng,
     geoPrecision: "exact",
     address: address || undefined,
-    image: tags.image || tags.wikimedia_commons || undefined,
+    image: image.url,
+    imageCredit: image.credit,
+    availability: { status: "not_supported" },
     bookingMode: "info_only", // lokalni vir: kontakt/website, ne rezervacija
-    sourceUrl: tags.website || tags["contact:website"] || undefined,
+    sourceUrl: safeOsmUrl(tags.website) ?? safeOsmUrl(tags["contact:website"]),
     lastUpdated,
     license: { source: "OpenStreetMap", attribution: "© OpenStreetMap" },
     phone: tags.phone || tags["contact:phone"] || undefined,
@@ -203,6 +251,7 @@ export function normalizeOsmElement(
 export function clearOsmCache(): void {
   cache.clear();
   lastCached = false;
+  lastSkipped = 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,9 +265,11 @@ export function createOsmAdapter(entry?: ProviderRegistryEntry): SupplyAdapter {
   return {
     entry: registryEntry,
     lastRunCached: () => lastCached,
+    lastRunSkipped: () => lastSkipped,
 
     async search(q: SupplyQuery): Promise<ProviderProduct[]> {
       lastCached = false;
+      lastSkipped = 0;
       if (!q.bbox) return []; // brez viewporta ni lokalne poizvedbe
 
       // Samo kategorije z OSM filtri; zoom prag kategorij je že
@@ -259,6 +310,7 @@ export function createOsmAdapter(entry?: ProviderRegistryEntry): SupplyAdapter {
         attemptTimeoutMs: 12_000,
         retryDelayMs: 1_000,
         maxMainAttempts: 5,
+        signal: q.signal, // AUDIT 42: preklic odjemalca prekine poskuse
       });
       if (!data) {
         // Overpass nedosegljiv (vsi konektorji) — MEHKA NAPAKA: runner jo
@@ -272,6 +324,7 @@ export function createOsmAdapter(entry?: ProviderRegistryEntry): SupplyAdapter {
       for (const el of (data.elements ?? []) as OverpassElement[]) {
         const product = normalizeOsmElement(el, now);
         if (product) products.push(product);
+        else lastSkipped++; // partial result — iskrena telemetrija
       }
 
       // Predpomnilnik (uspešni zadetki samo — ne napak/praznin po napaki).

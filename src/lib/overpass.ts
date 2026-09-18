@@ -73,7 +73,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 function overpassHttpPost(
   url: string,
   body: string,
-  timeoutMs: number
+  timeoutMs: number,
+  signal?: AbortSignal
 ): Promise<OverpassJSON | null> {
   return new Promise((resolve) => {
     const u = new URL(url);
@@ -118,6 +119,24 @@ function overpassHttpPost(
       resolve(null);
     });
     req.on("error", () => resolve(null));
+    // AUDIT 42: preklic odjemalca (AbortSignal iz /api/supply/search →
+    // SupplyQuery.signal) prekine tudi odhodni HTTPS klic — ne trošimo
+    // javnega Overpassa za odgovor, ki ga nihče več ne čaka.
+    const onAbort = () => {
+      req.destroy();
+      resolve(null);
+    };
+    if (signal) {
+      if (signal.aborted) {
+        req.destroy();
+        resolve(null);
+        return;
+      }
+      signal.addEventListener("abort", onAbort, { once: true });
+    }
+    req.on("close", () => {
+      if (signal) signal.removeEventListener("abort", onAbort);
+    });
     req.write(body);
     req.end();
   });
@@ -150,6 +169,8 @@ export async function overpassFetch(
     attemptTimeoutMs?: number;
     retryDelayMs?: number;
     maxMainAttempts?: number;
+    /** Preklic odjemalca — prekine poskus + izstopi iz retry zanke. */
+    signal?: AbortSignal;
   } = {}
 ): Promise<OverpassJSON | null> {
   const deadline = Date.now() + (opts.budgetMs ?? 8000);
@@ -166,6 +187,8 @@ export async function overpassFetch(
 
   for (let i = 0; i < attempts.length; i++) {
     const { url } = attempts[i];
+    // AUDIT 42: preklic odjemalca — nikoli več poskusov, takoj ven.
+    if (opts.signal?.aborted) return null;
     // Časovni proračun: za smiseln poskus mora ostati ≥ 1,5 s
     const remaining = deadline - Date.now();
     if (remaining < 1500) return null;
@@ -173,9 +196,12 @@ export async function overpassFetch(
     const data = await overpassHttpPost(
       url,
       body,
-      Math.min(attemptTimeout, remaining)
+      Math.min(attemptTimeout, remaining),
+      opts.signal
     );
     if (data) return data;
+    // Preklic med poskusom → ne razmišljaj o nadaljnjih poskusih.
+    if (opts.signal?.aborted) return null;
 
     // 429 = rate limit / 5xx = preobremenjen strežnik / napaka omrežja —
     // premor in poskusi naslednji konektor (mirror); zadnji → null

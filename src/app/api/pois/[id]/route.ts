@@ -1,11 +1,24 @@
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 // GET /api/pois/[id]?osmId=123&type=node
 // Vrne podrobnosti POI-ja + Wikipedia opis (če je na voljo)
+//
+// AUDIT 42 (42-e F2): javna ruta z 1–2 NIAZPREDBEŽNIMA klicema na
+// Wikidata/Wikipedia na vsak klic, brez omejitve — kladivo bi spravilo naš
+// IP na Wikimedia throttle (ista vrzel kot /api/pois v 1.33). Zdaj:
+// 30/min/IP (ključ poi-detail).
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const limited = rateLimit(request, {
+    limit: 30,
+    windowMs: 60_000,
+    key: "poi-detail",
+  });
+  if (limited) return limited;
+
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);

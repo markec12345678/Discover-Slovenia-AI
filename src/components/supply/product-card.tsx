@@ -22,9 +22,12 @@ const L = {
   addPlan: { sl: "V načrt", en: "Add to plan" },
   added: { sl: "V načrtu", en: "In plan" },
   perPerson: { sl: "/osebo", en: "/person" },
+  perNight: { sl: "/noč", en: "/night" },
   perDay: { sl: "/dan", en: "/day" },
   perVehicle: { sl: "/vozilo", en: "/vehicle" },
+  perTransfer: { sl: "/prevoz", en: "/transfer" },
   total: { sl: "skupaj", en: "total" },
+  fromPrice: { sl: "od", en: "from" },
   reviews: { sl: "ocen", en: "reviews" },
   hours: { sl: "h", en: "h" },
   local: { sl: "lokalno", en: "local" },
@@ -53,11 +56,17 @@ export function ProductCard({
   const priceSuffix =
     product.price?.unit === "per_person"
       ? ` ${L.perPerson[lang]}`
-      : product.price?.unit === "per_day"
-        ? ` ${L.perDay[lang]}`
-        : product.price?.unit === "per_vehicle"
-          ? ` ${L.perVehicle[lang]}`
-          : "";
+      : product.price?.unit === "per_night"
+        ? ` ${L.perNight[lang]}`
+        : product.price?.unit === "per_day"
+          ? ` ${L.perDay[lang]}`
+          : product.price?.unit === "per_vehicle"
+            ? ` ${L.perVehicle[lang]}`
+            : product.price?.unit === "per_transfer"
+              ? ` ${L.perTransfer[lang]}`
+              : product.price?.unit === "total"
+                ? ` ${L.total[lang]}`
+                : "";
 
   return (
     <div
@@ -122,6 +131,11 @@ export function ProductCard({
       <div className="mt-2 flex items-center justify-between gap-2">
         {product.price ? (
           <span className="inline-flex items-center text-sm font-bold text-foreground">
+            {product.price.fromPrice ? (
+              <span className="mr-0.5 text-[11px] font-medium text-muted-foreground">
+                {L.fromPrice[lang]}
+              </span>
+            ) : null}
             <Euro className="size-3.5" aria-hidden="true" />
             {product.price.amount}
             {priceSuffix}

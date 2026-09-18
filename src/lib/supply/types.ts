@@ -14,6 +14,11 @@
 //    komercialnega inventarja (skupina "local" v registru).
 //  - Vsa cena/razpoložljivost/ocena polja so OPCIJSKA: vir, ki jih nima,
 //    jih preprosto ne izpolni (nikoli ne izmišljujemo vrednosti).
+//  - POSLOVNA ODLOČITEV (audit 42, točka 1): NIMA escape-hatch polja za
+//    provider-specifične atribute (providerMeta …). Splošna polja
+//    (subcategory) pokrijejo klasifikacijo; (provider, providerProductId)
+//    JE ključ za nazaj obratni klic pri ponudniku — vse ostalo ostaja
+//    ZNOTRAJ adapterja. Model ostane provider-agnostic tudi pri 10+ virih.
 // ============================================================================
 
 /** Vsi ponudniki/viri, ki jih sistem pozna (register: supply/registry.ts). */
@@ -92,8 +97,10 @@ export type InventoryAccess =
   | "api_booking"
   | "open_data";
 
-/** Uporabniku prijazen status ponudbe (izpeljan iz InventoryAccess). */
-export type SupplyStatus = "live" | "search" | "affiliate" | "local";
+/** Uporabniku prijazen status ponudbe (izpeljan iz InventoryAccess).
+ *  "planned": vir/API je preverjen v auditu, a dostop ŠE NI priključen
+ *  (niti inventar niti affiliate povezava) — iskrena oznaka brez obljub. */
+export type SupplyStatus = "live" | "search" | "affiliate" | "local" | "planned";
 
 /** Natančnost geo podatka (iskrenost pina na zemljevidu). */
 export type GeoPrecision =
@@ -103,12 +110,37 @@ export type GeoPrecision =
   | "country" // državni nivo (Airalo eSIM)
   | "route"; // linija/pot (transfer rute — ne pin)
 
-/** Cena z enoto in valuto (vedno EUR prikazno pri nas). */
+/**
+ * Cena z enoto in valuto (vedno EUR prikazno pri nas — adapter konvertira
+ * + razkrije v `note`, če je vir v drugi valuti).
+ *
+ * SEMANTIKA ENOTE (audit 42, točka 10 — €79 / €79 from / €79/night /
+ * €79/person / €79/transfer / €79/day se NIKOLI ne sme mešati):
+ *  - total        → skupna cena izdelka (vstopnica, eSIM paket)
+ *  - per_person   → na osebo (Viator/GYG ture, Tiqets vstopnice, leti)
+ *  - per_night    → na nočitev (Booking/nastanitve)
+ *  - per_day      → na dan (najem avta — DiscoverCars)
+ *  - per_vehicle  → na vozilo (transfer s celotnim vozilom)
+ *  - per_transfer → na prevoz (KiwiTaxi transfer, ne glede na zasedenost)
+ * `fromPrice: true` → objavljena JE "od" cena (spodnja meja, ne točen
+ * citat) — UI izpiše "od €79", AI razume kot proračunsko spodnjo mejo.
+ */
+export type PriceUnit =
+  | "total"
+  | "per_person"
+  | "per_night"
+  | "per_day"
+  | "per_vehicle"
+  | "per_transfer";
+
 export interface PriceInfo {
   amount: number;
   currency: "EUR";
-  unit: "total" | "per_person" | "per_day" | "per_vehicle";
-  /** Iskrenost: npr. "živa cena" / "objavljena cena (ne živi citat)". */
+  unit: PriceUnit;
+  /** Ali je cena "od" (spodnja meja) — struktuirano, ne le besedilo. */
+  fromPrice?: boolean;
+  /** Iskrenost: npr. "živa cena" / "objavljena cena (ne živi citat)" /
+  *  "konvertirano iz USD". */
   note?: string;
 }
 
@@ -133,19 +165,41 @@ export interface ProviderProduct {
   lng?: number;
   geoPrecision?: GeoPrecision;
   address?: string;
+  /** Samo http(s) URL (adapter validira — OSM tagi so javno ureljivi!);
+   *  hotlink z atribucijo, NIKOLI kopija v naš storage (licenčna čistost). */
   image?: string;
+  /** Vir/pravica prikaza slike (audit 42, točka 12): npr.
+   *  "Wikimedia Commons", "© Viator", "OpenStreetMap contributor". */
+  imageCredit?: string;
   /** Ocena 0–5 IZKLJUČNO iz vira ponudnika (nikoli lastna ocena). */
   rating?: number;
   reviewCount?: number;
   price?: PriceInfo;
-  availability?: { live: boolean; note?: string };
+  /**
+   * RAZPOLOŽLJIVOST (audit 42, točka 11) — NIKOLI „true/false", ker smo
+   * dejansko preverili le pri živih virih:
+   *  - live_available   → provider JOŽ preveril (živi API klic) → na voljo
+   *  - live_unavailable → provider JOŽ preveril → ni na voljo za datum
+   *  - unknown          → provider ima koncept, a tega klica nismo naredili
+   *                       (npr. content-only tier: cena je, dostopnost ni)
+   *  - not_supported    → vir koncepta sploh nima (OSM, statični CSV)
+   * ODSOTNO polje pomeni not_supported (dokumentirana semantika) — adapter,
+   * ki zna preverjati, MORA nastaviti izrecno.
+   */
+  availability?: {
+    status: AvailabilityStatus;
+    /** ISO 8601 trenutka preverbe (samo pri live_*). */
+    checkedAt?: string;
+    note?: string;
+  };
   bookingMode: BookingMode;
   /** Rezervacija: /go/[provider]?product=… (strežniško; komercialni) ali
    *  null pri info_only (lokalni vir ima sourceUrl/phone). */
   bookingUrl?: string;
   /** Primarni vir (website pri OSM; productUrl pri partnerjih). */
   sourceUrl?: string;
-  /** ISO 8601 — čas ZADNJEGA uspešnega pridobivanja od vira. */
+  /** ISO 8601 — čas ZADNJEGA uspešnega pridobivanja od vira (cache poli
+   *  obdrži izvorni čas; ni „data timestamp" vira samoga — dokumentirano). */
   lastUpdated: string;
   /** Licenca/atribucija (OSM: "© OpenStreetMap"; FSQ: Apache-2.0 …). */
   license?: { source: string; attribution?: string };
@@ -163,6 +217,13 @@ export interface ProviderProduct {
   altSources?: ProviderSlug[];
 }
 
+/** Status razpoložljivosti (semantika glej ProviderProduct.availability). */
+export type AvailabilityStatus =
+  | "live_available"
+  | "live_unavailable"
+  | "unknown"
+  | "not_supported";
+
 /** ---------------------------------------------------------------------------
  *  SUPPLY QUERY — viewport → bbox → supply query (požrešnost pod nadzorom)
  *  ------------------------------------------------------------------------ */
@@ -178,6 +239,9 @@ export interface SupplyQuery {
   /** Št. potnikov (1–20). */
   pax?: number;
   locale: "sl" | "en";
+  /** Preklic odjemalca (request signal) — adapter ga spoštuje, kjer
+   *  podpira (OSM: prekinitev nodo-https + prenehanje retry zanke). */
+  signal?: AbortSignal;
 }
 
 /** Rezultat enega adapterja (telemetrija/UX stanje plasti). */
@@ -189,6 +253,9 @@ export interface AdapterRunInfo {
   count: number;
   cached: boolean;
   note?: string;
+  /** Delni rezultat: št. elementov vira, ki jih normalizacija ZAVRLA
+   *  (brez imena/koordinat/tipa) — iskrenost „partial result". */
+  skipped?: number;
 }
 
 /** Odgovor /api/supply/search. */
@@ -238,6 +305,8 @@ export interface SelectedProviderProduct {
   locationName?: string;
   price?: PriceInfo;
   dates?: { start?: string; end?: string };
+  /** Razpoložljivost (samo status — AI kontekst ne potrebuje checkedAt). */
+  availability?: { status: AvailabilityStatus };
   /** Ime vira ("OpenStreetMap", "Viator" …). */
   source: string;
   /** Rezervacijska povezava (samo prek /go — nikoli direktno iz klienta

@@ -11,10 +11,13 @@
 import { taxonomyOf } from "./taxonomy";
 import type { ProductType } from "./types";
 
-/** Nadzorovan nabor markerjev po zoom nivojih (strežniška meja). */
+/** Nadzorovan nabor markerjev po zoom nivojih (strežniška meja).
+ *  AUDIT 42: vrstica {minZoom:8, max:60} je bila MRTVA — SUPPLY_MIN_ZOOM=10
+ *  vrne prazne kategorije že pri z<10, torej z8–9 nikoli ni moglo vrniti
+ *  60 produktov. Tabela je zdaj USKLAJENA s SUPPLY_MIN_ZOOM (brez mrtvih
+ *  vrstic, kapice počasi naraščajo). */
 const ZOOM_CAPS: Array<{ minZoom: number; max: number }> = [
-  { minZoom: 0, max: 0 }, // z0–7: samo destinacije (brez produktov)
-  { minZoom: 8, max: 60 }, // z8–9: top-N po kategoriji (destinacijska raven)
+  { minZoom: 0, max: 0 }, // z0–9: samo destinacije (brez produktov)
   { minZoom: 10, max: 120 }, // z10–11: regionalna raven
   { minZoom: 12, max: 220 }, // z12–13: mestna raven
   { minZoom: 14, max: 400 }, // z14+: ulična raven (strešnik)

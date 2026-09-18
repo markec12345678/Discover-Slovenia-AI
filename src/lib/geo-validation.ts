@@ -303,8 +303,17 @@ export function validateItineraryGeo(
     const dayWeekday = dayDateMs !== null ? new Date(dayDateMs).getDay() : null;
 
     // --- pravilo 7: manjkajoče koordinate (neznan ID → ne moremo računati) ---
+    // AUDIT 42 (42-d RED #2): supply/chat postanki imajo LASTNE lat/lng —
+    // prej je vsak ne-T1 id (tudi z veljavnimi koordinatami) sprožil
+    // missing_coords NAPAKO. Zdaj: neznanim ID-jem z lastnimi končnimi
+    // koordinatami napaka NE pade (enaka semantika kot store.ts coordsOf).
     for (const s of stops) {
-      if (!COORDS.has(s.destination_id)) {
+      const hasOwnCoords =
+        typeof s.lat === "number" &&
+        typeof s.lng === "number" &&
+        Number.isFinite(s.lat) &&
+        Number.isFinite(s.lng);
+      if (!COORDS.has(s.destination_id) && !hasOwnCoords) {
         issues.push({
           day: dayNo,
           level: "error",

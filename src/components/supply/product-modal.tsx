@@ -42,6 +42,7 @@ import { taxonomyOf } from "@/lib/supply/taxonomy";
 import { getProvider, statusLabel } from "@/lib/supply/registry";
 import type { ProviderProduct } from "@/lib/supply/types";
 import { addProductToSelection } from "@/lib/supply/selection";
+import { isSafeHttpUrl, safeExternalHref } from "@/lib/external-url";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -67,10 +68,17 @@ const L = {
   descSource: { sl: "· opis:", en: "· description:" },
   price: { sl: "Cena", en: "Price" },
   perPerson: { sl: "na osebo", en: "per person" },
+  perNight: { sl: "na noč", en: "per night" },
   perDay: { sl: "na dan", en: "per day" },
   perVehicle: { sl: "na vozilo", en: "per vehicle" },
+  perTransfer: { sl: "na prevoz", en: "per transfer" },
   total: { sl: "skupaj", en: "total" },
+  fromPrice: { sl: "od", en: "from" },
   reviews: { sl: "ocen", en: "reviews" },
+  availLiveOk: { sl: "Na voljo (živi vir)", en: "Available (live source)" },
+  availLiveNo: { sl: "Ni na voljo (živi vir)", en: "Unavailable (live source)" },
+  availUnknown: { sl: "Dostopnost neznana", en: "Availability unknown" },
+  imageCredit: { sl: "Slika", en: "Image" },
   addPlan: { sl: "Dodaj v moj načrt", en: "Add to my plan" },
   addPlanAcc: { sl: "Dodaj med izbrane (načrtuvalnik bo upošteval)", en: "Add to selection (the planner will account for it)" },
   added: { sl: "Dodano ✓", en: "Added ✓" },
@@ -214,8 +222,15 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
   const tax = taxonomyOf(product.type);
   const provider = getProvider(product.provider);
   const status = provider ? statusLabel(provider.status)[lang] : "";
-  const headerImage = product.image ?? wikiImage ?? null;
+  // AUDIT 42 (42-b/42-e RED): OSM tagi so javno ureljivi — http(s) meja na
+  // SLIKI tudi na render plasti (adapter že validira; namerno OBA meji).
+  // wikiImage pride iz Wikipedia REST API (zaupanja vreden https gostitelj).
+  const safeImage =
+    product.image && isSafeHttpUrl(product.image) ? product.image : null;
+  const headerImage = safeImage ?? wikiImage ?? null;
   const wikiLink = wikiUrl ?? buildWikiLinkFromTag(product.wikipedia);
+  // Click-XSS meja: http(s) ali "#" — rel=noopener NE nevtralizira javascript:
+  const sourceHref = safeExternalHref(product.sourceUrl);
 
   const handleAdd = () => {
     const result = addProductToSelection(product, { locale: lang });
@@ -232,11 +247,24 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
   const priceUnit =
     product.price?.unit === "per_person"
       ? L.perPerson[lang]
-      : product.price?.unit === "per_day"
-        ? L.perDay[lang]
-        : product.price?.unit === "per_vehicle"
-          ? L.perVehicle[lang]
-          : L.total[lang];
+      : product.price?.unit === "per_night"
+        ? L.perNight[lang]
+        : product.price?.unit === "per_day"
+          ? L.perDay[lang]
+          : product.price?.unit === "per_vehicle"
+            ? L.perVehicle[lang]
+            : product.price?.unit === "per_transfer"
+              ? L.perTransfer[lang]
+              : L.total[lang];
+
+  const availabilityBadge =
+    product.availability?.status === "live_available"
+      ? { text: L.availLiveOk[lang], cls: "border-emerald-600/40 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300" }
+      : product.availability?.status === "live_unavailable"
+        ? { text: L.availLiveNo[lang], cls: "border-red-600/40 bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-300" }
+        : product.availability?.status === "unknown"
+          ? { text: L.availUnknown[lang], cls: "border-amber-600/40 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300" }
+          : null;
 
   return (
     <Dialog
@@ -264,6 +292,7 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
                 alt={product.title}
                 className="size-full object-cover"
                 loading="lazy"
+                referrerPolicy="no-referrer"
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).style.display = "none";
                 }}
@@ -278,6 +307,15 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
               </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+            {/* AUDIT 42, točka 12 — kredit/pravica slike nad sliko */}
+            {headerImage && product.imageCredit ? (
+              <span
+                className="absolute right-2 top-2 rounded bg-black/55 px-1.5 py-0.5 text-[10px] text-white/90"
+                aria-label={`${L.imageCredit[lang]}: ${product.imageCredit}`}
+              >
+                © {product.imageCredit}
+              </span>
+            ) : null}
             <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
               <div className="mb-2 flex flex-wrap items-center gap-1.5">
                 <Badge className="text-white" style={{ backgroundColor: tax.color }}>
@@ -287,6 +325,11 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
                 {provider ? (
                   <Badge variant="outline" className="border-white/40 bg-black/30 text-white">
                     {status}
+                  </Badge>
+                ) : null}
+                {availabilityBadge ? (
+                  <Badge variant="outline" className={cn("border-white/40 bg-black/30", availabilityBadge.cls)}>
+                    {availabilityBadge.text}
                   </Badge>
                 ) : null}
                 {product.rating != null ? (
@@ -323,11 +366,20 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
                     {L.price[lang]}
                   </div>
                   <div className="mt-0.5 flex items-baseline gap-1.5">
+                    {product.price.fromPrice ? (
+                      <span className="text-xs text-muted-foreground">{L.fromPrice[lang]}</span>
+                    ) : null}
                     <span className="text-xl font-bold text-foreground">
                       €{product.price.amount}
                     </span>
                     <span className="text-xs text-muted-foreground">{priceUnit}</span>
                   </div>
+                  {/* Iskrenost cene (audit 42, točka 9): „od kdaj / od kod“ */}
+                  {product.price.note ? (
+                    <p className="mt-0.5 text-[10px] text-muted-foreground/80">
+                      {product.price.note}
+                    </p>
+                  ) : null}
                 </div>
                 <Euro className="size-5 text-muted-foreground" aria-hidden="true" />
               </div>
@@ -402,8 +454,14 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
                   {product.phone ? (
                     <ContactItem icon={Phone} label={L.phone[lang]} value={product.phone} href={`tel:${product.phone.replace(/\s+/g, "")}`} />
                   ) : null}
-                  {product.sourceUrl ? (
-                    <ContactItem icon={Globe} label={L.website[lang]} value={prettyUrl(product.sourceUrl)} href={product.sourceUrl} external />
+                  {product.sourceUrl && sourceHref !== "#" ? (
+                    <ContactItem
+                      icon={Globe}
+                      label={L.website[lang]}
+                      value={prettyUrl(product.sourceUrl)}
+                      href={sourceHref}
+                      external
+                    />
                   ) : null}
                   {product.openingHours ? (
                     <ContactItem icon={Clock} label={L.hours[lang]} value={product.openingHours} />
@@ -458,10 +516,11 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
                   href={
                     product.provider === "osm" && product.lat != null && product.lng != null
                       ? `https://www.openstreetmap.org/?mlat=${product.lat}&mlon=${product.lng}#map=16/${product.lat}/${product.lng}`
-                      : (product.sourceUrl ?? "#")
+                      : sourceHref
                   }
                   target="_blank"
                   rel="noopener noreferrer"
+                  referrerPolicy="no-referrer"
                   className="font-medium text-primary hover:text-primary/80"
                 >
                   {product.license?.source ?? provider?.labels[lang] ?? product.provider}
@@ -547,6 +606,9 @@ function buildWikiLinkFromTag(tag?: string): string | null {
   if (!tag) return null;
   const [lang, title] = tag.split(":", 2);
   if (!lang || !title) return null;
+  // AUDIT 42 (42-e F6): ista validacija jezika kot strežnik (2–3 male
+  // črke) — sicer bi lahko zlonameren OSM tag zlagal poddomen.
+  if (!/^[a-z]{2,3}$/.test(lang)) return null;
   return `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(title)}`;
 }
 

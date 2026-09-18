@@ -687,7 +687,9 @@
     "supplySelectedHint": "The AI will treat selected products as mandatory (it will not swap them for similar ones).",
     "supplySelectedRemoveAria": "Remove {name} from selection",
     "supplyStopBadge": "Map",
-    "supplyStopBadgeTitle": "Stop added from the supply map"
+    "supplyStopBadgeTitle": "Stop added from the supply map",
+    "supplySelectedStateAria": "Change priority for {name}",
+    "supplySelectedStateTitle": "Click to cycle: mandatory → preferred → suggested (for the AI planner)"
   },
   "common": {
     "loading": "Loading...",

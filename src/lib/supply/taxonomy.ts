@@ -117,6 +117,9 @@ export const TAXONOMY: Record<ProductType, TaxonomyEntry> = {
       "nwr[tourism=guest_house]",
       "nwr[tourism=apartment]",
       "nwr[tourism=motel]",
+      // AUDIT 42 (točka 1 — „kamp"): brez camp_site kampi NISO predstavljivi
+      "nwr[tourism=camp_site]",
+      "nwr[tourism=chalet]",
     ],
   },
   shop: {

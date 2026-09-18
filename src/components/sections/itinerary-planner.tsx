@@ -100,6 +100,8 @@ import {
 import type { ChatPlace } from "@/lib/geo-intent";
 // F1 (Supply Map): odstranjevanje izbranih produktov (čipi nad gumbom)
 import { removeSelectedProduct } from "@/lib/supply/selection";
+import type { SelectedProviderProduct } from "@/lib/supply/types";
+import { persistSelection } from "@/lib/supply/selection-persist";
 import { useToast } from "@/hooks/use-toast";
 import { trackFunnel } from "@/lib/funnel";
 import { optimizeDayOrder } from "@/lib/route-order";
@@ -608,6 +610,12 @@ export function ItineraryPlanner() {
   // F1 (Supply Map): izbrani produkti z zemljevida ponudbe (sessionStorage
   // persistenca prek selection-persist — preživi osvežitev strani).
   const selectedProducts = useAppStore((s) => s.selectedProducts);
+  const setSelectedProducts = useAppStore((s) => s.setSelectedProducts);
+  // AUDIT 42 (42-d YELLOW #6): store se hidrira iz sessionStorage ŠELE na
+  // klientu (SSR = []) — čipi bi sprožili React hydration mismatch. Rešitev:
+  // čipi se izrišejo šele po mountu (ista plat kot ostale client-only plasti).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   // F5.1: izpeljana pot po dnevih ( barve/koordinate) za TripMapPanel —
   // isti izvor kot raziskovalni zemljevid na /zemljevid
   const routeByDay = useAppStore((s) => s.routeByDay);
@@ -3015,8 +3023,11 @@ export function ItineraryPlanner() {
               </CardContent>
               <CardFooter className="flex-col items-stretch gap-2">
                 {/* F1 (Supply Map): izbrani produkti z zemljevida — AI jih
-                    prejme strukturirano; tu so vidni kot odstranljivi čipi. */}
-                {selectedProducts.length > 0 ? (
+                    prejme strukturirano; tu so vidni kot odstranljivi čipi.
+                    AUDIT 42: izris šele po mountu (hidracija) + krogotek
+                    FIXED/PREFERRED/SUGGESTED (koncept je zdaj DEJANSKO
+                    uporabniku dostopen, ne le dokumentiran). */}
+                {mounted && selectedProducts.length > 0 ? (
                   <div className="rounded-lg border border-border bg-muted/40 p-2.5">
                     <p className="text-[11px] font-semibold text-foreground">
                       {t("supplySelectedTitle", { count: selectedProducts.length })}
@@ -3027,6 +3038,22 @@ export function ItineraryPlanner() {
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {selectedProducts.map((p) => {
                         const key = `${p.provider}:${p.providerProductId}`;
+                        const nextState =
+                          p.selectionState === "fixed"
+                            ? "preferred"
+                            : p.selectionState === "preferred"
+                              ? "suggested"
+                              : "fixed";
+                        const cycleSelection = () => {
+                          const next: SelectedProviderProduct[] = selectedProducts.map((x) =>
+                            x.provider === p.provider &&
+                            x.providerProductId === p.providerProductId
+                              ? { ...x, selectionState: nextState }
+                              : x
+                          );
+                          setSelectedProducts(next);
+                          persistSelection(next);
+                        };
                         return (
                           <span
                             key={key}
@@ -3034,9 +3061,15 @@ export function ItineraryPlanner() {
                             title={`${p.title} · ${p.source}`}
                           >
                             <span className="truncate">{p.title}</span>
-                            <span className="shrink-0 rounded-full bg-primary/10 px-1 text-[9px] uppercase text-primary">
+                            <button
+                              type="button"
+                              onClick={cycleSelection}
+                              aria-label={`${t("supplySelectedStateAria", { name: p.title })}: ${p.selectionState}`}
+                              title={t("supplySelectedStateTitle")}
+                              className="shrink-0 rounded-full bg-primary/10 px-1 text-[9px] uppercase text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
                               {p.selectionState}
-                            </span>
+                            </button>
                             <button
                               type="button"
                               onClick={() => removeSelectedProduct(p.provider, p.providerProductId)}

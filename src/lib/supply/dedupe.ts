@@ -1,17 +1,27 @@
 // ============================================================================
 // TRAVEL SUPPLY MAP — DEDUPLIKACIJSKA ARHITEKTURA (F1, 1.49.0)
 // ============================================================================
-// Isti objekt lahko pride iz več virov (OSM hotel + FSQ hotel + bodoči
-// Booking hotel). Dedupe ključ = geohash(~80 m) + normaliziran naslov.
+// Isti FIZIČNI objekt lahko pride iz več virov (OSM hotel + FSQ hotel).
+// AUDIT 42, točka 5 (naročnikovo pravilo) — pravila združevanja:
+//  1. ENAK id (provider:providerProductId) → vedno duplikat.
+//  2. LOKALNI viri (osm/fsq, skupina "local" v registru): združitev na
+//     geohash(~80 m) + ISTEVNI tip + normaliziran naslov — identiteta
+//     fizičnega objekta je pri odprtih geo virih dovolj zanesljiva.
+//  3. KOMERČNI/LASTNI viri: NIKOLI ne združujemo čez vire (niti z lokalnimi)
+//     — dve turi z istim imenom v istem mestnem centru pri različnih
+//     ponudnikih sta DVA producenta. Če identiteta ni dovolj zanesljiva:
+//     DO NOT MERGE (naročnikovo izrecno pravilo).
+// Ključ vsebuje TIP (restavracija in hotel z istim imenom v isti stavbi
+// — gostilna s sobami — sta različna produkta).
+//
 // Združeni pin ohrani NAJBOLJŠI primarni zapis (ocena/cena/bogatost) in
 // evidenco alternativnih virov (altSources) — pin nikoli ni podvojen.
 //
-// Čiste funkcije (brez omrežja) → supply-dedupe.test.ts.
-// V F1 je aktiven samo OSM → dedupe deluje znotraj-vir (Overpass vrača
-// node+way duplikate) in je ARHITEKTURA pripravljena za čez-vir.
+// Čiste funkcije → supply-dedupe/core testi.
 // ============================================================================
 
 import type { ProviderProduct, ProviderSlug } from "./types";
+import { getProvider } from "./registry";
 
 const BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz";
 
@@ -67,7 +77,9 @@ export function normalizeTitle(s: string): string {
     .trim();
 }
 
-/** Dedupe ključ: geohash7 + normaliziran naslov (brez geo → samo naslov). */
+/** Dedupe ključ za LOKALNE vire: geohash7 + tip + normaliziran naslov
+ *  (brez geo → ni čez-vir združevanja). Komerčni/lastni viri NE uporabljajo
+ *  tega ključa — njihova identiteta je providerProductId (glej spodaj). */
 export function dedupeKey(p: ProviderProduct): string {
   if (
     typeof p.lat === "number" &&
@@ -75,9 +87,14 @@ export function dedupeKey(p: ProviderProduct): string {
     Number.isFinite(p.lat) &&
     Number.isFinite(p.lng)
   ) {
-    return `${geohash(p.lat, p.lng, 7)}:${normalizeTitle(p.title)}`;
+    return `${geohash(p.lat, p.lng, 7)}:${p.type}:${normalizeTitle(p.title)}`;
   }
-  return `nogeo:${p.provider}:${normalizeTitle(p.title)}`;
+  return `nogeo:${p.provider}:${p.type}:${normalizeTitle(p.title)}`;
+}
+
+/** Ali sme produkt čez-vir združevati po ključu (samo LOKALNA skupina). */
+function isLocalFuzzyProvider(slug: ProviderSlug): boolean {
+  return getProvider(slug)?.group === "local";
 }
 
 /** Kvaliteta zapisa (primarni izbor pri združevanju): ocena, recenzije,
@@ -102,10 +119,11 @@ export interface DedupeResult {
 
 /**
  * Deduplikacija seznama produktov.
- *  - ENAK providerProductId → vedno duplikat (isti objekt drugačen way).
- *  - Enak dedupeKey (geo+ime) → združitev: primarni ostane bogatejši
- *    zapis; alternativni viri se zapišejo v altSources (izpeljano polje,
- *    ne dela kanonskega modela — ker je izpeljano ob vsakem iskanju).
+ *  - ENAK id → vedno duplikat (isti objekt, drugačen way zapisa).
+ *  - LOKALNI viri z enakim ključem (geo+tip+ime) → združitev: primarni
+ *    ostane bogatejši zapis; alternativni viri se zapišejo v altSources.
+ *  - KOMERČNI/LASTNI viri → ključ je vedno unikaten na id (DO NOT MERGE
+ *    čez vire — identiteta ni zanesljiva; naročnikovo pravilo audita 42).
  */
 export function dedupeProducts(products: ProviderProduct[]): DedupeResult {
   const byKey = new Map<string, ProviderProduct>();
@@ -119,14 +137,18 @@ export function dedupeProducts(products: ProviderProduct[]): DedupeResult {
     }
     byId.add(p.id);
 
-    const key = dedupeKey(p);
+    // Komerčni/lastni viri se NIKOLI ne združujejo po geo+ime — njihov
+    // „ključ“ je lastni id (vsak prikaz je svoj pin/kartica).
+    const key = isLocalFuzzyProvider(p.provider) ? dedupeKey(p) : `id:${p.id}`;
+
     const existing = byKey.get(key);
     if (!existing) {
       byKey.set(key, { ...p, altSources: undefined });
       continue;
     }
 
-    // Združitev: bogatejši zapis postane primarni; viri se seštejejo.
+    // Združitev (samo lokalna skupina): bogatejši zapis postane primarni;
+    // viri se seštejejo.
     duplicates++;
     const primary =
       productRichness(p) > productRichness(existing) ? p : existing;

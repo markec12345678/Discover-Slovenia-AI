@@ -92,6 +92,8 @@ function statusBadgeClass(status: ProviderRegistryEntry["status"]): string {
       return "border-teal-600/40 bg-teal-50 text-teal-800 dark:bg-teal-950/30 dark:text-teal-300";
     case "affiliate":
       return "border-amber-600/40 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300";
+    case "planned":
+      return "border-muted-foreground/30 bg-muted text-muted-foreground";
   }
 }
 

@@ -14,6 +14,7 @@ import type { Itinerary } from "@/lib/types";
 import type { ProviderProduct, SelectedProviderProduct } from "./types";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
 import { persistSelection } from "./selection-persist";
+import { MAX_SELECTED_PRODUCTS } from "./sanitize";
 
 export { SUPPLY_SELECTION_KEY, readPersistedSelection } from "./selection-persist";
 
@@ -32,6 +33,9 @@ export function toSelectedProduct(
     lng: p.lng,
     locationName: p.address,
     price: p.price,
+    availability: p.availability
+      ? { status: p.availability.status }
+      : undefined,
     source: p.license?.source ?? p.provider,
     bookingUrl: p.bookingMode === "info_only" ? p.sourceUrl : undefined,
     selectionState,
@@ -42,7 +46,7 @@ export interface AddSelectionResult {
   added: boolean;
   /** postanek vstavljen v obstoječi načrt? (false = samo izbira/stash) */
   insertedStop: boolean;
-  reason?: "duplicate" | "accommodation" | "no-geo" | "no-plan" | "no-days";
+  reason?: "duplicate" | "accommodation" | "no-geo" | "no-plan" | "no-days" | "limit";
 }
 
 /**
@@ -66,6 +70,12 @@ export function addProductToSelection(
   const key = `${product.provider}:${product.providerProductId}`;
   if (current.some((p) => `${p.provider}:${p.providerProductId}` === key)) {
     return { added: false, insertedStop: false, reason: "duplicate" };
+  }
+  // AUDIT 42 (42-d YELLOW #5): strežnik kapira na MAX_SELECTED_PRODUCTS in
+  // TIHO poreže — klient naj enako omeji, da čipi ne obljubijo več, kot bo
+  // AI dejansko prejel.
+  if (current.length >= MAX_SELECTED_PRODUCTS) {
+    return { added: false, insertedStop: false, reason: "limit" };
   }
 
   const selected = toSelectedProduct(product);

@@ -202,7 +202,7 @@
     "transfersAria": "Rezerviraj transfer prek Kiwitaxija — odpre partnersko povezavo",
     "transportLabel": "Vlaki & avtobusi",
     "transportDesc": "Medkrajevni prevozi po Sloveniji — za potnike brez avta.",
-    "transportAria": "Poišči vlake in avtobuse prek Omiya — odpre partnersko povezavo",
+    "transportAria": "Poišči vlake in avtobuse prek Omio — odpre partnersko povezavo",
     "ticketsLabel": "Vstopnice",
     "ticketsDesc": "Vstopnice za znamenitosti (Postojna, Grad Bled …) — brez čakalnih vrst.",
     "ticketsAria": "Kupi vstopnice prek Tiqetsa — odpre partnersko povezavo",
@@ -687,7 +687,9 @@
     "supplySelectedHint": "AI bo izbrane izdelke upošteval kot obvezne (ne jih zamenja s podobnimi).",
     "supplySelectedRemoveAria": "Odstrani {name} iz izbire",
     "supplyStopBadge": "Zemljevid",
-    "supplyStopBadgeTitle": "Postanek, dodan z zemljevida ponudbe"
+    "supplyStopBadgeTitle": "Postanek, dodan z zemljevida ponudbe",
+    "supplySelectedStateAria": "Spremeni prioriteto izbire za {name}",
+    "supplySelectedStateTitle": "Klikni za preklop: obvezno → prednostno → predlagano (za načrtovalnik AI)"
   },
   "common": {
     "loading": "Nalagam...",

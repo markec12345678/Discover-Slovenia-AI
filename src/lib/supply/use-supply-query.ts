@@ -164,16 +164,20 @@ export function useSupplyQuery({
   }, []);
 
   // IZPELJANO stanje: ko ne smemo spraševati, je sloj prazen (brez
-  // sinhronih setState klicev v efektu — React 19 pravila).
+  // sinhronih setState klicev v efektu — React 19 pravila). Modulno-konstanten
+  // objekt (AUDIT 42, 42-e F9): brez tega bi vsak render starša dobil NOVO
+  // identiteto products:[] → efekt markerjev se ponovno izvede vsak render.
   if (!shouldQuery) {
-    return {
-      products: [],
-      loading: false,
-      error: null,
-      degraded: [],
-      adapters: [],
-      lastZoom: zoom,
-    };
+    return EMPTY_STATE;
   }
   return state;
 }
+
+const EMPTY_STATE: SupplyLayerState = {
+  products: [],
+  loading: false,
+  error: null,
+  degraded: [],
+  adapters: [],
+  lastZoom: 0,
+};

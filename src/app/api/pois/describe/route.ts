@@ -73,6 +73,14 @@ export async function POST(request: Request) {
     const limited = rateLimit(request, { limit: 60, windowMs: 600000, key: "poi-describe" });
     if (limited) return limited;
 
+  // AUDIT 42 (42-e F7): brez meje velikosti telesa bi request.json()
+  // najprej prenesel/v pomnilnik naložil poljuben payload (OOM vektor na
+  // self-hosted Render) — zavrnemo nad 32 KB, preden karkoli preberemo.
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(contentLength) && contentLength > 32_768) {
+    return NextResponse.json({ error: "Preveliko telo zahteve" }, { status: 413 });
+  }
+
   let body: DescribeRequest;
   try {
     body = (await request.json()) as DescribeRequest;

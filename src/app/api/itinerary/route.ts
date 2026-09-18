@@ -43,6 +43,7 @@ import { buildStopReasons } from "@/lib/stop-insights";
 import {
   sanitizeSelectedProviderProducts,
   buildSelectedProductsContext,
+  buildSelectionRecommendations,
 } from "@/lib/supply/sanitize";
 import { insertProductStop } from "@/lib/supply/stop-insert";
 import type {
@@ -749,6 +750,17 @@ JSON format (STROGO):
     // F1 (Supply Map): FIXED izbire tudi na deterministični poti — fallback
     // ne pozna AI prompta, zato jih vstavimo naravnost (ista mehanika).
     fallback = applyFixedSelectedProducts(fallback, cleanSelectedProducts, lang);
+
+    // AUDIT 42 (42-d YELLOW #2): PREFERRED/SUGGESTED/nastanitve/brez-geo
+    // izbire na fallback poti prej TIHO IZGINILE — zdaj gredo v
+    // recommendations (deterministično, iskreno, brez AI).
+    const selectionRecs = buildSelectionRecommendations(cleanSelectedProducts, lang);
+    if (selectionRecs.length > 0) {
+      fallback.recommendations = [
+        ...selectionRecs,
+        ...(fallback.recommendations ?? []),
+      ];
+    }
 
     // Fallback: hevristični pakirni seznam + dogodki (isti enrich kot AI pot)
     // (P4-8: jezik itinererja — EN uporabnik dobi EN seznam)

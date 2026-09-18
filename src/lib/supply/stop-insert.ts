@@ -152,10 +152,17 @@ export function insertProductStop(
   if (product.openingHours) notesParts.push(product.openingHours);
   if (product.address) notesParts.push(product.address);
   if (product.price) {
+    // AUDIT 42, točka 10: enota + „od" vedno zraven cene (nikoli gol €X).
+    const unit = product.price.unit.replace(/_/g, " ");
+    const from = product.price.fromPrice
+      ? isEn
+        ? "from "
+        : "od "
+      : "";
     notesParts.push(
       isEn
-        ? `price: €${product.price.amount} (${product.price.unit.replace(/_/g, " ")})`
-        : `cena: ${product.price.amount} € (${product.price.unit.replace(/_/g, " ")})`
+        ? `price: ${from}€${product.price.amount} (${unit})`
+        : `cena: ${from}${product.price.amount} € (${unit})`
     );
   }
   notesParts.push(

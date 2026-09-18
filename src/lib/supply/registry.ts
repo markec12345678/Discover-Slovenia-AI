@@ -25,6 +25,7 @@ import type {
   ProviderSlug,
   SupplyStatus,
 } from "./types";
+import type { AffiliateProvider } from "@/lib/affiliate";
 
 /** Podprte zmožnosti (razlikovanje po naročniku). */
 export interface ProviderCapabilityFlags {
@@ -46,18 +47,14 @@ export interface ProviderCapabilityFlags {
   affiliate: boolean;
 }
 
-/** /go/[provider] ruta obstoječega affiliate sistema (affiliate.ts). */
-export type GoRoute =
-  | "hotels"
-  | "cars"
-  | "activities"
-  | "flights"
-  | "insurance"
-  | "esim"
-  | "transfers"
-  | "transport"
-  | "tickets"
-  | "viator";
+/**
+ * /go/[provider] ruta obstoječega affiliate sistema (affiliate.ts).
+ * AUDIT 42 (42-b YELLOW #3): prej je bil to NEODVISEN duplikat union-a —
+ * tip je zdaj IZPELJAN iz AFFILIATE_PROVIDERS (affiliate.ts), tako da TS
+ * preverja enakost obeh besednjakov ob vsakem prevodu (drift nemogoč).
+ * `import type` se izbriše pri prevodu → client-varen (brez runtime uvoza).
+ */
+export type GoRoute = AffiliateProvider;
 
 export interface ProviderRegistryEntry {
   slug: ProviderSlug;
@@ -80,8 +77,20 @@ export interface ProviderRegistryEntry {
   envKeys: { affiliate?: string[]; api?: string[] };
   /** Zoom prag plasti (max(tipov iz taksonomije, ta prag)). */
   minZoom: number;
-  /** TTL predpomnilnika v ms (0 = brez smisla pri redirect-only). */
+  /** TTL predpomnilnika v ms (0 = živi vir brez smisla cachati —
+   *  npr. real-time razpoložljivost; prav tako vpliva na Cache-Control
+   *  odgovora /api/supply/search: vsak AKTIVEN adapter s 0 → no-store). */
   cacheTtlMs: number;
+  /** Zgornja meja izvedbe ENEGA adapterja (ms) — runner (adapter.ts) jo
+   *  uveljavlja s timeout diro, tudi če adapter obljublja notranji budget
+   *  (obrnjena pogodba: obesek NIKOLI ne odloži celotnega /api/supply/search).
+   *  OSM: 50 s (notranji proračun 45 s + primarni poskusi). */
+  timeoutMs: number;
+  /** Strežniška omejitev klicev adapterja na minuto (0 = neomejeno) —
+   *  v memorieskem drsnem oknu; ščiti naš odhodni promet do vira, ko bo
+   *  več uporabnikov hkrati (per-IP limit je 30/min, to je GLOBALNA meja
+   *  instance). Zavrnjen klic NI napaka vira: note "rate-limited". */
+  maxCallsPerMin: number;
   /** Uradna dokumentacija (vir trditev — veže vsako trditev na vir). */
   docsUrl?: string;
   /** Iskrena opomba o dostopu (SL/EN) za UI. */
@@ -129,8 +138,10 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
       affiliate: false,
     },
     envKeys: {},
-    minZoom: 8,
+    minZoom: 10, // usklajeno s SUPPLY_MIN_ZOOM (zoom.ts) — z<10 je državni pogled
     cacheTtlMs: 10 * 60 * 1000,
+    timeoutMs: 50_000, // notranji proračun 45 s + primarni poskusi
+    maxCallsPerMin: 60, // globalna meja instance (2× per-IP limit)
     docsUrl: "https://wiki.openstreetmap.org/wiki/Overpass_API",
     accessNote: {
       sl: "Odprti podatki (ODbL) · žive poizvedbe po viewportu",
@@ -158,6 +169,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     envKeys: { api: ["FSQ_PLACES_DIR"] },
     minZoom: 12,
     cacheTtlMs: 24 * 60 * 60 * 1000,
+    timeoutMs: 30_000,
+    maxCallsPerMin: 60,
     docsUrl: "https://opensource.foursquare.com/os-places",
     accessNote: {
       sl: "Odprti PODATKI (Apache-2.0 z atribucijo) · slovenska podmnožica še ni ingestirana",
@@ -185,6 +198,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     envKeys: {},
     minZoom: 22,
     cacheTtlMs: 0,
+    timeoutMs: 15_000,
+    maxCallsPerMin: 0,
     docsUrl: "https://www.slovenia.info/llms.txt",
     accessNote: {
       sl: "Uradna vsebina (llms.txt) — opisi za AI, brez geo feeeda",
@@ -214,6 +229,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     envKeys: {},
     minZoom: 22,
     cacheTtlMs: 0,
+    timeoutMs: 10_000,
+    maxCallsPerMin: 0,
     accessNote: {
       sl: "Lastni Listingi/izkušnje/izdelki v DB — geo polja še manjkajo (bodoča faza)",
       en: "Own listings/experiences/products in DB — geo fields still missing (future phase)",
@@ -234,6 +251,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     envKeys: { affiliate: ["BOOKING_AFFILIATE_ID"], api: [] },
     minZoom: 12,
     cacheTtlMs: 0,
+    timeoutMs: 15_000,
+    maxCallsPerMin: 0,
     docsUrl: "https://developers.booking.com/demand/docs",
     accessNote: {
       sl: "Demand API zahteva status Managed Affiliate Partner (pogodba) — danes samo affiliate povezava",
@@ -253,6 +272,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     envKeys: { affiliate: ["VIATOR_AFFILIATE_URL"], api: [] },
     minZoom: 10,
     cacheTtlMs: 0,
+    timeoutMs: 15_000,
+    maxCallsPerMin: 0,
     docsUrl: "https://docs.viator.com/partner-api/technical/",
     accessNote: {
       sl: "Partner API (brezplačni affiliate tier) — prijava potrebna; danes samo affiliate povezava",
@@ -272,6 +293,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     envKeys: { affiliate: ["GETYOURGUIDE_PARTNER_ID"], api: [] },
     minZoom: 10,
     cacheTtlMs: 0,
+    timeoutMs: 15_000,
+    maxCallsPerMin: 0,
     docsUrl: "https://github.com/getyourguide/partner-api-spec",
     accessNote: {
       sl: "Partner API zahteva odobritev (portal) — danes samo affiliate povezava",
@@ -291,6 +314,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     envKeys: { affiliate: ["TIQETS_AFFILIATE_URL"], api: [] },
     minZoom: 11,
     cacheTtlMs: 0,
+    timeoutMs: 15_000,
+    maxCallsPerMin: 0,
     docsUrl: "https://developers.tiqets.dev",
     accessNote: {
       sl: "Distributor API po affiliate prijavi — danes samo affiliate povezava",
@@ -310,6 +335,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     envKeys: { affiliate: ["KIWITAXI_PAP_ID"], api: [] },
     minZoom: 10,
     cacheTtlMs: 0,
+    timeoutMs: 15_000,
+    maxCallsPerMin: 0,
     docsUrl: "https://kiwitaxi.com/en/partner/webmaster/instructions/api",
     accessNote: {
       sl: "JAVNI CSV vir potrjen (audit 18. 9. 2026: kraje/rute/cene za SI) — adapter prvi na vrsti v F2",
@@ -329,6 +356,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     envKeys: { affiliate: ["DISCOVERCARS_AFFILIATE_CODE"], api: [] },
     minZoom: 11,
     cacheTtlMs: 0,
+    timeoutMs: 15_000,
+    maxCallsPerMin: 0,
     docsUrl: "https://www.discovercars.com/affiliate",
     accessNote: {
       sl: "Search API le prek B4B pogodbe — danes samo affiliate povezava",
@@ -348,6 +377,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     envKeys: { affiliate: ["SKYSCANNER_MEDIA_PARTNER_ID"], api: [] },
     minZoom: 7,
     cacheTtlMs: 0,
+    timeoutMs: 15_000,
+    maxCallsPerMin: 0,
     docsUrl: "https://developers.skyscanner.net",
     accessNote: {
       sl: "Travel API za uveljavljena podjetja — danes samo affiliate povezava",
@@ -367,6 +398,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     envKeys: { affiliate: ["OMIO_AFFILIATE_URL"], api: [] },
     minZoom: 9,
     cacheTtlMs: 0,
+    timeoutMs: 15_000,
+    maxCallsPerMin: 0,
     docsUrl: "https://www.omio.com/affiliate",
     accessNote: {
       sl: "Search API del affiliate programa (po prijavi) — brez lat/lng; danes samo affiliate povezava",
@@ -386,6 +419,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     envKeys: { affiliate: ["AIRALO_AFFILIATE_URL"], api: [] },
     minZoom: 5,
     cacheTtlMs: 0,
+    timeoutMs: 15_000,
+    maxCallsPerMin: 0,
     docsUrl: "https://developers.partners.airalo.com",
     accessNote: {
       sl: "Partner API (odobritev) vrača cene na ravni države — danes samo affiliate povezava",
@@ -405,6 +440,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     envKeys: { affiliate: ["WORLDNOMADS_AFFILIATE_URL"], api: [] },
     minZoom: 5,
     cacheTtlMs: 0,
+    timeoutMs: 15_000,
+    maxCallsPerMin: 0,
     docsUrl: "https://partner.worldnomads.com",
     accessNote: {
       sl: "Brez API-ja (affiliate-only, plačilo po ponudbi) — samo povezava",
@@ -424,6 +461,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     envKeys: { affiliate: ["SAFETYWING_AMBASSADOR_ID"], api: [] },
     minZoom: 5,
     cacheTtlMs: 0,
+    timeoutMs: 15_000,
+    maxCallsPerMin: 0,
     docsUrl: "https://safetywing.com/ambassador",
     accessNote: {
       sl: "Brez javnega API-ja (ambassador program) — samo povezava",
@@ -434,18 +473,25 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     slug: "travelpayouts",
     labels: { sl: "Travelpayouts", en: "Travelpayouts" },
     group: "commercial",
-    inventoryAccess: ["affiliate_deep_link"],
-    status: "affiliate",
+    // AUDIT 42 (42-b): prej status "affiliate" + inventoryAccess
+    // ["affiliate_deep_link"] — a ZA ta vir NIMAMO niti povezave (brez
+    // goRoute, prazni envKeys) niti API dostopa. Iskren status = "planned":
+    // self-serve API vir, preverjen v auditu, priključitev po pregledu
+    // pogojev v F2. NIKOLI ne prikažemo kot obstoječo partner povezavo.
+    inventoryAccess: [],
+    status: "planned",
     active: false,
     types: ["flight", "accommodation"],
     capabilities: { ...NO_INVENTORY_CAPS },
     envKeys: { affiliate: [], api: [] },
     minZoom: 7,
     cacheTtlMs: 0,
+    timeoutMs: 15_000,
+    maxCallsPerMin: 0,
     docsUrl: "https://support.travelpayouts.com/hc/en-us/categories/200358578-API-and-data",
     accessNote: {
-      sl: "Self-serve API (predpomnjene cene letov/hotelov) — uporaba po preverbi pogojev v F2",
-      en: "Self-serve API (cached flight/hotel prices) — usage pending terms review in F2",
+      sl: "Self-serve API (predpomnjene cene letov/hotelov) — priključitev načrtovana po preverbi pogojev v F2",
+      en: "Self-serve API (cached flight/hotel prices) — integration planned pending terms review in F2",
     },
   },
 ];
@@ -471,7 +517,12 @@ export function activeProviders(): ProviderRegistryEntry[] {
 
 /** Komercialni z affiliate globoko povezavo (kartice v supply panelu). */
 export function affiliateCardProviders(): ProviderRegistryEntry[] {
-  return PROVIDER_REGISTRY.filter((p) => p.group === "commercial" && p.goRoute !== undefined);
+  return PROVIDER_REGISTRY.filter(
+    (p) =>
+      p.group === "commercial" &&
+      p.goRoute !== undefined &&
+      p.inventoryAccess.includes("affiliate_deep_link")
+  );
 }
 
 /** Lokalni viri (OSM/FSQ/STO) — vedno ločena skupina v UI. */
@@ -480,8 +531,8 @@ export function localProviders(): ProviderRegistryEntry[] {
 }
 
 /**
- * Uporabniku prijazen status (badge): local | live | search | affiliate.
- * Izpeljano IZKLJUČNO iz registra — UI nikoli ne barva po svoje.
+ * Uporabniku prijazen status (badge): local | live | search | affiliate |
+ * planned. Izpeljano IZKLJUČNO iz registra — UI nikoli ne barva po svoje.
  */
 export function statusLabel(status: SupplyStatus): { sl: string; en: string } {
   switch (status) {
@@ -493,5 +544,7 @@ export function statusLabel(status: SupplyStatus): { sl: string; en: string } {
       return { sl: "Iskanje", en: "Search" };
     case "affiliate":
       return { sl: "Povezava partnerja", en: "Partner link" };
+    case "planned":
+      return { sl: "Načrtovano", en: "Planned" };
   }
 }
