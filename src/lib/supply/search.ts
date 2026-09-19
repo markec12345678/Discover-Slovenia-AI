@@ -31,11 +31,22 @@ import { createOsmAdapter } from "./osm-adapter";
 import { createKiwiTaxiAdapter } from "./providers/kiwitaxi/adapter";
 import { createViatorAdapter } from "./providers/viator/adapter";
 import { createGetYourGuideAdapter } from "./providers/getyourguide/adapter";
+import { createTiqetsAdapter } from "./providers/tiqets/adapter";
+import { createBookingAdapter } from "./providers/booking/adapter";
+import { createSkyscannerAdapter } from "./providers/skyscanner/adapter";
+import { createAiraloAdapter } from "./providers/airalo/adapter";
+import { createTravelpayoutsAdapter } from "./providers/travelpayouts/adapter";
+import { createFsqAdapter } from "./providers/fsq/adapter";
 
 /**
  * Tovarna adapterjev po slug-u (iz registra: AKTIVNI). Adapter, ki nima
  * svojega podatka (dataset ni nameščen), se pošteno izprazni — nikoli
  * „na silo" priklopljen inventar.
+ *
+ * TASK 53 (1.58.0): +6 adapterjev z iskrenimi capability gates (brez
+ * poverilnic/dataseta vrnejo [] z opombo not-configured/no-dataset —
+ * BEZ omrežnih klicev): tiqets, booking, skyscanner, airalo,
+ * travelpayouts, fsq. Prihodnja aktivacija = SAMO env vnos (§21).
  */
 const ADAPTER_FACTORIES: Partial<
   Record<string, (entry: ProviderRegistryEntry) => SupplyAdapter>
@@ -44,6 +55,12 @@ const ADAPTER_FACTORIES: Partial<
   kiwitaxi: createKiwiTaxiAdapter, // TASK 43: prvi realni komercialni adapter
   viator: createViatorAdapter, // TASK 45: drugi realni adapter (runtime capability gate)
   getyourguide: createGetYourGuideAdapter, // TASK 46: tretji realni adapter (runtime capability gate)
+  tiqets: createTiqetsAdapter, // TASK 53: četrti adapter (gate + strict portal mapper)
+  booking: createBookingAdapter, // TASK 53: peti adapter (Demand API gate)
+  skyscanner: createSkyscannerAdapter, // TASK 53: šesti adapter (gate + origin gate)
+  airalo: createAiraloAdapter, // TASK 53: sedmi adapter (OAuth2 gate)
+  travelpayouts: createTravelpayoutsAdapter, // TASK 53: osmi adapter (token + origin gate)
+  fsq: createFsqAdapter, // TASK 53: deveti adapter (lokalna množica gate)
 };
 
 /** Privzeti adapterji (iz registra: aktivni). */

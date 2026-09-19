@@ -40,14 +40,23 @@ describe("supply registry — invarianti", () => {
     }
   });
 
-  test("AFFILIATE-only providerji NIMAJMO inventarskih zmožnosti (izjema: adapter z runtime gate — Task 45/46)", () => {
+  test("AFFILIATE-only providerji NIMAJMO inventarskih zmožnosti (izjema: adapter z runtime gate — Task 45/46/53)", () => {
     // Ključno pravilo naročnika: affiliate URL NI inventar. Provider, ki ima
     // SAMO affiliate_deep_link dostop, ne sme trditi geo/cene/razpoložljivosti
     // — RAZEN če ima IMPLEMENTIRAN adapter za živo preverjeno pogodbo, ki je
     // zaščiten z runtime capability gate (viator, Task 45 + getyourguide,
-    // Task 46: brez API žetona vrne iskreno PRAZEN sloj — zmožnosti opisujejo
+    // Task 46 + TASK 53: tiqets/booking/skyscanner/airalo/travelpayouts —
+    // brez API žetona vrnejo iskreno PRAZEN sloj; zmožnosti opisujejo
     // pogodbo, ne stanje).
-    const RUNTIME_GATED_ADAPTERS = new Set(["viator", "getyourguide"]); // Task 45 + 46
+    const RUNTIME_GATED_ADAPTERS = new Set([
+      "viator",
+      "getyourguide",
+      "tiqets",
+      "booking",
+      "skyscanner",
+      "airalo",
+      "travelpayouts",
+    ]); // Task 45 + 46 + 53
     for (const p of PROVIDER_REGISTRY) {
       const onlyAffiliate =
         p.inventoryAccess.length === 1 &&
@@ -62,7 +71,7 @@ describe("supply registry — invarianti", () => {
     }
   });
 
-  test("aktivni adapterji: lokalni vir + dokazano priklopljeni komercialni (Task 43+45+46)", () => {
+  test("aktivni adapterji: lokalni viri + dokazano priklopljeni komercialni (Task 43+45+46+53)", () => {
     // F1: aktivni so izključno adapterji z DEJANSKO prisotnim podatkom
     // (nikoli "na silo"). Po Task 43: osm (lokalni) + kiwitaxi (prvi realni
     // komercialni — statičen CSV dataset, ki je verzioniran v gitu).
@@ -70,15 +79,24 @@ describe("supply registry — invarianti", () => {
     // runtime capability gate: brez VIATOR_API_KEY plast iskreno PRAZNA).
     // Po Task 46: + getyourguide (tretji realni adapter — živo preverjena
     // OpenAPI pogodba; brez GETYOURGUIDE_API_TOKEN plast iskreno PRAZNA).
+    // Po TASK 53: + tiqets/booking/skyscanner/airalo/travelpayouts
+    // (adapterji z iskrenimi gates — brez poverilnic/dataseta PRAZEN sloj z
+    // opombo not-configured/no-dataset/origin-required, BREZ omrežja) +
+    // fsq (lokalna množica — adapter pripravljen, dataset manjka).
     const active = activeProviders();
-    expect(active.length).toBe(4);
+    expect(active.length).toBe(10);
     expect(active.map((p) => p.slug).sort()).toEqual([
+      "airalo",
+      "booking",
+      "fsq",
       "getyourguide",
       "kiwitaxi",
       "osm",
+      "skyscanner",
+      "tiqets",
+      "travelpayouts",
       "viator",
     ]);
-
     const osm = active.find((p) => p.slug === "osm")!;
     expect(osm.group).toBe("local");
     expect(osm.status).toBe("local");
@@ -118,14 +136,20 @@ describe("supply registry — invarianti", () => {
 
     // Vsi ostali komercialni providerji ostajajo NEAKTIVNI (dokler nimajo
     // dokazanega dostopa do inventarja — affiliate povezava NI inventar;
-    // izjeme: viator Task 45 + getyourguide Task 46 — adapterja z runtime
-    // gate, ki BREZ žetona vračata iskreno PRAZEN sloj).
+    // izjeme: viator Task 45 + getyourguide Task 46 + TASK 53 gated
+    // adapterji: tiqets/booking/skyscanner/airalo/travelpayouts — BREZ
+    // žetona vračajo iskreno PRAZEN sloj).
     for (const p of PROVIDER_REGISTRY) {
       if (
         p.group === "commercial" &&
         p.slug !== "kiwitaxi" &&
         p.slug !== "viator" &&
-        p.slug !== "getyourguide"
+        p.slug !== "getyourguide" &&
+        p.slug !== "tiqets" &&
+        p.slug !== "booking" &&
+        p.slug !== "skyscanner" &&
+        p.slug !== "airalo" &&
+        p.slug !== "travelpayouts"
       ) {
         expect(p.active).toBe(false);
       }

@@ -183,13 +183,17 @@ describe("ProviderRegistry contract (točka 2)", () => {
     }
   });
 
-  test("travelpayouts: iskren status 'planned' BREZ affiliate_deep_link (ni lažne povezave)", () => {
+  test("travelpayouts: iskren status 'search' BREZ affiliate_deep_link (adapter priključen — Task 53)", () => {
+    // TASK 53: Data API adapter je priključen z iskrenim gate (brez žetona
+    // PRAZEN sloj) — status 'search' opisuje VRSTO dostopa, ki jo IMAMO
+    // pripravljeno (iskalni API s predpomnjenimi cenami). NIMA lastne
+    // affiliate povezave (brez goRoute, prazen inventoryAccess) — NE
+    // prikazujemo ga kot obstoječo partner povezavo.
     const tp = getProvider("travelpayouts")!;
-    expect(tp.status).toBe("planned");
+    expect(tp.status).toBe("search");
     expect(tp.inventoryAccess).not.toContain("affiliate_deep_link");
     expect(affiliateCardProviders().map((p) => p.slug)).not.toContain("travelpayouts");
-    expect(statusLabel("planned").sl.length).toBeGreaterThan(0);
-    expect(statusLabel("planned").en.length).toBeGreaterThan(0);
+    expect(tp.active).toBe(true); // adapter priključen (runtime gate)
   });
 
   test("aktivni adapter (osm) minZoom je usklajen s SUPPLY_MIN_ZOOM (10)", () => {
@@ -337,9 +341,11 @@ describe("supplyResponseCacheControl (točka 13)", () => {
   });
 
   test("najkrajši TTL med aktivnimi določa s-maxage (ne fiksni 60)", () => {
-    // Brez real-time GYG (TTL 0) — čist scenarij najkrajšega TTL-ja.
+    // Brez real-time virov (TTL 0: GYG + Task 53 tiqets/skyscanner) — čist
+    // scenarij najkrajšega TTL-ja.
+    const TTL_ZERO = new Set(["getyourguide", "tiqets", "skyscanner"]);
     const withShort = [
-      ...PROVIDER_REGISTRY.filter((p) => p.slug !== "getyourguide"),
+      ...PROVIDER_REGISTRY.filter((p) => !TTL_ZERO.has(p.slug)),
       { ...getProvider("fsq")!, active: true, cacheTtlMs: 20_000 },
     ];
     const cc = supplyResponseCacheControl(withShort);

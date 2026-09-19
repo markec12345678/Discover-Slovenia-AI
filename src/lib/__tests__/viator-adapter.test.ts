@@ -202,14 +202,22 @@ describe("TASK 45 §2/§3: capability gate — brez VIATOR_API_KEY", () => {
     expect(res.products).toEqual([]);
   });
 
-  test("③ defaultAdapters() vključuje viator (tovarna priklopljena — 4 adapterji)", () => {
-    // Task 46: + getyourguide (tretji realni adapter). Red je iz registra
-    // (activeProviders) — tovarna le preslika slug → factory.
+  test("③ defaultAdapters() vključuje viator (tovarna priklopljena — 10 adapterjev)", () => {
+    // Task 46: + getyourguide (tretji realni adapter). Task 53: + tiqets,
+    // booking, skyscanner, airalo, travelpayouts, fsq (iskreni gates —
+    // brez poverilnic/dataseta PRAZEN sloj, brez omrežnih klicev). Red je
+    // iz registra (activeProviders) — tovarna le preslika slug → factory.
     const adapters = defaultAdapters();
     expect(adapters.map((a) => a.entry.slug).sort()).toEqual([
+      "airalo",
+      "booking",
+      "fsq",
       "getyourguide",
       "kiwitaxi",
       "osm",
+      "skyscanner",
+      "tiqets",
+      "travelpayouts",
       "viator",
     ]);
   });

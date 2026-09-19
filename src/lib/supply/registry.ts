@@ -156,29 +156,47 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     slug: "fsq",
     labels: { sl: "Foursquare Open Places", en: "Foursquare Open Places" },
     group: "local",
+    // TASK 53 (1.58.0): DEVETI adapter (lokalni POI sloj). ODPRTI PODATKI
+    // (Apache-2.0 z atribucijo) — množica OS Places je danes GATED na
+    // HuggingFace (sprejem pogojev + prenos) → FSQ_PLACES_DIR MANJKA.
+    // Adapter je LOKALEN (brez omrežja): bere pripravljene JSONL datoteke
+    // iz FSQ_PLACES_DIR (runbook pretvorbe je v glavi fsq/dataset.ts).
+    // Brez množice adapter vrne [] z opombo „no-dataset" — ko je
+    // množica postavljena, sloj oživi BREZ spremembe kode.
     inventoryAccess: ["open_data"],
     status: "local",
-    active: false, // podatkovna množica še NI nameščena (F2 ingest)
-    types: ["restaurant", "accommodation", "attraction", "poi"],
+    active: true, // priklopljen na /api/supply/search (runtime dataset gate v adapterju)
+    types: [
+      "restaurant",
+      "accommodation",
+      "museum",
+      "viewpoint",
+      "natural",
+      "religious",
+      "shop",
+      "attraction",
+      "poi",
+    ],
     capabilities: {
-      geo: true,
-      price: false,
+      geo: true, // latitude/longitude iz množice (geoPrecision: exact)
+      price: false, // odprti podatki — cen NI (info_only)
       availability: false,
-      images: false,
-      reviews: false,
+      images: false, // množica NE vsebuje slik
+      reviews: true, // stats.rating + rating_count (samo kadar obstajajo)
       map: true,
       booking: false,
       affiliate: false,
     },
     envKeys: { api: ["FSQ_PLACES_DIR"] },
     minZoom: 12,
+    // Statična množica → dolg TTL je pošten (mtime osvežitev nasproti).
     cacheTtlMs: 24 * 60 * 60 * 1000,
     timeoutMs: 30_000,
-    maxCallsPerMin: 60,
+    maxCallsPerMin: 0, // brez odhodnega prometa (lokalna množica)
     docsUrl: "https://opensource.foursquare.com/os-places",
     accessNote: {
-      sl: "Odprti PODATKI (Apache-2.0 z atribucijo) · slovenska podmnožica še ni ingestirana",
-      en: "Open DATA (Apache-2.0 with attribution) · Slovenian subset not yet ingested",
+      sl: "Odprti PODATKI (Apache-2.0 z atribucijo) · adapter pripravljen; množica še ni nameščena (FSQ_PLACES_DIR)",
+      en: "Open DATA (Apache-2.0 with attribution) · adapter ready; dataset not yet installed (FSQ_PLACES_DIR)",
     },
   },
   {
@@ -246,21 +264,43 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     slug: "booking",
     labels: { sl: "Booking.com", en: "Booking.com" },
     group: "commercial",
+    // TASK 53 (1.58.0): PETI adapter (nastanitve). Pogodba: Demand API v3
+    // je JAVNO dokumentirana (developers.booking.com/demand/docs — portal
+    // 200, TASK 52); iskanje PO BBOX + rates blok. Host demand.booking.com
+    // je iz razvojnega peskovnika DNS-blokiran (dokumentirana omejitev
+    // okolja, ne pogodbe). DOSTOP: BOOKING_API_KEY MANJKA — Demand API
+    // zahteva status Managed Affiliate Partner → adapter PRIKLJUČEN v
+    // iskreno PRAZNEM stanju. Ko ključ + status pridejo, žive sobe/cene
+    // stečejo BREZ spremembe kode.
     inventoryAccess: ["affiliate_deep_link"],
     status: "affiliate",
-    active: false,
+    active: true, // priklopljen na /api/supply/search (runtime capability gate v adapterju)
     types: ["accommodation"],
     goRoute: "hotels",
-    capabilities: { ...NO_INVENTORY_CAPS },
-    envKeys: { affiliate: ["BOOKING_AFFILIATE_ID"], api: [] },
+    capabilities: {
+      geo: true, // location.latitude/longitude (geoPrecision: exact)
+      price: true, // per_night iz rates bloka (ko bo API aktiven)
+      availability: false, // blok-dostopnost nad našim tierjem — ne preverjamo (unknown)
+      images: true, // photo URLs vira (imageCredit: © Booking.com)
+      reviews: false, // review polja v iskanju niso dokumentirana za naš tier — iskreno NE mapiramo
+      map: true,
+      booking: true, // affiliate_redirect (/go/hotels — kategorija)
+      affiliate: true,
+    },
+    envKeys: {
+      affiliate: ["BOOKING_AFFILIATE_ID"],
+      api: ["BOOKING_API_KEY", "BOOKING_API_BASE"],
+    },
     minZoom: 12,
-    cacheTtlMs: 0,
-    timeoutMs: 15_000,
-    maxCallsPerMin: 0,
+    // Rates so živi citati ob poizvedbi → konservativnih 10 min (ista
+    // disciplina kot Viator iskalne cene).
+    cacheTtlMs: 10 * 60 * 1000,
+    timeoutMs: 20_000, // iskanje + EN rates blok klic
+    maxCallsPerMin: 20,
     docsUrl: "https://developers.booking.com/demand/docs",
     accessNote: {
-      sl: "Demand API zahteva status Managed Affiliate Partner (pogodba) — danes samo affiliate povezava",
-      en: "Demand API requires Managed Affiliate Partner status (contract) — today affiliate link only",
+      sl: "Demand API zahteva status Managed Affiliate Partner (pogodba) — danes samo affiliate povezava, sloj je pripravljen in iskreno prazen.",
+      en: "Demand API requires Managed Affiliate Partner status (contract) — today affiliate link only, layer is ready and honestly empty.",
     },
   },
   {
@@ -371,21 +411,45 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     slug: "tiqets",
     labels: { sl: "Tiqets", en: "Tiqets" },
     group: "commercial",
+    // TASK 53 (1.58.0): ČETRTI adapter (kartice+vstopnice). Pogodba:
+    // vrata ŽIVO preverjena (api.tiqets.com/v2/products → 401 JSON,
+    // api_version 2.7 — „The key is incorrect or the user is not
+    // authorized…"). CELA API referenca je ZA portal prijavo (portals.
+    // tiqets.com) → mapper je STRICT fail-closed (polja označena
+    // DOCUMENTED-ASSUMPTION; manjkajoči id/naslov → preskočen + štet).
+    // DOSTOP: TIQETS_API_KEY MANJKA (Distributor API zahteva odobritev
+    // affiliate prijave prek Awin) → adapter PRIKLJUČEN v iskreno PRAZNEM
+    // stanju (vrne [] + „not-configured"). Ko ključ pride v env, živi
+    // produkti stečejo BREZ spremembe kode (ista pot, isti kanonski model).
     inventoryAccess: ["affiliate_deep_link"],
     status: "affiliate",
-    active: false,
+    active: true, // priklopljen na /api/supply/search (runtime capability gate v adapterju)
     types: ["ticket", "activity"],
     goRoute: "tickets",
-    capabilities: { ...NO_INVENTORY_CAPS },
-    envKeys: { affiliate: ["TIQETS_AFFILIATE_URL"], api: [] },
+    capabilities: {
+      geo: true, // venue koordinate (geoPrecision: exact — samo iz vira)
+      price: true, // objavljene cene vstopnic (ko bo API aktiven; EUR only)
+      availability: false, // Distributor tier — ne preverjamo (unknown)
+      images: true, // naslovne slike vira (imageCredit: © Tiqets)
+      reviews: false, // polja ocen portalno zaprta — iskreno NE mapiramo
+      map: true,
+      booking: true, // affiliate_redirect (/go/tickets — kategorija, brez produktnega parametra)
+      affiliate: true,
+    },
+    envKeys: {
+      affiliate: ["TIQETS_AFFILIATE_URL"],
+      api: ["TIQETS_API_KEY"],
+    },
     minZoom: 11,
+    // Svežina kataloga NI dokumentirana javno (portal) → 0 = iskreni
+    // no-store (vsak klic vira je živ, brez predpomnilnika izpisa).
     cacheTtlMs: 0,
     timeoutMs: 15_000,
-    maxCallsPerMin: 0,
+    maxCallsPerMin: 20,
     docsUrl: "https://developers.tiqets.dev",
     accessNote: {
-      sl: "Distributor API po affiliate prijavi — danes samo affiliate povezava",
-      en: "Distributor API after affiliate application — today affiliate link only",
+      sl: "Distributor API (odobritev affiliate prijave prek Awin) — vrata živo preverjena; API ključ še ni izdan. Danes samo affiliate povezava, sloj je pripravljen in iskreno prazen.",
+      en: "Distributor API (approval via Awin affiliate application) — gate verified live; API key not yet issued. Today affiliate link only, layer is ready and honestly empty.",
     },
   },
   {
@@ -446,21 +510,44 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     slug: "skyscanner",
     labels: { sl: "Skyscanner", en: "Skyscanner" },
     group: "commercial",
+    // TASK 53 (1.58.0): ŠESTI adapter (leti). Pogodba: Travel API v3 je
+    // JAVNO dokumentirana (developers.skyscanner.net/docs; Flights Live
+    // Prices: create → poll). Vrata ŽIVO preverjena (POST /flights/live/
+    // search/create brez ključa → Request Forbidden). DOSTOP:
+    // SKYSCANNER_API_KEY MANJKA — Travel API se izda po prijavi prek
+    // partners.skyscanner.net (Apply for our Flights API).
+    // PRODUCT GAP (iskreno): SupplyQuery NIMA izvornega letališča — leta
+    // so iskanja IZHODIŠČE→CILJ. Ob prisotnem ključu adapter vrne [] z
+    // opombo „origin-required" (arhitektura pripravljena prek
+    // deps.originPlaceId resolverja — prihodnja produktna odločitev).
     inventoryAccess: ["affiliate_deep_link"],
     status: "affiliate",
-    active: false,
+    active: true, // priklopljen na /api/supply/search (runtime capability gate + origin gate)
     types: ["flight"],
     goRoute: "flights",
-    capabilities: { ...NO_INVENTORY_CAPS },
-    envKeys: { affiliate: ["SKYSCANNER_MEDIA_PARTNER_ID"], api: [] },
+    capabilities: {
+      geo: true, // places[] vira (geoPrecision: city — letališče cilja)
+      price: true, // pricing_options[0] (per_person, od-cena)
+      availability: false, // Live Prices cenitveni citat ne potrjuje sedežev — unknown
+      images: false, // vir ne vrača slik produktov
+      reviews: false,
+      map: true, // pin ciljnega letališča (samo iz places[] vira)
+      booking: true, // affiliate_redirect (/go/flights) + deep_link vira kot sourceUrl
+      affiliate: true,
+    },
+    envKeys: {
+      affiliate: ["SKYSCANNER_MEDIA_PARTNER_ID"],
+      api: ["SKYSCANNER_API_KEY", "SKYSCANNER_API_BASE"],
+    },
     minZoom: 7,
+    // Živi citati iskanj → 0 = no-store (ista disciplina kot GYG).
     cacheTtlMs: 0,
-    timeoutMs: 15_000,
-    maxCallsPerMin: 0,
-    docsUrl: "https://developers.skyscanner.net",
+    timeoutMs: 20_000, // create + do 5 poll poskusov
+    maxCallsPerMin: 10, // dvostopen async tok — konservativna meja instance
+    docsUrl: "https://developers.skyscanner.net/docs/intro",
     accessNote: {
-      sl: "Travel API za uveljavljena podjetja — danes samo affiliate povezava",
-      en: "Travel API for established businesses — today affiliate link only",
+      sl: "Travel API (prijava prek partners.skyscanner.net) — pogodba javno dokumentirana; API ključ še ni izdan. Danes samo affiliate povezava, sloj je pripravljen in iskreno prazen.",
+      en: "Travel API (application via partners.skyscanner.net) — contract publicly documented; API key not yet issued. Today affiliate link only, layer is ready and honestly empty.",
     },
   },
   {
@@ -488,21 +575,45 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     slug: "airalo",
     labels: { sl: "Airalo", en: "Airalo" },
     group: "commercial",
+    // TASK 53 (1.58.0): SEDMI adapter (eSIM). Pogodba: Partner API v2 —
+    // /api/v2/countries je ŽIVO preverjena NA PESKOVNIKU (sandbox.airalo.com
+    // → 200, pravi JSON: Slovenia id=210, package_count=4; /api/v2/packages
+    // brez žetona = route not found → auth-gated). Produkcija api.airalo.com
+    // je iz peskovnika DNS-blokirana (omejitev okolja, ne pogodbe).
+    // DOSTOP: AIRALO_CLIENT_ID/SECRET MANJKATA (OAuth2 client credentials,
+    // odobritev prek partners.airalo.com) → adapter iskreno prazen.
+    // GEO: državni nivo — pin = kanonski center SI (geoPrecision: country).
+    // CENA: SAMO ob izrecnem EUR v viru (USD → cena izpuščena + opomba;
+    // NIKOLI lažna konverzija).
     inventoryAccess: ["affiliate_deep_link"],
     status: "affiliate",
-    active: false,
+    active: true, // priklopljen na /api/supply/search (runtime capability gate v adapterju)
     types: ["esim"],
     goRoute: "esim",
-    capabilities: { ...NO_INVENTORY_CAPS },
-    envKeys: { affiliate: ["AIRALO_AFFILIATE_URL"], api: [] },
+    capabilities: {
+      geo: true, // državni center SI (geoPrecision: country — kanonski)
+      price: true, // package cene (SAMO EUR iz vira — sicer izpuščeno)
+      availability: false, // koncept paketov brez preverjanja — unknown
+      images: true, // image URL vira
+      reviews: false,
+      map: true,
+      booking: true, // affiliate_redirect (/go/esim)
+      affiliate: true,
+    },
+    envKeys: {
+      affiliate: ["AIRALO_AFFILIATE_URL"],
+      api: ["AIRALO_CLIENT_ID", "AIRALO_CLIENT_SECRET", "AIRALO_API_BASE"],
+    },
     minZoom: 5,
-    cacheTtlMs: 0,
-    timeoutMs: 15_000,
-    maxCallsPerMin: 0,
+    // Paketni katalog (državni nivo) → 1 h (katalog se redko spreminja,
+    // cene so objavljene, ne živi citat).
+    cacheTtlMs: 60 * 60 * 1000,
+    timeoutMs: 20_000, // token + countries + packages
+    maxCallsPerMin: 20,
     docsUrl: "https://developers.partners.airalo.com",
     accessNote: {
-      sl: "Partner API (odobritev) vrača cene na ravni države — danes samo affiliate povezava",
-      en: "Partner API (approval) returns country-level prices — today affiliate link only",
+      sl: "Partner API (OAuth2, odobritev) — vrata peskovnika živo preverjena; poverilnici še nista izdani. Danes samo affiliate povezava, sloj je pripravljen in iskreno prazen.",
+      en: "Partner API (OAuth2, approval) — sandbox gate verified live; credentials not yet issued. Today affiliate link only, layer is ready and honestly empty.",
     },
   },
   {
@@ -551,25 +662,44 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     slug: "travelpayouts",
     labels: { sl: "Travelpayouts", en: "Travelpayouts" },
     group: "commercial",
-    // AUDIT 42 (42-b): prej status "affiliate" + inventoryAccess
-    // ["affiliate_deep_link"] — a ZA ta vir NIMAMO niti povezave (brez
-    // goRoute, prazni envKeys) niti API dostopa. Iskren status = "planned":
-    // self-serve API vir, preverjen v auditu, priključitev po pregledu
-    // pogojev v F2. NIKOLI ne prikažemo kot obstoječo partner povezavo.
+    // TASK 53 (1.58.0): OSMI adapter (Data API — predpomnjene cene letov).
+    // Pogodba: JAVNO dokumentirana (support.travelpayouts.com + ogledala);
+    // vrata ŽIVO preverjena (api.travelpayouts.com/aviasales/v3/
+    // prices_for_dates → 401 Unauthorized brez žetona). SELF-SERVE vir
+    // (račun → travelpayouts.com/developers/api → token) → iskren
+    // blockedReason: NOT_CONFIGURED (ne partner approval).
+    // PRODUCT GAP (iskreno): Data API je IZHODIŠČE→CILJ — izhodišče določa
+    // TRAVELPAYOUTS_ORIGIN (IATA, operaterska odločitev); brez njega
+    // adapter ob prisotnem žetonu vrne [] z opombo „origin-required".
+    // Cene so PREDPOMNJENE najnižje (ni živi citat) → fromPrice: true.
     inventoryAccess: [],
-    status: "planned",
-    active: false,
-    types: ["flight", "accommodation"],
-    capabilities: { ...NO_INVENTORY_CAPS },
-    envKeys: { affiliate: [], api: [] },
+    status: "search", // iskalni API s predpomnjenimi cenami (adapter priključen, iskreno prazen)
+    active: true, // priklopljen na /api/supply/search (runtime capability + origin gate)
+    types: ["flight"],
+    capabilities: {
+      geo: false, // letna povezava IZHODIŠČE→CILJ — BREZ pina (iskreno, dokumentirano)
+      price: true, // predpomnjene cene letov (per_person, fromPrice)
+      availability: false, // predpomnjene cene ne potrjujejo sedežev — unknown
+      images: false,
+      reviews: false,
+      map: false, // NIMAMO pina — sloj NE nastopa na zemljevidu (iskreno)
+      booking: true, // affiliate_redirect (/go/flights?dest=…)
+      affiliate: true,
+    },
+    envKeys: {
+      affiliate: [],
+      api: ["TRAVELPAYOUTS_TOKEN", "TRAVELPAYOUTS_API_BASE", "TRAVELPAYOUTS_ORIGIN"],
+    },
     minZoom: 7,
-    cacheTtlMs: 0,
-    timeoutMs: 15_000,
-    maxCallsPerMin: 0,
+    // Predpomnjene cene vira → 10 min (iskren kompromis med svežino
+    // in vljudnostjo do vira).
+    cacheTtlMs: 10 * 60 * 1000,
+    timeoutMs: 10_000,
+    maxCallsPerMin: 30,
     docsUrl: "https://support.travelpayouts.com/hc/en-us/categories/200358578-API-and-data",
     accessNote: {
-      sl: "Self-serve API (predpomnjene cene letov/hotelov) — priključitev načrtovana po preverbi pogojev v F2",
-      en: "Self-serve API (cached flight/hotel prices) — integration planned pending terms review in F2",
+      sl: "Data API (self-serve žeton po registraciji računa) — vrata živo preverjena; žeton še ni nastavljen. Sloj je pripravljen in iskreno prazen.",
+      en: "Data API (self-serve token after account sign-up) — gate verified live; token not yet set. Layer is ready and honestly empty.",
     },
   },
 ];

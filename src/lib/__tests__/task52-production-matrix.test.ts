@@ -293,13 +293,13 @@ describe("T52 §16/§17: klasifikacija cen in razpoložljivosti", () => {
   });
 
   test("affiliate-only providerji (brez adapterja) NIMAOJO cen (§8/§10: povezava NI inventar)", () => {
+    // TASK 53: tiqets/booking/skyscanner/airalo/travelpayouts imajo zdaj
+    // adapterje z iskrenimi gates (CODE_READY) — ostajajo brez živih cen,
+    // a NISO več "brez adapterja". Preostali affiliate-only (brez adapterja):
+    // discovercars, omio, worldnomads, safetywing.
     for (const slug of [
-      "booking",
-      "tiqets",
       "discovercars",
-      "skyscanner",
       "omio",
-      "airalo",
       "worldnomads",
       "safetywing",
     ]) {
@@ -309,6 +309,37 @@ describe("T52 §16/§17: klasifikacija cen in razpoložljivosti", () => {
       expect(m.cta).toBe("affiliate_redirect");
       expect(m.aiIntegrated).toBe(false);
     }
+  });
+
+  test("TASK 53: novi gated adapterji (tiqets/booking/skyscanner/airalo/travelpayouts) — CODE_READY, iskrene klasifikacije", () => {
+    for (const slug of [
+      "tiqets",
+      "booking",
+      "skyscanner",
+      "airalo",
+      "travelpayouts",
+    ]) {
+      const m = getProductionMatrixEntry(slug)!;
+      // adapter priključen, a NI živih podatkov → CODE_READY (ne higher!)
+      expect(m.stage).toBe("CODE_READY");
+      expect(getProvider(slug)!.active).toBe(true); // priklopljen (runtime gate)
+      // cene opisujejo POGODBO (od-cene), NE današnji živi citat
+      expect(m.price).toBe("FROM_PRICE");
+      expect(m.availability).toBe("UNKNOWN");
+      expect(m.aiIntegrated).toBe(true); // priklopljen na supply → AI pot
+      expect(m.cta).toBe("affiliate_redirect");
+    }
+  });
+
+  test("TASK 53: fsq — CODE_READY z dataset gate (množica manjka)", () => {
+    const m = getProductionMatrixEntry("fsq")!;
+    expect(m.stage).toBe("CODE_READY");
+    expect(m.accessKind).toBe("OPEN_DATA");
+    expect(m.price).toBe("NOT_SUPPORTED"); // odprti podatki — cen NI
+    expect(m.availability).toBe("NOT_SUPPORTED");
+    expect(m.aiIntegrated).toBe(true);
+    expect(m.cta).toBe("info_only");
+    expect(getProvider("fsq")!.active).toBe(true); // adapter priključen (dataset gate)
   });
 
   test("viator/gyg: fromPrice cena (NIKOLI živi citat) + UNKNOWN razpoložljivost", () => {
@@ -501,9 +532,11 @@ describe("T52 §13: matrika ostaja provider-agnostic (brez viatorPrice/…)", ()
           expect(reg.goRoute).toBeDefined();
           expect(reg.group).toBe("commercial");
         } else {
-          // affiliate ZMOŽNOST brez povezave (travelpayouts, planned) —
-          // NIKOLI prikazan kot obstoječ partner: ostaja na DISCOVERED
-          expect(m.stage).toBe("DISCOVERED");
+          // affiliate ZMOŽNOST brez povezave (travelpayouts) — NIKOLI
+          // prikazan kot obstoječ partner (brez goRoute, ni kartice).
+          // TASK 53: Data API adapter je priključen → CODE_READY
+          // (iskreno prazen do žetona + izhodišča).
+          expect(m.stage).toBe("CODE_READY");
           expect(m.blockedReason).toBe("NOT_CONFIGURED");
         }
       } else if (reg.slug !== "own") {

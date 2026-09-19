@@ -77,10 +77,11 @@ export interface ProviderProductionStatus {
   monetization: MonetizationState;
 }
 
-/** Je env vnos „credential-like“ (ID/ključ/žeton/URL)? _BASE in _DIR NISTA
- *  poverilnica (preklop produkcija/sandbox oz. pot do dataseta). */
+/** Je env vnos „credential-like“ (ID/ključ/žeton/URL)? _BASE, _DIR in _ORIGIN
+ *  NISO poverilnice (preklop produkcija/sandbox, pot do dataseta oz.
+ *  operaterska konfiguracija izhodišča letov — TASK 53). */
 function credentialLike(name: string): boolean {
-  return !name.endsWith("_BASE") && !name.endsWith("_DIR");
+  return !name.endsWith("_BASE") && !name.endsWith("_DIR") && !name.endsWith("_ORIGIN");
 }
 
 /**
