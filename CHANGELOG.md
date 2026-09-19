@@ -7,6 +7,17 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.56.0] — 2026-09-20
+
+### Popravljeno (1.56.0 — TASK 51: geografska koherenca itinerarjev in realizem fallback izbire)
+
+- **P2 (TASK 50 odkrit) — fallback izbor destinacij je ignoriral geografijo**: `generateFallbackItinerary` je obiskoval destinacije V VRSTNEM REDU PO OCENI (interesi + rating); dokazan repro z ŽIVIM OSRM: B2 (5 dni, 300 €) = **1115 km** cik-cak (Triglav → Soča → Bohinj → Postojna → Vintgar → Kobarid → Slovenj Gradec → Novo mesto → Črnomelj → Dravograd), B3 (7 dni, 150 €) = **1650 km**; vrstni red obiska == vrstni red po oceni (dokaz vzroka). Fix (root cause, minimalen): NOVA `src/lib/geo-order.ts` — deterministično sidrovno urejanje (greedy nearest-neighbor, sidra = VERIFICIRANE FIXED izbire v vrstnem redu izbire §8 F2, outlierji > 60 km od vseh sidrov verižijo ZA gručami; vremenski bloki ohranijo notranje naboré na svojih dnevih; haversine IZKLJUČNO hevristika urejanja — realne noge/urnik ostanejo OSRM + repairScheduleGaps). Po fixu (živi OSRM): B2 = **755 km (−32 %)**, B3 = **870 km (−47 %)**, 0 backtracking dogodkov.
+- **NOVA `src/lib/geo-coherence.ts` — deterministične metrike M1–M5** (§4/§13): M1 skupne km nog z odkritim deležem OSRM/hevristika, M2 najdaljša noga (vir + par), M3 backtracking (dokumentirana definicija: vračanje znotraj 30 km območja prejšnjega postanka po ≥ 45 km haversine odhodu — R_VISIT/D_LEFT utemeljena na regijah Slovenije, brez arbitrarnih pragov), M4 mediana noga + števec nog > 120 km, M5 sidro-dan koherenca FIXED. Observability vrstica na fallback poti (`TASK 51 geo coherence (fallback): km=… backtracking=…`).
+- **P2 (urna integracija) — degeneriran termin „23:30-23:30"** ob nasičenem dnevu (3 geografsko zahtevna FIXED sidra → vožnje potisnejo termine do 23:00 → vstavitev nič trajanja, neparsable). Fix: POŠTENA tla nasičenja v `appendSlotAfter` (začetek ≤ 23:00, konec ≤ 23:30 → vedno parsable ≥ 30 min); časovno neravnino geo validacija odkrito javi (fail-visible).
+- **Refine prompt pravilo 9 SL/EN** (§17): „prednostno povezuj geografsko smiselne zaporedne destinacije — izogibaj se vračanju čez že obiskano območje" (strežniška geografska validacija ostaja vir resnice).
+- **+45 testov** (`src/lib/__tests__/task51-geo-coherence.test.ts`): 12 čistih enot geo-order (U1–U12: NN veriga, §7 primer Bled+Piran, vremenski bloki, determinizem/izenačenja po poolIndex, nekončne koordinate, FIXED vrstni red, outlierji) + geo-coherence metrike (M3 A→B→C→B, lokalna gruča NI backtracking, M1/M2/M5) + 33 route testov nad realnima rutama (G3-1–G3-6 3-dnevni, G5-1–G5-5 5-dnevni, G7-1–G7-4 7-dnevni, F1–F4 FIXED, G-A1–G-A10 adversarial geografija, R1–R2 refinement, SL/EN pariteta, G-A8b malformed AI). Suite: **916/916** (871 + 45 novih), lint 0, tsc 0 (src).
+- **docs/TASK-51-GEOGRAPHIC-COHERENCE.md** — repro pred/po, vzročna analiza, metrike, matrike, omejitve (P3: intra-dan E→W→E→W pri več FIXED na istem nasičenem dnevu — odkrito javljeno).
+
 ## [1.55.1] — 2026-09-19
 
 ### Dodano (1.55.1 — TASK 50 §21/§20/§26: avtomatizacija scenarijev + performance dokazi + končni format poročila)

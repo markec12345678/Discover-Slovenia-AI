@@ -70,6 +70,14 @@ function appendSlotAfter(locations: LocationVisit[], durationH: number): string 
   let start = m
     ? Math.max(parseInt(m[3], 10) + parseInt(m[4], 10) / 60 + 0.5, 12)
     : minStart;
+  // TASK 51 (§16 urna integracija): nasičen dan (npr. 3 geografsko
+  // zahtevna FIXED sidra → dolge vožnje potisnejo termine do 23:00) je
+  // prej lahko proizvel DEGENERIRAN termin "23:30-23:30" (nič trajanja —
+  // neparsable, čuden prikaz). POŠTENA tla nasičenja: začetek najkasneje
+  // 23:00, konec največ 23:30 → VEDNO parsable okvir (najmanj 30 min);
+  // časovno neravnino (prekrivanje/prek polnoči po repairu) geo validacija
+  // odkrito javi — fail-visible, ne prikritje.
+  if (start > 23) start = 23;
   const end = Math.min(23.5, start + durationH);
   start = Math.max(start, end - durationH);
   return `${fmt(start)}-${fmt(end)}`;

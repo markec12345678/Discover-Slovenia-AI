@@ -75,8 +75,20 @@ import {
 } from "@/lib/supply/selection-verify";
 import type { SelectedProviderProduct } from "@/lib/supply/types";
 import type { SupplyValidationInfo } from "@/lib/types";
-import { dayRouteGeometry, serializeLegs, legKey } from "@/lib/road-routing";
+import { dayRouteGeometry, serializeLegs, legKey, DESTINATION_COORDS } from "@/lib/road-routing";
 import { buildLegRouteIndex } from "@/lib/road-routing-server";
+// TASK 51 (1.56.0) — GEOGRAFSKA KOHERENCA: deterministično urejanje
+// fallback postankov okoli sidrov (FIXED izbire + željene destinacije) +
+// merljive metrike M1–M5 (haversine IZKLJUČNO hevristika urejanja/metrike;
+// realne razdalje/časi ostanejo OSRM noge + repairScheduleGaps).
+import {
+  orderAroundAnchors,
+  type GeoOrderAnchor,
+} from "@/lib/geo-order";
+import {
+  computeGeoCoherence,
+  type CoherenceStop,
+} from "@/lib/geo-coherence";
 
 // ============================================================================
 // WEATHER-CONTEXT (t11): realna vremenska napoved PRED generiranjem
@@ -428,6 +440,27 @@ export async function POST(request: Request) {
   const fixedCount = verifiedSelection.filter(
     (p) => p.selectionState === "fixed"
   ).length;
+
+  // TASK 51 (§7/§8 — ANCHORS): geografska sidra za deterministično urejanje
+  // fallback postankov. VIR: VERIFICIRANA izbira (Task 49 — koordinate so
+  // kanonske, klientove podstavljene NIKOLI ne pridejo do sem; test G-A10),
+  // samo FIXED izbire, v VRSTNEM REDU IZBIRE (§8 F2: vrstni red FIXED se ne
+  // spremeni). Sidra brez kanonskih koordinat se preskočijo (unknown ostane
+  // unknown — NE izmišljamo lokacije).
+  const geoAnchors: GeoOrderAnchor[] = verifiedSelection
+    .filter(
+      (p) =>
+        p.selectionState === "fixed" &&
+        p.lat != null &&
+        p.lng != null &&
+        Number.isFinite(p.lat) &&
+        Number.isFinite(p.lng)
+    )
+    .map((p) => ({
+      id: `${p.provider}:${p.providerProductId}`,
+      lat: p.lat as number,
+      lng: p.lng as number,
+    }));
   console.log(
     `[itinerary] supply-aware: context=${aiSupply.total} (capped ${aiSupply.products.length}) providers=${aiSupply.providers.join(",") || "-"} degraded=${aiSupply.degraded.join(",") || "-"} fixed=${fixedCount}`
   );
@@ -925,8 +958,10 @@ JSON format (STROGO):
     console.error("[itinerary] AI napaka, uporabljam fallback:", error);
     // WEATHER-CONTEXT: fallback prejme sidrne napovedi — deževni dnevi
     // dobijo notranje/prilagodljive destinacije (glej generateFallbackItinerary)
+    // TASK 51: geoAnchors = VERIFICIRANE FIXED izbire (kanonske koordinate,
+    // vrstni red izbire) — deterministično geografsko urejanje okoli njih.
     let fallback = await enrichWithRealWeather(
-      generateFallbackItinerary(input, anchorForecasts),
+      generateFallbackItinerary(input, anchorForecasts, geoAnchors),
       input.startDate,
       lang
     );
@@ -1047,6 +1082,37 @@ JSON format (STROGO):
     // UI sprint (točka D): noge tudi na fallback poti (isti vir številk)
     withReasons.legs = serializeLegs(legs);
 
+    // TASK 51 (§4): meritve geografske koherence fallback načrta nad
+    // REALNIMI nogami (M1 skupne km z odkritim deležem OSRM/hevristika,
+    // M2 najdaljša noga, M3 deterministični backtracking). Merljivo in
+    // reproducibilno (isti vhod → isti izpis) — živo dokazno sredstvo.
+    const coherenceStops: CoherenceStop[] = [];
+    for (const d of fallback.days) {
+      for (const loc of d.locations) {
+        const c =
+          DESTINATION_COORDS.get(loc.destination_id) ??
+          (loc.lat != null && loc.lng != null
+            ? { lat: loc.lat, lng: loc.lng }
+            : null);
+        coherenceStops.push({
+          id: loc.destination_id,
+          name: loc.destination_name,
+          lat: c?.lat ?? Number.NaN,
+          lng: c?.lng ?? Number.NaN,
+        });
+      }
+    }
+    const coherence = computeGeoCoherence(coherenceStops, (a, b) => {
+      const leg = legs.get(legKey(a.id, b.id));
+      return leg ? { km: leg.km, source: leg.source } : null;
+    });
+    console.log(
+      `[itinerary] TASK 51 geo coherence (fallback): km=${coherence.totalDistanceKm} ` +
+        `(osrm=${coherence.osrmLegs}/heuristic=${coherence.heuristicLegs}) ` +
+        `longest=${coherence.longestLegKm}km [${coherence.longestLegSource ?? "-"}] ` +
+        `backtracking=${coherence.backtrackingEvents.length} anchors=${geoAnchors.length}`
+    );
+
     return NextResponse.json(withReasons);
   }
 }
@@ -1140,7 +1206,8 @@ const INDOOR_TYPES = new Set(["cave", "spa", "city"]);
 
 function generateFallbackItinerary(
   input: PlannerInput,
-  anchors: AnchorForecast[] = []
+  anchors: AnchorForecast[] = [],
+  geoAnchors: GeoOrderAnchor[] = []
 ): Itinerary {
   // P4-8 (EN-fallback fix): jezik vsega determinističnega besedila — prej
   // je fallback izpisoval slovensko tudi za EN uporabnike (mešanje jezikov)
@@ -1225,9 +1292,63 @@ function generateFallbackItinerary(
   // Deterministično: isti vhod → isti načrt (0 AI žetonov).
   const pacePlan = PACE_FALLBACK[input.pace ?? "balanced"];
 
+  // ------------------------------------------------------------------
+  // TASK 51 (§6/§7) — FAZA 1: IZBIRA postankov (POPOLNOMA enaka prejšnji
+  // logiki: ocena interesov, sezonski filter, zaprtja, deževni dnevi →
+  // notranji). Spremeni se SAMO VRSTNI RED (faza 2) — izbira ostaja
+  // iskrena in reveribilno enaka TASK 50.
+  // ------------------------------------------------------------------
+  const rainyByDay: boolean[] = [];
+  const daySetDests: (typeof DESTINATIONS)[number][][] = [];
   for (let day = 1; day <= input.days; day++) {
     const rainy = isRainyDay(anchors, day - 1);
-    const locationsPerDay = pacePlan.stopsPerDay;
+    rainyByDay.push(rainy);
+    const set: (typeof DESTINATIONS)[number][] = [];
+    for (let i = 0; i < pacePlan.stopsPerDay; i++) {
+      set.push(pickDest(rainy ? indoor : ranked));
+    }
+    daySetDests.push(set);
+  }
+
+  // ------------------------------------------------------------------
+  // TASK 51 (§6/§7) — FAZA 2: GEOGRAFSKO UREJANJE (deterministično, brez
+  // omrežja). VZROK TASK 50 P2 (dokazan repro): obiskovali smo destinacije
+  // V VRSTNEM REDU PO OCENI (B2 1115 km / B3 1650 km cik-cak — realne OSRM
+  // noge). Sidra: VERIFICIRANE FIXED izbire (vrstni red izbire — §8 F2) +
+  // uporabniško željene destinacije, ki so RES izbrane. Haversine je tu
+  // IZKLJUČNO hevristika urejanja — realne noge/urnik ostanejo OSRM +
+  // repairScheduleGaps (Task 50). Vremenski bloki ohranijo notranje nabori
+  // na svojih dnevih (iskrenost deževne logike).
+  // ------------------------------------------------------------------
+  const poolIndexById = new Map(
+    DESTINATIONS.map((d, i) => [d.id, i] as const)
+  );
+  // SIDRA = SAMO VERIFICIRANE FIXED izbire (vrstni red izbire — §8 F2).
+  // Željene destinacije (preferredDestinations) NISO urejevalna sidra:
+  // +2,5 pohitritev izbire (obstoječe) jih zajamči v nabor, njihova
+  // umeščanje pa zaupa NN/verigi — vhodni VRSTNI RED želja NIMA geografske
+  // semantike (adversarialni dokaz G-A3: sidranje po vhodnem redu bi
+  // prisililo NW → NE → NW vračanje, kar §4 izrecno prepoveduje).
+  const orderedSets = orderAroundAnchors({
+    daySets: daySetDests.map((set) =>
+      set.map((d) => ({
+        id: d.id,
+        lat: d.coords.lat,
+        lng: d.coords.lng,
+        poolIndex: poolIndexById.get(d.id) ?? 0,
+      }))
+    ),
+    rainyDays: rainyByDay,
+    anchors: geoAnchors,
+  });
+  const destById = new Map(
+    DESTINATIONS.map((d) => [d.id, d] as const)
+  );
+
+  // FAZA 3: IZGRADNJA — sloti/cene/zapiski (ISTA logika kot prej, samo nad
+  // UREJENIMI nabori; vsi invarianti Task 48/49/50 ostajajo netaknjeni).
+  for (let day = 1; day <= input.days; day++) {
+    const rainy = rainyByDay[day - 1] ?? false;
     const locations: LocationVisit[] = [];
 
     // TASK 50 (§14, P1 — drive-aware sloti): prej fiksni ritem 09:00/14:00
@@ -1237,8 +1358,10 @@ function generateFallbackItinerary(
     // 30 min), zaokroženo navzgor (glej src/lib/schedule-slots.ts).
     let slotCursor: SlotCursor = { prevEndH: null, prevCoords: null };
 
-    for (let i = 0; i < locationsPerDay; i++) {
-      const dest = pickDest(rainy ? indoor : ranked);
+    const ordered = orderedSets[day - 1] ?? [];
+    for (let i = 0; i < ordered.length; i++) {
+      const dest = destById.get(ordered[i].id);
+      if (!dest) continue; // nedosegljivo (izbira vedno iz DESTINATIONS)
       const cost = dest.costPerPerson * input.groupSize;
       totalCost += cost;
       const { label: timeSlot, cursor } = nextSlot(

@@ -476,6 +476,7 @@ Update rules:
 6. If the instruction asks for "kid-friendly" — choose family-friendly destinations
 7. Keep or improve quality (ratings, relevance)
 8. Stops whose destination_id contains a colon (e.g. "osm:node-123", "kiwitaxi:456") are USER-SELECTED products from the supply map: keep them EXACTLY as they are (same id, title, price, coordinates) unless the instruction explicitly asks to remove them — never invent new colon-ids, never change their price or location
+9. Prefer geographically coherent consecutive destinations — avoid big jumps and avoid returning to an already-visited area without a clear reason (the server-side geographic validation remains the source of truth)
 
 JSON format (STRICT, same as input):
 {
@@ -520,6 +521,7 @@ Pravila za posodobitev:
 6. Če ukaz sprašuje "primerno za otroke" — izberi family-friendly destinacije
 7. Ohrani ali izboljšaj kakovost (ocene, relevantnost)
 8. Postanki, katerih destination_id vsebuje dvopičje (npr. "osm:node-123", "kiwitaxi:456"), so UPORABNIKOVO IZBRANI izdelki z zemljevida ponudbe: ohrani jih NATANKO takšne, kot so (isti id, naslov, cena, koordinate), razen če ukaz izrecno zahteva njihovo odstranitev — NIKOLI ne izmišljuj novih id-jev z dvopičjem in ne spreminjaj njihove cene ali lokacije
+9. Prednostno povezuj geografsko smiselne zaporedne destinacije — izogibaj se velikim skokom in vračanju čez že obiskano območje brez jasnega razloga (strežniška geografska validacija ostaja vir resnice)
 
 JSON format (STROGO, enak kot vhod):
 {
