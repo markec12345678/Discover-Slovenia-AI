@@ -8,7 +8,7 @@
 // ostanejo strežniške).
 //
 // STATUSI SO DEJANSKO STANJE (september 2026, docs/TRAVEL-SUPPLY-MAP-AUDIT.md
-// + docs/PROVIDER-APPLICATIONS.md):
+// + docs/PROVIDER-APPLICATIONS.md — master matrika produkcijske aktivacije):
 //  - AKTIVNA adapterja: osm (lokalni vir) in kiwitaxi (Task 43: prvi realni
 //    komercialni — objavljeni CSV inventar, status "static").
 //  - Ostali komercialni providerji: status "affiliate" (globoka povezava
@@ -16,6 +16,11 @@
 //    NIKOLI ne predstavljamo affiliate URL-ja kot inventarja.
 //  - fsq: odprti podatki (Apache-2.0), adapter pripravljen po ingestu
 //    — podatek NI nameščen → neaktiven.
+//
+// PRODUKCIJSKA MATRIKA (Task 52, 1.57.0): življenjski cikel vsakega
+// providerja (DISCOVERED → … → PRODUCTION ACTIVE) + env dostop
+// (PRESENT/MISSING, brez vrednosti) je v production-matrix.ts —
+// strojno berljiva, testovno varovana proti driftu s tem registrom.
 // ============================================================================
 
 import type {

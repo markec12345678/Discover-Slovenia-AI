@@ -7,7 +7,17 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
-## [1.56.1] — 2026-09-20
+## [1.57.0] — 2026-09-20
+
+### Dodano (1.57.0 — TASK 52: full provider production activation & honest live supply)
+
+- **PRODUKCIJSKA MATRIKA (§0–§6): NOVA `src/lib/supply/production-matrix.ts`** — strojno berljiv življenjski cikel VSIH 16 providerjev (DISCOVERED → CONTRACT_VERIFIED → ACCESS_AVAILABLE → CODE_READY → … → PRODUCTION_ACTIVE) z blokirnimi razlogi (PARTNER_APPROVAL_REQUIRED / ACCESS_NOT_AVAILABLE / NOT_CONFIGURED / BLOCKED / NOT_APPLICABLE), vrsto dostopa (§4: OPEN_DATA/STATIC_CONTENT/AFFILIATE_DEEP_LINK/SEARCH_API/DIRECT_BOOKING — affiliate NIKOLI predstavljen kot inventory), klasifikacijo cen (§16: LIVE_PRICE ≠ FROM_PRICE ≠ UNKNOWN ≠ NOT_SUPPORTED; danes NIHČE LIVE_PRICE — iskren assertion) in razpoložljivosti (§17: KT „preveri pri ponudniku", nikoli „available" brez dokaza). ENV dostop (§6) strežniško vrača IZKLJUČNO `{envVar, present: boolean}` — vrednosti ne zapustijo modula (LEAK test z vsemi skrivnostmi nastavljenimi); semantika presence usklajena z affiliate.ts (ID → ne-prazno; `_URL` → veljaven https; `_BASE`/`_DIR` NISTA credential).
+- **NOVA `docs/PROVIDER-APPLICATIONS.md`** (popravljen dangling reference iz `registry.ts:11`!) — človeška master matrika: popolna tabela (kategorija/adapter/pogodba/dostop/access/production/live/price/availability/CTA/AI/status) + access matrix (vsi ID-ji MISSING v tej instanci — fail-closed: čisti redirecti `monetized:false`, iskreno prazni viator/gyg sloji) + aktivacijski RUNBOOKI (točno kateri env naredi providerja produktivnega BREZ spremembe kode).
+- **`.env.example` dopolnjen** z manjkajočimi dokumentiranimi imeni iz kode: `OSRM_BASE_URL`, `APP_URL`, `FSQ_PLACES_DIR` (brez skrivnosti — samo dokumentacija).
+- **Živi dokazi uradnih dostopov (§5, 2026-09-19):** vsi portali dosegljivi (Viator docs 200, Booking/Tiqets/Skyscanner/Airalo/WN/SW/DiscoverCars 200); API overitvena vrata živa in iskrena — `api.viator.com` brez ključa → 401/INVALID_HEADER_VALUE; `api.getyourguide.com/1/tours` → „The X-ACCESS-TOKEN header is missing". Web-search skill 429 (okolje) → preverba neposredno (curl).
+- **+32 testov** (`task52-production-matrix.test.ts`): pokritost register↔matrika (§3 — noben provider ne manjka, seznam naročnika obvezno prisoten), invarianta PRODUCTION_ACTIVE ⟺ brez blokirnega razloga, AFFILIATE_DEEP_LINK nikoli LIVE_PRICE/LIVE, OSM nikoli affiliate (§12), kategorije A–E (§7–§11), viator/gyg CODE_READY + FROM_PRICE + UNKNOWN, affiliateStatus() ↔ accessMatrix() usklajenost za VSEH 11 go-rut + drift guard env imen, kanonska polja matrike (§13 — brez viatorPrice/…). Suite: **979/979** (947 + 32), lint 0, tsc 0 (src).
+- **Živi E2E (§18/§19):** supply search → 48 realnih KT produktov (cena `per_transfer` + `fromPrice:true` + „objavljena cena, ni živi citat") + `adapter viator/getyourguide: ok=True count=0 note=not-configured` (iskreni capability gates); 15 živih /go/ redirect preverb (302 čisti brez ID-jev, `<script>`/path-traversal/dvojno-kodiranje → 400, neznan provider → 404, `javascript:`/`data:` v dest → whitelist fallback „Slovenija", dolžina > 100 → 400); zemljevid v živo: Transferji čip 48, „48 POI · KiwiTaxi", grozd 46+2 pinov (screenshot); vir-podatkov z iskrenimi statusi; mobile 375px 0 overflow.
+- **docs/TASK-52-PROVIDER-ACTIVATION.md** — revizijsko poročilo §0–§19 (inventar, matrike, živi dokazi, omejitve okolja iskreno, runbooki).
 
 ### Popravljeno (1.56.1 — TASK 51 dopolnitev §15–§30: routing failure, geo data integrity, no-N+1)
 
