@@ -30,7 +30,7 @@ import { dedupeProducts } from "@/lib/supply/dedupe";
 import { insertProductStop } from "@/lib/supply/stop-insert";
 import { sanitizeSelectedProviderProducts, buildSelectedProductsContext } from "@/lib/supply/sanitize";
 import { toSelectedProduct } from "@/lib/supply/selection";
-import { searchSupply } from "@/lib/supply/search";
+import { searchSupply, clearProviderRateLimits } from "@/lib/supply/search";
 import { getProvider } from "@/lib/supply/registry";
 import type { SupplyAdapter } from "@/lib/supply/adapter";
 import type { ProviderProduct, ProviderSlug, SupplyQuery } from "@/lib/supply/types";
@@ -169,6 +169,12 @@ beforeEach(() => {
   process.env.GETYOURGUIDE_API_TOKEN = "test-gyg-token";
   resetGetYourGuideAdapterCaches();
   clearGygTourUrls();
+  // TASK 49 (test higiena): providerRateLimited je MODULNO stanje (60 s okno,
+  // viator = 20/min). Brez čiščenja sošedni datoteke (viator-hardening,
+  // viator-adapter …) porabijo viator proračun → zadnji §23 testi tu so
+  // lažno "rate-limited" (viator izdelek manjka). Isti vzorec že uporabljata
+  // getyourguide-regression.test.ts in supply-contract.test.ts.
+  clearProviderRateLimits();
 });
 
 afterEach(() => {

@@ -64,6 +64,14 @@ import {
   validateItinerarySupply,
   type SupplyValidationReport,
 } from "@/lib/supply/itinerary-validation";
+// TASK 49 (1.54.0) — SUPPLY INTEGRITY: klientova izbira/načrt so NEZAUPAN
+// vnos — cena/geo/tip/razpoložljivost se verificirajo proti strežniški
+// resnici (KT dataset ∪ strežni supply); brez dokaza → unknown.
+import {
+  verifySelectedProducts,
+  verifyCurrentStopsAuthority,
+  hasVerifyChanges,
+} from "@/lib/supply/selection-verify";
 import type { SelectedProviderProduct } from "@/lib/supply/types";
 import type { SupplyValidationInfo } from "@/lib/types";
 import { dayRouteGeometry, serializeLegs } from "@/lib/road-routing";
@@ -349,15 +357,6 @@ export async function POST(request: Request) {
   // odvisne praktične podatke (sezona/vreme/parkiranje).
   const lang = input.language === "en" ? "en" : "sl";
 
-  // F1 (Supply Map): strukturiran blok izbranih produktov za AI prompt —
-  // FIXED/PREFERRED/SUGGESTED semantika + izrecno pravilo, da AI NE SME
-  // zamenjati FIXED izbire s podobnim lokalom (uporabnikova izbira je
-  // obvezna). Prazna izbira → prazen blok (ni spremembe obnašanja).
-  const selectedProductsBlock = buildSelectedProductsContext(
-    cleanSelectedProducts,
-    lang
-  );
-
   // === RANKING ENGINE + WEATHER-CONTEXT + TASK 47 SUPPLY CONTEXT ===
   // (vzporedno — supply iskanje je hitro: kiwitaxi v pomnilniku ~2 ms,
   // viator/gyg capability gate ~1 ms, OSM cat-gated → 0 klicev na Overpass;
@@ -396,10 +395,36 @@ export async function POST(request: Request) {
     );
   }
 
+  // ------------------------------------------------------------------
+  // TASK 49 (§4/§7, P0 — SUPPLY INTEGRITY): klientova izbira je NEZAUPAN
+  // vnos. Do 1.53.0 je sanitizacija oblike (enumi/kapice/whitelist)
+  // pustila dobro oblikovano FABRIKIRANO ceno skozi — živi dokazi audita:
+  // kiwitaxi:411 s 1 € (dataset: 77 €), osm izdelek s 5 € (info_only vir
+  // cene nikoli nima), viator:98765 s 79 € (provider ni priključen).
+  // Takšna cena je postala KANONSKA avtoriteta Taska 47/48 → v finalnem
+  // načrtu in v statusu proračuna. Zdaj: strežniška resnica (KT dataset ∪
+  // strežni supply kontekst) ZMAGA; brez dokaza → cena/razpoložljivost
+  // ODSTRANJENI (unknown is unknown); fabrikantrt KT id → izbira ZAVRŽENA.
+  // ------------------------------------------------------------------
+  const supplyVerified = verifySelectedProducts(
+    cleanSelectedProducts,
+    aiSupply.products
+  );
+  const verifiedSelection = supplyVerified.products;
+  if (hasVerifyChanges(supplyVerified.report)) {
+    console.warn(
+      `[itinerary] TASK 49 supply verify (izbira): ${supplyVerified.report.rejectedFake} zavrnjenih, ` +
+        `${supplyVerified.report.priceOverrides} cen popravljenih na kanon, ` +
+        `${supplyVerified.report.pricesStripped} cen odstranjenih (unknown), ` +
+        `${supplyVerified.report.geoRestored} geo, ${supplyVerified.report.titlesRestored} naslovov, ` +
+        `${supplyVerified.report.typesRestored} tipov, ${supplyVerified.report.availabilityStripped} razpoložljivosti`
+    );
+  }
+
   // TASK 47 (§22 — minimalna observabilnost, brez novega sistema): 
   // strukturirana vrstica o supply kontekstu. BREZ žetonov, BREZ celih
   // payloadov, BREZ PII — samo števila/znani provider slug-i.
-  const fixedCount = cleanSelectedProducts.filter(
+  const fixedCount = verifiedSelection.filter(
     (p) => p.selectionState === "fixed"
   ).length;
   console.log(
@@ -410,6 +435,16 @@ export async function POST(request: Request) {
   // PREFERRED/SUGGESTED semantika, cena z enoto, ločena razpoložljivost,
   // prioritetna lestvica. Prazna ponudba → prazen blok (ni spremembe).
   const aiSupplyBlock = buildAiSupplyContext(aiSupply.products, lang);
+
+  // F1 (Supply Map): strukturiran blok izbranih produktov za AI prompt —
+  // FIXED/PREFERRED/SUGGESTED semantika + izrecno pravilo, da AI NE SME
+  // zamenjati FIXED izbire s podobnim lokalom (uporabnikova izbira je
+  // obvezna). Prazna izbira → prazen blok (ni spremembe obnašanja).
+  // TASK 49: gradi se nad VERIFICIRANO izbiro.
+  const selectedProductsBlock = buildSelectedProductsContext(
+    verifiedSelection,
+    lang
+  );
 
   // TASK 48 (1.53.0): strežni supply kot AVTORITETA za invariantno plast —
   // projekcija AiSupplyProduct → oblika izbire (selectionState "suggested":
@@ -699,7 +734,7 @@ JSON format (STROGO):
     // silent, NIKOLI fallback produkt). Znan → REBIND na kanonske vrednosti
     // (naslov, cena z enoto v notes, geo, iskrena razpoložljivost) — AI
     // pusti SAMO itinerary semantiko (dan/urnik/trajanje).
-    const knownSupply = buildKnownSupplyIndex(cleanSelectedProducts, aiSupply.products);
+    const knownSupply = buildKnownSupplyIndex(verifiedSelection, aiSupply.products);
     const supplyValidated = revalidateSupplyStops(itinerary, knownSupply, lang);
     if (supplyValidated.dropped.length > 0) {
       console.warn(
@@ -713,13 +748,17 @@ JSON format (STROGO):
     // obnova koordinat/smeri prevoza, FIXED vstavitev z kanonsko ceno
     // (nadomesti applyFixedSelectedProducts klic — ista insertProductStop
     // mehanika + unit semantika; AI NIKOLI ne izniči uporabnikove izbire).
-    // Avtoriteta: uporabnikova izbira ∪ strežni supply (aiSupplyAuthority) ∪
-    // postanki, ki jih je Task 47 revalidiral (currentStops).
+    // Avtoriteta: uporabnikova izbira (VERIFICIRANA, Task 49) ∪ strežni
+    // supply (aiSupplyAuthority) ∪ postanki, ki jih je Task 47 revalidiral
+    // (currentStops — prav tako overjeni: KT iz dataseta, ostali unknown).
+    const currentStopsVerified = verifyCurrentStopsAuthority(
+      extractSupplyStops(supplyValidated.itinerary)
+    );
     const invariant = validateItinerarySupply(
       supplyValidated.itinerary,
       {
-        selection: [...aiSupplyAuthority, ...cleanSelectedProducts],
-        currentStops: extractSupplyStops(supplyValidated.itinerary),
+        selection: [...aiSupplyAuthority, ...verifiedSelection],
+        currentStops: currentStopsVerified.stops,
       },
       { lang, groupSize: input.groupSize }
     );
@@ -815,7 +854,7 @@ JSON format (STROGO):
       geo_restored: supplyReport.geoRestored,
       directions_fixed: supplyReport.directionsFixed,
       reinserted: supplyReport.reinserted,
-      fixed_count: cleanSelectedProducts.filter((p) => p.selectionState === "fixed").length,
+      fixed_count: verifiedSelection.filter((p) => p.selectionState === "fixed").length,
       budget_status: budgetValidation.status,
       issues: supplyReport.issues.length,
     });
@@ -873,11 +912,12 @@ JSON format (STROGO):
 
     // F1 (Supply Map) → TASK 48 (§15): FIXED izbire tudi na deterministični
     // poti — ISTA invariantna plast kot AI pot (dedupe, unit cena, geo,
-    // smer, FIXED vstavitev s kanonsko ceno; avtoriteta = izbira ∪ strežni
-    // supply). Fallback ne pozna AI prompta, zato se vnesejo naravnost.
+    // smer, FIXED vstavitev s kanonsko ceno; avtoriteta = VERIFICIRANA izbira
+    // ∪ strežni supply — Task 49). Fallback ne pozna AI prompta, zato se
+    // vnesejo naravnost.
     const fallbackValidated = validateItinerarySupply(
       fallback,
-      { selection: [...aiSupplyAuthority, ...cleanSelectedProducts] },
+      { selection: [...aiSupplyAuthority, ...verifiedSelection] },
       { lang, groupSize: input.groupSize }
     );
     fallback = fallbackValidated.itinerary;
@@ -886,7 +926,7 @@ JSON format (STROGO):
     // AUDIT 42 (42-d YELLOW #2): PREFERRED/SUGGESTED/nastanitve/brez-geo
     // izbire na fallback poti prej TIHO IZGINILE — zdaj gredo v
     // recommendations (deterministično, iskreno, brez AI).
-    const selectionRecs = buildSelectionRecommendations(cleanSelectedProducts, lang);
+    const selectionRecs = buildSelectionRecommendations(verifiedSelection, lang);
     if (selectionRecs.length > 0) {
       fallback.recommendations = [
         ...selectionRecs,
@@ -942,7 +982,7 @@ JSON format (STROGO):
       geo_restored: supplyReport.geoRestored,
       directions_fixed: supplyReport.directionsFixed,
       reinserted: supplyReport.reinserted,
-      fixed_count: cleanSelectedProducts.filter((p) => p.selectionState === "fixed").length,
+      fixed_count: verifiedSelection.filter((p) => p.selectionState === "fixed").length,
       budget_status: fallbackBudgetValidation.status,
       issues: supplyReport.issues.length,
     });

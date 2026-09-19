@@ -39,6 +39,14 @@ import {
   validateItinerarySupply,
   type SupplyValidationReport,
 } from "@/lib/supply/itinerary-validation";
+// TASK 49 (1.54.0) — SUPPLY INTEGRITY na refine poti: klientov payload
+// (izbira + trenutni načrt) je NEZAUPAN vnos — cena/geo/naslov/tip se
+// verificirajo proti strežniški resnici (KT dataset); brez dokaza → unknown.
+import {
+  verifySelectedProducts,
+  verifyCurrentStopsAuthority,
+  hasVerifyChanges,
+} from "@/lib/supply/selection-verify";
 import type { SupplyValidationInfo } from "@/lib/types";
 
 // POST /api/itinerary/refine — Multi-turn popravki obstoječega itinererja.
@@ -286,10 +294,33 @@ export async function POST(request: Request) {
     (formData as { selectedProviderProducts?: unknown } | null | undefined)
       ?.selectedProviderProducts
   );
+  // TASK 49 (§4/§7, P0): klientova izbira NA REFINU je prav tako NEZAUPAN
+  // vnos — isti verify sloj kot generacija (KT dataset zmaga; brez dokaza
+  // → unknown; fabrikantrt KT id → izbira zavrnjena). Strežni supply
+  // kontekst se na refinu NE pridobiva (0 dodatnih remote klicev) — KT
+  // dataset v pomnilniku pokriva edinega priključenega komercialnega vira.
+  const supplyVerified = verifySelectedProducts(cleanSelectedProducts);
+  const verifiedSelection = supplyVerified.products;
+  if (hasVerifyChanges(supplyVerified.report)) {
+    console.warn(
+      `[itinerary/refine] TASK 49 supply verify (izbira): ${supplyVerified.report.rejectedFake} zavrnjenih, ` +
+        `${supplyVerified.report.priceOverrides} cen popravljenih na kanon, ` +
+        `${supplyVerified.report.pricesStripped} cen odstranjenih (unknown), ` +
+        `${supplyVerified.report.geoRestored} geo, ${supplyVerified.report.titlesRestored} naslovov, ` +
+        `${supplyVerified.report.typesRestored} tipov, ${supplyVerified.report.availabilityStripped} razpoložljivosti`
+    );
+  }
   // Kanonska avtoriteta obstoječih supply postankov (refine pot): načrt
   // PRED spremembo — AI odmev ne more tiho zbrisati/spremeniti refa, cene
   // ali koordinat, ki jih uporabnik že vidi v svojem načrtu.
-  const currentStops = extractSupplyStops(current);
+  // TASK 49 (P0): TI postanki so klientov payload → overjeni proti
+  // strežniški resnici (KT cena/naslov/geo iz dataseta; fabrikantrt KT id
+  // → izvzet → Task 48 plast ga zavrže kot fake_supply_ref; ostali →
+  // cena unknown/NaN, ki Number.isFinite obravnava pošteno).
+  const currentStopsVerified = verifyCurrentStopsAuthority(
+    extractSupplyStops(current)
+  );
+  const currentStops = currentStopsVerified.stops;
 
   // P0.2 (recenzija): datumska konteksta za PONOVEN izračun dogodkov in opomb
   // o gneči po spremembi — startDate iz obrazca, sicer okvir, shranjen s
@@ -556,7 +587,7 @@ JSON format (STROGO, enak kot vhod):
     // ------------------------------------------------------------------
     const supplyValidated = validateItinerarySupply(
       refinedItinerary,
-      { selection: cleanSelectedProducts, currentStops },
+      { selection: verifiedSelection, currentStops },
       {
         lang: isEn ? "en" : "sl",
         groupSize: formData?.groupSize,
@@ -625,7 +656,7 @@ JSON format (STROGO, enak kot vhod):
       geo_restored: supplyReport.geoRestored,
       directions_fixed: supplyReport.directionsFixed,
       reinserted: supplyReport.reinserted,
-      fixed_count: cleanSelectedProducts.filter((p) => p.selectionState === "fixed").length,
+      fixed_count: verifiedSelection.filter((p) => p.selectionState === "fixed").length,
       budget_status: budgetValidation.status,
       issues: supplyReport.issues.length,
     });
@@ -693,7 +724,7 @@ JSON format (STROGO, enak kot vhod):
       // --------------------------------------------------------------
       const quickValidated = validateItinerarySupply(
         result.itinerary,
-        { selection: cleanSelectedProducts, currentStops },
+        { selection: verifiedSelection, currentStops },
         {
           lang: isEn ? "en" : "sl",
           groupSize: formData?.groupSize,
@@ -760,7 +791,7 @@ JSON format (STROGO, enak kot vhod):
         geo_restored: quickReport.geoRestored,
         directions_fixed: quickReport.directionsFixed,
         reinserted: quickReport.reinserted,
-        fixed_count: cleanSelectedProducts.filter((p) => p.selectionState === "fixed").length,
+        fixed_count: verifiedSelection.filter((p) => p.selectionState === "fixed").length,
         budget_status: withReasons.budgetValidation.status,
         issues: quickReport.issues.length,
       });
