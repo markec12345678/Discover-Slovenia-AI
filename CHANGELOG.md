@@ -7,6 +7,21 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.56.1] — 2026-09-20
+
+### Popravljeno (1.56.1 — TASK 51 dopolnitev §15–§30: routing failure, geo data integrity, no-N+1)
+
+- **P1 (najden z novimi testi) — malformed OSRM vrednosti sošle skozi kot „verified"**: `fetchOsrmLeg` je preverjal `typeof route.distance !== "number"` — a `typeof NaN === "number"`, zato je OSRM odgovor z NaN/Infinity razdaljo ustvaril nogo z `source: "osrm"` in NaN km (tiho sprejeta lažna realna razdalja — krši §15 „malformed response" in §21 „never silently accept"). Fix: `Number.isFinite` + nenegativnost (distance/duration) → fail-closed hevristika; testi RF NaN/Infinity/negativ.
+- **§15 ROUTING FAILURE (matrika 4 načinov)**: PRAVI `defaultOsrmJsonFetcher` (izvožen za teste — ne-mockan) teče v testnem PODPROCESU nad lokalnim TLS strežnikom (`fixtures/task51-osrm-failure-server.ts`, samopodpisan cert + NODE_EXTRA_CA_CERTS v otrok-procesu; forenzika: bun test deli register modulov med datotekami → OSRM_BASE ni preusmerljiv po uvozu, env cert zaupanja se prebere ob zagonu) z načini HTTP 500 / timeout (strežnik ne odgovarja) / malformed body / mrtva vrata / NoRoute / ok — vsi odpovedni načini → null na isti meji → hevristika z odkritim virom. Nad plastjo: 11 RF testov (network/timeout/500/malformed/NoRoute/manjka routes/NaN/Infinity/negativ/niz/kontrast-ok) nad PRAVO logiko `fetchOsrmLeg`/`buildLegRouteIndex`; mešan indeks ostane MEŠAN (ne lažno enoten).
+- **§16 SCHEDULE INTEGRATION**: pipeline potrditev nad 5-dnevnim odzivom — vrzeli med zaporednima terminoma ≥ vožnji iz NOG (urnik ne izmišljuje hitrejše vožnje, ko OSRM odpove), 0 prekrivanj, 0 schedule_gap/time_slot_invalid, koherenca (backtracking 0), viri odkriti (geoValidation.method + quality.routingMethod „heuristic").
+- **§21 GEO DATA INTEGRITY (baterija)**: null island / manjkajoča lat / manjkajoč lng / neveljaven lat 999 / lng −999 / ZAMENJANA lat-lng / lažna koordinata (Mongolija) / obe manjkajoči / Infinity (1e999 prek surovega JSON — JSON nima NaN/Infinity, 1e999 se parsira) → VSE obnovljene na KT kanon; fake id (ni v inventarju) → ZAVRŽEN (fail-closed) + zavrnitev JE zabeležena v observability (console.warn vrstica, testni spy — nikoli tiho); T1 postanki vedno znotraj bbox Slovenije.
+- **§22 HUMAN-REALISTIC OUTPUT**: tabela merljivih metrik nad odzivom (veljavne koordinate, vir vsake noge zabeležen, skupne km, najdaljša noga ≡ max noga ±1, backtracking array, overlap 0, nemogoči prehodi 0, FIXED nespremenjen, fake supply 0, fake cena 0) — BREZ „AI quality score" (quality ostane determinističen: routingMethod/drivingMinutes/natureScore).
+- **§25 NO-N+1**: števci klicev — točno 1 klic na edinstven par (4 postanki → 3 klici, ne N+1), ponovljen klic → 0 novih (predpomnilnik), 4 zaporedne odpovedi → varovalka izklopi OSRM (0 klicev, hevristika), reset obnovi; vrh sočasnosti ≤ 4.
+- **§26 observability**: vrstica geo coherence dobljila `stops=N` (vidnost kandidatov/postankov).
+- **+31 testov** (`task51-routing-failure.test.ts` + `fixtures/`): 947/947 skupaj, lint 0, tsc 0 (src). Ne podvajam §18 (AI 429/malformed/omrežje → fallback je pokrit z G-A8/G-A8b/S11).
+- **docs/TASK-51-GEOGRAPHIC-ITINERARY.md** — končno poročilo v §29 formatu (Repository/Baseline/Root Cause/Before-After/matrike/Performance/Observability/P0–P3/§30 končni format: GREEN).
+- Forenzika (dokumentirana v poročilu): bash izpis peskovnika lahko poje `[ho` v prikazu — „tipkarska napaka" v budget-panel.tsx je bila iluzija izpisa (datoteka pri HEAD je veljavna, `od -c` dokaz); fiks revertiran, produkcijska datoteka nedotaknjena.
+
 ## [1.56.0] — 2026-09-20
 
 ### Popravljeno (1.56.0 — TASK 51: geografska koherenca itinerarjev in realizem fallback izbire)

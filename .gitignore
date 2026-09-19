@@ -89,3 +89,7 @@ server.log
 /sandbox-keepalive.sh
 /sandbox-logs/
 .sandbox-bin/
+
+# TASK 51 §15: samopodpisana certifikata lokalnega TLS testnega strežnika
+# (generirata ob zagonu testa; veljavnost 2 dni — v repo NE sodita)
+src/lib/__tests__/fixtures/*.pem

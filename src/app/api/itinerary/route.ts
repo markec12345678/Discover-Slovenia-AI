@@ -1107,7 +1107,8 @@ JSON format (STROGO):
       return leg ? { km: leg.km, source: leg.source } : null;
     });
     console.log(
-      `[itinerary] TASK 51 geo coherence (fallback): km=${coherence.totalDistanceKm} ` +
+      `[itinerary] TASK 51 geo coherence (fallback): stops=${coherence.stops} ` +
+        `km=${coherence.totalDistanceKm} ` +
         `(osrm=${coherence.osrmLegs}/heuristic=${coherence.heuristicLegs}) ` +
         `longest=${coherence.longestLegKm}km [${coherence.longestLegSource ?? "-"}] ` +
         `backtracking=${coherence.backtrackingEvents.length} anchors=${geoAnchors.length}`

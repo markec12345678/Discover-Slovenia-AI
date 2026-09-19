@@ -134,8 +134,15 @@ interface OsrmRouteResponse {
 /**
  * Privzeti pridobivalec: node:https z family:4 + timeout. Vrne parsed JSON
  * ali null (timeout/napaka/HTTP ≠ 200). NIKOLI ne vrže.
+ *
+ * TASK 51 (§15): izvoženo za deterministične teste odpovedi OSRM — testni
+ * podproces (fixtures/task51-osrm-failure-server.ts) poganja PRAVO,
+ * ne-mockano različico nad lokalnim TLS strežnikom z načini 500 /
+ * timeout / malformed /ok. Neodvisno od tega OSTANE notranji — OSRM_BASE se
+ * zapeče ob uvozu modula, zato ga testi (ki si delijo register modulov) ne
+ * morejo preusmeriti po uvozu.
  */
-const defaultOsrmJsonFetcher: OsrmJsonFetcher = (url, timeoutMs) =>
+export const defaultOsrmJsonFetcher: OsrmJsonFetcher = (url, timeoutMs) =>
   new Promise((resolve) => {
     const req = https.get(
       url,
@@ -196,9 +203,19 @@ async function fetchOsrmLeg(
       | null;
     if (!data || data.code !== "Ok" || !data.routes?.[0]) return null;
     const route = data.routes[0];
+    // TASK 51 (§15/§21): NaN/Infinity sta typeof "number" — neveljavna
+    // (malformed) OSRM vrednost NE SME postati "verified" noga z virom
+    // "osrm" (NaN km bi bila tiho sprejeta lažna realna razdalja).
+    // Negativne vrednosti so prav tako nemogoče (razdalja/trajanje ≥ 0).
+    const distance = route.distance;
+    const duration = route.duration;
     if (
-      typeof route.distance !== "number" ||
-      typeof route.duration !== "number"
+      typeof distance !== "number" ||
+      typeof duration !== "number" ||
+      !Number.isFinite(distance) ||
+      !Number.isFinite(duration) ||
+      distance < 0 ||
+      duration < 0
     ) {
       return null;
     }
@@ -210,8 +227,8 @@ async function fetchOsrmLeg(
         : undefined;
 
     return {
-      km: round5(route.distance / 1000),
-      min: round5(route.duration / 60),
+      km: round5(distance / 1000),
+      min: round5(duration / 60),
       source: "osrm",
       geometry: geometryLatlng,
     };
