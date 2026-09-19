@@ -2,6 +2,9 @@
 // TASK 53 — FSQ ADAPTER: CAPABILITY GATE / DATASET / KATEGORIJE / OSVEŽEVANJE
 // ============================================================================
 // Fixtures so TEST-ONLY preslikava JAVNO DOKUMENTIRANE sheme Foursquare
+// TEST FIXTURE — NOT LIVE DATA (§23): vse odgovore/fixture v tej datoteki
+// so SANITIZIRANE POGODBEBNE FIXTURE — samo za unit/integration teste,
+// NIKOLI za produkcjski runtime.
 // Open Places (docs.foursquare.com „Places OS Data Schemas"). NI izmišljenih
 // mest v produkcijski poti: adapter bere SAMO .jsonl datoteke iz
 // FSQ_PLACES_DIR (temp mape testov — produkcijska pot repozitorija NI

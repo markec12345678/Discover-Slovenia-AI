@@ -196,8 +196,20 @@ export function providerEnvAccess(slug: ProviderSlug): ProviderEnvAccess {
   const needsEnv = affiliate.length > 0 || api.length > 0;
   const credentialLike = (name: string) =>
     !name.endsWith("_BASE") && !name.endsWith("_DIR") && !name.endsWith("_ORIGIN");
+  // API poverilnice: VSE credential-like vnosе api skupine morajo biti
+  // prisotne (TASK 53 §21: airalo OAuth2 zahteva OBE — CLIENT_ID +
+  // CLIENT_SECRET; DELNA konfiguracija = NE konfigurirano, iskreno
+  // fail-closed). Eno-ključni viri (viator/tiqets/…) imajo en sam vnos
+  // → every() je tam ekvivalenten some().
+  const apiCreds = api.filter((c) => credentialLike(c.envVar));
+  const apiConfigured = apiCreds.length > 0 && apiCreds.every((c) => c.present);
+  // Affiliate poverilnica: ENA zadostuje (monetizacijska plast je
+  // samostojen produkcijski dosežek — affiliate CTA teče brez API ključa).
+  const affiliateConfigured = affiliate.some(
+    (c) => c.present && credentialLike(c.envVar)
+  );
   const productionConfigured = needsEnv
-    ? [...affiliate, ...api].some((c) => c.present && credentialLike(c.envVar))
+    ? apiConfigured || affiliateConfigured
     : MATRIX[entry.slug as ProviderSlug]?.stage === "PRODUCTION_ACTIVE";
   return { affiliate, api, productionConfigured };
 }

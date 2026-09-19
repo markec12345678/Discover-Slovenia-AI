@@ -3,6 +3,9 @@
 // NEGATIVNI PREDPOMNILNIK / KLASIFIKACIJA NAPAK
 // ============================================================================
 // Mock fetch je TEST-ONLY preslikava dokumentirane oblike odgovorov vira:
+// TEST FIXTURE — NOT LIVE DATA (§23): vse odgovore v tej datoteki
+// so SANITIZIRANE POGODBEBNE FIXTURE — samo za unit/integration teste,
+// NIKOLI za produkcjski runtime.
 // uspešna ovojnica {success:true, data:[…]} je KONVENCIJA, izpeljana iz
 // ŽIVO preverjene napakovne ovojnice (sonda Task 53-1: GET /v2/products?
 // city=amsterdam → 401 {success:false, api_version:{major:2,minor:7}}).

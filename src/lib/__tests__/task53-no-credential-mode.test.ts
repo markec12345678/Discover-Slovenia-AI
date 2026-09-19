@@ -16,6 +16,8 @@
 // ============================================================================
 
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import https from "node:https";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import {
   PROVIDER_REGISTRY,
   activeProviders,
@@ -83,6 +85,40 @@ const SI_QUERY: SupplyQuery = {
 // ============================================================================
 
 describe("TASK 53 §20: NO-CREDENTIAL MODE (današnje stanje instance)", () => {
+  // Deterministično BREZ omrežja (naslov testa: „BREZ omrežja"):
+  // OSM živi Overpass klic gre prek node:https (NE globalThis.fetch —
+  // sandbox forenzika, glej overpass.ts) in se v razvojnem peskovniku
+  // obesi (zrcala ~18 s). Mock na https.request simulira IZKLOPJENO
+  // omrežje: overpassHttpPost takoj resolve-a null → adapter pošteno
+  // degraded (NE sesuje), gated adapterji 0 klicev, KT dataset nedotaknjen.
+  // Retry zaporedje (5 × 1 s spanja) je deterministično ~5 s → test ②
+  // dobi podaljšan timeout; ③④ hitita prek OSM failure cache (60 s).
+  const realRequest = https.request;
+  type AnyFn = (...a: unknown[]) => unknown;
+  let errCb: AnyFn | undefined;
+  const fakeReq = {
+    on(_ev: string, cb: AnyFn) {
+      if (_ev === "error") errCb = cb;
+      return fakeReq;
+    },
+    write() {},
+    end() {
+      queueMicrotask(() =>
+        errCb?.(new Error("task53: omrežje izklopljeno (deterministični test)"))
+      );
+    },
+    destroy() {},
+  };
+  beforeEach(() => {
+    errCb = undefined;
+    (https as { request: unknown }).request = ((
+      ..._args: unknown[]
+    ) => fakeReq) as unknown;
+  });
+  afterEach(() => {
+    (https as { request: unknown }).request = realRequest;
+  });
+
   test("① tovarna: VSI aktivni adapterji se zgradijo brez izjem (10 adapterjev)", () => {
     const adapters = defaultAdapters();
     expect(adapters.length).toBe(10);
@@ -123,7 +159,7 @@ describe("TASK 53 §20: NO-CREDENTIAL MODE (današnje stanje instance)", () => {
     }
     // vsaj ena iskrena opomba je prisotna (telemetrija deluje)
     expect(gated.length).toBeGreaterThanOrEqual(6);
-  });
+  }, 12_000);
 
   test("③ NO-FAKE invarianta: noben produkt gated adapterjev NE obstaja v odgovoru", async () => {
     const res = await searchSupply(SI_QUERY);
@@ -140,7 +176,7 @@ describe("TASK 53 §20: NO-CREDENTIAL MODE (današnje stanje instance)", () => {
     for (const p of res.products) {
       expect(gatedSlugs.has(p.provider)).toBe(false);
     }
-  });
+  }, 12_000);
 
   test("④ izolacija: OSM/KiwiTaxi še vedno tečeta (graceful degradation ostane)", async () => {
     const res = await searchSupply(SI_QUERY);
@@ -154,7 +190,7 @@ describe("TASK 53 §20: NO-CREDENTIAL MODE (današnje stanje instance)", () => {
     // KT transferji so v produktih (48 SI rut iz dataseta)
     expect(res.products.some((p) => p.provider === "kiwitaxi")).toBe(true);
     expect(osm).toBeDefined();
-  });
+  }, 12_000);
 
   test("⑤ accessMatrix: čist env → vse TASK 53 poverilnice MISSING, productionConfigured=false", () => {
     for (const slug of [
@@ -363,5 +399,65 @@ describe("TASK 53 §8/§9/§10: kanonske reference novih adapterjev", () => {
     // lokalni vir NIKOLI komercialne rezervacije
     expect(fsq.capabilities.affiliate).toBe(false);
     expect(fsq.capabilities.booking).toBe(false);
+  });
+});
+
+// ============================================================================
+// §23 CONTRACT FIXTURES — jasna oznaka + NIKOLI v produkciji
+// ============================================================================
+
+describe("TASK 53 §23: contract fixtures so TEST-ONLY (oznaka + izolacija)", () => {
+  const ADAPTER_TEST_FILES = [
+    "tiqets-adapter.test.ts",
+    "booking-adapter.test.ts",
+    "skyscanner-adapter.test.ts",
+    "airalo-adapter.test.ts",
+    "travelpayouts-adapter.test.ts",
+    "fsq-adapter.test.ts",
+  ] as const;
+
+  test("① VSA adapter-test datoteka nosi oznako TEST FIXTURE — NOT LIVE DATA", () => {
+    for (const f of ADAPTER_TEST_FILES) {
+      const src = readFileSync(`src/lib/__tests__/${f}`, "utf8");
+      expect(src).toContain("TEST FIXTURE — NOT LIVE DATA");
+    }
+  });
+
+  test("② PRODUKCIJSKA KODA nikoli ne uvaža iz __tests__ (fixture NE more v runtime)", () => {
+    // Strukturna meja zaupanja: noben modul izven __tests__ ne sme uvažati
+    // iz testne mape — sanitizirane pogočne fixture tako po konstrukciji
+    // ne morejo doseči produkcjske poti.
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir)) {
+        const full = `${dir}/${entry}`;
+        if (statSync(full).isDirectory()) {
+          if (entry === "__tests__" || entry === "node_modules") continue;
+          walk(full);
+        } else if (/\.(ts|tsx)$/.test(entry)) {
+          const src = readFileSync(full, "utf8");
+          if (/from\s+["'][^"']*__tests__/.test(src)) offenders.push(full);
+        }
+      }
+    };
+    walk("src");
+    expect(offenders).toEqual([]);
+  });
+
+  test("③ NO-FAKE v production adapterjih: noben adapter nima hardcodeanih fixture produktov", () => {
+    // Vir proizvodov je IZKLJUČNO živi klic/dataset — scan izvorne kode
+    // novih adapterjev po značilnih fixture vzorcih (sample/DEMO izdelki).
+    for (const slug of ["tiqets", "booking", "skyscanner", "airalo", "travelpayouts", "fsq"]) {
+      for (const part of ["adapter", "mapper", "client", "types", "dataset"]) {
+        const path = `src/lib/supply/providers/${slug}/${part}.ts`;
+        let src: string;
+        try {
+          src = readFileSync(path, "utf8");
+        } catch {
+          continue; // fsq nima client.ts ipd.
+        }
+        expect(src).not.toMatch(/fallbackProducts|DEMO_PRODUCTS|sampleProducts/i);
+      }
+    }
   });
 });

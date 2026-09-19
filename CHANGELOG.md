@@ -7,6 +7,39 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.58.0] — 2026-09-20 (TASK 53: ALL PROVIDERS READY WITHOUT API KEYS)
+
+### Provider adapterji (1.58.0 — TASK 53 §5–§10)
+
+- **6 NOVIH adapterjev** po vzorcu viator/gyg (iskreni capability gates, 0 klicev na vir brez poverilnic, NIKOLI fake inventarja): **tiqets** (Api-Key gate; city iskanje po kanonskih destinacijah; cena SAMO izrecno EUR), **booking** (Demand API v3 search+rates veriga; cena = nočna, okno 1 noč; bookingBbox pretvorba), **skyscanner** (Live Prices v3 create→poll z zgornjo mejo 5; žive cene TTL 0; PRODUCT GAP origin iskreno `origin-required`), **airalo** (OAuth2 client credentials — OBE poverilnici; države 24 h cache; cena SAMO ob EUR, USD → izpuščena z opombo, NIKOLI pretvorba), **travelpayouts** (Data API token+origin gate; bookingUrl /go/flights), **fsq** (lokalni JSONL bralec Open Places; gate `no-dataset`; info_only).
+- **Centralna povezava:** `ADAPTER_FACTORIES` 10 tovarn v search.ts; registry vnosi 6 novih providerjev (minZoom/cacheTtlMs/maxCallsPerMin/types); production-matrix CODE_READY + accessKind + blockedReason za vseh 6; `.env.example` dopolnjen.
+- **`productionConfigured` AND-semantika** (production-matrix + production-status): API poverilnice so konfigurirane ŠTESE, ko so VSE credential-like prisotne (airalo OAuth2 potrebuje OBE; delna = NE konfigurirano — iskreno fail-closed). Affiliate poverilnica = samostojna plast (OR).
+
+### Varnost / iskrenost (§11–§23)
+
+- **/go centralna arhitektura** že pokriva nove rute (živo preverjeno: tickets→tiqets 302, hotels→booking 302, flights→skyscanner 302, esim→airalo 302; `javascript:`/`data:`/path-traversal → 400/whitelist-fallback; neznan provider → 404).
+- **TEST FIXTURE pravilo (§23):** vseh 6 novih testnih datotek nosi oznako `TEST FIXTURE — NOT LIVE DATA`; nov strukturni test prepoveduje uvoz iz `__tests__` v produkciji (src scan) + NO-FAKE scan (fallbackProducts/DEMO_PRODUCTS prepovedani).
+- **NO-CREDENTIAL MODE (§20):** `searchSupply` z izbrisanimi ključi → 7 gated adapterjev `ok=true count=0 not-configured` + fsq `no-dataset`, KT 48, 0 fake (deterministični https mock — omrežje izklopljeno, OSM graceful-degraded).
+- **FUTURE ACTIVATION (§21):** tovarna vrne ISTIH 10 adapterjev z in brez ključev; statusi se dvignejo NOT_CONFIGURED → CONFIGURED samo ob prisotnosti poverilnic (LIVE ostane rezerviran za živo preverbo — TASK 54).
+
+### Testi (§22/§26)
+
+- **190 novih testov**: tiqets 22 + booking 27 + skyscanner 27 + airalo 29 + travelpayouts 26 + fsq 36 + task53-no-credential-mode 23 (vključno §23 fixture izolacija). Pokritost: 6× mapper, 6× missing credential, 6× malformed response, 6× redirect, 401/403/429/timeout klasifikacija v vsakem client bloku, env LEAK guard v vsakem adapterju.
+- **Celota: 1196/1196 PASS** (44.503 expect), lint 0, tsc 0 (src). TASK 47–51 baseline (1004 testov) nedotaknjen.
+
+### Browser E2E (§28 — živo na dev strežniku)
+
+- SL: zemljevid → Transferji → "Ponudba v pogledu 48" → kartica → ProductModal (od €77/prevoz, razredi vozil, vir CSV) → Dodaj (disabled po 1×) → načrtovalnik "fixed" → generiraj → FIXED "od 77 €" v načrtu → refine "Manj vožnje" (z-ai-sdk 200) → FIXED ohranjen.
+- FIXED kanon dokaz (API): podtaknjeni €1 + lažni naslov → kanonska cena €51 + kanonski naslov "Ljubljana Airport → Ljubljana", točno 1×, knownTotal 231.
+- EN: /en/zemljevid "Supply in view 48", modal 100 % angleško ("from €77 per transfer", "real transfer prices, not live quotes"). Mobile 375/390: 0px overflow (/, /vir-podatkov, /zemljevid, /nacrtuj). /vir-podatkov: 16/16 kartic (3 Živi / 4 Ni konfiguriran / 7 Potrebna odobritev / 2 Samo partnerska povezava) SL+EN.
+
+### Dokumentacija
+
+- **`docs/TASK-53-ALL-PROVIDERS-READY.md`** — končno poročilo A–S (inventar 16, pogodbena matrika živo preverjenih vrat, adapter matrika, affiliate/booking matrika, AI/FIXED, varnost, izolacija, no-credential mode, testi, E2E, performance, prihodnja aktivacija runbook, končna matrika §24/§30, Final Gate 23 pogojev).
+- README: Zemljevid sekcija (Supply Map plast) + status vrstica (TASK 53 ✅).
+
+---
+
 ## [1.57.2] — 2026-09-19 (TASK 52 zaključek: žive verige + končno poročilo A–U)
 
 ### Dokumentacija (1.57.2 — TASK 52 §20–§41)

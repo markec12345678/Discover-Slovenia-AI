@@ -2,6 +2,9 @@
 // TASK 53 — TRAVELPAYOUTS ADAPTER: CAPABILITY GATE / PRODUCT GAP / CACHE
 // ============================================================================
 // Mock fetch je TEST-ONLY preslikava JAVNO DOKUMENTIRANE pogodbe Travelpayouts
+// TEST FIXTURE — NOT LIVE DATA (§23): vse odgovore/fixture v tej datoteki
+// so SANITIZIRANE POGODBEBNE FIXTURE — samo za unit/integration teste,
+// NIKOLI za produkcjski runtime.
 // Data API (support.travelpayouts.com — /aviasales/v3/prices_for_dates).
 // NI izmišljenega inventarja: adapter se preskuša proti dokumentiranim
 // oblikam odgovorov vira. (LIVE-VERIFIED: brez žetona vir odgovori 401.)

@@ -3,6 +3,9 @@
 // CACHE / IZOLACIJA
 // ============================================================================
 // Mock fetch je TEST-ONLY preslikava JAVNO DOKUMENTIRANE pogodbe vira
+// TEST FIXTURE — NOT LIVE DATA (§23): vse odgovore v tej datoteki
+// so SANITIZIRANE POGODBEBNE FIXTURE — samo za unit/integration teste,
+// NIKOLI za produkcjski runtime.
 // (developers.skyscanner.net — Flights Live Prices v3; vrata brez ključa
 // so ŽIVO preverjena: HTTP 403 "Request Forbidden"). NI izmišljenega
 // inventarja — adapter se preskuša proti dokumentiranim odgovorom vira.

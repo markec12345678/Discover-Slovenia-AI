@@ -3,6 +3,9 @@
 // RATES VERIGA / NEGATIVNI PREDPOMNILNIK / KLASIFIKACIJA NAPAK
 // ============================================================================
 // Mock fetch je TEST-ONLY preslikava DOKUMENTIRANE oblike Demand API v3
+// TEST FIXTURE — NOT LIVE DATA (§23): vse odgovore v tej datoteki
+// so SANITIZIRANE POGODBEBNE FIXTURE — samo za unit/integration teste,
+// NIKOLI za produkcjski runtime.
 // (developers.booking.com/demand/docs — endpoint obliki iz Task 53-1):
 //  - GET  /v3/accommodations/search?bbox=west,south,east,north&… →
 //        {"data": [{"accommodation": {id, name, location: {latitude,

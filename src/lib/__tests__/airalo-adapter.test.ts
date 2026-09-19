@@ -2,6 +2,9 @@
 // TASK 53 — AIRALO ADAPTER: CAPABILITY GATE / ŽETON / KATALOG / CACHE
 // ============================================================================
 // Mock fetch je TEST-ONLY preslikava pogodbe vira (sandbox /api/v2/
+// TEST FIXTURE — NOT LIVE DATA (§23): vse odgovore v tej datoteki
+// so SANITIZIRANE POGODBEBNE FIXTURE — samo za unit/integration teste,
+// NIKOLI za produkcjski runtime.
 // countries oblika je ŽIVO preverjena — GOLI array; paketi + žeton so
 // DOCUMENTED-ASSUMPTION iz uradne dokumentacije). NI izmišljenega
 // inventarja — adapter se preskuša proti dokumentiranim odgovorom vira.

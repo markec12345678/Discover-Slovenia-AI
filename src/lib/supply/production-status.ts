@@ -99,10 +99,14 @@ export function userFacingStatus(
   //    „AFFILIATE ONLY“, tudi če je monetizacija nastavljena (§26).
   if (entry.blockedReason === "NOT_APPLICABLE") return "AFFILIATE_ONLY";
 
-  // 3) CONFIGURED — SAMO inventarska API poverilnica (ključ/žeton) je
-  //    prisotna. Affiliate ID/URL tega NE sproži: monetizirana povezava
-  //    NI konfiguriran inventar (§26 — ločena chip spodaj).
-  const apiConfigured = env.api.some((c) => c.present && credentialLike(c.envVar));
+  // 3) CONFIGURED — SAMO inventarske API poverilnice (ključ/žeton) so
+  //    prisotne — VSE credential-like vnosе api skupine (TASK 53 §21:
+  //    airalo OAuth2 potrebuje OBE, delna = NE konfigurirano). Affiliate
+  //    ID/URL tega NE sproži: monetizirana povezava NI konfiguriran
+  //    inventar (§26 — ločena chip spodaj).
+  const apiCreds = env.api.filter((c) => credentialLike(c.envVar));
+  const apiConfigured =
+    apiCreds.length > 0 && apiCreds.every((c) => c.present);
   if (apiConfigured) return "CONFIGURED";
 
   // 4) Partner approval / pogodba (tudi B4B = pogodbena oblika dostopa).

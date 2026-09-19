@@ -12,7 +12,7 @@
 
 **Produkcija (primarna):** <https://i-feel-slovenia.onrender.com> (Render, avtomatski deploy iz `main`) · **Sekundarna:** <https://i-feel-slovenia.vercel.app> (Vercel, rate-limit okna — glej runbook)
 
-**Status faz:** P0 ✅ → P1 ✅ → P2 ✅ → P3 ✅ (varnostni auditi) → P4 ✅ (pilotni polish) → P5 ✅ (priprava deploya) → P6 ✅ (sinhronizacija dokumentov) → P7 ✅ (varnostni audit + popravki P0–P2) → P8 ✅ (responsive 390 px + atomarna booking deduplikacija) → P9 ✅ (code freeze + deploy runbook/smoke orodja) → R2/R3 auditi ✅ → FW1 ✅ (kritični audit popravki) → FW2 ✅ (UX quick wins — Mindtrip Tier 1) → FW3 ✅ (AI-first hierarhija UX refaktor) → **MONET ✅ (monetizacijska mreža — 10 partnerjev fail-closed, affiliate + GEO/SEO paket + mobilni UX pass)** — pilot-ready; produkcijo preveri dinamično (smoke skripta, točka 8)
+**Status faz:** P0 ✅ → P1 ✅ → P2 ✅ → P3 ✅ (varnostni auditi) → P4 ✅ (pilotni polish) → P5 ✅ (priprava deploya) → P6 ✅ (sinhronizacija dokumentov) → P7 ✅ (varnostni audit + popravki P0–P2) → P8 ✅ (responsive 390 px + atomarna booking deduplikacija) → P9 ✅ (code freeze + deploy runbook/smoke orodja) → R2/R3 auditi ✅ → FW1 ✅ (kritični audit popravki) → FW2 ✅ (UX quick wins — Mindtrip Tier 1) → FW3 ✅ (AI-first hierarhija UX refaktor) → **MONET ✅ (monetizacijska mreža — 10 partnerjev fail-closed, affiliate + GEO/SEO paket + mobilni UX pass)** → TASK 42–51 ✅ (Supply Map + supply-aware AI/FIXED + geo koherenca — 947/947) → TASK 52 ✅ (produkcijska matrika 16 providerjev — 1004/1004) → **TASK 53 ✅ (ALL PROVIDERS READY WITHOUT API KEYS — 10 adapterjev, 1196/1196 testov, lint 0, tsc 0; 3 LIVE, 8 CODE READY z živo preverjenimi pogodbami, 0 fake inventarja; prihodnja aktivacija = samo env vnos — glej [TASK-53 matriko](docs/TASK-53-ALL-PROVIDERS-READY.md))** — pilot-ready; produkcijo preveri dinamično (smoke skripta, točka 8)
 
 > 🧊 **CODE FREEZE (P9, 2026-09-11):** razvoj za pilot je zaključen — do konca pilota NOVIH funkcij ni (samo popravki napak iz realne uporabe).
 >
@@ -115,6 +115,7 @@ Platforma rešuje **3 ključne probleme**:
 - 22 destinacijskih markerjev, Leaflet + OpenStreetMap
 - Tisoči POI (Overpass API) + Wikipedia in AI opisi
 - Vremenska napoved (Open-Meteo) v načrtu potovanj
+- **Plast ponudbe (Supply Map, TASK 42–53):** 10 adapterjev, 16 providerjev v [produkcijski matriki](docs/TASK-53-ALL-PROVIDERS-READY.md) — 3 živi viri (OSM POI, STO llms.txt RAG, KiwiTaxi transferji s 48 realnimi rutami v pogledu), 8 kodirano pripravljenih z živo preverjenimi pogodbami (Viator, GetYourGuide, Tiqets, Booking, Skyscanner, Airalo, Travelpayouts, Foursquare Open Places) — **iskreni capability gates: brez API ključev adapterji vračajo 0 produktov z opombo `not-configured`, NIKOLI fake inventarja**; prihodnja aktivacija = samo env vnos. CTA rezervacij tečejo centralno prek `/go/*` (fail-closed redirect, affiliate ID-ji ločeno od podatkov)
 
 ### 🏢 B2B portali
 
