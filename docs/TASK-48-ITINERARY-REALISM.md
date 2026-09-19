@@ -307,3 +307,93 @@ refine/ai), BudgetPanel SL (uncertain z razlogom) + EN (within
 "€280 of €500"), 390 px + 375 px brez horizontalnega overflow,
 footer `min-h-screen flex flex-col` + `mt-auto` (porinjen pri dolgi
 vsebini).
+
+---
+
+## RE-VERIFIKACIJA (2026-09-19, HEAD `ab30f0c` — po TASK 49/50/51)
+
+Nadzor nad izvirno specifikacijo §1–§22 po tem, ko so se nad plastjo
+Taska 48 nabrala trije naslednji taski (49: selection-verify strežna
+resnica; 50: schedule-slots/repair + price_unverified; 51: geo-order +
+geo-coherence + OSRM failure matrika). Audit „ne zaupaj poročilom" —
+branje dejanske kode na HEAD + polna regresija + živa E2E.
+
+### Ugotovitve audita (§1)
+
+- **Vrsta §15 JE samo okrepljena**: `sanitizeItinerary →
+  revalidateSupplyStops → verifyCurrentStopsAuthority →
+  validateItinerarySupply (ref/dedupe/cena/geo/smer/FIXED) →
+  recomputeTotalBudget → computeBudgetValidation →
+  buildLegRouteIndex (OSRM) → repairScheduleGaps →
+  validateItineraryGeo` — velja za VSEH 5 poti (AI, fallback,
+  refine-AI, quick-action, fallback_echo; refine route vrstice
+  571/591/627/660/690/746/877/908/918/932).
+- **§4 časovne invariante** (`time_slot_invalid`, `duration_invalid`,
+  `schedule_overlap` v geo-validation.ts) + TASK 50 repair — intaktne.
+- **§7 unit semantika** (`canonicalStopCost`: per_transfer ≠ ×osebe,
+  per_person × groupSize, per_night unknown) — intaktna; TASK 49
+  `selection-verify` dodaja kanonsko avtoriteto NAD klientovo izbiro.
+- **§8 unknown is unknown** — okrepljeno (TASK 50 `price_unverified`:
+  neverificirana klientova cifra → NaN + poštena opomba SL/EN).
+- **§9/§10 FIXED/dedupe** — intaktni (refine le iz `current`,
+  dedupe SAMO po (provider, id)).
+- **§12 budget** — `computeBudgetValidation` unchanged; „uncertain"
+  zahteva dokazljivost — živo dokazano spodaj.
+- **§13 vsebina ≠ komercialna ponudba** — OSM info_only: cena/razpolo
+  žljivost VEDNO odstranjena (selection-verify vrstica 193).
+- **§14 refine bypass** — ZAPRT (P0 fix 1.53.0; TASK 50 je zaprl še
+  echo vejo — surov klientov payload nikoli ne vrne nevalidiran).
+
+### Regresija (§20)
+
+- Testi: **947/947, 0 fail** (enako kot končno stanje Taska 51).
+- Lint: **0**. TypeScript: **0** napak v `src/` (samo predhodne
+  opombe `skills/` + `tailwind.config.ts` zunaj aplikacije).
+- Git: delovno drevo ČISTO (samo gitignored `.zscripts/e2e/` orodja).
+
+### Živa E2E (brskalnik, §17) — 2×FIXED (kiwitaxi:408 €51 + :409 €51)
+
+- **A — TRANSFER**: /zemljevid → Pokaži POI → čip Transferji → zoom
+  ≥ 10 → **48 izdelkov** → modal („na prevoz", „objavljena cena, ni
+  živi citat", vir KiwiTaxi) → Dodaj v moj načrt → sessionStorage
+  `dai:supply-selection` strukturiran FIXED item.
+- **B — FIXED 2×**: banner „Izbrani produkti (2) · obvezne"; generi
+  ran načrt vsebuje TOČNO 2 supply postanka (1× vsak — dokazano po
+  števcu opomb „vir: KiwiTaxi"/„source: KiwiTaxi" = 2; dodatni pojavi
+  naslova v tekstu so booking-offer vrstice, ne postanki).
+- **C — BUDGET 500 €**: BudgetPanel → **uncertain** („končnega zneska
+  ni mogoče v celoti dokazati — 2 „od" ceni") — §12 iskrenost, NE
+  „within" nad fromPrice.
+- **D — REFINEMENT**: hitra akcija `slower_pace` → deterministično,
+  4 spremembe, geo error→ok (isti validacijski sloj); prosto-besedilni
+  refine → FIXED supply postanki PREŽIVIJO refine (fallback_echo pot).
+- **E/F — SL+EN**: EN pot: banner „Selected products (2) · mandatory",
+  „Day 1–3", 2× „source: KiwiTaxi" + 2× „per transfer".
+- **G — MOBILNI**: 390 px in 375 px — **0 px** horizontalnega preliva,
+  0 napak strani; footer `min-h-screen flex flex-col` + `mt-auto`.
+- dev.log dokazi: `supply-aware: context=48 (capped 12) fixed=2`,
+  `TASK 50 schedule repair`, `TASK 51 geo coherence: stops=8 km=530
+  (osrm=4) anchors=2` — realne OSRM noge.
+
+### Omejitve okolja (iskreno, FOLLOW-UP — brez sprememb kode)
+
+1. **z-ai SDK trenutno 429** (preizkušeno 3×): generacija E2E je
+   tekla po DETERMINISTIČNI FALLBACK poti — kar je točno §15/§18
+   zahtevo (AI odpoved → popolnoma validiran fallback, nikoli
+   pokvarjen načrt). AI pot samo je pokrita z 947 unit testi +
+   prejšnjimi živimi dokazi (Task 47: „AI uspešno (source:
+   z-ai-sdk)"). FOLLOW-UP: ponovna živa AI E2E, ko se kvota sprosti.
+2. **Prisma klient se ob vsakem `next dev` regenerira kot postgres**
+   (`next.config.ts` vrstica 14: `execSync("npx prisma generate")` —
+   default schema = postgres za Vercel): v SQLite sandboxu vsi
+   DB-dotiki fail-open (ranking engine, analitika, bookings — vsi
+   try/catch, zlata pot NESPREMENJENA). Ni regresija Taska 48 (baza v
+   tem vsebniku nikoli ni delovala). FOLLOW-UP: pogojni
+   `--schema schema.dev-sqlite.prisma` glede na `DATABASE_URL`.
+3. **OOM 4 GB**: dolgo tekoči dev strežnik + Chromium presežeta RAM —
+   E2E disciplina: svež strežnik na vsakem runs, `agent-browser close`
+   na koncu (shranjeno v `.zscripts/e2e/`, gitignored).
+
+**Sklep re-verifikacije**: TASK 48 GREEN na HEAD `ab30f0c` — vse
+invariante §1–§22 ostajajo izvršene, nadgrajene z Taski 49–51, brez
+regresij, z živimi dokazi A–G.
