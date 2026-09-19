@@ -7,6 +7,25 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.57.2] — 2026-09-19 (TASK 52 zaključek: žive verige + končno poročilo A–U)
+
+### Dokumentacija (1.57.2 — TASK 52 §20–§41)
+
+- **`docs/TASK-52-PROVIDER-PRODUCTION-ACTIVATION.md`** — končno poročilo v strukturi A–U (baseline, inventar, kapabilitetna matrika, access matrix, aktivacijsko delo, ŽIVE VERIGE dokazov, affiliate, booking-CTA, cene, razpoložljivost, AI integracija, FIXED-refinement, varnost, performance, i18n, mobilne, env, regresija, blokerji, končna matrika, Final Gate 21 pogojev).
+- **§25 ŽIVE VERIGE (10-korakna) na HEAD:** KiwiTaxi 10/10 (CSV → iskanje 200 → 48 produktov → mapper → kanonski produkt s licenco → FROM_PRICE z note → not_supported → sourceUrl → 302 redirect na kiwitaxi.com/en/transfers/1439 → AI kontekst context=48 fixed=1); STO 10/10 (llms.txt → 664 zapisov → **ŽIVI overlay refresh iz slovenia.info med preverbo** — fetchedAt 18:06, freshness plast nad git baselineom → geopovezava Bled→slug); OSM (kodna pot zelena; danes overpass-api.de 406 iz peskovnika → fail-closed degradacija DOKAZANA V ŽIVO: degraded=['osm'], 0 izmišljenih produktov, KT v ISTEM odgovoru nedotaknjen — točno predvideno vedenje §15/§23/§35); Viator/GYG iskrena vrata (ok=true count=0 note=not-configured).
+- **§20/§21 AI veriga z manipulirano ceno (živi dokaz):** klient poslal FIXED kiwitaxi:408 s podrivnimi €1 → selection-verify popravi na kanonskih €51 („1 cen popravljenih na kanon") → AI kontekst context=48 providers=kiwitaxi fixed=1 → končni načrt vsebuje kiwitaxi:408 TOČNO 1× z estimated_cost 51 (kanon, ne klientova trditev), notes „od 51 € (per transfer) · preveri pri ponudniku · vir: KiwiTaxi", budgetValidation knownTotal=171 (samo verificirane cene).
+- **§29/§30 browser E2E:** desktop 1280×800 (zemljevid: „Ponudba v pogledu 48", ProductModal z realnimi cenami razredov + CTA „Preveri ponudbo in rezerviraj pri partnerju", „Dodaj med izbrane" nato disabled + „V načrtu"); mobile 375×812 in 390×844: 0px preliv; i18n SL+EN (vir-podatkov 16/16 kartic: SL 3 Živi podatki + 4 Ni konfiguriran + 7 Potrebna odobritev partnerja + 2 Samo partnerska povezava; EN enako prek /en/vir-podatkov; 0 raw i18n ključev; /en h1 preveden); 0 console error.
+- **Regresija:** 1004/1004 testov, lint 0, tsc 0 (src/ — napake izključno v `skills/*` zunaj projekta).
+
+## [1.57.1] — 2026-09-19 (TASK 52 §32: produkcijski status za uporabnika/administratorja)
+
+### Dodano (1.57.1 — register UI statusi)
+
+- **NOVA `src/lib/supply/production-status.ts`** — uporabniku/administratorju prijazen status IZKLJUČNO iz dovoljenega nabora §32: LIVE / CONFIGURED / NOT CONFIGURED / PARTNER ACCESS REQUIRED / AFFILIATE ONLY. Izpeljava: LIVE ⟺ PRODUCTION_ACTIVE (dokazana stopnja — affiliate ID NI pogoj); AFFILIATE_ONLY ⟺ vir brez inventarskega API-ja (ZA VEDNO, tudi z monetizacijo — §26); CONFIGURED ⟺ SAMO inventarska API poverilnica prisotna (affiliate ID tega NE sproži); monetizacija LOČENA (chip: CONFIGURED/NOT_CONFIGURED/NOT_APPLICABLE). Strežniški modul — nikoli v klientu.
+- **`/vir-podatkov` nadgradnja:** produkcijski badge na kartici vsakega providerja + stopnja življenjskega cikla §0 (PRODUCTION_ACTIVE/DISCOVERED/…) + chipi cene/razpoložljivosti/monetizacije + legenda „Kaj statusi pomenijo" (affiliate NI inventar). i18n SL+EN (fragments + messages merge).
+- **+25 testov** (`task52-production-status.test.ts`): besednjak statusov (nič drugih vrednosti), LIVE invarianta (PRODUCTION_ACTIVE → LIVE; vsi drugi NIKOLI LIVE), LIVE z vsemi env poverilnicami nastavljenimi (KiwiTaxi CSV ostane LIVE tudi z ID — vir ne zahteva poverilnic za podatke), CONFIGURED samo ob API ključu (affiliate ID NE), AFFILIATE_ONLY permanenca, NOT_CONFIGURED poti, monetizacijska stanja, 16/16 pokritost registra. Suite: 1004/1004.
+- **E2E curl:** SL + EN 200; 16/16 kartic pravilnih (3 LIVE, 4 NOT CONFIGURED, 7 PARTNER ACCESS REQUIRED, 2 AFFILIATE ONLY); 0 raw i18n ključev.
+
 ## [1.57.0] — 2026-09-20
 
 ### Dodano (1.57.0 — TASK 52: full provider production activation & honest live supply)
