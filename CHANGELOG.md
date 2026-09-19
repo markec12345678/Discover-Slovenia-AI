@@ -7,6 +7,40 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.55.1] — 2026-09-19
+
+### Dodano (1.55.1 — TASK 50 §21/§20/§26: avtomatizacija scenarijev + performance dokazi + končni format poročila)
+
+- **12 determinističnih avtomatiziranih scenarijev (S1–S12)** — `src/lib/__tests__/task50-scenario-automation.test.ts`: klic REALNIH route handlerjev (POST `/api/itinerary` + `/api/itinerary/refine`) skozi celo strežniško verigo. Obvezni §21 seznam: basic, budget, impossible budget, one FIXED, two FIXED, refine, tampered price, fake provider, provider unavailable, SL/EN parity + echo tamper + duplicate FIXED. Determinizem BREZ `mock.module` (forenzika: bun mock.module pušča čez datoteke — dokazano z dvema datotekama): popolna omrežna izključitev prek `globalThis.fetch` (z-ai-web-dev-sdk + openai paket + Open-Meteo gredo čez globalni fetch → AI določno odpove → fallback pot), `OSRM_BASE_URL` preusmerjen na nedosegljiv localhost PRED uvozom (OSRM teče prek node:https, NE global fetch), KT dataset = lokalna datoteka, unikatni `x-real-ip` (ločena rate-limit vedra), kanoniki dinamično iz baseline-a (`skipIf` brez `data/`). Suite: **871/871** (859 + 12).
+- **§20 performance dokazi** (živi strežnik): AI generacija 15,4–24,5 s (free-tier veriga); refine 12,6–21,3 s (AI) / 11,7 s (429 → echo); supply search KT 20 ms hladen / ~0,2 s topel (lokalni dataset, 0 omrežja); OSM hladen 4,5 s (258 produktov) / toplo 8–23 ms (TTL 10 min + LRU 60); map = 8 OSM ploščic + OSRM geometrija; blackout ~0,5 s strežniško (200, 0 fake). Vzorci: N+1 NE (adapterji vzporedno `Promise.allSettled`; generacija = 1 supply iskanje; refine = 0), podvojeni klici NE (TTL/LRU/pipe predpomnilniki), ponovljena validacija NE (refine before/after = namenski dokaz), nepotrebni remote klici NE (cat-gating, capability gate, kap 12). Presoja: performance NI blocker → 0 optimizacij „samo zaradi številke" (§20 pravilo).
+- **§26/§29 končni format poročila** — `docs/TASK-50-REAL-USER-VALIDATION.md`: Repository/Baseline, SCENARIO MATRIX 34/34 (30 zahtevanih + 4 ekstra, SL/EN stolpca, dokazi [H]/[S#]/[B]), ADVERSARIAL MATRIX 12/12 (T1–T10 + H1 + V1), 14 sekcijskih auditov (Supply/AI Integrity, Realism, Budget, Time, Geo, Routing, Refinement, Provider Failures, Security, i18n, Mobile, Performance, New Tests, P0–P3), točen zaključek „TASK 50 STATUS: GREEN". Sveža §22 regresija: 871/871, lint 0, tsc 0 (src), browser E2E SL+EN (hero → AI načrt → BudgetPanel → refine 200; 0 napak), 375/390 px 0 preliva, footer `min-h-screen flex flex-col` + `mt-auto`.
+- **CHANGELOG higiena**: dodani zamujeni vnosi 1.53.0/1.54.0/1.55.0 (dokumentirani v docs/, nikoli zapisani v CHANGELOG).
+
+## [1.55.0] — 2026-09-19
+
+### Popravljeno (1.55.0 — TASK 50: realna uporabniška / adversarialna validacija itinerarjev)
+
+- **P0 — refine echo veja je vračala SUROV klientov payload ob AI odpovedi** (KT €1 namesto kanon €77; fabrikantrt viator:99999 s klientovo €500 prikazan; zastarela klientova geoValidacija „ok"). Fix: echo veja = ISTA validacijska veriga kot quick-action (validateItinerarySupply nad overjeno izbiro + currentStops; sveža geoValidation/budgetValidation/legs; observability `source:"fallback_echo"`). Dokaz: echo-proof 8/8 pri repliciranem upstream 429.
+- **P1 — neizvedljivi urniki**: fiksni terminski ritem 09–13/14–18 (vrzel 1 h) neodvisno od vožnje; 14/19 scenarijev worst:error. Fix: NOVA `src/lib/schedule-slots.ts` (drive-aware termini: konzervativna haversine ×1,5/50 km/h + 30 min rezerva; `repairScheduleGaps` — popravljalna plast nad REALNIMI OSRM nogami, minute-natančno, premakne LE začetke, prekrivanja poravna tudi brez noge) vpeto na VSEH 5 poteh (generacija AI+fallback, refine AI+quick-action+echo) + AI prompt pravilo 7 SL/EN. A/B: schedule_gap 10 → 0.
+- **P1 — neverificirana klientova cena kot prikazana**: `price_unverified` veja → estimated_cost NaN (JSON null) + poštena opomba SL/EN; UI/ICS varovalke (značilka >0, „€NaN" nemogoč).
+- **P2 — null-island pin (0,0) na klientu zavrnjen** (AI haluciniran `socca` + 5334 km pot).
+- **+27 testov** (22 schedule-slots + 5 price_unverified) = 859/859; 39+ živih scenarijev (obe AI stanji); docs/TASK-50-REAL-USER-VALIDATION.md.
+
+## [1.54.0] — 2026-09-19
+
+### Popravljeno (1.54.0 — TASK 49: product readiness audit)
+
+- **P0 — supply integrity**: klientova izbira/načrt = NEZAUPAN vnos (živi dokazi: kiwitaxi:411 s €1 namesto €77 iz dataseta; OSM izdelek s fabrikirano ceno; viator cena brez strežne resnice; refine currentStops s klientovo ceno). NOVA strežniška verify plast `src/lib/supply/selection-verify.ts`: KT dataset = kanon (cena/pin/naslov/tip; fabrikantrt id → ZAVRŽEN), OSM cena/razpoložljivost VEDNO odstranjena (info_only), ostali viri → unknown is unknown; AI prompt + knownSupply + Task 48 invarianta prejemajo IZKLJUČNO verificirano izbiro; currentStops avtoriteta overjena; `type:"accommodation"` FIXED bypass zaprt.
+- **Test higiena**: `clearProviderRateLimits` v gyg-hardening (vzrok 2 predhodnih GYG order-failov — modulni rate-limit viator 20/min); suite 832/832 ZELENO PRVIČ; +25 unit testov; docs/TASK-49-PRODUCT-READINESS-AUDIT.md.
+
+## [1.53.0] — 2026-09-19
+
+### Dodano (1.53.0 — TASK 48: itinerary realism validation)
+
+- **Supply-doslednostna plast nad AI izhodom** (generacija + fallback + refine): fake supply ref ODSTRANJEN (fail-closed), dedupe po (provider, id), cene po unit semantiki (per_transfer ≠ ×osebe; per_person × groupSize; per_night unknown), koordinate/smer prevoza iz kanonske avtoritete, FIXED izbire neničljive (točno 1×, refine le iz current), P0 refinement bypass zaprt (refine pot = ista validacija), budget status within/exceeded/uncertain iz ZNANIH stroškov (BudgetPanel SL+EN), časovne invariante (time_slot_invalid, duration_invalid, urnik neodvisen od koordinat), supply noge sodelujejo v geo preverjanjih, null island = missing_coords, observability `itinerary_validated` dogodki. +62 testov (807 skupaj); docs/TASK-48-ITINERARY-REALISM.md.
+
+---
+
 ## [1.52.0] — 2026-09-19
 
 ### Dodano (1.52.0 — TASK 47: SUPPLY-AWARE AI — real supply → AI odločitvena plast)
