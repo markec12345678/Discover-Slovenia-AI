@@ -170,11 +170,19 @@ export function buildItineraryICS(
           lang === "en" ? `Why: ${loc.reason}` : `Zakaj: ${loc.reason}`
         );
       }
-      descParts.push(
-        lang === "en"
-          ? `Estimated cost: €${loc.estimated_cost}`
-          : `Ocena stroška: ${loc.estimated_cost} €`
-      );
+      // TASK 50 (§10): estimated_cost je lahko NaN/null (strežniško
+      // neverificirana cena — vir nepriključen) → v koledar NE pišemo
+      // "€NaN"; neznan strošek izpustimo (opomba postanke ga pokriva).
+      if (
+        typeof loc.estimated_cost === "number" &&
+        Number.isFinite(loc.estimated_cost)
+      ) {
+        descParts.push(
+          lang === "en"
+            ? `Estimated cost: €${loc.estimated_cost}`
+            : `Ocena stroška: ${loc.estimated_cost} €`
+        );
+      }
       if (!hasRealDates) descParts.push(relativeNote);
       if (options.url) descParts.push(options.url);
 

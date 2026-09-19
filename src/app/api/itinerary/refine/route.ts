@@ -29,8 +29,9 @@ import { PARTY_PROMPT_LABELS, isPartyType } from "@/lib/party-types";
 import { PACE_PROMPT_LABELS } from "@/lib/pace-types";
 import { applyQuickAction, QUICK_ACTIONS } from "@/lib/refine-actions";
 import { buildStopReasons } from "@/lib/stop-insights";
-import { dayRouteGeometry, serializeLegs } from "@/lib/road-routing";
+import { dayRouteGeometry, serializeLegs, legKey } from "@/lib/road-routing";
 import { buildLegRouteIndex } from "@/lib/road-routing-server";
+import { repairScheduleGaps, type DriveHoursResolver } from "@/lib/schedule-slots";
 import { sanitizeSelectedProviderProducts } from "@/lib/supply/sanitize";
 import {
   computeBudgetValidation,
@@ -611,6 +612,24 @@ JSON format (STROGO, enak kot vhod):
     // F5.6: realne ceste (OSRM) — isti indeks nog za kvaliteto, geo,
     // razlage in geometrijo (predpomnilnik → drugi klic za isti par je zdarma).
     const legs = await buildLegRouteIndex(refinedItinerary);
+
+    // TASK 50 (§14/§15 — REPAIR SCHEDULE GAPS, tudi AI refine POT): AI odmev
+    // lahko vrne prekrivajoč/nemogoč urnik (živi dokaz F4: 12:00–16:00 po
+    // 09:00–13:00). §15: invalid schedule NE SME priti skozi neopazim.
+    // Konzervativna repair plast (premakne LE nemogoče začetke; trajanja/
+    // vršni red/cene/ID-ji ostanejo) poravna urnik z REALNIMI vožnjami.
+    const refineLegDriveH: DriveHoursResolver = (aId, bId) => {
+      const leg = legs.get(legKey(aId, bId));
+      return leg ? leg.min / 60 : null;
+    };
+    const refineRepaired = repairScheduleGaps(refinedItinerary.days, refineLegDriveH);
+    refinedItinerary.days = refineRepaired.days;
+    if (refineRepaired.report.shifted + refineRepaired.report.overlapShifted > 0) {
+      console.log(
+        `[itinerary/refine] TASK 50 schedule repair (AI): ${refineRepaired.report.shifted} terminov premaknjenih za vožnjo, ${refineRepaired.report.overlapShifted} zaradi prekrivanja`
+      );
+    }
+
     refinedItinerary.quality = computeItineraryQuality(refinedItinerary, formData, legs);
     refinedItinerary.rationale =
       sanitizeAiRationale(parsed.rationale) ??
@@ -750,6 +769,21 @@ JSON format (STROGO, enak kot vhod):
       // strukturo dneva — preračunaj (isto čisto funkcijo kot AI pot)
       // F5.6: realne ceste (OSRM) — predpomniljeni pari iz generiranja.
       const legs = await buildLegRouteIndex(result.itinerary);
+
+      // TASK 50 (§14, P1 — REPAIR SCHEDULE GAPS): po transformaciji (reslots
+      // hevristika) še enkrat poravnamo termine z REALNIMI nogami — gorski
+      // pari (haversine ~0,3 h prek OSRM 1,5 h) drugače ostanejo schedule_gap
+      // ERROR. Premakne se LE začetek termina; trajanja/vršni red/cene ostanejo.
+      const quickLegDriveH: DriveHoursResolver = (aId, bId) => {
+        const leg = legs.get(legKey(aId, bId));
+        return leg ? leg.min / 60 : null;
+      };
+      const quickRepaired = repairScheduleGaps(
+        result.itinerary.days,
+        quickLegDriveH
+      );
+      result.itinerary.days = quickRepaired.days;
+
       result.itinerary.geoValidation = validateItineraryGeo(
         result.itinerary,
         isEn ? "en" : "sl",
@@ -824,9 +858,95 @@ JSON format (STROGO, enak kot vhod):
       });
     }
 
-    // Fallback: vrni originalni itinerer z opombo (jezikovno pravilno — P4-8)
+    // ------------------------------------------------------------------
+    // TASK 50 (§10, P0 — 1.55.0): ta veja je vračala SUROV klientov payload
+    // (`current`) kot "itinerary" z zdrobom fallback — BREZ verify/invariant/
+    // budget/geo plasti. Živi dokazi (harness 19. 9. 2026, AI 429 je to vejo
+    // zadel pri 13/18 refine zahtev): fabrikantrt viator:99999 s klientovo
+    // €500 in kiwitaxi:424242 s €99 sta PREŽIVELA v končnem načrtu; KT postanek
+    // s klientovo €1 je ostal €1 (kanon: €77); prekrivajoč urnik je bil
+    // vračen z ZASTARELO geoValidacijo (brez schedule_overlap zaznave).
+    // Pravilo TASK 50 §10: klientov podatek NI kanonski — strežnik mora
+    // restore/reject/unknown. Zdaj: ISTA integritetna plast kot quick-action
+    // pot (validateItinerarySupply nad current z overjeno izbiro +
+    // currentStops; sveža geo/budget/legs revalidacija). Struktura ostane
+    // uporabnikova (warning sporočilo ostane), integriteta je strežniška.
+    // ------------------------------------------------------------------
+    const echoValidated = validateItinerarySupply(
+      current,
+      { selection: verifiedSelection, currentStops },
+      {
+        lang: isEn ? "en" : "sl",
+        groupSize: formData?.groupSize,
+        reinsertFixed: false,
+      }
+    );
+    const echoItinerary = echoValidated.itinerary;
+    const echoReport = echoValidated.report;
+    if (echoReport.issues.length > 0) {
+      console.warn(
+        `[itinerary/refine] TASK 50 echo validacija: ${echoReport.validated}/${echoReport.supplyStops} veljavnih, ` +
+          `${echoReport.rejected} zavrnjenih, ${echoReport.deduped} dedupliciranih, ` +
+          `${echoReport.priceCorrections} popravkov cen`
+      );
+    }
+    // P0.2/P0.1: sveža geo validacija na (popravljeni) strukturi — prej se je
+    // vračala ZASTARELA geoValidacija iz klientovega payloada (prekrivanja,
+    // ki jih je klient vnesel, niso bila zaznana). F5.6: OSRM noge.
+    const echoLegs = await buildLegRouteIndex(echoItinerary);
+
+    // TASK 50 (§15): prekrivajoč/nepreverjen urnik iz klientovega payloada se
+    // NE vrača neopazim — repairScheduleGaps poravna začetke (drži trajanja
+    // in vršni red) z realnimi vožnjami; kar ostane (neparsable termini,
+    // dnevi čez polnoč) geo validacija pošteno javi.
+    const echoLegDriveH: DriveHoursResolver = (aId, bId) => {
+      const leg = echoLegs.get(legKey(aId, bId));
+      return leg ? leg.min / 60 : null;
+    };
+    const echoRepaired = repairScheduleGaps(echoItinerary.days, echoLegDriveH);
+    echoItinerary.days = echoRepaired.days;
+
+    echoItinerary.geoValidation = validateItineraryGeo(
+      echoItinerary,
+      isEn ? "en" : "sl",
+      echoLegs
+    );
+    // TASK 48 (§12): budget status iz ZNANIH stroškov na sveži strukturi
+    const echoBudgetSynced = recomputeTotalBudget(echoItinerary);
+    echoBudgetSynced.budgetValidation = computeBudgetValidation(
+      echoBudgetSynced,
+      {
+        budget: formData?.budget,
+        groupSize: formData?.groupSize,
+        canonicalCosts: echoReport.canonicalCosts,
+      }
+    );
+    echoBudgetSynced.supplyValidation = supplySummaryOf(echoReport);
+    // UI sprint (točka D): sveže noge tudi na echo poti (klientove so lahko
+    // zastarele/izmišljene — isti vir številk kot ostale poti)
+    echoBudgetSynced.legs = serializeLegs(echoLegs);
+
+    // §18: strežniška observability dogodka (neblokirajoče, brez PII)
+    void logItineraryValidation(db, {
+      path: "refine",
+      source: "fallback_echo",
+      supply_stops: echoReport.supplyStops,
+      validated: echoReport.validated,
+      rejected: echoReport.rejected,
+      deduped: echoReport.deduped,
+      price_corrections: echoReport.priceCorrections,
+      geo_restored: echoReport.geoRestored,
+      directions_fixed: echoReport.directionsFixed,
+      reinserted: echoReport.reinserted,
+      fixed_count: verifiedSelection.filter((p) => p.selectionState === "fixed").length,
+      budget_status: echoBudgetSynced.budgetValidation.status,
+      issues: echoReport.issues.length,
+    });
+
+    // Fallback: vrni (strežniško validiran) originalni itinerer z opombo
+    // (jezikovno pravilno — P4-8)
     return NextResponse.json({
-      itinerary: current,
+      itinerary: echoBudgetSynced,
       instruction,
       source: "fallback",
       warning: isEn

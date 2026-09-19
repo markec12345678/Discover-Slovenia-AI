@@ -993,3 +993,79 @@ describe("TASK 48 — extractSupplyStops", () => {
     expect(map.get("kiwitaxi:123")?.destination_name).toBe("Transfer"); // prvi primerek
   });
 });
+
+// ============================================================================
+// TASK 50 (1.55.0) — §10/§11: klientova cena NI kanonska, kadar vira ni mogoče
+// strežniško verificirati (currentStops authority z NaN ceno iz
+// verifyCurrentStopsAuthority). Prikaz in proračun morata biti USKLAJENA:
+// unknown je unknown (NaN), nikoli klientova cifra.
+// ============================================================================
+
+describe("TASK 50 — price_unverified (§10: unknown ≠ klientova cifra)", () => {
+  test("viator postanek v currentStops z NaN ceno → izhod estimated_cost NaN + poštena opomba (SL)", () => {
+    // currentStops simulira verifyCurrentStopsAuthority izhod: viator brez
+    // priključitve → cena NaN (unknown). AI/echo odmev pa nosi klientovih 500.
+    const currentStops = new Map<string, LocationVisit>([
+      ["viator:99999", stop("viator:99999", "Fake Luxury Tour", "19:00-21:00", Number.NaN)],
+    ]);
+    const it = itineraryOf([
+      { day: 1, stops: [stop("viator:99999", "Fake Luxury Tour", "19:00-21:00", 500, { notes: "cena: 500 € · vir: viator" })] },
+    ]);
+    const res = validateItinerarySupply(it, { selection: [], currentStops }, LANG);
+    const out = res.itinerary.days[0].locations[0];
+    expect(Number.isNaN(out.estimated_cost)).toBe(true);
+    expect(out.notes).toContain("Cena ni preverjena");
+    expect(out.notes).not.toContain("500");
+    expect(res.report.issues.some((i) => i.rule === "price_unverified")).toBe(true);
+  });
+
+  test("EN variant: poštena opomba v angleščini", () => {
+    const currentStops = new Map<string, LocationVisit>([
+      ["viator:99999", stop("viator:99999", "Fake Tour", "19:00-21:00", Number.NaN)],
+    ]);
+    const it = itineraryOf([
+      { day: 1, stops: [stop("viator:99999", "Fake Tour", "19:00-21:00", 999)] },
+    ]);
+    const res = validateItinerarySupply(it, { selection: [], currentStops }, { lang: "en" });
+    expect(res.itinerary.days[0].locations[0].notes).toContain("Price not verified");
+  });
+
+  test("KT postanek z NaN currentStop (dataset manjka) → tudi NaN, ne klientova cifra", () => {
+    const currentStops = new Map<string, LocationVisit>([
+      ["kiwitaxi:411", stop("kiwitaxi:411", "Transfer", "18:00-19:00", Number.NaN)],
+    ]);
+    const it = itineraryOf([
+      { day: 1, stops: [stop("kiwitaxi:411", "Transfer", "18:00-19:00", 1234)] },
+    ]);
+    const res = validateItinerarySupply(it, { selection: [], currentStops }, LANG);
+    expect(Number.isNaN(res.itinerary.days[0].locations[0].estimated_cost)).toBe(true);
+  });
+
+  test("FINITE currentStop (KT €51) ostane kanon — regresija 1.54 vedenja", () => {
+    const currentStops = new Map<string, LocationVisit>([
+      ["kiwitaxi:123", stop("kiwitaxi:123", "Private transfer Ljubljana → Bled", "09:00-10:00", 51)],
+    ]);
+    const it = itineraryOf([
+      { day: 1, stops: [stop("kiwitaxi:123", "Transfer", "09:00-10:00", 1)] },
+    ]);
+    const res = validateItinerarySupply(it, { selection: [], currentStops }, LANG);
+    expect(res.itinerary.days[0].locations[0].estimated_cost).toBe(51);
+    expect(res.report.priceCorrections).toBe(1);
+  });
+
+  test("budget sloj: NaN cena se NE šteje v stopsTotal/knownTotal (computeBudgetValidation)", () => {
+    const it = itineraryOf([
+      {
+        day: 1,
+        stops: [
+          stop("bled", "Bled", "09:00-13:00", 50),
+          stop("viator:99999", "Fake", "14:00-16:00", Number.NaN),
+        ],
+      },
+    ]);
+    const bv = computeBudgetValidation(it, { budget: 500, groupSize: 2 });
+    expect(bv.unknownCostStops).toBe(1); // viator:99999 brez kanona
+    expect(bv.stopsTotal).toBe(50); // NaN prispeva 0
+    expect(bv.knownTotal).toBe(50); // T1 bled 25×2
+  });
+});

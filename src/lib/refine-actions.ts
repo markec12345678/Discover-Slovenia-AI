@@ -1,6 +1,7 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import { recomputeTotalBudget } from "@/lib/itinerary-quality";
+import { reslotLocations } from "@/lib/schedule-slots";
 import type {
   DayPlan,
   Itinerary,
@@ -168,18 +169,19 @@ function visitFrom(
   };
 }
 
-/** Prestavi časovne okvirje dneva nazaj v fiksni ritem 09:00/14:00 (kot fallback). */
+/** Prestavi časovne okvirje dneva v fiksni ritem 09:00/14:00 (kot fallback)
+ *  — TASK 50 (§14, P1): z drive-aware vrzelmi. Prej je bil ritem fiksno
+ *  9 + i*5 z vrzeljo TOČNO 1 h → schedule_gap ERROR, kadar je vožnja med
+ *  zaporednima postankoma > 1 h. Zdaj reslotLocations (schedule-slots.ts)
+ *  premakne začetek termina za (konzervativna vožnja + 30 min), če je to
+ *  kasneje od predloge ritma. Koordinate: T1 dataset prednost (slotCoordsOf). */
 function reslots(day: DayPlan): DayPlan {
   return {
     ...day,
-    locations: day.locations.map((loc, i) => {
-      const start = 9 + i * 5;
-      return {
-        ...loc,
-        time_slot: `${String(start).padStart(2, "0")}:00-${String(start + 4).padStart(2, "0")}:00`,
-        duration: 4,
-      };
-    }),
+    locations: reslotLocations(day.locations, {
+      spacingH: 5,
+      durationH: 4,
+    }).map((loc) => ({ ...loc, duration: 4 })),
   };
 }
 

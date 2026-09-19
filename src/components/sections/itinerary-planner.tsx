@@ -3678,9 +3678,18 @@ export function ItineraryPlanner() {
                                           <Clock className="size-3" aria-hidden />
                                           {loc.duration}h
                                         </Badge>
-                                        <Badge className="bg-accent text-accent-foreground">
-                                          €{loc.estimated_cost}
-                                        </Badge>
+                                        {/* TASK 50 (§10/§11): estimated_cost je
+                                            lahko NaN/null — postanek, katerega
+                                            cene strežnik NI mogel verificirati
+                                            (vir nepriključen). Značilka cene se
+                                            skrije (unknown ≠ 0 = "brezplačno"),
+                                            opomba postanka pove, kaj preveriti. */}
+                                        {typeof loc.estimated_cost === "number" &&
+                                          loc.estimated_cost > 0 && (
+                                          <Badge className="bg-accent text-accent-foreground">
+                                            €{loc.estimated_cost}
+                                          </Badge>
+                                        )}
                                         {/* 1.42 (GEO → NAČRT) + F1 (Supply
                                             Map): postanek, dodan iz AI
                                             klepeta ALI z zemljevida ponudbe

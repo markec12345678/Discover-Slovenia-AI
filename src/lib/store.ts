@@ -105,7 +105,13 @@ export const useAppStore = create<AppState>((set) => ({
           typeof loc.lat === "number" &&
           typeof loc.lng === "number" &&
           Number.isFinite(loc.lat) &&
-          Number.isFinite(loc.lng)
+          Number.isFinite(loc.lng) &&
+          // TASK 50 (§14 GEO): null island (0,0) NI veljavna koordinata —
+          // AI haluciniran ID (živi dokaz: "socca" z lat 0/lng 0) bi sicer
+          // risal pin + pot čez pol Afrike. Isto pravilo kot strežniška
+          // coordsOfStop/geo validacija (missing_coords). Geo panel postanek
+          // pošteno javi kot neznano destinacijo — brez pina je iskreno.
+          !(loc.lat === 0 && loc.lng === 0)
         ) {
           const coord: RouteCoord = {
             lat: loc.lat,

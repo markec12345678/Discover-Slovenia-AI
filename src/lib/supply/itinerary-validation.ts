@@ -347,6 +347,7 @@ export type SupplyRuleId =
   | "fake_supply_ref" // kolon-ref, ki ni v kanonski avtoriteti → odstranjen
   | "duplicate_supply" // isti provider+id dvakrat → dedupe
   | "price_mismatch" // estimated_cost ≠ kanonski → popravljen
+  | "price_unverified" // TASK 50: vir cene ni strežniško verificirljiv → unknown
   | "geo_drift" // koordinate odmeva ≠ kanonske → obnovljene
   | "direction_reversed" // odmev obrne smer prevoza → naslov obnovljen
   | "fixed_reinserted"; // FIXED izbira, ki jo AI izpusti → vnese
@@ -585,6 +586,34 @@ export function validateItinerarySupply(
             ref: key,
           });
         }
+      } else if (
+        currentStop &&
+        !Number.isFinite(currentStop.estimated_cost)
+      ) {
+        // TASK 50 (§10, P1 — 1.55.0): postanek JE v trenutnem načrtu (Task 48
+        // ga uporabniku ohrani — skrito odstranjevanje ni dovoljeno), a vir
+        // cene NI strežniško verificirljiv: verifyCurrentStopsAuthority je
+        // že odločil „unknown" (NaN — viator/gyg brez priključitve, KT brez
+        // dataseta, OSM z neverificirano netrivialno trditvijo). Do 1.54.0 je
+        // klientova cifra (živi dokaz: viator:99999 s €500) ostala kot
+        // PRIKAZANA cena v končnem načrtu, budget sloj pa je bil iskren —
+        // prikaz in proračun sta si nasprotovala. Zdaj: klientova trditev se
+        // pretvori v unknown — estimated_cost NaN (značilke/proračun/JSON
+        // serializacija čisti) + poštena opomba, kaj uporabnik sam preveri.
+        fixedStop = {
+          ...fixedStop,
+          estimated_cost: Number.NaN,
+          notes:
+            opts.lang === "en"
+              ? "Price not verified — provider is not connected on the server. Check the price and availability with the provider before booking."
+              : "Cena ni preverjena — vir ni strežniško priključen. Ceno in razpoložljivost preveri pri ponudniku pred rezervacijo.",
+        };
+        report.issues.push({
+          day: day.day,
+          level: "warn",
+          rule: "price_unverified",
+          ref: key,
+        });
       }
 
       stops.push(fixedStop);
@@ -687,7 +716,9 @@ export async function logItineraryValidation(
   db: AnalyticsEventWriter,
   props: {
     path: "generate" | "refine";
-    source: "ai" | "fallback" | "quick_action";
+    /** TASK 50: "fallback_echo" = refine veja, kjer je AI odpovedal in se
+     *  (strežniško validiran) obstoječi načrt vrača nazaj (§10/§15 dokaz). */
+    source: "ai" | "fallback" | "quick_action" | "fallback_echo";
     supply_stops: number;
     validated: number;
     rejected: number;

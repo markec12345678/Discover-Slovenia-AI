@@ -16,6 +16,7 @@ import {
 } from "@/lib/weather-utils";
 import { PARTY_TYPES, PARTY_PROMPT_LABELS } from "@/lib/party-types";
 import { PACES, PACE_PROMPT_LABELS, PACE_FALLBACK } from "@/lib/pace-types";
+import { nextSlot, repairScheduleGaps, type SlotCursor, type DriveHoursResolver } from "@/lib/schedule-slots";
 import {
   buildCrowdNotices,
   tripOverlapsPeakWeekend,
@@ -74,7 +75,7 @@ import {
 } from "@/lib/supply/selection-verify";
 import type { SelectedProviderProduct } from "@/lib/supply/types";
 import type { SupplyValidationInfo } from "@/lib/types";
-import { dayRouteGeometry, serializeLegs } from "@/lib/road-routing";
+import { dayRouteGeometry, serializeLegs, legKey } from "@/lib/road-routing";
 import { buildLegRouteIndex } from "@/lib/road-routing-server";
 
 // ============================================================================
@@ -614,7 +615,7 @@ Rules:
 4. Match the traveler's interests
 5. Stay within budget (total < €${input.budget})
 6. Respect seasonal suitability (${input.season})
-7. Keep time frames realistic (account for ~30-45 min drives between locations)
+7. Keep time frames realistic: the next slot may only START after (previous slot ends + driving time between them). Short urban hops ~30 min, cross-region drives (e.g. Ljubljana→Piran, Bohinj→Postojna) 1.5–2 h — the gap between slots MUST cover the drive (geo validation flags errors otherwise)
 8. When fitting, mention suggested partners from the PREDLAGANI PARTNERJI list in notes or recommendations (e.g. "For lunch, visit [a partner from the list]"). NEVER invent restaurant, hotel or venue names — venue names may appear ONLY from the suggested partners list; when that list is absent, notes and recommendations must not name specific venues
 9. Add estimated drive time to the next location in notes (e.g. "30 min drive to Bohinj")
 10. "packing_list": 8-14 concrete items for this trip (season, interests, duration)
@@ -663,7 +664,7 @@ Pravila:
 4. Ustrezi interesom potnika
 5. Ostani znotraj proračuna (skupni < €${input.budget})
 6. Upoštevaj sezonsko ustreznost (${input.season})
-7. Časovni okvirji naj bodo realistični (upostevaj vožnjo med lokacijami ~30-45min)
+7. Časovni okvirji naj bodo realistični: naslednji termin se začne ŠELE po (konec prejšnjega + čas vožnje med njima). Krajše mestne vožnje ~30 min, medregijske (npr. Ljubljana→Piran, Bohinj→Postojna) 1,5–2 h — vrzel med termini MORA pokriti vožnjo (geo validacija sicer javi napako)
 8. Kadar ustreza, v notes ali recommendations omeni predlagane partnerje s seznama PREDLAGANI PARTNERJI (npr. "Za kosilo obiščite [partnerja s seznama]"). NIKOLI ne izmišljuj imen restavracij, hotelov ali lokalov — imena lokalov se smejo pojaviti SAMO s seznama predlaganih partnerjev; če seznama ni, notes in recommendations ne smeta vsebovati imen konkretnih lokalov
 9. V notes dodaj ocenjen čas vožnje do naslednje lokacije (npr. "30 min vožnje do Bohinja")
 10. "packing_list": 8-14 konkretnih stvari za ta izlet (sezona, interesi, trajanje)
@@ -866,6 +867,26 @@ JSON format (STROGO):
     // zavlačuje mimo ~3 s (sočasnost 4 × timeout 2,5 s).
     const legs = await buildLegRouteIndex(budgetSynced);
 
+    // TASK 50 (§14/§15 — REPAIR SCHEDULE GAPS, tudi AI POT): AI izhod lahko
+    // vsebuje nemogoče urnike (živi dokazi: A3 Ljubljana→Piran 1 h vrzel
+    // prek 1,5 h vožnje; F4 prekrivanje 12:00/13:00). §15: invalid schedule
+    // NE SME priti skozi neopazim. Konzervativna repair plast (premakne LE
+    // nemogoče začetke terminov; trajanja/vršni red/cene/ID-ji ostanejo)
+    // poravna urnik z REALNIMI vožnjami. Kar ostane (neparsable termini,
+    // dnevi čez polnoč) geo validacija pošteno javi — flag-only ostaja za
+    // vse, česar ni mogoče popraviti brez izmišljevanja.
+    const aiLegDriveH: DriveHoursResolver = (aId, bId) => {
+      const leg = legs.get(legKey(aId, bId));
+      return leg ? leg.min / 60 : null;
+    };
+    const aiScheduleRepaired = repairScheduleGaps(budgetSynced.days, aiLegDriveH);
+    budgetSynced.days = aiScheduleRepaired.days;
+    if (aiScheduleRepaired.report.shifted + aiScheduleRepaired.report.overlapShifted > 0) {
+      console.log(
+        `[itinerary] TASK 50 schedule repair (AI): ${aiScheduleRepaired.report.shifted} terminov premaknjenih za vožnjo, ${aiScheduleRepaired.report.overlapShifted} zaradi prekrivanja`
+      );
+    }
+
     budgetSynced.quality = computeItineraryQuality(budgetSynced, input, legs);
     budgetSynced.rationale =
       sanitizeAiRationale(parsed.rationale) ??
@@ -953,6 +974,26 @@ JSON format (STROGO):
     // FW4.1: metrike + deterministična utemeljitev (fallback nima AI rationale)
     // (P4-8: jezik itinererja) + F5.6 realne ceste (ista obogatitev kot AI pot)
     const legs = await buildLegRouteIndex(fallback);
+
+    // TASK 50 (§14, P1 — REPAIR SCHEDULE GAPS): termini iz generateFallback
+    // itinererja so hevristični (haversine ×1,5 — gorski pari podcenjeni:
+    // Triglav→Soča 0,28 h prek OSRM 1,5 h). Po izgradnji REALNIH nog še
+    // enkrat poravnamo termine (premakne se LE začetek; vrstni red/ID-ji/
+    // cene/trajanja ostanejo) — deterministična pot je s tem izvedljiva
+    // PO KONSTRUKCIJI, ne le označena. AI pot ostaja flag-only (avtorski
+    // časi AI izpisa; geo validacija jih javi —Task 48 dizajn).
+    const legDriveH: DriveHoursResolver = (aId, bId) => {
+      const leg = legs.get(legKey(aId, bId));
+      return leg ? leg.min / 60 : null;
+    };
+    const scheduleRepaired = repairScheduleGaps(fallback.days, legDriveH);
+    fallback.days = scheduleRepaired.days;
+    if (scheduleRepaired.report.shifted + scheduleRepaired.report.overlapShifted > 0) {
+      console.log(
+        `[itinerary] TASK 50 schedule repair (fallback): ${scheduleRepaired.report.shifted} terminov premaknjenih za vožnjo, ${scheduleRepaired.report.overlapShifted} zaradi prekrivanja`
+      );
+    }
+
     fallback.quality = computeItineraryQuality(fallback, input, legs);
     fallback.rationale = buildFallbackRationale(input, fallback.quality, lang);
 
@@ -1189,15 +1230,28 @@ function generateFallbackItinerary(
     const locationsPerDay = pacePlan.stopsPerDay;
     const locations: LocationVisit[] = [];
 
+    // TASK 50 (§14, P1 — drive-aware sloti): prej fiksni ritem 09:00/14:00
+    // (vrzel TOČNO 1 h) neodvisno od vožnje — geo validacija je upravičeno
+    // sprožila schedule_gap ERROR (14/19 scenarijev harnessa). Zdaj: začetek
+    // vsakega termina = max(ritem, prejšnji konec + konzervativna vožnja +
+    // 30 min), zaokroženo navzgor (glej src/lib/schedule-slots.ts).
+    let slotCursor: SlotCursor = { prevEndH: null, prevCoords: null };
+
     for (let i = 0; i < locationsPerDay; i++) {
       const dest = pickDest(rainy ? indoor : ranked);
       const cost = dest.costPerPerson * input.groupSize;
       totalCost += cost;
-      const startHour = 9 + i * pacePlan.spacingHours;
+      const { label: timeSlot, cursor } = nextSlot(
+        slotCursor,
+        { lat: dest.coords.lat, lng: dest.coords.lng },
+        9 + i * pacePlan.spacingHours,
+        pacePlan.durationHours
+      );
+      slotCursor = cursor;
       locations.push({
         destination_id: dest.id,
         destination_name: dest.name,
-        time_slot: `${String(startHour).padStart(2, "0")}:00-${String(startHour + pacePlan.durationHours).padStart(2, "0")}:00`,
+        time_slot: timeSlot,
         duration: pacePlan.durationHours,
         estimated_cost: cost,
         // Deževen dan: transparenten razlog notranje izbire (resnična
