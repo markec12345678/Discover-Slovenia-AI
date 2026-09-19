@@ -292,8 +292,18 @@ booking URL → sanitize izbire (Task 47, pokrito v `supply-contract.test.ts`)
 
 **Testi (integrirano na origin/main 3ed963c)**: 807 testov / 805 pass /
 2 fail — OBA fail sta PREDHODNA na pristine origin/main (GYG Task 46
-test-order interference: samostojen zagon datoteke 42/42, polni suite 2
+test-order interference: samostojen zagon datoteke 45/45, polni suite 2
 fail zaradi modulnega stanja med datotekami; NI Task 48 regresija —
 dokazano A/B: pristine 745/743+2, z Task 48 807/805+2, +62 novih pass).
 **Lint**: 0 napak. **TypeScript**: 0 napak (samo predhodne `skills/` +
 `tailwind.config` opombe zunaj projekta).
+
+**Končni SHA (1.53.0)**: `bdd5f86` — ponovno E2E verifikacija po
+integraciji (2026-09-19): generacija z FIXED izbiro
+(`reinserted:2`, Viator €158 = 79×2 per_person, OSM €0 info_only),
+refine P0 pot (`reinserted:2` — AI odmev izpusti FIXED, plast jih
+vrne točno 1×), `itinerary_validated` dogodki v DB (generate/ai +
+refine/ai), BudgetPanel SL (uncertain z razlogom) + EN (within
+"€280 of €500"), 390 px + 375 px brez horizontalnega overflow,
+footer `min-h-screen flex flex-col` + `mt-auto` (porinjen pri dolgi
+vsebini).
