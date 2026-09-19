@@ -54,7 +54,18 @@ import {
   buildKnownSupplyIndex,
   revalidateSupplyStops,
 } from "@/lib/supply/itinerary-supply-validation";
-import { applyFixedSelectedProducts } from "@/lib/supply/apply-fixed";
+// TASK 48 (1.53.0) — ITINERARY REALISM: invariantna plast NAD Task 47
+// revalidacijo (dedupe po provider+id, cena po UNIT semantiki, obnova
+// geo/smeri, FIXED neničljivost, budget status) + observability.
+import {
+  computeBudgetValidation,
+  extractSupplyStops,
+  logItineraryValidation,
+  validateItinerarySupply,
+  type SupplyValidationReport,
+} from "@/lib/supply/itinerary-validation";
+import type { SelectedProviderProduct } from "@/lib/supply/types";
+import type { SupplyValidationInfo } from "@/lib/types";
 import { dayRouteGeometry, serializeLegs } from "@/lib/road-routing";
 import { buildLegRouteIndex } from "@/lib/road-routing-server";
 
@@ -400,6 +411,27 @@ export async function POST(request: Request) {
   // prioritetna lestvica. Prazna ponudba → prazen blok (ni spremembe).
   const aiSupplyBlock = buildAiSupplyContext(aiSupply.products, lang);
 
+  // TASK 48 (1.53.0): strežni supply kot AVTORITETA za invariantno plast —
+  // projekcija AiSupplyProduct → oblika izbire (selectionState "suggested":
+  // NIKOLI reinsertirani — FIXED prihajajo SAMO iz uporabnikove izbire;
+  // uporabnikova izbira ima prednost pri istem ključu, ker se ZADNJA doda).
+  // Task 47 rebind postavi FLAT znesek cene; ta sloj popravi na unit
+  // semantiko (per_person × groupSize, per_transfer brez množenja).
+  const aiSupplyAuthority: SelectedProviderProduct[] = aiSupply.products.map(
+    (p) => ({
+      provider: p.provider,
+      providerProductId: p.providerProductId,
+      type: p.type,
+      title: p.title,
+      ...(p.location?.lat != null ? { lat: p.location.lat } : {}),
+      ...(p.location?.lng != null ? { lng: p.location.lng } : {}),
+      ...(p.price ? { price: p.price } : {}),
+      ...(p.availability ? { availability: p.availability } : {}),
+      source: p.provider,
+      selectionState: "suggested",
+    })
+  );
+
   // (lang je izračunan že pred ranking klicem — glej zgoraj)
 
   // === WEATHER-CONTEXT: pravo vreme + sestava potnikov v prompt ===
@@ -675,18 +707,31 @@ JSON format (STROGO):
       );
     }
 
-    // F1 (Supply Map): DETERMINISTIČNA UTRDITEV FIXED izbir. AI je dobil
-    // strukturirana pravila v promptu, a :free modeli so nepredvidljivi —
-    // če je FIXED produkt (z geo, ne-nastanitev) AI izpustil, ga vstavimo
-    // z isto mehaniko kot fallback (najbližji dan, večernji slot). AI
-    // NIKOLI ne more izničiti uporabnikove eksplicitne izbire; že
-    // vključeni produkti (isti destination_id) se preskočijo (dedupe).
-    // (TASK 47: ekstrahirano v @/lib/supply/apply-fixed — vedenje identično.)
-    const withFixedStops = applyFixedSelectedProducts(
+    // F1 (Supply Map) → TASK 48 (§15, 1.53.0): INVARIANTNA PLAST nad Task 47
+    // revalidacijo — dedupe po (provider, id), cena po UNIT semantiki
+    // (per_transfer ≠ ×osebe; per_person × groupSize; per_night unknown),
+    // obnova koordinat/smeri prevoza, FIXED vstavitev z kanonsko ceno
+    // (nadomesti applyFixedSelectedProducts klic — ista insertProductStop
+    // mehanika + unit semantika; AI NIKOLI ne izniči uporabnikove izbire).
+    // Avtoriteta: uporabnikova izbira ∪ strežni supply (aiSupplyAuthority) ∪
+    // postanki, ki jih je Task 47 revalidiral (currentStops).
+    const invariant = validateItinerarySupply(
       supplyValidated.itinerary,
-      cleanSelectedProducts,
-      lang
+      {
+        selection: [...aiSupplyAuthority, ...cleanSelectedProducts],
+        currentStops: extractSupplyStops(supplyValidated.itinerary),
+      },
+      { lang, groupSize: input.groupSize }
     );
+    const withFixedStops = invariant.itinerary;
+    const supplyReport = invariant.report;
+    if (supplyReport.issues.length > 0) {
+      console.warn(
+        `[itinerary] TASK 48 invariantna plast: ${supplyReport.validated}/${supplyReport.supplyStops} veljavnih, ` +
+          `${supplyReport.rejected} zavrnjenih, ${supplyReport.deduped} dedupliciranih, ` +
+          `${supplyReport.priceCorrections} popravkov cen, ${supplyReport.reinserted} FIXED vnšenih`
+      );
+    }
 
     // 1.48.3: :free modeli VSAKIH TOLIKO vrnejo popoln JSON z neveljavno
     // strukturo dni — sanitizeItinerary legitimno poreže VSE dneve, razlaga/
@@ -744,6 +789,37 @@ JSON format (STROGO):
     // fallback in refine).
     const budgetSynced = recomputeTotalBudget(enriched);
 
+    // ------------------------------------------------------------------
+    // TASK 48 (§12): STATUS PRORAČUNA iz ZNANIH stroškov + povzetek supply
+    // validacije (§21) — oba se priložita načrtu (BudgetPanel prikaz,
+    // analitika). "within" zahteva, da so VSE cene znane in da ni "od"
+    // cen — sicer "uncertain" (nikoli "znotraj", česar ne moremo dokazati).
+    // ------------------------------------------------------------------
+    const budgetValidation = computeBudgetValidation(budgetSynced, {
+      budget: input.budget,
+      groupSize: input.groupSize,
+      canonicalCosts: supplyReport.canonicalCosts,
+    });
+    budgetSynced.budgetValidation = budgetValidation;
+    budgetSynced.supplyValidation = supplySummaryOf(supplyReport);
+
+    // §18: strežniška observability dogodka (neblokirajoče, brez PII)
+    void logItineraryValidation(db, {
+      path: "generate",
+      source: "ai",
+      supply_stops: supplyReport.supplyStops,
+      validated: supplyReport.validated,
+      rejected: supplyReport.rejected,
+      deduped: supplyReport.deduped,
+      price_corrections: supplyReport.priceCorrections,
+      geo_restored: supplyReport.geoRestored,
+      directions_fixed: supplyReport.directionsFixed,
+      reinserted: supplyReport.reinserted,
+      fixed_count: cleanSelectedProducts.filter((p) => p.selectionState === "fixed").length,
+      budget_status: budgetValidation.status,
+      issues: supplyReport.issues.length,
+    });
+
     // F5.6 (ROAD ROUTING): realne cestne razdalje/časi (OSRM) za VSE plasti —
     // kvaliteta, geo-validacija, stroški, razlage postankov, geometrija za
     // zemljevid. Best-effort: ob nedosegljivem OSRM hevristika (razkrito v
@@ -795,9 +871,17 @@ JSON format (STROGO):
       lang
     );
 
-    // F1 (Supply Map): FIXED izbire tudi na deterministični poti — fallback
-    // ne pozna AI prompta, zato jih vstavimo naravnost (ista mehanika).
-    fallback = applyFixedSelectedProducts(fallback, cleanSelectedProducts, lang);
+    // F1 (Supply Map) → TASK 48 (§15): FIXED izbire tudi na deterministični
+    // poti — ISTA invariantna plast kot AI pot (dedupe, unit cena, geo,
+    // smer, FIXED vstavitev s kanonsko ceno; avtoriteta = izbira ∪ strežni
+    // supply). Fallback ne pozna AI prompta, zato se vnesejo naravnost.
+    const fallbackValidated = validateItinerarySupply(
+      fallback,
+      { selection: [...aiSupplyAuthority, ...cleanSelectedProducts] },
+      { lang, groupSize: input.groupSize }
+    );
+    fallback = fallbackValidated.itinerary;
+    const supplyReport = fallbackValidated.report;
 
     // AUDIT 42 (42-d YELLOW #2): PREFERRED/SUGGESTED/nastanitve/brez-geo
     // izbire na fallback poti prej TIHO IZGINILE — zdaj gredo v
@@ -831,6 +915,37 @@ JSON format (STROGO):
     const legs = await buildLegRouteIndex(fallback);
     fallback.quality = computeItineraryQuality(fallback, input, legs);
     fallback.rationale = buildFallbackRationale(input, fallback.quality, lang);
+
+    // TASK 48 (§12): total_budget se PRERAČUNA tudi na fallback poti — vstavljeni
+    // FIXED postanki (iz validacijske plasti) prej niso bili v seštevku (drift
+    // prikaza), status proračuna pa izhaja iz ZNANIH stroškov (ista plast kot
+    // AI pot — fallback je enako preverljiv).
+    const fallbackBudgetSynced = recomputeTotalBudget(fallback);
+    fallback = fallbackBudgetSynced;
+    const fallbackBudgetValidation = computeBudgetValidation(fallback, {
+      budget: input.budget,
+      groupSize: input.groupSize,
+      canonicalCosts: supplyReport.canonicalCosts,
+    });
+    fallback.budgetValidation = fallbackBudgetValidation;
+    fallback.supplyValidation = supplySummaryOf(supplyReport);
+
+    // §18: strežniška observability dogodka (neblokirajoče, brez PII)
+    void logItineraryValidation(db, {
+      path: "generate",
+      source: "fallback",
+      supply_stops: supplyReport.supplyStops,
+      validated: supplyReport.validated,
+      rejected: supplyReport.rejected,
+      deduped: supplyReport.deduped,
+      price_corrections: supplyReport.priceCorrections,
+      geo_restored: supplyReport.geoRestored,
+      directions_fixed: supplyReport.directionsFixed,
+      reinserted: supplyReport.reinserted,
+      fixed_count: cleanSelectedProducts.filter((p) => p.selectionState === "fixed").length,
+      budget_status: fallbackBudgetValidation.status,
+      issues: supplyReport.issues.length,
+    });
 
     // P0.2 GEO-VALIDACIJA: isto preverjanje izvedljivosti kot na AI poti —
     // fallback itinerar mora biti enako preverljiv kot AI izpisa.
@@ -1091,5 +1206,22 @@ function generateFallbackItinerary(
           "Lokalni marketi imajo najboljše cene za prigrizke",
         ],
     source: "fallback",
+  };
+}
+
+// ============================================================================
+// TASK 48 (1.53.0): povzetek supply poročila → serializabilno polje načrta
+// (SupplyValidationInfo v types.ts — brez Map struktur kanonskih cen).
+// ============================================================================
+function supplySummaryOf(r: SupplyValidationReport): SupplyValidationInfo {
+  return {
+    supplyStops: r.supplyStops,
+    validated: r.validated,
+    rejected: r.rejected,
+    deduped: r.deduped,
+    priceCorrections: r.priceCorrections,
+    geoRestored: r.geoRestored,
+    directionsFixed: r.directionsFixed,
+    reinserted: r.reinserted,
   };
 }

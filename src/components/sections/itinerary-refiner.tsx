@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useAppStore } from "@/lib/store";
 import type { Itinerary, PlannerInput, RefineChange } from "@/lib/types";
 import { QUICK_ACTIONS } from "@/lib/refine-actions";
 import {
@@ -214,7 +215,19 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
           // language (vstavi se šele ob generiranju fetch-u) — brez tega je
           // refine na EN straneh poganjal SL prompt + SL validacijske opombe.
           // Vstavimo ga iz locale strani, da je refine vedno v jeziku uporabnika.
-          formData: { ...formData, language: isEn ? "en" : "sl" },
+          formData: {
+            ...formData,
+            language: isEn ? "en" : "sl",
+            // TASK 48 (§14 — P0 refinement bypass fix): kanonska izbira z
+            // zemljevida gre TUDI z refine zahtevo — strežnik jo potrebuje kot
+            // avtoriteto za supply revalidacijo (FIXED izbire, cene, koordinate).
+            // Isti vzorec kot generacija (itinerary-planner generateItinerary).
+            ...(useAppStore.getState().selectedProducts.length > 0
+              ? {
+                  selectedProviderProducts: useAppStore.getState().selectedProducts,
+                }
+              : {}),
+          },
           instruction: trimmed,
           history: history.map((h) => h.instruction),
           ...(quick ? { action: quick.action, day: quick.day } : {}),

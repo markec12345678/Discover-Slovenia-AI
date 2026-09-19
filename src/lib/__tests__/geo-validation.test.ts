@@ -476,3 +476,187 @@ describe("defenzivnost", () => {
     expect(v.days[0].km).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// TASK 48 (§4 časovne invariante + §6 supply noge) — 1.53.0
+// ---------------------------------------------------------------------------
+
+describe("TASK 48 — časovne invariante (§4)", () => {
+  test("OBRNJEN termin (13:00-09:00) → time_slot_invalid ERROR (ne tiho preskočen)", () => {
+    const v = validateItineraryGeo(
+      itineraryOf([
+        { day: 1, stops: [stop("bled", "Bled", "13:00-09:00")] },
+      ])
+    );
+    expect(rulesOf(v)).toContain("time_slot_invalid:error");
+    expect(v.worst).toBe("error");
+  });
+
+  test("termin, ki se konča TOČNO ob začetku (09:00-09:00) → time_slot_invalid", () => {
+    const v = validateItineraryGeo(
+      itineraryOf([{ day: 1, stops: [stop("bled", "Bled", "09:00-09:00")] }])
+    );
+    expect(rulesOf(v)).toContain("time_slot_invalid:error");
+  });
+
+  test("neformatiran termin (\"cel dan\") ostaja BREZ issue (unknown is unknown)", () => {
+    const v = validateItineraryGeo(
+      itineraryOf([{ day: 1, stops: [stop("bled", "Bled", "cel dan")] }])
+    );
+    expect(rulesOf(v)).not.toContain("time_slot_invalid:error");
+  });
+
+  test("nepozitiven duration (0) → duration_invalid ERROR", () => {
+    const zero = stop("bled", "Bled", "09:00-12:00");
+    const v = validateItineraryGeo(
+      itineraryOf([{ day: 1, stops: [{ ...zero, duration: 0 }] }])
+    );
+    expect(rulesOf(v)).toContain("duration_invalid:error");
+  });
+
+  test("duration NaN → duration_invalid ERROR (stari/pokvarjeni shranjeni načrti)", () => {
+    const broken = stop("bled", "Bled", "09:00-12:00");
+    const v = validateItineraryGeo(
+      itineraryOf([{ day: 1, stops: [{ ...broken, duration: Number.NaN }] }])
+    );
+    expect(rulesOf(v)).toContain("duration_invalid:error");
+  });
+
+  test("prekrivanje terminov BREZ koordinat konca (supply + T1) → schedule_overlap (§4: previous.end ≤ next.start)", () => {
+    // 10:00-12:00 Bled (T1) + 11:00-13:00 supply postanek brez lastnih koordinat
+    // — prej je bila noga izvzeta (ne-T1 konec), zdaj se urnik preverja povsod.
+    const v = validateItineraryGeo(
+      itineraryOf([
+        {
+          day: 1,
+          stops: [
+            stop("bled", "Bled", "10:00-12:00"),
+            stop("osm:node-42", "Supply kraj", "11:00-13:00"),
+          ],
+        },
+      ])
+    );
+    expect(rulesOf(v)).toContain("schedule_overlap:error");
+  });
+});
+
+describe("TASK 48 — supply noge sodelujejo v geo preverjanjih (§6)", () => {
+  /** Supply postanek z lastnimi koordinatami ( Ljubljana center). */
+  function supplyStopAt(
+    id: string,
+    name: string,
+    lat: number,
+    lng: number,
+    slot = "14:00-16:00"
+  ): LocationVisit {
+    return { ...stop(id, name, slot), lat, lng };
+  }
+
+  test("nevši noga T1 → supply z lastnimi koordinatami sodeluje v razdalji (Ljubljana → Piran ~ error prag)", () => {
+    // ~100 km naravnost × 1.3 ≈ 130 km > 80 (warn prag) — prej TIHO PRESKOČENO
+    const v = validateItineraryGeo(
+      itineraryOf([
+        {
+          day: 1,
+          stops: [
+            stop("ljubljana", "Ljubljana", "09:00-12:00"),
+            supplyStopAt("osm:node-1", "Piran POI", 45.5233, 13.5676, "14:00-16:00"),
+          ],
+        },
+      ])
+    );
+    expect(rulesOf(v)).toContain("leg_distance:warn");
+    // km dneva zdaj ŠTEJE supply nogo (ne 0)
+    expect(v.days[0].km).toBeGreaterThan(80);
+  });
+
+  test("supply + supply noga (Bled POI → Piran POI, ~102 km naravnost × 1.3 ≈ 135 km) → leg_distance WARN + day_km šteje", () => {
+    const v = validateItineraryGeo(
+      itineraryOf([
+        {
+          day: 1,
+          stops: [
+            supplyStopAt("osm:node-1", "Bled POI", 46.3683, 14.0944, "09:00-11:00"),
+            supplyStopAt("osm:node-2", "Piran POI", 45.5233, 13.5676, "14:00-16:00"),
+          ],
+        },
+      ])
+    );
+    // ~135 km cestne razdalje: WARN prag (80), še ne ERROR (150)
+    expect(rulesOf(v)).toContain("leg_distance:warn");
+    expect(v.days[0].km).toBeGreaterThan(100);
+  });
+
+  test("schedule_gap se preverja, ko ima supply postanek koordinate (vozna vrzel premajhna)", () => {
+    // Ljubljana → supply POI pri Piranu (~100 km ×1.3/55 ≈ 2.4 h vožnje),
+    // vrzel med termini 11:00 → 11:30 = 0.5 h < 2.4 h → ERROR schedule_gap
+    const v = validateItineraryGeo(
+      itineraryOf([
+        {
+          day: 1,
+          stops: [
+            stop("ljubljana", "Ljubljana", "09:00-11:00"),
+            supplyStopAt("osm:node-1", "Piran POI", 45.5233, 13.5676, "11:30-13:00"),
+          ],
+        },
+      ])
+    );
+    expect(rulesOf(v)).toContain("schedule_gap:error");
+  });
+
+  test("brez lastnih koordinat in brez T1 ID → ni razdaljske niti urniške trditve (samo missing_coords)", () => {
+    const v = validateItineraryGeo(
+      itineraryOf([
+        {
+          day: 1,
+          stops: [
+            stop("bled", "Bled", "09:00-12:00"),
+            stop("osm:node-9", "Krajevni POI brez koordinat", "13:00-15:00"),
+          ],
+        },
+      ])
+    );
+    expect(rulesOf(v)).toContain("missing_coords:error");
+    expect(rulesOf(v)).not.toContain("schedule_overlap:error");
+    expect(rulesOf(v)).not.toContain("leg_distance:error");
+  });
+});
+
+describe("TASK 48 — null island (0,0) AI halucinacija", () => {
+  test("postanek na (0,0) → missing_coords (ne ~6.920 km noga)", () => {
+    const nullIsland = stop("socca", "Reka Soča (AI tipkarska)", "20:00-21:30");
+    const v = validateItineraryGeo(
+      itineraryOf([
+        {
+          day: 1,
+          stops: [
+            stop("bohinj", "Bohinj", "14:00-17:00"),
+            { ...nullIsland, lat: 0, lng: 0 },
+          ],
+        },
+      ])
+    );
+    const rules = rulesOf(v);
+    expect(rules).toContain("missing_coords:error");
+    expect(rules).not.toContain("leg_distance:error");
+    expect(rules).not.toContain("day_km:error");
+    expect(v.days[0].km).toBe(0); // noga se NE izračuna iz null islanda
+  });
+
+  test("veljavne lastne koordinate (Bled POI) NISO null island — noga se računa", () => {
+    const bledPoi = stop("osm:node-1", "Bled POI", "09:00-11:00");
+    const v = validateItineraryGeo(
+      itineraryOf([
+        {
+          day: 1,
+          stops: [
+            { ...bledPoi, lat: 46.3683, lng: 14.0944 },
+            stop("bohinj", "Bohinj", "12:00-14:00"),
+          ],
+        },
+      ])
+    );
+    expect(v.days[0].km).toBeGreaterThan(0);
+    expect(rulesOf(v)).not.toContain("missing_coords:error");
+  });
+});

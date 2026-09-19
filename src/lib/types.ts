@@ -172,6 +172,53 @@ export interface Itinerary {
   // Opcijsko: stari shranjeni/deljeni načrti brez polja → client hevristika
   // (ista formula kot fallback geo-validacije, pošteno razkrito z "~").
   legs?: Record<string, LegSummary>;
+  // NOVO (TASK 48, 1.53.0): supply-doslednost + status proračuna —
+  // deterministično preverjena plast NAD AI izhodom (generacija + refine +
+  // fallback): vsak supply ref proti kanonski izbiri (izmišljen → odstranjen),
+  // dedupe po (provider, id), cene po unit semantiki, koordinate iz vira,
+  // FIXED izbire neničljive. Izračun: src/lib/supply/itinerary-validation.ts.
+  // Opcijsko: stari shranjeni načrti polja nimajo.
+  supplyValidation?: SupplyValidationInfo;
+  // NOVO (TASK 48, 1.53.0): status proračuna iz ZNANIH (dokazljivih) stroškov
+  // — "within" ZAHTEVA, da so vse cene znane in da ni "od" cen (§12: nikoli
+  // "znotraj proračuna", česar ne moremo dokazati). Prikaz: BudgetPanel.
+  budgetValidation?: BudgetValidationInfo;
+}
+
+/** TASK 48: povzetek supply validacije (serializabilen podcene poročila —
+ *  brez Map struktur, ki nosijo kanonske cene). */
+export interface SupplyValidationInfo {
+  /** Vseh supply postankov (kolon-format "provider:id") v načrtu. */
+  supplyStops: number;
+  /** Ref-ov, uspešno rešenih proti kanonski avtoriteti. */
+  validated: number;
+  /** Izmišljenih ref-ov, ODSTRANJENIH (fail-closed). */
+  rejected: number;
+  /** Podvojenih ref-ov, odstranjenih (isti provider+id). */
+  deduped: number;
+  /** Popravljenih cen na kanonsko vrednost (unit semantika). */
+  priceCorrections: number;
+  /** Obnovljenih koordinat iz kanonske izbire. */
+  geoRestored: number;
+  /** Popravljenih obrnjenih smeri prevozov (§5 kanonska smer). */
+  directionsFixed: number;
+  /** Ponovno vstavljenih FIXED izbir (AI jih je izpustil). */
+  reinserted: number;
+}
+
+/** TASK 48: status proračuna iz znanih stroškov (§12 — iskren do dokazov). */
+export interface BudgetValidationInfo {
+  status: "within" | "exceeded" | "uncertain";
+  /** Uporabnikov proračun (EUR), če je znan. */
+  budget: number | null;
+  /** Seštevek postankov z dokazljivo (kanonsko) ceno. */
+  knownTotal: number;
+  /** Seštevek estimated_cost vseh postankov (prikazna številka). */
+  stopsTotal: number;
+  /** Št. postankov z "od" ceno (spodnja meja, ne končni znesek). */
+  fromPriceCount: number;
+  /** Št. postankov brez dokazljive cene. */
+  unknownCostStops: number;
 }
 
 /** UI sprint: povzetek cestne noge (km/min/vir, brez geometrije) — serializacijska
@@ -235,6 +282,10 @@ export type GeoRuleId =
   | "schedule_overlap"
   | "duplicate_stop"
   | "missing_coords"
+  // TASK 48 (§4 časovne invariante): obrnjen termin (start ≥ end) in
+  // nepozitivno trajanje postanka — prej tiho preskočeno.
+  | "time_slot_invalid"
+  | "duration_invalid"
   // F5.5: odpiralni časi ( samo z znanim datumom; vir v sporočilu)
   | "closed_month"
   | "closed_weekday";

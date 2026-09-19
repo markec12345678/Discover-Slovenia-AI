@@ -124,6 +124,64 @@ export function BudgetPanel({
   const delta = goalValue !== null ? totalEur - goalValue : null;
   const overBudget = delta !== null && delta > 0;
 
+  // TASK 48 (§12): strežniško izračunan status proračuna iz ZNANIH stroškov —
+  // "within" zahteva dokazljive cene (brez "od"/neznanosti), sicer
+  // "uncertain" (nikoli "znotraj", česar ne moremo dokazati). Prikazano samo,
+  // kadar ga načrt nosi (novi načrti 1.53.0+; stari shranjeni ga nimajo).
+  const bv = itinerary.budgetValidation;
+  const budgetStatusBlock =
+    bv && bv.budget !== null
+      ? (() => {
+          const numberFmt2 = (n: number) => (isEn ? `€${n}` : `${n} €`);
+          if (bv.status === "exceeded") {
+            return (
+              <div
+                className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-800 dark:text-red-300"
+                role="status"
+              >
+                {isEn
+                  ? `Known costs (${numberFmt2(bv.knownTotal)}) already exceed your trip budget of ${numberFmt2(bv.budget as number)}.`
+                  : `Znani stroški (${numberFmt2(bv.knownTotal)}) že presegajo proračun potovanja ${numberFmt2(bv.budget as number)}.`}
+              </div>
+            );
+          }
+          if (bv.status === "within") {
+            return (
+              <div
+                className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-300"
+                role="status"
+              >
+                {isEn
+                  ? `Within budget: all planned costs are verified — ${numberFmt2(bv.knownTotal)} of ${numberFmt2(bv.budget as number)}.`
+                  : `Znotraj proračuna: vsi načrtovani stroški so preverjeni — ${numberFmt2(bv.knownTotal)} od ${numberFmt2(bv.budget as number)}.`}
+              </div>
+            );
+          }
+          const reason =
+            bv.fromPriceCount > 0 && bv.unknownCostStops > 0
+              ? isEn
+                ? `${bv.fromPriceCount} "from" price(s) and ${bv.unknownCostStops} stop(s) without a verified price`
+                : `${bv.fromPriceCount} „od“ cena/e in ${bv.unknownCostStops} postankov brez preverjene cene`
+              : bv.fromPriceCount > 0
+                ? isEn
+                  ? `${bv.fromPriceCount} "from" price(s) — the final total may be higher`
+                  : `${bv.fromPriceCount} „od“ cena/e — končni znesek je lahko višji`
+                : isEn
+                  ? `${bv.unknownCostStops} stop(s) without a verified price`
+                  : `${bv.unknownCostStops} postankov brez preverjene cene`;
+          return (
+            <div
+              className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-300"
+              role="status"
+            >
+              {isEn
+                ? `Known costs so far: ${numberFmt2(bv.knownTotal)} of ${numberFmt2(bv.budget as number)} — the final total is not fully provable (${reason}).`
+                : `Znani stroški doslej: ${numberFmt2(bv.knownTotal)} od ${numberFmt2(bv.budget as number)} — končnega zneska ni mogoče v celoti dokazati (${reason}).`}
+            </div>
+          );
+        })()
+      : null;
+
   const title = isEn ? "Trip budget" : "Proračun potovanja";
 
   const numberFmt = (n: number) => (isEn ? `€${n}` : `${n} €`);
@@ -311,6 +369,7 @@ export function BudgetPanel({
   const body = (
     <>
       {rows}
+      {budgetStatusBlock && <div className="mt-3">{budgetStatusBlock}</div>}
       {splitter}
       {goalBlock}
       {howBlock}

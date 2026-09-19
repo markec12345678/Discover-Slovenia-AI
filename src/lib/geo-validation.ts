@@ -41,7 +41,7 @@ import {
   legKey,
   type LegRouteIndex,
 } from "@/lib/road-routing";
-import type { Itinerary, RoutingMethod } from "@/lib/types";
+import type { Itinerary, LocationVisit, RoutingMethod } from "@/lib/types";
 
 /** Cestni faktor — dejanske ceste so ~1,3× daljše od ravne črte (Slovenija). */
 const ROAD_FACTOR = 1.3;
@@ -69,6 +69,10 @@ export type GeoRuleId =
   | "schedule_overlap"
   | "duplicate_stop"
   | "missing_coords"
+  // TASK 48 (§4 časovne invariante): obrnjen/neveljaven termin postanka
+  // (start ≥ end) in duration ≤ 0 — prej sta se TIHO preskočila.
+  | "time_slot_invalid"
+  | "duration_invalid"
   // F5.5 ( odpiralni časi, MindTrip pariteta — »Louvre je zaprt ob torkih«):
   // zaprtje destinacije/atribacije na dan obiska ( SAMO z znanim datumom
   // odhoda — brez datuma NE trdimo ničesar)
@@ -166,6 +170,45 @@ function parseSlot(slot: string): { startMin: number; endMin: number } | null {
   return { startMin: s, endMin: e };
 }
 
+/** TASK 48 (§4): razvrsti time_slot v tri stanja — parseSlot null je
+ *  dvomensen (neformatiran VERSUS obrnjen), invarianta "start < end"
+ *  pa zahteva, da OBRNJEN termin sproži napako, ne tiho preskočenje. */
+type SlotKind =
+  | { kind: "ok"; startMin: number; endMin: number }
+  | { kind: "reversed" } // vzorcu ustreza, a konec ≤ začetek (npr. 13:00-09:00)
+  | { kind: "unknown" }; // neformatiran — ne trdimo ničesar (§8)
+
+function classifySlot(slot: unknown): SlotKind {
+  if (typeof slot !== "string") return { kind: "unknown" };
+  const m = slot.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
+  if (!m) return { kind: "unknown" };
+  const s = Number(m[1]) * 60 + Number(m[2]);
+  const e = Number(m[3]) * 60 + Number(m[4]);
+  if (e <= s) return { kind: "reversed" };
+  return { kind: "ok", startMin: s, endMin: e };
+}
+
+/** TASK 48 (§4/§6): koordinate postanka — T1 dataset ALI lastne (supply/chat
+ *  postanki imajo lastne lat/lng; enaka semantika kot pravilo missing_coords).
+ *  TOČNO (0,0) je null island — geo sentinel "ni podatka", ki ga AI odmev
+ *  izpljune namesto koordinat (živ primer: refine "socca" @ 0,0 bi izračunal
+ *  ~6.920 km nogo). Enak izid kot manjkajoče koordinate: iskreno
+ *  "ne morem preveriti", ne absurdne razdalje. */
+function coordsOfStop(s: LocationVisit): { lat: number; lng: number } | null {
+  const t1 = COORDS.get(s.destination_id);
+  if (t1) return t1;
+  if (
+    typeof s.lat === "number" &&
+    typeof s.lng === "number" &&
+    Number.isFinite(s.lat) &&
+    Number.isFinite(s.lng) &&
+    !(s.lat === 0 && s.lng === 0)
+  ) {
+    return { lat: s.lat, lng: s.lng };
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Lokalizirana sporočila (strežniško, vzorec crowd-alternatives.ts;
 // struktura issue ostane strojno berljiva: rule + day + level)
@@ -232,6 +275,17 @@ function msgMissingCoords(lang: Lang, name: string, id: string): string {
   return lang === "en"
     ? `Cannot verify "${name}" (${id}) — unknown destination, distances for this day may be understated`
     : `"${name}" (${id}) ne morem preveriti — neznana destinacija, razdalje tega dne so lahko podcenjene`;
+}
+
+function msgTimeSlotInvalid(lang: Lang, name: string, slot: string): string {
+  return lang === "en"
+    ? `Time slot of "${name}" is not valid (${slot}): it ends before or exactly when it starts — one of the times must be wrong`
+    : `Termin "${name}" ni veljaven (${slot}): konča se pred ali natanko takrat, ko se začne — eden od časov je napačen`;
+}
+function msgDurationInvalid(lang: Lang, name: string): string {
+  return lang === "en"
+    ? `"${name}" has a non-positive duration — a stop must take some time`
+    : `"${name}" ima nepozitivno trajanje — postanek mora trajati nekaj časa`;
 }
 
 function msgClosedMonth(
@@ -308,11 +362,10 @@ export function validateItineraryGeo(
     // missing_coords NAPAKO. Zdaj: neznanim ID-jem z lastnimi končnimi
     // koordinatami napaka NE pade (enaka semantika kot store.ts coordsOf).
     for (const s of stops) {
-      const hasOwnCoords =
-        typeof s.lat === "number" &&
-        typeof s.lng === "number" &&
-        Number.isFinite(s.lat) &&
-        Number.isFinite(s.lng);
+      // TASK 48: (0,0) null island šteje kot MANJKAJOČE koordinate —
+      // enaka odločitev kot coordsOfStop za noge (iskreno "ne morem
+      // preveriti", ne absurdne razdalje).
+      const hasOwnCoords = coordsOfStop(s) !== null;
       if (!COORDS.has(s.destination_id) && !hasOwnCoords) {
         issues.push({
           day: dayNo,
@@ -322,6 +375,39 @@ export function validateItineraryGeo(
             lang,
             s.destination_name ?? s.destination_id,
             s.destination_id
+          ),
+        });
+      }
+    }
+
+    // --- TASK 48 (§4 časovne invariante): termin in trajanje postanka ---
+    // OBRNJEN termin (start ≥ end) se prej TIHO preskočil (parseSlot → null
+    // brez issue); zdaj sproži napako. Neformatiran termin ostaja brez
+    // trditve (unknown is unknown). duration ≤ 0 je fizično nemogoč
+    // (sanitizacija ga sicer clampa na novih načrtih — to je varovalka za
+    // stare/shranjene načrte, ki sanitizacije še niso šli).
+    for (const s of stops) {
+      const slotKind = classifySlot(s.time_slot);
+      if (slotKind.kind === "reversed") {
+        issues.push({
+          day: dayNo,
+          level: "error",
+          rule: "time_slot_invalid",
+          message: msgTimeSlotInvalid(
+            lang,
+            s.destination_name ?? s.destination_id,
+            s.time_slot
+          ),
+        });
+      }
+      if (typeof s.duration !== "number" || !Number.isFinite(s.duration) || s.duration <= 0) {
+        issues.push({
+          day: dayNo,
+          level: "error",
+          rule: "duration_invalid",
+          message: msgDurationInvalid(
+            lang,
+            s.destination_name ?? s.destination_id
           ),
         });
       }
@@ -376,60 +462,71 @@ export function validateItineraryGeo(
     }
 
     // --- zaporedne noge: razdalje, vožnja, urnik ---
+    // TASK 48 (§4/§6): koordinate se razrešijo iz T1 dataseta ALI lastnih
+    // lat/lng postanka (supply/chat kraji) — prej je bila KATERAKOLI noga s
+    // ne-T1 koncem IZVZETA iz vseh treh preverjanj (razdalja, vožnja, urnik),
+    // zdaj supply postanki sodelujejo enako kot T1 (hevristika haversine ×
+    // ROAD_FACTOR pošteno razkrita z "~", enako kot ob padcu OSRM).
+    // Urnik (prekrivanje) se preverja NEODVISNO od koordinat — za prekrivanje
+    // terminov fizična lokacija ni potrebna, samo oba parsable termina.
     let kmStraight = 0; // hevristična razdalja (rezerva, kadar ni indeksa)
     let driveH = 0;
     let dayKm = 0; // F5.6: seštevek km nog (realne ceste, kadar so na voljo)
     for (let i = 0; i < stops.length - 1; i++) {
-      const a = COORDS.get(stops[i].destination_id);
-      const b = COORDS.get(stops[i + 1].destination_id);
-      if (!a || !b) continue;
-      const leg = legs?.get(
-        legKey(stops[i].destination_id, stops[i + 1].destination_id)
-      );
-      const straight = haversineKm(a, b);
-      const roadKm = leg ? leg.km : round5(straight * ROAD_FACTOR);
-      const legH = leg ? leg.min / 60 : (straight * ROAD_FACTOR) / AVG_SPEED_KMH;
-      kmStraight += straight;
-      driveH += legH;
-      dayKm += roadKm;
-      if (leg) {
-        usedLegs.set(
-          legKey(stops[i].destination_id, stops[i + 1].destination_id),
-          leg
+      const a = coordsOfStop(stops[i]);
+      const b = coordsOfStop(stops[i + 1]);
+      let legH: number | null = null;
+      if (a && b) {
+        const leg = legs?.get(
+          legKey(stops[i].destination_id, stops[i + 1].destination_id)
         );
-      }
+        const straight = haversineKm(a, b);
+        const roadKm = leg ? leg.km : round5(straight * ROAD_FACTOR);
+        legH = leg ? leg.min / 60 : (straight * ROAD_FACTOR) / AVG_SPEED_KMH;
+        kmStraight += straight;
+        driveH += legH;
+        dayKm += roadKm;
+        if (leg) {
+          usedLegs.set(
+            legKey(stops[i].destination_id, stops[i + 1].destination_id),
+            leg
+          );
+        }
 
-      // pravilo 3: zaporedna razdalja
-      if (roadKm > THRESHOLDS.legKm.error) {
-        issues.push({
-          day: dayNo,
-          level: "error",
-          rule: "leg_distance",
-          message: msgLegDistance(
-            lang,
-            stops[i].destination_name ?? stops[i].destination_id,
-            stops[i + 1].destination_name ?? stops[i + 1].destination_id,
-            roadKm,
-            "error"
-          ),
-        });
-      } else if (roadKm > THRESHOLDS.legKm.warn) {
-        issues.push({
-          day: dayNo,
-          level: "warn",
-          rule: "leg_distance",
-          message: msgLegDistance(
-            lang,
-            stops[i].destination_name ?? stops[i].destination_id,
-            stops[i + 1].destination_name ?? stops[i + 1].destination_id,
-            roadKm,
-            "warn"
-          ),
-        });
+        // pravilo 3: zaporedna razdalja
+        if (roadKm > THRESHOLDS.legKm.error) {
+          issues.push({
+            day: dayNo,
+            level: "error",
+            rule: "leg_distance",
+            message: msgLegDistance(
+              lang,
+              stops[i].destination_name ?? stops[i].destination_id,
+              stops[i + 1].destination_name ?? stops[i + 1].destination_id,
+              roadKm,
+              "error"
+            ),
+          });
+        } else if (roadKm > THRESHOLDS.legKm.warn) {
+          issues.push({
+            day: dayNo,
+            level: "warn",
+            rule: "leg_distance",
+            message: msgLegDistance(
+              lang,
+              stops[i].destination_name ?? stops[i].destination_id,
+              stops[i + 1].destination_name ?? stops[i + 1].destination_id,
+              roadKm,
+              "warn"
+            ),
+          });
+        }
       }
 
       // pravilo 5: časovna združljivost (SAMO če sta termina parsable —
-      // drugače preskoči, brez izmišljenih časov)
+      // drugače preskoči, brez izmišljenih časov). Prekrivanje se preverja
+      // tudi BREZ koordinat (§4: previous.end ≤ next.start, ko sta termina
+      // časovno fiksna); primerjava vrzeli z vožnjo le ob znani nogi (§6).
       const sa = parseSlot(stops[i].time_slot);
       const sb = parseSlot(stops[i + 1].time_slot);
       if (sa && sb) {
@@ -445,7 +542,7 @@ export function validateItineraryGeo(
               stops[i + 1].time_slot
             ),
           });
-        } else if (gapH + THRESHOLDS.scheduleTightBuffer < legH) {
+        } else if (legH !== null && gapH + THRESHOLDS.scheduleTightBuffer < legH) {
           issues.push({
             day: dayNo,
             level: "error",
@@ -459,7 +556,7 @@ export function validateItineraryGeo(
               "error"
             ),
           });
-        } else if (gapH < legH) {
+        } else if (legH !== null && gapH < legH) {
           issues.push({
             day: dayNo,
             level: "warn",

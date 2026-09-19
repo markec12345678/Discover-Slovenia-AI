@@ -31,6 +31,15 @@ import { applyQuickAction, QUICK_ACTIONS } from "@/lib/refine-actions";
 import { buildStopReasons } from "@/lib/stop-insights";
 import { dayRouteGeometry, serializeLegs } from "@/lib/road-routing";
 import { buildLegRouteIndex } from "@/lib/road-routing-server";
+import { sanitizeSelectedProviderProducts } from "@/lib/supply/sanitize";
+import {
+  computeBudgetValidation,
+  extractSupplyStops,
+  logItineraryValidation,
+  validateItinerarySupply,
+  type SupplyValidationReport,
+} from "@/lib/supply/itinerary-validation";
+import type { SupplyValidationInfo } from "@/lib/types";
 
 // POST /api/itinerary/refine — Multi-turn popravki obstoječega itinererja.
 //
@@ -123,6 +132,23 @@ function buildValidationEvidence(
   }
 
   return { scope, day, before: beforeSnap, after: afterSnap, status, statusNote };
+}
+
+// ============================================================================
+// TASK 48 (1.53.0): povzetek supply poročila → serializabilno polje načrta
+// ( SupplyValidationInfo v types.ts — brez Map struktur kanonskih cen).
+// ============================================================================
+function supplySummaryOf(r: SupplyValidationReport): SupplyValidationInfo {
+  return {
+    supplyStops: r.supplyStops,
+    validated: r.validated,
+    rejected: r.rejected,
+    deduped: r.deduped,
+    priceCorrections: r.priceCorrections,
+    geoRestored: r.geoRestored,
+    directionsFixed: r.directionsFixed,
+    reinserted: r.reinserted,
+  };
 }
 
 export async function POST(request: Request) {
@@ -249,6 +275,21 @@ export async function POST(request: Request) {
   const refineInput: PlannerInput = formData
     ? { ...formData, interests: normalizeInterests(formData.interests ?? []) }
     : currentAsFallbackInput;
+
+  // ------------------------------------------------------------------
+  // TASK 48 (§14 — P0 REFINEMENT BYPASS FIX, 1.53.0): kanonska izbira z
+  // zemljevida se pošlje TUDI z refine zahtevo ( klient jo priloži iz
+  // store-a — isti vzorec kot generacija). Meja zaupanja: isti sanitize
+  // kot /api/itinerary (provider whitelist, enumi, kapice).
+  // ------------------------------------------------------------------
+  const cleanSelectedProducts = sanitizeSelectedProviderProducts(
+    (formData as { selectedProviderProducts?: unknown } | null | undefined)
+      ?.selectedProviderProducts
+  );
+  // Kanonska avtoriteta obstoječih supply postankov (refine pot): načrt
+  // PRED spremembo — AI odmev ne more tiho zbrisati/spremeniti refa, cene
+  // ali koordinat, ki jih uporabnik že vidi v svojem načrtu.
+  const currentStops = extractSupplyStops(current);
 
   // P0.2 (recenzija): datumska konteksta za PONOVEN izračun dogodkov in opomb
   // o gneči po spremembi — startDate iz obrazca, sicer okvir, shranjen s
@@ -402,6 +443,7 @@ Update rules:
 5. If the instruction says "replace X with Y" — swap them
 6. If the instruction asks for "kid-friendly" — choose family-friendly destinations
 7. Keep or improve quality (ratings, relevance)
+8. Stops whose destination_id contains a colon (e.g. "osm:node-123", "kiwitaxi:456") are USER-SELECTED products from the supply map: keep them EXACTLY as they are (same id, title, price, coordinates) unless the instruction explicitly asks to remove them — never invent new colon-ids, never change their price or location
 
 JSON format (STRICT, same as input):
 {
@@ -445,6 +487,7 @@ Pravila za posodobitev:
 5. Če ukaz sprašuje "namesto X dodaj Y" — zamenjaj
 6. Če ukaz sprašuje "primerno za otroke" — izberi family-friendly destinacije
 7. Ohrani ali izboljšaj kakovost (ocene, relevantnost)
+8. Postanki, katerih destination_id vsebuje dvopičje (npr. "osm:node-123", "kiwitaxi:456"), so UPORABNIKOVO IZBRANI izdelki z zemljevida ponudbe: ohrani jih NATANKO takšne, kot so (isti id, naslov, cena, koordinate), razen če ukaz izrecno zahteva njihovo odstranitev — NIKOLI ne izmišljuj novih id-jev z dvopičjem in ne spreminjaj njihove cene ali lokacije
 
 JSON format (STROGO, enak kot vhod):
 {
@@ -491,10 +534,44 @@ JSON format (STROGO, enak kot vhod):
     // SANITIZE-FIX (revizija 1.33.0): enak shape guard kot pri generaciji —
     // refine AI izhod je prav tako nevalidiran struktura (glej 16-c P2).
     // maxDays: število dni obstoječega (že sanitiziranega) načrta.
-    const refinedItinerary: Itinerary = sanitizeItinerary(
+    let refinedItinerary: Itinerary = sanitizeItinerary(
       parsed,
       Array.isArray(current.days) ? current.days.length : undefined
     );
+
+    // ------------------------------------------------------------------
+    // TASK 48 (§14 — P0 REFINEMENT BYPASS FIX, 1.53.0): REFINE POT GRE ZDAJ
+    // SKOZI ISTO VALIDACIJSKO PLAST KOT GENERACIJA. Prej: sanitize shape →
+    // enriched — BREZ supply revalidacije (AI je lahko tiho zbrisal FIXED
+    // postanek, spremenil ceno/koordinato izbranega produkta ali izmislil
+    // nov kolon-ref). Zdaj (fail-closed):
+    //   - izmišljen ref (ni v izbiri niti v trenutnem načrtu) → ODSTRANJEN
+    //   - podvojen provider+id → DEDUPLICIRAN
+    //   - cena/koordinate/smer → obnovljene iz kanonske avtoritete
+    //     (izbira → obstoječi postanek pred spremembo)
+    //   - FIXED izbira, ki JE bila v načrtu in jo AI izpusti → PONOVNO
+    //     VNEŠENA (reinsertFixedFrom "current" — refine ne vsiljuje novih
+    //     postankov, ki jih trenutni načrt nima; to je pot generacije)
+    // Čista, deterministična plast — brez novih remote klicev (§19).
+    // ------------------------------------------------------------------
+    const supplyValidated = validateItinerarySupply(
+      refinedItinerary,
+      { selection: cleanSelectedProducts, currentStops },
+      {
+        lang: isEn ? "en" : "sl",
+        groupSize: formData?.groupSize,
+        reinsertFixedFrom: "current",
+      }
+    );
+    refinedItinerary = supplyValidated.itinerary;
+    const supplyReport = supplyValidated.report;
+    if (supplyReport.issues.length > 0) {
+      console.warn(
+        `[itinerary/refine] TASK 48 supply revalidacija: ${supplyReport.validated}/${supplyReport.supplyStops} veljavnih, ` +
+          `${supplyReport.rejected} zavrnjenih, ${supplyReport.deduped} dedupliciranih, ` +
+          `${supplyReport.priceCorrections} popravkov cen, ${supplyReport.reinserted} FIXED ponovno vnšenih`
+      );
+    }
 
     // FW4.1: strukturne metrike se PRERAČUNAJO na novi strukturi (stare
     // vrednosti bi bile zastarele) + posodobljena AI utemeljitev.
@@ -524,6 +601,34 @@ JSON format (STROGO, enak kot vhod):
     // crowdNotices pa izpuščeni (AI JSON jih ne vsebuje → izgubljeni).
     // ------------------------------------------------------------------
     const synced = recomputeTotalBudget(refinedItinerary);
+
+    // TASK 48 (§12): status proračuna iz ZNANIH stroškov na NOVI strukturi
+    // (ista plast kot generacija — "within" zahteva dokazljive cene, sicer
+    // "uncertain") + povzetek supply validacije (§21) na načrtu.
+    const budgetValidation = computeBudgetValidation(synced, {
+      budget: formData?.budget,
+      groupSize: formData?.groupSize,
+      canonicalCosts: supplyReport.canonicalCosts,
+    });
+    synced.budgetValidation = budgetValidation;
+    synced.supplyValidation = supplySummaryOf(supplyReport);
+
+    // §18: strežniška observability dogodka (neblokirajoče, brez PII)
+    void logItineraryValidation(db, {
+      path: "refine",
+      source: "ai",
+      supply_stops: supplyReport.supplyStops,
+      validated: supplyReport.validated,
+      rejected: supplyReport.rejected,
+      deduped: supplyReport.deduped,
+      price_corrections: supplyReport.priceCorrections,
+      geo_restored: supplyReport.geoRestored,
+      directions_fixed: supplyReport.directionsFixed,
+      reinserted: supplyReport.reinserted,
+      fixed_count: cleanSelectedProducts.filter((p) => p.selectionState === "fixed").length,
+      budget_status: budgetValidation.status,
+      issues: supplyReport.issues.length,
+    });
     synced.events = matchEventsForItinerary(synced.days, 6, refineTripWindow, isEn ? "en" : "sl");
     synced.crowdNotices = buildCrowdNotices(synced, refineInputWithDates, isEn ? "en" : "sl");
 
@@ -579,6 +684,24 @@ JSON format (STROGO, enak kot vhod):
         day,
         isEn ? "en" : "sl"
       );
+
+      // --------------------------------------------------------------
+      // TASK 48 (§14): tudi DETERMINISTIČNA pot gre skozi isto validacijsko
+      // plast (defense in depth — transformacije so čiste, a sloj zagotavlja
+      // invariant tukaj). reinsertFixed: NE — odstranitev postanka s hitro
+      // akcijo je EKSPlicitNA uporabnikova intencija (stop_removed).
+      // --------------------------------------------------------------
+      const quickValidated = validateItinerarySupply(
+        result.itinerary,
+        { selection: cleanSelectedProducts, currentStops },
+        {
+          lang: isEn ? "en" : "sl",
+          groupSize: formData?.groupSize,
+          reinsertFixed: false,
+        }
+      );
+      result.itinerary = quickValidated.itinerary;
+      const quickReport = quickValidated.report;
       // P0.2 (recenzija): dogodki + opombe o gneči se preračunata tudi na
       // deterministični poti (zamenjava/odstranitev postanka spremeni oba)
       result.itinerary.events = matchEventsForItinerary(
@@ -614,6 +737,33 @@ JSON format (STROGO, enak kot vhod):
       }));
       // UI sprint (točka D): sveže noge tudi na deterministični poti
       withReasons.legs = serializeLegs(legs);
+
+      // TASK 48 (§12): status proračuna + povzetek supply validacije tudi na
+      // deterministični poti (ista plast kot AI pot — hitra akcija je enako
+      // preverljiva sprememba načrta).
+      withReasons.budgetValidation = computeBudgetValidation(withReasons, {
+        budget: formData?.budget,
+        groupSize: formData?.groupSize,
+        canonicalCosts: quickReport.canonicalCosts,
+      });
+      withReasons.supplyValidation = supplySummaryOf(quickReport);
+
+      // §18: strežniška observability dogodka (neblokirajoče, brez PII)
+      void logItineraryValidation(db, {
+        path: "refine",
+        source: "quick_action",
+        supply_stops: quickReport.supplyStops,
+        validated: quickReport.validated,
+        rejected: quickReport.rejected,
+        deduped: quickReport.deduped,
+        price_corrections: quickReport.priceCorrections,
+        geo_restored: quickReport.geoRestored,
+        directions_fixed: quickReport.directionsFixed,
+        reinserted: quickReport.reinserted,
+        fixed_count: cleanSelectedProducts.filter((p) => p.selectionState === "fixed").length,
+        budget_status: withReasons.budgetValidation.status,
+        issues: quickReport.issues.length,
+      });
 
       // P0.1 (recenzija): before → mutation → after iz ISTE validacijske plasti
       // kot prikaz — dokaz, da je dan po spremembi izvedljiv (ali opozorilo,

@@ -1,0 +1,831 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // 2026-09-10 (Faza 4f): migracija na Neon Postgres (Pot B — serverless Vercel).
+  // SQLite ostaja možen samo prek Pot A (Docker/VPS) — glej docs/DEPLOYMENT.md.
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// UPORABNIKI
+// ============================================================================
+
+// Registrirani uporabnik (B2C) — za shranjevanje itinererjev in preference
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  passwordHash  String
+  preferences   String?  // JSON: { interests, budget, groupSize, ... }
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // === EMAIL VERIFIKACIJA + PONASTAVITEV GESLA (P1 — isti princip kot Owner) ===
+  // emailVerified: null = nepotrjena — dokler ni potrjena, "moja potovanja"
+  // ne prikažejo konzultacij (zasebni podatki zahtevajo lastništvo e-pošte)
+  emailVerified             DateTime?
+  verificationToken         String?
+  verificationTokenExpires  DateTime?
+  resetToken                String?
+  resetTokenExpires         DateTime?
+
+  // === P3-audit (P3a-1): razveljavitev sej ob ponastavitvi gesla ===
+  tokenVersion Int @default(0)
+
+  itineraries   SavedItinerary[]
+
+  @@index([email])
+}
+
+// Lastnik lokala (B2B stranka) — za samostojen pristop lastnika
+model Owner {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  passwordHash  String
+  phone         String?
+  businessName  String
+  plan          String    @default("free") // free | premium | enterprise
+  role          String    @default("provider") // provider | moderator | admin | super_admin
+  subscriptionStatus String @default("none") // none | active | canceled | past_due
+  stripeCustomerId String?
+  subscriptionEndsAt DateTime?
+  // Ali je bil poslan opomnik za obnovitev (cron ga resetira ob podaljšanju)
+  renewalReminderSent Boolean @default(false)
+
+  // === EMAIL VERIFIKACIJA + RESET GESLA (P0-4) ===
+  // emailVerified: čas potrditve e-pošte (null = nepotrjena)
+  emailVerified             DateTime?
+  verificationToken         String?
+  verificationTokenExpires  DateTime?
+  // resetToken: enkratni žeton za ponastavitev gesla (1 h veljavnost)
+  resetToken                String?
+  resetTokenExpires         DateTime?
+
+  // === P3-audit (P3a-1): razveljavitev sej ob ponastavitvi gesla ===
+  // tokenVersion se poveča ob vsaki ponastavitvi gesla; JWT callback
+  // (auth.ts) ga preverja s kratkim cachingom → stare seje umrejo v ≤60 s.
+  tokenVersion Int @default(0)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  listings      Listing[]
+  products      Product[]
+  experiences   Experience[]
+  sponsorships  Sponsorship[]
+  commissionInvoices CommissionInvoice[]
+
+  @@index([email])
+  @@index([plan])
+  @@index([role])
+  @@index([subscriptionStatus])
+}
+
+// Shranjeni itinererji (B2C) — anonimno shranjevanje + javno deljenje prek /pot/[shareId]
+// userId je opcijski: itinerer lahko shrani anonimni obiskovalec (brez računa),
+// prihodnje pa ga povežemo z registriranim uporabnikom.
+model SavedItinerary {
+  id          String   @id @default(cuid())
+  userId      String?
+  itinerary   String   // JSON: Itinerary object
+  formData    String   // JSON: PlannerInput (ali null pri anonimnem shranjevanju)
+  name        String?
+  // Javni ID za deljenje (URL /pot/{shareId}) — nerodljiv, lowercase alnum
+  shareId     String   @unique
+  // F7 (vodniki): SHA-256 hash editnega žetona — plain žeton vrne POST
+  // /api/itinerary/save izključno shranjevalniku (localStorage). Null pri
+  // starih poteh (pred F7) — te NE morejo zahtevati avtorstva vodnika.
+  editTokenHash String?
+  // Število ogledov deljene strani (public statistika)
+  views       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Vodnik avtorja na deljenem potovanju — F7 skupnostni vodniki.
+// Odgovor na MindTrip "community guides (realni avtorji)": naš vodnik ni
+// promocijski, temveč KOREKTIVNI — "verdict" (kaj bi storil drugače) je
+// izraz našega poštenostnega diferencatorja.
+// Avtor = imetnik editToken (iz odgovora shranjevanja) ali prijavljeni
+// uporabnik, ki je pot shranil (userId). 1 : 1 s SavedItinerary (shareId unique).
+model TripGuide {
+  id          String   @id @default(cuid())
+  shareId     String   @unique
+  // Avtorsko ime (psevdonim) — 1–60 znakov, enaka pravila kot TripComment
+  authorName  String
+  // "Zakaj ta pot" — 2–500 znakov
+  intro       String
+  // "Kaj bi storil drugače" — 0–500 znakov (opcijsko, a jedro diferencatorja)
+  verdict     String?
+  // JSON: [{ day: number|null, text: string }] — največ 6 nasvetov,
+  // day = številka dneva (1..14) ali null (splošen nasvet)
+  tips        String
+  // Jezik vodnika (avtorjeva izbira po UI locale) — "sl" | "en"
+  lang        String   @default("sl")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Glasovi obiskovalcev na lokacijah deljenih potovanj (/pot/[shareId])
+// Skupinsko planiranje: vsak anonimni obiskovalec (voterId, client-generated)
+// lahko glasuje za destination_id (locationKey) na točno enem deljenem tripu
+// (shareId) — unique constraint to zagotavlja (idempotent insert).
+model TripVote {
+  id          String   @id @default(cuid())
+  shareId     String
+  locationKey String
+  voterId     String
+  createdAt   DateTime @default(now())
+
+  @@unique([shareId, locationKey, voterId])
+  @@index([shareId])
+}
+
+// Komentarji obiskovalcev na deljenih potovanjih (/pot/[shareId]) — P1
+// Skupinsko planiranje: pohitri odločanje (vprašanja, dogovori "vidimo se ob 9h").
+// Anonimno (authorName 1–60 znakov) — brez računa, enako kot glasovanje.
+model TripComment {
+  id          String   @id @default(cuid())
+  shareId     String
+  authorName  String
+  text        String   // 2–500 znakov
+  createdAt   DateTime @default(now())
+
+  @@index([shareId])
+  @@index([createdAt])
+}
+
+// Všečki (srčki) na deljenih potovanjih — P1
+// En všeček na pot na anonimni clientId (localStorage, enako kot voterId) —
+// toggle prek API-ja (insert ali delete, idempotentno prek unique).
+model TripLike {
+  id        String   @id @default(cuid())
+  shareId   String
+  clientId  String
+  createdAt DateTime @default(now())
+
+  @@unique([shareId, clientId])
+  @@index([shareId])
+}
+
+// Skupinske ANKETE na deljenih potovanjih (/pot/[shareId]) — F11, MindTrip
+// vrzel #2. Brez-računa glasovanje: poljubno vprašanje z 2–6 možnostmi
+// (npr. "Kateri dan?", "Hotel ali Apartma?"). options = JSON string array
+// (prisma primitivni tip ne podpira list). Avtor (authorClientId = localStorage
+// ID, enak kot voterId) lahko anketo zapre; zaprta anketa prikaže rezultate.
+model TripPoll {
+  id             String   @id @default(cuid())
+  shareId        String
+  question       String   // 2–200 znakov
+  options        String   // JSON array: 2–6 opcij, vsaka 1–80 znakov
+  authorName     String?  // prikazno ime avtorja (1–60), opcijsko
+  authorClientId String   // ID ustvarjalca — edini lahko zaključi izbriše
+  closed         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  votes          TripPollVote[]
+
+  @@index([shareId])
+  @@index([createdAt])
+}
+
+// Glas v anketi — unique([pollId, voterId]) = 1 glas na obiskovalca;
+// prestavitev glasu = update optionIdx (zadnji glas velja).
+model TripPollVote {
+  id        String   @id @default(cuid())
+  pollId    String
+  voterId   String
+  optionIdx Int
+  createdAt DateTime @default(now())
+
+  poll      TripPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, voterId])
+  @@index([pollId])
+}
+
+// ============================================================================
+// F12: SKUPINSKI POTNI DNEVNIK (vrzel #3 — Stippl "travel reel/photobook",
+// naš pošteni tekstovni pristop BREZ slik: zasebnost + ni stroškov shrambe).
+// Vpisi na deljeni povezavi /pot/[shareId] — isti brez-računa vzorec kot
+// ankete/komentarji (authorClientId = localStorage ID). dayIndex = 1-based
+// dan iz načrta (null = splošen vpis); placeName je prost tekst (kraj);
+// rating 1–5 (null = brez ocene). Natisnjena stran = naš "photobook".
+model TripDiaryEntry {
+  id             String   @id @default(cuid())
+  shareId        String
+  authorName     String?  // prikazno ime (1–60), opcijsko
+  authorClientId String   // ID pisca — edini lahko ureja izbriše
+  dayIndex       Int?     // 1-based dan načrta (null = splošno)
+  placeName      String?  // kraj spomina (1–80), prost tekst
+  rating         Int?     // 1–5 zvezdic (null = brez ocene)
+  text           String   // 2–2000 znakov — spomin sam
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  @@index([shareId])
+  @@index([shareId, authorClientId])
+}
+
+// ============================================================================
+// LOKALCI (LISTINGS)
+// ============================================================================
+
+// Lokali (hotelir, restavracije, aktivnosti) — B2B listings za monetizacijo
+model Listing {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String
+  longDescription String?
+  category        String // hotel | restaurant | bar | activity | shop | transport | other
+  destinationId   String? // povezava z destinacijo iz slovenia-data.ts (ne FK)
+  destinationName String?
+  address         String
+  phone           String?
+  email           String?
+  website         String?
+  images          String // JSON array of URLs
+  plan            String   @default("free") // free | premium | enterprise
+  featured        Boolean  @default(false)
+  verified        Boolean  @default(false)
+  rating          Float    @default(0)
+  reviewCount     Int      @default(0)
+  priceRange      String   @default("€") // € | €€ | €€€
+  openingHours    String?
+  specialties     String? // JSON array
+  // === PRAKTIČNI PODATKI (t12 faza 1) ===
+  // Vsa tri polja so NEOBVEZNA (null = ni podatka) — javni prikaz se izriše
+  // SAMO ob realnem vnosu partnerja/admina (nikoli izmišljen). Slovar ključev
+  // in label: src/lib/listing-practical.ts.
+  // seasons: JSON array SeasonKey (spring/summer/autumn/winter; vse 4 = celo leto)
+  seasons            String?
+  // weatherSuitability: indoor | outdoor | all-weather (ključ za deževne dneve)
+  weatherSuitability String?
+  // parking: free | paid | street | private | none
+  parking            String?
+  ownerEmail      String?
+  viewCount       Int      @default(0)
+  clickCount      Int      @default(0)
+  aiRecommendations Int    @default(0)
+  leadCount       Int      @default(0)
+
+  // === STATUS SISTEM (Faza 1) ===
+  // Workflow: draft → pending → approved → published → archived → deleted
+  status          String   @default("published") // draft | pending | approved | published | rejected | expired | archived | deleted
+  rejectionReason String?
+  submittedAt     DateTime?
+  approvedAt      DateTime?
+  approvedBy      String?  // Admin ID (Owner.id)
+
+  // === PARTNER SISTEM (Faza 1) ===
+  // AI lahko razlikuje med navadnim/preverjenim/premium/featured partnerjem
+  partnerStatus   String   @default("standard") // standard | verified | premium | featured
+  partnerSince    DateTime? // kdaj je postal partner
+  verifiedByAdmin Boolean  @default(false) // ali je admin ročno verificiral
+  premiumUntil    DateTime? // do kdaj velja premium status (lahko različno od subscription)
+
+  // Sponzorirane poti — lokal plača za vključitev v AI itinererje
+  sponsored       Boolean  @default(false)
+  sponsoredUntil  DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  ownerId         String?
+  owner           Owner?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  events          ListingEvent[]
+  sponsorships    Sponsorship[]
+
+  // === P2-2: 60-dnevni email nizi za stare draft lokalce ===
+  // koraki: dan 3 / 10 / 30 / 60 od createdAt (samo status "draft", submittedAt null)
+  draftNudgeStep   Int       @default(0) // 0 = še nič, 1–4 = zadnji poslan korak
+  draftNudgeSentAt DateTime? // kdaj je bil zadnji nudge poslan
+
+  @@index([destinationId])
+  @@index([category])
+  @@index([plan])
+  @@index([featured])
+  @@index([ownerId])
+  @@index([sponsored])
+  @@index([status])
+  @@index([partnerStatus])
+}
+
+// Eventi za analitiko lokalov (impression/click/ai_recommendation/lead)
+model ListingEvent {
+  id         String   @id @default(cuid())
+  listingId  String
+  type       String   // impression | click | ai_recommendation | lead
+  source     String?  // npr. "homepage" | "itinerary" | "search"
+  metadata   String?  // JSON
+  createdAt  DateTime @default(now())
+
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// TRŽNICA
+// ============================================================================
+
+// Tržnica izdelkov — lokalni kmetje, vinogradniki, obrtniki prodajajo izdelke
+model Product {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String
+  longDescription String?
+  category        String // food | wine | honey | oil | craft | souvenir | other
+  destinationId   String?
+  destinationName String?
+  price           Float
+  compareAtPrice  Float?
+  currency        String   @default("EUR")
+  images          String // JSON array of URLs
+  stock           Int      @default(0)
+  sku             String?
+  weight          Float?
+  organic         Boolean  @default(false)
+  handmade        Boolean  @default(false)
+  local           Boolean  @default(true)
+  vegan           Boolean  @default(false)
+  plan            String   @default("free")
+  featured        Boolean  @default(false)
+  verified        Boolean  @default(false)
+  rating          Float    @default(0)
+  reviewCount     Int      @default(0)
+  shippingFree    Boolean  @default(false)
+  shipsEurope     Boolean  @default(true)
+  shipsWorldwide  Boolean  @default(false)
+  sellerName      String
+  sellerEmail     String?
+  sellerPhone     String?
+  sellerWebsite   String?
+  viewCount       Int      @default(0)
+  saleCount       Int      @default(0)
+
+  // Status sistem (Faza 1)
+  // P3-audit (P3c-9): novi izdelki gredo v moderacijo (pending → admin approve →
+  // published) — enak flow kot Listing. Obstoječi demo zapisi ostanejo published.
+  status          String   @default("pending")
+  submittedAt     DateTime?
+  rejectionReason String?
+
+  // UGC recenzije obiskovalcev (ločeno od demo rating/reviewCount iz CSV-seeda)
+  reviews         Review[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  ownerId         String?
+  owner           Owner?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([category])
+  @@index([destinationId])
+  @@index([featured])
+  @@index([ownerId])
+  @@index([status])
+}
+
+// Tržnica izkušenj
+model Experience {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String
+  longDescription String?
+  category        String // tour | workshop | tasting | outdoor | cultural | adventure | wellness
+  destinationId   String?
+  destinationName String?
+  pricePerPerson  Float
+  currency        String   @default("EUR")
+  durationHours   Float
+  minGroupSize    Int      @default(1)
+  maxGroupSize    Int      @default(10)
+  languages       String // JSON array
+  meetingPoint    String?
+  address         String
+  images          String
+  providerName    String
+  providerEmail   String?
+  providerPhone   String?
+  providerWebsite String?
+  plan            String   @default("free")
+  featured        Boolean  @default(false)
+  verified        Boolean  @default(false)
+  rating          Float    @default(0)
+  reviewCount     Int      @default(0)
+  familyFriendly  Boolean  @default(false)
+  accessibility   Boolean  @default(false)
+  viewCount       Int      @default(0)
+  bookingCount    Int      @default(0)
+
+  // Status sistem (Faza 1)
+  // P3-audit (P3c-9): nove izkušnje gredo v moderacijo (pending → admin approve
+  // → published) — enak flow kot Listing. Obstoječi demo zapisi ostanejo published.
+  status          String   @default("pending")
+  submittedAt     DateTime?
+  rejectionReason String?
+
+  // UGC recenzije obiskovalcev (ločeno od demo rating/reviewCount iz CSV-seeda)
+  reviews         Review[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  ownerId         String?
+  owner           Owner?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([category])
+  @@index([destinationId])
+  @@index([featured])
+  @@index([ownerId])
+  @@index([status])
+}
+
+// ============================================================================
+// UGC RECENZIJE (Faza 2)
+// ============================================================================
+
+// UGC mnenja obiskovalcev za izdelke in izkušnje tržnice — social proof.
+// NAMENOMA ločeno od Product.rating/Experience.rating (demo podatki iz
+// CSV-seeda): povprečje UGC se izračuna dinamično iz teh vrstic.
+// productId XOR experienceId (ena od obeh, obe ne) — validacija v API-ju.
+model Review {
+  id           String   @id @default(cuid())
+  productId    String?
+  experienceId String?
+  authorName   String
+  rating       Int      // 1–5
+  comment      String   // 10–1000 znakov (validirano v API-ju)
+  createdAt    DateTime @default(now())
+
+  product      Product?     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  experience   Experience?  @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([experienceId])
+}
+
+// ============================================================================
+// NAROČILA IN REZERVACIJE
+// ============================================================================
+
+model Order {
+  id              String   @id @default(cuid())
+  orderNumber     String   @unique
+  buyerEmail      String
+  buyerName       String
+  buyerPhone      String?
+  buyerAddress    String?
+  buyerCity       String?
+  buyerPostalCode String?
+  buyerCountry    String   @default("SI")
+  status          String   @default("pending")
+  paymentMethod   String   @default("stripe")
+  stripeSessionId String?
+  subtotal        Float
+  shippingCost    Float   @default(0)
+  total           Float
+  currency        String   @default("EUR")
+  items           String
+  trackingNumber  String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  paidAt          DateTime?
+
+  @@index([buyerEmail])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Booking {
+  id              String   @id @default(cuid())
+  bookingNumber   String   @unique
+  guestEmail      String
+  guestName       String
+  guestPhone      String?
+  experienceId    String
+  experienceName  String
+  bookingDate     DateTime
+  groupSize       Int
+  pricePerPerson  Float
+  total           Float
+  currency        String   @default("EUR")
+  status          String   @default("pending")
+  paymentMethod   String   @default("stripe")
+  // FW1 (audit R3 🔴 #1 — inflacija provizijske osnove): plačilni status je
+  // LOČEN od statusa rezervacije. Demo rezervacije (brez Stripe) so VEDNO
+  // "unpaid" in NIKOLI ne vstopijo v provizijsko osnovo — provizijsko
+  // upravičena rezervacija je izključno DEJANSKO PLAČANA transakcija, ki ni
+  // preklicana/refundirana (glej lib/commissions.ts invariant). "paid" bodo
+  // nastavljali izključno Stripe webhook (future) oz. nadzorovani demo seed.
+  paymentStatus   String   @default("unpaid") // unpaid | paid | refunded
+  stripeSessionId String?
+  notes           String?
+  providerName    String
+  providerEmail   String
+  meetingPoint    String?
+  source          String?   // atribucija izvora: "consultation" (rezervacija iz AI konzultacije) | null
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  confirmedAt     DateTime?
+
+  @@index([experienceId])
+  @@index([bookingDate])
+  @@index([paymentStatus])
+  @@index([guestEmail])
+  @@index([status])
+  @@index([source])
+}
+
+// ============================================================================
+// SPONZORSTVA (Faza 1)
+// ============================================================================
+
+model Sponsorship {
+  id              String   @id @default(cuid())
+  listingId       String
+  ownerId         String
+  level           String   // basic | premium | featured
+  amount          Float    // EUR
+  currency        String   @default("EUR")
+  status          String   @default("created") // created | paid | active | expiring | expired | cancelled | archived
+  stripePaymentId String?
+  startsAt        DateTime
+  endsAt          DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  listing         Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  // 19-f-3 (revizija 1.36.0): finančna evidenca — brisanje Owner-ja NE sme
+  // kaskadno uničiti plačanih sponzorstev (stripePaymentId). GDPR izbris = anonymizacija.
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+
+  @@index([listingId])
+  @@index([ownerId])
+  @@index([status])
+  @@index([endsAt])
+}
+
+// ============================================================================
+// ANALITIKA (Faza 1)
+// ============================================================================
+
+// Ogled strani — funnel tracking (/api/track-funnel) in page analitika
+// (/api/admin/track-pageview, /api/admin/indexing, /api/admin/leads-dashboard)
+model PageView {
+  id         String   @id @default(cuid())
+  path       String
+  funnelStep String?  // homepage_view | destination_view | itinerary_generate | newsletter_signup | listing_click
+  title      String?
+  referrer   String?
+  createdAt  DateTime @default(now())
+
+  @@index([path])
+  @@index([funnelStep])
+  @@index([createdAt])
+}
+
+// Splošni analitični eventi (user behavior)
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  type      String   // ai_itinerary | ai_chat | smart_search | affiliate_click | newsletter_signup | page_view
+  userId    String?
+  sessionId String?
+  metadata  String   // JSON
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+  @@index([sessionId])
+}
+
+// AI uporaba — za stroškovno analizo in monitoring
+model AIUsageLog {
+  id           String   @id @default(cuid())
+  feature      String   // itinerary | chat | search | refine | recommend | poi | tag | insights | faq | translate
+  source       String   // puter | z-ai-sdk | fallback | cache
+  success      Boolean
+  responseTime Int      // ms
+  costEur      Float    @default(0)
+  userId       String?
+  sessionId    String?
+  metadata     String?  // JSON
+  createdAt    DateTime @default(now())
+
+  @@index([feature])
+  @@index([source])
+  @@index([createdAt])
+  @@index([success])
+}
+
+// ============================================================================
+// AUDIT LOG — sledenje admin/owner akcij (Faza 6)
+// ============================================================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorId     String?  // Owner ID (kdo je naredil)
+  actorEmail  String?  // email (za lažje iskanje)
+  actorRole   String   // admin | owner | system | stripe
+  action      String   // listing_approved | listing_rejected | sponsorship_activated | sponsorship_cancelled | plan_changed | featured_set | etc.
+  resourceType String  // listing | sponsorship | owner | user
+  resourceId  String?  // ID entitete
+  resourceName String? // ime (za berljivost)
+  metadata    String?  // JSON: dodatni podatki
+  createdAt   DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@index([resourceType])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// VPRAŠAJ LOKALCA — javna vprašanja obiskovalcev z grounded AI odgovori
+// (Faza 2: social proof + "zero hallucination" diferenciacija)
+// ============================================================================
+
+model LocalQuestion {
+  id              String    @id @default(cuid())
+  question        String    // 10–500 znakov, trimmed
+  answer          String?   // AI odgovor (grounded) — null dokler ni odgovorjen
+  answerSource    String?   // "ai" | "fallback" — transparentnost odgovora
+  destinationName String?   // ožji kontekst (npr. "Bled") — null = splošno vprašanje
+  authorName      String?   // prikazno ime (2–40 znakov, neobvezno)
+  isPublic        Boolean   @default(true) // admin lahko skrije neustrezno
+  createdAt       DateTime  @default(now())
+  answeredAt      DateTime?
+  recommendedPartners String? // JSON array priporočenih partnerjev iz odgovora: [{ name, kind, category, destinationName, plan }]
+  visitorId       String?   // anonimni obiskovalcev ID (piškotek ask_visitor) — števec dnevne brezplačne meje (1/dan, Faza 3b-2)
+
+  @@index([isPublic, answeredAt])
+  @@index([createdAt])
+  @@index([visitorId, createdAt])
+}
+
+// ============================================================================
+// „VPRAŠAJ LOKALCA" KONZULTACIJE (Faza 3c: model „ponudniki plačajo")
+// ============================================================================
+// Kot Booking.com: uporabnik NE plačuje — globoka osebna konzultacija je
+// BREZPLAČNA (dnevna meja 3/dan na e-pošto varuje AI stroške). Monetizacija
+// poteka na strani ponudnikov: citirani premium partnerji (B2B flywheel —
+// aiRecommendations + ListingEvent) + atribucija rezervacij, ki izhajajo iz
+// konzultacije (Booking.source = "consultation") → ponudnik vidi vrednost,
+// ki jo plača prek premium naročnine.
+
+// Izvedena globoka konzultacija (brezplačna — uporabniški lead za rezervacije)
+// ============================================================================
+// P3-audit (P3b-7): DEDUPLIKACIJA STRIPE WEBHOOK DOGODKOV
+// Stripe retry-a dostavljanje — obdelani event.id se zapiše TUKAJ;
+// ponovljen event se prezgodaj zavrne. Čiščenje: starejše od 30 dni
+// (počisti se ob vsaki obdelavi).
+// ============================================================================
+
+model ProcessedStripeEvent {
+  id        String   @id // Stripe event.id (evt_...)
+  eventType String // npr. "checkout.session.completed"
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model Consultation {
+  id              String    @id @default(cuid())
+  accessToken     String    @unique // zasebna povezava /konzultacija/{token} (nedoglediv)
+  email           String    // e-pošta obiskovalca (dostavna e-pošta s povezavo)
+  question        String    // 20–2000 znakov — podrobni opis potreb
+  destinationName String?   // ožji kontekst (npr. "Bled") — null = vsa Slovenija
+  travelDates     String?   // prosto besedilo (npr. "12.–19. julij")
+  partyDescription String?  // prosto besedilo (npr. "2 odrasla + otroka 4 in 7")
+  budget          String?   // ena izmed fiksnih vrednosti (npr. "300–600 €")
+  interests       String?   // JSON array izbranih interesov (validirani seznam)
+  answer          String?   // AI globok odgovor (grounded) — null dokler ni dostavljen
+  answerSource    String?   // "ai" | "fallback" — transparentnost (isti princip kot LocalQuestion)
+  recommendedPartners String? // JSON array citiranih partnerjev — isti format kot LocalQuestion
+  status          String    @default("pending") // pending | delivered
+  deliveredAt     DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// WEB PUSH NAROČNINE — VAPID (Faza 2: retention kanal)
+// ============================================================================
+
+model PushSubscription {
+  id              String    @id @default(cuid())
+  endpoint        String    @unique // push service URL (https)
+  p256dh          String    // keys.p256dh iz browser subscription
+  auth            String    // keys.auth iz browser subscription
+  userAgent       String?   // za debug/segmentacijo
+  createdAt       DateTime  @default(now())
+  lastSeenAt      DateTime  @default(now())
+  unsubscribedAt  DateTime? // soft-delete ko push service vrne 404/410
+
+  // --- Dnevni opomnik za shranjeno potovanje (Task 3b) ---
+  // kind="news": splošna naročnina (newsletter blok)
+  // kind="trip": naročnina VEZANA na deljeni načrt /pot/{shareId} —
+  //              dnevni cron pošlje dogodek + rezervacijo, dokler
+  //              tripEnd ni pretečen. tripStart pomeni trenutek prijave
+  //              (načrti nimajo absolutnih datumov — PlannerInput ima days+season).
+  kind            String    @default("news")
+  shareId         String?   // SavedItinerary.shareId (validiran ob prijavi)
+  destinationIds  String?   // JSON array destination_id iz dni načrta
+  tripStart       DateTime? // trenutek prijave (prvi dan opomnikov)
+  tripEnd         DateTime? // tripStart + days — po tem datumu cron ne pošilja več
+  lastPushAt      DateTime? // dnevni rate limit (max 1 push/24h na naročnino)
+
+  @@index([unsubscribedAt])
+  @@index([kind, unsubscribedAt])
+  @@index([tripEnd])
+}
+
+// ============================================================================
+// PROVIZIJSKI RAČUNI (Faza 4a: Booking-style provizijski model)
+// ============================================================================
+// Kot pri Booking.com: turist plača polno ceno neposredno ponudniku, platforma
+// pa ponudniku OBRAČUNA provizijo le za rezervacije, ki jih prinese AI kanal
+// (Booking.source = "consultation" — atribucija iz brezplačne konzultacije).
+// Stopnja: free partner 12 %, premium/featured partner 0 % (vključeno v
+// naročnino). Stopnja se zapiše (snapshot) ob izdaji računa — poznejše
+// spremembe paketa ne vplivajo na že izdane račune.
+// periodEnd je EKSKLUSIVNA meja (prvi trenutek naslednjega meseca).
+
+model CommissionInvoice {
+  id            String    @id @default(cuid())
+  ownerId       String
+  // 19-f-3 (revizija 1.36.0): računovodski zapis (10+ let retention) —
+  // brisanje Owner-ja ne sme pobrisati izdanih/plačanih računov.
+  owner         Owner     @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  invoiceNumber String    @unique // INV-YYYYMM-XXXXXX
+  periodStart   DateTime  // prvi trenutek koledarskega meseca (inkluzivno)
+  periodEnd     DateTime  // prvi trenutek naslednjega meseca (ekskluzivno)
+  bookingCount  Int       @default(0) // št. atribuiranih rezervacij v obdobju
+  commissionBase Float    @default(0) // skupna vrednost atribuiranih rezervacij (EUR)
+  rate          Float     @default(0.12) // provizijska stopnja ob izdaji (snapshot)
+  amount        Float     @default(0) // commissionBase × rate (EUR)
+  status        String    @default("issued") // issued | paid
+  issuedAt      DateTime  @default(now())
+  paidAt        DateTime?
+  // Stripe PaymentIntent ID, kadar je račun plačan prek kartice (Faza 5);
+  // null = ročno/SEPA označeno plačilo (mark_paid).
+  stripePaymentId String?
+  createdAt     DateTime  @default(now())
+
+  @@unique([ownerId, periodStart]) // idempotenca: en račun na obdobje
+  @@index([ownerId])
+  @@index([status])
+  @@index([issuedAt])
+}
+
+// ============================================================================
+// LEAD — B2B prijava lokalov prek javnega obrazca "Pridruži se" (homepage)
+// ============================================================================
+// P4-2a: prej leads.json (fs write — Vercel read-only FS → 500). Zdaj DB.
+model Lead {
+  id            String   @id @default(cuid())
+  name          String   // ime in priimek kontaktne osebe
+  email         String   // e-pošta (lowercase)
+  phone         String?  // telefon (opcijsko)
+  businessName  String   // ime lokala/panožbe
+  businessType  String   // tip lokala (restaurant, hotel, ...)
+  location      String   // kraj
+  plan          String   // želen paket (basic, premium, enterprise)
+  message       String?  // sporočilo (opcijsko)
+  gdprConsent   Boolean  @default(true)  // GDPR privolitev (obvezna)
+  status        String   @default("nov") // nov | kontaktiran | zakljucen (admin)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([businessName])
+}
+
+// P6: prej data/newsletter.json (fs write — na Vercelu efemeren, podatki izginejo
+// ob vsakem deployu). Zdaj PostgreSQL, enako kot Lead.
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  source    String?  // "homepage" | "itinerary_email" (kontekst prijave)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([source])
+}

@@ -84,3 +84,8 @@ server.log
 # FW2: API ruta /api/push/test NE sme biti ignorirana (goli vzorec "test" jo izključi;
 # to je verjetno vzrok, zakaj je gumb "Pošlji testno obvestilo" v produkciji kdaj kazal 404)
 !src/app/api/push/test/
+
+# Z.ai sandbox ostanki (niso del projekta)
+/sandbox-keepalive.sh
+/sandbox-logs/
+.sandbox-bin/
