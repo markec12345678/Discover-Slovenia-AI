@@ -6,11 +6,12 @@ import { hreflangForPath } from "@/components/seo";
 import { currentBaseUrl } from "@/lib/host";
 import { LanguageToggle } from "@/components/language-toggle";
 import { Footer } from "@/components/sections/footer";
+import { PROVIDER_REGISTRY } from "@/lib/supply/registry";
 import {
-  PROVIDER_REGISTRY,
-  statusLabel,
-  type ProviderRegistryEntry,
-} from "@/lib/supply/registry";
+  productionStatuses,
+  type ProviderProductionStatus,
+  type UserFacingStatus,
+} from "@/lib/supply/production-status";
 
 /**
  * /vir-podatkov — seznam virov podatkov (E-E-A-T).
@@ -65,16 +66,21 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-/** Statusna značka (barva IZPELJANA iz stanja, ne iz želja — iskrenost). */
-const STATUS_BADGE_CLASS: Record<ProviderRegistryEntry["status"], string> = {
-  local: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-  live: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
-  // TASK 43: objavljeni statični inventar (KiwiTaxi CSV) — lastna barva,
-  // ločena od „live“ (živi API) in „affiliate“ (samo povezava).
-  static: "bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300",
-  search: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-  affiliate: "bg-muted text-muted-foreground",
-  planned: "bg-muted/60 text-muted-foreground/80",
+/** Statusna značka (barva IZPELJANA iz stanja, ne iz želja — iskrenost).
+ * TASK 52 §32: glavni badge je PRODUKCIJSKI status (LIVE / CONFIGURED /
+ * NOT CONFIGURED / PARTNER ACCESS REQUIRED / AFFILIATE ONLY) — izpeljan
+ * strežniško iz production-matrix + env prisotnosti (SAMO Boolean).
+ * NIKOLI „LIVE“, če poverilnica manjka. */
+const PROD_STATUS_BADGE_CLASS: Record<UserFacingStatus, string> = {
+  LIVE: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
+  CONFIGURED:
+    "bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300",
+  NOT_CONFIGURED:
+    "bg-muted text-muted-foreground",
+  PARTNER_ACCESS_REQUIRED:
+    "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+  AFFILIATE_ONLY:
+    "bg-muted/60 text-muted-foreground/80 border border-border",
 };
 
 /** Skupine registra (lokalni odprti viri / lastna tržnica / partnerji). */
@@ -84,6 +90,12 @@ export default async function DataSourcePage() {
   const t = await getTranslations("dataSources");
   const locale = await getLocale();
   const lang = locale === "en" ? "en" : "sl";
+
+  // TASK 52 §32: strežniška produkcijska stanja (env SAMO Boolean —
+  // vrednosti nikoli ne zapustijo strežnika). Server komponenta = varno.
+  const statusBySlug = new Map<string, ProviderProductionStatus>(
+    productionStatuses().map((s) => [s.slug, s])
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -133,21 +145,45 @@ export default async function DataSourcePage() {
                   </h3>
                   <div className="space-y-3">
                     {entries.map((p) => {
-                      const badge = statusLabel(p.status);
+                      const prod = statusBySlug.get(p.slug);
                       return (
                         <div key={p.slug} className="rounded-lg border border-border p-4">
                           <div className="flex items-start justify-between gap-3">
-                            <h4 className="font-semibold">{p.labels[lang]}</h4>
-                            <span
-                              className={`text-xs px-2 py-1 rounded shrink-0 font-medium ${STATUS_BADGE_CLASS[p.status]}`}
-                            >
-                              {badge[lang]}
-                            </span>
+                            <div className="min-w-0">
+                              <h4 className="font-semibold">{p.labels[lang]}</h4>
+                              {/* Stopnja življenjskega cikla (§0) — tehnični
+                                  label za administracijo (matrika §2). */}
+                              {prod && (
+                                <p className="text-[10px] font-mono text-muted-foreground/70 mt-0.5">
+                                  {t("prodStageLabel")}: {prod.stage}
+                                </p>
+                              )}
+                            </div>
+                            {prod && (
+                              <span
+                                className={`text-xs px-2 py-1 rounded shrink-0 font-medium ${PROD_STATUS_BADGE_CLASS[prod.status]}`}
+                              >
+                                {t(`prodStatus.${prod.status}`)}
+                              </span>
+                            )}
                           </div>
                           {p.accessNote && (
                             <p className="text-sm text-muted-foreground mt-1">
                               {p.accessNote[lang]}
                             </p>
+                          )}
+                          {prod && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted/70 text-muted-foreground">
+                                {t("prodPriceLabel")}: {t(`prodPrice.${prod.price}`)}
+                              </span>
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted/70 text-muted-foreground">
+                                {t("prodAvailabilityLabel")}: {t(`prodAvailability.${prod.availability}`)}
+                              </span>
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted/70 text-muted-foreground">
+                                {t("prodMonetizationLabel")}: {t(`prodMonetization.${prod.monetization}`)}
+                              </span>
+                            </div>
                           )}
                           {p.docsUrl && (
                             <a
@@ -166,6 +202,15 @@ export default async function DataSourcePage() {
                 </div>
               );
             })}
+          </div>
+
+          {/* TASK 52 §32: legenda statusov — pomen vsakega badge-a v eninem
+              stavku (iskrenost: povezava NI zaloga). */}
+          <div className="mt-6 rounded-lg border border-border bg-muted/30 p-4">
+            <h3 className="text-sm font-semibold mb-1">
+              {t("prodLegendTitle")}
+            </h3>
+            <p className="text-xs text-muted-foreground">{t("prodLegend")}</p>
           </div>
         </section>
 

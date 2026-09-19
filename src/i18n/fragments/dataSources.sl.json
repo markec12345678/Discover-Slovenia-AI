@@ -32,6 +32,35 @@
       "commercial": "Komercialni partnerji"
     },
     "supplyDocs": "Uradna dokumentacija",
+    "prodStatus": {
+      "LIVE": "Živi podatki",
+      "CONFIGURED": "Konfiguriran",
+      "NOT_CONFIGURED": "Ni konfiguriran",
+      "PARTNER_ACCESS_REQUIRED": "Potrebna odobritev partnerja",
+      "AFFILIATE_ONLY": "Samo partnerska povezava"
+    },
+    "prodPrice": {
+      "LIVE_PRICE": "živi citi cen",
+      "FROM_PRICE": "objavljene „od“-cene",
+      "UNKNOWN": "cene neznane",
+      "NOT_SUPPORTED": "brez cen"
+    },
+    "prodAvailability": {
+      "LIVE": "živa razpoložljivost",
+      "UNKNOWN": "razpoložljivost neznana",
+      "NOT_SUPPORTED": "brez podatka o razpoložljivosti"
+    },
+    "prodMonetization": {
+      "CONFIGURED": "monetizacija nastavljena",
+      "NOT_CONFIGURED": "monetizacija ni nastavljena",
+      "NOT_APPLICABLE": "ni predmet monetizacije"
+    },
+    "prodStageLabel": "Stopnja",
+    "prodPriceLabel": "Cene",
+    "prodAvailabilityLabel": "Razpoložljivost",
+    "prodMonetizationLabel": "Monetizacija",
+    "prodLegendTitle": "Kaj statusi pomenijo",
+    "prodLegend": "Živi podatki: ponudnikovi podatki dejansko tečejo v naš sistem. Konfiguriran: dostop je nastavljen, živa preverba še sledi. Ni konfiguriran: dostop je mogoč self-serve, a ključ še ni vnešen. Potrebna odobritev partnerja: API zahteva prijavo/pogodbo pri ponudniku. Samo partnerska povezava: vir nima inventarskega API-ja — povezava NI zaloga.",
     "providersTitle": "Lokalni ponudniki",
     "providersText": "Podatki o lokalnih ponudnikih (hoteli, restavracije, aktivnosti, izdelki, izkušnje) so prispevani s strani registriranih ponudnikov preko B2B portala. Vsak ponudnik je odgovoren za točnost svojih podatkov.",
     "meta": {

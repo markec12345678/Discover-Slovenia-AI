@@ -951,7 +951,36 @@
     "meta": {
       "title": "Data sources",
       "description": "The list of data sources used by the Discover Slovenia AI platform."
-    }
+    },
+    "prodStatus": {
+      "LIVE": "Live data",
+      "CONFIGURED": "Configured",
+      "NOT_CONFIGURED": "Not configured",
+      "PARTNER_ACCESS_REQUIRED": "Partner approval required",
+      "AFFILIATE_ONLY": "Affiliate link only"
+    },
+    "prodPrice": {
+      "LIVE_PRICE": "live price quotes",
+      "FROM_PRICE": "published “from” prices",
+      "UNKNOWN": "prices unknown",
+      "NOT_SUPPORTED": "no prices"
+    },
+    "prodAvailability": {
+      "LIVE": "live availability",
+      "UNKNOWN": "availability unknown",
+      "NOT_SUPPORTED": "no availability data"
+    },
+    "prodMonetization": {
+      "CONFIGURED": "monetization configured",
+      "NOT_CONFIGURED": "monetization not configured",
+      "NOT_APPLICABLE": "not applicable for monetization"
+    },
+    "prodStageLabel": "Stage",
+    "prodPriceLabel": "Prices",
+    "prodAvailabilityLabel": "Availability",
+    "prodMonetizationLabel": "Monetization",
+    "prodLegendTitle": "What the statuses mean",
+    "prodLegend": "Live data: the provider's data actually flows into our system. Configured: access is set up, live verification is still pending. Not configured: self-serve access exists, but the key has not been entered yet. Partner approval required: the API requires an application/contract with the provider. Affiliate link only: the source has no inventory API — a link is NOT inventory."
   },
   "demoScenarios": {
     "badge": "Try it in 30 seconds",
