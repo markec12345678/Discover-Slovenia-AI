@@ -47,3 +47,99 @@ Existing strengths must remain usable: natural-language planning, ingestion/impo
 - Keep mobile usability in mind from the beginning, not as a final patch.
 
 **Explicit user instructions for the current task always take precedence when they intentionally conflict with this document.**
+
+## 🔴 TWO-PASS RULE — MANDATORY FOR SUBSTANTIAL WORK
+
+### PASS 1 — ANALYSIS ONLY
+
+- Inspect the current repository HEAD and the relevant implementation.
+- Do not modify files.
+- Identify and classify findings:
+  CONFIRMED / LIKELY / UNCONFIRMED / NOT A BUG.
+- Prove every claimed bug from actual code, data flow, UI behavior, or reproducible behavior.
+- Check regression risk before proposing a change.
+- Do not treat theoretical edge cases as confirmed defects.
+
+### PASS 2 — CHANGES
+
+- Modify ONLY confirmed issues or explicitly requested functionality.
+- Use the smallest safe patch.
+- Preserve working architecture, business logic and existing UX capabilities.
+- Add tests only when they protect a confirmed bug, critical business rule, security boundary, or important user flow.
+- Run relevant verification after changes.
+
+Never mix discovery and modification without first establishing that the problem is real.
+
+The AI must prefer:
+
+**CORRECT CODE + ZERO CHANGES**
+
+over
+
+**MORE CHANGES + MORE TESTS.**
+
+## 🔴 DATA ACCURACY RULE
+
+Discover Slovenia is a tourism product. Never invent or silently guess:
+
+- places or attractions
+- addresses or coordinates
+- opening hours
+- prices
+- availability
+- travel times or route distances
+- events
+- accommodation, restaurant or activity offers
+- booking or affiliate status
+
+If information is not verified by the relevant data source, mark it as uncertain or omit it.
+
+Do not present straight-line distance as driving distance or estimated travel time as verified travel time.
+
+## 🔴 FEATURE DISCIPLINE
+
+Do not add a feature merely because another tourism platform has it, an AI model suggested it, or it looks impressive.
+
+Before implementing a non-trivial feature establish:
+
+1. WHO uses it?
+2. WHAT problem does it solve?
+3. WHAT existing functionality is insufficient?
+4. HOW will the improvement be verified?
+
+If these cannot be answered from the actual product context, do not implement the feature.
+
+## 🔴 PRODUCT + REVENUE TRUST
+
+Affiliate and partner functionality must never mislead users.
+
+- Do not fabricate offers, prices or availability.
+- Do not claim an affiliate relationship that is not configured.
+- Do not manipulate rankings solely for commission.
+- External/provider links must remain truthful and functional.
+
+## 🔴 REAL USER FLOW OVER TEST COUNT
+
+Prioritize verification of real journeys:
+
+visitor → destination/place → map → itinerary → provider/booking
+
+and the equivalent mobile flow.
+
+A larger test count is not itself evidence of a better product.
+
+## 🔴 STOP CONDITION
+
+Stop changing the repository when:
+
+- no confirmed important bug remains
+- requested functionality works
+- relevant tests/checks pass
+- no reproducible regression exists
+- remaining findings are theoretical or low-impact
+
+**NO CHANGE REQUIRED** is a valid and preferred result when the current implementation is correct.
+
+## FINAL PRINCIPLE
+
+**PROVE FIRST. CHANGE SECOND. TEST THIRD. VERIFY FOURTH. STOP WHEN DONE.**
