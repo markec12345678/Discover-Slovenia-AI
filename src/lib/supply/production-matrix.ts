@@ -242,17 +242,18 @@ const MATRIX: Record<ProviderSlug, Omit<ProductionMatrixEntry, "slug">> = {
   fsq: {
     category: "LOCAL_OPEN_DATA",
     accessKind: "OPEN_DATA",
-    // TASK 53: adapter (lokalni JSONL bralec) je KODIRANO pripravljen —
-    // stage CODE_READY; množica OS Places je GATED na HuggingFace
-    // (sprejem pogojev + prenos) → danes NI nameščena.
-    stage: "CODE_READY",
-    blockedReason: "ACCESS_NOT_AVAILABLE",
+    // TASK 61 (1.61.0): MNOŽICA NAMEŠČENA in živo strežena — lokalni
+    // JSONL sloj (SI+HR+ME+AL, snapshot 2025-02-06 fused.io/source.coop,
+    // ingest 2026-09-20, bun run fsq:ingest). Živi podatki so preverjeni
+    // (supply poizvedbe vračajo FSQ produkte) → PRODUCTION_ACTIVE (ista
+    // logika kot kiwitaxi: objavljeni statični feed, lokalno strežanje).
+    stage: "PRODUCTION_ACTIVE",
     price: "NOT_SUPPORTED",
     availability: "NOT_SUPPORTED",
     cta: "info_only",
-    aiIntegrated: true, // priklopljen na supply search (iskreno prazen — no-dataset)
+    aiIntegrated: true,
     docsUrl: "https://opensource.foursquare.com/os-places",
-    note: "Apache-2.0 odprta množica: adapter JE pripravljen (lokalni JSONL bralec + kategorjska taksonomija), slovenska podmnožica pa še NI ingestirana (FSQ_PLACES_DIR MISSING). Ko je množica postavljena, sloj oživi BREZ spremembe kode — NE simuliramo FSQ plasti.",
+    note: "ODbL→Apache-2.0 odprta množica (z atribucijo): LOCALNO strežen POI sloj za SI+HR+ME+AL (snapshot 2025-02-06, kategorije: potovalno-relevanten nabor). Cene/razpoložljivost NISO podprte (info_only) — nikoli ne-komercialen vir ne postane affiliate. Osvežitev: bun run fsq:ingest (novi snapshotji na source.coop).",
   },
   sto: {
     category: "LOCAL_OPEN_DATA",

@@ -90,12 +90,12 @@ describe("T52 §32: produkcjski status pokriva CEL register", () => {
 // ============================================================================
 
 describe("T52 §32: LIVE samo za dejavno tekoče podatke", () => {
-  test("LIVE točno za PRODUCTION_ACTIVE (osm, sto, kiwitaxi)", () => {
+  test("LIVE točno za PRODUCTION_ACTIVE (osm, sto, kiwitaxi + fsq TASK 61)", () => {
     const live = productionStatuses()
       .filter((s) => s.status === "LIVE")
       .map((s) => s.slug)
       .sort();
-    expect(live).toEqual(["kiwitaxi", "osm", "sto"]);
+    expect(live).toEqual(["fsq", "kiwitaxi", "osm", "sto"]);
   });
 
   test("invarianta: LIVE ⟹ stage === PRODUCTION_ACTIVE (vsak provider)", () => {
@@ -154,10 +154,14 @@ describe("T52 §32: današnje stanje (brez poverilnic)", () => {
     expect(statusOf("safetywing")).toBe("AFFILIATE_ONLY");
   });
 
-  test("fsq/travelpayouts/own → NOT CONFIGURED (dataset/plast/račun manjka)", () => {
-    for (const slug of ["fsq", "travelpayouts", "own"]) {
+  test("travelpayouts/own → NOT CONFIGURED (račun/plast manjka); fsq → LIVE (TASK 61 množica)", () => {
+    for (const slug of ["travelpayouts", "own"]) {
       expect(statusOf(slug)).toBe("NOT_CONFIGURED");
     }
+    // TASK 61 (1.61.0): fsq množica je nameščena (data/fsq-places, SI+HR+ME+AL)
+    // in živo strežena → LIVE po stopnji PRODUCTION_ACTIVE (ista logika kot
+    // kiwitaxi — statičen lokalno strežen vir brez poverilnic).
+    expect(statusOf("fsq")).toBe("LIVE");
   });
 
   test("monetizacija: lokalni/lastni viri NOT_APPLICABLE, ostali NOT_CONFIGURED", () => {

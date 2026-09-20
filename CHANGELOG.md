@@ -7,6 +7,57 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+---
+
+## [1.61.0] — 2026-09-20 (TASK 61: FSQ OS PLACES AKTIVACIJA — SI+HR+ME+AL)
+
+### Dodano
+
+- **Namestitev odprte množice Foursquare Open Places (TASK 61)**: 125.446
+  potovalno-relevantnih krajev v `data/fsq-places/` (si 18.010 / hr 88.331 /
+  me 10.285 / al 8.820 — 36,6 MB git baseline, KT vzorec) iz NAJNOVEJŠEGA
+  javnega snapshotja 2025-02-06 PRIMARNE distribucije fused.io
+  (data.source.coop/fused/fsq-os-places — S3 brez prijave; HuggingFace
+  zrcalo `do-me/foursquare_places_100M` ima ISTO shemo, uradni HF repo je
+  gated in NI potreben).
+- **Ingest cev (`bun run fsq:ingest`)**: `scripts/ingest-fsq.py`
+  (python3 + DuckDB httpfs range-pushdown — odkrije SAMO datoteke, ki se
+  sekajo z regijo, prek parquet metapodatkov; 3 od 81 datotek) +
+  `scripts/ingest-fsq.ts` (VSA poslovna logika v TS: isti moduli kot
+  adapter — `--from-raw` za nadaljevanje, `--keep-raw` za debug).
+- **Regija SI+HR+ME+AL**: `SUPPORTED_COUNTRY_BBOXES` + `supportedCountryOf`
+  + `inSupportedCountryBbox` (nalagalni filter); DODELITEV države ob
+  ingestu po LASTNI KODI vira (`country` ISO — Zagreb → HR kljub
+  prekrivanju s SI pravokotnikom; prisotna tuja koda (IT/AT/HU/BA/RS/GR/
+  XK/MK) = izven regije, ~11 manjkajočih kod dobi bbox rezervo).
+- **Hierarhične kategorije vira**: label-poti „A > B > C“ → segment-match
+  (vsak segment preslikan ločeno; subcategory = TERMINAL — najbolj
+  specifičen od vira); preproste oznake ENAKO kot prej (združljivo).
+- **Nove preslikave (evidence-counts iz regije)**: `lodging` → accommodation
+  (~61k), `dining and drinking` → restaurant (~119k), `beach` → natural
+  (~5,4k — Jadranska obala), `fuel station` → **petrol** (~4,3k — novi tip
+  fsq plasti; pokriva OSM sloj, ki je v peskovniku mrežno mrtev), `castle`/
+  `monument`/`plaza`/`theater` → attraction, `vacation rental`/`resort` →
+  accommodation, `bar`/`pub`/`bakery` → restaurant, `pharmacy`/`drugstore`
+  → shop, `mosque`/`synagogue` → religious; NAMERNO izpuščeni: nočni
+  klubi, poslovne stavbe, gradbene trgovine (editorial obseg —
+  `fsqPlaceInScope`).
+- **Production matrika**: fsq CODE_READY/ACCESS_NOT_AVAILABLE →
+  **PRODUCTION_ACTIVE** (4. živi provider: osm/sto/kiwitaxi/fsq — ista
+  logika kot KT: lokalno strežen statičen vir brez poverilnic).
+
+### Spremenjeno
+
+- Registry fsq: `types` + `petrol`; accessNote (namestitev/snapshot/refresh);
+  `.env.example` FSQ razdelek (osvežitveni runbook).
+
+### Testi
+
+- 1295/1295 (+3 neto): hierarhične poti (segment+terminal), editorialni
+  obseg (`fsqPlaceInScope`), podprte države (Zagreb/Dubrovnik/Kotor/Tirana
+  true; Dunaj/Beograd false; dokumentirane posledice pravokotnikov),
+  matrika/status posodobljeni za 4. PRODUCTION_ACTIVE.
+
 ## [1.60.0] — 2026-09-20 (TASK 58 §20–§32: MY TRIP + POTRDITVE + SPREJEMNI TESTI)
 
 ### Dodano

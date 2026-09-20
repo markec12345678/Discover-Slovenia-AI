@@ -158,12 +158,14 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     labels: { sl: "Foursquare Open Places", en: "Foursquare Open Places" },
     group: "local",
     // TASK 53 (1.58.0): DEVETI adapter (lokalni POI sloj). ODPRTI PODATKI
-    // (Apache-2.0 z atribucijo) — množica OS Places je danes GATED na
-    // HuggingFace (sprejem pogojev + prenos) → FSQ_PLACES_DIR MANJKA.
-    // Adapter je LOKALEN (brez omrežja): bere pripravljene JSONL datoteke
-    // iz FSQ_PLACES_DIR (runbook pretvorbe je v glavi fsq/dataset.ts).
-    // Brez množice adapter vrne [] z opombo „no-dataset" — ko je
-    // množica postavljena, sloj oživi BREZ spremembe kode.
+    // (Apache-2.0 z atribucijo). TASK 61 (1.61.0): MNOŽICA JE NAMEŠČENA —
+    // primarna distribucija fused.io (source.coop, snapshot 2025-02-06),
+    // ingest 2026-09-20 (bun run fsq:ingest; runbook v glavi fsq/dataset.ts).
+    // Regija: SI+HR+ME+AL (kanonski bbox približki); kategorije omejene na
+    // potovalno-relevanten nabor (nastanitve/jed/muzeji/žape/plaže/bencin/
+    // trgovine — evidence števci v FSQ_CATEGORY_MAP). Adapter ostaja LOKALEN
+    // (brez omrežja): bere .jsonl iz FSQ_PLACES_DIR (privzeto ./data/fsq-places,
+    // git baseline). Če mapa manjka, adapter vrne [] z opombo „no-dataset“.
     inventoryAccess: ["open_data"],
     status: "local",
     active: true, // priklopljen na /api/supply/search (runtime dataset gate v adapterju)
@@ -177,6 +179,7 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
       "shop",
       "attraction",
       "poi",
+      "petrol", // TASK 61: bencinske (Fuel Station) — pokriva mrtvi OSM sloj v peskovniku
     ],
     capabilities: {
       geo: true, // latitude/longitude iz množice (geoPrecision: exact)
@@ -196,8 +199,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     maxCallsPerMin: 0, // brez odhodnega prometa (lokalna množica)
     docsUrl: "https://opensource.foursquare.com/os-places",
     accessNote: {
-      sl: "Odprti PODATKI (Apache-2.0 z atribucijo) · adapter pripravljen; množica še ni nameščena (FSQ_PLACES_DIR)",
-      en: "Open DATA (Apache-2.0 with attribution) · adapter ready; dataset not yet installed (FSQ_PLACES_DIR)",
+      sl: "Odprti PODATKI (Apache-2.0 z atribucijo) · množica nameščena: SI+HR+ME+AL, snapshot 2025-02-06 (fused.io/source.coop), osvežitev: bun run fsq:ingest",
+      en: "Open DATA (Apache-2.0 with attribution) · dataset installed: SI+HR+ME+AL, snapshot 2025-02-06 (fused.io/source.coop), refresh: bun run fsq:ingest",
     },
   },
   {

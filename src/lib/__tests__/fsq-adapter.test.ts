@@ -13,7 +13,8 @@
 // KLJUČNE INVARIANTE:
 //  - CAPABILITY GATE: množica ni nameščena (mapa manjka / ni .jsonl / nič
 //    veljavnih krajev) → iskreno PRAZEN sloj + „no-dataset" (ZERO throw)
-//  - STRICT LOADER: neveljavne vrstice + izven-SI kraji → preskočeni + šteti
+//  - STRICT LOADER: neveljavne vrstice + kraji izven regije (SI+HR+ME+AL)
+//    → preskočeni + šteti
 //  - KATEGORIJE: FSQ_CATEGORY_MAP labeli → kanonski tipi (restaurant/museum/
 //    natural/religious/viewpoint/shop/accommodation); brez zadetka → poi
 //  - MTIME OSVEŽEVANJE: dodana vrstica v .jsonl → naslednja poizvedba vidi
@@ -37,11 +38,15 @@ import {
 import {
   FSQ_CATEGORY_MAP,
   SI_BBOX,
+  SUPPORTED_COUNTRY_BBOXES,
   fsqCategoryType,
   fsqDatasetDir,
   fsqDatasetStats,
+  fsqPlaceInScope,
   getFsqDatasetIndex,
   inSloveniaBbox,
+  inSupportedCountryBbox,
+  supportedCountryOf,
 } from "@/lib/supply/providers/fsq/dataset";
 import { mapFsqPlace } from "@/lib/supply/providers/fsq/mapper";
 import type { FsqPlace } from "@/lib/supply/providers/fsq/types";
@@ -397,6 +402,28 @@ describe("TASK 53: FSQ_CATEGORY_MAP + fsqCategoryType", () => {
     expect(FSQ_CATEGORY_MAP["store"]).toBe("shop");
     expect(FSQ_CATEGORY_MAP["supermarket"]).toBe("shop");
     expect(FSQ_CATEGORY_MAP["grocery store"]).toBe("shop");
+    // TASK 61: starševski segmenti hierarhije (fused distribucija pošilja
+    // labela kot poti „A > B > C“) + regiji prilagojeni terminali.
+    expect(FSQ_CATEGORY_MAP["lodging"]).toBe("accommodation");
+    expect(FSQ_CATEGORY_MAP["dining and drinking"]).toBe("restaurant");
+    expect(FSQ_CATEGORY_MAP["vacation rental"]).toBe("accommodation");
+    expect(FSQ_CATEGORY_MAP["bar"]).toBe("restaurant");
+    expect(FSQ_CATEGORY_MAP["bakery"]).toBe("restaurant");
+    expect(FSQ_CATEGORY_MAP["beach"]).toBe("natural");
+    expect(FSQ_CATEGORY_MAP["mountain"]).toBe("natural");
+    expect(FSQ_CATEGORY_MAP["mosque"]).toBe("religious");
+    expect(FSQ_CATEGORY_MAP["castle"]).toBe("attraction");
+    expect(FSQ_CATEGORY_MAP["monument"]).toBe("attraction");
+    expect(FSQ_CATEGORY_MAP["plaza"]).toBe("attraction");
+    expect(FSQ_CATEGORY_MAP["theater"]).toBe("attraction");
+    expect(FSQ_CATEGORY_MAP["fuel station"]).toBe("petrol");
+    expect(FSQ_CATEGORY_MAP["pharmacy"]).toBe("shop");
+    expect(FSQ_CATEGORY_MAP["drugstore"]).toBe("shop");
+    // NAMERNO ni „nightclub“/„retail“/“construction supplies store“:
+    // nočni klubi in gradbene trgovine NISO potovalno-relevantni (editorial
+    // obseg ingesta — fsqPlaceInScope jih zavrne).
+    expect(FSQ_CATEGORY_MAP["nightclub"]).toBeUndefined();
+    expect(FSQ_CATEGORY_MAP["retail"]).toBeUndefined();
   });
 
   test("② neznan label → NI vnosa v tabeli (fsqCategoryType da poi)", () => {
@@ -433,11 +460,106 @@ describe("TASK 53: FSQ_CATEGORY_MAP + fsqCategoryType", () => {
     expect(inSloveniaBbox(46.05, 14.5)).toBe(true); // Ljubljana
     expect(inSloveniaBbox(45.5, 13.6)).toBe(true); // Piran
     expect(inSloveniaBbox(48.2, 16.37)).toBe(false); // Dunaj
-    expect(inSloveniaBbox(45.0, 14.5)).toBe(false); // Zagreb-ish jug
+    expect(inSloveniaBbox(45.0, 14.5)).toBe(false); // Zagreb-ish jug (SI preverjanje ostane ozko!)
     expect(SI_BBOX.latMin).toBe(45.4);
     expect(SI_BBOX.latMax).toBe(46.9);
     expect(SI_BBOX.lngMin).toBe(13.3);
     expect(SI_BBOX.lngMax).toBe(16.6);
+  });
+
+  test("⑦ TASK 61 hierarhične poti: segment-match + terminal kot subcategory", () => {
+    // „Travel and Transportation > Lodging > Hotel“ → lodging (segment) →
+    // accommodation; subcategory = TERMINAL (Hotel) — najbolj specifičen.
+    const hotel = place({
+      categories: [{ label: "Travel and Transportation > Lodging > Hotel" }],
+    }) as unknown as FsqPlace;
+    expect(fsqCategoryType(hotel)).toEqual({
+      type: "accommodation",
+      subcategory: "Hotel",
+    });
+    // „Dining and Drinking > Restaurant > Pizzeria“ → dining and drinking →
+    // restaurant; subcategory Pizzeria.
+    const pizzeria = place({
+      categories: [{ label: "Dining and Drinking > Restaurant > Pizzeria" }],
+    }) as unknown as FsqPlace;
+    expect(fsqCategoryType(pizzeria)).toEqual({
+      type: "restaurant",
+      subcategory: "Pizzeria",
+    });
+    // „Retail > Food and Beverage Retail > Grocery Store“ → grocery store →
+    // shop (starševski „retail“ NAMERNO ni preslikan).
+    const grocery = place({
+      categories: [{ label: "Retail > Food and Beverage Retail > Grocery Store" }],
+    }) as unknown as FsqPlace;
+    expect(fsqCategoryType(grocery)).toEqual({
+      type: "shop",
+      subcategory: "Grocery Store",
+    });
+    // „Landmarks and Outdoors > Beach“ → beach → natural.
+    const beach = place({
+      categories: [{ label: "Landmarks and Outdoors > Beach" }],
+    }) as unknown as FsqPlace;
+    expect(fsqCategoryType(beach)).toEqual({ type: "natural", subcategory: "Beach" });
+    // Hierarhična pot BREZ preslikanega segmenta → poi (NE ugibamo).
+    const office = place({
+      categories: [
+        { label: "Business and Professional Services > Health and Beauty Service > Hair Salon" },
+      ],
+    }) as unknown as FsqPlace;
+    expect(fsqCategoryType(office).type).toBe("poi");
+    // Preprosta oznaka (starejši snapshoti) — ENAKO kot prej.
+    expect(
+      fsqCategoryType(place({ categories: [{ label: "Museum" }] }) as unknown as FsqPlace)
+    ).toEqual({ type: "museum", subcategory: "Museum" });
+  });
+
+  test("⑧ TASK 61 fsqPlaceInScope: editorial obseg ingesta", () => {
+    const inScope = (labels: string[]) =>
+      fsqPlaceInScope(
+        place({ categories: labels.map((l) => ({ label: l })) }) as unknown as FsqPlace
+      );
+    expect(inScope(["Travel and Transportation > Lodging > Hostel"])).toBe(true);
+    expect(inScope(["Dining and Drinking > Bar > Pub"])).toBe(true);
+    expect(inScope(["Community and Government > Spiritual Center > Church"])).toBe(true);
+    expect(inScope(["Landmarks and Outdoors > Beach"])).toBe(true);
+    expect(inScope(["Travel and Transportation > Fuel Station"])).toBe(true);
+    expect(inScope(["Museum"])).toBe(true); // preprosta oznaka — isto
+    expect(
+      inScope(["Business and Professional Services > Office"])
+    ).toBe(false); // pisarna NI potovalna ponudba
+    expect(
+      inScope(["Retail > Construction Supplies Store"])
+    ).toBe(false); // gradbena trgovina NI
+    expect(
+      inScope(["Community and Government > Residential Building > Apartment or Condo"])
+    ).toBe(false); // stanovanjska stavda NI
+    expect(fsqPlaceInScope(place({ categories: undefined }) as unknown as FsqPlace)).toBe(false);
+    expect(
+      fsqPlaceInScope(place({ categories: [13068] }) as unknown as FsqPlace)
+    ).toBe(false); // goli ID brez labela ni klasificabilen
+  });
+
+  test("⑨ TASK 61 podprte države: SI+HR+ME+AL (nalagalni filter regije)", () => {
+    expect(Object.keys(SUPPORTED_COUNTRY_BBOXES).sort()).toEqual(["AL", "HR", "ME", "SI"]);
+    expect(inSupportedCountryBbox(46.05, 14.5)).toBe(true); // Ljubljana (SI)
+    expect(inSupportedCountryBbox(45.81, 15.98)).toBe(true); // Zagreb (HR)
+    expect(inSupportedCountryBbox(42.65, 18.09)).toBe(true); // Dubrovnik (HR)
+    expect(inSupportedCountryBbox(42.42, 18.77)).toBe(true); // Kotor (ME)
+    expect(inSupportedCountryBbox(41.33, 19.82)).toBe(true); // Tirana (AL)
+    expect(inSupportedCountryBbox(48.2, 16.37)).toBe(false); // Dunaj — IZVEN regije
+    expect(inSupportedCountryBbox(44.79, 20.45)).toBe(false); // Beograd (RS) — izven (ni v naboru)
+    // Sarajevo (43.86, 18.41) je ZNOTRAJ HR pravokotnika — dokumentirana
+    // posledica kanonskih bbox približkov (pravokotnik ovije Bosno), NE napaka.
+    expect(inSupportedCountryBbox(43.86, 18.41)).toBe(true);
+    expect(inSupportedCountryBbox(45.0, 14.5)).toBe(true); // Zagreb-ish jug — VIDEN prek HR bbox-a (dokumentirana posledica pravokotnikov)
+    expect(supportedCountryOf(46.05, 14.5)).toBe("SI");
+    expect(supportedCountryOf(41.33, 19.82)).toBe("AL");
+    expect(supportedCountryOf(48.2, 16.37)).toBeNull();
+    // SI pravokotnik ni državna meja: Zagreb (45.81, 15.98) JE znotraj SI
+    // pravokotnika (prav zato ingest dodeljuje državo po LASTNI KODI vira,
+    // ne po prvem zadetku bbox-a — glej scripts/ingest-fsq.ts countryOfRaw).
+    expect(inSloveniaBbox(45.81, 15.98)).toBe(true);
+    expect(inSloveniaBbox(43.51, 16.44)).toBe(false); // Split — res izven SI
   });
 });
 

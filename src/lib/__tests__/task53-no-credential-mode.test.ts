@@ -135,8 +135,9 @@ describe("TASK 53 §20: NO-CREDENTIAL MODE (današnje stanje instance)", () => {
         a.note === "origin-required"
     );
     // vsi komercialni gated adapterji (viator/gyg/tiqets/booking/skyscanner/
-    // airalo/travelpayouts) + fsq (no-dataset) — ODVISNO od zoom/category
-    // gatinga: pri zoom 12 + naših kategorijah morajo vsi teči
+    // airalo/travelpayouts) — ODVISNO od zoom/category gatinga: pri zoom 12
+    // + naših kategorijah morajo vsi teči. TASK 61: fsq NI VEČ gated —
+    // množica je nameščena (data/fsq-places) in vrača REALNE produkte.
     const expectedGated = [
       "viator",
       "getyourguide",
@@ -145,7 +146,6 @@ describe("TASK 53 §20: NO-CREDENTIAL MODE (današnje stanje instance)", () => {
       "skyscanner",
       "airalo",
       "travelpayouts",
-      "fsq",
     ];
     for (const slug of expectedGated) {
       const info = res.adapters.find((a) => a.slug === slug);
@@ -157,6 +157,12 @@ describe("TASK 53 §20: NO-CREDENTIAL MODE (današnje stanje instance)", () => {
     for (const slug of expectedGated) {
       expect(res.degraded).not.toContain(slug as never);
     }
+    // TASK 61: fsq zdaj streže iz komitane množice (KT vzorec — count > 0,
+    // kategorija accommodation je v SI_QUERY).
+    const fsqInfo = res.adapters.find((a) => a.slug === "fsq");
+    expect(fsqInfo).toBeDefined();
+    expect(fsqInfo!.ok).toBe(true);
+    expect(fsqInfo!.count).toBeGreaterThan(0);
     // vsaj ena iskrena opomba je prisotna (telemetrija deluje)
     expect(gated.length).toBeGreaterThanOrEqual(6);
   }, 12_000);
@@ -171,7 +177,7 @@ describe("TASK 53 §20: NO-CREDENTIAL MODE (današnje stanje instance)", () => {
       "skyscanner",
       "airalo",
       "travelpayouts",
-      "fsq",
+      // TASK 61: fsq NI več gated — nameščena odprta množica sme servati.
     ]);
     for (const p of res.products) {
       expect(gatedSlugs.has(p.provider)).toBe(false);
@@ -210,30 +216,32 @@ describe("TASK 53 §20: NO-CREDENTIAL MODE (današnje stanje instance)", () => {
     expect(providerEnvAccess("fsq").productionConfigured).toBe(false);
   });
 
-  test("⑥ user-facing statusi ostanejo ISKRENI (nikoli LIVE brez poverilnic)", () => {
+  test("⑥ user-facing statusi ostanejo ISKRENI (nikoli LIVE brez dokaza)", () => {
     const bySlug = new Map<string, ProviderProductionStatus>(
       productionStatuses().map((s) => [s.slug, s])
     );
-    // LIVE samo za dejavno tekoče plasti (osm/sto/kiwitaxi — nikoli gated)
-    for (const slug of ["viator", "getyourguide", "tiqets", "booking", "skyscanner", "airalo", "travelpayouts", "fsq"]) {
+    // LIVE samo za dejavno tekoče plasti (osm/sto/kiwitaxi + TASK 61 fsq —
+    // nikoli gated komercialni)
+    for (const slug of ["viator", "getyourguide", "tiqets", "booking", "skyscanner", "airalo", "travelpayouts"]) {
       expect(bySlug.get(slug)!.status).not.toBe("LIVE");
     }
     expect(bySlug.get("osm")!.status).toBe("LIVE");
     expect(bySlug.get("kiwitaxi")!.status).toBe("LIVE");
     expect(bySlug.get("sto")!.status).toBe("LIVE");
+    expect(bySlug.get("fsq")!.status).toBe("LIVE"); // TASK 61: nameščena množica živo strežena
     // klasifikacija ostane: gated adapterji so NOT_CONFIGURED ali PARTNER
     for (const s of productionStatuses()) {
       expect(["LIVE", "CONFIGURED", "NOT_CONFIGURED", "PARTNER_ACCESS_REQUIRED", "AFFILIATE_ONLY"]).toContain(s.status);
     }
   });
 
-  test("⑦ matrika: 16 vnosov, 3 PRODUCTION ACTIVE, 9 CODE_READY (6 novih + viator/gyg/own), 4 CONTRACT_VERIFIED", () => {
+  test("⑦ matrika: 16 vnosov, 4 PRODUCTION ACTIVE (+fsq TASK 61), 8 CODE_READY, 4 CONTRACT_VERIFIED", () => {
     const matrix = productionMatrix();
     expect(matrix.length).toBe(16);
     const byStage = new Map<string, number>();
     for (const m of matrix) byStage.set(m.stage, (byStage.get(m.stage) ?? 0) + 1);
-    expect(byStage.get("PRODUCTION_ACTIVE")).toBe(3);
-    expect(byStage.get("CODE_READY")).toBe(9);
+    expect(byStage.get("PRODUCTION_ACTIVE")).toBe(4); // osm, sto, kiwitaxi + fsq (TASK 61)
+    expect(byStage.get("CODE_READY")).toBe(8);
     expect(byStage.get("CONTRACT_VERIFIED")).toBe(4); // discovercars, omio, wn, sw
   });
 });

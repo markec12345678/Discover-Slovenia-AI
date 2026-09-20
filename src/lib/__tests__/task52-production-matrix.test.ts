@@ -135,10 +135,10 @@ describe("T52 §0: veriga življenjskega cikla", () => {
     }
   });
 
-  test("PRODUCTION ACTIVE (današnje stanje): osm, sto, kiwitaxi — NIKOLI affiliate-only", () => {
+  test("PRODUCTION ACTIVE (današnje stanje): osm, sto, kiwitaxi, fsq — NIKOLI affiliate-only", () => {
     const summary = productionSummary();
     const activeSet = [...summary.productionActive].sort().join(",");
-    expect(activeSet).toBe(["kiwitaxi", "osm", "sto"].sort().join(","));
+    expect(activeSet).toBe(["fsq", "kiwitaxi", "osm", "sto"].sort().join(","));
     for (const m of productionMatrix()) {
       if (m.stage === "PRODUCTION_ACTIVE") {
         // odprti podatki ali objavljeni statični vir — NIKOLI affiliate-only
@@ -331,15 +331,16 @@ describe("T52 §16/§17: klasifikacija cen in razpoložljivosti", () => {
     }
   });
 
-  test("TASK 53: fsq — CODE_READY z dataset gate (množica manjka)", () => {
+  test("TASK 61: fsq — PRODUCTION_ACTIVE z nameščeno množico (SI+HR+ME+AL)", () => {
     const m = getProductionMatrixEntry("fsq")!;
-    expect(m.stage).toBe("CODE_READY");
+    expect(m.stage).toBe("PRODUCTION_ACTIVE"); // TASK 61: lokalni dataset živo strežen
+    expect(m.blockedReason).toBeUndefined(); // nič več ACCESS_NOT_AVAILABLE
     expect(m.accessKind).toBe("OPEN_DATA");
     expect(m.price).toBe("NOT_SUPPORTED"); // odprti podatki — cen NI
     expect(m.availability).toBe("NOT_SUPPORTED");
     expect(m.aiIntegrated).toBe(true);
     expect(m.cta).toBe("info_only");
-    expect(getProvider("fsq")!.active).toBe(true); // adapter priključen (dataset gate)
+    expect(getProvider("fsq")!.active).toBe(true); // adapter priključen (dataset v data/fsq-places)
   });
 
   test("viator/gyg: fromPrice cena (NIKOLI živi citat) + UNKNOWN razpoložljivost", () => {
