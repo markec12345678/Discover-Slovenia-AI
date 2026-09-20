@@ -7,6 +7,20 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.58.1] — 2026-09-20 (TASK 54: LIVE PROVIDER ACTIVATION — GitHub-first audit)
+
+### TASK 54 (revizijsko-aktivacijski task v okolju brez poverilnic)
+
+- **GitHub-first audit (§0/§1):** origin/main = HEAD (08778e3), token veljaven; baseline 1196/1196 testov, lint 0, tsc 0 (src). Dejanski GitHub kot source of truth — ne prompt/stara poročila.
+- **Credential matrix (§27):** strojno izpeljana iz production-matrix + providerEnvAccess nad dejanskim okoljem: VSEH 25 provider env spremenljivk MISSING (0 poverilnic; samo PRESENT/MISSING, vrednosti NIKOLI izpisane). 3 LIVE (osm/sto/kiwitaxi), 8 gated CODE READY, 5 affiliate-only/blocked, own = produktna odločitev.
+- **Živi dokazi vrat (danes, brez poverilnic):** Viator 401 s pogodbenimi glavami (exp-api-key + Accept:application/json;version=2.0 — dokaz, da so glave adapterja pravilne), Tiqets 401 api_version 2.7, GYG strukturiran ERROR JSON, Skyscanner 301→www→403, Travelpayouts 401, Airalo sandbox 200 (Slovenia id=210). Vsi adapterji aktivirajo BREZ spremembe kode.
+- **Žive verige:** KiwiTaxi polna E2E (48 produktov → modal od €77 s pošteno opombo "objavljena cena, ni živi citat" → FIXED točno 1× v AI načrtu → /go → živi kiwitaxi checkout z booking tokenom); STO overlay sprožen danes (664 zapisov); OSM fail-closed dokazan (peskovnik blokira Overpass — okolje, ne koda; degraded+0 fake).
+- **Neskladje §5 POPRAVLJENO:** `.env.example` je manjkal 11 imen, ki jih koda bere (TIQETS_API_KEY, BOOKING_API_KEY/BASE, SKYSCANNER_API_KEY/BASE z www aktivacijsko opombo, AIRALO_CLIENT_ID/SECRET/BASE, TRAVELPAYOUTS_TOKEN/BASE/ORIGIN) — dodana SAMO imena z dokumentiranimi pogodbami, NIKOLI vrednosti.
+- **Browser E2E (§23):** SL+EN zlata pot (Supply in view 48, modal 100 % EN), 16/16 kartic /vir-podatkov SL+EN (3/4/7/2), mobile 375/390: 0 px preliva, konzola: samo pre-existing (prisma postgres clobber).
+- **Brez sprememb delujočih providerjev, brez nove arhitekture, brez fake podatkov** (§24/§33). Dokumentacija: docs/TASK-54-LIVE-PROVIDER-ACTIVATION.md (A–I + credential matrika).
+
+---
+
 ## [1.58.0] — 2026-09-20 (TASK 53: ALL PROVIDERS READY WITHOUT API KEYS)
 
 ### Provider adapterji (1.58.0 — TASK 53 §5–§10)
