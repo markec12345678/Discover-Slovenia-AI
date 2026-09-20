@@ -63,7 +63,9 @@ export default async function PotovanjePage() {
   const lang = locale === "en" ? "en" : "sl";
   return (
     <>
-      <Navigation />
+      <div className="print:hidden">
+        <Navigation />
+      </div>
       <main id="vsebina" className="min-h-[60vh]">
         <section className="border-b bg-gradient-to-b from-muted/50 to-background py-10 sm:py-14">
           <div className="mx-auto max-w-5xl px-4 sm:px-6">
@@ -83,9 +85,11 @@ export default async function PotovanjePage() {
           <JourneyPlanner />
         </div>
       </main>
-      <Footer />
-      <Chatbot />
-      <StickyMobileCTA />
+      <div className="print:hidden">
+        <Footer />
+        <Chatbot />
+        <StickyMobileCTA />
+      </div>
     </>
   );
 }

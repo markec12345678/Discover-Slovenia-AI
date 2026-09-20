@@ -241,7 +241,7 @@ export interface JourneyPlace {
   lat?: number;
   lng?: number;
   /** Od kod geo: „kiwitaxi-dataset" | „destinations" | unresolved. */
-  source: "kiwitaxi-dataset" | "destinations" | "unresolved";
+  source: "transfer-inventory" | "destinations" | "unresolved";
 }
 
 export interface JourneyCategoryResult {
@@ -275,6 +275,13 @@ export interface TravelJourney {
   totals: JourneyTotals;
   validation: { issues: JourneyValidationIssue[] };
   /** Najzgodnejši možen prihod na destinacijo (transfer + ura prihoda). */
+  /**
+   * Zdravje virov (§22 izolacija odpovedi + §30 observability): ponudniki,
+   * ki so odpovedali/brez podatka (dataset manjka / adapter napaka).
+   * Potovanje SE NADALJUJE — ostale kategorije ostanejo (fail-closed
+   * posameznega vira NE uniči celotne poti).
+   */
+  supplyHealth: { degradedProviders: string[] };
   earliestArrivalAtDestination?: { time: string; via: string };
   generatedAt: string;
 }

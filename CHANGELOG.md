@@ -7,6 +7,40 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.60.0] — 2026-09-20 (TASK 58 §20–§32: MY TRIP + POTRDITVE + SPREJEMNI TESTI)
+
+### Dodano
+
+- **MY TRIP (§20)**: `buildMyTrip()` (lib/journey/trip-view.ts) + komponenta
+  journey-trip — ena časovnica potovanja po dneh: prihod (vpis), transferji
+  (trajanje IZ vira), hoteli/restavracije/bencin BREZ izumljenih ur
+  (timeNote razlog), dogodki na realnih datumih, najem = zunanja kartica.
+  Vsaka postavka nosi REALNI status (ZUNANJA REZERVACIJA / SAMO INFORMACIJA).
+- **Potrditveni dokument (§21)**: natisljiv (print:hidden + window.print) —
+  vsa zahtevana polja; št. rezervacije = „Zunanja rezervacija" DOKLER
+  provider dejansko ne vrne svoje (izdelana številka ZAVRNJENA na meji).
+- **Provider-agnostic (§24)**: TRANSFER_INVENTORY_RESOLVERS registracija
+  (vzorec ADAPTER_FACTORIES), najem/naznake virov IZ registra — 0 if-provider
+  verig v orkestratorju/UI.
+- **Izolacija odpovedi (§22)**: supplyHealth.degradedProviders + opombe
+  kategorij; odpoved enega vira NE uniči potovanja (testirano OSM+KT).
+- **Observability (§30)**: journey_started + supply_searched (neblokirajoče,
+  brez PII/se skrivnosti); booking_redirected ≡ obstoječi affiliate_click.
+- **Sprejemni testi (§25–§26)**: 33 novih (E2E veriga §26 v 13 korakih,
+  booking matriks, integriteta, fixtures≠live).
+
+### Spremenjeno
+
+- handoff preslika v lib/journey/handoff.ts (FIXED, dedupe, registry oznake).
+- JourneyPlace.source: „kiwitaxi-dataset" → „transfer-inventory" (agnostično).
+
+### Regresija
+
+- bun test 1292/1292 (+33), lint 0, tsc 0; browser E2E SL+EN (MY TRIP,
+  dokument, tiskanje, prenos FIXED v načrtovalnik), 375/390 0 px, 0 napak.
+
+---
+
 ## [1.59.0] — 2026-09-20 (TASK 58: FULL PROVIDER JOURNEY)
 
 ### Dodano — orkestracija celotnega potovanja čez VSE obstoječe ponudnike

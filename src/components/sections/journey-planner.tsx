@@ -27,6 +27,8 @@ import { persistSelection } from "@/lib/supply/selection-persist";
 import { useAppStore } from "@/lib/store";
 import type { SelectedProviderProduct } from "@/lib/supply/types";
 import { describeTotals } from "@/lib/journey/totals";
+import { journeyProductsToSelection } from "@/lib/journey/handoff";
+import { JourneyTrip } from "@/components/journey-trip";
 import type {
   JourneyCategoryKey,
   JourneyProduct,
@@ -193,6 +195,8 @@ export function JourneyPlanner() {
   const [error, setError] = useState<string | null>(null);
   const [journey, setJourney] = useState<TravelJourney | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // §21: tiskalniški pogovor pokaže SAMO potrditveni dokument (MY TRIP).
+  const [printMode, setPrintMode] = useState(false);
 
   const toggleCat = (c: JourneyCategoryKey) =>
     setCats((prev) =>
@@ -245,31 +249,13 @@ export function JourneyPlanner() {
     [allProducts, selected]
   );
 
-  /** Izbira potovanja → obstoječa izbira načrtovalnika (FIXED semantika). */
+  /**
+   * Izbira potovanja → obstoječa izbira načrtovalnika (FIXED semantika).
+   * Preslikava živi v lib/journey/handoff.ts (provider-agnostic §24 —
+   * oznake virov IZ registra, dedupe, dogodki izpuščeni).
+   */
   const handoff = useCallback(() => {
-    const items: SelectedProviderProduct[] = selectedProducts
-      .filter((p) => p.provider !== "events")
-      .map((p) => ({
-        provider: p.provider as SelectedProviderProduct["provider"],
-        providerProductId: p.providerProductId,
-        type: p.type,
-        title: p.title,
-        ...(p.lat != null && p.lng != null ? { lat: p.lat, lng: p.lng } : {}),
-        ...(p.address ? { locationName: p.address } : {}),
-        ...(p.price ? { price: p.price } : {}),
-        ...(p.availability
-          ? { availability: { status: p.availability.status } }
-          : {}),
-        source:
-          p.provider === "kiwitaxi"
-            ? "KiwiTaxi"
-            : p.provider === "osm"
-              ? "OpenStreetMap"
-              : String(p.provider),
-        ...(p.bookingUrl ? { bookingUrl: p.bookingUrl } : {}),
-        // Uporabnikova IZBIRA = FIXED (AI je NE sme tiho zamenjati — §7/§14).
-        selectionState: "fixed" as const,
-      }));
+    const items = journeyProductsToSelection(selectedProducts, lang);
     // KANONSKI vzorec iz načrtovalnika (itinerary-planner:3054): pomnilniška
     // trgovina IN sessionStorage — če je bil store inicializiran že na
     // /potovanje (npr. klepet), ostane usklajen tudi v pomnilniku.
@@ -277,6 +263,22 @@ export function JourneyPlanner() {
     persistSelection(items);
     router.push(lang === "en" ? "/en/nacrtuj" : "/nacrtuj");
   }, [selectedProducts, router, lang]);
+
+  /**
+   * §21: natisni potrditveni dokument — začasno skrij ostale dele strani
+   * (print:hidden razredi spodaj), sproži window.print(), povrni po dogodku.
+   */
+  const printConfirmation = useCallback(() => {
+    setPrintMode(true);
+    // Počakaj razred na DOM, nato odpri tiskalniški pogovor.
+    requestAnimationFrame(() => {
+      window.print();
+      const done = () => setPrintMode(false);
+      window.addEventListener("afterprint", done, { once: true });
+      // Varnostna kopija za brskalnike brez afterprint dogodka.
+      setTimeout(done, 1500);
+    });
+  }, []);
 
   const toggleProduct = (id: string) =>
     setSelected((prev) => {
@@ -300,6 +302,7 @@ export function JourneyPlanner() {
   return (
     <div className="space-y-6">
       {/* === VHODNI OBRAZEC === */}
+      <div className={printMode ? "print:hidden" : ""}>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -416,11 +419,13 @@ export function JourneyPlanner() {
           )}
         </CardContent>
       </Card>
+      </div>
 
       {/* === REZULTATI === */}
       {journey && (
         <div className="space-y-6">
           {/* Povzetek: kraji + najzgodnejši prihod */}
+          <div className={printMode ? "print:hidden" : ""}>
           <Card>
             <CardContent className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4 text-sm">
               <span className="font-medium">
@@ -449,16 +454,27 @@ export function JourneyPlanner() {
               )}
             </CardContent>
           </Card>
+          </div>
 
           {/* Zemljevid potovanja (statusi pinov §13) */}
-          <JourneyMap
-            products={mapProducts}
-            origin={journey.origin}
-            destination={journey.destination}
-            lang={lang}
+          <div className={printMode ? "print:hidden" : ""}>
+            <JourneyMap
+              products={mapProducts}
+              origin={journey.origin}
+              destination={journey.destination}
+              lang={lang}
+            />
+          </div>
+
+          {/* §20 MY TRIP — ena časovnica potovanja + §21 potrditveni dokument */}
+          <JourneyTrip
+            journey={journey}
+            selectedIds={selected}
+            onPrint={printConfirmation}
           />
 
           {/* Kategorije */}
+          <div className={printMode ? "print:hidden" : ""}>
           {ALL_CATS.filter((c) => cats.includes(c)).map((catKey) => {
             const cat = journey.categories[catKey];
             if (!cat) return null;
@@ -614,8 +630,10 @@ export function JourneyPlanner() {
               </section>
             );
           })}
+          </div>
 
           {/* === SKUPNA CENA (semantika §16) === */}
+          <div className={printMode ? "print:hidden" : ""}>
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{t(L.totals.title)}</CardTitle>
@@ -648,8 +666,10 @@ export function JourneyPlanner() {
               </p>
             </CardContent>
           </Card>
+          </div>
 
           {/* === PRENOS V NAČRTOVALNIK (FIXED semantika) === */}
+          <div className={printMode ? "print:hidden" : ""}>
           <div className="space-y-2">
             <Button
               onClick={handoff}
@@ -663,6 +683,7 @@ export function JourneyPlanner() {
                 ? t(L.handoff.none)
                 : t(L.handoff.hint)}
             </p>
+          </div>
           </div>
         </div>
       )}

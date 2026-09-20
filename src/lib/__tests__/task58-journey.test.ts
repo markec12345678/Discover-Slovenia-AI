@@ -416,7 +416,7 @@ describe("TASK 58: orkestrator — ZGLED POTOVANJA Brnik → Maribor (§6–§12
       );
       if ("error" in j) throw new Error(j.error);
       expect(j.origin.label).toContain("Ljubljana Airport");
-      expect(j.origin.source).toBe("kiwitaxi-dataset");
+      expect(j.origin.source).toBe("transfer-inventory");
       expect(j.origin.lat).toBeGreaterThan(45); // realne koordinate SI
       expect(j.destination.label).toBe("Maribor");
       expect(j.destination.source).toBe("destinations");

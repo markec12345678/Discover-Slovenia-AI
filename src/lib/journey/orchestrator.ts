@@ -27,8 +27,13 @@ import { EVENTS_EN } from "@/lib/events-data-en";
 import type { EventItem } from "@/lib/events-data";
 import { searchSupply } from "@/lib/supply/search";
 import type { SupplyAdapter } from "@/lib/supply/adapter";
-import type { ProviderProduct } from "@/lib/supply/types";
-import { getProvider } from "@/lib/supply/registry";
+import type { ProviderProduct, ProviderSlug } from "@/lib/supply/types";
+import {
+  activeProviders,
+  PROVIDER_REGISTRY,
+  type ProviderRegistryEntry,
+} from "@/lib/supply/registry";
+import type { KiwiRoute } from "@/lib/supply/providers/kiwitaxi/types";
 import {
   getKiwitaxiDataset,
   searchKiwitaxiRoutes,
@@ -181,6 +186,63 @@ function eventToJourney(
 }
 
 // ---------------------------------------------------------------------------
+// TASK 58 §24 — PROVIDER-AGNOSTIC SEAM ZA LOKALNE TRANSFER INVENTARJE
+// (isti vzorec kot ADAPTER_FACTORIES v search.ts): register → slug →
+// resolver. Provider-specifična logika Živi ZNOTRAJ provider meje
+// (dataset.ts/adapter.ts); orkestrator vrti SAMO prek registra + te
+// registracije — NIKOLI if (provider === "...").
+// ---------------------------------------------------------------------------
+
+/** Resolver lokalnega (ingested) transfer inventarja (provider meja). */
+interface TransferInventoryResolver {
+  /** Iskanje rut po imenih (null = dataset manjka — okoljska odpoved). */
+  searchRoutes(from: string, to: string): KiwiRoute[] | null;
+  /** Ruta → kanonski ProviderProduct (preslikava provider meje). */
+  routeToProduct(route: KiwiRoute, locale: "sl" | "en", fetchedAt: string): ProviderProduct;
+  /** fetchedAt trenutno strežene generacije (null = dataset manjka). */
+  datasetFetchedAt(): string | null;
+}
+
+const TRANSFER_INVENTORY_RESOLVERS: Partial<
+  Record<ProviderSlug, TransferInventoryResolver>
+> = {
+  // Edini lokalni transfer inventar danes (Task 43 CSV ingest).
+  kiwitaxi: {
+    searchRoutes: searchKiwitaxiRoutes,
+    routeToProduct: kiwiRouteToProduct,
+    datasetFetchedAt: () => getKiwitaxiDataset()?.fetchedAt ?? null,
+  },
+};
+
+/** Aktivni ponudniki transferjev z lokalnim (static) inventarjem — IZ registra. */
+function transferInventoryProviders(): ProviderRegistryEntry[] {
+  return activeProviders().filter(
+    (p) =>
+      p.types.includes("transfer") &&
+      p.inventoryAccess.includes("static_content")
+  );
+}
+
+/** Geo izhodišča iz podatkov transfer inventarjev (registry-driven). */
+function findTransferOriginGeo(
+  query: string,
+  destinationName: string
+): { label: string; lat: number; lng: number } | null {
+  for (const entry of transferInventoryProviders()) {
+    const resolver = TRANSFER_INVENTORY_RESOLVERS[entry.slug];
+    if (!resolver) continue;
+    const routes = resolver.searchRoutes(query, destinationName);
+    const withGeo = routes?.find(
+      (r) => r.fromLat != null && r.fromLng != null
+    );
+    if (withGeo?.fromLat != null && withGeo?.fromLng != null) {
+      return { label: withGeo.fromName, lat: withGeo.fromLat, lng: withGeo.fromLng };
+    }
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // RAZREŠEVANJE KRAJEV
 // ---------------------------------------------------------------------------
 
@@ -213,27 +275,16 @@ function resolveOrigin(
   const alias = ORIGIN_ALIASES[n];
   const query = alias ?? raw.trim();
 
-  // 1) KT dataset: rute IZ tega kraja nosijo fromLat/fromLng (vir podatkov).
-  const routes = searchKiwitaxiRoutes(query, destinationName) ?? [];
-  const withGeo = routes.find((r) => r.fromLat != null && r.fromLng != null);
-  if (withGeo && alias) {
+  // 1) Lokalni transfer inventarji (registry-driven §24): rute IZ tega
+  //    kraja nosijo fromLat/fromLng (geo IZ podatkov partnerja).
+  const geo = findTransferOriginGeo(query, destinationName);
+  if (geo) {
     return {
       place: {
-        label: `${withGeo.fromName} (Brnik)`,
-        lat: withGeo.fromLat,
-        lng: withGeo.fromLng,
-        source: "kiwitaxi-dataset",
-      },
-      query,
-    };
-  }
-  if (withGeo) {
-    return {
-      place: {
-        label: withGeo.fromName,
-        lat: withGeo.fromLat,
-        lng: withGeo.fromLng,
-        source: "kiwitaxi-dataset",
+        label: alias ? `${geo.label} (Brnik)` : geo.label,
+        lat: geo.lat,
+        lng: geo.lng,
+        source: "transfer-inventory",
       },
       query,
     };
@@ -264,18 +315,63 @@ async function transferCategory(
   originQuery: string,
   destinationName: string,
   lang: "sl" | "en",
-  issues: JourneyValidationIssue[]
+  issues: JourneyValidationIssue[],
+  degradedProviders: string[]
 ): Promise<JourneyCategoryResult> {
   const cat = emptyCategory("transfer");
-  const ds = getKiwitaxiDataset();
+  const providers = transferInventoryProviders();
+  const products: JourneyProduct[] = [];
+  let totalRoutes = 0;
+  let datasetsMissing = 0;
+  const providerLabels: string[] = [];
 
-  if (!ds) {
+  // §24: register-driven — DANES je edini lokalni transfer inventar
+  // kiwitaxi (Task 43 CSV); prihodnji inventarji se priključijo SAMO prek
+  // TRANSFER_INVENTORY_RESOLVERS registracije (brez if-provider verig).
+  for (const entry of providers) {
+    const resolver = TRANSFER_INVENTORY_RESOLVERS[entry.slug];
+    if (!resolver) continue;
+    providerLabels.push(entry.labels[lang]);
+    const fetchedAt = resolver.datasetFetchedAt();
+    if (fetchedAt == null) {
+      datasetsMissing++;
+      degradedProviders.push(entry.slug);
+      continue;
+    }
+    const routes = resolver.searchRoutes(originQuery, destinationName) ?? [];
+    if (routes.length === 0) continue;
+    totalRoutes += routes.length;
+    for (const r of routes.slice(0, MAX_TRANSFER_ROUTES)) {
+      const base = providerProductToJourney(
+        resolver.routeToProduct(r, lang, fetchedAt),
+        "transfer",
+        // Razdalja transferja je podatkov vira (distanceKm), ne haversine.
+        { lat: r.fromLat ?? 0, lng: r.fromLng ?? 0 }
+      );
+      products.push({
+        ...base,
+        durationMin: r.durationMin,
+        vehicleOptions: r.classes
+          .slice(0, MAX_VEHICLE_CLASSES)
+          .map((c) => ({
+            name: c.name,
+            pax: c.pax,
+            eur: c.eur,
+            transferId: c.transferId,
+          })),
+      });
+    }
+  }
+
+  // §22 izolacija: dataset manjka pri VSEH virih → kategorija izostane z
+  // opombo, potovanje SE NADALJUJE (ne sesuje ostalih kategorij).
+  if (providers.length > 0 && datasetsMissing === providers.length) {
     issues.push({
       level: "warn",
       rule: "dataset_missing",
       message: {
-        sl: "KiwiTaxi dataset ni nameščen (okoljska odpoved) — transferji trenutno niso na voljo.",
-        en: "KiwiTaxi dataset is not installed (environment failure) — transfers are currently unavailable.",
+        sl: `Vir transferjev (${providerLabels.join(", ")}) ni na voljo (dataset manjka) — transferji trenutno niso na voljo.`,
+        en: `Transfer source (${providerLabels.join(", ")}) unavailable (dataset missing) — transfers are currently unavailable.`,
       },
     });
     cat.note = {
@@ -285,8 +381,7 @@ async function transferCategory(
     return cat;
   }
 
-  const routes = searchKiwitaxiRoutes(originQuery, destinationName) ?? [];
-  if (routes.length === 0) {
+  if (products.length === 0) {
     issues.push({
       level: "warn",
       rule: "no_transfer_route",
@@ -302,30 +397,10 @@ async function transferCategory(
     return cat;
   }
 
-  const capped = routes.slice(0, MAX_TRANSFER_ROUTES);
-  cat.products = capped.map((r) => {
-    const base = providerProductToJourney(
-      kiwiRouteToProduct(r, lang, ds.fetchedAt),
-      "transfer",
-      // Razdalja transferja je podatkov vira (distanceKm), ne haversine.
-      { lat: r.fromLat ?? 0, lng: r.fromLng ?? 0 }
-    );
-    return {
-      ...base,
-      durationMin: r.durationMin,
-      vehicleOptions: r.classes
-        .slice(0, MAX_VEHICLE_CLASSES)
-        .map((c) => ({
-          name: c.name,
-          pax: c.pax,
-          eur: c.eur,
-          transferId: c.transferId,
-        })),
-    };
-  });
+  cat.products = products.slice(0, MAX_TRANSFER_ROUTES);
   cat.note = {
-    sl: `Objavljeni podatki partnerja (CSV ingest): ${routes.length} rut; cene so „od", ne živi citat.`,
-    en: `Partner published data (CSV ingest): ${routes.length} routes; prices are “from”, not live quotes.`,
+    sl: `Objavljeni podatki (${providerLabels.join(", ")}): ${totalRoutes} rut; cene so „od", ne živi citat.`,
+    en: `Published data (${providerLabels.join(", ")}): ${totalRoutes} routes; prices are “from”, not live quotes.`,
   };
   return cat;
 }
@@ -335,6 +410,7 @@ async function localCategories(
   travelers: number,
   lang: "sl" | "en",
   wanted: Set<JourneyCategoryKey>,
+  degradedProviders: string[],
   adapters?: SupplyAdapter[]
 ): Promise<{
   accommodation: JourneyCategoryResult;
@@ -372,11 +448,17 @@ async function localCategories(
     adapters
   );
 
-  const osmDegraded = res.adapters.some((a) => a.slug === "osm" && !a.ok);
-  const degradedNote = osmDegraded
+  // §22/§30: odpoved ENEGA adapterja NE uniči potovanja — zabeležži
+  // se v supplyHealth (structured event), kategorije ostanejo (morda prazne
+  // z opombo); runner že izolira (Promise.allSettled + degraded[]).
+  for (const a of res.adapters) {
+    if (!a.ok && !degradedProviders.includes(a.slug)) degradedProviders.push(a.slug);
+  }
+  const localDegraded = res.adapters.some((a) => !a.ok);
+  const degradedNote = localDegraded
     ? {
-        sl: "Lokalni vir (OpenStreetMap) trenutno ni dosegljiv.",
-        en: "Local source (OpenStreetMap) is currently unreachable.",
+        sl: "Lokalni vir je trenutno nedosegljiv (ostalo potovanje deluje).",
+        en: "A local source is currently unreachable (the rest of the journey still works).",
       }
     : undefined;
 
@@ -455,14 +537,19 @@ function eventsCategory(
 
 function rentalCategory(destinationName: string): JourneyCategoryResult {
   const cat = emptyCategory("rental");
-  // DiscoverCars: AFFILIATE_ONLY (register: brez inventarja — iskreno
-  // KARTICA, ne ProviderProduct; pravi podprti tok = /go/cars).
-  const entry = getProvider("discovercars");
-  if (entry) {
+  // §24 REGISTER-DRIVEN: komercialni ponudniki najema z affiliate-only
+  // dostopom (brez lokalnega inventarja) → iskrene KARTICE (affiliate ≠
+  // inventar — NIKOLI ProviderProduct). Pravi podprti tok vsakega = /go.
+  // Danes: discovercars (edini vrsta car_rental v registru).
+  for (const entry of PROVIDER_REGISTRY) {
+    if (!entry.types.includes("car_rental")) continue;
+    if (entry.group !== "commercial") continue;
+    if (!entry.goRoute) continue;
+    if (!entry.inventoryAccess.includes("affiliate_deep_link")) continue;
     cat.providers.push({
-      provider: "discovercars",
+      provider: entry.slug,
       label: entry.labels,
-      url: `/go/cars?dest=${encodeURIComponent(destinationName)}`,
+      url: `/go/${entry.goRoute}?dest=${encodeURIComponent(destinationName)}`,
       booking: bookingCapabilityOf("affiliate_redirect"),
       status: "affiliate",
       note: entry.accessNote,
@@ -555,12 +642,13 @@ export async function planJourney(
     });
   }
 
-  // --- kategorije (obstoječi viri) ---
+  // --- kategorije (obstoječi viri; §22: odpoved enega vira ne uniči poti) ---
+  const degradedProviders: string[] = [];
   const transfer =
     wanted.has("transfer")
-      ? await transferCategory(origin.query, dest.name, lang, issues)
+      ? await transferCategory(origin.query, dest.name, lang, issues, degradedProviders)
       : emptyCategory("transfer");
-  const local = await localCategories(dest, travelers, lang, wanted, opts?.adapters);
+  const local = await localCategories(dest, travelers, lang, wanted, degradedProviders, opts?.adapters);
   const events =
     wanted.has("events")
       ? eventsCategory(dest.id, intent.startDate, lang)
@@ -603,6 +691,7 @@ export async function planJourney(
     },
     totals,
     validation: { issues },
+    supplyHealth: { degradedProviders },
     ...(earliest ? { earliestArrivalAtDestination: earliest } : {}),
     generatedAt: new Date().toISOString(),
   };

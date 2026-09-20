@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { planJourney } from "@/lib/journey/orchestrator";
+import { logJourneyEvent } from "@/lib/journey/observability";
 import type { JourneyIntent } from "@/lib/journey/types";
 import { JOURNEY_CATEGORY_KEYS } from "@/lib/journey/types";
 
@@ -68,6 +70,27 @@ export async function POST(request: Request) {
     if ("error" in journey) {
       return NextResponse.json({ error: journey.error }, { status: 400 });
     }
+
+    // §30 OBAVESTLJIVOST (neblokirajoče, brez PII/se skrivnosti):
+    // journey_started + supply_searched (števci + degraded). Preslikava:
+    // booking_redirected ≡ obstoječi "affiliate_click" (/go); prihodnji
+    // booking/payment dogodki → tipizirani v observability.ts (API_BOOKING še 0).
+    void logJourneyEvent(db, "journey_started", {
+      origin: journey.origin.label,
+      destination: journey.destination.label,
+      travelers: journey.travelers,
+      lang: journey.lang,
+      categories: Object.keys(journey.categories),
+    });
+    void logJourneyEvent(db, "supply_searched", {
+      origin: journey.origin.label,
+      destination: journey.destination.label,
+      counts: Object.fromEntries(
+        Object.entries(journey.categories).map(([k, c]) => [k, c.products.length])
+      ),
+      degraded: journey.supplyHealth.degradedProviders,
+      issues: journey.validation.issues.map((i) => i.rule),
+    });
 
     return NextResponse.json({ journey });
   } catch (error) {
