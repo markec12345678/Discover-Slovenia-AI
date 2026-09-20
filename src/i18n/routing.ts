@@ -74,6 +74,10 @@ export const EN_STATIC_ROUTES = new Set([
   // najbolj uporabna površina (vsebina: imena POI + OSM so jezikovno
   // nevtralni). Komponente: L vzorec (map-section je bil že dvojezičen).
   "/zemljevid",
+  // TASK 58 (potovanja): celotno potovanje čez vse ponudnike — jedro
+  // lijaka za tuje turiste (prihod → transfer → nastanitev → …). Komponenta
+  // journey-planner je dvojezična (L vzorec).
+  "/potovanje",
 ]);
 
 /**

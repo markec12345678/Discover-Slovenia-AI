@@ -551,6 +551,43 @@ model Booking {
 }
 
 // ============================================================================
+// TASK 58 — POTOVANJA: KANONSKA POTRDITEV REZERVACIJE PONUDNIKA (§19)
+// ============================================================================
+// Ločeno od lastne tržnice (Booking/Stripe): tukaj živijo POTRDITVE, ki jih
+// (eventualno) vrnejo ZUNANJI ponudniki potovalne verige. INVARIANTE
+// (lib/journey/booking.ts, testno varovane):
+//  - EXTERNAL NIKOLI ne postane CONFIRMED (potrditev živi pri ponudniku);
+//  - CONFIRMED/PAID ZAHTEVA providerBookingId iz providerjevega odgovora;
+//  - shranjujemo SAMO tisto, kar provider dejansko vrne (providerPayload).
+// DANAŠNJE STANJE (0 poverilnic / 0 API_BOOKING ponudnikov): tabela je
+// PRIPRAMLJENA in IZPRAZNJENA (iskrena arhitektura — brez fake zapisov).
+model JourneyBooking {
+  id                String   @id @default(cuid())
+  // Veza na shranjeno pot (SavedItinerary.shareId), ko uporabnik shrani.
+  shareId           String?
+  provider          String
+  providerProductId String
+  // SELECTED | PENDING | PAYMENT_REQUIRED | PAID | CONFIRMED | FAILED |
+  // CANCELLED | UNKNOWN | EXTERNAL (validacija v lib/journey/booking.ts)
+  status            String
+  // SAMO če ga je vrnil provider (EXTERNAL ga NIKOLI ne nosi).
+  providerBookingId String?
+  // SAMO iz providerjevega odgovora (nikoli klientova trditev).
+  confirmedPrice    Float?
+  currency          String   @default("EUR")
+  confirmationUrl   String?
+  cancellationUrl   String?
+  // Surovi podatki providerjevega odgovora (JSON) — nič izmišljenega.
+  providerPayload   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([shareId])
+  @@index([provider, providerProductId])
+  @@index([status])
+}
+
+// ============================================================================
 // SPONZORSTVA (Faza 1)
 // ============================================================================
 

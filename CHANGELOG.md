@@ -7,6 +7,48 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.59.0] — 2026-09-20 (TASK 58: FULL PROVIDER JOURNEY)
+
+### Dodano — orkestracija celotnega potovanja čez VSE obstoječe ponudnike
+
+- **`/potovanje`** (SL+EN): prihod (Brnik/ura) → transfer → nastanitev → dogodki
+  → restavracije → bencin → najem avta — ena potovalna veriga z iskrenimi
+  oznakami (OD CENA ≠ končna cena; CENA NEZNANA ≠ brezplačno; REZERVACIJA PRI
+  PONUDNIKU ≠ opravljena rezervacija; SAMO INFORMACIJA brez fake checkout-a).
+- **`src/lib/journey/`**: kanonski model (TravelJourney, sledljivost izbir §5),
+  matriks zmožnosti IZPELJAN iz registra (docs/TASK-58-JOURNEY-AUDIT.md),
+  orkestrator (KT rute / OSM runner / EVENTS / affiliate kartice), tokovi
+  rezervacije (§17 A–D) z invariantami (EXTERNAL ≠ CONFIRMED, CONFIRMED zahteva
+  providerBookingId iz odgovora ponudnika), skupna cena s semantiko (confirmed /
+  known / estimated(od-cene) / unknown-izrecno — nikoli unknown=0).
+- **KT iskanje po ruti** (`searchKiwitaxiRoutes`): Brnik→Maribor = 3 realne rute
+  (€162 od-cena, 100 min, 7 razredov vozil) — 0 omrežja, 0 novih validacij.
+- **Bencinske postaje**: nov kanonski tip `petrol` (OSM `amenity=fuel`) —
+  razširitev OBSTOJEČEGA lokalnega vira, ne nov ponudnik.
+- **`JourneyBooking`** (Prisma): kanonski model potrditev §19 — prazna tabela
+  (0 API_BOOKING ponudnikov; zapis nastane SAMO iz providerjevega odgovora).
+- **Zemljevid potovanja**: statusi pinov (selected/recommended/informational;
+  booked/pending/failed dosegljivi SAMO prek API_BOOKING — danes nikoli).
+- **Prenos izbir v načrtovalnik**: FIXED semantika (kanonični vzorec store +
+  sessionStorage); AI izbranih izdelkov NE zamenja tiho (obstoječa veriga).
+- **API**: `POST /api/journey/plan` (rate-limited, kanonski viri, validacija
+  čas+geo: najzgodnejši prihod = ura + trajanje transferja iz vira),
+  `GET /api/journey/bookings?shareId=` (iskreno prazna/brez lažnih statusov).
+
+### Spremenjeno
+
+- Sitemap 736 → 738 URL (+/potovanje SL+EN; števci usklajeni, test zelen).
+- Prisma client regeneriran (JourneyBooking); `db:push` v peskovniku odpove
+  (dokumentirana okoljska omejitev SQLite↔postgres od TASK 54).
+
+### Regresija
+
+- `bun test` 1259/1259 (+45), lint 0, tsc 0 (src); browser E2E SL+EN, mobile
+  375/390 0 px preliva; živi dokaz Brnik→Maribor (3 rute, 3 dogodki, od €604,
+  15:40 najzgodnejši prihod); 0 poverilnic → 0 API_BOOKING (iskreno).
+
+---
+
 ## [1.58.3] — 2026-09-20 (TASK 56: P2 DATA INTEGRITY HARDENING)
 
 ### TASK 56 (GitHub-first → samo dokazani minimalni popravki; 0 novih funkcij)

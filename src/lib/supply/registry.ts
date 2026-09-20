@@ -130,6 +130,7 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
       "restaurant",
       "accommodation",
       "shop",
+      "petrol",
     ],
     capabilities: {
       geo: true,

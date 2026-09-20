@@ -178,6 +178,8 @@ export function osmTagsToProductType(
     };
   }
   if (tags.shop) return { type: "shop", subcategory: tags.shop };
+  // TASK 58 (potovanja): bencinske postaje — discovery/informacija (fuel).
+  if (tags.amenity === "fuel") return { type: "petrol", subcategory: "fuel" };
   return null;
 }
 

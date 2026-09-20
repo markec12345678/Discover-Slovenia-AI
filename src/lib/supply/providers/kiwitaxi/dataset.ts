@@ -26,7 +26,7 @@
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import type { KiwiTaxiDataset } from "./types";
+import type { KiwiRoute, KiwiTaxiDataset } from "./types";
 import { isKiwiTaxiDataset } from "./validate";
 
 /**
@@ -141,4 +141,75 @@ export function kiwitaxiTransferExists(transferId: number): boolean | null {
 /** Testni hak: simuliraj odsotnost baznega dataseta (samo testi!). */
 export function disableKiwitaxiBaselineForTests(disabled: boolean): void {
   baselineDisabled = disabled;
+}
+
+// ---------------------------------------------------------------------------
+// TASK 58 (POTOVANJA) — ISKANJE RUT PO IMENIH (from → to) — ČISTA LOKALNA
+// poizvedba nad obstoječim datasetom (0 omrežnih klicev, 0 novih validacij).
+// Orkestrator potovanja potrebuje „Brnik → Maribor", ne viewport filtriranje.
+// ---------------------------------------------------------------------------
+
+/** Normalizacija imena kraja za ujemanje (male črke, brez ločil/diacritik). */
+function normalizePlaceName(v: string): string {
+  return v
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // diacritics (čćžšđ → cczsd)
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/** Kanonski vzdevki letališč (iskanjam „brnik" ✓ brez razbijanja podatka). */
+const PLACE_ALIASES: Record<string, string> = {
+  brnik: "ljubljana airport",
+  "ljubljanska letalcisce": "ljubljana airport",
+  "letalisce brnik": "ljubljana airport",
+  "lju": "ljubljana airport",
+  "maribor edvard rusjan": "maribor airport",
+  "mbx": "maribor airport",
+};
+
+function canonicalPlaceQuery(raw: string): string {
+  const n = normalizePlaceName(raw);
+  return PLACE_ALIASES[n] ?? n;
+}
+
+/**
+ * Iskanje rut po imenih krajev (from → to). Ujemanje: normalizirana
+ * poizvedba je PODNIZ normaliziranega imena kraja vira (npr. „maribor"
+ * ujame tudi „Maribor train station" — iskreno: vse so realne rute).
+ * Razvrstitev: utež prodaje vira desc, cena asc (isti vrstni red kot
+ * adapter — NI lastnega rangiranja). Vrača null, če dataset manjka
+ * (klicalnik poroča iskreno — NE kaznujemo uporabnika).
+ */
+export function searchKiwitaxiRoutes(
+  fromQuery: string,
+  toQuery: string
+): KiwiRoute[] | null {
+  const ds = getKiwitaxiDataset();
+  if (!ds) return null;
+
+  const from = canonicalPlaceQuery(fromQuery);
+  const to = canonicalPlaceQuery(toQuery);
+  if (!from || !to) return [];
+
+  const fromAirport = from.includes("airport");
+  const toAirport = to.includes("airport");
+
+  const matched = ds.routes.filter((r) => {
+    const rf = normalizePlaceName(r.fromName);
+    const rt = normalizePlaceName(r.toName);
+    // Letališče: „ljubljana airport" NE sme ujeti mesta „Ljubljana" in
+    // obratno (stroga enakost END-of-string za letališča — iskrenost).
+    const fromOk = fromAirport
+      ? rf === from
+      : rf.includes(from) || from.includes(rf);
+    const toOk = toAirport
+      ? rt === to
+      : rt.includes(to) || to.includes(rt);
+    return fromOk && toOk;
+  });
+
+  matched.sort((a, b) => b.weight - a.weight || a.minPriceEur - b.minPriceEur);
+  return matched;
 }

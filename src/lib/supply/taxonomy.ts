@@ -134,6 +134,18 @@ export const TAXONOMY: Record<ProductType, TaxonomyEntry> = {
       "nwr[shop=bakery]",
     ],
   },
+  // TASK 58 (potovanja): bencinske postaje — DISCOVERY/INFORMACIJA iz
+  // obstoječega lokalnega vira (OSM amenity=fuel). NIKAKRŠNA transakcija
+  // (fuel price date ni del taksonomije — vir OSM ga ima redko in
+  // zastarelo; cena ostaja UNKNOWN, iskrenost > šumenje).
+  petrol: {
+    type: "petrol",
+    icon: "⛽",
+    color: "#b91c1c",
+    label: { sl: "Bencinska", en: "Petrol station" },
+    minZoom: 12,
+    osmFilters: ["nwr[amenity=fuel]"],
+  },
 
   // --- KOMERČALNI TIPI (adapterji jih bodo polnili; OSM nima filtra) ---
   activity: {
@@ -198,6 +210,17 @@ export const TAXONOMY: Record<ProductType, TaxonomyEntry> = {
     color: "#78716c",
     label: { sl: "Zavarovanje", en: "Insurance" },
     minZoom: 5,
+  },
+
+  // TASK 58 (potovanja): dogodki iz LOKALNEGA vsebinskega dataseta
+  // (events-data) — informacijska plast brez OSM filtra (ni supply sloj;
+  // zemljevid potovanja prikaže datum/čas, NIKOLI „na voljo" trditev).
+  event: {
+    type: "event",
+    icon: "🎭",
+    color: "#9f1239",
+    label: { sl: "Dogodek", en: "Event" },
+    minZoom: 10,
   },
 
   // Zajemalni

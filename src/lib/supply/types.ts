@@ -68,6 +68,8 @@ export type ProductType =
   | "flight"
   | "esim"
   | "insurance"
+  | "petrol"
+  | "event"
   | "poi";
 
 /** Kako se produkt rezervira (iz kanonskega registra zmožnosti). */
