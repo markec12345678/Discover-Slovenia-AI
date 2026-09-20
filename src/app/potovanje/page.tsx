@@ -14,7 +14,8 @@ import { currentBaseUrl } from "@/lib/host";
 // /potovanje — CELOTNO POTOVANJE ČEZ VSE PONUDNIKE (TASK 58).
 //
 // Ena stran, ena potovalna veriga: prihod (Brnik, ura) → transfer →
-// nastanitev → dogodki → restavracije → bencin → najem avta. Vsak produkt
+// nastanitev → znamenitosti (TASK 63: odprti viri SI+HR+ME+AL) → dogodki →
+// restavracije → bencin → najem avta. Vsak produkt
 // nosi KANONSKO identiteto (provider/ID/cena-semantika/geo) in ISKRENO
 // zmožnost rezervacije (REZERVACIJA PRI PONUDNIKU ≠ opravljena rezervacija;
 // OD CENA ≠ končna cena; SAMO INFORMACIJA brez fake checkout-a).
@@ -31,8 +32,8 @@ const L = {
     en: "One journey, every provider",
   },
   subtitle: {
-    sl: "Od pristanka na Brniku do zadnjega postanka: prevoz, nastanitev, dogodki, restavracije, bencin in najem avta — z resničnimi izdelki, resničnimi cenami in iskrenimi možnostmi rezervacije.",
-    en: "From touchdown at Brnik to the last stop: transfers, stays, events, restaurants, petrol and car rental — with real products, real prices and honest booking capabilities.",
+    sl: "Od pristanka na Brniku do zadnjega postanka: prevoz, nastanitev, znamenitosti, dogodki, restavracije, bencin in najem avta — z resničnimi izdelki, resničnimi cenami in iskrenimi možnostmi rezervacije.",
+    en: "From touchdown at Brnik to the last stop: transfers, stays, things to do, events, restaurants, petrol and car rental — with real products, real prices and honest booking capabilities.",
   },
   metaTitle: {
     sl: "Celotno potovanje po Sloveniji — vsi ponudniki na enem mestu",

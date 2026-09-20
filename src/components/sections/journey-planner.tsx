@@ -10,6 +10,7 @@ import {
   Clock,
   ExternalLink,
   Fuel,
+  Landmark,
   Loader2,
   MapPin,
   PartyPopper,
@@ -64,8 +65,8 @@ const L = {
   form: {
     title: { sl: "Sestavi celotno potovanje", en: "Build your complete journey" },
     subtitle: {
-      sl: "Prihod → prevoz → nastanitev → dogodki → restavracije → bencin → najem avta — na enem mestu, z resničnimi ponudniki.",
-      en: "Arrival → transfer → stay → events → restaurants → petrol → car rental — in one place, with real providers.",
+      sl: "Prihod → prevoz → nastanitev → znamenitosti → dogodki → restavracije → bencin → najem avta — na enem mestu, z resničnimi ponudniki.",
+      en: "Arrival → transfer → stay → things to do → events → restaurants → petrol → car rental — in one place, with real providers.",
     },
     origin: { sl: "Izhodišče (npr. Brnik)", en: "Origin (e.g. Brnik)" },
     destination: { sl: "Destinacija", en: "Destination" },
@@ -79,6 +80,7 @@ const L = {
   cat: {
     transfer: { sl: "Transfer", en: "Transfer" },
     accommodation: { sl: "Nastanitev", en: "Stay" },
+    attractions: { sl: "Znamenitosti", en: "Things to do" },
     events: { sl: "Dogodki", en: "Events" },
     restaurants: { sl: "Restavracije", en: "Restaurants" },
     petrol: { sl: "Bencinske postaje", en: "Petrol stations" },
@@ -136,6 +138,7 @@ const L = {
 const CATEGORY_ICONS: Record<JourneyCategoryKey, React.ReactNode> = {
   transfer: <Car className="h-4 w-4" />,
   accommodation: <MapPin className="h-4 w-4" />,
+  attractions: <Landmark className="h-4 w-4" />,
   events: <PartyPopper className="h-4 w-4" />,
   restaurants: <Utensils className="h-4 w-4" />,
   petrol: <Fuel className="h-4 w-4" />,
@@ -145,6 +148,7 @@ const CATEGORY_ICONS: Record<JourneyCategoryKey, React.ReactNode> = {
 const ALL_CATS: JourneyCategoryKey[] = [
   "transfer",
   "accommodation",
+  "attractions",
   "events",
   "restaurants",
   "petrol",

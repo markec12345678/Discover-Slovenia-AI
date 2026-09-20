@@ -278,6 +278,21 @@ export function buildMyTrip(
     day1.push(entry);
   }
 
+  // TASK 63: znamenitosti — izbrane things-to-do točke (info_only, brez
+  // rezervacije). Čas SAMO iz objavljenih odpiralnih ur vira; sicer
+  // timeNote iskreno pove, zakaj časa ni (nikoli izumljenega urnika).
+  const attractions = journey.categories.attractions?.products.filter(selected) ?? [];
+  for (const a of attractions) {
+    const entry = productToEntry(a);
+    entry.timeNote = a.openingHours
+      ? { sl: `Odpiralni čas vira: ${a.openingHours}`, en: `Source opening hours: ${a.openingHours}` }
+      : {
+          sl: "Odpiralni časi niso objavljeni v viru — načrtuj obisk po lastni želji.",
+          en: "Opening hours are not published by the source — plan the visit at your own pace.",
+        };
+    day1.push(entry);
+  }
+
   // --- Dogodki: SVOJI realni datumi (urna ni v viru — ne izmišljujemo) ---
   const eventEntries = journey.categories.events.products
     .filter(selected)

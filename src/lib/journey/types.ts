@@ -27,13 +27,14 @@ import type {
 } from "@/lib/supply/types";
 
 // ---------------------------------------------------------------------------
-// KATEGORIJE POTOVANJA (zgled: prihod → transfer → nastanitev → dogodki →
-// restavracije → bencin → najem avta)
+// KATEGORIJE POTOVANJA (zgled: prihod → transfer → nastanitev →
+// znamenitosti → dogodki → restavracije → bencin → najem avta)
 // ---------------------------------------------------------------------------
 
 export type JourneyCategoryKey =
   | "transfer"
   | "accommodation"
+  | "attractions"
   | "events"
   | "restaurants"
   | "petrol"
@@ -42,6 +43,7 @@ export type JourneyCategoryKey =
 export const JOURNEY_CATEGORY_KEYS: readonly JourneyCategoryKey[] = [
   "transfer",
   "accommodation",
+  "attractions",
   "events",
   "restaurants",
   "petrol",

@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.62.0 · 1314/1314 testov · lint 0 · tsc 0 (`src/`; sledi git `main`) |
+| **Stanje** | v1.63.0 · 1323/1323 testov · lint 0 · tsc 0 (`src/`; sledi git `main`) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -76,8 +76,9 @@
 - **Večdnevni itinererji z deterministično validacijo** — OSRM realne cestne razdalje/časi,
   odpiralni časi, cik-cak opozorila, 2-opt optimizacija zaporedja, „preveri tuj načrt"
   (10 pravil, 0 AI žetonov), zvočni povzetek (TTS), pogovor z načrtom.
-- **Journey načrtovanje čez ponudnike** — prihod → transfer → nastanitev → hrana →
-  bencin → dogodki v enem načrtu, ki upošteva dejanske zmogljivosti virov.
+- **Journey načrtovanje čez ponudnike** — prihod → transfer → nastanitev →
+  znamenitosti (odprti viri po 4 državah) → hrana → bencin → dogodki v enem
+  načrtu, ki upošteva dejanske zmogljivosti virov.
 - **MY TRIP** — ena časovnica po dneh; vsaka postavka nosi realni status
   (Zunanja rezervacija / Samo informacija); natisljivi potrditveni dokument.
 - **Transferji** — odkrivanje iz objavljenega KiwiTaxi feeda z realnimi cenami;
@@ -139,7 +140,7 @@ Dejansko dostopni viri (4 viri PRODUCTION_ACTIVE; preostali iskreno prazni)
         ↓
 Validacija (geo-koherenca, realni časi, cik-cak, duplikati)
         ↓
-Journey produkti (transferji, nastanitve, hrana, bencin, dogodki)
+Journey produkti (transferji, nastanitve, znamenitosti, hrana, bencin, dogodki)
         ↓
 Itinerer + MY TRIP (časovnica po dneh, status vsake postavke)
         ↓
@@ -229,7 +230,7 @@ iskreno prazne sloje.
 |---|---|
 | `/` | domača stran — AI lijak |
 | `/nacrtuj` | AI načrtovalnik itinererjev (jezik/slika/PDF/Maps → načrt) |
-| `/potovanje` | journey načrtovalnik čez ponudnike (prihod/transfer/nastanitev/hrana/bencin) |
+| `/potovanje` | journey načrtovalnik čez ponudnike (prihod/transfer/nastanitev/znamenitosti/hrana/bencin) |
 | `/destinacije` | 38 destinacij s filtri (država/regija/tip/cena/ocena) |
 | `/destinacija/[slug]` | hub destinacije + programske podstrani |
 | `/zemljevid` | interaktivni zemljevid (FSQ + OSM + transfer plasti) |
@@ -433,7 +434,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.62.0**.
+Trenutna verzija: **1.63.0**.
 
 ---
 

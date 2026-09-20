@@ -27,7 +27,7 @@ import { EVENTS_EN } from "@/lib/events-data-en";
 import type { EventItem } from "@/lib/events-data";
 import { searchSupply } from "@/lib/supply/search";
 import type { SupplyAdapter } from "@/lib/supply/adapter";
-import type { ProviderProduct, ProviderSlug } from "@/lib/supply/types";
+import type { ProductType, ProviderProduct, ProviderSlug } from "@/lib/supply/types";
 import {
   activeProviders,
   PROVIDER_REGISTRY,
@@ -113,6 +113,15 @@ const MAX_VEHICLE_CLASSES = 8;
 const DEST_BBOX_DELTA = 0.05;
 /** Kap produktov na potovalno kategorijo (lokalne/plast). */
 const MAX_CATEGORY_PRODUCTS = 12;
+
+/** TASK 63: things-to-do tipi taksonomije (znamenitosti/plast potovanja). */
+const ATTRACTION_TYPES: readonly ProductType[] = [
+  "attraction",
+  "museum",
+  "viewpoint",
+  "natural",
+  "religious",
+];
 
 // ---------------------------------------------------------------------------
 // PRESLIKAVE KANONSKIH PRODUKTOV → POTOVALNI PRODUKT (sledljivost §5)
@@ -427,18 +436,24 @@ async function localCategories(
   adapters?: SupplyAdapter[]
 ): Promise<{
   accommodation: JourneyCategoryResult;
+  attractions: JourneyCategoryResult;
   restaurants: JourneyCategoryResult;
   petrol: JourneyCategoryResult;
 }> {
   const accommodation = emptyCategory("accommodation");
+  const attractions = emptyCategory("attractions");
   const restaurants = emptyCategory("restaurants");
   const petrol = emptyCategory("petrol");
 
   const needsOsm =
-    wanted.has("accommodation") || wanted.has("restaurants") || wanted.has("petrol");
-  if (!needsOsm) return { accommodation, restaurants, petrol };
+    wanted.has("accommodation") ||
+    wanted.has("attractions") ||
+    wanted.has("restaurants") ||
+    wanted.has("petrol");
+  if (!needsOsm)
+    return { accommodation, attractions, restaurants, petrol };
 
-  // ENA skupna poizvedba runnerja (zoom 14 = vse tri kategorije vidne;
+  // ENA skupna poizvedba runnerja (zoom 14 = vse kategorije vidne;
   // cap 400/zoom — bbox ~10×10 km okoli destinacije).
   const bbox: [number, number, number] | [number, number, number, number] = [
     destination.lat - DEST_BBOX_DELTA,
@@ -446,9 +461,27 @@ async function localCategories(
     destination.lat + DEST_BBOX_DELTA,
     destination.lng + DEST_BBOX_DELTA,
   ];
-  const cats = ["accommodation", "restaurant", "petrol"].filter((c) =>
-    wanted.has(c === "restaurant" ? "restaurants" : (c as JourneyCategoryKey))
-  ) as ("accommodation" | "restaurant" | "petrol")[];
+  // TASK 63: znamenitosti = 5 things-to-do tipov taksonomije (attraction/
+  // museum/viewpoint/natural/religious) — vsestreženi s FSQ slojem
+  // (SI+HR+ME+AL) in OSM viewport slojem, po isti supply poti.
+  const cats = (
+    [
+      "accommodation",
+      "attraction",
+      "museum",
+      "viewpoint",
+      "natural",
+      "religious",
+      "restaurant",
+      "petrol",
+    ] as const
+  ).filter((c) =>
+    c === "restaurant"
+      ? wanted.has("restaurants")
+      : ATTRACTION_TYPES.includes(c)
+        ? wanted.has("attractions")
+        : wanted.has(c as JourneyCategoryKey)
+  ) as ("accommodation" | "attraction" | "museum" | "viewpoint" | "natural" | "religious" | "restaurant" | "petrol")[];
 
   const res = await searchSupply(
     {
@@ -483,6 +516,16 @@ async function localCategories(
         accommodation.products.push(
           providerProductToJourney(p, "accommodation", destCenter)
         );
+    } else if (
+      ATTRACTION_TYPES.includes(p.type) &&
+      wanted.has("attractions")
+    ) {
+      // TASK 63: things-to-do produkti (muzeji/gradovi/plaže/razgledišča/
+      // cerkve …) — iskreni info_only (odpiralni časi SAMO če jih vir ima).
+      if (attractions.products.length < MAX_CATEGORY_PRODUCTS)
+        attractions.products.push(
+          providerProductToJourney(p, "attractions", destCenter)
+        );
     } else if (p.type === "restaurant" && wanted.has("restaurants")) {
       if (restaurants.products.length < MAX_CATEGORY_PRODUCTS)
         restaurants.products.push(
@@ -498,15 +541,27 @@ async function localCategories(
   const byDistance = (a: JourneyProduct, b: JourneyProduct) =>
     (a.distanceKm ?? 999) - (b.distanceKm ?? 999);
   accommodation.products.sort(byDistance);
+  attractions.products.sort(byDistance);
   restaurants.products.sort(byDistance);
   petrol.products.sort(byDistance);
 
+  // TASK 63: iskrena opomba plasti znamenitosti — odprti viri (FSQ/OSM),
+  // brez rezervacije; odpiralni časi SAMO kjer jih vir dejansko objavlja
+  // (FSQ množica jih nima → timeNote v MY TRIP pove zakaj časa ni).
+  if (attractions.products.length > 0) {
+    attractions.note = {
+      sl: "Znamenitosti iz odprtih virov (FSQ OS Places, OpenStreetMap) — informativne, brez rezervacije. Odpiralni časi niso objavljeni v viru; pred obiskom preveri pri ponudniku.",
+      en: "Attractions from open sources (FSQ OS Places, OpenStreetMap) — informational, no booking. Opening hours are not published in the source; check with the operator before visiting.",
+    };
+  }
+
   if (degradedNote) {
     accommodation.note = degradedNote;
+    attractions.note = degradedNote;
     restaurants.note = degradedNote;
     petrol.note = degradedNote;
   }
-  return { accommodation, restaurants, petrol };
+  return { accommodation, attractions, restaurants, petrol };
 }
 
 function eventsCategory(
@@ -675,6 +730,7 @@ export async function planJourney(
   const allProducts = [
     ...transfer.products,
     ...local.accommodation.products,
+    ...local.attractions.products,
     ...local.restaurants.products,
     ...local.petrol.products,
     ...events.products,
@@ -697,6 +753,7 @@ export async function planJourney(
     categories: {
       transfer,
       accommodation: local.accommodation,
+      attractions: local.attractions,
       events,
       restaurants: local.restaurants,
       petrol: local.petrol,

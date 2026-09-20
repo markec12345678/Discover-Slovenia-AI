@@ -7,6 +7,43 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.63.0] — 2026-09-20 (TASK 63: JOURNEY ATTRACTIONS — STVARI ZA VIDETI PO 4 DRŽAVAH)
+
+### Dodano
+- **Nova kategorija potovanja „Znamenitosti" (attractions)** — 7. kategorija verige
+  prihod → transfer → nastanitev → **znamenitosti** → dogodki → restavracije →
+  bencin → najem. Vir: 5 things-to-do tipov taksonomije (attraction, museum,
+  viewpoint, natural, religious) — vsestreženi prek FSQ OS Places sloja
+  (SI+HR+ME+AL) in OSM viewport sloja po isti supply poti (0 novih adapterjev,
+  0 novih odvisnosti).
+- **MY TRIP**: izbrane znamenitosti v časovnici dneva 1 — status SAMO
+  INFORMACIJA, čas SAMO iz objavljenih odpiralnih ur vira (FSQ jih nima →
+  timeNote „Odpiralni časi niso objavljeni v viru — načrtuj obisk po lastni
+  želji." — nikoli izumljen urnik).
+- **Iskrena opomba plasti**: „Znamenitosti iz odprtih virov (FSQ OS Places,
+  OpenStreetMap) — informativne, brez rezervacije. Odpiralni časi niso
+  objavljeni v viru; pred obiskom preveri pri ponudniku." (SL+EN).
+- **Handoff**: izbrane znamenitosti se prenesejo v načrtovalnik kot FIXED
+  izbira (tip ohranjen — dedupe/enaka semantika kot ostale kategorije).
+
+### Pokritost (živi FSQ dokazi, bbox ±0,15°)
+- Dubrovnik 325 · Split 502 · Zadar 339 · Zagreb 1.654 · Kotor 481 ·
+  Budva 441 · Tirana 171 · Bled 207 things-to-do krajev; regija skupaj
+  ~16,5k (HR 10.212 · SI 3.502 · ME 1.909 · AL 895).
+
+### Testi
+- 9 novih testov (`task63-journey-attractions.test.ts`): register (7
+  kategorij), orkestrator DI (tipi ⊆ things-to-do, kontrola ločitve od
+  nastanitev/restavracij, selektivna zahteva, sort po razdalji, SI destinacija,
+  iskrena opomba SL/EN), MY TRIP (INFO status + timeNote brez izumljene ure,
+  izbor = uporabnikov), handoff (FIXED, tip ohranjen).
+- **1323/1323** (prej 1314), lint 0, tsc 0 (src).
+- Živi E2E: API + browser /potovanje (Dubrovnik: Znamenitosti 12 — Srđ,
+  War Photo Limited, Etnografski muzej; izbor Srđ → MY TRIP s poštenim
+  timeNote; Bled/Kotor/Tirana enako; 0 napak brskalnika).
+
+---
+
 ## [1.62.0] — 2026-09-20 (TASK 62: REGIONALNA POKRITOST POTOVANJ — SI+HR+ME+AL)
 
 ### Dodano
