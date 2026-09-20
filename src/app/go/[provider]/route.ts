@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
+import { kiwitaxiTransferExists } from "@/lib/supply/providers/kiwitaxi/dataset";
 import {
   AFFILIATE_PROVIDERS,
   type AffiliateProvider,
@@ -136,6 +137,22 @@ export async function GET(
         );
       }
       productId = rp;
+    }
+  }
+
+  // TASK 56 (P2-1): CANONICAL MEMBERSHIP — veljaven FORMAT še ni članstvo.
+  // KT dataset (strežni kanon, lokalno dostopen, 0 remote klicev) dokaže
+  // obstoj transferja: veljaven format + NI član trenutne generacije →
+  // fabricated → 404 (fail-closed — isto načelo kot selection-verify
+  // rejectedFake). Dataset ni na voljo (svež klon/peskovnik) → null →
+  // preusmerimo kot prej (okoljska odpoved NE sme kaznovati uporabnika).
+  // Veljavni tok (ID iz našega bookingUrl = vedno član) ostane 302.
+  if (provider === "transfers" && productId) {
+    if (kiwitaxiTransferExists(Number(productId)) === false) {
+      return NextResponse.json(
+        { error: "Neznan produkt — ID ni v kanonskem inventarju ponudnika" },
+        { status: 404 }
+      );
     }
   }
 

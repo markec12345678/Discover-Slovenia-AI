@@ -7,17 +7,18 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
-## [1.58.1] — 2026-09-20 (TASK 54: LIVE PROVIDER ACTIVATION — GitHub-first audit)
+## [1.58.3] — 2026-09-20 (TASK 56: P2 DATA INTEGRITY HARDENING)
 
-### TASK 54 (revizijsko-aktivacijski task v okolju brez poverilnic)
+### TASK 56 (GitHub-first → samo dokazani minimalni popravki; 0 novih funkcij)
 
-- **GitHub-first audit (§0/§1):** origin/main = HEAD (08778e3), token veljaven; baseline 1196/1196 testov, lint 0, tsc 0 (src). Dejanski GitHub kot source of truth — ne prompt/stara poročila.
-- **Credential matrix (§27):** strojno izpeljana iz production-matrix + providerEnvAccess nad dejanskim okoljem: VSEH 25 provider env spremenljivk MISSING (0 poverilnic; samo PRESENT/MISSING, vrednosti NIKOLI izpisane). 3 LIVE (osm/sto/kiwitaxi), 8 gated CODE READY, 5 affiliate-only/blocked, own = produktna odločitev.
-- **Živi dokazi vrat (danes, brez poverilnic):** Viator 401 s pogodbenimi glavami (exp-api-key + Accept:application/json;version=2.0 — dokaz, da so glave adapterja pravilne), Tiqets 401 api_version 2.7, GYG strukturiran ERROR JSON, Skyscanner 301→www→403, Travelpayouts 401, Airalo sandbox 200 (Slovenia id=210). Vsi adapterji aktivirajo BREZ spremembe kode.
-- **Žive verige:** KiwiTaxi polna E2E (48 produktov → modal od €77 s pošteno opombo "objavljena cena, ni živi citat" → FIXED točno 1× v AI načrtu → /go → živi kiwitaxi checkout z booking tokenom); STO overlay sprožen danes (664 zapisov); OSM fail-closed dokazan (peskovnik blokira Overpass — okolje, ne koda; degraded+0 fake).
-- **Neskladje §5 POPRAVLJENO:** `.env.example` je manjkal 11 imen, ki jih koda bere (TIQETS_API_KEY, BOOKING_API_KEY/BASE, SKYSCANNER_API_KEY/BASE z www aktivacijsko opombo, AIRALO_CLIENT_ID/SECRET/BASE, TRAVELPAYOUTS_TOKEN/BASE/ORIGIN) — dodana SAMO imena z dokumentiranimi pogodbami, NIKOLI vrednosti.
-- **Browser E2E (§23):** SL+EN zlata pot (Supply in view 48, modal 100 % EN), 16/16 kartic /vir-podatkov SL+EN (3/4/7/2), mobile 375/390: 0 px preliva, konzola: samo pre-existing (prisma postgres clobber).
-- **Brez sprememb delujočih providerjev, brez nove arhitekture, brez fake podatkov** (§24/§33). Dokumentacija: docs/TASK-54-LIVE-PROVIDER-ACTIVATION.md (A–I + credential matrika).
+- **P2-1 `/go/transfers` canonical membership (ZAPRT):** veljaven FORMAT še ni članstvo — fabricated transferId (999999999) je prej preusmeril na neobstoječ kiwitaxi produkt. Nova `kiwitaxiTransferExists()` v dataset plasti (lokalni kanon, 9614 transfer id-jev, 0 remote klicev; ID prostor = razredi vozil, NE route id-ji) + vrata v /go ruti: član → 302 (nespremenjeno), NE-član → **404** (fail-closed, isto načelo kot selection-verify rejectedFake), dataset manjka → 302 (okoljska odpoved NE kaznuje). Affiliate logika nespremenjena. Živi dokaz: product=1439 → 302 → živi checkout; 999999999 → 404 (prej 302).
+- **P2-2 save-meja kanonska revalidacija (ZAPRTA):** /api/itinerary/save je zaupal SAMO shape guard — klientova €1 cena / fabrikantrt providerProductId / drug provider / duplikat so se shranili in prikazali na javni /pot/{shareId}. Nova `revalidateSavedItinerarySupply()` PONOVNO UPORABI obstoječo verigo (ista sestava kot refine echo/TASK 50): verifyCurrentStopsAuthority → validateItinerarySupply(selection=[]) → recomputeTotalBudget + prenos kanonskih KT naslovov. NOV verification sistem NI ustvarjen; legitimen načrt gre skož nespremenjen (test ⑨: 0 popravkov). Živi dokaz: rejection warning v dev.log pred persistenco.
+- **P2-3 refine notes → FOLLOW-UP (brez kode, po pravilih taska):** notes so prosto besedilo — NISO source of truth (cena/ID/geo/availability-struktura so zaščiteni drugje), ne morejo povzročiti napačne rezervacije/cene; perzistenčna meja pokrita prek price_unverified veje. Polna kanonizacija na refine = arhitekturna sprememba → zavrnjena kot nepotreben refactoring.
+- **Test-first (rdeče dokazano pred popravkom):** +18 testov (task56-p2-hardening): P2-1 član/NE-član/malformiran/dataset-manjka/helper/allowlist; P2-2 vsi trije scenariji iz taska (cena €1→kanon, fabricated ID→drop, drug provider→cena unknown+opomba) + dedupe/geo/naslov/total_budget/T1-nedotaknjeni/legitimen-0-popravkov/EN. Kanoniki dinamično iz baseline dataseta.
+- **Regresija:** bun test **1214/1214** (+18), lint 0, tsc 0 (src). Živo: 48 KT produktov nespremenjenih, mobile 375/390 0 px preliva, konzola samo pre-existing (sandbox auth/db — okolje).
+- **Nedotaknjeno:** delujoči providerji (osm/sto/kiwitaxi adapterji, affiliate), FIXED/cena/geo/ID/availability pravila, origin logika (0 tihih LJU), .env.example, 0 credentialov.
+- Dokumentacija: docs/TASK-56-P2-HARDENING.md (A–G: baseline, audit tabelа, spremembe, testi, integriteta, odločitev GREEN, WAITING FOR REAL PROVIDER CREDENTIALS).
+
 
 ---
 
@@ -32,6 +33,22 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 - **Regresija:** bun test **1196/1196** (44 503 expectov), lint 0, tsc 0 (src). Žive re-preverbe: Viator/Tiqets/Travelpayouts vrata 401, Airalo sandbox 200, supply search 48 KT produktov s kanonskimi cenami, `/go` 302 + zlonamerni ID 400.
 - **Odločitev: YELLOW → GREEN po popravkih dokumentacije.** 0 P0/0 P1; 7 P2 ugotovitev (knjigovodske/follow-up) zabeleženih v docs/TASK-54-LIVE-PROVIDER-ACTIVATION.md razdelek J, vključno z aktivacijskim protokolom dokazov za vsakega providerja ob prihodu poverilnic.
 - **0 poverilnic v okolju → živa aktivacija gated providerjev NI izvedena (iskreno, brez simulacije).** README status usklajen s TASK 54.
+
+
+---
+
+## [1.58.1] — 2026-09-20 (TASK 54: LIVE PROVIDER ACTIVATION — GitHub-first audit)
+
+### TASK 54 (revizijsko-aktivacijski task v okolju brez poverilnic)
+
+- **GitHub-first audit (§0/§1):** origin/main = HEAD (08778e3), token veljaven; baseline 1196/1196 testov, lint 0, tsc 0 (src). Dejanski GitHub kot source of truth — ne prompt/stara poročila.
+- **Credential matrix (§27):** strojno izpeljana iz production-matrix + providerEnvAccess nad dejanskim okoljem: VSEH 25 provider env spremenljivk MISSING (0 poverilnic; samo PRESENT/MISSING, vrednosti NIKOLI izpisane). 3 LIVE (osm/sto/kiwitaxi), 8 gated CODE READY, 5 affiliate-only/blocked, own = produktna odločitev.
+- **Živi dokazi vrat (danes, brez poverilnic):** Viator 401 s pogodbenimi glavami (exp-api-key + Accept:application/json;version=2.0 — dokaz, da so glave adapterja pravilne), Tiqets 401 api_version 2.7, GYG strukturiran ERROR JSON, Skyscanner 301→www→403, Travelpayouts 401, Airalo sandbox 200 (Slovenia id=210). Vsi adapterji aktivirajo BREZ spremembe kode.
+- **Žive verige:** KiwiTaxi polna E2E (48 produktov → modal od €77 s pošteno opombo "objavljena cena, ni živi citat" → FIXED točno 1× v AI načrtu → /go → živi kiwitaxi checkout z booking tokenom); STO overlay sprožen danes (664 zapisov); OSM fail-closed dokazan (peskovnik blokira Overpass — okolje, ne koda; degraded+0 fake).
+- **Neskladje §5 POPRAVLJENO:** `.env.example` je manjkal 11 imen, ki jih koda bere (TIQETS_API_KEY, BOOKING_API_KEY/BASE, SKYSCANNER_API_KEY/BASE z www aktivacijsko opombo, AIRALO_CLIENT_ID/SECRET/BASE, TRAVELPAYOUTS_TOKEN/BASE/ORIGIN) — dodana SAMO imena z dokumentiranimi pogodbami, NIKOLI vrednosti.
+- **Browser E2E (§23):** SL+EN zlata pot (Supply in view 48, modal 100 % EN), 16/16 kartic /vir-podatkov SL+EN (3/4/7/2), mobile 375/390: 0 px preliva, konzola: samo pre-existing (prisma postgres clobber).
+- **Brez sprememb delujočih providerjev, brez nove arhitekture, brez fake podatkov** (§24/§33). Dokumentacija: docs/TASK-54-LIVE-PROVIDER-ACTIVATION.md (A–I + credential matrika).
+
 
 ---
 

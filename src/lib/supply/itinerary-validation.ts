@@ -52,8 +52,10 @@
 // ============================================================================
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { recomputeTotalBudget } from "@/lib/itinerary-quality";
 import { isProviderSlug } from "./registry";
 import { insertProductStop } from "./stop-insert";
+import { verifyCurrentStopsAuthority } from "./selection-verify";
 import type {
   PriceInfo,
   ProviderSlug,
@@ -743,4 +745,84 @@ export async function logItineraryValidation(
   } catch {
     // analitika je "nice to have" — nikoli ne blokira odgovora
   }
+}
+
+// ---------------------------------------------------------------------------
+// TASK 56 (P2-2) — SAVE-MEJA REVALIDACIJA (ista veriga kot refine echo)
+// ---------------------------------------------------------------------------
+
+/**
+ * Kanonska revalidacija itinererja NA MEJI SHRANJEVANJA
+ * (/api/itinerary/save → javna deljena povezava /pot/{shareId}).
+ *
+ * VRZEL (dokazana v TASK 55 reviziji): save je v preteklosti zanesel SAMO
+ * sanitizeItinerary (shape guard) — klientova €1 cena, fabrikantrt
+ * providerProductId, drug provider ali duplikat so se SHRANILI in prikazali
+ * na javni strani. Rešitev PONOVNO UPORABI obstoječo verigo (NI nov
+ * verification sistem) — točno to sestavo, ki jo že poganja refine echo
+ * pot (refine/route.ts §echo): postanki vhodnega načrta se overijo prek
+ * verifyCurrentStopsAuthority (KT dataset = kanon: cena/naslov/geo;
+ * fabrikantrt KT ref → ODSTRANJEN; OSM €0 pošteno / trditev → unknown;
+ * ostali providerji → cena unknown), nato validateItinerarySupply
+ * (dedupe točno 1×, geo/smer obnova, cena kanon ali unknown + iskrena
+ * opomba — TASK 50 price_unverified veja) in recomputeTotalBudget
+ * (skupna vsota iz DEJANSKIH postankov, isti princip kot P0.2 recenzija).
+ *
+ * Semantika selection=[]: save ne pozna uporabnikove izbire (ima SAMO
+ * načrt) — avtoriteta so izključno overjeni postanki načrta samega, kar
+ * je NATANKO refine echo model (TASK 50: postanek v načrtu se ne odstrani
+ * nemi — samo njegova klientova cena/geo se overita).
+ *
+ * KT dataset manjka (svež klon/peskovnik — okoljska odpoved): cena
+ * postankov postane unknown (NaN + opomba), postanki ostanejo (NE
+ * kaznujemo uporabnika — isto kot verifyCurrentStopsAuthority undefined
+ * veja). T1/klepet postanki (id brez dvopičja) so NEDOTIKNJENI.
+ *
+ * Čista, deterministična funkcija (0 omrežja, 0 db) — testovljiva.
+ */
+export function revalidateSavedItinerarySupply(
+  it: Itinerary,
+  lang: "sl" | "en"
+): { itinerary: Itinerary; report: SupplyValidationReport } {
+  const authority = verifyCurrentStopsAuthority(extractSupplyStops(it));
+  const validated = validateItinerarySupply(
+    it,
+    { selection: [], currentStops: authority.stops },
+    { lang }
+  );
+
+  // KT NASLOVI: verifyCurrentStopsAuthority jih je ŽE popravila na kanon
+  // (report.titlesRestored) — prenesi popravljene vrednosti v izhodni
+  // načrt, da prikaz javne deljene strani ne nosi klientovega podtaknjenega
+  // imena KANONSKEGA produkta (validateItinerarySupply obnavlja naslov samo
+  // pri OBRNITVI smeri iz selection avtoritete, ki je tu prazna). Naslovi
+  // drugih providerjev imajo strežnega kanona šele ob priključitvi —
+  // ostanejo klientovi (isti prikazni razred kot ostalo prosto besedilo).
+  const ktTitles = new Map<string, string>();
+  for (const [key, stop] of authority.stops) {
+    if (key.startsWith("kiwitaxi:")) {
+      ktTitles.set(key, stop.destination_name);
+    }
+  }
+  let result = validated.itinerary;
+  if (ktTitles.size > 0) {
+    result = {
+      ...result,
+      days: result.days.map((d) => ({
+        ...d,
+        locations: (d.locations ?? []).map((loc) => {
+          const canonicalName = ktTitles.get(loc.destination_id);
+          return canonicalName != null &&
+            canonicalName !== loc.destination_name
+            ? { ...loc, destination_name: canonicalName }
+            : loc;
+        }),
+      })),
+    };
+  }
+
+  return {
+    itinerary: recomputeTotalBudget(result),
+    report: validated.report,
+  };
 }

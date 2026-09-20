@@ -110,6 +110,34 @@ export function resetKiwitaxiDataset(): void {
   baselineDisabled = false;
 }
 
+/**
+ * TASK 56 (P2-1) — MEMBERSHIP transferja v trenutno streženi generaciji.
+ *
+ * ID prostor: TRANSFER id-ji (razredi vozil — deep link /transfers/{id},
+ * ki ga gradi cheapestTransferId/classes[].transferId), NE id-ji rut
+ * (ktRouteById v selection-verify je DRUGI prostor: r.id).
+ *
+ * Meja zaupanja za /go/transfers?product={id}: veljaven FORMAT (števke)
+ * še ni članstvo — fabricated ID (živi dokaz: 999999999 → prej 302 na
+ * neobstoječ produkt) se danes dokaže NEodvisno od klienta proti
+ * strežniškemu kanonu (lokalni dataset, 0 omrežnih klicev).
+ *
+ * Vrača:
+ *  - true  → transfer obstaja v trenutni generaciji (baseline/overlay);
+ *  - false → dataset je na voljo, transfer pa NE obstaja (fabricated);
+ *  - null  → dataset NI na voljo (svež klon brez ingesta / testni hak) —
+ *            članstva ni mogoče dokazati; klicalec NE sme kaznovati
+ *            (isti duh kot ktRouteById undefined veja v selection-verify).
+ */
+export function kiwitaxiTransferExists(transferId: number): boolean | null {
+  if (!Number.isInteger(transferId) || transferId <= 0) return false;
+  const ds = getKiwitaxiDataset();
+  if (!ds) return null;
+  return ds.routes.some((r) =>
+    r.classes.some((c) => c.transferId === transferId)
+  );
+}
+
 /** Testni hak: simuliraj odsotnost baznega dataseta (samo testi!). */
 export function disableKiwitaxiBaselineForTests(disabled: boolean): void {
   baselineDisabled = disabled;

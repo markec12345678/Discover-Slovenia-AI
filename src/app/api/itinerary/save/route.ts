@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { randomId } from "@/lib/security";
 import { sanitizeItinerary } from "@/lib/itinerary-sanitize";
+import { revalidateSavedItinerarySupply } from "@/lib/supply/itinerary-validation";
 
 // POST /api/itinerary/save — shranjevanje itinererja (P1-2b: anonimno ALI na račun)
 //
@@ -83,8 +84,29 @@ export async function POST(request: Request) {
       );
     }
 
+    // TASK 56 (P2-2): KANONSKA REVALIDACIJA SUPPLY POSTANKOV na meji
+    // shranjevanja. Do 1.58.2 je save zaupal SAMO shape guard — klientova
+    // €1 cena / fabrikantrt providerProductId / drug provider / duplikat so
+    // se shranili in prikazali na JAVNI deljeni povezavi /pot/{shareId}.
+    // Rešitev PONOVNO UPORABLJA obstoječo verigo (ista sestava kot refine
+    // echo): verifyCurrentStopsAuthority → validateItinerarySupply →
+    // recomputeTotalBudget (glej revalidateSavedItinerarySupply). NI nov
+    // verification sistem; FIXED/cena/geo/ID pravila so nespremenjena —
+    // legitimen (strežniško generiran) načrt gre skozi brez sprememb.
+    const fd = b.formData as { language?: unknown } | null | undefined;
+    const saveLang = fd?.language === "en" ? "en" : "sl";
+    const supplyChecked = revalidateSavedItinerarySupply(sanitized, saveLang);
+    if (supplyChecked.report.rejected > 0) {
+      console.warn(
+        `[itinerary/save] supply revalidacija: ODSTRANJENIH ${supplyChecked.report.rejected} fabrikantrnih supply postankov: ${supplyChecked.report.issues
+          .filter((i) => i.rule === "fake_supply_ref")
+          .map((i) => i.ref)
+          .join(", ")}`
+      );
+    }
+
     // Omeji velikost shranjenega JSON (preprečuje zlorabo)
-    const itineraryJson = JSON.stringify(sanitized);
+    const itineraryJson = JSON.stringify(supplyChecked.itinerary);
     if (itineraryJson.length >= 200_000) {
       return NextResponse.json(
         { error: "Itinerer je prevelik" },
