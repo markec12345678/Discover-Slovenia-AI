@@ -78,6 +78,10 @@ export const EN_STATIC_ROUTES = new Set([
   // lijaka za tuje turiste (prihod → transfer → nastanitev → …). Komponenta
   // journey-planner je dvojezična (L vzorec).
   "/potovanje",
+  // TASK 64 (Go Mode): Now&Next sopotnik MED potovanjem — za tuje turiste
+  // najbolj uporabna ravno na telefonu na poti (komponenta go-mode je
+  // dvojezična, L vzorec; isti kanon kot /potovanje).
+  "/na-poti",
 ]);
 
 /**

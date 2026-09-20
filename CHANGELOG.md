@@ -7,6 +7,67 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.64.0] — 2026-09-20 (TASK 64: GO MODE „NA POTI" — NOW & NEXT SOPOTNIK)
+
+### Dodano
+- **Go Mode (`/na-poti`)** — Now&Next sopotnik MED potovanjem (največja
+  ne-kreditna vrzel konkurenčne analize): živa ura + aktivni dan, NASLEDNJA
+  postanka načrta (hero kartica z emoji, realnim časom oz. iskrenim timeNote),
+  ostale postanke dneva, opravljanje z enim klikom (zbirka „Opravljeno" z
+  časom opravitve + obnovitev), povzetek prihodnjih dni. Načrt persistira
+  NA NAPRAVI (`dai:go-trip` + `dai:go-progress`, localStorage) prek gumba
+  „Zaženi Na poti (Go Mode)" na `/potovanje` — 100 % client-side (0 novih
+  API-jev, 0 db, deluje tudi brez signala za ogled načrta).
+- **GPS (prva uporaba Geolocation API v projektu)** — `watchPosition`
+  (visoka natančnost) z živimi razdaljami do naslednje postanke in kardinalno
+  smerjo (azimut → sever/severovzhod/… SL+EN); natančnost prikazana v
+  metrih; pošteni statusi (aktiven / zavrnjeno / nepodprto / napaka) in
+  PONOVNI poskus po zavrnitvi (ob napaki se watch zapre).
+- **TripEntry nosi geo/telefon/surove odpiralne ure** — `lat/lng`,
+  `openingHours` (surov OSM niz — nikoli parsan), `phone` se podajo iz
+  JourneyProduct v MY TRIP časovnico (Go Mode klika „Pokliči", pokaže
+  odpiralne ure vira).
+- **EN whitelist + sitemap**: `/na-poti` na EN whitelisti (`/en/na-poti`,
+  full dvojezična komponenta, L vzorec) + v sitemap.xml (SL + EN + hreflang
+  alternata; 764 URL-jev skupaj).
+
+### Iskrenost (isti kanon kot MY TRIP §20/§23)
+- Razdalje so **PREMICA (v zraku)** — izrecno NE vozne razdalje (vozna bi
+  zahtevala OSRM routing na klientu); oznaka ob vsaki razdalji.
+- Countdown se izračuna **SAMO iz realnih časov vira** (uporabnikov vpis
+  prihoda / trajanje transferja) — NIKOLI iz odpiralnih ur (OSM
+  `opening_hours` sintaksa se NE pars).
+- Brez GPS ali brez geo na postanki → razdalja/smer preprosto NI
+  (undefined) z iskreno opombo — ne izmišljujemo.
+- Dan brez realnih ur → „V načrtu za ta dan ni objavljenih realnih ur —
+  vrstni red je po tvoji izbiri."
+- Dan z neuveljavljenim datumom / pretečenim / brez datuma → vedno opomba,
+  ZAKAJ je prikazan pravi dan („še se ni začel" / „za teboj" / „datum
+  prihoda ni vnesen").
+- GPS sledi se NE shranjuje — položaj živi samo v pomnilniku seje;
+  načrt so javni podatki virov + uporabnikove izbire na tej napravi.
+
+### Popravljeno
+- **GPS retry po zavrnitvi** (najdeno v živi E2E verifikaciji): po napaki
+  `watchPosition` ostal registriran → gumb „Vklopi GPS" ni mogel ponovno
+  poskusiti; sedaj se ob napaki watch zapre in poskus se lahko ponovi.
+
+### Testi
+- 26 novih testov (`task64-go-mode.test.ts`): kompasna matematika (azimut
+  N/E/S/W + 8 kardinalov SL/EN z robnimi sektorji), dnevna logika (aktiven
+  dan po dnevu, naslednje/ostanek/opravljeno, countdown samo iz realnih
+  ur, pred/po/undated dnevi z iskrenimi opombami, prazen načrt, naslov
+  NA POTI — X), geo iskrenost (razdalja 0,1° lat ≈ 11,1 km, smer sever/vzhod,
+  postanek brez geo → NI razdalje, brez GPS → NI razdalj), persistenca
+  (round-trip, pokvarjen JSON → null, napačna oblika → null, clear,
+  SSR guard, progres trim), podaja geo/ur/telefona skozi buildMyTrip
+  (DI adapter, Bled) + celotna veriga journey → MY TRIP → NA POTI.
+- **1349/1349** (prej 1323), lint 0, tsc 0 (src).
+- Sitemap števci usklajeni (22 stalnih SL poti; EN formula samodejno
+  prek EN_STATIC_ROUTES.size).
+
+---
+
 ## [1.63.0] — 2026-09-20 (TASK 63: JOURNEY ATTRACTIONS — STVARI ZA VIDETI PO 4 DRŽAVAH)
 
 ### Dodano

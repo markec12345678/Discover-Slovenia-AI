@@ -51,6 +51,13 @@ export interface TripEntry {
   /** Zakaj časa NI (iskrena opomba namesto izumljene ure). */
   timeNote?: { sl: string; en: string };
   location?: string;
+  /** Geo koordinate (TASK 64 Go Mode — razdalja/smer med potovanjem; SAMO kjer ima vir geo). */
+  lat?: number;
+  lng?: number;
+  /** Surovi odpiralni časi vira (OSM opening_hours — nikoli parsrani). */
+  openingHours?: string;
+  /** Telefon vira (uporabno med potovanjem — pokliči). */
+  phone?: string;
   durationMin?: number;
   price?: PriceInfo;
   status: TripItemStatus;
@@ -166,6 +173,9 @@ function productToEntry(p: JourneyProduct): TripEntry {
     title: p.title,
     providerLabel: providerLabelOf(p),
     ...(p.address ? { location: p.address } : {}),
+    ...(p.lat != null && p.lng != null ? { lat: p.lat, lng: p.lng } : {}),
+    ...(p.openingHours ? { openingHours: p.openingHours } : {}),
+    ...(p.phone ? { phone: p.phone } : {}),
     ...(p.durationMin != null ? { durationMin: p.durationMin } : {}),
     ...(p.price ? { price: p.price } : {}),
     status: status.status,
@@ -217,6 +227,8 @@ export function buildMyTrip(
     ...(journey.origin.lat != null && journey.origin.lng != null
       ? {
           location: `${journey.origin.lat.toFixed(4)}, ${journey.origin.lng.toFixed(4)}`,
+          lat: journey.origin.lat,
+          lng: journey.origin.lng,
         }
       : {}),
     status: "INFO",

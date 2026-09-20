@@ -117,6 +117,10 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
   // TASK 58 (potovanja): celotno potovanje čez vse ponudnike — jedro lijaka
   // (na EN whitelisti → samodejno dobi /en različico + hreflang alternata).
   add("/potovanje", 0.8, "Potovanje", "weekly");
+  // TASK 64 (Go Mode): Now&Next sopotnik — osebno orodje na telefonu; brez
+  // shranjenega načrta pokaže iskreno prazno stanje + CTA na /potovanje.
+  // Tudi na EN whitelisti (/en/na-poti + hreflang).
+  add("/na-poti", 0.5, "Go Mode", "weekly");
   add("/dogodki", 0.7, "Dogodki", "weekly");
   add("/vodici", 0.6, "Vodiči", "weekly");
   add("/slovenia-pass", 0.6, "Slovenia Pass", "monthly");
@@ -212,8 +216,9 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
 /** Število EN URL-jev (FW4.3-2 + ADRIA-EN + GEO-A) — za poročanje brez gradnje seznama. */
 export function getEnSitemapUrlCount(): number {
   // stalne poti IZ whitelistE (EN_STATIC_ROUTES.size — samo-vzdrževno ob
-  // dodajanju poti; 1.48: /zemljevid je 12. član; TASK 58: /potovanje 13.)
-  // + 22 hub (GEO-A) + 22 + 110 + 88 + 88 + 22 vodnikov (ADRIA-EN + LOOP-EN + WINTER-EN)
+  // dodajanju poti; 1.48: /zemljevid je 12. član; TASK 58: /potovanje 13.;
+  // TASK 64: /na-poti 14.)
+  // + 38 hub (GEO-A) + 38 + 190 + 152 + 152 + 22 vodnikov (ADRIA-EN + LOOP-EN + WINTER-EN)
   return (
     EN_STATIC_ROUTES.size +
     DESTINATIONS.length +
@@ -227,11 +232,12 @@ export function getEnSitemapUrlCount(): number {
 
 /** Skupno število vseh URL-jev (za hitro poročanje brez gradnje seznama) */
 export function getTotalSitemapUrlCount(): number {
-  // 21 stalnih (TASK 58: +/potovanje) + 22 hub (GEO-A) + 22 + 110 + 88 + 88
-  // + 22 vodnikov (ADRIA+LOOP+WINTER) = 373 SL
-  // + EN (FW4.3-2 + GEO-A hub + vsi vodniki + primerjava + zemljevid + potovanje) = 738 skupaj
+  // 22 stalnih (TASK 58: +/potovanje; TASK 64: +/na-poti) + 38 hub (GEO-A)
+  // + 38 + 190 + 152 + 152 + 22 vodnikov (ADRIA+LOOP+WINTER)
+  // + EN (FW4.3-2 + GEO-A hub + vsi vodniki + primerjava + zemljevid +
+  // potovanje + na-poti) = 764 skupaj
   return (
-    21 +
+    22 +
     DESTINATIONS.length +
     DESTINATIONS.length +
     DESTINATIONS.length * 5 +

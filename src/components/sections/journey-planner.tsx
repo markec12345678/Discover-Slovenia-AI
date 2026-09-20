@@ -13,6 +13,7 @@ import {
   Landmark,
   Loader2,
   MapPin,
+  Navigation,
   PartyPopper,
   Plane,
   Users,
@@ -30,6 +31,7 @@ import { useAppStore } from "@/lib/store";
 import type { SelectedProviderProduct } from "@/lib/supply/types";
 import { describeTotals } from "@/lib/journey/totals";
 import { journeyProductsToSelection } from "@/lib/journey/handoff";
+import { saveGoTrip } from "@/lib/journey/go-persist";
 import { JourneyTrip } from "@/components/journey-trip";
 import type {
   JourneyCategoryKey,
@@ -111,6 +113,13 @@ const L = {
       en: "Selected products carry over as YOUR choice (AI will not silently replace them).",
     },
     none: { sl: "Izberi vsaj en izdelek", en: "Select at least one product" },
+  },
+  go: {
+    button: { sl: "Zaženi Na poti (Go Mode)", en: "Start On-the-road (Go Mode)" },
+    hint: {
+      sl: "Načrt se shrani na tej napravi — med potovanjem vidiš, kaj je naslednje, razdaljo do postanka (GPS) in opravljene postanke.",
+      en: "The plan is saved on this device — while traveling you see what's next, distance to the stop (GPS) and completed stops.",
+    },
   },
   origin: { sl: "Izhodišče", en: "Origin" },
   destination: { sl: "Destinacija", en: "Destination" },
@@ -268,6 +277,17 @@ export function JourneyPlanner() {
     persistSelection(items);
     router.push(lang === "en" ? "/en/nacrtuj" : "/nacrtuj");
   }, [selectedProducts, router, lang]);
+
+  /**
+   * TASK 64 — GO MODE aktivacija: persistira journey + izbire na napravo
+   * (dai:go-trip) in odpre /na-poti (Now&Next sopotnik). NI strežniški klic —
+   * isti kanonski journey, ki ga vidi MY TRIP.
+   */
+  const startGoMode = useCallback(() => {
+    if (!journey) return;
+    saveGoTrip(journey, [...selected]);
+    router.push(lang === "en" ? "/en/na-poti" : "/na-poti");
+  }, [journey, selected, router, lang]);
 
   /**
    * §21: natisni potrditveni dokument — začasno skrij ostale dele strani
@@ -687,21 +707,34 @@ export function JourneyPlanner() {
           </Card>
           </div>
 
-          {/* === PRENOS V NAČRTOVALNIK (FIXED semantika) === */}
+          {/* === PRENOS V NAČRTOVALNIK (FIXED) + GO MODE (TASK 64) === */}
           <div className={printMode ? "print:hidden" : ""}>
           <div className="space-y-2">
-            <Button
-              onClick={handoff}
-              disabled={selectedProducts.length === 0}
-              className="w-full sm:w-auto"
-            >
-              {t(L.handoff.button)} ({selectedProducts.length})
-            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                onClick={handoff}
+                disabled={selectedProducts.length === 0}
+                className="h-11 w-full sm:w-auto sm:flex-1"
+              >
+                {t(L.handoff.button)} ({selectedProducts.length})
+              </Button>
+              <Button
+                onClick={startGoMode}
+                disabled={selectedProducts.length === 0}
+                variant="outline"
+                className="h-11 w-full border-emerald-600/50 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-900 dark:border-emerald-500/40 dark:text-emerald-300 dark:hover:bg-emerald-950 sm:w-auto sm:flex-1"
+              >
+                <Navigation className="mr-2 h-4 w-4" /> {t(L.go.button)}
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
               {selectedProducts.length === 0
                 ? t(L.handoff.none)
                 : t(L.handoff.hint)}
             </p>
+            {journey && selectedProducts.length > 0 && (
+              <p className="text-xs text-muted-foreground">{t(L.go.hint)}</p>
+            )}
           </div>
           </div>
         </div>

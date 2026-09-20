@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.63.0 · 1323/1323 testov · lint 0 · tsc 0 (`src/`; sledi git `main`) |
+| **Stanje** | v1.64.0 · 1349/1349 testov · lint 0 · tsc 0 (`src/`; sledi git `main`) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -81,6 +81,10 @@
   načrtu, ki upošteva dejanske zmogljivosti virov.
 - **MY TRIP** — ena časovnica po dneh; vsaka postavka nosi realni status
   (Zunanja rezervacija / Samo informacija); natisljivi potrditveni dokument.
+- **Na poti (Go Mode)** — Now&Next sopotnik MED potovanjem: živa ura, naslednja
+  postanka načrta, razdalja in smer do nje (GPS, premica — izrecno ne vozna),
+  opravljanje z enim klikom, prihodnji dnevi; načrt je shranjen na napravi in
+  deluje tudi brez signala.
 - **Transferji** — odkrivanje iz objavljenega KiwiTaxi feeda z realnimi cenami;
   rezervacija prek zunanje predaje `/go`.
 - **Najem avtomobilov** — odkrivanje prek affiliate sloja z zunanjim handoffom
@@ -143,6 +147,8 @@ Validacija (geo-koherenca, realni časi, cik-cak, duplikati)
 Journey produkti (transferji, nastanitve, znamenitosti, hrana, bencin, dogodki)
         ↓
 Itinerer + MY TRIP (časovnica po dneh, status vsake postavke)
+        ↓
+Na poti / Go Mode (Now&Next na napravi: GPS razdalja/smer, opravljeni postanki)
         ↓
 Zunanja predaja (/go) ali — po aktivaciji — API booking
 ```
@@ -231,6 +237,7 @@ iskreno prazne sloje.
 | `/` | domača stran — AI lijak |
 | `/nacrtuj` | AI načrtovalnik itinererjev (jezik/slika/PDF/Maps → načrt) |
 | `/potovanje` | journey načrtovalnik čez ponudnike (prihod/transfer/nastanitev/znamenitosti/hrana/bencin) |
+| `/na-poti` | Go Mode — Now&Next sopotnik med potovanjem (GPS razdalje, opravljeni postanki; načrt na napravi) |
 | `/destinacije` | 38 destinacij s filtri (država/regija/tip/cena/ocena) |
 | `/destinacija/[slug]` | hub destinacije + programske podstrani |
 | `/zemljevid` | interaktivni zemljevid (FSQ + OSM + transfer plasti) |
@@ -247,7 +254,7 @@ iskreno prazne sloje.
 | `/za-ponudnike` · `/owner` · `/admin` | B2B portali |
 
 Angleščina živi na `/en/…` (jedro lijaka: načrtuj, destinacije, zemljevid, potovanje,
-vodici, info strani); ostale poti so slovenske. Polni API: `/api/journey/plan`,
+na poti, vodici, info strani); ostale poti so slovenske. Polni API: `/api/journey/plan`,
 `/api/journey/bookings`, `/api/itinerary`, `/api/chat`, `/api/cron/*` in ostali
 endpointi v `src/app/api/`.
 
@@ -434,7 +441,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.63.0**.
+Trenutna verzija: **1.64.0**.
 
 ---
 
