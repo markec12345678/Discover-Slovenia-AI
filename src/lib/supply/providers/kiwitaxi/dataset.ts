@@ -213,3 +213,37 @@ export function searchKiwitaxiRoutes(
   matched.sort((a, b) => b.weight - a.weight || a.minPriceEur - b.minPriceEur);
   return matched;
 }
+
+/**
+ * TASK 62: geo izhodišče BREZ odvisnosti od destinacije. Orkestrator
+ * potovanja potrebuje geo izvorišča (npr. „Brnik") TUDI ko destinacija
+ * (Dubrovnik/Kotor/Tirana…) v inventarju nima rut — geo je ŠE VEDNO iz
+ * partnerjevih podatkov (fromLat/fromLng najbolj obiskane rute IZ tega
+ * kraja), NE haversine ugibanje. Vrača null, če dataset manjka ali kraj
+ * ni znan (klicalnik poroča iskreno „unresolved").
+ */
+export function searchKiwitaxiOriginGeo(
+  fromQuery: string
+): { label: string; lat: number; lng: number } | null {
+  const ds = getKiwitaxiDataset();
+  if (!ds) return null;
+
+  const from = canonicalPlaceQuery(fromQuery);
+  if (!from) return null;
+  const fromAirport = from.includes("airport");
+
+  const matched = ds.routes.filter((r) => {
+    const rf = normalizePlaceName(r.fromName);
+    return fromAirport
+      ? rf === from
+      : rf.includes(from) || from.includes(rf);
+  });
+  if (matched.length === 0) return null;
+
+  matched.sort((a, b) => b.weight - a.weight || a.minPriceEur - b.minPriceEur);
+  const best = matched.find(
+    (r) => r.fromLat != null && r.fromLng != null
+  );
+  if (best?.fromLat == null || best?.fromLng == null) return null;
+  return { label: best.fromName, lat: best.fromLat, lng: best.fromLng };
+}

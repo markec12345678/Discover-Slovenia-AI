@@ -22,7 +22,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { DESTINATIONS } from "@/lib/slovenia-data";
+import { COUNTRIES, DESTINATIONS } from "@/lib/slovenia-data";
+import { COUNTRIES_EN } from "@/lib/slovenia-data-en";
 import { persistSelection } from "@/lib/supply/selection-persist";
 import { useAppStore } from "@/lib/store";
 import type { SelectedProviderProduct } from "@/lib/supply/types";
@@ -334,11 +335,25 @@ export function JourneyPlanner() {
                 onChange={(e) => setDestination(e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                {DESTINATIONS.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
+                {COUNTRIES.map((c) => {
+                  const group = DESTINATIONS.filter(
+                    (d) => d.country === c.value
+                  );
+                  if (group.length === 0) return null;
+                  const groupLabel =
+                    lang === "en"
+                      ? (COUNTRIES_EN[c.value] ?? c.label)
+                      : c.label;
+                  return (
+                    <optgroup key={c.value} label={groupLabel}>
+                      {group.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} · {d.budget} · ★ {d.rating.toFixed(1)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
               </select>
             </div>
             <div className="grid grid-cols-3 gap-2">

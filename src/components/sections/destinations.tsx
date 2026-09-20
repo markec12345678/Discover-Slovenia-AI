@@ -26,11 +26,14 @@ import {
   DESTINATIONS,
   REGIONS,
   INTERESTS,
+  COUNTRIES,
+  COUNTRY_OF_REGION,
 } from "@/lib/slovenia-data";
 import {
   getEnDestination,
   REGIONS_EN,
   INTERESTS_EN,
+  COUNTRIES_EN,
 } from "@/lib/slovenia-data-en";
 import { Link } from "@/i18n/navigation";
 import type { Destination, DestinationType, Budget } from "@/lib/types";
@@ -110,6 +113,7 @@ export function DestinationsSection({
   const t = useTranslations("homeDest");
   const locale = useLocale();
   const isEn = locale === "en";
+  const [country, setCountry] = useState<string>(ALL_VALUE);
   const [region, setRegion] = useState<string>(ALL_VALUE);
   const [interest, setInterest] = useState<string>(ALL_VALUE);
   const [type, setType] = useState<string>(ALL_VALUE);
@@ -120,17 +124,20 @@ export function DestinationsSection({
   const filtered = useMemo(() => {
     const minRating = rating === ALL_VALUE ? 0 : Number(rating);
     return DESTINATIONS.filter((d) => {
+      // TASK 62: primarna os — država (SI/HR/ME/AL); regija je sekundarna.
+      const countryOk = country === ALL_VALUE || d.country === country;
       const regionOk = region === ALL_VALUE || d.region === region;
       const interestOk =
         interest === ALL_VALUE || d.bestFor.includes(interest);
       const typeOk = type === ALL_VALUE || d.type === type;
       const budgetOk = budget === ALL_VALUE || d.budget === budget;
       const ratingOk = d.rating >= minRating;
-      return regionOk && interestOk && typeOk && budgetOk && ratingOk;
+      return countryOk && regionOk && interestOk && typeOk && budgetOk && ratingOk;
     });
-  }, [region, interest, type, budget, rating]);
+  }, [country, region, interest, type, budget, rating]);
 
   const hasActiveFilters =
+    country !== ALL_VALUE ||
     region !== ALL_VALUE ||
     interest !== ALL_VALUE ||
     type !== ALL_VALUE ||
@@ -138,6 +145,7 @@ export function DestinationsSection({
     rating !== ALL_VALUE;
 
   const clearFilters = () => {
+    setCountry(ALL_VALUE);
     setRegion(ALL_VALUE);
     setInterest(ALL_VALUE);
     setType(ALL_VALUE);
@@ -213,14 +221,39 @@ export function DestinationsSection({
             ) : null}
           </div>
 
-          {/* 1. vrstica: regija, interes, tip (2-col na mobilnem, da filtri ne zorijo v 5-stopenjski stack) */}
+          {/* 1. vrstica: država (TASK 62), regija, interes (2-col na mobilnem) */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <FilterSelect
+              value={country}
+              onChange={(v) => {
+                setCountry(v);
+                // Koherentnost: regija iz DRUJE države ne sme ostati aktivna
+                // (sicer prazna mreža brez razlage) — pošten reset na „vse".
+                if (
+                  v !== ALL_VALUE &&
+                  region !== ALL_VALUE &&
+                  COUNTRY_OF_REGION[region] !== v
+                ) {
+                  setRegion(ALL_VALUE);
+                }
+              }}
+              placeholder={t("countryPlaceholder")}
+              ariaLabel={t("countryAriaLabel")}
+              options={COUNTRIES.map((c) => ({
+                value: c.value,
+                label: isEn ? (COUNTRIES_EN[c.value] ?? c.label) : c.label,
+              }))}
+            />
             <FilterSelect
               value={region}
               onChange={setRegion}
               placeholder={t("regionPlaceholder")}
               ariaLabel={t("regionAriaLabel")}
-              options={REGIONS.map((r) => ({
+              options={REGIONS.filter(
+                // TASK 62: regije IZBRANE države (ali vse, če ni izbire)
+                (r) =>
+                  country === ALL_VALUE || COUNTRY_OF_REGION[r.value] === country
+              ).map((r) => ({
                 value: r.value,
                 label: isEn ? (REGIONS_EN[r.value] ?? r.label) : r.label,
               }))}
@@ -237,6 +270,10 @@ export function DestinationsSection({
                 }`,
               }))}
             />
+          </div>
+
+          {/* 2. vrstica: tip, cena, ocena (izbira po ceni in kvaliteti — TASK 62) */}
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <FilterSelect
               value={type}
               onChange={setType}
@@ -244,10 +281,6 @@ export function DestinationsSection({
               ariaLabel={t("typeAriaLabel")}
               options={TYPE_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))}
             />
-          </div>
-
-          {/* 2. vrstica: cena, ocena */}
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-2">
             <FilterSelect
               value={budget}
               onChange={setBudget}

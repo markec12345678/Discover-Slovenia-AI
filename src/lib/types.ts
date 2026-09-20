@@ -3,7 +3,36 @@
 
 import type { SelectedProviderProduct } from "./supply/types";
 
-export type Region = "gorenjska" | "primorska" | "osrednja" | "kras" | "stajerska" | "koroska" | "prekmurje" | "dolenjska" | "bela-krajina";
+export type Region =
+  | "gorenjska"
+  | "primorska"
+  | "osrednja"
+  | "kras"
+  | "stajerska"
+  | "koroska"
+  | "prekmurje"
+  | "dolenjska"
+  | "bela-krajina"
+  // TASK 62: regionalne pokritost — regije sosednjih držav (HR/ME/AL)
+  | "kontinentalna-hrvaska"
+  | "istra"
+  | "kvartner"
+  | "lika"
+  | "dalmacija"
+  | "boka-kotorska"
+  | "crnogorsko-primorje"
+  | "osrednja-crna-gora"
+  | "severna-crna-gora"
+  | "osrednja-albanija"
+  | "juana-albanija";
+
+/**
+ * TASK 62: država destinacije — pokritost SI+HR+ME+AL (zahodni Balkan).
+ * Obstaja v vsaki destinaciji (izrecno, NE po privzetku — iskrenost:
+ * država ni ugibanje iz koordinat, je editorialno določena lastnost
+ * registra, testno preverjena proti FSQ SUPPORTED_COUNTRY_BBOXES).
+ */
+export type CountryCode = "SI" | "HR" | "ME" | "AL";
 export type DestinationType = "lake" | "city" | "mountain" | "cave" | "coast" | "river" | "spa" | "gorge" | "castle";
 export type Budget = "€" | "€€" | "€€€";
 export type Season = "spring" | "summer" | "autumn" | "winter";
@@ -39,6 +68,9 @@ export interface Destination {
   name: string;
   tagline: string;
   region: Region;
+  /** TASK 62: država (SI/HR/ME/AL) — skupaj z regijo določa filtriranje
+   *  po državah; koherence regija↔država preverjajo testi. */
+  country: CountryCode;
   type: DestinationType;
   description: string;
   highlights: string[];

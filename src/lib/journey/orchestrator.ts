@@ -36,6 +36,7 @@ import {
 import type { KiwiRoute } from "@/lib/supply/providers/kiwitaxi/types";
 import {
   getKiwitaxiDataset,
+  searchKiwitaxiOriginGeo,
   searchKiwitaxiRoutes,
 } from "@/lib/supply/providers/kiwitaxi/dataset";
 import { kiwiRouteToProduct } from "@/lib/supply/providers/kiwitaxi/adapter";
@@ -197,6 +198,8 @@ function eventToJourney(
 interface TransferInventoryResolver {
   /** Iskanje rut po imenih (null = dataset manjka — okoljska odpoved). */
   searchRoutes(from: string, to: string): KiwiRoute[] | null;
+  /** TASK 62: geo izhodišča BREZ destinacije (opcijsko — null = ni znano). */
+  originGeo?(from: string): { label: string; lat: number; lng: number } | null;
   /** Ruta → kanonski ProviderProduct (preslikava provider meje). */
   routeToProduct(route: KiwiRoute, locale: "sl" | "en", fetchedAt: string): ProviderProduct;
   /** fetchedAt trenutno strežene generacije (null = dataset manjka). */
@@ -209,6 +212,7 @@ const TRANSFER_INVENTORY_RESOLVERS: Partial<
   // Edini lokalni transfer inventar danes (Task 43 CSV ingest).
   kiwitaxi: {
     searchRoutes: searchKiwitaxiRoutes,
+    originGeo: searchKiwitaxiOriginGeo,
     routeToProduct: kiwiRouteToProduct,
     datasetFetchedAt: () => getKiwitaxiDataset()?.fetchedAt ?? null,
   },
@@ -238,6 +242,15 @@ function findTransferOriginGeo(
     if (withGeo?.fromLat != null && withGeo?.fromLng != null) {
       return { label: withGeo.fromName, lat: withGeo.fromLat, lng: withGeo.fromLng };
     }
+  }
+  // TASK 62: fallback geo izvorišča BREZ odvisnosti od destinacije — geo je iz
+  // partnerjevih podatkov (fromLat/fromLng rut IZ tega kraja), tudi kadar
+  // destinacija (Dubrovnik/Kotor/Tirana…) v inventarju nima rut. Iskreno:
+  // če kraj ni v partnerjevem imeniku, ostane „unresolved" (NE ugibamo).
+  for (const entry of transferInventoryProviders()) {
+    const resolver = TRANSFER_INVENTORY_RESOLVERS[entry.slug];
+    const geo = resolver?.originGeo?.(query);
+    if (geo) return geo;
   }
   return null;
 }

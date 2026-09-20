@@ -15,10 +15,10 @@ import { hreflangForPath } from "@/components/seo";
 import { currentBaseUrl } from "@/lib/host";
 
 /**
- * /destinacije — vseh 22 slovenskih destinacij (FW3: AI-first hierarhija).
+ * /destinacije — vseh 38 destinacij (TASK 62: 22 SI + 16 HR/ME/AL; FW3: AI-first hierarhija).
  *
  * Homepage prikaže samo 6 priljubljenih destinacij (featured mode); ta stran
- * je polni imenik s 5 filtri (regija, interesi, tip, cena, ocena) in modali
+ * je polni imenik s 6 filtri (država, regija, interesi, tip, cena, ocena) in modali
  * s podrobnostmi. Zbirke (kurirane sezname) pod njim ponudijo alternativni
  * vstop za tiste, ki ne vedo, kje začeti.
  *

@@ -34,7 +34,7 @@ export type Locale = (typeof routing.locales)[number];
 // (skrivanje DB sekcij na EN).
 // ============================================================================
 
-/** Destinacijske pod-poti, ki so EN-različice (×22 destinacij). */
+/** Destinacijske pod-poti, ki so EN-različice (×38 destinacij — TASK 62). */
 const EN_DESTINATION_SUBROUTES = [
   // GEO-A: nadrejena hub stran (do 2026-09-14 je bila 404 — zdaj živi,
   // zato je tudi njena EN različica na whitelisti; 308 proxy preusmeritev

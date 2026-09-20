@@ -52,7 +52,7 @@
   },
   "heroTrust": {
     "free": "Brezplačno",
-    "destinations": "22 destinacij",
+    "destinations": "38 destinacij",
     "aiSlovenian": "AI v slovenščini",
     "verifiedPartners": "Preverjeni partnerji"
   },
@@ -88,9 +88,11 @@
     "titleFeatured": "Priljubljene destinacije",
     "titleAll": "Raziščite destinacije",
     "subtitleFeatured": "Šest kotičkov, ki jih obiskovalci iščejo največ",
-    "subtitleAll": "22 najlepših kotičkov Slovenije",
+    "subtitleAll": "39 najlepših kotičkov zahodnega Balkana",
     "filters": "Filtri",
     "clearFilters": "Počisti filtre",
+    "countryPlaceholder": "Vse države",
+    "countryAriaLabel": "Filtriraj po državi",
     "regionPlaceholder": "Vse regije",
     "regionAriaLabel": "Filtriraj po regiji",
     "interestPlaceholder": "Vsi interesi",
@@ -117,7 +119,7 @@
     "rating47": "4.7+",
     "rating49": "4.9+",
     "showing": "Prikazujem {count} od {total} destinacij",
-    "viewAll": "Razišči vseh 22 destinacij",
+    "viewAll": "Razišči vseh 38 destinacij",
     "cardAriaLabel": "Odpri podrobnosti za {name}",
     "featuredBadge": "★ Priporočeno",
     "ratingLabel": "/ 5 · uredniška ocena",
@@ -232,7 +234,7 @@
     "subtitle": "Prilepi načrt, ki si ga dobil od ChatGPTja, Mindtripa ali Layle — deterministično preverimo razdalje po realnih cestah, zaprtja obiskovanih krajev, duplikate in vrstni red postankov. Poročilo s citiranimi viri, brez ugibanj.",
     "inputLabel": "Besedilo potovalnega načrta",
     "placeholder": "Prilepi besedilo načrta …\n\nDan 1: Bled — jezero in grad\n9:00–11:00 sprehod ob jezeru\n\nDan 2: Ljubljana — staro mesto …",
-    "hint": "Preverimo samo postanke iz naših 22 destinacij — ostalih ne ugibamo.",
+    "hint": "Preverimo samo postanke iz naših 38 destinacij — ostalih ne ugibamo.",
     "tryExample": "Preizkusi primer (z namernimi napakami)",
     "checking": "Preverjam …",
     "submit": "Preveri načrt",
@@ -279,7 +281,7 @@
     },
     "sources": {
       "title": "Zakaj tako preverjamo (viri)",
-      "limitation": "Pošteno: preverimo lahko samo postanke, ki se ujemajo z našimi 22 destinacijami. Krajev izven tega niza ne poznamo — in jih ne izmišljujemo.",
+      "limitation": "Pošteno: preverimo lahko samo postanke, ki se ujemajo z našimi 38 destinacijami. Krajev izven tega niza ne poznamo — in jih ne izmišljujemo.",
       "limitationDuration": "Trajanj aktivnosti iz besedila ne izluščimo — ocena obsega dneva šteje samo vožnjo.",
       "zeroAi": "Preverjanje je 100 % deterministično: 0 AI žetonov, samo izračun."
     }
@@ -290,7 +292,7 @@
     "ariaLabel": "Noga strani",
     "brandAriaLabel": "Discover Slovenia AI — domov",
     "brandName": "Discover Slovenia AI",
-    "brandDescription": "AI-poganjan načrtovalec potovanj za Slovenijo. Odkrijte 22 najlepših destinacij — od Blejskega jezera do jadranske obale.",
+    "brandDescription": "AI-poganjan načrtovalec potovanj za Slovenijo in zahodni Balkan. Odkrijte 38 destinacij — od Blejskega jezera do jonske obale.",
     "copyright": "© 2026 Discover Slovenia AI.",
     "exploreColumn": "Razišči",
     "exploreAllDestinations": "Vse destinacije",
@@ -596,11 +598,11 @@
     "ingestPinsButtonAria": "Prepoznaj destinacije iz shranjenih točk",
     "ingestPinsFile": "Izberi datoteko",
     "ingestPinsFileAria": "Izberi datoteko s shranjenimi točkami (.json, .kml, .txt)",
-    "ingestPinsHint": "Google Zemljevidi → Shranjeno: izvozi prek Google Takeout (JSON/KML) ali preprosto prilepi seznam. Točke povežem z našimi 22 destinacijami po imenu ali po bližini (do 25 km) — brez AI, čisto deterministično.",
+    "ingestPinsHint": "Google Zemljevidi → Shranjeno: izvozi prek Google Takeout (JSON/KML) ali preprosto prilepi seznam. Točke povežem z našimi 38 destinacijami po imenu ali po bližini (do 25 km) — brez AI, čisto deterministično.",
     "ingestPinsError": "Točk ni bilo mogoče prepoznati.",
     "ingestPinsSourceFile": "Vir: {name}",
     "ingestPinsSourcePaste": "Vir: prilepljene točke",
-    "ingestPinsMeta": "Skupaj {total} točk ({format}) · {unmatched} ne prepoznanih — izven naših 22 destinacij",
+    "ingestPinsMeta": "Skupaj {total} točk ({format}) · {unmatched} ne prepoznanih — izven naših 38 destinacij",
     "ingestPinsFormatGeojson": "Google izvoz JSON",
     "ingestPinsFormatKml": "KML",
     "ingestPinsFormatText": "besedilni seznam",
@@ -715,7 +717,7 @@
     "offerCards": {
       "plannerTitle": "AI načrtovalec potovanj",
       "plannerDesc": "Generira personalizirane itinererje glede na proračun, interese in sezono.",
-      "destinationsTitle": "22 destinacij",
+      "destinationsTitle": "38 destinacij",
       "destinationsDesc": "Od Alp do Jadrana — z interaktivnim zemljevidom in tisoči POI.",
       "providersTitle": "Lokalni ponudniki",
       "providersDesc": "Neposredne povezave do hotelov, restavracij in aktivnosti — rezervacija vedno pri ponudniku, brez dodatnih stroškov za vas.",
@@ -1025,12 +1027,12 @@
   },
   "destinationsPage": {
     "badge": "Destinacije",
-    "title": "Vseh 22 destinacij Slovenije",
+    "title": "Vseh 38 destinacij — Slovenija in zahodni Balkan",
     "subtitle": "Od Bledega jezera in vrhov Julijcev do ozkih piranskih ulic — filtrirajte po regiji, interesi, tipu in ceni ter poiščite svoj kotiček Slovenije.",
-    "statsLine": "22 destinacij · 5 filtrov · Brez prijave",
+    "statsLine": "38 destinacij · 6 filtrov · Brez prijave",
     "meta": {
-      "title": "Vseh 22 destinacij Slovenije",
-      "description": "Raziščite 22 najlepših slovenskih destinacij — od Bledega jezera do Pirana. Filtri po regiji, interesih, tipu in ceni."
+      "title": "Vseh 38 destinacij — Slovenija in zahodni Balkan",
+      "description": "Raziščite 38 destinacij Slovenije in zahodnega Balkana — od Bledega jezera do Sarande. Filtri po državi, regiji, interesih, tipu, ceni in oceni."
     }
   },
   "guidePage": {

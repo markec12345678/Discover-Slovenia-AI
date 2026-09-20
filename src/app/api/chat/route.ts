@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { DESTINATIONS } from "@/lib/slovenia-data";
+import { COUNTRIES, DESTINATIONS } from "@/lib/slovenia-data";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
 import { rateLimit } from "@/lib/rate-limit";
@@ -113,9 +113,10 @@ export async function POST(request: Request) {
     }).catch(() => []),
   ]);
 
-  // Destinacije (vse 22)
-  const destContext = DESTINATIONS.slice(0, 22).map((d) =>
-    `- ${d.name} (${d.region}): ${d.tagline}. Aktivnosti: ${d.activities.slice(0, 4).join(", ")}. Najboljše za: ${d.bestFor.slice(0, 3).join(", ")}.`
+  // Destinacije (vseh 38 — TASK 62: SI+HR+ME+AL; država v kontekstu,
+  // da model NE priporoča dubrovniške plaže kot „slovenske")
+  const destContext = DESTINATIONS.map((d) =>
+    `- ${d.name} (${COUNTRIES.find((c) => c.value === d.country)?.label ?? d.country}): ${d.tagline}. Aktivnosti: ${d.activities.slice(0, 4).join(", ")}. Najboljše za: ${d.bestFor.slice(0, 3).join(", ")}.`
   ).join("\n");
 
   // P3c-4: vsaka vrstica ponudniške vsebine (ime + opis + meta lokalov /
@@ -212,10 +213,10 @@ Ti kraji so odgovor na uporabnikovo vprašanje KJE — priporočaj 2–4 najbolj
   // enaka varnostna pravila (SYSTEM_DATA_GUARD, <podatek> ovijanje ostane).
   const systemPrompt =
     lang === "en"
-      ? `You are "Slovenia AI" — a friendly, expert assistant for the travel platform "Discover Slovenia AI". You help users plan trips around Slovenia.
+      ? `You are "Slovenia AI" — a friendly, expert assistant for the travel platform "Discover Slovenia AI". You help users plan trips around Slovenia and, since 2026, also Croatia, Montenegro and Albania (the western Balkan).
 
-YOU KNOW ALL ABOUT SLOVENIA:
-- 22 destinations from Bled to Piran
+YOU KNOW ALL ABOUT THE REGION:
+- 38 destinations from Bled to Sarandë — across Slovenia, Croatia, Montenegro and Albania
 - Local providers (hotels, restaurants, activities)
 - Products (food, crafts, souvenirs)
 - Experiences (tours, tastings, adventures)
@@ -245,10 +246,10 @@ RULES:
 9. When a fact comes from an OFFICIAL SOURCE above, cite it like [1] or [2] — never invent citation numbers
 
 ${SYSTEM_DATA_GUARD}`
-      : `Si "Slovenija AI" — prijazen, strokovni asistent za turistično platformo "Discover Slovenia AI". Pomagaš uporabnikom načrtovati potovanje po Sloveniji.
+      : `Si "Slovenija AI" — prijazen, strokovni asistent za turistično platformo "Discover Slovenia AI". Pomagaš uporabnikom načrtovati potovanje po Sloveniji in od leta 2026 tudi po Hrvaški, Črni gori in Albaniji (zahodni Balkan).
 
-VEŠ VSE O SLOVENIJI:
-- 22 destinacij od Bleda do Pirana
+VEŠ VSE O REGIJI:
+- 38 destinacij od Bleda do Sarande — Slovenija, Hrvaška, Črna gora in Albanija
 - Lokalni ponudniki (hoteli, restavracije, aktivnosti)
 - Izdelki (kulinarika, obrt, spominki)
 - Izkušnje (turi, degustacije, avanture)

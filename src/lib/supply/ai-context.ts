@@ -118,9 +118,15 @@ export function toAiSupplyProduct(
 // ---------------------------------------------------------------------------
 
 /**
- * Bbox Slovenije izpeljan IZ DESTINATIONS koordinat (naš enkraten vir
+ * Bbox Slovenije izpeljan IZ SLOVENSKIH destinacij (naš enkraten vir
  * resnosti — brez hardcodanih magičnih števil) + blazena obroba 0.15°.
  * Površina ~4 deg² — pod mejo z10 (36 deg²) v maxBboxAreaForZoom.
+ *
+ * TASK 62: register je razširjen na SI+HR+ME+AL, a je ta bbox namenoma
+ * OSTAL slovenski — AI supply kontekst (transferji KT) pokriva slovensko
+ * ponudbo; regionalna potovanja uporabljajo journey planner, ki poizveduje
+ * bbox-okoli-destinacije (orchestrator localCategories). Regijska širitev
+ * registra tu NE pomeni širjenja iskanja (iskrenost namena).
  */
 export function aiSupplyBboxFromDestinations(): [
   number,
@@ -133,6 +139,7 @@ export function aiSupplyBboxFromDestinations(): [
   let maxLat = -90;
   let maxLng = -180;
   for (const d of DESTINATIONS) {
+    if (d.country !== "SI") continue; // TASK 62: samo slovenske koordinate
     minLat = Math.min(minLat, d.coords.lat);
     maxLat = Math.max(maxLat, d.coords.lat);
     minLng = Math.min(minLng, d.coords.lng);

@@ -43,7 +43,7 @@ import {
 } from "@/lib/seo-page-data";
 
 /**
- * /destinacija/[slug]/guide/[type] — programatski vodniki (22 × 4 = 88).
+ * /destinacija/[slug]/guide/[type] — programatski vodniki (38 × 4 = 152).
  *
  * FW4.3-2: dvojezična stran (SL + EN) po vzorcu /o-strani:
  * - Vsa besedila prek `getTranslations("guidePage")` (server komponenta);
@@ -111,7 +111,7 @@ function lowerLabel(label: string, locale: string): string {
     : label.charAt(0).toLowerCase() + label.slice(1);
 }
 
-// generateStaticParams: 22 destinacij × 4 tipi = 88 kombinacij
+// generateStaticParams: 38 destinacij × 4 tipi = 152 kombinacij
 export async function generateStaticParams() {
   const params: { slug: string; type: string }[] = [];
   for (const dest of DESTINATIONS) {

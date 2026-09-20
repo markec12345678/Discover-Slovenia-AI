@@ -77,7 +77,7 @@ export interface SitemapUrl {
 
 /**
  * Vrne vse URL-je, ki jih platforma generira.
- * Trenutno: 19 stalnih + 22 hub destinacij (GEO-A) + 22 things-to-do + 110 itinererjev + 88 best-time + 88 vodnikov
+ * Trenutno (TASK 62): 19 stalnih + 38 hub destinacij (GEO-A; 22 SI + 16 regionalnih) + 38 things-to-do + 190 itinererjev + 152 best-time + 152 vodnikov
  * + 10 jadranskih vodnikov (ADRIA-1) + 4 domači (SLO-LOOP-1) + 8 zimskih
  *   (SLO-WINTER-1 + SLO-WINTER-2) = 371 SL URL-jev
  * + EN različice (FW4.3-2 jedro lijaka + vsi vodniki ADRIA/LOOP/WINTER) = 733 skupaj.
@@ -135,7 +135,7 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
   add("/llms.txt", 0.3, "GEO", "monthly");
   add("/rss.xml", 0.3, "GEO", "daily");
 
-  // === Destinacijski hub (GEO-A, 22) ===
+  // === Destinacijski hub (GEO-A, 38 — TASK 62: 22 SI + 16 HR/ME/AL) ===
   // Nadrejena stran destinacije — do 2026-09-14 je bila 404, kljub temu da
   // so jo linkali llms.txt/llms-full.txt (22×) in JSON-LD. Zdaj je povezovalni
   // vozeli → višja prioriteta kot podstrani (0.9 kot /destinacije seznam).
@@ -143,12 +143,12 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
     add(`/destinacija/${d.slug}`, 0.9, "Destinacija hub", "weekly");
   }
 
-  // === Things to do (22) ===
+  // === Things to do (38 — vse registrirane destinacije) ===
   for (const d of DESTINATIONS) {
     add(`/destinacija/${d.slug}/things-to-do`, 0.8, "Things to do", "weekly");
   }
 
-  // === Itinererji (22 × 5 = 110) ===
+  // === Itinererji (38 × 5 = 190) ===
   for (const d of DESTINATIONS) {
     for (const dur of DURATION_SLUGS) {
       add(`/destinacija/${d.slug}/itinerary/${dur}`, 0.7, "Itinerer");

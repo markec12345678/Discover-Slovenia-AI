@@ -17,7 +17,8 @@ import { DESTINATIONS } from "@/lib/slovenia-data";
 /**
  * /zemljevid — interaktivni zemljevid Slovenije (FW3: AI-first hierarhija).
  *
- * Zemljevid je preseljen z homepagea na lastno stran: prikaže 22 destinacij,
+ * Zemljevid je preseljen z homepagea na lastno stran: prikaže 38 destinacij
+ * (TASK 62: SI+HR+ME+AL),
  * lokalne ponudnike in — če je uporabnik ravno sestavil AI itinerer —
  * tudi pot svojega potovanja (routeCoords/routeByDay iz app store).
  *

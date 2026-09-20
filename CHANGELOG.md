@@ -7,6 +7,30 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.62.0] — 2026-09-20 (TASK 62: REGIONALNA POKRITOST POTOVANJ — SI+HR+ME+AL)
+
+### Dodano
+- **Destinacijski register razširjen na 4 države**: 22 slovenskih + 16 novih destinacij zahodnega Balkana (HR: Zagreb, Plitvička jezera, Rijeka, Pula, Zadar, Split, Hvar, Dubrovnik; ME: Kotor, Budva, Podgorica, Durmitor; AL: Tirana, Berat, Gjirokastër, Sarandë) — isto shemo, ista iskrenost (editorialni opisi/kurirane ocene, koordinate mestnih središč, VLM-auditirane AI slike).
+- `Destination.country` (SI/HR/ME/AL — izrecno, ne ugibanje iz koordinat) + 11 novih regij + `COUNTRIES`/`COUNTRY_OF_REGION` izvozi + EN overlay za vseh 16 destinacij (`slovenia-data-en.ts`).
+- **Načrtovalnik potovanj (`/potovanje`)**: destinacijski izbirnik zdaj optgroup po državah z signalom cene in kvalitete (`Dubrovnik · €€€ · ★ 4.8`) — „izbira po ceni in kvaliteti" neposredno v obrazcu.
+- **`/destinacije`**: nov filter Država (primarna os) + regije filtrirane po izbrani državi; tip/cena/ocena zdaj v skupni vrstici (6 filtrov).
+- **Izvoriščni fallback KT geo** (`searchKiwitaxiOriginGeo`): „Brnik" se razreši iz partnerjevih geo podatkov tudi za destinacije brez KT rut (Dubrovnik/Kotor/Tirana) — iskreno (neznan kraj ostane unresolved).
+- **AI kontekst**: klepet/itinerer vidita vseh 38 destinacij z oznako države + izrecno pravilo obsega (privzeto slovensko potovanje; regionalne destinacije SAMO na izrecno željo).
+
+### Popravljeno
+- `aiSupplyBboxFromDestinations()`: bbox AI supply konteksta ostane SLOVENSKI (~4 deg² < meja z10) — regijska širitev registra NE razširi iskanja.
+- Fallback načrtovalnik (`/api/itinerary`): privzeti bazen destinacij ostane slovenski (geo-koherenca TASK 51); regionalne vstopijo samo prek `preferredDestinations` (G5-1).
+- Vsa hardcoded števila destinacij („22") posodobljena na dejansko stanje (38) v i18n sporočilih (SL/EN/IT), fragmentih, chat/plan-check/rss/llms kontekstih.
+- `viator-hardening.test.ts`: higiena `clearProviderRateLimits()` v beforeEach — odprta PREDHODNA okvara polnega suite-a (onesnaženje 20/min okna med datotekami; 6 testov).
+- rss test: dinamično štetje itemov iz registra (38×5 + 22 kuriranih = 212) + natančen XML escape test (entitete `&apos;` so veljavne).
+
+### Dokumentirano
+- Komentarji registrov/strani posodobljeni (39→38, 22 SI→22 SI realno, vodniki 38×4=152, sitemap 38 hub).
+
+### Testi
+- 19 novih testov (`task62-regional-destinations.test.ts`): integriteta registra (števci 22/8/4/4, unikatnost, regija↔država↔FSQ bbox koherenco, slike na disku), EN overlay pariteta, KT izvoriščni geo, orkestrator Dubrovnik/Zagreb (iskrene opombe: 0 transfer rut ≠ napaka), neznana destinacija → 38 podprtih.
+- **1314/1314** (prej 1295), lint 0, tsc 0 (src).
+
 ---
 
 ## [1.61.0] — 2026-09-20 (TASK 61: FSQ OS PLACES AKTIVACIJA — SI+HR+ME+AL)

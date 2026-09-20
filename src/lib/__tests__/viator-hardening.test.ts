@@ -34,7 +34,7 @@ import { dedupeProducts } from "@/lib/supply/dedupe";
 import { insertProductStop } from "@/lib/supply/stop-insert";
 import { sanitizeSelectedProviderProducts } from "@/lib/supply/sanitize";
 import { toSelectedProduct } from "@/lib/supply/selection";
-import { searchSupply } from "@/lib/supply/search";
+import { searchSupply, clearProviderRateLimits } from "@/lib/supply/search";
 import { getProvider } from "@/lib/supply/registry";
 import type { SupplyAdapter } from "@/lib/supply/adapter";
 import type { ProviderProduct, ProviderSlug, SupplyQuery } from "@/lib/supply/types";
@@ -230,6 +230,13 @@ beforeEach(() => {
   prevKey = process.env.VIATOR_API_KEY;
   resetViatorAdapterCaches();
   clearViatorProductUrls();
+  // POPRAVEK (TASK 62): počisti strežniško okno klicev na providerja —
+  // v CELOTNEM suite-u prejšnje datoteke (viator-adapter/-contract, task50
+  // LIVE scenariji) napolnijo 20/min okno, kar tiho izloči adapterje iz
+  // searchSupply (rate-limited ≠ degraded) in podre izolacijske teste,
+  // ki pričakujejo SVEŽE stanje. Enako higieno ima vsak testni file, ki
+  // vbrizgava adapterje z REALNIMI vnosi registra (entry.maxCallsPerMin).
+  clearProviderRateLimits();
 });
 
 afterEach(() => {

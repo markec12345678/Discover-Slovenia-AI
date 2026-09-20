@@ -361,7 +361,7 @@ export async function POST(request: Request) {
   // izrecno, da ne ugiba o urnikih; brez vnosa destinacija nima omejitve)
   const destContext = DESTINATIONS.map(
     (d) =>
-      `- ${d.id} (${d.name}): ${d.type}/${d.region}, ${d.duration}, €${d.costPerPerson}/osebo, ocena ${d.rating}, aktivnosti: ${d.activities.join(", ")}. Najboljše za: ${d.bestFor.join(", ")}. Sezona: ${d.bestSeason.join(", ")}${d.opening ? `. Odpiralni čas (vir ${d.opening.source}): ${d.opening.note}` : ""}`
+      `- ${d.id} (${d.name}, ${d.country}): ${d.type}/${d.region}, ${d.duration}, €${d.costPerPerson}/osebo, ocena ${d.rating}, aktivnosti: ${d.activities.join(", ")}. Najboljše za: ${d.bestFor.join(", ")}. Sezona: ${d.bestSeason.join(", ")}${d.opening ? `. Odpiralni čas (vir ${d.opening.source}): ${d.opening.note}` : ""}`
   ).join("\n");
 
   // FW4.3: jezik AI izpisa — client pošlje locale ("en" → angleški
@@ -648,11 +648,13 @@ Rules:
 4. Match the traveler's interests
 5. Stay within budget (total < €${input.budget})
 6. Respect seasonal suitability (${input.season})
+7. COUNTRY SCOPE (TASK 62): the destination list includes regional destinations outside Slovenia (marked HR=Croatia, ME=Montenegro, AL=Albania). This is by default a SLOVENIAN trip — include regional destinations ONLY when the user explicitly asks for them (listed preferred destinations) or the request clearly names a regional place. A mixed multi-country plan is valid ONLY when the days allow realistic driving (Ljubljana→Dubrovnik is ~6 h)
 7. Keep time frames realistic: the next slot may only START after (previous slot ends + driving time between them). Short urban hops ~30 min, cross-region drives (e.g. Ljubljana→Piran, Bohinj→Postojna) 1.5–2 h — the gap between slots MUST cover the drive (geo validation flags errors otherwise)
 8. When fitting, mention suggested partners from the PREDLAGANI PARTNERJI list in notes or recommendations (e.g. "For lunch, visit [a partner from the list]"). NEVER invent restaurant, hotel or venue names — venue names may appear ONLY from the suggested partners list; when that list is absent, notes and recommendations must not name specific venues
 9. Add estimated drive time to the next location in notes (e.g. "30 min drive to Bohinj")
 10. "packing_list": 8-14 concrete items for this trip (season, interests, duration)
-11. "rationale": 1-2 sentences, written as a guide in third person: why THIS itinerary suits the traveler — reference their interests, budget and desire for less driving. Concrete, no marketing fluff.${extraRulesBlockEn}
+11. "rationale": 1-2 sentences, written as a guide in third person: why THIS itinerary suits the traveler — reference their interests, budget and desire for less driving. Concrete, no marketing fluff.
+12. COUNTRY SCOPE (TASK 62): the destination list includes regional destinations outside Slovenia (marked HR=Croatia, ME=Montenegro, AL=Albania). This is by default a SLOVENIAN trip — include regional destinations ONLY when the user explicitly asks for them (listed preferred destinations) or the request clearly names a regional place. A mixed multi-country plan is valid ONLY when the days allow realistic driving (Ljubljana→Dubrovnik is ~6 h).${extraRulesBlockEn}
 
 JSON format (STRICT):
 {
@@ -701,7 +703,8 @@ Pravila:
 8. Kadar ustreza, v notes ali recommendations omeni predlagane partnerje s seznama PREDLAGANI PARTNERJI (npr. "Za kosilo obiščite [partnerja s seznama]"). NIKOLI ne izmišljuj imen restavracij, hotelov ali lokalov — imena lokalov se smejo pojaviti SAMO s seznama predlaganih partnerjev; če seznama ni, notes in recommendations ne smeta vsebovati imen konkretnih lokalov
 9. V notes dodaj ocenjen čas vožnje do naslednje lokacije (npr. "30 min vožnje do Bohinja")
 10. "packing_list": 8-14 konkretnih stvari za ta izlet (sezona, interesi, trajanje)
-11. "rationale": 1-2 povedi, napisane kot vodnik v tretji osebi: zakaj TA pot ustreza potniku — sklicuj se na njegove interese, proračun in željo po manj vožnje. Konkretno, brez marketinških fraz.${extraRulesBlockSl}
+11. "rationale": 1-2 povedi, napisane kot vodnik v tretji osebi: zakaj TA pot ustreza potniku — sklicuj se na njegove interese, proračun in željo po manj vožnje. Konkretno, brez marketinških fraz.
+12. OBSEG DRŽAV (TASK 62): seznam destinacij vsebuje tudi regionalne destinacije izven Slovenije (označene HR=Hrvaška, ME=Črna gora, AL=Albanija). To je PRIVZETO slovensko potovanje — regionalne destinacije vključi SAMO, kadar jih uporabnik izrecno želi (naštete željene destinacije) ali kadar prošnja jasno imenuje regionalni kraj. Mešan večdržavni načrt je veljaven SAMO, če dnevi dopuščajo realno vožnjo (Ljubljana→Dubrovnik je ~6 h).${extraRulesBlockSl}
 
 JSON format (STROGO):
 {
@@ -1216,9 +1219,27 @@ function generateFallbackItinerary(
   const taglineOf = (d: (typeof DESTINATIONS)[number]): string =>
     isEn ? (DESTINATIONS_EN[d.id]?.tagline ?? d.tagline) : d.tagline;
 
+  // TASK 62: PRIVZETI bazen ostane SLOVENSKI (znamba platforme + geo-koherentna
+  // sidra TASK 51). Regionalne destinacije (HR/ME/AL) vstopijo SAMO z izrecno
+  // uporabnikovo željo (preferredDestinations) — čezmejno potovanje je
+  // premišljena odločitev, ne naključje ocenjevalnika (G5-1 dokaz: mešan
+  // bazen bi sestavil Ljubljana→Tirana noge in razbil ≤60 km koherenco).
+  const preferredRegional = new Set(
+    (input.preferredDestinations ?? []).filter((id) =>
+      DESTINATIONS.some((d) => d.id === id && d.country !== "SI")
+    )
+  );
+  const inDefaultPool = (d: (typeof DESTINATIONS)[number]) =>
+    d.country === "SI" || preferredRegional.has(d.id);
+
   // Filtriraj sezonsko ustrezne destinacije
-  const suitable = DESTINATIONS.filter((d) => d.bestSeason.includes(input.season));
-  const pool = suitable.length >= input.days * 2 ? suitable : DESTINATIONS;
+  const suitable = DESTINATIONS.filter(
+    (d) => inDefaultPool(d) && d.bestSeason.includes(input.season)
+  );
+  const pool =
+    suitable.length >= input.days * 2
+      ? suitable
+      : DESTINATIONS.filter(inDefaultPool);
 
   // F5.5 ( odpiralni časi): če je datum odhoda znan, mesečno zaprtje na
   // ravni DESTINACIJE ( Vintgar nov–mar) izloči destinacijo iz bazena —

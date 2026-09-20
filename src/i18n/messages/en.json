@@ -52,7 +52,7 @@
   },
   "heroTrust": {
     "free": "Free",
-    "destinations": "22 destinations",
+    "destinations": "38 destinations",
     "aiSlovenian": "Slovenian-speaking AI",
     "verifiedPartners": "Verified partners"
   },
@@ -88,9 +88,11 @@
     "titleFeatured": "Popular destinations",
     "titleAll": "Explore destinations",
     "subtitleFeatured": "The six spots travellers search for most",
-    "subtitleAll": "The 22 most beautiful corners of Slovenia",
+    "subtitleAll": "The 39 most beautiful corners of the western Balkans",
     "filters": "Filters",
     "clearFilters": "Clear filters",
+    "countryPlaceholder": "All countries",
+    "countryAriaLabel": "Filter by country",
     "regionPlaceholder": "All regions",
     "regionAriaLabel": "Filter by region",
     "interestPlaceholder": "All interests",
@@ -117,7 +119,7 @@
     "rating47": "4.7+",
     "rating49": "4.9+",
     "showing": "Showing {count} of {total} destinations",
-    "viewAll": "Explore all 22 destinations",
+    "viewAll": "Explore all 38 destinations",
     "cardAriaLabel": "Open details for {name}",
     "featuredBadge": "★ Recommended",
     "ratingLabel": "/ 5 · editorial rating",
@@ -232,7 +234,7 @@
     "subtitle": "Paste a plan you got from ChatGPT, Mindtrip or Layla — we deterministically verify real-road distances, opening closures, duplicates and stop order. A report with cited sources, zero guesswork.",
     "inputLabel": "Travel plan text",
     "placeholder": "Paste your plan text …\n\nDay 1: Bled — lake and castle\n9:00–11:00 walk around the lake\n\nDay 2: Ljubljana — old town …",
-    "hint": "We only verify stops from our 22 destinations — we don't guess the rest.",
+    "hint": "We only verify stops from our 38 destinations — we don't guess the rest.",
     "tryExample": "Try an example (with deliberate mistakes)",
     "checking": "Checking …",
     "submit": "Check the plan",
@@ -279,7 +281,7 @@
     },
     "sources": {
       "title": "Why we check this way (sources)",
-      "limitation": "Honesty note: we can only verify stops matching our 22 destinations. Places outside that set we simply don't know — and we don't invent them.",
+      "limitation": "Honesty note: we can only verify stops matching our 38 destinations. Places outside that set we simply don't know — and we don't invent them.",
       "limitationDuration": "We don't extract activity durations from text — the day-load estimate counts driving only.",
       "zeroAi": "The check is 100% deterministic: 0 AI tokens, pure computation."
     }
@@ -290,7 +292,7 @@
     "ariaLabel": "Page footer",
     "brandAriaLabel": "Discover Slovenia AI — home",
     "brandName": "Discover Slovenia AI",
-    "brandDescription": "An AI-powered travel planner for Slovenia. Discover the 22 most beautiful destinations — from Lake Bled to the Adriatic coast.",
+    "brandDescription": "An AI-powered travel planner for Slovenia and the western Balkans. Discover 38 destinations — from Lake Bled to the Ionian coast.",
     "copyright": "© 2026 Discover Slovenia AI.",
     "exploreColumn": "Explore",
     "exploreAllDestinations": "All destinations",
@@ -596,11 +598,11 @@
     "ingestPinsButtonAria": "Detect destinations from saved places",
     "ingestPinsFile": "Choose file",
     "ingestPinsFileAria": "Choose a saved places file (.json, .kml, .txt)",
-    "ingestPinsHint": "Google Maps → Saved: export via Google Takeout (JSON/KML) or simply paste a list. I match pins to our 22 destinations by name or proximity (within 25 km) — no AI, fully deterministic.",
+    "ingestPinsHint": "Google Maps → Saved: export via Google Takeout (JSON/KML) or simply paste a list. I match pins to our 38 destinations by name or proximity (within 25 km) — no AI, fully deterministic.",
     "ingestPinsError": "The saved places could not be recognized.",
     "ingestPinsSourceFile": "Source: {name}",
     "ingestPinsSourcePaste": "Source: pasted places",
-    "ingestPinsMeta": "{total} places total ({format}) · {unmatched} not recognized — outside our 22 destinations",
+    "ingestPinsMeta": "{total} places total ({format}) · {unmatched} not recognized — outside our 38 destinations",
     "ingestPinsFormatGeojson": "Google JSON export",
     "ingestPinsFormatKml": "KML",
     "ingestPinsFormatText": "plain list",
@@ -715,7 +717,7 @@
     "offerCards": {
       "plannerTitle": "AI travel planner",
       "plannerDesc": "Generates personalised itineraries based on your budget, interests and season.",
-      "destinationsTitle": "22 destinations",
+      "destinationsTitle": "38 destinations",
       "destinationsDesc": "From the Alps to the Adriatic — with an interactive map and thousands of POIs.",
       "providersTitle": "Local providers",
       "providersDesc": "Direct links to hotels, restaurants and activities — you always book with the provider, at no extra cost.",
@@ -1025,12 +1027,12 @@
   },
   "destinationsPage": {
     "badge": "Destinations",
-    "title": "All 22 destinations of Slovenia",
+    "title": "All 38 destinations — Slovenia and the western Balkans",
     "subtitle": "From Lake Bled and the peaks of the Julian Alps to the narrow streets of Piran — filter by region, interests, type and price and find your own corner of Slovenia.",
-    "statsLine": "22 destinations · 5 filters · No sign-up",
+    "statsLine": "38 destinations · 6 filters · No sign-up",
     "meta": {
-      "title": "All 22 destinations of Slovenia",
-      "description": "Explore the 22 most beautiful destinations in Slovenia — from Lake Bled to Piran. Filter by region, interests, type and price."
+      "title": "All 38 destinations — Slovenia and the western Balkans",
+      "description": "Explore 38 destinations across Slovenia and the western Balkans — from Lake Bled to Sarandë. Filter by country, region, interests, type, price and rating."
     }
   },
   "guidePage": {

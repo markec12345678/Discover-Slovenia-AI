@@ -196,6 +196,142 @@ export const DESTINATIONS_EN: Record<string, DestinationEn> = {
     activities: ["Swimming in the Kolpa", "Old town walk", "Cycling through Bela krajina", "Ethnographic museum"],
     duration: "1-2 days",
   },
+  // === TASK 62: regional destinations (HR/ME/AL) — same overlay rules ===
+  zagreb: {
+    tagline: "The Croatian capital with Viennese charm and café culture",
+    description:
+      "Zagreb is a city at the crossroads of Central and Southeast Europe with a Habsburg-era core: the Upper Town with its covered market and Lotrščak tower, Art Nouveau streets of the lower town, and the lively Dolac market in the morning. Its Advent fair is among Europe's most festive in December, while summer coffee on Tkalčićeva street sets the city's rhythm.",
+    highlights: ["Upper Town", "Ban Jelačić Square", "Dolac Market", "Cathedral"],
+    activities: ["Upper Town walk", "Museums and galleries", "Advent in December", "Coffee on Tkalčićeva"],
+    duration: "2 days",
+  },
+  "plitvicka-jezera": {
+    tagline: "A UNESCO cascade of turquoise lakes and waterfalls",
+    description:
+      "Croatia's oldest national park is a chain of sixteen lakes spilling into one another over travertine barriers and waterfalls. Wooden footbridges lead alongside the water through the forest, and electric boats cross the largest lake, Kozjak. The water shifts between turquoise and emerald with the season and the light.",
+    highlights: ["Veliki Slap", "Lake Kozjak", "Wooden footbridges", "Travertine barriers"],
+    activities: ["Footbridge walk", "Boat ride across Kozjak", "Photography", "Veliki Slap viewpoint"],
+    duration: "1 day",
+  },
+  rijeka: {
+    tagline: "A capital of culture with Croatia's largest port",
+    description:
+      "Rijeka is a port city on the Kvarner gulf with an Austro-Hungarian core, the long Korzo promenade and Trsat castle on the hill above. It was a European Capital of Culture in 2020; its Easter carnival is among the largest in Europe. Ferries to the islands and Italy depart from its harbor — the city is the gateway to Kvarner.",
+    highlights: ["Korzo", "Trsat Castle", "City Tower", "St. Vitus Cathedral"],
+    activities: ["Korzo stroll", "View from Trsat", "Rijeka Carnival", "Ferry trips to the islands"],
+    duration: "1-2 days",
+  },
+  pula: {
+    tagline: "A Roman amphitheater on the Adriatic",
+    description:
+      "Pula is Istria's largest city, home to the best-preserved Roman amphitheater in the world after Rome — the 1st-century Arena still hosts concerts and open-air cinema. The old core with the Golden Gate and the Cathedral of St. Mary presses onto a peninsula, with beaches and Istrian wine villages around the city.",
+    highlights: ["Arena amphitheater", "Golden Gate", "Old Town square", "Istrian riviera"],
+    activities: ["Arena visit", "Old Town walk", "Swimming", "Istrian wine tasting"],
+    duration: "1-2 days",
+  },
+  zadar: {
+    tagline: "The city of sunsets and sea organs",
+    description:
+      "Zadar is a Dalmatian city on a peninsula with a Roman street plan and the Romanesque Church of St. Donatus. On the waterfront the Sea Organ plays with the waves, beside the Greeting to the Sun — an installation around which crowds gather at dusk; Alfred Hitchcock called the Zadar sunset the most beautiful in the world. The Kornati islands are closest from here.",
+    highlights: ["Sea Organ", "Greeting to the Sun", "St. Donatus Church", "Roman ruins"],
+    activities: ["Listening to the Sea Organ", "Sunset watching", "Ramparts walk", "Kornati trip"],
+    duration: "1-2 days",
+  },
+  split: {
+    tagline: "A living city inside Diocletian's Palace",
+    description:
+      "The heart of Split is Diocletian's Palace from the 4th century — a Roman complex people still live in: cafés on the Peristyle, a market in the cellars, boutiques in vaulted halls. The Cathedral of St. Domnius is the world's oldest cathedral in continuous use. Marjan hill offers an escape into pines above the city, and ferries to the islands leave from the harbor.",
+    highlights: ["Diocletian's Palace", "Peristyle", "St. Domnius Cathedral", "Marjan hill"],
+    activities: ["Exploring the palace", "Marjan walk", "Bačvice beach", "Ferry trips to the islands"],
+    duration: "2 days",
+  },
+  hvar: {
+    tagline: "The sunniest Adriatic island of lavender and wine",
+    description:
+      "Hvar has almost 2,800 hours of sunshine a year, a Venetian harbor town and the Fortica fortress on the hill. The island's interior hides lavender fields and vineyards of bogotin-rich pošipina (a local wine). The Pakleni islands lie off the harbor — scree-covered coves for anchoring and swimming.",
+    highlights: ["Fortica fortress", "Hvar harbor", "Pakleni islands", "Lavender fields"],
+    activities: ["View from Fortica", "Pakleni islands trip", "Pošip wine tasting", "Swimming in the coves"],
+    duration: "2-3 days",
+  },
+  dubrovnik: {
+    tagline: "A medieval walled city above the blue Adriatic",
+    description:
+      "Dubrovnik — the Ragusan republic that rivalled Venice for centuries — is a walled city rising from the sea, its Stradun linking the Pile and Ploče gates. The nearly two-kilometer wall walk is the most famous city stroll on the Adriatic; a cable car climbs to Srđ for the view over the old town and islands. The wooded islet of Lokrum lies just offshore.",
+    highlights: ["City walls", "Stradun", "Lokrum island", "Srđ cable car"],
+    activities: ["Wall walk", "Franciscan monastery cloister", "Lokrum trip", "Sunset from Srđ"],
+    duration: "2-3 days",
+  },
+  kotor: {
+    tagline: "A fjord-like bay with a medieval walled town",
+    description:
+      "Kotor sits at the end of the Bay of Kotor, which twists between steep mountains like the Mediterranean's only fjord. The UNESCO-protected old town is a grid of squares and lanes; the walls of San Giovanni castle climb 1,200+ steps above the town to a legendary view of the bay. In nearby Perast lies the baroque islet of Our Lady of the Rocks.",
+    highlights: ["Kotor Old Town", "San Giovanni walls", "Bay of Kotor", "Perast"],
+    activities: ["Old Town walk", "Climb to the walls", "Perast trip", "Bay cruise"],
+    duration: "1-2 days",
+  },
+  budva: {
+    tagline: "An old town on a peninsula among beaches and pines",
+    description:
+      "Budva is Montenegro's most visited seaside town — an old core on a rocky walled peninsula, ringed by beaches (Mogren, Jaz, Slovenska plaža). In summer the streets and terraces are full; in spring and autumn the old town breathes easily. The most photographed sight is the islet of Sveti Stefan with its former fishing village turned hotel.",
+    highlights: ["Budva Old Town", "Mogren beach", "Sveti Stefan", "Jaz beach"],
+    activities: ["Old Town stroll", "Swimming at Mogren", "Sveti Stefan viewpoint", "Evenings on the waterfront"],
+    duration: "1-2 days",
+  },
+  podgorica: {
+    tagline: "A relaxed capital where rivers and mountains meet",
+    description:
+      "Podgorica is the capital and largest city of Montenegro, built at the confluence of the Morača and Ribnica rivers. Its rhythm comes from the korzo, café terraces and the Millennium Bridge; Stara Varoš preserves remains of the Ottoman town with its clock tower. An excellent base — Lake Skadar, Budva and Durmitor are all day trips away.",
+    highlights: ["Millennium Bridge", "Stara Varoš", "Clock tower", "Gorica hill"],
+    activities: ["Korzo stroll", "Exploring Stara Varoš", "Coffee by the Morača", "Lake Skadar trip"],
+    duration: "1 day",
+  },
+  durmitor: {
+    tagline: "A UNESCO massif above Black Lake and the Tara canyon",
+    description:
+      "Durmitor National Park is a mountain range scarred by 18 glacial lakes — the best known is Black Lake by Žabljak, the region's mountain capital. The Tara river canyon is the deepest in Europe (1,300 m) and home to rafting between forested banks; the panoramic road over the Sedlo pass links Žabljak with the south. In winter there are ski slopes, in summer hiking trails around the lakes.",
+    highlights: ["Black Lake", "Tara Canyon", "Žabljak", "Sedlo pass"],
+    activities: ["Walk around Black Lake", "Rafting the Tara", "Panoramic drive over Sedlo", "Skiing in winter"],
+    duration: "2-3 days",
+  },
+  tirana: {
+    tagline: "A colorful capital with an Ottoman core and café tempo",
+    description:
+      "Tirana is a capital that opened up after long decades — painted facades, Skanderbeg Square with the Et'hem Bey Mosque and the clock tower, cafés in the block streets. The Dajti Ekspres cable car climbs to 1,600 m above the city for a view over the plain and the Adriatic; the Bunk'Art museum in a nuclear shelter tells the story of the 20th century.",
+    highlights: ["Skanderbeg Square", "Et'hem Bey Mosque", "Bunk'Art", "Mount Dajti"],
+    activities: ["Exploring the center", "Dajti cable car", "Museums", "Café culture"],
+    duration: "2 days",
+  },
+  berat: {
+    tagline: "The town of a thousand windows below the castle",
+    description:
+      "Berat is a UNESCO-protected town known as the town of a thousand windows — white Ottoman houses on the Mangalem hill terrace up toward the castle at the top. The old bridge over the Osum river links the Gorica quarter; inside the castle is the Onufri Museum with its icons. Vineyards surround Berat, with tastings offered in traditional houses.",
+    highlights: ["Berat Castle", "Mangalem quarter", "Old bridge", "Onufri Museum"],
+    activities: ["Mangalem walk", "Castle visit", "Osum bridge", "Wine tasting"],
+    duration: "1 day",
+  },
+  gjirokaster: {
+    tagline: "The stone city of grey roofs below a mighty castle",
+    description:
+      "Gjirokastër is a UNESCO town of stone houses with shingle roofs, built on a steep slope beneath one of the largest Balkan castles. The old bazaar preserves an Ottoman trading street with arches; the birthplace of the writer Ismail Kadare is now a museum. The mountains around the town invite hikes above the valley.",
+    highlights: ["Gjirokastër Castle", "Old bazaar", "Stone houses", "Kadare's house"],
+    activities: ["Castle visit", "Bazaar stroll", "Ethnographic museum", "Hikes around town"],
+    duration: "1 day",
+  },
+  saranda: {
+    tagline: "A sunny Ionian town across from Corfu",
+    description:
+      "Sarandë is Albania's southernmost seaside town, across from the Greek island of Corfu (a 30-minute ferry). The coast south of town hides Ksamil with its white beaches and islets; inland lies antiquity — Butrint, a UNESCO ancient city between the lake and the channel. The Lëkurësi fortress above town frames the sunset over the Ionian Sea.",
+    highlights: ["Ksamil", "Ancient Butrint", "Lëkurësi fortress", "View of Corfu"],
+    activities: ["Swimming in Ksamil", "Butrint visit", "Sunset from Lëkurësi", "Ferry to Corfu"],
+    duration: "2-3 days",
+  },
+};
+
+export const COUNTRIES_EN: Record<string, string> = {
+  SI: "Slovenia",
+  HR: "Croatia",
+  ME: "Montenegro",
+  AL: "Albania",
 };
 
 export const REGIONS_EN: Record<string, string> = {
@@ -208,6 +344,18 @@ export const REGIONS_EN: Record<string, string> = {
   prekmurje: "Prekmurje",
   dolenjska: "Lower Carniola",
   "bela-krajina": "White Carniola",
+  // TASK 62: regionalne regije (HR/ME/AL)
+  "kontinentalna-hrvaska": "Continental Croatia",
+  istra: "Istria",
+  kvartner: "Kvarner",
+  lika: "Lika",
+  dalmacija: "Dalmatia",
+  "boka-kotorska": "Bay of Kotor",
+  "crnogorsko-primorje": "Montenegrin Coast",
+  "osrednja-crna-gora": "Central Montenegro",
+  "severna-crna-gora": "Northern Montenegro",
+  "osrednja-albanija": "Central Albania",
+  "juana-albanija": "Southern Albania",
 };
 
 export const INTERESTS_EN: Record<string, string> = {

@@ -1,6 +1,6 @@
 {
   "name": "nextjs_tailwind_shadcn_ts",
-  "version": "1.61.0",
+  "version": "1.62.0",
   "private": true,
   "scripts": {
     "dev": "bash -c 'set -a; source .env; set +a; next dev -p 3000 --webpack 2>&1 | tee dev.log'",

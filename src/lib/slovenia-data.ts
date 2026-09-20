@@ -1,14 +1,18 @@
-import type { Destination } from "./types";
+import type { CountryCode, Destination } from "./types";
 
-// Single source of truth za slovenske destinacije.
-// 12 najboljših destinacij, pokriva vse regije.
+// Single source of truth za destinacije platforme.
+// 22 slovenskih destinacij (pokriva vse regije) + 16 destinacij zahodnega
+// Balkana (TASK 62: HR/ME/AL — isto shemo, ista iskrenost).
 // SLIKE: `/content/*.jpg` so AI-generirane (z-ai image generation, sept 2026)
 // po VLM auditu — stara CDN slika za Dravograd je prikazovala turkizno reko
 // v gozdnati dolini (Soča-style) namesto mesta ob sotočju treh rek. Nova slika
 // je narejena iz opisa, VLM potrjeno ujemanje 9/10. Brez atribucije (AI, ne CC).
+// Regionalne slike (TASK 62): enaka konvencija — AI-generirane, VLM
+// spot-audit 3/3 PASS (dubrovnik/berat/durmitor), glej blok TASK 62 spodaj.
 export const DESTINATIONS: Destination[] = [
   {
     id: "bled",
+    country: "SI",
     slug: "bled",
     name: "Bled",
     tagline: "Biser Alp s srednjeveškim gradom in otokom",
@@ -30,6 +34,7 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     id: "bohinj",
+    country: "SI",
     slug: "bohinj",
     name: "Bohinj",
     tagline: "Divja, nedotaknjena lepota Triglavskega narodnega parka",
@@ -51,6 +56,7 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     id: "ljubljana",
+    country: "SI",
     slug: "ljubljana",
     name: "Ljubljana",
     tagline: "Zelena, ustvarjalna prestolnica z zmajevim mostom",
@@ -72,6 +78,7 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     id: "postojna",
+    country: "SI",
     slug: "postojnska-jama",
     name: "Postojnska jama",
     tagline: "24 km podzemnih rovov in vilinsko kraljestvo kapnikov",
@@ -103,6 +110,7 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     id: "piran",
+    country: "SI",
     slug: "piran",
     name: "Piran",
     tagline: "Slovenske Benetke s kamnitimi uličicami in Tartinijevim trgom",
@@ -124,6 +132,7 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     id: "soca",
+    country: "SI",
     slug: "reka-soca",
     name: "Reka Soča",
     tagline: "Smaragdna reka med Julijci za adrenalinske avanture",
@@ -145,6 +154,7 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     id: "triglav",
+    country: "SI",
     slug: "triglav",
     name: "Triglav",
     tagline: "2864 m visok simbol naroda z neštetimi potmi",
@@ -166,6 +176,7 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     id: "kobarid",
+    country: "SI",
     slug: "kobarid",
     name: "Kobarid",
     tagline: "Zgodovina, Soška fronta in kulinarika v eni vasi",
@@ -196,6 +207,7 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     id: "maribor",
+    country: "SI",
     slug: "maribor",
     name: "Maribor",
     tagline: "Drugo največje mesto z najstarejšo trto na svetu",
@@ -217,6 +229,7 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     id: "portoroz",
+    country: "SI",
     slug: "portoroz",
     name: "Portorož",
     tagline: "Slovensko obmorsko letovišče s Casino in wellness",
@@ -238,6 +251,7 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     id: "vintgar",
+    country: "SI",
     slug: "vintgarska-soteska",
     name: "Vintgarska soteska",
     tagline: "Kratek sprehod skozi apnenec ob umirjeni reki",
@@ -272,6 +286,7 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     id: "rogaska",
+    country: "SI",
     slug: "rogaska-slatina",
     name: "Rogaška Slatina",
     tagline: "Najstarejše slovensko zdravilišče z mineralno vodo",
@@ -294,6 +309,7 @@ export const DESTINATIONS: Destination[] = [
   // === ŠTAJERSKA — dodatne destinacije ===
   {
     id: "ptuj",
+    country: "SI",
     slug: "ptuj",
     name: "Ptuj",
     tagline: "Najstarejše mesto v Sloveniji z rimsko zgodovino",
@@ -327,6 +343,7 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     id: "celje",
+    country: "SI",
     slug: "celje",
     name: "Celje",
     tagline: "Nekdanja prestolnica grofov Celjskih z impresivnim gradom",
@@ -358,6 +375,7 @@ export const DESTINATIONS: Destination[] = [
   // === PRIMORSKA — dodatne destinacije ===
   {
     id: "nova-gorica",
+    country: "SI",
     slug: "nova-gorica",
     name: "Nova Gorica",
     tagline: "Mesto vrtnic na meji z Italijo",
@@ -380,6 +398,7 @@ export const DESTINATIONS: Destination[] = [
   // === KOROŠKA ===
   {
     id: "slovenj-gradec",
+    country: "SI",
     slug: "slovenj-gradec",
     name: "Slovenj Gradec",
     tagline: "Alpsko mestece z bogato glasbeno tradicijo",
@@ -401,6 +420,7 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     id: "dravograd",
+    country: "SI",
     slug: "dravograd",
     name: "Dravograd",
     tagline: "Tromeja rek Drave, Meže in Mislinje",
@@ -423,6 +443,7 @@ export const DESTINATIONS: Destination[] = [
   // === PREKMURJE ===
   {
     id: "murska-sobota",
+    country: "SI",
     slug: "murska-sobota",
     name: "Murska Sobota",
     tagline: "Center Prekmurja z gradom ob jezeru",
@@ -444,6 +465,7 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     id: "lendava",
+    country: "SI",
     slug: "lendava",
     name: "Lendava",
     tagline: "Dvojezično mesto z vinogradi in gradom na hribu",
@@ -466,6 +488,7 @@ export const DESTINATIONS: Destination[] = [
   // === DOLENJSKA ===
   {
     id: "novo-mesto",
+    country: "SI",
     slug: "novo-mesto",
     name: "Novo mesto",
     tagline: "Dolenjska prestolnica ob reki Krki",
@@ -487,6 +510,7 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     id: "otocec",
+    country: "SI",
     slug: "otocec",
     name: "Otočec",
     tagline: "Edini slovenski grad na otoku reke",
@@ -508,6 +532,7 @@ export const DESTINATIONS: Destination[] = [
   // === BELA KRAJINA ===
   {
     id: "crnomelj",
+    country: "SI",
     slug: "crnomelj",
     name: "Črnomelj",
     tagline: "Srce Bele krajine ob reki Kolpi",
@@ -527,6 +552,383 @@ export const DESTINATIONS: Destination[] = [
     costPerPerson: 15,
     featured: false,
   },
+  // ==========================================================================
+  // TASK 62 (1.62.0): REGIONALNA POKRITOST — HRVAŠKA / ČRNA GORA / ALBANIJA
+  // ==========================================================================
+  // 16 novih destinacij zahodnega Balkana. isto shemo kot SI vnosi.
+  // Iskrenost vsebine: opisi so EDITORIALNE (kurirane, konservativne — dobro
+  // znane znamenitosti, brez izmišljenih specifikov); rating/budget/
+  // costPerPerson so editorialne ocene v isti skali kot SI vnosi (primerljive
+  // med sabo, niso API podatki). Koordinate so javno znane geografske točke
+  // mest/znamenitosti; test task62 preverja koherence regija↔država↔FSQ bbox.
+  // Slike: /content/*.jpg AI-generirane (z-ai, sept 2026, VLM spot-audit 3/3
+  // PASS — dubrovnik/berat/durmitor), enaka konvencija kot SI slike.
+  // featured: false pri vseh — homepage ostane 6 SI (znamka), regionalno
+  // pokritost pokaže /destinacije + načrtovalnik potovanj (optgroup).
+  // ==========================================================================
+
+  // === HRVAŠKA — kontinentalna ===
+  {
+    id: "zagreb",
+    country: "HR",
+    slug: "zagreb",
+    name: "Zagreb",
+    tagline: "Hrvaška prestolnica z dunajskim šarmom in kavarniško kulturo",
+    region: "kontinentalna-hrvaska",
+    type: "city",
+    description:
+      "Zagreb je mesto na prelomu srednjeje in jugovzhodne Evrope z Dunaju podobnim jedrom: Gornji grad s pokrito tržnico in Lotrščakom, secesijske ulice spodnjega mesta in živahen Dolac zjutraj, ko kmetje razstavijo svoje pridelke. Advent na Gornjem mestu decembra med najbolj praznične v Evropi, poleti pa kava na Tkalčićevi ulici daje ritem mestu.",
+    highlights: ["Gornji grad", "Trg bana Jelačića", "Tržnica Dolac", "Katedrala"],
+    activities: ["Sprehod po Gornjem gradu", "Muzeji in galerije", "Advent v decembru", "Kava na Tkalčićevo"],
+    bestFor: ["kultura", "mesto", "hrana"],
+    bestSeason: ["spring", "summer", "autumn", "winter"],
+    image: "/content/zagreb.jpg",
+    coords: { lat: 45.815, lng: 15.9819 },
+    rating: 4.5,
+    budget: "€",
+    duration: "2 dni",
+    costPerPerson: 25,
+    featured: false,
+  },
+  // === HRVAŠKA — Lika ===
+  {
+    id: "plitvicka-jezera",
+    country: "HR",
+    slug: "plitvicka-jezera",
+    name: "Plitvička jezera",
+    tagline: "UNESCO kaskada turkiznih jezer in slapov",
+    region: "lika",
+    type: "lake",
+    description:
+      "Najstarejši hrvaški narodni park je veriga šestnajstih jezer, ki se zalivajo druga v drugo čez travertinske barjera in slapove. Lesene brvi vodijo ob vodi skozi gozd, čez največje jezero Kozjak vozijo električne ladje. Barva vode se premika med turkizno in smaragdno od sezone in svetlobe.",
+    highlights: ["Veliki slap", "Jezero Kozjak", "Lesene brvi", "Travertinske barjera"],
+    activities: ["Sprehod po brveh", "Vožnja z ladjo po Kozjaku", "Fotografija", "Ogled Velikega slapa"],
+    bestFor: ["narava", "fotografija", "družina"],
+    bestSeason: ["spring", "summer", "autumn"],
+    image: "/content/plitvicka-jezera.jpg",
+    coords: { lat: 44.8654, lng: 15.582 },
+    rating: 4.8,
+    budget: "€€",
+    duration: "1 dan",
+    costPerPerson: 35,
+    featured: false,
+  },
+  // === HRVAŠKA — Kvarner ===
+  {
+    id: "rijeka",
+    country: "HR",
+    slug: "rijeka",
+    name: "Rijeka",
+    tagline: "Prestolnica kulture z največjim hrvaškim pristaniščem",
+    region: "kvartner",
+    type: "city",
+    description:
+      "Rijeka je pristaniško mesto na Kvarnerju z avstro-ogrskim jedrom, dolgim Korzom in Trsatskim gradom na hribu nad mestom. Leta 2020 je bila evropska prestolnica kulture; velikonočni Riješki karneval je med največjimi v Evropi. Iz Rijeke vodijo trajekti na otoke in v Italijo — mesto je prehod v Kvarner.",
+    highlights: ["Korzo", "Trsatski grad", "Mestni stolp", "Stolnica sv. Vida"],
+    activities: ["Sprehod po Korzu", "Pogled s Trsata", "Riješki karneval", "Trajektni izleti na otoke"],
+    bestFor: ["mesto", "kultura", "hrana"],
+    bestSeason: ["spring", "summer", "autumn"],
+    image: "/content/rijeka.jpg",
+    coords: { lat: 45.3271, lng: 14.4422 },
+    rating: 4.3,
+    budget: "€",
+    duration: "1-2 dni",
+    costPerPerson: 20,
+    featured: false,
+  },
+  // === HRVAŠKA — Istra ===
+  {
+    id: "pula",
+    country: "HR",
+    slug: "pula",
+    name: "Pula",
+    tagline: "Rimski amfiteater ob Jadranskem morju",
+    region: "istra",
+    type: "coast",
+    description:
+      "Pula je največje mesto Istre z najbolje ohranjenim rimskim amfiteaterom na svetu po Rimu — Arena iz 1. stoletja še danes sprejema koncerte in film na odprtem. Staro mestno jedro z Zlatim portalom in Stolnico sv. Marije se stiska na polotoku, okoli mesta pa ležijo plaže in istrska vinorodna vas.",
+    highlights: ["Amfiteater Arena", "Zlati portal", "Stari trg", "Istrska riviera"],
+    activities: ["Ogled Arene", "Sprehod po starem mestu", "Kopanje", "Vinske degustacije po Istri"],
+    bestFor: ["kultura", "družina", "hrana"],
+    bestSeason: ["spring", "summer", "autumn"],
+    image: "/content/pula.jpg",
+    coords: { lat: 44.8683, lng: 13.8481 },
+    rating: 4.5,
+    budget: "€€",
+    duration: "1-2 dni",
+    costPerPerson: 25,
+    featured: false,
+  },
+  // === HRVAŠKA — Dalmacija ===
+  {
+    id: "zadar",
+    country: "HR",
+    slug: "zadar",
+    name: "Zadar",
+    tagline: "Mesto sončnega zahoda in morskih orgel",
+    region: "dalmacija",
+    type: "coast",
+    description:
+      "Zadar je dalmatinsko mesto na polotoku z rimskim tlorisom in romansko cerkvijo sv. Donata. Ob obali morske orgle igrajo na valove, desno pa Pozdrav soncu — instalacija, ob kateri se zberejo množice ob zahodu; Alfred Hitchcock je zadarški zahod imenoval najlepšega na svetu. Iz Zadra so najkrajši izleti na Kornate.",
+    highlights: ["Morske orgle", "Pozdrav soncu", "Cerkev sv. Donata", "Rimske ruševine"],
+    activities: ["Poslušanje morskih orgel", "Sončni zahod", "Sprehod po obzidju", "Izlet na Kornate"],
+    bestFor: ["romantika", "kultura", "družina"],
+    bestSeason: ["spring", "summer", "autumn"],
+    image: "/content/zadar.jpg",
+    coords: { lat: 44.1194, lng: 15.2314 },
+    rating: 4.6,
+    budget: "€€",
+    duration: "1-2 dni",
+    costPerPerson: 25,
+    featured: false,
+  },
+  {
+    id: "split",
+    country: "HR",
+    slug: "split",
+    name: "Split",
+    tagline: "Živo mesto znotraj Dioklecijanove palače",
+    region: "dalmacija",
+    type: "coast",
+    description:
+      "Srce Splita je Dioklecijanova palača iz 4. stoletja — rimski kompleks, v katerem danes živijo ljudje: v Peristilu kavare, v podzemljih tržnica, v Vaulted sobah butiki. Katedrala sv. Duje je najstarejša katedrala na svetu v neprekinjeni uporabi. Hrib Marjan ponudi pobeg v borovce nad mestom, iz pristanišča pa krmarijo trajekti na otoke.",
+    highlights: ["Dioklecijanova palača", "Peristil", "Katedrala sv. Duje", "Marjan"],
+    activities: ["Raziskovanje palače", "Sprehod na Marjan", "Plaža Bačvice", "Trajektni izleti na otoke"],
+    bestFor: ["kultura", "mesto", "hrana"],
+    bestSeason: ["spring", "summer", "autumn"],
+    image: "/content/split.jpg",
+    coords: { lat: 43.5081, lng: 16.4402 },
+    rating: 4.6,
+    budget: "€€",
+    duration: "2 dni",
+    costPerPerson: 30,
+    featured: false,
+  },
+  {
+    id: "hvar",
+    country: "HR",
+    slug: "hvar",
+    name: "Hvar",
+    tagline: "Najsončnejši jadranski otok sivine in levandule",
+    region: "dalmacija",
+    type: "coast",
+    description:
+      "Hvar je otok s skoraj 2800 sončnimi urami letno, pristaniškim mestom Beneškega videza in tvrdjavo Fortico na hribu. Notranjost otoka skriva levandulna polja in vinograde bogotinjave pošipine (vinska sorta). Pred pristaniščem ležijo Pakleni otoki — škriljasti zalivi za sidranje in kopanje.",
+    highlights: ["Tvrdjava Fortica", "Hvarsko pristanišče", "Pakleni otoki", "Levandulna polja"],
+    activities: ["Pogled s Fortice", "Izlet na Paklene otoke", "Vinska degustacija pošipine", "Kopanje v zalivih"],
+    bestFor: ["romantika", "narava", "hrana"],
+    bestSeason: ["spring", "summer", "autumn"],
+    image: "/content/hvar.jpg",
+    coords: { lat: 43.1729, lng: 16.5914 },
+    rating: 4.7,
+    budget: "€€€",
+    duration: "2-3 dni",
+    costPerPerson: 40,
+    featured: false,
+  },
+  {
+    id: "dubrovnik",
+    country: "HR",
+    slug: "dubrovnik",
+    name: "Dubrovnik",
+    tagline: "Srednjeveško obzidano mesto nad modrim Jadranom",
+    region: "dalmacija",
+    type: "coast",
+    description:
+      "Dubrovnik — dubrovniška republika, ki je stoletja tekmovala z Benetkami — je obzidano mesto na steni nad morjem, katerega Stradun povezuje vrata Pile in Ploče. Obzidje dolgo skoraj dva kilometra nudi najbolj znan mestni sprehod Jadrana; žičnica vzpelje na Srđ za pogled na staro mesto in otoke. Pred mestom leži gozdnati Lokrum.",
+    highlights: ["Mestno obzidje", "Stradun", "Otok Lokrum", "Žičnica na Srđ"],
+    activities: ["Sprehod po obzidju", "Križni hodnik frančiškanskega samostana", "Izlet na Lokrum", "Sončni zahod z Srđa"],
+    bestFor: ["kultura", "romantika", "fotografija"],
+    bestSeason: ["spring", "summer", "autumn"],
+    image: "/content/dubrovnik.jpg",
+    coords: { lat: 42.6507, lng: 18.0944 },
+    rating: 4.8,
+    budget: "€€€",
+    duration: "2-3 dni",
+    costPerPerson: 45,
+    featured: false,
+  },
+  // === ČRNA GORA — Boka kotorska ===
+  {
+    id: "kotor",
+    country: "ME",
+    slug: "kotor",
+    name: "Kotor",
+    tagline: "Fjordu podobna Boka s srednjeveškim obzidanim mestom",
+    region: "boka-kotorska",
+    type: "coast",
+    description:
+      "Kotor leži na dnu Bokokotorskega zaliva, ki se zvija med strmimi gorami kot edini fjord Sredozemlja. Staro mestno jedro z mrežo trgov in uličic je pod Unesco zaščito; obzidje z gradom San Giovanni se vzpenja 1200+ stopnic nad mesto in nudi legendaren pogled na zaliv. V sosednjem Perastu baročni otok Gospa od Škrpjela.",
+    highlights: ["Stari grad Kotor", "Obzidje San Giovanni", "Boka kotorska", "Perast"],
+    activities: ["Sprehod po starem mestu", "Vzpon na obzidje", "Izlet v Perast", "Križarjenje po Boki"],
+    bestFor: ["kultura", "romantika", "fotografija"],
+    bestSeason: ["spring", "summer", "autumn"],
+    image: "/content/kotor.jpg",
+    coords: { lat: 42.4247, lng: 18.7714 },
+    rating: 4.7,
+    budget: "€€",
+    duration: "1-2 dni",
+    costPerPerson: 25,
+    featured: false,
+  },
+  // === ČRNA GORA — primorje ===
+  {
+    id: "budva",
+    country: "ME",
+    slug: "budva",
+    name: "Budva",
+    tagline: "Stari grad na polotoku med plažami in borovci",
+    region: "crnogorsko-primorje",
+    type: "coast",
+    description:
+      "Budva je najbolj obiskano črnogorsko obmorsko mesto — staro mestno jedro na skalnatem polotoku z obzidjem, okrog njega pa niz plaž (Mogren, Jaz, Slovenska plaža). Poleti so ulice in terase polne, jeseni in pomladi pa staro mesto diha sproščeno. Fotografom najbolj znan motiv je otoček Sveti Stefan z nekdanjo vasjo-bivališče hotelom.",
+    highlights: ["Stari grad Budva", "Plaža Mogren", "Sveti Stefan", "Plaža Jaz"],
+    activities: ["Sprehod po starem mestu", "Kopanje na Mogrenu", "Razgled na Sveti Stefan", "Večeri na obali"],
+    bestFor: ["družina", "romantika", "hrana"],
+    bestSeason: ["spring", "summer", "autumn"],
+    image: "/content/budva.jpg",
+    coords: { lat: 42.2864, lng: 18.8424 },
+    rating: 4.4,
+    budget: "€€",
+    duration: "1-2 dni",
+    costPerPerson: 25,
+    featured: false,
+  },
+  // === ČRNA GORA — notranjost ===
+  {
+    id: "podgorica",
+    country: "ME",
+    slug: "podgorica",
+    name: "Podgorica",
+    tagline: "Sproščeno glavno mesto na stičištru rek in planin",
+    region: "osrednja-crna-gora",
+    type: "city",
+    description:
+      "Podgorica je glavno in največje mesto Črne gore, zgrajeno ob sotočju Morače in Ribnice. Mestni ritem določajo korzo, kavarniške terase in Millenniumski most; Stara varoš ohranja ostanke otomanskega mesta s stolpom z uro. Odlična izhodiščna točka — do Skadarskega jezera, Budve in Durmitorja je vsakodnevni izlet.",
+    highlights: ["Millenniumski most", "Stara varoš", "Stolp z uro", "Gorica"],
+    activities: ["Sprehod po korzu", "Raziskovanje Stare varoši", "Kava ob Morači", "Izlet na Skadarsko jezero"],
+    bestFor: ["mesto", "hrana", "kultura"],
+    bestSeason: ["spring", "summer", "autumn"],
+    image: "/content/podgorica.jpg",
+    coords: { lat: 42.4304, lng: 19.2594 },
+    rating: 4.2,
+    budget: "€",
+    duration: "1 dan",
+    costPerPerson: 15,
+    featured: false,
+  },
+  {
+    id: "durmitor",
+    country: "ME",
+    slug: "durmitor",
+    name: "Durmitor",
+    tagline: "UNESCO gorovje nad Črnim jezerom in kanjonom Tare",
+    region: "severna-crna-gora",
+    type: "mountain",
+    description:
+      "Narodni park Durmitor je gorovje izdrobljeno z 18 ledeniških jezer — najbolj znano je Črno jezero ob Žabljaku, glavnem mestu planin. Kanjon reke Tare je najglobji v Evropi (1300 m) in dom raftinga med bregovi; panoramska cesta preko Sedla Soa povezuje Žabljak z jugom. Pozimi smučarišča, poleti pohodniške poti okrog jezer.",
+    highlights: ["Črno jezero", "Kanjon Tare", "Žabljak", "Sedlo Soa"],
+    activities: ["Pohod okrog Črnega jezera", "Rafting po Tari", "Panoramska vožnja čez Sedlo", "Smučanje pozimi"],
+    bestFor: ["narava", "avantura", "adrenalin"],
+    bestSeason: ["spring", "summer", "autumn", "winter"],
+    image: "/content/durmitor.jpg",
+    coords: { lat: 43.1544, lng: 19.122 },
+    rating: 4.7,
+    budget: "€€",
+    duration: "2-3 dni",
+    costPerPerson: 25,
+    featured: false,
+  },
+  // === ALBANIJA — center ===
+  {
+    id: "tirana",
+    country: "AL",
+    slug: "tirana",
+    name: "Tirana",
+    tagline: "Barvita prestolnica z otomanskim jedrom in kavarniškim tempom",
+    region: "osrednja-albanija",
+    type: "city",
+    description:
+      "Tirana je prestolnica, ki se je po dolgih desetletjih odprla — fasade v barvah, Skanderbegov trg z mošejo Et'hem Bej in stolpom z uro, kavarnice v blokovskih ulicah. Žičnica Dajti Ekspres vzpenja na 1600 m nad mestom za pogled na ravnino in Jadran; muzej Bunk'Art v atomskem zaklonišču pripoveduje zgodovino 20. stoletja.",
+    highlights: ["Skanderbegov trg", "Mošeja Et'hem Bej", "Bunk'Art", "Gora Dajti"],
+    activities: ["Raziskovanje centra", "Žičnica na Dajti", "Muzeji", "Kavarniška kultura"],
+    bestFor: ["mesto", "kultura", "hrana"],
+    bestSeason: ["spring", "summer", "autumn"],
+    image: "/content/tirana.jpg",
+    coords: { lat: 41.3275, lng: 19.8187 },
+    rating: 4.3,
+    budget: "€",
+    duration: "2 dni",
+    costPerPerson: 15,
+    featured: false,
+  },
+  // === ALBANIJA — jug ===
+  {
+    id: "berat",
+    country: "AL",
+    slug: "berat",
+    name: "Berat",
+    tagline: "Mesto tisočerih oken pod gradom ob reki Osum",
+    region: "juana-albanija",
+    type: "castle",
+    description:
+      "Berat je mesto pod Unesco zaščito, znano kot mesto tisočerih oken — bele otomanske hiše na hribu Mangalem se stopničasto vzpenjajo proti gradu na vrhu. Stari most čez reko Osum povezuje četrt Gorica; v gradu je Onufrijev muzej z ikonami. Okoli Berata so vinogradi, domačini ponujajo degustacije v tradicionalnih hišah.",
+    highlights: ["Beratski grad", "Četrt Mangalem", "Stari most", "Onufrijev muzej"],
+    activities: ["Sprehod po Mangalemu", "Obisk gradu", "Most čez Osum", "Vinska degustacija"],
+    bestFor: ["kultura", "fotografija", "hrana"],
+    bestSeason: ["spring", "summer", "autumn"],
+    image: "/content/berat.jpg",
+    coords: { lat: 40.7058, lng: 19.952 },
+    rating: 4.6,
+    budget: "€",
+    duration: "1 dan",
+    costPerPerson: 15,
+    featured: false,
+  },
+  {
+    id: "gjirokaster",
+    country: "AL",
+    slug: "gjirokaster",
+    name: "Gjirokastër",
+    tagline: "Mesto kamna — sive strehe pod mogočnim gradom",
+    region: "juana-albanija",
+    type: "castle",
+    description:
+      "Gjirokastër je Unesco mesto kamnitih hiš s strehami iz skodle, zgrajeno na strmem pobočju pod enim največjih balkanskih gradov. Stara baza ohranja otomansko trgovsko ulico z venci; rojstna hiša pisatelja Ismaila Kadareja je danes muzej. Nad dolino se sliši legenda o Zermu in dolini nimf — planine okrog mesta vabijo na pohode.",
+    highlights: ["Gjirokastrski grad", "Stara baza", "Kamnite hiše", "Kadarejeva hiša"],
+    activities: ["Obisk gradu", "Sprehod po bazarju", "Etnografski muzej", "Pohodi v okolico"],
+    bestFor: ["kultura", "fotografija", "narava"],
+    bestSeason: ["spring", "summer", "autumn"],
+    image: "/content/gjirokaster.jpg",
+    coords: { lat: 40.0758, lng: 20.1425 },
+    rating: 4.6,
+    budget: "€",
+    duration: "1 dan",
+    costPerPerson: 15,
+    featured: false,
+  },
+  {
+    id: "saranda",
+    country: "AL",
+    slug: "saranda",
+    name: "Sarandë",
+    tagline: "Sončno jonsko mesto nasproti Korfu",
+    region: "juana-albanija",
+    type: "coast",
+    description:
+      "Sarandë je najbolj južno albansko obmorsko mesto, nasproti grškega Korfu (trajekt 30 min). Obala južno od mesta skriva Ksamil z belimi plažami in otočki, notranjost pa antiko — Butrint je Unesco antični mesto med jezerom in kanalom. Pogled iz trdnjave Lëkurësi nad mestom večer ponudi sončni zahod nad Jonskim morjem.",
+    highlights: ["Ksamil", "Antični Butrint", "Trdnjava Lëkurësi", "Pogled na Korfu"],
+    activities: ["Kopanje v Ksamila", "Ogled Butrinta", "Sončni zahod iz Lëkurësija", "Trajekt na Korfu"],
+    bestFor: ["družina", "romantika", "narava"],
+    bestSeason: ["spring", "summer", "autumn"],
+    image: "/content/saranda.jpg",
+    coords: { lat: 39.8753, lng: 20.0063 },
+    rating: 4.5,
+    budget: "€€",
+    duration: "2-3 dni",
+    costPerPerson: 25,
+    featured: false,
+  },
 ];
 
 // Pomožne funkcije za iskanje
@@ -542,6 +944,54 @@ export function getDestinationsByRegion(region: string): Destination[] {
   return DESTINATIONS.filter((d) => d.region === region);
 }
 
+/** TASK 62: destinacije izbrane države (filterska os v UI). */
+export function getDestinationsByCountry(country: CountryCode): Destination[] {
+  return DESTINATIONS.filter((d) => d.country === country);
+}
+
+/**
+ * TASK 62: države registra — primarna filterska os pokritosti (SI+HR+ME+AL).
+ * Vrstni red je privzetek prikaza (SI prva — znamka platforme).
+ */
+export const COUNTRIES: { value: CountryCode; label: string }[] = [
+  { value: "SI", label: "Slovenija" },
+  { value: "HR", label: "Hrvaška" },
+  { value: "ME", label: "Črna gora" },
+  { value: "AL", label: "Albanija" },
+];
+
+/**
+ * TASK 62: regija → država (skladiščenje optgroupov v filtrih). Popolna
+ * preslikka VSIH regij v REGIONS — test task62 preverja pokritost +
+ * koherence z Destinacijami.
+ */
+export const COUNTRY_OF_REGION: Record<string, CountryCode> = {
+  // Slovenija
+  gorenjska: "SI",
+  primorska: "SI",
+  osrednja: "SI",
+  kras: "SI",
+  stajerska: "SI",
+  koroska: "SI",
+  prekmurje: "SI",
+  dolenjska: "SI",
+  "bela-krajina": "SI",
+  // Hrvaška
+  "kontinentalna-hrvaska": "HR",
+  istra: "HR",
+  kvartner: "HR",
+  lika: "HR",
+  dalmacija: "HR",
+  // Črna gora
+  "boka-kotorska": "ME",
+  "crnogorsko-primorje": "ME",
+  "osrednja-crna-gora": "ME",
+  "severna-crna-gora": "ME",
+  // Albanija
+  "osrednja-albanija": "AL",
+  "juana-albanija": "AL",
+};
+
 export const REGIONS: { value: string; label: string }[] = [
   { value: "gorenjska", label: "Gorenjska" },
   { value: "primorska", label: "Primorska" },
@@ -552,6 +1002,18 @@ export const REGIONS: { value: string; label: string }[] = [
   { value: "prekmurje", label: "Prekmurje" },
   { value: "dolenjska", label: "Dolenjska" },
   { value: "bela-krajina", label: "Bela krajina" },
+  // TASK 62: regionalne regije (HR/ME/AL) — vrstni red po državah COUNTRIES
+  { value: "kontinentalna-hrvaska", label: "Kontinentalna Hrvaška" },
+  { value: "istra", label: "Istra" },
+  { value: "kvartner", label: "Kvarner" },
+  { value: "lika", label: "Lika" },
+  { value: "dalmacija", label: "Dalmacija" },
+  { value: "boka-kotorska", label: "Boka kotorska" },
+  { value: "crnogorsko-primorje", label: "Črnogorsko primorje" },
+  { value: "osrednja-crna-gora", label: "Osrednja Črna gora" },
+  { value: "severna-crna-gora", label: "Severna Črna gora" },
+  { value: "osrednja-albanija", label: "Osrednja Albanija" },
+  { value: "juana-albanija", label: "Južna Albanija" },
 ];
 
 export const INTERESTS: { value: string; label: string; icon: string }[] = [

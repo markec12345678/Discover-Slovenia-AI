@@ -247,12 +247,20 @@ describe("rss.xml route", () => {
     expect(body).toContain(`https://${RENDER}/rss.xml`);
   });
 
-  test("itemi: 22 things-to-do + 88 vodnikov + 22 vodnikov (10 jadranskih + 4 domači + 8 zimskih) = 132, escapano besedilo", async () => {
+  test("itemi: 38 things-to-do + 152 vodnikov + 22 vodnikov (10 jadranskih + 4 domači + 8 zimskih) = 212, escapano besedilo", async () => {
     const body = await (await rssGET(req(RENDER))).text();
     const items = body.match(/<item>/g) ?? [];
-    expect(items.length).toBe(132);
+    // TASK 62: things-to-do (vsaka destinacija) + guide (vsaka × 4) so
+    // IZPELJANI iz registra (38 = 22 SI + 16 HR/ME/AL) — števec odporen na
+    // prihodnje razširitve; 22 kuriranih vodnikov ostaja fiksno (vsebina).
+    const expected =
+      DESTINATIONS.length * (1 + 4) + 22;
+    expect(items.length).toBe(expected);
     expect(body).toContain(`https://${RENDER}/destinacija/bled/things-to-do`);
     expect(body).toContain(`https://${RENDER}/destinacija/bled/guide/druzinski`);
+    // TASK 62: regionalne destinacije imajo things-to-do + vodnike
+    expect(body).toContain(`https://${RENDER}/destinacija/dubrovnik/things-to-do`);
+    expect(body).toContain(`https://${RENDER}/destinacija/kotor/guide/romanticni-pobeg`);
     // ADRIA-1: jadranski vodniki z RESNIČNIM pubDate (edini itemi z njim)
     expect(body).toContain(`https://${RENDER}/vodici/kotor-crna-gora-iz-slovenije`);
     // SLO-LOOP-1: domači krožni vodniki (kategorija "Vodič po Sloveniji")
@@ -267,8 +275,11 @@ describe("rss.xml route", () => {
     expect(body).toContain(`https://${RENDER}/vodici/smucanje-v-januarju`);
     expect(body).toContain(`https://${RENDER}/vodici/zimske-pocitnice-z-otroki`);
     expect(body).toMatch(/<pubDate>[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4}/);
-    // XML escape: & < > morajo biti entitete; UTF-8 šumniki so veljavni
-    expect(body).not.toMatch(/<description>[^<]*[&<>][^<]*<\/description>/);
+    // XML escape: raw & < > morajo biti entitete; UTF-8 šumniki so veljavni.
+    // TASK 62: &apos;/&amp; itd. so VELJAVNE entitete (npr. »Et'hem Bej«,
+    // »Bunk'Art« v tiranskih vsebinah) — dovoljeni so SAMO surovi znaki.
+    expect(body).not.toMatch(/<description>[^<]*&(?!amp;|lt;|gt;|apos;|quot;|#\d+;)[^<]*<\/description>/);
+    expect(body).not.toMatch(/<description>[^<]*[<>][^<]*<\/description>/);
   });
 });
 

@@ -29,7 +29,8 @@ import { buildLegRouteIndex } from "@/lib/road-routing-server";
 // 0 AI žetonov ( čista logika + OSRM realne ceste, kot pri generiranju).
 // Odprta javna pot → rate limit 10/min na IP ( enako kot ingest).
 //
-// Poštenost: preverimo SAMO postanke iz naših 22 destinacij — če jih ne
+// Poštenost: preverimo SAMO postanke iz naših 38 destinacij (TASK 62:
+// SI+HR+ME+AL) — če jih ne
 // prepoznamo, vrnemo 422 in REČEMO ( ne izmišljujemo "podobnih" krajev).
 //
 // F17 ( javna telemetrija): ob USPEŠNO izračunanem poročilu strežnik
