@@ -21,6 +21,20 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.58.2] — 2026-09-20 (TASK 55: NEODVISNA REVIZIJA TASK 54 — GitHub-first)
+
+### TASK 55 (revizijski task — 0 sprememb produkcijske kode)
+
+- **GitHub baseline (§1):** dejanski GitHub HEAD (API) = `e2f36d7` = lokalni HEAD = TASK 54 commit; TASK 53 = `a8659da`; 0 commitov za TASK 54. **Zastarela SHA `08778e3` v dokumentu TASK 54 popravljena** (na GitHubu ni obstajala — API 422; bil je lokalni snapshot pred uskladitvijo).
+- **Neodvisna revizija (3 vzporedni agenti, read-only):** 16 providerjev VERIFIED, 10 adapterjev VERIFIED, 3 PRODUCTION_ACTIVE VERIFIED, `.env.example` uskladitev VERIFIED (100 % križna preverba), 0 fake product path-ov, 0 poti za ceno 0, 0 poti za nepotrjeno „available", 0 affiliate-kot-inventar, KT veriga (kanonska cena/ID tampering/exactly-once/`/go`) vse dokazano.
+- **Števca popravljena:** env imen 25 → **27** (16 supply + 11 affiliate; vse MISSING); DOCUMENTED-ASSUMPTION 35 → **38** (36 + 2 meta; vse še veljavne, portal-gated).
+- **Origin vrzeli iskrene (brez tihih defaultov):** Skyscanner `deps.originPlaceId` + Travelpayouts `TRAVELPAYOUTS_ORIGIN` — brez njiju adapter iskreno `origin-required`; NI hardcodiranega LJU origin-a kjerkoli v supply logiki.
+- **Regresija:** bun test **1196/1196** (44 503 expectov), lint 0, tsc 0 (src). Žive re-preverbe: Viator/Tiqets/Travelpayouts vrata 401, Airalo sandbox 200, supply search 48 KT produktov s kanonskimi cenami, `/go` 302 + zlonamerni ID 400.
+- **Odločitev: YELLOW → GREEN po popravkih dokumentacije.** 0 P0/0 P1; 7 P2 ugotovitev (knjigovodske/follow-up) zabeleženih v docs/TASK-54-LIVE-PROVIDER-ACTIVATION.md razdelek J, vključno z aktivacijskim protokolom dokazov za vsakega providerja ob prihodu poverilnic.
+- **0 poverilnic v okolju → živa aktivacija gated providerjev NI izvedena (iskreno, brez simulacije).** README status usklajen s TASK 54.
+
+---
+
 ## [1.58.0] — 2026-09-20 (TASK 53: ALL PROVIDERS READY WITHOUT API KEYS)
 
 ### Provider adapterji (1.58.0 — TASK 53 §5–§10)

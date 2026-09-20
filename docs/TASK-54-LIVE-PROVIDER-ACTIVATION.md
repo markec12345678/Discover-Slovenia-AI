@@ -10,10 +10,11 @@
 
 | Element | Vrednost |
 |---|---|
-| `origin/main` (GitHub API) | `08778e3` (po snapshot resetu; prej `a8659da` — isti TASK 53 commit, vključuje TASK 54 §5 `.env.example` popravek) |
-| Lokalni HEAD | `08778e3` (main, čisto delovno drevo) |
+| `origin/main` (GitHub API) | `e2f36d7` (po uskladitvi 54-3: lastnikov commit `42bb4ca` + TASK 54 ponovno uveljavljen; prej `a8659da` — isti TASK 53 commit, vključuje TASK 54 §5 `.env.example` popravek) |
+| Lokalni HEAD | `e2f36d7` (main, čisto delovno drevo) |
 | TASK 52 commit | `81e28f6` (dokumenti + žive verige) |
-| TASK 53 commit | `08778e3` = HEAD (1196 testov, 10 adapterjev) |
+| TASK 53 commit | `a8659da` (1196 testov, 10 adapterjev) |
+| TASK 54 commit | `e2f36d7` = HEAD |
 | `bun test` | **1196/1196 PASS** (44 503 expectov, 41 datotek) |
 | `bun run lint` | **0 napak** |
 | `bunx tsc --noEmit` | **0 napak v src/** (pre-existing zunaj: `skills/*`, `tailwind.config.ts` — okolje, ne projekt) |
@@ -40,7 +41,8 @@ izpuščena iz §18 aktivacijske logike).
 > Env prisotnost preverjena nad DEJANSKIM okoljem instance (`.env` vsebuje izključno
 > `DATABASE_URL`; procesni env: 0 provider spremenljivk). **Vrednosti NIKOLI zapisane.**
 > „API reachable“ = živi dokaz vrat DANES (2026-09-20, curl brez/neveljavno poverilnico —
-> samo vrata, brez podatkov).
+> samo vrata, brez podatkov). Natančno število env imen v registru: **27** (16 supply +
+> 11 affiliate; prvotno poročilo „25“ je štelo le poverilnice — TASK 55 revizija popravila števec).
 
 | Provider | Exact env (iz kode) | Credential | API reachable | Auth OK | Real products | Price | Availability | AI | Booking | Affiliate | Final |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -127,8 +129,8 @@ skladno** po popravku.
 
 ## G. DOCUMENTED-ASSUMPTION TRIAŽA (§26)
 
-35 oznak `DOCUMENTED-ASSUMPTION` (tiqets/booking/skyscanner/airalo/travelpayouts glave in
-oblike odgovorov) — **vse še veljavne**: portalno zaprto, preverba izrecno odložena na živo
+38 oznak `DOCUMENTED-ASSUMPTION` (36 v providerski kodi + 2 meta; tiqets/booking/skyscanner/airalo/travelpayouts glave in
+oblike odgovorov — TASK 55 revizija preštela 38, prvotno poročilo je navajalo 35) — **vse še veljavne**: portalno zaprto, preverba izrecno odložena na živo
 aktivacijo s poverilnico (pravilno — NE označujemo verified brez dokaza). TODO/FIXME v supply
 kodi: **0**. `origin-required`: skyscanner (deps.originPlaceId) + travelpayouts
 (TRAVELPAYOUTS_ORIGIN) — iskrena PRODUCT GAP, ostajata (§11/§13: NE odstranjuj brez legitimnega
@@ -163,3 +165,66 @@ arhitekture, brez odstranjevanja zaščit.**
 aktivacijsko logiko (detect → authenticate → real request → map → validate → price →
 availability → geo → ID → booking URL → affiliate URL → AI → FIXED → refinement) z živimi
 dokazi za vsako stopnjo.
+
+---
+
+## J. TASK 55 — NEODVISNA REVIZIJA TEGA POROČILA (2026-09-20, GitHub-first)
+
+> Revizija izvedena po zahtevi lastnika: „NE verjemi poročilu, preveri kodo + dejanski Git
+> commit“. Trije vzporedni revizijski agenti (provider sistem / ENV+origin / KiwiTaxi+AI veriga),
+> vsak z dokazi datoteka:vrstica; 0 sprememb kode med revizijo.
+
+| Trditev TASK 54 | Kje v kodi | Status |
+|---|---|---|
+| 16 providerjev | registry.ts (16 zapisov slug) | **VERIFIED** |
+| 10 adapterjev | search.ts:51–64 ADAPTER_FACTORIES | **VERIFIED** |
+| 3 LIVE (osm/sto/kiwitaxi) | production-matrix.ts + testi (57/57 živo) | **VERIFIED** |
+| Env imen: 25 | dejansko **27** (16 supply + 11 affiliate) | **CORRECTED** (števec) |
+| Vse MISSING v okolju | .env = samo DATABASE_URL; procesni env = 0 | **VERIFIED** |
+| 1196 testov | bun test: 1196/1196, 44 503 expectov | **VERIFIED** (ponovno pognano) |
+| `.env.example` 11 dodatkov | križna preverka koda↔predloga = 100 % | **VERIFIED** |
+| 0 P0/P1 | revizija: 0 P0, 0 P1, P2 samo knjigovodsko | **VERIFIED** |
+| 35 DOCUMENTED-ASSUMPTION | dejansko **38** (36 + 2 meta) | **CORRECTED** (števec) |
+| Živa vrata (401/403/200) | re-verificirano danes: Viator 401, Tiqets 401, TP 401, Airalo sandbox 200 | **VERIFIED** |
+| KT E2E veriga | supply search 48 KT produktov, kanonska cena €51/per_transfer/fromPrice, availability not_supported + iskrena opomba, /go 302, zlonamerni ID 400 | **VERIFIED** |
+
+**Zastarela SHA referenca popravljena:** prvotni dokument je navajal `08778e3` (lokalni
+snapshot SHA pred uskladitvijo 54-3 — na GitHubu NE obstaja, API 422). Dejanski GitHub HEAD:
+`e2f36d7` (= TASK 54 commit, API 200). Popravljen v razdelku A zgoraj.
+
+**P2 ugotovitve revizije (0 P0/0 P1 — vse knjigovodske/dokumentacijske):**
+1. Števca „25 env“ → 27 in „35 oznak“ → 38 (popravljena v tem dokumentu).
+2. `production-matrix.ts` travelpayouts `accessKind: SEARCH_API` — semantični drift (dostopa
+   še ni); mitigirano z `NOT_CONFIGURED` + accessNote; ne vpliva na integriteto.
+3. `production-matrix.ts` sto `aiIntegrated: true` teče po RAG poti (ne adapter) — definicijska
+   opomba, ne napaka.
+4. airalo/own `FROM_PRICE` klasifikacija brez `fromPrice` flaga v kanonskem modelu (cena je
+   točna skupna, ne „od“-cena) — kozmetika poročanja.
+5. Refine pot ne re-vezuje `notes` supply postankov na kanonske (strukturirana integriteta
+   cene/ID/geo nedotaknjena) — Follow-up.
+6. `/go/transfers` preverja OBLIKO ID-ja (`^\d{1,10}$`), ne članstva v datasetu — globinska
+   obramba Follow-up (gostitelj ostaja v allowlist, najslabše: KiwiTaxi 404).
+7. `/api/itinerary/save` sanitizira obliko, ne ponovno validira supply — Follow-up (rezervacija
+   poteka prek /go strežniško; prikaz lahko pokaže klientovo ceno do re-verifikacije v refine).
+
+**Odločitev TASK 55: YELLOW → GREEN po popravkih dokumentacije.** Vse materialne trditve
+poročila TASK 54 so potrjene z Neodvisno revizijo kode + živimi preverbami. 0 poverilnic v
+okolju → živa aktivacija gated providerjev NI mogoča (iskreno; brez simulacije). Aktivacijska
+vrata + predloga dokazov za vsakega providerja: glej dokumentacijo §13/F zgoraj.
+
+**Aktivacijski protokol (dokazna predloga za vsakega providerja ob prihodu poverilnice):**
+```text
+Provider: <ime>
+credential present: YES/NO → če NO: NOT CONFIGURED (konec)
+authentication: PASS/FAIL (živi klic auth plasti)
+real API response: PASS/FAIL (dejanski JSON iz vira)
+products mapped: PASS/FAIL (kanonski ProviderProduct)
+price: VERIFIED/UNKNOWN (iz vira; NIKOLI fallback)
+availability: VERIFIED/UNKNOWN (unknown ostane unknown)
+geo: PASS/FAIL (koordinate iz vira)
+booking URL: VERIFIED/MISSING
+affiliate URL: VERIFIED/MISSING (monetized:true/false)
+AI integration: VERIFIED (FIXED točno 1×, kanonska cena)
+E2E: PASS/FAIL
+ČE KATERIKOLI KORAK PADE → provider ostane NOT CONFIGURED / PARTIAL.
+```
