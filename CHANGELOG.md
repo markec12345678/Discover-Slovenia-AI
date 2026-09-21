@@ -7,6 +7,53 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.74.1] — 2026-09-21 (TASK 79: DST-VARNI DATUMI DNI ONLINE)
+
+### Popravljeno
+- **Podvojen datum dneva čez preklop na zimski čas** (`src/lib/trip-dates.ts`
+  — FW4.2 jedro, 10+ komponent): `dayISOForDayNumber`/`tripEndDateISO`/
+  `tripWindowMs` so uporabljali ms seštevanje (start + N×24 h). Client
+  komponente (načrtovalnik, deljena pot, geo-validacija zaprtij, množične
+  alternative) tečejo v brskalnikovem časovnem pasu (npr.
+  Europe/Ljubljana) — ms pot čez 25-urni dan (preklop na zimski čas)
+  pristane na 23:00 PREDHODNJEGA koledarskega dne: dan 2 in dan 3 bi
+  kazala ISTI datum (enkrat na leto, ena noč), od tod napačni dnevi v
+  tednu za opozorila o zaprtih atrakcijah in matching dodanih dogodkov po
+  dneh. Popravek: čista KOLEDARSKA aritmetika `new Date(y, m, d+n)` —
+  ISTA semantika kot offline.html (TASK 78 blok, zdaj formalno
+  referenčna implementacija).
+- `isValidStartDate`: primerjava meje 400 dni je zdaj koledarska (UTC
+  projekcija koledarskih polj) — ms primerjava bi bila čez DST preklop
+  na meji za 1 h napačna.
+- `tripWindowMs`: endMs = lokalna polnoč ZADNJEGA koledarskega dne
+  (dogodki na zadnjem dnevu čez preklop zdaj res padejo v okvir).
+
+### Dodano
+- 13 testov/62 pričakovanj (`task79-trip-dates-dst.test.ts`) — prvi
+  DIREKTNI unit testi za `trip-dates.ts`: cel file teče s
+  `process.env.TZ = "Europe/Ljubljana"` (dejanski DST pas!) s sentinel
+  predtestom, ki DOKAZUJE, da pas velja (v UTC bi namreč stara koda šla
+  skozi iste trditve — testi ne bi dokazovali nič); »test the test«:
+  stara ms koda reproducibilno pade na reprodukcijskih trditvah;
+  cross-contract: offline TASK 78 blok se izvede v ISTEM procesu/pasu in
+  MORA kazati iste datume kot online; fail-closed (roll-over/oblika/dan
+  0/NaN/absurdno velik N → null, nikoli izmišljen datum); lastnost:
+  10-dnevna pot čez preklop ima 10 različnih, naraščajočih datumov.
+- E2E: zlata pot z startom 2026-10-24 (čez zimski preklop) — vsi dnevi s
+  pravilnimi datumi (Dan 3 · ponedeljek, 26. oktobra — točno točka, kjer
+  bi ms pot podvojila), glava »24.–27. oktobra 2026«, 0 konzolnih napak,
+  375 px 0 px preliva. Brskalnik sandboxa teče v UTC — DST dokaz je v
+  unit testih z dejanskim pasom; E2E dokazuje ne-regresijo zlate poti.
+
+### Opombe
+- Pregled ostalih ms aritmetik v kodi: `plan-facts.ts`/`weather-utils.ts`
+  sta UTC-nočno zasnovana (`T00:00:00Z` + `toISOString`) → DST-varna po
+  konstrukciji; `events-match`/`packing-smart` uporabljata `Math.round`
+  oz. približne horizonte → varna; `itinerary/route.ts` ms logika teče
+  na strežniku (UTC v produkciji na obeh platformah).
+
+---
+
 ## [1.74.0] — 2026-09-21 (TASK 78: OFFLINE NAČRTI Z REALNIMI DATUMI DNI)
 
 ### Dodano

@@ -13,6 +13,12 @@
 // deterministične — isto obnašanje na serverju (API) in clientu (UI).
 // Datumi se parsajo kot LOKALNA polnoč (ne UTC) — "dan" je koledarski dan.
 //
+// TASK 79 — DST-VARNOST: aritmetika dni je KOLEDARSKA (new Date(y, m, d+n)),
+// ne ms seštevanje (start + N×24 h). Preklop na zimski čas (25-urni dan)
+// bi ms pot pristal na 23:00 PREDHODNJEGA koledarskega dne → podvojen
+// datum dneva v UI (client teče v uporabnikovem pasu, npr.
+// Europe/Ljubljana). ISTA semantika kot offline.html (TASK 78 blok).
+//
 // Slovenske oblike mesecev: rodilnik (genitiv — "14. septembra") in
 // orodnik (instrumental — "med 12. in 14. septembrom").
 
@@ -65,17 +71,20 @@ const WEEKDAYS = [
   "sobota",
 ];
 
-/** Današnji dan ob 00:00 lokalnega časa (ms). */
-function startOfToday(): number {
+/** Današnji dan ob 00:00 lokalnega časa. */
+function startOfToday(): Date {
   const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
-/** ISO datum (YYYY-MM-DD) → ms lokalne polnoči; null za neveljavno. */
-export function parseISODateLocal(value: unknown): number | null {
+/**
+ * ISO datum (YYYY-MM-DD) → Date lokalne polnoči (koledarski dan);
+ * null za neveljavno (roll-over npr. 2026-02-31 se zavrne).
+ */
+function parseISODateCalendar(value: unknown): Date | null {
   if (typeof value !== "string" || !ISO_DATE_RE.test(value)) return null;
   const [y, m, d] = value.split("-").map(Number);
-  // Mesec/dan 1-based; Date tolance za npr. 2026-02-31 (roll-over) zavrnemo
+  // Mesec/dan 1-based; Date tolerance za npr. 2026-02-31 (roll-over) zavrnemo
   const dt = new Date(y, m - 1, d);
   if (
     dt.getFullYear() !== y ||
@@ -84,38 +93,64 @@ export function parseISODateLocal(value: unknown): number | null {
   ) {
     return null;
   }
-  return dt.getTime();
+  return dt;
 }
 
-/** ms lokalne polnoči → ISO datum (YYYY-MM-DD); null za neveljavno. */
-function toISODate(ms: number): string | null {
-  if (!Number.isFinite(ms)) return null;
-  const dt = new Date(ms);
+/** ISO datum (YYYY-MM-DD) → ms lokalne polnoči; null za neveljavno. */
+export function parseISODateLocal(value: unknown): number | null {
+  const dt = parseISODateCalendar(value);
+  return dt === null ? null : dt.getTime();
+}
+
+/** Date lokalne polnoči → ISO datum (YYYY-MM-DD); null za neveljavno. */
+function toISODateFromCalendar(dt: Date): string | null {
+  if (Number.isNaN(dt.getTime())) return null;
   const mm = String(dt.getMonth() + 1).padStart(2, "0");
   const dd = String(dt.getDate()).padStart(2, "0");
   return `${dt.getFullYear()}-${mm}-${dd}`;
 }
 
 /**
- * Veljaven datum odhoda: ISO format, ni v preteklosti (danes OK),
- * največ MAX_START_AHEAD_Dni naprej.
+ * Koledarski dan N potovanja kot Date lokalne polnoči (dan 1 = startDate).
+ * DST-VARNO: čista koledarska aritmetika new Date(y, m, d + n) — ms pot
+ * (start + N×24 h) čez preklop na zimski čas pristane na 23:00 PREDHODNJEGA
+ * dne → podvojen datum (TASK 79). Absurdno velik N → Invalid Date → null.
  */
-export function isValidStartDate(value: unknown): value is string {
-  if (typeof value !== "string" || !ISO_DATE_RE.test(value)) return false;
-  const ms = parseISODateLocal(value);
-  if (ms === null) return false;
-  const today = startOfToday();
-  return ms >= today && ms <= today + MAX_START_AHEAD_DAYS * DAY_MS;
+function tripCalendarDay(startDate: string, dayNumber: number): Date | null {
+  const start = parseISODateCalendar(startDate);
+  if (start === null || !Number.isFinite(dayNumber) || dayNumber < 1) {
+    return null;
+  }
+  const dt = new Date(
+    start.getFullYear(),
+    start.getMonth(),
+    start.getDate() + (dayNumber - 1)
+  );
+  return Number.isNaN(dt.getTime()) ? null : dt;
 }
 
-/** Datum ZADNJEGA dneva potovanja (dan 1 = startDate). */
+/**
+ * Veljaven datum odhoda: ISO format, ni v preteklosti (danes OK),
+ * največ MAX_START_AHEAD_Dni naprej. Primerjava je KOLEDARSKA (razlika
+ * dni prek UTC projekcije koledarskih polj) — ms primerjava bi bila čez
+ * DST preklop na meji 400 dni za 1 h napačna.
+ */
+export function isValidStartDate(value: unknown): value is string {
+  const dt = parseISODateCalendar(value);
+  if (dt === null) return false;
+  const today = startOfToday();
+  const from = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const to = Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate());
+  const diffDays = Math.round((to - from) / DAY_MS);
+  return diffDays >= 0 && diffDays <= MAX_START_AHEAD_DAYS;
+}
+
+/** Datum ZADNJEGA dneva potovanja (dan 1 = startDate; dan `days` = konec). */
 export function tripEndDateISO(
   startDate: string,
   days: number
 ): string | null {
-  const startMs = parseISODateLocal(startDate);
-  if (startMs === null || !Number.isFinite(days) || days < 1) return null;
-  return toISODate(startMs + (days - 1) * DAY_MS);
+  return dayISOForDayNumber(startDate, days);
 }
 
 /** Okvir potovanja v ms (za events match); null, če start ni veljaven ISO. */
@@ -123,9 +158,16 @@ export function tripWindowMs(
   startDate: string | null | undefined,
   days: number
 ): { startMs: number; endMs: number } | null {
-  const startMs = parseISODateLocal(startDate);
-  if (startMs === null || !Number.isFinite(days) || days < 1) return null;
-  return { startMs, endMs: startMs + (days - 1) * DAY_MS };
+  const start = parseISODateCalendar(startDate);
+  if (start === null || !Number.isFinite(days) || days < 1) return null;
+  // endMs = lokalna polnoč ZADNJEGA koledarskega dne (DST-varno)
+  const end = new Date(
+    start.getFullYear(),
+    start.getMonth(),
+    start.getDate() + (days - 1)
+  );
+  if (Number.isNaN(end.getTime())) return null;
+  return { startMs: start.getTime(), endMs: end.getTime() };
 }
 
 /** ISO datum N-tega dneva potovanja (dan 1 = startDate); null če neveljavno. */
@@ -133,11 +175,8 @@ export function dayISOForDayNumber(
   startDate: string,
   dayNumber: number
 ): string | null {
-  const startMs = parseISODateLocal(startDate);
-  if (startMs === null || !Number.isFinite(dayNumber) || dayNumber < 1) {
-    return null;
-  }
-  return toISODate(startMs + (dayNumber - 1) * DAY_MS);
+  const dt = tripCalendarDay(startDate, dayNumber);
+  return dt === null ? null : toISODateFromCalendar(dt);
 }
 
 /** Ali se dogodek (start–end) prekriva z okvirom potovanja. */

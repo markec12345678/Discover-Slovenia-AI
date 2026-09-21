@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.74.0 · 1582 testov (offline načrti z datumi dni) · lint 0 · tsc 0 (`src/`; sledi git `main`) |
+| **Stanje** | v1.74.1 · 1595 testov (DST-varni datumi dni online + offline) · lint 0 · tsc 0 (`src/`; sledi git `main`) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -86,7 +86,9 @@
   načrtu, ki upošteva dejanske zmogljivosti virov.
 - **MY TRIP** — ena časovnica po dneh; vsaka postavka nosi realni status
   (Zunanja rezervacija / Samo informacija); **živa dnevna napoved po dnevih
-  potovanja** (Open-Meteo — čip pri vsakem dnevu z realnim datumom; pretekli
+  potovanja** (Open-Meteo — čip pri vsakem dnevu z realnim, DST-varnim
+  datumom (koledarska aritmetika — preklop na zimski čas ne podvoji
+  datuma dneva); pretekli
   dnevi/dnevi čez ~16-dnevni horizont vira iskreno brez čipa, vir izrecno
   naveden); **pas zdravja virov** (katere vire ni bilo mogoče doseči ob
   generiranju — imena iz registra, „nič izmišljenega", ostalo potovanje
@@ -115,7 +117,8 @@
   ICS/QR deljenje; bližnjice ikone aplikacije (4) vodijo na dejanske strani
   (načrtuj/zemljevid/tržnica/destinacije — testno varovane); dnevi na
   offline strani nosijo REALNE datume (»Dan N · torek, 14. septembra«,
-  DST-varna koledarska aritmetika — source-contract testi).
+  DST-varna koledarska aritmetika — ISTA kot online načrtovalnik od
+  1.74.1; source-contract testi, preklop dokazan v pasu Europe/Ljubljana).
 
 Vsaka zmožnost zgoraj je preverjena v kodi; zmožnost, ki obstaja samo v načrtu,
 ni navedena.
@@ -462,7 +465,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.74.0**.
+Trenutna verzija: **1.74.1**.
 
 ---
 
