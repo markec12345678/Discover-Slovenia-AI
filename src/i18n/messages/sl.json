@@ -1936,6 +1936,7 @@
     "title": "Koliko napak ujame naš preverjevalnik?",
     "subtitle": "Vsak drug vam obljublja natančnost. Mi jo štejemo: vsako dokončano preverjanje načrta se zabeleži na strežniku, vsako opozorilo po vrsti — in številke so javne za vse.",
     "liveTitle": "Naša števila (šteta na strežniku, brez osebnih podatkov)",
+    "detailsSummary": "Podrobnosti štetja in javne študije",
     "stats": {
       "plansLabel": "Preverjeni načrti",
       "plansSince": "štejemo od {date}",

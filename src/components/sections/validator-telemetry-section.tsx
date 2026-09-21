@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import {
   Activity,
   CalendarDays,
+  ChevronDown,
   ClipboardCheck,
   ExternalLink,
   History,
@@ -35,6 +36,15 @@ import type { ValidatorPublicStats } from "@/lib/validator-stats";
 // Vsebina:
 //   1. ŽIVE številke iz GET /api/plan-check/stats ( strežniško štetje,
 //      60 s predpomnilnik, brez PII) — 6 kartic + razčlenitev po pravilih
+//      TASK 70 (P5, raziskava TASK 68): vizualna kompresija v bralnem toku.
+//      Sekcija je med potrošniškim tokom ( preveri načrt → destinacije)
+//      merila ~1541 px na mobilnem — skoraj dva zaslona. Zdaj:
+//        - žive številke = KOMPAKTNI trak ( 6 celic, vse podrobnosti
+//          ohranjene — vsaka sub-vrstica ostane v svoji celici);
+//        - razčlenitev po pravilih + javne študije + metoda → native
+//          <details> ( privzeto zloženo; vzorec stop-insights.tsx).
+//      Brez prestavljanja, brez izgube vsebine — razlikovalna vsebina
+//      ostane, globina je EN klik stran ( progresivno razkrivanje).
 //   2. JAVNE ŠTUDIJE ( statične, z viri) — MEM 43,2 %, BBC 37/33 %,
 //      Tow 37–94 % — ISTI viri kot v poročilu F13 ( en vir resnice)
 //   3. KAKO ŠTEJEMO ( pošteno): dokončana preverjanja, od 1.21.0, brez PII,
@@ -217,58 +227,56 @@ export function ValidatorTelemetrySection() {
           </p>
         </div>
 
-        {/* Žive številke: nalaganje → skelet kartic */}
+        {/* Žive številke: nalaganje → skelet KOMPAKTNEGA traku ( TASK 70) */}
         {stats === null && !unavailable && (
           <>
             <p role="status" className="sr-only">
               {t("states.loading")}
             </p>
-            <div className="mx-auto mt-8 grid max-w-6xl grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6">
+            <div
+              className="mx-auto mt-8 grid max-w-6xl grid-cols-3 gap-x-3 gap-y-4 sm:mt-10 sm:grid-cols-6 sm:gap-x-4"
+              aria-hidden="true"
+            >
               {Array.from({ length: 6 }).map((_, i) => (
-                <Card key={i} className="border-border/70" aria-hidden="true">
-                  <CardContent className="p-4 sm:p-5">
-                    <div className="h-3.5 w-20 animate-pulse rounded bg-muted" />
-                    <div className="mt-3 h-8 w-14 animate-pulse rounded bg-muted" />
-                    <div className="mt-2 h-2.5 w-24 animate-pulse rounded bg-muted/70" />
-                  </CardContent>
-                </Card>
+                <div key={i}>
+                  <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+                  <div className="mt-2 h-7 w-14 animate-pulse rounded bg-muted" />
+                  <div className="mt-1.5 h-2.5 w-24 animate-pulse rounded bg-muted/70" />
+                </div>
               ))}
             </div>
           </>
         )}
 
-        {/* Žive številke: podatki */}
+        {/* Žive številke: KOMPAKTNI trak ( TASK 70 P5) — 6 celic brez kartic;
+            VSE sub-vrstice ostanejo ( razdalja med vrsticami se skrči,
+            ne pa informacija). Skupna višina ~2× manj kot mreža kartic. */}
         {stats !== null && (
           <div className="mx-auto mt-8 max-w-6xl sm:mt-10">
             <h3 className="text-center text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               {t("liveTitle")}
             </h3>
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6">
+            <dl className="mt-4 grid grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-6 sm:gap-x-4">
               {cards.map((card) => (
-                <Card
-                  key={card.label}
-                  className="border-border/70 bg-card shadow-sm"
-                >
-                  <CardContent className="p-4 sm:p-5">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <card.icon
-                        className="size-4 shrink-0 text-primary"
-                        aria-hidden="true"
-                      />
-                      <span className="text-xs font-medium leading-tight">
-                        {card.label}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-3xl font-bold tracking-tight tabular-nums">
-                      {card.value}
-                    </p>
-                    <p className="mt-1 text-xs leading-snug text-muted-foreground">
-                      {card.sub}
-                    </p>
-                  </CardContent>
-                </Card>
+                <div key={card.label} className="flex flex-col">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <card.icon
+                      className="size-3.5 shrink-0 text-primary"
+                      aria-hidden="true"
+                    />
+                    <dt className="text-[11px] font-medium leading-tight">
+                      {card.label}
+                    </dt>
+                  </div>
+                  <dd className="mt-1 text-2xl font-bold tabular-nums tracking-tight">
+                    {card.value}
+                  </dd>
+                  <dd className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                    {card.sub}
+                  </dd>
+                </div>
               ))}
-            </div>
+            </dl>
           </div>
         )}
 
@@ -289,47 +297,65 @@ export function ValidatorTelemetrySection() {
           </p>
         )}
 
-        {/* Razčlenitev po pravilih ( horizontalni stolpci) */}
-        {stats !== null && stats.rules.length > 0 && (
-          <div className="mx-auto mt-10 max-w-3xl">
-            <h3 className="text-lg font-semibold">{t("rules.title")}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t("rules.subtitle")}
-            </p>
-            <ul className="mt-4 space-y-3">
-              {stats.rules.slice(0, 6).map((r) => {
-                const pct =
-                  maxRuleCount > 0
-                    ? Math.max(4, Math.round((r.count / maxRuleCount) * 100))
-                    : 0;
-                return (
-                  <li key={r.rule}>
-                    <div className="flex items-baseline justify-between gap-3 text-sm">
-                      <span className="font-medium">
-                        {isRuleKey(r.rule) ? t(`rules.${r.rule}`) : r.rule}
-                      </span>
-                      <span className="tabular-nums text-muted-foreground">
-                        {nf.format(r.count)}
-                      </span>
-                    </div>
-                    <div
-                      className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted"
-                      aria-hidden="true"
-                    >
-                      <div
-                        className="h-full rounded-full bg-primary/70"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
+        {/* TASK 70 (P5): podrobnosti → native <details>, privzeto zloženo.
+            Vzorec stop-insights.tsx: skrit marker, chevron se obrne prek
+            group-open, tipkovnica/bralnik delujeta iz serverne semantike
+            ( brez JS stanja → ni hidracijskega tveganja). */}
+        <details className="group mx-auto mt-8 max-w-5xl">
+          <summary className="mx-auto flex w-fit cursor-pointer select-none list-none items-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+            {t("detailsSummary")}
+            <ChevronDown
+              className="size-4 shrink-0 transition-transform group-open:rotate-180"
+              aria-hidden="true"
+            />
+          </summary>
 
-        {/* Javne študije + kako štejemo */}
-        <div className="mx-auto mt-10 grid max-w-5xl items-start gap-4 lg:grid-cols-2 lg:gap-6">
+          <div className="mt-6">
+            {/* Razčlenitev po pravilih ( horizontalni stolpci) */}
+            {stats !== null && stats.rules.length > 0 && (
+              <div className="mx-auto max-w-3xl">
+                <h3 className="text-lg font-semibold">{t("rules.title")}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t("rules.subtitle")}
+                </p>
+                <ul className="mt-4 space-y-3">
+                  {stats.rules.slice(0, 6).map((r) => {
+                    const pct =
+                      maxRuleCount > 0
+                        ? Math.max(4, Math.round((r.count / maxRuleCount) * 100))
+                        : 0;
+                    return (
+                      <li key={r.rule}>
+                        <div className="flex items-baseline justify-between gap-3 text-sm">
+                          <span className="font-medium">
+                            {isRuleKey(r.rule) ? t(`rules.${r.rule}`) : r.rule}
+                          </span>
+                          <span className="tabular-nums text-muted-foreground">
+                            {nf.format(r.count)}
+                          </span>
+                        </div>
+                        <div
+                          className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted"
+                          aria-hidden="true"
+                        >
+                          <div
+                            className="h-full rounded-full bg-primary/70"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
+            {/* Javne študije + kako štejemo */}
+            <div
+              className={`grid items-start gap-4 lg:grid-cols-2 lg:gap-6 ${
+                stats !== null && stats.rules.length > 0 ? "mt-8" : ""
+              }`}
+            >
           <Card className="border-border/80 shadow-sm">
             <CardContent className="p-5 sm:p-6">
               <h3 className="text-lg font-semibold">{t("studies.title")}</h3>
@@ -396,7 +422,9 @@ export function ValidatorTelemetrySection() {
               </div>
             </CardContent>
           </Card>
-        </div>
+            </div>
+          </div>
+        </details>
       </div>
     </section>
   );

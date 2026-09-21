@@ -7,6 +7,47 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.69.0] — 2026-09-21 (TASK 70: TELEMETRIJA — VIZUALNA KOMPRESIJA V BRALNEM TOKU)
+
+### Spremenjeno
+- **Telemetrija preverjevalnika: kompresija z ohranitvijo vsebine
+  ( TASK 68 P5).** Sekcija stoji med potrošniškim bralnim tokom
+  ( „Preveri svoj načrt" → destinacije) in je na mobilnem merila
+  **~1541 px — skoraj dva zaslona**. Po vzorcu najboljših ( progresivno
+  razkrivanje; enakovredno TASK 69 „Več filtrov") zdaj:
+  - **žive številke = kompaktni trak** — 6 celic ( `dl`/`dt`/`dd`
+    semantika, grid-cols-3 mobilno / 6 namizno, ikona + vrednost +
+    label + sub-vrstica) namesto 6 kartic v 3 vrsticah; **VSE
+    sub-vrstice ostanejo** — skrči se razmik med vrsticami, ne informacija;
+  - **razčlenitev po pravilih + javne študije + metoda → native
+    `<details>`** ( privzeto zloženo; vzorec stop-insights.tsx: skrit
+    marker, chevron `group-open:rotate-180`, tipkovnica/bralnik iz
+    serverne semantike — brez JS stanja, brez hidracijskega tveganja).
+- Rezultat na mobilnem: **511 px zaprto** ( −67 %; odprto ~1595 px =
+  popolna vsebina ena klik stran). Namizje EN: 451 px.
+
+### Ohranjeno (namenoma — iskrenost na kanon)
+- Sekcija ostaja na istem mestu ( nadaljevanje zgodbe „preveri → glej
+  dokaz"); fail-open: opozorilo o nedosegljivosti in prazno stanje
+  („še 0 preverjanj") sta VEDNO vidni ZUNAJ zložljivke; javne študije
+  so dosegljive tudi brez živih statistik.
+- Ni izgube podatkov: vseh 6 števk + sub-vrstic, razčlenitev po pravilih
+  ( največ 6), 3 študije z viri, 4 točke metode, povezavi na vir podatkov
+  in #preveri-nacrt.
+
+### Dodano
+- i18n ( SL/EN, validatorTelemetry): `detailsSummary`
+  („Podrobnosti štetja in javne študije" / „Counting details and public
+  studies") — pariteta 11/11 vrhnjih ključev obeh jezikov.
+
+### Testi
+- Ni nove čiste logike ( čisto vizualna kompresija) — suite ostaja
+  **1493/1493**; verifikacija E2E: zloženo privzeto, klik/Enter razpre,
+  chevron 180°, 0 napak v konzoli po svežem nalaganju, SL+EN, 375 px,
+  brez prekrivanja z lepljivo mobilno vrstico.
+
+---
+
 ## [1.68.0] — 2026-09-21 (TASK 69: DESTINACIJSKA MREŽA — ENOSTAVNA IZBIRA)
 
 ### Spremenjeno

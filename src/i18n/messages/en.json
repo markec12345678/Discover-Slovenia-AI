@@ -1936,6 +1936,7 @@
     "title": "How many mistakes does our validator catch?",
     "subtitle": "Everyone else promises accuracy. We count it: every completed plan check is recorded server-side, every issue by type — and the numbers are public for all.",
     "liveTitle": "Our numbers (counted server-side, no personal data)",
+    "detailsSummary": "Counting details and public studies",
     "stats": {
       "plansLabel": "Plans checked",
       "plansSince": "counting since {date}",
