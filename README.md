@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.66.0 · 1442/1442 testov · lint 0 · tsc 0 (`src/`; sledi git `main`) |
+| **Stanje** | v1.67.0 · 1479/1479 testov · lint 0 · tsc 0 (`src/`; sledi git `main`) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -88,9 +88,13 @@
 - **Na poti (Go Mode)** — Now&Next sopotnik MED potovanjem: živa ura, naslednja
   postanka načrta, razdalja in smer do nje (GPS, premica — izrecno ne vozna),
   **živo vreme pri naslednji postanki** (Open-Meteo: trenutno stanje + današnja
-  napoved, vir in čas meritve izrecno navedena), opravljanje z enim klikom,
-  prihodnji dnevi; načrt je shranjen na napravi in deluje tudi brez signala
-  (vreme je edina plast, ki potrebuje signal — ob izpadu iskrena opomba).
+  napoved, vir in čas meritve izrecno navedena), **navigacijski handoff**
+  (gumb „Navigiraj": na mobilnem geo: URI → sistemski izbirnik navigacijskih
+  aplikacij — Google Maps, Waze, Organic …; na namizju Google Maps URL; cilj
+  so realne koordinate postanka, ne iskanje po imenu), opravljanje z enim
+  klikom, prihodnji dnevi; načrt je shranjen na napravi in deluje tudi brez
+  signala (vreme je edina plast, ki potrebuje signal — ob izpadu iskrena
+  opomba).
 - **Transferji** — odkrivanje iz objavljenega KiwiTaxi feeda z realnimi cenami;
   rezervacija prek zunanje predaje `/go`.
 - **Najem avtomobilov** — odkrivanje prek affiliate sloja z zunanjim handoffom
@@ -311,7 +315,7 @@ dodatnih prenosov. Osvežitev feedov: `bun run fsq:ingest` / `bun run kiwitaxi:i
 Preverjanje:
 
 ```bash
-bun test                 # 1314 testov
+bun test                 # 1479 testov
 bun run lint             # eslint
 bunx tsc --noEmit        # tipi
 ```
@@ -447,7 +451,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.64.0**.
+Trenutna verzija: **1.67.0**.
 
 ---
 

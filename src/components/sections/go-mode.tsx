@@ -67,6 +67,11 @@ import {
   GO_WEATHER_LABELS,
   type GoWeather,
 } from "@/lib/journey/go-weather";
+import {
+  GO_NAV_LABELS,
+  goNavLinks,
+  isCoarsePointer,
+} from "@/lib/journey/go-nav";
 
 // ---------------------------------------------------------------------------
 // Oznake (L vzorec — enak kanon kot journey-planner/journey-trip)
@@ -197,6 +202,82 @@ function EntryLinks({
         </a>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TASK 67 — NAVIGACIJSKI HANDOFF (zunanja aplikacija)
+// ---------------------------------------------------------------------------
+
+/**
+ * Gumb „Navigiraj": ODPRE zunanjo navigacijo do postanka.
+ *  - href = Google Maps URL (vedno veljaven https link — SSR/hidracijsko
+ *    varen, deluje povsod);
+ *  - na mobilnem (pointer: coarse) klik prestrežemo in odpremo geo: URI →
+    SISTEMSKI izbirnik navigacijskih aplikacij (Google Maps, Waze, Organic,
+    Apple Maps … — uporabnik izbere svojo);
+ *  - postanek BREZ geo → gumba NI (iskrena odsotnost — kot razdalja);
+ *  - platforma NI lastna navigacija (AGENTS.md §13) — label to izrecno pove.
+ */
+function NavButton({
+  card,
+  lang,
+  variant = "hero",
+}: {
+  card: GoEntryCard;
+  lang: "sl" | "en";
+  variant?: "hero" | "icon";
+}) {
+  const links = goNavLinks(card.entry);
+  if (links == null) return null; // brez geo → handoff preprosto NI
+
+  const onNav = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    // Mobilni: geo: URI odpre izbirnik aplikacij (precej nad web URL — brez
+    // privzganja Google Maps). Prestrežemo SAMO ob kliku (0 hidracijskih
+    // posledic). Desktop/pad: privzeti <a> odpre Google Maps.
+    if (isCoarsePointer()) {
+      e.preventDefault();
+      window.location.href = links.geo;
+    }
+  };
+
+  const externalHint = GO_NAV_LABELS.external[lang];
+  const aria = GO_NAV_LABELS.navigateAria[lang](card.entry.title);
+
+  if (variant === "icon") {
+    return (
+      <Button asChild variant="outline" className="h-11 w-11 shrink-0">
+        <a
+          href={links.web}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={onNav}
+          title={externalHint}
+          aria-label={aria}
+        >
+          <NavigationIcon className="h-4 w-4" />
+        </a>
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      asChild
+      variant="outline"
+      className="h-12 flex-1 border-emerald-300 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-900 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950"
+    >
+      <a
+        href={links.web}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onNav}
+        title={externalHint}
+        aria-label={aria}
+      >
+        <NavigationIcon className="mr-2 h-4 w-4" /> {GO_NAV_LABELS.navigate[lang]}
+      </a>
+    </Button>
   );
 }
 
@@ -561,13 +642,18 @@ export function GoMode() {
 
             <EntryLinks card={view.next} lang={lang} />
 
-            <Button
-              onClick={() => toggleDone(view.next!.entry.key)}
-              size="lg"
-              className="h-12 w-full text-base"
-            >
-              ✓ {t(L.complete)}: {view.next.entry.title}
-            </Button>
+            {/* TASK 67: navigacijski handoff + opravljanje — navigacija je
+                prva akcija ob postanku, opravi druga (mobilno: skupaj full-width) */}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <NavButton card={view.next} lang={lang} />
+              <Button
+                onClick={() => toggleDone(view.next!.entry.key)}
+                size="lg"
+                className="h-12 flex-1 text-base"
+              >
+                <span className="truncate">✓ {t(L.complete)}: {view.next.entry.title}</span>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -623,14 +709,17 @@ export function GoMode() {
                       </p>
                     )}
                   </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => toggleDone(card.entry.key)}
-                    className="h-11 shrink-0"
-                    aria-label={`${t(L.complete)}: ${card.entry.title}`}
-                  >
-                    ✓
-                  </Button>
+                  <div className="flex shrink-0 gap-2">
+                    <NavButton card={card} lang={lang} variant="icon" />
+                    <Button
+                      variant="outline"
+                      onClick={() => toggleDone(card.entry.key)}
+                      className="h-11 shrink-0"
+                      aria-label={`${t(L.complete)}: ${card.entry.title}`}
+                    >
+                      ✓
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}

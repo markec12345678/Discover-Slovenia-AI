@@ -7,6 +7,59 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.67.0] — 2026-09-21 (TASK 67: GO MODE — NAVIGACIJSKI HANDOFF)
+
+### Dodano
+- **Navigacijski handoff v Go Mode** — AGENTS.md §13 za Go Mode eksplicitno
+  zahteva „navigation handoff"; do zdaj je uporabnik videl razdaljo in smer
+  do naslednjega postanka (premico), a ni imel NOBENEGA gumba, da dejansko
+  pride tja. Zdaj: gumb „Navigiraj" v hero kartici NASLEDNJE + ikonski gumb
+  pri ostalih postankih dneva.
+  - **Mobitel (pointer: coarse):** `geo:` URI (RFC 5870, Android q konvencija
+    z oznako) → SISTEMSKI izbirnik navigacijskih aplikacij (Google Maps, Waze,
+    Organic Maps, Apple Maps …) — uporabnik izbere SVOJO aplikacijo;
+    platforma NI lastna navigacija (AGENTS.md: no proprietary navigation
+    engine; label/title to izrecno pove).
+  - **Desktop/pad:** Google Maps Directions URL API
+    (`dir/?api=1&destination=lat,lng` — uradni format; izhodišče privzeto
+    uporabnikova lokacija). `href` je vedno veljaven https link (SSR in
+    hidracijsko varen — izbira geo/web se zgodi ŠTEK ob kliku, ne med
+    renderom).
+  - **Cilj = REALNE koordinate postanka iz vira** (ne iskanje po imenu —
+    edini prejšnji navigacijski vzorec v repo `trip-timeline.tsx` doda
+    „Slovenia" imenu, kar bi za Kotor/Tirano našlo napačen kraj).
+- **Čista plast** (`src/lib/journey/go-nav.ts`): `buildGeoNavUri`
+  (fail-closed koordinate: NaN/Infinity/meje → null; oznaka sanitizirana +
+  URL-encodana), `buildWebNavUrl` (SAMO validirane številke v URL — 0
+  uporabniškega besedila, URL injection nemogoč), `goNavLinks` (nadzor —
+  en vir resnice), `pickGoNavHref` (čista izbira), `isCoarsePointer`
+  (okolje, kliče se samo ob kliku), oznake SL/EN.
+
+### Iskrenost (isti kanon kot TASK 64/65/66)
+- Postanek BREZ geo → gumba NI (iskrena odsotnost — popolnoma isti kanon kot
+  razdalja/DistanceChip in vreme/goWeatherTarget).
+- Handoff je IZRECNO zunanji: title/aria „Odpre zunanjo navigacijsko
+  aplikacijo (izberi si svojo)" — platforma ne trdi, da vodi po poti.
+- Vozna pot/čas od izbrane aplikacije je NJENA odgovornost — razdalja v Go
+  Mode ostaja pošteno označena „v zraku" (premica).
+- geo: URI po RFC 5870 (odprt standard) — ni zaveznic do Google; web URL je
+  samo ena od možnosti namiznega handoffa.
+
+### Testi
+- 37 novih testov (`task67-go-nav.test.ts`): geo URI (format fiksno 6 mest,
+  negativne koordinate, 0,0 veljavna, meje ±90/±180, 4 države — Bled/
+  Dubrovnik/Kotor/Tirana, INJECTION — `&`/`<`/`>`/`"`/`\\`/`#` sanitizirani
+  in encodani, koordinate ostanejo cele), web URL (format, negativne
+  koordinate, regex — samo številke, fail-closed), `goNavLinks` (brez geo →
+  null; polovična geo → null; naslov z napadom → web URL NEspremenjen),
+  `pickGoNavHref` (coarse/fine/null), `isCoarsePointer` (SSR brez window,
+  matchMedia true/false/ni-funkcija/vrže), oznake SL/EN, CELA VERIGA
+  `buildGoView` → `GoEntryCard` → handoff (naslednji/remaining/opravljeni
+  postanki, 4 države v enem dnevu).
+- **1479/1479** (prej 1442), lint 0, tsc 0 (`src`).
+
+---
+
 ## [1.66.0] — 2026-09-21 (TASK 66: MY TRIP — VREME PO DNEVIH POTOVANJA)
 
 ### Dodano
