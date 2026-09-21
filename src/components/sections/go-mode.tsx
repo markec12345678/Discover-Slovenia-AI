@@ -18,6 +18,7 @@ import { useLocale } from "next-intl";
 import {
   ChevronDown,
   ChevronUp,
+  CloudSun,
   Compass,
   ExternalLink,
   LocateFixed,
@@ -59,6 +60,13 @@ import {
   saveGoProgress,
   type GoTripRecord,
 } from "@/lib/journey/go-persist";
+import {
+  goWeatherTarget,
+  observedTimeLabel,
+  parseGoWeatherResponse,
+  GO_WEATHER_LABELS,
+  type GoWeather,
+} from "@/lib/journey/go-weather";
 
 // ---------------------------------------------------------------------------
 // Oznake (L vzorec — enak kanon kot journey-planner/journey-trip)
@@ -234,6 +242,76 @@ export function GoMode() {
     [trip, now, geo.position, done]
   );
 
+  // ----------------------------------------------------------------------
+  // TASK 65 — VREME PRI NASLEDNJI POSTANKI (živi Open-Meteo prek
+  // /api/weather, 10-min cache na strežniku). Cilj je GEO naslednjega
+  // postanka — postanek brez geo → vreme preprosto NI (iskrena odsotnost,
+  // isti kanon kot DistanceChip). Pogled se gradi vsakih 30 s (živa ura) —
+  // zato so effect-depi PRIMITIVI (lat/lng), da se fetch sproži SAMO ob
+  // spremembi postanka (ne ob vsakem tiku ure).
+  // ----------------------------------------------------------------------
+  const weatherTarget = useMemo(
+    () => (view ? goWeatherTarget(view) : null),
+    [view]
+  );
+  const wLat = weatherTarget?.lat ?? null;
+  const wLng = weatherTarget?.lng ?? null;
+  const [weather, setWeather] = useState<GoWeather | null>(null);
+  const [weatherFailed, setWeatherFailed] = useState(false);
+  /** Za kateri cilj je trenutni odgovor veljalen (drugo = zastarel → skeleton). */
+  const [weatherFor, setWeatherFor] = useState<{
+    lat: number | null;
+    lng: number | null;
+  }>({ lat: null, lng: null });
+  const [weatherTick, setWeatherTick] = useState(0);
+
+  // Osvežitev vsakih 10 min — usklajeno s 600 s strežniškim cachejem
+  // (setState v interval-callbacku — zunanji dogodek).
+  useEffect(() => {
+    const refresh = setInterval(() => setWeatherTick((t) => t + 1), 600_000);
+    return () => clearInterval(refresh);
+  }, []);
+
+  useEffect(() => {
+    if (wLat == null || wLng == null) return; // brez geo → NI vremena
+    let active = true;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/weather?lat=${wLat}&lng=${wLng}&lang=${lang}&daily=1`,
+          { signal: controller.signal }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const parsed = parseGoWeatherResponse(await res.json());
+        if (!active) return;
+        if (parsed) {
+          setWeather(parsed);
+          setWeatherFailed(false);
+        } else {
+          setWeather(null);
+          setWeatherFailed(true);
+        }
+        setWeatherFor({ lat: wLat, lng: wLng });
+      } catch {
+        // Prekinitev (nov cilj) NE šteje kot napaka — active je takrat false.
+        if (!active) return;
+        setWeather(null);
+        setWeatherFailed(true);
+        setWeatherFor({ lat: wLat, lng: wLng });
+      }
+    })();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [wLat, wLng, lang, weatherTick]);
+
+  /** skeleton, dokler odgovor ne pokriva aktualnega cilja (zastarel = loading). */
+  const weatherLoading =
+    wLat != null &&
+    (weatherFor.lat !== wLat || weatherFor.lng !== wLng);
+
   const toggleDone = useCallback((key: string) => {
     setDone((prev) => {
       const next = { ...prev };
@@ -408,6 +486,62 @@ export function GoMode() {
                 )}
               </div>
             </div>
+
+            {/* === TASK 65: VREME PRI NASLEDNJI POSTANKI ===
+                Živi Open-Meteo (prek /api/weather, brez ključa). ISKRENOST:
+                postanek brez geo → trak SE NE PRIKAŽE (kot razdalja); napaka
+                vira/brez signala → iskrena opomba (načrt dela naprej); vir in
+                čas meritve sta izrecno navedena. */}
+            {wLat != null && wLng != null && (
+              <div
+                className="rounded-lg border bg-muted/30 px-3 py-2"
+                aria-label={t(GO_WEATHER_LABELS.title)}
+              >
+                <p className="mb-1 flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  <CloudSun className="h-3 w-3" aria-hidden="true" />
+                  {t(GO_WEATHER_LABELS.title)}
+                </p>
+                {weatherLoading ? (
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="size-7 rounded-full" />
+                    <Skeleton className="h-4 w-44" />
+                  </div>
+                ) : weatherFailed || !weather ? (
+                  <p className="text-xs text-muted-foreground">
+                    {t(GO_WEATHER_LABELS.unavailable)}
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                    <span
+                      className="text-xl leading-none"
+                      role="img"
+                      aria-label={weather.condition}
+                    >
+                      {weather.icon}
+                    </span>
+                    <span className="font-semibold tabular-nums">
+                      {weather.temp} °C
+                    </span>
+                    <span className="capitalize text-muted-foreground">
+                      {weather.condition}
+                    </span>
+                    {weather.today && (
+                      <span className="text-muted-foreground">
+                        {GO_WEATHER_LABELS.today[lang](weather.today)}
+                      </span>
+                    )}
+                    <span className="ml-auto text-[11px] text-muted-foreground">
+                      {weather.observedAt &&
+                        observedTimeLabel(weather.observedAt) &&
+                        `${GO_WEATHER_LABELS.observed[lang](
+                          observedTimeLabel(weather.observedAt) as string
+                        )} · `}
+                      {t(GO_WEATHER_LABELS.source)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-1.5">
               <DistanceChip card={view.next} lang={lang} />

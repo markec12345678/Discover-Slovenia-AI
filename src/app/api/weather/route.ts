@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
-import { weatherCodeToIcon, weatherCodeToText } from "@/lib/weather-utils";
+import {
+  openMeteoCurrentUrl,
+  parseOpenMeteoCurrent,
+  parseOpenMeteoToday,
+  type CurrentWeatherPayload,
+  type TodayOutlookPayload,
+} from "@/lib/weather-utils";
 
-// GET /api/weather?lat=46.37&lng=14.09
-// Uporablja Open-Meteo (brez API ključa, brezplačno)
-// Prevajanje WMO kod → slovensko besedilo/ikone je v skupnem @/lib/weather-utils
+// GET /api/weather?lat=46.37&lng=14.09[&lang=sl|en][&daily=1]
+// Uporablja Open-Meteo (brez API ključa, brezplačno).
+// Prevajanje WMO kod → besedilo/ikone je v skupnem @/lib/weather-utils
+// (ČISTI parse sloji TASK 65 — fail-closed, testirljivi brez omrežja).
+//
+// TASK 65 (Go Mode „Na poti"): `lang` izbere jezik besedila pogoje
+// (privzeto sl — obstoječi klici brez parametra se obnašajo ENAKO kot prej),
+// `daily=1` doda današnjo dnevno napoved (tempMax + verjetnost padavin)
+// iz ISTEGA klica Open-Meteo (0 dodatnih klicev na vir).
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const lat = searchParams.get("lat");
@@ -26,25 +38,40 @@ export async function GET(request: Request) {
     );
   }
 
+  // TASK 65: jezik besedila (fail-closed na privzeti sl — samo "en" preklopi)
+  const lang = searchParams.get("lang") === "en" ? "en" : "sl";
+  // TASK 65: današnja dnevna napoved (samo dobesedno "1" jo vklopi)
+  const withDaily = searchParams.get("daily") === "1";
+
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=Europe/Ljubljana`;
+    const url = openMeteoCurrentUrl(lat, lng, withDaily);
 
     const res = await fetch(url, { next: { revalidate: 600 } }); // cache 10 min
     if (!res.ok) {
       throw new Error(`Open-Meteo: ${res.status}`);
     }
 
-    const data = await res.json();
-    const current = data.current;
-    const code = current.weather_code as number;
+    const data: unknown = await res.json();
 
-    return NextResponse.json({
-      condition: weatherCodeToText(code),
-      temp: Math.round(current.temperature_2m),
-      humidity: Math.round(current.relative_humidity_2m),
-      windSpeed: Math.round(current.wind_speed_10m),
-      icon: weatherCodeToIcon(code),
-    });
+    // Fail-closed parse: neveljaven odgovor vira → 502 (nikoli izmišljenih
+    // vrednosti). Prej se je .current dostopal neposredno (TypeError → 502)
+    // — vedenje ob napaki ostaja enako, zdaj pa je logika testirana.
+    const current = parseOpenMeteoCurrent(data, lang);
+    if (!current) {
+      throw new Error("Open-Meteo: neveljaven odgovor (current)");
+    }
+
+    // Daily: SAMO če je zahtevan IN veljaven — neveljaven daily blok NE sesuje
+    // trenutnega vremena (iskrena odsotnost polja today, ne napaka).
+    const today: TodayOutlookPayload | null = withDaily
+      ? parseOpenMeteoToday(data, lang)
+      : null;
+
+    const payload: CurrentWeatherPayload & { today?: TodayOutlookPayload } =
+      current;
+    if (today) payload.today = today;
+
+    return NextResponse.json(payload);
   } catch (error) {
     console.error("[weather] napaka:", error);
     return NextResponse.json(

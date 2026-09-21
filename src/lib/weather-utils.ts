@@ -2,11 +2,18 @@
  * Skupni helperji za Open-Meteo vreme.
  *
  * Uporabniki:
- * - /api/weather (current vreme za vreme widget)
+ * - /api/weather (current vreme za vreme widget + TASK 65: Go Mode daily)
  * - /api/itinerary (DAILY prognoza — PRAVO vreme v AI itinererju)
  *
  * Open-Meteo je brezplačen in brez API ključa; uporablja WMO weather kode.
+ *
+ * TASK 65: parse plasti so ČISTE in FAIL-CLOSED — manjkajoče/napačno tipizirane
+ * vrednosti → null (nikoli izmišljenih 0 °C / 0 %). Vir je živ API, zato
+ * odgovoru NE zaupamo (vsako polje preverjeno po tipu).
  */
+
+/** Jeznik (Stanje) — vpliva samo na besedilo condition. */
+export type WeatherLang = "sl" | "en";
 
 /** WMO weather code → slovensko besedilo. */
 export function weatherCodeToText(code: number): string {
@@ -164,4 +171,156 @@ export async function fetchDailyForecast(
     console.error("[weather] daily forecast napaka:", error);
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// TASK 65 — ČISTI PARSE PLASTI ZA /api/weather (Go Mode „Na poti", 1.65.0)
+// ---------------------------------------------------------------------------
+// Odgovor Open-Meteo preverjamo POLJE PO POLJU (vir je zunanja živa storitev):
+// napačen tip / manjkajoče polje → null (fail-closed), NIKOLI nadomestna
+// vrednost. „precipitation_probability_max" je lahko null v viru — prenesemo
+// null (NEZNANO), nikoli 0 %.
+// ---------------------------------------------------------------------------
+
+/** Trenutno vreme (odgovor /api/weather — osnovna oblika). */
+export interface CurrentWeatherPayload {
+  /** Besedilo po WMO kodi v izbranem jeziku. */
+  condition: string;
+  /** °C (zaokroženo). */
+  temp: number;
+  /** % (zaokroženo). */
+  humidity: number;
+  /** km/h (zaokroženo). */
+  windSpeed: number;
+  /** Emoji ikona po WMO kodi. */
+  icon: string;
+  /** ISO lokalni čas meritve (current.time) — kdaj je VIR izmeril. */
+  observedAt?: string;
+}
+
+/** Današnja dnevna napoved (daily[0]) — SAMO realna polja vira. */
+export interface TodayOutlookPayload {
+  condition: string;
+  icon: string;
+  /** °C max (zaokroženo). */
+  tempMax: number;
+  /** % — null, če vir ne vrne vrednosti (NEZNANO ≠ 0 %). */
+  precipitationProbabilityMax: number | null;
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+/**
+ * Izlušči TRENUTNO vreme iz surovega Open-Meteo odgovora (fail-closed).
+ *
+ * Preverja: current.{temperature_2m, relative_humidity_2m, wind_speed_10m,
+ * weather_code} so števila; current.time (neobvezno) je niz.
+ */
+export function parseOpenMeteoCurrent(
+  raw: unknown,
+  lang: WeatherLang
+): CurrentWeatherPayload | null {
+  if (!isRecord(raw)) return null;
+  const current = raw.current;
+  if (!isRecord(current)) return null;
+
+  const temp = current.temperature_2m;
+  const humidity = current.relative_humidity_2m;
+  const windSpeed = current.wind_speed_10m;
+  const code = current.weather_code;
+  if (
+    typeof temp !== "number" ||
+    !Number.isFinite(temp) ||
+    typeof humidity !== "number" ||
+    !Number.isFinite(humidity) ||
+    typeof windSpeed !== "number" ||
+    !Number.isFinite(windSpeed) ||
+    typeof code !== "number" ||
+    !Number.isFinite(code)
+  ) {
+    return null;
+  }
+
+  const payload: CurrentWeatherPayload = {
+    condition:
+      lang === "en" ? weatherCodeToTextEn(code) : weatherCodeToText(code),
+    temp: Math.round(temp),
+    humidity: Math.round(humidity),
+    windSpeed: Math.round(windSpeed),
+    icon: weatherCodeToIcon(code),
+  };
+  const time = current.time;
+  if (typeof time === "string" && time.length > 0) {
+    payload.observedAt = time;
+  }
+  return payload;
+}
+
+/**
+ * Izlušči DANAŠNJO dnevno napoved (daily[0]) iz surovega Open-Meteo
+ * odgovora (fail-closed). Zahteva daily.time[0] (datum) — index 0 je DANES
+ * (forecast_days=1 / start_date=danes pri klicu iz /api/weather).
+ */
+export function parseOpenMeteoToday(
+  raw: unknown,
+  lang: WeatherLang
+): TodayOutlookPayload | null {
+  if (!isRecord(raw)) return null;
+  const daily = raw.daily;
+  if (!isRecord(daily)) return null;
+
+  const time = daily.time;
+  if (!Array.isArray(time) || time.length === 0) return null;
+
+  const tempMax = daily.temperature_2m_max;
+  const code = daily.weather_code;
+  if (
+    !Array.isArray(tempMax) ||
+    typeof tempMax[0] !== "number" ||
+    !Number.isFinite(tempMax[0]) ||
+    !Array.isArray(code) ||
+    typeof code[0] !== "number" ||
+    !Number.isFinite(code[0])
+  ) {
+    return null;
+  }
+
+  // Vir lahko vrne null (neznano) — prenesemo null, NIKOLI 0 %.
+  const precipArr = daily.precipitation_probability_max;
+  const precipRaw = Array.isArray(precipArr) ? precipArr[0] : undefined;
+  const precipitationProbabilityMax =
+    typeof precipRaw === "number" && Number.isFinite(precipRaw)
+      ? Math.round(precipRaw)
+      : null;
+
+  return {
+    condition:
+      lang === "en" ? weatherCodeToTextEn(code[0]) : weatherCodeToText(code[0]),
+    icon: weatherCodeToIcon(code[0]),
+    tempMax: Math.round(tempMax[0]),
+    precipitationProbabilityMax,
+  };
+}
+
+/**
+ * Zgradi URL Open-Meteo forecast klica za /api/weather (ČIST — testirljiv).
+ *
+ * lat/lng sta ŽE validirana niza (COORD_RE v routes) — neposredno
+ * interpolirana (brez encodeURIComponent, ki bi pokvaril minus/decimalno
+ * piko — ne-obdelan niz ne more vsebovati ločil URL, ker je prešel COORD_RE).
+ *
+ * `withDaily`: doda daily blok (weather_code, temperature_2m_max,
+ * precipitation_probability_max) + forecast_days=1 (danas) — Go Mode
+ * „danes pri naslednji postanki" pogled.
+ */
+export function openMeteoCurrentUrl(
+  lat: string,
+  lng: string,
+  withDaily: boolean
+): string {
+  const base = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`;
+  if (!withDaily) return `${base}&timezone=Europe/Ljubljana`;
+  return `${base}&daily=weather_code,temperature_2m_max,precipitation_probability_max&forecast_days=1&timezone=Europe/Ljubljana`;
 }

@@ -7,6 +7,61 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.65.0] — 2026-09-21 (TASK 65: VREME „NA POTI" — GO MODE + OPEN-METEO)
+
+### Dodano
+- **Vreme pri naslednji postanki (Go Mode)** — hero kartica NASLEDNJE na
+  `/na-poti` dobi živi vremenski trak: trenutno stanje pri lokaciji
+  naslednjega postanka (emoji, °C, pogoj, vlažnost implicitno prek API-ja)
+  + današnja napoved („danes do X °C · padavine Y %") + izrecen VIR
+  (Open-Meteo) in čas meritve vira („meritev ob 08:15"). Odločitveno
+  vrednost ima vreme TAM, kamor potnik pelje — ne tam, kjer je — zato je
+  cilj koordinata naslednjega postanka, ne GPS uporabnika.
+- **`/api/weather` razširitev (100 % backward compatible)**: neobvezna
+  `lang=sl|en` (besedilo pogoje; privzeto sl — obstoječi klici brez
+  parametra se obnašajo ENAKO kot prej) in `daily=1` (današnja napoved iz
+  ISTEGA klica Open-Meteo — 0 dodatnih klicev na vir). Odgovor nosi
+  neobvezna polja `observedAt` (čas meritve vira) in `today`.
+- **Čisti parse sloji** (`weather-utils.ts`): `parseOpenMeteoCurrent` /
+  `parseOpenMeteoToday` / `openMeteoCurrentUrl` — odgovor živega vira se
+  preverja POLJE PO POLJU (testirljivo brez omrežja; prej je route dostopal
+  `.current` neposredno).
+- **Klient čista plast** (`journey/go-weather.ts`): `goWeatherTarget`
+  (geo naslednjega postanka), striktna validacija odgovora
+  (`parseGoWeatherResponse`), oznake SL/EN.
+
+### Iskrenost (isti kanon kot TASK 64 §20/§23)
+- Naslednji postanek BREZ geo → vremenski trak SE NE PRIKAŽE (ista
+  logika kot razdalja/smer — ne izmišljujemo „blizu").
+- Padavine: vir lahko vrne null (neznano) → del izpisa se IZPUSTI
+  (NEZNANO ≠ 0 %).
+- Napaka vira / brez signala → iskerna opomba („načrt pa dela naprej") —
+  načrt na napravi NI odvisen od vremena; osvežitev vsakih 10 min je
+  usklajena s strežniškim cachejem (600 s).
+- Vreme je PRI naslednji postanki (premica ni vmes) — naslov traku to
+  izrecno pove; vir in čas meritve sta vidna.
+- Fetch sproži SAMO ob spremembi postanka (effect-depi so primitivi
+  lat/lng — živa ura vsakih 30 s NE povzroča klicev).
+
+### Testi
+- 41 novih testov (`task65-go-weather.test.ts`): parse plasti (SL/EN,
+  fail-closed: ne-število/NaN/manjkajoč current/daily → null; padavine
+  null ≠ 0 %; observedAt neobvezen), URL graditelj (osnovna oblika
+  NESPREMENJENA — backward compat; daily blok + forecast_days=1 samo na
+  zahtevo), cilj vremena (geo naslednjega postanka; brez geo → null; vse
+  opravljeno → null; prihod z geo → izhodišče; NaN varovalka), striktna
+  validacija klienta (8 primerov), oznake SL/EN + čas meritve, ROUTE
+  integracija z mockanim global.fetch (backward compat brez parametrov,
+  lang+daily, vir brez daily → 200 brez today, neveljaven vir → 502,
+  P7-B injection guard, napačen lang → privzeti SL) in CELA VERIGA
+  journey → MY TRIP → NA POTI → cilj vremena (DI adapter, Bled).
+- **1390/1390** (prej 1349), lint 0, tsc 0 (src).
+- Živi E2E: Open-Meteo dosegljiv iz peskovnika (Kotor 23,8 °C), API
+  prek dev strežnika SL/EN/daily + browser E2E na `/na-poti` z
+  injiciranim potovanjem (vremenski trak z živimi podatki).
+
+---
+
 ## [1.64.0] — 2026-09-20 (TASK 64: GO MODE „NA POTI" — NOW & NEXT SOPOTNIK)
 
 ### Dodano
