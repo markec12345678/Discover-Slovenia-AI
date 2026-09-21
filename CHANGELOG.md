@@ -7,6 +7,43 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.74.0] — 2026-09-21 (TASK 78: OFFLINE NAČRTI Z REALNIMI DATUMI DNI)
+
+### Dodano
+- **Realni datum ob vsakem dnevu na offline strani** ( `offline.html`):
+  „Dan N · torek, 14. septembra" — ISTA semantika kot online načrtovalnik
+  ( FW4.2: dan N = `tripStartDate` + N−1, lokalna polnoč). Angleščina:
+  „Day N · Tuesday, 14 September" ( en-GB). Offline popotnik v gorah
+  ( Triglav/Soča — slab signal) zdaj vidi, KATEREGA DATUMA je „Dan 3",
+  ne le zaporedno številko.
+- **DST-varna koledarska aritmetika** ( `new Date(y, m, d+n)`): ms
+  seštevanje ( start + N×24 h) čez preklop na zimski čas ( 25-urni dan)
+  pokaže NAPAČEN datum — novi blok uporablja čisto koledarsko aritmetiko
+  in ji testi dokazujejo pravilnost čez OBA preklopa ( 2026-03-29 in
+  2026-10-25).
+- Samozadosten „TASK 78" blok v `offline.html` ( 0 zunanjih odvisnosti)
+  + 14 testov/39 pričakovanj po SOURCE-CONTRACT vzorcu: testi izvlečejo
+  in izvedejo IZVIRNO odposlano kodo ( ne kopijo) — veljavnost ISO
+  datumov ( roll-over zavrnjen), genitivne oznake, iskrene zavrnitve.
+
+### Popravljeno
+- Tipka v najvidnejšem elementu offline strani: „**Vači** shranjeni
+  načrti" → „**Vaši** shranjeni načrti" ( statični banner — i18n niz je
+  bil že pravilen).
+
+### Opombe
+- **Iskrenost** ( kanon 71/74/77): brez `tripStartDate` ali neveljaven
+  dan → BREZ datuma ( 0 izmišljenih datumov — E2E dokazano: 0 `day-date`
+  elementov). E2E: SL + EN + iskrenostni primer + 0 konzolnih napak +
+  375 px 0 px preliva.
+- ZAZNANO ( predhodno, kandidat za naslednjo nalogo): online
+  `dayISOForDayNumber` ( `src/lib/trip-dates.ts`) uporablja MS
+  aritmetiko — načrt, ki seže čez preklop na zimski čas ( eno noč na
+  leto), bi online pokazal podvojen datum tega dne; offline blok je zdaj
+  DST-varna referenčna implementacija.
+- Verzija 1.74.0 ( ne 1.73.5): nova uporabniška zmožnost → minor bump,
+  vrnitev k semver disciplini ( 1.73.4 je bil feat na patch nivoju).
+
 ## [1.73.4] — 2026-09-21 (TASK 77: GENERIRANJE NI VEČ NEMO ČAKANJE — števec, faze, Prekliči, odmor 90 s)
 
 ### Dodano

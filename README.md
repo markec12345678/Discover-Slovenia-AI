@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.73.4 · 1568 testov (števec/faze/preklic generiranja) · lint 0 · tsc 0 (`src/`; sledi git `main`) |
+| **Stanje** | v1.74.0 · 1582 testov (offline načrti z datumi dni) · lint 0 · tsc 0 (`src/`; sledi git `main`) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -113,7 +113,9 @@
 - **PWA** — načrti brez povezave (aktivno Go Mode potovanje tudi na splošni offline
   strani), pameten pakirni seznam z razlogi, proračun na osebo,
   ICS/QR deljenje; bližnjice ikone aplikacije (4) vodijo na dejanske strani
-  (načrtuj/zemljevid/tržnica/destinacije — testno varovane).
+  (načrtuj/zemljevid/tržnica/destinacije — testno varovane); dnevi na
+  offline strani nosijo REALNE datume (»Dan N · torek, 14. septembra«,
+  DST-varna koledarska aritmetika — source-contract testi).
 
 Vsaka zmožnost zgoraj je preverjena v kodi; zmožnost, ki obstaja samo v načrtu,
 ni navedena.
@@ -460,7 +462,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.73.4**.
+Trenutna verzija: **1.74.0**.
 
 ---
 

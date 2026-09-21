@@ -93,6 +93,8 @@
     padding: 8px 12px; font-weight: 700; font-size: .85rem;
   }
   .day-weather { font-weight: 500; font-size: .78rem; }
+  /* TASK 78: datum dneva ob »Dan N« (muted nasprotje vremenu). */
+  .day-date { font-weight: 500; font-size: .75rem; opacity: .8; }
   .stop {
     display: flex; gap: 10px; padding: 10px 12px;
     border-top: 1px solid var(--border); font-size: .9rem;
@@ -138,7 +140,7 @@
 
   <div class="banner" role="status">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></svg>
-    <p id="t-banner">Trenutno ni internetne povezave. Vači shranjeni načrti so spodaj na voljo tudi brez povezave — zemljevid poti pa deluje za območja, ki ste jih že odprli.</p>
+    <p id="t-banner">Trenutno ni internetne povezave. Vaši shranjeni načrti so spodaj na voljo tudi brez povezave — zemljevid poti pa deluje za območja, ki ste jih že odprli.</p>
   </div>
 
   <!-- GO MODE (dai:go-trip): aktivno potovanje IZMED potovanja — najprej,
@@ -261,6 +263,51 @@
     return v == null ? "" : "≈ " + v + " " + T.budgetCur;
   }
 
+  // === TASK 78 (1.73.5): realni datumi dni =================================
+  // Samozadosten blok (BREZ zunanjih odvisnosti) — izvlečejo ga bun testi
+  // (task78-offline-days.test.ts — source-contract: testiramo IZVORNO
+  // odposlano kodo, ne kopijo). ISTA semantika kot src/lib/trip-dates.ts
+  // (FW4.2: ISO datum = lokalna polnoč, dan N = start + N−1), a s
+  // KOLEDARSKO aritmetiko (new Date(y, m, d+n)) — ms seštevanje čez
+  // preklop na zimski čas (25 h dan) pokaže NAPAČEN datum; koledarska
+  // aritmetika je DST-varna.
+  var MONTHS_GEN = ["januarja", "februarja", "marca", "aprilja", "maja",
+    "junija", "julija", "avgusta", "septembra", "oktobra", "novembra", "decembra"];
+  var WEEKDAYS_SI = ["nedelja", "ponedeljek", "torek", "sreda", "četrtek",
+    "petek", "sobota"];
+  function parseLocalDate(v) {
+    if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+    var p = v.split("-");
+    var y = +p[0], mo = +p[1], d = +p[2];
+    var dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) {
+      return null; // roll-over (npr. 2026-02-31) je neveljaven datum
+    }
+    return { y: y, mo: mo, d: d };
+  }
+  function fmtDayLabel(ms, lang) {
+    try {
+      var dt = new Date(ms);
+      if (isNaN(dt.getTime())) return "";
+      if (lang === "en") {
+        return new Intl.DateTimeFormat("en-GB", {
+          weekday: "long", day: "numeric", month: "long"
+        }).format(dt);
+      }
+      return WEEKDAYS_SI[dt.getDay()] + ", " + dt.getDate() + ". " +
+        MONTHS_GEN[dt.getMonth()];
+    } catch (e) { return ""; }
+  }
+  function dayDateLabel(tripStartDate, dayNumber, lang) {
+    var base = parseLocalDate(tripStartDate);
+    if (!base || typeof dayNumber !== "number" ||
+        !isFinite(dayNumber) || dayNumber < 1) return "";
+    var dt = new Date(base.y, base.mo - 1, base.d + (dayNumber - 1));
+    if (isNaN(dt.getTime())) return "";
+    return fmtDayLabel(dt.getTime(), lang);
+  }
+  // === /TASK 78 ============================================================
+
   // --- Renderer enega itinererja (isti JSON kot /api/itinerary/shared). ---
   function renderItinerary(itin) {
     if (!itin || !Array.isArray(itin.days) || itin.days.length === 0) return "";
@@ -273,8 +320,15 @@
         weather = esc(day.weather.condition) +
           (typeof day.weather.temp === "number" ? " · " + day.weather.temp + " °C" : "");
       }
+      // TASK 78: realni datum dneva (»Dan N · torek, 14. septembra«) —
+      // ISTA semantika kot online planner (dan N = tripStartDate + N−1).
+      // ISKRENOST: brez tripStartDate ali neveljaven dan → BREZ datuma
+      // (nikoli ne izmišljujemo datumov).
+      var dayDate = dayDateLabel(itin.tripStartDate, day.day, LANG);
       html += '<div class="day"><div class="day-head"><span>' + esc(T.day) + " " +
-        esc(day.day) + "</span>" +
+        esc(day.day) +
+        (dayDate ? ' <span class="day-date">· ' + esc(dayDate) + "</span>" : "") +
+        "</span>" +
         (weather ? '<span class="day-weather">' + weather + "</span>" : "") +
         "</div>";
       day.locations.forEach(function (loc) {
