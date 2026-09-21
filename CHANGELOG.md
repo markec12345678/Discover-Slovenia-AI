@@ -7,6 +7,77 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.66.0] — 2026-09-21 (TASK 66: MY TRIP — VREME PO DNEVIH POTOVANJA)
+
+### Dodano
+- **Vreme po dnevih v MY TRIP časovnici** — vsak dan z REALNIM datumom
+  (dan prihoda iz vpisa uporabnika + dnevi dogodkov iz virov) dobi čip z
+  živo dnevno napovedjo Open-Meteo: pogoj (emoji + besedilo), „do X °C" in
+  „padavine Y %". Sidro napovedi je GEO DESTINACIJE potovanja (MY TRIP je
+  načrtovalni pogled — živo vreme pri uporabniku/naslednjem postanku že
+  pokriva Go Mode TASK 65). EN klic na celo časovnico (okno min…max
+  datumov dni), 15-min strežniški cache.
+- **`/api/weather` NAČIN B (100 % backward compatible)**: neobvezna
+  `start=YYYY-MM-DD` + `end=YYYY-MM-DD` (skupaj ali noben) vračata
+  `{ forecast: [{ date, condition, icon, tempMax,
+  precipitationProbabilityMax }] }` — dnevna napoved ZA KONKRETNE DATUME,
+  ne „i-ti dan od danes". Zahtevano okno se najprej poravna na realno
+  (`clampForecastRange`: preteklost → danes; čez horizont → danes+15);
+  PRAZEN presek → 200 `{ forecast: [] }` BREZ klica vira (iskrena prazna
+  napoved — nikoli izmišljenih dni). Način A (brez start/end) ostaja
+  popolnoma nespremenjen (39 obstoječih klicev/obnašanj nespremenjenih).
+- **Čiste plasti** (`weather-utils.ts`): `parseOpenMeteoDailyRange`
+  (parse zanka IZVLEČENA iz `fetchDailyForecast` — enako vedenje, en vir
+  resnice; fail-closed po dnevu), `clampForecastRange` (čisto — „danes" je
+  parameter), `openMeteoDailyRangeUrl`, `todayISOSI` izvožen.
+- **Klient čista plast** (`journey/trip-weather.ts`): `tripWeatherAnchor`
+  (geo destinacije), `tripWeatherDates` (unikatni realni datumi dni),
+  `tripWeatherRange` (okno zahteve), striktna validacija odgovora
+  (`parseTripWeatherResponse`), oznake SL/EN.
+
+### Iskrenost (isti kanon kot TASK 64/65)
+- Dan BREZ realnega datuma („Datum prihoda ni vnesen") → BREZ čipa
+  (napoved za neobstoječi datum se ne izmišljuje).
+- Destinacija brez geo → vreme preprosto NI (iskrena odsotnost — isti
+  kanon kot goWeatherTarget).
+- Pretekli dnevi in dnevi čez ~16-dnevni horizont vira → BREZ čipa; če
+  NOBEN dan nima napovedi, ena iskrena opomba pove zakaj („Open-Meteo
+  objavlja napoved le za prihodnje dneve, do ~16 dni vnaprej").
+- Padavine null v viru → del čipa se IZPUSTI (NEZNANO ≠ 0 %).
+- Izpad vira → opomba („načrt potovanja deluje nespremenjeno") — ne
+  napaka; vir je v title čipa izrecno naveden (Open-Meteo).
+- Čipi so `print:hidden` — natisnjeni potrditveni dokument ostane dokument
+  o rezervacijah (dejstva), ne vremenska napoved.
+- Fetch sproži SAMO ob spremembi potovanja (effect-depi primitivi
+  lat/lng/start/end/lang); zastarel odgovor se ne pokaže.
+
+### Testi
+- 52 novih testov (`task66-trip-weather.test.ts`): parseOpenMeteoDailyRange
+  (fail-closed: neveljaven dan izpuščen; prazen vir → null; padavine
+  manjkajo → null ≠ 0 %), clampForecastRange (8 primerov: preteklost →
+  danes; horizont → danes+15; točna meja danes+15 veljavna / danes+16 →
+  null; prazen presek; neveljavni vhodi), URL graditelj (brez current;
+  negativne koordinate), REFAKTOR fetchDailyForecast (obnašanje zaklenjeno
+  z mockanim fetch — forecast_days/start_date/end_date; odhod čez horizont
+  → null BREZ klica), klient plast (sidro/datumi/okno/striktna validacija;
+  prazna tabela → [] ≠ null), oznake SL/EN, ROUTE način B (13 primerov z
+  mockanim fetch: lokalizacija SL/EN, clamp URL-jev, prazen presek → 200
+  brez klica vira, 400 — samo eden parameter/neveljaven format/start za
+  end/P7-B injection, 502 fail-closed, daily=1 podrejen start/end) in
+  CELA VERIGA journey → MY TRIP → okno (DI adapter, Bled; brez startDate
+  → datumi null).
+- **1442/1442** (prej 1390), lint 0, tsc 0 (src).
+- Živi E2E: mode B skozi dev strežnik (SL: Bled 4 dni z lokaliziranimi pogoji;
+  EN: Kotor; čez horizont → 200 `{forecast:[]}` brez klica vira; preteklost →
+  prazna; samo eden parameter/neveljaven datum/injection → 400; mode A
+  nespremenjen). Browser E2E: `/potovanje` (Brnik→Bled) — čip z ŽIVIMI
+  podatki ob datumu dneva 1, TOČNO EN klic načina B na časovnico; datum čez
+  horizont → čip izgine + iskrena opomba; EN besedila; 375px 0px preliva
+  (VLM vizualni pregled mobilno+desktop PASS); `print:hidden` na čipu;
+  0 konzolnih napak.
+
+---
+
 ## [1.65.0] — 2026-09-21 (TASK 65: VREME „NA POTI" — GO MODE + OPEN-METEO)
 
 ### Dodano

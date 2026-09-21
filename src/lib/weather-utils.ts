@@ -76,8 +76,11 @@ export interface DailyForecast {
  * Prognozni horizont Open-Meteo (~16 dni) se meri od "danes" — na
  * serverju (UTC) bi ob robnih urah dobili napačen dan, zato računamo
  * v Ljubljanskem pasu (enako kot timezone param API klica).
+ *
+ * TASK 66: izvoženo — isti "danes" potrebujeta clampForecastRange in
+ * /api/weather (način start/end), da sta klient in vir usklajena.
  */
-function todayISOSI(): string {
+export function todayISOSI(): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Ljubljana",
   }).format(new Date());
@@ -140,33 +143,9 @@ export async function fetchDailyForecast(
       throw new Error(`Open-Meteo: ${res.status}`);
     }
 
-    const data = (await res.json()) as {
-      daily?: {
-        time?: string[];
-        weather_code?: number[];
-        temperature_2m_max?: number[];
-        precipitation_probability_max?: (number | null)[];
-      };
-    };
-
-    const d = data.daily;
-    if (!d?.time?.length) return null;
-
-    const out: DailyForecast[] = [];
-    for (let i = 0; i < d.time.length; i++) {
-      const tempMax = d.temperature_2m_max?.[i];
-      const code = d.weather_code?.[i];
-      // Manjkajoče temperature/kode preskočimo — raje manj dni kot napačni
-      if (typeof tempMax !== "number" || typeof code !== "number") continue;
-      out.push({
-        date: d.time[i],
-        weatherCode: code,
-        tempMax,
-        precipitationProbabilityMax:
-          d.precipitation_probability_max?.[i] ?? null,
-      });
-    }
-    return out.length > 0 ? out : null;
+    // TASK 66: parse zanka IZVLEČENA v čisto parseOpenMeteoDailyRange
+    // (isto vedenje — zdaj jo deli fetchDailyForecast in /api/weather).
+    return parseOpenMeteoDailyRange(await res.json());
   } catch (error) {
     console.error("[weather] daily forecast napaka:", error);
     return null;
@@ -323,4 +302,113 @@ export function openMeteoCurrentUrl(
   const base = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`;
   if (!withDaily) return `${base}&timezone=Europe/Ljubljana`;
   return `${base}&daily=weather_code,temperature_2m_max,precipitation_probability_max&forecast_days=1&timezone=Europe/Ljubljana`;
+}
+
+// ---------------------------------------------------------------------------
+// TASK 66 — DNEVNA NAPOVED PO DNEVIH POTI (MY TRIP, 1.66.0)
+// ---------------------------------------------------------------------------
+// MY TRIP časovnica potrebuje napoved ZA KONKRETNE DATUME dni potovanja
+// (dan prihoda + datumi dogodkov) — ne „i-ti dan od danes". Nova čista plast:
+//  - parseOpenMeteoDailyRange: surov odgovor → DailyForecast[] (fail-closed,
+//    ENAKA zanka kot prej v fetchDailyForecast — zdaj deljena, en vir resnice)
+//  - clampForecastRange: datumsko okno zahteve → realno okno (danes … danes+15)
+//  - openMeteoDailyRangeUrl: URL graditelj za klic z start_date/end_date
+// ISKRENOST: napoved obstaja SAMO za realno objavljene prihodnje dneve —
+// pretekli dnevi in dnevi čez horizont (~16 dni) se ISKRENO izpustijo
+// (prazni presek → null → prazna napoved, NIKOLI izmišljenih dni).
+// ---------------------------------------------------------------------------
+
+/**
+ * Izlušči DNEVNO napoved (celoten daily blok) iz surovega Open-Meteo
+ * odgovora (fail-closed). Zanka je SEMANTIČNO IDENTIČNA prejšnji inline
+ * logiki fetchDailyForecast (izvlečena v TASK 66 — en vir resnice):
+ * manjkajoča temperatura/koda dneva → dan se preskoči (raje manj dni kot
+ * napačni); prazen rezultat → null (vir ni vrnil NIČ uporabnega).
+ */
+export function parseOpenMeteoDailyRange(raw: unknown): DailyForecast[] | null {
+  if (!isRecord(raw)) return null;
+  const daily = raw.daily;
+  if (!isRecord(daily)) return null;
+
+  const time = daily.time;
+  if (!Array.isArray(time) || time.length === 0) return null;
+
+  const tempMax = daily.temperature_2m_max;
+  const code = daily.weather_code;
+  const precip = daily.precipitation_probability_max;
+
+  const out: DailyForecast[] = [];
+  for (let i = 0; i < time.length; i++) {
+    const t = Array.isArray(tempMax) ? tempMax[i] : undefined;
+    const c = Array.isArray(code) ? code[i] : undefined;
+    // Manjkajoče temperature/kode preskočimo — raje manj dni kot napačni
+    if (typeof t !== "number" || typeof c !== "number") continue;
+    out.push({
+      date: time[i],
+      weatherCode: c,
+      tempMax: t,
+      precipitationProbabilityMax:
+        (Array.isArray(precip) ? precip[i] : undefined) ?? null,
+    });
+  }
+  return out.length > 0 ? out : null;
+}
+
+/** Zadnji realno prognozni dan = danes + 15 (horizont vira ~16 dni vključno). */
+export const FORECAST_HORIZON_OFFSET_DAYS = 15;
+
+function isoOfMs(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+/**
+ * Zahtevano datumsko okno [start, end] → realno okno napovedi (ČISTO —
+ * „danes" je parameter, ne ura sistema → testirljivo brez časa).
+ *
+ * - start < danes → start se poravna na DANES (napoved za preteklost ne
+ *   obstaja — arhiv je drugačen produkt vira);
+ * - end > danes+15 → end se poreže na horizont (vir ne objavi več);
+ * - prazen presek (vse preteklo ali vse čez horizont) → null → iskrena
+ *   PRAZNA napoved (dnevi obstajajo, njihova realna napoved pa NE).
+ */
+export function clampForecastRange(
+  start: string,
+  end: string,
+  today: string
+): { start: string; end: string } | null {
+  const startMs = Date.parse(`${start}T00:00:00Z`);
+  const endMs = Date.parse(`${end}T00:00:00Z`);
+  const todayMs = Date.parse(`${today}T00:00:00Z`);
+  if (
+    !Number.isFinite(startMs) ||
+    !Number.isFinite(endMs) ||
+    !Number.isFinite(todayMs)
+  ) {
+    return null;
+  }
+  const effStartMs = Math.max(startMs, todayMs);
+  const effEndMs = Math.min(
+    endMs,
+    todayMs + FORECAST_HORIZON_OFFSET_DAYS * 86_400_000
+  );
+  if (effStartMs > effEndMs) return null;
+  return { start: isoOfMs(effStartMs), end: isoOfMs(effEndMs) };
+}
+
+/**
+ * Zgradi URL Open-Meteo DNEVNE napovedi za datumsko okno (ČIST — testirljiv).
+ *
+ * lat/lng sta ŽE validirana niza (COORD_RE v routes) — interpolirana
+ * neposredno (enak kanon kot openMeteoCurrentUrl). start/end sta ŽE
+ * validirana ISO datuma (ISO_DATE_RE v routes) — brez ločil URL možnih.
+ * timezone=Europe/Ljubljana: datume vira dobimo v SI pasu (enako kot
+ * todayISOSI merjenje horizonta).
+ */
+export function openMeteoDailyRangeUrl(
+  lat: string,
+  lng: string,
+  startDate: string,
+  endDate: string
+): string {
+  return `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weather_code,temperature_2m_max,precipitation_probability_max&start_date=${startDate}&end_date=${endDate}&timezone=Europe/Ljubljana`;
 }

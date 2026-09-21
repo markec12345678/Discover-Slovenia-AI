@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.65.0 · 1390/1390 testov · lint 0 · tsc 0 (`src/`; sledi git `main`) |
+| **Stanje** | v1.66.0 · 1442/1442 testov · lint 0 · tsc 0 (`src/`; sledi git `main`) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -39,7 +39,7 @@
 | Živi POI sloj po viewportu zemljevida | OpenStreetMap Overpass API |
 | Uradna turistična vsebina (RAG) | slovenia.info `llms.txt` (STO) |
 | Transfer odkrivanje z objavljenimi realnimi cenami | KiwiTaxi partner feed (CSV) |
-| Živo vreme (trenutno + dnevna napoved) | Open-Meteo (brez ključa) |
+| Živo vreme (trenutno + dnevna napoved; po dnevih poti v MY TRIP) | Open-Meteo (brez ključa) |
 | **38 kuriranih destinacij** v 4 državah + EN različice | lastni destinacijski register |
 | Journey orkestracija, MY TRIP časovnica, natisljivi potrditveni dokument | lastna koda |
 | Zunanje booking predaje (`/go`) in affiliate preusmeritve | 16-provider omrežje |
@@ -81,7 +81,10 @@
   znamenitosti (odprti viri po 4 državah) → hrana → bencin → dogodki v enem
   načrtu, ki upošteva dejanske zmogljivosti virov.
 - **MY TRIP** — ena časovnica po dneh; vsaka postavka nosi realni status
-  (Zunanja rezervacija / Samo informacija); natisljivi potrditveni dokument.
+  (Zunanja rezervacija / Samo informacija); **živa dnevna napoved po dnevih
+  potovanja** (Open-Meteo — čip pri vsakem dnevu z realnim datumom; pretekli
+  dnevi/dnevi čez ~16-dnevni horizont vira iskreno brez čipa, vir izrecno
+  naveden); natisljivi potrditveni dokument (čipi vremena se ne tiskajo).
 - **Na poti (Go Mode)** — Now&Next sopotnik MED potovanjem: živa ura, naslednja
   postanka načrta, razdalja in smer do nje (GPS, premica — izrecno ne vozna),
   **živo vreme pri naslednji postanki** (Open-Meteo: trenutno stanje + današnja

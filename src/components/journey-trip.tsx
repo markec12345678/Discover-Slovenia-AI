@@ -1,14 +1,22 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
-import { Printer, ShieldCheck, ExternalLink } from "lucide-react";
+import { CloudSun, Printer, ShieldCheck, ExternalLink } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildMyTrip } from "@/lib/journey/trip-view";
 import type { TripEntry, MyTripView } from "@/lib/journey/trip-view";
+import {
+  parseTripWeatherResponse,
+  tripWeatherAnchor,
+  tripWeatherDates,
+  tripWeatherRange,
+  TRIP_WEATHER_LABELS,
+  type TripWeatherDay,
+} from "@/lib/journey/trip-weather";
 import type { TravelJourney } from "@/lib/journey/types";
 
 // ============================================================================
@@ -19,6 +27,14 @@ import type { TravelJourney } from "@/lib/journey/types";
 // Vsaka postavka nosi REALNI status (ZUNANJA REZERVACIJA / SAMO INFORMACIJA —
 // NIKOLI "potrjeno" brez providerjevega odgovora). Časi se pokažejo SAMO tam,
 // kjer so realni (timeNote pove zakaj jih ni).
+//
+// TASK 66 — VREME PO DNEVIH: vsak dan Z realnim datumom dobi čip z živo
+// dnevno napovedjo Open-Meteo (tempMax + pogoj + padavine), zasidrano na
+// GEO DESTINACIJE (MY TRIP je načrt, ne navigacija — živo vreme pri
+// uporabniku/naslednjem postanku pokriva Go Mode). ISKRENOST: dan brez
+// datuma/brez objavljene napovedi → BREZ čipa; izpad vira → opomba, ne
+// napaka; čipi so print:hidden (natisnjeni dokument ostane dejstva o
+// rezervacijah, ne vreme).
 //
 // Potrditveni dokument (§21): natisljiv — Trip/Traveler/Provider/Booking ID/
 // Date/Time/Location/Duration/Price/Currency/Status/Provider link/Cancellation.
@@ -81,6 +97,33 @@ function statusBadge(e: TripEntry, lang: "sl" | "en") {
       : "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-100";
   return (
     <Badge className={variant}>{e.statusLabel[lang]}</Badge>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TASK 66 — VREMESKI ČIP DNEVA (načrt: pogoj + do X °C + padavine)
+// ---------------------------------------------------------------------------
+
+function WeatherChip({
+  w,
+  lang,
+}: {
+  w: TripWeatherDay;
+  lang: "sl" | "en";
+}) {
+  const dayText = TRIP_WEATHER_LABELS.day[lang](w);
+  return (
+    <span
+      className="inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-full border bg-muted/30 px-2.5 py-0.5 text-xs text-muted-foreground print:hidden"
+      title={TRIP_WEATHER_LABELS.source[lang]}
+      aria-label={`${w.condition}, ${dayText}`}
+    >
+      <span role="img" aria-hidden="true" className="leading-none">
+        {w.icon}
+      </span>
+      <span className="capitalize">{w.condition}</span>
+      <span className="font-medium tabular-nums text-foreground">{dayText}</span>
+    </span>
   );
 }
 
@@ -209,6 +252,81 @@ export function JourneyTrip({
   const hasItems =
     trip.days.some((d) => d.entries.length > 1) || trip.externalCards.length > 0;
 
+  // ---------------------------------------------------------------------
+  // TASK 66 — VREME PO DNEVIH (živi Open-Meteo prek /api/weather način B,
+  // 15-min strežniški cache). Sidro = GEO DESTINACIJE; okno = min…max
+  // datumov dni (dan prihoda + datumi dogodkov). Brez sidra/brez datumov
+  // → vreme preprosto NI (iskrena odsotnost — isti kanon kot Go Mode).
+  // Effect-depi so PRIMITIVI (lat/lng/start/end/lang), da se fetch sproži
+  // SAMO ob spremembi potovanja (ne ob vsakem renderu izbire).
+  // ---------------------------------------------------------------------
+  const anchor = useMemo(() => tripWeatherAnchor(journey), [journey]);
+  const wDates = useMemo(() => tripWeatherDates(trip), [trip]);
+  const range = useMemo(
+    () => (wDates ? tripWeatherRange(wDates) : null),
+    [wDates]
+  );
+  const aLat = anchor?.lat ?? null;
+  const aLng = anchor?.lng ?? null;
+  const rStart = range?.start ?? null;
+  const rEnd = range?.end ?? null;
+
+  const [forecast, setForecast] = useState<TripWeatherDay[] | null>(null);
+  const [weatherFailed, setWeatherFailed] = useState(false);
+  /** Za katero okno je trenutni odgovor veljaven (drugo = zastarel → brez čipov). */
+  const [weatherFor, setWeatherFor] = useState<string | null>(null);
+  const weatherKey =
+    aLat != null && aLng != null && rStart != null && rEnd != null
+      ? `${aLat},${aLng},${rStart},${rEnd},${lang}`
+      : null;
+
+  useEffect(() => {
+    if (aLat == null || aLng == null || rStart == null || rEnd == null) return;
+    let active = true;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/weather?lat=${aLat}&lng=${aLng}&lang=${lang}&start=${rStart}&end=${rEnd}`,
+          { signal: controller.signal }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const parsed = parseTripWeatherResponse(await res.json());
+        if (!active) return;
+        if (parsed) {
+          setForecast(parsed);
+          setWeatherFailed(false);
+        } else {
+          setForecast(null);
+          setWeatherFailed(true);
+        }
+        setWeatherFor(`${aLat},${aLng},${rStart},${rEnd},${lang}`);
+      } catch {
+        // Prekinitev (novo okno) NE šteje kot napaka — active je takrat false.
+        if (!active) return;
+        setForecast(null);
+        setWeatherFailed(true);
+        setWeatherFor(`${aLat},${aLng},${rStart},${rEnd},${lang}`);
+      }
+    })();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [aLat, aLng, rStart, rEnd, lang]);
+
+  /** Čipi se pokažejo SAMO iz odgovora, ki pokriva aktualno okno (zastarel = brez). */
+  const forecastCurrent = weatherKey != null && weatherKey === weatherFor && !weatherFailed;
+  const byDate = useMemo(
+    () => new Map((forecast ?? []).map((f) => [f.date, f] as const)),
+    [forecast]
+  );
+  /** Koliko dni je dobilo čip (za iskreno opombo "ni na voljo"). */
+  const matchedDays =
+    forecastCurrent && wDates
+      ? wDates.filter((d) => byDate.has(d)).length
+      : 0;
+
   return (
     <Card id="moja-pot" className="print:border-0 print:shadow-none">
       <CardHeader className="print:hidden">
@@ -227,19 +345,40 @@ export function JourneyTrip({
           <p className="text-sm text-muted-foreground">{L.doc.notSelected[lang]}</p>
         )}
 
-        {/* Časovnica po dneh (časi SAMO realni — §20) */}
-        {trip.days.map((day, i) => (
+        {/* Časovnica po dneh (časi SAMO realni — §20) + TASK 66 vremenski čipi */}
+        {trip.days.map((day, i) => {
+          const dayWeather =
+            forecastCurrent && day.date ? byDate.get(day.date) : undefined;
+          return (
           <div key={`${day.date ?? i}`} className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {day.dateLabel[lang]}
-            </p>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {day.dateLabel[lang]}
+              </p>
+              {dayWeather && <WeatherChip w={dayWeather} lang={lang} />}
+            </div>
             <div className="divide-y rounded-lg border">
               {day.entries.map((e) => (
                 <EntryRow key={e.key} e={e} lang={lang} />
               ))}
             </div>
           </div>
-        ))}
+          );
+        })}
+
+        {/* TASK 66 — iskrene opombe o vremenu (časovnica dela naprej) */}
+        {weatherKey != null && weatherFailed && (
+          <p className="flex items-start gap-1.5 text-xs text-muted-foreground print:hidden">
+            <CloudSun className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            {TRIP_WEATHER_LABELS.unavailable[lang]}
+          </p>
+        )}
+        {forecastCurrent && wDates && wDates.length > 0 && matchedDays === 0 && (
+          <p className="flex items-start gap-1.5 text-xs text-muted-foreground print:hidden">
+            <CloudSun className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            {TRIP_WEATHER_LABELS.notPublished[lang]}
+          </p>
+        )}
 
         {/* Zunanje kartice (najem — affiliate ≠ inventar) */}
         {trip.externalCards.length > 0 && (
