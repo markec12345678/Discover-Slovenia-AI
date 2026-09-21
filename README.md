@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.72.0 · 1528/1528 testov · lint 0 · tsc 0 (`src/`; sledi git `main`) |
+| **Stanje** | v1.73.0 · 1541/1541 testov · lint 0 · tsc 0 (`src/`; sledi git `main`) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -84,7 +84,10 @@
   (Zunanja rezervacija / Samo informacija); **živa dnevna napoved po dnevih
   potovanja** (Open-Meteo — čip pri vsakem dnevu z realnim datumom; pretekli
   dnevi/dnevi čez ~16-dnevni horizont vira iskreno brez čipa, vir izrecno
-  naveden); natisljivi potrditveni dokument (čipi vremena se ne tiskajo).
+  naveden); **pas zdravja virov** (katere vire ni bilo mogoče doseči ob
+  generiranju — imena iz registra, „nič izmišljenega", ostalo potovanje
+  deluje; zdravo stanje = brez pasa, ne tiska se); natisljivi
+  potrditveni dokument (čipi vremena in pas zdravja se ne tiskajo).
 - **Na poti (Go Mode)** — Now&Next sopotnik MED potovanjem: živa ura, naslednja
   postanka načrta, razdalja in smer do nje (GPS, premica — izrecno ne vozna),
   **živo vreme pri naslednji postanki** (Open-Meteo: trenutno stanje + današnja
@@ -247,7 +250,7 @@ iskreno prazne sloje.
 |---|---|
 | `/` | domača stran — AI lijak |
 | `/nacrtuj` | AI načrtovalnik itinererjev (jezik/slika/PDF/Maps → načrt) |
-| `/potovanje` | journey načrtovalnik čez ponudnike (prihod/transfer/nastanitev/znamenitosti/hrana/bencin) + MY TRIP s potrditvenim dokumentom (postavke po dneh, skupna cena §16) |
+| `/potovanje` | journey načrtovalnik čez ponudnike (prihod/transfer/nastanitev/znamenitosti/hrana/bencin) + MY TRIP s potrditvenim dokumentom (postavke po dneh, skupna cena §16) in pasom zdravja virov (§22 — samo ob odpovedi vira) |
 | `/na-poti` | Go Mode — Now&Next sopotnik med potovanjem (GPS razdalje, opravljeni postanki; načrt na napravi — HTML v PLANS cache, LRU-varno) |
 | `/destinacije` | 38 destinacij s filtri (država/regija + čipi interesa; tip/cena/ocena v zložljivih „Več filtrov"), razvrščanjem (priporočeno/ocena/cena) in ceno (≈ €) na kartici |
 | `/destinacija/[slug]` | hub destinacije + programske podstrani |
@@ -452,7 +455,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.72.0**.
+Trenutna verzija: **1.73.0**.
 
 ---
 

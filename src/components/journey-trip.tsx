@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
-import { CloudSun, Printer, ShieldCheck, ExternalLink } from "lucide-react";
+import { AlertTriangle, CloudSun, Printer, ShieldCheck, ExternalLink } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildMyTrip } from "@/lib/journey/trip-view";
 import type { TripEntry, MyTripView } from "@/lib/journey/trip-view";
 import { computeJourneyTotals, describeTotals } from "@/lib/journey/totals";
+import {
+  SUPPLY_HEALTH_LABELS,
+  supplyHealthView,
+} from "@/lib/journey/supply-health";
 import {
   parseTripWeatherResponse,
   tripWeatherAnchor,
@@ -41,6 +45,14 @@ import type { TravelJourney } from "@/lib/journey/types";
 // Date/Time/Location/Duration/Price/Currency/Status/Provider link/Cancellation.
 // Booking ID je "—" (zunanja rezervacija) DOKLER provider dejansko ne vrne
 // svojega — številke NE izdelujemo.
+//
+// TASK 74 — ZDRAVJE VIROV: journey.supplyHealth (§22 izolacija odpovedi +
+// §30 observability) se na ravni CELEGA potovanja pokaže kot amber pas nad
+// časovnico — KATERI viri so odpovedali (imena iz registra), fail-closed
+// razlaga („nič izmišljenega") in pomiritev („ostalo potovanje deluje").
+// PRAZNA množica = vsi viri odgovorili = TIŠINA (ne slave-ujemo odsotnosti
+// težav — isti kanon kot vreme). print:hidden: potrditveni dokument so
+// dejstva o rezervacijah, ne zdravje virov.
 // ============================================================================
 
 const L = {
@@ -134,6 +146,44 @@ function WeatherChip({
       <span className="capitalize">{w.condition}</span>
       <span className="font-medium tabular-nums text-foreground">{dayText}</span>
     </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TASK 74 — ZDRAVJE VIROV (§22/§30 na ravni CELEGA potovanja)
+// ---------------------------------------------------------------------------
+
+/** Amber pas nad časovnico: KATERI viri so odpovedali ob generiranju,
+ *  fail-closed razlaga (nič izmišljenega) + pomiritev §22 (ostalo dela).
+ *  SAMO ob dejanski odpovedi — zdravo stanje = tišina (isti kanon kot
+ *  vreme). print:hidden — zdravje virov ni dejstvo o rezervacijah,
+ *  potrditveni dokument ostane čist. */
+function SupplyHealthNote({
+  journey,
+  lang,
+}: {
+  journey: TravelJourney;
+  lang: "sl" | "en";
+}) {
+  const view = useMemo(
+    () => supplyHealthView(journey.supplyHealth?.degradedProviders, lang),
+    [journey.supplyHealth, lang]
+  );
+  if (!view) return null;
+  return (
+    <div
+      role="note"
+      aria-label={SUPPLY_HEALTH_LABELS.title[lang]}
+      className="flex items-start gap-2.5 rounded-lg border border-amber-300/60 bg-amber-500/10 p-3 text-amber-800 dark:border-amber-700/60 dark:text-amber-300 print:hidden"
+    >
+      <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+      <div className="min-w-0 space-y-0.5">
+        <p className="text-sm font-semibold">{SUPPLY_HEALTH_LABELS.title[lang]}</p>
+        <p className="text-xs leading-relaxed text-amber-800/90 dark:text-amber-300/90">
+          {SUPPLY_HEALTH_LABELS.body[lang](view.listText)}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -420,6 +470,9 @@ export function JourneyTrip({
         {!hasItems && (
           <p className="text-sm text-muted-foreground">{L.doc.notSelected[lang]}</p>
         )}
+
+        {/* TASK 74 — zdravje virov: samo ob odpovedi (zdravo = tišina) */}
+        <SupplyHealthNote journey={journey} lang={lang} />
 
         {/* Časovnica po dneh (časi SAMO realni — §20) + TASK 66 vremenski čipi */}
         {trip.days.map((day, i) => {

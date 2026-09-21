@@ -7,6 +7,62 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.73.0] — 2026-09-21 (TASK 74: ZDRAVJE VIROV — supplyHealth NA MY TRIP)
+
+### Dodano
+- **Amber pas zdravja virov v MY TRIP (`/potovanje`).** Podatki
+  `journey.supplyHealth.degradedProviders` ( §22 izolacija odpovedi +
+  §30 observability) so se doslej zabeležili SAMO strežniško ( API log +
+  note posameznih kategorij) — potnik pa ni videl, da je bilo njegovo
+  potovanje zgrajeno z odpovedalim virom. Zdaj nad časovnico stoji pas,
+  ki pove:
+  - **KATERI viri** so odpovedali ( prikazna imena IZ registra —
+    „OpenStreetMap", ne `osm`; neznan slug pokaže surovi niz, imena NE
+    izmišljamo);
+  - **KAJ to pomeni** ( fail-closed: „Iz njih ni ponudb — nič
+    izmišljenega"; ne „kategorija je prazna" — drug vir je morda kategorijo
+    že pokril);
+  - **POMIRITEV §22** ( „Ostalo potovanje deluje" — odpoved enega vira
+    ne uniči poti) in **časovni kontekst** ( „ob generiranju poti" —
+    posnetek stanja, ne živi status).
+- **`src/lib/journey/supply-health.ts`** ( čisto, 0 React/db/localStorage):
+  `supplyHealthView()` preslika slug → oznaka registra, deduplicira,
+  ohrani zaporedje, fail-closed nad smeti ( stari zapisi brez polja /
+  pokvarjen JSON → null, ne sesutje). `SUPPLY_HEALTH_LABELS` hrani kopijo
+  pasu SL/EN v lib ( isti vzorec kot `TRIP_WEATHER_LABELS`) — iskrene
+  trditve so testno varovane.
+
+### Ohranjeno (namenoma — iskrenost)
+- **Zdravo stanje = TIŠINA.** Prazna množica ( vsi viri odgovorili) pasa
+  NE pokaže — ne slave-ujemo odsotnosti težav ( isti kanon kot vreme v
+  TASK 66). Pas je utež, ki jo potnik zasluži videti RAVNO takrat, ko so
+  kategorije lažje, kot bi lahko bile.
+- **`print:hidden`** — zdravje virov ni dejstvo o rezervacijah;
+  potrditveni dokument ( §21) ostane čist tudi, ko je vir odpovedal.
+- **Obseg: MY TRIP samo.** Go Mode (`/na-poti`) namenoma IZPUŠČEN —
+  zdravje virov je informacija o ČASU NAČRTOVANJA, sopotnik na poti pa
+  dela z že shranjenim zapisom.
+- Register ostaja ENOTI vir imen ( `getProvider`; client-varen po glavi
+  datoteke — isti vzorec že uporabljata map-view in product-modal).
+
+### Testi
+- `task74-supply-health.test.ts` — 13 testov/66 pričakovanj: preslikava
+  ( realni slugi osm/fsq/kiwitaxi → oznake registra), neznan slug →
+  surovi niz, dedup, zaporedje, SL/EN pariteta, fail-closed ( undefined/
+  null/prazno/samo-presledki/smrt vpisa), readonly vhod, kopija pasu
+  ( ključne trditve v SL+EN), REGRESIJA: vsi aktivni vnosi registra
+  imajo neprazno oznako ( preslikava ne more pasti na surovi slug).
+- Skupaj: **1541/1541** ( prej 1528), lint 0, tsc 0 (`src/`).
+- Browser E2E: organski pozitivni primer ( Overpass je med E2E dejansko
+  odpovedal — pas se je samodejno prikazal z „OpenStreetMap"; kategorije
+  so ostale polne prek FSQ — točno pomiritev §22), EN kopija, 375 px
+  ( 0 px preliva, ikona levo, večvrstični prelom), print emulacija
+  ( pas ODSOTEN v PDF, potrditveni dokument PRISOTEN), deterministični
+  negativni test ( brez lokalnih kategorij → prazna množica → brez pasa),
+  0 napak konzole/strani.
+
+---
+
 ## [1.72.0] — 2026-09-21 (TASK 73: OFFLINE PWA — GO MODE NA SPLOŠNI BREZPOVEZAVNI STRANI)
 
 ### Dodano
