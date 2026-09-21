@@ -7,6 +7,47 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.73.1] — 2026-09-21 (TASK 75: PWA SHORTCUTS — obljuba, ki drži)
+
+### Popravljeno
+- **PWA shortcuts (4) so obljubljali neobstoječe cilje.** Dolgi pritisk
+  ikone aplikacije je ponudil „AI načrtovalec", „Zemljevid", „Tržnica",
+  „Destinacije" — a so vsi vodili na `/?section=…` vzorec iz časov
+  ENOSTRANSKE aplikacije (commit 8ab9d01), ki ga današnja večstranska
+  aplikacija NE prebere ( 0 zadetkov za `section` v `src/`). Uporabnik,
+  ki je izbral „Zemljevid", je pristal na domači strani brez zemljevida —
+  prazna obljuba ( isti iskrenostni kanon kot TASK 71 „1 klik").
+  Popravljeni URL-ji na DEJANSKE strani: `/nacrtuj`, `/zemljevid`,
+  `/trznica`, `/destinacije`.
+- Deploy potrditvi ( „posodobi github vercel render"): obe platformi
+  ( Render primarna, Vercel sekundarna) se samodejni nameščata iz
+  GitHub `main` — v1.73.0 potrjena živa na obeh prek `/api/health`
+  ( status „ok"; Render zbudit iz spanja).
+
+### Testi
+- `task75-pwa-shortcuts.test.ts` — 7 testov/45 pričakovanj, TRAJNA
+  varovalka: ① vsak shortcut URL vodi na DEJANSKO obstoječo App Router
+  stran ( fs check na `src/app/<path>/page.tsx`), ② utrulec proti
+  vračanju starega `?section=` vzorca, ③ štiri znane cilje, ④ ime+opis
+  vsakega shortcotta, ⑤ shortcut ikone obstajajo, ⑥ manifest ikone imajo
+  DEJANSKE PNG dimenzije ( glava IHDR — 192×192, 512×512), ⑦ screenshots
+  obstajajo z dejanskimi dimenzijami + wide in narrow form_factor.
+- Browser E2E: vsi 4 cilji HTTP 200 in se RENDERIRAJO ( naslovi strani
+  dejansko ustrezajo: „Interaktivni zemljevid Slovenije", „AI načrtovalec
+  potovanj", …; zemljevid Leaflet kontejner prisoten), živi `/manifest.json`
+  streže popravljene URL-je, 0 napak konzole/strani.
+
+### Opombe (iskrenost poročanja)
+- **2 viator testa sta flaky v polnem suite-u** ( `TASK 45 §2/§3 ②` in
+  `§6 ①` — posamično 32/32 zelenih; isti fail na ČISTEM HEAD brez TASK 75
+  sprememb = časovno odvisna anomalija adapter cache-a med testi, ne
+  regresija te popravke). Kandidat za diagnostiko v naslednji nalogi.
+- `src/components/sections/poi-modal.tsx` — mrtev untracked file ( ni
+  uvožen nikjer; zgodovinski vir po komentarjih product-modal/taxonomy).
+  NAMENOMA izpuščen iz commita ( ni del te popravke).
+
+---
+
 ## [1.73.0] — 2026-09-21 (TASK 74: ZDRAVJE VIROV — supplyHealth NA MY TRIP)
 
 ### Dodano

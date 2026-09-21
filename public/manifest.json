@@ -11,7 +11,12 @@
   "orientation": "portrait-primary",
   "lang": "sl-SI",
   "dir": "ltr",
-  "categories": ["travel", "tourism", "lifestyle", "navigation"],
+  "categories": [
+    "travel",
+    "tourism",
+    "lifestyle",
+    "navigation"
+  ],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -43,29 +48,49 @@
       "name": "AI načrtovalec",
       "short_name": "Načrtuj",
       "description": "Sestavi popotni itinerer z AI",
-      "url": "/?section=načrtuj",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "url": "/nacrtuj",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Zemljevid",
       "short_name": "Zemljevid",
       "description": "Interaktivni zemljevid Slovenije",
-      "url": "/?section=zemljevid",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "url": "/zemljevid",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Tržnica",
       "short_name": "Tržnica",
       "description": "Lokalni slovenski izdelki",
-      "url": "/?section=trznica",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "url": "/trznica",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Destinacije",
       "short_name": "Destinacije",
       "description": "22 najlepših destinacij",
-      "url": "/?section=destinacije",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "url": "/destinacije",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ],
   "screenshots": [
