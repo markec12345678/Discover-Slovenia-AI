@@ -7,6 +7,38 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.73.3] — 2026-09-21 (TASK 76b: PREDOGLED SKOZI PREHOD — hidracija živa)
+
+### Popravljeno
+- **Sandbox prehod (Caddy :81 → localhost:3000, `header_up Host {host}`) je
+  izničil React hidracijo.** Next.js 16 dev privzeto blokira dev vire
+  ( `/_next/hmr`, `/__nextjs_font/…`) iz „tujih" originov — dovoljen je
+  SAMO `localhost`; prehod pa ohrani vhodni Host ( `127.0.0.1` ali zunanja
+  domena predogleda) ⇒ stran se izriše ( SSR + vsi skripti 200), a
+  hidracija UTIHNE: React dogodki ne delujejo, `self.__next_f` ostane
+  prazen, gumb „Sestavi mojo pot" ostane disabled kljub vnosu — BREZ
+  katerekoli konzolne napake ( tiha okvara, najtežja vrsta za diagnosticiranje).
+  Popravek: `allowedDevOrigins: ["127.0.0.1", "localhost", …DSA_ALLOWED_DEV_ORIGINS]`
+  v `next.config.ts` ( dev-samo možnost — produkcija `next build`/standalone
+  je ne upošteva; env hatch po vzorcu DSA_LOW_MEMORY_BUILD).
+- Forenzika ob poti ( lokalni dev): OOM morilec je tiho ubijal
+  `next-server` pri ~2,4 GB RSS ( zabojnik 3,9 GB; skupaj s Chromiumom
+  prek meja) — del vzroza ponavljajočih se padcev dev strežnika;
+  `bun test` = EN proces ( deljen module state med datotekami) — vzrok
+  1.73.2; `( cmd &)` subshell sintaksa preživi mejo Bash ukaza, `setsid`
+  NE ( cgroup spravilo okolja).
+
+### Verifikacija
+- Browser E2E po popravku: prehod `127.0.0.1:81` — vnos hero → gumb
+  OMOGOČEN ( hidracija živa); `localhost:3000` — zlati tok celoten:
+  vnos → „Sestavi mojo pot" → sessionStorage `heroQuery` prenos →
+  `/nacrtuj` ( naslov + H1 pravilna); 0 napak strani/konzole;
+  375 px: 0 px horizontalnega preliva.
+- 1551/1551 testov, lint 0, tsc 0 ( `src/`) — konfiguracijska sprememba
+  nič ne lomi.
+
+---
+
 ## [1.73.2] — 2026-09-21 (TASK 76: FLAKY VIATOR TESTI — forenzika in trajna higiena suite-a)
 
 ### Popravljeno

@@ -83,6 +83,23 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // TASK 76 (1.73.3): Next 16 dev blokira dev vire (/_next/hmr,
+  // /__nextjs_font) iz „tujih" originov — privzeto je dovoljen SAMO
+  // localhost. Sandbox prehod (Caddyfile :81 → localhost:3000, header_up
+  // Host {host}) ohrani vhodni Host ⇒ predogled prek prehoda pride z
+  // originom 127.0.0.1 (ali zunanjo domeno predogleda) → hidracija
+  // UTIHNE (stran se izriže, React dogodki NE delujejo — BREZ konzolne
+  // napake; diagnoza: self.__next_f prazen + gumb „Sestavi mojo pot"
+  // ostane disabled kljub vnosu). Dovolimo 127.0.0.1 + izbirne dodatne
+  // origine prek DSA_ALLOWED_DEV_ORIGINS (vejica-ločeno). SAMO dev —
+  // produkcija (next build/standalone) možnosti NE upošteva.
+  allowedDevOrigins: [
+    "127.0.0.1",
+    "localhost",
+    ...(process.env.DSA_ALLOWED_DEV_ORIGINS
+      ? process.env.DSA_ALLOWED_DEV_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
+      : []),
+  ],
   // INFO-FIX (revizija 1.33.0, 16-e P3): x-powered-by: Next.js glava v
   // produkciji razkriva tehnologijo brez koristi — izklop.
   poweredByHeader: false,
