@@ -99,8 +99,24 @@ export function HeroQuickInput() {
         </div>
       </div>
 
+      {/* TASK 71 (raziskava TASK 68 P6): mikrocopy nad čipi — čipi so
+          DEJANSKO 1-klik izkušnja (klik → samodejni submit → /nacrtuj
+          prevzame query in zgenerira načrt); besedilo to izreče
+          (Wanderlogov "1 klik" vzorec znižuje zaznano kompleksnost).
+          id + aria-labelledby čipe označi kot imenovano skupino. */}
+      <p
+        id="hero-quick-chips-label"
+        className="mt-5 text-center text-xs font-medium text-white/80 drop-shadow-[0_1px_8px_rgba(0,0,0,0.5)] sm:text-sm"
+      >
+        {t("chipsHint")}
+      </p>
+
       {/* Intent chipi — 6 želja po FW3 predlogu; py-2.5 = ~46px tap tarča (2026 standard) */}
-      <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+      <div
+        role="group"
+        aria-labelledby="hero-quick-chips-label"
+        className="mt-3 flex flex-wrap justify-center gap-2.5"
+      >
         {QUICK_ACTIONS.map((action) => {
           const Icon = action.icon;
           return (

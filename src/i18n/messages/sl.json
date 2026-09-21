@@ -30,6 +30,7 @@
     "sectionAriaLabel": "Predstavitev platforme Discover Slovenia AI",
     "imageAlt": "Blejsko jezero z otokom, cerkvijo in gradom ob sončnem zahodu",
     "inputAriaLabel": "Kaj želiš doživeti v Sloveniji?",
+    "chipsHint": "Ali izberi željo — en klik do načrta:",
     "scrollCue": "Odkrij več",
     "scrollCueAriaLabel": "Pomakni se navzdol do statistik",
     "trustNoAccount": "Brez računa",
@@ -134,7 +135,9 @@
     "sortLabel": "Razvrsti destinacije",
     "sortRecommended": "Priporočeno",
     "sortRating": "Najbolj ocenjeno",
-    "sortPrice": "Najcenejše"
+    "sortPrice": "Najcenejše",
+    "cardPrice": "≈ {price} €",
+    "cardPriceSr": " · ocena cene na osebo"
   },
   "homeExp": {
     "eyebrow": "Doživetja",

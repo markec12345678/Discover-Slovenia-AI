@@ -30,6 +30,7 @@
     "sectionAriaLabel": "Discover Slovenia AI platform introduction",
     "imageAlt": "Lake Bled with its island, church and castle at sunset",
     "inputAriaLabel": "What do you want to experience in Slovenia?",
+    "chipsHint": "Or pick a wish — one click to a plan:",
     "scrollCue": "Discover more",
     "scrollCueAriaLabel": "Scroll down to the statistics",
     "trustNoAccount": "No account needed",
@@ -134,7 +135,9 @@
     "sortLabel": "Sort destinations",
     "sortRecommended": "Recommended",
     "sortRating": "Top rated",
-    "sortPrice": "Cheapest"
+    "sortPrice": "Cheapest",
+    "cardPrice": "≈ €{price}",
+    "cardPriceSr": " · estimated price per person"
   },
   "homeExp": {
     "eyebrow": "Experiences",

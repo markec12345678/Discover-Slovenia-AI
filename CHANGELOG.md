@@ -7,6 +7,64 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.70.0] — 2026-09-21 (TASK 71: DOKONČANJE RAZISKAVE TASK 68 — CENA NA KARTICI + „1 KLIK" MIKROCOPY)
+
+### Dodano
+- **Cena na destinacijski kartici (TASK 68 P4 — hierarhija odločitvenih
+  podatkov).** Kompletni metapodatkovni pas `★ 4.8 · €€ · ⏱ 1-2 dni ·
+  ≈ 25 €` — po vzorcu GetYourGuide („from €X" na vsaki kartici):
+  - **primerjava cen na prvi pogled** — do zdaj je bila cena
+    ( `costPerPerson`) vidna šele v modalu (2 klika globoko); zdaj
+    uporabnik primerja 38 destinacij brez odpiranja;
+  - **iskrenost:** `≈` simbol sporoča OCENO, ne garantirano ceno
+    ( uredniški podatek 10–80 €); sr-only pripona „ocena cene na
+    osebo" / „estimated price per person" za bralnike zaslona;
+  - **lokalna konvencija valute:** SL `≈ 25 €`, EN `≈ €25`
+    ( enak nabor placeholderjev `{price}` v obeh jezikih).
+- **„1 klik" mikrocopy nad intent čipi v heroju (TASK 68 P6 —
+  Wanderlogov vzorec).** Čipi so DEJANSKO 1-klik izkušnja ( klik →
+  samodejni submit → `/nacrtuj` prevzame query → samodejna generacija
+  itinererja) — mikrocopy to zdaj izreče: „Ali izberi željo — en klik
+  do načrta:" / „Or pick a wish — one click to a plan:". Sticky CTA
+  „Načrtuj z AI" namenoma NE nosi obeležja ( vodi na obrazec — tam
+  bi „1 klik" bil neiskren).
+- **A11y:** čipi so zdaj imenovana skupina ( `role="group"` +
+  `aria-labelledby="hero-quick-chips-label"` — vidno besedilo je
+  hkrati oznaka skupine za bralnike zaslona).
+- **Regresijska varovalka paritete i18n
+  ( `task71-i18n-parity.test.ts`, 6 testov/3114 pričakovanj):** SL in EN
+  slovarja morata imeti identično množico ploščih ključev, neprazne
+  vrednosti, obstoj novih ključev TASK 71 in enak nabor placeholderjev
+  za `cardPrice`. Do zdaj ročna preverba ( python) je trajno
+  avtomatizirana. Namerno NE preverja enakosti placeholderjev vseh
+  ključev ( 5 dokumentiranih jezikovno pogojenih izjem tipa
+  SL `{hl1Lower}` / EN `{hl1}`).
+
+### Ohranjeno (namenoma — iskrenost na kanon)
+- **Števec recenzij NI dodan** ( P4 predlog ga omenja): podatkovni
+  model `Destination` števca nima ( obstaja le v marketplace/listings),
+  izmišljenih številk ne objavljamo. Ocena ostaja uredniška
+  ( „/ 5 · uredniška ocena").
+- **Budget badge ( €/€€/€€€) ostaja** na kartici kljub ceni: je
+  povratna zanka filtra ( uporabnik vidi, da filter „€€" dejansko
+  dela); cena doduje natančnost, ne nadomešča kategorijo.
+- Modal ( „Ocena obiska: 25 €") in kompletni pas kartice se skladata
+  ( isti vir `costPerPerson`); featured kartice na domači strani
+  dobijo enako vrstico ( isti komponenti `DestinationCard`).
+
+### Testi
+- `bun test` — **1499/1499** (+6 pariteta i18n; prej 1493); eslint 0;
+  `tsc --noEmit` src 0 ( predhodno obstoječe napake le v `skills/` +
+  `tailwind.config.ts`, zunaj tega obsega).
+- Browser E2E: SL/EN `/destinacije` ( cene se ujemajo z realnimi
+  podatki: Bled ≈ 25 €, Bohinj ≈ 15 €, Ljubljana ≈ 20 €); hero SL/EN;
+  dokazan 1-klik tok ( čip „Miren vikend" → `/nacrtuj` → query
+  prenešen → generacija → itinerer); 375 px ( pas se prelomi v 3 čiste
+  vrstice, hint ena vrstica, VLM: brez napak); namizje 1280 px ( pas
+  v eni vrstici); 0 konzolnih/stranskih napak.
+
+---
+
 ## [1.69.0] — 2026-09-21 (TASK 70: TELEMETRIJA — VIZUALNA KOMPRESIJA V BRALNEM TOKU)
 
 ### Spremenjeno

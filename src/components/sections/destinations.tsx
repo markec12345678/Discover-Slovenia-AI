@@ -568,9 +568,12 @@ function DestinationCard({
       </div>
 
       {/* Body — OPCIJA-2 (gostota): en compact metapodatkovni pas
-          (★ ocena · budget · trajanje) namesto dveh ločenih vrstic —
+          (★ ocena · budget · trajanje · cena) namesto dveh ločenih vrstic —
           Mindtripovo zgoščeno "sličica + metapodatki + status" v ozki
-          kartici, brez uredniškega nereda. */}
+          kartici, brez uredniškega nereda. TASK 71 (raziskava TASK 68 P4):
+          cena ≈ €X na kartici (GYG vzorec "from €X") — primerjava brez
+          odpiranja modala; realni podatek costPerPerson (10–80 €), ≈ simbol
+          sporoča oceno, ne garantirano ceno (iskrenost). */}
       <CardContent className="flex flex-col gap-2 p-3 sm:p-4">
         <div className="min-w-0">
           <h3 className="text-base font-semibold leading-tight sm:text-lg">
@@ -581,7 +584,7 @@ function DestinationCard({
           </p>
         </div>
 
-        {/* Compact pas: ocena + budget + trajanje v eni vrstici */}
+        {/* Compact pas: ocena + budget + trajanje + cena v eni vrstici */}
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
           <span className="inline-flex items-center gap-1">
             <Star
@@ -604,6 +607,11 @@ function DestinationCard({
           <span className="inline-flex items-center gap-1 text-muted-foreground">
             <Clock className="size-3" aria-hidden="true" />
             {destination.duration}
+          </span>
+          <span aria-hidden="true" className="text-border">·</span>
+          <span className="inline-flex items-center gap-1 font-medium tabular-nums">
+            {t("cardPrice", { price: destination.costPerPerson })}
+            <span className="sr-only">{t("cardPriceSr")}</span>
           </span>
         </div>
 
