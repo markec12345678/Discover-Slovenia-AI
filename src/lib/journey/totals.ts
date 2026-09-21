@@ -18,9 +18,15 @@ import type { JourneyProduct, JourneyTotals } from "./types";
  * Izračun skupne cene iz KANONSKIH produktov potovanja.
  * Čista funkcija; fromPrice cene grejo SAMO v estimatedTotal (spodnja meja),
 // odstoječa cena v unknownCount.
+ *
+ * TASK 72: podpis je STRUKTURNO razširjen na ReadonlyArray<Pick<JourneyProduct,
+ * "price">> — isti kanon §16 zdaj sešteva tudi postavke POTRDITVENEGA
+ * DOKUMENTA ( TripEntry iz trip-view nosi price?: PriceInfo — enaka oblika).
+ * Nazaj kompatibilno: vsi obstoječi klici ( JourneyProduct[]) še vedno
+ * tipkajo; NI nove logike — EN vir resnice za „od/znano/unknown“ ločbo.
  */
 export function computeJourneyTotals(
-  products: JourneyProduct[]
+  products: ReadonlyArray<Pick<JourneyProduct, "price">>
 ): JourneyTotals {
   let knownTotal = 0;
   let estimatedTotal = 0;

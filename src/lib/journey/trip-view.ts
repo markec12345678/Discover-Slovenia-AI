@@ -353,6 +353,23 @@ export function buildMyTrip(
     })
   );
 
+  // TASK 72 — KRONOLOŠKI vrstni red dni: vir dogodke razvršča po pomembnosti
+  // ( prekrivanje → prihajajoči → pretekli), ne po datumu — brez tega bi
+  // časovnica in potrditveni dokument lahko kazali dni v napačnem zaporedju.
+  // ISO datum se ureja leksikografsko = kronološko; dan brez datuma (prihod
+  // brez vnosa) se s "" uredi PRVI (sidro časovnice). Stabilno: isti datum
+  // ohrani vrstni red vstavljanja ( dan prihoda pred dogodkom istega dne).
+  const dayOne: MyTripDay = {
+    ...(journey.startDate ? { date: journey.startDate } : {}),
+    dateLabel: journey.startDate
+      ? formatDateLabel(journey.startDate)
+      : { sl: "Datum prihoda ni vnesen", en: "Arrival date not entered" },
+    entries: day1,
+  };
+  const days = [dayOne, ...eventDays].sort((a, b) =>
+    (a.date ?? "").localeCompare(b.date ?? "")
+  );
+
   const title = {
     sl: `MOJA POT — ${journey.destination.label.toUpperCase()}`,
     en: `MY TRIP — ${journey.destination.label.toUpperCase()}`,
@@ -360,16 +377,7 @@ export function buildMyTrip(
 
   return {
     title,
-    days: [
-      {
-        ...(journey.startDate ? { date: journey.startDate } : {}),
-        dateLabel: journey.startDate
-          ? formatDateLabel(journey.startDate)
-          : { sl: "Datum prihoda ni vnesen", en: "Arrival date not entered" },
-        entries: day1,
-      },
-      ...eventDays,
-    ],
+    days,
     externalCards,
     confirmation: {
       // Potrjene rezervacije obstajajo SAMO iz JourneyBooking zapisov

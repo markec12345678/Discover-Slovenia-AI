@@ -7,6 +7,74 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.71.0] — 2026-09-21 (TASK 72: MY TRIP — POTRDITVENI DOKUMENT: SKUPNA CENA §16 + GRUPIRANJE PO DNEHIH)
+
+### Dodano
+- **Skupna cena v potrditvenem dokumentu (§16 kanon).** Dokument je
+  do zdaj sešteval NIČ — cene vrstic so bile naštete, nikoli povzete
+  ( kartica „od/znane" v načrtovalniku je med tiskanjem skrita).
+  Zdaj dokument nosi lastni povzetek nad SVOJIMI vrsticami:
+  - **`Skupaj: od €154 — ocena (vsota „od" cen)`** — od-cene → ocena
+    ( spodnja meja), točne cene → znano, BREZ cene → izrecno šteto
+    ( „N produktov z neznano ceno (ne štejejo kot brezplačno)"),
+    NIKOLI potrjeno ≠ dejansko plačano;
+  - pod črto sledi `describeTotals` poštena razlaga, kaj številka
+    PREDSTAVLJA (§16 „UI must explain what the total actually
+    represents") — natisnjena skupaj z dokumentom;
+  - **EN vir resnice:** `computeJourneyTotals` podpis je strukturno
+    razširjen ( `ReadonlyArray<Pick<JourneyProduct, "price">>` —
+    nazaj kompatibilno) — isti kanon zdaj sešteva tudi `TripEntry`
+    dokumenta; NI duplikata logike.
+- **Postavke dokumenta grupirane po dneh** — isti datumski ritmi
+  časovnice ( majhne uppercase glave dni), zunanje kartice najema v
+  lastni skupini „Zunanja rezervacija"; čista re-razvrstitev obstoječih
+  vrstic ( `DocEntry` izvlečena komponenta — ni novih podatkov).
+- **KRONOLOŠKI vrstni red dni ( časovnica + dokument).** Vir dogodke
+  razvršča po pomembnosti ( prekrivanje → prihajajoči → pretekli),
+  ne po datumu — dnevi so se lahko izrisali v napačnem zaporedju.
+  Zdaj: ISO datum uredi leksikografsko = kronološko ( tudi dogodek
+  PRED prihodom je iskreno pred njim); dan brez datuma („Datum prihoda
+  ni vnesen") ostane PRVI ( sidro časovnice); stabilno ( isti datum
+  ohrani vrstni red vstavljanja).
+
+### Popravljeno (mobilno 375 px — najdeno med E2E)
+- **Dolg URL ponudnika** ( `/go/transfers?product=…&from=…`) je štrlel
+  369 px čez 341 px kartico → `break-all` na vrednosti `DocRow`.
+- **Status badge** ( „Zunanja rezervacija — pri ponudniku", 211 px) je
+  štrlel 17 px čez rob → `whitespace-normal` + `flex-wrap` vrstice
+  ( badge se prelomi v 2 vrstici / novo vrstico). Po popravku:
+  scrollWidth = clientWidth ( 0 px preliva).
+
+### Ohranjeno (namenoma — iskrenost na kanon)
+- Vsaka vrstica dokumenta še vedno nosi VSA §21 polja ( ponudnik/ID/
+  št. rezervacije/datum/čas/lokacija/trajanje/cena/valuta/status/
+  povezava/preklic) — grupiranje je ČISTA re-razvrstitev.
+- Skupna cena ne pomnoži `per_person × travelers` niti `per_day ×`
+  dnevi ( ni zanesljivo znano) — sledi obstoječi §16 odločitvi
+  ( vsota kanonskih zneskov + razlaga), enako kot načrtovalnik.
+- confirmedTotal ostaja 0 ( 0 API_BOOKING ponudnikov) — povzetek je
+  „od + znane cene", NIKOLI „plačano".
+
+### Testi
+- `task72-trip-doc.test.ts` — **12 testov/45 pričakovanj**: struktur tip
+  ( mešane od/točne/brez → ocena/znano/unknown; NaN fail-closed;
+  zaokrožitev; prazno; unknown-only brez €0; describeTotals SL/EN),
+  integracija `buildMyTrip` ( transfer od + dogodek točen → 162+30,
+  prihod brez cene NI 0; zunanja kartica šteta; kronološki vrstni red
+  ⑨–⑫ vključno z dogodkom pred prihodom + datumsko brez sidrom),
+  nazaj kompatibilnost ( JourneyProduct[] + ReadonlyArray).
+- `bun test` — **1511/1511** (prej 1499); eslint 0; tsc src 0.
+- Browser E2E: `/potovanje` SL ( Brnik→Bled, 2 transferja €77 →
+  „Skupaj: od €154 — ocena"; glave „Datum prihoda ni vnesen" +
+  „Zunanja rezervacija"; print medij: dokument + skupna cena se
+  natisneta); EN ( „Total: from €154 — estimate (sum of „from"
+  prices)" + polna §16 razlaga; „Arrival date not entered" +
+  „External booking"; „Print confirmation"); 375 px 0 px preliva
+  ( prej 205 px); VLM vizualna potrditev ( skupna cena + razlaga +
+  badge v 2 vrsticah); 0 konzolnih/stranskih napak.
+
+---
+
 ## [1.70.0] — 2026-09-21 (TASK 71: DOKONČANJE RAZISKAVE TASK 68 — CENA NA KARTICI + „1 KLIK" MIKROCOPY)
 
 ### Dodano

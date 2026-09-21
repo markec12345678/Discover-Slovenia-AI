@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildMyTrip } from "@/lib/journey/trip-view";
 import type { TripEntry, MyTripView } from "@/lib/journey/trip-view";
+import { computeJourneyTotals, describeTotals } from "@/lib/journey/totals";
 import {
   parseTripWeatherResponse,
   tripWeatherAnchor,
@@ -80,6 +81,10 @@ const L = {
       sl: "Izberi izdelke v kategorijah — tukaj se zgradi tvoja pot.",
       en: "Select products in the categories — your trip builds here.",
     },
+    // TASK 72 — skupna cena dokumenta (§16: od-cene = ocena, znane = točne)
+    total: { sl: "Skupaj", en: "Total" },
+    totalEstimated: { sl: "ocena (vsota „od“ cen)", en: "estimate (sum of „from“ prices)" },
+    totalKnown: { sl: "točne cene", en: "exact prices" },
   },
 };
 
@@ -96,7 +101,12 @@ function statusBadge(e: TripEntry, lang: "sl" | "en") {
       ? "bg-violet-100 text-violet-900 border-violet-300 hover:bg-violet-100"
       : "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-100";
   return (
-    <Badge className={variant}>{e.statusLabel[lang]}</Badge>
+    // TASK 72 — whitespace-normal: na ozki mobilni kartici se dolgi status
+    // ( „Zunanja rezervacija — pri ponudniku") prelomi v 2 vrstici namesto
+    // da štrli čez rob kartice ( prej 17 px preliva na 375 px).
+    <Badge className={`${variant} whitespace-normal text-center leading-tight`}>
+      {e.statusLabel[lang]}
+    </Badge>
   );
 }
 
@@ -129,7 +139,9 @@ function WeatherChip({
 
 function EntryRow({ e, lang }: { e: TripEntry; lang: "sl" | "en" }) {
   return (
-    <div className="flex items-start gap-3 py-2">
+    // TASK 72 — flex-wrap: na ozki mobilni kartici se status badge prelomi
+    // v novo vrstico ( namesto 17 px preliva čez rob kartice).
+    <div className="flex flex-wrap items-start gap-x-3 gap-y-1 py-2">
       <div className="w-16 shrink-0 text-right text-sm font-medium tabular-nums text-muted-foreground">
         {e.time ? (
           <>
@@ -163,7 +175,50 @@ function DocRow({ label, value }: { label: string; value: string | null | undefi
   return (
     <div className="flex gap-2 text-xs">
       <span className="w-32 shrink-0 text-muted-foreground">{label}</span>
-      <span className="min-w-0 flex-1 font-medium">{value ?? "—"}</span>
+      {/* TASK 72 — break-all: dolgi URL-ji ponudnikov ( /go/transfers?…)
+          se na mobilnem prelomijo, namesto da širijo kartico čez zaslon. */}
+      <span className="min-w-0 flex-1 break-all font-medium">{value ?? "—"}</span>
+    </div>
+  );
+}
+
+/** TASK 72 — ena postavka dokumenta (izvlečena iz ConfirmationDoc, da se
+ *  isto vrstico izrise po dneh in v zunanjih karticah brez duplikacije). */
+function DocEntry({ e, lang }: { e: TripEntry; lang: "sl" | "en" }) {
+  return (
+    <div className="space-y-1 py-2">
+      <p className="text-sm font-medium">
+        {e.icon} {e.title}
+      </p>
+      <div className="space-y-1">
+        <DocRow label={L.doc.provider[lang]} value={e.providerLabel[lang]} />
+        <DocRow label={L.doc.productId[lang]} value={e.providerProductId ?? null} />
+        <DocRow
+          label={L.doc.bookingId[lang]}
+          value={
+            e.bookingId ??
+            (e.status === "EXTERNAL" ? L.doc.externalBooking[lang] : null)
+          }
+        />
+        <DocRow label={L.doc.date[lang]} value={e.date ?? null} />
+        <DocRow
+          label={L.doc.time[lang]}
+          value={e.time ? `${e.time.start}${e.time.end ? `–${e.time.end}` : ""}` : null}
+        />
+        <DocRow label={L.doc.location[lang]} value={e.location ?? null} />
+        <DocRow
+          label={L.doc.duration[lang]}
+          value={e.durationMin != null ? `${e.durationMin} ${L.doc.min[lang]}` : null}
+        />
+        <DocRow label={L.doc.price[lang]} value={priceText(e, lang)} />
+        <DocRow label={L.doc.currency[lang]} value={e.price ? "EUR" : null} />
+        <DocRow label={L.doc.status[lang]} value={e.statusLabel[lang]} />
+        <DocRow
+          label={L.doc.providerLink[lang]}
+          value={e.bookingUrl ?? e.sourceUrl ?? null}
+        />
+        <DocRow label={L.doc.cancellation[lang]} value={e.cancellation[lang]} />
+      </div>
     </div>
   );
 }
@@ -178,6 +233,23 @@ function ConfirmationDoc({
   travelers: number;
 }) {
   const entries = trip.days.flatMap((d) => d.entries).concat(trip.externalCards);
+
+  // TASK 72 — SKUPNA CENA DOKUMENTA (§16): isti kanon kot načrtovalnik
+  // (computeJourneyTotals strukturno sprejme TripEntry): od-cene → ocena
+  // ( spodnja meja), točne cene → znano, brez cene → šteto, NIKOLI kot 0.
+  // Sešteva SAMO vrstice NAD sabo ( lastne postavke dokumenta, ne vse
+  // ponudbe potovanja). describeTotals pošteno razloži, kaj številka je.
+  const totals = computeJourneyTotals(entries);
+  const totalParts: string[] = [];
+  if (totals.estimatedTotal > 0) {
+    totalParts.push(`${L.doc.from[lang]} €${totals.estimatedTotal}`);
+  }
+  if (totals.knownTotal > 0) {
+    totalParts.push(`€${totals.knownTotal} (${L.doc.totalKnown[lang]})`);
+  }
+  const totalExplain = describeTotals(totals, lang);
+  const showTotal = totalParts.length > 0 || totalExplain.length > 0;
+
   return (
     <div className="space-y-4 rounded-lg border p-4">
       <div className="space-y-1">
@@ -188,44 +260,48 @@ function ConfirmationDoc({
         <DocRow label={L.doc.trip[lang]} value={trip.title[lang]} />
         <DocRow label={L.doc.travelers[lang]} value={String(travelers)} />
       </div>
+
+      {/* TASK 72 — postavke grupirane po dneh (ista časovnica kot zgoraj):
+          dan kot majhna glava skupine, zunanje kartice v lastni skupini.
+          Čista re-razvrstitev obstoječih vrstic (ni novih podatkov). */}
       <div className="divide-y">
-        {entries.map((e) => (
-          <div key={`doc-${e.key}`} className="space-y-1 py-3">
-            <p className="text-sm font-medium">
-              {e.icon} {e.title}
+        {trip.days.map((day, i) => (
+          <div key={`doc-day-${day.date ?? i}`} className="space-y-1 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {day.dateLabel[lang]}
             </p>
-            <div className="space-y-1">
-              <DocRow label={L.doc.provider[lang]} value={e.providerLabel[lang]} />
-              <DocRow label={L.doc.productId[lang]} value={e.providerProductId ?? null} />
-              <DocRow
-                label={L.doc.bookingId[lang]}
-                value={
-                  e.bookingId ??
-                  (e.status === "EXTERNAL" ? L.doc.externalBooking[lang] : null)
-                }
-              />
-              <DocRow label={L.doc.date[lang]} value={e.date ?? null} />
-              <DocRow
-                label={L.doc.time[lang]}
-                value={e.time ? `${e.time.start}${e.time.end ? `–${e.time.end}` : ""}` : null}
-              />
-              <DocRow label={L.doc.location[lang]} value={e.location ?? null} />
-              <DocRow
-                label={L.doc.duration[lang]}
-                value={e.durationMin != null ? `${e.durationMin} ${L.doc.min[lang]}` : null}
-              />
-              <DocRow label={L.doc.price[lang]} value={priceText(e, lang)} />
-              <DocRow label={L.doc.currency[lang]} value={e.price ? "EUR" : null} />
-              <DocRow label={L.doc.status[lang]} value={e.statusLabel[lang]} />
-              <DocRow
-                label={L.doc.providerLink[lang]}
-                value={e.bookingUrl ?? e.sourceUrl ?? null}
-              />
-              <DocRow label={L.doc.cancellation[lang]} value={e.cancellation[lang]} />
-            </div>
+            {day.entries.map((e) => (
+              <DocEntry key={`doc-${e.key}`} e={e} lang={lang} />
+            ))}
           </div>
         ))}
+        {trip.externalCards.length > 0 && (
+          <div key="doc-external" className="space-y-1 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {L.external[lang]}
+            </p>
+            {trip.externalCards.map((e) => (
+              <DocEntry key={`doc-${e.key}`} e={e} lang={lang} />
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* TASK 72 — skupna cena + poštena razlaga §16 (natisnjeno tudi) */}
+      {showTotal && (
+        <div className="space-y-1 border-t pt-3">
+          {totalParts.length > 0 && (
+            <p className="text-sm font-semibold">
+              {L.doc.total[lang]}: {totalParts.join(" · ")}
+              {totals.estimatedTotal > 0 ? ` — ${L.doc.totalEstimated[lang]}` : ""}
+            </p>
+          )}
+          {totalExplain && (
+            <p className="text-xs text-muted-foreground">{totalExplain}</p>
+          )}
+        </div>
+      )}
+
       <p className="text-[10px] text-muted-foreground">
         {L.doc.generated[lang]}: {trip.generatedAt.slice(0, 16).replace("T", " ")} UTC
       </p>
@@ -388,7 +464,7 @@ export function JourneyTrip({
             </p>
             <div className="divide-y rounded-lg border">
               {trip.externalCards.map((e) => (
-                <div key={e.key} className="flex items-center gap-3 py-2">
+                <div key={e.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
                   <div className="text-lg leading-none">{e.icon}</div>
                   <div className="min-w-0 flex-1 space-y-0.5">
                     <p className="text-sm font-medium leading-snug">{e.title}</p>
