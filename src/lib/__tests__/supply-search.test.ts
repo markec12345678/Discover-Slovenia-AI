@@ -13,10 +13,17 @@ import {
   clearOsmCache,
 } from "@/lib/supply/osm-adapter";
 import type { OsmAdapterDeps } from "@/lib/supply/osm-adapter";
-import { parseSupplyQuery, searchSupply } from "@/lib/supply/search";
+import { parseSupplyQuery, searchSupply, clearProviderRateLimits } from "@/lib/supply/search";
 import { getProvider } from "@/lib/supply/registry";
 import type { SupplyAdapter } from "@/lib/supply/adapter";
 import type { ProviderProduct, SupplyQuery } from "@/lib/supply/types";
+
+// TASK 76: runner-jev omejevalnik (providerRateLimited) je module-level
+// stanje, deljeno med vsemi datotekami suite-a (bun test = en proces) —
+// vsaka datoteka, ki poganja searchSupply, začne s čistim oknom.
+beforeEach(() => {
+  clearProviderRateLimits();
+});
 
 // ---------------------------------------------------------------------------
 // OSM NORMALIZACIJA (Overpass element → kanonski ProviderProduct)

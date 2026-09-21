@@ -1,6 +1,7 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test, beforeEach } from "bun:test";
 import { readFileSync } from "node:fs";
 import { GET } from "@/app/api/supply/search/route";
+import { clearProviderRateLimits } from "@/lib/supply/search";
 
 // ============================================================================
 // TASK 44 — PRODUCTION HARDENING: /api/supply/search odpovedna izolacija
@@ -24,6 +25,12 @@ const ROUTE_SRC = readFileSync(
   new URL("../../app/api/supply/search/route.ts", import.meta.url),
   "utf-8"
 );
+
+// TASK 76: GET integracija dejansko poganja searchSupply — runner-jev
+// omejevalnik je module state, deljen med datotekami suite-a.
+beforeEach(() => {
+  clearProviderRateLimits();
+});
 
 describe("TASK 44: telemetrija supply poizvedbe je ODVOJENA od odgovora", () => {
   test("SOURCE CONTRACT: zapis je fire-and-forget — NI `await writeSupplyQueryAnalytics`", () => {

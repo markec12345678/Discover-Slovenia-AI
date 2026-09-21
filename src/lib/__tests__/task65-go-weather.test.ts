@@ -29,6 +29,7 @@ import type { SupplyAdapter } from "@/lib/supply/adapter";
 import type { ProviderProduct } from "@/lib/supply/types";
 import { getProvider } from "@/lib/supply/registry";
 import { getKiwitaxiBaseline } from "@/lib/supply/providers/kiwitaxi/dataset";
+import { clearProviderRateLimits } from "@/lib/supply/search";
 import { GET as weatherGET } from "@/app/api/weather/route";
 
 const baseline = getKiwitaxiBaseline();
@@ -441,6 +442,7 @@ function mockFetchOnce(payload: unknown, status = 200): void {
 
 afterEach(() => {
   globalThis.fetch = realFetch;
+  clearProviderRateLimits(); // TASK 76: ne puščaj runner žetonov naslednjim datotekam
 });
 
 describe("TASK 65: GET /api/weather — route integracija (mock vir)", () => {

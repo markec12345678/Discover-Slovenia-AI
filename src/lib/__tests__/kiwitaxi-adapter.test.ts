@@ -20,7 +20,7 @@ import {
 import { isKiwiTaxiDataset, filterValidRoutes } from "@/lib/supply/providers/kiwitaxi/validate";
 import type { KiwiRoute, KiwiTaxiDataset } from "@/lib/supply/providers/kiwitaxi/types";
 import { getProvider } from "@/lib/supply/registry";
-import { searchSupply } from "@/lib/supply/search";
+import { searchSupply, clearProviderRateLimits } from "@/lib/supply/search";
 import { dedupeProducts } from "@/lib/supply/dedupe";
 import type { SupplyAdapter } from "@/lib/supply/adapter";
 import type { ProviderProduct, SupplyQuery } from "@/lib/supply/types";
@@ -104,11 +104,13 @@ function fakeOsmAdapter(products: ProviderProduct[]): SupplyAdapter {
 
 beforeEach(() => {
   resetKiwitaxiDataset();
+  clearProviderRateLimits(); // TASK 76: runner omejevalnik (deljen module state)
 });
 
 afterEach(() => {
   resetKiwitaxiDataset();
   disableKiwitaxiBaselineForTests(false);
+  clearProviderRateLimits();
 });
 
 // ---------------------------------------------------------------------------

@@ -24,7 +24,7 @@ import {
   getProvider,
   affiliateCardProviders,
 } from "@/lib/supply/registry";
-import { defaultAdapters, searchSupply } from "@/lib/supply/search";
+import { defaultAdapters, searchSupply, clearProviderRateLimits } from "@/lib/supply/search";
 import {
   productionMatrix,
   providerEnvAccess,
@@ -64,6 +64,7 @@ beforeEach(() => {
     saved[k] = process.env[k];
     delete process.env[k];
   }
+  clearProviderRateLimits(); // TASK 76: runner omejevalnik (deljen module state)
 });
 
 afterEach(() => {
@@ -71,6 +72,7 @@ afterEach(() => {
     if (saved[k] === undefined) delete process.env[k];
     else process.env[k] = saved[k];
   }
+  clearProviderRateLimits(); // TASK 76: defaultAdapters() porabi žetone VSEH providerjev
 });
 
 const SI_QUERY: SupplyQuery = {

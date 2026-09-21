@@ -22,6 +22,7 @@ import { kiwitaxiTransferExists } from "@/lib/supply/providers/kiwitaxi/dataset"
 import type { SupplyAdapter } from "@/lib/supply/adapter";
 import type { ProviderProduct, ProviderSlug } from "@/lib/supply/types";
 import { PROVIDER_REGISTRY, getProvider, isProviderSlug } from "@/lib/supply/registry";
+import { clearProviderRateLimits } from "@/lib/supply/search";
 import { planJourney } from "@/lib/journey/orchestrator";
 import { journeyCapabilityMatrix } from "@/lib/journey/capabilities";
 import {
@@ -39,9 +40,11 @@ const hasKt = Boolean(baseline);
 
 beforeEach(() => {
   resetKiwitaxiDataset();
+  clearProviderRateLimits(); // TASK 76: vbrizgani adapterji kljub temu trošijo runner žetone
 });
 afterEach(() => {
   disableKiwitaxiBaselineForTests(false);
+  clearProviderRateLimits();
 });
 
 // ---------------------------------------------------------------------------

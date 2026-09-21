@@ -36,6 +36,7 @@ import {
   defaultMapStatus,
 } from "@/lib/journey/booking";
 import { computeJourneyTotals, describeTotals } from "@/lib/journey/totals";
+import { clearProviderRateLimits } from "@/lib/supply/search";
 import type { JourneyProduct } from "@/lib/journey/types";
 
 const baseline = getKiwitaxiBaseline();
@@ -43,12 +44,14 @@ const hasKt = Boolean(baseline);
 
 beforeEach(() => {
   resetKiwitaxiDataset();
+  clearProviderRateLimits(); // TASK 76: runner omejevalnik (deljen module state)
 });
 // afterEach ekvivalent: povrni baseline po testih, ki ga izključijo.
 import { afterEach } from "bun:test";
 
 afterEach(() => {
   disableKiwitaxiBaselineForTests(false);
+  clearProviderRateLimits();
 });
 
 // ---------------------------------------------------------------------------

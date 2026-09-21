@@ -7,6 +7,57 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.73.2] — 2026-09-21 (TASK 76: FLAKY VIATOR TESTI — forenzika in trajna higiena suite-a)
+
+### Popravljeno
+- **Korenski vzrok 2 „flaky" viator testov najden in odstranjen** — ne
+  časovna anomalija adapter cache-a, kot je sumila opomba v 1.73.1,
+  ampak **kontaminacija med datotekami**. `bun test` poganja VSE datoteke
+  suite-a v ENEM procesu → runner-jev drseči omejevalnik
+  (`providerRateLimited` v `supply/search.ts`, 60 s okno, kap iz registra
+  — viator 20/min) je module-level stanje, deljeno med datotekami.
+  Route-integracijski testi ( `POST /api/itinerary` →
+  `fetchAiSupplyContext` → `searchSupply(defaultAdapters())`) so pred
+  `viator-adapter.test.ts` porabili točno kap: task51-routing-failure
+  **13** + task53-no-credential-mode **3** + task51-geo-coherence
+  **4** = **20/20** → opazka „rate-limited" namesto „not-configured"
+  ( 2 padca v polnem suite-u; posamično 32/32 zeleno — zato je izgledalo
+  „flaky"). Izmerjeno živo z začasno instrumentacijo ( žeton po žeton,
+  natančna atribucija po datotekah), instrumentacija nato povratna —
+  `search.ts` ostaja netaknjen.
+- **17 testnih datotek** zdaj čisti okno ( `clearProviderRateLimits` v
+  beforeEach/afterEach): 6 neposrednih klicateljev `searchSupply`
+  ( viator/booking/kiwitaxi/tiqets/supply-search/task53) + 3
+  route-testi ( task50, task51-routing-failure, task51-geo-coherence)
+  + 8 posrednih ( planJourney klicatelji in route-uvozniki: task58×2,
+  task62/63/64/65/66, supply-route-hardening). Suite je hermetičen
+  glede na vrstni red izvedbe — 6 datotek je konvencijo že imelo
+  ( gyg-*, viator-hardening, supply-contract, task47-supply-context),
+  17 jo je manjkalo.
+
+### Testi
+- `task76-suite-hygiene.test.ts` — 3 trajne varovalke: ① SOURCE CONTRACT —
+  vsaka testna datoteka, ki troši žetone ( vzorec `searchSupply(` ALI
+  uvoz `@/app/api/` ALI klic `planJourney(`), MORA referencirati
+  `clearProviderRateLimits` ( nov test, ki bi puščal žetone naslednjim
+  datotekam, pade s seznamom kršiteljev in navodilom popravka);
+  ② živostna kontrola — vzorci zajamejo ≥ 15 datotek ( varovalka ni
+  mrtva črka, če bi vzorce preimenovali); ③ obseg — ≥ 50 datotek.
+- **1551/1551 testov** ( 1548 + 3 varovalke; prej 1546/1548 s 2 padcema),
+  poln suite 3× zapored zelen ( 0 fail), lint 0, tsc 0 ( `src/`).
+
+### Opombe (iskrenost poročanja)
+- 2 tsc napaki v `examples/` ( socket.io primeri) sta prisotni tudi na
+  čistem HEAD — predhodno stanje, izven tega popravka.
+- Vnos TASK 74 v lokalnem `worklog.md` je bil izgubljen v okvari orodij
+  prejšnje seje ( zaveza ostaja popolna v GitHub commit sporočilu
+  `bcfca6d`) — krajši rekonstruiran vnos je dodan v tem ciklu.
+- 3. samodejni komit nesreče ( UUID sporočilo, `95b30ce` — vseboval samo
+  namenoma izpuščen `poi-modal.tsx`) razveljavljen z `git reset` PRED
+  potiskanjem; na remote nikoli ni prišel.
+
+---
+
 ## [1.73.1] — 2026-09-21 (TASK 75: PWA SHORTCUTS — obljuba, ki drži)
 
 ### Popravljeno

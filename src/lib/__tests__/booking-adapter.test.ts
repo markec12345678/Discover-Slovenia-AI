@@ -38,7 +38,7 @@ import {
   bookingLastSkipped,
 } from "@/lib/supply/providers/booking/adapter";
 import { BookingApiError } from "@/lib/supply/providers/booking/client";
-import { searchSupply } from "@/lib/supply/search";
+import { searchSupply, clearProviderRateLimits } from "@/lib/supply/search";
 import type { SupplyAdapter } from "@/lib/supply/adapter";
 import type { ProviderRegistryEntry } from "@/lib/supply/registry";
 import type { SupplyQuery } from "@/lib/supply/types";
@@ -223,6 +223,7 @@ beforeEach(() => {
   prevKey = process.env.BOOKING_API_KEY;
   prevBase = process.env.BOOKING_API_BASE;
   resetBookingAdapterCaches();
+  clearProviderRateLimits(); // TASK 76: runner omejevalnik (deljen module state)
 });
 
 afterEach(() => {
@@ -231,6 +232,7 @@ afterEach(() => {
   if (prevBase === undefined) delete process.env.BOOKING_API_BASE;
   else process.env.BOOKING_API_BASE = prevBase;
   resetBookingAdapterCaches();
+  clearProviderRateLimits();
 });
 
 // ---------------------------------------------------------------------------

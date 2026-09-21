@@ -8,7 +8,7 @@
 // 0 omrežja v testih; iskrene opombe: 0 transfer rut ≠ napaka).
 // ============================================================================
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test, beforeEach } from "bun:test";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -34,9 +34,16 @@ import { getProvider } from "@/lib/supply/registry";
 import type { SupplyAdapter } from "@/lib/supply/adapter";
 import type { ProviderProduct } from "@/lib/supply/types";
 import { planJourney } from "@/lib/journey/orchestrator";
+import { clearProviderRateLimits } from "@/lib/supply/search";
 
 const baseline = getKiwitaxiBaseline();
 const hasKt = Boolean(baseline);
+
+// TASK 76: planJourney poganja searchSupply (tudi z vbrizganimi adapterji) —
+// runner-jev omejevalnik je module state, deljen med datotekami suite-a.
+beforeEach(() => {
+  clearProviderRateLimits();
+});
 
 /** Id-ji 16 novih regionalnih destinacij (TASK 62). */
 const NEW_IDS = [

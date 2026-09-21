@@ -35,6 +35,7 @@ import {
 } from "@/lib/supply/providers/kiwitaxi/dataset";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { Itinerary, LocationVisit } from "@/lib/types";
+import { clearProviderRateLimits } from "@/lib/supply/search";
 import {
   orderAroundAnchors,
   type GeoOrderAnchor,
@@ -89,6 +90,7 @@ beforeEach(() => {
     )) as unknown as typeof fetch;
   resetKiwitaxiDataset();
   resetRoadRoutingState();
+  clearProviderRateLimits(); // TASK 76: route-testi porabljajo žetone runner omejevalnika
 });
 
 afterAll(() => {

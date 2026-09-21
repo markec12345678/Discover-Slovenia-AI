@@ -34,6 +34,7 @@ import {
 } from "@/lib/supply/providers/kiwitaxi/dataset";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { Itinerary, LocationVisit } from "@/lib/types";
+import { clearProviderRateLimits } from "@/lib/supply/search";
 
 // ---------------------------------------------------------------------------
 // OSRM teče prek node:https (NE global fetch) — zato bazo preusmerimo na
@@ -70,6 +71,10 @@ beforeEach(() => {
     Promise.reject(new Error("task50: network disabled (deterministic test)"))) as unknown as typeof fetch;
   resetKiwitaxiDataset();
   resetRoadRoutingState();
+  // TASK 76: POST /api/itinerary → fetchAiSupplyContext → searchSupply
+  // (defaultAdapters) porabi žetone VSEH omejenih providerjev — ta datoteka
+  // jih je puščala naslednjim (13× viator) in podrla viator-adapter teste.
+  clearProviderRateLimits();
 });
 
 afterAll(() => {

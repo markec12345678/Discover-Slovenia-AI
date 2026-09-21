@@ -33,7 +33,7 @@ import {
   tiqetsLastSkipped,
 } from "@/lib/supply/providers/tiqets/adapter";
 import { TiqetsApiError } from "@/lib/supply/providers/tiqets/client";
-import { searchSupply } from "@/lib/supply/search";
+import { searchSupply, clearProviderRateLimits } from "@/lib/supply/search";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { SupplyAdapter } from "@/lib/supply/adapter";
 import type { ProviderRegistryEntry } from "@/lib/supply/registry";
@@ -205,12 +205,14 @@ let prevKey: string | undefined;
 beforeEach(() => {
   prevKey = process.env.TIQETS_API_KEY;
   resetTiqetsAdapterCaches();
+  clearProviderRateLimits(); // TASK 76: runner omejevalnik (deljen module state)
 });
 
 afterEach(() => {
   if (prevKey === undefined) delete process.env.TIQETS_API_KEY;
   else process.env.TIQETS_API_KEY = prevKey;
   resetTiqetsAdapterCaches();
+  clearProviderRateLimits();
 });
 
 // ---------------------------------------------------------------------------

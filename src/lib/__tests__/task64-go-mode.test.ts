@@ -9,7 +9,7 @@
 // kanon kot TASK 63 — 0 omrežja).
 // ============================================================================
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 import { planJourney } from "@/lib/journey/orchestrator";
 import { buildMyTrip, type MyTripDay, type MyTripView, type TripEntry } from "@/lib/journey/trip-view";
@@ -30,9 +30,16 @@ import { getProvider } from "@/lib/supply/registry";
 import type { SupplyAdapter } from "@/lib/supply/adapter";
 import type { ProviderProduct } from "@/lib/supply/types";
 import { getKiwitaxiBaseline } from "@/lib/supply/providers/kiwitaxi/dataset";
+import { clearProviderRateLimits } from "@/lib/supply/search";
 
 const baseline = getKiwitaxiBaseline();
 const hasKt = Boolean(baseline);
+
+// TASK 76: planJourney poganja searchSupply — runner-jev omejevalnik je
+// module state, deljen med datotekami suite-a (bun test = en proces).
+beforeEach(() => {
+  clearProviderRateLimits();
+});
 
 // ---------------------------------------------------------------------------
 // Fixture gradniki (čisti — go-view testiramo BREZ celotnega journeyja)

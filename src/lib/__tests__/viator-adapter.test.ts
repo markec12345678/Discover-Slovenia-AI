@@ -21,7 +21,7 @@ import { createViatorAdapter, resetViatorAdapterCaches, viatorLastNote } from "@
 import { resetViatorDestinations } from "@/lib/supply/providers/viator/destinations";
 import { clearViatorProductUrls, lookupViatorProductUrl } from "@/lib/supply/providers/viator/mapper";
 import { getProvider } from "@/lib/supply/registry";
-import { searchSupply, defaultAdapters } from "@/lib/supply/search";
+import { searchSupply, defaultAdapters, clearProviderRateLimits } from "@/lib/supply/search";
 import { runAdapter, type SupplyAdapter } from "@/lib/supply/adapter";
 import { toSelectedProduct } from "@/lib/supply/selection";
 import {
@@ -161,6 +161,13 @@ beforeEach(() => {
   prevKey = process.env.VIATOR_API_KEY;
   resetViatorAdapterCaches();
   clearViatorProductUrls();
+  // TASK 76: runner-jev drseči omejevalnik (providerRateLimited) je
+  // MODULE-LEVEL stanje, ki se v bun testu deli med VSE datoteke suite-a
+  // (en proces). Brez tega čiščenja so opazke v tej datoteki odvisne od
+  // žetonov, ki so jih pred njo porabile prejšnje datoteke prek
+  // route-testov (13 + 3 + 4 = 20/20 kapa) → note „rate-limited"
+  // namesto „not-configured".
+  clearProviderRateLimits();
 });
 
 afterEach(() => {
@@ -169,6 +176,7 @@ afterEach(() => {
   resetViatorAdapterCaches();
   clearViatorProductUrls();
   resetViatorDestinations();
+  clearProviderRateLimits(); // TASK 76: ne puščaj žetonov naslednjim datotekam
 });
 
 // ---------------------------------------------------------------------------

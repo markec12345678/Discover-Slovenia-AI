@@ -9,7 +9,7 @@
 // timeNote, nikoli izumljen urnik) in handoff (prenos v načrtovalnik).
 // ============================================================================
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test, beforeEach } from "bun:test";
 
 import { JOURNEY_CATEGORY_KEYS } from "@/lib/journey/types";
 import { planJourney } from "@/lib/journey/orchestrator";
@@ -19,9 +19,16 @@ import { getProvider } from "@/lib/supply/registry";
 import type { SupplyAdapter } from "@/lib/supply/adapter";
 import type { ProviderProduct } from "@/lib/supply/types";
 import { getKiwitaxiBaseline } from "@/lib/supply/providers/kiwitaxi/dataset";
+import { clearProviderRateLimits } from "@/lib/supply/search";
 
 const baseline = getKiwitaxiBaseline();
 const hasKt = Boolean(baseline);
+
+// TASK 76: planJourney poganja searchSupply — runner-jev omejevalnik je
+// module state, deljen med datotekami suite-a (bun test = en proces).
+beforeEach(() => {
+  clearProviderRateLimits();
+});
 
 const TOD_TYPES = ["attraction", "museum", "viewpoint", "natural", "religious"] as const;
 
