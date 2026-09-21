@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.67.0 · 1479/1479 testov · lint 0 · tsc 0 (`src/`; sledi git `main`) |
+| **Stanje** | v1.68.0 · 1493/1493 testov · lint 0 · tsc 0 (`src/`; sledi git `main`) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -248,7 +248,7 @@ iskreno prazne sloje.
 | `/nacrtuj` | AI načrtovalnik itinererjev (jezik/slika/PDF/Maps → načrt) |
 | `/potovanje` | journey načrtovalnik čez ponudnike (prihod/transfer/nastanitev/znamenitosti/hrana/bencin) |
 | `/na-poti` | Go Mode — Now&Next sopotnik med potovanjem (GPS razdalje, opravljeni postanki; načrt na napravi) |
-| `/destinacije` | 38 destinacij s filtri (država/regija/tip/cena/ocena) |
+| `/destinacije` | 38 destinacij s filtri (država/regija + čipi interesa; tip/cena/ocena v zložljivih „Več filtrov") in razvrščanjem (priporočeno/ocena/cena) |
 | `/destinacija/[slug]` | hub destinacije + programske podstrani |
 | `/zemljevid` | interaktivni zemljevid (FSQ + OSM + transfer plasti) |
 | `/moja-potovanja` | shranjena potovanja, naročila, deljene poti |
@@ -315,7 +315,7 @@ dodatnih prenosov. Osvežitev feedov: `bun run fsq:ingest` / `bun run kiwitaxi:i
 Preverjanje:
 
 ```bash
-bun test                 # 1479 testov
+bun test                 # 1493 testov
 bun run lint             # eslint
 bunx tsc --noEmit        # tipi
 ```
@@ -451,7 +451,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.67.0**.
+Trenutna verzija: **1.68.0**.
 
 ---
 

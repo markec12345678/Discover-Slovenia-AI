@@ -126,7 +126,15 @@
     "moreInfo": "Več informacij",
     "emptyTitle": "Ni destinacij za izbrane filtre.",
     "emptyHint": "Poskusite spremeniti filtre ali jih počistiti.",
-    "imageAlt": "{name} — {tagline}"
+    "imageAlt": "{name} — {tagline}",
+    "interestAll": "Vsi",
+    "interestsAriaLabel": "Filtriraj po interesu",
+    "moreFilters": "Več filtrov",
+    "moreFiltersWithCount": "Več filtrov ({count})",
+    "sortLabel": "Razvrsti destinacije",
+    "sortRecommended": "Priporočeno",
+    "sortRating": "Najbolj ocenjeno",
+    "sortPrice": "Najcenejše"
   },
   "homeExp": {
     "eyebrow": "Doživetja",

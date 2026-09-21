@@ -126,7 +126,15 @@
     "moreInfo": "More info",
     "emptyTitle": "No destinations match your filters.",
     "emptyHint": "Try changing or clearing the filters.",
-    "imageAlt": "{name} — {tagline}"
+    "imageAlt": "{name} — {tagline}",
+    "interestAll": "All",
+    "interestsAriaLabel": "Filter by interest",
+    "moreFilters": "More filters",
+    "moreFiltersWithCount": "More filters ({count})",
+    "sortLabel": "Sort destinations",
+    "sortRecommended": "Recommended",
+    "sortRating": "Top rated",
+    "sortPrice": "Cheapest"
   },
   "homeExp": {
     "eyebrow": "Experiences",

@@ -9,6 +9,8 @@ import {
   Compass,
   ImageIcon,
   Filter,
+  SlidersHorizontal,
+  ChevronDown,
   X,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,10 +37,22 @@ import {
   INTERESTS_EN,
   COUNTRIES_EN,
 } from "@/lib/slovenia-data-en";
+import {
+  DESTINATIONS_SORT_OPTIONS,
+  sortDestinations,
+  type DestinationsSort,
+} from "@/lib/destinations-sort";
 import { Link } from "@/i18n/navigation";
 import type { Destination, DestinationType, Budget } from "@/lib/types";
 
 const ALL_VALUE = "all";
+
+/** TASK 69 (P2): ključi label za sortni segment ( homeDest namespace). */
+const SORT_LABEL_KEYS: Record<DestinationsSort, string> = {
+  recommended: "sortRecommended",
+  rating: "sortRating",
+  price: "sortPrice",
+};
 
 // Možnosti za filter tipa destinacije (labelKey → ključi v "homeDest" namespace)
 const TYPE_OPTIONS: { value: DestinationType; labelKey: string }[] = [
@@ -119,6 +133,12 @@ export function DestinationsSection({
   const [type, setType] = useState<string>(ALL_VALUE);
   const [budget, setBudget] = useState<string>(ALL_VALUE);
   const [rating, setRating] = useState<string>(ALL_VALUE);
+  // TASK 69 (P2): razvrščanje — "recommended" privzeto (uredniški vrstni
+  // red = dosedanja slika, torej brez reverzije obstoječega obnašanja).
+  const [sort, setSort] = useState<DestinationsSort>("recommended");
+  // TASK 69 (P1): napredni filtri (tip/cena/ocena) privzeto skriti —
+  // progresivno razkrivanje (vzorec „More filters" pri GetYourGuide).
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [selected, setSelected] = useState<Destination | null>(null);
 
   const filtered = useMemo(() => {
@@ -151,14 +171,26 @@ export function DestinationsSection({
     setType(ALL_VALUE);
     setBudget(ALL_VALUE);
     setRating(ALL_VALUE);
+    // TASK 69 (P2): sort je RAZVRŠČANJE (način prikaza), ne filter — ob
+    // čiščenju filtrov ostane izbira uporabnika ( vzorec GetYourGuide/TripAdvisor).
   };
+
+  // TASK 69 (P1): število aktivnih naprednih filtrov — badge na gumbu
+  // „Več filtrov", da je skrito stanje vidno ( feedback brez razkritja).
+  const advancedCount =
+    [type, budget, rating].filter((v) => v !== ALL_VALUE).length;
 
   // FW3: featured način — samo izbranih 6 (featured: true v slovenia-data)
   const featuredList = useMemo(
     () => DESTINATIONS.filter((d) => d.featured),
     []
   );
-  const list = featured ? featuredList : filtered;
+  // TASK 69 (P2): v polnem načinu se po filtriranju uveljavi razvrščanje;
+  // featured način ostane kuriran ( brez spremembe obstoječega obnašanja).
+  const list = useMemo(
+    () => (featured ? featuredList : sortDestinations(filtered, sort)),
+    [featured, featuredList, filtered, sort]
+  );
 
   // FW4.3-2: na EN prikazujemo overlay (tagline/highlights/duration …);
   // id/slug/name/slike/cene ostanejo iz slovenskega vira resnice.
@@ -221,8 +253,11 @@ export function DestinationsSection({
             ) : null}
           </div>
 
-          {/* 1. vrstica: država (TASK 62), regija, interes (2-col na mobilnem) */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {/* TASK 69 (P1): 1. vrstica — SAMO država + regija.
+              Interes se je preselil v čipe ( 1 klik namesto dropdown),
+              tip/cena/ocena pa v zložljivo „Več filtrov" — na mobilnem
+              uporabnik vidi kartice po eni vrstici kontrol, ne treh. */}
+          <div className="grid grid-cols-2 gap-3">
             <FilterSelect
               value={country}
               onChange={(v) => {
@@ -258,50 +293,117 @@ export function DestinationsSection({
                 label: isEn ? (REGIONS_EN[r.value] ?? r.label) : r.label,
               }))}
             />
-            <FilterSelect
-              value={interest}
-              onChange={setInterest}
-              placeholder={t("interestPlaceholder")}
-              ariaLabel={t("interestAriaLabel")}
-              options={INTERESTS.map((i) => ({
-                value: i.value,
-                label: `${i.icon} ${
-                  isEn ? (INTERESTS_EN[i.value] ?? i.label) : i.label
-                }`,
-              }))}
-            />
           </div>
 
-          {/* 2. vrstica: tip, cena, ocena (izbira po ceni in kvaliteti — TASK 62) */}
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <FilterSelect
-              value={type}
-              onChange={setType}
-              placeholder={t("typePlaceholder")}
-              ariaLabel={t("typeAriaLabel")}
-              options={TYPE_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))}
+          {/* TASK 69 (P1): 2. vrstica — interes kot čipi z vodoravnim
+              drsenjem ( vzorec kategorij GetYourGuide). Radiogroup
+              semantika: aria-checked na gumbu, enako kot sortni segment. */}
+          <div
+            role="radiogroup"
+            aria-label={t("interestsAriaLabel")}
+            className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            <InterestChip
+              value={ALL_VALUE}
+              active={interest === ALL_VALUE}
+              label={t("interestAll")}
+              onChange={() => setInterest(ALL_VALUE)}
             />
-            <FilterSelect
-              value={budget}
-              onChange={setBudget}
-              placeholder={t("budgetPlaceholder")}
-              ariaLabel={t("budgetAriaLabel")}
-              options={BUDGET_OPTIONS.map((b) => ({ value: b.value, label: t(b.labelKey) }))}
-            />
-            <FilterSelect
-              value={rating}
-              onChange={setRating}
-              placeholder={t("ratingPlaceholder")}
-              ariaLabel={t("ratingAriaLabel")}
-              options={RATING_OPTIONS.map((r) => ({ value: r.value, label: t(r.labelKey) }))}
-            />
+            {INTERESTS.map((i) => (
+              <InterestChip
+                key={i.value}
+                value={i.value}
+                active={interest === i.value}
+                icon={i.icon}
+                label={isEn ? (INTERESTS_EN[i.value] ?? i.label) : i.label}
+                onChange={() => setInterest(i.value)}
+              />
+            ))}
+          </div>
+
+          {/* TASK 69 (P1): napredni filtri (tip/cena/ocena — TASK 62) —
+              privzeto skriti; badge pokaže število aktivnih, tudi skritih. */}
+          <div className="mt-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-expanded={showAdvanced}
+              aria-controls="dest-advanced-filters"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="h-9 gap-1.5"
+            >
+              <SlidersHorizontal className="size-3.5" aria-hidden="true" />
+              {advancedCount > 0
+                ? t("moreFiltersWithCount", { count: advancedCount })
+                : t("moreFilters")}
+              <ChevronDown
+                className={`size-3.5 transition-transform ${
+                  showAdvanced ? "rotate-180" : ""
+                }`}
+                aria-hidden="true"
+              />
+            </Button>
+            {showAdvanced ? (
+              <div
+                id="dest-advanced-filters"
+                className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3"
+              >
+                <FilterSelect
+                  value={type}
+                  onChange={setType}
+                  placeholder={t("typePlaceholder")}
+                  ariaLabel={t("typeAriaLabel")}
+                  options={TYPE_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))}
+                />
+                <FilterSelect
+                  value={budget}
+                  onChange={setBudget}
+                  placeholder={t("budgetPlaceholder")}
+                  ariaLabel={t("budgetAriaLabel")}
+                  options={BUDGET_OPTIONS.map((b) => ({ value: b.value, label: t(b.labelKey) }))}
+                />
+                <FilterSelect
+                  value={rating}
+                  onChange={setRating}
+                  placeholder={t("ratingPlaceholder")}
+                  ariaLabel={t("ratingAriaLabel")}
+                  options={RATING_OPTIONS.map((r) => ({ value: r.value, label: t(r.labelKey) }))}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
 
-        {/* Števec rezultatov */}
-        <p className="mt-5 text-sm text-muted-foreground">
-          {t("showing", { count: filtered.length, total: DESTINATIONS.length })}
-        </p>
+        {/* TASK 69 (P2): števec + sortni segment v isti vrstici.
+            Sort je radiogroup gumb — tipkovniško dostopen, brez Selecta. */}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            {t("showing", { count: filtered.length, total: DESTINATIONS.length })}
+          </p>
+          <div
+            role="radiogroup"
+            aria-label={t("sortLabel")}
+            className="flex rounded-lg border border-border/60 bg-muted/20 p-0.5"
+          >
+            {DESTINATIONS_SORT_OPTIONS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={sort === option}
+                onClick={() => setSort(option)}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors sm:text-sm ${
+                  sort === option
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t(SORT_LABEL_KEYS[option])}
+              </button>
+            ))}
+          </div>
+        </div>
           </>
         ) : null}
 
@@ -345,6 +447,47 @@ export function DestinationsSection({
 interface FilterOption {
   value: string;
   label: string;
+}
+
+/**
+ * TASK 69 (P1): čip za izbiro interesa — 1 klik namesto dropdown
+ * ( prikaz + izklop v isti interakciji). Radiogroup semantika:
+ * v vedno točno ena izbira ( vključno „Vsi").
+ */
+function InterestChip({
+  value,
+  active,
+  label,
+  icon,
+  onChange,
+}: {
+  value: string;
+  active: boolean;
+  label: string;
+  icon?: string;
+  onChange: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      data-filter-value={value}
+      onClick={onChange}
+      className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border/60 bg-background text-muted-foreground hover:border-foreground/40 hover:text-foreground"
+      }`}
+    >
+      {icon ? (
+        <span aria-hidden="true" className="text-sm">
+          {icon}
+        </span>
+      ) : null}
+      {label}
+    </button>
+  );
 }
 
 function FilterSelect({

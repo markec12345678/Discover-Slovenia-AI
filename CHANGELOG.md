@@ -7,6 +7,53 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.68.0] — 2026-09-21 (TASK 69: DESTINACIJSKA MREŽA — ENOSTAVNA IZBIRA)
+
+### Spremenjeno
+- **Filtri destinacij: progresivno razkrivanje ( TASK 68 raziskava).** Do zdaj
+  je polni način (/destinacije) uporabniku pokazal 6 dropdownov v dveh vrsticah
+  naenkrat — na mobilnem TRI vrstice kontrol, preden je sploh videl prvo
+  kartico (kognitivna obremenitev; NN/g „progressive disclosure", vzorec
+  „More filters" GetYourGuide). Zdaj:
+  - **vidni samo Država + Regija** (dropdown, 2 stolpca);
+  - **Interes → vodoravno drseči čipi** („Vsi" + 8 interesov, 1 klik namesto
+    2 klika + branje seznama; radiogroup semantika z aria-checked);
+  - **Tip/Cena/Ocena → zložljivo „Več filtrov"** (privzeto skrito; badge
+    „Več filtrov (n)" pokaže število aktivnih TUDI skritih filtrov — skrito
+    stanje ostane vidno, prazna mreža brez razlage je izključena).
+- **Hitro razvrščanje ( P2):** segment „Priporočeno | Najbolj ocenjeno |
+  Najcenejše" ob števcu zadetkov. „Priporočeno" = uredniški vrstni red podatkov
+  (privzeto — IDENTIČNO dosedanjemu prikazu, ni reverzije), „Najbolj ocenjeno"
+  = uredniška ocena padajoče, „Najcenejše" = strošek na osebo naraščajoče.
+  Izenačitve deterministično: sekundarni kriterij, nato ime ( enak vrstni red
+  v vseh okoljih). Sort je način PRIKAZA, ne filter — ob „Počisti filtre"
+  ostane uporabnikova izbira ( vzorec GetYourGuide/TripAdvisor).
+
+### Dodano
+- `src/lib/destinations-sort.ts` — čista funkcija `sortDestinations` (ne
+  mutira vhoda; fallback neznanega načina → uredniški vrstni red, ne crash)
+  + `DESTINATIONS_SORT_OPTIONS` + `isDestinationsSort` tip-varovana.
+- i18n ( SL/EN, homeDest): `interestAll`, `interestsAriaLabel`, `moreFilters`,
+  `moreFiltersWithCount`, `sortLabel`, `sortRecommended`, `sortRating`,
+  `sortPrice` — popolna pariteta 50/50 ključev.
+
+### Ohranjeno (namenoma)
+- Koherentnost država↔regija (pošten reset regije ob spremembi države),
+  števec zadetkov, EmptyState s „Počisti filtre", featured način na domači
+  strani (kuriranih 6, brez filtrov/sortiranja — brez spremembe).
+- `interestPlaceholder`/`interestAriaLabel` ključi ostajajo v sporočilnih
+  datotekah (ne škodijo; odstranitev bi bila nepotrebna sprememba).
+
+### Testi
+- `task69-destinations-sort.test.ts` — 14 testov (289 expect): uredniški
+  vrstni red identiteta, rating/price monotonost, nemutacija vhoda, prazen/
+  en-element seznam, izenačitve (rating→cena→ime; cena→rating→ime),
+  determinizem dvojnega klica, veljavnost realnih podatkov (0 NaN),
+  integracija filter+sort, isDestinationsSort zavrnitev neveljavnih, fallback
+  neznanega načina. Skupno: **1493/1493** ( prej 1479 + 14).
+
+---
+
 ## [1.67.0] — 2026-09-21 (TASK 67: GO MODE — NAVIGACIJSKI HANDOFF)
 
 ### Dodano
