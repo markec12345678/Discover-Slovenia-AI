@@ -1169,6 +1169,9 @@ export function ItineraryPlanner() {
       partyType: input.partyType ?? "none",
       pace: input.pace ?? "none",
       has_start_date: Boolean(input.startDate),
+      // TASK 80: prvo generiranje ali regeneracija (obstoječi načrt v
+      // spominu) — ločujemo vrtince prvega skoka in ponovnih poskusov
+      regeneration: Boolean(itinerary),
       locale,
     });
     setLoading(true);
@@ -2056,37 +2059,44 @@ export function ItineraryPlanner() {
   // Prekliči (AbortController). Same skelete so čisto dekorativne
   // (aria-hidden) — obvestilo nosi vrstica.
   const generationStageKey = generationStageFor(generationElapsed).key;
+  // TASK 80: statusna vrstica generiranja IZVLEČENA iz skeleta — prvič (brez
+  // načrta) stoji nad skeleti, ob REGENERACIJI pa nad ZAMEGLENIM obstoječim
+  // načrtom (ta ne izgine v skeletih — uporabnik obdrži konteksto).
+  const generationStatusBar = (
+    <div className="flex items-center justify-between gap-3 rounded-lg border bg-card p-3 shadow-sm">
+      <div className="flex min-w-0 items-center gap-3">
+        <Loader2
+          className="size-5 shrink-0 animate-spin text-primary"
+          aria-hidden
+        />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">
+            {t(`generatingStage.${generationStageKey}`)}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {t("generatingElapsed", {
+              time: formatGenerationElapsed(generationElapsed),
+            })}{" "}
+            · {t("generatingHint")}
+          </p>
+        </div>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={handleCancelGeneration}
+        className="shrink-0"
+      >
+        <X className="size-3.5" aria-hidden />
+        {tCommon("cancel")}
+      </Button>
+    </div>
+  );
+
   const loadingSkeleton = (
     <div className="space-y-4" role="status" aria-live="polite">
-      <div className="flex items-center justify-between gap-3 rounded-lg border bg-card p-3 shadow-sm">
-        <div className="flex min-w-0 items-center gap-3">
-          <Loader2
-            className="size-5 shrink-0 animate-spin text-primary"
-            aria-hidden
-          />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">
-              {t(`generatingStage.${generationStageKey}`)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {t("generatingElapsed", {
-                time: formatGenerationElapsed(generationElapsed),
-              })}{" "}
-              · {t("generatingHint")}
-            </p>
-          </div>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleCancelGeneration}
-          className="shrink-0"
-        >
-          <X className="size-3.5" aria-hidden />
-          {tCommon("cancel")}
-        </Button>
-      </div>
+      {generationStatusBar}
       <div aria-hidden="true">
         <Skeleton className="h-10 w-2/3" />
         {Array.from({ length: 3 }).map((_, i) => (
@@ -3217,7 +3227,15 @@ export function ItineraryPlanner() {
                     type="button"
                     variant="outline"
                     size="lg"
-                    onClick={() => setFormExpanded(false)}
+                    onClick={() => {
+                      setFormExpanded(false);
+                      // TASK 80: zapiranje obrazca = »obdrži stari načrt« —
+                      // napaka (neuspešne) regeneracije se tiho umakne;
+                      // načrt v delovni površini ostane viden. Prej je tu
+                      // nastalo mrtvo stanje: napaka brez obrazca je načrt
+                      // skrila BREZ možnosti prikaza.
+                      setError(null);
+                    }}
                     aria-label={t("summaryCloseAria")}
                   >
                     <X className="size-4" aria-hidden />
@@ -3239,19 +3257,47 @@ export function ItineraryPlanner() {
           </div>
         )}
 
-        {/* UI sprint (točka B): urejanje z OBSTOJEČIM načrtom — nalaganje ali
-            napaka se pokažeta pod obrazcem (načrt ostaja v spominu) */}
-        {formExpanded && itinerary && (loading || error) && (
-          <div className="mt-6 space-y-4">
-            {loading ? loadingSkeleton : errorAlert}
+        {/* TASK 80: REGENERACIJA z obstoječim načrtom — statusna vrstica
+            (faza + števec + Prekliči) stoji nad ZAMEGLENIM načrtom, ki NE
+            izgine v skeletih (uporabnik obdrži konteksto; skeleti so lažna
+            obetanja, ko že imaš načrt). Vidna neodvisno od formExpanded —
+            gumb Prekliči (TASK 77) mora ostati dosegljiv tudi, če uporabnik
+            med generiranjem zloži obrazec. */}
+        {itinerary && loading && (
+          <div
+            className={cn("space-y-4", formExpanded && "mt-6")}
+            role="status"
+            aria-live="polite"
+          >
+            {generationStatusBar}
           </div>
+        )}
+
+        {/* TASK 80: napaka regeneracije se pokaže pod obrazcem, OBSTOJEČI
+            načrt pa ostane VIDEN v delovni površini (prej se je skril —
+            neuspešna regeneracija ti ne vzame starega načrta s pogleda). */}
+        {formExpanded && itinerary && !loading && error && (
+          <div className="mt-6 space-y-4">{errorAlert}</div>
         )}
 
         {/* === DELOVNA POVRŠINA (uspeh) — UI sprint: rezultat je GLAVNI
             prostor (Trip header → Zemljevid+Pogovor → Stanje → Dnevi → Več),
-            ne desni stolpec ob obrazcu. Vsa logika nespremenjena. === */}
-        {!loading && !error && itinerary && (
-          <div className={cn("space-y-5", formExpanded && "mt-8")}>
+            ne desni stolpec ob obrazcu. Vsa logika nespremenjena.
+            TASK 80: površina je izrisana KADARKOLI načrt obstaja — med
+            regeneracijo je ZAMEGLJENA (opacity + pointer-events-none +
+            inert: stara različica se ne more klikati/fokusirati), ob napaki
+            regeneracije pa ostane polno uporabna (stari načrt je še vedno
+            tvoj). === */}
+        {itinerary && (
+          <div
+            className={cn(
+              "space-y-5 transition-opacity duration-300",
+              formExpanded && "mt-8",
+              loading && "pointer-events-none select-none opacity-60",
+            )}
+            aria-busy={loading || undefined}
+            inert={loading || undefined}
+          >
                 {/* Obnovljeni načrt chip */}
                 {restoredVisible && (
                   <div

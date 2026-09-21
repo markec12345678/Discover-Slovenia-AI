@@ -25,7 +25,7 @@
 | Dogodek | Kdaj se sproži | Enkrat / večkrat | Obvezni props | Pomen / metrika |
 |---|---|---|---|---|
 | `planner_started` | prva interakcija z obrazcem načrtovalca (vpis ali oddaja) | 1× na življenjsko dobo komponente (ref varovalka) | `locale` | zavedanje: delež obiskovalcev, ki začnejo načrtovati |
-| `planner_submitted` | oddaja obrazca / samodejna AI generacija (hero NLP) | vsaka oddaja | `days`, `interests` (število), `season`, `partyType`, `has_start_date`, `locale` | intent: kakšne načrte ljudje dejansko hočejo |
+| `planner_submitted` | oddaja obrazca / samodejna AI generacija (hero NLP) | vsaka oddaja | `days`, `interests` (število), `season`, `partyType`, `has_start_date`, `regeneration` (0|1 — obstoječi načrt v spominu, TASK 80), `locale` | intent: kakšne načrte ljudje dejansko hočejo; delež regeneracij |
 | `planner_result_rendered` | načrt uspešno prikazan v UI | vsak nov rezultat | `days`, `stops` (skupno postankov), `source` (`ai`/`fallback`), `locale` | uspešnost generacije; skupaj s `planner_submitted` → stopnja uspešnih generacij |
 | `day_adjusted` | hitra akcija „Prilagodi ta dan" (deterministično ali AI) | vsak klik, ki vrne odgovor | `action`, `day`, `source`, `geo_status` (`pass`/`warn`/`still_failing`), `km_before`, `km_after` | P0: ali geo-popravki dejansko izboljšajo dan (km pred/po iz ISTE validacijske plasti kot prikaz) |
 | `planner_refined` | vsak uspešen refine (hitra akcija ali prosti ukaz) | vsak uspešen refine | `via` (`quick_action`/`free_text`), `source`, `changes` (število učinkovitih sprememb), `action?`, `day?`, `geo_status` | iteracija: delež uporabnikov, ki načrt še spremenijo |

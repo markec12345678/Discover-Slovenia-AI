@@ -7,6 +7,53 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.74.2] — 2026-09-21 (TASK 80: REGENERACIJA NE IZGINE NAČRTA)
+
+### Popravljeno
+- **Obstoječi načrt je MED regeneracijo izgineval s pogleda** (
+  `itinerary-planner.tsx`): delovna površina je imela pogoj
+  `!loading && !error && itinerary` — ponovno generiranje je stari načrt
+  nadomestilo s skeleti (lažna obetanja, ko že imaš načrt), ob **napaki**
+  regeneracije pa se načrt ni nikoli vrnil v prikaz ( ostal je le v
+  spominu). Sedaj: površina je izrisana KADARKOLI načrt obstaja — med
+  regeneracijo je **zamegljena** ( `opacity-60` + `pointer-events-none` +
+  `select-none` + `inert` [ React 19 — tudi tipkovnica/a11y drevo] +
+  `aria-busy`, mehak prehod 300 ms), ob napaki pa polno uporabna ( stari
+  načrt je še vedno tvoj).
+- **Mrtvo stanje** ( napaka regeneracije + zložen obrazec): načrt skrit,
+  napaka nevidna — BREZ možnosti prikaza. Popravek: gumb »zapri urejanje«
+  ( X) zdaj počisti napako ( zapiranje obrazca = »obdrži stari načrt«);
+  načrt ostane viden v delovni površini.
+
+### Spremenjeno
+- **Statusna vrstica generiranja ( TASK 77) izluščena iz skeleta** (
+  `generationStatusBar`) — prvič ( brez načrta) stoji nad skeleti (
+  nespremenjeno), ob regeneraciji pa nad zamegljenim načrtom, NEODVISNO
+  od stanja obrazca ( gumb Prekliči ostane dosegljiv tudi, če uporabnik
+  med generiranjem zloži obrazec). Nalaganje ob obstoječem načrtu ne
+  izriše več skeletov pod obrazcem — stari načrt JE vsebina.
+- Analitika: `planner_submitted` nosi `regeneration` ( 0|1 — obstoječi
+  načrt v spominu) — ločujemo vrtince prvega skoka in ponovnih poskusov (
+  docs/ANALYTICS-EVENTS.md posodobljen).
+
+### Dodano
+- 9 source-contract testov/16 pričakovanj (
+  `task80-regeneration-dim.test.ts` — precedent TASK 78/73): trditve o
+  DEJANSKI odposlani datoteki ( pogoj površine, dim razredi, inert,
+  izluščena vrstica uporabljena natanko 2×, error veja brez skeleta, X
+  počisti napako, analitika); E2E dokazuje obnašanje ( dim pride → nov
+  načrt → dim odide; preklic med regeneracijo → tiho, stari načrt nazaj).
+
+### Opombe
+- E2E ( nadaljevanje seje TASK 79 — načrt obnovljen iz persistente):
+  regeneracija 4→5 dni → stari načrt VIDEN + dim ( `aria-busy`,
+  `inert`) + vrstica »Zbiram vreme … Preteklo: 0:00 · navadno 15–40 s«
+  nad njim → nov 5-dnevni načrt z dim odstranjenim; preklic med
+  regeneracijo → tiho ( 0 napak, 0 opozoril, stari načrt nedotaknjen);
+  375 px 0 px preliva.
+
+---
+
 ## [1.74.1] — 2026-09-21 (TASK 79: DST-VARNI DATUMI DNI ONLINE)
 
 ### Popravljeno
