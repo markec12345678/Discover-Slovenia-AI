@@ -14,6 +14,8 @@
 //      OFFLINE fallback: zadnji viden HTML → sicer /offline.html
 //      (samoizpolnitvena stran z seznamom načrtov iz localStorage +
 //       cache-a — brez strežnika)
+//      /pot/* (deljeni načrti) IN /na-poti (Go Mode sopotnik) gredo v
+//      PLANS cache; ostale strani v SHELL (približek app shell)
 //   6. Ostalo (RSC payload-i)   → network-first z cache fallbackom
 //      (RSC mora ostati svež ONLINE — cache-first bi serviral odmrl
 //       payload po spremembi vsebine)
@@ -68,6 +70,14 @@ const STATIC_ASSETS = [
 const SHARED_ITINERARY_PREFIX = "/api/itinerary/shared/";
 // Stran deljenega potovanja (HTML) — drugi del jedra.
 const SHARE_PAGE_PREFIX = "/pot/";
+// GO MODE strani (HTML, TASK 73): /na-poti je najobčutljivejša offline
+// izkušnja (sopotnik MED potovanjem). HTML hranimo v PLANS cache (40
+// vnosov) namesto v SHELL (400 vnosov) — v SHELL-u bi jo LRU iztrebljanje
+// (chunk-i + RSC payload-i vsake navigacije) lahko pregnalo ravno, ko je
+// uporabnik brez signala. Vnosni format je identičen obstoječim (Response
+// za URL) → imena cache-a NAMENOMA ne bumpamo (bump bi ob aktivaciji SW
+// pobrisal že-shranjene offline načrte popotnikov).
+const GO_PAGE_PATHS = ["/na-poti", "/en/na-poti"];
 
 /** Ali je zahtevek OSM tile (Leaflet)? (a|b|c.)tile.openstreetmap.org */
 function isOsmTileHost(hostname) {
@@ -250,12 +260,14 @@ self.addEventListener("fetch", (event) => {
   // -------------------------------------------------------------------------
   // 5) NAVIGACIJE (HTML) — network-first z offline fallbackom:
   //    zadnji viden HTML → sicer /offline.html (samoizpolnitvena stran).
-  //    /pot/* (deljena potovanja) se shrani v PLANS cache ("offline načrt"),
-  //    ostale strani v SHELL cache (približek app shell).
+  //    /pot/* (deljena potovanja) IN /na-poti (Go Mode) se shrani v PLANS
+  //    cache ("offline načrt" — 40 vnosov, LRU-varno), ostale strani v
+  //    SHELL cache (približek app shell).
   // -------------------------------------------------------------------------
   if (request.mode === "navigate" || request.destination === "document") {
     const isSharePage = url.pathname.startsWith(SHARE_PAGE_PREFIX);
-    const navCache = isSharePage ? PLANS_CACHE : SHELL_CACHE;
+    const isGoPage = GO_PAGE_PATHS.includes(url.pathname);
+    const navCache = isSharePage || isGoPage ? PLANS_CACHE : SHELL_CACHE;
 
     event.respondWith(
       fetch(request)

@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.71.0 · 1511/1511 testov · lint 0 · tsc 0 (`src/`; sledi git `main`) |
+| **Stanje** | v1.72.0 · 1528/1528 testov · lint 0 · tsc 0 (`src/`; sledi git `main`) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -103,7 +103,8 @@
 - **Tržnica** — lokalni partnerji, izdelki in izkušnje z lastnim checkoutom;
   B2B portala za ponudnike (`/owner`) in administratorje (`/admin`).
 - **Slovensko + angleško izkušnja** — SL privzeto, EN na jedru lijaka (`/en/…`).
-- **PWA** — načrti brez povezave, pameten pakirni seznam z razlogi, proračun na osebo,
+- **PWA** — načrti brez povezave (aktivno Go Mode potovanje tudi na splošni offline
+  strani), pameten pakirni seznam z razlogi, proračun na osebo,
   ICS/QR deljenje.
 
 Vsaka zmožnost zgoraj je preverjena v kodi; zmožnost, ki obstaja samo v načrtu,
@@ -247,7 +248,7 @@ iskreno prazne sloje.
 | `/` | domača stran — AI lijak |
 | `/nacrtuj` | AI načrtovalnik itinererjev (jezik/slika/PDF/Maps → načrt) |
 | `/potovanje` | journey načrtovalnik čez ponudnike (prihod/transfer/nastanitev/znamenitosti/hrana/bencin) + MY TRIP s potrditvenim dokumentom (postavke po dneh, skupna cena §16) |
-| `/na-poti` | Go Mode — Now&Next sopotnik med potovanjem (GPS razdalje, opravljeni postanki; načrt na napravi) |
+| `/na-poti` | Go Mode — Now&Next sopotnik med potovanjem (GPS razdalje, opravljeni postanki; načrt na napravi — HTML v PLANS cache, LRU-varno) |
 | `/destinacije` | 38 destinacij s filtri (država/regija + čipi interesa; tip/cena/ocena v zložljivih „Več filtrov"), razvrščanjem (priporočeno/ocena/cena) in ceno (≈ €) na kartici |
 | `/destinacija/[slug]` | hub destinacije + programske podstrani |
 | `/zemljevid` | interaktivni zemljevid (FSQ + OSM + transfer plasti) |
@@ -451,7 +452,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.71.0**.
+Trenutna verzija: **1.72.0**.
 
 ---
 

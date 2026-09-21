@@ -76,6 +76,16 @@
   .plan-link { font-size: .85rem; color: var(--primary); font-weight: 600; text-decoration: none; }
   .plan-link:hover { text-decoration: underline; }
 
+  /* GO MODE kartica (aktivno potovanje — najpomembnejša brez povezave). */
+  .plan-go { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary) inset; }
+  .day-count { font-weight: 500; font-size: .78rem; }
+  .go-note {
+    font-size: .8rem; color: var(--amber);
+    background: var(--amber-soft); border-radius: 8px; padding: 10px 12px;
+    margin: 12px 0 0;
+  }
+  .btn-go { width: 100%; justify-content: center; margin-top: 14px; }
+
   .day { border: 1px solid var(--border); border-radius: 10px; margin-top: 12px; overflow: hidden; }
   .day-head {
     display: flex; justify-content: space-between; align-items: center;
@@ -131,6 +141,14 @@
     <p id="t-banner">Trenutno ni internetne povezave. Vači shranjeni načrti so spodaj na voljo tudi brez povezave — zemljevid poti pa deluje za območja, ki ste jih že odprli.</p>
   </div>
 
+  <!-- GO MODE (dai:go-trip): aktivno potovanje IZMED potovanja — najprej,
+       ker je za popotnika brez signala to najbolj nujna vsebina. -->
+  <section id="go-section" aria-labelledby="t-go-title" hidden>
+    <h2 id="t-go-title"><span id="t-go">Na poti — aktivno potovanje</span></h2>
+    <div id="go-plan"></div>
+    <p class="go-note" id="go-notcached" role="status" hidden></p>
+  </section>
+
   <section aria-labelledby="t-plans-title">
     <h2 id="t-plans-title"><span id="t-plans">Moji načrti</span> <span class="count" id="plans-count">0</span></h2>
     <div id="plans-list"></div>
@@ -177,6 +195,10 @@
       empty: "Na tej napravi še ni shranjenih načrtov. Načrt shranite (gumb »Shrani in deli« na strani načrtovalnika), preden odpotujete brez povezave.",
       notCached: "Ta načrt še ni bil odprt na tej napravi — odprite ga online, da bo na voljo brez povezave.",
       openFull: "Odpri polno stran",
+      go: "Na poti — aktivno potovanje",
+      goOpen: "Odpri Na poti",
+      goNotCached: "Stran »Na poti« na tej napravi še ni bila odprta, zato se brez povezave morda ne odpre. Ob naslednji povezavi jo odpri — gumb »Zaženi Na poti« na strani Potovanje jo odpre in shrani samodejno. Do takrat je celoten načrt izpisan spodaj.",
+      goNoDate: "Datum prihoda ni vnesen",
       tips: "Nasveti", saved: "shranjeno", generated: "ustvarjeno",
       minutes: "min", weather: "vreme", budgetCur: "€",
       footnote: "Prikazani so načrti, shranjeni na tej napravi (vir: vaš brskalnik). Številke se brez povezave ne posodabljajo — za sveže podatke se povežite.",
@@ -191,6 +213,10 @@
       empty: "No plans saved on this device yet. Save a plan (the “Save & share” button in the planner) before you travel offline.",
       notCached: "This plan hasn't been opened on this device yet — open it online to make it available offline.",
       openFull: "Open full page",
+      go: "On the road — active journey",
+      goOpen: "Open On-the-road",
+      goNotCached: "The “On-the-road” page hasn't been opened on this device yet, so it may not open while offline. Open it next time you're online — the “Start On-the-road” button on the Journey page opens and saves it automatically. Until then, the full plan is printed below.",
+      goNoDate: "Arrival date not entered",
       tips: "Tips", saved: "saved", generated: "generated",
       minutes: "min", weather: "weather", budgetCur: "€",
       footnote: "Shown are plans stored on this device (source: your browser). Numbers do not refresh while offline — reconnect for fresh data.",
@@ -208,6 +234,8 @@
   document.getElementById("t-retry").textContent = T.retry;
   document.getElementById("t-home").textContent = T.home;
   document.getElementById("t-footnote").textContent = T.footnote;
+  document.getElementById("t-go").textContent = T.go;
+  document.getElementById("go-notcached").textContent = T.goNotCached;
 
   document.getElementById("btn-retry").addEventListener("click", function () {
     window.location.reload();
@@ -425,6 +453,115 @@
     } catch (e) { /* poln/pokvarjen localStorage — preskoči */ }
   }
 
+  // --- 0) GO MODE: aktivno potovanje (dai:go-trip) — sopotnik »Na poti«. ---
+  // isto shranišče kot go-persist.ts (TASK 64); validacija ogleda RAVNO
+  // ključe, ki jih persistenca piše (version/savedAt/journey/selectedIds).
+  function readGoTrip() {
+    try {
+      var raw = window.localStorage.getItem("dai:go-trip");
+      if (!raw) return null;
+      var rec = JSON.parse(raw);
+      if (!rec || typeof rec !== "object" || Array.isArray(rec)) return null;
+      if (rec.version !== 1 || typeof rec.savedAt !== "string") return null;
+      var j = rec.journey;
+      if (!j || typeof j !== "object") return null;
+      if (typeof j.id !== "string" || (j.lang !== "sl" && j.lang !== "en")) return null;
+      if (!j.origin || !j.destination ||
+          typeof j.origin.label !== "string" ||
+          typeof j.destination.label !== "string") return null;
+      if (!j.categories || typeof j.categories !== "object") return null;
+      if (!Array.isArray(rec.selectedIds) ||
+          !rec.selectedIds.every(function (id) { return typeof id === "string"; })) {
+        return null;
+      }
+      return rec;
+    } catch (e) { return null; }
+  }
+
+  // Vanillas ZRCALI buildMyTrip (MY TRIP §20) — SAMO naslovi, 0 izumljenih
+  // ur/cen: Dan 1 = prihod + izbrani nedatirani izdelki (transfer/nastanitev/
+  // restavracija/bencin/znamenitost); dogodki na SVOJIH realnih datumih
+  // (brez datuma → izpuščeni, kot časovnica); kronološko po ISO datumu,
+  // dan brez datuma (prihod brez vnosa) ostane prvi kot sidro (TASK 72).
+  function goTimeline(rec) {
+    var j = rec.journey;
+    var sel = {};
+    rec.selectedIds.forEach(function (id) { sel[id] = true; });
+    function picked(catKey) {
+      var cat = j.categories[catKey];
+      var prods = cat && Array.isArray(cat.products) ? cat.products : [];
+      return prods.filter(function (p) {
+        return p && typeof p === "object" &&
+          typeof p.title === "string" && sel[p.id] === true;
+      });
+    }
+    var day1 = [(j.lang === "en" ? "Arrival: " : "Prihod: ") + j.origin.label];
+    ["transfer", "accommodation", "restaurants", "petrol", "attractions"].forEach(
+      function (k) { picked(k).forEach(function (p) { day1.push(p.title); }); }
+    );
+    var evByDate = {}, evOrder = [];
+    picked("events").forEach(function (p) {
+      var d = p.eventDate && typeof p.eventDate.start === "string"
+        ? p.eventDate.start.slice(0, 10) : null;
+      if (!d) return;
+      if (!evByDate[d]) { evByDate[d] = []; evOrder.push(d); }
+      evByDate[d].push(p.title);
+    });
+    var days = [{
+      date: typeof j.startDate === "string" ? j.startDate : "",
+      label: typeof j.startDate === "string" ? fmtDate(j.startDate) : T.goNoDate,
+      titles: day1
+    }];
+    evOrder.forEach(function (d) {
+      days.push({ date: d, label: fmtDate(d), titles: evByDate[d] });
+    });
+    days.sort(function (a, b) { return a.date.localeCompare(b.date); });
+    var stops = 0;
+    days.forEach(function (d) { stops += d.titles.length; });
+    return { days: days, stops: stops };
+  }
+
+  function renderGoSection() {
+    var section = document.getElementById("go-section");
+    var planEl = document.getElementById("go-plan");
+    var rec = readGoTrip();
+    if (!section || !planEl || !rec) return;
+    var j = rec.journey;
+    var tl = goTimeline(rec);
+    var meta = [tl.days.length + "× " + T.day.toLowerCase(), tl.stops + " " + T.stops];
+    var html = '<div class="plan plan-go"><div class="plan-head"><div class="plan-name">' +
+      esc(j.origin.label) + " → " + esc(j.destination.label) + '</div><div class="plan-date">' +
+      esc((T.saved + " " + fmtDate(rec.savedAt, "")).trim()) + "</div></div>" +
+      '<p class="plan-meta">' + esc(meta.join(" · ")) + "</p>";
+    tl.days.forEach(function (d) {
+      html += '<div class="day"><div class="day-head"><span>' + esc(d.label) +
+        '</span><span class="day-count">' + d.titles.length + " " + esc(T.stops) +
+        "</span></div>";
+      d.titles.forEach(function (t) {
+        html += '<div class="stop"><div class="stop-main"><div class="stop-name">' +
+          esc(t) + "</div></div></div>";
+      });
+      html += "</div>";
+    });
+    var goHref = LANG === "en" ? "/en/na-poti" : "/na-poti";
+    html += '<a class="btn btn-primary btn-go" href="' + goHref + '">' +
+      esc(T.goOpen) + " →</a></div>";
+    planEl.innerHTML = html;
+    section.hidden = false;
+    // ISKRENOST: ali se bo stran »Na poti« sploh odprla brez signala?
+    // (SW jo shrani ob prvem obisku; gumb »Zaženi Na poti« nanjo tudi
+    // odnese — zato je CACHE HIT običajen primer.)
+    if (window.caches && window.caches.match) {
+      window.caches.match(goHref).then(function (hit) {
+        if (!hit) {
+          var note = document.getElementById("go-notcached");
+          if (note) note.hidden = false;
+        }
+      }).catch(function () { /* zasebni način — opomba ostane skrita */ });
+    }
+  }
+
+  renderGoSection();
   renderSavedPlans();
   renderLastItinerary();
 })();

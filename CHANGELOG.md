@@ -7,6 +7,79 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.72.0] — 2026-09-21 (TASK 73: OFFLINE PWA — GO MODE NA SPLOŠNI BREZPOVEZAVNI STRANI)
+
+### Dodano
+- **Go Mode odsek na offline strani (`/offline.html`).** Splošni offline
+  fallback je do zdaj poznal deljene načrte (`dai:my-trips`) in zadnji
+  ne-shranjen načrt načrtovalnika — NE pa **aktivnega Go Mode potovanja**
+  (`dai:go-trip`), kljub temu da je to ravno izkušnja, oblikovana za
+  delovanje brez signala. Popotnik, ki je pristal na offline strani,
+  ni imel poti nazaj k sopotniku. Zdaj ( najprej — nujna vsebina):
+  - kartica aktivnega potovanja: relacija ( iz → v), „shranjeno
+    <datum>", meta ( št. dni · št. postankov) in **dnevna časovnica z
+    naslovi postankov** — vanilla zrcalo `buildMyTrip` ( §20): isti
+    dan-1 model ( prihod + izbrani nedatirani izdelki), dogodki na
+    svojih realnih datumih, kronološko po TASK 72 ( ISO datum, dan brez
+    datuma = sidro prvi); neizbrani izdelki se NE pokažejo;
+  - **primarni CTA „Odpri Na poti"** — lokalno-zavedna povezava
+    ( `/na-poti` oz. `/en/na-poti`; isti URL, ki ga gradi
+    `startGoMode`), čez celo kartico ( 48 px tipno ciljno površino);
+  - **iskrena opomba o odprtosti strani:** če `/na-poti` NI v Cache
+    Storage ( `caches.match` preveri dejansko stanje), se pokaže
+    opomba, da se stran morda ne odpre brez povezave in da je celoten
+    načrt izpisan spodaj ( 0 izmišljanja; ob HIT ostane skrita).
+- **sw.js: navigacije `/na-poti` + `/en/na-poti` → PLANS cache**
+  ( `dai-plans`, 40 vnosov) namesto SHELL ( 400 vnosov). V SHELL-u bi
+  jih LRU iztrebljanje ( chunk-i + RSC payload-i vsake navigacije)
+  lahko pregnalo ravno, ko je uporabnik brez signala; v PLANS cache
+  jih ogroža le 40+ odprtih deljenih načrtov.
+
+### Ohranjeno (namenoma — iskrenost)
+- Kartica prikazuje **samo naslove** ( 0 izumljenih ur, 0 cen, 0
+  statusov) — časi/cene/statusi živijo na `/na-poti` ( isti kanon kot
+  časovnica: dogodek brez datuma je izpuščen, ne izumljen).
+- Naslov prihoda sledi **jeziku zapisa** ( kanon `buildMyTrip`:
+  „Prihod:"/„Arrival:"), vmesnik in povezava pa jeziku strani
+  ( piškotek `NEXT_LOCALE`).
+- **Imena cache-a NISO bumpana** ( `dai-plans-v1`, `dai-shell-v2`):
+  vnosni format se ni spremenil, bump bi ob aktivaciji SW pobrisal
+  že-shranjene offline načrte popotnikov — odločitev je dokumentirana
+  v `sw.js` ob `GO_PAGE_PATHS`.
+- `/na-poti` NI dodan v namestitveni precache: brez hidracijskih
+  chunk-ov bi stran kazala večni skeleton — offline.html z dejanskimi
+  podatki je iskreno močnejša ( gumb „Zaženi Na poti" nanjo tudi
+  odnese, zato je cache-hit običajen primer).
+
+### Testi
+- `task73-offline-gomode.test.ts` — **17 testov/81 pričakovanj**,
+  dvoslojno:
+  - **A) statične trditve virov:** offline.html bere PRAVilen ključ
+    ( `dai:go-trip`), vsi elementi odseka obstajajo, Go odsek stoji
+    pred „Mojni načrti", slovarja I18N ( SL/EN) imata identično
+    množico ključev ( zavedna hoja po zavitočih); sw.js: GO_PAGE_PATHS
+    → PLANS cache, imena cache-a nezamaknjena, offline.html še
+    precache-ana;
+  - **B) izvedba DEJANSKE inline skripte** offline.html nad stub
+    DOM-om ( `new Function` + globalni stubi document/window/
+    localStorage/fetch/caches): SL/EN/mešani zapis, neizbrani izdelec
+    skrit, kronologija ( dogodek pred prihodom 1. / brez datuma sidro),
+    XSS ubežanje, pokvarjeni/vržeči zapisi brez sesutja, opomba ob
+    MISS/HIT/manjkanju caches API, dogodek brez datuma izpuščen.
+- `bun test` — **1528/1528** ( prej 1511); eslint 0; tsc src 0.
+- Browser E2E: `/offline.html` SL ( kartica Ljubljana ( Brnik) → Bled,
+  „2× dan · 5 postankov", dan 21. sep. s 4 postanki + dan 25. sep.
+  Festival Bled, neizbrana Gostilna ODSOTNA, CTA → `/na-poti`, opomba
+  vidna ker /na-poti res ni v cache-u); EN ( piškotek + EN zapis →
+  „Arrival:", „1× day · 4 stops", CTA → `/en/na-poti`); brez zapisa →
+  odsek skrit; pokvarjen JSON → skrit brez sesutja; cache HIT
+  ( seediran `dai-plans-v1`) → opomba skrita; 375 px: 0 px preliva,
+  CTA 48 px; VLM 2× vizualna potrditev ( kartica + opomba brez
+  napak); 0 konzolnih/stranskih napak ( TypeError v /na-poti je
+  artifact E2E fiksna brez `booking` polja — pravi zapisi so tipizirani).
+
+---
+
 ## [1.71.0] — 2026-09-21 (TASK 72: MY TRIP — POTRDITVENI DOKUMENT: SKUPNA CENA §16 + GRUPIRANJE PO DNEHIH)
 
 ### Dodano
