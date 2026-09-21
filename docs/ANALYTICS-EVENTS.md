@@ -72,12 +72,13 @@ glavne odpovedi). Eid/oddedup ni potreben — en zapis na zahtevo.
 
 | Dogodek | Kdaj se sproži | Enkrat / večkrat | Obvezni props | Pomen / metrika |
 |---|---|---|---|---|
-| `planner_error` | HTTP ≠ 200 ali napaka omrežja/parsiranja pri generaciji | vsaka napaka | `status?`, `stage` (`response`/`network_or_parse`) | zanesljivost generacije |
+| `planner_error` | HTTP ≠ 200 ali napaka omrežja/parsiranja pri generaciji | vsaka napaka | `status?`, `stage` (`response`/`network_or_parse`/`timeout` — TASK 77 odmor > 90 s), `elapsed?` | zanesljivost generacije |
 | `empty_result` | API vrne 200, a 0 postankov | vsak prazen rezultat | `days` | lažni uspeh (prikaz brez vsebine) |
 | `invalid_location` | postanek z ID-jem izven dataseta (AI halucinacija) | vsak neveljaven postanek | `day`, `destination_id` | kakovost AI izbire; podpira geo pravilo `missing_coords` |
 | `unrealistic_day` | geo-validacija vrne ERROR za dan | vsak ERROR (warn NE šteje) | `day`, `rule` (npr. `leg_distance`), `km`, `source` | P0: delež nerealističnih dni po pravilih — ISTA plast kot prikaz |
 | `save_failed` | shranjevanje na strežnik ne uspe | vsaka napaka | `locale` | zanesljivost shranjevanja |
 | `refine_failed` | AI refine ne uspe (opozorilo + izvirni načrt) ALI akcija zavrnjena (`cannot_transform`) | vsak neuspeh/zavrnitev | `via`, `action?`, `day?`, `reason?` (npr. `missing_destination_data`, `no_nearby_alternative`) | P0.3: kadar varna transformacija ni mogoča — merjeno ločeno od uspehov |
+| `planner_cancelled` | uporabnik klikne **Prekliči** med generiranjem (TASK 77) | vsak preklic | `elapsed` (s) | **NAMERNA izbira, ne napaka** — meri nedopustne čakalne dobe; prej je obešena zahtevka uporabnika ujela v skeletu do osvežitve strani (izguba obrazca) |
 | `result_session_ended_without_action` | rezultat prikazan, pagehide/unmount po ≥ 45 s BREZ zaznanega refine/shranjevanja | 1× na prikaz rezultata (sessionStorage en-shot + strežniški eid dedup) | `seconds_viewed`, `days`, `source` | **PROXY signal** (P1-3): „rezultat prikazan, naslednji sledeni dogodek ni bil zaznan v merjenem oknu". NE dokaz nezadovoljstva — znano podcenjevanje: mobilni brskalniki lahko izpustijo `pagehide`, zemljevid v novem zavihku se ne sledi, izguba povezave izgleda kot konec. Metrika: branje časa (`seconds_viewed`) ob nizki konverziji. |
 
 ## Kako se metrike računajo

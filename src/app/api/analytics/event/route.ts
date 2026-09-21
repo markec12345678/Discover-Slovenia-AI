@@ -113,6 +113,8 @@ const VALID_EVENTS = new Set([
   "unrealistic_day",
   "save_failed",
   "refine_failed",
+  // TASK 77: uporabnikov preklic generiranja (namerna izbira, ne napaka)
+  "planner_cancelled",
   // P1-3 (recenzija): preimenovano iz user_abandoned_after_result — proxy
   // signal "rezultat prikazan, sledeni dogodek ni bil zaznan v merjenem oknu"
   "result_session_ended_without_action",

@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.73.3 · 1551 testov (hermetičen suite + hidracija prek prehoda) · lint 0 · tsc 0 (`src/`; sledi git `main`) |
+| **Stanje** | v1.73.4 · 1568 testov (števec/faze/preklic generiranja) · lint 0 · tsc 0 (`src/`; sledi git `main`) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -69,6 +69,10 @@
 
 - **AI načrtovanje potovanj** — naravni jezik (SL/EN), izboljšave v pogovoru; vhodi:
   besedilo, fotografija/screenshot (VLM), PDF, shranjene točke Google Maps.
+  Med generiranjem (15–40 s): statusna vrstica z **dejanskim števcem**, fazo
+  po značilnem vrstnem redu strežnika in gumbom **Prekliči** (tiho, brez
+  izgube obrazca); odmor > 90 s → ločena jasna napaka (`aria-live` za
+  bralnike zaslonov).
 - **Odkrivanje destinacij** — 38 kuriranih profilov s filtri po **državi, regiji, tipu,
   ceni (€–€€€) in oceni (★)**; programske podstrani (things-to-do, itinerary,
   best-time-to-visit, guide).
@@ -456,7 +460,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.73.3**.
+Trenutna verzija: **1.73.4**.
 
 ---
 

@@ -7,6 +7,48 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.73.4] — 2026-09-21 (TASK 77: GENERIRANJE NI VEČ NEMO ČAKANJE — števec, faze, Prekliči, odmor 90 s)
+
+### Dodano
+- **Povratna informacija med AI generiranjem načrta** ( trenutek, ki ga
+  občuti VSAK uporabnik — 15–40 s čakanja): statusna vrstica nad skeleti
+  z DEJANSKIM števcem ( 1 Hz, m:ss), fazo po značilnem vrstnem redu
+  strežnika ( supply → compose → verify — vreme/supply/ranking → AI
+  sestavljanje → supply rebound/geo preverjanje) in iskrenim namigom
+  „navadno 15–40 s". `role="status"` + `aria-live="polite"` bralnikom
+  zaslonov; same skelete so dekorativne ( `aria-hidden`).
+- **Gumb „Prekliči" med generiranjem** ( AbortController): uporabnikov
+  preklic je NAMERNA izbira — tiho vrne prejšnje stanje ( prazen uvod
+  ali obstoječi načrt), BREZ napake in BREZ izgube obrazca. Prej je
+  obešena zahtevka ( polh strežnik / izguba omrežja) uporabnika ujela
+  v skeletu — edini izhod je bila osvežitev strani.
+- **Odmor predolge zahteve ( 90 s)**: ločena, jasnejša napaka
+  ( „trajalo je predolgo — preveri povezavo …") od generične omrežne;
+  strežniška zahtevka se prekine na klientu.
+- Nova čista plast `src/lib/generation-stages.ts` ( 0 React — meje faz,
+  format števca, abort razločevalci preklic ≠ timeout) + 17 testov /
+  56 pričakovanj; dogodek `planner_cancelled` ( union + API whitelist +
+  docs/ANALYTICS-EVENTS.md).
+
+### Popravljeno
+- Napaka `planner_error` dobi novo stopnjo `stage: "timeout"` + `elapsed`
+  ( ločeno od `response`/`network_or_parse`).
+
+### Opombe
+- **Iskrenost faz** ( kanon 71/74): meje ( 0/8/30 s) so ZNAČILNI časi, NE
+  trditev o živem napredku — klient ne dobi faznih signalov od strežnika;
+  besedilo opisuje DELO, ki ga strežnik dejansko počne, števec pa je
+  dejanski. Namig „navadno 15–40 s" drži obljubo skromno.
+- E2E ( brskalnik): namizna + mobilna ( 375 px, 0 px preliva) vrstica,
+  tihi preklic brez napake, zlati tok do načrta z zemljevidom, 0 napak
+  v konzoli. Organski dogodek ob poti: OOM morilec je ubil dev
+  strežnik MED generiranjem ( 2,46 GB RSS — že dokumentiran vzorec
+  TASK 76b, PREDHODNI; ponoven zagon, E2E nato čist).
+- `src/components/sections/poi-modal.tsx` ( 515 vrstic, mrtev NEUVES
+  datoteka že od TASK 75 dokumentirana) IZBRISANA — vsebuje nič
+  edinstvenega ( product-modal.tsx je popolna nadgradnja istih
+  endpointov).
+
 ## [1.73.3] — 2026-09-21 (TASK 76b: PREDOGLED SKOZI PREHOD — hidracija živa)
 
 ### Popravljeno

@@ -78,6 +78,16 @@ import {
   isValidStartDate,
   parseISODateLocal,
 } from "@/lib/trip-dates";
+// TASK 77 (1.73.4): povratna informacija generiranja — števec/faze/timeout
+// (čista logika v lib, tu samo React vezava + AbortController)
+import {
+  GENERATION_TIMEOUT_SECONDS,
+  ABORT_REASON_CANCEL,
+  ABORT_REASON_TIMEOUT,
+  formatGenerationElapsed,
+  generationStageFor,
+  isCancelledAbort,
+} from "@/lib/generation-stages";
 import type {
   PlannerInput,
   Itinerary,
@@ -412,6 +422,10 @@ export function ItineraryPlanner() {
   const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // TASK 77: DEJANSKI pretečeni čas generiranja (1 Hz) +AbortController —
+  // prej je uporabnik ob obešeni zahtevi ostal ujet v skeletu brez izhoda.
+  const [generationElapsed, setGenerationElapsed] = useState(0);
+  const generationAbortRef = useRef<AbortController | null>(null);
 
   // P0.2 GEO-VALIDACIJA: izvedljivost poti za prikaz (panel + dnevne značke).
   // Shranjeno polje (API/refine) ali preračun na mestu uporabe za stare
@@ -1159,6 +1173,28 @@ export function ItineraryPlanner() {
     });
     setLoading(true);
     setError(null);
+
+    // TASK 77: preklic + odmor predolge zahteve. Prej je obešena zahtevka
+    // (polh strežnik / izguba omrežja) uporabnika ujela v skeletu — edini
+    // izhod je bila osvežitev strani, ki bi IZGUBILA obrazec. Sedaj:
+    //   - Prekliči gumb → abort(CANCEL) → tiho vrnemov prejšnje stanje
+    //   - 90 s brez odgovora → abort(TIMEOUT) → jasna ločena napaka
+    // Števec (1 Hz) živi v state — ga bere statusna vrstica skeleta.
+    const controller = new AbortController();
+    // Varovalka: morebitna (teoretična) starejša zahtevka v letu se prekliče
+    // TIHO (razlog CANCEL — ne želimo lažne napake v njeni catch veji).
+    generationAbortRef.current?.abort(ABORT_REASON_CANCEL);
+    generationAbortRef.current = controller;
+    const generationStartedAt = Date.now();
+    setGenerationElapsed(0);
+    const tickId = setInterval(() => {
+      setGenerationElapsed(
+        Math.floor((Date.now() - generationStartedAt) / 1000)
+      );
+    }, 1000);
+    const timeoutId = setTimeout(() => {
+      controller.abort(ABORT_REASON_TIMEOUT);
+    }, GENERATION_TIMEOUT_SECONDS * 1000);
     try {
       // F1 (Supply Map): izbrani produkti z zemljevida ponudbe — AI prejme
       // STRUKTURIRAN objekt (FIXED/PREFERRED/SUGGESTED); strežnik sanitizira.
@@ -1166,6 +1202,7 @@ export function ItineraryPlanner() {
       const res = await fetch("/api/itinerary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           ...input,
           language: locale === "en" ? "en" : "sl",
@@ -1277,13 +1314,45 @@ export function ItineraryPlanner() {
       // načrte (kjer je obveščanje res potrebno). Napake še vedno javljajo
       // toasti (variant="destructive") — te uporabnik MORA videti.
     } catch (err) {
+      // TASK 77: uporabnikov preklic je NAMERNA izbira — brez napake, brez
+      // toasta; stanje (prazen uvod / obstoječi načrt) se vrne samo od sebe,
+      // ker loading pade v finally.
+      if (isCancelledAbort(controller.signal)) {
+        trackPlannerEvent("planner_cancelled", {
+          elapsed: Math.floor((Date.now() - generationStartedAt) / 1000),
+        });
+        return;
+      }
+      if (controller.signal.aborted) {
+        // Odmor (90 s) — ločena, jasnejša napaka od generične omrežne;
+        // uporabnik ve, da je bila zahtevka prekinjena na naši strani.
+        trackPlannerEvent("planner_error", {
+          stage: "timeout",
+          elapsed: Math.floor((Date.now() - generationStartedAt) / 1000),
+        });
+        setError(t("errorTimeout"));
+        return;
+      }
       trackPlannerEvent("planner_error", { stage: "network_or_parse" });
       const msg =
         err instanceof Error ? err.message : t("errorGeneratingFallback");
       setError(msg);
     } finally {
+      clearTimeout(timeoutId);
+      clearInterval(tickId);
+      if (generationAbortRef.current === controller) {
+        generationAbortRef.current = null;
+      }
       setLoading(false);
+      setGenerationElapsed(0);
     }
+  }
+
+  // TASK 77: en klik za tiho izhod iz generiranja (gumb v statusni vrstici
+  // skeleta). NE dotika loading/error — to sta rezervirano za finally blok
+  // generateItinerary (enotna pot čiščenja, tudi ob timeoutu).
+  function handleCancelGeneration() {
+    generationAbortRef.current?.abort(ABORT_REASON_CANCEL);
   }
 
   // === Shrani & deli: POST /api/itinerary/save → deljiva povezava ===
@@ -1979,20 +2048,59 @@ export function ItineraryPlanner() {
 
   // UI sprint: stanja nalaganja/napake/prazno kot spremenljivke — uporabljena
   // na obeh mestih (uvodni prostor brez načrta + urejanje z obstoječim načrtom)
+  //
+  // TASK 77: skelet ni več NEM. Statusna vrstica (role="status" +
+  // aria-live="polite") sporoča bralnikom zaslonov DEJANSKI pretečeni čas
+  // (1 Hz) in fazo po značilnem vrstnem redu strežnika (supply → compose →
+  // verify — glej src/lib/generation-stages.ts za iskrenostne meje) + gumb
+  // Prekliči (AbortController). Same skelete so čisto dekorativne
+  // (aria-hidden) — obvestilo nosi vrstica.
+  const generationStageKey = generationStageFor(generationElapsed).key;
   const loadingSkeleton = (
-    <div className="space-y-4">
-      <Skeleton className="h-10 w-2/3" />
-      {Array.from({ length: 3 }).map((_, i) => (
-        <Card key={i}>
-          <CardHeader>
-            <Skeleton className="h-6 w-32" />
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </CardContent>
-        </Card>
-      ))}
+    <div className="space-y-4" role="status" aria-live="polite">
+      <div className="flex items-center justify-between gap-3 rounded-lg border bg-card p-3 shadow-sm">
+        <div className="flex min-w-0 items-center gap-3">
+          <Loader2
+            className="size-5 shrink-0 animate-spin text-primary"
+            aria-hidden
+          />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">
+              {t(`generatingStage.${generationStageKey}`)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {t("generatingElapsed", {
+                time: formatGenerationElapsed(generationElapsed),
+              })}{" "}
+              · {t("generatingHint")}
+            </p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleCancelGeneration}
+          className="shrink-0"
+        >
+          <X className="size-3.5" aria-hidden />
+          {tCommon("cancel")}
+        </Button>
+      </div>
+      <div aria-hidden="true">
+        <Skeleton className="h-10 w-2/3" />
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i}>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 

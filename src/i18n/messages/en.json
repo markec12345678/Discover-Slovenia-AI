@@ -476,6 +476,14 @@
     "moreDesc": "Recommendations, tips, events during your visit, packing list and timeline.",
     "submit": "Generate itinerary ✨",
     "generating": "AI is thinking...",
+    "generatingStage": {
+      "supply": "Gathering weather, stays and events…",
+      "compose": "The AI is composing your route…",
+      "verify": "Checking distances and quality…"
+    },
+    "generatingElapsed": "Elapsed: {time}",
+    "generatingHint": "usually 15–40 s",
+    "errorTimeout": "Generation took too long (over 90 s) — check your connection and try again.",
     "validationDays": "Number of days must be between 1 and 14.",
     "validationBudget": "Budget must be greater than €0.",
     "validationGroupSize": "Group size must be between 1 and 20.",

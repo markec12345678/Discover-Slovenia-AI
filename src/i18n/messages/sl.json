@@ -476,6 +476,14 @@
     "moreDesc": "Priporočila, nasveti, dogodki med obiskom, pakirni seznam in časovni pregled.",
     "submit": "Generiraj itinerer ✨",
     "generating": "AI razmišlja...",
+    "generatingStage": {
+      "supply": "Zbiram vreme, nastanitve in dogodke…",
+      "compose": "AI sestavlja tvojo pot…",
+      "verify": "Preverjam razdalje in kakovost…"
+    },
+    "generatingElapsed": "Preteklo: {time}",
+    "generatingHint": "navadno 15–40 s",
+    "errorTimeout": "Generiranje je trajalo predolgo (prek 90 s) — preveri povezavo in poskusi znova.",
     "validationDays": "Število dni mora biti med 1 in 14.",
     "validationBudget": "Proračun mora biti večji od 0 €.",
     "validationGroupSize": "Velikost skupine mora biti med 1 in 20.",

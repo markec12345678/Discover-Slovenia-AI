@@ -132,6 +132,10 @@ export type PlannerEventName =
   | "unrealistic_day"
   | "save_failed"
   | "refine_failed"
+  // TASK 77: uporabnik je kliknil Prekliči med generiranjem (props: elapsed
+  // v s) — NAMERNA izbira, ne napaka; meri, kako pogosto so čakalne dobe
+  // nedopustne in ali gumb rešuje ujetost v skeletu
+  | "planner_cancelled"
   // P1-3: proxy signal — rezultat prikazan, sledeni dogodek ni bil zaznan
   // v merjenem oknu (NE pomeni "uporabnik ni bil zadovoljen")
   | "result_session_ended_without_action";
