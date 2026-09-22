@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.80.1 · 1878 testov (CI zelen) · lint 0 · tsc 0 (celoten projekt, kot CI) |
+| **Stanje** | v1.81.0 · 1903 testi (CI zelen) · lint 0 · tsc 0 (celoten projekt, kot CI) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -40,7 +40,7 @@
 | Uradna turistična vsebina (RAG) | slovenia.info `llms.txt` (STO) |
 | Transfer odkrivanje z objavljenimi realnimi cenami | KiwiTaxi partner feed (CSV) |
 | Živo vreme (trenutno + dnevna napoved; po dnevih poti v MY TRIP in v dnevnih karticah itinerarja — načrtovalnik + deljen načrt) | Open-Meteo (brez ključa) |
-| Zvočni povzetek dneva itinerarja (gumb »Poslušaj« v glavi dneva; načrtovalnik + deljen načrt) | platformski TTS SDK (brez ključa) |
+| Zvočni povzetek dneva itinerarja (gumb »Poslušaj« v glavi dneva; načrtovalnik + deljen načrt + MY TRIP) | platformski TTS SDK (brez ključa) |
 | **38 kuriranih destinacij** v 4 državah + EN različice | lastni destinacijski register |
 | Journey orkestracija, MY TRIP časovnica, natisljivi potrditveni dokument | lastna koda |
 | Zunanje booking predaje (`/go`) in affiliate preusmeritve | 16-provider omrežje |
@@ -86,7 +86,8 @@
 - **Večdnevni itinererji z deterministično validacijo** — OSRM realne cestne razdalje/časi,
   odpiralni časi, cik-cak opozorila, 2-opt optimizacija zaporedja, „preveri tuj načrt"
   (10 pravil, 0 AI žetonov), živo vreme v glavah dni (Open-Meteo, sidro po dnevih),
-  zvočni povzetek (TTS — cel načrt ali posamezni dan, tudi na deljeni povezavi),
+  zvočni povzetek (TTS — cel načrt ali posamezni dan; načrtovalnik, deljena
+  povezava in MY TRIP),
   pogovor z načrtom.
 - **Journey načrtovanje čez ponudnike** — prihod → transfer → nastanitev →
   znamenitosti (odprti viri po 4 državah) → hrana → bencin → dogodki v enem
@@ -97,10 +98,11 @@
   datumom (koledarska aritmetika — preklop na zimski čas ne podvoji
   datuma dneva); pretekli
   dnevi/dnevi čez ~16-dnevni horizont vira iskreno brez čipa, vir izrecno
-  naveden); **pas zdravja virov** (katere vire ni bilo mogoče doseči ob
+  naveden); **zvočni povzetek dneva** (gumb »Poslušaj« — popotnik posluša
+  svoj načrt, tisk dokumenta ostane čist); **pas zdravja virov** (katere vire ni bilo mogoče doseči ob
   generiranju — imena iz registra, „nič izmišljenega", ostalo potovanje
   deluje; zdravo stanje = brez pasa, ne tiska se); natisljivi
-  potrditveni dokument (čipi vremena in pas zdravja se ne tiskajo).
+  potrditveni dokument (čipi vremena, zvok in pas zdravja se ne tiskajo).
 - **Na poti (Go Mode)** — Now&Next sopotnik MED potovanjem: živa ura, naslednja
   postanka načrta, razdalja in smer do nje (GPS, premica — izrecno ne vozna),
   **živo vreme pri naslednji postanki** (Open-Meteo: trenutno stanje + današnja
@@ -338,7 +340,7 @@ dodatnih prenosov. Osvežitev feedov: `bun run fsq:ingest` / `bun run kiwitaxi:i
 Preverjanje:
 
 ```bash
-bun test                 # 1878 testov
+bun test                 # 1903 testi
 bun run lint             # eslint
 bunx tsc --noEmit        # tipi
 ```
@@ -474,7 +476,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.80.1**.
+Trenutna verzija: **1.81.0**.
 
 ---
 

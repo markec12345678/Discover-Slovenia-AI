@@ -21,7 +21,9 @@ import {
 //   - VHOD SO STRUKTURIRANI PODATKI DNEVA, NE PROSTO BESEDILO — strežnik
 //     skript pripovedi zgradi SAM (ista čista lib funkcija kot klient),
 //     zato API NI splošni "text-to-speech kot storitev" (varuje pred
-//     zlorabo); zod vrata kapajo obseg (8 postankov, dolžine polj).
+//     zlorabo); zod vrata kapajo obseg (meja postankov iz NARRATION_LIMITS
+//     — 16 od TASK 91: dan 1 MY TRIP združi prihod + vse izbrane postavke,
+//     globino varuje maxChunks, dolžine polj).
 //   - VIR: z-ai-web-dev-sdk (platformski SDK, BREZ uporabniških
 //     poverilnic — nadaljevanje direktive »najprej vse brez ključa«).
 //     Glasovi: sl → tongtong (slovenske besede fonetično), en → jam

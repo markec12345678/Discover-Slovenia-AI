@@ -20,7 +20,8 @@
 //      AIGC/LIST kose v glavi vira moramo PARSIRATI po RIFF kosih, ne
 //      44-bajtna predpostavka — izmerjeno 2026-09-24).
 //   2. /api/tts — strežniška pot (zod vrata + SDK + predpomnilnik).
-//   3. itinerary-audio.tsx — gumb v glavi dneva (TripTimeline + SharedTrip).
+//   3. itinerary-audio.tsx — gumb v glavi dneva (TripTimeline + SharedTrip
+//       + JourneyTrip/MY TRIP — TASK 91).
 //
 // ISKRENOST (kanon 71/74/77/88): pripoved je zgrajena SAMO iz podatkov,
 // ki dejansko obstajajo (imena, termini, opisi, datum). Prazen dan →
@@ -60,8 +61,13 @@ export const NARRATION_LIMITS = {
   maxChunkChars: 1024,
   /** Varnostna meja razreza (stavki so lahko dolgi). */
   chunkTargetChars: 960,
-  /** Zgornja meja postankov na dan (zod vrata). */
-  maxStops: 8,
+  /** Zgornja meja postankov na dan (zod vrata). TASK 91: 8 → 16 — dan 1
+   *  MY TRIP strukturno združi prihod + VSE izbrane postavke kategorij
+   *  (transferji, nastanitve, hrana, bencin, znamenitosti), lahko jih je
+   *  več kot 8; globina varuje maxChunks (dolžina skripta), ne števec —
+   *  MY TRIP vnosi BREZ opisa so kratki (ime [+ termin]), planner ostaja
+   *  ≤ 8 postankov po svoji validaciji (nespremenjeno). */
+  maxStops: 16,
   /** Zgornja meja dolžine imena (zod vrata). */
   maxNameChars: 160,
   /** Zgornja meja dolžine opisa (zod vrata). */
@@ -233,6 +239,48 @@ export function narrationStopsFromDay(
           ? v.notes.trim()
           : undefined,
     }));
+}
+
+// ─── MY TRIP (TASK 91) — druga struktura dneva, isti kanon ───────────────
+
+/** Strukturinsko minimalen vnos MY TRIP dneva (TripEntry brez odvisnosti
+ *  od journey tipov — lib ostaja čist: title + SAMO realni termin).
+ *  timeNote NI vnos pripovedi (meta-razlaga, zakaj časa ni — zaslon
+ *  jo pokaže, govor je samo ime). */
+export interface TripEntryLike {
+  title: string;
+  time?: { start: string } | null;
+}
+
+/**
+ * Preslikava postavk MY TRIP dneva (buildMyTrip → TripEntry[]) v vnose
+ * pripovedi: termin SAMO kadar je realen (time.start — vpis uporabnika /
+ * trajanje iz vira), ime vedno; OPIS ne obstaja v tej strukturi (ne
+ * izmišljujemo ga). Prazni naslovi odpadejo (fail-closed kot povsod).
+ */
+export function narrationStopsFromTripEntries(
+  entries: ReadonlyArray<TripEntryLike>
+): NarrationStopInput[] {
+  return entries
+    .filter((e) => typeof e.title === "string" && e.title.trim() !== "")
+    .map((e) => ({
+      time:
+        e.time && typeof e.time.start === "string" ? e.time.start.trim() : "",
+      name: e.title.trim(),
+    }));
+}
+
+/**
+ * Govorna datumska oznaka MY TRIP (vir vsebuje leto, planner ne):
+ * »25. september 2026« → »25. september« / »September 25, 2026« →
+ * »September 25«. Leto se za GOVOR izpusti (isti datum, pariteta z
+ * planner oznako, ki leta nima — štirimestna števka bi jo SL glas glasil
+ * kot angleške besede sredi slovenskega stavka; glej izmero zgoraj).
+ * Besedni oznaki (»Datum prihoda ni vnesen«) ostanejo nespremenjene —
+ * klicalec jih ne pošlje, kadar datuma ni (dateLabel null).
+ */
+export function speechTripDateLabel(dateLabel: string): string {
+  return dateLabel.replace(/\s*,?\s*\d{4}\s*$/, "").trim();
 }
 
 /**

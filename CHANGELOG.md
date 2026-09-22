@@ -7,6 +7,83 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.81.0] — 2026-09-24 (TASK 91: ZVOČNI POVZETEK DNEVA V MY TRIP — zadnja površina brez zvoka)
+
+### Dodano
+- **Gumb »Poslušaj« v glavi vsakega dneva MY TRIP** (JourneyTrip —
+  /potovanje, sl + en): popotnik med potovanjem (telefon v žepu) posluša
+  SVOJ potrjen načrt dneva — prihod, transferji z realnimi termini,
+  izbrane nastanitve/restavracije/znamenitosti/bencin. Zadnja površina
+  brez zvoka (TASK 89 je pokril planner + deljen načrt; MY TRIP je
+  vzorec pripravil v „znano za nadaljnje"). Isti platformski TTS
+  (z-ai-web-dev-sdk, BREZ poverilnic), ista API pot /api/tts, isti
+  klientni/strežniški predpomnilnik, ista komponenta DayAudioButton —
+  SAMO preslikava podatkov je nova (čista plast, 0 duplikacije).
+- **`narrationStopsFromTripEntries`** (src/lib/itinerary-audio.ts):
+  preslikava TripEntry[] → vnosi pripovedi — termin SAMO kadar je
+  realen (time.start: vpis uporabnika / trajanje iz vira), ime vedno;
+  OPIS v tej strukturi ne obstaja → se NE izmišljuje (iskrenost).
+  Strukturinsko tipiziran vhod (TripEntryLike — title + time) drži lib
+  čist (0 odvisnosti od journey tipov).
+- **`speechTripDateLabel`**: MY TRIP datumska oznaka vsebuje leto
+  (»25. september 2026«), plannerjeva ne — za GOVOR se leto izpusti
+  (isti datum, pariteta z plannerjem; štirimestna števka bi jo SL glas
+  tongtong glasil kot angleške besede sredi slovenskega stavka —
+  izmera TASK 89). Dan brez datuma → dateLabel null (meta-opombe
+  »Datum prihoda ni vnesen« govor NE bere).
+- **`NARRATION_LIMITS.maxStops` 8 → 16**: dan 1 MY TRIP strukturno
+  združi prihod + VSE izbrane postavke kategorij (transferji,
+  nastanitve, hrana, bencin, znamenitosti) — lahko jih je več kot 8,
+  legitimno potovanje ne sme pastti na varovalki. Globino varuje
+  maxChunks (dolžina skripta), ne števec: 16 MY TRIP vnosov brez opisa
+  ≈ 1–2 kosa ≤ 4; planner ostaja ≤ 8 postankov po svoji validaciji
+  (nespremenjeno). Zod vrata sledejo KONSTANTO (ENA resnica).
+- **Analitika `surface=mytrip`**: Dogodek `itinerary_audio_play` zdaj
+  loči še površino MY TRIP — pove, ali poslušajo POTNIKI svoj
+  potrjen načrt med potovanjem (ne le oblikovalci načrta in obiskovalci
+  deljenih povezav). Klientna whitelist + strežniški VALID_EVENTS
+  nespremenjena (istie ime dogodka) + docs/ANALYTICS-EVENTS.md.
+
+### Testi
+- `task91-mytrip-audio.test.ts`: 25 testov / 68 pričakovanj — UNIT
+  (preslikava: realni termin SAMO iz time.start, brez izmišljenega
+  opisa, prazni naslovi odpadejo, trim; speechTripDateLabel: SL/EN
+  leto ven, sredinske številke nedotaknjene, brez leta nespremenjeno;
+  maxStops=16 + 16 imen gre skozi chunker z 0 izgubami ≤ maxChunks)
+  + INTEGRACIJA (buildDayNarrationScript ∘ preslikava: »Dan prvi.« +
+  realni termini v besedah + imena brez termina + dan brez datuma +
+  prazen dan → null) + SOURCE-CONTRACT (JourneyTrip izrisuje gumb
+  surface=mytrip s preslikavama; tip surface vključuje mytrip; zod
+  uporablja konstanto ne literal; analytics komentar + docs usklajeni).
+- TASK 89 test osvežen: docs-vrstica dogodka sedaj regularni izraz
+  (1.80; 1.81 `surface=mytrip`) — evolucija dokumentacije, ne padec.
+- Skupaj: **1903/1903 testov** (1878 + 25), lint 0, tsc src 0.
+
+### E2E (agent-browser, /potovanje 375 px)
+- Zlata pot: obrazec (Brnik → Maribor, 15. 10. 2026 14:00) → Načrtuj
+  potovanje → POST /api/journey/plan 200 → MY TRIP se izriše z gumbom
+  »Poslušaj zvočni povzetek dneva 1« v glavi dneva (ob vremenskem
+  čipu — iskrena opomba ~16-dnevni horizont, dan je čez njim).
+- Klik → POST /api/tts **200** (hladna generacija, strukturirani
+  podatki dneva) → predvajanje (gumb preklopi v »Ustani« …
+  »Ustavi«) → kratek povzetek se konča → idle. Ponovni klik →
+  predvajanje IZ KLIENTNEGA predpomnilnika (0 novih /api/tts
+  zahtev — blob LRU deluje) → ustavitev.
+- POST /api/analytics/event **200** (itinerary_audio_play,
+  surface=mytrip) — analitična veriga zelena.
+- 0 konzolnih napak; 0 px preliva (scrollWidth − clientWidth = 0);
+  VLM potrditev posnetka (gumb vidno v glavi dneva desno od datuma,
+  vnosovja brez prelomov). Dokaz: task91-mytrip-audio.png.
+
+### Znano za nadaljnje delo (iskreno zapisano)
+- Konsolidacija dveh TTS poti (/api/itinerary/tts D2 prosto besedilo +
+  /api/tts TASK 89/91 strukturirani dan) v skupno jedro (SDK + WAV
+  spajanje) — obe delujeta neodvisno, vzorec je pripravljen.
+- 12 providerjev s poverilnicami čaka na uporabnikove poverilnice
+  (odloženo po direktivi).
+
+---
+
 ## [1.80.1] — 2026-09-24 (TASK 90: README SINHRONIZACIJA + VERCEL REGIJA — docs/config, 0 produkcijske kode)
 
 ### Spremenjeno (dokumentacija in konfiguracija)

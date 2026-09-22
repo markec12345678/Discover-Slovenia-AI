@@ -79,8 +79,8 @@ export interface DayAudioButtonProps {
   /** Postanki dneva (preslikani iz day.locations — narrationStopsFromDay). */
   stops: ReadonlyArray<NarrationStopInput>;
   lang: NarrationLang;
-  /** Površina za analitiko: planner | shared. */
-  surface: "planner" | "shared";
+  /** Površina za analitiko: planner | shared | mytrip (TASK 91). */
+  surface: "planner" | "shared" | "mytrip";
   className?: string;
 }
 

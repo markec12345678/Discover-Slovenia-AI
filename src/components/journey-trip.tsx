@@ -23,6 +23,11 @@ import {
   type TripWeatherDay,
 } from "@/lib/journey/trip-weather";
 import { WeatherChip } from "@/components/itinerary-weather";
+import { DayAudioButton } from "@/components/itinerary-audio";
+import {
+  narrationStopsFromTripEntries,
+  speechTripDateLabel,
+} from "@/lib/itinerary-audio";
 import type { TravelJourney } from "@/lib/journey/types";
 
 // ============================================================================
@@ -54,6 +59,12 @@ import type { TravelJourney } from "@/lib/journey/types";
 // PRAZNA množica = vsi viri odgovorili = TIŠINA (ne slave-ujemo odsotnosti
 // težav — isti kanon kot vreme). print:hidden: potrditveni dokument so
 // dejstva o rezervacijah, ne zdravje virov.
+//
+// TASK 91 — ZVOČNI POVZETEK DNEVA (1.81.0): gumb »Poslušaj« v glavi vsakega
+// dneva MY TRIP (zadnja površina brez zvoka — vzorec TASK 89, ista čista
+// lib: narrationStopsFromTripEntries preslika TripEntry[] v ime [+ realni
+// termin]; datum brez leta za govor — speechTripDateLabel). Popotnik na
+// potovanju posluša svoj dan (telefon v žepu), tisk dokumenta ostane čist.
 // ============================================================================
 
 const L = {
@@ -454,10 +465,16 @@ export function JourneyTrip({
         {/* TASK 74 — zdravje virov: samo ob odpovedi (zdravo = tišina) */}
         <SupplyHealthNote journey={journey} lang={lang} />
 
-        {/* Časovnica po dneh (časi SAMO realni — §20) + TASK 66 vremenski čipi */}
+        {/* Časovnica po dneh (časi SAMO realni — §20) + TASK 66 vremenski čipi
+            + TASK 91 zvočni povzetek dneva (surface=mytrip) */}
         {trip.days.map((day, i) => {
           const dayWeather =
             forecastCurrent && day.date ? byDate.get(day.date) : undefined;
+          // TASK 91 — datum za GOVOR brez leta (»25. september« — planner
+          // pariteta); dan brez datuma → null (ne beremo meta-opombe).
+          const audioDateLabel = day.date
+            ? speechTripDateLabel(day.dateLabel[lang])
+            : null;
           return (
           <div key={`${day.date ?? i}`} className="space-y-1">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -465,6 +482,14 @@ export function JourneyTrip({
                 {day.dateLabel[lang]}
               </p>
               {dayWeather && <WeatherChip w={dayWeather} lang={lang} />}
+              <DayAudioButton
+                dayNumber={i + 1}
+                dateLabel={audioDateLabel}
+                stops={narrationStopsFromTripEntries(day.entries)}
+                lang={lang}
+                surface="mytrip"
+                className="ml-auto shrink-0 self-center"
+              />
             </div>
             <div className="divide-y rounded-lg border">
               {day.entries.map((e) => (

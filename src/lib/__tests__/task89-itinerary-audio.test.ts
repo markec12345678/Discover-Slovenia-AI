@@ -668,7 +668,9 @@ describe("TASK 89: integracija površin + analitika", () => {
   });
 
   test("dogodek je dokumentiran v docs/ANALYTICS-EVENTS.md", () => {
-    expect(analyticsDocs).toContain("`itinerary_audio_play` (1.80)");
+    // TASK 91 (1.81) je vrstico razširil: (1.80; 1.81 `surface=mytrip`) —
+    // dogodek še vedno dokumentiran, surface pa zdaj vključuje MY TRIP
+    expect(analyticsDocs).toMatch(/`itinerary_audio_play` \(1\.80(; 1\.81 `surface=mytrip`)?\)/);
     expect(analyticsDocs).toContain("TASK 89");
   });
 });
