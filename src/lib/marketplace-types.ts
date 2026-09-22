@@ -72,6 +72,10 @@ export interface Experience {
   languages: string[];
   meetingPoint?: string | null;
   address: string;
+  // TASK 87: geo koordinati pin-a (neobvezno — null = izkušnja brez pina
+  // na supply zemljevidu; own adapter jo iskreno izpusti)
+  lat?: number | null;
+  lng?: number | null;
   images: string[];
   providerName: string;
   providerEmail?: string | null;

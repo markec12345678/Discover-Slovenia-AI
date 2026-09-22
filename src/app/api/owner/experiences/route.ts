@@ -78,6 +78,24 @@ const createSchema = z.object({
   languages: z.array(z.string()).default(["sl"]),
   meetingPoint: z.string().nullable().optional(),
   address: z.string().min(3, "Naslov je obvezen"),
+  // === GEO KOORDINATE (TASK 87) — neobvezni pin izkušnje na supply
+  // zemljevidu. Trda vrata enaka formi: obe ALI nobena (refine spodaj),
+  // ±90/±180. Zunaj-SI točke so DOVOLJENE (robni kraji IT/AT/HU) —
+  // mehki hint živi samo na formi; strežnik ne zavira zakonitih robov.
+  lat: z
+    .number()
+    .finite()
+    .min(-90, "Geo širina mora biti med -90 in 90")
+    .max(90, "Geo širina mora biti med -90 in 90")
+    .nullable()
+    .optional(),
+  lng: z
+    .number()
+    .finite()
+    .min(-180, "Geo dolžina mora biti med -180 in 180")
+    .max(180, "Geo dolžina mora biti med -180 in 180")
+    .nullable()
+    .optional(),
   images: z.array(z.string()).default([]),
   providerName: z.string().min(2, "Ime ponudnika je obvezno"),
   providerEmail: z.string().nullable().optional(),
@@ -85,7 +103,16 @@ const createSchema = z.object({
   providerWebsite: safeWebsiteSchema,
   familyFriendly: z.boolean().default(false),
   accessibility: z.boolean().default(false),
-});
+}).refine(
+  (d) =>
+    (d.lat === undefined || d.lat === null) ===
+    (d.lng === undefined || d.lng === null),
+  {
+    message:
+      "Vnesite obe koordinati (geo širino in geo dolžino) ali obe izpraznite.",
+    path: ["lat"],
+  }
+);
 
 // GET /api/owner/experiences — vrne vse izkušnje trenutno prijavljenega lastnika
 export async function GET() {
@@ -238,6 +265,9 @@ export async function POST(request: Request) {
         languages: JSON.stringify(data.languages),
         meetingPoint: data.meetingPoint?.trim() || null,
         address: data.address.trim(),
+        // TASK 87: geo koordinati pin-a (obe ali nobena — zod refine zgoraj)
+        lat: data.lat ?? null,
+        lng: data.lng ?? null,
         images: JSON.stringify(data.images),
         providerName: data.providerName.trim(),
         providerEmail: data.providerEmail?.trim() || null,

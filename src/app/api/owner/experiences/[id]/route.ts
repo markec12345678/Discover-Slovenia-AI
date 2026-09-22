@@ -41,6 +41,24 @@ const updateSchema = z.object({
   languages: z.array(z.string()).optional(),
   meetingPoint: z.string().nullable().optional(),
   address: z.string().min(3, "Naslov je obvezen").optional(),
+  // === GEO KOORDINATE (TASK 87) — neobvezni pin izkušnje na supply
+  // zemljevidu. Trda vrata enaka formi: obe ALI nobena (refine spodaj),
+  // ±90/±180. Zunaj-SI točke so DOVOLJENE (robni kraji IT/AT/HU) —
+  // mehki hint živi samo na formi; strežnik ne zavira zakonitih robov.
+  lat: z
+    .number()
+    .finite()
+    .min(-90, "Geo širina mora biti med -90 in 90")
+    .max(90, "Geo širina mora biti med -90 in 90")
+    .nullable()
+    .optional(),
+  lng: z
+    .number()
+    .finite()
+    .min(-180, "Geo dolžina mora biti med -180 in 180")
+    .max(180, "Geo dolžina mora biti med -180 in 180")
+    .nullable()
+    .optional(),
   images: z.array(z.string()).optional(),
   providerName: z.string().min(2, "Ime ponudnika je obvezno").optional(),
   providerEmail: z.string().nullable().optional(),
@@ -48,7 +66,16 @@ const updateSchema = z.object({
   providerWebsite: safeWebsiteSchema,
   familyFriendly: z.boolean().optional(),
   accessibility: z.boolean().optional(),
-});
+}).refine(
+  (d) =>
+    (d.lat === undefined || d.lat === null) ===
+    (d.lng === undefined || d.lng === null),
+  {
+    message:
+      "Vnesite obe koordinati (geo širino in geo dolžino) ali obe izpraznite.",
+    path: ["lat"],
+  }
+);
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -233,6 +260,14 @@ export async function PUT(request: Request, { params }: RouteParams) {
           (experience.meetingPoint || null)) ||
       (data.address !== undefined &&
         data.address.trim() !== experience.address) ||
+      // TASK 87: sprememba geo koordinat je VSEBINSKA — pin na supply
+      // zemljevidu je javno viden (own adapter: published + lat/lng NOT
+      // NULL), zato nova/spremenjena lokacija gre v ponovni pregled
+      // (kot naslov/meeting point — logistika izvedbe).
+      (data.lat !== undefined &&
+        (data.lat ?? null) !== (experience.lat ?? null)) ||
+      (data.lng !== undefined &&
+        (data.lng ?? null) !== (experience.lng ?? null)) ||
       // FW1: kontakt ponudnika (javno prikazani + partner snapshot)
       (data.providerName !== undefined &&
         data.providerName.trim() !== experience.providerName) ||
@@ -287,6 +322,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
           meetingPoint: data.meetingPoint?.trim() || null,
         }),
         ...(data.address !== undefined && { address: data.address.trim() }),
+        ...(data.lat !== undefined && { lat: data.lat ?? null }),
+        ...(data.lng !== undefined && { lng: data.lng ?? null }),
         ...(data.images !== undefined && {
           images: JSON.stringify(data.images),
         }),

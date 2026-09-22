@@ -277,14 +277,17 @@ const MATRIX: Record<ProviderSlug, Omit<ProductionMatrixEntry, "slug">> = {
     // dev instanci (koordinate → pin → supply odgovor); PRODUKCIJSKI živi
     // podatki čakajo prve partnerjeve listinge s koordinatami (stopnja
     // iskreno ostaja PRODUCTION_CONFIGURED, NE PRODUCTION_ACTIVE).
+    // TASK 87 (1.78.0): DRUGI vir — Experience geo stolpca; adapter zdaj
+    // združuje listinge IN izkušnje (price → FROM_PRICE: objavljene cene
+    // izkušenj, listingi ostanejo brez številčne cene).
     stage: "PRODUCTION_CONFIGURED",
     blockedReason: "NO_LIVE_DATA",
-    price: "NOT_SUPPORTED", // priceRange €|€€|€€€ je obseg, ne številčna cena
+    price: "FROM_PRICE", // TASK 87: objavljena pricePerPerson izkušenj (per_person, NISO živi citat); listingi priceRange obseg → brez
     availability: "NOT_SUPPORTED", // Stripe checkout, ne koledar
     cta: "own_checkout",
     aiIntegrated: true, // priklopljen na supply search → AI kontekst izbire
     docsUrl: "",
-    note: "Lastna tržnica: Listingi z geo stolpcema (lat/lng, TASK 84) na supply zemljevidu — rezervacija prek lastnega Stripe toka. Listing BREZ koordinat je iskreno izpuščen; prazna tržnica = „no-listings“. Experience/Product še brez geo (bodoča faza).",
+    note: "Lastna tržnica: Listingi (TASK 84) IN izkušnje (TASK 87) z geo stolpci na supply zemljevidu — rezervacija prek lastnega Stripe toka. Izkušnje imajo pravo ceno (per_person), listingi obseg €. Zapis BREZ koordinat je iskreno izpuščen; prazna tržnica = „no-listings“. Product še brez geo.",
   },
 
   // === A — ACTIVITIES / EXPERIENCES (§7) ================================

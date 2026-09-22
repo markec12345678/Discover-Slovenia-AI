@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, type FormEvent } from "react";
-import { Loader2, AlertCircle, Save, Info } from "lucide-react";
+import { Loader2, AlertCircle, Save, Info, MapPin } from "lucide-react";
 
 import {
   Dialog,
@@ -27,6 +27,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import {
+  GEO_ERROR_MESSAGES,
+  GEO_SI_HINT,
+  isWithinSloveniaBbox,
+  parseGeoInput,
+  type GeoFieldError,
+} from "@/lib/listing-geo-validation";
+import {
   EXPERIENCE_CATEGORY_LABELS,
   LANGUAGE_LABELS,
   type Experience,
@@ -46,6 +53,9 @@ export interface ExperienceFormData {
   languages: string;
   meetingPoint: string;
   address: string;
+  // TASK 87: geo koordinati pin-a (string — parse v submit; prazno = brez pina)
+  lat: string;
+  lng: string;
   images: string;
   familyFriendly: boolean;
   accessibility: boolean;
@@ -75,6 +85,8 @@ const EMPTY_FORM: ExperienceFormData = {
   languages: "sl, en",
   meetingPoint: "",
   address: "",
+  lat: "",
+  lng: "",
   images: "",
   familyFriendly: false,
   accessibility: false,
@@ -114,8 +126,21 @@ export function ExperienceFormDialog({
   const [form, setForm] = useState<ExperienceFormData>(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // TASK 87: geo polja — touched po vzoru TASK 82/85 (inline validacija
+  // šele po prvi interakciji, da nov prazen dialog ne kriči napak)
+  const [geoTouched, setGeoTouched] = useState(false);
 
   const isEdit = experience !== null;
+
+  // Vedno izračunan live parse (čiste funkcije iz listing-geo-validation —
+  // TASK 87 delimo isti validacijski vir z listing formo)
+  const geoParse = parseGeoInput(form.lat, form.lng);
+  const geoError: GeoFieldError = geoTouched ? geoParse.error : null;
+  const showSiHint =
+    geoParse.error === null &&
+    geoParse.lat !== null &&
+    geoParse.lng !== null &&
+    !isWithinSloveniaBbox(geoParse.lat, geoParse.lng);
 
   // Nastavi formo ko se odpre ali ko se experience spremeni
   useEffect(() => {
@@ -134,6 +159,8 @@ export function ExperienceFormDialog({
           languages: (experience.languages ?? ["sl"]).join(", "),
           meetingPoint: experience.meetingPoint ?? "",
           address: experience.address,
+          lat: experience.lat != null ? String(experience.lat) : "",
+          lng: experience.lng != null ? String(experience.lng) : "",
           images: (experience.images ?? []).join("\n"),
           familyFriendly: experience.familyFriendly,
           accessibility: experience.accessibility,
@@ -146,6 +173,8 @@ export function ExperienceFormDialog({
         setForm(EMPTY_FORM);
       }
       setErrorMsg(null);
+      // TASK 87: reset geo touched (nov dialog ne kriči napak)
+      setGeoTouched(false);
     }
   }, [open, experience]);
 
@@ -200,6 +229,14 @@ export function ExperienceFormDialog({
       return;
     }
 
+    // TASK 87: geo vrata (obe-ali-nobena, ±90/±180) — enak vzorec kot
+    // listing forma (TASK 85). Neveljaven geo ZAVRE submit.
+    if (geoParse.error !== null) {
+      setGeoTouched(true);
+      setErrorMsg(GEO_ERROR_MESSAGES[geoParse.error]);
+      return;
+    }
+
     setLoading(true);
     try {
       const images = parseImages(form.images);
@@ -222,6 +259,9 @@ export function ExperienceFormDialog({
         languages,
         meetingPoint: form.meetingPoint.trim() || null,
         address: form.address.trim(),
+        // TASK 87: geo koordinati (oba ali noben — validirano zgoraj)
+        lat: geoParse.lat,
+        lng: geoParse.lng,
         images,
         familyFriendly: form.familyFriendly,
         accessibility: form.accessibility,
@@ -523,6 +563,89 @@ export function ExperienceFormDialog({
                 required
               />
             </div>
+          </div>
+
+          {/* GEO KOORDINATE (TASK 87) — pin izkušnje na zemljevidu ponudb.
+              Inline validacija po vzoru TASK 82/85: touched →
+              aria-invalid + role="alert"; rumeni hint zunaj SI bbox. */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-sm font-medium">
+              <MapPin className="size-4 text-primary" aria-hidden="true" />
+              Lokacija na zemljevidu
+              <span className="font-normal text-muted-foreground">
+                (neobvezno)
+              </span>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="ef-lat"
+                  className="text-xs text-muted-foreground"
+                >
+                  Geo širina (N)
+                </Label>
+                <Input
+                  id="ef-lat"
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  min={-90}
+                  max={90}
+                  placeholder="46.3625"
+                  value={form.lat}
+                  onChange={(e) => update("lat", e.target.value)}
+                  onBlur={() => setGeoTouched(true)}
+                  disabled={loading}
+                  aria-invalid={geoError !== null}
+                  aria-describedby={geoError ? "ef-geo-error" : undefined}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="ef-lng"
+                  className="text-xs text-muted-foreground"
+                >
+                  Geo dolžina (E)
+                </Label>
+                <Input
+                  id="ef-lng"
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  min={-180}
+                  max={180}
+                  placeholder="14.0936"
+                  value={form.lng}
+                  onChange={(e) => update("lng", e.target.value)}
+                  onBlur={() => setGeoTouched(true)}
+                  disabled={loading}
+                  aria-invalid={geoError !== null}
+                  aria-describedby={geoError ? "ef-geo-error" : undefined}
+                />
+              </div>
+            </div>
+            {geoError !== null && (
+              <p
+                id="ef-geo-error"
+                role="alert"
+                className="text-xs text-destructive"
+              >
+                {GEO_ERROR_MESSAGES[geoError]}
+              </p>
+            )}
+            {!geoError && showSiHint && (
+              <p
+                id="ef-geo-hint"
+                className="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400"
+              >
+                <MapPin className="size-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+                {GEO_SI_HINT}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Z obema koordinatama se izkušnja prikaže kot pin na zemljevidu
+              ponudb (po objavi). Primer: 46.3625, 14.0936 (Bled).
+            </p>
           </div>
 
           {/* Slike */}

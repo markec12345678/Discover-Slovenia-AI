@@ -179,6 +179,56 @@ export async function register() {
       });
     }
 
+    // Startup SHEMA migracija — TASK 87 (1.78.0): doda geo stolpca
+    // Experience (lat/lng — pin izkušnje na supply zemljevidu, own
+    // adapter, drugi vir) na obstoječih bazah. Idempotentna,
+    // additive-only, fail-open — skupna zastavica
+    // DSA_DISABLE_SCHEMA_MIGRATION. Glej src/lib/experience-geo-migration.ts.
+    try {
+      const { migrateExperienceGeoColumns } = await import(
+        "./lib/experience-geo-migration"
+      );
+      const r = await migrateExperienceGeoColumns();
+      if (r.columnsAdded.length > 0) {
+        console.log(
+          `[instrumentation] Shema migracija (Experience geo): dodani ` +
+            `stolpci [${r.columnsAdded.join(", ")}] (${r.dialect})`
+        );
+        recordStartupStep({
+          name: "schema:experience-geo",
+          status: "ok",
+          detail: `dodani stolpci: ${r.columnsAdded.join(", ")} (${r.dialect})`,
+        });
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija (Experience geo): stolpcev ni " +
+            "bilo mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
+        );
+        recordStartupStep({
+          name: "schema:experience-geo",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja stolpcev ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:experience-geo",
+          status: "ok",
+          detail: "stolpci že prisotni",
+        });
+      }
+    } catch (error) {
+      // Fail-open: migracija NE sme podreti zagona strežnika.
+      console.error(
+        "[instrumentation] Shema migracija (Experience geo) ni uspela:",
+        error
+      );
+      recordStartupStep({
+        name: "schema:experience-geo",
+        status: "failed",
+        detail: String(error),
+      });
+    }
+
     // Startup SHEMA migracija — F11 (1.15.0): ustvari tabeli TripPoll +
     // TripPollVote na obstoječih bazah (Vercel/Neon nima ročnega db push;
     // skip-worktree past je modele enkrat zadržala pred commitom).

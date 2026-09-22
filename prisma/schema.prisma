@@ -425,6 +425,16 @@ model Experience {
   languages       String // JSON array
   meetingPoint    String?
   address         String
+
+  // === GEO KOORDINATE (TASK 87, 1.78.0): pin izkušnje na supply zemljevidu
+  // (own adapter, drugi vir poleg Listing). NEOBVEZNO (null = izkušnja brez
+  // pina — own supply adapter jo iskreno IZPUSTI, nikoli ne izmišljamo
+  // lokacije). Vnese ponudnik (owner portal); geoPrecision: exact.
+  // Startup migracija: src/lib/experience-geo-migration.ts (prisma
+  // migration: 20260924100000_experience_geo).
+  lat             Float?
+  lng             Float?
+
   images          String
   providerName    String
   providerEmail   String?

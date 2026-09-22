@@ -95,7 +95,11 @@ export function ImageLightbox({
   // naložena. Predpomnjene slike prav tako sprožijo onload (React priklopi
   // handler v istem commitu kot src). Menjava slike → loaded false do dogodka.
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
-  const loaded = loadedSrc === current.src;
+  // POPRAVEK (E2E TASK 87): izkušnja/lokal BREZ slik → valid=[] → current
+  // undefined — Branje current.src TU (pred varovalko spodaj) je sesuvalo
+  // modal („Cannot read properties of undefined (reading 'src')").
+  // Optional chaining: prazna galerija preprosto ni „loaded".
+  const loaded = current != null && loadedSrc === current.src;
 
   // Brez veljavnih slik lightbox nima kaj pokazati — ne montažiraj ga.
   if (valid.length === 0 || !current) return null;

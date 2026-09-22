@@ -27,7 +27,8 @@ export type ProviderSlug =
   | "osm"
   | "fsq"
   | "sto"
-  // Lastna tržnica (Listing/Experience/Product v lastni DB)
+  // Lastna tržnica (Listing + Experience z geo v lastni DB; Product še
+  // brez geo — TASK 87)
   | "own"
   // Komercialni providerji (dokler nimajo potrjenega API dostopa: samo
   // affiliate globoka povezava prek /go — NIKOLI ProviderProduct)

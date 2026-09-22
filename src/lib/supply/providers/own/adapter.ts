@@ -1,26 +1,33 @@
 // ============================================================================
-// TRAVEL SUPPLY MAP — OWN ADAPTER (TASK 84, 1.75.0)
+// TRAVEL SUPPLY MAP — OWN ADAPTER (TASK 84, 1.75.0; TASK 87, 1.78.0)
 // ============================================================================
 // DESETI realni SupplyAdapter — zadnji provider BREZ zunanjih poverilnic:
-// LASTNA TRŽNICA (Listing v lastni DB). Do zdaj je bil register-vnos
-// „own" zamrznjen na active:false, ker Listing ni imel koordinat — geo
-// stolpca (lat/lng, schema TASK 84) to odpirata.
+// LASTNA TRŽNICA (Listing + Experience v lastni DB). Do TASK 84 je bil
+// register-vnos „own" zamrznjen na active:false, ker Listing ni imel
+// koordinat — geo stolpca (lat/lng) so ga odprla. TASK 87 doda DRUGI vir:
+// izkušnje (Experience) s svojimi geo stolpci (enaka arhitektura).
 //
 // KANONSKA PRESLIKAVA (brez spremembe kanonskega modela):
 //  - type:            Listing.category → kanonski tip (hotel → accommodation,
 //                     restaurant|bar → restaurant, activity → activity,
-//                     shop → shop, transport → transport, other → poi)
-//  - providerProductId: listing.id → id "own:{listingId}"
-//  - geo:             lat/lng IZKLJUČNO kadar OBSTAJO (partner/admin vnos) —
-//                     geoPrecision "exact"; listing BREZ koordinat je
+//                     shop → shop, transport → transport, other → poi);
+//                     Experience.category → tour → "tour", vse ostale
+//                     kategorije (workshop/tasting/outdoor/cultural/
+//                     adventure/wellness) → "activity" (iskrena poenostavitev
+//                     — subcategory nosi izvirnik)
+//  - providerProductId: listing.id/experience.id → id "own:{id}"
+//  - geo:             lat/lng IZKLJUČNO kadar OBSTAJO (partnerjev vnos) —
+//                     geoPrecision "exact"; zapis BREZ koordinat je
 //                     iskreno IZPUSTEN (nikoli ne izmišljamo lokacije)
-//  - cena:            ODSOTNA (priceRange €|€€|€€€ je OBSEG, ne cena —
-//                     PriceInfo zahteva številko; ne lažemo z izmišljeno)
+//  - cena:            Listing: ODSOTNA (priceRange €|€€|€€€ je OBSEG, ne
+//                     cena — ne lažemo z izmišljeno). Experience:
+//                     pricePerPerson je PRAVA številčna cena → PriceInfo
+//                     (unit per_person, EUR)
 //  - razpoložljivost: ODSOTNA (not_supported — lastni koncept je Stripe
 //                     checkout, ne živi koledar; polje izpuščeno po dogovoru)
 //  - bookingMode:     own_marketplace (rezervacija prek naše tržnice —
 //                     produkt modal ponuja „dodaj v načrt"; /go NIKOLI)
-//  - sourceUrl:       listing.website (SAMO validiran http(s) — sicer
+//  - sourceUrl:       website/providerWebsite (SAMO validiran http(s) — sicer
 //                     izpuščen; render plast je NEODVISNA druga meja)
 //  - slika:           PRVA iz images JSON (SAMO validiran http(s) — slike
 //                     nalagajo partnerji, javni vnos ima obe meji)
@@ -28,14 +35,14 @@
 //  - lastUpdated:     updatedAt (čas ZADNJEGA urejanja partnerja)
 //
 // GATES (iskrenost, fail-closed — isti vzorec kot fsq „no-dataset"):
-//  - listing brez koordinat → NE pride v sloj (poizvedba že filtrira:
+//  - zapis brez koordinat → NE pride v sloj (poizvedbi že filtrirata:
 //    status published AND lat NOT NULL AND lng NOT NULL);
-//  - prazna tržnica → [] + opomba „no-listings";
+//  - prazna tržnica (listingi IN izkušnje) → [] + opomba „no-listings";
 //  - brez bbox → [] + opomba „no-bbox" (viewport model, kot osm/fsq);
-//  - DB napaka → MEČE (runner ujame → degraded[], ostali adapterji
-//    nadaljujejo — ni tihega praznega sloja ob podrti bazi).
+//  - DB napaka (KATERIKOLI vir) → MEČE (runner ujame → degraded[],
+//    ostali adapterji nadaljujejo — ni tihega praznega sloja ob podrti bazi).
 //
-// VIEWPORT: poizvedba po bbox-u (točke v okviru) + vidni kategoriji
+// VIEWPORT: poizvedbi po bbox-u (točke v okviru) + vidni kategoriji
 // (q.cats) + zoom gating v runnerju (minZoom 10, usklajeno z osm —
 // lastna tržnica je redkost, državni pogled z9− je brez produktov).
 //
@@ -74,9 +81,41 @@ export interface OwnListingRow {
   updatedAt: Date;
 }
 
+/** Vrstica izkušnje (TASK 87 — drugi vir lastne tržnice). */
+export interface OwnExperienceRow {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  category: string; // tour | workshop | tasting | outdoor | cultural | adventure | wellness
+  address: string;
+  meetingPoint: string | null;
+  images: string;
+  pricePerPerson: number;
+  rating: number;
+  reviewCount: number;
+  providerWebsite: string | null;
+  providerPhone: string | null;
+  lat: number | null;
+  lng: number | null;
+  updatedAt: Date;
+}
+
 /** Argumenti findMany poizvedbe (struktura, ki jo adapter pošlje — Prisma
  *  orderBy je SEZNAM objektov; testni maketa sprejme isti tipek). */
 export interface OwnListingQueryArgs {
+  where: {
+    status: string;
+    lat: { not: null };
+    lng: { not: null };
+  };
+  select: Record<string, boolean>;
+  take: number;
+  orderBy: Array<Record<string, "asc" | "desc">>;
+}
+
+/** Argumenti findMany poizvedbe izkušenj (ista struktura kot listing). */
+export interface OwnExperienceQueryArgs {
   where: {
     status: string;
     lat: { not: null };
@@ -91,6 +130,9 @@ export interface OwnListingQueryArgs {
 export type OwnDb = {
   listing: {
     findMany(args: OwnListingQueryArgs): Promise<OwnListingRow[]>;
+  };
+  experience: {
+    findMany(args: OwnExperienceQueryArgs): Promise<OwnExperienceRow[]>;
   };
 };
 
@@ -116,6 +158,21 @@ export function ownCategoryToType(category: string): ProviderProduct["type"] {
       return "transport";
     default:
       return "poi";
+  }
+}
+
+/** Kanonski tip iz kategorije izkušnje (shemski komentar: tour | workshop
+ *  | tasting | outdoor | cultural | adventure | wellness). Vodena tura →
+ *  „tour"; vse ostale so „activity" (delavnica/degustacija/pustolovščina …
+ *  je dejavnost; subcategory nosi izvirnik — iskrena poenostavitev). */
+export function ownExperienceCategoryToType(
+  category: string
+): ProviderProduct["type"] {
+  switch (category) {
+    case "tour":
+      return "tour";
+    default:
+      return "activity";
   }
 }
 
@@ -183,6 +240,70 @@ export function mapOwnListing(row: OwnListingRow): ProviderProduct | null {
   };
 }
 
+/** Normalizacija izkušnje → kanonski produkt (čista funkcija — testirljiva;
+ *  TASK 87, drugi vir lastne tržnice). */
+export function mapOwnExperience(
+  row: OwnExperienceRow
+): ProviderProduct | null {
+  // Koordinate so OBVEZNE za pin (query že filtrira — varovalka za ročne
+  // klice/drift: neveljavna števila zavrnemo, ne popravljamo).
+  if (
+    typeof row.lat !== "number" ||
+    typeof row.lng !== "number" ||
+    !Number.isFinite(row.lat) ||
+    !Number.isFinite(row.lng) ||
+    Math.abs(row.lat) > 90 ||
+    Math.abs(row.lng) > 180
+  ) {
+    return null;
+  }
+
+  const title = row.name?.trim();
+  if (!title) return null; // ime je NOT NULL v shemi — varovalka
+
+  return {
+    id: `own:${row.id}`,
+    provider: "own",
+    providerProductId: row.id,
+    type: ownExperienceCategoryToType(row.category),
+    subcategory: row.category || undefined,
+    title,
+    description: row.description?.trim() || undefined,
+    lat: row.lat,
+    lng: row.lng,
+    geoPrecision: "exact",
+    address: row.address?.trim() || undefined,
+    image: firstSafeImage(row.images ?? "[]"),
+    // ocena SAMO kadar je dejansko podatke (> 0) — 0 = „ni ocen", ne „slabo"
+    rating: row.rating > 0 ? row.rating : undefined,
+    reviewCount: row.reviewCount > 0 ? row.reviewCount : undefined,
+    // IZKUŠNJA ima PRAVO številčno ceno (pricePerPerson) — PriceInfo je
+    // iskreno prisoten (Listing priceRange €|€€|€€€ tega NIMA — tam izpustimo)
+    price:
+      typeof row.pricePerPerson === "number" &&
+      Number.isFinite(row.pricePerPerson) &&
+      row.pricePerPerson > 0
+        ? {
+            amount: row.pricePerPerson,
+            currency: "EUR",
+            unit: "per_person",
+            note: "objavljena cena ponudnika (naša tržnica)",
+          }
+        : undefined,
+    // availability ODSOTNA (not_supported — Stripe checkout, ne koledar)
+    bookingMode: "own_marketplace",
+    // bookingUrl NI (rezervacija teče prek tržnice/načrta — NIKOLI /go)
+    sourceUrl:
+      row.providerWebsite && isSafeHttpUrl(row.providerWebsite)
+        ? row.providerWebsite
+        : undefined,
+    lastUpdated: new Date(row.updatedAt).toISOString(),
+    phone: row.providerPhone?.trim() || undefined,
+    // openingHours NI (izkušnja nima odpiralnih časov — trajanje je
+    // durationHours, ki ga kanonski produkt ne nosi)
+  };
+}
+
 /** Ali točka leži v bbox poizvedbe (viewport filter — isti kot fsq). */
 function pointInBbox(
   lat: number,
@@ -235,57 +356,115 @@ export function createOwnAdapterWithDb(
         return [];
       }
 
-      // === DB GATE: SAMO objavljeni listingi S koordinatami (geo stolpca
-      //     TASK 84). Listing brez lat/lng NIKOLI ne pride v sloj —
-      //     poizvedba že izključi (fail-closed na strani vira).
-      //     DB napaka MEČE naprej (runner → degraded — iskreno).
-      const rows = await dbClient.listing.findMany({
-        where: { status: "published", lat: { not: null }, lng: { not: null } },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          description: true,
-          category: true,
-          address: true,
-          images: true,
-          rating: true,
-          reviewCount: true,
-          phone: true,
-          openingHours: true,
-          website: true,
-          lat: true,
-          lng: true,
-          updatedAt: true,
-        },
-        // Vrstni red po lastnem signalu tržnice: rating desc (koliko
-        // dokazanih recenzij) → naziv asc (deterministično) — NE lastnega
-        // rangiranja po planu/sponsored (to je tržna promocija, ne gostota).
-        orderBy: [{ rating: "desc" }, { name: "asc" }],
-        take: OWN_MAX_RESULTS * 2,
-      });
+      // === DB GATE: SAMO objavljeni zapisi S koordinatami (geo stolpca
+      //     TASK 84 Listing / TASK 87 Experience). Zapis brez lat/lng
+      //     NIKOLI ne pride v sloj — poizvedbi že izključita (fail-closed
+      //     na strani vira). DB napaka KATEREGAKOLI vira MEČE naprej
+      //     (Promise.all → runner → degraded — iskreno).
+      const [listingRows, experienceRows] = await Promise.all([
+        dbClient.listing.findMany({
+          where: { status: "published", lat: { not: null }, lng: { not: null } },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            category: true,
+            address: true,
+            images: true,
+            rating: true,
+            reviewCount: true,
+            phone: true,
+            openingHours: true,
+            website: true,
+            lat: true,
+            lng: true,
+            updatedAt: true,
+          },
+          // Vrstni red po lastnem signalu tržnice: rating desc (koliko
+          // dokazanih recenzij) → naziv asc (deterministično) — NE lastnega
+          // rangiranja po planu/sponsored (to je tržna promocija, ne gostota).
+          orderBy: [{ rating: "desc" }, { name: "asc" }],
+          take: OWN_MAX_RESULTS * 2,
+        }),
+        // TASK 87: DRUGI vir — objavljene izkušnje s koordinatami
+        // (ista vrata kot listingi; pricePerPerson je PRAVA cena → PriceInfo)
+        dbClient.experience.findMany({
+          where: { status: "published", lat: { not: null }, lng: { not: null } },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            category: true,
+            address: true,
+            meetingPoint: true,
+            images: true,
+            pricePerPerson: true,
+            rating: true,
+            reviewCount: true,
+            providerWebsite: true,
+            providerPhone: true,
+            lat: true,
+            lng: true,
+            updatedAt: true,
+          },
+          orderBy: [{ rating: "desc" }, { name: "asc" }],
+          take: OWN_MAX_RESULTS * 2,
+        }),
+      ]);
 
-      if (rows.length === 0) {
+      if (listingRows.length === 0 && experienceRows.length === 0) {
         // Prazna tržnica za to instanco (dev) — iskreno prazna plast
         // (enakovredno fsq „no-dataset": vir obstaja, podatka ni).
         lastNote = "no-listings";
         return [];
       }
 
+      // === POENOTENJE OBEH VIROV (skupni vrstni red/viewport/kategorije;
+      //     izvirna vrstica ostane na zapisu — preslikava po viru) ===
+      type UnifiedRow =
+        | {
+            source: "listing";
+            row: OwnListingRow;
+            type: ProviderProduct["type"];
+          }
+        | {
+            source: "experience";
+            row: OwnExperienceRow;
+            type: ProviderProduct["type"];
+          };
+      const unified: UnifiedRow[] = [
+        ...listingRows.map((r) => ({
+          source: "listing" as const,
+          row: r,
+          type: ownCategoryToType(r.category),
+        })),
+        ...experienceRows.map((r) => ({
+          source: "experience" as const,
+          row: r,
+          type: ownExperienceCategoryToType(r.category),
+        })),
+      ];
+
       // === VRSTNI RED (in-memory po istem signalu kot orderBy zgoraj —
       //     deterministično NEODVISNO od tega, ali DB razvrsti izbran
       //     nabor): rating desc → ime asc. To je lastni signal tržnice
       //     (koliko dokazanih recenzij), NE komercialno rangiranje po
       //     planu/sponsored (to je tržna promocija, ne gostota sloja). ===
-      rows.sort((a, b) => {
-        const rd = (b.rating ?? 0) - (a.rating ?? 0);
+      unified.sort((a, b) => {
+        const rd = (b.row.rating ?? 0) - (a.row.rating ?? 0);
         if (rd !== 0) return rd;
-        return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+        return a.row.name < b.row.name
+          ? -1
+          : a.row.name > b.row.name
+            ? 1
+            : 0;
       });
 
       // === VIEWPORT FILTER (pin v okviru) ===
-      const inView = rows.filter((r) =>
-        pointInBbox(r.lat as number, r.lng as number, q.bbox!)
+      const inView = unified.filter((r) =>
+        pointInBbox(r.row.lat as number, r.row.lng as number, q.bbox!)
       );
       if (inView.length === 0) {
         lastNote = "no-match";
@@ -299,7 +478,7 @@ export function createOwnAdapterWithDb(
       let catFiltered = 0;
       if (q.cats.length > 0) {
         const cats = q.cats;
-        visible = inView.filter((r) => cats.includes(ownCategoryToType(r.category)));
+        visible = inView.filter((r) => cats.includes(r.type));
         catFiltered = inView.length - visible.length;
         if (visible.length === 0) {
           lastNote = "cat-filtered";
@@ -310,11 +489,15 @@ export function createOwnAdapterWithDb(
       const capped = visible.length > OWN_MAX_RESULTS;
       const selected = capped ? visible.slice(0, OWN_MAX_RESULTS) : visible;
 
-      // === KANONSKA PRESLIKAVA (fail-closed per listing) ===
+      // === KANONSKA PRESLIKAVA (fail-closed per zapis; vir določa
+      //     preslikavo — listing/experience) ===
       const products: ProviderProduct[] = [];
       let mappedSkipped = 0;
-      for (const row of selected) {
-        const p = mapOwnListing(row);
+      for (const u of selected) {
+        const p =
+          u.source === "listing"
+            ? mapOwnListing(u.row)
+            : mapOwnExperience(u.row);
         if (p) products.push(p);
         else mappedSkipped++;
       }

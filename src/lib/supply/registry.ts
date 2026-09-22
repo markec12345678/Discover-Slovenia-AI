@@ -245,12 +245,16 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     // providers/own/adapter.ts bere objavljene listinge S koordinatami;
     // listing brez koordinat je iskreno izpuščen (nikoli izmišljena
     // lokacija). Prazna tržnica → opomba „no-listings" (kot fsq
-    // „no-dataset"). Experience/Product ostajata brez geo (bodoča faza).
+    // „no-dataset").
+    // TASK 87 (1.78.0): DRUGI vir — Experience s svojima geo stolpcema
+    // (experience-geo-migration.ts). Kategorija tour → tip „tour" (novo
+    // v types), ostale kategorije → „activity"; pricePerPerson je PRAVA
+    // številčna cena → PriceInfo (per_person). Product še ostaja brez geo.
     active: true,
-    types: ["activity", "accommodation", "restaurant", "shop", "transport", "poi"],
+    types: ["activity", "tour", "accommodation", "restaurant", "shop", "transport", "poi"],
     capabilities: {
       geo: true, // lat/lng partnerjev/admina vnosa (geoPrecision: exact)
-      price: false, // priceRange €|€€|€€€ je obseg, NE številčna cena
+      price: true, // TASK 87: izkušnje imajo pricePerPerson (listingi ostanejo brez — priceRange je obseg)
       availability: false, // Stripe checkout, ne koledar → not_supported
       images: true, // images JSON (validiran http(s) v adapterju)
       reviews: true, // rating/reviewCount (samo kadar > 0)

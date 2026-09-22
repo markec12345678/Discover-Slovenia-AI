@@ -471,7 +471,30 @@ export function ExperienceModal({
                       {experience.address}
                     </p>
                   ) : null}
+                  {/* TASK 87: geo povezava na zemljevid — samo kadar ima
+                      izkušnja obe koordinati (vnos ponudnika). Zlati
+                      poudarni marker na ciljni lokaciji + supply own pin. */}
+                  {experience.lat != null && experience.lng != null ? (
+                    <a
+                      href={`/zemljevid?lat=${experience.lat}&lng=${experience.lng}&zoom=13&label=${encodeURIComponent(experience.name)}`}
+                      className="mt-3 inline-flex w-fit items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <MapPin className="size-4 text-primary" aria-hidden="true" />
+                      Prikaži na zemljevidu
+                    </a>
+                  ) : null}
                 </div>
+              </section>
+            ) : experience.lat != null && experience.lng != null ? (
+              /* TASK 87: brez točke srečanja, a z geo — povezava sama */
+              <section>
+                <a
+                  href={`/zemljevid?lat=${experience.lat}&lng=${experience.lng}&zoom=13&label=${encodeURIComponent(experience.name)}`}
+                  className="inline-flex w-fit items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <MapPin className="size-4 text-primary" aria-hidden="true" />
+                  Prikaži na zemljevidu
+                </a>
               </section>
             ) : null}
 

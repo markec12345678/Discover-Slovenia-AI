@@ -7,6 +7,81 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.78.0] — 2026-09-24 (TASK 87: GEO KOORDINATE IZKUŠNJE — drugi vir lastne tržnice na supply zemljevidu)
+
+### Dodano
+- **Geo stolpca Experience (lat/lng)** — izkušnje (ture, delavnice,
+  degustacije …) so FIZIČNE lokacije (address + meetingPoint), zdaj dobijo
+  isti geo vzorec kot listingi (TASK 84/85/86): `lat/lng Float?` v shemi,
+  prisma migracija `20260924100000_experience_geo` (DOUBLE PRECISION, CI
+  drift vrata) + startup migracija `src/lib/experience-geo-migration.ts`
+  (idempotentna, additive-only, fail-open, obe narečja) registrirana v
+  instrumentation.ts kot `schema:experience-geo` (4 statusi, vidna na
+  /api/health).
+- **Own adapter — DRUGI VIR (izkušnje)**: `providers/own/adapter.ts` zdaj
+  združuje Listing + Experience (Promise.all, skupen vrstni red rating
+  desc → ime asc, viewport, kategorije, kap 60). `mapOwnExperience`:
+  kategorija `tour` → kanonski tip **„tour"** (nov v registry own types),
+  ostale kategorije → „activity" (subcategory nosi izvirnik); izkušnja
+  ima PRAVO številčno ceno → **PriceInfo per_person EUR** (listingi
+  ostanejo brez — priceRange je obseg); bookingMode own_marketplace,
+  NIKOLI /go. DB napaka KATEREGAKOLI vira meče (runner → degraded —
+  iskrenost). Prazna tržnica (listingi IN izkušnje) → „no-listings".
+- **Geo vnosa na owner formi izkušnje** (`experience-form.tsx`): polji
+  Geo širina/dolžina (ef-lat/ef-lng, step=any, inputMode=decimal) z
+  inline validacijo po vzoru TASK 85 (touched → aria-invalid +
+  role="alert"; rumeni SI hint zunaj bbox; submit zavrne neveljaven geo).
+  Enak validacijski vir kot listing forma (listing-geo-validation.ts —
+  deli GEO_ERROR_MESSAGES/GEO_SI_HINT, ena resnica).
+- **API geo vrata**: owner create/update experiences — zod
+  `.finite().min(-90).max(90)` / ±180 + refine obe-ali-nobena;
+  contentChanged vključuje geo (pomaknjen pin je javno viden →
+  re-moderacija published → pending, enako kot naslov/meeting point).
+  Negativni E2E: samo lat brez lng → 400 (vrata delujejo).
+- **»Prikaži na zemljevidu« v experience modalu** (javni /dozivetja):
+  povezava SAMO ob obeh koordinatah (z in brez točke srečanja — obe
+  poti), href `/zemljevid?lat=&lng=&zoom=13&label=` z
+  encodeURIComponent; zlati poudarni marker (TASK 86, map-view ni
+  potreboval sprememb) + supply own pin na isti lokaciji.
+- **Production-matrix**: own price NOT_SUPPORTED → **FROM_PRICE**
+  (objavljene cene izkušenj — NISO živi citat; konvencija KiwiTaxi
+  statičnega CSV-ja).
+
+### Popravljeno
+- **ImageLightbox sesutje na modalu brez slik** (predhodni bug, ulovljen
+  v E2E): izkušnja/lokal z `images: []` → `current` undefined → branje
+  `current.src` PRED varovalko je vrečo „Cannot read properties of
+  undefined (reading 'src')" (`image-lightbox.tsx:98`). Popravek:
+  optional chaining — prazna galerija preprosto ni „loaded".
+
+### Testi
+- `task87-experience-geo.test.ts`: 40 testov / 116 pričakovanj —
+  UNIT (migracija obe narečji/idempotentna/delna/neznana;
+  ownExperienceCategoryToType tour/activity; mapOwnExperience polna
+  preslikava + cena per_person + fail-closed koordinate/ime/cena +
+  meje http(s) + pokvarjen JSON; adapter združevanje obeh virov, vrata,
+  viewport, kategorije, vrstni red, kap, DB napaka obeh virov meče) +
+  SOURCE-CONTRACT (schema Float?, migracija ALTER ×2, instrumentation
+  4×, API zod vrata + contentChanged + persistanca, forma markerji,
+  modal povezava, registry tour, toPublicExperience ne strippa).
+- task84 maketa posodobljena (makeOwnDb z izkušnjami — default [], vsi
+  stari testi nespremenjeno veljavni).
+- Skupaj: **1768/1768 testov** (1728 + 40), lint 0, tsc 0.
+- E2E (agent-browser, 375px): registracija ownerja → forma (samo lat →
+  inline napaka + aria-invalid → dopolnjen lng → POST 200, DB natančno
+  46.3625/14.0936) → objava → supply search own:1 (type tour, cena 35
+  per_person) → javni modal → Prikaži na zemljevidu → zlati marker +
+  popup (ime + koordinate) → POI sloj + čip Ture → own pin popup →
+  produkt modal (cena + vir „Lokalni ponudniki (naša tržnica)") → Dodaj
+  med izbrane deluje → PUT geo sprememba published→pending
+  (reSubmission=true) → 0 konzolnih napak / 0px preliva. Testna
+  izkušnja + owner počiščena.
+- Operativne opombe: 2× OOM restart dev strežnika (4 GB/0 swap — težji
+  prevodi); 1× prehodni 500 na /api/supply/search točno med HMR
+  rekompilacijo (3× 200 po njej — dev artefakt, ne koda).
+
+---
+
 ## [1.77.0] — 2026-09-22 (TASK 86: GEO GLOB-POVEZAVA — javni imenik → listing modal → zemljevid točno na lokaciji lokala)
 
 ### Dodano

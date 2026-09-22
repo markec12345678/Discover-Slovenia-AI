@@ -24,6 +24,7 @@ import path from "node:path";
 import { migrateListingGeoColumnsWith } from "../listing-geo-migration";
 import {
   createOwnAdapterWithDb,
+  type OwnExperienceRow,
   mapOwnListing,
   ownCategoryToType,
   ownLastNote,
@@ -92,8 +93,14 @@ function baseRow(overrides: Partial<OwnListingRow> = {}): OwnListingRow {
   };
 }
 
-/** Lažni DB klient za adapterske teste (DI — createOwnAdapterWithDb). */
-function makeOwnDb(rows: OwnListingRow[] | Error) {
+/** Lažni DB klient za adapterske teste (DI — createOwnAdapterWithDb).
+ *  TASK 87: adapter združuje DVA vira (listing + experience) — maketa
+ *  sprejne izkušnje kot drugi (neobvezen) argument; default [] pusti
+ *  vsem TASK 84 testom nespremenjeno obnašanje. */
+function makeOwnDb(
+  rows: OwnListingRow[] | Error,
+  experiences: OwnExperienceRow[] | Error = []
+) {
   const calls: unknown[] = [];
   const db: OwnDb = {
     listing: {
@@ -101,6 +108,13 @@ function makeOwnDb(rows: OwnListingRow[] | Error) {
         calls.push(args);
         if (rows instanceof Error) throw rows;
         return rows;
+      },
+    },
+    experience: {
+      findMany: async (args: unknown) => {
+        calls.push(args);
+        if (experiences instanceof Error) throw experiences;
+        return experiences;
       },
     },
   };
