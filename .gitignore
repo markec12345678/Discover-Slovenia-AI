@@ -57,6 +57,9 @@ server.log
 # Local lead data (file-based storage, no DB)
 /data/leads.json
 
+# TASK 82: E2E dokazi agent-brskalnika (nastanejo lokalno, v repo NE sodijo)
+/e2e-*.png
+
 # VARNOST: lokalna baza, interni agent logi in uporabniški podatki se NE committajo
 /db/*.db
 /db/backups/

@@ -108,6 +108,9 @@ const VALID_EVENTS = new Set([
   "meal_suggestion_dismissed",
   // Neuspehi
   "planner_error",
+  // TASK 82: oddaja zavrnjena zaradi validacije (props: field =
+  // days|budget|groupSize|interests|startDate) — meri trenje obrazca
+  "planner_validation_failed",
   "empty_result",
   "invalid_location",
   "unrealistic_day",

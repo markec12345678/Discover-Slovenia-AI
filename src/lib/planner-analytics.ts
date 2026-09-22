@@ -127,6 +127,7 @@ export type PlannerEventName =
   | "meal_suggestion_dismissed"
   // Neuspehi
   | "planner_error"
+  | "planner_validation_failed"
   | "empty_result"
   | "invalid_location"
   | "unrealistic_day"

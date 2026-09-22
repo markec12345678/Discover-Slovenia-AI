@@ -7,6 +7,66 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.74.5] — 2026-09-22 (TASK 82: INLINE VALIDACIJA ŠTEVILSKIH POLJ)
+
+### Popravljeno
+- **Obrazec načrtovalnika ni imel vidne validacije številskih polj** —
+  `<form noValidate>` je NAMERNO izklopil brskalnikova vrata (toast +
+  strežnik valuejo svojo), a polja »dnevi / proračun / skupina« niso
+  imela NOBENE povratne informacije: izpraznjeno polje je prikazalo »0«,
+  neveljaven vnos (20 dni, 3,5 dneva, 2,5 osebe, 150.000 €) je ob oddaji
+  sprožil EN generičen toast brez rdečega polja, sporočila pod njim ali
+  fokusa. Delne vrednosti (3,5 dneva / 2,5 osebe) so TIHO prešle čez
+  klienta IN strežnik ( zanka dni ju je nato tiho porezala).
+- **Izpraznjeno številsko polje je pokazalo »0«** — `Number("") === 0` se
+  je zapihal v nadzorovano vrednost (`value={0}`); zdaj se 0/NaN prikaže
+  kot prazno polje.
+
+### Dodano
+- **`src/lib/planner-field-validation.ts`** — ena sama resnica o pogojih
+  treh polj ( isto čisto logiko poganjajo inline napaka, `validate()` ob
+  oddaji in enotski testi): dnevi = **celo** število 1–14; proračun > 0 €
+  in ≤ **100.000 €** ( zrcali strežniško preverbo — ni izmišljene
+  klientske meje); skupina = **celo** število 1–20. Dve ločeni sporočili
+  proračuna ( »večji od 0 €« / novo `validationBudgetMax` »največ
+  100.000 €«) — SL + EN pariteta ( varovalka task71).
+- **Inline napaka pod poljem** ( `role="alert"` + ikona): prikaže se šele,
+  ko uporabnik polje ZAPUSTI (blur) ali neuspešno odda obrazec — nikoli
+  med tipkanjem prvih števk. `aria-invalid` (rdeči obrez, ki ga shadcn
+  Input že zna) + `aria-describedby` → bralnik zaslona poveže napako s
+  poljem.
+- **Oddaja z neveljavnim vnosom**: vsa tri polja postanejo »touched«
+  ( vidne VSE napake, ne samo prva), fokus skoči na prvo neveljavno
+  polje ( tipkovnica/bralnik pride do njega takoj), toast ostaja.
+- **Analytika `planner_validation_failed`** ( props: `field` =
+  days|budget|groupSize|interests|startDate) — meri trenje obrazca:
+  katero polje najpogosteje zavrača oddajo. Dovoljeno na OBEH straneh
+  ( klientna unija + strežniški `VALID_EVENTS` — sicer bi strežnik dogodek
+  tiho zavrnil s 400).
+- `.gitignore`: vzorec `/e2e-*.png` ( dokazi agent-brskalnika ne sodijo v
+  repo — prej so se prerivali v samodejne commite).
+
+### Spremenjeno
+- `validate()` zdaj vrača strukturiran izid `{ field, message }` namesto
+  golega niza ( fokus + analytika potrebujeta ime polja); vrstni red
+  sporočil je ohranjen ( days → budget → groupSize → interests →
+  startDate).
+- Sporočili `validationDays`/`validationGroupSize` izrecno napovesta
+  »celo število / whole number« — zavrnitev 3,5 dni ni več zavita v
+  sporočilo, ki ga izpolnjuje.
+
+### Testi
+- `task82-planner-inline-validation.test.ts` — 30 testov / 91 pričakovanj:
+  enotsko ( čiste funkcije: obseg, celnost, NaN/Infinity/niz/null,
+  razvrstitev razlogov proračuna, vrstni red »prvo neveljavno«) +
+  source-contract ( stara vgnešena validacija ODSOTNA, touched ob bluru,
+  aria-invalid/describedby na vseh treh inputih, role="alert", prikaz
+  praznega namesto »0«, fokus + vse tri napake ob oddaji, analytika na
+  obeh allowlistah, i18n pariteta) + pogodbena poravnava s
+  `/api/itinerary` ( ISTE številke — drift nemogoč).
+
+---
+
 ## [1.74.4] — 2026-09-22 (TASK 81, 2. plast: JOURNEYBOOKING DRIFT ZAPRT)
 
 ### Popravljeno

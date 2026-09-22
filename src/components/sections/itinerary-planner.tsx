@@ -115,6 +115,16 @@ import { persistSelection } from "@/lib/supply/selection-persist";
 import { useToast } from "@/hooks/use-toast";
 import { trackFunnel } from "@/lib/funnel";
 import { optimizeDayOrder } from "@/lib/route-order";
+// TASK 82: ena sama resnica o pogojih številskih polj (dnevi/proračun/
+// skupina) — isto čisto logiko poganja inline napaka pod poljem, validate()
+// ob oddaji in enotski testi. Pogodba poravnana s /api/itinerary.
+import {
+  isDaysValid,
+  budgetInvalidReason,
+  isGroupSizeValid,
+  firstInvalidNumericField,
+  type NumericFieldName,
+} from "@/lib/planner-field-validation";
 import {
   trackPlannerEvent,
   markResultRendered,
@@ -422,6 +432,17 @@ export function ItineraryPlanner() {
   const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // TASK 82: inline validacija številskih polj — "touched" se nastavi ob
+  // bluru ali neuspešni oddaji (NIKOČ med tipkanjem prvih števk), napaka
+  // pod poljem se prikaže samo za dotaknjeno neveljavno polje.
+  const [touched, setTouched] = useState<Record<NumericFieldName, boolean>>({
+    days: false,
+    budget: false,
+    groupSize: false,
+  });
+  const daysInputRef = useRef<HTMLInputElement>(null);
+  const budgetInputRef = useRef<HTMLInputElement>(null);
+  const groupSizeInputRef = useRef<HTMLInputElement>(null);
   // TASK 77: DEJANSKI pretečeni čas generiranja (1 Hz) +AbortController —
   // prej je uporabnik ob obešeni zahtevi ostal ujet v skeletu brez izhoda.
   const [generationElapsed, setGenerationElapsed] = useState(0);
@@ -941,23 +962,53 @@ export function ItineraryPlanner() {
     }));
   }
 
-  function validate(input: PlannerInput): string | null {
-    if (!Number.isFinite(input.days) || input.days < 1 || input.days > 14) {
-      return t("validationDays");
+  // TASK 82: inline sporočila pod številskimi polji — izpeljana iz ISTIH
+  // čistih funkcij kot validate() (enoobrazje: kar je rdeče pod poljem, je
+  // tudi razlog zavrnjene oddaje). Prikaz samo po "touched".
+  const daysFieldError = touched.days && !isDaysValid(formData.days)
+    ? t("validationDays")
+    : null;
+  const budgetReason = touched.budget
+    ? budgetInvalidReason(formData.budget)
+    : null;
+  const budgetFieldError = budgetReason
+    ? budgetReason === "too_large"
+      ? t("validationBudgetMax")
+      : t("validationBudget")
+    : null;
+  const groupSizeFieldError =
+    touched.groupSize && !isGroupSizeValid(formData.groupSize)
+      ? t("validationGroupSize")
+      : null;
+
+  /** Strukturiran izid validacije — field omogoča fokus na prvo
+   * neveljavno polje + analytiko (planner_validation_failed). */
+  type ValidationResult = {
+    field: NumericFieldName | "interests" | "startDate";
+    message: string;
+  };
+
+  function validate(input: PlannerInput): ValidationResult | null {
+    if (!isDaysValid(input.days)) {
+      return { field: "days", message: t("validationDays") };
     }
-    if (!Number.isFinite(input.budget) || input.budget <= 0) {
-      return t("validationBudget");
+    const bReason = budgetInvalidReason(input.budget);
+    if (bReason === "too_large") {
+      return { field: "budget", message: t("validationBudgetMax") };
     }
-    if (!Number.isFinite(input.groupSize) || input.groupSize < 1 || input.groupSize > 20) {
-      return t("validationGroupSize");
+    if (bReason) {
+      return { field: "budget", message: t("validationBudget") };
+    }
+    if (!isGroupSizeValid(input.groupSize)) {
+      return { field: "groupSize", message: t("validationGroupSize") };
     }
     if (input.interests.length === 0) {
-      return t("validationInterests");
+      return { field: "interests", message: t("validationInterests") };
     }
     // FW4.2: datum odhoda (opcijsko) — izbirnik datumov večinoma poskrbi
     // za veljavnost; to je varnostna mreža (pretekli datum / ročni vnos)
     if (input.startDate && !isValidStartDate(input.startDate)) {
-      return t("validationStartDate");
+      return { field: "startDate", message: t("validationStartDate") };
     }
     return null;
   }
@@ -1452,10 +1503,28 @@ export function ItineraryPlanner() {
     e.preventDefault();
     const vErr = validate(formData);
     if (vErr) {
-      setError(vErr);
+      setError(vErr.message);
+      // TASK 82: vsa številska polja so zdaj "touched" → inline napake se
+      // pokažejo pod polji (ne samo toast), fokus gre na prvo neveljavno
+      // številsko polje — tipkovnica/bralnik zaslona pride do njega takoj.
+      const firstField = firstInvalidNumericField(formData);
+      if (firstField) {
+        setTouched({ days: true, budget: true, groupSize: true });
+        const ref =
+          firstField === "days"
+            ? daysInputRef
+            : firstField === "budget"
+              ? budgetInputRef
+              : groupSizeInputRef;
+        ref.current?.focus();
+      }
+      // Merjenje trenja obrazca: katero polje najpogosteje zavrača oddajo.
+      trackPlannerEvent("planner_validation_failed", {
+        field: vErr.field,
+      });
       toast({
         title: t("validationToastTitle"),
-        description: vErr,
+        description: vErr.message,
         variant: "destructive",
       });
       return;
@@ -2888,7 +2957,10 @@ export function ItineraryPlanner() {
                       type="number"
                       min={1}
                       max={14}
-                      value={formData.days}
+                      /* TASK 82: 0/NaN (izpraznjeno polje) se prikaže kot
+                         prazno — ne kot "0" (prej vidna številka, ki je
+                         nikoli ni želel videti) */
+                      value={formData.days || ""}
                       onChange={(e) => {
                         fireStartedOnce();
                         setFormData((p) => ({
@@ -2896,8 +2968,28 @@ export function ItineraryPlanner() {
                           days: Number(e.target.value),
                         }));
                       }}
+                      /* TASK 82: touched ob bluru — napaka se ne prikaže
+                         med tipkanjem, ampak šele, ko polje zapusti */
+                      onBlur={() =>
+                        setTouched((p) => ({ ...p, days: true }))
+                      }
+                      aria-invalid={daysFieldError ? true : undefined}
+                      aria-describedby={
+                        daysFieldError ? "days-field-error" : undefined
+                      }
+                      ref={daysInputRef}
                       required
                     />
+                    {daysFieldError && (
+                      <p
+                        id="days-field-error"
+                        role="alert"
+                        className="flex items-center gap-1.5 text-xs font-medium text-destructive"
+                      >
+                        <AlertCircle className="size-3.5 shrink-0" aria-hidden />
+                        {daysFieldError}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -2912,7 +3004,7 @@ export function ItineraryPlanner() {
                       min={50}
                       max={5000}
                       step={50}
-                      value={formData.budget}
+                      value={formData.budget || ""}
                       onChange={(e) => {
                         fireStartedOnce();
                         setFormData((p) => ({
@@ -2920,8 +3012,26 @@ export function ItineraryPlanner() {
                           budget: Number(e.target.value),
                         }));
                       }}
+                      onBlur={() =>
+                        setTouched((p) => ({ ...p, budget: true }))
+                      }
+                      aria-invalid={budgetFieldError ? true : undefined}
+                      aria-describedby={
+                        budgetFieldError ? "budget-field-error" : undefined
+                      }
+                      ref={budgetInputRef}
                       required
                     />
+                    {budgetFieldError && (
+                      <p
+                        id="budget-field-error"
+                        role="alert"
+                        className="flex items-center gap-1.5 text-xs font-medium text-destructive"
+                      >
+                        <AlertCircle className="size-3.5 shrink-0" aria-hidden />
+                        {budgetFieldError}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -2935,7 +3045,7 @@ export function ItineraryPlanner() {
                       type="number"
                       min={1}
                       max={20}
-                      value={formData.groupSize}
+                      value={formData.groupSize || ""}
                       onChange={(e) => {
                         fireStartedOnce();
                         setFormData((p) => ({
@@ -2943,8 +3053,26 @@ export function ItineraryPlanner() {
                           groupSize: Number(e.target.value),
                         }));
                       }}
+                      onBlur={() =>
+                        setTouched((p) => ({ ...p, groupSize: true }))
+                      }
+                      aria-invalid={groupSizeFieldError ? true : undefined}
+                      aria-describedby={
+                        groupSizeFieldError ? "groupSize-field-error" : undefined
+                      }
+                      ref={groupSizeInputRef}
                       required
                     />
+                    {groupSizeFieldError && (
+                      <p
+                        id="groupSize-field-error"
+                        role="alert"
+                        className="flex items-center gap-1.5 text-xs font-medium text-destructive"
+                      >
+                        <AlertCircle className="size-3.5 shrink-0" aria-hidden />
+                        {groupSizeFieldError}
+                      </p>
+                    )}
                   </div>
                 </div>
 
