@@ -8,6 +8,12 @@ import { generateCompletion } from "@/lib/ai-client";
 import { rankListings, buildTransparencyContext } from "@/lib/ranking-engine";
 import type { Itinerary, PlannerInput, DayPlan, LocationVisit } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
+// TASK 100 (TASK 99 na GitHubu): deterministični motor itinererja — čist
+// modul (0 LLM/0 omrežja/0 ure), izvlečen iz route, testno pokrit.
+import {
+  generateDeterministicItinerary,
+  type AnchorForecast,
+} from "@/lib/deterministic-itinerary";
 import {
   fetchDailyForecast,
   weatherCodeToText,
@@ -104,14 +110,6 @@ import {
 // načrtuje sezonsko — današnja napoved za neznani datum bi bila zavajajoča.
 // Vir ostaja pošten: realna napoved Open-Meteo po regijah, brez izmišljenih
 // statusov.
-
-interface AnchorForecast {
-  /** SL oznaka regije za prompt */
-  label: string;
-  /** EN oznaka regije za prompt */
-  labelEn: string;
-  forecast: DailyForecast[];
-}
 
 // Tri regionalna sidra — Gorenjska/alpi, osrednja Slovenija, obala.
 // Koordinate pridejo IZ slovenia-data (enosoten vir resnice o destinacijah);

@@ -122,6 +122,13 @@ export interface PlannerInput {
   // Sanitizacija na strežniku: src/lib/supply/sanitize.ts. Nazaj
   // kompatibilno: brez polja = dosedanje vedenje.
   selectedProviderProducts?: SelectedProviderProduct[];
+  // NOVO (TASK 100 / TASK 99 na GitHubu): izbira motorja generiranja.
+  //   "auto" (privzeto) — AI veriga, ob odpovedi deterministična rezerva;
+  //   "deterministic" — BREZ LLM klica: parser → podatki → constrainti →
+  //   ranking → scheduling (generateDeterministicItinerary) + ISTA
+  //   validacijska/obogatitvena veriga; source odgovora "deterministic".
+  // Opcijsko + nazaj kompatibilno: brez polja = "auto".
+  engine?: "auto" | "deterministic";
 }
 
 export interface LocationVisit {
@@ -164,7 +171,12 @@ export interface Itinerary {
   total_budget: number;
   recommendations: string[];
   tips: string[];
-  source: "ai" | "fallback";
+  // TASK 100 (TASK 99 na GitHubu): "deterministic" = načrt je sestavil
+  // DETERMINISTIČNI MOTOR (rule/scoring/scheduling iz kanonskih podatkov —
+  // 0 AI žetonov, reproducibilno), ki ga je uporabnik IZRECNO zahteval
+  // (PlannerInput.engine). "fallback" ostaja za isti motor, dosežen ob
+  // odpovedi AI (iskrena degradacija); "ai" = generativni model.
+  source: "ai" | "fallback" | "deterministic";
   // NOVO: dogodki, ki se zgodijo na obiskanih destinacijah (matched iz
   // events-data.ts ob generiranju / ob ogledu deljenega potovanja)
   events?: ItineraryEvent[];
