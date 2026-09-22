@@ -137,6 +137,9 @@ export type PlannerEventName =
   // v s) — NAMERNA izbira, ne napaka; meri, kako pogosto so čakalne dobe
   // nedopustne in ali gumb rešuje ujetost v skeletu
   | "planner_cancelled"
+  // TASK 89: uspešen začetek predvajanja zvočnega povzetka dneva (props:
+  // day, lang, surface planner|shared, bytes) — doseg nove TTS zmožnosti
+  | "itinerary_audio_play"
   // P1-3: proxy signal — rezultat prikazan, sledeni dogodek ni bil zaznan
   // v merjenem oknu (NE pomeni "uporabnik ni bil zadovoljen")
   | "result_session_ended_without_action";

@@ -24,6 +24,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PartnerBadge, type PartnerStatus } from "@/components/partner-badge";
+import { DayAudioButton } from "@/components/itinerary-audio";
 import {
   ItineraryWeatherNotes,
   WeatherChip,
@@ -35,6 +36,7 @@ import { addSavedTrip, deriveSavedTripName } from "@/lib/my-trips-storage";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
 import { dayISOForDayNumber } from "@/lib/trip-dates";
 import { formatDayLabel } from "@/lib/itinerary-weather";
+import { narrationStopsFromDay } from "@/lib/itinerary-audio";
 import { cn } from "@/lib/utils";
 import type { DayPlan, LocationVisit, PlannerInput } from "@/lib/types";
 
@@ -232,6 +234,10 @@ export function TripTimeline({ days, totalBudget, tripStartDate }: TripTimelineP
           ? dayISOForDayNumber(tripStartDate, day.day)
           : null;
         const liveWeather = chipFor(day.day);
+        // TASK 89: postanki dneva za zvočni povzetek (ista preslikava kot
+        // SharedTrip — ena resnica v lib).
+        const audioStops = narrationStopsFromDay(day.locations);
+        const audioDateLabel = dayISO ? formatDayLabel(dayISO, lang) : null;
         return (
         <div key={day.day} className="relative">
           {/* Dan header */}
@@ -239,7 +245,7 @@ export function TripTimeline({ days, totalBudget, tripStartDate }: TripTimelineP
             <div className="flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-lg shadow-md">
               {day.day}
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <h3 className="text-lg font-bold">
                 {t("dayLabel", { day: day.day })}
                 {dayISO && (
@@ -261,6 +267,16 @@ export function TripTimeline({ days, totalBudget, tripStartDate }: TripTimelineP
                 )
               )}
             </div>
+            {/* TASK 89: zvočni povzetek dneva (TTS, brez ključa) — desno
+                v glavi dneva; fail-closed brez uporabnih postankov. */}
+            <DayAudioButton
+              dayNumber={day.day}
+              dateLabel={audioDateLabel}
+              stops={audioStops}
+              lang={lang}
+              surface="planner"
+              className="ml-auto shrink-0 self-center"
+            />
           </div>
 
           {/* Vertikalna črta */}

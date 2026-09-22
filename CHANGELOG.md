@@ -7,6 +7,97 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.80.0] — 2026-09-24 (TASK 89: ZVOČNI POVZETEK DNEVA — »Poslušaj dan«, TTS brez ključa)
+
+### Dodano
+- **Gumb »Poslušaj« v glavi vsakega dneva** (TripTimeline — rezultati
+  načrtovalnika sl/en + SharedTrip — javni deljeni načrt /pot/[shareId]):
+  popotnik na poti (telefon v žepu) in uporabniki z okvarjenim vidom
+  namesto BRANJA dneva poslušajo povzetek. Konkurenčna analiza
+  (docs/AI/MINDTRIP-ANALIZA-2026-09-AGENT.md) je audio itinerar izrecno
+  označila kot vrzel do Mindtripa (»TTS priložnost!«); vir zvoka je
+  platformski z-ai-web-dev-sdk — BREZ uporabniških poverilnic
+  (nadaljevanje direktive »najprej vse brez ključa«). Komplement obstoječemu
+  D2 »Poslušaj načrt« (povzetek CELEG načrta, planner): nov gumb pripoveduje
+  EN DAN v podrobnosti (termini + opisi posameznih postankov) in deluje
+  tudi na deljeni povezavi (prijatelji brez računa).
+- **Čista lib plast `src/lib/itinerary-audio.ts`** (0 omrežja, 0 db,
+  0 React): gradnja pripovedi IZKLJUČNO iz dejstev dneva (termini, imena,
+  opisi, datum — 0 izmišljenega), razrez na kose ≤ 1024 znakov po stavčnih
+  mejah (omejitev TTS API; vsebina NIKOLI ne izgine — spoji se nazaj),
+  spajanje WAV bufferjev po RIFF hoji po kosih (TTS vir piše
+  NE-standardno glavo fmt+AIGC+LIST+data — izmerjeno; pad byte pri lihih
+  velikostih, formatna neusklajenost → null), deterministični ključ
+  predpomnilnika (djb2).
+- **Zvoku prijazne številke (IZMERJENO z ASR povratno zanko 2026-09-24)**:
+  tongtong glasi števke kot ANGLEŠKE besede (»nine«, »fourteen«) sredi
+  slovenskega stavka; slovenske BESEDE izgovori fonetično razumljivo
+  (»ob devetih« → »Ab Dveiti«). Zato SL pripoved zapiše ure (ob devetih,
+  od devetih do trinajstih, ob štirinajstih in pol), dneve (Dan drugi) in
+  datume (petek, petindvajsetega septembra) Z BESEDAMI; EN glas (jam,
+  nativni angleški) pa dobi števke (»Friday the twenty fifth of September«
+  iz istega vnosa — ista povratna zanka). Besedni termini (»zjutraj«) in
+  nenavadne ure (>23) gredo nespremenjeno — iskren izvirnik.
+- **API pot `/api/tts`** (POST): vhod so STRUKTURIRANI podatki dneva, NE
+  prosto besedilo — skript pripovedi zgradi STREŽNIK iz iste čiste funkcije
+  (API ni splošna »TTS kot storitev«); zod vrata zrcalijo NARRATION_LIMITS
+  (8 postankov, dolžine polj, maxChunks 4 → 413); LRU predpomnilnik po
+  bajtih (32 MB — isti dan → isti zvok, 0 novih TTS klicev); zaporedni
+  klici (≤ 4 × ~2 s); 30-s proračun na klic; iskrene napake (503
+  tts_unavailable / 400 invalid_day / 405 GET); SDK samo strežniško,
+  enkratna inicializacija z odpovednim ponastavljanjem.
+- **Komponenta `DayAudioButton`** (`src/components/itinerary-audio.tsx`):
+  stanja idle → loading (spinner + »Nalagam zvok …«) → playing (■ Ustavi);
+  klientni LRU predpomnilnik blob URL-jev (12 dni — ponovno poslušanje
+  brez nove zahteve); zastareli odgovori se ne predvajajo (dan se med
+  nalaganjem sprememi); prekinitev ob odhodu; fail-closed — dan brez
+  uporabnih postankov → BREZ gumba (0 lažnih gumbov); print:hidden;
+  a11y (aria-labeli SL/EN, role=alert napaka); iskrena opomba ob odpovedi.
+- **Analitika `itinerary_audio_play`** (props: day, lang, surface
+  planner|shared, bytes): klientna whitelist + strežniška VALID_EVENTS +
+  docs/ANALYTICS-EVENTS.md — meri doseg TTS zmožnosti in ali poslušajo
+  tudi obiskovalci deljenih povezav.
+
+### Znano za nadaljnje delo (iskreno zapisano)
+- Dve TTS poti zdaj obstajata: `/api/itinerary/tts` (D2, prosto besedilo,
+  rate-limit, brez predpomnilnika) in `/api/tts` (TASK 89, strukturirani
+  dan, predpomnilnik). Obe delujeta neodvisno; konsolidacija skupnega
+  TTS jedra (SDK + WAV spajanje) je naravni naslednji korak.
+- MY TRIP (journey-trip) še nima zvočnega povzetka dneva — vzorec
+  (lib + gumb + pot) je pripravljen za naslednjo plast.
+
+### Testi
+- `task89-itinerary-audio.test.ts`: 65 testov / 187 pričakovanj — UNIT
+  (narrationStopsFromDay; speechTime SL/EN vse oblike + nepravilne ure +
+  besedni passthrough; speechDateLabel rodilni števniki + meje;
+  buildDayNarrationScript iskrenost/cap/normalizacija; chunkNarration
+  meje/stavki/ovescno-dolgi/brez izgube; concatWavBuffers glava/PCM
+  vrstni red/lihi kosi/trunciranje/smeti/neusklajenost; narrationCacheKey
+  determinizem) + SOURCE-CONTRACT (pot gradi skript SAM, zod zrcali
+  meje, glasi tongtong/jam, obe površini izrisujeta gumb, whitelist +
+  docs, čistost lib plasti 0 fetch/0 db/0 React).
+- Skupaj: **1878/1878 testov** (1813 + 65), lint 0, tsc src 0.
+
+### E2E (agent-browser)
+- Planner (375 px): zlata pot → razdelek »Več o tvoji poti« → 3 gumbi →
+  klik Dan 1 → Nalagam → Ustavi (predvaja) → stop → Poslušaj; Dan 2
+  predvaja; POST /api/tts 200; 0 konzolnih napak; 0 px preliva.
+- Deljeni načrt (/pot/[shareId]): 3 gumbi; ZAUPODOSTOJEN klik (prava
+  gesta) → hladna generacija ~20 s → predvaja (0 opomb o napaki) → stop.
+  Pomembna E2E ugotovitev: sintetični kliki (element.click() iz evala) NE
+  dajo user activation → brskalnikova politika avtopredvajanja pravilno
+  zavrne play(); pravi uporabniki (gesta) predvajajo brez težav.
+- Print: print:hidden na gumbu in napaki (dokument ostane dejstva).
+- Namizje 1280 px: 0 px preliva. VLM potrditev mobilnega posnetka
+  (čista glava dneva, gumb desno, brez prekrivanj).
+- Testni deljeni načrt počiščen iz DB.
+- Opomba okolja: 2 OOM-kill next-server (2,84 GB RSS) med E2E — znana
+  omejitev peskovnika 4 GB (enak vzorec kot prej TASK 88), ne koda:
+  strežnik se povrne z restartom; 32-MB predpomnilnik zvoka je < 1,2 %
+  tega odtisa.
+
+---
+
 ## [1.79.0] — 2026-09-24 (TASK 88: ŽIVO VREME V DNEVNIH KARTICAH ITINERARJA — TripTimeline + SharedTrip)
 
 ### Dodano

@@ -22,6 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DayAudioButton } from "@/components/itinerary-audio";
 import { ItineraryEventsSection } from "@/components/itinerary-events";
 import {
   ItineraryWeatherNotes,
@@ -40,6 +41,7 @@ import {
   formatDayLabelSI,
   parseISODateLocal,
 } from "@/lib/trip-dates";
+import { narrationStopsFromDay } from "@/lib/itinerary-audio";
 import type { Itinerary, ItineraryEvent, LocationVisit } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -415,6 +417,11 @@ export function SharedTrip({
             // TASK 88: živa napoved tega dne (ob datumu + geo sidru)
             const liveWeather = chipFor(day.day);
 
+            // TASK 89: postanki dneva za zvočni povzetek (ista preslikava
+            // kot TripTimeline — ena resnica v lib).
+            const audioStops = narrationStopsFromDay(day.locations);
+            const audioDateLabel = dayISO ? formatDayLabelSI(dayISO) : null;
+
             return (
               <div key={day.day} className="scroll-mt-24" id={`dan-${day.day}`}>
                 {/* Dan header */}
@@ -426,7 +433,7 @@ export function SharedTrip({
                   >
                     {day.day}
                   </div>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <h3 className="text-lg font-bold">
                       Dan {day.day}
                       {dayISO && (
@@ -436,7 +443,7 @@ export function SharedTrip({
                       )}
                     </h3>
                     {/* TASK 88: ŽIVI čip premošča statični posnetek; brez njega
-                        ostane prikaz iz časa generiranja (lahno zastarel). */}
+                        ostane prikaz iz časa generiranja (lahko zastarel). */}
                     {liveWeather ? (
                       <WeatherChip w={liveWeather} lang="sl" />
                     ) : (
@@ -448,6 +455,16 @@ export function SharedTrip({
                       )
                     )}
                   </div>
+                  {/* TASK 89: zvočni povzetek dneva (TTS, brez ključa) —
+                      deljeni načrt lahko posluša tudi prijatelj brez računa. */}
+                  <DayAudioButton
+                    dayNumber={day.day}
+                    dateLabel={audioDateLabel}
+                    stops={audioStops}
+                    lang="sl"
+                    surface="shared"
+                    className="ml-auto shrink-0 self-center"
+                  />
                 </div>
 
                 {/* Lokacije v dnevu */}

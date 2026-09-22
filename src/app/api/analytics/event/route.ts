@@ -118,6 +118,8 @@ const VALID_EVENTS = new Set([
   "refine_failed",
   // TASK 77: uporabnikov preklic generiranja (namerna izbira, ne napaka)
   "planner_cancelled",
+  // TASK 89: uspešen začetek zvočnega povzetka dneva (TTS)
+  "itinerary_audio_play",
   // P1-3 (recenzija): preimenovano iz user_abandoned_after_result — proxy
   // signal "rezultat prikazan, sledeni dogodek ni bil zaznan v merjenem oknu"
   "result_session_ended_without_action",
