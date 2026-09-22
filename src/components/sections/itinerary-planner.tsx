@@ -4552,8 +4552,13 @@ export function ItineraryPlanner() {
                     postankov (razlogi, metoda razkrita, persist odkljukov) */}
                 <SmartPackingSection itinerary={itinerary} input={formData} />
 
-                {/* WOW: AI Trip Timeline — vizualni dan */}
-                <TripTimeline days={itinerary.days} totalBudget={itinerary.total_budget} />
+                {/* WOW: AI Trip Timeline — vizualni dan (TASK 88: datum odhoda
+                    poganja ŽIVO dnevno napoved — čip na glavi dneva) */}
+                <TripTimeline
+                  days={itinerary.days}
+                  totalBudget={itinerary.total_budget}
+                  tripStartDate={itinerary.tripStartDate}
+                />
                     </CardContent>
                   )}
                 </Card>

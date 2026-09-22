@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Clock,
   MapPin,
@@ -24,10 +24,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PartnerBadge, type PartnerStatus } from "@/components/partner-badge";
+import {
+  ItineraryWeatherNotes,
+  WeatherChip,
+  useItineraryForecast,
+} from "@/components/itinerary-weather";
 import { useAppStore } from "@/lib/store";
 import { saveItinerary } from "@/lib/itinerary-share";
 import { addSavedTrip, deriveSavedTripName } from "@/lib/my-trips-storage";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
+import { dayISOForDayNumber } from "@/lib/trip-dates";
+import { formatDayLabel } from "@/lib/itinerary-weather";
 import { cn } from "@/lib/utils";
 import type { DayPlan, LocationVisit, PlannerInput } from "@/lib/types";
 
@@ -45,6 +52,9 @@ import type { DayPlan, LocationVisit, PlannerInput } from "@/lib/types";
 interface TripTimelineProps {
   days: DayPlan[];
   totalBudget?: number;
+  /** TASK 88: ISO datum odhoda — pogoj za ŽIVO dnevno napoved (čip).
+   *  Brez njega dnevi niso datirani in vreme ostane statični posnetek. */
+  tripStartDate?: string;
 }
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -144,11 +154,19 @@ function inferCategory(visit: LocationVisit): string {
   return "default";
 }
 
-export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
+export function TripTimeline({ days, totalBudget, tripStartDate }: TripTimelineProps) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   // I18N-FIX (revizija 1.33.0, 16-d P2): komponenta je viden del rezultatov
   // načrtovalnika — prej 100 % hardkodirana SL tudi na /en/nacrtuj.
   const t = useTranslations("planner.timeline");
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+
+  // TASK 88 — ŽIVO vreme po dnevih (Open-Meteo prek /api/weather način B,
+  // sidro = prvi geo-postanek dneva, dedupe po regiji). Statični posnetek
+  // day.weather ostane FALLBACK, ko živa napoved ni na voljo.
+  const { chipFor, unavailable, notPublished, hasWindow } =
+    useItineraryForecast(days, tripStartDate, lang);
 
   // Shrani itinerer in kopiraj deljivo povezavo (uporabi store + helper)
   const handleSaveItinerary = useCallback(async () => {
@@ -209,6 +227,11 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
           (sum, v) => sum + (v.estimated_cost || 0),
           0
         );
+        // TASK 88: realni datum dneva (ob znanem odhodu) + živa napoved
+        const dayISO = tripStartDate
+          ? dayISOForDayNumber(tripStartDate, day.day)
+          : null;
+        const liveWeather = chipFor(day.day);
         return (
         <div key={day.day} className="relative">
           {/* Dan header */}
@@ -217,12 +240,25 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
               {day.day}
             </div>
             <div>
-              <h3 className="text-lg font-bold">{t("dayLabel", { day: day.day })}</h3>
-              {day.weather && (
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Cloud className="size-3.5" aria-hidden="true" />
-                  {day.weather.condition} · {day.weather.temp}°C
-                </div>
+              <h3 className="text-lg font-bold">
+                {t("dayLabel", { day: day.day })}
+                {dayISO && (
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    {formatDayLabel(dayISO, lang)}
+                  </span>
+                )}
+              </h3>
+              {/* TASK 88: ŽIVI čip premošča statični posnetek; brez njega
+                  ostane prikaz obdobja generiranja (danes že zastarel). */}
+              {liveWeather ? (
+                <WeatherChip w={liveWeather} lang={lang} />
+              ) : (
+                day.weather && (
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Cloud className="size-3.5" aria-hidden="true" />
+                    {day.weather.condition} · {day.weather.temp}°C
+                  </div>
+                )
               )}
             </div>
           </div>
@@ -403,6 +439,17 @@ export function TripTimeline({ days, totalBudget }: TripTimelineProps) {
         </div>
         );
       })}
+
+      {/* TASK 88 — iskrene opombe o živem vremenu (časovnica dela naprej) */}
+      {hasWindow && (
+        <div className="ml-16">
+          <ItineraryWeatherNotes
+            unavailable={unavailable}
+            notPublished={notPublished}
+            lang={lang}
+          />
+        </div>
+      )}
 
       {/* AI nasvet na dnu (lokaliziran) */}
       {days[0]?.locations && days[0].locations.length > 0 && (

@@ -7,6 +7,84 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.79.0] — 2026-09-24 (TASK 88: ŽIVO VREME V DNEVNIH KARTICAH ITINERARJA — TripTimeline + SharedTrip)
+
+### Dodano
+- **Živa dnevna napoved v glavah dni rezultatov načrtovalnika** (TripTimeline):
+  vsak dan z realnim datumom (datum odhoda + številka dneva, DST-varno
+  dayISOForDayNumber) dobi čip z ŽIVO napovedjo Open-Meteo (pogoj + do
+  X °C + verjetnost padavin), ki premošča dotlej statični posnetek
+  `day.weather` iz časa generiranja (za starejše načrte lahko že močno
+  zastarel). Statični posnetek ostane FALLBACK, ko živa napoved ni na
+  voljo. Ob čipu se izpiše še datum dneva (formatDayLabel: sl
+  „četrtek, 24. septembra", en „Thursday, 24 September").
+- **Enak čip na javnem deljenem načrtu** (/pot/[shareId], SharedTrip —
+  sl-only površina po reviziji 1.29.0 #13): prijatelji, ki odprejo
+  povezavo, vidijo AKTUALNO napoved, ne podatek iz dneva generiranja.
+- **Sidro PO DNEVU, ne eno za celo pot** (razlika od MY TRIP TASK 66):
+  dan 1 Bled, dan 2 Ljubljana, dan 3 Postojna → 3 različne regionalne
+  napovedi (Slovenija ni vremensko enotna — obala vs. Alpe pogosto
+  več °C narazen). Sidro dneva = PRVI postanek z rešljivimi koordinatami
+  (visit.lat/lng nad lookupom, sicer DESTINATIONS po destination_id,
+  fail-closed ±90/±180 + null island 0,0 — isto vrata kot supply).
+- **Dedupe + cap zahtev**: enaka sidra se združijo v ENO zahtevo
+  (datumsko okno min..max skupine); več kot
+  `ITINERARY_WEATHER_MAX_ANCHORS` (4) unikatnih sider → vsi dnevi na
+  PRVEM sidru (glavna regija — dokumentiran trade-off, 1 klic).
+  Vsa logika v ČISTEM sloju `src/lib/itinerary-weather.ts` (0 omrežja,
+  0 db — testirljivo brez brskalnika).
+- **Deljen `WeatherChip` izvožen v novo komponento**
+  (`src/components/itinerary-weather.tsx`): journey-trip (MY TRIP) zdaj
+  uvaža IZVOZEN čip (popolnoma ista vizija — nikjer duplikacije);
+  novi potrošniki: TripTimeline + SharedTrip.
+- **Iskrene opombe** (ItineraryWeatherNotes, isti kanon TASK 66):
+  izpad VSEH skupin sider → „Vreme trenutno ni na voljo — načrt potuje
+  naprej"; dnevi obstajajo, napoved pa ni objavljena (preteklost/čez
+  ~16-dnevni horizont Open-Meteo) → opomba o horizontu; zdravo stanje =
+  tišina. print:hidden (natisnjeni dokument ostane dejstva o
+  rezervacijah, ne vreme).
+
+### Varovalke (hook useItineraryForecast)
+- Efekt se sproži SAMO ob spremembi primitivnega ključa zahteve
+  (sidra+okna+jezik) — ne ob vsakem renderu izbire; ref se posodobi v
+  efektu deklariranem PRED fetch efektom (eslint react-hooks/refs).
+- Zastarel odgovor (drugo okno) → brez čipov (requestKey === loadedFor);
+  prekinitev ob odhodu (AbortController + active) NE šteje kot napaka.
+- Odpadla ENA skupina (omrežje/502/parse) pusti NJENE dneve brez čipa —
+  ostale skupine živijo naprej (delna odpoved ≠ splošna).
+- Preslikava dan → napoved PO DATUMU v čisti `applyForecastToDays`
+  (dan brez ujemanja v napovedi = brez čipa — nikoli izmišljenih dni).
+- Ponovna uporaba /api/weather NAČIN B (TASK 66) brez sprememb: 15-min
+  strežniški fetch cache, 4 s timeout, clampForecastRange (prazen
+  presek → iskreno prazna napoved, brez klica vira).
+
+### Testi
+- `task88-itinerary-weather.test.ts`: 45 testov / 103 pričakovanj —
+  UNIT (resolveVisitCoords vrata; načrt sider: pogojni null/dedupe/cap/
+  okno min..max/poganj datumov; requestKey determinizem;
+  applyForecastToDays ujemanje/odpadla skupina/horizont/prazna;
+  formatDayLabel sl+en+neveljaven) + SOURCE-CONTRACT (TripTimeline čip +
+  fallback + opombe; planner podaja tripStartDate; SharedTrip sl čip;
+  journey-trip uvaža izvozen čip brez lokalne duplikacije; hook
+  varovalke; čisti sloj kanon iskrenosti).
+- Skupaj: **1813/1813 testov** (1768 + 45), lint 0, tsc 0 (src).
+
+### E2E (agent-browser, 375 px)
+- Deljen načrt (start +2 dni): 2 čipa (Bled ⛈️nevihta do 17 °C · 75 %,
+  Ljubljana 🌫️megla do 18 °C · 15 %), 2 klica /api/weather po svojem
+  sidru → 200, čip znotraj glave #dan-1, 0 px preliva, 0 napak.
+- Planner zlata pot (SL): generiranje z datumom → razdelek „Več o tvoji
+  poti" → 3 čipi + 3 datuma dni (Bled/Ljubljana/Postojna — 3 sidra, 3
+  različne napovedi), 0 px preliva.
+- Planner EN: čipi „⛈️thunderstorm up to 17 °C · rain 75 %" + dnevi
+  „Day 1 Thursday, 24 September" — bilingvalnost potrjena.
+- Iskrenostna pot (start ~8 mesecev v prihodnost): 0 čipov + opomba o
+  horizontu + statični posnetek „Sončno (posnetek) · 21 °C" kot
+  fallback — točno po kanonu.
+- Testni deljeni načrt počiščen iz DB.
+
+---
+
 ## [1.78.0] — 2026-09-24 (TASK 87: GEO KOORDINATE IZKUŠNJE — drugi vir lastne tržnice na supply zemljevidu)
 
 ### Dodano

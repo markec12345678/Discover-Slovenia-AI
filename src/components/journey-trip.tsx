@@ -22,6 +22,7 @@ import {
   TRIP_WEATHER_LABELS,
   type TripWeatherDay,
 } from "@/lib/journey/trip-weather";
+import { WeatherChip } from "@/components/itinerary-weather";
 import type { TravelJourney } from "@/lib/journey/types";
 
 // ============================================================================
@@ -123,31 +124,10 @@ function statusBadge(e: TripEntry, lang: "sl" | "en") {
 }
 
 // ---------------------------------------------------------------------------
-// TASK 66 — VREMESKI ČIP DNEVA (načrt: pogoj + do X °C + padavine)
+// TASK 66 — VREMESKI ČIP DNEVA: od TASK 88 deli komponento z itinerarjem
+// ( TripTimeline + SharedTrip) — izvožen WeatherChip v
+// @/components/itinerary-weather (ista vizija, isti kanon iskrenosti).
 // ---------------------------------------------------------------------------
-
-function WeatherChip({
-  w,
-  lang,
-}: {
-  w: TripWeatherDay;
-  lang: "sl" | "en";
-}) {
-  const dayText = TRIP_WEATHER_LABELS.day[lang](w);
-  return (
-    <span
-      className="inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-full border bg-muted/30 px-2.5 py-0.5 text-xs text-muted-foreground print:hidden"
-      title={TRIP_WEATHER_LABELS.source[lang]}
-      aria-label={`${w.condition}, ${dayText}`}
-    >
-      <span role="img" aria-hidden="true" className="leading-none">
-        {w.icon}
-      </span>
-      <span className="capitalize">{w.condition}</span>
-      <span className="font-medium tabular-nums text-foreground">{dayText}</span>
-    </span>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // TASK 74 — ZDRAVJE VIROV (§22/§30 na ravni CELEGA potovanja)

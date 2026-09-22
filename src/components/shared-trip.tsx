@@ -23,6 +23,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ItineraryEventsSection } from "@/components/itinerary-events";
+import {
+  ItineraryWeatherNotes,
+  WeatherChip,
+  useItineraryForecast,
+} from "@/components/itinerary-weather";
 import { warmOfflinePlanCache } from "@/lib/itinerary-share";
 import { SmartPackingSection } from "@/components/packing-smart";
 import { BudgetPanel } from "@/components/budget-panel";
@@ -106,6 +111,13 @@ export function SharedTrip({
   const setItinerary = useAppStore((s) => s.setItinerary);
   const routeCoords = useAppStore((s) => s.routeCoords);
   const routeByDay = useAppStore((s) => s.routeByDay);
+
+  // TASK 88 — ŽIVO vreme po dnevih (Open-Meteo prek /api/weather način B,
+  // sidro = prvi geo-postanek dneva). Površina /pot/[shareId] je SL-only
+  // ( revizija 1.29.0 #13) — jezik čipa je prav tako sl. Statični posnetek
+  // day.weather ostane fallback (zastarel za starijše deljene načrte).
+  const { chipFor, unavailable, notPublished, hasWindow } =
+    useItineraryForecast(itinerary.days, itinerary.tripStartDate, "sl");
 
   // === Glasovanje skupine — stanje ===
   // Števci se inicializirajo iz server propsov (hidratacija varna),
@@ -400,6 +412,9 @@ export function SharedTrip({
                 })
               : [];
 
+            // TASK 88: živa napoved tega dne (ob datumu + geo sidru)
+            const liveWeather = chipFor(day.day);
+
             return (
               <div key={day.day} className="scroll-mt-24" id={`dan-${day.day}`}>
                 {/* Dan header */}
@@ -420,11 +435,17 @@ export function SharedTrip({
                         </span>
                       )}
                     </h3>
-                    {day.weather && (
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <CloudSun className="size-3.5" aria-hidden="true" />
-                        {day.weather.condition} · {day.weather.temp}°C
-                      </div>
+                    {/* TASK 88: ŽIVI čip premošča statični posnetek; brez njega
+                        ostane prikaz iz časa generiranja (lahno zastarel). */}
+                    {liveWeather ? (
+                      <WeatherChip w={liveWeather} lang="sl" />
+                    ) : (
+                      day.weather && (
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <CloudSun className="size-3.5" aria-hidden="true" />
+                          {day.weather.condition} · {day.weather.temp}°C
+                        </div>
+                      )
                     )}
                   </div>
                 </div>
@@ -480,6 +501,15 @@ export function SharedTrip({
               </div>
             );
           })}
+
+          {/* TASK 88 — iskrene opombe o živem vremenu (načrt dela naprej) */}
+          {hasWindow && (
+            <ItineraryWeatherNotes
+              unavailable={unavailable}
+              notPublished={notPublished}
+              lang="sl"
+            />
+          )}
         </section>
 
         {/* === Dogodki med tvojim obiskom === */}
