@@ -274,9 +274,28 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    // TASK 86: glob lokacija iz query (?lat=&lng=&zoom=&label=) —
+    // povezava "Prikaži na zemljevidu" iz javnega listing modala.
+    // Client-only branje (leaflet init živi v useEffect → ni SSR/hidration
+    // vprašanj); neveljaven vnos iskreno pade na privzeti pogled Slovenije.
+    // Null island (0,0) zavrnjen — enaka konvencija kot supply adapterji.
+    const q = new URLSearchParams(window.location.search);
+    const qLat = Number(q.get("lat"));
+    const qLng = Number(q.get("lng"));
+    const qZoom = Number(q.get("zoom"));
+    const qLabel = q.get("label");
+    const hasGeo =
+      Number.isFinite(qLat) &&
+      Number.isFinite(qLng) &&
+      Math.abs(qLat) <= 90 &&
+      Math.abs(qLng) <= 180 &&
+      !(qLat === 0 && qLng === 0);
+    const hasZoom = hasGeo && Number.isFinite(qZoom);
+
     const map = L.map(containerRef.current, {
-      center: [46.15, 14.47], // Center Slovenije
-      zoom: 8,
+      // TASK 86: center/zoom iz query (highlight lokacija), sicer Slovenija
+      center: hasGeo ? [qLat, qLng] : [46.15, 14.47],
+      zoom: hasZoom ? Math.min(16, Math.max(10, qZoom)) : 8,
       scrollWheelZoom: false, // Boljša UX na mobilnem
       zoomControl: true,
       attributionControl: true,
@@ -313,6 +332,54 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     };
     map.on("moveend zoomend", syncViewport);
     syncViewport();
+
+    // TASK 86: ZLATI poudarni marker na query lokaciji — vstop iz javnega
+    // listing modala ("Prikaži na zemljevidu"). DIREKTNO na map (ne v
+    // grozdenje!), da je vedno viden takoj; supply own pin se v grozdu
+    // naloži ločeno (ista točka za published listing z geo). Label iz
+    // query je uporabniški vnos → escapeHtml (XSS varnost).
+    if (hasGeo) {
+      const highlightIcon = L.divIcon({
+        className: "highlight-location-marker",
+        html: `
+          <div style="transform: translateY(-50%); position: relative;">
+            <div style="
+              display: flex; align-items: center; justify-content: center;
+              width: 40px; height: 40px; border-radius: 9999px;
+              background: #d97706; color: white;
+              box-shadow: 0 4px 12px rgba(217, 119, 6, 0.5);
+              border: 3px solid white; font-size: 20px;
+              font-family: sans-serif; position: relative; z-index: 1;
+            ">📍</div>
+            <div style="
+              position: absolute; left: 50%; top: 100%;
+              transform: translateX(-50%);
+              width: 0; height: 0;
+              border-left: 8px solid transparent;
+              border-right: 8px solid transparent;
+              border-top: 10px solid #d97706;
+            "></div>
+          </div>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 40],
+        popupAnchor: [0, -38],
+      });
+      L.marker([qLat, qLng], {
+        icon: highlightIcon,
+        title: qLabel ?? undefined,
+        zIndexOffset: 1000, // nad destinacijskimi/supply markerji
+      })
+        .addTo(map)
+        .bindPopup(
+          `<div style="min-width: 180px; font-family: sans-serif;">` +
+            `<div style="font-weight: 700; font-size: 15px; color: #1a2e1a; margin-bottom: 4px;">${
+              qLabel ? escapeHtml(qLabel) : (lang === "en" ? "Location" : "Lokacija")
+            }</div>` +
+            `<div style="font-size: 12px; color: #6b7280;" class="tabular-nums">${qLat.toFixed(5)}, ${qLng.toFixed(5)}</div>` +
+            `</div>`
+        );
+    }
 
     // Dodaj markerje za vse destinacije
     DESTINATIONS.forEach((dest) => {

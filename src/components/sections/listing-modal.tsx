@@ -278,6 +278,19 @@ export function ListingModal({ listing, onClose }: ListingModalProps) {
                 </p>
               )}
 
+              {/* TASK 86: geo povezava na zemljevid — samo kadar ima listing
+                  obe koordinati (TASK 85: partner/admin vnos). Zlati
+                  poudarni marker na ciljni lokaciji + supply own pin. */}
+              {listing.lat != null && listing.lng != null ? (
+                <a
+                  href={`/zemljevid?lat=${listing.lat}&lng=${listing.lng}&zoom=13&label=${encodeURIComponent(listing.name)}`}
+                  className="inline-flex w-fit items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <MapPin className="size-4 text-primary" aria-hidden="true" />
+                  Prikaži na zemljevidu
+                </a>
+              ) : null}
+
               {/* Specialties */}
               {listing.specialties.length > 0 ? (
                 <section>

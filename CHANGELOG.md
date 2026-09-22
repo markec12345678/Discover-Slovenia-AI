@@ -7,6 +7,45 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.77.0] — 2026-09-22 (TASK 86: GEO GLOB-POVEZAVA — javni imenik → listing modal → zemljevid točno na lokaciji lokala)
+
+### Dodano
+- **»Prikaži na zemljevidu« v javnem listing modalu** — zaključek javnega
+  geo toka TASK 85: partner vnese koordinati → popotnik v imeniku lokalov
+  (/lokali) odpere podrobnosti → klik → zemljevid se odre točno na
+  lokaciji z ZLATIM poudarnim markerjem. Povezava se prikaže SAMO ob
+  obeh koordinatah (`listing.lat/lng != null`, javni API jih vrača —
+  toPublicListing jih namerno ne strippa); href
+  `/zemljevid?lat=&lng=&zoom=13&label=` z encodeURIComponent(imenom).
+- **Glob query podpora v map-view** (`?lat=&lng=&zoom=&label=`):
+  client-only parse (leaflet init živi v useEffect — ni SSR/hidration
+  vprašanj), trda vrata ±90/±180 + null island (0,0) zavrnjen (ista
+  konvencija kot supply adapterji), zoom clamp [10, 16], neveljaven
+  vnos iskreno pade na privzeti pogled Slovenije.
+- **Zlati poudarni marker** na query lokaciji: divIcon pin (#d97706,
+  bel obrob, kazalec), DIREKTNO na map (ne v grozdenje!) z
+  zIndexOffset 1000 — viden takoj nad destinacijskimi/supply pini;
+  popup z imenom (escapeHtml — label iz URL je uporabniški vnos, XSS
+  varnost) + koordinatama toFixed(5). Supply own pin se v grozdu naloži
+  ločeno na isti točki za published listing.
+
+### Testi
+- `task86-map-deep-link.test.ts`: 9 testov / 25 pričakovanj —
+  source-contract (URLSearchParams parse + ±90/±180 + null island +
+  zoom clamp; highlight marker zIndexOffset/addTo(map); escapeHtml
+  qLabel; modal pogoj lat/lng != null + zoom=13 + encodeURIComponent;
+  toPublicListing NE strippa lat/lng + javna ruta uporablja
+  sanitizacijo).
+- Skupaj: **1728/1728 testov** (1719 + 9), lint 0, tsc 0.
+- E2E (agent-browser, 375px): published listing z geo → /lokali →
+  Podrobnosti → modal → Prikaži na zemljevidu → URL s query → marker
+  centriran (offset 0px) → popup ime + 46.36250, 14.09360 → Pokaži POI +
+  Hrana & pijača → supply 98 fsq + 1 own (popup »Lokalni ponudniki
+  (naša tržnica)«) → 0 konzolnih napak, 0px preliva. Testni listing
+  počiščen.
+
+---
+
 ## [1.76.1] — 2026-09-22 (TASK 85, 2. plast: GEO KOORDINATE V ONBOARDING ČAROVNIKU — vnos že ob prvem ustvarjanju)
 
 ### Dodano
