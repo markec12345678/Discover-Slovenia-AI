@@ -53,7 +53,7 @@ Zgolj UX veriga, kot jo opisujejo primarni vir + recenzije:
 | Morning/Afternoon/Evening segmenti | ❌ (tekstovni time_slot) | aitravel.tools |
 | Start Anywhere: povezava | ✅ F5.4 (deterministično) | mindtrip.ai |
 | Start Anywhere: slika/screenshot | ✅ F8 (VLM) | mindtrip.ai |
-| Start Anywhere: **PDF** | ❌ | mindtrip.ai |
+| Start Anywhere: **PDF** | ✅ D3 (1.23.0, verificirano+E2E+testi v 1.83.1 — unpdf, 0 AI) | mindtrip.ai |
 | Google Pins uvoz | ✅ F14 (1.18.0) — Mindtrip ima kot »NEW« 2026 | mindtrip.ai |
 | Events (koncerti/sejmi, »fits your vibe«) | ✅ ItineraryEventsSection | mindtrip.ai (NEW, nov 2025) |
 | Skupinski klebet v realnem času + @AI | ❌ (async: ankete F11 + dnevnik F12) | mindtrip.ai |
@@ -149,6 +149,15 @@ poceni zmage (segmenti dneva, audio, PDF) ter 3 zavrnitve z dokazi.
       Jutro/Popoldan/Večer (dodatek nabora #2) — skupaj ena sprint.
 - [ ] **D2:** Audio »Poslušaj svoj načrt« (TTS, slovenščina) — ločena
       majhna funkcija pred ali po UI sprintu.
-- [ ] **D3:** PDF uvoz (razširitev obstoječega ingest zavihka) — majhna.
+- [x] **D3:** PDF uvoz (razširitev obstoječega ingest zavihka) — majhna.
+      OPRAVljENO: implementirano v 1.23.0 (unpdf besedilna plast → isti
+      deterministični matcher, 0 AI); 2026-09-24 (1.83.1, TASK 95) E2E
+      verificirano (PDF → PREPOZNANO 5 destinacij → samodejni 5-dnevni
+      načrt, 0 napak, 0 preliva), dodanih 26 testov (cevovod + pogodbe),
+      vse poštene napake verificirane (422 skeniran / 422 ni zadetkov /
+      400 ne-PDF / 400 napačna magija / 413 prevelik / 405 GET).
+      Dokaz: docs/screenshots/task95-pdf-ingest-plan.png.
+      OPOMBA: vrstica inventarja zgoraj je bila do 1.83.1 ❌ — doc drift
+      (analiza ni zajela obstoječe implementacije); popravljena.
 - [ ] **D4:** Izrecno odloženo: cene na karti, receipts, real-time klebet
       (dokumentirano z utemeljitvami v tem naboru).

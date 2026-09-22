@@ -7,6 +7,48 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.83.1] — 2026-09-24 (TASK 95: D3 PDF UVOZ — E2E VERIFIKACIJA + TESTNA POKRITOST; 0 PRODUKCIJSKE KODE)
+
+### Verificirano (doc drift popravljen)
+- **D3 »Začni s PDF-jem« je bil implementiran že v 1.23.0**, a nikoli E2E
+  verificiran in z 0 testne pokritosti (edini ingest vir brez testov).
+  Analiza konkurence (MINDTRIP-ANALIZA §7) ga je napačno navajala kot
+  »❌« — vrstica inventarja in checklist D3 sta zdaj popravljena na ✅
+  z dokazom.
+
+### E2E zlata pot (agent-browser, 375 px)
+- Upload `d3-test-vodnik.pdf` (5 dni, 5 destinacij) → POST
+  `/api/itinerary/ingest-pdf` 200 → **PREPOZNANO: Bled ×3, Bohinj ×2,
+  Postojnska jama ×2, Piran ×2, Ljubljana ×1** → samodejna generacija →
+  »Vaš 5-dnevni itinerer« z vsemi 5 destinacijami v načrtu in realnimi
+  OSRM etapami (~285 km skupno). 0 konzolnih napak; 0 px preliva;
+  VLM potrditev postavitve.
+- Vse poštene napake verificirane s curl: skeniran PDF (brez besedilne
+  plasti) → 422 + usmeritev na zavihek Slika; PDF brez slovenskih
+  destinacij → 422 (nič izmišljanja); ne-PDF data URL → 400; napačna
+  magija (ni `%PDF-`) → 400; manjkajoče polje → 400; prevelik
+  (8 MB base64 / > 60 strani) → 413; GET → 405.
+
+### Dodano (testi)
+- `task95-ingest-pdf.test.ts` — 26 testov / 110 pričakovanj:
+  **FUNKCIONALNA CEVOVOD** (pdf-lib zgenerira PDF → unpdf izvleče
+  besedilno plast → `matchDestinationsInText` deterministično prepozna —
+  ista tehnika kot E2E; negativni: tuji vodik → 0 zadetkov, skeniran
+  PDF → < 40 znakov), **SOURCE-CONTRACT poti** (rate limit 10/min z
+  lastnim ključem PREJ kot parsanje; meje 8 MB/60 strani/400k znakov →
+  413; magija %PDF-; unpdf 0 AI; isti matcher kot vsi viri; poštene
+  422; oblika odgovora; PDF se NE shranjuje — 0 prisma/db uvozov;
+  samo POST), **SOURCE-CONTRACT klienta** (zavihek PDF v tablistu,
+  klientska validacija vrste/6 MB, FileReader readAsDataURL + reset
+  inputa, POST pot, SAMODEJNA generacija po zadetkih, analitika
+  ingest_pdf_attempted/success, odstrani gumb, drop zona z
+  tipkovnico), **I18N** (15 ključev ingestPdf* v sl + en).
+- Skupaj **1995/1995** testov (51.065 pričakovanj), lint 0, tsc src 0.
+
+### Dokaz
+- `docs/screenshots/task95-pdf-ingest-plan.png` (VLM potrjena) +
+  `task95-pdf-ingest-matches.png`.
+
 ## [1.83.0] — 2026-09-24 (TASK 93: SEGMENTACIJA DNEVA NA VSEH POVRŠINAH NAČRTA + poštene etape časovnice)
 
 ### Dodano (zadnja "poceni zmaga" iz konkurenčne analize)
