@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.74.5 · 1643 testov (CI zelen) · lint 0 · tsc 0 (celoten projekt, kot CI) |
+| **Stanje** | v1.80.1 · 1878 testov (CI zelen) · lint 0 · tsc 0 (celoten projekt, kot CI) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -39,11 +39,12 @@
 | Živi POI sloj po viewportu zemljevida | OpenStreetMap Overpass API |
 | Uradna turistična vsebina (RAG) | slovenia.info `llms.txt` (STO) |
 | Transfer odkrivanje z objavljenimi realnimi cenami | KiwiTaxi partner feed (CSV) |
-| Živo vreme (trenutno + dnevna napoved; po dnevih poti v MY TRIP) | Open-Meteo (brez ključa) |
+| Živo vreme (trenutno + dnevna napoved; po dnevih poti v MY TRIP in v dnevnih karticah itinerarja — načrtovalnik + deljen načrt) | Open-Meteo (brez ključa) |
+| Zvočni povzetek dneva itinerarja (gumb »Poslušaj« v glavi dneva; načrtovalnik + deljen načrt) | platformski TTS SDK (brez ključa) |
 | **38 kuriranih destinacij** v 4 državah + EN različice | lastni destinacijski register |
 | Journey orkestracija, MY TRIP časovnica, natisljivi potrditveni dokument | lastna koda |
 | Zunanje booking predaje (`/go`) in affiliate preusmeritve | 16-provider omrežje |
-| Lastna tržnica (partnerji, izdelki, izkušnje) z lastnim checkoutom | lastna baza + Stripe (demo mode brez ključev) |
+| Lastna tržnica (partnerji, izdelki, izkušnje) z lastnim checkoutom in pini na supply zemljevidu (listingi in izkušnje s koordinatami) | lastna baza + Stripe (demo mode brez ključev) |
 
 ### 🟡 Pripravljeno, čaka na aktivacijo ponudnika
 
@@ -79,10 +80,14 @@
   ceni (€–€€€) in oceni (★)**; programske podstrani (things-to-do, itinerary,
   best-time-to-visit, guide).
 - **Interaktivni zemljevid** — Leaflet + OSM; FSQ sloj 125.446 krajev (nastanitve,
-  restavracije, atrakcije, plaže, bencinske črpalke) in transfer rute KiwiTaxi.
+  restavracije, atrakcije, plaže, bencinske črpalke), transfer rute KiwiTaxi in pini
+  lastne tržnice (lokalni in izkušnje s koordinatami — glob-povezava iz imenika vodi
+  na zemljevid točno na lokaciji lokala).
 - **Večdnevni itinererji z deterministično validacijo** — OSRM realne cestne razdalje/časi,
   odpiralni časi, cik-cak opozorila, 2-opt optimizacija zaporedja, „preveri tuj načrt"
-  (10 pravil, 0 AI žetonov), zvočni povzetek (TTS), pogovor z načrtom.
+  (10 pravil, 0 AI žetonov), živo vreme v glavah dni (Open-Meteo, sidro po dnevih),
+  zvočni povzetek (TTS — cel načrt ali posamezni dan, tudi na deljeni povezavi),
+  pogovor z načrtom.
 - **Journey načrtovanje čez ponudnike** — prihod → transfer → nastanitev →
   znamenitosti (odprti viri po 4 državah) → hrana → bencin → dogodki v enem
   načrtu, ki upošteva dejanske zmogljivosti virov.
@@ -112,6 +117,8 @@
   (ni lastni inventar).
 - **Dogodki** — koledar dogodkov (slovenski viri).
 - **Tržnica** — lokalni partnerji, izdelki in izkušnje z lastnim checkoutom;
+  partner/admin ob ustvarjanju vnese pin lokacije (geo koordinate — tudi v onboarding
+  čarovniku), javni imenik pa glob-povezuje na zemljevid točno na lokaciji;
   B2B portala za ponudnike (`/owner`) in administratorje (`/admin`).
 - **Slovensko + angleško izkušnja** — SL privzeto, EN na jedru lijaka (`/en/…`).
 - **PWA** — načrti brez povezave (aktivno Go Mode potovanje tudi na splošni offline
@@ -166,7 +173,7 @@ Destinacija / čas / preference (38-destinacijski register, 4 države)
         ↓
 Provider capability registry (16 ponudnikov, zmogljivosti po viru)
         ↓
-Dejansko dostopni viri (4 viri PRODUCTION_ACTIVE; preostali iskreno prazni)
+Dejansko dostopni viri (4 viri PRODUCTION_ACTIVE + lastna tržnica PRODUCTION_CONFIGURED; preostali iskreno prazni)
         ↓
 Validacija (geo-koherenca, realni časi, cik-cak, duplikati)
         ↓
@@ -224,7 +231,7 @@ Vsak adapter je fail-closed: manjkajoča poverilnica = prazna plast + jasna opom
 | Omio | transport | affiliate deep-link | CONTRACT_VERIFIED / PARTNER_APPROVAL_REQUIRED |
 | WorldNomads | zavarovanje | affiliate only | CONTRACT_VERIFIED (brez API) |
 | SafetyWing | zavarovanje | affiliate only | CONTRACT_VERIFIED (brez API) |
-| Lastna tržnica | partnerji/izdelki/izkušnje | direktni booking | CODE_READY (geo sloj supply zemljevida še manjka) |
+| Lastna tržnica | partnerji/izdelki/izkušnje + geo pini (supply zemljevid) | direktni booking | **PRODUCTION_CONFIGURED** (geo sloj živ — listingi in izkušnje s koordinatami; stopnja NE prečka v ACTIVE, dokler živi partnerji s pini niso dokazljivi) |
 
 Stanja so izpeljana iz [`src/lib/supply/production-matrix.ts`](src/lib/supply/production-matrix.ts)
 (strojno berljiva matrika življenjskega cikla; človeška različica s runbooki:
@@ -331,7 +338,7 @@ dodatnih prenosov. Osvežitev feedov: `bun run fsq:ingest` / `bun run kiwitaxi:i
 Preverjanje:
 
 ```bash
-bun test                 # 1511 testov
+bun test                 # 1878 testov
 bun run lint             # eslint
 bunx tsc --noEmit        # tipi
 ```
@@ -467,7 +474,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.74.5**.
+Trenutna verzija: **1.80.1**.
 
 ---
 

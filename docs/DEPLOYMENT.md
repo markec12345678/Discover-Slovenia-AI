@@ -162,6 +162,11 @@ docker compose logs cron                   # izidi cron klicev (sent/issued/…)
 
 ### Cron urniki (enaki vercel.json, UTC)
 
+> **Regija (1.80.1):** `vercel.json` pripeta `regions: ["fra1"]` (Frankfurt) —
+> sekundarna produkcija streže evropskemu občinstvu (SI · HR · ME · AL) z manj
+> latence kot privzeta regija iad1 (ZDA). Prevzame ob naslednjem deployu iz
+> `main`; cron urniki in vsa ostala konfiguracija so nespremenjeni.
+
 | Urnik (UTC) | Končna točka | Opis |
 |---|---|---|
 | `0 6 * * *` | `/api/cron/daily-trip-push` | dnevni push opomniki potovanj |

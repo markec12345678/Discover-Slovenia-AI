@@ -7,6 +7,39 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.80.1] — 2026-09-24 (TASK 90: README SINHRONIZACIJA + VERCEL REGIJA — docs/config, 0 produkcijske kode)
+
+### Spremenjeno (dokumentacija in konfiguracija)
+- **README.md sinhroniziran z dejanskim stanjem** (bil je na 1.74.5 — zaostal
+  za 6 MANOR verzijami 1.75.0–1.80.0): status vrstica (v1.80.1 · 1878 testov),
+  živi-sloji tabela (+ zvočni povzetek dneva TTS, vreme v dnevnih karticah
+  itinerarja, pini lastne tržnice na supply zemljevidu), zemljevid/tržnica/
+  itinerer striči „Kaj lahko uporabnik počne" (geo glob-povezava imenik →
+  zemljevid, pin vnos v onboarding čarovniku, per-dan TTS tudi na deljeni
+  povezavi), provider tabela (lastna tržnica CODE_READY → **PRODUCTION_CONFIGURED**
+  — geo sloj živ), journey diagram (4 ACTIVE + tržnica CONFIGURED), hitri
+  začetek (1878 testov), trenutna verzija.
+- **vercel.json okrepljen:** `$schema` (namensko preverjanje veljavnosti),
+  `framework: nextjs` (eksplicitno), `regions: ["fra1"]` — sekundarna
+  produkcija (i-feel-slovenia.vercel.app) pripeta na evropsko regijo Frankfurt
+  (privzeto Vercel regijo iad1/ZDA; občinstvo SI · HR · ME · AL → bližje =
+  manj latence). Crons NEspremenjenih 8 (urniki so zaklenjeni v README/deployment
+  docs in CI); `maxDuration` za reingest cron poti ŽE izvažajo sami route
+  handlerji (`export const maxDuration = 300`, Next.js nativno — Vercel to
+  spoštuje, plan prilagodi na zgor).
+- **docs/DEPLOYMENT.md:** zaznamek o regiji fra1 (rollout opomba — obstoječi
+  deployment prevzame ob naslednjem deployu; ni funkcionalna sprememba).
+- Version bump 1.80.0 → **1.80.1** (PATCH — semver: docs/config popravek,
+  0 sprememb produkcijske kode, 0 novih testov pričakovano).
+
+### Testi
+- Brez sprememb kode → 1878/1878 (prisotno pred commitom), lint 0.
+  README/vercel.json NISO pokriti s source-contract testi (preverjeno —
+  edini vercel-referenčni test je geo.test.ts za allowed-host logiko, ne
+  configa).
+
+---
+
 ## [1.80.0] — 2026-09-24 (TASK 89: ZVOČNI POVZETEK DNEVA — »Poslušaj dan«, TTS brez ključa)
 
 ### Dodano
