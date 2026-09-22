@@ -186,15 +186,17 @@ describe("TASK 97: BookingPanel source-contract", () => {
   test("Tiqets kartica: /go/tickets z destinacijo, ime partnerja, CTA", () => {
     expect(panel).toContain('goHref("tickets", loc.destination_name)');
     expect(panel).toContain('partnerName="Tiqets"');
-    expect(panel).toContain('cta="Vstopnice"');
+    // TASK 98 (i18n): CTA je zdaj preveden ključ (prej hardcoded SL "Vstopnice")
+    expect(panel).toContain('cta={t("ctaTickets")}');
   });
 
   test("kartica zavarovanja: /go/insurance prek helperja, ime, CTA, opis", () => {
     expect(panel).toContain("href={insuranceHref}");
     expect(panel).toContain('partnerName="World Nomads"');
-    expect(panel).toContain('cta="Zavarovanje"');
+    // TASK 98 (i18n): CTA in opis sta prevedena ključa (prej hardcoded SL)
+    expect(panel).toContain('cta={t("ctaInsurance")}');
     expect(panel).toContain("description={insuranceDescription}");
-    expect(panel).toContain("-dnevno potovanje");
+    expect(panel).toContain('t("insuranceDaysDesc", { days: insuranceDays })');
   });
 
   test("tripDays prop v vmesniku + destrukturiran v komponenti", () => {

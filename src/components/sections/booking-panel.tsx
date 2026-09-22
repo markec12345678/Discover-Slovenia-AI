@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { safeExternalHref } from "@/lib/external-url";
 import {
   Calendar,
@@ -185,37 +186,45 @@ function safeJsonImages(images: string[] | undefined | null): string | undefined
   return images[0];
 }
 
-// Povezava za kontakt lastnika — website > email > phone
+// Povezava za kontakt lastnika — website > email > phone.
+// TASK 98 (i18n): vrača labelKey (prevodne ključe), ne besedilo —
+// besedilo je odvisno od locale, kartice ga prevedejo prek t().
+export type ContactLabelKey = "contactWebsite" | "contactEmail" | "contactPhone";
+
 function getContactLink(listing: BookingListing): {
   href: string;
-  label: string;
+  labelKey: ContactLabelKey;
 } | null {
-  if (listing.website) return { href: safeExternalHref(listing.website), label: "Spletna stran" };
-  if (listing.email) return { href: `mailto:${listing.email}`, label: "Pošlji povpraševanje" };
-  if (listing.phone) return { href: `tel:${listing.phone}`, label: "Pokliči" };
+  if (listing.website)
+    return { href: safeExternalHref(listing.website), labelKey: "contactWebsite" };
+  if (listing.email)
+    return { href: `mailto:${listing.email}`, labelKey: "contactEmail" };
+  if (listing.phone)
+    return { href: `tel:${listing.phone}`, labelKey: "contactPhone" };
   return null;
 }
 
 function getExperienceContact(exp: BookingExperience): {
   href: string;
-  label: string;
+  labelKey: ContactLabelKey;
 } | null {
   if (exp.providerWebsite)
-    return { href: safeExternalHref(exp.providerWebsite), label: "Spletna stran" };
+    return { href: safeExternalHref(exp.providerWebsite), labelKey: "contactWebsite" };
   if (exp.providerEmail)
-    return { href: `mailto:${exp.providerEmail}`, label: "Pošlji povpraševanje" };
+    return { href: `mailto:${exp.providerEmail}`, labelKey: "contactEmail" };
   if (exp.providerPhone)
-    return { href: `tel:${exp.providerPhone}`, label: "Pokliči" };
+    return { href: `tel:${exp.providerPhone}`, labelKey: "contactPhone" };
   return null;
 }
 
 function getProductContact(p: BookingProduct): {
   href: string;
-  label: string;
+  labelKey: ContactLabelKey;
 } | null {
-  if (p.sellerWebsite) return { href: safeExternalHref(p.sellerWebsite), label: "Spletna stran" };
+  if (p.sellerWebsite)
+    return { href: safeExternalHref(p.sellerWebsite), labelKey: "contactWebsite" };
   if (p.sellerEmail)
-    return { href: `mailto:${p.sellerEmail}`, label: "Pošlji povpraševanje" };
+    return { href: `mailto:${p.sellerEmail}`, labelKey: "contactEmail" };
   return null;
 }
 
@@ -237,6 +246,8 @@ function FeaturedVerifiedBadges({
   featured: boolean;
   verified: boolean;
 }) {
+  // TASK 98 (i18n): oznaki prevedeni (prej hardcoded SL)
+  const t = useTranslations("planner.booking");
   return (
     <div className="flex flex-wrap items-center gap-1">
       {featured && (
@@ -245,7 +256,7 @@ function FeaturedVerifiedBadges({
           className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 gap-1 text-[10px] px-1.5 py-0"
         >
           <Sparkles className="size-3" aria-hidden />
-          Izpostavljeno
+          {t("badgeFeatured")}
         </Badge>
       )}
       {verified && (
@@ -254,7 +265,7 @@ function FeaturedVerifiedBadges({
           className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 gap-1 text-[10px] px-1.5 py-0"
         >
           <BadgeCheck className="size-3" aria-hidden />
-          Preverjeno
+          {t("badgeVerified")}
         </Badge>
       )}
     </div>
@@ -325,6 +336,7 @@ function AffiliateCard({
 }
 
 function ListingCard({ listing }: { listing: BookingListing }) {
+  const t = useTranslations("planner.booking");
   const img = safeJsonImages(listing.images);
   const contact = getContactLink(listing);
   return (
@@ -384,7 +396,9 @@ function ListingCard({ listing }: { listing: BookingListing }) {
               });
             }}
           >
-            Obišči
+            {/* TASK 98 (i18n): specifična akcija stika (prej vedno generični
+                "Obišči"; label je bil mrtven kode — zdaj dejansko uporabljen) */}
+            {t(contact.labelKey)}
             <ExternalLink className="size-3.5" aria-hidden />
           </a>
         </Button>
@@ -394,6 +408,7 @@ function ListingCard({ listing }: { listing: BookingListing }) {
 }
 
 function ExperienceCard({ exp }: { exp: BookingExperience }) {
+  const t = useTranslations("planner.booking");
   const img = safeJsonImages(exp.images);
   const contact = getExperienceContact(exp);
   return (
@@ -434,7 +449,7 @@ function ExperienceCard({ exp }: { exp: BookingExperience }) {
           </span>
           <span aria-hidden>·</span>
           <span className="font-semibold text-foreground/80">
-            €{exp.pricePerPerson}/osebo
+            {t("pricePerPerson", { price: exp.pricePerPerson })}
           </span>
         </div>
         <div className="mt-1.5">
@@ -448,7 +463,7 @@ function ExperienceCard({ exp }: { exp: BookingExperience }) {
             target={contact.href.startsWith("http") ? "_blank" : undefined}
             rel={contact.href.startsWith("http") ? "noopener noreferrer" : undefined}
           >
-            Obišči
+            {t(contact.labelKey)}
             <ExternalLink className="size-3.5" aria-hidden />
           </a>
         </Button>
@@ -458,6 +473,7 @@ function ExperienceCard({ exp }: { exp: BookingExperience }) {
 }
 
 function ProductCard({ product }: { product: BookingProduct }) {
+  const t = useTranslations("planner.booking");
   const img = safeJsonImages(product.images);
   const contact = getProductContact(product);
   return (
@@ -492,7 +508,7 @@ function ProductCard({ product }: { product: BookingProduct }) {
                 variant="outline"
                 className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] px-1.5 py-0"
               >
-                Lokalno
+                {t("badgeLocal")}
               </Badge>
             </>
           )}
@@ -508,7 +524,7 @@ function ProductCard({ product }: { product: BookingProduct }) {
             target={contact.href.startsWith("http") ? "_blank" : undefined}
             rel={contact.href.startsWith("http") ? "noopener noreferrer" : undefined}
           >
-            Obišči
+            {t(contact.labelKey)}
             <ExternalLink className="size-3.5" aria-hidden />
           </a>
         </Button>
@@ -543,6 +559,10 @@ function DestinationBlock({
 
 // === Glavna komponenta ===
 export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPanelProps) {
+  // TASK 98 (i18n): VSA besedila površine so prevedena (planner.booking
+  // imenski prostor, SL + EN) — prej je bila komponenta SL-hardcoded in
+  // so EN uporabniki na /en/nacrtuj videli slovenščino.
+  const t = useTranslations("planner.booking");
   const locations = dayPlan.locations;
   // Prva destinacija — za najem avta
   const firstDestination = locations[0];
@@ -550,8 +570,8 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
   const insuranceDays = clampInsuranceDays(tripDays);
   const insuranceHref = insuranceGoHref(tripDays);
   const insuranceDescription = insuranceDays
-    ? `Potno zavarovanje za ${insuranceDays}-dnevno potovanje — tudi za pustolovske aktivnosti`
-    : "Potno zavarovanje — tudi za pustolovske aktivnosti";
+    ? t("insuranceDaysDesc", { days: insuranceDays })
+    : t("insuranceDesc");
 
   // Filtriraj listings po kategorijah za posamezen tab
   function getAccommodationListings(destId: string): BookingListing[] {
@@ -597,12 +617,9 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
     >
       <h4 className="flex items-center gap-2 text-sm font-semibold text-primary">
         <Calendar className="size-4" aria-hidden />
-        Rezerviraj ta dan
+        {t("heading")}
       </h4>
-      <p className="mt-0.5 text-xs text-muted-foreground">
-        Nastanitev, aktivnosti, prehrano in transport rezerviraj neposredno prek
-        naših partnerjev ali lokalnih ponudnikov.
-      </p>
+      <p className="mt-0.5 text-xs text-muted-foreground">{t("intro")}</p>
 
       <Separator className="my-3" />
 
@@ -611,7 +628,7 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
           <TabsTrigger value="accommodation" className="flex flex-col gap-0.5 py-1.5 text-xs sm:flex-row sm:text-sm">
             <span className="flex items-center gap-1">
               <Hotel className="size-3.5" aria-hidden />
-              Nastanitev
+              {t("tabAccommodation")}
             </span>
             {accommodationCount > 0 && (
               <span className="rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold text-primary">
@@ -622,7 +639,7 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
           <TabsTrigger value="activities" className="flex flex-col gap-0.5 py-1.5 text-xs sm:flex-row sm:text-sm">
             <span className="flex items-center gap-1">
               <Ticket className="size-3.5" aria-hidden />
-              Aktivnosti
+              {t("tabActivities")}
             </span>
             {activitiesCount > 0 && (
               <span className="rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold text-primary">
@@ -633,7 +650,7 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
           <TabsTrigger value="dining" className="flex flex-col gap-0.5 py-1.5 text-xs sm:flex-row sm:text-sm">
             <span className="flex items-center gap-1">
               <UtensilsCrossed className="size-3.5" aria-hidden />
-              Hrana
+              {t("tabDining")}
             </span>
             {diningCount > 0 && (
               <span className="rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold text-primary">
@@ -644,7 +661,7 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
           <TabsTrigger value="transport" className="flex flex-col gap-0.5 py-1.5 text-xs sm:flex-row sm:text-sm">
             <span className="flex items-center gap-1">
               <Car className="size-3.5" aria-hidden />
-              Transport
+              {t("tabTransport")}
             </span>
           </TabsTrigger>
         </TabsList>
@@ -662,8 +679,8 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
                   href={goHref("hotels", loc.destination_name)}
                   icon={<Hotel className="size-5" aria-hidden />}
                   partnerName="Booking.com"
-                  cta="Iskanje"
-                  description={`Iskanje hotelov in apartmajev v ${loc.destination_name}`}
+                  cta={t("ctaSearch")}
+                  description={t("hotelsDesc", { dest: loc.destination_name })}
                   onTrack={() => trackFunnel("listing_click", goHref("hotels", loc.destination_name))}
                 />
                 {listings.length > 0 ? (
@@ -675,7 +692,7 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
                 ) : (
                   <EmptyState
                     icon={<Hotel className="size-5" aria-hidden />}
-                    text={`V bazi še ni hotelov za ${loc.destination_name}. Rezervirajte prek Booking.com zgoraj.`}
+                    text={t("hotelsEmpty", { dest: loc.destination_name })}
                   />
                 )}
               </DestinationBlock>
@@ -696,8 +713,8 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
                   href={goHref("activities", loc.destination_name)}
                   icon={<Ticket className="size-5" aria-hidden />}
                   partnerName="GetYourGuide"
-                  cta="Iskanje"
-                  description={`Oglejte si vodene ture in izkušnje v ${loc.destination_name}`}
+                  cta={t("ctaSearch")}
+                  description={t("activitiesDesc", { dest: loc.destination_name })}
                   onTrack={() => trackFunnel("listing_click", goHref("activities", loc.destination_name))}
                 />
                 {/* TASK 97 — Tiqets (vstopnice): zadnji manjkajoči partner na
@@ -708,8 +725,8 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
                   href={goHref("tickets", loc.destination_name)}
                   icon={<Landmark className="size-5" aria-hidden />}
                   partnerName="Tiqets"
-                  cta="Vstopnice"
-                  description="Vstopnice za znamenitosti in muzeje — brez čakanja v vrsti"
+                  cta={t("ctaTickets")}
+                  description={t("ticketsDesc")}
                   onTrack={() => trackFunnel("listing_click", goHref("tickets", loc.destination_name))}
                 />
                 {exps.length > 0 ? (
@@ -721,7 +738,7 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
                 ) : (
                   <EmptyState
                     icon={<Ticket className="size-5" aria-hidden />}
-                    text={`V bazi še ni izkušenj za ${loc.destination_name}. Poiščite aktivnosti na GetYourGuide zgoraj.`}
+                    text={t("activitiesEmpty", { dest: loc.destination_name })}
                   />
                 )}
               </DestinationBlock>
@@ -753,7 +770,7 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
                     {diningListings.length > 0 && (
                       <div className="flex items-center gap-1.5 pt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         <Wine className="size-3.5" aria-hidden />
-                        Lokalni izdelki
+                        {t("localProducts")}
                       </div>
                     )}
                     <div className="space-y-2">
@@ -766,7 +783,7 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
                 {!hasAnything && (
                   <EmptyState
                     icon={<UtensilsCrossed className="size-5" aria-hidden />}
-                    text={`V bazi še ni restavrac ali lokalnih izdelkov za ${loc.destination_name}.`}
+                    text={t("diningEmpty", { dest: loc.destination_name })}
                   />
                 )}
               </DestinationBlock>
@@ -782,24 +799,24 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
                 href={goHref("cars", firstDestination.destination_name)}
                 icon={<Car className="size-5" aria-hidden />}
                 partnerName="DiscoverCars"
-                cta="Najem"
-                description={`Najem avta v ${firstDestination.destination_name} — prilagodljivi datumi prevzema`}
+                cta={t("ctaRental")}
+                description={t("carsDesc", { dest: firstDestination.destination_name })}
                 onTrack={() => trackFunnel("listing_click", goHref("cars", firstDestination.destination_name))}
               />
               <AffiliateCard
                 href={goHref("transport", "Ljubljana")}
                 icon={<TrainFront className="size-5" aria-hidden />}
                 partnerName="Omio"
-                cta="Iskanje"
-                description="Vlaki in avtobusi med destinacijami — potovanje brez avta"
+                cta={t("ctaSearch")}
+                description={t("trainsDesc")}
                 onTrack={() => trackFunnel("listing_click", goHref("transport", "Ljubljana"))}
               />
               <AffiliateCard
                 href={`/go/transfers?from=${encodeURIComponent("Ljubljana")}&dest=${encodeURIComponent(firstDestination.destination_name)}`}
                 icon={<CarTaxiFront className="size-5" aria-hidden />}
                 partnerName="Kiwitaxi"
-                cta="Transfer"
-                description={`Transfer z letališča Ljubljana do ${firstDestination.destination_name} — brez čakanja`}
+                cta={t("ctaTransfer")}
+                description={t("transferDesc", { dest: firstDestination.destination_name })}
                 onTrack={() =>
                   trackFunnel(
                     "listing_click",
@@ -811,16 +828,16 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
                 href={goHref("esim")}
                 icon={<Smartphone className="size-5" aria-hidden />}
                 partnerName="Airalo"
-                cta="eSIM"
-                description="eSIM za Slovenijo — internet takoj ob prihodu, brez fizične SIM"
+                cta={t("ctaEsim")}
+                description={t("esimDesc")}
                 onTrack={() => trackFunnel("listing_click", goHref("esim"))}
               />
               <AffiliateCard
                 href={goHref("flights", "Ljubljana")}
                 icon={<Plane className="size-5" aria-hidden />}
                 partnerName="Skyscanner"
-                cta="Iskanje"
-                description="Leti do Ljubljane (letališče Jožeta Pučnika) — primerjava cen"
+                cta={t("ctaSearch")}
+                description={t("flightsDesc")}
                 onTrack={() => trackFunnel("listing_click", goHref("flights", "Ljubljana"))}
               />
               {/* TASK 97 — ZAVAROVANJE (World Nomads / SafetyWing): trip-level
@@ -831,7 +848,7 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
                 href={insuranceHref}
                 icon={<ShieldCheck className="size-5" aria-hidden />}
                 partnerName="World Nomads"
-                cta="Zavarovanje"
+                cta={t("ctaInsurance")}
                 description={insuranceDescription}
                 onTrack={() => trackFunnel("listing_click", insuranceHref)}
               />

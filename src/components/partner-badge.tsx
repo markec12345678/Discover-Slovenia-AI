@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Star, Crown, BadgeCheck, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -127,6 +128,10 @@ export function AffiliateBadge({
   size = "sm",
   className,
 }: AffiliateBadgeProps) {
+  // TASK 98 (i18n): kratka oznaka + tooltip prevedena (affiliate.badgeShort /
+  // affiliate.tooltip) — uporabljeno na BookingPanel, ki je zdaj dvojezična.
+  // VELIKI badge (md/lg) ostaja ime partnerja (blagovna znamka, se ne prevaja).
+  const t = useTranslations("affiliate");
   const sizeClasses = {
     sm: "text-[10px] px-2 py-0.5 gap-0.5",
     md: "text-xs px-2.5 py-1 gap-1",
@@ -147,7 +152,7 @@ export function AffiliateBadge({
         sizeClasses[size],
         className
       )}
-      title="Partnerska povezava — Preusmerjeni boste na zunanjo stran. Discover Slovenia AI lahko prejeme provizijo."
+      title={t("tooltip")}
     >
       <svg
         className={iconSizes[size]}
@@ -162,7 +167,7 @@ export function AffiliateBadge({
         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
       </svg>
-      {size === "sm" ? "Partner" : AFFILIATE_LABELS[type]}
+      {size === "sm" ? t("badgeShort") : AFFILIATE_LABELS[type]}
     </span>
   );
 }

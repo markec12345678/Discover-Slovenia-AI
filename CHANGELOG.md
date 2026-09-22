@@ -7,6 +7,63 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.85.0] — 2026-09-24 (TASK 98: DVOJEZIČNA BOOKING PLOŠČA NAČRTOVALNIKA — I18N SL + EN)
+
+### Problem
+BookingPanel (glavna booking površina načrtovalnika — 4 zavihki: nastanitev,
+aktivnosti, hrana, transport; 9 affiliate partnerjev + lokalne kartice +
+prazna stanja) je bila **SL-hardcoded**, čeprav `/nacrtuj` živi tudi na
+`/en/nacrtuj` (EN whitelist) — EN uporabniki so videli slovenske naslove,
+zavihke, CTA-je, opise kartic in opis zavarovanja. Obstojni dolg iz TASK 97.
+
+### Dodano (produkcija)
+- **`planner.booking` imenski prostor (33 ključev, SL + EN)**: naslov, intro,
+  4 zavihki, CTA-ji vseh 9 partnerjev (Iskanje/Vstopnice/Najem/Transfer/eSIM/
+  Zavarovanje), opisi kartic z `{dest}` interpolacijo, opis zavarovanja z
+  `{days}` interpolacijo (»Potno zavarovanje za 3-dnevno potovanje« /
+  »Travel insurance for a 3-day trip«), oznake (Izpostavljeno/Preverjeno/
+  Lokalno → Featured/Verified/Local), cena izkušnje (»€{price}/osebo« →
+  »€{price}/person«), prazna stanja za vse 3 zavihke + stik partnerjev.
+- **Aktivirana mrtva koda**: kontakt-helperji (`getContactLink` idr.) so od
+  nekdaj računali `label` (»Spletna stran« / »Pošlji povpraševanje« /
+  »Pokliči«), ki **nikoli ni bil izrisan** (gumb je vedno kazal generični
+  »Obišči«). Zdaj helperji vračajo prevodne ključe (`labelKey`) in gumb kaže
+  **specifično akcijo stika** (Website / Send inquiry / Call) — bolj
+  informativno v obeh jezikih.
+- **AffiliateBadge dvojezičen** (`partner-badge.tsx`, uporabljen na panelu):
+  kratka oznaka »Partner« + tooltip prevedena (`affiliate.badgeShort` /
+  `affiliate.tooltip`, SL + EN); veliki badge (md/lg) ostane ime partnerja
+  (blagovna znamka, se ne prevaja).
+- **SL besedila so nespremenjena** (parity s prejšnjo hardcoded različico,
+  vključno TASK 97 semantiko »{days}-dnevno potovanje«) — SL uporabniki ne
+  vidijo razlike, EN uporabniki dobijo celotno površino v angleščini.
+
+### Testi (0 → 24 novih)
+`task98-booking-i18n.test.ts` (24 testov / 52 pričakovanj): pariteta ključev
+SL/EN (33/33 identično), ICU placeholderji enaki v obeh jezikih ({dest}×7,
+{days}, {price} — nikoli razpad enega jezika), vsebinski parity SL +
+smiselnost EN, source-contract (5× `useTranslations("planner.booking")`,
+0 hardcoded `cta="`/`description="`/`text="` propov, 0 slovenskih literalov v
+kodi, 0 diakritikov), kontakt-helperji vračajo ključe, drift guard (vsak
+`t()` ključ komponente obstaja v obeh jezikih — poznejša odstranitev ključa
+pade v testih, ne v produkciji), AffiliateBadge pogodba, EN whitelist
+utemeljitev. TASK 97 source-contract posodobljen za i18n refaktor (semantika
+kartic ohranjena).
+
+### E2E (agent-browser, obe lokalni)
+`/en/nacrtuj` — generiran 3-dnevni načrt: »Book this day« + intro, zavihki
+Stay/Activities/Dining/Transport, Booking.com »Search hotels and apartments
+in Bled«, Tiqets »Tickets for attractions and museums — skip the line«,
+World Nomads »Travel insurance for a 3-day trip« (dinamični days=3),
+href `/go/insurance?days=3` → 302 worldnomads.com, `/go/tickets?dest=Bled` →
+302 tiqets.com, angleška prazna stanja, 0 konzolnih napak. `/nacrtuj` (isti
+načrt prek localStorage): »Rezerviraj ta dan«, »Potno zavarovanje za 3-dnevno
+potovanje« (identično prejšnji različici), vsi CTA-ji SL, 0 napak. 0 px
+preliva. Dokaza: `docs/screenshots/task98-booking-en-transport.png` +
+`task98-booking-sl-transport.png` (VLM potrjena).
+
+---
+
 ## [1.84.0] — 2026-09-24 (TASK 97: AFFILIATE POKRITOST NAČRTOVALNIKA BREZ POVERILNIC — TIQETS + ZAVAROVANJE)
 
 ### Direktiva uporabnika
