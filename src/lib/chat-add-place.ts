@@ -2,6 +2,9 @@ import { DESTINATIONS } from "@/lib/slovenia-data";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import type { Itinerary, LocationVisit, PlannerInput } from "@/lib/types";
 import type { ChatPlace, PlaceCategory } from "@/lib/geo-intent";
+// 99-b: persistenca zadnjega načrta je zdaj DELJENA knjižnica (nekodaj
+// dupliciran pisec tukaj + v plannerju — isto telo, isti ključ, ista meja)
+import { persistItinerary } from "@/lib/itinerary-persist";
 
 // ============================================================================
 // DODAJ V NAČRT IZ KLEPETA (1.42.0)
@@ -29,11 +32,14 @@ export const CHAT_ADD_PLACE_EVENT = "chat:add-place";
 /** sessionStorage odložišče krajev, ko še ni načrta (vzorec heroQuery). */
 export const CHAT_STASH_KEY = "discoverslovenia_chat_places";
 
-/** localStorage ključ zadnjega načrta — ENAK kot v itinerary-planner.tsx
- *  (enkraten vir resnice, da planner in klepet bereta/pisala isto mesto). */
-export const LAST_ITINERARY_KEY = "discoverslovenia_last_itinerary";
-
-const MAX_PERSIST_CHARS = 250 * 1024; // 250 KB (ista meja kot planner)
+// 99-b: ključ + branje zadnjega načrta prihajata iz src/lib/itinerary-persist.ts
+// (enkraten vir resnice — planner in klepet bereta/piseta isto mesto). Izvoza
+// ohranjamo tukaj zaradi obstoječih uvoznikov (planner: LAST_ITINERARY_KEY;
+// klepet: readLastItinerary).
+export {
+  LAST_ITINERARY_KEY,
+  readLastItinerary,
+} from "@/lib/itinerary-persist";
 
 /** Tipična trajanja/cene po kategoriji — HEVRISTIKA, pošteno razkrita v
  *  notesih postanka (ocena, ne obljb — prava cena je v ponudbi gostilne). */
@@ -371,53 +377,19 @@ export function removeChatPlaceFromItinerary(
 }
 
 // ---------------------------------------------------------------------------
-// localStorage / sessionStorage vmesniki (isti vzorec kot planner)
+// localStorage / sessionStorage vmesniki (od 99-b delegirajo na deljene
+// knjižnice — itinerary-persist za zadnji načrt, spodaj sessionStorage)
 // ---------------------------------------------------------------------------
 
-interface PersistedItinerary {
-  itinerary: Itinerary;
-  formData?: PlannerInput;
-  savedAt?: string;
-}
-
-/** Prebere zadnji načrt iz localStorage (validiran, brez sesutja ob smeti). */
-export function readLastItinerary(): PersistedItinerary | null {
-  try {
-    const raw = localStorage.getItem(LAST_ITINERARY_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as PersistedItinerary | null;
-    if (
-      !parsed ||
-      !parsed.itinerary ||
-      !Array.isArray(parsed.itinerary.days) ||
-      parsed.itinerary.days.length === 0
-    ) {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-/** Zapiše zadnji načrt (ista oblika kot planner — savedAt ostane svež). */
+/** Zapiše zadnji načrt (ista oblika kot planner — savedAt ostane svež).
+ *  99-b: nekdaj duplicirana implementacija (lastni MAX_PERSIST_CHARS +
+ *  payload ročno), zdaj delegacija na src/lib/itinerary-persist.ts —
+ *  enaka semantika: meja 250 * 1024 znakov, defenzivno, brez throw. */
 export function persistLastItinerary(
   it: Itinerary,
   formData?: PlannerInput
 ): void {
-  try {
-    const payload: PersistedItinerary = {
-      itinerary: it,
-      formData,
-      savedAt: new Date().toISOString(),
-    };
-    const serialized = JSON.stringify(payload);
-    if (serialized.length < MAX_PERSIST_CHARS) {
-      localStorage.setItem(LAST_ITINERARY_KEY, serialized);
-    }
-  } catch {
-    // Poln/zasebni localStorage — mirno preskoči
-  }
+  persistItinerary(it, formData);
 }
 
 /** Odloži kraj, ko še ni načrta (sessionStorage — izgubi ob zaprtju zavihka). */

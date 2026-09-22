@@ -7,6 +7,91 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.86.0] — 2026-09-24 (TASK 99: BOOKING LIFECYCLE DOKONČANJE + MARKETPLACE PAYOUT/CUSTOMER STATE — issue #1 §2/§10)
+
+### Problem (revizija GitHub issue #1)
+1. **Booking lifecycle (§2)**: `ConfirmationStatus` je manjkal 4 zahtevane
+   statuse (`BOOKING_REQUESTED`, `REFUNDED`, `MODIFIED`, `EXPIRED`), državna
+   naprava prehodov je bila SPANJA (0 write poti — tabela `JourneyBooking`
+   nikoli zapisana, GET brez klicalnika), `confirmedCount`/`bookingId` v
+   MY TRIP sta bila hardcoded 0/null, checkout handoff (klik na /go) ni
+   pustil NOBENEGA lifecycle zapisa.
+2. **Marketplace (§10)**: payout state je manjkal popolnoma, customer state
+   je manjkal (gost ni imel poti za zahtevek preklica), `/trznica` prazno
+   stanje ni ločilo NO_LIVE_DATA od filtrirane praznine.
+3. **Iskrenostne vrzeli**: značka cene postanka je goli `€X` tudi za
+   FROM_PRICE postanke (KT transferji); vse ne-not_supported razpoložljivosti
+   so se izrisale kot "NEZNANA" (tudi future live); pravilo
+   `event_before_arrival` deklarirano a nikoli izsevano.
+
+### Dodano (produkcija)
+- **Polni lifecycle statusov (13)**: +`BOOKING_REQUESTED` (oddana zahteva),
+  `REFUNDED` (providerjevo vračilo), `MODIFIED` (sprememba potrjene
+  rezervacije pri ponudniku), `EXPIRED` (potekel zadržani inventar) —
+  z prehodi (REFUNDED iz PAID/CONFIRMED/CANCELLED; MODIFIED samo iz
+  provider-potrjenih; EXPIRED terminalen) in validatorjem (MODIFIED zahteva
+  providerBookingId + ceno; REFUNDED zahteva providerBookingId).
+- **Write pot `/api/journey/bookings`**: POST zapiše ISKRENE uporabniške
+  dogodke (SAMO `SELECTED`/`EXTERNAL`/`BOOKING_REQUESTED` — idempotentno,
+  rate-limit 30/min, provider whitelist); PATCH (provider-driven prehodi)
+  je **fail-closed za žetonom** `JOURNEY_PROVIDER_TOKEN` (brez njega 503 —
+  iskreno sporočilo; z njim polna državna naprava pripravljena za future
+  webhook integracije, 0 spremembe kode).
+- **Checkout handoff zapis**: klik na povezavo ponudnika v MY TRIP zunanjih
+  karticah zapiše EXTERNAL vrstico (fire-and-forget `keepalive`) — lifecycle
+  stanje "preusmerjen na ponudnika" je zdaj REALNO brez lažne rezervacije.
+- **MY TRIP prekrivka iz DEJANSKIH vrstic**: `JourneyTrip` prinese efemerne
+  vrstice (GET `?products=…&sessionKey=…`, obseg anonimne seje
+  `dsa_planner_sid` — stanje NE pušča med uporabniki) in prekrije
+  status/oznako/bookingId postavkam z zapisom; `confirmedCount` se šteje iz
+  vrstic (0 poverilnic → 0 — iskrenost ohranjena); opomba dokumenta se
+  preklopi pri >0 potrjenih + vrstica o zabeleženih preusmeritvah;
+  statusBadge razlikuje provider-potrjeno (smaragdno) / odpoved (rdeče) /
+  čakalna (rumeno) / pri ponudniku (vijolično).
+- **Marketplace payout state (§10)**: `Booking.payoutStatus`
+  (not_due → due → processing → paid | failed; privzeto **not_due** — demo/
+  unpaid NIKOLI ne zapade izplačilu) + `derivePayoutStatus()` fail-closed
+  izpeljava + dvojezične oznake; lastnik vidi `payoutDisplay` v seznamu.
+- **Marketplace customer state (§10)**: `Booking.customerStatus`
+  (none | cancellation_requested) + **gostova pot zahtevka preklica**
+  `POST /api/bookings/[bookingNumber]/cancel-request` (lastništvo po
+  e-pošti kot GET, idempotenten, pošteni 409 za cancelled/completed,
+  AuditLog) + gumb "Zahtevaj preklic" v Moja naročila + amber obvestilo;
+  lastnikov preklic obravnava zahtevek (customerStatus → none) in vidi
+  števec odprtih zahtevkov.
+- **NO_LIVE_DATA prazno stanje tržnice**: brez filtrov izrecno "Ni še živih
+  ponudb (NO_LIVE_DATA)" (nikoli "uspešna" prazna tržnica); z aktivnimi
+  filtri navaden "Ni zadetkov".
+- **Iskrenostni popravki (§4/§5/§12)**: značka cene postanka pokaže
+  "od €X" kadar kanonska opomba pravi "cena: od" (FROM_PRICE ni končna
+  cena); LIVE razpoložljivosti se izrisajo po svoji barvi
+  (live_available = smaragdno "LIVE · NA VOLJO", live_unavailable = rdeče
+  "LIVE · NI NA VOLJO", unknown = rumeno); pravilo `event_before_arrival`
+  se ZDAJ izseva v validation.issues (prej mrtva vrednost enuma).
+
+### Popravljeno
+- **§15 (napake)**: JSON error ovojnice na destinations poteh (503 namesto
+  surovega HTML); omrežna napaka klienta se NE pripisuje več OSM
+  (`client-network` vs `supply-unavailable`, prazn `degraded`); onError
+  fallback slike na 8 mestih tržnice (kartice + modalna okna).
+- **§18 (stanja)**: localStorage pisci konsolidirani — `LAST_ITINERARY_KEY`
+  (2 pisca → `@/lib/itinerary-persist`), `dai:my-orders` writeList
+  (komponenta → lib), `discoverslovenia_voter`/`comment_name` (5 kopij →
+  `@/lib/client-identity`); TS2352 v task98 testu (cast prek unknown).
+- Migracija `JourneyBooking`: +`sessionKey` stolpec (efemerni obseg seje)
+  + 4. indeks — idempotentni ALTER za obstoječe baze (startup pot).
+
+### Testi
+- NOVI: `task99-booking-lifecycle.test.ts` (31 testov / 156 pričakovanj —
+  statusi, prehodi, validator invariante, write pot source-contract, MY
+  TRIP prekrivka) + `task99-marketplace-lifecycle.test.ts` (20 testov /
+  64 pričakovanj — shema, izpeljava payouta fail-closed, cancel-request
+  pot, owner vidnost, NO_LIVE_DATA) + `task99a-error-handling.test.ts`
+  (24) + `task99b-state-consolidation.test.ts` (30).
+- POSODABLJENI: task81 migracijska pogodba (14 stolpcev/4 indeksi + ALTER).
+
+---
+
 ## [1.85.0] — 2026-09-24 (TASK 98: DVOJEZIČNA BOOKING PLOŠČA NAČRTOVALNIKA — I18N SL + EN)
 
 ### Problem

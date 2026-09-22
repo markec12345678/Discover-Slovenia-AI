@@ -181,3 +181,89 @@ export function formatPrice(value: number, currency = "EUR"): string {
     return `${value.toFixed(2)} €`;
   }
 }
+
+// ============================================================================
+// TASK 99 (issue #1 §10) — ŽIVLJENJSKI CIKLUS REZERVACIJE TRŽNICE:
+// payout state + customer state (tehnična struktura, fail-closed).
+// ============================================================================
+
+/** Payout state — izplačilo partnerju (Booking.payoutStatus).
+ *  "not_due" — plačilo še NI bilo prisvojeno (demo/unpaid = VEDNO not_due);
+ *  "due" — plačano in opravljeno, izplačilo zapade;
+ *  "processing" — izplačilo v teku; "paid" — izplačano; "failed" — spodletelo.
+ *  Zapisuje IZKLJUČNO izplačilna plast (cron/admin) — NIKOLI demo pot. */
+export type BookingPayoutStatus =
+  | "not_due"
+  | "due"
+  | "processing"
+  | "paid"
+  | "failed";
+
+export const BOOKING_PAYOUT_STATUSES: readonly BookingPayoutStatus[] = [
+  "not_due",
+  "due",
+  "processing",
+  "paid",
+  "failed",
+];
+
+/** Customer state — stanje gostove rezervacije (Booking.customerStatus).
+ *  "none" — brez odprtega zahtevka; "cancellation_requested" — gost je
+ *  zahteval preklic (zahtevek, NE preklic — izvede lastnik prek owner PATCH). */
+export type BookingCustomerStatus = "none" | "cancellation_requested";
+
+export const BOOKING_CUSTOMER_STATUSES: readonly BookingCustomerStatus[] = [
+  "none",
+  "cancellation_requested",
+];
+
+/** Dvojezične oznake payout stanja (iskrene: not_due NI "napaka"). */
+export const BOOKING_PAYOUT_LABELS: Record<
+  BookingPayoutStatus,
+  { sl: string; en: string }
+> = {
+  not_due: { sl: "Izplačilo še ne zapada", en: "Payout not due yet" },
+  due: { sl: "Za izplačilo", en: "Due for payout" },
+  processing: { sl: "Izplačilo v teku", en: "Payout processing" },
+  paid: { sl: "Izplačano", en: "Payout paid" },
+  failed: { sl: "Izplačilo spodletelo", en: "Payout failed" },
+};
+
+/** Dvojezične oznake customer stanja. */
+export const BOOKING_CUSTOMER_LABELS: Record<
+  BookingCustomerStatus,
+  { sl: string; en: string }
+> = {
+  none: { sl: "Brez zahtevka", en: "No request" },
+  cancellation_requested: {
+    sl: "Gost zahteva preklic",
+    en: "Guest requested cancellation",
+  },
+};
+
+/**
+ * ISKRENA izpeljava trenutnega payout stanja iz dejanskih polj rezervacije:
+ * brez prisvojenega plačila (paymentStatus ≠ "paid") izplačilo NIKOLI ne
+ * zapada — demo/unpaid rezervacije so trajno "not_due" (shranjeno stanje
+ * ostaja not_due; "due" bi nastavila izključno izplačilna plast, ko bo
+ * plačilo dejansko prisvojeno prek Stripe produkcijskega toka).
+ */
+export function derivePayoutStatus(booking: {
+  paymentStatus: string;
+  status: string;
+  payoutStatus: string;
+}): BookingPayoutStatus {
+  if (booking.payoutStatus === "paid") return "paid";
+  if (booking.payoutStatus === "processing") return "processing";
+  if (booking.payoutStatus === "failed") return "failed";
+  // Izplačilo zapade SAMO za DEJANSKO plačano in opravljeno rezervacijo —
+  // preklicana/refundirana plačila se vračajo kupcu, ne partnerju.
+  if (
+    booking.paymentStatus === "paid" &&
+    booking.status === "completed" &&
+    booking.payoutStatus === "due"
+  ) {
+    return "due";
+  }
+  return "not_due";
+}

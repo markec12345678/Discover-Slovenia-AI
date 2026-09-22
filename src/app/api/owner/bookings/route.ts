@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
+import { derivePayoutStatus } from "@/lib/marketplace-types";
 
 // ============================================================================
 // /api/owner/bookings — Booking manager za ponudnike (P0-3)
@@ -106,6 +107,12 @@ export async function GET(request: Request) {
         total: true,
         currency: true,
         status: true,
+        // TASK 99 (§10): customer state (gostov zahtevek) + payout state —
+        // izplačilno stanje se IZPELJE (derivePayoutStatus), shranjeno
+        // polje pa zapiše izključno izplačilna plast.
+        customerStatus: true,
+        paymentStatus: true,
+        payoutStatus: true,
         notes: true,
         meetingPoint: true,
         source: true,
@@ -114,7 +121,14 @@ export async function GET(request: Request) {
       },
     });
 
-    // Statistika po statusih + prihodki
+    // TASK 99 (§10) — iskrena izpeljava payout stanja za prikaz (shranjeno
+    // polje ostaja not_due dokler izplačilna plast ne zapiše drugače).
+    const bookingsWithDerived = bookings.map((b) => ({
+      ...b,
+      payoutDisplay: derivePayoutStatus(b),
+    }));
+
+    // Statistika po statusih + prihodki + TASK 99 odprti gostovi zahtevki
     const now = new Date();
     const stats = {
       total: bookings.length,
@@ -122,6 +136,10 @@ export async function GET(request: Request) {
       confirmed: bookings.filter((b) => b.status === "confirmed").length,
       completed: bookings.filter((b) => b.status === "completed").length,
       cancelled: bookings.filter((b) => b.status === "cancelled").length,
+      // TASK 99 — odprti zahtevki gostov za preklic (customer state)
+      cancellationRequested: bookings.filter(
+        (b) => b.customerStatus === "cancellation_requested"
+      ).length,
       // prihodki: potrjene + zaključene, prihodnje rezervacije
       upcomingRevenue: bookings
         .filter(
@@ -134,7 +152,7 @@ export async function GET(request: Request) {
       fromConsultation: bookings.filter((b) => b.source === "consultation").length,
     };
 
-    return NextResponse.json({ bookings, stats });
+    return NextResponse.json({ bookings: bookingsWithDerived, stats });
   } catch (error) {
     console.error("[api/owner/bookings] GET napaka:", error);
     return NextResponse.json(
@@ -236,12 +254,15 @@ export async function PATCH(request: Request) {
     // zapisa; sočasen cancel+complete = last-write-wins (completed→cancelled
     // bi uničil provizijsko osnovo). Zdaj: POGOJNI update (WHERE status =
     // prebrani status) — če se je status medtem spremenil, 409 brez učinka.
+    // TASK 99 (§10): ob lastnikovem preklicu se gostov zahtevek za preklic
+    // obravnavá (customerStatus → "none" — zahtevek izveden, ne izgubljen).
     const updated = await db.booking.updateMany({
       where: { id: booking.id, status: booking.status },
       data: {
         status: newStatus,
         confirmedAt:
           newStatus === "confirmed" ? new Date() : booking.confirmedAt,
+        ...(action === "cancel" ? { customerStatus: "none" } : {}),
       },
     });
     if (updated.count === 0) {

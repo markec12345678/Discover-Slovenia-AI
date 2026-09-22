@@ -11,11 +11,17 @@
 -- EXISTS, ista pot kot F11/F12) — te SQL datoteke NE aplicira noben
 -- avtomatski deploy korak; je zgodovinsko-vrstična resnica za
 -- `prisma migrate deploy` in CI drift vrata.
+--
+-- TASK 99 (issue #1 §2): dodan stolpec "sessionKey" (efemerni obseg seje
+-- za MY TRIP prekrivko — vrstice brez shareId ne puščajo med uporabniki)
+-- + 4. indeks. Obstoječe baze dobijo stolpec z idempotentnim ALTER prek
+-- startup migracije (ADD COLUMN IF NOT EXISTS / narečno-varno).
 
 -- CreateTable
 CREATE TABLE "JourneyBooking" (
     "id" TEXT NOT NULL,
     "shareId" TEXT,
+    "sessionKey" TEXT,
     "provider" TEXT NOT NULL,
     "providerProductId" TEXT NOT NULL,
     "status" TEXT NOT NULL,
@@ -32,5 +38,6 @@ CREATE TABLE "JourneyBooking" (
 
 -- CreateIndex
 CREATE INDEX "JourneyBooking_shareId_idx" ON "JourneyBooking"("shareId");
+CREATE INDEX "JourneyBooking_sessionKey_idx" ON "JourneyBooking"("sessionKey");
 CREATE INDEX "JourneyBooking_provider_providerProductId_idx" ON "JourneyBooking"("provider", "providerProductId");
 CREATE INDEX "JourneyBooking_status_idx" ON "JourneyBooking"("status");

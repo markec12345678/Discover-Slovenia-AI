@@ -13,6 +13,7 @@ import {
   Info,
   AlertCircle,
   Users,
+  Ban,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,9 +31,14 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 // FW2-B lib — defensiven localStorage dostop do številk (ključi
 // "dai:my-orders" / "dai:my-bookings", array nizov, najnovejše najprej).
+// 99-b: writeList (odstrani/izprazni) + oba ključa prihajata IZ LIB-a
+// (nekdaj duplicirani tukaj z lastnim LIST_CAP).
 import {
   getOrderNumbers,
   getBookingNumbers,
+  writeList,
+  ORDERS_KEY,
+  BOOKINGS_KEY,
 } from "@/lib/my-orders-storage";
 
 // ============================================================================
@@ -66,11 +72,9 @@ const MY_EMAIL_KEY = "dai:my-email";
 /** Lookup API-ja dovolita 20 zahtev / 10 min — toliko jih tudi naložimo. */
 const FETCH_CAP = 20;
 
-/** Omejitev seznama v localStorage (enako kot FW2-B lib). */
-const LIST_CAP = 50;
-
-const ORDERS_KEY = "dai:my-orders";
-const BOOKINGS_KEY = "dai:my-bookings";
+// Seznama številk (ORDERS_KEY/BOOKINGS_KEY) in pisanje celih seznamov
+// (writeList) prihajata iz FW2-B lib — 99-b: enkraten vir, brez lokalne
+// replikacije kap/ključev.
 
 // --- Odgovori API-jev (podmnožice, ki jih prikažemo) ----------------------
 
@@ -91,6 +95,8 @@ interface BookingData {
   total: number;
   currency: string;
   groupSize: number;
+  /** TASK 99 (§10) — gostov zahtevek preklica (customer state). */
+  customerStatus?: string;
 }
 
 /** Vrstica seznama: ok | missing (404) | failed (omrežje/429) | needsEmail. */
@@ -186,27 +192,6 @@ export function rememberCheckoutEmail(email: string): void {
     }
   } catch {
     // Preskoči — prikaz zgodovine je "nice to have", ne kritičen tok
-  }
-}
-
-/**
- * Lokalno pisanje v FW2-B ključa (odstrani/izprazni) — lib izvaža samo
- * add/get, zato tukaj repliciramo IDENTIČNO semantiko zapisa: JSON array
- * čistih nizov, najnovejše najprej, cap 50, defenzivno.
- */
-function writeList(key: string, numbers: string[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    if (numbers.length === 0) {
-      window.localStorage.removeItem(key);
-    } else {
-      window.localStorage.setItem(
-        key,
-        JSON.stringify(numbers.slice(0, LIST_CAP))
-      );
-    }
-  } catch {
-    // Poln localStorage — sprememba lokacije mirno odpade
   }
 }
 
@@ -542,6 +527,7 @@ export function MyOrdersSection({ defaultEmail = "" }: MyOrdersSectionProps) {
                     <li key={entry.number}>
                       <BookingCard
                         entry={entry}
+                        email={email.trim().toLowerCase()}
                         onRemove={() => handleRemove("bookings", entry.number)}
                       />
                     </li>
@@ -657,11 +643,51 @@ function OrderCard({
 
 function BookingCard({
   entry,
+  email,
   onRemove,
 }: {
   entry: ListEntry<BookingData>;
+  /** TASK 99 — za zahtevek preklica (lastništvo po e-pošti). */
+  email: string;
   onRemove: () => void;
 }) {
+  // TASK 99 (§10) — gostov zahtevek preklica: lokalno stanje + POST.
+  const [cancelMsg, setCancelMsg] = useState<string | null>(null);
+  const [cancelErr, setCancelErr] = useState<string | null>(null);
+  const [requesting, setRequesting] = useState(false);
+
+  const requestCancellation = async () => {
+    if (!entry.data || requesting) return;
+    setRequesting(true);
+    setCancelErr(null);
+    try {
+      const res = await fetch(
+        `/api/bookings/${encodeURIComponent(entry.number)}/cancel-request`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        }
+      );
+      const data = (await res.json()) as {
+        success?: boolean;
+        message?: string;
+        error?: string;
+      };
+      if (res.ok && data.success) {
+        setCancelMsg(data.message ?? "Zahtevek za preklic je zabeležen.");
+        // Lokalna posodobitev stanja (brez ponovnega iskanja)
+        entry.data.customerStatus = "cancellation_requested";
+      } else {
+        setCancelErr(data.error ?? "Zahtevek ni uspel — poskusite znova.");
+      }
+    } catch {
+      setCancelErr("Omrežna napaka — poskusite znova.");
+    } finally {
+      setRequesting(false);
+    }
+  };
+
   if (entry.status !== "ok" || !entry.data) {
     return (
       <Card className="border-dashed">
@@ -724,6 +750,49 @@ function BookingCard({
         <p className="mt-1 font-mono text-xs text-muted-foreground">
           {b.bookingNumber}
         </p>
+        {/* TASK 99 (§10) — customer state: gostov zahtevek preklica
+            (iskreno: zahtevek, NE preklic — izvede ponudnik). */}
+        {(b.status === "pending" || b.status === "confirmed") &&
+          b.customerStatus === "cancellation_requested" && (
+            <p className="mt-2 flex items-start gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+              <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              Zahtevek za preklic je zabeležen — ponudnik ga bo obravnaval.
+            </p>
+          )}
+        {(b.status === "pending" || b.status === "confirmed") &&
+          b.customerStatus !== "cancellation_requested" && (
+            <div className="mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={requestCancellation}
+                disabled={requesting || !email}
+                title={
+                  email
+                    ? "Pošlje zahtevek za preklic ponudniku (preklic potrdi on)"
+                    : "Najprej potrdite e-pošto zgoraj"
+                }
+              >
+                {requesting ? (
+                  <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Ban className="size-3.5" aria-hidden="true" />
+                )}
+                Zahtevaj preklic
+              </Button>
+            </div>
+          )}
+        {cancelMsg && (
+          <p role="status" className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">
+            {cancelMsg}
+          </p>
+        )}
+        {cancelErr && (
+          <p role="alert" className="mt-2 text-xs text-destructive">
+            {cancelErr}
+          </p>
+        )}
       </CardContent>
     </Card>
   );

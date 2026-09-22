@@ -93,6 +93,14 @@ const L = {
     priceUnknown: { sl: "CENA NEZNANA", en: "PRICE UNKNOWN" },
     livePrice: { sl: "CENA VIRA", en: "SOURCE PRICE" },
     availabilityUnknown: { sl: "RAZPOLOŽLJIVOST NEZNANA", en: "AVAILABILITY UNKNOWN" },
+    // TASK 99 (issue #1 §5): LIVE stanja se prikažejo PO NJIHOVI barvi —
+    // „live_available" NI „unknown" (prej so se vsa ne-not_supported stanja
+    // izrisala kot neznana — latentna napačna oznaka).
+    availabilityLive: { sl: "LIVE · NA VOLJO", en: "LIVE · AVAILABLE" },
+    availabilityUnavailable: {
+      sl: "LIVE · NI NA VOLJO",
+      en: "LIVE · UNAVAILABLE",
+    },
     bookableExternal: { sl: "REZERVACIJA PRI PONUDNIKU", en: "BOOKABLE · EXTERNAL" },
     infoOnly: { sl: "SAMO INFORMACIJA", en: "INFO ONLY" },
     affiliateOnly: { sl: "SAMO POVEZAVA PARTNERJA", en: "AFFILIATE ONLY" },
@@ -572,7 +580,21 @@ export function JourneyPlanner() {
                             <div className="flex flex-wrap gap-1.5">
                               {priceBadge(p, lang)}
                               {p.availability &&
-                                p.availability.status !== "not_supported" && (
+                                p.availability.status ===
+                                  "live_available" && (
+                                  <Badge className="border-emerald-300 bg-emerald-100 text-emerald-900 hover:bg-emerald-100">
+                                    {L.badge.availabilityLive[lang]}
+                                  </Badge>
+                                )}
+                              {p.availability &&
+                                p.availability.status ===
+                                  "live_unavailable" && (
+                                  <Badge className="border-red-300 bg-red-100 text-red-900 hover:bg-red-100">
+                                    {L.badge.availabilityUnavailable[lang]}
+                                  </Badge>
+                                )}
+                              {p.availability &&
+                                p.availability.status === "unknown" && (
                                   <Badge variant="outline">
                                     {L.badge.availabilityUnknown[lang]}
                                   </Badge>

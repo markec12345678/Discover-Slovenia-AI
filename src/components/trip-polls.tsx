@@ -16,6 +16,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+// 99-b: anonimni clientId + prihranjeno ime — deljena knjižnica
+// (enkraten vir ključev; prej duplicirana v 4 socialnih komponentah)
+import {
+  getVoterId,
+  getAuthorName,
+  saveAuthorName,
+} from "@/lib/client-identity";
 
 // ============================================================================
 // TRIP POLLS — skupinske ankete na javni strani deljenega tripa (F11)
@@ -32,13 +39,10 @@ import { cn } from "@/lib/utils";
 // Optimistični UI z revertom ob napaki (isti vzorec kot trip-social).
 // ============================================================================
 
-// ENAK ključ kot VOTER_STORAGE_KEY (shared-trip) / CLIENT_ID_STORAGE_KEY
-// (trip-social): isti brskalnik = isti anonimni obiskovalec povsod.
-const CLIENT_ID_STORAGE_KEY = "discoverslovenia_voter";
-// Prihranjeno ime avtorja — skupno s komentarji (trip-social)
-const AUTHOR_NAME_STORAGE_KEY = "discoverslovenia_comment_name";
+// Anonimni clientId + prihranjeno ime avtorja prihajata iz deljene
+// knjižnice src/lib/client-identity.ts (99-b — enkraten vir: isti
+// brskalnik = isti anonimni obiskovalec povsod).
 
-const CLIENT_ID_RE = /^[a-zA-Z0-9_-]{8,64}$/;
 const QUESTION_MAX = 200;
 const OPTION_MAX = 80;
 const OPTIONS_MIN = 2;
@@ -179,24 +183,19 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
     setMounted(true);
     if (!shareId) return;
     try {
-      let cid = window.localStorage.getItem(CLIENT_ID_STORAGE_KEY);
-      if (!cid || !CLIENT_ID_RE.test(cid)) {
-        cid =
-          typeof crypto !== "undefined" &&
-          typeof crypto.randomUUID === "function"
-            ? crypto.randomUUID()
-            : `v-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
-        window.localStorage.setItem(CLIENT_ID_STORAGE_KEY, cid);
+      // 99-b: read-or-create anonimni ID (private mode → null → stanje
+      // ostane nedotaknjeno, ankete ostanejo berljive)
+      const cid = getVoterId();
+      if (cid) {
+        setClientId(cid);
+
+        // Prihranjeno ime (skupno s komentarji)
+        const savedName = getAuthorName() ?? "";
+        if (savedName) setAuthorName(savedName);
+
+        // Dopolni myVote/isAuthor (server-side podatki jih ne poznajo)
+        void refreshPolls(cid);
       }
-      setClientId(cid);
-
-      // Prihranjeno ime (skupno s komentarji)
-      const savedName =
-        window.localStorage.getItem(AUTHOR_NAME_STORAGE_KEY) ?? "";
-      if (savedName) setAuthorName(savedName);
-
-      // Dopolni myVote/isAuthor (server-side podatki jih ne poznajo)
-      void refreshPolls(cid);
     } catch {
       // private mode — ankete ostanejo berljive, brez mojega glasu
     }
@@ -267,15 +266,9 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
         setOptions(["", ""]);
         setFormOpen(false);
 
-        // Prihrani ime (skupno s komentarji)
-        try {
-          window.localStorage.setItem(
-            AUTHOR_NAME_STORAGE_KEY,
-            authorName.trim()
-          );
-        } catch {
-          // private mode — ignore
-        }
+        // Prihrani ime (skupno s komentarji; defenzivno — private mode
+        // se mirno preskoči znotraj lib-a)
+        saveAuthorName(authorName.trim());
 
         toast({
           title: "Anketa je ustvarjena",

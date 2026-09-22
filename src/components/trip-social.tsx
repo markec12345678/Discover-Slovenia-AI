@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+// 99-b: anonimni clientId + prihranjeno ime — deljena knjižnica
+// (enkraten vir ključev; prej duplicirana v 4 socialnih komponentah)
+import {
+  getVoterId,
+  getAuthorName,
+  saveAuthorName,
+} from "@/lib/client-identity";
 
 // ============================================================================
 // TRIP SOCIAL — všečki (srčki) + komentarji na javni strani deljenega tripa
@@ -21,21 +28,15 @@ import { cn } from "@/lib/utils";
 //    z revertom ob napaki (isti vzorec kot glasovanje v shared-trip.tsx)
 //  - KOMENTARJI: obrazec + seznam → POST/GET /api/trip-comments
 //
-// clientId je ENAK anonimni identifikator kot pri glasovanju (VOTER_STORAGE_KEY
-// v shared-trip.tsx — "discoverslovenia_voter"): isti brskalnik = isti
+// clientId je ENAK anonimni identifikator kot pri glasovanju (getVoterId
+// iz src/lib/client-identity.ts — enkraten vir): isti brskalnik = isti
 // obiskovalec za glasove in všečke.
 // ============================================================================
 
-// localStorage ključi — ENAK ključ kot VOTER_STORAGE_KEY v shared-trip.tsx,
-// da ima isti obiskovalec isti anonimni ID za glasovanje IN všečke.
-const CLIENT_ID_STORAGE_KEY = "discoverslovenia_voter";
+// Ključ všečka je LASTNOST te komponente (ločen seznam na deljeni pot);
+// anonimni ID in ime avtorja prihajata iz client-identity lib-a.
 const likeStorageKey = (shareId: string) =>
   `discoverslovenia_like_${shareId}`;
-// Priročnost: ime avtorja si zapomnimo za naslednji komentar
-const AUTHOR_NAME_STORAGE_KEY = "discoverslovenia_comment_name";
-
-/** Veljaven clientId (enak vzorec kot API). */
-const CLIENT_ID_RE = /^[a-zA-Z0-9_-]{8,64}$/;
 
 const AUTHOR_NAME_MAX = 60;
 const COMMENT_TEXT_MAX = 500;
@@ -183,20 +184,14 @@ export function TripSocial({
     setMounted(true);
     if (!shareId) return;
     try {
-      let cid = window.localStorage.getItem(CLIENT_ID_STORAGE_KEY);
-      if (!cid || !CLIENT_ID_RE.test(cid)) {
-        cid =
-          typeof crypto !== "undefined" &&
-          typeof crypto.randomUUID === "function"
-            ? crypto.randomUUID()
-            : `v-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
-        window.localStorage.setItem(CLIENT_ID_STORAGE_KEY, cid);
-      }
-      setClientId(cid);
+      // 99-b: read-or-create anonimni ID (private mode → null, stanje
+      // ostane nedotaknjeno — isto kot prejšnji try/catch vzorec)
+      const cid = getVoterId();
+      if (cid) setClientId(cid);
 
       setLiked(window.localStorage.getItem(likeStorageKey(shareId)) === "1");
 
-      const savedName = window.localStorage.getItem(AUTHOR_NAME_STORAGE_KEY);
+      const savedName = getAuthorName();
       if (savedName && savedName.trim()) setAuthorName(savedName.trim());
     } catch {
       // localStorage nedostopen (private mode) — všečki/komentarji delujejo
@@ -312,12 +307,9 @@ export function TripSocial({
         ]);
         setText("");
 
-        // Prihrani ime za naslednji komentar
-        try {
-          window.localStorage.setItem(AUTHOR_NAME_STORAGE_KEY, name);
-        } catch {
-          // private mode — ignore
-        }
+        // Prihrani ime za naslednji komentar (defenzivno — private mode
+        // se mirno preskoči znotraj lib-a)
+        saveAuthorName(name);
 
         toast({
           title: "Komentar je objavljen",

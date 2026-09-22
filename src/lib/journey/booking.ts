@@ -90,22 +90,88 @@ export function bookingCapabilityOf(
 /**
  * Ali je status zaključno-potrjen (izključno iz providerjevega odgovora)?
  * EXTERNAL pomeni: rezervacija/potrditev obstaja PRI PONUDNIKU, ne pri nas —
- * NIKOLI se ne sme preslikati v CONFIRMED.
+ * NIKOLI se ne sme preslikati v CONFIRMED. TASK 99: MODIFIED (spremenjena
+ * POTRJENA rezervacija) je prav tako provider-potrjen dogodek.
  */
 export function isProviderConfirmed(status: ConfirmationStatus): boolean {
-  return status === "CONFIRMED" || status === "PAID";
+  return status === "CONFIRMED" || status === "PAID" || status === "MODIFIED";
 }
 
-/** Veljavni prehodi statusov (drži EXTERNAL ≠ CONFIRMED). */
+/**
+ * TASK 99 (issue #1 §2) — dvojezične oznake statusov potrditve za UI
+ * (iskrene: npr. REFUNDED samo iz providerjevega odgovora, EXTERNAL vedno
+ * „pri ponudniku"). Uporabljajo se v My Trip prekrivki iz JourneyBooking.
+ */
+export const CONFIRMATION_STATUS_LABELS: Record<
+  ConfirmationStatus,
+  { sl: string; en: string }
+> = {
+  SELECTED: { sl: "Izbrano", en: "Selected" },
+  BOOKING_REQUESTED: {
+    sl: "Zahteva za rezervacijo oddana",
+    en: "Booking request submitted",
+  },
+  PENDING: { sl: "Čaka na ponudnika", en: "Awaiting provider" },
+  PAYMENT_REQUIRED: {
+    sl: "Zahtevano plačilo",
+    en: "Payment required",
+  },
+  PAID: { sl: "Plačano (čaka potrditev)", en: "Paid (awaiting confirmation)" },
+  CONFIRMED: { sl: "Potrjeno pri ponudniku", en: "Confirmed by provider" },
+  MODIFIED: {
+    sl: "Spremenjeno pri ponudniku",
+    en: "Modified at the provider",
+  },
+  REFUNDED: { sl: "Vračilo izvršeno", en: "Refunded" },
+  EXPIRED: { sl: "Poteklo", en: "Expired" },
+  FAILED: { sl: "Spodletelo", en: "Failed" },
+  CANCELLED: { sl: "Preklicano", en: "Cancelled" },
+  UNKNOWN: { sl: "Stanje neznano", en: "Status unknown" },
+  EXTERNAL: {
+    sl: "Zunanja rezervacija — pri ponudniku",
+    en: "External booking — at the provider",
+  },
+};
+
+/** Veljavni prehodi statusov (drži EXTERNAL ≠ CONFIRMED). TASK 99 (§2):
+ * dopolnjen BOOKING_REQUESTED / MODIFIED / REFUNDED / EXPIRED poti —
+ * REFUNDED iz PAID/CONFIRMED/CANCELLED (vračilo je providerjev dogodek,
+ * ne naša odločitev), MODIFIED samo iz provider-potrjenih stanj,
+ * EXPIRED iz ne-zaključenih čakalnih stanj (terminalen). */
 const ALLOWED_TRANSITIONS: Record<ConfirmationStatus, ConfirmationStatus[]> = {
-  SELECTED: ["PENDING", "PAYMENT_REQUIRED", "CANCELLED", "FAILED"],
-  PENDING: ["PAYMENT_REQUIRED", "CONFIRMED", "FAILED", "CANCELLED", "UNKNOWN"],
-  PAYMENT_REQUIRED: ["PAID", "FAILED", "CANCELLED"],
-  PAID: ["CONFIRMED", "CANCELLED"], // paid ≠ confirmed (vračilo možno)
-  CONFIRMED: ["CANCELLED"],
+  SELECTED: [
+    "BOOKING_REQUESTED",
+    "PENDING",
+    "PAYMENT_REQUIRED",
+    "CANCELLED",
+    "FAILED",
+  ],
+  BOOKING_REQUESTED: [
+    "PENDING",
+    "PAYMENT_REQUIRED",
+    "CONFIRMED",
+    "FAILED",
+    "CANCELLED",
+    "EXPIRED",
+    "UNKNOWN",
+  ],
+  PENDING: [
+    "PAYMENT_REQUIRED",
+    "CONFIRMED",
+    "FAILED",
+    "CANCELLED",
+    "EXPIRED",
+    "UNKNOWN",
+  ],
+  PAYMENT_REQUIRED: ["PAID", "FAILED", "CANCELLED", "EXPIRED"],
+  PAID: ["CONFIRMED", "MODIFIED", "REFUNDED", "CANCELLED"], // paid ≠ confirmed (vračilo možno)
+  CONFIRMED: ["MODIFIED", "REFUNDED", "CANCELLED"],
+  MODIFIED: ["CANCELLED", "REFUNDED", "UNKNOWN"],
+  REFUNDED: [], // vračilo izvršeno — terminalno
+  EXPIRED: [], // zadržani inventar/zahteva je potekla — terminalno
   FAILED: [],
-  CANCELLED: [],
-  UNKNOWN: ["PENDING", "FAILED", "CANCELLED"],
+  CANCELLED: ["REFUNDED"], // preklic s kasnejšim vračilom (providerjev dogodek)
+  UNKNOWN: ["PENDING", "FAILED", "CANCELLED", "EXPIRED"],
   // EXTERNAL je ABSORPTIVNO stanje: potrditev živi pri ponudniku — nikoli
   // ne postane naša CONFIRMED (le ponudnik sam lahko izda svojo potrditev,
   // in to prek svojega kanala, ne prek našega prehoda).
@@ -151,13 +217,25 @@ export function validateConfirmationRecord(
       return {
         ok: false,
         reason:
-          "CONFIRMED/PAID zahteva providerBookingId iz providerjevega odgovora (sicer je trditev, ne potrditev)",
+          "CONFIRMED/PAID/MODIFIED zahteva providerBookingId iz providerjevega odgovora (sicer je trditev, ne potrditev)",
       };
     }
     if (rec.confirmedPrice == null) {
       return {
         ok: false,
-        reason: "CONFIRMED/PAID zahteva potrjeno ceno iz providerjevega odgovora",
+        reason: "CONFIRMED/PAID/MODIFIED zahteva potrjeno ceno iz providerjevega odgovora",
+      };
+    }
+  }
+  // TASK 99 (§2): REFUNDED se nanaša na DEJANSKO providerjevo rezervacijo —
+  // zahtevamo providerBookingId (znesek vračila je lahko drugačen od
+  // prvotne cene, zato confirmedPrice ni obvezen).
+  if (rec.status === "REFUNDED") {
+    if (!rec.providerBookingId || rec.providerBookingId.trim() === "") {
+      return {
+        ok: false,
+        reason:
+          "REFUNDED zahteva providerBookingId (vračilo se nanaša na dejansko rezervacijo)",
       };
     }
   }

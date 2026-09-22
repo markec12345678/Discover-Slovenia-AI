@@ -46,6 +46,9 @@ import {
 import { narrationStopsFromDay } from "@/lib/itinerary-audio";
 import type { Itinerary, ItineraryEvent, LocationVisit } from "@/lib/types";
 import { cn } from "@/lib/utils";
+// 99-b: anonimni voterId — deljena knjižnica (enkraten vir ključa;
+// prej dupliciran v shared-trip/trip-social/trip-diary/trip-polls)
+import { getVoterId } from "@/lib/client-identity";
 
 // Client-only load Leaflet zemljevida (enak vzorec kot map-section.tsx)
 const MapView = dynamic(
@@ -79,8 +82,8 @@ const MapView = dynamic(
 //    (CTA, deljenje, glasovanje in zemljevid se NE natisnejo)
 // ============================================================================
 
-// localStorage ključi za glasovanje skupine
-const VOTER_STORAGE_KEY = "discoverslovenia_voter";
+// localStorage ključ oddanih glasov (voterId prihaja iz client-identity lib-a;
+// ta ključ je lastnost glasovanja v tej komponenti)
 const votesStorageKey = (shareId: string) =>
   `discoverslovenia_votes_${shareId}`;
 
@@ -153,16 +156,10 @@ export function SharedTrip({
   useEffect(() => {
     if (!shareId) return;
     try {
-      let vid = window.localStorage.getItem(VOTER_STORAGE_KEY);
-      if (!vid) {
-        vid =
-          typeof crypto !== "undefined" &&
-          typeof crypto.randomUUID === "function"
-            ? crypto.randomUUID()
-            : `v-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
-        window.localStorage.setItem(VOTER_STORAGE_KEY, vid);
-      }
-      setVoterId(vid);
+      // 99-b: read-or-create anonimni ID (private mode → null → stanje
+      // ostane nedotaknjeno, glasovanje dela brez persistenze)
+      const vid = getVoterId();
+      if (vid) setVoterId(vid);
 
       const raw = window.localStorage.getItem(votesStorageKey(shareId));
       if (raw) {

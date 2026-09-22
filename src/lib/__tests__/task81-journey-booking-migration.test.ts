@@ -85,11 +85,14 @@ describe("journey-booking-migration (unit)", () => {
     expect(create).toContain("TIMESTAMP(3)");
     expect(create).toContain('CONSTRAINT "JourneyBooking_pkey" PRIMARY KEY ("id")');
     expect(create).toContain("DOUBLE PRECISION");
+    // TASK 99: efemerni obseg seje je del CREATE (nove baze)
+    expect(create).toContain('"sessionKey" TEXT');
 
     const idx = calls.exec.filter((s) => s.startsWith("CREATE INDEX"));
-    expect(idx).toHaveLength(3);
+    expect(idx).toHaveLength(4);
     expect(idx.map((s) => s.match(/"JourneyBooking_[a-zA-Z_]+_idx"/)![0]).sort()).toEqual([
       '"JourneyBooking_provider_providerProductId_idx"',
+      '"JourneyBooking_sessionKey_idx"',
       '"JourneyBooking_shareId_idx"',
       '"JourneyBooking_status_idx"',
     ]);
@@ -105,8 +108,13 @@ describe("journey-booking-migration (unit)", () => {
     expect(r.dialect).toBe("postgres");
     expect(r.tablesCreated).toEqual([]);
     expect(calls.exec.filter((s) => s.includes("CREATE TABLE"))).toHaveLength(0);
-    // indeksi vseeno tečejo (IF NOT EXISTS — poceni in varni)
-    expect(calls.exec.filter((s) => s.startsWith("CREATE INDEX"))).toHaveLength(3);
+    // TASK 99: obstoječa tabela dobi idempotentni ALTER ADD COLUMN sessionKey
+    expect(
+      calls.exec.find((s) =>
+        s.includes('ALTER TABLE "JourneyBooking" ADD COLUMN IF NOT EXISTS "sessionKey"'))
+    ).toBeTruthy();
+    // indeksi vseeno tečejo (IF NOT EXISTS — poceni in varni; TASK 99: 4)
+    expect(calls.exec.filter((s) => s.startsWith("CREATE INDEX"))).toHaveLength(4);
   });
 
   test("sqlite, tabela manjka → sqlite DDL (DATETIME, inline PRIMARY KEY)", async () => {
@@ -149,24 +157,25 @@ describe("journey-booking-migration (source-contract)", () => {
 
   test("migracijska SQL vsebuje tabelo JourneyBooking z vsemi stolpci modela", () => {
     expect(sql).toContain('CREATE TABLE "JourneyBooking"');
-    // stolpci iz modela (vrstni red po shemi)
+    // stolpci iz modela (vrstni red po shemi) — TASK 99: +sessionKey (14)
     const model = schema.match(/model JourneyBooking \{([\s\S]*?)\n\}/)![1];
     const cols = [...model.matchAll(/^\s+([a-zA-Z]+)\s+/gm)].map((m) => m[1]);
-    expect(cols.length).toBe(13);
+    expect(cols.length).toBe(14);
     for (const c of cols) {
       expect(sql).toContain(`"${c}"`);
     }
   });
 
-  test("migracijska SQL vsebuje vse 3 indekse iz modela", () => {
+  test("migracijska SQL vsebuje vse 4 indekse iz modela", () => {
     expect(sql).toContain('CREATE INDEX "JourneyBooking_shareId_idx" ON "JourneyBooking"("shareId")');
+    expect(sql).toContain('CREATE INDEX "JourneyBooking_sessionKey_idx" ON "JourneyBooking"("sessionKey")');
     expect(sql).toContain(
       'CREATE INDEX "JourneyBooking_provider_providerProductId_idx" ON "JourneyBooking"("provider", "providerProductId")'
     );
     expect(sql).toContain('CREATE INDEX "JourneyBooking_status_idx" ON "JourneyBooking"("status")');
-    // indeksi v modelu (@@index) morajo biti natanko 3
+    // indeksi v modelu (@@index) morajo biti natanko 4 (TASK 99: +sessionKey)
     const idxCount = [...model_indexMatches(schema)].length;
-    expect(idxCount).toBe(3);
+    expect(idxCount).toBe(4);
   });
 
   function* model_indexMatches(s: string) {
@@ -177,16 +186,18 @@ describe("journey-booking-migration (source-contract)", () => {
   test("startup migracija (lib) uporablja ISTA imena stolpcev kot SQL migracija", () => {
     // vsak stolpec iz migracijske SQL mora živeti tudi v lib DDL (postgres veja)
     for (const col of [
-      "id", "shareId", "provider", "providerProductId", "status",
+      "id", "shareId", "sessionKey", "provider", "providerProductId", "status",
       "providerBookingId", "confirmedPrice", "currency", "confirmationUrl",
       "cancellationUrl", "providerPayload", "createdAt", "updatedAt",
     ]) {
       expect(libSrc).toContain(`"${col}"`);
     }
-    // ista 3 imena indeksov
+    // ista 4 imena indeksov + idempotentni ALTER za obstoječe baze (TASK 99)
     expect(libSrc).toContain('"JourneyBooking_shareId_idx"');
+    expect(libSrc).toContain('"JourneyBooking_sessionKey_idx"');
     expect(libSrc).toContain('"JourneyBooking_provider_providerProductId_idx"');
     expect(libSrc).toContain('"JourneyBooking_status_idx"');
+    expect(libSrc).toContain('ADD COLUMN "sessionKey" TEXT');
   });
 
   test("instrumentation.ts registrira startup korak schema:journey-booking", () => {

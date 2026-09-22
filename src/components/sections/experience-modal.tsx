@@ -271,6 +271,9 @@ export function ExperienceModal({
                 alt={`${experience.name} — slika ${activeImage + 1}`}
                 className="size-full object-cover"
                 loading="lazy"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
               />
             ) : (
               <div className="flex size-full items-center justify-center text-5xl">
@@ -374,6 +377,9 @@ export function ExperienceModal({
                     alt=""
                     className="size-full object-cover"
                     loading="lazy"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
                   />
                 </button>
               ))}
@@ -1440,6 +1446,9 @@ function RecommendationsSection({
                     alt={e.name}
                     className="size-full object-cover transition-transform group-hover:scale-105"
                     loading="lazy"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
                   />
                 ) : (
                   <div className="flex size-full items-center justify-center text-3xl">

@@ -35,6 +35,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { getEditToken } from "@/lib/itinerary-share";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
+// TASK 99-b (§18): skupni vir avtorskega imena (prej lokalna kopija ključa)
+import { getAuthorName, saveAuthorName } from "@/lib/client-identity";
 
 // ============================================================================
 // TRIP GUIDE — avtorski vodnik na deljeni poti (F7 skupnostni vodniki)
@@ -88,9 +90,9 @@ const TIP_TEXT_MIN = 2;
 const TIP_TEXT_MAX = 280;
 const TIPS_MAX = 6;
 
-/** localStorage ključ avtorskega imena — ENAK kot v trip-social (pripombe):
- *  identiteta obiskovalca je konsistentna med komentarji in vodnikom. */
-const AUTHOR_NAME_STORAGE_KEY = "discoverslovenia_comment_name";
+/** Avtorsko ime — od TASK 99-b iz SKUPNEGA vira @/lib/client-identity
+ *  (prej 5. lokalna kopija istega ključa — konsistentna identiteta obiskovalca
+ *  med komentarji, dnevnikom, anketami in vodnikom). */
 
 /** Vrstica obrazca za nasvet (prazna besedila so še neveljavna). */
 interface TipDraft {
@@ -144,12 +146,8 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
   // komentarjev (konsistentna identiteta obiskovalca)
   useEffect(() => {
     setIsOwner(Boolean(getEditToken(shareId)));
-    try {
-      const savedName = window.localStorage.getItem(AUTHOR_NAME_STORAGE_KEY);
-      if (savedName) setAuthorName(savedName);
-    } catch {
-      // zasebni način — brez predizpolnitve
-    }
+    const savedName = getAuthorName();
+    if (savedName) setAuthorName(savedName);
   }, [shareId]);
 
   /** Odpri obrazec (nov ali urejanje obstoječega vodnika). */
@@ -284,14 +282,7 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
       const wasNew = !guide;
       setGuide(data.guide);
       setEditing(false);
-      try {
-        window.localStorage.setItem(
-          AUTHOR_NAME_STORAGE_KEY,
-          authorName.trim()
-        );
-      } catch {
-        // zasebni način — ime ne persistira
-      }
+      saveAuthorName(authorName.trim());
       trackPlannerEvent("guide_saved", {
         tips_count: data.guide.tips.length,
         has_verdict: Boolean(data.guide.verdict),

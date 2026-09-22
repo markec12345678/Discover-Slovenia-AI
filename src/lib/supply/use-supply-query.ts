@@ -28,11 +28,23 @@ import { trackPlannerEvent } from "@/lib/planner-analytics";
 export interface SupplyLayerState {
   products: SupplySearchResponse["products"];
   loading: boolean;
-  error: string | null;
+  error: SupplyLayerError | null;
   degraded: string[];
   adapters: SupplySearchResponse["adapters"];
   lastZoom: number;
 }
+
+/**
+ * Iskrene kode napake sloja ponudbe (TASK 99-a, §15):
+ *  - "client-network"     — odpoved na strani ODJEMALCA (offline oz. fetch
+ *                            ni niti prišel do strežnika) — NOBEN ponudnik
+ *                            ni kriv;
+ *  - "supply-unavailable" — strežniška/HTTP napaka — plast ni na voljo,
+ *                            a krivda se NE pripisuje posameznemu
+ *                            ponudniku (samo poštena strežniška atribucija
+ *                            v uspešnem odgovoru sme napolniti degraded).
+ */
+export type SupplyLayerError = "client-network" | "supply-unavailable";
 
 interface UseSupplyQueryOpts {
   /** Ali je sloj sploh vklopljen (gumb Pokaži POI). */
@@ -124,14 +136,26 @@ export function useSupplyQuery({
             setState((prev) => ({ ...prev, loading: false }));
             return;
           }
-          // OSM plast ni na voljo — mapa ostane funkcionalna (destinacije),
-          // iskrena napaka se izpiše v sloju.
+          // TASK 99-a (§15, iskrenost): prej je VSA odpoved obsodila OSM
+          // (degraded: ["osm"]) — tudi kadar je uporabnik offline. Zdaj
+          // ločimo dve povsem različni vzroki:
+          //   1) NAPAKA ODJEMALCA: navigator.onLine === false ALI TypeError
+          //      (fetch je padel na omrežni ravni — HTTP odgovora sploh ni
+          //      bilo) → "client-network", degraded: [] (nihče ni kriv);
+          //   2) sicer (HTTP status napaka / strežniška odpoved) →
+          //      "supply-unavailable", a degraded: [] — ponudnika ne
+          //      obtožimo, dokler ga ne znamo iskreno pripisati (degraded
+          //      sme priti le iz strežniškega atribucijskega odgovora
+          //      v uspešni poti zgoraj).
+          const isClientNetwork =
+            (typeof navigator !== "undefined" && navigator.onLine === false) ||
+            err instanceof TypeError;
           setState((prev) => ({
             ...prev,
             loading: false,
-            error: "supply-unavailable",
+            error: isClientNetwork ? "client-network" : "supply-unavailable",
             products: [],
-            degraded: ["osm"],
+            degraded: [],
           }));
         });
     },

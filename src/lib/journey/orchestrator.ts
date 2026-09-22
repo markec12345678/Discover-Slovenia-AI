@@ -567,7 +567,8 @@ async function localCategories(
 function eventsCategory(
   destinationId: string,
   startDate: string | undefined,
-  lang: "sl" | "en"
+  lang: "sl" | "en",
+  issues: JourneyValidationIssue[]
 ): JourneyCategoryResult {
   const cat = emptyCategory("events");
   let all = EVENTS.filter((e) => e.destinationId === destinationId);
@@ -583,6 +584,20 @@ function eventsCategory(
       else kept.push(e);
     }
     all = kept;
+  }
+  // TASK 99 (issue #1 §12): pravilo event_before_arrival je bilo DEKLARIRANO
+  // v tipih, a NIKOLI izsevano (mrtva vrednost enuma). Zdaj: izpuščeni
+  // dogodki proizvedejo iskreno opozorilo v validation.issues (podatek je
+  // nosila že kategorija, sedaj pa jo vidi tudi validacijska plast).
+  if (skipped > 0 && startDate) {
+    issues.push({
+      level: "warn",
+      rule: "event_before_arrival",
+      message: {
+        sl: `Dogodki, ki se končajo pred datumom prihoda (${skipped}), niso vključeni v načrt.`,
+        en: `Events ending before the arrival date (${skipped}) are not included in the plan.`,
+      },
+    });
   }
   all.sort((a, b) => a.date.localeCompare(b.date));
   cat.products = all.slice(0, MAX_CATEGORY_PRODUCTS).map((e) =>
@@ -719,7 +734,7 @@ export async function planJourney(
   const local = await localCategories(dest, travelers, lang, wanted, degradedProviders, opts?.adapters);
   const events =
     wanted.has("events")
-      ? eventsCategory(dest.id, intent.startDate, lang)
+      ? eventsCategory(dest.id, intent.startDate, lang, issues)
       : emptyCategory("events");
   const rental = wanted.has("rental") ? rentalCategory(dest.name) : emptyCategory("rental");
 

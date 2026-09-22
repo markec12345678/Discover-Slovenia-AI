@@ -44,6 +44,8 @@ export interface TripEntry {
   icon: string;
   title: string;
   providerLabel: { sl: string; en: string };
+  /** TASK 99 — kanonski slug ponudnika (za JourneyBooking prekrivko/preusmeritev). */
+  provider?: string;
   /** ISO datum — SAMO realen (dogodek iz vira / datum prihoda uporabnika). */
   date?: string;
   /** Čas — SAMO realen (vpis uporabnika / trajanje iz vira). */
@@ -172,6 +174,7 @@ function productToEntry(p: JourneyProduct): TripEntry {
     icon: taxonomyOf(p.type).icon,
     title: p.title,
     providerLabel: providerLabelOf(p),
+    provider: p.provider,
     ...(p.address ? { location: p.address } : {}),
     ...(p.lat != null && p.lng != null ? { lat: p.lat, lng: p.lng } : {}),
     ...(p.openingHours ? { openingHours: p.openingHours } : {}),
@@ -185,7 +188,9 @@ function productToEntry(p: JourneyProduct): TripEntry {
     providerProductId: p.providerProductId,
     cancellation:
       status.status === "EXTERNAL" ? CANCELLATION_EXTERNAL : CANCELLATION_INFO,
-    bookingId: null, // SAMO iz JourneyBooking (danes 0 zapisov — §21 iskrenost)
+    // SAMO iz JourneyBooking zapisa (TASK 99: prekrivka v journey-trip
+    // izpolni iz DEJANSKIH vrstic — 0 poverilnic danes → iskreno null).
+    bookingId: null,
   };
 }
 
@@ -334,6 +339,10 @@ export function buildMyTrip(
   }
 
   // --- Zunanje kartice (najem — affiliate, NE inventar) ---
+  // TASK 99: kartica nosi provider slug (konsistentnost s TripEntry);
+  // providerProductId NAMENOMA manjka — kategorija affiliate NI kanonski
+  // produkt, zato checkout handoff zapis ne nastane (klik že sledi /go
+  // analitiki affiliate_click; lifecycle vrstice so samo za produkte).
   const externalCards: TripEntry[] = journey.categories.rental.providers.map(
     (prov) => ({
       key: `rental:${prov.provider}`,
@@ -341,6 +350,7 @@ export function buildMyTrip(
       icon: taxonomyOf("car_rental").icon,
       title: prov.label.sl,
       providerLabel: prov.label,
+      provider: prov.provider,
       status: "EXTERNAL" as const,
       statusLabel: {
         sl: "Zunanja rezervacija — pri ponudniku",

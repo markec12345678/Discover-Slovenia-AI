@@ -28,7 +28,15 @@ import {
   narrationStopsFromTripEntries,
   speechTripDateLabel,
 } from "@/lib/itinerary-audio";
-import type { TravelJourney } from "@/lib/journey/types";
+import { plannerSessionId } from "@/lib/planner-analytics";
+import {
+  CONFIRMATION_STATUS_LABELS,
+  isProviderConfirmed,
+} from "@/lib/journey/booking";
+import type {
+  ConfirmationStatus,
+  TravelJourney,
+} from "@/lib/journey/types";
 
 // ============================================================================
 // JOURNEY TRIP — "MY TRIP" POGLED (TASK 58 §20) + POTRDITVENI DOKUMENT (§21)
@@ -109,6 +117,15 @@ const L = {
     total: { sl: "Skupaj", en: "Total" },
     totalEstimated: { sl: "ocena (vsota „od“ cen)", en: "estimate (sum of „from“ prices)" },
     totalKnown: { sl: "točne cene", en: "exact prices" },
+    // TASK 99 — prekrivka JourneyBooking (realni zapisi iz DB)
+    confirmedApi: {
+      sl: "Potrjene rezervacije prek API-ja ponudnikov:",
+      en: "Bookings confirmed via provider APIs:",
+    },
+    handoffRecorded: {
+      sl: "Zabeležene preusmeritve k ponudniku (rezervacija živi tam):",
+      en: "Recorded handoffs to the provider (the booking lives there):",
+    },
   },
 };
 
@@ -120,10 +137,20 @@ function priceText(e: TripEntry, lang: "sl" | "en"): string | null {
 }
 
 function statusBadge(e: TripEntry, lang: "sl" | "en") {
+  // TASK 99 — razširjene barve po DEJANSKEM statusu (prekrivka iz
+  // JourneyBooking): provider-potrjeno = smaragdno, odpoved/napaka =
+  // rdeče, čakalna stanja = rumeno, EXTERNAL ostane vijolično (pri ponudniku).
+  const confirmed = isProviderConfirmed(e.status as ConfirmationStatus);
   const variant =
     e.status === "EXTERNAL"
       ? "bg-violet-100 text-violet-900 border-violet-300 hover:bg-violet-100"
-      : "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-100";
+      : confirmed
+        ? "bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-100"
+        : e.status === "FAILED" || e.status === "CANCELLED"
+          ? "bg-red-100 text-red-900 border-red-300 hover:bg-red-100"
+          : e.status === "INFO"
+            ? "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-100"
+            : "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-100";
   return (
     // TASK 72 — whitespace-normal: na ozki mobilni kartici se dolgi status
     // ( „Zunanja rezervacija — pri ponudniku") prelomi v 2 vrstici namesto
@@ -178,7 +205,16 @@ function SupplyHealthNote({
   );
 }
 
-function EntryRow({ e, lang }: { e: TripEntry; lang: "sl" | "en" }) {
+function EntryRow({
+  e,
+  lang,
+  onHandoff,
+}: {
+  e: TripEntry;
+  lang: "sl" | "en";
+  /** TASK 99 — zapis checkout handoffa (EXTERNAL) ob kliku na ponudnika. */
+  onHandoff?: (e: TripEntry) => void;
+}) {
   return (
     // TASK 72 — flex-wrap: na ozki mobilni kartici se status badge prelomi
     // v novo vrstico ( namesto 17 px preliva čez rob kartice).
@@ -208,6 +244,23 @@ function EntryRow({ e, lang }: { e: TripEntry; lang: "sl" | "en" }) {
         )}
       </div>
       {statusBadge(e, lang)}
+      {/* TASK 99 (issue #1 §2): checkout handoff na ČASOVNICI — postavka z
+          bookingUrl (npr. KT transfer) dobi gumb pri ponudniku; klik iskreno
+          zapiše EXTERNAL lifecycle vrstico (potrditev živi pri ponudniku). */}
+      {e.bookingUrl && e.status === "EXTERNAL" && (
+        <Button asChild variant="outline" size="sm" className="h-7 w-7 min-w-0 px-0">
+          <a
+            href={e.bookingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onHandoff ? () => onHandoff(e) : undefined}
+            aria-label={`${L.doc.providerLink[lang]}: ${e.title}`}
+            title={L.doc.providerLink[lang]}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </Button>
+      )}
     </div>
   );
 }
@@ -268,10 +321,16 @@ function ConfirmationDoc({
   trip,
   lang,
   travelers,
+  confirmedCount = 0,
+  handoffCount = 0,
 }: {
   trip: MyTripView;
   lang: "sl" | "en";
   travelers: number;
+  /** TASK 99 — ŠTETJE iz DEJANSKIH JourneyBooking vrstic (ne hardcoded 0). */
+  confirmedCount?: number;
+  /** TASK 99 — zabeležene EXTERNAL preusmeritve (iskren signal). */
+  handoffCount?: number;
 }) {
   const entries = trip.days.flatMap((d) => d.entries).concat(trip.externalCards);
 
@@ -295,7 +354,19 @@ function ConfirmationDoc({
     <div className="space-y-4 rounded-lg border p-4">
       <div className="space-y-1">
         <p className="text-sm font-semibold">{L.confirmTitle[lang]}</p>
-        <p className="text-xs text-muted-foreground">{trip.confirmation.note[lang]}</p>
+        {/* TASK 99 — opomba se izpisuje iz DEJANSKEGA stanja vrstic: 0 →
+            iskrena „ni še“ razlaga; >0 → štetje potrjenih + zabeleženih
+            preusmeritev. NIKOLI generično „uspešno“. */}
+        <p className="text-xs text-muted-foreground">
+          {confirmedCount > 0
+            ? `${L.doc.confirmedApi[lang]} ${confirmedCount}`
+            : trip.confirmation.note[lang]}
+        </p>
+        {handoffCount > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {L.doc.handoffRecorded[lang]} {handoffCount}
+          </p>
+        )}
       </div>
       <div className="space-y-2 text-xs text-muted-foreground">
         <DocRow label={L.doc.trip[lang]} value={trip.title[lang]} />
@@ -368,6 +439,159 @@ export function JourneyTrip({
   );
   const hasItems =
     trip.days.some((d) => d.entries.length > 1) || trip.externalCards.length > 0;
+
+  // ---------------------------------------------------------------------
+  // TASK 99 (issue #1 §2) — PREKRIVKA REALNIH JourneyBooking VRSTIC.
+  // Do 1.85.0 je bil confirmedCount HARDCODED 0 („danes 0 zapisov“) in
+  // bookingId vedno null — arhitektura brez bralca. Zdaj: efekterne
+  // vrstice (shareId NULL, obseg seje dsa_planner_sid) se prinesejo z
+  // GET /api/journey/bookings?products=… in prekrijejo status/bookingId
+  // POSTAVKAM, ki imajo DEJANSKI zapis. Danes lahko nastanejo SAMO
+  // EXTERNAL zapisi (klik na handoff povezavo) — CONFIRMED/PAID/MODIFIED
+  // lahko pridete IZKLJUČNO iz providerjevega odgovora (0 poverilnic →
+  // štetje ostane 0 — iskrenost ostaja zakon).
+  // ---------------------------------------------------------------------
+  const [bookingRows, setBookingRows] = useState<
+    { key: string; status: string; providerBookingId: string | null }[]
+  >([]);
+  const overlayProducts = useMemo(() => {
+    const entries = trip.days
+      .flatMap((d) => d.entries)
+      .concat(trip.externalCards);
+    const keys = entries
+      .filter(
+        (e) =>
+          e.provider != null &&
+          e.providerProductId != null &&
+          e.status === "EXTERNAL"
+      )
+      .map((e) => `${e.provider}:${e.providerProductId}`);
+    return Array.from(new Set(keys)).slice(0, 20);
+  }, [trip]);
+  const overlayQuery =
+    overlayProducts.length > 0 ? overlayProducts.join(",") : null;
+
+  useEffect(() => {
+    if (!overlayQuery) {
+      setBookingRows([]);
+      return;
+    }
+    let active = true;
+    const sid = plannerSessionId();
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/journey/bookings?products=${encodeURIComponent(overlayQuery)}&sessionKey=${encodeURIComponent(sid)}`
+        );
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          bookings?: {
+            provider: string;
+            providerProductId: string;
+            status: string;
+            providerBookingId?: string | null;
+          }[];
+        };
+        if (active && Array.isArray(data.bookings)) {
+          setBookingRows(
+            data.bookings.map((b) => ({
+              key: `${b.provider}:${b.providerProductId}`,
+              status: b.status,
+              providerBookingId: b.providerBookingId ?? null,
+            }))
+          );
+        }
+      } catch {
+        // Neblokirajoče — prekrivka je izboljšava, ne obveza (brez nje
+        // vidimo enako iskreno „0 potrjenih“).
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [overlayQuery]);
+
+  const rowByKey = useMemo(
+    () => new Map(bookingRows.map((r) => [r.key, r] as const)),
+    [bookingRows]
+  );
+
+  /** Postavke z DEJANSKIM zapisom dobijo njegov status/oznako/ID —
+   *  vsi ostali ostanejo točno takšni, kot jih je zgradil buildMyTrip. */
+  const effectiveTrip = useMemo(() => {
+    if (bookingRows.length === 0) return trip;
+    const augment = (e: TripEntry): TripEntry => {
+      if (e.provider == null || e.providerProductId == null) return e;
+      const row = rowByKey.get(`${e.provider}:${e.providerProductId}`);
+      if (!row) return e;
+      const label =
+        CONFIRMATION_STATUS_LABELS[row.status as ConfirmationStatus];
+      return {
+        ...e,
+        ...(label ? { statusLabel: label } : {}),
+        status: row.status as TripEntry["status"],
+        ...(row.providerBookingId ? { bookingId: row.providerBookingId } : {}),
+      };
+    };
+    return {
+      ...trip,
+      days: trip.days.map((d) => ({ ...d, entries: d.entries.map(augment) })),
+      externalCards: trip.externalCards.map(augment),
+    };
+  }, [trip, rowByKey, bookingRows]);
+
+  const confirmedCount = useMemo(
+    () => bookingRows.filter((r) => isProviderConfirmed(r.status as ConfirmationStatus)).length,
+    [bookingRows]
+  );
+  const handoffCount = useMemo(
+    () => bookingRows.filter((r) => r.status === "EXTERNAL").length,
+    [bookingRows]
+  );
+
+  /** TASK 99 — ISKREN zapis checkout handoffa (EXTERNAL): ob kliku na
+   *  povezavo ponudnika zabeležimo, da je uporabnik ODŠEL tja. To NI
+   *  rezervacija (potrditev živi pri ponudniku) — fire-and-forget, ne
+   *  blokira navigacije, idempotentno na strežniku. Optimistična vrstica
+   *  se prikaže TAKOJ (števec preusmeritev); ob odpovedi POST se povrne
+   *  nazaj (iskrenost: ne kažemo zapisa, ki ga ni). */
+  const recordHandoff = (e: TripEntry) => {
+    if (e.provider == null || e.providerProductId == null) return;
+    const key = `${e.provider}:${e.providerProductId}`;
+    try {
+      const body = JSON.stringify({
+        provider: e.provider,
+        providerProductId: e.providerProductId,
+        status: "EXTERNAL",
+        sessionKey: plannerSessionId(),
+      });
+      // Optimistično: števec preusmeritev se pomakne takoj (uporabnik že
+      // odhaja na ponudnikovo stran); strežnik je idempotenten, ponovni
+      // klik ne podvaja.
+      setBookingRows((rows) =>
+        rows.some((r) => r.key === key)
+          ? rows
+          : [...rows, { key, status: "EXTERNAL", providerBookingId: null }]
+      );
+      fetch("/api/journey/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        keepalive: true,
+      })
+        .then((res) => {
+          if (!res.ok) {
+            // Odpoved (npr. 429) — optimistično stanje PONIČIMO
+            setBookingRows((rows) => rows.filter((r) => r.key !== key));
+          }
+        })
+        .catch(() => {
+          setBookingRows((rows) => rows.filter((r) => r.key !== key));
+        });
+    } catch {
+      // Zasebni način/blokiran fetch — tiho (handoff ni odvisen od nas)
+    }
+  };
 
   // ---------------------------------------------------------------------
   // TASK 66 — VREME PO DNEVIH (živi Open-Meteo prek /api/weather način B,
@@ -466,8 +690,9 @@ export function JourneyTrip({
         <SupplyHealthNote journey={journey} lang={lang} />
 
         {/* Časovnica po dneh (časi SAMO realni — §20) + TASK 66 vremenski čipi
-            + TASK 91 zvočni povzetek dneva (surface=mytrip) */}
-        {trip.days.map((day, i) => {
+            + TASK 91 zvočni povzetek dneva (surface=mytrip) + TASK 99 prekrivka
+            DEJANSKIH booking statusov (effectiveTrip) */}
+        {effectiveTrip.days.map((day, i) => {
           const dayWeather =
             forecastCurrent && day.date ? byDate.get(day.date) : undefined;
           // TASK 91 — datum za GOVOR brez leta (»25. september« — planner
@@ -493,7 +718,7 @@ export function JourneyTrip({
             </div>
             <div className="divide-y rounded-lg border">
               {day.entries.map((e) => (
-                <EntryRow key={e.key} e={e} lang={lang} />
+                <EntryRow key={e.key} e={e} lang={lang} onHandoff={recordHandoff} />
               ))}
             </div>
           </div>
@@ -514,14 +739,15 @@ export function JourneyTrip({
           </p>
         )}
 
-        {/* Zunanje kartice (najem — affiliate ≠ inventar) */}
-        {trip.externalCards.length > 0 && (
+        {/* Zunanje kartice (najem — affiliate ≠ inventar) — TASK 99: klik
+            na povezavo ISKRENO zabeleži checkout handoff (EXTERNAL) */}
+        {effectiveTrip.externalCards.length > 0 && (
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {L.external[lang]}
             </p>
             <div className="divide-y rounded-lg border">
-              {trip.externalCards.map((e) => (
+              {effectiveTrip.externalCards.map((e) => (
                 <div key={e.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
                   <div className="text-lg leading-none">{e.icon}</div>
                   <div className="min-w-0 flex-1 space-y-0.5">
@@ -533,7 +759,16 @@ export function JourneyTrip({
                   {statusBadge(e, lang)}
                   {e.bookingUrl && (
                     <Button asChild variant="outline" size="sm">
-                      <a href={e.bookingUrl} target="_blank" rel="noopener noreferrer">
+                      <a
+                        href={e.bookingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={
+                          e.provider && e.providerProductId
+                            ? () => recordHandoff(e)
+                            : undefined
+                        }
+                      >
                         <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                     </Button>
@@ -544,9 +779,15 @@ export function JourneyTrip({
           </div>
         )}
 
-        {/* Potrditveni dokument (§21) */}
+        {/* Potrditveni dokument (§21) — TASK 99: štetje iz DEJANSKIH vrstic */}
         {hasItems && (
-          <ConfirmationDoc trip={trip} lang={lang} travelers={journey.travelers} />
+          <ConfirmationDoc
+            trip={effectiveTrip}
+            lang={lang}
+            travelers={journey.travelers}
+            confirmedCount={confirmedCount}
+            handoffCount={handoffCount}
+          />
         )}
 
         {/* Iskrenost zavarovanja (nikoli "potrjeno" brez dokaza) */}

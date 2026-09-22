@@ -140,3 +140,41 @@ NIKOLI ne bo prikazan kot naš vir.
 *Vzdrževanje: ta list se posodablja ob vsaki spremembi registra/adapterjev
 (commit TASK 52+). Strojno stanje (env PRESENT/MISSING) je živo dostopno
 prek `accessMatrix()`; matrika in register se preverjata za drift v testih.*
+
+---
+
+## 6. KLASIFIKACIJA ZMOŽNOSTI (issue #1 §9) — kaj sistem SME in ČESA NE SME obljubiti DANES (brez poverilnic)
+
+> Vsak ponudnik ima izrecno definirano, kar sistem sme obljubiti uporabniku
+> danes (0 poverilnic) in česa NE SME — fail-closed pogodba po ponudniku.
+> Booking mode / CTA / deep link / attribution (/go → affiliate_click +
+> funnel) / error & unavailable stanja so v KODI; ta tabela je njihova
+> dokumentirana resnica. TASK 99 (1.86.0) doda še JOURNEY_PROVIDER_TOKEN —
+> kanal za provider-driven prehode statusov (webhook), fail-closed dokler
+> žetona ni.
+
+| Provider | Booking mode / CTA danes | SME obljubiti | NE SME obljubiti (nikoli) |
+|---|---|---|---|
+| **OSM** | info_only (odprti vir) | kraje, odpiralne ure, koordinate, telefone — IZ vira | cen, razpoložljivosti, rezervacije (NOT_SUPPORTED) |
+| **FSQ** | info_only (nameščena množica) | kraje/tipe POI, koordinate — iz lokalne množice | cen, razpoložljivosti, rezervacije |
+| **STO** | info_only (RAG vsebina) | uradno vsebino destinacij (llms.txt) | cen, razpoložljivosti, rezervacije |
+| **own (tržnica)** | own_checkout | kartice izdelkov/izkušenj iz lastne DB; cene lastnih izkušenj (objavljene); demo rezervacijo v DEMO načinu (DSA_DEMO_PAYMENTS=1, produkcija 501) | „uspešne rezervacije" v produkciji (Stripe checkout TODO); payout (vedno not_due); prazne tržnice kot „uspešno" stanje — izrecno NO_LIVE_DATA |
+| **KiwiTaxi** | affiliate_redirect (/go/transfers) | objavljeni transfer INVENTAR (308 krajev, 1.494 rut, 9.614 transferjev), od-cene (FROM_PRICE), razrede vozil, trajanja IZ vira | živih citatov, potrjene razpoložljivosti (NOT_SUPPORTED), rezervacije pri nas |
+| **Viator** | affiliate_redirect (/go/viator) | preusmeritev na živo iskalnico ponudnika; oznako partnerja | cen, razpoložljivosti, inventarja, potrditev (API 401 brez ključa) |
+| **GetYourGuide** | affiliate_redirect (/go/activities) | preusmeritev; oznako partnerja | cen, razpoložljivosti, inventarja, potrditev |
+| **Tiqets** | affiliate_redirect (/go/tickets) | preusmeritev na iskalnico vstopnic po destinaciji | vstopnic, cen, preskoka vrste kot garancije |
+| **Booking.com** | affiliate_redirect (/go/hotels) | preusmeritev na iskanje nastanitev (ss=destinacija, datumi) | cen sob, razpoložljivosti, potrditve |
+| **DiscoverCars** | affiliate_redirect (/go/cars) | preusmeritev na iskanje najema (destinacija + datumi) | cen najema, razpoložljivosti vozil |
+| **Omio** | affiliate_redirect (/go/transport) | preusmeritev na iskanje vlakov/avtobusov | voznih redov, cen, razpoložljivosti |
+| **Skyscanner** | affiliate_redirect (/go/flights) | preusmeritev na iskanje letov (iz Ljubljana) | letov, cen, razpoložljivosti |
+| **Airalo** | affiliate_redirect (/go/esim) | preusmeritev na eSIM trgovino | paketov, pokritve, cen |
+| **World Nomads** | affiliate_redirect (/go/insurance, prednost) | preusmeritev na zavarovanje (dolžina potovanja iz načrta) | citatov zavarovanja, pokritine kot garancije |
+| **SafetyWing** | affiliate_redirect (/go/insurance, rezerva) | preusmeritev (samo če WN URL manjka) | citatov, pokritine |
+| **Travelpayouts** | affiliate_redirect (allowlist hostov) | nič (brez markerja ni niti redirecta) | iskanja, cen, razpoložljivosti (NOT_CONFIGURED) |
+
+**Skupne invariante (veljajo za VSE):** zunanja rezervacija NIKOLI ni
+prikazana kot potrjena (ConfirmationStatus.EXTERNAL je absorptiven —
+CONFIRMED nastavi izključno providerjev odgovor prek PATCH kanala z
+žetonom `JOURNEY_PROVIDER_TOKEN`); checkout handoff ob kliku se iskreno
+zapiše kot EXTERNAL (TASK 99); affiliate povezava ≠ inventar; od-cena NI
+zagotovljena končna cena; „ni podatka" NI „na voljo".

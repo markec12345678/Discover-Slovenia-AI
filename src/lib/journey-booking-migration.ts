@@ -103,7 +103,7 @@ export async function migrateJourneyBookingTableWith(
       dialect === "postgres"
         ? `CREATE TABLE "JourneyBooking" (
              "id" TEXT NOT NULL,
-             "shareId" TEXT,
+             "sessionKey" TEXT,
              "provider" TEXT NOT NULL,
              "providerProductId" TEXT NOT NULL,
              "status" TEXT NOT NULL,
@@ -119,7 +119,7 @@ export async function migrateJourneyBookingTableWith(
            )`
         : `CREATE TABLE IF NOT EXISTS "JourneyBooking" (
              "id" TEXT NOT NULL PRIMARY KEY,
-             "shareId" TEXT,
+             "sessionKey" TEXT,
              "provider" TEXT NOT NULL,
              "providerProductId" TEXT NOT NULL,
              "status" TEXT NOT NULL,
@@ -137,8 +137,38 @@ export async function migrateJourneyBookingTableWith(
   }
 
   // ── Indeksi (obe narečji podpirata IF NOT EXISTS) ────────────────────────
+  // ── TASK 99: sessionKey na OBSTOJEČIH tabelah (idempotentno) ───────────
+  // Baze, ki so tabelo dobile pred TASK 99, stolpca še nimajo — dodamo ga
+  // z narečno-varnim ADD COLUMN (SQLite ne podpira IF NOT EXISTS).
+  if (exists) {
+    try {
+      if (dialect === "sqlite") {
+        const cols = (await client.$queryRawUnsafe(
+          "PRAGMA table_info(JourneyBooking)"
+        )) as { name?: string }[];
+        const hasCol =
+          Array.isArray(cols) && cols.some((c) => c?.name === "sessionKey");
+        if (!hasCol) {
+          await client.$executeRawUnsafe(
+            'ALTER TABLE "JourneyBooking" ADD COLUMN "sessionKey" TEXT'
+          );
+        }
+      } else {
+        await client.$executeRawUnsafe(
+          'ALTER TABLE "JourneyBooking" ADD COLUMN IF NOT EXISTS "sessionKey" TEXT'
+        );
+      }
+    } catch (error) {
+      // FAIL-OPEN: napaka se zalogira, zagon se nadaljuje (isti vzorec)
+      console.error("[journey-booking-migration] sessionKey ADD COLUMN:", error);
+    }
+  }
+
   await client.$executeRawUnsafe(
     `CREATE INDEX IF NOT EXISTS "JourneyBooking_shareId_idx" ON "JourneyBooking"("shareId")`
+  );
+  await client.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "JourneyBooking_sessionKey_idx" ON "JourneyBooking"("sessionKey")`
   );
   await client.$executeRawUnsafe(
     `CREATE INDEX IF NOT EXISTS "JourneyBooking_provider_providerProductId_idx" ON "JourneyBooking"("provider", "providerProductId")`

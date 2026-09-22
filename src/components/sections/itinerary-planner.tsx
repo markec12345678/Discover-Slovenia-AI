@@ -102,8 +102,13 @@ import {
   removeChatPlaceFromItinerary,
   readStashedChatPlaces,
   isValidChatPlace,
-  LAST_ITINERARY_KEY,
 } from "@/lib/chat-add-place";
+// TASK 99-b (§18): persistenca zadnjega načrta ima ZDAJ EN sam vir
+// (prej dupliciran pisec v plannerju in klepetu — isti ključ, isti meji).
+import {
+  persistItinerary,
+  readLastItinerary,
+} from "@/lib/itinerary-persist";
 import type { ChatPlace } from "@/lib/geo-intent";
 // F1 (Supply Map): odstranjevanje izbranih produktov (čipi nad gumbom)
 import { removeSelectedProduct } from "@/lib/supply/selection";
@@ -224,32 +229,16 @@ function spreadDaySlots(locations: LocationVisit[]): LocationVisit[] {
   });
 }
 
-// Persistenca zadnjega itinererja (localStorage) + deljeni načrti (URL ?odpri=)
-// KLJUČ je uvožen iz src/lib/chat-add-place.ts (enkraten vir — isti ključ
-// bere/piseta klepet in planner).
-const MAX_PERSIST_CHARS = 250 * 1024; // 250 KB
+// Persistenca zadnjega itinererja: od TASK 99-b ŽIVI V @/lib/itinerary-persist
+// (enkraten vir — isti ključ/meji bere in piše tudi AI klepet). Planner samo
+// kliče persistItinerary/readLastItinerary; obnovitvena validacija formData
+// (isValidPlannerInput) ostaje TUKAJ, ker je PlannerInput-tipizirana.
 
-interface PersistedItinerary {
-  itinerary: Itinerary;
-  formData?: PlannerInput;
-  savedAt?: string;
-}
-
-function persistItineraryLocally(it: Itinerary, input: PlannerInput) {
-  try {
-    const payload: PersistedItinerary = {
-      itinerary: it,
-      formData: input,
-      savedAt: new Date().toISOString(),
-    };
-    const serialized = JSON.stringify(payload);
-    if (serialized.length < MAX_PERSIST_CHARS) {
-      localStorage.setItem(LAST_ITINERARY_KEY, serialized);
-    }
-  } catch {
-    // Poln/zasebni localStorage — mirno preskoči
-  }
-}
+/** TASK 99 (issue #1 §4): kanonska opomba supply postanka »cena: od …« /
+ *  »price: from …« (canonicalPriceNote v supply/itinerary-supply-validation)
+ *  označuje FROM_PRICE znesek — znaczka cene ga izpiše s predpono „od“,
+ *  ker od-cena NI zagotovljena končna cena. */
+const FROM_PRICE_NOTE_RE = /\b(cena|price):\s*(od|from)\s/i;
 
 function isValidPlannerInput(v: unknown): v is PlannerInput {
   if (!v || typeof v !== "object") return false;
@@ -699,18 +688,17 @@ export function ItineraryPlanner() {
     }
 
     // 2) Obnovi zadnji načrt iz localStorage (samo če store še ni poln)
+    // TASK 99-b: branje je v knjižnici (enkraten vir, defenzivno — smeti →
+    // null); validacija formData ostane plannerjeva (PlannerInput tip).
     try {
       if (!useAppStore.getState().itinerary) {
-        const stored = localStorage.getItem(LAST_ITINERARY_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored) as PersistedItinerary | null;
-          if (parsed?.itinerary && Array.isArray(parsed.itinerary.days) && parsed.itinerary.days.length > 0) {
-            setItinerary(parsed.itinerary);
-            if (isValidPlannerInput(parsed.formData)) {
-              setFormData(parsed.formData);
-            }
-            setRestoredVisible(true);
+        const parsed = readLastItinerary();
+        if (parsed) {
+          setItinerary(parsed.itinerary);
+          if (isValidPlannerInput(parsed.formData)) {
+            setFormData(parsed.formData);
           }
+          setRestoredVisible(true);
         }
       }
     } catch {
@@ -760,7 +748,7 @@ export function ItineraryPlanner() {
       }
 
       setItinerary(result.itinerary);
-      persistItineraryLocally(result.itinerary, formData);
+      persistItinerary(result.itinerary, formData);
       markResultEngaged();
       // Strukturna sprememba — zastarel deljeni link se umakne (vzorec F16)
       if (shareUrl) {
@@ -821,7 +809,7 @@ export function ItineraryPlanner() {
     if (addedCount === 0) return;
 
     setItinerary(current);
-    persistItineraryLocally(current, formData);
+    persistItinerary(current, formData);
     markResultEngaged();
     if (shareUrl) {
       setShareUrl(null);
@@ -848,7 +836,7 @@ export function ItineraryPlanner() {
     const result = removeChatPlaceFromItinerary(itinerary, loc.destination_id);
     if (!result.ok) return;
     setItinerary(result.itinerary);
-    persistItineraryLocally(result.itinerary, formData);
+    persistItinerary(result.itinerary, formData);
     markResultEngaged();
     // Strukturna sprememba — zastarel deljeni link se umakne (vzorec F16)
     if (shareUrl) {
@@ -1008,7 +996,7 @@ export function ItineraryPlanner() {
         : [...currentAdded, ev],
     };
     setItinerary(next);
-    persistItineraryLocally(next, formData);
+    persistItinerary(next, formData);
     // P0.2 (recenzija): dodani/odstranjeni dogodek spremeni načrt — zastareli
     // deljeni link se umakne (enak vzorec kot pri refine)
     if (shareUrl) {
@@ -1062,7 +1050,7 @@ export function ItineraryPlanner() {
       geoValidation: undefined,
     };
     setItinerary(next);
-    persistItineraryLocally(next, formData);
+    persistItinerary(next, formData);
     markResultEngaged();
     // P0.2 (recenzija): strukturna sprememba — zastareli deljeni link se
     // umakne (enak vzorec kot pri refine / dodajanju dogodka)
@@ -1158,7 +1146,7 @@ export function ItineraryPlanner() {
       legs: undefined,
     };
     setItinerary(next);
-    persistItineraryLocally(next, formData);
+    persistItinerary(next, formData);
     markResultEngaged();
     if (shareUrl) {
       setShareUrl(null);
@@ -1339,7 +1327,7 @@ export function ItineraryPlanner() {
       );
 
       // Persistenca — zadnji načrt preživi osvežitev strani
-      persistItineraryLocally(data, input);
+      persistItinerary(data, input);
 
       // UX-CMP #2 (Mindtrip primerjava): uspešni toast ob generiranju je
       // ODSTRANJEN — pojavil se je TIK ob izrisu delovne površine in je
@@ -3599,7 +3587,7 @@ export function ItineraryPlanner() {
                           setItinerary(newItinerary);
                           // Refiniran načrt se shrani lokalno (deljiva povezava ostane ista
                           // dokler uporabnik znova klikne "Shrani in deli")
-                          persistItineraryLocally(newItinerary, formData);
+                          persistItinerary(newItinerary, formData);
                           // P0.2 (recenzija): deljiva povezava kaže na STARO različico —
                           // javna /pot/[shareId] mora biti identična urejeni različici, zato
                           // se ob vsaki spremembi načrta zastareli link umakne (uporabnik
@@ -3941,11 +3929,20 @@ export function ItineraryPlanner() {
                                             cene strežnik NI mogel verificirati
                                             (vir nepriključen). Značilka cene se
                                             skrije (unknown ≠ 0 = "brezplačno"),
-                                            opomba postanka pove, kaj preveriti. */}
+                                            opomba postanka pove, kaj preveriti.
+                                            TASK 99 (issue #1 §4): če kanonska
+                                            opomba postanka pravi „cena: od …" /
+                                            „price: from …" (supply validacija),
+                                            je ta znesek FROM_PRICE — znaczka
+                                            izpiše „od €X“ (spodnja meja), ne
+                                            gol €X, kot da bi bila zagotovljena
+                                            končna cena. */}
                                         {typeof loc.estimated_cost === "number" &&
                                           loc.estimated_cost > 0 && (
                                           <Badge className="bg-accent text-accent-foreground">
-                                            €{loc.estimated_cost}
+                                            {FROM_PRICE_NOTE_RE.test(loc.notes ?? "")
+                                              ? `od €${loc.estimated_cost}`
+                                              : `€${loc.estimated_cost}`}
                                           </Badge>
                                         )}
                                         {/* 1.42 (GEO → NAČRT) + F1 (Supply

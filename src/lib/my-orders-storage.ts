@@ -15,9 +15,18 @@
 //   - obrambno branje/pisanje — pokvarjen/ poln storage ne sme sesesti app
 //
 // Shranjujemo SAMO številke (javni, nesignificirani identifikatorji) — brez PII.
+//
+// 99-b (GitHub #1 §18): ključa + pisanje CELIH seznamov (writeList —
+// odstrani/izprazni) živijo SAMO tukaj. Nekdaj je my-orders-section.tsx
+// repliciral writeList + LIST_CAP + oba ključa lokalno ("lib izvaža samo
+// add/get") — zdaj uvaža vse iz te knjižnice, semantika nespremenjena.
 
-const BOOKINGS_KEY = "dai:my-bookings";
-const ORDERS_KEY = "dai:my-orders";
+/** localStorage ključ naročil (checkout) — izvožen za UI (odstrani/izprazni). */
+export const ORDERS_KEY = "dai:my-orders";
+
+/** localStorage ključ rezervacij izkušenj — izvožen za UI (odstrani/izprazni). */
+export const BOOKINGS_KEY = "dai:my-bookings";
+
 const MAX_NUMBERS = 50; // zadnjih 50 (najstarejši odpadejo s konca)
 const NUMBER_MAX_LENGTH = 32; // številke so kratke; daljše = sumljiv vnos
 
@@ -56,6 +65,29 @@ function addNumber(key: string, value: string): void {
     window.localStorage.setItem(key, JSON.stringify(rest.slice(0, MAX_NUMBERS)));
   } catch {
     // Poln/zasebni localStorage — mirno preskoči
+  }
+}
+
+/**
+ * Zapiši CEL seznam številk v lokalni ključ (odstrani/izprazni) — semantika
+ * IDENTIČNA nekdanji lokalni implementaciji v my-orders-section.tsx
+ * (LIST_CAP = 50 = MAX_NUMBERS): prazen seznam → removeItem (ključ izgine,
+ * NE prazen JSON array), sicer JSON array čistih nizov, najnovejše najprej,
+ * cap MAX_NUMBERS, defenzivno (poln storage ne sesuje UI toka).
+ */
+export function writeList(key: string, numbers: string[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (numbers.length === 0) {
+      window.localStorage.removeItem(key);
+    } else {
+      window.localStorage.setItem(
+        key,
+        JSON.stringify(numbers.slice(0, MAX_NUMBERS))
+      );
+    }
+  } catch {
+    // Poln localStorage — sprememba lokacije mirno odpade
   }
 }
 

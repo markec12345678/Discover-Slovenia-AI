@@ -49,8 +49,8 @@ const slBooking = (slMessages as Record<string, Record<string, unknown>>).planne
   .booking as Record<string, string>;
 const enBooking = (enMessages as Record<string, Record<string, unknown>>).planner
   .booking as Record<string, string>;
-const slAff = (slMessages as Record<string, Record<string, string>>).affiliate;
-const enAff = (enMessages as Record<string, Record<string, string>>).affiliate;
+const slAff = (slMessages as unknown as Record<string, Record<string, string>>).affiliate;
+const enAff = (enMessages as unknown as Record<string, Record<string, string>>).affiliate;
 
 /** Vsi ICU placeholderji ključa (urejeni) — za primerjavo med jeziki. */
 function placeholders(s: string): string[] {

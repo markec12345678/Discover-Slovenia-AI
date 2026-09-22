@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.85.0 · 2060 testov (CI zelen) · lint 0 · tsc 0 (celoten projekt, kot CI) |
+| **Stanje** | v1.86.0 · 2165 testov (CI zelen) · lint 0 · tsc 0 (celoten projekt, kot CI) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -46,6 +46,8 @@
 | Journey orkestracija, MY TRIP časovnica, natisljivi potrditveni dokument | lastna koda |
 | Zunanje booking predaje (`/go`) in affiliate preusmeritve — 9 partnerjev na načrtovalniku (nastanitev, aktivnosti, vstopnice, najem, vlaki, transferji, leti, eSIM, zavarovanje) | 16-provider omrežje |
 | Dvojezična booking plošča načrtovalnika (vsi naslovi, opisi, CTA-ji, prazna stanja in opis zavarovanja z dnevi načrta — SL + EN; 1.85.0) | next-intl (`planner.booking`, 33 ključev) |
+| Polni booking lifecycle potovanja (13 statusov + prehodi; POST/GET/PATCH `/api/journey/bookings` — checkout handoff zapisi EXTERNAL, MY TRIP prekrivka iz realnih vrstic, provider prehodi fail-closed za žetonom; 1.86.0) | Prisma `JourneyBooking` + `lib/journey/booking.ts` |
+| Marketplace payout + customer state (payoutStatus not_due→due→processing→paid, gostov zahtevek preklica z AuditLog, lastnikova vidnost; 1.86.0) | Prisma `Booking` + `lib/marketplace-types.ts` |
 | Lastna tržnica (partnerji, izdelki, izkušnje) z lastnim checkoutom in pini na supply zemljevidu (listingi in izkušnje s koordinatami) | lastna baza + Stripe (demo mode brez ključev) |
 
 ### 🟡 Pripravljeno, čaka na aktivacijo ponudnika
@@ -485,7 +487,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.85.0**.
+Trenutna verzija: **1.86.0**.
 
 ---
 

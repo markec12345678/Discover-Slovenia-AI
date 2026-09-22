@@ -168,6 +168,12 @@ function getSessionId(): string {
   }
 }
 
+/** TASK 99 — javni anonimni ID seje (isti vir kot analitika; brez PII).
+ *  Uporablja ga JourneyBooking prekrivka (efemerne EXTERNAL vrstice). */
+export function plannerSessionId(): string {
+  return getSessionId();
+}
+
 /** Fire-and-forget dogodek — POST /api/analytics/event (nikoli ne vrže).
  *  P1-2: eid (clientEventId) omogoča strežniško deduplikacijo. */
 export function trackPlannerEvent(

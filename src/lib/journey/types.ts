@@ -73,13 +73,21 @@ export type ConfirmationCapability =
   | "external" // potrditev pri ponudniku, NAM neznana (affiliate tok)
   | "none"; // nič za potrditi (info_only)
 
-/** Status potrditve rezervacije (§19 — EXTERNAL NIKOLI postane CONFIRMED). */
+/** Status potrditve rezervacije (§19 — EXTERNAL NIKOLI postane CONFIRMED).
+ * TASK 99 (issue #1 §2 — CELOTEN lifecycle): dopolnjeni statusi
+ * BOOKING_REQUESTED (zahteva oddana ponudniku), REFUNDED (vračilo iz
+ * providerjevega odgovora), MODIFIED (sprememba potrjene rezervacije pri
+ * ponudniku), EXPIRED (zadržani inventar/zahteva je potekla). */
 export type ConfirmationStatus =
   | "SELECTED"
+  | "BOOKING_REQUESTED"
   | "PENDING"
   | "PAYMENT_REQUIRED"
   | "PAID"
   | "CONFIRMED"
+  | "MODIFIED"
+  | "REFUNDED"
+  | "EXPIRED"
   | "FAILED"
   | "CANCELLED"
   | "UNKNOWN"
@@ -87,14 +95,29 @@ export type ConfirmationStatus =
 
 export const CONFIRMATION_STATUSES: readonly ConfirmationStatus[] = [
   "SELECTED",
+  "BOOKING_REQUESTED",
   "PENDING",
   "PAYMENT_REQUIRED",
   "PAID",
   "CONFIRMED",
+  "MODIFIED",
+  "REFUNDED",
+  "EXPIRED",
   "FAILED",
   "CANCELLED",
   "UNKNOWN",
   "EXTERNAL",
+];
+
+/** Statusi, ki jih lahko sistem ZAPIŠE BREZ providerjevega odgovora (§2
+ * iskrenost): SELECTED (uporabnikova izbira), EXTERNAL (preusmeritev na
+ * ponudnika — checkout handoff), BOOKING_REQUESTED (oddana zahteva pri
+ * API_BOOKING ponudniku). VSAKI drugi status mora priti prek prehoda iz
+ * obstoječega zapisa (provider-driven dogodek). */
+export const INITIAL_CONFIRMATION_STATUSES: readonly ConfirmationStatus[] = [
+  "SELECTED",
+  "EXTERNAL",
+  "BOOKING_REQUESTED",
 ];
 
 // ---------------------------------------------------------------------------

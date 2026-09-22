@@ -25,6 +25,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+// 99-b: anonimni clientId + prihranjeno ime — deljena knjižnica
+// (enkraten vir ključev; prej duplicirana v 4 socialnih komponentah)
+import {
+  getVoterId,
+  getAuthorName,
+  saveAuthorName,
+} from "@/lib/client-identity";
 
 // ============================================================================
 // TRIP DIARY — skupinski potni dnevnik na javni strani deljenega tripa (F12)
@@ -45,13 +52,11 @@ import { cn } from "@/lib/utils";
 // Optimistični UI z revertom ob napaki (isti vzorec kot trip-social/polls).
 // ============================================================================
 
-// ENAK ključ kot VOTER_STORAGE_KEY (shared-trip) / CLIENT_ID_STORAGE_KEY
-// (trip-social/trip-polls): isti brskalnik = isti anonimni obiskovalec.
-const CLIENT_ID_STORAGE_KEY = "discoverslovenia_voter";
-// Prihranjeno ime avtorja — skupno s komentarji (trip-social) in anketami
-const AUTHOR_NAME_STORAGE_KEY = "discoverslovenia_comment_name";
+// Anonimni clientId + prihranjeno ime avtorja prihajata iz deljene
+// knjižnice src/lib/client-identity.ts (99-b — enkraten vir: isti
+// brskalnik = isti anonimni obiskovalec za glasovanje, všečke,
+// komentarje, ankete IN dnevnik).
 
-const CLIENT_ID_RE = /^[a-zA-Z0-9_-]{8,64}$/;
 const TEXT_MAX = 2000;
 const TEXT_MIN = 2;
 const PLACE_MAX = 80;
@@ -423,24 +428,19 @@ export function TripDiary({
     setMounted(true);
     if (!shareId) return;
     try {
-      let cid = window.localStorage.getItem(CLIENT_ID_STORAGE_KEY);
-      if (!cid || !CLIENT_ID_RE.test(cid)) {
-        cid =
-          typeof crypto !== "undefined" &&
-          typeof crypto.randomUUID === "function"
-            ? crypto.randomUUID()
-            : `v-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
-        window.localStorage.setItem(CLIENT_ID_STORAGE_KEY, cid);
+      // 99-b: read-or-create anonimni ID (private mode → null → stanje
+      // ostane nedotaknjeno, dnevnik ostane berljiv)
+      const cid = getVoterId();
+      if (cid) {
+        setClientId(cid);
+
+        // Prihranjeno ime (skupno s komentarji in anketami)
+        const savedName = getAuthorName() ?? "";
+        if (savedName) setAuthorName(savedName);
+
+        // Dopolni isAuthor (server-side podatki ga ne poznajo)
+        void refreshEntries(cid);
       }
-      setClientId(cid);
-
-      // Prihranjeno ime (skupno s komentarji in anketami)
-      const savedName =
-        window.localStorage.getItem(AUTHOR_NAME_STORAGE_KEY) ?? "";
-      if (savedName) setAuthorName(savedName);
-
-      // Dopolni isAuthor (server-side podatki ga ne poznajo)
-      void refreshEntries(cid);
     } catch {
       // private mode — dnevnik ostane berljiv, brez urejanja
     }
@@ -486,13 +486,10 @@ export function TripDiary({
       const dayIndex =
         dayValue === "general" ? null : Number(dayValue) || null;
 
-      // Prihrani ime za naslednjič (skupno s komentarji)
+      // Prihrani ime za naslednjič (skupno s komentarji; defenzivno —
+      // private mode se mirno preskoči znotraj lib-a)
       if (a) {
-        try {
-          window.localStorage.setItem(AUTHOR_NAME_STORAGE_KEY, a);
-        } catch {
-          // private mode — ne uspe, ni kritično
-        }
+        saveAuthorName(a);
       }
 
       // Optimistični vpis (začasen id, negativen)

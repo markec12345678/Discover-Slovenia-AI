@@ -124,6 +124,12 @@ const T = {
     sl: "Nekateri viri trenutno niso dosegljivi — destinacije ostajajo.",
     en: "Some sources are unreachable right now — destinations remain.",
   },
+  // TASK 99-a (§15): iskrena oznaka za "client-network" — napaka je na
+  // STRANI ODJEMALCA (offline), zato NE obtožuje virov/ponudnikov.
+  networkHint: {
+    sl: "Ni internetne povezave — destinacije ostajajo na voljo.",
+    en: "You appear to be offline — destinations remain available.",
+  },
 } as const;
 
 type MapLang = keyof typeof T.allDestinations;
@@ -949,10 +955,14 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         </div>
       ) : null}
 
-      {/* Error/degraded badge (zgornji levi) */}
+      {/* Error/degraded badge (zgornji levi) — TASK 99-a: koda napake
+          odloča o iskrenem besedilu (client-network → namig na povezavo,
+          sicer strežniška nedosegljivost virov) */}
       {!supply.loading && supply.error && showPois ? (
         <div className="absolute left-3 top-12 z-[1000] max-w-[240px] rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 shadow-md dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
-          {T.degradedHint[lang]}
+          {supply.error === "client-network"
+            ? T.networkHint[lang]
+            : T.degradedHint[lang]}
         </div>
       ) : null}
 

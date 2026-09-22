@@ -669,6 +669,9 @@ function ProductCard({
             alt={`${product.name} — ${product.description}`}
             loading="lazy"
             className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
           />
         ) : (
           <div className="flex size-full items-center justify-center bg-muted text-4xl">
@@ -851,6 +854,9 @@ function ExperienceCard({
             alt={`${experience.name} — ${experience.description}`}
             loading="lazy"
             className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
           />
         ) : (
           <div className="flex size-full items-center justify-center bg-muted text-4xl">
@@ -1061,22 +1067,38 @@ function EmptyState({
       <span className="flex size-12 items-center justify-center rounded-full bg-muted">
         <Store className="size-6 text-muted-foreground" aria-hidden="true" />
       </span>
-      <p className="text-base font-medium">Ni najdenih rezultatov.</p>
-      <p className="text-sm text-muted-foreground">
-        Poskusite spremeniti filtre ali jih počistiti.
-      </p>
+      {/* TASK 99 (issue #1 §10): prazna tržnica BREZ filtrov = NO_LIVE_DATA
+          (iskrena oznaka stanja podatkov — NE generična „uspešna" praznina);
+          z aktivnimi filtri = navaden filtriran prazen rezultat. */}
       {canClear ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onClear}
-          className="mt-2 gap-1.5"
-        >
-          <X className="size-3.5" aria-hidden="true" />
-          Počisti filtre ({label})
-        </Button>
-      ) : null}
+        <>
+          <p className="text-base font-medium">Ni najdenih rezultatov.</p>
+          <p className="text-sm text-muted-foreground">
+            Poskusite spremeniti filtre ali jih počistiti.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onClear}
+            className="mt-2 gap-1.5"
+          >
+            <X className="size-3.5" aria-hidden="true" />
+            Počisti filtre ({label})
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="text-base font-medium">
+            Ni še živih ponudb (NO_LIVE_DATA).
+          </p>
+          <p className="max-w-md text-sm text-muted-foreground">
+            Tržnica nima še objavljenih {label} partnerjev. Ko jih bodo dodali,
+            se bodo pojavili tukaj — prazna tržnica ni napaka, je iskreno
+            stanje ponudbe.
+          </p>
+        </>
+      )}
     </div>
   );
 }
