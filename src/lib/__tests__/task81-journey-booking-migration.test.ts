@@ -1,0 +1,220 @@
+/**
+ * Testi zagoniske shema migracije JourneyBooking (TASK 81, 1.74.3).
+ *
+ * Ozadje: model JourneyBooking (TASK 58, 1.59.0) je bil commitan BREZ prisma
+ * migracije in BREZ startup koraka — CI "Migration drift check" bi to odkril,
+ * a je bil Build job od 1.59.0 stalno SKIPPED (needs: quality; quality je
+ * padal na tsc). Rezultat: na Neon produkciji tabela nikoli ni bila ustvarjena
+ * in /api/journey/bookings vrača 503 namesto praznega seznama.
+ *
+ * Tokrat se to ne sme več ponoviti:
+ *   1. UNIT testi nad migrateJourneyBookingTableWith (mock klient, obe
+ *      narečji, idempotentnost, fail-open unknown);
+ *   2. SOURCE-CONTRACT testi (precedent TASK 78/73/80 — trditve nad
+ *      DEJANSKO odposlanimi datotekami):
+ *      - prisma/migrations/20260922100000_journey_booking/migration.sql
+ *        vsebuje NATANČNO tabelo + 3 indekse (drift vrata CI);
+ *      - DDL se ujema z modelom v schema.prisma (stolpci po vrsti);
+ *      - startup migracija (journey-booking-migration.ts) vsebuje ISTA
+ *        imena stolpcev/indeksov kot SQL migracija (skladje obeh poti);
+ *      - instrumentation.ts registrira korak schema:journey-booking.
+ */
+
+import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { migrateJourneyBookingTableWith } from "../journey-booking-migration";
+
+const ROOT = process.cwd();
+
+/** Lažni Prisma klient z beleženjem izjav (scripted odgovori). */
+function makeDb(script: {
+  /** Odziv PRAGMA (array = sqlite). */
+  pragma?: unknown[];
+  pragmaThrows?: boolean;
+  /** Odziv information_schema poizvedbe (array = postgres). */
+  info?: unknown[];
+  infoThrows?: boolean;
+  /** Odziv obstoja JourneyBooking tabele (neprazno = obstaja). */
+  tableExists?: boolean;
+  /** Odziv $executeRawUnsafe: število zadetih vrstic (ali napaka). */
+  exec?: (sql: string) => number | Promise<number>;
+}) {
+  const calls = { query: [] as string[], exec: [] as string[] };
+  const db = {
+    async $queryRawUnsafe(sql: string) {
+      calls.query.push(sql);
+      if (sql.startsWith("PRAGMA")) {
+        if (script.pragmaThrows) throw new Error("syntax error near PRAGMA");
+        // PRAGMA na JourneyBooking = preverba obstoja tabele (neprazno = obstaja)
+        if (sql.includes("JourneyBooking")) {
+          return script.tableExists ? [{ name: "id" }] : [];
+        }
+        return script.pragma ?? [];
+      }
+      if (sql.includes("information_schema.tables")) {
+        if (sql.includes("JourneyBooking")) {
+          return script.tableExists ? [{ table_name: "JourneyBooking" }] : [];
+        }
+        if (script.infoThrows) throw new Error("connection refused");
+        return script.info ?? [];
+      }
+      return [];
+    },
+    async $executeRawUnsafe(sql: string) {
+      calls.exec.push(sql);
+      const r = script.exec ? await script.exec(sql) : 0;
+      return r;
+    },
+  };
+  return { db, calls };
+}
+
+type SchemaDb = Parameters<typeof migrateJourneyBookingTableWith>[0];
+
+describe("journey-booking-migration (unit)", () => {
+  test("postgres, tabela manjka → CREATE TABLE + 3 indeksi, poročana ustvaritev", async () => {
+    const { db, calls } = makeDb({ pragmaThrows: true, info: [{}] });
+    const r = await migrateJourneyBookingTableWith(db as unknown as SchemaDb);
+    expect(r.dialect).toBe("postgres");
+    expect(r.tablesCreated).toEqual(["JourneyBooking"]);
+
+    const create = calls.exec.find((s) => s.includes('CREATE TABLE "JourneyBooking"'));
+    expect(create).toBeTruthy();
+    // postgres DDL specifike (skladno s prisma postgres konvencijo)
+    expect(create).toContain("TIMESTAMP(3)");
+    expect(create).toContain('CONSTRAINT "JourneyBooking_pkey" PRIMARY KEY ("id")');
+    expect(create).toContain("DOUBLE PRECISION");
+
+    const idx = calls.exec.filter((s) => s.startsWith("CREATE INDEX"));
+    expect(idx).toHaveLength(3);
+    expect(idx.map((s) => s.match(/"JourneyBooking_[a-zA-Z_]+_idx"/)![0]).sort()).toEqual([
+      '"JourneyBooking_provider_providerProductId_idx"',
+      '"JourneyBooking_shareId_idx"',
+      '"JourneyBooking_status_idx"',
+    ]);
+  });
+
+  test("postgres, tabela že obstaja → NIČ ni ustvarjeno (idempotentnost)", async () => {
+    const { db, calls } = makeDb({
+      pragmaThrows: true,
+      info: [{}],
+      tableExists: true,
+    });
+    const r = await migrateJourneyBookingTableWith(db as unknown as SchemaDb);
+    expect(r.dialect).toBe("postgres");
+    expect(r.tablesCreated).toEqual([]);
+    expect(calls.exec.filter((s) => s.includes("CREATE TABLE"))).toHaveLength(0);
+    // indeksi vseeno tečejo (IF NOT EXISTS — poceni in varni)
+    expect(calls.exec.filter((s) => s.startsWith("CREATE INDEX"))).toHaveLength(3);
+  });
+
+  test("sqlite, tabela manjka → sqlite DDL (DATETIME, inline PRIMARY KEY)", async () => {
+    const { db, calls } = makeDb({ pragma: [{ name: "id" }] });
+    const r = await migrateJourneyBookingTableWith(db as unknown as SchemaDb);
+    expect(r.dialect).toBe("sqlite");
+    expect(r.tablesCreated).toEqual(["JourneyBooking"]);
+
+    const create = calls.exec.find((s) => s.includes('CREATE TABLE IF NOT EXISTS "JourneyBooking"'));
+    expect(create).toBeTruthy();
+    expect(create).toContain("DATETIME");
+    expect(create).toContain('"id" TEXT NOT NULL PRIMARY KEY');
+    expect(create).toContain("REAL");
+  });
+
+  test("DB nedosegljiva (unknown) → prazen rezultat, brez DDL (fail-open)", async () => {
+    const { db, calls } = makeDb({ pragmaThrows: true, infoThrows: true });
+    const r = await migrateJourneyBookingTableWith(db as unknown as SchemaDb);
+    expect(r.dialect).toBe("unknown");
+    expect(r.tablesCreated).toEqual([]);
+    expect(calls.exec).toHaveLength(0);
+  });
+});
+
+describe("journey-booking-migration (source-contract)", () => {
+  const sqlPath = path.join(
+    ROOT,
+    "prisma/migrations/20260922100000_journey_booking/migration.sql"
+  );
+  const sql = readFileSync(sqlPath, "utf8");
+  const libSrc = readFileSync(
+    path.join(ROOT, "src/lib/journey-booking-migration.ts"),
+    "utf8"
+  );
+  const instrumentation = readFileSync(
+    path.join(ROOT, "src/instrumentation.ts"),
+    "utf8"
+  );
+  const schema = readFileSync(path.join(ROOT, "prisma/schema.prisma"), "utf8");
+
+  test("migracijska SQL vsebuje tabelo JourneyBooking z vsemi stolpci modela", () => {
+    expect(sql).toContain('CREATE TABLE "JourneyBooking"');
+    // stolpci iz modela (vrstni red po shemi)
+    const model = schema.match(/model JourneyBooking \{([\s\S]*?)\n\}/)![1];
+    const cols = [...model.matchAll(/^\s+([a-zA-Z]+)\s+/gm)].map((m) => m[1]);
+    expect(cols.length).toBe(13);
+    for (const c of cols) {
+      expect(sql).toContain(`"${c}"`);
+    }
+  });
+
+  test("migracijska SQL vsebuje vse 3 indekse iz modela", () => {
+    expect(sql).toContain('CREATE INDEX "JourneyBooking_shareId_idx" ON "JourneyBooking"("shareId")');
+    expect(sql).toContain(
+      'CREATE INDEX "JourneyBooking_provider_providerProductId_idx" ON "JourneyBooking"("provider", "providerProductId")'
+    );
+    expect(sql).toContain('CREATE INDEX "JourneyBooking_status_idx" ON "JourneyBooking"("status")');
+    // indeksi v modelu (@@index) morajo biti natanko 3
+    const idxCount = [...model_indexMatches(schema)].length;
+    expect(idxCount).toBe(3);
+  });
+
+  function* model_indexMatches(s: string) {
+    const m = s.match(/model JourneyBooking \{([\s\S]*?)\n\}/)![1];
+    yield* m.matchAll(/@@index\(\[([^\]]+)\]\)/g);
+  }
+
+  test("startup migracija (lib) uporablja ISTA imena stolpcev kot SQL migracija", () => {
+    // vsak stolpec iz migracijske SQL mora živeti tudi v lib DDL (postgres veja)
+    for (const col of [
+      "id", "shareId", "provider", "providerProductId", "status",
+      "providerBookingId", "confirmedPrice", "currency", "confirmationUrl",
+      "cancellationUrl", "providerPayload", "createdAt", "updatedAt",
+    ]) {
+      expect(libSrc).toContain(`"${col}"`);
+    }
+    // ista 3 imena indeksov
+    expect(libSrc).toContain('"JourneyBooking_shareId_idx"');
+    expect(libSrc).toContain('"JourneyBooking_provider_providerProductId_idx"');
+    expect(libSrc).toContain('"JourneyBooking_status_idx"');
+  });
+
+  test("instrumentation.ts registrira startup korak schema:journey-booking", () => {
+    expect(instrumentation).toContain("./lib/journey-booking-migration");
+    expect(instrumentation).toContain('name: "schema:journey-booking"');
+    // vsi 4 statusi (ok/unknown/failed + ok-tabela-že-prisotna) so pokriti
+    const step = instrumentation.match(
+      /schema:journey-booking[\s\S]{0,3000}?fail-open/g
+    );
+    expect(step!.length).toBeGreaterThanOrEqual(1);
+    const statuses = instrumentation.match(/name: "schema:journey-booking"/g)!;
+    expect(statuses.length).toBe(4);
+  });
+
+  test("drift je res zaprt: vsi modeli iz sheme so v migracijah (baseline + nove)", () => {
+    // preštej vse modele in vse CREATE TABLE v migracijskih datotekah
+    const models = [...schema.matchAll(/^model ([A-Za-z]+)/gm)].map((m) => m[1]);
+    expect(models.length).toBeGreaterThanOrEqual(29);
+
+    const baseline = readFileSync(
+      path.join(ROOT, "prisma/migrations/20260916000000_baseline/migration.sql"),
+      "utf8"
+    );
+    const tables = new Set([
+      ...[...baseline.matchAll(/CREATE TABLE "([A-Za-z]+)"/g)].map((m) => m[1]),
+      ...[...sql.matchAll(/CREATE TABLE "([A-Za-z]+)"/g)].map((m) => m[1]),
+    ]);
+    const missing = models.filter((m) => !tables.has(m));
+    expect(missing).toEqual([]);
+  });
+});

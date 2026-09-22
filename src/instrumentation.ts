@@ -229,6 +229,62 @@ export async function register() {
       });
     }
 
+    // Startup SHEMA migracija — TASK 58 (1.59.0): ustvari tabelo
+    // JourneyBooking (kanonična potrditev rezervacije zunanjega ponudnika
+    // §19). Model je bil commitan BREZ migracije in BREZ startup koraka —
+    // na Neon produkciji tabela ni bila nikoli ustvarjena, zato je
+    // /api/journey/bookings vračal 503 namesto praznega seznama (drift je
+    // odkril CI šele v 1.74.3, ko je Build job prenehal biti skrit za
+    // padlim quality jobom). Idempotentna (IF NOT EXISTS), additive-only,
+    // fail-open — skupna zastavica DSA_DISABLE_SCHEMA_MIGRATION. Glej
+    // src/lib/journey-booking-migration.ts (zgodovinska migracija:
+    // prisma/migrations/20260922100000_journey_booking).
+    try {
+      const { migrateJourneyBookingTable } = await import(
+        "./lib/journey-booking-migration"
+      );
+      const r = await migrateJourneyBookingTable();
+      if (r.tablesCreated.length > 0) {
+        console.log(
+          `[instrumentation] Shema migracija (TASK 58 potrditve): ` +
+            `ustvarjene tabele [${r.tablesCreated.join(", ")}] (${r.dialect})`
+        );
+        recordStartupStep({
+          name: "schema:journey-booking",
+          status: "ok",
+          detail: `ustvarjene tabele: ${r.tablesCreated.join(", ")} (${r.dialect})`,
+        });
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija (TASK 58 potrditve): tabel " +
+            "ni bilo mogoče preveriti (DB nedosegljiva?) — preskočeno " +
+            "(fail-open)."
+        );
+        recordStartupStep({
+          name: "schema:journey-booking",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja tabele ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:journey-booking",
+          status: "ok",
+          detail: "tabela že prisotna",
+        });
+      }
+    } catch (error) {
+      // Fail-open: migracija NE sme podreti zagona strežnika.
+      console.error(
+        "[instrumentation] Shema migracija (TASK 58 potrditve) ni uspela:",
+        error,
+      );
+      recordStartupStep({
+        name: "schema:journey-booking",
+        status: "failed",
+        detail: String(error),
+      });
+    }
+
     // Startup SHEMA migracija — SOCIALNA PLAST deljenih potovanj (P1 + F7,
     // 1.15.0): Neon baza je bila sinhronizirana v Fazi 4f — vsi kasnejši
     // stolpci (SavedItinerary.formData/editTokenHash/userId) in tabele

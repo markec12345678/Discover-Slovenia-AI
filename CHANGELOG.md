@@ -7,6 +7,59 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.74.4] — 2026-09-22 (TASK 81, 2. plast: JOURNEYBOOKING DRIFT ZAPRT)
+
+### Popravljeno
+- **CI Build job — »Migration drift check (migrations ⇄ schema)« FAILURE**
+  ( odkrit šele zdaj, ker je bil Build job `needs: quality` — po 1.74.3
+  popravljenem quality jobu se je Build PRVIČ pognal po 7 dneh): model
+  `JourneyBooking` ( TASK 58, 1.59.0, commit `d478cfe`) je bil commitan v
+  `schema.prisma` BREZ prisma migracije. Zadnji zeleni CI na `main`:
+  `62e1e41` (2026-09-15) — CI je bil rdeč 7 dni, a je bila rdeča
+  skrita pred Build vrati (quality je padel prej).
+- **Dejavna posledica na produkciji (Neon)**: tabela `JourneyBooking` NI
+  bila nikoli ustvarjena — noben startup korak je ni pokrival, `db:deploy`
+  ( `prisma migrate deploy`) pa se ne izvaja avtomatsko ob deployu. Rezultat:
+  `GET /api/journey/bookings?shareId=…` vrača **503** »Baza potrditev
+  trenutno ni dosegljiva« namesto iskrenega praznega seznama ( edini bralec
+  tabele; TASK 58 §19 kanonična potrditev rezervacij).
+
+### Dodano
+- **Migracija `20260922100000_journey_booking`** (
+  `prisma/migrations/…/migration.sql`): zgodovinsko-vrstična resnica —
+  tabela + 3 indeksi po Prisma DDL konvenciji ( identičen vzorec baseline).
+  Zapre CI drift vrata IN odpira varna `db:deploy` vrata za bodoče
+  spremembe.
+- **Startup shema migracija `schema:journey-booking`** (
+  `src/lib/journey-booking-migration.ts`, registriran v
+  `instrumentation.ts` — isti vzorec kot F11 ankete / F12 dnevnik):
+  idempotentna ( `CREATE … IF NOT EXISTS` + poizvedba za poročanje),
+  additive-only, fail-open ( izid viden na `/api/health`), obe narečji
+  ( Postgres TIMESTAMP(3) + pkey omejevalnik / SQLite DATETIME + inline
+  PRIMARY KEY). **To je DEJANSKI mehanizem, ki bo ustvaril tabelo na
+  produkciji ob naslednjem zagonu** ( serverless hladni zagoni — brez
+  ročnega koraka).
+- **9 testov/62 pričakovanj** (
+  `src/lib/__tests__/task81-journey-booking-migration.test.ts`): unit
+  ( postgres ustvari / idempotentnost / sqlite DDL / unknown fail-open) +
+  source-contract ( precedenca TASK 78/73/80 — trditve nad DEJANSKO
+  odposlanimi datotekami): migracijska SQL vsebuje vseh 13 stolpcev +
+  3 indekse modela; startup lib uporablja ISTA imena kot SQL migracija;
+  `instrumentation.ts` registrira korak s 4 statusi; **varovalka proti
+  ponovitvi**: vsi modeli iz `schema.prisma` imajo `CREATE TABLE` v
+  migracijah ( baseline + nove) — naslednji model brez migracije pade na
+  rdečem testu TUDI pred CI.
+
+### Opombe
+- Lokalna sqlite baza (`db/custom.db`) tabelo že ima ( `db push` pot) —
+  startup korak gre skozi idempotentno vejo; dokaz na
+  `GET /api/health`: `schema:journey-booking → ok`.
+- `migrate diff` s shadow DB ni izvedljiv v sandboxu (brez Dockerja) —
+  končni dokaz je CI (Actions Postgres service container).
+- Ni sprememb vidnih uporabniku razen: `/api/journey/bookings` na
+  produkciji po naslednjem deployu vrne `{ bookings: [] }` (200) namesto
+  503.
+
 ## [1.74.3] — 2026-09-22 (TASK 81: CI ZELEN — MRTVA TW3 ZAPUŠČINA VEN)
 
 ### Popravljeno
