@@ -49,7 +49,31 @@ const updateSchema = z.object({
     .enum(["free", "paid", "street", "private", "none"])
     .nullable()
     .optional(),
-});
+  // === GEO KOORDINATE (TASK 85) — enaka vrata kot create ===
+  lat: z
+    .number()
+    .finite()
+    .min(-90, "Geo širina mora biti med -90 in 90")
+    .max(90, "Geo širina mora biti med -90 in 90")
+    .nullable()
+    .optional(),
+  lng: z
+    .number()
+    .finite()
+    .min(-180, "Geo dolžina mora biti med -180 in 180")
+    .max(180, "Geo dolžina mora biti med -180 in 180")
+    .nullable()
+    .optional(),
+}).refine(
+  (d) =>
+    (d.lat === undefined || d.lat === null) ===
+    (d.lng === undefined || d.lng === null),
+  {
+    message:
+      "Vnesite obe koordinati (geo širino in geo dolžino) ali obe izpraznite.",
+    path: ["lat"],
+  }
+);
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -169,6 +193,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
     // vsebina ne gre javno živa brez ponovnega pregleda.
     // DRAFT (onboarding čarovnik!) in REJECTED se NE dotakneta — zavrnjen
     // lokal se ponovno odda prek obstoječega submit flow-a.
+    // TASK 85: sprememba geo koordinat je VSEBINSKA — pin na supply
+    // zemljevidu je javno viden (own adapter: published + lat/lng NOT NULL),
+    // zato nova/spremenjena lokacija gre v ponovni pregled (kot naslov).
     const contentChanged =
       (data.name !== undefined && data.name.trim() !== listing.name) ||
       (data.category !== undefined && data.category !== listing.category) ||
@@ -182,7 +209,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
       (data.specialties !== undefined &&
         JSON.stringify(data.specialties) !== (listing.specialties || "[]")) ||
       (data.destinationId !== undefined &&
-        (data.destinationId || null) !== listing.destinationId);
+        (data.destinationId || null) !== listing.destinationId) ||
+      (data.lat !== undefined && (data.lat ?? null) !== (listing.lat ?? null)) ||
+      (data.lng !== undefined && (data.lng ?? null) !== (listing.lng ?? null));
     const needsReModeration =
       contentChanged &&
       (listing.status === "published" ||
@@ -239,6 +268,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
         ...(data.parking !== undefined && {
           parking: data.parking || null,
         }),
+        // TASK 85: geo koordinati (obe ali nobena — zod refine; null = izbris)
+        ...(data.lat !== undefined && { lat: data.lat ?? null }),
+        ...(data.lng !== undefined && { lng: data.lng ?? null }),
         // Plan, featured in verified se NE posodabljajo preko tega API-ja
         // P3c-1: nazaj v pregled ob vsebinski spremembi
         ...(needsReModeration && {

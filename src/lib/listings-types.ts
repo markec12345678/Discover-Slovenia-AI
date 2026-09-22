@@ -46,6 +46,12 @@ export interface Listing {
   seasons?: SeasonKey[] | null;
   weatherSuitability?: WeatherSuitability | null;
   parking?: ParkingOption | null;
+  // === GEO KOORDINATE (TASK 85) — neobvezni pin na supply zemljevidu ===
+  // Vnese partner (owner portal) ali admin; geoPrecision: exact.
+  // Lastna tržnica (own adapter) pokaže pin SAMO za published listinge
+  // z obema koordinatama (fail-closed, enaka meja ±90/±180).
+  lat?: number | null;
+  lng?: number | null;
   viewCount: number;
   clickCount: number;
   // === STATUS SISTEM (P0-1): moderacijska zanka draft → pending → published ===

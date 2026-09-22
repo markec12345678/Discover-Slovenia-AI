@@ -13,6 +13,7 @@ import {
   CalendarDays,
   CloudSun,
   Car,
+  MapPin,
 } from "lucide-react";
 
 import {
@@ -54,6 +55,13 @@ import {
   type Listing,
   type ListingCategory,
 } from "@/lib/listings-types";
+import {
+  GEO_ERROR_MESSAGES,
+  GEO_SI_HINT,
+  isWithinSloveniaBbox,
+  parseGeoInput,
+  type GeoFieldError,
+} from "@/lib/listing-geo-validation";
 import { AutoTagButton } from "@/components/owner/auto-tag-button";
 
 export interface ListingFormData {
@@ -74,6 +82,9 @@ export interface ListingFormData {
   seasons: SeasonKey[];
   weatherSuitability: WeatherSuitability | null;
   parking: ParkingOption | null;
+  // === GEO KOORDINATE (TASK 85) — surovo besedilo, parse ob submitu ===
+  lat: string;
+  lng: string;
 }
 
 interface ListingFormDialogProps {
@@ -100,6 +111,8 @@ const EMPTY_FORM: ListingFormData = {
   seasons: [],
   weatherSuitability: null,
   parking: null,
+  lat: "",
+  lng: "",
 };
 
 /**
@@ -118,8 +131,20 @@ export function ListingFormDialog({
   const [specialtyInput, setSpecialtyInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // TASK 85: geo polja — touched po vzoru TASK 82 (inline validacija
+  // šele po prvi interakciji, da nov prazen dialog ne kriči napak)
+  const [geoTouched, setGeoTouched] = useState(false);
 
   const isEdit = listing !== null;
+
+  // Vedno izračunan live parse (čiste funkcije iz listing-geo-validation)
+  const geoParse = parseGeoInput(form.lat, form.lng);
+  const geoError: GeoFieldError = geoTouched ? geoParse.error : null;
+  const showSiHint =
+    geoParse.error === null &&
+    geoParse.lat !== null &&
+    geoParse.lng !== null &&
+    !isWithinSloveniaBbox(geoParse.lat, geoParse.lng);
 
   // Nastavi formo ko se odpre ali ko se listing spremeni
   useEffect(() => {
@@ -142,6 +167,8 @@ export function ListingFormDialog({
           seasons: listing.seasons ?? [],
           weatherSuitability: listing.weatherSuitability ?? null,
           parking: listing.parking ?? null,
+          lat: listing.lat != null ? String(listing.lat) : "",
+          lng: listing.lng != null ? String(listing.lng) : "",
         });
       } else {
         setForm(EMPTY_FORM);
@@ -149,6 +176,7 @@ export function ListingFormDialog({
       setImageInput("");
       setSpecialtyInput("");
       setErrorMsg(null);
+      setGeoTouched(false);
     }
   }, [open, listing]);
 
@@ -235,6 +263,14 @@ export function ListingFormDialog({
       return;
     }
 
+    // TASK 85: trda geo vrata — obe koordinati ali nobena, ±90/±180.
+    // Zunaj-SI točke (rob IT/AT/HU) so dovoljene — rumeni hint NE blokira.
+    if (geoParse.error !== null) {
+      setGeoTouched(true);
+      setErrorMsg(GEO_ERROR_MESSAGES[geoParse.error]);
+      return;
+    }
+
     setLoading(true);
     try {
       const payload = {
@@ -254,6 +290,9 @@ export function ListingFormDialog({
         seasons: form.seasons,
         weatherSuitability: form.weatherSuitability,
         parking: form.parking,
+        // TASK 85: null = izpraznjeno (pin odstranjen), obe ali nobena
+        lat: geoParse.lat,
+        lng: geoParse.lng,
       };
 
       const url = isEdit
@@ -545,6 +584,89 @@ export function ListingFormDialog({
               <span className="font-normal text-muted-foreground">
                 (neobvezno)
               </span>
+            </div>
+
+            {/* GEO KOORDINATE (TASK 85) — pin lastne tržnice na zemljevidu
+                ponudb. Inline validacija po vzoru TASK 82: touched →
+                aria-invalid + role="alert"; rumeni hint zunaj SI bbox. */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 text-sm font-medium">
+                <MapPin className="size-4 text-primary" aria-hidden="true" />
+                Lokacija na zemljevidu
+                <span className="font-normal text-muted-foreground">
+                  (neobvezno)
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="lf-lat"
+                    className="text-xs text-muted-foreground"
+                  >
+                    Geo širina (N)
+                  </Label>
+                  <Input
+                    id="lf-lat"
+                    type="number"
+                    inputMode="decimal"
+                    step="any"
+                    min={-90}
+                    max={90}
+                    placeholder="46.3625"
+                    value={form.lat}
+                    onChange={(e) => update("lat", e.target.value)}
+                    onBlur={() => setGeoTouched(true)}
+                    disabled={loading}
+                    aria-invalid={geoError !== null}
+                    aria-describedby={geoError ? "lf-geo-error" : undefined}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="lf-lng"
+                    className="text-xs text-muted-foreground"
+                  >
+                    Geo dolžina (E)
+                  </Label>
+                  <Input
+                    id="lf-lng"
+                    type="number"
+                    inputMode="decimal"
+                    step="any"
+                    min={-180}
+                    max={180}
+                    placeholder="14.0936"
+                    value={form.lng}
+                    onChange={(e) => update("lng", e.target.value)}
+                    onBlur={() => setGeoTouched(true)}
+                    disabled={loading}
+                    aria-invalid={geoError !== null}
+                    aria-describedby={geoError ? "lf-geo-error" : undefined}
+                  />
+                </div>
+              </div>
+              {geoError !== null && (
+                <p
+                  id="lf-geo-error"
+                  role="alert"
+                  className="text-xs text-destructive"
+                >
+                  {GEO_ERROR_MESSAGES[geoError]}
+                </p>
+              )}
+              {!geoError && showSiHint && (
+                <p
+                  id="lf-geo-hint"
+                  className="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400"
+                >
+                  <MapPin className="size-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+                  {GEO_SI_HINT}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Z obema koordinatama se lokal prikaže kot pin na zemljevidu
+                ponudb (po objavi). Primer: 46.3625, 14.0936 (Bled).
+              </p>
             </div>
 
             {/* Sezona obratovanja — čipi */}

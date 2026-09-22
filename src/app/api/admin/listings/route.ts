@@ -7,6 +7,7 @@ import {
   isValidWeatherSuitability,
   isValidParkingOption,
 } from "@/lib/listing-practical";
+import { isLatValid, isLngValid } from "@/lib/listing-geo-validation";
 
 // Pomožna: preveri admin geslo iz headerja
 function unauthorized() {
@@ -172,6 +173,41 @@ export async function POST(request: Request) {
       : null;
     const parking = isValidParkingOption(body.parking) ? body.parking : null;
 
+    // TASK 85: geo koordinati (pin lastne tržnice) — trda vrata enaka
+    // owner API-ju: obe ALI nobena, ±90/±180. Neveljavna številka ni
+    // tiho prirejena (clamp bi premaknil pin) ampak izrecno zavrnjena.
+    const latRaw =
+      typeof body.lat === "number" && Number.isFinite(body.lat)
+        ? body.lat
+        : null;
+    const lngRaw =
+      typeof body.lng === "number" && Number.isFinite(body.lng)
+        ? body.lng
+        : null;
+    if (latRaw !== null && !isLatValid(latRaw)) {
+      return NextResponse.json(
+        { error: "Geo širina mora biti med -90 in 90" },
+        { status: 400 }
+      );
+    }
+    if (lngRaw !== null && !isLngValid(lngRaw)) {
+      return NextResponse.json(
+        { error: "Geo dolžina mora biti med -180 in 180" },
+        { status: 400 }
+      );
+    }
+    if ((latRaw !== null) !== (lngRaw !== null)) {
+      return NextResponse.json(
+        {
+          error:
+            "Vnesite obe koordinati (geo širino in geo dolžino) ali obe izpraznite.",
+        },
+        { status: 400 }
+      );
+    }
+    const lat = latRaw;
+    const lng = lngRaw;
+
     const created = await db.listing.create({
       data: {
         name,
@@ -212,6 +248,9 @@ export async function POST(request: Request) {
         seasons: seasons.length > 0 ? JSON.stringify(seasons) : null,
         weatherSuitability,
         parking,
+        // TASK 85: obe ali nobena (validirano zgoraj); null = brez pina
+        lat,
+        lng,
         ownerEmail:
           typeof body.ownerEmail === "string" && body.ownerEmail.trim()
             ? body.ownerEmail.trim()

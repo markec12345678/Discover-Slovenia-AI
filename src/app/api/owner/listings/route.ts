@@ -86,7 +86,34 @@ const createSchema = z.object({
     .enum(["free", "paid", "street", "private", "none"])
     .nullable()
     .optional(),
-});
+  // === GEO KOORDINATE (TASK 85) — neobvezni pin na supply zemljevidu ===
+  // Trda vrata enaka formi: obe ALI nobena (refine spodaj), ±90/±180.
+  // Zunaj-SI točke so DOVOLJENE (robni kraji IT/AT/HU) — mehki hint
+  // živi samo na formi; strežnik ne zavira zakonitih robov.
+  lat: z
+    .number()
+    .finite()
+    .min(-90, "Geo širina mora biti med -90 in 90")
+    .max(90, "Geo širina mora biti med -90 in 90")
+    .nullable()
+    .optional(),
+  lng: z
+    .number()
+    .finite()
+    .min(-180, "Geo dolžina mora biti med -180 in 180")
+    .max(180, "Geo dolžina mora biti med -180 in 180")
+    .nullable()
+    .optional(),
+}).refine(
+  (d) =>
+    (d.lat === undefined || d.lat === null) ===
+    (d.lng === undefined || d.lng === null),
+  {
+    message:
+      "Vnesite obe koordinati (geo širino in geo dolžino) ali obe izpraznite.",
+    path: ["lat"],
+  }
+);
 
 // GET /api/owner/listings — vrne vse lokale trenutno prijavljenega lastnika
 export async function GET() {
@@ -238,6 +265,9 @@ export async function POST(request: Request) {
             : null,
         weatherSuitability: data.weatherSuitability || null,
         parking: data.parking || null,
+        // TASK 85: geo koordinati pin-a (obe ali nobena — zod refine zgoraj)
+        lat: data.lat ?? null,
+        lng: data.lng ?? null,
         ownerId: session.user.id,
         ownerEmail: owner.email,
         // Status: novi lokalci začnejo kot DRAFT (lastnik jih mora oddati v pregled)

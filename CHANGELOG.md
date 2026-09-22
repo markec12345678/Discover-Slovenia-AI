@@ -7,6 +7,58 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.76.0] — 2026-09-22 (TASK 85: GEO KOORDINATE NA LISTING FORMAH — partner/admin vneseta pin lastne tržnice)
+
+### Dodano
+- **Vnos geo koordinat (lat/lng) na OBEH listing formah** — TASK 84 je
+  aktiviral own-marketplace supply sloj, a je edini pogoj za pin
+  (koordinati) zahteval ročen DB dostop. TASK 85 zapre to zadnjo vrzel:
+  partner (owner portal) ali admin lahko zdaj vpišeta lokacijo prek
+  forme — brez spremembe kode se pin prikaže na zemljevidu ponudb
+  (plug-and-play, kot vsi gates).
+  1. **Čista validacijska plast `src/lib/listing-geo-validation.ts`**
+     (vzorec TASK 82 — funkcije brez Reacta, skupne formi + testom):
+     `parseCoordinate` (dopusti slovensko decimalno VEJICO), trda vrata
+     `parseGeoInput` (obe koordinati ALI nobena; lat ±90 / lng ±180 —
+     identično meji own adapter fail-closed filtra), `GEO_ERROR_MESSAGES`
+     (ena resnica za obe formi) ter MEHKI rumeni hint `isWithinSloveniaBbox`
+     + `GEO_SI_HINT` — točka zunaj SI bbox-a (45.4–46.9 N, 13.3–16.6 E,
+     isti kanonski pravokotnik kot FSQ ingest) NE blokira shranjevanja
+     (zakoniti robni kraji IT/AT/HU), opozori pa na tipično ZAMENO
+     lat↔lng (npr. 14.09, 46.36 → Romunija).
+  2. **Owner API** (`/api/owner/listings` POST + `[id]` PUT): zod vrata
+     (`.finite().min(-90).max(90)` / `±180`, `.nullable().optional()`) +
+     `.refine` obe-ali-nobena; persistanca `lat ?? null` (prazno = pin
+     odstranjen). GEO SPREMEMBA ŠTEJE KOT VSEBINSKA (P3c-1
+     re-moderacija): pin je javno viden (own adapter: published +
+     lat/lng NOT NULL), zato nova/spremenjena lokacija published/pending
+     zapisa gre nazaj v admin pregled — kot naslov.
+  3. **Owner ListingFormDialog**: polji Geo širina (N) / Geo dolžina (E)
+     v okviru Praktični podatki (MapPin ikona, `type=number`
+     `step=0.000001` `inputMode=decimal`, placeholder Bled). INLINE
+     validacija po vzoru TASK 82: `geoTouched` onBlur → `aria-invalid` +
+     `aria-describedby` + `role="alert"` sporočilo pod parom; prefill
+     `String(listing.lat)`; submit ZAVRE pred fetch ob trdi napaki.
+  4. **Admin API** (oba `admin/listings` route): ročna validacija z istimi
+     čistimi helperji — izrecna zavrnitev (400) namesto tihega clamp-a
+     (prirejanje bi PREMAKNILO pin), polovičen vnos zavrnjen.
+  5. **Admin ListingForm**: isto polje + live parse (inline error +
+     rumeni SI hint), `AdminListing` razširjen z lat/lng, prefill/payload.
+
+### Testi
+- `task85-listing-geo-form.test.ts`: 43 testov / 136 pričakovanj —
+  unit (parseCoordinate: vejica/trim/prazno/neštevilo/eksponent;
+  isLatValid/isLngValid meje vključno + NaN/Infinity fail-closed;
+  parseGeoInput: obe-ali-nobena, presežene meje, neštevilo v posameznem
+  polju pade v SVOJO napako ne both_required, zamenjava lat↔lng je
+  svetovno veljavna a zunaj SI bbox) + source-contract (zod vrata +
+  refine, contentChanged geo re-moderacija, aria-invalid/role=alert,
+  step 0.000001, prefill String(listing.lat), payload geoParse, admin
+  izrecne 400 napake, SI_BBOX single source of truth iz FSQ dataset).
+- Skupaj: **1713/1713 testov** (1670 + 43), lint 0, tsc 0.
+
+---
+
 ## [1.75.0] — 2026-09-22 (TASK 84: LASTNA TRŽNICA KOT SUPPLY SLOJ — zadnji provider BREZ ključa aktiviran)
 
 ### Dodano

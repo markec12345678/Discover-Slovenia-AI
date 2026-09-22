@@ -57,6 +57,12 @@ import path from "node:path";
 import type { ProductType } from "../../types";
 import type { FsqPlace } from "./types";
 import { isFsqPlace } from "./types";
+// TASK 85 (1.76.0): SI_BBOX živi v client-safe modulu (slovenia-bbox.ts),
+// ker ga listing-geo-validation.ts uvaža v client bundle. Tukaj re-export,
+// da vsi dosedanji uvozi ostanejo veljavni.
+import { SI_BBOX } from "@/lib/slovenia-bbox";
+
+export { SI_BBOX };
 
 // ---------------------------------------------------------------------------
 // PODPORTE DRŽAVE (nalagalni filter regije — dokumentirane meje)
@@ -66,14 +72,6 @@ import { isFsqPlace } from "./types";
 // pokrijejo ozemlje države ± robni presežki v sosednjih državah) — isti
 // vzorec poštenosti kot prvotni SI_BBOX. Kraji znotraj SI bbox-a a zunaj
 // Slovenije (npr. Trst/Videm/Dunaj pravokotnikovo) so možni in znani.
-
-/** Kanonski približek meja Slovenije (deg): lat 45.4–46.9, lng 13.3–16.6. */
-export const SI_BBOX = {
-  latMin: 45.4,
-  latMax: 46.9,
-  lngMin: 13.3,
-  lngMax: 16.6,
-} as const;
 
 /** Podprte države FSQ plasti (nalagalni filter + razvrščanje po državi). */
 export const SUPPORTED_COUNTRY_BBOXES = {
