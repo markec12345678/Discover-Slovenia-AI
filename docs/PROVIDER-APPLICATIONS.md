@@ -30,7 +30,7 @@ Prejšnje žive preverbe pogodb: 2026-09-18 (TASK 45 Viator, TASK 46 GYG).
 | **OSM** | Lokalni (odprti) | ✅ `osm-adapter.ts` | ODbL (odprta) | OPEN DATA | brez ključa | ✅ AKTIVEN | ✅ žive Overpass poizvedbe | NOT SUPPORTED | NOT SUPPORTED | info_only | ✅ | **ACTIVE** |
 | **Foursquare Open Places** | Lokalni (odprti) | ❌ ni datoteke | Apache-2.0 | OPEN DATA (množica NI nameščena) | MISSING (`FSQ_PLACES_DIR`) | ❌ | ❌ | NOT SUPPORTED | NOT SUPPORTED | info_only | ❌ | **ACCESS NOT AVAILABLE** |
 | **slovenia.info (STO)** | Lokalni (vsebina) | ingest + RAG (ni sloj zemljevida) | llms.txt (uradna vsebina) | STATIC CONTENT | brez ključa | ✅ (RAG vir) | ✅ ingest 2026-09-17 + tedenski cron | NOT SUPPORTED | NOT SUPPORTED | info_only | ✅ (RAG) | **ACTIVE** (ne-sloj) |
-| **Lastna tržnica (own)** | Own | DB + Stripe | lastna | DIRECT BOOKING (geo še manjka) | — | ❌ (brez geo plasti) | ❌ | FROM_PRICE (lastne cene) | UNKNOWN | own_checkout | ❌ | **CODE READY** |
+| **Lastna tržnica (own)** | Own | ✅ `providers/own/adapter` (TASK 84) | lastna | DIRECT BOOKING (geo: lat/lng na Listingu) | — | ✅ sloj priklopljen (prazna tržnica = iskreno „no-listings") | ✅ E2E na testnem listingu (dev) | NOT SUPPORTED (priceRange je obseg) | NOT SUPPORTED (Stripe, ne koledar) | own_checkout | ✅ priklopljen | **PRODUCTION CONFIGURED** (NO_LIVE_DATA — živi partnerjevi listingi s koordinatami še manjkajo) |
 | **Viator** | A — activities | ✅ `providers/viator/*` | ✅ živo preverjena | AFFILIATE DEEP LINK (API danes NE dostopen) | API key MISSING | ❌ (iskreno prazen sloj) | ❌ (vrata živa: 401 brez ključa) | FROM PRICE (ko bo aktiven) | UNKNOWN (nad Basic tierjem) | affiliate_redirect | ✅ priklopljen | **CODE READY / NOT CONFIGURED** |
 | **GetYourGuide** | A — activities | ✅ `providers/getyourguide/*` | ✅ živo preverjena | AFFILIATE DEEP LINK (API danes NE dostopen) | API token MISSING (NI self-serve) | ❌ (iskreno prazen sloj) | ❌ (vrata živa: „X-ACCESS-TOKEN missing") | FROM PRICE (ko bo aktiven) | UNKNOWN | affiliate_redirect | ✅ priklopljen | **CODE READY / PARTNER APPROVAL REQUIRED** |
 | **Tiqets** | A — activities | ❌ | ✅ (portal živ) | AFFILIATE DEEP LINK | affiliate URL MISSING; API po odobritvi | ❌ | ❌ | NOT SUPPORTED | NOT SUPPORTED | affiliate_redirect | ❌ | **PARTNER APPROVAL REQUIRED** |
@@ -44,11 +44,12 @@ Prejšnje žive preverbe pogodb: 2026-09-18 (TASK 45 Viator, TASK 46 GYG).
 | **SafetyWing** | E — insurance | ❌ | ✅ (portal živ) | AFFILIATE DEEP LINK (Ambassador) | ambassador ID MISSING | ❌ | ❌ | NOT SUPPORTED (brez javnega API) | NOT SUPPORTED | affiliate_redirect | ❌ | **NOT APPLICABLE** (API) |
 | **Travelpayouts** | Infra/vir | ❌ | ✅ (docs živi) | SEARCH API (self-serve, bodoče) | marker/token MISSING (ni računa) | ❌ | ❌ | UNKNOWN | UNKNOWN | affiliate_redirect (hosti že dovoljeni v /go) | ❌ | **NOT CONFIGURED** |
 
-**Povzetek (productionSummary):** 16 vnosov · **3 PRODUCTION ACTIVE**
-(osm, sto, kiwitaxi) · 2 CODE READY (viator, getyourguide — adapterja
-priključena, iskreno prazna do ključev) · 1 CODE READY (own — geo manjka)
-· 2 DISCOVERED (fsq, travelpayouts) · 8 CONTRACT VERIFIED (affiliate-only,
-blokirani na dostopu).
+**Povzetek (productionSummary):** 16 vnosov · **4 PRODUCTION ACTIVE**
+(osm, sto, kiwitaxi, fsq) · **1 PRODUCTION CONFIGURED (own — TASK 84:
+sloj priklopljen, živi partnerjevi listingi s koordinatami še manjkajo)**
+· 2 CODE READY (viator, getyourguide — adapterja priključena, iskreno
+prazna do ključev) · 1 DISCOVERED (travelpayouts) · 8 CONTRACT VERIFIED
+(affiliate-only, blokirani na dostopu).
 
 ---
 

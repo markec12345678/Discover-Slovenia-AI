@@ -341,9 +341,10 @@ describe("supplyResponseCacheControl (točka 13)", () => {
   });
 
   test("najkrajši TTL med aktivnimi določa s-maxage (ne fiksni 60)", () => {
-    // Brez real-time virov (TTL 0: GYG + Task 53 tiqets/skyscanner) — čist
+    // Brez real-time virov (TTL 0: GYG + Task 53 tiqets/skyscanner +
+    // TASK 84 own — živa DB poizvedba po vsakem zahtevku) — čist
     // scenarij najkrajšega TTL-ja.
-    const TTL_ZERO = new Set(["getyourguide", "tiqets", "skyscanner"]);
+    const TTL_ZERO = new Set(["getyourguide", "tiqets", "skyscanner", "own"]);
     const withShort = [
       ...PROVIDER_REGISTRY.filter((p) => !TTL_ZERO.has(p.slug)),
       { ...getProvider("fsq")!, active: true, cacheTtlMs: 20_000 },

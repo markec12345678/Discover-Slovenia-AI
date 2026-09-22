@@ -240,26 +240,32 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     group: "own",
     inventoryAccess: ["search_api"],
     status: "search",
-    active: false, // Listing/Experience/Product ŠE nimajo koordinat → ni sloja
-    types: ["activity", "accommodation", "restaurant", "poi"],
+    // TASK 84 (1.75.0): AKTIVIRAN — Listing ima geo stolpca (lat/lng,
+    // startup migracija listing-geo-migration.ts). Adapter
+    // providers/own/adapter.ts bere objavljene listinge S koordinatami;
+    // listing brez koordinat je iskreno izpuščen (nikoli izmišljena
+    // lokacija). Prazna tržnica → opomba „no-listings" (kot fsq
+    // „no-dataset"). Experience/Product ostajata brez geo (bodoča faza).
+    active: true,
+    types: ["activity", "accommodation", "restaurant", "shop", "transport", "poi"],
     capabilities: {
-      geo: false,
-      price: true,
-      availability: false,
-      images: true,
-      reviews: true,
-      map: false,
-      booking: true,
+      geo: true, // lat/lng partnerjev/admina vnosa (geoPrecision: exact)
+      price: false, // priceRange €|€€|€€€ je obseg, NE številčna cena
+      availability: false, // Stripe checkout, ne koledar → not_supported
+      images: true, // images JSON (validiran http(s) v adapterju)
+      reviews: true, // rating/reviewCount (samo kadar > 0)
+      map: true, // pin na supply zemljevidu
+      booking: true, // lastna rezervacija (Stripe tok tržnice)
       affiliate: false,
     },
     envKeys: {},
-    minZoom: 22,
-    cacheTtlMs: 0,
+    minZoom: 10, // usklajeno s SUPPLY_MIN_ZOOM (zoom.ts) — kot osm
+    cacheTtlMs: 0, // živa DB poizvedba po vsakem zahtevku → no-store
     timeoutMs: 10_000,
-    maxCallsPerMin: 0,
+    maxCallsPerMin: 0, // lokalna DB — brez omrežnega klica, brez meje
     accessNote: {
-      sl: "Lastni Listingi/izkušnje/izdelki v DB — geo polja še manjkajo (bodoča faza)",
-      en: "Own listings/experiences/products in DB — geo fields still missing (future phase)",
+      sl: "Lastna tržnica (Listing s koordinatami, BREZ zunanjih poverilnic) · listing brez geo je izpuščen · prazna tržnica = iskreno prazen sloj",
+      en: "Own marketplace (Listings with coordinates, NO external credentials) · listing without geo is skipped · empty marketplace = honestly empty layer",
     },
   },
 

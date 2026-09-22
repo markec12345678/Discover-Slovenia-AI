@@ -121,9 +121,9 @@ describe("TASK 53 §20: NO-CREDENTIAL MODE (današnje stanje instance)", () => {
     (https as { request: unknown }).request = realRequest;
   });
 
-  test("① tovarna: VSI aktivni adapterji se zgradijo brez izjem (10 adapterjev)", () => {
+  test("① tovarna: VSI aktivni adapterji se zgradijo brez izjem (11 adapterjev)", () => {
     const adapters = defaultAdapters();
-    expect(adapters.length).toBe(10);
+    expect(adapters.length).toBe(11);
     expect(() => adapters.forEach((a) => void a.entry)).not.toThrow();
   });
 
@@ -237,14 +237,17 @@ describe("TASK 53 §20: NO-CREDENTIAL MODE (današnje stanje instance)", () => {
     }
   });
 
-  test("⑦ matrika: 16 vnosov, 4 PRODUCTION ACTIVE (+fsq TASK 61), 8 CODE_READY, 4 CONTRACT_VERIFIED", () => {
+  test("⑦ matrika: 16 vnosov, 4 PRODUCTION ACTIVE (+fsq TASK 61), 7 CODE_READY, 4 CONTRACT_VERIFIED, 1 PRODUCTION_CONFIGURED (+own TASK 84)", () => {
     const matrix = productionMatrix();
     expect(matrix.length).toBe(16);
     const byStage = new Map<string, number>();
     for (const m of matrix) byStage.set(m.stage, (byStage.get(m.stage) ?? 0) + 1);
     expect(byStage.get("PRODUCTION_ACTIVE")).toBe(4); // osm, sto, kiwitaxi + fsq (TASK 61)
-    expect(byStage.get("CODE_READY")).toBe(8);
+    expect(byStage.get("CODE_READY")).toBe(7);
     expect(byStage.get("CONTRACT_VERIFIED")).toBe(4); // discovercars, omio, wn, sw
+    // TASK 84 (1.75.0): own — sloj priklopljen (adapter + register active),
+    // živi partnerjevi listingi s koordinatami še manjkajo (NO_LIVE_DATA)
+    expect(byStage.get("PRODUCTION_CONFIGURED")).toBe(1);
   });
 });
 
@@ -304,13 +307,13 @@ describe("TASK 53 §21: FUTURE ACTIVATION (env → adapter zazna)", () => {
     expect(acc.productionConfigured).toBe(false); // …a NI poverilnica
   });
 
-  test("⑦ tovarna ostaja ISTA: defaultAdapters() vrne ISTIH 10 adapterjev z in brez ključev", () => {
+  test("⑦ tovarna ostaja ISTA: defaultAdapters() vrne ISTIH 11 adapterjev z in brez ključev", () => {
     // (arhitektura se NE spremeni z aktivacijo — samo env razlikuje stanje)
     const before = defaultAdapters().map((a) => a.entry.slug).sort();
     process.env.TIQETS_API_KEY = "aktivacijski-test";
     const after = defaultAdapters().map((a) => a.entry.slug).sort();
     expect(after).toEqual(before);
-    expect(after.length).toBe(10);
+    expect(after.length).toBe(11);
   });
 });
 
@@ -354,7 +357,7 @@ describe("TASK 53 §12: /go centralna arhitektura (CTA fail-closed)", () => {
       expect(matrixSlugs.has(slug)).toBe(true);
       expect(statusSlugs.has(slug)).toBe(true);
     }
-    expect(active.length).toBe(10);
+    expect(active.length).toBe(11);
     expect(matrixSlugs.size).toBe(16);
     expect(statusSlugs.size).toBe(16);
   });

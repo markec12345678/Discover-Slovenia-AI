@@ -129,6 +129,56 @@ export async function register() {
       });
     }
 
+    // Startup SHEMA migracija — TASK 84 (1.75.0): doda geo stolpca Listing
+    // (lat/lng — pin lastne tržnice na supply zemljevidu,
+    // src/lib/supply/providers/own/adapter.ts) na obstoječih bazah.
+    // Idempotentna, additive-only, fail-open — skupna zastavica
+    // DSA_DISABLE_SCHEMA_MIGRATION. Glej src/lib/listing-geo-migration.ts.
+    try {
+      const { migrateListingGeoColumns } = await import(
+        "./lib/listing-geo-migration"
+      );
+      const r = await migrateListingGeoColumns();
+      if (r.columnsAdded.length > 0) {
+        console.log(
+          `[instrumentation] Shema migracija (Listing geo): dodani ` +
+            `stolpci [${r.columnsAdded.join(", ")}] (${r.dialect})`
+        );
+        recordStartupStep({
+          name: "schema:listing-geo",
+          status: "ok",
+          detail: `dodani stolpci: ${r.columnsAdded.join(", ")} (${r.dialect})`,
+        });
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija (Listing geo): stolpcev ni " +
+            "bilo mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
+        );
+        recordStartupStep({
+          name: "schema:listing-geo",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja stolpcev ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:listing-geo",
+          status: "ok",
+          detail: "stolpci že prisotni",
+        });
+      }
+    } catch (error) {
+      // Fail-open: migracija NE sme podreti zagona strežnika.
+      console.error(
+        "[instrumentation] Shema migracija (Listing geo) ni uspela:",
+        error
+      );
+      recordStartupStep({
+        name: "schema:listing-geo",
+        status: "failed",
+        detail: String(error),
+      });
+    }
+
     // Startup SHEMA migracija — F11 (1.15.0): ustvari tabeli TripPoll +
     // TripPollVote na obstoječih bazah (Vercel/Neon nima ročnega db push;
     // skip-worktree past je modele enkrat zadržala pred commitom).

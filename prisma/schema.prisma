@@ -279,6 +279,15 @@ model Listing {
   aiRecommendations Int    @default(0)
   leadCount       Int      @default(0)
 
+  // === GEO KOORDINATE (TASK 84, 1.75.0): pin lastne tržnice na supply
+  // zemljevidu. NEOBVEZNO (null = listing brez pina — own supply adapter
+  // ga iskreno IZPUSTI, nikoli ne izmišljamo lokacije). Vnese partner
+  // (owner portal) ali admin; geoPrecision: exact. Startup migracija:
+  // src/lib/listing-geo-migration.ts (prisma migration:
+  // 20260923100000_listing_geo).
+  lat              Float?
+  lng              Float?
+
   // === STATUS SISTEM (Faza 1) ===
   // Workflow: draft → pending → approved → published → archived → deleted
   status          String   @default("published") // draft | pending | approved | published | rejected | expired | archived | deleted

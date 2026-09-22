@@ -64,6 +64,8 @@ export type BlockReason =
   | "ACCESS_NOT_AVAILABLE" // dostop (ključ/feed/dataset) ni na voljo
   | "NOT_CONFIGURED" // ID/ključ obstaja self-serve, a NI v env
   | "BLOCKED" // vir zahteva pogodbo/B4B — danes nemogoče
+  | "NO_LIVE_DATA" // TASK 84: sloj je priklopljen, živi podatki še niso
+  // prispevali (npr. own: partnerjevi listingi s koordinatami)
   | "NOT_APPLICABLE"; // vir sploh nima take vrste dostopa (npr. brez API)
 
 /** Klasifikacija VRSTE DOSTOPA (§4 — nikoli pomešana z inventarjem). */
@@ -269,14 +271,20 @@ const MATRIX: Record<ProviderSlug, Omit<ProductionMatrixEntry, "slug">> = {
   own: {
     category: "OWN_MARKETPLACE",
     accessKind: "DIRECT_BOOKING",
-    stage: "CODE_READY",
-    blockedReason: "ACCESS_NOT_AVAILABLE",
-    price: "FROM_PRICE",
-    availability: "UNKNOWN",
+    // TASK 84 (1.75.0): geo stolpca Listing (lat/lng) + own adapter
+    // (providers/own/adapter.ts) + register active → sloj priklopljen na
+    // /api/supply/search. Pipeline je E2E preverjen na testnem listingu v
+    // dev instanci (koordinate → pin → supply odgovor); PRODUKCIJSKI živi
+    // podatki čakajo prve partnerjeve listinge s koordinatami (stopnja
+    // iskreno ostaja PRODUCTION_CONFIGURED, NE PRODUCTION_ACTIVE).
+    stage: "PRODUCTION_CONFIGURED",
+    blockedReason: "NO_LIVE_DATA",
+    price: "NOT_SUPPORTED", // priceRange €|€€|€€€ je obseg, ne številčna cena
+    availability: "NOT_SUPPORTED", // Stripe checkout, ne koledar
     cta: "own_checkout",
-    aiIntegrated: false,
+    aiIntegrated: true, // priklopljen na supply search → AI kontekst izbire
     docsUrl: "",
-    note: "Lastni Listingi/izdelki v DB s Stripe checkoutom — geo polja za supply sloj še manjkajo (ni zemljevidnega prikaza). Lastna tržnica, ne zunanji provider.",
+    note: "Lastna tržnica: Listingi z geo stolpcema (lat/lng, TASK 84) na supply zemljevidu — rezervacija prek lastnega Stripe toka. Listing BREZ koordinat je iskreno izpuščen; prazna tržnica = „no-listings“. Experience/Product še brez geo (bodoča faza).",
   },
 
   // === A — ACTIVITIES / EXPERIENCES (§7) ================================

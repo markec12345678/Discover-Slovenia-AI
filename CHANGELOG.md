@@ -7,6 +7,74 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.75.0] — 2026-09-22 (TASK 84: LASTNA TRŽNICA KOT SUPPLY SLOJ — zadnji provider BREZ ključa aktiviran)
+
+### Dodano
+- **`own` provider (lastna tržnica) AKTIVIRAN na supply zemljevidu** —
+  zadnji od 16 vnosov registra, ki NE potrebuje ZUNANJIH poverilnic.
+  Do zdaj zamrznjen (`active: false`, »Listing še nima koordinat — ni
+  sloja«); TASK 84 zapre to vrzel TREH-plastno:
+  1. **GEO STOLPCA `lat`/`lng` na Listing** (NEOBVEZNA — null = listing
+     brez pina, NIKOLI izmišljena lokacija): prisma/schema.prisma +
+     prisma migracija `20260923100000_listing_geo` (CI drift vrata,
+     postgres `DOUBLE PRECISION`) + STARTUP shema migracija
+     `src/lib/listing-geo-migration.ts` (DEJANSKI mehanizem na
+     produkciji — vzorec t12/F11/F12: idempotentna, additive-only,
+     fail-open, OBE narečji — sqlite `REAL` / postgres) + registracija v
+     instrumentation.ts kot `schema:listing-geo` (4 statusi, viden na
+     /api/health).
+  2. **OWN ADAPTER `src/lib/supply/providers/own/adapter.ts`** — deseti
+     realni SupplyAdapter: bere objavljene Listinge S koordinatami iz
+     lastne DB (lazy klient, DI `createOwnAdapterWithDb` za teste).
+     Kanonska preslikava: category → tip (hotel→accommodation,
+     restaurant|bar→restaurant …), geoPrecision `exact`, bookingMode
+     `own_marketplace` (NIKOLI /go), ocena samo kadar > 0 (0 = »ni
+     podatka«, ne »slabo«), CENA ODSOTNA (priceRange €|€€|€€€ je obseg,
+     ne številka — PriceInfo zahteva številko), slika/website SAMO
+     validiran http(s) (obe meji: adapter + render). Iskreni gates
+     (vzorec fsq): prazna tržnica → `no-listings`; brez bbox →
+     `no-bbox`; listing izven viewporta → `no-match`; kategorija
+     izklopljena → `cat-filtered`; DB napaka → MEČE (runner → degraded,
+     NE tiho prazen sloj ob podrti bazi). Vrstni red: rating desc → ime
+     asc (lastni signal tržnice; NE komercialno rangiranje po
+     plan/sponsored) — v spominu, neodvisno od DB orderBy.
+  3. **REGISTER + MATRIKA**: `active: true`, geo/map zmožnosti,
+     minZoom 10 (usklajeno s SUPPLY_MIN_ZOOM, kot osm), types razširjen
+     (+shop/transport). Matrika: CODE_READY → PRODUCTION_CONFIGURED z
+     NOVIM iskrenim razlogom `NO_LIVE_DATA` (sloj priklopljen; živi
+     partnerjevi listingi s koordinatami še niso prispevali — stopnja
+     iskreno NE prečka v PRODUCTION_ACTIVE, dokler podatkov ni mogoče
+     dokazati). BlockReason slovar razširjen additive-only.
+- **E2E DOKAZ (dev, testni listing — vnešen → preverjen → izbrisan)**:
+  supply odgovor `own: 1` (pin 46.3625/14.0936 ob Bledu) → pin na
+  zemljevidu (/zemljevid, zoom 17 po razbitju grozda) → popup → modal
+  izdelka (telefon/website/koordinate/vir »Lokalni ponudniki (naša
+  tržnica)«, BREZ /go gumba — pravilno) → »Dodaj med izbrane« deluje
+  (gumb se onesposobi po dodajanju). Po čiščenju: iskrena opomba
+  `no-listings` (prazna tržnica ≠ napaka).
+
+### Spremenjeno
+- **`search.ts` tovarna**: `own: createOwnAdapter` (11 adapterjev;
+  prej 10). `cacheTtlMs: 0` (živa DB poizvedba po vsakem zahtevku —
+  odgovar `no-store`, skladno z obstoječimi TTL-0 viri).
+- **9 starih testov posodobljenih na novo resnico** (števci 10→11
+  adapterjev, matrika 8→7 CODE_READY + 1 PRODUCTION_CONFIGURED,
+  TTL-zero množica +own, aktivni seznam +own) — vsi ostanki staranja
+  odstranjeni (`active: false`/`minZoom: 22` varovalke).
+
+### Varovano (novo)
+- **27 testov/92 pričakovanj** (`task84-own-supply.test.ts`): unit
+  migracija (postgres DOUBLE PRECISION / sqlite REAL / idempotentnost /
+  delna / fail-open unknown), unit adapter (preslikava, gates, viewport,
+  kategorije, vrstni red, kap 60, DB napaka → throw), source-contract
+  (schema Float?, OBJA ALTER stavka, lib narečja, instrumentation 4
+  statusi, register aktivacija, search factory, matrika stopnja +
+  NO_LIVE_DATA).
+- **1670/1670 testov** (+27), lint 0, tsc 0, /api/health
+  `schema:listing-geo: ok`, 375px 0px preliva, 0 konzolnih napak.
+
+---
+
 ## [1.74.5] — 2026-09-22 (TASK 82: INLINE VALIDACIJA ŠTEVILSKIH POLJ)
 
 ### Popravljeno

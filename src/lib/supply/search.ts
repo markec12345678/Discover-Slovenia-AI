@@ -37,6 +37,7 @@ import { createSkyscannerAdapter } from "./providers/skyscanner/adapter";
 import { createAiraloAdapter } from "./providers/airalo/adapter";
 import { createTravelpayoutsAdapter } from "./providers/travelpayouts/adapter";
 import { createFsqAdapter } from "./providers/fsq/adapter";
+import { createOwnAdapter } from "./providers/own/adapter";
 
 /**
  * Tovarna adapterjev po slug-u (iz registra: AKTIVNI). Adapter, ki nima
@@ -47,6 +48,10 @@ import { createFsqAdapter } from "./providers/fsq/adapter";
  * poverilnic/dataseta vrnejo [] z opombo not-configured/no-dataset —
  * BEZ omrežnih klicev): tiqets, booking, skyscanner, airalo,
  * travelpayouts, fsq. Prihodnja aktivacija = SAMO env vnos (§21).
+ *
+ * TASK 84 (1.75.0): own — LASTNA TRŽNICA (Listing z geo stolpcema
+ * lat/lng, lokalna DB, BREZ zunanjih poverilnic). Prazna tržnica →
+ * iskrena opomba „no-listings“; listing brez koordinat → izpuščen.
  */
 const ADAPTER_FACTORIES: Partial<
   Record<string, (entry: ProviderRegistryEntry) => SupplyAdapter>
@@ -61,6 +66,7 @@ const ADAPTER_FACTORIES: Partial<
   airalo: createAiraloAdapter, // TASK 53: sedmi adapter (OAuth2 gate)
   travelpayouts: createTravelpayoutsAdapter, // TASK 53: osmi adapter (token + origin gate)
   fsq: createFsqAdapter, // TASK 53: deveti adapter (lokalna množica gate)
+  own: createOwnAdapter, // TASK 84: deseti adapter (lastna tržnica, DB gate)
 };
 
 /** Privzeti adapterji (iz registra: aktivni). */

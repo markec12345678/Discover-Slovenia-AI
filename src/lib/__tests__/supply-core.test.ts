@@ -83,8 +83,11 @@ describe("supply registry — invarianti", () => {
     // (adapterji z iskrenimi gates — brez poverilnic/dataseta PRAZEN sloj z
     // opombo not-configured/no-dataset/origin-required, BREZ omrežja) +
     // fsq (lokalna množica — adapter pripravljen, dataset manjka).
+    // Po TASK 84: + own (lastna tržnica — Listing z geo stolpcema lat/lng;
+    // prazna tržnica = iskreno „no-listings", listing brez koordinat je
+    // izpuščen — NIKOLI izmišljena lokacija).
     const active = activeProviders();
-    expect(active.length).toBe(10);
+    expect(active.length).toBe(11);
     expect(active.map((p) => p.slug).sort()).toEqual([
       "airalo",
       "booking",
@@ -92,6 +95,7 @@ describe("supply registry — invarianti", () => {
       "getyourguide",
       "kiwitaxi",
       "osm",
+      "own",
       "skyscanner",
       "tiqets",
       "travelpayouts",
