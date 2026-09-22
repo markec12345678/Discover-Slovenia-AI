@@ -7,6 +7,46 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.74.3] — 2026-09-22 (TASK 81: CI ZELEN — MRTVA TW3 ZAPUŠČINA VEN)
+
+### Popravljeno
+- **CI (GitHub Actions, job »Lint & Type Check«) rdeč na `main` zadnjih 3
+  push-ev** (`698148c`, `60def1e` 1.74.1, `13293be` 1.74.2): korak
+  `bunx tsc --noEmit` je padel na `tailwind.config.ts` —
+  `Cannot find module 'tailwindcss-animate'`. Lokalna preverba po nalogah
+  je namreč tekla kot `tsc src` (samo `src/`), CI pa preverja **celoten
+  projekt** — razlika je ostala neopažena.
+- Vzrok: `tailwind.config.ts` je bila **mrtva Tailwind v3 zapuščina**.
+  Projekt teče na Tailwind 4 (CSS-first: `@tailwindcss/postcss` v
+  `postcss.config.mjs`, `@import "tailwindcss"` + `@import "tw-animate-css"`
+  v `globals.css`, vse barve v `@theme inline`) — v4 JS configa **nikoli ni
+  prebral** (nobene `@config` direktive, nič ga ne referencira), vtičnik
+  `tailwindcss-animate` (v3-only) pa ni bil niti v `package.json` niti v
+  `bun.lock` niti nameščen. Namesto namestitve vtičnika, ki ga nič ne
+  uporablja, je **odvečna datoteka izbrisana**.
+
+### Dodano
+- **Dokazno verigo pred izbrisom** (ni bilo »zbrišem in upam«):
+  1. čist `git clone` + `bun install --frozen-lockfile` + `prisma
+     generate` + `tsc --noEmit` (eksaktna CI simulacija) je pokazal
+     NATANČNO eno napako — `tailwind.config.ts` (edina sledena datoteka
+     z napako; preostale lokalne so v nesledenih `skills/` mapa sandboxa,
+     ki jih CI ne vidi);
+  2. po odstranitvi v klonu: `tsc --noEmit` **exit 0**;
+  3. brskalniška preverba po izbrisu na živi strani: `.bg-primary` →
+     `oklch(0.43 0.105 158)` (tema deluje), `fade-in-0` →
+     `--tw-enter-opacity: 0` in `zoom-in-95` → `--tw-enter-scale: .95`
+     (`tw-animate-css` pokriva vse animacijske utility-je, ki jih
+     shadcn/komponente uporabljajo), 0 konzolnih napak, 375 px 0 px
+     preliva — aplikacija se obnaša **identično** (TW4 configa nikoli ni
+     bral, izbris je imel ničelen učinek).
+
+### Opombe
+- `Production Health Monitor` workflow je ves čas uspeval — produkcija
+  (Vercel/Render) je bila zdrava; rdeča je bila samo kvalitetna vrata CI.
+- Ni sprememb v produkciji vidnih uporabniku — čista odstranitev mrtve
+  kode, ki je lomila build vrata.
+
 ## [1.74.2] — 2026-09-21 (TASK 80: REGENERACIJA NE IZGINE NAČRTA)
 
 ### Popravljeno
