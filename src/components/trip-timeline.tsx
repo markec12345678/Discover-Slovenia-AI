@@ -25,6 +25,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PartnerBadge, type PartnerStatus } from "@/components/partner-badge";
 import { DayAudioButton } from "@/components/itinerary-audio";
+import { DaySegmentHeader } from "@/components/day-segment-header";
+import { PlannerStopLeg } from "@/components/planner-stop-leg";
+import { segmentBoundaryAt } from "@/lib/day-segments";
 import {
   ItineraryWeatherNotes,
   WeatherChip,
@@ -38,17 +41,23 @@ import { dayISOForDayNumber } from "@/lib/trip-dates";
 import { formatDayLabel } from "@/lib/itinerary-weather";
 import { narrationStopsFromDay } from "@/lib/itinerary-audio";
 import { cn } from "@/lib/utils";
-import type { DayPlan, LocationVisit, PlannerInput } from "@/lib/types";
+import type { DayPlan, Itinerary, LocationVisit, PlannerInput } from "@/lib/types";
 
 // ============================================================================
 // AI TRIP TIMELINE — vizualni dan z timeline layout
 // ============================================================================
 //
 // WOW: Ne seznam — vizualni dan!
-// 09:00 ☕ Lokalna kavarna
-// 11:00 🥾 Naravna pot
-// 13:30 🍽️ Kosilo (⭐ Verified Partner)
-// 15:00 🍯 Lokalni proizvajalec
+// JUTRO    09:00 ☕ Lokalna kavarna
+//          11:00 🥾 Naravna pot
+// POPOLDAN 13:30 🍽️ Kosilo (⭐ Verified Partner)
+//          15:00 🍯 Lokalni proizvajalec
+//
+// TASK 93: glave segmentov dneva (Jutro/Popoldan/Večer) + POŠTENE etape med
+// postanki — prej je časovnica kazala IZMIŠLJENI "~30 min" za vsak neznan
+// par (12 hardcoded parov + privzetek). Zdaj PlannerStopLeg črpa iz istega
+// vira kot značke ~km dni (OSRM legs / hevristika geo-validacije), neznani
+// ID-ji → BREZ povezovalnika (brez lažnih številk).
 // ============================================================================
 
 interface TripTimelineProps {
@@ -57,6 +66,9 @@ interface TripTimelineProps {
   /** TASK 88: ISO datum odhoda — pogoj za ŽIVO dnevno napoved (čip).
    *  Brez njega dnevi niso datirani in vreme ostane statični posnetek. */
   tripStartDate?: string;
+  /** TASK 93: OSRM noge iz načrta (isti vir kot podrobni pogled) —
+   *  pošteni povezovalniki med karticami; brez njih hevristika. */
+  legs?: Itinerary["legs"];
 }
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -109,42 +121,6 @@ function getCategoryStyle(category: string) {
   return CATEGORY_STYLES[category] || CATEGORY_STYLES.default;
 }
 
-// Preprosta hevristika za travel time (Wanderlog inspiracija)
-// V produkciji: Google Maps Distance Matrix API
-const KNOWN_DISTANCES: Record<string, number> = {
-  "bled-vintgar": 10,
-  "bled-bohinj": 25,
-  "bled-ljubljana": 45,
-  "ljubljana-bled": 45,
-  "ljubljana-vintgar": 50,
-  "piran-portoroz": 10,
-  "soca-kobarid": 20,
-  "soca-bovec": 15,
-  "bohinj-vogel": 15,
-  "maribol-ptuj": 35,
-  "celje-maribor": 60,
-};
-
-function estimateTravelTime(from: string, to: string): string | null {
-  const key1 = `${from.toLowerCase()}-${to.toLowerCase()}`;
-  const key2 = `${to.toLowerCase()}-${from.toLowerCase()}`;
-
-  const minutes = KNOWN_DISTANCES[key1] || KNOWN_DISTANCES[key2];
-
-  if (minutes) {
-    if (minutes < 60) return `${minutes} min`;
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return m > 0 ? `${h}h ${m}min` : `${h}h`;
-  }
-
-  // Fallback: če sta ista destinacija, ni travel time
-  if (from === to) return null;
-
-  // Default: ~30 min za neznane
-  return "~30 min";
-}
-
 // Določi ikono glede na ime destinacije/opis
 function inferCategory(visit: LocationVisit): string {
   const text = `${visit.destination_name} ${visit.notes || ""}`.toLowerCase();
@@ -156,7 +132,7 @@ function inferCategory(visit: LocationVisit): string {
   return "default";
 }
 
-export function TripTimeline({ days, totalBudget, tripStartDate }: TripTimelineProps) {
+export function TripTimeline({ days, totalBudget, tripStartDate, legs }: TripTimelineProps) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   // I18N-FIX (revizija 1.33.0, 16-d P2): komponenta je viden del rezultatov
   // načrtovalnika — prej 100 % hardkodirana SL tudi na /en/nacrtuj.
@@ -288,16 +264,29 @@ export function TripTimeline({ days, totalBudget, tripStartDate }: TripTimelineP
               const category = inferCategory(visit);
               const style = getCategoryStyle(category);
               const Icon = style.icon;
-              const nextVisit = day.locations[idx + 1];
-              // Preprosta hevristika za travel time (v produkciji: Google Maps API)
-              const travelTime = nextVisit ? estimateTravelTime(visit.destination_name, nextVisit.destination_name) : null;
+              // TASK 93: prejšnji postanek za POŠTENO etapo (isti vir kot
+              // podrobni pogled) + meja segmenta dneva (Jutro/Popoldan/Večer)
+              const prev = idx > 0 ? day.locations[idx - 1] : null;
+              const { segment, showHeader } = segmentBoundaryAt(
+                day.locations,
+                idx
+              );
 
               return (
-                <div
-                  key={`${visit.destination_id}-${idx}`}
-                  className="relative animate-in fade-in slide-in-from-left-2 duration-300"
-                  style={{ animationDelay: `${idx * 100}ms` }}
-                >
+                <div key={`${visit.destination_id}-${idx}`}>
+                  {/* Etapa od prejšnjega postanka (🚗 ~X km · ~Y min) —
+                      IZVEN relativnega ovoja, da pikica časovnice ostane
+                      poravnana s kartico (isti vrstni red kot podrobni
+                      pogled: etapa → glava segmenta → kartica) */}
+                  {prev && <PlannerStopLeg from={prev} to={visit} legs={legs} />}
+                  {/* TASK 93: glava segmenta — ob prehodu ali prvem postanku */}
+                  {showHeader && segment && (
+                    <DaySegmentHeader segment={segment} lang={lang} />
+                  )}
+                  <div
+                    className="relative animate-in fade-in slide-in-from-left-2 duration-300"
+                    style={{ animationDelay: `${idx * 100}ms` }}
+                  >
                   {/* Timeline dot */}
                   <div
                     className={cn(
@@ -427,16 +416,7 @@ export function TripTimeline({ days, totalBudget, tripStartDate }: TripTimelineP
                       </div>
                     </CardContent>
                   </Card>
-
-                  {/* Travel time do naslednje lokacije (Wanderlog inspiracija) */}
-                  {travelTime && (
-                    <div className="ml-4 flex items-center gap-1.5 py-1 text-xs text-muted-foreground">
-                      <Navigation className="size-3" aria-hidden="true" />
-                      <span>{travelTime}</span>
-                      <span className="text-muted-foreground/50">·</span>
-                      <span>{t("toNextStop")}</span>
-                    </div>
-                  )}
+                  </div>
                 </div>
               );
             })}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -23,6 +23,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DayAudioButton } from "@/components/itinerary-audio";
+import { DaySegmentHeader } from "@/components/day-segment-header";
+import { segmentBoundaryAt } from "@/lib/day-segments";
 import { ItineraryEventsSection } from "@/components/itinerary-events";
 import {
   ItineraryWeatherNotes,
@@ -480,12 +482,23 @@ export function SharedTrip({
                             onToggle: () => void toggleVote(locationKey),
                           }
                         : undefined;
+                    // TASK 93: glava segmenta dneva (Jutro/Popoldan/Večer) —
+                    // ista lib kot planner; deljeni načrt je SL površina
+                    const { segment, showHeader } = segmentBoundaryAt(
+                      day.locations,
+                      idx
+                    );
                     return (
-                      <LocationCard
-                        key={`${day.day}-${idx}`}
-                        visit={visit}
-                        vote={vote}
-                      />
+                      <Fragment key={`${day.day}-${idx}`}>
+                        {showHeader && segment && (
+                          <DaySegmentHeader
+                            segment={segment}
+                            lang="sl"
+                            className="col-span-full"
+                          />
+                        )}
+                        <LocationCard visit={visit} vote={vote} />
+                      </Fragment>
                     );
                   })}
                 </div>

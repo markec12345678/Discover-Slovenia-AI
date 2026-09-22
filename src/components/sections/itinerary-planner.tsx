@@ -32,11 +32,8 @@ import {
   Check,
   Copy,
   ChevronDown,
-  CloudSun,
   HelpCircle,
   MessageCircle,
-  Moon,
-  Sun,
   X,
   Volume2,
   FileText,
@@ -148,6 +145,8 @@ import { TripTimeline } from "@/components/trip-timeline";
 import { buildItineraryICS, icsFileName } from "@/lib/ics-export";
 import type { IngestMatch } from "@/lib/url-ingest";
 import { PlannerStopLeg } from "@/components/planner-stop-leg";
+import { DaySegmentHeader } from "@/components/day-segment-header";
+import { segmentBoundaryAt } from "@/lib/day-segments";
 import {
   PlannerLegSuggestions,
   type StopSuggestion,
@@ -192,38 +191,9 @@ const PACE_OPTIONS: { value: Pace; labelKey: string }[] = [
 ];
 
 // UI sprint (nabor #2 — dodatek raziskave): segment dneva Jutro/Popoldan/
-// Večer iz obstoječega time_slot polja. "HH:MM-…" → košarica po začetni uri;
-// besedilni sloti po ključnih besedah; neznano → null (brez segmentacije —
-// nazaj kompatibilno s starimi načrti). NE spreminja podatkovne plasti.
-type DaySegment = "morning" | "afternoon" | "evening";
-
-const SEGMENT_LABEL_KEYS: Record<DaySegment, string> = {
-  morning: "segMorning",
-  afternoon: "segAfternoon",
-  evening: "segEvening",
-};
-
-const SEGMENT_ICONS: Record<DaySegment, typeof Sun> = {
-  morning: Sun,
-  afternoon: CloudSun,
-  evening: Moon,
-};
-
-function segmentOfSlot(slot: string): DaySegment | null {
-  if (!slot) return null;
-  const hourMatch = slot.match(/^(\d{1,2}):(\d{2})/);
-  if (hourMatch) {
-    const hour = parseInt(hourMatch[1], 10);
-    if (hour < 12) return "morning";
-    if (hour < 17) return "afternoon";
-    return "evening";
-  }
-  const lower = slot.toLowerCase();
-  if (/(jutr|zjutraj|morning)/.test(lower)) return "morning";
-  if (/(popoldan|afternoon)/.test(lower)) return "afternoon";
-  if (/(večer|vecer|zvečer|zvecer|evening|night)/.test(lower)) return "evening";
-  return null;
-}
+// Večer — logika od TASK 93 živi v src/lib/day-segments.ts (ena resnica za
+// podrobni pogled, TripTimeline in SharedTrip); vizual je skupna komponenta
+// DaySegmentHeader.
 
 /**
  * Backlog #5: enakomerna prerazporeditev časovnih okvirjev dneva čez
@@ -3864,19 +3834,15 @@ export function ItineraryPlanner() {
                             </div>
                           ))}
                         {day.locations.map((loc, idx) => {
-                          // UI sprint (točka D smeri): premik med postanki in
-                          // segment dneva — izračun nad obstoječimi poli
+                          // Točka D smeri: premik med postanki — izračun nad
+                          // obstoječimi poli; segment dneva (TASK 93) iz
+                          // skupne lib (ena resnica za vse površine)
                           const prev = idx > 0 ? day.locations[idx - 1] : null;
-                          const seg = segmentOfSlot(loc.time_slot);
-                          const prevSeg = prev
-                            ? segmentOfSlot(prev.time_slot)
-                            : null;
-                          // UI sprint (nabor #2): glava segmenta se pokaže ob
-                          // prehodu (Jutro → Popoldan → Večer) ali na prvem
-                          // postanku dneva; neznani sloti → brez glave
-                          const showSegHeader =
-                            seg !== null && (prev === null || seg !== prevSeg);
-                          const SegIcon = seg ? SEGMENT_ICONS[seg] : null;
+                          // Glava segmenta se pokaže ob prehodu (Jutro →
+                          // Popoldan → Večer) ali na prvem postanku dneva;
+                          // neznani sloti → brez glave
+                          const { segment: seg, showHeader: showSegHeader } =
+                            segmentBoundaryAt(day.locations, idx);
                           // UI sprint (točka C): lokalna sličica destinacije —
                           // SAMO obstoječi /content viri (brez novih odvisnosti)
                           const dest = destinationById(loc.destination_id);
@@ -3925,21 +3891,11 @@ export function ItineraryPlanner() {
                                   }
                                 />
                               )}
-                              {showSegHeader && seg && SegIcon && (
-                                <div className="flex items-center gap-2 py-1">
-                                  <span
-                                    className="h-px flex-1 border-t border-border/70"
-                                    aria-hidden
-                                  />
-                                  <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    <SegIcon className="size-3.5" aria-hidden />
-                                    {t(SEGMENT_LABEL_KEYS[seg])}
-                                  </span>
-                                  <span
-                                    className="h-px flex-1 border-t border-border/70"
-                                    aria-hidden
-                                  />
-                                </div>
+                              {showSegHeader && seg && (
+                                <DaySegmentHeader
+                                  segment={seg}
+                                  lang={locale === "en" ? "en" : "sl"}
+                                />
                               )}
                               <div
                                 id={`stop-row-${day.day}-${idx}`}
@@ -4578,6 +4534,7 @@ export function ItineraryPlanner() {
                   days={itinerary.days}
                   totalBudget={itinerary.total_budget}
                   tripStartDate={itinerary.tripStartDate}
+                  legs={itinerary.legs}
                 />
                     </CardContent>
                   )}

@@ -7,6 +7,58 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.83.0] — 2026-09-24 (TASK 93: SEGMENTACIJA DNEVA NA VSEH POVRŠINAH NAČRTA + poštene etape časovnice)
+
+### Dodano (zadnja "poceni zmaga" iz konkurenčne analize)
+- **Segmentacija dneva Jutro / Popoldan / Večer na ZADNJIH dveh površinah**
+  načrta: glavna časovnica rezultatov (`TripTimeline` — prvi pogled po
+  generiranju) in deljen načrt (`SharedTrip` — vidi ga prijatelj brez
+  računa). Podrobni pogled ("Več o tvoji poti") jo je imel že od UI
+  sprinta — zdaj so VSE površine načrta segmentirane (vir:
+  docs/AI/MINDTRIP-ANALIZA-2026-09-AGENT.md §6.2.1 — "poceni vizualna
+  sprememba obstoječega time_slot polja, NE spreminja podatkovne plasti").
+- **Nova čista lib `src/lib/day-segments.ts`** — ENA resnica za
+  segmentacijo: `segmentOfSlot` (urne košarice po ZAČETNI uri: < 12 jutro,
+  12–16:59 popoldan, ≥ 17 večer; besedilni sloti SL+EN po ključnih besedah;
+  neznano → null, brez ugibanj — §8), `segmentBoundaryAt` (pravilo glave:
+  prvi postanek z znanim segmentom + vsak prehod; neznan slot ne lomi
+  prehodov — Ista semantika kot UI sprint, ekstrakcija in ne redesign) in
+  `DAY_SEGMENT_LABELS` (L vzorec, dvajezične oznake).
+- **Skupna komponenta `DaySegmentHeader`** (Sun/CloudSun/Moon ikone,
+  črtkana ločila, role="presentation") — vizual identičen UI sprint
+  različici; trije potrošniki, 0 duplikatov.
+
+### Popravljeno (iskrenost številk v časovnici)
+- **Časovnica ni več kazala IZMIŠLJENEGA "~30 min"**: `TripTimeline` je
+  imel 12 hardcoded razdalj + privzeti "~30 min" za VSAK neznan par
+  destinacij (številka iz zraka, predstavljena kot ocena). Zdaj črpa
+  `PlannerStopLeg` — ISTI vir kot podrobni pogled in značke ~km dni
+  (OSRM `itinerary.legs` → hevristika geo-validacije premica × 1,3 ÷
+  55 km/h); neznani ID-ji → BREZ povezovalnika (brez lažnih številk).
+  Časovnica in podrobni pogled se zdaj OBLIGATNO strinjata o isti etapi.
+
+### Spremenjeno (konsolidacija — 0 vedenjskih sprememb podrobnega pogleda)
+- itinerary-planner.tsx: lokalna kopija `segmentOfSlot`/`SEGMENT_*`
+  odstranjena (uvoz iz lib); mrtvi i18n ključi `segMorning`/`segAfternoon`/
+  `segEvening` + `timeline.toNextStop` odstranjeni iz obeh jezikov
+  (oznake zdaj iz lib — ena resnica, ne dva vira besedila).
+
+### Testi
+- `task93-day-segments.test.ts`: 28 testov / 102 pričakovanj — UNIT
+  (urne meje 11:59/12:00/16:59/17:00, košarica po začetni uri, SL+EN
+  ključne besede, neznano → null; segmentBoundaryAt: prvi/prehod/isti/
+  neznan-prejšnji/neznan-trenutni/defenzivni robovi/nemonoton dan ohrani
+  vrstni red; DAY_SEGMENT_LABELS popolna pokritost) + SOURCE-CONTRACT
+  (lib čista plast; planner uvaža lib+komponento, NIMA lokalne kopije;
+  timeline: glave + PlannerStopLeg, NIMA estimateTravelTime/
+  KNOWN_DISTANCES/'return "~30 min"'; vrstni red etapa → glava → kartica;
+  shared col-span-full; sporočila brez mrtvih ključev; planner posreduje
+  legs timeline-u).
+- Skupaj: 1969/1969 testov (50.955 pričakovanj; +28 testov — i18n paritetni
+  test se sam prilagodi odstranjenim ključem), lint 0, tsc 0.
+
+---
+
 ## [1.82.0] — 2026-09-24 (TASK 92: KONSOLIDACIJA TTS — eno jedro za obe zvočni poti)
 
 ### Spremenjeno (konsolidacija na skupno jedro)
