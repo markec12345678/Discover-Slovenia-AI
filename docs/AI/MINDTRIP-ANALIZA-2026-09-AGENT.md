@@ -145,10 +145,28 @@ poceni zmage (segmenti dneva, audio, PDF) ter 3 zavrnitve z dokazi.
 
 ## 7. Odločitve za uporabnika (checklist)
 
-- [ ] **D1:** Faza 1–5 predloga UI (nabor #1) + segmentacija dneva
+- [x] **D1:** Faza 1–5 predloga UI (nabor #1) + segmentacija dneva
       Jutro/Popoldan/Večer (dodatek nabora #2) — skupaj ena sprint.
-- [ ] **D2:** Audio »Poslušaj svoj načrt« (TTS, slovenščina) — ločena
+      OPRAVLJENO v dveh delih: UI sprint 1.22.0 (komit 1ba324f — delovna
+      površina: Trip header → Zemljevid+Pogovor 1.6fr/1fr → statusni trak
+      → dnevni časovni trak; NL-first obrazec; sličice pogojne na
+      obstoječe lokalne podatke; F16 kontekst; mobilni vrstni red) +
+      segmentacija na vseh površinah 1.83.0 (TASK 93). 2026-09-24
+      (1.83.2, TASK 96) hierarhija E2E verificirana na obnovljenem
+      načrtu (8/8 orientirjev, zavihek Vprašaj interaktiven, 0 napak,
+      0 preliva, VLM) + 13 pogodbenih testov VRSTNEGA REDA renderiranja.
+      Dokaz: docs/screenshots/task96-d1-workspace-restored.png.
+      OPOMBA: checklist vrstica je bila do 1.83.2 `[ ]` — doc drift
+      (sprint izveden, a nikoli odkrito zaprt).
+- [x] **D2:** Audio »Poslušaj svoj načrt« (TTS, slovenščina) — ločena
       majhna funkcija pred ali po UI sprintu.
+      OPRAVLJENO v treh delih: 1.80.0 (TASK 89 — gumb »Poslušaj« v glavah
+      dni, načrtovalnik + deljen načrt; empirično izbrana glasu
+      sl=tongtong / en=jam; SL govorno-prijazne številke — besede, ne
+      cifre), 1.81.0 (TASK 91 — MY TRIP površina, maxStops 16 za
+      strukturo dneva 1), 1.82.0 (TASK 92 — ENO skupno jedro tts-engine:
+      obe poti, LRU 32 MB, EN glas popravek, zaprta površina prostega
+      besedila). Checklist vrstica doc drift (nikoli odkrito zaprta).
 - [x] **D3:** PDF uvoz (razširitev obstoječega ingest zavihka) — majhna.
       OPRAVljENO: implementirano v 1.23.0 (unpdf besedilna plast → isti
       deterministični matcher, 0 AI); 2026-09-24 (1.83.1, TASK 95) E2E

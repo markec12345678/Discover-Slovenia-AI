@@ -7,6 +7,46 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.83.2] — 2026-09-24 (TASK 96: D1 UI SPRINT — INVENTURA + POGODBA HIERARHIJE; CEL CHECKLIST ANALIZE ZAPRT)
+
+### Verificirano (doc drift × 2 popravljen)
+- **D1 (UI sprint) je bil izveden že v 1.22.0** (komit 1ba324f — delovna
+  površina po Mindtrip modelu: Trip header → Zemljevid+Pogovor →
+  statusni trak → dnevni trak; NL-first obrazec), segmentacija dneva pa
+  v 1.83.0 (TASK 93) — checklist vrstica je bila doc drift, nikoli
+  odkrito zaprta.
+- **D2 (audio) označen [x]** — opravljeno v 1.80.0/1.81.0/1.82.0
+  (TASK 89/91/92), vrstica je ostala `[ ]` (doc drift).
+- **S tem je CELoten §7 checklist konkurenčne analize razrešen:**
+  D1 ✅ · D2 ✅ · D3 ✅ (TASK 95) · D4 = izrecna zavrnitev z dokazi
+  (po zasnovi ne todo). Vse tri »poceni zmage« nabora #2 so žive,
+  testirane in E2E dokumentirane.
+
+### E2E spot-check (agent-browser, 375 px — obnovljeni načrt iz localStorage)
+- BONUS pot preverjena: welcome-back (localStorage iz TASK 95 seje) →
+  obnovljeni 5-dnevni načrt se naloži s restored chip (role=status +
+  dismissing) → **8/8 orientirjev delovne površine**: header
+  (resultTitle), summaryBar (Uredi), zemljevid (TripMapPanel z markerji),
+  zavihka pogovora (Spremeni načrt / Vprašaj), statusStrip, dayNav,
+  dayCards, quickActions.
+- Interaktivnost: preklop na zavihek »Vprašaj« → panel »Vprašaj o načrtu«
+  z vprašalnim poljem. 0 konzolnih napak; 0 px preliva; VLM potrditev
+  (~285 km · ~3h 55min · ~€385 · 1 opozorilo v statusnem traku).
+
+### Dodano (testi)
+- `task96-d1-workspace.test.ts` — 13 testov / 41 pričakovanj:
+  **POGODBA VRSTNEGA REDA** renderiranja (header → summary → grid →
+  status → dayNav → dayCards po dejanskih vrsticah izvorne datoteke),
+  površina izrisana KADARKOLI načrt obstaja (TASK 80 semantika: dim +
+  inert + aria-busy), zemljevid+pogovor v eni površini (1.6fr/1fr,
+  onStopSelect dvosmerna sinhronizacija), NL-first obrazec, sličice
+  POGOJNE na obstoječe lokalne podatke (dest?.image; 0 zunanjih virov),
+  F16 kontekst, min-w-0 varovalka, TripTimeline v moreOpen, restored
+  chip, integracija PlannerStatusStrip/PlannerDayNav, i18n (sl + en).
+
+### Dokaz
+- `docs/screenshots/task96-d1-workspace-restored.png` (VLM potrjena).
+
 ## [1.83.1] — 2026-09-24 (TASK 95: D3 PDF UVOZ — E2E VERIFIKACIJA + TESTNA POKRITOST; 0 PRODUKCIJSKE KODE)
 
 ### Verificirano (doc drift popravljen)

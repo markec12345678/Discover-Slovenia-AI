@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.83.1 · 1995 testov (CI zelen) · lint 0 · tsc 0 (celoten projekt, kot CI) |
+| **Stanje** | v1.83.2 · 2008 testov (CI zelen) · lint 0 · tsc 0 (celoten projekt, kot CI) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -343,7 +343,7 @@ dodatnih prenosov. Osvežitev feedov: `bun run fsq:ingest` / `bun run kiwitaxi:i
 Preverjanje:
 
 ```bash
-bun test                 # 1995 testov
+bun test                 # 2008 testov
 bun run lint             # eslint
 bunx tsc --noEmit        # tipi
 ```
