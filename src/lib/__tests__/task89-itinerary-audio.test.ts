@@ -537,12 +537,18 @@ describe("TASK 89: narrationCacheKey", () => {
 
 describe("TASK 89: /api/tts source-contract", () => {
   const route = source("src/app/api/tts/route.ts");
+  // TASK 92: glas/SDK/timeout/predpomnilnik so se preselili v SKUPNO jedro
+  // src/lib/tts-engine.ts (isto pogodbo preverja task92 test — tu samo
+  // pot, da NE vzdržuje lokalne kopije).
+  const engine = source("src/lib/tts-engine.ts");
 
   test("skript gradi STREŽNIK iz strukturiranih podatkov (ista lib funkcija)", () => {
     expect(route).toContain("buildDayNarrationScript");
     expect(route).toContain("narrationCacheKey");
     expect(route).toContain("chunkNarration");
-    expect(route).toContain("concatWavBuffers");
+    // WAV spajanje živi v jedru (isti RIFF parser kot TASK 89):
+    expect(engine).toContain("concatWavBuffers");
+    expect(route).not.toContain("concatWavBuffers");
   });
 
   test("VHOD NI prostho besedilo — zod sprejme SAMO strukturo dneva", () => {
@@ -561,14 +567,17 @@ describe("TASK 89: /api/tts source-contract", () => {
   });
 
   test("glasi po jeziku: sl → tongtong, en → jam (empirična izbira)", () => {
-    expect(route).toContain('sl: "tongtong"');
-    expect(route).toContain('en: "jam"');
+    // TASK 92: VOICE_FOR_LANG je v jedru — pot ga NE podvaja
+    expect(engine).toContain('sl: "tongtong"');
+    expect(engine).toContain('en: "jam"');
+    expect(route).not.toContain('voice: "tongtong"');
   });
 
   test("SDK SAMO strežniško + časovni proračun na klic", () => {
-    expect(route).toContain('import("z-ai-web-dev-sdk")');
-    expect(route).toContain("TTS_CALL_TIMEOUT_MS");
-    expect(route).toContain("withTimeout");
+    expect(engine).toContain('import("z-ai-web-dev-sdk")');
+    expect(engine).toContain("TTS_CALL_TIMEOUT_MS");
+    expect(engine).toContain("withTimeout");
+    expect(route).not.toContain('import("z-ai-web-dev-sdk")');
   });
 
   test("iskrene napake: 503 tts_unavailable, 400 invalid_day/no_stops, 405 GET", () => {
@@ -579,9 +588,12 @@ describe("TASK 89: /api/tts source-contract", () => {
   });
 
   test("LRU predpomnilnik po bajtih (32 MB varovalka)", () => {
-    expect(route).toContain("CACHE_MAX_BYTES");
-    expect(route).toContain("cacheGet");
-    expect(route).toContain("cachePut");
+    // TASK 92: skupni ttsCache (ByteLruCache) v jedru — pot samo get/put
+    expect(engine).toContain("TTS_CACHE_MAX_BYTES");
+    expect(engine).toContain("ByteLruCache");
+    expect(route).toContain("ttsCache.get");
+    expect(route).toContain("ttsCache.put");
+    expect(route).not.toContain("CACHE_MAX_BYTES"); // lokalna kopija izrinjena
   });
 
   test("varovalka maxChunks (413 script_too_long)", () => {

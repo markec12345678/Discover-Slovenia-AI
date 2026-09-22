@@ -156,7 +156,7 @@ import { PlannerMealStop } from "@/components/planner-meal-stop";
 import { pickMealStop, type MealSuggestion } from "@/lib/meal-stops";
 import { PlannerStatusStrip } from "@/components/planner-status-strip";
 import { PlannerSummaryBar } from "@/components/planner-summary-bar";
-import { buildItineraryAudioScript } from "@/lib/planner-audio";
+import { buildItineraryAudioScript, planAudioCacheKey } from "@/lib/planner-audio";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import type { LocationVisit } from "@/lib/types";
 
@@ -499,9 +499,13 @@ export function ItineraryPlanner() {
   }, [itinerary]);
 
   // D2 (nabor #2): zvočni povzetek — skript se sestavi ČISTO iz podatkov
-  // načrta (ista čista funkcija na clientu; km iz geo-validacije, enak vir
-  // kot značke ~km dni). Null, če načrta ni. Ključ razveljavi stari zvok ob
-  // spremembi načrta/locale/skupine.
+  // načrta (ista čista funkcija na clientu, samo za prikaz razpoložljivosti
+  // in analitiko; STREŽNIK si ga ob klicu zgradi SAM iz strukturiranih
+  // podatkov — TASK 92). Null, če načrta ni.
+  //
+  // TASK 92: ključ razveljavitve je ZGOŠČENA VSEBINA (planAudioCacheKey,
+  // djb2) — prej `${locale}:${groupSize}:${chars}` je dva RAZLIČNA načrta z
+  // enako dolžino skripta izenačil in klient bi tiho predvajal STARI zvok.
   const audioScript = useMemo(
     () =>
       itinerary
@@ -516,8 +520,15 @@ export function ItineraryPlanner() {
   );
   const audioKey = useMemo(
     () =>
-      audioScript ? `${locale}:${formData.groupSize}:${audioScript.chars}` : null,
-    [audioScript, locale, formData.groupSize]
+      itinerary
+        ? planAudioCacheKey({
+            itinerary,
+            dayKm,
+            groupSize: formData.groupSize,
+            locale: locale === "en" ? "en" : "sl",
+          })
+        : null,
+    [itinerary, dayKm, formData.groupSize, locale]
   );
 
   // FAZA 4 (pilotna analitika): planner_started — prva interakcija z obrazcem
@@ -2040,11 +2051,13 @@ export function ItineraryPlanner() {
   }
 
   // === D2 "Poslušaj svoj načrt": POST /api/itinerary/tts → WAV blob →
-  // predvajalnik pod akcijsko vrstico. Skript pride IZ CLIENTA (deterministično
-  // sestavljen — 0 AI na poti do zvoka); TTS ga samo izgovori. Stari zvok se
-  // razveljavi, ko se načrt spremeni (audioKey). ===
+  // predvajalnik pod akcijsko vrstico. TASK 92: klient pošlje STRUKTURIRANE
+  // podatke načrta (itinerary/dayKm/groupSize/locale) — skript si STREŽNIK
+  // zgradi SAM (ista čista funkcija; API ni več splošni text-to-speech).
+  // Stari zvok se razveljavi, ko se načrt spremeni (audioKey = zgoščena
+  // vsebina). ===
   async function handleListenClick() {
-    if (!audioScript || audioLoading) return;
+    if (!audioScript || !itinerary || audioLoading) return;
     // že imamo svež zvok → preklopi predvajanje (istogumbna UX)
     if (audioUrl && audioUrlKey === audioKey && audioRef.current) {
       const el = audioRef.current;
@@ -2058,14 +2071,16 @@ export function ItineraryPlanner() {
     trackPlannerEvent("itinerary_audio_requested", {
       locale,
       chars: audioScript.chars,
-      days: itinerary?.days.length ?? 0,
+      days: itinerary.days.length,
     });
     try {
       const res = await fetch("/api/itinerary/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: audioScript.text,
+          itinerary,
+          dayKm,
+          groupSize: formData.groupSize,
           locale: locale === "en" ? "en" : "sl",
         }),
       });
@@ -2073,7 +2088,10 @@ export function ItineraryPlanner() {
         const data = (await res.json().catch(() => null)) as {
           error?: string;
         } | null;
-        throw new Error(t("listenError")); // I18N-FIX (1.33.0): strežniški SL detail v konzolo, klient vidi t()
+        // I18N-FIX (1.33.0): strežniški SL detail v konzolo (dijagnostika),
+        // klient vidi t() — lokalizirano, ne surove napake.
+        if (data?.error) console.error("[itinerary/tts]", data.error);
+        throw new Error(t("listenError"));
       }
       const blob = await res.blob();
       if (blob.size === 0) throw new Error(t("listenError"));
@@ -2086,6 +2104,8 @@ export function ItineraryPlanner() {
         locale,
         bytes: blob.size,
         chunks: res.headers.get("X-Audio-Chunks") ?? "",
+        // TASK 92: strežniški predpomnilnik (hit = 0 novih TTS klicev)
+        cache: res.headers.get("X-TTS-Cache") ?? "",
       });
       // samodejno predvajanje ob prvi pripravi (naslednji render postavi src)
       requestAnimationFrame(() => {

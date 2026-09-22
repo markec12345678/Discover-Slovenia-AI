@@ -7,6 +7,84 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.82.0] — 2026-09-24 (TASK 92: KONSOLIDACIJA TTS — eno jedro za obe zvočni poti)
+
+### Spremenjeno (konsolidacija na skupno jedro)
+- **Novo skupno jedro `src/lib/tts-engine.ts`** — EDINA implementacija
+  strežniškega TTS (prej dve: /api/itinerary/tts je imel ~90 vrstic
+  duplikata razreza + WAV parserja/spajalnika): SDK klient (singleton na
+  proces, odpoved se ne zapomni), glas po jeziku (VOICE_FOR_LANG),
+  časovni proračun na klic (withTimeout — Promise.race s POČIŠČENIM
+  timerjem), spajanje WAV (concatWavBuffers iz itinerary-audio —
+  RIFF hoja po kosih za NE-standardne glave vira), tipizirane napake
+  (TtsEngineError: timeout/unavailable/invalid_wav) in **ByteLruCache** —
+  LRU predpomnilnik po BAJTIH s pravilno izrivanjem NAJSTAREJŠIH vnosov
+  (pri pisanju testov ujeta dve semantični napaki izvlečka: kumulativna
+  zanka je lahko izrinila NAJMANJ nedavno uporabljen vnos, nov vnos pa se
+  je štel dvakrat) — skupni proračun 32 MB DELITA obe poti.
+- **`/api/itinerary/tts` (D2 »Poslušaj svoj načrt«) — VHOD NI VEČ PROSTO
+  BESEDILO**: klient pošlje STRUKTURIRANE podatke načrta (itinerary +
+  dayKm + groupSize + locale, zod vrata kapajo obseg), skript si STREŽNIK
+  zgradi SAM z isto čisto funkcijo (buildItineraryAudioScript) — ista
+  filozofija kot /api/tts (TASK 89). Prejšnja oblika `{ text, locale }`
+  je bila de facto odprta »TTS kot storitev« (vsakdo je lahko izgovoril
+  poljubno besedilo) — ta površina je ZAPRTA.
+- **Glasi po jeziku (popravek kakovosti)**: D2 pot je prej vedno govorila
+  z glasom tongtong — TUDI ANGLEŠKEMU besedilu (EN uporabniki so
+  poslušali kitajski naglas); zdaj ena resnica VOICE_FOR_LANG: sl →
+  tongtong, en → jam (empirična izbira TASK 89, ASR povratna zanka).
+- **Strežniški predpomnilnik za povzetek CELEGA načrta** (prvič): isti
+  načrt → isti zvok (planAudioCacheKey, djb2 nad kanonično obliko —
+  dan/ime/proraček/km/skupina/jezik) → ponovno poslušanje in vrnitev na
+  jezik nazaj sta 0 novih TTS klicev (X-TTS-Cache: hit/miss).
+- **Rate limit obeh poti zdaj SAMO na poti zgrešitve predpomnilnika**
+  (6 sintez/min na IP): predpomnjeni odgovori so prosti (0 stroška
+  vira) — legitimno ponovno poslušanje ne porabi limite (prej je vsak
+  klik D2 štel); /api/tts prej NI IMEL rate limita (luknja zaprta).
+- **PRAVI timeout na D2 poti**: prejšnji AbortController nikoli ni prejel
+  signala od SDK klica (navidezna varovalka) — zamenjan z withTimeout iz
+  jedra; nova SDK instanca na vsak klic → singleton.
+
+### Popravljeno
+- **Klientni ključ razveljavitve zvoka (planner)**: prej
+  `${locale}:${groupSize}:${chars}` — dva RAZLIČNA načrta z enako
+  dolžino skripta sta DELILA ključ in klient je tiho predvajal STARI
+  zvok; zdaj planAudioCacheKey (zgoščena VSEBINA — ista funkcija kot
+  strežnik, ENA resnica). Kanonična oblika zajema NATANČNO tisto, kar
+  vpliva na skript (številka dneva je v skriptu »Dan 1:« → mora biti v
+  ključu; imena NEtrimana, ker graditelj vidi neobrezane nize;
+  nadmnožica dovoljena — raje zgrešitev kot napačen zadetek).
+- Strežniška SL napaka D2 poti gre zdaj RES v konzolo (komentar jo je
+  obetal, koda pa je spremenljivko ignorirala) — klient še vedno vidi
+  lokalizirano t() sporočilo.
+
+### Glave poštenosti (novo/additivno)
+- Obe poti razkrivata X-TTS-Cache (hit/miss); sinteza vrne tudi
+  X-Audio-Voice (glas je viden v glavi odgovora — preverljivost sestave
+  zvoka ob že obstoječem X-Audio-Chunks).
+
+### Testi
+- `task92-tts-engine.test.ts`: 38 testov / 112 pričakovanj — UNIT
+  (ByteLruCache: LRU osvežitev na get, izrivanje najstarejših, neizvedljiv
+  vnos, nadomeščanje; planAudioCacheKey: determinističnost, občutljivost
+  na jezik/skupino/km/proraček/ime/ŠTEVILKO DNEVA/presledek, neobstoječi
+  km ne prereva, imenski prostor p≠n; withTimeout: resolvi/prekoraček/
+  predaja napake; VOICE_FOR_LANG) + SOURCE-CONTRACT (jedro: SDK samo
+  dinamično, singleton z ponastavitvijo ob odpovedi, zaporedni klici, timer
+  se počisti; obe poti: strukturiran vhod, glas prek jedra (NI hardcoded
+  tongtong), skupni LRU, rate limit NATANKO za ttsCache.get, stare lokalne
+  kopije izrinjene, iskrene napake, glave; klient: strukturiran POST,
+  audioKey iz planAudioCacheKey, analitika cache glave).
+- TASK 89 test osvežen: pogodbe glasu/SDK/timeouta/LRU zdaj preverjajo
+  SKUPNO jedro (pot jih ne sme več vsebovati — 0 lokalnih kopij).
+- Skupaj: **1941/1941 testov** (1903 + 38), lint 0.
+
+### Znano za nadaljnje delo (iskreno zapisano)
+- 12 providerjev s poverilnicami čaka na uporabnikove poverilnice
+  (odloženo po direktivi).
+
+---
+
 ## [1.81.0] — 2026-09-24 (TASK 91: ZVOČNI POVZETEK DNEVA V MY TRIP — zadnja površina brez zvoka)
 
 ### Dodano

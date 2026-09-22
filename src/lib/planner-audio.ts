@@ -21,8 +21,25 @@ import type { Itinerary } from "@/lib/types";
  *  ~1100 znakov, ker API zavrača > 1024 znaka na klic. */
 export const AUDIO_SCRIPT_MAX_CHARS = 1000;
 
+// ── TASK 92: strukturno minimalen načrt (ista disciplina kot TripEntryLike
+//    v itinerary-audio.ts) — pot /api/itinerary/tts sprejme STRUKTURIRANE
+//    podatke (ne prostega besedila!) in skript zgradi STREŽNIK s to isto
+//    čisto funkcijo; Itinerary iz types.ts to strukturo ZADOVOLJUJE.
+
+/** Dan v minimalni obliki za zvočni povzetek (imena postankov). */
+export interface AudioScriptDay {
+  day: number;
+  locations: ReadonlyArray<{ destination_name: string }>;
+}
+
+/** Načrt v minimalni obliki za zvočni povzetek (dnevi + proračun). */
+export interface AudioScriptItinerary {
+  total_budget: number;
+  days: ReadonlyArray<AudioScriptDay>;
+}
+
 interface AudioScriptInput {
-  itinerary: Itinerary;
+  itinerary: Itinerary | AudioScriptItinerary;
   /** km po dnevih iz geo-validacije (isti vir kot značke ~km dni) */
   dayKm: Record<number, number>;
   /** velikost skupine iz obrazca (samo za uvodno poved) */
@@ -146,4 +163,59 @@ export function buildItineraryAudioScript(
   if (text.length > AUDIO_SCRIPT_MAX_CHARS) text = build(2, false);
 
   return { text, chars: text.length };
+}
+
+// ── TASK 92: deterministični ključ predpomnilnika (djb2) ──────────────────
+//
+// Isti vzorec kot narrationCacheKey (TASK 89): kanonična JSON oblika vnosa
+// + djb2 zgoščevanje. ENA funkcija, ki jo uporabljata OBA konca:
+//   - KLIENT (itinerary-planner.tsx): točen ključ razveljavitve blob URL-ja
+//     (prej `${locale}:${groupSize}:${chars}` — dva RAZLIČNA načrta z enako
+//     dolžino skripta sta delila ključ in klient je tiho predvajal STARI
+//     zvok; zgoščena vsebina to izključi);
+//   - STREŽNIK (/api/itinerary/tts): ključ v skupni LRU predpomnilnik
+//     tts-engine (isti vhod → isti zvok, 0 novih TTS klicev).
+// Prefiks „p“ ločuje imenski prostor od „n“ (dnevna pripoved, TASK 89).
+
+/** Vnos, iz katerega se izračuna ključ (ista polja kot AudioScriptInput). */
+export interface PlanAudioKeyInput {
+  itinerary: Itinerary | AudioScriptItinerary;
+  dayKm: Record<number, number>;
+  groupSize: number;
+  locale: "sl" | "en";
+}
+
+/** Deterministični ključ zvočnega povzetka NAČRTA (djb2, baza 36).
+ *
+ * Kanonična oblika zajema NATANČNO tisto, kar vpliva na skript (dan + ime
+ * postanka NEtrimano — graditelj vidi neobrezane nize; proraček/km
+ * zaokrožena, ker skript uporablja zaokrožene vrednosti; skupina; jezik).
+ * Nadmnožica je NAMENOMA dovoljena (deduplikacijo imen graditelj pusti v
+ * ključu — raje zgrešitev predpomnilnika kot napačen zadetek). */
+export function planAudioCacheKey(input: PlanAudioKeyInput): string {
+  const { itinerary, dayKm, groupSize, locale } = input;
+  const canonical = JSON.stringify({
+    g: groupSize,
+    l: locale,
+    b: Math.round(itinerary.total_budget),
+    km: itinerary.days
+      .map((d) => {
+        const km = dayKm[d.day];
+        return [d.day, Number.isFinite(km) ? Math.round(km) : null];
+      })
+      .filter((e) => e[1] !== null),
+    d: itinerary.days.map((d) => [
+      d.day,
+      d.locations
+        .map((l) =>
+          typeof l.destination_name === "string" ? l.destination_name : ""
+        )
+        .filter((n) => n !== ""),
+    ]),
+  });
+  let h = 5381;
+  for (let i = 0; i < canonical.length; i++) {
+    h = ((h * 33) ^ canonical.charCodeAt(i)) >>> 0;
+  }
+  return `p${h.toString(36)}`;
 }

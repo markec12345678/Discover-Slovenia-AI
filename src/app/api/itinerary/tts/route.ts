@@ -1,131 +1,149 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { rateLimit } from "@/lib/rate-limit";
-import { AUDIO_SCRIPT_MAX_CHARS } from "@/lib/planner-audio";
+import {
+  AUDIO_SCRIPT_MAX_CHARS,
+  buildItineraryAudioScript,
+  planAudioCacheKey,
+} from "@/lib/planner-audio";
+import { NARRATION_LIMITS, chunkNarration } from "@/lib/itinerary-audio";
+import {
+  TtsEngineError,
+  synthesizeChunks,
+  ttsCache,
+} from "@/lib/tts-engine";
 
 // ============================================================================
 // POST /api/itinerary/tts — D2 "Poslušaj svoj načrt" (nabor #2)
+// TASK 92 (1.82.0): KONSOLIDACIJA na skupno jedro src/lib/tts-engine.ts.
 // ============================================================================
 //
-// Zvočni povzetek itinerarja (Mindtrip ga ima; nihče na trgu nima
-// slovenskega). Besedilo ZDAJ sestavi client ČISTO deterministično iz
-// podatkov načrta (src/lib/planner-audio.ts — 0 AI žetonov); ta ruta
-// besedilo samo IZGOVORI prek TTS (z-ai-web-dev-sdk, strežniško).
+// Zvočni povzetek CELEGA načrta (planner): uvod (dnevi/skupina/proračun) →
+// ena poved na dan (imena postankov + približni km) → zaključek.
 //
-// Omejitve (iskrene, v glavi odgovora):
-//  - TTS API: največ 1024 znaka NA KLIC → besedilo razbijemo na povedi
-//    (≤ 1000 znakov na kos) in kose ZDRUŽIMO v en WAV (PCM concat po
-//    RIFF hoje — ista oblika: 24 kHz, 16-bit, mono)
-//  - MP3 trenutno NI podprt (API napaka 1214) → WAV (~4,2 KB/znak) →
-//    skript je zato OMEJEN na ~1000 znakov (~1,5 min zvoka) — povzetek
-//    po dnevih, ne branje celotnih kartic
-//  - hitrost govora 1.0, glas "tongtong" (preizkušen na SL+EN besedilu)
+// SPREMEMBA VZORCA (ista filozofija kot /api/tts TASK 89):
+//   - VHOD SO STRUKTURIRANI PODATKI NAČRTA (itinerary + dayKm + groupSize +
+//     locale), NE več prosto besedilo — skript ZDAJ zgradi STREŽNIK s to
+//     isto čisto funkcijo (buildItineraryAudioScript), ki jo klient uporablja
+//     za prikaz razpoložljivosti. Prejšnja oblika { text, locale } je bila
+//     DE FAKTO odprta "TTS kot storitev" (vsakdo je lahko izgovoril
+//     poljubno besedilo do ~1100 znakov) — ta površina je zdaj ZAPRTA.
+//   - GLAS PO JEZIKU (popravek): prej je pot vedno govorila "tongtong",
+//     tudi ANGLEŠKEMU besedilu (EN uporabniki so poslušali kitajski naglas);
+//     zdaj sl → tongtong, en → jam (empirična izbira TASK 89, ASR zanka).
+//   - PREDPOMNILNIK: isti načrt → isti zvok — skupni LRU po bajtih (32 MB,
+//     tts-engine, deli ga z /api/tts); ponovno poslušanje/zamenjava jezikov
+//     nazaj je 0 novih TTS klicev.
+//   - RATE LIMIT: 6 sintez/min na IP — SAMO na poti zgrešitve predpomnilnika
+//     (prej: vsak klik, tudi replay, je porabil limit; zdaj replay prosto).
+//   - SDK/timeout/spajanje: skupno jedro (singleton klient na proces,
+//     PRAVI timeout na klic — prejšnji AbortController nikoli ni prejel
+//     signala od SDK-ja, bil je navidezen; RIFF spajanje po kosih, ker vir
+//     piše NE-standardno glavo fmt+AIGC+LIST+data).
+//
+// Omejitve (iskrene, v glavah odgovora):
+//  - TTS API: največ 1024 znaka NA KLIC → razrez po povedeh (chunkNarration,
+//    ≤ 960 znakov na kos) in spajanje nazaj v EN WAV;
+//  - skript OMEJEN na ~1000 znakov (~1,5 min zvoka) — povzetek po dnevih,
+//    ne branje celotnih kartic (deterministična degradacija v čisti funkciji:
+//    najprej odpadejo km, nato imena — jedro povzetka so imena);
+//  - hitrost govora 1.0.
 //
 // Varnost / poštenost:
-//  - rate limit 6 klicev/min na IP (odprta javna pot, TTS je dražji od
-//    HTML prenosov)
-//  - besedilo NE shranjujemo nikamor; zvok se generira v pomnilniku in
-//    takoj vrne (Cache-Control: no-store)
-//  - glava X-Audio-Chunks razkrije število TTS klicev (enakovredno
-//    "via" pri F8 sliki — preverljivost)
+//  - zvok se NE shranjuje nikamor trajno (generira v pomnilniku, takoj
+//    vrne; Cache-Control: no-store; LRU je samo pomnilniška varovalka);
+//  - glave X-Audio-Chunks/X-Audio-Voice/X-TTS-Cache razkrijejo sestavo
+//    zvoka (preverljivost, vzorec "via" pri F8 sliki).
 // ============================================================================
 
-const MAX_TEXT_CHARS = AUDIO_SCRIPT_MAX_CHARS + 100; // ~1100: trdna meja
-const CHUNK_TARGET = 1000; // varnostna margina pod API mejo 1024
-const TTS_TIMEOUT_MS = 30000;
+// ── Zod vrata (strukturirani vhod — kapajo obseg) ──────────────────────────
 
-/** Razbij besedilo na kose po povedeh (≤ target znakov). Trdno pravilo:
- *  posamezna poved, daljša od target, se razreže na meji (ne zgubi se). */
-function splitIntoChunks(text: string, target = CHUNK_TARGET): string[] {
-  const sentences = text.match(/[^.!?]+[.!?]+["']?\s*/g) ?? [text];
-  const chunks: string[] = [];
-  let current = "";
-  for (const sentence of sentences) {
-    if (current.length + sentence.length <= target) {
-      current += sentence;
-    } else {
-      if (current.trim()) chunks.push(current.trim());
-      if (sentence.length <= target) {
-        current = sentence;
-      } else {
-        // Zelo dolga poved (brez ločil) — razrežemo na besedah
-        let rest = sentence.trim();
-        while (rest.length > target) {
-          let cut = rest.lastIndexOf(" ", target);
-          if (cut <= 0) cut = target;
-          chunks.push(rest.slice(0, cut).trim());
-          rest = rest.slice(cut).trim();
-        }
-        current = rest;
-      }
-    }
-  }
-  if (current.trim()) chunks.push(current.trim());
-  return chunks;
-}
+const locationSchema = z.object({
+  // ime postanka: jedro povzetka (ista meja kot dnevna pripoved). PRAZNO
+  // ime ne zavrne celotne zahteve — čista funkcija ga izpusti iz povzetka
+  // (fail-closed na vsebini, ne na vhodu robov).
+  destination_name: z.string().max(NARRATION_LIMITS.maxNameChars),
+});
 
-/** Izvleci PCM payload iz WAV bufferja — hoje po RIFF chunkih (robustno:
- *  nekateri encoderji pred "data" vstavijo LIST/extra chunke). */
-function wavDataPayload(buf: Buffer): Buffer | null {
-  if (buf.length < 44) return null;
-  if (buf.toString("ascii", 0, 4) !== "RIFF") return null;
-  if (buf.toString("ascii", 8, 12) !== "WAVE") return null;
-  let offset = 12;
-  while (offset + 8 <= buf.length) {
-    const chunkId = buf.toString("ascii", offset, offset + 4);
-    const chunkSize = buf.readUInt32LE(offset + 4);
-    if (chunkId === "data") {
-      const end = Math.min(offset + 8 + chunkSize, buf.length);
-      return buf.subarray(offset + 8, end);
-    }
-    offset += 8 + chunkSize + (chunkSize % 2); // chunki so 2-bajtno poravnani
-  }
-  return null;
-}
+const daySchema = z.object({
+  day: z.number().int().min(1).max(30),
+  locations: z.array(locationSchema).max(24), // build deduplicira
+});
 
-/** Parametri oblike iz fmt chunka (validacija: vsi kosi morajo biti isti). */
-function wavFormat(buf: Buffer): {
-  sampleRate: number;
-  channels: number;
-  bitsPerSample: number;
-} | null {
-  if (buf.toString("ascii", 12, 16) !== "fmt ") return null;
-  const chunkSize = buf.readUInt32LE(16);
-  if (chunkSize < 16) return null;
-  const audioFormat = buf.readUInt16LE(20);
-  if (audioFormat !== 1) return null; // samo čisti PCM
-  return {
-    channels: buf.readUInt16LE(22),
-    sampleRate: buf.readUInt32LE(24),
-    bitsPerSample: buf.readUInt16LE(34),
-  };
-}
-
-/** Združi PCM payloade v en WAV s kanonično 44-bajtno glavo. */
-function concatWav(
-  payloads: Buffer[],
-  format: { sampleRate: number; channels: number; bitsPerSample: number }
-): Buffer {
-  const data = Buffer.concat(payloads);
-  const { sampleRate, channels, bitsPerSample } = format;
-  const header = Buffer.alloc(44);
-  header.write("RIFF", 0, "ascii");
-  header.writeUInt32LE(36 + data.length, 4);
-  header.write("WAVE", 8, "ascii");
-  header.write("fmt ", 12, "ascii");
-  header.writeUInt32LE(16, 16); // velikost fmt chunka (PCM)
-  header.writeUInt16LE(1, 20); // PCM
-  header.writeUInt16LE(channels, 22);
-  header.writeUInt32LE(sampleRate, 24);
-  header.writeUInt32LE((sampleRate * channels * bitsPerSample) / 8, 28);
-  header.writeUInt16LE((channels * bitsPerSample) / 8, 32);
-  header.writeUInt16LE(bitsPerSample, 34);
-  header.write("data", 36, "ascii");
-  header.writeUInt32LE(data.length, 40);
-  return Buffer.concat([header, data]);
-}
+const bodySchema = z.object({
+  locale: z.enum(["sl", "en"]),
+  groupSize: z.number().int().min(1).max(20),
+  // km po dnevih iz geo-validacije (ključi so JSON nizi števil dni)
+  dayKm: z.record(z.string(), z.number().min(0).max(2000)),
+  itinerary: z.object({
+    total_budget: z.number().min(0).max(1_000_000),
+    days: z.array(daySchema).min(1).max(30),
+  }),
+});
 
 export async function POST(request: Request) {
-  // Odprta javna pot → dosleden rate limit (TTS strošek)
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Neveljaven JSON." }, { status: 400 });
+  }
+
+  const parsed = bodySchema.safeParse(body);
+  if (!parsed.success) {
+    // Stara klientna oblika { text, locale } tu prav tako odpade —
+    // struktura je javna pogodba novega klienta (isti commit).
+    return NextResponse.json(
+      { error: "Manjkajoči ali neveljavni podatki načrta." },
+      { status: 400 }
+    );
+  }
+
+  const { locale, groupSize, dayKm, itinerary } = parsed.data;
+  const lang = locale === "en" ? "en" : "sl";
+
+  // Skript gradi STREŽNIK iz strukturiranih podatkov (ista čista funkcija
+  // kot v klientu — deterministično, 0 AI žetonov).
+  const script = buildItineraryAudioScript({
+    itinerary,
+    dayKm,
+    groupSize,
+    locale: lang,
+  });
+  if (script === null) {
+    return NextResponse.json(
+      { error: "Načrt brez dni — nič za izgovor." },
+      { status: 400 }
+    );
+  }
+  if (script.chars > AUDIO_SCRIPT_MAX_CHARS + 100) {
+    // Čista funkcija degradira do meje; varovalka za nepričakovano.
+    return NextResponse.json(
+      {
+        error: `Besedilo je predolgo (največ ${AUDIO_SCRIPT_MAX_CHARS + 100} znakov — zvočni povzetek je po namenu kratek).`,
+      },
+      { status: 413 }
+    );
+  }
+
+  // Predpomnilnik (skupno jedro): isti načrt → isti zvok, 0 TTS klicev.
+  const cacheKey = planAudioCacheKey({ itinerary, dayKm, groupSize, locale: lang });
+  const cached = ttsCache.get(cacheKey);
+  if (cached) {
+    return new NextResponse(new Uint8Array(cached), {
+      status: 200,
+      headers: {
+        "Content-Type": "audio/wav",
+        "Content-Length": String(cached.length),
+        "X-TTS-Cache": "hit",
+        "X-Audio-Locale": lang,
+        "Cache-Control": "no-store",
+      },
+    });
+  }
+
+  // ZGREŠITEV predpomnilnika (dragocena sinteza) → rate limit (6/min na
+  // IP; odgovori iz predpomnilnika zgoraj so prosti — replay ne porabi).
   const limited = rateLimit(request, {
     limit: 6,
     windowMs: 60000,
@@ -133,116 +151,79 @@ export async function POST(request: Request) {
   });
   if (limited) return limited;
 
-  let body: { text?: unknown; locale?: unknown };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Neveljaven JSON." }, { status: 400 });
-  }
-
-  const text = typeof body.text === "string" ? body.text.trim() : "";
-  const locale = body.locale === "en" ? "en" : "sl";
-
-  if (text.length < 10) {
+  // Razrez po povedeh (ista funkcija kot dnevna pripoved — ≤ 960/kos).
+  const chunks = chunkNarration(script.text);
+  if (chunks.length === 0) {
     return NextResponse.json(
-      { error: "Manjka ali prekratko besedilo za izgovor." },
+      { error: "Prazen povzetek — nič za izgovor." },
       { status: 400 }
     );
   }
-  if (text.length > MAX_TEXT_CHARS) {
+  if (chunks.length > NARRATION_LIMITS.maxChunks) {
+    // Skript ≤ ~1100 znakov → ≤ 2 kosa; iskrena varovalka kljub temu.
     return NextResponse.json(
-      {
-        error: `Besedilo je predolgo (največ ${MAX_TEXT_CHARS} znakov — zvočni povzetek je po namenu kratek).`,
-      },
+      { error: "Povzetek presega dovoljeno dolžino." },
       { status: 413 }
     );
   }
 
-  // TTS (STREŽNIŠKO — z-ai-web-dev-sdk nikoli v client kodi)
-  const chunks = splitIntoChunks(text);
-  const buffers: Buffer[] = [];
   try {
-    const ZAI = (await import("z-ai-web-dev-sdk")).default;
-    const zai = await ZAI.create();
+    // Jedro: glas po jeziku (sl tongtong / en jam), zaporedni klici,
+    // pravi timeout, spajanje WAV po RIFF kosih.
+    const { wav, calls, voice } = await synthesizeChunks(chunks, lang);
 
-    for (const chunk of chunks) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), TTS_TIMEOUT_MS);
-      try {
-        const response = await zai.audio.tts.create({
-          input: chunk,
-          voice: "tongtong",
-          speed: 1.0,
-          response_format: "wav",
-          stream: false,
-        });
-        const arrayBuffer = await response.arrayBuffer();
-        buffers.push(Buffer.from(new Uint8Array(arrayBuffer)));
-      } finally {
-        clearTimeout(timer);
-      }
-    }
+    ttsCache.put(cacheKey, wav);
+
+    return new NextResponse(new Uint8Array(wav), {
+      status: 200,
+      headers: {
+        "Content-Type": "audio/wav",
+        "Content-Length": String(wav.length),
+        // Iskrenost: koliko TTS klicev je sestavilo ta zvok + jezik govora
+        "X-Audio-Chunks": String(calls),
+        "X-Audio-Locale": lang,
+        "X-Audio-Voice": voice,
+        "X-TTS-Cache": "miss",
+        "Cache-Control": "no-store",
+      },
+    });
   } catch (err) {
-    const isTimeout =
-      err instanceof Error &&
-      (err.name === "AbortError" || err.message.includes("abort"));
+    // Preslikava jedrovih vzrokov v iskrena SL sporočila (stara disciplina
+    // te poti: uporabnik ve, ali je timeout ali nedosegljivost).
+    if (err instanceof TtsEngineError) {
+      console.error("[itinerary/tts] TTS jedro:", err.kind, err.message);
+      if (err.kind === "timeout") {
+        return NextResponse.json(
+          { error: "Govor se ni uspel ustvariti v roku (poskusi znova)." },
+          { status: 502 }
+        );
+      }
+      if (err.kind === "invalid_wav") {
+        return NextResponse.json(
+          { error: "TTS je vrnil neveljaven zvok — poskusi znova." },
+          { status: 502 }
+        );
+      }
+      return NextResponse.json(
+        {
+          error:
+            "Zvoka trenutno ni mogoče ustvariti (TTS storitev ni dosegljiva).",
+        },
+        { status: 502 }
+      );
+    }
     console.error("[itinerary/tts] TTS napaka:", err);
     return NextResponse.json(
       {
-        error: isTimeout
-          ? "Govor se ni uspel ustvariti v roku (poskusi znova)."
-          : "Zvoka trenutno ni mogoče ustvariti (TTS storitev ni dosegljiva).",
+        error:
+          "Zvoka trenutno ni mogoče ustvariti (TTS storitev ni dosegljiva).",
       },
       { status: 502 }
     );
   }
+}
 
-  // Validacija + konkatenacija (isti format pri vseh kosih)
-  const payloads: Buffer[] = [];
-  let format: { sampleRate: number; channels: number; bitsPerSample: number } | null =
-    null;
-  for (const buf of buffers) {
-    const payload = wavDataPayload(buf);
-    const fmt = wavFormat(buf);
-    if (!payload || !fmt || payload.length === 0) {
-      console.error("[itinerary/tts] neveljaven WAV odgovor (RIFF/fmt/data)");
-      return NextResponse.json(
-        { error: "TTS je vrnil neveljaven zvok — poskusi znova." },
-        { status: 502 }
-      );
-    }
-    if (format === null) {
-      format = fmt;
-    } else if (
-      format.sampleRate !== fmt.sampleRate ||
-      format.channels !== fmt.channels ||
-      format.bitsPerSample !== fmt.bitsPerSample
-    ) {
-      console.error("[itinerary/tts] nedosledna WAV oblika med kosi");
-      return NextResponse.json(
-        { error: "TTS je vrnil nedosleden zvok — poskusi znova." },
-        { status: 502 }
-      );
-    }
-    payloads.push(payload);
-  }
-  if (payloads.length === 0 || format === null) {
-    return NextResponse.json(
-      { error: "TTS ni vrnil zvoka — poskusi znova." },
-      { status: 502 }
-    );
-  }
-
-  const wav = concatWav(payloads, format);
-  return new NextResponse(new Uint8Array(wav), {
-    status: 200,
-    headers: {
-      "Content-Type": "audio/wav",
-      "Content-Length": String(wav.length),
-      // Iskrenost: koliko TTS klicev je sestavilo ta zvok + jezik govora
-      "X-Audio-Chunks": String(chunks.length),
-      "X-Audio-Locale": locale,
-      "Cache-Control": "no-store",
-    },
-  });
+// GET ni podprt (namenska POST pot; zvok se gradi iz podatkov načrta)
+export function GET() {
+  return NextResponse.json({ error: "method_not_allowed" }, { status: 405 });
 }

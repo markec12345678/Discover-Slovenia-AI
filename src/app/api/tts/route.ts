@@ -1,16 +1,24 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { rateLimit } from "@/lib/rate-limit";
 import {
   NARRATION_LIMITS,
   buildDayNarrationScript,
   chunkNarration,
-  concatWavBuffers,
   narrationCacheKey,
   type NarrationDayInput,
 } from "@/lib/itinerary-audio";
+import {
+  TtsEngineError,
+  synthesizeChunks,
+  ttsCache,
+} from "@/lib/tts-engine";
 
 // ============================================================================
 // TASK 89 — /api/tts: ZVOČNI POVZETEK DNEVA (1.80.0)
+// TASK 92 — konsolidacija na skupno jedro src/lib/tts-engine.ts (1.82.0):
+//   glas/klient/timeout/predpomnilnik zdaj živijo v ENEM jedru, ki ga
+//   deli z /api/itinerary/tts (skupni proračun 32 MB LRU).
 // ============================================================================
 //
 // POST { lang, day: { dayNumber, dateLabel?, stops: [{time, name,
@@ -26,11 +34,16 @@ import {
 //     globino varuje maxChunks, dolžine polj).
 //   - VIR: z-ai-web-dev-sdk (platformski SDK, BREZ uporabniških
 //     poverilnic — nadaljevanje direktive »najprej vse brez ključa«).
-//     Glasovi: sl → tongtong (slovenske besede fonetično), en → jam
-//     (nativni angleški) — IZBRANO z ASR povratno zanko 2026-09-24.
+//     Glasovi (jedro): sl → tongtong (slovenske besede fonetično),
+//     en → jam (nativni angleški) — IZBRANO z ASR povratno zanko
+//     2026-09-24.
 //   - PREDPOMNILNIK: zvok dneva je determinističen (isti vhod → isti
-//     zvok) → LRU po bajtih (32 MB); ponovni poslušalci/deljeni načrt
-//     ne plačajo novih TTS klicev.
+//     zvok) → skupni LRU po bajtih (32 MB, tts-engine); ponovni
+//     poslušalci/deljeni načrt ne plačajo novih TTS klicev.
+//   - RATE LIMIT (TASK 92): 6 sintez/min na IP — SAMO na poti ZAMUD
+//     (predpomnjene odgovore strežnik razda brez stroška vira; zloraba
+//     dražje poti je tako omejena, legitimno ponovno poslušanje pa
+//     prosto).
 //   - ISKRENOST: vsaka odpoved (SDK/timeout/spajanje) → 503 z jasno
 //     JSON napako; klient pokaže iskreno opombo. Prazen dan → 400
 //     (gumb se v klientu sploh ne izriše — fail-closed na obeh koncih).
@@ -52,88 +65,6 @@ const bodySchema = z.object({
     stops: z.array(stopSchema).min(1).max(NARRATION_LIMITS.maxStops),
   }),
 });
-
-// ── Predpomnilnik (LRU po skupnih bajtih — varovalka pomnilnika) ──────────
-
-const CACHE_MAX_BYTES = 32 * 1024 * 1024; // 32 MB (dan ≈ 1–3 MB zvoka)
-const cache = new Map<string, Buffer>(); // vstavljalni vrstni red = LRU
-
-function cacheGet(key: string): Buffer | null {
-  const hit = cache.get(key);
-  if (hit === undefined) return null;
-  // osveži LRU pozicijo
-  cache.delete(key);
-  cache.set(key, hit);
-  return hit;
-}
-
-function cachePut(key: string, buf: Buffer): void {
-  cache.delete(key);
-  cache.set(key, buf);
-  let total = buf.length;
-  const evict: string[] = [];
-  for (const [k, v] of cache) {
-    if (k === key) continue;
-    total += v.length;
-    if (total > CACHE_MAX_BYTES) evict.push(k);
-  }
-  for (const k of evict) cache.delete(k);
-}
-
-// ── TTS vir (z-ai-web-dev-sdk — SAMO strežniško, ena instanca) ────────────
-
-/** Glas po jeziku (izbrano empirično — glej zgornjo opombo). */
-const VOICE_FOR_LANG: Record<"sl" | "en", string> = {
-  sl: "tongtong",
-  en: "jam",
-};
-
-/** Časovni proračun ENEGA TTS klica (izmerjeno ~2 s; 30 s varovalka). */
-const TTS_CALL_TIMEOUT_MS = 30_000;
-
-type ZAIModule = typeof import("z-ai-web-dev-sdk");
-type ZAIClass = ZAIModule["default"];
-type TtsClient = Awaited<ReturnType<ZAIClass["create"]>>;
-
-let ttsClientPromise: Promise<TtsClient> | null = null;
-
-async function getTtsClient(): Promise<TtsClient> {
-  if (!ttsClientPromise) {
-    ttsClientPromise = (async () => {
-      const ZAI = (await import("z-ai-web-dev-sdk")).default;
-      return ZAI.create();
-    })();
-    // Odpovedle inicializacije ne smemo zapomniti (naslednji poskus znova)
-    ttsClientPromise.catch(() => {
-      ttsClientPromise = null;
-    });
-  }
-  return ttsClientPromise;
-}
-
-async function ttsChunk(text: string, voice: string): Promise<Buffer> {
-  const zai = await getTtsClient();
-  const res = await zai.audio.tts.create({
-    input: text,
-    voice,
-    speed: 1.0,
-    response_format: "wav",
-    stream: false,
-  });
-  const arrayBuffer = await res.arrayBuffer();
-  const buf = Buffer.from(new Uint8Array(arrayBuffer));
-  if (buf.length === 0) throw new Error("prazen TTS odgovor");
-  return buf;
-}
-
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    p,
-    new Promise<T>((_resolve, reject) =>
-      setTimeout(() => reject(new Error(`timeout ${ms} ms`)), ms)
-    ),
-  ]);
-}
 
 // ── Glavna pot ────────────────────────────────────────────────────────────
 
@@ -168,9 +99,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "no_stops" }, { status: 400 });
   }
 
-  // Predpomnilnik: isti dan → isti zvok, 0 TTS klicev.
+  // Predpomnilnik (skupno jedro): isti dan → isti zvok, 0 TTS klicev.
   const cacheKey = narrationCacheKey(dayInput, lang);
-  const cached = cacheGet(cacheKey);
+  const cached = ttsCache.get(cacheKey);
   if (cached) {
     return new NextResponse(new Uint8Array(cached), {
       status: 200,
@@ -183,6 +114,16 @@ export async function POST(request: Request) {
     });
   }
 
+  // ZGREŠITEV predpomnilnika (dragocena sinteza) → dosleden rate limit
+  // (ista disciplina kot /api/itinerary/tts; odgovori iz predpomnilnika
+  // zgoraj so prosti — 0 stroška vira).
+  const limited = rateLimit(request, {
+    limit: 6,
+    windowMs: 60000,
+    key: "api-tts",
+  });
+  if (limited) return limited;
+
   const chunks = chunkNarration(script);
   if (chunks.length === 0) {
     return NextResponse.json({ error: "no_stops" }, { status: 400 });
@@ -192,21 +133,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "script_too_long" }, { status: 413 });
   }
 
-  const voice = VOICE_FOR_LANG[lang];
   try {
-    // Zaporedno (ne vzporedno): prijazno do limitov klicev vira; ≤ 4 kosi
-    // po ~2 s ≈ najslabše ~8 s na dan.
-    const buffers: Buffer[] = [];
-    for (const chunk of chunks) {
-      buffers.push(await withTimeout(ttsChunk(chunk, voice), TTS_CALL_TIMEOUT_MS));
-    }
+    // Jedro: zaporedni klici (≤ 4 × ~2 s ≈ najslabše ~8 s na dan),
+    // glas po jeziku, pravi timeout na klic, RIFF spajanje.
+    const { wav, calls, voice } = await synthesizeChunks(chunks, lang);
 
-    const wav = concatWavBuffers(buffers);
-    if (wav === null) {
-      return NextResponse.json({ error: "tts_unavailable" }, { status: 503 });
-    }
-
-    cachePut(cacheKey, wav);
+    ttsCache.put(cacheKey, wav);
 
     return new NextResponse(new Uint8Array(wav), {
       status: 200,
@@ -214,11 +146,18 @@ export async function POST(request: Request) {
         "Content-Type": "audio/wav",
         "Content-Length": String(wav.length),
         "X-TTS-Cache": "miss",
+        // Iskrenost: koliko klicev vira + kateri glas (preverljivost).
+        "X-Audio-Chunks": String(calls),
+        "X-Audio-Voice": voice,
         "Cache-Control": "no-store",
       },
     });
   } catch (err) {
-    console.error("[api/tts] TTS generiranje ni uspelo:", err);
+    if (err instanceof TtsEngineError) {
+      console.error("[api/tts] TTS jedro:", err.kind, err.message);
+    } else {
+      console.error("[api/tts] TTS generiranje ni uspelo:", err);
+    }
     return NextResponse.json({ error: "tts_unavailable" }, { status: 503 });
   }
 }
