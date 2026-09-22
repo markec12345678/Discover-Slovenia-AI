@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.83.2 · 2008 testov (CI zelen) · lint 0 · tsc 0 (celoten projekt, kot CI) |
+| **Stanje** | v1.84.0 · 2036 testov (CI zelen) · lint 0 · tsc 0 (celoten projekt, kot CI) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -44,7 +44,7 @@
 | Segmentacija dneva Jutro / Popoldan / Večer + poštene etape med postanki (🚗 ~X km · ~Y min, isti vir kot značke km dni) na vseh površinah načrta | lastna lib day-segments + OSRM legs |
 | **38 kuriranih destinacij** v 4 državah + EN različice | lastni destinacijski register |
 | Journey orkestracija, MY TRIP časovnica, natisljivi potrditveni dokument | lastna koda |
-| Zunanje booking predaje (`/go`) in affiliate preusmeritve | 16-provider omrežje |
+| Zunanje booking predaje (`/go`) in affiliate preusmeritve — 9 partnerjev na načrtovalniku (nastanitev, aktivnosti, vstopnice, najem, vlaki, transferji, leti, eSIM, zavarovanje) | 16-provider omrežje |
 | Lastna tržnica (partnerji, izdelki, izkušnje) z lastnim checkoutom in pini na supply zemljevidu (listingi in izkušnje s koordinatami) | lastna baza + Stripe (demo mode brez ključev) |
 
 ### 🟡 Pripravljeno, čaka na aktivacijo ponudnika
@@ -52,6 +52,11 @@
 - **7 API adapterjev je kodirano-pripravljenih** (Viator, GetYourGuide, Tiqets, Booking,
   Skyscanner, Airalo, Travelpayouts) — vrata so živo preverjena, vsak adapter je priklopljen
   v **iskreno praznem stanju**, dokler poverilnica ni v env. To NI aktivna API integracija.
+- **Affiliate plast deluje ŽE DANES brez poverilnic** (fail-closed čiste povezave): vsaka
+  `/go/*` preusmeritev vodi na delujočo partnerjevo stran (`monetized: false` — nikoli
+  lažnega trackinga); ko poverilnica pride v env, se monetizacija prižge **brez spremembe
+  kode**. Načrtovalnik pokriva vseh 9 partnerjev (1.84.0: + Tiqets vstopnice, + zavarovanje
+  z `days` iz dolžine načrta).
 - **Booking arhitektura** — `JourneyBooking` stanjski model, potrditvena validacija,
   provider-agnostic registracija resolverjev — zamrznjena v stanju „activation ready".
 - **Ni še aktivirano:** API booking, webhook ingest ponudnikov, živi citati/rezervacije,
@@ -343,7 +348,7 @@ dodatnih prenosov. Osvežitev feedov: `bun run fsq:ingest` / `bun run kiwitaxi:i
 Preverjanje:
 
 ```bash
-bun test                 # 2008 testov
+bun test                 # 2036 testov
 bun run lint             # eslint
 bunx tsc --noEmit        # tipi
 ```

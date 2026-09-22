@@ -7,6 +7,71 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.84.0] — 2026-09-24 (TASK 97: AFFILIATE POKRITOST NAČRTOVALNIKA BREZ POVERILNIC — TIQETS + ZAVAROVANJE)
+
+### Direktiva uporabnika
+»Poverilnice, ki jih ne rabim jaz ti dat, naredi če možno« → inventura cele
+affiliate plasti je pokazala: `/go/[provider]` redirect (11 ponudnikov) +
+`affiliate.ts` gradilci + adapterji so OD ČASA TASK 43–56 živi v fail-closed
+načinu (brez ID-ja → ČISTA partner povezava, `monetized: false`). Edina
+dejanska vrzel na glavni površini: **načrtovalniški BookingPanel** ni imel
+vstopnic (Tiqets) in zavarovanja (World Nomads / SafetyWing).
+
+### Dodano (produkcija)
+- **Kartica Tiqets** (zavihek Aktivnosti, po destinaciji): `/go/tickets?dest=…`
+  → čista tiqets.com stran danes; monetizacija se prižge z
+  `TIQETS_AFFILIATE_URL` brez spremembe kode.
+- **Kartica zavarovanja** (zavihek Transport): `/go/insurance?days={N}` z
+  **dinamično dolžino načrta** (`tripDays` prop = `itinerary.days.length`);
+  čista helperja `insuranceGoHref` + `clampInsuranceDays` (meja /go rute
+  1–30, zaokrožitev, izpust parametra pri neveljavnem vhodu — ruta
+  privzame 7). Opis: »Potno zavarovanje za N-dnevno potovanje — tudi za
+  pustolovske aktivnosti« (isti ton kot homepage kartica).
+- **Mobilni popravek kartic** (VLM odkril): dekorativna `ExternalLink`
+  ikona v vrstici imena je na <sm skrita — sprosti ~18px, da se
+  »World Nomads« (98px) ne reže več v »World Noma…« (92px na voljo);
+  na sm+ ikona ostane ob CTA gumbu. Celotna kartica ostaja povezava,
+  badge »Partner« (tooltip) sporoča zunanjo preusmeritev.
+
+### E2E (agent-browser 375 px, obnovljeni 5-dnevni načrt)
+- Zavihek Transport → 6 kartic (DiscoverCars, Omio, Kiwitaxi, Airalo,
+  Skyscanner, **World Nomads** z »5-dnevno«); href `/go/insurance?days=5`.
+- Zavihek Aktivnosti → GetYourGuide + **Tiqets** (`/go/tickets?dest=Bled`).
+- **Klik zavarovanja → nov zavihek naloži worldnomads.com/travel-insurance**
+  (cela veriga: klik → /go → 302 → partner).
+- DB sledenje: `affiliate_click` `{provider:"insurance", days:5,
+  monetized:false}` — iskren fail-closed (0 lažnega trackinga).
+- 0 konzolnih napak; 0 px preliva; 0 odrezanih imen (DOM overflow-check
+  po kartici: vse `false`); VLM potrditev obeh posnetkov.
+- Živi `/go` sweep (curl, 11/11): hotels→booking.com/ss=Bled,
+  cars→discovercars (datumi), activities→gyg/s?q=Bled,
+  flights→skyscanner/lju, insurance→worldnomads, esim→airalo,
+  transfers→kiwitaxi/search?from=Ljubljana&to=Bled, transport→omio,
+  tickets→tiqets, viator→viator.com, getyourguide→gyg — **vse deluje
+  BREZ poverilnic**.
+
+### Dodano (testi)
+- `task97-planner-affiliate.test.ts` — 28 testov / 72 pričakovanj:
+  čista helperja (meje/clamp/href), **env-aktivacija brez spremembe kode**
+  (Tiqets awin1 URL → monetized:true; WN precedenca pred SafetyWing;
+  ne-https → fail-closed na čisto povezavo), source-contract panela
+  (kartici, union "tickets", tripDays, ikoni, rel/target, klient NE
+  uvaža @/lib/affiliate, 0 `process.env` v klientu, 9 providerjev),
+  planner (tripDays podajanje), /go ruta (days 1–30 → 400, allowlist),
+  registar (drift guard).
+
+### Doc sync
+- `PROVIDER-APPLICATIONS.md`: FSQ vrstica popravljen doc drift #4 (adapter
+  `providers/fsq/*` OBSTOJA + množica nameščena 1.61.0 → PRODUCTION_ACTIVE;
+  prejšnja vrstica je pisala »ni datoteke / ACCESS NOT AVAILABLE« iz časa
+  TASK 52).
+- README: status vrstica 1.84.0 · 2036 testov; affiliate vrstica živo-sloji
+  tabele (9 partnerjev na načrtovalniku); razdelek »Pripravljeno« dopolnjen
+  z jasno ločnico: affiliate plast deluje ŽE DANES brez poverilnic (čiste
+  povezave), monetizacija + API inventar pa čakata na env poverilnice.
+
+---
+
 ## [1.83.2] — 2026-09-24 (TASK 96: D1 UI SPRINT — INVENTURA + POGODBA HIERARHIJE; CEL CHECKLIST ANALIZE ZAPRT)
 
 ### Verificirano (doc drift × 2 popravljen)

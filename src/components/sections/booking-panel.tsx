@@ -21,6 +21,8 @@ import {
   TrainFront,
   CarTaxiFront,
   Smartphone,
+  ShieldCheck,
+  Landmark,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -40,13 +42,41 @@ import type { DayPlan } from "@/lib/types";
 // Partnerske povezave — vse prek /go/ redirecta (strežniško tracking +
 // strežniška affiliate konfiguracija). Klient ne drži partner ID-jev.
 // dest je opcijsken za nove providerje (esim deluje brez njega).
+// TASK 97: "tickets" (Tiqets — vstopnice) dodan k unionu; zavarovanje ima
+// lastni izgrajevalnik spodaj (days parameter, ne dest).
 const goHref = (
-  provider: "hotels" | "cars" | "activities" | "flights" | "esim" | "transfers" | "transport" | "tickets",
+  provider:
+    | "hotels"
+    | "cars"
+    | "activities"
+    | "flights"
+    | "esim"
+    | "transfers"
+    | "transport"
+    | "tickets",
   dest?: string,
 ) =>
   dest
     ? `/go/${provider}?dest=${encodeURIComponent(dest)}`
     : `/go/${provider}`;
+
+// TASK 97 — ZAVAROVANJE (World Nomads / SafetyWing): trip-level ponudba z
+// `days` parametrom iz dolžine načrta (/go ruta sprejme 1–30; več →
+// zaščitenemo na 30). Čista funkcija: brez env, brez window — varna za
+// klient in direktno testirljiva. Neveljaven/manjkajoč vnos → parameter
+// izpuščen (ruta privzame 7 dni — enako kot homepage kartica).
+export function insuranceGoHref(tripDays?: number): string {
+  const n = clampInsuranceDays(tripDays);
+  return n ? `/go/insurance?days=${n}` : "/go/insurance";
+}
+
+/** Days 1–30 (meja /go rute) ali null, če vnos ni uporaben. */
+export function clampInsuranceDays(tripDays?: number): number | null {
+  if (typeof tripDays !== "number" || !Number.isFinite(tripDays)) return null;
+  const rounded = Math.round(tripDays);
+  if (rounded < 1) return null;
+  return Math.min(rounded, 30);
+}
 
 // === LOKALNI TIPI (da ne motimo obstoječih tipov v types.ts) ===
 // Zrcalijo API route /api/itinerary/bookings — prijazno za client.
@@ -139,6 +169,8 @@ interface BookingPanelProps {
   bookingData?: BookingData | null;
   /** HTML id (npr. "booking-panel-1") — gumb "Rezerviraj" v TripTimeline scrolla sem */
   id?: string;
+  /** TASK 97: dolžina CELEGA načrta (v dnevih) — za /go/insurance?days=… */
+  tripDays?: number;
 }
 
 // "Hotel" kategorije, ki veljajo za nastanitev
@@ -277,7 +309,11 @@ function AffiliateCard({
         <div className="flex items-center gap-1.5 text-sm font-semibold">
           <span className="truncate">{partnerName}</span>
           <AffiliateBadge type="generic" size="sm" />
-          <ExternalLink className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+          {/* TASK 97 (mobilni popravek): na <sm ikona skrita — sprosti ~18px
+              v vrstici imena (celotna kartica JE povezava, badge "Partner"
+              že sporoča zunanjo preusmeritev; "World Nomads" se ni več
+              rezal v "World Noma…"). Na sm+ ikona ostane (ob CTA gumbu). */}
+          <ExternalLink className="hidden size-3 shrink-0 text-muted-foreground sm:inline-block" aria-hidden />
         </div>
         <p className="line-clamp-1 text-xs text-muted-foreground">{description}</p>
       </div>
@@ -506,10 +542,16 @@ function DestinationBlock({
 }
 
 // === Glavna komponenta ===
-export function BookingPanel({ dayPlan, bookingData, id }: BookingPanelProps) {
+export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPanelProps) {
   const locations = dayPlan.locations;
   // Prva destinacija — za najem avta
   const firstDestination = locations[0];
+  // TASK 97: zavarovanje — days iz dolžine načrta (clamp 1–30 v helperju)
+  const insuranceDays = clampInsuranceDays(tripDays);
+  const insuranceHref = insuranceGoHref(tripDays);
+  const insuranceDescription = insuranceDays
+    ? `Potno zavarovanje za ${insuranceDays}-dnevno potovanje — tudi za pustolovske aktivnosti`
+    : "Potno zavarovanje — tudi za pustolovske aktivnosti";
 
   // Filtriraj listings po kategorijah za posamezen tab
   function getAccommodationListings(destId: string): BookingListing[] {
@@ -658,6 +700,18 @@ export function BookingPanel({ dayPlan, bookingData, id }: BookingPanelProps) {
                   description={`Oglejte si vodene ture in izkušnje v ${loc.destination_name}`}
                   onTrack={() => trackFunnel("listing_click", goHref("activities", loc.destination_name))}
                 />
+                {/* TASK 97 — Tiqets (vstopnice): zadnji manjkajoči partner na
+                    glavni booking površini; deluje ČISTO brez poverilnic
+                    (/go/tickets → tiqets.com), monetizacija se prižge z
+                    TIQETS_AFFILIATE_URL brez spremembe kode. */}
+                <AffiliateCard
+                  href={goHref("tickets", loc.destination_name)}
+                  icon={<Landmark className="size-5" aria-hidden />}
+                  partnerName="Tiqets"
+                  cta="Vstopnice"
+                  description="Vstopnice za znamenitosti in muzeje — brez čakanja v vrsti"
+                  onTrack={() => trackFunnel("listing_click", goHref("tickets", loc.destination_name))}
+                />
                 {exps.length > 0 ? (
                   <div className="space-y-2">
                     {exps.map((e) => (
@@ -768,6 +822,18 @@ export function BookingPanel({ dayPlan, bookingData, id }: BookingPanelProps) {
                 cta="Iskanje"
                 description="Leti do Ljubljane (letališče Jožeta Pučnika) — primerjava cen"
                 onTrack={() => trackFunnel("listing_click", goHref("flights", "Ljubljana"))}
+              />
+              {/* TASK 97 — ZAVAROVANJE (World Nomads / SafetyWing): trip-level
+                  ponudba z days iz dolžine načrta (/go rute meja 1–30).
+                  Čista povezava danes (brez poverilnic); monetizacija se
+                  prižge z WORLDNOMADS_AFFILIATE_URL / SAFETYWING_AMBASSADOR_ID. */}
+              <AffiliateCard
+                href={insuranceHref}
+                icon={<ShieldCheck className="size-5" aria-hidden />}
+                partnerName="World Nomads"
+                cta="Zavarovanje"
+                description={insuranceDescription}
+                onTrack={() => trackFunnel("listing_click", insuranceHref)}
               />
             </DestinationBlock>
           )}

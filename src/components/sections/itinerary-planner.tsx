@@ -4157,9 +4157,11 @@ export function ItineraryPlanner() {
 
                         {/* Booking panel za ta dan — nastanitev, aktivnosti, hrana, transport */}
                         {/* id="booking-panel-{dan}" — nanj kaže gumb "Rezerviraj" v TripTimeline */}
+                        {/* TASK 97: tripDays = dolžina celega načrta → /go/insurance?days=… */}
                         <BookingPanel
                           dayPlan={day}
                           bookingData={bookingData}
+                          tripDays={itinerary.days.length}
                           id={`booking-panel-${day.day}`}
                         />
                       </CardContent>

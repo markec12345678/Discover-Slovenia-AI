@@ -17,7 +17,9 @@
 > `fromPrice` NI potrjena cena. Neuganjena razpoložljivost ostaja
 > UNKNOWN / „preveri pri ponudniku" — NIKOLI „available".
 
-Datum zadnje žive preverbe: **2026-09-19** (TASK 52 §5 — portali + API
+Datum zadnje žive preverbe: **2026-09-24** (TASK 97 — živi `/go` sweep
+vseh 11 affiliate preusmeritev na dev: 11/11 → 302 na čisto partnerjevo
+stran, 0 poverilnic). Prejšnje: 2026-09-19 (TASK 52 §5 — portali + API
 overitvena vrata prek curl; podrobnosti v docs/TASK-52-PROVIDER-ACTIVATION.md).
 Prejšnje žive preverbe pogodb: 2026-09-18 (TASK 45 Viator, TASK 46 GYG).
 
@@ -28,7 +30,7 @@ Prejšnje žive preverbe pogodb: 2026-09-18 (TASK 45 Viator, TASK 46 GYG).
 | Provider | Kategorija | Adapter | Pogodba | Vrsta dostopa (dejanska) | Access | Production | Live verified | Price | Availability | CTA/Booking | AI | Status |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | **OSM** | Lokalni (odprti) | ✅ `osm-adapter.ts` | ODbL (odprta) | OPEN DATA | brez ključa | ✅ AKTIVEN | ✅ žive Overpass poizvedbe | NOT SUPPORTED | NOT SUPPORTED | info_only | ✅ | **ACTIVE** |
-| **Foursquare Open Places** | Lokalni (odprti) | ❌ ni datoteke | Apache-2.0 | OPEN DATA (množica NI nameščena) | MISSING (`FSQ_PLACES_DIR`) | ❌ | ❌ | NOT SUPPORTED | NOT SUPPORTED | info_only | ❌ | **ACCESS NOT AVAILABLE** |
+| **Foursquare Open Places** | Lokalni (odprti) | ✅ `providers/fsq/*` (TASK 53/61) | Apache-2.0 | OPEN DATA (množica NAMEŠČENA, lokalno strežena) | `FSQ_PLACES_DIR` privzeto `./data/fsq-places` (nastavljeno) | ✅ | ✅ (SI+HR+ME+AL, 125.446 POI; `bun run fsq:ingest`) | NOT SUPPORTED | NOT SUPPORTED | info_only | ✅ | **ACTIVE** |
 | **slovenia.info (STO)** | Lokalni (vsebina) | ingest + RAG (ni sloj zemljevida) | llms.txt (uradna vsebina) | STATIC CONTENT | brez ključa | ✅ (RAG vir) | ✅ ingest 2026-09-17 + tedenski cron | NOT SUPPORTED | NOT SUPPORTED | info_only | ✅ (RAG) | **ACTIVE** (ne-sloj) |
 | **Lastna tržnica (own)** | Own | ✅ `providers/own/adapter` (TASK 84) | lastna | DIRECT BOOKING (geo: lat/lng na Listingu) | — | ✅ sloj priklopljen (prazna tržnica = iskreno „no-listings") | ✅ E2E na testnem listingu (dev) | NOT SUPPORTED (priceRange je obseg) | NOT SUPPORTED (Stripe, ne koledar) | own_checkout | ✅ priklopljen | **PRODUCTION CONFIGURED** (NO_LIVE_DATA — živi partnerjevi listingi s koordinatami še manjkajo) |
 | **Viator** | A — activities | ✅ `providers/viator/*` | ✅ živo preverjena | AFFILIATE DEEP LINK (API danes NE dostopen) | API key MISSING | ❌ (iskreno prazen sloj) | ❌ (vrata živa: 401 brez ključa) | FROM PRICE (ko bo aktiven) | UNKNOWN (nad Basic tierjem) | affiliate_redirect | ✅ priklopljen | **CODE READY / NOT CONFIGURED** |
@@ -65,7 +67,7 @@ prazna do ključev) · 1 DISCOVERED (travelpayouts) · 8 CONTRACT VERIFIED
 | Provider | API key | Partner ID | Affiliate ID/URL | OAuth | Production access | Sandbox |
 |---|---|---|---|---|---|---|
 | osm | — | — | — | — | DA (odprti vir) | — |
-| fsq | `FSQ_PLACES_DIR` MISSING (datoteka) | — | — | — | NE (množica ni ingestirana) | — |
+| fsq | `FSQ_PLACES_DIR` privzeto `./data/fsq-places` (nastavljeno) | — | — | — | DA (množica ingestirana, lokalno strežena) | — |
 | sto | — | — | — | — | DA (llms.txt) | — |
 | own | — | — | — | — | DA (lastna DB/Stripe) | — |
 | booking | — | — | `BOOKING_AFFILIATE_ID` MISSING | NE | NE (čaka Managed Affiliate Partner) | NE |
