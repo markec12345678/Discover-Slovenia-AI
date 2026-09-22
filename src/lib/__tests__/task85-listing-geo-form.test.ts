@@ -403,3 +403,39 @@ describe("TASK 85: source-contract — admin ListingForm", () => {
     expect(src).toContain("text-amber-600");
   });
 });
+
+// ---------------------------------------------------------------------------
+// 10. SOURCE-CONTRACT — onboarding čarovnik (korak 4 Dodatno)
+//     Partner vnese koordinate ŽE med prvim ustvarjanjem (ne šele z edit)
+// ---------------------------------------------------------------------------
+
+describe("TASK 85: source-contract — onboarding-wizard (korak 4)", () => {
+  const src = source("src/components/owner/onboarding-wizard.tsx");
+
+  test("WizardForm + EMPTY_FORM + prefillFrom imajo lat/lng", () => {
+    expect(src).toContain("lat: string;");
+    expect(src).toContain('lat: l.lat != null ? String(l.lat) : ""');
+    expect(src).toContain('lng: l.lng != null ? String(l.lng) : ""');
+  });
+
+  test("validateStep korak 4: neveljaven geo vnos ZAVRE (prazno = veljavno)", () => {
+    expect(src).toContain("case 4:");
+    expect(src).toContain("parseGeoInput(form.lat, form.lng)");
+    expect(src).toContain("return GEO_ERROR_MESSAGES[geo.error];");
+  });
+
+  test("buildStepPayload korak 4 pošlje geo (null = brez pina)", () => {
+    expect(src).toContain("lat: geo.lat,");
+    expect(src).toContain("lng: geo.lng,");
+  });
+
+  test("UI: polji ob-lng/ob-lat + inline error + SI hint (aria/role=alert)", () => {
+    expect(src).toContain('id="ob-lat"');
+    expect(src).toContain('id="ob-lng"');
+    expect(src).toContain('id="ob-geo-error"');
+    expect(src).toContain('role="alert"');
+    expect(src).toContain("aria-invalid={geoParse.error !== null}");
+    expect(src).toContain("showSiHint");
+    expect(src).toContain("text-amber-600");
+  });
+});

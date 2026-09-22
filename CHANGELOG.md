@@ -7,6 +7,38 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.76.1] — 2026-09-22 (TASK 85, 2. plast: GEO KOORDINATE V ONBOARDING ČAROVNIKU — vnos že ob prvem ustvarjanju)
+
+### Dodano
+- **Geo koordinati v onboarding čarovniku (korak 4 »Dodatno«)** — dopolnilna
+  plast TASK 85: partner, ki prvič ustvarja lokal prek 5-korakovnega
+  čarovnika, vpiše koordinati ŽE MED ONBOARDINGOM (prej je moral po
+  ustvarjanju znova odpreti urejanje — večina listingov bi ostala brez
+  pinov). Ista infrastruktura kot ListingFormDialog:
+  - `WizardForm` razširjen z `lat`/`lng` (surovo besedilo) + prefill
+    `prefillFrom` (nadaljevanje osnutka ponudi že vnešene koordinati)
+  - `validateStep(4)`: korak je opcijsko (preskoči = brez pina), NEVELJAVEN
+    vnos pa se ZAVRE (prazno = veljavno) — ista trda vrata
+    `parseGeoInput` (obe-ali-nobena, ±90/±180)
+  - `buildStepPayload(4)` pošlje `lat`/`lng` (null = izpraznjeno)
+  - UI: polji Geo širina (N) / Geo dolžina (E) z MapPin ikono,
+    `step="any"` (Google Maps paste), inline `role="alert"` napaka pod
+    parom + rumeni SI-bbox hint (zamenjava lat↔lng)
+
+### Testi
+- 4 novi source-contract testi (49 v task85 suite): WizardForm/prefill,
+  validateStep zavrnitev, buildStepPayload geo, UI aria/role=alert/hint.
+- Skupaj: **1719/1719 testov** (1715 + 4), lint 0, tsc 0.
+- E2E (agent-browser, 375px): svež partner → čarovnik samodejno → korak 1
+  (POST 200, osnutek) → korak 2 opisi (PUT 200) → korak 3 fotografija →
+  korak 4: samo lat → inline napaka + aria-invalid=true → dopolnjen lng
+  → Nadaljuj (PUT 200) → DB lat/lng natančno 46.3625/14.0936 → 0 konzolnih
+  napak, 0px preliva. (Operativna opomba: agent-browser click ref je med
+  HMR rebuildi odmetal ghost snapshot — JS click zanesljiv; wizard E2E
+  čist.) Testni listing + owner počišččena.
+
+---
+
 ## [1.76.0] — 2026-09-22 (TASK 85: GEO KOORDINATE NA LISTING FORMAH — partner/admin vneseta pin lastne tržnice)
 
 ### Dodano
