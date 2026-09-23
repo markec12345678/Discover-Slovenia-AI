@@ -157,12 +157,23 @@ describe("sanitizeItinerary", () => {
     expect(r.recommendations[0].length).toBeLessThanOrEqual(300);
   });
 
-  test("source: fallback ohranjen, vse drugo → ai", () => {
+  test("source: fallback/deterministic ohranjena, vse drugo → ai", () => {
     expect(
       sanitizeItinerary({ days: [VALID_DAY], recommendations: [], tips: [], source: "fallback" }).source
     ).toBe("fallback");
+    // 1.89.1 (Issue #1 FA regresija): shranjen "Brez AI" načrt (engine
+    // deterministic, 0 LLM žetonov) je prej dobil source "ai" → napačna
+    // oznaka "AI načrt" na /pot/{shareId}. Vir mora preživeti sanitize,
+    // ker save pot sanitizira PRED persistenco (save/route.ts:79).
+    expect(
+      sanitizeItinerary({ days: [VALID_DAY], recommendations: [], tips: [], source: "deterministic" }).source
+    ).toBe("deterministic");
     expect(
       sanitizeItinerary({ days: [VALID_DAY], recommendations: [], tips: [], source: "evil" }).source
+    ).toBe("ai");
+    // Nezaupan vnos ne more izmisliti tretjega veljavnega vira
+    expect(
+      sanitizeItinerary({ days: [VALID_DAY], recommendations: [], tips: [], source: "DETERMINISTIC" }).source
     ).toBe("ai");
   });
 });

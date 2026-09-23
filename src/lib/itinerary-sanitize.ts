@@ -156,7 +156,18 @@ export function sanitizeItinerary(raw: unknown, maxDays?: number): Itinerary {
     total_budget: Math.max(0, asNum(obj.total_budget)),
     recommendations: asStrList(obj.recommendations),
     tips: asStrList(obj.tips),
-    source: obj.source === "fallback" ? "fallback" : "ai",
+    // 1.89.1 (Issue #1 FA): "deterministic" (TASK 100 — Brez AI motor) je
+    // veljaven vir od types.ts:179 dalje, a ga je stara preslikava vseh
+    // ne-fallback vrednosti pretvorila v "ai" — shranjen načrt z 0 LLM
+    // žetoni se je na /pot/{shareId} prikazal z napačno oznako "AI načrt"
+    // (browser dokaz: e2e-i1-shots/11-share-clean-deterministic-badge.png).
+    // Sedaj se veljavna vira (fallback/deterministic) preneseta; vsi ostali
+    // nizi, vključno z neveljavnimi, ostanejo "ai" (nezaupan vnos NE more
+    // izmisliti tretjega vira).
+    source:
+      obj.source === "fallback" || obj.source === "deterministic"
+        ? obj.source
+        : "ai",
     ...(Array.isArray(obj.packingList) || typeof obj.packingList === "undefined"
       ? { packingList: asStrList(obj.packingList) }
       : {}),
