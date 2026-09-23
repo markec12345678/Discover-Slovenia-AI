@@ -160,6 +160,12 @@ import { PlannerMealStop } from "@/components/planner-meal-stop";
 import { pickMealStop, type MealSuggestion } from "@/lib/meal-stops";
 import { PlannerStatusStrip } from "@/components/planner-status-strip";
 import { PlannerSummaryBar } from "@/components/planner-summary-bar";
+// Issue #3 (UX REDESIGN — AI = CONTROL LAYER + TRUST): kompaktna kontrolna
+// vrstica (refinement čipi vidni TAKOJ nad potjo) in iskrena vrstica
+// zaupanja (✓ samo, če je plast dejansko preverjena). Oba kličata/branita
+// OBSTOJEČE plasti — NI nove logike načrtovanja.
+import { PlannerAiControls } from "@/components/planner-ai-controls";
+import { PlannerTrustLine } from "@/components/planner-trust-line";
 import { buildItineraryAudioScript, planAudioCacheKey } from "@/lib/planner-audio";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import type { LocationVisit } from "@/lib/types";
@@ -697,6 +703,21 @@ export function ItineraryPlanner() {
       setFormData(smartInput);
       generateItinerary(smartInput);
       return;
+    }
+
+    // 1.6) Issue #3 (Start Anywhere secondary): sidro #start-kjerkoli iz
+    // heroja. Če uporabnik že ima obnovljen načrt, je obrazec zložen —
+    // sidra na skritem elementu ne delujejo. Zato ob prihodu s hash-em
+    // obrazec RAZŠIRIMO (zmožnost ostane dostopna — HIDE ≠ DELETE) in
+    // se pomaknemo do bloka uvoza virov (povezava/slika/PDF/točke).
+    const startHash = window.location.hash;
+    if (startHash === "#start-kjerkoli" || startHash === "#start-anywhere") {
+      setFormExpanded(true);
+      setTimeout(() => {
+        document
+          .getElementById("start-kjerkoli")
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 200);
     }
 
     // 2) Obnovi zadnji načrt iz localStorage (samo če store še ni poln)
@@ -2400,9 +2421,12 @@ export function ItineraryPlanner() {
                     prepozna destinacije in izpolni obrazec.
                     POZOR: NI <form> — HTML ne dovoljuje ugnezdenih formov
                     ( zunanji planner form), zato Enter obravnavamo prek
-                    onKeyDown na vhodu. */}
+                    onKeyDown na vhodu.
+                    Issue #3: id="start-kjerkoli" — sidro sekundarne povezave
+                    iz heroja ("Imaš že svoje vire?"). */}
                 <div
-                  className="rounded-lg border border-primary/20 bg-primary/5 p-3"
+                  id="start-kjerkoli"
+                  className="scroll-mt-[130px] rounded-lg border border-primary/20 bg-primary/5 p-3"
                   onPaste={handleIngestPaste}
                 >
                   <div className="space-y-2">
@@ -3532,6 +3556,35 @@ export function ItineraryPlanner() {
                     )}
                   </div>
                 </div>
+
+                {/* Issue #3 §3 (AI = CONTROL LAYER): kontrolna vrstica nad
+                    potjo — čipi prilagoditve (manj vožnje, ceneje, več narave
+                    …) + prosti ukaz so vidni TAKOJ, ne šele v zavihku raila.
+                    KLICATA ISTI /api/itinerary/refine kot rail (enaka
+                    obremenitev); polna izkušnja (zgodovina, PlanCopilot)
+                    ostane v desnem stolpcu — HIDE ≠ DELETE. */}
+                <PlannerAiControls
+                  itinerary={itinerary}
+                  formData={formData}
+                  onRefined={(newItinerary) => {
+                    setItinerary(newItinerary);
+                    // Isti kanon kot rail refiner: lokalna persistenca +
+                    // zastareli share link se umakne (P0.2)
+                    persistItinerary(newItinerary, formData);
+                    setShareUrl(null);
+                    setCopied(false);
+                  }}
+                />
+
+                {/* Issue #3 §4 (TRUST): zbitek preverb — ✓ Pot preverjena ·
+                    ✓ Razdalje izračunane · ✓ Vreme preverjeno · ✓ Odprto ob
+                    tvojem času. ISKRENO: ✓ samo, če je plast dejansko
+                    izvedena in čista; ⚠ s številom sicer; manjkajoča plast
+                    se ne izriše (nikoli lažni ✓). */}
+                <PlannerTrustLine
+                  itinerary={itinerary}
+                  geoValidation={geoValidation}
+                />
 
                 {/* UI sprint (točka B smeri): obrazec zložen v POVZETEK
                     parametrov — "Uredi" ga znova odpre nad delovno površino. */}

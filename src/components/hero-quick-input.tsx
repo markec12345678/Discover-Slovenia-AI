@@ -13,6 +13,8 @@ import {
   Zap,
   Trees,
   Loader2,
+  Mountain,
+  Sprout,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -32,8 +34,13 @@ import { Button } from "@/components/ui/button";
 // ki se pošlje v /nacrtuj). Oba sta v sporočilih (heroChips namespace),
 // da se celoten vnos prevede (label SAMO ne bi zadostoval — uporabnik
 // bi videl EN gumb, planner pa dobil SL poizvedbo).
+// Issue #3 (UX REDESIGN): +2 primera iz naročila ("Narava in hrana",
+// "Morje + gore") — primarna izkušnja je ENO dominantno vprašanje +
+// nekaj primerov; obstoječih 6 čipov NE odstranjamo (ZERO FEATURE LOSS).
 const QUICK_ACTIONS = [
   { icon: Leaf, labelKey: "calmWeekend", queryKey: "calmWeekendQuery" },
+  { icon: Sprout, labelKey: "natureFood", queryKey: "natureFoodQuery" },
+  { icon: Mountain, labelKey: "seaMountains", queryKey: "seaMountainsQuery" },
   { icon: Heart, labelKey: "romantic", queryKey: "romanticQuery" },
   { icon: Users, labelKey: "family", queryKey: "familyQuery" },
   { icon: UtensilsCrossed, labelKey: "foodWine", queryKey: "foodWineQuery" },
@@ -111,7 +118,7 @@ export function HeroQuickInput() {
         {t("chipsHint")}
       </p>
 
-      {/* Intent chipi — 6 želja po FW3 predlogu; py-2.5 = ~46px tap tarča (2026 standard) */}
+      {/* Intent chipi — 8 želje (FW3 predlog + Issue #3 primera); py-2.5 = ~46px tap tarča (2026 standard) */}
       <div
         role="group"
         aria-labelledby="hero-quick-chips-label"
@@ -136,6 +143,20 @@ export function HeroQuickInput() {
           );
         })}
       </div>
+
+      {/* Issue #3 (START ANYWHERE secondary): "Imaš že vire?" — povezava /
+          slika / PDF / Google pins uvoz živi na /nacrtuj (zavihki v bloku
+          Start Anywhere). Tu je SEKUNDARNA vrstica, da je dominantno vprašanje
+          ŠE VEDNO en sam AI vnos (HIDE ≠ DELETE — zmožnost ostane, vidnost
+          kontekstualna). Sidro #start-kjerkoli na načrtovalniku. */}
+      <p className="mt-4 text-center text-xs text-white/70 drop-shadow-[0_1px_8px_rgba(0,0,0,0.5)] sm:text-[13px]">
+        <a
+          href={`${localePrefix(locale)}/nacrtuj#start-kjerkoli`}
+          className="underline decoration-white/40 underline-offset-4 transition-colors hover:text-white hover:decoration-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-sm"
+        >
+          {t("startAnywhere")}
+        </a>
+      </p>
 
       {/* Trust indicators — raziskava P4-5: subtilni trust signali dvigujejo konverzijo
           PREMIUM-VIZ: pike poenotene v enoten bel ton (prej 4 barvne —

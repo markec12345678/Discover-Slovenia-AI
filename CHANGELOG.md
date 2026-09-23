@@ -7,6 +7,79 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.90.0] — 2026-09-23 (ISSUE #3: UX REDESIGN — ONE SIMPLE EXPERIENCE / ZERO FEATURE LOSS)
+
+### Cilj
+- **ENOSTAVNA izkušnja nad BOGATO platformo** — DISCOVER → PLAN → BOOK → GO;
+  ~100 zmožnosti ostane ~100 zmožnosti, uporabnik vidi le tiste, ki so
+  relevantne v trenutku. **HIDE ≠ DELETE.**
+
+### Read-only revizija + matrika (PRED implementacijo, po navodilu Issue #3)
+- **docs/FEATURE-MATRIX.md (NOV):** matrika ~100 zmožnosti (lokacija ·
+  backend · nov UX · vidnost KEEP VISIBLE/CONTEXTUAL · Delete=NE VSE) +
+  najdbe 20 revizijskih točk (4 revizije 5-A/5-B/5-C/5-D v worklogu).
+- Ključne najdbe: /potovanje + /na-poti (Go Mode) NISTA bila v nobeni
+  navigaciji; Moja potovanja samo v mobilnem meniju; hitre akcije refinementa
+  zaprte v rail zavihku; Start Anywhere brez izhoda s homepagea.
+
+### DISCOVER (domov)
+- Hero: **+2 primera čipa** iz Issue #3 (Narava in hrana, Morje + gore —
+  skupaj 8, obstoječih 6 NE odstranjenih).
+- Hero: **sekundarna vrstica "Začni od drugje"** (Start Anywhere) →
+  `/nacrtuj#start-kjerkoli` (ob prihodu s hash-em se obrazec samodejno
+  razširi in zascrolla do bloka uvoza virov — Povezava/Slika/PDF/Točke).
+
+### PLAN (načrtovalnik)
+- **NOV `planner-ai-controls.tsx` (AI = KONTROLNA PLAST):** kompaktna
+  kontrolna vrstica DIREKTNO v delovni površini rezultata — izbira dneva +
+  6 determinističnih hitrih akcij (isti `QUICK_ACTIONS` vir kot rail) +
+  3 prosti čipi (Ceneje / Bolj aktivno / Bolj mirno) + prosti ukaz
+  ("dodaj Piran, odstrani Kranj …"). KLICATA **ISTI `/api/itinerary/refine`**
+  endpoint z enako obremenitvijo kot rail — NI nove logike načrtovanja;
+  polna izkušnja (zgodovina, PlanCopilot) v railu OSTANE.
+- **NOV `planner-trust-line.tsx` (TRUST):** iskren zbitek preverb —
+  ✓ Pot preverjena / ✓ Razdalje izračunane (OSRM; hevristika pošteno
+  označena) / ✓ Vreme preverjeno / ✓ Odprto ob tvojem času. **✓ SAMO, če je
+  plast dejansko izvedena in čista; ⚠ s številom sicer; manjkajoča plast se
+  ne izriše** (nikoli lažni ✓).
+
+### EXPLORE → "Add to my trip"
+- DestinationModal: **primarni CTA "Dodaj v mojo pot"** — prenese destinacijo
+  kot željo prek OBSTOJEČE plasti (sessionStorage heroQuery → /nacrtuj
+  samodejno sestavi načrt z AZ DA destinacijo). Ni nov mehanizem.
+
+### Vidnost pokopanih zmožnosti (GO vrstica modela)
+- Navigacija (desktop): **+ "Moja potovanja"** (prej samo mobilni meni).
+- Footer (kolona Načrtuj): **+ "Na poti (Go Mode, offline)"** in
+  **"Načrtuj celo potovanje"** (/potovanje) — obe strani prej dosegljivi
+  samo med seboj.
+
+### Stanja
+- **NOV `src/app/not-found.tsx`:** blagovzna 404 stran z izhodi na zlato
+  pot (domov/načrtuj), SL/EN (isti vzorec kot pot error boundary).
+
+### Zagovorjena celovitost (Issue #3 REQUIRED E2E — vse preverjeno)
+- 1 Home→AI načrt→itinerer→zemljevid→refine (čip Ceneje)→shrani (shareId) ✓
+- 2 Start Anywhere→uvoz Točke (Bled/Piran/Ljubljana/Bohinj prepoznani)→načrt ✓
+- 3 Explore→Bled modal→Dodaj v mojo pot→načrt z Bledom ✓
+- 4 Kontekstualna rezervacija (BookingPanel + /go linki) ✓
+- 5 Booking stanje→MOJA POT (ZUNANJA semantika) ✓
+- 6 MOJA POT→Zaženi Na poti→/na-poti ✓
+- 7 Go Mode: naslednja postaja + navigacijski handoff + offline ✓
+- 8 AI refinement ohranja podatke poti (persist + stale share link umaknitev) ✓
+- 9 Deterministična rezerva: API source=deterministic + UI preklopnik ✓
+- 10 /go/* redirecti (302 + affiliate atribucija fail-closed) + 404 ✓
+- Mobilni 390/430 + desktop 1440: **0 px preliva** na //nacrtuj/potovanje/na-poti ✓
+- 0 napak strani (sveža seja), 0 hidracijskih napak ✓
+
+### Testi
+- **2317/2317 PASS** (+6 novih: `issue3-ux-redesign.test.ts` — pokritost
+  nadzorov AI kontrolne plasti, nespremenjenost QUICK_ACTIONS, prosti čipi =
+  obstoječa free-text pot, i18n ključi redesigna SL+EN).
+- lint 0 · tsc 0 (src/).
+
+---
+
 ## [1.89.1] — 2026-09-23 (ISSUE #1 FA: provenance resnice shranjenih načrtov)
 
 ### Dokumentacijska sinhronizacija (2026-09-23, brez spremembe kode)

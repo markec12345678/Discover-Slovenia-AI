@@ -68,6 +68,11 @@ export async function Footer() {
               { href: "/#rezerviraj", key: "planBookings" },
               // P1-2b: B2C računi popotnikov
               { href: "/moja-potovanja", key: "planMyTrips" },
+              // Issue #3 (ZERO FEATURE LOSS): Go Mode (/na-poti) je bil dosegljiv
+              // SAMO z gumba na /potovanje (pokopana zmožnost) — vrstica GO v
+              // modelu DISCOVER → PLAN → BOOK → GO zahteva javno vidnost.
+              { href: "/na-poti", key: "planGoMode" },
+              { href: "/potovanje", key: "planJourney" },
               { href: "/prijava", key: "planLogin" },
             ]}
           />

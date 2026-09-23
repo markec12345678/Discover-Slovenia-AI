@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
+import { localePrefix } from "@/i18n/routing";
 import {
   BedDouble,
   TicketCheck,
@@ -19,6 +22,7 @@ import {
   ArrowRight,
   Store,
   Compass,
+  MapPlus,
 } from "lucide-react";
 import {
   Dialog,
@@ -27,6 +31,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WeatherWidget } from "@/components/sections/weather-widget";
@@ -74,6 +79,8 @@ export function DestinationModal({
   destination,
   onClose,
 }: DestinationModalProps) {
+  const router = useRouter();
+  const locale = useLocale();
 
   // Lokali v bližini (B2B listings)
   const [nearbyListings, setNearbyListings] = useState<Listing[]>([]);
@@ -212,6 +219,31 @@ export function DestinationModal({
 
             {/* Vsebina */}
             <div className="space-y-6 p-5 sm:p-6">
+              {/* Issue #3 §8 (EXPLORE → "Add to my trip"): primarni izhod iz
+                  odkrivanja je DODAJ V MOJO POT — ISTI prenos kot hero čipi
+                  (sessionStorage "heroQuery" → /nacrtuj samodejno sestavi
+                  načrt z AZ DA destinacijo). NI nova logika — obstoječa
+                  plast prenosa želje. */}
+              <Button
+                type="button"
+                size="lg"
+                className="w-full gap-2"
+                onClick={() => {
+                  if (!destination) return;
+                  trackFunnel("listing_click", `/nacrtuj?dest=${destination.id}`);
+                  sessionStorage.setItem(
+                    "heroQuery",
+                    `3-dnevno potovanje z destinacijo ${destination.name} — ${destination.tagline}`
+                  );
+                  onClose();
+                  router.push(`${localePrefix(locale)}/nacrtuj`);
+                }}
+              >
+                <MapPlus className="size-4" aria-hidden="true" />
+                Dodaj v mojo pot
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Button>
+
               {/* Opis */}
               <p className="text-sm leading-relaxed text-foreground/90">
                 {destination.description}

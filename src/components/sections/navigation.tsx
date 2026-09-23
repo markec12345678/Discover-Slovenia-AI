@@ -26,9 +26,14 @@ import { useCart } from "@/lib/cart-store";
  * FW3 (AI-first hierarhija): navigacija ima samo 4 glavne povezave
  * (Destinacije, Doživetja, Zemljevid, Vodiči) + primarni CTA "Načrtuj z AI"
  * (→ /načrtuj) + diskretni "Za ponudnike". Preostale funkcije (nivo 2:
- * Dogodki, Lokali, Tržnica, Slovenia Pass, Moja potovanja) so dostopne v
- * mobilnem meniju in prek sekcije "Razišči Slovenijo" na homepageu —
- * progresivno razkrivanje namesto kognitivnega overloada.
+ * Dogodki, Lokali, Tržnica, Slovenia Pass) so dostopne v mobilnem meniju in
+ * prek sekcije "Razišči Slovenijo" na homepageu — progresivno razkrivanje
+ * namesto kognitivnega overloada.
+ *
+ * Issue #3 (UX REDESIGN — ZERO FEATURE LOSS): "Moja potovanja" je dodana
+ * TUDI v desktop navigacijo (prej samo mobilni meni — pokopana zmožnost
+ * na najširšem zaslonu). Ciljni model DISCOVER → PLAN → BOOK → GO zahteva,
+ * da je centralni shranjeni objekt (MY TRIP) dosegljiv z vsake naprave.
  */
 function useNavLinks() {
   const t = useTranslations("nav");
@@ -37,6 +42,7 @@ function useNavLinks() {
     { href: "/dozivetja", label: t("experiences") },
     { href: "/zemljevid", label: t("map") },
     { href: "/vodici", label: t("guides") },
+    { href: "/moja-potovanja", label: t("trips") },
   ];
 }
 
@@ -51,7 +57,6 @@ function useSecondaryLinks() {
     { href: "/lokali", label: t("listings") },
     { href: "/trznica", label: t("marketplace") },
     { href: "/slovenia-pass", label: t("pass") },
-    { href: "/moja-potovanja", label: t("trips") },
   ];
 }
 
@@ -161,7 +166,8 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
           </span>
         </Link>
 
-        {/* Desktop navigacija — 4 glavne povezave (FW3 hierarhija) */}
+        {/* Desktop navigacija — 5 glavnih povezav (FW3 hierarhija + Issue #3
+            Moja potovanja — centralni objekt MY TRIP dosegljiv na desktopu) */}
         <nav
           className="hidden items-center gap-1 lg:flex"
           aria-label="Glavna navigacija"

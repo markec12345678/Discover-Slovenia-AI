@@ -35,7 +35,8 @@
     "scrollCueAriaLabel": "Pomakni se navzdol do statistik",
     "trustNoAccount": "Brez računa",
     "trustVerified": "km in cene preverjeni",
-    "trustUpdated": "posodobljeno september 2026"
+    "trustUpdated": "posodobljeno september 2026",
+    "startAnywhere": "Imaš že svoje vire? Začni od drugje — povezava, slika, PDF ali Google pins"
   },
   "heroChips": {
     "calmWeekend": "Miren vikend",
@@ -49,7 +50,11 @@
     "adventure": "Avantura",
     "adventureQuery": "Adrenalin vikend — rafting na Soči in pohodi v gorah",
     "noCrowds": "Brez gužve",
-    "noCrowdsQuery": "Mirni pohodi v naravi, stran od turističnih množic"
+    "noCrowdsQuery": "Mirni pohodi v naravi, stran od turističnih množic",
+    "natureFood": "Narava in hrana",
+    "natureFoodQuery": "Potovanje po slovenski naravi z dobrimi lokalnimi gostilnami — jezera, soteske in tradicionalna hrana",
+    "seaMountains": "Morje + gore",
+    "seaMountainsQuery": "Kombinacija morja in gor — Piran in Obala ter izleti v Triglavski narodni park"
   },
   "heroTrust": {
     "free": "Brezplačno",
@@ -332,7 +337,9 @@
     "legalTrust": "Zaupanje in varnost",
     "legalPrivacy": "Politika zasebnosti",
     "legalTerms": "Pogoji uporabe",
-    "legalContact": "Kontakt"
+    "legalContact": "Kontakt",
+    "planGoMode": "Na poti (Go Mode, offline)",
+    "planJourney": "Načrtuj celo potovanje (prevozi, nastanitev, aktivnosti)"
   },
   "chatbot": {
     "headerTitle": "Slovenija AI",

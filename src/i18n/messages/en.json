@@ -35,7 +35,8 @@
     "scrollCueAriaLabel": "Scroll down to the statistics",
     "trustNoAccount": "No account needed",
     "trustVerified": "verified distances & prices",
-    "trustUpdated": "updated September 2026"
+    "trustUpdated": "updated September 2026",
+    "startAnywhere": "Already have your own sources? Start anywhere — link, image, PDF or Google pins"
   },
   "heroChips": {
     "calmWeekend": "Relaxed weekend",
@@ -49,7 +50,11 @@
     "adventure": "Adventure",
     "adventureQuery": "An adrenaline weekend — rafting on the Soča and mountain hikes",
     "noCrowds": "No crowds",
-    "noCrowdsQuery": "Peaceful hikes in nature, away from the tourist crowds"
+    "noCrowdsQuery": "Peaceful hikes in nature, away from the tourist crowds",
+    "natureFood": "Nature & food",
+    "natureFoodQuery": "Trip through Slovenian nature with great local restaurants — lakes, gorges and traditional food",
+    "seaMountains": "Sea + mountains",
+    "seaMountainsQuery": "Sea and mountains combined — Piran and the Coast plus day trips into Triglav National Park"
   },
   "heroTrust": {
     "free": "Free",
@@ -332,7 +337,9 @@
     "legalTrust": "Trust and safety",
     "legalPrivacy": "Privacy policy",
     "legalTerms": "Terms of use",
-    "legalContact": "Contact"
+    "legalContact": "Contact",
+    "planGoMode": "On the road (Go Mode, offline)",
+    "planJourney": "Plan the whole journey (transfers, stays, activities)"
   },
   "chatbot": {
     "headerTitle": "Slovenia AI",
