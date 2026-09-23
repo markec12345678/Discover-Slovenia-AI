@@ -25,6 +25,12 @@ booking lifecycle / kanonske identitete / marketplace lifecycle, mobilna
    dobi min(lastna meja, preostanek), pod 8 s se preskoči, Gemini/Puter
    zdaj čutita per-klic timeout + maxRetries 0; itinerary 65 s/70 s —
    odgovor PRIDE VEDNO (AI ali deterministična rezerva) v < 80 s.
+   **FA-A1-b (isti dan)**: SDK abort v Vercel hkg1 runtimeu NI sprožil
+   (E2E lokalno 73 s/69 s z obešajočim providerjem; produkcija kljub
+   budgetu 300,25 s → 504) → dodana ŠE ZUNANJA trda meja AI faze v
+   sami route: Promise.race 70 s, NEODVISNA od SDK internals. Produkcijski
+   dokaz po popravku: 200 v 72,5 s, source "fallback", veljaven načrt
+   (prej: gol 504 brez odgovora).
 
 ### P2/P3
 2. **fix: recommendations javne projekcije (F-B)** — /api/recommendations/
