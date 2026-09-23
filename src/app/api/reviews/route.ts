@@ -96,11 +96,14 @@ async function validateReviewBody(
         ),
       };
     }
+    // HARDENING M3: recenzije sprejemamo SAMO za OBJAVLJENE izdelke —
+    // prej je obstoj zadostoval (recenzija za pending/rejected izdelek je
+    // čakala v bazi in se pokazala ob objavi).
     const exists = await db.product.findUnique({
       where: { id: productIdRaw },
-      select: { id: true },
+      select: { id: true, status: true },
     });
-    if (!exists) {
+    if (!exists || exists.status !== "published") {
       return {
         ok: false,
         response: NextResponse.json(
@@ -120,11 +123,12 @@ async function validateReviewBody(
         ),
       };
     }
+    // HARDENING M3: enako published-only pravilo za izkušnje.
     const exists = await db.experience.findUnique({
       where: { id: experienceIdRaw },
-      select: { id: true },
+      select: { id: true, status: true },
     });
-    if (!exists) {
+    if (!exists || exists.status !== "published") {
       return {
         ok: false,
         response: NextResponse.json(

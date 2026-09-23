@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { checkAdmin } from "@/lib/auth-guards";
+import { requireAdmin } from "@/lib/auth-guards";
 
 // GET /api/analytics/funnel — search → click → contact → booking funnel
 // Header: x-admin-password
@@ -13,9 +13,10 @@ import { checkAdmin } from "@/lib/auth-guards";
 // Rezervacija: 3
 export async function GET(request: Request) {
   try {
-    if (!checkAdmin(request.headers.get("x-admin-password"))) {
-      return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
-    }
+    // HARDENING V2: prej go checkAdmin BREZ rateLimit -> neomezen
+    // brute-force oracle na admin geslo. requireAdmin = limit + preverba.
+    const denied = requireAdmin(request);
+    if (denied) return denied;
 
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get("days") || "30", 10);

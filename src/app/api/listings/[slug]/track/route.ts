@@ -66,8 +66,16 @@ export async function POST(
       return NextResponse.json({ error: "Neveljaven tip eventa" }, { status: 400 });
     }
 
-    const listing = await db.listing.findUnique({ where: { slug }, select: { id: true } });
-    if (!listing) {
+    // HARDENING M2: sledenje velja SAMO za OBJAVLJENE lokale — prej je
+    // 200-vs-404 našteval neobjavljene sluge (draft/pending/rejected) in
+    // napihoval B2B metriko (viewCount/leadCount/aiRecommendations) na
+    // vsebinah, ki javno še ne obstajajo.
+    const listing = await db.listing.findUnique({
+      where: { slug },
+      select: { id: true, status: true },
+    });
+    if (!listing || listing.status !== "published") {
+      // enak odgovor kot neobstoječ — brez razkritja statusa
       return NextResponse.json({ error: "Lokal ni najden" }, { status: 404 });
     }
 

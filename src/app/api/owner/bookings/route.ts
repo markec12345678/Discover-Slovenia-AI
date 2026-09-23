@@ -256,13 +256,18 @@ export async function PATCH(request: Request) {
     // prebrani status) — če se je status medtem spremenil, 409 brez učinka.
     // TASK 99 (§10): ob lastnikovem preklicu se gostov zahtevek za preklic
     // obravnavá (customerStatus → "none" — zahtevek izveden, ne izgubljen).
+    // HARDENING X2: vsak lastnikov uspešen prehod zahtevek RAZREŠI — tudi
+    // confirm/complete (prej ga je počistil SAMO cancel: rezervacija, ki jo
+    // je lastnik kljub zahtevku potrdil/zaključil, je nosila zastareli
+    // "cancellation_requested" za vedno — nadzorna plošča ga je štela,
+    // gostov UI pa ga pri completed ni več kazal).
     const updated = await db.booking.updateMany({
       where: { id: booking.id, status: booking.status },
       data: {
         status: newStatus,
         confirmedAt:
           newStatus === "confirmed" ? new Date() : booking.confirmedAt,
-        ...(action === "cancel" ? { customerStatus: "none" } : {}),
+        customerStatus: "none",
       },
     });
     if (updated.count === 0) {

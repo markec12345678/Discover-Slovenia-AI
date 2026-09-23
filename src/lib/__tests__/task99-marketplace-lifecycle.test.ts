@@ -220,8 +220,12 @@ describe("TASK 99 §10: owner bookings vidnost (source-contract)", () => {
   });
 
   test("④ lastnikov preklic obravnava zahtevek (customerStatus → none)", () => {
-    expect(ownerBookingsSrc).toMatch(
-      /action === "cancel" \? \{ customerStatus: "none" \}/
+    // HARDENING X2: vsak uspešen lastnikov prehod razreši zahtevek —
+    // prej pogojno samo ob cancelu (zastareli "cancellation_requested"
+    // je ostal na completed rezervacijah za vedno)
+    expect(ownerBookingsSrc).toContain('customerStatus: "none"');
+    expect(ownerBookingsSrc).not.toContain(
+      'action === "cancel" ? { customerStatus: "none" }'
     );
   });
 });
