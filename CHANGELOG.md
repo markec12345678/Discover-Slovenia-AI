@@ -7,6 +7,33 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.89.1] — 2026-09-23 (ISSUE #1 FA: provenance resnice shranjenih načrtov)
+
+### Popravljeno
+1. **fix: shranjen "Brez AI" načrt je bil po shranitvi preimenovan v "AI
+   načrt"** — `sanitizeItinerary` (save meja, save/route.ts:79) je vse
+   ne-fallback vire pretvoril v "ai", čeprav je `Itinerary.source` unija
+   `"ai" | "fallback" | "deterministic"` (types.ts:179) že od TASK 100.
+   Posledica: načrt, ustvarjen z izrecno izbranim motorjem "Brez AI"
+   (0 LLM žetonov), je bil na deljeni povezavi /pot/{shareId} prikazan z
+   oznako **"AI načrt"** — napaka resnice vira (provenance), nasprotje
+   Issue #1 §14/§19 (iskrene oznake virov) in Issue #2 dosega (deterministična
+   pot je prvorazredna). Browser dokaz popravka: generate (source
+   "deterministic") → save → /pot/{shareId} badge zdaj **"Načrt brez AI
+   (deterministični motor)"** (prej "AI načrt"; e2e-i1-shots/fix-verified-
+   share-badge.png). Sanitizer sedaj prenaša SAMO veljavna vira
+   (fallback/deterministic); neveljavni/nasiljeni nizi ostanejo "ai" —
+   nezaupan vnos ne more izmisliti tretjega vira. +3 regresijske asercije
+   (vključno "DETERMINISTIC" velike črke → "ai").
+
+### Verifikacija
+- 2311/2311 testov, lint 0, tsc 0 (src/).
+- FINAL ACCEPTANCE ISSUE #1: audit 1-A (9 področij, brskalniški E2E user
+  journey, mobile 375/390/412 0 px preliva, idempotentnost handoffa
+  3×POST→1 vrstica, ponarejen CONFIRMED→400, PATCH brez žetona→503).
+
+---
+
 ## [1.89.0] — 2026-09-23 (ISSUE #2: CORE brez AI API ključa — glasovni klepet + domenska plast odgovorov)
 
 ### Metoda
