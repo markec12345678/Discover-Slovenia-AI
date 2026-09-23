@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getRecommendedIds } from "@/lib/ai-recommendations";
 import { rateLimit } from "@/lib/rate-limit";
+import { toPublicProduct } from "@/lib/public-fields";
 
 // GET /api/recommendations/products?productId=XXX&limit=4
 // Vrne AI-priporočene podobne izdelke.
@@ -67,8 +68,12 @@ export async function GET(request: Request) {
       .filter((r): r is NonNullable<typeof r> => r !== null)
       .slice(0, limit);
 
+    // 1.88.1 (FINAL ACCEPTANCE F-B): javna projekcija FW1/R3 — prej je
+    // ...p spread v javni JSON puščal ownerId/rejectionReason/submittedAt
+    // (ista družina puččov, ki jo je 1.88.0 zaprla na /api/products;
+    // ta površina je ostala spregledana).
     const products = ordered.map((p) => ({
-      ...p,
+      ...toPublicProduct(p),
       images: JSON.parse(p.images || "[]") as string[],
     }));
 
