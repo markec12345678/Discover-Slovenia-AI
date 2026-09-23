@@ -47,6 +47,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { buildMyTrip } from "@/lib/journey/trip-view";
+import { recordExternalHandoff } from "@/lib/journey/handoff-record";
 import {
   buildGoView,
   GO_LABELS,
@@ -178,6 +179,11 @@ function EntryLinks({
           href={e.bookingUrl}
           target="_blank"
           rel="noopener noreferrer"
+          // 1.88.1 (FA-3 GAP): enak zapis EXTERNAL handoffa kot MOJA POT
+          // povezava (prej Go Mode kliki niso pustili lifecycle sledi).
+          onClick={() =>
+            recordExternalHandoff(e.provider, e.providerProductId)
+          }
           className="inline-flex items-center gap-1 font-medium text-violet-700 underline-offset-4 hover:underline dark:text-violet-400"
         >
           {L.bookAt[lang]} <ExternalLink className="h-3.5 w-3.5" />

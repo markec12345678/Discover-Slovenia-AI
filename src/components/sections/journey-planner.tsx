@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { COUNTRIES, DESTINATIONS } from "@/lib/slovenia-data";
 import { COUNTRIES_EN } from "@/lib/slovenia-data-en";
 import { persistSelection } from "@/lib/supply/selection-persist";
+import { recordExternalHandoff } from "@/lib/journey/handoff-record";
 import { useAppStore } from "@/lib/store";
 import type { SelectedProviderProduct } from "@/lib/supply/types";
 import { describeTotals } from "@/lib/journey/totals";
@@ -659,6 +660,16 @@ export function JourneyPlanner() {
                               href={p.bookingUrl}
                               target="_blank"
                               rel="noopener noreferrer"
+                              // 1.88.1 (FA-3 GAP): kartični CTA je prej odšel
+                              // k ponudniku BREZ zapisa EXTERNAL (samo MOJA POT
+                              // povezava ga je zapisala) — lifecycle evidence
+                              // zdaj pošten na VSEH površinah izdelka.
+                              onClick={() =>
+                                recordExternalHandoff(
+                                  p.provider,
+                                  p.providerProductId
+                                )
+                              }
                               className="inline-flex items-center gap-1 font-medium text-violet-700 underline-offset-4 hover:underline dark:text-violet-400"
                             >
                               {t(L.bookAt)} <ExternalLink className="h-3.5 w-3.5" />
