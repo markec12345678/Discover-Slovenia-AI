@@ -58,7 +58,10 @@ describe("HARDENING M2: track sprejme SAMO objavljene lokale", () => {
 describe("HARDENING M3: recenzije SAMO za objavljene izdelke/izkušnje", () => {
   test("product in experience obstoj preverjata status", () => {
     const src = read("src/app/api/reviews/route.ts");
-    expect(src.match(/exists\.status !== "published"/g)?.length).toBe(2);
-    expect(src.match(/select: \{ id: true, status: true \}/g)?.length).toBe(2);
+    // 1.88.1 (FA-A): vrata zdaj na VSEH 4 obstojnostnih preverbah — POST
+    // (M3, 1.88.0) IN GET (FA-A — prej je bil UGC neobjavljenega cilja
+    // javno berljiv).
+    expect(src.match(/exists\.status !== "published"/g)?.length).toBe(4);
+    expect(src.match(/select: \{ id: true, status: true \}/g)?.length).toBe(4);
   });
 });

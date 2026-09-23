@@ -263,11 +263,15 @@ export async function GET(request: Request) {
           { status: 400 }
         );
       }
+      // 1.88.1 (FINAL ACCEPTANCE F-A): obstojnost sama ni dovolj — UGC
+      // recenzije NEOBJAVLJENEGA (draft/pending/rejected) izdelka so bile
+      // javno berljive. Uniformni 404 (isti kanon kot M2 track/reviews
+      // vrata: neizdano ne obstaja za javnost).
       const exists = await db.product.findUnique({
         where: { id: productId },
-        select: { id: true },
+        select: { id: true, status: true },
       });
-      if (!exists) {
+      if (!exists || exists.status !== "published") {
         return NextResponse.json(
           { error: "Izdelek ne obstaja" },
           { status: 404 }
@@ -280,11 +284,12 @@ export async function GET(request: Request) {
           { status: 400 }
         );
       }
+      // 1.88.1 (F-A): enaka published vrata kot izdelek zgoraj.
       const exists = await db.experience.findUnique({
         where: { id: experienceId },
-        select: { id: true },
+        select: { id: true, status: true },
       });
-      if (!exists) {
+      if (!exists || exists.status !== "published") {
         return NextResponse.json(
           { error: "Izkušnja ne obstaja" },
           { status: 404 }
