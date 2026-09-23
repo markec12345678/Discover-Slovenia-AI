@@ -7,6 +7,51 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.87.1] — 2026-09-23 (PRODUKCIJA BUILD GREEN: vrzel schema.prisma od 1.86.0 zaprta — skip-worktree past)
+
+### Problem (živi dokaz iz Vercel build logov)
+1. **Produkcija pada od 1.86.0**: stolpci `Booking.payoutStatus` +
+   `Booking.customerStatus` + `JourneyBooking.sessionKey` so bili v 1.86.0
+   dodani SAMO v lokalni (sqlite) različici `prisma/schema.prisma` —
+   datoteka ima zastavico **skip-worktree** (dvojnost: lokalno sqlite /
+   commitano postgresql), zato commitana produkcijska shema polj NIKOLI ni
+   dobila. Vercel build je padal na tipih (BookingSelect brez
+   customerStatus; sessionKey manjka v WhereInput; payoutStatus manjka v
+   insertih) — zadnji uspešen deploy pred tem popravkom: v1.84.0.
+2. **Zamujena TS napaka v novem testu** (task100, 1.87.0): lokalni tsc
+   poganjam pred dodajanjem testne datoteke — `destType` vrača
+   `string | undefined` in `toContain` zahteva niz. Vercel jo je ujel.
+
+### Popravek (trojno zaprtje vrzeli)
+- **COMMITANA postgresql shema**: vsa tri polja + indeks sessionKey
+  (usklajeno z lokalno sqlite različico — ista polja, isti privzetki,
+  razlikuje se SAMO provider vrstica). Lokalna sqlite različica ostaja
+  nespremenjena v delovnem drevesu (skip-worktree ponovno nastavljen).
+- **Zgodovinska migracija** `20260923110000_booking_payout_customer`
+  (ADD COLUMN IF NOT EXISTS, varna privzetka `not_due`/`none`) — resnica
+  za `prisma migrate deploy` + CI drift vrata (migrations ⇄ schema).
+- **STARTUP migracija** `src/lib/booking-state-migration.ts` —
+  idempotenten ALTER na obstoječih bazah (postgres IF NOT EXISTS /
+  sqlite PRAGMA pot), additive-only, fail-open, skupna zastavica
+  `DSA_DISABLE_SCHEMA_MIGRATION` — isti vzorec kot sessionKey
+  (journey-booking-migration). Povezana v instrumentation kot korak
+  `schema:booking-state` (vidno na /api/health).
+- `package.json` verzija usklajena (1.86.0 → 1.87.1 — prejšnji taski so
+  pozabili bumpati).
+
+### Verifikacija (živo)
+- **Vercel deploy fae5b34 = READY** (prvi zeleni po v1.84.0).
+- Produkcija `/api/health`: `schema:booking-state ok`; vse ostale
+  startup migracije ok; `config:secrets` ok.
+- Produkcija `/api/itinerary` z `engine="deterministic"`: **200 v 2,3 s**
+  (jedro 0 LLM žetonov), veljaven 2-dnevni načrt, `source:
+  "deterministic"`.
+- Testi: **2214/2214** (+10 `task100b-booking-state-migration`: unit obeh
+  narečij, idempotentnost, fail-open, obrambna CREATE pot, source-contract
+  staged sheme/migracije/instrumentacije) · lint 0 · tsc 0 (src/).
+
+---
+
 ## [1.87.0] — 2026-09-23 (TASK 100 / TASK 99 na GitHubu: DETERMINISTIČNI MOTOR KOT NARAVNA POT — načrt BREZ LLM)
 
 ### Problem (nadaljevanje TASK 99: "odstrani odvisnost od generativnega AI modela, kjer ni potreben")
