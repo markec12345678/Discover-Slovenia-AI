@@ -385,6 +385,58 @@ export async function register() {
       });
     }
 
+    // Startup SHEMA migracija — TASK 99 §10 (1.87.1): stolpca
+    // Booking.payoutStatus + Booking.customerStatus sta bila dodana SAMO v
+    // lokalni (sqlite) shemi — produkcijska (postgresql) jih je dobila šele
+    // v 1.87.1, obstoječe baze pa ju potrebujejo z idempotentnim ALTER
+    // (isti vzorec kot sessionKey zgoraj). Zgodovinska resnica:
+    // prisma/migrations/20260923110000_booking_payout_customer.
+    try {
+      const { migrateBookingState } = await import(
+        "./lib/booking-state-migration"
+      );
+      const r = await migrateBookingState();
+      if (r.columnsAdded.length > 0) {
+        console.log(
+          `[instrumentation] Shema migracija (TASK 99 payout/customer): ` +
+            `dodani stolpci [${r.columnsAdded.join(", ")}] na Booking (${r.dialect})`
+        );
+        recordStartupStep({
+          name: "schema:booking-state",
+          status: "ok",
+          detail: `dodani stolpci: ${r.columnsAdded.join(", ")} (${r.dialect})`,
+        });
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija (TASK 99 payout/customer): " +
+            "stanja ni bilo mogoče preveriti (DB nedosegljiva?) — " +
+            "preskočeno (fail-open)."
+        );
+        recordStartupStep({
+          name: "schema:booking-state",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja stolpcev ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:booking-state",
+          status: "ok",
+          detail: "stolpca že prisotna",
+        });
+      }
+    } catch (error) {
+      // Fail-open: migracija NE sme podreti zagona strežnika.
+      console.error(
+        "[instrumentation] Shema migracija (TASK 99 payout/customer) ni uspela:",
+        error,
+      );
+      recordStartupStep({
+        name: "schema:booking-state",
+        status: "failed",
+        detail: String(error),
+      });
+    }
+
     // Startup SHEMA migracija — SOCIALNA PLAST deljenih potovanj (P1 + F7,
     // 1.15.0): Neon baza je bila sinhronizirana v Fazi 4f — vsi kasnejši
     // stolpci (SavedItinerary.formData/editTokenHash/userId) in tabele

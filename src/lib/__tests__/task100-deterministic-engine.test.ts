@@ -304,7 +304,10 @@ describe("TASK 100: vedenje motorja", () => {
     );
     expect(it.days[0].locations.length).toBeGreaterThan(0);
     for (const loc of it.days[0].locations) {
-      expect(["cave", "spa", "city"]).toContain(destType(loc.destination_id));
+      // veljaven ID ⇒ veljaven tip (ID-ji prihajajo IZ kanonskega dataseta)
+      const type = destType(loc.destination_id);
+      expect(type).toBeTruthy();
+      expect(["cave", "spa", "city"]).toContain(type as string);
       // SL (privzeti jezik): transparenten razlog notranje izbire
       expect(loc.notes).toContain("deževen dan");
     }

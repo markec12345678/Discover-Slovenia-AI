@@ -551,6 +551,18 @@ model Booking {
   // preklicana/refundirana (glej lib/commissions.ts invariant). "paid" bodo
   // nastavljali izključno Stripe webhook (future) oz. nadzorovani demo seed.
   paymentStatus   String   @default("unpaid") // unpaid | paid | refunded
+  // TASK 99 (issue #1 §10 — payout state): tehnična struktura izplačil
+  // partnerjem. "not_due" (plačilo še ni bilo prisvojeno — demo/unpaid
+  // rezervacije so VEDNO not_due) | "due" (plačano + opravljeno —
+  // izplačilo zapade) | "processing" | "paid" | "failed". Zapisuje IZKLJUČNO
+  // izplačilna plast (cron/admin) — NIKOLI demo pot. Danes: brez Stripe
+  // booking checkouta v produkciji ostane vsem iskreno "not_due".
+  payoutStatus    String   @default("not_due")
+  // TASK 99 (issue #1 §10 — customer state): stanje GOSTA rezervacije.
+  // "none" (privzeto) | "cancellation_requested" (gost je ZAHTeval preklic
+  // prek /api/bookings/[bookingNumber]/cancel-request — zahtevek, NE preklic:
+  // izvede lastnik prek owner PATCH, ki stanje resetira).
+  customerStatus  String   @default("none")
   stripeSessionId String?
   notes           String?
   providerName    String
@@ -584,10 +596,16 @@ model JourneyBooking {
   id                String   @id @default(cuid())
   // Veza na shranjeno pot (SavedItinerary.shareId), ko uporabnik shrani.
   shareId           String?
+  // TASK 99 — anonimni ID seje (dsa_planner_sid): EFIMERNE vrstice
+  // (shareId NULL) so obsegene na sejo brskalnika, da stanje ne pušča
+  // med uporabniki. NULL = strežniški/provider zapis (globalen).
+  sessionKey        String?
   provider          String
   providerProductId String
-  // SELECTED | PENDING | PAYMENT_REQUIRED | PAID | CONFIRMED | FAILED |
-  // CANCELLED | UNKNOWN | EXTERNAL (validacija v lib/journey/booking.ts)
+  // SELECTED | BOOKING_REQUESTED | PENDING | PAYMENT_REQUIRED | PAID |
+  // CONFIRMED | MODIFIED | REFUNDED | EXPIRED | FAILED | CANCELLED |
+  // UNKNOWN | EXTERNAL — polni lifecycle (issue #1 §2), validacija +
+  // prehodi v lib/journey/booking.ts (ALLOWED_TRANSITIONS)
   status            String
   // SAMO če ga je vrnil provider (EXTERNAL ga NIKOLI ne nosi).
   providerBookingId String?
@@ -602,6 +620,7 @@ model JourneyBooking {
   updatedAt         DateTime @updatedAt
 
   @@index([shareId])
+  @@index([sessionKey])
   @@index([provider, providerProductId])
   @@index([status])
 }
