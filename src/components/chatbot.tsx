@@ -21,6 +21,10 @@ import {
   Clock,
   Plus,
   Check,
+  Mic,
+  MicOff,
+  Volume2,
+  Square,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +47,15 @@ import {
   isValidChatPlace,
 } from "@/lib/chat-add-place";
 import { useAppStore } from "@/lib/store";
+// GLASOVNI KLEPET (Issue #2 §6/§7/§8): brskalnikov STT/TTS brez AI ključa —
+// čisto plast v src/lib/voice.ts (podpora, jezikovna oznaka, čistitev besedila)
+import {
+  sttSupported,
+  ttsSupported,
+  speechRecognitionCtor,
+  speechLanguageTag,
+  speechTextForUtterance,
+} from "@/lib/voice";
 
 // GEO-ODGOVORI: Leaflet vgreteni ŠTEKNO — komponenta se naloži šele, ko
 // prvi AI odgovor prinese kraje (ostale strani ne plačajo ~140 KB bundla).
@@ -625,6 +638,122 @@ export function Chatbot() {
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  // ── GLASOVNI KLEPET (Issue #2 §6/§7/§8) ── BREZ AI API KLJUČA ──────────
+  // §6 VHOD: Web Speech API SpeechRecognition (brskalnikov STT).
+  // §7 IZHOD: window.speechSynthesis (brskalniški TTS).
+  // §8 CELI KLEPET: izgovorjeno vprašanje → besedilo → /api/chat → odgovor
+  // se prikaŽE in SAMODEJNO prebere (shouldAutoSpeak semantika v lib/voice).
+  // Podpora se preverja PO hidrataciji (server=false, klient=true bi bil
+  // hydration mismatch); nepodprto STT → gumb se NE izriše (besedilni vnos
+  // je vedno viden = zahtevan fallback), nepodprt TTS → gumb za branje se
+  // ne izriše (odgovori ostanejo besedilni).
+  const [voiceIn, setVoiceIn] = useState(false);
+  const [voiceOut, setVoiceOut] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
+  const recRef = useRef<SpeechRecognition | null>(null);
+  const finalTranscriptRef = useRef("");
+  const manualStopRef = useRef(false);
+
+  useEffect(() => {
+    setVoiceIn(sttSupported());
+    setVoiceOut(ttsSupported());
+  }, []);
+
+  /** §7: prebere odgovor ( ali ustavi morebitnega prejšnjega). */
+  function speakMessage(idx: number, text: string) {
+    if (!ttsSupported()) return;
+    stopSpeaking();
+    const clean = speechTextForUtterance(text);
+    if (!clean) return;
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang = speechLanguageTag(locale);
+    u.onend = () => setSpeakingIdx(null);
+    u.onerror = () => setSpeakingIdx(null);
+    setSpeakingIdx(idx);
+    window.speechSynthesis.speak(u);
+  }
+
+  function stopSpeaking() {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setSpeakingIdx(null);
+  }
+
+  /** §6: mikrofon vklop/izklop — diktiranje vprašanja (brez AI ključa). */
+  function toggleVoiceInput() {
+    if (listening) {
+      // Ročna ustavitev: prepoznavo ustavimo, a besedila NE pošljemo
+      // ( ostane v vnosu za urejanje) — razlikuje se od naravnega konca.
+      manualStopRef.current = true;
+      recRef.current?.stop();
+      return;
+    }
+    const Ctor = speechRecognitionCtor();
+    if (!Ctor) return;
+    const rec = new Ctor();
+    rec.lang = speechLanguageTag(locale);
+    rec.continuous = false;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    finalTranscriptRef.current = "";
+    manualStopRef.current = false;
+    rec.onresult = (e) => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        const txt = r[0]?.transcript ?? "";
+        if (r.isFinal) finalTranscriptRef.current += txt;
+        else interim += txt;
+      }
+      // Vmesni prepis kažemo v vnosu ( uporabnik vidi, kaj se sliši)
+      if (interim) setInput(interim);
+    };
+    rec.onerror = (e) => {
+      setListening(false);
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        toast({ title: t("voiceDenied"), description: t("voiceDeniedDesc") });
+      } else if (e.error === "no-speech") {
+        toast({ title: t("voiceNoSpeech") });
+      } else if (e.error !== "aborted") {
+        toast({ title: t("voiceError") });
+      }
+    };
+    rec.onend = () => {
+      setListening(false);
+      if (manualStopRef.current) return; // ročna ustavitev — ne pošiljaj
+      const finalText = finalTranscriptRef.current.trim();
+      if (finalText) {
+        // §8 CELI KLEPET: izgovorjeno vprašanje gre v klepet; odgovor se
+        // bo (kjer TTS podprt) samodejno prebral — glej sendMessage.
+        sendMessage(finalText, { viaVoice: true });
+      }
+    };
+    recRef.current = rec;
+    try {
+      rec.start();
+      setListening(true);
+    } catch {
+      setListening(false);
+    }
+  }
+
+  // TTS ne sme "uči" iz zaprtega klepeta — ustavimo ob odmontiranju,
+  // ob zaprtju panela in ob vsakem novem poizvedovanju ( sendMessage).
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      try {
+        recRef.current?.abort();
+      } catch {
+        // nepodprto / Že končano — ni napaka
+      }
+    };
+  }, []);
+
   // Povrni shranjeno zgodovino (SAMO v effect — prvi render ostane enak na
   // strežniku in klientu, zato ni hydration mismatch)
   useEffect(() => {
@@ -680,8 +809,11 @@ export function Chatbot() {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 100);
     } else {
-      // Reset ko se zapre
+      // Reset ko se zapre — glasovni izgovor se NADALJUJE v ozadju le,
+      // če bi panel zaprli med branjem; pošteno ga ustavimo (uporabnik
+      // ne vidi več besedila, ki bi se bralo).
       setHasNewMessage(false);
+      stopSpeaking();
     }
   }, [open]);
 
@@ -781,10 +913,14 @@ export function Chatbot() {
     });
   }
 
-  async function sendMessage(text: string) {
+  async function sendMessage(text: string, opts?: { viaVoice?: boolean }) {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
+    // Glasovni klepet (§8): novo vprašanje prekine izgovor prejšnjega
+    // odgovora — odgovora se ne smeta prekrivati.
+    stopSpeaking();
 
+    const viaVoice = opts?.viaVoice === true;
     const userMessage: ChatMessage = { role: "user", content: trimmed };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
@@ -819,6 +955,14 @@ export function Chatbot() {
           places,
         },
       ]);
+
+      // §8 CELI GLASOVNI KLEPET: odgovor na IZGOVORJENO vprašanje se
+      // samodejno prebere (brskalniški TTS, brez AI ključa). Tipkovnica in
+      // hitri pozivi ostanejo tiho — samodejni izgovor je rezerviran za
+      // glasovni pogovor, kjer uporabnik pričakuje govorjen odgovor.
+      if (viaVoice && ttsSupported() && data.message) {
+        speakMessage(newMessages.length, data.message);
+      }
 
       // Telemetrija: geo odgovor je bil izrisan (meri doseg funkcije:
       // koliko odgovorov prinese pine — ločeno po plasti porekla)
@@ -1014,6 +1158,39 @@ export function Chatbot() {
                       </ul>
                     </div>
                   ) : null}
+
+                  {/* §7 GLASOVNI IZHOD — brskalniški TTS (brez AI ključa):
+                      odgovor preberi na glas. Gumb se izriše SAMO ob
+                      podprtem speechSynthesis; ob izgovoru se spremeni v
+                      ustavitev. Ne moti zemljevida/virov — lastna vrstica. */}
+                  {msg.role === "assistant" && voiceOut && msg.content ? (
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          speakingIdx === i
+                            ? stopSpeaking()
+                            : speakMessage(i, msg.content)
+                        }
+                        aria-pressed={speakingIdx === i}
+                        aria-label={
+                          speakingIdx === i
+                            ? t("voiceStopSpeak")
+                            : t("voiceSpeak")
+                        }
+                        className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {speakingIdx === i ? (
+                          <Square className="size-3" aria-hidden="true" />
+                        ) : (
+                          <Volume2 className="size-3" aria-hidden="true" />
+                        )}
+                        {speakingIdx === i
+                          ? t("voiceStopSpeak")
+                          : t("voiceSpeak")}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ))}
@@ -1058,12 +1235,38 @@ export function Chatbot() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={t("inputPlaceholder")}
+                placeholder={listening ? t("voiceListening") : t("inputPlaceholder")}
                 disabled={loading}
                 maxLength={500}
                 className="flex-1"
                 aria-label={t("inputAriaLabel")}
               />
+              {/* §6 GLASOVNI VHOD — brskalnikov STT, brez AI ključa. Gumb se
+                  izriše SAMO ob podprtem SpeechRecognition; besedilni vnos
+                  je vedno viden (zahtevani fallback za nepodprte brskalnike). */}
+              {voiceIn && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={toggleVoiceInput}
+                  disabled={loading && !listening}
+                  aria-pressed={listening}
+                  aria-label={listening ? t("voiceStop") : t("voiceStart")}
+                  title={listening ? t("voiceStop") : t("voiceStart")}
+                  className={cn(
+                    "shrink-0",
+                    listening &&
+                      "animate-pulse border-red-300 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-600 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/60"
+                  )}
+                >
+                  {listening ? (
+                    <MicOff className="size-4" aria-hidden="true" />
+                  ) : (
+                    <Mic className="size-4" aria-hidden="true" />
+                  )}
+                </Button>
+              )}
               <Button
                 type="submit"
                 size="icon"

@@ -388,7 +388,16 @@
     "addPlaceAddedDesc": "{name} · Dan {day} — poglejte ga na strani Načrtuj",
     "addPlaceDuplicateTitle": "Že v načrtu",
     "addPlaceNoPlanTitle": "Ni še načrta",
-    "addPlaceNoPlanDesc": "{name} smo shranili — ustvarite načrt na strani Načrtuj in dodali ga bomo samodejno."
+    "addPlaceNoPlanDesc": "{name} smo shranili — ustvarite načrt na strani Načrtuj in dodali ga bomo samodejno.",
+    "voiceStart": "Dikiraj vprašanje (mikrofon)",
+    "voiceStop": "Ustavi diktiranje",
+    "voiceListening": "Poslušam … govori",
+    "voiceSpeak": "Preberi na glas",
+    "voiceStopSpeak": "Ustavi branje",
+    "voiceNoSpeech": "Govora nisem slišal — poskusi znova.",
+    "voiceDenied": "Dostop do mikrofona je zavrnjen.",
+    "voiceDeniedDesc": "V nastavitvah brskalnika dovoli dostop do mikrofona za to stran.",
+    "voiceError": "Prepoznavanje govora ni uspelo. Poskusi znova ali vpiši vprašanje."
   },
   "planner": {
     "title": "AI načrtovalec potovanj",

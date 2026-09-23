@@ -388,7 +388,16 @@
     "addPlaceAddedDesc": "{name} · Day {day} — see it on the Plan page",
     "addPlaceDuplicateTitle": "Already in your plan",
     "addPlaceNoPlanTitle": "No plan yet",
-    "addPlaceNoPlanDesc": "We saved {name} — create a plan on the Plan page and we'll add it automatically."
+    "addPlaceNoPlanDesc": "We saved {name} — create a plan on the Plan page and we'll add it automatically.",
+    "voiceStart": "Dictate your question (microphone)",
+    "voiceStop": "Stop dictation",
+    "voiceListening": "Listening … speak now",
+    "voiceSpeak": "Read aloud",
+    "voiceStopSpeak": "Stop reading",
+    "voiceNoSpeech": "I didn’t hear any speech — try again.",
+    "voiceDenied": "Microphone access was denied.",
+    "voiceDeniedDesc": "Allow microphone access for this page in your browser settings.",
+    "voiceError": "Speech recognition failed. Try again or type your question."
   },
   "planner": {
     "title": "AI trip planner",
