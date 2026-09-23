@@ -1,9 +1,23 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { checkAdmin } from "@/lib/auth-guards";
+import { checkAdmin, requireAdmin } from "@/lib/auth-guards";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limit";
 import { escapeHtml } from "@/lib/security";
+import { revalidateTag } from "next/cache";
+
+// HARDENING S5: zavrnitev takoj invalidira predpomnjene "marketplace"
+// sklope (SEO strani) — prej se je sprememba prenesla šele po 1 h.
+// Fail-open: napaka invalidacije NE sme polomiti zavrnitve.
+function invalidateMarketplaceCache(context: string) {
+  try {
+    // Next 16: drugi argument (profil) je obvezen — "max" pomeni
+    // takojšnjo razveljavitev predpomnjenih vnosov tega taga.
+    revalidateTag("marketplace", "max");
+  } catch (error) {
+    console.error(`[reject:${context}] revalidateTag napaka:`, error);
+  }
+}
 
 // Validni razlogi za zavrnitev
 const REJECTION_REASONS = [
@@ -93,6 +107,9 @@ export async function POST(
         },
       });
 
+      // HARDENING S5: takojšnja osvežitev SEO predpomnilnika
+      invalidateMarketplaceCache("product");
+
       // Audit log
       await logAudit({
         actorRole: "admin",
@@ -152,6 +169,9 @@ export async function POST(
         },
       });
 
+      // HARDENING S5: takojšnja osvežitev SEO predpomnilnika
+      invalidateMarketplaceCache("experience");
+
       // Audit log
       await logAudit({
         actorRole: "admin",
@@ -201,7 +221,7 @@ export async function POST(
       );
     }
 
-    // Zavrnitev → status nazaj na draft (lastnik lahko popravi in ponovno odda)
+    // Zavrnitev → status "rejected" (lastnik lahko popravi in ponovno odda)
     await db.listing.update({
       where: { id },
       data: {
@@ -211,6 +231,9 @@ export async function POST(
         approvedAt: null,
       },
     });
+
+    // HARDENING S5: takojšnja osvežitev SEO predpomnilnika
+    invalidateMarketplaceCache("listing");
 
     // Audit log
     await logAudit({
@@ -253,9 +276,11 @@ export async function POST(
 
 // GET — vrne seznam validnih razlogov
 export async function GET(request: Request) {
-  if (!checkAdmin(request.headers.get("x-admin-password"))) {
-    return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
-  }
+  // HARDENING V3: prej go checkAdmin BREZ rateLimit — POST ima svoj limit
+  // (60/10 min), GET pa ne -> brute-force gesla mimo POST kvote.
+  // requireAdmin = skupni admin-any bucket + preverba.
+  const denied = requireAdmin(request);
+  if (denied) return denied;
   return NextResponse.json({ reasons: REJECTION_REASONS });
 }
 

@@ -5,6 +5,21 @@ import { generateCompletion } from "@/lib/ai-client";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limit";
 import { escapeHtml } from "@/lib/security";
+import { revalidateTag } from "next/cache";
+
+// HARDENING S5: moderacija (approve/reject) takoj invalidira predpomnjene
+// "marketplace" sklope (SEO strani) — prej se je sprememba prenesla šele po
+// 1 h (revalidateTag nikoli klican). Fail-open: napaka invalidacije NE sme
+// polomiti moderacijskega odgovora.
+function invalidateMarketplaceCache(context: string) {
+  try {
+    // Next 16: drugi argument (profil) je obvezen — "max" pomeni
+    // takojšnjo razveljavitev predpomnjenih vnosov tega taga.
+    revalidateTag("marketplace", "max");
+  } catch (error) {
+    console.error(`[approve:${context}] revalidateTag napaka:`, error);
+  }
+}
 
 // POST /api/admin/approve/[id] — odobri vsebino in jo objavi
 // Header: x-admin-password
@@ -66,7 +81,10 @@ export async function POST(
         data: { status: "published" },
       });
 
-      // Audit log
+      // HARDENING S5: takojšnja osvežitev SEO predpomnilnika
+      invalidateMarketplaceCache("product");
+
+    // Audit log
       await logAudit({
         actorRole: "admin",
         action: AUDIT_ACTIONS.PRODUCT_APPROVED,
@@ -121,6 +139,9 @@ export async function POST(
         // submittedAt ostaja (kdaj je bila oddana v pregled)
         data: { status: "published" },
       });
+
+      // HARDENING S5: takojšnja osvežitev SEO predpomnilnika
+      invalidateMarketplaceCache("experience");
 
       // Audit log
       await logAudit({
@@ -190,7 +211,10 @@ export async function POST(
       (e) => console.error("[approve] AI enrichment napaka:", e)
     );
 
-    // 3. Audit log
+    // 3. HARDENING S5: takojšnja osvežitev SEO predpomnilnika
+    invalidateMarketplaceCache("listing");
+
+    // 4. Audit log
     await logAudit({
       actorRole: "admin",
       action: newStatus === "published" ? AUDIT_ACTIONS.LISTING_APPROVED : AUDIT_ACTIONS.LISTING_PUBLISHED,

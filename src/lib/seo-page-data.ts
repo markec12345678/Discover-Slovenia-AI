@@ -26,7 +26,8 @@ import type { SeoListingInput } from "@/components/sections/seo-conversion";
  * 1. unstable_cache (revalidate 3600 s, tags: ["marketplace", "seo-pages"]) —
  *    podatki so gostiteljsko in lokalno neodvisni; spremembe moderacije
  *    (approve/reject/objava) se na SEO straneh prenesejo v roku 1 h;
- *    revalidateTag("marketplace") omogoča prihodnjo takojšnjo osvežitev.
+ *    revalidateTag("marketplace") ob admin approve/reject zdaj sproži
+ *    TAKOJŠNJO osvežitev (HARDENING S5 — prej ni bil klican nikjer).
  * 2. try/catch fallback NA KLICI (ne znotraj predpomnjene funkcije!) — ob
  *    napaki DB se kartične sekcije preprosto ne izrišejo (stran NIKOLI ne
  *    500), predpomnilnik pa se NE zastrupi s praznim rezultatom.
@@ -100,11 +101,43 @@ function toSeoListing(l: DbListing, destinationName: string): SeoListingInput {
 }
 
 function toSeoExperience(e: DbExperience): Experience {
+  // HARDENING S3: ročno izbrana JAVNA polja (mirror toSeoListing) — ...e
+  // spread je v RSC payload poslal tudi ownerId/rejectionReason/status/
+  // submittedAt/createdAt/updatedAt (interni + moderacijski zaznamek).
+  // Izpisana polja = javni vmesnik Experience (kartica + modal rabita vsa).
   return {
-    ...e,
-    images: parseJsonArray(e.images),
-    languages: parseJsonArray(e.languages),
+    id: e.id,
+    name: e.name,
+    slug: e.slug,
+    description: e.description,
+    longDescription: e.longDescription,
     category: e.category as Experience["category"],
+    destinationId: e.destinationId,
+    destinationName: e.destinationName,
+    pricePerPerson: e.pricePerPerson,
+    currency: e.currency,
+    durationHours: e.durationHours,
+    minGroupSize: e.minGroupSize,
+    maxGroupSize: e.maxGroupSize,
+    languages: parseJsonArray(e.languages),
+    meetingPoint: e.meetingPoint,
+    address: e.address,
+    lat: e.lat,
+    lng: e.lng,
+    images: parseJsonArray(e.images),
+    providerName: e.providerName,
+    providerEmail: e.providerEmail,
+    providerPhone: e.providerPhone,
+    providerWebsite: e.providerWebsite,
+    plan: e.plan,
+    featured: e.featured,
+    verified: e.verified,
+    rating: e.rating,
+    reviewCount: e.reviewCount,
+    familyFriendly: e.familyFriendly,
+    accessibility: e.accessibility,
+    viewCount: e.viewCount,
+    bookingCount: e.bookingCount,
   };
 }
 
@@ -114,17 +147,18 @@ async function fetchThingsToDoData(
 ): Promise<SeoThingsToDoData> {
   const [listings, experiences, products] = await Promise.all([
     db.listing.findMany({
-      where: { destinationId },
+      // HARDENING S2: samo OBJAVLJENI (enako kot /api/listings).
+      where: { destinationId, status: "published" },
       take: 6,
       orderBy: { featured: "desc" },
     }),
     db.experience.findMany({
-      where: { destinationId },
+      where: { destinationId, status: "published" },
       take: 6,
       orderBy: { featured: "desc" },
     }),
     db.product.findMany({
-      where: { destinationId },
+      where: { destinationId, status: "published" },
       take: 4,
       orderBy: { featured: "desc" },
     }),
@@ -150,8 +184,10 @@ async function fetchGuideData(
 ): Promise<SeoGuideData> {
   const [listings, experiences] = await Promise.all([
     db.listing.findMany({
+      // HARDENING S2: samo OBJAVLJENI (enako kot /api/listings).
       where: {
         destinationId,
+        status: "published",
         category: { in: listingCategories },
       },
       take: 6,
@@ -160,6 +196,7 @@ async function fetchGuideData(
     db.experience.findMany({
       where: {
         destinationId,
+        status: "published",
         category: { in: experienceCategories },
       },
       take: 4,

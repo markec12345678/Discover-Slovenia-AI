@@ -251,6 +251,13 @@ export async function POST(request: Request) {
         // TASK 85: obe ali nobena (validirano zgoraj); null = brez pina
         lat,
         lng,
+        // HARDENING M1: status je zdaj IZRECEN ( prej se je zanašal na
+        // schema default "published" — footgun za vsako prihodnjo pot brez
+        // statusa) + zapisan MODERACIJSKI ZAPIS (admin vnos = odobritev:
+        // approvedAt/approvedBy; prej sta ostala null — brez sledi).
+        status: "published",
+        approvedAt: new Date(),
+        approvedBy: "admin",
         ownerEmail:
           typeof body.ownerEmail === "string" && body.ownerEmail.trim()
             ? body.ownerEmail.trim()
