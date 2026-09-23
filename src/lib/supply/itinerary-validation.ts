@@ -61,7 +61,18 @@ import type {
   ProviderSlug,
   SelectedProviderProduct,
 } from "./types";
+
+// HARDENING I4/P-3: odprti krajevni viri (info_only) — €0 je dolgoletna
+// poštena konvencija (brezplačen obisk odprte točke), ne izmišljena vrednost.
+// Komercialni providerji (affiliate_redirect/api_bookable) brez strežno
+// dokazljive cene → unknown (NaN + opomba), NIKOLI €0 ali AI-jeva cifra.
 import type { Itinerary, LocationVisit } from "@/lib/types";
+
+// HARDENING I4/P-3: odprti krajevni viri (info_only) — €0 je dolgoletna
+// poštena konvencija (brezplačen obisk odprte točke), ne izmišljena vrednost.
+// Komercialni providerji (affiliate_redirect/api_bookable) brez strežno
+// dokazljive cene → unknown (NaN + opomba), NIKOLI €0 ali AI-jeva cifra.
+const INFO_ONLY_PROVIDERS = new Set(["osm", "fsq", "sto", "events"]);
 
 // ---------------------------------------------------------------------------
 // SUPPLY REF — kolon-format (provider:providerProductId)
@@ -573,6 +584,49 @@ export function validateItinerarySupply(
         (currentStop && Number.isFinite(currentStop.estimated_cost)
           ? { cost: Math.round(currentStop.estimated_cost), fromPrice: false }
           : null);
+      // HARDENING I4/P-3 (generacijska vrzel): avtoriteta pozna produkt, a
+      // njegove cene NE MOREMO dokazati ( izbira brez strežne resnice —
+      // verifySelectedProducts jo je odstranil) in ni currentStop (generacija,
+      // ne refine). Do zdaj je AI-jeva IZMIŠLJENA cena (kljub "price:
+      // unknown" v promptu) preživela v izhodu; enako pravilo kot price_
+      // unverified veja spodaj: unknown je unknown — NaN + poštena opomba.
+      // ODPRTI viri (osm/fsq/sto/events — info_only): €0 je dolgoletna
+      // poštena konvencija (brezplačen obisk), izmišljena neničelna
+      // vrednost pa je trditev → NaN (ista semantika kot
+      // verifyCurrentStopsAuthority za refine pot).
+      const infoOnlyProvider = INFO_ONLY_PROVIDERS.has(ref.provider);
+      if (!canonicalCost && canonical && canonical.price == null && !infoOnlyProvider) {
+        fixedStop = {
+          ...fixedStop,
+          estimated_cost: Number.NaN,
+          notes:
+            opts.lang === "en"
+              ? "Price not verified — provider is not connected on the server. Check the price and availability with the provider before booking."
+              : "Cena ni preverjena — vir ni strežniško priključen. Ceno in razpoložljivost preveri pri ponudniku pred rezervacijo.",
+        };
+        report.issues.push({
+          day: day.day,
+          level: "warn",
+          rule: "price_unverified",
+          ref: key,
+        });
+      } else if (
+        !canonicalCost &&
+        canonical &&
+        canonical.price == null &&
+        infoOnlyProvider &&
+        Number.isFinite(fixedStop.estimated_cost) &&
+        fixedStop.estimated_cost !== 0
+      ) {
+        // Odprti vir: AI-jeva neničelna cena je IZUM → unknown.
+        fixedStop = { ...fixedStop, estimated_cost: Number.NaN };
+        report.issues.push({
+          day: day.day,
+          level: "warn",
+          rule: "price_unverified",
+          ref: key,
+        });
+      }
       if (canonicalCost) {
         report.canonicalCosts.set(key, canonicalCost);
         const current = Number.isFinite(fixedStop.estimated_cost)
@@ -691,6 +745,36 @@ export function validateItinerarySupply(
               ),
             })),
           };
+        } else if (!INFO_ONLY_PROVIDERS.has(p.provider)) {
+          // HARDENING I4/P-3 (deterministična pot): komercialni FIXED produkt
+          // BREZ dokazljive cene (verifySelectedProducts jo je odstranil) —
+          // prej je insertProductStop zapisal €0 (izmišljena vrednost za
+          // PLAČLJIVO turo). Enako pravilo kot AI pot: unknown je unknown —
+          // NaN + poštena opomba (AI pot: price_unverified veja zgoraj).
+          result = {
+            ...result,
+            days: result.days.map((d) => ({
+              ...d,
+              locations: d.locations.map((s) =>
+                s.destination_id === key
+                  ? {
+                      ...s,
+                      estimated_cost: Number.NaN,
+                      notes:
+                        opts.lang === "en"
+                          ? "Price not verified — provider is not connected on the server. Check the price and availability with the provider before booking."
+                          : "Cena ni preverjena — vir ni strežniško priključen. Ceno in razpoložljivost preveri pri ponudniku pred rezervacijo.",
+                    }
+                  : s
+              ),
+            })),
+          };
+          report.issues.push({
+            day: inserted.day,
+            level: "warn",
+            rule: "price_unverified",
+            ref: key,
+          });
         }
       }
     }

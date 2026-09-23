@@ -26,6 +26,45 @@ import type { KiwiRoute } from "./providers/kiwitaxi/types";
 import type { AiSupplyProduct } from "./ai-context";
 import type { SelectedProviderProduct } from "./types";
 import type { LocationVisit } from "@/lib/types";
+import { SI_BBOX } from "@/lib/slovenia-bbox";
+
+// ---------------------------------------------------------------------------
+// HARDENING I1/I2 — GEO PLAUSIBILITY ZA NEVERIFICIRANE IZBIRE
+// ---------------------------------------------------------------------------
+// Za providerje BREZ strežne resnice (danes vsi razen kiwitaxi + priključenih)
+// so klientove koordinate edini geo podatek — prej so šle naravnost v
+// geoAnchors/finalne postanke (komentar v route.ts je trdil „koordinate so
+// kanonske… NIKOLI ne pridejo do sem", kar je resilo SAMO za kiwitaxi).
+// Odtujeni vnos (Tokyo) je lahko pokvaril geo-urejanje in zemljevid.
+// PRAVILO: koordinate, ki jih ni mogoče dokazati, so DOVOLJENE samo kot
+// PLAUSIBILNE za našo regijo ( SI_BBOX + margina ~1.5°/2.0° — pokriva
+// alpsko-jadransko soseščino: Trst, Zagreb, Reka, Istra, Gradec, Benetke);
+// zunaj regije → geo ODSTRANJENO (unknown — produkt ostane kot uporabnikova
+// izbira, brez geo sidra in brez pina).
+const GEO_PLAUSIBILITY_MARGIN = { lat: 1.5, lng: 2.0 } as const;
+const GEO_PLAUSIBILITY_BBOX = {
+  latMin: SI_BBOX.latMin - GEO_PLAUSIBILITY_MARGIN.lat,
+  latMax: SI_BBOX.latMax + GEO_PLAUSIBILITY_MARGIN.lat,
+  lngMin: SI_BBOX.lngMin - GEO_PLAUSIBILITY_MARGIN.lng,
+  lngMax: SI_BBOX.lngMax + GEO_PLAUSIBILITY_MARGIN.lng,
+} as const;
+
+/** Ali so klientove (nedokazljive) koordinate plausibilne za našo regijo. */
+export function isPlausibleClientGeo(
+  lat: number | null | undefined,
+  lng: number | null | undefined
+): boolean {
+  return (
+    typeof lat === "number" &&
+    typeof lng === "number" &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= GEO_PLAUSIBILITY_BBOX.latMin &&
+    lat <= GEO_PLAUSIBILITY_BBOX.latMax &&
+    lng >= GEO_PLAUSIBILITY_BBOX.lngMin &&
+    lng <= GEO_PLAUSIBILITY_BBOX.lngMax
+  );
+}
 
 // ---------------------------------------------------------------------------
 // POROČILO (iskrena telemetrija popravkov — števci, brez vsebin)
@@ -47,6 +86,9 @@ export interface SupplyVerifyReport {
   typesRestored: number;
   /** Izbire/postanki, ODSTRANJENI ker produkt ne obstaja (kt id ni v datasetu). */
   rejectedFake: number;
+  /** HARDENING I1: klientove koordinate NEVERIFICIRANEGA produkta zunaj
+   *  plausibilne regije → geo odstranjeno (unknown). */
+  geoStripped: number;
 }
 
 function emptyReport(): SupplyVerifyReport {
@@ -58,6 +100,7 @@ function emptyReport(): SupplyVerifyReport {
     titlesRestored: 0,
     typesRestored: 0,
     rejectedFake: 0,
+    geoStripped: 0,
   };
 }
 
@@ -70,8 +113,9 @@ export function hasVerifyChanges(r: SupplyVerifyReport): boolean {
       r.geoRestored +
       r.titlesRestored +
       r.typesRestored +
-      r.rejectedFake >
-    0
+      r.rejectedFake +
+      r.geoStripped >
+      0
   );
 }
 
@@ -190,12 +234,22 @@ export function verifySelectedProducts(
       continue;
     }
 
-    // --- OSM: info_only vir — cena/razpoložljivost sta nemogoči po zasnovi ---
+    // --- OSM: info_only vir — cena/razpoložljivost sta nemogoči po zasnovi;
+    // geo je klientov odmev strežnega pina → dovoljen SAMO znotraj
+    // plausibilne regije ( HARDENING I1 — zunaj → odstranjen, unknown). ---
     if (p.provider === "osm") {
-      if (p.price || p.availability) {
+      const geoPlausible = isPlausibleClientGeo(p.lat, p.lng);
+      const strippedGeo = !geoPlausible && p.lat != null && p.lng != null;
+      if (strippedGeo) report.geoStripped++;
+      if (p.price || p.availability || strippedGeo) {
         if (p.price) report.pricesStripped++;
         if (p.availability) report.availabilityStripped++;
-        out.push({ ...p, price: undefined, availability: undefined });
+        out.push({
+          ...p,
+          price: undefined,
+          availability: undefined,
+          ...(strippedGeo ? { lat: undefined, lng: undefined } : {}),
+        });
       } else {
         out.push(p);
       }
@@ -240,10 +294,22 @@ export function verifySelectedProducts(
       continue;
     }
     // Ni strežne resnice → unknown is unknown (produkt ostane kot
-    // uporabnikova izbira; cena/razpoložljivost se ne trdita).
+    // uporabnikova izbira; cena/razpoložljivost se ne trdita). HARDENING
+    // I1/I2: tudi klientove koordinate niso dokazljive — zunaj plausibilne
+    // regije se geo ODSTRANI (geoAnchors ga preskočijo; brez pina), znotraj
+    // regije pa velja kot uporabnikova izbira lokacije (iskren kompromis:
+    // regijsko smiselne izbire ohranijo uporabnost, svetovne izmišljotine ne).
     if (p.price) report.pricesStripped++;
     if (p.availability) report.availabilityStripped++;
-    out.push({ ...p, price: undefined, availability: undefined });
+    const geoPlausible = isPlausibleClientGeo(p.lat, p.lng);
+    const strippedGeo = !geoPlausible && p.lat != null && p.lng != null;
+    if (strippedGeo) report.geoStripped++;
+    out.push({
+      ...p,
+      price: undefined,
+      availability: undefined,
+      ...(strippedGeo ? { lat: undefined, lng: undefined } : {}),
+    });
   }
 
   return { products: out, report };
