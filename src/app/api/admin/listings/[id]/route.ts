@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { invalidateMarketplaceCache } from "@/lib/marketplace-cache";
 import { requireAdmin } from "@/lib/auth-guards";
 import {
   parseSeasons,
@@ -278,6 +279,10 @@ export async function PUT(
       },
     });
 
+    // 1.88.1 (F-C): admin ureja objavljeno vsebino — predpomnilnik takoj
+    // izpusti staro različico (prej do 1 h stale SEO).
+    invalidateMarketplaceCache("admin-listing-put");
+
     return NextResponse.json({
       listing: {
         ...updated,
@@ -339,6 +344,9 @@ export async function DELETE(
     }
 
     await db.listing.delete({ where: { id } });
+
+    // 1.88.1 (F-C): izbrisana vsebina takoj izpade iz javnih površin.
+    invalidateMarketplaceCache("admin-listing-delete");
 
     return NextResponse.json({
       success: true,

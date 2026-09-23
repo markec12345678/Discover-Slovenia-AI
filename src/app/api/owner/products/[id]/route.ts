@@ -3,6 +3,7 @@ import { safeWebsiteSchema } from "@/lib/external-url";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { invalidateMarketplaceCache } from "@/lib/marketplace-cache";
 import { authOptions } from "@/lib/auth";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { ProductCategory } from "@/lib/marketplace-types";
@@ -268,6 +269,12 @@ export async function PUT(request: Request, { params }: RouteParams) {
       },
     });
 
+    // 1.88.1 (F-C): objavljena vsebina je pravšla v pending — SEO
+    // predpomnilnik takoj izpusti staro objavljeno različico (prej do 1 h).
+    if (needsReModeration) {
+      invalidateMarketplaceCache("owner-product-put");
+    }
+
     return NextResponse.json({
       success: true,
       // P3c-9: flag za UI — vsebina gre nazaj v admin pregled
@@ -307,6 +314,8 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
 
   try {
     await db.product.delete({ where: { id } });
+    // 1.88.1 (F-C): izbrisana vsebina takoj izpade iz javnih površin.
+    invalidateMarketplaceCache("owner-product-delete");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[api/owner/products/[id]] DELETE napaka:", error);

@@ -3,6 +3,7 @@ import { safeWebsiteSchema } from "@/lib/external-url";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { invalidateMarketplaceCache } from "@/lib/marketplace-cache";
 import { authOptions } from "@/lib/auth";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { parseSeasons } from "@/lib/listing-practical";
@@ -296,6 +297,12 @@ export async function PUT(request: Request, { params }: RouteParams) {
       },
     });
 
+    // 1.88.1 (FA-A1/F-C): objavljena vsebina je pravšla v pending — SEO
+    // predpomnilnik takoj izpusti staro objavljeno različico (prej do 1 h).
+    if (needsReModeration) {
+      invalidateMarketplaceCache("owner-listing-put");
+    }
+
     return NextResponse.json({
       success: true,
       // P3c-1: flag za UI — lokal gre nazaj v admin pregled
@@ -366,6 +373,9 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       );
     }
     await db.listing.delete({ where: { id } });
+    // 1.88.1 (F-C): izbrisana (tudi objavljena) vsebina takoj izpade iz
+    // predpomnjenih javnih površin (prej do 1 h).
+    invalidateMarketplaceCache("owner-listing-delete");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[api/owner/listings/[id]] DELETE napaka:", error);
