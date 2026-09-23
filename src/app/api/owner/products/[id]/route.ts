@@ -172,6 +172,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
     // (checkout bere DB ceno). Od tu naprej del "vsebinske" spremembe.
     const contentChanged =
       (data.name !== undefined && data.name.trim() !== product.name) ||
+      // HARDENING M4: kategorija žene javno filtriranje/taksonomijo
+      (data.category !== undefined && data.category !== product.category) ||
       (data.description !== undefined &&
         data.description.trim() !== product.description) ||
       (data.longDescription !== undefined &&
@@ -188,7 +190,19 @@ export async function PUT(request: Request, { params }: RouteParams) {
       (data.sellerName !== undefined &&
         data.sellerName.trim() !== product.sellerName) ||
       (data.sellerEmail !== undefined &&
-        (data.sellerEmail?.trim() || null) !== (product.sellerEmail || null));
+        (data.sellerEmail?.trim() || null) !== (product.sellerEmail || null)) ||
+      // HARDENING M4: javni kontakt/trditve izdelka — telefon, spletna stran
+      // prodajalca in marketinške trditve (organic/handmade/vegan/local) se
+      // izpisujejo na javnem profilu izdelka → so VSEBINA.
+      (data.sellerPhone !== undefined &&
+        (data.sellerPhone?.trim() || null) !== (product.sellerPhone || null)) ||
+      (data.sellerWebsite !== undefined &&
+        (data.sellerWebsite?.trim() || null) !==
+          (product.sellerWebsite || null)) ||
+      (data.organic !== undefined && data.organic !== product.organic) ||
+      (data.handmade !== undefined && data.handmade !== product.handmade) ||
+      (data.local !== undefined && data.local !== product.local) ||
+      (data.vegan !== undefined && data.vegan !== product.vegan);
     const needsReModeration =
       contentChanged &&
       (product.status === "published" || product.status === "rejected");

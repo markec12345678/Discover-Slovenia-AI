@@ -238,6 +238,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
     // spremembe (cena je del denarnega toka — glej /api/bookings).
     const contentChanged =
       (data.name !== undefined && data.name.trim() !== experience.name) ||
+      // HARDENING M4: kategorija žene javno filtriranje (guide/[type] SEO
+      // strani + own adapter tip aktivnost/tura) → je VSEBINA.
+      (data.category !== undefined &&
+        data.category !== experience.category) ||
       (data.description !== undefined &&
         data.description.trim() !== experience.description) ||
       (data.longDescription !== undefined &&

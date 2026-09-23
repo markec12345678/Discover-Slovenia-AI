@@ -196,6 +196,11 @@ export async function PUT(request: Request, { params }: RouteParams) {
     // TASK 85: sprememba geo koordinat je VSEBINSKA — pin na supply
     // zemljevidu je javno viden (own adapter: published + lat/lng NOT NULL),
     // zato nova/spremenjena lokacija gre v ponovni pregled (kot naslov).
+    // HARDENING S4: dopolnjena javna kontakt/dostopna polja — naslov, telefon,
+    // spletna stran in urnik se izpisujejo na javnem profilu lokala in tri
+    // od njih (address/website/phone) vstopajo v own supply adapter → so
+    // VSEBINA ( komentar zgoraj je to že hotel povedati z „kot naslov", a
+    // koda naslova nikoli ni preverila).
     const contentChanged =
       (data.name !== undefined && data.name.trim() !== listing.name) ||
       (data.category !== undefined && data.category !== listing.category) ||
@@ -210,6 +215,17 @@ export async function PUT(request: Request, { params }: RouteParams) {
         JSON.stringify(data.specialties) !== (listing.specialties || "[]")) ||
       (data.destinationId !== undefined &&
         (data.destinationId || null) !== listing.destinationId) ||
+      (data.address !== undefined &&
+        data.address.trim() !== (listing.address ?? "")) ||
+      (data.phone !== undefined &&
+        (data.phone?.trim() || null) !== (listing.phone || null)) ||
+      (data.email !== undefined &&
+        (data.email?.trim() || null) !== (listing.email || null)) ||
+      (data.website !== undefined &&
+        (data.website?.trim() || null) !== (listing.website || null)) ||
+      (data.openingHours !== undefined &&
+        (data.openingHours?.trim() || null) !==
+          (listing.openingHours || null)) ||
       (data.lat !== undefined && (data.lat ?? null) !== (listing.lat ?? null)) ||
       (data.lng !== undefined && (data.lng ?? null) !== (listing.lng ?? null));
     const needsReModeration =
