@@ -14,6 +14,12 @@ import {
   type ChatPlace,
 } from "@/lib/geo-intent";
 import { fetchOverpassNearby } from "@/lib/overpass";
+import {
+  buildDomainFallbackAnswer,
+  type DomainListing,
+  type DomainProduct,
+  type DomainExperience,
+} from "@/lib/chat-domain-fallback";
 
 // POST /api/chat — AI chatbot z dostopom do vsebine platforme
 //
@@ -375,63 +381,90 @@ ${SYSTEM_DATA_GUARD}`;
   } catch (error) {
     console.error("[chat] AI napaka:", error);
 
-    // Fallback — preprost deterministični odgovor (v jeziku pogovora)
-    const fallback = generateFallbackResponse(lastUserMessage, lang);
+    // Issue #2 §5 — DETERMINISTIČNA DOMENSKA PLAST: odgovor sestavljen IZ
+    // REALNIH podatkov (baza + statika + OSM + Open-Meteo), pošteno označen
+    // (source "fallback"). NIKOLI ne simulira LLM-ja in ne izmišljuje
+    // podatkov — prej je bil tu trdo kodiran 7-vzorcni odgovor, ki realnih
+    // podatkov ni uporabil (npr. OSM kraji so bili že pridobljeni, a
+    // zavrženi).
+    //
+    // Enrichment: za prepoznano destinacijo dodamo še njene vrstice iz baze
+    // (isti vzorec kot ask-local) — featured top-10 namreč ni nujno ravno za
+    // ta kraj. Poizvedba je PODPRTA s .catch(() => []) — baza ne sme podreti
+    // rezervnega odgovora.
+    const fallback = await buildDomainFallbackAnswer(
+      lastUserMessage,
+      lang,
+      {
+        listings: topListings as DomainListing[],
+        products: topProducts as DomainProduct[],
+        experiences: topExperiences as DomainExperience[],
+        osmPlaces,
+      },
+      {
+        enrich: async (destinationName) => {
+          const [ls, ps, es] = await Promise.all([
+            db.listing
+              .findMany({
+                where: { status: "published", destinationName },
+                take: 3,
+                select: {
+                  name: true,
+                  category: true,
+                  destinationName: true,
+                  description: true,
+                  rating: true,
+                  priceRange: true,
+                },
+              })
+              .catch(() => []),
+            db.product
+              .findMany({
+                where: { status: "published", destinationName },
+                take: 3,
+                select: {
+                  name: true,
+                  category: true,
+                  destinationName: true,
+                  price: true,
+                  rating: true,
+                },
+              })
+              .catch(() => []),
+            db.experience
+              .findMany({
+                where: { status: "published", destinationName },
+                take: 3,
+                select: {
+                  name: true,
+                  category: true,
+                  destinationName: true,
+                  pricePerPerson: true,
+                  rating: true,
+                },
+              })
+              .catch(() => []),
+          ]);
+          return {
+            listings: ls as DomainListing[],
+            products: ps as DomainProduct[],
+            experiences: es as DomainExperience[],
+          };
+        },
+      }
+    );
+
     return NextResponse.json({
-      message: fallback,
+      message: fallback.message,
       source: "fallback",
-      sources: [] as StoCitation[],
-      places: [] as ChatPlace[],
+      sources: stoGrounding.active ? stoGrounding.citations : ([] as StoCitation[]),
+      places: fallback.places,
       timestamp: new Date().toISOString(),
     });
   }
 }
 
-// Preprost fallback — brez AI, samo pattern matching (dvojezično)
-function generateFallbackResponse(userMessage: string, lang: "sl" | "en"): string {
-  const msg = userMessage.toLowerCase();
-
-  if (lang === "en") {
-    if (msg.includes("bled")) {
-      return "Bled is Slovenia's most recognisable postcard view 🏔️ — a medieval castle, an island with a church and crystal-clear water. I recommend visiting early in the morning to avoid the crowds. For AI planning, visit the Plan page.";
-    }
-    if (msg.includes("ljubljan")) {
-      return "Ljubljana is our capital 🏛️ — a city with a castle on the hill, the Triple Bridge and a lively old town. For culinary adventures try the Ljubljana food tour in the experiences section.";
-    }
-    if (msg.includes("piran") || msg.includes("coast")) {
-      return "Piran is a Venetian coastal town 🌊 with narrow alleys and the lovely Tartini Square. Ideal for a romantic trip. For accommodation, check the local hotels in our database.";
-    }
-    if (msg.includes("itiner") || msg.includes("plan")) {
-      return "For AI trip planning, visit the Plan page. The AI will consider your budget, interests and season and put together the perfect plan.";
-    }
-    if (msg.includes("wine") || msg.includes("food") || msg.includes("culinary")) {
-      return "Slovenian cuisine is wonderfully diverse 🍷 — from coastal wines to Prekmurje classics. I recommend tastings in the Vipava Valley or Maribor. Check our marketplace for local products.";
-    }
-    if (msg.includes("hello") || msg.includes("hi") || msg.includes("hey")) {
-      return "Hello! 🇸🇮 I'm Slovenia AI. How can I help you plan your trip around Slovenia?";
-    }
-
-    return "I'm Slovenia AI 🇸🇮. I can help with information about destinations, listings, products and experiences across Slovenia. For a complete travel plan, visit our AI planner on the Plan page.";
-  }
-
-  if (msg.includes("bled")) {
-    return "Bled je najbolj prepoznavna slovenska razglednica 🏔️. Srednjeveški grad, otok s cerkvijo in kristalno čista voda. Priporočam obisk zgodaj zjutraj za manj ljudi. Za AI načrtovanje obiščite strani Načrtuj.";
-  }
-  if (msg.includes("ljubljan")) {
-    return "Ljubljana je naša prestolnica 🏛️ — mesto z gradom na hribu, Tromostovjem in živahnim starim mestnim jedrom. Za kulinarične dogodivščine preizkusite turo po Ljubljani v sekciji izkušenj.";
-  }
-  if (msg.includes("piran") || msg.includes("obal")) {
-    return "Piran je venecijansko obalno mesto 🌊 s ozkimi uličicami in čudovitim Trgom Tartini. Idealno za romantični izlet. Za namestitev preverite lokalne hotele v naši bazi.";
-  }
-  if (msg.includes("itiner") || msg.includes("načrt")) {
-    return "Za AI načrtovanje potovanja obiščite strani Načrtuj. AI bo upošteval vaš proračun, interese in sezono ter sestavil popoln načrt.";
-  }
-  if (msg.includes("víno") || msg.includes("vino") || msg.includes("kulinar")) {
-    return "Slovenska kulinarika je raznolika 🍷 — od primorskih vin do prekmurske gaze. Priporočam degustacije v Vipavski dolini ali Mariboru. Preverite našo tržnico za lokalne izdelke.";
-  }
-  if (msg.includes("zdravo") || msg.includes("pozdrav") || msg.includes("hi")) {
-    return "Pozdravljen! 🇸🇮 Sem Slovenija AI. Kako vam lahko pomagam pri načrtovanju potovanja po Sloveniji?";
-  }
-
-  return "Sem Slovenija AI 🇸🇮. Lahko vam pomagam z informacijami o destinacijah, lokalcih, izdelkih in izkušnjah po Sloveniji. Za popoln načrt potovanja obiščite naš AI načrtovalec na strani Načrtuj.";
-}
+// generateFallbackResponse (trdo kodirani 7-vzorcni odgovor) je z 1.89.0
+// ZAMENJAN z buildDomainFallbackAnswer (src/lib/chat-domain-fallback.ts) —
+// Issue #2 §5: deterministična domenska plast, ki odgovarja iz realnih
+// Discover podatkov, ne pa pripravljenih besedil za 3 kraje.
