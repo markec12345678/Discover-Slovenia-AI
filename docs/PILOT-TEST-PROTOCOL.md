@@ -1,8 +1,9 @@
 # PILOT TEST — 10 realnih slovenskih ponudnikov
 
 > Protokol za pilot test po P3 validacijskem auditu (commit `fab3f77`).
-> Status dokumenta: **v1.0 — po generalni vaji (P4-1) v produkciji 2026-09-11.**
-> Produkcija: `i-feel-slovenia.vercel.app`
+> Status dokumenta: **v1.1 — usklajeno s stanjem kode na HEAD `1cfd247` (v1.89.1), 2026-09-23.**
+> Točke, označene z ✅ POPRAVLJENO, so bile po P4-1 odpravljene v kasnejših verzijah (P4-2a, P4-2b, P4-6, P4-9, 1.89.x) in so bile znova preverjene v kodi.
+> Produkcija: `i-feel-slovenia.onrender.com` (Render, primarna) · `i-feel-slovenia.vercel.app` (Vercel, sekundarna) — oba na isti verziji in isti bazi (Neon PostgreSQL)
 
 ---
 
@@ -26,41 +27,41 @@
 
 ### ⚠️ OLAJŠAVE, KI JIH PILOT POTREBUJE (pripravi PRED testom)
 
-| # | Težava | Vpliv na pilota | Odlaga / rešitev |
+| # | Težava | Vpliv na pilota | Stanje / rešitev |
 |---|---|---|---|
-| 1 | **SMTP ni konfiguriran** — vsa e-pošta je demo (samo strežniški log). Lastnik vidi "povezava poslana", a nič ne pride. | Blokira: verifikacijo e-pošte → plačljive funkcije; geslo-reset; obvestila o rezervacijah; nudge emaile | **(a)** Nastavi SMTP env spremenljivke v Vercel (Resend/Postmark/Brevo — brez spremembe kode) ALI **(b)** pilot ponudnikom ročno nastavi `emailVerified` v DB in vsi gledajo dashboard |
-| 2 | **Obrazec "Pridruži se" na homepage vrne 500 v produkciji** (`/api/leads` piše v `data/leads.json` — Vercel FS je read-only). Admin zavihek "Leadi" je vedno prazen. | Edini self-service B2B lijak je mrtev | Pilot ponudnikom pošlji **direktni URL `/owner/prijava`** (obvezno!). Obrazec popravi ali skrij kasneje (odločitev uporabnika — feature freeze) |
-| 3 | **Povpraševanja gostov so za lastnika NEVIDNA** — statistika "Lead-i" šteje B2B prijave (leads.json), zavihek Rezervacije = samo izkušnje, e-pošta = demo | Lastnik ne ve, da je kdaj povprašal gost | Pilot scenarij osredotoči na **rezervacije izkušenj** (te so vidne); povpraševanja izpusti ali ročno beri ListingEvent |
-| 4 | **Onboarding zahteva 3 URL-je fotografij** | Pravi ponudniki imajo fotke na telefonu, ne URL-je | Pripri predhodno 3 URL-je fotografij za vsakega ponudnika (njihova spletna stran/FB) ali jim pomagaj v skupnem klicu |
-| 5 | **Stripe demo način** — rezervacije se takoj potrdijo, naročnina (če je email preverjen) se aktivira brez plačila | Vsi "plačilni" dogodki so navidezna | Povej ponudnikom odkrito: "med beto se nič ne zaračuna" (sporočilo je že v UI) |
-| 6 | **AI fallback način** — planer dela (destinacije, vreme), a NE citira lokalov | Osnovna vrednost "AI te priporoča" je oslabela | Postavi pričakovanja: pilot meri **platformo in lijak**, AI citiranje pride z aktivacijo modela |
-| 7 | **"Preverjen partner" znak samodejno ob odobritvi** (ne po dejanski verifikaciji) | Kozmetična varnost komunikacije | Ni blokator; odloči kasneje, ali znak pomeni kaj več |
+| 1 | **SMTP ni konfiguriran** — vsa e-pošta je demo (samo strežniški log). | Blokira: verifikacijo e-pošte → plačljive funkcije; geslo-reset; obvestila o rezervacijah | **EXTERNAL CONFIGURATION (a):** nastavi SMTP env spremenljivke na Render (primarni) IN Vercel (Resend/Postmark/Brevo SMTP — brez spremembe kode) ALI **(b)** pilot ponudnikom ročno nastavi `emailVerified` v DB. ⚠️ Pomembno: v produkciji demo e-pošta sedaj **redigira URL-je** (varnostni popravek P7-C1) — povezav za verifikacijo/reset NI več mogoče prebrati iz strežniških logov; brez SMTP je edina pot ročna nastavitev `emailVerified` v DB |
+| 2 | ~~Obrazec "Pridruži se" na homepage vrne 500~~ | — | ✅ **POPRAVLJENO (P4-2a):** `/api/leads` zdaj piše v PostgreSQL (model `Lead`); admin zavihek "Leadi" dela (nov/kontaktiran/zaklucen); homepage B2B lijak je živ. Direktni URL `/owner/prijava` ostaja priporočen za pilota |
+| 3 | ~~Povpraševanja gostov so za lastnika NEVIDNA~~ | — | ✅ **POPRAVLJENO (P4-6):** owner dashboard ima KPI "Povpraševanja gostov" (ListingEvent `lead`); povpraševanja gostov so viden del statistike |
+| 4 | ~~Onboarding zahteva 3 URL-je fotografij~~ | — | ✅ **POPRAVLJENO (P4-9):** čarovnik zahteva **vsaj 1 URL fotografije** |
+| 5 | **Stripe demo način** — rezervacije/naročila so navidezna | Pilot mora vedeti, kdaj je plačilo navidezno | **Dejansko stanje (1.89.1):** demo v produkciji zahteva izrecno zastavico `DSA_DEMO_PAYMENTS=1` (Render in Vercel) — brez nje rezervacije/naročila vrnejo **501** (fail-closed, ni tihih fake plačil). Demo rezervacija je potrjena a NEPLAČANA (`unpaid`) in ne vstopi v provizijsko osnovo. Naročnina ima PRAVI Stripe Checkout (zahteva `STRIPE_SECRET_KEY`). **Pilot korak F.3 bo vrnil 501, razen če pred testom nastaviš `DSA_DEMO_PAYMENTS=1` v produkciji** |
+| 6 | **AI fallback način** — planer dela (destinacije, vreme), a NE citira lokalov | Osnovna vrednost "AI te priporoča" je oslabela | **Delno popravljeno (1.89.0):** zero-AI KLEPET zdaj gradi odgovore iz realnih DB lokalov/izdelkov/izkušenj (`chat-domain-fallback`); deterministični PLANER še vedno ne citira konkretnih lokalov — pričakovanja pilotu postavi tako |
+| 7 | ~~"Preverjen partner" znak samodejno ob odobritvi~~ | — | ✅ **POPRAVLJENO (P4-2b):** znak se NE podeli samodejno — je ločena izrecna admin akcija (`/api/admin/listings/[id]/verify`). Za pilot: po odobritvi lokal znaka še nima; znak zahteva ločeno verifikacijo |
 
 ### Odločitev
 - **GO za pilot** z direktnimi URL-ji in osredotočenjem na: onboarding → objava → odkrivanje → rezervacija izkušnje → dashboard provizij.
-- **Ni GO** za: javni marketing ponudnikom prek homepage (napaka 500), e-poštni tokovi brez SMTP.
+- **Ni GO** za: e-poštni tokove brez SMTP (razen ročna nastavitev `emailVerified`) in rezervacije v produkciji brez `DSA_DEMO_PAYMENTS=1` (sicer 501).
 
 ---
 
 ## 2. TESTNI PROTOCOL — 1 ponudnik (ponovi × 10)
 
-Vsak ponudnik ~45 min. Vsi koraki na **produkciji** (`i-feel-slovenia.vercel.app`).
+Vsak ponudnik ~45 min. Vsi koraki na **produkciji** (`i-feel-slovenia.onrender.com`, primarna; sicer `i-feel-slovenia.vercel.app`).
 Admin dostop: `/admin` (geslo iz `.env` → `ADMIN_PASSWORD`).
 
 ### A. Priprava (ti, pred srečanjem)
-1. ✅ Zberi od ponudnika: ime, ime podjetja, e-pošta, telefon, 3+ URL-je fotografij, kratek+dolgi opis, naslov, urnik, spletno stran.
+1. ✅ Zberi od ponudnika: ime, ime podjetja, e-pošta, telefon, vsaj 1 URL fotografije (več je bolje), kratek+dolgi opis, naslov, urnik, spletno stran.
 2. ✅ Preveri produkcijo: `/api/debug-db` → 401 (živ znak nove kode).
 3. ✅ (če ne nastaviš SMTP) pripravi skript za `emailVerified` nastavitev.
 
 ### B. Registracija (5 min — ponudnik sam)
-1. Odpre `/owner/prijava` (POŠLJI MU TA URL — ni povezave z homepage!).
+1. Odpre `/owner/prijava` (povezava je tudi v nogi homepagea in na tržnici; direktni URL ostaja najhitrejša pot).
 2. Zavihek **Registracija** → izpolni (ime, podjetje, e-pošta, telefon, geslo ×2, GDPR).
 3. ➜ dashboard se odpre, onboarding čarovnik se sam zažene.
 
 ### C. Onboarding čarovnik (15 min)
 1. Korak 1: ime, kategorija, destinacija, telefon, naslov.
 2. Korak 2: kratek (1–2 stavka) + dolgi opis.
-3. Korak 3: **vsaj 3 URL-je fotografij** (pripravi vnaprej!).
+3. Korak 3: **vsaj 1 URL fotografije** (pripravi vnaprej!).
 4. Korak 4: spletna stran, urnik, cenovni razred (opcijsko — Preskoči).
 5. Korak 5: **Oddaj v pregled** → vidi kartico z statusom "V pregledu".
 
@@ -70,13 +71,13 @@ Admin dostop: `/admin` (geslo iz `.env` → `ADMIN_PASSWORD`).
 
 ### E. Javna kontrola (5 min — s ponudnikom skupaj)
 1. Osveži homepage → lokal viden v seznamu (kategorija Restavracija ipd.).
-2. Odpri "Podrobnosti" → preveri: fotke, opis, kontakt, urnik, "Preverjen partner" znak.
-3. (Opcijsko) izpolni testno povpraševanje → vidi "Povpraševanje poslano" (a ne pričakuj da ga lastnik vidi — glej §1.3).
+2. Odpri "Podrobnosti" → preveri: fotke, opis, kontakt, urnik. ("Preverjen partner" znak še NI prisoten — podeli se šele z ločeno admin verifikacijo, glej §1.7.)
+3. (Opcijsko) izpolni testno povpraševanje → vidi "Povpraševanje poslano" → lastnik ga vidi v statistiki "Povpraševanja gostov" (glej §1.3).
 
 ### F. Izkušnja + rezervacija (10 min)
 1. Owner dashboard → **Izkušnje** → Dodaj (ime, opis, cena, trajanje, min/max, jezik, meeting point, naslov, ponudnik).
 2. Status "V pregledu" → ti: `/admin` → **Odobri in objavi izkušnjo**.
-3. Gost (ti v anonymnem oknu): homepage → Tržnica → zavihek **Izkušnje** → P4r izkušnja → **Rezerviraj** → datum/osebe/podatki → **Potrdi** → številka `IF-EXP-…`, skupaj = cena×osebe.
+3. Gost (ti v anonymnem oknu): homepage → Tržnica → zavihek **Izkušnje** → za izkušnjo → **Rezerviraj** → datum/osebe/podatki → **Potrdi** → številka `IF-EXP-…`, skupaj = cena×osebe. (Predhodno preveri, da je `DSA_DEMO_PAYMENTS=1` nastavljen v produkciji — sicer ta korak vrne 501.)
 4. Owner: **Rezervacije** → vidi rezervacijo + prihodek → **Zaključi**.
 
 ### G. Poslovni zaključek (5 min)
@@ -103,9 +104,9 @@ Admin dostop: `/admin` (geslo iz `.env` → `ADMIN_PASSWORD`).
 
 ## 3. KNOWN-LIMITATIONS BRIEFING (povej vsakemu ponudniku)
 
-1. **Beta = brezplačno:** vsi paketi 0 € med beto; nič se ne zaračuna (Stripe demo).
-2. **E-pošta:** med beto obvestila morda ne pridejo — gledaj portal (dashboard).
-3. **AI priporočila:** trenutno osnovna (rule-based); polni AI pride pred komercialno fazo.
+1. **Beta = brezplačno:** vsi paketi 0 € med beto; nič se ne zaračuna (demo način; produkcija zahteva `DSA_DEMO_PAYMENTS=1`, sicer rezervacija vrne 501).
+2. **E-pošta:** brez SMTP nastavitve obvestila ne pridejo — gledaj portal (dashboard).
+3. **AI priporočila:** klepet brez AI ključa priporoča realne lokale iz baze (osnovno, a iskreno); polni AI pride z aktivacijo modela.
 4. **Moderacija:** vsaka objava/prememba gre skozi naš pregled (varnost predstavitve).
 5. **Provizija:** 12 % samo za goste, ki jih prinese AI konzultacija; direktne rezervacije = 0 €.
 

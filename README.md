@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.89.0 · 2311 testov (CI zelen) · lint 0 · tsc 0 (src/) · Vercel deploy READY · CORE deluje brez AI ključa (Issue #2) |
+| **Stanje** | v1.89.1 · 2311 testov (CI zelen) · lint 0 · tsc 0 (src/) · Vercel deploy READY · CORE deluje brez AI ključa (Issue #2) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -262,8 +262,11 @@ iskreno prazne sloje.
   — uporabnik rezervira pri ponudniku; platforma ne predstavlja, da je rezervacija
   potrjena.
 - Affiliate preusmeritve (Viator, Booking, DiscoverCars, Skyscanner, …).
-- Lastna tržnica: checkout izkušenj/izdelkov prek Stripe (v produkciji brez ključev
-  fail-closed zaprt; demo veja samo z izrecnim okoljskim stikalom).
+- Lastna tržnica: naročnina (premium/enterprise) ima PRAVI Stripe Checkout
+  (zahteva `STRIPE_SECRET_KEY`); checkout izdelkov/izkušenj je DEMO ali 501 —
+  real-money tok (Stripe Checkout Session) je aktivacijski blocker (TODO),
+  ne varnostna napaka: demo veja samo z izrecnim `DSA_DEMO_PAYMENTS=1`,
+  sicer produkcija fail-closed 501 (nikoli tiho fake plačilo).
 
 **Pripravljeno (arhitektura, NE predstavljati kot produkcijsko aktivno):**
 - 7 provider API adapterjev (CODE_READY) — aktivacija samo z realno poverilnico,
@@ -352,7 +355,7 @@ dodatnih prenosov. Osvežitev feedov: `bun run fsq:ingest` / `bun run kiwitaxi:i
 Preverjanje:
 
 ```bash
-bun test                 # 2060 testov
+bun test                 # 2311 testov
 bun run lint             # eslint
 bunx tsc --noEmit        # tipi
 ```
@@ -488,7 +491,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.89.0**.
+Trenutna verzija: **1.89.1**.
 
 ---
 

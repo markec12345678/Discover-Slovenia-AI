@@ -9,6 +9,25 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ## [1.89.1] — 2026-09-23 (ISSUE #1 FA: provenance resnice shranjenih načrtov)
 
+### Dokumentacijska sinhronizacija (2026-09-23, brez spremembe kode)
+- **README.md:** Stanje v1.89.0→v1.89.1 (vrstica 20 + »Trenutna verzija«),
+  »2060 testov«→2311 (dejansko stanje: package.json, CI, produkcija health).
+- **docs/PILOT-TEST-PROTOCOL.md (v1.1):** produkcija zdaj Render (primarna) +
+  Vercel (sekundarna), oba 1.89.1 na isti bazi; 4 od 7 zastarelih omejitev
+  označene kot POPRAVLJENO z dokazom v kodi (leads→PostgreSQL P4-2a;
+  povpraševanja gostov vidna P4-6; onboarding 1 fotografija P4-9; znak
+  »Preverjen partner« ločena admin akcija P4-2b); dopolnjeno: demo plačila v
+  produkciji zahtevajo `DSA_DEMO_PAYMENTS=1` (sicer 501 — pilot korak F.3),
+  demo e-pošta v produkciji redigira URL-je (P7-C1 — iz logov ni več mogoče
+  prebrati povezav), zero-AI klepet citira realne lokale (1.89.0).
+- **docs/PROVIDER-APPLICATIONS.md:** matrika usklajena s
+  `production-matrix.ts` — adapterji TASK 53 (tiqets, booking, skyscanner,
+  airalo, travelpayouts) zdaj označeni kot obstoječi/CODE_READY (prej ❌);
+  povzetek: 7 CODE READY · 4 CONTRACT VERIFIED · 0 DISCOVERED (prej
+  2/8/1); runbooka FSQ (aktivna množica) in Travelpayouts (adapter
+  pripravljen) odpravljena; klasifikacija cen/razpoložljivosti usklajena z
+  matrico (FROM_PRICE ko aktiven / UNKNOWN, ne NOT SUPPORTED).
+
 ### Popravljeno
 1. **fix: shranjen "Brez AI" načrt je bil po shranitvi preimenovan v "AI
    načrt"** — `sanitizeItinerary` (save meja, save/route.ts:79) je vse

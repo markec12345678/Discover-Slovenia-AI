@@ -17,10 +17,12 @@
 > `fromPrice` NI potrjena cena. Neuganjena razpoložljivost ostaja
 > UNKNOWN / „preveri pri ponudniku" — NIKOLI „available".
 
-Datum zadnje žive preverbe: **2026-09-24** (TASK 97 — živi `/go` sweep
-vseh 11 affiliate preusmeritev na dev: 11/11 → 302 na čisto partnerjevo
-stran, 0 poverilnic). Prejšnje: 2026-09-19 (TASK 52 §5 — portali + API
-overitvena vrata prek curl; podrobnosti v docs/TASK-52-PROVIDER-ACTIVATION.md).
+Datum zadnje sinhronizacije dokumenta: **2026-09-23** (HEAD `1cfd247`,
+v1.89.1 — matrika usklajena s `production-matrix.ts` in adapterji TASK 53+).
+Zadnja živa preverba `/go`: TASK 97 — sweep vseh 11 affiliate preusmeritev na
+dev: 11/11 → 302 na čisto partnerjevo stran, 0 poverilnic. Prejšnje:
+2026-09-19 (TASK 52 §5 — portali + API overitvena vrata prek curl;
+podrobnosti v docs/TASK-52-PROVIDER-ACTIVATION.md).
 Prejšnje žive preverbe pogodb: 2026-09-18 (TASK 45 Viator, TASK 46 GYG).
 
 ---
@@ -35,23 +37,25 @@ Prejšnje žive preverbe pogodb: 2026-09-18 (TASK 45 Viator, TASK 46 GYG).
 | **Lastna tržnica (own)** | Own | ✅ `providers/own/adapter` (TASK 84) | lastna | DIRECT BOOKING (geo: lat/lng na Listingu) | — | ✅ sloj priklopljen (prazna tržnica = iskreno „no-listings") | ✅ E2E na testnem listingu (dev) | NOT SUPPORTED (priceRange je obseg) | NOT SUPPORTED (Stripe, ne koledar) | own_checkout | ✅ priklopljen | **PRODUCTION CONFIGURED** (NO_LIVE_DATA — živi partnerjevi listingi s koordinatami še manjkajo) |
 | **Viator** | A — activities | ✅ `providers/viator/*` | ✅ živo preverjena | AFFILIATE DEEP LINK (API danes NE dostopen) | API key MISSING | ❌ (iskreno prazen sloj) | ❌ (vrata živa: 401 brez ključa) | FROM PRICE (ko bo aktiven) | UNKNOWN (nad Basic tierjem) | affiliate_redirect | ✅ priklopljen | **CODE READY / NOT CONFIGURED** |
 | **GetYourGuide** | A — activities | ✅ `providers/getyourguide/*` | ✅ živo preverjena | AFFILIATE DEEP LINK (API danes NE dostopen) | API token MISSING (NI self-serve) | ❌ (iskreno prazen sloj) | ❌ (vrata živa: „X-ACCESS-TOKEN missing") | FROM PRICE (ko bo aktiven) | UNKNOWN | affiliate_redirect | ✅ priklopljen | **CODE READY / PARTNER APPROVAL REQUIRED** |
-| **Tiqets** | A — activities | ❌ | ✅ (portal živ) | AFFILIATE DEEP LINK | affiliate URL MISSING; API po odobritvi | ❌ | ❌ | NOT SUPPORTED | NOT SUPPORTED | affiliate_redirect | ❌ | **PARTNER APPROVAL REQUIRED** |
-| **Booking.com** | B — accommodation | ❌ | ✅ (docs živi) | AFFILIATE DEEP LINK | affiliate ID MISSING; Demand API zahteva Managed Affiliate Partner | ❌ | ❌ | NOT SUPPORTED | NOT SUPPORTED | affiliate_redirect | ❌ | **PARTNER APPROVAL REQUIRED** |
+| **Tiqets** | A — activities | ✅ `providers/tiqets/adapter.ts` (TASK 53) | ✅ (portal živ) | AFFILIATE DEEP LINK | API key MISSING (izda se po Awin odobritvi) | ❌ (iskreno prazen sloj) | ❌ (vrata živa: 401 „key incorrect") | FROM PRICE (ko bo aktiven) | UNKNOWN (Distributor tier) | affiliate_redirect | ✅ priklopljen | **CODE READY / PARTNER APPROVAL REQUIRED** |
+| **Booking.com** | B — accommodation | ✅ `providers/booking/adapter.ts` (TASK 53) | ✅ (docs živi) | AFFILIATE DEEP LINK | affiliate ID MISSING; Demand API zahteva Managed Affiliate Partner | ❌ (iskreno prazen sloj) | ❌ (sandbox host DNS-blokiran v okolju) | FROM PRICE per_night (ko bo aktiven) | UNKNOWN (blok-dostopnost nad tierjem) | affiliate_redirect | ✅ priklopljen | **CODE READY / PARTNER APPROVAL REQUIRED** |
 | **KiwiTaxi** | C — transport | ✅ `providers/kiwitaxi/*` | ✅ (objavljeni partner podatki) | STATIC CONTENT (CSV feed) + affiliate | PAP ID MISSING (monetizacija) | ✅ **INVENTAR AKTIVEN** | ✅ CSV ingest 2026-09-18 (9 614 transferjev; tedenski cron) | FROM PRICE (objavljene, niso živi citat) | NOT SUPPORTED („preveri pri ponudniku") | affiliate_redirect | ✅ | **ACTIVE** (inventar) |
 | **DiscoverCars** | C — transport | ❌ | ✅ (portal živ) | AFFILIATE DEEP LINK | affiliate code MISSING; Search API le B4B | ❌ | ❌ | NOT SUPPORTED | NOT SUPPORTED | affiliate_redirect | ❌ | **BLOCKED** (B4B) |
 | **Omio** | C — transport | ❌ | ✅ (portal živ) | AFFILIATE DEEP LINK | affiliate URL MISSING (format po odobritvi) | ❌ | ❌ | NOT SUPPORTED | NOT SUPPORTED | affiliate_redirect | ❌ | **PARTNER APPROVAL REQUIRED** |
-| **Skyscanner** | D — flights | ❌ | ✅ (portal živ) | AFFILIATE DEEP LINK | mediaPartnerId MISSING; Travel API „za uveljavljena podjetja" | ❌ | ❌ | NOT SUPPORTED | NOT SUPPORTED | affiliate_redirect | ❌ | **PARTNER APPROVAL REQUIRED** |
-| **Airalo** | E — eSIM | ❌ | ✅ (portal živ) | AFFILIATE DEEP LINK | affiliate URL MISSING; Partner API po odobritvi | ❌ | ❌ | NOT SUPPORTED | NOT SUPPORTED | affiliate_redirect | ❌ | **PARTNER APPROVAL REQUIRED** |
+| **Skyscanner** | D — flights | ✅ `providers/skyscanner/adapter.ts` (TASK 53) | ✅ (portal živ) | AFFILIATE DEEP LINK | mediaPartnerId MISSING; Travel API „za uveljavljena podjetja" | ❌ (iskreno prazen sloj) | ❌ (vrata živa: Request Forbidden brez ključa) | FROM PRICE (ko bo aktiven) | UNKNOWN (citat ≠ sedeži) | affiliate_redirect | ✅ priklopljen | **CODE READY / PARTNER APPROVAL REQUIRED** (SupplyQuery še brez izvornega letališča — „origin-required") |
+| **Airalo** | E — eSIM | ✅ `providers/airalo/adapter.ts` (TASK 53) | ✅ (portal živ) | AFFILIATE DEEP LINK | OAuth2 CLIENT_ID/SECRET MISSING; Partner API po odobritvi | ❌ (iskreno prazen sloj) | ❌ (peskovnik živ: /countries 200) | FROM PRICE (ko bo aktiven) | UNKNOWN | affiliate_redirect | ✅ priklopljen | **CODE READY / PARTNER APPROVAL REQUIRED** |
 | **World Nomads** | E — insurance | ❌ | ✅ (portal živ) | AFFILIATE DEEP LINK (CJ) | affiliate URL MISSING | ❌ | ❌ | NOT SUPPORTED (brez API-ja — plačilo po quote) | NOT SUPPORTED | affiliate_redirect | ❌ | **NOT APPLICABLE** (API) |
 | **SafetyWing** | E — insurance | ❌ | ✅ (portal živ) | AFFILIATE DEEP LINK (Ambassador) | ambassador ID MISSING | ❌ | ❌ | NOT SUPPORTED (brez javnega API) | NOT SUPPORTED | affiliate_redirect | ❌ | **NOT APPLICABLE** (API) |
-| **Travelpayouts** | Infra/vir | ❌ | ✅ (docs živi) | SEARCH API (self-serve, bodoče) | marker/token MISSING (ni računa) | ❌ | ❌ | UNKNOWN | UNKNOWN | affiliate_redirect (hosti že dovoljeni v /go) | ❌ | **NOT CONFIGURED** |
+| **Travelpayouts** | Infra/vir | ✅ `providers/travelpayouts/adapter.ts` (TASK 53) | ✅ (docs živi) | SEARCH API (self-serve) | token MISSING (ni računa) | ❌ (iskreno prazen sloj) | ❌ (vrata živa: 401 brez žetona) | FROM PRICE (predpomnjene, ni živi citat) | UNKNOWN | affiliate_redirect (hosti že dovoljeni v /go) | ✅ priklopljen | **CODE READY / NOT CONFIGURED** (izhodišče letov določa `TRAVELPAYOUTS_ORIGIN`) |
 
 **Povzetek (productionSummary):** 16 vnosov · **4 PRODUCTION ACTIVE**
 (osm, sto, kiwitaxi, fsq) · **1 PRODUCTION CONFIGURED (own — TASK 84:
 sloj priklopljen, živi partnerjevi listingi s koordinatami še manjkajo)**
-· 2 CODE READY (viator, getyourguide — adapterja priključena, iskreno
-prazna do ključev) · 1 DISCOVERED (travelpayouts) · 8 CONTRACT VERIFIED
-(affiliate-only, blokirani na dostopu).
+· **7 CODE READY** (viator, getyourguide, tiqets, booking, skyscanner,
+airalo, travelpayouts — adapterji priključeni, iskreno prazni do
+ključev/žetonov) · **4 CONTRACT VERIFIED** (discovercars, omio,
+worldnomads, safetywing — affiliate-only, brez adapterja).
+0 DISCOVERED.
 
 ---
 
@@ -120,8 +124,8 @@ Dodatni strežniški viri (izven supply registra, a produkcijsko odvisni):
 | Airalo | Impact/TP → URL | `AIRALO_AFFILIATE_URL` | `/go/esim` monetiziran |
 | World Nomads | CJ dashboard → URL | `WORLDNOMADS_AFFILIATE_URL` | `/go/insurance` monetiziran (WN prednost) |
 | SafetyWing | Ambassador program | `SAFETYWING_AMBASSADOR_ID` | `/go/insurance` monetiziran (če WN manjka) |
-| Foursquare | download SI podmnožice | `FSQ_PLACES_DIR` + adapter (F2) | nov lokalni sloj (zahteva adapter) |
-| Travelpayouts | račun → marker/token | marker env + adapter (F2) | nov search vir (zahteva adapter) |
+| Foursquare | (že namestilo) `bun run fsq:ingest` — novi snapshotji na source.coop | `FSQ_PLACES_DIR` (privzeto `./data/fsq-places` — nameščeno) | osvežitev lokalne množice (adapter že aktiven, TASK 61) |
+| Travelpayouts | račun → travelpayouts.com/developers/api → token | `TRAVELPAYOUTS_TOKEN` (+ `TRAVELPAYOUTS_ORIGIN` IATA) | nov search vir (adapter že pripravljen, TASK 53) |
 
 ---
 
