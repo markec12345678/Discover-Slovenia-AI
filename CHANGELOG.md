@@ -7,6 +7,55 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.88.1] — 2026-09-23 (FINAL ACCEPTANCE AUDIT: 1×P1 + 4×P2/P3 ugotovitev iz dejanskega E2E/produkcijskega pregleda)
+
+### Metoda
+FINAL ACCEPTANCE (ne nov splošni audit): browser E2E zlati tok (16
+screenshotov), produkcijski smoke + error matrix (14 sond), kodni pregledi
+booking lifecycle / kanonske identitete / marketplace lifecycle, mobilna
+375/390/412 px, i18n SL/EN. Popravki samo za dokazane napake.
+
+### P1
+1. **fix: AI veriga SKUPNI wall-clock proračun (FA-A1)** — engine=auto
+   je v produkciji 3/3 sond obešal ≥ 280 s in končal kot gol Vercel 504
+   FUNCTION_INVOCATION_TIMEOUT (maxDuration 300 s) — fallback JSON nikoli
+   ni dosegel klienta; hkrati klient abortira pri 90 s (TASK 77). Vzrok:
+   veriga ni imela skupne meje (120 + 90 + 90 + 45 = 345 s). Fix:
+   `totalBudgetMs` (privzet 150 s — varovalka VSAH klicev), vsaka noga
+   dobi min(lastna meja, preostanek), pod 8 s se preskoči, Gemini/Puter
+   zdaj čutita per-klic timeout + maxRetries 0; itinerary 65 s/70 s —
+   odgovor PRIDE VEDNO (AI ali deterministična rezerva) v < 80 s.
+
+### P2/P3
+2. **fix: recommendations javne projekcije (F-B)** — /api/recommendations/
+   products|experiences sta spreadala celo Prima vrstico
+   (ownerId/rejectionReason/submittedAt v javni JSON). Zdaj
+   toPublicProduct/toPublicExperience (ISTA družina FW1/R3).
+3. **fix: marketplace cache invalidacija ob re-moderaciji/brisanju (F-C)**
+   — lastnikova vsebinska sprememba (published→pending) in vsa brisanja
+   niso klicala revalidateTag → SEO strani so do 1 h kazale
+   odstranjeno/neobjavljeno vsebino. Nov skupni helper
+   src/lib/marketplace-cache.ts; 9 priključitev (3× owner PUT, 3× owner
+   DELETE, admin listings PUT+DELETE).
+4. **fix: EXTERNAL handoff zapis na vseh produktnih povezavah (FA-3 GAP)**
+   — zapis »uporabnik je odšel k ponudniku« je prej ustvarjala SAMO MOJA
+   POT povezava; kartični CTA »Rezerviraj pri ponudniku« in Go Mode
+   EntryLinks so šli tja brez lifecycle evidence. Nov skupni helper
+   recordExternalHandoff (fire-and-forget, idempotenten strežniško);
+   browser dokaz: števec 0→1, točno en zapis.
+5. **fix: GET /api/reviews objavljenost cilja (F-A)** — UGC recenzije
+   neobjavljenega izdelka/izkušnje so bile javno berljive (POST je imel
+   vrata, GET ne). Zdaj vsa 4 obstojnostna preverba zahtevajo
+   status "published" (uniformni 404).
+
+### Testi
+2287/2287 (+24 novih fa-acceptance-fixes: proračun verige, uskladitev z
+klientom, preskočena veriga vrne null takoj; projekcije; invalidacije;
+handoff helper + obe površini; reviews vrata) · lint 0 · tsc 0 (src/).
+Browser: zlati tok + števec handoffa 0→1 + 0 konzolnih napak + 375 px
+brez preliva. Lokalno engine=auto: 200 v 18,6 s (source "ai");
+deterministic: 200 v 3,3 s.
+
 ## [1.88.0] — 2026-09-23 (PRODUCTION HARDENING MASTER TASK: konsistenca, iskrenost, varnost — 7×P1 + 20×P2 dokazanih in zaprtih)
 
 ### Metoda
