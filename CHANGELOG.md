@@ -7,6 +7,68 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.88.0] — 2026-09-23 (PRODUCTION HARDENING MASTER TASK: konsistenca, iskrenost, varnost — 7×P1 + 20×P2 dokazanih in zaprtih)
+
+### Metoda
+AUDIT → EVIDENCE → FIX → TEST → VERIFY (4 vzporedne revizije + lastna
+verifikacija VSOTE P1 ugotovk z git arheologijo in izvedbo DDL proti
+pravemu sqlite). 2263/2263 testov (+50 novih), lint 0, tsc 0, E2E browser
+verifikacija (domov/načrtovalec/deterministični načrt/SEO strani/zemljevid,
+0 konzolnih napak, mobilna 375 px brez preliva).
+
+### P1 popravki (7)
+1. **fix: journey-booking startup migracija DDL pariteta (H1/H2)** — commit
+   8782d8c je pomotoma IZBRISAL `"shareId" TEXT` iz obeh CREATE TABLE vej
+   (SQLite veja je imela od TASK 81 tudi nedoločen narekovaj) → sveža
+   Postgres baza bi dobila tabelo brez shareId (indeks nanj pada → vsi
+   where:{shareId} klici 503), sveža SQLite pa NOBENE tabele. Produkcija
+   nepoškodovana (tabela od 1.74.4, CREATE veja preskočena). Healing +
+   DDL-strukturni testi (izvedba proti bun:sqlite — substring test je
+   prej izpolnil INDEKS, ne CREATE TABLE).
+2. **fix: journey booking klientova pot brez provider atestacij (S1)** —
+   javni POST je persistiral klientova providerBookingId/confirmedPrice/URL
+   (lažni "Št. rezervacije" v dokumentu My Trip). Client = identiteta +
+   status; atestacije ZAPISE IZKLJUČNO žetonom zaklenjen PATCH. + timingSafe
+   žeton, SERIALIZABLE transakcija s P2034 retry (TOCTOU), CAS na PATCH
+   (last-write-wins), prehod SELECTED→EXTERNAL.
+3. **fix: SEO supply vidnost (S2/S3/S5)** — 5 poizvedb seo-page-data brez
+   status:"published" (draft/pending/rejected na javnih SEO straneh);
+   toSeoExperience ...e spread je v browser poslal ownerId/rejectionReason/
+   providerEmail/status; revalidateTag("marketplace","max") ob moderaciji
+   (prej nikoli klican — 1 h zamik).
+4. **fix: re-moderacijski sprožilci (S4/M4)** — objavljeni lokal: naslov/
+   telefon/e-pošta/spletna stran/urnik so VSEBINA (3 od njih vstopajo v
+   own supply adapter); product: category/kontakt/trditve; experience:
+   category.
+5. **fix: geo plausibility neverificiranih izbir (I1/I2)** — klientove
+   koordinate za providerje brez strežne resnice so šle naravnost v
+   geoAnchors/postanke (komentar "koordinate so kanonske… NIKOLI" je
+   veljal samo za kiwitaxi). Vrata SI_BBOX ± 1.5°/2.0°: Tokio → geo
+   odstranjeno, Ljubljana → ohranjeno.
+6. **fix: cena unknown je unknown na OBEH poteh (I4/P-3)** — komercialni
+   FIXED produkt brez dokazljive cene: AI generacija je pustila LLM-jevo
+   izmišljeno ceno, deterministična pot pa €0. Obe zdaj NaN + "Cena ni
+   preverjena"; odprti viri (osm/fsq/sto/events) obdržijo €0 konvencijo.
+7. **fix: admin brute-force oracles (V1-V3)** — GET debug-db, GET
+   analytics/funnel, GET admin/reject brez rateLimit → neomejeno ugibanje
+   skupnega admin gesla. Zdaj requireAdmin (60/10 min + timing-safe).
+
+### P2 popravki (izbor)
+- days typeof+integer varovanje (niz "abc" → 400, prej NaN dayCap → prazen
+  200-uspeh); refine hasItineraryShape shape guard (crash-razred, veljavni
+  payloadi nespremenjeni); z-ai-sdk text timeout 45 s (kot VLM pot);
+  track/reviews published-only vrata (uniform 404); customerStatus
+  razrešen ob VSAKEM lastnikovem prehodu (ne le cancel); admin listings
+  POST ekspliciten status + moderacijski zapis; rankListings preskočena ob
+  engine=deterministic (odvečna DB poizvedba).
+
+### CI opažanje (zavrnjena lažna težava)
+`branches: [main, develop]` v ci.yml je PRAVILEN (cat -A izpis je bil
+manglan; od -c byte dump + YAML parse + živi Actions runs dokazujejo
+main). Brez spremembe — evidence-first.
+
+---
+
 ## [1.87.1] — 2026-09-23 (PRODUKCIJA BUILD GREEN: vrzel schema.prisma od 1.86.0 zaprta — skip-worktree past)
 
 ### Problem (živi dokaz iz Vercel build logov)
