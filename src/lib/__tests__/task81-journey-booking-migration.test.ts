@@ -21,6 +21,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { Database } from "bun:sqlite";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { migrateJourneyBookingTableWith } from "../journey-booking-migration";
@@ -197,7 +198,11 @@ describe("journey-booking-migration (source-contract)", () => {
     expect(libSrc).toContain('"JourneyBooking_sessionKey_idx"');
     expect(libSrc).toContain('"JourneyBooking_provider_providerProductId_idx"');
     expect(libSrc).toContain('"JourneyBooking_status_idx"');
-    expect(libSrc).toContain('ADD COLUMN "sessionKey" TEXT');
+    // idempotentni ALTER za obstoječe baze (TASK 99 + HARDENING H1:
+    // zanka po ["shareId", "sessionKey"] — dejanska izvedba je dokazana v
+    // unit healing testih z izvedenimi SQL izjavami, tu le source-kontrakt)
+    expect(libSrc).toContain('["shareId", "sessionKey"]');
+    expect(libSrc).toContain('ADD COLUMN "${column}" TEXT');
   });
 
   test("instrumentation.ts registrira startup korak schema:journey-booking", () => {
@@ -227,5 +232,93 @@ describe("journey-booking-migration (source-contract)", () => {
     ]);
     const missing = models.filter((m) => !tables.has(m));
     expect(missing).toEqual([]);
+  });
+});
+
+// ============================================================================
+// HARDENING AUDIT (H1/H2/H3) — DDL STRUKTURNE REGRESIJSKE VRATA
+// ============================================================================
+// Prejšnji source-contract test je trdil "lib vsebuje shareId" — to je
+// izpolnil INDEKS (CREATE INDEX ... ON "JourneyBooking"("shareId")), ne
+// CREATE TABLE. Posledica: bug 8782d8c (1.86.0) je izbrisal "shareId" TEXT
+// iz OBEH CREATE TABLE vej in CI je ostal zelen; sveža Postgres baza je
+// dobila tabelo brez stolpca (indeks nanj je padel), sveža SQLite baza pa
+// zaradi nedoločenega narekovaja ("confirmedPrice REAL,) NIČ. Tu sedaj:
+//   1. POSTGRES DDL iz vira → VSAK stolpec modela mora biti V CREATE TABLE;
+//   2. SQLITE DDL iz vira → IZVEDEN proti pravemu bun:sqlite (sintaksa!) in
+//      PRAGMA table_info primerja VSEH 14 stolpcev modela;
+//   3. vsi 4 indeksi iz vira se izvedejo nad ustvarjeno tabelo (shareId
+//      indeks nad tabelo brez shareId bi PADAL — to je bila dejanska napaka).
+//   4. healing: obstoječa tabela brez shareId dobi ADD COLUMN.
+// ============================================================================
+describe("journey-booking-migration (DDL struktura — HARDENING regresija)", () => {
+  const libSrcHard = readFileSync(
+    path.join(ROOT, "src/lib/journey-booking-migration.ts"),
+    "utf8"
+  );
+  const MODEL_COLUMNS = [
+    "id", "shareId", "sessionKey", "provider", "providerProductId", "status",
+    "providerBookingId", "confirmedPrice", "currency", "confirmationUrl",
+    "cancellationUrl", "providerPayload", "createdAt", "updatedAt",
+  ];
+
+  test("POSTGRES CREATE TABLE iz vira vsebuje VSEH 14 stolpcev modela (ne le indeksi)", () => {
+    const pgDdl = libSrcHard.match(
+      /\? `CREATE TABLE "JourneyBooking" \(([\s\S]+?)\)\s*`/
+    )![1];
+    // vsaka DDL vrstica stolpca: zamaknjen "ime" TIP
+    const ddlCols = [...pgDdl.matchAll(/"([a-zA-Z]+)"/g)].map((m) => m[1]);
+    for (const col of MODEL_COLUMNS) {
+      expect(ddlCols).toContain(col);
+    }
+    expect(pgDdl).toContain('CONSTRAINT "JourneyBooking_pkey"');
+  });
+
+  test("SQLITE CREATE TABLE iz vira je SINTAKSNO veljaven in vsebuje VSEH 14 stolpcev (izvedba proti pravemu sqlite)", () => {
+    const sqliteDdl = libSrcHard.match(
+      /: `CREATE TABLE IF NOT EXISTS "JourneyBooking" \(([\s\S]+?)\)\s*`/
+    )![1];
+    const db = new Database(":memory:");
+    // H2 regresija: nedoločen narekovaj ("confirmedPrice REAL,) tu pade
+    db.run(`CREATE TABLE IF NOT EXISTS "JourneyBooking" (${sqliteDdl})`);
+    const cols = db
+      .query('PRAGMA table_info("JourneyBooking")')
+      .all() as { name: string }[];
+    expect(cols.map((c) => c.name).sort()).toEqual([...MODEL_COLUMNS].sort());
+    // vsi 4 indeksi iz vira se izvedejo nad tabelo (H1: shareId indeks bi
+    // padel, če stolpec manjka)
+    const idxStmts = [
+      ...libSrcHard.matchAll(
+        /CREATE INDEX IF NOT EXISTS "JourneyBooking_[a-zA-Z_]+_idx" ON "JourneyBooking"\([^)]*\)/g
+      ),
+    ].map((m) => m[0]);
+    expect(idxStmts).toHaveLength(4);
+    for (const stmt of idxStmts) db.run(stmt);
+    db.close();
+  });
+
+  test("healing: obstoječa tabela BREZ shareId dobi idempotenten ADD COLUMN (sqlite)", async () => {
+    // PRAGMA table_info(JourneyBooking) vrne le "id" → manjkata shareId + sessionKey
+    const { db, calls } = makeDb({ pragma: [{ name: "id" }], tableExists: true });
+    const r = await migrateJourneyBookingTableWith(db as unknown as SchemaDb);
+    expect(r.dialect).toBe("sqlite");
+    expect(r.tablesCreated).toEqual([]);
+    // H1 healing: shareId (in sessionKey) ALTER se izvede
+    expect(
+      calls.exec.find((s) => s.includes('ALTER TABLE "JourneyBooking" ADD COLUMN "shareId" TEXT'))
+    ).toBeTruthy();
+    expect(
+      calls.exec.find((s) => s.includes('ALTER TABLE "JourneyBooking" ADD COLUMN "sessionKey" TEXT'))
+    ).toBeTruthy();
+  });
+
+  test("healing: postgres obstoječa tabela dobi ADD COLUMN IF NOT EXISTS za shareId", async () => {
+    const { db, calls } = makeDb({ pragmaThrows: true, info: [{}], tableExists: true });
+    await migrateJourneyBookingTableWith(db as unknown as SchemaDb);
+    expect(
+      calls.exec.find((s) =>
+        s.includes('ALTER TABLE "JourneyBooking" ADD COLUMN IF NOT EXISTS "shareId" TEXT')
+      )
+    ).toBeTruthy();
   });
 });

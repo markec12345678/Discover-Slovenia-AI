@@ -103,6 +103,7 @@ export async function migrateJourneyBookingTableWith(
       dialect === "postgres"
         ? `CREATE TABLE "JourneyBooking" (
              "id" TEXT NOT NULL,
+             "shareId" TEXT,
              "sessionKey" TEXT,
              "provider" TEXT NOT NULL,
              "providerProductId" TEXT NOT NULL,
@@ -119,12 +120,13 @@ export async function migrateJourneyBookingTableWith(
            )`
         : `CREATE TABLE IF NOT EXISTS "JourneyBooking" (
              "id" TEXT NOT NULL PRIMARY KEY,
+             "shareId" TEXT,
              "sessionKey" TEXT,
              "provider" TEXT NOT NULL,
              "providerProductId" TEXT NOT NULL,
              "status" TEXT NOT NULL,
              "providerBookingId" TEXT,
-             "confirmedPrice REAL,
+             "confirmedPrice" REAL,
              "currency" TEXT NOT NULL DEFAULT 'EUR',
              "confirmationUrl" TEXT,
              "cancellationUrl" TEXT,
@@ -140,27 +142,40 @@ export async function migrateJourneyBookingTableWith(
   // ── TASK 99: sessionKey na OBSTOJEČIH tabelah (idempotentno) ───────────
   // Baze, ki so tabelo dobile pred TASK 99, stolpca še nimajo — dodamo ga
   // z narečno-varnim ADD COLUMN (SQLite ne podpira IF NOT EXISTS).
+  //
+  // ── HARDENING AUDIT (H1): shareId na OBSTOJEČIH tabelah ─────────────────
+  // Bug 8782d8c (1.86.0) je "shareId" TEXT pomotoma IZBRISAL iz obeh
+  // CREATE TABLE vej — sveža baza, ki je tabelo ustvarila s to različico,
+  // ima tabelo BREZ shareId (ustvarjanje indeksa JourneyBooking_shareId_idx
+  // je nato padlo, fail-open pa pustil pokvarjeno tabelo živeti → vsi
+  // where: { shareId } klici 503). Healing: idempotenten ADD COLUMN za
+  // obe manjkajoča stolpca (shareId + sessionKey) na obstoječih tabelah.
   if (exists) {
-    try {
-      if (dialect === "sqlite") {
-        const cols = (await client.$queryRawUnsafe(
-          "PRAGMA table_info(JourneyBooking)"
-        )) as { name?: string }[];
-        const hasCol =
-          Array.isArray(cols) && cols.some((c) => c?.name === "sessionKey");
-        if (!hasCol) {
+    for (const column of ["shareId", "sessionKey"] as const) {
+      try {
+        if (dialect === "sqlite") {
+          const cols = (await client.$queryRawUnsafe(
+            "PRAGMA table_info(JourneyBooking)"
+          )) as { name?: string }[];
+          const hasCol =
+            Array.isArray(cols) && cols.some((c) => c?.name === column);
+          if (!hasCol) {
+            await client.$executeRawUnsafe(
+              `ALTER TABLE "JourneyBooking" ADD COLUMN "${column}" TEXT`
+            );
+          }
+        } else {
           await client.$executeRawUnsafe(
-            'ALTER TABLE "JourneyBooking" ADD COLUMN "sessionKey" TEXT'
+            `ALTER TABLE "JourneyBooking" ADD COLUMN IF NOT EXISTS "${column}" TEXT`
           );
         }
-      } else {
-        await client.$executeRawUnsafe(
-          'ALTER TABLE "JourneyBooking" ADD COLUMN IF NOT EXISTS "sessionKey" TEXT'
+      } catch (error) {
+        // FAIL-OPEN: napaka se zalogira, zagon se nadaljuje (isti vzorec)
+        console.error(
+          `[journey-booking-migration] ${column} ADD COLUMN:`,
+          error
         );
       }
-    } catch (error) {
-      // FAIL-OPEN: napaka se zalogira, zagon se nadaljuje (isti vzorec)
-      console.error("[journey-booking-migration] sessionKey ADD COLUMN:", error);
     }
   }
 
