@@ -81,6 +81,20 @@ export interface AICompletionOptions {
    * preskoči rezervni model (čaka v isti :free vrsti).
    */
   timeoutMs?: number;
+  /**
+   * 1.88.1 (FINAL ACCEPTANCE FA-A1): SKUPNI wall-clock proračun CELOTE
+   * provider verige (ms). Brez njega je najslabša časovnica znašala
+   * 120 s (OpenRouter) + 90 s (Gemini 45 s × SDK retry) + 90 s (Puter) +
+   * 45 s (z-ai) = 345 s — NAD Vercel maxDuration (300 s) → gol
+   * FUNCTION_INVOCATION_TIMEOUT brez JSON fallbacka (produkcija,
+   * 2026-09-23, 3/3 sonde). Z proračunom vsaka noga dobi NAJVEČ preostanek,
+   * noga pod pragom MIN_LEG_MS pa se preskoči — veriga je VEDNO vezana.
+   * Privzeto 150 s (varovalka vseh klicev); načrtovalec poti podaljša
+   * glede na klientovo potrpežljivost (GENERATION_TIMEOUT_SECONDS 90 s —
+   * TASK 77: uporabnikov abort je NAMERNA UX odločitev, strežnik ji mora
+   * slediti, sicer uporabnik vidi napako, ki je strežnik nikoli ne reši).
+   */
+  totalBudgetMs?: number;
 }
 
 export interface AIVisionResult {
@@ -232,6 +246,8 @@ function describeError(error: unknown): string {
 
 // ─── Provider 2: PUTER ────────────────────────────────────────────────────
 
+const PUTER_TIMEOUT_MS = 45_000;
+
 let puterClient: OpenAI | null = null;
 
 function getPuterClient(): OpenAI | null {
@@ -247,7 +263,7 @@ function getPuterClient(): OpenAI | null {
     puterClient = new OpenAI({
       baseURL: baseUrl,
       apiKey: token,
-      timeout: 45_000,
+      timeout: PUTER_TIMEOUT_MS,
       maxRetries: 1,
     });
   }
@@ -260,6 +276,12 @@ function puterModel(): string {
 }
 
 // ─── Generacija (veriga) ─────────────────────────────────────────────────
+
+/** 1.88.1 (FA-A1): privzeti SKUPNI proračun verige — Vercel varovalka. */
+const TOTAL_CHAIN_BUDGET_MS = 150_000;
+/** 1.88.1 (FA-A1): pod tem preostankom se noga preskoči (ni smisla
+ *  začeti klica, ki ga klient nikakor ne more dočakati). */
+const MIN_LEG_MS = 8_000;
 
 /**
  * Generira AI chat completion po verigi
@@ -276,6 +298,17 @@ export async function generateCompletion(
   // klicalec lahko zahteva krajše (npr. health-check 8).
   const maxTokens = options?.maxTokens ?? 4096;
 
+  // 1.88.1 (FA-A1): skupni proračun verige — glej AICompletionOptions.
+  // legBudgetMs vrne NULL, ko preostanek pade pod prag (noga se preskoči
+  // BREZ zapisa odpovedi v circuit breaker — preskok ni provider napaka),
+  // sicer pa min(osebna meja noge, preostanek).
+  const deadline =
+    Date.now() + (options?.totalBudgetMs ?? TOTAL_CHAIN_BUDGET_MS);
+  const legBudgetMs = (capMs: number): number | null => {
+    const remaining = deadline - Date.now();
+    return remaining < MIN_LEG_MS ? null : Math.min(capMs, remaining);
+  };
+
   const mapped = messages.map((m) => ({ role: m.role, content: m.content }));
 
   // === 0. OPENROUTER (primarni; :free modeli NISO thinking → brez tal) ===
@@ -289,8 +322,11 @@ export async function generateCompletion(
   // provider error) notranji fallback poskusi ŠE VEDNO — tam je drug
   // model dejansko drugačna vrsta.
   const orTimeout = options?.timeoutMs ?? OPENROUTER_TIMEOUT_MS;
+  // 1.88.1 (FA-A1): noga dobi min(osebni proračun, preostanek verige);
+  // pod pragom MIN_LEG_MS se preskoči (brez breaker zapisa — ni napaka).
+  const orBudget = legBudgetMs(orTimeout);
   const openrouter = getOpenRouterClient();
-  if (openrouter && !openrouterBreakerOpen()) {
+  if (openrouter && orBudget !== null && !openrouterBreakerOpen()) {
     let lastOrError: unknown = null;
     for (const model of openrouterModels()) {
       try {
@@ -308,9 +344,13 @@ export async function generateCompletion(
           // timeoutMs IZKLJUČIMO SDK auto-retry (maxRetries 0): naša retry
           // plast je notranji fallback model — SDK podvajanje bi tiho
           // podvojilo najslabšo časovnico (timeout + retry = 2× proračun).
+          // 1.88.1 (FA-A1): maxRetries 0 ZDAJ VEDNO (veriga je retry plast;
+          // brez tega je bila najslabša časovnica 60 s × 2 SDK poskusa =
+          // 120 s SAMO za prvo nogo) — timeout noge pa je vezan na
+          // preostanek skupnega proračuna.
           {
-            timeout: orTimeout,
-            ...(options?.timeoutMs ? { maxRetries: 0 } : {}),
+            timeout: orBudget,
+            maxRetries: 0,
           }
         );
         const content = completion.choices[0]?.message?.content?.trim();
@@ -323,7 +363,7 @@ export async function generateCompletion(
         lastOrError = error;
         if (error instanceof OpenAI.APIConnectionTimeoutError) {
           console.error(
-            `[ai-client] OpenRouter TIMEOUT po ${orTimeout / 1000} s (${model}) — čakalna vrsta :free globlja od proračuna; rezervni model preskočen (ista vrsta), nadaljujem na Gemini/Puter/z-ai`
+            `[ai-client] OpenRouter TIMEOUT po ${orBudget / 1000} s (${model}) — čakalna vrsta :free globlja od proračuna; rezervni model preskočen (ista vrsta), nadaljujem na Gemini/Puter/z-ai`
           );
           break; // 1.48.2: NE poskusi rezervnega modela — ista čakalna vrsta
         }
@@ -347,21 +387,28 @@ export async function generateCompletion(
   // proračun TLA 512 žetonov, da majhni klici (health, ask) ne ostanejo brez
   // vidne vsebine. P7-C2 zgornja meja ostaja (tala ne odprejo token-bombe).
   const geminiMaxTokens = Math.max(maxTokens, 512);
+  const geminiBudget = legBudgetMs(GEMINI_TIMEOUT_MS);
   const gemini = getGeminiClient();
-  if (gemini && !geminiBreakerOpen()) {
+  if (gemini && geminiBudget !== null && !geminiBreakerOpen()) {
     try {
-      const completion = await gemini.chat.completions.create({
-        model: geminiModel(),
-        messages: mapped,
-        temperature,
-        max_tokens: geminiMaxTokens,
-        ...(options?.reasoningEffort
-          ? { reasoning_effort: options.reasoningEffort }
-          : {}),
-        ...(options?.jsonMode
-          ? { response_format: { type: "json_object" as const } }
-          : {}),
-      });
+      const completion = await gemini.chat.completions.create(
+        {
+          model: geminiModel(),
+          messages: mapped,
+          temperature,
+          max_tokens: geminiMaxTokens,
+          ...(options?.reasoningEffort
+            ? { reasoning_effort: options.reasoningEffort }
+            : {}),
+          ...(options?.jsonMode
+            ? { response_format: { type: "json_object" as const } }
+            : {}),
+        },
+        // 1.88.1 (FA-A1): per-klic timeout VEZAN na preostanek verige +
+        // maxRetries 0 (prej SDK privzeto 45 s × 2 poskusa = 90 s —
+        // najslabša časovnica verige 345 s > Vercel maxDuration 300 s).
+        { timeout: geminiBudget, maxRetries: 0 }
+      );
       const content = completion.choices[0]?.message?.content?.trim();
       if (content) {
         geminiRecordSuccess();
@@ -379,18 +426,24 @@ export async function generateCompletion(
   }
 
   // === 2. PUTER ===
+  // 1.88.1 (FA-A1): per-klic timeout VEZAN na preostanek verige +
+  // maxRetries 0 (prej konstruktorjev 45 s × 2 poskusa = 90 s za to nogo).
+  const puterBudget = legBudgetMs(PUTER_TIMEOUT_MS);
   const puter = getPuterClient();
-  if (puter) {
+  if (puter && puterBudget !== null) {
     try {
-      const completion = await puter.chat.completions.create({
-        model: puterModel(),
-        messages: mapped,
-        temperature,
-        max_tokens: maxTokens,
-        ...(options?.jsonMode
-          ? { response_format: { type: "json_object" as const } }
-          : {}),
-      });
+      const completion = await puter.chat.completions.create(
+        {
+          model: puterModel(),
+          messages: mapped,
+          temperature,
+          max_tokens: maxTokens,
+          ...(options?.jsonMode
+            ? { response_format: { type: "json_object" as const } }
+            : {}),
+        },
+        { timeout: puterBudget, maxRetries: 0 }
+      );
       const content = completion.choices[0]?.message?.content?.trim();
       if (content) {
         return { content, source: "puter" };
@@ -403,12 +456,20 @@ export async function generateCompletion(
   // === 3. z-ai-web-dev-sdk (razvojni sandbox) ===
   // HARDENING I6: timeout konstanta (isti budget kot Gemini/Puter v verigi)
   const ZAI_TEXT_TIMEOUT_MS = 45_000;
+  // 1.88.1 (FA-A1): tudi ta noga je vezana na preostanek verige.
+  const zaiBudget = legBudgetMs(ZAI_TEXT_TIMEOUT_MS);
+  if (zaiBudget === null) {
+    // Preostanek pod pragom — brez smisla zaganjati SDK (import + create
+    // sta že sama ~100 ms, klic pa nikakor ne more uspeti v <8 s).
+    return null;
+  }
   try {
     const ZAI = (await import("z-ai-web-dev-sdk")).default;
     const zai = await ZAI.create();
     // HARDENING I6 (P2): SDK klic NIMA lastnega timeouta — obesek bi lahko
     // povrnil celo generacijo. Isti vzorec kot VLM pot zgoraj: Promise.race
     // z 45 s timeoutom (dosedanji najdaljši budget v verigi — Gemini/Puter).
+    // 1.88.1 (FA-A1): budilnika vežemo na preostanek verige.
     const completion = await Promise.race([
       zai.chat.completions.create({
         messages: mapped,
@@ -418,7 +479,7 @@ export async function generateCompletion(
       new Promise<never>((_, reject) =>
         setTimeout(
           () => reject(new Error("ZAI_TEXT_TIMEOUT")),
-          ZAI_TEXT_TIMEOUT_MS
+          zaiBudget
         )
       ),
     ]);

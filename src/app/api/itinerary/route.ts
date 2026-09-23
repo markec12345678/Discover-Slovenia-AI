@@ -782,10 +782,21 @@ JSON format (STROGO):
       // (direktna meritev 2026-09-17, 3/3 vzorci ≥ 60 s — enak ključ in
       // model kot ta veriga). Privzeti 60-s budilnik je vsak drugi klic
       // tiho rezal v deterministični fallback PO enaki čakalni dobi.
-      // Proračun 120 s: uporabnik po ~isti potrpežljivosti dobi PRAVI AI
-      // načrt; najslabša časovnica ostane vezana (timeout → preskok na
-      // Gemini/fallback, brez podvajanj — glej ai-client 1.48.2).
-      { temperature: 0.7, jsonMode: true, timeoutMs: 120_000 }
+      // 1.88.1 (FINAL ACCEPTANCE FA-A1): proračun AI klica je ZDAJ vezan na
+      // SKUPNI budget verige (totalBudgetMs) IN na klientovo potrpežljivost.
+      // Dejstva (produkcija, 2026-09-23): engine=auto je 3/3 sond obešal
+      // ≥ 280 s → gol Vercel 504 FUNCTION_INVOCATION_TIMEOUT (maxDuration
+      // 300 s), fallback JSON nikoli ni dosegel klienta; hkrati klient
+      // abortira pri 90 s (GENERATION_TIMEOUT_SECONDS, TASK 77 — NAMERNA UX
+      // odločitev), torej je bil prejšnji proračun 120 s NEUSKLAJEN z obejo
+      // mejama. Zdaj: OpenRouter 65 s (zajame 2/3 izmerjenih free-tier
+      // generacij 60/61/79 s; globoka vrsta pade pošteno v rezervo) +
+      // skupni budget 70 s — ob timeoutu se Gemini/Puter/z-ai preskočijo in
+      // route takoj zgradi deterministično rezervo (~2–5 s). Odgovor torej
+      // PRIDE VEDNO (AI ali rezerva) v < 80 s < 90 s klientove meje.
+      // Ob HITRI OpenRouter napaki (429/5xx v sekundah) Gemini še dobi
+      // svoj ~45-s rezervat znotraj 70 s.
+      { temperature: 0.7, jsonMode: true, timeoutMs: 65_000, totalBudgetMs: 70_000 }
     );
 
     const content = result?.content;
