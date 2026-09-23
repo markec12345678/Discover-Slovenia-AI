@@ -7,6 +7,87 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.87.0] — 2026-09-23 (TASK 100 / TASK 99 na GitHubu: DETERMINISTIČNI MOTOR KOT NARAVNA POT — načrt BREZ LLM)
+
+### Problem (nadaljevanje TASK 99: "odstrani odvisnost od generativnega AI modela, kjer ni potreben")
+1. **Dvoumna hierarhija motorjev**: deterministični generator je živel v
+   `/api/itinerary/route.ts` kot "fallback" — dosegljiven SAMO ob odpovedi
+   AI. Jedro travel-planning workflowa (parser → podatki → constrainti →
+   ranking → scheduling) NI bilo dosegljivo naravno, čeprav za njegovo
+   delo generativni model ni potreben (0 žetonov, 100 % reproducibilno).
+2. **Podvojen izvor resnice**: enaka ~250-vrstična logika je obstajala v
+   route (fallback) — izvleček v prvorazredni modul je bil začet
+   (deterministic-itinerary.ts) a route še vedno klical LOKALNO kopijo.
+3. **Uporabnik ni imel izbire**: UI je ponujal samo AI pot; zahtevo po
+   načrtu brez AI (zasebnost, hitrost, predvidljivost) ni bilo mogoče
+   izraziti.
+
+### Dodano (produkcija)
+- **`PlannerInput.engine` ("auto" | "deterministic")** — izbira motorja na
+  meji (validirana, 400 za neznano vrednost; nazaj kompatibilno: brez
+  polja = "auto" = AI veriga z deterministično rezervo, nespremenjeno).
+- **NARAVNA deterministična pot**: `engine = "deterministic"` se odloči
+  PRED gradnjo promptov in klicem LLM — 0 AI žetonov, isti vhod vedno da
+  isti načrt. Obogatitvena veriga je IDENTIČNA AI poti: supply invariantna
+  plast (TASK 48), realno vreme Open-Meteo, OSRM noge + repairScheduleGaps
+  (TASK 50), geo-validacija, kakovost, razlage postankov, geometrija
+  zemljevida, budget status.
+- **Čist modul `src/lib/deterministic-itinerary.ts`** (prvorazredni motor):
+  izvleček iz route s parametrizirano oznako vira (`source`:
+  "deterministic" = izrecna zahteva; "fallback" = iskrena degradacija ob
+  odpovedi AI — dosedanja semantika za analitiko/teste nespremenjena).
+  Čistost testno varovana: NI uvozov ai-client/SDK, NI ure
+  (Date.now/Math.random), NI omrežja/fetch, NI baze.
+- **Ena skupna veriga `buildDeterministicPlanResponse`** (route): naravna
+  pot in fallback pot delata ISTITO obogatitev — nikoli dve plasti. catch
+  blok zdaj delegira (prej ~160 vrstic podvojene logike).
+- **Stikalo motorja v UI** (napredne nastavitve načrtovalnika): "Z AI" /
+  "Brez AI" + poštena razlaga (SL+EN). Analitika `planner_submitted`
+  nosi `engine` (merjenje povpraševanja po načrtu brez AI).
+- **Tri-stopenjski badge vira načrta**: AI (emerald) / Brez AI
+  (vijolična) / Predloga (amber) — na načrtovalniku, deljenem potovanju
+  in zgodovini sprememb.
+- **Observability**: `itinerary_validated.source` union razširjen z
+  "deterministic" (ločena vrstica od "fallback" v analitiki); vsi
+  strežniški dnevniki (TASK 50/51) nosijo dejanski vir poti.
+
+### Spremenjeno
+- `/api/itinerary/route.ts`: −163 vrstic neto (1464 → 1301); LOKALNA
+  kopija `generateFallbackItinerary` (249 vrstic) in lokalni `isRainyDay`
+  ODSTRANJENI (modul je edini vir); neuvoženi uvozi očiščeni
+  (DESTINATIONS_EN, PACE_FALLBACK, nextSlot, SlotCursor,
+  parseISODateLocal, orderAroundAnchors, DayPlan, LocationVisit).
+- `Itinerary.source` unija: +`"deterministic"` (types.ts).
+- `logItineraryValidation` props.source unija: +`"deterministic"`
+  (supply/itinerary-validation.ts).
+
+### Testi
+- **Novo: `task100-deterministic-engine.test.ts` (39 testov)** —
+  determinizem (JSON-identičen izhod; nizka padavinska sidra = pot brez
+  sidrov), source semantika, vedenje motorja (dnevi, veljavni ID-ji,
+  termini brez prekrivanj, cena × skupina, SL/EN, tempo → gostota, dež →
+  notranji, zaprtje Vintgar nov–mar fail-closed, privzeti bazen SI,
+  regionalne samo z željo, pohitritev +2,5, izčrpanje bazena), čistost
+  modula (source-contract brez komentarjev — dokumentacija sme omeniti,
+  klic ne sme obstajati), route wiring (uvod modula, brez lokalne kopije,
+  naravna pot PRED LLM klicem, validacija 400, skupna veriga, observability
+  unija), frontend (stikalo, badge, i18n SL+EN neprazni).
+- TASK 80 test: okno source-contracta 450 → 650 znakov (TASK 100 dodal
+  polje `engine` dogodku — namen testa je članstvo v dogodku, ne dolžina).
+- **Skupaj: 2204 testov (vseh 0 fail)** · lint 0 · tsc 0.
+- **E2E (dev strežnik, živo)**: engine=deterministic → 200 v 5,6 s
+  (jedro 0 LLM; OSRM+vreme obogatitev), drugi klic 28 ms (predpomnilnik),
+  JEDRO načrta bitno-identično med klici; neveljaven engine → 400; auto
+  pot (brez polja) → pravi AI načrt (18,9 s); UI pot: stikalo "Brez AI" →
+  "Sestavi načrt" → POST 200 → načrt z značko "Brez AI" (browser + VLM
+  potrditev vizualno); mobilni 375 px brez preliva; 0 konzolnih napak.
+
+### Dokumentacija
+- README: vrstica zmožnosti (deterministični motor), stanje 2204 testov,
+  trenutna verzija 1.87.0.
+
+---
+
 ## [1.86.0] — 2026-09-24 (TASK 99: BOOKING LIFECYCLE DOKONČANJE + MARKETPLACE PAYOUT/CUSTOMER STATE — issue #1 §2/§10)
 
 ### Problem (revizija GitHub issue #1)

@@ -719,8 +719,11 @@ export async function logItineraryValidation(
   props: {
     path: "generate" | "refine";
     /** TASK 50: "fallback_echo" = refine veja, kjer je AI odpovedal in se
-     *  (strežniško validiran) obstoječi načrt vrača nazaj (§10/§15 dokaz). */
-    source: "ai" | "fallback" | "quick_action" | "fallback_echo";
+     *  (strežniško validiran) obstoječi načrt vrača nazaj (§10/§15 dokaz).
+     *  TASK 100: "deterministic" = naravna deterministična pot (uporabnik
+     *  izrecno zahteval motor brez LLM) — isto dogajanje kot "fallback",
+     *  a brez odpovedi AI (ločeno za analitiko). */
+    source: "ai" | "fallback" | "deterministic" | "quick_action" | "fallback_echo";
     supply_stops: number;
     validated: number;
     rejected: number;

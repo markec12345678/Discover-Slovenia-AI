@@ -426,7 +426,13 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
                       "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
                   )}
                 >
-                  {h.source === "ai" ? "AI" : "fallback"}
+                  {h.source === "ai"
+                    ? "AI"
+                    : h.source === "deterministic"
+                    ? isEn
+                      ? "no AI"
+                      : "brez AI"
+                    : "fallback"}
                 </Badge>
                 <span className="text-muted-foreground">{h.instruction}</span>
               </div>

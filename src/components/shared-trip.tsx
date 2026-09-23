@@ -314,7 +314,11 @@ export function SharedTrip({
             )}
             <Badge variant="outline" className="gap-1.5">
               <Sparkles className="size-3.5" aria-hidden="true" />
-              {itinerary.source === "ai" ? "AI načrt" : "Predloga načrta"}
+              {itinerary.source === "ai"
+                ? "AI načrt"
+                : itinerary.source === "deterministic"
+                ? "Načrt brez AI (deterministični motor)"
+                : "Predloga načrta"}
             </Badge>
             <Badge variant="outline" className="gap-1.5">
               <Eye className="size-3.5" aria-hidden="true" />

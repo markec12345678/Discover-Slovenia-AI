@@ -95,9 +95,11 @@ describe("TASK 80 — napaka regeneracije: stari načrt ostane + tiho umikanje",
 describe("TASK 80 — analitika: prvo generiranje ≠ regeneracija", () => {
   test("⑨ planner_submitted nosi regeneration: Boolean(itinerary)", () => {
     expect(SOURCE).toContain("regeneration: Boolean(itinerary)");
-    // prop je znotraj dogodka planner_submitted (ne drugje)
+    // prop je znotraj dogodka planner_submitted (ne drugje).
+    // Okno 450 → 650 znakov (TASK 100 je dogodku dodal polje engine —
+    // namen testa je članstvo v dogodku, ne dolžina payloada).
     const submitted =
-      /trackPlannerEvent\("planner_submitted", \{[\s\S]{0,450}?regeneration: Boolean\(itinerary\),[\s\S]{0,80}?locale,/;
+      /trackPlannerEvent\("planner_submitted", \{[\s\S]{0,650}?regeneration: Boolean\(itinerary\),[\s\S]{0,80}?locale,/;
     expect(submitted.test(SOURCE)).toBe(true);
   });
 });

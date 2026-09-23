@@ -195,6 +195,18 @@ const PACE_OPTIONS: { value: Pace; labelKey: string }[] = [
   { value: "fast", labelKey: "paceFast" },
 ];
 
+// TASK 100 (TASK 99 na GitHubu): motor generiranja — "auto" (privzeto,
+// nazaj kompatibilno) = AI veriga z deterministično rezervo;
+// "deterministic" = načrt BREZ LLM klica (0 žetonov, trenuten, 100 %
+// reproducibilno — isti vhod vedno da isti načrt). LabelKey → "planner".
+const ENGINE_OPTIONS: {
+  value: NonNullable<PlannerInput["engine"]>;
+  labelKey: string;
+}[] = [
+  { value: "auto", labelKey: "engineAuto" },
+  { value: "deterministic", labelKey: "engineDeterministic" },
+];
+
 // UI sprint (nabor #2 — dodatek raziskave): segment dneva Jutro/Popoldan/
 // Večer — logika od TASK 93 živi v src/lib/day-segments.ts (ena resnica za
 // podrobni pogled, TripTimeline in SharedTrip); vizual je skupna komponenta
@@ -931,6 +943,17 @@ export function ItineraryPlanner() {
     }));
   }
 
+  // TASK 100: motor generiranja — izbira MED dvema stanjema ("auto" je
+  // vedno izbrano, ko uporabnik ni dotaknil stikala — nazaj kompatibilno:
+  // stari odjemalci polja sploh ne pošljejo). Brez de-toggle: motor je
+  // OBVEZNA odločitev z jasnim privzetkom, ne filtrirna želja.
+  function toggleEngine(value: NonNullable<PlannerInput["engine"]>) {
+    fireStartedOnce();
+    setFormData((prev) =>
+      prev.engine === value ? prev : { ...prev, engine: value }
+    );
+  }
+
   // TASK 82: inline sporočila pod številskimi polji — izpeljana iz ISTIH
   // čistih funkcij kot validate() (enoobrazje: kar je rdeče pod poljem, je
   // tudi razlog zavrnjene oddaje). Prikaz samo po "touched".
@@ -1188,6 +1211,9 @@ export function ItineraryPlanner() {
       season: input.season,
       partyType: input.partyType ?? "none",
       pace: input.pace ?? "none",
+      // TASK 100: kateri motor je ZADEL načrt (auto = AI z rezervo,
+      // deterministic = brez LLM) — merimo povpraševanje po načrtu brez AI.
+      engine: input.engine ?? "auto",
       has_start_date: Boolean(input.startDate),
       // TASK 80: prvo generiranje ali regeneracija (obstoječi načrt v
       // spominu) — ločujemo vrtince prvega skoka in ponovnih poskusov
@@ -3157,6 +3183,49 @@ export function ItineraryPlanner() {
                     </p>
                   </div>
 
+                  {/* TASK 100 (TASK 99 na GitHubu): motor generiranja —
+                      odgovor na zahtevo po načrtu BREZ AI modela.
+                      "auto" (privzeto) = AI veriga z deterministično rezervo;
+                      "deterministic" = čist motor: 0 žetonov, trenuten,
+                      100 % reproducibilno. ISTA validacijska/obogatitvena
+                      veriga (supply, vreme, OSRM, geo-validacija) kot AI pot. */}
+                  <div className="space-y-2">
+                    <Label>
+                      <Sparkles className="size-4" aria-hidden />
+                      {t("engineLabel")}
+                    </Label>
+                    <div
+                      role="group"
+                      aria-label={t("engineLabel")}
+                      className="flex flex-wrap gap-1.5"
+                    >
+                      {ENGINE_OPTIONS.map((option) => {
+                        const selected =
+                          (formData.engine ?? "auto") === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => toggleEngine(option.value)}
+                            aria-pressed={selected}
+                            className={cn(
+                              "inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
+                              "min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                              selected
+                                ? "border-primary bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+                                : "border-border bg-muted text-muted-foreground hover:bg-muted/70"
+                            )}
+                          >
+                            {t(option.labelKey)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t("engineHint")}
+                    </p>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="season" className="flex items-center gap-2">
                       <Cloud className="size-4" aria-hidden />
@@ -3434,10 +3503,16 @@ export function ItineraryPlanner() {
                       className={cn(
                         itinerary.source === "ai"
                           ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                          : itinerary.source === "deterministic"
+                          ? "border-violet-500/40 bg-violet-500/10 text-violet-700 dark:text-violet-400"
                           : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
                       )}
                     >
-                      {itinerary.source === "ai" ? t("badgeAI") : t("badgeSample")}
+                      {itinerary.source === "ai"
+                        ? t("badgeAI")
+                        : itinerary.source === "deterministic"
+                        ? t("badgeDeterministic")
+                        : t("badgeSample")}
                     </Badge>
                     <Badge className="bg-primary text-primary-foreground">
                       {t("totalBadge", { total: itinerary.total_budget })}
