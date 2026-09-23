@@ -96,3 +96,7 @@ server.log
 # TASK 51 §15: samopodpisana certifikata lokalnega TLS testnega strežnika
 # (generirata ob zagonu testa; veljavnost 2 dni — v repo NE sodita)
 src/lib/__tests__/fixtures/*.pem
+
+# local E2E evidence screenshots (audit artifacts, not part of the product)
+.fa6-shots/
+e2e-fa1-shots*/
