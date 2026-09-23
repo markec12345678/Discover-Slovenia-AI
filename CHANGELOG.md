@@ -7,6 +7,53 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.89.0] — 2026-09-23 (ISSUE #2: CORE brez AI API ključa — glasovni klepet + domenska plast odgovorov)
+
+### Metoda
+GitHub Issue #2 (TASK: Dokončaj celoten Discover CORE brez AI API ključa).
+PASS 1 read-only repo-wide audit (AI credential mapa, 15 generateCompletion
+klicevalcev, zero-AI runtime z /api/ai-health status "down"), browser E2E v
+DEJANSKEM zero-AI okolju (16+2 screenshotov, kritični tok
+Planner→Itinerary→Journey→My Trip→Reload→Share→Handoff vse PASS), PASS 2
+samo za dokazane vrzeli.
+
+### Dodano (Issue #2 §6/§7/§8 — glasovni klepet BREZ AI ključa)
+1. **feat: glasovni VHOD — brskalnikov STT (SpeechRecognition)** — mic gumb
+   v klepetu (izriše se SAMO ob podprtem API; nepodprt brskalnik pade na
+   besedilni vnos, ki je vedno viden). Interim prepis v vnosu, končni prepis
+   samodejno pošlje vprašanje; ročna ustavitev ne pošlja; zavrnitev
+   dovoljenja → pošten toast. Minimalni ambientni tipi
+   (src/types/speech-recognition.d.ts), čista plast src/lib/voice.ts.
+2. **feat: glasovni IZHOD — brskalniški TTS (speechSynthesis)** — gumb
+   "Preberi na glas" na vsakem odgovoru; samodejni izgovor odgovora na
+   IZGOVORJENO vprašanje (celi glasovni klepet §8); ustavitev ob novem
+   vprašanju/zaprtju; čistitev markdowna/emoji/URL-jev za izgovor.
+   i18n +9 ključev (sl/en).
+
+### Spremenjeno (Issue #2 §5 — domenska plast brez AI)
+3. **fix: /api/chat fallback je bil 7-vzorcno trdo kodirano besedilo** —
+   OSM kraji in DB kontekst so bili ŽE pridobljeni, a zavrženi (places: []).
+   Zdaj buildDomainFallbackAnswer() sestavlja odgovor IZ realnih podatkov:
+   destinacije (tagline/ocena/strošek/aktivnosti), lokalni/izdelki/
+   izkušnje iz baze (per-destinacijo obogatitev), OSM kraji z mini
+   zemljevidom, REALNA Open-Meteo napoved ob vremenskem vprašanju.
+   Poštenost ostaja: "AI trenutno ni dosegljiv", FROM_PRICE "od €X",
+   ZUNANJA (nikoli "potrjeno"), NEZNANO razpoložljivost, ob napaki
+   OSM/vremena izrecno "ni uspelo pridobiti" (brez izmišljanja).
+
+### Tests
+4. +23 regresijskih testov (chat-domain-fallback 16: poštenost, 10 tipov
+   vprašanj §8, enrichment fail-safe, dvojezičnost, OSM-failure honesty;
+   voice 7: feature detection SSR/webkit, jezikovne oznake, TTS čistitev,
+   auto-speak semantika). 2311/2311 PASS, lint 0, tsc 0 (src/).
+
+### Verified without AI (zero-AI runtime, ai-health "down")
+Planner engine=auto → fallback v 6,9 s (2 dni, geo validacija OSRM);
+deterministic 3 dni; share/journey/my-trip/handoff PASS; weather question
+→ realna Open-Meteo napoved (0,12 s); booking status → ZUNANJA semantika;
+error states 400/404; mobile 375 0 preliva; mic/speak gumbi + graceful
+napake v browserju (spy dokaz: klik = 1 speechSynthesis.speak klic).
+
 ## [1.88.1] — 2026-09-23 (FINAL ACCEPTANCE AUDIT: 1×P1 + 4×P2/P3 ugotovitev iz dejanskega E2E/produkcijskega pregleda)
 
 ### Metoda

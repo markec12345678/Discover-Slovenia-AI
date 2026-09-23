@@ -99,4 +99,8 @@ src/lib/__tests__/fixtures/*.pem
 
 # local E2E evidence screenshots (audit artifacts, not part of the product)
 .fa6-shots/
-e2e-fa1-shots*/
+e2e-*-shots/
+
+# local z-ai SDK override (test-time zero-AI simulation — never commit)
+.z-ai-config
+e2e-fa1-shots-2/
