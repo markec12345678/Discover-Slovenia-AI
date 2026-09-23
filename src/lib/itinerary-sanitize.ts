@@ -174,3 +174,97 @@ export function sanitizeItinerary(raw: unknown, maxDays?: number): Itinerary {
     // tu jih namerno NE prenašamo iz nezaupanja vrednega vhoda.
   };
 }
+
+// ---------------------------------------------------------------------------
+// HARDENING I5 — LAHKOTNI OBLIKOVNI PREVERJENIK ZA REFINE MEJO
+// ---------------------------------------------------------------------------
+// Refine je edina meja zaupanja, ki je klientov `current` itinerer uporabljala
+// SUROVEGA (generacija: sanitize po JSON.parse; save: sanitize pred
+// persistenco). Popolna sanitizacija bi tukaj ODSTRANILA polja, ki se na
+// echo poti ne preračunavajo (events/quality) → minimalna varna različica je
+// OBLIKOVNI preverjenik, ki ZAVRNE (400) le dejansko pokvarjene payloade —
+// točno razred hrošča, ki ga je shape guard rešil na drugih mejah
+// (notes:{} → "Objects are not valid as a React child"; days brez arraya →
+// TypeError .map). Veljavni payloadi grejo nespremenjeni.
+// ---------------------------------------------------------------------------
+
+/** Ali klientov `current` itinerer ima strukturo, ki jo strežniška koda
+ *  (applyQuickAction/validateItinerarySupply/repairScheduleGaps/echo) varno
+ *  bere — objekt, dnevi array 1..14, lokacije array, občutljiva nizovna in
+ *  številska polja pravih tipov. NE spreminja ničesar — samo preverja. */
+export function hasItineraryShape(raw: unknown): boolean {
+  if (typeof raw !== "object" || raw === null) return false;
+  const it = raw as Record<string, unknown>;
+  if (!Array.isArray(it.days) || it.days.length < 1 || it.days.length > 14) {
+    return false;
+  }
+  // crash-razred: strežnik bere .days.map, klient ( echo) pa React otroke
+  if (it.recommendations !== undefined && !isStringArray(it.recommendations)) {
+    return false;
+  }
+  if (it.tips !== undefined && !isStringArray(it.tips)) return false;
+  if (it.packingList !== undefined && !isStringArray(it.packingList)) {
+    return false;
+  }
+  if (it.total_budget !== undefined && !isFiniteNumber(it.total_budget)) {
+    return false;
+  }
+  for (const d of it.days) {
+    if (typeof d !== "object" || d === null) return false;
+    const day = d as Record<string, unknown>;
+    if (!Array.isArray(day.locations) || day.locations.length > 24) {
+      return false;
+    }
+    if (day.weather !== undefined && !isWeatherShape(day.weather)) {
+      return false;
+    }
+    for (const l of day.locations) {
+      if (typeof l !== "object" || l === null) return false;
+      const loc = l as Record<string, unknown>;
+      // React-otrok razred: nizi morajo biti nizi (notes:{} je padal SSR)
+      for (const field of [
+        "destination_name",
+        "notes",
+        "reason",
+        "category",
+        "time_slot",
+      ]) {
+        if (loc[field] !== undefined && typeof loc[field] !== "string") {
+          return false;
+        }
+      }
+      for (const field of [
+        "duration",
+        "estimated_cost",
+        "lat",
+        "lng",
+      ]) {
+        if (loc[field] !== undefined && !isFiniteNumberOrNull(loc[field])) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+function isStringArray(v: unknown): boolean {
+  return Array.isArray(v) && v.every((x) => typeof x === "string");
+}
+
+function isFiniteNumber(v: unknown): boolean {
+  return typeof v === "number" && Number.isFinite(v);
+}
+
+function isFiniteNumberOrNull(v: unknown): boolean {
+  return v === null || isFiniteNumber(v);
+}
+
+function isWeatherShape(v: unknown): boolean {
+  if (typeof v !== "object" || v === null) return false;
+  const w = v as Record<string, unknown>;
+  return (
+    (w.condition === undefined || typeof w.condition === "string") &&
+    (w.temp === undefined || isFiniteNumber(w.temp))
+  );
+}

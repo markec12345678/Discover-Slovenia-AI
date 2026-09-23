@@ -401,14 +401,27 @@ export async function generateCompletion(
   }
 
   // === 3. z-ai-web-dev-sdk (razvojni sandbox) ===
+  // HARDENING I6: timeout konstanta (isti budget kot Gemini/Puter v verigi)
+  const ZAI_TEXT_TIMEOUT_MS = 45_000;
   try {
     const ZAI = (await import("z-ai-web-dev-sdk")).default;
     const zai = await ZAI.create();
-    const completion = await zai.chat.completions.create({
-      messages: mapped,
-      thinking: { type: "disabled" },
-      max_tokens: maxTokens,
-    });
+    // HARDENING I6 (P2): SDK klic NIMA lastnega timeouta — obesek bi lahko
+    // povrnil celo generacijo. Isti vzorec kot VLM pot zgoraj: Promise.race
+    // z 45 s timeoutom (dosedanji najdaljši budget v verigi — Gemini/Puter).
+    const completion = await Promise.race([
+      zai.chat.completions.create({
+        messages: mapped,
+        thinking: { type: "disabled" },
+        max_tokens: maxTokens,
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("ZAI_TEXT_TIMEOUT")),
+          ZAI_TEXT_TIMEOUT_MS
+        )
+      ),
+    ]);
 
     const content = completion.choices[0]?.message?.content?.trim();
     if (content) {

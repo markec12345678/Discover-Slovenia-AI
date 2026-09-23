@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { wrapProviderData, SYSTEM_DATA_GUARD } from "@/lib/ai-context";
 import { DESTINATIONS, normalizeInterests } from "@/lib/slovenia-data";
-import { sanitizeItinerary } from "@/lib/itinerary-sanitize";
+import { sanitizeItinerary, hasItineraryShape } from "@/lib/itinerary-sanitize";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
 import type {
@@ -189,6 +189,20 @@ export async function POST(request: Request) {
   const instruction = body.instruction.trim().slice(0, 500); // omejitev dolžine
   const current = body.itinerary;
   const formData = body.formData;
+
+  // HARDENING I5 (P2): klientov `current` je NEZAUPAN payload — oblika je
+  // varovana na drugih mejah (generacija: sanitize po JSON.parse; save:
+  // sanitize pred persistenco), refine pa ga je uporabljal SUROVEGA v
+  // quick-action/echo vejah (točno razred hrošča shape guarda: notes:{}
+  // → React crash; days brez arraya → TypeError .map). Veljavni payloadi
+  // gredo nespremenjeni ( polja, ki se na echo poti ne preračunavajo —
+  // events/quality — ostanejo); pokvarjeni se zavrnejo z 400.
+  if (!hasItineraryShape(current)) {
+    return NextResponse.json(
+      { error: "Neveljavna struktura itinererja (days/locations/notes)" },
+      { status: 400 }
+    );
+  }
 
   // 19c-4 (revizija 1.36.0, P2): formData (season, interests, budget,
   // groupSize, partyType, pace) gre v SYSTEM prompt — prej surovi client

@@ -165,7 +165,14 @@ describe("TASK 82 — pogodba poravnana s /api/itinerary (drift nemogoč)", () =
     expect(ITINERARY_ROUTE_SOURCE).toContain("input.budget > 100_000");
   });
   test("strežnik še vedno čuva dneve 1–14 in skupino 1–20 (naša meja = njegova)", () => {
-    expect(ITINERARY_ROUTE_SOURCE).toContain("input.days < 1 || input.days > 14");
+    // HARDENING I3: days je od 1.88.0 typovno varovan (integer) + range
+    // 1–14 (prej je niz "abc" prešel range primerjavo → NaN dayCap)
+    expect(ITINERARY_ROUTE_SOURCE).toContain(
+      "typeof input.days !== \"number\" ||"
+    );
+    expect(ITINERARY_ROUTE_SOURCE).toContain("!Number.isInteger(input.days)");
+    expect(ITINERARY_ROUTE_SOURCE).toContain("input.days < 1");
+    expect(ITINERARY_ROUTE_SOURCE).toContain("input.days > 14");
     // groupSize preverba je v strežniku VEČVRSTIČNA — obe meji ločeno
     expect(ITINERARY_ROUTE_SOURCE).toContain("input.groupSize < 1");
     expect(ITINERARY_ROUTE_SOURCE).toContain("input.groupSize > 20");

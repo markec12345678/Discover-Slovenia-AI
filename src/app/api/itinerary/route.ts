@@ -207,9 +207,17 @@ export async function POST(request: Request) {
     );
   }
 
-  if (input.days < 1 || input.days > 14) {
+  // HARDENING I3 (P2): days je moral biti številčen — niz "3"/"abc" je
+  // prešel truthy + range primerjavo ("abc" < 1 je false, "abc" > 14 je
+  // false) → NaN dayCap → prazni dnevi kot 200-uspeh.
+  if (
+    typeof input.days !== "number" ||
+    !Number.isInteger(input.days) ||
+    input.days < 1 ||
+    input.days > 14
+  ) {
     return NextResponse.json(
-      { error: "Število dni mora biti med 1 in 14" },
+      { error: "Število dni mora biti celo število med 1 in 14" },
       { status: 400 }
     );
   }
@@ -374,14 +382,21 @@ export async function POST(request: Request) {
   // (§10 — obstoječi searchSupply runner, AI nikoli ne pozna provider API-jev)
   let partnerContext = "";
 
+  // HARDENING Perf2: engine=deterministic se vrne IZRECNO pred gradnjo
+  // promptov (naravna pot spodaj) — partner kontekst (ranking DB poizvedba
+  // + buildTransparencyContext) tam NIMA porabe → ga preskočimo (prej je
+  // vsak deterministični zahtevek opravil nepotrebno ranking poizvedbo).
+  const skipRanking = input.engine === "deterministic";
   const [ranked, anchorForecasts, aiSupply] = await Promise.all([
-    rankListings({
-      interests: input.interests,
-      season: input.season,
-    }).catch((e) => {
-      console.error("[itinerary] ranking engine napaka:", e);
-      return [] as Awaited<ReturnType<typeof rankListings>>;
-    }),
+    skipRanking
+      ? Promise.resolve([] as Awaited<ReturnType<typeof rankListings>>)
+      : rankListings({
+          interests: input.interests,
+          season: input.season,
+        }).catch((e) => {
+          console.error("[itinerary] ranking engine napaka:", e);
+          return [] as Awaited<ReturnType<typeof rankListings>>;
+        }),
     fetchAnchorForecasts(input.days, input.startDate),
     // NIKOLI ne vrže (interna varovalka — odpoved supply = prazen kontekst)
     fetchAiSupplyContext({
@@ -422,7 +437,7 @@ export async function POST(request: Request) {
       `[itinerary] TASK 49 supply verify (izbira): ${supplyVerified.report.rejectedFake} zavrnjenih, ` +
         `${supplyVerified.report.priceOverrides} cen popravljenih na kanon, ` +
         `${supplyVerified.report.pricesStripped} cen odstranjenih (unknown), ` +
-        `${supplyVerified.report.geoRestored} geo, ${supplyVerified.report.titlesRestored} naslovov, ` +
+        `${supplyVerified.report.geoRestored} geo, ${supplyVerified.report.geoStripped} geo-stripped, ${supplyVerified.report.titlesRestored} naslovov, ` +
         `${supplyVerified.report.typesRestored} tipov, ${supplyVerified.report.availabilityStripped} razpoložljivosti`
     );
   }
@@ -434,11 +449,15 @@ export async function POST(request: Request) {
     (p) => p.selectionState === "fixed"
   ).length;
 
-  // TASK 51 (§7/§8 — ANCHORS): geografska sidra za deterministično urejanje
-  // fallback postankov. VIR: VERIFICIRANA izbira (Task 49 — koordinate so
-  // kanonske, klientove podstavljene NIKOLI ne pridejo do sem; test G-A10),
-  // samo FIXED izbire, v VRSTNEM REDU IZBIRE (§8 F2: vrstni red FIXED se ne
-  // spremeni). Sidra brez kanonskih koordinat se preskočijo (unknown ostane
+  // TASK 51 (§7/§8 — ANCHORS): Geografska sidra za deterministično urejanje
+  // fallback postankov. VIR: VERIFICIRANA izbira (Task 49), samo FIXED
+  // izbire, v VRSTNEM REDU IZBIRE (§8 F2: vrstni red FIXED se ne spremeni).
+  // HARDENING I1 (resnica o viru koordinat): kanonske so SAMO koordinate,
+  // ki jih je potrdila strežna resnica — kiwitaxi dataset (geoRestored, test
+  // G-A10) ali priključen strežni supply. Za providerje BREZ strežne resnice
+  // je koordinate klienta pustil verifySelectedProducts le, če so PLAUSIBILNE
+  // za našo regijo (SI_BBOX + margina); svetovne izmišljotine so odstranjene
+  // (geoStripped). Sidra brez koordinat se preskočijo (unknown ostane
   // unknown — NE izmišljamo lokacije).
   const geoAnchors: GeoOrderAnchor[] = verifiedSelection
     .filter(
