@@ -124,6 +124,22 @@ describe("FA-A1: itinerary route je usklajen s klientom (90 s) in platformo (300
     expect(itineraryRouteSrc).toContain("FINAL ACCEPTANCE FA-A1");
     expect(itineraryRouteSrc).toContain("GENERATION_TIMEOUT_SECONDS");
   });
+
+  test("FA-A1-b: ZUNANJA trda meja AI faze (Promise.race, neodvisna od SDK)", () => {
+    // Vercel hkg1 runtime je obešal prošnjo ≥ 300 s kljub SDK budgetu
+    // (SDK abort tam očitno ni sprožil) — route ima zdaj svojo mejo.
+    expect(itineraryRouteSrc).toContain("const aiHardCapMs = 70_000;");
+    expect(itineraryRouteSrc).toContain(
+      "aiHardCapTimer = setTimeout(() => resolve(null), aiHardCapMs);"
+    );
+    expect(itineraryRouteSrc).toContain(
+      "if (aiHardCapTimer) clearTimeout(aiHardCapTimer);"
+    );
+    // race dejansko obdaja generateCompletion klic
+    const i = itineraryRouteSrc.indexOf("Promise.race([");
+    const j = itineraryRouteSrc.indexOf("generateCompletion(", i);
+    expect(j).toBeGreaterThan(i);
+  });
 });
 
 describe("FA-A1 (VEDENJE): preskočena veriga vrne null TAKOJ (brez omrežja)", () => {

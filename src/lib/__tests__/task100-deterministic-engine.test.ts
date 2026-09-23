@@ -455,7 +455,10 @@ describe("TASK 100: route wiring (source-contract)", () => {
 
   test("naravna pot (engine === \"deterministic\") se odloči PRED klicom LLM", () => {
     const branch = route.indexOf('input.engine === "deterministic"');
-    const llmCall = route.indexOf("await generateCompletion(");
+    // 1.88.1 (FA-A1-b): klic je ovit v Promise.race trdo mejo — await je
+    // zdaj na race, ne na samem klicu; vzorec sledi sintaksi, POMEN
+    // (vrstni red: deterministic veja PRED LLM klicem) ostaja nespremenjen.
+    const llmCall = route.indexOf("generateCompletion(");
     expect(branch).toBeGreaterThan(-1);
     expect(llmCall).toBeGreaterThan(-1);
     expect(branch).toBeLessThan(llmCall);
