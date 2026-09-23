@@ -354,3 +354,65 @@ describe("TASK 99 §2/§8: MY TRIP prekrivka iz DEJANSKIH vrstic", () => {
     );
   });
 });
+
+// ============================================================================
+// HARDENING MASTER TASK — S1/C2/C3/C4/X1 regresijska vrata
+// ============================================================================
+// S1 (P1): javna POST pot je prej kopirala klientova atestacijska polja
+//   (providerBookingId/confirmedPrice/URLji/providerPayload) v kanonsko
+//   tabelo potrditev za vse začetne statuse — lažni „Št. rezervacije" se je
+//   izrisal v dokumentu My Trip. Client pot = identiteta + status, NIČ več.
+// C2: žeton PATCH kanala se primerja timing-safe (ne z !==).
+// C3: dedup+create POST je atomaren (SERIALIZABLE + P2034 retry).
+// C4: PATCH piše pogojeno (CAS na status) — ne last-write-wins.
+// X1: prehod SELECTED → EXTERNAL obstaja (handoff klik po izbiri).
+// ============================================================================
+describe("HARDENING: klientova pot brez provider atestacij + atomarnost", () => {
+  const postSection = routeSrc.slice(
+    routeSrc.indexOf("export async function POST"),
+    routeSrc.indexOf("export async function PATCH")
+  );
+  const patchSection = routeSrc.slice(routeSrc.indexOf("export async function PATCH"));
+
+  test("S1: POST ne kliče buildRecordFromBody — klient nikoli ne prineše atestacij", () => {
+    // klicni vzorec (ne le ime — ime omenja tudi dokumentacijski komentar)
+    expect(postSection).not.toMatch(/\bbuildRecordFromBody\s*\(/);
+    // zapis klientovega dogodka je REČENO v poti kot identiteta + status
+    expect(postSection).toContain("const rec: BookingConfirmationRecord = {");
+  });
+
+  test("S1: POST create zapiše atestacijska polja kot NULL (izključno provider kanal)", () => {
+    expect(postSection).toContain("providerBookingId: null");
+    expect(postSection).toContain("confirmedPrice: null");
+    expect(postSection).toContain("confirmationUrl: null");
+    expect(postSection).toContain("cancellationUrl: null");
+    expect(postSection).toContain("providerPayload: null");
+  });
+
+  test("S1: klientov prehod (update obstoječe vrstice) spreminja SAMO status", () => {
+    expect(postSection).toContain("data: { status: rec.status }");
+  });
+
+  test("C2: žeton PATCH kanala primerjan timing-safe", () => {
+    expect(routeSrc).toContain("timingSafeEqual(provided, token)");
+    expect(routeSrc).not.toContain("provided !== token");
+  });
+
+  test("C3: POST dedup+create teče v transakciji s P2034 retry", () => {
+    expect(postSection).toContain("$transaction");
+    expect(postSection).toContain("P2034");
+    expect(postSection).toContain("Serializable");
+  });
+
+  test("C4: PATCH piše pogojeno — updateMany s predpogojem statusa + 409", () => {
+    expect(patchSection).toContain("updateMany");
+    expect(patchSection).toContain("where: { id, status: existing.status }");
+    expect(patchSection).toContain("count === 0");
+  });
+
+  test("X1: prehod SELECTED → EXTERNAL je dovoljen (handoff po izbiri)", () => {
+    expect(isValidStatusTransition("SELECTED", "EXTERNAL")).toBe(true);
+    // invarianta ostaja: EXTERNAL nikoli ne postane CONFIRMED
+    expect(isValidStatusTransition("EXTERNAL", "CONFIRMED")).toBe(false);
+  });
+});

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
+import { timingSafeEqual } from "@/lib/security";
 import {
   isValidStatusTransition,
   validateConfirmationRecord,
@@ -234,71 +236,125 @@ export async function POST(request: Request) {
     return statusError(INITIAL_CONFIRMATION_STATUSES);
   }
 
-  // Sestavi zapis + potrdi invariante (EXTERNAL brez bookingId/cene …).
-  const rec = buildRecordFromBody(body, {
-    provider,
+  // S1 (HARDENING, P1): klientova pot NIKOLI ne nosi provider-atestacij.
+  // providerBookingId/confirmedPrice/confirmationUrl/cancellationUrl/
+  // providerPayload so IZKLJUČNO tisto, kar je vrnil provider — zapisuje jih
+  // lahko SAMO žetonom zaklenjen PATCH kanal. Prej je buildRecordFromBody
+  // kopiral klientova polja za začetne statuse (SELECTED/BOOKING_REQUESTED
+  // …): lažni providerBookingId se je izrisal kot „Št. rezervacije" v
+  // dokumentu My Trip. Zapis klientovega dogodka = identiteta + status.
+  const rec: BookingConfirmationRecord = {
+    provider: provider as ProviderSlug,
     providerProductId,
-    status,
-  });
+    status: status as BookingConfirmationRecord["status"],
+  };
   const validation = validateConfirmationRecord(rec);
   if (!validation.ok) {
     return NextResponse.json({ error: validation.reason }, { status: 400 });
   }
 
-  try {
-    // Idempotenčna semantika: obstoječa vrstica ISTEGA produkta (in istega
-    // konteksta shareId+sessionKey) se NE podvaja — ponovni klik na handoff
-    // povezavo ne ustvari novih vrstic; sprememba statusa gre prek prehodov.
-    const existing = await db.journeyBooking.findFirst({
-      where: {
-        provider,
-        providerProductId,
-        shareId: shareId || null,
-        ...(shareId ? {} : { sessionKey }),
-      },
-      select: { id: true, status: true },
-    });
+  // C3 (HARDENING, P1-vzorec /api/bookings): dedup + create atomarno —
+  // findFirst → create brez transakcije je TOCTOU (dva sočasna handoff
+  // klika ustvarita dve vrstici). SERIALIZABLE na Postgresu (P2034 retry),
+  // SQLite (enouporabniška demo) privzeta raven.
+  const txOptions = process.env.DATABASE_URL?.startsWith("file:")
+    ? undefined
+    : { isolationLevel: Prisma.TransactionIsolationLevel.Serializable };
 
-    if (existing) {
-      if (existing.status === rec.status) {
-        const booking = await db.journeyBooking.findUnique({
-          where: { id: existing.id },
-          select: SELECT_FIELDS,
-        });
-        return NextResponse.json({ booking, idempotent: true });
-      }
-      if (!isValidStatusTransition(existing.status as never, rec.status as never)) {
+  try {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const result = await db.$transaction(
+          async (tx) => {
+            // Idempotenčna semantika: obstoječa vrstica ISTEGA produkta (in
+            // istega konteksta shareId+sessionKey) se NE podvaja — ponovni
+            // klik na handoff povezavo ne ustvari novih vrstic; sprememba
+            // statusa gre prek prehodov.
+            const existing = await tx.journeyBooking.findFirst({
+              where: {
+                provider,
+                providerProductId,
+                shareId: shareId || null,
+                ...(shareId ? {} : { sessionKey }),
+              },
+              select: { id: true, status: true },
+            });
+
+            if (existing) {
+              if (existing.status === rec.status) {
+                const booking = await tx.journeyBooking.findUnique({
+                  where: { id: existing.id },
+                  select: SELECT_FIELDS,
+                });
+                return { kind: "idempotent" as const, booking };
+              }
+              if (
+                !isValidStatusTransition(
+                  existing.status as never,
+                  rec.status as never
+                )
+              ) {
+                return { kind: "conflict" as const, from: existing.status };
+              }
+              // Klientov prehod spreminja SAMO status — nikoli ne pomete
+              // atestacij, ki jih je zapisal provider kanal (PATCH).
+              const booking = await tx.journeyBooking.update({
+                where: { id: existing.id },
+                data: { status: rec.status },
+                select: SELECT_FIELDS,
+              });
+              return { kind: "transitioned" as const, booking };
+            }
+
+            const booking = await tx.journeyBooking.create({
+              data: {
+                provider,
+                providerProductId,
+                status: rec.status,
+                ...(shareId ? { shareId } : { sessionKey }),
+                // S1: atestacijska polja ostanejo NULL — zapisuje jih izključno
+                // provider (PATCH kanal, žeton) iz providerjevega odgovora.
+                providerBookingId: null,
+                confirmedPrice: null,
+                currency: "EUR",
+                confirmationUrl: null,
+                cancellationUrl: null,
+                providerPayload: null,
+              },
+              select: SELECT_FIELDS,
+            });
+            return { kind: "created" as const, booking };
+          },
+          txOptions
+        );
+
+        if (result.kind === "conflict") {
+          return NextResponse.json(
+            {
+              error: `Prehod ${result.from} → ${rec.status} ni dovoljen`,
+            },
+            { status: 409 }
+          );
+        }
         return NextResponse.json(
           {
-            error: `Prehod ${existing.status} → ${rec.status} ni dovoljen`,
+            booking: result.booking,
+            ...(result.kind === "idempotent"
+              ? { idempotent: true }
+              : result.kind === "transitioned"
+                ? { transitioned: true }
+                : { created: true }),
           },
-          { status: 409 }
+          { status: result.kind === "created" ? 201 : 200 }
         );
+      } catch (error) {
+        const conflict =
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2034";
+        if (!conflict || attempt >= 2) throw error;
+        await new Promise((r) => setTimeout(r, 60));
       }
-      const booking = await db.journeyBooking.update({
-        where: { id: existing.id },
-        data: updateDataOf(rec),
-        select: SELECT_FIELDS,
-      });
-      return NextResponse.json({ booking, transitioned: true });
     }
-
-    const booking = await db.journeyBooking.create({
-      data: {
-        provider,
-        providerProductId,
-        status: rec.status,
-        ...(shareId ? { shareId } : { sessionKey }),
-        providerBookingId: rec.providerBookingId ?? null,
-        confirmedPrice: rec.confirmedPrice?.amount ?? null,
-        currency: "EUR",
-        confirmationUrl: rec.confirmationUrl ?? null,
-        cancellationUrl: rec.cancellationUrl ?? null,
-        providerPayload: rec.providerPayload ?? null,
-      },
-      select: SELECT_FIELDS,
-    });
-    return NextResponse.json({ booking, created: true }, { status: 201 });
   } catch (error) {
     console.error("[journey/bookings] POST napaka:", error);
     return NextResponse.json(
@@ -337,7 +393,9 @@ export async function PATCH(request: Request) {
   const provided =
     request.headers.get("x-provider-token") ??
     (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (provided !== token) {
+  // C2 (HARDENING): timing-safe primerjava ( isti vzorec kot admin geslo /
+  // cron secret — prej običajni !== je puščal timing signal).
+  if (!timingSafeEqual(provided, token)) {
     return NextResponse.json({ error: "Neveljaven žeton" }, { status: 401 });
   }
 
@@ -382,9 +440,25 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: validation.reason }, { status: 400 });
     }
 
-    const booking = await db.journeyBooking.update({
-      where: { id },
+    // C4 (HARDENING): POGOJEN zapis (compare-and-swap) — prej je veljal
+    // read-then-write z brezpogojnim update: sočasna PATCH-a sta se preklala
+    // (last-write-wins) in lahko preskočila terminalna stanja. Oglišče
+    // updateMany sprejme PREDALOGO statusa iz branja; če je vrstica vmes
+    // spremenila stanje, count=0 → 409 ( isto vzorec kot owner PATCH).
+    const result = await db.journeyBooking.updateMany({
+      where: { id, status: existing.status },
       data: updateDataOf(rec),
+    });
+    if (result.count === 0) {
+      return NextResponse.json(
+        {
+          error: `Stanje zapisa se je spremenilo ( ${existing.status} → …) — ponovite branje`,
+        },
+        { status: 409 }
+      );
+    }
+    const booking = await db.journeyBooking.findUnique({
+      where: { id },
       select: SELECT_FIELDS,
     });
     return NextResponse.json({ booking, transitioned: true });
@@ -401,6 +475,9 @@ export async function PATCH(request: Request) {
 // Pomožniki — sestava zapisa iz telesa zahteve
 // ---------------------------------------------------------------------------
 
+// SAMO za PATCH (provider kanal, žeton): prebere IZKLJUČNO providerjeva
+// atestacijska polja iz telesa. POST (klientova pot) te pomožnika NE kliče
+// — glej S1 zgoraj.
 function buildRecordFromBody(
   body: Record<string, unknown>,
   identity: { provider: string; providerProductId: string; status: string }

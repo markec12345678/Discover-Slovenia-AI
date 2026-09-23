@@ -139,10 +139,15 @@ export const CONFIRMATION_STATUS_LABELS: Record<
  * ne naša odločitev), MODIFIED samo iz provider-potrjenih stanj,
  * EXPIRED iz ne-zaključenih čakalnih stanj (terminalen). */
 const ALLOWED_TRANSITIONS: Record<ConfirmationStatus, ConfirmationStatus[]> = {
+  // HARDENING X1: dopolnjen EXTERNAL — POST sprejema SELECTED in EXTERNAL
+  // kot začetna stanja, handoff klik pa je ravno prehod izbira → zunanja
+  // rezervacija (brez tega roba bi drugi klik po izbiri dobil 409 in
+  // optimistična UI vrstica se povrnila).
   SELECTED: [
     "BOOKING_REQUESTED",
     "PENDING",
     "PAYMENT_REQUIRED",
+    "EXTERNAL",
     "CANCELLED",
     "FAILED",
   ],
