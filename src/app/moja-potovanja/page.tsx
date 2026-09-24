@@ -20,6 +20,8 @@ import {
   Sparkles,
   ArrowRight,
   Plus,
+  HardDrive,
+  CloudUpload,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +32,9 @@ import { useToast } from "@/hooks/use-toast";
 // FW2-C: lokalna zgodovina naročil/rezervacij (localStorage številke + javni
 // lookup API-ji) — neodvisna od /api/user/trips, zato render tudi med nalaganjem.
 import { MyOrdersSection } from "@/components/my-orders-section";
+// TASK 4 / K-6 (UX FIX PASS): gostov pogled — LOKALNA potovanja (dai:my-trips)
+// namesto login zida v zlati poti.
+import { getSavedTrips, type TrackedTrip } from "@/lib/my-trips-storage";
 
 // ============================================================================
 // /moja-potovanja — osebni prostor prijavljenega popotnika (P1-2b)
@@ -84,22 +89,35 @@ export default function MojaPotovanjaPage() {
   const [data, setData] = useState<TripsResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  // TASK 4 / K-6: gostova LOKALNA potovanja (hidrirajo se TEKOM mounta —
+  // localStorage je klient-only, da ni hydration mismatcha).
+  const [localTrips, setLocalTrips] = useState<TrackedTrip[] | null>(null);
 
   const isUserSession =
     status === "authenticated" && session?.user?.accountType === "user";
 
-  // Preusmeritev neprijavljenih / napačnih sej na prijavo
+  // TASK 4 / K-6 (UX FIX PASS): NEPREUSMERJENI gost — prej je klik
+  // "Moja potovanja" gosta vrgel na /prijava BREZ sporočila, da je pravkar
+  // shranjen načrt DEJANSKO še dostopen (deljiva povezava + localStorage).
+  // Prelom zlate poti točno pri MY TRIP (živi dokaz revizije, korak 10).
+  // Zdaj: gost vidi SVOJA lokalna potovanja + iskreno ponudbo računa.
+  // B2B seja še vedno nima kaj iskati tukaj — nazaj na domačo stran.
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/prijava");
-    } else if (
+    if (
       status === "authenticated" &&
       session?.user?.accountType !== "user"
     ) {
-      // B2B seja nima kaj iskati tukaj — nazaj na domačo stran
       router.replace("/");
     }
   }, [status, session, router]);
+
+  // K-6: hidratacija lokalnih potovanj (samo gost — prijavljeni uporablja
+  // strežniški seznam iz /api/user/trips + claim plast pri prijavi).
+  useEffect(() => {
+    if (isUserSession) return;
+    const hydrate = setTimeout(() => setLocalTrips(getSavedTrips()), 0);
+    return () => clearTimeout(hydrate);
+  }, [isUserSession]);
 
   // Nalaganje podatkov (samo za B2C sejo)
   useEffect(() => {
@@ -158,8 +176,9 @@ export default function MojaPotovanjaPage() {
     }
   };
 
-  // Spinner med preusmeritvijo / nalaganjem seje
-  if (status === "loading" || status === "unauthenticated" || !isUserSession) {
+  // Spinner SAMO med nalaganjem seje (gost ne čaka več na preusmeritev —
+  // TASK 4 / K-6: takoj dobi svoj pogled).
+  if (status === "loading" || (status === "authenticated" && !isUserSession)) {
     return (
       <main
         className="min-h-screen bg-muted/30 flex items-center justify-center"
@@ -172,6 +191,131 @@ export default function MojaPotovanjaPage() {
           />
           <p className="text-sm text-muted-foreground">Nalagam...</p>
         </div>
+      </main>
+    );
+
+  }
+
+  // TASK 4 / K-6: GOSTOV POGLED — lokalna potovanja te naprave + iskrena
+  // ponudba računa (sinhronizacija). Ni login zida: načrti so DEJANSKO
+  // dostopni (deljive povezave so javne; localStorage nosi seznam).
+  if (!isUserSession) {
+    const trips = localTrips ?? [];
+    return (
+      <main className="min-h-screen bg-muted/30 flex flex-col">
+        <header className="bg-background border-b border-border">
+          <div className="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between gap-3">
+            <Link
+              href="/"
+              className="flex items-center gap-2 text-primary font-bold text-lg"
+            >
+              <Mountain className="size-5" aria-hidden="true" />
+              Discover Slovenia AI
+            </Link>
+            <Button asChild size="sm" className="gap-1.5 h-10">
+              <Link href="/prijava">Prijavi se</Link>
+            </Button>
+          </div>
+        </header>
+
+        <section className="flex-1 mx-auto w-full max-w-5xl px-4 py-8 sm:py-10">
+          <h1 className="text-2xl font-bold sm:text-3xl">Moja potovanja</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Tvoji shranjeni načrti na <strong>tej napravi</strong> — brez računa.
+          </p>
+
+          {/* Iskrena razlaga lokalnega shranjevanja + ponudba sinhronizacije */}
+          <Alert className="mt-6 border-primary/30 bg-primary/5">
+            <CloudUpload className="size-4 text-primary" aria-hidden="true" />
+            <AlertTitle>Načrti so shranjeni na tej napravi</AlertTitle>
+            <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <span className="text-sm">
+                Deljive povezave so javne in delujejo povsod. Z računom pa se
+                načrti ob prijavi samodejeno prenesejo v tvoj profil — videti
+                jih boš na vsaki napravi.
+              </span>
+              <Button asChild size="sm" className="gap-1.5 shrink-0">
+                <Link href="/prijava">
+                  Ustvari račun
+                  <ArrowRight className="size-3.5" aria-hidden="true" />
+                </Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
+
+          {/* Lokalna potovanja (iste kartice kot prijavljeni) */}
+          <section aria-labelledby="lokalna-potovanja" className="mt-8">
+            <div className="flex items-center justify-between gap-3">
+              <h2
+                id="lokalna-potovanja"
+                className="flex items-center gap-2 text-lg font-semibold"
+              >
+                <HardDrive className="size-5 text-primary" aria-hidden="true" />
+                Shranjena potovanja
+              </h2>
+              <Badge variant="secondary">
+                {trips.length}
+                {trips.length === 1 ? " načrt" : trips.length < 5 ? " načrti" : " načrtov"}
+              </Badge>
+            </div>
+
+            {localTrips === null ? (
+              <div className="mt-4 space-y-3" aria-busy="true" aria-label="Nalagam potovanja">
+                <div className="h-24 rounded-xl border border-border bg-background animate-pulse" />
+                <div className="h-24 rounded-xl border border-border bg-background animate-pulse" />
+              </div>
+            ) : trips.length === 0 ? (
+              <EmptyState
+                icon={<Map className="size-8 text-primary" aria-hidden="true" />}
+                title="Nimaš še shranjenih potovanj"
+                description="Načrtuj potovanje z AI načrtovalcem in ga shrani — pojavi se tukaj (na tej napravi)."
+                ctaHref="/nacrtuj"
+                ctaLabel="Načrtuj potovanje"
+              />
+            ) : (
+              <ul className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {trips.map((trip) => (
+                  <li key={trip.shareId}>
+                    <Card className="h-full transition-shadow hover:shadow-md">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base line-clamp-1">
+                          {trip.name ?? `Potovanje ${formatDate(trip.savedAt)}`}
+                        </CardTitle>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-1">
+                            <HardDrive className="size-3.5" aria-hidden="true" />
+                            na tej napravi
+                          </span>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex items-center justify-between gap-3 pt-0">
+                        <span className="text-xs text-muted-foreground">
+                          Shranjeno {formatDate(trip.savedAt)}
+                        </span>
+                        <Button asChild size="sm" className="gap-1.5 shrink-0">
+                          <Link href={`/pot/${trip.shareId}`}>
+                            Odpri
+                            <ArrowRight className="size-3.5" aria-hidden="true" />
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </section>
+
+        <footer className="mt-auto border-t border-border bg-background">
+          <div className="mx-auto max-w-5xl px-4 py-4 max-sm:pb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between text-xs text-muted-foreground">
+            <span>Discover Slovenia AI — vaš osebni potovalni pomočnik</span>
+            <Link href="/nacrtuj" className="hover:text-primary transition-colors inline-flex items-center gap-1">
+              <Plus className="size-3.5" aria-hidden="true" />
+              Nov načrt
+            </Link>
+          </div>
+        </footer>
       </main>
     );
   }

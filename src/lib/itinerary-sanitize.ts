@@ -127,10 +127,17 @@ function sanitizeDay(raw: unknown): DayPlan | null {
           temp: clamp(asNum((day.weather as Record<string, unknown>).temp), -60, 60),
         }
       : { condition: "", temp: 0 };
+  // TASK 4 / K-2: ohrani resnični marker "sezonska ocena" skozi save/refine
+  // meje (gost shranjuje načrt → /pot/[shareId] mora vedeti, da vreme ni
+  // realna napoved). Podeduje se SAMO izrecno true; vse ostalo ostane
+  // neoznačeno (AI izhod sam po sebi nima pojma o izvoru — določi ga šele
+  // enrichWithRealWeather na ruti).
+  const weatherEstimated = day.weatherEstimated === true;
   return {
     day: clamp(Math.round(asNum(day.day)) || 1, 1, MAX_DAYS),
     locations,
     weather,
+    ...(weatherEstimated ? { weatherEstimated: true } : {}),
   };
 }
 

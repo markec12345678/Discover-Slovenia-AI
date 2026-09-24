@@ -101,6 +101,19 @@ export function getSavedTripIds(): string[] {
   return readTrips().map((t) => t.shareId);
 }
 
+/**
+ * TASK 4 / K-6 (UX FIX PASS): vsi LOKALNO shranjeni načrti te naprave —
+ * osnova za gostov pogled na /moja-potovanja. Prej: gost, ki je ravnokar
+ * shranil načrt (deljiva povezava + localStorage), je ob kliku
+ * "Moja potovanja" padel na login zid BREZ sporočila, da je načrt dejansko
+ * še dostopen — prelom zlate poti točno pri MY TRIP. Zdaj gost vidi SVOJE
+ * lokalne načrte (iste kartice kot prijavljeni) + iskreno ponudbo računa
+ * (sinhronizacija med naprave). Podatki so javni (shareId + ime) — brez PII.
+ */
+export function getSavedTrips(): TrackedTrip[] {
+  return readTrips().slice().reverse(); // najnovejši najprej
+}
+
 /** Število sledenih načrtov (npr. za prazen/neprazen prikaz). */
 export function getSavedTripsCount(): number {
   return readTrips().length;

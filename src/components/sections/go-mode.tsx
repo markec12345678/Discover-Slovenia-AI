@@ -28,6 +28,7 @@ import {
   Phone,
   RotateCcw,
   Trash2,
+  Wand2,
 } from "lucide-react";
 
 import { Link } from "@/i18n/navigation";
@@ -132,7 +133,14 @@ const L = {
       sl: "Sestavi potovanje na strani Potovanje (prihod, destinacija, postanke po 4 državah), izberi kar te zanima in pritisni „Zaženi Na poti“.",
       en: "Build a journey on the Journey page (arrival, destination, stops across 4 countries), pick what interests you and press “Start On-the-road”.",
     },
+    // TASK 4 / K-7: drugi izhod za uporabnike AI NAČRTA — prej je empty
+    // state vodil SAMO v /potovanje (drugi koncept), AI načrt ni imel mostu.
+    descAi: {
+      sl: "Imaš AI načrt? Gumb „Zaženi Na poti“ na načrtovalniku (ali deljeni povezavi) ga naloži sem — deluje tudi brez signala.",
+      en: "Have an AI plan? The “Start On-the-road” button on the planner (or a shared link) loads it here — it works offline too.",
+    },
     cta: { sl: "Sestavi potovanje", en: "Build a journey" },
+    ctaAi: { sl: "Načrtuj z AI", en: "Plan with AI" },
   },
   duration: { sl: "trajanje", en: "duration" },
   min: { sl: "min", en: "min" },
@@ -321,7 +329,15 @@ export function GoMode() {
   }, []);
 
   const trip = useMemo(
-    () => (record ? buildMyTrip(record.journey, new Set(record.selectedIds)) : null),
+    () =>
+      record
+        ? // TASK 4 / K-7: v2 = AI itinerer (MyTripView shranjen SESTAVLJEN —
+          // 0 transformacij ob branju); v1 = /potovanje TravelJourney
+          // (kanonična pot, nespremenjena).
+          record.version === 1
+          ? buildMyTrip(record.journey, new Set(record.selectedIds))
+          : record.view
+        : null,
     [record]
   );
   const view = useMemo(
@@ -427,6 +443,9 @@ export function GoMode() {
   }
 
   // --- Prazen stanje: ni shranjenega načrta (ali zaključen Go Mode) ---
+  // TASK 4 / K-7: DVA izhoda — potovanje iz /potovanje (kanonična pot) ALI
+  // AI načrt (nacrtuj → „Zaženi Na poti“; revizija: uporabnik AI načrta ni
+  // vedel, da Go Mode obstaja zanj — empty state je vodil SAMO v /potovanje).
   if (!record || !view) {
     return (
       <Card>
@@ -436,12 +455,23 @@ export function GoMode() {
           <p className="max-w-md text-sm text-muted-foreground">
             {t(L.empty.desc)}
           </p>
-          <Button asChild size="lg" className="h-12">
-            <Link href="/potovanje">
-              <NavigationIcon className="mr-2 h-4 w-4" />
-              {t(L.empty.cta)}
-            </Link>
-          </Button>
+          <p className="max-w-md text-xs text-muted-foreground">
+            {t(L.empty.descAi)}
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button asChild size="lg" className="h-12">
+              <Link href="/potovanje">
+                <NavigationIcon className="mr-2 h-4 w-4" />
+                {t(L.empty.cta)}
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="h-12">
+              <Link href="/nacrtuj">
+                <Wand2 className="mr-2 h-4 w-4" />
+                {t(L.empty.ctaAi)}
+              </Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -809,7 +839,15 @@ export function GoMode() {
       {/* === NAPREJ / KONEC === */}
       <div className="flex flex-col gap-2 pt-2 sm:flex-row">
         <Button asChild variant="outline" className="h-11 sm:flex-1">
-          <Link href="/potovanje">{t(L.planLink)}</Link>
+          {/* TASK 4 / K-7: nazaj na IZVORNI načrt — /nacrtuj za AI itinererje
+              (v2), /potovanje za kanonična potovanja (v1). */}
+          <Link href={record.version === 2 ? "/nacrtuj" : "/potovanje"}>
+            {record.version === 2
+              ? lang === "sl"
+                ? "Nazaj na načrt"
+                : "Back to the plan"
+              : t(L.planLink)}
+          </Link>
         </Button>
         <AlertDialog>
           <AlertDialogTrigger asChild>
@@ -824,7 +862,12 @@ export function GoMode() {
             <AlertDialogHeader>
               <AlertDialogTitle>{t(L.endConfirm.title)}</AlertDialogTitle>
               <AlertDialogDescription>
-                {t(L.endConfirm.desc)}
+                {/* TASK 4 / K-7: iskren vir obnovitve glede na vrsto zapisa */}
+                {record.version === 2
+                  ? lang === "sl"
+                    ? "Načrt in opravljene postanke pobrišem s te naprave. AI načrt lahko kadar koli znova odpreš na načrtovalniku ali prek deljene povezave."
+                    : "I will delete the plan and completed stops from this device. You can reopen the AI plan anytime on the planner or via its shared link."
+                  : t(L.endConfirm.desc)}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

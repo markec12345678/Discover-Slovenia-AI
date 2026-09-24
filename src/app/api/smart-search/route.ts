@@ -153,13 +153,34 @@ ${SYSTEM_DATA_GUARD}`;
 Vrni JSON z najbolj ujemajočimi se rezultati.`;
 
   try {
-    const result = await generateCompletion(
-      [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      { temperature: 0.3, jsonMode: true }
-    );
+    // ------------------------------------------------------------------
+    // TASK 4 / K-5 (UX FIX PASS, 1.91.0): ZUNANJA trda meja AI iskanja.
+    // Živi dokazi audita (2026-09-24): sonde 35,1 s (uspeh) do >400 s brez
+    // odgovora (3/4 sond HTTP 000) — debounced iskalni dialog (600 ms)
+    // pričakuje HITRE odgovore, uporabnik pa je gledal skeleton brez konca.
+    // Rešitev po auditu: trda meja + padec na LOKALNO (keyword) iskanje —
+    // podatki (destinacije/listings/izdelki/izkušnje) so ŽE v kontekstu,
+    // zato odgovor PRIDE VEDNO (< ~16 s), iskreno označen source:"fallback".
+    // ------------------------------------------------------------------
+    const smartSearchCapMs = 15_000;
+    let smartSearchTimer: ReturnType<typeof setTimeout> | null = null;
+    const result = await Promise.race([
+      generateCompletion(
+        [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        // Noga vezana na skupno mejo (OpenRouter 12 s + veriga 15 s) —
+        // hitre napake še dobijo rezervat Gemini/Puter, globoka vrsta
+        // pa pošteno pade v lokalno keyword rezervo.
+        { temperature: 0.3, jsonMode: true, timeoutMs: 12_000, totalBudgetMs: 15_000 }
+      ),
+      new Promise<null>((resolve) => {
+        smartSearchTimer = setTimeout(() => resolve(null), smartSearchCapMs);
+      }),
+    ]).finally(() => {
+      if (smartSearchTimer) clearTimeout(smartSearchTimer);
+    });
 
     const content = result?.content;
     if (!content) {
@@ -254,7 +275,9 @@ function fallbackSearch(
     listings: matchedListings,
     products: matchedProducts,
     experiences: matchedExperiences,
-    summary: `Rezultati za: "${query}"`,
+    // K-5: iskrena oznaka razloga padca — uporabnik ve, da je to hitro
+    // ključno-besedno iskanje, ne AI razumevanje namena.
+    summary: `Hitro iskanje po ključnih besedah: "${query}" (AI razumevanje trenutno ni odgovorilo)`,
     source: "fallback",
   };
 }

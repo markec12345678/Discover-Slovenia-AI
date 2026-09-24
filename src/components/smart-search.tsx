@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import {
   Search,
   Loader2,
@@ -12,6 +13,7 @@ import {
   Package,
   Compass,
   X,
+  AlertCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -51,38 +53,93 @@ interface SmartSearchProps {
  */
 export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSearchProps) {
   const t = useTranslations("planner.smartSearch");
+  const locale = useLocale();
+  const isEn = locale === "en";
   const exampleQueries = t.raw("examples") as string[];
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult | null>(null);
+  // TASK 4 / K-5 (UX FIX PASS): iskrena stanja iskanja — prej je bila napaka
+  // tiho pogoltnjena (catch → setResults(null) → "ni zadetkov", kar je
+  // ZAVAJAJOČE: iskanje NI uspelo, ni da ni zadetkov). Zdaj: izrecno
+  // sporočilo + elapsed hint (AI lahko traja) + abort ob spremembi vnosa
+  // (prej sta se zastareli odgovori lahko prekrivala).
+  const [error, setError] = useState<string | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const requestIdRef = useRef(0);
+
+  const L = {
+    searching: { sl: "Iščem …", en: "Searching …" },
+    searchingSlow: {
+      sl: "AI razumevanje lahko traja nekaj sekund — po 15 s pade na hitro iskanje.",
+      en: "AI understanding can take a few seconds — after 15 s it falls back to fast search.",
+    },
+    failed: {
+      sl: "Iskanje trenutno ni uspelo — poskusi znova.",
+      en: "Search failed right now — please try again.",
+    },
+    seconds: { sl: "s", en: "s" },
+  } as const;
+
+  // K-5: števec med nalaganjem (1 Hz, po koncu ponastavitev).
+  useEffect(() => {
+    if (!loading) {
+      setElapsedSeconds(0);
+      return;
+    }
+    const started = Date.now();
+    const tick = setInterval(
+      () => setElapsedSeconds(Math.floor((Date.now() - started) / 1000)),
+      1000
+    );
+    return () => clearInterval(tick);
+  }, [loading]);
 
   // Debounced search
   useEffect(() => {
     if (!query.trim() || query.trim().length < 3) {
       setResults(null);
+      setError(null);
       return;
     }
 
+    const thisRequestId = ++requestIdRef.current;
     setLoading(true);
+    setError(null);
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
         const res = await fetch("/api/smart-search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query: query.trim(), limit: 3 }),
+          signal: controller.signal,
         });
         if (!res.ok) throw new Error("Napaka pri iskanju");
         const data: SearchResult = await res.json();
-        setResults(data);
-      } catch {
-        setResults(null);
+        // K-5: sprejmi SAMO odgovor najnovejše zahteve (zastareli odpadejo)
+        if (requestIdRef.current === thisRequestId) {
+          setResults(data);
+        }
+      } catch (err) {
+        // Preklic ob spremembi vnosa NI napaka uporabniku
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        if (requestIdRef.current === thisRequestId) {
+          setResults(null);
+          setError(L.failed[isEn ? "en" : "sl"]);
+        }
       } finally {
-        setLoading(false);
+        if (requestIdRef.current === thisRequestId) {
+          setLoading(false);
+        }
       }
     }, 600); // 600ms debounce
 
-    return () => clearTimeout(timer);
-  }, [query]);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, isEn]);
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
@@ -90,6 +147,7 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
     setTimeout(() => {
       setQuery("");
       setResults(null);
+      setError(null);
     }, 300);
   }, [onOpenChange]);
 
@@ -158,7 +216,17 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
             </div>
           )}
 
-          {query.trim() && !loading && !hasResults && (
+          {query.trim() && !loading && error && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 p-4 text-sm text-amber-700 dark:text-amber-400"
+            >
+              <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {query.trim() && !loading && !error && !hasResults && (
             <div className="p-8 text-center text-sm text-muted-foreground">
               <Search className="mx-auto mb-2 size-8 opacity-40" aria-hidden="true" />
               {t("noResults", { query })}
@@ -170,6 +238,24 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="h-12 animate-pulse rounded-lg bg-muted" />
               ))}
+              <p
+                className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                role="status"
+                aria-live="polite"
+              >
+                <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                {L.searching[isEn ? "en" : "sl"]}
+                {elapsedSeconds > 0 && (
+                  <span className="tabular-nums">
+                    {" "}· {elapsedSeconds} {L.seconds[isEn ? "en" : "sl"]}
+                  </span>
+                )}
+              </p>
+              {elapsedSeconds >= 5 && (
+                <p className="text-xs text-muted-foreground/80">
+                  {L.searchingSlow[isEn ? "en" : "sl"]}
+                </p>
+              )}
             </div>
           )}
 

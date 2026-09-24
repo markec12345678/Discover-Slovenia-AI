@@ -69,6 +69,8 @@ interface TripTimelineProps {
   /** TASK 93: OSRM noge iz načrta (isti vir kot podrobni pogled) —
    *  pošteni povezovalniki med karticami; brez njih hevristika. */
   legs?: Itinerary["legs"];
+  /** TASK 4 / K-11: vrstni red v flex delovni površini načrtovalnika. */
+  className?: string;
 }
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -132,7 +134,7 @@ function inferCategory(visit: LocationVisit): string {
   return "default";
 }
 
-export function TripTimeline({ days, totalBudget, tripStartDate, legs }: TripTimelineProps) {
+export function TripTimeline({ days, totalBudget, tripStartDate, legs, className }: TripTimelineProps) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   // I18N-FIX (revizija 1.33.0, 16-d P2): komponenta je viden del rezultatov
   // načrtovalnika — prej 100 % hardkodirana SL tudi na /en/nacrtuj.
@@ -182,7 +184,7 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs }: TripTim
   if (!days || days.length === 0) return null;
 
   return (
-    <div className="space-y-8">
+    <div className={cn("space-y-8", className)}>
       {/* Skupni povzetek */}
       {totalBudget !== undefined && (
         <div className="flex items-center justify-center gap-4 rounded-xl bg-primary/5 border border-primary/20 p-4">

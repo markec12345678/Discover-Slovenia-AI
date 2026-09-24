@@ -15,18 +15,35 @@
 // ============================================================================
 
 import type { TravelJourney } from "./types";
+import type { MyTripView } from "./trip-view";
 
 const GO_TRIP_KEY = "dai:go-trip";
 const GO_PROGRESS_KEY = "dai:go-progress";
 const MAX_PROGRESS_KEYS = 200; // varovalka pred napihnjenim zapisi
 
 /** Persistiran zapis Go Mode potovanja (v1 — selektivna migracija po potrebi). */
-export interface GoTripRecord {
+export interface GoTripRecordV1 {
   version: 1;
   savedAt: string; // ISO
   journey: TravelJourney;
   selectedIds: string[];
 }
+
+/**
+ * TASK 4 / K-7 (UX FIX PASS, 1.91.0): Go Mode zapis, zgrajen iz AI ITINERERJA
+ * (nacrtuj/pot/[shareId] → „Zaženi Na poti"). namesto iz /potovanje
+ * TravelJourney strukture. `view` je MyTripView — ISTA oblika, ki jo GoMode
+ * izrisuje prek buildGoView, zato 0 novih render konceptov. V1 zapisi
+ * (journey) ostanejo podprti — nazaj kompatibilno.
+ */
+export interface GoTripRecordV2 {
+  version: 2;
+  kind: "itinerary";
+  savedAt: string; // ISO
+  view: MyTripView;
+}
+
+export type GoTripRecord = GoTripRecordV1 | GoTripRecordV2;
 
 // ---------------------------------------------------------------------------
 // Validacija oblike (NE zaupamo poljubnemu JSON-u v storage)
@@ -52,13 +69,36 @@ function isValidJourney(v: unknown): v is TravelJourney {
 function isValidRecord(v: unknown): v is GoTripRecord {
   if (typeof v !== "object" || v === null) return false;
   const r = v as Record<string, unknown>;
-  return (
-    r.version === 1 &&
-    typeof r.savedAt === "string" &&
-    isValidJourney(r.journey) &&
-    Array.isArray(r.selectedIds) &&
-    r.selectedIds.every((id) => typeof id === "string")
-  );
+  if (r.version === 1) {
+    return (
+      typeof r.savedAt === "string" &&
+      isValidJourney(r.journey) &&
+      Array.isArray(r.selectedIds) &&
+      r.selectedIds.every((id) => typeof id === "string")
+    );
+  }
+  if (r.version === 2) {
+    // K-7: lahkotna oblikovna validacija MyTripView (globoka bi podvajala
+    // tip; pokvarjen zapis se tretira kot da ga ni — GoMode prazen stav).
+    if (r.kind !== "itinerary" || typeof r.savedAt !== "string") return false;
+    const view = r.view as { days?: unknown } | null | undefined;
+    if (typeof view !== "object" || view === null) return false;
+    if (!Array.isArray(view.days)) return false;
+    return view.days.every(
+      (d) =>
+        typeof d === "object" &&
+        d !== null &&
+        Array.isArray((d as { entries?: unknown }).entries) &&
+        (d as { entries: unknown[] }).entries.every(
+          (e) =>
+            typeof e === "object" &&
+            e !== null &&
+            typeof (e as { key?: unknown }).key === "string" &&
+            typeof (e as { title?: unknown }).title === "string"
+        )
+    );
+  }
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,7 +115,7 @@ export function saveGoTrip(
 ): boolean {
   if (typeof window === "undefined") return false;
   try {
-    const record: GoTripRecord = {
+    const record: GoTripRecordV1 = {
       version: 1,
       savedAt: new Date().toISOString(),
       journey,
@@ -85,6 +125,29 @@ export function saveGoTrip(
     return true;
   } catch {
     // Poln ali zasebni localStorage (Safari private mode) — mirno preskoči.
+    return false;
+  }
+}
+
+/**
+ * TASK 4 / K-7: shrani AI ITINERER kot aktivni Go Mode načrt (različica 2 —
+ * MyTripView iz buildItineraryGoView). Vrne true ob uspehu (false: SSR /
+ * poljen/zasebni localStorage). PREPIŠE morebitni obstoječi zapis — Go Mode
+ * ima ENO aktivno potovanje (ista semantika kot saveGoTrip v1).
+ */
+export function saveItineraryGoTrip(view: MyTripView): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const record: GoTripRecordV2 = {
+      version: 2,
+      kind: "itinerary",
+      savedAt: new Date().toISOString(),
+      view,
+    };
+    window.localStorage.setItem(GO_TRIP_KEY, JSON.stringify(record));
+    return true;
+  } catch {
+    // Poln ali zasebni localStorage — mirno preskoči.
     return false;
   }
 }

@@ -29,7 +29,12 @@ describe("TASK 80 — pogoj delovne površine (načrt ne izgine več)", () => {
   });
 
   test("② nova površina: {itinerary && ( … cn(… loading && dim …) aria-busy inert", () => {
-    const dimSurface = /\{itinerary && \(\s*<div\s+className=\{cn\(\s*"space-y-5 transition-opacity duration-300",\s*formExpanded && "mt-8",\s*loading && "pointer-events-none select-none opacity-60",\s*\)\}\s*aria-busy=\{loading \|\| undefined\}\s*inert=\{loading \|\| undefined\}/;
+    // TASK 4 / K-11 (UX FIX PASS): površina je zdaj flex-col (mobilni vrstni
+    // red naslov → dnevi → zemljevid → kontrole) + id="plan-workspace"
+    // (scroll sidro po generaciji) — NAMEN je nespremenjen: pogoj SAMO
+    // itinerary, zameglitev + inert + aria-busy med regeneracijo.
+    // ([\s\S]*? mosti komentarje znotraj cn() klica.)
+    const dimSurface = /\{itinerary && \(\s*<div\s+id="plan-workspace"\s+className=\{cn\(\s*[\s\S]*?"flex flex-col space-y-5 transition-opacity duration-300",\s*formExpanded && "mt-8",\s*loading && "pointer-events-none select-none opacity-60",\s*\)\}\s*aria-busy=\{loading \|\| undefined\}\s*inert=\{loading \|\| undefined\}/;
     expect(dimSurface.test(SOURCE)).toBe(true);
   });
 

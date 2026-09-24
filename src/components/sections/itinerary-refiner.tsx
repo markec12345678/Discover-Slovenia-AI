@@ -44,6 +44,16 @@ interface ItineraryRefinerProps {
   itinerary: Itinerary;
   formData: PlannerInput;
   onRefined: (newItinerary: Itinerary) => void;
+  /**
+   * TASK 4 / K-9 (UX FIX PASS): skrij podvojene hitre akcije v railu, ko je
+   * PRIMARNA kontrolna vrstica (PlannerAiControls — Issue #3 §3) vidna v
+   * delovni površini. Živi dokaz revizije: 6 čipov + vnos sta se POJAVILA
+   * DVAKRAT (a11y inventar: 26 kontrol) — HIDE ≠ DELETE: rail obdrži
+   * ZGODOVINO + prosti ukaz (globlja, večturna izkušnja); dnevni čipi so
+   * na enem mestu (delovna vrstica z vidnimi oznakami obsega, K-8).
+   * Opcijsko: false (privzeto) ohrani dosedanji izgled za ostale klice.
+   */
+  hideQuickActions?: boolean;
 }
 
 interface HistoryEntry {
@@ -73,6 +83,22 @@ const L = {
   loading: {
     sl: "Prilagajam itinerer …",
     en: "Adjusting the itinerary …",
+  },
+  // TASK 4 / K-4: IZHOD iz dolgega refine klica — Prekliči + števec (isti
+  // kanon kot PlannerAiControls / generacija TASK 77).
+  cancel: { sl: "Prekliči", en: "Cancel" },
+  seconds: { sl: "s", en: "s" },
+  loadingSlowHint: {
+    sl: "AI lahko potrebuje do ~60 s — lahko prekličeš.",
+    en: "AI can take up to ~60 s — you can cancel.",
+  },
+  toastCancelled: {
+    sl: "Prilagoditev preklicana — načrt ni spremenjen",
+    en: "Adjustment cancelled — itinerary unchanged",
+  },
+  toastTimeout: {
+    sl: "Prilagoditev je trajala predolgo — poskusi znova",
+    en: "The adjustment took too long — try again",
   },
   adjustDay: { sl: "Prilagodi ta dan", en: "Adjust this day" },
   day: { sl: "Dan", en: "Day" },
@@ -125,7 +151,12 @@ const ACTION_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
  * dobi kot ukaz, fallback pot (deterministično) pa jih izvede z čistimi
  * transformacijami nad datasetom destinacij. Ni nov AI sistem.
  */
-export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRefinerProps) {
+export function ItineraryRefiner({
+  itinerary,
+  formData,
+  onRefined,
+  hideQuickActions = false,
+}: ItineraryRefinerProps) {
   const { toast } = useToast();
   const locale = useLocale();
   const isEn = locale === "en";
@@ -136,6 +167,10 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
   const [showHistory, setShowHistory] = useState(false);
   const [quickDay, setQuickDay] = useState<number>(itinerary.days[0]?.day ?? 1);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  // TASK 4 / K-4: števec + abort (isti vzorec kot PlannerAiControls).
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const timedOutRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Dan hitrih akcij omejen na veljavne dneve trenutnega itinererja
@@ -147,6 +182,20 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
       setQuickDay(dayNumbers[0] ?? 1);
     }
   }, [dayNumbersKey, quickDay]);
+
+  // K-4: števec teka SAMO med nalaganjem (1 Hz).
+  useEffect(() => {
+    if (!loading) {
+      setElapsedSeconds(0);
+      return;
+    }
+    const started = Date.now();
+    const tick = setInterval(
+      () => setElapsedSeconds(Math.floor((Date.now() - started) / 1000)),
+      1000
+    );
+    return () => clearInterval(tick);
+  }, [loading]);
 
   // Focus na input ko komponenta postane vidna
   useEffect(() => {
@@ -196,6 +245,11 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
     }
   }
 
+  // TASK 4 / K-4: Prekliči — uporabnikov izhod iz čakalne vrste AI.
+  function handleCancel() {
+    abortRef.current?.abort();
+  }
+
   async function handleRefine(
     instructionText: string,
     quick?: { action: string; day: number }
@@ -205,10 +259,20 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
 
     setLoading(true);
     setBusyAction(quick?.action ?? null);
+    // K-4: klient ima SVOJ abort signal (strežniška trda meja 60 s;
+    // klient varovalka 90 s — usklajeno z GENERATION_TIMEOUT_SECONDS).
+    const controller = new AbortController();
+    abortRef.current = controller;
+    timedOutRef.current = false;
+    const clientTimeout = setTimeout(() => {
+      timedOutRef.current = true;
+      controller.abort();
+    }, 90_000);
     try {
       const res = await fetch("/api/itinerary/refine", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           itinerary,
           // P4-8 (isti razred buga kot nav.tagline): formData STATE nima polja
@@ -351,17 +415,37 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
         }
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : L.errorGeneric[isEn ? "en" : "sl"];
-      trackPlannerEvent("refine_failed", {
-        via: quick ? "quick_action" : "free_text",
-        action: quick?.action,
-      });
-      toast({
-        title: L.toastFailed[isEn ? "en" : "sl"],
-        description: msg,
-        variant: "destructive",
-      });
+      // K-4: PREKLIC ≠ napaka — uporabnik je sam končal čakanje (oz. 90 s
+      // varovalka); iskren toast brez destruktivne variante za preklic.
+      if (err instanceof DOMException && err.name === "AbortError") {
+        const timedOut = timedOutRef.current;
+        trackPlannerEvent(timedOut ? "refine_timeout" : "refine_cancelled", {
+          via: quick ? "quick_action" : "free_text",
+          action: quick?.action,
+          placement: "rail",
+          elapsed_seconds: elapsedSeconds,
+        });
+        toast({
+          title: timedOut
+            ? L.toastTimeout[isEn ? "en" : "sl"]
+            : L.toastCancelled[isEn ? "en" : "sl"],
+          variant: timedOut ? "destructive" : "default",
+        });
+      } else {
+        const msg = err instanceof Error ? err.message : L.errorGeneric[isEn ? "en" : "sl"];
+        trackPlannerEvent("refine_failed", {
+          via: quick ? "quick_action" : "free_text",
+          action: quick?.action,
+        });
+        toast({
+          title: L.toastFailed[isEn ? "en" : "sl"],
+          description: msg,
+          variant: "destructive",
+        });
+      }
     } finally {
+      clearTimeout(clientTimeout);
+      abortRef.current = null;
       setLoading(false);
       setBusyAction(null);
       setInstruction("");
@@ -440,8 +524,12 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
           </div>
         )}
 
-        {/* === FAZA 4-2: Prilagodi ta dan — hitre akcije === */}
-        {dayNumbers.length > 0 && (
+        {/* === FAZA 4-2: Prilagodi ta dan — hitre akcije ===
+            TASK 4 / K-9: SKRITO, ko je primarna kontrolna vrstica
+            (PlannerAiControls) vidna v delovni površini — 6 čipov + izbirnik
+            dneva se ne podvajata (a11y revizija: 26 kontrol). HIDE ≠ DELETE:
+            false (privzeto) ohrani blok za ostale klice. */}
+        {!hideQuickActions && dayNumbers.length > 0 && (
           <div className="mb-3 rounded-lg border border-border/60 bg-background/60 p-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground/90">
@@ -530,11 +618,36 @@ export function ItineraryRefiner({ itinerary, formData, onRefined }: ItineraryRe
           </Button>
         </form>
 
-        {/* Loading indikator z razlago */}
+        {/* Loading indikator z razlago — TASK 4 / K-4: števec + Prekliči */}
         {loading && (
-          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-            <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-            {L.loading[isEn ? "en" : "sl"]}
+          <div
+            className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2 className="size-3 shrink-0 animate-spin" aria-hidden="true" />
+            <span>
+              {L.loading[isEn ? "en" : "sl"]}{" "}
+              {elapsedSeconds > 0 && (
+                <span className="tabular-nums">
+                  · {elapsedSeconds} {L.seconds[isEn ? "en" : "sl"]}
+                </span>
+              )}
+            </span>
+            {elapsedSeconds >= 10 && (
+              <span className="text-muted-foreground/80">
+                {L.loadingSlowHint[isEn ? "en" : "sl"]}
+              </span>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCancel}
+              className="ml-auto shrink-0 h-7 gap-1.5 px-2.5 text-xs"
+            >
+              {L.cancel[isEn ? "en" : "sl"]}
+            </Button>
           </div>
         )}
       </CardContent>

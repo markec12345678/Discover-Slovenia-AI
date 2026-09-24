@@ -7,6 +7,97 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.91.0] — 2026-09-24 (TASK 4: UX FIX PASS — ZERO FEATURE LOSS + ZERO CONFUSION)
+
+### Cilj
+- **Dokaz enostavnosti BREZ izgube funkcij** — izvedba vseh HIGH in MEDIUM
+  popravkov iz revizije TASK 4 (A–K poročilo na Issue #3,
+  `ux-audit-4/TASK4-REPORT.md`) v predlaganem vrstnem redu:
+  **K-2/K-3 (majhna) → K-4/K-5 (trde meje) → K-6/K-7 (premostitvi) → MEDIUM.**
+  Nič od ~100 zmožnosti ni bilo izgubljeno; vsak popravek je bodisi
+  ISKRENOST (nikoli ✓ brez dokaza) bodisi IZHOD (nikoli ujetost).
+
+### ISKRENOST TRUST VRSTICE (K-2, K-3, K-15)
+- **K-2 »Vreme preverjeno ✓« nad oceno:** `DayPlan.weatherEstimated` marker
+  (BE: deterministic-itinerary sezonska ocena → `true`;
+  `enrichWithRealWeather` ob uspehu Open-Meteo → `false`, ob padcu → `true`
+  na VSEH dnevih; refine prenese resnico iz trenutnega načrta; sanitize
+  marker ohrani). TrustLine: ✓ SAMO nad realno napovedjo; ocena → amber
+  »Vreme: sezonska ocena«; mešano → »delno preverjeno«; stari načrti brez
+  markerja → postavka SE NE izriše (§4 pravilo).
+- **K-3 »Odprto ob tvojem času ✓« brez datuma:** `GeoValidation.openingHoursChecked`
+  flag (plast teče SAMO z znanim tripStartDate). TrustLine brez datuma
+  postavke NE izriše — prej je closedCount=0 napačno izrisal ✓.
+- **K-15 podrobnosti za enim klikom:** vsaka postavka trust vrstice je
+  KLIKABILNA (dvignjeno stanje `calcDetailsOpen` v plannerju → razklop
+  »Podrobnosti izračunov« + smooth scroll na `#planner-calc-details`).
+
+### TRDE MEJE AI (K-4, K-5) — odgovor PRIDE VEDNO
+- **K-4 refine (živi dokaz: 8–11 min spinnerja):** Promise.race trda meja
+  **60 s** v `/api/itinerary/refine` (enaka varovalka kot generacija —
+  SDK timeout se v produkciji ne sproži vedno); padec v obstoječo
+  deterministično hitro-akcijo / echo pot. FE (PlannerAiControls +
+  ItineraryRefiner): AbortController + gumb **Prekliči** + števec dejansko
+  pretečenega časa (1 Hz) + hint po 10 s; PREKLIC ≠ napaka (ločen toast +
+  analitika `refine_cancelled`/`refine_timeout`); klient varovalka 90 s.
+- **K-5 AI iskanje (živi dokaz: 35 s–10 min, 3/4 sond HTTP 000):** trda
+  meja **15 s** v `/api/smart-search` + padec na obstoječe LOKALNO
+  keyword iskanje (podatki že v kontekstu) z iskrenim povzetkom
+  »Hitro iskanje po ključnih besedah …«; FE: loading števec, hint po 5 s,
+  izrecno NAPAKA stanje (prej tiho »ni zadetkov«), abort + requestId
+  varovalka proti zastarelim odgovorom.
+
+### PREMOSTITVI ZLATE POTI (K-6, K-7)
+- **K-6 MY TRIP gost (login zid):** gost na /moja-potovanja vidi SVOJA
+  LOKALNA potovanja (`dai:my-trips` — nove `getSavedTrips()`) + iskreno
+  ponudbo računa (sinhronizacija ob prijavi — obstoječa claim plast).
+  NI preusmeritve na prijavo; B2B redirect ostaja.
+- **K-7 GO MODE most (ločen otok):** nova čista pretvorba
+  `src/lib/journey/itinerary-go.ts` (Itinerary → MyTripView: dnevi 1:1,
+  termini IZ time_slot, geo iz dataseta/lastnih koordinat, status
+  »Načrtovani postanek — brez rezervacije«) + `dai:go-trip` zapis
+  **različice 2** (go-persist unija v1/v2, lahkotna validacija). Gumb
+  **»Zaženi Na poti«** na akcijski vrstici /nacrtuj IN na /pot/[shareId]
+  (prej 0 povezav na /na-poti!). GoMode: v2 izris brez transformacij,
+  prazen stanje z DVEMA izhodoma (Sestavi potovanje + Načrtuj z AI),
+  v2-aware »Nazaj na načrt« + iskren end-confirm. E2E dokaz:
+  deljena povezava → klik → /na-poti izriše naslednji postanek z
+  navigacijo in opravljanjem.
+
+### MEDIUM (K-8 … K-15)
+- **K-8 obseg čipov VIDEN:** »Za izbrani dan: Dan N« nad 6 determinističnimi
+  čipi, »Za celotno pot:« nad prostimi (VLM: nevidno prej).
+- **K-9 podvojenih 26 kontrol NE več:** rail »Spremeni načrt« skrije
+  dnevne čipe (hideQuickActions) — ostanejo prosti ukaz + zgodovina;
+  primarna vrstica je edini prostor dnevnih akcij (HIDE ≠ DELETE).
+- **K-10 »Dodaj v mojo pot« lažnjujoče ime:** gumb zdaj
+  »Zgradi novo pot okoli {destinacija}« (dejansko naredi novo generacijo).
+- **K-11 mobilni vrstni red + scroll:** flex/order — naslov → trust →
+  dnevi → zemljevid → kontrole (desktop lg: nespremenjen Issue #3 red);
+  PO generaciji smooth scroll na `#plan-workspace` (prej y≈999 pod zgibom).
+- **K-12 »Na poti« v mobilnem meniju** (prej samo noga; nav.goMode SL/EN).
+- **K-13 iskrena obljuba trajanja:** »navadno 15–40 s« →
+  »do ~90 s (AI brezplačna vrsta lahko zamudi)« (SL+EN).
+- **K-14 »Vstopnice« odpre ZAVIHEK AKTIVNOSTI:** BookingPanel Tabs nadzoro
+  (dogodek `dsa:booking-tab` {panelId, tab} — prej vedno Nastanitev).
+- **K-15** — glej zgoraj (klikabilna trust vrstica).
+
+### Analitika
+- Novi dogodki: `refine_cancelled`, `refine_timeout`, `go_mode_started`
+  (props: via/action/placement/elapsed_seconds · via/days/persisted).
+
+### Preverjanje
+- `bun test`: **2317/2317** (2 source-contract testa usklajena z novim
+  workspace redom — namen ohranjen) · `bun run lint`: **0** ·
+  `tsc --noEmit` (src/): **0**.
+- Browser dokazi: K-7 e2e (deljena → Na poti → naslednji postanek), K-2/K-3
+  (»Vreme: sezonska ocena« + ODSOTNO »Odprto ob tvojem času«), K-4 (Prekliči
+  + števec), K-6 (gost 390 px, 0 preliva), K-8 (vidni oznaki obsega),
+  K-11 (Y-pozicije: naslov→dnevi→zemljevid→kontrole), K-12 (meni),
+  K-15 (expanded=true). Izvedene slike: `ux-fixpass/`.
+
+---
+
 ## [1.90.0] — 2026-09-23 (ISSUE #3: UX REDESIGN — ONE SIMPLE EXPERIENCE / ZERO FEATURE LOSS)
 
 ### Cilj

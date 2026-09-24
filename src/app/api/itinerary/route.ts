@@ -1083,8 +1083,16 @@ async function enrichWithRealWeather(
       startDate
     );
     if (!daily) {
-      // Open-Meteo ni dosegljiv — obdrži obstoječe (AI/sezonsko) vreme
-      return itinerary;
+      // TASK 4 / K-2 (UX FIX PASS): Open-Meteo ni dosegljiv — obstoječe
+      // vreme (AI-izmišljeno ali sezonska ocena iz determinističnega motorja)
+      // NI realna napoved, zato ga izrecno označimo kot oceno. TrustLine
+      // zaradi tega NE izriše "✓ Vreme preverjeno" (živi dokaz audita:
+      // Render /api/weather → error, itinerer pa je trdil "sončno 22°" —
+      // realno je bilo megla/nevhta). ISKRENOST > lep prikaz.
+      return {
+        ...itinerary,
+        days: itinerary.days.map((d) => ({ ...d, weatherEstimated: true })),
+      };
     }
 
     const tips = Array.isArray(itinerary.tips) ? [...itinerary.tips] : [];
@@ -1092,7 +1100,11 @@ async function enrichWithRealWeather(
     for (let i = 0; i < itinerary.days.length; i++) {
       const forecast = daily[i];
       // Če prognoza nima dneva i (krajša od itinererja), obdrži obstoječe vreme
-      if (!forecast) continue;
+      // — a označi kot oceno (tega dne napoved NI bila preverjena).
+      if (!forecast) {
+        itinerary.days[i] = { ...itinerary.days[i], weatherEstimated: true };
+        continue;
+      }
 
       itinerary.days[i] = {
         ...itinerary.days[i],
@@ -1103,6 +1115,9 @@ async function enrichWithRealWeather(
               : weatherCodeToText(forecast.weatherCode),
           temp: Math.round(forecast.tempMax),
         },
+        // TASK 4 / K-2: realna Open-Meteo napoved — izrecni marker za
+        // TrustLine (✓ sme se izrisati SAMO nad tem).
+        weatherEstimated: false,
       };
 
       // Dež alternative — dodaj v tips, če je verjetnost padavin visoka

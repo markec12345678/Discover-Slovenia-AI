@@ -564,6 +564,33 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
   // so EN uporabniki na /en/nacrtuj videli slovenščino.
   const t = useTranslations("planner.booking");
   const locations = dayPlan.locations;
+  // TASK 4 / K-14 (UX FIX PASS): NADZOROVANI zavihki — prej je bil Tabs
+  // nekontroliran (defaultValue="accommodation"), zato je klik na gumb
+  // "Vstopnice" na kartici postanka odprl NASTANITEV (živi dokaz revizije:
+  // Bohinj → plošča je pokazala Booking.com namesto Tiqets/izkušenj).
+  // Zdaj: gumb pošlje dogodek `dsa:booking-tab` {panelId, tab}, ta plošča
+  // (isti id) preklopi zavihek in scroll ostane pri klicatelju.
+  const [tab, setTab] = React.useState<
+    "accommodation" | "activities" | "dining" | "transport"
+  >("accommodation");
+  React.useEffect(() => {
+    if (!id) return;
+    const onOpenTab = (e: Event) => {
+      const detail = (e as CustomEvent<{ panelId?: string; tab?: string }>)
+        .detail;
+      if (detail?.panelId !== id) return;
+      if (
+        detail.tab === "accommodation" ||
+        detail.tab === "activities" ||
+        detail.tab === "dining" ||
+        detail.tab === "transport"
+      ) {
+        setTab(detail.tab);
+      }
+    };
+    document.addEventListener("dsa:booking-tab", onOpenTab);
+    return () => document.removeEventListener("dsa:booking-tab", onOpenTab);
+  }, [id]);
   // Prva destinacija — za najem avta
   const firstDestination = locations[0];
   // TASK 97: zavarovanje — days iz dolžine načrta (clamp 1–30 v helperju)
@@ -623,7 +650,13 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
 
       <Separator className="my-3" />
 
-      <Tabs defaultValue="accommodation" className="w-full">
+      <Tabs
+        value={tab}
+        onValueChange={(v) =>
+          setTab(v as "accommodation" | "activities" | "dining" | "transport")
+        }
+        className="w-full"
+      >
         <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4">
           <TabsTrigger value="accommodation" className="flex flex-col gap-0.5 py-1.5 text-xs sm:flex-row sm:text-sm">
             <span className="flex items-center gap-1">

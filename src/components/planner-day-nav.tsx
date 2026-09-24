@@ -39,9 +39,11 @@ const DAY_NAV_HEIGHT = 56;
 
 interface PlannerDayNavProps {
   days: DayPlan[];
+  /** TASK 4 / K-11: vrstni red v flex delovni površini. */
+  className?: string;
 }
 
-export function PlannerDayNav({ days }: PlannerDayNavProps) {
+export function PlannerDayNav({ days, className }: PlannerDayNavProps) {
   const t = useTranslations("planner");
   const [activeDay, setActiveDay] = useState<number>(days[0]?.day ?? 1);
   const pillRefs = useRef<Record<number, HTMLButtonElement | null>>({});
@@ -96,7 +98,11 @@ export function PlannerDayNav({ days }: PlannerDayNavProps) {
   return (
     <nav
       aria-label={t("dayNavAriaLabel")}
-      className="sticky top-[65px] z-30 border-b border-border/70 bg-background/95 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/85 lg:hidden"
+      className={cn(
+        // TASK 4 / K-11: vrstni red v flex delovni površini (mobilno pred dnevi).
+        "sticky top-[65px] z-30 border-b border-border/70 bg-background/95 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/85 lg:hidden",
+        className
+      )}
     >
       <div className="flex items-center gap-2">
         {/* Bližnjici — Prilagodi (VERIFY/ADJUST) in Shrani (konverzija) */}

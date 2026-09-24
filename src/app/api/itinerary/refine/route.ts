@@ -562,13 +562,38 @@ JSON format (STROGO, enak kot vhod):
 }`;
 
   try {
-    const result = await generateCompletion(
-      [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      { temperature: 0.6, jsonMode: true }
-    );
+    // ------------------------------------------------------------------
+    // TASK 4 / K-4 (UX FIX PASS, 1.91.0): ZUNANJA trda meja AI faze na
+    // REFINU — enaka varovalka kot generacija (aiHardCap, 1.88.1 FA-A1-b),
+    // ki ji je ta ruta IZPUSTILA. Živi dokazi audita (2026-09-24): prosti
+    // refine je čakal na OpenRouter :free vrsto 262 s (API sonda) oziroma
+    // 8–11 MINUT v brskalniku — spinner brez konca, brez preklica, brez
+    // napredka; uporabnik je upravičeno mislil, da se je aplikacija zmrznila.
+    // SDK timeout se v produkciji OČITNO NE sproži vedno (dokumentirano v
+    // itinerary/route.ts:780+), zato Promise.race varovalka: ob 60 s klic
+    // pade v catch → obstoječa deterministična hitra-akcija ali iskrena
+    // echo pot z opozorilom. Odgovor PRIDE VEDNO v < ~65 s.
+    // ------------------------------------------------------------------
+    const refineHardCapMs = 60_000;
+    let refineHardCapTimer: ReturnType<typeof setTimeout> | null = null;
+    const result = await Promise.race([
+      generateCompletion(
+        [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        // K-4: proračun noge VEZAN na skupno mejo (ista semantika kot
+        // generacija: OpenRouter 55 s + veriga 60 s — globoka vrsta pade
+        // pošteno v rezervo, hitre napake (429/5xx) pa še dobijo rezervat
+        // Gemini/Puter znotraj preostanka).
+        { temperature: 0.6, jsonMode: true, timeoutMs: 55_000, totalBudgetMs: 60_000 }
+      ),
+      new Promise<null>((resolve) => {
+        refineHardCapTimer = setTimeout(() => resolve(null), refineHardCapMs);
+      }),
+    ]).finally(() => {
+      if (refineHardCapTimer) clearTimeout(refineHardCapTimer);
+    });
 
     const content = result?.content;
     if (!content) {
@@ -586,6 +611,24 @@ JSON format (STROGO, enak kot vhod):
       parsed,
       Array.isArray(current.days) ? current.days.length : undefined
     );
+
+    // ------------------------------------------------------------------
+    // TASK 4 / K-2 (UX FIX PASS): vreme na refini NI novo preverjeno —
+    // AI JSON ga izmisli (primera v promptu trdita "sončno 22"). Prenesi
+    // resnico iz trenutnega načrta: dan, ki je imel REALNO napoved
+    // (weatherEstimated === false), obdrži svojo napoved (spremenijo se
+    // postanki, ne vreme); vsi ostali dnevi so izrecno OCENA, da TrustLine
+    // ne izriše "✓ Vreme preverjeno" nad izmišljenim vremenom.
+    // ------------------------------------------------------------------
+    refinedItinerary.days = refinedItinerary.days.map((d) => {
+      const prev = Array.isArray(current.days)
+        ? current.days.find((c) => c.day === d.day)
+        : undefined;
+      if (prev?.weather && prev.weatherEstimated === false) {
+        return { ...d, weather: prev.weather, weatherEstimated: false };
+      }
+      return { ...d, weatherEstimated: true };
+    });
 
     // ------------------------------------------------------------------
     // TASK 48 (§14 — P0 REFINEMENT BYPASS FIX, 1.53.0): REFINE POT GRE ZDAJ

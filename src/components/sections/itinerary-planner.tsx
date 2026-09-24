@@ -4,6 +4,7 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import {
   Sparkles,
@@ -38,6 +39,7 @@ import {
   Volume2,
   FileText,
   Ticket,
+  Footprints,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -166,6 +168,10 @@ import { PlannerSummaryBar } from "@/components/planner-summary-bar";
 // OBSTOJEČE plasti — NI nove logike načrtovanja.
 import { PlannerAiControls } from "@/components/planner-ai-controls";
 import { PlannerTrustLine } from "@/components/planner-trust-line";
+// TASK 4 / K-7 (UX FIX PASS): AI itinerer → Go Mode premostitev — čista
+// pretvorba (buildItineraryGoView) + persistenca (saveItineraryGoTrip).
+import { buildItineraryGoView } from "@/lib/journey/itinerary-go";
+import { saveItineraryGoTrip } from "@/lib/journey/go-persist";
 import { buildItineraryAudioScript, planAudioCacheKey } from "@/lib/planner-audio";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import type { LocationVisit } from "@/lib/types";
@@ -394,6 +400,8 @@ export function ItineraryPlanner() {
   const { toast } = useToast();
   const t = useTranslations("planner");
   const tCommon = useTranslations("common");
+  // TASK 4 / K-7: navigacija na /na-poti ob zagonu Go Mode
+  const router = useRouter();
   // FW4.3: locale določa jezik AI itinererja ("en" → angleški izpis;
   // API sprejme language polje, default "sl")
   const locale = useLocale();
@@ -607,6 +615,10 @@ export function ItineraryPlanner() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // TASK 4 / K-15: DVIGNJENO stanje razklopa "Podrobnosti izračunov" —
+  // sproži ga tudi klik na postavko trust vrstice (isti `open` kot
+  // PlannerStatusStrip; prej skrito za zložkom + scrollom).
+  const [calcDetailsOpen, setCalcDetailsOpen] = useState(false);
 
   // === Pošlji na e-pošto ===
   const [emailOpen, setEmailOpen] = useState(false);
@@ -1332,6 +1344,17 @@ export function ItineraryPlanner() {
       // povzetek parametrov — delovna površina načrta prevzame zaslon
       setFormExpanded(false);
 
+      // TASK 4 / K-11 (UX FIX PASS): SCROLL NA DELOVNO POVRŠINO po generaciji.
+      // Živi dokaz revizije: naslov delovne površine je pri y≈700+ (AI
+      // kontrolna vrstica šele y≈999 pri 900 px viewportu) — uporabnik je
+      // po 41–76 s čakanja ostal gledat ZGIB obrazca, ne pa načrta. Zdaj:
+      // rAF (po renderju novega stanja) + gladek scroll na vrh načrta.
+      requestAnimationFrame(() => {
+        document
+          .getElementById("plan-workspace")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+
       // Pilotna analitika: rezultat prikazan + začetek merjenja opustitve
       trackPlannerEvent("planner_result_rendered", {
         days: data.days?.length ?? 0,
@@ -1423,6 +1446,43 @@ export function ItineraryPlanner() {
   // generateItinerary (enotna pot čiščenja, tudi ob timeoutu).
   function handleCancelGeneration() {
     generationAbortRef.current?.abort(ABORT_REASON_CANCEL);
+  }
+
+  // ========================================================================
+  // TASK 4 / K-7 (UX FIX PASS): „Zaženi Na poti“ — AI itinerer → Go Mode.
+  // Čista pretvorba (postanki/dnevi/termini/geo že obstajajo) + persistenca
+  // na napravo (dai:go-trip v2) + preusmeritev na /na-poti. Prej: GO člen
+  // DISCOVER→PLAN→BOOK→GO je bil LOČEN otok (deljena stran 0 povezav na
+  // /na-poti; uporabnik bi moral potovanje zgraditi znova na /potovanje).
+  // ========================================================================
+  function handleStartGoMode() {
+    if (!itinerary) return;
+    const view = buildItineraryGoView(itinerary, {
+      lang: locale === "en" ? "en" : "sl",
+      name: deriveSavedTripName(itinerary),
+    });
+    const saved = saveItineraryGoTrip(view);
+    trackPlannerEvent("go_mode_started", {
+      via: "planner_action_row",
+      days: itinerary.days.length,
+      persisted: saved,
+    });
+    if (saved) {
+      router.push("/na-poti");
+    } else {
+      // Poln/zasebni localStorage — iskren toast (načrt NE more na napravo)
+      toast({
+        title:
+          locale === "en"
+            ? "Cannot store the plan on this device"
+            : "Načrta ni bilo mogoče shraniti na to napravo",
+        description:
+          locale === "en"
+            ? "Browser storage is full or blocked (private mode) — On-the-road needs the plan on the device."
+            : "Shramba brskalnika je polna ali blokirana (zasebni način) — Na poti potrebuje načrt na napravi.",
+        variant: "destructive",
+      });
+    }
   }
 
   // === Shrani & deli: POST /api/itinerary/save → deljiva povezava ===
@@ -3489,8 +3549,14 @@ export function ItineraryPlanner() {
             tvoj). === */}
         {itinerary && (
           <div
+            id="plan-workspace"
             className={cn(
-              "space-y-5 transition-opacity duration-300",
+              // TASK 4 / K-11: flex + order — MOBILNI vrstni red naslov →
+              // dnevi → zemljevid → kontrole (revizija: uporabnik je videl
+              // "Kaj naj spremenim na tvoji poti?" PREJDEN kot samo pot);
+              // desktop (lg+) obdrži Issue #3 vrstni red (kontrole nad potjo).
+              // space-y-5 dela tudi v flex-col (margins na DOM otrocih).
+              "flex flex-col space-y-5 transition-opacity duration-300",
               formExpanded && "mt-8",
               loading && "pointer-events-none select-none opacity-60",
             )}
@@ -3501,7 +3567,7 @@ export function ItineraryPlanner() {
                 {restoredVisible && (
                   <div
                     role="status"
-                    className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm text-primary animate-in fade-in slide-in-from-top-1 duration-300"
+                    className="order-1 flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm text-primary animate-in fade-in slide-in-from-top-1 duration-300"
                   >
                     <Sparkles className="size-4 shrink-0" aria-hidden />
                     <span className="flex-1 font-medium">{t("restoredChip")}</span>
@@ -3517,7 +3583,7 @@ export function ItineraryPlanner() {
                 )}
 
                 {/* Header */}
-                <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="order-2 flex flex-wrap items-center justify-between gap-3">
                   <h3 className="text-2xl font-bold">
                     {t("resultTitle", { days: itinerary.days.length })}
                   </h3>
@@ -3564,6 +3630,9 @@ export function ItineraryPlanner() {
                     obremenitev); polna izkušnja (zgodovina, PlanCopilot)
                     ostane v desnem stolpcu — HIDE ≠ DELETE. */}
                 <PlannerAiControls
+                  // K-11: mobilno ZA zemljevidom/dnevi (uporabnik najprej vidi
+                  // POT, šele nato kontrole); desktop ostane nad potjo (lg:order-3).
+                  className="order-8 lg:order-3"
                   itinerary={itinerary}
                   formData={formData}
                   onRefined={(newItinerary) => {
@@ -3582,13 +3651,35 @@ export function ItineraryPlanner() {
                     izvedena in čista; ⚠ s številom sicer; manjkajoča plast
                     se ne izriše (nikoli lažni ✓). */}
                 <PlannerTrustLine
+                  // K-11: trust ZA naslovom tudi na mobilnem (iskrene oznake
+                  // držijo kontekst naslova); desktop vrstni red nespremenjen.
+                  className="order-3 lg:order-4"
                   itinerary={itinerary}
                   geoValidation={geoValidation}
+                  // TASK 4 / K-15: klik na postavko razklopi Podrobnosti
+                  // izračunov (dvignjeno stanje + scroll na razklopljeno
+                  // sekcijo — prej skrito za zložkom in scrollom).
+                  onOpenDetails={() => {
+                    setCalcDetailsOpen(true);
+                    requestAnimationFrame(() => {
+                      // dva rAF: prvi renderira razklopljeno vsebino, drugi
+                      // gladi scroll nanjo (kanon PlannerSummaryBar).
+                      requestAnimationFrame(() => {
+                        document
+                          .getElementById("planner-calc-details")
+                          ?.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start",
+                          });
+                      });
+                    });
+                  }}
                 />
 
                 {/* UI sprint (točka B smeri): obrazec zložen v POVZETEK
                     parametrov — "Uredi" ga znova odpre nad delovno površino. */}
                 <PlannerSummaryBar
+                  className="order-4 lg:order-5"
                   formData={formData}
                   onEdit={() => {
                     setFormExpanded(true);
@@ -3613,7 +3704,9 @@ export function ItineraryPlanner() {
                     lokaciji (id="itinerary-refiner"). */}
                 <div
                   className={cn(
-                    "grid gap-4",
+                    // K-11: mobilno ZA dnevi (naslov → dnevi → zemljevid →
+                    // kontrole); desktop lg:order-6 (zemljevid pred statusom).
+                    "order-7 grid gap-4 lg:order-6",
                     routeByDay.length > 0 && "lg:grid-cols-[1.6fr_1fr]"
                   )}
                 >
@@ -3707,8 +3800,12 @@ export function ItineraryPlanner() {
                     </div>
                     {chatTab === "refine" ? (
                       /* F9 "Pogovor z načrtom": ukazi za SPREMEMBE — refiner.
-                          vprašanje ≠ ukaz, obe plasti sta jasno ločeni. */
+                          vprašanje ≠ ukaz, obe plasti sta jasno ločeni.
+                          TASK 4 / K-9: hitri akcije v railu SKRITE — primarna
+                          vrstica jih že ima (vidne oznake obsega, K-8); rail
+                          obdrži prosti ukaz + zgodovino (HIDE ≠ DELETE). */
                       <ItineraryRefiner
+                        hideQuickActions
                         itinerary={itinerary}
                         formData={formData}
                         onRefined={(newItinerary) => {
@@ -3739,6 +3836,7 @@ export function ItineraryPlanner() {
                     korak dlje od prvega zaslona). */}
                 {geoValidation && (
                   <PlannerStatusStrip
+                    className="order-9 lg:order-7"
                     itinerary={itinerary}
                     input={formData}
                     geoValidation={geoValidation}
@@ -3754,16 +3852,25 @@ export function ItineraryPlanner() {
                           )
                         : 0
                     }
+                    // TASK 4 / K-15: nadzorovani razklop (dvignjeno stanje —
+                    // sproža ga tudi trust vrstica zgoraj).
+                    open={calcDetailsOpen}
+                    onOpenChange={setCalcDetailsOpen}
                   />
                 )}
 
                 {/* P0-4: mobilna/tabletna navigacija po dnevih potovanja — lepljiva
                     vrstica pod glavo (scroll-spy tabi + bližnjici Prilagodi/Shrani).
-                    Na desktopu (lg+) skrita — dvostolpčni pogled je dovolj pregleden. */}
-                <PlannerDayNav days={itinerary.days} />
+                    Na desktopu (lg+) skrita — dvostolpčni pogled je dovolj pregleden.
+                    K-11: mobilno Neposredno pred dnevi (order-5), desktop lg:order-8. */}
+                <PlannerDayNav
+                  className="order-5 lg:order-8"
+                  days={itinerary.days}
+                />
 
-                {/* Day plans */}
-                <div className="space-y-4">
+                {/* Day plans — K-11: mobilno PREJDEN zemljevidom in kontroli
+                    (order-6); desktop za zemljevidom (lg:order-9). */}
+                <div className="order-6 space-y-4 lg:order-9">
                   {itinerary.days.map((day) => {
                     // FW4.2: ISO datum tega dneva (samo če je znan datum odhoda)
                     const dayISO = itinerary.tripStartDate
@@ -4139,6 +4246,25 @@ export function ItineraryPlanner() {
                                                     loc.destination_name,
                                                 }
                                               );
+                                              // TASK 4 / K-14 (UX FIX PASS):
+                                              // gumb nosi napis "Vstopnice" →
+                                              // odpreti mora zavihek AKTIVNOSTI
+                                              // (Tiqets/izkušnje), ne privzete
+                                              // nastanitve. Prej je plošča po
+                                              // scrollu vedno pokazala
+                                              // Booking.com (živi dokaz:
+                                              // Bohinj → Nastanitev).
+                                              document.dispatchEvent(
+                                                new CustomEvent(
+                                                  "dsa:booking-tab",
+                                                  {
+                                                    detail: {
+                                                      panelId: `booking-panel-${day.day}`,
+                                                      tab: "activities",
+                                                    },
+                                                  }
+                                                )
+                                              );
                                               document
                                                 .getElementById(
                                                   `booking-panel-${day.day}`
@@ -4298,7 +4424,7 @@ export function ItineraryPlanner() {
 
                 {/* === AKCIJSKA VRSTICA: shrani/deli + e-pošta === */}
                 {/* id="itinerary-actions" — cilj mobilne bližnjice "Shrani" (P0-4) */}
-                <Card id="itinerary-actions" className="scroll-mt-[130px] lg:scroll-mt-24">
+                <Card id="itinerary-actions" className="order-10 scroll-mt-[130px] lg:scroll-mt-24">
                   <CardContent className="space-y-4 p-4">
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -4314,6 +4440,22 @@ export function ItineraryPlanner() {
                           <Share2 className="size-4" aria-hidden />
                         )}
                         {saving ? t("saving") : t("saveShare")}
+                      </Button>
+                      {/* TASK 4 / K-7 (UX FIX PASS): „Zaženi Na poti“ — GO člen
+                          DISCOVER→PLAN→BOOK→GO NEPRETRGANO iz načrtovalnika.
+                          Itinerer se pretvori (čista funkcija) in shrani NA
+                          NAPRAVO (dai:go-trip v2) — Na poti deluje tudi brez
+                          signala. Prej ta most NI obstajal. */}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleStartGoMode}
+                        disabled={loading}
+                        className="gap-1.5 border-emerald-300 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-900 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950"
+                        aria-label={t("goModeButtonAria")}
+                      >
+                        <Footprints className="size-4" aria-hidden />
+                        {t("goModeButton")}
                       </Button>
                       <Button
                         type="button"
@@ -4487,8 +4629,9 @@ export function ItineraryPlanner() {
                 {/* UI sprint (točki A/5 smeri): "VEČ O TVOJI POTI" — napredne
                     podrobnosti na korak dlje (priporočila, nasveti, dogodki,
                     pakirni seznam, časovni pregled); primarna delovna površina
-                    ostane čista. Vsebina razdelkov je nespremenjena. */}
-                <Card>
+                    ostane čista. Vsebina razdelkov je nespremenjena.
+                    K-11: order-11 v flex delovni površini. */}
+                <Card className="order-11">
                   <button
                     type="button"
                     onClick={() => setMoreOpen((v) => !v)}
@@ -4641,6 +4784,7 @@ export function ItineraryPlanner() {
                 {/* FW4.2: dogodki z okvirjem potovanja + "Dodaj v mojo pot" */}
                 {/* 1.29.0 (revizija #13): EN locale → prevedena sekcija (EVENTS_EN) */}
                 <ItineraryEventsSection
+                  className="order-12"
                   events={itinerary.events}
                   lang={locale === "en" ? "en" : "sl"}
                   tripStartDate={itinerary.tripStartDate}
@@ -4653,11 +4797,16 @@ export function ItineraryPlanner() {
 
                 {/* F6.1: pameten pakirni seznam — iz dnevne napovedi + dejanskih
                     postankov (razlogi, metoda razkrita, persist odkljukov) */}
-                <SmartPackingSection itinerary={itinerary} input={formData} />
+                <SmartPackingSection
+                  className="order-13"
+                  itinerary={itinerary}
+                  input={formData}
+                />
 
                 {/* WOW: AI Trip Timeline — vizualni dan (TASK 88: datum odhoda
                     poganja ŽIVO dnevno napoved — čip na glavi dneva) */}
                 <TripTimeline
+                  className="order-14"
                   days={itinerary.days}
                   totalBudget={itinerary.total_budget}
                   tripStartDate={itinerary.tripStartDate}
@@ -4668,7 +4817,7 @@ export function ItineraryPlanner() {
                 </Card>
 
                 {/* WOW: Social Sharing — deli svoj AI plan */}
-                <div className="flex items-center justify-center gap-3 py-2">
+                <div className="order-15 flex items-center justify-center gap-3 py-2">
                   <SocialShare
                     title={t("socialShareTitle")}
                     destinations={Array.from(new Set(itinerary.days.flatMap((d) => d.locations.map((l) => l.destination_name))))}

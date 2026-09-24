@@ -159,6 +159,14 @@ export interface DayPlan {
   day: number;
   locations: LocationVisit[];
   weather: { condition: string; temp: number };
+  // TASK 4 / K-2 (UX FIX PASS, 1.91.0): iskrenost vremena v trust vrstici —
+  // `estimated: true` = SEZONSKA OCENA / AI-izmišljeno vreme, NE realna
+  // Open-Meteo napoved (plast se ni izvedla oz. ni uspela). TrustLine na
+  // podlagi tega NE izriše "✓ Vreme preverjeno" (pravilo Issue #3 §4:
+  // nikoli ✓ brez dejansko izvedene plasti). Opcijsko + nazaj kompatibilno:
+  // stari načrti brez polja se obravnavajo po starem ( some(d=>d.weather) ),
+  // sveže generirani pa nosijo izrecno resnico.
+  weatherEstimated?: boolean;
   // F5.6 (road routing): poenostavljena geometrija poti dneva PO REALNIH
   // CESTAH ([lat, lng] točke, OSRM/OpenStreetMap) — za zemljevid poti na
   // /nacrtuj. Opcijsko: stari načrti in hevristični izračuni (OSRM ni
@@ -355,6 +363,15 @@ export interface GeoValidation {
   issues: GeoValidationIssue[];
   tripKm: number;
   worst: "ok" | "warn" | "error";
+  /**
+   * TASK 4 / K-3 (UX FIX PASS, 1.91.0): ali se je plast odpiralnih časov
+   * (closed_month/closed_weekday) DEJANSKO izvedla — zahteva znan datum
+   * odhoda (tripStartDate). false / undefined (stari shranjeni načrti) →
+   * TrustLine NE izriše "✓ Odprto ob tvojem času" (pravilo Issue #3 §4:
+   * nikoli ✓ brez izvedene plasti — prej je closedCount=0 brez datuma
+   * napačno izrisal ✓, čeprav pravili sploh nista tekla).
+   */
+  openingHoursChecked?: boolean;
   /**
    * F5.6 (road routing): od kod so razdalje/časi — "osrm" (realne ceste),
    * "heuristic" (haversine × 1,3 ÷ 55 km/h) ali "mixed". Opcijsko: stari

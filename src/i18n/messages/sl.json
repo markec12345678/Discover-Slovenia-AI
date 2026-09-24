@@ -13,6 +13,7 @@
     "marketplace": "Tržnica",
     "pass": "Slovenia Pass",
     "trips": "Moja potovanja",
+    "goMode": "Na poti",
     "tagline": "AI potovanja",
     "searchAria": "AI iskanje"
   },
@@ -497,7 +498,7 @@
       "verify": "Preverjam razdalje in kakovost…"
     },
     "generatingElapsed": "Preteklo: {time}",
-    "generatingHint": "navadno 15–40 s",
+    "generatingHint": "do ~90 s (AI brezplačna vrsta lahko zamudi)",
     "errorTimeout": "Generiranje je trajalo predolgo (prek 90 s) — preveri povezavo in poskusi znova.",
     "validationDays": "Število dni mora biti celo število med 1 in 14.",
     "validationBudget": "Proračun mora biti večji od 0 €.",
@@ -558,6 +559,8 @@
     "saveShare": "Shrani in deli",
     "saving": "Shranjujem...",
     "saveShareAriaLabel": "Shrani itinerer in ustvari deljivo povezavo",
+    "goModeButton": "Zaženi Na poti",
+    "goModeButtonAria": "Zaženi Na poti s tem načrtom — sopotnik na telefonu (deluje tudi brez signala)",
     "emailButton": "Pošlji na e-poštni naslov",
     "emailButtonAriaLabel": "Pošlji itinerer na e-poštni naslov",
     "shareLinkAriaLabel": "Deljiva povezava do itinererja",

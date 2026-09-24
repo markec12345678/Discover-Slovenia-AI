@@ -49,10 +49,14 @@ function useNavLinks() {
 /**
  * Sekundarne povezave (nivo 2 — "raziskovanje") — prikazane samo v
  * mobilnem meniju pod glavnimi povezavami, da desktop ostane minimalen.
+ * TASK 4 / K-12 (UX FIX PASS): "Na poti" (GO MODE) DODAN — prej dosegljiv
+ * SAMO iz noge (revizija: mobilni meni ga NI imel; GO člen
+ * DISCOVER→PLAN→BOOK→GO ni bil v primarni navigaciji na mobilnem).
  */
 function useSecondaryLinks() {
   const t = useTranslations("nav");
   return [
+    { href: "/na-poti", label: t("goMode") },
     { href: "/dogodki", label: t("events") },
     { href: "/lokali", label: t("listings") },
     { href: "/trznica", label: t("marketplace") },

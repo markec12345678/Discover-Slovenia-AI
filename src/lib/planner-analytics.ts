@@ -133,6 +133,15 @@ export type PlannerEventName =
   | "unrealistic_day"
   | "save_failed"
   | "refine_failed"
+  // TASK 4 / K-4 (UX FIX PASS): preklic dolgega refine klica (props: via,
+  // action, placement, elapsed_seconds) — NAMERNA izbira, ne napaka
+  | "refine_cancelled"
+  // TASK 4 / K-4: 90 s klient varovalka refine klica (isti pomen kot
+  // planner_error stage=timeout, ločeno ime za ločbo od generacije)
+  | "refine_timeout"
+  // TASK 4 / K-7: AI itinerer zagnan v Go Mode (props: via, days,
+  // persisted) — most PLAN → GO, ki ga revizija ni imela
+  | "go_mode_started"
   // TASK 77: uporabnik je kliknil Prekliči med generiranjem (props: elapsed
   // v s) — NAMERNA izbira, ne napaka; meri, kako pogosto so čakalne dobe
   // nedopustne in ali gumb rešuje ujetost v skeletu

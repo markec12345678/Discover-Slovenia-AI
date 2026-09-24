@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Calendar,
   CalendarDays,
@@ -10,6 +11,7 @@ import {
   CloudSun,
   Euro,
   Eye,
+  Footprints,
   HelpCircle,
   Lightbulb,
   Map as MapIcon,
@@ -22,6 +24,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+// TASK 4 / K-7 (UX FIX PASS): „Zaženi Na poti“ z deljene strani — prej je
+// imela stran 0 povezav na /na-poti (revizija: GO člen odrezan od AI načrta).
+import { buildItineraryGoView } from "@/lib/journey/itinerary-go";
+import { saveItineraryGoTrip } from "@/lib/journey/go-persist";
 import { DayAudioButton } from "@/components/itinerary-audio";
 import { DaySegmentHeader } from "@/components/day-segment-header";
 import { segmentBoundaryAt } from "@/lib/day-segments";
@@ -118,6 +124,8 @@ export function SharedTrip({
   const setItinerary = useAppStore((s) => s.setItinerary);
   const routeCoords = useAppStore((s) => s.routeCoords);
   const routeByDay = useAppStore((s) => s.routeByDay);
+  // TASK 4 / K-7: navigacija na /na-poti po zagonu Go Mode
+  const router = useRouter();
 
   // TASK 88 — ŽIVO vreme po dnevih (Open-Meteo prek /api/weather način B,
   // sidro = prvi geo-postanek dneva). Površina /pot/[shareId] je SL-only
@@ -640,6 +648,27 @@ export function SharedTrip({
                 <MapPin className="size-4 mr-2" aria-hidden="true" />
                 Načrtuj svoje potovanje
               </Link>
+            </Button>
+            {/* TASK 4 / K-7 (UX FIX PASS): „Zaženi Na poti“ — potovanje iz TEGA
+                načrta gre v Go Mode (na tej napravi; deluje tudi brez signala).
+                Prej: deljena stran NI imela NOBENE povezave na /na-poti —
+                uporabnik bi moral potovanje zgraditi znova na /potovanje. */}
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => {
+                const view = buildItineraryGoView(itinerary, {
+                  lang: "sl",
+                  name,
+                });
+                if (saveItineraryGoTrip(view)) {
+                  router.push("/na-poti");
+                }
+              }}
+              aria-label="Zaženi Na poti s tem načrtom"
+            >
+              <Footprints className="size-4 mr-2" aria-hidden="true" />
+              Zaženi Na poti
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link href={`/?odpri=${shareId}`}>

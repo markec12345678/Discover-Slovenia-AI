@@ -33,6 +33,16 @@ interface PlannerStatusStripProps {
    *  izdelki) prek vseh dni — poganja vrstico "Rezerviraj" pod ploščicami.
    *  0 ali undefined = vrstica se ne prikaže (prazna tržnica ni CTA). */
   bookingOfferCount?: number;
+  /**
+   * TASK 4 / K-15 (UX FIX PASS): nadzorovani način razklopa — stanje je
+   * DVIGNJENO v itinerary-planner, da ga lahko sproži tudi klik na
+   * postavko v PlannerTrustLine (isti `open`). Opcijsko: brez obeh propov
+   * komponenta obdrži lastno stanje (nazaj kompatibilno za ostale klice).
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** TASK 4 / K-11: vrstni red v flex delovni površini. */
+  className?: string;
 }
 
 /**
@@ -47,9 +57,18 @@ export function PlannerStatusStrip({
   input,
   geoValidation,
   bookingOfferCount = 0,
+  open: openControlled,
+  onOpenChange,
+  className,
 }: PlannerStatusStripProps) {
   const t = useTranslations("planner");
-  const [open, setOpen] = useState(false);
+  // K-15: nadzorovani (dvignjeni) način ima prednost; sicer lastno stanje.
+  const [openLocal, setOpenLocal] = useState(false);
+  const open = openControlled ?? openLocal;
+  const setOpen = (v: boolean) => {
+    if (onOpenChange) onOpenChange(v);
+    else setOpenLocal(v);
+  };
 
   const drivingMinutes = geoValidation.days.reduce(
     (sum, d) => sum + (d.drivingMinutes ?? 0),
@@ -124,7 +143,7 @@ export function PlannerStatusStrip({
   ];
 
   return (
-    <div className="space-y-3">
+    <div className={cn("space-y-3", className)}>
       {/* Ploščice stanja */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         {tiles.map(({ icon: Icon, label, value, tone, iconTone }) => (
@@ -180,12 +199,14 @@ export function PlannerStatusStrip({
         </button>
       )}
 
-      {/* Zložene podrobnosti — iste kartice kot prej, korak dlje */}
+      {/* Zložene podrobnosti — iste kartice kot prej, korak dlje
+          (TASK 4 / K-15: id="planner-calc-details" — cilj scrolla ob kliku
+          na postavko trust vrstice) */}
       <Button
         type="button"
         variant="outline"
         size="sm"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(!open)}
         aria-expanded={open}
         className="w-full gap-1.5 border-dashed text-muted-foreground hover:text-foreground"
       >
@@ -200,7 +221,7 @@ export function PlannerStatusStrip({
       </Button>
 
       {open && (
-        <div className="space-y-4">
+        <div id="planner-calc-details" className="space-y-4 scroll-mt-24">
           <ItineraryQualityCard itinerary={itinerary} input={input} />
           <BudgetPanel itinerary={itinerary} input={input} />
           <GeoValidationPanel itinerary={itinerary} />

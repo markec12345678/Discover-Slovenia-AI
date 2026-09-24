@@ -300,7 +300,11 @@ export function generateDeterministicItinerary(
       // dosegljiv (glej enrichWithRealWeather v route, ki jo sicer prepiše
       // z realno prognozo). Ni več lažna "dnevna" napoved, ampak izrecno
       // sezonsko povprečje.
+      // TASK 4 / K-2: weatherEstimated=true pomeni, da to NI realna napoved —
+      // enrichWithRealWeather ga ob uspehu preklopi na realnega (false);
+      // TrustLine na podlagi tega ne izriše "✓ Vreme preverjeno".
       weather: { condition: input.season === "winter" ? "sneg" : "sončno", temp: input.season === "winter" ? 2 : 22 },
+      weatherEstimated: true,
     });
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Send,
@@ -29,6 +29,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
 import type { Itinerary, PlannerInput } from "@/lib/types";
 import { QUICK_ACTIONS } from "@/lib/refine-actions";
@@ -60,6 +61,8 @@ interface PlannerAiControlsProps {
   itinerary: Itinerary;
   formData: PlannerInput;
   onRefined: (newItinerary: Itinerary) => void;
+  /** TASK 4 / K-11: vrstni red v flex delovni površini (mobilno za dnevi). */
+  className?: string;
 }
 
 /** Dvojezične oznake (isti vzorec kot ItineraryRefiner — L konstanta). */
@@ -71,6 +74,17 @@ const L = {
   },
   adjustDay: { sl: "Dan", en: "Day" },
   wholeTrip: { sl: "cela pot", en: "whole trip" },
+  // TASK 4 / K-8: VIDNA ločba obsega — skupinski oznaki nad čipi. VLM
+  // revizija: "chips do not visually indicate which day they affect … no
+  // text explaining scope" (a11y imena so ga nosila, vidno ne).
+  scopeDayLabel: {
+    sl: "Za izbrani dan:",
+    en: "For the selected day:",
+  },
+  scopeTripLabel: {
+    sl: "Za celotno pot:",
+    en: "For the whole trip:",
+  },
   quickActionsHint: {
     sl: "Hitre akcije delujejo tudi brez AI (deterministično)",
     en: "Quick actions also work without AI (deterministic)",
@@ -85,6 +99,19 @@ const L = {
   },
   send: { sl: "Pošlji", en: "Send" },
   loading: { sl: "Prilagajam …", en: "Adjusting …" },
+  // TASK 4 / K-4: IZHOD iz dolgega refine klica (živi dokaz: 8–11 min
+  // spinnerja brez preklica) — Prekliči + števec dejansko pretečenega časa
+  // (isti kanon iskrenosti kot generacija TASK 77).
+  cancel: { sl: "Prekliči", en: "Cancel" },
+  seconds: { sl: "s", en: "s" },
+  loadingSlowHint: {
+    sl: "AI lahko potrebuje do ~60 s — lahko prekličeš.",
+    en: "AI can take up to ~60 s — you can cancel.",
+  },
+  toastCancelled: {
+    sl: "Prilagoditev preklicana — načrt ni spremenjen",
+    en: "Adjustment cancelled — itinerary unchanged",
+  },
   toastUpdated: { sl: "Itinerer posodobljen!", en: "Itinerary updated!" },
   toastStillFailing: {
     sl: "Posodobljeno — a dan še vedno ni izvedljiv",
@@ -92,6 +119,10 @@ const L = {
   },
   toastNoChange: { sl: "Ni sprememb", en: "No changes" },
   toastFailed: { sl: "Posodobitev ni uspela", en: "Update failed" },
+  toastTimeout: {
+    sl: "Prilagoditev je trajala predolgo — poskusi znova (hitre akcije delujejo takoj)",
+    en: "The adjustment took too long — try again (quick actions work instantly)",
+  },
   errorGeneric: {
     sl: "Napaka pri posodobitvi",
     en: "Error while updating",
@@ -161,6 +192,7 @@ export function PlannerAiControls({
   itinerary,
   formData,
   onRefined,
+  className,
 }: PlannerAiControlsProps) {
   const { toast } = useToast();
   const locale = useLocale();
@@ -169,6 +201,13 @@ export function PlannerAiControls({
   const [instruction, setInstruction] = useState("");
   const [loading, setLoading] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  // TASK 4 / K-4: števec dejansko pretečenega časa (iskren — ne ocena) +
+  // AbortController za Prekliči (prej: fetch brez signal → 8–11 min ujetost).
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const abortRef = useRef<AbortController | null>(null);
+  // K-4: ločba PREKLIC (uporabnikov klik) od TIMEOUT-a (90 s varovalka) —
+  // različni sporočili (kanon TASK 77 PREKLIC vs TIMEOUT).
+  const timedOutRef = useRef(false);
   const [quickDay, setQuickDay] = useState<number>(
     itinerary.days[0]?.day ?? 1
   );
@@ -183,11 +222,31 @@ export function PlannerAiControls({
     }
   }, [dayNumbersKey, quickDay]);
 
+  // K-4: števec teka SAMO med nalaganjem (1 Hz); po koncu se ponastavi.
+  useEffect(() => {
+    if (!loading) {
+      setElapsedSeconds(0);
+      return;
+    }
+    const started = Date.now();
+    const tick = setInterval(
+      () => setElapsedSeconds(Math.floor((Date.now() - started) / 1000)),
+      1000
+    );
+    return () => clearInterval(tick);
+  }, [loading]);
+
   // EN enaknoslovnica refinerjeve handleRefine (ista obremenitev, isti
   // endpoint, isti tosti — razlikuje SAMO placement v analitiki).
   // day === null → prosto-besedilna pot CELEGA načrta (brez action polja —
   // API vediča VALID_ACTIONS ključavno filtrira neznane id-je, mi pa tega
   // sploh ne pošljemo, da je obremenitev IDENTIČNA obstoječi prosti poti).
+  // TASK 4 / K-4: Prekliči — uporabnikov izhod iz čakalne vrste AI (brez
+  // napake — sam je izbral konec; načrt ostane nespremenjen).
+  function handleCancel() {
+    abortRef.current?.abort();
+  }
+
   async function handleRefine(
     instructionText: string,
     quick?: { action: string; day: number | null }
@@ -197,10 +256,20 @@ export function PlannerAiControls({
 
     setLoading(true);
     setBusyAction(quick?.action ?? null);
+    // K-4: klient ima SVOJ abort signal (strežniška trda meja je 60 s;
+    // klient varovalka 90 s — usklajeno z GENERATION_TIMEOUT_SECONDS).
+    const controller = new AbortController();
+    abortRef.current = controller;
+    timedOutRef.current = false;
+    const clientTimeout = setTimeout(() => {
+      timedOutRef.current = true;
+      controller.abort();
+    }, 90_000);
     try {
       const res = await fetch("/api/itinerary/refine", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           itinerary,
           formData: {
@@ -281,18 +350,39 @@ export function PlannerAiControls({
         }
       }
     } catch (err) {
-      trackPlannerEvent("refine_failed", {
-        via: quick ? (quick.day != null ? "quick_action" : "free_text") : "free_text",
-        action: quick?.action,
-        placement: "control_strip",
-      });
-      toast({
-        title: L.toastFailed[isEn ? "en" : "sl"],
-        description:
-          err instanceof Error ? err.message : L.errorGeneric[isEn ? "en" : "sl"],
-        variant: "destructive",
-      });
+      // K-4: PREKLIC ≠ napaka — uporabnik je sam končal čakanje; iskren
+      // toast, brez destruktivne variante, brez analitike "failed".
+      // TIMEOUT (90 s varovalka) ima svoje, jasnejše sporočilo.
+      if (err instanceof DOMException && err.name === "AbortError") {
+        const timedOut = timedOutRef.current;
+        trackPlannerEvent(timedOut ? "refine_timeout" : "refine_cancelled", {
+          via: quick ? (quick.day != null ? "quick_action" : "free_text") : "free_text",
+          action: quick?.action,
+          placement: "control_strip",
+          elapsed_seconds: elapsedSeconds,
+        });
+        toast({
+          title: timedOut
+            ? L.toastTimeout[isEn ? "en" : "sl"]
+            : L.toastCancelled[isEn ? "en" : "sl"],
+          variant: timedOut ? "destructive" : "default",
+        });
+      } else {
+        trackPlannerEvent("refine_failed", {
+          via: quick ? (quick.day != null ? "quick_action" : "free_text") : "free_text",
+          action: quick?.action,
+          placement: "control_strip",
+        });
+        toast({
+          title: L.toastFailed[isEn ? "en" : "sl"],
+          description:
+            err instanceof Error ? err.message : L.errorGeneric[isEn ? "en" : "sl"],
+          variant: "destructive",
+        });
+      }
     } finally {
+      clearTimeout(clientTimeout);
+      abortRef.current = null;
       setLoading(false);
       setBusyAction(null);
       setInstruction("");
@@ -305,7 +395,7 @@ export function PlannerAiControls({
   }
 
   return (
-    <div className="rounded-xl border border-primary/25 bg-primary/5 p-3 sm:p-4">
+    <div className={cn("rounded-xl border border-primary/25 bg-primary/5 p-3 sm:p-4", className)}>
       {/* Glava — naslov + izbira dneva za hitre akcije */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -345,14 +435,23 @@ export function PlannerAiControls({
         </div>
       </div>
 
-      {/* Čipi hitrih akcij — 6 determinističnih (isti vir kot rail) */}
+      {/* TASK 4 / K-8: VIDNE oznake obsega — "Za izbrani dan:" nad 6
+          determinističnimi čipi, "Za celotno pot:" nad prostimi. Prej je
+          obseg nosil samo title atribut + a11y ime (VLM: nevidno). */}
       {dayNumbers.length > 0 && (
-        <div
-          className="mt-3 flex flex-wrap gap-1.5"
-          role="group"
-          aria-label={L.title[isEn ? "en" : "sl"]}
-        >
-          {QUICK_ACTIONS.map((qa) => {
+        <div className="mt-3 space-y-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/90">
+            {L.scopeDayLabel[isEn ? "en" : "sl"]}{" "}
+            <span className="font-semibold text-foreground/80">
+              {t("dayTitle", { day: quickDay })}
+            </span>
+          </p>
+          <div
+            className="flex flex-wrap gap-1.5"
+            role="group"
+            aria-label={`${L.scopeDayLabel[isEn ? "en" : "sl"]} ${t("dayTitle", { day: quickDay })}`}
+          >
+            {QUICK_ACTIONS.map((qa) => {
             const Icon = ACTION_ICONS[qa.id] ?? Sparkles;
             const busy = busyAction === qa.id && loading;
             return (
@@ -381,7 +480,16 @@ export function PlannerAiControls({
 
           {/* Prosti čipi (Issue #3 §3: ceneje / bolj aktivno / bolj mirno) —
               OBSTOJEČA prosto-besedilna pot (celoten načrt, brez action) */}
-          {AI_CONTROL_FREE_ACTIONS.map((fa) => {
+          </div>
+          <p className="pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/90">
+            {L.scopeTripLabel[isEn ? "en" : "sl"]}
+          </p>
+          <div
+            className="flex flex-wrap gap-1.5"
+            role="group"
+            aria-label={L.scopeTripLabel[isEn ? "en" : "sl"]}
+          >
+            {AI_CONTROL_FREE_ACTIONS.map((fa) => {
             const Icon = FREE_ACTION_ICONS[fa.id] ?? Sparkles;
             const busy = busyAction === fa.id && loading;
             return (
@@ -408,6 +516,43 @@ export function PlannerAiControls({
               </button>
             );
           })}
+          </div>
+        </div>
+      )}
+
+      {/* TASK 4 / K-4: vrstica napredka + Prekliči med dolgim refine klicem —
+          števec je DEJANSKI pretečeni čas (kanon TASK 77), ne ocena. */}
+      {loading && (
+        <div
+          className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-background/80 px-3 py-2"
+          role="status"
+          aria-live="polite"
+        >
+          <Loader2
+            className="size-3.5 shrink-0 animate-spin text-primary"
+            aria-hidden="true"
+          />
+          <span className="text-xs font-medium text-muted-foreground">
+            {L.loading[isEn ? "en" : "sl"]} {elapsedSeconds > 0 && (
+              <span className="tabular-nums">
+                · {elapsedSeconds} {L.seconds[isEn ? "en" : "sl"]}
+              </span>
+            )}
+          </span>
+          {elapsedSeconds >= 10 && (
+            <span className="text-xs text-muted-foreground/80">
+              {L.loadingSlowHint[isEn ? "en" : "sl"]}
+            </span>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleCancel}
+            className="ml-auto shrink-0 gap-1.5"
+          >
+            {L.cancel[isEn ? "en" : "sl"]}
+          </Button>
         </div>
       )}
 
@@ -423,22 +568,31 @@ export function PlannerAiControls({
           className="flex-1 bg-background"
           aria-label={L.inputLabel[isEn ? "en" : "sl"]}
         />
-        <Button
-          type="submit"
-          disabled={loading || !instruction.trim()}
-          size="sm"
-          className="shrink-0 gap-1.5"
-          aria-label={L.send[isEn ? "en" : "sl"]}
-        >
-          {loading ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          ) : (
+        {loading ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleCancel}
+            className="shrink-0 gap-1.5"
+            aria-label={L.cancel[isEn ? "en" : "sl"]}
+          >
+            {L.cancel[isEn ? "en" : "sl"]}
+          </Button>
+        ) : (
+          <Button
+            type="submit"
+            disabled={loading || !instruction.trim()}
+            size="sm"
+            className="shrink-0 gap-1.5"
+            aria-label={L.send[isEn ? "en" : "sl"]}
+          >
             <Send className="size-4" aria-hidden="true" />
-          )}
-          <span className="hidden sm:inline">
-            {L.send[isEn ? "en" : "sl"]}
-          </span>
-        </Button>
+            <span className="hidden sm:inline">
+              {L.send[isEn ? "en" : "sl"]}
+            </span>
+          </Button>
+        )}
       </form>
 
       <p className="mt-1.5 text-[11px] text-muted-foreground/80">

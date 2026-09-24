@@ -219,11 +219,11 @@ export function DestinationModal({
 
             {/* Vsebina */}
             <div className="space-y-6 p-5 sm:p-6">
-              {/* Issue #3 §8 (EXPLORE → "Add to my trip"): primarni izhod iz
-                  odkrivanja je DODAJ V MOJO POT — ISTI prenos kot hero čipi
-                  (sessionStorage "heroQuery" → /nacrtuj samodejno sestavi
-                  načrt z AZ DA destinacijo). NI nova logika — obstoječa
-                  plast prenosa želje. */}
+              {/* Issue #3 §8 (EXPLORE → "Add to my trip") — prej lažnjujoče
+                  ime "Dodaj v mojo pot": gumb NE doda k obstoječemu načrtu,
+                  ampak ZGRADI NOVEGA okoli destinacije (heroQuery prenos →
+                  nova generacija; živi dokaz revizije K-10). Iskreno ime +
+                  še vedno ISTI prenos — NI nove logike. */}
               <Button
                 type="button"
                 size="lg"
@@ -240,7 +240,7 @@ export function DestinationModal({
                 }}
               >
                 <MapPlus className="size-4" aria-hidden="true" />
-                Dodaj v mojo pot
+                Zgradi novo pot okoli {destination.name}
                 <ArrowRight className="size-4" aria-hidden="true" />
               </Button>
 

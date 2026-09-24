@@ -143,7 +143,11 @@ describe("TASK 96: D1 komponente — obstoj in integracija", () => {
 
   test("PlannerDayNav: izrisan z dnevi itinerarja", () => {
     const s = source(PLANNER);
-    expect(s).toContain("<PlannerDayNav days={itinerary.days} />");
+    // TASK 4 / K-11 (UX FIX PASS): vrstica je dobila className (vrstni red v
+    // flex delovni površini — mobilno neposredno pred dnevi) in je zdaj
+    // večvrstična; NAMEN je nespremenjen: izrisana z dnevi itinererja.
+    expect(s).toContain("<PlannerDayNav");
+    expect(s).toContain("days={itinerary.days}");
   });
 
   test("restored chip (welcome-back): role=status + dismissing", () => {

@@ -327,8 +327,11 @@ describe("TASK 64: go-persist — dai:go-trip", () => {
       const rec = loadGoTrip();
       expect(rec).not.toBeNull();
       expect(rec?.version).toBe(1);
-      expect(rec?.journey.id).toBe("j1");
-      expect(rec?.selectedIds).toEqual(["fsq:a1", "fsq:a2"]);
+      // TASK 4 / K-7: GoTripRecord je zdaj unija (v1 journey | v2 itinerary)
+      // — ozko vračanje po version, da TS ve, da je ta zapis v1.
+      const v1 = rec?.version === 1 ? rec : null;
+      expect(v1?.journey.id).toBe("j1");
+      expect(v1?.selectedIds).toEqual(["fsq:a1", "fsq:a2"]);
       expect(typeof rec?.savedAt).toBe("string");
     });
   });

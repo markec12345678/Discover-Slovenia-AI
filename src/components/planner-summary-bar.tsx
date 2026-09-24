@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { INTERESTS } from "@/lib/slovenia-data";
 import type { PartyType } from "@/lib/party-types";
 import type { Pace } from "@/lib/pace-types";
@@ -19,6 +20,8 @@ import type { PlannerInput, Season } from "@/lib/types";
 interface PlannerSummaryBarProps {
   formData: PlannerInput;
   onEdit: () => void;
+  /** TASK 4 / K-11: vrstni red v flex delovni površini. */
+  className?: string;
 }
 
 const PARTY_LABEL_KEYS: Record<PartyType, string> = {
@@ -47,7 +50,7 @@ const PACE_LABEL_KEYS: Record<Pace, string> = {
  * gumbom "Uredi" — delovna površina načrta prevzame prvi zaslon, vsi
  * kontrolniki ostanejo en klik stran. Vsa logika obrazca je nespremenjena.
  */
-export function PlannerSummaryBar({ formData, onEdit }: PlannerSummaryBarProps) {
+export function PlannerSummaryBar({ formData, onEdit, className }: PlannerSummaryBarProps) {
   const t = useTranslations("planner");
 
   const partyLabel = formData.partyType
@@ -65,7 +68,10 @@ export function PlannerSummaryBar({ formData, onEdit }: PlannerSummaryBarProps) 
 
   return (
     <div
-      className="flex flex-wrap items-center gap-1.5 rounded-xl border bg-card/60 p-2.5 sm:gap-2 sm:p-3"
+      className={cn(
+        "flex flex-wrap items-center gap-1.5 rounded-xl border bg-card/60 p-2.5 sm:gap-2 sm:p-3",
+        className
+      )}
       role="group"
       aria-label={t("summaryEditAria")}
     >

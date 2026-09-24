@@ -13,6 +13,7 @@
     "marketplace": "Marketplace",
     "pass": "Slovenia Pass",
     "trips": "My trips",
+    "goMode": "On the road",
     "tagline": "AI trips",
     "searchAria": "AI search"
   },
@@ -497,7 +498,7 @@
       "verify": "Checking distances and quality…"
     },
     "generatingElapsed": "Elapsed: {time}",
-    "generatingHint": "usually 15–40 s",
+    "generatingHint": "up to ~90 s (the free AI queue can delay it)",
     "errorTimeout": "Generation took too long (over 90 s) — check your connection and try again.",
     "validationDays": "Number of days must be a whole number between 1 and 14.",
     "validationBudget": "Budget must be greater than €0.",
@@ -558,6 +559,8 @@
     "saveShare": "Save and share",
     "saving": "Saving...",
     "saveShareAriaLabel": "Save the itinerary and create a shareable link",
+    "goModeButton": "Start On-the-road",
+    "goModeButtonAria": "Start On-the-road with this plan — a companion on your phone (works offline too)",
     "emailButton": "Send by email",
     "emailButtonAriaLabel": "Send the itinerary to an email address",
     "shareLinkAriaLabel": "Shareable link to the itinerary",

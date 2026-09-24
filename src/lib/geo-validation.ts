@@ -116,6 +116,7 @@ export interface GeoValidation {
    * hevristiko (nazaj kompatibilno, pošteno razkrito).
    * (Zrcali types.ts GeoValidation.method — strukturno enako.)
    */
+  openingHoursChecked?: boolean;
   method?: RoutingMethod;
 }
 
@@ -678,11 +679,19 @@ export function validateItineraryGeo(
   if (legs && usedLegs.size > 0) method = legIndexMethod(usedLegs);
   else if (legs) method = "heuristic";
 
+  // TASK 4 / K-3 (UX FIX PASS): ali se je plast odpiralnih časov DEJANSKO
+  // izvedla — zahteva znan datum odhoda (tripStart). Brez datuma pravili
+  // closed_month/closed_weekday NE tečeta (`if (dayMonth !== null)`), zato
+  // je "✓ Odprto ob tvojem času" nad takim načrtom LAŽNA trditev. Flag je
+  // izhodišče za PlannerTrustLine (NE izriše ✓, če plasti ni bilo).
+  const openingHoursChecked = tripStart !== null && days.length > 0;
+
   return {
     days: dayMetrics,
     issues,
     tripKm,
     worst,
+    openingHoursChecked,
     ...(method ? { method } : {}),
   };
 }
