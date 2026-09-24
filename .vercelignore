@@ -1,0 +1,15 @@
+# .vercelignore — VAJA SAMO ZA CLI DEPLOYJE (git-based deployji uporabljajo
+# vsebino repoja in te mape itak ne vsebujejo).
+# Razlog (dokazano 24. 9. 2026, dpl_A2x8jLpZ5VVPNTufYj5KZvJbojGe):
+# `vercel deploy` naloži LOKALNO delovno drevo, vključno z ne-sledenimi
+# mapami peskovnika (skills/ z 2 tipovnimi napakami → `next build` type
+# check je padel; ux-audit-4/ dokazila ~13 MB …). Vse ne-build mape so tu.
+skills
+ux-audit-4
+ux-fixpass
+ux-verify-1.91.0
+tool-results
+upload
+docker
+docs/screenshots
+.z-ai-config
