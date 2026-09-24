@@ -164,6 +164,43 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: securityHeaders,
       },
+      // ─────────────────────────────────────────────────────────────────────
+      // SW-SPECIFIČNA CSP (1.95.0, fix bele slike zemljevida na produkciji):
+      //
+      // Service worker ima LASTNO CSP, ki jo prejme z odgovorom /sw.js — in
+      // ta CSP velja za fetch() klice IZ SW konteksta (ne strani!). Splošna
+      // CSP zgoraj ima connect-src 'self' blob:, kar je PRAVILNO za stran
+      // (klient nikoli ne kliče tujih API-jev) — a SW v fetch handlerju
+      // SAM prevzame prestrete zahteve (OSM tiles, unsplash slike) in jih
+      // ponovno pridobi s fetch(request) IZ SVOJEGA konteksta → njegova
+      // connect-src blokira tile.openstreetmap.org → respondWith obljuba
+      // ZAVRNE → ploščice NE naložijo → BELA SLIKA zemljevida (dokazano na
+      // obeh produkcijah: istostranska slika OK, tuja slika/tile FAIL, v
+      // devu deluje ker je SW passthrough prek ?dev=1).
+      //
+      // connect-src tu ZRCALI img-src politiko strani ('self' + vsi https):
+      // SW sme pridobivati SAMO tisto, kar sme tudi stran (slike/tiles) —
+      // omrežna površina SW-ja je strožja ali enaka strani, NIKOLI širša
+      // (SW ne sme postati proxy za poljuben promet). Ostali direktivi
+      // ostajajo tesni (script/worker 'self').
+      // Pravilo za POSAMEZNO pot PREGLASI splošno pravilo (isti ključ,
+      // specifičnejša pot kasneje v seznamu).
+      // ─────────────────────────────────────────────────────────────────────
+      {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self'",
+              "worker-src 'self'",
+              // PRESTRETE slike/ploščice: enaka omrežna meja kot img-src strani
+              "connect-src 'self' blob: https:",
+            ].join("; "),
+          },
+        ],
+      },
     ];
   },
 };
