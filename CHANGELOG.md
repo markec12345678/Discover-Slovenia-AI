@@ -7,6 +7,43 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.91.1] — 2026-09-24 (docs: sinhronizacija + POPOLNA VERIFIKACIJA UX FIX PASS na produkciji)
+
+### Dokazano na ŽIVI produkciji (Render 1.91.0)
+- **K-2/K-3 API sonda:** svež generiran načrt vrača `weatherEstimated:true`
+  (Render nima omrežnega izhoda do Open-Meteo → poštena amber oznaka
+  »Vreme: sezonska ocena«) in `openingHoursChecked:false` (brez datuma
+  odhoda postavka o odpiralnih časih SE NE izriše). Stari deljeni načrt
+  (/pot/fb4162e781, ustvarjen pred 1.91.0) prav tako NE izriše nobene
+  nez dokazane ✓ trditve (§4 pravilo deluje retroaktivno).
+- **K-7 E2E browser:** klik »Zaženi Na poti« na deljenem načrtu → /na-poti
+  izriše »Načrtovani postanek — brez rezervacije« + »Navigiraj« +
+  »Nazaj na načrt« — zlata pot DISCOVER→PLAN→BOOK→GO povezana do konca.
+- **K-12 browser (390 px):** »Na poti« je v mobilnem meniju; 0 konzolnih
+  napak na homepage.
+- **Render /api/health:** version 1.91.0, vsi startup checki OK.
+
+### Verifikacija kode (lokalno)
+- `bunx tsc --noEmit`: 0 napak (src/; 2 napaki v skills/ nista aplikacija).
+- `bun run lint`: 0/0. `bun test`: **2317/2317** (52.568 expect, 92 datotek).
+- Vsak popravek K-2…K-15 preverjen v kodi (markerji, Promise.race meje,
+  mostne datoteke, i18n ključi).
+
+### Sinhronizacija dokumentacije
+- README: Stanje → v1.91.1 + TASK 4 UX FIX PASS; trenutna verzija → 1.91.1.
+- docs/FEATURE-MATRIX.md: vrstica Go Mode posodobljena (K-12 mobilni meni +
+  K-7 most »Zaženi Na poti«; prej »NI v navigaciji!«).
+
+### Odperto (operater — NI dosegljivo iz repozitorija)
+- **Vercel še vedno 1.90.0** (avto-deploy tega pusha se ni sprožil;
+  v peskovniku ni Vercel CLI/poverilnic) — potreben redeploy z dashboarda.
+- **K-1 (Render egress do Open-Meteo):** vzrok v infrastrukturi Rendera;
+  aplikacija zdaj iskreno prikazuje sezonsko oceno namesto lažne vrednosti.
+- K-16 (LOW): offline hard reload (SW toplo-predpomnilnik), zoom tipki
+  zemljevida na 390 px, beta pasica konkuruje hero CTA.
+
+---
+
 ## [1.91.0] — 2026-09-24 (TASK 4: UX FIX PASS — ZERO FEATURE LOSS + ZERO CONFUSION)
 
 ### Cilj

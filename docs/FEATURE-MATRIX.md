@@ -24,7 +24,7 @@
 | Postanek ob poti / kosilo | PlannerLegSuggestions/MealStop | /api/itinerary/stops-along-way | kontekstualno | PLAN dan | CONTEXTUAL | NE |
 | Rezervacija (kontekstualna) | BookingPanel po dnevu + /go/* | /api/supply + /go/[provider] | dnevni paneli | PLAN/BOOK kontekstualno | CONTEXTUAL | NE |
 | Journey /potovanje (7 kategorij) | /potovanje (NI v navigaciji!) | /api/journey/* | pokopana stran | PLAN sekundarna (footer + povezave) | CONTEXTUAL | NE |
-| Go Mode /na-poti (offline, GPS) | /na-poti (NI v navigaciji!) | 100 % klient (dai:go-trip) | pokopana stran | GO — footer povezava + /potovanje gumb | CONTEXTUAL | NE |
+| Go Mode /na-poti (offline, GPS) | /na-poti — od 1.91.0 (K-12) tudi v MOBILNEM meniju; most »Zaženi Na poti« z /nacrtuj in /pot/[shareId] (K-7) | 100 % klient (dai:go-trip, v2 tudi itinerary) | prej pokopana stran | GO — footer + mobilni meni + most iz AI načrta | CONTEXTUAL | NE |
 | Shrani in deli | /nacrtuj akcijska vrstica | POST /api/itinerary/save (shareId+editToken) | spodaj | PLAN akcije | VISIBLE | NE |
 | Deljena pot /pot/[shareId] | javna stran + skupnost | GET shared | ločena stran | MY TRIP (javni pogled) | VISIBLE | NE |
 | Moja potovanja | /moja-potovanja (samo mobilni meni!) | /api/user/trips | namenjena stran | MY TRIP — navigacija tudi na desktopu | VISIBLE | NE |
