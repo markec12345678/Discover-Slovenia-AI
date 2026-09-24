@@ -288,3 +288,15 @@ je obstoječ vzorec rute nedotaknjene od 1.33.0 — dokumentirano, ne vpliva).
 
 **Ostanek Issue #4 po VAL 6:** §18 (uradna vsebina/NiST), §23 (share/privacy),
 §24 (security/rate-limit dokumentacija), P2+ — nič ne blokira pilota.
+
+**1.98.1 HOTFIX (isti dan):** med VAL 6 produkcijsko verifikacijo odkrita
+REGRESA, ki NI bila VAL 6: /pot, /api/trip, /api/itinerary/shared so na
+Render vracali 500 na vseh branjih (pisi delovali). Koren: git skip-worktree
+past na prisma/schema.prisma — modeli VAL 2–5 niso nikoli prišli v repozitorij,
+Render je gradil Prisma klienta iz zastarele sheme (Unknown field `isPublic`
+— PrismaClientValidationError, client-side). DB je bila zdrava (n-migracije
+raw SQL). Popravek d0fdbd9: polna shema v repo + 2 varovalki (instrumentation
+`client:trip-parity` FAILED ob zastarelmu buildu + test pasti: model vsebina
+≡ HEAD, izjema samo provider vrstica). Dokaz: 404 namesto 500 na neobstoječem
+shareId, /pot/fb4162e781 200, /api/trip 200 s contentVersion, VAL 6 LOCKED
+oznake preživijo produkcijski round-trip.
