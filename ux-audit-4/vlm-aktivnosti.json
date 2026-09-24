@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Based on the **'Aktivnosti'** (Activities) tab in the booking panel, here are the details of the offers listed:\n\n### **Location: BOHINJ**\n\n1.  **Provider:** GetYourGuide\n    *   **Label:** \"Partner\" (indicated by a blue tag with a link icon)\n    *   **Offer:** Ogledite si vodene ture in izkušnje v Bohinj (View guided tours and experiences in Bohinj)\n    *   **Button Label:** **Iskanje** (Search)\n\n2.  **Provider:** Tiqets\n    *   **Label:** \"Partner\" (blue tag with link icon)\n    *   **Offer:** Vstopnice za znamenitosti in muzeje — brez čakanja v vrsti (Tickets for attractions and museums — skip the line)\n    *   **Button Label:** **Vstopnice** (Tickets)\n\n3.  **Provider:** Local Provider (implied by specific activity listing)\n    *   **Offer:** Kmečka delavnica — slr In skuta\n    *   **Details:** 3h • 1-10 • **€35/osebo**\n    *   **Rating:** ★ 4.9\n    *   **Button Label:** **Pošlji povpraševanje** (Send inquiry) [with an external link icon]\n\n---\n\n### **Location: TRIGLAV**\n\n4.  **Provider:** GetYourGuide\n    *   **Label:** \"Partner\"\n    *   **Offer:** Ogledite si vodene ture in izkušnje v Triglav\n    *   **Button Label:** **Iskanje**\n\n5.  **Provider:** Tiqets\n    *   **Label:** \"Partner\"\n    *   **Offer:** Vstopnice za znamenitosti in muzeje — brez čakanja v vrsti\n    *   **Button Label:** **Vstopnice**\n\n6.  **Provider:** Local Provider (implied)\n    *   **Offer:** Triglav v dveh dneh z vodnikom\n    *   **Details:** 20h • 2-4 • **€220/osebo**\n    *   **Rating:** ★ 5.0\n    *   **Button Label:** **Pošlji povpraševanje** [with an external link icon]\n\n### **External Partner Indication**\nYes, there is a clear indication for external partners:\n*   The providers **GetYourGuide** and **Tiqets** explicitly display a blue **\"Partner\"** badge next to their names.\n*   Additionally, the description text at the top of the panel states: *\"Nastanitev, aktivnosti, prehrano in transport rezerviraj neposredno prek naših partnerjev ali lokalnih ponudnikov\"* (Book accommodation, activities, food, and transport directly through our partners or local providers).\n*   The local provider options (\"Pošlji povpraševanje\") include a small **external link icon** (box with arrow) on the button, suggesting they lead to an external inquiry form or website.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1790225460,
+  "id": "20260924125047714d564eb4f640b0",
+  "model": "glm-5v-turbo",
+  "object": "chat.completion",
+  "request_id": "20260924125047714d564eb4f640b0",
+  "usage": {
+    "completion_tokens": 680,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 1737,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 2417
+  }
+}

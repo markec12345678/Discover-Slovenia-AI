@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Based on the provided image, here are the answers to your questions:\n\n1) **List of ALL visible chips/buttons exactly as labeled:**\n*   **Top Row (AI Adjustments):** `Manj vožnje`, `Pimerno za dva`, `Počasnejši tempo`, `Več narave`, `Več mline`, `Za družino`, `Ceneje`, `Bolj aktivno`, `Bolj mirno`\n*   **Day Selector Row (Map Area):** `Vsi dnevi`, `Dan 1`, `Dan 2`, `Dan 3`\n\n2) **Is there a day selector (e.g. 'Dan 1' dropdown) above the chips?**\nNo, there is no day selector *above* the AI adjustment chips. The day selector buttons (`Vsi dnevi`, `Dan 1`, etc.) are located **below** the chips, positioned on the left side of the map area.\n\n3) **Do the chips indicate visually WHICH day they affect?**\nNo, the top row of adjustment chips does not visually indicate which specific day they affect. They appear as general global adjustments.\n\n4) **Do 'Ceneje', 'Bolj aktivno', 'Bolj mirno' indicate they affect the WHOLE trip?**\nWhile there is no explicit text on these specific buttons saying \"Whole Trip,\" their placement in the main control bar (separate from the day-specific buttons below) and their general phrasing strongly imply they are **global adjustments** intended to affect the entire itinerary or the general style of the trip.\n\n5) **Is there ANY text explaining scope difference between chip groups?**\nNo, there is no visible text, label, or legend in this view that explicitly explains the difference in scope (e.g., \"Global Adjustments\" vs. \"Day-Specific Adjustments\") between the top chip row and the bottom day-selector row.\n\n6) **What is the free-text input placeholder?**\nThe placeholder text in the input field is:\n**`npr. dodaj Piran, odstrani Kranj, spremeni tempo ...`**",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1790224761,
+  "id": "20260924123911bb78d81bcab1474b",
+  "model": "glm-5v-turbo",
+  "object": "chat.completion",
+  "request_id": "20260924123911bb78d81bcab1474b",
+  "usage": {
+    "completion_tokens": 448,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 1017,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 1465
+  }
+}

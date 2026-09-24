@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Based on the screenshot, here is the geo-validation content found:\n\n**Main Warning Card:**\n*   **Title:** Preverba izvedljivosti\n*   **Summary:** Nekateri dnevi niso realno izvedljivi — priporočam prilagoditve.\n*   **Total Distance Issue:** skupaj »380 km\n\n**Detailed Day-by-Day Issues:**\n\n**DAN 2**\n*   **Status:** Naprimer dan (Amber/Warning)\n*   **Distance/Time:** »150 km • 2 h 35 min\n*   **Specific Issue (Red text):** Reka Soča → Postojnska jama: **»150 km v enem kosu** (prenose nad 80 km se splača le s dobrim razlogom)\n\n**DAN 3**\n*   **Status:** Ni izvedljiv (Red/Error)\n*   **Distance/Time:** »165 km • 2 h 10 min\n*   **Specific Issue 1 (Red text):** Novo mesto → Slovenj Gradec: **»165 km v enem kosu** (prenose nad 150 km se splača le s dobrim razlogom)\n*   **Specific Issue 2 (Red text):** **»165 km vožnje v enem dnevu** (udoben okvir je okoli 150 km)",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1790223744,
+  "id": "20260924122218ceaaccb860d7417c",
+  "model": "glm-5v-turbo",
+  "object": "chat.completion",
+  "request_id": "20260924122218ceaaccb860d7417c",
+  "usage": {
+    "completion_tokens": 305,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 979,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 1284
+  }
+}

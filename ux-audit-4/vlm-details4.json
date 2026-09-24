@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Based on the screenshot provided, the **'Podrobnosti izračunov' (Calculation details) panel is currently COLLAPSED**. \n\nYou can see the header with the upward-pointing chevron (^) and the text \"Podrobnosti izračunov\", but the detail cards for **Kakovost** (Quality), **Proračun** (Budget), and **Geo-validacija** are **not visible** in this view.\n\n### What is shown instead:\nBelow the collapsed panel, the screen displays a summary card titled **\"Tvoja pot\" (Your trip)** with these high-level stats:\n*   **Duration:** 3 dni · 2 osebi · narava + kultura\n*   **Vožnja (Driving):** 8 h 50 min\n*   **Narava (Nature):** 4/5\n*   **Predviden strošek (Estimated cost):** € (not specified)\n*   **Hrana (Food):** 1/5\n*   **Tempo (Pace):** Miren (Relaxed)\n*   **Gorivo + avtocestna vinjeta (Fuel + vignette):** ≈70.8 €\n\nBecause the Geo-validacija section is not expanded, **no specific issue text regarding km per day, schedule overlaps, distances, or closed places can be quoted from this image.** The only geo-related information visible is the total driving distance (~380 km) and time shown in the top summary bar.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1790223728,
+  "id": "202609241222024402728d20054f13",
+  "model": "glm-5v-turbo",
+  "object": "chat.completion",
+  "request_id": "202609241222024402728d20054f13",
+  "usage": {
+    "completion_tokens": 324,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 1001,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 1325
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Based on the visual evidence provided in the image, here are the precise answers to your questions:\n\n1) **Yes.** There is a visible day selector dropdown labeled **\"Dan 1\"**. The chips like **'Manj vožnje'**, **'Več narave'**, etc., are visually grouped directly underneath this selector and the label **\"Prilagodi ta dan\"** (Adjust this day), which clearly indicates they affect the currently selected day.\n\n2) **No.** The specific chips you mentioned (**'Ceneje'**, **'Bolj aktivno'**, **'Bolj mirno'**) are **not visible** in this screenshot. The only chip that might imply a global scope is **\"Za družino\"** (For family), but it does not explicitly state it affects the whole trip.\n\n3) **Yes.** There is hint text explaining the scope of the first group. The text reads: **\"Opisi spremembo ali uporabi hitro akcijo za posamezen dan\"** (Describes the change or use a quick action for an individual day). Additionally, there is smaller text below the chips stating: **\"Hitre akcije delujejo tudi brez AI (deterministično)\"** (Quick actions also work without AI (deterministic)).\n\n4) **No.** There is no loading state (such as a spinner or skeleton effect) visible on any of the chips. They all appear fully rendered and static.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1790224738,
+  "id": "2026092412385136870ea3c0e9484c",
+  "model": "glm-5v-turbo",
+  "object": "chat.completion",
+  "request_id": "2026092412385136870ea3c0e9484c",
+  "usage": {
+    "completion_tokens": 322,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 1017,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 1339
+  }
+}
