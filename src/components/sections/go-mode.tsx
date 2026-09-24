@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
 import {
+  AlertTriangle,
   ChevronDown,
   ChevronUp,
   CloudSun,
@@ -27,6 +28,7 @@ import {
   Navigation as NavigationIcon,
   Phone,
   RotateCcw,
+  Route as RouteIcon,
   Trash2,
   Wand2,
 } from "lucide-react";
@@ -49,6 +51,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { buildMyTrip } from "@/lib/journey/trip-view";
 import { recordExternalHandoff } from "@/lib/journey/handoff-record";
+import { heuristicLeg } from "@/lib/road-routing";
 import { OpeningHoursStatus } from "@/components/opening-hours-status";
 import {
   buildGoView,
@@ -149,6 +152,47 @@ const L = {
     sl: "Načrt je shranjen na tej napravi — deluje tudi brez signala.",
     en: "The plan is stored on this device — it works offline too.",
   },
+  // === ISSUE #4 §8 (val 2): real-time kontekst — pošteni žetoni ===
+  driveFromPrev: {
+    sl: "vožnja od prejšnjega postanka",
+    en: "drive from the previous stop",
+  },
+  legSource: {
+    osrm: { sl: "vir: OSRM (realne ceste)", en: "source: OSRM (real roads)" },
+    heuristic: { sl: "ocena (hevristika)", en: "estimate (heuristic)" },
+  },
+  eta: {
+    label: { sl: "Predviden prihod", en: "Estimated arrival" },
+    hint: {
+      sl: "ocena iz premočne razdalje ×1,3 pri 55 km/h — ni podatka o prometu",
+      en: "estimate from straight-line ×1.3 at 55 km/h — no traffic data",
+    },
+    unknown: {
+      sl: "Predviden prihod: neznano — brez GPS ali vozne razdalje",
+      en: "Estimated arrival: unknown — no GPS or drive distance",
+    },
+  },
+  delay: {
+    sl: "Zamude in promet v realnem času: NEZNANO — nimamo vira (niti lažnega prometa).",
+    en: "Real-time delays and traffic: UNKNOWN — we have no source (and no fake traffic either).",
+  },
+  dayRoute: {
+    sl: (n: number, km: number, min: number, method: string) =>
+      `Pot dneva: ${n} postankov · skupaj ~${km} km · ~${min} min (${method})`,
+    en: (n: number, km: number, min: number, method: string) =>
+      `Day's route: ${n} stops · ~${km} km total · ~${min} min (${method})`,
+  },
+  hoursMissing: {
+    sl: "vir ne objavlja ur — preveri pri postanku",
+    en: "not published by the source — check on arrival",
+  },
+  savedTrip: {
+    link: { sl: "Odpri shranjeno pot", en: "Open the saved trip" },
+    note: {
+      sl: "Ta načrt je povezan s shranjeno potjo (/pot/…).",
+      en: "This plan is linked to a saved trip (/pot/…).",
+    },
+  },
 } as const;
 
 function localeTime(d: Date, lang: "sl" | "en"): string {
@@ -171,6 +215,37 @@ function DistanceChip({ card, lang }: { card: GoEntryCard; lang: "sl" | "en" }) 
       {L.inAir[lang]}
     </Badge>
   );
+}
+
+/**
+ * ISSUE #4 §8 (val 2): VOŽNJA od prejšnjega postanka (po načrtu) — km/min
+ * iz OSRM ali hevristike, vir razkrit. Brez noge (prvi postanek dneva /
+ * manjkajoči par) se žeton NE prikaže (ne izmišljujemo).
+ */
+function LegChip({
+  card,
+  lang,
+}: {
+  card: GoEntryCard;
+  lang: "sl" | "en";
+}) {
+  const leg = card.entry.legFromPrev;
+  if (!leg) return null;
+  return (
+    <Badge
+      className="gap-1 border-sky-300 bg-sky-50 text-sky-900 hover:bg-sky-50 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200"
+      title={L.driveFromPrev[lang]}
+    >
+      <RouteIcon className="h-3 w-3" aria-hidden="true" />
+      ~{leg.km} km · ~{leg.min} {L.min[lang]} ·{" "}
+      {t2(leg.source === "osrm" ? L.legSource.osrm : L.legSource.heuristic, lang)}
+    </Badge>
+  );
+}
+
+/** Dvojezična pomožna (krajšanje za žetone). */
+function t2(o: { sl: string; en: string }, lang: "sl" | "en") {
+  return o[lang];
 }
 
 function EntryLinks({
@@ -238,12 +313,16 @@ function NavButton({
   card,
   lang,
   variant = "hero",
+  origin,
 }: {
   card: GoEntryCard;
   lang: "sl" | "en";
   variant?: "hero" | "icon";
+  /** ISSUE #4 §8: živi GPS — prenese se v web URL (external app dobi
+   * dejansko izhodišče; brez njega uporabi svojo lokacijo). */
+  origin?: { lat: number; lng: number } | null;
 }) {
-  const links = goNavLinks(card.entry);
+  const links = goNavLinks(card.entry, origin ?? null);
   if (links == null) return null; // brez geo → handoff preprosto NI
 
   const onNav = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -415,6 +494,34 @@ export function GoMode() {
   const weatherLoading =
     wLat != null &&
     (weatherFor.lat !== wLat || weatherFor.lng !== wLng);
+
+  // ----------------------------------------------------------------------
+  // ISSUE #4 §8 (val 2): ETA DO NASLEDNJEGA POSTANKA — SAMO ko imamo GPS +
+  // geo postanka (hevristika premica ×1,3 pri 55 km/h — pošteno labelirana,
+  // ker prometa nimamo). Brez pogojev → izrecno NEZNANO (ne tiho).
+  // ----------------------------------------------------------------------
+  const etaInfo = useMemo(() => {
+    if (!view?.next || !now) return null;
+    const n = view.next.entry;
+    if (
+      geo.position &&
+      typeof n.lat === "number" &&
+      typeof n.lng === "number"
+    ) {
+      const leg = heuristicLeg(
+        { lat: geo.position.lat, lng: geo.position.lng },
+        { lat: n.lat, lng: n.lng }
+      );
+      const arrival = new Date(now.getTime() + leg.min * 60_000);
+      return {
+        unknown: false as const,
+        hhmm: localeTime(arrival, lang),
+        min: leg.min,
+        km: leg.km,
+      };
+    }
+    return { unknown: true as const };
+  }, [view, now, geo.position, lang]);
 
   const toggleDone = useCallback((key: string) => {
     setDone((prev) => {
@@ -602,6 +709,32 @@ export function GoMode() {
                     {view.next.entry.location}
                   </p>
                 )}
+
+                {/* === ISSUE #4 §8 (val 2): PREDVIDEN PRIHOD (ETA) ===
+                    SAMO iz realnih vhodov (GPS + geo postanka); sicer
+                    izrecno NEZNANO — nikoli izmišljen promet. */}
+                {etaInfo && (
+                  <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                    {etaInfo.unknown ? (
+                      <p className="text-xs text-muted-foreground">
+                        {t(L.eta.unknown)}
+                      </p>
+                    ) : (
+                      <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
+                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          {t(L.eta.label)}
+                        </span>
+                        <span className="font-semibold tabular-nums">
+                          ~{etaInfo.hhmm}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          (~{etaInfo.km} km · ~{etaInfo.min} {L.min[lang]} ·{" "}
+                          {t(L.eta.hint)})
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -663,6 +796,8 @@ export function GoMode() {
 
             <div className="flex flex-wrap gap-1.5">
               <DistanceChip card={view.next} lang={lang} />
+              {/* ISSUE #4 §8: vožnja od prejšnjega postanka (OSRM/ocena). */}
+              <LegChip card={view.next} lang={lang} />
               <Badge variant="secondary">{t(view.next.entry.statusLabel)}</Badge>
               {view.next.entry.durationMin != null && (
                 <Badge variant="outline">
@@ -672,24 +807,38 @@ export function GoMode() {
             </div>
 
             {/* ISSUE #4 §9: status ur ob TRENUTKU (OPEN/CLOSED/UNKNOWN)
-                + surov niz vira (nič ne izgubimo). Prej: samo surov niz. */}
-            {view.next.entry.openingHours && (
-              <div className="text-xs text-muted-foreground">
-                <span className="mr-1">{t(L.hours)}:</span>
-                <OpeningHoursStatus
-                  raw={view.next.entry.openingHours}
-                  lang={lang}
-                  className="text-xs"
-                />
-              </div>
-            )}
+                + surov niz vira (nič ne izgubimo). §8: vir brez ur →
+                izrecno URA NEZNANA (ne tiha odsotnost). */}
+            <div className="text-xs text-muted-foreground">
+              <span className="mr-1">{t(L.hours)}:</span>
+              <OpeningHoursStatus
+                raw={view.next.entry.openingHours}
+                lang={lang}
+                missingLabel={L.hoursMissing}
+                className="text-xs"
+              />
+            </div>
+
+            {/* === ISSUE #4 §8: ZAMUDE/PROMET — pošteno NEZNANO (nikoli
+                lažni „open now / traffic“) === */}
+            <p
+              className="flex items-center gap-1.5 rounded-lg border border-dashed px-3 py-2 text-xs text-muted-foreground"
+              role="note"
+            >
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              {t(L.delay)}
+            </p>
 
             <EntryLinks card={view.next} lang={lang} />
 
             {/* TASK 67: navigacijski handoff + opravljanje — navigacija je
                 prva akcija ob postanku, opravi druga (mobilno: skupaj full-width) */}
             <div className="flex flex-col gap-2 sm:flex-row">
-              <NavButton card={view.next} lang={lang} />
+              <NavButton
+                card={view.next}
+                lang={lang}
+                origin={geo.position}
+              />
               <Button
                 onClick={() => toggleDone(view.next!.entry.key)}
                 size="lg"
@@ -706,6 +855,36 @@ export function GoMode() {
             {t(GO_LABELS.noEntryLeft)}
           </CardContent>
         </Card>
+      )}
+
+      {/* === ISSUE #4 §8 (val 2): POT DNEVA (vsota nog — OSRM/ocena) ===
+          Samo kjer načrt nosi noge; delne ocene so pošteno razkrite
+          (legsKnown/legsTotal). */}
+      {view.activeDayRoute && (
+        <p className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+          <RouteIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <span className="font-medium">
+            {L.dayRoute[lang](
+              view.activeDayRoute.legsKnown + 1,
+              view.activeDayRoute.km,
+              view.activeDayRoute.min,
+              t2(
+                view.activeDayRoute.method === "osrm"
+                  ? L.legSource.osrm
+                  : view.activeDayRoute.method === "heuristic"
+                    ? L.legSource.heuristic
+                    : { sl: "mešano", en: "mixed" },
+                lang
+              )
+            )}
+          </span>
+          {view.activeDayRoute.legsKnown < view.activeDayRoute.legsTotal && (
+            <span className="text-xs text-muted-foreground">
+              ({view.activeDayRoute.legsKnown}/{view.activeDayRoute.legsTotal}{" "}
+              {L.stops[lang]})
+            </span>
+          )}
+        </p>
       )}
 
       {/* === ISKRENOST: dan brez realnih ur === */}
@@ -753,17 +932,23 @@ export function GoMode() {
                       </p>
                     )}
                     {/* ISSUE #4 §9: ure + status tudi na preostalih
-                        postankih dneva (prej: samo naslednja kartica). */}
-                    {card.entry.openingHours && (
-                      <OpeningHoursStatus
-                        raw={card.entry.openingHours}
-                        lang={lang}
-                        className="text-[11px]"
-                      />
-                    )}
+                        postankih dneva (prej: samo naslednja kartica).
+                        §8: vir brez ur → izrecno URA NEZNANA. */}
+                    <OpeningHoursStatus
+                      raw={card.entry.openingHours}
+                      lang={lang}
+                      missingLabel={L.hoursMissing}
+                      showRaw={false}
+                      className="text-[11px]"
+                    />
                   </div>
                   <div className="flex shrink-0 gap-2">
-                    <NavButton card={card} lang={lang} variant="icon" />
+                    <NavButton
+                      card={card}
+                      lang={lang}
+                      variant="icon"
+                      origin={geo.position}
+                    />
                     <Button
                       variant="outline"
                       onClick={() => toggleDone(card.entry.key)}
@@ -854,11 +1039,21 @@ export function GoMode() {
       )}
 
       {/* === NAPREJ / KONEC === */}
+      {/* ISSUE #4 §2 (val 2): v2 zapis s shareId → nazaj na SHRANJENO pot
+          (/pot/{shareId} — strežniški objekt), ne na prazen načrtovalnik. */}
       <div className="flex flex-col gap-2 pt-2 sm:flex-row">
         <Button asChild variant="outline" className="h-11 sm:flex-1">
           {/* TASK 4 / K-7: nazaj na IZVORNI načrt — /nacrtuj za AI itinererje
               (v2), /potovanje za kanonična potovanja (v1). */}
-          <Link href={record.version === 2 ? "/nacrtuj" : "/potovanje"}>
+          <Link
+            href={
+              record.version === 2
+                ? record.shareId
+                  ? `/pot/${record.shareId}`
+                  : "/nacrtuj"
+                : "/potovanje"
+            }
+          >
             {record.version === 2
               ? lang === "sl"
                 ? "Nazaj na načrt"
@@ -904,6 +1099,19 @@ export function GoMode() {
 
       <p className="px-1 pb-2 text-center text-xs text-muted-foreground">
         {t(L.offline)}
+        {/* ISSUE #4 §2: veza na shranjeno pot (strežniški objekt) — povezava
+            je navaden URL (offline-varna: pokaže se ob kliku, ko je signal). */}
+        {record.version === 2 && record.shareId && (
+          <>
+            {" · "}
+            <Link
+              href={`/pot/${record.shareId}`}
+              className="font-medium underline underline-offset-2"
+            >
+              {t(L.savedTrip.link)}
+            </Link>
+          </>
+        )}
       </p>
     </div>
   );

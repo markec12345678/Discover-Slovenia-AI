@@ -7,9 +7,19 @@ import { db } from "@/lib/db";
 export interface AuditLogParams {
   actorId?: string;
   actorEmail?: string;
-  actorRole: "admin" | "owner" | "system" | "stripe";
+  // ISSUE #4 §13 (val 2): "user" = B2C popotnik (vloga na poti);
+  // "edit-token-owner" = anonimni lastnik poti (brez računa) — iskreno
+  // ločeno od sistema (dejanje je človekovo, žeton je dokaz).
+  actorRole:
+    | "admin"
+    | "owner"
+    | "system"
+    | "stripe"
+    | "user"
+    | "edit-token-owner";
   action: string;
   // P3c-9: "product" | "experience" — moderacijska zanka tržnice
+  // ISSUE #4 §13: "trip" | "trip_collaborator" — sodelovanje na poti
   resourceType:
     | "listing"
     | "product"
@@ -18,7 +28,9 @@ export interface AuditLogParams {
     | "owner"
     | "user"
     | "booking"
-    | "commission_invoice";
+    | "commission_invoice"
+    | "trip"
+    | "trip_collaborator";
   resourceId?: string;
   resourceName?: string;
   metadata?: Record<string, unknown>;
@@ -72,4 +84,13 @@ export const AUDIT_ACTIONS = {
   BOOKING_STATUS_CHANGED: "booking_status_changed",
   COMMISSION_INVOICE_ISSUED: "commission_invoice_issued",
   COMMISSION_INVOICE_PAID: "commission_invoice_paid",
+  // ISSUE #4 §13 (val 2) — sodelovanje na poti (celoten življenjski cikel
+  // vabil: izdaja / sprejem / sprememba vloge / odvzem / vsebina CAS)
+  TRIP_INVITE_SENT: "trip_invite_sent",
+  TRIP_COLLABORATOR_ACCEPTED: "trip_collaborator_accepted",
+  TRIP_COLLABORATOR_ROLE_CHANGED: "trip_collaborator_role_changed",
+  TRIP_COLLABORATOR_REVOKED: "trip_collaborator_revoked",
+  TRIP_LINK_SHARING_CHANGED: "trip_link_sharing_changed",
+  TRIP_CONTENT_UPDATED: "trip_content_updated",
+  TRIP_CONTENT_CONFLICT: "trip_content_conflict",
 } as const;

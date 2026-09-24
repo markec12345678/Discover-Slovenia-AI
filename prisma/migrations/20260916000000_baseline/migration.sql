@@ -56,7 +56,10 @@ CREATE TABLE "SavedItinerary" (
     "shareId" TEXT NOT NULL,
     "editTokenHash" TEXT,
     "views" INTEGER NOT NULL DEFAULT 0,
+    "isPublic" BOOLEAN NOT NULL DEFAULT true,
+    "contentVersion" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "SavedItinerary_pkey" PRIMARY KEY ("id")
 );
@@ -892,4 +895,30 @@ ALTER TABLE "Sponsorship" ADD CONSTRAINT "Sponsorship_ownerId_fkey" FOREIGN KEY 
 
 -- AddForeignKey
 ALTER TABLE "CommissionInvoice" ADD CONSTRAINT "CommissionInvoice_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "Owner"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- CreateTable (ISSUE #4 §13 val 2 — sodelovanje na poti)
+CREATE TABLE "TripCollaborator" (
+    "id" TEXT NOT NULL,
+    "shareId" TEXT NOT NULL,
+    "userId" TEXT,
+    "inviteEmail" TEXT,
+    "role" TEXT NOT NULL,
+    "status" TEXT NOT NULL,
+    "inviteToken" TEXT NOT NULL,
+    "invitedBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "acceptedAt" TIMESTAMP(3),
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "TripCollaborator_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TripCollaborator_inviteToken_key" ON "TripCollaborator"("inviteToken");
+
+-- CreateIndex
+CREATE INDEX "TripCollaborator_shareId_status_idx" ON "TripCollaborator"("shareId", "status");
+
+-- CreateIndex
+CREATE INDEX "TripCollaborator_userId_idx" ON "TripCollaborator"("userId");
 

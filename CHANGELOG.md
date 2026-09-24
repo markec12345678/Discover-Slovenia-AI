@@ -7,6 +7,109 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.93.0] — 2026-09-24 (ISSUE #4 IMPLEMENTACIJSKI VAL 2: §2+§8+§13)
+
+> **Načrt:** docs/TRIP-DOMAIN-MAP.md (§2 domena, obvezni predpogoj) +
+> docs/ISSUE4-BASELINE.md §F. **Metoda:** meriti → popraviti → dokazati
+> (ista disciplina kot VAL 1). **0 izgube funkcij; 0 zmede dodane.**
+
+### §2 — TRIP KOT ENOTEN OBJEKT (PODATKOVNA RESNICA)
+
+- **`GET /api/trip/[shareId]` — enoten bralni agregator:** povzetek načrta
+  (dnevi/postanki/datumi/proračun + weatherEstimated markerji), vodnik,
+  skupnostne številke (komentarji/všečki/glasovi/ankete/dnevnik), rezervacije
+  (EXTERNAL/SELECTED/CONFIRMED), `contentVersion`/`updatedAt`, vloga klicalca;
+  sodelujoče vidi SAMO lastnik (seznam ljudi ni javen podatek). 0 novih
+  težkih modelov — vsebina ostane na edinem viru
+  (`GET /api/itinerary/shared/[shareId]`), agregator je glava in stanje.
+- **`dai:go-trip` v2 nosi `shareId`** → Go Mode premosti nazaj na strežniško
+  pot: gumb »Nazaj na načrt« vodi na shranjeno povezavo + povezava
+  »Odpri shranjeno pot«. Identiteta objekta načrta je varovalka v plannerju:
+  karkoli spremeni vsebino (refine/regeneracija/dodajanje kraja) → veza
+  UGAJA SAMO (stara povezava ne laže, da je isti trip).
+- **Domain map:** docs/TRIP-DOMAIN-MAP.md — popoln inventar kje živi kateri
+  koncept poti (8 strežniških modelov na shareId + 17 klientskih ključev +
+  sodba vrzeli). Normalizacija v TripDay/TripItem zavestno ZAVRJENA
+  (snapshot JSON + čiste izračunane plasti so zdravi; migracija brez
+  dokazane vrednosti).
+
+### §8 — REAL-TIME TRIP CONTEXT (GO MODE)
+
+- **Vozni časi potujejo z načrtom:** `Itinerary.legs` (OSRM/hevristika) →
+  `legFromPrev` na vsakem postanku + `route` povzetek dneva (km/min/metoda,
+  delne ocene pošteno razkrite z legsKnown/legsTotal). Žeton
+  »~X km · ~Y min · vir: OSRM/ocena« na naslednjem postanku; vrstica
+  »Pot dneva: N postankov · skupaj ~X km · ~Y min«.
+- **PREDVIDEN PRIHOD (ETA):** SAMO iz realnih vhodov (GPS + geo postanka):
+  hevristika premica ×1,3 pri 55 km/h, pošteno labelirana
+  (»ni podatka o prometu«); brez pogojev → izrecno
+  »Prihod: neznano — brez GPS ali vozne razdalje« (nikoli izmišljeno).
+- **ZAMUDE/PROMET:** izrecen pošten žeton »NEZNANO — nimamo vira (niti
+  lažnega prometa)« — 0 lažnega traffic/flight/open-now kjerkoli.
+- **Navigacijski handoff z IZHODIŠČEM:** živi GPS se prenese v Google Maps
+  URL (`origin=lat,lng`) — zunanja aplikacija računa pot od dejanskega
+  izhodišča; brez GPS pa uporabi svojo lokacijo (pošteno).
+- **Ure za v2 postanke:** vir brez ur → izrecno »URA NEZNANA — vir ne
+  objavlja ur« namesto tihe odsotnosti (isti kanon: če vira ni, je UNKNOWN).
+- **§3 na GO površini:** postanki s strežniško validirano `/go/…` povezavo
+  nosijo EXTERNAL žeton + gumb »Rezerviraj pri ponudniku« (fail-closed:
+  absolutne poti zavrnjene).
+
+### §13 — TRIP COLLABORATION PERMISSIONS
+
+- **Nove vloge (ena točka resnice `src/lib/trip-permissions.ts`):**
+  OWNER (editToken hash ‖ račun `userId` — generalizacija dokazanega
+  trip-guide dvojega preverjanja) → EDITOR → COMMENTER → VIEWER → NONE;
+  `communityTripGate` = mehka vrata za 6 skupnostnih rut (javna pot =
+  anonimno kot doslej, 0 spremembe obnašanja).
+- **`TripCollaborator` model (additive migracija):** PENDING → ACTIVE →
+  REVOKED cikel; vabila z žetonom (`/pot/{shareId}?invite={token}`), sprejem
+  ZAHTEVA B2C sejo (klik ≠ sprejem); e-poštno naslovljena vabila se vežejo
+  nanjo (tuji račun → 403); idempotenten ponovni sprejem; zgornja meja 20
+  ne-odvzetih na pot.
+- **Vabila brez SMTP (iskreno):** POST vrne `inviteUrl` + hint »povezavo
+  kopiraj in pošlji sami« (SMTP = operater, dokumentirano).
+- **Prvi mutabilni endpoint:** `PATCH /api/itinerary/shared/[shareId]`
+  (ime + itinerer) z vlogo ≥ EDITOR + **compare-and-swap** na
+  `contentVersion` → 409 s strežnikovo verzijo (isti dokazani vzorec kot
+  JourneyBooking PATCH); ISTA varnostna veriga kot save (sanitize +
+  supply revalidacija + 200 KB).
+- **Revokacija javne povezave (`isPublic`):** privzeto TRUE (vse obstoječe
+  pote ostanejo javne — nazaj kompatibilno); izklop → /pot in javne rute
+  vrnejo 404 (obstoj skrit, ne 403); VAROVALKA PRED ZAKLEPOM: anonimni
+  lastnik (samo editToken) ne more izklopiti javnosti — najprej claim s
+  računom.
+- **Audit:** AuditLog razširjen (actorRole »user«/»edit-token-owner«,
+  resourceType »trip«/»trip_collaborator«, 7 novih akcij — celoten
+  življenjski cikel vabil + CAS konflikti). Živi dokazi v E2E.
+- **Upravljalna plošča na /pot:** lastniku (žeton v brskalniku ali seja)
+  povabi/spremeni vlogo/odvzeme/povabi znova + preklopi javno povezavo +
+  preimenuje (CAS s 409 handlingom); uredniku preimenovanje; obiskovalec
+  javne pote vidi NIČ (čisto); ?invite= trak vsem.
+
+### OPERATIVNO
+
+- **Migracije:** prisma schema + baseline SQL + idempotentna zagonska
+  migracija (`trip-collaborator-migration.ts`, isti fail-open kanon) +
+  dev DB. **Dev okolje:** dodan NEXTAUTH_SECRET/NEXTAUTH_URL v .env
+  (getServerSession v lokalnem devu brez skrivnosti ni deloval —
+  produkcijski sta nastavljena že od prej).
+- **Testi:** +21 (issue4-wave2-truth: hierarhija vlog, validatorji,
+  itinerary-go noge/rezervacije/route povzetek, buildGoView activeDayRoute,
+  go-nav origin fail-closed, hevristika ETA, go-persist shareId) →
+  **2386/2386**; lint 0/0; tsc 0 (src/).
+- **E2E (agent-browser, 0 konzolnih napak, 7 dokazov v ux-verify-issue4-val2/):**
+  (a) GO Mode: ETA neznano brez GPS → z GPS ~14:23 (~60 km · ~65 min,
+  ocena) + zamude NEZNANO + Pot dneva (OSRM) + URA NEZNANA + ZDAJ ODPRTO
+  (parsano) + nav URL z origin= + Odpri shranjeno pot → /pot/{shareId};
+  (b) vabila: trak → prijavi se (anonimno) → Sprejmi → »Vabilo sprejeto —
+  tvoja vloga: Komentator«; (c) lastniška plošča: seznam + revoke +
+  »Povabi znova« + preimenovanje (PATCH 200, verzija 1→2→3) + 409 ob
+  zaprti verziji; (d) zasebna pot: claim → izklop → anonimni 404 (stran +
+  API) → sodelujoči 200 → anonimni komentar 403 → nazaj javno.
+
+---
+
 ## [1.92.0] — 2026-09-24 (ISSUE #4 §1 BASELINE → IMPLEMENTACIJSKI VAL 1: §3+§6+§9+§11)
 
 > **Načrt:** docs/ISSUE4-BASELINE.md (§1, commit `55905d3`). **Metoda:** meriti →

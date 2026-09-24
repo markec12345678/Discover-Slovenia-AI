@@ -35,12 +35,18 @@ export interface GoTripRecordV1 {
  * TravelJourney strukture. `view` je MyTripView — ISTA oblika, ki jo GoMode
  * izrisuje prek buildGoView, zato 0 novih render konceptov. V1 zapisi
  * (journey) ostanejo podprti — nazaj kompatibilno.
+ *
+ * ISSUE #4 §2 (val 2): opcijski `shareId` — Go Mode premosti nazaj na
+ * shranjeno pot (strežniški objekt). Stari zapisi brez njega ostanejo
+ * veljavni (otok brez povezave — iskrena omejitev starih zapisov).
  */
 export interface GoTripRecordV2 {
   version: 2;
   kind: "itinerary";
   savedAt: string; // ISO
   view: MyTripView;
+  /** ISSUE #4 §2: veza na shranjeno pot (/pot/{shareId}) — opcijsko. */
+  shareId?: string;
 }
 
 export type GoTripRecord = GoTripRecordV1 | GoTripRecordV2;
@@ -134,15 +140,27 @@ export function saveGoTrip(
  * MyTripView iz buildItineraryGoView). Vrne true ob uspehu (false: SSR /
  * poljen/zasebni localStorage). PREPIŠE morebitni obstoječi zapis — Go Mode
  * ima ENO aktivno potovanje (ista semantika kot saveGoTrip v1).
+ *
+ * ISSUE #4 §2 (val 2): `opts.shareId` premosti zapis na shranjeno pot
+ * (Go Mode potem ponudi povezavo „Odpri shranjeno pot"). Opcijsko —
+ * ne-shranjeni osnutki ostanejo brez veze (kot doslej).
  */
-export function saveItineraryGoTrip(view: MyTripView): boolean {
+export function saveItineraryGoTrip(
+  view: MyTripView,
+  opts?: { shareId?: string | null }
+): boolean {
   if (typeof window === "undefined") return false;
   try {
+    const shareId =
+      opts?.shareId && /^[a-z0-9]{1,32}$/.test(opts.shareId)
+        ? opts.shareId
+        : undefined;
     const record: GoTripRecordV2 = {
       version: 2,
       kind: "itinerary",
       savedAt: new Date().toISOString(),
       view,
+      ...(shareId ? { shareId } : {}),
     };
     window.localStorage.setItem(GO_TRIP_KEY, JSON.stringify(record));
     return true;

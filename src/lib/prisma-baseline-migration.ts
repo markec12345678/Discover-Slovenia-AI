@@ -72,7 +72,7 @@ export const BASELINE_MIGRATION_ID = "20260916000000_baseline";
  * pade na rdečem testu in zahteva posodobitev konstante.
  */
 export const BASELINE_CHECKSUM =
-  "4601d3b8de3fc0fde6b99ad893ee8907c005c979b2141d54a4f3d367e979a384";
+  "986e3a7a3d7559ce13ef0cb66ee8bc75bc48cd19133336ff1bbe8183ed94f24b";
 
 /** Strukturalni tip, ki ga sprejme resolve (omogoča testiranje z lastnim klientom). */
 type SchemaDb = Pick<PrismaClient, "$queryRawUnsafe" | "$executeRawUnsafe">;

@@ -95,7 +95,7 @@ export async function saveItinerary(
   if (data.editToken) storeEditToken(data.shareId, data.editToken);
   // F5.7: takoj "ogrej" offline predpomnilnik — sveže shranjen načrt je
   // s tem na voljo tudi brez povezave (offline.html ga izriše iz cache-a).
-  warmOfflinePlanCache(data.shareId);
+  warmOfflinePlanCache(data.shareId, data.editToken);
   return { shareId: data.shareId, url: data.url, editToken: data.editToken };
 }
 
@@ -107,12 +107,24 @@ export async function saveItinerary(
  * strežnika. `warm=1` pomeni BREZ štetja ogleda (iskrena števca — ogled
  * šteje samo pravi ogled strani/plannerja, ne ogrevanje predpomnilnika).
  * Nikoli ne vrže in ne blokira klicatelja.
+ *
+ * ISSUE #4 §13 (val 2): ZASEBNE pote (isPublic=false) zahtevajo
+ * editToken glavo — ogrevanje se zgodi v lastnikovem brskalniku tik ob
+ * shranjevanju, žeton je na voljo.
  */
-export function warmOfflinePlanCache(shareId: string): void {
+export function warmOfflinePlanCache(
+  shareId: string,
+  editToken?: string | null
+): void {
   if (typeof window === "undefined" || !shareId) return;
   try {
-    fetch(
-      `/api/itinerary/shared/${encodeURIComponent(shareId)}?warm=1`
+    void fetch(
+      `/api/itinerary/shared/${encodeURIComponent(shareId)}?warm=1`,
+      {
+        ...(editToken
+          ? { headers: { "x-dsa-edit-token": editToken } }
+          : {}),
+      }
     )
       .then((r) => {
         // Premečkaj telo, da se povezava sprosti (SW je že kloniral).

@@ -75,6 +75,10 @@ export interface OpeningHoursStatusProps {
   lang: "sl" | "en";
   /** Ali izrisati tudi surov niz (privzeto da — zero feature loss). */
   showRaw?: boolean;
+  /** ISSUE #4 §8 (val 2): oznaka, ko ur NI (vir ne objavlja) — če je podana,
+   * se namesto tihe odsotnosti izriše iskren UNKNOWN žeton (»Če vira ni,
+   * mora biti UNKNOWN«). */
+  missingLabel?: { sl: string; en: string };
   className?: string;
 }
 
@@ -82,6 +86,7 @@ export function OpeningHoursStatus({
   raw,
   lang,
   showRaw = true,
+  missingLabel,
   className,
 }: OpeningHoursStatusProps) {
   // Strežnik: null (brez žetona — identičen izris za hidracijo);
@@ -92,7 +97,28 @@ export function OpeningHoursStatus({
     () => null
   );
 
-  if (!raw) return null;
+  // §8: ura NI objavljena → iskren UNKNOWN (samo kadar je klicatelj zahteval
+  // missingLabel — sicer starejše površine obdržijo tiho odsotnost).
+  if (!raw) {
+    if (!missingLabel) return null;
+    return (
+      <span
+        className={cn(
+          "inline-flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground",
+          className
+        )}
+      >
+        <Badge
+          variant="outline"
+          className="gap-1 px-1.5 py-0 text-[10px] font-semibold text-muted-foreground"
+        >
+          <HelpCircle className="size-3" aria-hidden="true" />
+          {L.chip.unknown[lang]}
+        </Badge>
+        <span className="whitespace-nowrap">{missingLabel[lang]}</span>
+      </span>
+    );
+  }
   const Icon = status ? CHIP_ICON[status.status] : HelpCircle;
 
   return (

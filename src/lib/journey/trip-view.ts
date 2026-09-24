@@ -72,12 +72,29 @@ export interface TripEntry {
   cancellation: { sl: string; en: string };
   /** Številka rezervacije — SAMO iz providerjevega odgovora (danes null). */
   bookingId: string | null;
+  /** ISSUE #4 §8 (val 2): VOŽNJA od prejšnjega postanka (po načrtu) —
+   * km/min iz OSRM ali hevristike (razkrito prek source); brez noge
+   * (prvi postanek dneva / manjkajoči pari) polja NI (NE izmišljujemo). */
+  legFromPrev?: { km: number; min: number; source: "osrm" | "heuristic" };
+}
+
+/** ISSUE #4 §8 (val 2): povzetek poti dneva iz OSRM/hevrističnih nog —
+ * samo znani pari se seštejejo; legsKnown/legsTotal pošteno povedeta,
+ * če je ocena delna. method = vir NOG (ne izmišljeno). */
+export interface DayRouteSummary {
+  km: number;
+  min: number;
+  legsKnown: number;
+  legsTotal: number;
+  method: "osrm" | "heuristic" | "mixed";
 }
 
 export interface MyTripDay {
   dateLabel: { sl: string; en: string };
   date?: string;
   entries: TripEntry[];
+  /** ISSUE #4 §8: pot dneva (vsota nog) — SAMO kjer načrt nosi noge. */
+  route?: DayRouteSummary;
 }
 
 export interface MyTripView {

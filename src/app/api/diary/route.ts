@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
+import { communityTripGate } from "@/lib/trip-permissions";
 
 // ============================================================================
 // TRIP DIARY — skupinski potni dnevnik na deljenem potovanju (F12, vrzel #3)
@@ -123,13 +124,16 @@ function toDTO(entry: EntryRow, clientId: string | null): DiaryEntryDTO {
   };
 }
 
-/** Preveri, da potovanje obstaja (404 sicer). */
-async function tripExists(shareId: string): Promise<boolean> {
+/** Preveri stanje potovanja (ISSUE #4 §13: public/private/missing). */
+async function tripState(
+  shareId: string
+): Promise<"missing" | "public" | "private"> {
   const saved = await db.savedItinerary.findUnique({
     where: { shareId },
-    select: { id: true },
+    select: { isPublic: true },
   });
-  return saved !== null;
+  if (!saved) return "missing";
+  return saved.isPublic ? "public" : "private";
 }
 
 /** Varnostno prebere celoštevilsko vrednost iz neznanega telesa. */
@@ -174,11 +178,18 @@ export async function GET(request: Request) {
       );
     }
 
-    if (!(await tripExists(shareId))) {
+    const state = await tripState(shareId);
+    if (state === "missing") {
       return NextResponse.json(
         { error: "Deljeno potovanje ne obstaja" },
         { status: 404 }
       );
+    }
+
+    // ISSUE #4 §13: zasebna pot → branje zahteva vlogo (javna kot doslej).
+    if (state === "private") {
+      const gate = await communityTripGate(shareId, "read");
+      if (gate) return gate;
     }
 
     const entries = await db.tripDiaryEntry.findMany({
@@ -276,11 +287,19 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (!(await tripExists(shareId))) {
+    const state = await tripState(shareId);
+    if (state === "missing") {
       return NextResponse.json(
         { error: "Deljeno potovanje ne obstaja" },
         { status: 404 }
       );
+    }
+
+    // ISSUE #4 §13: zasebna pot → pisanje dnevnika zahteva vlogo
+    // komentatorja+ (javna kot doslej).
+    if (state === "private") {
+      const gate = await communityTripGate(shareId, "comment");
+      if (gate) return gate;
     }
 
     // Zgornji meji: skupno in na avtorja (preprečuje smeti)
@@ -500,10 +519,19 @@ export async function DELETE(request: Request) {
 
     const entry = await db.tripDiaryEntry.findUnique({
       where: { id: entryId },
-      select: { authorClientId: true },
+      select: { authorClientId: true, shareId: true },
     });
     if (!entry) {
       return NextResponse.json({ error: "Vpis ne obstaja" }, { status: 404 });
+    }
+
+    // ISSUE #4 §13: zasebna pot → brisanje vpisa zahteva vlogo.
+    {
+      const state = await tripState(entry.shareId);
+      if (state === "private") {
+        const gate = await communityTripGate(entry.shareId, "comment");
+        if (gate) return gate;
+      }
     }
 
     if (entry.authorClientId !== clientId) {

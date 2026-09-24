@@ -20,7 +20,7 @@
 // ============================================================================
 
 import { haversineKm } from "@/lib/geo-corridor";
-import type { MyTripDay, MyTripView, TripEntry } from "./trip-view";
+import type { DayRouteSummary, MyTripDay, MyTripView, TripEntry } from "./trip-view";
 
 // ---------------------------------------------------------------------------
 // VHODNE OBLIKE
@@ -60,6 +60,9 @@ export interface GoView {
   /** Aktiven dan (datum + zakaj JE ta dan aktiven — iskrenost). */
   activeDayLabel: { sl: string; en: string };
   activeDayNote?: { sl: string; en: string };
+  /** ISSUE #4 §8 (val 2): pot dneva (vsota OSRM/hevrističnih nog) — SAMO
+   * kjer jo načrt nosi (MyTripDay.route). */
+  activeDayRoute?: DayRouteSummary;
   /** Naslednji ne-opravljeni postanek dneva. */
   next?: GoEntryCard;
   /** Ali aktiven dan sploh ima kakšen realen čas (za iskreno opombo). */
@@ -285,6 +288,7 @@ export function buildGoView(
       en: "No days in the plan",
     },
     ...(active?.note ? { activeDayNote: active.note } : {}),
+    ...(active?.day.route ? { activeDayRoute: active.day.route } : {}),
     ...(next != null ? { next } : {}),
     dayHasRealTime,
     remaining,

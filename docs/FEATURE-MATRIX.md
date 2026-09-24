@@ -1,6 +1,6 @@
 # FEATURE MATRIX — UX REDESIGN "ONE SIMPLE EXPERIENCE" (Issue #3)
 
-> Status: **v1.2 — posodobljeno 2026-09-24 (v1.92.0, ISSUE #4 val 1: §3/§6/§9/§11). Audit v1.0: HEAD `8ff87e8`.**
+> Status: **v1.3 — posodobljeno 2026-09-24 (v1.93.0, ISSUE #4 val 2: §2/§8/§13). Audit v1.0: HEAD `8ff87e8`.**
 > Vir: revizija 5-A/5-B/5-C/5-D (worklog) — 38 strani, 48 API skupin, 121 lastnih komponent.
 > PRAVILO: **ZERO FEATURE LOSS.** HIDE ≠ DELETE. Ob dvomu → KEEP.
 > Model ciljne izkušnje: **DISCOVER → PLAN → BOOK → GO** (uporabnik ne razume arhitekture).
@@ -25,6 +25,7 @@
 | Rezervacija (kontekstualna) | BookingPanel po dnevu + /go/* | /api/supply + /go/[provider] | dnevni paneli | PLAN/BOOK kontekstualno | CONTEXTUAL | NE |
 | Journey /potovanje (7 kategorij) | /potovanje (NI v navigaciji!) | /api/journey/* | pokopana stran | PLAN sekundarna (footer + povezave) | CONTEXTUAL | NE |
 | Go Mode /na-poti (offline, GPS) | /na-poti — od 1.91.0 (K-12) tudi v MOBILNEM meniju; most »Zaženi Na poti« z /nacrtuj in /pot/[shareId] (K-7) | 100 % klient (dai:go-trip, v2 tudi itinerary) | prej pokopana stran | GO — footer + mobilni meni + most iz AI načrta | CONTEXTUAL | NE |
+| Go Mode real-time kontekst (1.93.0 §8) | /na-poti hero kartica + vrstica poti dneva | itinerary.legs potujejo z načrtom (legFromPrev + route povzetek) | ETA ~HH:MM (ocena, samo z GPS) / izrecno neznano; zamude NEZNANO; vozni časi z virom OSRM/ocena; nav handoff z origin= | GO | CONTEXTUAL | NE |
 | Shrani in deli | /nacrtuj akcijska vrstica | POST /api/itinerary/save (shareId+editToken) | spodaj | PLAN akcije | VISIBLE | NE |
 | Deljena pot /pot/[shareId] | javna stran + skupnost | GET shared | ločena stran | MY TRIP (javni pogled) | VISIBLE | NE |
 | Moja potovanja | /moja-potovanja (samo mobilni meni!) | /api/user/trips | namenjena stran | MY TRIP — navigacija tudi na desktopu | VISIBLE | NE |
@@ -45,6 +46,8 @@
 | Rezervacijski lifecycle na AI časovnici (1.92.0 §3) | trip-timeline postanki z /go izdelkom | POST /api/journey/bookings (EXTERNAL, idempotentno) + GET prekrivka | žeton Brez rezervacije → Zunanja rezervacija | PLAN (časovnica) — ISTA semantika kot MOJA POT/GO | CONTEXTUAL | NE |
 | Cenovna resnica časovnice (1.92.0 §6) | trip-timeline + cost-truth.ts | supply validacija NaN sentinel | dnevna vsota + N z neznano ceno + žeton na postanku | PLAN (časovnica + glava ~€ kvalificirana) | CONTEXTUAL | NE |
 | AI metering (1.92.0 §11) | ai-client/ai-usage.ts + admin zavihek | AIUsageLog (VSE AI površine + fallback/cache) | admin agregati 7/30 dni + retry vidnost | PLATFORMA (admin) | CONTEXTUAL | NE |
+| Trip enoten objekt (1.93.0 §2) | GET /api/trip/[shareId] (agregator: načrt+vodnik+skupnost+rezervacije+verzija+vloga) + dai:go-trip v2 shareId | SavedItinerary + 8 modelov na shareId (0 novih težkih) | Go Mode povezan s shranjeno potjo (Odpri shranjeno pot) | PLATFORMA (stanje poti) | CONTEXTUAL | NE |
+| Sodelovanje z dovoljenji (1.93.0 §13) | /pot/[shareId] plošča (lastnik/urednik) + ?invite= trak | TripCollaborator (PENDING/ACTIVE/REVOKED) + trip-permissions.ts (5 vlog) + PATCH vsebine s CAS | povabi/odvzemi/spremeni vlogo + javna↔zasebna povezava + preimenovanje (409 konflikt) | MY TRIP (skupnostno) | CONTEXTUAL | NE |
 | Skupnost: glasanje/komentarji/všečki/ankete/dnevnik | /pot/[shareId] | /api/trip-vote, trip-likes, trip-comments, poll, diary | deljena stran | MY TRIP javni pogled | CONTEXTUAL | NE |
 | Skupnost: odkrivanje poti | CommunityTrips na /nacrtuj | RSC | spodaj | PLAN spodaj | CONTEXTUAL | NE |
 | Mnenja (reviews) | product/experience modal | /api/reviews | modal | EXPLORE modal | CONTEXTUAL | NE |

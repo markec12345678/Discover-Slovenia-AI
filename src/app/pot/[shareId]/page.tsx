@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
+import { authOptions } from "@/lib/auth";
 import { safeJsonLd } from "@/lib/security";
 import { matchEventsForItinerary } from "@/lib/events-match";
 import { tripWindowMs } from "@/lib/trip-dates";
+import { resolveTripRole, roleAtLeast } from "@/lib/trip-permissions";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { SharedTrip } from "@/components/shared-trip";
+import { TripCollaboration } from "@/components/trip-collaboration";
 import { TripGuide, type GuideData } from "@/components/trip-guide";
 import { TripDiary, type DiaryEntry } from "@/components/trip-diary";
 import { TripPolls } from "@/components/trip-polls";
@@ -39,6 +43,7 @@ async function getSharedItinerary(shareId: string) {
       itinerary: true,
       views: true,
       createdAt: true,
+      isPublic: true,
     },
   });
 
@@ -114,6 +119,22 @@ export default async function SharedTripPage({
   const saved = await getSharedItinerary(shareId);
 
   if (!saved) notFound();
+
+  // ISSUE #4 §13 (val 2): ZASEBNA pot (isPublic=false) — dostop ima samo
+  // prijavljen uporabnik z vlogo (lastnik/sodelujoči). RSC vidi SAMO sejo
+  // (editToken živi v brskalniku — zasebni način je zato rezerviran za
+  // računske lastnike, glej PATCH varovalko). Drugi → 404 (obstoj poti
+  // ostane skrit, ne 403).
+  if (!saved.isPublic) {
+    let session = null;
+    try {
+      session = await getServerSession(authOptions);
+    } catch {
+      // napaka seje = anonimno → 404 spodaj
+    }
+    const { role } = await resolveTripRole(shareId, { session });
+    if (!roleAtLeast(role, "VIEWER")) notFound();
+  }
 
   // SEO-2: tiskalna noga z DEJANSKO povezavo (prej mrtva domena)
   const base = await currentBaseUrl();
@@ -391,6 +412,13 @@ export default async function SharedTripPage({
         events={events}
         initialVotes={initialVotes}
       />
+
+      {/* === ISSUE #4 §13 (val 2): SODELOVANJE — vloga, vabila, revokacija,
+          javna/zasebna povezava + preimenovanje s CAS. Lastniku pokaže
+          upravljanje, povabljenim sprejem, obiskovalcem stanje. === */}
+      <div className="mx-auto max-w-5xl px-4 pb-10 pt-2 sm:px-6 lg:px-8">
+        <TripCollaboration shareId={shareId} initialName={saved.name} />
+      </div>
 
       {/* === F7: AVTORJSKI VODNIK (skupnostni vodniki) — prikaz vsem,
           avtorstvo le lastniku (editToken v localStorage); prazna kartica

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
+import { communityTripGate } from "@/lib/trip-permissions";
 
 // ============================================================================
 // TRIP LIKES — všečki (srčki) na deljenem potovanju
@@ -72,13 +73,20 @@ export async function POST(request: Request) {
     // Potovanje mora obstajati (preprečuje všečke na izmišljene tripe)
     const exists = await db.savedItinerary.findUnique({
       where: { shareId },
-      select: { id: true },
+      select: { id: true, isPublic: true },
     });
     if (!exists) {
       return NextResponse.json(
         { error: "Deljeno potovanje ne obstaja" },
         { status: 404 }
       );
+    }
+
+    // ISSUE #4 §13: zasebna pot → pisanje zahteva vlogo komentatorja+
+    // (javna pot = anonimno kot doslej).
+    if (!exists.isPublic) {
+      const gate = await communityTripGate(shareId, "comment");
+      if (gate) return gate;
     }
 
     // Toggle: če všeček obstaja → izbriši, sicer ustvari

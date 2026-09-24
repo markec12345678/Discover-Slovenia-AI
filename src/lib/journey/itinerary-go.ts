@@ -23,8 +23,14 @@
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { dayISOForDayNumber } from "@/lib/trip-dates";
+import { legKey } from "@/lib/road-routing";
 import type { Itinerary, LocationVisit } from "@/lib/types";
-import type { MyTripDay, MyTripView, TripEntry } from "./trip-view";
+import type {
+  DayRouteSummary,
+  MyTripDay,
+  MyTripView,
+  TripEntry,
+} from "./trip-view";
 
 // ---------------------------------------------------------------------------
 // Pomožne (čiste)
@@ -113,6 +119,22 @@ const STATUS_PLANNED = {
   },
 };
 
+// ISSUE #4 §3 na GO površini: postanek s preverjeno /go povezavo do
+// ponudnika nosi EXTERNAL statusni žeton (enak kot časovnica VAL 1) —
+// klik = handoff, NIKOLI „rezervirano”.
+const STATUS_BOOKABLE = {
+  status: "EXTERNAL" as const,
+  label: {
+    sl: "Zunanja rezervacija — pri ponudniku",
+    en: "External booking — at the provider",
+  },
+};
+
+const CANCELLATION_EXTERNAL = {
+  sl: "Pogoji preklica in vračila veljajo pri ponudniku — pred rezervacijo preveri njihove pogoje.",
+  en: "Cancellation and refund terms apply at the provider — check their terms before booking.",
+};
+
 const CANCELLATION_INFO = {
   sl: "Ni rezervacije — nič za preklicati.",
   en: "No booking — nothing to cancel.",
@@ -132,12 +154,41 @@ export interface ItineraryGoOptions {
  * Pretvori AI itinerer v MY TRIP pogled (ISTA oblika kot buildMyTrip —
  * GoMode ga izrisuje prek buildGoView brez sprememb). Dan N = datum iz
  * tripStartDate (če je znan); termini postankov so IZ NAČRTA.
+ *
+ * ISSUE #4 §8 (val 2): nosi NOGE (itinerary.legs → legFromPrev na vsakem
+ * postanku + route povzetek dneva) in §3 rezervacijska polja
+ * (booking_provider/product_id/url iz VAL 1) — Go Mode s tem pokaže
+ * vozni čas do naslednjega postanka, pot dneva in gumb Rezerviraj.
+ * Vse ostalo ostaja po istem kanonu iskrenosti.
  */
 export function buildItineraryGoView(
   itinerary: Itinerary,
   opts: ItineraryGoOptions
 ): MyTripView {
   const days: MyTripDay[] = [];
+
+  // Noge iz načrta (ključi "idA|idB" — isto kot serializeLegs).
+  const legs =
+    itinerary.legs && typeof itinerary.legs === "object"
+      ? (itinerary.legs as Record<string, { km: number; min: number; source: "osrm" | "heuristic" }>)
+      : {};
+  const legOf = (aId: string, bId: string) => {
+    const l = legs[legKey(aId, bId)];
+    if (
+      l &&
+      typeof l.km === "number" &&
+      Number.isFinite(l.km) &&
+      typeof l.min === "number" &&
+      Number.isFinite(l.min)
+    ) {
+      return {
+        km: l.km,
+        min: l.min,
+        source: l.source === "osrm" ? ("osrm" as const) : ("heuristic" as const),
+      };
+    }
+    return null;
+  };
 
   for (const day of Array.isArray(itinerary.days) ? itinerary.days : []) {
     const dayNo = typeof day.day === "number" ? day.day : days.length + 1;
@@ -146,11 +197,22 @@ export function buildItineraryGoView(
         ? dayISOForDayNumber(itinerary.tripStartDate, dayNo)
         : null;
 
-    const entries: TripEntry[] = (
-      Array.isArray(day.locations) ? day.locations : []
-    ).map((loc, idx) => {
+    const locations = Array.isArray(day.locations) ? day.locations : [];
+
+    const entries: TripEntry[] = locations.map((loc, idx) => {
       const coords = coordsOfLoc(loc);
       const time = parseTimeSlot(loc.time_slot);
+      // §3 VAL 1 polja — strežniško validirana /go pot (samo relativne
+      // poti preživijo sanitize). Klik na GoMode = isti handoff kanal.
+      const bookable =
+        typeof loc.booking_url === "string" &&
+        loc.booking_url.startsWith("/go/") &&
+        typeof loc.booking_provider === "string";
+      // §8: noga od prejšnjega postanka (PO VRSTNEM REDU načrta).
+      const leg =
+        idx > 0
+          ? legOf(locations[idx - 1].destination_id, loc.destination_id)
+          : null;
       return {
         key: `itin-d${dayNo}-i${idx}-${loc.destination_id}`,
         category: "attractions" as const,
@@ -160,18 +222,52 @@ export function buildItineraryGoView(
           sl: "AI načrt potovanja",
           en: "AI travel plan",
         },
+        ...(bookable ? { provider: loc.booking_provider } : {}),
+        ...(bookable ? { providerProductId: loc.booking_product_id } : {}),
+        ...(bookable ? { bookingUrl: loc.booking_url } : {}),
         ...(iso ? { date: iso } : {}),
         ...(time ? { time } : {}),
         ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
         ...(typeof loc.duration === "number" && loc.duration > 0
           ? { durationMin: Math.round(loc.duration * 60) }
           : {}),
-        status: STATUS_PLANNED.status,
-        statusLabel: STATUS_PLANNED.label,
-        cancellation: CANCELLATION_INFO,
+        ...(leg ? { legFromPrev: leg } : {}),
+        status: bookable ? STATUS_BOOKABLE.status : STATUS_PLANNED.status,
+        statusLabel: bookable ? STATUS_BOOKABLE.label : STATUS_PLANNED.label,
+        cancellation: bookable ? CANCELLATION_EXTERNAL : CANCELLATION_INFO,
         bookingId: null,
       } satisfies TripEntry;
     });
+
+    // §8: povzetek poti dneva (samo znane noge; delna ocena je pošteno
+    // razkrita prek legsKnown/legsTotal).
+    let route: DayRouteSummary | undefined;
+    if (locations.length >= 2) {
+      let km = 0;
+      let min = 0;
+      let known = 0;
+      let osrm = 0;
+      let heur = 0;
+      for (let i = 1; i < locations.length; i++) {
+        const l = legOf(locations[i - 1].destination_id, locations[i].destination_id);
+        if (!l) continue;
+        known++;
+        km += l.km;
+        min += l.min;
+        if (l.source === "osrm") osrm++;
+        else heur++;
+      }
+      if (known > 0) {
+        route = {
+          km: Math.round(km),
+          min: Math.round(min),
+          legsKnown: known,
+          legsTotal: locations.length - 1,
+          method:
+            heur === 0 ? "osrm" : osrm === 0 ? "heuristic" : "mixed",
+        };
+      }
+    }
 
     days.push({
       ...(iso ? { date: iso } : {}),
@@ -182,6 +278,7 @@ export function buildItineraryGoView(
             en: `Day ${dayNo}`,
           },
       entries,
+      ...(route ? { route } : {}),
     });
   }
 

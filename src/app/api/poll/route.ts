@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
+import { communityTripGate } from "@/lib/trip-permissions";
 
 // ============================================================================
 // TRIP POLLS — skupinske ankete na deljenem potovanju (F11, MindTrip vrzel #2)
@@ -128,13 +129,16 @@ async function toDTO(poll: PollRow, voterId: string | null): Promise<PollDTO> {
   };
 }
 
-/** Preveri, da potovanje obstaja (404 sicer). */
-async function tripExists(shareId: string): Promise<boolean> {
+/** Preveri stanje potovanja (ISSUE #4 §13: public/private/missing). */
+async function tripState(
+  shareId: string
+): Promise<"missing" | "public" | "private"> {
   const saved = await db.savedItinerary.findUnique({
     where: { shareId },
-    select: { id: true },
+    select: { isPublic: true },
   });
-  return saved !== null;
+  if (!saved) return "missing";
+  return saved.isPublic ? "public" : "private";
 }
 
 // ============================================================================
@@ -169,11 +173,18 @@ export async function GET(request: Request) {
       );
     }
 
-    if (!(await tripExists(shareId))) {
+    const state = await tripState(shareId);
+    if (state === "missing") {
       return NextResponse.json(
         { error: "Deljeno potovanje ne obstaja" },
         { status: 404 }
       );
+    }
+
+    // ISSUE #4 §13: zasebna pot → branje zahteva vlogo (javna kot doslej).
+    if (state === "private") {
+      const gate = await communityTripGate(shareId, "read");
+      if (gate) return gate;
     }
 
     const polls = await db.tripPoll.findMany({
@@ -274,11 +285,19 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (!(await tripExists(shareId))) {
+    const state = await tripState(shareId);
+    if (state === "missing") {
       return NextResponse.json(
         { error: "Deljeno potovanje ne obstaja" },
         { status: 404 }
       );
+    }
+
+    // ISSUE #4 §13: zasebna pot → ustvarjanje ankete zahteva vlogo
+    // komentatorja+ (javna kot doslej).
+    if (state === "private") {
+      const gate = await communityTripGate(shareId, "comment");
+      if (gate) return gate;
     }
 
     // Zgornja meja AKTIVNIH anket (zaprte ne štejejo)
@@ -360,10 +379,19 @@ export async function PATCH(request: Request) {
 
     const poll = await db.tripPoll.findUnique({
       where: { id: pollId },
-      select: { authorClientId: true },
+      select: { authorClientId: true, shareId: true },
     });
     if (!poll) {
       return NextResponse.json({ error: "Anketa ne obstaja" }, { status: 404 });
+    }
+
+    // ISSUE #4 §13: zasebna pot → upravljanje ankete zahteva vlogo.
+    {
+      const state = await tripState(poll.shareId);
+      if (state === "private") {
+        const gate = await communityTripGate(poll.shareId, "comment");
+        if (gate) return gate;
+      }
     }
 
     // Samo avtor ankete lahko zaključi/odpre
@@ -434,10 +462,19 @@ export async function DELETE(request: Request) {
 
     const poll = await db.tripPoll.findUnique({
       where: { id: pollId },
-      select: { authorClientId: true },
+      select: { authorClientId: true, shareId: true },
     });
     if (!poll) {
       return NextResponse.json({ error: "Anketa ne obstaja" }, { status: 404 });
+    }
+
+    // ISSUE #4 §13: zasebna pot → brisanje ankete zahteva vlogo.
+    {
+      const state = await tripState(poll.shareId);
+      if (state === "private") {
+        const gate = await communityTripGate(poll.shareId, "comment");
+        if (gate) return gate;
+      }
     }
 
     if (poll.authorClientId !== clientId) {

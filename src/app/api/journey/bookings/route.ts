@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { timingSafeEqual } from "@/lib/security";
+import { communityTripGate } from "@/lib/trip-permissions";
 import {
   isValidStatusTransition,
   validateConfirmationRecord,
@@ -100,6 +101,19 @@ export async function GET(request: Request) {
       if (!SHARE_ID_RE.test(shareId)) {
         return NextResponse.json({ error: "Neveljaven shareId" }, { status: 400 });
       }
+
+      // ISSUE #4 §13 (val 2): zasebna pot → branje prekrivke zahteva vlogo
+      // ≥ VIEWER (javna pot = kot doslej). Preverimo poceni (en select),
+      // vrata odperejo samo zasebnim pote potezam.
+      const savedAccess = await db.savedItinerary.findUnique({
+        where: { shareId },
+        select: { isPublic: true },
+      });
+      if (savedAccess && !savedAccess.isPublic) {
+        const gate = await communityTripGate(shareId, "read");
+        if (gate) return gate;
+      }
+
       const bookings = await db.journeyBooking.findMany({
         where: { shareId },
         select: SELECT_FIELDS,
@@ -234,6 +248,20 @@ export async function POST(request: Request) {
   // provider-driven in živi za PATCH kanalom (žeton). Fail-closed.
   if (!INITIAL_CONFIRMATION_STATUSES.includes(status as never)) {
     return statusError(INITIAL_CONFIRMATION_STATUSES);
+  }
+
+  // ISSUE #4 §13 (val 2): zapis dogodka NA ZASEBNO pot zahteva vlogo
+  // komentatorja+ (javna pot = kot doslej; efemerne vrstice brez shareId
+  // so obsegene s sessionKey in ostajajo odprte).
+  if (shareId) {
+    const savedAccess = await db.savedItinerary.findUnique({
+      where: { shareId },
+      select: { isPublic: true },
+    });
+    if (savedAccess && !savedAccess.isPublic) {
+      const gate = await communityTripGate(shareId, "comment");
+      if (gate) return gate;
+    }
   }
 
   // S1 (HARDENING, P1): klientova pot NIKOLI ne nosi provider-atestacij.

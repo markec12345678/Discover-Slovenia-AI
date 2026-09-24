@@ -615,6 +615,17 @@ export function ItineraryPlanner() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // ISSUE #4 §2 (val 2): shareId različice načrta, KI JE NA STREŽNIKU in
+  // se UJEMA s trenutno vsebino (shranjeno TO sejo ali odprto prek ?odpri=).
+  // Identiteta objekta je varovalka: karkoli spremeni načrt (refine,
+  // regeneracija, dodajanje kraja) → povezava UGAJA SAMO (stara povezava
+  // ne velja več — ne lažemo, da je to isti trip).
+  const [linkedTrip, setLinkedTrip] = useState<{
+    itinerary: Itinerary;
+    shareId: string;
+  } | null>(null);
+  const activeShareId =
+    linkedTrip && linkedTrip.itinerary === itinerary ? linkedTrip.shareId : null;
   // TASK 4 / K-15: DVIGNJENO stanje razklopa "Podrobnosti izračunov" —
   // sproži ga tudi klik na postavko trust vrstice (isti `open` kot
   // PlannerStatusStrip; prej skrito za zložkom + scrollom).
@@ -684,6 +695,9 @@ export function ItineraryPlanner() {
       fetchSharedItinerary(shareId)
         .then((data) => {
           setItinerary(data.itinerary);
+          // ISSUE #4 §2: odprta deljena različica JE strežniška različica —
+          // Go Mode premostitev veže nanjo (dokler se vsebina ne spremeni).
+          setLinkedTrip({ itinerary: data.itinerary, shareId });
           setRestoredVisible(false);
           toast({
             title: t("sharedOpenedToast"),
@@ -1461,7 +1475,7 @@ export function ItineraryPlanner() {
       lang: locale === "en" ? "en" : "sl",
       name: deriveSavedTripName(itinerary),
     });
-    const saved = saveItineraryGoTrip(view);
+    const saved = saveItineraryGoTrip(view, { shareId: activeShareId });
     trackPlannerEvent("go_mode_started", {
       via: "planner_action_row",
       days: itinerary.days.length,
@@ -1494,6 +1508,8 @@ export function ItineraryPlanner() {
       const result = await saveItinerary(itinerary, formData);
       const absoluteUrl = `${window.location.origin}${result.url}`;
       setShareUrl(absoluteUrl);
+      // ISSUE #4 §2: pravkar shranjena različica == strežniška različica.
+      setLinkedTrip({ itinerary, shareId: result.shareId });
       // P2-3: sledi anonimno shranjen načrt za prevzem ob prijavi (localStorage)
       addSavedTrip(result.shareId, deriveSavedTripName(itinerary));
       trackFunnel("itinerary_saved");

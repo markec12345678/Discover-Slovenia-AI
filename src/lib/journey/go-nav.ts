@@ -86,13 +86,30 @@ export function buildGeoNavUri(
 /**
  * `https://www.google.com/maps/dir/?api=1&destination=lat,lng` — uradni
  * Maps URL API (destination je edini obvezen parameter; izhodišče privzeto
- * uporabnikova lokacija). V URL grejo SAMO validirane številke — naslov se
+ * uporabnikova lokacija). V URL gredo SAMO validirane številke — naslov se
  * NE vstavlja (koordinate iz vira so natančnejše od imena).
  * Neveljavna koordinata → null.
+ *
+ * ISSUE #4 §8 (val 2): opcijski `origin` — ko je GPS aktiven, dob external
+ * app DEJANSKO izhodišče (url param origin lat,lng) namesto njenega lastnega
+ * ugibanja; brez GPS izhodišča NE podajamo (aplikacija uporabi svojo trenutno
+ * lokacijo — pošteno, ker ne vemo, kje si).
  */
-export function buildWebNavUrl(lat: number, lng: number): string | null {
+export function buildWebNavUrl(
+  lat: number,
+  lng: number,
+  origin?: { lat: number; lng: number } | null
+): string | null {
   if (!isValidCoord(lat, lng)) return null;
-  return `https://www.google.com/maps/dir/?api=1&destination=${fixed6(lat)},${fixed6(lng)}`;
+  let url = `https://www.google.com/maps/dir/?api=1&destination=${fixed6(lat)},${fixed6(lng)}`;
+  if (
+    origin &&
+    isValidCoord(origin.lat, origin.lng) &&
+    (origin.lat !== lat || origin.lng !== lng)
+  ) {
+    url += `&origin=${fixed6(origin.lat)},${fixed6(origin.lng)}`;
+  }
+  return url;
 }
 
 // ---------------------------------------------------------------------------
@@ -111,13 +128,18 @@ export interface GoNavLinks {
  * Povezave navigacijskega handoffa za postanek. SAMO če ima postanek
  * REALNE koordinate vira — sicer null (iskrena odsotnost, isti kanon kot
  * DistanceChip: razdalja se prav tako ne izmišljuje).
+ *
+ * ISSUE #4 §8: `origin` (živi GPS) se prenese v web URL — zunanja aplikacija
+ * dobi dejansko izhodišče poti (geo: URI izhodišča ne potrebuje — aplikacija
+ * sama ve, kjer si, ko jo odpreš s telefonom).
  */
 export function goNavLinks(
-  entry: Pick<TripEntry, "lat" | "lng" | "title">
+  entry: Pick<TripEntry, "lat" | "lng" | "title">,
+  origin?: { lat: number; lng: number } | null
 ): GoNavLinks | null {
   if (entry.lat == null || entry.lng == null) return null;
   const geo = buildGeoNavUri(entry.lat, entry.lng, entry.title);
-  const web = buildWebNavUrl(entry.lat, entry.lng);
+  const web = buildWebNavUrl(entry.lat, entry.lng, origin ?? null);
   if (geo == null || web == null) return null; // fail-closed (paranoično, a dosledno)
   return { geo, web };
 }

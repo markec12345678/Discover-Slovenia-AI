@@ -661,7 +661,9 @@ export function SharedTrip({
                   lang: "sl",
                   name,
                 });
-                if (saveItineraryGoTrip(view)) {
+                // ISSUE #4 §2 (val 2): Go Mode zapis veže na TO shranjeno
+                // pot (shareId) — premostitev nazaj na strežniški objekt.
+                if (saveItineraryGoTrip(view, { shareId })) {
                   router.push("/na-poti");
                 }
               }}

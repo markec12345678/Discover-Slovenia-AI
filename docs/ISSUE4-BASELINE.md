@@ -168,3 +168,27 @@ Po §1 disciplini = najprej **najmanjša rešljiv, najvič vrednosti**:
 **Naslednji val (predlog):** §2 Trip enoten objekt (domain map → odločitev) →
 §8 real-time kontekst v GO → §13 kolaboracija permissions. Pilot 10 ponudnikov
 ostaja vzporeden in neblokiran.
+
+---
+
+## G. IMPLEMENTACIJSKI VAL 2 — ZAKLJUČEN (2026-09-24, v1.93.0)
+
+> Po predlogu iz oddelka F (§2 → §8 → §13). Ista disciplina: meriti →
+> popraviti → dokazati. **0 sprememb, ki bi izgubile funkcijo.**
+
+| Sklop | Dostavljeno | Dokaz |
+|---|---|---|
+| **§2 Trip enoten objekt** | Domain map najprej (docs/TRIP-DOMAIN-MAP.md — 8 modelov na shareId, 17 klientskih ključev, sodba: normalizacija ZAVRJENA); `GET /api/trip/[shareId]` agregator (načrt/vodnik/skupnost/rezervacije/verzija/vloga — sodelujoče samo lastniku); `dai:go-trip` v2 nosi `shareId` (identiteta načrta = varovalka: sprememba vsebine ugasne vezo) | Živo: `role:VIEWER` anonimno / `role:OWNER + collaborators[]` z žetonom; E2E: GO Mode »Odpri shranjeno pot« → /pot/{shareId} (go-mode-eta-live.png) |
+| **§8 real-time kontekst** | Vozni časi potujejo z načrtom (legs → legFromPrev + route povzetek dneva z delno poštenostjo); ETA samo iz realnih vhodov (GPS+geo, hevristika labelirana) sicer izrecno NEZNANO; zamude/promet izrecno NEZNANO; nav handoff z `origin=`; v2 postanki brez ur → URA NEZNANA; §3 booking žetoni na GO | E2E z GPS: »PREDVIDEN PRIHOD ~14:23 (~60 km · ~65 min · ocena iz premočne razdalje ×1,3 …)« + nav URL `&origin=46.056900,14.505800`; brez GPS: »Prihod: neznano« + »Zamude … NEZNANO« (go-mode-eta-delay-route.png, go-mode-hours-nav-origin.png) |
+| **§13 permissions** | trip-permissions.ts (OWNER/EDITOR/COMMENTER/VIEWER/NONE, ena točka resnice); TripCollaborator (PENDING→ACTIVE→REVOKED, žetonska vabila, e-poštna vez, idempotenca, meja 20); PATCH vsebine s CAS (contentVersion, 409 s strežnikovo verzijo); isPublic revokacija (404 = obstoj skrit; zaklep-varovalka za anonimne lastnike); communityTripGate mehka vrata (6 rut, javne = 0 spremembe); AuditLog 7 novih akcij | E2E z sejo: vabilo → sprejem → »Vabilo sprejeto — tvoja vloga: Komentator«; preimenovanje 200 (v0→v1→v2→v3) + 409 ob zaprti verziji; revoke → »dostop odvzet« + »Povabi znovo«; zasebna pot: anonimni 404 (stran+API), sodelujoči 200, anonimni komentar 403 (invite-accepted.png, owner-panel.png, owner-revoked.png) |
+
+**Testi:** 2386/2386 (+21) · lint 0/0 · tsc 0 (src/) · 0 konzolnih napak v E2E ·
+7 dokazov v ux-verify-issue4-val2/.
+
+**Operativno:** additive migracije (schema + baseline SQL + idempotentna
+zagonska) · dev .env dopolnjen z NEXTAUTH_SECRET/URL (getServerSession v
+lokalnem devu brez njiju ni deloval — produkcija ima že od prej).
+
+**Naslednji val (predlog):** §4 import rezervacij/dokumentov (ročni vnos +
+PDF/slika parsing z DRAFT potrditvijo) → §7 transport resnica → §14 budget
+ločeno od ocen. Pilot 10 ponudnikov ostaja vzporeden in neblokiran.

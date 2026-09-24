@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
+import { communityTripGate } from "@/lib/trip-permissions";
 
 // ============================================================================
 // TRIP VOTE — glasovanje obiskovalcev na lokacijah deljenega potovanja
@@ -89,7 +90,7 @@ async function validateVoteBody(
   // Potovanje mora obstajati (preprečuje glasovanje na izmišljene tripe)
   const saved = await db.savedItinerary.findUnique({
     where: { shareId },
-    select: { itinerary: true },
+    select: { itinerary: true, isPublic: true },
   });
   if (!saved) {
     return {
@@ -99,6 +100,13 @@ async function validateVoteBody(
         { status: 404 }
       ),
     };
+  }
+
+  // ISSUE #4 §13 (val 2): zasebna pot → zahtevaj vlogo komentatorja+
+  // (javna pot = anonimno kot doslej, 0 spremembe obnašanja).
+  if (!saved.isPublic) {
+    const gate = await communityTripGate(shareId, "comment");
+    if (gate) return { ok: false, response: gate };
   }
 
   // locationKey mora biti destinacija tega potovanja (preprečuje smeti v DB)
@@ -234,13 +242,19 @@ export async function GET(request: Request) {
 
     const exists = await db.savedItinerary.findUnique({
       where: { shareId },
-      select: { id: true },
+      select: { id: true, isPublic: true },
     });
     if (!exists) {
       return NextResponse.json(
         { error: "Deljeno potovanje ne obstaja" },
         { status: 404 }
       );
+    }
+
+    // ISSUE #4 §13: zasebna pot → branje zahteva vlogo (javna kot doslej).
+    if (!exists.isPublic) {
+      const gate = await communityTripGate(shareId, "read");
+      if (gate) return gate;
     }
 
     const grouped = await db.tripVote.groupBy({
