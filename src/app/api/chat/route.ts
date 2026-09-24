@@ -313,6 +313,7 @@ ${SYSTEM_DATA_GUARD}`;
   try {
     const result = await generateCompletion(aiMessages, {
       temperature: 0.7,
+      usageLog: { feature: "chat" },
     });
 
     const content = result?.content;

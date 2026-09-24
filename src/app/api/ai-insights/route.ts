@@ -271,7 +271,7 @@ Generiraj insights glede na to statistiko.`;
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      { temperature: 0.5, jsonMode: true }
+      { temperature: 0.5, jsonMode: true, usageLog: { feature: "insights" } }
     );
 
     const content = result?.content;

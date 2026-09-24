@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
+import { logFallbackUsage } from "@/lib/ai-usage";
 import { rateLimit } from "@/lib/rate-limit";
 import { SYSTEM_DATA_GUARD, wrapProviderData } from "@/lib/ai-context";
 
@@ -173,7 +174,7 @@ Vrni JSON z najbolj ujemajočimi se rezultati.`;
         // Noga vezana na skupno mejo (OpenRouter 12 s + veriga 15 s) —
         // hitre napake še dobijo rezervat Gemini/Puter, globoka vrsta
         // pa pošteno pade v lokalno keyword rezervo.
-        { temperature: 0.3, jsonMode: true, timeoutMs: 12_000, totalBudgetMs: 15_000 }
+        { temperature: 0.3, jsonMode: true, timeoutMs: 12_000, totalBudgetMs: 15_000, usageLog: { feature: "search" } }
       ),
       new Promise<null>((resolve) => {
         smartSearchTimer = setTimeout(() => resolve(null), smartSearchCapMs);
@@ -233,6 +234,10 @@ function fallbackSearch(
   experiences: Array<{ id: string; name: string; category: string; description: string }>,
   limit: number
 ): SearchResults {
+  // ISSUE #4 §11 (val 1): zapis DEJANSKO izvedenega fallbacka — keyword
+  // iskanje je služilo uporabniku (source "fallback", success true);
+  // ločeno od success=false vrstic AI verige, ki povedo samo, da je AI padel.
+  const meteringStartedAt = Date.now();
   const q = query.toLowerCase();
   const words = q.split(/\s+/).filter((w) => w.length > 2);
 
@@ -269,6 +274,9 @@ function fallbackSearch(
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
     .map(({ id, name, tagline }) => ({ id, name, tagline, reason: "Ujema se z iskalnim nizom" }));
+
+  // ISSUE #4 §11: zapis fallbacka PRED odgovorom (ne onesnaži payload-a).
+  logFallbackUsage("search", Date.now() - meteringStartedAt);
 
   return {
     destinations: matchedDests,

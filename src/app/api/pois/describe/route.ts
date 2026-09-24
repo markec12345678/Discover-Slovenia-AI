@@ -180,7 +180,7 @@ Odgovor (SAMO opis, brez prefixa):`;
         },
         { role: "user", content: prompt },
       ],
-      { temperature: 0.6 }
+      { temperature: 0.6, usageLog: { feature: "poi" } }
     );
 
     let description = result?.content?.trim() || "";

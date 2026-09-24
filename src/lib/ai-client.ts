@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { logAIUsage } from "@/lib/ai-usage";
 
 /**
  * AI Client — več-provider veriga (F10 + 1.14.0)
@@ -56,9 +57,30 @@ export type AIProviderSource =
   | "z-ai-sdk"
   | "fallback";
 
+/** ISSUE #4 §11: žetoni iz provider odgovora (kadar jih vir pošlje). */
+export interface AIUsageTokens {
+  promptTokens?: number;
+  completionTokens?: number;
+}
+
 export interface AICompletionResult {
   content: string;
   source: AIProviderSource;
+  /** §11 metering: od začetka verige do uspeha (ms). */
+  latencyMs: number;
+  /** Model, ki je DEJANSKO odgovoril (npr. "nex-agi/nex-n2.5-pro:free"). */
+  model?: string;
+  /** §11 metering: poraba žetonov zmagovalne noge (kadar vir pošlje). */
+  usage?: AIUsageTokens;
+}
+
+/** §11 metering kontekst — prisotnost pomeni, da veriga ZAPIŠE vrstico v
+ *  AIUsageLog (brez njega: 0 zapisov — testi/mocki ostanejo hermetični). */
+export interface AIUsageLogContext {
+  /** Klicalo/plast: "itinerary" | "refine" | "chat" | "search" | … */
+  feature: string;
+  userId?: string;
+  sessionId?: string;
 }
 
 export interface AICompletionOptions {
@@ -95,11 +117,18 @@ export interface AICompletionOptions {
    * slediti, sicer uporabnik vidi napako, ki je strežnik nikoli ne reši).
    */
   totalBudgetMs?: number;
+  /** ISSUE #4 §11 (val 1): metering zapis v AIUsageLog (fire-and-forget,
+   *  vključi poskuse verige kot metadata.attempts — retry vidnost). */
+  usageLog?: AIUsageLogContext;
 }
 
 export interface AIVisionResult {
   content: string;
   source: "gemini" | "z-ai-sdk";
+  /** §11 metering (ista semantika kot AICompletionResult). */
+  latencyMs: number;
+  model?: string;
+  usage?: AIUsageTokens;
 }
 
 // ─── Provider 0: OPENROUTER (PRIMARNI) ───────────────────────────────────
@@ -283,14 +312,73 @@ const TOTAL_CHAIN_BUDGET_MS = 150_000;
  *  začeti klica, ki ga klient nikakor ne more dočakati). */
 const MIN_LEG_MS = 8_000;
 
+/** ISSUE #4 §11: obrambno branje `usage` bloku (OpenAI SDK pošilja
+ *  snake_case; nekateri compat viri camelCase — sprejmemo oba, samo števila). */
+function usageOf(
+  completion: unknown
+): AIUsageTokens | undefined {
+  const u = (completion as { usage?: Record<string, unknown> } | null
+    | undefined)?.usage;
+  if (!u || typeof u !== "object") return undefined;
+  const num = (v: unknown) =>
+    typeof v === "number" && Number.isFinite(v) ? v : undefined;
+  const prompt = num(u.promptTokens) ?? num(u.prompt_tokens);
+  const completionTokens =
+    num(u.completionTokens) ?? num(u.completion_tokens);
+  if (prompt == null && completionTokens == null) return undefined;
+  return { promptTokens: prompt, completionTokens };
+}
+
+/** §11 metering: interni telemetrični zbiralnik verige (poskusi nog za
+ *  metadata.attempts — retry/preskip vidnost v AIUsageLog). */
+interface ChainTelemetry {
+  attempts: string[];
+}
+
 /**
  * Generira AI chat completion po verigi
  * OpenRouter → Gemini → Puter → z-ai-sdk.
  * Če vsi odpovejo, vrne null (klicalec naj uporabi lasten fallback).
+ *
+ * ISSUE #4 §11 (val 1): OLUPNI RAZRED ZAPISA — klic z `options.usageLog`
+ * zapiše točno ENO vrstico v AIUsageLog (zmagovalni provider oz. "none",
+ * success, responseTime, model, žetoni, poskusi verige). Fire-and-forget:
+ * zapis NIKOLI ne vpliva na odgovor (isti kanon kot handoff-record).
  */
 export async function generateCompletion(
   messages: AIMessage[],
   options?: AICompletionOptions
+): Promise<AICompletionResult | null> {
+  const startedAt = Date.now();
+  const telemetry: ChainTelemetry = { attempts: [] };
+  const result = await generateCompletionChain(
+    messages,
+    options,
+    startedAt,
+    telemetry
+  );
+  if (options?.usageLog) {
+    logAIUsage({
+      feature: options.usageLog.feature,
+      userId: options.usageLog.userId,
+      sessionId: options.usageLog.sessionId,
+      source: result?.source ?? "none",
+      success: result != null,
+      responseTimeMs: Date.now() - startedAt,
+      model: result?.model,
+      usage: result?.usage,
+      metadata: { attempts: telemetry.attempts.slice(0, 12) },
+    });
+  }
+  return result;
+}
+
+/** Notranja veriga (brez zapisa) — izolirana, da je wrapper kratko berljiv. */
+async function generateCompletionChain(
+  messages: AIMessage[],
+  options: AICompletionOptions | undefined,
+  startedAt: number,
+  telemetry: ChainTelemetry
 ): Promise<AICompletionResult | null> {
   const temperature = options?.temperature ?? 0.7;
   // P7-C2 (F5.4): strežna zgornja meja izpisa — prej neomejeno (token-bomb
@@ -326,6 +414,12 @@ export async function generateCompletion(
   // pod pragom MIN_LEG_MS se preskoči (brez breaker zapisa — ni napaka).
   const orBudget = legBudgetMs(orTimeout);
   const openrouter = getOpenRouterClient();
+  // §11 telemetrija: zakaj noga NI bila poskusena (retry vidnost).
+  if (!openrouter) telemetry.attempts.push("openrouter:not-configured");
+  else if (orBudget === null)
+    telemetry.attempts.push("openrouter:skipped-budget");
+  else if (openrouterBreakerOpen())
+    telemetry.attempts.push("openrouter:breaker-open");
   if (openrouter && orBudget !== null && !openrouterBreakerOpen()) {
     let lastOrError: unknown = null;
     for (const model of openrouterModels()) {
@@ -356,17 +450,26 @@ export async function generateCompletion(
         const content = completion.choices[0]?.message?.content?.trim();
         if (content) {
           openrouterRecordSuccess();
-          return { content, source: "openrouter" };
+          telemetry.attempts.push(`openrouter:${model}:ok`);
+          return {
+            content,
+            source: "openrouter",
+            latencyMs: Date.now() - startedAt,
+            model,
+            usage: usageOf(completion),
+          };
         }
         throw new Error(`empty OpenRouter content (${model})`);
       } catch (error) {
         lastOrError = error;
         if (error instanceof OpenAI.APIConnectionTimeoutError) {
+          telemetry.attempts.push(`openrouter:${model}:timeout`);
           console.error(
             `[ai-client] OpenRouter TIMEOUT po ${orBudget / 1000} s (${model}) — čakalna vrsta :free globlja od proračuna; rezervni model preskočen (ista vrsta), nadaljujem na Gemini/Puter/z-ai`
           );
           break; // 1.48.2: NE poskusi rezervnega modela — ista čakalna vrsta
         }
+        telemetry.attempts.push(`openrouter:${model}:error`);
         console.error(
           `[ai-client] OpenRouter napaka (${model}):`,
           describeError(error)
@@ -389,6 +492,11 @@ export async function generateCompletion(
   const geminiMaxTokens = Math.max(maxTokens, 512);
   const geminiBudget = legBudgetMs(GEMINI_TIMEOUT_MS);
   const gemini = getGeminiClient();
+  // §11 telemetrija: zakaj noga NI bila poskusena.
+  if (!gemini) telemetry.attempts.push("gemini:not-configured");
+  else if (geminiBudget === null)
+    telemetry.attempts.push("gemini:skipped-budget");
+  else if (geminiBreakerOpen()) telemetry.attempts.push("gemini:breaker-open");
   if (gemini && geminiBudget !== null && !geminiBreakerOpen()) {
     try {
       const completion = await gemini.chat.completions.create(
@@ -412,11 +520,19 @@ export async function generateCompletion(
       const content = completion.choices[0]?.message?.content?.trim();
       if (content) {
         geminiRecordSuccess();
-        return { content, source: "gemini" };
+        telemetry.attempts.push(`gemini:${geminiModel()}:ok`);
+        return {
+          content,
+          source: "gemini",
+          latencyMs: Date.now() - startedAt,
+          model: geminiModel(),
+          usage: usageOf(completion),
+        };
       }
       throw new Error("empty Gemini content");
     } catch (error) {
       geminiRecordFailure();
+      telemetry.attempts.push(`gemini:${geminiModel()}:error`);
       console.error(
         "[ai-client] Gemini napaka:",
         describeError(error),
@@ -430,6 +546,9 @@ export async function generateCompletion(
   // maxRetries 0 (prej konstruktorjev 45 s × 2 poskusa = 90 s za to nogo).
   const puterBudget = legBudgetMs(PUTER_TIMEOUT_MS);
   const puter = getPuterClient();
+  if (!puter) telemetry.attempts.push("puter:not-configured");
+  else if (puterBudget === null)
+    telemetry.attempts.push("puter:skipped-budget");
   if (puter && puterBudget !== null) {
     try {
       const completion = await puter.chat.completions.create(
@@ -446,9 +565,17 @@ export async function generateCompletion(
       );
       const content = completion.choices[0]?.message?.content?.trim();
       if (content) {
-        return { content, source: "puter" };
+        telemetry.attempts.push(`puter:${puterModel()}:ok`);
+        return {
+          content,
+          source: "puter",
+          latencyMs: Date.now() - startedAt,
+          model: puterModel(),
+          usage: usageOf(completion),
+        };
       }
     } catch (error) {
+      telemetry.attempts.push(`puter:${puterModel()}:error`);
       console.error("[ai-client] Puter API napaka:", describeError(error));
     }
   }
@@ -461,6 +588,7 @@ export async function generateCompletion(
   if (zaiBudget === null) {
     // Preostanek pod pragom — brez smisla zaganjati SDK (import + create
     // sta že sama ~100 ms, klic pa nikakor ne more uspeti v <8 s).
+    telemetry.attempts.push("z-ai-sdk:skipped-budget");
     return null;
   }
   try {
@@ -486,9 +614,16 @@ export async function generateCompletion(
 
     const content = completion.choices[0]?.message?.content?.trim();
     if (content) {
-      return { content, source: "z-ai-sdk" };
+      telemetry.attempts.push("z-ai-sdk:ok");
+      return {
+        content,
+        source: "z-ai-sdk",
+        latencyMs: Date.now() - startedAt,
+        usage: usageOf(completion),
+      };
     }
   } catch (error) {
+    telemetry.attempts.push("z-ai-sdk:error");
     console.error(
       "[ai-client] z-ai-web-dev-sdk napaka:",
       describeError(error)
@@ -506,19 +641,60 @@ export async function generateCompletion(
  * Uporaba: F8 "Začni s sliko" — AI LE PREBRE sliko (ekstraktor imen),
  * ujemanje z destinacijami ostane DETERMINISTIČNO v klicalcu.
  * imageDataUrl pričakovana oblika: data:image/(jpeg|png|webp);base64,…
+ *
+ * ISSUE #4 §11 (val 1): `options.usageLog` zapiše vrstico v AIUsageLog
+ * (ista semantika kot generateCompletion — fire-and-forget).
  */
 export async function generateVisionCompletion(
   prompt: string,
   imageDataUrl: string,
-  options?: { maxTokens?: number }
+  options?: {
+    maxTokens?: number;
+    usageLog?: AIUsageLogContext;
+  }
 ): Promise<AIVisionResult | null> {
   // Tla 512 (isti razlog kot pri generateCompletion — thinking proračun);
   // reasoning_effort "low": ekstrakcija imen je mehanična naloga, globoko
   // razmišljanje bi le poravnilo proračun (podprtost živo preverjena).
   const maxTokens = Math.max(options?.maxTokens ?? 1024, 512);
+  const startedAt = Date.now();
+  const telemetry: ChainTelemetry = { attempts: [] };
+  const result = await generateVisionChain(
+    prompt,
+    imageDataUrl,
+    maxTokens,
+    startedAt,
+    telemetry
+  );
+  if (options?.usageLog) {
+    logAIUsage({
+      feature: options.usageLog.feature,
+      userId: options.usageLog.userId,
+      sessionId: options.usageLog.sessionId,
+      source: result?.source ?? "none",
+      success: result != null,
+      responseTimeMs: Date.now() - startedAt,
+      model: result?.model,
+      usage: result?.usage,
+      metadata: { attempts: telemetry.attempts.slice(0, 12) },
+    });
+  }
+  return result;
+}
+
+/** Notranja vision veriga (brez zapisa). */
+async function generateVisionChain(
+  prompt: string,
+  imageDataUrl: string,
+  maxTokens: number,
+  startedAt: number,
+  telemetry: ChainTelemetry
+): Promise<AIVisionResult | null> {
 
   // === 1. GEMINI (image_url del v OpenAI-compat formatu) ===
   const gemini = getGeminiClient();
+  if (!gemini) telemetry.attempts.push("gemini:not-configured");
+  else if (geminiBreakerOpen()) telemetry.attempts.push("gemini:breaker-open");
   if (gemini && !geminiBreakerOpen()) {
     try {
       const completion = await gemini.chat.completions.create({
@@ -538,11 +714,19 @@ export async function generateVisionCompletion(
       const content = completion.choices[0]?.message?.content?.trim();
       if (content) {
         geminiRecordSuccess();
-        return { content, source: "gemini" };
+        telemetry.attempts.push(`gemini:${geminiModel()}:ok`);
+        return {
+          content,
+          source: "gemini",
+          latencyMs: Date.now() - startedAt,
+          model: geminiModel(),
+          usage: usageOf(completion),
+        };
       }
       throw new Error("empty Gemini vision content");
     } catch (error) {
       geminiRecordFailure();
+      telemetry.attempts.push(`gemini:${geminiModel()}:error`);
       console.error(
         "[ai-client] Gemini vision napaka:",
         describeError(error),
@@ -588,9 +772,16 @@ export async function generateVisionCompletion(
 
     const content = completion.choices[0]?.message?.content?.trim();
     if (content) {
-      return { content, source: "z-ai-sdk" };
+      telemetry.attempts.push("z-ai-sdk:ok");
+      return {
+        content,
+        source: "z-ai-sdk",
+        latencyMs: Date.now() - startedAt,
+        usage: usageOf(completion),
+      };
     }
   } catch (error) {
+    telemetry.attempts.push("z-ai-sdk:error");
     console.error(
       "[ai-client] z-ai VLM napaka:",
       describeError(error)

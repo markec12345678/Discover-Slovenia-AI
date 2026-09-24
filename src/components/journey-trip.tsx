@@ -105,6 +105,9 @@ const L = {
     providerLink: { sl: "Povezava ponudnika", en: "Provider link" },
     cancellation: { sl: "Preklic", en: "Cancellation" },
     externalBooking: { sl: "Zunanja rezervacija", en: "External booking" },
+    // ISSUE #4 §6 (val 1): komercialen vnos BREZ cene → vrstica to izreče
+    // (prej: cena se tiho izpustila; najem avta / affiliate kartice).
+    priceUnknown: { sl: "cena neznana pri ponudniku", en: "price unknown at the provider" },
     min: { sl: "min", en: "min" },
     from: { sl: "od", en: "from" },
     per: { sl: "", en: "" },
@@ -235,7 +238,11 @@ function EntryRow({
         <p className="text-xs text-muted-foreground">
           {e.providerLabel[lang]}
           {e.durationMin != null ? ` · ${e.durationMin} ${L.doc.min[lang]}` : ""}
-          {e.price ? ` · ${priceText(e, lang)}` : ""}
+          {e.price
+            ? ` · ${priceText(e, lang)}`
+            : e.bookingUrl
+              ? ` · ${L.doc.priceUnknown[lang]}`
+              : ""}
         </p>
         {e.timeNote && (
           <p className="text-xs italic text-muted-foreground/80">

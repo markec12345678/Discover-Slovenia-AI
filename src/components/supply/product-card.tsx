@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { taxonomyOf } from "@/lib/supply/taxonomy";
 import { getProvider, statusLabel } from "@/lib/supply/registry";
+import { showsUnknownPriceChip } from "@/lib/supply/price-display";
 import type { ProviderProduct } from "@/lib/supply/types";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,13 @@ const L = {
   reviews: { sl: "ocen", en: "reviews" },
   hours: { sl: "h", en: "h" },
   local: { sl: "lokalno", en: "local" },
+  // ISSUE #4 §6 (val 1): produkt brez cene pri viru, ki cene ima → ISKREN
+  // žeton "Cena neznana" (prej: tiho skrivanje / naglo degradiranje na ure).
+  priceUnknown: { sl: "Cena neznana", en: "Price unknown" },
+  priceUnknownHint: {
+    sl: "Cena ni preverjena — vir ne pošilja cene za ta produkt. Preveri pri ponudniku.",
+    en: "Price not verified — the source does not send a price for this product. Check with the provider.",
+  },
 } as const;
 
 export interface ProductCardProps {
@@ -139,6 +147,28 @@ export function ProductCard({
             <Euro className="size-3.5" aria-hidden="true" />
             {product.price.amount}
             {priceSuffix}
+          </span>
+        ) : showsUnknownPriceChip(product) ? (
+          // ISSUE #4 §6: vir cene ima, ta produkt je ne nosi → žeton, NE tišina.
+          // (Odprti viri brez koncepta cen — OSM/FSQ — ostanejo na starem
+          // poštenem prikazu spodaj: tišina TAM je iskrena.)
+          <span
+            className="inline-flex min-w-0 items-center gap-1.5"
+            title={L.priceUnknownHint[lang]}
+          >
+            <Badge
+              variant="outline"
+              className="gap-0.5 border-amber-300 bg-amber-50 px-1.5 py-0 text-[10px] font-semibold text-amber-900 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+            >
+              <Euro className="size-2.5" aria-hidden="true" />
+              {L.priceUnknown[lang]}
+            </Badge>
+            {product.openingHours ? (
+              <span className="inline-flex min-w-0 items-center gap-1 truncate text-[11px] text-muted-foreground">
+                <Clock className="size-3 shrink-0" aria-hidden="true" />
+                {product.openingHours.slice(0, 24)}
+              </span>
+            ) : null}
           </span>
         ) : product.openingHours ? (
           <span className="inline-flex items-center gap-1 truncate text-[11px] text-muted-foreground">

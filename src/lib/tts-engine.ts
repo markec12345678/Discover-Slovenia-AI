@@ -29,6 +29,7 @@
 // ============================================================================
 
 import { concatWavBuffers } from "@/lib/itinerary-audio";
+import { logAIUsage } from "@/lib/ai-usage";
 
 // ── Jezik → glas (ENA resnica za obe poti) ────────────────────────────────
 
@@ -246,5 +247,15 @@ export async function synthesizeChunks(
       "TTS je vrnil neveljaven ali mešan zvok"
     );
   }
+  // ISSUE #4 §11 (val 1): metering PRAVE sinteze (z-ai-sdk vir; zadetki
+  // LRU predpomnilnika se zapišejo na straneh rut — X-TTS-Cache: hit).
+  // Strošek 0,00 (razvojni sandbox) — žetoni/znaki so v metadata.
+  logAIUsage({
+    feature: "tts",
+    source: "z-ai-sdk",
+    success: true,
+    responseTimeMs: 0,
+    metadata: { calls: buffers.length, bytes: wav.length, voice },
+  });
   return { wav, calls: buffers.length, voice };
 }

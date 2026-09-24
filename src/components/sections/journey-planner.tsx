@@ -28,6 +28,7 @@ import { COUNTRIES, DESTINATIONS } from "@/lib/slovenia-data";
 import { COUNTRIES_EN } from "@/lib/slovenia-data-en";
 import { persistSelection } from "@/lib/supply/selection-persist";
 import { recordExternalHandoff } from "@/lib/journey/handoff-record";
+import { OpeningHoursStatus } from "@/components/opening-hours-status";
 import { useAppStore } from "@/lib/store";
 import type { SelectedProviderProduct } from "@/lib/supply/types";
 import { describeTotals } from "@/lib/journey/totals";
@@ -685,9 +686,16 @@ export function JourneyPlanner() {
                               {t(L.openSource)} <ExternalLink className="h-3 w-3" />
                             </a>
                           )}
+                          {/* ISSUE #4 §9: status ur ob trenutku + surov
+                              niz vira (prej: samo surov niz). */}
                           {p.openingHours && (
                             <span className="text-xs text-muted-foreground">
-                              {t(L.hours)}: {p.openingHours}
+                              <span className="mr-1">{t(L.hours)}:</span>
+                              <OpeningHoursStatus
+                                raw={p.openingHours}
+                                lang={lang}
+                                className="text-xs"
+                              />
                             </span>
                           )}
                         </div>

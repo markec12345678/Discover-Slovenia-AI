@@ -87,7 +87,7 @@ Prevedi v: ${targetLabels}`;
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      { temperature: 0.3, jsonMode: true }
+      { temperature: 0.3, jsonMode: true, usageLog: { feature: "translate" } }
     );
 
     const content = result?.content;

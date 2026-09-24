@@ -274,7 +274,7 @@ Opis lokalca: ${description}`;
       { role: "system", content: "Si SEO strokovnjak. Vedno odgovoriš z veljavnim JSON." },
       { role: "user", content: prompt },
     ],
-    { temperature: 0.4, jsonMode: true }
+    { temperature: 0.4, jsonMode: true, usageLog: { feature: "approve" } }
   );
 
   if (!result?.content) return;

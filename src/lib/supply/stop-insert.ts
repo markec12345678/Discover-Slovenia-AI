@@ -206,6 +206,20 @@ export function insertProductStop(
     category: "supply",
     lat: product.lat,
     lng: product.lng,
+    // ISSUE #4 §3 (val 1): rezervacijski lifecycle postanka — KONKRETEN
+    // izdelek (provider+productId+/go povezava) se prenese v načrt, da
+    // trip-timeline izriše pošten žeton (Brez rezervacije → EXTERNAL po
+    // handoffu; NIKOLI lažni confirmed). Info-only produkti (odprti viri)
+    // booking koncepta nimajo → polja izpadejo (iskrena tišina).
+    ...(product.bookingUrl &&
+    product.bookingMode !== "info_only" &&
+    product.bookingUrl.startsWith("/go/")
+      ? {
+          booking_provider: product.provider,
+          booking_product_id: product.providerProductId,
+          booking_url: product.bookingUrl,
+        }
+      : {}),
   };
 
   const existing = it.days[dayIdx].locations;

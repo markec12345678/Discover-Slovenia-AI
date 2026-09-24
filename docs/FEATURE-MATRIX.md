@@ -1,6 +1,6 @@
 # FEATURE MATRIX — UX REDESIGN "ONE SIMPLE EXPERIENCE" (Issue #3)
 
-> Status: **v1.0 — read-only audit zaključen 2026-09-23 (HEAD `8ff87e8`, v1.89.1).**
+> Status: **v1.2 — posodobljeno 2026-09-24 (v1.92.0, ISSUE #4 val 1: §3/§6/§9/§11). Audit v1.0: HEAD `8ff87e8`.**
 > Vir: revizija 5-A/5-B/5-C/5-D (worklog) — 38 strani, 48 API skupin, 121 lastnih komponent.
 > PRAVILO: **ZERO FEATURE LOSS.** HIDE ≠ DELETE. Ob dvomu → KEEP.
 > Model ciljne izkušnje: **DISCOVER → PLAN → BOOK → GO** (uporabnik ne razume arhitekture).
@@ -18,7 +18,7 @@
 | Vprašaj o načrtu (PlanCopilot) | rail zavihek "Vprašaj" | POST /api/itinerary/ask | zavihek | PLAN rail (ostane) | CONTEXTUAL | NE |
 | Zemljevid poti (OSRM, barve dni) | /nacrtuj TripMapPanel + /zemljevid + /pot | leaflet + OSRM | delovna površina | PLAN (osrednji objekt) | VISIBLE | NE |
 | Vreme (Open-Meteo, po dnevu) | dnevne kartice badge | /api/weather (generacija vnese) | kontekstualno | PLAN dnevni + GO | CONTEXTUAL | NE |
-| Odpiralni časi (validacija) | geoValidation issues + GeoValidationPanel | F5.5 pravila closed_month/weekday | zloženo v "Podrobnosti" | PLAN trust vrstica ✓/⚠ + podrobnosti | CONTEXTUAL | NE |
+| Odpiralni časi (validacija + STATUS) | geoValidation issues + GeoValidationPanel + OpeningHoursStatus | F5.5 pravila closed_month/weekday + lib/opening-hours.ts (parser OSM podmnožice) | zloženo v "Podrobnosti" | PLAN trust vrstica ✓/⚠ + GO žeton ZDAJ ODPRTO/ZAPRTO/URA NEZNANA (1.92.0 §9) | CONTEXTUAL | NE |
 | Geo-validacija poti | PlannerStatusStrip + panel | geoValidation (80/150 km) | ploščice + zloženo | PLAN trust vrstica + ploščice | CONTEXTUAL | NE |
 | Optimizacija zaporedja (2-opt) | gumb v dnevu | klient | kontekstualno | PLAN dan | CONTEXTUAL | NE |
 | Postanek ob poti / kosilo | PlannerLegSuggestions/MealStop | /api/itinerary/stops-along-way | kontekstualno | PLAN dan | CONTEXTUAL | NE |
@@ -42,6 +42,9 @@
 | Rezervacija izkušnje | ExperienceModal | /api/bookings (DSA_DEMO_PAYMENTS) | modal | BOOK kontekstualno | CONTEXTUAL | NE |
 | Povpraševanje po lokalu | ListingModal BookingAssistant | /api/listing-inquiry | modal | BOOK kontekstualno | CONTEXTUAL | NE |
 | Affiliate hub (10 partnerjev) | homepage sekicja + /go/* | /go/[provider] (fail-closed, monetized flag) | sekcija | DISCOVER spodaj (Rezerviraj) | CONTEXTUAL | NE |
+| Rezervacijski lifecycle na AI časovnici (1.92.0 §3) | trip-timeline postanki z /go izdelkom | POST /api/journey/bookings (EXTERNAL, idempotentno) + GET prekrivka | žeton Brez rezervacije → Zunanja rezervacija | PLAN (časovnica) — ISTA semantika kot MOJA POT/GO | CONTEXTUAL | NE |
+| Cenovna resnica časovnice (1.92.0 §6) | trip-timeline + cost-truth.ts | supply validacija NaN sentinel | dnevna vsota + N z neznano ceno + žeton na postanku | PLAN (časovnica + glava ~€ kvalificirana) | CONTEXTUAL | NE |
+| AI metering (1.92.0 §11) | ai-client/ai-usage.ts + admin zavihek | AIUsageLog (VSE AI površine + fallback/cache) | admin agregati 7/30 dni + retry vidnost | PLATFORMA (admin) | CONTEXTUAL | NE |
 | Skupnost: glasanje/komentarji/všečki/ankete/dnevnik | /pot/[shareId] | /api/trip-vote, trip-likes, trip-comments, poll, diary | deljena stran | MY TRIP javni pogled | CONTEXTUAL | NE |
 | Skupnost: odkrivanje poti | CommunityTrips na /nacrtuj | RSC | spodaj | PLAN spodaj | CONTEXTUAL | NE |
 | Mnenja (reviews) | product/experience modal | /api/reviews | modal | EXPLORE modal | CONTEXTUAL | NE |

@@ -191,7 +191,7 @@ Odgovor (samo iz dejstev zgoraj):`;
       ],
       // F10: reasoningEffort "low" — fraziranje dejstev je mehanična naloga;
       // globoko razmišljanje bi le poravnilo proračun (Gemini thinking).
-      { temperature: 0.3, maxTokens: AI_MAX_TOKENS, reasoningEffort: "low" }
+      { temperature: 0.3, maxTokens: AI_MAX_TOKENS, reasoningEffort: "low", usageLog: { feature: "ask" } }
     );
 
     const content = result?.content?.trim();

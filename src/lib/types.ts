@@ -153,6 +153,21 @@ export interface LocationVisit {
   // povezovalniki uporabijo te koordinate namesto dataseta
   lat?: number;
   lng?: number;
+  // ISSUE #4 §3 (implementacijski val 1, 2026-09-24): ISKRENI rezervacijski
+  // lifecycle postanka AI načrta. Postanki, dodani z zemljevida ponudbe
+  // (stop-insert.ts), nosijo KONKRETEN izdelek (provider + productId +
+  // /go povezavo) — trip-timeline na njihovem mestu izriše resnico:
+  //   · brez teh polj (organik/T1 postanki) → žetona ni (ni rezervacijskega
+  //     koncepta — isto kot INFO semantika GO Mode);
+  //   · booking_url brez zapisa → žeton „Brez rezervacije“;
+  //   · zapis EXTERNAL (handoff) → vijolični žeton „Zunanja rezervacija —
+  //     pri ponudniku“ (ISTI kanon JourneyBooking, session-scoped prekrivka
+  //     /api/journey/bookings?products=… — nikoli lažni CONFIRMED).
+  // Opcijsko + nazaj kompatibilno (stari shranjeni načrti brez polj).
+  booking_provider?: string;
+  booking_product_id?: string;
+  /** Relativna /go/… povezava (adapter jo gradi strežniško-varno). */
+  booking_url?: string;
 }
 
 export interface DayPlan {

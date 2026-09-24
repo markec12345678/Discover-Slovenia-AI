@@ -89,6 +89,7 @@ import {
   User,
   XCircle,
   BadgeCheck,
+  Brain,
 } from "lucide-react";
 import {
   CATEGORY_ICONS,
@@ -331,7 +332,7 @@ export function AdminDashboard({
         <BetaStatusWidget />
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="grid w-full max-w-3xl grid-cols-5">
+          <TabsList className="grid w-full max-w-3xl grid-cols-3 sm:grid-cols-6">
             <TabsTrigger value="pregled" className="h-11 gap-1.5">
               <ClipboardCheck className="size-4" />
               <span className="hidden sm:inline">Pregled</span>
@@ -360,6 +361,11 @@ export function AdminDashboard({
               <TrendingUp className="size-4" />
               <span className="hidden sm:inline">Statistika</span>
             </TabsTrigger>
+            {/* ISSUE #4 §11 (val 1): AI metering observability za admina. */}
+            <TabsTrigger value="ai" className="h-11 gap-1.5">
+              <Brain className="size-4" />
+              <span className="hidden sm:inline">AI poraba</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent
@@ -385,6 +391,9 @@ export function AdminDashboard({
           </TabsContent>
           <TabsContent value="stats" className="mt-6">
             <StatsTab adminPassword={adminPassword} />
+          </TabsContent>
+          <TabsContent value="ai" className="mt-6">
+            <AiUsageTab adminPassword={adminPassword} />
           </TabsContent>
         </Tabs>
       </main>
@@ -2754,5 +2763,239 @@ function KpiCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// === TAB 5: AI PORABA — ISSUE #4 §11 (val 1) =================================
+// Observability meteringa (AIUsageLog): agregati 7/30 dni po feature+source,
+// uspešnost, povprečni odzivni časi, žetoni, stroški (0,00 dokler so vsi
+// viri :free — iskrenost) + zadnje odpovedi z vidnostjo poskusov verige
+// (metadata.attempts — retry vidnost). Brez PII.
+
+interface AiUsageFeatureAgg {
+  feature: string;
+  calls: number;
+  successRate: number;
+  avgResponseTimeMs: number;
+  totalCostEur: number;
+  promptTokens: number;
+  completionTokens: number;
+  bySource: { source: string; calls: number; successRate: number }[];
+}
+
+interface AiUsageFailure {
+  feature: string;
+  source: string;
+  responseTimeMs: number;
+  createdAt: string;
+  model?: string;
+  attempts: string[];
+}
+
+interface AiUsageData {
+  totalRows: number;
+  last7Days: AiUsageFeatureAgg[];
+  last30Days: AiUsageFeatureAgg[];
+  recentFailures: AiUsageFailure[];
+}
+
+function AiUsageTab({ adminPassword }: { adminPassword: string }) {
+  const [data, setData] = React.useState<AiUsageData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/admin/ai-usage", {
+          headers: { "x-admin-password": adminPassword },
+        });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const json = (await res.json()) as AiUsageData;
+        if (cancelled) return;
+        setData(json);
+      } catch (err) {
+        if (cancelled) return;
+        console.error("[admin/ai-usage] fetch:", err);
+        setError("AI poraba trenutno ni dosegljiva.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [adminPassword]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-sm text-muted-foreground">
+          {error}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!data) return null;
+
+  const pct = (v: number) => `${Math.round(v * 100)} %`;
+  const eur = (v: number) =>
+    v.toLocaleString("sl-SI", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Brain className="size-4" /> AI poraba — metering
+          </CardTitle>
+          <CardDescription>
+            Vse AI površine (načrtovalec, klepet, iskanje, vizija, TTS,
+            priporočila) pišejo vrstice v AIUsageLog. Stroški so 0,00 €, dokler
+            so vsi viri brezplačna stopnja (iskrenost: žetoni so zapisani,
+            stroška NE izmišljujemo).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <div className="flex flex-wrap gap-4 text-muted-foreground">
+            <span>
+              Skupaj vrstic: <strong className="text-foreground tabular-nums">{data.totalRows.toLocaleString("sl-SI")}</strong>
+            </span>
+            <span>
+              Zadnjih 7 dni: <strong className="text-foreground tabular-nums">{data.last7Days.reduce((n, f) => n + f.calls, 0).toLocaleString("sl-SI")}</strong> klicev
+            </span>
+            <span>
+              Zadnjih 30 dni: <strong className="text-foreground tabular-nums">{data.last30Days.reduce((n, f) => n + f.calls, 0).toLocaleString("sl-SI")}</strong> klicev
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Zadnjih 7 dni po funkciji</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.last7Days.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Ni še zapisov v tem obdobju — vrstice se pišejo od vala 1
+              naprej (vsak AI klic, fallback in zadetek predpomnilnika).
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Funkcija</TableHead>
+                    <TableHead className="text-right">Klici</TableHead>
+                    <TableHead className="text-right">Uspešnost</TableHead>
+                    <TableHead className="text-right">Ø čas (ms)</TableHead>
+                    <TableHead className="text-right">Žetoni (vh/izh)</TableHead>
+                    <TableHead className="text-right">Strošek</TableHead>
+                    <TableHead>Viri</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.last7Days.map((f) => (
+                    <TableRow key={f.feature}>
+                      <TableCell className="font-medium">{f.feature}</TableCell>
+                      <TableCell className="text-right tabular-nums">{f.calls}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        <span
+                          className={
+                            f.successRate >= 0.9
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : f.successRate >= 0.5
+                                ? "text-amber-600 dark:text-amber-400"
+                                : "text-red-600 dark:text-red-400"
+                          }
+                        >
+                          {pct(f.successRate)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {f.avgResponseTimeMs.toLocaleString("sl-SI")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {f.promptTokens > 0 || f.completionTokens > 0
+                          ? `${f.promptTokens.toLocaleString("sl-SI")} / ${f.completionTokens.toLocaleString("sl-SI")}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">{eur(f.totalCostEur)} €</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {f.bySource
+                          .map((s) => `${s.source}×${s.calls}`)
+                          .join(", ")}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Zadnje odpovedi (retry vidnost)</CardTitle>
+          <CardDescription>
+            Poskusi verige so zapisani v vrstnem redu izvedbe — npr.
+            »openrouter:timeout« pomeni, da je free-vrsta globlja od proračuna
+            in je noga padla v rezervo.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {data.recentFailures.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Ni odpovedi — vse AI vrstice v bazi so uspešne. ✓
+            </p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {data.recentFailures.map((f, i) => (
+                <li
+                  key={`${f.feature}-${i}`}
+                  className="flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2"
+                >
+                  <Badge variant="outline" className="text-xs">
+                    {f.feature}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(f.createdAt).toLocaleString("sl-SI")}
+                  </span>
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {f.responseTimeMs.toLocaleString("sl-SI")} ms
+                  </span>
+                  {f.model ? (
+                    <span className="max-w-56 truncate text-xs text-muted-foreground" title={f.model}>
+                      {f.model}
+                    </span>
+                  ) : null}
+                  {f.attempts.length > 0 ? (
+                    <span className="text-xs text-muted-foreground">
+                      {f.attempts.join(" → ")}
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

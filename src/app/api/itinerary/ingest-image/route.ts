@@ -132,7 +132,7 @@ export async function POST(request: Request) {
   const vision = await generateVisionCompletion(
     VLM_PROMPT,
     `data:${parsed.mime};base64,${parsed.base64}`,
-    { maxTokens: 2048 } // F10: ekstraktor + thinking proračun (Gemini 3.x)
+    { maxTokens: 2048, usageLog: { feature: "ingest_image" } } // F10: ekstraktor + thinking proračun (Gemini 3.x)
   );
 
   if (!vision) {

@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { buildMyTrip } from "@/lib/journey/trip-view";
 import { recordExternalHandoff } from "@/lib/journey/handoff-record";
+import { OpeningHoursStatus } from "@/components/opening-hours-status";
 import {
   buildGoView,
   GO_LABELS,
@@ -670,10 +671,17 @@ export function GoMode() {
               )}
             </div>
 
+            {/* ISSUE #4 §9: status ur ob TRENUTKU (OPEN/CLOSED/UNKNOWN)
+                + surov niz vira (nič ne izgubimo). Prej: samo surov niz. */}
             {view.next.entry.openingHours && (
-              <p className="text-xs text-muted-foreground">
-                {t(L.hours)}: {view.next.entry.openingHours}
-              </p>
+              <div className="text-xs text-muted-foreground">
+                <span className="mr-1">{t(L.hours)}:</span>
+                <OpeningHoursStatus
+                  raw={view.next.entry.openingHours}
+                  lang={lang}
+                  className="text-xs"
+                />
+              </div>
             )}
 
             <EntryLinks card={view.next} lang={lang} />
@@ -743,6 +751,15 @@ export function GoMode() {
                       <p className="text-xs italic text-muted-foreground">
                         {t(card.entry.timeNote)}
                       </p>
+                    )}
+                    {/* ISSUE #4 §9: ure + status tudi na preostalih
+                        postankih dneva (prej: samo naslednja kartica). */}
+                    {card.entry.openingHours && (
+                      <OpeningHoursStatus
+                        raw={card.entry.openingHours}
+                        lang={lang}
+                        className="text-[11px]"
+                      />
                     )}
                   </div>
                   <div className="flex shrink-0 gap-2">

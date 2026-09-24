@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { taxonomyOf } from "@/lib/supply/taxonomy";
 import { getProvider, statusLabel } from "@/lib/supply/registry";
+import { showsUnknownPriceChip } from "@/lib/supply/price-display";
 import type { ProviderProduct } from "@/lib/supply/types";
 import { addProductToSelection } from "@/lib/supply/selection";
 import { isSafeHttpUrl, safeExternalHref } from "@/lib/external-url";
@@ -67,6 +68,13 @@ const L = {
   data: { sl: "Podatki:", en: "Data:" },
   descSource: { sl: "· opis:", en: "· description:" },
   price: { sl: "Cena", en: "Price" },
+  // ISSUE #4 §6 (val 1): modal izreče resnico tudi, ko cene NI — vir, ki
+  // cene ima, je ne poslal za ta produkt (ODPRITI viri brez koncepta cen
+  // ostanejo brez sekcije — tišina je tam iskrena).
+  priceUnknown: {
+    sl: "Cena ni preverjena — vir ne pošilja cene za ta produkt. Preveri pri ponudniku pred nakupom.",
+    en: "Price not verified — the source does not send a price for this product. Check with the provider before purchase.",
+  },
   perPerson: { sl: "na osebo", en: "per person" },
   perNight: { sl: "na noč", en: "per night" },
   perDay: { sl: "na dan", en: "per day" },
@@ -376,7 +384,9 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
               </div>
             ) : null}
 
-            {/* Cena — SAMO kadar obstaja (iskrenost: OSM nima cen) */}
+            {/* Cena — SAMO kadar obstaja (iskrenost: OSM nima cen);
+                ISSUE #4 §6: kadar je NE poznamo pri viru, ki cene ima,
+                modal to IZREČE (prej: tiha odsotnost celot sekcije). */}
             {product.price ? (
               <div className="flex items-center justify-between rounded-lg border border-border bg-background p-3">
                 <div>
@@ -400,6 +410,16 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
                   ) : null}
                 </div>
                 <Euro className="size-5 text-muted-foreground" aria-hidden="true" />
+              </div>
+            ) : showsUnknownPriceChip(product) ? (
+              <div
+                className="flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950"
+                role="note"
+              >
+                <p className="text-xs leading-relaxed text-amber-900 dark:text-amber-200">
+                  {L.priceUnknown[lang]}
+                </p>
+                <Euro className="size-5 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden="true" />
               </div>
             ) : null}
 

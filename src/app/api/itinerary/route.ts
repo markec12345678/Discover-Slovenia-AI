@@ -4,6 +4,7 @@ import { sanitizeItinerary } from "@/lib/itinerary-sanitize";
 import { SYSTEM_DATA_GUARD } from "@/lib/ai-context";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
+import { logAIUsage } from "@/lib/ai-usage";
 import { rankListings, buildTransparencyContext } from "@/lib/ranking-engine";
 import type { Itinerary, PlannerInput } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
@@ -806,7 +807,7 @@ JSON format (STROGO):
         // rezervo (~2–5 s). Odgovor torej PRIDE VEDNO (AI ali rezerva) v
         // < 80 s < 90 s klientove meje. Ob HITRI OpenRouter napaki (429/5xx
         // v sekundah) Gemini še dobi svoj ~45-s rezervat znotraj 70 s.
-        { temperature: 0.7, jsonMode: true, timeoutMs: 65_000, totalBudgetMs: 70_000 }
+        { temperature: 0.7, jsonMode: true, timeoutMs: 65_000, totalBudgetMs: 70_000, usageLog: { feature: "itinerary" } }
       ),
       new Promise<null>((resolve) => {
         aiHardCapTimer = setTimeout(() => resolve(null), aiHardCapMs);
@@ -1170,6 +1171,11 @@ async function buildDeterministicPlanResponse(
   },
   source: "fallback" | "deterministic"
 ): Promise<NextResponse> {
+  // ISSUE #4 §11 (val 1): metering determinističnega odgovora — source
+  // pove, KDO je služil uporabnika: "fallback" (AI veriga je padla) ali
+  // "deterministic" (izrecna izbira motorja, 0 žetonov). Merjen je čas
+  // GRADNJE načrta (deterministična veriga + obogatitve).
+  const meteringStartedAt = Date.now();
   const {
     anchorForecasts,
     geoAnchors,
@@ -1342,6 +1348,17 @@ async function buildDeterministicPlanResponse(
         `longest=${coherence.longestLegKm}km [${coherence.longestLegSource ?? "-"}] ` +
         `backtracking=${coherence.backtrackingEvents.length} anchors=${geoAnchors.length}`
     );
+
+    // ISSUE #4 §11: vrstica AIUsageLog za deterministični odgovor (isti
+    // stolpci kot AI vrstice — success=true, ker je uporabnik dobil veljaven
+    // načrt; source loči od AI zmagovalcev).
+    logAIUsage({
+      feature: "itinerary",
+      source,
+      success: true,
+      responseTimeMs: Date.now() - meteringStartedAt,
+      metadata: { engine: source },
+    });
 
     return NextResponse.json(withReasons);
 }

@@ -59,7 +59,7 @@ Pravila:
         { role: "system", content: "Si slovenski pripovedovalec. Pišeš čustvene, avtentične zgodbe o lokalnih ponudnikih. Vedno odgovoriš z JSON." },
         { role: "user", content: prompt },
       ],
-      { temperature: 0.8, jsonMode: true }
+      { temperature: 0.8, jsonMode: true, usageLog: { feature: "story" } }
     );
 
     if (result?.content) {

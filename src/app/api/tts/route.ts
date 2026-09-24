@@ -13,6 +13,7 @@ import {
   synthesizeChunks,
   ttsCache,
 } from "@/lib/tts-engine";
+import { logCacheUsage } from "@/lib/ai-usage";
 
 // ============================================================================
 // TASK 89 — /api/tts: ZVOČNI POVZETEK DNEVA (1.80.0)
@@ -103,6 +104,8 @@ export async function POST(request: Request) {
   const cacheKey = narrationCacheKey(dayInput, lang);
   const cached = ttsCache.get(cacheKey);
   if (cached) {
+    // ISSUE #4 §11: zadetek predpomnilnika je del resnice o stroških.
+    logCacheUsage("tts", 0, { metadata: { bytes: cached.length } });
     return new NextResponse(new Uint8Array(cached), {
       status: 200,
       headers: {

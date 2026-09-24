@@ -686,7 +686,15 @@
       "dayTotal": "Dan {day} skupaj:",
       "aiTipTitle": "AI nasvet",
       "tipOneDay": "Za popoln dan začni zgodaj (pred 9:00) da izogneš se množicam.",
-      "tipMultiDay": "Premikaj se po regijah — Bled + Bohinj istočasno, nato Soča naslednji dan."
+      "tipMultiDay": "Premikaj se po regijah — Bled + Bohinj istočasno, nato Soča naslednji dan.",
+      "priceUnverified": "Cena ni preverjena",
+      "unknownCostCount": "{count, plural, one {# postanek z neznano ceno} two {# postanka z neznano ceno} few {# postanki z neznano ceno} other {# postankov z neznano ceno}}",
+      "budgetUnknownNote": "{count, plural, one {vključuje # neznano ceno} two {vključuje # neznani ceni} few {vključuje # neznane cene} other {vključuje # neznanih cen}}",
+      "bookingNone": "Brez rezervacije",
+      "bookingExternal": "Zunanja rezervacija — pri ponudniku",
+      "bookingConfirmed": "Potrjeno pri ponudniku",
+      "bookAtProvider": "Rezerviraj pri ponudniku",
+      "bookAtProviderAria": "Rezerviraj {name} pri ponudniku — odpre zunanjo stran"
     },
     "smartSearch": {
       "title": "AI iskanje",

@@ -106,6 +106,36 @@ export function supplyRefKey(
 }
 
 // ---------------------------------------------------------------------------
+// ISSUE #4 §3 (val 1): PRODUKTNO-SPECIFIČNA /go POVEZAVA POSTANKA
+// ---------------------------------------------------------------------------
+// Produktno-specifični komercialni ponudniki z DETERMINISTIČNO povezavo
+// (točno format, ki ga gradijo adapterji — /go/{provider}?product={id};
+// /go ruta strežniško validira produktne parametre + host allowlist).
+// Viri z DODATNIMI parametri (transfers/from, hotels/dest, flights/dest) in
+// tiqets (ID ne gre v URL) NE dobijo povezave tukaj — njihova rezervacijska
+// pot ostaja booking panel (K-14 pošteni CTA-ji), ki ima polne parametre.
+// S tem življenjski cikel "Brez rezervacije → EXTERNAL" na časovnici AI
+// načrta nosi KONKRETEN izdelek tudi na strežniški (AI) poti — ne le na
+// klientni (zemljevid → V načrt) poti (stop-insert.ts, isti pogoji).
+// ---------------------------------------------------------------------------
+
+const PRODUCT_GO_PROVIDERS: ReadonlySet<string> = new Set([
+  "viator",
+  "getyourguide",
+]);
+
+/** Deterministična produktna /go povezava (ali null, če ponudnik ni
+ *  produktno-specifičen). ISTA oblika kot adapterjev mapper — /go ruta je
+ *  edina avtoriteta za sprejem produkt parametrov. */
+export function productGoUrl(
+  provider: string,
+  providerProductId: string
+): string | null {
+  if (!PRODUCT_GO_PROVIDERS.has(provider)) return null;
+  return `/go/${provider}?product=${encodeURIComponent(providerProductId)}`;
+}
+
+// ---------------------------------------------------------------------------
 // KANONSKA CENA POSTANKA — unit semantika (§7)
 // ---------------------------------------------------------------------------
 
@@ -526,6 +556,22 @@ export function validateItinerarySupply(
 
       let fixedStop = stop;
 
+      // ISSUE #4 §3 (val 1): PRODUKTNO-SPECIFIČEN komercialen postanek →
+      // deterministična /go povezava (isti format kot adapter; /go ruta
+      // validira parametre). Življenjski cikel na časovnici (žeton
+      // "Brez rezervacije" → gumb "Rezerviraj pri ponudniku" → EXTERNAL
+      // zapis) ima s tem KONKRETEN izdelek — tudi na AI poti. Samo kadar
+      // povezava še NI prisotna (klientna pot jo je morda že dala).
+      const stopGoUrl = productGoUrl(ref.provider, ref.providerProductId);
+      if (stopGoUrl && !fixedStop.booking_url) {
+        fixedStop = {
+          ...fixedStop,
+          booking_provider: ref.provider,
+          booking_product_id: ref.providerProductId,
+          booking_url: stopGoUrl,
+        };
+      }
+
       // 1c) GEO CANONICAL: koordinate odmeva → kanonske (cena/geo sta
       // jeziku neodvisni; AI premik pina je hallucinacija). Avtoriteta:
       // selection (lastne koordinate produkta) → currentStop (postanek
@@ -709,6 +755,15 @@ export function validateItinerarySupply(
         price: p.price,
         bookingMode:
           p.provider === "osm" ? ("info_only" as const) : ("affiliate_redirect" as const),
+        // ISSUE #4 §3 (val 1): FIXED vstavitev nosi produktno /go povezavo,
+        // kadar je ponudnik produktno-specifičen (stop-insert jo prenese
+        // v postanek načrta — isti pogoj kot klientna pot).
+        ...(productGoUrl(p.provider, p.providerProductId)
+          ? {
+              bookingUrl:
+                productGoUrl(p.provider, p.providerProductId) ?? undefined,
+            }
+          : {}),
         lastUpdated: new Date().toISOString(),
         license: { source: p.source },
       };

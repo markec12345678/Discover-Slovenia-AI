@@ -12,6 +12,7 @@ import {
   synthesizeChunks,
   ttsCache,
 } from "@/lib/tts-engine";
+import { logCacheUsage } from "@/lib/ai-usage";
 
 // ============================================================================
 // POST /api/itinerary/tts — D2 "Poslušaj svoj načrt" (nabor #2)
@@ -130,6 +131,8 @@ export async function POST(request: Request) {
   const cacheKey = planAudioCacheKey({ itinerary, dayKm, groupSize, locale: lang });
   const cached = ttsCache.get(cacheKey);
   if (cached) {
+    // ISSUE #4 §11: zadetek predpomnilnika je del resnice o stroških.
+    logCacheUsage("tts", 0, { metadata: { bytes: cached.length } });
     return new NextResponse(new Uint8Array(cached), {
       status: 200,
       headers: {

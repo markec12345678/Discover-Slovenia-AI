@@ -148,3 +148,23 @@ Po §1 disciplini = najprej **najmanjša rešljiv, najvič vrednosti**:
 3. **§9 opening hours UNKNOWN** (timezone/DST statusi);
 4. **§11 AIUsageLog metering**.
    Vsak korak: testi + pošten UI + 0 izgube funkcij.
+
+---
+
+## F. IMPLEMENTACIJSKI VAL 1 — ZAKLJUČEN (2026-09-24, v1.92.0)
+
+> Po predlogu iz oddelka E. Metoda: meriti → popraviti → dokazati.
+> **0 sprememb, ki bi izgubile funkcijo; 0 zmede dodane.**
+
+| Sklop | Dostavljeno | Dokaz |
+|---|---|---|
+| **§3 lifecycle na AI časovnici** | Žeton »Brez rezervacije« → gumb »Rezerviraj pri ponudniku« → EXTERNAL zapis (POST 201, session-scoped) → vijolični »Zunanja rezervacija — pri ponudniku«; strežniška deterministična `/go/{provider}?product={id}` (viator/gyg) v validacijski verigi; sanitize polja ohrani pri shranjevanju | E2E: generacija z viator FIXED izbiro → klik → 201 + viator.com + žeton prevrnjen (ux-verify-issue4/timeline-external-chip.png) |
+| **§6 cenovna resnica** | dayCostSummary (NaN/null ≠ €0): dnevna vsota + »N postankov z neznano ceno«, glava »~€X · vključuje N neznanih cen«, amber žeton »Cena ni preverjena«; product-card/modal »Cena neznana« pri virih z cenami; MY TRIP vrstica »cena neznana pri ponudniku« | E2E: »Dan 1 skupaj: 80 · 1 postanek z neznano ceno« + header kvalifikacija (timeline-booking-price-chips.png); 16+8 enotskih testov |
+| **§9 statusi ur** | lib/opening-hours.ts — parser preproste OSM podmnožice (čez-noč, pavze, off, 24/7), nepodprto → iskren UNKNOWN; žeton ZDAJ ODPRTO/ZAPRTO/URA NEZNANA + podrobnost + SUROV niz ohranjen; GO Mode (naslednja + preostali) + journey-planner; DST-varna stenska ura (useSyncExternalStore, hidracijsko varno) | E2E: »ZDAJ ODPRTO · odprto do 17:00 · Mo-Fr 08:00-17:00; Sa 09:00-13:00; Su off« + »URA NEZNANA · zapleten zapis ur — preveri pri ponudniku« (go-mode-hours-chip.png) |
+| **§11 AI metering** | AIUsageLog 0 → VSE površine (16 AI rut + vizija + TTS sinteze/LRU + priporočila cache + fallback/deterministic vrstice); rezultat verige nosi latencyMs/model/žetone; poskusi verige v metadata.attempts (retry vidnost); admin bralnik GET /api/admin/ai-usage + zavihek »AI poraba« | Živo: vrstica `search/z-ai-sdk` ms=1486 žetoni 1084/101 attempts=[openrouter:not-configured→z-ai-sdk:ok]; itinerary none→fallback vrstice; admin 401 brez gesla; 48 novih testov |
+
+**Testi:** 2365/2365 (+48) · lint 0/0 · tsc 0 (src/) · 0 konzolnih napak v E2E.
+
+**Naslednji val (predlog):** §2 Trip enoten objekt (domain map → odločitev) →
+§8 real-time kontekst v GO → §13 kolaboracija permissions. Pilot 10 ponudnikov
+ostaja vzporeden in neblokiran.

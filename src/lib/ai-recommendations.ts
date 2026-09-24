@@ -17,6 +17,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
+import { logFallbackUsage, logCacheUsage } from "@/lib/ai-usage";
 import { wrapProviderData, SYSTEM_DATA_GUARD } from "@/lib/ai-context";
 
 // ============================================================================
@@ -323,7 +324,7 @@ async function selectWithAI(
           },
           { role: "user", content: prompt },
         ],
-        { temperature: 0.3 }
+        { temperature: 0.3, usageLog: { feature: "recommend" } }
       );
 
       const indices = result?.content ? parseIndices(result.content, candidates.length) : null;
@@ -337,7 +338,8 @@ async function selectWithAI(
       console.error("[ai-rec] Product AI napaka:", error);
     }
 
-    // Fallback: top 4 po ratingu
+    // Fallback: top 4 po ratingu — ISSUE #4 §11: zapis (SQL je služil).
+    logFallbackUsage("recommend", 0, { metadata: { kind: type, path: "product-top-rating" } });
     return {
       itemIds: candidates.slice(0, 4).map((c) => c.id),
       source: "fallback",
@@ -361,7 +363,7 @@ async function selectWithAI(
           },
           { role: "user", content: prompt },
         ],
-        { temperature: 0.3 }
+        { temperature: 0.3, usageLog: { feature: "recommend" } }
       );
 
       const indices = result?.content ? parseIndices(result.content, candidates.length) : null;
@@ -375,6 +377,8 @@ async function selectWithAI(
       console.error("[ai-rec] Experience AI napaka:", error);
     }
 
+    // ISSUE #4 §11: zapis fallbacka (SQL je služil).
+    logFallbackUsage("recommend", 0, { metadata: { kind: type, path: "experience-top-rating" } });
     return {
       itemIds: candidates.slice(0, 4).map((c) => c.id),
       source: "fallback",
@@ -397,9 +401,11 @@ export async function getRecommendedIds(
   const cacheKey = `${type}:${itemId}`;
   const store = await readCache();
 
-  // 1. Preveri cache
+  // 1. Preveri cache — ISSUE #4 §11: zadetek je VIDEN v metering
+  //    (0 stroškov, a del odgovornosti stroškov).
   const cached = store[cacheKey];
   if (cached && isFresh(cached)) {
+    logCacheUsage("recommend", 0, { metadata: { kind: type } });
     return { itemIds: cached.itemIds, source: "cache" };
   }
 

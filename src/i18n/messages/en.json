@@ -686,7 +686,15 @@
       "dayTotal": "Day {day} total:",
       "aiTipTitle": "AI tip",
       "tipOneDay": "For a perfect day, start early (before 9:00) to avoid the crowds.",
-      "tipMultiDay": "Group your stops by region — Bled + Bohinj together, then the Soča valley the next day."
+      "tipMultiDay": "Group your stops by region — Bled + Bohinj together, then the Soča valley the next day.",
+      "priceUnverified": "Price unverified",
+      "unknownCostCount": "{count, plural, one {# stop with unknown price} other {# stops with unknown price}}",
+      "budgetUnknownNote": "{count, plural, one {includes # unknown price} other {includes # unknown prices}}",
+      "bookingNone": "No booking",
+      "bookingExternal": "External booking — at the provider",
+      "bookingConfirmed": "Confirmed at the provider",
+      "bookAtProvider": "Book at the provider",
+      "bookAtProviderAria": "Book {name} at the provider — opens an external site"
     },
     "smartSearch": {
       "title": "AI search",

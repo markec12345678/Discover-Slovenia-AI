@@ -107,6 +107,24 @@ function sanitizeLocation(raw: unknown): LocationVisit | null {
     ...(typeof loc.reason === "string"
       ? { reason: loc.reason.slice(0, MAX_LIST_ITEM_CHARS) }
       : {}),
+    // ISSUE #4 §3 (val 1): rezervacijski lifecycle postanka (provider +
+    // productId + /go povezava) preživi SHRANITEV/DELJENJE — sicer bi
+    // žetoni "Brez rezervacije → EXTERNAL" na /pot/[shareId] izpadli.
+    // Varnost: provider/productId so nizi s kapom; booking_url SAMO
+    // relativna /go/ pot (nikoli zunanji absolutni URL — tisti gradi
+    // adapter strežniško-varno, klientov vnos pa ne more odpreti
+    // poljubne domene).
+    ...(typeof loc.booking_provider === "string"
+      ? { booking_provider: loc.booking_provider.slice(0, 40) }
+      : {}),
+    ...(typeof loc.booking_product_id === "string"
+      ? { booking_product_id: loc.booking_product_id.slice(0, 200) }
+      : {}),
+    ...(typeof loc.booking_url === "string" &&
+      loc.booking_url.startsWith("/go/") &&
+      loc.booking_url.length <= 300
+      ? { booking_url: loc.booking_url }
+      : {}),
   };
 }
 

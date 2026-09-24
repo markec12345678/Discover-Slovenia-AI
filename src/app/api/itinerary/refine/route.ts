@@ -4,6 +4,7 @@ import { DESTINATIONS, normalizeInterests } from "@/lib/slovenia-data";
 import { sanitizeItinerary, hasItineraryShape } from "@/lib/itinerary-sanitize";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
+import { logFallbackUsage } from "@/lib/ai-usage";
 import type {
   Itinerary,
   PlannerInput,
@@ -161,6 +162,9 @@ function supplySummaryOf(r: SupplyValidationReport): SupplyValidationInfo {
 }
 
 export async function POST(request: Request) {
+    // ISSUE #4 §11 (val 1): route-level časovnik — za zapis DEJANSKO
+    // izvedenih fallbackov (deterministična akcija / echo originala).
+    const routeStartedAt = Date.now();
     // Rate limit AI refine klicev
     const limited = rateLimit(request, { limit: 20, windowMs: 600000, key: "itinerary-refine" });
     if (limited) return limited;
@@ -586,7 +590,7 @@ JSON format (STROGO, enak kot vhod):
         // generacija: OpenRouter 55 s + veriga 60 s — globoka vrsta pade
         // pošteno v rezervo, hitre napake (429/5xx) pa še dobijo rezervat
         // Gemini/Puter znotraj preostanka).
-        { temperature: 0.6, jsonMode: true, timeoutMs: 55_000, totalBudgetMs: 60_000 }
+        { temperature: 0.6, jsonMode: true, timeoutMs: 55_000, totalBudgetMs: 60_000, usageLog: { feature: "refine" } }
       ),
       new Promise<null>((resolve) => {
         refineHardCapTimer = setTimeout(() => resolve(null), refineHardCapMs);
@@ -904,6 +908,10 @@ JSON format (STROGO, enak kot vhod):
       console.log(
         `[itinerary/refine] Hitra akcija "${action}" (dan ${day}) deterministično: ${result.changes.length} sprememb, geo ${validation.before.worst}→${validation.after.worst} (${validation.status})`
       );
+      // ISSUE #4 §11: zapis fallbacka (deterministična akcija je služila).
+      logFallbackUsage("refine", Date.now() - routeStartedAt, {
+        metadata: { path: "fast-action", action },
+      });
       return NextResponse.json({
         itinerary: withReasons,
         instruction,
@@ -1004,6 +1012,10 @@ JSON format (STROGO, enak kot vhod):
 
     // Fallback: vrni (strežniško validiran) originalni itinerer z opombo
     // (jezikovno pravilno — P4-8)
+    // ISSUE #4 §11: zapis fallbacka (echo originala je služil).
+    logFallbackUsage("refine", Date.now() - routeStartedAt, {
+      metadata: { path: "echo-original" },
+    });
     return NextResponse.json({
       itinerary: echoBudgetSynced,
       instruction,

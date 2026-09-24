@@ -7,6 +7,83 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.92.0] — 2026-09-24 (ISSUE #4 §1 BASELINE → IMPLEMENTACIJSKI VAL 1: §3+§6+§9+§11)
+
+> **Načrt:** docs/ISSUE4-BASELINE.md (§1, commit `55905d3`). **Metoda:** meriti →
+> popraviti → dokazati (TASK 4 disciplina). **0 izgube funkcij · 0 zmede.**
+
+### §3 — Rezervacijski lifecycle na AI časovnici (načrtovalec)
+- **Stanje pred:** 13-stopenjski stroj JourneyBooking je obstajal, a SELE na
+  MOJA POT in GO Mode — časovnica načrtovalnika ni pokazala NIČ.
+- **Stanje zdaj:** vsak postanek s KONKRETENIM izdelkom (viator/getyourguide —
+  deterministična `/go/{provider}?product={id}` povezava, ki jostrežniško
+  validira /go ruta) nosi pošten žeton:
+  - slate »Brez rezervacije« → gumb »Rezerviraj pri ponudniku« →
+    **EXTERNAL zapis** (POST /api/journey/bookings, idempotenten,
+    session-scoped) → vijolični »Zunanja rezervacija — pri ponudniku«;
+  - provider-potrjeno (CONFIRMED/PAID/MODIFIED) → smaragdno — NIKOLI ga ne
+    postavimo sami (fail-closed provider kanal);
+  - organski/T1 postanki → brez žetona (ni rezervacijskega koncepta).
+- **Strežniška pot:** validacijska veriga (itinerary-validation.ts) pripne
+  booking polja potrjeno-valiranim supply postankom + FIXED vstavitvam;
+  klientna pot (stop-insert.ts) enaki pogoji. Sanitize (itinerary-sanitize.ts)
+  polja POŠTUJE pri shranjevanju/deljenju (samo relativne /go poti).
+- **E2E dokaz:** generacija z viator FIXED izbiro → postanek ima opombo
+  »Cena ni preverjena« + žeton + gumb; klik → 201 + preusmeritev na pravi
+  viator.com + žeton se prevrne v EXTERNAL (ux-verify-issue4/*.png).
+
+### §6 — Cenovna resnica povsod (UNKNOWN nikoli več tiho €0)
+- **trip-timeline:** dnevni strošek prej `sum + (v.estimated_cost || 0)` —
+  NaN (neznana cena) se je tiho štel kot €0. Zdaj: znana vsota + »N postankov
+  z neznano ceno«; glava »~€X · vključuje N neznanih cen«; postanek z
+  neznano ceno nosi amber žeton »Cena ni preverjena«.
+- **product-card/product-modal:** manjkajoča cena pri viru, ki cene IMA
+  (klasifikacija ≠ NOT_SUPPORTED) → žeton »Cena neznana« (isti kanon kot
+  journey-planner TASK 99; odprti viri ostanejo pri pošteni tišini).
+- **MY TRIP vrstica:** komercialen vnos brez cene → »cena neznana pri
+  ponudniku« (prej: tiha odsotnost).
+- **Čista plast:** src/lib/cost-truth.ts + supply/price-display.ts (testirani).
+
+### §9 — Odpiralni časi: OPEN/CLOSED/UNKNOWN ob trenutku
+- **Nova čista plast** src/lib/opening-hours.ts: parser PREPROSTE podmnožice
+  OSM sintakse (Mo-Fr/Sa-Su/dnevi z vejico/pavze/čez noč/24:00/off), vse
+  NEPODPRTE sintakse (PH, sunrise, meseci, Sa[1], odprti konci) → iskren
+  UNKNOWN (delno razbiranje bi lahko izreklo napačen CLOSED).
+- **Površine:** GO Mode (naslednja kartica + preostali postanki) in
+  journey-planner kartice — žeton »ZDAJ ODPRTO/ZAPRTO/URA NEZNANA« + podrobnost
+  (»odprto do 17:00« / »zaprto · odpre pon 08:00«) + SUROV niz vira ohranjen
+  (zero feature loss).
+- **DST-varnost:** stenska ura Europe/Ljubljana (Intl, useSyncExternalStore —
+  hidracijsko varno, brez setState v efektu; 10-minutna svežina snapshotov).
+
+### §11 — AI metering (AIUsageLog: 0 → VSE površine)
+- **Stanje pred:** model obstajal, NIČ runtime kode ni pisalo vanj (0 vrstic).
+- **ai-client.ts:** rezultat nosi latencyMs/model/žetone; opcija `usageLog`
+  zapiše ENO vrstico na klic (source zmagovalca ali »none«, poskusi verige
+  kot metadata.attempts — retry/preskok vidnost). Fire-and-forget (napaka
+  zapisa NIKOLI ne pade v odgovor).
+- **Žičeno:** itinerary, refine, ask, ingest_image (vizija), search, chat,
+  ask_local, translate, poi, insights, story, tag, approve, recommend
+  (vključno cache zadetke), tts (sinteze + LRU zadetki) + fallback zapisi
+  (deterministični motor je služil: source »fallback«).
+- **Admin bralnik:** GET /api/admin/ai-usage (isti timing-safe zid) +
+  zavihek »AI poraba« v admin plošči (agregati 7/30 dni po funkciji: klici,
+  uspešnost, Ø čas, žetoni, stroški 0,00 € dokler so viri :free — ne
+  izmišljujemo) + zadnje odpovedi s poskusi verige.
+- **Živi dokaz (dev):** vrstica `search/z-ai-sdk` z žetoni 1084/101 +
+  veriga poskusov `openrouter:not-configured → … → z-ai-sdk:ok`.
+
+### Testi / orodja / dokazi
+- `bun test`: **2365/2365** (+48 novih: parser ur, cost-truth, price-display,
+  ai-usage vrstica/stroški, admin agregacija). `bun run lint`: 0/0.
+  `bunx tsc --noEmit`: 0 (src/; 2 napaki v skills/ nista aplikacija).
+- Browser E2E: 0 konzolnih napak; dokazi v `ux-verify-issue4/`
+  (go-mode-hours-chip.png, timeline-booking-price-chips.png,
+  timeline-external-chip.png, timeline-planner.png).
+- i18n: +8 ključev planner.timeline (SL+EN parity 1620/1620).
+
+---
+
 ## [1.91.1] — 2026-09-24 (docs: sinhronizacija + POPOLNA VERIFIKACIJA UX FIX PASS na produkciji)
 
 ### Dokazano na ŽIVI produkciji (Render 1.91.0)

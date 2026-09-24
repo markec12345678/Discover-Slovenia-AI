@@ -259,7 +259,7 @@ export async function POST(request: Request) {
         { role: "system", content: buildSystemPrompt(destinationName || null, context) },
         { role: "user", content: question },
       ],
-      { temperature: 0.6 }
+      { temperature: 0.6, usageLog: { feature: "ask_local" } }
     );
 
     if (aiResult?.content) {

@@ -121,7 +121,7 @@ Predlagaj kategorijo, atribute in tagi.`;
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      { temperature: 0.3, jsonMode: true }
+      { temperature: 0.3, jsonMode: true, usageLog: { feature: "tag" } }
     );
 
     const content = result?.content;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Clock,
@@ -19,6 +19,7 @@ import {
   Calendar,
   Check,
   Loader2,
+  ExternalLink,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +37,9 @@ import {
 import { useAppStore } from "@/lib/store";
 import { saveItinerary } from "@/lib/itinerary-share";
 import { addSavedTrip, deriveSavedTripName } from "@/lib/my-trips-storage";
-import { trackPlannerEvent } from "@/lib/planner-analytics";
+import { trackPlannerEvent, plannerSessionId } from "@/lib/planner-analytics";
+import { recordExternalHandoff } from "@/lib/journey/handoff-record";
+import { dayCostSummary, totalUnknownCostStops } from "@/lib/cost-truth";
 import { dayISOForDayNumber } from "@/lib/trip-dates";
 import { formatDayLabel } from "@/lib/itinerary-weather";
 import { narrationStopsFromDay } from "@/lib/itinerary-audio";
@@ -74,6 +77,65 @@ interface TripTimelineProps {
 }
 
 type SaveState = "idle" | "saving" | "saved" | "error";
+
+// ============================================================================
+// ISSUE #4 §3 (val 1): JOURNEYBOOKING PREKRIVKA ZA ŽETONE POSTANKOV
+// ============================================================================
+// Način B (isti vir kot journey-trip.tsx): efemerne vrstice trenutne seje
+// (sessionKey = dsa_planner_sid) za postanke AI načrta, ki nosijo KONKRETEN
+// izdelek (booking_provider + booking_product_id). Vrne preslikavo
+// "provider:productId" → status. Zavesa: če pride do napake, žetoni
+// ostanejo na poštenem privzetku „Brez rezervacije“ (nima smo izmišljevali).
+// Provider-potrjeni statusi (CONFIRMED/PAID/MODIFIED) se prikažejo kot
+// smaragdno — nikoli jih NE postavimo sami (zapis jih naredi le provider
+// kanal z žetonom, fail-closed).
+// ============================================================================
+
+type BookingRow = {
+  provider: string;
+  providerProductId: string;
+  status: string;
+};
+
+function useJourneyBookingStates(
+  bookable: { provider: string; productId: string }[]
+): Map<string, string> {
+  const [states, setStates] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    if (bookable.length === 0) return;
+    // Strežnik omejuje na 20 parov — vzamemo prvih 20 (isti vzorec
+    // journey-trip.tsx prekrivke).
+    const products = bookable
+      .slice(0, 20)
+      .map((b) => `${b.provider}:${b.productId}`)
+      .join(",");
+    const params = new URLSearchParams({
+      products,
+      sessionKey: plannerSessionId(),
+    });
+    let cancelled = false;
+    fetch(`/api/journey/bookings?${params.toString()}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { bookings?: BookingRow[] } | null) => {
+        if (cancelled || !data?.bookings) return;
+        const map = new Map<string, string>();
+        for (const row of data.bookings) {
+          map.set(`${row.provider}:${row.providerProductId}`, row.status);
+        }
+        setStates(map);
+      })
+      .catch(() => {
+        // Iskreni privzeti žetoni ostanejo — prekrivka ni kritična pot.
+      });
+    return () => {
+      cancelled = true;
+    };
+    // bookable se izračuna z useMemo v komponenti (stabilna identiteta).
+  }, [bookable]);
+
+  return states;
+}
 
 /** Fallback formData, če store nima shranjenega vnosa obrazca. */
 function fallbackForm(it: NonNullable<ReturnType<typeof useAppStore.getState>["itinerary"]>): PlannerInput {
@@ -148,6 +210,37 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs, className
   const { chipFor, unavailable, notPublished, hasWindow } =
     useItineraryForecast(days, tripStartDate, lang);
 
+  // ISSUE #4 §3: postanki s KONKRETENIM izdelkom (booking_url + provider +
+  // productId) — za prekrivko JourneyBooking stanj (življenjski cikel na
+  // mestu uporabe, ne le na MOJA POT / GO Mode).
+  const bookableStops = useMemo(
+    () =>
+      days
+        .flatMap((d) => d?.locations ?? [])
+        .filter(
+          (v): v is LocationVisit & {
+            booking_provider: string;
+            booking_product_id: string;
+            booking_url: string;
+          } =>
+            !!v.booking_url &&
+            !!v.booking_provider &&
+            !!v.booking_product_id
+        )
+        .map((v) => ({
+          provider: v.booking_provider,
+          productId: v.booking_product_id,
+        })),
+    [days]
+  );
+  const bookingStates = useJourneyBookingStates(bookableStops);
+  // Optimistični EXTERNAL po kliku (strežnik je idempotenten; prekrivka ob
+  // ponovnem mountu prinese isto resnico — isti vzorec kot journey-trip).
+  const [localExternal, setLocalExternal] = useState<Set<string>>(new Set());
+
+  // ISSUE #4 §6: skupno št. postankov z neznano ceno (glava načrta).
+  const unknownTotal = useMemo(() => totalUnknownCostStops(days), [days]);
+
   // Shrani itinerer in kopiraj deljivo povezavo (uporabi store + helper)
   const handleSaveItinerary = useCallback(async () => {
     if (saveState === "saving") return;
@@ -187,7 +280,7 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs, className
     <div className={cn("space-y-8", className)}>
       {/* Skupni povzetek */}
       {totalBudget !== undefined && (
-        <div className="flex items-center justify-center gap-4 rounded-xl bg-primary/5 border border-primary/20 p-4">
+        <div className="flex flex-wrap items-center justify-center gap-4 rounded-xl bg-primary/5 border border-primary/20 p-4">
           <div className="flex items-center gap-2">
             <Calendar className="size-5 text-primary" aria-hidden="true" />
             <span className="font-semibold">{t("daysPlan", { count: days.length })}</span>
@@ -196,17 +289,23 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs, className
           <div className="flex items-center gap-2">
             <Euro className="size-5 text-primary" aria-hidden="true" />
             <span className="font-semibold">~€{totalBudget}</span>
+            {/* ISSUE #4 §6: ~€ ocena je kvalificirana, kadar so cene
+                postankov neznane (prej: NaN se je tiho štel kot €0). */}
+            {unknownTotal > 0 && (
+              <span className="text-xs font-normal text-amber-700 dark:text-amber-400">
+                · {t("budgetUnknownNote", { count: unknownTotal })}
+              </span>
+            )}
           </div>
         </div>
       )}
 
       {/* Timeline za vsak dan */}
       {days.map((day) => {
-        // Skupni strošek dneva (uporabljen v day budget summary spodaj)
-        const dayCost = day.locations.reduce(
-          (sum, v) => sum + (v.estimated_cost || 0),
-          0
-        );
+        // ISSUE #4 §6: dnevni strošek s PLAŠČEM NEZNANEGA — NaN (cena ni
+        // preverjena) se NE šteje kot €0 (prej: `|| 0` je neznanje tiho
+        // pretvoril v „brezplačno"). Čista funkcija = ena resnica (testirana).
+        const cost = dayCostSummary(day.locations);
         // TASK 88: realni datum dneva (ob znanem odhodu) + živa napoved
         const dayISO = tripStartDate
           ? dayISOForDayNumber(tripStartDate, day.day)
@@ -274,6 +373,27 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs, className
                 idx
               );
 
+              // ISSUE #4 §3: rezervacijska resnica TEGA postanka. Status
+              // pride iz JourneyBooking prekrivke (ali optimističnega
+              // EXTERNAL po kliku) — NIKOLI ga ne postavimo sami.
+              const bookingKey =
+                visit.booking_provider && visit.booking_product_id
+                  ? `${visit.booking_provider}:${visit.booking_product_id}`
+                  : null;
+              const bookingStatus = bookingKey
+                ? (bookingStates.get(bookingKey) ??
+                  (localExternal.has(bookingKey) ? "EXTERNAL" : undefined))
+                : undefined;
+              const bookingConfirmed =
+                bookingStatus === "CONFIRMED" ||
+                bookingStatus === "PAID" ||
+                bookingStatus === "MODIFIED";
+              // ISSUE #4 §6: cena je KONČNA (tudi pošteno 0 odprtega vira)
+              // ali NEZNANA (NaN sentinel supply validacije).
+              const costKnown =
+                typeof visit.estimated_cost === "number" &&
+                Number.isFinite(visit.estimated_cost);
+
               return (
                 <div key={`${visit.destination_id}-${idx}`}>
                   {/* Etapa od prejšnjega postanka (🚗 ~X km · ~Y min) —
@@ -333,13 +453,46 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs, className
                             </p>
                           )}
 
-                          {/* Badge + cena */}
-                          <div className="mt-2 flex items-center gap-2">
-                            {visit.estimated_cost > 0 && (
+                          {/* Badge + cena + rezervacijska resnica (§3/§6) */}
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            {costKnown && visit.estimated_cost > 0 && (
                               <Badge variant="secondary" className="text-[10px] gap-0.5">
                                 <Euro className="size-2.5" aria-hidden="true" />
                                 {visit.estimated_cost}
                               </Badge>
+                            )}
+                            {/* ISSUE #4 §6: postanek z neznano ceno to IZREČE
+                                (prej: tiho štet kot €0 v dnevni vsoti). */}
+                            {!costKnown && (
+                              <Badge
+                                variant="outline"
+                                className="border-amber-300 bg-amber-50 text-[10px] gap-0.5 text-amber-900 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+                                title={visit.notes || undefined}
+                              >
+                                <Euro className="size-2.5" aria-hidden="true" />
+                                {t("priceUnverified")}
+                              </Badge>
+                            )}
+                            {/* ISSUE #4 §3: življenjski cikel rezervacije —
+                                ISTA semantika kot GO Mode / MOJA POT,
+                                sedaj na mestu načrtovanja. */}
+                            {visit.booking_url && bookingKey && (
+                              bookingConfirmed ? (
+                                <Badge className="bg-emerald-100 text-[10px] gap-0.5 border-emerald-300 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+                                  <Check className="size-2.5" aria-hidden="true" />
+                                  {t("bookingConfirmed")}
+                                </Badge>
+                              ) : bookingStatus === "EXTERNAL" ? (
+                                <Badge className="bg-violet-100 text-[10px] gap-0.5 border-violet-300 text-violet-900 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200">
+                                  <ExternalLink className="size-2.5" aria-hidden="true" />
+                                  {t("bookingExternal")}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] gap-0.5 text-muted-foreground">
+                                  <Bookmark className="size-2.5" aria-hidden="true" />
+                                  {t("bookingNone")}
+                                </Badge>
+                              )
                             )}
                           </div>
                         </div>
@@ -355,6 +508,41 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs, className
 
                       {/* Akcijski gumbi */}
                       <div className="mt-3 flex flex-wrap items-center gap-2">
+                        {/* ISSUE #4 §3: KONKRETEN izdelek → direktna pot k
+                            ponudniku (+ zapis EXTERNAL handoffa — isti
+                            zapisovalni kanon kot journey/GO površine) +
+                            optimistični vijolični žeton po kliku. */}
+                        {visit.booking_url && bookingKey && !bookingConfirmed && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1 text-xs text-violet-700 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-400"
+                            onClick={() => {
+                              recordExternalHandoff(
+                                visit.booking_provider,
+                                visit.booking_product_id
+                              );
+                              setLocalExternal(
+                                (prev) => new Set(prev).add(bookingKey)
+                              );
+                              trackPlannerEvent("booking_cta_clicked", {
+                                via: "timeline_stop",
+                                provider: visit.booking_provider,
+                              });
+                              window.open(
+                                visit.booking_url,
+                                "_blank",
+                                "noopener,noreferrer"
+                              );
+                            }}
+                            aria-label={t("bookAtProviderAria", {
+                              name: visit.destination_name,
+                            })}
+                          >
+                            <ExternalLink className="size-3" aria-hidden="true" />
+                            {t("bookAtProvider")}
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -424,14 +612,20 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs, className
             })}
           </div>
 
-          {/* Day budget summary (Wanderlog inspiracija) */}
-          {dayCost > 0 && (
-            <div className="mt-4 flex items-center justify-end gap-2 text-xs text-muted-foreground">
+          {/* Day budget summary (Wanderlog inspiracija) — ISSUE #4 §6:
+              neznane cene so VIDNE, ne tiho pretvorjene v €0. */}
+          {(cost.known > 0 || cost.unknownCount > 0) && (
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-2 text-xs text-muted-foreground">
               <span>{t("dayTotal", { day: day.day })}</span>
               <Badge variant="secondary" className="gap-0.5">
                 <Euro className="size-2.5" aria-hidden="true" />
-                {dayCost}
+                {cost.known}
               </Badge>
+              {cost.unknownCount > 0 && (
+                <span className="text-amber-700 dark:text-amber-400">
+                  {t("unknownCostCount", { count: cost.unknownCount })}
+                </span>
+              )}
             </div>
           )}
         </div>
