@@ -5,6 +5,40 @@
 > P4-7 testira proti pravemu Postgresu (service container). Dokument vsebuje
 > tudi zgodovinsko analizo padcev (Faza 4d) in alternativno Docker pot (Pot A
 > — POZOR: trenutno zahteva prilagoditev, glej razdelek 3).
+>
+> **Dopolnilo (24. 9. 2026, 1.91.1):** primarna površina je zdaj **Render**
+> (`i-feel-slovenia.onrender.com`), Vercel pa sekundarna — glej razdelek 1a
+> (zastoj gradbene vrste) in README.
+
+---
+
+## 1a. Zastoj gradbene vrste Vercel (QUEUED stall) — diagnoza in rešitev
+
+**Pojav (24. 9. 2026):** pusha 1.91.0 (07:03) in 1.91.1 (07:24) sta ostala
+**QUEUED brez dogodkov** (>1 uro); prejšnji deploy (1.90.0) je bil READY.
+
+**Vzrok (dokazan z API-jem):** vrsta BUILD ima na Hobby načrtu
+**1 sočasen build NA RAČUN** — drugi projekti iste ekipe so poplavili vrsto
+z **~26 QUEUED deployji** (podvojeni pushi the-drinkers-website*,
+thedrinkers2026 …), en build pa je zasedel builder. Naši deployji nikoli
+niso prišli na vrsto. NE gre za napako v kodi.
+
+**Rešitev (API + token, 24. 9. 2026):**
+1. `GET /v6/deployments?limit=100&teamId=…` → inventar QUEUED/BUILDING;
+2. `DELETE /v13/deployments/{id}?teamId=…` za vsak TUJ QUEUED deploy
+   (preklic ujetih LASTNIH je bil 404 — DELETE deluje; BUILDING pustimo
+   končati);
+3. če uporabljaš CLI rešitev: **`vercel deploy` naloži LOKALNO drevo**
+   (tudi ne-sledene mape!) → obvezno ima `.vercelignore` (commit `bb396af`:
+   skills/, ux-audit-*/, tool-results/, upload/, docker/ …), sicer
+   `next build` type-check pade na peskovniških datotekah
+   (dokaz: `dpl_A2x8jLpZ` — »skills/image-edit … error TS2561«);
+4. po čiščenju vrste se git push samodejno zgradi (dokaz:
+   `bb396af` → READY v ~4 min, `dpl_GwVCfa9A…`).
+
+**Preventiva:** pred deployjem preveri
+`GET /v6/deployments?limit=100&teamId=…` (števec QUEUED); če >5 tujih,
+počisti. Oz. nastavi projekt v lastno team z ločeno kvoto.
 
 ---
 

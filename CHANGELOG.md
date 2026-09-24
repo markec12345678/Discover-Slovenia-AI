@@ -35,10 +35,21 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
   K-7 most »Zaženi Na poti«; prej »NI v navigaciji!«).
 
 ### Odperto (operater — NI dosegljivo iz repozitorija)
-- **Vercel še vedno 1.90.0** (avto-deploy tega pusha se ni sprožil;
-  v peskovniku ni Vercel CLI/poverilnic) — potreben redeploy z dashboarda.
+- ~~**Vercel še vedno 1.90.0**~~ → **REŠENO 24. 9. 2026 z Vercel žetonom**: vzrok
+  dvojno — (1) gradbena vrsta računa je bila poplavljena s ~26 QUEUED
+  deployji drugih projektov ekipe (Hobby = 1 sočasen build → naši deployji
+  1.91.0/1.91.1 od 07:03/07:24 nikoli niso dobili builderja); (2) CLI
+  rešitev je padla, ker `vercel deploy` naloži lokalno drevo vključno z
+  ne-sledeno maps `skills/` (2 tipovni napaki → type-check padel,
+  `dpl_A2x8jLpZ`). Popravilo: izbris 25 tujih QUEUED deployjev (API) +
+  `.vercelignore` (commit `bb396af`) + git deploy → **READY**;
+  `i-feel-slovenia.vercel.app/api/health` = **1.91.1**. Živi dokazi na
+  Vercelu: realno vreme (`weatherEstimated:false`, »delno oblačno 18°«),
+  K-7 most (go-trip v2 → »Načrtovani postanek — brez rezervacije«),
+  K-12 mobilni meni, K-5 trda meja (12,4 s fallback), 0 konzolnih napak.
 - **K-1 (Render egress do Open-Meteo):** vzrok v infrastrukturi Rendera;
-  aplikacija zdaj iskreno prikazuje sezonsko oceno namesto lažne vrednosti.
+  aplikacija zdaj iskreno prikazuje sezonsko oceno namesto lažne vrednosti
+  (Vercel primerjava: tam je vreme REALNO — divergenca površin je poštena).
 - K-16 (LOW): offline hard reload (SW toplo-predpomnilnik), zoom tipki
   zemljevida na 390 px, beta pasica konkuruje hero CTA.
 
