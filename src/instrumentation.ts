@@ -642,6 +642,54 @@ export async function register() {
         detail: String(error),
       });
     }
+
+    // Startup SHEMA migracija — ISSUE #4 §22 (val 5, 1.97.0): revizije
+    // vsebine poti — tabela SavedItineraryRevision (undo na strežniku).
+    // Idempotentna, additive-only, fail-open, skupna zastavica
+    // DSA_DISABLE_SCHEMA_MIGRATION. Glej src/lib/trip-revisions-migration.ts.
+    try {
+      const { migrateTripRevisionsSchema } = await import(
+        "./lib/trip-revisions-migration"
+      );
+      const r = await migrateTripRevisionsSchema();
+      if (r.tablesCreated.length > 0) {
+        console.log(
+          `[instrumentation] Shema migracija (revizije poti): ustvarjene ` +
+            `tabele [${r.tablesCreated.join(", ")}] (${r.dialect})`
+        );
+        recordStartupStep({
+          name: "schema:trip-revisions",
+          status: "ok",
+          detail: `ustvarjene tabele: ${r.tablesCreated.join(", ")} (${r.dialect})`,
+        });
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija (revizije poti): stanja ni " +
+            "bilo mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
+        );
+        recordStartupStep({
+          name: "schema:trip-revisions",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja sheme ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:trip-revisions",
+          status: "ok",
+          detail: "shema že prisotna",
+        });
+      }
+    } catch (error) {
+      console.error(
+        "[instrumentation] Shema migracija (revizije poti) ni uspela:",
+        error
+      );
+      recordStartupStep({
+        name: "schema:trip-revisions",
+        status: "failed",
+        detail: String(error),
+      });
+    }
   } else {
     recordStartupStep({
       name: "schema:listing-practical",
@@ -675,6 +723,11 @@ export async function register() {
     });
     recordStartupStep({
       name: "schema:trip-documents",
+      status: "skipped",
+      detail: "DSA_DISABLE_SCHEMA_MIGRATION=1",
+    });
+    recordStartupStep({
+      name: "schema:trip-revisions",
       status: "skipped",
       detail: "DSA_DISABLE_SCHEMA_MIGRATION=1",
     });

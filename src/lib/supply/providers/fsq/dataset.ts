@@ -27,9 +27,10 @@
 //     (dodana/prepisana .jsonl datoteka sproži ponovni nalagalni prehod —
 //     namestitev nove kopije BREZ restarta procesa).
 //
-// NAINSTALIRANA MNOŽICA (2026-09-20): snapshot 2025-02-06, štiri države
-// (SI+HR+ME+AL, kanonski bbox približki spodaj), kategorije omejene na
-// potovalno-relevanten nabor (glej FSQ_CATEGORY_MAP + fsqPlaceInScope).
+// NAINSTALIRANA MNOŽICA (2026-09-20): snapshot FSQ_SNAPSHOT_DATE (ISSUE #4
+// §17, VAL 5 sklop A — en vir resnice v src/lib/data-freshness.ts), štiri
+// države (SI+HR+ME+AL, kanonski bbox približki spodaj), kategorije omejene
+// na potovalno-relevanten nabor (glej FSQ_CATEGORY_MAP + fsqPlaceInScope).
 //
 // KONFIGURACIJA (strežniški env):
 //   FSQ_PLACES_DIR — mapa s .jsonl datotekami (absolutna ali relativna na
@@ -62,7 +63,14 @@ import { isFsqPlace } from "./types";
 // da vsi dosedanji uvozi ostanejo veljavni.
 import { SI_BBOX } from "@/lib/slovenia-bbox";
 
+// ISSUE #4 §17 (VAL 5 sklop A): datum FSQ posnetka ima en vir resnice —
+// konstanto FSQ_SNAPSHOT_DATE v čistem listnem modulu data-freshness.ts
+// (prej zgolj komentar zgoraj + accessNote registra). Re-export tukaj
+// (vzorec SI_BBOX), da adapter/plast zemljevida/testi uvažajo od tu.
+import { FSQ_SNAPSHOT_DATE } from "@/lib/data-freshness";
+
 export { SI_BBOX };
+export { FSQ_SNAPSHOT_DATE };
 
 // ---------------------------------------------------------------------------
 // PODPORTE DRŽAVE (nalagalni filter regije — dokumentirane meje)

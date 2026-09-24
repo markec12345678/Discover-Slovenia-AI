@@ -18,6 +18,21 @@ import {
   CAPABILITY_COLUMN_LABELS,
   type CapabilityCell,
 } from "@/lib/supply/capability-matrix";
+// ISSUE #4 §17+§19 (VAL 5 sklop A): enoten koncept svežine (FRESH/STALE/
+// UNKNOWN/LIVE) + §19 vrsta vira (LIVE/STATIC/USER/PROVIDER/GENERATED) —
+// ČISTI listni modul, vrstice spodaj so IZPELJANE iz njega (nikoli ročno
+// barvane besede: barva/oznaka sledita dejanski klasifikaciji).
+import {
+  FSQ_SNAPSHOT_DATE,
+  classifyFreshness,
+  formatDataAge,
+  freshnessLabel,
+  sourceTypeForSourceClass,
+  type DataFreshness,
+  type SourceType,
+} from "@/lib/data-freshness";
+// §17: as-of datum dataseta destinacij — en vir resnice (stop-insights.ts).
+import { DESTINATIONS_DATA_AS_OF } from "@/lib/stop-insights";
 
 /**
  * /vir-podatkov — seznam virov podatkov (E-E-A-T).
@@ -120,6 +135,30 @@ const CAPABILITY_COLUMNS = [
   "e2e",
 ] as const;
 
+/** Barvne oznake svežine (§17) — barva IZPELJANA iz stanja (vzorec
+ *  PROD_STATUS_BADGE_CLASS / CAPABILITY_CELL_CLASS — iskrenost: nikoli
+ *  „sveže" v zeleni, če klasifikacija pravi drugače). */
+const FRESHNESS_BADGE_CLASS: Record<DataFreshness, string> = {
+  live: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
+  fresh: "bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300",
+  stale: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+  unknown: "bg-muted/60 text-muted-foreground/80",
+};
+
+/** Vrstica tabele svežine (§17+§19) — vse IZPELJANO iz data-freshness.ts. */
+interface FreshnessRow {
+  key: string;
+  /** Ime sloja: znamka (locale-invariantna, vzorec SOURCES) ali i18n ključ. */
+  name: string | null;
+  nameKey: string | null;
+  sourceType: SourceType;
+  freshness: DataFreshness;
+  /** §19 data age (relativna starost ali datum; null kadar ni znan). */
+  age: string | null;
+  detailKey: string;
+  detailParams?: Record<string, string>;
+}
+
 export default async function DataSourcePage() {
   const t = await getTranslations("dataSources");
   const locale = await getLocale();
@@ -130,6 +169,83 @@ export default async function DataSourcePage() {
   const statusBySlug = new Map<string, ProviderProductionStatus>(
     productionStatuses().map((s) => [s.slug, s])
   );
+
+  // ISSUE #4 §17+§19 (VAL 5 sklop A): vrstice svežine glavnih slojev.
+  // Ura je STREŽNIŠKI čas izrisa (RSC — request-scoped, hidracije ni);
+  // klasifikacije/starosti so IZPELJANE iz modula (en vir resnice).
+  //   - OSM: žive Overpass poizvedbe ob vsakem iskanju → LIVE/živo;
+  //   - FSQ: statični posnetek 2025-02-06 → STATIC + ZASTARELO (posnetek,
+  //     ne živo stanje — jedro zahteve §17 o „125.446 krajev“);
+  //   - Open-Meteo: živi API s pomnilniškim predpomnilnikom → LIVE/živo;
+  //   - destinacije: as-of datum uredniškega vodnika → klasificirano;
+  //   - prevozi: „od“-cene iz statičnega inventarja, brez živega citata
+  //     → NEZNANO (dokler ni API); affiliate: samo povezava → NEZNANO.
+  const freshnessNow = Date.now();
+  const freshnessRows: FreshnessRow[] = [
+    {
+      key: "osm",
+      name: "OpenStreetMap",
+      nameKey: null,
+      sourceType: sourceTypeForSourceClass("poi", { liveChecked: true }),
+      freshness: classifyFreshness("poi", { liveChecked: true }),
+      age: null,
+      detailKey: "freshness.osmDetail",
+    },
+    {
+      key: "fsq",
+      name: "Foursquare Open Places",
+      nameKey: null,
+      sourceType: sourceTypeForSourceClass("poi"),
+      freshness: classifyFreshness("poi", {
+        timestamp: FSQ_SNAPSHOT_DATE,
+        now: freshnessNow,
+      }),
+      age: formatDataAge(FSQ_SNAPSHOT_DATE, freshnessNow, lang),
+      detailKey: "freshness.fsqDetail",
+    },
+    {
+      key: "openMeteo",
+      name: "Open-Meteo",
+      nameKey: null,
+      sourceType: sourceTypeForSourceClass("weather", { liveChecked: true }),
+      freshness: classifyFreshness("weather", { liveChecked: true }),
+      age: null,
+      detailKey: "freshness.openMeteoDetail",
+    },
+    {
+      key: "destinations",
+      name: null,
+      nameKey: "freshness.rows.destinations",
+      sourceType: sourceTypeForSourceClass("destinationContent"),
+      freshness: classifyFreshness("destinationContent", {
+        timestamp: DESTINATIONS_DATA_AS_OF,
+        now: freshnessNow,
+      }),
+      age: formatDataAge(DESTINATIONS_DATA_AS_OF, freshnessNow, lang),
+      detailKey: "freshness.destinationsDetail",
+      detailParams: { date: DESTINATIONS_DATA_AS_OF },
+    },
+    {
+      key: "transfers",
+      name: null,
+      nameKey: "freshness.rows.transfers",
+      sourceType: sourceTypeForSourceClass("transferPrices"),
+      // Od-cene iz statičnega inventarja — živega citata NI → iskreno
+      // neznano (dokler ni API), ne izmišljenega „sveže“.
+      freshness: classifyFreshness("transferPrices", { timestamp: null }),
+      age: null,
+      detailKey: "freshness.transfersDetail",
+    },
+    {
+      key: "affiliate",
+      name: null,
+      nameKey: "freshness.rows.affiliate",
+      sourceType: sourceTypeForSourceClass("affiliateOffers"),
+      freshness: classifyFreshness("affiliateOffers", {}),
+      age: null,
+      detailKey: "freshness.affiliateDetail",
+    },
+  ];
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -158,6 +274,78 @@ export default async function DataSourcePage() {
             </div>
           ))}
         </div>
+
+        {/* ISSUE #4 §17+§19 (VAL 5 sklop A): SVEŽINA PODATKOV — enoten
+            koncept FRESH/STALE/UNKNOWN/LIVE po slojih + §19 vrsta vira.
+            Ključna iskrenost (§17): število krajev IZ POSNETKA ni enako
+            število ŽIVIH krajev — stran to pove eksplicitno; FSQ posnetek
+            se klasificira kot ZASTARELO (posnetek, ne živo stanje). */}
+        <section aria-labelledby="data-freshness" className="mt-12">
+          <h2 id="data-freshness" className="text-2xl font-bold mb-3">
+            {t("freshness.title")}
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            {t("freshness.intro")}
+          </p>
+
+          <div className="mb-6 rounded-lg border border-amber-300/70 bg-amber-50/70 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
+            <p className="text-xs leading-relaxed text-amber-900 dark:text-amber-200">
+              {t("freshness.disclaimer", { date: FSQ_SNAPSHOT_DATE })}
+            </p>
+          </div>
+
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-xs border-collapse min-w-[720px]">
+              <thead>
+                <tr className="bg-muted/50">
+                  <th scope="col" className="text-left font-semibold p-2 border-b border-border whitespace-nowrap">
+                    {t("freshness.colDataset")}
+                  </th>
+                  <th scope="col" className="text-left font-semibold p-2 border-b border-border whitespace-nowrap">
+                    {t("freshness.colType")}
+                  </th>
+                  <th scope="col" className="text-left font-semibold p-2 border-b border-border whitespace-nowrap">
+                    {t("freshness.colFreshness")}
+                  </th>
+                  <th scope="col" className="text-left font-semibold p-2 border-b border-border">
+                    {t("freshness.colDetail")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {freshnessRows.map((row) => (
+                  <tr key={row.key} className="align-top">
+                    <th scope="row" className="text-left font-medium p-2 border-b border-border/60 whitespace-nowrap">
+                      {row.name ?? t(row.nameKey as string)}
+                    </th>
+                    {/* §19 kanonski termini (LIVE/STATIC/USER/PROVIDER/
+                        GENERATED) so namerno v izvirniku — pogodbeni pojmi. */}
+                    <td className="p-2 border-b border-border/60 whitespace-nowrap">
+                      <span className="font-mono text-[11px] text-muted-foreground">
+                        {row.sourceType}
+                      </span>
+                    </td>
+                    <td className="p-2 border-b border-border/60 whitespace-nowrap">
+                      <span
+                        className={`inline-block px-1.5 py-0.5 rounded font-medium ${FRESHNESS_BADGE_CLASS[row.freshness]}`}
+                      >
+                        {freshnessLabel(row.freshness, lang)}
+                      </span>
+                      {row.age && (
+                        <span className="block mt-0.5 text-[10px] text-muted-foreground/80">
+                          {row.age}
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-2 border-b border-border/60">
+                      {t(row.detailKey, row.detailParams)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
         {/* F1 (Supply Map): registrom gnana sekcija — en vir resnice.
             Ko se v prihodnji fazi priključi adapter (npr. KiwiTaxi v F2),

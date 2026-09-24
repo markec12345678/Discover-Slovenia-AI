@@ -588,6 +588,13 @@
     "generatedToastDescSample": "Prikazan je pripravljen predlog itinererja.",
     "savedToast": "Načrt shranjen!",
     "savedToastDesc": "Povezavo za deljenje lahko kopiraš spodaj.",
+    "savedUpdatedToast": "Pot posodobljena (v{version})",
+    "savedUpdatedToastDesc": "Ista deljena povezava, sveža vsebina — prejšnja različica je shranjena v zgodovini.",
+    "undoLabelRefine": "AI prilagoditev",
+    "undoLabelRegenerate": "regeneracija",
+    "undoChip": "Prejšnja različica na voljo ({label} · {count} v zgodovini)",
+    "undoChipAction": "Razveljavi",
+    "undoChipDismiss": "Počisti zgodovino razveljavitve",
     "saveErrorToastTitle": "Napaka pri shranjevanju",
     "saveErrorToastDesc": "Shranjevanje ni uspelo — poskusi znova.",
     "saveErrorInline": "Shranjevanje ni uspelo — poskusi znova",
@@ -1083,7 +1090,27 @@
     "capabilityCredsPresent": "nastavljene",
     "capabilityCredsNone": "ne potrebuje",
     "capabilityCredsMissing": "manjka: {vars}",
-    "capabilityManual": "Ročni vnos / uvoz dokumenta"
+    "capabilityManual": "Ročni vnos / uvoz dokumenta",
+    "freshness": {
+      "title": "Svežina podatkov",
+      "intro": "Za vsak glavni podatkovni sloj objavljamo svežino in vrsto vira. Živo pomeni, da je bil podatek preverjen ob prikazu; sveže in zastarelo sta določeni glede na starost zajema; neznano pomeni, da časa zajema ni mogoče določiti. Vrsta vira je kanonski termin: LIVE (živ vir), STATIC (statičen posnetek oziroma kurirani vodnik), USER (uporabnikov vnos), PROVIDER (partnerjev vir), GENERATED (umetno inteligenco generirano).",
+      "disclaimer": "Posnetek množice krajev ni živo stanje: število točk iz statičnega posnetka (npr. Foursquare Open Places, {date}) NE pomeni, da je enako število krajev trenutno odprtih ali živih — posnetek je stanje ob dnevu zajema.",
+      "colDataset": "Sloj",
+      "colType": "Vrsta vira",
+      "colFreshness": "Svežina",
+      "colDetail": "Podrobnosti",
+      "rows": {
+        "destinations": "Destinacije (uredniški vodnik)",
+        "transfers": "Prevozi (od-cene)",
+        "affiliate": "Affiliate ponudbe"
+      },
+      "osmDetail": "žive Overpass poizvedbe ob vsakem iskanju POI (ODbL)",
+      "fsqDetail": "statični posnetek množice krajev — NI živo stanje (osvežitev: bun run fsq:ingest)",
+      "openMeteoDetail": "živi API; pomnilniški predpomnilnik 10–15 minut",
+      "destinationsDetail": "uredniško kurirani vodnik; stanje podatkov na {date}",
+      "transfersDetail": "od-cene iz statičnega inventarja — žive cene prek API niso na voljo (preveri pri ponudniku)",
+      "affiliateDetail": "samo partnerska povezava — brez preverjenih podatkov o ponudbi"
+    }
   },
   "demoScenarios": {
     "badge": "Preizkusi v 30 sekundah",
@@ -2201,5 +2228,10 @@
       "a5": "Mindtrip je dober generalist; njihova aplikacija za iOS ostaja na voljo, njihova spletna stran pa je bila septembra 2026 ob pisanju nedosegljiva. Za slovenska potovanja pri nas dobite: načrtovanje brez prijave, slovenščino kot jedro izdelka, preverjene lokalne podatke in rezervacije pri lokalnih ponudnikih. Presodite sami — poskus brez prijave traja 30 sekund."
     },
     "sources": "Primerjava temelji na javno dostopnih recenzijah (2025–2026) in uredniški analizi platforme (september 2026). Več: <linkSources>vir podatkov</linkSources> · <linkTrust>zaupanje in varnost</linkTrust> · <linkAbout>o strani</linkAbout>"
+  },
+  "marketplace": {
+    "recsWhy": "Zakaj: {why}",
+    "recsWhyFromData": "· (iz podatkov)",
+    "recsWhyFromDataTitle": "Razlog je sestavljen iz podatkov o priporočenem artiklu — ni ga izbrala AI."
   }
 }

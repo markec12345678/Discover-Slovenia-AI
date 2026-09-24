@@ -9,6 +9,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Star,
   MapPin,
@@ -71,8 +72,19 @@ interface ExperienceModalProps {
   onSelect?: (experience: Experience) => void;
 }
 
+/**
+ * §20 (1.97.0): AI priporočilo z razložljivo why vrstico — ne črn AI
+ * ranking. `whySource: "deterministic"` pomeni, da vrstico ni curirala
+ * AI, ampak jo je koda sestavila iz podatkov izkušnje (UI pokaže
+ * "(iz podatkov)").
+ */
+interface RecommendedExperience extends Experience {
+  why?: string;
+  whySource?: "ai" | "deterministic";
+}
+
 interface RecommendationsResponse {
-  experiences: Experience[];
+  experiences: RecommendedExperience[];
   total: number;
   source?: "ai" | "fallback" | "cache";
 }
@@ -191,7 +203,10 @@ export function ExperienceModal({
   };
 
   // Priporočila — pridobi ko se experience spremeni.
-  const [recommendations, setRecommendations] = useState<Experience[]>([]);
+  // §20: pošljemo lang, da strežnik izbere jezikovno različico why
+  // vrstice (cache hrani obe — prvi obiskovalec ne zaključi jezika).
+  const locale = useLocale();
+  const [recommendations, setRecommendations] = useState<RecommendedExperience[]>([]);
   const [recLoading, setRecLoading] = useState(false);
   const [recError, setRecError] = useState<boolean>(false);
   const [recSource, setRecSource] = useState<"ai" | "fallback" | "cache">("ai");
@@ -203,7 +218,7 @@ export function ExperienceModal({
       const res = await fetch(
         `/api/recommendations/experiences?experienceId=${encodeURIComponent(
           experienceId
-        )}&limit=4`,
+        )}&limit=4&lang=${locale === "en" ? "en" : "sl"}`,
         { cache: "no-store" }
       );
       if (!res.ok) throw new Error("Napaka pri priporočilih");
@@ -216,7 +231,7 @@ export function ExperienceModal({
     } finally {
       setRecLoading(false);
     }
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     if (experience?.id) {
@@ -1363,6 +1378,10 @@ function BookingSection({
  * Prikazuje do 4 AI-priporočene podobne izkušnje (GLM izbere iz 10 kandidatov).
  * Klik na kartico zamenja trenutno izkušnjo v modalu (preko onSelect).
  * `source` prikaže transparenten badge (AI / fallback / cache).
+ * §20 (1.97.0): pod imenom vsake kartice je ENA iskrena vrstica
+ * "Zakaj: {why}" (samo dejstva iz kandidata) + droben izvor
+ * "(iz podatkov)", kadar vrstico ni curirala AI (whySource
+ * "deterministic") — priporočilo ni črn AI ranking.
  */
 function RecommendationsSection({
   loading,
@@ -1374,11 +1393,16 @@ function RecommendationsSection({
 }: {
   loading: boolean;
   error: boolean;
-  items: Experience[];
+  items: RecommendedExperience[];
   currentId: string;
   onSelect?: (experience: Experience) => void;
   source?: "ai" | "fallback" | "cache";
 }) {
+  // §20: prevodi why vrstice — komponenta sicer nosi hardcoded SL besedila
+  // (tržnica je slovenska površina), a why vrstica je NEW površina in
+  // modali se izrisujejo TUDI na EN whitelisti (/destinacija/…/things-to-do
+  // prek seo-conversion) → zato next-intl (namespace marketplace).
+  const t = useTranslations("marketplace");
   const visible = items.filter((e) => e.id !== currentId).slice(0, 4);
   const isAI = source === "ai" || source === "cache";
   const sourceLabel = isAI ? "AI" : "Podobni";
@@ -1462,6 +1486,18 @@ function RecommendationsSection({
                 <h4 className="line-clamp-1 text-xs font-semibold">
                   {e.name}
                 </h4>
+                {/* §20: ena iskrena vrstica razloga (samo dejstva iz
+                    kandidata) — stilsko enaka meta vrstici kartice */}
+                {e.why ? (
+                  <p className="line-clamp-2 text-[11px] leading-snug text-muted-foreground">
+                    {t("recsWhy", { why: e.why })}
+                    {e.whySource === "deterministic" ? (
+                      <span title={t("recsWhyFromDataTitle")}>
+                        {` ${t("recsWhyFromData")}`}
+                      </span>
+                    ) : null}
+                  </p>
+                ) : null}
                 <div className="mt-auto flex items-center justify-between gap-1">
                   <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground">
                     <Star

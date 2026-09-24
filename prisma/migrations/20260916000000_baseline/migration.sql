@@ -969,3 +969,24 @@ CREATE INDEX "TripDocument_shareId_idx" ON "TripDocument"("shareId");
 
 -- CreateIndex
 CREATE INDEX "TripDocument_type_idx" ON "TripDocument"("type");
+
+
+-- CreateTable (ISSUE #4 §22 val 5 — revizije vsebine poti: undo na strežniku)
+CREATE TABLE "SavedItineraryRevision" (
+    "id" TEXT NOT NULL,
+    "shareId" TEXT NOT NULL,
+    "version" INTEGER NOT NULL,
+    "itinerary" TEXT NOT NULL,
+    "name" TEXT,
+    "authorId" TEXT,
+    "authorRole" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "SavedItineraryRevision_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "SavedItineraryRevision_shareId_version_idx" ON "SavedItineraryRevision"("shareId", "version");
+
+-- CreateIndex
+CREATE INDEX "SavedItineraryRevision_createdAt_idx" ON "SavedItineraryRevision"("createdAt");

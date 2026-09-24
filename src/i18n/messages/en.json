@@ -588,6 +588,13 @@
     "generatedToastDescSample": "A ready-made sample itinerary is shown.",
     "savedToast": "Plan saved!",
     "savedToastDesc": "You can copy the sharing link below.",
+    "savedUpdatedToast": "Trip updated (v{version})",
+    "savedUpdatedToastDesc": "Same shared link, fresh content — the previous version is kept in history.",
+    "undoLabelRefine": "AI refinement",
+    "undoLabelRegenerate": "regeneration",
+    "undoChip": "Previous version available ({label} · {count} in history)",
+    "undoChipAction": "Undo",
+    "undoChipDismiss": "Clear undo history",
     "saveErrorToastTitle": "Error while saving",
     "saveErrorToastDesc": "Saving failed — please try again.",
     "saveErrorInline": "Saving failed — please try again",
@@ -1083,7 +1090,27 @@
     "capabilityCredsPresent": "configured",
     "capabilityCredsNone": "not required",
     "capabilityCredsMissing": "missing: {vars}",
-    "capabilityManual": "Manual entry / document import"
+    "capabilityManual": "Manual entry / document import",
+    "freshness": {
+      "title": "Data freshness",
+      "intro": "For every major data set we publish its freshness and source type. Live means the fact was verified at display time; fresh and stale are decided by the age of capture; unknown means the capture time cannot be determined. The source type is a canonical term: LIVE (live source), STATIC (static snapshot or curated guide), USER (user-entered), PROVIDER (partner source), GENERATED (AI-generated).",
+      "disclaimer": "A snapshot of a places dataset is not the live state: the number of places in a static snapshot (e.g. Foursquare Open Places, {date}) does NOT mean the same number of places is currently open or live — a snapshot is the state at the day of capture.",
+      "colDataset": "Data set",
+      "colType": "Source type",
+      "colFreshness": "Freshness",
+      "colDetail": "Details",
+      "rows": {
+        "destinations": "Destinations (editorial guide)",
+        "transfers": "Transfers (from-prices)",
+        "affiliate": "Affiliate offers"
+      },
+      "osmDetail": "live Overpass queries on every POI search (ODbL)",
+      "fsqDetail": "static snapshot of the places dataset — NOT the live state (refresh: bun run fsq:ingest)",
+      "openMeteoDetail": "live API; in-memory cache for 10–15 minutes",
+      "destinationsDetail": "editorially curated guide; data as of {date}",
+      "transfersDetail": "from-prices from a static inventory — no live prices via API (check with the provider)",
+      "affiliateDetail": "partner link only — no verified offer data"
+    }
   },
   "demoScenarios": {
     "badge": "Try it in 30 seconds",
@@ -2201,5 +2228,10 @@
       "a5": "Mindtrip is a good generalist; their iOS app remains available, though their website was unreachable as of September 2026 when this was written. For Slovenia trips you get here: planning without an account, Slovenian as a core language, verified local data, and bookings with local providers. Judge for yourself — a no-signup try takes 30 seconds."
     },
     "sources": "Based on publicly available reviews (2025–2026) and the platform's editorial analysis (September 2026). More: <linkSources>data sources</linkSources> · <linkTrust>trust and safety</linkTrust> · <linkAbout>about</linkAbout>"
+  },
+  "marketplace": {
+    "recsWhy": "Why: {why}",
+    "recsWhyFromData": "· (from data)",
+    "recsWhyFromDataTitle": "Reason composed from the recommended item's own data — not an AI pick."
   }
 }

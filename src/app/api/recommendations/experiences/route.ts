@@ -4,12 +4,15 @@ import { getRecommendedIds } from "@/lib/ai-recommendations";
 import { rateLimit } from "@/lib/rate-limit";
 import { toPublicExperience } from "@/lib/public-fields";
 
-// GET /api/recommendations/experiences?experienceId=XXX&limit=4
+// GET /api/recommendations/experiences?experienceId=XXX&limit=4&lang=sl|en
 // Vrne AI-priporočene podobne izkušnje.
 // AI (GLM) izbere 4 najbolj smiselne iz 10 SQL kandidatov.
 // Rezultati so cachirani 24 ur (memory + data/ai-rec-cache.json).
 // P7-C2 (F5.3): dodan rate limit (60/10 min) — prej bi lahko javni bot
 // nežnostno sprožal AI klice (cache na Vercelu ni deloval, glej lib).
+// ISSUE #4 §20 (1.97.0): vsak item nosi why (eno vrstico razloga, samo
+// dejstva iz kandidata) + whySource ("ai" | "deterministic") — ne črn
+// AI ranking. lang izbere jezikovno različico (cache hrani obe).
 export async function GET(request: Request) {
   const limited = rateLimit(request, {
     limit: 60,
@@ -25,6 +28,9 @@ export async function GET(request: Request) {
       Math.max(parseInt(searchParams.get("limit") || String(4), 10) || 4, 1),
       12
     );
+    // §20: jezikovna različica why vrstice (default SL — nazadnje
+    // združljivo s prejšnjimi odjemalci, ki parametra ne pošljejo).
+    const lang: "sl" | "en" = searchParams.get("lang") === "en" ? "en" : "sl";
 
     if (!experienceId) {
       return NextResponse.json(
@@ -48,7 +54,8 @@ export async function GET(request: Request) {
     }
 
     // === AI PRIPOROČILA (z 24h cache) ===
-    const { itemIds, source } = await getRecommendedIds("experience", experienceId);
+    // §20: whys prihajajo z istim klicem (cache jih nosi v obeh jezikih).
+    const { itemIds, whys, source } = await getRecommendedIds("experience", experienceId);
 
     if (itemIds.length === 0) {
       return NextResponse.json({ experiences: [], total: 0, source });
@@ -72,11 +79,22 @@ export async function GET(request: Request) {
     // ...e spread v javni JSON puščal ownerId/rejectionReason/submittedAt
     // (ista družina puččov, ki jo je 1.88.0 zaprla na /api/experiences;
     // ta površina je ostala spregledana).
-    const experiences = ordered.map((e) => ({
-      ...toPublicExperience(e),
-      images: JSON.parse(e.images || "[]") as string[],
-      languages: JSON.parse(e.languages || "[]") as string[],
-    }));
+    // §20: why vrstica po itemu — jezik izbere POIZVEDBA (cache hrani obe
+    // različici, zato prvi obiskovalec ne zaključi jezika za vse).
+    const whysById = new Map(whys.map((w) => [w.id, w]));
+    const experiences = ordered.map((e) => {
+      const w = whysById.get(e.id);
+      const why = w ? (lang === "en" ? w.en : w.sl) : "";
+      const whySource = w ? (lang === "en" ? w.sourceEn : w.sourceSl) : undefined;
+      return {
+        ...toPublicExperience(e),
+        images: JSON.parse(e.images || "[]") as string[],
+        languages: JSON.parse(e.languages || "[]") as string[],
+        // §20: razložljivo priporočilo — SAMO če vrstica obstaja (praznih
+        // razlogov ne izmišljujemo; fallback vsebuje vedno ime kandidata).
+        ...(why ? { why, whySource } : {}),
+      };
+    });
 
     return NextResponse.json({ experiences, total: experiences.length, source });
   } catch (error) {

@@ -50,8 +50,15 @@ import {
   UserPlus,
   ShieldCheck,
   RefreshCw,
+  History,
 } from "lucide-react";
-import { getEditToken } from "@/lib/itinerary-share";
+import {
+  getEditToken,
+  fetchTripRevisions,
+  fetchTripRevisionContent,
+  updateItinerary,
+  type RevisionMeta,
+} from "@/lib/itinerary-share";
 
 type Role = "OWNER" | "EDITOR" | "COMMENTER" | "VIEWER" | "NONE";
 
@@ -144,6 +151,16 @@ export function TripCollaboration({
     "idle"
   );
   const nameRef = useRef(initialName ?? "");
+
+  // ISSUE #4 §22 (val 5): zgodovina revizij vsebine (undo na strežniku).
+  // Leneno — naloži se šele ob razpretju (urejevalška površina).
+  const [revisionsOpen, setRevisionsOpen] = useState(false);
+  const [revisions, setRevisions] = useState<RevisionMeta[] | null>(null);
+  const [revisionsError, setRevisionsError] = useState<string | null>(null);
+  const [restoringVersion, setRestoringVersion] = useState<number | null>(null);
+  const [restoreState, setRestoreState] = useState<
+    "idle" | "done" | "conflict" | "error"
+  >("idle");
 
   const editToken = useMemo(
     () => (typeof window === "undefined" ? null : getEditToken(shareId)),
@@ -271,6 +288,63 @@ export function TripCollaboration({
       }
     },
     [shareId, editToken, load]
+  );
+
+  // ── ZGODOVINA REVIZIJ (§22, leneco nalaganje) ─────────────────────────
+  const loadRevisions = useCallback(async () => {
+    setRevisionsError(null);
+    try {
+      const r = await fetchTripRevisions(shareId);
+      setRevisions(r.revisions);
+    } catch (e) {
+      setRevisionsError(errText(e));
+    }
+  }, [shareId]);
+
+  const toggleRevisions = useCallback(() => {
+    setRevisionsOpen((open) => {
+      const next = !open;
+      // Leneco: prvo razprtje sproži nalaganje (ne ob vsakem renderju).
+      if (next && revisions === null && !revisionsError) {
+        void loadRevisions();
+      }
+      return next;
+    });
+  }, [revisions, revisionsError, loadRevisions]);
+
+  // §22: OBNOVI revizijo = PATCH s prebrano staro vsebino (CAS). Sam
+  // obnovitveni zapis NAREDI revizijo trenutne vsebine — zgodovina ostane
+  // celotna (obnovitev je tudi urejanje, sledenje se ne prekine).
+  const restoreVersion = useCallback(
+    async (version: number) => {
+      if (!agg || restoringVersion !== null) return;
+      setRestoreState("idle");
+      setRestoringVersion(version);
+      setActionError(null);
+      try {
+        const content = await fetchTripRevisionContent(shareId, version);
+        await updateItinerary(
+          shareId,
+          content,
+          agg.version.contentVersion
+        );
+        setRestoreState("done");
+        // RSC stran /pot/[shareId] — celotna osvežitev pobere svežo
+        // vsebino + novo verzijo (pošteno in preprosto).
+        setTimeout(() => window.location.reload(), 900);
+      } catch (e) {
+        const msg = errText(e);
+        if (msg.includes("sočasno urejanje")) {
+          setRestoreState("conflict");
+        } else {
+          setRestoreState("error");
+          setActionError(msg);
+        }
+      } finally {
+        setRestoringVersion(null);
+      }
+    },
+    [shareId, agg, restoringVersion]
   );
 
   // ── JAVNA/ZASEBNA POVEZAVA (lastnik) ──────────────────────────────────
@@ -505,6 +579,115 @@ export function TripCollaboration({
                 Zaporedno urejanje je zaklenjeno z različico (iskren 409 ob
                 konfliktu — nikoli tiho ne prepišemo tučih sprememb).
               </p>
+            </div>
+
+            {/* ISSUE #4 §22 (val 5): ZGODOVINA VERZIJ — revizije vsebine
+                (undo na strežniku). Vsaka zamenjava vsebine (posodobitev
+                v načrtovalniku / obnovitev) arhivira prejšnjo različico;
+                tu jo lahko lastnik/urednik pogleda in OBNOVI. Obnovitev je
+                sama urejanje (dela novo revizijo) — zgodovina ostane celo. */}
+            <div className="space-y-2 border-t pt-4">
+              <button
+                type="button"
+                onClick={toggleRevisions}
+                aria-expanded={revisionsOpen}
+                className="flex w-full flex-wrap items-center gap-2 text-left text-sm font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+              >
+                <History className="h-4 w-4" aria-hidden="true" />
+                Zgodovina verzij
+                <Badge variant="secondary" className="ml-1">
+                  v{agg.version.contentVersion}
+                </Badge>
+                <span className="ml-auto text-xs font-normal text-muted-foreground">
+                  {revisionsOpen ? "skrij" : "pokaži"}
+                </span>
+              </button>
+
+              {revisionsOpen && (
+                <div className="space-y-2">
+                  {revisions === null && !revisionsError && (
+                    <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                      Nalagam zgodovino…
+                    </p>
+                  )}
+                  {revisionsError && (
+                    <p className="flex flex-wrap items-center gap-2 text-sm text-destructive">
+                      <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                      {revisionsError}
+                      <Button variant="outline" size="sm" onClick={() => void loadRevisions()}>
+                        <RefreshCw className="mr-1 h-3 w-3" aria-hidden="true" />
+                        poskusi znova
+                      </Button>
+                    </p>
+                  )}
+                  {revisions !== null && revisions.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Še ni starejših različic — ta pot še ni bila urejena
+                      (trenutna v{agg.version.contentVersion} je prva).
+                    </p>
+                  )}
+                  {revisions !== null && revisions.length > 0 && (
+                    <>
+                      <ul className="divide-y rounded-md border">
+                        {revisions.map((r) => (
+                          <li
+                            key={r.version}
+                            className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm"
+                          >
+                            <span className="font-mono text-xs font-semibold">
+                              v{r.version}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(r.createdAt).toLocaleString("sl-SI")}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {(r.sizeBytes / 1024).toFixed(0)} KB
+                            </span>
+                            <span className="ml-auto">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => void restoreVersion(r.version)}
+                                disabled={
+                                  restoringVersion !== null ||
+                                  restoreState === "done"
+                                }
+                              >
+                                {restoringVersion === r.version ? (
+                                  <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden="true" />
+                                ) : null}
+                                Obnovi
+                              </Button>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      {restoreState === "done" && (
+                        <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                          Obnovljeno — osvežujem pot…
+                        </p>
+                      )}
+                      {restoreState === "conflict" && (
+                        <p className="flex flex-wrap items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
+                          <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                          Pot je med tem spremenil nekdo drug —
+                          <Button variant="outline" size="sm" onClick={() => void load()}>
+                            <RefreshCw className="mr-1 h-3 w-3" aria-hidden="true" />
+                            osveži
+                          </Button>
+                          in poskusi znova.
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Obnovitev vrne staro vsebino kot NOVO različico
+                        (zdajšnja se arhivira) — zgodovina se nikoli ne
+                        izgubi. Zadnjih 20 različic se hrani.
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Vabila (samo lastnik) */}

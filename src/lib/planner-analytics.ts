@@ -120,6 +120,13 @@ export type PlannerEventName =
   // ovinkom (detour km iz OSRM plasti; count = št. prikazanih predlogov)
   | "leg_suggestions_expanded"
   | "leg_suggestion_added"
+  // ISSUE #4 §22 (val 5): razveljavljen zadnji DESTRUKTIVEN prehod (props:
+  // label refine|regeneracija, count ostanka) — "AI refinement ne sme
+  // nepreklicno prepisati tripa"; meri, ali undo dejansko rešuje.
+  | "itinerary_undo"
+  // §22: posodobitev NA MESU (PATCH) ni uspela (409/napaka) — iskren padec
+  // v klasično pot (POST → nova povezava); meri pogostost konfliktov.
+  | "save_inplace_fallback"
   // Backlog #6 "Kosilo na dolgi etapi": svetovalni predlog kosila (kind =
   // arrive | depart | enroute | honest; leg_min/day_drive_min = kontekst
   // sprožilca ≥ 75 min etapa ali ≥ 120 min dan)

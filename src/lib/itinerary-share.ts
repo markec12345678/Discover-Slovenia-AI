@@ -140,6 +140,150 @@ export function warmOfflinePlanCache(
 }
 
 /**
+ * ISSUE #4 §22 (val 5): POSODOBI obstoječo pot na mestu (PATCH, CAS) —
+ * namesto novega shareId ob vsakem shranjevanju. Vrne novo contentVersion;
+ * strežnik STARO vsebino arhivira kot revizijo (revisionSaved) → obnovitev
+ * je možna. 409 = sočasno urejanje (klient odloči: ponovno naloži).
+ */
+export async function updateItinerary(
+  shareId: string,
+  itinerary: Itinerary,
+  baseVersion: number,
+  name?: string
+): Promise<{
+  contentVersion: number;
+  revisionSaved: boolean;
+  name: string | null;
+}> {
+  const editToken = getEditToken(shareId);
+  let res: Response;
+  try {
+    res = await fetch(
+      `/api/itinerary/shared/${encodeURIComponent(shareId)}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(editToken ? { "x-dsa-edit-token": editToken } : {}),
+        },
+        body: JSON.stringify({
+          baseVersion,
+          itinerary,
+          ...(name !== undefined ? { name } : {}),
+        }),
+      }
+    );
+  } catch {
+    throw new Error("Posodabljanje ni uspelo — preveri povezavo.");
+  }
+
+  const data = (await res.json().catch(() => null)) as {
+    success?: boolean;
+    contentVersion?: number;
+    revisionSaved?: boolean;
+    name?: string | null;
+    error?: string;
+    conflict?: boolean;
+  } | null;
+
+  if (res.status === 409 || data?.conflict) {
+    throw new Error(
+      "Pot je bila med tem spremenjena (sočasno urejanje) — osveži podatke in poskusi znova."
+    );
+  }
+  if (!res.ok || !data?.success || typeof data.contentVersion !== "number") {
+    throw new Error(data?.error ?? "Posodabljanje ni uspelo — poskusi znova.");
+  }
+  return {
+    contentVersion: data.contentVersion,
+    revisionSaved: data.revisionSaved === true,
+    name: data.name ?? null,
+  };
+}
+
+/**
+ * ISSUE #4 §22 (val 5): metapodatki zgodovine revizij (brez vsebine).
+ * Vloga ≥ EDITOR (editToken/seja) — drugače API zavrne.
+ */
+export interface RevisionMeta {
+  version: number;
+  name: string | null;
+  authorRole: string;
+  createdAt: string;
+  sizeBytes: number;
+}
+
+export async function fetchTripRevisions(
+  shareId: string
+): Promise<{ currentVersion: number | null; revisions: RevisionMeta[] }> {
+  const editToken = getEditToken(shareId);
+  let res: Response;
+  try {
+    res = await fetch(
+      `/api/itinerary/shared/${encodeURIComponent(shareId)}/revisions`,
+      {
+        ...(editToken ? { headers: { "x-dsa-edit-token": editToken } } : {}),
+        cache: "no-store",
+      }
+    );
+  } catch {
+    throw new Error("Zgodovine verzij ni bilo mogoče naložiti.");
+  }
+  if (!res.ok) {
+    throw new Error("Zgodovina verzij ni dosegljiva (zahteva vlogo urejevalca).");
+  }
+  const data = (await res.json()) as {
+    success?: boolean;
+    currentVersion?: number | null;
+    revisions?: RevisionMeta[];
+  };
+  if (!data?.success || !Array.isArray(data.revisions)) {
+    throw new Error("Zgodovine verzij ni bilo mogoče naložiti.");
+  }
+  return {
+    currentVersion: data.currentVersion ?? null,
+    revisions: data.revisions,
+  };
+}
+
+/**
+ * ISSUE #4 §22 (val 5): CELA vsebina dane revizije (za obnovitev).
+ * Vrne ITINERER — obnovitev naredi klient z updateItinerary (PATCH s
+ * CAS; obnovitev sama zapiše revizijo trenutne vsebine — sledenje celo).
+ */
+export async function fetchTripRevisionContent(
+  shareId: string,
+  version: number
+): Promise<Itinerary> {
+  const editToken = getEditToken(shareId);
+  let res: Response;
+  try {
+    res = await fetch(
+      `/api/itinerary/shared/${encodeURIComponent(shareId)}/revisions?version=${encodeURIComponent(
+        String(version)
+      )}`,
+      {
+        ...(editToken ? { headers: { "x-dsa-edit-token": editToken } } : {}),
+        cache: "no-store",
+      }
+    );
+  } catch {
+    throw new Error("Revizije ni bilo mogoče naložiti.");
+  }
+  if (!res.ok) {
+    throw new Error("Revizija ni dosegljiva.");
+  }
+  const data = (await res.json()) as {
+    success?: boolean;
+    itinerary?: Itinerary;
+  };
+  if (!data?.success || !data.itinerary || !Array.isArray(data.itinerary.days)) {
+    throw new Error("Revizija je neveljavna.");
+  }
+  return data.itinerary;
+}
+
+/**
  * Pridobi deljen itinerer po shareId (URL parameter "odpri").
  * Meta: GET /api/itinerary/shared/[shareId]
  *       → { success, name, itinerary, createdAt, views }

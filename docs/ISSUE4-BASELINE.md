@@ -240,3 +240,27 @@ vse izmerjene v §1 matriki; nič ne blokira pilota. Issue #4 P1 seznam
 (trip versioning §22, offline verification §10✓/§16✓, provider matrix §5✓,
 reservation import §4✓, collaboration §13✓, budget §14✓) — preverjanje
 P1 pokritosti: 7/9 odprtih ali zaključenih po načrtu.
+
+---
+
+## J. ISSUE #4 — VAL 5 ZAKLJUČEN (§17+§19 + §20 + §22, 1.97.0, 2026-09-25)
+
+Po baseline ostanku §I; izbrane točke po vrednosti: **P0 #6** (data
+provenance/freshness model) + **P1 #9/#13/#14** — s tem je CELA P1 lista
+pokrita. Ista disciplina: meriti → popraviti → dokazati.
+
+| Oddelek | Dostava | Dokaz |
+|---|---|---|
+| **§17+§19 svežina + provenance** | lib/data-freshness.ts (čist modul): DataFreshness FRESH/STALE/UNKNOWN/LIVE + SourceType LIVE/STATIC/USER/PROVIDER/GENERATED + SourceClass (8 razredov, prag na razred) + classifyFreshness (ura INJICIRANA; brez podatka → NEZNANO) + formatDataAge sl/en + FSQ_SNAPSHOT_DATE konstanta (3 hardcode kopice odpravljene); /vir-podatkov sekcija "Svežina podatkov" (6 vrstic + disclaimer posnetek≠živo, SL+EN 16 ključev); stop-insights vrstica svežine | 38 testov (klasifikacija/meje/oznake/starost/konstanta/čistost source-contract) + žive sonde |
+| **§20 razložljiva priporočila** | ai-recommendations.ts: AI vrača why+whyEn (kanon: SAMO polja kandidata, NIKOLI izmisli); RecommendationWhy z LOČENIM izvorom jezikovno (sourceSl/sourceEn); deterministični fallback graditelj iz istih polj; mapper utrjen (range/duplikat/prazno); cache whys + legacy vrata; modala izrisujeta "Zakaj: {why}" + "(iz podatkov)" samo za deterministic | 42 testov + product-modal-why-{ai,deterministic}.png |
+| **§22 trip versioning/undo** | SEJNI undo sklad (itinerary-undo.ts čist modul LIFO bound 10; vsa 3 destruktivna mesta: 2× refine + regeneracija → applyItinerary; undo čip z Razveljavi); STREŽNIŠKE revizije (SavedItineraryRevision 3-plastna additive migracija + instrumentation schema:trip-revisions; PATCH arhivira staro vsebino ZNOTRAJ uspelega CAS, fail-open, retencija 20, iskren revisionSaved); GET .../revisions (vrata ≥ EDITOR: zasebna 404/javna 403; seznam metapodatki, ?version=N vsebina; audit trip_revision_read); OBNOVITEV = PATCH s CAS (zgodovina cela); PATCH-na-mesto pri shranjevanju (ista povezava namesto duplikata; 409 → iskren padec + save_inplace_fallback dogodek); /pot "Zgodovina verzij" UI (leneco, Obnovi, 409 prikaz) | 32 testov + API E2E (v0→v1→v2→v3 polna sled, vrata 403/400) + browser E2E (Obnovi klik → reload; refine → undo čip → Razveljavi → čip izgine) |
+
+**Testi:** 2633/2633 (+112: svežina 38, priporočila 42, revizije 32) ·
+lint 0/0 · tsc 0 (src/) · 0 konzolnih napak v E2E · dokazi v
+ux-verify-issue4-val5/ + val5b/.
+
+**P1 pokritost po VAL 5: 9/9** (versioning ✓ import ✓ collaboration ✓
+budget ✓ freshness ✓ explainability ✓ offline ✓ capability matrix ✓
+analytics funnel/observability obstajata iz prej). Ostanek Issue #4:
+P2 (§21 regresija rut, §18 uradna vsebina, §23+ share/privacy/varnost …)
+— nič ne blokira pilota.

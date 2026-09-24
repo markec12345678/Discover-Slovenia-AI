@@ -38,6 +38,12 @@ import {
 
 const HOUR_MS = 60 * 60_000;
 
+// ISSUE #4 §22 (val 5): največje število ohranjenih revizij na pot.
+// 20 × 200 KB kap vsebine = zgornja meja prostora na pot (~4 MB worst
+// case, tipično 10–50 KB na revizijo). Oddaljene počisti zapisovalna
+// pot PATCH-a (retencija nad verzijo, ne createdAt — deterministično).
+const TRIP_REVISIONS_KEEP = 20;
+
 async function readEditTokenAndSession(
   request: Request
 ): Promise<{ editToken: string | null; session: TripSession | null }> {
@@ -253,6 +259,18 @@ export async function PATCH(
     if (itineraryJson !== null) data.itinerary = itineraryJson;
     if (name !== null) data.name = name;
 
+    // ISSUE #4 §22 (val 5): revizija STARE vsebine PRED zamenjavo. Beremo
+    // vrstico PRED CAS (če CAS zadene, je prebrana vsebina po verzijah
+    // nujno tista, ki jo ZAMENJUJEMO — verzije se samo povečujejo).
+    // Name-only spremembe NE delajo revizije (vsebina se ni zamenjala).
+    const prePatch =
+      itineraryJson !== null
+        ? await db.savedItinerary.findUnique({
+            where: { shareId },
+            select: { itinerary: true, name: true, contentVersion: true },
+          })
+        : null;
+
     const result = await db.savedItinerary.updateMany({
       where: { shareId, contentVersion: baseVersion },
       data,
@@ -289,6 +307,50 @@ export async function PATCH(
       select: { contentVersion: true, updatedAt: true, name: true },
     });
 
+    // ISSUE #4 §22 (val 5): USPELA zamenjava vsebine → zapiši revizijo
+    // stare vsebine (undo na strežniku). FAIL-OPEN: napaka zapisa revizije
+    // NE sesuje uspelega PATCH-a (vsebina JE zamenjana) — iskreno
+    // zapišemo revisionSaved:false v odgovor + audit + dnevnik.
+    let revisionSaved = false;
+    if (prePatch && prePatch.itinerary) {
+      try {
+        await db.savedItineraryRevision.create({
+          data: {
+            shareId,
+            // Verzija, ki jo ZAMENJUJEMO (prebrana pred CAS — vsebina, ki
+            // je bila aktivna, dokler je baseVersion veljal).
+            version: baseVersion,
+            itinerary: prePatch.itinerary,
+            name: prePatch.name,
+            authorId: session?.user?.id ?? null,
+            authorRole: editToken ? "edit-token-owner" : "user",
+          },
+        });
+        revisionSaved = true;
+
+        // Retencija: ohrani največ TRIP_REVISIONS_KEEP zadnjih revizij
+        // (oddaljene počisti — omejen prostor, spodaj je vedno samo
+        // nedavna zgodovina; §22 minimalni "restore prejšnje verzije").
+        const keep = await db.savedItineraryRevision.findMany({
+          where: { shareId },
+          orderBy: { version: "desc" },
+          skip: TRIP_REVISIONS_KEEP,
+          take: 1,
+          select: { version: true },
+        });
+        if (keep.length > 0) {
+          await db.savedItineraryRevision.deleteMany({
+            where: { shareId, version: { lt: keep[0].version } },
+          });
+        }
+      } catch (revError) {
+        console.error(
+          "[itinerary/shared PATCH] §22 revizija ni zapisana (fail-open):",
+          revError
+        );
+      }
+    }
+
     await logAudit({
       actorId: session?.user?.id ?? undefined,
       actorRole: editToken ? "edit-token-owner" : "user",
@@ -301,6 +363,9 @@ export async function PATCH(
         role,
         changedItinerary: itineraryJson !== null,
         changedName: name !== null,
+        // §22: ali je bila stara vsebina arhivirana (revizija) — iskren
+        // dokaz undo-varnosti tega PATCH-a.
+        revisionSaved,
       },
     });
 
@@ -310,6 +375,8 @@ export async function PATCH(
       contentVersion: updated?.contentVersion,
       updatedAt: updated?.updatedAt.toISOString(),
       name: updated?.name,
+      // §22: dodano (additive) — klienti ≤1.96 ga prezrejo.
+      revisionSaved,
     });
   } catch (error) {
     console.error("[itinerary/shared] PATCH napaka:", error);

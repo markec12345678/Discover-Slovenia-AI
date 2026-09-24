@@ -3,7 +3,7 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import {
@@ -40,6 +40,7 @@ import {
   FileText,
   Ticket,
   Footprints,
+  Undo2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -138,7 +139,22 @@ import {
 import { destinationById } from "@/lib/stop-insights";
 import { validateItineraryGeo } from "@/lib/geo-validation";
 import { StopInsights } from "@/components/stop-insights";
-import { saveItinerary, fetchSharedItinerary } from "@/lib/itinerary-share";
+import {
+  saveItinerary,
+  fetchSharedItinerary,
+  updateItinerary,
+  getEditToken,
+} from "@/lib/itinerary-share";
+// ISSUE #4 §22 (val 5): sejni undo sklad nad destruktivnimi prehodi
+// (AI refinement / regeneracija) — "refinement ne sme nepreklicno
+// prepisati tripa" (citat §22). Čist modul, testiran v __tests__.
+import {
+  pushUndo,
+  popUndo,
+  canUndo,
+  peekUndo,
+  type UndoEntry,
+} from "@/lib/itinerary-undo";
 import { addSavedTrip, deriveSavedTripName } from "@/lib/my-trips-storage";
 import { cn } from "@/lib/utils";
 import { BookingPanel, type BookingData } from "@/components/sections/booking-panel";
@@ -623,9 +639,55 @@ export function ItineraryPlanner() {
   const [linkedTrip, setLinkedTrip] = useState<{
     itinerary: Itinerary;
     shareId: string;
+    // ISSUE #4 §22 (val 5): strežniška contentVersion povezane pote —
+    // baza za CAS ob posodabljanju NA MESU (namesto nove povezave).
+    // null = neznana (odprta tuja pot) → nikoli ne PATCHamo.
+    contentVersion: number | null;
   } | null>(null);
   const activeShareId =
     linkedTrip && linkedTrip.itinerary === itinerary ? linkedTrip.shareId : null;
+
+  // ISSUE #4 §22 (val 5): SEJNI UNDO SKLAD — vsak destruktivni prehod
+  // (AI refinement, regeneracija) potisne PREJŠNJO vsebino; "Razveljavi"
+  // jo vrne. Omejen na 10 (UNDO_STACK_LIMIT v čistem modulu).
+  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
+
+  // §22: enoten applier za DESTRUKTIVNE prehode — prejšnja vsebina gre na
+  // undo sklad PRED zamenjavo (vsa tri mesta: regeneracija + oba refinerja
+  // uporabljata TA helper; adicijski mikro-ukrepi (chat +/- kraj) ostanejo
+  // na golem setItinerary — niso "nepreklicen prepis" v smislu §22, ker so
+  // enojni reverzibilni koraki, ki jih pokriva strežniška revizija po
+  // shranitvi).
+  const applyItinerary = useCallback(
+    (next: Itinerary, undoLabel: string) => {
+      setUndoStack((s) =>
+        itinerary
+          ? pushUndo(s, { itinerary, label: undoLabel, at: Date.now() })
+          : s
+      );
+      setItinerary(next);
+    },
+    [itinerary]
+  );
+
+  // §22: razveljavi zadnji destruktivni prehod (LIFO). Vsebina se vrne,
+  // sklad se skrajša; lokalna persistenca + umik zastarele povezave po
+  // istem kanonu kot refine (P0.2).
+  const handleUndo = useCallback(() => {
+    const popped = popUndo(undoStack);
+    if (!popped) return;
+    setUndoStack(popped.remaining);
+    setItinerary(popped.entry.itinerary);
+    persistItinerary(popped.entry.itinerary, formData);
+    if (shareUrl) {
+      setShareUrl(null);
+      setCopied(false);
+    }
+    trackPlannerEvent("itinerary_undo", {
+      label: popped.entry.label,
+      locale,
+    });
+  }, [undoStack, formData, shareUrl, locale]);
   // TASK 4 / K-15: DVIGNJENO stanje razklopa "Podrobnosti izračunov" —
   // sproži ga tudi klik na postavko trust vrstice (isti `open` kot
   // PlannerStatusStrip; prej skrito za zložkom + scrollom).
@@ -697,7 +759,9 @@ export function ItineraryPlanner() {
           setItinerary(data.itinerary);
           // ISSUE #4 §2: odprta deljena različica JE strežniška različica —
           // Go Mode premostitev veže nanjo (dokler se vsebina ne spremeni).
-          setLinkedTrip({ itinerary: data.itinerary, shareId });
+          // §22: odprta deljena pot — contentVersion neznan (ne bomo
+          // PATCHali na mestu; morebitna shranitev naredi novo povezavo).
+          setLinkedTrip({ itinerary: data.itinerary, shareId, contentVersion: null });
           setRestoredVisible(false);
           toast({
             title: t("sharedOpenedToast"),
@@ -1353,7 +1417,10 @@ export function ItineraryPlanner() {
         }
       }
 
-      setItinerary(data);
+      // ISSUE #4 §22 (val 5): regeneracija je DESTRUKTIVEN prehod — prejšnji
+      // načrt gre na sejni undo sklad ("Razveljavi" ga vrne; brez tega je
+      // regeneracija nad obstoječim načrtom nepreklicna do konca seje).
+      applyItinerary(data, t("undoLabelRegenerate"));
       // UI sprint (točka B): obrazec se po uspešni generaciji zloži v
       // povzetek parametrov — delovna površina načrta prevzame zaslon
       setFormExpanded(false);
@@ -1499,17 +1566,76 @@ export function ItineraryPlanner() {
     }
   }
 
-  // === Shrani & deli: POST /api/itinerary/save → deljiva povezava ===
+  // === Shrani & deli ===
+  // ISSUE #4 §22 (val 5): če je povezana pot NAŠA (editToken v brskalniku +
+  // znana contentVersion), jo POSODOBIMO NA MESU (PATCH s CAS) — stara
+  // vsebina gre v strežniško revizijo (undo na strežniku) in deljena
+  // povezava ostane ISTA (prijatelji vidijo svežo različico). Sicer (prvi
+  // shranitev / tuja pot / 409 konflikt) klasična pot: POST → NOVA povezava.
   async function handleSaveShare() {
     if (!itinerary || saving) return;
     setSaving(true);
     setShareError(null);
     try {
+      // §22: posodobitev na mestu — samo ko JE povezana pot, je NAŠA
+      // (editToken) in poznamo njeno contentVersion (CAS baza).
+      const linked =
+        linkedTrip && linkedTrip.itinerary === itinerary ? linkedTrip : null;
+      if (
+        linked &&
+        linked.contentVersion !== null &&
+        getEditToken(linked.shareId)
+      ) {
+        try {
+          const upd = await updateItinerary(
+            linked.shareId,
+            itinerary,
+            linked.contentVersion
+          );
+          setLinkedTrip({
+            itinerary,
+            shareId: linked.shareId,
+            contentVersion: upd.contentVersion,
+          });
+          setShareUrl(`${window.location.origin}/pot/${linked.shareId}`);
+          trackFunnel("itinerary_saved");
+          markResultEngaged();
+          trackPlannerEvent("itinerary_saved", {
+            days: itinerary.days.length,
+            source: itinerary.source,
+            locale,
+            // §22: shranjeno kot POSODOBITEV obstoječe pote (ne nova povezava)
+            inPlace: 1,
+            revisionSaved: upd.revisionSaved ? 1 : 0,
+          });
+          toast({
+            title: t("savedUpdatedToast"),
+            description: t("savedUpdatedToastDesc", {
+              version: upd.contentVersion,
+            }),
+          });
+          return;
+        } catch (e) {
+          // 409 (sočasno urejanje) / napaka → iskren padec v klasično pot:
+          // NOVA povezava (spodaj) + toast pove, da je nastala nova.
+          trackPlannerEvent("save_inplace_fallback", { locale });
+          console.warn(
+            "[planner] §22 posodobitev na mestu ni uspela — nova povezava:",
+            e
+          );
+        }
+      }
+
       const result = await saveItinerary(itinerary, formData);
       const absoluteUrl = `${window.location.origin}${result.url}`;
       setShareUrl(absoluteUrl);
       // ISSUE #4 §2: pravkar shranjena različica == strežniška različica.
-      setLinkedTrip({ itinerary, shareId: result.shareId });
+      // §22: nova pote ima contentVersion 0 (postgres default).
+      setLinkedTrip({
+        itinerary,
+        shareId: result.shareId,
+        contentVersion: 0,
+      });
       // P2-3: sledi anonimno shranjen načrt za prevzem ob prijavi (localStorage)
       addSavedTrip(result.shareId, deriveSavedTripName(itinerary));
       trackFunnel("itinerary_saved");
@@ -3598,6 +3724,41 @@ export function ItineraryPlanner() {
                   </div>
                 )}
 
+                {/* ISSUE #4 §22 (val 5): UNDO čip — razveljavi zadnji
+                    destruktivni prehod (AI refinement / regeneracija).
+                    Viden SAMO ko sklad NI prazen (canUndo vrata); gumb
+                    vrne prejšnjo vsebino, X počisti celoten sklad
+                    (iskreno: po čiščenju te seje ni več nazaj). */}
+                {canUndo(undoStack) && (
+                  <div
+                    role="status"
+                    className="order-1 flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/5 px-4 py-2 text-sm text-violet-700 dark:text-violet-300 animate-in fade-in slide-in-from-top-1 duration-300"
+                  >
+                    <Undo2 className="size-4 shrink-0" aria-hidden />
+                    <span className="flex-1 font-medium">
+                      {t("undoChip", {
+                        count: undoStack.length,
+                        label: peekUndo(undoStack)?.label ?? "",
+                      })}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleUndo}
+                      className="rounded-full px-2 py-0.5 font-semibold underline-offset-2 hover:bg-violet-500/10 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {t("undoChipAction")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUndoStack([])}
+                      className="rounded-full p-1 hover:bg-violet-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-label={t("undoChipDismiss")}
+                    >
+                      <X className="size-4" aria-hidden />
+                    </button>
+                  </div>
+                )}
+
                 {/* Header */}
                 <div className="order-2 flex flex-wrap items-center justify-between gap-3">
                   <h3 className="text-2xl font-bold">
@@ -3652,7 +3813,9 @@ export function ItineraryPlanner() {
                   itinerary={itinerary}
                   formData={formData}
                   onRefined={(newItinerary) => {
-                    setItinerary(newItinerary);
+                    // §22 (val 5): AI refinement je DESTRUKTIVEN prehod —
+                    // prejšnja vsebina gre na sejni undo sklad.
+                    applyItinerary(newItinerary, t("undoLabelRefine"));
                     // Isti kanon kot rail refiner: lokalna persistenca +
                     // zastareli share link se umakne (P0.2)
                     persistItinerary(newItinerary, formData);
@@ -3825,7 +3988,9 @@ export function ItineraryPlanner() {
                         itinerary={itinerary}
                         formData={formData}
                         onRefined={(newItinerary) => {
-                          setItinerary(newItinerary);
+                          // §22 (val 5): AI refinement je DESTRUKTIVEN prehod —
+                          // prejšnja vsebina gre na sejni undo sklad.
+                          applyItinerary(newItinerary, t("undoLabelRefine"));
                           // Refiniran načrt se shrani lokalno (deljiva povezava ostane ista
                           // dokler uporabnik znova klikne "Shrani in deli")
                           persistItinerary(newItinerary, formData);

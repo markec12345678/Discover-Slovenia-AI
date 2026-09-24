@@ -107,4 +107,6 @@ export const AUDIT_ACTIONS = {
   // ISSUE #4 §15 (val 4) — dokumenti poti (metapodatki + povezava)
   TRIP_DOCUMENT_ADDED: "trip_document_added",
   TRIP_DOCUMENT_REMOVED: "trip_document_removed",
+  // ISSUE #4 §22 (val 5) — revizije vsebine poti (undo na strežniku)
+  TRIP_REVISION_READ: "trip_revision_read",
 } as const;

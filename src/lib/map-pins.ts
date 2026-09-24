@@ -37,6 +37,10 @@ import {
   fsqCategoryType,
 } from "@/lib/supply/providers/fsq/dataset";
 import type { FsqPlace, FsqResolvedType } from "@/lib/supply/providers/fsq/types";
+// ISSUE #4 §17 (VAL 5 sklop A): datum FSQ POSNETKA (konstanta) — svežina
+// plasti se klasificira po njem (posnetek ≠ živo stanje), ločeno od
+// lastUpdated (max date_refreshed/mtime = čas OSVEŽITVE namestitve).
+import { FSQ_SNAPSHOT_DATE } from "@/lib/data-freshness";
 
 // ---------------------------------------------------------------------------
 // KONSTANTE
@@ -113,6 +117,15 @@ export interface MapPinsDatasetInfo {
   places: number;
   /** Najnovejši date_refreshed v množici (ISO) ali null. */
   lastUpdated: string | null;
+  /**
+   * ISSUE #4 §17 (VAL 5 sklop A): datum FSQ POSNETKA ("2025-02-06",
+   * konstanta FSQ_SNAPSHOT_DATE — en vir resnice v data-freshness.ts).
+   * NAMERNO ločeno od lastUpdated: lastUpdated meri osvežitev NAŠE
+   * namestitve (date_refreshed/mtime datotek), snapshotDate pa starost
+   * VIRA samoga — posnetek je statičen in to odkrito povemo (klasificira
+   * se kot "stale" po §17). Null kadar množica ni nameščena.
+   */
+  snapshotDate?: string | null;
 }
 
 export interface MapPinsResult {
@@ -359,7 +372,12 @@ export function computeMapPins(
 /** Zadnje znano stanje množice (diagnostika; null kadar še ni bilo dostopa). */
 function datasetInfoOf(idx: Awaited<ReturnType<typeof getFsqDatasetIndex>>): MapPinsDatasetInfo {
   if (!idx || idx.places.length === 0) {
-    return { installed: false, places: idx?.places.length ?? 0, lastUpdated: null };
+    return {
+      installed: false,
+      places: idx?.places.length ?? 0,
+      lastUpdated: null,
+      snapshotDate: null,
+    };
   }
   let lastMs: number | null = null;
   for (const p of idx.places) {
@@ -372,6 +390,8 @@ function datasetInfoOf(idx: Awaited<ReturnType<typeof getFsqDatasetIndex>>): Map
     installed: true,
     places: idx.places.length,
     lastUpdated: lastMs == null ? null : new Date(lastMs).toISOString(),
+    // §17: posnetek VIRA (konstanta) — ne odvisen od naših mtimes.
+    snapshotDate: FSQ_SNAPSHOT_DATE,
   };
 }
 

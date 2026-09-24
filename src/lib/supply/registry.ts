@@ -30,6 +30,10 @@ import type {
   SupplyStatus,
 } from "./types";
 import type { AffiliateProvider } from "@/lib/affiliate";
+// ISSUE #4 §17 (VAL 5 sklop A): datum FSQ posnetka — en vir resnice iz
+// čistega listnega modula data-freshness.ts (prej hardcodan tu in v
+// komentarju dataset.ts; register je client-varen, modul je client-varen).
+import { FSQ_SNAPSHOT_DATE } from "@/lib/data-freshness";
 
 /** Podprte zmožnosti (razlikovanje po naročniku). */
 export interface ProviderCapabilityFlags {
@@ -199,8 +203,8 @@ export const PROVIDER_REGISTRY: ProviderRegistryEntry[] = [
     maxCallsPerMin: 0, // brez odhodnega prometa (lokalna množica)
     docsUrl: "https://opensource.foursquare.com/os-places",
     accessNote: {
-      sl: "Odprti PODATKI (Apache-2.0 z atribucijo) · množica nameščena: SI+HR+ME+AL, snapshot 2025-02-06 (fused.io/source.coop), osvežitev: bun run fsq:ingest",
-      en: "Open DATA (Apache-2.0 with attribution) · dataset installed: SI+HR+ME+AL, snapshot 2025-02-06 (fused.io/source.coop), refresh: bun run fsq:ingest",
+      sl: `Odprti PODATKI (Apache-2.0 z atribucijo) · množica nameščena: SI+HR+ME+AL, snapshot ${FSQ_SNAPSHOT_DATE} (fused.io/source.coop), osvežitev: bun run fsq:ingest`,
+      en: `Open DATA (Apache-2.0 with attribution) · dataset installed: SI+HR+ME+AL, snapshot ${FSQ_SNAPSHOT_DATE} (fused.io/source.coop), refresh: bun run fsq:ingest`,
     },
   },
   {

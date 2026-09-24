@@ -7,6 +7,101 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.97.0] — 2026-09-25 (ISSUE #4 VAL 5: §17+§19 + §20 + §22)
+
+> **Trije odseki Issue #4 v enem valu (P0 #6 + P1 #9/#13/#14):** enoten
+> koncept svežine podatkov s provenance (§17+§19 — P0 točka 6), razložljiva
+> priporočila (§20) in trip versioning/undo (§22). S tem je **celotna P1
+> lista Issue #4 pokrita**. **0 izgube funkcij; nazaj kompatibilno.**
+
+### §17+§19 — DISCOVERY DATA QUALITY + FRESHNESS / SOURCE PROVENANCE
+
+- **Nova čista plast `src/lib/data-freshness.ts`**: enoten koncept
+  `DataFreshness = fresh | stale | unknown | live` (§17 naročnikova
+  enumeracija) + `SourceType = LIVE | STATIC | USER | PROVIDER | GENERATED`
+  (§19) + `SourceClass` (8 razredov: weather/openingHours/events/poi/
+  transferPrices/affiliateOffers/destinationContent/supplyProduct — en
+  nabor pragov na razred) + `classifyFreshness` + `freshnessLabel` (sl/en)
+  + `formatDataAge` ("pred 3 dnevi" / >30 d → datum) + `FSQ_SNAPSHOT_DATE`
+  konstanta ("2025-02-06" — prej SAMO v komentarju; 3 hardcode kopice
+  odpravljene: dataset, registry accessNote, map-pins).
+- **Čistost po konstrukciji**: modul NIMA lastne ure — `now` vedno
+  injicira klicalnik; brez podatka → NEZNANO (nikoli ne ugibamo);
+  testno varovana čistost (0 fetch/prisma/ai-client).
+- **/vir-podatkov**: nova sekcija "Svežina podatkov" (6 vrstic: OSM žive
+  poizvedbe · FSQ POSNETEK 2025-02-06 = zastarelo po definiciji ·
+  Open-Meteo predpomnilnik 10–15 min · destinacije as-of · transferji ·
+  affiliate) + amber disclaimer **"posnetek ≠ živo stanje"** — točno
+  odgovor na §17 pritožbo "125.446 krajev NI isto kot 125.446 živih
+  krajev". SL+EN (16 novih i18n ključev, pariteta).
+- **stop-insights**: prva uporabniška vrstica svežine destinacijskih
+  podatkov ("Svežina: sveže · podatki od …").
+
+### §20 — RECOMMENDATION ENGINE (razložljivost)
+
+- **`ai-recommendations.ts` razširitev**: GLM zdaj vrača
+  `{"selection":[{"i","why","whyEn"}]}` s kanonom *"why sme navajati SAMO
+  podatke iz kandidata (kategorija, regija, cena, ocena, opis, značilnosti)
+  — NIKOLI ne izmisli podatkov"*. Dvojezični `RecommendationWhy` z LOČENIM
+  izvorom na jezik (`sourceSl`/`sourceEn` — AI lahko poda SL brez EN,
+  potem je EN iskreno deterministična, ne lažno "ai").
+- **Deterministični fallback graditelj** iz ISTIH polj kandidata (manjkajoče
+  polje se izpusti — nikoli se ne izmisli); velja za AI izpad, manjkajoč
+  why in vnaprej pripravljene izbire.
+- **Mapper utrjen**: out-of-range `i` zavrnjen, duplikati zavrnjeni, prazne
+  vrstice → fallback; cache razširjen z `whys` + `cacheEntryHasValidWhy`
+  vrata (legacy zapisi ≤1.96 brez whys → rebuild, ne sesutje).
+- **UI**: product-modal + experience-modal izrisujeta "Zakaj: {why}" /
+  "Why: {why}" + drobno "(iz podatkov)" SAMO kadar `whySource ===
+  "deterministic"` — priporočilo ni več črni AI ranking.
+
+### §22 — TRIP VERSIONING / UNDO
+
+- **Sejni undo sklad** (`src/lib/itinerary-undo.ts`, čist modul, LIFO,
+  bound 10): vsak DESTRUKTIVNI prehod v plannerju (AI refinement ×2 mesti +
+  regeneracija) potisne prejšnjo vsebino; undo čip "Razveljavi" jo vrne
+  (X počisti zgodovino — iskren: po čiščenju ni več nazaj). Citat §22
+  izpolnjen: *"AI refinement ne sme nepreklicno prepisati tripa."*
+- **Strežniške revizije**: `SavedItineraryRevision` model (3-plastna
+  additive migracija: schema + baseline SQL + zagonška DDL +
+  instrumentation `schema:trip-revisions`). Vsak USPELI CAS-prepis vsebine
+  (PATCH) NAJPREJ arhivira staro vsebino kot revizijo — fail-open (napaka
+  revizije NE sesuje PATCH-a; iskren `revisionSaved` v odgovoru + auditu).
+  Retencija: zadnjih 20 revizij na pot (deleteMany nad verzijo).
+- **`GET /api/itinerary/shared/[shareId]/revisions`**: vrata ≥ EDITOR
+  (zasebna 404, javna 403); seznam = SAMO metapodatki (verzija/datum/
+  velikost — brez vsebine); `?version=N` = cela vsebina za obnovitev;
+  audit `TRIP_REVISION_READ`.
+- **Obnovitev = običajen PATCH** s prebrano staro vsebino (CAS reused;
+  obnovitev sama arhivira trenutno vsebino — zgodovina ostane CELA).
+  UI: /pot "Zgodovina verzij" (leneco nalaganje, gumb Obnovi, 409
+  konflikt iskreo prikazan).
+- **PATCH-na-mesto pri shranjevanju**: če je povezana pot NAŠA (editToken
+  v brskalniku + znana contentVersion), jo planner POSODOBI na mestu
+  (ista deljena povezava, sveža vsebina) namesto da ustvari duplikat pot;
+  409/napaka → iskren padec v klasično pot (nova povezava + dogodek
+  `save_inplace_fallback`).
+
+### Dokazi (E2E, ux-verify-issue4-val5/ + val5b/)
+
+- API tok §22: save v0 → PATCH → v1 (revizija v0) → obnovitev → v2
+  (revizija v1) → browser Obnovi → v3 (revizija v2) — polna sled; vrata
+  403 (anonimni/napačen žeton) + 400 (version=-1).
+- Browser: /pot "Zgodovina verzij v2" → seznam v1/v0 → Obnovi → reload;
+  planner: refine → undo čip ("Prejšnja različica na voljo (AI prilagoditev
+  · 1 v zgodovini)") → Razveljavi → čip izgine (vsebina vračena); 0
+  konzolnih napak.
+- Priporočila: product-modal-why-ai.png + product-modal-why-deterministic.png.
+
+### Testi
+
+**2633/2633** (+112: svežina 38, priporočila 42, revizije 32) · lint 0 ·
+tsc 0 (src/). BASELINE_CHECKSUM posodobljen (namerna sprememba baseline
+SQL — varovalna testna stena je spremembo ZAZNALA in zahtevala posodobitev
+konstante, kot je bila zasnovana).
+
+---
+
 ## [1.96.0] — 2026-09-25 (ISSUE #4 VAL 4: §5 + §10 + §15 + §16)
 
 > **Štirje odseki Issue #4 v enem valu:** provider capability matrika (§5),

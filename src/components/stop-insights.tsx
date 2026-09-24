@@ -13,7 +13,9 @@ import {
   destinationById,
   durationLabelFor,
   weatherSuitabilityOf,
+  DESTINATIONS_DATA_AS_OF,
 } from "@/lib/stop-insights";
+import { classifyFreshness, freshnessLabel } from "@/lib/data-freshness";
 import type { LocationVisit } from "@/lib/types";
 
 // ============================================================================
@@ -38,6 +40,12 @@ import type { LocationVisit } from "@/lib/types";
 //
 // Datum "posodobljeno" sledi DESTINATIONS_DATA_AS_OF iz stop-insights.ts
 // (git-zabeležena zadnja sprememba dataseta destinacij).
+//
+// ISSUE #4 §17 (VAL 5 sklop A): ENOTNA OZNAKA SVEŽINE — razred
+// destinationContent se klasificira z data-freshness.ts (FRESH/STALE/
+// UNKNOWN/LIVE po as-of datumu). Vreme (day.weather) NIMA časovnega žiga
+// v itinererju — starosti NE izmišljujemo (iskrenost §17: brez podatka
+// ni prikaza; živi widget /api/weather ima svojo atribucijo).
 // ============================================================================
 
 interface StopInsightsProps {
@@ -81,6 +89,9 @@ const L = {
   source: { sl: "Vir", en: "Source" },
   sourceName: { sl: "Uredniški vodnik destinacij", en: "Editorial destination guide" },
   updated: { sl: "posodobljeno", en: "updated" },
+  // ISSUE #4 §17 (VAL 5 sklop A): enotna vrstica svežine destinationContent
+  freshness: { sl: "Svežina", en: "Freshness" },
+  dataAsOf: { sl: "podatki od", en: "data as of" },
   perPerson: { sl: "/ osebo", en: "/ person" },
   warning: {
     sl: "Pred obiskom preveri urnike, cene in dostopnost na uradni strani lokacije.",
@@ -112,6 +123,15 @@ export function StopInsights({ visit, locale }: StopInsightsProps) {
       ? opening.noteEn
       : opening.note
     : null;
+
+  // ISSUE #4 §17 (VAL 5 sklop A): klasifikacija svežine destinationContent
+  // po as-of datumu (ura injicirana tu — modul nima lastne ure). Prag 180 d
+  // je dovolj širok, da razred ni občutljiv na milisekunde med SSR in
+  // hidracijo (klasifikacija se spremeni šele čez mesece).
+  const destFreshness = classifyFreshness("destinationContent", {
+    timestamp: DESTINATIONS_DATA_AS_OF,
+    now: Date.now(),
+  });
 
   // Praktični podatki se prikažejo, če obstoja KATERIKOLI zapis o destinaciji
   if (!visit.reason && !dest) return null;
@@ -282,6 +302,21 @@ export function StopInsights({ visit, locale }: StopInsightsProps) {
                   </span>{" "}
                   {label("sourceName", locale)} · {label("updated", locale)}{" "}
                   {DATA_AS_OF_LABEL[lang]}
+                </dd>
+              </div>
+            </div>
+
+            {/* ISSUE #4 §17 (VAL 5 sklop A): ENOTNA VRSTICA SVEŽINE —
+                destinationContent klasificiran po as-of datumu (sveže/
+                zastarelo odkrito povedano). Vreme NIMA časovnega žiga →
+                vrstice o starosti vremena NI (ne izmišljujemo). */}
+            <div className="flex items-start gap-1.5 sm:col-span-2">
+              <div>
+                <dt className="sr-only">{label("freshness", locale)}</dt>
+                <dd className="text-muted-foreground/80">
+                  {label("freshness", locale)}:{" "}
+                  {freshnessLabel(destFreshness, lang)} ·{" "}
+                  {label("dataAsOf", locale)} {DATA_AS_OF_LABEL[lang]}
                 </dd>
               </div>
             </div>
