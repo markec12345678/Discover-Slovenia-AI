@@ -104,11 +104,75 @@ model SavedItinerary {
   editTokenHash String?
   // Število ogledov deljene strani (public statistika)
   views       Int      @default(0)
+  // ISSUE #4 §13 (val 2): javna deljena povezava. Privzeto TRUE — VSE
+  // obstoječe pote so bile javne po konstrukciji (nazaj kompatibilno).
+  // Izklop (samo računski lastnik) => /pot + javne rute zahtevajo vlogo.
+  isPublic    Boolean  @default(true)
+  // ISSUE #4 §13: optimistično zaklepanje (compare-and-swap) vsebine.
+  // contentVersion se poveča ob VSakem PATCH; klient pošlje bazo nazaj.
+  contentVersion Int   @default(0)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// ISSUE #4 §13 (val 2) — SODELovanje na poti z dovoljenji.
+// Vloge: EDITOR (ureja vsebino + ime), COMMENTER (skupnostni vpisi),
+// VIEWER (samo branje zasebne pote). LASTNIK (OWNER) NI vrstica tu —
+// lastništvo ostane dvojno: editTokenHash (anonimni) ALI SavedItinerary
+// .userId (račun) — isto kot TripGuide avtorstvo (dokazan vzorec).
+// status: PENDING (vabilo izdano, še ni sprejeto) → ACTIVE (sprejeto) →
+// REVOKED (odvzeto — vrstica ostane za forenziko/audit).
+// inviteToken: tajni žeton vabila (URL ?invite=...), randomId(32).
+model TripCollaborator {
+  id          String   @id @default(cuid())
+  shareId     String
+  // Prijavljeni uporabnik (B2C račun) — nastavi se ob SPREJEMU vabila
+  // (PENDING vrstica je še brez userId).
+  userId      String?
+  // E-pošta vabljenega (opcijsko — samo za prikaz lastniku).
+  inviteEmail String?
+  role        String   // EDITOR | COMMENTER | VIEWER
+  status      String   // PENDING | ACTIVE | REVOKED
+  inviteToken String   @unique
+  // Kdo je povabil: "session:{userId}" | "edit-token" (anonimni lastnik).
+  invitedBy   String
+  createdAt   DateTime @default(now())
+  acceptedAt  DateTime?
+  updatedAt   DateTime @updatedAt
+
+  @@index([shareId, status])
+  @@index([userId])
+}
+
+// ISSUE #4 §22 (val 5) — REVIZIJE VSEBINE POTI (undo na strežniku).
+// Vsak USPELI CAS-prepis vsebine (PATCH /api/itinerary/shared/[shareId])
+// NAJPREJ shrani staro vsebino kot revizijo → "Trip v1 → refinement →
+// Trip v2, z možnostjo restore prejšnje verzije" (citat §22).
+// Popolnoma additive: nastane SAMO ob zamenjavi vsebine; obstoječe pote
+// se ne dotika. Brez FK na SavedItinerary (isti vzorec kot TripDocument —
+// shareId je javna, stabilna identiteta poti). Retencija: največ 20
+// revizij na pot (oddaljene počisti zapisovalna pot — glej PATCH route).
+model SavedItineraryRevision {
+  id         String   @id @default(cuid())
+  shareId    String
+  // contentVersion, ki jo ta revizija ZAMENJUJE (stara verzija).
+  version    Int
+  // JSON: stara vsebina (SANITIZIRANA pri pisanju — isti 200 KB kap).
+  itinerary  String
+  // Staro ime poti (če je bilo nastavljeno) — za prikaz zgodovine.
+  name       String?
+  // Avtor spremembe: session userId (null = anonimni lastnik z editToken).
+  authorId   String?
+  // "user" | "edit-token-owner" (isti kanon kot AuditLog actorRole).
+  authorRole String
+  createdAt  DateTime @default(now())
+
+  @@index([shareId, version])
+  @@index([createdAt])
 }
 
 // Vodnik avtorja na deljenem potovanju — F7 skupnostni vodniki.
@@ -616,6 +680,22 @@ model JourneyBooking {
   cancellationUrl   String?
   // Surovi podatki providerjevega odgovora (JSON) — nič izmišljenega.
   providerPayload   String?
+  // ISSUE #4 §4 (val 3): IZVOR zapisa — kdo je podatke PRINESel:
+  //   "USER"      = ročni vnos uporabnika (potrjen z samim dejanjem vnosa);
+  //   "IMPORTED"  = parse dokumenta (slika/PDF/besedilo), ki ga je uporabnik
+  //                 PREGLEDAL in potrdil pred zapisom (dokument = atestacija);
+  //   "PROVIDER"  = provider kanal (PATCH, žeton) — izključno;
+  //   null        = legacy (SELECTED/EXTERNAL dogodki iz VAL 1 — brez izvora).
+  // Razlikovanje je ISKRENOST: UI nikoli ne trdi "provider potrjen prek naše
+  // integracije" za zapise, ki jih je prinesel uporabnik.
+  source            String?
+  // ISSUE #4 §4 (val 3): ekstrahirani/ročni podatki rezervacije (JSON):
+  // providerName, reservationNumber, startDateTime, endDateTime,
+  // locationName, guestName, price, currency, cancellationDeadline,
+  // contact, notes, parseConfidence — kopirano IZ dokumenta/potrditve
+  // uporabnika (surovo, nič izmišljenega). Živi SAMO pri source
+  // USER/IMPORTED; provider kanal nosi providerPayload.
+  importData        String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -623,6 +703,79 @@ model JourneyBooking {
   @@index([sessionKey])
   @@index([provider, providerProductId])
   @@index([status])
+  @@index([source])
+}
+
+// ============================================================================
+// ISSUE #4 §14 (val 3) — UPORABNIKOVI STROŠKI NA POTI (ocena ≠ strošek)
+// ============================================================================
+// Sodba TRIP-DOMAIN-MAP (val 2): Expense model NE uvajamo ZA OCENE — a §14
+// izrecno zahteva "booked / paid" vedrici, ki sta UPORABNIKOVA TRDITVA
+// (provider nič ne vrne — 0 poverilnic). To je NATANKO razred podatkov,
+// ki ga hiša že modelira po shareId (TripDiaryEntry, TripVote): zapis je
+// človekov, ne providerjev — zato živi TU, ne v JourneyBooking (katerega
+// atestacijska polja ostanejo izključno providerjeva).
+//   kind "booked" = rezervirano (zavezujoče, a še ni plačano);
+//   kind "paid"   = plačano (denar je odšel).
+// Znesek je USER-asserted EUR — UI to izrecno pokaže (provenance).
+model TripExpense {
+  id        String   @id @default(cuid())
+  shareId   String
+  // Dan poti (0-based), če je strošek vezan na dan (neobvezno).
+  dayIndex  Int?
+  label     String
+  amountEur Float
+  kind      String   // "booked" | "paid"
+  // Avtor (diary vzorec): prijavljeni uporabnik ali anonimni client ID.
+  authorName     String?
+  authorClientId String?
+  createdAt DateTime @default(now())
+
+  @@index([shareId])
+  @@index([kind])
+}
+
+// ----------------------------------------------------------------------------
+// ISSUE #4 §15 (val 4, 1.96.0) — DOKUMENTI POTI
+// ----------------------------------------------------------------------------
+// Naročnikova zahteva: vsak dokument ima type, source, createdAt,
+// trip/reservation povezavo, privacy, deletion, offline availability.
+//
+// ISKRENA ODLOČITEV O VSEBINI (isti vzorec kot TripDiaryEntry "BREZ slik"
+// in parse "dokument se NE shrani"): shranjujemo SAMO METAPODATKE +
+// povezavo — binarna/PDF vsebina ostane pri uporabniku (zasebnost +
+// stroški shrambe). type je SEMANTIČNA vrsta (potrditev/vavčer/vstopnica/
+// račun/zapisek), format je zapis vira (pdf/slika/samo povezava …).
+// Privacy deduje iz poti (SavedItinerary.isPublic — vrata v API kot pri
+// stroških/dnevniku); brisanje SAMO avtor; offline = strežniško izrisan
+// /pot HTML se predpomni v SW (dai-plans) → dokumenti so vidni brez signala.
+model TripDocument {
+  id        String   @id @default(cuid())
+  shareId   String
+  // Semantična vrsta (kanonska taksonomija §15):
+  // "booking_confirmation" | "voucher" | "ticket" | "receipt" | "note"
+  type      String
+  // Zapis vira: "pdf" | "image" | "text" | "link" | "none"
+  format    String
+  // Izvor zapisa: "USER" (ročni vnos) | "IMPORTED" (izluščeno iz dokumenta)
+  source    String
+  // Kratek naslov (npr. "Vstopnica – Bled, 12. 7.")
+  title     String
+  // Uporabnikova opomba (prosto besedilo, kap)
+  note      String?
+  // Zunanja povezava na dokument pri ponudniku (https, kap dolžine)
+  url       String?
+  // Mehka povezava na rezervacijo (JourneyBooking.id) — neobvezna
+  bookingId String?
+  // Dan poti (0-based), če je dokument vezan na dan
+  dayIndex  Int?
+  // Avtor (diary/expense vzorec): prijavljeni uporabnik ali anonimni clientId
+  authorName     String?
+  authorClientId String?
+  createdAt DateTime @default(now())
+
+  @@index([shareId])
+  @@index([type])
 }
 
 // ============================================================================
@@ -690,13 +843,23 @@ model AnalyticsEvent {
 // AI uporaba — za stroškovno analizo in monitoring
 model AIUsageLog {
   id           String   @id @default(cuid())
-  feature      String   // itinerary | chat | search | refine | recommend | poi | tag | insights | faq | translate
-  source       String   // puter | z-ai-sdk | fallback | cache
-  success      Boolean
+  // ISSUE #4 §11 (val 1, 2026-09-24): od vala 1 naprej VSE AI površine
+  // pišejo vrstice (prej: 0 runtime zapisov). Vrednosti feature (proste
+  // besede — String, ne enum): itinerary | refine | ask | ingest_image |
+  // search | chat | ask_local | translate | poi | insights | story | tag |
+  // approve | recommend | tts | faq (legacy navodilo).
+  feature      String
+  // Zmagovalni provider verige (openrouter | gemini | puter | z-ai-sdk) |
+  // "none" (veriga padla) | "fallback" (deterministični motor je služil) |
+  // "cache" (predpomnilnik) | "deterministic" (izrecna izbira motorja).
+  source       String
+  success      Boolean  // ali je klic uporabniku DEJANSKO uspešno služil
   responseTime Int      // ms
-  costEur      Float    @default(0)
+  costEur      Float    @default(0)  // 0,00 dokler so viri :free (iskrenost)
   userId       String?
   sessionId    String?
+  // JSON: { model?, tokens?: {promptTokens, completionTokens},
+  //         attempts?: string[] (poskusi verige — retry vidnost), … }
   metadata     String?  // JSON
   createdAt    DateTime @default(now())
 

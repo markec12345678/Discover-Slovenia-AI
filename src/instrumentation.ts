@@ -733,6 +733,48 @@ export async function register() {
     });
   }
 
+  // 1.98.1 — CLIENT PARITY (varovalka proti zastarelemu Prisma klientu):
+  // skip-worktree past je povzročila, da so modeli VAL 2–5 ostali SAMO
+  // lokalno; Render je gradil klienta iz zastarele sheme in vsa branja
+  // SavedItinerary (select isPublic) so padala s PrismaClientValidationError.
+  // Ta preverba zahteva žrtvena polja/modelе NA KLIJENTU (napaka se vrže
+  // client-side, pred DB) — FAILED korak pomeni RAZPOREDITVENO SESUTJE
+  // paritete (rebuild z novo shemo), ne DB napako. Glej src/lib/client-parity.ts.
+  try {
+    const { checkClientModelParityLive } = await import(
+      "./lib/client-parity"
+    );
+    const r = await checkClientModelParityLive();
+    if (r.ok) {
+      recordStartupStep({
+        name: "client:trip-parity",
+        status: "ok",
+        detail: `klient pozna: ${r.verified.join("; ") || "-"}${
+          r.nonFatal.length > 0
+            ? ` (neusodno: ${r.nonFatal.length})`
+            : ""
+        }`,
+      });
+    } else {
+      console.error(
+        "[instrumentation] CLIENT PARITY PRELOM: Prisma klient NE pozna " +
+          "polj/modelov novejše sheme (zastarel build?):",
+        r.staleClientError
+      );
+      recordStartupStep({
+        name: "client:trip-parity",
+        status: "failed",
+        detail: `zastarel Prisma klient: ${r.staleClientError ?? "?"}`,
+      });
+    }
+  } catch (error) {
+    recordStartupStep({
+      name: "client:trip-parity",
+      status: "failed",
+      detail: String(error),
+    });
+  }
+
   // Startup MIGRACIJA ZGODOVINE — baseline resolve (MIGR-HISTORY, 1.30.0):
   // produkcija (Neon Postgres) je bila ustanovljena z db push BREZ
   // _prisma_migrations zgodovine; ta korak ob zagonu zapiše baseline vrstico

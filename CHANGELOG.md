@@ -7,6 +7,53 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.98.1] — 2026-09-25 (HOTFIX: skip-worktree past — produkcija Prisma klient zastarel)
+
+> **Kritični popravek produkcijske regresa**, odkrit med VAL 6 verifikacijo:
+> `/pot/[shareId]`, `/api/trip/[shareId]` in `/api/itinerary/shared/[shareId]`
+> so na Render vracali 500 na VSAH branjih (tudi stari shareId-ji), medtem ko
+> so pisi delovali. Vzrok NI bil VAL 6 — diagnostika (začasni izpis napake)
+> je razkrila `PrismaClientValidationError: Unknown field 'isPublic'`.
+
+### Vzrok (veriga dokazov)
+
+1. `prisma/schema.prisma` ima lokalno zastavico **git skip-worktree**
+   (namerna dvojni-env konvencija: repozitorij `provider="postgresql"`,
+   lokalni dev `provider="sqlite"`).
+2. Posledica: **vse spremembe MODELOV od VALA 2 dalje** (isPublic/
+   contentVersion/updatedAt, TripCollaborator, TripExpense, TripDocument,
+   SavedItineraryRevision, JourneyBooking.source/importData — 168 vrstic)
+   so ostale SAMO v lokalnem delovnem drevesu; commiti VAL 2–5 so odšli s
+   ZASTARELO shemo.
+3. Render `prisma generate` → klient brez teh polj → vsak SELECT z isPublic
+   pada (klientska validacija), CREATE (ki polj izpusti) pa dela → aplikacija
+   deluje, branjе poti pa so tiho polomljena. N-migracije (raw SQL) so tabele
+   v Neon Postgresu vselej ustvarile — DB je bila ZDRAVA, klient pa ne.
+
+### Popravek
+
+- **schema.prisma v repu = polna shema** (provider=postgresql + vsi modeli
+  VAL 2–5) — skip-worktree odstranjen pred commitom (lokalno ponovno
+  nastavljen ZA dev provider vrstico, kar je edina dovoljena razlika).
+- **NOVA varovalka 1 — instrumentation `client:trip-parity`**: ob zagonu
+  strežnika zahteva žrtvena polja/modelе NA KLIJENTU (`findUnique` select
+  isPublic/contentVersion/updatedAt + `count` na 4 novih modelih).
+  `PrismaClientValidationError` se vrže CLIENT-side (pred DB) → zastarel
+  build se vidi TAKOJ v `/api/health` kot FAILED korak. DB-side napake
+  (npr. manjkajoča tabela) se NE štejejo kot pariteta (to delo n-migracij).
+- **NOVA varovalka 2 — test pasti** (`issue4-wave6-schema-parity.test.ts`):
+  MODEL VSEBINA delovnega drevesa mora biti identična `git show HEAD`
+  (izjema SAMO provider vrstica) — prihodnji agent, ki doda model lokalno
+  in ga ne commita, dobi PADLI test z glasnim navodilom + 6 enotskih
+  testov client-parity modula + zaščita žrtvenih polj pred izbrisom.
+- Diagnostični izpis napake v shared GET odstranjen (bil je začasen).
+
+**Dokaz:** Render po deployju — `/api/health` korak `client:trip-parity` OK;
+`/api/itinerary/shared/{neobstoječ}` → **404** (prej 500); `/pot/fb4162e781`
+→ 200; shranjene poti VAL 6 berljive.
+
+---
+
 ## [1.98.0] — 2026-09-25 (ISSUE #4 VAL 6: §21 ROUTE OPTIMIZATION)
 
 > **P2 §21 v enem valu:** regresijska suita optimizacije zaporedja (celotna
