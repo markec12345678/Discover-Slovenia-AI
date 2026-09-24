@@ -12,6 +12,7 @@ import { SharedTrip } from "@/components/shared-trip";
 import { TripCollaboration } from "@/components/trip-collaboration";
 import { TripReservations } from "@/components/trip-reservations";
 import { TripBudgetCard } from "@/components/trip-budget-card";
+import { TripDocumentsCard } from "@/components/trip-documents-card";
 import { TripGuide, type GuideData } from "@/components/trip-guide";
 import { TripDiary, type DiaryEntry } from "@/components/trip-diary";
 import { TripPolls } from "@/components/trip-polls";
@@ -434,6 +435,14 @@ export default async function SharedTripPage({
           shareId={shareId}
           dayCount={saved.itinerary.days.length}
         />
+      </div>
+
+      {/* === ISSUE #4 §15 (val 4): DOKUMENTI POTI — metapodatki (vrsta/zapis/
+          izvor/ustvarjeno) + povezava na rezervacijo + zunanja https povezava.
+          Binarna vsebina se NE shranjuje (zasebnost — isti vzorec kot
+          dnevnik/parse). Offline: strežniško izrisan HTML → SW predpomnjen. === */}
+      <div className="mx-auto max-w-5xl px-4 pb-10 pt-2 sm:px-6 lg:px-8">
+        <TripDocumentsCard shareId={shareId} />
       </div>
 
       {/* === F7: AVTORJSKI VODNIK (skupnostni vodniki) — prikaz vsem,

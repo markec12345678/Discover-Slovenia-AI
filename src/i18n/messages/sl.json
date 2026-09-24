@@ -1076,7 +1076,14 @@
     "prodAvailabilityLabel": "Razpoložljivost",
     "prodMonetizationLabel": "Monetizacija",
     "prodLegendTitle": "Kaj statusi pomenijo",
-    "prodLegend": "Živi podatki: ponudnikovi podatki dejansko tečejo v naš sistem. Konfiguriran: dostop je nastavljen, živa preverba še sledi. Ni konfiguriran: dostop je mogoč self-serve, a ključ še ni vnešen. Potrebna odobritev partnerja: API zahteva prijavo/pogodbo pri ponudniku. Samo partnerska povezava: vir nima inventarskega API-ja — povezava NI zaloga."
+    "prodLegend": "Živi podatki: ponudnikovi podatki dejansko tečejo v naš sistem. Konfiguriran: dostop je nastavljen, živa preverba še sledi. Ni konfiguriran: dostop je mogoč self-serve, a ključ še ni vnešen. Potrebna odobritev partnerja: API zahteva prijavo/pogodbo pri ponudniku. Samo partnerska povezava: vir nima inventarskega API-ja — povezava NI zaloga.",
+    "capabilityTitle": "Zmožnostna matrika rezervacijske plasti",
+    "capabilityIntro": "Formalizacija stanja vsakega ponudnika po naročnikovi matriki (odsek §5): odkrivanje, affiliate, API iskanje, citat cene, rezervacija, odpoved, webhook, refundacija, poverilnice in E2E dokaz. Status „živo“ pomeni dejanski živi odgovor providerja — objavljene „od“-cene NISO živi citat, uporabnikov uvoz dokumenta NI providerjeva potrditev. Matrika se izpelje iz istega registra kot zemljevid ponudbe (brez ročnega vzdrževanja).",
+    "capabilityLegend": "živo = dejanski živi odgovor vira · kodirano, čaka dostop = adapter priključen, prazen brez poverilnic/odobritve · arhitektura (0 živih) = state machine/kanal obstaja, ni živih klicev · uporabnikova izjava = ročni vnos/uvoz dokumenta (dokument je atestacija) · ni podprto = vir te zmožnosti nima · neveljavno = za ta vir nima smisla · E2E ni izveden = browser dokaz še ni bil izveden",
+    "capabilityCredsPresent": "nastavljene",
+    "capabilityCredsNone": "ne potrebuje",
+    "capabilityCredsMissing": "manjka: {vars}",
+    "capabilityManual": "Ročni vnos / uvoz dokumenta"
   },
   "demoScenarios": {
     "badge": "Preizkusi v 30 sekundah",

@@ -353,6 +353,154 @@ export async function POST(request: Request) {
     current.days.length
   );
 
+  // ------------------------------------------------------------------
+  // ISSUE #4 §10 (VAL 4, 1.96.0): HITRA AKCIJA JE DETERMINISTIČNA ODLOČITEV
+  // — izvede se PRIMA, BREZ LLM klica. Naročnikova zahteva: "če je
+  // odločitev mogoče sprejeti deterministično, ne sme zahtevati LLM."
+  // Šest čipov (applyQuickAction) ima POPOLNO deterministično izvedbo —
+  // prej je tekla SAMO ob odpovedi AI (60 s čakanja, da bi zamenjal en
+  // postanek). AI ostaja IZKLJUČNO za prostojezikovno refiniranje
+  // (naravnojezikovna interpretacija — pravi LLM domeni po §10).
+  // Izvedba + validacijska veriga: IDENTIČNA prejšnji catch-poti (Faza
+  // 4-2 blok, prestavljen sem — 0 sprememb logike, samo vrstni red).
+  // ------------------------------------------------------------------
+  if (action && day) {
+    const result = applyQuickAction(
+      current,
+      refineInput,
+      action,
+      day,
+      isEn ? "en" : "sl"
+    );
+
+    // --------------------------------------------------------------
+    // TASK 48 (§14): tudi DETERMINISTIČNA pot gre skozi isto validacijsko
+    // plast (defense in depth — transformacije so čiste, a sloj zagotavlja
+    // invariant tukaj). reinsertFixed: NE — odstranitev postanka s hitro
+    // akcijo je EKSPlicitNA uporabnikova intencija (stop_removed).
+    // --------------------------------------------------------------
+    const quickValidated = validateItinerarySupply(
+      result.itinerary,
+      { selection: verifiedSelection, currentStops },
+      {
+        lang: isEn ? "en" : "sl",
+        groupSize: formData?.groupSize,
+        reinsertFixed: false,
+      }
+    );
+    result.itinerary = quickValidated.itinerary;
+    const quickReport = quickValidated.report;
+    // P0.2 (recenzija): dogodki + opombe o gneči se preračunata tudi na
+    // deterministični poti (zamenjava/odstranitev postanka spremeni oba)
+    result.itinerary.events = matchEventsForItinerary(
+      result.itinerary.days,
+      6,
+      refineTripWindow,
+      isEn ? "en" : "sl"
+    );
+    result.itinerary.crowdNotices = buildCrowdNotices(
+      result.itinerary,
+      refineInputWithDates,
+      isEn ? "en" : "sl"
+    );
+    // P0.2 GEO-VALIDACIJA: tudi deterministična hitra akcija spremeni
+    // strukturo dneva — preračunaj (isto čisto funkcijo kot AI pot)
+    // F5.6: realne ceste (OSRM) — predpomniljeni pari iz generiranja.
+    const legs = await buildLegRouteIndex(result.itinerary);
+
+    // TASK 50 (§14, P1 — REPAIR SCHEDULE GAPS): po transformaciji (reslots
+    // hevristika) še enkrat poravnamo termine z REALNIMI nogami — gorski
+    // pari (haversine ~0,3 h prek OSRM 1,5 h) drugače ostanejo schedule_gap
+    // ERROR. Premakne se LE začetek termina; trajanja/vršni red/cene ostanejo.
+    const quickLegDriveH: DriveHoursResolver = (aId, bId) => {
+      const leg = legs.get(legKey(aId, bId));
+      return leg ? leg.min / 60 : null;
+    };
+    const quickRepaired = repairScheduleGaps(
+      result.itinerary.days,
+      quickLegDriveH
+    );
+    result.itinerary.days = quickRepaired.days;
+
+    result.itinerary.geoValidation = validateItineraryGeo(
+      result.itinerary,
+      isEn ? "en" : "sl",
+      legs
+    );
+    const withReasons = buildStopReasons(
+      result.itinerary,
+      refineInput,
+      isEn ? "en" : "sl",
+      legs
+    );
+    // F5.6: sveža geometrija po spremembi strukture (stara bi bila napačna)
+    withReasons.days = withReasons.days.map((d) => ({
+      ...d,
+      routeGeometry: dayRouteGeometry(d.locations, legs) ?? undefined,
+    }));
+    // UI sprint (točka D): sveže noge tudi na deterministični poti
+    withReasons.legs = serializeLegs(legs);
+
+    // TASK 48 (§12): status proračuna + povzetek supply validacije tudi na
+    // deterministični poti (ista plast kot AI pot — hitra akcija je enako
+    // preverljiva sprememba načrta).
+    withReasons.budgetValidation = computeBudgetValidation(withReasons, {
+      budget: formData?.budget,
+      groupSize: formData?.groupSize,
+      canonicalCosts: quickReport.canonicalCosts,
+    });
+    withReasons.supplyValidation = supplySummaryOf(quickReport);
+
+    // §18: strežniška observability dogodka (neblokirajoče, brez PII)
+    void logItineraryValidation(db, {
+      path: "refine",
+      source: "quick_action",
+      supply_stops: quickReport.supplyStops,
+      validated: quickReport.validated,
+      rejected: quickReport.rejected,
+      deduped: quickReport.deduped,
+      price_corrections: quickReport.priceCorrections,
+      geo_restored: quickReport.geoRestored,
+      directions_fixed: quickReport.directionsFixed,
+      reinserted: quickReport.reinserted,
+      fixed_count: verifiedSelection.filter((p) => p.selectionState === "fixed").length,
+      budget_status: withReasons.budgetValidation.status,
+      issues: quickReport.issues.length,
+    });
+
+    // P0.1 (recenzija): before → mutation → after iz ISTE validacijske plasti
+    // kot prikaz — dokaz, da je dan po spremembi izvedljiv (ali opozorilo,
+    // da NI — nikoli samo "uspešen 200 in lep nov tekst"). F5.6: realne ceste.
+    const beforeGeo = validateItineraryGeo(current, isEn ? "en" : "sl", legs);
+    const validation = buildValidationEvidence(
+      beforeGeo,
+      result.itinerary.geoValidation,
+      "day",
+      day,
+      isEn ? "en" : "sl"
+    );
+
+    console.log(
+      `[itinerary/refine] Hitra akcija "${action}" (dan ${day}) deterministično-PRIMA (§10, 0 LLM): ${result.changes.length} sprememb, geo ${validation.before.worst}→${validation.after.worst} (${validation.status})`
+    );
+    // ISSUE #4 §11: zapis (deterministična akcija je OPRAMLJALA — source
+    // "deterministic" zdaj iskreno odraža primarno pot, ne rezervo).
+    logFallbackUsage("refine", Date.now() - routeStartedAt, {
+      metadata: { path: "fast-action-deterministic-primary", action },
+    });
+    return NextResponse.json({
+      itinerary: withReasons,
+      instruction,
+      source: "deterministic",
+      applied: true,
+      action,
+      day,
+      changes: result.changes satisfies RefineChange[],
+      note: result.note,
+      validation,
+    });
+  }
+
   // Pripravi kontekst destinacij
   const destContext = DESTINATIONS.map(
     (d) =>
@@ -785,145 +933,10 @@ JSON format (STROGO, enak kot vhod):
   } catch (error) {
     console.error("[itinerary/refine] AI napaka:", error);
 
-    // FAZA 4-2: hitra akcija (action + day) ima DETERMINISTIČNO izvedbo —
-    // izvede se tudi brez AI žetona (na produkciji je AI pogosto v fallback
-    // načinu). Ni nov AI sistem: čiste transformacije nad istim datasetom
-    // destinacij, vsaka sprememba poročana v `changes`.
-    if (action && day) {
-      const result = applyQuickAction(
-        current,
-        refineInput,
-        action,
-        day,
-        isEn ? "en" : "sl"
-      );
-
-      // --------------------------------------------------------------
-      // TASK 48 (§14): tudi DETERMINISTIČNA pot gre skozi isto validacijsko
-      // plast (defense in depth — transformacije so čiste, a sloj zagotavlja
-      // invariant tukaj). reinsertFixed: NE — odstranitev postanka s hitro
-      // akcijo je EKSPlicitNA uporabnikova intencija (stop_removed).
-      // --------------------------------------------------------------
-      const quickValidated = validateItinerarySupply(
-        result.itinerary,
-        { selection: verifiedSelection, currentStops },
-        {
-          lang: isEn ? "en" : "sl",
-          groupSize: formData?.groupSize,
-          reinsertFixed: false,
-        }
-      );
-      result.itinerary = quickValidated.itinerary;
-      const quickReport = quickValidated.report;
-      // P0.2 (recenzija): dogodki + opombe o gneči se preračunata tudi na
-      // deterministični poti (zamenjava/odstranitev postanka spremeni oba)
-      result.itinerary.events = matchEventsForItinerary(
-        result.itinerary.days,
-        6,
-        refineTripWindow,
-        isEn ? "en" : "sl"
-      );
-      result.itinerary.crowdNotices = buildCrowdNotices(
-        result.itinerary,
-        refineInputWithDates,
-        isEn ? "en" : "sl"
-      );
-      // P0.2 GEO-VALIDACIJA: tudi deterministična hitra akcija spremeni
-      // strukturo dneva — preračunaj (isto čisto funkcijo kot AI pot)
-      // F5.6: realne ceste (OSRM) — predpomniljeni pari iz generiranja.
-      const legs = await buildLegRouteIndex(result.itinerary);
-
-      // TASK 50 (§14, P1 — REPAIR SCHEDULE GAPS): po transformaciji (reslots
-      // hevristika) še enkrat poravnamo termine z REALNIMI nogami — gorski
-      // pari (haversine ~0,3 h prek OSRM 1,5 h) drugače ostanejo schedule_gap
-      // ERROR. Premakne se LE začetek termina; trajanja/vršni red/cene ostanejo.
-      const quickLegDriveH: DriveHoursResolver = (aId, bId) => {
-        const leg = legs.get(legKey(aId, bId));
-        return leg ? leg.min / 60 : null;
-      };
-      const quickRepaired = repairScheduleGaps(
-        result.itinerary.days,
-        quickLegDriveH
-      );
-      result.itinerary.days = quickRepaired.days;
-
-      result.itinerary.geoValidation = validateItineraryGeo(
-        result.itinerary,
-        isEn ? "en" : "sl",
-        legs
-      );
-      const withReasons = buildStopReasons(
-        result.itinerary,
-        refineInput,
-        isEn ? "en" : "sl",
-        legs
-      );
-      // F5.6: sveža geometrija po spremembi strukture (stara bi bila napačna)
-      withReasons.days = withReasons.days.map((d) => ({
-        ...d,
-        routeGeometry: dayRouteGeometry(d.locations, legs) ?? undefined,
-      }));
-      // UI sprint (točka D): sveže noge tudi na deterministični poti
-      withReasons.legs = serializeLegs(legs);
-
-      // TASK 48 (§12): status proračuna + povzetek supply validacije tudi na
-      // deterministični poti (ista plast kot AI pot — hitra akcija je enako
-      // preverljiva sprememba načrta).
-      withReasons.budgetValidation = computeBudgetValidation(withReasons, {
-        budget: formData?.budget,
-        groupSize: formData?.groupSize,
-        canonicalCosts: quickReport.canonicalCosts,
-      });
-      withReasons.supplyValidation = supplySummaryOf(quickReport);
-
-      // §18: strežniška observability dogodka (neblokirajoče, brez PII)
-      void logItineraryValidation(db, {
-        path: "refine",
-        source: "quick_action",
-        supply_stops: quickReport.supplyStops,
-        validated: quickReport.validated,
-        rejected: quickReport.rejected,
-        deduped: quickReport.deduped,
-        price_corrections: quickReport.priceCorrections,
-        geo_restored: quickReport.geoRestored,
-        directions_fixed: quickReport.directionsFixed,
-        reinserted: quickReport.reinserted,
-        fixed_count: verifiedSelection.filter((p) => p.selectionState === "fixed").length,
-        budget_status: withReasons.budgetValidation.status,
-        issues: quickReport.issues.length,
-      });
-
-      // P0.1 (recenzija): before → mutation → after iz ISTE validacijske plasti
-      // kot prikaz — dokaz, da je dan po spremembi izvedljiv (ali opozorilo,
-      // da NI — nikoli samo "uspešen 200 in lep nov tekst"). F5.6: realne ceste.
-      const beforeGeo = validateItineraryGeo(current, isEn ? "en" : "sl", legs);
-      const validation = buildValidationEvidence(
-        beforeGeo,
-        result.itinerary.geoValidation,
-        "day",
-        day,
-        isEn ? "en" : "sl"
-      );
-
-      console.log(
-        `[itinerary/refine] Hitra akcija "${action}" (dan ${day}) deterministično: ${result.changes.length} sprememb, geo ${validation.before.worst}→${validation.after.worst} (${validation.status})`
-      );
-      // ISSUE #4 §11: zapis fallbacka (deterministična akcija je služila).
-      logFallbackUsage("refine", Date.now() - routeStartedAt, {
-        metadata: { path: "fast-action", action },
-      });
-      return NextResponse.json({
-        itinerary: withReasons,
-        instruction,
-        source: "fallback",
-        applied: true,
-        action,
-        day,
-        changes: result.changes satisfies RefineChange[],
-        note: result.note,
-        validation,
-      });
-    }
+    // ISSUE #4 §10 (VAL 4): hitra akcija (action + day) ima DETERMINISTIČNO
+    // PRIMARNO pot ZGODAJ v rutti (0 LLM klicev) — ta catch je zanjo
+    // NEDOSEGLJIV. Prostojezikovno refiniranje (edina preostala LLM domena
+    // po §10) ima svoj iskren fallback spodaj.
 
     // ------------------------------------------------------------------
     // TASK 50 (§10, P0 — 1.55.0): ta veja je vračala SUROV klientov payload

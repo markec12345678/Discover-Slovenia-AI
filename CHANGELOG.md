@@ -7,6 +7,117 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.96.0] — 2026-09-25 (ISSUE #4 VAL 4: §5 + §10 + §15 + §16)
+
+> **Štirje odseki Issue #4 v enem valu:** provider capability matrika (§5),
+> deterministična personalizacija brez AI odvisnosti (§10), dokumenti poti
+> (§15) in offline z REALNIM dokazom (§16 — vključno dnevno navigacijo v
+> Go Mode). **0 izgube funkcij; nazaj kompatibilno.**
+
+### §5 — BOOKING PROVIDER LAYER: capability matrika
+
+- **Nova čista plast `src/lib/supply/capability-matrix.ts`**: naročnikova
+  matrika (Provider | Discovery | Affiliate | API Search | Quote | Booking |
+  Cancellation | Webhook | Refund | Credentials | E2E) IZPELJANA iz
+  obstoječih strojno berljivih virov (registry → production-matrix →
+  providerEnvAccess) — NE iz README proze; vrstice sledijo registru
+  (drift nemogoč, testovno varovano). PRAVILO LIVE: „živo" SAMO z dejanskim
+  živim odgovorom providerja — objavljene „od"-cene NISO živi citat
+  (0 providerjev ga ima), uvožen dokument NI providerjeva potrditev.
+- **Javna objava na `/vir-podatkov`** (SL+EN): horizontalno scrollable
+  tabela 17 vrstic × 11 stolpcev z barvnimi značkami (barva IZPELJANA iz
+  statusa), legendă celic in stolpcem poverilnic (Boolean prisotnost env
+  po IMENU — vrednosti nikoli ne zapustijo strežnika).
+
+### §10 — PERSONALIZATION WITHOUT AI DEPENDENCY (deterministična plast)
+
+- **Budget-aware izbira v motorju** (`deterministic-itinerary.ts`): dnevni
+  proračun (budget / dni — skupinski znesek, ISTA semantika kot
+  computeBudgetValidation) vpliva DETERMINISTIČNO na izbor postankov:
+  najprej cenovno dosegljivi (ocena še odloča) → če ni nič dosegljivega,
+  najcenejši neizrabljen (iskren presežek, budgetValidation ga označi,
+  NIKOLI lažni €0). Brez proračuna: zaporedje bitno-identično prejšnjemu.
+- **partyType učinek** (prej SAMO AI prompt pravilo 13): pohostnitve nad
+  bestFor — family → družina (+0,75), couple → romantika (+0,5), friends →
+  avantura/adrenalin (+0,4), solo → mir/sprostitev (+0,4). NAMERNO pod 1,0
+  (ena zadetek interesa): partyType je REFINEMENT, NIKOLI dominator nad
+  uporabnikovimi interesi (test varuje).
+- **Tedenska zaprtja** (`weekdayClosedIds` — čista, testabilna funkcija):
+  destinacija, zaprta na ravni „destination" na dan potovanja, se iz bazena
+  IZLOČI (ista fail-closed logika kot mesečna zaprtja F5.5);
+  mainAttraction zaprtja NE izločajo (mesto odprto — WARN v validatorju).
+- **Refine hitre akcije = DETERMINISTIČNO-PRIMARNE** (naročnik: „če je
+  odločitev mogoče sprejeti deterministično, ne sme zahtevati LLM"): šest
+  čipov (applyQuickAction) se izvede ZGODAJ v rutti z 0 LLM klici (prej je
+  teklo SAMO ob odpovedi AI po 60 s). Source iskreno „deterministic"
+  (ne „fallback"); AI ostaja IZKLJUČNO za prostojezikovno refiniranje.
+
+### §15 — DOCUMENTS / ATTACHMENTS (dokumenti poti)
+
+- **NOV model `TripDocument`** (3-plastna additive migracija: schema.prisma +
+  baseline SQL amend + BASELINE_CHECKSUM update + idempotentna zagonška
+  migracija `trip-documents-migration.ts` v instrumentation): vrsta
+  (booking_confirmation/voucher/ticket/receipt/note) + zapis vira
+  (pdf/image/text/link) + izvor (USER/IMPORTED) + naslov/opomba + zunanja
+  https povezava + mehka povezava na JourneyBooking + avtor (diary vzorec).
+- **ISKRENA ODLOČITEV O VSEBINI** (isti vzorec kot dnevnik „brez slik" in
+  parse „dokument se ne shrani"): shranjujemo SAMO METAPODATKE + povezavo —
+  binarna/PDF vsebina ostane pri uporabniku (zasebnost + stroški shrambe).
+- **API `GET/POST/DELETE /api/trip/[shareId]/documents`**: vrata kot
+  stroški/dnevnik (javna pot branje vsakomur, zasebna ≥ VIEWER/pisanje ≥
+  COMMENTER); kanonski nabori tipov/formatov/izvorov; url SAMO https
+  (fail-closed); bookingId preverjen proti poti (ne tuje rezervacije);
+  meji 100/pot in 25/avtor; brisanje SAMO avtor; audit
+  trip_document_added/removed.
+- **Agregator + UI**: `documents` v GET /api/trip/[shareId] (§15 polja) +
+  kartica „Dokumenti poti" na /pot (seznam z značkami vrst, povezavami,
+  izvorom VEDNO razkritim, brisanjem avtorja, iskreno offline opombo).
+- **Offline**: strežniško izrisan /pot HTML → SW dai-plans predpomnilnik →
+  dokumenti vidni brez signala; dodajanje/brisanje potrebuje povezavo.
+
+### §16 — OFFLINE (realni dokaz + iskrena ločitev zmožnosti)
+
+- **Go Mode DNEVNA NAVIGACIJA** (zahteva „navigate days"): čipi vseh dni +
+  gumb „Danes" (vrne samodejno izbiro); ročna izbira je pošteno označena
+  („Dan ročno izbran — prikaz po načrtu, ne po današnjem datumu"); izbira
+  preživi tick ure/GPS; opravljeni postanki ostanejo PO DNEVIH ločeni.
+  `buildGoView(..., { dayOverride })` — čista funkcija, brez opts
+  bitno-identična prejšnjemu.
+- **offline.html: Go Mode zapisi V2** (AI itinererji — popravljena vrzel):
+  zapisi „Zaženi Na poti" (MyTripView) so prej bili ZAVRNJENI
+  (version !== 1) → offline.html ni izrisal NIČ. Zdaj: izris iz istih polj
+  kot GoMode (naslovi + SAMO realni časi), povezava nazaj na /pot/{shareId};
+  V1 zapisi ostanejo podprti (nazaj kompatibilno).
+- **MATRIKA ZMOŽNOSTI BREZ SIGNALA** (naročnik: „ne uporabljaj splošne
+  oznake offline, če deluje samo del aplikacije"): 5 LOČENIH vrstic na
+  offline.html (SL+EN) + kompaktne oznake v nogi Go Mode — podatki načrtov
+  delujejo / ploščice delno (samo že odprta območja) / navigacija zunanja
+  aplikacija / vreme samo povezava / rezervacije samo povezava.
+- **SW vsebinski bump (sw3)**: offline.html je predpomnjen ob namestitvi —
+  bump sili update že-nameščenih SW-jev.
+- **REALNI offline E2E** (agent-browser `set offline` na produkciji —
+  dokazi v `ux-verify-issue4-val4/`): online ogled poti → ogrevanje SW
+  cache → ZAŽENI NA POTI → offline → reload poti iz SW cache → navigacija
+  dni v Go Mode → reconnect (cesta §16: online load → save → close/reopen
+  → disable network → open trip → navigate days → Go Mode → reconnect).
+
+### Quality Gates
+
+- **Testi: 2521/2521** (+78: §5 capability 18, §10 personalizacija 21,
+  §15 dokumenti 22, §16 offline 17) · lint 0/0 · tsc 0 (src/) ·
+  0 konzolnih napak v E2E.
+
+---
+
+# Changelog
+
+Vse pomembne spremembe projekta Discover Slovenia AI (prej I Feel Slovenia).
+
+Format temelji na [Keep a Changelog](https://keepachangelog.com/slo/1.1.0/),
+in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
+
+---
+
 ## [1.95.1] — 2026-09-25 (ZEMLJEVID: bela slika v produkciji + vsi pini Balkana)
 
 > **Dve nalogi:** (a) POPRAVEK BELE SLIKE ZEMLJEVIDA na Vercel/Render

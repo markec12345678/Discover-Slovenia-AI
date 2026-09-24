@@ -27,7 +27,13 @@ import { nextSlot, type SlotCursor } from "@/lib/schedule-slots";
 import { parseISODateLocal } from "@/lib/trip-dates";
 import { orderAroundAnchors, type GeoOrderAnchor } from "@/lib/geo-order";
 import type { DailyForecast } from "@/lib/weather-utils";
-import type { Itinerary, PlannerInput, DayPlan, LocationVisit } from "@/lib/types";
+import type {
+  DestinationOpening,
+  Itinerary,
+  PlannerInput,
+  DayPlan,
+  LocationVisit,
+} from "@/lib/types";
 
 // ============================================================================
 // VREMENSKI SIDRI (tip — definicije/klici ostajajo v route; tu samo oblika)
@@ -53,6 +59,73 @@ export function isRainyDay(anchors: AnchorForecast[], dayIndex: number): boolean
     (a) => (a.forecast[dayIndex].precipitationProbabilityMax ?? 0) >= 60
   ).length;
   return rainy >= 2;
+}
+
+// ============================================================================
+// ISSUE #4 §10 (VAL 4, 1.96.0) — DETERMINISTIČNA PERSONALIZACIJA
+// ============================================================================
+// Naročnik: "Če je odločitev mogoče sprejeti deterministično, ne sme
+// zahtevati LLM." Trije domeni, ki so bili prej SAMO v AI promptu, so zdaj
+// ČISTE funkcije motorja (0 žetonov, 0 omrežja, popolnoma reproducibilne):
+//   1. BUDGET — dnevni proračun vpliva na IZBOR postankov (ne samo post-hoc
+//      validacija);
+//   2. PARTY TYPE — pohostnitev nad bestFor (prej prompt pravilo 13);
+//   3. TEDENSKA ZAPRTJA — zaprtje destinacije na ravni dneva-v-tednu jo
+//      izloči iz bazena (isted logika kot mesečna zaprtja F5.5).
+// ============================================================================
+
+/** Pohostnitve partyType nad bestFor oznakami (kanonski podatki — nikoli
+ *  izmišljene ustreznosti). Družina → družini prijazno, par → romantika,
+ *  prijatelji → avantura/adrenalin, sam → mir/sprostitev.
+ *  Vrednosti so NAMERNO pod 1,0 (ena zadetek interesa = 1,0): partyType je
+ *  REFINAMENT vrstnega reda, NIKOLI dominator nad uporabnikovimi interesi
+ *  ( test: interesi smučanje/pohodništvo + family → interesi zmagajo). */
+const PARTY_TYPE_BOOST: Record<
+  NonNullable<PlannerInput["partyType"]>,
+  Record<string, number>
+> = {
+  family: { "družina": 0.75 },
+  couple: { "romantika": 0.5 },
+  friends: { "avantura": 0.4, "adrenalin": 0.4 },
+  solo: { "mir": 0.4, "sprostitev": 0.4 },
+};
+
+/** Minimalna oblika destinacije za izračun tedenskih zaprtij (čista
+ *  funkcija — testabilna s sintetičnimi vnosi). */
+export interface WeekdayClosureInput {
+  id: string;
+  opening?: DestinationOpening;
+}
+
+/** ISSUE #4 §10: dnevi-v-tednu, ko je DESTINACIJA (closureLevel
+ *  "destination") zaprta med potovanjem → izločijo se iz bazena.
+ *  mainAttraction zaprtja NE izločajo (mesto je odprto — validator pošteno
+ *  opozori WARN, enako kot pri mesečnih zaprtjih). Deterministično iz
+ *  startDate + dolžine poti (0 ure — parseISODateLocal je čist). */
+export function weekdayClosedIds(
+  destinations: readonly WeekdayClosureInput[],
+  startDate: string | undefined,
+  days: number
+): Set<string> {
+  const closed = new Set<string>();
+  if (!startDate) return closed;
+  const startMs = parseISODateLocal(startDate);
+  if (startMs === null) return closed;
+  // Dnevi-v-tednu celotne poti (JS getDay: 0=ned … 6=sob)
+  const weekdays = new Set<number>();
+  for (let i = 0; i < days; i++) {
+    weekdays.add(new Date(startMs + i * 86400000).getDay());
+  }
+  for (const d of destinations) {
+    const opening = d.opening;
+    if (
+      opening?.closureLevel === "destination" &&
+      opening.closedWeekdays?.some((w) => weekdays.has(w))
+    ) {
+      closed.add(d.id);
+    }
+  }
+  return closed;
 }
 
 // ============================================================================
@@ -156,32 +229,108 @@ export function generateDeterministicItinerary(
   // validator tak načrt pošteno označi ( ERROR) in refine ga lahko popravi.
   const effectivePool = openPool.length >= input.days ? openPool : pool;
 
+  // ISSUE #4 §10 (VAL 4): TEDENSKA ZAPRTJA (dnevi-v-tednu) — enaka
+  // fail-closed logika kot mesečna zaprtja zgoraj: destinacija, zaprta na
+  // ravni "destination" na dan potovanja, se iz bazena IZLOČI ( Glej
+  // weekdayClosedIds — čista funkcija, testabilna). mainAttraction zaprtja
+  // ( Ptujski grad ob ponedeljkih) NE izločajo — mesto je odprto, geo
+  // validator pošteno opozori WARN glede dneva.
+  const closedOnTripWeekdays = weekdayClosedIds(
+    DESTINATIONS,
+    input.startDate,
+    input.days
+  );
+  const weekdayOpenPool =
+    closedOnTripWeekdays.size > 0
+      ? effectivePool.filter((d) => !closedOnTripWeekdays.has(d.id))
+      : effectivePool;
+  const finalPool =
+    weekdayOpenPool.length >= input.days ? weekdayOpenPool : effectivePool;
+
   // Ocenjevalnik: ujemanje interesov + F5.4 pohitritev za izrecno zaželene
   // destinacije ( iz prilepljene povezave — "Start Anywhere"). Pohitritev
   // ( +2,5) dominira nad oceno/všečnostjo, a NE nad sezonskim filtrom in
   // deževno-logiko — vreme in sezona ostajata iskreni prednost.
+  // ISSUE #4 §10 (VAL 4): + partyType pohostnitev nad bestFor (prej SAMO
+  // AI prompt pravilo 13 — zdaj deterministično, enako za oba motorja
+  // poti). Skromne vrednosti: interesi uporabnika ostanejo glavna sila.
+  const partyBoost = input.partyType ? PARTY_TYPE_BOOST[input.partyType] : null;
   const score = (d: (typeof DESTINATIONS)[number]) =>
     d.bestFor.filter((b) => input.interests.includes(b)).length +
     d.rating / 10 +
-    (input.preferredDestinations?.includes(d.id) ? 2.5 : 0);
+    (input.preferredDestinations?.includes(d.id) ? 2.5 : 0) +
+    (partyBoost
+      ? d.bestFor.reduce((sum, b) => sum + (partyBoost[b] ?? 0), 0)
+      : 0);
 
-  const ranked = [...effectivePool].sort((a, b) => score(b) - score(a));
+  const ranked = [...finalPool].sort((a, b) => score(b) - score(a));
   const indoor = ranked.filter((d) => INDOOR_TYPES.has(d.type));
+
+  // ISSUE #4 §10 (VAL 4): BUDGET-AWARE IZBIRA. Dnevni proračun (skupinski
+  // znesek — ISTA semantika kot computeBudgetValidation: cena postanka =
+  // costPerPerson × groupSize) vpliva DETERMINISTIČNO na izbor:
+  //  - najprej cenovno dosegljivi kandidati (dayCost ≤ preostanek dneva);
+  //  - če ni dosegljivih → NAJCENEJŠI neizrabljen kandidat (iskreno —
+  //    načrt preseže, budgetValidation ga označi; NE skrivamo stroškov
+  //    in NE pišemo lažnih €0);
+  //  - brez proračuna (0/negativen) → zaporedje IDENTIČNO prejšnjemu.
+  const dailyBudget =
+    Number.isFinite(input.budget) && input.budget > 0
+      ? input.budget / input.days
+      : null;
+  const dayCost = (d: (typeof DESTINATIONS)[number]) =>
+    d.costPerPerson * input.groupSize;
 
   // Zaporedni izbor z razstrupljanjem (brez vremena: isto zaporedje kot prej)
   const used = new Set<string>();
-  const pickDest = (preferred: typeof ranked) => {
-    for (const d of preferred) {
-      if (!used.has(d.id)) {
-        used.add(d.id);
-        return d;
+  const pickDest = (
+    preferred: typeof ranked,
+    remainingBudget: number | null
+  ) => {
+    // 1) cenovno dosegljivi iz prednostnega niza (ocena še vedno odloča)
+    const affordable =
+      remainingBudget == null
+        ? preferred
+        : preferred.filter((d) => dayCost(d) <= remainingBudget);
+    if (affordable.length > 0) {
+      for (const d of affordable) {
+        if (!used.has(d.id)) {
+          used.add(d.id);
+          return d;
+        }
       }
     }
-    // primarna zalogovnica izčrpana → splošni niz po vrsti
-    for (const d of ranked) {
-      if (!used.has(d.id)) {
-        used.add(d.id);
-        return d;
+    if (remainingBudget == null) {
+      // brez proračuna: PRVOTNA logika (bitno-identična prejšnji)
+      // primarna zalogovnica izčrpana → splošni niz po vrsti
+      for (const d of ranked) {
+        if (!used.has(d.id)) {
+          used.add(d.id);
+          return d;
+        }
+      }
+    } else {
+      // 2) dosegljivi iz splošnega niza — NAJCENEJŠI (deterministično:
+      // cena, nato vrstni red niza)
+      const affordableRanked = ranked.filter(
+        (d) => dayCost(d) <= remainingBudget && !used.has(d.id)
+      );
+      if (affordableRanked.length > 0) {
+        const cheapest = [...affordableRanked].sort(
+          (a, b) => dayCost(a) - dayCost(b)
+        )[0];
+        used.add(cheapest.id);
+        return cheapest;
+      }
+      // 3) NIČ dosegljivega → najcenejši neizrabljen sploh (iskren presežek;
+      //    budgetValidation pošteno označi exceeded — nikoli lažni €0)
+      const unused = ranked.filter((d) => !used.has(d.id));
+      if (unused.length > 0) {
+        const cheapest = [...unused].sort(
+          (a, b) => dayCost(a) - dayCost(b)
+        )[0];
+        used.add(cheapest.id);
+        return cheapest;
       }
     }
     // vse porabljene → reset (zaporedje ostaja deterministično)
@@ -211,8 +360,15 @@ export function generateDeterministicItinerary(
     const rainy = isRainyDay(anchors, day - 1);
     rainyByDay.push(rainy);
     const set: (typeof DESTINATIONS)[number][] = [];
+    // §10: dnevni proračun se OBNOVLJA z vsakim dnem (isti znesek na dan;
+    // neporabljeni del se NE prenaša — preprosto in deterministicno)
+    let remainingToday = dailyBudget;
     for (let i = 0; i < pacePlan.stopsPerDay; i++) {
-      set.push(pickDest(rainy ? indoor : ranked));
+      const pick = pickDest(rainy ? indoor : ranked, remainingToday);
+      set.push(pick);
+      if (remainingToday != null && pick) {
+        remainingToday = Math.max(0, remainingToday - dayCost(pick));
+      }
     }
     daySetDests.push(set);
   }

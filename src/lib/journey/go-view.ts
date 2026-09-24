@@ -76,6 +76,12 @@ export interface GoView {
   /** Ali je GPS položaj na voljo (prikaz razdalj). */
   positionAvailable: boolean;
   generatedAt: string;
+  /** ISSUE #4 §16 (val 4): DNEVNA NAVIGACIJA — celoten seznam dni za
+   * preklapljanje (ročna izbira dneva + povratek na današnjega). Prazno,
+   * če je samo en dan. */
+  daySwitcher: { index: number; label: { sl: string; en: string }; isToday: boolean }[];
+  /** §16: ali je aktiven dan ROČNO izbran (0 = samodejno po datumu). */
+  dayManuallySelected: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -240,15 +246,43 @@ function toCard(
 /**
  * Zgradi NOW & NEXT pogled iz MY TRIP + živega časa (+ opcionalno GPS) +
  * uporabnikovih opravljenih postankov. ČISTO — brez stranskih učinkov.
+ *
+ * ISSUE #4 §16 (val 4): `opts.dayOverride` — ROČNA izbira dneva (dnevna
+ * navigacija v Go Mode). Kadar je podan veljaven indeks, se pokaže TA dan
+ * (iskrena opomba: ročna izbora, ne današnji datum); `laterDays` sledijo
+ * izbranemu dnevu. Brez opts ( obstoječi klici) — samodejna izbira po
+ * datumu, obnašanje BITNO-IDENTIČNO prejšnjemu.
  */
 export function buildGoView(
   trip: MyTripView,
   now: Date,
   position: GoPosition | null,
-  done: GoDoneMap
+  done: GoDoneMap,
+  opts?: { dayOverride?: number | null }
 ): GoView {
-  const active = pickActiveDay(trip.days, now);
-  const isToday = active?.day.date === isoOf(now);
+  const today = isoOf(now);
+  const auto = pickActiveDay(trip.days, now);
+  const overrideIndex =
+    opts?.dayOverride != null &&
+    Number.isInteger(opts.dayOverride) &&
+    opts.dayOverride >= 0 &&
+    opts.dayOverride < trip.days.length
+      ? opts.dayOverride
+      : null;
+
+  const active =
+    overrideIndex != null
+      ? {
+          index: overrideIndex,
+          day: trip.days[overrideIndex],
+          note: {
+            sl: "Dan ročno izbran — prikaz po načrtu, ne po današnjem datumu.",
+            en: "Day selected manually — shown by the plan, not by today's date.",
+          },
+        }
+      : auto;
+
+  const isToday = active?.day.date === today;
 
   const entries = active?.day.entries ?? [];
   const notDone: TripEntry[] = [];
@@ -277,6 +311,18 @@ export function buildGoView(
 
   const dayHasRealTime = entries.some((e) => e.time?.start != null);
 
+  // ISSUE #4 §16 (val 4): DNEVNA NAVIGACIJA — celoten seznam dni za
+  // preklapljanje (ročna izbira); isToday označi današnji dan (tudi kadar
+  // je izbran drug). Prazno pri enodnevnem načrtu (switcher bi bil šum).
+  const daySwitcher =
+    trip.days.length > 1
+      ? trip.days.map((d, i) => ({
+          index: i,
+          label: d.dateLabel,
+          isToday: d.date === today,
+        }))
+      : [];
+
   return {
     title: {
       sl: `NA POTI — ${trip.title.sl.replace(/^MOJA POT — /, "")}`,
@@ -296,6 +342,8 @@ export function buildGoView(
     laterDays,
     positionAvailable: position != null,
     generatedAt: new Date().toISOString(),
+    daySwitcher,
+    dayManuallySelected: overrideIndex != null,
   };
 }
 

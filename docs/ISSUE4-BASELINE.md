@@ -215,3 +215,28 @@ task99/task98) · lint 0/0 · tsc 0 (src/) · 0 konzolnih napak v E2E ·
 potovanj · §10 offline · §15 dokumenti (širše od §4 parse) · §16
 večnapravčni Go progres — vse izmerjene v §1 matriki, nič ne blokira
 pilota.
+
+---
+
+## I. ISSUE #4 — VAL 4 ZAKLJUČEN (§5 + §10 + §15 + §16, 1.96.0, 2026-09-25)
+
+Po baseline predlogu §H (ostanek: §5 smeri · §10 offline · §15 dokumenti ·
+§16 večnapravčni Go) — natančne zahteve prebrane IZ issue #4 telesa:
+
+| Oddelek | Dostava | Dokaz |
+|---|---|---|
+| **§5 provider capability matrika** | lib/supply/capability-matrix.ts — vrstica na provider registra (+ manual); stolpci PO naročniku (Discovery/Affiliate/API Search/Quote/Booking/Cancellation/Webhook/Refund/Credentials/E2E); IZPELJANA iz registry/production-matrix/providerEnvAccess (drift nemogoč; credentials SAMO Boolean prisotnost po imenu) | LIVE invarianta testno varovana (quote LIVE ⟺ LIVE_PRICE — 0 živih; e2e LIVE samo osm/fsq/kiwitaxi/viator+manual; cancellation/webhook/refund 0 živih); javna tabela /vir-podatkov SL+EN (17×11) |
+| **§10 personalizacija brez AI** | motor: budget-aware izbira (dnevni proračun, dosegljivi → najcenejši iskren presežek) + partyType boost (<1,0 — NIKOLI nad uporabnikovimi interesi) + weekdayClosedIds (destination-level izločanje); refine hitre akcije DETERMINISTIČNO-PRIMARNE (0 LLM, source iskreno "deterministic") | 21 testov (budget/partij/type/weekday/refine source-contract); E2E: /vir-podatkov + /pot + Go Mode |
+| **§15 dokumenti poti** | TripDocument (3-plastna additive migracija + instrumentation schema:trip-documents); API GET/POST/DELETE /api/trip/[shareId]/documents (vrata kot stroški; kanonski nabori; https fail-closed; bookingId proti poti; 100/25 meji; brisanje samo avtor; audit); agregator documents; /pot kartica | 22 testov (migracija unit obe narečji + drift vrata schema↔baseline↔modul + API source-contract); E2E: dodaj → izris (značka/povezava/izvor/privatnost) → izbriši (samo avtor) |
+| **§16 offline** | Go Mode DNEVNA NAVIGACIJA (buildGoView dayOverride — čipa dni + Danes reset, iskrena opomba ročne izbire); offline.html V2 zapisi (AI itinererji prej ZAVRNJENI — zdaj izrisan iz istih polj kot GoMode + /pot shareId povezava; V1 ostaja); MATRIKA ZMOŽNOSTI (5 ločenih vrstic SL+EN: podatki delujejo/ploščice delno/navigacija zunanja/vreme samo povezava/rezervacije samo povezava) + kompaktne oznake v nogi Go Mode; SW vsebinski bump sw3 | 17 testov (offline.html V2 izvedba nad stub DOM + matrika + dayOverride unit + SW bump); REALNI offline E2E z agent-browser set offline NA PRODUKCIJI (script §16: online load → save → close/reopen → disable network → open trip → navigate days → Go Mode → reconnect) |
+
+**Testi:** 2521/2521 (+78: capability 18, personalizacija 21, dokumenti 22,
+offline 17) · lint 0/0 · tsc 0 (src/) · 0 konzolnih napak v E2E ·
+dokazi v ux-verify-issue4-val4/.
+
+**Ostanek Issue #4 po VAL 4:** §17+ (discovery kvalitete/svežina, §18
+uradna vsebina, §19 provenance, §20 priporočila, §21 optimizacija rut …) —
+vse izmerjene v §1 matriki; nič ne blokira pilota. Issue #4 P1 seznam
+(trip versioning §22, offline verification §10✓/§16✓, provider matrix §5✓,
+reservation import §4✓, collaboration §13✓, budget §14✓) — preverjanje
+P1 pokritosti: 7/9 odprtih ali zaključenih po načrtu.

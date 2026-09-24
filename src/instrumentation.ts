@@ -594,6 +594,54 @@ export async function register() {
         detail: String(error),
       });
     }
+
+    // Startup SHEMA migracija — ISSUE #4 §15 (val 4, 1.96.0): dokumenti
+    // poti — tabela TripDocument (metapodatki, NE binarna vsebina).
+    // Idempotentna, additive-only, fail-open, skupna zastavica
+    // DSA_DISABLE_SCHEMA_MIGRATION. Glej src/lib/trip-documents-migration.ts.
+    try {
+      const { migrateTripDocumentsSchema } = await import(
+        "./lib/trip-documents-migration"
+      );
+      const r = await migrateTripDocumentsSchema();
+      if (r.tablesCreated.length > 0) {
+        console.log(
+          `[instrumentation] Shema migracija (dokumenti poti): ustvarjene ` +
+            `tabele [${r.tablesCreated.join(", ")}] (${r.dialect})`
+        );
+        recordStartupStep({
+          name: "schema:trip-documents",
+          status: "ok",
+          detail: `ustvarjene tabele: ${r.tablesCreated.join(", ")} (${r.dialect})`,
+        });
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija (dokumenti poti): stanja ni " +
+            "bilo mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
+        );
+        recordStartupStep({
+          name: "schema:trip-documents",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja sheme ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:trip-documents",
+          status: "ok",
+          detail: "shema že prisotna",
+        });
+      }
+    } catch (error) {
+      console.error(
+        "[instrumentation] Shema migracija (dokumenti poti) ni uspela:",
+        error
+      );
+      recordStartupStep({
+        name: "schema:trip-documents",
+        status: "failed",
+        detail: String(error),
+      });
+    }
   } else {
     recordStartupStep({
       name: "schema:listing-practical",
@@ -622,6 +670,11 @@ export async function register() {
     });
     recordStartupStep({
       name: "schema:trip-truth",
+      status: "skipped",
+      detail: "DSA_DISABLE_SCHEMA_MIGRATION=1",
+    });
+    recordStartupStep({
+      name: "schema:trip-documents",
       status: "skipped",
       detail: "DSA_DISABLE_SCHEMA_MIGRATION=1",
     });

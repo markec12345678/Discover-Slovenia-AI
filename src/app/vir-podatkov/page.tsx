@@ -12,6 +12,12 @@ import {
   type ProviderProductionStatus,
   type UserFacingStatus,
 } from "@/lib/supply/production-status";
+import {
+  bookingCapabilityMatrix,
+  CAPABILITY_CELL_LABELS,
+  CAPABILITY_COLUMN_LABELS,
+  type CapabilityCell,
+} from "@/lib/supply/capability-matrix";
 
 /**
  * /vir-podatkov — seznam virov podatkov (E-E-A-T).
@@ -85,6 +91,34 @@ const PROD_STATUS_BADGE_CLASS: Record<UserFacingStatus, string> = {
 
 /** Skupine registra (lokalni odprti viri / lastna tržnica / partnerji). */
 const REGISTRY_GROUPS = ["local", "own", "commercial"] as const;
+
+/** Barvne oznake celic §5 matrike (iskrenost: barva IZPELJANA iz statusa). */
+const CAPABILITY_CELL_CLASS: Record<CapabilityCell, string> = {
+  LIVE: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
+  CODE_READY:
+    "bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300",
+  ARCHITECTURE:
+    "bg-muted text-muted-foreground",
+  USER_ATTESTED:
+    "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+  NOT_SUPPORTED: "bg-muted/60 text-muted-foreground/80",
+  NOT_APPLICABLE: "text-muted-foreground/50",
+  NOT_RUN: "bg-muted/40 text-muted-foreground/70",
+};
+
+/** Vrstni red stolpcev §5 matrike (po naročniku). */
+const CAPABILITY_COLUMNS = [
+  "discovery",
+  "affiliate",
+  "apiSearch",
+  "quote",
+  "booking",
+  "cancellation",
+  "webhook",
+  "refund",
+  "credentials",
+  "e2e",
+] as const;
 
 export default async function DataSourcePage() {
   const t = await getTranslations("dataSources");
@@ -211,6 +245,111 @@ export default async function DataSourcePage() {
               {t("prodLegendTitle")}
             </h3>
             <p className="text-xs text-muted-foreground">{t("prodLegend")}</p>
+          </div>
+        </section>
+
+        {/* ISSUE #4 §5 (1.96.0): ZMOŽNOSTNA MATRIKA REZERVACIJSKE PLASTI —
+            formalizacija README razlikovanj (CODE READY adapterji,
+            affiliate /go, neaktivne API integracije, booking lifecycle) v
+            naročnikovo matriko 11 stolpcev. Izpeljana IZ REGISTRA/matrike
+            (en vir resnice) — nikoli „živo“ brez dejanskega živega odgovora
+            providerja (testovno varovana invarianta). */}
+        <section aria-labelledby="capability-matrix" className="mt-12">
+          <h2 id="capability-matrix" className="text-2xl font-bold mb-3">
+            {t("capabilityTitle")}
+          </h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            {t("capabilityIntro")}
+          </p>
+
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-xs border-collapse min-w-[900px]">
+              <thead>
+                <tr className="bg-muted/50">
+                  <th scope="col" className="text-left font-semibold p-2 border-b border-border sticky left-0 bg-muted/50">
+                    {CAPABILITY_COLUMN_LABELS.provider[lang]}
+                  </th>
+                  {CAPABILITY_COLUMNS.map((col) => (
+                    <th
+                      key={col}
+                      scope="col"
+                      className="text-left font-semibold p-2 border-b border-border whitespace-nowrap"
+                    >
+                      {CAPABILITY_COLUMN_LABELS[col][lang]}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {bookingCapabilityMatrix().map((row) => {
+                  const label =
+                    row.slug === "manual"
+                      ? t("capabilityManual")
+                      : PROVIDER_REGISTRY.find((p) => p.slug === row.slug)
+                          ?.labels[lang] ?? row.slug;
+                  return (
+                    <tr key={row.slug} className="align-top">
+                      <th
+                        scope="row"
+                        className="text-left font-medium p-2 border-b border-border/60 whitespace-nowrap"
+                      >
+                        {label}
+                      </th>
+                      {CAPABILITY_COLUMNS.map((col) => {
+                        if (col === "credentials") {
+                          const creds = row.credentials;
+                          const text =
+                            creds.missingEnvVars.length === 0
+                              ? creds.productionConfigured
+                                ? t("capabilityCredsPresent")
+                                : t("capabilityCredsNone")
+                              : t("capabilityCredsMissing", {
+                                  vars: creds.missingEnvVars.join(", "),
+                                });
+                          return (
+                            <td
+                              key={col}
+                              className="p-2 border-b border-border/60 whitespace-nowrap"
+                            >
+                              <span
+                                className={
+                                  creds.missingEnvVars.length === 0 &&
+                                  creds.productionConfigured
+                                    ? "text-green-700 dark:text-green-400"
+                                    : "text-muted-foreground"
+                                }
+                              >
+                                {text}
+                              </span>
+                            </td>
+                          );
+                        }
+                        const cell = row[col] as CapabilityCell;
+                        return (
+                          <td
+                            key={col}
+                            className="p-2 border-b border-border/60 whitespace-nowrap"
+                            title={row.note}
+                          >
+                            <span
+                              className={`inline-block px-1.5 py-0.5 rounded font-medium ${CAPABILITY_CELL_CLASS[cell]}`}
+                            >
+                              {CAPABILITY_CELL_LABELS[cell][lang]}
+                            </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-border bg-muted/30 p-4">
+            <p className="text-xs text-muted-foreground">
+              {t("capabilityLegend")}
+            </p>
           </div>
         </section>
 

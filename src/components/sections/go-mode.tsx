@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
 import {
   AlertTriangle,
+  CalendarCheck,
   ChevronDown,
   ChevronUp,
   CloudSun,
@@ -113,6 +114,13 @@ const L = {
   complete: { sl: "Opravi", en: "Done" },
   restore: { sl: "Obnovi", en: "Restore" },
   laterDays: { sl: "Naslednji dnevi", en: "Coming days" },
+  // ISSUE #4 §16 (val 4): dnevna navigacija — preklapljanje dni.
+  dayNav: { sl: "Dnevi poti", en: "Trip days" },
+  dayToday: { sl: "Danes", en: "Today" },
+  dayManual: {
+    sl: "Dan izbran ročno — »Danes« se vrne na današnji datum.",
+    en: "Day selected manually — “Today” returns to today's date.",
+  },
   stops: { sl: "postankov", en: "stops" },
   inAir: { sl: "v zraku", en: "as the crow flies" },
   toward: { sl: "proti", en: "toward" },
@@ -151,6 +159,14 @@ const L = {
   offline: {
     sl: "Načrt je shranjen na tej napravi — deluje tudi brez signala.",
     en: "The plan is stored on this device — it works offline too.",
+  },
+  // ISSUE #4 §16 (val 4): MATRIKA ZMOŽNOSTI BREZ SIGNALA — iskrena
+  // ločitev (nikoli splošna "offline" oznaka): dnevi/postanki/GPS-ure
+  // delujejo; ploščice samo že odprta območja; navigacija je zunanja
+  // aplikacija; vreme in rezervacije potrebujejo signal.
+  offlineMatrix: {
+    sl: "Brez signala: dnevi in postanki delujejo · navigacijski gumb odpre zunanjo aplikacijo · vreme potrebuje signal",
+    en: "Offline: days and stops work · the navigation button opens an external app · weather needs a signal",
   },
   // === ISSUE #4 §8 (val 2): real-time kontekst — pošteni žetoni ===
   driveFromPrev: {
@@ -391,6 +407,10 @@ export function GoMode() {
   const [done, setDone] = useState<Record<string, string>>({});
   const [now, setNow] = useState<Date | null>(null);
   const [showDone, setShowDone] = useState(false);
+  // ISSUE #4 §16 (val 4): DNEVNA NAVIGACIJA — ročno izbrani dan (null =
+  // samodejno po datumu). Preživi tick ure/geo — uporabnikova izbira je
+  // stabilna, dokler jo ne resetira (gumb »Danes«).
+  const [dayOverride, setDayOverride] = useState<number | null>(null);
   const geo = useGeolocation();
 
   useEffect(() => {
@@ -421,8 +441,11 @@ export function GoMode() {
     [record]
   );
   const view = useMemo(
-    () => (trip && now ? buildGoView(trip, now, geo.position, done) : null),
-    [trip, now, geo.position, done]
+    () =>
+      trip && now
+        ? buildGoView(trip, now, geo.position, done, { dayOverride })
+        : null,
+    [trip, now, geo.position, done, dayOverride]
   );
 
   // ----------------------------------------------------------------------
@@ -620,6 +643,73 @@ export function GoMode() {
           </div>
         </CardContent>
       </Card>
+
+      {/* === ISSUE #4 §16 (val 4): DNEVNA NAVIGACIJA — preklapljanje dni ===
+          Zahteva naročnika (§16): "navigate days" tudi brez signala —
+          prej je bil aktiven dan SAMODEN (po datumu) in so bili kasnejši
+          dnevi le bralni povzetek. Zdaj: čipi vseh dni + gumb »Danes«
+          (vrne samodejno izbiro); izbira preživi tick ure/GPS. */}
+      {view.daySwitcher.length > 0 && (
+        <Card>
+          <CardContent className="space-y-2 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {t(L.dayNav)}
+              </p>
+              {view.dayManuallySelected && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setDayOverride(null)}
+                  aria-label={t(L.dayToday)}
+                >
+                  <CalendarCheck className="h-4 w-4" aria-hidden />
+                  {t(L.dayToday)}
+                </Button>
+              )}
+            </div>
+            <div
+              className="flex flex-wrap gap-2"
+              role="group"
+              aria-label={t(L.dayNav)}
+            >
+              {view.daySwitcher.map((d) => {
+                const isSelected =
+                  view.dayManuallySelected && d.index === dayOverride;
+                const isAuto =
+                  !view.dayManuallySelected &&
+                  d.label.sl === view.activeDayLabel.sl;
+                return (
+                  <button
+                    key={d.index}
+                    type="button"
+                    onClick={() => setDayOverride(d.index)}
+                    aria-pressed={isSelected || isAuto}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      isSelected || isAuto
+                        ? "border-emerald-600 bg-emerald-50 text-emerald-800 dark:border-emerald-500/60 dark:bg-emerald-950 dark:text-emerald-300"
+                        : "border-border bg-background text-muted-foreground hover:border-emerald-600/40 hover:text-foreground"
+                    }`}
+                  >
+                    {t(d.label)}
+                    {d.isToday && (
+                      <span
+                        className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300"
+                        title={t(L.dayToday)}
+                      >
+                        {t(L.dayToday)}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {view.dayManuallySelected && (
+              <p className="text-xs text-muted-foreground">{t(L.dayManual)}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* === GPS NADZOR === */}
       <Card>
@@ -1112,6 +1202,9 @@ export function GoMode() {
             </Link>
           </>
         )}
+        {/* ISSUE #4 §16 (val 4): matrika zmožnosti — iskrena ločitev
+            kaj dela brez signala (ne splošna "offline" oznaka). */}
+        <span className="mt-1 block">{t(L.offlineMatrix)}</span>
       </p>
     </div>
   );

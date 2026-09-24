@@ -1076,7 +1076,14 @@
     "prodAvailabilityLabel": "Availability",
     "prodMonetizationLabel": "Monetization",
     "prodLegendTitle": "What the statuses mean",
-    "prodLegend": "Live data: the provider's data actually flows into our system. Configured: access is set up, live verification is still pending. Not configured: self-serve access exists, but the key has not been entered yet. Partner approval required: the API requires an application/contract with the provider. Affiliate link only: the source has no inventory API — a link is NOT inventory."
+    "prodLegend": "Live data: the provider's data actually flows into our system. Configured: access is set up, live verification is still pending. Not configured: self-serve access exists, but the key has not been entered yet. Partner approval required: the API requires an application/contract with the provider. Affiliate link only: the source has no inventory API — a link is NOT inventory.",
+    "capabilityTitle": "Booking layer capability matrix",
+    "capabilityIntro": "A formalization of each provider's state per the §5 matrix: discovery, affiliate, API search, quote, booking, cancellation, webhook, refund, credentials and E2E evidence. A “live” status means an actual live provider response — published “from” prices are NOT live quotes, a user's document import is NOT a provider confirmation. The matrix derives from the same registry that powers the supply map (no manual upkeep).",
+    "capabilityLegend": "live = actual live source response · coded, awaiting access = adapter wired, empty without credentials/approval · architecture (0 live) = state machine/channel exists, zero live calls · user-attested = manual entry/document import (the document is the attestation) · not supported = the source lacks this capability · not applicable = meaningless for this source · E2E not run = browser proof not yet performed",
+    "capabilityCredsPresent": "configured",
+    "capabilityCredsNone": "not required",
+    "capabilityCredsMissing": "missing: {vars}",
+    "capabilityManual": "Manual entry / document import"
   },
   "demoScenarios": {
     "badge": "Try it in 30 seconds",

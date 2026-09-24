@@ -943,3 +943,29 @@ CREATE INDEX "TripExpense_shareId_idx" ON "TripExpense"("shareId");
 
 -- CreateIndex
 CREATE INDEX "TripExpense_kind_idx" ON "TripExpense"("kind");
+
+
+-- CreateTable (ISSUE #4 §15 val 4 — dokumenti poti: metapodatki, NE binarna vsebina)
+CREATE TABLE "TripDocument" (
+    "id" TEXT NOT NULL,
+    "shareId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "format" TEXT NOT NULL,
+    "source" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "note" TEXT,
+    "url" TEXT,
+    "bookingId" TEXT,
+    "dayIndex" INTEGER,
+    "authorName" TEXT,
+    "authorClientId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "TripDocument_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "TripDocument_shareId_idx" ON "TripDocument"("shareId");
+
+-- CreateIndex
+CREATE INDEX "TripDocument_type_idx" ON "TripDocument"("type");

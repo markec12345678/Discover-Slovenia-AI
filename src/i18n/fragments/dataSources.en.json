@@ -66,6 +66,13 @@
     "meta": {
       "title": "Data sources",
       "description": "The list of data sources used by the Discover Slovenia AI platform."
-    }
+    },
+    "capabilityTitle": "Booking layer capability matrix",
+    "capabilityIntro": "A formalization of each provider's state per the §5 matrix: discovery, affiliate, API search, quote, booking, cancellation, webhook, refund, credentials and E2E evidence. A “live” status means an actual live provider response — published “from” prices are NOT live quotes, a user's document import is NOT a provider confirmation. The matrix derives from the same registry that powers the supply map (no manual upkeep).",
+    "capabilityLegend": "live = actual live source response · coded, awaiting access = adapter wired, empty without credentials/approval · architecture (0 live) = state machine/channel exists, zero live calls · user-attested = manual entry/document import (the document is the attestation) · not supported = the source lacks this capability · not applicable = meaningless for this source · E2E not run = browser proof not yet performed",
+    "capabilityCredsPresent": "configured",
+    "capabilityCredsNone": "not required",
+    "capabilityCredsMissing": "missing: {vars}",
+    "capabilityManual": "Manual entry / document import"
   }
 }

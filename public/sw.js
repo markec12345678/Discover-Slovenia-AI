@@ -1,15 +1,15 @@
 // Service worker za Discover Slovenia AI — F5.7 (PWA offline načrt).
 //
-// VERZIJA SKRIPTE: sw2 (1.95.1, 25. 9. 2026) — VSEBINSKI BUMP (samo
+// VERZIJA SKRIPTE: sw3 (1.96.0, 25. 9. 2026) — VSEBINSKI BUMP (samo
 // komentar, logika nespremenjena): browser namesti novo generacijo SW LE,
-// kadar se bajti skripte RAZLIKUJOJO od nameščene. Popravek belega
-// zemljevida na produkciji (1.95.0) je v CSP GLAVI odgovora /sw.js —
-// CSP se aplicira na kontekst SW ob NAMESTITVI skripte, zato je ta bump
-// OBVEZEN, da že-nameščeni SW-ji (stara connect-src 'self' blob:, ki
-// blokira tile.openstreetmap.org → bela slika) prevzamejo novo politiko
-// (connect-src 'self' blob: https: — sw.js dobi lastno glavo v
-// next.config.ts headers()). updateViaCache: "none" v sw-register.tsx
-// zagotavlja, da se ta datoteka VEDNO preveri prek omrežja.
+// kadar se bajti skripte RAZLIKUJEJO od nameščene. ISSUE #4 §16 (val 4)
+// je POSODOBIL public/offline.html (Go Mode zapisi V2 + matrika zmožnosti
+// brez signala) — offline.html je PREDPOMNJEN ob namestitvi (precache),
+// zato je ta bump OBVEZEN, da že-nameščeni SW-ji prevzamejo novo različico.
+// (Prejšnji bump sw2/1.95.1: CSP glava /sw.js — connect-src 'self' blob:
+// https:, ki omogoča ploščice OpenStreetMap v SW kontekstu.)
+// updateViaCache: "none" v sw-register.tsx zagotavlja, da se ta datoteka
+// VEDNO preveri prek omrežja.
 //
 // STRATEGIJE (po vrsti ujemanja):
 //   1. /api/itinerary/shared/*  → network-first + offline fallback iz cache-a

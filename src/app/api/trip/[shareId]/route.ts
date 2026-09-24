@@ -212,6 +212,7 @@ export async function GET(
       diaryCount,
       bookings,
       expenses,
+      documents,
     ] = await Promise.all([
       db.savedItinerary.findUnique({
         where: { shareId },
@@ -259,6 +260,26 @@ export async function GET(
         where: { shareId },
         select: { kind: true, amountEur: true },
         take: 200,
+      }),
+      // ISSUE #4 §15 (val 4): dokumenti poti (metapodatki — javna polja
+      // brez avtorjevega clientId; isti izris kot /pot plošča).
+      db.tripDocument.findMany({
+        where: { shareId },
+        select: {
+          id: true,
+          type: true,
+          format: true,
+          source: true,
+          title: true,
+          note: true,
+          url: true,
+          bookingId: true,
+          dayIndex: true,
+          authorName: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "asc" },
+        take: 100,
       }),
     ]);
 
@@ -385,6 +406,21 @@ export async function GET(
       // ISSUE #4 §14 (val 3): proračun poti (5 vedric — planned ocena,
       // booked/paid denar, perPerson samo ob znani skupini).
       budget,
+      // ISSUE #4 §15 (val 4): seznam dokumentov poti (type/source/createdAt
+      // + povezava na rezervacijo — §15 zahtevana polja v agregatorju).
+      documents: documents.map((doc) => ({
+        id: doc.id,
+        type: doc.type,
+        format: doc.format,
+        source: doc.source,
+        title: doc.title,
+        note: doc.note,
+        url: doc.url,
+        bookingId: doc.bookingId,
+        dayIndex: doc.dayIndex,
+        authorName: doc.authorName,
+        createdAt: doc.createdAt.toISOString(),
+      })),
       ...(collaborators !== undefined ? { collaborators } : {}),
     });
   } catch (error) {

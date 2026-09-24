@@ -22,6 +22,7 @@ export interface AuditLogParams {
   // ISSUE #4 §13: "trip" | "trip_collaborator" — sodelovanje na poti
   // ISSUE #4 §4+§14 (val 3): "journey_booking" | "trip_expense" —
   // rezervacije in stroški na poti
+  // ISSUE #4 §15 (val 4): "trip_document" — dokumenti poti (metapodatki)
   resourceType:
     | "listing"
     | "product"
@@ -34,7 +35,8 @@ export interface AuditLogParams {
     | "trip"
     | "trip_collaborator"
     | "journey_booking"
-    | "trip_expense";
+    | "trip_expense"
+    | "trip_document";
   resourceId?: string;
   resourceName?: string;
   metadata?: Record<string, unknown>;
@@ -102,4 +104,7 @@ export const AUDIT_ACTIONS = {
   RESERVATION_IMPORT_CONFIRMED: "reservation_import_confirmed",
   TRIP_EXPENSE_ADDED: "trip_expense_added",
   TRIP_EXPENSE_REMOVED: "trip_expense_removed",
+  // ISSUE #4 §15 (val 4) — dokumenti poti (metapodatki + povezava)
+  TRIP_DOCUMENT_ADDED: "trip_document_added",
+  TRIP_DOCUMENT_REMOVED: "trip_document_removed",
 } as const;

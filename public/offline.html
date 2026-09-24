@@ -124,6 +124,26 @@
 
   footer.note { margin-top: 40px; font-size: .78rem; color: var(--text-muted); }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+  /* ISSUE #4 §16 (val 4): MATRIKA ZMOŽNOSTI BREZ SIGNALA — naročnikova
+     zahteva: loči offline podatke / ploščice / navigacijo / vreme /
+     rezervacije (NIKOLI splošna oznaka "offline" za del aplikacije). */
+  .cap {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; margin-top: 28px;
+  }
+  .cap h2 { margin-bottom: 8px; }
+  .cap ul { list-style: none; margin: 0; padding: 0; font-size: .85rem; }
+  .cap li {
+    display: flex; gap: 10px; align-items: baseline;
+    padding: 5px 0; border-top: 1px solid var(--border);
+  }
+  .cap li:first-child { border-top: 0; }
+  .cap li strong { flex: none; min-width: 148px; }
+  .cap .ok { color: var(--primary); font-weight: 700; flex: none; }
+  .cap .part { color: var(--amber); font-weight: 700; flex: none; }
+  .cap .no { color: var(--text-muted); font-weight: 700; flex: none; }
+  .cap li span.note { color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -159,6 +179,13 @@
   <section id="last-section" aria-labelledby="t-last-title" hidden>
     <h2 id="t-last-title"><span id="t-last">Zadnji načrt (ne shranjen)</span></h2>
     <div id="last-plan"></div>
+  </section>
+
+  <!-- ISSUE #4 §16 (val 4): MATRIKA ZMOŽNOSTI — iskrena ločitev kaj dela
+       brez signala (NE splošna "offline" oznaka). -->
+  <section class="cap" aria-labelledby="t-cap-title">
+    <h2 id="t-cap-title"><span id="t-cap">Kaj dela brez signala</span></h2>
+    <ul id="cap-list"></ul>
   </section>
 
   <div class="actions">
@@ -204,7 +231,15 @@
       tips: "Nasveti", saved: "shranjeno", generated: "ustvarjeno",
       minutes: "min", weather: "vreme", budgetCur: "€",
       footnote: "Prikazani so načrti, shranjeni na tej napravi (vir: vaš brskalnik). Številke se brez povezave ne posodabljajo — za sveže podatke se povežite.",
-      langAttr: "sl"
+      langAttr: "sl",
+      capTitle: "Kaj dela brez signala",
+      capRows: [
+        { k: "Podatki načrtov", v: "deluje", cls: "ok", n: "shranjeni načrti na tej napravi (načrtovalec, Moji načrti, Na poti — dnevi in postanki)" },
+        { k: "Zemljevid (ploščice)", v: "delno", cls: "part", n: "samo območja, ki si jih že odpral online" },
+        { k: "Navigacija do postanka", v: "zunaj", cls: "part", n: "gumb odpre Google Maps / aplikacijo zemljevida — prevzame nameščena aplikacija" },
+        { k: "Vreme", v: "samo povezava", cls: "no", n: "živi Open-Meteo — brez signala pokažemo zadnje znano / iskreno sporočilo" },
+        { k: "Rezervacije", v: "samo povezava", cls: "no", n: "zaključek nakupa je pri ponudniku (zunanja povezava)" }
+      ]
     },
     en: {
       title: "You're offline",
@@ -222,7 +257,15 @@
       tips: "Tips", saved: "saved", generated: "generated",
       minutes: "min", weather: "weather", budgetCur: "€",
       footnote: "Shown are plans stored on this device (source: your browser). Numbers do not refresh while offline — reconnect for fresh data.",
-      langAttr: "en"
+      langAttr: "en",
+      capTitle: "What works offline",
+      capRows: [
+        { k: "Plan data", v: "works", cls: "ok", n: "plans saved on this device (planner, My plans, On-the-road — days and stops)" },
+        { k: "Map tiles", v: "partial", cls: "part", n: "only areas you already opened online" },
+        { k: "Navigation to a stop", v: "external", cls: "part", n: "the button opens Google Maps / your map app — the installed app takes over" },
+        { k: "Weather", v: "online only", cls: "no", n: "live Open-Meteo — offline shows last known / an honest notice" },
+        { k: "Bookings", v: "online only", cls: "no", n: "checkout happens at the provider (external link)" }
+      ]
     }
   };
   var T = I18N[LANG];
@@ -238,6 +281,17 @@
   document.getElementById("t-footnote").textContent = T.footnote;
   document.getElementById("t-go").textContent = T.go;
   document.getElementById("go-notcached").textContent = T.goNotCached;
+
+  // ISSUE #4 §16 (val 4): MATRIKA ZMOŽNOSTI — iskrena ločitev (nikoli
+  // splošna "offline" oznaka za del aplikacije).
+  document.getElementById("t-cap").textContent = T.capTitle;
+  var capList = document.getElementById("cap-list");
+  if (capList) {
+    capList.innerHTML = T.capRows.map(function (r) {
+      return '<li><strong>' + esc(r.k) + '</strong><span class="' + r.cls + '">' +
+        esc(r.v) + '</span><span class="note">' + esc(r.n) + "</span></li>";
+    }).join("");
+  }
 
   document.getElementById("btn-retry").addEventListener("click", function () {
     window.location.reload();
@@ -509,26 +563,48 @@
 
   // --- 0) GO MODE: aktivno potovanje (dai:go-trip) — sopotnik »Na poti«. ---
   // isto shranišče kot go-persist.ts (TASK 64); validacija ogleda RAVNO
-  // ključe, ki jih persistenca piše (version/savedAt/journey/selectedIds).
+  // ključe, ki jih persistenca piše. ISSUE #4 §16 (val 4): PODPORA V2 —
+  // zapisi AI itinererjev (MyTripView iz »Zaženi Na poti« na /pot) so
+  // prej bili ZAVRNJENI (version !== 1) → offline.html ni izrisal NIČ.
+  // Zdaj: v1 (journey/selectedIds) OSTAJA nespremenjen; v2 (view.days) se
+  // izriše iz days[].entries[] (ISTE polje kot GoMode — naslovi + realni
+  // časi, 0 izumljenih podatkov).
   function readGoTrip() {
     try {
       var raw = window.localStorage.getItem("dai:go-trip");
       if (!raw) return null;
       var rec = JSON.parse(raw);
       if (!rec || typeof rec !== "object" || Array.isArray(rec)) return null;
-      if (rec.version !== 1 || typeof rec.savedAt !== "string") return null;
-      var j = rec.journey;
-      if (!j || typeof j !== "object") return null;
-      if (typeof j.id !== "string" || (j.lang !== "sl" && j.lang !== "en")) return null;
-      if (!j.origin || !j.destination ||
-          typeof j.origin.label !== "string" ||
-          typeof j.destination.label !== "string") return null;
-      if (!j.categories || typeof j.categories !== "object") return null;
-      if (!Array.isArray(rec.selectedIds) ||
-          !rec.selectedIds.every(function (id) { return typeof id === "string"; })) {
-        return null;
+      if (typeof rec.savedAt !== "string") return null;
+      if (rec.version === 1) {
+        var j = rec.journey;
+        if (!j || typeof j !== "object") return null;
+        if (typeof j.id !== "string" || (j.lang !== "sl" && j.lang !== "en")) return null;
+        if (!j.origin || !j.destination ||
+            typeof j.origin.label !== "string" ||
+            typeof j.destination.label !== "string") return null;
+        if (!j.categories || typeof j.categories !== "object") return null;
+        if (!Array.isArray(rec.selectedIds) ||
+            !rec.selectedIds.every(function (id) { return typeof id === "string"; })) {
+          return null;
+        }
+        return rec;
       }
-      return rec;
+      if (rec.version === 2) {
+        if (rec.kind !== "itinerary") return null;
+        var view = rec.view;
+        if (!view || typeof view !== "object") return null;
+        if (!Array.isArray(view.days)) return null;
+        var okDays = view.days.every(function (d) {
+          return d && typeof d === "object" && Array.isArray(d.entries) &&
+            d.entries.every(function (e) {
+              return e && typeof e === "object" && typeof e.title === "string";
+            });
+        });
+        if (!okDays) return null;
+        return rec;
+      }
+      return null;
     } catch (e) { return null; }
   }
 
@@ -538,6 +614,32 @@
   // (brez datuma → izpuščeni, kot časovnica); kronološko po ISO datumu,
   // dan brez datuma (prihod brez vnosa) ostane prvi kot sidro (TASK 72).
   function goTimeline(rec) {
+    // ISSUE #4 §16 (val 4): V2 — AI itinerer (MyTripView.days). Izris iz
+    // ISTIH polj kot GoMode: naslovi vnosa + SAMO realni časi (time.start),
+  // 0 izumljenih ur/cen. dateLabel je dvojezičen vzame [LANG].
+    if (rec.version === 2) {
+      var view = rec.view;
+      var days2 = [];
+      var stops2 = 0;
+      view.days.forEach(function (d) {
+        var titles = [];
+        (d.entries || []).forEach(function (e) {
+          var t = e.title;
+          if (e.time && typeof e.time.start === "string") {
+            t = e.time.start.slice(0, 5) + " · " + t;
+          }
+          titles.push(t);
+        });
+        stops2 += titles.length;
+        days2.push({
+          date: typeof d.date === "string" ? d.date : "",
+          label: d.dateLabel && typeof d.dateLabel[LANG] === "string"
+            ? d.dateLabel[LANG] : (typeof d.date === "string" ? fmtDate(d.date) : T.goNoDate),
+          titles: titles
+        });
+      });
+      return { days: days2, stops: stops2 };
+    }
     var j = rec.journey;
     var sel = {};
     rec.selectedIds.forEach(function (id) { sel[id] = true; });
@@ -580,11 +682,16 @@
     var planEl = document.getElementById("go-plan");
     var rec = readGoTrip();
     if (!section || !planEl || !rec) return;
-    var j = rec.journey;
+    // §16: V2 naslov iz MyTripView.title (dvojezičen); V1 ostaja
+    // origin → destination.
+    var headName = rec.version === 2
+      ? (rec.view.title && typeof rec.view.title[LANG] === "string"
+          ? rec.view.title[LANG] : "—")
+      : rec.journey.origin.label + " → " + rec.journey.destination.label;
     var tl = goTimeline(rec);
     var meta = [tl.days.length + "× " + T.day.toLowerCase(), tl.stops + " " + T.stops];
     var html = '<div class="plan plan-go"><div class="plan-head"><div class="plan-name">' +
-      esc(j.origin.label) + " → " + esc(j.destination.label) + '</div><div class="plan-date">' +
+      esc(headName) + '</div><div class="plan-date">' +
       esc((T.saved + " " + fmtDate(rec.savedAt, "")).trim()) + "</div></div>" +
       '<p class="plan-meta">' + esc(meta.join(" · ")) + "</p>";
     tl.days.forEach(function (d) {
@@ -599,7 +706,16 @@
     });
     var goHref = LANG === "en" ? "/en/na-poti" : "/na-poti";
     html += '<a class="btn btn-primary btn-go" href="' + goHref + '">' +
-      esc(T.goOpen) + " →</a></div>";
+      esc(T.goOpen) + " →</a>";
+    // §16 V2 + val 2 shareId: premostitev nazaj na shranjeno pot — tudi
+    // brez signala (SW predpomni /pot HTML ob prvem obisku).
+    if (rec.version === 2 && typeof rec.shareId === "string" &&
+        /^[a-z0-9]{1,32}$/.test(rec.shareId)) {
+      var potHref = "/pot/" + encodeURIComponent(rec.shareId);
+      html += '<a class="btn btn-outline btn-go" href="' + potHref + '">' +
+        esc(T.openFull) + " →</a>";
+    }
+    html += "</div>";
     planEl.innerHTML = html;
     section.hidden = false;
     // ISKRENOST: ali se bo stran »Na poti« sploh odprla brez signala?
