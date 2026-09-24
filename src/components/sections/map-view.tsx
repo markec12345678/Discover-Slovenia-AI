@@ -31,6 +31,7 @@ import {
   CarTaxiFront,
   Compass,
   Bus,
+  Fuel,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,9 +41,10 @@ import { cn } from "@/lib/utils";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
 import type { Destination, DestinationType } from "@/lib/types";
 import { useAppStore } from "@/lib/store";
-import { taxonomyOf, DEFAULT_SUPPLY_TYPES } from "@/lib/supply/taxonomy";
+import { taxonomyOf } from "@/lib/supply/taxonomy";
 import type { ProductType, ProviderProduct } from "@/lib/supply/types";
 import { useSupplyQuery } from "@/lib/supply/use-supply-query";
+import { useMapPins } from "@/lib/map-pins-client";
 import { SUPPLY_MIN_ZOOM } from "@/lib/supply/zoom";
 import { getProvider } from "@/lib/supply/registry";
 import { addProductToSelection } from "@/lib/supply/selection";
@@ -62,6 +64,13 @@ const TYPE_ICONS: Record<DestinationType, string> = {
   castle: "🏰",
 };
 
+// === Privzeti pogled: Slovenija + zahodni Balkan (1.95.1) =================
+// Bbox 38 uredniških destinacij (SI+HR+ME+AL — TASK 62) — zemljevid se
+// odpri na CELI regiji, ne samo Sloveniji. Center je rezerva za L.map()
+// pred fitBounds (fitBounds se prilagodi dejanski velikosti kontejnerja).
+const BALKANS_BOUNDS = L.latLngBounds([39.88, 13.57], [46.67, 20.14]);
+const BALKANS_CENTER: [number, number] = [43.3, 16.9];
+
 // === Dvojezični nizi zemljevida (1.48) — T (prevodi), ker je L že Leaflet ===
 // (locale je stabilen za življenjsko dobo komponente: sprememba jezika =
 // navigacija = remount; vseeno je v deps Effectov, da so popup-i iz LEAFLET
@@ -75,6 +84,7 @@ const T = {
   catRestaurant: { sl: "Hrana & pijača", en: "Food & drink" },
   catAccommodation: { sl: "Nastanitve", en: "Stays" },
   catShop: { sl: "Trgovine", en: "Shops" },
+  catPetrol: { sl: "Bencinske", en: "Petrol" },
   // TASK 45: aktivnosti/ture (Viator Partner API) — izrecna izbira
   // (default: false; naročniška zahteva §9: sloj OFF → 0 API klicev).
   catActivity: { sl: "Aktivnosti", en: "Activities" },
@@ -93,8 +103,8 @@ const T = {
     en: "Filter POI categories",
   },
   emptyText: {
-    sl: "Vse kategorije so izklopljene — POI-ji niso prikazani.",
-    en: "All categories are off — no POIs are shown.",
+    sl: "Vse kategorije so izklopljene — točke niso prikazane.",
+    en: "All categories are off — no places are shown.",
   },
   emptyReset: { sl: "Prikaži privzeto", en: "Show defaults" },
   loadingPois: { sl: "Nalagam POI-je…", en: "Loading POIs…" },
@@ -103,8 +113,8 @@ const T = {
     en: "POIs could not be loaded. Try again later.",
   },
   mapAria: {
-    sl: "Interaktivni zemljevid slovenskih destinacij in točk interesa",
-    en: "Interactive map of Slovenian destinations and points of interest",
+    sl: "Interaktivni zemljevid Slovenije in Balkana z destinacijami, bencinskimi, restavracijami in nastanitvami",
+    en: "Interactive map of Slovenia and the Balkans with destinations, petrol stations, restaurants and stays",
   },
   infoDestUnit: { sl: "destinacij", en: "destinations" },
   infoClickMarker: { sl: "Klikni marker", en: "Tap a marker" },
@@ -130,6 +140,32 @@ const T = {
     sl: "Ni internetne povezave — destinacije ostajajo na voljo.",
     en: "You appear to be offline — destinations remain available.",
   },
+  // MAP PINS sloj (1.95.1) — statični FSQ: bencinske/restavracije/
+  // nastanitve SI+HR+ME+AL.
+  pinsUnit: { sl: "točk", en: "places" },
+  pinsCappedHint: {
+    sl: "Prikazanih najboljše ocenjenih — približajte za vse.",
+    en: "Showing best-rated — zoom in for all.",
+  },
+  pinsError: {
+    sl: "Točk ni bilo mogoče naložiti — premaknite zemljevid in poskusite znova.",
+    en: "Places could not be loaded — move the map and try again.",
+  },
+  pinsCellTitle: {
+    sl: (n: number) => `${n} točk na tem območju`,
+    en: (n: number) => `${n} places in this area`,
+  },
+  pinsCellZoom: { sl: "Približaj to območje", en: "Zoom into this area" },
+  pinsReviews: {
+    sl: (n: number) => `${n} mnenj`,
+    en: (n: number) => `${n} reviews`,
+  },
+  // Atribucija (Apache-2.0) — ISTA vrednost kot MAP_PINS_SOURCE v
+  // src/lib/map-pins.ts (server; klient ne sme uvažati node:fs plasti).
+  pinsAttribution: {
+    sl: "Foursquare Open Places (Apache-2.0)",
+    en: "Foursquare Open Places (Apache-2.0)",
+  },
 } as const;
 
 type MapLang = keyof typeof T.allDestinations;
@@ -149,19 +185,30 @@ const POI_CATEGORIES: {
   { value: "natural", label: T.catNatural, icon: Trees, default: true },
   { value: "viewpoint", label: T.catViewpoint, icon: Eye, default: true },
   { value: "religious", label: T.catReligious, icon: Church, default: true },
+  // 1.95.1: bencinske/hrana/nastanitve/trgovine so zdaj PRIVZETO VKLOPLJENE
+  // (uporabniška zahteva: "pini vse bencinske lokali restavracije hoteli
+  // itd") — gostoto nadzoruje zoom-aware map-pins sloj (grid agregacija
+  // pri nizkem zoomu) + strežniški zoom gating supply plasti (minZoom iz
+  // taksonomije — restavracije z≥13 ipd.).
+  {
+    value: "petrol",
+    label: T.catPetrol,
+    icon: Fuel,
+    default: true,
+  },
   {
     value: "restaurant",
     label: T.catRestaurant,
     icon: Utensils,
-    default: false,
+    default: true,
   },
   {
     value: "accommodation",
     label: T.catAccommodation,
     icon: BedDouble,
-    default: false,
+    default: true,
   },
-  { value: "shop", label: T.catShop, icon: ShoppingBag, default: false },
+  { value: "shop", label: T.catShop, icon: ShoppingBag, default: true },
   {
     value: "transfer",
     label: T.catTransfer,
@@ -184,7 +231,21 @@ const POI_CATEGORIES: {
   },
 ];
 
-const DEFAULT_POI_CATS: ProductType[] = DEFAULT_SUPPLY_TYPES;
+// 1.95.1: privzete kategorije ZEMLJEVIDA (9 lokalnih tipov — "vsa mesta
+// Balkana"). NAMENOMA lokalna konstanta, NE DEFAULT_SUPPLY_TYPES (strežniški
+// privzete supply poizvedbe ostanejo nespremenjene — čipi zemljevida
+// pošljejo svojo izbiro eksplicitno).
+const DEFAULT_POI_CATS: ProductType[] = [
+  "attraction",
+  "museum",
+  "viewpoint",
+  "natural",
+  "religious",
+  "petrol",
+  "restaurant",
+  "accommodation",
+  "shop",
+];
 
 interface MapViewProps {
   /** Koordinate poti (polyline) za prikaz — npr. iz AI itinererja */
@@ -213,6 +274,10 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
   const markersRef = useRef<L.Marker[]>([]);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
   const poiLayerRef = useRef<L.MarkerClusterGroup | null>(null);
+  // 1.95.1: MAP PINS sloj — grid mehurčki (z≤10) + grozd posameznih pinov
+  // (z≥11). Ločeno od supply poiLayer (komercialni/OSR produkti z modali).
+  const gridLayerRef = useRef<L.LayerGroup | null>(null);
+  const pinsClusterRef = useRef<L.MarkerClusterGroup | null>(null);
   const [showRoute, setShowRoute] = useState(true);
   // 1.48: dvojezičnost (vzorec L iz map-section — prej hardcoded SL tudi na /en)
   const lang: MapLang = useLocale() === "en" ? "en" : "sl";
@@ -247,6 +312,15 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     zoom: viewport.zoom,
     bbox: viewport.bbox,
     locale: lang,
+  });
+
+  // 1.95.1: MAP PINS — statični FSQ sloj (bencinske/restavracije/nastanitve
+  // … SI+HR+ME+AL) — VEDNO aktiven (grid agregacija pri nizkem zoomu,
+  // posamezni pini pri z≥11). Isti cats kot supply (deljeni čipi).
+  const pins = useMapPins({
+    bbox: viewport.bbox,
+    zoom: viewport.zoom,
+    cats,
   });
 
   // Ref za dostop do najnovejših produktov iz event handlerja (closure safe)
@@ -299,13 +373,21 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     const hasZoom = hasGeo && Number.isFinite(qZoom);
 
     const map = L.map(containerRef.current, {
-      // TASK 86: center/zoom iz query (highlight lokacija), sicer Slovenija
-      center: hasGeo ? [qLat, qLng] : [46.15, 14.47],
-      zoom: hasZoom ? Math.min(16, Math.max(10, qZoom)) : 8,
+      // TASK 86: center/zoom iz query (highlight lokacija), sicer Balkan
+      // (1.95.1: privzeti pogled je Slovenija + zahodni Balkan — bbox 38
+      // uredniških destinacij; fitBounds spodaj prilagodi velikosti).
+      center: hasGeo ? [qLat, qLng] : BALKANS_CENTER,
+      zoom: hasZoom ? Math.min(16, Math.max(10, qZoom)) : 6,
       scrollWheelZoom: false, // Boljša UX na mobilnem
       zoomControl: true,
       attributionControl: true,
     });
+
+    // 1.95.1: privzeti pogled — CELA regija (Slovenija + zahodni Balkan),
+    // prilagojena dejanski velikosti kontejnerja (ne fiksen zoom).
+    if (!hasGeo) {
+      map.fitBounds(BALKANS_BOUNDS, { padding: [12, 12] });
+    }
 
     // OpenStreetMap tile layer
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -322,6 +404,17 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     // clearLayers ob menjavi viewporta (živo ugotovljeno v E2E — markerji
     // ostanejo v vrsti, DOM pa prazen); naši količine (≤ 400) so majhne.
     poiLayerRef.current = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      disableClusteringAtZoom: 15,
+      maxClusterRadius: 60,
+      spiderfyOnMaxZoom: true,
+    }).addTo(map);
+
+    // 1.95.1: MAP PINS sloji — grid mehurčki (layerGroup, z≤10) in grozd
+    // posameznih pinov (markercluster, z≥11). Ista grozdenja nastavitev kot
+    // supply sloj (enaka markercluster muha — zanesljiv izris v efektu).
+    gridLayerRef.current = L.layerGroup().addTo(map);
+    pinsClusterRef.current = L.markerClusterGroup({
       showCoverageOnHover: false,
       disableClusteringAtZoom: 15,
       maxClusterRadius: 60,
@@ -462,12 +555,14 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
       mapRef.current = null;
       markersRef.current = [];
       poiLayerRef.current = null;
+      gridLayerRef.current = null;
+      pinsClusterRef.current = null;
     };
     // lang v deps: Leaflet popup-i so template stringi, vezani ob bindanju —
     // ob (teoretični) spremembi jezika se zemljevid pobriše in znova nariše
   }, [lang]);
 
-  // Event delegation za CTA gumbe v popupih (destinacije + produkti)
+  // Event delegation za CTA gumbe v popupih (destinacije + produkti + celice)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -493,6 +588,17 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         if (dest) {
           map.closePopup();
           onOpenDestination?.(dest);
+        }
+        return;
+      }
+
+      // 1.95.1: grid celica CTA → približaj območje (z12 = posamezni pini)
+      if (target.classList.contains("map-cell-cta")) {
+        const lat = Number(target.getAttribute("data-cell-lat"));
+        const lng = Number(target.getAttribute("data-cell-lng"));
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          map.closePopup();
+          map.setView([lat, lng], 12, { animate: true });
         }
       }
     };
@@ -752,6 +858,169 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     if (map) map.addLayer(layer);
   }, [supply.products, showPois, lang]);
 
+  // === Render MAP PINS sloja (1.95.1) — statični FSQ =====================
+  // Grid mehurčki (z≤10) v gridLayer; posamezni pini (z≥11) v pinsCluster.
+  // Ista markercluster muha kot supply sloj: snemi → počisti → dodaj →
+  // vrni (zanesljiv izris). Pini dobijo zIndexOffset -200, da so supply
+  // produkti (bogatejši popup z CTA) NAD osnovnimi pini, kadar se prekrivajo.
+  // Prazne kategorije (activeCats.size === 0) pošteno skrijejo sloj
+  // (konzistentno s supply plasto in besedilom praznega stanja).
+  useEffect(() => {
+    const map = mapRef.current;
+    const cluster = pinsClusterRef.current;
+    const gridLayer = gridLayerRef.current;
+    if (!map || !cluster || !gridLayer) return;
+
+    if (cats.length === 0 || pins.error) {
+      cluster.clearLayers();
+      gridLayer.clearLayers();
+      return;
+    }
+
+    if (pins.mode === "grid") {
+      // Grid mehurčki — dominantna kategorija obarva, število pove gostoto.
+      cluster.clearLayers();
+      map.removeLayer(gridLayer);
+      gridLayer.clearLayers();
+
+      for (const cell of pins.cells) {
+        const dominant = cell.cats[0]?.type ?? "poi";
+        const meta = taxonomyOf(dominant);
+        const icon = L.divIcon({
+          className: "map-grid-bubble",
+          html: `
+            <div style="position: absolute; transform: translate(-50%, -50%); white-space: nowrap;">
+              <div style="
+                display: inline-flex; align-items: center; gap: 4px;
+                padding: 3px 9px; border-radius: 9999px;
+                background: ${meta.color}; color: white;
+                font-size: 11px; font-weight: 700;
+                border: 2px solid white;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+                font-family: sans-serif;
+              "><span style="font-size: 13px;">${meta.icon}</span>${formatPinCount(cell.count, lang)}</div>
+            </div>
+          `,
+        });
+
+        const breakdown = cell.cats
+          .map((c) => {
+            const m = taxonomyOf(c.type);
+            return `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: #374151; padding: 2px 0;">
+              <span>${m.icon} ${m.label[lang]}</span>
+              <b class="tabular-nums">${c.count}</b>
+            </div>`;
+          })
+          .join("");
+
+        const popupHtml = `
+          <div style="min-width: 190px; font-family: sans-serif;">
+            <div style="font-weight: 700; font-size: 14px; color: #1a2e1a; margin-bottom: 6px;">
+              ${T.pinsCellTitle[lang](cell.count)}
+            </div>
+            ${breakdown}
+            <button data-cell-lat="${cell.lat.toFixed(5)}" data-cell-lng="${cell.lng.toFixed(5)}" class="map-cell-cta" style="
+              width: 100%;
+              margin-top: 8px;
+              padding: 6px 10px;
+              background: #2d6a3e;
+              color: white;
+              border: none;
+              border-radius: 6px;
+              font-size: 12px;
+              font-weight: 600;
+              cursor: pointer;
+              font-family: sans-serif;
+            ">${T.pinsCellZoom[lang]}</button>
+          </div>
+        `;
+
+        L.marker([cell.lat, cell.lng], { icon, zIndexOffset: -200 })
+          .addTo(gridLayer)
+          .bindPopup(popupHtml, { maxWidth: 240, className: "grid-bubble-popup" });
+      }
+
+      map.addLayer(gridLayer);
+      return;
+    }
+
+    // Posamezni pini (z≥11) — isti vizualni jezik kot supply markerji
+    // (taksonomska ikona v barvnem krogu), a brez produktnega CTA-modal.
+    gridLayer.clearLayers();
+    map.removeLayer(cluster);
+    cluster.clearLayers();
+
+    for (const pin of pins.pins) {
+      const meta = taxonomyOf(pin.type);
+      const icon = L.divIcon({
+        className: "map-pin-marker",
+        html: `
+          <div style="transform: translateY(-50%);">
+            <div style="
+              width: 26px; height: 26px;
+              border-radius: 50%;
+              background: ${meta.color};
+              color: white;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 13px;
+              border: 2px solid white;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+              font-family: sans-serif;
+              cursor: pointer;
+            ">${meta.icon}</div>
+          </div>
+        `,
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+        popupAnchor: [0, -13],
+      });
+
+      const ratingHtml =
+        pin.rating != null
+          ? `<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 10px;">
+              <span style="font-size: 13px; font-weight: 600; color: #d97706;">★ ${pin.rating.toFixed(1)}</span>
+              ${pin.ratingCount ? `<span style="font-size: 12px; color: #6b7280;">${T.pinsReviews[lang](pin.ratingCount)}</span>` : ""}
+            </div>`
+          : "";
+
+      const popupHtml = `
+        <div style="min-width: 180px; max-width: 220px; font-family: sans-serif;">
+          <div style="font-weight: 700; font-size: 14px; color: #1a2e1a; margin-bottom: 6px; line-height: 1.3;">
+            ${escapeHtml(pin.name)}
+          </div>
+          <span style="
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: ${meta.color};
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 8px;
+          ">${meta.icon} ${meta.label[lang]}${pin.sub ? ` · ${escapeHtml(pin.sub)}` : ""}</span>
+          ${ratingHtml}
+          <div style="font-size: 10px; color: #9ca3af; margin-top: 4px; border-top: 1px solid #f3f4f6; padding-top: 6px;">
+            ${T.pinsAttribution[lang]}
+          </div>
+        </div>
+      `;
+
+      L.marker([pin.lat, pin.lng], {
+        icon,
+        title: pin.name,
+        zIndexOffset: -200,
+      })
+        .addTo(cluster)
+        .bindPopup(popupHtml, { maxWidth: 240, className: "map-pin-popup" });
+    }
+
+    map.addLayer(cluster);
+  }, [pins.mode, pins.cells, pins.pins, pins.error, cats.length, lang]);
+
   const toggleCat = (cat: ProductType) => {
     const wasOn = activeCats.has(cat);
     setActiveCats((prev) => {
@@ -776,7 +1045,8 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
   };
 
   const handleResetView = () => {
-    mapRef.current?.setView([46.15, 14.47], 8);
+    // 1.95.1: ponastavitev = CELA regija (Slovenija + zahodni Balkan)
+    mapRef.current?.fitBounds(BALKANS_BOUNDS, { padding: [12, 12] });
   };
 
   const handleShowAll = () => {
@@ -886,59 +1156,70 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
       </div>
 
       {/* POI category chips — multi-select s števci (iskreni: iz supply
-          counts), usklajeno s čip vzorcem klepeta. */}
-      {showPois ? (
-        <div className="absolute bottom-12 left-3 z-[1000] max-w-[calc(100%-1.5rem)] rounded-md border border-border bg-background/95 p-1.5 shadow-md backdrop-blur sm:max-w-[calc(100%-9rem)]">
-          <div
-            role="group"
-            aria-label={T.chipsAria[lang]}
-            className="flex flex-wrap gap-1"
-          >
-            {POI_CATEGORIES.map(({ value, label, icon: Icon }) => {
-              const on = activeCats.has(value);
-              const count = supply.products.filter((p) => p.type === value).length;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => toggleCat(value)}
-                  aria-pressed={on}
-                  title={label[lang]}
-                  className={cn(
-                    "flex min-h-7 shrink-0 items-center gap-1 rounded-full border px-2 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    on
-                      ? "border-primary/30 bg-primary/10 text-foreground"
-                      : "border-border/60 bg-transparent text-muted-foreground opacity-60"
-                  )}
-                >
-                  <Icon className="size-3 shrink-0" aria-hidden />
-                  <span className="truncate">{label[lang]}</span>
-                  {on && !supply.loading ? (
-                    <span className="shrink-0 tabular-nums opacity-70">
-                      {count}
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-          {/* Prazno stanje — iskren opis + reset (vzorec iz klepeta 1.46) */}
-          {activeCats.size === 0 ? (
-            <div className="mt-1 flex items-center justify-between gap-2 border-t border-border/60 pt-1">
-              <p className="text-[10px] leading-snug text-muted-foreground">
-                {T.emptyText[lang]}
-              </p>
+          counts), usklajeno s čip vzorcem klepeta. 1.95.1: vidni VEDNO —
+          nadzorujejo statični map-pins sloj (bencinske/hrana/nastanitve …)
+          IN supply sloj (isti kanonski tipi). */}
+      <div className="absolute bottom-12 left-3 z-[1000] max-w-[calc(100%-1.5rem)] rounded-md border border-border bg-background/95 p-1.5 shadow-md backdrop-blur sm:max-w-[calc(100%-9rem)]">
+        <div
+          role="group"
+          aria-label={T.chipsAria[lang]}
+          className="flex flex-wrap gap-1"
+        >
+          {POI_CATEGORIES.map(({ value, label, icon: Icon }) => {
+            const on = activeCats.has(value);
+            const count = supply.products.filter((p) => p.type === value).length;
+            return (
               <button
+                key={value}
                 type="button"
-                onClick={resetCats}
-                className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium text-foreground transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => toggleCat(value)}
+                aria-pressed={on}
+                title={label[lang]}
+                className={cn(
+                  "flex min-h-7 shrink-0 items-center gap-1 rounded-full border px-2 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  on
+                    ? "border-primary/30 bg-primary/10 text-foreground"
+                    : "border-border/60 bg-transparent text-muted-foreground opacity-60"
+                )}
               >
-                {T.emptyReset[lang]}
+                <Icon className="size-3 shrink-0" aria-hidden />
+                <span className="truncate">{label[lang]}</span>
+                {on && showPois && !supply.loading ? (
+                  <span className="shrink-0 tabular-nums opacity-70">
+                    {count}
+                  </span>
+                ) : null}
               </button>
-            </div>
-          ) : null}
+            );
+          })}
         </div>
-      ) : null}
+        {/* Iskrene opombe slojev: kap posameznih pinov / napaka / prazno
+            stanje — enovrstične, nevsiljive. */}
+        {activeCats.size === 0 ? (
+          <div className="mt-1 flex items-center justify-between gap-2 border-t border-border/60 pt-1">
+            <p className="text-[10px] leading-snug text-muted-foreground">
+              {T.emptyText[lang]}
+            </p>
+            <button
+              type="button"
+              onClick={resetCats}
+              className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium text-foreground transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {T.emptyReset[lang]}
+            </button>
+          </div>
+        ) : null}
+        {activeCats.size > 0 && pins.mode === "pins" && pins.capped ? (
+          <p className="mt-1 border-t border-border/60 pt-1 text-[10px] leading-snug text-muted-foreground">
+            {T.pinsCappedHint[lang]}
+          </p>
+        ) : null}
+        {activeCats.size > 0 && pins.error ? (
+          <p className="mt-1 border-t border-border/60 pt-1 text-[10px] leading-snug text-amber-700 dark:text-amber-400">
+            {T.pinsError[lang]}
+          </p>
+        ) : null}
+      </div>
 
       {/* Loading spinner za supply poizvedbo (zgornji levi, ne blokira) */}
       {supply.loading && showPois ? (
@@ -966,11 +1247,24 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         </div>
       ) : null}
 
-      {/* Info badge (spodaj levo) */}
+      {/* Info badge (spodaj levo) — 1.95.1: + števec statičnih točk (FSQ)
+          z atribucijo v title (licenca Apache-2.0). */}
       <div className="absolute bottom-3 left-3 z-[1000] rounded-lg border border-border bg-background/95 px-3 py-2 text-xs shadow-md backdrop-blur">
         <div className="flex items-center gap-2">
           <Star className="size-3.5 fill-amber-400 text-amber-400" />
           <span className="font-medium">{DESTINATIONS.length} {T.infoDestUnit[lang]}</span>
+          {activeCats.size > 0 && pins.dataset?.installed && pins.total > 0 ? (
+            <>
+              <span className="text-muted-foreground">·</span>
+              <Badge
+                variant="outline"
+                className="max-w-[240px] truncate text-[10px]"
+                title={T.pinsAttribution[lang]}
+              >
+                {formatPinCount(pins.total, lang)} {T.pinsUnit[lang]}
+              </Badge>
+            </>
+          ) : null}
           {showPois && supply.products.length > 0 ? (
             <>
               <span className="text-muted-foreground">·</span>
@@ -979,7 +1273,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
               </Badge>
             </>
           ) : null}
-          {!showPois ? (
+          {!showPois && pins.total === 0 ? (
             <Badge variant="outline" className="text-[10px]">
               {T.infoClickMarker[lang]}
             </Badge>
@@ -1004,6 +1298,19 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+/** Formatiranje števca točk (1.95.1): "12,5k" (SL) / "12.5k" (EN). */
+function formatPinCount(n: number, lang: MapLang): string {
+  if (n >= 1000) {
+    const v = n / 1000;
+    const str =
+      v >= 10
+        ? String(Math.round(v))
+        : v.toFixed(1).replace(".", lang === "sl" ? "," : ".");
+    return `${str}k`;
+  }
+  return String(n);
 }
 
 /** Escaping za HTML atribut (data-poi-id). */

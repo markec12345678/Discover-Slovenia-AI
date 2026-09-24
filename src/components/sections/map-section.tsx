@@ -36,12 +36,16 @@ const MapView = dynamic(
 
 const L = {
   badge: { sl: "Interaktivni zemljevid", en: "Interactive map" },
-  title: { sl: "Odkrijte Slovenijo na zemljevidu", en: "Discover Slovenia on the map" },
+  // 1.95.1: regija (Slovenija + zahodni Balkan) + statični FSQ točke
+  title: {
+    sl: "Odkrijte Slovenijo in Balkan na zemljevidu",
+    en: "Discover Slovenia & the Balkans on the map",
+  },
   subtitle: {
     sl: (n: number) =>
-      `${n} destinacij razporejenih od Alp do Jadrana. Kliknite marker za podrobnosti, vreme in rezervacije.`,
+      `${n} destinacij od Alp do Albanije — plus bencinske postaje, restavracije, nastanitve in druge lokalne točke. Kliknite marker za podrobnosti, vreme in rezervacije.`,
     en: (n: number) =>
-      `${n} destinations from the Alps to the Adriatic. Tap a marker for details, weather and bookings.`,
+      `${n} destinations from the Alps to Albania — plus petrol stations, restaurants, stays and other local places. Tap a marker for details, weather and bookings.`,
   },
   loading: { sl: "Nalagam zemljevid…", en: "Loading map…" }, // rezerva za prihodnjo uporabo znotraj komponente
   routeBadge: {

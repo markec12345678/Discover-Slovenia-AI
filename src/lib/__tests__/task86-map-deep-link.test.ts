@@ -38,8 +38,12 @@ describe("TASK 86: source-contract — map-view glob query podpora", () => {
     expect(src).toContain("Math.min(16, Math.max(10, qZoom))");
   });
 
-  test("center/zoom iz query, fallback center Slovenije", () => {
-    expect(src).toContain("hasGeo ? [qLat, qLng] : [46.15, 14.47]");
+  test("center/zoom iz query, fallback center Balkana (1.95.1 regija)", () => {
+    // 1.95.1: privzeti pogled je Slovenija + zahodni Balkan (BALKANS_CENTER
+    // + fitBounds BALKANS_BOUNDS) — glob query še VEDNO prevlada (hasGeo).
+    expect(src).toContain("hasGeo ? [qLat, qLng] : BALKANS_CENTER");
+    expect(src).toContain("const BALKANS_CENTER: [number, number] = [43.3, 16.9]");
+    expect(src).toContain("map.fitBounds(BALKANS_BOUNDS");
   });
 
   test("zlati poudarni marker: direktno na map (ne v grozdenje) + nad pini", () => {

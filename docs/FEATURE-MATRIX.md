@@ -35,7 +35,8 @@
 | Smart iskanje | header ikona | /api/smart-search | dialog | GLOBAL header | CONTEXTUAL | NE |
 | Vprašaj lokalca / konzultacija | /vodici + /konzultacija/[token] | /api/ask-local, /api/consultations | stran + dialog | EXPLORE/vodici | CONTEXTUAL | NE |
 | Destinacije (38) + kolekcije | /destinacije + modal | /api/destinations | katalog | DISCOVER/EXPLORE | VISIBLE | NE |
-| Zemljevid odkrivanja (sloji, POI) | /zemljevid | /api/supply/search (zoom-gated) | stran | EXPLORE | VISIBLE | NE |
+| Zemljevid odkrivanja (sloji, POI) | /zemljevid | /api/supply/search (zoom-gated) + /api/map/pins (FSQ 125k, grid/pins) | stran | EXPLORE | VISIBLE | NE |
+| Zemljevid Balkana — vsi pini (bencinske/restavracije/nastanitve) | /zemljevid | /api/map/pins (statična FSQ množica SI+HR+ME+AL) | stran | EXPLORE | VISIBLE (1.95.1) | NE |
 | Dogodki | /dogodki + dodaj v pot | statični nabor + CustomEvent | stran | EXPLORE | CONTEXTUAL | NE |
 | Lokali (B2B imenik) | /lokali | /api/listings | stran | EXPLORE | VISIBLE | NE |
 | Tržnica (izdelki/izkušnje) | /trznica + /dozivetja | /api/products, /api/experiences | stran | EXPLORE/BOOK | VISIBLE | NE |

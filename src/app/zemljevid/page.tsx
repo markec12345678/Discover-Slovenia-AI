@@ -15,12 +15,15 @@ import { currentBaseUrl } from "@/lib/host";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 
 /**
- * /zemljevid — interaktivni zemljevid Slovenije (FW3: AI-first hierarhija).
+ * /zemljevid — interaktivni zemljevid Slovenije in zahodnega Balkana
+ * (FW3: AI-first hierarhija; 1.95.1: regija).
  *
- * Zemljevid je preseljen z homepagea na lastno stran: prikaže 38 destinacij
- * (TASK 62: SI+HR+ME+AL),
- * lokalne ponudnike in — če je uporabnik ravno sestavil AI itinerer —
- * tudi pot svojega potovanja (routeCoords/routeByDay iz app store).
+ * Zemljevid je preseljen z homepagea na lastno stran: privzeti pogled je
+ * CELA regija (38 destinacij TASK 62: SI+HR+ME+AL) + STATIČNI FSQ sloj
+ * (125.445 točk — bencinske, restavracije, nastanitve, trgovine … iz
+ * Foursquare Open Places, Apache-2.0) in — če je uporabnik ravno
+ * sestavil AI itinerer — tudi pot svojega potovanja (routeCoords/
+ * routeByDay iz app store).
  *
  * 1.48: stran je na EN whitelisti (src/i18n/routing.ts) — prej je gumb
  * "Map" v /en navigaciji vodil na 308 → slovensko stran. Vsi nizi sledijo
@@ -33,26 +36,26 @@ const PATH = "/zemljevid";
 const L = {
   badge: { sl: "Zemljevid", en: "Map" },
   title: {
-    sl: "Interaktivni zemljevid Slovenije",
-    en: "Interactive map of Slovenia",
+    sl: "Interaktivni zemljevid Slovenije in Balkana",
+    en: "Interactive map of Slovenia & the Balkans",
   },
   subtitle: {
     sl: (n: number) =>
-      `${n} destinacij od Alp do Jadrana na enem zemljevidu — s podrobnostmi o vsaki lokaciji in potjo vašega AI itinererja, ko ga sestavite.`,
+      `${n} destinacij od Alp do Albanije na enem zemljevidu — z bencinskimi postajami, restavracijami, nastanitvami in drugimi lokalnimi točkami, s podrobnostmi o vsaki lokaciji in potjo vašega AI itinererja.`,
     en: (n: number) =>
-      `${n} destinations from the Alps to the Adriatic on a single map — with details for every location and your AI itinerary route once you build one.`,
+      `${n} destinations from the Alps to Albania on a single map — with petrol stations, restaurants, stays and other local places, details for every location and your AI itinerary route once you build one.`,
   },
   hint: {
     sl: "Kliknite marker za podrobnosti · Brez prijave",
     en: "Tap a marker for details · No sign-up required",
   },
   metaTitle: {
-    sl: "Interaktivni zemljevid Slovenije",
-    en: "Interactive map of Slovenia",
+    sl: "Interaktivni zemljevid Slovenije in Balkana",
+    en: "Interactive map of Slovenia & the Balkans",
   },
   metaDescription: {
-    sl: "Raziščite Slovenijo na interaktivnem zemljevidu — destinacije, lokalne ponudnike in pot svojega AI itinererja.",
-    en: "Explore Slovenia on an interactive map — destinations, local providers and your AI itinerary route.",
+    sl: "Raziščite Slovenijo in Balkan na interaktivnem zemljevidu — destinacije, bencinske postaje, restavracije, nastanitve, lokalne ponudnike in pot svojega AI itinererja.",
+    en: "Explore Slovenia and the Balkans on an interactive map — destinations, petrol stations, restaurants, stays, local providers and your AI itinerary route.",
   },
 } as const;
 

@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.94.0 · 2421 testov (CI zelen) · lint 0 · tsc 0 (src/) · UX redesign Issue #3 + TASK 4 UX FIX PASS · ISSUE #4 VAL 1 (§3 lifecycle · §6 cene · §9 ure · §11 AI metering) + VAL 2 (§2 Trip enoten objekt · §8 Go Mode real-time kontekst · §13 sodelovanje z dovoljenji) + VAL 3 (§4 import rezervacij s parse→potrditev · §7 transport resnica · §14 proračun 5 vedric) · CORE deluje brez AI ključa (Issue #2) |
+| **Stanje** | v1.95.1 · 2443 testov (CI zelen) · lint 0 · tsc 0 (src/) · UX redesign Issue #3 + TASK 4 UX FIX PASS · ISSUE #4 VAL 1 (§3 lifecycle · §6 cene · §9 ure · §11 AI metering) + VAL 2 (§2 Trip enoten objekt · §8 Go Mode real-time kontekst · §13 sodelovanje z dovoljenji) + VAL 3 (§4 import rezervacij s parse→potrditev · §7 transport resnica · §14 proračun 5 vedric) · ZEMLJEVID 1.95.1 (SW CSP fix bele slike + Slovenija&Balkan z 125k pini) · CORE deluje brez AI ključa (Issue #2) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·

@@ -7,6 +7,70 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.95.1] — 2026-09-25 (ZEMLJEVID: bela slika v produkciji + vsi pini Balkana)
+
+> **Dve nalogi:** (a) POPRAVEK BELE SLIKE ZEMLJEVIDA na Vercel/Render
+> (diagnoza iz 1.95.0 — SW CSP — končno DOSTAVLJEN v produkcijo), (b)
+> zemljevid razširjen na **Slovenijo + cel zahodni Balkan** s **pini vseh
+> bencinskih, restavracij, nastanitev in trgovin** (125.445 točk).
+> **0 izgube funkcij; nazaj kompatibilno.**
+
+### POPRAVEK PRODUKCIJE — bela slika zemljevida (SW CSP)
+
+- **Vzrok (dokazan na obeh produkcijah):** service worker ima LASTNO CSP,
+  ki jo prejme z odgovorom `/sw.js` — in velja za `fetch()` klice IZ SW
+  konteksta. Splošna CSP strani (`connect-src 'self' blob:` — pravilna za
+  stran!) se je aplicirala TUDI na `/sw.js`; SW v fetch handlerju prevzame
+  prestreto zahtevo po OSM ploščici in jo znova pridobi IZ SVOJEGA
+  konteksta → blokirana → `respondWith` zavrača → ploščice NE naložijo →
+  **BELA SLIKA** (v devu delovalo, ker je SW passthrough prek `?dev=1`).
+- **Popravek 1 (1.95.0, next.config.ts):** `/sw.js` dobi LASTNO CSP pravilo
+  (`connect-src 'self' blob: https:` — zrcali img-src strani: SW sme
+  pridobivati SAMO tisto, kar sme stran; omrežna površina SW nikoli širša).
+- **Popravek 2 (1.95.1, `public/sw.js`):** VSEBINSKI BUMP skripte (verzija
+  v komentarju, logika nespremenjena) — browser namesti novo generacijo SW
+  LE, kadar se bajti RAZLIKUJEJO; brez bumpa bi že-nameščeni SW-ji (stara
+  connect-src) ostali aktivni KLJUB novi glavi. `updateViaCache: "none"` v
+  sw-register.tsx zagotavlja mrežni prevzem ob vsaki navigaciji.
+
+### ZEMLJEVID — Slovenija + zahodni Balkan, vsi pini (uporabniška zahteva)
+
+- **`lib/map-pins.ts` — ČISTA STATIČNA PLAST nad FSQ množico** (125.445
+  krajev SI+HR+ME+AL; ~61,6k restavracij, 36k nastanitev, 9,4k trgovin,
+  1,9k bencinskih, 11,1k narave …): zoom-aware gostota — **z≤10 GRID
+  AGREGACIJA** (celice 1°→1/16°; mehurček = težišče + število + top-3
+  kategorije; ~36 celic na celotno regijo, ~8 ms poizvedba iz pomnilnika)
+  in **z≥11 posamezni pini** (rangirani po dokazanih recenzijah — isto
+  rangiranje kot fsq adapter; kap 800 + iskren `capped` razkrit). Množica
+  manjka → iskren prazen odgovor (installed: false, NIKOLI napaka).
+- **`GET /api/map/pins`** — bbox/zoom/cats vrata (kap površine 400°²,
+  dedupe cats, neznani tipi odpadejo); rate limit 60/min/IP; Cache-Control
+  `s-maxage=600, stale-while-revalidate=86400` (statična množica, mtime
+  osveževanje); atribucija Foursquare Open Places (Apache-2.0) v vsakem
+  odgovoru — klient jo izpiše v popupih + info badge (licenčna obveza).
+- **`lib/map-pins-client.ts`** — debounce 400 ms, AbortController,
+  zaporedne številke proti zastarelim odgovorom (vzorec use-supply-query;
+  React 19 higiena — setState samo iz asinhronih callbackov).
+- **MapView:** privzeti pogled = **cela regija** (fitBounds bbox 38
+  destinacij SI+HR+ME+AL; Ponastavi vrača na regijo); MAP PINS sloj VEDNO
+  aktiven (grid mehurčki z dengan popupom »N točk na tem območju« + gumb
+  »Približaj to območje« → z12; posamezni pini z popupom ime/kategorija/
+  ocena/atribucija); pini pod supply produkti (zIndexOffset −200).
+- **Čipi kategorij vidni VEDNO** (ne več samo ob vklopu POI) + nove
+  kategorije privzeto vklopljene: **Bencinske**, Hrana & pijača,
+  Nastanitve, Trgovine (skupaj 9 lokalnih tipov — »pini vse bencinske
+  lokali restavracije hoteli itd«). Strežniški zoom gating supply plasti
+  ostaja po taksonomiji (restavracije z≥13 ipd.) — supply pipeline
+  nespremenjen (DEFAULT_SUPPLY_TYPES strežniško NE spremenjeni).
+- **Besedila:** /zemljevid hero + meta »Slovenija in Balkan« (SL+EN),
+  map-section naslov/podnaslov, aria-label zemljevida.
+- **Testi:** +23 (map-pins.test.ts: tabela celic, parse vrata — bbox/zoom/
+  cats/zloraba, grid agregacija — težišče/top-3/determinizem, pins
+  rangiranje/kap/ocena/subcategory, iskrenost, atribucija) + posodobljen
+  pogodbeni test TASK 86 (fallback center = Balkan); **2443/2443**.
+
+---
+
 ## [1.94.0] — 2026-09-24 (ISSUE #4 IMPLEMENTACIJSKI VAL 3: §4+§7+§14)
 
 > **Načrt:** docs/ISSUE4-BASELINE.md §G (predlog vala 3). **Metoda:**
