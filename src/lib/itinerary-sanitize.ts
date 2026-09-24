@@ -125,6 +125,14 @@ function sanitizeLocation(raw: unknown): LocationVisit | null {
       loc.booking_url.length <= 300
       ? { booking_url: loc.booking_url }
       : {}),
+    // ISSUE #4 §21 (VAL 6): oznaka NAMERNOSTI postanka preživi
+    // SHRANITEV/DELJENJE — sicer bi gumb "Optimalno zaporedje" na
+    // /pot/[shareId] ali po ponovnem odpiranju shranjenega načrta tiho
+    // premaknil uporabnikove FIXED/supply postanke. Varnost: podeduje se
+    // SAMO izrecno true (isti vzorec kot weatherEstimated) — klientov/AI
+    // vhod z čimer drugim oznako ne postavi (refine jo strežniško obnovi
+    // iz dokazljivih virov — route-intent.ts).
+    ...(loc.intentLocked === true ? { intentLocked: true } : {}),
   };
 }
 

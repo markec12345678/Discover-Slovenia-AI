@@ -493,6 +493,7 @@
     "mealDismiss": "Zapri predlog kosila",
     "optimizeContextual": "Našel sem krajšo pot",
     "optimizeContextualSaving": "prihraniš približno {km} km",
+    "optimizeLockedHint": "Fiksni postanki (tvoje izbire) ostanejo na svojih mestih",
     "moreTitle": "Več o tvoji poti",
     "moreDesc": "Priporočila, nasveti, dogodki med obiskom, pakirni seznam in časovni pregled.",
     "submit": "Generiraj itinerer ✨",

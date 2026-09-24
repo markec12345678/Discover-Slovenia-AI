@@ -264,3 +264,27 @@ budget ✓ freshness ✓ explainability ✓ offline ✓ capability matrix ✓
 analytics funnel/observability obstajata iz prej). Ostanek Issue #4:
 P2 (§21 regresija rut, §18 uradna vsebina, §23+ share/privacy/varnost …)
 — nič ne blokira pilota.
+
+---
+
+## K. ISSUE #4 — VAL 6 ZAKLJUČEN (§21 ROUTE OPTIMIZATION, 1.98.0, 2026-09-25)
+
+Po §J ostanku (P2: §21 regresija rut, §18 uradna vsebina, §23+ share/privacy)
+— izbrano po vrednosti (priporočilo Task 16): §21. Naročnikova zahteva
+besedno: regresijska suita za 1/2/14 dni, duplicate location, closed POI,
+missing coordinates, impossible route, border crossing, ferry, walking,
+driving, mixed transport + "posebej preveri, da optimizacija NE uniči
+uporabnikovega namernega vrstnega reda".
+
+| Oddelek | Dostava | Dokaz |
+|---|---|---|
+| **§21 namerni vrstni red** | `LocationVisit.intentLocked?` (additive) + `lib/route-intent.ts` (čist modul: FIXED izbire `provider:productId` + supply postanki + booking_provider → oznaka); `/api/itinerary` obe poti (AI + deterministična) označita pred odgovorom; `/api/itinerary/refine` OHRANI po destination_id na VSEH 3 izhodih (AI/hitra akcija/echo) + sveži FIXED + IZMIŠLJENE AI oznake POŠTENO ODSTRANJENE; `sanitizeItinerary` prenos skozi shranjevanje/deljenje (samo izrecno true) | 43 testov (označevanje/ohranjanje/fail-open/čistost) |
+| **§21 optimizeDayOrder v2** | zamrznjeni postanki NA TOČNO isti poziciji z LASTNIM terminom; prosti po SEGMENTIH med zamrznjenimi (strošek z povezovalniki do sosedov — vsota lokalnih optimumov = optimalna celota); ≤7 prostih IZČRPNO (Heap), sicer 2-opt; termini prostih položajev UREJENI (zmnožek ohranjen, brez novih prekrivanj); NOVA zmožnost: koordinate iz `visit.lat/lng` (OSM/tuji kraji — Zagreb); iskrene odklonitve (<3, NaN, <2 prostih) | 43 testov (matrika) + E2E: 5-postankovni dan (triglav ZAK → piran → ljubljana → bohinj → postojna ZAK), gumb "prihraniš ~115 km" + namig 🔒 → klik → ZAK nepremična na mestih 1/5 z lastnima terminoma, sredina optimalna, gumb izgine (ux-verify-issue4-val6/) |
+| **§21 trajekt/hoja/mešani resnica** | hevristika je VEDNO VOZNA ocena (haversine ×1,3 ÷ 55 km/h, vir "heuristic") — NIKOLI "ferry", NIKOLI hoja (Go Mode navigacija je zunanji handoff); README 96-97 dopolnjen z jamstvom zamrzovanja | testi (obalni par čez vodo → "heuristic"; osnova 55 km/h; DayOrderResult nima polja mode) |
+
+**Testi:** 2676/2676 (+43) · lint 0/0 · tsc 0 (src/) · 0 konzolnih napak v
+E2E (server-side `Unexpected end of JSON input` na /api/itinerary/bookings
+je obstoječ vzorec rute nedotaknjene od 1.33.0 — dokumentirano, ne vpliva).
+
+**Ostanek Issue #4 po VAL 6:** §18 (uradna vsebina/NiST), §23 (share/privacy),
+§24 (security/rate-limit dokumentacija), P2+ — nič ne blokira pilota.

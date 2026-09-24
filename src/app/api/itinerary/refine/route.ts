@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { wrapProviderData, SYSTEM_DATA_GUARD } from "@/lib/ai-context";
 import { DESTINATIONS, normalizeInterests } from "@/lib/slovenia-data";
 import { sanitizeItinerary, hasItineraryShape } from "@/lib/itinerary-sanitize";
+// ISSUE #4 §21 (VAL 6) — NAMERNI VRSTNI RED na refinu: klientov načrt nosi
+// intentLocked oznake; refine izhod jih OHRANI po destination_id (nova
+// AI dodane postanke pusti proste — predlogi niso namerna izbira).
+import { refineIntentLocked } from "@/lib/route-intent";
 import { db } from "@/lib/db";
 import { generateCompletion } from "@/lib/ai-client";
 import { logFallbackUsage } from "@/lib/ai-usage";
@@ -320,6 +324,12 @@ export async function POST(request: Request) {
   // dataset v pomnilniku pokriva edinega priključenega komercialnega vira.
   const supplyVerified = verifySelectedProducts(cleanSelectedProducts);
   const verifiedSelection = supplyVerified.products;
+  // ISSUE #4 §21 (VAL 6): ID-ji VERIFICIRANIH FIXED izbir (kanonski
+  // "provider:productId" — isti zapis kot postanki v načrtu) — refine izhod
+  // jih označi kot NAMERNE (isti vir resnice kot /api/itinerary).
+  const fixedDestinationIds: string[] = verifiedSelection
+    .filter((p) => p.selectionState === "fixed")
+    .map((p) => `${p.provider}:${p.providerProductId}`);
   if (hasVerifyChanges(supplyVerified.report)) {
     console.warn(
       `[itinerary/refine] TASK 49 supply verify (izbira): ${supplyVerified.report.rejectedFake} zavrnjenih, ` +
@@ -488,8 +498,15 @@ export async function POST(request: Request) {
     logFallbackUsage("refine", Date.now() - routeStartedAt, {
       metadata: { path: "fast-action-deterministic-primary", action },
     });
+    // ISSUE #4 §21: hitra akcija transformira načrt — namernost (vhodne
+    // oznake + sveže FIXED izbire) se nanese NAZAJ (novi postanki prosti).
+    const withIntent = refineIntentLocked(
+      withReasons,
+      current,
+      fixedDestinationIds
+    );
     return NextResponse.json({
-      itinerary: withReasons,
+      itinerary: withIntent,
       instruction,
       source: "deterministic",
       applied: true,
@@ -924,8 +941,18 @@ JSON format (STROGO, enak kot vhod):
       isEn ? "en" : "sl"
     );
 
+    // ISSUE #4 §21 (VAL 6): AI JSON je šel skozi sanitizeItinerary (shape
+    // guard oznak ne pozna) — namernost se OHRANI iz klientovega vhoda po
+    // destination_id + sveže FIXED izbire; novi AI predlogi ostanejo PROSTI
+    // (iskreno: predlog ni namerna izbira). Fail-open čista plast.
+    const withIntent = refineIntentLocked(
+      withReasons,
+      current,
+      fixedDestinationIds
+    );
+
     return NextResponse.json({
-      itinerary: withReasons,
+      itinerary: withIntent,
       instruction,
       source: result.source,
       validation,
@@ -1029,8 +1056,16 @@ JSON format (STROGO, enak kot vhod):
     logFallbackUsage("refine", Date.now() - routeStartedAt, {
       metadata: { path: "echo-original" },
     });
+    // ISSUE #4 §21 (VAL 6): tudi echo pot — validateItinerarySupply/repair
+    // sta lahko prestavili postanke; namernost se obnovi iz klientovega
+    // vhoda (isto čisto plast, fail-open — nikoli ne zadrži odgovora).
+    const echoWithIntent = refineIntentLocked(
+      echoBudgetSynced,
+      current,
+      fixedDestinationIds
+    );
     return NextResponse.json({
-      itinerary: echoBudgetSynced,
+      itinerary: echoWithIntent,
       instruction,
       source: "fallback",
       warning: isEn

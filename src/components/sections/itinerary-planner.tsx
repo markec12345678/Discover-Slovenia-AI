@@ -41,6 +41,7 @@ import {
   Ticket,
   Footprints,
   Undo2,
+  Lock,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -4527,29 +4528,47 @@ export function ItineraryPlanner() {
                           ) {
                             return null;
                           }
+                          // ISSUE #4 §21 (VAL 6): dan z NAMERNIMI postanki
+                          // (intentLocked — FIXED izbire/uporabnikovo dodani)
+                          // pod gumbom POŠTENO pove, da ti ostanejo na mestu
+                          // (optimizeDayOrder jih zamrzne — route-order.ts v2).
+                          const lockedCount = day.locations.filter(
+                            (l) => l.intentLocked === true
+                          ).length;
                           return (
-                            <button
-                              type="button"
-                              onClick={() => applyOptimalOrder(day)}
-                              className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                              aria-label={t("optimizeOrderAria", {
-                                day: day.day,
-                                km: opt.savedKm,
-                              })}
-                            >
-                              {/* UI sprint (točka E smeri): prihranek kot
-                                  kontekstna priložnost ("✨ Našel sem krajšo
-                                  pot — prihraniš približno X km") — prag in
-                                  izračun F16 nespremenjena (≥ 5 km / ≥ 5 %). */}
-                              <Sparkles
-                                className="size-4 shrink-0 text-primary"
-                                aria-hidden
-                              />
-                              {t("optimizeContextual")}
-                              <span className="text-xs font-normal text-primary">
-                                · {t("optimizeContextualSaving", { km: opt.savedKm })}
-                              </span>
-                            </button>
+                            <div className="space-y-1.5">
+                              <button
+                                type="button"
+                                onClick={() => applyOptimalOrder(day)}
+                                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                aria-label={t("optimizeOrderAria", {
+                                  day: day.day,
+                                  km: opt.savedKm,
+                                })}
+                              >
+                                {/* UI sprint (točka E smeri): prihranek kot
+                                    kontekstna priložnost ("✨ Našel sem krajšo
+                                    pot — prihraniš približno X km") — prag in
+                                    izračun F16 nespremenjena (≥ 5 km / ≥ 5 %). */}
+                                <Sparkles
+                                  className="size-4 shrink-0 text-primary"
+                                  aria-hidden
+                                />
+                                {t("optimizeContextual")}
+                                <span className="text-xs font-normal text-primary">
+                                  · {t("optimizeContextualSaving", { km: opt.savedKm })}
+                                </span>
+                              </button>
+                              {lockedCount > 0 && (
+                                <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                                  <Lock
+                                    className="size-3 shrink-0"
+                                    aria-hidden
+                                  />
+                                  {t("optimizeLockedHint")}
+                                </p>
+                              )}
+                            </div>
                           );
                         })()}
 

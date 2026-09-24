@@ -493,6 +493,7 @@
     "mealDismiss": "Dismiss lunch suggestion",
     "optimizeContextual": "I found a shorter route",
     "optimizeContextualSaving": "you save about {km} km",
+    "optimizeLockedHint": "Fixed stops (your picks) stay in place",
     "moreTitle": "More about your trip",
     "moreDesc": "Recommendations, tips, events during your visit, packing list and timeline.",
     "submit": "Generate itinerary ✨",

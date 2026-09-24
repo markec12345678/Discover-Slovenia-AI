@@ -168,6 +168,12 @@ export interface LocationVisit {
   booking_product_id?: string;
   /** Relativna /go/… povezava (adapter jo gradi strežniško-varno). */
   booking_url?: string;
+  // ISSUE #4 §21 (VAL 6): ISKRENA oznaka NAMERNOSTI postanka. Postanki iz
+  // uporabnikovih FIXED izbir in uporabnikovo dodani supply postanki (zemljevid
+  // ponudbe) so uporabnikov NAMERNI vrstni red — optimizeDayOrder jih ZAMRZNE
+  // na mestu (pozicija + lastni termin). Stari shranjeni načrti brez oznake:
+  // vsi postanki prosti (isto obnašanje kot prej — nazaj kompatibilno).
+  intentLocked?: boolean;
 }
 
 export interface DayPlan {

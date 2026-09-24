@@ -125,21 +125,112 @@ function slotStartMinutes(slot: string): number | null {
   return h * 60 + min;
 }
 
+// ---------------------------------------------------------------------------
+// ISSUE #4 §21 (VAL 6) — SEGMENTNA OPTIMIZACIJA Z ZAMRZNJENIMI POSTANKI
+// ---------------------------------------------------------------------------
+//
+// KRITIČNA zahteva §21: "posebej preveri, da optimizacija NE UNIČI
+// uporabnikovega NAMERNEGA vrstnega reda." Do 1.97.0 je gumb "Optimalno
+// zaporedje" preuredil VSE postanke dneva — tudi tiste, ki jih je uporabnik
+// IZRECNO izbral (FIXED izbire zemljevida ponudbe, §8 F2) oz. sam dodal
+// (supply/klepet postanki). Pogodba "vrstni red FIXED se NE spremeni" je
+// veljala pri GENERIRANJU (geo-order sidra) — klientna optimizacija pa jo
+// je tiho prelomila.
+//
+// v2 (ISTA čista, deterministična mehanika, 0 omrežja):
+//   · postanki z intentLocked === true so ZAMRZNJENI: pozicija V zaporedju
+//     in LASTNI termin ostanejo točno takšni, kot so;
+//   · PROSTI postanki se optimizirajo po SEGMENTIH med zamrznjenimi
+//     sosedami: strošek segmenta = dist(prejšnji zamrznjeni, prvi) +
+//     pathKm(segment) + dist(zadnji, naslednji zamrznjeni) (dan-brez-soseda
+//     = brez povezovalnika). Segmenti so NEODVISNI (vsaka noge poti pripada
+//     natanko enemu segmentu) → vsota lokalnih optimumov JE optimalna celota
+//     med zamrznjenimi oglišči;
+//   · zmnožek terminov: zamrznjeni obdržijo SVOJ termin, prosti POLOŽAJI
+//     (ne postanki) dobijo urejene termine izvirnih terminov prostih
+//     položajev — med prostimi položaji NI novih časovnih inverzij,
+//     obstoječe inverzije z zamrznjenimi postanki pa ostanejo pošteno
+//     vidne (geo-validacija jih javi — ne prikrivamo).
+//
+// Koordinatorji: dataset (DESTINATION_COORDS) najprej, nato KONČNI lat/lng
+// na SAMEM postanku (OSM/klepet/tuji kraji — destination_id "osm:node-…").
+// Postanek brez razrešljivih koordinat → null (iskrena odklonitev, kot prej).
+// ---------------------------------------------------------------------------
+
+/**
+ * Optimalno zaporedje ENEGA SEGMENTA prostih postankov (odprta pot z
+ * povezovalnikoma do zamrznjenih sosedov). ≤7 točk IZČRPNO (Heap — isti
+ * algoritem kot bestOrder), sicer 2-opt do konvergence (max 60 potez).
+ * Strošek je poljuben (klicalnik vloži povezovalnike); izenačitve ohranijo
+ * IZVIRNI vrstni red (strogo <) — deterministično.
+ */
+function bestSegmentOrder<T>(items: T[], cost: (order: T[]) => number): T[] {
+  const n = items.length;
+  if (n < 2) return items.slice();
+  if (n <= 7) {
+    // Heapov algoritem po permutacijah — 7! = 5040, milisekunde
+    let best = items.slice();
+    let bestCost = cost(items);
+    const arr = items.slice();
+    const c = new Array<number>(n).fill(0);
+    let i = 1;
+    while (i < n) {
+      if (c[i] < i) {
+        const k = i % 2 === 0 ? 0 : c[i];
+        [arr[i], arr[k]] = [arr[k], arr[i]];
+        const cst = cost(arr);
+        if (cst < bestCost) {
+          bestCost = cst;
+          best = arr.slice();
+        }
+        c[i] += 1;
+        i = 1;
+      } else {
+        c[i] = 0;
+        i += 1;
+      }
+    }
+    return best;
+  }
+  // 2-opt (ista konvergenčna varovalka kot bestOrder — max 60 potez)
+  const order = items.slice();
+  let improved = true;
+  let guard = 0;
+  while (improved && guard < 60) {
+    improved = false;
+    guard += 1;
+    for (let a = 0; a < n - 1 && !improved; a++) {
+      for (let b = a + 1; b < n && !improved; b++) {
+        const before = cost(order);
+        const candidate = order
+          .slice(0, a)
+          .concat(order.slice(a, b + 1).reverse(), order.slice(b + 1));
+        const after = cost(candidate);
+        if (after < before - 0.01) {
+          order.splice(0, n, ...candidate);
+          improved = true;
+        }
+      }
+    }
+  }
+  return order;
+}
+
 /**
  * Izračuna optimalno zaporedje postankov dneva (deterministično, 0 AI).
  *
  * Vrne null, kadar pošteno ne moremo:
  *  - manj kot 3 postanki (preureditev nima smisla),
- *  - KATERIKOLI postanek nima znanega ID-ja/koordinat (naših 22) — ne
- *    ugibamo razdalj za tuje ID-je.
+ *  - KATERIKOLI postanek nima razrešljivih koordinat (dataset ali lastni
+ *    končni lat/lng) — ne ugibamo razdalj,
+ *  - manj kot 2 PROSTA postanka (ničesar ni za optimizirati — vsi
+ *    zamrznjeni ali zamrznjeni + 1 prost; §21: odklonitev, ne delni poskus).
  *
- * Termini: PERMUTACIJA izvirnih nizov — urejeni termini dneva ostanejo na
- * ISTIH urah (jutro/kosilo/večer + vmiki za vožnjo med njimi), postanki se
- * preuredijo MEDNJH. Struktura časa ostane točno taka, kot jo je sestavil
- * načrt: BREZ novih prekrivanj in brez novih vrzeli. (Test F16 je pokazal,
- * da izračun konca iz trajanj postanka naredi prekrivanja — trajanja so
- * ocene AI in se z zaporedjem ne smejo mešati.) Če kateri termin ni
- * razpoznaven, vsak postanek obdrži SVOJ izvirni termin (iskreno).
+ * Termini: PERMUTACIJA izvirnih nizov — urejeni termini ostanejo na ISTIH
+ * urah, postanki se preuredijo MED NJIH. Zamrznjeni (intentLocked) obdržijo
+ * SVOJ izvirni termin; prosti položaji dobijo urejene termine prostih
+ * položajev (glej §21 zgoraj). Če kateri termin ni razpoznaven, vsak
+ * postanek obdrži SVOJ izvirni termin (iskreno — isto kot prej).
  */
 export function optimizeDayOrder(
   locations: LocationVisit[]
@@ -147,8 +238,21 @@ export function optimizeDayOrder(
   const stops = Array.isArray(locations) ? locations : [];
   if (stops.length < 3) return null;
 
-  // Vsi postanki morajo imeti znane koordinate (naših 22) — sicer null
-  const coords = stops.map((l) => DESTINATION_COORDS.get(l.destination_id));
+  // Koordinatorji: dataset najprej, nato končni lat/lng na postanku (OSM/
+  // klepet/tuji). Nerazrešljivo (tudi NaN/±Infinity) → null (iskrena odklonitev).
+  const coords = stops.map((l) => {
+    const c = DESTINATION_COORDS.get(l.destination_id);
+    if (c) return c;
+    if (
+      typeof l.lat === "number" &&
+      typeof l.lng === "number" &&
+      Number.isFinite(l.lat) &&
+      Number.isFinite(l.lng)
+    ) {
+      return { lat: l.lat, lng: l.lng };
+    }
+    return null;
+  });
   if (coords.some((c) => !c)) return null;
 
   const dist = (a: number, b: number): number => {
@@ -159,28 +263,75 @@ export function optimizeDayOrder(
     return heuristicLeg(ca, cb).km;
   };
 
-  const indices = stops.map((_, i) => i);
-  const before = pathKm(indices, dist);
-  const { order, km: after } = bestOrder(indices, dist);
+  // §21: zamrznjeni postanki (izrecno true — stari načrti brez oznake so
+  // VSI prosti, nazaj kompatibilno)
+  const locked = stops.map((l) => l.intentLocked === true);
+  const freeIdx = stops.map((_, i) => i).filter((i) => !locked[i]);
+  if (freeIdx.length < 2) return null;
 
-  // Termini kot PERMUTACIJA: urejeni izvirni termini po novih pozicijah
-  // (isti nizi — urejenost začetkov zagotavlja, da ne nastanejo prekrivanja,
-  // ki jih prej ni bilo). Nerazpoznaven katerikoli → vsak obdrži svojega.
+  // Segmenti PROSTIH položajev med zamrznjenimi (dan-brez-soseda = brez
+  // povezovalnika). Zamrznjeni položaji ostanejo na mestu; vsak segment
+  // optimiziramo NEODVISNO (noge poti se ne prekrivajo → vsota lokalnih
+  // optimumov je optimalna celota med oglišči).
+  const newOrder: number[] = stops.map((_, i) => i);
+  let segStart = 0;
+  for (let pos = 0; pos <= stops.length; pos++) {
+    const isBoundary = pos === stops.length || locked[pos];
+    if (!isBoundary) continue;
+    if (pos > segStart) {
+      const segOrig = newOrder.slice(segStart, pos);
+      if (segOrig.length >= 2) {
+        const prevIdx = segStart > 0 ? newOrder[segStart - 1] : null;
+        const nextIdx = pos < stops.length ? newOrder[pos] : null;
+        const cost = (seg: number[]): number => {
+          let km = pathKm(seg, dist);
+          if (prevIdx !== null) km += dist(prevIdx, seg[0]);
+          if (nextIdx !== null) km += dist(seg[seg.length - 1], nextIdx);
+          return km;
+        };
+        const optimized = bestSegmentOrder(segOrig, cost);
+        for (let k = 0; k < optimized.length; k++) {
+          newOrder[segStart + k] = optimized[k];
+        }
+      }
+    }
+    segStart = pos + 1;
+  }
+
+  const before = pathKm(
+    stops.map((_, i) => i),
+    dist
+  );
+  const after = pathKm(newOrder, dist);
+
+  // Termini kot PERMUTACIJA: zamrznjeni obdržijo SVOJEGA; prosti položaji
+  // dobijo urejene termine izvirnih terminov PROSTIH položajev (isti nizi —
+  // urejenost začetkov zagotavlja, da med prostimi položaji ne nastanejo
+  // prekrivanja, ki jih prej ni bilo). Nerazpoznaven katerikoli → vsak
+  // obdrži svojega (iskrena varovalka, kot prej).
   const slots = stops.map((l) => (l.time_slot ?? "").trim());
   const starts = slots.map((s) => slotStartMinutes(s));
   const allParsed = starts.every((s) => s !== null);
-  const sortedSlots = allParsed
-    ? slots
-        .slice()
-        .sort((a, b) => (slotStartMinutes(a) ?? 0) - (slotStartMinutes(b) ?? 0))
+  const freeSlotSorted = allParsed
+    ? stops
+        .map((_, i) => i)
+        .filter((i) => !locked[i])
+        .map((i) => slots[i])
+        .sort(
+          (a, b) =>
+            (slotStartMinutes(a) ?? 0) - (slotStartMinutes(b) ?? 0)
+        )
     : null;
 
-  const newLocations: LocationVisit[] = order.map((origIdx, newPos) => {
+  let freePtr = 0;
+  const newLocations: LocationVisit[] = newOrder.map((origIdx) => {
     const stop = stops[origIdx];
-    if (sortedSlots === null) return stop; // nerazpoznan termin → svoj ostane
+    if (locked[origIdx]) return stop; // ZAMRZNJEN: lastni termin, ista referenca
+    if (freeSlotSorted === null) return stop; // nerazpoznan termin → svoj ostane
+    const slot = freeSlotSorted[freePtr++];
     return {
       ...stop,
-      time_slot: sortedSlots[newPos] || stop.time_slot,
+      time_slot: slot || stop.time_slot,
     };
   });
 

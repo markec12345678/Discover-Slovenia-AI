@@ -91,6 +91,10 @@ import {
   computeGeoCoherence,
   type CoherenceStop,
 } from "@/lib/geo-coherence";
+// ISSUE #4 §21 (VAL 6) — NAMERNI VRSTNI RED: postanki iz uporabnikovih FIXED
+// izbir + supply postanki dobijo intentLocked, pred odgovorom odidejo v
+// klient (gumb "Optimalno zaporedje" jih zamrzne — route-order.ts v2).
+import { markItineraryIntentLocked } from "@/lib/route-intent";
 
 // ============================================================================
 // WEATHER-CONTEXT (t11): realna vremenska napoved PRED generiranjem
@@ -478,6 +482,16 @@ export async function POST(request: Request) {
     `[itinerary] supply-aware: context=${aiSupply.total} (capped ${aiSupply.products.length}) providers=${aiSupply.providers.join(",") || "-"} degraded=${aiSupply.degraded.join(",") || "-"} fixed=${fixedCount}`
   );
 
+  // ISSUE #4 §21 (VAL 6) — NAMERNI VRSTNI RED: ID-ji VERIFICIRANIH FIXED
+  // izbir v kanonskem "provider:productId" formatu (isti zapis, ki ga nosijo
+  // supply postanki v načrtu — Task 48 invariantna plast). markItinerary
+  // IntentLocked tik pred odgovorom nanje (in na category "supply" /
+  // booking_provider postanke) postavi intentLocked — klientova optimizacija
+  // zaporedja jih nato ZAMRZNE (§8 F2 pogodba razširjena tudi na gumb).
+  const fixedDestinationIds: string[] = verifiedSelection
+    .filter((p) => p.selectionState === "fixed")
+    .map((p) => `${p.provider}:${p.providerProductId}`);
+
   // TASK 47 (§3/§4/§5/§6/§14): strukturiran blok kanonske ponudbe v prompt —
   // PREFERRED/SUGGESTED semantika, cena z enoto, ločena razpoložljivost,
   // prioritetna lestvica. Prazna ponudba → prazen blok (ni spremembe).
@@ -535,6 +549,7 @@ export async function POST(request: Request) {
         geoAnchors,
         aiSupplyAuthority,
         verifiedSelection,
+        fixedDestinationIds,
         tripWindow,
         tripEnd,
         lang,
@@ -1025,7 +1040,16 @@ JSON format (STROGO):
     // postanki na clientu uporabijo ISTE številke kot značke ~km dni.
     withReasons.legs = serializeLegs(legs);
 
-    return NextResponse.json(withReasons);
+    // ISSUE #4 §21 (VAL 6): ZADNJA plast pred odgovorom — namerni vrstni red
+    // (FIXED izbire + supply postanki) dobi intentLocked, da klientova
+    // optimizacija zaporedja teh postankov NE premakne (iskrena pogodba:
+    // označeni so SAMO uporabnikovi akti, ne uredniški predlogi).
+    const withIntent = markItineraryIntentLocked(
+      withReasons,
+      fixedDestinationIds
+    );
+
+    return NextResponse.json(withIntent);
   } catch (error) {
     console.error("[itinerary] AI napaka, uporabljam fallback:", error);
     // WEATHER-CONTEXT + TASK 51 geo sidra + TASK 48 invariantna plast:
@@ -1039,6 +1063,7 @@ JSON format (STROGO):
         geoAnchors,
         aiSupplyAuthority,
         verifiedSelection,
+        fixedDestinationIds,
         tripWindow,
         tripEnd,
         lang,
@@ -1165,6 +1190,7 @@ async function buildDeterministicPlanResponse(
     geoAnchors: GeoOrderAnchor[];
     aiSupplyAuthority: SelectedProviderProduct[];
     verifiedSelection: SelectedProviderProduct[];
+    fixedDestinationIds: string[];
     tripWindow: TripWindow | null;
     tripEnd: string | undefined;
     lang: "sl" | "en";
@@ -1181,6 +1207,7 @@ async function buildDeterministicPlanResponse(
     geoAnchors,
     aiSupplyAuthority,
     verifiedSelection,
+    fixedDestinationIds,
     tripWindow,
     tripEnd,
     lang,
@@ -1360,7 +1387,16 @@ async function buildDeterministicPlanResponse(
       metadata: { engine: source },
     });
 
-    return NextResponse.json(withReasons);
+    // ISSUE #4 §21 (VAL 6): ISTA namerna-plast kot AI pot — FIXED izbire +
+    // supply postanki dobijo intentLocked pred odgovorom (en kodni vir:
+    // markItineraryIntentLocked; deterministična/fallback pot je enako
+    // zavezana pogodbi o uporabnikovem vrstnem redu kot AI pot).
+    const withIntent = markItineraryIntentLocked(
+      withReasons,
+      fixedDestinationIds
+    );
+
+    return NextResponse.json(withIntent);
 }
 
 // ============================================================================

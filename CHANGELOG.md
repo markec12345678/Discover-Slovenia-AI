@@ -7,6 +7,75 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.98.0] — 2026-09-25 (ISSUE #4 VAL 6: §21 ROUTE OPTIMIZATION)
+
+> **P2 §21 v enem valu:** regresijska suita optimizacije zaporedja (celotna
+> naročnikova matrika) + **JAMSTVO namernega vrstnega reda** — optimizacija
+> NE uniči uporabnikovih FIXED izbir in lastnih dodajkov (zamrznjene so na
+> mestu z lastnim terminom). **0 izgube funkcij; nazaj kompatibilno.**
+
+### §21 — ZAMRZNJEN NAMERNI VRSTNI RED (intentLocked)
+
+- **`LocationVisit.intentLocked?`** (additive): iskrena oznaka, da je postanek
+  uporabnikova IZRECNA izbira. Strežnik jo postavi v `src/lib/route-intent.ts`
+  (čist listni modul) na TREH virih resnice: (1) VERIFICIRANE FIXED izbire
+  (`provider:productId` — Task 49), (2) supply postanki (`category: "supply"`
+  — dodani z zemljevida ponudbe), (3) postanki s konkretnim izdelkom
+  (`booking_provider` — Task 48 popravljeni AI odmevi). Oba odgovora
+  `/api/itinerary` (AI pot + deterministična pot) nosita oznake; `/api/itinerary/refine`
+  jih OHRANI po `destination_id` na VSEH treh izhodih (AI, hitra akcija,
+  echo fallback) + nanaša sveže FIXED izbire refina + POŠTENO ODSTRANI
+  izmišljene AI oznake (nezaupan izhod ni dokaz o namernosti). Novi AI
+  predlogi ostanejo PROSTI. `sanitizeItinerary` oznako prenese skozi
+  shranjevanje/deljenje (samo izrecno `true` — isti vzorec kot `weatherEstimated`).
+- **`optimizeDayOrder` v2** (`route-order.ts`): zamrznjeni postanki ostanejo
+  na TOČNO isti poziciji z LASTNIM terminom; PROSTI postanki se optimizirajo
+  po SEGMENTIH med zamrznjenimi sosedmi (strošek segmenta vključuje
+  povezovalnike do sosedov — vsota lokalnih optimumov je optimalna celota
+  med oglišči). ≤7 prostih IZČRPNO (Heap), sicer 2-opt (ista mehanika kot
+  prej). Termini: zamrznjeni obdržijo SVOJEGA; prosti POLOŽAJI dobijo urejene
+  termine prostih položajev (zmnožek ohranjen — brez novih prekrivanj).
+- **NOVA zmožnost**: koordinate se razrešujejo tudi iz `lat`/`lng` na samem
+  postanku (OSM/klepet/tuji kraji, npr. Zagreb) — prej je optimizator odklonil
+  VSE ne-T1 postanke; zdaj dela iskreno tudi z njimi (heuristika ostaja
+  VOZNA ocena — haversine ×1,3 ÷ 55 km/h, nikoli trajekt/hoja).
+- **UI**: pod gumbom "Optimalno zaporedje" pošten namig 🔒 "Fiksni postanki
+  (tvoje izbire) ostanejo na svojih mestih" (SL+EN, pariteta 1:1) — samo
+  kadar dan dejansko vsebuje zamrznjene postanke.
+- **Iskrene odklonitve** (nespremenjene): <3 postankov; nerazrešljive/NaN
+  koordinate; <2 prostih postankov (ničesar ni za optimizirati — tudi "preveč
+  zamrznjen" dan iskreno ne ponuja gumba).
+
+### §21 — REGRESIJSKA SUITA (43 testov, `issue4-wave6-route-regression.test.ts`)
+
+Celotna naročnikova matrika: **1/2/14 dni** (neodvisnost dni, množice
+postankov/terminov, determinizem) · **podvojeni postanki** (obe kopiji
+ohranjeni) · **zaprt POI** (optimizator je po zasnovi agnostičen do ur —
+resnica živi v selection/trust plasteh) · **manjkajoče koordinate**
+(unknown id → null; unknown id S končnima lat/lng → DELA; NaN/±Infinity →
+null) · **nemogoča ruta** (nekončno → null; identične točke → veljavno) ·
+**prehod meje** (Zagreb prek lastnih koordinat — cestna ocena brez
+border-awareness trditev) · **trajekt** (obalni par čez vodo: vir je
+VEDNO "heuristic", NIKOLI "ferry" — odkrito dokumentirano) · **hoja/vožnja**
+(heuristika je vozna osnova 55 km/h ×1,3; optimizator NIKOLI ne trdi hoje —
+Go Mode navigacija je zunanji handoff) · **NAMERNI VRSTNI RED** (zamrznjeni
+na točno istih pozicijah z lastnim terminom; vsi zamrznjeni → null;
+zamrznjeni + 1 prost → null; stari načrti brez oznak → vsi prosti;
+8-postankovni 2-opt veja z zamrznjenimi) + `bestOrder` pogodba za plan-check
+(F13) + čistost modulov (0 omrežja/baze/LLM/ure) + i18n pariteta.
+
+**Dokazi:** E2E (agent-browser, `ux-verify-issue4-val6/`): shranjen načrt
+5 postankov (triglav ZAK → piran → ljubljana → bohinj → postojna ZAK),
+odprt prek `/nacrtuj?odpri=` → gumb "prihraniš približno 115 km" + namik 🔒 →
+klik → **triglav in postojna NEPREMIČNA na mestih 1 in 5 z lastnima
+terminoma**, prosta sredina preurejena optimalno, gumb izgine (dan
+optimalen). API sonde: /api/itinerary (deterministični) organski postanki
+iskreno PROSTI; save round-trip ohrani oznake.
+
+**Testi:** 2676/2676 (+43) · lint 0/0 · tsc 0 (src/).
+
+---
+
 ## [1.97.0] — 2026-09-25 (ISSUE #4 VAL 5: §17+§19 + §20 + §22)
 
 > **Trije odseki Issue #4 v enem valu (P0 #6 + P1 #9/#13/#14):** enoten
