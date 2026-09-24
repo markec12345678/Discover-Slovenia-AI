@@ -456,6 +456,21 @@ const MATRIX: Record<ProviderSlug, Omit<ProductionMatrixEntry, "slug">> = {
       "https://support.travelpayouts.com/hc/en-us/categories/200358578-API-and-data",
     note: "Data API javno dokumentirana (žeton v X-Access-Token; vrata živo preverjena: 401 brez žetona). SELF-SERVE vir (račun → travelpayouts.com/developers/api → token). TRAVELPAYOUTS_TOKEN MISSING → adapter priključen v iskreno PRAZNEM stanju. PRODUCT GAP: izhodišče letov določa TRAVELPAYOUTS_ORIGIN (IATA) — brez njega iskrena opomba „origin-required“. Povezava/hosti so že dovoljeni v /go omrežju.",
   },
+  // ISSUE #4 §4 (val 3): "manual" NI supply adapter — je izrecen slug za
+  // ročni vnos/uvožene rezervacije neznanega ponudnika (JourneyBooking
+  // source USER/IMPORTED). Zato IZKLJUČEN iz supply iskanja in AI konteksta.
+  manual: {
+    category: "INFRASTRUCTURE",
+    accessKind: "STATIC_CONTENT",
+    stage: "DISCOVERED", // val 3: "manual" ni aktivni vir — najnižja stopnja
+    blockedReason: "NOT_APPLICABLE",
+    price: "NOT_SUPPORTED",
+    availability: "NOT_SUPPORTED",
+    cta: "info_only",
+    aiIntegrated: false,
+    docsUrl: "",
+    note: "Ni supply vir — rezervacije z tem slugom izključno uporabnikovo izjavljenje (ročni vnos / parse dokumenta). ProviderSlug član samo za tipno pokritost journey plasti.",
+  },
 };
 
 /** Celotna MASTER matrika (skupaj z env dostopom instance). */

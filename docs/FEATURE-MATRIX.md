@@ -1,6 +1,6 @@
 # FEATURE MATRIX — UX REDESIGN "ONE SIMPLE EXPERIENCE" (Issue #3)
 
-> Status: **v1.3 — posodobljeno 2026-09-24 (v1.93.0, ISSUE #4 val 2: §2/§8/§13). Audit v1.0: HEAD `8ff87e8`.**
+> Status: **v1.4 — posodobljeno 2026-09-24 (v1.94.0, ISSUE #4 val 3: §4/§7/§14). Audit v1.0: HEAD `8ff87e8`.**
 > Vir: revizija 5-A/5-B/5-C/5-D (worklog) — 38 strani, 48 API skupin, 121 lastnih komponent.
 > PRAVILO: **ZERO FEATURE LOSS.** HIDE ≠ DELETE. Ob dvomu → KEEP.
 > Model ciljne izkušnje: **DISCOVER → PLAN → BOOK → GO** (uporabnik ne razume arhitekture).
@@ -46,6 +46,9 @@
 | Rezervacijski lifecycle na AI časovnici (1.92.0 §3) | trip-timeline postanki z /go izdelkom | POST /api/journey/bookings (EXTERNAL, idempotentno) + GET prekrivka | žeton Brez rezervacije → Zunanja rezervacija | PLAN (časovnica) — ISTA semantika kot MOJA POT/GO | CONTEXTUAL | NE |
 | Cenovna resnica časovnice (1.92.0 §6) | trip-timeline + cost-truth.ts | supply validacija NaN sentinel | dnevna vsota + N z neznano ceno + žeton na postanku | PLAN (časovnica + glava ~€ kvalificirana) | CONTEXTUAL | NE |
 | AI metering (1.92.0 §11) | ai-client/ai-usage.ts + admin zavihek | AIUsageLog (VSE AI površine + fallback/cache) | admin agregati 7/30 dni + retry vidnost | PLATFORMA (admin) | CONTEXTUAL | NE |
+| Import rezervacij iz dokumenta (1.94.0 §4) | /pot kartica "Rezervacije" (tabs Ročno/Dokument/Besedilo → uredljiv predogled → potrditev) | POST /api/journey/bookings/parse (stateless VLM/PDF/LLM) + /import (source USER/IMPORTED, DRAFT za nezanesljiv parse) | žetoni z IZVOROM (uporabnikov vnos / uvoženo) — NIKOLI "provider potrjeno" | BOOK (na deljeni poti) | CONTEXTUAL | NE |
+| Transport resnica (1.94.0 §7) | affiliate-section + booking-panel transport + destination-modal | productGoUrl kiwitaxi (AI-pot lifecycle) + i18n truth notes | žeton SAMO POVEZAVA PARTNERJA + vrstica (brez živih cen / od-cene / brez vozni redov) | BOOK (affiliate kartice) | CONTEXTUAL | NE |
+| Proračun poti — 5 vedric (1.94.0 §14) | /pot kartica "Proračun poti" + obrazec stroška | lib/trip-budget.ts + TripExpense model + /api/trip/[shareId]/expenses + agregator budget blok | Načrt (ocena, od-cene/neznano štetje) · Rezervirano/Plačano (denar z izvorom) · Na osebo | MY TRIP (na deljeni poti) | CONTEXTUAL | NE |
 | Trip enoten objekt (1.93.0 §2) | GET /api/trip/[shareId] (agregator: načrt+vodnik+skupnost+rezervacije+verzija+vloga) + dai:go-trip v2 shareId | SavedItinerary + 8 modelov na shareId (0 novih težkih) | Go Mode povezan s shranjeno potjo (Odpri shranjeno pot) | PLATFORMA (stanje poti) | CONTEXTUAL | NE |
 | Sodelovanje z dovoljenji (1.93.0 §13) | /pot/[shareId] plošča (lastnik/urednik) + ?invite= trak | TripCollaborator (PENDING/ACTIVE/REVOKED) + trip-permissions.ts (5 vlog) + PATCH vsebine s CAS | povabi/odvzemi/spremeni vlogo + javna↔zasebna povezava + preimenovanje (409 konflikt) | MY TRIP (skupnostno) | CONTEXTUAL | NE |
 | Skupnost: glasanje/komentarji/všečki/ankete/dnevnik | /pot/[shareId] | /api/trip-vote, trip-likes, trip-comments, poll, diary | deljena stran | MY TRIP javni pogled | CONTEXTUAL | NE |

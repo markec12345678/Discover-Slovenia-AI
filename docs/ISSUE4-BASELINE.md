@@ -192,3 +192,26 @@ lokalnem devu brez njiju ni deloval — produkcija ima že od prej).
 **Naslednji val (predlog):** §4 import rezervacij/dokumentov (ročni vnos +
 PDF/slika parsing z DRAFT potrditvijo) → §7 transport resnica → §14 budget
 ločeno od ocen. Pilot 10 ponudnikov ostaja vzporeden in neblokiran.
+
+---
+
+## H — VAL 3 (§4+§7+§14), v1.94.0 — ZAKLJUČENO
+
+> Po predlogu iz oddelka G. Ista disciplina: meriti → popraviti →
+> dokazati. **0 sprememb, ki bi izgubile funkcijo.**
+
+| Sklop | Dostavljeno | Dokaz |
+|---|---|---|
+| **§4 import rezervacij** | Stateless AI parse (`POST /api/journey/bookings/parse`: slika VLM / PDF unpdf / besedilo LLM jsonMode; strog prompt »NEVER invent values«; deterministična normalizacija lib/imported-reservation.ts) + zapis SAMO po potrditvi (`POST /api/journey/bookings/import`: source USER/IMPORTED — DOKUMENT JE ATESTACIJA, S1 neoslabljen za provider trditve; DRAFT za nezanesljiv parse; prehodi DRAFT→CONFIRMED/CANCELLED) + `source`/`importData` stolpca + UI kartica »Rezervacije« na /pot (tabs Ročno/Dokument/Besedilo → uredljiv predogled → Potrdi; žetoni z izvorom — NIKOLI smaragdno »provider potrjeno«) + preslikava imena → kanonski slug (neznano = `manual`, izrecno) | E2E: prilepljeno besedilo → AI prebere KiwiTaxi/KT-8877-2211/14.07.2026 14:30/51 EUR/Marko Kovac + »Prebrano z AI (z-ai-sdk)« → predogled → Potrdi → DB zapis (CONFIRMED, IMPORTED, €51) → seznam z žetoni »Potrjeno (uporabnikov vnos)« + »(uvoženo iz dokumenta)« (reservation-parse-preview.png, pot-reservations-saved.png) |
+| **§7 transport resnica** | productGoUrl razširitev za kiwitaxi (numerični KT ID → `/go/transfers?product=` — AI-pot transferji dobijo poln lifecycle žeton→gumb→EXTERNAL, prej samo kartna pot) + žeton »SAMO POVEZAVA PARTNERJA« + poštena vrstica na vseh transportnih affiliate karticah (affiliate-section homepage, booking-panel transport, destination-modal CTA): leti/najem/transferji/vlaki-vsak po svoji resnici (brez živih cen / od-cene / brez vozni redov), SL+EN pariteta; ferry ne obstaja → nič ne trdimo | E2E: homepage »SAMO POVEZAVA PARTNERJA« + 4 vrstice (SL + EN); /go/transfers?product=25 → 302 → kiwitaxi.com/en/transfers/25 (affiliate-transport-truth.png, affiliate-transport-truth-en.png) |
+| **§14 budget + expenses** | lib/trip-budget.ts (5 vedric: planned ocena z fromPrice/unknown števci — NEZNANA NIKOLI €0 · booked/paid denar · perPerson samo ob znani skupini · SKUPAJ se ne meša čez ocena+denar) + TripExpense model (3-plastna additive migracija; kind booked/paid; diary avtor vzorec) + GET/POST/DELETE /api/trip/[shareId]/expenses (vrata: javna=comment, zasebna branje VIEWER/pisanje COMMENTER; meji 200/50; brisanje samo avtor) + SAVE-PATH VRZELA ZAPRTA (budgetValidation se preračuna ob save — prej /pot nikoli ni imel within/exceeded bloka) + groupSize iz formData (prej default lažni 2) + agregator budget blok + UI kartica »Proračun poti« | E2E: /pot »Rezervirano 337 € · 4 zapisov · uporabniško potrjeno« + »Plačano 32 €« + »Na osebo (4)« + načrt »~25 € · 1 postanek brez znane cene (NE seštevamo)« + stroški z brisanjem (pot-budget-reservations.png) |
+
+**Testi:** 2421/2421 (+35 wave3: parse normalizacija/provider preslikava/
+DRAFT stroj/budget vedrice/kiwitaxi URL + posodobljeni kontraktni task81/
+task99/task98) · lint 0/0 · tsc 0 (src/) · 0 konzolnih napak v E2E ·
+6 dokazov v ux-verify-issue4-val3/.
+
+**Ostanek Issue #4 po VAL 3 (vrzeli, ki še niso odprte):** §5 smeri
+potovanj · §10 offline · §15 dokumenti (širše od §4 parse) · §16
+večnapravčni Go progres — vse izmerjene v §1 matriki, nič ne blokira
+pilota.

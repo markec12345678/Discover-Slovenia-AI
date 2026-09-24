@@ -93,9 +93,33 @@ export async function POST(request: Request) {
     // recomputeTotalBudget (glej revalidateSavedItinerarySupply). NI nov
     // verification sistem; FIXED/cena/geo/ID pravila so nespremenjena —
     // legitimen (strežniško generiran) načrt gre skozi brez sprememb.
-    const fd = b.formData as { language?: unknown } | null | undefined;
+    const fd = b.formData as
+      | { language?: unknown; budget?: unknown; groupSize?: unknown }
+      | null
+      | undefined;
     const saveLang = fd?.language === "en" ? "en" : "sl";
-    const supplyChecked = revalidateSavedItinerarySupply(sanitized, saveLang);
+    // ISSUE #4 §14 (val 3): proračun + skupina iz PlannerInput (formData)
+    // → revalidate preračuna budgetValidation (vrzel: save ga je izpuščal
+    // → /pot brez within/exceeded bloka). Kap 0–100k / 1–20 (isti razred
+    // kot PlannerInput validacija).
+    const saveBudget =
+      typeof fd?.budget === "number" &&
+      Number.isFinite(fd.budget) &&
+      fd.budget > 0 &&
+      fd.budget <= 100_000
+        ? fd.budget
+        : undefined;
+    const saveGroupSize =
+      typeof fd?.groupSize === "number" &&
+      Number.isFinite(fd.groupSize) &&
+      fd.groupSize >= 1 &&
+      fd.groupSize <= 20
+        ? Math.round(fd.groupSize)
+        : undefined;
+    const supplyChecked = revalidateSavedItinerarySupply(sanitized, saveLang, {
+      ...(saveBudget != null ? { budget: saveBudget } : {}),
+      ...(saveGroupSize != null ? { groupSize: saveGroupSize } : {}),
+    });
     if (supplyChecked.report.rejected > 0) {
       console.warn(
         `[itinerary/save] supply revalidacija: ODSTRANJENIH ${supplyChecked.report.rejected} fabrikantrnih supply postankov: ${supplyChecked.report.issues

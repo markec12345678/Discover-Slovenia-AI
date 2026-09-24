@@ -20,6 +20,8 @@ export interface AuditLogParams {
   action: string;
   // P3c-9: "product" | "experience" — moderacijska zanka tržnice
   // ISSUE #4 §13: "trip" | "trip_collaborator" — sodelovanje na poti
+  // ISSUE #4 §4+§14 (val 3): "journey_booking" | "trip_expense" —
+  // rezervacije in stroški na poti
   resourceType:
     | "listing"
     | "product"
@@ -30,7 +32,9 @@ export interface AuditLogParams {
     | "booking"
     | "commission_invoice"
     | "trip"
-    | "trip_collaborator";
+    | "trip_collaborator"
+    | "journey_booking"
+    | "trip_expense";
   resourceId?: string;
   resourceName?: string;
   metadata?: Record<string, unknown>;
@@ -93,4 +97,9 @@ export const AUDIT_ACTIONS = {
   TRIP_LINK_SHARING_CHANGED: "trip_link_sharing_changed",
   TRIP_CONTENT_UPDATED: "trip_content_updated",
   TRIP_CONTENT_CONFLICT: "trip_content_conflict",
+  // ISSUE #4 §4+§14 (val 3) — rezervacije (uvoz/parse) + stroški poti
+  RESERVATION_IMPORTED: "reservation_imported",
+  RESERVATION_IMPORT_CONFIRMED: "reservation_import_confirmed",
+  TRIP_EXPENSE_ADDED: "trip_expense_added",
+  TRIP_EXPENSE_REMOVED: "trip_expense_removed",
 } as const;

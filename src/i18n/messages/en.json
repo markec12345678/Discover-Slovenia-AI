@@ -230,7 +230,12 @@
     "stayGroup": "Stay",
     "moveGroup": "Getting there",
     "experienceGroup": "Experiences",
-    "essentialsGroup": "Travel essentials"
+    "essentialsGroup": "Travel essentials",
+    "handoffBadge": "Partner link only",
+    "handoffFlightsNote": "No live flight prices in the app — compare at Skyscanner.",
+    "handoffCarsNote": "Partner link only — rental offers at DiscoverCars.",
+    "handoffTransfersNote": "Published from-prices; availability at Kiwitaxi.",
+    "handoffTransportNote": "Rail/bus timetables and prices are not in the app — search at Omio."
   },
   "newsletter": {
     "title": "Get Slovenia's hidden gems",
@@ -775,7 +780,11 @@
       "esimDesc": "eSIM for Slovenia — internet the moment you land, no physical SIM",
       "flightsDesc": "Flights to Ljubljana (Jože Pučnik Airport) — compare prices",
       "insuranceDaysDesc": "Travel insurance for a {days}-day trip — adventure activities covered too",
-      "insuranceDesc": "Travel insurance — adventure activities covered too"
+      "insuranceDesc": "Travel insurance — adventure activities covered too",
+      "handoffRentalNote": "Partner link only today — rental offers, prices and availability are at DiscoverCars.",
+      "handoffRailNote": "Rail and bus timetables and prices are not available in the app — search at Omio.",
+      "handoffFlightNote": "Partner link — no live flight prices in the app (compare at Skyscanner).",
+      "handoffTransferNote": "Published from-prices; availability and booking at Kiwitaxi."
     }
   },
   "common": {

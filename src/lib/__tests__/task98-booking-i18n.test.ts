@@ -62,9 +62,10 @@ function placeholders(s: string): string[] {
 // ---------------------------------------------------------------------------
 
 describe("TASK 98: planner.booking — pariteta sporocil SL/EN", () => {
-  test("imenski prostor obstaja v obeh jezikih z identicnimi keyseti (33)", () => {
-    expect(Object.keys(slBooking).length).toBe(33);
-    expect(Object.keys(enBooking).length).toBe(33);
+  test("imenski prostor obstaja v obeh jezikih z identicnimi keyseti (37)", () => {
+    // ISSUE #4 §7 (val 3): +4 handoff truth note ključi (rental/rail/flight/transfer)
+    expect(Object.keys(slBooking).length).toBe(37);
+    expect(Object.keys(enBooking).length).toBe(37);
     expect(Object.keys(slBooking).sort()).toEqual(Object.keys(enBooking).sort());
   });
 

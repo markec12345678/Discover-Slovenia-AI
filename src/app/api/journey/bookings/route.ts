@@ -37,7 +37,9 @@ import type { ProviderSlug } from "@/lib/supply/types";
 //  - zapišemo SAMO tisto, kar dejansko vemo (0 poverilnic → 0 CONFIRMED).
 // ============================================================================
 
-/** Veljavni ponudniki zapisa (kanonski slugi + lokalni koledar dogodkov). */
+/** Veljavni ponudniki zapisa (kanonski slugi + lokalni koledar dogodkov
+ *  + "manual" — ISSUE #4 §4 val 3: ročni vnos/uvožena rezervacija neznanega
+ *  ponudnika; izrecen slug, nikoli lažen kanonski). */
 const VALID_PROVIDERS: readonly string[] = [
   "osm",
   "fsq",
@@ -56,6 +58,7 @@ const VALID_PROVIDERS: readonly string[] = [
   "safetywing",
   "travelpayouts",
   "events",
+  "manual",
 ];
 
 const SHARE_ID_RE = /^[a-z0-9]{1,32}$/;
@@ -190,11 +193,13 @@ const SELECT_FIELDS = {
   provider: true,
   providerProductId: true,
   status: true,
+  source: true,
   providerBookingId: true,
   confirmedPrice: true,
   currency: true,
   confirmationUrl: true,
   cancellationUrl: true,
+  importData: true,
   createdAt: true,
   updatedAt: true,
 } as const;

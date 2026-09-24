@@ -230,7 +230,12 @@
     "stayGroup": "Bivanje",
     "moveGroup": "Na pot",
     "experienceGroup": "Doživetja",
-    "essentialsGroup": "Varna pot"
+    "essentialsGroup": "Varna pot",
+    "handoffBadge": "Samo povezava partnerja",
+    "handoffFlightsNote": "Brez živih cen letov v aplikaciji — primerjava pri Skyscannerju.",
+    "handoffCarsNote": "Samo povezava partnerja — ponudba najema pri DiscoverCars.",
+    "handoffTransfersNote": "Objavljene od-cene prevozov; razpoložljivost pri Kiwitaxiju.",
+    "handoffTransportNote": "Vozni redi in cene vlakov/avtobusov niso v aplikaciji — iskanje pri Omio."
   },
   "newsletter": {
     "title": "Prejmi skrite bisere Slovenije",
@@ -775,7 +780,11 @@
       "esimDesc": "eSIM za Slovenijo — internet takoj ob prihodu, brez fizične SIM",
       "flightsDesc": "Leti do Ljubljane (letališče Jožeta Pučnika) — primerjava cen",
       "insuranceDaysDesc": "Potno zavarovanje za {days}-dnevno potovanje — tudi za pustolovske aktivnosti",
-      "insuranceDesc": "Potno zavarovanje — tudi za pustolovske aktivnosti"
+      "insuranceDesc": "Potno zavarovanje — tudi za pustolovske aktivnosti",
+      "handoffRentalNote": "Danes samo povezava partnerja — ponudba, cene in razpoložljivost najema so pri DiscoverCars.",
+      "handoffRailNote": "Vozni redi in cene vlakov/avtobusov niso na voljo v aplikaciji — iskanje pri Omio.",
+      "handoffFlightNote": "Povezava partnerja — brez živih cen letov v aplikaciji (primerjava pri Skyscannerju).",
+      "handoffTransferNote": "Objavljene od-cene prevozov; razpoložljivost in rezervacija pri Kiwitaxiju."
     }
   },
   "common": {

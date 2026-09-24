@@ -922,3 +922,24 @@ CREATE INDEX "TripCollaborator_shareId_status_idx" ON "TripCollaborator"("shareI
 -- CreateIndex
 CREATE INDEX "TripCollaborator_userId_idx" ON "TripCollaborator"("userId");
 
+
+-- CreateTable (ISSUE #4 §14 val 3 — uporabnikovi stroški na poti)
+CREATE TABLE "TripExpense" (
+    "id" TEXT NOT NULL,
+    "shareId" TEXT NOT NULL,
+    "dayIndex" INTEGER,
+    "label" TEXT NOT NULL,
+    "amountEur" DOUBLE PRECISION NOT NULL,
+    "kind" TEXT NOT NULL,
+    "authorName" TEXT,
+    "authorClientId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "TripExpense_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "TripExpense_shareId_idx" ON "TripExpense"("shareId");
+
+-- CreateIndex
+CREATE INDEX "TripExpense_kind_idx" ON "TripExpense"("kind");

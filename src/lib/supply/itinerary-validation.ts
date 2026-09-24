@@ -126,11 +126,23 @@ const PRODUCT_GO_PROVIDERS: ReadonlySet<string> = new Set([
 
 /** Deterministična produktna /go povezava (ali null, če ponudnik ni
  *  produktno-specifičen). ISTA oblika kot adapterjev mapper — /go ruta je
- *  edina avtoriteta za sprejem produkt parametrov. */
+ *  edina avtoriteta za sprejem produkt parametrov.
+ *
+ *  ISSUE #4 §7 (val 3): KIWITAXI transferi — edini transport s KONKRETNIM
+ *  inventarjem (308 krajev / 1.494 rut / 9.614 prevozov, kanonski dataset)
+ *  so prej na AI poti ostali BREZ življenjskega cikla (karte "Brez
+ *  rezervacije" se izrišejo samo ob booking_url), medtem ko je KARTNA pot
+ *  (stop-insert) cikel imela. Numerični KT ID → /go/transfers?product=…
+ *  (validacija numeric + membership preveri /go ruta sama — isti vir);
+ *  preostali transporti (rental/rail/bus/flight = affiliate kartice) so
+ *  handoff brez produkta — njihova resnica je §7 žeton na karticah. */
 export function productGoUrl(
   provider: string,
   providerProductId: string
 ): string | null {
+  if (provider === "kiwitaxi" && /^\d{1,10}$/.test(providerProductId)) {
+    return `/go/transfers?product=${encodeURIComponent(providerProductId)}`;
+  }
   if (!PRODUCT_GO_PROVIDERS.has(provider)) return null;
   return `/go/${provider}?product=${encodeURIComponent(providerProductId)}`;
 }
@@ -924,7 +936,13 @@ export async function logItineraryValidation(
  */
 export function revalidateSavedItinerarySupply(
   it: Itinerary,
-  lang: "sl" | "en"
+  lang: "sl" | "en",
+  opts?: {
+    /** ISSUE #4 §14 (val 3): uporabnikov proračun (cilj, EUR) iz formData. */
+    budget?: number;
+    /** ISSUE #4 §14 (val 3): velikost skupine iz formData (PlannerInput). */
+    groupSize?: number;
+  }
 ): { itinerary: Itinerary; report: SupplyValidationReport } {
   const authority = verifyCurrentStopsAuthority(extractSupplyStops(it));
   const validated = validateItinerarySupply(
@@ -963,8 +981,21 @@ export function revalidateSavedItinerarySupply(
     };
   }
 
+  // ISSUE #4 §14 (val 3) — SAVE-PATH VRZEL: do val 3 je save izpuščal
+  // budgetValidation (sanitize namenoma ne zaupa klientovi strukturi, save
+  // pa je nikoli ni preračunal) → /pot nikoli ni imel within/exceeded/
+  // uncertain bloka. Preračun TUKAJ (isti klic kot generacija po sanitize)
+  // iz kanonskih stroškov validacije + uporabnikovega budget/groupSize iz
+  // formData — legiten načrt gre skozi nespremenjen.
+  const budgeted = recomputeTotalBudget(result);
+  budgeted.budgetValidation = computeBudgetValidation(budgeted, {
+    ...(opts?.budget != null ? { budget: opts.budget } : {}),
+    ...(opts?.groupSize != null ? { groupSize: opts.groupSize } : {}),
+    canonicalCosts: validated.report.canonicalCosts,
+  });
+
   return {
-    itinerary: recomputeTotalBudget(result),
+    itinerary: budgeted,
     report: validated.report,
   };
 }

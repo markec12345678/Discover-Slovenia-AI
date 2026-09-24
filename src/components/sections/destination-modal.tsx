@@ -73,6 +73,9 @@ interface AffiliateCta {
   partner: string;
   category: string;
   badge?: string;
+  /** ISSUE #4 §7 (val 3): transport CTA-ji — izrecen žeton, da je to
+   *  ZUNANJA rezervacija pri partnerju (ne naše iskanje/inventar). */
+  externalOnly?: boolean;
 }
 
 export function DestinationModal({
@@ -148,6 +151,7 @@ export function DestinationModal({
           icon: Car,
           partner: "DiscoverCars",
           category: "Najem avta",
+          externalOnly: true,
         },
         {
           href: `/go/activities?dest=${encodeURIComponent(destination.name)}`,
@@ -166,6 +170,7 @@ export function DestinationModal({
           icon: Plane,
           partner: "Skyscanner",
           category: "Letalske vozovnice",
+          externalOnly: true,
         },
         {
           href: `/go/tickets?dest=${encodeURIComponent(destination.name)}`,
@@ -419,6 +424,12 @@ export function DestinationModal({
                           <span className="block text-xs text-muted-foreground">
                             {cta.category}
                           </span>
+                          {cta.externalOnly ? (
+                            <span className="mt-1 inline-flex items-center gap-1 text-[10px] leading-none text-muted-foreground">
+                              <ExternalLink className="size-3" aria-hidden="true" />
+                              Zunanja rezervacija pri ponudniku
+                            </span>
+                          ) : null}
                         </span>
                         <ExternalLink
                           className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5"

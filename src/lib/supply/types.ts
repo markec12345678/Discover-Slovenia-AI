@@ -43,7 +43,11 @@ export type ProviderSlug =
   | "airalo"
   | "worldnomads"
   | "safetywing"
-  | "travelpayouts";
+  | "travelpayouts"
+  // ISSUE #4 §4 (val 3): ročni vnos/uvožena rezervacija NEZnanEGA
+  // ponudnika — izrecen slug za JourneyBooking.source USER/IMPORTED
+  // zapise (nikoli lažen kanonski; ni supply adapter).
+  | "manual";
 
 /**
  * Kanonska taksonomija tipov produktov (provider-agnostic).

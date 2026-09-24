@@ -114,6 +114,8 @@ export async function migrateJourneyBookingTableWith(
              "confirmationUrl" TEXT,
              "cancellationUrl" TEXT,
              "providerPayload" TEXT,
+             "source" TEXT,
+             "importData" TEXT,
              "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
              "updatedAt" TIMESTAMP(3) NOT NULL,
              CONSTRAINT "JourneyBooking_pkey" PRIMARY KEY ("id")
@@ -131,6 +133,8 @@ export async function migrateJourneyBookingTableWith(
              "confirmationUrl" TEXT,
              "cancellationUrl" TEXT,
              "providerPayload" TEXT,
+             "source" TEXT,
+             "importData" TEXT,
              "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
              "updatedAt" DATETIME NOT NULL
            )`
@@ -151,7 +155,9 @@ export async function migrateJourneyBookingTableWith(
   // where: { shareId } klici 503). Healing: idempotenten ADD COLUMN za
   // obe manjkajoča stolpca (shareId + sessionKey) na obstoječih tabelah.
   if (exists) {
-    for (const column of ["shareId", "sessionKey"] as const) {
+    // ISSUE #4 §4 (val 3): source/importData se dodata starejšim bazam z
+    // istim idempotentnim healing vzorcem kot shareId/sessionKey.
+    for (const column of ["shareId", "sessionKey", "source", "importData"] as const) {
       try {
         if (dialect === "sqlite") {
           const cols = (await client.$queryRawUnsafe(
@@ -190,6 +196,9 @@ export async function migrateJourneyBookingTableWith(
   );
   await client.$executeRawUnsafe(
     `CREATE INDEX IF NOT EXISTS "JourneyBooking_status_idx" ON "JourneyBooking"("status")`
+  );
+  await client.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "JourneyBooking_source_idx" ON "JourneyBooking"("source")`
   );
 
   return { dialect, tablesCreated };

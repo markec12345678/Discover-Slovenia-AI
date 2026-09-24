@@ -77,8 +77,11 @@ export type ConfirmationCapability =
  * TASK 99 (issue #1 §2 — CELOTEN lifecycle): dopolnjeni statusi
  * BOOKING_REQUESTED (zahteva oddana ponudniku), REFUNDED (vračilo iz
  * providerjevega odgovora), MODIFIED (sprememba potrjene rezervacije pri
- * ponudniku), EXPIRED (zadržani inventar/zahteva je potekla). */
+ * ponudniku), EXPIRED (zadržani inventar/zahteva je potekla).
+ * ISSUE #4 §4 (val 3): DRAFT — uvožena rezervacija iz dokumenta, ki še
+ * ČAKA uporabnikovo potrditev (nezanesljiv parsing ostane DRAFT). */
 export type ConfirmationStatus =
+  | "DRAFT"
   | "SELECTED"
   | "BOOKING_REQUESTED"
   | "PENDING"
@@ -94,6 +97,7 @@ export type ConfirmationStatus =
   | "EXTERNAL";
 
 export const CONFIRMATION_STATUSES: readonly ConfirmationStatus[] = [
+  "DRAFT",
   "SELECTED",
   "BOOKING_REQUESTED",
   "PENDING",
@@ -112,12 +116,15 @@ export const CONFIRMATION_STATUSES: readonly ConfirmationStatus[] = [
 /** Statusi, ki jih lahko sistem ZAPIŠE BREZ providerjevega odgovora (§2
  * iskrenost): SELECTED (uporabnikova izbira), EXTERNAL (preusmeritev na
  * ponudnika — checkout handoff), BOOKING_REQUESTED (oddana zahteva pri
- * API_BOOKING ponudniku). VSAKI drugi status mora priti prek prehoda iz
- * obstoječega zapisa (provider-driven dogodek). */
+ * API_BOOKING ponudniku), DRAFT (ISSUE #4 §4: uvoz/parsing rezervacije,
+ * ki še čaka uporabnikovo potrditev — NEZANESLJIV parsing ostane DRAFT).
+ * VSAKI drugi status mora priti prek prehoda iz obstoječega zapisa
+ * (provider-driven dogodek ali uporabnikova potrditev uvoza). */
 export const INITIAL_CONFIRMATION_STATUSES: readonly ConfirmationStatus[] = [
   "SELECTED",
   "EXTERNAL",
   "BOOKING_REQUESTED",
+  "DRAFT",
 ];
 
 // ---------------------------------------------------------------------------

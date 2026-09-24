@@ -67,8 +67,8 @@ function rec(
 // ---------------------------------------------------------------------------
 
 describe("TASK 99 §2: polni nabor ConfirmationStatus", () => {
-  test("① vseh 13 statusov (9 obstoječih + 4 novi iz issue §2)", () => {
-    expect(CONFIRMATION_STATUSES).toHaveLength(13);
+  test("① vseh 14 statusov (13 iz TASK 99 + DRAFT iz Issue #4 §4 val 3)", () => {
+    expect(CONFIRMATION_STATUSES).toHaveLength(14);
     // novi iz issue #1 §2 (prej manjkali POVsod — grep 0 zadetkov)
     expect(CONFIRMATION_STATUSES).toContain("BOOKING_REQUESTED");
     expect(CONFIRMATION_STATUSES).toContain("REFUNDED");
@@ -86,8 +86,11 @@ describe("TASK 99 §2: polni nabor ConfirmationStatus", () => {
   test("② INITIAL_CONFIRMATION_STATUSES: SAMO uporabniku pripisljivi (fail-closed)", () => {
     // Brez provider odgovora lahko zapišemo LE izbiro/preusmeritev/zahtevo —
     // VSAK drug status je provider-driven dogodek (PATCH kanal, žeton).
+    // ISSUE #4 §4 (val 3): + DRAFT (uvožena rezervacija čaka potrditev —
+    // uporabnikov dogodek, ne providerjev).
     expect([...INITIAL_CONFIRMATION_STATUSES].sort()).toEqual([
       "BOOKING_REQUESTED",
+      "DRAFT",
       "EXTERNAL",
       "SELECTED",
     ]);

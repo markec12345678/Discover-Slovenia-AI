@@ -7,6 +7,114 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.94.0] — 2026-09-24 (ISSUE #4 IMPLEMENTACIJSKI VAL 3: §4+§7+§14)
+
+> **Načrt:** docs/ISSUE4-BASELINE.md §G (predlog vala 3). **Metoda:**
+> meriti → popraviti → dokazati (ista disciplina kot VAL 1/VAL 2).
+> **0 izgube funkcij; 0 zmede dodane; nazaj kompatibilno.**
+
+### §4 — IMPORT REZERVACIJ IN DOKUMENTOV
+
+- **`POST /api/journey/bookings/parse` — STATELESS AI ekstrakcija (0
+  zapisov):** slika (VLM veriga Gemini → z-ai), PDF (unpdf besedilo → LLM
+  jsonMode) ali prilepljeno besedilo → STROG prompt (»NEVER invent values«)
+  → deterministična normalizacija (`lib/imported-reservation.ts`: striže,
+  kapira, cena > 0 ≤ 100k, valuta ISO whitelist, manjkajoče = null).
+  `via` razkritek bralca; rate limit 6/min; dokument nikoli shranjen.
+- **`POST /api/journey/bookings/import` — zapis SAMO po uporabnikovi
+  potrditvi:** source `USER` (ročni vnos — potrditev je dejanje vnosa) /
+  `IMPORTED` (pregledan dokument — DOKUMENT JE ATESTACIJA, utemeljitev v
+  `lib/journey/booking.ts`; S1 ostaja neoslabljen za klientove trditve o
+  providerjevem odgovoru). Status DRAFT (nezanesljiv parsing — Issue #4 §4
+  izrecno) nosi SAMO importData; CONFIRMED sme nositi št. rezervacije +
+  ceno IZ dokumenta. Posodobitev (DRAFT → CONFIRMED/CANCELLED) samo
+  uporabniški uvozi; zasebna pot ≥ EDITOR; audit
+  RESERVATION_IMPORTED / RESERVATION_IMPORT_CONFIRMED.
+- **DRAŽAVNI STROJ:** nov status `DRAFT` (14 skupaj) + prehodi
+  (DRAFT → CONFIRMED/CANCELLED/FAILED/UNKNOWN/EXTERNAL; NIKOLI → PAID) +
+  `validateConfirmationRecord` source-aware (USER/IMPORTED smejo
+  atestacije iz dokumenta; brez source ostanejo STARA pravila).
+- **`source` + `importData` stolpca** (JourneyBooking, additive):
+  izvor zapisa (USER/IMPORTED/PROVIDER/null-legacy) + surovi podatki
+  rezervacije (ponudnik, št., kdaj, kraj, gost, cena, valuta, rok odpovedi,
+  kontakt). Migracija po VAL 2 kanonu (schema + journey_booking SQL +
+  startup healing ALTER + baseline checksum).
+- **UI `/pot` — kartica »Rezervacije«:** seznam z IZVOROM razkritim
+  (žeton »Potrjeno (uporabnikov vnos)« + »(uvoženo iz dokumenta)« /
+  »(ročni vnos)« — NIKOLI smaragdno »provider potrjeno«) + »Dodaj
+  rezervacijo«: Ročno / Dokument (slika|PDF) / Besedilo → parse →
+  UREDLJIV predogled → Potrdi in shrani (ali Shrani kot osnutek).
+  DRAFT z žetonom »Čaka potrditev« + gumbi Potrdi/Prekliči.
+- **`bookingList` v agregatorju** (parsan summary BREZ contact/notes v
+  javnem odgovoru) + `bookings.draft` števec.
+- **Preslikava ponudnika:** ime iz dokumenta → kanonski slug
+  (Booking.com → booking, KiwiTaxi → kiwitaxi …), neznano → `manual`
+  (izrecen slug, nikoli lažen kanonski; ProviderSlug član).
+
+### §7 — TRANSPORT REALITY (resnica na vseh površinah)
+
+- **Kiwitaxi transferi na AI poti — ŽIVLJENJSKI CIKEL:** `productGoUrl`
+  razširitev — numerični KT ID → `/go/transfers?product={id}` (numeric
+  validacija + membership preveri /go rute; isti vir). AI-predlagani
+  transferji zdaj dobijo žeton »Brez rezervacije« → gumb »Rezerviraj pri
+  ponudniku« → EXTERNAL — prej SO SAMO kartna (stop-insert) pot imela
+  cikel (vrzel K-14 konsistence).
+- **Žeton »SAMO POVEZAVA PARTNERJA« + poštena vrstica** na VSEH
+  transportnih affiliate karticah (homepage affiliate-section, booking
+  panel transport zavihek, destination-modal CTA): leti »Brez živih cen
+  letov v aplikaciji« · najem »ponudba pri DiscoverCars« · transferji
+  »Objavljene od-cene; razpoložljivost pri Kiwitaxiju« · vlaki/avtobusi
+  »Vozni redi in cene … niso na voljo v aplikaciji — iskanje pri Omio«
+  (SL + EN pariteta, 9 novih i18n ključev).
+- **Ferry:** nič ne obstaja — nič NE trdimo (iskrena tišina).
+
+### §14 — BUDGET + EXPENSES (ocena ≠ strošek — sodba TRIP-DOMAIN-MAP drži)
+
+- **`lib/trip-budget.ts` — 5 vedric resnice:** planned (ocena načrta iz
+  budgetValidation/dayCostSummary: knownTotal + fromPriceCount +
+  unknownCostStops — NEZNANA cena NIKOLI €0) · booked (uporabniško
+  potrjene rezervacije + TripExpense zaveze) · paid (TripExpense plačila)
+  · perPerson (SAMO denar, SAMO ob znani skupini) · groupSize iz formData
+  (PlannerInput — prej NIKOLI ni prišel do /pot, default je bil lažni 2).
+  SKUPNI znesek se NE meša čez planned+booked (dvojni števec) — vedro
+  po vedro z izvorom.
+- **`TripExpense` model** (additive, 3-plastna migracija): uporabnikovi
+  stroški (kind booked/paid, dayIndex, avtor clientId — diary vzorec).
+  `GET/POST/DELETE /api/trip/[shareId]/expenses`: javna = komentar
+  raven; zasebna branje ≥ VIEWER, pisanje ≥ COMMENTER; meji 200/pot in
+  50/avtor; brisanje samo avtor; audit.
+- **SAVE-PATH VRZELA ZAPRTA:** `revalidateSavedItinerarySupply` od zdaj
+  preračuna `budgetValidation` iz kanonskih stroškov + formData
+  budget/groupSize (prej jo je save IZPUŠČAL → /pot nikoli ni imel
+  within/exceeded/uncertain bloka).
+- **Agregator `budget` blok** (strežniško computeTripBudgetSummary) +
+  **UI `/pot` kartica »Proračun poti«:** Načrt (ocena) z od-cenami/
+  neznanimi števci + status proračuna · Rezervirano/Plačano (denar) ·
+  Na osebo · seznam stroškov + obrazec »Zabeleži strošek« (vrsta
+  booked/paid, dan, znesek — z izrecno opombo »tvoja trditev«).
+
+### KVALITETA
+
+- **Testi:** 2421/2421 (+35 VAL 3, `issue4-wave3-truth.test.ts`: parse
+  normalizacija 10, provider preslikava 4, DRAFT državni stroj 8, budget
+  vedrice 8, kiwitaxi /go 4, cost-truth hrbtenica 1) + posodobljeni
+  kontraktni testi (task81 16 stolpcev/5 indeksov, task99 14 statusov,
+  task98 37 ključev). **lint 0 · tsc 0 (src/).**
+- **Browser E2E (0 konzolnih napak, 6 dokazov `ux-verify-issue4-val3/`):**
+  (a) /pot Rezervacije + Proračun: 4 rezervacije z izvori (GetYourGuide
+  uvoženo · Booking.com uvoženo · Hotel Park osnutek→preklicano ·
+  KiwiTaxi parse→potrjeno), Rezervirano 337 € · 4 zapisi, Plačano 32 €,
+  Na osebo (skupina 4); (b) parse tok v browserju: prilepljeno besedilo →
+  AI prebere KiwiTaxi/KT-8877-2211/14.07.2026 14:30/51 EUR/Marko Kovac +
+  »Prebrano z AI (z-ai-sdk)« → UREDLJIV predogled → Potrdi → zapis v DB
+  (CONFIRMED, IMPORTED, €51); (c) §7 homepage: žeton SAMO POVEZAVA
+  PARTNERJA + 4 poštene vrstice (SL+EN pariteta); (d) §7 AI-path:
+  /go/transfers?product=25 → 302 → kiwitaxi.com/en/transfers/25.
+- **Operativno:** OOM zrušitve dev strežnika v 4 GB peskovniku ostajajo
+  okoljske (dokumentirano VAL 2) — produkcijska koda ni vzrok.
+
+---
+
 ## [1.93.0] — 2026-09-24 (ISSUE #4 IMPLEMENTACIJSKI VAL 2: §2+§8+§13)
 
 > **Načrt:** docs/TRIP-DOMAIN-MAP.md (§2 domena, obvezni predpogoj) +

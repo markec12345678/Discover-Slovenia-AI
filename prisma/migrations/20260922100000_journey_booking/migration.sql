@@ -16,6 +16,11 @@
 -- za MY TRIP prekrivko — vrstice brez shareId ne puščajo med uporabniki)
 -- + 4. indeks. Obstoječe baze dobijo stolpec z idempotentnim ALTER prek
 -- startup migracije (ADD COLUMN IF NOT EXISTS / narečno-varno).
+--
+-- ISSUE #4 §4 (val 3): dodana stolpca "source" (izvor zapisa:
+-- USER/IMPORTED/PROVIDER/null-legacy) in "importData" (ekstrahirani/
+-- ročni podatki rezervacije) + 5. indeks (source). Obstoječe baze: startup
+-- migracija journey-booking-migration.ts (idempotenten healing ALTER).
 
 -- CreateTable
 CREATE TABLE "JourneyBooking" (
@@ -31,6 +36,8 @@ CREATE TABLE "JourneyBooking" (
     "confirmationUrl" TEXT,
     "cancellationUrl" TEXT,
     "providerPayload" TEXT,
+    "source" TEXT,
+    "importData" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "JourneyBooking_pkey" PRIMARY KEY ("id")
@@ -41,3 +48,4 @@ CREATE INDEX "JourneyBooking_shareId_idx" ON "JourneyBooking"("shareId");
 CREATE INDEX "JourneyBooking_sessionKey_idx" ON "JourneyBooking"("sessionKey");
 CREATE INDEX "JourneyBooking_provider_providerProductId_idx" ON "JourneyBooking"("provider", "providerProductId");
 CREATE INDEX "JourneyBooking_status_idx" ON "JourneyBooking"("status");
+CREATE INDEX "JourneyBooking_source_idx" ON "JourneyBooking"("source");

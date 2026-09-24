@@ -11,6 +11,7 @@ import {
   Car,
   Plane,
   ExternalLink,
+  Info,
   MapPin,
   Star,
   Clock,
@@ -278,6 +279,7 @@ function AffiliateCard({
   partnerName,
   cta,
   description,
+  truthNote,
   onTrack,
 }: {
   href: string;
@@ -285,6 +287,10 @@ function AffiliateCard({
   partnerName: string;
   cta: string;
   description: string;
+  /** ISSUE #4 §7 (val 3): POŠTENA VRSTICA pod opisom — kaj DEJANSKO lahko
+   *  narediš tukaj (samo povezava / brez živih cen / brez vozni redov) —
+   *  affiliate kartica ≠ inventar ≠ vozni red. */
+  truthNote?: string;
   onTrack?: () => void;
 }) {
   return (
@@ -327,6 +333,12 @@ function AffiliateCard({
           <ExternalLink className="hidden size-3 shrink-0 text-muted-foreground sm:inline-block" aria-hidden />
         </div>
         <p className="line-clamp-1 text-xs text-muted-foreground">{description}</p>
+        {truthNote ? (
+          <p className="mt-1 flex items-center gap-1 text-[11px] leading-tight text-muted-foreground/90">
+            <Info className="size-3 shrink-0" aria-hidden />
+            <span className="line-clamp-2">{truthNote}</span>
+          </p>
+        ) : null}
       </div>
       <span className="hidden shrink-0 rounded-md bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground transition-colors group-hover:bg-primary/90 sm:inline-block">
         {cta}
@@ -834,6 +846,7 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
                 partnerName="DiscoverCars"
                 cta={t("ctaRental")}
                 description={t("carsDesc", { dest: firstDestination.destination_name })}
+                truthNote={t("handoffRentalNote")}
                 onTrack={() => trackFunnel("listing_click", goHref("cars", firstDestination.destination_name))}
               />
               <AffiliateCard
@@ -842,6 +855,7 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
                 partnerName="Omio"
                 cta={t("ctaSearch")}
                 description={t("trainsDesc")}
+                truthNote={t("handoffRailNote")}
                 onTrack={() => trackFunnel("listing_click", goHref("transport", "Ljubljana"))}
               />
               <AffiliateCard
@@ -850,6 +864,7 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
                 partnerName="Kiwitaxi"
                 cta={t("ctaTransfer")}
                 description={t("transferDesc", { dest: firstDestination.destination_name })}
+                truthNote={t("handoffTransferNote")}
                 onTrack={() =>
                   trackFunnel(
                     "listing_click",
@@ -871,6 +886,7 @@ export function BookingPanel({ dayPlan, bookingData, id, tripDays }: BookingPane
                 partnerName="Skyscanner"
                 cta={t("ctaSearch")}
                 description={t("flightsDesc")}
+                truthNote={t("handoffFlightNote")}
                 onTrack={() => trackFunnel("listing_click", goHref("flights", "Ljubljana"))}
               />
               {/* TASK 97 — ZAVAROVANJE (World Nomads / SafetyWing): trip-level

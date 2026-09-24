@@ -101,11 +101,14 @@ export function isProviderConfirmed(status: ConfirmationStatus): boolean {
  * TASK 99 (issue #1 §2) — dvojezične oznake statusov potrditve za UI
  * (iskrene: npr. REFUNDED samo iz providerjevega odgovora, EXTERNAL vedno
  * „pri ponudniku"). Uporabljajo se v My Trip prekrivki iz JourneyBooking.
+ * ISSUE #4 §4 (val 3): DRAFT — osnutek, ki čaka uporabnikovo potrditev
+ * (vedno z razloženim izvorom v source polju).
  */
 export const CONFIRMATION_STATUS_LABELS: Record<
   ConfirmationStatus,
   { sl: string; en: string }
 > = {
+  DRAFT: { sl: "Osnutek — čaka potrditev", en: "Draft — awaiting confirmation" },
   SELECTED: { sl: "Izbrano", en: "Selected" },
   BOOKING_REQUESTED: {
     sl: "Zahteva za rezervacijo oddana",
@@ -137,8 +140,15 @@ export const CONFIRMATION_STATUS_LABELS: Record<
  * dopolnjen BOOKING_REQUESTED / MODIFIED / REFUNDED / EXPIRED poti —
  * REFUNDED iz PAID/CONFIRMED/CANCELLED (vračilo je providerjev dogodek,
  * ne naša odločitev), MODIFIED samo iz provider-potrjenih stanj,
- * EXPIRED iz ne-zaključenih čakalnih stanj (terminalen). */
+ * EXPIRED iz ne-zaključenih čakalnih stanj (terminalen).
+ * ISSUE #4 §4 (val 3): DRAFT — uporabnik potrdi uvoz (CONFIRMED — z
+ * izvorom USER/IMPORTED, ne provider kanalom), ga prekliče ali označi
+ * spodletelega; DRAFT NIKOLI ne vodi v PAID (plačilo potrjuje samo
+ * providerjev dogodek ali uporabnikov strošek v TripExpense). */
 const ALLOWED_TRANSITIONS: Record<ConfirmationStatus, ConfirmationStatus[]> = {
+  // ISSUE #4 §4: uvožena rezervacija čaka potrditev — uporabnikova odločitev
+  // (ali zaključek življenjskega cikla) zapre osnutek.
+  DRAFT: ["CONFIRMED", "CANCELLED", "FAILED", "UNKNOWN", "EXTERNAL"],
   // HARDENING X1: dopolnjen EXTERNAL — POST sprejema SELECTED in EXTERNAL
   // kot začetna stanja, handoff klik pa je ravno prehod izbira → zunanja
   // rezervacija (brez tega roba bi drugi klik po izbiri dobil 409 in
@@ -191,19 +201,36 @@ export function isValidStatusTransition(
   return (ALLOWED_TRANSITIONS[from] ?? []).includes(to);
 }
 
-/** Zapišljiv zapis potrditve — SAMO tisto, kar provider dejansko vrne. */
+/** Zapišljiv zapis potrditve — SAMO tisto, kar provider dejansko vrne.
+ * ISSUE #4 §4 (val 3): `source` — izvor podatkov zapisa:
+ *   "USER" | "IMPORTED" = uporabnik je podatke potrdil (ročni vnos oz.
+ *   pregledan dokument — DOKUMENT JE ATESTACIJA: uporabnik potrdi, da mu je
+ *   ponudnik izdal to potrditev; ne trdimo, da je provider potrdil prek
+ *   NAŠE integracije — UI vedno razkrije izvor);
+ *   "PROVIDER" | undefined = stara pravila (atestacije SAMO provider kanal).
+ */
+export type BookingSource = "USER" | "IMPORTED" | "PROVIDER";
+
 export interface BookingConfirmationRecord {
   provider: ProviderSlug;
   providerProductId: string;
   status: ConfirmationStatus;
-  /** SAMO če ga je vrnil provider (EXTERNAL tok ga NIMA — null). */
+  /** Izvor podatkov (§4) — določa, katera atestacijska pravila veljajo. */
+  source?: BookingSource;
+  /** SAMO če ga je vrnil provider (EXTERNAL tok ga NIMA — null);
+ *   izjema: source USER/IMPORTED — št. rezervacije IZ uporabnikovega
+ *   dokumenta (uporabniško potrjen). */
   providerBookingId?: string;
-  /** Potrjena cena SAMO iz providerjevega odgovora (nikoli klientova). */
+  /** Potrjena cena SAMO iz providerjevega odgovora (nikoli klientova);
+ *   izjema: source USER/IMPORTED — cena IZ uporabnikovega dokumenta. */
   confirmedPrice?: { amount: number; currency: "EUR" };
   confirmationUrl?: string;
   cancellationUrl?: string;
   /** Surovi podatki, ki jih je vrnil provider (JSON). */
   providerPayload?: string;
+  /** §4: ekstrahirani/ročni podatki rezervacije (JSON) — SAMO source
+ *   USER/IMPORTED (provider kanal nosi providerPayload). */
+  importData?: string;
 }
 
 /**
@@ -211,13 +238,24 @@ export interface BookingConfirmationRecord {
  *  - CONFIRMED/PAID ZAHTEVATA providerBookingId (brez njega je to trditev,
  *    ne podatek) — zavrnjeno;
  *  - EXTERNAL ne sme nositi providerBookingId/potrdilne URL-jev NASE
- *    (živi pri ponudniku, ne pri nas).
+ *    (živi pri ponudniku, ne pri nas);
+ *  - DRAFT (§4) ne sme nositi atestacij — osnutek je NEPOTRJEN;
+ *  - ISSUE #4 §4: source USER/IMPORTED sme nositi providerBookingId/
+ *    confirmedPrice/importData — atestacija je UPORABNIKOV DOKUMENT
+ *    (potrdilo, ki mu ga je izdal ponudnik, in ga je uporabnik potrdil),
+ *    NE klientova trditev o providerjevem odgovoru prek naše integracije.
+ *    Ključna razlika od S1 (POST hardening): S1 ščiti pred lažnimi
+ *    trditvami „provider je potrdil MOJO izbiro“; §4 uvaža ZGODBO „to je
+ *    moje potrdilo od ponudnika“ — vedno z razkritim izvorom (source +
+ *    UI provenance žeton „uporabniško potrjeno“, NIKOLI smaragdno
+ *    „provider potrjeno“ brez provider kanala).
  * Vrne { ok: true } ali { ok: false, reason } — klicalnik zavrne zapis.
  */
 export function validateConfirmationRecord(
   rec: BookingConfirmationRecord
 ): { ok: true } | { ok: false; reason: string } {
-  if (isProviderConfirmed(rec.status)) {
+  const userSourced = rec.source === "USER" || rec.source === "IMPORTED";
+  if (isProviderConfirmed(rec.status) && !userSourced) {
     if (!rec.providerBookingId || rec.providerBookingId.trim() === "") {
       return {
         ok: false,
@@ -255,6 +293,17 @@ export function validateConfirmationRecord(
       return {
         ok: false,
         reason: "EXTERNAL zapis ne sme nositi potrjene cene (ni od ponudnika)",
+      };
+    }
+  }
+  // ISSUE #4 §4: DRAFT je NEPOTRJEN — nosi SAMO importData (surovi parse),
+  // nikoli atestacijskih polj (ta se zapišeta šele ob uporabnikovi potrditvi).
+  if (rec.status === "DRAFT") {
+    if (rec.providerBookingId != null || rec.confirmedPrice != null) {
+      return {
+        ok: false,
+        reason:
+          "DRAFT zapis ne sme nositi atestacijskih polj (osnutek čaka potrditev — ceno/št. rezervacije iz dokumenta hrani importData)",
       };
     }
   }

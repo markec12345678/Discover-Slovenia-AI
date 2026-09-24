@@ -11,6 +11,11 @@ import {
   type TripRole,
   type TripSession,
 } from "@/lib/trip-permissions";
+import {
+  computeTripBudgetSummary,
+  groupSizeFromFormData,
+} from "@/lib/trip-budget";
+import type { DayPlan } from "@/lib/types";
 
 // ============================================================================
 // GET  /api/trip/[shareId] — ISSUE #4 §2: ENOTEN BRALNI OBJEKT POTI
@@ -87,6 +92,69 @@ function summarizePlan(raw: string): PlanSummary | null {
   };
 }
 
+/** ISSUE #4 §14 (val 3): dnevi načrta iz JSON (samo za cost-truth vsote). */
+function parseItineraryDays(raw: string): DayPlan[] {
+  try {
+    const parsed = JSON.parse(raw) as { days?: unknown };
+    if (!Array.isArray(parsed.days)) return [];
+    return parsed.days as DayPlan[];
+  } catch {
+    return [];
+  }
+}
+
+/** ISSUE #4 §14 (val 3): budgetValidation iz JSON (null za stare pote). */
+function parseBudgetValidation(
+  raw: string
+): Parameters<typeof computeTripBudgetSummary>[1] {
+  try {
+    const parsed = JSON.parse(raw) as { budgetValidation?: unknown };
+    const bv = parsed.budgetValidation;
+    if (typeof bv !== "object" || bv === null) return null;
+    return bv as Parameters<typeof computeTripBudgetSummary>[1];
+  } catch {
+    return null;
+  }
+}
+
+/** ISSUE #4 §4 (val 3): prikazni povzetek uvožene rezervacije (brez
+ *  contact/notes — javni odgovor ne razkriva zasebnih podatkov). */
+function bookingSummaryOf(
+  importData: string | null
+): {
+  providerName: string | null;
+  reservationNumber: string | null;
+  startDateTime: string | null;
+  locationName: string | null;
+  guestName: string | null;
+  cancellationDeadline: string | null;
+} {
+  const empty = {
+    providerName: null,
+    reservationNumber: null,
+    startDateTime: null,
+    locationName: null,
+    guestName: null,
+    cancellationDeadline: null,
+  };
+  if (!importData) return empty;
+  try {
+    const d = JSON.parse(importData) as Record<string, unknown>;
+    const s = (k: string) =>
+      typeof d[k] === "string" ? (d[k] as string).slice(0, 200) : null;
+    return {
+      providerName: s("providerName"),
+      reservationNumber: s("reservationNumber"),
+      startDateTime: s("startDateTime"),
+      locationName: s("locationName"),
+      guestName: s("guestName"),
+      cancellationDeadline: s("cancellationDeadline"),
+    };
+  } catch {
+    return empty;
+  }
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ shareId: string }> }
@@ -135,6 +203,7 @@ export async function GET(
     // ── Agregacija (vzporedno, ena runda poizvedb) ──────────────────────
     const [
       savedFull,
+      formData,
       guide,
       commentCount,
       likeCount,
@@ -142,6 +211,7 @@ export async function GET(
       pollCount,
       diaryCount,
       bookings,
+      expenses,
     ] = await Promise.all([
       db.savedItinerary.findUnique({
         where: { shareId },
@@ -155,6 +225,10 @@ export async function GET(
           createdAt: true,
         },
       }),
+      db.savedItinerary.findUnique({
+        where: { shareId },
+        select: { formData: true },
+      }),
       db.tripGuide.findUnique({
         where: { shareId },
         select: { authorName: true, lang: true },
@@ -166,7 +240,25 @@ export async function GET(
       db.tripDiaryEntry.count({ where: { shareId } }),
       db.journeyBooking.findMany({
         where: { shareId },
-        select: { status: true },
+        select: {
+          status: true,
+          source: true,
+          confirmedPrice: true,
+          currency: true,
+          provider: true,
+          providerProductId: true,
+          providerBookingId: true,
+          importData: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: "asc" },
+        take: 100,
+      }),
+      db.tripExpense.findMany({
+        where: { shareId },
+        select: { kind: true, amountEur: true },
+        take: 200,
       }),
     ]);
 
@@ -187,9 +279,30 @@ export async function GET(
       confirmed: bookings.filter(
         (b) => b.status === "CONFIRMED" || b.status === "PAID"
       ).length,
+      // ISSUE #4 §4 (val 3): osnutki (parsan dokument čaka potrditev).
+      draft: bookings.filter((b) => b.status === "DRAFT").length,
       // Preostli statusi (PENDING/FAILED/...) se ne povprečijo — samo
       // kategorije, ki jih UI dejansko izrisuje.
     };
+
+    // ISSUE #4 §14 (val 3): PRORAČUN — 5 vedric resnice, izračunano
+    // strežniško (ista čista plast kot UI). planned iz JSON (ocena),
+    // booked/paid iz uporabnikovih zapisov (denar). groupSize iz formData
+    // (PlannerInput — prej nikoli ni prišel do /pot).
+    const itineraryDays = parseItineraryDays(savedFull.itinerary);
+    const budgetValidation = parseBudgetValidation(savedFull.itinerary);
+    const budget = computeTripBudgetSummary(
+      itineraryDays,
+      budgetValidation,
+      bookings.map((b) => ({
+        status: b.status,
+        source: b.source,
+        confirmedPrice: b.confirmedPrice,
+        currency: b.currency,
+      })),
+      expenses.map((e) => ({ kind: e.kind, amountEur: e.amountEur })),
+      groupSizeFromFormData(formData?.formData ?? null)
+    );
 
     // Sodelujoči: SAMO lastnik (seznam ljudi NI javen podatek).
     let collaborators: unknown[] | undefined;
@@ -254,6 +367,24 @@ export async function GET(
         diaryEntries: diaryCount,
       },
       bookings: bookingSummary,
+      // ISSUE #4 §4 (val 3): seznam rezervacij (omejena polja — importData
+      // PARSIRAMO in vrnemo SAMO prikazna polja, brez contact/notes v
+      // javnem odgovoru; podrobnosti dostopne prek bookings GET iste poti).
+      bookingList: bookings.map((b) => ({
+        provider: b.provider,
+        providerProductId: b.providerProductId,
+        status: b.status,
+        source: b.source,
+        providerBookingId: b.providerBookingId,
+        confirmedPrice: b.confirmedPrice,
+        currency: b.currency,
+        summary: bookingSummaryOf(b.importData),
+        createdAt: b.createdAt.toISOString(),
+        updatedAt: b.updatedAt.toISOString(),
+      })),
+      // ISSUE #4 §14 (val 3): proračun poti (5 vedric — planned ocena,
+      // booked/paid denar, perPerson samo ob znani skupini).
+      budget,
       ...(collaborators !== undefined ? { collaborators } : {}),
     });
   } catch (error) {

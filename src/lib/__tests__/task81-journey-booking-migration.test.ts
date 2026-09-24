@@ -88,13 +88,17 @@ describe("journey-booking-migration (unit)", () => {
     expect(create).toContain("DOUBLE PRECISION");
     // TASK 99: efemerni obseg seje je del CREATE (nove baze)
     expect(create).toContain('"sessionKey" TEXT');
+    // ISSUE #4 val 3: +source/importData v CREATE TABLE
+    expect(create).toContain('"source" TEXT');
+    expect(create).toContain('"importData" TEXT');
 
     const idx = calls.exec.filter((s) => s.startsWith("CREATE INDEX"));
-    expect(idx).toHaveLength(4);
+    expect(idx).toHaveLength(5);
     expect(idx.map((s) => s.match(/"JourneyBooking_[a-zA-Z_]+_idx"/)![0]).sort()).toEqual([
       '"JourneyBooking_provider_providerProductId_idx"',
       '"JourneyBooking_sessionKey_idx"',
       '"JourneyBooking_shareId_idx"',
+      '"JourneyBooking_source_idx"',
       '"JourneyBooking_status_idx"',
     ]);
   });
@@ -114,8 +118,8 @@ describe("journey-booking-migration (unit)", () => {
       calls.exec.find((s) =>
         s.includes('ALTER TABLE "JourneyBooking" ADD COLUMN IF NOT EXISTS "sessionKey"'))
     ).toBeTruthy();
-    // indeksi vseeno tečejo (IF NOT EXISTS — poceni in varni; TASK 99: 4)
-    expect(calls.exec.filter((s) => s.startsWith("CREATE INDEX"))).toHaveLength(4);
+    // indeksi vseeno tečejo (IF NOT EXISTS — poceni in varni; val 3: 5)
+    expect(calls.exec.filter((s) => s.startsWith("CREATE INDEX"))).toHaveLength(5);
   });
 
   test("sqlite, tabela manjka → sqlite DDL (DATETIME, inline PRIMARY KEY)", async () => {
@@ -161,7 +165,8 @@ describe("journey-booking-migration (source-contract)", () => {
     // stolpci iz modela (vrstni red po shemi) — TASK 99: +sessionKey (14)
     const model = schema.match(/model JourneyBooking \{([\s\S]*?)\n\}/)![1];
     const cols = [...model.matchAll(/^\s+([a-zA-Z]+)\s+/gm)].map((m) => m[1]);
-    expect(cols.length).toBe(14);
+    // ISSUE #4 par 4 (val 3): +source/importData (16)
+    expect(cols.length).toBe(16);
     for (const c of cols) {
       expect(sql).toContain(`"${c}"`);
     }
@@ -174,9 +179,10 @@ describe("journey-booking-migration (source-contract)", () => {
       'CREATE INDEX "JourneyBooking_provider_providerProductId_idx" ON "JourneyBooking"("provider", "providerProductId")'
     );
     expect(sql).toContain('CREATE INDEX "JourneyBooking_status_idx" ON "JourneyBooking"("status")');
-    // indeksi v modelu (@@index) morajo biti natanko 4 (TASK 99: +sessionKey)
+    // indeksi v modelu (@@index) morajo biti natanko 5
+    // (TASK 99: +sessionKey; ISSUE #4 val 3: +source)
     const idxCount = [...model_indexMatches(schema)].length;
-    expect(idxCount).toBe(4);
+    expect(idxCount).toBe(5);
   });
 
   function* model_indexMatches(s: string) {
@@ -189,7 +195,8 @@ describe("journey-booking-migration (source-contract)", () => {
     for (const col of [
       "id", "shareId", "sessionKey", "provider", "providerProductId", "status",
       "providerBookingId", "confirmedPrice", "currency", "confirmationUrl",
-      "cancellationUrl", "providerPayload", "createdAt", "updatedAt",
+      "cancellationUrl", "providerPayload", "source", "importData",
+      "createdAt", "updatedAt",
     ]) {
       expect(libSrc).toContain(`"${col}"`);
     }
@@ -198,10 +205,12 @@ describe("journey-booking-migration (source-contract)", () => {
     expect(libSrc).toContain('"JourneyBooking_sessionKey_idx"');
     expect(libSrc).toContain('"JourneyBooking_provider_providerProductId_idx"');
     expect(libSrc).toContain('"JourneyBooking_status_idx"');
-    // idempotentni ALTER za obstoječe baze (TASK 99 + HARDENING H1:
-    // zanka po ["shareId", "sessionKey"] — dejanska izvedba je dokazana v
-    // unit healing testih z izvedenimi SQL izjavami, tu le source-kontrakt)
-    expect(libSrc).toContain('["shareId", "sessionKey"]');
+    // idempotentni ALTER za obstoječe baze (TASK 99 + HARDENING H1 + val 3:
+    // zanka po ["shareId", "sessionKey", "source", "importData"] — dejanska
+    // izvedba je dokazana v unit healing testih, tu le source-kontrakt)
+    expect(libSrc).toContain(
+      '["shareId", "sessionKey", "source", "importData"]'
+    );
     expect(libSrc).toContain('ADD COLUMN "${column}" TEXT');
   });
 
@@ -246,7 +255,7 @@ describe("journey-booking-migration (source-contract)", () => {
 // zaradi nedoločenega narekovaja ("confirmedPrice REAL,) NIČ. Tu sedaj:
 //   1. POSTGRES DDL iz vira → VSAK stolpec modela mora biti V CREATE TABLE;
 //   2. SQLITE DDL iz vira → IZVEDEN proti pravemu bun:sqlite (sintaksa!) in
-//      PRAGMA table_info primerja VSEH 14 stolpcev modela;
+//      PRAGMA table_info primerja VSEH 16 stolpcev modela;
 //   3. vsi 4 indeksi iz vira se izvedejo nad ustvarjeno tabelo (shareId
 //      indeks nad tabelo brez shareId bi PADAL — to je bila dejanska napaka).
 //   4. healing: obstoječa tabela brez shareId dobi ADD COLUMN.
@@ -259,10 +268,11 @@ describe("journey-booking-migration (DDL struktura — HARDENING regresija)", ()
   const MODEL_COLUMNS = [
     "id", "shareId", "sessionKey", "provider", "providerProductId", "status",
     "providerBookingId", "confirmedPrice", "currency", "confirmationUrl",
-    "cancellationUrl", "providerPayload", "createdAt", "updatedAt",
+    "cancellationUrl", "providerPayload", "source", "importData",
+    "createdAt", "updatedAt",
   ];
 
-  test("POSTGRES CREATE TABLE iz vira vsebuje VSEH 14 stolpcev modela (ne le indeksi)", () => {
+  test("POSTGRES CREATE TABLE iz vira vsebuje VSEH 16 stolpcev modela (ne le indeksi)", () => {
     const pgDdl = libSrcHard.match(
       /\? `CREATE TABLE "JourneyBooking" \(([\s\S]+?)\)\s*`/
     )![1];
@@ -274,7 +284,7 @@ describe("journey-booking-migration (DDL struktura — HARDENING regresija)", ()
     expect(pgDdl).toContain('CONSTRAINT "JourneyBooking_pkey"');
   });
 
-  test("SQLITE CREATE TABLE iz vira je SINTAKSNO veljaven in vsebuje VSEH 14 stolpcev (izvedba proti pravemu sqlite)", () => {
+  test("SQLITE CREATE TABLE iz vira je SINTAKSNO veljaven in vsebuje VSEH 16 stolpcev (izvedba proti pravemu sqlite)", () => {
     const sqliteDdl = libSrcHard.match(
       /: `CREATE TABLE IF NOT EXISTS "JourneyBooking" \(([\s\S]+?)\)\s*`/
     )![1];
@@ -285,14 +295,14 @@ describe("journey-booking-migration (DDL struktura — HARDENING regresija)", ()
       .query('PRAGMA table_info("JourneyBooking")')
       .all() as { name: string }[];
     expect(cols.map((c) => c.name).sort()).toEqual([...MODEL_COLUMNS].sort());
-    // vsi 4 indeksi iz vira se izvedejo nad tabelo (H1: shareId indeks bi
+    // vsi 5 indeksi iz vira se izvedejo nad tabelo (H1: shareId indeks bi
     // padel, če stolpec manjka)
     const idxStmts = [
       ...libSrcHard.matchAll(
         /CREATE INDEX IF NOT EXISTS "JourneyBooking_[a-zA-Z_]+_idx" ON "JourneyBooking"\([^)]*\)/g
       ),
     ].map((m) => m[0]);
-    expect(idxStmts).toHaveLength(4);
+    expect(idxStmts).toHaveLength(5);
     for (const stmt of idxStmts) db.run(stmt);
     db.close();
   });

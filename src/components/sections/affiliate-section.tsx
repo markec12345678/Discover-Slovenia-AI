@@ -5,6 +5,7 @@ import {
   Ticket,
   ShieldCheck,
   ExternalLink,
+  Info,
 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { PARTNER_LABELS, insurancePartnerName } from "@/lib/affiliate";
@@ -33,6 +34,10 @@ interface Partner {
   descriptionKey: string;
   href: string;
   ariaKey: string;
+  /** ISSUE #4 §7 (val 3): poštena vrstica za TRANSPORT partnerje — kaj
+   *  DEJANSKO lahko narediš tukaj (samo povezava / brez živih cen /
+   *  brez vozni redov). Affiliate kartica ≠ inventar ≠ vozni red. */
+  handoffKey?: string;
 }
 
 /** Vsi partnerji — popolnoma isti href-i kot prej (sledenje nespremenjeno). */
@@ -52,6 +57,7 @@ const partners: Partner[] = [
     descriptionKey: "flightsDesc",
     href: "/go/flights?dest=Ljubljana",
     ariaKey: "flightsAria",
+    handoffKey: "handoffFlightsNote",
   },
   {
     id: "cars",
@@ -60,6 +66,7 @@ const partners: Partner[] = [
     descriptionKey: "carsDesc",
     href: "/go/cars?dest=Ljubljana",
     ariaKey: "carsAria",
+    handoffKey: "handoffCarsNote",
   },
   {
     id: "transfers",
@@ -68,6 +75,7 @@ const partners: Partner[] = [
     descriptionKey: "transfersDesc",
     href: "/go/transfers?dest=Ljubljana",
     ariaKey: "transfersAria",
+    handoffKey: "handoffTransfersNote",
   },
   {
     id: "transport",
@@ -76,6 +84,7 @@ const partners: Partner[] = [
     descriptionKey: "transportDesc",
     href: "/go/transport?dest=Ljubljana",
     ariaKey: "transportAria",
+    handoffKey: "handoffTransportNote",
   },
   {
     id: "activities",
@@ -197,12 +206,28 @@ export async function AffiliateSection() {
                         <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                           {t(p.labelKey)}
                         </div>
-                        <div className="mt-0.5 text-base font-semibold text-foreground">
+                        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-semibold text-foreground">
                           {p.name}
+                          {/* ISSUE #4 §7 (val 3): transport partnerji — izrecen
+                              žeton SAMO POVEZAVA (affiliate ≠ inventar). */}
+                          {p.handoffKey ? (
+                            <span className="rounded-full border border-border bg-muted/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                              {t("handoffBadge")}
+                            </span>
+                          ) : null}
                         </div>
                         <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
                           {t(p.descriptionKey)}
                         </p>
+                        {/* ISSUE #4 §7 (val 3): poštena vrstica — kaj DEJANSKO
+                            lahko narediš tukaj (brez živih cen / brez
+                            vozni redov / od-cene pri ponudniku). */}
+                        {p.handoffKey ? (
+                          <p className="mt-1 flex items-start gap-1 text-xs leading-snug text-muted-foreground/90">
+                            <Info className="mt-0.5 size-3 shrink-0" aria-hidden />
+                            <span>{t(p.handoffKey)}</span>
+                          </p>
+                        ) : null}
                       </div>
 
                       {/* /go/ redirect — kliks se izmeri strežniško (AnalyticsEvent + funnel) */}

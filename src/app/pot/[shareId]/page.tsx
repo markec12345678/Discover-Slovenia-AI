@@ -10,6 +10,8 @@ import { resolveTripRole, roleAtLeast } from "@/lib/trip-permissions";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { SharedTrip } from "@/components/shared-trip";
 import { TripCollaboration } from "@/components/trip-collaboration";
+import { TripReservations } from "@/components/trip-reservations";
+import { TripBudgetCard } from "@/components/trip-budget-card";
 import { TripGuide, type GuideData } from "@/components/trip-guide";
 import { TripDiary, type DiaryEntry } from "@/components/trip-diary";
 import { TripPolls } from "@/components/trip-polls";
@@ -418,6 +420,20 @@ export default async function SharedTripPage({
           upravljanje, povabljenim sprejem, obiskovalcem stanje. === */}
       <div className="mx-auto max-w-5xl px-4 pb-10 pt-2 sm:px-6 lg:px-8">
         <TripCollaboration shareId={shareId} initialName={saved.name} />
+      </div>
+
+      {/* === ISSUE #4 §4+§14 (val 3): REZERVACIJE + PRORAČUN — uvoz/ročni
+          vnos rezervacij (parse → predogled → potrditev; DRAFT ostane
+          vidno označen) + 5 vednic proračuna (ocena/denar ločeno, neznane
+          cene nikoli €0). === */}
+      <div className="mx-auto max-w-5xl px-4 pb-10 pt-2 sm:px-6 lg:px-8">
+        <TripReservations shareId={shareId} />
+      </div>
+      <div className="mx-auto max-w-5xl px-4 pb-10 pt-2 sm:px-6 lg:px-8">
+        <TripBudgetCard
+          shareId={shareId}
+          dayCount={saved.itinerary.days.length}
+        />
       </div>
 
       {/* === F7: AVTORJSKI VODNIK (skupnostni vodniki) — prikaz vsem,

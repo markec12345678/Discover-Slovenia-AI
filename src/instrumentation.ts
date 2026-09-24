@@ -543,6 +543,57 @@ export async function register() {
         detail: String(error),
       });
     }
+
+    // Startup SHEMA migracija — ISSUE #4 §4+§14 (val 3, 1.94.0): rezervacije
+    // + stroški — stolpci JourneyBooking (source/importData) + tabela
+    // TripExpense. Idempotentna, additive-only, fail-open, skupna zastavica
+    // DSA_DISABLE_SCHEMA_MIGRATION. Glej src/lib/trip-truth-migration.ts.
+    try {
+      const { migrateTripTruthSchema } = await import(
+        "./lib/trip-truth-migration"
+      );
+      const r = await migrateTripTruthSchema();
+      if (r.columnsAdded.length > 0 || r.tablesCreated.length > 0) {
+        console.log(
+          `[instrumentation] Shema migracija (resnica poti): dodani ` +
+            `stolpci [${r.columnsAdded.join(", ") || "-"}], ustvarjene ` +
+            `tabele [${r.tablesCreated.join(", ") || "-"}] (${r.dialect})`
+        );
+        recordStartupStep({
+          name: "schema:trip-truth",
+          status: "ok",
+          detail:
+            `dodani stolpci: ${r.columnsAdded.join(", ") || "-"}; ` +
+            `ustvarjene tabele: ${r.tablesCreated.join(", ") || "-"} (${r.dialect})`,
+        });
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija (resnica poti): stanja ni " +
+            "bilo mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
+        );
+        recordStartupStep({
+          name: "schema:trip-truth",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja sheme ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:trip-truth",
+          status: "ok",
+          detail: "shema že prisotna",
+        });
+      }
+    } catch (error) {
+      console.error(
+        "[instrumentation] Shema migracija (resnica poti) ni uspela:",
+        error
+      );
+      recordStartupStep({
+        name: "schema:trip-truth",
+        status: "failed",
+        detail: String(error),
+      });
+    }
   } else {
     recordStartupStep({
       name: "schema:listing-practical",
@@ -566,6 +617,11 @@ export async function register() {
     });
     recordStartupStep({
       name: "schema:trip-collaborator",
+      status: "skipped",
+      detail: "DSA_DISABLE_SCHEMA_MIGRATION=1",
+    });
+    recordStartupStep({
+      name: "schema:trip-truth",
       status: "skipped",
       detail: "DSA_DISABLE_SCHEMA_MIGRATION=1",
     });
