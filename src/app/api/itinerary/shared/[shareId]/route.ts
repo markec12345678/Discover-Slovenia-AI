@@ -146,8 +146,19 @@ export async function GET(
     });
   } catch (error) {
     console.error("[itinerary/shared] GET napaka:", error);
+    // ZAČASNA DIAGNOSTIKA (1.98.0 — produkcija vrača 500 na vseh branjih
+    // SavedItinerary; vzrok moramo videti v odgovoru, Render logi niso
+    // dostopni iz peskovnika). ODSTRANITI po popravku vzroka.
+    const diag =
+      error instanceof Error
+        ? {
+            name: error.name,
+            message: error.message,
+            code: (error as { code?: string }).code ?? null,
+          }
+        : { name: typeof error, message: String(error), code: null };
     return NextResponse.json(
-      { error: "Napaka pri pridobivanju itinererja" },
+      { error: "Napaka pri pridobivanju itinererja", diag },
       { status: 500 }
     );
   }
