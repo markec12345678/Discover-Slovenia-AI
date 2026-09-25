@@ -9,6 +9,12 @@ import {
   bookingConfirmationEmail,
   providerBookingNotificationEmail,
 } from "@/lib/email-templates";
+import {
+  capacitySufficient,
+  checkDayAvailability,
+  refusalMessage,
+  toDayKey,
+} from "@/lib/experience-availability";
 
 // POST /api/bookings — ustvari rezervacijo izkušnje (demo ali production Stripe)
 //
@@ -21,6 +27,12 @@ import {
 //
 // VARNOST: ceno, ime izkušnje in kontakt ponudnika preberemo iz baze
 // (client posredovana cena se NE zaupa — prej je bila možna €0 rezervacija).
+//
+// TASK 33 (Tier 2 #1, 1.110.0): KOLEDAR RAZPOLOŽLJIVOSTI — preverba dneva
+// (blackout / sezona / kapaciteta/dan) teče ZNOTRAJ SERIALIZABLE
+// transakcije (atomarna preprečitev overbookinga — isti P2034 retry
+// vzorec kot dedup). DORMANT: brez nastavitev (ExperienceAvailability)
+// je dan neomejen in se obnašanje NE spremeni.
 //
 // DEMO mode (brez realnih Stripe ključev): direktno ustvari Booking z
 // status="confirmed", confirmedAt=now, ter pošlje potrditvena e-pošta
@@ -312,6 +324,7 @@ export async function POST(request: Request) {
       const createAtomically = async (): Promise<{
         duplicate: boolean;
         bookingNumber: string;
+        refused: string | null;
       }> => {
         for (let attempt = 0; ; attempt++) {
           try {
@@ -330,8 +343,43 @@ export async function POST(request: Request) {
                   return {
                     duplicate: true,
                     bookingNumber: existing.bookingNumber,
+                    refused: null,
                   };
                 }
+
+                // TASK 33 (Tier 2 #1): koledar razpoložljivosti — ATOMARNA
+                // preverba znotraj transakcije (dva sočasna requesta vidita
+                // isto vsoto → overbooking nemogoč). checkDayAvailability
+                // šteje Σ groupSize rezervacij tega UTC-dneva z statusom ≠
+                // "cancelled" (preklic sprosti mesto).
+                const dayKey = toDayKey(bookingDate);
+                const { policy, booked } = await checkDayAvailability({
+                  db: tx,
+                  experienceId,
+                  dayKey,
+                });
+                if (policy.kind === "closed") {
+                  return {
+                    duplicate: false,
+                    bookingNumber: "",
+                    refused: refusalMessage(policy, booked),
+                  };
+                }
+                if (
+                  policy.kind === "open" &&
+                  !capacitySufficient({
+                    capacity: policy.capacity,
+                    booked,
+                    groupSize,
+                  })
+                ) {
+                  return {
+                    duplicate: false,
+                    bookingNumber: "",
+                    refused: refusalMessage(policy, booked),
+                  };
+                }
+
                 const created = await tx.booking.create({
                   data: {
                     bookingNumber,
@@ -365,6 +413,7 @@ export async function POST(request: Request) {
                 return {
                   duplicate: false,
                   bookingNumber: created.bookingNumber,
+                  refused: null,
                 };
               },
               txOptions
@@ -390,6 +439,7 @@ export async function POST(request: Request) {
                 return {
                   duplicate: true,
                   bookingNumber: lateDup.bookingNumber,
+                  refused: null,
                 };
               }
               throw error;
@@ -400,6 +450,16 @@ export async function POST(request: Request) {
       };
 
       const outcome = await createAtomically();
+
+      // TASK 33 (Tier 2 #1): zavrnjena rezervacija (blackout / izven sezone /
+      // zasedena dnevna kapaciteta) — 409 s iskrenim razlogom.
+      if (outcome.refused) {
+        return NextResponse.json(
+          { success: false, error: outcome.refused },
+          { status: 409 }
+        );
+      }
+
       const dup = outcome.duplicate
         ? { bookingNumber: outcome.bookingNumber }
         : null;
@@ -520,6 +580,9 @@ export async function POST(request: Request) {
     //   3. Vrni { url } za preusmeritev
     //   4. Webhook (stripe/webhook) posluša za checkout.session.completed
     //      in nastavi status="confirmed", confirmedAt=now, stripeSessionId
+    //   5. TASK 33: pred ustvarjanjem "pending" vrstice PONOVNO pokliči
+    //      checkDayAvailability znotraj transakcije (isti vzorec kot demo
+    //      pot zgoraj) — pending rezervacija ZASEDA kapaciteto dneva.
     return NextResponse.json(
       {
         success: false,

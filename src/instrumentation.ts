@@ -279,6 +279,58 @@ export async function register() {
       });
     }
 
+    // Startup SHEMA migracija — TASK 33 (1.110.0, Tier 2 #1): ustvari tabeli
+    // koledarja razpoložljivosti izkušnje (ExperienceAvailability +
+    // ExperienceAvailabilityDay — kapaciteta/dan + blackout + sezona;
+    // preprečitev overbookinga v POST /api/bookings) na obstoječih bazah.
+    // Idempotentna, additive-only, fail-open — skupna zastavica
+    // DSA_DISABLE_SCHEMA_MIGRATION. Glej
+    // src/lib/experience-availability-migration.ts.
+    try {
+      const { migrateExperienceAvailabilityTables } = await import(
+        "./lib/experience-availability-migration"
+      );
+      const r = await migrateExperienceAvailabilityTables();
+      if (r.tablesCreated.length > 0) {
+        console.log(
+          `[instrumentation] Shema migracija (koledar razpoložljivosti): ` +
+            `ustvarjene tabele [${r.tablesCreated.join(", ")}] (${r.dialect})`
+        );
+        recordStartupStep({
+          name: "schema:experience-availability",
+          status: "ok",
+          detail: `ustvarjene tabele: ${r.tablesCreated.join(", ")} (${r.dialect})`,
+        });
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija (koledar razpoložljivosti): " +
+            "tabel ni bilo mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
+        );
+        recordStartupStep({
+          name: "schema:experience-availability",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja tabel ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:experience-availability",
+          status: "ok",
+          detail: "tabele že prisotne",
+        });
+      }
+    } catch (error) {
+      // Fail-open: migracija NE sme podreti zagona strežnika.
+      console.error(
+        "[instrumentation] Shema migracija (koledar razpoložljivosti) ni uspela:",
+        error
+      );
+      recordStartupStep({
+        name: "schema:experience-availability",
+        status: "failed",
+        detail: String(error),
+      });
+    }
+
     // Startup SHEMA migracija — F11 (1.15.0): ustvari tabeli TripPoll +
     // TripPollVote na obstoječih bazah (Vercel/Neon nima ročnega db push;
     // skip-worktree past je modele enkrat zadržala pred commitom).

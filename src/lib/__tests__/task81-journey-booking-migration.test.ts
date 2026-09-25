@@ -22,7 +22,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { migrateJourneyBookingTableWith } from "../journey-booking-migration";
 
@@ -231,14 +231,23 @@ describe("journey-booking-migration (source-contract)", () => {
     const models = [...schema.matchAll(/^model ([A-Za-z]+)/gm)].map((m) => m[1]);
     expect(models.length).toBeGreaterThanOrEqual(29);
 
-    const baseline = readFileSync(
-      path.join(ROOT, "prisma/migrations/20260916000000_baseline/migration.sql"),
-      "utf8"
-    );
-    const tables = new Set([
-      ...[...baseline.matchAll(/CREATE TABLE "([A-Za-z]+)"/g)].map((m) => m[1]),
-      ...[...sql.matchAll(/CREATE TABLE "([A-Za-z]+)"/g)].map((m) => m[1]),
-    ]);
+    // TASK 33: preberi VSE migracije (baseline + vse kasnejše) — nova
+    // tabela vsakega prihodnjega TASK-a mora biti zajeta avtomatsko
+    // (prej je bil seznam ročno kodiran: baseline + journey_booking).
+    const migrationsDir = path.join(ROOT, "prisma/migrations");
+    const migrationFiles = readdirSync(migrationsDir)
+      .filter((f) => !f.startsWith(".") && f !== "migration_lock.toml")
+      .map((f) => path.join(migrationsDir, f, "migration.sql"))
+      .filter((f) => existsSync(f));
+    expect(migrationFiles.length).toBeGreaterThanOrEqual(7);
+
+    const tables = new Set<string>();
+    for (const file of migrationFiles) {
+      const migrationSql = readFileSync(file, "utf8");
+      for (const match of migrationSql.matchAll(/CREATE TABLE "([A-Za-z]+)"/g)) {
+        tables.add(match[1]);
+      }
+    }
     const missing = models.filter((m) => !tables.has(m));
     expect(missing).toEqual([]);
   });

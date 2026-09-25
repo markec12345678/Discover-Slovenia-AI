@@ -53,6 +53,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// TASK 33 (Tier 2 #1): lastniški koledar razpoložljivosti izkušnje
+import { ExperienceAvailabilityDialog } from "@/components/owner/experience-availability-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -3757,6 +3759,11 @@ function ExperiencesTab({
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Experience | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  // TASK 33 (Tier 2 #1): izkušnja, katere koledar razpoložljivosti urejamo
+  const [calendarExperience, setCalendarExperience] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const fetchExperiences = useCallback(async () => {
@@ -3910,6 +3917,12 @@ function ExperiencesTab({
               experience={experience}
               onEdit={() => handleEdit(experience)}
               onDelete={() => setDeleteId(experience.id)}
+              onAvailability={() =>
+                setCalendarExperience({
+                  id: experience.id,
+                  name: experience.name,
+                })
+              }
             />
           ))}
         </div>
@@ -3920,6 +3933,14 @@ function ExperiencesTab({
         onOpenChange={setFormOpen}
         experience={editing}
         onSaved={fetchExperiences}
+      />
+
+      {/* TASK 33 (Tier 2 #1): koledar razpoložljivosti (kapaciteta/dan +
+          blackout + sezona — preprečitev overbookinga) */}
+      <ExperienceAvailabilityDialog
+        open={calendarExperience !== null}
+        onOpenChange={(open) => !open && setCalendarExperience(null)}
+        experience={calendarExperience}
       />
 
       <AlertDialog
@@ -3997,10 +4018,12 @@ function ExperienceCard({
   experience,
   onEdit,
   onDelete,
+  onAvailability,
 }: {
   experience: Experience;
   onEdit: () => void;
   onDelete: () => void;
+  onAvailability: () => void;
 }) {
   // P3c-9: status moderacijske zanke (vzorec badge-ov iz listings zavihka;
   // tip Experience nima status polja, API ga vrača iz DB)
@@ -4137,6 +4160,17 @@ function ExperienceCard({
           >
             <Pencil className="size-3.5" aria-hidden="true" />
             Uredi
+          </Button>
+          {/* TASK 33 (Tier 2 #1): koledar razpoložljivosti (blackout/kapaciteta) */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onAvailability}
+            className="flex-1 gap-1.5"
+            aria-label={`Koledar razpoložljivosti: ${experience.name}`}
+          >
+            <Calendar className="size-3.5" aria-hidden="true" />
+            Koledar
           </Button>
           <Button
             variant="outline"

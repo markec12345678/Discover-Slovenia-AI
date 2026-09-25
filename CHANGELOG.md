@@ -7,6 +7,86 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.110.0] — 2026-09-26 (TASK 33 / Tier 2 #1: koledar razpoložljivosti)
+
+### Dodano
+
+- **KOLEDAR RAZPOLOŽLJIVOSTI IZKUŠNJE (Tier 2 #1 benchmarka Task 28 —
+  mandat docs/COMPETITIVE-ANALYSIS.md C1/priporočilo #3: „vsaj
+  kapaciteta/dan + blackout datumi, da ponudnik prepreči overbooking";
+  deterministično, 0 zunanjih odvisnosti)**. Do zdaj je imel ponudnik za
+  omejevanje rezervacij LE min/maxGroupSize — dva gosta sta lahko istočasno
+  rezervirala 2 × 40 oseb. Zdaj:
+  - **Dva nova Prisma modela (additive-only, DORMANT)**:
+    `ExperienceAvailability` (1:1 nastavitve izkušnje: privzeta dnevna
+    kapaciteta + sezonsko okno) in `ExperienceAvailabilityDay` (dnevni
+    prepis: blackout „closed" ali izjemni dan „open" s prilagojeno
+    kapaciteto; `@@unique(experienceId, date)` = ena vrstica na dan).
+    Brez vrstice v nastavitvah je dan NEOMEJEN — obstoječe obnašanje
+    tržnice se NE spremeni (dormant, enak vzorec kot Stripe).
+  - **Čista domena `src/lib/experience-availability.ts`** (en vir
+    resnice, 51 enotskih testov): stroga validacija koledarskih datumov
+    (2026-02-30 ZAVRNE, prestopna vključena), `resolveDayPolicy` z
+    dokumentirano prednostjo (blackout > izjemni dan > sezona >
+    unrestricted), ČEZLETNA sezona (start > end, npr. 15.11. → 15.3. za
+    zimske ponudnike), `capacitySufficient` z VKLJUČNO mejo (zadnje mesto
+    gre skozi), `expandDateRange` z varovalko 366 dni, zasedenost =
+    Σ groupSize rezervacij dneva s statusom ≠ „cancelled" (preklic
+    sprosti mesto; pending/confirmed/completed ga držijo).
+  - **ATOMARNA PREPREČITEV OVERBOOKINGA v POST /api/bookings**: preverba
+    dneva (blackout / izven sezone / kapaciteta/dan) teče ZNOTRAJ
+    obstoječe SERIALIZABLE transakcije (isti P2034 retry vzorec kot
+    dedup) — dva sočasna requesta vidita ISTO vsoto, overbooking je
+    nemogoč. Zavrnitev → 409 z iskrenim slovenskim sporočilom po vzroku
+    („zaprt" / „izven sezone" / „zaseden — kapaciteta N oseb na dan").
+  - **Javni GET /api/experiences/[slug]/availability?month=YYYY-MM**
+    (slug ALI id): mesečni pogled za gosta — za vsak dan available/reason
+    /capacity/booked/remaining + past flag. NOTE (razlog zaprtja) je
+    LASTNIŠKI podatek in se javno NE razkriva; samo objavljene izkušnje
+    (enoten 404); rate limit 120/min/IP.
+  - **Lastniške rute** (session + lastništvo + AuditLog, bucket
+    „owner-api"): `GET/PUT /api/owner/experiences/[id]/availability`
+    (nastavitve; vsa tri polja prazna = koledar izklopljen — pošteno
+    brisanje vrstice) in `POST/DELETE …/availability/days` (prepis
+    enega dneva ali obsega do 366 dni — orodje „zapri obseg"; zaprt dan
+    z nastavljeno kapaciteto → 400, iskrena napaka).
+  - **Lastniški UI: `ExperienceAvailabilityDialog`** (gumb „Koledar" na
+    kartici izkušnje v owner dashboardu): mesečna mreža (ponedeljek
+    prvi) z barvno kodiranjem (blackout / izven sezone / prepis dneva /
+    zasedeno `gosti/kapaciteta`), klik prihodnjega dneva odpre urejevalnik
+    prepisa (stanje + kapaciteta + opomba + odstranitev), obrazec osnovnih
+    pravil (kapaciteta + sezona) in orodje „zapri obseg datumov".
+    Pretekli dnevi so zaklenjeni (zgodovina se ne spreminja).
+  - **Gostovski UI (experience-modal)**: ob izbiri datuma se naloži
+    mesečni pogled (`BREZ setState-v-efektu` — izpeljano nalaganje iz
+    predpomnilnika po mesecih, vzorec Task 29) in pod datumom se izriše
+    proaktivni status: „Zaprt dan" / „Izven sezone" / „Zaseden dan" /
+    „Še N prostih mest" / „Preverjam razpoložljivost…". Submit je
+    blokiran (client validacija zrcala strežnik), skupina nad prostimi
+    mesti pa zavrnjena z iskrenim sporočilom. Strežnik ostaja AVTORITETA
+    (transakcijska preverba) — klientni prikaz je le UX.
+  - **51 novih testov** (`task33-experience-availability.test.ts`):
+    domena (datumi/sezona/policy/kapaciteta/obsegi/sporočila), startup
+    migracija z vbrizganim klientom (sqlite/postgres/unknown,
+    idempotentnost), source-contract (shema/migracija/instrumentation/
+    guard-v-transakciji z vrstnim redom dedup → guard → create/note-se-
+    ne-razkriva/UI vezi) in funkcionalno DB (blackout 409, kapaciteta
+    4+2>5 → 409, zadnje mesto 200, po polnem dnevu 409, dormant 200,
+    izven sezone 409, preklicana rezervacija NE zaseda, javni mesečni
+    pogled + zasebnost note — dbReachable varovalka za CI brez baze).
+
+### Spremenjeno
+
+- **`task81-journey-booking-migration.test.ts` (drift vrata)**: seznam
+  migracij razširjen iz ročno kodiranih (baseline + journey_booking) na
+  VSE mape v prisma/migrations — nova tabela vsakega prihodnjega taska
+  je zajeta avtomatsko (vrata so okrepila, ne omehčala).
+- Startup migracija registrirana v instrumentation.ts (korak
+  `schema:experience-availability`, idempotentna, additive-only,
+  fail-open, DSA_DISABLE_SCHEMA_MIGRATION skupna zastavica).
+
+---
+
 ## [1.109.0] — 2026-09-26 (TASK 32 / Tier 1 #5: EN blog + čiščenje de/it)
 
 ### Dodano

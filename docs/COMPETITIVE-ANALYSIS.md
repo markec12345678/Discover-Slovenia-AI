@@ -42,7 +42,7 @@
 
 | # | Kar imajo oni | Naše stanje | Zakaj pomembno |
 |---|---|---|---|
-| C1 | **Koledar razpoložljivosti** (kapaciteta/dan, blackout, sezona) | Samo min/max skupina | Brez tega ponudnik ne more preprečiti overbookinga |
+| C1 | **Koledar razpoložljivosti** (kapaciteta/dan, blackout, sezona) | 1.110.0 (TASK 33) ✓ osnovni DB koledar: privzeta kapaciteta/dan + blackout dnevi + sezonsko okno (tudi čezletno), atomarna preprečitev overbookinga v POST /api/bookings, lastniški mesečni urejevalnik | Brez tega ponudnik ne more preprečiti overbookinga — osnovna vrzel ZAPRTA (terminski sloti ostanejo prihodnji korak) |
 | C2 | **Supplier Portal s poslovnimi metrikami** | Imamo dashboard ✓ (ogledi/kliki/rezervacije/provizije) | Paritetno osnovno; manjka razčlenitev po kanalu/terminu |
 | C3 | **Booking widget za LASTNO spletno stran ponudnika** (Bókun!) | Nič | Bókunov glavni prodajni argument — ponudnik dobi rezervacijski sistem ZA VSE svoje kanale |
 | C4 | **API/channel connectivity** (Bókun, TourCMS, TicketingHub → GYG) | Nič javnega API-ja za ponudnike | Za večje ponudnike ki imajo lastne sisteme |
@@ -74,7 +74,7 @@
 ### Pred monetizacijo (NUJNO — cenični wedge zahteva zaupanje):
 1. **A1: Mnenja samo po končani rezervaciji** — poveži Review z Booking ID (majhen fix: rate-limit + bookingNumber validacija)
 2. **B2/B3: Pravi Stripe + payout sled** — brez tega smo "inquiry platforma", ne marketplace
-3. **B1: Osnovni koledar razpoložljivosti** — vsaj kapaciteta/dan + blackout datumi (prepreči overbooking pri 10 ponudnikih)
+3. ~~**B1: Osnovni koledar razpoložljivosti** — vsaj kapaciteta/dan + blackout datumi (prepreči overbooking pri 10 ponudnikih)~~ ✅ ZAKLJUČENO v 1.110.0 (TASK 33 — glej vrstico C1 zgoraj)
 
 ### Po prvih 10–20 ponudnikih (rast):
 4. **C5: Prevodi vsebin** (nemščina, italijanščina, angleščina) — naše tržišče so TUJCI

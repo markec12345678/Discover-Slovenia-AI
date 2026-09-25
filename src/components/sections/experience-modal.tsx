@@ -132,6 +132,18 @@ interface BookingResponse {
   providerEmail?: string;
 }
 
+/** TASK 33 (Tier 2 #1): dnevni pogled javnega koledarja razpoložljivosti
+ *  (GET /api/experiences/[slug]/availability?month=). */
+interface AvailDayView {
+  date: string;
+  past: boolean;
+  available: boolean;
+  reason: "blackout" | "out-of-season" | null;
+  capacity: number | null;
+  booked: number;
+  remaining: number | null;
+}
+
 /** Lokalni datum kot "YYYY-MM-DD" (brez UTC zamika). */
 function toLocalDateStr(d: Date): string {
   const y = d.getFullYear();
@@ -751,6 +763,48 @@ function BookingSection({
     notes: "",
   });
 
+  // === TASK 33 (Tier 2 #1): koledar razpoložljivosti — mesečni pogled ob
+  // izbiri datuma (iskren UX: zaprt/zaseden dan je viden ŽE pred submitom;
+  // strežnik ostaja AVTORITETA — preverba teče v SERIALIZABLE transakciji
+  // POST /api/bookings). Vzorec BREZ setState-v-efektu: nalaganje je
+  // IZPELJANO stanje (manjkajoč mesec v predpomnilniku), vsi setState
+  // klici živijo v async povratnih klicih obljube. Predpomnilnik po mesecih
+  // ostane živ — preklop dneva znotraj meseca ne ponovno nalaga.
+  const [availByMonth, setAvailByMonth] = useState<
+    Record<string, Record<string, AvailDayView>>
+  >({});
+  const availInFlight = useRef<Set<string>>(new Set());
+
+  const availMonth = form.date ? form.date.slice(0, 7) : null;
+  const availDays = availMonth ? availByMonth[availMonth] : undefined;
+  const availLoading = availMonth !== null && availDays === undefined;
+  const selectedAvail =
+    form.date && availDays ? availDays[form.date] : undefined;
+
+  useEffect(() => {
+    if (!form.date) return;
+    const month = form.date.slice(0, 7);
+    if (availInFlight.current.has(month) || availByMonth[month]) return;
+    availInFlight.current.add(month);
+    fetch(
+      `/api/experiences/${experience.id}/availability?month=${month}`
+    )
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { days?: AvailDayView[] } | null) => {
+        const map: Record<string, AvailDayView> = {};
+        for (const day of body?.days ?? []) map[day.date] = day;
+        setAvailByMonth((prev) => ({ ...prev, [month]: map }));
+      })
+      .catch(() => {
+        // Iskrenost: napaka nalaganja NE blokira obrazca — strežnik
+        // avtoritativno preverja ob submitu (prazna mapa ustavi spinner).
+        setAvailByMonth((prev) => ({ ...prev, [month]: {} }));
+      })
+      .finally(() => {
+        availInFlight.current.delete(month);
+      });
+  }, [form.date, experience.id, availByMonth]);
+
   const setPhase = (p: BookingPhase) => {
     setPhaseState(p);
     onPhaseChange?.(p);
@@ -768,6 +822,23 @@ function BookingSection({
         next.date = "Neveljaven datum rezervacije.";
       } else if (parsed < today) {
         next.date = "Datum rezervacije mora biti danes ali pozneje.";
+      } else if (
+        // TASK 33: zaprt dan (blackout) ali izven sezone — koledar
+        // ponudnika; strežnik isto preverja v transakciji (avtoriteta)
+        selectedAvail &&
+        !selectedAvail.past &&
+        !selectedAvail.available
+      ) {
+        next.date =
+          selectedAvail.reason === "blackout"
+            ? "Ta datum je zaprt — ponudnik ne sprejema rezervacij."
+            : "Ta datum je izven sezone ponudnika.";
+      } else if (
+        selectedAvail &&
+        !selectedAvail.past &&
+        selectedAvail.remaining === 0
+      ) {
+        next.date = "Ta datum je zaseden — kapaciteta dneva je dosežena.";
       }
     }
 
@@ -781,6 +852,14 @@ function BookingSection({
       next.groupSize = "Vnesite veljavno število oseb.";
     } else if (gs < minGroup || gs > maxGroup) {
       next.groupSize = `Med ${minGroup} in ${maxGroup} oseb.`;
+    } else if (
+      // TASK 33: skupina ne sme preseči prostih mest dneva
+      selectedAvail &&
+      !selectedAvail.past &&
+      selectedAvail.remaining !== null &&
+      gs > selectedAvail.remaining
+    ) {
+      next.groupSize = `Na ta datum je prostih le ${selectedAvail.remaining} mest.`;
     }
 
     if (form.name.trim().length < 2) {
@@ -1120,6 +1199,32 @@ function BookingSection({
                 className="mt-1 text-xs text-destructive"
               >
                 {errors.date}
+              </p>
+            ) : selectedAvail && !selectedAvail.past && !selectedAvail.available ? (
+              // TASK 33: proaktivni status dneva (pred submitom)
+              <p className="mt-1 text-xs text-destructive">
+                {selectedAvail.reason === "blackout"
+                  ? "Zaprt dan (ponudnik ne sprejema rezervacij) — izberite drug datum."
+                  : "Izven sezone ponudnika — izberite datum znotraj sezone."}
+              </p>
+            ) : selectedAvail &&
+              !selectedAvail.past &&
+              selectedAvail.remaining === 0 ? (
+              <p className="mt-1 text-xs text-destructive">
+                Zaseden dan — kapaciteta dneva je dosežena.
+              </p>
+            ) : selectedAvail &&
+              !selectedAvail.past &&
+              selectedAvail.remaining !== null ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {selectedAvail.remaining <= 5
+                  ? `Še ${selectedAvail.remaining} prostih mest na ta dan.`
+                  : `Prostih mest na ta dan: ${selectedAvail.remaining}.`}{" "}
+                Točen čas obiska dogovorite z izvajalcem po potrditvi.
+              </p>
+            ) : availLoading ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Preverjam razpoložljivost…
               </p>
             ) : (
               // P4-9: iskrena mikrokopija — čas rezervacije se dogovori
