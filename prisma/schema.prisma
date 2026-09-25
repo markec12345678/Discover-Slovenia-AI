@@ -654,6 +654,63 @@ model Booking {
 }
 
 // ============================================================================
+// TASK 33 (Tier 2 #1) — KOLEDAR RAZPOLOŽLJIVOSTI IZKUŠNJE (1.110.0)
+// ============================================================================
+// Mandat docs/COMPETITIVE-ANALYSIS.md (C1/priporočilo #3): "vsaj kapaciteta/
+// dan + blackout datumi (prepreči overbooking)". Dva nova modela, additive-only,
+// DORMANT dokler ponudnik ne nastavi ničesar (brez vrstice v
+// ExperienceAvailability je rezervacija povsod neomejena — obstoječe
+// obnašanje se NE spremeni):
+//   - ExperienceAvailability      — 1:1 NASTAVITVE izkušnje (privzeta dnevna
+//     kapaciteta + sezonsko okno);
+//   - ExperienceAvailabilityDay   — DNEVNI PREPIS (blackout ali izjemni dan
+//     s prilagojeno kapaciteto).
+// Datumi so kanonski nizi "YYYY-MM-DD" (UTC-dan, TZ-varno — isti zapis kot
+// EventItem/events-data); zasedenost se šteje iz Booking.groupSize
+// (status ≠ "cancelled" — glej lib/experience-availability.ts, en vir
+// resnice resolveDayPolicy). Startup samoozdravitvena dvojnica:
+// src/lib/experience-availability-migration.ts (prisma migration:
+// 20260926140000_experience_availability).
+
+model ExperienceAvailability {
+  id              String   @id @default(cuid())
+  // 1:1 z Experience (brez FK relacije — isti vzorec kot Booking.experienceId:
+  // Experience je lahko izbrisan, nastavitve ostanu brez sirot)
+  experienceId    String   @unique
+  // null = NEOMEJENO (veljajo samo min/maxGroupSize izkušnje);
+  // število = največ gostov na dan (vsota groupSize rezervacij tega dne)
+  defaultCapacity Int?
+  // Sezonsko okno (vključno). start > end = sezona ČEZ KONEC LETA
+  // (npr. 15.11. → 15.3. — zimski ponudniki). null = brez meje na tej strani.
+  seasonStart     String?
+  seasonEnd       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([experienceId])
+}
+
+model ExperienceAvailabilityDay {
+  id            String   @id @default(cuid())
+  experienceId  String
+  // Kanonski ključ dneva "YYYY-MM-DD" (UTC)
+  date          String
+  // "open" | "closed" — closed = BLACKOUT (zavrnjena rezervacija);
+  // open + capacity = IZJEMNI DAN (prepiše sezono)
+  status        String   @default("open")
+  // null = podeduje ExperienceAvailability.defaultCapacity
+  capacity      Int?
+  // Razlog (npr. "zasebni dogodek") — LASTNIŠKI podatek: javni API ga NE
+  // razkriva (javno je samo, da dan ni na voljo)
+  note          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([experienceId, date])
+  @@index([experienceId])
+}
+
+// ============================================================================
 // TASK 58 — POTOVANJA: KANONSKA POTRDITEV REZERVACIJE PONUDNIKA (§19)
 // ============================================================================
 // Ločeno od lastne tržnice (Booking/Stripe): tukaj živijo POTRDITVE, ki jih
