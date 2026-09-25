@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { derivePayoutStatus } from "@/lib/marketplace-types";
+import { rateLimit } from "@/lib/rate-limit";
 
 // ============================================================================
 // /api/owner/bookings — Booking manager za ponudnike (P0-3)
@@ -52,6 +53,15 @@ async function findOwnerBooking(ownerId: string, bookingNumber: string) {
 }
 
 export async function GET(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated owner API brez abuse-meje —
+  // skupni bucket "owner-api" (vzorec requireAdmin "admin-any").
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "owner-api",
+  });
+  if (limited) return limited;
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Niste prijavljeni" }, { status: 401 });
@@ -163,6 +173,15 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated owner API brez abuse-meje —
+  // skupni bucket "owner-api" (vzorec requireAdmin "admin-any").
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "owner-api",
+  });
+  if (limited) return limited;
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Niste prijavljeni" }, { status: 401 });

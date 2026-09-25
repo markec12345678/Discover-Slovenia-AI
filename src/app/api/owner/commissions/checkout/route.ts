@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isStripeConfigured, isStripeDemo } from "@/lib/stripe-server";
+import { rateLimit } from "@/lib/rate-limit";
 
 // ============================================================================
 // POST /api/owner/commissions/checkout — Stripe Checkout za provizijski račun
@@ -19,6 +20,15 @@ import { isStripeConfigured, isStripeDemo } from "@/lib/stripe-server";
 // { url }. Ob uspešnem plačilu webhook (checkout.session.completed,
 // type=commission_invoice) označi račun kot plačan in pošlje potrdilo.
 export async function POST(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated owner API brez abuse-meje —
+  // skupni bucket "owner-api" (vzorec requireAdmin "admin-any").
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "owner-api",
+  });
+  if (limited) return limited;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email || session.user.accountType === "user") {

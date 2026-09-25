@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { timingSafeEqual } from "@/lib/security";
+import { timingSafeEqual, adminSessionFrom } from "@/lib/security";
 import { rateLimit } from "@/lib/rate-limit";
 
 // ============================================================================
@@ -160,7 +160,7 @@ export async function getCurrentRole(request?: Request): Promise<Role> {
   // ostale admin poti so že uporabljale checkAdmin/verifyCronAuth).
   // Semantika enaka: fail-closed brez ADMIN_PASSWORD, enak 401 potek.
   if (request) {
-    if (checkAdmin(request.headers.get("x-admin-password"))) {
+    if (checkAdmin(request)) {
       return "admin";
     }
   }
@@ -241,15 +241,31 @@ export async function requireOwner() {
 }
 
 /**
- * Preveri ali je uporabnik admin (preko admin gesla).
+ * Preveri ali je uporabnik admin.
+ *
+ * ISSUE #4 §24 (VAL 8, P2): sprejme tudi CELO zahtevo — takrat preveri
+ * najprej HTTPONLY session piškotek `dsa_admin_session` (izda ga
+ * POST /api/admin/verify ob pravilnem geslu; geslo NE živi v brskalniku),
+ * nato še klasično glavo x-admin-password (nazaj kompatibilno za
+ * skripte/integracije). Nizi ostanejo sprejeti za neposredne primerjave
+ * gesla (npr. verify route iz telesa zahteve).
  *
  * VARNOST: constant-time (timing-safe) primerjava — preprečuje timing
  * napade na ugibanje admin gesla. Fail-closed, če ADMIN_PASSWORD ni nastavljen.
  */
-export function checkAdmin(password: string | null | undefined): boolean {
+export function checkAdmin(
+  input: Request | string | null | undefined
+): boolean {
+  // Pot A (VAL 8): httpOnly session piškotek — preverjen PRVI.
+  if (typeof input === "object" && input != null) {
+    if (adminSessionFrom(input)) return true;
+    const header = input.headers.get("x-admin-password");
+    return checkAdmin(header);
+  }
+  // Pot B: surovo geslo (glava / telo / skripte).
   const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminPassword || !password) return false;
-  return timingSafeEqual(password, adminPassword);
+  if (!adminPassword || !input) return false;
+  return timingSafeEqual(input, adminPassword);
 }
 
 /**
@@ -276,7 +292,7 @@ export function requireAdmin(request: Request): NextResponse | null {
     key: "admin-any",
   });
   if (limited) return limited;
-  if (!checkAdmin(request.headers.get("x-admin-password"))) {
+  if (!checkAdmin(request)) {
     return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
   }
   return null;

@@ -39,9 +39,14 @@ describe("HARDENING V1-V3: admin GET rute uporabljajo requireAdmin (limit + prev
     expect(getSection).toContain("requireAdmin(request)");
     expect(getSection).not.toContain("if (!checkAdmin(");
     // POST obdrži svoj rateLimit + checkAdmin (dvojno štetje bi zategnilo)
+    // VAL 8 (ISSUE #4 §24): checkAdmin(request) = session piškotek ALI glava
+    // (namera ista — lastni limit + admin vrata; sprejeta OBA vzorca).
     const postSection = src.slice(0, getIdx);
     expect(postSection).toContain("rateLimit(request");
-    expect(postSection).toContain("checkAdmin(request.headers.get");
+    expect(
+      postSection.includes("checkAdmin(request)") ||
+        postSection.includes("checkAdmin(request.headers.get")
+    ).toBe(true);
   });
 });
 

@@ -34,6 +34,7 @@ import {
   getSavedTripIds,
   removeSavedTripIds,
 } from "@/lib/my-trips-storage";
+import { getEditToken } from "@/lib/itinerary-share";
 
 // ============================================================================
 // /prijava — prijava in registracija B2C računa popotnika (P1-2b)
@@ -55,13 +56,22 @@ async function claimSavedTrips(): Promise<number> {
     const shareIds = getSavedTripIds();
     if (shareIds.length === 0) return 0;
 
+    // ISSUE #4 §23 (VAL 8): prevzem zahteva dokaz lastništva — žetone
+    // (dsa_edit_token_{shareId}) ima v localStorage le brskalnik, ki je
+    // pot shranil. Prejemnik deljene povezave žetona NIMA → ne more prevzeti.
+    const editTokens: Record<string, string> = {};
+    for (const sid of shareIds) {
+      const tok = getEditToken(sid);
+      if (tok) editTokens[sid] = tok;
+    }
+
     let claimed = 0;
     let responded = false;
     try {
       const res = await fetch("/api/user/trips/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shareIds }),
+        body: JSON.stringify({ shareIds, editTokens }),
       });
       responded = res.ok || res.status === 400 || res.status === 403;
       if (res.ok) {

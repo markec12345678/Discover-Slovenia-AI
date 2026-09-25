@@ -16,30 +16,48 @@ import { Loader2, Lock, ShieldCheck, AlertCircle } from "lucide-react";
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
 import { BetaBanner } from "@/components/beta-banner";
 
-const STORAGE_KEY = "admin_token";
+// ============================================================================
+// ADMIN PRIJAVA — ISSUE #4 §24 (VAL 8, P2): geslo NE živi v brskalniku
+// ============================================================================
+// Prej: uspešna prijava je shranila SKUPNO admin geslo v localStorage
+// ("admin_token") in ga vsak API klic poslal v glavi x-admin-password —
+// XSS ali lokalni dostop je izdal geslo do vseh admin endpointov.
+//
+// Zdaj: POST /api/admin/verify ob uspehu izda HMAC-podpisan session žeton
+// v HTTPONLY piškotku `dsa_admin_session` (TTL 60 min). Stanje seje
+// preverimo z GET /api/admin/verify; odjava počisti piškotek prek
+// POST /api/admin/logout. AdminDashboard dobi prazen niz za glavo
+// (avtentikacija teče prek piškotka, ki ga pošilja brskalnik samodejno).
+// ============================================================================
 
 export default function AdminPage() {
-  // Hydratation-safe state
+  // null = preverjam sejo (mount); true = dashboard; false = prijavni obrazec
   const [mounted, setMounted] = React.useState(false);
-  const [password, setPassword] = React.useState<string | null>(null);
+  const [sessionOk, setSessionOk] = React.useState<boolean | null>(null);
 
   React.useEffect(() => {
     setMounted(true);
-    try {
-      const token = window.localStorage.getItem(STORAGE_KEY);
-      setPassword(token);
-    } catch {
-      setPassword(null);
-    }
+    let cancelled = false;
+    fetch("/api/admin/verify", { cache: "no-store" })
+      .then((res) => {
+        if (!cancelled) setSessionOk(res.ok);
+      })
+      .catch(() => {
+        if (!cancelled) setSessionOk(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     try {
-      window.localStorage.removeItem(STORAGE_KEY);
+      // httpOnly piškotka JS ne more izbrisati — počisti ga server.
+      await fetch("/api/admin/logout", { method: "POST" });
     } catch {
-      /* ignore */
+      /* omrežna napaka: pišček poteče sam (TTL) */
     }
-    setPassword(null);
+    setSessionOk(false);
   };
 
   // SSR-safe placeholder (prevents hydration mismatch)
@@ -51,28 +69,21 @@ export default function AdminPage() {
     );
   }
 
-  if (!password) {
+  if (!sessionOk) {
     return (
       <div className="min-h-screen bg-muted/30 flex flex-col">
         <BetaBanner />
-        <LoginForm
-          onLogin={(token) => {
-            try {
-              window.localStorage.setItem(STORAGE_KEY, token);
-            } catch {
-              /* ignore */
-            }
-            setPassword(token);
-          }}
-        />
+        <LoginForm onLogin={() => setSessionOk(true)} />
       </div>
     );
   }
 
-  return <AdminDashboard adminPassword={password} onLogout={handleLogout} />;
+  // adminPassword prop ostaja (kompatibilnost dashboarda) — prazen niz:
+  // avtentikacija teče prek httpOnly session piškotka (VAL 8).
+  return <AdminDashboard adminPassword="" onLogout={handleLogout} />;
 }
 
-function LoginForm({ onLogin }: { onLogin: (token: string) => void }) {
+function LoginForm({ onLogin }: { onLogin: () => void }) {
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
@@ -92,7 +103,8 @@ function LoginForm({ onLogin }: { onLogin: (token: string) => void }) {
         body: JSON.stringify({ password }),
       });
       if (res.ok) {
-        onLogin(password);
+        // Server je izdal httpOnly session piškotek — gesla NE shranjujemo.
+        onLogin();
       } else {
         const d: unknown = await res.json();
         const msg =

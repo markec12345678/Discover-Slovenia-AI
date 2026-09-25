@@ -11,6 +11,7 @@ import {
   issueCommissionInvoice,
 } from "@/lib/commissions";
 import { isStripeDemo } from "@/lib/stripe-server";
+import { rateLimit } from "@/lib/rate-limit";
 
 // ============================================================================
 // /api/owner/commissions — provizijski model (Faza 4a, Booking-style)
@@ -31,7 +32,16 @@ import { isStripeDemo } from "@/lib/stripe-server";
 // ============================================================================
 // GET — predogled + zgodovina računov
 // ============================================================================
-export async function GET() {
+export async function GET(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated owner API brez abuse-meje —
+  // skupni bucket "owner-api" (vzorec requireAdmin "admin-any").
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "owner-api",
+  });
+  if (limited) return limited;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email || session.user.accountType === "user") {
@@ -145,6 +155,15 @@ export async function GET() {
 // POST — izdaja računa (generate) ali oznaka plačila (mark_paid)
 // ============================================================================
 export async function POST(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated owner API brez abuse-meje —
+  // skupni bucket "owner-api" (vzorec requireAdmin "admin-any").
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "owner-api",
+  });
+  if (limited) return limited;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email || session.user.accountType === "user") {

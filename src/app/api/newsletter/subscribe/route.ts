@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 // GET — število naročnikov (admin only — x-admin-password, P6: prej javen count)
 export async function GET(request: Request) {
   try {
-    if (!checkAdmin(request.headers.get("x-admin-password"))) {
+    if (!checkAdmin(request)) {
       return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
     }
     const [count, latest] = await Promise.all([

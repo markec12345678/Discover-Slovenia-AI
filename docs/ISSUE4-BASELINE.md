@@ -323,3 +323,42 @@ datumom, obdobjem, enoto in virom."
 
 **Ostanek Issue #4 po VAL 7:** §23 (share/privacy preverba), §24 (security
 rate-limit dokumentacija) — P3 razred, nič ne blokira pilota.
+
+## M. ISSUE #4 — VAL 8 ZAKLJUČEN (§23 SHARE LINKS + PRIVACY · §24 SECURITY + ABUSE, 1.100.0, 2026-09-25)
+
+Zadnji ostanek po §L. Dva read-only audita (Task 20-a §23, 20-b §24 — dokazi
+file:line v worklogu), vrzeli naslovljene po resnosti, **0 sprememb sheme**.
+
+| Sklop | Vrzela (izmerjena) | Dostava |
+|---|---|---|
+| **§23 P1 importData leak** | `GET/POST /api/journey/bookings` je javno (shareId) vračal surovi `importData` — kontakt/e-pošta/telefon/notes iz uvoženih potrditev | skupni SELECT_FIELDS izpusti polje (oba kanala hkrati: GET shareId/products + POST idempotent/transitioned); prikazni povzetek gradi agregator `bookingSummaryOf` (nespremenjen, brez contact/notes) |
+| **§23 P1 robots.txt** | produkcija je strežala STATIČNI `public/robots.txt` (dinamični handler = mrtva koda: brez `Sitemap:`, brez `Disallow: /admin,/owner,/api/`) + dev 500 (konflikt public/page) | `public/robots.txt` izbrisan → route handler (gostotelju prilagojen Sitemap + must-revalidate) je edini vir; dev 500 → 200 |
+| **§23 P2 claim takeover** | `POST /api/user/trips/claim` prevzame vsako anonimno pot SAMO z javnim shareId | zahteva `editTokens` (SHA-256 + timingSafeEqual); pote brez `editTokenHash` ne morejo biti prevzete (fail-closed, skladno s F7 avtorstvom); klient pošlje žetone iz localStorage |
+| **§23 P2 expiration** | NIČ ni poteklo (shareId/editToken/inviteToken trajni) | PENDING `inviteToken` 7 dni TTL (iz `createdAt`, brez sheme) → 410 Gone; re-invite = nova vrstica |
+| **§23 P3 konsistenca** | `===` primerjava hashov · brez X-Robots-Tag na API odgovorih · 403 "zasebno" = oracle obstoja | timingSafeEqual (trip-permissions + trip-guide) · `X-Robots-Tag: noindex, follow` na `/pot/*` · zasebna pot → 404 (enako kot /pot stran in GET shared) |
+| **§24 P2 admin geslo v localStorage** | `/admin` je shranil SKUPNO geslo (`admin_token`) in ga pošiljal v glavi — XSS/lokalni dostop = izdaja gesla | httpOnly HMAC session piškotek `dsa_admin_session` (TTL 60 min, ključ iz ADMIN_PASSWORD → rotacija = revok vseh sej); `checkAdmin(request)` = piškotek ALI glava (nazaj kompatibilno); nova `/api/admin/logout`; primitivi v čistem `lib/security.ts`; E2E: `document.cookie` prazen, localStorage brez gesla |
+| **§24 P3 nepokriti rate limiti** | weather (edini javni zunanji-proksi, cache-key bypass z vrtenjem koordinat) · VSI owner API-ji · user/trips · provider-roi · stripe checkout/portal | weather 60/min · owner-api 120/min skupni bucket (14 datotek, vzorec "admin-any") · user-trips 120/min · provider-roi 60/min · stripe 30/10min |
+| **§24 P5+D5 resnica** | komentar "sliding window" (implementacija = fiksno okno) · D5 "načrtovan Upstash" brez recepta | komentar popravljen; D5 dokumentiran v `rate-limit.ts` + SECURITY-REVIEW rev. #11: produkcija = 1 Render instanca → meje držijo; DOLOČENA rešitev (Upstash REST, 2 env, INCR+EXPIRE, fail-open, async ~50 mest — odložena dokler scale-out ni realen) |
+| **Varovalka provider (3. zadetek)** | nenamerni UUID commit `1691d29` (samo provider flip; nikoli pushan) | `.githooks/pre-commit` verzioniran v repu (`git config core.hooksPath .githooks`) — zavrne staged `provider = "sqlite"`; negativni test izveden (commit ZAVRNJEN) |
+
+**Preverjeno ŽE pokrito (audita, brez sprememb):** Stripe webhook (podpis
+fail-closed + dedupe + rollback marker) · editToken CAS + contentVersion 409 ·
+vloge owner/* (lastništvo + accountType) · admin rute (requireAdmin/checkAdmin
++ timing-safe) · cron Bearer · IP ekstrakcija (desni XFF, revizija #8) ·
+login hibridni ip+email limit · email/push env-gated z iskreno dokumentacijo
+("demo če ni nastavljen" — NI lažne "live" dokumentacije) · localStorage
+inventar 24 ključev (edina P2 = admin geslo, zdaj zaprta; session JWT je
+httpOnly).
+
+**Zavestno odloženo (dokumentirano):** D3 (async_payment_succeeded — pred
+pravimi plačili) · D6 (reviews capa) · moderator RBAC (dormantna rezervirana
+vloga, 0 živih površin) · delete-trip + rotacija editTokena (večji funkciji,
+isti vzorec claim dokaza) · SW cache ostanek po preklicu (TTL evaporacija).
+
+**Testi:** 2739/2739 (+32 `issue4-wave8-share-security` — §A–§H) · lint 0/0 ·
+tsc 0 (src/). E2E: admin seja (piškotek+odjava+dashboard), oracle 404, robots
+200 s Sitemap, X-Robots-Tag živ.
+
+**Ostanek Issue #4 po VAL 8:** §23/§24 zavarovani; odprto le še
+dokumentirano-odložene (D3, D6, moderator, delete-trip). ISSUE #4
+implementacijska gradnja (§2–§24) je ZAKLJUČENA.

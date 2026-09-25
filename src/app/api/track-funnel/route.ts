@@ -56,7 +56,7 @@ export async function GET(request: Request) {
   try {
     // P7-B (F3): timing-safe primerjava (prej surov !== — isto popravljal
     // P3a-4 na 4 admin rutah, ta je bila preskočena, ker ni pod /api/admin/)
-    if (!checkAdmin(request.headers.get("x-admin-password"))) {
+    if (!checkAdmin(request)) {
       return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
     }
 

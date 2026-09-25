@@ -237,7 +237,7 @@ Odgovor (SAMO opis, brez prefixa):`;
 // P7-B (F4): prej javen + izdal absolutno pot datoteke cache-a (cacheFile)
 // — zdaj timing-safe admin zaščita, brez poti.
 export async function GET(request: Request) {
-  if (!checkAdmin(request.headers.get("x-admin-password"))) {
+  if (!checkAdmin(request)) {
     return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
   }
   const store = await readCache();

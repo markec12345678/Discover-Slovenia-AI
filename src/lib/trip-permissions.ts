@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { timingSafeEqual } from "@/lib/security";
 
 // ============================================================================
 // TRIP PERMISSIONS — ISSUE #4 §13 (val 2): ena točka resnice o vlogah
@@ -116,10 +117,11 @@ export async function resolveTripRole(
   if (!saved) return { role: "NONE", saved: null };
 
   // ── Pot 1: tajni žeton (anonimni lastnik) — hash primerjava ────────────
+  // VAL 8 (ISSUE #4 §23 P3): timing-safe (enotna politika platforme).
   let isOwner = false;
   if (ctx.editToken && EDIT_TOKEN_RE.test(ctx.editToken) && saved.editTokenHash) {
     const tokenHash = createHash("sha256").update(ctx.editToken).digest("hex");
-    isOwner = tokenHash === saved.editTokenHash;
+    isOwner = timingSafeEqual(tokenHash, saved.editTokenHash);
   }
 
   // ── Pot 2: prijavljen lastnik (SavedItinerary.userId) ──────────────────
@@ -207,12 +209,12 @@ export async function communityTripGate(
 
   // Zavrnitev — pošteno pove KAJ je treba (prijava / vabilo).
   if (role === "NONE" && !saved.isPublic) {
+    // VAL 8 (ISSUE #4 §23, P3 — oracle zaprtje): obstoj ZASEBNE poti NE sme
+    // biti razkrivljiv (prej 403 "zasebno" = potrditev, da pot OBSTOJA).
+    // Isti odgovor kot /pot stran in GET shared (neobstoječa = ne obstaja).
     return NextResponse.json(
-      {
-        error:
-          "Ta potovanje je zasebno — dostop imajo povabljeni sodelujoči (prijavi se z računom, na katerega si prejel vabilo).",
-      },
-      { status: 403 }
+      { error: "Deljeno potovanje ne obstaja" },
+      { status: 404 }
     );
   }
   return NextResponse.json(

@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { getBetaStatus } from "@/lib/beta";
 import type { ProductCategory, MarketplacePlan } from "@/lib/marketplace-types";
+import { rateLimit } from "@/lib/rate-limit";
 
 // Omejitve števila izdelkov glede na paket (izven beta obdobja)
 const PLAN_LIMITS_NORMAL: Record<MarketplacePlan, number> = {
@@ -95,7 +96,16 @@ const createSchema = z.object({
 });
 
 // GET /api/owner/products — vrne vse izdelke trenutno prijavljenega lastnika
-export async function GET() {
+export async function GET(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated owner API brez abuse-meje —
+  // skupni bucket "owner-api" (vzorec requireAdmin "admin-any").
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "owner-api",
+  });
+  if (limited) return limited;
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json(
@@ -128,6 +138,15 @@ export async function GET() {
 
 // POST /api/owner/products — ustvari nov product za prijavljenega lastnika
 export async function POST(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated owner API brez abuse-meje —
+  // skupni bucket "owner-api" (vzorec requireAdmin "admin-any").
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "owner-api",
+  });
+  if (limited) return limited;
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json(

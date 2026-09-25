@@ -201,6 +201,19 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // ─────────────────────────────────────────────────────────────────────
+      // ISSUE #4 §23 (VAL 8, P3): X-Robots-Tag na deljenih poteh —
+      // meta robots na strani pokriva HTML izris, a odgovori /pot/* prek
+      // proxyjev/ogledov brez meta (headless fetch, CDN vmesni predpomnilnik)
+      // z glavo NE bodo nikoli indeksirani. Dvojna zaščita z
+      // index:false v metadata (pot/page.tsx) + 0 URL-jev v sitemapu.
+      // ─────────────────────────────────────────────────────────────────────
+      {
+        source: "/pot/:path*",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, follow" },
+        ],
+      },
     ];
   },
 };

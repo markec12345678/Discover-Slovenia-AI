@@ -104,7 +104,7 @@ function validateSendBody(
 
 /** Avtentikacija admin-a (timing-safe, fail-closed). P3a-4. */
 function requireAdmin(request: Request): NextResponse | null {
-  if (!checkAdmin(request.headers.get("x-admin-password"))) {
+  if (!checkAdmin(request)) {
     return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
   }
   return null;

@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isStripeConfigured, isStripeDemo, PLAN_MONTHLY_PRICE } from "@/lib/stripe-server";
+import { rateLimit } from "@/lib/rate-limit";
 import { sendEmail } from "@/lib/email";
 import { paymentConfirmationEmail } from "@/lib/email-templates";
 
@@ -11,6 +12,15 @@ import { paymentConfirmationEmail } from "@/lib/email-templates";
 // Demo mode: direktno nadgradi Owner-ja (brez Stripe klica)
 // Production mode: ustvari Stripe Customer + Checkout Session in vrne URL za redirect
 export async function POST(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): finančna akcija — nizka meja (session-gated,
+  // a odpiranje Stripe sej brez meje bi ob napaki klienta naredilo vrsto).
+  const limited = rateLimit(request, {
+    limit: 30,
+    windowMs: 10 * 60_000,
+    key: "stripe-checkout",
+  });
+  if (limited) return limited;
+
   try {
     const session = await getServerSession(authOptions);
     // F1 (revizija 1.36.0, 19-b P2): Owner in User tabeli imata neodvisni

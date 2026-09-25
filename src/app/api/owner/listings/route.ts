@@ -8,6 +8,7 @@ import { DESTINATIONS } from "@/lib/slovenia-data";
 import { getBetaStatus } from "@/lib/beta";
 import { parseSeasons, SEASON_KEYS } from "@/lib/listing-practical";
 import type { ListingCategory, ListingPlan } from "@/lib/listings-types";
+import { rateLimit } from "@/lib/rate-limit";
 
 // Omejitve števila lokalov glede na paket (izven beta obdobja)
 const PLAN_LIMITS_NORMAL: Record<ListingPlan, number> = {
@@ -116,7 +117,16 @@ const createSchema = z.object({
 );
 
 // GET /api/owner/listings — vrne vse lokale trenutno prijavljenega lastnika
-export async function GET() {
+export async function GET(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated owner API brez abuse-meje —
+  // skupni bucket "owner-api" (vzorec requireAdmin "admin-any").
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "owner-api",
+  });
+  if (limited) return limited;
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json(
@@ -161,6 +171,15 @@ export async function GET() {
 
 // POST /api/owner/listings — ustvari nov listing za prijavljenega lastnika
 export async function POST(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated owner API brez abuse-meje —
+  // skupni bucket "owner-api" (vzorec requireAdmin "admin-any").
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "owner-api",
+  });
+  if (limited) return limited;
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json(

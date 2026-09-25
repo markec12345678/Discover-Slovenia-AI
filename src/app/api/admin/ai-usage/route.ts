@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     });
     if (limited) return limited;
 
-    if (!checkAdmin(request.headers.get("x-admin-password"))) {
+    if (!checkAdmin(request)) {
       return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
     }
 

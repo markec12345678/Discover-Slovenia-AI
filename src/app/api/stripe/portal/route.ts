@@ -4,12 +4,21 @@ import Stripe from "stripe";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isStripeConfigured, isStripeDemo } from "@/lib/stripe-server";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/stripe/portal — ustvari Stripe Customer Portal session
 // (za upravljanje naročnine — cancel, update card, see invoices)
 // Demo mode: vrne demo message
 // Production mode: ustvari portal session z customer ID in vrne URL za redirect
-export async function POST() {
+export async function POST(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): finančna akcija — enaka meja kot checkout.
+  const limited = rateLimit(request, {
+    limit: 30,
+    windowMs: 10 * 60_000,
+    key: "stripe-portal",
+  });
+  if (limited) return limited;
+
   try {
     const session = await getServerSession(authOptions);
     // F1 (revizija 1.36.0, 19-b P2): email kolizija User/Owner — brez tega

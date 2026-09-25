@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
 
 // ============================================================================
 // /api/user/trips — "Moja potovanja" (P1-2b)
@@ -15,7 +16,16 @@ import { authOptions } from "@/lib/auth";
 // B2B Owner seje so zavrnjene (403), brez seje 401.
 // ============================================================================
 
-export async function GET() {
+export async function GET(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): seznam lastnih poti — session-gated, a brez
+  // abuse-meje (redni dashboard naredi ~6–10 branj na osvežitev).
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "user-trips",
+  });
+  if (limited) return limited;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {

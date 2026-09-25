@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireOwner } from "@/lib/auth-guards";
+import { rateLimit } from "@/lib/rate-limit";
 
 // GET /api/analytics/provider-roi — ROI za posameznega ownerja
 // Vrne: koliko prometa je dobil, koliko stane paket, kakšen je ROI
 export async function GET(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated brez abuse-meje — DB agregat.
+  const limited = rateLimit(request, {
+    limit: 60,
+    windowMs: 60_000,
+    key: "analytics-provider-roi",
+  });
+  if (limited) return limited;
+
   try {
     const { error, ownerId } = await requireOwner();
     if (error) return error;

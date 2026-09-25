@@ -7,6 +7,89 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.100.0] — 2026-09-25 (ISSUE #4 VAL 8: §23 SHARE LINKS + PRIVACY · §24 SECURITY + ABUSE)
+
+> Zadnji P3 ostanek Issue #4. Dva ločena read-only audita (20-a §23, 20-b §24)
+> z dokazi file:line; vrzeli naslovljene po resnosti. **0 sprememb sheme**
+> (vsi popravki v logiki rut → nič tveganja migracij).
+
+### §23 — Share links + privacy
+
+- **P1 importData leak zaprt**: `GET/POST /api/journey/bookings` ni več vračal
+  surovega `importData` (kontakt/e-pošta/telefon/notes/guestName iz uvoženih
+  potrditev) JAVNO komurkoli s shareId. Skupni `SELECT_FIELDS` izpusti polje —
+  oba iztočna kanala (GET shareId/products + POST idempotent/transitioned)
+  zaprta z eno spremembo; prikazni povzetek (brez zasebnih polj) gradi
+  agregator `bookingSummaryOf` (nespremenjen).
+- **P1 robots.txt en vir resnice**: `public/robots.txt` izbrisan — v
+  produkciji je statična datoteka TIHO preglasila dinamični route handler
+  (brez `Sitemap:` direktive, brez `Disallow: /admin,/owner,/api/`), v devu
+  pa je konflikt public/page povzročal 500. Route handler (gostitelju
+  prilagojen, `must-revalidate`) je zdaj edini vir; dev 500 → 200.
+- **P2 claim takeover zaprt**: `POST /api/user/trips/claim` zahteva
+  `editTokens` (SHA-256 + timingSafeEqual) — prej je zadostoval JAVEN
+  shareId, vsak prejemnik deljene povezave si je po prijavi lahko prevzel
+  anonimno pot kot so-lastnika. Pote brez `editTokenHash` (stare, pre-F7)
+  NE morejo biti prevzete (fail-closed, skladno z avtorstvom vodnika).
+  Klient (`/prijava`) pošlje žetone iz localStorage.
+- **P2 vabila potečejo**: PENDING `inviteToken` velja 7 dni (TTL iz
+  `createdAt`, brez shemske spremembe) — poteklo vabilo → 410 Gone;
+  re-invite = nova vrstica z novim žetonom.
+- **P3 konsistenca**: timing-safe primerjava `editTokenHash`
+  (trip-permissions + trip-guide); `X-Robots-Tag: noindex, follow` na
+  `/pot/*` (next.config headers); obstoj ZASEBNE poti ni več oracle —
+  `communityTripGate` vrača 404 (ne 403 "zasebno"), enako kot `/pot`
+  stran in GET shared.
+
+### §24 — Security + abuse
+
+- **P2 admin geslo IZVEN brskalnika**: `/admin` ni več shranjeval skupnega
+  gesla v localStorage (`admin_token`) in ga pošiljal v glavi — XSS/lokalni
+  dostop bi izdal geslo do vseh admin API-jev. Zdaj: `POST /api/admin/verify`
+  izda HMAC-podpisan session žeton (`<expHex>.<hmac>`, ključ iz
+  ADMIN_PASSWORD, TTL 60 min) v HTTPONLY piškotku `dsa_admin_session`;
+  `checkAdmin` sprejme Request (piškotek preverjen PRVI) ali glavo
+  (nazaj kompatibilno za skripte); nova `POST /api/admin/logout` ruta čisti
+  piškotek. Primitivi v čistem `lib/security.ts` (listni modul, brez db).
+- **P3 rate limiti dopolnjeni** (issue našteva AI/TTS/comments/votes/likes/
+  polls/diary/public trip/auth — vse že pokrito; dopolnjene vrzeli):
+  `/api/weather` 60/min (edini javni zunanji-proksi brez meje — vrtenje
+  lat/lng obide cache), VSI owner API-ji (14 datotek, skupni bucket
+  `owner-api` 120/min — vzorec `requireAdmin` "admin-any"),
+  `user/trips` 120/min, `analytics/provider-roi` 60/min,
+  `stripe/checkout` + `stripe/portal` 30/10min.
+- **P5 komentar resnica**: rate-limit.ts je fiksno-oknenski (prej pisalo
+  "sliding window").
+- **D5 (rate limit deljenost) — dokumentirano in DOLOČENA rešitev**:
+  produkcija = 1 Render instanca (Vercel upokojen) → objavljene meje držijo
+  nominalno; shared rešitev določena v `rate-limit.ts` + SECURITY-REVIEW
+  rev. #11 (Upstash Redis REST: 2 env spremenljivki, INCR+EXPIRE pipeline,
+  fail-open nazaj na lokalni števec; async podpis = mehanska sprememba
+  ~50 klicnih mest, namensko odložena dokler razširjanje instanc ni realno).
+
+### Varovalka (provider past, 3. zadetek)
+
+- `.githooks/pre-commit` (verzioniran v repu; aktivacija
+  `git config core.hooksPath .githooks`): zavrne vsak commit, ki bi vnesel
+  `provider = "sqlite"` v staged `prisma/schema.prisma`. Nenamerni UUID
+  commit `1691d29` (samo provider flip) je bil iz lokalne zgodovine
+  odstranjen PRED pushom — na GitHub nikoli ni prišel.
+
+### Testi
+
+- 2739/2739 (+32: `issue4-wave8-share-security.test.ts` — §A–§H obljube:
+  importData, robots, claim, TTL, admin session čisti primitivi + površine,
+  rate limiti, konsistenca, D5 resnica) · posodobljen hardening test
+  (namera ohranjena, sprejeta oba vzorca checkAdmin).
+- E2E dokazi (lokalno): verify POST → Set-Cookie httpOnly; GET verify
+  200/401; analytics 200 prek piškotka IN prek glave (nazaj kompatibilno);
+  logout Max-Age=0; brskalnik — dashboard se izriše, `document.cookie`
+  PRAZEN (httpOnly), localStorage BREZ gesla, odjava počisti piškotek;
+  javna pot komentar 200 / zasebna pot 404 (oracle); robots.txt 200 z
+  Sitemap + Disallow /admin,/owner,/api/.
+
+---
+
 ## [1.99.1] — 2026-09-25 (HOTFIX: schema provider sqlite ušel v repo)
 
 > Med VAL 7 produkcijo verifikacijo odkrita regresa LASTNEGA vala: commit

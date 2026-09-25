@@ -48,6 +48,36 @@
 > fiksno-okenski in per-instanca (meja se pomnoži z instancami/hostname-i —
 > dokumentirano, načrtovan Upstash); (D6) reviews nimajo unique/capa na
 > (izdelek, avtor) brez nakupa.
+>
+> ✅ **Posodobitev 2026-09-25 (revizija #11 — ISSUE #4 VAL 8, v1.100.0):**
+> zaključena §23/§24 preverba (dva read-only audita z dokazi file:line).
+> Zaprto: **P1** `importData` leak (surovi kontakt/notes uvoženih rezervacij
+> javno vsem s shareId — GET in POST kanal `journey/bookings`); **P1**
+> robots.txt dvojni vir (statična datoteka je v produkciji tiho preglasila
+> dinamični handler → brez Sitemap direktive in brez Disallow /admin,/owner,
+> /api/; v devu 500 konflikt — `public/robots.txt` izbrisan); **P2** claim
+> takeover (prevzem anonimne poti zdaj zahteva editToken; prej zadostoval
+> javen shareId); **P2** vabila brez roka (PENDING inviteToken 7 dni TTL →
+> 410); **P2** admin geslo v localStorage (`admin_token`) → httpOnly HMAC
+> session piškotek `dsa_admin_session` (TTL 60 min, ključ iz ADMIN_PASSWORD —
+> rotacija gesla razveljavi vse seje; `checkAdmin(request)` = piškotek ALI
+> glava, nazaj kompatibilno; nova `/api/admin/logout`); **P3** nepokriti
+> rate limiti (weather 60/min — edini javni zunanji-proksi; vsi owner API-ji
+> 120/min skupni bucket `owner-api`; user/trips, provider-roi,
+> stripe/checkout+portal); timing-safe `editTokenHash`; `X-Robots-Tag:
+> noindex` na `/pot/*`; oracle zaprtje (zasebna pot → 404, ne 403).
+> **D5 rešen v dokumentaciji**: produkcija = 1 Render instanca (Vercel
+> upokojen) → meje držijo nominalno; shared rešitev DOLOČENA (rate-limit.ts
+> glava + spodaj §1.7): Upstash Redis REST — 2 env spremenljivki
+> (`UPSTASH_REDIS_REST_URL`/`_TOKEN`), `hitLimit` telo → INCR+EXPIRE
+> pipeline (~1 s timeout, fail-open na lokalni števec), async podpis
+> rateLimit/hitLimit (~50 klicnih mest) — izvedba namensko odložena, dokler
+> razširjanje instanc ni realno. Odpri dolgova ostajata: D3 (SEPA async
+> plačila — pred uvozom pravih plačil) in D6; D5 prenesen iz "dolga" v
+> "določeno rešitev z odloženim terminom". **Provider past (3. zadetek,
+> nenamerni UUID commit 1691d29 — nikoli pushan):** `.githooks/pre-commit`
+> (verzioniran; `git config core.hooksPath .githooks`) zavrne vsak commit s
+> `provider = "sqlite"` v staged shemi.
 
 ---
 

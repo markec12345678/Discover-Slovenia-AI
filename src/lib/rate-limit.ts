@@ -2,12 +2,30 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 
 /**
- * Rate limiting — preprost in-memory sliding window (per IP + endpoint).
+ * Rate limiting — preprost in-memory FIKSNO-OKENSKI števec (per IP + endpoint).
  *
  * Namen: zaščita javnih (zlasti AI) endpointov pred zlorabo/brute-force.
- * Omejitve: na serverless (Vercel) deluje per-instanca — za robustno
- * produkcijo priporočam Upstash Redis (glej docs/SECURITY-REVIEW.md §1.7
- * »Pot do centralizacije« za točen načrt in zavrnjene alternative).
+ *
+ * ISSUE #4 §24 (VAL 8) — PRODUKCIJSKA RESNICA o deljenosti (dolg D5):
+ *   Buckets so v pomnilniku PROCESA → meja velja NA INSTANCO. Današnja
+ *   produkcija = 1 Render web service (brez render.yaml/autoscaling;
+ *   Vercel je upokojen) → objavljene meje držijo nominalno. Meja se
+ *   pomnoži ŠE, če se instanca razširi (Render autoscale) ali se doda
+ *   druga gostiteljska površina.
+ *
+ *   DOLOČENA shared rešitev (aktivacija = 2 env spremenljivki, brez
+ *   spremembe klicev): Upstash Redis REST (UPSTASH_REDIS_REST_URL +
+ *   UPSTASH_REDIS_REST_TOKEN) — hitLimit telo zamenja INCR+EXPIRE
+ *   pipeline (`POST /pipeline`, timeout ~1 s, ob napadi fetcha fail-open
+ *   nazaj na lokalni števec — razpoložljivost pred strogostjo). Zahteva
+ *   async podpis rateLimit/hitLimit (≈50 klicnih mest — mehanska sprememba
+ *   `await`), zato je namensko ODLOŽENA, dokler razširjanje instanc ni
+ *   realno (1 instanca = 1× nominal). Načrt varovan v
+ *   docs/SECURITY-REVIEW.md (revizija #11, §1.7).
+ *
+ *   (Zgodovina komentarja: tu je prej pisalo "sliding window" — implementacija
+ *   je fiksno okno (števec do meje, reset ob resetAt); popravek VAL 8 P5,
+ *   da se koda in dokumentacija ne razhajata.)
  */
 
 interface Bucket {
@@ -164,7 +182,7 @@ export function rateLimit(
 }
 
 /**
- * P3a-3: ključna (BREZ Request/IP) varianta sliding-window limiterja.
+ * P3a-3: ključna (BREZ Request/IP) varianta fiksno-okenskega limiterja.
  *
  * Za mesta, ki nimajo dostopa do Request objekta (npr. NextAuth authorize
  * callback) — ključ je poljuben niz (npr. `login:${email}`). Vene `true`,

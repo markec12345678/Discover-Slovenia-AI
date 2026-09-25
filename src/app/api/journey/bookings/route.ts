@@ -188,6 +188,11 @@ export async function GET(request: Request) {
   }
 }
 
+// ISSUE #4 §23 (VAL 8, P1): odgovori NE vračajo surovega importData
+// (contact/e-pošta/telefon/notes/guestName iz uvoženih potrditev — prej
+// javno komurkoli s shareId). Prikazni povzetek BREZ zasebnih polj gradi
+// agregator /api/trip/[shareId] (bookingSummaryOf); surovi podatki
+// ostanejo strežniški (izvor resnice za prehode POST /import).
 const SELECT_FIELDS = {
   id: true,
   provider: true,
@@ -199,7 +204,6 @@ const SELECT_FIELDS = {
   currency: true,
   confirmationUrl: true,
   cancellationUrl: true,
-  importData: true,
   createdAt: true,
   updatedAt: true,
 } as const;

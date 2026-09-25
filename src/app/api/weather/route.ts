@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 import {
   clampForecastRange,
   openMeteoCurrentUrl,
@@ -32,6 +33,15 @@ import {
 // { forecast: [{ date, condition, icon, tempMax, precipitationProbabilityMax }] }.
 // Način A (brez start/end) ostaja 100 % nespremenjen (backward compat).
 export async function GET(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): edini javni zunanji-proksi brez meje — vrtenje
+  // lat/lng obide odzivni cache (cache key = koordinati) → zloraba Open-Meteo.
+  const limited = rateLimit(request, {
+    limit: 60,
+    windowMs: 60_000,
+    key: "weather",
+  });
+  if (limited) return limited;
+
   const { searchParams } = new URL(request.url);
   const lat = searchParams.get("lat");
   const lng = searchParams.get("lng");

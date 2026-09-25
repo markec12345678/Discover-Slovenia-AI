@@ -30,8 +30,8 @@ export async function POST(
   });
   if (limited) return limited;
 
-  const adminPassword = request.headers.get("x-admin-password");
-  if (!checkAdmin(adminPassword)) {
+  // VAL 8 (ISSUE #4 §24): checkAdmin(request) = session piškotek ALI glava.
+  if (!checkAdmin(request)) {
     return NextResponse.json({ error: "Neavtoriziran dostop" }, { status: 401 });
   }
 

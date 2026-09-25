@@ -21,10 +21,17 @@ import { INVITE_TOKEN_RE } from "@/lib/trip-permissions";
 //   - isti račun že ACTIVE na isti poti → idempotentno vrne obstoječo
 //     vlogo (sprejem drugega vabila ne more TIHO znižati/povišati vloge —
 //     vlogo spreminja samo lastnik);
-//   - žeton ne obstaja → 404 (NE razkrivamo, katera pot je za njim).
+//   - žeton ne obstaja → 404 (NE razkrivamo, katera pot je za njim);
+//   - ISSUE #4 §23 (VAL 8, P2): PENDING vabilo poteče po 7 dneh
+//     (createdA + TTL; brez shemske spremembe). Poteklo vabilo → 410 Gone
+//     (iskreno: "lastnik te mora povabiti znova" — re-invite = nova vrstica,
+//     žetoni se ne reciklirajo).
 // ============================================================================
 
 const HOUR_MS = 60 * 60_000;
+
+/** ISSUE #4 §23 (VAL 8): veljavnost PENDING vabila — 7 dni. */
+const INVITE_TTL_MS = 7 * 24 * HOUR_MS;
 
 export async function POST(request: Request) {
   const limited = rateLimit(request, {
@@ -74,6 +81,7 @@ export async function POST(request: Request) {
         status: true,
         inviteEmail: true,
         userId: true,
+        createdAt: true,
       },
     });
 
@@ -88,6 +96,22 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "To vabilo je bilo odvzeto — lastnik te mora povabiti znova." },
         { status: 403 }
+      );
+    }
+
+    // ISSUE #4 §23 (VAL 8): potekla PENDING vabila so mrtva — 410 Gone.
+    // (Tabela ostaja kot revizijska sled; re-invite naredi NOVO vrstico z
+    // novim žetonom, zato reciklaža ni mogoča.)
+    if (
+      row.status === "PENDING" &&
+      Date.now() - row.createdAt.getTime() > INVITE_TTL_MS
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "To vabilo je poteklo (veljavna so 7 dni) — lastnik te mora povabiti znova.",
+        },
+        { status: 410 }
       );
     }
 

@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { isStripeConfigured, isStripeDemo } from "@/lib/stripe-server";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { activateSponsorship } from "@/lib/sponsorships";
+import { rateLimit } from "@/lib/rate-limit";
 
 // ============================================================================
 // POST /api/owner/sponsorship — ustvari sponsorship checkout (demo ali Stripe)
@@ -25,6 +26,15 @@ const SPONSORSHIP_PRICES: Record<string, number> = {
 };
 
 export async function POST(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated owner API brez abuse-meje —
+  // skupni bucket "owner-api" (vzorec requireAdmin "admin-any").
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "owner-api",
+  });
+  if (limited) return limited;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email || session.user.accountType === "user") {
@@ -295,7 +305,16 @@ export async function POST(request: Request) {
 // GET /api/owner/sponsorship — pridobi aktivna sponzorstva lastnika
 // ============================================================================
 
-export async function GET() {
+export async function GET(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated owner API brez abuse-meje —
+  // skupni bucket "owner-api" (vzorec requireAdmin "admin-any").
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "owner-api",
+  });
+  if (limited) return limited;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email || session.user.accountType === "user") {

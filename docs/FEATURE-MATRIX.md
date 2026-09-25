@@ -79,7 +79,9 @@
 | Slovenia Pass (gamifikacija) | /slovenia-pass | klient | stran | EXPLORE | CONTEXTUAL | NE |
 | SEO nabor (16 destinacijskih podstrani, vodiči) | /destinacija/* | RSC | podstrani | EXPLORE/SEO | CONTEXTUAL | NE |
 | B2B lijak /owner/* | /za-ponudnike → dashboard | /api/owner/* (15) | ločen tok | ADVANCED (Za ponudnike) | CONTEXTUAL | NE |
-| Admin plošča | /admin | /api/admin/* (10) | ločen tok | ADVANCED | CONTEXTUAL | NE |
+| Admin plošča | /admin — od 1.100.0 prijava brez shranjenega gesla (httpOnly HMAC session piškotek 60 min, odjava /api/admin/logout; glava x-admin-password ostane za skripte) | /api/admin/* (11 + logout) | ločen tok | ADVANCED | CONTEXTUAL | NE |
+| Zasebnost deljene poti (1.100.0 §23) | importData (kontakt/notes) IZVEN javnih odgovorov · claim prevzema zahteva editToken · vabila 7 dni · zasebna pot = 404 (brez oracla) · X-Robots-Tag noindex | journey/bookings, user/trips/claim, collaborators/accept, trip-permissions | traja kot prej za javne pote | MY TRIP | CONTEXTUAL | NE |
+| Varnostna plast (1.100.0 §24) | robots.txt en vir (handler s Sitemap + Disallow /admin,/owner,/api) · rate limiti: weather/owner-api/user-trips/provider-roi/stripe · D5 dokumentiran (Upstash recept) | robots.txt/route.ts, lib/rate-limit.ts, lib/security.ts | — | PLATFORMA | CONTEXTUAL | NE |
 | Primerjava načrtovalcev | /primerjava | statična | stran | EXPLORE/SEO | CONTEXTUAL | NE |
 
 **Skupaj: ~100 zmožnosti → po redesignu ~100 zmožnosti.** Spreminja se SAMO vidnost/trenutek prikaza.

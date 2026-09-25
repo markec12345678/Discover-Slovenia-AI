@@ -45,7 +45,7 @@ export async function POST(
     const limited = rateLimit(request, { limit: 60, windowMs: 10 * 60_000, key: "admin-approve" });
     if (limited) return limited;
 
-    if (!checkAdmin(request.headers.get("x-admin-password"))) {
+    if (!checkAdmin(request)) {
       return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
     }
 

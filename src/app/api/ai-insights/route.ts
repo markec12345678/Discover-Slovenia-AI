@@ -53,7 +53,7 @@ export async function GET(request: Request) {
 
     // Avtentikacija (P3a-4: timing-safe checkAdmin iz auth-guards)
     if (type === "admin") {
-      if (!checkAdmin(request.headers.get("x-admin-password"))) {
+      if (!checkAdmin(request)) {
         return NextResponse.json({ error: "Neavtorizirano" }, { status: 401 });
       }
     }

@@ -2,10 +2,20 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireOwner } from "@/lib/auth-guards";
 import { canSubmitForReview } from "@/lib/profile-completion";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/owner/listings/submit — oddaj lokal v pregled (DRAFT → PENDING)
 // Body: { listingId: string }
 export async function POST(request: Request) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated owner API brez abuse-meje —
+  // skupni bucket "owner-api" (vzorec requireAdmin "admin-any").
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "owner-api",
+  });
+  if (limited) return limited;
+
   try {
     const { error, ownerId } = await requireOwner();
     if (error) return error;

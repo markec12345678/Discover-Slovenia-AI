@@ -17,7 +17,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.99.1 · 2707 testov (CI zelen) · lint 0 · tsc 0 (src/) · UX redesign Issue #3 + TASK 4 UX FIX PASS · ISSUE #4 VAL 1 (§3 lifecycle · §6 cene · §9 ure · §11 AI metering) + VAL 2 (§2 Trip enoten objekt · §8 Go Mode real-time kontekst · §13 sodelovanje z dovoljenji) + VAL 3 (§4 import rezervacij s parse→potrditev · §7 transport resnica · §14 proračun 5 vedric) + VAL 4 (§5 provider capability matrika · §10 deterministična personalizacija brez AI · §15 dokumenti poti · §16 offline z realnim E2E dokazom + dnevna navigacija Go Mode) + VAL 5 (§17/§19 enotna svežina FRESH/STALE/UNKNOWN/LIVE + provenance · §20 razložljiva priporočila z why vrstico · §22 trip versioning/undo — sejni undo sklad + strežniške revizije z obnovitvijo) + VAL 6 (§21 optimizacija zaporedja — namerni vrstni red zamrznjen intentLocked + regresijska suita celotne matrike) + VAL 7 (§18 destinacijska vsebina — provenance plast: 9 uradnih virov + 29 iskrenih uredniških kuracij, as-of resnica z git pastjo, vir/odpiralni čas/posodobljeno na hub+modal, addressCountry resnica za 16 tujih destinacij, NiST odkrito dokumentiran) · HOTFIX 1.99.1 (schema provider past — obe smeri varovani) · ZEMLJEVID 1.95.1 (SW CSP fix bele slike + Slovenija&Balkan z 125k pini) · CORE deluje brez AI ključa (Issue #2) |
+| **Stanje** | v1.100.0 · 2739 testov (CI zelen) · lint 0 · tsc 0 (src/) · UX redesign Issue #3 + TASK 4 UX FIX PASS · ISSUE #4 VAL 1 (§3 lifecycle · §6 cene · §9 ure · §11 AI metering) + VAL 2 (§2 Trip enoten objekt · §8 Go Mode real-time kontekst · §13 sodelovanje z dovoljenji) + VAL 3 (§4 import rezervacij s parse→potrditev · §7 transport resnica · §14 proračun 5 vedric) + VAL 4 (§5 provider capability matrika · §10 deterministična personalizacija brez AI · §15 dokumenti poti · §16 offline z realnim E2E dokazom + dnevna navigacija Go Mode) + VAL 5 (§17/§19 enotna svežina FRESH/STALE/UNKNOWN/LIVE + provenance · §20 razložljiva priporočila z why vrstico · §22 trip versioning/undo — sejni undo sklad + strežniške revizije z obnovitvijo) + VAL 6 (§21 optimizacija zaporedja — namerni vrstni red zamrznjen intentLocked + regresijska suita celotne matrike) + VAL 7 (§18 destinacijska vsebina — provenance plast: 9 uradnih virov + 29 iskrenih uredniških kuracij, as-of resnica z git pastjo, vir/odpiralni čas/posodobljeno na hub+modal, addressCountry resnica za 16 tujih destinacij, NiST odkrito dokumentiran) + VAL 8 (§23+§24 share/private varnost — importData leak zaprt, robots.txt en vir resnice, claim prevzem zahteva editToken, vabila 7 dni TTL, admin geslo iz localStorage → httpOnly HMAC seja, rate limiti na vseh prej odprtih poteh, D5 dokumentiran z Upstash receptom) · HOTFIX 1.99.1 (schema provider past — obe smeri varovani + pre-commit varovalka) · ZEMLJEVID 1.95.1 (SW CSP fix bele slike + Slovenija&Balkan z 125k pini) · CORE deluje brez AI ključa (Issue #2) |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -358,7 +358,7 @@ dodatnih prenosov. Osvežitev feedov: `bun run fsq:ingest` / `bun run kiwitaxi:i
 Preverjanje:
 
 ```bash
-bun test                 # 2311 testov
+bun test                 # 2739 testov
 bun run lint             # eslint
 bunx tsc --noEmit        # tipi
 ```
@@ -366,7 +366,9 @@ bunx tsc --noEmit        # tipi
 Demo računi (samo lokalni seed; fiksni gesli veljata le z
 `DEV_FIXED_DEMO_PASSWORDS=1`): `tina@demo.discoverslovenia.si` /
 `marko@demo.discoverslovenia.si` — geslo `demo1234`. Admin portal `/admin`
-se overi z `ADMIN_PASSWORD` env (ne prek NextAuth).
+se overi z `ADMIN_PASSWORD` env (ne prek NextAuth) — od 1.100.0 prek
+httpOnly HMAC session piškotka (60 min; geslo ne živi v brskalniku,
+glava `x-admin-password` ostane sprejeta za skripte).
 
 ---
 

@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# ============================================================================
+# PRE-COMMIT VAROVALKA — provider past v prisma/schema.prisma
+# (2026-09-25, po TRETJEM zadetku: 1.98.1, 5d00161/1.99.1, 1691d29 UUID commit)
+#
+# PRAVILO: repo (HEAD → GitHub → Render/produkcija) MORA vsebovati
+#   datasource db { provider = "postgresql" }
+# Lokalni sqlite (Pot A / Docker) je dovoljen SAMO v delovnem drevesu —
+# NEKOMMITTAN. Glej docs/DEPLOYMENT.md + docs/ISSUE4-BASELINE.md §K
+# (zadnjič: /pot 500 + health degraded na produkciji).
+#
+# Aktivacija (lokalna konfiguracija, enkrat na klon):
+#   git config core.hooksPath .githooks
+# ============================================================================
+set -euo pipefail
+
+# 1) PREVERI SAMO STAGED različico schema.prisma (index, ne delovno drevo)
+STAGED=$(git diff --cached --name-only -- prisma/schema.prisma | head -1 || true)
+if [ -z "$STAGED" ]; then
+  exit 0  # schema.prisma ni v tem commitu — nič za preveriti
+fi
+
+# 2) Izlušči provider IZKLJUČNO iz bloka `datasource db { ... }`
+#    (generator blok ima svojega providerja — "prisma-client-js" — ki ni predmet)
+PROVIDER=$(git show ":prisma/schema.prisma" \
+  | awk '/^datasource db[[:space:]]*\{/{f=1; next} f && /^\}/{f=0} f && /provider[[:space:]]*=/{print; exit}' \
+  | sed 's/.*provider[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/')
+
+if [ "$PROVIDER" != "postgresql" ]; then
+  echo "" >&2
+  echo "✗✗✗ PRE-COMMIT ZAVRNJEN — PROVIDER PAST (4. poskus preprečen) ✗✗✗" >&2
+  echo "" >&2
+  echo "  Staged prisma/schema.prisma ima datasource provider = \"$PROVIDER\"" >&2
+  echo "  Repo MORA vsebovati provider = \"postgresql\" (Render/produkcija)." >&2
+  echo "" >&2
+  echo "  Lokalni sqlite ostane NEKOMMITTAN v delovnem drevesu:" >&2
+  echo "    git restore --staged prisma/schema.prisma" >&2
+  echo "" >&2
+  echo "  Dokumentacija: docs/ISSUE4-BASELINE.md §K (past 1.98.1 + 1.99.1)" >&2
+  echo "  + schema-parity test ③ (tests/…/schema parity)." >&2
+  echo "" >&2
+  exit 1
+fi
+
+echo "✓ pre-commit: provider varovalka OK (postgresql)"

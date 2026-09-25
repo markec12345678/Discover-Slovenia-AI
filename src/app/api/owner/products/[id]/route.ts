@@ -7,6 +7,7 @@ import { invalidateMarketplaceCache } from "@/lib/marketplace-cache";
 import { authOptions } from "@/lib/auth";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { ProductCategory } from "@/lib/marketplace-types";
+import { rateLimit } from "@/lib/rate-limit";
 
 // Validacijska shema za posodobitev izdelka
 const updateSchema = z.object({
@@ -67,7 +68,16 @@ async function getOwnedProduct(id: string, ownerId: string) {
 }
 
 // GET /api/owner/products/[id] — posamezni product (samo lastnik)
-export async function GET(_request: Request, { params }: RouteParams) {
+export async function GET(request: Request, { params }: RouteParams) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated owner API brez abuse-meje —
+  // skupni bucket "owner-api" (vzorec requireAdmin "admin-any").
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "owner-api",
+  });
+  if (limited) return limited;
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Niste prijavljeni" }, { status: 401 });
@@ -95,6 +105,15 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
 // PUT /api/owner/products/[id] — posodobi product (samo lastnik)
 export async function PUT(request: Request, { params }: RouteParams) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated owner API brez abuse-meje —
+  // skupni bucket "owner-api" (vzorec requireAdmin "admin-any").
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "owner-api",
+  });
+  if (limited) return limited;
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Niste prijavljeni" }, { status: 401 });
@@ -294,7 +313,16 @@ export async function PUT(request: Request, { params }: RouteParams) {
 }
 
 // DELETE /api/owner/products/[id] — izbriše product (samo lastnik)
-export async function DELETE(_request: Request, { params }: RouteParams) {
+export async function DELETE(request: Request, { params }: RouteParams) {
+  // ISSUE #4 §24 (VAL 8, P3): session-gated owner API brez abuse-meje —
+  // skupni bucket "owner-api" (vzorec requireAdmin "admin-any").
+  const limited = rateLimit(request, {
+    limit: 120,
+    windowMs: 60_000,
+    key: "owner-api",
+  });
+  if (limited) return limited;
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Niste prijavljeni" }, { status: 401 });

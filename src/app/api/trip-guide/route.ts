@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
+import { timingSafeEqual } from "@/lib/security";
 
 // ============================================================================
 // TRIP GUIDE — avtorski vodnik na deljenem potovanju (F7 skupnostni vodniki)
@@ -186,11 +187,13 @@ export async function PUT(request: Request) {
     let isOwner = false;
 
     // Pot 1: tajni žeton (anonimni lastnik — hash primerjava)
+    // VAL 8 (ISSUE #4 §23 P3): timing-safe (128-bit žetona sicer ni
+    // realno timing-targetati, a enotna politika platforme).
     if (editToken && EDIT_TOKEN_RE.test(editToken) && saved.editTokenHash) {
       const tokenHash = createHash("sha256")
         .update(editToken)
         .digest("hex");
-      isOwner = tokenHash === saved.editTokenHash;
+      isOwner = timingSafeEqual(tokenHash, saved.editTokenHash);
     }
 
     // Pot 2: prijavljen lastnik (SavedItinerary.userId) — pokrije tudi
