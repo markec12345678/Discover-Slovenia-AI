@@ -11,6 +11,10 @@ import {
   importedProductId,
   type ParsedReservation,
 } from "@/lib/imported-reservation";
+import {
+  parseReservationText,
+  isReservationParseEmpty,
+} from "@/lib/reservation-text-parse";
 
 // ============================================================================
 // POST /api/journey/bookings/parse — ISSUE #4 §4: STATELESS AI EKSTRAKCIJA
@@ -23,6 +27,11 @@ import {
 //    IZRECNO prisotna — manjkajoče ostane null (nikoli ne ugiba);
 //  · normalizacija je DETERMINISTIČNA (lib/imported-reservation.ts): striže,
 //    kapira, validira ceno/valuto — AI izhod NI zaupanja vreden vhod v bazo;
+//  · M1 (Issue #5 / T5-D): če AI ni na voljo (brez ključev/timeout) ALI vrne
+//    neuporaben izhod, PDF in BESEDILO padejo na deterministični regex
+//    parser (lib/reservation-text-parse.ts) — vir je iskreno razkrit
+//    (method:"deterministic", via:"fallback"). SLIKA ostane AI-only:
+//    iz slike ni besedila za regex — pošten 502 z nasvetom (ročni vnos);
 //  · ZAPIO samo uporabnik po pregledu in potrditvi (gumb v UI) — prek
 //    /api/journey/bookings/import; nezanesljiv parsing ostane DRAFT;
 //  · vir parsanja razkrijemo v odgovoru (`via`) — kot pri ingest slikah.
@@ -62,12 +71,53 @@ function parseImageDataUrl(
 function parsePdfDataUrl(raw: string): { base64: string } | null {
   const m = raw.match(/^data:application\/pdf;base64,([A-Za-z0-9+/=\s]+)$/);
   if (!m) return null;
-  const base64 = m[2].replace(/\s+/g, "");
+  // M1 (T5-D): POPOVLJENA obstoječa napaka — regex ima ENO skupino (bazo),
+  // stara koda je brala m[2] (undefined → TypeError → 503 za VELJAVNE PDF-e).
+  const base64 = m[1].replace(/\s+/g, "");
   if (base64.length === 0) return null;
   // Magicka glava (isti fail-closed kot ingest-pdf): brez %PDF- to ni PDF.
   const head = Buffer.from(base64.slice(0, 1024), "base64").toString("latin1");
   if (!head.startsWith("%PDF-")) return null;
   return { base64 };
+}
+
+/**
+ * M1 (T5-D): AI je odpovedal (brez ključev/timeout) ali vrnil prazen izhod
+ * → DETERMINISTIČNI regex parser nad besedilom (0 AI). Iskrenost: vir je
+ * razkrit (method:"deterministic", via:"fallback"); če tudi parser ne
+ * prepozna ključnih polj, 422 z jasnim nasvetom (ročni vnos) — nikoli
+ * "praznega uspeha" in nikoli tihe nadomestitve vira.
+ */
+function deterministicParseResponse(text: string): NextResponse {
+  const fields = parseReservationText(text);
+  if (isReservationParseEmpty(fields)) {
+    return NextResponse.json(
+      {
+        error:
+          "Iz besedila nisem prepoznal ključnih polj (ponudnik, št. rezervacije ali datum). Vnesi rezervacijo ročno ali prilepi popolnejše potrdilo.",
+      },
+      { status: 422 }
+    );
+  }
+  const providerSlug = providerSlugFromName(fields.providerName);
+  const providerProductId = importedProductId(
+    providerSlug,
+    fields.reservationNumber
+  );
+  return NextResponse.json(
+    {
+      method: "deterministic" as const,
+      via: "fallback",
+      fields,
+      providerSlug,
+      providerProductId,
+      needsConfirmation: fields.needsConfirmation,
+      // ISKRENOST: parse SAMO prebere — zapis (tudi CONFIRMED) zahteva
+      // uporabnikovo potrditev v naslednjem koraku (import ruta).
+      persisted: false,
+    },
+    { status: 200 }
+  );
 }
 
 export async function POST(request: Request) {
@@ -191,16 +241,22 @@ export async function POST(request: Request) {
         }
       );
       if (!completion) {
-        return NextResponse.json(
-          {
-            error:
-              "Dokumenta ni bilo mogoče prebrati (AI storitev trenutno ni dosegljiva). Poskusi kasneje ali vnesi rezervacijo ročno.",
-          },
-          { status: 502 }
-        );
+        // M1 (T5-D): AI nedosegljiv → deterministični parser nad unpdf
+        // besedilom (ista besedila, ki bi jih dobil LLM — 0 AI žetonov).
+        return deterministicParseResponse(pdfText);
       }
       via = completion.source;
       fields = normalizeParsedReservation(completion.content);
+      // AI je odgovoril, a ničesar ni izluščil (deformiran izhod) → rezerva
+      // nad istim besedilom; če tudi ta ne prepozna nič → iskren 422 znotraj
+      // deterministicParseResponse (napaka je v dokumentu, ne v storitvi).
+      if (
+        fields.providerName == null &&
+        fields.reservationNumber == null &&
+        fields.startDateTime == null
+      ) {
+        return deterministicParseResponse(pdfText);
+      }
     } else {
       // Besedilo (prilepljena potrditvena e-pošta)
       if (text.length > MAX_TEXT_CHARS) {
@@ -223,16 +279,19 @@ export async function POST(request: Request) {
         }
       );
       if (!completion) {
-        return NextResponse.json(
-          {
-            error:
-              "Besedila ni bilo mogoče prebrati (AI storitev trenutno ni dosegljivo). Poskusi kasneje ali vnesi rezervacijo ročno.",
-          },
-          { status: 502 }
-        );
+        // M1 (T5-D): AI nedosegljiv → deterministični parser nad prilepljenim
+        // besedilom (0 AI žetonov, enaka normalizacija kot AI pot).
+        return deterministicParseResponse(text);
       }
       via = completion.source;
       fields = normalizeParsedReservation(completion.content);
+      if (
+        fields.providerName == null &&
+        fields.reservationNumber == null &&
+        fields.startDateTime == null
+      ) {
+        return deterministicParseResponse(text);
+      }
     }
 
     const providerSlug = providerSlugFromName(fields.providerName);

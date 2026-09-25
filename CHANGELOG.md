@@ -7,6 +7,65 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.104.0] — 2026-09-26 (ISSUE #5 T5-D: zaključek vseh MEDIUM feature-razredov)
+
+### Dodano
+
+- **M8 — PDF izvoz itinererja** (MEDIUM → ZAPRT): `src/lib/pdf/trip-itinerary-pdf.ts`
+  (pdf-lib + Liberation Sans, diakritike č/š/ž, večstranska paginacija, noga
+  „str. N/M", iskrena vir-labela) + `GET /api/itinerary/shared/[shareId]/pdf`
+  (ista vrata kot JSON ogled: 404-oracle za zasebne, resolveTripRole vrata,
+  30/uro, attachment + no-store) + gumb „Prenesi PDF" na `/pot` (editToken
+  glava za zasebne pote; toast ob odpovedi). 12 testov (vsebinska zanka prek
+  unpdf — dnevi/postanki/diakritike; paginacija ≥2 strani; source-contract
+  + funkcionalna vrata). 0 novih odvisnosti.
+- **M7 — drag/drop prestavljanje postankov + dodajanje/odstranjevanje dneva**
+  (MEDIUM → ZAPRT): `src/lib/planner-reorder.ts` (premik postanka znotraj
+  dneva — termini kot permutacija po route-order kanonu, intentLocked potuje
+  s postankom, invalidacija geoValidation/legs) + `src/lib/planner-days.ts`
+  (+dan/−dan 1–14, renumber, tripEndDateISO prek trip-dates) + UI v
+  itinerary-planner (GripVertical ročaj + ↑/↓ tipkovniški gumbi + HTML5
+  drag za miško — touch prijazen) + i18n SL/EN (17+17 ključev, pariteta
+  varovana). 29+ testov (čiste funkcije + source-contract).
+- **M10 — CI e2e** (MEDIUM → ZAPRT): `scripts/ops/ci-e2e.sh` (8 korakov:
+  deterministični načrt → save → deljen ogled → PDF → PATCH revizija → 409
+  konflikt → rezervacijski parse → 422 error pot) pognan v CI build jobu
+  takoj za functional-smoke (isti strežnik, ~10 s). VARNOSTNO VRATA: skripta
+  ZAVRNE ne-lokalne cilje (piše v DB); CI nima AI ključev → parse sproži
+  DETERMINISTIČNO rezervo — zlata pot dokazana v vsakem pushu.
+- **M1 — deterministični parser rezervacij** (MEDIUM → ZAPRT za besedilo/PDF):
+  `src/lib/reservation-text-parse.ts` (473 vrstic — regex za Booking.com /
+  Airbnb / Agoda / Expedia / GetYourGuide / Viator / Tripadvisor / KiwiTaxi /
+  DiscoverCars / letalska PNR / SŽ + generična potrdila SL/EN/DE; nič ne
+  izmišljuje — polja nastanejo SAMO iz eksplicitnih pojavitev) priklopljen
+  na obe AI-null poti v `/api/journey/bookings/parse` (PDF prek unpdf
+  besedila + prilepljeno besedilo) z iskrenim razkritjem
+  `method:"deterministic", via:"fallback"`; smeti → 422 z nasvetom za ročni
+  vnos. 29 testov. Slika ostaja AI-ONLY (VLM nima besedila — iskrena
+  dokumentirana izjema).
+- **M9 — arhiv zastaralih skript** (MEDIUM → ZAPRT): 35 zgodovinskih datotek
+  premaknjenih v `scripts/archive/` (git mv — zgodovina ohranjena; 2 importa
+  popravljen na `@/` alias) + `scripts/archive/README.md` (2 tierja, navodila
+  za obnovo). Izjeme ostanejo žive z razlogom: `db/p9-smoke-cleanup.ts`
+  (referenca production-smoke.sh), `client-test.d.ts` (ambientna
+  deklaracija). tsc/lint/test IDENTIČNI bazni (2852→2912 z novimi T5-D
+  testi, 0 regresij).
+
+### Popravljeno
+
+- **TASK 76 higiena**: `issue5-t5d-itinerary-pdf.test.ts` (dinamični uvoz
+  route handlerja) je sprožal žetone deljenega omejevalnika brez čiščenja →
+  dodan `clearProviderRateLimits` uvoz + klic v beforeEach (konvencija
+  suite-a).
+
+### Vrata
+
+- `bun test` **2912/2912** (2852 + 60 novih T5-D) · `bun run lint` **0** ·
+  `tsc --noEmit` **0** v src/ · `ci-e2e.sh` lokalno **9/9** (exit 0) ·
+  matrika posodobljena z ZAPRT oznakami M1/M7/M8/M9/M10 (1.104.0).
+
+---
+
 ## [1.103.0] — 2026-09-26 (ISSUE #5 T5-C, 1. del: dokumentacijska resnica + M9)
 
 ### Popravljeno

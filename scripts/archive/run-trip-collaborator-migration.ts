@@ -1,7 +1,7 @@
 // Enkratni zagon additivne migracije Issue #4 §13 (za dev DB, pred db push).
 // isto logiko ob vsakem zagonu izvede src/instrumentation.ts (fail-open).
 import { PrismaClient } from "@prisma/client";
-import { migrateTripCollaboratorSchemaWith } from "../../src/lib/trip-collaborator-migration";
+import { migrateTripCollaboratorSchemaWith } from "@/lib/trip-collaborator-migration";
 import { config } from "dotenv";
 
 config({ path: ".env.local" });

@@ -33,6 +33,10 @@ import {
   Check,
   Copy,
   ChevronDown,
+  ChevronUp,
+  GripVertical,
+  Plus,
+  Trash2,
   HelpCircle,
   MessageCircle,
   X,
@@ -121,6 +125,14 @@ import { persistSelection } from "@/lib/supply/selection-persist";
 import { useToast } from "@/hooks/use-toast";
 import { trackFunnel } from "@/lib/funnel";
 import { optimizeDayOrder } from "@/lib/route-order";
+// M7 (Issue #5 / T5-D): ročno prestavljanje + dodajanje/odstranjevanje dneva —
+// čiste deterministične operacije (isti invalidacijski kanon kot F16).
+import { reorderStopInItinerary } from "@/lib/planner-reorder";
+import {
+  addDay as addDayToItinerary,
+  removeDay as removeDayFromItinerary,
+  MAX_PLANNER_DAYS,
+} from "@/lib/planner-days";
 // TASK 82: ena sama resnica o pogojih številskih polj (dnevi/proračun/
 // skupina) — isto čisto logiko poganja inline napaka pod poljem, validate()
 // ob oddaji in enotski testi. Pogodba poravnana s /api/itinerary.
@@ -625,6 +637,18 @@ export function ItineraryPlanner() {
     day: number;
     indexInDay: number;
     nonce: number;
+  } | null>(null);
+
+  // M7 (Issue #5 / T5-D): ROČNO prestavljanje postankov — stanje vlečenja
+  // (HTML5 DnD za miš; dotik + tipkovnica + bralniki pokrijeta puščici
+  // ↑/↓, ki kličeta ISTO deterministično operacijo). Samo znotraj dneva.
+  const [dragging, setDragging] = useState<{
+    day: number;
+    idx: number;
+  } | null>(null);
+  const [dragOver, setDragOver] = useState<{
+    day: number;
+    idx: number;
   } | null>(null);
 
   // === Shrani & deli ===
@@ -1204,6 +1228,93 @@ export function ItineraryPlanner() {
     toast({
       title: t("optimizeToastTitle"),
       description: t("optimizeToastDesc", { km: res.savedKm }),
+    });
+  }
+
+  // M7 (Issue #5 / T5-D): ROČNO prestavljanje postanka v dnevu (drag/drop +
+  // puščici ↑/↓). DETERMINISTIČNO na klientu (0 AI, 0 omrežja): termini so
+  // permutacija položajev (kanon route-order.ts), invalidacija ista kot
+  // applyOptimalOrder (routeGeometry dneva + quality/geoValidation/legs).
+  // §21: intentLocked POTUJE s postankom — ročna namernost je izrecna
+  // (samo samodejni optimizatorji zamrznejo zaklenjene postanke).
+  function applyStopReorder(day: DayPlan, fromIdx: number, toIdx: number) {
+    if (!itinerary) return;
+    const next = reorderStopInItinerary(itinerary, day.day, fromIdx, toIdx);
+    if (next === itinerary) return; // no-op (isti indeks / varovalka)
+    setItinerary(next);
+    persistItinerary(next, formData);
+    markResultEngaged();
+    // Strukturna sprememba — zastareli deljeni link se umakne (kanon F16):
+    if (shareUrl) {
+      setShareUrl(null);
+      setCopied(false);
+    }
+    trackPlannerEvent("stop_reordered", {
+      day: day.day,
+      from: fromIdx + 1,
+      to: toIdx + 1,
+      locale,
+    });
+    toast({ title: t("stopReorderedToastTitle") });
+  }
+
+  // M7 (Issue #5 / T5-D): dodaj PRAZEN dan (0 AI; varovalka max 14 — isti
+  // limit kot obrazec + API). formData.days sinhroniziramo, da regeneracija
+  // in refine (strežnik kapira na current.days.length) ostanejo usklajeni.
+  function handleAddDay() {
+    if (!itinerary) return;
+    const next = addDayToItinerary(itinerary);
+    if (next === itinerary) {
+      toast({
+        title: t("addDayMaxTitle"),
+        description: t("addDayMaxDesc", { max: MAX_PLANNER_DAYS }),
+      });
+      return;
+    }
+    setFormData((p) => ({ ...p, days: next.days.length }));
+    setItinerary(next);
+    persistItinerary(next, formData);
+    markResultEngaged();
+    if (shareUrl) {
+      setShareUrl(null);
+      setCopied(false);
+    }
+    trackPlannerEvent("day_added", {
+      days: next.days.length,
+      locale,
+    });
+    toast({
+      title: t("dayAddedToastTitle"),
+      description: t("dayAddedToastDesc", { day: next.days.length }),
+    });
+  }
+
+  // M7 (Issue #5 / T5-D): odstrani dan + RENUMERIRAJ preostale (1..N — id-ji
+  // UI, dayISO, PlannerDayNav so vezani na zaporedno št.). Varovalka: vsaj
+  // 1 dan. crowdNotices se zamaknejo/počistijo (vezani na strukturo dni).
+  function handleRemoveDay(day: DayPlan) {
+    if (!itinerary) return;
+    const next = removeDayFromItinerary(itinerary, day.day);
+    if (next === itinerary) {
+      toast({ title: t("removeDayMinTitle") });
+      return;
+    }
+    setFormData((p) => ({ ...p, days: next.days.length }));
+    setItinerary(next);
+    persistItinerary(next, formData);
+    markResultEngaged();
+    if (shareUrl) {
+      setShareUrl(null);
+      setCopied(false);
+    }
+    trackPlannerEvent("day_removed", {
+      removed_day: day.day,
+      days: next.days.length,
+      locale,
+    });
+    toast({
+      title: t("dayRemovedToastTitle"),
+      description: t("dayRemovedToastDesc", { day: day.day }),
     });
   }
 
@@ -4196,6 +4307,22 @@ export function ItineraryPlanner() {
                               </span>
                             </button>
                           )}
+                          {/* M7 (Issue #5 / T5-D): odstrani TA dan (0 AI;
+                              preostali se preštevilčijo). Skrito, ko je dan
+                              edini (varovalka minimalnega obsega). */}
+                          {itinerary.days.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDay(day)}
+                              className="shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              aria-label={t("removeDayAria", {
+                                day: day.day,
+                              })}
+                              title={t("removeDayTitle")}
+                            >
+                              <Trash2 className="size-4" aria-hidden />
+                            </button>
+                          )}
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-3">
@@ -4304,7 +4431,50 @@ export function ItineraryPlanner() {
                               )}
                               <div
                                 id={`stop-row-${day.day}-${idx}`}
-                                className="rounded-lg border bg-card/50 p-4 transition-shadow"
+                                className={cn(
+                                  "rounded-lg border bg-card/50 p-4 transition-shadow",
+                                  // M7: vizualni odziv cilja spusta (samo
+                                  // znotraj istega dneva, ne na sam izvor):
+                                  dragging &&
+                                    dragOver?.day === day.day &&
+                                    dragOver.idx === idx &&
+                                    !(dragging.day === day.day && dragging.idx === idx) &&
+                                    "ring-2 ring-primary/50 border-primary/40"
+                                )}
+                                // M7 (Issue #5 / T5-D): HTML5 vlečenje (miš);
+                                // dotik/tipkovnica/bralniki imajo puščici ↑/↓.
+                                draggable={day.locations.length > 1}
+                                onDragStart={(e) => {
+                                  setDragging({ day: day.day, idx });
+                                  e.dataTransfer.effectAllowed = "move";
+                                  // Firefox zahteva podatke za pričetek vleka:
+                                  e.dataTransfer.setData(
+                                    "text/plain",
+                                    `${day.day}:${idx}`
+                                  );
+                                }}
+                                onDragOver={(e) => {
+                                  if (dragging?.day !== day.day) return;
+                                  e.preventDefault();
+                                  e.dataTransfer.dropEffect = "move";
+                                  setDragOver({ day: day.day, idx });
+                                }}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  if (
+                                    dragging &&
+                                    dragging.day === day.day &&
+                                    dragging.idx !== idx
+                                  ) {
+                                    applyStopReorder(day, dragging.idx, idx);
+                                  }
+                                  setDragging(null);
+                                  setDragOver(null);
+                                }}
+                                onDragEnd={() => {
+                                  setDragging(null);
+                                  setDragOver(null);
+                                }}
                               >
                                 <div className="flex items-start gap-3">
                                   {dest?.image && (
@@ -4315,6 +4485,7 @@ export function ItineraryPlanner() {
                                         fill
                                         sizes="(max-width: 640px) 64px, 80px"
                                         className="object-cover"
+                                        draggable={false}
                                       />
                                     </div>
                                   )}
@@ -4337,6 +4508,61 @@ export function ItineraryPlanner() {
                                           vstopnice + fokus) prestavijo v
                                           novo vrstico namesto preliva */}
                                       <div className="flex flex-wrap items-center gap-2">
+                                        {/* M7 (Issue #5 / T5-D): ROČNO
+                                            prestavljanje — puščici ↑/↓
+                                            (tipkovnica + dotik + bralniki) +
+                                            ročaj (vizualna oznaka vleka).
+                                            ISTA deterministična operacija
+                                            kot drag/drop. */}
+                                        {day.locations.length > 1 && (
+                                          <span className="inline-flex items-center gap-0.5">
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                applyStopReorder(day, idx, idx - 1)
+                                              }
+                                              disabled={idx === 0}
+                                              className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30"
+                                              aria-label={t("moveStopUpAria", {
+                                                name: loc.destination_name,
+                                              })}
+                                              title={t("moveStopUpTitle")}
+                                            >
+                                              <ChevronUp
+                                                className="size-4"
+                                                aria-hidden
+                                              />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                applyStopReorder(day, idx, idx + 1)
+                                              }
+                                              disabled={
+                                                idx === day.locations.length - 1
+                                              }
+                                              className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30"
+                                              aria-label={t("moveStopDownAria", {
+                                                name: loc.destination_name,
+                                              })}
+                                              title={t("moveStopDownTitle")}
+                                            >
+                                              <ChevronDown
+                                                className="size-4"
+                                                aria-hidden
+                                              />
+                                            </button>
+                                            <span
+                                              className="hidden cursor-grab select-none rounded-full p-1.5 text-muted-foreground/60 md:inline-flex"
+                                              title={t("dragHandleTitle")}
+                                              aria-hidden
+                                            >
+                                              <GripVertical
+                                                className="size-4"
+                                              />
+                                            </span>
+                                          </span>
+                                        )}
                                         <Badge variant="outline" className="gap-1">
                                           <Clock className="size-3" aria-hidden />
                                           {loc.duration}h
@@ -4619,6 +4845,22 @@ export function ItineraryPlanner() {
                     </Card>
                     );
                   })}
+
+                  {/* M7 (Issue #5 / T5-D): dodaj PRAZEN dan na konec (0 AI,
+                      deterministično; max 14 — isti limit kot obrazec, gumb
+                      se pošteno onesposobi na meji). formData.days se
+                      sinhronizira v handlerju. */}
+                  <button
+                    type="button"
+                    onClick={handleAddDay}
+                    disabled={itinerary.days.length >= MAX_PLANNER_DAYS}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-40"
+                    aria-label={t("addDayAria")}
+                    title={t("addDayAria")}
+                  >
+                    <Plus className="size-4" aria-hidden />
+                    {t("addDay")}
+                  </button>
                 </div>
 
 

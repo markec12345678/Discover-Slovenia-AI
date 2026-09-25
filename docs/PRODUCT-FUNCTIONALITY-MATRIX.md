@@ -1,6 +1,6 @@
 # PRODUCT-FUNCTIONALITY-MATRIX — Discover Slovenia AI
 
-> **Datum:** 2026-09-26 · **Verzija:** 1.100.3 (audit) / 1.102.0 (T5-B dostava) · **HEAD ob auditu:** a854404 · **Popravljeni v T5-B (1.102.0):** H1, H2, M3-chat, M4, M5, M6 (označeno spodaj)
+> **Datum:** 2026-09-26 · **Verzija:** 1.100.3 (audit) / 1.102.0 (T5-B) / 1.104.0 (T5-D dostava) · **HEAD ob auditu:** a854404 · **Popravljeni v T5-B (1.102.0):** H1, H2, M3-chat, M4, M5, M6 · **Popravljeni v T5-C (1.103.0):** M11, M9-pot · **Popravljeni v T5-D (1.104.0):** M1, M7, M8, M9-arhiv, M10 (označeno spodaj)
 > **Namen:** Issue #5 „COMPLETE PRODUCT FUNCTIONALITY / DETERMINISTIC SDK + SCRIPTS FIRST" — Faza 2 (popolna funkcijska matrika), Faza 3 (AI odvisnosti), Faza 4 (SDK/scripts), Faza 5 (vrzeli). Izdelano iz TREH neodvisnih read-only revizij (dokazi `file:line`): [T5-a1 AI-odvisnosti](audit/t5-a1-ai-dependency.md) · [T5-a2 Discovery/Planning/Import](audit/t5-a2-capabilities-discovery-planning-import.md) · [T5-a3 Trip/Map/Offline/Skupnost/L10n/SDK](audit/t5-a3-capabilities-trip-map-offline-community-l10n-sdk.md).
 > **Metoda:** read-only analiza kode (src/, public/, scripts/, prisma/, docs/), žive sonde na lokalnem dev strežniku in produkciji (Render + Vercel), NI sprememb aplikacijske kode.
 
@@ -63,7 +63,7 @@
 | PlanCopilot „Vprašaj" (computed-first, brez ugibanja) | DA | sfraziranje optional | plan-qa.test (29) — **M5 ZAPRT v 1.102.0** | DELA |
 | Plan-check validator tujih načrtov (0 AI, zigzag) | DA | ne | wave6 + živa sonda | DELA |
 | Leg suggestions + meal stops (koridor ≥75 min) | DA | ne | — | DELA |
-| Ročna urejanja (remove/optimalno zaporedje/dodaj dogodek/kraj) | DA | ne | — | DELA Z OMEJITVAMI (**ni drag/drop, ni add/remove dan — MEDIUM**) |
+| Ročna urejanja (remove/optimalno zaporedje/dodaj dogodek/kraj) | DA | ne | — | DELA — **M7 ZAPRT v 1.104.0** (premik postanka ↑/↓ + HTML5 drag; dodaj/odstrani dan 1–14; `planner-reorder.ts` + `planner-days.ts`) |
 | Shrani/deli/e-pošta/ics/TTS/GO persist | shrani/deli/ics DA | TTS: AI-only | wave5/task89 | DELA (TTS → F) |
 
 ### C. Start Anywhere / import (6 vhodnih tipov)
@@ -74,12 +74,12 @@
 | URL (SSRF bloklista, redirect re-validacija, 8 s fetch) | DA | ne | issue5-t5b-ingest-ssrf (20) — **M6 ZAPRT v 1.102.0** | DELA |
 | PDF (unpdf, %PDF- magija, max 60 strani; skeniran → poštena 422) | DA | ne | **task95 (94–352)** | DELA |
 | Google Pins (Takeout JSON/KML/besedilo; ≤25 km) | DA | ne | pins-ingest.test (29) — **M4 ZAPRT v 1.102.0** | DELA |
-| Slika/screenshot | ujemanje DA | **HARD — VLM; 502 brez ključev** | — | **AI-ONLY (MEDIUM)** |
-| Rezervacije (parse slika/PDF/besedilo → normalizacija → POTRDI) | normalizacija DA | **parse HARD; 502 brez ključev; ročni vnos = fallback** | wave3/task58 | **AI-ONLY parse (MEDIUM); ročno DELA** |
+| Slika/screenshot | ujemanje DA | **HARD — VLM; 502 brez ključev** | — | **AI-ONLY (ostaja iskrena izjema — slika nima besedila za det. parser)** |
+| Rezervacije (parse slika/PDF/besedilo → normalizacija → POTRDI) | normalizacija + parse-besedilo/PDF DA | parse: AI ali **deterministični regex fallback** | issue5-t5d-reservation-fallback (29) — **M1 ZAPRT v 1.104.0** (slika ostaja AI-ONLY) | **DELA** — brez ključev: `method:"deterministic", via:"fallback"`; smeti → iskren 422 + nasvet |
 
 ### D. Trip platform (17 zmožnosti)
 
-Vse DELA (dokazi T5-a3 A1–A17): save (SHA-256 editToken + timing-safe), load/deljen pogled (404-nevidnost zasebnih), PATCH na mestu (CAS), **strežniške revizije + undo sklad (§22)**, sodelovanje (7-dnevna TTL vabila, vloga rangi owner/editor/viewer, `trip-permissions.ts` ena točka resnice), dokumenti (.ics + register — **PDF izvoz MANJKA, MEDIUM**), stroški/proračun (TripExpense + 5 vedric), rezervacije (JourneyBooking lifecycle DRAFT→CONFIRMED→used, izvor vedno razkrit), transport (journey orchestrator), gost→račun kontinuiteta (localStorage → claim `/api/user/trips/claim`), svežina (FRESH/STALE/UNKNOWN/LIVE §17/§19), provenance.
+Vse DELA (dokazi T5-a3 A1–A17): save (SHA-256 editToken + timing-safe), load/deljen pogled (404-nevidnost zasebnih), PATCH na mestu (CAS), **strežniške revizije + undo sklad (§22)**, sodelovanje (7-dnevna TTL vabila, vloga rangi owner/editor/viewer, `trip-permissions.ts` ena točka resnice), dokumenti (.ics + register — **PDF izvoz: `trip-itinerary-pdf.ts` + `/api/itinerary/shared/[shareId]/pdf` — M8 ZAPRT v 1.104.0**), stroški/proračun (TripExpense + 5 vedric), rezervacije (JourneyBooking lifecycle DRAFT→CONFIRMED→used, izvor vedno razkrit), transport (journey orchestrator), gost→račun kontinuiteta (localStorage → claim `/api/user/trips/claim`), svežina (FRESH/STALE/UNKNOWN/LIVE §17/§19), provenance.
 
 ### E. Map / Go Mode (13 zmožnosti)
 
@@ -111,8 +111,8 @@ Auth (NextAuth + anonimna identiteta + claim kontinuiteta) DELA · My Trips (`/m
 |---|---|
 | Arhitektura SDK | **Koherentna**: `src/lib` = en vir resnice; 14+ skriptnih uvozov `../src/lib/*`; API/UI/testi uvažajo iste module; bivša duplikacija motorja route↔lib odstranjena (1.87.0); route-order NI dupliran |
 | **Preostali dolg primitivov (HIGH)** | **H2 ZAPRT v 1.102.0** — `src/lib/geo-distance.ts` (haversineKm + ROAD_FACTOR + AVG_SPEED_KMH + heuristicLeg*): 10/11 lokacij bit-identično konsolidiranih; 1 dokumentirana izjema `journey/orchestrator.ts:65` (anti-NaN objem, namerno ločena) |
-| Scripts inventar | 74 datotek (46 .ts + 2 .sh root, 9 db/, 15 ops/, 2 verify/, 2 .py) — ~30 enkratnih zgodovinskih (MEDIUM: arhiv brez ločitve; revenue-analysis.ts:8 POKVARJENA hardcode pot) |
-| CI e2e | CI poganja 0 e2e skript — functional smoke (GET-only) je edini živi E2E (MEDIUM) |
+| Scripts inventar | 74 datotek — **M9 ZAPRT v 1.104.0**: ~35 zgodovinskih premaknjenih v `scripts/archive/` (git mv, 2 importa popravljena na `@/` alias, `archive/README.md` s tabelama tierov; izjeme ostanejo žive: `db/p9-smoke-cleanup.ts` — referenca production-smoke.sh, `client-test.d.ts` — ambientna deklaracija); revenue-analysis.ts pot popravljen že v 1.103.0 |
+| CI e2e | **M10 ZAPRT v 1.104.0** — `scripts/ops/ci-e2e.sh` (8 korakov: načrt → save → ogled → PDF → revizija → 409 → parse → 422) pognan v CI build jobu za functional-smoke; zavrne ne-lokalne cilje (piše v DB); lokalno 9/9 zeleno |
 | `/api/stripe`, `/api/checkout`, `/api/orders` | **STRIPE NOT ACTIVATED** — live-capable a DORMANT, fail-closed (brez `STRIPE_SECRET_KEY` → 503; demo izrecen `DSA_DEMO_PAYMENTS=1`, nikoli tiha) |
 | commissions.ts / affiliate.ts | commissions = realna DB logika (12 %, mesečni računi, pdf-lib — B2B) · affiliate = LIVE (env-gated, `monetized:false` brez ID-jev) |
 | FEATURE-FLAGS.md | **ZASTARELO (MEDIUM)** — opisuje `PAYMENTS_ENABLED`, ki v kodi NE obstaja (dejansko: `isStripeConfigured`/`isStripeDemo`) |
@@ -142,16 +142,16 @@ Auth (NextAuth + anonimna identiteta + claim kontinuiteta) DELA · My Trips (`/m
 
 | # | Vrzel | Dokaz |
 |---|---|---|
-| M1 | Vision poti brez determinističnega fallbacka — ingest-image VEDNO 502 brez ključev; bookings/parse (slika AND PDF AND besedilo) VEDNO 502 | ingest-image/route.ts:138–149; bookings/parse/route.ts:132–233 |
+| M1 | Vision poti brez determinističnega fallbacka — ingest-image VEDNO 502 brez ključev; bookings/parse (slika AND PDF AND besedilo) VEDNO 502 | ingest-image/route.ts:138–149; bookings/parse/route.ts:132–233 | **ZAPRT v 1.104.0 (T5-D):** `reservation-text-parse.ts` (473 vrstic regex parser) na PDF (unpdf besedilo) + besedilo poteh; slika ostaja iskrena izjema (VLM nima besedila) |
 | M2 | TTS enojni vir (z-ai SDK) brez verige — produkcijska zanesljivost nedokazana | tts-engine.ts:163 |
 | M3 | Hard cap samo 3/19 AI klicev — chat lahko čaka ~150 s pred fallbackom; klientni fetch brez AbortController | ai-client.ts:310; chatbot.tsx:931 |
 | M4 | pins-ingest.ts (403 vrstice, 3 formati) — 0 testov | rg = 0 zadetkov v __tests__ |
 | M5 | plan-qa.ts + plan-facts.ts (~700 vrstic det. Q&A) — 0 testov | rg = 0 |
 | M6 | /api/itinerary/ingest ruta (SSRF plast) netestirana na ravni route | edini test = task95 (PDF cevovod) |
-| M7 | Planner: ni drag/drop prestavljanja, ni dodajanja/odstranjevanja dneva | rg draggable|addDay = 0 |
-| M8 | PDF izvoz itinererja ne obstaja (pdf-lib že v uporabi za račune) | A16 |
-| M9 | ~30 zastaralih skript brez arhiva; revenue-analysis.ts pokvarjena pot `/home/z/Discover-Slovenia-AI` | revenue-analysis.ts:8 |
-| M10 | CI poganja 0 e2e skript; §16 dokaz je harness-ravni, ne brskalniški | pwa-test.ts:4–9 (iskreno prizna) |
+| M7 | Planner: ni drag/drop prestavljanja, ni dodajanja/odstranjevanja dneva | rg draggable|addDay = 0 | **ZAPRT v 1.104.0 (T5-D):** `planner-reorder.ts` + `planner-days.ts` + UI (GripVertical + ↑/↓ tipkovniški gumbi + HTML5 drag; +dan/−dan 1–14) + i18n SL/EN + testi |
+| M8 | PDF izvoz itinererja ne obstaja (pdf-lib že v uporabi za račune) | A16 | **ZAPRT v 1.104.0 (T5-D):** `pdf/trip-itinerary-pdf.ts` (455 vrstic, č/š/ž, paginacija) + `GET /api/itinerary/shared/[shareId]/pdf` (attachment, 30/h) + gumb na /pot; 12 testov |
+| M9 | ~30 zastaralih skript brez arhiva; revenue-analysis.ts pokvarjena pot `/home/z/Discover-Slovenia-AI` | revenue-analysis.ts:8 | **ZAPRT (pot v 1.103.0, arhiv v 1.104.0 T5-D):** 35 datotek v `scripts/archive/` z README; tsc/lint/test identični bazni |
+| M10 | CI poganja 0 e2e skript; §16 dokaz je harness-ravni, ne brskalniški | pwa-test.ts:4–9 (iskreno prizna) | **ZAPRT v 1.104.0 (T5-D):** `scripts/ops/ci-e2e.sh` v CI build jobu (API-dim zlata pot, 8 korakov, ~10 s); brskalniški offline dokaz ostaja harness-raven (iskreno) |
 | M11 | FEATURE-FLAGS.md drift — opisuje neobstoječi `PAYMENTS_ENABLED` sistem | FEATURE-FLAGS.md:7 |
 
 ### LOW (13) → T5-C ali dokumentirano
@@ -168,15 +168,15 @@ config:secrets ne izpiše degradiranega AI načina v /api/health (svetujemo info
 |---|---|---|
 | 1 | Domov → ustvari pot → deterministični itinerer → validacija → zemljevid → shrani → Moja potovanja → znova odpri | ✓ kodno + živa sonda (POST engine=deterministic <1 s; save/claim/revizije testirane) |
 | 2 | Domov → Start Anywhere → uvoz besedila → destinacije → itinerer → shrani | ✓ (keyword parse 0-AI) |
-| 3 | Start Anywhere → PDF/slika/screenshot/povezava | povezava ✓ · PDF ✓ (unpdf) · **slika = AI-ONLY (M1)** |
+| 3 | Start Anywhere → PDF/slika/screenshot/povezava | povezava ✓ · PDF ✓ (unpdf) · slika = AI-ONLY (iskrena izjema, M1 ostalo zaprto za besedilo/PDF) |
 | 4 | Shranjena pot → urejanje → prestavi → intentLocked → optimizacija → revizija → undo | ✓ (wave6 41 testov) |
 | 5 | Shranjena pot → Go Mode → naslednji postanek → pot → ETA → odpiralni časi/vreme → handoff | ✓ (K-7 most, ETA hevristika iskreno) |
-| 6 | Shranjena pot → offline → zapri/odpri → itinerer/Go Mode → ponovna povezava | ✓ mehanizmi (sw strategije) — **dokaz harness-ravni (M10)** |
+| 6 | Shranjena pot → offline → zapri/odpri → itinerer/Go Mode → ponovna povezava | ✓ mehanizmi (sw strategije) — dokaz harness-ravni (iskreno); API-dim CI e2e od 1.104.0 |
 | 7 | Pot → deljenje → zasebnost/prevzem → pravilen dostop prejemnika | ✓ (§23: claim zahteva editToken, 404-nevidnost) |
 | 8 | Pot → sodelovanje → owner/editor/viewer | ✓ (§13: vrata + TTL) |
-| 9 | Pot → uvoz rezervacije → lifecycle → povezava z itinererjem | parse **AI-ONLY (M1)**; ročni vnos + lifecycle + normalizacija ✓ |
+| 9 | Pot → uvoz rezervacije → lifecycle → povezava z itinererjem | parse besedilo/PDF ✓ (deterministična rezerva od 1.104.0; slika AI-ONLY — iskrena izjema); ročni vnos + lifecycle + normalizacija ✓ |
 | 10 | Pot → proračun/stroški → skupne → revizije → persistenca | ✓ (5 vedric + TripExpense) |
-| 11 | Brskanje → filtri → podrobnost destinacije → POI → dodaj v izlet | ✓ RAZEN SmartSearch poti (**H1**) |
+| 11 | Brskanje → filtri → podrobnost destinacije → POI → dodaj v izlet | ✓ — SmartSearch navigacija H1 zaprta v 1.102.0 (browser dokaz: klik Bled → /destinacija/bled) |
 
 ## 7. Iskren predodgovor na končno vprašanje Issue #5
 
@@ -186,4 +186,4 @@ config:secrets ne izpiše degradiranega AI načina v /api/health (svetujemo info
 
 ---
 
-*Naslednji korak: T5-B — popravek HIGH (H1 SmartSearch navigacija, H2 geo-distance konsolidacija) + izbranih MEDIUM vrzeli po vrednosti.*
+*Zaključek T5-D (1.104.0): vsi MEDIUM feature-razredi zaprti (M1/M7/M8/M9/M10 + prej H1/H2/M3–M6/M11). Odprte ostanejo samo dokumentirane LOW/iskrene izjeme (slika VLM, TTS, brskalniški offline dokaz) — glej Issue #5 komentarje za končno poročilo.*

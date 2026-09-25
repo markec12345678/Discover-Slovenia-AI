@@ -137,6 +137,8 @@ export function TripReservations({ shareId }: { shareId: string }) {
   // Parse tok (dokument)
   const [parsing, setParsing] = useState(false);
   const [parseVia, setParseVia] = useState<string | null>(null);
+  // M1 (T5-D): "ai" | "deterministic" — vgrajeni bralnik razkrit iskreno.
+  const [parseMethod, setParseMethod] = useState<string | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [rawText, setRawText] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -242,6 +244,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
       const data = (await r.json().catch(() => null)) as {
         fields?: ParsedFields;
         via?: string;
+        method?: string;
         error?: string;
       } | null;
       if (!r.ok || !data?.fields) {
@@ -250,6 +253,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
       }
       setFields(data.fields);
       setParseVia(data.via ?? null);
+      setParseMethod(data.method ?? null);
       setFromParse(true);
     } catch (e) {
       setParseError(errText(e));
@@ -317,6 +321,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
         setFileName(null);
         setFileKind(null);
         setParseVia(null);
+        setParseMethod(null);
         setFormOpen(false);
         setParseError(null);
         await load();
@@ -586,7 +591,9 @@ export function TripReservations({ shareId }: { shareId: string }) {
 
             {parseVia ? (
               <p className="text-[11px] text-muted-foreground">
-                Prebrano z AI ({parseVia}) — preveri polja pred potrditvijo.
+                {parseMethod === "deterministic"
+                  ? "Prebrano z vgrajenim bralnikom (brez AI) — preveri polja pred potrditvijo."
+                  : `Prebrano z AI (${parseVia}) — preveri polja pred potrditvijo.`}
               </p>
             ) : null}
 

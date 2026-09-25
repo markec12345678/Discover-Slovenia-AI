@@ -39,6 +39,12 @@ export type PlannerEventName =
   | "day_adjusted"
   | "stop_replaced"
   | "stop_removed"
+  // M7 (Issue #5 / T5-D): ročno prestavljanje + strukturno urejanje dni
+  // (deterministično, 0 AI) — meri uporabo novih kontrol (drag/puščice,
+  // dodaj/odstrani dan).
+  | "stop_reordered"
+  | "day_added"
+  | "day_removed"
   | "itinerary_saved"
   | "map_opened"
   | "provider_detail_opened"

@@ -9,11 +9,13 @@ import {
   CalendarDays,
   Clock,
   CloudSun,
+  Download,
   Euro,
   Eye,
   Footprints,
   HelpCircle,
   Lightbulb,
+  Loader2,
   Map as MapIcon,
   MapPin,
   Printer,
@@ -37,10 +39,11 @@ import {
   WeatherChip,
   useItineraryForecast,
 } from "@/components/itinerary-weather";
-import { warmOfflinePlanCache } from "@/lib/itinerary-share";
+import { warmOfflinePlanCache, getEditToken } from "@/lib/itinerary-share";
 import { SmartPackingSection } from "@/components/packing-smart";
 import { BudgetPanel } from "@/components/budget-panel";
 import { SocialShare } from "@/components/social-share";
+import { useToast } from "@/hooks/use-toast";
 import { useAppStore, DAY_COLORS } from "@/lib/store";
 import { formatEventDate } from "@/lib/events-data";
 import {
@@ -147,6 +150,52 @@ export function SharedTrip({
   const [voterId, setVoterId] = useState<string>("");
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [voteError, setVoteError] = useState<string | null>(null);
+
+  // M8 (Issue #5 / T5-D): PDF izvoz poti (strežniški pdf-lib, diakritike).
+  // Zasebna pot pošlje editToken glavo (isti kanon kot warmOfflinePlanCache).
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const { toast } = useToast();
+  const downloadPdf = useCallback(async () => {
+    setPdfBusy(true);
+    try {
+      const token = getEditToken(shareId);
+      const r = await fetch(
+        `/api/itinerary/shared/${encodeURIComponent(shareId)}/pdf`,
+        {
+          cache: "no-store",
+          ...(token ? { headers: { "x-dsa-edit-token": token } } : {}),
+        }
+      );
+      if (!r.ok) {
+        toast({
+          title: "PDF ni na voljo",
+          description:
+            r.status === 404
+              ? "Pot ni javna ali ne obstaja — odpri kot lastnik."
+              : `Napaka ${r.status} — poskusi znova.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `pot-${shareId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({
+        title: "PDF ni na voljo",
+        description: "Preveri povezavo in poskusi znova.",
+        variant: "destructive",
+      });
+    } finally {
+      setPdfBusy(false);
+    }
+  }, [shareId, toast]);
 
   // Na mountu nastavi itinerer v store → MapView nariše barvno pot po dnevih
   useEffect(() => {
@@ -687,6 +736,22 @@ export function SharedTrip({
             >
               <Printer className="size-4 mr-2" aria-hidden="true" />
               Natisni / Shrani kot PDF
+            </Button>
+            {/* M8 (Issue #5 / T5-D): pravi PDF izvoz (pdf-lib, več strani,
+                č/š/ž) — brskalniški print ostaja offline rezerva. */}
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => void downloadPdf()}
+              disabled={pdfBusy}
+              aria-label="Prenesi načrt kot PDF datoteko"
+            >
+              {pdfBusy ? (
+                <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
+              ) : (
+                <Download className="size-4 mr-2" aria-hidden="true" />
+              )}
+              Prenesi PDF
             </Button>
           </div>
         </section>

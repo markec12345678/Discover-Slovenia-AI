@@ -7,9 +7,9 @@
  */
 import ZAI from "z-ai-web-dev-sdk";
 import { promises as fs } from "fs";
-import { DESTINATIONS } from "../src/lib/slovenia-data";
-import { EVENTS } from "../src/lib/events-data";
-import { BLOG_POSTS } from "../src/lib/blog-data";
+import { DESTINATIONS } from "@/lib/slovenia-data";
+import { EVENTS } from "@/lib/events-data";
+import { BLOG_POSTS } from "@/lib/blog-data";
 
 interface AuditItem {
   kind: "destination" | "event" | "blog" | "hero";
