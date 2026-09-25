@@ -22,7 +22,13 @@
 // ============================================================================
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { haversineKm } from "@/lib/geo-distance";
 import type { DayPlan, LocationVisit } from "@/lib/types";
+
+// T5-b1/H2: haversine formula živi v src/lib/geo-distance.ts (en vir
+// resnice). Konstanti spodaj sta NAMERNO lokalni in konzervativnejši od
+// geo-distance (1,5/50 ≠ 1,3/55) — terminski repair potrebuje rezervo nad
+// OSRM realnimi časi (dokumentirano v T5-a3 F.3 D2; NE poenotevati).
 
 const T1_COORDS = new Map(DESTINATIONS.map((d) => [d.id, d.coords]));
 
@@ -53,20 +59,6 @@ export function slotCoordsOf(s: {
     return { lat: s.lat, lng: s.lng };
   }
   return null;
-}
-
-function haversineKm(
-  a: { lat: number; lng: number },
-  b: { lat: number; lng: number }
-): number {
-  const R = 6371;
-  const rad = (x: number) => (x * Math.PI) / 180;
-  const dLat = rad(b.lat - a.lat);
-  const dLng = rad(b.lng - a.lng);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
 }
 
 /** Konzervativna ocena vožnje v urah (konzervativno — glej konstante zgoraj).

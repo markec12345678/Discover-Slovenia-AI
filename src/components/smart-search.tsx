@@ -24,9 +24,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useRouter } from "@/i18n/navigation";
+import {
+  searchResultHref,
+  type SmartSearchResultRef,
+} from "@/lib/search-result-nav";
 
 interface SearchResult {
-  destinations: Array<{ id: string; name: string; tagline: string; reason: string }>;
+  destinations: Array<{
+    id: string;
+    /** Kanonski slug za /destinacija/[slug] (4 od 38 destinacij ima id ≠ slug). */
+    slug?: string;
+    name: string;
+    tagline: string;
+    reason: string;
+  }>;
   listings: Array<{ id: string; name: string; category: string; reason: string }>;
   products: Array<{ id: string; name: string; category: string; reason: string }>;
   experiences: Array<{ id: string; name: string; category: string; reason: string }>;
@@ -56,6 +68,7 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
   const locale = useLocale();
   const isEn = locale === "en";
   const exampleQueries = t.raw("examples") as string[];
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult | null>(null);
@@ -150,6 +163,21 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
       setError(null);
     }, 300);
   }, [onOpenChange]);
+
+  // ISSUE #5 T5-B / H1 (fix wave 1): rezultati so bili MRTVI KLIKI —
+  // listings/izdelki/doživetja so imeli onClick = samo handleClose(),
+  // destinacija pa je klicala onSelectDestination?.(id), ki ni bil nikoli
+  // podan (optional chaining = no-op). Zdaj VSAK rezultat navigira po
+  // preslikavi iz src/lib/search-result-nav.ts (en vir resnice) in dialog
+  // se zapre (handleClose v klicatelju). Tipkovna dostopnost ostaja —
+  // rezultati so <button type="button"> (fokus/tab/enter nespremenjeni).
+  const navigateResult = useCallback(
+    (ref: SmartSearchResultRef) => {
+      const href = searchResultHref(ref);
+      if (href) router.push(href);
+    },
+    [router]
+  );
 
   const hasResults = results && (
     results.destinations.length > 0 ||
@@ -291,14 +319,22 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
                     subtitle: d.tagline,
                     reason: d.reason,
                     onClick: () => {
-                      onSelectDestination?.(d.id);
+                      // H1: klik na destinacijo NAVIGIRA v hub — prej no-op.
+                      // Prednost ima zunanja ključka (navigation.tsx jo je
+                      // priklopil); slug je kanonski segment (id je rezerva —
+                      // hub stran razreši oboje).
+                      if (onSelectDestination) {
+                        onSelectDestination(d.slug ?? d.id);
+                      } else {
+                        navigateResult({ kind: "destination", id: d.id, slug: d.slug ?? null });
+                      }
                       handleClose();
                     },
                   }))}
                 />
               )}
 
-              {/* Listings */}
+              {/* Listings — H1: navigacija v imenik lokalov (prej mrtev klik) */}
               {results.listings.length > 0 && (
                 <ResultGroup
                   icon={<Store className="size-4 text-primary" aria-hidden="true" />}
@@ -308,12 +344,15 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
                     title: l.name,
                     subtitle: l.category,
                     reason: l.reason,
-                    onClick: () => handleClose(),
+                    onClick: () => {
+                      navigateResult({ kind: "listing", id: l.id });
+                      handleClose();
+                    },
                   }))}
                 />
               )}
 
-              {/* Products */}
+              {/* Products — H1: navigacija na tržnico (prej mrtev klik) */}
               {results.products.length > 0 && (
                 <ResultGroup
                   icon={<Package className="size-4 text-primary" aria-hidden="true" />}
@@ -323,12 +362,15 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
                     title: p.name,
                     subtitle: p.category,
                     reason: p.reason,
-                    onClick: () => handleClose(),
+                    onClick: () => {
+                      navigateResult({ kind: "product", id: p.id });
+                      handleClose();
+                    },
                   }))}
                 />
               )}
 
-              {/* Experiences */}
+              {/* Experiences — H1: navigacija na doživetja (prej mrtev klik) */}
               {results.experiences.length > 0 && (
                 <ResultGroup
                   icon={<Compass className="size-4 text-primary" aria-hidden="true" />}
@@ -338,7 +380,10 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
                     title: e.name,
                     subtitle: e.category,
                     reason: e.reason,
-                    onClick: () => handleClose(),
+                    onClick: () => {
+                      navigateResult({ kind: "experience", id: e.id });
+                      handleClose();
+                    },
                   }))}
                 />
               )}

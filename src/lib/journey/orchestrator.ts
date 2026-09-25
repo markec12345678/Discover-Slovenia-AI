@@ -61,7 +61,12 @@ import { JOURNEY_CATEGORY_KEYS } from "./types";
 // POMOŽNE (čiste)
 // ---------------------------------------------------------------------------
 
-/** Haversine razdalja (km) — isti vzorec kot geo-validacija. */
+/** Haversine razdalja (km) — isti vzorec kot geo-validacija.
+ *  T5-b1/H2: NAMERNO NI konsolidirana v src/lib/geo-distance.ts — ta kopija
+ *  ima varovalko Math.min(1, √h) (anti-NaN clamp za antipodalne robne
+ *  primere), geo-distance pa je bit-enaka 10 identičnim mestom BREZ nje.
+ *  Vrednosti so enake za vse realne vhode; formalna razlika je poročana
+ *  glavnemu agentu (T5-b1) — poenotevati SAMO z explicitno odločitvijo. */
 export function haversineKm(
   a: { lat: number; lng: number },
   b: { lat: number; lng: number }

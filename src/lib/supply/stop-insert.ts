@@ -16,29 +16,15 @@
 import type { Itinerary, LocationVisit } from "@/lib/types";
 import type { ProviderProduct } from "./types";
 import { availabilityNote } from "./availability-note";
+import { haversineKm } from "@/lib/geo-distance";
+
+// T5-b1/H2: haversine formula živi v src/lib/geo-distance.ts (en vir
+// resnice — ISTA formula in R = 6371 kot prejšnja lokalna kopija).
 
 export type AddProductResult =
   | { ok: true; kind: "stop"; itinerary: Itinerary; day: number }
   | { ok: true; kind: "selection-only"; reason: "accommodation" | "no-geo" }
   | { ok: false; reason: "no-days" | "duplicate" };
-
-/** Haversine km (ista formula kot chat-add-place — enkraten vir). */
-function haversineKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(s));
-}
 
 /** Tipična trajanja po tipu produkta (hevristika, pošteno razkrita). */
 const TYPE_DURATION_H: Partial<Record<string, number>> = {
@@ -146,7 +132,7 @@ export function insertProductStop(
     for (const loc of d.locations) {
       const c = coordsOfVisit(loc, opts.destinationCoords);
       if (!c) continue;
-      const dist = haversineKm(product.lat!, product.lng!, c.lat, c.lng);
+      const dist = haversineKm({ lat: product.lat!, lng: product.lng! }, c);
       if (dist < best.dist) best = { day: d.day, dist };
     }
   }

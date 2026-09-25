@@ -5,6 +5,10 @@ import type { ChatPlace, PlaceCategory } from "@/lib/geo-intent";
 // 99-b: persistenca zadnjega načrta je zdaj DELJENA knjižnica (nekodaj
 // dupliciran pisec tukaj + v plannerju — isto telo, isti ključ, ista meja)
 import { persistItinerary } from "@/lib/itinerary-persist";
+import { haversineKm } from "@/lib/geo-distance";
+
+// T5-b1/H2: haversine formula živi v src/lib/geo-distance.ts (en vir
+// resnice — ISTA formula in R = 6371 kot prejšnja lokalna kopija).
 
 // ============================================================================
 // DODAJ V NAČRT IZ KLEPETA (1.42.0)
@@ -107,23 +111,6 @@ export function isValidChatPlace(p: unknown): p is ChatPlace {
 // Pomožne funkcije
 // ---------------------------------------------------------------------------
 
-function haversineKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(s));
-}
-
 /** Normalizirano ime za dedupe (čšž → csz, brez ločil, lowercase). */
 function normalizeName(s: string): string {
   return s
@@ -161,7 +148,7 @@ function bestDayForPlace(it: Itinerary, place: ChatPlace): number {
     for (const loc of d.locations) {
       const c = coordsOfVisit(loc);
       if (!c) continue;
-      const dist = haversineKm(place.lat, place.lng, c.lat, c.lng);
+      const dist = haversineKm({ lat: place.lat, lng: place.lng }, c);
       if (dist < best.dist) best = { day: d.day, dist };
     }
   }

@@ -37,16 +37,21 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { dayISOForDayNumber, parseISODateLocal } from "@/lib/trip-dates";
 import {
+  AVG_SPEED_KMH,
+  ROAD_FACTOR,
+  haversineKm,
+} from "@/lib/geo-distance";
+import {
   legIndexMethod,
   legKey,
   type LegRouteIndex,
 } from "@/lib/road-routing";
 import type { Itinerary, LocationVisit, RoutingMethod } from "@/lib/types";
 
-/** Cestni faktor — dejanske ceste so ~1,3× daljše od ravne črte (Slovenija). */
-const ROAD_FACTOR = 1.3;
-/** Povprečna hitrost (km/h) — vključuje gorske ceste, kraje, parkiranje. */
-const AVG_SPEED_KMH = 55;
+// T5-b1/H2: cestni faktor (1,3), hitrost (55 km/h) in haversine formula
+// živijo v src/lib/geo-distance.ts (en vir resnice — ISTI vrednosti in
+// vrstni red operacij kot prej; izrazi v spodnji logiki so namerno
+// nespremenjeni, ker bit-enakost velja nad konsolidacijo izrazov).
 
 /** Pragi (isti kot pilot validator — konsistentnost med testom in produkcijo). */
 const THRESHOLDS = {
@@ -139,21 +144,6 @@ const WEEKDAY_LABELS: Record<Lang, string[]> = {
   sl: ["nedeljo", "ponedeljek", "torek", "sredo", "četrtek", "petek", "soboto"],
   en: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
 };
-
-function haversineKm(
-  a: { lat: number; lng: number },
-  b: { lat: number; lng: number }
-): number {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const la = (a.lat * Math.PI) / 180;
-  const lb = (b.lat * Math.PI) / 180;
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(la) * Math.cos(lb) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
 
 /** Zaokroži na 5 (km ali minute) — brez lažne natančnosti "137 km". */
 function round5(n: number): number {

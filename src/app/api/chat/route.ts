@@ -311,9 +311,34 @@ ${SYSTEM_DATA_GUARD}`;
   ];
 
   try {
-    const result = await generateCompletion(aiMessages, {
-      temperature: 0.7,
-      usageLog: { feature: "chat" },
+    // ------------------------------------------------------------------
+    // ISSUE #5 T5-B / M3 (fix wave 1): ZUNANJA trda meja AI klepeta.
+    // Enak K-5 vzorec kot itinerary (70 s), refine (60 s) in smart-search
+    // (15 s) — tej ruti ga je revizija T5-a1 (vrzel #3) izrecno opredelila
+    // kot edino AI pot brez trde meje: privzeti skupni proračun verige je
+    // 150 s (ai-client.ts), klientni fetch v chatbot.tsx pa NI imel
+    // AbortControllerja — uporabnik je lahko gledal spinner ~2,5 min pred
+    // domensko rezervo (živi dokaz tega razreda: refine 262 s / search
+    // >400 s, 2026-09-24). Zdaj: 25 s zunanja meja → null → obstoječa
+    // deterministična domenska plast (buildDomainFallbackAnswer) —
+    // odgovor PRIDE VEDNO v < ~26 s, pošteno označen source:"fallback".
+    // ------------------------------------------------------------------
+    const chatHardCapMs = 25_000;
+    let chatHardCapTimer: ReturnType<typeof setTimeout> | null = null;
+    const result = await Promise.race([
+      generateCompletion(
+        aiMessages,
+        // Noga vezana na skupno mejo (ista semantika kot refine: OpenRouter
+        // 22 s + veriga 25 s — globoka vrsta pade pošteno v domensko
+        // rezervo, hitre napake (429/5xx) pa še dobijo rezervat
+        // Gemini/Puter znotraj preostanka, ki ostane nad MIN_LEG_MS).
+        { temperature: 0.7, timeoutMs: 22_000, totalBudgetMs: 25_000, usageLog: { feature: "chat" } }
+      ),
+      new Promise<null>((resolve) => {
+        chatHardCapTimer = setTimeout(() => resolve(null), chatHardCapMs);
+      }),
+    ]).finally(() => {
+      if (chatHardCapTimer) clearTimeout(chatHardCapTimer);
     });
 
     const content = result?.content;

@@ -7,6 +7,75 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.102.0] — 2026-09-26 (ISSUE #5 T5-B: fix valu 1 — H1 SmartSearch navigacija + H2 geo-distance konsolidacija + 4 MEDIUM)
+
+### Popravljeno
+
+- **H1 — SmartSearch rezultati niso več mrtvi kliki** (HIGH, revizija T5-a2 #1):
+  `navigation.tsx:420` je izrisoval `<SmartSearch>` BREZ `onSelectDestination`
+  → klik na destinacijo je bil no-op; listings/izdelki/doživetja so imeli
+  onClick = samo `handleClose()`. Fix: nov `src/lib/search-result-nav.ts`
+  (čista preslikava vrsta→href, en vir resnice, 0 uvozov) · `navigation.tsx`
+  priklopi `onSelectDestination` (locale-zaveden router — EN uporabnik ob
+  kliku NE izgubi jezika) · `smart-search.tsx` vse štiri skupine navigirajo
+  (destinacija → `/destinacija/[slug]`, lokali → `/lokali`, izdelki →
+  `/trznica`, doživetja → `/dozivetja`) · `/api/smart-search` strežniško
+  prilepi kanonski slug iz DESTINATIONS (`destSlugById`; 4 od 38 destinacij
+  ima id ≠ slug; AI NE izmišlja slug-a — obe poti, AI + keyword fallback).
+  **Brskalniški dokaz**: klik na rezultat „Bled" → navigacija na
+  `/destinacija/bled`, hub stran izrisana, 0 konzolnih napak.
+- **H2 — deterministični geometrijski primitivi konsolidirani** (HIGH,
+  revizija T5-a3 #1): `haversineKm` ×11 datotek + `ROAD_FACTOR 1.3` ×5 +
+  `AVG_SPEED 55` ×3 → en čist modul `src/lib/geo-distance.ts`
+  (`EARTH_RADIUS_KM`, `ROAD_FACTOR`, `AVG_SPEED_KMH`, `haversineKm`,
+  `heuristicLegKm`, `heuristicLegMinutes`). 10/11 lokacij bit-identično
+  zamenjanih (15/15 točkovnih parov `===` stara↔nova; vsi obstoječi testi
+  mimo). 1 zavestna izjema: `journey/orchestrator.ts:65` ima anti-NaN
+  `Math.min(1, √h)` objem, ki ga drugih 10 nima — ostaja ločena z
+  dokumentacijo (unifikacija objema je izrecna odločitev za pozneje, ne
+  tiha sprememba vedenja).
+- **M3 (chat) — trda meja + klientni abort** (MEDIUM, T5-a1 #3): `/api/chat`
+  je bila edina pomembna AI pot brez trde meje (privzeti budget 150 s;
+  klientni fetch brez AbortControllerja → uporabnik je lahko čakal ~2,5 min).
+  Fix po K-5 vzorcu: 25 s zunanja `Promise.race` meja (noga 22 s / budget
+  25 s, timer počiščen v `finally`) → ob null/timeout OBSTOJEČA domenska
+  rezerva (`source:"fallback"`); `chatbot.tsx` — `AbortController` 30 s
+  (pokrije mejo + gradnjo rezerve), abort gre po obstoječi poti sporočila
+  o nedosegljivosti (0 novih nizov).
+
+### Dodano (testi — 107 novih, skupaj 2852)
+
+- `src/lib/__tests__/pins-ingest.test.ts` (**29**, M4): Takeout GeoJSON
+  (vključno [lng,lat] past + properties.location), KML (entitete,
+  višina), besedilni seznam (bullets), robovi (prazno, pokvarjen JSON,
+  KML brez Placemark, lat 999, null-island, MAX_PINS 200 ×2), ujemanje
+  (najdaljši vzorec, koordinate ≤25 km prednost, izven radija → ime,
+  pinsUnmatched iskrenost, agregacija/rangiranje, suggestion) + ingestPins
+  cevovod.
+- `src/lib/__tests__/plan-qa.test.ts` (**29**, M5): buildPlanFacts
+  (km/min prek NEODVISNE testne haversine formule, delegacija ≡
+  validateItineraryGeo, budget/driveCosts, busiest/quietest, datumi,
+  defenzivna oblika praznega načrta, renderFactsSheet) + answerPlanQuestion
+  (9 SL namenov + EN fraze + vreme; iskrene poti: out_of_range, null,
+  točen „ugibati pa ne bom" / „I won't guess" kontrakt).
+- `src/lib/__tests__/issue5-t5b-smartsearch-nav.test.ts` (16): preslikava
+  unit + DESTINATIONS slug resnica + source-contract priklopa.
+- `src/lib/__tests__/issue5-t5b-chat-hardcap.test.ts` (9): source-contract
+  meje + funkcionalno (omrežje odbija vse → 200 `source:"fallback"`).
+- `src/lib/__tests__/issue5-t5b-ingest-ssrf.test.ts` (20, M6): SSRF
+  bloklista (11 zasebnih naslovov → 400 BREZ fetcha), redirect
+  re-validacija (302 → 127.0.0.2 → 400; relativna javna → sledi),
+  uspešna pot (3 destinacije + suggestion), iskrene 422/502.
+- TASK 76 higiena: obe novi datoteki z route uvozi čistita okno
+  (`clearProviderRateLimits`).
+
+### Testi
+
+- `bun test` **2852/2852** (2745 + 107) · `bun run lint` **0** ·
+  `bunx tsc --noEmit` **0** v `src/`.
+
+---
+
 ## [1.101.0] — 2026-09-26 (ISSUE #5 T5-A: SAMO BRALNI AUDIT — produktno-funkcijska matrika + AI-revizija)
 
 ### Dodano

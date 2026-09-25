@@ -1,6 +1,10 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import { legKey, type LegRouteIndex } from "@/lib/road-routing";
+import {
+  ROAD_FACTOR as GEO_ROAD_FACTOR,
+  haversineKm as geoHaversineKm,
+} from "@/lib/geo-distance";
 import type { Itinerary, LocationVisit, PlannerInput } from "@/lib/types";
 
 // ============================================================================
@@ -18,8 +22,10 @@ import type { Itinerary, LocationVisit, PlannerInput } from "@/lib/types";
 // Deterministično, jezikovno zavestno (sl/en), isto na serverju in clientu.
 // ============================================================================
 
-/** Cestni faktor — enak kot itinerary-quality (dejanske ceste so daljše). */
-export const ROAD_FACTOR = 1.3;
+/** Cestni faktor — enak kot itinerary-quality (dejanske ceste so daljše).
+ *  T5-b1/H2: vrednost živi v src/lib/geo-distance.ts (en vir resnice);
+ *  re-izvoz ohranja obstoječe uvoze (refine-actions idr.). */
+export const ROAD_FACTOR = GEO_ROAD_FACTOR;
 
 /** Tipi destinacij, ki so v glavnem notranji (t12 / WEATHER-CONTEXT). */
 export const INDOOR_TYPES = new Set(["cave", "spa", "city"]);
@@ -42,22 +48,16 @@ export const NATURE_TYPES = new Set([
  */
 export { DESTINATIONS_DATA_AS_OF } from "@/lib/destination-provenance";
 
-/** Haversine razdalja med dvema točkama v km (enaka formula kot quality). */
+/** Haversine razdalja med dvema točkama v km (enaka formula kot quality).
+ *  T5-b1/H2: telo je preseljeno v src/lib/geo-distance.ts; 4-skalarna
+ *  izvožena podpis OSTAJA (nazaj kompatibilno za pins-ingest idr.). */
 export function haversineKm(
   lat1: number,
   lng1: number,
   lat2: number,
   lng2: number
 ): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
+  return geoHaversineKm({ lat: lat1, lng: lng1 }, { lat: lat2, lng: lng2 });
 }
 
 /** Povezava destinacije po id (neodvisna od jezika — identifikatorji so skupni). */

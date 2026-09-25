@@ -1,4 +1,10 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import {
+  AVG_SPEED_KMH as GEO_AVG_SPEED_KMH,
+  ROAD_FACTOR as GEO_ROAD_FACTOR,
+  heuristicLegKm,
+  heuristicLegMinutes,
+} from "@/lib/geo-distance";
 import type { Itinerary, RoutingMethod } from "@/lib/types";
 
 // ============================================================================
@@ -39,10 +45,11 @@ import type { Itinerary, RoutingMethod } from "@/lib/types";
 // ============================================================================
 
 /** Cestni faktor za hevristiko — enak kot v vseh čistih plasteh (nazaj
- *  kompatibilen fallback, kadar OSRM ni na voljo). */
-export const HEURISTIC_ROAD_FACTOR = 1.3;
-/** Povprečna hitrost za hevristiko (km/h). */
-export const HEURISTIC_AVG_SPEED_KMH = 55;
+ *  kompatibilen fallback, kadar OSRM ni na voljo).
+ *  T5-b1/H2: vrednost živi v src/lib/geo-distance.ts (en vir resnice). */
+export const HEURISTIC_ROAD_FACTOR = GEO_ROAD_FACTOR;
+/** Povprečna hitrost za hevristiko (km/h) — en vir: geo-distance. */
+export const HEURISTIC_AVG_SPEED_KMH = GEO_AVG_SPEED_KMH;
 
 /** Vir podatka za eno "nogo" (par zaporednih postankov). */
 export type LegSource = "osrm" | "heuristic";
@@ -74,39 +81,22 @@ export function round5(n: number): number {
   return Math.round(n / 5) * 5;
 }
 
-/** Haversine razdalja v km (ista formula kot v čistih plastih). */
-function haversineKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
-
 /** Koordinate destinacij (client-varno — isti vir kot čisti plasti). */
 export const DESTINATION_COORDS = new Map(
   DESTINATIONS.map((d) => [d.id, d.coords])
 );
 
-/** Hevristična noga (haversine × 1,3 ÷ 55 km/h) — čista, za fallback in teste. */
+/** Hevristična noga (haversine × 1,3 ÷ 55 km/h) — čista, za fallback in teste.
+ *  T5-b1/H2: haversine in konstanti prihajata iz src/lib/geo-distance.ts
+ *  (ISTA semantika in vrstni red operacij kot prej — round5 na mestu). */
 export function heuristicLeg(
   a: { lat: number; lng: number },
   b: { lat: number; lng: number }
 ): LegRoute {
-  const straight = haversineKm(a.lat, a.lng, b.lat, b.lng);
-  const roadKm = straight * HEURISTIC_ROAD_FACTOR;
+  const roadKm = heuristicLegKm(a, b);
   return {
     km: round5(roadKm),
-    min: round5((roadKm / HEURISTIC_AVG_SPEED_KMH) * 60),
+    min: round5(heuristicLegMinutes(a, b)),
     source: "heuristic",
   };
 }

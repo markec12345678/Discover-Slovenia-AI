@@ -1,5 +1,6 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { legKey, type LegRouteIndex } from "@/lib/road-routing";
+import { ROAD_FACTOR, haversineKm } from "@/lib/geo-distance";
 import type { DriveCosts, Itinerary } from "@/lib/types";
 
 // ============================================================================
@@ -25,28 +26,8 @@ import type { DriveCosts, Itinerary } from "@/lib/types";
 // (stari načrti brez quality polja). Brez stranskih učinkov.
 // ============================================================================
 
-/** Cestni faktor — isti kot v geo-validation/itinerary-quality (en vir
- *  formule: ravne črte so krajše od dejanskih cest). */
-const ROAD_FACTOR = 1.3;
-
-/** Haversine razdalja v km (ista formula kot drugje — lokalna kopija,
- *  ker je lib čisto brez odvisnosti). */
-function haversineKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
+// T5-b1/H2: cestni faktor in haversine formula živita v
+// src/lib/geo-distance.ts (en vir resnice — ISTI vrednosti kot prej).
 
 // --- Predpostavke (razkrite v UI) — viri ob implementaciji ---------------
 
@@ -105,13 +86,7 @@ export function computeDrivingKm(
       km += leg.km; // realna cesta (OSRM) — faktor je že v merjeni poti
     } else {
       // hevristika (noga ni v indeksu) — enaka formula kot brez indeksa
-      km +=
-        haversineKm(
-          known[i - 1].coords.lat,
-          known[i - 1].coords.lng,
-          known[i].coords.lat,
-          known[i].coords.lng
-        ) * ROAD_FACTOR;
+      km += haversineKm(known[i - 1].coords, known[i].coords) * ROAD_FACTOR;
     }
   }
   return Math.round(km / 5) * 5;

@@ -68,6 +68,14 @@ const PLACE_PIN_COLORS: Record<"t1" | "osm" | "t2", string> = {
   t2: "#0f766e", // turkizni — uradni vir STO (T2, 1.44): članek, ne lokal
 };
 
+/**
+ * ISSUE #5 T5-B / M3: klientni timeout fetcha klepeta. Strežniška trda meja
+ * je 25 s (chat/route.ts, K-5 vzorec) + gradnja domenske rezerve — 30 s
+ * pokrije oboje z rezervo, potem klient prekine čakanje (AbortController)
+ * in pokaže obstoječe sporočilo o nedosegljivosti.
+ */
+const CHAT_FETCH_TIMEOUT_MS = 30_000;
+
 /** Ikone kategorij krajev (Mindtrip: fork ikona na pinu; mi v seznamu). */
 const CATEGORY_ICONS: Record<PlaceCategory, React.ComponentType<{ className?: string }>> = {
   food: Utensils,
@@ -927,10 +935,20 @@ export function Chatbot() {
     setInput("");
     setLoading(true);
 
+    // ISSUE #5 T5-B / M3 (fix wave 1): klientni abort čakanja. Strežniška
+    // trda meja je 25 s + gradnja domenske rezerve — 30 s pokrije oboje,
+    // potem pa klient prekine fetch in pokaže OBSTOJEČE sporočilo o
+    // nedosegljivosti (offlineFallback v catchu). Prej fetch NI imel
+    // signal-a: obešajoča se prošnja je držala loader do ~150 s+ (vrzel
+    // T5-a1 #3). Timer se počisti ob koncu (finally) — tudi ob uspehu.
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), CHAT_FETCH_TIMEOUT_MS);
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           messages: newMessages,
           currentPage: typeof window !== "undefined" ? window.location.pathname : undefined,
@@ -982,6 +1000,8 @@ export function Chatbot() {
 
       if (!open) setHasNewMessage(true);
     } catch {
+      // T5-B/M3: tudi AbortError (časovna omejitev klienta) gre po isti
+      // obstoječi poti — brez novih nizov, brez nove logike.
       setMessages((prev) => [
         ...prev,
         {
@@ -990,6 +1010,7 @@ export function Chatbot() {
         },
       ]);
     } finally {
+      clearTimeout(abortTimer);
       setLoading(false);
     }
   }

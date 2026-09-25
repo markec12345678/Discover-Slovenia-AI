@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
 import { Mountain, Menu, Sun, Moon, Compass, Search, ShoppingCart, Building2 } from "lucide-react";
@@ -20,6 +20,7 @@ import { PwaHeaderIcons } from "@/components/pwa/pwa-header-icons";
 import { SmartSearch } from "@/components/smart-search";
 import { WishlistSheet } from "@/components/wishlist-sheet";
 import { useCart } from "@/lib/cart-store";
+import { destinationHref } from "@/lib/search-result-nav";
 
 
 /**
@@ -82,8 +83,25 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
   const [scrolled, setScrolled] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
   const t = useTranslations("nav");
+  const router = useRouter();
   const navLinks = useNavLinks();
   const secondaryLinks = useSecondaryLinks();
+
+  // ISSUE #5 T5-B / H1 (fix wave 1): SmartSearch rezultati so bili MRTVI
+  // KLIKI — <SmartSearch> je bil izrisan BREZ onSelectDestination, zato je
+  // bil klik na destinacijo no-op (optional chaining v komponenti), ostale
+  // skupine pa so samo zaprle dialog. Zdaj klik na destinacijo navigira na
+  // hub stran (/destinacija/[idOrSlug] — obe obliki razreši SSG hub prek
+  // getDestinationById najprej) in dialog se zapre (handleClose v
+  // komponenti). Router je locale-zaveden (@/i18n/navigation), zato EN
+  // uporabnik ostane v angleščini. Ostale skupine (lokali/izdelki/
+  // doživetja) navigira komponenta sama prek search-result-nav.ts.
+  const handleSearchSelectDestination = React.useCallback(
+    (destIdOrSlug: string) => {
+      router.push(destinationHref(destIdOrSlug));
+    },
+    [router]
+  );
 
   // "Steklo" = odscrollano ALI vedno (podstrani brez heroja)
   const glass = scrolled || solid;
@@ -417,7 +435,11 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
       />
 
       {/* AI Smart Search — naravno-jezikovno iskanje */}
-      <SmartSearch open={searchOpen} onOpenChange={setSearchOpen} />
+      <SmartSearch
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        onSelectDestination={handleSearchSelectDestination}
+      />
     </header>
   );
 }

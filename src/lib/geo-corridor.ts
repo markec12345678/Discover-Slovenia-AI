@@ -1,26 +1,23 @@
+import { haversineKm as geoHaversineKm } from "@/lib/geo-distance";
+
 // ============================================================================
 // GEO-CORRIDOR — skupna čista geometrija za "koridor okrog odseka" (backlog #5
 // in #6). Izluščeno iz src/app/api/itinerary/stops-along-way/route.ts (1.24.0),
 // da jo lahko uporabi tudi odjemalec (meal-stops.ts) — identične formule,
 // nobenih odvisnosti, hidracijsko varno.
+// T5-b1/H2: telo haversineKm je preseljeno v src/lib/geo-distance.ts (en vir
+// resnice); 4-skalarna izvožena podpis OSTAJA (nazaj kompatibilno za
+// go-view/meal-stops/refine-actions/pins-ingest uvoznike).
 // ============================================================================
 
-/** Haversine razdalja v km (ista formula kot čiste plasti). */
+/** Haversine razdalja v km (ista formula kot čiste plasti — geo-distance). */
 export function haversineKm(
   lat1: number,
   lng1: number,
   lat2: number,
   lng2: number
 ): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
+  return geoHaversineKm({ lat: lat1, lng: lng1 }, { lat: lat2, lng: lng2 });
 }
 
 /**

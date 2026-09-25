@@ -22,6 +22,7 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { Itinerary, PlannerInput, CrowdNotice, CrowdAlternative } from "@/lib/types";
 import { dayISOForDayNumber } from "@/lib/trip-dates";
+import { haversineKm } from "@/lib/geo-distance";
 
 /**
  * Destinacije z javno dokumentiranim vrhunskim obiskovalnim pritiskom.
@@ -78,23 +79,8 @@ export function tripOverlapsPeakWeekend(startDate: string, days: number): boolea
   return false;
 }
 
-/** Haversine razdalja v km (ista formula kot v itinerary-quality, zasebna tam). */
-function haversineKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
+// T5-b1/H2: haversine formula živi v src/lib/geo-distance.ts (en vir
+// resnice — ISTA formula in R = 6371 kot prejšnja lokalna kopija).
 
 const MAX_ALTERNATIVE_KM = 60;
 
@@ -135,25 +121,13 @@ export function buildCrowdNotices(
           d.id !== origin.id &&
           !HIGH_DEMAND_IDS.has(d.id) &&
           d.bestSeason.includes(input.season) &&
-          haversineKm(
-            origin.coords.lat,
-            origin.coords.lng,
-            d.coords.lat,
-            d.coords.lng
-          ) <= MAX_ALTERNATIVE_KM
+          haversineKm(origin.coords, d.coords) <= MAX_ALTERNATIVE_KM
       )
         .map((d) => ({
           destination_id: d.id,
           destination_name: d.name,
           slug: d.slug,
-          distanceKm: Math.round(
-            haversineKm(
-              origin.coords.lat,
-              origin.coords.lng,
-              d.coords.lat,
-              d.coords.lng
-            )
-          ),
+          distanceKm: Math.round(haversineKm(origin.coords, d.coords)),
           // Ujemanje interesov potnika — pošten razlog "boljše za vas"
           matchedInterests: d.bestFor.filter((b) =>
             input.interests.includes(b)

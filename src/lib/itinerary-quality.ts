@@ -1,6 +1,11 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { computeTripDriveCosts } from "@/lib/trip-costs";
 import {
+  AVG_SPEED_KMH,
+  ROAD_FACTOR,
+  haversineKm,
+} from "@/lib/geo-distance";
+import {
   legIndexMethod,
   legKey,
   type LegRouteIndex,
@@ -62,30 +67,8 @@ const FOOD_NOTE_PATTERNS = [
   "brbonč",
 ];
 
-/** Cestni faktor — dejanske ceste so daljše od ravne črte (dolina/ prelaz). */
-const ROAD_FACTOR = 1.3;
-/** Povprečna hitrost (km/h) vključno z mestnimi/počasnimi odseki. */
-const AVG_SPEED_KMH = 55;
 /** Zgornja meja dolžine rationale (znaki) — 1–2 povedi. */
 const RATIONALE_MAX_LEN = 240;
-
-/** Haversine razdalja med dvema točkama v km. */
-function haversineKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
 
 /**
  * Skupni čas vožnje (minute): seštevek razdalj med VSA zaporednima
@@ -117,13 +100,9 @@ function computeDrivingMinutes(
       minutes += leg.min;
       usedLegs.set(legKey(known[i - 1].id, known[i].id), leg);
     } else {
+      // ISTI vrstni red operacij kot prej (bit-enakost): (hav × 1,3 × 60) ÷ 55
       minutes +=
-        (haversineKm(
-          known[i - 1].coords.lat,
-          known[i - 1].coords.lng,
-          known[i].coords.lat,
-          known[i].coords.lng
-        ) *
+        (haversineKm(known[i - 1].coords, known[i].coords) *
           ROAD_FACTOR *
           60) /
         AVG_SPEED_KMH;

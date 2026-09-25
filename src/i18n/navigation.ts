@@ -17,6 +17,11 @@ import { routing } from "./routing";
  * server komponentah (getLocale iz request config-a — header, ki ga nastavi
  * src/proxy.ts).
  *
+ * ISSUE #5 T5-B (H1): izvožen je tudi `useRouter` — programski router.push
+ * iz klientnih komponent (npr. SmartSearch navigacija) MORA ostati v
+ * aktivnem lokalnem (enaka logika prefixa kot Link), sicer EN uporabnik
+ * ob kliku na rezultat iskanja izgubi jezik.
+ *
  * OPOMBA: `usePathname` iz tega modula NE uporabljajmo neposredno —
  * `usePathname()` (next/navigation) vrača ZUNANJI URL, torej S `/en`
  * prefix-om, kadar uporabnik brska angleško (proxy rewrite je klientu
@@ -24,6 +29,6 @@ import { routing } from "./routing";
  * routing.ts; pri delu s potmi najprej odstrani `/en` prefix (glej
  * vzorec v language-switcher.tsx).
  */
-export const { Link, redirect, usePathname, getPathname } = createNavigation(
+export const { Link, redirect, usePathname, useRouter, getPathname } = createNavigation(
   routing,
 );

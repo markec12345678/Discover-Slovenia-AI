@@ -1,6 +1,6 @@
 # PRODUCT-FUNCTIONALITY-MATRIX — Discover Slovenia AI
 
-> **Datum:** 2026-09-26 · **Verzija:** 1.100.3 (audit) / 1.101.0 (dostava) · **HEAD ob auditu:** a854404
+> **Datum:** 2026-09-26 · **Verzija:** 1.100.3 (audit) / 1.102.0 (T5-B dostava) · **HEAD ob auditu:** a854404 · **Popravljeni v T5-B (1.102.0):** H1, H2, M3-chat, M4, M5, M6 (označeno spodaj)
 > **Namen:** Issue #5 „COMPLETE PRODUCT FUNCTIONALITY / DETERMINISTIC SDK + SCRIPTS FIRST" — Faza 2 (popolna funkcijska matrika), Faza 3 (AI odvisnosti), Faza 4 (SDK/scripts), Faza 5 (vrzeli). Izdelano iz TREH neodvisnih read-only revizij (dokazi `file:line`): [T5-a1 AI-odvisnosti](audit/t5-a1-ai-dependency.md) · [T5-a2 Discovery/Planning/Import](audit/t5-a2-capabilities-discovery-planning-import.md) · [T5-a3 Trip/Map/Offline/Skupnost/L10n/SDK](audit/t5-a3-capabilities-trip-map-offline-community-l10n-sdk.md).
 > **Metoda:** read-only analiza kode (src/, public/, scripts/, prisma/, docs/), žive sonde na lokalnem dev strežniku in produkciji (Render + Vercel), NI sprememb aplikacijske kode.
 
@@ -38,7 +38,7 @@
 | Dogodki (statični koledar + „Dodaj v mojo pot") | DA | ne | events-i18n | DELA |
 | Vodiči (adria SSG) + blog (SL-only) | DA | ne | sitemap sampling | DELA Z OMEJITVAMI (EN brez bloga — LOW) |
 | Zbirke (collections modal) | DA | ne | task84 | DELA |
-| Smart search (NL iskanje po platformi) | fallback DA (keyword ≤16 s) | optional (hard cap 15 s) | ruta netestirana | **BROKEN-UX — mrtvi kliki (HIGH)** |
+| Smart search (NL iskanje po platformi) | fallback DA (keyword ≤16 s) | optional (hard cap 15 s) | issue5-t5b-smartsearch-nav (16) | DELA — **H1 ZAPRT v 1.102.0** (vse 4 skupine navigirajo; browser dokaz: klik Bled → /destinacija/bled) |
 | `/api/destinations*` (javni JSON) | DA | ne | task99a | API-ONLY (LOW, dokumentirati) |
 | Explore hub + tržnica + zemljevid | DA | ne | — | DELA |
 
@@ -60,7 +60,7 @@
 | Vreme (Open-Meteo brez ključa; weatherEstimated iskren) | DA | ne | task88/task66 | DELA |
 | Refine — hitre akcije (6 čipov, 0 LLM, primarna pot) | DA | ne | wave4/issue3 | DELA |
 | Refine — prosti jezik (hard cap 60 s; fallback = echo + opozorilo) | fallback DA | optional | — | DELA Z OMEJITVAMI |
-| PlanCopilot „Vprašaj" (computed-first, brez ugibanja) | DA | sfraziranje optional | **0 testov (MEDIUM)** | DELA |
+| PlanCopilot „Vprašaj" (computed-first, brez ugibanja) | DA | sfraziranje optional | plan-qa.test (29) — **M5 ZAPRT v 1.102.0** | DELA |
 | Plan-check validator tujih načrtov (0 AI, zigzag) | DA | ne | wave6 + živa sonda | DELA |
 | Leg suggestions + meal stops (koridor ≥75 min) | DA | ne | — | DELA |
 | Ročna urejanja (remove/optimalno zaporedje/dodaj dogodek/kraj) | DA | ne | — | DELA Z OMEJITVAMI (**ni drag/drop, ni add/remove dan — MEDIUM**) |
@@ -71,9 +71,9 @@
 | Vhod | Deterministično | AI | Test | Status |
 |---|---|---|---|---|
 | Besedilo (NL keyword parse SL+EN → interesi) | DA | ne | issue3 tag-align | DELA |
-| URL (SSRF bloklista, redirect re-validacija, 8 s fetch) | DA | ne | **ruta netestirana (MEDIUM)** | DELA |
+| URL (SSRF bloklista, redirect re-validacija, 8 s fetch) | DA | ne | issue5-t5b-ingest-ssrf (20) — **M6 ZAPRT v 1.102.0** | DELA |
 | PDF (unpdf, %PDF- magija, max 60 strani; skeniran → poštena 422) | DA | ne | **task95 (94–352)** | DELA |
-| Google Pins (Takeout JSON/KML/besedilo; ≤25 km) | DA | ne | **0 testov (MEDIUM)** | DELA |
+| Google Pins (Takeout JSON/KML/besedilo; ≤25 km) | DA | ne | pins-ingest.test (29) — **M4 ZAPRT v 1.102.0** | DELA |
 | Slika/screenshot | ujemanje DA | **HARD — VLM; 502 brez ključev** | — | **AI-ONLY (MEDIUM)** |
 | Rezervacije (parse slika/PDF/besedilo → normalizacija → POTRDI) | normalizacija DA | **parse HARD; 502 brez ključev; ročni vnos = fallback** | wave3/task58 | **AI-ONLY parse (MEDIUM); ročno DELA** |
 
@@ -110,7 +110,7 @@ Auth (NextAuth + anonimna identiteta + claim kontinuiteta) DELA · My Trips (`/m
 | Vidik | Ugotovitev |
 |---|---|
 | Arhitektura SDK | **Koherentna**: `src/lib` = en vir resnice; 14+ skriptnih uvozov `../src/lib/*`; API/UI/testi uvažajo iste module; bivša duplikacija motorja route↔lib odstranjena (1.87.0); route-order NI dupliran |
-| **Preostali dolg primitivov (HIGH)** | `haversineKm` ×11 datotek · `ROAD_FACTOR 1.3` ×5 · `AVG_SPEED 55` ×3 — 11 lokacij (geo-corridor.ts:9, stop-insights.ts:46, journey/orchestrator.ts:65, road-routing.ts:78, itinerary-quality.ts:73, geo-validation.ts:143, trip-costs.ts:34, crowd-alternatives.ts:82, schedule-slots.ts:58, supply/stop-insert.ts:26, chat-add-place.ts:110) |
+| **Preostali dolg primitivov (HIGH)** | **H2 ZAPRT v 1.102.0** — `src/lib/geo-distance.ts` (haversineKm + ROAD_FACTOR + AVG_SPEED_KMH + heuristicLeg*): 10/11 lokacij bit-identično konsolidiranih; 1 dokumentirana izjema `journey/orchestrator.ts:65` (anti-NaN objem, namerno ločena) |
 | Scripts inventar | 74 datotek (46 .ts + 2 .sh root, 9 db/, 15 ops/, 2 verify/, 2 .py) — ~30 enkratnih zgodovinskih (MEDIUM: arhiv brez ločitve; revenue-analysis.ts:8 POKVARJENA hardcode pot) |
 | CI e2e | CI poganja 0 e2e skript — functional smoke (GET-only) je edini živi E2E (MEDIUM) |
 | `/api/stripe`, `/api/checkout`, `/api/orders` | **STRIPE NOT ACTIVATED** — live-capable a DORMANT, fail-closed (brez `STRIPE_SECRET_KEY` → 503; demo izrecen `DSA_DEMO_PAYMENTS=1`, nikoli tiha) |

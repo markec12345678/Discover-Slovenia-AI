@@ -28,7 +28,16 @@ interface SmartSearchRequest {
 }
 
 interface SearchResults {
-  destinations: Array<{ id: string; name: string; tagline: string; reason: string }>;
+  destinations: Array<{
+    id: string;
+    /** ISSUE #5 T5-B (H1): kanonski slug za navigacijo /destinacija/[slug]
+     *  — 4 od 38 destinacij ima id ≠ slug (npr. postojna → postojnska-jama).
+     *  Odgovor ga doda iz slovenia-data (AI ga NE izmišlja). */
+    slug: string;
+    name: string;
+    tagline: string;
+    reason: string;
+  }>;
   listings: Array<{ id: string; name: string; category: string; reason: string }>;
   products: Array<{ id: string; name: string; category: string; reason: string }>;
   experiences: Array<{ id: string; name: string; category: string; reason: string }>;
@@ -197,10 +206,19 @@ Vrni JSON z najbolj ujemajočimi se rezultati.`;
     const validProductIds = new Set(allProducts.map((p) => p.id));
     const validExperienceIds = new Set(allExperiences.map((e) => e.id));
 
+    // ISSUE #5 T5-B (H1): id → slug preslikava za navigacijo v hub stran —
+    // strežniško prilepljena iz kanonskega dataseta (AI izhod ostane le
+    // id/ime/razlaga; slug NI odvisen od AI).
+    const destSlugById = new Map(DESTINATIONS.map((d) => [d.id, d.slug] as const));
+
     const results: SearchResults = {
       destinations: (parsed.destinations || [])
         .filter((d: { id: string }) => validDestIds.has(d.id))
-        .slice(0, limit),
+        .slice(0, limit)
+        .map((d: { id: string; name: string; tagline: string; reason: string }) => ({
+          ...d,
+          slug: destSlugById.get(d.id) ?? d.id,
+        })),
       listings: (parsed.listings || [])
         .filter((l: { id: string }) => validListingIds.has(l.id))
         .slice(0, limit),
@@ -273,7 +291,14 @@ function fallbackSearch(
     .filter((d) => d.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
-    .map(({ id, name, tagline }) => ({ id, name, tagline, reason: "Ujema se z iskalnim nizom" }));
+    .map(({ id, name, tagline, slug }) => ({
+      id,
+      // ISSUE #5 T5-B (H1): slug za navigacijo (ista polja kot AI pot)
+      slug,
+      name,
+      tagline,
+      reason: "Ujema se z iskalnim nizom",
+    }));
 
   // ISSUE #4 §11: zapis fallbacka PRED odgovorom (ne onesnaži payload-a).
   logFallbackUsage("search", Date.now() - meteringStartedAt);
