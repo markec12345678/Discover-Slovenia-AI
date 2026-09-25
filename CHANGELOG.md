@@ -7,6 +7,44 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.100.3] — 2026-09-25 (HOTFIX: migration drift vrata — ročno napisan DDL iz VAL 2)
+
+### Popravljeno
+
+- **Po 1.100.2 je Build job prvič pognal drift vrata (`prisma migrate diff
+  --from-migrations --to-schema-datamodel --exit-code`) in odkril drs**:
+  replay migracij ≠ `schema.prisma` pri natanko dveh stolpcih —
+  `SavedItinerary.updatedAt` in `TripCollaborator.updatedAt` sta imela v
+  baseline SQL `DEFAULT CURRENT_TIMESTAMP`, schema pa ju definira kot
+  `@updatedAt` (client-level, BREZ DB defaulta — Prismina konvencija).
+  Vzrok: ročno pisan DDL, ki ga je VAL 2 (c04ab67) appandal v baseline, je
+  uporabil običajno ročno obliko `DEFAULT CURRENT_TIMESTAMP` namesto tistega,
+  kar bi `prisma migrate dev` generiral iz sheme. (Tretja tabela z defaultom,
+  `TripDiaryEntry.updatedAt`, se UJEMA — njen model ima `@default(now())
+  @updatedAt`.) Build job s `needs: quality` ni tekel od pred VAL 5, zato se
+  drs ni videl.
+- **Fix: baseline SQL usklajen s shemo** — `updatedAt ... DEFAULT
+  CURRENT_TIMESTAMP` → `updatedAt TIMESTAMP(3) NOT NULL` za obe tabeli
+  (SavedItinerary, TripCollaborator). Drift vrata so zdaj zelena (replay ≡
+  schema). `0 sprememb schema.prisma` in `0 sprememb uporabniške sheme na
+  produkciji` — baseline se replay-a SAMO v shadow/CI bazah; produkcija ima
+  tabele od startup migracij (Prisma client vzdržuje `updatedAt` prek
+  `@updatedAt` na client strani — DB default ni potreben).
+- **Verižni ukrep po vzorcu 1.100.1**: spremenjena baseline datoteka pomeni
+  nov `BASELINE_CHECKSUM` (`24f5e639…`) + stara vrednost (`09271942…`,
+  trenutno na produkciji po 1.100.1 heal-u) dodana v
+  `HISTORICAL_BASELINE_CHECKSUMS` (5 vnosov) → naslednji hladni zagon na
+  Renderu vrstico samoozdravi (enkraten prehod `healed` → `ok`).
+
+### Testi
+
+- 2745/2745 (brez novih — obstoječe varovalke pokrivajo: checksum ≡ datoteka,
+  zgodovinski seznam edinstven/brez sedanje vrednosti) · lint 0 · tsc 0
+  (src/). CI: quality + build (drift vrata + db push + build + functional
+  smoke) prvič v celoti zelen.
+
+---
+
 ## [1.100.2] — 2026-09-25 (HOTFIX: CI RDEČ od VAL 7 naprej — shallow-klon git-resnica past)
 
 ### Popravljeno

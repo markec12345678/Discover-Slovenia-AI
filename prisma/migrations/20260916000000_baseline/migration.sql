@@ -59,7 +59,7 @@ CREATE TABLE "SavedItinerary" (
     "isPublic" BOOLEAN NOT NULL DEFAULT true,
     "contentVersion" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "SavedItinerary_pkey" PRIMARY KEY ("id")
 );
@@ -908,7 +908,7 @@ CREATE TABLE "TripCollaborator" (
     "invitedBy" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "acceptedAt" TIMESTAMP(3),
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "TripCollaborator_pkey" PRIMARY KEY ("id")
 );

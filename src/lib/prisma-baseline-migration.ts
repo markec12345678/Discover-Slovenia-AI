@@ -86,18 +86,22 @@ export const BASELINE_MIGRATION_ID = "20260916000000_baseline";
  * pade na rdečem testu in zahteva posodobitev konstante.
  */
 export const BASELINE_CHECKSUM =
-  "09271942094c36cd0c25a5b7b9259dfe1010a9d4d8ccedc50f35cb5a848537bd";
+  "24f5e639a082c6cedc6335b9d30a4a7b9cbbbbe93aaa9b0d2bd15afd55fa9db9";
 
 /**
  * Vsi ZGODOVINSKI checksumi BASELINE_CHECKSUM konstante, ki so kdaj koli
- * živeli v main veji (izračunano iz git zgodovine — HOTFIX 1.100.1):
+ * živeli v main veji (izračunano iz git zgodovine — HOTFIX 1.100.1, razširjeno
+ * 1.100.3):
  *
  *   · 4601d3b8… — 1.30.0 → 1.35.0 era (vrstica na Render/Neon produkciji
  *     izvira iz tega obdobja)
  *   · 986e3a7a… — VAL 2 (1.93.0, commit c04ab67)
  *   · 08ca0668… — VAL 3 (1.94.0, commit 881d027)
  *   · c451adf6… — VAL 4 (1.96.0, commit 46209a7)
- *   · 09271942… — VAL 5 (1.97.0, commit 27151ea) = sedanja BASELINE_CHECKSUM
+ *   · 09271942… — VAL 5 (1.97.0, commit 27151ea); sedanja vrednost na
+ *     produkciji po 1.100.1 heal-u
+ *   · 24f5e639… — HOTFIX 1.100.3 (drift vrata: updatedAt brez DB defaulta
+ *     za SavedItinerary/TripCollaborator) = sedanja BASELINE_CHECKSUM
  *
  * Namen: samoozdravitev zastarele (a legitimne) produkcijske vrstice — glej
  * opombo SAMOOZDRAVITEV v glavi modula. Dovoljenje za heal ima SAMO
@@ -113,6 +117,7 @@ export const HISTORICAL_BASELINE_CHECKSUMS: readonly string[] = [
   "986e3a7a3d7559ce13ef0cb66ee8bc75bc48cd19133336ff1bbe8183ed94f24b",
   "08ca0668110ced5b5d833aa1edbc6e0bb3109a70c8d82da37f4e465198408e45",
   "c451adf668638707b56d9d2dc7200b9a48bef3371f2aa48cd489acecd4bdda9a",
+  "09271942094c36cd0c25a5b7b9259dfe1010a9d4d8ccedc50f35cb5a848537bd",
 ];
 
 /** Strukturalni tip, ki ga sprejme resolve (omogoča testiranje z lastnim klientom). */
