@@ -551,6 +551,14 @@ model Review {
   authorName   String
   rating       Int      // 1–5
   comment      String   // 10–1000 znakov (validirano v API-ju)
+  // TASK 28 (Tier 1 #2): GYG-model »overjena rezervacija« — mnenje
+  // dobi žeton SAMO kadar je ob objavi obstajala DOLOČENA potrdnjena
+  // lastna rezervacija (provider "own", providerProductId = experience.id,
+  // isProviderConfirmed). SNIMAK ob objavi (ne živa veza): kasnejše
+  // preklicane rezervacije žetona ne brišejo nazaj (zgodbena resnica
+  // ob objavi). Izdelki izrecno brez (njihove rezervacije živijo pri
+  // zunanjih ponudnikih — ni deterministične veze, ne lažemo).
+  verified     Boolean  @default(false)
   createdAt    DateTime @default(now())
 
   product      Product?     @relation(fields: [productId], references: [id], onDelete: Cascade)
