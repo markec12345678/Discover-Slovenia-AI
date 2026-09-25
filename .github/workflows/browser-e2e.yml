@@ -1,0 +1,94 @@
+name: Browser E2E (offline/PWA)
+
+# D6-C (Issue #6 faza 6): PRAVI brskalniški offline E2E z omrežno emulacijo.
+#
+# ZAKAJ NE V VSAKEM PUSHU (iskrena odločitev, ne lažno zeleni):
+#   · vsak-push CI že dokazuje API-dim (ci-e2e.sh: načrt→save→ogled→PDF→
+#     revizija→409→parse→422 — 0 odvisnosti od brskalnika, ~10 s);
+#   · brskalniški dim zahteva chromium namestitev (~300 MB + cache, ~4 min
+#     dodatkov na vsak push) — razmerje vrednost/strošek za vsak push je
+#     slab, za release/pre-release pa odlično.
+# GATE TIERS (glej docs/E2E-GATES.md):
+#   T1 vsak push: API-dim (ci-e2e.sh) — zelenje Build joba DOKAZANO vključuje
+#      ta korak (ime koraka vsebuje „API e2e" — nikoli tiho preskočen);
+#   T2 workflow_dispatch (ta datoteka): brskalniški offline cikel
+#      (browser-offline-e2e.sh — 7 preverjanj omrežne emulacije);
+#   T3 ročno/lokalno: isti skripti tečejo identično (reproducibilnost).
+#
+# CI NIKOLI ne trdi, da je brskalniški E2E tekel, če ni (T1 poroča samo
+# svoj dim; T2 je ločen job z lastnim rdečim/zelenim statusom).
+
+on:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: "Razlog zagona (npr. pred release)"
+        required: false
+        default: ""
+
+jobs:
+  browser-offline-e2e:
+    name: Offline/PWA browser E2E (SW + network emulation)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: dsa_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/dsa_test"
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🥟 Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 📦 Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: 🗄️ Prepare Prisma client & test DB (Postgres)
+        run: |
+          bunx prisma generate
+          bunx prisma db push --skip-generate
+
+      - name: 🌐 Setup agent-browser (chromium)
+        run: |
+          npm install -g agent-browser
+          agent-browser install --with-deps
+
+      - name: 🏗️ Build (standalone — dev SW ne predpomni!)
+        run: bun run build
+        env:
+          NEXTAUTH_SECRET: "ci-smoke-nextauth-secret-0123456789"
+          NEXTAUTH_URL: "http://localhost:3000"
+          ADMIN_PASSWORD: "ci-smoke-admin-0123456789abcdef"
+          STRIPE_SECRET_KEY: "sk_test_demo_placeholder"
+          SMTP_HOST: "localhost"
+
+      - name: 🔌 Browser offline E2E (SW + set offline on/off)
+        run: bash scripts/ops/browser-offline-e2e.sh
+        env:
+          NEXTAUTH_SECRET: "ci-smoke-nextauth-secret-0123456789"
+          NEXTAUTH_URL: "http://localhost:3000"
+          ADMIN_PASSWORD: "ci-smoke-admin-0123456789abcdef"
+          STRIPE_SECRET_KEY: "sk_test_demo_placeholder"
+          SMTP_HOST: "localhost"
+
+      - name: 🧹 Cleanup browser
+        if: always()
+        run: agent-browser close || true
