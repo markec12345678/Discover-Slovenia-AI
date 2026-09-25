@@ -7,6 +7,63 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.109.0] — 2026-09-26 (TASK 32 / Tier 1 #5: EN blog + čiščenje de/it)
+
+### Dodano
+
+- **EN BLOG (Tier 1 #5 benchmarka Task 28 — zadnja Tier 1 naloga,
+  deterministično, 0 zunanjih odvisnosti)**: blog (16 člankov, modal na
+  /vodici) je bil SL-only — na /en/vodici se ni izrisal. Zdaj je dvojezičen:
+  - **`src/lib/blog-data-en.ts`**: popolni EN prevodi vseh 16 člankov
+    (Bled, Soča, kulinarika, Triglav, Piran, zima/terme, Vintgar, cviček,
+    Bohinj pozimi, Drava kolesarjenje, Pohorje, slapovi, Ljubljana 48 h,
+    gibanica z receptom, štajerski vinogradi, TNP). Pogodbena pariteta
+    (varovana v testih): istih 16 slugov, iste kategorije/datumi/readTime/
+    slike/avtorji/relatedDestination — samo besedila so prevedena.
+    Slovenska lastna imena jedi (kremšnita, žlikrofi, gibanica) ostanejo
+    izvirna — to je angleški zapis o Sloveniji.
+  - **`BlogSection` dvojezična** (useLocale + useTranslations
+    „blogSection"): EN množica člankov na /en/vodici, SL nespremenjena;
+    UI nizi iz sporočil (11 ključev v SL in EN z identičnimi ICU
+    placeholderji), oznake kategorij podatkovno vezane (isti vir resnice
+    kot vodiki), datumi prek date-fns enGB („5 Mar 2026") vs sl
+    („5. mar. 2026"), povezana destinacija z EN overlay-jem
+    (DESTINATIONS_EN tagline; novo-mesto/murska-sobota iskren SL fallback
+    — nikoli izmišljanja) in i18n Link (EN uporabnik ostane na
+    /en/destinacije, ne padec na slovensko pot).
+  - **25 novih testov** (`task32-blog-en.test.ts`): pariteta podatkov
+    SL↔EN (16 slugov, struktura, ≠ SL besedilo), kvaliteta EN vsebine
+    (markdown, dolžine, angleška frekvenčna besedila, brez SL
+    funkcijskih besed), kategorije/helperji, sporočilna pariteta
+    blogSection, drift guard t() ključev, source-contract (0 hardcoded
+    UI literalov, brezpogojen izris na /vodici, AskLocal ostaja SL-only),
+    de/it čiščenje (mrtvi datoteki ne obstajata, 308 preusmeritve
+    ohranjene).
+
+### Spremenjeno
+
+- **`/vodici` stran**: `BlogSection` se izriše brez locale vrata — EN
+  uporabniki na /en/vodici vidijo EN blog pod (že prej prevedenimi)
+  zimskimi/krožnimi/jadranskimi vodniki. „Vprašaj lokalca" (DB vsebina
+  skupnosti) ostaja SL-only (P4-8: nikoli mešanja jezikov).
+
+### Odstranjeno
+
+- **ČIŠČENJE STARE NEVELJAVNE VSEBINE DE/IT**: mrtvi delni prevodi
+  `src/i18n/messages/de.json` in `it.json` izbrisani — `request.ts` ju
+  nikoli ni nalagal (locales so samo sl+en), de.json je celo trdil
+  „22 Reiseziele" (destinacij je 38). 308 legacy preusmeritve za /de in
+  /it URL-je so OHRANJENE v proxy.ts — stare zunanje povezave ne smejo
+  postati 404; celoviti DE/IT prevodi (če kdaj) pridejo kot lastna
+  naloga.
+
+### Dokumentacija
+
+- routing.ts/proxy.ts komentarji posodobljeni (zgodovina de/it
+  odstranitve + zakaj 308 ostaja).
+
+---
+
 ## [1.108.0] — 2026-09-26 (TASK 31 / Tier 1 #3: uvoz rezervacij prek e-pošte)
 
 ### Dodano

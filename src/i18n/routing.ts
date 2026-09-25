@@ -13,8 +13,11 @@ import { defineRouting } from "next-intl/routing";
  *
  * Zgodovina (P4-8, Phase 1): prej so bile javno dostopne delno prevedene
  * strani (/en, /de, /it — prevedena navigacija + noga, hardcoded slovenska
- * vsebina). /de in /it ostajata legacy (308 na slovensko pot) dokler ne
- * dobita celovitih prevodov.
+ * vsebina). TASK 32 (Tier 1 #5): mrtvi delni prevodi de.json/it.json so
+ * ODSTRANJENI (request.ts je nikoli ni nalagal — locales so samo sl+en;
+ * de.json je celo trdil "22 Reiseziele", destinacij je 38). /de in /it
+ * URL-ji ostanejo legacy (308 na slovensko pot) — stare zunanje povezave
+ * ne smejo biti 404; celoviti prevodi (če kdaj) pridejo kot lastna naloga.
  *
  * `localePrefix: "as-needed"`: default locale ("sl") NIMA prefix-a (URL je
  * `/`); "en" ga ima (`/en/…`).

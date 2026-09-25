@@ -1,6 +1,6 @@
 # PRODUCT-FUNCTIONALITY-MATRIX — Discover Slovenia AI
 
-> **Datum:** 2026-09-26 · **Verzija:** 1.100.3 (audit) / 1.102.0 (T5-B) / 1.104.0 (T5-D) / 1.106.0 (TASK 28 Tier 1: live-sync + overjena rezervacija) / 1.107.0 (TASK 30 Tier 1 #4: Lighthouse + CWV vrata) / 1.108.0 (TASK 31 Tier 1 #3: uvoz rezervacij prek e-pošte — TripItov model) · **HEAD ob auditu:** a854404 · **Popravljeni v T5-B (1.102.0):** H1, H2, M3-chat, M4, M5, M6 · **Popravljeni v T5-C (1.103.0):** M11, M9-pot · **Popravljeni v T5-D (1.104.0):** M1, M7, M8, M9-arhiv, M10 (označeno spodaj)
+> **Datum:** 2026-09-26 · **Verzija:** 1.100.3 (audit) / 1.102.0 (T5-B) / 1.104.0 (T5-D) / 1.106.0 (TASK 28 Tier 1: live-sync + overjena rezervacija) / 1.107.0 (TASK 30 Tier 1 #4: Lighthouse + CWV vrata) / 1.108.0 (TASK 31 Tier 1 #3: uvoz rezervacij prek e-pošte — TripItov model) / 1.109.0 (TASK 32 Tier 1 #5: EN blog + čiščenje de/it) · **HEAD ob auditu:** a854404 · **Popravljeni v T5-B (1.102.0):** H1, H2, M3-chat, M4, M5, M6 · **Popravljeni v T5-C (1.103.0):** M11, M9-pot · **Popravljeni v T5-D (1.104.0):** M1, M7, M8, M9-arhiv, M10 (označeno spodaj)
 > **Namen:** Issue #5 „COMPLETE PRODUCT FUNCTIONALITY / DETERMINISTIC SDK + SCRIPTS FIRST" — Faza 2 (popolna funkcijska matrika), Faza 3 (AI odvisnosti), Faza 4 (SDK/scripts), Faza 5 (vrzeli). Izdelano iz TREH neodvisnih read-only revizij (dokazi `file:line`): [T5-a1 AI-odvisnosti](audit/t5-a1-ai-dependency.md) · [T5-a2 Discovery/Planning/Import](audit/t5-a2-capabilities-discovery-planning-import.md) · [T5-a3 Trip/Map/Offline/Skupnost/L10n/SDK](audit/t5-a3-capabilities-trip-map-offline-community-l10n-sdk.md).
 > **Metoda:** read-only analiza kode (src/, public/, scripts/, prisma/, docs/), žive sonde na lokalnem dev strežniku in produkciji (Render + Vercel), NI sprememb aplikacijske kode.
 
@@ -36,7 +36,7 @@
 | Doživetja (DB + modal detail) | DA | ne | task87/task84 | DELA |
 | Lokali (B2B imenik, DB) | DA | ne | task85/99a + CI smoke | DELA |
 | Dogodki (statični koledar + „Dodaj v mojo pot") | DA | ne | events-i18n | DELA |
-| Vodiči (adria SSG) + blog (SL-only) | DA | ne | sitemap sampling | DELA Z OMEJITVAMI (EN brez bloga — LOW) |
+| Vodiči (adria SSG) + blog (SL + EN) | DA | ne | task32-blog-en (25) | DELA — **EN blog dodan v 1.109.0 (TASK 32)**: 16 popolnih prevodov, pariteta varovana |
 | Zbirke (collections modal) | DA | ne | task84 | DELA |
 | Smart search (NL iskanje po platformi) | fallback DA (keyword ≤16 s) | optional (hard cap 15 s) | issue5-t5b-smartsearch-nav (16) | DELA — **H1 ZAPRT v 1.102.0** (vse 4 skupine navigirajo; browser dokaz: klik Bled → /destinacija/bled) |
 | `/api/destinations*` (javni JSON) | DA | ne | task99a | API-ONLY (LOW, dokumentirati) |
@@ -115,6 +115,7 @@ Auth (NextAuth + anonimna identiteta + claim kontinuiteta) DELA · My Trips (`/m
 | Scripts inventar | 74 datotek — **M9 ZAPRT v 1.104.0**: ~35 zgodovinskih premaknjenih v `scripts/archive/` (git mv, 2 importa popravljena na `@/` alias, `archive/README.md` s tabelama tierov; izjeme ostanejo žive: `db/p9-smoke-cleanup.ts` — referenca production-smoke.sh, `client-test.d.ts` — ambientna deklaracija); revenue-analysis.ts pot popravljen že v 1.103.0 |
 | CI e2e | **M10 ZAPRT v 1.104.0** — `scripts/ops/ci-e2e.sh` (8 korakov: načrt → save → ogled → PDF → revizija → 409 → parse → 422) pognan v CI build jobu za functional-smoke; zavrne ne-lokalne cilje (piše v DB); lokalno 9/9 zeleno |
 | **Lighthouse + CWV vrata** | **DODANO v 1.107.0 (TASK 30 Tier 1 #4)** — `scripts/ops/lighthouse-gates.sh` (mobile/simulate nad standalone buildom, 5 strani × 7 pragov: perf/a11y/bp/seo + LCP/CLS/TBT; REGRESIJSKA z izmerjenim baseline perf 0.55–0.82 + dokumentiranim TBT šumom +57 %) + CI workflow `lighthouse.yml` (T2 workflow_dispatch + artifact poročil); dokaz lokalno 36/36 · baseline + iskrene meje v [E2E-GATES.md](E2E-GATES.md) |
+| **EN blog + čiščenje de/it** | **DODANO v 1.109.0 (TASK 32 Tier 1 #5 — zadnja Tier 1 naloga)** — `src/lib/blog-data-en.ts` (16 popolnih EN prevodov, pogodbena pariteta SL↔EN varovana v 25 testih) + dvojezična `BlogSection` (t("blogSection") 11 ključev SL/EN, enGB datumi, EN overlay destinacij z iskrenim fallbackom, i18n Link) na /vodici in /en/vodici; mrtva delna prevoda de.json/it.json izbrisana (request.ts ju nikoli ni nalagal), 308 legacy preusmeritve /de+/it OHRANJENE (stare povezave ≠ 404) |
 | `/api/stripe`, `/api/checkout`, `/api/orders` | **STRIPE NOT ACTIVATED** — live-capable a DORMANT, fail-closed (brez `STRIPE_SECRET_KEY` → 503; demo izrecen `DSA_DEMO_PAYMENTS=1`, nikoli tiha) |
 | commissions.ts / affiliate.ts | commissions = realna DB logika (12 %, mesečni računi, pdf-lib — B2B) · affiliate = LIVE (env-gated, `monetized:false` brez ID-jev) |
 | FEATURE-FLAGS.md | **ZASTARELO (MEDIUM)** — opisuje `PAYMENTS_ENABLED`, ki v kodi NE obstaja (dejansko: `isStripeConfigured`/`isStripeDemo`) |
@@ -158,7 +159,7 @@ Auth (NextAuth + anonimna identiteta + claim kontinuiteta) DELA · My Trips (`/m
 
 ### LOW (13) → T5-C ali dokumentirano
 
-seo-faq AI v SSR renderu + 90-dnevni fallback cache · poi-descriptions trajni fallback cache · ask-local kvota porabljena tudi ob fallbacku · admin AI tagi brez review · zastarela trditev „uporablja z-ai-web-dev-sdk" (i18n:832) · /api/destinations API-only · EN /vodici brez bloga · URL/PDF/pins samodejna generacija brez eksplicitne potrditve · manifest description „22 destinacij" · de/it legacy · ročni sw.js byte-bump · dai-plans LRU 40 · dvojni lokalizacijski mehanizem.
+seo-faq AI v SSR renderu + 90-dnevni fallback cache · poi-descriptions trajni fallback cache · ask-local kvota porabljena tudi ob fallbacku · admin AI tagi brez review · zastarela trditev „uporablja z-ai-web-dev-sdk" (i18n:832) · /api/destinations API-only · EN /vodici brez bloga — ZAPRTO v 1.109.0 (TASK 32: 16 EN prevodov) · URL/PDF/pins samodejna generacija brez eksplicitne potrditve · manifest description „22 destinacij" · de/it legacy — počiščeno v 1.109.0 (mrtvi de.json/it.json izbrisana; 308 preusmeritve namerno ostanejo) · ročni sw.js byte-bump · dai-plans LRU 40 · dvojni lokalizacijski mehanizem.
 
 ### INFO (2)
 

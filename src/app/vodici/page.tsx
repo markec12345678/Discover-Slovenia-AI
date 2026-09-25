@@ -30,8 +30,9 @@ import { Link } from "@/i18n/navigation";
  * Blog + "Vprašaj lokalca".
  *
  * ADRIA-EN: na EN se izriše glava + vsi trije seznami vodnikov (full prevodi);
- * BlogSection in AskLocal (slovenska uredniška/DB vsebina) se NE izrišeta
- * (P4-8: nikoli mešanja jezikov).
+ * TASK 32 (Tier 1 #5): tudi BlogSection je zdaj dvojezična (16 EN člankov —
+ * BLOG_POSTS_EN, pariteta varovana v testih). AskLocal (slovenska DB
+ * vsebina skupnosti) ostaja SL only (P4-8: nikoli mešanja jezikov).
  */
 
 const COUNTRY_FLAG: Record<string, string> = {
@@ -258,8 +259,9 @@ export default async function GuidesPage() {
           </div>
         </section>
 
-        {/* Blog z vodičiniki in zgodbami (SL only — P4-8) */}
-        {locale !== "en" && <BlogSection />}
+        {/* Blog z vodičiniki in zgodbami (TASK 32: dvojezičen —
+            BLOG_POSTS_EN na /en/vodici, SL množica na /vodici) */}
+        <BlogSection />
 
         {/* Vprašaj lokalca — odgovori skupnosti (SL only — P4-8) */}
         {locale !== "en" && (

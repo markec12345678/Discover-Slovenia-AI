@@ -32,6 +32,10 @@ const COOKIE_LOCALE = "NEXT_LOCALE";
  * FW4.3-2: "en" je ODSTRANJEN s tega seznama — angleščina je zdaj javna
  * (jedro lijaka, glej EN whitelist v src/i18n/routing.ts). /de in /it
  * ostajata legacy (308) do celovitih prevodov.
+ *
+ * TASK 32 (Tier 1 #5): mrtvi delni prevodi de.json/it.json so izbrisani
+ * (request.ts nalaga samo sl+en) — 308 preusmeritve pa OSTAJO: stare
+ * zunanje povezave ne smejo postati 404.
  */
 const LEGACY_LOCALE_PREFIXES = ["/de", "/it"] as const;
 

@@ -2021,6 +2021,19 @@
       "readMore": "Preberi →"
     }
   },
+  "blogSection": {
+    "badge": "Blog & vodičniki",
+    "title": "Zgodbe iz Slovenije",
+    "intro": "Vodičniki, nasveti in inspiracije za vaše naslednje potovanje",
+    "readMore": "Preberi več",
+    "readTime": "{minutes} min branja",
+    "readArticleAria": "Preberi članek: {title}",
+    "dialogDescription": "Celoten članek {title} avtorja {author}.",
+    "relatedDestination": "Povezana destinacija",
+    "exploreDestination": "Razišči destinacijo",
+    "emptyTitle": "V tej kategoriji ni člankov.",
+    "emptyDescription": "Poskusite izbrati drugo kategorijo."
+  },
   "destinationPage": {
     "breadcrumbHome": "Domov",
     "breadcrumbDestinations": "Destinacije",

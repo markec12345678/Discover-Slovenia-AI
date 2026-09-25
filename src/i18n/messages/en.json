@@ -2021,6 +2021,19 @@
       "readMore": "Read →"
     }
   },
+  "blogSection": {
+    "badge": "Blog & guides",
+    "title": "Stories from Slovenia",
+    "intro": "Guides, tips and inspiration for your next trip",
+    "readMore": "Read more",
+    "readTime": "{minutes} min read",
+    "readArticleAria": "Read article: {title}",
+    "dialogDescription": "The full article {title} by {author}.",
+    "relatedDestination": "Related destination",
+    "exploreDestination": "Explore the destination",
+    "emptyTitle": "No articles in this category.",
+    "emptyDescription": "Try selecting a different category."
+  },
   "destinationPage": {
     "breadcrumbHome": "Home",
     "breadcrumbDestinations": "Destinations",
