@@ -141,7 +141,7 @@ jobs:
       # odpovedi AI) — brez omrežne odvisnosti, ~5 s.
       # HOSTNAME=0.0.0.0: GH runner ima HOSTNAME env (docker id), ki bi ga
       # standalone server.js sicer poskusil vezati — eksplicitno prepišemo.
-      - name: 🚀 Functional smoke (zagon + ključne rute + fallback načrt)
+      - name: 🚀 Functional smoke + API e2e (zagon + rute + fallback + življenjski cikel)
         run: |
           set -euo pipefail
           NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 \
@@ -154,6 +154,15 @@ jobs:
             tail -60 server.log || true
             exit 1
           fi
+          # M10 (Issue #5 / T5-D): API-ravni ZLATA POT na istem strežniku.
+          # MORA teči v TEM koraku — trap cleanup EXIT ubije strežnik ob
+          # izhodu iz lupine tega koraka (ločen korak bi dobil mrtev strežnik).
+          # CI nima AI ključev → parse sproži DETERMINISTIČNO rezervo (M1).
+          if ! bash scripts/ops/ci-e2e.sh http://127.0.0.1:3000; then
+            echo "::error::CI-E2E neuspešen — server.log (zadnjih 60 vrstic):"
+            tail -60 server.log || true
+            exit 1
+          fi
         env:
           # 1.48.2 CI FIX: ≥ 16 znakov (config:secrets 1.33.0 guard) — glej
           # komentar pri Build koraku zgoraj.
@@ -162,19 +171,3 @@ jobs:
           ADMIN_PASSWORD: "ci-smoke-admin-0123456789abcdef"
           STRIPE_SECRET_KEY: "sk_test_demo_placeholder"
           SMTP_HOST: "localhost"
-      # ── CI-E2E (M10, Issue #5 / T5-D): API-ravni ZLATA POT ──────────────
-      # functional-smoke obliva površino (SSR/SEO/health/fallback); ta korak
-      # izvede POLN jedrni življenjski cikel poti na istem strežniku:
-      # načrt (deterministic) → save → deljen ogled → PDF izvoz → PATCH
-      # revizija (CAS) → 409 konflikt → rezervacijski parser (fallback M1)
-      # → 422 error pot. CI NIMA AI ključev → parse sproži DETERMINISTIČNO
-      # rezervo (ista pot kot v produkciji ob odpovedi AI) — 0 omrežnih
-      # odvisnosti, ~10 s. Skripta ZAVRNE ne-lokalne cilje (piše v DB).
-      - name: 🔁 API e2e — jedrni življenjski cikel poti (brez AI)
-        run: |
-          set -euo pipefail
-          if ! bash scripts/ops/ci-e2e.sh http://127.0.0.1:3000; then
-            echo "::error::CI-E2E neuspešen — server.log (zadnjih 60 vrstic):"
-            tail -60 server.log || true
-            exit 1
-          fi
