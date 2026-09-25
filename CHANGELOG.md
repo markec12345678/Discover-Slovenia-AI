@@ -7,6 +7,45 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.101.0] — 2026-09-26 (ISSUE #5 T5-A: SAMO BRALNI AUDIT — produktno-funkcijska matrika + AI-revizija)
+
+### Dodano
+
+- **Issue #5 Faza 1–5 zaključena (read-only, 0 sprememb aplikacijske kode)** — tri
+  neodvisne revizije (T5-a1 AI-odvisnosti, T5-a2 Discovery/Planning/Import,
+  T5-a3 Trip/Map/Offline/Skupnost/L10n/SDK) konsolidirane v
+  **`docs/PRODUCT-FUNCTIONALITY-MATRIX.md`**: 95 zmožnosti, 89 DELA,
+  25 AI-klicnih mest (razredi A/B/C), SDK/scripts inventar (74 skript),
+  Stripe/providers klasifikacija, 11 zlatih poti, vrzeli po resnosti.
+- `docs/audit/` — trije revizijski dokumenti z dokazi `file:line`
+  (t5-a1 139 vrstic, t5-a2 106, t5-a3 245).
+
+### Ugotovitve (izhodišče za T5-B/C)
+
+- **BLOCKER: 0** (izrecna no-op ugotovitev). **HIGH: 2** — SmartSearch mrtvi
+  kliki (navigation.tsx:420 brez onSelectDestination) in duplikacija
+  haversineKm ×11 / ROAD_FACTOR ×5 / AVG_SPEED ×3. **MEDIUM: 11, LOW: 13, INFO: 2**
+  (polni seznam v matriki §5).
+- **Jedro deluje z NIČ AI ključi** (audit-raven dokaz): razred A domen
+  (razdalje/urniki/zaprtja/vreme/proračun/DB/permissions/validacija/rezervacije/
+  revizije) je 100 % AI-free; `/api/itinerary` ima naravno deterministično pot
+  (`engine:"deterministic"`, UI stikalo „Brez AI", živa sonda <1 s) in
+  samodejni fallback (70 s hard cap); nobena halucinirana vrednost ne postane
+  kanon (cene→kanon, vreme→prepis, budget→preračun, supply→revalidacija).
+- Izjeme brez AI ključev (iskrene napake, ne tihe pokvarjenosti): uvoz slike
+  (502, ni OCR fallbacka), parse rezervacij iz dokumentov (502, ročni vnos
+  ostane), TTS (502/503, enojni vir), NL refine (echo + opozorilo),
+  NL iskanje/klepet (deterministični fallback).
+- Vercel sonda (Faza 9 predokus): živ, `/api/health` ok v1.100.3 — README
+  trditev „sekundarna" ostaja utemeljena; polna verifikacija v T5-C.
+
+### Testi
+
+- Brez sprememb aplikacijske kode → 2745/2745 (že verificirano ob zagonu T5-A),
+  lint 0, tsc 0 (src/). Dokumentacijska dostava (docs/ + verzija).
+
+---
+
 ## [1.100.3] — 2026-09-25 (HOTFIX: migration drift vrata — ročno napisan DDL iz VAL 2)
 
 ### Popravljeno
