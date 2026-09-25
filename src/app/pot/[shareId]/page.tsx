@@ -47,6 +47,8 @@ async function getSharedItinerary(shareId: string) {
       views: true,
       createdAt: true,
       isPublic: true,
+      // TASK 28 (live-sync): verzija ob renderu — osnova za polling banner.
+      contentVersion: true,
     },
   });
 
@@ -414,6 +416,7 @@ export default async function SharedTripPage({
         createdAt={saved.createdAt.toISOString()}
         events={events}
         initialVotes={initialVotes}
+        initialVersion={saved.contentVersion}
       />
 
       {/* === ISSUE #4 §13 (val 2): SODELOVANJE — vloga, vabila, revokacija,

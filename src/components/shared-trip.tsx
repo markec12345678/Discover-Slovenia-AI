@@ -19,6 +19,7 @@ import {
   Map as MapIcon,
   MapPin,
   Printer,
+  RefreshCw,
   Route,
   Sparkles,
   ThumbsUp,
@@ -45,6 +46,9 @@ import { BudgetPanel } from "@/components/budget-panel";
 import { SocialShare } from "@/components/social-share";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore, DAY_COLORS } from "@/lib/store";
+// TASK 28 (Tier 1 #1): live-sync indikator — polling strežniške verzije poti
+// (viden zavihek, 20 s) → banner „posodobljeno drugje — Osveži".
+import { useTripVersionPoll } from "@/hooks/use-trip-version-poll";
 import { formatEventDate } from "@/lib/events-data";
 import {
   dayISOForDayNumber,
@@ -106,6 +110,11 @@ interface SharedTripProps {
   events?: ItineraryEvent[];
   /** Začetni seštevek glasov po lokaciji (locationKey = destination_id) */
   initialVotes?: Record<string, number>;
+  /**
+   * TASK 28 (live-sync): strežniška contentVersion ob renderu. Manjka
+   * ( starejši zapis / null) → polling se NE vklopi (nikoli ne ugibamo).
+   */
+  initialVersion?: number | null;
 }
 
 interface LocationVoteProps {
@@ -123,12 +132,29 @@ export function SharedTrip({
   createdAt,
   events,
   initialVotes,
+  initialVersion,
 }: SharedTripProps) {
   const setItinerary = useAppStore((s) => s.setItinerary);
   const routeCoords = useAppStore((s) => s.routeCoords);
   const routeByDay = useAppStore((s) => s.routeByDay);
   // TASK 4 / K-7: navigacija na /na-poti po zagonu Go Mode
   const router = useRouter();
+
+  // TASK 28 (Tier 1 #1): LIVE-SYNC — če je kdo medtem shranil novejšo
+  // različico te poti (PATCH CAS poveča contentVersion), banner ponudi
+  // „Osveži" (router.refresh() ponovno rendera strežniško komponento →
+  // initialVersion dohiti strežnik → banner se sam pobriše). Površina
+  // /pot je SL-only (1.29.0 #13) → nizi so slovenski, isti kanon kot
+  // ostali SharedTrip izpisi.
+  const {
+    stale: planStale,
+    serverVersion: planServerVersion,
+    dismiss: dismissPlanUpdate,
+  } = useTripVersionPoll({
+    shareId,
+    knownVersion: initialVersion ?? null,
+    enabled: typeof initialVersion === "number",
+  });
 
   // TASK 88 — ŽIVO vreme po dnevih (Open-Meteo prek /api/weather način B,
   // sidro = prvi geo-postanek dneva). Površina /pot/[shareId] je SL-only
@@ -339,6 +365,41 @@ export function SharedTrip({
 
   return (
     <main className="min-h-screen bg-background">
+      {/* === TASK 28 (Tier 1 #1): LIVE-SYNC BANNER === */}
+      {planStale && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="border-b border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+        >
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-3 text-sm sm:px-6 lg:px-8">
+            <RefreshCw className="size-4 shrink-0" aria-hidden="true" />
+            <p className="min-w-0 flex-1">
+              Ta načrt je bil med tem posodobljen
+              {typeof planServerVersion === "number"
+                ? ` (strežniška različica ${planServerVersion})`
+                : ""}
+              .
+            </p>
+            <button
+              type="button"
+              onClick={() => router.refresh()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400 bg-white px-3 py-1.5 text-sm font-semibold text-amber-900 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:border-amber-600 dark:bg-amber-900 dark:text-amber-100 dark:hover:bg-amber-800"
+            >
+              <RefreshCw className="size-4" aria-hidden="true" />
+              Osveži
+            </button>
+            <button
+              type="button"
+              onClick={dismissPlanUpdate}
+              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-amber-800 underline-offset-2 transition-colors hover:bg-amber-100 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:text-amber-300 dark:hover:bg-amber-900/60"
+            >
+              Ne zdaj
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* === Hero === */}
       <div className="border-b border-border bg-gradient-to-b from-primary/10 to-transparent">
         <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">

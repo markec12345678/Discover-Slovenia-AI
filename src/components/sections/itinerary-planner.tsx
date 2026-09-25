@@ -13,6 +13,7 @@ import {
   CalendarDays,
   CalendarArrowDown,
   Car,
+  RefreshCw,
   Euro,
   Gauge,
   Users,
@@ -164,6 +165,8 @@ import {
   markResultEngaged,
   fireAbandonedIfUnengaged,
 } from "@/lib/planner-analytics";
+// TASK 28 (Tier 1 #1): live-sync indikator povezane pote (polling).
+import { useTripVersionPoll } from "@/hooks/use-trip-version-poll";
 import { destinationById } from "@/lib/stop-insights";
 import { validateItineraryGeo } from "@/lib/geo-validation";
 import { StopInsights } from "@/components/stop-insights";
@@ -694,6 +697,85 @@ export function ItineraryPlanner() {
   } | null>(null);
   const activeShareId =
     linkedTrip && linkedTrip.itinerary === itinerary ? linkedTrip.shareId : null;
+
+  // TASK 28 (Tier 1 #1): LIVE-SYNC — polling strežniške verzije POVEZANE
+  // pote (viden zavihek, 20 s, /api/trip/[shareId]/version). Znana verzija
+  // (contentVersion ≠ null) je baza primerjave — odprta TUJA pot (null)
+  // se NE poll'a (iskreno: brez baze ne trdimo zastarelosti). Klientove
+  // lastne shranitve sproti posodabljajo linkedTrip.contentVersion →
+  // nikoli ne oglámo svojega PATCH-a kot „posodobljeno drugje".
+  const {
+    stale: planUpdateStale,
+    serverVersion: planUpdateServerVersion,
+    dismiss: dismissPlanUpdate,
+  } = useTripVersionPoll({
+    shareId: linkedTrip ? linkedTrip.shareId : null,
+    knownVersion: linkedTrip?.contentVersion ?? null,
+    enabled: linkedTrip !== null && linkedTrip.contentVersion !== null,
+  });
+
+  // nalaganje strežniške različice ima SVOJ indikator (ločeno od saving,
+  // ki pomeni „shranjujem na strežnik")
+  const [planUpdateBusy, setPlanUpdateBusy] = useState(false);
+
+  // TASK 28: dogodek SAMO ob prehodu false→true (ne ob vsaki nadaljnji
+  // spremembi strežniške verzije med prikazanim bannerjem).
+  const planUpdateWasStale = useRef(false);
+  useEffect(() => {
+    if (planUpdateStale && !planUpdateWasStale.current) {
+      trackPlannerEvent("plan_update_detected", {
+        locale,
+        server_version: planUpdateServerVersion ?? -1,
+      });
+    }
+    planUpdateWasStale.current = planUpdateStale;
+  }, [planUpdateStale, planUpdateServerVersion, locale]);
+
+  // TASK 28 (Tier 1 #1): naloži strežniško (novejšo) različico povezane
+  // pote. DESTRUKTIVEN prehod → prejšnja vsebina gre na undo sklad (isti
+  // §22 kanon kot regeneracija/refine). Po nalasu linkedTrip.contentVersion
+  // dohiti strežnik (CAS baza znova veljavna — naslednja shranitev je
+  // POSODOBITEV na mestu, ne nova povezava).
+  async function handleLoadServerVersion() {
+    if (!linkedTrip || planUpdateBusy) return;
+    setPlanUpdateBusy(true);
+    try {
+      const data = await fetchSharedItinerary(linkedTrip.shareId);
+      // §22: prejšnjo vsebino na undo sklad PRED zamenjavo (reverzibilno).
+      if (itinerary) {
+        applyItinerary(data.itinerary, t("undoLabelPlanUpdate"));
+      } else {
+        setItinerary(data.itinerary);
+      }
+      setLinkedTrip({
+        itinerary: data.itinerary,
+        shareId: linkedTrip.shareId,
+        contentVersion: data.contentVersion,
+      });
+      // Vsebina == strežnik → povezana deljena povezana SPET velja (F16).
+      setShareUrl(`${window.location.origin}/pot/${linkedTrip.shareId}`);
+      dismissPlanUpdate();
+      trackPlannerEvent("plan_update_loaded", {
+        locale,
+        server_version: data.contentVersion ?? -1,
+      });
+      toast({
+        title: t("planUpdatedLoadedToast"),
+        description: t("planUpdatedLoadedToastDesc", {
+          version: data.contentVersion ?? "—",
+        }),
+      });
+    } catch {
+      trackPlannerEvent("plan_update_load_failed", { locale });
+      toast({
+        title: t("planUpdatedLoadErrorToast"),
+        description: t("planUpdatedLoadErrorToastDesc"),
+        variant: "destructive",
+      });
+    } finally {
+      setPlanUpdateBusy(false);
+    }
+  }
 
   // ISSUE #4 §22 (val 5): SEJNI UNDO SKLAD — vsak destruktivni prehod
   // (AI refinement, regeneracija) potisne PREJŠNJO vsebino; "Razveljavi"
@@ -5005,6 +5087,67 @@ export function ItineraryPlanner() {
                 {/* id="itinerary-actions" — cilj mobilne bližnjice "Shrani" (P0-4) */}
                 <Card id="itinerary-actions" className="order-10 scroll-mt-[130px] lg:scroll-mt-24">
                   <CardContent className="space-y-4 p-4">
+                    {/* === TASK 28 (Tier 1 #1): LIVE-SYNC BANNER — strežnik
+                        poroča NOVEJŠO različico povezane pote. ČISTA povezava
+                        (brez lokalnih sprememb) → gumb „Naloži“; umazana
+                        (linkedTrip.itinerary ≠ itinerary) → iskren opozorilo
+                        brez gumba (naloga bi izbrisala nehranjene spremembe —
+                        najprej shrani kot novo povezavo). === */}
+                    {planUpdateStale && linkedTrip && (
+                      <div
+                        role="status"
+                        aria-live="polite"
+                        className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+                      >
+                        <div className="flex items-start gap-3">
+                          <RefreshCw className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                          <div className="min-w-0 flex-1 space-y-2">
+                            <p className="text-sm font-semibold">
+                              {t("planUpdatedBannerTitle")}
+                            </p>
+                            <p className="text-sm">
+                              {t("planUpdatedBannerDesc", {
+                                version: planUpdateServerVersion ?? "—",
+                              })}
+                            </p>
+                            {activeShareId === null && (
+                              <p className="text-sm font-medium">
+                                {t("planUpdatedLocalEdits")}
+                              </p>
+                            )}
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {activeShareId !== null && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  onClick={handleLoadServerVersion}
+                                  disabled={planUpdateBusy}
+                                  className="gap-1.5 border-amber-400 bg-white text-amber-900 hover:bg-amber-100 dark:border-amber-600 dark:bg-amber-900 dark:text-amber-100 dark:hover:bg-amber-800"
+                                >
+                                  {planUpdateBusy ? (
+                                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                                  ) : (
+                                    <RefreshCw className="size-4" aria-hidden />
+                                  )}
+                                  {planUpdateBusy
+                                    ? t("planUpdatedLoading")
+                                    : t("planUpdatedLoadButton")}
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={dismissPlanUpdate}
+                                className="text-amber-800 hover:bg-amber-100 hover:text-amber-900 dark:text-amber-300 dark:hover:bg-amber-900/60"
+                              >
+                                {t("planUpdatedDismiss")}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex flex-wrap gap-2">
                       <Button
                         type="button"

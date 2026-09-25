@@ -87,6 +87,9 @@ export async function GET(
         createdAt: true,
         views: true,
         isPublic: true,
+        // TASK 28 (live-sync): verzija poti v odgovoru (additivno — stari
+        // klienti prezrejo) → načrtovalnik po osvežitvi pozna CAS bazo.
+        contentVersion: true,
       },
     });
 
@@ -143,6 +146,8 @@ export async function GET(
       itinerary,
       createdAt: saved.createdAt.toISOString(),
       views: isWarm ? saved.views : saved.views + 1,
+      // TASK 28 (live-sync): additivno — baza za CAS po ponovnem odprtu.
+      contentVersion: saved.contentVersion,
     });
   } catch (error) {
     console.error("[itinerary/shared] GET napaka:", error);

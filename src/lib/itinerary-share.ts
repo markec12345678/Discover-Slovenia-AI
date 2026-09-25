@@ -21,6 +21,12 @@ export interface SharedItineraryResult {
   itinerary: Itinerary;
   createdAt: string | null;
   views: number;
+  /**
+   * TASK 28 (live-sync): strežniška contentVersion (additivno v API).
+   * null = strežnik je ni poslal (starejša različica) → klicatelj nikoli
+   * ne ugiba (CAS baza ostaja neznana → PATCH na mestu se NE izvede).
+   */
+  contentVersion: number | null;
 }
 
 /**
@@ -311,6 +317,7 @@ export async function fetchSharedItinerary(
     itinerary?: Itinerary;
     createdAt?: string | null;
     views?: number;
+    contentVersion?: number;
   };
 
   if (!data?.success || !data?.itinerary || !Array.isArray(data.itinerary.days)) {
@@ -322,5 +329,9 @@ export async function fetchSharedItinerary(
     itinerary: data.itinerary,
     createdAt: data.createdAt ?? null,
     views: data.views ?? 0,
+    // TASK 28: samo izrecno številčna vrednost (starejši strežniki je ne
+    // pošiljajo) — nikoli ne pretvorimo "neznano" v 0 (to bi lažno CASalo).
+    contentVersion:
+      typeof data.contentVersion === "number" ? data.contentVersion : null,
   };
 }

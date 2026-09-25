@@ -7,6 +7,66 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.106.0] — 2026-09-26 (TASK 28 / Tier 1: live-sync + overjena rezervacija)
+
+### Dodano
+
+- **LIVE-SYNC INDIKATOR POTI (Tier 1 #1, „Wanderlog model" brez CRDT/WS)**:
+  gledalcu deljene pote (in povezanemu načrtu v plannerju) se vsakih 20 s
+  (SAMO viden zavihek; 5 zaporednih napak → utihne do spremembe vidnosti)
+  preveri strežniška `contentVersion` prek NOVE lahkotne rute
+  `GET /api/trip/[shareId]/version` (600/h/IP; zasebna pot brez vloge → 404
+  nevidnost; NE pod `/api/itinerary/shared/*`, ker bi SW cache fallback ob
+  offline sprožil lažni banner). Novejša verzija → banner
+  „Ta načrt je bil med tem posodobljen — Osveži" (/pot: `router.refresh()`)
+  oziroma „Povezana pot je bila posodobljena drugje" v plannerju (gumb
+  „Naloži posodobljeno različico" SAMO ob čisti povezavi — lokalne
+  nehranjene spremembe NE brišemo tiho; nalaganje je destruktiven prehod →
+  §22 undo sklad + linkedTrip/CAS obnova). Čista knjižnica
+  `src/lib/trip-version.ts` (resolveVersionStale: strogo novejša;
+  null = neznano = nikoli zastarelo; napaka → null, ne ugibanje) + hook
+  `useTripVersionPoll` (izpeljano stanje brez setState-v-efektu). ADDITIVNO:
+  `GET /api/itinerary/shared/[shareId]` vrača `contentVersion` (baza za CAS
+  po ponovnem odprtu; `fetchSharedItinerary` prenese, null = ni poslana).
+  Nova analitika: `plan_update_detected` / `plan_update_loaded` /
+  `plan_update_load_failed` (11 novih i18n ključev SL+EN, task71 pariteta).
+- **ŽETON »OVERJENA REZERVACIJA« (Tier 1 #2, GYG-model zaupanja —
+  deterministično, 0 zunanjih odvisnosti)**: `Review.verified` (SNIMAK ob
+  objavi, ne živa vez) — strežniško IZRAČUNAN v `POST /api/reviews` prek dveh
+  iskrenih verig: A prijavljen uporabnik → SavedItinerary.userId → shareId →
+  lastna potrjena rezervacija; B anonimna plannerSessionKey (dsa_planner_sid)
+  → JourneyBooking.sessionKey. Žeton zasveti SAMO ob potrjeni lastni
+  rezervaciji TARO izkušnje (provider „own" + providerProductId =
+  experience.id + status CONFIRMED/PAID/MODIFIED — nov
+  `PROVIDER_CONFIRMED_STATUSES`, EN vir resnice za `isProviderConfirmed`).
+  Iskrene meje (dokumentirane v glavi rute + testih): izdelki NIKOLI ne
+  dobijo žetona (affiliate rezervacije pri zunanjih ponudnikih — ni
+  deterministične veze); EXTERNAL handoff se NE šteje (potrditev živi pri
+  ponudniku); anonimni lastnik poti z editTokenom ga ne more dokazati.
+  ReviewSection pošlje sejo SAMO za izkušnje in prikaže emerald žeton z
+  tooltip-resnico. Shema: `verified Boolean @default(false)` + migracija
+  `20260926100000_review_verified` (additive-only) + startup samoozdravitvena
+  dvojnica `review-verified-migration.ts` (idempotentna, fail-open,
+  sqlite+postgres) + korak `schema:review-verified` v instrumentaciji.
+
+### Testi
+
+- `task28-trip-version.test.ts` (23): čista tabelica resolveVersionStale,
+  fetchTripVersion iskrenost (offline/4xx/shape → null), source-contract
+  vseh 5 integracij (ruta/shared/ SharedTrip/pot RSC/planner/hook/i18n),
+  funkcionalno (javna pot 200 brez vsebine; verzija raste po CAS patch;
+  zasebna 404; neveljaven 400) — TASK 76 higiena.
+- `task28-review-verified.test.ts` (18): unit migracije z vbrizganimi
+  klienti (sqlite/postgres/unknown; idempotentnost), source-contract
+  (shema/migracija/instrumentacija/EN-vir-statusov/strežniški izračun/
+  žeton-samo-za-izkušnje/ReviewSection), funkcionalno DB (veriga B CONFIRMED
+  → true; SELECTED/tuja seja/izdelek/neveljaven format → false) — TASK 76
+  higiena.
+- Skupno: **3066 testov** (3022 obstoječih + 41 novih; wave6 schema-parity
+  past zelena takoj po commitu sheme).
+
+---
+
 ## [1.105.0] — 2026-09-26 (ISSUE #6 D6-B: dopolnitev determinističnega jedra)
 
 ### Dodano

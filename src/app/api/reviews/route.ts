@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
+import { authOptions } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
+import { PROVIDER_CONFIRMED_STATUSES } from "@/lib/journey/booking";
 
 // ============================================================================
 // REVIEWS — UGC mnenja obiskovalcev za izdelke in izkušnje tržnice
@@ -14,15 +17,38 @@ import { rateLimit } from "@/lib/rate-limit";
 // z demo vrednostmi.
 //
 // Kontrakt (konsumira ga ReviewSection / 10-a frontend):
-//   POST /api/reviews  body { productId? | experienceId?, authorName, rating, comment }
-//                    → { success: true, review: { id, authorName, rating, comment, createdAt } }
+//   POST /api/reviews  body { productId? | experienceId?, authorName, rating, comment,
+//                             plannerSessionKey? }
+//                    → { success: true, review: { id, authorName, rating, comment,
+//                                                 verified, createdAt } }
 //   GET  /api/reviews?productId=xxx  |  ?experienceId=xxx
-//                    → { reviews: [{ id, authorName, rating, comment, createdAt }] }
+//                    → { reviews: [{ id, authorName, rating, comment, verified,
+//                                    createdAt }] }
 //                      (najnovejša prva, limit 20)
 //
 // Validacija: productId XOR experienceId (ena od obeh, obe ne) + obstojnost
 // v DB (404); authorName 2–60 znakov; rating celo število 1–5;
 // comment 10–1000 znakov (oboje trim).
+//
+// TASK 28 (Tier 1 #2) — »OVERJENA REZERVACIJA« (GYG-model zaupanja,
+// deterministično, 0 zunanjih odvisnosti):
+//   review.verified = SNIMAK ob objavi: takrat je za TARO IZKUŠNJO
+//   (experienceId) obstajala potrjena LASTNA rezervacija
+//   (JourneyBooking: provider "own" + providerProductId = experience.id +
+//   status CONFIRMED/PAID/MODIFIED — isProviderConfirmed). Dve iskreni
+//   verigi identitete (nobena ni 100 % — obe sta nadgrajnjeni od brez
+//   identitete, kar je status quo):
+//     A (prijava):  sessionUser → SavedItinerary.userId → shareId →
+//                   own-rezervacija s tem shareId
+//     B (anonimno): plannerSessionKey (dsa_planner_sid iz načrtovalnika,
+//                   opcijsko v telesu) → JourneyBooking.sessionKey
+//   Izdelki (Product) NIKOLI ne dobijo žetona — njihove rezervacije živijo
+//   pri zunanjih ponudnikih (affiliate preusmeritve; imp-* ID-ji uvozov se
+//   ne povezujejo z našimi izdelki) → deterministične veze NI in je ne
+//   izmišljujemo (data honesty). EXTERNAL handoff se NE šteje (potrditev
+//   živi pri ponudniku — ne trdimo, da je bila opravljena).
+//   Izračun je strežniški (klientovih trditev NE zaupamo — ŽETON se ne
+//   poda, se izračuna).
 // ============================================================================
 
 const HOUR_MS = 60 * 60_000;
@@ -37,12 +63,92 @@ interface ReviewBody {
   authorName?: unknown;
   rating?: unknown;
   comment?: unknown;
+  // TASK 28 (Tier 1 #2): opcijska anonimna identiteta seje načrtovalnika
+  // (dsa_planner_sid) — strežnik jo uporabi SAMO za poizvedbo obstoječe
+  // potrjene lastne rezervacije (žeton se izračuna, nikoli ne zaupa
+  // klientovi trditvi).
+  plannerSessionKey?: unknown;
 }
 
 /** Uspešno validiran target recenzije (natanko en od obeh ID-jev). */
 interface ReviewTarget {
   productId?: string;
   experienceId?: string;
+}
+
+/** TASK 28: veljaven format seje načrtovalnika (planner-analytics kanon). */
+const PLANNER_SESSION_KEY_RE = /^[a-z0-9_-]{8,64}$/i;
+
+/**
+ * TASK 28 (Tier 1 #2) — IZRAČUN ŽETONA »overjena rezervacija«.
+ *
+ * Deterministična poizvedba: obstaja POTRJENA lastna rezervacija (provider
+ * "own", providerProductId = targetExperienceId, isProviderConfirmed)
+ * katerina koli od:
+ *   A) na poti, katere lastnik je PRIJAVLJEN uporabnik (SavedItinerary.userId
+ *      = sessionUserId) — veriga za prijavljene;
+ *   B) z isto sejo načrtovalnika (sessionKey = plannerSessionKey) — veriga
+ *      za anonimne (isti brskalnik/seja, ki je zapisala rezervacijo).
+ *
+ * Iskrene meje (dokumentirane):
+ *   - brez prijave in brez seje → false (ne moremo dokazati → ne trdimo);
+ *   - anonimni lastnik poti z editTokenom (userId null, sessionKey
+ *     null na rezervaciji s shareId) → NE ujame nobena veriga (iskrena
+ *     vrzel — dokumentirana);
+ *   - napaka poizvedbe → false (fail-closed za žeton, NE za objavo).
+ */
+async function computeReviewVerified(options: {
+  targetExperienceId: string;
+  sessionUserId: string | null;
+  plannerSessionKey: string | null;
+}): Promise<boolean> {
+  const { targetExperienceId, sessionUserId, plannerSessionKey } = options;
+  if (!sessionUserId && !plannerSessionKey) return false;
+
+  // Skupni pogoj POTRJENE lastne rezervacije TARO izkušnje — status MORA
+  // biti provider-potrjen (CONFIRMED/PAID/MODIFIED, isti vir resnice kot
+  // isProviderConfirmed; EXTERNAL/DRAFT/SELECTED iskreno NE štejejo).
+  const ownConfirmed = {
+    provider: "own",
+    providerProductId: targetExperienceId,
+    status: { in: PROVIDER_CONFIRMED_STATUSES },
+  } as const;
+
+  try {
+    // Veriga A: prijavljen lastnik poti (SavedItinerary.userId → shareId).
+    if (sessionUserId) {
+      const mine = await db.savedItinerary.findMany({
+        where: { userId: sessionUserId },
+        select: { shareId: true },
+      });
+      if (mine.length > 0) {
+        const viaTrip = await db.journeyBooking.findFirst({
+          where: {
+            ...ownConfirmed,
+            shareId: { in: mine.map((t) => t.shareId) },
+          },
+          select: { id: true },
+        });
+        if (viaTrip) return true;
+      }
+    }
+
+    // Veriga B: ista seja načrtovalnika (efemerne rezervacije brez poti).
+    if (plannerSessionKey) {
+      const viaSession = await db.journeyBooking.findFirst({
+        where: { ...ownConfirmed, sessionKey: plannerSessionKey },
+        select: { id: true },
+      });
+      if (viaSession) return true;
+    }
+  } catch (error) {
+    // Fail-closed SAMO za žeton: napaka dokaza pomeni »ne moremo potrditi«,
+    // objava mnenja samo nadaljuje (iskrena meja, ne tiho lažno true).
+    console.error("[reviews] computeReviewVerified napaka:", error);
+    return false;
+  }
+
+  return false;
 }
 
 /** Skupni validacijski helper → target + ostala polja ali NextResponse. */
@@ -205,13 +311,46 @@ export async function POST(request: Request) {
     if (!validated.ok) return validated.response;
     const { target, authorName, rating, comment } = validated;
 
+    // TASK 28 (Tier 1 #2): žeton izračuna STREŽNIK ob objavi (snimak).
+    // plannerSessionKey je opcijsen in validiran po formatu; sejo uporabi
+    // SAMO za poizvedbo rezervacije (nikoli se ne shrani na mnenje).
+    const b = (raw ?? {}) as ReviewBody;
+    const plannerSessionKey =
+      typeof b.plannerSessionKey === "string" &&
+      PLANNER_SESSION_KEY_RE.test(b.plannerSessionKey.trim())
+        ? b.plannerSessionKey.trim()
+        : null;
+
+    let sessionUserId: string | null = null;
+    try {
+      const session = (await getServerSession(authOptions)) as {
+        user?: { id?: string; accountType?: string };
+      } | null;
+      if (session?.user?.id && session.user.accountType === "user") {
+        sessionUserId = session.user.id;
+      }
+    } catch {
+      // napaka seje = anonimno (veriga A odpade, iskreno)
+    }
+
+    // Žeton SAMO za izkušnje (izdelki nimajo deterministične veze — glej
+    // glavo datoteke). NE čitamo obstoječe rezervacije za izdelek.
+    const verified = target.experienceId
+      ? await computeReviewVerified({
+          targetExperienceId: target.experienceId,
+          sessionUserId,
+          plannerSessionKey,
+        })
+      : false;
+
     const review = await db.review.create({
-      data: { ...target, authorName, rating, comment },
+      data: { ...target, authorName, rating, comment, verified },
       select: {
         id: true,
         authorName: true,
         rating: true,
         comment: true,
+        verified: true,
         createdAt: true,
       },
     });
@@ -304,6 +443,7 @@ export async function GET(request: Request) {
         authorName: true,
         rating: true,
         comment: true,
+        verified: true,
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },

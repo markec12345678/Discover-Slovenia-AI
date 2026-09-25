@@ -50,6 +50,15 @@ export type PlannerEventName =
   // meri uporabo strelic med dnevi na kartici postanka.
   | "stop_moved_to_day"
   | "itinerary_saved"
+  // TASK 28 (Tier 1 #1, live-sync): polling je zaznal NOVEJŠO strežniško
+  // različico povezane pote (props: server_version, locale) → banner
+  // „posodobljeno drugje"; uporabnik jo je naložil (plan_update_loaded)
+  // ali nalaganje ni uspelo (plan_update_load_failed). Meri, ali
+  // sodelovanje brez CRDT (prisotnost po polling) dejansko pride v
+  // uporabo — komplement 409 konfliktom na pisalni strani (CAS).
+  | "plan_update_detected"
+  | "plan_update_loaded"
+  | "plan_update_load_failed"
   | "map_opened"
   | "provider_detail_opened"
   | "affiliate_clicked"

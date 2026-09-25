@@ -1,13 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
-import { Loader2, MessageSquareQuote, Star } from "lucide-react";
+import { BadgeCheck, Loader2, MessageSquareQuote, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+// TASK 28 (Tier 1 #2): žeton »overjena rezervacija« — objava pošlje
+// opcijsko sejo načrtovalnika (isti javni anonimni vir kot JourneyBooking
+// prekrivka); strežnik IZRAČUNA žeton iz obstoječe potrjene lastne
+// rezervacije (klientova trditev se ne zaupa).
+import { plannerSessionId } from "@/lib/planner-analytics";
 
 // ============================================================================
 // REVIEW SECTION — UGC mnenja obiskovalcev (social proof)
@@ -34,6 +39,9 @@ interface ReviewItem {
   authorName: string;
   rating: number;
   comment: string;
+  /** TASK 28: žeton »overjena rezervacija« (snimak ob objavi — strežniško
+   *  izračunan). Manjka na starejših zapisih → NE prikažemo (ne lažemo). */
+  verified?: boolean;
   createdAt: string;
 }
 
@@ -203,6 +211,10 @@ export function ReviewSection({
           authorName: authorName.trim(),
           rating,
           comment: comment.trim(),
+          // TASK 28 (Tier 1 #2): SAMO za izkušnje (edina deterministična
+          // veriga rezervacij); sejo strežnik uporabi zgolj za poizvedbo
+          // potrjene lastne rezervacije — žetona NIKOLI ne zaupa klientu.
+          ...(experienceId ? { plannerSessionKey: plannerSessionId() } : {}),
         }),
       });
       const data: ReviewPostResponse = await res.json().catch(() => ({}));
@@ -293,8 +305,23 @@ export function ReviewSection({
                   {r.authorName.trim().charAt(0).toUpperCase()}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">
+                  <p className="flex flex-wrap items-center gap-x-1.5 truncate text-sm font-medium">
                     {r.authorName}
+                    {/* TASK 28: žeton »overjena rezervacija« (GYG-model) —
+                        strežniško izračunan snimak ob objavi (potrjena
+                        lastna rezervacija te izkušnje). Samo prikaz —
+                        tooltip pove resnico, ne pretirujemo. */}
+                    {r.verified === true && (
+                      <span
+                        role="img"
+                        aria-label="Overjena rezervacija"
+                        title="Ob objavi mnenja je obstajala potrjena rezervacija te izkušnje prek naše tržnice."
+                        className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                      >
+                        <BadgeCheck className="size-3" aria-hidden="true" />
+                        Overjena rezervacija
+                      </span>
+                    )}
                   </p>
                   <div className="flex items-center gap-2">
                     <StarRow rating={r.rating} />

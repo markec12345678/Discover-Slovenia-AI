@@ -229,6 +229,56 @@ export async function register() {
       });
     }
 
+    // Startup SHEMA migracija — TASK 28 (1.106.0): doda stolpec
+    // Review.verified (GYG-model »overjena rezervacija« — SNIMAK ob
+    // objavi mnenja, izračunan v POST /api/reviews) na obstoječih bazah.
+    // Idempotentna, additive-only, fail-open — skupna zastavica
+    // DSA_DISABLE_SCHEMA_MIGRATION. Glej src/lib/review-verified-migration.ts.
+    try {
+      const { migrateReviewVerifiedColumn } = await import(
+        "./lib/review-verified-migration"
+      );
+      const r = await migrateReviewVerifiedColumn();
+      if (r.columnAdded) {
+        console.log(
+          `[instrumentation] Shema migracija (Review verified): dodan ` +
+            `stolpec verified (${r.dialect})`
+        );
+        recordStartupStep({
+          name: "schema:review-verified",
+          status: "ok",
+          detail: `dodan stolpec: verified (${r.dialect})`,
+        });
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija (Review verified): stolpca ni " +
+            "bilo mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
+        );
+        recordStartupStep({
+          name: "schema:review-verified",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja stolpca ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:review-verified",
+          status: "ok",
+          detail: "stolpec že prisoten",
+        });
+      }
+    } catch (error) {
+      // Fail-open: migracija NE sme podreti zagona strežnika.
+      console.error(
+        "[instrumentation] Shema migracija (Review verified) ni uspela:",
+        error
+      );
+      recordStartupStep({
+        name: "schema:review-verified",
+        status: "failed",
+        detail: String(error),
+      });
+    }
+
     // Startup SHEMA migracija — F11 (1.15.0): ustvari tabeli TripPoll +
     // TripPollVote na obstoječih bazah (Vercel/Neon nima ročnega db push;
     // skip-worktree past je modele enkrat zadržala pred commitom).

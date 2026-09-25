@@ -88,13 +88,25 @@ export function bookingCapabilityOf(
 // ---------------------------------------------------------------------------
 
 /**
+ * TASK 28 (Tier 1 #2): statusi, ki štejejo kot POTRJENO pri ponudniku —
+ * IZKLJUČEN vir resnice za isProviderConfirmed() in za poizvedbe, ki
+ * iščejo potrjene rezervacije (npr. žeton »overjena rezervacija« v
+ * POST /api/reviews — Prisma where { in: [...] } ne more klicati funkcije).
+ */
+export const PROVIDER_CONFIRMED_STATUSES: ConfirmationStatus[] = [
+  "CONFIRMED",
+  "PAID",
+  "MODIFIED",
+];
+
+/**
  * Ali je status zaključno-potrjen (izključno iz providerjevega odgovora)?
  * EXTERNAL pomeni: rezervacija/potrditev obstaja PRI PONUDNIKU, ne pri nas —
  * NIKOLI se ne sme preslikati v CONFIRMED. TASK 99: MODIFIED (spremenjena
  * POTRJENA rezervacija) je prav tako provider-potrjen dogodek.
  */
 export function isProviderConfirmed(status: ConfirmationStatus): boolean {
-  return status === "CONFIRMED" || status === "PAID" || status === "MODIFIED";
+  return PROVIDER_CONFIRMED_STATUSES.includes(status);
 }
 
 /**

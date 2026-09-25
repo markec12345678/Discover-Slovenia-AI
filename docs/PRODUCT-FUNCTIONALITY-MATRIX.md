@@ -1,6 +1,6 @@
 # PRODUCT-FUNCTIONALITY-MATRIX — Discover Slovenia AI
 
-> **Datum:** 2026-09-26 · **Verzija:** 1.100.3 (audit) / 1.102.0 (T5-B) / 1.104.0 (T5-D dostava) · **HEAD ob auditu:** a854404 · **Popravljeni v T5-B (1.102.0):** H1, H2, M3-chat, M4, M5, M6 · **Popravljeni v T5-C (1.103.0):** M11, M9-pot · **Popravljeni v T5-D (1.104.0):** M1, M7, M8, M9-arhiv, M10 (označeno spodaj)
+> **Datum:** 2026-09-26 · **Verzija:** 1.100.3 (audit) / 1.102.0 (T5-B) / 1.104.0 (T5-D) / 1.106.0 (TASK 28 Tier 1: live-sync + overjena rezervacija) · **HEAD ob auditu:** a854404 · **Popravljeni v T5-B (1.102.0):** H1, H2, M3-chat, M4, M5, M6 · **Popravljeni v T5-C (1.103.0):** M11, M9-pot · **Popravljeni v T5-D (1.104.0):** M1, M7, M8, M9-arhiv, M10 (označeno spodaj)
 > **Namen:** Issue #5 „COMPLETE PRODUCT FUNCTIONALITY / DETERMINISTIC SDK + SCRIPTS FIRST" — Faza 2 (popolna funkcijska matrika), Faza 3 (AI odvisnosti), Faza 4 (SDK/scripts), Faza 5 (vrzeli). Izdelano iz TREH neodvisnih read-only revizij (dokazi `file:line`): [T5-a1 AI-odvisnosti](audit/t5-a1-ai-dependency.md) · [T5-a2 Discovery/Planning/Import](audit/t5-a2-capabilities-discovery-planning-import.md) · [T5-a3 Trip/Map/Offline/Skupnost/L10n/SDK](audit/t5-a3-capabilities-trip-map-offline-community-l10n-sdk.md).
 > **Metoda:** read-only analiza kode (src/, public/, scripts/, prisma/, docs/), žive sonde na lokalnem dev strežniku in produkciji (Render + Vercel), NI sprememb aplikacijske kode.
 
@@ -79,7 +79,7 @@
 
 ### D. Trip platform (17 zmožnosti)
 
-Vse DELA (dokazi T5-a3 A1–A17): save (SHA-256 editToken + timing-safe), load/deljen pogled (404-nevidnost zasebnih), PATCH na mestu (CAS), **strežniške revizije + undo sklad (§22)**, sodelovanje (7-dnevna TTL vabila, vloga rangi owner/editor/viewer, `trip-permissions.ts` ena točka resnice), dokumenti (.ics + register — **PDF izvoz: SL+EN + noge km/min + rezervacije — M8 ZAPRT v 1.104.0, dopolnjen v 1.105.0 (D6-B)**), stroški/proračun (TripExpense + 5 vedric), rezervacije (JourneyBooking lifecycle DRAFT→CONFIRMED→used, izvor vedno razkrit), transport (journey orchestrator), gost→račun kontinuiteta (localStorage → claim `/api/user/trips/claim`), svežina (FRESH/STALE/UNKNOWN/LIVE §17/§19), provenance.
+Vse DELA (dokazi T5-a3 A1–A17): save (SHA-256 editToken + timing-safe), load/deljen pogled (404-nevidnost zasebnih), PATCH na mestu (CAS), **strežniške revizije + undo sklad (§22)**, sodelovanje (7-dnevna TTL vabila, vloga rangi owner/editor/viewer, `trip-permissions.ts` ena točka resnice), **live-sync indikator (1.106.0 / TASK 28 Tier 1 #1): polling `GET /api/trip/[shareId]/version` (20 s, viden zavihek) → banner »posodobljeno drugje — Osveži« na /pot in v plannerju (čista povezava → Naloži s §22 undo; umazana → iskreno opozorilo, nehranjenih sprememb NE brišemo)**, dokumenti (.ics + register — **PDF izvoz: SL+EN + noge km/min + rezervacije — M8 ZAPRT v 1.104.0, dopolnjen v 1.105.0 (D6-B)**), stroški/proračun (TripExpense + 5 vedric), rezervacije (JourneyBooking lifecycle DRAFT→CONFIRMED→used, izvor vedno razkrit), transport (journey orchestrator), gost→račun kontinuiteta (localStorage → claim `/api/user/trips/claim`), svežina (FRESH/STALE/UNKNOWN/LIVE §17/§19), provenance.
 
 ### E. Map / Go Mode (13 zmožnosti)
 
@@ -91,7 +91,7 @@ Vse DELA: manifest popoln (ikone any+maskable, 4 shortcuts, screenshots — desc
 
 ### G. Skupnost (8 zmožnosti — 100 % DB-backed, 0 demo/mock)
 
-Vse DELA: glasovi (TripVote unique), komentarji (2–500 znakov), všečki (idempotentni toggle), ankete (prestavitev glasu, avtor edini zaključi), potni dnevnik (rating 1–5), vodniki (tips, editToken za urejanje), skupnost načrtuje (server komponenta), wishlist (localStorage + DB hibrid). Anonimna identiteta `client-identity.ts`, enotna vrata `communityTripGate`.
+Vse DELA: glasovi (TripVote unique), komentarji (2–500 znakov), všečki (idempotentni toggle), ankete (prestavitev glasu, avtor edini zaključi), potni dnevnik (rating 1–5), vodniki (tips, editToken za urejanje), skupnost načrtuje (server komponenta), wishlist (localStorage + DB hibrid), **UGC mnenja z žetonom »overjena rezervacija« (1.106.0 / TASK 28 Tier 1 #2): strežniški snimak ob objavi — lastna POTRJENA rezervacija iste izkušnje (provider own, CONFIRMED/PAID/MODIFIED); izdelki iskreno brez žetona (affiliate veze ni)**. Anonimna identiteta `client-identity.ts`, enotna vrata `communityTripGate`.
 
 ### H. Lokalizacija
 

@@ -1,0 +1,21 @@
+-- TASK 28 (Tier 1 #2): verified zastavica UGC mnenja (GYG-model zaupanja).
+--
+-- Review.verified = SNIMAK ob objavi mnenja: takrat je za TARO izkušnjo
+-- (Experience.id) obstajala DOSTAVLJENA potrdnjena lastna rezervacija
+-- (JourneyBooking provider "own" + providerProductId = experience.id +
+-- status CONFIRMED/PAID/MODIFIED — isProviderConfirmed). Izračunava jo
+-- POST /api/reviews (deterministično, 0 zunanjih odvisnosti) prek dveh
+-- iskrenih verig:
+--   A (prijava): sessionUser → SavedItinerary.userId → shareId → own-rezervacija
+--   B (anonomno): plannerSessionKey (dsa_planner_sid) → JourneyBooking.sessionKey
+--
+-- Izdelki (Product) izrecno NE dobivajo žetona: njihove rezervacije živijo
+-- pri zunanjih ponudnikih (affiliate preusmeritve) — deterministične veze
+-- ni in je NE izmišljujemo (data honesty).
+--
+-- Stolpec je NOT NULL DEFAULT false (additive-only; obstoječa mnenja
+-- ostanejo neoverjena — zgodovinsko resnično). Startup samoozdravitvena
+-- dvojnica: src/lib/review-verified-migration.ts (ista arhitektura kot
+-- experience-geo).
+
+ALTER TABLE "Review" ADD COLUMN "verified" BOOLEAN NOT NULL DEFAULT false;

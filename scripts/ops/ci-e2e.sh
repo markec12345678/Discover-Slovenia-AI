@@ -80,7 +80,7 @@ send() { # $1=metoda, $2=pot, $3=JSON, $4=izhodna datoteka, $5..=glave
 }
 
 # ── 0/8: pripravljenost strežnika ─────────────────────────────────────────
-step "0/8 — Pripravljenost (${BASE_URL}, do ${READY_TIMEOUT} s)"
+step "0/9 — Pripravljenost (${BASE_URL}, do ${READY_TIMEOUT} s)"
 deadline=$(( $(date +%s) + READY_TIMEOUT ))
 ready=0
 while [ "$(date +%s)" -lt "$deadline" ]; do
@@ -96,7 +96,7 @@ else
 fi
 
 # ── 1/8: načrt (deterministični motor — 0 AI žetonov) ─────────────────────
-step "1/8 — POST /api/itinerary (engine: deterministic — zlata pot #1)"
+step "1/9 — POST /api/itinerary (engine: deterministic — zlata pot #1)"
 code=$(send POST "/api/itinerary" \
   '{"engine":"deterministic","budget":1200,"days":2,"interests":["narava","gastro"],"season":"summer","groupSize":2,"language":"sl"}' \
   "$TMP/plan.json")
@@ -111,7 +111,7 @@ else
 fi
 
 # ── 2/8: shranitev (anonimna — shareId + editToken) ───────────────────────
-step "2/8 — POST /api/itinerary/save (anonimna shranitev)"
+step "2/9 — POST /api/itinerary/save (anonimna shranitev)"
 # Celoten odgovor načrtovalnika je Itinerary-oblika (days[].locations[]);
 # save vrata (sanitizeItinerary) očistijo morebitne dodatne ključe.
 jq -n --argjson plan "$(cat "$TMP/plan.json")" \
@@ -128,7 +128,7 @@ else
 fi
 
 # ── 3/8: javni ogled deljene poti ─────────────────────────────────────────
-step "3/8 — GET /api/itinerary/shared/{shareId} (branje shranjene poti)"
+step "3/9 — GET /api/itinerary/shared/{shareId} (branje shranjene poti)"
 code=$(curl -sS -m 60 -o "$TMP/shared.json" -w "%{http_code}" \
   -H "x-forwarded-for: ${RUN_IP}" \
   "${BASE_URL}/api/itinerary/shared/${sshare}" 2>/dev/null) || code=000
@@ -141,7 +141,7 @@ else
 fi
 
 # ── 4/8: PDF izvoz (M8) ───────────────────────────────────────────────────
-step "4/8 — GET /api/itinerary/shared/{shareId}/pdf (PDF izvoz, M8)"
+step "4/9 — GET /api/itinerary/shared/{shareId}/pdf (PDF izvoz, M8)"
 code=$(curl -sS -m 90 -o "$TMP/trip.pdf" -D "$TMP/pdf-headers.txt" -w "%{http_code}" \
   -H "x-forwarded-for: ${RUN_IP}" \
   "${BASE_URL}/api/itinerary/shared/${sshare}/pdf" 2>/dev/null) || code=000
@@ -156,7 +156,7 @@ else
 fi
 
 # ── 5/8: PATCH z editToken (revizija, CAS) ────────────────────────────────
-step "5/8 — PATCH shared (editToken + baseVersion 0 → revizija)"
+step "5/9 — PATCH shared (editToken + baseVersion 0 → revizija)"
 code=$(send PATCH "/api/itinerary/shared/${sshare}" \
   '{"baseVersion":0,"name":"CI-E2E preimenovana"}' \
   "$TMP/patch.json" \
@@ -170,7 +170,7 @@ else
 fi
 
 # ── 6/8: PATCH z ZASTARELO baseVersion → 409 (iskrena sočasnost) ──────────
-step "6/8 — PATCH z zastarelo baseVersion (pričakovan 409 konflikt)"
+step "6/9 — PATCH z zastarelo baseVersion (pričakovan 409 konflikt)"
 code=$(send PATCH "/api/itinerary/shared/${sshare}" \
   '{"baseVersion":0,"name":"CI-E2E konflikt"}' \
   "$TMP/patch2.json" \
@@ -183,7 +183,7 @@ else
 fi
 
 # ── 7/8: rezervacijski parser — deterministična rezerva (M1) ──────────────
-step "7/8 — POST /api/journey/bookings/parse {text} (deterministična rezerva, M1)"
+step "7/9 — POST /api/journey/bookings/parse {text} (deterministična rezerva, M1)"
 PARSE_TEXT='Booking.com — Potrditev rezervacije
 
 Vaša številka rezervacije: 408.921.371.224
@@ -211,7 +211,7 @@ else
 fi
 
 # ── 8/8: parser na smeteh → 422 z nasvetom (error pot brez slepe ulice) ───
-step "8/8 — POST parse {smeti} (pričakovan 422 z nasvetom)"
+step "8/9 — POST parse {smeti} (pričakovan 422 z nasvetom)"
 code=$(printf '{"text":"Fajn dan vsem!"}' | \
   curl -sS -m 60 -o "$TMP/parse2.json" -w "%{http_code}" -X POST \
     "${BASE_URL}/api/journey/bookings/parse" \
@@ -227,11 +227,27 @@ else
   bad_check "POST parse (smeti) → ${code} (pričakovano 422), error: ${gerr:-/}"
 fi
 
+
+# ── 9/9: live-sync verzija poti (TASK 28, Tier 1 #1) — PATCH iz koraka 5
+# je povečal contentVersion 0 → 1; lahkotna verzija mora vrniti 1 (signal
+# za banner "posodobljeno drugje" na /pot in v plannerju) ─────────────────
+step "9/9 — GET /api/trip/{shareId}/version (live-sync verzija, TASK 28)"
+code=$(curl -sS -m 10 -o "$TMP/version.json" -w "%{http_code}" \
+  "${BASE_URL}/api/trip/${sshare}/version" \
+  -H "x-forwarded-for: ${RUN_IP}" 2>/dev/null) || code=000
+vok=$(jq -r '.success // empty' "$TMP/version.json" 2>/dev/null || true)
+vver=$(jq -r '.contentVersion // empty' "$TMP/version.json" 2>/dev/null || true)
+if [ "$code" = "200" ] && [ "$vok" = "true" ] && [ "$vver" = "1" ]; then
+  ok_check "200 — contentVersion ${vver} (PATCH iz koraka 5 viden v lahkotnem odgovoru)"
+else
+  bad_check "GET version → ${code}, success: ${vok:-/}, contentVersion: ${vver:-/} (pričakovano 1)"
+fi
+
 # ── povzetek ──────────────────────────────────────────────────────────────
 step "Povzetek"
 line
 echo "  cilj:      ${BASE_URL}"
-echo "  tok:       načrt → save → ogled → PDF → revizija → 409 → parse → 422"
+echo "  tok:       načrt → save → ogled → PDF → revizija → 409 → parse → 422 → verzija"
 echo "  rezultat:  ${PASS} ok / ${FAIL} neuspešnih"
 line
 if [ "$FAIL" -gt 0 ]; then
