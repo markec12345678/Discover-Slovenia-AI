@@ -7,6 +7,44 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.103.0] — 2026-09-26 (ISSUE #5 T5-C, 1. del: dokumentacijska resnica + M9)
+
+### Popravljeno
+
+- **M11 — FEATURE-FLAGS.md usklajen z resnico** (MEDIUM, T5-a3 #5): glava
+  dokumenta zdaj izrecno navaja DEJANSKE mehanizme (AI: env ključi +
+  `source:"fallback"` rezerve s trdimi mejami 70/60/25/15 s · plačila:
+  `STRIPE_SECRET_KEY` fail-closed 503 + `DSA_DEMO_PAYMENTS=1` · beta:
+  `BETA_*` · admin: HMAC seja) in izrecno opozori, da `PAYMENTS_ENABLED`
+  v kodi NE obstaja — centralni sistem zastavic ostaja načrt, izrecno
+  ne-načrtovan v obdobju Issue #5.
+- **M9 (del) — `scripts/revenue-analysis.ts` POKVARJENA hardcode pot**
+  (`file:/home/z/Discover-Slovenia-AI/db/custom.db` — projekt živi na
+  `/home/z/my-project`; skripta od 1.100.x ni delovala) → zamenjano s
+  skupnim `db` klientom (`@/lib/db`), kot vsi ostali db skripti.
+  (Preostanek M9 — arhiviranje ~30 zastaralih enkratnih skriptov — ostaja
+  dokumentiran v matriki kot zaostanek T5-C.)
+
+### Preverjeno (T5-C browser E2E, dev)
+
+- **Zlata pot #1 v celoti**: `/nacrtuj` → motor „Brez AI" → Generiraj →
+  načrt izrisan (Dan 1–3, oznaka „Brez AI", hitre akcije „delujejo tudi
+  brez AI", zemljevid, zaupanja vrstica) → Shrani → deljiva povezava
+  ustvarjena (`/pot/[shareId]`) → ponovni odpiranje izriše shranjeno pot
+  (Dan 1 · Bohinj, 0 konzolnih napak). Med preverjanjem odkrit in
+  razrešen DEV-OKOLJSKI incident: next-server je bil OOM-ubit (stroj 4 GB
+  RAM) → ChunkLoadError lazivih komponent → napakа boundary „Te deljene
+  poti ni mogoče prikazati" — REŠITEV: restart strežnika, stran se izriše
+  normalno; DB vrstica je bila celotna (itinerary 3007 znakov,
+  isPublic=1). Ni produktna napaka.
+
+### Testi
+
+- Brez sprememb aplikacijske logike → 2852/2852 (nespremenjeno) · lint 0 ·
+  tsc 0 (src/ aplikacije).
+
+---
+
 ## [1.102.0] — 2026-09-26 (ISSUE #5 T5-B: fix valu 1 — H1 SmartSearch navigacija + H2 geo-distance konsolidacija + 4 MEDIUM)
 
 ### Popravljeno

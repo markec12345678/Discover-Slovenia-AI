@@ -1,10 +1,27 @@
 # Feature Flags
 
 > **Status:** Living document
-> **Datum:** 2026-07-15
+> **Datum:** 2026-09-26 (usklajeno z resnico v T5-C, Issue #5)
 > **Namen:** Postopno vklop/izklop funkcij brez novih deployev
 
-> ⚠️ **Stanje implementacije: NAČRT.** Sistem feature flagov **ni implementiran** — v repozitoriju ne obstajata niti `feature-flags.ts` niti `/api/feature-flags`. Ta dokument opisuje načrtovano zasnovo, trenutno stanje upravlja `process.env` (npr. `PAYMENTS_ENABLED=false`).
+> ⚠️ **Stanje implementacije: NAČRT — IZRECNO NI NAČRTOVAN v obdobju Issue #5.**
+> Sistem feature flagov **ni implementiran** — v repozitoriju ne obstajata niti
+> `feature-flags.ts` niti `/api/feature-flags`. **Dejanski mehanizmi danes** (vsak
+> neodvisno, brez centralne zastavice — po nemotenem delovanju odloča
+> konfiguracija/ključi, ne stikalo):
+> - **AI površine** (chat/smart-search/refine/ask/insights/recommendations):
+>   vedno dosegljive z lastno deterministično rezervo — `OPENROUTER_API_KEY`,
+>   `GEMINI_API_KEY`, `PUTER_AUTH_TOKEN` (brez ključev → `source:"fallback"`).
+>   Trde meje: itinerary 70 s, refine 60 s, chat 25 s, smart-search 15 s.
+> - **Plačila**: `STRIPE_SECRET_KEY` (brez njega ruta **fail-closed 503**) +
+>   `DSA_DEMO_PAYMENTS=1` (izrecni demo način). ~~`PAYMENTS_ENABLED`~~ — ta
+>   spremenljivka v kodi **NE obstaja** (revizija T5-a3, 1.102.0).
+> - **Beta**: `BETA_*` env (beta-status API).
+> - **Admin**: ADMIN_PASSWORD → httpOnly HMAC seja (VAL 8 §24).
+>
+> Operaterji: **za izklop AI funkcije ni centralne zastavice** — izklopi
+> pripadajoči API ključ (funkcija ostane dosegljiva, a deluje v rezervi) ali
+> komentiraj klicatelja. Uvedba centralnega sistema ostaja načrt (spodaj).
 
 ---
 

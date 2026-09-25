@@ -2,11 +2,13 @@
  * Analiza: kje program prinaša največ — funnel + monetizacijski kanali.
  * Zaženi: bun scripts/revenue-analysis.ts
  */
-import { PrismaClient } from '@prisma/client'
+import { db } from "@/lib/db"
 
-const prisma = new PrismaClient({
-  datasources: { db: { url: 'file:/home/z/Discover-Slovenia-AI/db/custom.db' } },
-})
+// ISSUE #5 T5-C/M9: odstranjena POKVARJENA hardcode pot
+// (file:/home/z/Discover-Slovenia-AI/... — projekt živi na /home/z/my-project;
+// skripta od 1.100.x ni delovala). Uporablja skupni db klient (@/lib/db),
+// kot vsi ostali db skripti — DATABASE_URL iz .env.
+const prisma = db
 
 const money = (n: number) =>
   new Intl.NumberFormat('sl-SI', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
