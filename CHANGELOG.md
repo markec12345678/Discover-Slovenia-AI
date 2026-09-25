@@ -7,6 +7,59 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.107.0] — 2026-09-26 (TASK 30 / Tier 1 #4: Lighthouse + CWV vrata)
+
+### Dodano
+
+- **LIGHTHOUSE + CORE WEB VITALS VRATA (Tier 1 #4 — benchmark Task 28:
+  svetovni produkti imajo perf budnost v CI, mi smo imeli 0 perf vrat)**:
+  nova skripta `scripts/ops/lighthouse-gates.sh` — samozadosten cikel
+  (standalone produkcijski build → zagon → 2× ogrevanje → Lighthouse
+  mobile/simulate nad 5 javnimi stranmi (`/`, `/destinacije`,
+  `/destinacija/bled`, `/na-poti`, `/zemljevid`) → 7 pragov na stran →
+  cleanup). NOV CI workflow `.github/workflows/lighthouse.yml` (T2 raven,
+  workflow_dispatch + artifact upload poročil — isti dostopni vzorec kot
+  browser-e2e.yml; ZAKAJ ne vsak push: chromium ~300 MB + build + ~5 min
+  meritev je slab vsak-push dogovor, pred release pa odličen).
+- **REGRESIJSKA vrata, ne čudovita (iskrena odločitev)**: pragovi
+  `perf ≥ 0.50 · a11y ≥ 0.90 · bp ≥ 0.90 · seo ≥ 0.90 · LCP ≤ 5000 ms ·
+  CLS ≤ 0.10 · TBT ≤ 2500 ms` — izpeljani iz izmerjenega baseline
+  (perf 0.55–0.82 mobile) z dokumentirano utemeljitvijo v glavi skripte +
+  `docs/E2E-GATES.md` (baseline tabela 5 strani; Google „good“ meje LCP
+  2.5 s / TBT 200 ms dokumentirane kot znani Tier 2 izboljševalni dolg —
+  vrata ščitijo pred razpadom, ne prikrivajo dolga).
+- **ŠUM izmerjen in spoštovan**: TBT med zagoni istega stroja 1360→2147 ms
+  (+57 %) → prag 2500 ms (vrata, ki padajo naključno, niso vrata);
+  a11y/bp/seo so DOM-stabilni → smelo 0.90; CLS 0–0.003 → Google „good“
+  brez kompromisa.
+- **Dev-mode artefakt odkrit in dokumentiran**: dev bundli (ne-minificirani)
+  dajo TBT ~13 000 ms — vrata ZATO merijo standalone (isto pot kot
+  Docker/Render), dev meritev bi bila lažna.
+- Varnostna vrata skripte: BASE_URL izključno localhost (enak vzorec kot
+  ci-e2e.sh/browser-offline-e2e.sh); samodejno iskanje kroma (CHROME_BIN →
+  ms-playwright → system) + LH_BIN env za izvedbo brez npx.
+
+### Spremenjeno
+
+- `tsconfig.json`: exclude ne-projektnih map (`skills`, `tool-results`,
+  `upload`, `mini-services`, `agent-ctx`, `ux-*`) — lokalni peskovnik jih
+  ima, git/CI pa ne; build tipizira SAMO projektno kodo (v CI sprememba
+  no-op, lokalno odpre build).
+
+### Dokumentacija
+
+- `docs/E2E-GATES.md`: nova sekcija „T2 — Lighthouse + CWV vrata" (36
+  preverjanj; baseline tabela; iskrene meje: Lantern je model, ne RUM;
+  CrUX field podatkov za novo domeno še ni — ko bodo, pragovi se umaknejo
+  RUM resnici) + T3 priročnik dopolnjen + nivoji v glavi.
+- README Stanje vrstica: 1.107.0 (prej 1.105.0 — 1.106.0 Task 29 je bil
+  neizrecno nespremenjen).
+
+### Testi
+
+- 0 novih enotskih testov (vrata so CI-delovni tok, ne knjižnica) — dokaz
+  je izvedba: `36 ok / 0 neuspešnih` lokalno (5 strani × 7 pragov + health).
+
 ## [1.106.0] — 2026-09-26 (TASK 28 / Tier 1: live-sync + overjena rezervacija)
 
 ### Dodano

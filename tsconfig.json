@@ -43,6 +43,12 @@
     ".next-e2e/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "skills",
+    "tool-results",
+    "upload",
+    "mini-services",
+    "agent-ctx",
+    "ux-*"
   ]
 }

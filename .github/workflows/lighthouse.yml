@@ -1,0 +1,100 @@
+name: Lighthouse + CWV gates
+
+# TASK 30 (Tier 1 #4, benchmark Task 28): perf/UX budnost v CI —
+# Wanderlog/GYG disciplina, prejšnje stanje: 0 perf vrat.
+#
+# KAJ: Lighthouse (mobile, simulate throttling — determinističnejši od
+# devtools na šumnem CI hardwareju) nad PRODUKCIJSKIM standalone buildom +
+# Core Web Vitals pragovi (LCP/CLS/TBT) nad 5 ključnimi javnimi stranmi.
+#
+# ZAKAJ NE V VSAKEM PUSHU (iskrena odločitev): vsak-push CI (T1) že dokazuje
+# API-dim (~10 s); lighthouse potrebuje chromium (~300 MB) + build + ~5 min
+# meritev — slab razmerje strošek/vrednost za vsak push, odlično pred
+# release/pre-release. GATE TIERS: glej docs/E2E-GATES.md.
+#
+# PRAGI = REGRESIJSKA (ščitijo današnji baseline, ne zahtevajo čudeža):
+#   perf ≥ 0.50 · a11y ≥ 0.90 · bp ≥ 0.90 · seo ≥ 0.90
+#   LCP ≤ 5000 ms · CLS ≤ 0.10 · TBT ≤ 2500 ms (izmerjen šum med zagoni!)
+# Utemeljitev baseline 1.107.0: scripts/ops/lighthouse-gates.sh glava +
+# docs/E2E-GATES.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: "Razlog zagona (npr. pred release)"
+        required: false
+        default: ""
+
+jobs:
+  lighthouse-gates:
+    name: Lighthouse + Core Web Vitals vrata (mobile, standalone)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: dsa_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/dsa_test"
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🥟 Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 📦 Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: 🗄️ Prepare Prisma client & test DB (Postgres)
+        run: |
+          bunx prisma generate
+          bunx prisma db push --skip-generate
+
+      - name: 🌐 Setup chromium (agent-browser/ms-playwright)
+        run: |
+          npm install -g agent-browser
+          agent-browser install --with-deps
+          # Diagnostika: skripta samodejno najde kroma v ~/.cache/ms-playwright
+          ls -1 "$HOME"/.cache/ms-playwright/chromium-*/chrome-linux*/chrome 2>/dev/null | sort -V | tail -1 || echo "chromium ni v ms-playwright!"
+
+      - name: 🏗️ Build (standalone — dev bundli niso merilo!)
+        run: bun run build
+        env:
+          NEXTAUTH_SECRET: "ci-smoke-nextauth-secret-0123456789"
+          NEXTAUTH_URL: "http://localhost:3000"
+          ADMIN_PASSWORD: "ci-smoke-admin-0123456789abcdef"
+          STRIPE_SECRET_KEY: "sk_test_demo_placeholder"
+          SMTP_HOST: "localhost"
+
+      - name: 🔦 Lighthouse + CWV vrata (5 strani)
+        run: bash scripts/ops/lighthouse-gates.sh
+        env:
+          NEXTAUTH_SECRET: "ci-smoke-nextauth-secret-0123456789"
+          NEXTAUTH_URL: "http://localhost:3000"
+          ADMIN_PASSWORD: "ci-smoke-admin-0123456789abcdef"
+          STRIPE_SECRET_KEY: "sk_test_demo_placeholder"
+          SMTP_HOST: "localhost"
+
+      - name: 📊 Arhiviraj Lighthouse poročila
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: /tmp/lighthouse-gates/
+          retention-days: 7
