@@ -3,7 +3,11 @@ import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
-import { generateTripItineraryPdf } from "@/lib/pdf/trip-itinerary-pdf";
+import {
+  generateTripItineraryPdf,
+  type TripItineraryPdfReservation,
+  type TripPdfLang,
+} from "@/lib/pdf/trip-itinerary-pdf";
 import {
   resolveTripRole,
   roleAtLeast,
@@ -27,6 +31,17 @@ import type { Itinerary } from "@/lib/types";
 // Offline/PWA: PDF potrebuje strežnik (kot PATCH) — brskalniški gumb
 // "Natisni / Shrani kot PDF" ostaja offline rezerva. Iskrena omejitev,
 // zapisana v FEATURE-FLAGS.md.
+//
+// M8+ (Issue #6 / D6-B): ?lang=en — izvoz v ANGLEŠČINI (vsota STRINGS v
+// generatorju + Intl en-GB). Veljavni sta SAMO "sl" (privzeto) in "en";
+// vsako drugo vrednost (vključno z musasto) spodrsne v privzeti "sl" —
+// arbitrirne vrednosti NIKOLI ne potujejo v generator.
+//
+// M8+ (D6-B): CONFIRMED rezervacije poti (JourneyBooking.veza = shareId,
+// ISTI vir kot bookingList v /api/trip/[shareId]) se izpišejo v razdelku
+// "Rezervacije" — provider + št. + status; importData parsamo strežniško in
+// izpišemo SAMO prikazna polja (providerName/številka — brez contact/notes,
+// isti §23 kanon kot bookings odgovori).
 // ============================================================================
 
 export const runtime = "nodejs"; // fs dostop do pisav
@@ -121,12 +136,68 @@ export async function GET(
       );
     }
 
-    const bytes = await generateTripItineraryPdf({
-      name: saved.name,
-      shareId,
-      itinerary,
-      createdAt: saved.createdAt?.toISOString() ?? null,
+    // M8+ (D6-B): jezik izvoza — belisted DOVOLJENIH vrednosti ("sl" je
+    // privzet; vse ostalo, razen "en", spodrsne v "sl").
+    const { searchParams } = new URL(request.url);
+    const langParam = searchParams.get("lang");
+    const lang: TripPdfLang = langParam === "en" ? "en" : "sl";
+
+    // M8+ (D6-B): SAMO CONFIRMED rezervacije te poti (veza shareId — čista,
+    // isto polje kot bookingList agregator). Prikazna preslikava poteka TUKAJ
+    // (surovi importData nikoli ne potuje v generator).
+    const bookingRows = await db.journeyBooking.findMany({
+      where: { shareId, status: "CONFIRMED" },
+      select: {
+        provider: true,
+        providerBookingId: true,
+        importData: true,
+        status: true,
+      },
+      orderBy: { createdAt: "asc" },
+      take: 20,
     });
+    const reservations: TripItineraryPdfReservation[] = bookingRows.map(
+      (b) => {
+        // Prikazna polja iz uvoženih podatkov (§23: brez contact/notes).
+        // Pokvarjen JSON NE sesuje izvoza — preprosto ni prikaznega imena
+        // (fallback na provider slug), nič se ne izumi.
+        let providerName: string | null = null;
+        let importNumber: string | null = null;
+        if (b.importData) {
+          try {
+            const d = JSON.parse(b.importData) as Record<string, unknown>;
+            providerName =
+              typeof d.providerName === "string"
+                ? d.providerName.slice(0, 100)
+                : null;
+            importNumber =
+              typeof d.reservationNumber === "string"
+                ? d.reservationNumber.slice(0, 60)
+                : null;
+          } catch {
+            // pokvarjen importData → samo kanonična polja zapisa
+          }
+        }
+        return {
+          provider: providerName ?? b.provider,
+          // providerBookingId je atestirana številka (provider oz. uporabniško
+          // potrjen dokument) — prednost pred surovo parse-vrednostjo.
+          reservationNumber: b.providerBookingId ?? importNumber,
+          status: b.status,
+        };
+      }
+    );
+
+    const bytes = await generateTripItineraryPdf(
+      {
+        name: saved.name,
+        shareId,
+        itinerary,
+        createdAt: saved.createdAt?.toISOString() ?? null,
+        reservations,
+      },
+      lang
+    );
 
     const fileName = asciiSlug(saved.name, shareId);
     return new NextResponse(Buffer.from(bytes), {

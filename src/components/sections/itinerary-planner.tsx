@@ -34,6 +34,8 @@ import {
   Copy,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   GripVertical,
   Plus,
   Trash2,
@@ -49,6 +51,18 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+// D6-B (Issue #6, M7+): potrditev pred odstranitvijo dneva S postanki —
+// destruktiven popravek (uniči N postankov), zato radix AlertDialog.
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import {
   Card,
@@ -127,7 +141,8 @@ import { trackFunnel } from "@/lib/funnel";
 import { optimizeDayOrder } from "@/lib/route-order";
 // M7 (Issue #5 / T5-D): ročno prestavljanje + dodajanje/odstranjevanje dneva —
 // čiste deterministične operacije (isti invalidacijski kanon kot F16).
-import { reorderStopInItinerary } from "@/lib/planner-reorder";
+// D6-B (Issue #6, M7+): moveStopToDay — prestavitev postanka MED dnevi.
+import { reorderStopInItinerary, moveStopToDay } from "@/lib/planner-reorder";
 import {
   addDay as addDayToItinerary,
   removeDay as removeDayFromItinerary,
@@ -650,6 +665,14 @@ export function ItineraryPlanner() {
     day: number;
     idx: number;
   } | null>(null);
+
+  // D6-B (Issue #6, M7+): dan, ki ČAKA na potrditev odstranitve. Nastane
+  // SAMO pri kliku „Odstrani dan" na dnevu S postanki (destruktiven popravek
+  // — uniči vse njegove postanke); prazen dan (nič ne izgubi) se odstrani
+  // takoj brez dialoga. Radix AlertDialog je krmilovan prek tega stanja.
+  const [removeDayPending, setRemoveDayPending] = useState<DayPlan | null>(
+    null
+  );
 
   // === Shrani & deli ===
   const [saving, setSaving] = useState(false);
@@ -1292,7 +1315,21 @@ export function ItineraryPlanner() {
   // M7 (Issue #5 / T5-D): odstrani dan + RENUMERIRAJ preostale (1..N — id-ji
   // UI, dayISO, PlannerDayNav so vezani na zaporedno št.). Varovalka: vsaj
   // 1 dan. crowdNotices se zamaknejo/počistijo (vezani na strukturo dni).
+  // D6-B (Issue #6, M7+): dan S postanki je DESTRUKTIVEN (uniči jih iz
+  // načrta) — najprej POTRDITEV prek AlertDialog (removeDayPending); PRAZEN
+  // dan (nič ne izgubi) gre takoj skozi, brez dialoga.
   function handleRemoveDay(day: DayPlan) {
+    if (!itinerary) return;
+    if ((day.locations?.length ?? 0) > 0) {
+      setRemoveDayPending(day);
+      return;
+    }
+    applyRemoveDay(day);
+  }
+
+  // D6-B: dejanski odstranitveni prehod (klic iz handleRemoveDay za prazen
+  // dan ali iz potrditvenega AlertDialoga po „Odstrani dan").
+  function applyRemoveDay(day: DayPlan) {
     if (!itinerary) return;
     const next = removeDayFromItinerary(itinerary, day.day);
     if (next === itinerary) {
@@ -1315,6 +1352,39 @@ export function ItineraryPlanner() {
     toast({
       title: t("dayRemovedToastTitle"),
       description: t("dayRemovedToastDesc", { day: day.day }),
+    });
+  }
+
+  // D6-B (Issue #6, M7+): prestavi postanek v PREJŠNJI/NASLEDNJI dan (0 AI,
+  // 0 omrežja — čista operacija moveStopToDay iz planner-reorder). Postanek
+  // se PRIPNE na konec ciljnega dneva z VSEMI polji (intentLocked potuje z
+  // njim — §21); termini se ne prerazporejajo, zato toast izrecno opomni,
+  // da preveri zaporedje in čase. Meje (dan 1 / zadnji dan) pokrijejo
+  // onemogočena gumba + no-op varovalka funkcije.
+  function handleMoveStopToDay(
+    day: DayPlan,
+    idx: number,
+    targetDayNumber: number
+  ) {
+    if (!itinerary) return;
+    const next = moveStopToDay(itinerary, day.day, idx, targetDayNumber);
+    if (next === itinerary) return; // no-op (meja / varovalka)
+    setItinerary(next);
+    persistItinerary(next, formData);
+    markResultEngaged();
+    // Strukturna sprememba — zastareli deljeni link se umakne (kanon F16):
+    if (shareUrl) {
+      setShareUrl(null);
+      setCopied(false);
+    }
+    trackPlannerEvent("stop_moved_to_day", {
+      from_day: day.day,
+      to_day: targetDayNumber,
+      locale,
+    });
+    toast({
+      title: t("stopMovedToDayToastTitle"),
+      description: t("stopMovedToDayToastDesc", { day: targetDayNumber }),
     });
   }
 
@@ -4563,6 +4633,73 @@ export function ItineraryPlanner() {
                                             </span>
                                           </span>
                                         )}
+                                        {/* D6-B (Issue #6, M7+): prestavi
+                                            postanek v PREJŠNJI/NASLEDNJI dan
+                                            (0 AI, 0 omrežja — čista operacija
+                                            moveStopToDay). Postanek se prine
+                                            na KONEC ciljnega dneva z vsemi
+                                            polji (intentLocked potuje z njim
+                                            — §21). Gumba sta vidna SAMO, ko
+                                            ima načrt več kot en dan; na
+                                            mejah (dan 1 / zadnji dan) sta
+                                            pošteno onemogočena. */}
+                                        {itinerary.days.length > 1 && (
+                                          <span className="inline-flex items-center gap-0.5">
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-7 w-7 rounded-full p-0 text-muted-foreground hover:text-primary disabled:pointer-events-none disabled:opacity-30"
+                                              disabled={day.day === 1}
+                                              onClick={() =>
+                                                handleMoveStopToDay(
+                                                  day,
+                                                  idx,
+                                                  day.day - 1
+                                                )
+                                              }
+                                              aria-label={t("moveStopToPrevDayAria", {
+                                                name: loc.destination_name,
+                                              })}
+                                              title={t("moveStopToPrevDayAria", {
+                                                name: loc.destination_name,
+                                              })}
+                                            >
+                                              <ChevronLeft
+                                                className="size-4"
+                                                aria-hidden
+                                              />
+                                            </Button>
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-7 w-7 rounded-full p-0 text-muted-foreground hover:text-primary disabled:pointer-events-none disabled:opacity-30"
+                                              disabled={
+                                                day.day ===
+                                                itinerary.days.length
+                                              }
+                                              onClick={() =>
+                                                handleMoveStopToDay(
+                                                  day,
+                                                  idx,
+                                                  day.day + 1
+                                                )
+                                              }
+                                              aria-label={t("moveStopToNextDayAria", {
+                                                name: loc.destination_name,
+                                              })}
+                                              title={t("moveStopToNextDayAria", {
+                                                name: loc.destination_name,
+                                              })}
+                                            >
+                                              <ChevronRight
+                                                className="size-4"
+                                                aria-hidden
+                                              />
+                                            </Button>
+                                          </span>
+                                        )}
                                         <Badge variant="outline" className="gap-1">
                                           <Clock className="size-3" aria-hidden />
                                           {loc.duration}h
@@ -5273,6 +5410,48 @@ export function ItineraryPlanner() {
                 </div>
           </div>
         )}
+
+        {/* D6-B (Issue #6, M7+): POTRDITEV pred odstranitvijo dneva S
+            postanki (destruktiven popravek — opozorilo o N postankih, ki
+            bodo izbrisani iz načrta). Krmiljano prek removeDayPending
+            (handleRemoveDay); prazni dnevi se odstranijo takoj, brez tega
+            dialoga. Portal — postavitev v drevesu ni vidna v DOM-u. */}
+        <AlertDialog
+          open={removeDayPending !== null}
+          onOpenChange={(open) => {
+            if (!open) setRemoveDayPending(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t("removeDayConfirmTitle", {
+                  day: removeDayPending?.day ?? 0,
+                })}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("removeDayConfirmDesc", {
+                  count: removeDayPending?.locations.length ?? 0,
+                })}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setRemoveDayPending(null)}>
+                {t("removeDayConfirmCancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  const day = removeDayPending;
+                  setRemoveDayPending(null);
+                  if (day) applyRemoveDay(day);
+                }}
+                className="bg-destructive text-white hover:bg-destructive/90"
+              >
+                {t("removeDayConfirmAction")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </section>
   );

@@ -15,6 +15,12 @@ import {
   parseReservationText,
   isReservationParseEmpty,
 } from "@/lib/reservation-text-parse";
+// Issue #6 (D6-B): ICS koledarski zapisi v besedilnem kanalu — BOLJ SPECIFIČEN
+// deterministični parser (VEVENT bloki) PREJ generičnega besedilnega parserja.
+import {
+  parseIcsReservation,
+  isIcsInput,
+} from "@/lib/reservation-ics-parse";
 
 // ============================================================================
 // POST /api/journey/bookings/parse — ISSUE #4 §4: STATELESS AI EKSTRAKCIJA
@@ -32,6 +38,10 @@ import {
 //    parser (lib/reservation-text-parse.ts) — vir je iskreno razkrit
 //    (method:"deterministic", via:"fallback"). SLIKA ostane AI-only:
 //    iz slike ni besedila za regex — pošten 502 z nasvetom (ročni vnos);
+//  · Issue #6 (D6-B): besedilo, ki VIDETI kot ICS koledar (BEGIN:VCALENDAR),
+//    v rezervi prebere BOLJ SPECIFIČEN VEVENT parser
+//    (lib/reservation-ics-parse.ts) PREJ generičnega besedilnega —
+//    specifično pred splošnim; odgovorna pogodba je IDENTIČNA;
 //  · ZAPIO samo uporabnik po pregledu in potrditvi (gumb v UI) — prek
 //    /api/journey/bookings/import; nezanesljiv parsing ostane DRAFT;
 //  · vir parsanja razkrijemo v odgovoru (`via`) — kot pri ingest slikah.
@@ -89,7 +99,13 @@ function parsePdfDataUrl(raw: string): { base64: string } | null {
  * "praznega uspeha" in nikoli tihe nadomestitve vira.
  */
 function deterministicParseResponse(text: string): NextResponse {
-  const fields = parseReservationText(text);
+  // Issue #6 (D6-B): če besedilo VIDETI kot ICS koledar (BEGIN:VCALENDAR),
+  // uporabimo BOLJ SPECIFIČEN deterministični VEVENT parser PREJ generičnega
+  // besedilnega (specifično pred splošnim — isti besedilni kanal, IDENTIČNA
+  // odgovorna pogodba method/via/fields/providerSlug/…/persisted).
+  const fields = isIcsInput(text)
+    ? parseIcsReservation(text)
+    : parseReservationText(text);
   if (isReservationParseEmpty(fields)) {
     return NextResponse.json(
       {

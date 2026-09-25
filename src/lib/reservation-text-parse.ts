@@ -45,8 +45,10 @@ const MAX_INPUT_CHARS = 60_000;
 // ZNANI PONUDNIKI — iskanje po celotnem besedilu (word-boundary, case-insens.)
 // ----------------------------------------------------------------------------
 
-/** [regex na besedilu, kanonski prikaz imena] — vrstni red = prioritetnost. */
-const PROVIDER_BRANDS: Array<[RegExp, string]> = [
+/** [regex na besedilu, kanonski prikaz imena] — vrstni red = prioritetnost.
+ *  IZVOŽENO (Issue #6 / D6-B): reservation-ics-parse.ts uporablja ISTI seznam
+ *  za SUMMARY hevristiko VEVENT dogodkov — en vir resnice, brez podvajanja. */
+export const PROVIDER_BRANDS: Array<[RegExp, string]> = [
   [/\bbooking\.?com\b/i, "Booking.com"],
   [/\bgetyourguide\b|\bgyg\b/i, "GetYourGuide"],
   [/\bkiwi ?taxi\b/i, "KiwiTaxi"],

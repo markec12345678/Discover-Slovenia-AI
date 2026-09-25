@@ -7,6 +7,47 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.105.0] — 2026-09-26 (ISSUE #6 D6-B: dopolnitev determinističnega jedra)
+
+### Dodano
+
+- **M1+ — ICS/iCalendar vhodni parser** (`src/lib/reservation-ics-parse.ts`,
+  307 vrstic): VEVENT → ParsedReservation skozi isti normalizator; RFC 5545
+  folding + unescape; UID → št. rezervacije (samo z števko); SUMMARY →
+  ponudnik prek ISTE PROVIDER_BRANDS liste (izvoz iz text parserja — en vir
+  resnice); DTSTART/DTEND RAW (brez izumljenih časovnih pasov);
+  X-BOOKING-URL > URL → bookingUrl; več VEVENTOV → prvi z veljavnim UID +
+  `countIcsEvents` iskrenost; koledar brez št. rezervacije → prazna
+  ekstrakcija → iskren 422 (ročni vnos). Priklop v
+  `/api/journey/bookings/parse` (specifično-pred-generičnim).
+- **M8+ — PDF izvoz dopolnjen**: EN lokalizacija (`?lang=en`, whitelist
+  validacija, 26-nizni STRINGS slovar SL/EN z dvojino SL „1 dan / 2 dneva");
+  **noge med postanki** (`→ ~X km · ~Y min` iz kanonskega heuristicLeg —
+  isti številki kot planner; manjkajoče koordinate → „razdalja ni znana"
+  / „distance unknown"); **rezervacijske reference** (JourneyBooking.shareId
+  relacija — CONFIRMED naročila → odsek REZERVACIJE/RESERVATIONS s
+  ponudnikom + št. + statusom; brez naročil → brez odseka). Odpiralni časi
+  iskreno IZPUŠČENI (LocationVisit nima teh podatkov — resnica > izum).
+- **M7+ — varna odstranitev dneva + premik med dnevi**:
+  `moveStopToDay` (čista funkcija — postanek z VSEMI polji vključno
+  intentLocked premaknjen na konec ciljnega dneva; invalidacija
+  routeGeometry obeh dni + quality/geoValidation/legs po F16 kanonu;
+  no-op varovalke); UI ChevronLeft/Right gumbi z mejno onemogočitvijo +
+  toast „Prestavljen v dan {day}"; AlertDialog potrditev ob odstranitvi
+  dneva S postanki („Ta dan vsebuje {count} postankov — odstranitev jih bo
+  izbrisala iz načrta.") — prazni dnevi se odstranijo takoj; novi
+  analytics dogodek stop_moved_to_day.
+
+### Vrata
+
+- `bun test` **2981/2981** (+69: 20 planner + 21 PDF + 28 rezervacije) ·
+  lint 0 · tsc 0 · `ci-e2e.sh` lokalno **9/9** · browser E2E: dialog
+  odstranitve dneva (opozorilo o 2 postankih) + premik Bohinja v dan 2
+  (toast) + mejna onemogočitev · EN PDF živa sonda (DAY 1/exported/legs
+  km+min vsebina prek unpdf).
+
+---
+
 ## [1.104.0] — 2026-09-26 (ISSUE #5 T5-D: zaključek vseh MEDIUM feature-razredov)
 
 ### Dodano

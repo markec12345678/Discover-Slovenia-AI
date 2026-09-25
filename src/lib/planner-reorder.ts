@@ -107,3 +107,85 @@ export function reorderStopInItinerary(
     legs: undefined,
   };
 }
+
+// ============================================================================
+// PRESTAVLJANJE POSTANKA MED DNEVI (Issue #6 / D6-B — M7+ zaključek)
+// ============================================================================
+// NAMEN: ročno prestavljanje je bilo omejeno na ZNOTRAJ dneva (↑/↓ + drag);
+// med dnevi je bilo možno SAMO prek NL ukaza AI („prestavi X na dan 2").
+// Ta operacija je čista, deterministična (0 AI, 0 omrežja) razširitev istega
+// kanona.
+//
+// SEMANTIKA:
+//  · postanek se odstrani iz IZVORNEGA dneva in PRIPNE NA KONEC ciljnega
+//    (priloga na konec je izrecna — termini se NE prerazporejajo, ker
+//    ciljni dan ima svojo kronologijo; toast opomni, da preveri vrstni red);
+//  · postanek obdrži VSA svoja polja (tudi intentLocked — §21 ročna
+//    namernost potuje z uporabnikovim postankom, isto kot znotraj dneva);
+//  · invalidacija: routeGeometry OBEH dotaknjenih dni (geometrija je vezana
+//    na staro sestavo postankov) + itinerary.quality/geoValidation/legs
+//    (kanon applyOptimalOrder).
+// ============================================================================
+
+/**
+ * Prestavi postanek iz dneva dayNumber (indeks stopIndex) v ciljni dan
+ * targetDayNumber — prine NA KONEC njegovih postankov, z vsemi polji
+ * (tudi intentLocked). Termini ciljnega dneva se ne prerazporejajo.
+ *
+ * Varovalke (vračajo VHODNO referenco — no-op, klicatelj lahko vedno
+ * zapiše izhod): ciljni dan ne obstaja, target === source dan, izvor ne
+ * obstaja, indeks izven meja.
+ */
+export function moveStopToDay(
+  it: Itinerary,
+  dayNumber: number,
+  stopIndex: number,
+  targetDayNumber: number
+): Itinerary {
+  if (!it || !Array.isArray(it.days)) return it;
+  if (targetDayNumber === dayNumber) return it;
+  const dayIdx = it.days.findIndex((d) => d.day === dayNumber);
+  if (dayIdx < 0) return it;
+  const targetIdx = it.days.findIndex((d) => d.day === targetDayNumber);
+  if (targetIdx < 0) return it; // ciljni dan ne obstaja (meja / luknja)
+
+  const day = it.days[dayIdx];
+  const target = it.days[targetIdx];
+  const locations = Array.isArray(day.locations) ? day.locations : [];
+  const targetLocations = Array.isArray(target.locations)
+    ? target.locations
+    : [];
+  if (stopIndex < 0 || stopIndex >= locations.length) return it;
+
+  // Array move brez mutantiranja vhoda (splice kanon):
+  const moved = locations.slice();
+  const [stop] = moved.splice(stopIndex, 1);
+
+  // Izgorni dan: krajši seznam; geometrija je vezana na staro sestavo.
+  const sourceDay: DayPlan = {
+    ...day,
+    locations: moved,
+    routeGeometry: undefined,
+  };
+  // Ciljni dan: postanek PRIPNEM na konec (vsa polja + intentLocked potujejo
+  // z njim — nikoli ne delamo kopije z izgubljenimi polji):
+  const nextTargetDay: DayPlan = {
+    ...target,
+    locations: [...targetLocations, stop],
+    routeGeometry: undefined,
+  };
+
+  const nextDays = it.days.slice();
+  nextDays[dayIdx] = sourceDay;
+  nextDays[targetIdx] = nextTargetDay;
+
+  return {
+    ...it,
+    days: nextDays,
+    // Strukturne metrike so bile izračunane za STARO sestavo — umaknjene,
+    // kartice jih preračunajo na mestu uporabe (hevristika, odkrito).
+    quality: undefined,
+    geoValidation: undefined,
+    legs: undefined,
+  };
+}

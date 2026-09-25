@@ -1,5 +1,5 @@
 /**
- * PDF izvoz itinererja poti (Issue #5 / T5-D / M8)
+ * PDF izvoz itinererja poti (Issue #5 / T5-D / M8 + Issue #6 / D6-B / M8+)
  * ============================================================================
  * Generira A4 PDF shranjene poti (pdf-lib + fontkit, Liberation Sans —
  * slovenske diakritike č/š/ž; isti vzorec kot commission-invoice-pdf).
@@ -7,6 +7,19 @@
  * Razlika računu: VEČSTRANSKI izpis (paginacija — dan se nikoli ne raztrga
  * čez stran; stop/notes se prelomi po vrsticah), noga na vsaki strani s
  * številčenjem.
+ *
+ * M8+ (Issue #6 D6-B, Phase 2):
+ *  · jezik: generateTripItineraryPdf(data, lang) — "sl" (privzeto, nazaj
+ *    kompatibilno) | "en"; VSI uporabniški nizi živijo v STRINGS (sl/en
+ *    stolpec), datumi/številke po Intl (sl-SI / en-GB);
+ *  · etape med zaporednimi postanki dneva ("→ ~X km · ~Y min") — SAMO
+ *    obstoječa deterministična hevrestika (heuristicLeg = haversineKm ×
+ *    ROAD_FACTOR ÷ AVG_SPEED_KMH × 60 iz src/lib/geo-distance.ts, round5 —
+ *    ISTI vir številk kot povezovalnik v plannerju); manjkajoče koordinate
+ *    kateregakoli postanka → izrecno "razdalja ni znana" (ne izumi);
+ *  · rezervacije: SAMO CONFIRMED zapisi JourneyBooking (veza shareId), ki
+ *    jih preslika ruta — provider + št. + status (iskrene oznake iz
+ *    CONFIRMATION_STATUS_LABELS); brez potrdil ni razdelka (dokaz, ne napaka).
  *
  * ISKRENOST (isti kanon kot UI):
  *  · vir načrta je razkrit (deterministično / AI / rezerva);
@@ -23,7 +36,13 @@ import fontkit from "@pdf-lib/fontkit";
 import { readFile } from "fs/promises";
 import path from "path";
 import { dayISOForDayNumber } from "@/lib/trip-dates";
-import type { Itinerary, DayPlan } from "@/lib/types";
+// heuristicLeg = ČISTI kanon etape: haversineKm × ROAD_FACTOR (1,3) za km,
+// (km ÷ AVG_SPEED_KMH = 55) × 60 za minute, zaokroženo na 5 (round5) — isto
+// kot povezovalnik PlannerStopLeg (geo-distance je en vir konstant).
+import { heuristicLeg } from "@/lib/road-routing";
+import { CONFIRMATION_STATUS_LABELS } from "@/lib/journey/booking";
+import type { ConfirmationStatus } from "@/lib/journey/types";
+import type { Itinerary, DayPlan, LocationVisit } from "@/lib/types";
 
 // ─── Paleta (usklajena z aplikacijo: emerald, brez modre) ──────────────────
 const INK = rgb(0.12, 0.16, 0.19);
@@ -40,22 +59,139 @@ const MARGIN = 50;
 /** Spodnja meja vsebine (noga je ob vpisovanju izpusta že zarezana). */
 const BOTTOM_LIMIT = 70;
 
+// ─── Jezik izvoza (M8+ / D6-B): "sl" privzet (nazaj kompatibilno) ──────────
+export type TripPdfLang = "sl" | "en";
+
+/** Rezervacija za izvoz — preslikava CONFIRMED JourneyBooking (naredi ruta). */
+export interface TripItineraryPdfReservation {
+  /** Prikazno ime ponudnika (importData.providerName ?? provider slug). */
+  provider: string;
+  /** Št. rezervacije (providerBookingId ?? importData.reservationNumber). */
+  reservationNumber: string | null;
+  /** Surovi status zapisa — oznaka iz CONFIRMATION_STATUS_LABELS (sl/en). */
+  status: string;
+}
+
 export interface TripItineraryPdfData {
   name: string | null;
   shareId: string;
   itinerary: Itinerary;
   createdAt: string | null; // ISO
+  /** CONFIRMED rezervacije poti (M8+ / D6-B) — opcijsko (nazaj kompatibilno). */
+  reservations?: readonly TripItineraryPdfReservation[];
 }
 
-// ─── Formatiranje (sl-SI, brez pasov — datumi so lokalni ISO) ──────────────
-const fmtEur = (v: number) =>
-  `${v.toLocaleString("sl-SI", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €`;
+// ─── VSI uporabniški nizi izvoza (sl / en — en vir, M8+ / D6-B) ────────────
+interface TripPdfStrings {
+  defaultTitle: string;
+  docTitlePrefix: string;
+  docSubject: string;
+  /** Prvi del glave meta vrstice: N {dan/dneva/dni | day/days}. */
+  dayOne: string;
+  dayTwo: string; // samo SL dvojina ("dneva"); EN = dayMany
+  dayMany: string;
+  stopOne: string;
+  stopFew: string; // SL 2–4 ("postanki"); EN = stopFew ("stops")
+  stopMany: string;
+  sourcePrefix: string;
+  sourceDeterministic: string;
+  sourceAi: string;
+  sourceFallback: string;
+  sourceUnknown: string;
+  budgetApprox: string;
+  savedAt: string;
+  dayHeading: string;
+  weatherFallback: string;
+  weatherEstimate: string;
+  freeDay: string;
+  unnamedStop: string;
+  providerLabel: string;
+  tipsHeading: string;
+  footerTrail: string;
+  footerExported: string;
+  pageAbbrev: string;
+  legUnknown: string;
+  reservationsHeading: string;
+  reservationNumberLabel: string;
+}
 
-const fmtDay = (iso: string) => {
+const STRINGS: Record<TripPdfLang, TripPdfStrings> = {
+  sl: {
+    defaultTitle: "Potovanje po Sloveniji",
+    docTitlePrefix: "Pot",
+    docSubject: "Itinerer shranjene poti (izvoz PDF)",
+    dayOne: "dan",
+    dayTwo: "dneva",
+    dayMany: "dni",
+    stopOne: "postanek",
+    stopFew: "postanki",
+    stopMany: "postankov",
+    sourcePrefix: "vir",
+    sourceDeterministic: "brez AI (deterministično)",
+    sourceAi: "AI načrt",
+    sourceFallback: "rezervni načrt",
+    sourceUnknown: "neznani vir",
+    budgetApprox: "okvirni proračun",
+    savedAt: "shranjeno",
+    dayHeading: "DAN",
+    weatherFallback: "vreme",
+    weatherEstimate: "(ocena)",
+    freeDay: "— prost dan (brez postankov) —",
+    unnamedStop: "Neimenovan postanek",
+    providerLabel: "ponudnik",
+    tipsHeading: "NASVETI ZA POTOVANJE",
+    footerTrail: "pot",
+    footerExported: "izvoženo",
+    pageAbbrev: "str.",
+    legUnknown: "razdalja ni znana",
+    reservationsHeading: "REZERVACIJE",
+    reservationNumberLabel: "št. rezervacije",
+  },
+  en: {
+    defaultTitle: "Trip around Slovenia",
+    docTitlePrefix: "Trip",
+    docSubject: "Itinerary of a saved trip (PDF export)",
+    dayOne: "day",
+    dayTwo: "days", // EN nima dvojine — enaka oblika kot množina
+    dayMany: "days",
+    stopOne: "stop",
+    stopFew: "stops",
+    stopMany: "stops",
+    sourcePrefix: "source",
+    sourceDeterministic: "no AI (deterministic)",
+    sourceAi: "AI plan",
+    sourceFallback: "fallback plan",
+    sourceUnknown: "unknown source",
+    budgetApprox: "approximate budget",
+    savedAt: "saved",
+    dayHeading: "DAY",
+    weatherFallback: "weather",
+    weatherEstimate: "(estimate)",
+    freeDay: "— free day (no stops) —",
+    unnamedStop: "Unnamed stop",
+    providerLabel: "provider",
+    tipsHeading: "TRAVEL TIPS",
+    footerTrail: "trip",
+    footerExported: "exported",
+    pageAbbrev: "p.",
+    legUnknown: "distance unknown",
+    reservationsHeading: "RESERVATIONS",
+    reservationNumberLabel: "reservation no.",
+  },
+};
+
+/** Locale za Intl (datumi/številke): sl-SI ostaja kanon za "sl". */
+const localeOf = (lang: TripPdfLang) => (lang === "sl" ? "sl-SI" : "en-GB");
+
+// ─── Formatiranje (brez pasov — datumi so lokalni ISO) ─────────────────────
+const fmtEur = (v: number, locale: string) =>
+  `${v.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €`;
+
+const fmtDay = (iso: string, locale: string) => {
   const d = new Date(`${iso.slice(0, 10)}T12:00:00`);
   return Number.isNaN(d.getTime())
     ? ""
-    : new Intl.DateTimeFormat("sl-SI", {
+    : new Intl.DateTimeFormat(locale, {
         day: "numeric",
         month: "long",
         year: "numeric",
@@ -63,17 +199,41 @@ const fmtDay = (iso: string) => {
 };
 
 /** Vir načrta — iskrena oznaka (isti kanon kot planner oznake). */
-function sourceLabel(source: Itinerary["source"] | undefined): string {
+function sourceLabel(
+  source: Itinerary["source"] | undefined,
+  t: TripPdfStrings
+): string {
   switch (source) {
     case "deterministic":
-      return "brez AI (deterministično)";
+      return t.sourceDeterministic;
     case "ai":
-      return "AI načrt";
+      return t.sourceAi;
     case "fallback":
-      return "rezervni načrt";
+      return t.sourceFallback;
     default:
-      return "neznani vir";
+      return t.sourceUnknown;
   }
+}
+
+/** Oznaka statusa rezervacije — iskrene dvojezične oznake (journey/booking);
+ *  neznan status ostane surova vrednost (nikoli ne prevajamo ugibanj). */
+function statusLabelOf(status: unknown, lang: TripPdfLang): string {
+  if (typeof status !== "string" || status === "") return "";
+  const labels = CONFIRMATION_STATUS_LABELS[status as ConfirmationStatus];
+  return labels ? labels[lang] : status;
+}
+
+/** Veljavne koordinate postanka (lat/lng sta opcijski — stari načrti). */
+function coordOf(
+  loc: LocationVisit | undefined
+): { lat: number; lng: number } | null {
+  return loc &&
+    typeof loc.lat === "number" &&
+    Number.isFinite(loc.lat) &&
+    typeof loc.lng === "number" &&
+    Number.isFinite(loc.lng)
+    ? { lat: loc.lat, lng: loc.lng }
+    : null;
 }
 
 // ─── Pisave (public/fonts — vključene v standalone build) ───────────────────
@@ -145,17 +305,21 @@ function dayKm(it: Itinerary, dayNumber: number): number | null {
 
 // ─── Glavni generator ──────────────────────────────────────────────────────
 export async function generateTripItineraryPdf(
-  data: TripItineraryPdfData
+  data: TripItineraryPdfData,
+  lang: TripPdfLang = "sl"
 ): Promise<Uint8Array> {
+  const t = STRINGS[lang];
+  const locale = localeOf(lang);
+
   const fonts = await loadFonts();
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   const regular = await pdf.embedFont(fonts.regular, { subset: true });
   const bold = await pdf.embedFont(fonts.bold, { subset: true });
 
-  const title = data.name?.trim() || "Potovanje po Sloveniji";
-  pdf.setTitle(`Pot: ${title}`);
-  pdf.setSubject("Itinerer shranjene poti (izvoz PDF)");
+  const title = data.name?.trim() || t.defaultTitle;
+  pdf.setTitle(`${t.docTitlePrefix}: ${title}`);
+  pdf.setSubject(t.docSubject);
   pdf.setCreator("Discover Slovenia AI");
   pdf.setProducer("Discover Slovenia AI");
 
@@ -194,27 +358,45 @@ export async function generateTripItineraryPdf(
 
   const metaBits: string[] = [];
   if (dayCount > 0) {
-    metaBits.push(
-      `${dayCount} ${dayCount === 1 ? "dan" : dayCount === 2 ? "dneva" : "dni"}`
-    );
+    // SL slovnica: 1 dan / 2 dneva / 3+ dni; EN: 1 day / N days.
+    const dayWord =
+      lang === "sl"
+        ? dayCount === 1
+          ? t.dayOne
+          : dayCount === 2
+            ? t.dayTwo
+            : t.dayMany
+        : dayCount === 1
+          ? t.dayOne
+          : t.dayMany;
+    metaBits.push(`${dayCount} ${dayWord}`);
   }
   if (stopCount > 0) {
-    metaBits.push(
-      `${stopCount} ${stopCount === 1 ? "postanek" : stopCount < 5 ? "postanki" : "postankov"}`
-    );
+    // SL slovnica: 1 postanek / 2–4 postanki / 5+ postankov; EN: stops.
+    const stopWord =
+      lang === "sl"
+        ? stopCount === 1
+          ? t.stopOne
+          : stopCount < 5
+            ? t.stopFew
+            : t.stopMany
+        : stopCount === 1
+          ? t.stopOne
+          : t.stopFew;
+    metaBits.push(`${stopCount} ${stopWord}`);
   }
-  metaBits.push(`vir: ${sourceLabel(it.source)}`);
+  metaBits.push(`${t.sourcePrefix}: ${sourceLabel(it.source, t)}`);
   if (typeof it.total_budget === "number" && it.total_budget > 0) {
-    metaBits.push(`okvirni proračun ${fmtEur(it.total_budget)}`);
+    metaBits.push(`${t.budgetApprox} ${fmtEur(it.total_budget, locale)}`);
   }
   if (it.tripStartDate) {
-    const start = fmtDay(it.tripStartDate);
-    const end = it.tripEndDate ? fmtDay(it.tripEndDate) : null;
+    const start = fmtDay(it.tripStartDate, locale);
+    const end = it.tripEndDate ? fmtDay(it.tripEndDate, locale) : null;
     metaBits.push(start && end ? `${start} – ${end}` : start);
   }
   if (data.createdAt) {
-    const created = fmtDay(data.createdAt);
-    if (created) metaBits.push(`shranjeno ${created}`);
+    const created = fmtDay(data.createdAt, locale);
+    if (created) metaBits.push(`${t.savedAt} ${created}`);
   }
   const metaLines = wrapText(metaBits.join(" · "), regular, 9.5, contentW);
   for (const line of metaLines.slice(0, 2)) {
@@ -252,7 +434,7 @@ export async function generateTripItineraryPdf(
       borderColor: EMERALD_BORDER,
       borderWidth: 1,
     });
-    page.drawText(`DAN ${dayNo}`, {
+    page.drawText(`${t.dayHeading} ${dayNo}`, {
       x: MARGIN + 10, y: PAGE_H - y - 15, size: 11, font: bold, color: EMERALD,
     });
     // Desna stran glave: datum (iz tripStartDate) · vreme · km
@@ -260,7 +442,7 @@ export async function generateTripItineraryPdf(
     if (it.tripStartDate) {
       const iso = dayISOForDayNumber(it.tripStartDate, dayNo);
       if (iso) {
-        const label = fmtDay(iso);
+        const label = fmtDay(iso, locale);
         if (label) headBits.push(label);
       }
     }
@@ -268,8 +450,8 @@ export async function generateTripItineraryPdf(
     if (km != null) headBits.push(`~${km.toFixed(0)} km`);
     const weather =
       day?.weather && typeof day.weather.temp === "number"
-        ? `${day.weather.condition ?? "vreme"} ${Math.round(day.weather.temp)} °C${
-            day.weatherEstimated ? " (ocena)" : ""
+        ? `${day.weather.condition ?? t.weatherFallback} ${Math.round(day.weather.temp)} °C${
+            day.weatherEstimated ? ` ${t.weatherEstimate}` : ""
           }`
         : null;
     if (weather) headBits.push(weather);
@@ -288,7 +470,7 @@ export async function generateTripItineraryPdf(
 
     if (locations.length === 0) {
       ensure(16);
-      page.drawText("— prost dan (brez postankov) —", {
+      page.drawText(t.freeDay, {
         x: MARGIN + 10, y: PAGE_H - y - 10, size: 9, font: regular, color: MUTED,
       });
       y += 18;
@@ -298,7 +480,7 @@ export async function generateTripItineraryPdf(
       const name =
         typeof loc?.destination_name === "string" && loc.destination_name.trim()
           ? loc.destination_name.trim()
-          : "Neimenovan postanek";
+          : t.unnamedStop;
       const slot =
         typeof loc?.time_slot === "string" ? loc.time_slot.trim() : "";
       const durationH =
@@ -356,10 +538,10 @@ export async function generateTripItineraryPdf(
       const rightBits: string[] = [];
       if (durationH) {
         rightBits.push(
-          `${durationH.toLocaleString("sl-SI", { maximumFractionDigits: 1 })} h`
+          `${durationH.toLocaleString(locale, { maximumFractionDigits: 1 })} h`
         );
       }
-      if (cost) rightBits.push(fmtEur(cost));
+      if (cost) rightBits.push(fmtEur(cost, locale));
       if (rightBits.length > 0) {
         drawTextRight(
           page,
@@ -384,7 +566,7 @@ export async function generateTripItineraryPdf(
         y += 11;
       }
       if (provider) {
-        page.drawText(`ponudnik: ${provider}`, {
+        page.drawText(`${t.providerLabel}: ${provider}`, {
           x: MARGIN + 100,
           y: PAGE_H - y - 9,
           size: 8.5,
@@ -394,6 +576,29 @@ export async function generateTripItineraryPdf(
         y += 12;
       }
       y += 4;
+
+      // ── M8+ (D6-B): etapa do NASLEDNJEGA postanka (med zaporednima) ──
+      // ISTA deterministična hevrestika kot povezovalnik v plannerju
+      // (haversine × 1,3 ÷ 55 km/h, round5 — vir številk je en). Manjka
+      // katerakoli koordinata → izrecno priznanje, ne izum ("razdalja
+      // ni znana" / "distance unknown").
+      if (i < locations.length - 1) {
+        const a = coordOf(loc);
+        const b = coordOf(locations[i + 1]);
+        const leg = a && b ? heuristicLeg(a, b) : null;
+        const legText = leg
+          ? `→ ~${leg.km} km · ~${leg.min} min`
+          : `→ ${t.legUnknown}`;
+        ensure(12);
+        page.drawText(legText, {
+          x: MARGIN + 100,
+          y: PAGE_H - y - 8,
+          size: 8,
+          font: regular,
+          color: MUTED,
+        });
+        y += 12;
+      }
     });
     y += 8;
   });
@@ -403,14 +608,58 @@ export async function generateTripItineraryPdf(
   if (tips.length > 0) {
     ensure(40);
     y += 4;
-    page.drawText("NASVETI ZA POTOVANJE", {
+    page.drawText(t.tipsHeading, {
       x: MARGIN, y: PAGE_H - y - 10, size: 9, font: bold, color: MUTED,
     });
     y += 18;
     for (const tip of tips) {
-      const t = typeof tip === "string" ? tip.trim().slice(0, 200) : "";
-      if (!t) continue;
-      const lines = wrapText(`• ${t}`, regular, 9, contentW - 12).slice(0, 2);
+      const tp = typeof tip === "string" ? tip.trim().slice(0, 200) : "";
+      if (!tp) continue;
+      const lines = wrapText(`• ${tp}`, regular, 9, contentW - 12).slice(0, 2);
+      ensure(lines.length * 12 + 4);
+      for (const line of lines) {
+        page.drawText(line, {
+          x: MARGIN + 6, y: PAGE_H - y - 10, size: 9, font: regular, color: INK,
+        });
+        y += 12;
+      }
+      y += 2;
+    }
+  }
+
+  // ── M8+ (D6-B): Rezervacije — SAMO CONFIRMED zapisi, ki jih prinese ruta ──
+  // (provider + št. + status). Brez zapisa NI razdelka: prazna tabela je
+  // dokaz "ni še potrjenih rezervacij", ne napaka (iskrena arhitektura §19).
+  const reservations = Array.isArray(data.reservations)
+    ? data.reservations.slice(0, 20)
+    : [];
+  if (reservations.length > 0) {
+    ensure(40);
+    y += 4;
+    page.drawText(t.reservationsHeading, {
+      x: MARGIN, y: PAGE_H - y - 10, size: 9, font: bold, color: MUTED,
+    });
+    y += 18;
+    for (const r of reservations) {
+      const provider =
+        typeof r?.provider === "string" ? r.provider.trim().slice(0, 100) : "";
+      const num =
+        typeof r?.reservationNumber === "string"
+          ? r.reservationNumber.trim().slice(0, 60)
+          : "";
+      const status = statusLabelOf(r?.status, lang);
+      const bits = [
+        ...(provider ? [provider] : []),
+        ...(num ? [`${t.reservationNumberLabel} ${num}`] : []),
+        ...(status ? [status] : []),
+      ];
+      if (bits.length === 0) continue; // prazen zapis se ne izriše (ne šumi)
+      const lines = wrapText(
+        `• ${bits.join(" · ")}`,
+        regular,
+        9,
+        contentW - 12
+      ).slice(0, 2);
       ensure(lines.length * 12 + 4);
       for (const line of lines) {
         page.drawText(line, {
@@ -424,7 +673,7 @@ export async function generateTripItineraryPdf(
 
   // ── Noge na VSEH straneh (zapisano zadnje — skupno število je znano) ──
   const pages = pdf.getPages();
-  const exported = new Intl.DateTimeFormat("sl-SI", {
+  const exported = new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "numeric",
     year: "numeric",
@@ -436,11 +685,11 @@ export async function generateTripItineraryPdf(
       thickness: 1,
       color: LINE,
     });
-    const left = `Discover Slovenia AI · pot ${data.shareId} · izvoženo ${exported}`;
+    const left = `Discover Slovenia AI · ${t.footerTrail} ${data.shareId} · ${t.footerExported} ${exported}`;
     p.drawText(truncateToWidth(left, regular, 7.5, contentW - 60), {
       x: MARGIN, y: 30, size: 7.5, font: regular, color: MUTED,
     });
-    const right = `str. ${i + 1}/${pages.length}`;
+    const right = `${t.pageAbbrev} ${i + 1}/${pages.length}`;
     const rightW = regular.widthOfTextAtSize(right, 7.5);
     p.drawText(right, {
       x: PAGE_W - MARGIN - rightW,

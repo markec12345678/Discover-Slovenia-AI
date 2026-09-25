@@ -63,7 +63,7 @@
 | PlanCopilot „Vprašaj" (computed-first, brez ugibanja) | DA | sfraziranje optional | plan-qa.test (29) — **M5 ZAPRT v 1.102.0** | DELA |
 | Plan-check validator tujih načrtov (0 AI, zigzag) | DA | ne | wave6 + živa sonda | DELA |
 | Leg suggestions + meal stops (koridor ≥75 min) | DA | ne | — | DELA |
-| Ročna urejanja (remove/optimalno zaporedje/dodaj dogodek/kraj) | DA | ne | — | DELA — **M7 ZAPRT v 1.104.0** (premik postanka ↑/↓ + HTML5 drag; dodaj/odstrani dan 1–14; `planner-reorder.ts` + `planner-days.ts`) |
+| Ročna urejanja (remove/optimalno zaporedje/dodaj dogodek/kraj) | DA | ne | — | DELA — **M7 ZAPRT v 1.104.0 + D6-B v 1.105.0** (premik ↑/↓ + HTML5 drag + premik MED dnevi z mejno logiko; +dan/−dan 1–14 s potrditvenim dialogom ob postankih) |
 | Shrani/deli/e-pošta/ics/TTS/GO persist | shrani/deli/ics DA | TTS: AI-only | wave5/task89 | DELA (TTS → F) |
 
 ### C. Start Anywhere / import (6 vhodnih tipov)
@@ -75,11 +75,11 @@
 | PDF (unpdf, %PDF- magija, max 60 strani; skeniran → poštena 422) | DA | ne | **task95 (94–352)** | DELA |
 | Google Pins (Takeout JSON/KML/besedilo; ≤25 km) | DA | ne | pins-ingest.test (29) — **M4 ZAPRT v 1.102.0** | DELA |
 | Slika/screenshot | ujemanje DA | **HARD — VLM; 502 brez ključev** | — | **AI-ONLY (ostaja iskrena izjema — slika nima besedila za det. parser)** |
-| Rezervacije (parse slika/PDF/besedilo → normalizacija → POTRDI) | normalizacija + parse-besedilo/PDF DA | parse: AI ali **deterministični regex fallback** | issue5-t5d-reservation-fallback (29) — **M1 ZAPRT v 1.104.0** (slika ostaja AI-ONLY) | **DELA** — brez ključev: `method:"deterministic", via:"fallback"`; smeti → iskren 422 + nasvet |
+| Rezervacije (parse slika/PDF/besedilo/ICS → normalizacija → POTRDI) | normalizacija + parse-besedilo/PDF/ICS DA | parse: AI ali **deterministični regex fallback** | issue5-t5d (29) + issue6-d6b-edge (28) — **M1 ZAPRT v 1.104.0, ICS dodan v 1.105.0** (slika ostaja AI-ONLY) | **DELA** — brez ključev: `method:"deterministic", via:"fallback"`; smeti → iskren 422 + nasvet |
 
 ### D. Trip platform (17 zmožnosti)
 
-Vse DELA (dokazi T5-a3 A1–A17): save (SHA-256 editToken + timing-safe), load/deljen pogled (404-nevidnost zasebnih), PATCH na mestu (CAS), **strežniške revizije + undo sklad (§22)**, sodelovanje (7-dnevna TTL vabila, vloga rangi owner/editor/viewer, `trip-permissions.ts` ena točka resnice), dokumenti (.ics + register — **PDF izvoz: `trip-itinerary-pdf.ts` + `/api/itinerary/shared/[shareId]/pdf` — M8 ZAPRT v 1.104.0**), stroški/proračun (TripExpense + 5 vedric), rezervacije (JourneyBooking lifecycle DRAFT→CONFIRMED→used, izvor vedno razkrit), transport (journey orchestrator), gost→račun kontinuiteta (localStorage → claim `/api/user/trips/claim`), svežina (FRESH/STALE/UNKNOWN/LIVE §17/§19), provenance.
+Vse DELA (dokazi T5-a3 A1–A17): save (SHA-256 editToken + timing-safe), load/deljen pogled (404-nevidnost zasebnih), PATCH na mestu (CAS), **strežniške revizije + undo sklad (§22)**, sodelovanje (7-dnevna TTL vabila, vloga rangi owner/editor/viewer, `trip-permissions.ts` ena točka resnice), dokumenti (.ics + register — **PDF izvoz: SL+EN + noge km/min + rezervacije — M8 ZAPRT v 1.104.0, dopolnjen v 1.105.0 (D6-B)**), stroški/proračun (TripExpense + 5 vedric), rezervacije (JourneyBooking lifecycle DRAFT→CONFIRMED→used, izvor vedno razkrit), transport (journey orchestrator), gost→račun kontinuiteta (localStorage → claim `/api/user/trips/claim`), svežina (FRESH/STALE/UNKNOWN/LIVE §17/§19), provenance.
 
 ### E. Map / Go Mode (13 zmožnosti)
 

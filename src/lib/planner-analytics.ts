@@ -45,6 +45,10 @@ export type PlannerEventName =
   | "stop_reordered"
   | "day_added"
   | "day_removed"
+  // D6-B (Issue #6, M7+): postanek prestavljen v PREJŠNJI/NASLEDNJI dan
+  // (props: from_day, to_day) — komplement stop_reordered (znotraj dneva);
+  // meri uporabo strelic med dnevi na kartici postanka.
+  | "stop_moved_to_day"
   | "itinerary_saved"
   | "map_opened"
   | "provider_detail_opened"
