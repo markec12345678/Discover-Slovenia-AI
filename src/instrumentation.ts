@@ -796,6 +796,13 @@ export async function register() {
         console.log(
           `[instrumentation] Migration baseline zabeležen: ${r.detail}`
         );
+      } else if (r.action === "healed") {
+        // HOTFIX 1.100.1: zastareli ZGODOVINSKI checksum (starejša
+        // različica kode) je bil samoozdravljen na trenutnega — dogodek
+        // je vreden lastne vrstice v logih (enkraten prehod).
+        console.log(
+          `[instrumentation] Migration baseline SAMOOZDRAVLJEN (1.100.1): ${r.detail}`
+        );
       } else if (
         r.action === "checksum-mismatch" ||
         r.action === "duplicate" ||
@@ -816,7 +823,9 @@ export async function register() {
             ? "unknown"
             : r.action === "skipped"
               ? "skipped"
-              : r.action === "recorded" || r.action === "already"
+              : r.action === "recorded" ||
+                  r.action === "already" ||
+                  r.action === "healed"
                 ? "ok"
                 : "failed", // checksum-mismatch | duplicate | index-failed
         detail: r.detail,

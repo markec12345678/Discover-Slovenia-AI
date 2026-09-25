@@ -53,6 +53,20 @@
  *       dvojniki), je potrebna ročna preverba;
  *     · dvojne vrstice z istim imenom (možne samo iz preteklih
  *       eksperimentov) poročamo kot duplicate (degraded).
+ *   - SAMOOZDRAVITEV (HOTFIX 1.100.1): repo vzorec "baseline raste z VAL-i"
+ *     (vsak VAL appenda DDL novih tabel v 20260916000000_baseline in
+ *     posodobi BASELINE_CHECKSUM v zaključku z datoteko — testna varovalka)
+ *     pomeni, da produkcija, ki je vrstico zabeležila v STAREJŠI različici
+ *     kode, po vsakem VAL-u pristane v checksum-mismatch — čeprav je njena
+ *     shema dejansko aktualna (zagotovile so jo additive startup migracije
+ *     schema:*, ki tečejo PRED tem korakom). Namesto ročnega "UPDATE
+ *     checksum" (kar priporoča detail sporočilo) modul to naredi sam —
+ *     vendar SAMO za checksume iz dovoljenega seznama znanih ZGODOVINSKIH
+ *     vrednosti te konstante (HISTORICAL_BASELINE_CHECKSUMS). Neznan
+ *     checksum ostane checksum-mismatch: pravi drift (ročni eksperiment,
+ *     tuja baza) se NE more prikriti za samoozdravitveno pot. Heal je
+ *     optimistično varen (UPDATE … WHERE checksum = <stari>) in
+ *     idempotenten (naslednji hladni zagon vidi "already").
  *   - FAIL-OPEN: napaka se zalogira, zagon strežnika se nadaljuje (a
  *     degraded stanja zdaj postanejo VIDNA na /api/health — 503);
  *   - Izklop: DSA_DISABLE_BASELINE_RESOLVE=1.
@@ -74,6 +88,33 @@ export const BASELINE_MIGRATION_ID = "20260916000000_baseline";
 export const BASELINE_CHECKSUM =
   "09271942094c36cd0c25a5b7b9259dfe1010a9d4d8ccedc50f35cb5a848537bd";
 
+/**
+ * Vsi ZGODOVINSKI checksumi BASELINE_CHECKSUM konstante, ki so kdaj koli
+ * živeli v main veji (izračunano iz git zgodovine — HOTFIX 1.100.1):
+ *
+ *   · 4601d3b8… — 1.30.0 → 1.35.0 era (vrstica na Render/Neon produkciji
+ *     izvira iz tega obdobja)
+ *   · 986e3a7a… — VAL 2 (1.93.0, commit c04ab67)
+ *   · 08ca0668… — VAL 3 (1.94.0, commit 881d027)
+ *   · c451adf6… — VAL 4 (1.96.0, commit 46209a7)
+ *   · 09271942… — VAL 5 (1.97.0, commit 27151ea) = sedanja BASELINE_CHECKSUM
+ *
+ * Namen: samoozdravitev zastarele (a legitimne) produkcijske vrstice — glej
+ * opombo SAMOOZDRAVITEV v glavi modula. Dovoljenje za heal ima SAMO
+ * checksum, ki ga je zapisala neka prejšnja različica tega modula; vsak
+ * drugi (neznan) checksum ostane checksum-mismatch (pravi drift).
+ *
+ * Vzdrževanje: ob vsaki prihodnji spremembi baseline datoteke dodaj PREJŠNJO
+ * vrednost BASELINE_CHECKSUM sem (in posodobi BASELINE_CHECKSUM) — test
+ * varovalka preverja, da je seznam brez podvojitev in brez sedanje vrednosti.
+ */
+export const HISTORICAL_BASELINE_CHECKSUMS: readonly string[] = [
+  "4601d3b8de3fc0fde6b99ad893ee8907c005c979b2141d54a4f3d367e979a384",
+  "986e3a7a3d7559ce13ef0cb66ee8bc75bc48cd19133336ff1bbe8183ed94f24b",
+  "08ca0668110ced5b5d833aa1edbc6e0bb3109a70c8d82da37f4e465198408e45",
+  "c451adf668638707b56d9d2dc7200b9a48bef3371f2aa48cd489acecd4bdda9a",
+];
+
 /** Strukturalni tip, ki ga sprejme resolve (omogoča testiranje z lastnim klientom). */
 type SchemaDb = Pick<PrismaClient, "$queryRawUnsafe" | "$executeRawUnsafe">;
 
@@ -90,10 +131,16 @@ export interface BaselineResolveResult {
    *   · duplicate — več vrstic z istim imenom (podvojeni vnosi);
    *   · index-failed — unique varovalka ni bila ustvarjena, zato vrstice
    *     NISMO zapisali (dirkalno-nevarna pot umaknjena).
+   *
+   * healed (HOTFIX 1.100.1) — vrstica je obstajala z ZGODOVINSKIM (znanim)
+   * checksumom; optimistični UPDATE jo je uskladil s trenutno konstanto.
+   * Preslika se v status "ok" (zgodovina je zdaj sinhrona), detail
+   * razkriva izvor (katere različice je checksum zapisala).
    */
   action:
     | "recorded"
     | "already"
+    | "healed"
     | "skipped"
     | "checksum-mismatch"
     | "duplicate"
@@ -207,6 +254,72 @@ export async function resolvePrismaBaselineWith(
     const rowChecksum =
       row && typeof row.checksum === "string" ? row.checksum : String(row?.checksum ?? "");
     if (rowChecksum !== BASELINE_CHECKSUM) {
+      // SAMOOZDRAVITEV (HOTFIX 1.100.1): checksum, ki ga je zapisala
+      // prejšnja različica tega modula (git-znan seznam), pomeni le
+      // ZASTARELO vrstico — shema na produkciji je bila medtem
+      // posodobljena z additive startup migracijami (schema:*, ki tečejo
+      // PRED tem korakom), torej trditev "ta baseline je uporabljen"
+      // drži tudi za novo vsebino datoteke. Uskladimo jo optimistično
+      // (WHERE stari checksum — varno tudi ob sočasnih zagonih).
+      if (HISTORICAL_BASELINE_CHECKSUMS.includes(rowChecksum)) {
+        let healedRows = 0;
+        try {
+          healedRows = await client.$executeRawUnsafe(
+            `UPDATE "_prisma_migrations" SET "checksum" = '${BASELINE_CHECKSUM}' ` +
+              `WHERE "migration_name" = '${BASELINE_MIGRATION_ID}' AND "checksum" = '${rowChecksum}'`
+          );
+        } catch (error) {
+          // Fail-open proti zagonu, a NE proti resnici: heal ni uspel
+          // (pravice?) — stanje ostane prijavljeno kot checksum-mismatch.
+          return {
+            dialect,
+            action: "checksum-mismatch",
+            detail:
+              `baseline vrstica ima zastareli znani checksum ${rowChecksum.slice(0, 8)}…, ` +
+              `a samoozdravitev (UPDATE) ni uspela: ${String(error).slice(0, 120)} — ` +
+              `ročno uskladi checksum (glej docs/DEPLOYMENT.md 4a)`,
+          };
+        }
+        if (healedRows > 0) {
+          return {
+            dialect,
+            action: "healed",
+            detail:
+              `baseline vrstica je imela ZGODOVINSKI checksum ${rowChecksum.slice(0, 8)}… ` +
+              `(zapisala ga je starejša različica kode) — samoozdravljen na ` +
+              `${BASELINE_CHECKSUM.slice(0, 8)}… (optimistični UPDATE). Zgodovina je ` +
+              `zdaj sinhrona, db:deploy vrata varna`,
+          };
+        }
+        // 0 zadetih vrstic: sočasna instanca je vrstico že uskladila (ali
+        // jo pravkar spreminja) — končno stanje presodimo ponovnim branjem.
+        const recheck = (await client.$queryRawUnsafe(
+          `SELECT "checksum" FROM "_prisma_migrations" WHERE "migration_name" = '${BASELINE_MIGRATION_ID}'`
+        )) as unknown[];
+        const recheckRow = Array.isArray(recheck)
+          ? (recheck[0] as { checksum?: unknown } | undefined)
+          : undefined;
+        const recheckChecksum =
+          recheckRow && typeof recheckRow.checksum === "string" ? recheckRow.checksum : "";
+        if (recheckChecksum === BASELINE_CHECKSUM) {
+          return {
+            dialect,
+            action: "already",
+            detail:
+              `baseline usklajen s strani sočasne instance (zgodovinska ` +
+              `vrstica ${rowChecksum.slice(0, 8)}… je bila v tem času že ` +
+              `samoozdravljena) — zgodovina sinhrona`,
+          };
+        }
+        return {
+          dialect,
+          action: "checksum-mismatch",
+          detail:
+            `baseline vrstica se je med samoozdravitvenim UPDATE spremenila ` +
+            `(sedaj ${recheckChecksum.slice(0, 8) || "(prazen)"}…) — ponovni zagon bo ` +
+            `stanje presodil znova`,
+        };
+      }
       return {
         dialect,
         action: "checksum-mismatch",

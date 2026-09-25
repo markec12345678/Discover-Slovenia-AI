@@ -293,6 +293,23 @@ Izklop: `DSA_DISABLE_BASELINE_RESOLVE=1`. Uspeh preveriš na javnem
 `/api/health` → `startup[]` → `migrate:baseline` (`ok`, detail
 "zabeležen" oz. "že zabeležen").
 
+**Samoozdravitev zastarelega checksuma (1.100.1):** repni vzorec je, da
+VAL-i appendajo DDL novih tabel v baseline datoteko (in posodobijo
+`BASELINE_CHECKSUM` v zaključku s testno varovalko). Produkcija, ki je
+vrstico zabeležila s starejšo konstanto, bi sicer po vsakem VAL-u padla v
+`checksum-mismatch` (degraded → health 503) — čeprav je njena shema
+aktualna (zagotovijo jo additive startup migracije `schema:*`, ki tečejo
+PRED `migrate:baseline`). Zato `resolvePrismaBaseline` od 1.100.1 ob
+odstopanju preveri `HISTORICAL_BASELINE_CHECKSUMS` (git izračunan allowlist
+vseh prejšnjih vrednosti konstante) in zastarelo vrstico uskladi z
+optimističnim `UPDATE … WHERE checksum = <stari>` — akcija `healed` se na
+`/api/health` prikaže kot `ok`, detail razkrije izvor. Neznan checksum
+ostane `checksum-mismatch`: pravi drift (ročni eksperiment, tuja baza) se
+ne more prikriti za samoozdravitveno pot. **Vzdrževanje:** ob naslednji
+spremembi baseline datoteke dodaj prejšnjo vrednost `BASELINE_CHECKSUM` v
+zgodovinski seznam (test varovalka preverja edinstvenost in odsotnost
+sedanje vrednosti).
+
 Ročna alternativa (ekvivalentno — za audite ali pred-1.30 baze):
 
 ```bash

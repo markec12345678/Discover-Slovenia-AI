@@ -7,6 +7,48 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.100.1] — 2026-09-25 (HOTFIX: SAMOOZDRAVITEV migrate:baseline checksuma — produkcija health degraded → ok)
+
+### Popravljeno
+
+- **Zastareli ZGODOVINSKI baseline checksum na produkciji (Render/Neon)**:
+  vrstica `_prisma_migrations` za `20260916000000_baseline` je bila zapisana
+  v eri 1.30.0–1.35.0 (checksum `4601d3b8…`); vsak kasnejši VAL (2–5), ki po
+  repnem vzorcu appenda DDL novih tabel v baseline datoteko in posodobi
+  `BASELINE_CHECKSUM`, je hladni zagon pustil v `checksum-mismatch` →
+  `/api/health` `degraded` (503) — čeprav je bila produkcijska shema
+  dejansko aktualna (posodobile so jo additive startup migracije `schema:*`,
+  ki tečejo PRED `migrate:baseline`; vseh 15 preverb `ok`). VAL 8 je stanje
+  dokumentiral kot „znan operativni korak"; ta hotfix ga razreši trajno.
+- **Samoozdravitev (allowlist, ne splošna izjema)**: `resolvePrismaBaseline`
+  ob odstopanju preveri `HISTORICAL_BASELINE_CHECKSUMS` (git izračunan seznam
+  VSEH 4 prejšnjih vrednosti konstante: `4601d3b8` 1.30–1.35 era, `986e3a7a`
+  VAL 2, `08ca0668` VAL 3, `c451adf6` VAL 4) → optimistični
+  `UPDATE … WHERE checksum = <stari>` (varen ob sočasnih zagonih,
+  idempotenten) → nova akcija `healed` → status `ok` z detailom, ki razkriva
+  izvor. Neznan checksum OSTANE `checksum-mismatch` — pravi drift (ročni
+  eksperiment, tuja baza) se ne more prikriti za heal pot. Odpoved UPDATE-a
+  (pravice) poroča `checksum-mismatch` z namigom na ročno uskladitev
+  (fail-open proti zagonu, ne proti resnici). Dirko dveh instanc pokrijeta
+  optimistični WHERE + ponovno branje (`already` oz. ponovna presoja).
+- **Učinek na produkciji**: po deployu tega hotfixa prvi hladni zagon izvede
+  heal (enkraten prehod — lastna vrstica v logih; naslednji zagoni `already`)
+  → `/api/health` status `ok`, `migrate:baseline` vrata za `db:deploy`
+  (`prisma migrate deploy`) so varna.
+- **Docs**: `docs/DEPLOYMENT.md` 4a razširjen z vzorcem vzdrževanja (ob
+  spremembi baseline datoteke dodaj prejšnji checksum v zgodovinski seznam).
+
+### Testi
+
+- +6 v `prisma-baseline-migration` (16/16 v datoteki): `healed` s
+  optimističnim UPDATE (WHERE AND na stari checksum + ime, brez INSERT),
+  vsaka od 4 zgodovinskih vrednosti se ozdravi, dirke (0 vrstic → ponovno
+  branje → `already` / `checksum-mismatch`), odpoved UPDATE-a, varovalka
+  seznama (edinstveni, 64-hex, brez sedanje vrednosti) in neznan checksum
+  NE sproži heal-a.
+
+---
+
 ## [1.100.0] — 2026-09-25 (ISSUE #4 VAL 8: §23 SHARE LINKS + PRIVACY · §24 SECURITY + ABUSE)
 
 > Zadnji P3 ostanek Issue #4. Dva ločena read-only audita (20-a §23, 20-b §24)
