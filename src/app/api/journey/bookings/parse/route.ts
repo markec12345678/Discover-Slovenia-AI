@@ -21,12 +21,20 @@ import {
   parseIcsReservation,
   isIcsInput,
 } from "@/lib/reservation-ics-parse";
+// TASK 31 (Tier 1 #3): surova e-pošta (RFC 5322) → čist MIME bralnik →
+// obstoječi parserji (besedilo/ICS/PDF) — TripItov model brez storitve.
+import {
+  parseEmailSource,
+  emailTextForParsing,
+  MAX_RAW_EMAIL_CHARS,
+} from "@/lib/email-mime-parse";
 
 // ============================================================================
 // POST /api/journey/bookings/parse — ISSUE #4 §4: STATELESS AI EKSTRAKCIJA
 // ============================================================================
-// Prebere potrdilo o rezervaciji (SLIKA screenshot/foto, PDF ali PRILEPLJENO
-// BESEDILO e-pošte) in vrne NORMALIZIRANA polja — NIČ SE NE ZAPIŠE.
+// Prebere potrdilo o rezervaciji (SLIKA screenshot/foto, PDF, PRILEPLJENO
+// BESEDILO e-pošte ali SUROVA E-POŠTA — glava + MIME) in vrne NORMALIZIRANA
+// polja — NIČ SE NE ZAPIŠE.
 //
 // Načelo (ista disciplina kot ingest-image / ingest-pdf):
 //  · AI (VLM/LLM) SAMO prebere dokument in ekstrahira polja, ki so v njem
@@ -42,17 +50,31 @@ import {
 //    v rezervi prebere BOLJ SPECIFIČEN VEVENT parser
 //    (lib/reservation-ics-parse.ts) PREJ generičnega besedilnega —
 //    specifično pred splošnim; odgovorna pogodba je IDENTIČNA;
+//  · TASK 31 (Tier 1 #3): { email } = SUROVA e-pošta (RFC 5322 — izvorna
+//    koda iz Gmaila/Outlooka ali .eml). Deterministični MIME bralnik
+//    (lib/email-mime-parse.ts, 0 odvisnosti) razstavi glavo + telo +
+//    priloge; kaskada (specifično pred splošnim):
+//      1. .ics priloga → VEVENT parser (0 AI — strukturirani podatki,
+//         via:"email-ics");
+//      2. besedilo (Subject + text/plain pred html) → ISTA kaskada kot
+//         zavihek Besedilo (AI → deterministična rezerva);
+//      3. .pdf priloga → ISTA kaskada kot zavihek Dokument (unpdf → AI →
+//         rezerva);
+//      4. nič uporabnega → iskren 422 z nasvetom (ročni vnos / Besedilo).
+//    Subject se prišteje besedilu — pogosto nosi ponudnika + št. rezervacije.
 //  · ZAPIO samo uporabnik po pregledu in potrditvi (gumb v UI) — prek
 //    /api/journey/bookings/import; nezanesljiv parsing ostane DRAFT;
 //  · vir parsanja razkrijemo v odgovoru (`via`) — kot pri ingest slikah.
 //
-// Vhod: { image: dataURL } | { pdf: dataURL } | { text: string } (ena možnost).
+// Vhod: { image: dataURL } | { pdf: dataURL } | { text: string } |
+//       { email: string } — ENA možnost.
 // Izhod: { fields: ParsedReservation, providerSlug, providerProductId,
 //          via, needsConfirmation } — vse za predogled UI obrazca.
 //
 // Varnost: rate limit 6/min (drag AI klic); slika ≤ 6 MB base64 JPEG/PNG/WebP;
 // PDF ≤ 8 MB base64 + max 60 strani (isti cap kot ingest-pdf); besedilo ≤
-// 20_000 znakov. Dokument se NE shrani nikamor (pomnilnik → pozabljen).
+// 20_000 znakov; e-pošta ≤ 2 MB surovega vira (pokrije bazo64 priloge).
+// Dokument se NE shrani nikamor (pomnilnik → pozabljen).
 // ============================================================================
 
 const MAX_BASE64_CHARS_IMAGE = 6 * 1024 * 1024;
@@ -136,6 +158,158 @@ function deterministicParseResponse(text: string): NextResponse {
   );
 }
 
+/**
+ * TASK 31 (Tier 1 #3): uspešen AI odgovor — ISTA pogodba kot prej, izvzeta
+ * v skupni gradnik (kaskadi besedila/PDF/e-pošte si delita izhod).
+ */
+function aiParseResponse(fields: ParsedReservation, via: string): NextResponse {
+  const providerSlug = providerSlugFromName(fields.providerName);
+  const providerProductId = importedProductId(
+    providerSlug,
+    fields.reservationNumber
+  );
+  return NextResponse.json(
+    {
+      method: "ai" as const,
+      via,
+      fields,
+      providerSlug,
+      providerProductId,
+      needsConfirmation: fields.needsConfirmation,
+      // ISKRENOST: parse SAMO prebere — zapis (tudi CONFIRMED) zahteva
+      // uporabnikovo potrditev v naslednjem koraku (import ruta).
+      persisted: false,
+    },
+    { status: 200 }
+  );
+}
+
+/**
+ * TASK 31 (Tier 1 #3): deterministični izhod iz E-POŠTNE .ics priloge —
+ * strukturirani podatki (VEVENT), AI ni potreben; via:"email-ics" iskreno
+ * razkrije kanal (priloga koledarja v posredovani e-pošti).
+ */
+function deterministicEmailResponse(
+  fields: ParsedReservation,
+  via: string
+): NextResponse {
+  const providerSlug = providerSlugFromName(fields.providerName);
+  const providerProductId = importedProductId(
+    providerSlug,
+    fields.reservationNumber
+  );
+  return NextResponse.json(
+    {
+      method: "deterministic" as const,
+      via,
+      fields,
+      providerSlug,
+      providerProductId,
+      needsConfirmation: fields.needsConfirmation,
+      persisted: false,
+    },
+    { status: 200 }
+  );
+}
+
+/**
+ * Skupna BESEDILO kaskada (zavihek Besedilo + besedilo iz e-pošte):
+ * AI najprej (ko je na voljo), iskrena deterministična rezerva (M1) —
+ * prestavljena 1:1 iz bivše `text` veje (ista pogodba, isti viri).
+ */
+async function textParseCascade(text: string): Promise<NextResponse> {
+  if (text.length > MAX_TEXT_CHARS) {
+    return NextResponse.json(
+      { error: "Besedilo je predolgo (največ 20.000 znakov)." },
+      { status: 413 }
+    );
+  }
+  const completion = await generateCompletion(
+    [
+      {
+        role: "user" as const,
+        content: `${RESERVATION_PARSE_PROMPT}\n\n--- DOCUMENT TEXT ---\n${text}`,
+      },
+    ],
+    {
+      jsonMode: true,
+      maxTokens: 2048,
+      usageLog: { feature: "reservation_parse" },
+    }
+  );
+  if (!completion) {
+    // M1 (T5-D): AI nedosegljiv → deterministični parser nad prilepljenim
+    // besedilom (0 AI žetonov, enaka normalizacija kot AI pot).
+    return deterministicParseResponse(text);
+  }
+  const fields = normalizeParsedReservation(completion.content);
+  if (
+    fields.providerName == null &&
+    fields.reservationNumber == null &&
+    fields.startDateTime == null
+  ) {
+    // AI je odgovoril, a ničesar ni izluščil (deformiran izhod) → rezerva
+    // nad istim besedilom; če tudi ta ne prepozna nič → iskren 422 znotraj
+    // deterministicParseResponse (napaka je v dokumentu, ne v storitvi).
+    return deterministicParseResponse(text);
+  }
+  return aiParseResponse(fields, completion.source);
+}
+
+/**
+ * Skupna PDF kaskada (zavihek Dokument + .pdf priloga iz e-pošte):
+ * unpdf besedilna ekstrakcija (0 AI) → AI → iskrena deterministična rezerva.
+ */
+async function pdfParseCascade(base64: string): Promise<NextResponse> {
+  // unpdf besedilna ekstrakcija (0 AI) — isti cap kot ingest-pdf.
+  const pdfText = await extractPdfText(base64);
+  if (pdfText == null) {
+    return NextResponse.json(
+      {
+        error:
+          "PDF ni bil mogoče prebrati. Če je skeniran (slika), naredi posnetek zaslona in uporabi zavihek Slika.",
+      },
+      { status: 422 }
+    );
+  }
+  if (pdfText.trim().length === 0) {
+    return NextResponse.json(
+      {
+        error:
+          "V PDF-u ni besedila (skeniran dokument) — naredi posnetek zaslona in uporabi zavihek Slika.",
+      },
+      { status: 422 }
+    );
+  }
+  const completion = await generateCompletion(
+    [
+      {
+        role: "user" as const,
+        content: `${RESERVATION_PARSE_PROMPT}\n\n--- DOCUMENT TEXT ---\n${pdfText.slice(0, 60_000)}`,
+      },
+    ],
+    {
+      jsonMode: true,
+      maxTokens: 2048,
+      usageLog: { feature: "reservation_parse" },
+    }
+  );
+  if (!completion) {
+    // M1 (T5-D): AI nedosegljiv → deterministični parser nad unpdf
+    // besedilom (ista besedila, ki bi jih dobil LLM — 0 AI žetonov).
+    return deterministicParseResponse(pdfText);
+  }
+  const fields = normalizeParsedReservation(completion.content);
+  if (
+    fields.providerName == null &&
+    fields.reservationNumber == null &&
+    fields.startDateTime == null
+  ) {
+    return deterministicParseResponse(pdfText);
+  }
+  return aiParseResponse(fields, completion.source);
+}
+
 export async function POST(request: Request) {
   const limited = rateLimit(request, {
     limit: 6,
@@ -154,24 +328,25 @@ export async function POST(request: Request) {
   const image = typeof body.image === "string" ? body.image.trim() : "";
   const pdf = typeof body.pdf === "string" ? body.pdf.trim() : "";
   const text = typeof body.text === "string" ? body.text.trim() : "";
-  const provided = [image, pdf, text].filter(Boolean).length;
+  const email = typeof body.email === "string" ? body.email.trim() : "";
+  const provided = [image, pdf, text, email].filter(Boolean).length;
   if (provided === 0) {
     return NextResponse.json(
-      { error: "Manjka vhod: image (data URL), pdf (data URL) ali text." },
+      {
+        error:
+          "Manjka vhod: image (data URL), pdf (data URL), text ali email (surova e-pošta).",
+      },
       { status: 400 }
     );
   }
   if (provided > 1) {
     return NextResponse.json(
-      { error: "Posreduj SAMO EN vhod (image ALI pdf ALI text)." },
+      { error: "Posreduj SAMO EN vhod (image ALI pdf ALI text ALI email)." },
       { status: 400 }
     );
   }
 
   try {
-    let fields: ParsedReservation;
-    let via: string;
-
     if (image) {
       if (image.length > MAX_BASE64_CHARS_IMAGE) {
         return NextResponse.json(
@@ -204,9 +379,13 @@ export async function POST(request: Request) {
           { status: 502 }
         );
       }
-      via = vision.source;
-      fields = normalizeParsedReservation(vision.content);
-    } else if (pdf) {
+      return aiParseResponse(
+        normalizeParsedReservation(vision.content),
+        vision.source
+      );
+    }
+
+    if (pdf) {
       if (pdf.length > MAX_BASE64_CHARS_PDF) {
         return NextResponse.json(
           { error: "PDF je prevelik (največ ~6 MB)." },
@@ -223,113 +402,61 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      // unpdf besedilna ekstrakcija (0 AI) — isti cap kot ingest-pdf.
-      const pdfText = await extractPdfText(parsed.base64);
-      if (pdfText == null) {
+      return await pdfParseCascade(parsed.base64);
+    }
+
+    if (email) {
+      // TASK 31 (Tier 1 #3): surova e-pošta → MIME razstavitev (0 AI) →
+      // obstoječe kaskade. Subject se prišteje besedilu (pogosto nosi
+      // ponudnika + št. rezervacije).
+      if (email.length > MAX_RAW_EMAIL_CHARS) {
         return NextResponse.json(
-          {
-            error:
-              "PDF ni bil mogoče prebrati. Če je skeniran (slika), naredi posnetek zaslona in uporabi zavihek Slika.",
-          },
-          { status: 422 }
-        );
-      }
-      if (pdfText.trim().length === 0) {
-        return NextResponse.json(
-          {
-            error:
-              "V PDF-u ni besedila (skeniran dokument) — naredi posnetek zaslona in uporabi zavihek Slika.",
-          },
-          { status: 422 }
-        );
-      }
-      const completion = await generateCompletion(
-        [
-          {
-            role: "user" as const,
-            content: `${RESERVATION_PARSE_PROMPT}\n\n--- DOCUMENT TEXT ---\n${pdfText.slice(0, 60_000)}`,
-          },
-        ],
-        {
-          jsonMode: true,
-          maxTokens: 2048,
-          usageLog: { feature: "reservation_parse" },
-        }
-      );
-      if (!completion) {
-        // M1 (T5-D): AI nedosegljiv → deterministični parser nad unpdf
-        // besedilom (ista besedila, ki bi jih dobil LLM — 0 AI žetonov).
-        return deterministicParseResponse(pdfText);
-      }
-      via = completion.source;
-      fields = normalizeParsedReservation(completion.content);
-      // AI je odgovoril, a ničesar ni izluščil (deformiran izhod) → rezerva
-      // nad istim besedilom; če tudi ta ne prepozna nič → iskren 422 znotraj
-      // deterministicParseResponse (napaka je v dokumentu, ne v storitvi).
-      if (
-        fields.providerName == null &&
-        fields.reservationNumber == null &&
-        fields.startDateTime == null
-      ) {
-        return deterministicParseResponse(pdfText);
-      }
-    } else {
-      // Besedilo (prilepljena potrditvena e-pošta)
-      if (text.length > MAX_TEXT_CHARS) {
-        return NextResponse.json(
-          { error: "Besedilo je predolgo (največ 20.000 znakov)." },
+          { error: "E-pošta je prevelika (največ 2 MB surovega vira)." },
           { status: 413 }
         );
       }
-      const completion = await generateCompletion(
-        [
+      const parsedEmail = parseEmailSource(email);
+      if (!parsedEmail.ok) {
+        return NextResponse.json(
           {
-            role: "user" as const,
-            content: `${RESERVATION_PARSE_PROMPT}\n\n--- DOCUMENT TEXT ---\n${text}`,
+            error:
+              "V prilepljenem besedilu ne prepoznavam strukture e-pošte (pričakovana glava s Subject/From + telo). Uporabi zavihek »Besedilo« ali vnesi rezervacijo ročno.",
           },
-        ],
-        {
-          jsonMode: true,
-          maxTokens: 2048,
-          usageLog: { feature: "reservation_parse" },
+          { status: 422 }
+        );
+      }
+      const msg = parsedEmail.message;
+      // 1. .ics priloga — SPECIFIČNO PREJ SPLOŠNIM (structured data, 0 AI):
+      if (msg.icsAttachment && isIcsInput(msg.icsAttachment)) {
+        const icsFields = parseIcsReservation(msg.icsAttachment);
+        if (!isReservationParseEmpty(icsFields)) {
+          return deterministicEmailResponse(icsFields, "email-ics");
         }
+        // prazna ICS vsebina → NE odnehaj: Subject/telo pogosto nosita
+        // ponudnika + št. rezervacije → nadaljuj na besedilno kaskado.
+      }
+      // 2. besedilo (Subject + text/plain pred html→text) — ISTA kaskada
+      //    kot zavihek Besedilo (AI → deterministična rezerva):
+      const emailText = emailTextForParsing(msg);
+      if (emailText) {
+        return await textParseCascade(emailText.slice(0, MAX_TEXT_CHARS));
+      }
+      // 3. .pdf priloga — ISTA kaskada kot zavihek Dokument:
+      if (msg.pdfAttachmentBase64) {
+        return await pdfParseCascade(msg.pdfAttachmentBase64);
+      }
+      // 4. nič uporabnega — iskren 422 z nasvetom:
+      return NextResponse.json(
+        {
+          error:
+            "Iz e-pošte nisem prepoznal uporabne vsebine (ni berljivega besedila, .ics ali .pdf priloge). Vnesi rezervacijo ročno.",
+        },
+        { status: 422 }
       );
-      if (!completion) {
-        // M1 (T5-D): AI nedosegljiv → deterministični parser nad prilepljenim
-        // besedilom (0 AI žetonov, enaka normalizacija kot AI pot).
-        return deterministicParseResponse(text);
-      }
-      via = completion.source;
-      fields = normalizeParsedReservation(completion.content);
-      if (
-        fields.providerName == null &&
-        fields.reservationNumber == null &&
-        fields.startDateTime == null
-      ) {
-        return deterministicParseResponse(text);
-      }
     }
 
-    const providerSlug = providerSlugFromName(fields.providerName);
-    const providerProductId = importedProductId(
-      providerSlug,
-      fields.reservationNumber
-    );
-
-    return NextResponse.json(
-      {
-        method: "ai" as const,
-        via,
-        fields,
-        providerSlug,
-        providerProductId,
-        needsConfirmation: fields.needsConfirmation,
-        // ISKRENOST: parse SAMO prebere — zapis (tudi CONFIRMED) zahteva
-        // uporabnikovo potrditev v naslednjem koraku (import ruta).
-        persisted: false,
-      },
-      { status: 200 }
-    );
+    // Besedilo (prilepljena potrditvena e-pošta)
+    return await textParseCascade(text);
   } catch (error) {
     console.error("[journey/bookings/parse] POST napaka:", error);
     return NextResponse.json(

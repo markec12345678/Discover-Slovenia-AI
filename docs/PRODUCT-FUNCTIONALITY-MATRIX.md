@@ -1,6 +1,6 @@
 # PRODUCT-FUNCTIONALITY-MATRIX — Discover Slovenia AI
 
-> **Datum:** 2026-09-26 · **Verzija:** 1.100.3 (audit) / 1.102.0 (T5-B) / 1.104.0 (T5-D) / 1.106.0 (TASK 28 Tier 1: live-sync + overjena rezervacija) / 1.107.0 (TASK 30 Tier 1 #4: Lighthouse + CWV vrata) · **HEAD ob auditu:** a854404 · **Popravljeni v T5-B (1.102.0):** H1, H2, M3-chat, M4, M5, M6 · **Popravljeni v T5-C (1.103.0):** M11, M9-pot · **Popravljeni v T5-D (1.104.0):** M1, M7, M8, M9-arhiv, M10 (označeno spodaj)
+> **Datum:** 2026-09-26 · **Verzija:** 1.100.3 (audit) / 1.102.0 (T5-B) / 1.104.0 (T5-D) / 1.106.0 (TASK 28 Tier 1: live-sync + overjena rezervacija) / 1.107.0 (TASK 30 Tier 1 #4: Lighthouse + CWV vrata) / 1.108.0 (TASK 31 Tier 1 #3: uvoz rezervacij prek e-pošte — TripItov model) · **HEAD ob auditu:** a854404 · **Popravljeni v T5-B (1.102.0):** H1, H2, M3-chat, M4, M5, M6 · **Popravljeni v T5-C (1.103.0):** M11, M9-pot · **Popravljeni v T5-D (1.104.0):** M1, M7, M8, M9-arhiv, M10 (označeno spodaj)
 > **Namen:** Issue #5 „COMPLETE PRODUCT FUNCTIONALITY / DETERMINISTIC SDK + SCRIPTS FIRST" — Faza 2 (popolna funkcijska matrika), Faza 3 (AI odvisnosti), Faza 4 (SDK/scripts), Faza 5 (vrzeli). Izdelano iz TREH neodvisnih read-only revizij (dokazi `file:line`): [T5-a1 AI-odvisnosti](audit/t5-a1-ai-dependency.md) · [T5-a2 Discovery/Planning/Import](audit/t5-a2-capabilities-discovery-planning-import.md) · [T5-a3 Trip/Map/Offline/Skupnost/L10n/SDK](audit/t5-a3-capabilities-trip-map-offline-community-l10n-sdk.md).
 > **Metoda:** read-only analiza kode (src/, public/, scripts/, prisma/, docs/), žive sonde na lokalnem dev strežniku in produkciji (Render + Vercel), NI sprememb aplikacijske kode.
 
@@ -66,7 +66,7 @@
 | Ročna urejanja (remove/optimalno zaporedje/dodaj dogodek/kraj) | DA | ne | — | DELA — **M7 ZAPRT v 1.104.0 + D6-B v 1.105.0** (premik ↑/↓ + HTML5 drag + premik MED dnevi z mejno logiko; +dan/−dan 1–14 s potrditvenim dialogom ob postankih) |
 | Shrani/deli/e-pošta/ics/TTS/GO persist | shrani/deli/ics DA | TTS: AI-only | wave5/task89 | DELA (TTS → F) |
 
-### C. Start Anywhere / import (6 vhodnih tipov)
+### C. Start Anywhere / import (7 vhodnih tipov)
 
 | Vhod | Deterministično | AI | Test | Status |
 |---|---|---|---|---|
@@ -76,6 +76,7 @@
 | Google Pins (Takeout JSON/KML/besedilo; ≤25 km) | DA | ne | pins-ingest.test (29) — **M4 ZAPRT v 1.102.0** | DELA |
 | Slika/screenshot | ujemanje DA | **HARD — VLM; 502 brez ključev** | — | **AI-ONLY (ostaja iskrena izjema — slika nima besedila za det. parser)** |
 | Rezervacije (parse slika/PDF/besedilo/ICS → normalizacija → POTRDI) | normalizacija + parse-besedilo/PDF/ICS DA | parse: AI ali **deterministični regex fallback** | issue5-t5d (29) + issue6-d6b-edge (28) — **M1 ZAPRT v 1.104.0, ICS dodan v 1.105.0** (slika ostaja AI-ONLY) | **DELA** — brez ključev: `method:"deterministic", via:"fallback"`; smeti → iskren 422 + nasvet |
+| **E-pošta — surova RFC 5322 (TASK 31 / Tier 1 #3, 1.108.0)** | **DA — čist MIME bralnik** (RFC 2047 glave, QP/base64, multipart/alternative+mixed, .ics/.pdf priloge z magic preverbo, From+Subject+telo kaskada) | ne (AI izključno na izluščenem besedilu — ista M1 kaskada) | **task31-email-mime (19) + task31-email-route (10) + task31-email-inbound (17)** | **DELA — TripItov model**: zavihek E-pošta (ročno lepljenje, 0 zunanjih storitev) + dormant webhook `/api/journey/bookings/email-inbound` (žeton `DSA_EMAIL_INBOUND_TOKEN` → iskren 503 brez njega; USTVARI SAMO DRAFT §4, idempotentno, 0 AI) |
 
 ### D. Trip platform (17 zmožnosti)
 
@@ -175,7 +176,7 @@ config:secrets ne izpiše degradiranega AI načina v /api/health (svetujemo info
 | 6 | Shranjena pot → offline → zapri/odpri → itinerer/Go Mode → ponovna povezava | ✓ mehanizmi (sw strategije) — dokaz harness-ravni (iskreno); API-dim CI e2e od 1.104.0 |
 | 7 | Pot → deljenje → zasebnost/prevzem → pravilen dostop prejemnika | ✓ (§23: claim zahteva editToken, 404-nevidnost) |
 | 8 | Pot → sodelovanje → owner/editor/viewer | ✓ (§13: vrata + TTL) |
-| 9 | Pot → uvoz rezervacije → lifecycle → povezava z itinererjem | parse besedilo/PDF ✓ (deterministična rezerva od 1.104.0; slika AI-ONLY — iskrena izjema); ročni vnos + lifecycle + normalizacija ✓ |
+| 9 | Pot → uvoz rezervacije → lifecycle → povezava z itinererjem | parse besedilo/PDF/ICS/e-pošta ✓ (deterministična rezerva od 1.104.0; **e-pošta RFC 5322 v 1.108.0 — čist MIME bralnik**; slika AI-ONLY — iskrena izjema); ročni vnos + lifecycle + normalizacija ✓ |
 | 10 | Pot → proračun/stroški → skupne → revizije → persistenca | ✓ (5 vedric + TripExpense) |
 | 11 | Brskanje → filtri → podrobnost destinacije → POI → dodaj v izlet | ✓ — SmartSearch navigacija H1 zaprta v 1.102.0 (browser dokaz: klik Bled → /destinacija/bled) |
 

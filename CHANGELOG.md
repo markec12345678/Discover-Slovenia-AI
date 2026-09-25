@@ -7,6 +7,76 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.108.0] — 2026-09-26 (TASK 31 / Tier 1 #3: uvoz rezervacij prek e-pošte)
+
+### Dodano
+
+- **UVOZ REZERVACIJ PREK E-POŠTE (TripItov model — Tier 1 #3 benchmarka
+  Task 28, deterministično, 0 zunanjih odvisnosti)**: surova potrditvena
+  e-pošta (RFC 5322 — „izvorna koda“ iz Gmaila/Outlooka ali .eml) → čist
+  MIME bralnik → obstoječi parserji. Trije sklopi:
+  - **ČIST MIME bralnik `src/lib/email-mime-parse.ts`** (0 odvisnosti,
+    nikoli ne vrže): razpletena (folded) glava, RFC 2047 kodirane besede
+    (B/Q — Subject „Booking.com – potrditev“ je v izvorni kodi base64/QP
+    kodiran!), quoted-printable/base64/7bit telesa, multipart/alternative
+    (text/plain PRED text/html — vrstni red odjemalcev) + mixed/related
+    (rekurzivno, meja gnezdenja 5), priloge .ics (surovo besedilo) in .pdf
+    (base64 + magic preverba `%PDF-` — pokvarjena priloga = ni priloge),
+    best-effort charset (utf-8, ob izrazitih nadomestnih znakih latin1 —
+    slovenska pošta/windows-1250 iskreno dokumentirana), `htmlToText`
+    rezerva (style/script/head odstranjeni, entitete dekodirane).
+    `emailTextForParsing`: From (TripItov signal ponudnika — domena
+    pošiljatelja je znamka) + Subject + telo.
+  - **`POST /api/journey/bookings/parse` NOVI VHOD `{ email }`** (≤ 2 MB):
+    kaskada specifično-pred-splošnim — 1. .ics priloga → VEVENT parser
+    (0 AI, `via:"email-ics"`), 2. besedilo (From+Subject+telo) → ISTA
+    kaskada kot zavihek Besedilo (AI → deterministična rezerva M1),
+    3. .pdf priloga → ISTA kaskada kot zavihek Dokument (unpdf → AI →
+    rezerva), 4. nič → iskren 422 z nasvetom. Refaktor rute: skupni
+    gradniki `textParseCascade`/`pdfParseCascade`/`aiParseResponse`
+    (pogodbena niza `return deterministicParseResponse(text/pdfText)`
+    in vrstni red ICS-pred-besedilom ohranjen — obstoječi source-contract
+    testi 51/51 zeleni).
+  - **DORMANT WEBHOOK `POST /api/journey/bookings/email-inbound`**
+    (TripItov samodejni kanal — fail-closed, vzorec JOURNEY_PROVIDER_TOKEN):
+    brez `DSA_EMAIL_INBOUND_TOKEN` → iskren 503 (kanal izklopljen, 0
+    lažnega zelenja); žeton timing-safe (401). S strojnim žetonom:
+    deterministična kaskada (0 AI — webhook ne žge žetonov) → OSNUTEK
+    DRAFT (source IMPORTED, NIKOLI CONFIRMED — §4: potrjevanje je
+    izključno uporabnikovo dejanje) + idempotenca (isti dokument ne
+    podvoji zapisa; P2034 retry), shareId-obstoječnost preverjena (brez
+    sirot), surova pošta se NE shrani (samo normaliziran importData),
+    audit `RESERVATION_IMPORTED` (actorRole system, kanal + via +
+    tema ≤ 120 znakov). Asociacija (sessionKey/shareId) je odgovornost
+    pošiljatelja — plus-naslov ali telo (žeton + naslov, ki ga je
+    nastavil lastnik = pooblastilo, iskreno dokumentirano).
+- **UI: 4. zavihek »E-pošta«** v Rezervacijah (/pot/[shareId]): navodila
+  za izvorno kodo (Gmail ⋮ → Pokaži izvorno kodo; Outlook .eml; Apple
+  Mail Pogled → Izvorno kodo), monospace textarea, gumb »Preberi
+  e-pošto«, ISKRENA opomba da samodejni posredovalni naslov čaka
+  aktivacijo vhodnega kanala (ročno lepljenje dela danes).
+- `.env.example`: sekcija VHODNA POŠTA (DSA_EMAIL_INBOUND_TOKEN, dormant
+  pojasnilo).
+
+### Testi
+
+- **46 novih** v treh datotekah: `task31-email-mime-parse.test.ts` (19:
+  glava/QP/base64/RFC 2047/multipart/priloge/fold/LF-only/meje/pasti/
+  čistost) + `task31-email-parse-route.test.ts` (10: funkcionalno AI-off
+  + source-contract kaskade/UI) + `task31-email-inbound.test.ts` (17:
+  fail-closed 503/401, validacija, srečna pot DB 201 DRAFT, idempotenca,
+  email-ics, source-contract DRAFT-only + brez AI uvozov).
+
+### Meje (iskrene)
+
+- Samodejni posredovalni naslov (rezervacije@…) zahteva zunanjo vhodno
+  poštno storitev (SendGrid Inbound Parse / Postmark / SES) — kanal je
+  DORMANT do takrat (isti status kot Stripe); ročno lepljenje pa deluje
+  ČISTO (0 zunanjih odvisnosti).
+- Bralnik ni odjemalnik: message/rfc822 gnezdenje in image/* priloge so
+  namerno prezrte (potrdila jih ne nosijo); charset windows-1250 je
+  best-effort (surova resnica ostane v izvirniku).
+
 ## [1.107.0] — 2026-09-26 (TASK 30 / Tier 1 #4: Lighthouse + CWV vrata)
 
 ### Dodano

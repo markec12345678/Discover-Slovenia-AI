@@ -51,6 +51,7 @@ import {
   PenLine,
   CircleAlert,
   CircleCheck,
+  Mail,
 } from "lucide-react";
 import { getEditToken } from "@/lib/itinerary-share";
 
@@ -141,6 +142,9 @@ export function TripReservations({ shareId }: { shareId: string }) {
   const [parseMethod, setParseMethod] = useState<string | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [rawText, setRawText] = useState("");
+  // TASK 31 (Tier 1 #3): surova e-pošta (izvorna koda / .eml) — čist MIME
+  // bralnik na strežniku razširi glavo + priloge (ICS/PDF) v polja.
+  const [rawEmail, setRawEmail] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileKind, setFileKind] = useState<"image" | "pdf" | null>(null);
   const [fileData, setFileData] = useState<string | null>(null);
@@ -262,6 +266,43 @@ export function TripReservations({ shareId }: { shareId: string }) {
     }
   }, [fileData, fileKind, rawText]);
 
+  // ── Parse e-pošte (TASK 31: surova RFC 5322 → MIME → polja) ────────
+  const parseRawEmail = useCallback(async () => {
+    if (rawEmail.trim().length < 40) {
+      setParseError(
+        "Prilepi SUROVO e-pošto (glava s Subject/From + telo — vsaj 40 znakov)."
+      );
+      return;
+    }
+    setParsing(true);
+    setParseError(null);
+    try {
+      const r = await fetch("/api/journey/bookings/parse", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: rawEmail.slice(0, 2_000_000) }),
+      });
+      const data = (await r.json().catch(() => null)) as {
+        fields?: ParsedFields;
+        via?: string;
+        method?: string;
+        error?: string;
+      } | null;
+      if (!r.ok || !data?.fields) {
+        setParseError(data?.error ?? `Napaka ${r.status}`);
+        return;
+      }
+      setFields(data.fields);
+      setParseVia(data.via ?? null);
+      setParseMethod(data.method ?? null);
+      setFromParse(true);
+    } catch (e) {
+      setParseError(errText(e));
+    } finally {
+      setParsing(false);
+    }
+  }, [rawEmail]);
+
   // ── Zapis (ročni vnos USER / uvožen IMPORTED) ───────────────────────
   const saveReservation = useCallback(
     async (status: "DRAFT" | "CONFIRMED") => {
@@ -317,6 +358,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
         });
         setFromParse(false);
         setRawText("");
+        setRawEmail("");
         setFileData(null);
         setFileName(null);
         setFileKind(null);
@@ -506,6 +548,9 @@ export function TripReservations({ shareId }: { shareId: string }) {
                 <TabsTrigger value="text" className="gap-1.5">
                   <ClipboardType className="size-3.5" aria-hidden /> Besedilo
                 </TabsTrigger>
+                <TabsTrigger value="email" className="gap-1.5">
+                  <Mail className="size-3.5" aria-hidden /> E-pošta
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="manual">
@@ -579,6 +624,45 @@ export function TripReservations({ shareId }: { shareId: string }) {
                   ) : null}
                   Preberi besedilo
                 </Button>
+              </TabsContent>
+
+              <TabsContent value="email" className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Prilepi <strong>surovo potrditveno e-pošto</strong> (celotna
+                  izvorna koda, ne vidni del): v Gmailu{" "}
+                  <em>⋮ → Pokaži izvorno kodo</em>, v Outlooku shrani kot{" "}
+                  <em>.eml</em> in odpri z urejevalnikom besedila, v Apple
+                  Mail pa <em>Pogled → Sporočilo → Izvorna koda</em>. Bralnik
+                  razbere glavo, telo in priloge (.ics / .pdf).
+                </p>
+                <Textarea
+                  aria-label="Surova e-pošta s potrditvijo rezervacije"
+                  value={rawEmail}
+                  onChange={(e) => setRawEmail(e.target.value)}
+                  placeholder={
+                    "From: potrditve@getyourguide.com\r\nSubject: GetYourGuide — potrditev GYG-123456\r\nContent-Type: text/plain …\r\n\r\nVaša rezervacija je potrjena …"
+                  }
+                  rows={7}
+                  className="font-mono text-xs"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => void parseRawEmail()}
+                  disabled={parsing || rawEmail.trim().length < 40}
+                  className="gap-1.5"
+                >
+                  {parsing ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Mail className="size-4" aria-hidden />
+                  )}
+                  Preberi e-pošto
+                </Button>
+                <p className="text-[11px] leading-snug text-muted-foreground">
+                  {"Samodejno posredovanje (naslov "}
+                  <em>rezervacije@…</em>
+                  {", kamor posreduješ potrdila) bo omogočeno, ko aktiviramo vhodni poštni kanal — danes deluje ročno lepljenje."}
+                </p>
               </TabsContent>
             </Tabs>
 
