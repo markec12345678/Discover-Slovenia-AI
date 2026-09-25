@@ -7,6 +7,29 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.99.1] — 2026-09-25 (HOTFIX: schema provider sqlite ušel v repo)
+
+> Med VAL 7 produkcijo verifikacijo odkrita regresa LASTNEGA vala: commit
+> `5d00161` je prek `git add -A` vnesel `provider = "sqlite"` iz lokalnega
+> delovnega drevesa v REPO. Render je zgradil Prisma klienta iz sqlite sheme
+> + Postgres `DATABASE_URL` → `PrismaClientInitializationError` → health
+> degraded (13 DB korakov unknown) + `/pot/[shareId]` 500 na vseh branjih.
+
+### Popravek (`573d8ea`)
+
+- `provider = "postgresql"` povrnjen v repozitorij (produkcijska resnica);
+  lokalni dev sqlite ostaja SAMO v delovnem drevesu (edina dovoljena razlika).
+
+### Varovalka (smer pasti je bila NEOBVAROVANA)
+
+- `issue4-wave6-schema-parity.test.ts` ③: **HEAD shema MORA imeti
+  provider = "postgresql"** — parity test ① strippne provider vrstico pri
+  primerjavi modelov, zato sam ne ulovi napačne VREDNOSTI v repu; zdaj jo
+  (z glasnim navodilom za popravilo). Obe smeri pasti (zastareli modeli 1.98.1
+> + napačen provider 1.99.1) sta zdaj varovani.
+
+---
+
 ## [1.99.0] — 2026-09-25 (ISSUE #4 VAL 7: §18 DESTINATION CONTENT + OFFICIAL DATA)
 
 > Po §J ostanku P2 (§18 uradna vsebina — zadnji P2 sklop po VAL 6).

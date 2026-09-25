@@ -84,6 +84,35 @@ describe("ISSUE #4 VAL 6+ (1.98.1) — skip-worktree PAST: shema v repu = shema 
     expect(schema).toContain("source            String?");
     expect(schema).toContain("importData        String?");
   });
+
+  test("③ provider v HEAD je POSTGRESQL (produkcijska resnica — 1.99.1 HOTFIX past)", () => {
+    // PRETEKLOST (1.99.1): commit 5d00161 je pomotoma vnesel
+    // provider = "sqlite" v REPO (lokalna dev razlika je ušla prek
+    // git add -A). Render je zgradil Prisma klienta iz sqlite sheme +
+    // Postgres DATABASE_URL → PrismaClientInitializationError → health
+    // degraded + /pot 500 na VSAH branjih.
+    //
+    // Ta test strippru provider vrstico PRI PRIMERJAVI modelov (①), zato
+    // sam ZASEBNO ne preverja vrednosti — dopolnilna varovalka tu:
+    // HEAD (oddana produkciji) MORA imeti provider = "postgresql".
+    // Delovno drevo SME imeti sqlite (lokalni dev — edina dovoljena
+    // razlika), REPO pa NE.
+    const head = readHeadSchema();
+    if (head === null) {
+      console.warn("[schema-parity] git show HEAD nedosegljiv — preskočeno");
+      return;
+    }
+    if (!/provider\s*=\s*"postgresql"/.test(head)) {
+      throw new Error(
+        'HEAD prisma/schema.prisma nima provider = "postgresql"! ' +
+          "Repo je ODDAN produkciji (Render gradi klienta iz njega) — " +
+          "sqlite v repu zlomi vse DB poizvedbe (PrismaClientInitialization" +
+          "Error). Lokalni dev sqlite živi SAMO v delovnem drevesu: " +
+          'spremeni vrstico nazaj na provider = "postgresql", commit, ' +
+          "nato lokalno povrni sqlite."
+      );
+    }
+  });
 });
 
 describe("ISSUE #4 VAL 6+ (1.98.1) — client-parity modul (instrumentacijska varovalka)", () => {
