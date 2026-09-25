@@ -12,8 +12,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout
+      # 1.100.2 CI FIX: fetch-depth: 0 (polna zgodovina, ~58 MiB) — unit testi
+      # vsebujejo GIT-RESNICO past (ISSUE #4 §18/A: DESTINATIONS_DATA_AS_OF ≡
+      # zadnji avtorski datum commita slovenia-data.ts). Privzeti shallow klon
+      # (fetch-depth: 1) ima pritrjeno (grafted) korenino na pushanem commitu,
+      # zato `git log -- <pot>` vrne KAR pushani commit (današnji datum) namesto
+      # pravega zadnjega avtorja → past je lažno padala na VSAKEM pushu od VAL 7
+      # (5d00161) naprej (rdeči CI skrit za lokalno zelenimi vrati). Test ima
+      # tudi lastno varovalko: shallow klon → izrecen preskok z opozorilom.
+      - name: 📥 Checkout (polna git zgodovina — git-resnica testi)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 🥟 Setup Bun
         uses: oven-sh/setup-bun@v2

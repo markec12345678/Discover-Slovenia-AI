@@ -7,6 +7,39 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.100.2] — 2026-09-25 (HOTFIX: CI RDEČ od VAL 7 naprej — shallow-klon git-resnica past)
+
+### Popravljeno
+
+- **Skriti dolg odkrit in zaprt: CI je padal na VSAKEM pushu od VAL 7
+  (5d00161)** — en sam test, `ISSUE #4 §18/A: DESTINATIONS_DATA_AS_OF ≡
+  zadnji avtorski datum commita slovenia-data.ts`. Vzrok: `actions/checkout`
+  brez `fetch-depth` naredi SHALLOW klon (globina 1), ki ima pritrjeno
+  (grafted) korenino na pushanem commitu — `git log -1 --format=%as --
+  src/lib/slovenia-data.ts` vrne KAR pushani commit (današnji datum
+  `2026-09-25`), konstanta pa je `2026-09-20` (pravi zadnji avtor: 35fcc29,
+  TASK 62). Past je bila namenjena proti ZASTARELI konstanti, v shallow
+  klonu pa je lažno padla ob vsakem pushu (tudi VAL 8 3400e0c in 1.100.1
+  840f037). „CI zelen" v README je medtem veljal za LOKALNA vrata —
+  build job (Postgres + migration drift vrata + functional smoke) je bil zaradi
+  `needs: quality` preskočen in ni tekel od pred VAL 5.
+- **CI fix (dvojna obramba)**: (1) `.github/workflows/ci.yml` — quality job
+  checkout s `fetch-depth: 0` (polna zgodovina, ~58 MiB — git-resnica testi
+  se v CI dejansko izvedejo in varujejo konstanto); (2) test ima lastno
+  varovalko — ob zaznanem shallow klonu (`git rev-parse
+  --is-shallow-repository` = true) se izrecno preskoči z opozorilom
+  (forki/drugi runnerji s shallow checkoutu ne vidijo lažno rdečega CI).
+- Build job ostaja shallow (njegovi koraki — migrate diff, db push, build,
+  functional smoke — ne uporabljajo git zgodovine).
+
+### Testi
+
+- Brez novih testov (popravek je v obstoječem §18/A testu + CI workflowu);
+  2745/2745 · lint 0 · tsc 0 (src/) lokalno; CI po pushu ponovno teče v
+  celoti (quality → build → functional smoke) prvič od VAL 5.
+
+---
+
 ## [1.100.1] — 2026-09-25 (HOTFIX: SAMOOZDRAVITEV migrate:baseline checksuma — produkcija health degraded → ok)
 
 ### Popravljeno

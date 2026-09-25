@@ -73,6 +73,28 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 describe("ISSUE #4 §18/§A: DESTINATIONS_DATA_AS_OF sledi git resnici", () => {
   test("konstanta ≡ zadnji AVTORSKI datum commita slovenia-data.ts (past proti zastaranju)", () => {
+    // 1.100.2: shallow klon (npr. actions/checkout brez fetch-depth) ima
+    // pritrjeno (grafted) korenino na pushanem commitu — `git log -- <pot>`
+    // bi vrnil KAR pushani commit (današnji datum), konstanta pa se nanaša
+    // na PRAVO zgodovino datoteke. Past v shallow klonu ne more delovati →
+    // izrecen preskok z opozorilom (CI od 1.100.2 uporablja fetch-depth: 0,
+    // zato se tam dejansko izvede).
+    try {
+      const shallow = execFileSync(
+        "git",
+        ["rev-parse", "--is-shallow-repository"],
+        { encoding: "utf-8", timeout: 15_000 }
+      ).trim();
+      if (shallow === "true") {
+        console.warn(
+          "[§18] shallow klon zaznan — git-resnica past preskočena " +
+            "(zahteva polno zgodovino; CI od 1.100.2: fetch-depth: 0)"
+        );
+        return;
+      }
+    } catch {
+      // git neznan/nedosegljiv — pokriva ga spodnji try/catch
+    }
     let gitDate: string | null = null;
     try {
       gitDate = execFileSync(
