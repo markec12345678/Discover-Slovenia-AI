@@ -8,7 +8,8 @@ import type { Itinerary, RoutingMethod } from "@/lib/types";
 //
 // PROBLEM, ki ga ta plast rešuje: do F5.6 so VSE plasti (kvaliteta,
 // geo-validacija, stroški, vpogledi postankov) razdalje ocenjevale z
-// haversine × 1,3 ÷ 55 km/h. Za 22 znanih točk v Sloveniji ta hevristika
+// haversine × 1,3 ÷ 55 km/h. Za prvotnih 22 znanih točk v Sloveniji (danes
+// 38 destinacij nabora, ISSUE #4 §18) je ta hevristika
 // SYSTEMATIČNO ZAVAJA v OBEH smerih hkrati (izmerjeno na realnih poteh
 // sandboxa, L2 test):
 //   - ČAS na avtocestnih povezavah PRETIRAVA (LJ→Piran: hevristika ~131 min;

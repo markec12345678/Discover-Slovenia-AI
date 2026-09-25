@@ -300,3 +300,26 @@ raw SQL). Popravek d0fdbd9: polna shema v repo + 2 varovalki (instrumentation
 ≡ HEAD, izjema samo provider vrstica). Dokaz: 404 namesto 500 na neobstoječem
 shareId, /pot/fb4162e781 200, /api/trip 200 s contentVersion, VAL 6 LOCKED
 oznake preživijo produkcijski round-trip.
+
+## L. ISSUE #4 — VAL 7 ZAKLJUČEN (§18 DESTINATION CONTENT, 1.99.0, 2026-09-25)
+
+Po §J ostanku P2 (zadnji P2 sklop). Zahteva besedno: "Preveri 38 kuriranih
+destinacij: source, datum, jezik, last update, structured facts, images,
+links in seasonal information. STO ima leta 2026 NiST kot nacionalno
+podatkovno središče … Discover naj ga ne kopira, ampak naj po potrebi
+uporablja strukturirane javne podatke kot source layer z provenance,
+datumom, obdobjem, enoto in virom."
+
+| Sklop | Dostava | Dokaz |
+|---|---|---|
+| **§18 provenance plast** | ČIST modul `lib/destination-provenance.ts`: `DestinationProvenance` (kind/source/sourceUrl/verifiedAt, additive na Destination) + registr 9 uradnih virov (5 destinacijskih domen F5.5 + 4 STO kanonične strani — VSAK URL curl-preverjen 200; STO /sl/znamenitosti/* iz posnetka so 404, delujoče so /en/places-to-go/*) + allowlista domen + resolver (uradni ↔ ISKRENA uredniška kuracija brez izmišljenih virov) | 23 testov (§B pokritost 38/38, https+ISO+allowlista, internal BREZ URL-ja) |
+| **§18 NiST odkritost** | Raziskava (2 iskanji + curl, 2026-09-25): javnega NiST portala s strukturiranimi podatki NI bilo mogoče preverljivo doseči (zadetki: US NIST + splošne statistike). NE kopiramo, NE izmišljujemo integracije — /vir-podatkov amber opomba z ambasadorsko opombo: če postane javen, dodamo po istem vzorcu | /vir-podatkov sekcija (nistNote SL+EN) + test i18n paritete |
+| **§18 as-of resnica** | `DESTINATIONS_DATA_AS_OF` "2026-09-13" → "2026-09-20" (PREJ 7 dni NEREŠNIČNO — TASK 62 je spremenil vsebino ne konstanto); preseljena v destination-provenance.ts (enotna točka) + re-izvoz stop-insights | test past: konstanta ≡ `git log -1 --format=%as -- slovenia-data.ts` (vzorec schema-parity 1.98.1) |
+| **§18 UI resnica** | hub /destinacija/[slug] sekcija "Vir vsebine" (vir+povezava+posodobljeno+opening) · modal opening blok + provenance noga (SL/EN) · kartice /destinacije VIDEN "uredniška/editorial" ob ★ (prej samo sr-only) | E2E browser dokazi (ux-verify-issue4-val7/) |
+| **§18 bugfixi resnice** | addressCountry JSON-LD: hardkodiran "SI" → dest.country (16 HR/ME/AL destinacij je prej LAŽNO trdilo SI — Zagreb/Kotor/Tirana) · map-view EN lookup po id ne slug (4 destinacije tiho padle na SL) | testi §D (EN overlay 38/38 po ID) + §E (ISO country, 16 tujih obstaja) |
+| **§18 API + docs** | /api/destinations + [slug]: provenance per zapis + glava X-Data-As-Of (aditivno, nazaj kompatibilno; TASK 99-a fail-closed ovojnica nespremenjena) · zastareli komentarji 22→38 (slovenia-data-en, road-routing) | testi §H ovojnica + posodobljeni TASK 99-a source-contract |
+
+**Testi:** 2706/2706 (+23) · lint 0/0 · tsc 0 (src/).
+
+**Ostanek Issue #4 po VAL 7:** §23 (share/privacy preverba), §24 (security
+rate-limit dokumentacija) — P3 razred, nič ne blokira pilota.

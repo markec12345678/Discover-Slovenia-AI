@@ -35,11 +35,12 @@ export const NATURE_TYPES = new Set([
 ]);
 
 /**
- * Datum zadnje vsebinske spremembe dataseta destinacij (git: sled sprememb
- * src/lib/slovenia-data.ts). Prikazuje se kot "posodobljeno" v praktičnih
- * podatkih — pošteno, ker datoteka res ni bila nazadnje spreminjena prej.
+ * ISSUE #4 §18 (VAL 7): konstanta je PRESELJENA v lib/destination-provenance.ts
+ * (enotna točka resnice §18 + varovalka testov proti zastaranju — prejšnja
+ * vrednost "2026-09-13" je bila 7 dni neresnična, TASK 62 jo je prehitel).
+ * Re-izvoz ohranja obstoječe uvoze (stop-insights komponenta, /vir-podatkov).
  */
-export const DESTINATIONS_DATA_AS_OF = "2026-09-13";
+export { DESTINATIONS_DATA_AS_OF } from "@/lib/destination-provenance";
 
 /** Haversine razdalja med dvema točkama v km (enaka formula kot quality). */
 export function haversineKm(

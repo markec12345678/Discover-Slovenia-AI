@@ -594,6 +594,13 @@ function DestinationCard({
             <span className="font-semibold tabular-nums">
               {destination.rating.toFixed(1)}
             </span>
+            {/* ISSUE #4 §18 (VAL 7): VIDEN kvalifikator — ocena je
+                UREDNIŠKA (ne uporabniške recenzije). Prej je oznaka
+                živela samo v sr-only (bralniki) + map popupu; vidiči
+                uporabniki so videli golem ★ 4.8. */}
+            <span className="text-[10px] font-normal text-muted-foreground">
+              {t("editorialShort")}
+            </span>
             <span className="sr-only">{t("ratingLabel")}</span>
           </span>
           <span aria-hidden="true" className="text-border">·</span>

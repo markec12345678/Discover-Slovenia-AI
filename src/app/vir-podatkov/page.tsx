@@ -33,6 +33,13 @@ import {
 } from "@/lib/data-freshness";
 // §17: as-of datum dataseta destinacij — en vir resnice (stop-insights.ts).
 import { DESTINATIONS_DATA_AS_OF } from "@/lib/stop-insights";
+// ISSUE #4 §18 (VAL 7): provenance destinacijske vsebine — registr uradnih
+// virov + povzetek (števci/jezik) IZPELJANI iz modula, nikoli ročno.
+import {
+  officialSourceRows,
+  provenanceSummary,
+} from "@/lib/destination-provenance";
+import { DESTINATIONS } from "@/lib/slovenia-data";
 
 /**
  * /vir-podatkov — seznam virov podatkov (E-E-A-T).
@@ -247,6 +254,16 @@ export default async function DataSourcePage() {
     },
   ];
 
+  // ISSUE #4 §18 (VAL 7): povzetek provenance + vrstice uradnih virov —
+  // IZPELJANI iz lib/destination-provenance.ts (en vir resnice; tabela
+  // na strani nikoli ročno urejena).
+  const destinationProvenance = provenanceSummary(DESTINATIONS);
+  const nameById = new Map(DESTINATIONS.map((d) => [d.id, d.name] as const));
+  const officialDestinations = officialSourceRows().map((row) => ({
+    ...row,
+    name: nameById.get(row.id) ?? row.id,
+  }));
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <LanguageToggle path="/vir-podatkov" />
@@ -344,6 +361,103 @@ export default async function DataSourcePage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </section>
+
+        {/* === ISSUE #4 §18 (VAL 7): PROVENANCE DESTINACIJSKE VSEBINE === */}
+        {/* Zahteva: 38 kuriranih destinacij s source/datumom/jezikom/last
+            update; NiST NE kopiramo — strukturirani javni podatki kot source
+            layer s provenance. Vsi števci/URL-ji/datumi so IZPELJANI iz
+            lib/destination-provenance.ts (en vir resnice); NiST raziskava je
+            iskren zapis o odločitvi (ne lažna integracija). */}
+        <section aria-labelledby="destination-content-provenance" className="mt-12">
+          <h2 id="destination-content-provenance" className="text-2xl font-bold mb-3">
+            {t("destinationContent.title")}
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            {t("destinationContent.intro")}
+          </p>
+
+          <p className="mb-6 inline-flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs font-medium">
+            <span className="inline-block size-2 rounded-full bg-primary" aria-hidden="true" />
+            {t("destinationContent.statsLine", {
+              total: destinationProvenance.total,
+              official: destinationProvenance.official,
+              internal: destinationProvenance.internal,
+              asOf: destinationProvenance.asOf,
+            })}
+          </p>
+
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-xs border-collapse min-w-[560px]">
+              <thead>
+                <tr className="bg-muted/50">
+                  <th scope="col" className="text-left font-semibold p-2 border-b border-border whitespace-nowrap">
+                    {t("destinationContent.colDestination")}
+                  </th>
+                  <th scope="col" className="text-left font-semibold p-2 border-b border-border">
+                    {t("destinationContent.colSource")}
+                  </th>
+                  <th scope="col" className="text-left font-semibold p-2 border-b border-border whitespace-nowrap">
+                    {t("destinationContent.colVerified")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {officialDestinations.map((row) => (
+                  <tr key={row.id} className="align-top">
+                    <th scope="row" className="text-left font-medium p-2 border-b border-border/60 whitespace-nowrap">
+                      {row.name}
+                    </th>
+                    <td className="p-2 border-b border-border/60">
+                      <a
+                        href={row.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline underline-offset-2"
+                      >
+                        {row.source} →
+                      </a>
+                    </td>
+                    <td className="p-2 border-b border-border/60 whitespace-nowrap">
+                      <time dateTime={row.verifiedAt}>
+                        {row.verifiedAt.replaceAll("-", ". ")}
+                      </time>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-6 space-y-4">
+            <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
+              <h3 className="text-sm font-semibold mb-1">
+                {t("destinationContent.internalTitle")}
+              </h3>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {t("destinationContent.internalNote", {
+                  internal: destinationProvenance.internal,
+                  asOf: destinationProvenance.asOf,
+                })}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
+              <h3 className="text-sm font-semibold mb-1">
+                {t("destinationContent.langTitle")}
+              </h3>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {t("destinationContent.langNote")}
+              </p>
+            </div>
+            <div className="rounded-lg border border-amber-300/70 bg-amber-50/70 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
+              <h3 className="text-sm font-semibold mb-1 text-amber-900 dark:text-amber-200">
+                {t("destinationContent.nistTitle")}
+              </h3>
+              <p className="text-xs leading-relaxed text-amber-900 dark:text-amber-200">
+                {t("destinationContent.nistNote")}
+              </p>
+            </div>
           </div>
         </section>
 

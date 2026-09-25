@@ -88,14 +88,19 @@ describe("TASK 99-a: /api/destinations — JSON napaka namesto 500 HTML", () => 
     expect(destinationsRoute).not.toContain("Podatkovna baza");
   });
 
-  test("uspešna pot NESPREMENJENA: isti filtri + oblika odgovora", () => {
+  test("uspešna pot: isti filtri + oblika odgovora (§18 aditivno)", () => {
     // select/where ekvivalent na statičnih podatkih:
     expect(destinationsRoute).toContain("let result = DESTINATIONS;");
     expect(destinationsRoute).toContain("d.region === region");
     expect(destinationsRoute).toContain("result.filter((d) => d.featured)");
-    // response shape:
-    expect(destinationsRoute).toContain("destinations: result,");
-    expect(destinationsRoute).toContain("total: result.length,");
+    // response shape (ISSUE #4 §18 VAL 7: `enriched` = result + ADITIVNO
+    // polje provenance na vsakem zapisu; ključa destinations/total
+    // ostajata, oblika je nazaj kompatibilna — neznan polji odjemalci
+    // preprosto ne vidijo):
+    expect(destinationsRoute).toContain("destinations: enriched,");
+    expect(destinationsRoute).toContain("total: enriched.length,");
+    // §18: as-of žig v glavi (metapodatek, ne v telesu):
+    expect(destinationsRoute).toContain('"X-Data-As-Of": DESTINATIONS_DATA_AS_OF');
     // vir podatkov nespremenjen (statičen, NE prisma):
     expect(destinationsRoute).toContain('from "@/lib/slovenia-data"');
     expect(destinationsRoute).not.toContain('@/lib/db"');
@@ -112,12 +117,15 @@ describe("TASK 99-a: /api/destinations/[slug] — JSON napaka + ohranjena 404 po
     expect(destinationSlugRoute).toContain("Destinacija trenutno ni dosegljiva");
   });
 
-  test("uspešna pot + 404 pot NESPREMENJENI", () => {
+  test("uspešna pot + 404 pot (§18 aditivno)", () => {
     expect(destinationSlugRoute).toContain("getDestinationById(slug)");
     expect(destinationSlugRoute).toContain("d.slug === slug");
     expect(destinationSlugRoute).toContain('"Destination not found"');
     expect(destinationSlugRoute).toContain("{ status: 404 }");
-    expect(destinationSlugRoute).toContain("return NextResponse.json({ destination });");
+    // ISSUE #4 §18 VAL 7: enriched = destination + ADITIVNO polje
+    // provenance (nazaj kompatibilno); glava X-Data-As-Of dodana.
+    expect(destinationSlugRoute).toContain("destination: enriched");
+    expect(destinationSlugRoute).toContain('"X-Data-As-Of": DESTINATIONS_DATA_AS_OF');
     expect(destinationSlugRoute).not.toContain('@/lib/db"');
   });
 

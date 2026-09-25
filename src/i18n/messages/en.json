@@ -130,6 +130,7 @@
     "cardAriaLabel": "Open details for {name}",
     "featuredBadge": "★ Recommended",
     "ratingLabel": "/ 5 · editorial rating",
+    "editorialShort": "editorial",
     "moreInfo": "More info",
     "emptyTitle": "No destinations match your filters.",
     "emptyHint": "Try changing or clearing the filters.",
@@ -1111,6 +1112,20 @@
       "destinationsDetail": "editorially curated guide; data as of {date}",
       "transfersDetail": "from-prices from a static inventory — no live prices via API (check with the provider)",
       "affiliateDetail": "partner link only — no verified offer data"
+    },
+    "destinationContent": {
+      "title": "Destination content provenance (38 destinations)",
+      "intro": "Every destination in the editorial guide carries a record of source and date: either an externally verified source (the destination's official site or a canonical STO page), or Discover Slovenia editorial curation (honestly labelled, no invented source). The same record is available via the API (provenance field + X-Data-As-Of header) and on each destination's page.",
+      "statsLine": "{total} destinations · {official} with an official source · {internal} editorially curated · updated {asOf}",
+      "colDestination": "Destination",
+      "colSource": "Official source",
+      "colVerified": "Verified",
+      "internalTitle": "Editorial curation",
+      "internalNote": "The remaining {internal} destinations have no externally verified source — their content is curated by the Discover Slovenia editorial team (descriptions, highlights, prices, seasonal advice). Last content change: {asOf}. The ★ rating is always editorial, never a user review.",
+      "langTitle": "Language of record",
+      "langNote": "Slovenian is the source of record (slovenia-data.ts); the English version is an overlay translation keyed by the same ID. German and Italian are not supported in the content set.",
+      "nistTitle": "NiST and official data (an honest decision)",
+      "nistNote": "Issue #4 mentions NiST (the STO national data centre) as a potential source. Search on 2026-09-25: we could not verifiably reach a public portal with structured, machine-readable data. We do not copy — or invent — a source that cannot be verified; instead we use verifiable public sources as a provenance-carrying source layer (source, date, period, unit): official destination sites (5), canonical STO slovenia.info pages (4), and an honest editorial-curation label for the rest. If NiST becomes publicly available with structured data, it can be added as a source following the same pattern."
     }
   },
   "demoScenarios": {
@@ -2029,7 +2044,16 @@
       "title": "Also explore",
       "all": "All destinations"
     },
-    "trackerTitle": "{name} — Destination"
+    "trackerTitle": "{name} — Destination",
+    "source": {
+      "title": "Content source",
+      "sourceLabel": "Source",
+      "updatedLabel": "Updated",
+      "openingLabel": "Opening hours",
+      "sourceShort": "source",
+      "externalSr": "opens on an external site",
+      "langNote": "Slovenian is the source of record; the English version is a translation."
+    }
   },
   "pwa": {
     "install": "Install app",

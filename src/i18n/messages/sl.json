@@ -130,6 +130,7 @@
     "cardAriaLabel": "Odpri podrobnosti za {name}",
     "featuredBadge": "★ Priporočeno",
     "ratingLabel": "/ 5 · uredniška ocena",
+    "editorialShort": "uredniška",
     "moreInfo": "Več informacij",
     "emptyTitle": "Ni destinacij za izbrane filtre.",
     "emptyHint": "Poskusite spremeniti filtre ali jih počistiti.",
@@ -1111,6 +1112,20 @@
       "destinationsDetail": "uredniško kurirani vodnik; stanje podatkov na {date}",
       "transfersDetail": "od-cene iz statičnega inventarja — žive cene prek API niso na voljo (preveri pri ponudniku)",
       "affiliateDetail": "samo partnerska povezava — brez preverjenih podatkov o ponudbi"
+    },
+    "destinationContent": {
+      "title": "Provenance destinacijske vsebine (38 destinacij)",
+      "intro": "Vsaka destinacija v uredniškem vodniku nosi zapis o viru in datumu: ali ima zunanjega preverjenega vira (uradna stran destinacije ali kanonična STO stran), ali je uredniško kurirana vsebina Discover Slovenia (pošteno označeno, brez izmišljenega vira). Enak zapis je dostopen prek API-ja (polje provenance + glava X-Data-As-Of) in na strani vsake destinacije.",
+      "statsLine": "{total} destinacij · {official} z uradnim virom · {internal} uredniško kuriranih · posodobljeno {asOf}",
+      "colDestination": "Destinacija",
+      "colSource": "Uradni vir",
+      "colVerified": "Preverjeno",
+      "internalTitle": "Uredniška kuracija",
+      "internalNote": "Preostalih {internal} destinacij nima zunanjega preverjenega vira — vsebino kurira uredništvo Discover Slovenia (opisi, poudarki, cene, sezonski nasveti). Datum zadnje vsebinske spremembe: {asOf}. Ocena ★ je vedno uredniška, nikoli uporabniška recenzija.",
+      "langTitle": "Jezik zapisa",
+      "langNote": "Slovenščina je vir resnice (slovenia-data.ts); angleška različica je prekrivni prevod po istem ID-ju. Nemščina in italijanščina nista podprti v vsebinskem naboru.",
+      "nistTitle": "NiST in uradni podatki (iskrena odločitev)",
+      "nistNote": "Issue #4 omenja NiST (STO nacionalno podatkovno središče) kot potencialen vir. Iskanje 2026-09-25: javnega portala s strukturiranimi, strojno berljivimi podatki nismo preverljivo dosegli. Ne kopiramo in si ne izmišljujemo vira, ki ga ni mogoče preveriti — namesto tega uporabljamo preverljive javne vire kot source layer s provenance (vir, datum, obdobje, enota): uradne strani destinacij (5), kanonične STO strani slovenia.info (4) in pošteno oznako uredniške kuracije za ostalo. Če NiST postane javno dostopen s strukturiranimi podatki, ga lahko dodamo kot vir po istem vzorcu."
     }
   },
   "demoScenarios": {
@@ -2029,7 +2044,16 @@
       "title": "Raziščite tudi",
       "all": "Vse destinacije"
     },
-    "trackerTitle": "{name} — Destinacija"
+    "trackerTitle": "{name} — Destinacija",
+    "source": {
+      "title": "Vir vsebine",
+      "sourceLabel": "Vir",
+      "updatedLabel": "Posodobljeno",
+      "openingLabel": "Odpiralni čas",
+      "sourceShort": "vir",
+      "externalSr": "odpre na zunanji strani",
+      "langNote": "Slovenščina je vir zapisa; angleška različica je prevod."
+    }
   },
   "pwa": {
     "install": "Namesti aplikacijo",

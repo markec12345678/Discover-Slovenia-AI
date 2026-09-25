@@ -23,6 +23,8 @@ import {
   Store,
   Compass,
   MapPlus,
+  CalendarDays,
+  BadgeCheck,
 } from "lucide-react";
 import {
   Dialog,
@@ -38,6 +40,7 @@ import { WeatherWidget } from "@/components/sections/weather-widget";
 import { ListingModal } from "@/components/sections/listing-modal";
 import { trackFunnel } from "@/lib/funnel";
 import { REGIONS } from "@/lib/slovenia-data";
+import { getDestinationProvenance } from "@/lib/destination-provenance";
 import {
   CATEGORY_LABELS,
   CATEGORY_ICONS,
@@ -278,6 +281,33 @@ export function DestinationModal({
                 />
               </div>
 
+              {/* ISSUE #4 §18 (VAL 7): odpiralni časi, kjer obstajajo —
+                  prej jih je pokazal SAMO planner (stop-insights); uporabnik
+                  na modalu ni vedel, da znamenitost pozimi morda sploh ni
+                  odprta. Vir je prikazan (isti vzorec poštenosti F5.5). */}
+              {destination.opening ? (
+                <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-sm">
+                  <p className="flex flex-wrap items-start gap-x-1.5">
+                    <CalendarDays
+                      className="mt-0.5 size-4 shrink-0 text-primary"
+                      aria-hidden="true"
+                    />
+                    <span>
+                      <span className="font-medium text-foreground/80">
+                        {locale === "en" ? "Opening hours" : "Odpiralni čas"}:
+                      </span>{" "}
+                      {locale === "en"
+                        ? destination.opening.noteEn
+                        : destination.opening.note}{" "}
+                      <span className="text-muted-foreground/80">
+                        ({locale === "en" ? "source" : "vir"}:{" "}
+                        {destination.opening.source})
+                      </span>
+                    </span>
+                  </p>
+                </div>
+              ) : null}
+
               {/* Poudarki */}
               <section>
                 <SectionTitle icon={Sparkles}>Poudarki</SectionTitle>
@@ -445,6 +475,53 @@ export function DestinationModal({
                   za vas.
                 </p>
               </section>
+
+              {/* ISSUE #4 §18 (VAL 7): PROVENANCE NOGA — vir vsebine +
+                  "posodobljeno" (uradna stran ↔ uredniška kuracija).
+                  Komponenta je SL-vzorčena (P4-8); novi nizi so dvodelni
+                  SL/EN prek locale (isti vzorec kot hub stran). */}
+              <footer className="rounded-lg border border-dashed border-border/60 p-3 text-xs text-muted-foreground">
+                <p className="flex flex-wrap items-center gap-x-1.5">
+                  <BadgeCheck
+                    className="size-3.5 shrink-0 text-primary"
+                    aria-hidden="true"
+                  />
+                  <span className="font-medium text-foreground/70">
+                    {locale === "en" ? "Source" : "Vir"}:
+                  </span>
+                  {(() => {
+                    const prov = getDestinationProvenance(destination);
+                    if (prov.kind === "official" && prov.sourceUrl) {
+                      return (
+                        <a
+                          href={prov.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 font-medium text-primary underline-offset-2 hover:underline"
+                        >
+                          {prov.source}
+                          <ExternalLink className="size-3" aria-hidden="true" />
+                        </a>
+                      );
+                    }
+                    return (
+                      <span>
+                        {locale === "en"
+                          ? "Discover Slovenia editorial curation"
+                          : "Discover Slovenia — uredniška kuracija"}
+                      </span>
+                    );
+                  })()}
+                  <span aria-hidden="true">·</span>
+                  <span>
+                    {locale === "en" ? "updated" : "posodobljeno"}{" "}
+                    {getDestinationProvenance(destination).verifiedAt.replaceAll(
+                      "-",
+                      ". "
+                    )}
+                  </span>
+                </p>
+              </footer>
             </div>
           </div>
         </DialogContent>

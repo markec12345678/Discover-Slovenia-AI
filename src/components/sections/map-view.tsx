@@ -503,7 +503,11 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
 
       // 1.48: EN overlay za tagline/duration (fallback na SL, če vnosa
       // ni v slovenia-data-en); budget (€) in ime sta jezikovno nevtralna
-      const en = DESTINATIONS_EN[dest.slug];
+      // ISSUE #4 §18 (VAL 7) BUGFIX: slovenia-data-en je ključen po `id`
+      // (NE `slug`) — prej je 4 destinacije (postojna/soca/vintgar/rogaska,
+      // kjer se id in slug razlikujeta) tiho padlo na SL besedilo na EN
+      // zemljevidu. Regresijski test: vsak id ∈ DESTINATIONS_EN.
+      const en = DESTINATIONS_EN[dest.id];
       const tagline = lang === "en" ? (en?.tagline ?? dest.tagline) : dest.tagline;
       const duration = lang === "en" ? (en?.duration ?? dest.duration) : dest.duration;
 

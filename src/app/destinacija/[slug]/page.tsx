@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
 import { BEST_FOR_EN, getEnDestination, REGIONS_EN } from "@/lib/slovenia-data-en";
+import { getDestinationProvenance } from "@/lib/destination-provenance";
 import { LanguageToggle } from "@/components/language-toggle";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,8 @@ import {
   Users,
   CalendarDays,
   Sparkles,
+  BadgeCheck,
+  ExternalLink,
 } from "lucide-react";
 import { breadcrumbJsonLd, hreflangForPath } from "@/components/seo";
 import { currentBaseUrl } from "@/lib/host";
@@ -149,6 +152,13 @@ export default async function DestinationHubPage({
   // Sosednje destinacije v isti regiji — notranje povezave med hub stranimi
   const nearby = DESTINATIONS.filter((d) => d.region === dest.region && d.id !== dest.id);
 
+  // ISSUE #4 §18 (VAL 7): provenance vsebine destinacije (vir + datum) —
+  // prikaz uporabniku na hub strani; isto resnica kot API/ /vir-podatkov.
+  const provenance = getDestinationProvenance(dest);
+
+  // §18: formatirana datumova vrstica (ISO yyyy-mm-dd → prikaz).
+  const verifiedAtLabel = provenance.verifiedAt.replaceAll("-", ". ");
+
   // JSON-LD: TouristDestination z LASTNO potjo (hub) — GEO-A: prej je
   // schema obstajala samo na things-to-do; hub zdaj drži kanonični zapis
   // s povezavami na vse podstrani (AI agenti sledijo containsPlace).
@@ -172,7 +182,10 @@ export default async function DestinationHubPage({
     },
     address: {
       "@type": "PostalAddress",
-      addressCountry: "SI",
+      // ISSUE #4 §18 (VAL 7) BUGFIX: prej hardkodiran "SI" — LAŽ za 16
+      // HR/ME/AL destinacij (Zagreb, Kotor, Tirana …) v JSON-LD. CountryCode
+      // je že ISO 3166-1 alpha-2 — uporabimo dejansko državo zapisa.
+      addressCountry: dest.country,
       addressRegion: dest.region,
     },
     // OPOMBA: aggregateRating NAMENOMA izpuščen — destinacije nimajo
@@ -342,6 +355,73 @@ export default async function DestinationHubPage({
               </Card>
             ))}
           </div>
+        </section>
+
+        {/* === ISSUE #4 §18 (VAL 7): VIR VSEBINE + ODIPIRALNI ČAS === */}
+        {/* Prej: hub ni pokazal NE vira NE datuma NE opening (kljub temu da
+            opening obstaja za 5 destinacij od F5.5). Sedaj: poštena vrstica
+            vira (uradna stran ↔ uredniška kuracija) + "posodobljeno" +
+            odpiralni časi z virom, kjer obstajajo. */}
+        <section className="mb-10" aria-labelledby="destination-content-source">
+          <Card className="border-border/60 bg-muted/20">
+            <CardContent className="p-5">
+              <h2
+                id="destination-content-source"
+                className="mb-3 flex items-center gap-2 text-base font-semibold"
+              >
+                <BadgeCheck className="size-4 text-primary" aria-hidden="true" />
+                {t("source.title")}
+              </h2>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p className="flex flex-wrap items-center gap-x-1.5">
+                  <span className="font-medium text-foreground/80">
+                    {t("source.sourceLabel")}:
+                  </span>
+                  {provenance.kind === "official" && provenance.sourceUrl ? (
+                    <a
+                      href={provenance.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-medium text-primary underline-offset-2 hover:underline"
+                    >
+                      {provenance.source}
+                      <ExternalLink className="size-3" aria-hidden="true" />
+                      <span className="sr-only">
+                        {t("source.externalSr")}
+                      </span>
+                    </a>
+                  ) : (
+                    <span>{provenance.source}</span>
+                  )}
+                </p>
+                <p className="flex flex-wrap items-center gap-x-1.5">
+                  <span className="font-medium text-foreground/80">
+                    {t("source.updatedLabel")}:
+                  </span>
+                  <time dateTime={provenance.verifiedAt}>
+                    {verifiedAtLabel}
+                  </time>
+                </p>
+                {dest.opening ? (
+                  <p className="flex flex-wrap items-start gap-x-1.5">
+                    <span className="font-medium text-foreground/80">
+                      {t("source.openingLabel")}:
+                    </span>
+                    <span>
+                      {isEn ? dest.opening.noteEn : dest.opening.note}{" "}
+                      <span className="text-muted-foreground/80">
+                        ({t("source.sourceShort").toLowerCase()}:{" "}
+                        {dest.opening.source})
+                      </span>
+                    </span>
+                  </p>
+                ) : null}
+                <p className="pt-1 text-xs text-muted-foreground/70">
+                  {t("source.langNote")}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </section>
 
         {/* === HUB: povezave na vse podstrani (jedro GEO-A) === */}

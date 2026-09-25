@@ -86,6 +86,40 @@ export interface Destination {
   featured: boolean;
   /** F5.5: preverjeni odpiralni časi ( SAMO kjer vir obstaja — opcijsko). */
   opening?: DestinationOpening;
+  /** ISSUE #4 §18 (VAL 7): provenance vsebine — pripne jo resolver
+   *  `getDestinationProvenance()` iz lib/destination-provenance.ts na
+   *  API/vrhnjih površinah (NE v samih podatkih — vzorec route-intent).
+   *  Odsotnost = uredniška kuracija (iskreno privzeto). */
+  provenance?: DestinationProvenance;
+}
+
+/**
+ * ISSUE #4 §18 (VAL 7): provenance destinacijske vsebine.
+ *
+ * Zahteva Issue #4 besedno: "Discover naj ga ne kopira [NiST], ampak naj
+ * po potrebi uporablja strukturirane javne podatke kot source layer z
+ * provenance, datumom, obdobjem, enoto in virom."
+ *
+ * Iskren model:
+ * - kind "official" — ZUNANJA preverjena stran (uradna domena destinacije
+ *   ali kanonična STO slovenia.info stran); sourceUrl OBVEZNO https.
+ * - kind "internal" — uredniška kuracija Discover Slovenia (BREZ lažnega
+ *   zunanjega vira; verifiedAt = datum vsebinske posodobitve dataseta).
+ *
+ * "Obdobje/enota" iz zahteve nosijo sama dejstva (bestSeason = obdobje;
+ * costPerPerson = EUR oseba; duration = obdobje) — vir in datum pa ta
+ * zapis. Jezik: SL vir resnice + EN prekrivni prevod (dokumentirano na
+ * /vir-podatkov, ISTO za vse zapise — zato NI per-zapisnega polja lang).
+ */
+export interface DestinationProvenance {
+  /** Razred vira: zunanja preverjena stran ali uredniška kuracija. */
+  kind: "official" | "internal";
+  /** Oznaka vira, prikazana uporabniku (uradna domena ali kuracija). */
+  source: string;
+  /** URL vira (SAMO za kind "official" — https, preverjena živa stran). */
+  sourceUrl?: string;
+  /** ISO datum (yyyy-mm-dd) zadnjega preverjanja vira/vsebine. */
+  verifiedAt: string;
 }
 
 export interface PlannerInput {

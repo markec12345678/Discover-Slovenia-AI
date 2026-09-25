@@ -7,6 +7,90 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.99.0] — 2026-09-25 (ISSUE #4 VAL 7: §18 DESTINATION CONTENT + OFFICIAL DATA)
+
+> Po §J ostanku P2 (§18 uradna vsebina — zadnji P2 sklop po VAL 6).
+> Zahteva Issue #4 besedno: "Preveri 38 kuriranih destinacij: source, datum,
+> jezik, last update, structured facts, images, links in seasonal information
+> … Discover naj ga [NiST] ne kopira, ampak naj po potrebi uporablja
+> strukturirane javne podatke kot source layer z provenance, datumom,
+> obdobjem, enoto in virom."
+
+### 1. PROVENANCE PLAST (novo jedro `lib/destination-provenance.ts`)
+
+Čist listni modul (isti standard kot route-intent.ts iz VAL 6 — brez
+Date.now/fetch/prisma; uvožen tudi v client komponente):
+
+- `DestinationProvenance` tip (additive na `Destination`): `kind`
+  ("official" | "internal") + `source` + `sourceUrl?` + `verifiedAt` (ISO).
+- **9/38 destinacij z ZUNANJIM preverjenim virom** (vsak URL curl-preverjen):
+  5 uradnih domen (postojnska-jama.eu, kobariski-muzej.si, vintgar.si,
+  pmpo.si, visitcelje.eu — opening urniki F5.5, verifiedAt 2026-09-14) +
+  4 kanonične STO slovenia.info strani (bled/ljubljana/piran/soca,
+  verifiedAt 2026-09-25). Domena allowlista varuje pred izmišljenimi URL-ji.
+- **29/38 z ISKRENO oznako uredniške kuracije** — BREZ izmišljenega zunanjega
+  vira; verifiedAt = datum vsebinske posodobitve dataseta.
+- **NiST raziskava (iskrena odločitev)**: 2 spletni iskanji 2026-09-25 —
+  javnega NiST portala s strukturiranimi podatki NI bilo mogoče preverljivo
+  doseči (zadetki: US NIST + splošne statistike). NE kopiramo, NE izmišljujemo
+  integracije — dokumentirano na /vir-podatkov z ambasadorsko opombo, da ga
+  lahko dodamo po istem vzorcu, če postane javen.
+- STO slovenia.info: /sl/znamenitosti/* poti iz posnetka so MRTVI (404) —
+  delujoče so /en/places-to-go/* (preverjeno, uporabljene).
+
+### 2. AS-OF RESNICA (zastarela konstanta popravljena + varovalka)
+
+- `DESTINATIONS_DATA_AS_OF`: "2026-09-13" → **"2026-09-20"** (resnica: TASK 62
+  je 2026-09-20 dodal 16 destinacij; konstanta je bila 7 dni neresnična).
+- Konstanta preseljena v destination-provenance.ts (enotna točka resnice);
+  stop-insights.ts re-izvaža (obstoječi uvozi nespremenjeni).
+- **Test past** (`§A`): konstanta ≡ `git log -1 --format=%as -- slovenia-data.ts`
+  — prihodnja vsebinska sprememba brez prenosa konstante PADA z glasnim
+  navodilom (vzorec schema-parity iz 1.98.1).
+
+### 3. UI RESNICA (kjer uporabnik odloča)
+
+- **/destinacija/[slug] hub**: nova sekcija "Vir vsebine" (vir s povezavo ↔
+  uredniška kuracija + "Posodobljeno" + opening z virom, kjer obstaja) +
+  **BUGFIX addressCountry**: JSON-LD je za 16 HR/ME/AL destinacij trdil "SI"
+  (Zagreb, Kotor, Tirana …) — zdaj dejanska `dest.country` (ISO alpha-2).
+- **DestinationModal**: opening blok (prej samo planner) + provenance noga
+  (vir + posodobljeno, SL/EN).
+- **/destinacije kartice**: VIDEN kvalifikator "uredniška"/"editorial" ob
+  oceni (prej samo sr-only + map popup — vidiči uporabniki so videli golem
+  ★ 4.8).
+- **BUGFIX map-view EN**: lookup po `dest.id` (ne `dest.slug`) — prej so 4
+  destinacije (postojna/soca/vintgar/rogaska) tiho padle na SL besedilo na
+  EN zemljevidu.
+- **/vir-podatkov**: nova sekcija "Provenance destinacijske vsebine" —
+  statistika (38 · 9 uradnih · 29 kuriranih · posodobljeno 2026-09-20),
+  tabela 9 uradnih virov z URL-ji in datumi, jezikovni model (SL vir resnice
+  + EN prevod), NiST iskrena opomba (amber). Vsi števci IZPELJANI iz modula.
+
+### 4. API (nazaj kompatibilno, aditivno)
+
+- `/api/destinations` + `/api/destinations/[slug]`: vsak zapis nosi
+  `provenance`; glava `X-Data-As-Of` (as-of žig, ne v telesu).
+- TASK 99-a fail-closed ovojnica NEspremenjena (source-contract testi
+  posodobljeni na aditivno obliko).
+
+### 5. DOKUMENTACIJSKA HIGIENA
+
+- Zastareli komentarji 22 → 38 destinacij (slovenia-data-en.ts glava +
+  road-routing.ts), z opombo o id-ključenju EN overlaya.
+
+### Testi
+
+- +23 regresijskih testov (`issue4-wave7-destination-content.test.ts`):
+  §A AS-OF git past · §B pokritost 38/38 + iskrenost obeh razredov +
+  allowlista domen · §C registr/summary + opening doslednost · §D EN overlay
+  38/38 po ID (razred map-view hrošča) · §E ISO country (temelj JSON-LD) ·
+  §F i18n pariteta SL/EN (3 bloki + placeholderji) · §G čistost modula ·
+  §H ovojnica identitete.
+- **2706/2706 testov · lint 0 · tsc 0 (src/)**.
+
+---
+
 ## [1.98.1] — 2026-09-25 (HOTFIX: skip-worktree past — produkcija Prisma klient zastarel)
 
 > **Kritični popravek produkcijske regresa**, odkrit med VAL 6 verifikacijo:

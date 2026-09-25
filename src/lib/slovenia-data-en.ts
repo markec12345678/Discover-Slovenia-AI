@@ -5,7 +5,9 @@
  * Struktura: Partial po poljih; identifikatorji (id/slug/region/type/bestFor/
  * bestSeason keys, coords, slike, cene) so skupni in se NE prevajajo.
  *
- * Ključi DESTINATIONS_EN = `id` polja iz slovenia-data.ts (22 destinacij).
+ * Ključi DESTINATIONS_EN = `id` polja iz slovenia-data.ts (38 destinacij —
+ * ISSUE #4 §18 VAL 7: pokritost 38/38 po ID je varovana z regresijskim
+ * testom; map-view lookupa po `id`, NE po `slug`).
  * Dolžine highlights/activities se ujemajo z originalom (3 ali 4 vnose).
  * Imena destinacij (Bled, Bohinj, Postojnska jama → Postojna Cave …) ostanejo
  * prepoznavna; regionalna/praistedna imena uporabljajo uveljavljena angleška
