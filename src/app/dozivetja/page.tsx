@@ -4,7 +4,6 @@ import { Compass } from "lucide-react";
 import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
 import { Chatbot } from "@/components/chatbot";
-import { StickyMobileCTA } from "@/components/sticky-mobile-cta";
 import { ExperiencesSection } from "@/components/sections/experiences";
 import { MarketplaceSection } from "@/components/sections/marketplace";
 import { Reveal } from "@/components/reveal";
@@ -68,7 +67,6 @@ export default function ExperiencesPage() {
       </main>
       <Footer />
       <Chatbot />
-      <StickyMobileCTA />
     </div>
   );
 }

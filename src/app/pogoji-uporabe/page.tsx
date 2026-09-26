@@ -5,7 +5,12 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { localePrefix } from "@/i18n/routing";
 import { hreflangForPath } from "@/components/seo";
 import { currentBaseUrl } from "@/lib/host";
-import { LanguageToggle } from "@/components/language-toggle";
+// TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer;
+// LanguageToggle odstranjen (stran je na EN whitelisti — EN_STATIC_ROUTES
+// v src/i18n/routing.ts — LanguageSwitcher v Navigation pokriva isto
+// SL⇄EN dejanje: trda navigacija, ohranitev poti; na mobilnem prek Več).
+import { Navigation } from "@/components/sections/navigation";
+import { Footer } from "@/components/sections/footer";
 
 /**
  * /pogoji-uporabe — pravno-informativna stran.
@@ -65,8 +70,10 @@ export default async function TermsPage() {
   const t = await getTranslations("terms");
 
   return (
-    <div className="min-h-screen bg-background">
-      <LanguageToggle path="/pogoji-uporabe" />
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* TASK 8 / D8-E (P-NAV-1): enotna lupina (Navigation + Footer). */}
+      <Navigation solid />
+      <main className="flex-grow">
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-bold mb-8">{t("title")}</h1>
         <div className="prose prose-slate dark:prose-invert max-w-none space-y-4 text-sm">
@@ -97,6 +104,8 @@ export default async function TermsPage() {
           ))}
         </div>
       </div>
+      </main>
+      <Footer />
     </div>
   );
 }

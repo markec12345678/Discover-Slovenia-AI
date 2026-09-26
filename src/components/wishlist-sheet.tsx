@@ -13,6 +13,10 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+// TASK 8 / D8-D (§3.3): MOST priljubljene → "Moja pot" (D8-A §9.7 —
+// wishlist prej ni imel nobene poti v načrt).
+import { AddToTripButton } from "@/components/add-to-trip-button";
+import type { MyTripInput } from "@/lib/my-trip";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/marketplace-types";
 import {
@@ -229,6 +233,30 @@ export function WishlistSheet({ scrolled }: { scrolled: boolean }) {
   );
 }
 
+/**
+ * TASK 8 / D8-D: preslikava wishlist vnosa → predmet zbirke "Moja pot".
+ * Identiteta: kind (izkušnja/izdelek) + ID zapisa — enaka kot srček, zato
+ * dedup deluje med tržnico in zbirko. href je ISKREN fallback /trznica
+ * (openFromWishlist odpre modal prek dogodka — globke povezave ni).
+ */
+function wishlistTripItem(entry: WishlistEntry): MyTripInput {
+  const subtitle = [
+    entry.destination ?? undefined,
+    entry.price !== null ? formatPrice(entry.price) : undefined,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return {
+    kind: entry.type,
+    refId: entry.id,
+    title: entry.name,
+    subtitle: subtitle || undefined,
+    href: "/trznica",
+    image: entry.image ?? undefined,
+    source: "priljubljene",
+  };
+}
+
 /** Ena vrstica seznamu: slika, ime, destinacija, cena, odstrani. */
 function WishlistRow({
   item,
@@ -287,6 +315,20 @@ function WishlistRow({
           </span>
         </span>
       </button>
+      {/* TASK 8 / D8-D: kompaktstni kanonski dodaj na ≥sm (z besedilom) in
+          ikonski na mobilnem (poln aria-label) — isti predmet, isti stanji:
+          oba gumba sta nekontrolirana in se sinhronizirata prek zbirke
+          (dai:my-trip-changed). "Odpri v tržnici" (glavni gumb) ostaja. */}
+      <AddToTripButton
+        variant="compact"
+        className="hidden sm:inline-flex"
+        item={wishlistTripItem(item)}
+      />
+      <AddToTripButton
+        variant="icon"
+        className="sm:hidden"
+        item={wishlistTripItem(item)}
+      />
       <Button
         type="button"
         variant="ghost"

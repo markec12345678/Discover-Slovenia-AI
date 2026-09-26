@@ -5,7 +5,13 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
 import { BEST_FOR_EN, getEnDestination, REGIONS_EN } from "@/lib/slovenia-data-en";
 import { getDestinationProvenance } from "@/lib/destination-provenance";
-import { LanguageToggle } from "@/components/language-toggle";
+// TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation (solid: hero ni na
+// vrhu strani, nad njim so breadcrumbs) + Footer. Lebdeči LanguageToggle je
+// ODSTRANJEN: LanguageSwitcher v Navigation pokriva isto SL⇄EN dejanje (trda
+// navigacija, EN whitelista ^/destinacija/[^/]+$ — routing.ts) tudi na
+// mobilnem (prek Več → Sheet).
+import { Navigation } from "@/components/sections/navigation";
+import { Footer } from "@/components/sections/footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +32,8 @@ import { breadcrumbJsonLd, hreflangForPath } from "@/components/seo";
 import { currentBaseUrl } from "@/lib/host";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
+// TASK 8 / D8-D (§3.3): kanonski "Dodaj v mojo pot" v hero območju hub strani
+import { DestinationAddToTrip } from "@/components/destination-add-to-trip";
 import { Link } from "@/i18n/navigation";
 import { localePrefix } from "@/i18n/routing";
 import {
@@ -240,8 +248,11 @@ export default async function DestinationHubPage({
   const title = t("trackerTitle", { name: dest.name });
 
   return (
-    <div className="min-h-screen bg-background">
-      <LanguageToggle path={`/destinacija/${dest.slug}`} />
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* TASK 8 / D8-E (P-NAV-1): enotna lupina (Navigation + Footer) —
+          prej sirota brez glavne navigacije. */}
+      <Navigation solid />
+      <main className="flex-grow">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbs) }} />
 
@@ -280,6 +291,18 @@ export default async function DestinationHubPage({
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+        {/* TASK 8 / D8-D (§3.3, D8-A §9.4 mrtvi konec): kanonski "Dodaj v mojo
+            pot" — hub strani destinacije prej NISO imele nobenega dodajanja v
+            pot (samo skok v načrtovalnik na dnu). Zbirka referenc (ADD sloj). */}
+        <div className="mb-10 flex justify-center">
+          <DestinationAddToTrip
+            slug={dest.slug}
+            name={dest.name}
+            region={regionBadge}
+            image={dest.image}
+          />
+        </div>
+
         {/* Opis */}
         <section className="mb-10">
           <h2 className="text-2xl font-bold mb-4">{t("aboutTitle", { name: dest.name })}</h2>
@@ -559,6 +582,8 @@ export default async function DestinationHubPage({
           </div>
         </section>
       </div>
+      </main>
+      <Footer />
     </div>
   );
 }

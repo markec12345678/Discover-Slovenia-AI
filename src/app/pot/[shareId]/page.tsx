@@ -19,6 +19,13 @@ import { TripPolls } from "@/components/trip-polls";
 import { TripSocial } from "@/components/trip-social";
 import { TripPushCard } from "@/components/trip-push-card";
 import { PrintQr } from "./print-qr";
+// TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer.
+// Obe sta znotraj .pot-page: standardni Footer se v PDF izhodu skrije
+// samodejno (obstoječe .pot-page footer print pravilo), Navigation pa
+// ovijemo v .print-hide (PDF izhod ostane čist — samo vsebina poti +
+// URL nogica). SharedTrip že izrisuje svoj <main> — brez gnezdenja.
+import { Navigation } from "@/components/sections/navigation";
+import { Footer } from "@/components/sections/footer";
 import { currentBaseUrl } from "@/lib/host";
 import type { Itinerary } from "@/lib/types";
 
@@ -399,7 +406,14 @@ export default async function SharedTripPage({
   };
 
   return (
-    <div className="pot-page min-h-screen bg-background">
+    <div className="pot-page min-h-screen flex flex-col bg-background">
+      {/* TASK 8 / D8-E (P-NAV-1): enotna lupina (Navigation + Footer) —
+          prej sirota z lastnim v-strani headerjem (ta ostaja nespremenjen
+          znotraj SharedTrip). print-hide: header se NE natisne v PDF. */}
+      <div className="print-hide">
+        <Navigation solid />
+      </div>
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(touristTrip) }}
@@ -505,6 +519,10 @@ export default async function SharedTripPage({
       {/* === PRINT QR (FW2-A) — QR deljive povezave v PDF izhodu; UI za
               deljenje ima print-hide, zato ta blok nosi QR na papirju === */}
       <PrintQr shareId={shareId} />
+
+      {/* TASK 8 / D8-E (P-NAV-1): standardna noga lupine (v printu jo skrije
+          obstoječe .pot-page footer pravilo — URL nogica ostane edina) */}
+      <Footer />
     </div>
   );
 }

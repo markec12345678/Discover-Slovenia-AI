@@ -4,7 +4,10 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { localePrefix } from "@/i18n/routing";
 import { hreflangForPath } from "@/components/seo";
 import { currentBaseUrl } from "@/lib/host";
-import { LanguageToggle } from "@/components/language-toggle";
+// TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid (Footer je že
+// obstajal); LanguageToggle odstranjen (/vir-podatkov je na EN whitelisti —
+// LanguageSwitcher v Navigation pokriva isto SL⇄EN dejanje).
+import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
 import { PROVIDER_REGISTRY } from "@/lib/supply/registry";
 import {
@@ -266,8 +269,9 @@ export default async function DataSourcePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <LanguageToggle path="/vir-podatkov" />
-      <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-16 sm:px-6 lg:px-8">
+      {/* TASK 8 / D8-E (P-NAV-1): enotna lupina (Navigation + Footer). */}
+      <Navigation solid />
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-16 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-bold mb-6">{t("title")}</h1>
         <p className="text-muted-foreground mb-8">{t("intro")}</p>
 
@@ -659,7 +663,7 @@ export default async function DataSourcePage() {
           <h2 className="font-bold mb-2">{t("providersTitle")}</h2>
           <p className="text-sm text-muted-foreground">{t("providersText")}</p>
         </div>
-      </div>
+      </main>
       <Footer />
     </div>
   );

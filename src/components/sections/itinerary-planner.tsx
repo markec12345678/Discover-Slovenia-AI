@@ -42,6 +42,7 @@ import {
   Trash2,
   HelpCircle,
   MessageCircle,
+  MoreHorizontal,
   X,
   Volume2,
   FileText,
@@ -52,6 +53,14 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+// TASK 8 / D8-F (issue #8 §5): akcije načrta — preljubčen meni "Več"
+// (vse zmožnosti ostanejo, vrstica pa preneha tekmuje z 5 CTAji).
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 // D6-B (Issue #6, M7+): potrditev pred odstranitvijo dneva S postanki —
 // destruktiven popravek (uniči N postankov), zato radix AlertDialog.
 import {
@@ -87,7 +96,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
-import { INTERESTS } from "@/lib/slovenia-data";
+import { DESTINATIONS, INTERESTS } from "@/lib/slovenia-data";
 import { PARTY_TYPES, type PartyType } from "@/lib/party-types";
 import { PACES, type Pace } from "@/lib/pace-types";
 import { formatEventDate } from "@/lib/events-data";
@@ -222,6 +231,13 @@ import { saveItineraryGoTrip } from "@/lib/journey/go-persist";
 import { buildItineraryAudioScript, planAudioCacheKey } from "@/lib/planner-audio";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import type { LocationVisit } from "@/lib/types";
+// TASK 8 / D8-F (D8-B §5): trak "Iz moje poti" nad obrazcem + prefill
+// dogodek (destinacije → PRAZNA formData.preferredDestinations izbira).
+import {
+  PlannerMyTripStrip,
+  MY_TRIP_PREFILL_EVENT,
+  type MyTripPrefillDetail,
+} from "@/components/planner-my-trip-strip";
 
 // F5.1: zemljevid poti na strani načrtovalnika — Leaflet je client-only
 // ( dostopa do window), zato dinamičen uvoz brez SSR ( isti vzorec kot
@@ -975,6 +991,63 @@ export function ItineraryPlanner() {
     window.addEventListener("heroQuery", handleHeroQuery as EventListener);
     return () => window.removeEventListener("heroQuery", handleHeroQuery as EventListener);
   }, []);
+
+  // === TASK 8 / D8-F (D8-B §5): "Iz moje poti" prefill — trak nad obrazcem
+  // pošlje destinacije iz zbirke (CustomEvent, isti vzorec kot heroQuery /
+  // CHAT_ADD_PLACE listenerji). Zapolnimo SAMO PRAZNO izbiro destinacij
+  // (formData.preferredDestinations — isti mehanizem kot url-ingest);
+  // uporabnikove obstoječe izbire NIKOLI ne prepišemo. NO generiranje —
+  // uporabnik sam klikne gumb za načrt (no silent AI regeneration). ===
+  useEffect(() => {
+    const handleMyTripPrefill = (e: Event) => {
+      const detail = (e as CustomEvent<MyTripPrefillDetail>).detail;
+      const ids = Array.isArray(detail?.destinations)
+        ? detail.destinations.filter((id) =>
+            DESTINATIONS.some((d) => d.id === id)
+          )
+        : [];
+      if (ids.length === 0) return;
+      // Dejanska imena za vidne čipe "Prepoznano" + toast (preverljivost)
+      const names = ids
+        .map((id) => DESTINATIONS.find((d) => d.id === id)?.name)
+        .filter((n): n is string => typeof n === "string");
+
+      const existing = formData?.preferredDestinations;
+      if (existing && existing.length > 0) {
+        // Uporabnikova izbira (npr. iz uvoza povezave) ima prednost —
+        // iskreno javimo, da ničesar nismo prepisali.
+        toast({
+          title: t("myTripPrefillKept"),
+          description: existing.join(", "),
+        });
+        return;
+      }
+      // Vidni povratek = isti prikaz kot url-ingest (čipi "Prepoznano"
+      // pod vnosom) — prenos ni tiho.
+      setIngestMatches(
+        ids.slice(0, 8).map((id) => {
+          const d = DESTINATIONS.find((x) => x.id === id);
+          return { id, name: d?.name ?? id, slug: d?.slug ?? id, count: 1 };
+        })
+      );
+      setIngestSourceTitle(t("myTripPrefillSource"));
+      toast({
+        title: t("myTripPrefillApplied"),
+        description: names.join(", "),
+      });
+      setFormData((prev) =>
+        prev.preferredDestinations && prev.preferredDestinations.length > 0
+          ? prev // varovalka: medtem je uporabnik izbral svoje — ne prepišemo
+          : { ...prev, preferredDestinations: Array.from(new Set(ids)).slice(0, 8) }
+      );
+    };
+
+    window.addEventListener(MY_TRIP_PREFILL_EVENT, handleMyTripPrefill as EventListener);
+    return () =>
+      window.removeEventListener(MY_TRIP_PREFILL_EVENT, handleMyTripPrefill as EventListener);
+    // Svež formData (isti vzorec kot CHAT_ADD_PLACE listener zgoraj) —
+    // prefill spoštuje TRENUTNO uporabnikovo izbiro.
+  }, [formData]);
 
   // === 1.42 (GEO → NAČRT): klepet → planner. AI klepet (plavajoči widget,
   // montiran tudi tukaj) pošlje CustomEvent s krajem; planner ga PREVZAME
@@ -2821,6 +2894,11 @@ export function ItineraryPlanner() {
             </CardHeader>
             <form onSubmit={handleSubmit} noValidate>
               <CardContent className="space-y-5">
+                {/* TASK 8 / D8-F (D8-B §5): "Iz moje poti" — trak zbirke nad
+                    obrazcem (nad NL vnosom in blokom destinacij/uvoda virov).
+                    Viden SAMO, ko zbirka ni prazna (tiho za nove uporabnike);
+                    utišana kartica ne tekmuje z gumbom za generiranje. */}
+                <PlannerMyTripStrip />
                 {/* UI sprint (točka B smeri): NARAVNI JEZIK kot primarni vnos
                     (»Start chatting« model, potrjen z naborom #2) — ista čista
                     funkcija kot hero (parseQueryToPlannerInput); obrazec spodaj
@@ -5148,7 +5226,13 @@ export function ItineraryPlanner() {
                         </div>
                       </div>
                     )}
-                    <div className="flex flex-wrap gap-2">
+                    {/* TASK 8 / D8-F (issue #8 §5, D8-B §5): razbremenitev
+                        akcijske vrstice — PRIMARNI "Shrani in deli" +
+                        sekundarni "Zaženi Na poti" + meni "Več" (E-pošta,
+                        .ics, Poslušaj). ČISTA RE-PREZENTACIJA: vsi handlerji
+                        in aria-labels so IDENTIČNI prejšnjim gumbom (zero
+                        loss, issue §42). */}
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
                         type="button"
                         onClick={handleSaveShare}
@@ -5179,60 +5263,67 @@ export function ItineraryPlanner() {
                         <Footprints className="size-4" aria-hidden />
                         {t("goModeButton")}
                       </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setEmailOpen((v) => !v);
-                          setEmailError(null);
-                        }}
-                        className="gap-1.5"
-                        aria-expanded={emailOpen}
-                        aria-label={t("emailButtonAriaLabel")}
-                      >
-                        <Mail className="size-4" aria-hidden />
-                        {t("emailButton")}
-                      </Button>
-                      {/* F5.2: načrt v koledar (.ics) — Apple Koledar /
-                          Google Calendar / Outlook, brez strežniškega klica */}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleIcsDownload}
-                        className="gap-1.5"
-                        aria-label={t("icsButtonAria")}
-                      >
-                        <CalendarArrowDown className="size-4" aria-hidden />
-                        {t("icsButton")}
-                      </Button>
-                      {/* D2 (nabor #2, Mindtrip audio): zvočni povzetek načrta.
-                          Skript se sestavi deterministično ( 0 AI) iz
-                          podatkov načrta; TTS ga izgovori na strežniku. */}
-                      {audioScript && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => void handleListenClick()}
-                          disabled={audioLoading || loading}
-                          className="gap-1.5"
-                          aria-label={t("listenButtonAria")}
-                          aria-expanded={Boolean(
-                            audioUrl && audioUrlKey === audioKey
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={loading}
+                            className="gap-1.5"
+                          >
+                            <MoreHorizontal className="size-4" aria-hidden />
+                            {t("moreActions")}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="min-w-[240px]">
+                          {/* E-pošta — ista zanka setEmailOpen kot prejšnji
+                              gumb (obrazec se odpre spodaj) */}
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              setEmailOpen((v) => !v);
+                              setEmailError(null);
+                            }}
+                            aria-expanded={emailOpen}
+                            aria-label={t("emailButtonAriaLabel")}
+                            className="gap-2"
+                          >
+                            <Mail className="size-4" aria-hidden />
+                            {t("emailMenu")}
+                          </DropdownMenuItem>
+                          {/* F5.2: načrt v koledar (.ics) — Apple Koledar /
+                              Google Calendar / Outlook, brez strežniškega klica */}
+                          <DropdownMenuItem
+                            onSelect={handleIcsDownload}
+                            aria-label={t("icsButtonAria")}
+                            className="gap-2"
+                          >
+                            <CalendarArrowDown className="size-4" aria-hidden />
+                            {t("icsMenu")}
+                          </DropdownMenuItem>
+                          {/* D2 (nabor #2, Mindtrip audio): zvočni povzetek
+                              načrta. Skript se sestavi deterministično (0 AI)
+                              iz podatkov načrta; TTS ga izgovori na strežniku.
+                              Pogoj enak prej: samo ko audioScript obstaja. */}
+                          {audioScript && (
+                            <DropdownMenuItem
+                              onSelect={() => void handleListenClick()}
+                              disabled={audioLoading || loading}
+                              aria-label={t("listenButtonAria")}
+                              aria-expanded={Boolean(
+                                audioUrl && audioUrlKey === audioKey
+                              )}
+                              className="gap-2"
+                            >
+                              {audioLoading ? (
+                                <Loader2 className="size-4 animate-spin" aria-hidden />
+                              ) : (
+                                <Volume2 className="size-4" aria-hidden />
+                              )}
+                              {audioLoading ? t("listenGenerating") : t("listenButton")}
+                            </DropdownMenuItem>
                           )}
-                        >
-                          {audioLoading ? (
-                            <Loader2
-                              className="size-4 animate-spin"
-                              aria-hidden
-                            />
-                          ) : (
-                            <Volume2 className="size-4" aria-hidden />
-                          )}
-                          {audioLoading
-                            ? t("listenGenerating")
-                            : t("listenButton")}
-                        </Button>
-                      )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
 
                     {/* D2: zvočni predvajalnik + poštena opomba ( računalniški

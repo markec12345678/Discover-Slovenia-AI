@@ -155,7 +155,12 @@ describe("ISSUE #4 VAL 8 §C: claim zahteva editToken (dokaz lastništva)", () =
   });
 
   test("klient (prijava) pošlje žetone iz localStorage", () => {
-    const page = source("src/app/prijava/page.tsx");
+    // TASK 8 / D8-E (issue #8 §52): /prijava je razcepljena na server ovoj
+    // (page.tsx — Navigation+Footer lupina) + klientni pogled
+    // (prijava-view.tsx), ker je Footer async server komponenta. Logika
+    // prijave/prevzema (claimSavedTrips) je nespremenjena — prebrana iz
+    // klientnega pogleda.
+    const page = source("src/app/prijava/prijava-view.tsx");
     expect(page).toContain("getEditToken(sid)");
     expect(page).toContain("body: JSON.stringify({ shareIds, editTokens })");
   });

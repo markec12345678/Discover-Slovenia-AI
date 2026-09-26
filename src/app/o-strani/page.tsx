@@ -8,7 +8,12 @@ import { currentBaseUrl } from "@/lib/host";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Mountain, Sparkles, Globe, Users } from "lucide-react";
-import { LanguageToggle } from "@/components/language-toggle";
+// TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer;
+// LanguageToggle odstranjen (stran je na EN whitelisti — EN_STATIC_ROUTES
+// v src/i18n/routing.ts — LanguageSwitcher v Navigation pokriva isto
+// SL⇄EN dejanje: trda navigacija, ohranitev poti; na mobilnem prek Več).
+import { Navigation } from "@/components/sections/navigation";
+import { Footer } from "@/components/sections/footer";
 
 /**
  * /o-strani — info stran (E-E-A-T).
@@ -54,8 +59,10 @@ export default async function AboutPage() {
   const t = await getTranslations("about");
 
   return (
-    <div className="min-h-screen bg-background">
-      <LanguageToggle path="/o-strani" />
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* TASK 8 / D8-E (P-NAV-1): enotna lupina (Navigation + Footer). */}
+      <Navigation solid />
+      <main className="flex-grow">
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
         <Badge className="mb-4">{t("badge")}</Badge>
         <h1 className="text-4xl font-bold mb-6">{t("title")}</h1>
@@ -170,6 +177,8 @@ export default async function AboutPage() {
           </div>
         </div>
       </div>
+      </main>
+      <Footer />
     </div>
   );
 }

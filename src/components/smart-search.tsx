@@ -23,6 +23,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+// TASK 8 / D8-D (§3.3, P-SEARCH-1): kanonski "Dodaj v mojo pot" na vrsticah
+// rezultatov — iskanje z najvišjo namero je bila mrtva ulica (samo skok).
+import { AddToTripButton } from "@/components/add-to-trip-button";
+import type { MyTripInput } from "@/lib/my-trip";
 import { cn } from "@/lib/utils";
 import { useRouter } from "@/i18n/navigation";
 import {
@@ -330,6 +334,17 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
                       }
                       handleClose();
                     },
+                    // TASK 8 / D8-D: href je ISTA pot, kamor vrstica navigira
+                    // (searchResultHref — en vir resnice). Identiteta: slug
+                    // (kanonski) z rezervo id (kot hub stran).
+                    tripItem: {
+                      kind: "destination",
+                      refId: d.slug ?? d.id,
+                      title: d.name,
+                      subtitle: d.tagline,
+                      href: searchResultHref({ kind: "destination", id: d.id, slug: d.slug ?? null }) ?? "/destinacije",
+                      source: "smart-search",
+                    },
                   }))}
                 />
               )}
@@ -347,6 +362,16 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
                     onClick: () => {
                       navigateResult({ kind: "listing", id: l.id });
                       handleClose();
+                    },
+                    // TASK 8 / D8-D: ista pot kot vrstica (imenik lokalov —
+                    // modal se odpre iz klientnega stanja, globoke povezave ni)
+                    tripItem: {
+                      kind: "listing",
+                      refId: l.id,
+                      title: l.name,
+                      subtitle: l.category,
+                      href: searchResultHref({ kind: "listing", id: l.id }) ?? "/lokali",
+                      source: "smart-search",
                     },
                   }))}
                 />
@@ -366,6 +391,15 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
                       navigateResult({ kind: "product", id: p.id });
                       handleClose();
                     },
+                    // TASK 8 / D8-D: ista pot kot vrstica (tržnica)
+                    tripItem: {
+                      kind: "product",
+                      refId: p.id,
+                      title: p.name,
+                      subtitle: p.category,
+                      href: searchResultHref({ kind: "product", id: p.id }) ?? "/trznica",
+                      source: "smart-search",
+                    },
                   }))}
                 />
               )}
@@ -384,6 +418,15 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
                       navigateResult({ kind: "experience", id: e.id });
                       handleClose();
                     },
+                    // TASK 8 / D8-D: ista pot kot vrstica (doživetja)
+                    tripItem: {
+                      kind: "experience",
+                      refId: e.id,
+                      title: e.name,
+                      subtitle: e.category,
+                      href: searchResultHref({ kind: "experience", id: e.id }) ?? "/dozivetja",
+                      source: "smart-search",
+                    },
                   }))}
                 />
               )}
@@ -401,6 +444,8 @@ interface ResultItem {
   subtitle: string;
   reason: string;
   onClick: () => void;
+  /** TASK 8 / D8-D: predmet zbirke "Moja pot" za kanonski dodaj na vrstici. */
+  tripItem?: MyTripInput;
 }
 
 function ResultGroup({
@@ -420,20 +465,35 @@ function ResultGroup({
       </h3>
       <div className="space-y-1">
         {items.map((item) => (
-          <button
+          // TASK 8 / D8-D: vrstica je zdaj vsebnik <div> z dvema SOSEDOVSKIMA
+          // gumboma (navigacija + kanonski dodaj) — NE vgnezdena gumba v
+          // gumbu (neveljaven HTML). Gumb sama ustavi propagacijo, soseda
+          // pa se klikov sploh ne dotakne.
+          <div
             key={item.id}
-            type="button"
-            onClick={item.onClick}
-            className="flex w-full items-start gap-3 rounded-lg border border-transparent p-2.5 text-left transition-colors hover:border-border hover:bg-muted/50"
+            className="flex items-center gap-2 rounded-lg border border-transparent p-2.5 transition-colors hover:border-border hover:bg-muted/50"
           >
-            <div className="flex-1 min-w-0">
-              <div className="flex items-baseline gap-2">
-                <p className="truncate text-sm font-medium">{item.title}</p>
-                <p className="shrink-0 text-[11px] text-muted-foreground">{item.subtitle}</p>
+            <button
+              type="button"
+              onClick={item.onClick}
+              className="flex min-w-0 flex-1 items-start gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <p className="truncate text-sm font-medium">{item.title}</p>
+                  <p className="shrink-0 text-[11px] text-muted-foreground">{item.subtitle}</p>
+                </div>
+                <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{item.reason}</p>
               </div>
-              <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{item.reason}</p>
-            </div>
-          </button>
+            </button>
+            {item.tripItem ? (
+              <AddToTripButton
+                variant="compact"
+                item={item.tripItem}
+                className="shrink-0"
+              />
+            ) : null}
+          </div>
         ))}
       </div>
     </div>

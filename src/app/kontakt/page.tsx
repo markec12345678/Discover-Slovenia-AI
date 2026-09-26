@@ -7,7 +7,12 @@ import { hreflangForPath } from "@/components/seo";
 import { currentBaseUrl } from "@/lib/host";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mail, MapPin, Globe, Shield } from "lucide-react";
-import { LanguageToggle } from "@/components/language-toggle";
+// TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer;
+// LanguageToggle odstranjen (stran je na EN whitelisti — EN_STATIC_ROUTES
+// v src/i18n/routing.ts — LanguageSwitcher v Navigation pokriva isto
+// SL⇄EN dejanje: trda navigacija, ohranitev poti; na mobilnem prek Več).
+import { Navigation } from "@/components/sections/navigation";
+import { Footer } from "@/components/sections/footer";
 
 /**
  * /kontakt — kontaktna stran.
@@ -50,8 +55,10 @@ export default async function ContactPage() {
   const t = await getTranslations("contact");
 
   return (
-    <div className="min-h-screen bg-background">
-      <LanguageToggle path="/kontakt" />
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* TASK 8 / D8-E (P-NAV-1): enotna lupina (Navigation + Footer). */}
+      <Navigation solid />
+      <main className="flex-grow">
       <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-bold mb-6">{t("title")}</h1>
         <p className="text-muted-foreground mb-8">{t("intro")}</p>
@@ -99,6 +106,8 @@ export default async function ContactPage() {
           </Link>
         </div>
       </div>
+      </main>
+      <Footer />
     </div>
   );
 }

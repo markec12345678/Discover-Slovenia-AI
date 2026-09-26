@@ -5,7 +5,6 @@ import { Footprints } from "lucide-react";
 import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
 import { Chatbot } from "@/components/chatbot";
-import { StickyMobileCTA } from "@/components/sticky-mobile-cta";
 import { GoMode } from "@/components/sections/go-mode";
 import { Badge } from "@/components/ui/badge";
 import { hreflangForPath } from "@/components/seo";
@@ -91,7 +90,6 @@ export default async function NaPotiPage() {
       <div className="print:hidden">
         <Footer />
         <Chatbot />
-        <StickyMobileCTA />
       </div>
     </>
   );

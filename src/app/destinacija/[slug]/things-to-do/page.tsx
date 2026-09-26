@@ -4,7 +4,11 @@ import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
 import { getEnDestination, REGIONS_EN } from "@/lib/slovenia-data-en";
-import { LanguageToggle } from "@/components/language-toggle";
+// TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer;
+// LanguageToggle odstranjen (LanguageSwitcher v Navigation pokriva SL⇄EN —
+// EN whitelista ^/destinacija/[^/]+/things-to-do$).
+import { Navigation } from "@/components/sections/navigation";
+import { Footer } from "@/components/sections/footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +18,8 @@ import { currentBaseUrl } from "@/lib/host";
 import { getFaqForPage } from "@/lib/seo-faq";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
+// TASK 8 / D8-D (§3.3): kanonski "Dodaj v mojo pot" v hero območju strani
+import { DestinationAddToTrip } from "@/components/destination-add-to-trip";
 import { Link } from "@/i18n/navigation";
 import { localePrefix } from "@/i18n/routing";
 import {
@@ -145,8 +151,10 @@ export default async function ThingsToDoPage({
   const title = t("trackerTitle", { name: dest.name });
 
   return (
-    <div className="min-h-screen bg-background">
-      <LanguageToggle path={`/destinacija/${dest.slug}/things-to-do`} />
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* TASK 8 / D8-E (P-NAV-1): enotna lupina (Navigation + Footer). */}
+      <Navigation solid />
+      <main className="flex-grow">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
       {faqs.length > 0 ? (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd(faqs)) }} />
@@ -186,6 +194,19 @@ export default async function ThingsToDoPage({
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+        {/* TASK 8 / D8-D (§3.3, D8-A §9.4 mrtvi konec): kanonski "Dodaj v mojo
+            pot" — tudi things-to-do prej ni imel dodajanja v pot (samo CTA na
+            dnu). Zbirka referenc (ADD sloj); razporedjanje ostane v /nacrtuj. */}
+        <div className="mb-12 flex justify-center">
+          <DestinationAddToTrip
+            slug={dest.slug}
+            name={dest.name}
+            region={regionBadge}
+            image={dest.image}
+            source="destinacija-things-to-do"
+          />
+        </div>
+
         {/* Opis */}
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-4">{t("aboutTitle", { name: dest.name })}</h2>
@@ -320,6 +341,8 @@ export default async function ThingsToDoPage({
           </div>
         </section>
       </div>
+      </main>
+      <Footer />
     </div>
   );
 }

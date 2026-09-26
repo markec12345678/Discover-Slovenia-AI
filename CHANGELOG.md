@@ -7,6 +7,83 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.112.0] — 2026-09-27 (ISSUE #8 / TASK 36: Discovery UX 2.0 — Faza 1 „The Spine")
+
+### Dodano
+
+- **BENCHMARK + ARHITEKTURA (issue #8 §2–§6, vrata pred implementacijo)**:
+  živi web benchmark Mindtrip/ALMA/Wanderlog (27 virov) + Google
+  Maps/Airbnb/Tripadvisor/Google Travel/Booking/Roadtrippers/Polarsteps/
+  TripIt/Komoot/AllTrails/GetYourGuide (59 virov) → benchmark matrika 15
+  UX področij (`docs/audit/task8-benchmark-matrix.md`) + D8-B UX
+  arhitektura DISCOVER→EXPLORE→SAVE→ADD→PLAN→GO
+  (`docs/audit/task8-d8b-ux-architecture.md`) + D8-A read-only audit
+  (66 zmožnosti, 7 različic „Dodaj“, 12 slepih ulic, ~22 kartic —
+  `docs/audit/task8-d8a-ux-audit.md`).
+- **KANONSKI „DODAJ V MOJO POT“ (P-CTA-1/P-STATE-1 — osrednji sistem)**:
+  ena domenska zbirka `dai:my-trip-items` (`src/lib/my-trip.ts` —
+  dedup kind:refId, FIFO 200, sanitizacija, cross-tab dogodki, handoff
+  zastavica) + ena primitiva `<AddToTripButton>` (full/compact/icon, ≥44px,
+  aria-pressed, SL/EN, toast „Dodano v mojo pot“ + „Odpri pot“, razveljavitev
+  odstranitve) + `useMyTrip` hook (hidratacijsko varen). Write-through
+  adapterji: zemljevid (izbira + zbirka hkrati), journey, klepet (44px
+  nadgradnja 28px gumba), planner dogodki. NOVE površine: destinacijski
+  modal + hub + things-to-do, SmartSearch vrstice (zaprta najvišja
+  namenska slepa ulica), dogodki, lokali, doživetja, wishlist most
+  (P-CTA-2). Slovnica stanj: Shrani (srček) ≠ **V moji poti** (mehek
+  smaragd) ≠ Načrtovano ≠ Rezervirano.
+- **POGLED „MOJA POT“ na /moja-potovanja** (`MyTripView`): zbirka grupirana
+  po vrstah (Destinacije/Lokali/Dogodki/Doživetja/Izdelki/…), Odpri +
+  Odstrani, „Nadaljuj načrtovanje“ handoff v načrtovalnik, Počisti z
+  razveljavitvijo. Skupen gostu in prijavljenemu.
+- **TRAK „IZ MOJE POTI“ v načrtovalniku** (`PlannerMyTripStrip`): destinacije
+  → prefill SAMO PRAZNE izbire (čipi „Vir: Moja pot“, nikoli prepis
+  uporabnikove izbire), izdelki/doživetja → obstoječa izbira (store +
+  persistSelection, dedup po ključu in naslovu), dogodki → iskrena opomba
+  (dodajo po generiranju). BREZ tihega generiranja.
+- **MOBILNA SPODNJA TAB VRSTICA** (`MobileTabBar` <lg):
+  Razišči · Zemljevid · Načrtuj (poudarjeni center) · Moja pot (števčna
+  značka zbirke) · Več (odpre obstoječi polni meni — 13 ciljev ohranjenih).
+  Hamburger sprožilec odstranjen, klepet FAB se dvigne (CSS `data-mobile-tabbar`),
+  varnostne cone spoštovane.
+- **ENOTNA LUPINA na 17 sirot** (P-NAV-1): Navigation (solid) + Footer na
+  vseh javnih straneh (destinacijski hub + 4 podpoti, /pot/[shareId] z
+  čistim printom, /moja-potovanja z premaknjenimi računskimi dejanji,
+  primerjava, konzultacija, prijava/4 auth strani, 7 info/pravnih).
+  Lebdeči LanguageToggle odstranjen SAMO tam, kjer ga LanguageSwitcher
+  pokriva (preverjeno — hreflang pokrit z metapodatki).
+- **DOMAČA STRAN — hierarhija** (issue §7): Hero „Kaj želiš doživeti?“ →
+  Nadaljuj svojo pot (dvignjeno) → vstopna vrstica Narava · Hrana · Mesta ·
+  Doživetja · Dogodki → uredniško odkrivanje → hub → validator +
+  telemetrija v `<details>` (progresivno razkrivanje) → ostalo pod pregibom.
+  Vseh 13 blokov OHRANJENIH. StickyMobileCTA upokojen (tab vrstica ga
+  pokriva; „Za ponudnike“ ostane v Več + nogi).
+
+### Popravljeno
+
+- **HARD 404** (D8-A §9.1): povezava `/načrtuj` (šumnik) na 38×5 straneh
+  predgeneriranih itinererjev → `/nacrtuj`.
+- **28px dotik tarča** v klepetu → kanonska 44px primitiva.
+- **Akcijska vrstica načrtovalnika: 5 CTA → 2 primarna (Shrani in deli,
+  Zaženi Na poti) + meni „Več“** (E-pošta, .ics, Poslušaj — isti handlerji,
+  iste aria-labels; pogoj audioScript ohranjen). Čista re-prezentacija.
+
+### Dokumentacija
+
+- `docs/audit/task8-feature-regression-matrix.md` — 31/31 zmožnosti
+  potrjena, 0 vrstic izgube (issue §46).
+- Screenshots: task8-home-desktop/mobile, task8-moja-pot-view,
+  task8-planner-strip/prefill, task8-destination-hub.
+
+### Vrata
+
+- 3317/3317 testov (+120: task8-my-trip-core 17 · task8-d-add-to-trip-surfaces 24 ·
+  task8-e-shell-tabbar 55 · task8-f-homepage-planner 24) · lint 0 · tsc 0 ·
+  brskalniška verifikacija D8-H (375/1280, 0 napak konzole, 0 preliv,
+  zlata pot dodajanja dokazana).
+
+---
+
 ## [1.111.1] — 2026-09-27 (TASK 35: payout sweep števec olderOpenCount — UI semantika)
 
 ### Popravljeno

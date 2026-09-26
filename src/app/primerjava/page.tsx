@@ -9,7 +9,11 @@ import { safeJsonLd } from "@/lib/security";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { LanguageToggle } from "@/components/language-toggle";
+// TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer;
+// LanguageToggle odstranjen (/primerjava je na EN whitelisti —
+// EN_STATIC_ROUTES — LanguageSwitcher v Navigation pokriva isto SL⇄EN).
+import { Navigation } from "@/components/sections/navigation";
+import { Footer } from "@/components/sections/footer";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import {
   Globe,
@@ -92,15 +96,16 @@ export default async function ComparisonPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-background">
-      <LanguageToggle path={PATH} />
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* TASK 8 / D8-E (P-NAV-1): enotna lupina (Navigation + Footer). */}
+      <Navigation solid />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd(faqs)) }}
       />
       <PageViewTracker path={PATH} title={t("title")} />
 
-      <main className="mx-auto max-w-4xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
+      <main className="mx-auto flex-grow w-full max-w-4xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
         {/* Glava */}
         <Badge className="mb-4">{t("badge")}</Badge>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -313,6 +318,7 @@ export default async function ComparisonPage() {
           })}
         </p>
       </main>
+      <Footer />
     </div>
   );
 }

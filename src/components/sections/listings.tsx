@@ -38,6 +38,8 @@ import {
   type ListingPlan,
 } from "@/lib/listings-types";
 import { ListingModal } from "@/components/sections/listing-modal";
+// TASK 8 / D8-D (§3.3): kanonski "Dodaj v mojo pot" tudi na kartici lokala
+import { AddToTripButton } from "@/components/add-to-trip-button";
 
 const ALL_VALUE = "all";
 
@@ -471,6 +473,26 @@ function ListingCard({
             </Button>
           ) : null}
         </div>
+
+        {/* TASK 8 / D8-D (§3.3): kompaktstni kanonski dodaj — POLNA širina
+            pod obstoječo CTA vrstico (obstoječe akcije Podrobnosti/spletna
+            stran ostajajo nespremenjene; 44px dotik iz primitve). */}
+        <AddToTripButton
+          variant="compact"
+          className="w-full justify-center"
+          item={{
+            kind: "listing",
+            refId: listing.id,
+            title: listing.name,
+            subtitle:
+              listing.reviewCount > 0
+                ? `${CATEGORY_LABELS[listing.category]} · ★ ${listing.rating.toFixed(1)}`
+                : CATEGORY_LABELS[listing.category],
+            href: "/lokali",
+            image,
+            source: "lokali",
+          }}
+        />
       </CardContent>
     </Card>
   );

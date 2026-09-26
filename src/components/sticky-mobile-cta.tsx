@@ -16,6 +16,14 @@ import { Sparkles, Building2 } from "lucide-react";
  * - Vidna samo na mobilnem (< sm), kjer je največji drop-off
  * - Postavi data-sticky-cta na <body> → chat FAB se dvigne (globals.css)
  * - Safe-area inset za iPhone
+ *
+ * TASK 8 / D8-E (issue #8 §52 — UPOKOJEN na straneh z lupino): spodnja
+ * mobilna tab vrstica (MobileTabBar) zdaj pokriva "Načrtuj z AI" (zavihek
+ * Načrtuj, vedno viden <lg) in "Za ponudnike" (Več → meni + Footer);
+ * chat FAB se dviga prek body[data-mobile-tabbar] (globals.css).
+ * Komponenta OSTAJA v repu (ni brisanja — varnejše): edini preostali
+ * uporabnik je domača stran (src/app/page.tsx, druga faza ISSUE #8/D8-F).
+ * Obnašanje komponente samo po sebi je nespremenjeno.
  */
 export function StickyMobileCTA() {
   const t = useTranslations("nav");

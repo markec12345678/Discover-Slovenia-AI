@@ -38,6 +38,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WeatherWidget } from "@/components/sections/weather-widget";
 import { ListingModal } from "@/components/sections/listing-modal";
+// TASK 8 / D8-D (§3.3): kanonski "Dodaj v mojo pot" — zbirka referenc (ADD sloj)
+import { AddToTripButton } from "@/components/add-to-trip-button";
 import { trackFunnel } from "@/lib/funnel";
 import { REGIONS } from "@/lib/slovenia-data";
 import { getDestinationProvenance } from "@/lib/destination-provenance";
@@ -227,6 +229,25 @@ export function DestinationModal({
 
             {/* Vsebina */}
             <div className="space-y-6 p-5 sm:p-6">
+              {/* TASK 8 / D8-D (§3.3, D8-A P-CTA-1): KANONSKI "Dodaj v mojo
+                  pot" — destinacijo dodamo v zbirko referenc (ADD sloj,
+                  dai:my-trip-items). Modala prej NI imela nobenega dodajanja
+                  v pot — samo regeneracijo. Spodnji "Zgradi novo pot" ostaja
+                  napredna pot (heroQuery prenos → nova generacija). */}
+              <AddToTripButton
+                variant="full"
+                className="w-full justify-center"
+                item={{
+                  kind: "destination",
+                  refId: destination.slug,
+                  title: destination.name,
+                  subtitle: regionLabel(destination.region),
+                  href: `/destinacija/${encodeURIComponent(destination.slug)}`,
+                  image: destination.image,
+                  source: "destination-modal",
+                }}
+              />
+
               {/* Issue #3 §8 (EXPLORE → "Add to my trip") — prej lažnjujoče
                   ime "Dodaj v mojo pot": gumb NE doda k obstoječemu načrtu,
                   ampak ZGRADI NOVEGA okoli destinacije (heroQuery prenos →

@@ -34,7 +34,6 @@ import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
 import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
 import { Chatbot } from "@/components/chatbot";
-import { StickyMobileCTA } from "@/components/sticky-mobile-cta";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -486,7 +485,6 @@ export default async function AdriaGuidePage({
 
       <Footer />
       <Chatbot />
-      <StickyMobileCTA />
     </div>
   );
 }

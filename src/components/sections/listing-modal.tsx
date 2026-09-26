@@ -32,6 +32,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PartnerBadge, type PartnerStatus } from "@/components/partner-badge";
 import { AIStory } from "@/components/ai-story";
 import { BookingAssistant } from "@/components/booking-assistant";
+// TASK 8 / D8-D (§3.3): kanonski "Dodaj v mojo pot" v modalu lokala (D8-A §9.5)
+import { AddToTripButton } from "@/components/add-to-trip-button";
 import {
   CATEGORY_LABELS,
   CATEGORY_ICONS,
@@ -362,6 +364,29 @@ export function ListingModal({ listing, onClose }: ListingModalProps) {
                   value={listing.clickCount.toLocaleString("sl-SI")}
                 />
               </section>
+
+              {/* TASK 8 / D8-D (§3.3): KANONSKI "Dodaj v mojo pot" — modal
+                  lokala prej ni imel NOBENE akcije dodajanja v pot (samo
+                  zunanja spletna stran / AI rezervacija). Zbirka referenc
+                  (ADD sloj): ISKREN href = imenik /lokali (globoke povezave
+                  na posamezen lokal ni — modal se odpira iz klientnega
+                  stanja). */}
+              <AddToTripButton
+                variant="full"
+                className="w-full justify-center"
+                item={{
+                  kind: "listing",
+                  refId: listing.id,
+                  title: listing.name,
+                  subtitle:
+                    listing.reviewCount > 0
+                      ? `${CATEGORY_LABELS[listing.category]} · ★ ${listing.rating.toFixed(1)}`
+                      : CATEGORY_LABELS[listing.category],
+                  href: "/lokali",
+                  image: listing.images[0],
+                  source: "lokali",
+                }}
+              />
 
               {/* CTA: spletna stran (glavni) */}
               {listing.website ? (

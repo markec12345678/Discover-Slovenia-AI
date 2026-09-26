@@ -20,6 +20,9 @@ import {
   formatEventDate,
 } from "@/lib/events-data";
 import { EVENT_CATEGORY_LABELS_EN } from "@/lib/events-data-en";
+// TASK 8 / D8-D (§3.3 write-through): dogodek, preklopljen V NAČRT, se
+// registrira tudi v zbirko "Moja pot" (čista lib — SSR-varna brez okna).
+import { addMyTripItem } from "@/lib/my-trip";
 import { eventOverlapsTrip, tripDuringPhraseSI } from "@/lib/trip-dates";
 import type { ItineraryEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -219,7 +222,30 @@ function EventMiniCard({ event, lang, duringVisit, added, onToggle }: EventMiniC
           {onToggle ? (
             <button
               type="button"
-              onClick={() => onToggle(event)}
+              onClick={() => {
+                onToggle(event);
+                // TASK 8 / D8-D (write-through, SAMO dodajanje): dogodek, ki
+                // ga uporabnik preklopi V NAČRT (razpored), se hkrati
+                // registrira v zbirko "Moja pot" (ADD sloj — zbirka ≠
+                // razpored). Ob odstranitvi iz načrta zbirke NE dotikamo:
+                // odstranitev iz razporeda ni odstranitev ideje. href je
+                // iskren koledar /dogodki (dogodki nimajo interne podstrani;
+                // zunanja spletna stran ostaja gumb ob sebi).
+                if (!added) {
+                  addMyTripItem({
+                    kind: "event",
+                    refId: event.id,
+                    title: event.name,
+                    subtitle: `${formatEventDate(
+                      event.date,
+                      event.endDate,
+                      lang
+                    )} · ${event.location}`,
+                    href: "/dogodki",
+                    source: "planner-dogodki",
+                  });
+                }
+              }}
               aria-pressed={added}
               className={cn(
                 "inline-flex min-h-[36px] items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",

@@ -21,6 +21,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+// TASK 8 / D8-D (§3.3): kanonski "Dodaj v mojo pot" na dogodkih (D8-A §9.2)
+import { AddToTripButton } from "@/components/add-to-trip-button";
 import {
   Select,
   SelectContent,
@@ -358,10 +360,28 @@ function EventCard({ event }: { event: EventItem }) {
             {event.description}
           </p>
 
-          {/* CTA gumbi */}
-          {(event.website || event.destinationId) && (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {event.website ? (
+          {/* CTA gumbi — TASK 8 / D8-D: kanonski "Dodaj v mojo pot" je ZDAJ
+              vedno prisoten (prej so kartice brez website/destinationId niso
+              imele NOBENE akcije). Obstoječi gumbi (spletna stran /
+              razišči destinacijo) ostajajo nespremenjeni. */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <AddToTripButton
+              variant="compact"
+              item={{
+                kind: "event",
+                refId: event.id,
+                title: event.name,
+                subtitle: `${formatEventDate(event.date, event.endDate)} · ${event.location}`,
+                // ISKRENOST href: dogodki nimajo interne podstrani — zbirka
+                // "Moja pot" sprejema SAMO notranje poti (my-trip.ts meja),
+                // zato vodi na koledar /dogodki (zunanja spletna stran
+                // dogodka ostaja gumb zgoraj).
+                href: "/dogodki",
+                image: event.image,
+                source: "dogodki",
+              }}
+            />
+            {event.website ? (
                 <Button asChild size="sm" variant="outline">
                   <a
                     href={event.website}
@@ -389,8 +409,7 @@ function EventCard({ event }: { event: EventItem }) {
                   </a>
                 </Button>
               ) : null}
-            </div>
-          )}
+          </div>
         </CardContent>
       </div>
     </Card>

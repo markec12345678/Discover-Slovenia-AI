@@ -4,7 +4,6 @@ import { Award } from "lucide-react";
 import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
 import { Chatbot } from "@/components/chatbot";
-import { StickyMobileCTA } from "@/components/sticky-mobile-cta";
 import { SloveniaPassSection } from "@/components/slovenia-pass-section";
 import { Reveal } from "@/components/reveal";
 import { Badge } from "@/components/ui/badge";
@@ -62,7 +61,6 @@ export default function SloveniaPassPage() {
       </main>
       <Footer />
       <Chatbot />
-      <StickyMobileCTA />
     </div>
   );
 }

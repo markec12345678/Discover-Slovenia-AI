@@ -18,6 +18,11 @@ import { DESTINATIONS } from "@/lib/slovenia-data";
 import { safeParseConsultPartners } from "@/lib/consultation-engine";
 import { ConsultationPartnerCards } from "@/components/consultation-partner-cards";
 import { ConsultationRefSetter } from "@/components/consultation-ref-setter";
+// TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer
+// (prej lastni header + mini-footer). Linka mini-noge (/vir-podatkov,
+// /politika-zasebnosti) sta v standardnem Footerju (stolpec Pravno).
+import { Navigation } from "@/components/sections/navigation";
+import { Footer } from "@/components/sections/footer";
 
 // ============================================================================
 // JAVNA (zasebna-povezava) STRAN KONZULTACIJE: /konzultacija/[token]
@@ -108,25 +113,26 @@ export default async function ConsultationPage({ params }: PageProps) {
     : null;
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      {/* Glava */}
-      <header className="border-b border-border/70 bg-background">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
+    <div className="min-h-screen flex flex-col bg-muted/30">
+      {/* TASK 8 / D8-E (P-NAV-1): enotna lupina (Navigation + Footer). */}
+      <Navigation solid />
+
+      <main className="mx-auto w-full flex-grow max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+        {/* Kontekst (prej lastni header chrome — zdaj vsebina, zero-loss):
+            nazaj na obrazec vprašanja + indikator zasebne povezave. */}
+        <div className="mb-6 flex items-center justify-between gap-3">
           <Link
             href="/#vprasi-lokalca"
-            className="flex items-center gap-2 text-sm font-semibold text-foreground transition hover:text-primary"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground transition hover:text-primary"
           >
             <RotateCcw className="size-4" aria-hidden="true" />
-            Discover Slovenia AI
+            Nazaj na vprašanje
           </Link>
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <Lock className="size-3.5" aria-hidden="true" />
             Zasebna povezava
           </span>
         </div>
-      </header>
-
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         {/* Atribucija: obisk te strani označi sejo — naslednja rezervacija
             se šteje kot izhodajoča iz konzultacije (Booking.source) */}
         <ConsultationRefSetter />
@@ -262,17 +268,9 @@ export default async function ConsultationPage({ params }: PageProps) {
         </p>
       </main>
 
-      <footer className="mt-auto border-t border-border/70 bg-background">
-        <div className="mx-auto max-w-3xl px-4 py-4 text-center text-xs text-muted-foreground sm:px-6">
-          <Link href="/vir-podatkov" className="hover:text-foreground hover:underline">
-            Viri podatkov
-          </Link>
-          {" • "}
-          <Link href="/politika-zasebnosti" className="hover:text-foreground hover:underline">
-            Zasebnost
-          </Link>
-        </div>
-      </footer>
+      {/* TASK 8 / D8-E: standardna noga lupine (linka prejšnje mini-noge
+          sta v njenem stolpcu Pravno). */}
+      <Footer />
     </div>
   );
 }

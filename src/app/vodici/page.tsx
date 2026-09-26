@@ -5,7 +5,6 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
 import { Chatbot } from "@/components/chatbot";
-import { StickyMobileCTA } from "@/components/sticky-mobile-cta";
 import { BlogSection } from "@/components/sections/blog";
 import { AskLocal } from "@/components/sections/ask-local";
 import { Reveal } from "@/components/reveal";
@@ -272,7 +271,6 @@ export default async function GuidesPage() {
       </main>
       <Footer />
       <Chatbot />
-      <StickyMobileCTA />
     </div>
   );
 }

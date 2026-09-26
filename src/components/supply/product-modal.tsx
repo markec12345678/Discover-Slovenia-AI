@@ -5,7 +5,8 @@
 // ============================================================================
 // Univerzalni modal za ProviderProduct (nadomesti PoiModal v map-view —
 // Wikipedia/AI obogatitev za OSM produkte je PRENESENA iz poi-modal.tsx,
-// dodana pa sta status vira (register) in "Dodaj v moj načrt").
+// dodana pa sta status vira (register) in dodajanje v pot — od TASK 8 / D8-D
+// prek kanonskega AddToTripButton "Dodaj v mojo pot" (write-through).
 //
 // Iskrenost: cena/ocena/razpoložljivost se prikažejo SAMO kadar obstajajo
 // (OSM nima cen — prikazan je vir); status LOCAL/AFFILIATE/LIVE/SEARCH
@@ -24,8 +25,6 @@ import {
   AlertCircle,
   Navigation,
   Sparkles,
-  Plus,
-  Check,
   Star,
   Euro,
 } from "lucide-react";
@@ -36,13 +35,17 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+// TASK 8 / D8-D (§3.3 write-through): kanonski "Dodaj v mojo pot" — en
+// gumb, dve resnici (izbira za AI kontekst IN pripadnost h zbirki).
+import { AddToTripButton } from "@/components/add-to-trip-button";
+import { addMyTripItem, removeMyTripItem } from "@/lib/my-trip";
 import { taxonomyOf } from "@/lib/supply/taxonomy";
+import { supplyTripItem, supplyTripKind } from "@/lib/supply/my-trip-item";
 import { getProvider, statusLabel } from "@/lib/supply/registry";
 import { showsUnknownPriceChip } from "@/lib/supply/price-display";
 import type { ProviderProduct } from "@/lib/supply/types";
-import { addProductToSelection } from "@/lib/supply/selection";
+import { addProductToSelection, removeSelectedProduct } from "@/lib/supply/selection";
 import { isSafeHttpUrl, safeExternalHref } from "@/lib/external-url";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
 import { useAppStore } from "@/lib/store";
@@ -87,8 +90,11 @@ const L = {
   availLiveNo: { sl: "Ni na voljo (živi vir)", en: "Unavailable (live source)" },
   availUnknown: { sl: "Dostopnost neznana", en: "Availability unknown" },
   imageCredit: { sl: "Slika", en: "Image" },
-  addPlan: { sl: "Dodaj v moj načrt", en: "Add to my plan" },
-  addPlanAcc: { sl: "Dodaj med izbrane (načrtuvalnik bo upošteval)", en: "Add to selection (the planner will account for it)" },
+  // TASK 8 / D8-D (issue #8 §52 — NAMERNA sprememba besedila): oznaka gumba
+  // "Dodaj v moj načrt" je upokojena — kanonski AddToTripButton prinaša
+  // svoje oznake ("Dodaj v mojo pot" / "V moji poti"). Detajlne oznake
+  // mehanike (postanek/izbira/duplikat) spodaj ostajajo kot vrstica pod
+  // gumbom — nič informacije ni izgubljeno.
   checkOffer: { sl: "Preveri ponudbo", en: "Check offer" },
   checkOfferAcc: {
     sl: "Preveri ponudbo in rezerviraj pri partnerju (odpre externo stran)",
@@ -268,6 +274,26 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
     const kind: "stop" | "selection" = result.insertedStop ? "stop" : "selection";
     setAddedState(kind);
     onAdded?.(product, kind);
+  };
+
+  // TASK 8 / D8-D (§3.3 write-through, D8-A §4.1 varianta 2): KONTROLIRANI
+  // kanonski gumb — obstoječa mehanika (addProductToSelection: dedupe/limit/
+  // postanek-ali-izbira + onAdded) ostaja IDENTIČNA; ob dodajanju se izdelek
+  // hkrati registrira v zbirko "Moja pot", ob odstranitvi pa izbere z
+  // removeSelectedProduct IN zbriše iz zbirke (zbirka ≠ razpored — a tu
+  // pripadnost zrcali izbiro, ker je to ista enkratna odločitev uporabnika).
+  const handleToggleTrip = (next: boolean) => {
+    if (next) {
+      handleAdd();
+      addMyTripItem(supplyTripItem(product, lang, "zemljevid"));
+      return;
+    }
+    removeSelectedProduct(product.provider, product.providerProductId);
+    removeMyTripItem(
+      supplyTripKind(product.type),
+      product.id
+    );
+    setAddedState(null);
   };
 
   const priceUnit =
@@ -535,31 +561,31 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
                 {L.checkOffer[lang]}
               </a>
             ) : null}
-            <Button
-              type="button"
-              onClick={handleAdd}
-              disabled={addedState !== null || isSelected}
-              className={cn(
-                "w-full gap-2",
-                !offerHref && "h-11",
-                addedState && "bg-accent text-accent-foreground"
-              )}
-              variant={offerHref ? "outline" : "default"}
-              aria-label={L.addPlanAcc[lang]}
-            >
-              {addedState || isSelected ? (
-                <Check className="size-4" aria-hidden="true" />
-              ) : (
-                <Plus className="size-4" aria-hidden="true" />
-              )}
-              {addedState === "stop"
-                ? L.addedStop[lang]
-                : addedState === "selection"
-                  ? L.addedSelection[lang]
-                  : addedState === "duplicate" || isSelected
-                    ? L.dup[lang]
-                    : L.addPlan[lang]}
-            </Button>
+            {/* TASK 8 / D8-D (§3.3 write-through): KANONSKI "Dodaj v mojo
+                pot" (prej "Dodaj v moj načrt") — kontrolirana izvedba:
+                stanje = izbira (isSelected/addedState), klik pa poganja
+                handleToggleTrip (izbira + zbirka hkrati). Podroben odziv
+                mehanike (postanek/izbira/duplikat) ostaja kot vrstica pod
+                gumbom — NIČ informacije ni izgubljeno. */}
+            <AddToTripButton
+              variant="full"
+              className="w-full justify-center"
+              added={addedState !== null || isSelected}
+              onToggle={handleToggleTrip}
+              item={supplyTripItem(product, lang, "zemljevid")}
+            />
+            {addedState ? (
+              <p
+                className="-mt-3 text-center text-xs text-muted-foreground"
+                aria-live="polite"
+              >
+                {addedState === "stop"
+                  ? L.addedStop[lang]
+                  : addedState === "selection"
+                    ? L.addedSelection[lang]
+                    : L.dup[lang]}
+              </p>
+            ) : null}
 
             {/* Atribucija vira */}
             <div className="border-t border-border pt-4">

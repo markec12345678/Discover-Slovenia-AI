@@ -5,7 +5,6 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
 import { Chatbot } from "@/components/chatbot";
-import { StickyMobileCTA } from "@/components/sticky-mobile-cta";
 import { ItineraryPlanner } from "@/components/sections/itinerary-planner";
 import { TravelStyleQuiz } from "@/components/travel-style-quiz";
 import { CommunityTrips } from "@/components/sections/community-trips";
@@ -97,7 +96,6 @@ export default async function PlanPage() {
       </main>
       <Footer />
       <Chatbot />
-      <StickyMobileCTA />
     </div>
   );
 }

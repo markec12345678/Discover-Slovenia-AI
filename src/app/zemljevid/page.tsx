@@ -5,7 +5,6 @@ import { MapPin } from "lucide-react";
 import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
 import { Chatbot } from "@/components/chatbot";
-import { StickyMobileCTA } from "@/components/sticky-mobile-cta";
 import { MapSection } from "@/components/sections/map-section";
 import { MapOpenedTracker } from "@/components/map-opened-tracker";
 import { Badge } from "@/components/ui/badge";
@@ -120,7 +119,6 @@ export default async function MapPage() {
       </main>
       <Footer />
       <Chatbot />
-      <StickyMobileCTA />
     </div>
   );
 }

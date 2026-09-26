@@ -4,7 +4,11 @@ import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
 import { getEnDestination, REGIONS_EN } from "@/lib/slovenia-data-en";
-import { LanguageToggle } from "@/components/language-toggle";
+// TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer;
+// LanguageToggle odstranjen (LanguageSwitcher v Navigation pokriva SL⇄EN —
+// EN whitelista ^/destinacija/[^/]+/best-time-to-visit/[^/]+$).
+import { Navigation } from "@/components/sections/navigation";
+import { Footer } from "@/components/sections/footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -162,8 +166,10 @@ export default async function BestTimeToVisitPage({
   const title = t("meta.title", { name: dest.name, season: seasonLabel });
 
   return (
-    <div className="min-h-screen bg-background">
-      <LanguageToggle path={`/destinacija/${dest.slug}/best-time-to-visit/${season}`} />
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* TASK 8 / D8-E (P-NAV-1): enotna lupina (Navigation + Footer). */}
+      <Navigation solid />
+      <main className="flex-grow">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }} />
 
@@ -325,6 +331,8 @@ export default async function BestTimeToVisitPage({
           </div>
         </section>
       </div>
+      </main>
+      <Footer />
     </div>
   );
 }

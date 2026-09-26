@@ -9,9 +9,14 @@
 // po posamični komponenti.
 // ============================================================================
 
-import { Star, MapPin, Plus, Check, Euro, Clock } from "lucide-react";
+import { Star, MapPin, Euro, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+// TASK 8 / D8-D (§3.3 write-through): kanonski "Dodaj v mojo pot" na kartici
+// (prej gumb "V načrt" h-7 — 28px, premajhna dot-tarča po D8-A).
+import { AddToTripButton } from "@/components/add-to-trip-button";
+import { addMyTripItem, removeMyTripItem } from "@/lib/my-trip";
+import { supplyTripItem, supplyTripKind } from "@/lib/supply/my-trip-item";
+import { removeSelectedProduct } from "@/lib/supply/selection";
 import { taxonomyOf } from "@/lib/supply/taxonomy";
 import { getProvider, statusLabel } from "@/lib/supply/registry";
 import { showsUnknownPriceChip } from "@/lib/supply/price-display";
@@ -20,8 +25,9 @@ import { cn } from "@/lib/utils";
 
 const L = {
   status: { sl: "Vir", en: "Source" },
-  addPlan: { sl: "V načrt", en: "Add to plan" },
-  added: { sl: "V načrtu", en: "In plan" },
+  // TASK 8 / D8-D (issue #8 §52 — NAMERNA sprememba besedila): oznaki gumba
+  // "V načrt" / "V načrtu" sta upokojeni — kanonski AddToTripButton prinaša
+  // svoje oznake ("Dodaj v mojo pot" / "V moji poti") + 44px dot-tarčo.
   perPerson: { sl: "/osebo", en: "/person" },
   perNight: { sl: "/noč", en: "/night" },
   perDay: { sl: "/dan", en: "/day" },
@@ -136,7 +142,7 @@ export function ProductCard({
           </div>
         </div>
       </button>
-      <div className="mt-2 flex items-center justify-between gap-2">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         {product.price ? (
           <span className="inline-flex items-center text-sm font-bold text-foreground">
             {product.price.fromPrice ? (
@@ -180,21 +186,25 @@ export function ProductCard({
             {product.license?.source ?? provider?.labels[lang]}
           </span>
         )}
-        <Button
-          type="button"
-          size="sm"
-          variant={selected ? "secondary" : "default"}
-          onClick={() => onAdd(product)}
-          aria-pressed={selected}
-          className="h-7 gap-1 px-2 text-[11px]"
-        >
-          {selected ? (
-            <Check className="size-3" aria-hidden="true" />
-          ) : (
-            <Plus className="size-3" aria-hidden="true" />
-          )}
-          {selected ? L.added[lang] : L.addPlan[lang]}
-        </Button>
+        {/* TASK 8 / D8-D (§3.3 write-through, D8-A §4.1 varianta 3):
+            kontrolirani kanonski gumb — dodajanje pokliče obstoječi
+            onAdd (starševa mehanika addProductToSelection) IN registrira
+            predmet v zbirki "Moja pot"; odstranitev pobriše oboje
+            (removeSelectedProduct + removeMyTripItem). */}
+        <AddToTripButton
+          variant="compact"
+          added={selected}
+          onToggle={(next) => {
+            if (next) {
+              onAdd(product);
+              addMyTripItem(supplyTripItem(product, lang, "zemljevid"));
+            } else {
+              removeSelectedProduct(product.provider, product.providerProductId);
+              removeMyTripItem(supplyTripKind(product.type), product.id);
+            }
+          }}
+          item={supplyTripItem(product, lang, "zemljevid")}
+        />
       </div>
     </div>
   );

@@ -46,6 +46,11 @@ import {
   persistLastItinerary,
   isValidChatPlace,
 } from "@/lib/chat-add-place";
+// TASK 8 / D8-D (issue #8): write-through — kraj iz klepeta se ob dodajanju
+// v načrt/odložišče hkrati zabeleži v zbirko "Moja pot" (dai:my-trip-items),
+// da je "V moji poti" resnica tudi na tej površini.
+import { addMyTripItem } from "@/lib/my-trip";
+import { AddToTripButton } from "@/components/add-to-trip-button";
 import { useAppStore } from "@/lib/store";
 // GLASOVNI KLEPET (Issue #2 §6/§7/§8): brskalnikov STT/TTS brez AI ključa —
 // čisto plast v src/lib/voice.ts (podpora, jezikovna oznaka, čistitev besedila)
@@ -430,34 +435,33 @@ function PlaceRow({
         )}
       </div>
       {/* 1.42 (GEO → NAČRT): "+" — kraj iz AI odgovora neposredno v načrt.
-          Po dodajanju ✓ (disabled) — dejanje je enkratno, dedupe varuje
-          addChatPlaceToItinerary ("Že v načrtu" toast).
+          TASK 8 / D8-D: kanonska primitiva (44px dotik, enoten besednjak
+          "Dodaj v mojo pot" / "V moji poti"). Dejanje ostaja ENKRATNO — po
+          dodajanju gumb zamrzne (pointer-events-none, dedupe varuje
+          addChatPlaceToItinerary "Že v načrtu" toast).
           1.44: T2 viri so članki — dejanja "Dodaj v načrt" ni (ne morejo
           biti postanek). */}
       {onAdd && !isT2 && (
-        <button
-          type="button"
-          onClick={() => onAdd(place)}
-          disabled={added}
-          className={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            added
-              ? "bg-primary/15 text-primary"
-              : "border border-border/60 text-muted-foreground hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
-          )}
-          aria-label={
-            added
-              ? t("addPlaceDone")
-              : t("addPlaceAria", { name: place.name })
-          }
-          title={added ? t("addPlaceDone") : t("addPlace")}
+        <span
+          className={cn("shrink-0", added && "pointer-events-none")}
         >
-          {added ? (
-            <Check className="size-3.5" aria-hidden />
-          ) : (
-            <Plus className="size-3.5" aria-hidden />
-          )}
-        </button>
+          <AddToTripButton
+            item={{
+              kind: place.slug ? "destination" : "poi",
+              refId: place.id,
+              title: place.name,
+              href: place.slug
+                ? `/destinacija/${place.slug}`
+                : `/zemljevid?lat=${place.lat}&lng=${place.lng}&zoom=15&label=${encodeURIComponent(place.name)}`,
+              source: "klepet",
+            }}
+            variant="icon"
+            added={added}
+            onToggle={(next) => {
+              if (next) onAdd(place);
+            }}
+          />
+        </span>
       )}
     </li>
   );
@@ -860,6 +864,21 @@ export function Chatbot() {
    *      in ga samodejno dodamo, ko uporabnik ustvari/obnovi načrt
    */
   function handleAddPlace(place: ChatPlace) {
+    // TASK 8 / D8-D: write-through v zbirko "Moja pot" — destinacija s slugom
+    // dobi notranjo povezavo, ostali kraji pošteno geo-globoko povezavo na
+    // zemljevid (vzorec TASK 86). Samo javni povzetki, brez PII.
+    addMyTripItem({
+      kind: place.slug ? "destination" : "poi",
+      refId: place.id,
+      title: place.name,
+      subtitle: [place.category, place.rating ? `★ ${place.rating}` : null]
+        .filter(Boolean)
+        .join(" · "),
+      href: place.slug
+        ? `/destinacija/${place.slug}`
+        : `/zemljevid?lat=${place.lat}&lng=${place.lng}&zoom=15&label=${encodeURIComponent(place.name)}`,
+      source: "klepet",
+    });
     const evt = new CustomEvent<ChatPlace>(CHAT_ADD_PLACE_EVENT, {
       detail: place,
       cancelable: true,

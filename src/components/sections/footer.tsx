@@ -19,8 +19,11 @@ export async function Footer() {
       className="mt-auto w-full border-t border-border bg-muted/30"
       aria-label={t("ariaLabel")}
     >
-      {/* pb-40 (mobilno): vsebina noge vidna nad sticky CTA (~65px + safe-area) IN nad dvignjenim chat FAB (~140px od dna); sm:pb-24: tudi na desktopu disclaimer počisti FAB (top ~80px od dna); lg:pt-12 ohrani zgornji odmik */}
-      <div className="mx-auto w-full max-w-7xl px-4 pb-40 pt-10 sm:px-6 sm:pb-24 lg:px-8 lg:pt-12 lg:pb-24">
+      {/* pb-48 (<sm): vsebina noge vidna nad spodnjo mobilno tab vrstico (~4.5rem + safe-area) IN nad dvignjenim chat FAB (~140px od dna);
+          TASK 8 / D8-E: sm:pb-48 (ne sm:pb-24) — tab vrstica je vidna na VSEH <lg zaslonih in FAB se tam dvigne na ~132px, zato tudi
+          tablični pogled (640–1023px) rabi večji spodnji odmik; lg:pb-24: desktop brez tab vrstice (samo FAB ~80px) ostaja nespremenjen;
+          lg:pt-12 ohrani zgornji odmik */}
+      <div className="mx-auto w-full max-w-7xl px-4 pb-48 pt-10 sm:px-6 sm:pb-48 lg:px-8 lg:pt-12 lg:pb-24">
         {/* 5 kolon (brand + 4 navigacijske); mobilno: krajši odmiki + linki v 2 stolpcih (Airbnb vzorec — prepolovljena dolžina noge) */}
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-10 lg:grid-cols-5">
           {/* 1. Brand */}

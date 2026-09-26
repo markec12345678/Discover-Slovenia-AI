@@ -5,7 +5,6 @@ import { Compass } from "lucide-react";
 import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
 import { Chatbot } from "@/components/chatbot";
-import { StickyMobileCTA } from "@/components/sticky-mobile-cta";
 import { JourneyPlanner } from "@/components/sections/journey-planner";
 import { Badge } from "@/components/ui/badge";
 import { hreflangForPath } from "@/components/seo";
@@ -89,7 +88,6 @@ export default async function PotovanjePage() {
       <div className="print:hidden">
         <Footer />
         <Chatbot />
-        <StickyMobileCTA />
       </div>
     </>
   );

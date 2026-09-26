@@ -22,6 +22,10 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+// TASK 8 / D8-D (§3.3 write-through): kanonski "Dodaj v mojo pot" na izbirah
+import { AddToTripButton } from "@/components/add-to-trip-button";
+import { addMyTripItem, removeMyTripItem } from "@/lib/my-trip";
+import { supplyTripItem, supplyTripKind } from "@/lib/supply/my-trip-item";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { COUNTRIES, DESTINATIONS } from "@/lib/slovenia-data";
@@ -106,8 +110,10 @@ const L = {
     bookableExternal: { sl: "REZERVACIJA PRI PONUDNIKU", en: "BOOKABLE · EXTERNAL" },
     infoOnly: { sl: "SAMO INFORMACIJA", en: "INFO ONLY" },
     affiliateOnly: { sl: "SAMO POVEZAVA PARTNERJA", en: "AFFILIATE ONLY" },
-    selected: { sl: "Izbrano", en: "Selected" },
-    select: { sl: "Dodaj v načrt", en: "Add to plan" },
+    // TASK 8 / D8-D (issue #8 §52 — NAMERNA sprememba besedila): oznaki
+    // badge-toggle "Dodaj v načrt" / "Izbrano" sta upokojeni — zamenjal ju
+    // je kanonski AddToTripButton ("Dodaj v mojo pot" / "V moji poti");
+    // mehanika toggleProduct ostaja nespremenjena.
   },
   totals: {
     title: { sl: "Skupna cena potovanja", en: "Journey total" },
@@ -615,14 +621,29 @@ export function JourneyPlanner() {
                             </div>
                           </div>
                           {p.provider !== "events" && (
-                            <Button
-                              variant={isSelected ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => toggleProduct(p.id)}
-                              aria-pressed={isSelected}
-                            >
-                              {isSelected ? L.badge.selected[lang] : t(L.badge.select)}
-                            </Button>
+                            /* TASK 8 / D8-D (§3.3 write-through, D8-A §4.1
+                                varianta 4): prej "Dodaj v načrt" badge-toggle.
+                                Mehanika izbire (toggleProduct → handoff/Go
+                                Mode) ostaja IDENTIČNA; ob VKLJUČITVI se
+                                produkt hkrati registrira v zbirko "Moja pot"
+                                (ADD sloj), ob izključitvi pa iz nje pobriše
+                                (zbirka zrcali izbiro — isto dejanje
+                                uporabnika). */
+                            <AddToTripButton
+                              variant="compact"
+                              added={isSelected}
+                              onToggle={(next) => {
+                                toggleProduct(p.id);
+                                if (next) {
+                                  addMyTripItem(
+                                    supplyTripItem(p, lang, "potovanje", "/potovanje")
+                                  );
+                                } else {
+                                  removeMyTripItem(supplyTripKind(p.type), p.id);
+                                }
+                              }}
+                              item={supplyTripItem(p, lang, "potovanje", "/potovanje")}
+                            />
                           )}
                         </div>
 

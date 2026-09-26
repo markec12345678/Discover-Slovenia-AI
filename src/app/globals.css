@@ -375,6 +375,19 @@ header.sticky,
   }
 }
 
+/* TASK 8 / D8-E (issue #8 §52): chat FAB + panel dvig nad spodnjo mobilno
+   tab vrstico (MobileTabBar). Vrstica je vidna na VSEH <lg zaslonih (ne
+   samo <sm kot StickyMobileCTA), zato je breakpoint 1023px. Isti vzorec
+   kot data-sticky-cta zgoraj (tab vrstica ~4.5rem + safe-area). */
+@media (max-width: 1023px) {
+  body[data-mobile-tabbar="true"] .dsa-chat-fab {
+    bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
+  body[data-mobile-tabbar="true"] .dsa-chat-panel {
+    bottom: calc(9rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* Elegantnejši scrollbar za dolge sezname */
 .custom-scrollbar {
   scrollbar-width: thin;

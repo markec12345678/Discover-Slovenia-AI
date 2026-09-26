@@ -4,7 +4,11 @@ import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
 import { getEnDestination, REGIONS_EN } from "@/lib/slovenia-data-en";
-import { LanguageToggle } from "@/components/language-toggle";
+// TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer;
+// LanguageToggle odstranjen (LanguageSwitcher v Navigation pokriva SL⇄EN —
+// EN whitelista ^/destinacija/[^/]+/itinerary/[^/]+$).
+import { Navigation } from "@/components/sections/navigation";
+import { Footer } from "@/components/sections/footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -140,8 +144,10 @@ export default async function ItineraryPage({
   const title = headline;
 
   return (
-    <div className="min-h-screen bg-background">
-      <LanguageToggle path={`/destinacija/${dest.slug}/itinerary/${duration}`} />
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* TASK 8 / D8-E (P-NAV-1): enotna lupina (Navigation + Footer). */}
+      <Navigation solid />
+      <main className="flex-grow">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
 
       {/* PageView tracking — beleži ogled v PageView tabelo */}
@@ -238,7 +244,7 @@ export default async function ItineraryPage({
                   <h3 className="font-semibold mb-1">{t(tt.labelKey)}</h3>
                   <p className="text-sm text-muted-foreground mb-3">{t(tt.descKey)}</p>
                   <Button asChild size="sm" variant="outline">
-                    <Link href={`/načrtuj`}>
+                    <Link href={`/nacrtuj`}>
                       {t("generateButton")} <ArrowRight className="size-3.5 ml-1" />
                     </Link>
                   </Button>
@@ -275,6 +281,8 @@ export default async function ItineraryPage({
           </Button>
         </section>
       </div>
+      </main>
+      <Footer />
     </div>
   );
 }

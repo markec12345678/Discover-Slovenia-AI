@@ -55,6 +55,8 @@ import { hasConsultationRef, clearConsultationRef } from "@/lib/consultation-ref
 import { ReviewSection } from "@/components/review-section";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { WishlistHeartButton } from "@/components/wishlist-sheet";
+// TASK 8 / D8-D (§3.3): kanonski "Dodaj v mojo pot" v modalu doživetja (D8-A §9.8)
+import { AddToTripButton } from "@/components/add-to-trip-button";
 import { addBooking } from "@/lib/my-orders-storage";
 import {
   EXPERIENCE_CATEGORY_LABELS,
@@ -615,6 +617,35 @@ export function ExperienceModal({
                 value={experience.bookingCount.toLocaleString("sl-SI")}
               />
             </section>
+
+            {/* TASK 8 / D8-D (§3.3): KANONSKI "Dodaj v mojo pot" nad
+                rezervacijo — doživetje prej ni imel NOBENE akcije dodajanja v
+                pot (samo srček/shrani + rezervacija). Zbirka referenc (ADD
+                sloj); razporedjanje in rezervacija ostajata spodaj.
+                ISKREN href = /dozivetja (globe povezave na modal ni — odpre
+                se iz klientnega stanja tržnice). */}
+            <AddToTripButton
+              variant="full"
+              className="w-full justify-center"
+              item={{
+                kind: "experience",
+                refId: experience.id,
+                title: experience.name,
+                subtitle: [
+                  experience.providerName,
+                  experience.destinationName ?? undefined,
+                  `${locale === "en" ? "from" : "od"} ${formatPrice(
+                    experience.pricePerPerson,
+                    experience.currency
+                  )}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
+                href: "/dozivetja",
+                image: experience.images[0],
+                source: "dozivetja",
+              }}
+            />
 
             {/* Rezervacija — PRAVA rezervacija prek POST /api/bookings
                 (demo mode ustvari potrjeno rezervacijo) + sekundarna

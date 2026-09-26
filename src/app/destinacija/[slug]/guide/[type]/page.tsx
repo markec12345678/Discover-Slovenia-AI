@@ -6,7 +6,11 @@ import { Link } from "@/i18n/navigation";
 import { localePrefix } from "@/i18n/routing";
 import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
 import { getEnDestination, REGIONS_EN } from "@/lib/slovenia-data-en";
-import { LanguageToggle } from "@/components/language-toggle";
+// TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer;
+// LanguageToggle odstranjen (LanguageSwitcher v Navigation pokriva SL⇄EN —
+// EN whitelista ^/destinacija/[^/]+/guide/[^/]+$).
+import { Navigation } from "@/components/sections/navigation";
+import { Footer } from "@/components/sections/footer";
 import {
   GUIDE_TYPES,
   GUIDE_TYPE_META,
@@ -317,8 +321,10 @@ export default async function GuidePage({
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <LanguageToggle path={`/destinacija/${dest.slug}/guide/${guideType}`} />
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* TASK 8 / D8-E (P-NAV-1): enotna lupina (Navigation + Footer). */}
+      <Navigation solid />
+      <main className="flex-grow">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd(faqs)) }}
@@ -663,6 +669,8 @@ export default async function GuidePage({
           </div>
         </section>
       </div>
+      </main>
+      <Footer />
     </div>
   );
 }
