@@ -310,8 +310,118 @@ describe("ISSUE #12 F12-3: EN razlogi zadetkov (uporabniški jezik na /en)", () 
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// 5. SOURCE-CONTRACT — F12-2: primarne kategorije + marker result card
+// 11. SOURCE-CONTRACT — F12-4: §9/§10 layout (stack nad zemljevidom,
+//     mobilni horizontalni scroll, izmenjava dropdown↔čipi, bottom sheet)
 // ─────────────────────────────────────────────────────────────────────────
+
+describe("ISSUE #12 F12-4 (§16): HITRE NAMERE nad zemljevidom (stack layout)", () => {
+  test("kategorije NISO več na dnu — vertikalni stack pod iskalno vrstico", () => {
+    // PREJ: absolute bottom-12 left-3 (lebdene na dnu, pod zemljevidom).
+    expect(mapViewSrc).not.toContain("absolute bottom-12 left-3");
+    // ZDAJ: stack na vrhu (top-[3.75rem] = tik pod iskalno vrstico).
+    expect(mapViewSrc).toContain("top-[3.75rem]");
+    // Hierarhija §16 v vertikalnem redu: iskanje (top-3) → namere (3.75rem).
+    expect(mapViewSrc).toContain("absolute left-3 top-3 z-[1001]");
+  });
+
+  test("mobile: HORIZONTALNI scroll primarnih kategorij (§10 — ena vrstica)", () => {
+    // Primarna vrstica: nowrap + overflow-x-auto na mobilnem, wrap na sm+:
+    expect(mapViewSrc).toContain(
+      "flex gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden"
+    );
+    // Natančni čipi (Več) — isti mobilni vzorec:
+    expect(mapViewSrc).toContain(
+      "mt-1 flex gap-1 overflow-x-auto border-t border-border/60 pb-0.5 pt-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden"
+    );
+  });
+
+  test("wrapper pointer-events-none — zemljevid vlečljiv med paneli stacka", () => {
+    expect(mapViewSrc).toContain("pointer-events-none absolute left-3 top-[3.75rem]");
+    expect(mapViewSrc).toContain('className="pointer-events-auto max-w-full rounded-md');
+  });
+
+  test("stanja (loading/zoom/error) v toku stacka — ne fiksni top-16/top-24", () => {
+    // Prej: absolute left-3 top-16 / top-24 (trčila bi s stackom):
+    expect(mapViewSrc).not.toContain("absolute left-3 top-16 z-[1000]");
+    expect(mapViewSrc).not.toContain("absolute left-3 top-24 z-[1000]");
+    // Pogoji stanj ostanejo vezani na kontekst (F12-1 invarianta):
+    expect(mapViewSrc).toContain("supply.loading && supplyActive");
+    expect(mapViewSrc).toContain("zoomTooLow && !supply.loading");
+    expect(mapViewSrc).toContain("supply.error && supplyActive");
+  });
+});
+
+describe("ISSUE #12 F12-4 (§9/§10): izmenjava dropdown ↔ čipi (resultsOpen)", () => {
+  test("dropdown viden LE ob resultsOpen (prostor si deli s kategorijami)", () => {
+    expect(mapViewSrc).toContain("const [resultsOpen, setResultsOpen] = useState(false);");
+    expect(mapViewSrc).toContain("(searchResults || searchError) && resultsOpen ?");
+    // Čipi skriti med odprtim dropdownom:
+    expect(mapViewSrc).toContain("!((searchResults || searchError) && resultsOpen) ?");
+  });
+
+  test("izbira zadetka ZAPRE dropdown — kontekst OSTA (supplyActive živi)", () => {
+    // handleResultDestination/handleResultGeoItem: setResultsOpen(false),
+    // searchResults NE čistimo (supply sloj + izpeljane kategorije žive):
+    expect(mapViewSrc).toMatch(
+      /const handleResultDestination[\s\S]{0,400}setResultsOpen\(false\);/
+    );
+    expect(mapViewSrc).toMatch(
+      /const handleResultGeoItem[\s\S]{0,400}setResultsOpen\(false\);/
+    );
+    // Nov vnos ponovno odpre dropdown:
+    expect(mapViewSrc).toMatch(/setTimeout\(async \(\) => \{[\s\S]{0,300}setResultsOpen\(true\);/);
+    // Clear = popoln reset:
+    expect(mapViewSrc).toMatch(/const handleClearSearch[\s\S]{0,400}setResultsOpen\(false\);/);
+  });
+});
+
+describe("ISSUE #12 F12-4: zoom kontrola bottomright + mobilni sheet CSS", () => {
+  test("zoom kontrola PREMAKNJENA na bottomright (prej mrtva pod iskanjem)", () => {
+    // F12-1 je iskanje postavil na top-levi — privzeta Leaflet zoom kontrola
+    // (top-left) je bila prekrita. Google Maps vzorec = bottomright.
+    expect(mapViewSrc).toContain("zoomControl: false");
+    expect(mapViewSrc).toContain('L.control.zoom({ position: "bottomright" })');
+  });
+
+  test("globals.css: mobilni REZULTATNI SHEET (§10) + safe area + :has() badge", () => {
+    const globalsCss = read("src/app/globals.css");
+    // Media query za mobile sheet:
+    expect(globalsCss).toContain("@media (max-width: 639px)");
+    expect(globalsCss).toContain(".leaflet-popup {");
+    expect(globalsCss).toContain("position: fixed !important;");
+    expect(globalsCss).toContain("bottom: 0 !important;");
+    expect(globalsCss).toContain("transform: none !important;");
+    // Safe area (iOS home bar) — obvezno pravilo baze:
+    expect(globalsCss).toContain("env(safe-area-inset-bottom, 0px)");
+    // Sheet look: zaobljeni zgornji vogali + skrit tip (puščica):
+    expect(globalsCss).toContain("border-radius: 1rem 1rem 0 0 !important;");
+    expect(globalsCss).toContain(".leaflet-popup-tip {");
+    // Info badge se umakne, ko je sheet odprt (:has()):
+    expect(globalsCss).toContain(".map-shell:has(.leaflet-popup) .map-info-badge");
+    // map-shell/map-info-badge razreda dejansko dodana v map-view:
+    expect(mapViewSrc).toContain('className="map-shell relative h-full w-full"');
+    expect(mapViewSrc).toContain("map-info-badge absolute bottom-3 left-3");
+  });
+
+  test("popup-pane REPARENT na mobilnem (transform prednik = containing block)", () => {
+    // .leaflet-popup-pane privzeto živi v .leaflet-map-pane, ki ga Leaflet
+    // premika s transform → fixed potomec bi se strnil na 0×0 (listič
+    // dokazan v E2E). Na mobilnem prestavimo pane k containerju:
+    expect(mapViewSrc).toContain('window.matchMedia("(max-width: 639px)")');
+    expect(mapViewSrc).toContain("map.getPanes().popupPane");
+    expect(mapViewSrc).toContain("containerRef.current?.appendChild(popupPane)");
+    // Desktop: pane se VRNE v map-pane (Leafletova pozicioniranja) +
+    // odprt popup se ob preklopu pošteno zapre:
+    expect(mapViewSrc).toContain("mapPane.appendChild(popupPane)");
+    expect(mapViewSrc).toContain("map.closePopup()");
+    // Poslušalec se počisti (higiena efekta):
+    expect(mapViewSrc).toContain(
+      'mobileMq.removeEventListener("change", syncPopupPane)'
+    );
+  });
+});
+
+
 
 describe("ISSUE #12 F12-2: primarne kategorije (5 skupin + expander Več)", () => {
   test("PRIMARY_CATEGORIES: 5 skupin + expander Več (vseh 12 dosegljivih)", () => {

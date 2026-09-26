@@ -432,6 +432,12 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
   const [searchResults, setSearchResults] = useState<MapSearchResponse | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState(false);
+  // F12-4 (§9/§10): dropdown rezultatov in kategorije si DELITA prostor pod
+  // iskalno vrstico (Google Maps vzorec izmenjave): med aktivnim dropdownom
+  // so čipi skriti; izbira zadetka dropdown ZAPRE (kontekst/searchResults
+  // OSTA NE — supply sloj in izpeljane kategorije ostanejo aktivni), čipi
+  // pa se vrnejo z izpeljanim stanjem.
+  const [resultsOpen, setResultsOpen] = useState(false);
   /** Zadetek, ki ga poudarimo (zlati marker — isti kanon kot deep-link). */
   const highlightRef = useRef<L.Marker | null>(null);
 
@@ -530,6 +536,8 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
   /** Klik na zadetek destinacije v seznamu: fly-to + kategorije ostanejo. */
   const handleResultDestination = (d: MapSearchResponse["destinations"][number]) => {
     flyTo(d.lat, d.lng, d.name, 12);
+    // F12-4: izbira = dropdown zaprt (rezultati/kontekst ostanejo v state).
+    setResultsOpen(false);
     trackPlannerEvent("map_search_result_selected", {
       kind: "destination",
       has_geo: 1,
@@ -541,6 +549,8 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     item: { name: string; lat?: number | null; lng?: number | null; slug?: string | null },
     kind: "listing" | "experience"
   ) => {
+    // F12-4: izbira = dropdown zaprt (kontekst ostane v state).
+    setResultsOpen(false);
     if (item.lat != null && item.lng != null) {
       flyTo(item.lat, item.lng, item.name, 15);
       trackPlannerEvent("map_search_result_selected", {
@@ -561,6 +571,8 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     setSearchQuery("");
     setSearchResults(null);
     setSearchError(false);
+    // F12-4: nov iskalni cikel se začne odprto.
+    setResultsOpen(false);
     clearHighlight();
   };
 
@@ -583,6 +595,9 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     const timer = setTimeout(async () => {
       setSearchLoading(true);
       setSearchError(false);
+      // F12-4: nov vnos ponovno odpre dropdown (rezultati prevzamejo prostor
+      // nad kategorijami — Google Maps vzorec izmenjave).
+      setResultsOpen(true);
       try {
         const res = await fetch("/api/smart-search", {
           method: "POST",
@@ -669,9 +684,41 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
       center: hasGeo ? [qLat, qLng] : BALKANS_CENTER,
       zoom: hasZoom ? Math.min(16, Math.max(10, qZoom)) : 6,
       scrollWheelZoom: false, // Boljša UX na mobilnem
-      zoomControl: true,
+      // F12-4 (§9/§10): zoom kontrola na DOL-DESNO (Google Maps vzorec).
+      // Privzeti top-levi položaj je OD F12-1 naprej prekrit z glavnim
+      // iskanjem („Kaj iščeš?" — z-[1001] nad z-5 kontrollo) — kontrola
+      // je bila vidno mrtva. bottomright je prosto (info badge je levo).
+      zoomControl: false,
       attributionControl: true,
     });
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+
+    // F12-4 (§10) — MOBILNI REZULTATNI SHEET (globals.css): .leaflet-popup
+    // je na mobilnem position:fixed/bottom:0 (spodnji sheet čez viewport).
+    // A .leaflet-popup-pane privzeto živi ZNOTRAJ .leaflet-map-pane, ki ga
+    // Leaflet premika z transform — transform-prednik postane CONTAINING
+    // BLOCK za fixed potomce → popup bi se strnil na 0×0. Rešitev: na
+    // mobilnem prestavimo popup-pane K map containerju (brez transforma);
+    // desktop (>639px) ostane v map-pane (Leafletova točna pozicioniranja
+    // z inline left/top + pane transform so tam pravilna).
+    const mobileMq = window.matchMedia("(max-width: 639px)");
+    const popupPane = map.getPanes().popupPane;
+    const mapPane = map.getPanes().mapPane;
+    const syncPopupPane = () => {
+      const wantsMobile = mobileMq.matches;
+      const parent = popupPane.parentElement;
+      if (wantsMobile && parent !== containerRef.current) {
+        containerRef.current?.appendChild(popupPane);
+      } else if (!wantsMobile && parent !== mapPane) {
+        mapPane.appendChild(popupPane);
+        // Preklop nazaj na desktop z odprtim popupom: inline koordinate
+        // bi bile izračunane za drugačno plastišče — pošteno zapremo
+        // (redki primer; naslednji klik markerja odpre pravilno).
+        map.closePopup();
+      }
+    };
+    mobileMq.addEventListener("change", syncPopupPane);
+    syncPopupPane();
 
     // 1.95.1: privzeti pogled — CELA regija (Slovenija + zahodni Balkan),
     // prilagojena dejanski velikosti kontejnerja (ne fiksen zoom).
@@ -845,6 +892,8 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     // Cleanup
     return () => {
       map.off("moveend zoomend");
+      // F12-4: poslušalec preklopa mobilni/desktop popup-pane.
+      mobileMq.removeEventListener("change", syncPopupPane);
       map.remove();
       mapRef.current = null;
       markersRef.current = [];
@@ -1481,7 +1530,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
   const zoomTooLow = supplyActive && Math.floor(viewport.zoom) < SUPPLY_MIN_ZOOM;
 
   return (
-    <div className="relative h-full w-full">
+    <div className="map-shell relative h-full w-full">
       {/* Map container */}
       <div
         ref={containerRef}
@@ -1520,7 +1569,10 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         </div>
         {/* Rezultati — kompaktne vrstice (vrsta badge + ime + reason), klik =
             fly-to (destinacija/geo zadetki) oz. poštena vrstica brez geo. */}
-        {searchResults || searchError ? (
+        {/* F12-4: dropdown je viden LE med odprtim iskalnim ciklom (izbira
+            zadetka ga zapre; kontekst/rezultati ostanejo v state — čipi
+            prevzamejo prostor nazaj). */}
+        {(searchResults || searchError) && resultsOpen ? (
           <div
             role="listbox"
             aria-label={T.searchResultsAria[lang]}
@@ -1689,14 +1741,27 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         />
       </div>
 
+      {/* ISSUE #12 (F12-4, §10/§16): HITRE NAMERE + stanja — vertikalni
+          stack POD iskalno vrstico (hierarhija §16: 1. ISKANJE → 2. HITRE
+          NAMERE → 3. ZEMLJEVID; prej so čipi lebdeli na DNU zemljevida).
+          Mobile: HORIZONTALNI scroll (§10 — primarne kategorije v eni
+          vrstici, ne razlijejo se); sm+: wrap. Med odprtim dropdownom
+          rezultatov čipi prepustijo prostor (izmenjava zgoraj); stanja
+          (loading/zoom/error) ostanejo v toku pod čipi — vedno pravilno
+          pozicionirana (prej fiksni top-16/top-24, ki bi zdaj trčili).
+          pointer-events-none na wrapperju — zemljevid ostane vlečljiv
+          med paneli; interaktivni paneli so pointer-events-auto. */}
+      <div className="pointer-events-none absolute left-3 top-[3.75rem] z-[1000] flex w-[calc(100%-10rem)] flex-col items-start gap-1.5 sm:left-1/2 sm:w-[min(48vw,440px)] sm:-translate-x-1/2">
       {/* POI category chips — ISSUE #12 (F12-2): PRIMARNE skupine (5) +
           „+ Več" expander (vseh 12 natančnih čipov — 0 izgub, guardrail).
-          F12-1: klik = filter kontekst → supply sloj samodejno aktiven. */}
-      <div className="absolute bottom-12 left-3 z-[1000] max-w-[calc(100%-1.5rem)] rounded-md border border-border bg-background/95 p-1.5 shadow-md backdrop-blur sm:max-w-[calc(100%-9rem)]">
+          F12-1: klik = filter kontekst → supply sloj samodejno aktiven.
+          F12-4: skriti med odprtim dropdownom (prostor prevzamejo zadetki). */}
+      {!((searchResults || searchError) && resultsOpen) ? (
+      <div className="pointer-events-auto max-w-full rounded-md border border-border bg-background/95 p-1.5 shadow-md backdrop-blur">
         <div
           role="group"
           aria-label={T.chipsAria[lang]}
-          className="flex flex-wrap gap-1"
+          className="flex gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden"
         >
           {PRIMARY_CATEGORIES.map(({ key, label, icon: Icon, types }) => {
             const on = types.every((t) => activeCats.has(t));
@@ -1742,12 +1807,14 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             {moreCatsOpen ? T.fewerCats[lang] : T.moreCats[lang]}
           </button>
         </div>
-        {/* Natančni čipi (vseh 12) — vidni LE ob razširitvi „+ Več". */}
+        {/* Natančni čipi (vseh 12) — vidni LE ob razširitvi „+ Več"
+            (F12-4: mobile horizontalni scroll — isti vzorec kot primarna
+            vrstica; sm+: wrap). */}
         {moreCatsOpen ? (
           <div
             role="group"
             aria-label={T.chipsAria[lang]}
-            className="mt-1 flex flex-wrap gap-1 border-t border-border/60 pt-1"
+            className="mt-1 flex gap-1 overflow-x-auto border-t border-border/60 pb-0.5 pt-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden"
           >
             {POI_CATEGORIES.map(({ value, label, icon: Icon }) => {
               const on = activeCats.has(value);
@@ -1805,38 +1872,42 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
           </p>
         ) : null}
       </div>
+      ) : null}
 
       {/* Loading spinner za supply poizvedbo (ne blokira) — F12-1: le ob
-          aktivnem kontekstu (iskanje/filter); POVEDAN pod iskalno vrstico
-          (zgornji levi prostor zdaj pripada iskanju) */}
+          aktivnem kontekstu (iskanje/filter). F12-4: v vertikalnem toku
+          pod čipi (ne fiksni top-16 — ta bi zdaj trčil s stackom). */}
       {supply.loading && supplyActive ? (
-        <div className="absolute left-3 top-16 z-[1000] flex items-center gap-2 rounded-lg border border-border bg-background/95 px-3 py-1.5 text-xs shadow-md backdrop-blur">
+        <div className="pointer-events-none flex items-center gap-2 rounded-lg border border-border bg-background/95 px-3 py-1.5 text-xs shadow-md backdrop-blur">
           <Loader2 className="size-3.5 animate-spin text-primary" aria-hidden="true" />
           <span className="font-medium">{T.loadingPois[lang]}</span>
         </div>
       ) : null}
 
-      {/* Zoom hint (supply zahteva približanje) — F12-1: pod iskalno vrstico */}
+      {/* Zoom hint (supply zahteva približanje) — F12-1/F12-4: tok pod čipi. */}
       {zoomTooLow && !supply.loading ? (
-        <div className="absolute left-3 top-16 z-[1000] max-w-[240px] rounded-lg border border-border bg-background/95 px-3 py-1.5 text-xs text-muted-foreground shadow-md backdrop-blur">
+        <div className="pointer-events-none max-w-full rounded-lg border border-border bg-background/95 px-3 py-1.5 text-xs text-muted-foreground shadow-md backdrop-blur">
           {T.zoomHint[lang]}
         </div>
       ) : null}
 
-      {/* Error/degraded badge (zgornji levi) — TASK 99-a: koda napake
-          odloča o iskrenem besedilu (client-network → namig na povezavo,
-          sicer strežniška nedosegljivost virov). F12-1: le ob kontekstu. */}
+      {/* Error/degraded badge — TASK 99-a: koda napake odloča o iskrenem
+          besedilu (client-network → namig na povezavo, sicer strežniška
+          nedosegljivost virov). F12-1: le ob kontekstu. F12-4: tok pod čipi. */}
       {!supply.loading && supply.error && supplyActive ? (
-        <div className="absolute left-3 top-24 z-[1000] max-w-[240px] rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 shadow-md dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+        <div className="pointer-events-none max-w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 shadow-md dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
           {supply.error === "client-network"
             ? T.networkHint[lang]
             : T.degradedHint[lang]}
         </div>
       ) : null}
+      </div>
 
       {/* Info badge (spodaj levo) — 1.95.1: + števec statičnih točk (FSQ)
-          z atribucijo v title (licenca Apache-2.0). */}
-      <div className="absolute bottom-3 left-3 z-[1000] rounded-lg border border-border bg-background/95 px-3 py-2 text-xs shadow-md backdrop-blur">
+          z atribucijo v title (licenca Apache-2.0). map-info-badge:
+          F12-4 — na mobilnem se skrije, ko je odprt rezultatni sheet
+          (globals.css :has() pravilo — ne prekriva kartice). */}
+      <div className="map-info-badge absolute bottom-3 left-3 z-[1000] rounded-lg border border-border bg-background/95 px-3 py-2 text-xs shadow-md backdrop-blur">
         <div className="flex items-center gap-2">
           <Star className="size-3.5 fill-amber-400 text-amber-400" />
           <span className="font-medium">{DESTINATIONS.length} {T.infoDestUnit[lang]}</span>

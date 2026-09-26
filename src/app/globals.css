@@ -198,6 +198,75 @@ header.sticky,
 }
 
 /* ============================================================
+   ISSUE #12 (F12-4, §10) — MOBILNI REZULTATNI SHEET
+   ------------------------------------------------------------
+   Na mobilnem (max-width 639px) Leaflet popup (marker result
+   card iz F12-2) postane SPODNJI SHEET čez celotno širino —
+   vzorec Google/Apple Maps: „spodnji rezultatni sheet/card,
+   uporaben z enim prstom“ (issue §10). Desktop: nekropsan
+   popup nad markerjem (standardni Leaflet).
+   - .leaflet-popup prestavljen na fixed/bottom (Leaflet sicer
+     pozicionira prek transform + top/bottom atributov).
+   - puščica (tip) skrita, zgornji vogali zaobljeni (sheet look).
+   - env(safe-area-inset-bottom) — iOS home bar (mobilni safe
+     area je obvezen).
+   ============================================================ */
+@media (max-width: 639px) {
+  .leaflet-popup {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+  .leaflet-popup-content-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 1rem 1rem 0 0 !important;
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.18) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+  .leaflet-popup-content {
+    width: auto !important;
+    max-width: calc(100vw - 2.75rem) !important;
+    margin: 0.75rem 0.875rem !important;
+    line-height: 1.45 !important;
+  }
+  /* „Drag handle“ — vizualni namig sheet-a (grab površina za
+     poteg navzgor je ves naslovni prostor kartice). */
+  .leaflet-popup-content-wrapper::before {
+    content: "" !important;
+    display: block !important;
+    width: 2.25rem !important;
+    height: 0.25rem !important;
+    margin: 0.5rem auto 0.25rem !important;
+    border-radius: 9999px !important;
+    background: rgba(0, 0, 0, 0.18) !important;
+  }
+  .leaflet-popup-tip {
+    display: none !important;
+  }
+  .leaflet-popup-close-button {
+    top: 0.375rem !important;
+    right: 0.5rem !important;
+    width: 2rem !important;
+    height: 2rem !important;
+    font-size: 1.25rem !important;
+    /* Dotikalni cilj ≥ 44px skupaj z bljižnjim paddingom gumba. */
+  }
+  /* Info badge (števec destinacij/točk) se umakne, ko je sheet odprt —
+     ne plava nad vsebino kartice (map-shell/map-info-badge razreda
+     dodaja map-view; :has() kliče Leaflet DOM). */
+  .map-shell:has(.leaflet-popup) .map-info-badge {
+    display: none !important;
+  }
+}
+
+/* ============================================================
    TISKANJE / PDF priprava — /pot/[shareId] ("Natisni → Shrani kot PDF")
    ------------------------------------------------------------
    Razredi (dodaja jih UI — shared-trip + page):
