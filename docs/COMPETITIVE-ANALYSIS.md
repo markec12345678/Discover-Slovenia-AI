@@ -36,7 +36,7 @@
 |---|---|---|---|
 | B1 | **Real-time dostopnost + instant potrditev** (GYG zahteva!) | Ročna izbira datuma; demo auto-potrditev | GYG to ZAHTEVA od ponudnikov ker gostje pričakujejo; mi nimamo koledarja kapacitet |
 | B2 | **Plačilo kartico ob rezervaciji + samodejni izplačili ponudnikom** (bi-tedensko/mesečno, PayPal/banka) | Stripe demo; izplačil NI (samo naš CommissionInvoice) | Ponudnik mora sam terjati denar od gosta → trenje; GYG vzame denar in izplača |
-| B3 | **Payout ledger / settlement report** | Nič | Računovodstvo ponudnika (kdor je dobil koliko) |
+| B3 | **Payout ledger / settlement report** | 1.111.0 (TASK 34) ✓ knjigovodski payout ledger: PayoutEntry (bruto/stopnja/provizija/neto po plačani rezervaciji, FW1 invariant) + mesečne poravnave s sweepom + CSV poročilo — BREZ prenosov denarja (B2 = prihodnji korak) | Računovodstvo ponudnika (kdor je dobil koliko) |
 
 ### 🟡 C. Operativna orodja ponudnika (zadržanje/retention)
 
@@ -73,7 +73,7 @@
 
 ### Pred monetizacijo (NUJNO — cenični wedge zahteva zaupanje):
 1. **A1: Mnenja samo po končani rezervaciji** — poveži Review z Booking ID (majhen fix: rate-limit + bookingNumber validacija)
-2. **B2/B3: Pravi Stripe + payout sled** — brez tega smo "inquiry platforma", ne marketplace
+2. **B2/B3: Pravi Stripe + payout sled** — brez tega smo "inquiry platforma", ne marketplace. ~~B3 payout sled~~ ✅ ZAKLJUČENO v 1.111.0 (TASK 34 — glej vrstico B3 zgoraj; B2 pravi Stripe Connect izplačili ostajajo)
 3. ~~**B1: Osnovni koledar razpoložljivosti** — vsaj kapaciteta/dan + blackout datumi (prepreči overbooking pri 10 ponudnikih)~~ ✅ ZAKLJUČENO v 1.110.0 (TASK 33 — glej vrstico C1 zgoraj)
 
 ### Po prvih 10–20 ponudnikih (rast):

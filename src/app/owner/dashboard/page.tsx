@@ -47,6 +47,7 @@ import {
   Receipt,
   Banknote,
   FileText,
+  Wallet,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // TASK 33 (Tier 2 #1): lastniški koledar razpoložljivosti izkušnje
 import { ExperienceAvailabilityDialog } from "@/components/owner/experience-availability-dialog";
+// TASK 34 (Tier 2 #2): lastniška knjiga izplačil (payout ledger)
+import { PayoutLedgerPanel } from "@/components/owner/payout-ledger-panel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -416,7 +419,7 @@ export default function OwnerDashboardPage() {
         <EmailVerificationBanner />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 mb-6 gap-1">
+          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-8 mb-6 gap-1">
             <TabsTrigger value="listings" className="gap-1.5 text-xs sm:text-sm">
               <Building className="size-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Moji lokalci</span>
@@ -452,6 +455,12 @@ export default function OwnerDashboardPage() {
               <Percent className="size-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Provizije</span>
               <span className="sm:hidden">Prov.</span>
+            </TabsTrigger>
+            {/* TASK 34 (Tier 2 #2): payout ledger — knjiga prihodkov po rezervacijah */}
+            <TabsTrigger value="izplacila" className="gap-1.5 text-xs sm:text-sm">
+              <Wallet className="size-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Izplačila</span>
+              <span className="sm:hidden">Izpl.</span>
             </TabsTrigger>
           </TabsList>
 
@@ -583,6 +592,11 @@ export default function OwnerDashboardPage() {
           {/* TAB 6: Provizije (Faza 4a — Booking-style) */}
           <TabsContent value="provizije" className="space-y-4">
             <CommissionsTab onUpgrade={() => setActiveTab("narocnina")} />
+          </TabsContent>
+
+          {/* TAB 7 (TASK 34, Tier 2 #2): Izplačila — payout ledger */}
+          <TabsContent value="izplacila" className="space-y-4">
+            <PayoutLedgerPanel />
           </TabsContent>
         </Tabs>
       </div>

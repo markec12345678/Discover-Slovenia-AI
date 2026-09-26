@@ -7,6 +7,102 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.111.0] — 2026-09-27 (TASK 34 / Tier 2 #2: payout ledger / mesečne poravnave)
+
+### Dodano
+
+- **PAYOUT LEDGER + MESEČNE PORAVNAVE (Tier 2 #2 benchmarka Task 28 —
+  mandat docs/COMPETITIVE-ANALYSIS.md B3: „Payout ledger / settlement
+  report — računovodstvo ponudnika [kdor je dobil koliko]";
+  deterministično, 0 zunanjih odvisnosti, BREZ prenosov denarja — Stripe
+  Connect/PayPal izplačila [B2] ostajajo prihodnji korak po filozofiji
+  „najprej funkcionalna celota")**. Do zdaj je imel ponudnik za svojo
+  evidenco prihodkov LE provizijske račune (obveznost NJEMU). Zdaj:
+  - **Dva nova Prisma modela (additive-only, DORMANT)**: `PayoutEntry`
+    (knjigovodska postavka PO rezervaciji — snapshot bruto/stopnja/
+    provizija/neto; `bookingId @unique` = idempotenca synca) in
+    `PayoutSettlement` (mesečna poravnava — izjava; `@@unique(ownerId,
+    periodStart)` = ena na obdobje). Brez FK relacije na Owner (snapshot
+    pristop kot Booking — postavke so izpeljana evidenca, vir resnice
+    ostaja Booking; provizija kot obveznost ima ločen CommissionInvoice
+    z lastno retencijo 19-f-3). Migracija
+    `20260927090000_payout_ledger` + startup samoozdravitev
+    `src/lib/payout-ledger-migration.ts` (idempotentna, additive-only,
+    fail-open; korak `schema:payout-ledger` v instrumentation.ts —
+    ista pot kot koledar razpoložljivosti).
+  - **FW1 invariant vstopa v ledger**: postavka nastane IZKLJUČNO za
+    dejansko plačane (`paymentStatus "paid"`), nepreklicane
+    (confirmed/completed) rezervacije lastnikovih izkušenj — demo/unpaid
+    NIKOLI ne vstopi (enak pogoj kot provizijska osnova). Stopnja
+    postavke je snapshot: 12 % SAMO za rezervacije iz AI kanala
+    (source "consultation") pri free partnerju, 0 % sicer (premium ali
+    direktna rezervacija) — UVOŽENA iz `lib/commissions.ts` (0.12 NI
+    podvojen, en vir resnice).
+  - **Čista domena `src/lib/payout-ledger.ts`**: `syncPayoutEntries`
+    (idempotentno samo-zdravljenje evidence — ob vsakem ogledu zavihka
+    ustvari mankajoče postavke za VSE upravičene rezervacije do konca
+    tekočega meseca, P2002 → preskoči), `issuePayoutSettlement`
+    (vzorec `issueCommissionInvoice`: tolerantna poizvedba gte/lt,
+    P2002 → „duplicate"; zajem = „VSE odprto do vključno poravnanega
+    meseca" — knjigovodski SWEEP, ki pošteno zameta tudi pozneje
+    plačane rezervacije starejših obdobij; create + vez postavk v ENI
+    transakciji), `settlePayoutSettlement` (potrditev uskladitve:
+    pogojni updateMany anti-race v transakciji — sočasna potrditev
+    natanko ena uspe; postavke se v isti transakciji prestavijo v
+    „settled"). **Premium lastniki PRVIJO poravnave** (njihova provizija
+    je 0, knjigovodstvo pa ostane) — nasprotje provizijskim računom, kjer
+    premium pomeni „ni računov". Audit sled: `payout_settlement_generated`
+    + `payout_settlement_settled` (resourceType „payout_settlement"
+    aditivno v uniji audit-log.ts).
+  - **GET/POST `/api/owner/payouts`** (session + bucket „owner-api"):
+    GET samo-zdravi evidenco in vrne predogled tekočega + prejšnjega
+    meseca (bruto/provizija/neto), število vseh odprtih postavk,
+    zgodovino poravnav in nedavne odprte postavke; POST `generate` (izda
+    poravnavo za prejšnji mesec) / `settle` (potrditev — 404 tuj
+    lastnik, 400 že potrjena). Za razliko od mark_paid provizijskih
+    računov (P7-C3: dolžnik ne vodi prihodkov platforme) TU lastnik
+    potrjuje SVOJO evidenco prihodkov — obveznost provizije ima ločen,
+    lastno varovan CommissionInvoice.
+  - **`GET /api/owner/payouts/report.csv?settlementId=`**: računovodsko
+    CSV poročilo poravnave (znak `;`, UTF-8 BOM za Excel, decimalka
+    vejica, ISO datumi YYYY-MM-DD po LJ, vrstica Skupaj, quoting po
+    admin vzorcu) — attachment + no-store (isti binarni vzorec kot
+    invoice-pdf, brez pisav/runtime nodejs).
+  - **Lastniški UI: zavihek »Izplačila«** (8. zavihek dashboarda,
+    `PayoutLedgerPanel`): predogled tekočega meseca (bruto/provizija/
+    neto), izdaja poravnave za prejšnji mesec z opombo o zajemu starejših
+    odprtih postavk, zgodovina poravnav (Badge Odprta/Potrjena, gumb
+    „Prenesi CSV", „Potrdi poravnavo" z AlertDialog potrditvijo) in
+    seznam odprtih postavk (AI kanal/Direktno badge, neto poudarjen).
+    ISKRENA opomba: „Poravnava je knjigovodska potrditev — platforma ne
+    izvaja prenosov denarja (brez Stripe Connect)." SL-only inline
+    (konvencija lastniškega portala — ni i18n obveznosti).
+  - **45 novih testov** (`task34-payout-ledger.test.ts`): domena
+    (številčenje PAYOUT-YYYYMM, monthRangeFor DST-varne LJ meje,
+    stopnje free/premium/pretekla naročnina/direktna, zaokrožitve na
+    cent, FW1 izključitve, seštevanje), startup migracija z vbrizganim
+    klientom (sqlite/postgres/unknown, idempotentnost), source-contract
+    (shema/migracija/instrumentation/en-vir-resnice-0.12/FW1-v-synccu/
+    sweep/anti-race/CSV glave/dashboard zavihek) in funkcionalno DB
+    (sync idempotentno, unpaid/cancelled IZVEN, izdaja z sweepom
+    pred-prejšnjega meseca 3 postavke, duplicate, settle → settled +
+    already + not_found, premium stopnja 0 + veljavna poravnava, audit
+    sledi — dbReachable varovalka za CI brez baze).
+
+### Spremenjeno
+
+- `src/lib/commissions.ts`: nova IZVOZA `monthRangeFor(ts)` (koledarski
+  mesec, ki vsebuje trenutek — DST-varno po LJ; določa obdobje postavke
+  iz createdAt rezervacije) in `monthKeyFor(periodStart)` (YYYYMM po LJ
+  stenski uri — številčenje poravnav) — aditivno, obstoječa
+  `monthRange`/`invoiceNumberFor` nedotaknjena.
+- `src/lib/audit-log.ts`: resourceType union razširjen z
+  `"payout_settlement"` (aditivno).
+- Lastniški dashboard: `TabsList` razširjen na 8 zavihkov
+  (grid-cols-4 → grid-cols-4/sm:grid-cols-8).
+
+---
+
 ## [1.110.0] — 2026-09-26 (TASK 33 / Tier 2 #1: koledar razpoložljivosti)
 
 ### Dodano

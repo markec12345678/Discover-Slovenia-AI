@@ -331,6 +331,57 @@ export async function register() {
       });
     }
 
+    // Startup SHEMA migracija — TASK 34 (1.111.0, Tier 2 #2): ustvari tabeli
+    // payout ledgerja (PayoutEntry — knjigovodska postavka po rezervaciji +
+    // PayoutSettlement — mesečna poravnava; mandat COMPETITIVE-ANALYSIS B3
+    // "računovodstvo ponudnika") na obstoječih bazah. Idempotentna,
+    // additive-only, fail-open — skupna zastavica DSA_DISABLE_SCHEMA_MIGRATION.
+    // Glej src/lib/payout-ledger-migration.ts.
+    try {
+      const { migratePayoutLedgerTables } = await import(
+        "./lib/payout-ledger-migration"
+      );
+      const r = await migratePayoutLedgerTables();
+      if (r.tablesCreated.length > 0) {
+        console.log(
+          `[instrumentation] Shema migracija (payout ledger): ` +
+            `ustvarjene tabele [${r.tablesCreated.join(", ")}] (${r.dialect})`
+        );
+        recordStartupStep({
+          name: "schema:payout-ledger",
+          status: "ok",
+          detail: `ustvarjene tabele: ${r.tablesCreated.join(", ")} (${r.dialect})`,
+        });
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija (payout ledger): " +
+            "tabel ni bilo mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
+        );
+        recordStartupStep({
+          name: "schema:payout-ledger",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja tabel ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:payout-ledger",
+          status: "ok",
+          detail: "tabele že prisotne",
+        });
+      }
+    } catch (error) {
+      // Fail-open: migracija NE sme podreti zagona strežnika.
+      console.error(
+        "[instrumentation] Shema migracija (payout ledger) ni uspela:",
+        error
+      );
+      recordStartupStep({
+        name: "schema:payout-ledger",
+        status: "failed",
+        detail: String(error),
+      });
+    }
+
     // Startup SHEMA migracija — F11 (1.15.0): ustvari tabeli TripPoll +
     // TripPollVote na obstoječih bazah (Vercel/Neon nima ročnega db push;
     // skip-worktree past je modele enkrat zadržala pred commitom).

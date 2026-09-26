@@ -1098,6 +1098,89 @@ model CommissionInvoice {
 }
 
 // ============================================================================
+// TASK 34 (Tier 2 #2) — PAYOUT LEDGER / MESEČNE PORAVNAVE (1.111.0)
+// ============================================================================
+// Mandat docs/COMPETITIVE-ANALYSIS.md B3: "Payout ledger / settlement report —
+// računovodstvo ponudnika (kdor je dobil koliko)". DETERMINISTIČNO, brez
+// prenosov denarja (B2 — Stripe Connect/PayPal izplačila — ostaja prihodnji
+// korak; enak "najprej funkcionalna celota" pristop kot pri provizijah):
+//   - PayoutEntry      — KNJIGOVODSKA postavka po rezervaciji (snapshot):
+//                        bruto (kar je ponudnik prejel od gosta), stopnja,
+//                        provizija platforme (SAMO za rezervacije iz AI kanala
+//                        pri free partnerju — isti pogoj kot CommissionInvoice)
+//                        in neto pozicija. Nastane IZKLJUČNO za dejansko
+//                        plačane (paymentStatus "paid"), nepreklicane
+//                        (confirmed/completed) rezervacije lastnikovih izkušenj
+//                        — FW1 invariant: demo/unpaid NIKOLI ne vstopi.
+//   - PayoutSettlement — mesečna PORAVNAVA (izjava): zajame VSE odprte
+//                        (pending) postavke do vključno poravnanega meseca
+//                        (zameta tudi pozneje plačane starejše rezervacije);
+//                        status pending → settled je knjigovodska POTRDITEV
+//                        uskladitve evidence — NE prenos denarja.
+// Oba modela sta additive-only in DORMANT (brez vrstic, dokler lastnik ne odpre
+// zavihka Izplačila oz. ne izda poravnave). Brez FK relacije na Owner
+// (snapshot pristop kot pri Booking — postavke so IZPELJANA evidenca, vir
+// resnice ostaja Booking; provizija kot obveznost ima svoj zapis
+// CommissionInvoice z lastno retencijo 19-f-3).
+
+model PayoutEntry {
+  id               String    @id @default(cuid())
+  ownerId          String
+  // Idempotenca: ena postavka na rezervacijo (sync je lahko poklican večkrat)
+  bookingId        String    @unique
+  bookingNumber    String    // snapshot (IF-EXP-…)
+  experienceName   String    // snapshot
+  bookingDate      DateTime  // snapshot (datum izvedbe izkušnje)
+  groupSize        Int
+  // snapshot vira: "consultation" (AI kanal → provizija) | null (direktno)
+  source           String?
+  grossAmount      Float     // Booking.total snapshot — kar je ponudnik prejel
+  rate             Float     @default(0) // snapshot: 0.12 | 0 (premium ali vir ≠ AI)
+  commissionAmount Float     @default(0) // gross × rate
+  netAmount        Float     @default(0) // gross − commission
+  currency         String    @default("EUR")
+  // Koledarski mesec REZERVACIJE (po createdAt, Europe/Ljubljana) — določa,
+  // v katero poravnavo postavka pade. periodEnd je EKSKLUZIVEN.
+  periodStart      DateTime
+  periodEnd        DateTime
+  status           String    @default("pending") // pending | settled
+  settlementId     String?   // vez na poravnavo ob izdaji
+  createdAt        DateTime  @default(now())
+  settledAt        DateTime?
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([periodStart])
+  @@index([settlementId])
+}
+
+model PayoutSettlement {
+  id               String   @id @default(cuid())
+  ownerId          String
+  settlementNumber String   @unique // PAYOUT-YYYYMM-XXXXXX
+  // NOMINALNO obdobje poravnave (prejšnji koledarski mesec po LJ); zajetje
+  // postavk je "vse odprto do vključno periodEnd" (glej lib/payout-ledger.ts).
+  periodStart      DateTime // prvi trenutek koledarskega meseca (inkluzivno)
+  periodEnd        DateTime // prvi trenutek naslednjega meseca (ekskluzivno)
+  entryCount       Int      @default(0) // št. zajetih postavk
+  grossTotal       Float    @default(0) // Σ bruto (kar je ponudnik prejel)
+  commissionTotal  Float    @default(0) // Σ provizija platforme
+  netTotal         Float    @default(0) // Σ neto pozicija ponudnika
+  currency         String   @default("EUR")
+  status           String   @default("pending") // pending | settled
+  // Iskreno: "manual" — poravnava je knjigovodska potrditev uskladitve,
+  // platforma NE izvaja prenosov denarja (B2 prihodnji korak).
+  method           String   @default("manual")
+  settledAt        DateTime?
+  createdAt        DateTime @default(now())
+
+  @@unique([ownerId, periodStart]) // idempotenca: ena poravnava na obdobje
+  @@index([ownerId])
+  @@index([status])
+  @@index([periodStart])
+}
+
+// ============================================================================
 // LEAD — B2B prijava lokalov prek javnega obrazca "Pridruži se" (homepage)
 // ============================================================================
 // P4-2a: prej leads.json (fs write — Vercel read-only FS → 500). Zdaj DB.

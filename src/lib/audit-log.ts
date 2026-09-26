@@ -23,6 +23,7 @@ export interface AuditLogParams {
   // ISSUE #4 §4+§14 (val 3): "journey_booking" | "trip_expense" —
   // rezervacije in stroški na poti
   // ISSUE #4 §15 (val 4): "trip_document" — dokumenti poti (metapodatki)
+  // TASK 34 (Tier 2 #2): "payout_settlement" — mesečne poravnave (ledger)
   resourceType:
     | "listing"
     | "product"
@@ -32,6 +33,7 @@ export interface AuditLogParams {
     | "user"
     | "booking"
     | "commission_invoice"
+    | "payout_settlement"
     | "trip"
     | "trip_collaborator"
     | "journey_booking"

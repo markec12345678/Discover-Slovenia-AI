@@ -105,6 +105,24 @@ export function monthRange(offset: number): { start: Date; end: Date } {
   };
 }
 
+// TASK 34 (payout ledger): koledarski mesec, ki VSEBUJE trenutek `ts`
+// (po Europe/Ljubljana) — določi, v katero obdobje poravnave postavka
+// (PayoutEntry) pade. ISTA DST-varna mehanika kot monthRange zgoraj.
+export function monthRangeFor(ts: Date): { start: Date; end: Date } {
+  const p = ljParts(ts.getTime());
+  return {
+    start: ljMonthStartUtc(p.y, p.m - 1),
+    end: ljMonthStartUtc(p.y, p.m),
+  };
+}
+
+// TASK 34 (payout ledger): YYYYMM ključ koledarskega meseca po LJ stenski uri
+// (isti vir kot invoiceNumberFor — revizija #8: nikoli po času procesa).
+export function monthKeyFor(periodStart: Date): string {
+  const p = ljParts(periodStart.getTime());
+  return `${p.y}${String(p.m).padStart(2, "0")}`;
+}
+
 export const monthLabel = (d: Date) =>
   new Intl.DateTimeFormat("sl-SI", {
     month: "long",
