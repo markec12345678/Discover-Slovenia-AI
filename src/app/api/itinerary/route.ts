@@ -79,6 +79,7 @@ import {
 // izbir + supply postanki dobijo intentLocked, pred odgovorom odidejo v
 // klient (gumb "Optimalno zaporedje" jih zamrzne — route-order.ts v2).
 import { markItineraryIntentLocked } from "@/lib/route-intent";
+import { enrichWithMarketplaceExperiences } from "@/lib/marketplace-stop-enrichment";
 
 // ============================================================================
 // WEATHER-CONTEXT (t11): realna vremenska napoved PRED generiranjem
@@ -817,7 +818,15 @@ async function buildDeterministicPlanResponse(
       fixedDestinationIds
     );
 
-    return NextResponse.json(withIntent);
+    // ISSUE #11 (D1): TRŽNICA NA POSTANKU — realne cene lastnih izkušenj
+    // (Experience.pricePerPerson, published, isti destinationId-pri prostor).
+    // ISTA fail-open filozofija kot enrichWithRealWeather: DB nedosegljiva
+    // → načrt NESPREMENJEN (brez polja, brez napake). ISKRENOST: fromPrice
+    // je »od« cena; estimated_cost ocena ostane (ocena ≠ cena — nikoli
+    // mešano; trip-budget vedrice nedotaknjene).
+    const withMarketplace = await enrichWithMarketplaceExperiences(withIntent);
+
+    return NextResponse.json(withMarketplace);
 }
 
 // ============================================================================

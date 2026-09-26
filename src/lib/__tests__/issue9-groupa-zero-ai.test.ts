@@ -415,6 +415,13 @@ describe("ISSUE #9 A(c): /api/ask-local funkcionalno — database PRIMA", () => 
       await db.localQuestion.count();
       dbReachable = true;
       // 3 realne (testne) vrstice za Piran — kontekst za top-3 odgovor.
+      // ROBUSTNOST (Issue #11 lekcija, 1.117.0): rating 5 (ne 4.5) — vrstice
+      // morajo biti VRH razvrstitve TUDI ob naseljeni bazi (demo seed /
+      // produkcija imajo Piran vrstice z ratingom 4.6–4.9, ki so prej
+      // potisnile naše 4.5 iz top-3 — test je tiho predpostavil PRAZNO
+      // bazo). Partner-utež v ask-local razvršča premiumListingse NAD
+      // oceno, demo Piran listingi pa so plan "free" (brez uteži) — ocena 5
+      // je zato zanesljiv vrh pri realnih podatkih.
       await db.listing.deleteMany({ where: { id: { in: LISTING_IDS } } });
       await db.listingEvent.deleteMany({
         where: { listingId: { in: LISTING_IDS } },
@@ -430,7 +437,7 @@ describe("ISSUE #9 A(c): /api/ask-local funkcionalno — database PRIMA", () => 
             destinationName: "Piran",
             address: "Testna ulica 1",
             images: "[]",
-            rating: 4.5,
+            rating: 5,
             priceRange: "€€",
             status: "published",
           },
@@ -513,7 +520,7 @@ describe("ISSUE #9 A(c): /api/ask-local funkcionalno — database PRIMA", () => 
     for (let i = 1; i <= 3; i++) {
       expect(body.question.answer).toContain(`Testna gostilna ${i}`);
     }
-    expect(body.question.answer).toContain("ocena 4.5/5");
+    expect(body.question.answer).toContain("ocena 5/5");
     expect(body.question.answer).toContain("Cenovni razred €€");
 
     // Dnevna kvota (1/dan) ostaja — ta uspeh je porabil edino vprašanje.

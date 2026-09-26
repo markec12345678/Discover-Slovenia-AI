@@ -7,6 +7,75 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.117.0] — 2026-09-26 (ISSUE #11 / D1: realne cene tržnice na postankih načrta)
+
+### Dodano
+
+- **TRŽNICA NA POSTANKU (D1, roadmap §4 #6)**: povezava med načrtovalnikom
+  in REALNIMI cenami lastne tržnice — 0 AI žetonov, čisti DB dotiki.
+  `POST /api/itinerary` obogoti vsak postanek načrta s poljem
+  `marketplace: { count, fromPrice (min pricePerPerson — IZREČNO »od«
+  cena, spodnja meja), currency, top (najboljša izkušnja: verified →
+  rating → reviewCount → ime — deterministična izbira) }`, kadar
+  destinacija postanka ima published izkušnje (`Experience.destinationId`
+  deli ID-pri prostor s kanoničnimi destinacijami `slovenia-data.ts`).
+  Modul `src/lib/marketplace-stop-enrichment.ts` (isti vzorec kot
+  `enrichWithRealWeather`: ena poizvedba na načrt, in-memory TTL
+  predpomnilnik 5 min na destinacijo — NULL se prav tako predpomni,
+  DB napaka → načrt NESPREMENJEN, fail-open).
+- **UI čip na kartici postanka** (`trip-timeline.tsx`): »Na tržnici od
+  €X · N izkušenj« / »From €X on the marketplace · N experiences« —
+  prikaz SAMO ob obstoječih podatkih (0 izkušenj → nič, ne izmišljeno),
+  locale-zavedna povezava (`/dozivetja` / `/en/dozivetja`, F4-E
+  whitelist — zavihek izkušenj se sam odpre), `title` razkrije top
+  izkušnjo ob hoverju. I18n ključa `marketplaceFrom`/`marketplaceCount`
+  (SL dvojina/množina + EN) v planner.timeline.
+- **Analitika**: nov dogodek `marketplace_stop_cta` (klient + strežnik
+  whitelist + docs/ANALYTICS-EVENTS.md) — meri notranji prehod načrt →
+  tržnica (props: destination, count, from_price); komplement
+  `booking_cta_clicked` (zunanji handoff) — prvi korak NOTRANJEGA 12 %
+  provizijskega kanala.
+
+### Iskrenost (neogljna pravila — pinirano s testi)
+
+- `estimated_cost` postanka OSTANE ocena načrta (costPerPerson × group) —
+  NIKOLI se ne prepiše s tržniško ceno in NE sešteje z njo (ocena ≠ cena;
+  trip-budget vedrice planned/booked/paid nedotaknjene).
+- `fromPrice` je »od« cena NA OSEBO (spodnja meja) — ločen signal od
+  skupinske ocene; vsota dneva ostane iz `dayCostSummary` (ocena).
+- Polje je opcijsko + nazaj kompatibilno (stari shranjeni načrti brez
+  njega ostanejo veljavni — UI čip se ne izriše).
+
+### Popravljeno
+
+- **Testna robustnost (issue9 ask-local)**: funkcionalni test je tiho
+  predpostavljal PRAZNO tržnico (svoje vrstice rating 4.5 so morale biti
+  edini top-3 za Piran) — demo-sejana baza jih je potisnila ven
+  (4.6–4.9). Testne vrstice sedaj rating 5 (vrh vsake realne razvrstitve
+  — robustno proti produkciji-oblikovanim bazam).
+
+### Testi
+
+- 23 novih (issue11-marketplace-stop-enrichment.test.ts): domena
+  (min/top/determinizem), apply (iskrenostni invarianti, čista funkcija),
+  enrich z injektiranim pridobivalcem (fail-open, predpomnilnik,
+  NULL-caching, delne poizvedbe), source-contract (ruta/tip/UI/i18n/
+  analytics — drift nemogoč), funkcionalno nad pravo DB (fromPrice ≡ min
+  iz NEODVISNE poizvedbe; POST route: samo-zadosten test — ne
+  predpostavlja ne prazne ne naseljene baze, dokazuje pravilnost proti
+  POLJUBNEMU stanju + bitno-identične ocene med generacijami).
+- Skupaj: 3753 testov (3730 + 23).
+
+### Dokumenti
+
+- docs/COMPETITIVE-ANALYSIS.md: vrstica D1 → ✅ faza 1 (povezava + od-cene;
+  PriceLock/terminski sloti ostanejo prihodnji korak).
+- docs/evidence/issue11/: 3 brskalniška posnetka (SL čip, EN čip, EN
+  pristop na tržnico) — dokazana zlata pot čip → /dozivetja (zavihek
+  izkušenj) in čip → /en/dozivetja.
+
+---
+
 ## [1.116.0] — 2026-09-26 (ISSUE #9: ZERO-AI / DETERMINISTIC-FIRST — popolna odstranitev AI iz jedra, 0 žetonov)
 
 ### Dodano

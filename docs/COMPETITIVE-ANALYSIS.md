@@ -53,7 +53,7 @@
 
 | # | Kar imajo oni | Naše stanje | Zakaj pomembno |
 |---|---|---|---|
-| D1 | **Žive cene + PriceLock** (Layla) | Rule-of-thumb cene (~€400/3 dni) | Naše AI planer cene niso realne |
+| D1 | **Žive cene + PriceLock** (Layla) | 1.117.0 (Issue #11) ✓ faza 1: realne cene lastne tržnice na postankih načrta (»od €X« čip + povezava na tržnico; iskrena ločitev ocena ≠ cena) — PriceLock/terminski sloti ostanejo prihodnji korak | Prvi korak D1 ZAPRT: načrt → tržnica prehod živi (0 AI žetonov) |
 | D2 | **Video vsebina v priporočilih** (Layla, short-form) | Statične slike | Gen-Z konverzija |
 | D3 | **Deep data integracije** (Mindtrip) | Published listings only | Paritetno načeloma; kvaliteta odvisna od modela |
 
@@ -79,7 +79,7 @@
 ### Po prvih 10–20 ponudnikih (rast):
 4. **C5: Prevodi vsebin** (nemščina, italijanščina, angleščina) — naše tržišče so TUJCI
 5. **C3: Embed widget** za lastne strani ponudnikov (Bókun playbook — postalj nas "rezervacijski sistem" ne le "kanal")
-6. **D1: Realne cene v AI** — poveži AI planer z dejanskimi cenami izkušenj (12 % provizija postane utemeljena)
+6. ~~**D1: Realne cene v AI** — poveži AI planer z dejanskimi cenami izkušenj (12 % provizija postane utemeljena)~~ ✅ ZAKLJUČENO v 1.117.0 (Issue #11 — glej vrstico D1 zgoraj; PriceLock/živi citati ostanejo prihodnji korak)
 
 ### Strateško (izbira):
 7. **Partnerstvo s slovenia.info/STO** namesto tekmovanja z Viator distribucijo

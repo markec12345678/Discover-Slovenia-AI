@@ -34,6 +34,7 @@
 | `map_opened` | uporabnik odpre zemljevid poti | vsako odprtje | `via` | razumevanje: ali ljudje načrt geografsko preverijo |
 | `provider_detail_opened` | klik na partnerja/ponudnika v booking panelu | vsak klik | `provider` | monetizacijska izpostavljenost |
 | `affiliate_clicked` | klik na affiliate povezavo | vsak klik | `provider` | monetizacija (12 % kanal) |
+| `marketplace_stop_cta` (1.117.0, Issue #11 D1) | klik čipa „Na tržnici od €X“ na kartici postanka načrta (realne cene lastnih izkušenj destinacije) | vsak klik | `destination`, `count`, `from_price` | notranji prehod načrt → tržnica (D1): ali realne cene premaknejo uporabnika proti rezervaciji; komplement `affiliate_clicked`/`booking_cta_clicked` (zunanji handoffi) — ta je prvi korak NOTRANJEGA 12 % kanala |
 | `itinerary_saved` | uspešno „Shrani in deli" | vsako shranjevanje | `days`, `stops`, `source`, `locale` | konverzija zlate poti; skupaj s `planner_result_rendered` → save rate |
 | `ingest_url_attempted` | uporabnik odda povezavo v „Začni s povezavo“ (F5.4) | vsak poskus | `host` (gostitelj, max 60 znakov — brez poti/query), `locale` | zanimanje za „Start Anywhere“ vnos; skupaj z `ingest_url_success` → stopnja uspešnosti prepoznavanja |
 | `ingest_url_success` | strežnik prepozna ≥ 1 destinacijo s povezave | vsak uspešen ingest | `matches` (število zadetkov), `days` (predlog dni), `locale` | kakovost prepoznavanja; predlog dni vs. dejansko generiranje |

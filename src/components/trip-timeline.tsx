@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Clock,
@@ -11,6 +12,7 @@ import {
   Euro,
   Cloud,
   Sparkles,
+  Store,
   UtensilsCrossed,
   Mountain,
   Camera,
@@ -393,6 +395,9 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs, className
               const costKnown =
                 typeof visit.estimated_cost === "number" &&
                 Number.isFinite(visit.estimated_cost);
+              // ISSUE #11 (D1): lokalni sklep tržne plasti (TS narrowing za
+              // onClick zaprtje — visit.marketplace tam ni več zožen).
+              const marketplace = visit.marketplace;
 
               return (
                 <div key={`${visit.destination_id}-${idx}`}>
@@ -493,6 +498,41 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs, className
                                   {t("bookingNone")}
                                 </Badge>
                               )
+                            )}
+                            {/* ISSUE #11 (D1): TRŽNICA NA POSTANKU — realne
+                                cene lastnih izkušenj destinacije (»od« cena =
+                                spodnja meja, NIKOLI »je« cena). Prikaz SAMO
+                                ko obogatitev obstaja (0 izkušenj → nič);
+                                povezava vodi na zavihek izkušenj tržnice
+                                (locale-zavedno /dozivetja oz. /en/dozivetja,
+                                F4-E whitelist). title razkrije top izkušnjo
+                                (deterministična izbira obogatitve) ob hoverju. */}
+                            {marketplace && (
+                              <Link
+                                href={
+                                  lang === "en" ? "/en/dozivetja" : "/dozivetja"
+                                }
+                                className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/5 px-2 py-0.5 text-[10px] font-medium text-primary transition-colors hover:border-primary/40 hover:bg-primary/10"
+                                title={marketplace.top.name}
+                                onClick={() => {
+                                  trackPlannerEvent("marketplace_stop_cta", {
+                                    destination: visit.destination_id,
+                                    count: marketplace.count,
+                                    from_price: marketplace.fromPrice,
+                                  });
+                                }}
+                              >
+                                <Store className="size-2.5" aria-hidden="true" />
+                                {t("marketplaceFrom", {
+                                  price: marketplace.fromPrice,
+                                })}
+                                <span className="opacity-50">·</span>
+                                <span className="opacity-80">
+                                  {t("marketplaceCount", {
+                                    count: marketplace.count,
+                                  })}
+                                </span>
+                              </Link>
                             )}
                           </div>
                         </div>

@@ -208,6 +208,39 @@ export interface LocationVisit {
   // na mestu (pozicija + lastni termin). Stari shranjeni načrti brez oznake:
   // vsi postanki prosti (isto obnašanje kot prej — nazaj kompatibilno).
   intentLocked?: boolean;
+  // ISSUE #11 (D1, 1.117.0): TRŽNICA NA POSTANKU — povezava postanka načrta
+  // z REALNIMI cenami lastnih izkušenj (Experience.pricePerPerson, published,
+  // isti destinationId-pri prostor kot kanonske destinacije). ISKRENOST:
+  // fromPrice je IZREČNO »od« cena (min pricePerPerson — spodnja meja,
+  // nikoli »je« cena); estimated_cost (ocena načrta iz costPerPerson) se
+  // NE prepiše in NE sešteje s tržniško ceno (ocena ≠ cena — mešanje bi
+  // bilo laž; trip-budget vedrice ostanejo nedotaknjene). Opcijsko +
+  // nazaj kompatibilno: stari shranjeni načrti brez polja ostanejo
+  // veljavni (UI čip se ne izriše). Glej src/lib/marketplace-stop-enrichment.ts.
+  marketplace?: StopMarketplaceInfo;
+}
+
+/**
+ * ISSUE #11 (D1): povzetek tržniških izkušenj destinacije postanka.
+ * Pripne ga OBOGATITEV ob generiranju načrta (fail-open — DB nedosegljiva
+ * pomeni načrt BREZ polja, nikoli napako uporabniku).
+ */
+export interface StopMarketplaceInfo {
+  /** Št. published izkušenj destinacije (≥ 1 — pri 0 polja NI). */
+  count: number;
+  /** min(pricePerPerson) — »od« cena NA OSEBO (spodnja meja, EUR). */
+  fromPrice: number;
+  currency: "EUR";
+  /** Najboljša izkušnja — deterministična izbira (verified → rating → reviewCount → ime). */
+  top: {
+    slug: string;
+    name: string;
+    pricePerPerson: number;
+    rating: number;
+    reviewCount: number;
+    verified: boolean;
+    durationHours: number;
+  };
 }
 
 export interface DayPlan {

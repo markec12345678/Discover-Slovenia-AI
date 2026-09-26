@@ -725,7 +725,9 @@
       "bookingExternal": "External booking — at the provider",
       "bookingConfirmed": "Confirmed at the provider",
       "bookAtProvider": "Book at the provider",
-      "bookAtProviderAria": "Book {name} at the provider — opens an external site"
+      "bookAtProviderAria": "Book {name} at the provider — opens an external site",
+      "marketplaceFrom": "From €{price} on the marketplace",
+      "marketplaceCount": "{count, plural, one {# experience} other {# experiences}}"
     },
     "smartSearch": {
       "title": "Smart search",

@@ -725,7 +725,9 @@
       "bookingExternal": "Zunanja rezervacija — pri ponudniku",
       "bookingConfirmed": "Potrjeno pri ponudniku",
       "bookAtProvider": "Rezerviraj pri ponudniku",
-      "bookAtProviderAria": "Rezerviraj {name} pri ponudniku — odpre zunanjo stran"
+      "bookAtProviderAria": "Rezerviraj {name} pri ponudniku — odpre zunanjo stran",
+      "marketplaceFrom": "Na tržnici od €{price}",
+      "marketplaceCount": "{count, plural, one {# izkušnja} two {# izkušnji} few {# izkušnje} other {# izkušenj}}"
     },
     "smartSearch": {
       "title": "Pametno iskanje",

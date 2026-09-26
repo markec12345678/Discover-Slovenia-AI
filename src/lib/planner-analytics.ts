@@ -63,6 +63,12 @@ export type PlannerEventName =
   | "provider_detail_opened"
   | "affiliate_clicked"
   | "booking_cta_clicked"
+  // ISSUE #11 (D1): klik čipa »Na tržnici od €X« na kartici postanka
+  // (props: destination, count, from_price) — meri, ali realne cene
+  // tržnice premaknejo uporabnika z načrta proti rezervaciji (D1 vpliv
+  // na 12 % provizijski kanal). Komplement booking_cta_clicked (zunanji
+  // handoff) — ta dogodek je NOTRANJI prehod na tržnico.
+  | "marketplace_stop_cta"
   // GEO-ODGOVORI (Task 29): AI klepet odgovori s kraji na zemljevidu
   // (OSM v bližini + T1 destinacije iz odgovora) — doseg funkcije
   | "chat_geo_answered"

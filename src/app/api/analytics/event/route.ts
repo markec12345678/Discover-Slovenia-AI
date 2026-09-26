@@ -32,6 +32,10 @@ const VALID_EVENTS = new Set([
   // OPCIJA-3 (transakcijska globina): klik rezervacijskega CTA (status_strip /
   // day_header / stop_card) — meri, kdaj v poti uporabniki želijo dejanje
   "booking_cta_clicked",
+  // ISSUE #11 (D1): klik čipa »Na tržnici od €X« na kartici postanka
+  // (props: destination, count, from_price) — notranji prehod na tržnico
+  // (komplement booking_cta_clicked, ki je zunanji handoff)
+  "marketplace_stop_cta",
   // GEO-ODGOVORI (Task 29): AI klepet je izrisal kraje na zemljevidu
   // (props: osm_count, t1_count, t2_count [1.44 — citani uradni viri STO],
   // cat_counts [1.46 — "food:5,drinks:2,destination:1,source:2"])
