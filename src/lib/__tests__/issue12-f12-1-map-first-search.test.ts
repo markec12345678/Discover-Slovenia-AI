@@ -1,11 +1,11 @@
 // ============================================================================
-// ISSUE #12 (F12-1, 1.118.0) — MAP-FIRST DISCOVERY: vedno-aktiven zemljevid
+// ISSUE #12 (F12-1 + F12-2, 1.118.0) — MAP-FIRST DISCOVERY
 // ----------------------------------------------------------------------------
-// Jedro faze 1 (issue §2 + §12 + guardrail matrika):
+// F12-1 (issue §2 + §12 + guardrail matrika):
 //  1. SOURCE-CONTRACT — Pokaži/Skrij POI gumb ODSTRANJEN (showPois/togglePois/
 //     EyeOff izginili iz map-view); supply poizvedba IZVEDENA iz konteksta
 //     (enabled: supplyActive = searchResults ‖ catsTouched); glavno iskanje
-//     („Kaj iščeš?“) živi NAD zemljevidom; fly-to + zlati poudarni marker;
+//     („Kaj iščeš?") živi NAD zemljevidom; fly-to + zlati poudarni marker;
 //     loading/zoom/error badgeji le ob kontekstu; loadingPois literal ostaja
 //     (kompatibilen s task8-f3b pinom).
 //  2. SOURCE-CONTRACT (ruta) — /api/smart-search selekta lat/lng/slug
@@ -16,6 +16,12 @@
 //     task31/33): geo zadetki nosijo lat/lng/slug iz DB; destinacije VEDNO
 //     nosijo koordinate (statični dataset); izdelki ostanejo brez geo
 //     (iskreno — Product nima geo stolpcev).
+// F12-2 (issue §4 + §6 + guardrail):
+//  5. SOURCE-CONTRACT — PRIMARNE kategorije (5 skupin + „+ Več" expander,
+//     vseh 12 čipov dosegljivih — 0 izgub); toggleGroup multi-select.
+//  6. SOURCE-CONTRACT — marker RESULT CARD: ★ ocena POGOJNA, PRIMARNA
+//     akcija „+ Dodaj v mojo pot" (isti selection.ts tok), sekundarni
+//     Podrobnosti + Navigiraj (Google Maps, noopener).
 // ============================================================================
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -244,5 +250,74 @@ describe("ISSUE #12 F12-1: funkcionalno — POST /api/smart-search z geo", () =>
         l.lat === null || l.lat === undefined || typeof l.lat === "number"
       ).toBe(true);
     }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// 5. SOURCE-CONTRACT — F12-2: primarne kategorije + marker result card
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("ISSUE #12 F12-2: primarne kategorije (5 skupin + expander Več)", () => {
+  test("PRIMARY_CATEGORIES: 5 skupin + expander Več (vseh 12 dosegljivih)", () => {
+    expect(mapViewSrc).toContain("const PRIMARY_CATEGORIES");
+    for (const key of ["food", "stay", "sights", "nature", "activities"]) {
+      expect(mapViewSrc).toContain(`key: "${key}"`);
+    }
+    // „+ Več" expander razkrije vseh 12 originalnih čipov (0 izgub —
+    // petrol/shop/transfer so dosegljivi SAMO prek sekundarne ravni):
+    expect(mapViewSrc).toContain("moreCatsOpen");
+    expect(mapViewSrc).toContain("setMoreCatsOpen");
+    expect(mapViewSrc).toContain("POI_CATEGORIES.map");
+    expect(mapViewSrc).toContain('moreCats: { sl: "Več", en: "More" }');
+    expect(mapViewSrc).toContain('fewerCats: { sl: "Manj", en: "Less" }');
+  });
+
+  test("toggleGroup: multi-select nad skupino (vklop VSEH tipov + kontekst)", () => {
+    expect(mapViewSrc).toContain("const toggleGroup");
+    expect(mapViewSrc).toContain("group.types.every((t) => activeCats.has(t))");
+    // Klik skupine prav tako postavi kontekst (F12-1 invarianta):
+    expect(mapViewSrc).toMatch(/const toggleGroup[\s\S]{0,600}setCatsTouched\(true\);/);
+  });
+
+  test("primarni skupinski čip ima števec SKUPNO prek tipov skupine", () => {
+    expect(mapViewSrc).toContain(
+      "supply.products.filter((p) => types.includes(p.type)).length"
+    );
+  });
+});
+
+describe("ISSUE #12 F12-2: marker result card (issue §6 struktura)", () => {
+  test("primarna akcija: Dodaj v mojo pot gumb v popupu (data-poi-add)", () => {
+    expect(mapViewSrc).toContain('class="map-poi-cta map-poi-add"');
+    expect(mapViewSrc).toContain("data-poi-add=");
+    expect(mapViewSrc).toContain("+ ${T.addToTrip[lang]}");
+    expect(mapViewSrc).toContain('addToTrip: { sl: "Dodaj v mojo pot"');
+  });
+
+  test("delegacija: map-poi-add → addProductToSelection z iskrenim odzivom", () => {
+    expect(mapViewSrc).toContain(
+      'target.classList.contains("map-poi-add")'
+    );
+    expect(mapViewSrc).toMatch(
+      /map-poi-add[\s\S]{0,400}addProductToSelection\(product, \{ locale: lang \}\)/
+    );
+    // Iskreni odzivi: dodano/duplikat → ✓; limit → besedilo (popup NE zapre):
+    expect(mapViewSrc).toContain('addedToTrip: { sl: "✓ Dodano"');
+    expect(mapViewSrc).toContain('addLimitReached: { sl: "Doseženih največ izbir"');
+    // Podrobnosti ostane (sekundarna) — modal pot:
+    expect(mapViewSrc).toContain("setSelectedProduct(product)");
+  });
+
+  test("★ ocena POGOJNA (brez ocene → vrstice NI — ne izmišljujemo)", () => {
+    expect(mapViewSrc).toContain("product.rating != null");
+    expect(mapViewSrc).toContain('reviewsUnit: { sl: "mnenj"');
+  });
+
+  test("Navigiraj: Google Maps iz koordinat (target _blank + noopener)", () => {
+    expect(mapViewSrc).toContain(
+      "https://www.google.com/maps/dir/?api=1&destination="
+    );
+    expect(mapViewSrc).toContain('rel="noopener noreferrer"');
+    expect(mapViewSrc).toContain('navigate: { sl: "Navigiraj"');
   });
 });

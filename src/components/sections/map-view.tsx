@@ -20,6 +20,7 @@ import {
   Star,
   Loader2,
   Eye,
+  MoreHorizontal,
   Search,
   Ticket,
   Landmark,
@@ -128,6 +129,16 @@ const T = {
     sl: "Filtriranje POI kategorij",
     en: "Filter POI categories",
   },
+  // ISSUE #12 (F12-2): „+ Več" expander (5 primarnih → vseh 12 čipov).
+  moreCats: { sl: "Več", en: "More" },
+  fewerCats: { sl: "Manj", en: "Less" },
+  // ISSUE #12 (F12-2): marker result card (issue §6) — primarna akcija je
+  // DODAJ V MOJO POT; sekundarni Podrobnosti + Navigiraj.
+  addToTrip: { sl: "Dodaj v mojo pot", en: "Add to my trip" },
+  addedToTrip: { sl: "✓ Dodano", en: "✓ Added" },
+  addLimitReached: { sl: "Doseženih največ izbir", en: "Selection limit reached" },
+  navigate: { sl: "Navigiraj", en: "Navigate" },
+  reviewsUnit: { sl: "mnenj", en: "reviews" },
   emptyText: {
     sl: "Vse kategorije so izklopljene — točke niso prikazane.",
     en: "All categories are off — no places are shown.",
@@ -316,6 +327,24 @@ interface MapSearchResponse {
   source: "deterministic";
 }
 
+// ISSUE #12 (F12-2): PRIMARNE KATEGORIJE — prvi nivo majhen in razumljiv
+// (issue §4: 5 skupin + „+ Več“). Skupine so PRESLIKAVE na kanonske tipe
+// (multi-select nad skupino): klik vklopi/izklopi VSE tipe skupine.
+// „+ Več“ razkrije vseh 12 originalnih čipov — NOBENA kategorija ni
+// izgubljena (guardrail matrika).
+const PRIMARY_CATEGORIES: {
+  key: string;
+  label: { sl: string; en: string };
+  icon: ComponentType<{ className?: string }>;
+  types: ProductType[];
+}[] = [
+  { key: "food", label: { sl: "Hrana", en: "Food" }, icon: Utensils, types: ["restaurant"] },
+  { key: "stay", label: { sl: "Spanje", en: "Stays" }, icon: BedDouble, types: ["accommodation"] },
+  { key: "sights", label: { sl: "Ogledi", en: "Sights" }, icon: Landmark, types: ["attraction", "museum", "viewpoint", "religious"] },
+  { key: "nature", label: { sl: "Narava", en: "Nature" }, icon: Trees, types: ["natural"] },
+  { key: "activities", label: { sl: "Aktivnosti", en: "Activities" }, icon: Compass, types: ["activity", "tour"] },
+];
+
 // 1.95.1: privzete kategorije ZEMLJEVIDA (9 lokalnih tipov — "vsa mesta
 // Balkana"). NAMENOMA lokalna konstanta, NE DEFAULT_SUPPLY_TYPES (strežniški
 // privzete supply poizvedbe ostanejo nespremenjene — čipi zemljevida
@@ -377,6 +406,8 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
   // rate limiti + z≥10 gating, ki ostajajo nespremenjeni).
   /** Uporabnik je vsaj enkrat kliknil čip kategorije (filter kontekst). */
   const [catsTouched, setCatsTouched] = useState(false);
+  /** ISSUE #12 (F12-2): „+ Več“ expander — vseh 12 čipov dosegljivih. */
+  const [moreCatsOpen, setMoreCatsOpen] = useState(false);
   /** Aktivne (vklopljene) kategorije — izklop = skrivanje. */
   const [activeCats, setActiveCats] = useState<ReadonlySet<ProductType>>(
     () => new Set(DEFAULT_POI_CATS)
@@ -823,7 +854,37 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     const handlePopupClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
 
-      // Produkt CTA → odpri ProductModal
+      // ISSUE #12 (F12-2): „+ Dodaj v mojo pot" — PRIMARNA akcija popupa.
+      // Isti tok kot ProductModal (selection.ts: dedup + kap MAX + persist
+      // + telemetrija supply_add_to_plan). Vizualni odziv: gumb se
+      // prebarva v „✓ Dodano" (popup ostane odprt — uporabnik vidi potrditev;
+      // duplikat/limit → iskren besedilni odziv, popup NE zapre).
+      if (target.classList.contains("map-poi-add")) {
+        const id = target.getAttribute("data-poi-id");
+        const product = productsRef.current.find((p) => p.id === id);
+        if (product) {
+          const result = addProductToSelection(product, { locale: lang });
+          if (result.added) {
+            target.textContent = T.addedToTrip[lang];
+            (target as HTMLButtonElement).disabled = true;
+            target.style.background = "#15803d";
+            target.style.cursor = "default";
+          } else if (result.reason === "duplicate") {
+            target.textContent = T.addedToTrip[lang];
+            (target as HTMLButtonElement).disabled = true;
+            target.style.background = "#15803d";
+            target.style.cursor = "default";
+          } else if (result.reason === "limit") {
+            target.textContent = T.addLimitReached[lang];
+            (target as HTMLButtonElement).disabled = true;
+            target.style.background = "#9ca3af";
+            target.style.cursor = "default";
+          }
+        }
+        return;
+      }
+
+      // Produkt CTA (Podrobnosti) → odpri ProductModal
       if (target.classList.contains("map-poi-cta")) {
         const id = target.getAttribute("data-poi-id");
         const product = productsRef.current.find((p) => p.id === id);
@@ -1060,11 +1121,26 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         title: product.title,
       });
 
+      // ISSUE #12 (F12-2): marker RESULT CARD (issue §6) — struktura:
+      // Ime / ★ ocena · št. mnenj (POGOJNO — OSM produkti pogosto brez
+      // ocene; ne izmišljujemo) / kategorija badge / PRIMARNA akcija
+      // „+ Dodaj v mojo pot" (isti tok kot ProductModal — dedup + kap +
+      // telemetrija v selection.ts) / sekundarni: Podrobnosti (modal) +
+      // Navigiraj (Google Maps iz koordinat — veljavno za VSE markerje,
+      // saj geo obstaja po konstrukciji supply plasti).
+      const ratingLine =
+        product.rating != null
+          ? `<div style="font-size:12px;color:#6b7280;margin-bottom:4px;line-height:1.3;">
+               ★ ${Number(product.rating.toFixed(1))}${product.reviewCount != null ? ` · ${product.reviewCount} ${T.reviewsUnit[lang]}` : ""}
+             </div>`
+          : "";
+      const navigateHref = `https://www.google.com/maps/dir/?api=1&destination=${product.lat},${product.lng}`;
       const popupHtml = `
-        <div style="min-width: 180px; max-width: 220px; font-family: sans-serif;">
-          <div style="font-weight: 700; font-size: 14px; color: #1a2e1a; margin-bottom: 6px; line-height: 1.3;">
+        <div style="min-width: 210px; max-width: 240px; font-family: sans-serif;">
+          <div style="font-weight: 700; font-size: 14px; color: #1a2e1a; margin-bottom: 4px; line-height: 1.3;">
             ${escapeHtml(product.title)}
           </div>
+          ${ratingLine}
           <span style="
             display: inline-flex;
             align-items: center;
@@ -1077,10 +1153,10 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             font-weight: 600;
             margin-bottom: 10px;
           ">${meta.icon} ${meta.label[lang]}</span>
-          <button data-poi-id="${escapeAttr(product.id)}" class="map-poi-cta" style="
+          <button data-poi-id="${escapeAttr(product.id)}" data-poi-add="1" class="map-poi-cta map-poi-add" style="
             width: 100%;
             padding: 6px 10px;
-            background: ${meta.color};
+            background: #16a34a;
             color: white;
             border: none;
             border-radius: 6px;
@@ -1088,7 +1164,36 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             font-weight: 600;
             cursor: pointer;
             font-family: sans-serif;
-          ">${T.details[lang]}</button>
+            margin-bottom: 6px;
+          ">+ ${T.addToTrip[lang]}</button>
+          <div style="display: flex; gap: 6px;">
+            <button data-poi-id="${escapeAttr(product.id)}" class="map-poi-cta" style="
+              flex: 1;
+              padding: 5px 8px;
+              background: transparent;
+              color: #374151;
+              border: 1px solid #d1d5db;
+              border-radius: 6px;
+              font-size: 11px;
+              font-weight: 600;
+              cursor: pointer;
+              font-family: sans-serif;
+            ">${T.details[lang]}</button>
+            <a href="${navigateHref}" target="_blank" rel="noopener noreferrer" style="
+              flex: 1;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              padding: 5px 8px;
+              color: #374151;
+              border: 1px solid #d1d5db;
+              border-radius: 6px;
+              font-size: 11px;
+              font-weight: 600;
+              text-decoration: none;
+              font-family: sans-serif;
+            ">${T.navigate[lang]}</a>
+          </div>
         </div>
       `;
 
@@ -1294,6 +1399,30 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
       enabled: wasOn ? 0 : 1,
       surface: "map",
     });
+  };
+
+  /** ISSUE #12 (F12-2): klik PRIMARNE skupine → vklop/izklop VSEH njenih
+   * tipov (multi-select nad skupino). Skupina je "on" samo, če so vsi
+   * tipi aktivni (iskreno delno stanje = izklopljena, delni prikaz pa
+   * ostane viden prek „+ Več“ natančnih čipov). */
+  const toggleGroup = (group: (typeof PRIMARY_CATEGORIES)[number]) => {
+    const allOn = group.types.every((t) => activeCats.has(t));
+    setActiveCats((prev) => {
+      const next = new Set(prev);
+      for (const t of group.types) {
+        if (allOn) next.delete(t);
+        else next.add(t);
+      }
+      return next;
+    });
+    setCatsTouched(true);
+    for (const t of group.types) {
+      trackPlannerEvent("map_poi_filtered", {
+        category: t,
+        enabled: allOn ? 0 : 1,
+        surface: "map",
+      });
+    }
   };
 
   /** Prazno stanje → nazaj na privzete kategorije (9 lokalnih tipov). */
@@ -1550,24 +1679,23 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         />
       </div>
 
-      {/* POI category chips — multi-select s števci (iskreni: iz supply
-          counts), usklajeno s čip vzorcem klepeta. 1.95.1: vidni VEDNO —
-          nadzorujejo statični map-pins sloj (bencinske/hrana/nastanitve …)
-          IN supply sloj (isti kanonski tipi). */}
+      {/* POI category chips — ISSUE #12 (F12-2): PRIMARNE skupine (5) +
+          „+ Več" expander (vseh 12 natančnih čipov — 0 izgub, guardrail).
+          F12-1: klik = filter kontekst → supply sloj samodejno aktiven. */}
       <div className="absolute bottom-12 left-3 z-[1000] max-w-[calc(100%-1.5rem)] rounded-md border border-border bg-background/95 p-1.5 shadow-md backdrop-blur sm:max-w-[calc(100%-9rem)]">
         <div
           role="group"
           aria-label={T.chipsAria[lang]}
           className="flex flex-wrap gap-1"
         >
-          {POI_CATEGORIES.map(({ value, label, icon: Icon }) => {
-            const on = activeCats.has(value);
-            const count = supply.products.filter((p) => p.type === value).length;
+          {PRIMARY_CATEGORIES.map(({ key, label, icon: Icon, types }) => {
+            const on = types.every((t) => activeCats.has(t));
+            const count = supply.products.filter((p) => types.includes(p.type)).length;
             return (
               <button
-                key={value}
+                key={`g-${key}`}
                 type="button"
-                onClick={() => toggleCat(value)}
+                onClick={() => toggleGroup({ key, label, icon: Icon, types })}
                 aria-pressed={on}
                 title={label[lang]}
                 className={cn(
@@ -1587,7 +1715,59 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
               </button>
             );
           })}
+          {/* „+ Več" — razkrije vseh 12 natančnih čipov (nobena kategorija
+              ni izgubljena; mobile: ne razlije v neobvladljiv UI). */}
+          <button
+            type="button"
+            onClick={() => setMoreCatsOpen((v) => !v)}
+            aria-expanded={moreCatsOpen}
+            className={cn(
+              "flex min-h-7 shrink-0 items-center gap-1 rounded-full border px-2 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              moreCatsOpen
+                ? "border-primary/30 bg-primary/10 text-foreground"
+                : "border-border/60 bg-transparent text-muted-foreground opacity-80"
+            )}
+          >
+            <MoreHorizontal className="size-3 shrink-0" aria-hidden />
+            {moreCatsOpen ? T.fewerCats[lang] : T.moreCats[lang]}
+          </button>
         </div>
+        {/* Natančni čipi (vseh 12) — vidni LE ob razširitvi „+ Več". */}
+        {moreCatsOpen ? (
+          <div
+            role="group"
+            aria-label={T.chipsAria[lang]}
+            className="mt-1 flex flex-wrap gap-1 border-t border-border/60 pt-1"
+          >
+            {POI_CATEGORIES.map(({ value, label, icon: Icon }) => {
+              const on = activeCats.has(value);
+              const count = supply.products.filter((p) => p.type === value).length;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => toggleCat(value)}
+                  aria-pressed={on}
+                  title={label[lang]}
+                  className={cn(
+                    "flex min-h-7 shrink-0 items-center gap-1 rounded-full border px-2 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    on
+                      ? "border-primary/30 bg-primary/10 text-foreground"
+                      : "border-border/60 bg-transparent text-muted-foreground opacity-60"
+                  )}
+                >
+                  <Icon className="size-3 shrink-0" aria-hidden />
+                  <span className="truncate">{label[lang]}</span>
+                  {on && supplyActive && !supply.loading ? (
+                    <span className="shrink-0 tabular-nums opacity-70">
+                      {count}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
         {/* Iskrene opombe slojev: kap posameznih pinov / napaka / prazno
             stanje — enovrstične, nevsiljive. */}
         {activeCats.size === 0 ? (

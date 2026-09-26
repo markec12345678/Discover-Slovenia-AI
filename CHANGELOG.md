@@ -47,21 +47,40 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 - `resetCats` → tudi IZHOD iz konteksta (`catsTouched=false` + clear
   highlight) — „Prikaži privzeto“ = svež obisk.
 
+### Dodano (F12-2 — primarne kategorije + marker result card)
+
+- **PRIMARNE KATEGORIJE** (issue §4): 5 razumljivih skupin — 🍴 Hrana /
+  🏨 Spanje / 🏛 Ogledi / 🌲 Narava / 🎯 Aktivnosti — preslikave na kanonske
+  tipe (Ogledi = attraction+museum+viewpoint+religious; Aktivnosti =
+  activity+tour); klik skupine = multi-select nad VSEMI tipi skupine
+  (števec skupno). **„+ Več" expander** razkrije vseh 12 originalnih čipov
+  — NOBENA kategorija ni izgubljena (guardrail: petrol/shop/transfer
+  ostanejo dosegljivi v sekundarni ravni).
+- **MARKER RESULT CARD** (issue §6): popup markerja zdaj sledi hierarhiji
+  ISKANJE→REZULTAT→AKCIJA — Ime / ★ ocena · št. mnenj (POGOJNO — OSM brez
+  ocene ne izmišljuje) / kategorija badge / **„+ Dodaj v mojo pot" kot
+  PRIMARNA akcija** (isti selection.ts tok: dedup + kap + persist +
+  telemetrija; vizualni odziv „✓ Dodano" / limit iskren) / sekundarni
+  „Podrobnosti" (ProductModal) + **„Navigiraj"** (Google Maps iz
+  koordinat, target=_blank noopener).
+
 ### Testi
 
-- 17 novih (issue12-f12-1-map-first-search.test.ts): source-contract
+- 24 novih (issue12-f12-1-map-first-search.test.ts): source-contract
   (gumb odstranjen — NE samo skrit; enabled izveden iz konteksta; iskanje +
   fly-to + poudarni marker; iskrena preslikava kategorij; badgegi na
   kontekstu; loadingPois pin ostaja task8-f3b; zoom-gating nedotaknjen;
   TASK 76 higiena) + funkcionalno POST /api/smart-search (destinacijski
   lat/lng ≡ slovenia-data NEODVISNO; izdelki brez geo iskreno).
-- Skupaj: 3770 testov (3753 + 17).
+- Skupaj: 3777 testov (3753 + 24).
 
 ### Dokumenti
 
-- docs/evidence/issue12/: 3 posnetka (iskanje Bled z rezultati, fly-to
-  z zlatim markerjem + POI badge, EN verzija) — dokazano živo: iskanje →
-  supply sloj SAMODEJNO aktiven (338 točk v pogledu) BREZ POI gumba.
+- docs/evidence/issue12/: 5 posnetkov (iskanje Bled z rezultati, fly-to
+  z zlatim markerjem + POI badge, EN verzija, primarne kategorije + Več
+  expander, marker result card z „✓ Dodano") — dokazano živo: iskanje →
+  supply sloj SAMODEJNO aktiven (338 točk) BREZ POI gumba; klik Dodaj →
+  ✓ Dodano (261 POI markerjev na Bledu, popup struktura §6).
 
 ---
 
