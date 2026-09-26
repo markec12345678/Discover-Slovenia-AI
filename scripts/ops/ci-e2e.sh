@@ -15,7 +15,7 @@
 #   4. GET  /api/itinerary/shared/{shareId}/pdf → %PDF + attachment (M8)
 #   5. PATCH /api/itinerary/shared/{shareId} (editToken, CAS) → revizija (§13)
 #   6. PATCH z ZASTARELO baseVersion → 409 konflikt (iskrena sočasnost)
-#   7. POST /api/journey/bookings/parse {text} → deterministic fallback (M1)
+#   7. POST /api/journey/bookings/parse {text} → deterministic text-parser (M1, ISSUE #9 ZERO-AI)
 #   8. POST /api/journey/bookings/parse {smeti} → 422 z nasvetom (error pot)
 #
 # VARNOST: skripta PIŠE v DB (save/patch) → dovoljeni so SAMO lokalni cilji
@@ -200,11 +200,11 @@ pmethod=$(jq -r '.method // empty' "$TMP/parse.json" 2>/dev/null || true)
 pvia=$(jq -r '.via // empty' "$TMP/parse.json" 2>/dev/null || true)
 pnum=$(jq -r '.fields.reservationNumber // empty' "$TMP/parse.json" 2>/dev/null || true)
 pprov=$(jq -r '.fields.providerName // empty' "$TMP/parse.json" 2>/dev/null || true)
-# POT JE ODVISNA OD OKOLJA: CI nima AI ključev → deterministic/fallback;
-# lokalni dev z ključi → ai (AI pot). Obe poti dokazujeta DELUJOČ endpoint
-# z izvlečenimi polji; deterministično rezervo brez ključev pinirajo unit
-# testi (issue5-t5d-reservation-fallback.test.ts, offline fetch).
-if [ "$code" = "200" ] && { [ "$pmethod" = "deterministic" ] && [ "$pvia" = "fallback" ] || [ "$pmethod" = "ai" ]; } && [ -n "$pnum" ] && [ -n "$pprov" ]; then
+# ISSUE #9 (ZERO-AI): BESEDILNA pot je VEDNO deterministična — method:
+# "deterministic", via: "text-parser" (0 AI žetonov, NEODVISNO od ključev;
+# opcijska vizija je samo na zavihku Slika). Rezervo brez omrežja pinirajo
+# unit testi (issue5-t5d-reservation-fallback.test.ts, offline fetch).
+if [ "$code" = "200" ] && [ "$pmethod" = "deterministic" ] && [ "$pvia" = "text-parser" ] && [ -n "$pnum" ] && [ -n "$pprov" ]; then
   ok_check "200 — method: ${pmethod}, via: ${pvia:-/} (${pprov}, št. ${pnum})"
 else
   bad_check "POST parse → ${code}, method: ${pmethod:-/}, via: ${pvia:-/}, št.: ${pnum:-/}, ponudnik: ${pprov:-/}"

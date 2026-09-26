@@ -302,3 +302,29 @@ describe("ISSUE #9 §14: priporočila tržnice — uteženo točkovanje (ostanek
     expect(rankProductCandidates(current, [far, near])[0].id).toBe("n");
   });
 });
+
+// ============================================================================
+// ISSUE #9 (Z9-E, CI popravek): ci-e2e.sh pričakuje NOVO pogodbo parse rute
+// (method "deterministic" + via "text-parser") — stara pričakovanja
+// ("via: fallback" / "method: ai") so ZASTARELA in so povzročila rdeči CI
+// (run 36257297964, korak Functional smoke + API e2e). Ta test pinira
+// usklajenost skripte z dejansko obliko odgovora rute (0 AI žetonov).
+// ============================================================================
+
+describe("ISSUE #9 Z9-E: CI skripte — usklajene z ZERO-AI pogodbo parse", () => {
+  test("ci-e2e.sh pričakuje deterministic/text-parser (NE fallback/ai)", () => {
+    const sh = source("scripts/ops/ci-e2e.sh");
+    // Nova (edina) besedilna pot: method deterministic + via text-parser.
+    expect(sh).toContain('[ "$pmethod" = "deterministic" ]');
+    expect(sh).toContain('[ "$pvia" = "text-parser" ]');
+    // Zastareli veji (AI pot / via fallback) NE smeta več obstajati v
+    // pričakovanju — sicer bi CI padel na zdravi poti (dokazano 2026-09-26).
+    expect(sh).not.toContain('[ "$pvia" = "fallback" ]');
+    expect(sh).not.toContain('[ "$pmethod" = "ai" ]');
+  });
+
+  test("ci-e2e.sh parse korak dokumentira ZERO-AI (besedilo = 0 AI, vedno)", () => {
+    const sh = source("scripts/ops/ci-e2e.sh");
+    expect(sh).toContain("ISSUE #9 (ZERO-AI): BESEDILNA pot je VEDNO deterministična");
+  });
+});
