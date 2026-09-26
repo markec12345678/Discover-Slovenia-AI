@@ -57,12 +57,17 @@ function storeEditToken(shareId: string, editToken: string): void {
 
 /**
  * Shrani itinerer na strežnik in vrne deljivo povezavo.
- * Meta: POST /api/itinerary/save { itinerary, formData, name? }
+ * Meta: POST /api/itinerary/save { itinerary, formData?, name? }
  *       → { success, shareId, url: "/pot/xxx", editToken }
+ *
+ * ISSUE #8 F2-C (fork skupnostne poti): `formData` je opcijska — ob null
+ * (deljena pot brez shranjenih vhodnih podatkov načrtovalnika) ključ NE
+ * gre v telo; API manjkajoči ključ obravnava kot null (`b.formData ?? null`).
+ * Vsi obstoječi klici pošiljajo PlannerInput — vedenje nespremenjeno.
  */
 export async function saveItinerary(
   itinerary: Itinerary,
-  formData: PlannerInput,
+  formData: PlannerInput | null,
   name?: string
 ): Promise<SaveItineraryResult> {
   let res: Response;
@@ -70,7 +75,12 @@ export async function saveItinerary(
     res = await fetch("/api/itinerary/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itinerary, formData, name }),
+      body: JSON.stringify({
+        itinerary,
+        // F2-C: null → BREZ formData ključa (API shraní "null").
+        ...(formData ? { formData } : {}),
+        name,
+      }),
     });
   } catch {
     throw new Error("Shranjevanje ni uspelo — preveri povezavo.");

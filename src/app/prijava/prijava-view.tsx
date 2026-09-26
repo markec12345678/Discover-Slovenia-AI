@@ -34,6 +34,8 @@ import {
   removeSavedTripIds,
 } from "@/lib/my-trips-storage";
 import { getEditToken } from "@/lib/itinerary-share";
+// TASK 8 / F2-A: strežniška refleksija zbirke "Moja pot" — prevzem ob prijavi
+import { syncMyTripToServer } from "@/lib/my-trip-sync";
 
 // ============================================================================
 // /prijava — prijava in registracija B2C računa popotnika (P1-2b)
@@ -265,6 +267,19 @@ function LoginForm({ router, toast }: LoginFormProps) {
           description: `${claimed} ${
             claimed === 1 ? "potovanje, ki ste ga ustvarili pred prijavo, smo povezali" : "potovanj, ki ste jih ustvarili pred prijavo, smo povezali"
           } z vašim računom.`,
+        });
+      }
+      // TASK 8 / F2-A: zbirka "Moja pot" (localStorage) se prenese v račun
+      // (union-merge) + prinese predmete z drugih naprav — neblokirajoče.
+      const myTripSync = await syncMyTripToServer();
+      if (myTripSync.synced && myTripSync.pulled > 0) {
+        toast({
+          title: "Moja pot je shranjena v račun",
+          description: `${myTripSync.pulled} ${
+            myTripSync.pulled === 1
+              ? "idejo z druge naprave smo prinesli v vašo zbirko."
+              : "idej z drugih naprav smo prinesli v vašo zbirko."
+          }`,
         });
       }
       router.push("/moja-potovanja");
@@ -515,6 +530,19 @@ function RegisterForm({ router, toast, switchToLogin }: RegisterFormProps) {
           description: `${claimed} ${
             claimed === 1 ? "potovanje, ki ste ga ustvarili pred prijavo, smo povezali" : "potovanj, ki ste jih ustvarili pred prijavo, smo povezali"
           } z vašim računom.`,
+        });
+      }
+      // TASK 8 / F2-A: zbirka "Moja pot" (localStorage) se prenese v račun
+      // (union-merge) + prinese predmete z drugih naprav — neblokirajoče.
+      const myTripSync = await syncMyTripToServer();
+      if (myTripSync.synced && myTripSync.pulled > 0) {
+        toast({
+          title: "Moja pot je shranjena v račun",
+          description: `${myTripSync.pulled} ${
+            myTripSync.pulled === 1
+              ? "idejo z druge naprave smo prinesli v vašo zbirko."
+              : "idej z drugih naprav smo prinesli v vašo zbirko."
+          }`,
         });
       }
       router.push("/moja-potovanja");

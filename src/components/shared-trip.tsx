@@ -57,8 +57,12 @@ import {
   parseISODateLocal,
 } from "@/lib/trip-dates";
 import { narrationStopsFromDay } from "@/lib/itinerary-audio";
-import type { Itinerary, ItineraryEvent, LocationVisit } from "@/lib/types";
+import type { Itinerary, ItineraryEvent, LocationVisit, PlannerInput } from "@/lib/types";
 import { cn } from "@/lib/utils";
+// ISSUE #8 §26 / F2-C (fork skupnostne poti): „Shrani kot svojo kopijo" —
+// obiskovalec deljene pote z enim klikom dobi LASTNO kopijo (nov shareId +
+// lastni editToken → popolnoma ureljiva) in se zapiše v „Moja potovanja".
+import { TripForkButton } from "@/components/trip-fork-button";
 // 99-b: anonimni voterId — deljena knjižnica (enkraten vir ključa;
 // prej dupliciran v shared-trip/trip-social/trip-diary/trip-polls)
 import { getVoterId } from "@/lib/client-identity";
@@ -115,6 +119,13 @@ interface SharedTripProps {
    * ( starejši zapis / null) → polling se NE vklopi (nikoli ne ugibamo).
    */
   initialVersion?: number | null;
+  /**
+   * ISSUE #8 §26 / F2-C: vhodni podatki načrtovalnika izvirne pote
+   * (PlannerInput | null) — podlaga za „Shrani kot svojo kopijo"
+   * (kopija ohrani formData; null = starejša/anonimna pot → kopija brez
+   * njih). Default null = nazaj-kompatibilno za obstoječe klice.
+   */
+  formData?: PlannerInput | null;
 }
 
 interface LocationVoteProps {
@@ -133,6 +144,7 @@ export function SharedTrip({
   events,
   initialVotes,
   initialVersion,
+  formData = null,
 }: SharedTripProps) {
   const setItinerary = useAppStore((s) => s.setItinerary);
   const routeCoords = useAppStore((s) => s.routeCoords);
@@ -759,6 +771,16 @@ export function SharedTrip({
                 Načrtuj svoje potovanje
               </Link>
             </Button>
+            {/* ISSUE #8 §26 / F2-C: „Shrani kot svojo kopijo" — skupnostna
+                vsebina se naravno preklopi v isti sistem poti: nov shareId +
+                lastni editToken (popolnoma ureljiva kopija) + zapis v
+                „Moja potovanja" (localStorage dai:my-trips). Vsa obstoječa
+                dejanja vrstice ostajajo (zero-loss). */}
+            <TripForkButton
+              itinerary={itinerary}
+              formData={formData}
+              name={name}
+            />
             {/* TASK 4 / K-7 (UX FIX PASS): „Zaženi Na poti“ — potovanje iz TEGA
                 načrta gre v Go Mode (na tej napravi; deluje tudi brez signala).
                 Prej: deljena stran NI imela NOBENE povezave na /na-poti —

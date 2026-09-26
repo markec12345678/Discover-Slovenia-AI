@@ -31,6 +31,9 @@ import { localePrefix } from "@/i18n/routing";
 import { Link } from "@/i18n/navigation";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
+// TASK 8 / F2-D (§3.3, D8-A §9.5 mrtvi konec): kanonski "Dodaj v mojo pot"
+// na vodiču — strežniška SSG stran, zato client ovojnik (kot D8-D hub).
+import { GuideAddToTrip } from "@/components/guide-add-to-trip";
 import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
 import { Chatbot } from "@/components/chatbot";
@@ -286,6 +289,21 @@ export default async function AdriaGuidePage({
               <Compass className="size-4" aria-hidden="true" />
               {guide.route}
             </span>
+          </div>
+
+          {/* TASK 8 / F2-D (§3.3): kanonski "Dodaj v mojo pot" — vodiči prej
+              niso imeli nobenega dodajanja v pot (samo skok v načrtovalnik
+              na dnu). Zbirka referenc (ADD sloj); razporejanje ostane v
+              /nacrtuj. Postavitev sledi hub destinacije (centered pod
+              hero/breadcrumbs). Podnaslov = obstoječa meta vrstica (dnevi ·
+              km · bralni čas, iz istih prevodov hero.readTime). */}
+          <div className="mb-10 flex justify-center">
+            <GuideAddToTrip
+              slug={guide.slug}
+              title={guide.title}
+              subtitle={`${guide.days} ${daysLabel(guide.days, locale)} · ${fmtKm(guide.km, locale)} km · ${guide.readTime} ${t("hero.readTime")}`}
+              image={guide.heroImage || undefined}
+            />
           </div>
 
           {/* Pot — timeline postaj */}

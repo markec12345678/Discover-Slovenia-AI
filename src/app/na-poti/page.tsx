@@ -31,8 +31,11 @@ const L = {
     en: "On the road: what's now, what's next",
   },
   subtitle: {
-    sl: "Tvoj sopotnik med potovanjem po Sloveniji, Hrvaški, Črni gori in Albaniji: naslednja postanka načrta, razdalja in smer do nje (GPS), opravljene postanke in prihodnji dnevi. Načrt je na tvoji napravi — deluje tudi brez signala.",
-    en: "Your companion while traveling across Slovenia, Croatia, Montenegro and Albania: the next stop on your plan, distance and direction to it (GPS), completed stops and coming days. The plan lives on your device — it works offline too.",
+    // TASK 8 / F2-B (§24 GO MODE — „calm and focused“): vidni podnaslov je
+    // pomirjen na eno vrstico (prej 3-vrstični zid besedila — šum pred NOW
+    // kartico). Meta opis (SEO) ostaja popoln — nespremenjen spodaj.
+    sl: "Kaj je zdaj, kaj je naslednje. Načrt je na tvoji napravi — deluje tudi brez signala.",
+    en: "What's now, what's next. Your plan lives on your device — it works offline too.",
   },
   metaTitle: {
     sl: "Na poti — Go Mode sopotnik med potovanjem",

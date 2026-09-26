@@ -36,6 +36,8 @@ import { getSavedTrips, type TrackedTrip } from "@/lib/my-trips-storage";
 // TASK 8 / D8-B §4: zbirka "Moja pot" (ADD sloj) — kanonski pogled nad
 // dai:my-trip-items, skupen gostu in prijavljenemu uporabniku.
 import { MyTripView } from "@/components/my-trip-view";
+// TASK 8 / F2-A: pull sinhronizacija zbirke ob obisku (prijavljeni uporabnik)
+import { syncMyTripToServer } from "@/lib/my-trip-sync";
 
 // ============================================================================
 // /moja-potovanja — KLIENTNI pogled (TASK 8 / D8-E): vsebina strani brez
@@ -128,6 +130,11 @@ export function MojaPotovanjaView() {
   useEffect(() => {
     if (!isUserSession) return;
     let cancelled = false;
+
+    // TASK 8 / F2-A: pull sinhronizacija zbirke "Moja pot" — prinese
+    // predmete z drugih naprav (union-merge v localStorage; MyTripView se
+    // osveži prek dogodka dai:my-trip-changed). Neblokirajoče + fail-open.
+    void syncMyTripToServer();
 
     fetch("/api/user/trips", { cache: "no-store" })
       .then(async (r) => {

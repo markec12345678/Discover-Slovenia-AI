@@ -15,6 +15,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
+import { MyTripAccountSync } from "@/components/my-trip-account-sync";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { PwaHeaderIcons } from "@/components/pwa/pwa-header-icons";
 import { SmartSearch } from "@/components/smart-search";
@@ -142,6 +143,9 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
 
   return (
     <>
+      {/* TASK 8 / F2-A: strežniška refleksija zbirke "Moja pot" — nevidni
+          gonilev (prijava sync + diff-sync med B2C sejo). Izrisuje null. */}
+      <MyTripAccountSync />
       <header
         className={cn(
           "sticky top-0 z-[2000] w-full transition-all duration-300",

@@ -7,6 +7,79 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.113.0] — 2026-09-28 (ISSUE #8 / TASK 37: Discovery UX 2.0 — Faza 2 „Zbirka je račun + skupnost")
+
+### Dodano
+
+- **STREŽNIŠKA REFLEKSIJA ZBIRKE „MOJA POT“ (F2-A — Google Maps „Want to go“
+  vzorec)**: zbirka referenc (`dai:my-trip-items`) je doslej živela SAMO na
+  napravi — prijava na drugi napravi je pomenila prazno zbirko. Zdaj:
+  - Prisma model `UserTripItem` (identiteta `userId:kind:refId`, FIFO kapa
+    200, CASCADE z računom; brez PII — samo javni povzetki kartic) +
+    startup shema migracija (`src/lib/user-trip-items-migration.ts`,
+    idempotentna, additive-only, fail-open — registrirana v
+    instrumentation.ts) + lineage migracija
+    `prisma/migrations/20260928100000_user_trip_items/`.
+  - API `/api/my-trip` (GET seznam · POST union-merge push — NIKOLI
+    destruktiven, FIFO kapa, ISTI sanitizacijski kanon kot klient
+    (whitelist vrst, dolžine, SAMO notranji href, addedAt clamp) · DELETE
+    eksplicitno odstranjevanje). Samo B2C seje (401/403), rate limit.
+  - Klientni sync modul `src/lib/my-trip-sync.ts`:
+    `syncMyTripToServer` (prijava: push union + pull z drugih naprav;
+    prazna lokalna = SAMO GET; fail-open — omrežje NE pokvari lokalne
+    zbirke) + `startMyTripDiffSync` (diff proti senci, debounce 2,5 s —
+    dodajanja/odstranjevanja se širijo na VSE površine, controlled
+    write-through vključno).
+  - Nevidni gonilev `<MyTripAccountSync>` v Navigation (prehod gost→B2C
+    sproži prijavno sinhronizacijo kadarkoli; med sejo teče diff-sync;
+    gost = 0 klicev na strežnik) + prijava/registracija sinhronizirata
+    zbirko (neblokirajoče, toast „Moja pot je shranjena v račun“ ob
+    prinesenih predmetih) + pull ob obisku /moja-potovanja.
+- **FORK SKUPNOSTNE/DELJENE POTI (F2-C — issue §26 „community content
+  connects into the same trip system")**: gumb „Shrani kot svojo kopijo“ na
+  /pot/[shareId] — kreira LASTNO kopijo poti (lasten shareId + lasten
+  editToken → popolnoma ureljiva) prek obstoječega
+  `saveItinerary` (žeton + offline ogrevanje avtomatsko) + `addSavedTrip`
+  (pojavi se v „Moja potovanja“). Toast z „Odpri kopijo“. Vsa obstoječa
+  dejanja („Zaženi Na poti“, PDF, kolaboracija, vodniki) nespremenjena.
+  `saveItinerary` signatura razširjena na `formData: PlannerInput | null`
+  (nazaj-kompatibilno).
+- **DODAJ V MOJO POT NA VODIČIH + KONZULTACIJAH (F2-D — zadnje slepe ulice
+  P-CTA)**: vodič detail (kind `guide`, SSG ohranjen prek client ovojnika)
+  + vseh 22 kartic seznama vodnikov (overlay Link vzorec — veljaven HTML) +
+  konzultacijske priporočene destinacije (kind `destination`, zasebna stran
+  ostaja 100 % client-side). „Načrtuj potovanje“/„Raziskuj {name}“/things-to-do
+  CTA ostajajo (zero-loss).
+
+### Spremenjeno
+
+- **GO MODE POMIRITEV (F2-B — issue §24 „calm and focused")**: hero
+  podnaslov na /na-poti skrajšan na eno vrstico (prej 3-vrstični zid
+  besedila; SEO meta opis nespremenjen) + GPS NADZOR (HOW) premaknjen pod
+  NASLEDNJE (NEXT) — hierarhija zdaj sledi NOW → NEXT → WHEN → HOW →
+  CONTEXT. VSA Go Mode zmožnost nespremenjena (GPS/ETA/vreme/ure/dnevi/
+  opravljanje/navigacija/pot dneva).
+
+### Varnost
+
+- `/api/my-trip`: samo B2C seje (Owner → 403, brez seje → 401); server
+  ponovno validira VSAKO postavko po istem kanonu kot klient (nikoli ne
+  zaupaa klientu); rate limit 60/h (GET/POST) + 120/h (DELETE); FIFO kapa
+  200/uporabnika; union-merge NIKOLI ne pobriše obstoječih računskih
+  predmetov (odstranjevanje izključno eksplicitno DELETE).
+
+### Testi
+
+- 3402 testov (+85 od v1.112.0): `task8-f2a-my-trip-sync.test.ts` (27 —
+  unit migracije + unit sync modula + source-contract rute/wiring/sheme +
+  funkcionalno DB-gated) · `task8-f2c-trip-fork.test.ts` (21) ·
+  `task8-f2d-guides-consultation-add.test.ts` (32) ·
+  `task8-f2b-go-mode-calm.test.ts` (6).
+- Regresijska matrika posodobljena: 31/31 zmožnost, 0 izgube
+  (`docs/audit/task8-feature-regression-matrix.md`).
+
+---
+
 ## [1.112.0] — 2026-09-27 (ISSUE #8 / TASK 36: Discovery UX 2.0 — Faza 1 „The Spine")
 
 ### Dodano

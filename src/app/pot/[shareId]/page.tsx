@@ -27,7 +27,7 @@ import { PrintQr } from "./print-qr";
 import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
 import { currentBaseUrl } from "@/lib/host";
-import type { Itinerary } from "@/lib/types";
+import type { Itinerary, PlannerInput } from "@/lib/types";
 
 // Javna stran deljenega itinererja: /pot/[shareId]
 // RSC — bere SavedItinerary direktno iz baze (brez API klica), SSR na vsak
@@ -56,6 +56,9 @@ async function getSharedItinerary(shareId: string) {
       isPublic: true,
       // TASK 28 (live-sync): verzija ob renderu — osnova za polling banner.
       contentVersion: true,
+      // ISSUE #8 §26 / F2-C (fork skupnostne poti): vhodni podatki
+      // načrtovalnika (PlannerInput) — podlaga za „Shrani kot svojo kopijo“.
+      formData: true,
     },
   });
 
@@ -80,7 +83,27 @@ async function getSharedItinerary(shareId: string) {
   );
   if (itinerary.days.length === 0) return null;
 
-  return { ...saved, itinerary };
+  // ISSUE #8 §26 / F2-C: formData (PlannerInput) za „Shrani kot svojo
+  // kopijo“. Starejše/anonimne pote imajo zapisan literal "null" (API:
+  // b.formData ?? null) → null; pokvarjen/veljaven le delno JSON → null
+  // (NE sesuje strani — fork takrat shrani kopijo brez formData).
+  let formData: PlannerInput | null = null;
+  if (typeof saved.formData === "string" && saved.formData !== "null") {
+    try {
+      const parsed: unknown = JSON.parse(saved.formData);
+      if (
+        parsed !== null &&
+        typeof parsed === "object" &&
+        !Array.isArray(parsed)
+      ) {
+        formData = parsed as PlannerInput;
+      }
+    } catch {
+      console.error("[pot] pokvarjen JSON formData:", shareId);
+    }
+  }
+
+  return { ...saved, itinerary, formData };
 }
 
 export async function generateMetadata({
@@ -431,6 +454,7 @@ export default async function SharedTripPage({
         events={events}
         initialVotes={initialVotes}
         initialVersion={saved.contentVersion}
+        formData={saved.formData}
       />
 
       {/* === ISSUE #4 §13 (val 2): SODELOVANJE — vloga, vabila, revokacija,

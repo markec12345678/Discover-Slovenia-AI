@@ -38,6 +38,13 @@ model User {
   // === P3-audit (P3a-1): razveljavitev sej ob ponastavitvi gesla ===
   tokenVersion Int @default(0)
 
+  // === TASK 8 / F2-A (Issue #8 Faza 2): strežniška refleksija zbirke "Moja pot" ===
+  // Zbirka referenc (localStorage dai:my-trip-items) se ob prijavi B2C
+  // uporabnika prenese v račun (union-merge, nikoli destruktivno) → iste
+  // ideje so dostopne iz katere koli naprave. Odstranjevanja se širijo z
+  // eksplicitnimi DELETE (diff-sync v src/lib/my-trip-sync.ts).
+  tripItems   UserTripItem[]
+
   itineraries   SavedItinerary[]
 
   @@index([email])
@@ -116,6 +123,32 @@ model SavedItinerary {
 
   user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+}
+
+// TASK 8 / F2-A (Issue #8 Faza 2): strežniška refleksija zbirke "Moja pot".
+// Ena vrstica = en predmet zbirke (kind:refId identiteta, isti kanon kot
+// src/lib/my-trip.ts — whitelist vrst, dolžine, SAMO notranji href). Brez
+// PII: samo javni povzetki, ki so tako ali tako vidni na karticah odkrivanja.
+// Union-merge ob sinhronizaciji (nikoli destruktivno); FIFO kapa 200 na
+// uporabnika (najstarejša addedAt odpade — enako kot localStorage).
+model UserTripItem {
+  id        String   @id @default(cuid())
+  userId    String
+  kind      String   // MyTripKind whitelist (server ponovno validira)
+  refId     String
+  title     String
+  subtitle  String?
+  href      String   // SAMO notranje poti (startsWith "/") — isti kanon
+  image     String?
+  source    String?
+  addedAt   DateTime // čas dodajanja s klienta (clamp: ne v prihodnost)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, refId])
   @@index([userId])
 }
 

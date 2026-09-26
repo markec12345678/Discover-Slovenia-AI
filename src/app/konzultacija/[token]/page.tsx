@@ -14,10 +14,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
-import { DESTINATIONS } from "@/lib/slovenia-data";
+import { DESTINATIONS, REGIONS } from "@/lib/slovenia-data";
 import { safeParseConsultPartners } from "@/lib/consultation-engine";
 import { ConsultationPartnerCards } from "@/components/consultation-partner-cards";
 import { ConsultationRefSetter } from "@/components/consultation-ref-setter";
+// TASK 8 / F2-D (§3.3, D8-A §9.9 mrtvi konec): kanonski "Dodaj v mojo pot"
+// za priporočeno destinacijo — client otok (deluje čisto na localStorage,
+// žetona NE razkrije), stran ostaja strežniška RSC.
+import { ConsultationDestinationAdd } from "@/components/consultation-destination-add";
 // TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer
 // (prej lastni header + mini-footer). Linka mini-noge (/vir-podatkov,
 // /politika-zasebnosti) sta v standardnem Footerju (stolpec Pravno).
@@ -108,8 +112,14 @@ export default async function ConsultationPage({ params }: PageProps) {
     ...(c.destinationName ? [c.destinationName] : []),
   ].filter((x): x is string => Boolean(x));
 
-  const destSlug = c.destinationName
-    ? DESTINATIONS.find((d) => d.name === c.destinationName)?.slug
+  const dest = c.destinationName
+    ? DESTINATIONS.find((d) => d.name === c.destinationName)
+    : undefined;
+  const destSlug = dest?.slug ?? null;
+  // Regija priporočene destinacije (javni podatek — kontekst vrstice v
+  // "Moja pot"); null, če se ime ne ujema s seznamom destinacij.
+  const destRegionLabel = dest
+    ? (REGIONS.find((r) => r.value === dest.region)?.label ?? null)
     : null;
 
   return (
@@ -213,19 +223,35 @@ export default async function ConsultationPage({ params }: PageProps) {
         {/* Nadaljevanje potovanja — monetizacijski CTA */}
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           {destSlug ? (
-            <Link
-              href={`/destinacija/${destSlug}/things-to-do`}
-              className="group rounded-xl border border-border/70 bg-background p-4 transition hover:border-primary/40 hover:shadow-sm"
-            >
-              <p className="flex items-center gap-2 text-sm font-semibold">
+            <div className="group relative rounded-xl border border-border/70 bg-background p-4 transition hover:border-primary/40 hover:shadow-sm">
+              {/* TASK 8 / F2-D: overlay povezava — celotna kartica ostane
+                  klikljiva, kanonski dodaj pa NI gumb znotraj <a> (veljaven
+                  HTML, isti vzorec kot /vodici kartice). */}
+              <Link
+                href={`/destinacija/${destSlug}/things-to-do`}
+                className="absolute inset-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <span className="sr-only">Raziskuj {c.destinationName}</span>
+              </Link>
+              <p className="relative z-10 flex items-center gap-2 text-sm font-semibold">
                 <MapPin className="size-4 text-primary" aria-hidden="true" />
                 Raziskuj {c.destinationName}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="relative z-10 mt-1 text-xs text-muted-foreground">
                 Lokali, izkušnje in dogodki, ki jih lokal priporoča — z
                 ocenami in cenami.
               </p>
-            </Link>
+              {/* TASK 8 / F2-D (§3.3): kanonski "Dodaj v mojo pot" — prej
+                  slepa ulica (samo skok na things-to-do). Čisto client-side
+                  na localStorage; zasebna vsebina konzultacije se ne razkrije. */}
+              <ConsultationDestinationAdd
+                slug={destSlug}
+                name={c.destinationName ?? destSlug}
+                subtitle={destRegionLabel ?? undefined}
+                image={dest?.image}
+                className="relative z-10 mt-3 w-full justify-center"
+              />
+            </div>
           ) : (
             <Link
               href="/"

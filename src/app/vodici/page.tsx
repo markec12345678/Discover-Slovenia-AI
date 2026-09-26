@@ -5,6 +5,9 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
 import { Chatbot } from "@/components/chatbot";
+// TASK 8 / F2-D (§3.3): kanonski "Dodaj v mojo pot" na karticah seznama —
+// strežniška stran, zato client ovojnik (kot D8-D destination wrapper).
+import { GuideAddToTrip } from "@/components/guide-add-to-trip";
 import { BlogSection } from "@/components/sections/blog";
 import { AskLocal } from "@/components/sections/ask-local";
 import { Reveal } from "@/components/reveal";
@@ -46,7 +49,12 @@ function fmtKm(km: number, locale: string): string {
   return km.toLocaleString(locale === "en" ? "en-GB" : "sl-SI");
 }
 
-/** Kartica vodnika na seznamu (skupna za domače kroge in jadranske). */
+/** Kartica vodnika na seznamu (skupna za domače kroge, zimske in jadranske).
+ *
+ *  TASK 8 / F2-D: celotna kartica je klikljiva prek OVERLAY povezave
+ *  (absolute inset-0) — tako kanonski "Dodaj v mojo pot" ni gumb
+ *  znotraj <a> (neveljaven HTML, isti vzorec rešitve kot SmartSearch v
+ *  D8-D). Vsebina in gumb so nad overlayjem (relative z-10). */
 function GuideCard({
   g,
   locale,
@@ -58,29 +66,35 @@ function GuideCard({
   countriesAria: string;
   readMore: string;
 }) {
+  const daysWord =
+    locale === "en" ? (g.days === 1 ? "day" : "days") : g.days === 1 ? "dan" : "dni";
   return (
-    <Link
-      href={`/vodici/${g.slug}`}
-      className="group flex h-full flex-col rounded-xl border bg-background p-5 transition-colors hover:border-primary/40 hover:shadow-sm"
-    >
+    <div className="group relative flex h-full flex-col rounded-xl border bg-background p-5 transition-colors hover:border-primary/40 hover:shadow-sm">
+      {/* Celotna kartica klikljiva — overlay povezava nad ozadjem */}
+      <Link
+        href={`/vodici/${g.slug}`}
+        className="absolute inset-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        <span className="sr-only">{g.metaTitle}</span>
+      </Link>
       <div
-        className="mb-2 flex items-center gap-1.5 text-lg"
+        className="relative z-10 mb-2 flex items-center gap-1.5 text-lg"
         aria-label={countriesAria}
       >
         {g.countries.map((c) => (
           <span key={c}>{COUNTRY_FLAG[c]}</span>
         ))}
       </div>
-      <h3 className="font-semibold leading-snug group-hover:text-primary">
+      <h3 className="relative z-10 font-semibold leading-snug group-hover:text-primary">
         {g.metaTitle}
       </h3>
-      <p className="mt-2 line-clamp-3 flex-1 text-sm leading-relaxed text-muted-foreground">
+      <p className="relative z-10 mt-2 line-clamp-3 flex-1 text-sm leading-relaxed text-muted-foreground">
         {g.excerpt}
       </p>
-      <div className="mt-4 flex flex-wrap items-center gap-3 border-t pt-3 text-xs text-muted-foreground">
+      <div className="relative z-10 mt-4 flex flex-wrap items-center gap-3 border-t pt-3 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <Calendar className="size-3.5 text-primary" aria-hidden="true" />
-          {g.days} {locale === "en" ? (g.days === 1 ? "day" : "days") : g.days === 1 ? "dan" : "dni"}
+          {g.days} {daysWord}
         </span>
         <span className="inline-flex items-center gap-1">
           <Route className="size-3.5 text-primary" aria-hidden="true" />
@@ -90,7 +104,19 @@ function GuideCard({
           {readMore}
         </span>
       </div>
-    </Link>
+      {/* TASK 8 / F2-D (§3.3): kompaktstni kanonski dodaj — polna širina pod
+          obstoječo meta vrstico (dnevi/km/„preberi" ostajajo nespremenjeni;
+          44px dotik iz primitve; identiteta kind:refId enaka detail strani). */}
+      <GuideAddToTrip
+        variant="compact"
+        className="relative z-10 mt-3 w-full justify-center"
+        slug={g.slug}
+        title={g.metaTitle}
+        subtitle={`${g.days} ${daysWord} · ${fmtKm(g.km, locale)} km`}
+        image={g.heroImage || undefined}
+        source="vodici-seznam"
+      />
+    </div>
   );
 }
 

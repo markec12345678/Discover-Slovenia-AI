@@ -711,53 +711,10 @@ export function GoMode() {
         </Card>
       )}
 
-      {/* === GPS NADZOR === */}
-      <Card>
-        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0 space-y-1">
-            <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
-              {geo.status === "requesting" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <LocateFixed
-                  className={`h-4 w-4 ${
-                    geo.status === "active" ? "text-emerald-600" : "text-muted-foreground"
-                  }`}
-                />
-              )}
-              {t(statusLabel)}
-              {geo.status === "active" && geo.position?.accuracyM != null && (
-                <span className="text-xs font-normal text-muted-foreground">
-                  {L.gps.accuracy[lang](geo.position.accuracyM)}
-                </span>
-              )}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {geo.position
-                ? t(GO_LABELS.positionHint)
-                : t(GO_LABELS.noPosition)}
-            </p>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            {geo.status === "idle" || geo.status === "denied" || geo.status === "unavailable" || geo.status === "error" ? (
-              <Button
-                onClick={geo.start}
-                variant="outline"
-                className="h-11"
-                aria-label={t(L.gps.start)}
-              >
-                <LocateFixed className="mr-2 h-4 w-4" /> {t(L.gps.start)}
-              </Button>
-            ) : (
-              <Button onClick={geo.stop} variant="outline" className="h-11">
-                {t(L.gps.stop)}
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* === NASLEDNJE (hero kartica) === */}
+      {/* TASK 8 / F2-B (§24 hierarhija NOW → NEXT → WHEN → HOW → CONTEXT):
+          NASLEDNJE je druga kartica (ne četrta) — primarni tok po GLAVI.
+          GPS NADZOR (HOW) je premaknjen POD naslednjo kartico. */}
       {view.next ? (
         <Card className="border-emerald-500 ring-1 ring-emerald-500/50">
           <CardContent className="space-y-4 p-4 sm:p-6">
@@ -946,6 +903,54 @@ export function GoMode() {
           </CardContent>
         </Card>
       )}
+
+      {/* === GPS NADZOR (HOW) — TASK 8 / F2-B: premaknjen pod NASLEDNJO
+          (§24: navigacijska orodja sledijo primarnemu toku, ne prekinjajo
+          NOW → NEXT). Vsa zmožnost nespremenjena. === */}
+      <Card>
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 space-y-1">
+            <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
+              {geo.status === "requesting" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <LocateFixed
+                  className={`h-4 w-4 ${
+                    geo.status === "active" ? "text-emerald-600" : "text-muted-foreground"
+                  }`}
+                />
+              )}
+              {t(statusLabel)}
+              {geo.status === "active" && geo.position?.accuracyM != null && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  {L.gps.accuracy[lang](geo.position.accuracyM)}
+                </span>
+              )}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {geo.position
+                ? t(GO_LABELS.positionHint)
+                : t(GO_LABELS.noPosition)}
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            {geo.status === "idle" || geo.status === "denied" || geo.status === "unavailable" || geo.status === "error" ? (
+              <Button
+                onClick={geo.start}
+                variant="outline"
+                className="h-11"
+                aria-label={t(L.gps.start)}
+              >
+                <LocateFixed className="mr-2 h-4 w-4" /> {t(L.gps.start)}
+              </Button>
+            ) : (
+              <Button onClick={geo.stop} variant="outline" className="h-11">
+                {t(L.gps.stop)}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* === ISSUE #4 §8 (val 2): POT DNEVA (vsota nog — OSRM/ocena) ===
           Samo kjer načrt nosi noge; delne ocene so pošteno razkrite

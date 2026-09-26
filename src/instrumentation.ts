@@ -331,6 +331,56 @@ export async function register() {
       });
     }
 
+    // Startup SHEMA migracija — TASK 8 / F2-A (Issue #8 Faza 2): ustvari
+    // tabelo UserTripItem — strežniška refleksija zbirke "Moja pot" za
+    // prijavljene B2C uporabnike (union-merge, nikoli destruktivno).
+    // Idempotentna, additive-only, fail-open — skupna zastavica
+    // DSA_DISABLE_SCHEMA_MIGRATION. Glej src/lib/user-trip-items-migration.ts.
+    try {
+      const { migrateUserTripItemsTable } = await import(
+        "./lib/user-trip-items-migration"
+      );
+      const r = await migrateUserTripItemsTable();
+      if (r.tablesCreated.length > 0) {
+        console.log(
+          `[instrumentation] Shema migracija (my-trip refleksija): ` +
+            `ustvarjene tabele [${r.tablesCreated.join(", ")}] (${r.dialect})`
+        );
+        recordStartupStep({
+          name: "schema:user-trip-items",
+          status: "ok",
+          detail: `ustvarjene tabele: ${r.tablesCreated.join(", ")} (${r.dialect})`,
+        });
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija (my-trip refleksija): " +
+            "tabel ni bilo mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
+        );
+        recordStartupStep({
+          name: "schema:user-trip-items",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja tabel ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:user-trip-items",
+          status: "ok",
+          detail: "tabele že prisotne",
+        });
+      }
+    } catch (error) {
+      // Fail-open: migracija NE sme podreti zagona strežnika.
+      console.error(
+        "[instrumentation] Shema migracija (my-trip refleksija) ni uspela:",
+        error
+      );
+      recordStartupStep({
+        name: "schema:user-trip-items",
+        status: "failed",
+        detail: String(error),
+      });
+    }
+
     // Startup SHEMA migracija — TASK 34 (1.111.0, Tier 2 #2): ustvari tabeli
     // payout ledgerja (PayoutEntry — knjigovodska postavka po rezervaciji +
     // PayoutSettlement — mesečna poravnava; mandat COMPETITIVE-ANALYSIS B3
