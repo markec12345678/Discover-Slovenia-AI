@@ -27,6 +27,9 @@ import { deterministicSearch } from "@/lib/deterministic-search";
 interface SmartSearchRequest {
   query: string;
   limit?: number; // default 3 per kategorijo
+  /** ISSUE #12 (F12-3, §13): jezik razlogov zadetkov ("en" → EN razlogi;
+   *  privzeto SL — nazaj kompatibilno s starejšimi klienti brez polja). */
+  locale?: "sl" | "en";
 }
 
 interface SearchResults {
@@ -107,6 +110,9 @@ export async function POST(request: Request) {
   }
 
   const limit = Math.min(Math.max(body.limit ?? 3, 1), 5);
+  // F12-3: jezik razlogov — samo eksplicitni "en" odpre EN vej (sicer SL;
+  // katera koli druga vrednost varno pade v privzeto SL).
+  const reasonLocale = body.locale === "en" ? "en" : "sl";
 
   // === PRIDOBI VSE ITEME IZ BAZE ===
   // ISSUE #12 (F12-1): select zdaj vključuje lat/lng (Listing/Experience —
@@ -160,7 +166,8 @@ export async function POST(request: Request) {
       products: allProducts,
       experiences: allExperiences,
     },
-    limit
+    limit,
+    reasonLocale
   );
 
   // ISSUE #5 T5-B (H1): id → slug preslikava za navigacijo v hub stran —

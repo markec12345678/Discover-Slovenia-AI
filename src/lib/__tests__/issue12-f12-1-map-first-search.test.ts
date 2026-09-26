@@ -1,5 +1,5 @@
 // ============================================================================
-// ISSUE #12 (F12-1 + F12-2, 1.118.0) — MAP-FIRST DISCOVERY
+// ISSUE #12 (F12-1 + F12-2 + F12-3, 1.118.0 → 1.119.0) — MAP-FIRST DISCOVERY
 // ----------------------------------------------------------------------------
 // F12-1 (issue §2 + §12 + guardrail matrika):
 //  1. SOURCE-CONTRACT — Pokaži/Skrij POI gumb ODSTRANJEN (showPois/togglePois/
@@ -22,12 +22,26 @@
 //  6. SOURCE-CONTRACT — marker RESULT CARD: ★ ocena POGOJNA, PRIMARNA
 //     akcija „+ Dodaj v mojo pot" (isti selection.ts tok), sekundarni
 //     Podrobnosti + Navigiraj (Google Maps, noopener).
+// F12-3 (issue §7 + §13):
+//  7. SOURCE-CONTRACT — POI terminologija IZGLAVLJENA iz glavnega
+//     uporabniškega jezika (chipsAria/loading/badge; interni identifikatorji
+//     POI_CATEGORIES/data-poi-id ostanejo — niso uporabniški tekst).
+//  8. SOURCE-CONTRACT — stanja v uporabniškem jeziku (issue §13 primer:
+//     degradedHint; zoomHint brez tehnične ravni; errorPois mrtva koda
+//     ODSTRANJENA).
+//  9. SOURCE-CONTRACT — ProviderPanel DEMOTION (§7/§16-7): ikonski
+//     sprožilec z aria-label + title (dostopnost celovita), panel OSTANE
+//     (Sheet z viri/statusi/atribucijo — napredna površina).
+// 10. SOURCE-CONTRACT — i18n glavni jezik (exploreHub.mapDesc +
+//     about.offerCards.destinationsDesc) brez POI; transparentnostne
+//     površine (dataSources/about.howP2) POI ZADRŽEJO (dovoljeno §13).
 // ============================================================================
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { db } from "@/lib/db";
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { deterministicSearch } from "@/lib/deterministic-search";
 // TASK 76 higiena: funkcionalni blok dinamično uvaža route handler prek
 // @/app/api (žetoni deljenega omejevalnika runnerja) → okno OBVEZNO
 // počistimo (konvencija suite-a, glej task76-suite-hygiene.test.ts).
@@ -41,6 +55,9 @@ const smartSearchRouteSrc = read("src/app/api/smart-search/route.ts");
 const plannerAnalyticsSrc = read("src/lib/planner-analytics.ts");
 const analyticsRouteSrc = read("src/app/api/analytics/event/route.ts");
 const useSupplyQuerySrc = read("src/lib/supply/use-supply-query.ts");
+const providerPanelSrc = read("src/components/supply/provider-panel.tsx");
+const i18nSl = read("src/i18n/messages/sl.json");
+const i18nEn = read("src/i18n/messages/en.json");
 
 // ─────────────────────────────────────────────────────────────────────────
 // 1. SOURCE-CONTRACT — map-view (gumb odstranjen, kontekst izveden)
@@ -98,8 +115,10 @@ describe("ISSUE #12 F12-1: Pokaži/Skrij POI gumb ODSTRANJEN (mentalni model)", 
     expect(mapViewSrc).toContain("supply.error && supplyActive");
   });
 
-  test("loadingPois literal OSTAJA (pin task8-f3b — kompatibilnost suite-a)", () => {
-    expect(mapViewSrc).toContain('loadingPois: { sl: "Nalagam POI-je…"');
+  test("loadingPois literal OSTAJA v dvojezičnem slovarju (pin task8-f3b)", () => {
+    // F12-3: besedilo je zdaj UPORABNIŠKI jezik („POI“ umaknjen iz §7);
+    // pin ščiti dvojezičnost slovarja (task8-f3b namensko posodobljen).
+    expect(mapViewSrc).toContain('loadingPois: { sl: "Nalagam lokalna mesta…"');
   });
 
   test("zoom-gating ostaja NEDOTAKNJEN (samozaščita gostote — z ≥ 10)", () => {
@@ -253,6 +272,43 @@ describe("ISSUE #12 F12-1: funkcionalno — POST /api/smart-search z geo", () =>
   });
 });
 
+describe("ISSUE #12 F12-3: EN razlogi zadetkov (uporabniški jezik na /en)", () => {
+  const deterministicSearchSrc = read("src/lib/deterministic-search.ts");
+
+  test("SOURCE-CONTRACT: iskalnik sprejema locale (4. arg, privzeto SL)", () => {
+    expect(deterministicSearchSrc).toContain(
+      'locale: "sl" | "en" = "sl"'
+    );
+    // Dvojezična razlaga zadetka (prej SL-only tudi na /en):
+    expect(deterministicSearchSrc).toContain('"Matches your search"');
+    expect(deterministicSearchSrc).toContain('"Ujema se z iskalnim nizom"');
+    // Vsa štiri mesta klica buildReason nosijo locale:
+    expect(deterministicSearchSrc.match(/buildReason\([^)]*locale\)/g)?.length).toBe(4);
+  });
+
+  test("SOURCE-CONTRACT: ruta sprejema locale + map-view ga pošilja v telesu", () => {
+    expect(smartSearchRouteSrc).toContain('locale?: "sl" | "en"');
+    expect(smartSearchRouteSrc).toContain('const reasonLocale = body.locale === "en" ? "en" : "sl"');
+    expect(smartSearchRouteSrc).toContain("reasonLocale");
+    expect(mapViewSrc).toContain("{ query: q, limit: 3, locale: lang }");
+  });
+
+  test("FUNKCIONALNO: locale=en → EN razlogi; privzeto (3 args) → SL nazaj kompatibilno", () => {
+    const DS = {
+      listings: [] as Array<{ id: string; name: string; category: string; destinationName: string | null; description: string | null; rating: number | null; priceRange: string | null }>,
+      products: [] as Array<{ id: string; name: string; category: string; destinationName: string | null; description: string | null; price: number | null; rating: number | null }>,
+      experiences: [] as Array<{ id: string; name: string; category: string; destinationName: string | null; description: string | null; pricePerPerson: number | null; rating: number | null; familyFriendly: boolean; durationHours: number | null }>,
+    };
+    const en = deterministicSearch("bled", DS, 3, "en");
+    const sl = deterministicSearch("bled", DS, 3);
+    expect(en.destinations.length).toBeGreaterThan(0);
+    // EN razlog:
+    expect(en.destinations[0]!.reason).toContain("Matches your search");
+    // Privzeti (brez 4. arg) — SL razlog (nazaj kompatibilno):
+    expect(sl.destinations[0]!.reason).toContain("Ujema se z iskalnim nizom");
+  });
+});
+
 // ─────────────────────────────────────────────────────────────────────────
 // 5. SOURCE-CONTRACT — F12-2: primarne kategorije + marker result card
 // ─────────────────────────────────────────────────────────────────────────
@@ -319,5 +375,105 @@ describe("ISSUE #12 F12-2: marker result card (issue §6 struktura)", () => {
     );
     expect(mapViewSrc).toContain('rel="noopener noreferrer"');
     expect(mapViewSrc).toContain('navigate: { sl: "Navigiraj"');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// 7.–10. SOURCE-CONTRACT — F12-3: §7 (POI umik + ProviderPanel demotion)
+//                                    §13 (stanja v uporabniškem jeziku)
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("ISSUE #12 F12-3 (§7): POI terminologija IZGLAVLJENA iz glavnega jezika", () => {
+  test("uporabniški nizi brez „POI“ (loading/aria/badge) — interni ID-ji ostanejo", () => {
+    // Uporabniški tekst (T slovar + badge) — POI izglavljen:
+    expect(mapViewSrc).not.toContain('Nalagam POI');
+    expect(mapViewSrc).not.toContain('POI-jev ni mogoče');
+    expect(mapViewSrc).not.toContain('Filtriranje POI');
+    expect(mapViewSrc).not.toContain('} POI · {');
+    // INTERNI identifikatorji (niso uporabniški tekst) ostanejo namerno:
+    expect(mapViewSrc).toContain("POI_CATEGORIES");
+    expect(mapViewSrc).toContain('class="map-poi-cta map-poi-add"');
+  });
+
+  test("badge supply sloja: rezultati v uporabniškem jeziku + atribucija OSTANE", () => {
+    expect(mapViewSrc).toContain('supplyUnit: { sl: "rezultatov", en: "results" }');
+    expect(mapViewSrc).toContain("{supply.products.length} {T.supplyUnit[lang]} · {sourcesLabel}");
+    // Transparentnost virov (issue §7: atribucija mora ostati dostopna):
+    expect(mapViewSrc).toContain("sourcesLabel");
+  });
+
+  test("mrtvi errorPois ODSTRANJEN (stanja streže networkHint/degradedHint)", () => {
+    expect(mapViewSrc).not.toContain("errorPois");
+    // Dejanski error tokovi ostanejo (TASK 99-a iskrenost):
+    expect(mapViewSrc).toContain("T.networkHint[lang]");
+    expect(mapViewSrc).toContain("T.degradedHint[lang]");
+  });
+});
+
+describe("ISSUE #12 F12-3 (§13): stanja v uporabniškem jeziku", () => {
+  test("degradedHint = PRIMER IZ ISSUEJA („Nekaterih lokalnih mest … prikazati“)", () => {
+    expect(mapViewSrc).toContain(
+      'sl: "Nekaterih lokalnih mest trenutno ni mogoče prikazati — destinacije ostajajo."'
+    );
+    expect(mapViewSrc).toContain(
+      'en: "Some local places can\'t be shown right now — destinations remain."'
+    );
+  });
+
+  test("zoomHint BREZ tehnične ravni „z ≥ 10“ (razlog ostane v hooku/kodu)", () => {
+    expect(mapViewSrc).not.toContain('lokalne točke (z ≥ 10)');
+    expect(mapViewSrc).toContain('sl: "Približajte zemljevid za lokalne točke."');
+    // Zoom-gating tehnično OSTAJA (samozaščita gostote — F12-1 test zgoraj):
+    expect(useSupplyQuerySrc).toContain("SUPPLY_MIN_ZOOM");
+  });
+
+  test("loading v uporabniškem jeziku (mesta, ne POI) + offline ostaja iskren", () => {
+    expect(mapViewSrc).toContain('loadingPois: { sl: "Nalagam lokalna mesta…", en: "Loading local places…" }');
+    expect(mapViewSrc).toContain('sl: "Ni internetne povezave — destinacije ostajajo na voljo."');
+  });
+
+  test("zastareli komentar „gumb Pokaži POI“ odstranjen iz hook pogodbe", () => {
+    expect(useSupplyQuerySrc).not.toContain("gumb Pokaži POI");
+    expect(useSupplyQuerySrc).toContain("NE iz gumba");
+  });
+});
+
+describe("ISSUE #12 F12-3 (§7/§16-7): ProviderPanel DEMOTION, dostopnost OSTANE", () => {
+  test("sprožilec je SAMO IKONA (vzorec Google Maps Layers) z aria-label + title", () => {
+    expect(providerPanelSrc).toContain('size="icon"');
+    expect(providerPanelSrc).toContain("aria-label={L.triggerAria[lang]}");
+    expect(providerPanelSrc).toContain("title={L.triggerAria[lang]}");
+    expect(providerPanelSrc).not.toContain("{L.trigger[lang]}");
+  });
+
+  test("panel OSTAJA dostopen (Sheet + viri + statusi + atribucija — §14 F)", () => {
+    expect(providerPanelSrc).toContain("SheetContent");
+    expect(providerPanelSrc).toContain("localProviders()");
+    expect(providerPanelSrc).toContain("PROVIDER_REGISTRY");
+    expect(providerPanelSrc).toContain("statusLegend");
+    // Iskrenost napake ostaja (degraded obvestilo v panelu):
+    expect(providerPanelSrc).toContain("productsDegraded");
+  });
+});
+
+describe("ISSUE #12 F12-3: i18n glavni jezik brez POI (transparentnost zadrži)", () => {
+  test("exploreHub.mapDesc + about.offerCards.destinationsDesc brez „POI“", () => {
+    for (const src of [i18nSl, i18nEn]) {
+      const mapDesc = src.match(/"mapDesc": "([^"]*)"/)?.[1] ?? "";
+      expect(mapDesc).not.toContain("POI");
+      const destDesc =
+        src.match(/"destinationsDesc": "([^"]*)"/)?.[1] ?? "";
+      expect(destDesc).not.toContain("POI");
+      expect(destDesc.length).toBeGreaterThan(0);
+    }
+  });
+
+  test("transparentnostne površine POI ZADRŽEJO (§13: tehnični razlog dostopen v podrobnostih)", () => {
+    // dataSources (stran vir-podatkov) + about.howP2 (razlaga motorja) —
+    // POI je tam URADEN tehnični izraz (POI baza / točke interesa) in
+    // NAMERNO ostane (issue §13 dovoljuje tehnični jezik v podrobnostih).
+    expect(i18nSl).toContain('"type": "POI baza"');
+    expect(i18nEn).toContain('"type": "POI database"');
+    expect(i18nSl).toContain("howP2");
   });
 });

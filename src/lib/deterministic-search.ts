@@ -513,18 +513,33 @@ function deterministicSort<T extends { score: number; rating: number | null; nam
   });
 }
 
-/** Pošten determinističen razlog zadetka (iz DEJANSKIH signalov ujemanja). */
-function buildReason(matchedTokens: string[], matchedCategories: string[]): string {
+/** Pošten determinističen razlog zadetka (iz DEJANSKIH signalov ujemanja).
+ *  ISSUE #12 (F12-3, §13): razlog je UPORABNIŠKI tekst → dvojezičen
+ *  (prej seveda SL tudi na /en — kategorije v razlogu so kanonski
+ *  identifikatorji (food/wine/hiking …) in ostanejo jezikovno nevtralni). */
+function buildReason(
+  matchedTokens: string[],
+  matchedCategories: string[],
+  locale: "sl" | "en" = "sl"
+): string {
   const parts: string[] = [];
   if (matchedTokens.length > 0) {
-    parts.push(`ključne besede: ${matchedTokens.slice(0, 4).join(", ")}`);
+    parts.push(
+      `${locale === "en" ? "keywords" : "ključne besede"}: ${matchedTokens.slice(0, 4).join(", ")}`
+    );
   }
   if (matchedCategories.length > 0) {
-    parts.push(`kategorija: ${matchedCategories.slice(0, 3).join(", ")}`);
+    parts.push(
+      `${locale === "en" ? "category" : "kategorija"}: ${matchedCategories.slice(0, 3).join(", ")}`
+    );
   }
   return parts.length > 0
-    ? `Ujema se z iskalnim nizom (${parts.join(" · ")})`
-    : "Ujema se z iskalnim nizom";
+    ? locale === "en"
+      ? `Matches your search (${parts.join(" · ")})`
+      : `Ujema se z iskalnim nizom (${parts.join(" · ")})`
+    : locale === "en"
+      ? "Matches your search"
+      : "Ujema se z iskalnim nizom";
 }
 
 // ─── 8. GLAVNA FUNKCIJA ────────────────────────────────────────────────────
@@ -536,13 +551,16 @@ function buildReason(matchedTokens: string[], matchedCategories: string[]): stri
  * @param datasets vrstice iz baze (iste, ki jih ruta pridobi) — listings,
  *                 products, experiences
  * @param limit    maksimalno število zadetkov na kategorijo (1–5)
+ * @param locale   jezik razlogov (issue #12 F12-3: "en" → EN razlogi;
+ *                 privzeto "sl" — nazaj kompatibilno s 3-arg klici)
  * @returns        per-kategorija seznami (destinacije vedno iz statičnih
  *                 DESTINATIONS; prazne mreže → prazni seznami)
  */
 export function deterministicSearch(
   query: string,
   datasets: DeterministicSearchDatasets,
-  limit: number
+  limit: number,
+  locale: "sl" | "en" = "sl"
 ): DeterministicSearchResult {
   const safeLimit = Math.min(Math.max(Math.floor(limit) || 3, 1), 5);
   const queryTokens = tokenize(query);
@@ -582,25 +600,25 @@ export function deterministicSearch(
       slug: d.dest.slug,
       name: d.dest.name,
       tagline: d.dest.tagline,
-      reason: buildReason(d.matchedTokens, d.matchedCategories),
+      reason: buildReason(d.matchedTokens, d.matchedCategories, locale),
     })),
     listings: scoredListings.slice(0, safeLimit).map((r) => ({
       id: r.id,
       name: r.name,
       category: r.category,
-      reason: buildReason(r.matchedTokens, r.matchedCategories),
+      reason: buildReason(r.matchedTokens, r.matchedCategories, locale),
     })),
     products: scoredProducts.slice(0, safeLimit).map((r) => ({
       id: r.id,
       name: r.name,
       category: r.category,
-      reason: buildReason(r.matchedTokens, r.matchedCategories),
+      reason: buildReason(r.matchedTokens, r.matchedCategories, locale),
     })),
     experiences: scoredExperiences.slice(0, safeLimit).map((r) => ({
       id: r.id,
       name: r.name,
       category: r.category,
-      reason: buildReason(r.matchedTokens, r.matchedCategories),
+      reason: buildReason(r.matchedTokens, r.matchedCategories, locale),
     })),
   };
 }

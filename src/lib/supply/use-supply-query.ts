@@ -47,7 +47,8 @@ export interface SupplyLayerState {
 export type SupplyLayerError = "client-network" | "supply-unavailable";
 
 interface UseSupplyQueryOpts {
-  /** Ali je sloj sploh vklopljen (gumb Pokaži POI). */
+  /** Ali je sloj sploh vklopljen (ISSUE #12 F12-1: izvedeno iz iskalno-
+   *  filtrirnega konteksta — searchResults ‖ catsTouched; NE iz gumba). */
   enabled: boolean;
   /** Aktivne kategorije (tipi). */
   cats: ProductType[];

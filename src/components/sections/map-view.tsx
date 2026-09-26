@@ -126,8 +126,10 @@ const T = {
     en: "No map location — open details",
   },
   chipsAria: {
-    sl: "Filtriranje POI kategorij",
-    en: "Filter POI categories",
+    // ISSUE #12 (F12-3, §7): „POI“ je tehnični izraz — izglavljen iz
+    // glavnega uporabniškega jezika (aria-label je uporabniški tekst).
+    sl: "Filtriranje kategorij",
+    en: "Filter categories",
   },
   // ISSUE #12 (F12-2): „+ Več" expander (5 primarnih → vseh 12 čipov).
   moreCats: { sl: "Več", en: "More" },
@@ -144,11 +146,12 @@ const T = {
     en: "All categories are off — no places are shown.",
   },
   emptyReset: { sl: "Prikaži privzeto", en: "Show defaults" },
-  loadingPois: { sl: "Nalagam POI-je…", en: "Loading POIs…" },
-  errorPois: {
-    sl: "POI-jev ni mogoče naložiti. Poskusite pozneje.",
-    en: "POIs could not be loaded. Try again later.",
-  },
+  // ISSUE #12 (F12-3, §7+§13): uporabniški jezik stanj — „POI“ tehnični
+  // izraz se umika iz glavnega UX (issue §7); vsa stanja ostajajo ISKRENA.
+  loadingPois: { sl: "Nalagam lokalna mesta…", en: "Loading local places…" },
+  // ISSUE #12 (F12-3): števec rezultatov supply sloja v glavnem jeziku
+  // (prej „X POI · viri“ — zdaj rezultati + atribucija virov ostane).
+  supplyUnit: { sl: "rezultatov", en: "results" },
   mapAria: {
     sl: "Interaktivni zemljevid Slovenije in Balkana z destinacijami, bencinskimi, restavracijami in nastanitvami",
     en: "Interactive map of Slovenia and the Balkans with destinations, petrol stations, restaurants and stays",
@@ -163,13 +166,18 @@ const T = {
     en: (n: number) => `Day ${n}`,
   },
   // F1 (Supply Map):
+  // ISSUE #12 (F12-3, §13): zoom hint BREZ tehnične ravni „z ≥ 10“ —
+  // uporabniško dejanje, ne številka plasti (razlog ostane v kodi/hooku).
   zoomHint: {
-    sl: "Približajte zemljevid za lokalne točke (z ≥ 10).",
-    en: "Zoom in for local places (z ≥ 10).",
+    sl: "Približajte zemljevid za lokalne točke.",
+    en: "Zoom in for local places.",
   },
+  // ISSUE #12 (F12-3, §13): PRIMER IZ ISSUEJA — „Nekaterih lokalnih mest
+  // trenutno ni mogoče prikazati.“ (prej: „Nekateri viri … niso dosegljivi“).
+  // Destinacije (vedno na voljo) ostanejo pošteno omenjene.
   degradedHint: {
-    sl: "Nekateri viri trenutno niso dosegljivi — destinacije ostajajo.",
-    en: "Some sources are unreachable right now — destinations remain.",
+    sl: "Nekaterih lokalnih mest trenutno ni mogoče prikazati — destinacije ostajajo.",
+    en: "Some local places can't be shown right now — destinations remain.",
   },
   // TASK 99-a (§15): iskrena oznaka za "client-network" — napaka je na
   // STRANI ODJEMALCA (offline), zato NE obtožuje virov/ponudnikov.
@@ -579,7 +587,9 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         const res = await fetch("/api/smart-search", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ query: q, limit: 3 }),
+          // F12-3 (§13): locale → EN razlogi zadetkov na /en zemljevidu
+          // (prej SL razlogi tudi v angleškem UI — uporabniški jezik).
+          body: JSON.stringify({ query: q, limit: 3, locale: lang }),
           signal: controller.signal,
         });
         if (!res.ok) throw new Error(`smart-search ${res.status}`);
@@ -1846,7 +1856,10 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             <>
               <span className="text-muted-foreground">·</span>
               <Badge variant="outline" className="max-w-[220px] truncate text-[10px]">
-                {supply.products.length} POI · {sourcesLabel}
+                {/* F12-3 (§7): brez tehničnega „POI“ — rezultati v
+                    uporabniškem jeziku; atribucija virov OSTAJA
+                    (transparentnost, issue §7 zahteva). */}
+                {supply.products.length} {T.supplyUnit[lang]} · {sourcesLabel}
               </Badge>
             </>
           ) : null}

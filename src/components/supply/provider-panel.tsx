@@ -1,7 +1,7 @@
 "use client";
 
 // ============================================================================
-// TRAVEL SUPPLY MAP — PROVIDER PANEL (F1, 1.49.0)
+// TRAVEL SUPPLY MAP — PROVIDER PANEL (F1, 1.49.0 → ISSUE #12 F12-3)
 // ============================================================================
 // Registrirani ponudniki z JASNIMI statusi (LIVE/SEARCH/AFFILIATE/LOCAL —
 // iz registra, nikoli iz komponente). Affiliate-only ponudniki se
@@ -9,6 +9,11 @@
 // centru karte) — BREZ izmišljenega inventarja, brez lažnih markerjev.
 //
 // Lokalni viri (OSM/FSQ/STO) so VEDNO ločena skupina od komercialnih.
+//
+// ISSUE #12 (F12-3, §7): DEMOTION — panel je NAPREDNA površina (hierarhija
+// §16 raven 7): sprožilec je SAMO IKONA (vzorec Google Maps „Layers“),
+// dostopnost pa ostaja celovita (aria-label + title). Providerji, viri,
+// atribucija in statusi OSTAJO dostopni — le niso več primarna navigacija.
 // ============================================================================
 
 import { useMemo } from "react";
@@ -40,7 +45,9 @@ import { ProductCard } from "./product-card";
 import { cn } from "@/lib/utils";
 
 const L = {
-  trigger: { sl: "Ponudba & viri", en: "Supply & sources" },
+  // F12-3 (§7): ikonski sprožilec — isti niz za aria-label + title
+  // (dostopnost nespremenjena, vizualna teža zmanjšana).
+  triggerAria: { sl: "Ponudba in viri (napredno)", en: "Supply and sources (advanced)" },
   title: { sl: "Zemljevid ponudbe", en: "Supply map" },
   desc: {
     sl: "Lokalna ponudba (odprti podatki) in komercialni partnerji z jasnimi statusi virov.",
@@ -134,9 +141,18 @@ export function ProviderPanel({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button type="button" size="sm" variant="secondary" className="shadow-md">
-          <Layers className="size-4" />
-          {L.trigger[lang]}
+        {/* F12-3 (§7): SAMO IKONA (demotion iz primarne navigacije — vzorec
+            Google Maps „Layers“ gumba). aria-label + title ohranjata
+            dostopnost; velikost icon = enakovreden dotikalni cilj. */}
+        <Button
+          type="button"
+          size="icon"
+          variant="secondary"
+          className="shadow-md"
+          aria-label={L.triggerAria[lang]}
+          title={L.triggerAria[lang]}
+        >
+          <Layers className="size-4" aria-hidden="true" />
         </Button>
       </SheetTrigger>
       <SheetContent
