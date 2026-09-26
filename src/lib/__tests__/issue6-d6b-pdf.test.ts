@@ -29,7 +29,7 @@
 //     route handler prek @/app/api/).
 // ============================================================================
 import { describe, expect, test, beforeAll, afterAll, beforeEach } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { PDFDocument } from "pdf-lib";
 import { extractText, getDocumentProxy } from "unpdf";
@@ -221,11 +221,96 @@ describe("D6-B/M8+: generateTripItineraryPdf(data, \"en\")", () => {
   test("determinističnost: isti vhod dvakrat → BAJTNO enak izhod", async () => {
     const a = await generateTripItineraryPdf({ ...PDF_DATA }, "sl");
     const b = await generateTripItineraryPdf({ ...PDF_DATA }, "sl");
+    // Diagnostika ob razliki (CI: takoj viden vzrok namesto golega 1):
+    const diffDump = (label: string, u: Uint8Array, v: Uint8Array) => {
+      const x = Buffer.from(u);
+      const y = Buffer.from(v);
+      if (Buffer.compare(x, y) === 0) return;
+      console.error(
+        `PDF diff [${label}]: len ${x.length} vs ${y.length} TZ=${process.env.TZ ?? "<system>"}`
+      );
+      // Oba PDF-a na disk za dekompresijo (zlib) pri diagnostiki.
+      try {
+        writeFileSync(`/tmp/pdf-diff-${label}-1.bin`, x);
+        writeFileSync(`/tmp/pdf-diff-${label}-2.bin`, y);
+        console.error(`zapisano: /tmp/pdf-diff-${label}-{1,2}.bin`);
+      } catch {
+        /* best-effort diagnostika */
+      }
+      for (let i = 0; i < Math.min(x.length, y.length); i++) {
+        if (x[i] !== y[i]) {
+          console.error(
+            `prva bajtna razlika @${i}\n  1: ${JSON.stringify(
+              x.slice(Math.max(0, i - 70), i + 70).toString("latin1")
+            )}\n  2: ${JSON.stringify(
+              y.slice(Math.max(0, i - 70), i + 70).toString("latin1")
+            )}`
+          );
+          break;
+        }
+      }
+    };
+    diffDump("sl", a, b);
     expect(a.length).toBe(b.length);
     expect(Buffer.compare(Buffer.from(a), Buffer.from(b))).toBe(0);
     const e1 = await generateTripItineraryPdf({ ...PDF_DATA }, "en");
     const e2 = await generateTripItineraryPdf({ ...PDF_DATA }, "en");
+    diffDump("en", e1, e2);
     expect(Buffer.compare(Buffer.from(e1), Buffer.from(e2))).toBe(0);
+  });
+
+  test("determinizem NE glede na sistemski TZ (revizija #8): preklop pasu med generacijama → enak izhod", async () => {
+    // Precedens: commission-invoice-pdf (P1) — dokument izpisuje datum po
+    // Europe/Ljubljana NE glede na sistemski pas procesa. Bun ≥ 1.4 poganja
+    // testne datoteke VZPOREDNO v skupnem procesu → process.env.TZ mutacije
+    // sočasnih testov (npr. task79 beforeAll/afterAll) ne smejo vplivati na
+    // bajtno enakost PDF-a. Okno mutacije je namenoma kratko (~2 generaciji).
+    const prevTZ = process.env.TZ;
+    try {
+      process.env.TZ = "UTC";
+      const utcEn = await generateTripItineraryPdf({ ...PDF_DATA }, "en");
+      const utcSl = await generateTripItineraryPdf({ ...PDF_DATA }, "sl");
+      process.env.TZ = "Europe/Ljubljana";
+      const ljEn = await generateTripItineraryPdf({ ...PDF_DATA }, "en");
+      const ljSl = await generateTripItineraryPdf({ ...PDF_DATA }, "sl");
+      // Diagnostika (enaka kot pri determinističnost testu):
+      for (const [label, u, v] of [
+        ["tzen", utcEn, ljEn],
+        ["tzsl", utcSl, ljSl],
+      ] as const) {
+        const x = Buffer.from(u);
+        const y = Buffer.from(v);
+        if (Buffer.compare(x, y) !== 0) {
+          console.error(
+            `PDF diff [TZ ${label}]: len ${x.length} vs ${y.length}`
+          );
+          try {
+            writeFileSync(`/tmp/pdf-diff-${label}-1.bin`, x);
+            writeFileSync(`/tmp/pdf-diff-${label}-2.bin`, y);
+            console.error(`zapisano: /tmp/pdf-diff-${label}-{1,2}.bin`);
+          } catch {
+            /* best-effort diagnostika */
+          }
+          for (let i = 0; i < Math.min(x.length, y.length); i++) {
+            if (x[i] !== y[i]) {
+              console.error(
+                `prva bajtna razlika @${i}\n  utc: ${JSON.stringify(
+                  x.slice(Math.max(0, i - 70), i + 70).toString("latin1")
+                )}\n  lj : ${JSON.stringify(
+                  y.slice(Math.max(0, i - 70), i + 70).toString("latin1")
+                )}`
+              );
+              break;
+            }
+          }
+        }
+      }
+      expect(Buffer.compare(Buffer.from(utcEn), Buffer.from(ljEn))).toBe(0);
+      expect(Buffer.compare(Buffer.from(utcSl), Buffer.from(ljSl))).toBe(0);
+    } finally {
+      // Bun si prvi nastavljeni TZ zapomni; "" ne razveljavi (kanon task79).
+      process.env.TZ = prevTZ === undefined ? "UTC" : prevTZ;
+    }
   });
 });
 

@@ -36,6 +36,24 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
   lastMonth.entryCount`, „odprtih skupno“, „vidne v naslednji poravnavi“)
   odklopljeni; canGenerate NE sme več gledati `openPendingCount > 0`;
   števec MORA izključevati vezane postavke (`settlementId: null`).
+- **DETERMINISTIČEN PDF IZVOZ (ModDate past pdf-lib — odkrita ob CI flaky
+  na Bun ≥ 1.4)**: `PDFDocument.create()` (updateInfoDict) nastavi
+  `/ModDate` na trenutek create s SEKUNDO resolucijo → dva izvoza istega
+  vhoda čez mejo sekunde nista bajtno enaka (test „determinističnost: isti
+  vhod dvakrat → BAJTNO enak izhod“ je na CI padal flaky od Bun 1.4, ki
+  poganja testne datoteke VZPOREDNO v skupnem procesu — večja
+  izpostavljenost mejam sekund). Popravek: datuma dokumenta
+  (CreationDate/ModDate) se vežeta na VHOD — trip-itinerary-pdf na
+  `createdAt` poti, commission-invoice-pdf na `issuedAt` računa
+  (semantično pravi dokument-datum, ne trenutek renderanja). Vidni
+  „izvoženo <datum>“ v nogi ostaja trenutek izvoza, SEDAJ s fiksnim
+  pasom Europe/Ljubljana (prej odvisen od sistemskega TZ procesa — isti
+  precedens revizija #8, ki ga commission-invoice-pdf že ima; enako
+  fmtDay datume dni).
+- Novi test „determinizem NE glede na sistemski TZ (revizija #8):
+  preklop pasu med generacijama → enak izhod“ + bajtne diff diagnostike
+  ob morebitni regresiji (izpis prve razlike + zapis PDF-ov v /tmp za
+  ročno dekompresijo).
 
 ---
 

@@ -152,6 +152,13 @@ export async function generateCommissionInvoicePdf(
   pdf.setTitle(`Račun ${data.invoiceNumber}`);
   pdf.setSubject("Provizijski račun za rezervacije iz AI konzultacij");
   pdf.setCreator("Discover Slovenia AI");
+  // DETERMINIZEM (pdf-lib lastnost — isti razlog kot trip-itinerary-pdf):
+  // PDFDocument.create() (updateInfoDict) nastavi ModDate na trenutek create
+  // s sekundno resolucijo → dva računa istega vhoda čez mejo sekunde nista
+  // bajtno enaka. Datuma dokumenta vežemo na VHODNI issuedAt (datum izdaje
+  // računa — semantično pravi dokument-datum, ne trenutek renderanja).
+  pdf.setCreationDate(data.issuedAt);
+  pdf.setModificationDate(data.issuedAt);
   pdf.setProducer("Discover Slovenia AI");
 
   const page = pdf.addPage([PAGE_W, PAGE_H]);

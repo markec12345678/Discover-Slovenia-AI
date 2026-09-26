@@ -195,6 +195,10 @@ const fmtDay = (iso: string, locale: string) => {
         day: "numeric",
         month: "long",
         year: "numeric",
+        // Revizija #8 (P1 — precedens commission-invoice-pdf): lokalni ISO
+        // datum dneva se izpiše po LJ pasu NE glede na sistemski TZ procesa
+        // (drugace bi strežnik v drugem pasu izpisal napačen dan).
+        timeZone: "Europe/Ljubljana",
       }).format(d);
 };
 
@@ -321,6 +325,17 @@ export async function generateTripItineraryPdf(
   pdf.setTitle(`${t.docTitlePrefix}: ${title}`);
   pdf.setSubject(t.docSubject);
   pdf.setCreator("Discover Slovenia AI");
+  // DETERMINIZEM (pdf-lib lastnost): PDFDocument.create() (updateInfoDict)
+  // nastavi ModDate na TRENUTEK create z sekundno resolucijo → dva izvoza
+  // istega vhoda čez mejo sekunde nista bajtno enaka (v /Info objektu).
+  // Datuma dokumenta zato vežemo na VHODNI createdAt poti — isti vir
+  // vsebine = bajtno enak PDF. Vidni „izvoženo <datum>" v nogi ostaja
+  // new Date() (nameren, prikazan uporabniku; fiksni pas LJ zgoraj).
+  const stableDate = data.createdAt ? new Date(data.createdAt) : new Date(0);
+  if (!Number.isNaN(stableDate.getTime())) {
+    pdf.setCreationDate(stableDate);
+    pdf.setModificationDate(stableDate);
+  }
   pdf.setProducer("Discover Slovenia AI");
 
   let page = pdf.addPage([PAGE_W, PAGE_H]);
@@ -677,6 +692,11 @@ export async function generateTripItineraryPdf(
     day: "numeric",
     month: "numeric",
     year: "numeric",
+    // Revizija #8 (P1 — precedens commission-invoice-pdf): datum izvoza po
+    // LJ pasu NE glede na sistemski TZ. Odpravlja tudi flaky determinizem v
+    // Bun ≥ 1.4 vzporednem test runnerju (process.env.TZ mutacije sočasnih
+    // testov ne smejo vplivati na bajtno enakost PDF-a).
+    timeZone: "Europe/Ljubljana",
   }).format(new Date());
   pages.forEach((p, i) => {
     p.drawLine({
