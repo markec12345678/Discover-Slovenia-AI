@@ -91,6 +91,9 @@ interface PayoutsData {
     settlementExists: boolean;
   };
   openPendingCount: number;
+  // Odprte postavke iz obdobij STAREJŠIH od poravnavanega meseca (sweep) —
+  // tekoči mesec NE (pripada naslednji poravnavi). Vira: GET /api/owner/payouts.
+  olderOpenCount: number;
   settlements: PayoutSettlementRow[];
   pendingEntries: PayoutEntryRow[];
 }
@@ -229,8 +232,11 @@ export function PayoutLedgerPanel() {
 
   if (!data) return null;
 
+  // Zrcali strežniški pogoj issuePayoutSettlement („vse odprto do vključno
+  // prejšnjega meseca"): postavke TEKOČEGA meseca izdaje NE upravičijo
+  // (sicer bi gumb obljubljal izdajo, ki bi jo strežnik zavrnil z 400).
   const canGenerate =
-    (data.lastMonth.entryCount > 0 || data.openPendingCount > 0) &&
+    (data.lastMonth.entryCount > 0 || data.olderOpenCount > 0) &&
     !data.lastMonth.settlementExists;
 
   const confirmSettlement = data.settlements.find(
@@ -345,23 +351,24 @@ export function PayoutLedgerPanel() {
                       </span>
                     </>
                   ) : (
-                    <>
-                      Ni odprtih postavk za to obdobje
-                      {data.openPendingCount > 0
-                        ? ` (odprtih skupno: ${data.openPendingCount} iz starejših obdobij)`
-                        : ""}
-                      .
-                    </>
+                    <>Ni odprtih postavk za to obdobje.</>
                   )}
                 </p>
-                {data.openPendingCount > data.lastMonth.entryCount &&
-                  data.lastMonth.entryCount > 0 && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Poravnava bo zajela tudi{" "}
-                      {data.openPendingCount - data.lastMonth.entryCount}{" "}
-                      odprtih postavk iz starejših obdobij.
-                    </p>
-                  )}
+                {/* Sweep: odprte postavke IZKLJUČNO iz obdobij pred poravnavanim
+                    mesecem (olderOpenCount) — tekoči mesec namenoma NE gre v
+                    to izdajo. Ob že izdani poravnavi jih zajame naslednja. */}
+                {data.olderOpenCount > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {data.olderOpenCount}{" "}
+                    {data.olderOpenCount === 1
+                      ? "odprta postavka"
+                      : "odprtih postavk"}{" "}
+                    iz obdobij pred {data.lastMonth.monthLabel}{" "}
+                    {data.lastMonth.settlementExists
+                      ? "— zajela jih bo naslednja izdaja."
+                      : "— zajela jih bo ta izdaja."}
+                  </p>
+                )}
                 {data.lastMonth.settlementExists && (
                   <p className="text-xs text-muted-foreground mt-1">
                     Poravnava za to obdobje je že izdana — viden v seznamu spodaj.
@@ -527,7 +534,7 @@ export function PayoutLedgerPanel() {
                   <div className="p-3 text-center text-xs text-muted-foreground">
                     … in še{" "}
                     {data.openPendingCount - data.pendingEntries.length} starejših
-                    odprtih postavk (vidne v naslednji poravnavi).
+                    odprtih postavk.
                   </div>
                 )}
               </div>

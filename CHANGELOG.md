@@ -7,6 +7,35 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.111.1] — 2026-09-27 (TASK 35: payout sweep števec olderOpenCount — UI semantika)
+
+### Popravljeno
+
+- **POPRAVLJEN SWEEP PRIKAZ V ZAVIHKU IZPLAČILA (nadgradnja TASK 34)**.
+  GET /api/owner/payouts sedaj vrača `olderOpenCount` — odprte postavke iz
+  obdobij STAREJŠIH od poravnavanega meseca (`periodEnd ≤ last.start`,
+  status pending; postavke TEKOČEGA meseca namenoma NE — pripadajo šele
+  naslednji poravnavi). UI ga dosledno uporablja:
+  - gumb „Izdi poročilo o poravnavi“ je omogočen IZKLJUČNO, ko izdaja
+    dejansko lahko nastane (`lastMonth.entryCount > 0 || olderOpenCount > 0`)
+    — prej je bil omogočen tudi, če so odprte SAMO postavke tekočega meseca,
+    kar je strežnik zavrl s 400 „Ni odprtih postavk do vključno …“ (gumb je
+    torej obljubljal nekaj, kar ni mogoče);
+  - sweep vrstica „X odprtih postavk iz obdobij pred <mesec> — zajela jih
+    bo ta / naslednja izdaja“ prikazuje PRAVI števec (prej
+    `openPendingCount − lastMonth.entryCount`, ki šteje tudi tekoči mesec →
+    lažen overcount, ter „odprtih skupno: N iz starejših obdobij“, ki je
+    tekoči mesec lažno označil za starejše obdobje);
+  - odstranjena napačna obljuba „(vidne v naslednji poravnavi)“ pri okrnjenem
+    seznamu odprtih postavk (razlika šteje tudi tekoči mesec, ki pripada
+    šele prihodnjim poravnavam).
+- 7 novih source-contract testov (`task35-payout-sweep.test.ts`) z
+  REGRESIJSKIMI varovalkami: stari lažni izračuni (`openPendingCount −
+  lastMonth.entryCount`, „odprtih skupno“, „vidne v naslednji poravnavi“)
+  odklopljeni; canGenerate NE sme več gledati `openPendingCount > 0`.
+
+---
+
 ## [1.111.0] — 2026-09-27 (TASK 34 / Tier 2 #2: payout ledger / mesečne poravnave)
 
 ### Dodano
