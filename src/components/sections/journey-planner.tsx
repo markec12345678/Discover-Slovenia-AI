@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import dynamic from "next/dynamic";
@@ -8,6 +8,7 @@ import {
   CalendarDays,
   Car,
   Clock,
+  Compass,
   ExternalLink,
   Fuel,
   Landmark,
@@ -28,6 +29,11 @@ import { addMyTripItem, removeMyTripItem } from "@/lib/my-trip";
 import { supplyTripItem, supplyTripKind } from "@/lib/supply/my-trip-item";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+// TASK 8 / F3-B (D8-A P-STATE-2): družina stanj — skeleti kategorij med
+// prvim iskanjem + ErrorState namesto golega rdečega besedila.
+import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/states/error-state";
+import { LoadingState } from "@/components/states/loading-state";
 import { COUNTRIES, DESTINATIONS } from "@/lib/slovenia-data";
 import { COUNTRIES_EN } from "@/lib/slovenia-data-en";
 import { persistSelection } from "@/lib/supply/selection-persist";
@@ -38,6 +44,12 @@ import type { SelectedProviderProduct } from "@/lib/supply/types";
 import { describeTotals } from "@/lib/journey/totals";
 import { journeyProductsToSelection } from "@/lib/journey/handoff";
 import { saveGoTrip } from "@/lib/journey/go-persist";
+// TASK 8 / F3-A (§43 NO PARALLEL APP — en načrtovalnik, ena zbirka):
+// uskladitev ogledala izbir s kolekcijo + predlogi destinacij "Iz moje poti".
+import { reconcileSelectionFromCollection } from "@/lib/journey/selection-mirror";
+import { isInMyTrip } from "@/lib/my-trip";
+import { useMyTrip } from "@/hooks/use-my-trip";
+import { destinationIdOf } from "@/components/planner-my-trip-strip";
 import { JourneyTrip } from "@/components/journey-trip";
 import type {
   JourneyCategoryKey,
@@ -76,6 +88,15 @@ const L = {
       sl: "Prihod → prevoz → nastanitev → znamenitosti → dogodki → restavracije → bencin → najem avta — na enem mestu, z resničnimi ponudniki.",
       en: "Arrival → transfer → stay → things to do → events → restaurants → petrol → car rental — in one place, with real providers.",
     },
+    // TASK 8 / F3-A (§43): /potovanje ni „drugi načrtovalnik" — to je korak
+    // ponudnikov/logistike ISTEGA načrtovalniškega sistema. Ena vidna
+    // resnica: izbire zrcali zbirka „Moja pot“ (dostopna povsod), v AI načrt
+    // pa jih preneseš z enim klikom (handoff spodaj).
+    note: {
+      sl: "Del enega načrtovalnika: izbire se shranijo v zbirko „Moja pot“ (vidna na vseh straneh) in se z enim klikom prenesejo v AI načrt.",
+      en: "Part of the one planner: picks land in your “My trip” collection (visible on every page) and carry into the AI plan in one click.",
+    },
+    fromMyTrip: { sl: "Iz moje poti:", en: "From my trip:" },
     origin: { sl: "Izhodišče (npr. Brnik)", en: "Origin (e.g. Brnik)" },
     destination: { sl: "Destinacija", en: "Destination" },
     date: { sl: "Datum prihoda", en: "Arrival date" },
@@ -214,6 +235,10 @@ export function JourneyPlanner() {
   const locale = useLocale();
   const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
   const router = useRouter();
+  // TASK 8 / F3-A: živi pogled na zbirko "Moja pot" (isti hook kot
+  // PlannerMyTripStrip / MyTripView — subscription na dai:my-trip-changed
+  // + cross-tab storage dogodke).
+  const { items: myTripItems } = useMyTrip();
 
   const [origin, setOrigin] = useState("Brnik");
   const [destination, setDestination] = useState("maribor");
@@ -278,6 +303,42 @@ export function JourneyPlanner() {
     () => allProducts.filter((p) => selected.has(p.id)),
     [allProducts, selected]
   );
+
+  // TASK 8 / F3-A — DRIFT A/B popravek (issue #8 §40/§43; 38-a §1f):
+  // zbirka "Moja pot" je resnica OGLEDALA izbir za produkte aktualnega
+  // potovanja. Dogodki (provider "events") ostajajo session-only (iz
+  // zbirke so namenoma izključeni — D8-D). Po novem iskanju se izbire
+  // STRUCTURNO rehidrirajo (re-search iste relacije obdrži izbire),
+  // odstranitev iz zbirke (npr. drug zavihek /moja-potovanja) pa jih
+  // pošteno odstrani tudi tu. Reconcile vrne isto referenco, če ni
+  // spremembe (React bailout — brez ploske zanke re-renderjev).
+  useEffect(() => {
+    setSelected((prev) =>
+      journey
+        ? new Set(
+            reconcileSelectionFromCollection(prev, allProducts, isInMyTrip)
+          )
+        : prev
+    );
+  }, [journey, allProducts, myTripItems]);
+
+  // TASK 8 / F3-A: destinacije iz zbirke kot TIHI predlogi nad obrazcem —
+  // klik na čip nastavi destinacijo (VIDNO dejanje; brez tihega prepisovanja
+  // uporabnikove izbire — isto načelo kot PlannerMyTripStrip prefill).
+  const myTripDestinations = useMemo(() => {
+    const out: { id: string; name: string }[] = [];
+    const seen = new Set<string>();
+    for (const item of myTripItems) {
+      if (item.kind !== "destination") continue;
+      const id = destinationIdOf(item);
+      if (!id || seen.has(id)) continue;
+      const d = DESTINATIONS.find((x) => x.id === id);
+      if (!d) continue;
+      seen.add(id);
+      out.push({ id: d.id, name: d.name });
+    }
+    return out;
+  }, [myTripItems]);
 
   /**
    * Izbira potovanja → obstoječa izbira načrtovalnika (FIXED semantika).
@@ -350,8 +411,43 @@ export function JourneyPlanner() {
             <Plane className="h-5 w-5" /> {t(L.form.title)}
           </CardTitle>
           <p className="text-sm text-muted-foreground">{t(L.form.subtitle)}</p>
+          {/* TASK 8 / F3-A (§43): tiha vrstica odnosa — en načrtovalnik,
+              dva koraka (ponudniki tukaj, AI načrt tam). */}
+          <p className="text-xs leading-snug text-muted-foreground">
+            <Compass className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+            {t(L.form.note)}
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* TASK 8 / F3-A: predlogi destinacij "Iz moje poti" — viden SAMO,
+              ko zbirka nosi razlovljive destinacije. Klik = nastavi izbiro
+              (aria-pressed — trenutna destinacija je poudarjena). */}
+          {myTripDestinations.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="inline-flex shrink-0 items-center gap-1 font-medium text-muted-foreground">
+                <Compass className="size-3.5 text-primary" aria-hidden="true" />
+                {t(L.form.fromMyTrip)}
+              </span>
+              {myTripDestinations.map((d) => {
+                const active = destination === d.id;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setDestination(d.id)}
+                    aria-pressed={active}
+                    className={`inline-flex min-h-[36px] items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                      active
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    {d.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-1">
               <label htmlFor="j-origin" className="text-sm font-medium">
@@ -468,13 +564,46 @@ export function JourneyPlanner() {
           </Button>
 
           {error && (
-            <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-              {error}
-            </p>
+            /* TASK 8 / F3-B: enotna error slovnica (destructive Alert +
+                ponovitev = re-run plan()) — prej golo rdeče besedilo brez
+                naslova in brez poti naprej (D8-A P-STATE-2). */
+            <ErrorState message={error} onRetry={() => void plan()} className="mt-4" />
           )}
         </CardContent>
       </Card>
       </div>
+
+      {/* === SKELETI KATEGORIJ MED PRVIM ISKANJEM (TASK 8 / F3-B) ===
+          D8-A P-STATE-2 / 38-a §2d #3: rezultati so se prej pojavili v ENEM
+          zamahu (nenadna zamenjava za praznim prostorom). Zdaj: statusna
+          vrstica (role="status" aria-live="polite" — nosi obvestilo) + 2
+          dekorativni skelet kartici na VIDO kategorijo (aria-hidden), dokler
+          prvi rezultat ne prispe. Ponovno iskanje Z obstoječim potovanjem
+          ohrani stare rezultate (konteksto, isto načelo kot načrtovalnik). */}
+      {loading && !journey && (
+        <div className="space-y-6" aria-busy="true">
+          <LoadingState variant="block" label={t(L.form.planning)} />
+          <div aria-hidden="true" className="space-y-6">
+            {ALL_CATS.filter((c) => cats.includes(c)).map((catKey) => (
+              <section key={catKey} className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="size-6 rounded-md" />
+                  <Skeleton className="h-6 w-40" />
+                </div>
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <Card key={i}>
+                    <CardContent className="space-y-3 p-4">
+                      <Skeleton className="h-5 w-2/3" />
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-4 w-1/3" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </section>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* === REZULTATI === */}
       {journey && (

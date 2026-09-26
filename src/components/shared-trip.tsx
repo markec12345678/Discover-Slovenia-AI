@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { useLocale } from "next-intl";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,7 +17,6 @@ import {
   HelpCircle,
   Lightbulb,
   Loader2,
-  Map as MapIcon,
   MapPin,
   Printer,
   RefreshCw,
@@ -66,20 +66,36 @@ import { TripForkButton } from "@/components/trip-fork-button";
 // 99-b: anonimni voterId — deljena knjižnica (enkraten vir ključa;
 // prej dupliciran v shared-trip/trip-social/trip-diary/trip-polls)
 import { getVoterId } from "@/lib/client-identity";
+// TASK 8 / F3-B: družina stanj — LoadingState za dynamic uvoz zemljevida.
+import { LoadingState } from "@/components/states/loading-state";
+
+// TASK 8 / F3-B (D8-A P-STATE-2): nalaganje zemljevida nosi družina
+// LoadingState (block varianta — status + aria-live obvestilo bralnikom);
+// prej je bil samo besedilni prostor „Nalagam zemljevid…". Oznaka je
+// L-pattern SL/EN (trdi predpogoj za F3-E EN razširitev).
+const MAP_LOADING_L = {
+  sl: "Nalagam zemljevid …",
+  en: "Loading map …",
+} as const;
+
+function MapLoadingState() {
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  return (
+    <LoadingState
+      variant="block"
+      label={MAP_LOADING_L[lang]}
+      className="h-[500px] w-full rounded-lg bg-muted sm:h-[600px]"
+    />
+  );
+}
 
 // Client-only load Leaflet zemljevida (enak vzorec kot map-section.tsx)
 const MapView = dynamic(
   () => import("@/components/sections/map-view").then((m) => m.MapView),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex h-[500px] w-full items-center justify-center bg-muted sm:h-[600px]">
-        <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <MapIcon className="size-8 animate-pulse" />
-          <p className="text-sm">Nalagam zemljevid…</p>
-        </div>
-      </div>
-    ),
+    loading: () => <MapLoadingState />,
   }
 );
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useLocale } from "next-intl";
 import { Heart, Trash2, MapPin, Compass, ShoppingBag } from "lucide-react";
 
 import {
@@ -13,6 +14,10 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+// TASK 8 / F3-B (D8-A P-STATE-2 + §13 „wishlist weak, no link"): prazno
+// stanje priljubljenih dobi družinsko EmptyState z NASLEDNJIM DEJANJEM
+// (CTA v tržnico) — prej samo besedilo brez povezave.
+import { EmptyState } from "@/components/states/empty-state";
 // TASK 8 / D8-D (§3.3): MOST priljubljene → "Moja pot" (D8-A §9.7 —
 // wishlist prej ni imel nobene poti v načrt).
 import { AddToTripButton } from "@/components/add-to-trip-button";
@@ -124,10 +129,20 @@ export function WishlistHeartButton({
  * stranski panel s shranjenimi vnosi. `scrolled` prilagodi barvo ikone
  * nad hero fotografijo (isti vzorec kot košarica).
  */
+
+// TASK 8 / F3-B: CTA praznega stanja v L-pattern (SL/EN — predpriprava
+// na F3-E; isti vzorec kot L v AddToTripButton).
+const WL = {
+  exploreCta: { sl: "Razišči tržnico", en: "Explore the marketplace" },
+} as const;
+
 export function WishlistSheet({ scrolled }: { scrolled: boolean }) {
   const [open, setOpen] = useState(false);
   const { entries } = useWishlist();
   const count = entries.length;
+  // TASK 8 / F3-B: jezik za L-pattern CTA praznega stanja (SL privzeto).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
 
   // Klik na vnos: zapri panel → sproži dogodek, na katerega MarketplaceSection
   // preklopi tab, scrolla na #trznica in odpre pripadajoči modal.
@@ -198,14 +213,22 @@ export function WishlistSheet({ scrolled }: { scrolled: boolean }) {
 
         {/* Body */}
         {count === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-            <span className="flex size-12 items-center justify-center rounded-full bg-muted">
-              <Heart className="size-6 text-muted-foreground" aria-hidden="true" />
-            </span>
-            <p className="text-base font-medium">Ni še nič shranjenega.</p>
-            <p className="text-sm text-muted-foreground">
-              Klikni srček na izkušnji ali izdelku.
-            </p>
+          /* TASK 8 / F3-B (D8-A §13): prazno stanje priljubljenih dobi
+              naslednje dejanje — CTA v tržnico (družinska EmptyState,
+              ≥44px dotik). Klik hkrati ZAPRE panel, da ne ostane odprt nad
+              novo stranjo. Prej: samo besedilo „Klikni srček …" brez
+              povezave (šibko prazno stanje D8-A §13). */
+          <div className="flex flex-1 flex-col items-center justify-center px-6 py-10">
+            <EmptyState
+              icon={Heart}
+              title="Ni še nič shranjenega."
+              description="Klikni srček na izkušnji ali izdelku."
+              action={{
+                label: WL.exploreCta[lang],
+                href: "/trznica",
+                onClick: () => setOpen(false),
+              }}
+            />
           </div>
         ) : (
           <div className="scroll-area-custom flex-1 overflow-y-auto px-4 py-3">

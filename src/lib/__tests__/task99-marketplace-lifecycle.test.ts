@@ -257,8 +257,10 @@ describe("TASK 99 §10/§19: gostov UI + NO_LIVE_DATA prazno stanje", () => {
     // brez filtrov → izrecno NO_LIVE_DATA (nikoli "uspešna" prazna tržnica)
     expect(marketplaceSrc).toContain("Ni še živih ponudb (NO_LIVE_DATA)");
     expect(marketplaceSrc).toContain("Ni najdenih rezultatov.");
-    // canClear (= hasActiveFilters) odloča vejo — stanji sta izključni
-    expect(marketplaceSrc).toContain("{canClear ? (");
+    // TASK 8 / F3-B: lokalni EmptyState klon je zamenjala družinska
+    // komponenta — vejo ŠE VEDNO odloča hasActiveFilters (= canClear),
+    // stanji ostajata izključni (isti TASK 99 §10 pogodbi).
+    expect(marketplaceSrc).toContain("hasActiveFilters");
     expect(marketplaceSrc).toContain("stanje ponudbe");
   });
 });

@@ -1,11 +1,11 @@
-# TASK 8 / ISSUE #8 — FEATURE-LOSS REGRESSION MATRIX (v1.113.0 „Faza 2 — Zbirka je račun + skupnost")
+# TASK 8 / ISSUE #8 — FEATURE-LOSS REGRESSION MATRIX (v1.114.0 „Faza 3 — En načrtovalnik, umirjena stanja")
 
 > **Pravilo:** NI nezadane vrstice za izgubo funkcije (issue §1: ZERO FEATURE LOSS).
 > Metodologija: D8-A inventar (66 zmožnosti, `task8-d8a-ux-audit.md` §3) → po vsaki spremembi
 > preverjeno s source-contract testi + brskalniško verifikacijo (D8-H).
-> **Before** = dostopnost na v1.111.1 (HEAD `ac75070`) · **After** = v1.113.0 (Faza 1: v1.112.0 + Faza 2).
+> **Before** = dostopnost na v1.111.1 (HEAD `ac75070`) · **After** = v1.114.0 (Faza 1: v1.112.0 + Faza 2: v1.113.0 + Faza 3).
 
-| Capability | Before (v1.111.1) | After (v1.113.0) | New access path | Verified | Evidence |
+| Capability | Before (v1.111.1) | After (v1.114.0) | New access path | Verified | Evidence |
 |---|---|---|---|---|---|
 | AI planning (klepet + /nacrtuj) | P (nav CTA + hero + FAB) | NESPREMENJENO — /nacrtuj ostaja jedro; FAB kanonski 44px dodaj v vrsticah | P | testi + browser (planner strip na /nacrtuj) | `task8-d-add-to-trip-surfaces.test.ts` (chatbot), screenshot task8-planner-*.png |
 | Deterministično načrtovanje | A (izbira motorja v obrazcu) | NESPREMENJENO | A | obstoječa suita | 3317 testov |
@@ -51,9 +51,9 @@
 
 SmartSearch vrstice · EventCard · ListingModal/kartica · hub/things-to-do destinacij · ExperienceModal · wishlist (most v pot) · klepet (44px) · journey-planner izbire · supply (write-through).
 
-## NAMERNO ODLADNJENO v fazo 3 (dokumentirano, ne izgubljeno)
+## NAMERNO ODLADNJENO v fazo 4 (dokumentirano, ne izgubljeno)
 
-/potovanje↔/nacrtuj združitev · EN razširitev SL-only površin (/pot fork gumb ima EN nize pripravljene) · Start Anywhere dvig (homepage hierarhija je že na mestu).
+EN razširitev SL-only površin (F3-E — F3-B je pripravil ~12 "Nalagam" uhodov z L-patternom; vsaka površina individualno vrata) · popolna absorpcija /potovanje v /nacrtuj (Option B — odložena na podatke lijaka, 38-a §1 MERGE OPTIONS).
 
 ## FAZA 2 DODANE ZMOŽNOSTI (vse NADGRADENE, brez izgube)
 
@@ -62,5 +62,22 @@ SmartSearch vrstice · EventCard · ListingModal/kartica · hub/things-to-do des
 - **Go Mode pomiritev** (F2-B): glej vrstico „Go Mode“.
 - **Vodiči/konzultacije dodaj** (F2-D): glej vrstico „Vodiči + blog + AskLocal“.
 
+## FAZA 3 DODANE ZMOŽNOSTI (vse NADGRADENE, brez izgube)
+
+- **EN NAČRTOVALNIK (F3-A, §43 NO PARALLEL APP — Option A+C; B odložen na podatke)**: /potovanje je okvirjen kot korak ponudnikov/logistike ENEGA načrtovalnika — vrstica odnosa v heroju + povezava „Odpri AI načrtovalnik" (prva vsebinska povezava /potovanje → /nacrtuj), tiha vrstica v glavi obrazca; /nacrtuj dobi vedno vidno tiho povezavo „Celotno potovanje" (ob supply čipih — obojesmerno mostovje); /potovanje dodan v mobilni Sheet „Več" (prej NOBENA navigacijska pot — samo noga); noga „Načrtuj celo potovanje" preoblikovana v „Celotno potovanje — ponudniki"; predlogi destinacij „Iz moje poti" (čipi nad obrazcem /potovanje, klik = VIDNA izbira, ne tihi prefill).
+- **DRIFT A/B POPRAVLJENA (F3-A — §40 ena življenjska doba)**: zbirka „Moja pot" je resnica ogledala izbir na /potovanje — novo iskanje REHIDRIRA izbire (re-search iste relacije jih obdrži; brskalniško dokazano), odstranitev iz zbirke (npr. drug zavihek) jih POŠTENO odstrani tudi na karticah (živi reconcile prek dai:my-trip-changed + cross-tab); dogodki ostajajo session-only (D8-D meja). Čista funkcija `src/lib/journey/selection-mirror.ts` + 6 domenskih testov.
+- **DRUŽINA STANJ (F3-B, §31/§32/§33 — P-STATE-2 ZAPRT)**: NOVA `src/components/states/` (LoadingState role=status aria-live, EmptyState ikona+naslov+opis+CTA ≥44px BREZ lastnih nizov, ErrorState role=alert truth ambery/destruktivni + retry) — zlati standard planner statusne vrstice kot slovnica. Prevzem: /potovanje iskanje+kategorije (skeleti namesto nenadne zamenjave + ErrorState z retry), moja-potovanja, tržnica, lokali, shared-trip map, wishlist prazno stanje (CTA → /trznica), events-calendar, destinacije, owner; 6/7 lokalnih EmptyState klonov poenotenih; ~12 „Nalagam" uhodov → L-pattern SL/EN (priprava na F3-E EN).
+- **START ANYWHERE DVIG (F3-C, §25 — NIKOLI hero)**: „Začni s svojimi viri →" VEDNO vidna v glavi obrazca /nacrtuj (tudi zložena — planner-summary-bar prop) + hashchange poslušalec (istostranske hash povezave delujejo); noga „Začni kjerkoli (povezava, slika, PDF)"; mobilni Sheet „Začni kjerkoli"; USP vrstica strani (enak besednjak kot hero); merilni hook ingest_completed po načinu (link/image/pins/pdf) v planner-analytics.
+- **WISHLIST MOST (F3-D, zbirka-sloj BREZ tihega razporejanja)**: čista lib `src/lib/wishlist-trip-bridge.ts` (identiteta IDENTIČNA wishlist-sheet — dedup deluje) + `useWishlist` hook; „Iz priljubljenih" trak v MyTripView (destinacijski čipi ×števec, „Uporabi v načrtu" → isti dai:my-trip-prefill dogodek + quick-add vseh vnoso v zbirko + iskren toast z dejanjem Načrtuj); PlannerMyTripStrip „Uporabi v načrtu" vključuje DESTINACIJE iz priljubljenih (dedup, toast omenja); nerazlovljiva destinacija → iskrena povezava /trznica.
+
+| Faza 3 vrstica | Before (v1.113.0) | After (v1.114.0) |
+|---|---|---|
+| /potovanje dostop | C (SAMO noga + Go Mode prazno stanje) | NADGRADENO — Sheet „Več" + vrstica odnosa + prefill čipi |
+| /potovanje↔/nacrtuj most | enosmerno (handoff gumb) | NADGRADENO — obojesmerno (companion link + flow note) |
+| Izbire /potovanje | izgubljene ob novem iskanju/reloadu | NADGRADENO — ogledalo zbirke (DRIFT A/B zaprta) |
+| Loading/empty/error | 7 klonov EmptyState + mešani spinners | NADGRADENO — ena družina stanj, 10 površin |
+| Start Anywhere | H (hero vrstica + zavihki planner) | NADGRADENO — 4 nova dostopna mesta + merjenje |
+| Wishlist → pot | ročni dodaj na vrsticah | NADGRADENO — most (trak + prefill združitev) |
+
 ---
-**Sklep:** 0 vrstic izgube funkcije. 31/31 zmožnost potrjena (testi 3402 + brskalniški dokazi D8-H/F2 + screenshots).
+**Sklep:** 0 vrstic izgube funkcije. 31/31 zmožnost potrjena + 6 novih Faza 3 vrstic (testi 3501 + brskalniški dokazi D8-H/F2/F3 + screenshots).

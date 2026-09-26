@@ -66,6 +66,11 @@ export async function Footer() {
             links={[
               { href: "/nacrtuj", key: "planPlanner" },
               { href: "/nacrtuj#kviz", key: "planQuiz" },
+              // TASK 8 / F3-C (issue #8 §25, audit §3 rec 2): pariteta
+              // "Začni kjerkoli" v nogi — uvoz virov (povezava/slika/PDF/
+              // Google pins) ima isti dostop kot kviz. Sidro razširi
+              // obrazec in pomakne na blok #start-kjerkoli (planner).
+              { href: "/nacrtuj#start-kjerkoli", key: "planStartAnywhere" },
               // OPP-1: iskrena primerjava načrtovalcev (discoverability + interne povezave za SEO)
               { href: "/primerjava", key: "planComparison" },
               { href: "/#rezerviraj", key: "planBookings" },

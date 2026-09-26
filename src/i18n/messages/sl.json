@@ -15,7 +15,9 @@
     "trips": "Moja potovanja",
     "goMode": "Na poti",
     "tagline": "AI potovanja",
-    "searchAria": "AI iskanje"
+    "searchAria": "AI iskanje",
+    "journey": "Celotno potovanje",
+    "startAnywhere": "Začni kjerkoli"
   },
   "hero": {
     "title": "Kaj želiš doživeti v Sloveniji?",
@@ -331,6 +333,7 @@
     "planColumn": "Načrtuj",
     "planPlanner": "AI načrtovalec",
     "planQuiz": "Kviz za popotnike",
+    "planStartAnywhere": "Začni kjerkoli (povezava, slika, PDF)",
     "planComparison": "Primerjava načrtovalcev",
     "planBookings": "Rezervacije",
     "planMyTrips": "Moja potovanja",
@@ -346,7 +349,7 @@
     "legalTerms": "Pogoji uporabe",
     "legalContact": "Kontakt",
     "planGoMode": "Na poti (Go Mode, offline)",
-    "planJourney": "Načrtuj celo potovanje (prevozi, nastanitev, aktivnosti)"
+    "planJourney": "Celotno potovanje — ponudniki (prevozi, nastanitev, aktivnosti)"
   },
   "chatbot": {
     "headerTitle": "Slovenija AI",
@@ -457,6 +460,8 @@
     "summaryDaysChip": "{days} dni",
     "summaryEdit": "Uredi",
     "summaryEditAria": "Uredi nastavitve načrta (dnevi, proračun, skupina, interesi)",
+    "startSourcesLink": "Začni s svojimi viri",
+    "startSourcesAria": "Začni s svojimi viri — povezava, slika, PDF ali Google pins",
     "summaryClose": "Zapri",
     "summaryCloseAria": "Zapri urejanje — vrni se na načrt",
     "railPrompt": "Kaj naj spremenim na tvoji poti?",
@@ -836,7 +841,9 @@
       "handoffRailNote": "Vozni redi in cene vlakov/avtobusov niso na voljo v aplikaciji — iskanje pri Omio.",
       "handoffFlightNote": "Povezava partnerja — brez živih cen letov v aplikaciji (primerjava pri Skyscannerju).",
       "handoffTransferNote": "Objavljene od-cene prevozov; razpoložljivost in rezervacija pri Kiwitaxiju."
-    }
+    },
+    "supplyCompanionLine": "Iščeš prevoz, nastanitev ali realne cene ponudnikov?",
+    "supplyCompanionLink": "Celotno potovanje"
   },
   "common": {
     "loading": "Nalagam...",

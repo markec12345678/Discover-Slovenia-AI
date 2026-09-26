@@ -26,6 +26,7 @@ import {
   FileUp,
   Waypoints,
   AlertCircle,
+  ArrowRight,
   Star,
   Cloud,
   Loader2,
@@ -173,6 +174,7 @@ import {
   markResultRendered,
   markResultEngaged,
   fireAbandonedIfUnengaged,
+  trackIngestCompleted,
 } from "@/lib/planner-analytics";
 // TASK 28 (Tier 1 #1): live-sync indikator povezane pote (polling).
 import { useTripVersionPoll } from "@/hooks/use-trip-version-poll";
@@ -974,6 +976,38 @@ export function ItineraryPlanner() {
       // Pokvarjen zapis — ignoriraj
     }
   }, []);
+
+  // === TASK 8 / F3-C (issue #8 §25, audit §3 rec 1 — "Start Anywhere
+  // measured lift"): skok na blok uvoza virov (#start-kjerkoli) kot ENA
+  // logika za vse vhode: tiha povezava v zglavlju obrazca (spodaj), gumb v
+  // zloženem PlannerSummaryBar in hashchange spodaj. Obrazec (če je zložen
+  // v povzetek parametrov) najprej RAZŠIRIMO — sidro na skritem elementu
+  // ne deluje (HIDE ≠ DELETE; isti vzorec kot mount razširitev 1.6). ===
+  const handleStartAnywhereJump = useCallback(() => {
+    setFormExpanded(true);
+    setTimeout(() => {
+      document
+        .getElementById("start-kjerkoli")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 200);
+  }, []);
+
+  // F3-C: istostranske hash povezave (/nacrtuj#start-kjerkoli iz NOGE —
+  // planStartAnywhere, mobilnega lista "Več" in USP vrstice strani) NE
+  // sprožijo mount efekta zgoraj (Next istostranska navigacija) — zato
+  // poslušamo hashchange in razširimo + pomaknemo enako kot ob prihodu
+  // s heroja.
+  useEffect(() => {
+    const handleStartAnywhereHash = () => {
+      const hash = window.location.hash;
+      if (hash === "#start-kjerkoli" || hash === "#start-anywhere") {
+        handleStartAnywhereJump();
+      }
+    };
+    window.addEventListener("hashchange", handleStartAnywhereHash);
+    return () =>
+      window.removeEventListener("hashchange", handleStartAnywhereHash);
+  }, [handleStartAnywhereJump]);
 
   // === WOW: Poslušaj heroQuery event (ista stran — npr. kviz ali demo
   // scenariji). Prihod s homepagea se obravnava ob mountu prek
@@ -2140,6 +2174,9 @@ export function ItineraryPlanner() {
         days: data.suggestion?.days ?? 3,
         locale,
       });
+      // F3-C (audit §3 rec 6): atribucija vnosa po načinu — enotni
+      // ingest_completed dogodek z mode propom (+ števec seje).
+      trackIngestCompleted("link");
 
       // Izpolni obrazec iz predloga ( ohrani budget/skupino/sezono uporabnika;
       // interesi in dnevi pridejo iz vira — uporabnik jih lahko poprej spremeni)
@@ -2265,6 +2302,8 @@ export function ItineraryPlanner() {
         days: data.suggestion?.days ?? 3,
         locale,
       });
+      // F3-C (audit §3 rec 6): atribucija vnosa po načinu (slika/VLM).
+      trackIngestCompleted("image");
 
       const nextInput: PlannerInput = {
         ...formData,
@@ -2394,6 +2433,8 @@ export function ItineraryPlanner() {
         format: data.format ?? "text",
         locale,
       });
+      // F3-C (audit §3 rec 6): atribucija vnosa po načinu (Google pins).
+      trackIngestCompleted("pins");
 
       // Izpolni obrazec iz predloga ( enak vzorec kot pri povezavah/slikah)
       const nextInput: PlannerInput = {
@@ -2513,6 +2554,8 @@ export function ItineraryPlanner() {
         days: data.suggestion?.days ?? 3,
         locale,
       });
+      // F3-C (audit §3 rec 6): atribucija vnosa po načinu (PDF).
+      trackIngestCompleted("pdf");
 
       // Izpolni obrazec iz predloga ( enak vzorec kot pri ostalih virih)
       const nextInput: PlannerInput = {
@@ -2891,6 +2934,25 @@ export function ItineraryPlanner() {
               <CardDescription className="text-base">
                 {t("description")}
               </CardDescription>
+              {/* TASK 8 / F3-C (issue #8 §25, audit §3 rec 1): VEDNO vidna
+                  tiha pot do uvoza virov v zglavlju obrazca — uvozni blok
+                  (#start-kjerkoli) je sicer en expand-klik stran, a z
+                  obnovljenim načrtom je obrazec zložen v PlannerSummaryBar.
+                  Utišan text-xs — SEKUNDARNO od AI vprašanja (uvoz NE sme
+                  postati glavna akcija; HIDE ≠ DELETE). Klic = isti vzorec
+                  kot mount razširitev hash-a (handleStartAnywhereJump). */}
+              <button
+                type="button"
+                onClick={handleStartAnywhereJump}
+                aria-label={t("startSourcesAria")}
+                className="inline-flex min-h-[36px] w-fit items-center gap-1.5 rounded-sm text-xs font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <Link2 className="size-3.5 shrink-0" aria-hidden />
+                {t("startSourcesLink")}
+                <span aria-hidden="true" className="text-muted-foreground/70">
+                  →
+                </span>
+              </button>
             </CardHeader>
             <form onSubmit={handleSubmit} noValidate>
               <CardContent className="space-y-5">
@@ -3945,6 +4007,22 @@ export function ItineraryPlanner() {
                     </div>
                   </div>
                 ) : null}
+                {/* TASK 8 / F3-A (§43 NO PARALLEL APP — druga smer mostu):
+                    /potovanje je korak ponudnikov/logistike ISTEGA
+                    načrtovalnika (prevozi, nastanitev, realne cene), ne
+                    tekmujoč drugi načrtovalnik. Tiha, vedno vidna povezava
+                    navzdol/nanaprej — izbire se od tam prenesejo sem
+                    (handoff FIXED). Ni odvisna od trenutne izbire. */}
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] leading-snug text-muted-foreground">
+                  <span>{t("supplyCompanionLine")}</span>
+                  <Link
+                    href={locale === "en" ? "/en/potovanje" : "/potovanje"}
+                    className="inline-flex items-center gap-0.5 font-medium text-primary underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                  >
+                    {t("supplyCompanionLink")}
+                    <ArrowRight className="size-3" aria-hidden />
+                  </Link>
+                </div>
                 <Button
                   type="submit"
                   className="w-full bg-primary"
@@ -4202,6 +4280,9 @@ export function ItineraryPlanner() {
                 <PlannerSummaryBar
                   className="order-4 lg:order-5"
                   formData={formData}
+                  // F3-C (issue #8 §25): tiha pot do uvoza virov vidna TUDI
+                  // v zloženem povzetku (zglavlje obrazca je takrat skrito).
+                  onStartAnywhere={handleStartAnywhereJump}
                   onEdit={() => {
                     setFormExpanded(true);
                     requestAnimationFrame(() => {

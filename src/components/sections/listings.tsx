@@ -40,8 +40,22 @@ import {
 import { ListingModal } from "@/components/sections/listing-modal";
 // TASK 8 / D8-D (§3.3): kanonski "Dodaj v mojo pot" tudi na kartici lokala
 import { AddToTripButton } from "@/components/add-to-trip-button";
+// TASK 8 / F3-B (D8-A P-STATE-2): družina stanj — LoadingState (hardcoded
+// „Nalagam lokale..." → L-pattern SL/EN), EmptyState (lokalni klon
+// poenoten) in ErrorState (črtkasta destructivna škatla → Alert
+// slovnica + ponovitev). 6× ListingSkeleton mreža ostaja (dobro hotena).
+import { LoadingState } from "@/components/states/loading-state";
+import { EmptyState } from "@/components/states/empty-state";
+import { ErrorState } from "@/components/states/error-state";
+import { useLocale } from "next-intl";
 
 const ALL_VALUE = "all";
+
+// TASK 8 / F3-B: oznaka nalaganja v L-pattern (SL/EN — D8-A §13 „Nalagam…"
+// uhodi so trdi predpogoj za F3-E EN razširitev).
+const L = {
+  loadingListings: { sl: "Nalagam lokale …", en: "Loading venues …" },
+} as const;
 
 // Možnosti za filter kategorije
 const CATEGORY_OPTIONS: { value: ListingCategory; label: string }[] = (
@@ -72,6 +86,9 @@ type ListingsResponse = {
  * Kartice vizualno razlikujejo pakete (free / premium / enterprise).
  */
 export function ListingsSection() {
+  // TASK 8 / F3-B: jezik za L-pattern oznake nalaganja (SL privzeto).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
   const [category, setCategory] = useState<string>(ALL_VALUE);
   const [destinationId, setDestinationId] = useState<string>(ALL_VALUE);
   const [sort, setSort] = useState<string>("featured");
@@ -199,18 +216,24 @@ export function ListingsSection() {
           </div>
         </div>
 
-        {/* Števec */}
-        <p className="mt-5 text-sm text-muted-foreground">
-          {loading ? (
-            "Nalagam lokale..."
-          ) : (
+        {/* Števec / nalaganje — TASK 8 / F3-B: med nalaganjem družina
+            LoadingState (status + aria-live + L-pattern oznaka), sicer
+            stevec površine. */}
+        {loading ? (
+          <LoadingState
+            variant="inline"
+            label={L.loadingListings[lang]}
+            className="mt-5"
+          />
+        ) : (
+          <p className="mt-5 text-sm text-muted-foreground">
             <>
               Prikazujem{" "}
               <span className="font-semibold text-foreground">{total}</span>{" "}
               {total === 1 ? "lokal" : total < 5 ? "lokale" : "lokalov"}
             </>
-          )}
-        </p>
+          </p>
+        )}
 
         {/* Grid */}
         {loading ? (
@@ -220,21 +243,26 @@ export function ListingsSection() {
             ))}
           </div>
         ) : error ? (
-          <div className="mt-6 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-destructive/40 bg-destructive/5 px-6 py-16 text-center">
-            <p className="text-base font-medium text-destructive">{error}</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => void fetchListings()}
-            >
-              Poskusi znova
-            </Button>
-          </div>
+          /* TASK 8 / F3-B: enotna error slovnica (destructive Alert +
+              ponovitev = fetchListings) — prej črtkasta škatla. */
+          <ErrorState
+            message={error}
+            onRetry={() => void fetchListings()}
+            className="mt-6"
+          />
         ) : listings.length === 0 ? (
+          /* TASK 8 / F3-B: družinska EmptyState — isto besedilo/akcija
+              (Počisti filtre ob aktivnih filtrih). */
           <EmptyState
-            canClear={hasActiveFilters}
-            onClear={clearFilters}
+            icon={Store}
+            title="Ni lokalov za izbrane filtre."
+            description="Poskusite spremeniti filtre ali jih počistiti."
+            action={
+              hasActiveFilters
+                ? { label: "Počisti filtre", onClick: clearFilters, icon: X }
+                : undefined
+            }
+            className="mt-6 py-16"
           />
         ) : (
           <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
@@ -551,36 +579,8 @@ function ListingSkeleton() {
   );
 }
 
-function EmptyState({
-  canClear,
-  onClear,
-}: {
-  canClear: boolean;
-  onClear: () => void;
-}) {
-  return (
-    <div className="mt-6 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 py-16 text-center">
-      <span className="flex size-12 items-center justify-center rounded-full bg-muted">
-        <Store className="size-6 text-muted-foreground" aria-hidden="true" />
-      </span>
-      <p className="text-base font-medium">Ni lokalov za izbrane filtre.</p>
-      <p className="text-sm text-muted-foreground">
-        Poskusite spremeniti filtre ali jih počistiti.
-      </p>
-      {canClear ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onClear}
-          className="mt-2 gap-1.5"
-        >
-          <X className="size-3.5" aria-hidden="true" />
-          Počisti filtre
-        </Button>
-      ) : null}
-    </div>
-  );
-}
+/* TASK 8 / F3-B: lokalni klon EmptyState je ODSTRANJEN — površina
+ * uporablja družinsko komponento @/components/states/empty-state
+ * (isto besedilo, ista akcija, enotna črtkasta slovnica). */
 
 export default ListingsSection;

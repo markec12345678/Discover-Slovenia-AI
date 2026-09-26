@@ -15,7 +15,9 @@
     "trips": "My trips",
     "goMode": "On the road",
     "tagline": "AI trips",
-    "searchAria": "AI search"
+    "searchAria": "AI search",
+    "journey": "Complete journey",
+    "startAnywhere": "Start anywhere"
   },
   "hero": {
     "title": "What do you want to experience in Slovenia?",
@@ -331,6 +333,7 @@
     "planColumn": "Plan",
     "planPlanner": "AI planner",
     "planQuiz": "Traveller quiz",
+    "planStartAnywhere": "Start anywhere (link, image, PDF)",
     "planComparison": "Planner comparison",
     "planBookings": "Bookings",
     "planMyTrips": "My trips",
@@ -346,7 +349,7 @@
     "legalTerms": "Terms of use",
     "legalContact": "Contact",
     "planGoMode": "On the road (Go Mode, offline)",
-    "planJourney": "Plan the whole journey (transfers, stays, activities)"
+    "planJourney": "Complete journey — providers (transfers, stays, activities)"
   },
   "chatbot": {
     "headerTitle": "Slovenia AI",
@@ -457,6 +460,8 @@
     "summaryDaysChip": "{days} days",
     "summaryEdit": "Edit",
     "summaryEditAria": "Edit plan settings (days, budget, group, interests)",
+    "startSourcesLink": "Start from your own sources",
+    "startSourcesAria": "Start from your own sources — link, image, PDF or Google pins",
     "summaryClose": "Close",
     "summaryCloseAria": "Close editing — return to the plan",
     "railPrompt": "What should I change on your trip?",
@@ -836,7 +841,9 @@
       "handoffRailNote": "Rail and bus timetables and prices are not available in the app — search at Omio.",
       "handoffFlightNote": "Partner link — no live flight prices in the app (compare at Skyscanner).",
       "handoffTransferNote": "Published from-prices; availability and booking at Kiwitaxi."
-    }
+    },
+    "supplyCompanionLine": "Looking for transfers, stays or real provider prices?",
+    "supplyCompanionLink": "Complete journey"
   },
   "common": {
     "loading": "Loading...",

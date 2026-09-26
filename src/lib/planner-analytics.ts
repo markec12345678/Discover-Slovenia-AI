@@ -108,6 +108,12 @@ export type PlannerEventName =
   // (unpdf/pdf.js, 0 AI) → isto deterministično ujemanje kot ostali viri
   | "ingest_pdf_attempted"
   | "ingest_pdf_success"
+  // TASK 8 / F3-C (issue #8 §25, audit §3 rec 6): atribucija vnosa po
+  // NAČINU — "imports per session by entry point". Uspešno zaključen uvoz
+  // (povezava/slika/PDF/točke) izstreli EN dogodek z mode propom (dopolnilo
+  // obstoječim ingest_*_success dogodkom — enoten prop za primerjavo
+  // vstopov; števec na sejo v sessionStorage).
+  | "ingest_completed"
   // D2 (nabor #2, Mindtrip audio): zvočni povzetek načrta (TTS; skript je
   // sestavljen deterministično iz podatkov načrta, 0 AI žetonov)
   | "itinerary_audio_requested"
@@ -207,6 +213,51 @@ function getSessionId(): string {
  *  Uporablja ga JourneyBooking prekrivka (efemerne EXTERNAL vrstice). */
 export function plannerSessionId(): string {
   return getSessionId();
+}
+
+// ---------------------------------------------------------------------------
+// TASK 8 / F3-C (issue #8 §25, audit §3 rec 6): atribucija vnosa po načinu.
+// Minimalen DODATNI števec na sejo (sessionStorage, brez PII): vsak uspešen
+// uvoz vira poveča števcem za ta način in izstreli en `ingest_completed`
+// dogodek z { mode, session_count } — "imports per session by entry point"
+// je tako merljiv brez prestrukturiranja obstoječe analitike.
+// ---------------------------------------------------------------------------
+
+/** Način vnosa vira (zavihki bloka #start-kjerkoli). */
+export type IngestMode = "link" | "image" | "pdf" | "pins";
+
+const INGEST_COUNT_KEY = "dsa_planner_ingest_count";
+
+function bumpIngestCount(mode: IngestMode): number {
+  try {
+    const raw = sessionStorage.getItem(INGEST_COUNT_KEY);
+    const counts = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    const current =
+      typeof counts[mode] === "number" && Number.isFinite(counts[mode])
+        ? (counts[mode] as number)
+        : 0;
+    const next = current + 1;
+    counts[mode] = next;
+    sessionStorage.setItem(INGEST_COUNT_KEY, JSON.stringify(counts));
+    return next;
+  } catch {
+    // Zasebni način / poln sessionStorage — dogodek izstreli vseeno
+    // (števcem te seje pa ne moremo povečati).
+    return 1;
+  }
+}
+
+/**
+ * Uspešno zaključen uvoz vira (katerikoli vhodni način). DODATNO obstoječim
+ * `ingest_*_success` dogodkom (ti ostanejo nespremenjeni) — ta dogodek nosi
+ * ENOTEN `mode` prop, da se uspešni uvozi po vstopih (povezava/slika/PDF/
+ * točke) neposredno primerjajo v analitiki.
+ */
+export function trackIngestCompleted(mode: IngestMode): void {
+  trackPlannerEvent("ingest_completed", {
+    mode,
+    session_count: bumpIngestCount(mode),
+  });
 }
 
 /** Fire-and-forget dogodek — POST /api/analytics/event (nikoli ne vrže).

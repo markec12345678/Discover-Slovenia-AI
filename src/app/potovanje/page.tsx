@@ -9,6 +9,7 @@ import { JourneyPlanner } from "@/components/sections/journey-planner";
 import { Badge } from "@/components/ui/badge";
 import { hreflangForPath } from "@/components/seo";
 import { currentBaseUrl } from "@/lib/host";
+import { Link } from "@/i18n/navigation";
 
 // /potovanje — CELOTNO POTOVANJE ČEZ VSE PONUDNIKE (TASK 58).
 //
@@ -34,6 +35,16 @@ const L = {
     sl: "Od pristanka na Brniku do zadnjega postanka: prevoz, nastanitev, znamenitosti, dogodki, restavracije, bencin in najem avta — z resničnimi izdelki, resničnimi cenami in iskrenimi možnostmi rezervacije.",
     en: "From touchdown at Brnik to the last stop: transfers, stays, things to do, events, restaurants, petrol and car rental — with real products, real prices and honest booking capabilities.",
   },
+  // TASK 8 / F3-A (issue #8 §43 NO PARALLEL APP): tiha vrstica odnosa —
+  // /potovanje je korak ponudnikov/logistike ENEGA načrtovalnika (AI načrt
+  // živi na /nacrtuj; izbire se prenesejo z enim klikom „Nadaljuj v
+  // načrtovalnik"). Prva vsebinska povezava /potovanje → /nacrtuj (do zdaj
+  // samo obratno prek handoff gumba).
+  flowNote: {
+    sl: "To je korak ponudnikov enega načrtovalnika — izbire preneseš v AI načrt na enem klik.",
+    en: "This is the providers step of the one planner — carry your picks into the AI plan in one click.",
+  },
+  flowLink: { sl: "Odpri AI načrtovalnik", en: "Open the AI planner" },
   metaTitle: {
     sl: "Celotno potovanje po Sloveniji — vsi ponudniki na enem mestu",
     en: "Complete Slovenia journey — every provider in one place",
@@ -77,6 +88,18 @@ export default async function PotovanjePage() {
             </h1>
             <p className="mt-3 max-w-3xl text-muted-foreground">
               {L.subtitle[lang]}
+            </p>
+            {/* TASK 8 / F3-A: tiha vrstica odnosa + povezava na AI načrtovalec
+                (§43 — en načrtovalnik; besedilo ne tekmuje z naslovom). */}
+            <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
+              {L.flowNote[lang]}
+              <Link
+                href="/nacrtuj"
+                className="inline-flex items-center gap-0.5 font-medium text-primary underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+              >
+                {L.flowLink[lang]}
+                <span aria-hidden="true">→</span>
+              </Link>
             </p>
           </div>
         </section>

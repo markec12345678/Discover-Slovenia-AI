@@ -7,6 +7,99 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.114.0] — 2026-09-28 (ISSUE #8 / TASK 38: Discovery UX 2.0 — Faza 3 „En načrtovalnik, umirjena stanja")
+
+### Dodano
+
+- **EN NAČRTOVALNIK (F3-A — issue §43 NO PARALLEL APP, Option A+C; popolna
+  absorpcija Option B odložena na podatke lijaka)**: /potovanje (JourneyPlanner,
+  7 kategorij ponudnikov) in /nacrtuj (AI načrtovalnik) sta zdaj VIDNO en
+  sistem, ne tekmeca —
+  - vrstica odnosa v heroju /potovanje („To je korak ponudnikov enega
+    načrtovalnika …") + povezava „Odpri AI načrtovalnik" (prva vsebinska
+    povezava /potovanje → /nacrtuj — prej samo handoff gumb);
+  - tiha vrstica v glavi obrazca JourneyPlanner (zbirka „Moja pot" +
+    en klik prenos);
+  - /nacrtuj dobi VEDNO vidno tiho povezavo „Celotno potovanje" (ob supply
+    čipih v CardFooter, neodvisna od trenutne izbire — obojesmerno mostvo);
+  - /potovanje dodan v mobilni Sheet „Več" (prej NIKJER v navigaciji — samo
+    noga + Go Mode prazno stanje; mobilni uporabniki brez poti do njega);
+  - noga preoblikovana: „Načrtuj celo potovanje" → „Celotno potovanje —
+    ponudniki (prevozi, nastanitev, aktivnosti)" (ne obljublja več drugega
+    načrtovanja);
+  - predlogi destinacij „Iz moje poti" nad obrazcem /potovanje (čipi iz
+    zbirke, klik = VIDNA izbira destinacije z aria-pressed — isto načelo
+    kot PlannerMyTripStrip prefill, brez tihega prepisovanja).
+- **DRIFT A/B POPRAVLJENA (F3-A — §40 ena vidna življenjska doba poti)**:
+  zbirka „Moja pot" je zdaj resnica OGLEDALA izbir na /potovanje — novo
+  iskanje REHIDRIRA izbire (re-search iste relacije jih obdrži; brskalniško
+  dokazano: STIL-SELECTED po ponovnem iskanju), odstranitev iz zbirke
+  (npr. drug zavihek /moja-potovanja) jih POŠTENO odstrani tudi na karticah
+  (živi reconcile prek dai:my-trip-changed + cross-tab storage dogodkov;
+  dokazano: DESELECTED + števec 0). Dogodki ostajajo session-only (D8-D
+  meja — informacijski, izven zbirke). Nova čista funkcija
+  `src/lib/journey/selection-mirror.ts` (bailout brez spremembe = isto
+  referenco → React brez odvečnih re-renderjev).
+- **DRUŽINA STANJ (F3-B — §31/§32/§33; D8-A P-STATE-2 „58 površin, vsaka
+  svoja" ZAPRT)**: NOVA `src/components/states/` —
+  - `LoadingState` (Loader2 + L-pattern SL/EN + neobvezne Skeleton vrstice,
+    role="status" aria-live="polite", skeleti aria-hidden);
+  - `EmptyState` (ikona + naslov + opis + CTA ≥44px — NIČ lastnih nizov,
+    besedila nosijo klicatelji);
+  - `ErrorState` (destruktivni Alert ali ambery „warning" + retry ≥44px,
+    role="alert", resnično — NIKOLI lažni uspeh).
+  Slovnica zlatega standarda (planner statusna vrstica TASK 77/80 +
+  SmartSearch). Prevzem: /potovanje iskanje + kategorije (skeleti namesto
+  nenadne zamenjave — največja vrzel jedrne strani + ErrorState z retry),
+  /moja-potovanja (3× LoadingState + ErrorState + EmptyState;
+  hardcode "Nalagam potovanja" aria ODHSTRANJEN), tržnica, lokali,
+  shared-trip (nalaganje zemljevida → LoadingState block), wishlist prazno
+  stanje dobi CTA „Razišči tržnico" (prej šibko brez povezave),
+  events-calendar, destinacije, owner dashboard — 6/7 lokalnih EmptyState
+  klonov poenotenih; ~12 „Nalagam" uhodov → L-pattern SL/EN (trdna
+  priprava na F3-E EN razširitev).
+- **START ANYWHERE DVIG (F3-C — §25; NIKOLI hero — uvoz NI glavno dejanje)**:
+  „Začni s svojimi viri →" VEDNO vidna v glavi obrazca /nacrtuj (tudi
+  zložena v povzetek — planner-summary-bar onStartAnywhere prop) +
+  hashchange poslušalec (istostranske #start-kjerkoli povezave zdaj
+  razširijo +pomaknejo tudi iz noge/Sheeta/USP vrstice); noga „Začni
+  kjerkoli (povezava, slika, PDF)"; mobilni Sheet „Začni kjerkoli"; druga
+  tiha USP vrstica na strani načrtovalnika (enak besednjak kot hero);
+  merilni hook `trackIngestCompleted` (ingest_completed po načinu —
+  link/image/pins/pdf; dokumentiran v docs/ANALYTICS-EVENTS.md).
+- **WISHLIST MOST (F3-D — zbirka-sloj, BREZ tihega razporejanja — ISTO
+  pravilo kot PlannerMyTripStrip „NO silent AI")**: nova čista lib
+  `src/lib/wishlist-trip-bridge.ts` (identiteta IDENTIČNA wishlist-sheet
+  preslikavi — kind=type, refId=id → dedup deluje čez površine; grupiranje
+  po destinacijah z razlovljivimi ID-ji, nerazlovljive → iskren fallback)
+  + javni `useWishlist` hook; „Iz priljubljenih" trak v MyTripView
+  (destinacijski čipi ×števec — „Bled ×3"; „Uporabi v načrtu" sproži ISTI
+  `dai:my-trip-prefill` dogodek kot trak načrtovalnika + quick-add VSEH
+  vnoso v zbirko + iskren toast z dejanjem „Načrtuj"); PlannerMyTripStrip
+  „Uporabi v načrtu" vključuje DESTINACIJE iz priljubljenih (dedup,
+  toast omenja „vključno z destinacijami iz priljubljenih").
+
+### Spremenjeno
+
+- Noga: oznaka povezave /potovanje preoblikovana (isti href, jasnejša
+  vloga — vidi zgornji F3-A).
+- `planner-my-trip-strip.tsx`: `destinationIdOf` zdaj IZVOŽENA (ena
+  resolucija destinacij — journey-planner čipi + trak delita isto logiko).
+- Ena asertacija v `task99-marketplace-lifecycle.test.ts` posodobljena
+  (canClear → hasActiveFilters veja — ista NO_LIVE_DATA semantika, prej
+  krhek dobesedni pogoj).
+
+### Testi
+
+- 3501/3501 (+99): `task8-f3a-one-planner-flow.test.ts` (18 — domena
+  ogledala + mostovi + zero-loss), `task8-f3b-states-family.test.ts` (48 —
+  družina + prevzem + i18n pariteta), `task8-f3cd-startanywhere-wishlist.test.ts`
+  (32 — most + dvig + grouping). Brskalniško dokazano: drift A (STIL-SELECTED
+  po re-search), drift B (živi deselect), wishlist most (3 vnosi v zbirko),
+  prefill „Vir: Moja pot", Sheet 375 brez preliva, 0 konzolnih napak.
+- Regresijska matrika razširjena na 31/31 + 6 novih Faza 3 vrstic — 0
+  izgube (docs/audit/task8-feature-regression-matrix.md).
+
 ## [1.113.0] — 2026-09-28 (ISSUE #8 / TASK 37: Discovery UX 2.0 — Faza 2 „Zbirka je račun + skupnost")
 
 ### Dodano

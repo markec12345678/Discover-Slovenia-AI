@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocale } from "next-intl";
 import {
   BarChart3,
   Check,
@@ -23,6 +24,12 @@ import {
   getAuthorName,
   saveAuthorName,
 } from "@/lib/client-identity";
+
+// TASK 8 / F3-B: hydration placeholder v L-pattern (SL/EN — D8-A §13
+// „Nalagam…" uhodi so trdi predpogoj za F3-E EN razširitev).
+const L = {
+  loadingPolls: { sl: "Nalagam ankete …", en: "Loading polls …" },
+} as const;
 
 // ============================================================================
 // TRIP POLLS — skupinske ankete na javni strani deljenega tripa (F11)
@@ -138,6 +145,9 @@ function votesLabel(n: number): string {
 // ============================================================================
 export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) {
   const { toast } = useToast();
+  // TASK 8 / F3-B: jezik za L-pattern placeholder nalaganja (SL privzeto).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
 
   const [clientId, setClientId] = useState<string>("");
   const [mounted, setMounted] = useState<boolean>(false);
@@ -610,7 +620,7 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
           <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
             {mounted
               ? "Še ni nobene ankete — postavi prvo vprašanje skupini!"
-              : "Nalagam ankete…"}
+              : L.loadingPolls[lang]}
           </p>
         ) : (
           <ul className="space-y-4" aria-live="polite">

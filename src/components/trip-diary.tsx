@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocale } from "next-intl";
 import {
   BookOpen,
   Loader2,
@@ -32,6 +33,12 @@ import {
   getAuthorName,
   saveAuthorName,
 } from "@/lib/client-identity";
+
+// TASK 8 / F3-B: hydration placeholder v L-pattern (SL/EN — D8-A §13
+// „Nalagam…" uhodi so trdi predpogoj za F3-E EN razširitev).
+const L = {
+  loadingDiary: { sl: "Nalagam dnevnik …", en: "Loading diary …" },
+} as const;
 
 // ============================================================================
 // TRIP DIARY — skupinski potni dnevnik na javni strani deljenega tripa (F12)
@@ -383,6 +390,9 @@ export function TripDiary({
   createdAt,
 }: TripDiaryProps) {
   const { toast } = useToast();
+  // TASK 8 / F3-B: jezik za L-pattern placeholder nalaganja (SL privzeto).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
 
   const [clientId, setClientId] = useState<string>("");
   const [mounted, setMounted] = useState<boolean>(false);
@@ -904,7 +914,7 @@ export function TripDiary({
             <p className="text-sm text-muted-foreground">
               {mounted
                 ? "Dnevnik je še prazen — zapiši prvi spomin in povabi ostale."
-                : "Nalagam dnevnik…"}
+                : L.loadingDiary[lang]}
             </p>
           </div>
         ) : (

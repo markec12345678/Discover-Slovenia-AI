@@ -7,7 +7,6 @@ import {
   Clock,
   ArrowRight,
   Compass,
-  ImageIcon,
   Filter,
   SlidersHorizontal,
   ChevronDown,
@@ -16,6 +15,9 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+// TASK 8 / F3-B (D8-A P-STATE-2): prazno stanje filtrov nosi družinska
+// EmptyState (lokalni klon poenoten — isto besedilo prek homeDest i18n).
+import { EmptyState } from "@/components/states/empty-state";
 import {
   Select,
   SelectContent,
@@ -409,7 +411,19 @@ export function DestinationsSection({
 
         {/* Grid mreža */}
         {list.length === 0 ? (
-          <EmptyState onClear={clearFilters} canClear={hasActiveFilters} />
+          /* TASK 8 / F3-B: družinska EmptyState — isto besedilo (i18n
+              ključi homeDest) + ista akcija „Počisti filtre". */
+          <EmptyState
+            icon={Compass}
+            title={t("emptyTitle")}
+            description={t("emptyHint")}
+            action={
+              hasActiveFilters
+                ? { label: t("clearFilters"), onClick: clearFilters, icon: X }
+                : undefined
+            }
+            className="mt-6 py-16"
+          />
         ) : (
           <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
             {displayList.map((d) => (
@@ -655,38 +669,8 @@ function DestinationCard({
   );
 }
 
-function EmptyState({
-  onClear,
-  canClear,
-}: {
-  onClear: () => void;
-  canClear: boolean;
-}) {
-  const t = useTranslations("homeDest");
-  return (
-    <div className="mt-6 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 py-16 text-center">
-      <span className="flex size-12 items-center justify-center rounded-full bg-muted">
-        <Compass className="size-6 text-muted-foreground" aria-hidden="true" />
-      </span>
-      <p className="text-base font-medium">{t("emptyTitle")}</p>
-      <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-        <ImageIcon className="size-3.5" aria-hidden="true" />
-        {t("emptyHint")}
-      </p>
-      {canClear ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onClear}
-          className="mt-2 gap-1.5"
-        >
-          <X className="size-3.5" aria-hidden="true" />
-          {t("clearFilters")}
-        </Button>
-      ) : null}
-    </div>
-  );
-}
+/* TASK 8 / F3-B: lokalni klon EmptyState je ODSTRANJEN — površina
+ * uporablja družinsko komponento @/components/states/empty-state
+ * (isto besedilo prek i18n ključev homeDest, ista akcija). */
 
 export default DestinationsSection;

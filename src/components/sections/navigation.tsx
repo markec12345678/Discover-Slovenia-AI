@@ -59,6 +59,17 @@ function useSecondaryLinks() {
   const t = useTranslations("nav");
   return [
     { href: "/na-poti", label: t("goMode") },
+    // TASK 8 / F3-A (issue #8 §43 NO PARALLEL APP): /potovanje je bil
+    // dosegljiv SAMO iz noge + Go Mode praznega stanja (38-a §1e — nikjer
+    // v navigaciji). Korak ponudnikov enega načrtovalnika zasluži Sheet
+    // vrstico (mobilni uporabniki niso imeli NOBENE poti do njega).
+    { href: "/potovanje", label: t("journey") },
+    // TASK 8 / F3-C (issue #8 §25, audit §3 rec 3): "Začni kjerkoli" v
+    // mobilnem listu "Več" — uvoz virov (povezava/slika/PDF/pins) sicer
+    // nima NOBENE ne-hero poti na mobilnem. Sidro na plannerju razširi
+    // obrazec in pomakne na blok #start-kjerkoli. ZA /potovanje (F3-A
+    // vrstica ostaja).
+    { href: "/nacrtuj#start-kjerkoli", label: t("startAnywhere") },
     { href: "/dogodki", label: t("events") },
     { href: "/lokali", label: t("listings") },
     { href: "/trznica", label: t("marketplace") },

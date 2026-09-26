@@ -15,7 +15,6 @@ import {
   MessageSquareText,
   CheckCircle2,
   Clock,
-  AlertCircle,
   Sparkles,
   ArrowRight,
   HardDrive,
@@ -26,6 +25,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+// TASK 8 / F3-B (D8-A P-STATE-2): družina stanj — LoadingState (2× pulse
+// bloka + hardcoded aria oznaki sta zamenjana), ErrorState
+// (destructive Alert) in EmptyState (lokalni klon poenoten, ISTO besedilo
+// in akcije). Oznake nalaganja so L-pattern SL/EN (predpogoj F3-E).
+import { LoadingState } from "@/components/states/loading-state";
+import { ErrorState } from "@/components/states/error-state";
+import { EmptyState } from "@/components/states/empty-state";
 import { useToast } from "@/hooks/use-toast";
 // FW2-C: lokalna zgodovina naročil/rezervacij (localStorage številke + javni
 // lookup API-ji) — neodvisna od /api/user/trips, zato render tudi med nalaganjem.
@@ -189,20 +195,15 @@ export function MojaPotovanjaView() {
   };
 
   // Spinner SAMO med nalaganjem seje (gost ne čaka več na preusmeritev —
-  // TASK 4 / K-6: takoj dobi svoj pogled).
+  // TASK 4 / K-6: takoj dobi svoj pogled). TASK 8 / F3-B: LoadingState
+  // (block) — oznaka je L-pattern SL/EN (družinski privzetek).
   if (status === "loading" || (status === "authenticated" && !isUserSession)) {
     return (
       <main
         className="flex-1 flex items-center justify-center py-24"
         aria-busy="true"
       >
-        <div className="flex flex-col items-center gap-3">
-          <Loader2
-            className="size-8 animate-spin text-muted-foreground"
-            aria-hidden="true"
-          />
-          <p className="text-sm text-muted-foreground">Nalagam...</p>
-        </div>
+        <LoadingState variant="block" />
       </main>
     );
 
@@ -268,17 +269,17 @@ export function MojaPotovanjaView() {
             </div>
 
             {localTrips === null ? (
-              <div className="mt-4 space-y-3" aria-busy="true" aria-label="Nalagam potovanja">
-                <div className="h-24 rounded-xl border border-border bg-background animate-pulse" />
-                <div className="h-24 rounded-xl border border-border bg-background animate-pulse" />
-              </div>
+              /* TASK 8 / F3-B: skeleton vrstice družine (status nosi vrstica,
+                  skeleti so dekorativni) — prej pulse bloki s hardcoded
+                  slovensko aria oznako. */
+              <LoadingState variant="block" rows={2} className="mt-4 items-stretch" />
             ) : trips.length === 0 ? (
               <EmptyState
-                icon={<Map className="size-8 text-primary" aria-hidden="true" />}
+                icon={Map}
                 title="Nimaš še shranjenih potovanj"
                 description="Načrtuj potovanje z AI načrtovalcem in ga shrani — pojavi se tukaj (na tej napravi)."
-                ctaHref="/nacrtuj"
-                ctaLabel="Načrtuj potovanje"
+                action={{ label: "Načrtuj potovanje", href: "/nacrtuj" }}
+                className="mt-4"
               />
             ) : (
               <ul className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -380,21 +381,17 @@ export function MojaPotovanjaView() {
           </Alert>
         )}
 
-        {/* Napaka nalaganja */}
+        {/* Napaka nalaganja — TASK 8 / F3-B: ErrorState (destructive) z
+            istim naslovom „Napaka" in istim sporočilom (brez ponovitve —
+            enako vedenje kot prej, samo enotna slovnica). */}
         {loadError && (
-          <Alert variant="destructive" className="mt-6">
-            <AlertCircle className="size-4" aria-hidden="true" />
-            <AlertTitle>Napaka</AlertTitle>
-            <AlertDescription>{loadError}</AlertDescription>
-          </Alert>
+          <ErrorState message={loadError} title="Napaka" className="mt-6" />
         )}
 
-        {/* Skeleton nalaganja */}
+        {/* Skeleton nalaganja — TASK 8 / F3-B: LoadingState (rows=2),
+            prej pulse bloka s hardcoded slovensko aria oznako. */}
         {!data && !loadError && (
-          <div className="mt-6 space-y-3" aria-busy="true" aria-label="Nalagam potovanja">
-            <div className="h-24 rounded-xl border border-border bg-background animate-pulse" />
-            <div className="h-24 rounded-xl border border-border bg-background animate-pulse" />
-          </div>
+          <LoadingState variant="block" rows={2} className="mt-6 items-stretch" />
         )}
 
         {/* TASK 8 / D8-B: zbirka "Moja pot" — odkrivanje → dodaj → nadaljuj */}
@@ -420,11 +417,11 @@ export function MojaPotovanjaView() {
 
               {data.trips.length === 0 ? (
                 <EmptyState
-                  icon={<Map className="size-8 text-primary" aria-hidden="true" />}
+                  icon={Map}
                   title="Nimate še shranjenih potovanj"
                   description="Načrtujte potovanje z AI načrtovalcem in ga shranite — pojavi se tukaj."
-                  ctaHref="/nacrtuj"
-                  ctaLabel="Načrtuj potovanje"
+                  action={{ label: "Načrtuj potovanje", href: "/nacrtuj" }}
+                  className="mt-4"
                 />
               ) : (
                 <ul className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -493,13 +490,11 @@ export function MojaPotovanjaView() {
 
                 {data.consultations.length === 0 ? (
                   <EmptyState
-                    icon={
-                      <Sparkles className="size-8 text-primary" aria-hidden="true" />
-                    }
+                    icon={Sparkles}
                     title="Niste še oddali konzultacije"
                     description="Poiščite brezplačen nasvet lokalca — vpišite vprašanje in AI ekspert vam bo odgovoril po e-pošti."
-                    ctaHref="/#vprasi-lokalca"
-                    ctaLabel="Brezplačna konzultacija"
+                    action={{ label: "Brezplačna konzultacija", href: "/#vprasi-lokalca" }}
+                    className="mt-4"
                   />
                 ) : (
                   <ul className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -561,36 +556,7 @@ export function MojaPotovanjaView() {
   );
 }
 
-/* ====================== PRAZNO STANJE ====================== */
-
-function EmptyState({
-  icon,
-  title,
-  description,
-  ctaHref,
-  ctaLabel,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  ctaHref: string;
-  ctaLabel: string;
-}) {
-  return (
-    <div className="mt-4 rounded-xl border border-dashed border-border bg-background/60 p-8 text-center">
-      <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-primary/10">
-        {icon}
-      </div>
-      <p className="font-medium">{title}</p>
-      <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
-        {description}
-      </p>
-      <Button asChild className="mt-4 gap-1.5 font-semibold">
-        <Link href={ctaHref}>
-          {ctaLabel}
-          <ArrowRight className="size-4" aria-hidden="true" />
-        </Link>
-      </Button>
-    </div>
-  );
-}
+/* ====================== PRAZNO STANJE ======================
+ * TASK 8 / F3-B: lokalni klon EmptyState je ODSTRANJEN — površina
+ * uporablja družinsko komponento @/components/states/empty-state
+ * (isto besedilo, iste akcije, enotna črtkasta slovnica + CTA ≥44px). */

@@ -54,6 +54,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// TASK 8 / F3-B (D8-A P-STATE-2): družina stanj — LoadingState (obe
+// hardcoded slovenski oznaki nalaganja → L-pattern SL/EN) in EmptyState
+// (lokalni klon poenoten — isto besedilo/akcija/vključno disabled).
+import { LoadingState } from "@/components/states/loading-state";
+import { EmptyState } from "@/components/states/empty-state";
 // TASK 33 (Tier 2 #1): lastniški koledar razpoložljivosti izkušnje
 import { ExperienceAvailabilityDialog } from "@/components/owner/experience-availability-dialog";
 // TASK 34 (Tier 2 #2): lastniška knjiga izplačil (payout ledger)
@@ -360,14 +365,12 @@ export default function OwnerDashboardPage() {
     }
   };
 
-  // Loading state
+  // Loading state — TASK 8 / F3-B: LoadingState (block) — oznaka je
+  // L-pattern SL/EN (družinski privzetek).
   if (status === "loading") {
     return (
       <main className="min-h-screen flex items-center justify-center bg-muted/30">
-        <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <Loader2 className="size-8 animate-spin" aria-hidden="true" />
-          <p className="text-sm">Nalagam portal...</p>
-        </div>
+        <LoadingState variant="block" />
       </main>
     );
   }
@@ -536,7 +539,7 @@ export default function OwnerDashboardPage() {
                 />
               </div>
             ) : listings.length === 0 ? (
-              <EmptyState onAdd={handleAdd} canAdd={canAddMore} />
+              <OwnerListingsEmptyState onAdd={handleAdd} canAdd={canAddMore} />
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {listings.map((listing) => (
@@ -675,9 +678,13 @@ function PlanBadge({ plan }: { plan: ListingPlan }) {
   );
 }
 
-/* ====================== EMPTY STATE ====================== */
+/* ====================== EMPTY STATE ======================
+ * TASK 8 / F3-B: lokalni klon je ODSTRANJEN — zavihek lokalov uporablja
+ * družinsko EmptyState (@/components/states) z ISTIM besedilom, akcijo
+ * in disabled logiko (dosežen limit paketa). */
 
-function EmptyState({
+// TASK 8 / F3-B: uporaba družinske EmptyState na mestu nekdanjega klona
+function OwnerListingsEmptyState({
   onAdd,
   canAdd,
 }: {
@@ -685,28 +692,13 @@ function EmptyState({
   canAdd: boolean;
 }) {
   return (
-    <Card className="border-dashed border-2 border-border bg-background">
-      <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16 text-center gap-4">
-        <div className="flex size-16 items-center justify-center rounded-full bg-primary/10">
-          <Building className="size-8 text-primary" aria-hidden="true" />
-        </div>
-        <div className="space-y-1">
-          <h3 className="text-lg font-bold">Nimate še lokalov</h3>
-          <p className="text-sm text-muted-foreground max-w-sm">
-            Dodajte svoj prvi lokal in začnite privabljati obiskovalce skozi
-            naš portal.
-          </p>
-        </div>
-        <Button
-          onClick={onAdd}
-          disabled={!canAdd}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 font-semibold"
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          Dodaj svoj prvi lokal
-        </Button>
-      </CardContent>
-    </Card>
+    <EmptyState
+      icon={Building}
+      title="Nimate še lokalov"
+      description="Dodajte svoj prvi lokal in začnite privabljati obiskovalce skozi naš portal."
+      action={{ label: "Dodaj svoj prvi lokal", onClick: onAdd, disabled: !canAdd, icon: Plus }}
+      className="border-2 bg-background py-12 sm:py-16"
+    />
   );
 }
 
@@ -1957,12 +1949,9 @@ function SubscriptionTab({
 /* Beta števec inline v naročnini */
 function BetaCounterInline({ betaStatus }: { betaStatus: BetaStatus | null }) {
   if (!betaStatus) {
-    return (
-      <div className="flex items-center gap-2 text-xs text-amber-700/80 dark:text-amber-300/70">
-        <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-        Nalagam...
-      </div>
-    );
+    /* TASK 8 / F3-B: LoadingState (inline) — L-pattern SL/EN oznaka
+        namesto prejšnje hardcoded slovenske. */
+    return <LoadingState variant="inline" className="text-xs" />;
   }
 
   const pct = Math.min(

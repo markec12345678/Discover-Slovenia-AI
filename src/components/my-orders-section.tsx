@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocale } from "next-intl";
 import {
   ShoppingBag,
   CalendarCheck,
@@ -40,6 +41,13 @@ import {
   ORDERS_KEY,
   BOOKINGS_KEY,
 } from "@/lib/my-orders-storage";
+
+// TASK 8 / F3-B: aria oznake nalaganja v L-pattern (SL/EN — D8-A §13
+// „Nalagam…" uhodi so trdi predpogoj za F3-E EN razširitev).
+const L = {
+  loadingOrders: { sl: "Nalagam naročila", en: "Loading orders" },
+  loadingBookings: { sl: "Nalagam rezervacije", en: "Loading reservations" },
+} as const;
 
 // ============================================================================
 // MOJA NAROČILA IN REZERVACIJE — lokalna zgodovina za popotnika (FW2-C)
@@ -206,6 +214,9 @@ interface MyOrdersSectionProps {
 
 export function MyOrdersSection({ defaultEmail = "" }: MyOrdersSectionProps) {
   const { toast } = useToast();
+  // TASK 8 / F3-B: jezik za L-pattern aria oznake nalaganja (SL privzeto).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
 
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -475,7 +486,11 @@ export function MyOrdersSection({ defaultEmail = "" }: MyOrdersSectionProps) {
               </div>
 
               {loading && !hasDetails ? (
-                <div className="mt-3 space-y-2" aria-busy="true" aria-label="Nalagam naročila">
+                <div
+                  className="mt-3 space-y-2"
+                  aria-busy="true"
+                  aria-label={L.loadingOrders[lang]}
+                >
                   <Skeleton className="h-20 w-full rounded-xl" />
                   <Skeleton className="h-20 w-full rounded-xl" />
                 </div>
@@ -517,7 +532,11 @@ export function MyOrdersSection({ defaultEmail = "" }: MyOrdersSectionProps) {
               </div>
 
               {loading && !hasDetails ? (
-                <div className="mt-3 space-y-2" aria-busy="true" aria-label="Nalagam rezervacije">
+                <div
+                  className="mt-3 space-y-2"
+                  aria-busy="true"
+                  aria-label={L.loadingBookings[lang]}
+                >
                   <Skeleton className="h-20 w-full rounded-xl" />
                   <Skeleton className="h-20 w-full rounded-xl" />
                 </div>

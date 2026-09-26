@@ -24,6 +24,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+// TASK 8 / F3-B (D8-A P-STATE-2): družina stanj — LoadingState (hardcoded
+// „Nalagam izdelke/izkušnje..." zamenjan z L-pattern SL/EN), EmptyState
+// (lokalni klon poenoten) in ErrorState (lokalna črtkasta škatla →
+// destructive Alert slovnica). Product/ExperienceSkeleton mreži ostanejo
+// (dobro hoteno obnašanje — NE regresiramo zlatih standardov).
+import { LoadingState } from "@/components/states/loading-state";
+import { EmptyState } from "@/components/states/empty-state";
+import { ErrorState } from "@/components/states/error-state";
+import { useLocale } from "next-intl";
 import {
   Select,
   SelectContent,
@@ -60,6 +69,14 @@ import {
 
 
 const ALL_VALUE = "all";
+
+// TASK 8 / F3-B: oznake nalaganja v L-pattern (SL/EN — D8-A §13 „Nalagam…"
+// uhodi so trdi predpogoj za F3-E EN razširitev). Stevec ostaja besedje
+// površine (SL), ker ni bil v dosegu tega vala.
+const L = {
+  loadingProducts: { sl: "Nalagam izdelke …", en: "Loading products …" },
+  loadingExperiences: { sl: "Nalagam izkušnje …", en: "Loading experiences …" },
+} as const;
 
 // Možnosti za filter kategorije izdelkov
 const PRODUCT_CATEGORY_OPTIONS: { value: ProductCategory; label: string }[] = (
@@ -119,6 +136,9 @@ export function MarketplaceSection({
 }: {
   defaultTab?: Tab;
 }) {
+  // TASK 8 / F3-B: jezik za L-pattern oznake nalaganja (SL privzeto).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
   const [tab, setTab] = useState<Tab>(defaultTab);
 
   // Filtri izdelki
@@ -446,38 +466,53 @@ export function MarketplaceSection({
           </div>
         </div>
 
-        {/* Števec */}
-        <p className="mt-5 text-center text-sm text-muted-foreground">
-          {tab === "products"
-            ? productsLoading
-              ? "Nalagam izdelke..."
-              : (() => {
-                  const t = productsTotal;
-                  return (
-                    <>
-                      Prikazujem{" "}
-                      <span className="font-semibold text-foreground">{t}</span>{" "}
-                      {t === 1 ? "izdelek" : t < 5 ? "izdelke" : "izdelkov"}
-                    </>
-                  );
-                })()
-            : experiencesLoading
-              ? "Nalagam izkušnje..."
-              : (() => {
-                  const t = experiencesTotal;
-                  return (
-                    <>
-                      Prikazujem{" "}
-                      <span className="font-semibold text-foreground">{t}</span>{" "}
-                      {t === 1
-                        ? "izkušnjo"
-                        : t < 5
-                          ? "izkušnje"
-                          : "izkušenj"}
-                    </>
-                  );
-                })()}
-        </p>
+        {/* Števec / nalaganje — TASK 8 / F3-B: med nalaganjem družina
+            LoadingState (status + aria-live), sicer stevec površine. */}
+        {tab === "products" ? (
+          productsLoading ? (
+            <LoadingState
+              variant="inline"
+              label={L.loadingProducts[lang]}
+              className="mt-5 justify-center"
+            />
+          ) : (
+            <p className="mt-5 text-center text-sm text-muted-foreground">
+              {(() => {
+                const t = productsTotal;
+                return (
+                  <>
+                    Prikazujem{" "}
+                    <span className="font-semibold text-foreground">{t}</span>{" "}
+                    {t === 1 ? "izdelek" : t < 5 ? "izdelke" : "izdelkov"}
+                  </>
+                );
+              })()}
+            </p>
+          )
+        ) : experiencesLoading ? (
+          <LoadingState
+            variant="inline"
+            label={L.loadingExperiences[lang]}
+            className="mt-5 justify-center"
+          />
+        ) : (
+          <p className="mt-5 text-center text-sm text-muted-foreground">
+            {(() => {
+              const t = experiencesTotal;
+              return (
+                <>
+                  Prikazujem{" "}
+                  <span className="font-semibold text-foreground">{t}</span>{" "}
+                  {t === 1
+                    ? "izkušnjo"
+                    : t < 5
+                      ? "izkušnje"
+                      : "izkušenj"}
+                </>
+              );
+            })()}
+          </p>
+        )}
 
         {/* Grid */}
         {tab === "products" ? (
@@ -493,10 +528,30 @@ export function MarketplaceSection({
               onRetry={() => void fetchProducts()}
             />
           ) : products.length === 0 ? (
+            /* TASK 8 / F3-B: družinska EmptyState — isto besedilo/akcije
+                (TASK 99 NO_LIVE_DATA ločitev ostaja), črtkasta slovnica. */
             <EmptyState
-              canClear={hasActiveFilters}
-              onClear={clearFilters}
-              label="izdelkov"
+              icon={Store}
+              title={
+                hasActiveFilters
+                  ? "Ni najdenih rezultatov."
+                  : "Ni še živih ponudb (NO_LIVE_DATA)."
+              }
+              description={
+                hasActiveFilters
+                  ? "Poskusite spremeniti filtre ali jih počistiti."
+                  : `Tržnica nima še objavljenih izdelkov partnerjev. Ko jih bodo dodali, se bodo pojavili tukaj — prazna tržnica ni napaka, je iskreno stanje ponudbe.`
+              }
+              action={
+                hasActiveFilters
+                  ? {
+                      label: "Počisti filtre (izdelkov)",
+                      onClick: clearFilters,
+                      icon: X,
+                    }
+                  : undefined
+              }
+              className="mt-6 py-16"
             />
           ) : (
             <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
@@ -521,10 +576,30 @@ export function MarketplaceSection({
             onRetry={() => void fetchExperiences()}
           />
         ) : experiences.length === 0 ? (
+          /* TASK 8 / F3-B: družinska EmptyState (izkušnje) — isto
+              besedilo/akcije kot prejšnji lokalni klon. */
           <EmptyState
-            canClear={hasActiveFilters}
-            onClear={clearFilters}
-            label="izkušenj"
+            icon={Compass}
+            title={
+              hasActiveFilters
+                ? "Ni najdenih rezultatov."
+                : "Ni še živih ponudb (NO_LIVE_DATA)."
+            }
+            description={
+              hasActiveFilters
+                ? "Poskusite spremeniti filtre ali jih počistiti."
+                : `Tržnica nima še objavljenih izkušenj partnerjev. Ko jih bodo dodali, se bodo pojavili tukaj — prazna tržnica ni napaka, je iskreno stanje ponudbe.`
+            }
+            action={
+              hasActiveFilters
+                ? {
+                    label: "Počisti filtre (izkušenj)",
+                    onClick: clearFilters,
+                    icon: X,
+                  }
+                : undefined
+            }
+            className="mt-6 py-16"
           />
         ) : (
           <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
@@ -1053,77 +1128,9 @@ function ExperienceSkeleton() {
   );
 }
 
-function EmptyState({
-  canClear,
-  onClear,
-  label,
-}: {
-  canClear: boolean;
-  onClear: () => void;
-  label: string;
-}) {
-  return (
-    <div className="mt-6 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-background px-6 py-16 text-center">
-      <span className="flex size-12 items-center justify-center rounded-full bg-muted">
-        <Store className="size-6 text-muted-foreground" aria-hidden="true" />
-      </span>
-      {/* TASK 99 (issue #1 §10): prazna tržnica BREZ filtrov = NO_LIVE_DATA
-          (iskrena oznaka stanja podatkov — NE generična „uspešna" praznina);
-          z aktivnimi filtri = navaden filtriran prazen rezultat. */}
-      {canClear ? (
-        <>
-          <p className="text-base font-medium">Ni najdenih rezultatov.</p>
-          <p className="text-sm text-muted-foreground">
-            Poskusite spremeniti filtre ali jih počistiti.
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onClear}
-            className="mt-2 gap-1.5"
-          >
-            <X className="size-3.5" aria-hidden="true" />
-            Počisti filtre ({label})
-          </Button>
-        </>
-      ) : (
-        <>
-          <p className="text-base font-medium">
-            Ni še živih ponudb (NO_LIVE_DATA).
-          </p>
-          <p className="max-w-md text-sm text-muted-foreground">
-            Tržnica nima še objavljenih {label} partnerjev. Ko jih bodo dodali,
-            se bodo pojavili tukaj — prazna tržnica ni napaka, je iskreno
-            stanje ponudbe.
-          </p>
-        </>
-      )}
-    </div>
-  );
-}
-
-function ErrorState({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry: () => void;
-}) {
-  return (
-    <div className="mt-6 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-destructive/40 bg-destructive/5 px-6 py-16 text-center">
-      <p className="text-base font-medium text-destructive">{message}</p>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={onRetry}
-        className="gap-1.5"
-      >
-        Poskusi znova
-      </Button>
-    </div>
-  );
-}
+/* TASK 8 / F3-B: lokalna EmptyState/ErrorState sta ODSTRANJENA —
+ * površina uporablja družino @/components/states (isto besedilo,
+ * iste akcije; skeleton mreži Product/Experience ostajajo lokalne,
+ * ker so dobro hotene). */
 
 export default MarketplaceSection;

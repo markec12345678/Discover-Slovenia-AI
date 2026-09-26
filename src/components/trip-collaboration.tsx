@@ -20,6 +20,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocale } from "next-intl";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -98,6 +99,12 @@ const STATUS_LABELS: Record<string, string> = {
   REVOKED: "odvzet",
 };
 
+// TASK 8 / F3-B: placeholder nalaganja zgodovine verzij v L-pattern (SL/EN —
+// D8-A §13 „Nalagam…" uhodi so trdi predpogoj za F3-E EN razširitev).
+const L = {
+  loadingRevisions: { sl: "Nalagam zgodovino …", en: "Loading history …" },
+} as const;
+
 function errText(e: unknown): string {
   if (e instanceof Error) return e.message;
   return String(e);
@@ -124,6 +131,10 @@ export function TripCollaboration({
   initialName: string | null;
 }) {
   const { data: session, status: sessionStatus } = useSession();
+  // TASK 8 / F3-B: jezik za L-pattern placeholder nalaganja zgodovine
+  // verzij (SL privzeto — predpogoj za F3-E).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get("invite");
 
@@ -608,7 +619,7 @@ export function TripCollaboration({
                   {revisions === null && !revisionsError && (
                     <p className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                      Nalagam zgodovino…
+                      {L.loadingRevisions[lang]}
                     </p>
                   )}
                   {revisionsError && (

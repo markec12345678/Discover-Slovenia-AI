@@ -23,6 +23,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 // TASK 8 / D8-D (§3.3): kanonski "Dodaj v mojo pot" na dogodkih (D8-A §9.2)
 import { AddToTripButton } from "@/components/add-to-trip-button";
+// TASK 8 / F3-B (D8-A P-STATE-2): prazno stanje nosi družinska EmptyState
+// (lokalni klon poenoten — isto besedilo).
+import { EmptyState } from "@/components/states/empty-state";
 import {
   Select,
   SelectContent,
@@ -190,7 +193,12 @@ export function EventsCalendar() {
 
         {/* Mesečni prikaz */}
         {groupedByMonth.length === 0 ? (
-          <EmptyState />
+          <EmptyState
+            icon={CalendarX}
+            title="Ni dogodkov za izbrane filtre."
+            description="Poskusite spremeniti mesec, kategorijo ali regijo."
+            className="mt-8 py-16"
+          />
         ) : (
           <div className="mt-8 flex flex-col gap-10">
             {groupedByMonth.map((group) => (
@@ -416,21 +424,8 @@ function EventCard({ event }: { event: EventItem }) {
   );
 }
 
-function EmptyState() {
-  return (
-    <div className="mt-8 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-background/50 px-6 py-16 text-center">
-      <span className="flex size-12 items-center justify-center rounded-full bg-muted">
-        <CalendarX
-          className="size-6 text-muted-foreground"
-          aria-hidden="true"
-        />
-      </span>
-      <p className="text-base font-medium">Ni dogodkov za izbrane filtre.</p>
-      <p className="text-sm text-muted-foreground">
-        Poskusite spremeniti mesec, kategorijo ali regijo.
-      </p>
-    </div>
-  );
-}
+/* TASK 8 / F3-B: lokalni klon EmptyState je ODSTRANJEN — površina
+ * uporablja družinsko komponento @/components/states/empty-state
+ * (isto besedilo: naslov + namig, brez CTA). */
 
 export default EventsCalendar;

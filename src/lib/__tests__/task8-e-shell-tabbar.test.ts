@@ -157,14 +157,16 @@ describe("TASK 8 / D8-E: Navigation — tab bar + ohranjen mobilni Sheet", () =>
     expect(navSrc).not.toContain('aria-label="Odpri meni"');
   });
 
-  test("mobilni Sheet: VSEH 12 link ciljev (5 primarnih + 5 sekundarnih + za ponudnike + CTA; D8-A §2.1 jih šteje kot 13 destinacij skupaj z logotipom/domov)", () => {
+  test("mobilni Sheet: VSEH 13 link ciljev (5 primarnih + 6 sekundarnih + za ponudnike + CTA; F3-A dodal /potovanje)", () => {
     const sheet = navSrc.slice(navSrc.indexOf("<SheetContent"));
     // Primarne + sekundarne povezave se izrisujejo iz ISTIH seznamov kot
     // desktop (useNavLinks/useSecondaryLinks) — Sheet ju preslika v celoti.
     expect(sheet).toContain("navLinks.map");
     expect(sheet).toContain("secondaryLinks.map");
-    // Seznama vsebujeta vseh 10 povezav (5 primarnih + 5 sekundarnih):
-    for (const href of ["/destinacije", "/dozivetja", "/zemljevid", "/vodici", "/moja-potovanja", "/na-poti", "/dogodki", "/lokali", "/trznica", "/slovenia-pass"]) {
+    // Seznama vsebujeta vseh 11 povezav (5 primarnih + 6 sekundarnih):
+    // TASK 8 / F3-A: /potovanje dodan v sekundarne povezave (prej dosegljiv
+    // samo iz noge — 38-a §1e; korak ponudnikov enega načrtovalnika).
+    for (const href of ["/destinacije", "/dozivetja", "/zemljevid", "/vodici", "/moja-potovanja", "/na-poti", "/potovanje", "/dogodki", "/lokali", "/trznica", "/slovenia-pass"]) {
       expect(navSrc).toContain(`href: "${href}"`);
     }
     // Za ponudnike + CTA Načrtuj sta v Sheetu dobesedno

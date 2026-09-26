@@ -33,6 +33,13 @@ import {
 } from "@/lib/my-trip";
 import { useAppStore } from "@/lib/store";
 import { DESTINATIONS } from "@/lib/slovenia-data";
+// TASK 8 / F3-D (issue #8, audit §4): most "Priljubljene" → načrt —
+// destinacije iz wishlist-a (razrešitev prostega besedila) se primešajo
+// prefill seznamu v handleUse. Beremo SVEŽE ob kliku (getWishlist) —
+// naročnina ni potrebna: trak se remounta ob spremembi zbirke, wishlist
+// pa je trenutek resnice ob kliku (isti vir kot srček/list).
+import { getWishlist } from "@/lib/wishlist-storage";
+import { groupWishlistByDestination } from "@/lib/wishlist-trip-bridge";
 import { MAX_SELECTED_PRODUCTS } from "@/lib/supply/sanitize";
 import { getProvider } from "@/lib/supply/registry";
 import { persistSelection } from "@/lib/supply/selection-persist";
@@ -98,6 +105,9 @@ const L = {
         ? "1 izdelek ali doživetje je v izbiri načrta"
         : `${n} izdelki/doživetja so v izbiri načrta`,
     appliedContext: "Zbirka ostaja kot kontekst — dogodki se dodajo po generiranju.",
+    // F3-D: iskren povzetek, kadar so v prefill ušle tudi destinacije iz
+    // "Priljubljenih" (en gumb pokrije zbirko + priljubljene).
+    appliedWishlist: "vključno z destinacijami iz priljubljenih",
     cappedNotice: "Dosežena meja izbire (20) — ostalo ostaja v zbirki.",
     removeAria: (title: string) => `Odstrani ${title} iz moje poti`,
     useAria: "Prenesi destinacije in izdelke iz moje poti v načrt",
@@ -118,6 +128,8 @@ const L = {
         ? "1 product or experience is in your plan selection"
         : `${n} products/experiences are in your plan selection`,
     appliedContext: "The collection stays as context — events are added after generation.",
+    // F3-D: honest summary when wishlist destinations joined the prefill.
+    appliedWishlist: "including destinations from your favourites",
     cappedNotice: "Selection limit (20) reached — the rest stays in your collection.",
     removeAria: (title: string) => `Remove ${title} from my trip`,
     useAria: "Transfer destinations and products from my trip into the plan",
@@ -142,8 +154,11 @@ const KIND_ICON: Record<MyTripKind, LucideIcon> = {
  * dodajanja uporabljajo oboje), zalogi pa sledi tudi globoka povezava
  * /destinacija/[slug]. Neznan ID se izpušča — strežnik ga tako ali tako
  * očisti (ista sanitizacija kot preferredDestinations v /api/itinerary).
+ *
+ * TASK 8 / F3-A: izvožena — isto resolucijo potrebuje journey-planner za
+ * predloge destinacij "Iz moje poti" (ena resolucija, ne dve kopiji).
  */
-function destinationIdOf(item: MyTripItem): string | undefined {
+export function destinationIdOf(item: MyTripItem): string | undefined {
   if (DESTINATIONS.some((d) => d.id === item.refId)) return item.refId;
   const bySlug = DESTINATIONS.find((d) => d.slug === item.refId);
   if (bySlug) return bySlug.id;
@@ -256,6 +271,33 @@ export function PlannerMyTripStrip() {
         destinations.push(id);
       }
     }
+
+    // 1b) TASK 8 / F3-D (audit §4 "wishlist→trip auto-bridge"): EN klik
+    //     pokrije tudi destinacije iz "Priljubljenih" — prosto besedilo
+    //     vnosa se razreši proti T1 datasetu (groupWishlistByDestination);
+    //     dodajo se SAMO razrešljivi ID-ji (nerazrešljivo besedilo NE
+    //     prispeva k prefillu — iskrenost). Wishlist beremo SVEŽE ob kliku
+    //     (brez naročnine — trak se remounta ob spremembi zbirke, klik je
+    //     trenutek resnice). PLAST ZBIRKE: brez tihega AI/razporejanja.
+    let wishlistDestinationCount = 0;
+    const wishlist = getWishlist();
+    if (wishlist.length > 0) {
+      const groups = groupWishlistByDestination(
+        wishlist,
+        lang === "en" ? "Other" : "Drugo"
+      );
+      for (const group of groups) {
+        if (group.destinationId && !seenIds.has(group.destinationId)) {
+          seenIds.add(group.destinationId);
+          destinations.push(group.destinationId);
+          wishlistDestinationCount++;
+        } else if (group.destinationId) {
+          // že v zbirki — še vedno iz priljubljenih prispeva k istemu ID-ju
+          wishlistDestinationCount++;
+        }
+      }
+    }
+
     if (destinations.length > 0) {
       window.dispatchEvent(
         new CustomEvent<MyTripPrefillDetail>(MY_TRIP_PREFILL_EVENT, {
@@ -304,6 +346,9 @@ export function PlannerMyTripStrip() {
     const parts: string[] = [];
     if (addedProducts > 0) parts.push(s.appliedProducts(addedProducts));
     if (eventItems.length > 0) parts.push(s.eventsNote);
+    // F3-D: destinacije iz "Priljubljenih" v prefillu so vidne v
+    // povzetku (en gumb, dva vira — uporabnik ve, kaj se je preneslo).
+    if (wishlistDestinationCount > 0) parts.push(s.appliedWishlist);
     if (parts.length === 0) parts.push(s.appliedContext);
     toast({ title: s.appliedTitle, description: parts.join(" ") });
     if (capped > 0) {

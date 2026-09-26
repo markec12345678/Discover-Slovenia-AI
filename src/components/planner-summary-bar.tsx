@@ -6,6 +6,7 @@ import {
   Cloud,
   Euro,
   Gauge,
+  Link2,
   Pencil,
   Users,
 } from "lucide-react";
@@ -22,6 +23,11 @@ interface PlannerSummaryBarProps {
   onEdit: () => void;
   /** TASK 4 / K-11: vrstni red v flex delovni površini. */
   className?: string;
+  /** TASK 8 / F3-C (issue #8 §25, audit §3 rec 1): tiha pot do uvoza virov
+   *  (povezava/slika/PDF/Google pins) vidna TUDI v zloženem povzetku —
+   *  zglavlje obrazca z isto povezavo je takrat skrito. Opcijsko: obstoječi
+   *  klicatelji brez propa ostanejo nespremenjeni. */
+  onStartAnywhere?: () => void;
 }
 
 const PARTY_LABEL_KEYS: Record<PartyType, string> = {
@@ -50,7 +56,12 @@ const PACE_LABEL_KEYS: Record<Pace, string> = {
  * gumbom "Uredi" — delovna površina načrta prevzame prvi zaslon, vsi
  * kontrolniki ostanejo en klik stran. Vsa logika obrazca je nespremenjena.
  */
-export function PlannerSummaryBar({ formData, onEdit, className }: PlannerSummaryBarProps) {
+export function PlannerSummaryBar({
+  formData,
+  onEdit,
+  className,
+  onStartAnywhere,
+}: PlannerSummaryBarProps) {
   const t = useTranslations("planner");
 
   const partyLabel = formData.partyType
@@ -108,7 +119,21 @@ export function PlannerSummaryBar({ formData, onEdit, className }: PlannerSummar
           +{Math.max(hiddenInterests, selectedInterests.length - 4)}
         </span>
       )}
-      <span className="ml-auto">
+      <span className="ml-auto flex items-center gap-1.5">
+        {onStartAnywhere && (
+          // F3-C: utišan tekst-xs gumb pred "Uredi" — uvoz virov je en klik
+          // stran tudi iz zloženega povzetka (SEKUNDARNO od AI vprašanja;
+          // enako besedilo kot povezava v zglavlju obrazca).
+          <button
+            type="button"
+            onClick={onStartAnywhere}
+            aria-label={t("startSourcesAria")}
+            className="inline-flex min-h-9 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Link2 className="size-3 shrink-0" aria-hidden="true" />
+            {t("startSourcesLink")}
+          </button>
+        )}
         <Button
           type="button"
           size="sm"
