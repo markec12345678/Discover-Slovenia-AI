@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
-import {
-  generateVisionCompletion,
-  generateCompletion,
-} from "@/lib/ai-client";
+// ISSUE #9 (ZERO-AI/deterministic-first): VLM (vision) je edini ostanek AI
+// v tej poti — SAMO za SLIKO (vizualno-semantično branje, brez besedilne
+// plasti). Besedilo/PDF/e-pošta so popolnoma deterministični (0 AI žetonov,
+// 0 odvisnosti od omrežja) — generateCompletion je ODSTRANJEN iz vseh
+// besedilnih poti.
+import { generateVisionCompletion } from "@/lib/ai-client";
 import {
   RESERVATION_PARSE_PROMPT,
   normalizeParsedReservation,
@@ -30,26 +32,31 @@ import {
 } from "@/lib/email-mime-parse";
 
 // ============================================================================
-// POST /api/journey/bookings/parse — ISSUE #4 §4: STATELESS AI EKSTRAKCIJA
+// POST /api/journey/bookings/parse — ISSUE #4 §4 + ISSUE #9 (ZERO-AI):
+// DETERMINISTIČNA EKSTRAKCIJA REZERVACIJ (STATELESS)
 // ============================================================================
 // Prebere potrdilo o rezervaciji (SLIKA screenshot/foto, PDF, PRILEPLJENO
 // BESEDILO e-pošte ali SUROVA E-POŠTA — glava + MIME) in vrne NORMALIZIRANA
 // polja — NIČ SE NE ZAPIŠE.
 //
-// Načelo (ista disciplina kot ingest-image / ingest-pdf):
+// Načelo (ISSUE #9 — obrat vrstnega reda: prej AI prima + deterministična
+// rezerva, zdaj DETERMINISTIČNI PARSER PRIMA — 0 AI žetonov, 0 odvisnosti od
+// omrežja; pot besedilo/PDF/e-pošta deluje tudi brez vseh AI ključev):
 //  · AI (VLM/LLM) SAMO prebere dokument in ekstrahira polja, ki so v njem
 //    IZRECNO prisotna — manjkajoče ostane null (nikoli ne ugiba);
 //  · normalizacija je DETERMINISTIČNA (lib/imported-reservation.ts): striže,
 //    kapira, validira ceno/valuto — AI izhod NI zaupanja vreden vhod v bazo;
-//  · M1 (Issue #5 / T5-D): če AI ni na voljo (brez ključev/timeout) ALI vrne
-//    neuporaben izhod, PDF in BESEDILO padejo na deterministični regex
-//    parser (lib/reservation-text-parse.ts) — vir je iskreno razkrit
-//    (method:"deterministic", via:"fallback"). SLIKA ostane AI-only:
-//    iz slike ni besedila za regex — pošten 502 z nasvetom (ročni vnos);
+//  · ISSUE #9: neprepoznano besedilo → iskren 422 z nasvetom (ročni vnos)
+//    — nikoli "prazen uspeh", nikoli tiha zamenjava vira;
+//  · `via` iskreno razkrije KANAL: "text-parser" | "pdf-parser" |
+//    "email-ics" (deterministične) | vision provider (SAMO slika);
+//  · SLIKA ostaja VLM-only: iz slike ni besedilne plasti za parser (OCR bi
+//    pomenil hujšo odvisnost — §28) — pošten 502 z nasvetom (ročni vnos).
+//    `method:"ai"` pomeni SAMO to pot;
 //  · Issue #6 (D6-B): besedilo, ki VIDETI kot ICS koledar (BEGIN:VCALENDAR),
-//    v rezervi prebere BOLJ SPECIFIČEN VEVENT parser
+//    prebere BOLJ SPECIFIČEN VEVENT parser
 //    (lib/reservation-ics-parse.ts) PREJ generičnega besedilnega —
-//    specifično pred splošnim; odgovorna pogodba je IDENTIČNA;
+//    specifično pred splošnim (vrstni red nespremenjen); pogodba IDENTIČNA;
 //  · TASK 31 (Tier 1 #3): { email } = SUROVA e-pošta (RFC 5322 — izvorna
 //    koda iz Gmaila/Outlooka ali .eml). Deterministični MIME bralnik
 //    (lib/email-mime-parse.ts, 0 odvisnosti) razstavi glavo + telo +
@@ -57,9 +64,9 @@ import {
 //      1. .ics priloga → VEVENT parser (0 AI — strukturirani podatki,
 //         via:"email-ics");
 //      2. besedilo (Subject + text/plain pred html) → ISTA kaskada kot
-//         zavihek Besedilo (AI → deterministična rezerva);
-//      3. .pdf priloga → ISTA kaskada kot zavihek Dokument (unpdf → AI →
-//         rezerva);
+//         zavihek Besedilo (deterministični text-parser, 0 AI);
+//      3. .pdf priloga → ISTA kaskada kot zavihek Dokument (unpdf →
+//         deterministični pdf-parser);
 //      4. nič uporabnega → iskren 422 z nasvetom (ročni vnos / Besedilo).
 //    Subject se prišteje besedilu — pogosto nosi ponudnika + št. rezervacije.
 //  · ZAPIO samo uporabnik po pregledu in potrditvi (gumb v UI) — prek
@@ -71,10 +78,11 @@ import {
 // Izhod: { fields: ParsedReservation, providerSlug, providerProductId,
 //          via, needsConfirmation } — vse za predogled UI obrazca.
 //
-// Varnost: rate limit 6/min (drag AI klic); slika ≤ 6 MB base64 JPEG/PNG/WebP;
-// PDF ≤ 8 MB base64 + max 60 strani (isti cap kot ingest-pdf); besedilo ≤
-// 20_000 znakov; e-pošta ≤ 2 MB surovega vira (pokrije bazo64 priloge).
-// Dokument se NE shrani nikamor (pomnilnik → pozabljen).
+// Varnost: rate limit 6/min (drag VLM klic za sliko); slika ≤ 6 MB base64
+// JPEG/PNG/WebP; PDF ≤ 8 MB base64 + max 60 strani (isti cap kot
+// ingest-pdf); besedilo ≤ 20_000 znakov; e-pošta ≤ 2 MB surovega vira
+// (pokrije bazo64 priloge). Dokument se NE shrani nikamor (pomnilnik →
+// pozabljen).
 // ============================================================================
 
 const MAX_BASE64_CHARS_IMAGE = 6 * 1024 * 1024;
@@ -114,13 +122,16 @@ function parsePdfDataUrl(raw: string): { base64: string } | null {
 }
 
 /**
- * M1 (T5-D): AI je odpovedal (brez ključev/timeout) ali vrnil prazen izhod
- * → DETERMINISTIČNI regex parser nad besedilom (0 AI). Iskrenost: vir je
- * razkrit (method:"deterministic", via:"fallback"); če tudi parser ne
- * prepozna ključnih polj, 422 z jasnim nasvetom (ročni vnos) — nikoli
- * "praznega uspeha" in nikoli tihe nadomestitve vira.
+ * ISSUE #9 (ZERO-AI): PRIMARNA deterministična pot besedila/PDF — 0 AI
+ * žetonov, 0 omrežja (prej AI prima + regex rezerva). Iskrenost: vir je
+ * razkrit (method:"deterministic", via:"text-parser"|"pdf-parser"); če
+ * parser ne prepozna ključnih polj, 422 z jasnim nasvetom (ročni vnos)
+ * — nikoli "praznega uspeha" in nikoli tihe nadomestitve vira.
  */
-function deterministicParseResponse(text: string): NextResponse {
+function deterministicParseResponse(
+  text: string,
+  via: "text-parser" | "pdf-parser"
+): NextResponse {
   // Issue #6 (D6-B): če besedilo VIDETI kot ICS koledar (BEGIN:VCALENDAR),
   // uporabimo BOLJ SPECIFIČEN deterministični VEVENT parser PREJ generičnega
   // besedilnega (specifično pred splošnim — isti besedilni kanal, IDENTIČNA
@@ -145,7 +156,7 @@ function deterministicParseResponse(text: string): NextResponse {
   return NextResponse.json(
     {
       method: "deterministic" as const,
-      via: "fallback",
+      via,
       fields,
       providerSlug,
       providerProductId,
@@ -159,8 +170,9 @@ function deterministicParseResponse(text: string): NextResponse {
 }
 
 /**
- * TASK 31 (Tier 1 #3): uspešen AI odgovor — ISTA pogodba kot prej, izvzeta
- * v skupni gradnik (kaskadi besedila/PDF/e-pošte si delita izhod).
+ * AI (VLM) odgovor — ISSUE #9: po odstranitvi generateCompletion iz
+ * besedilnih poti je to izključno SLIKA (vision provider razkrito v via);
+ * ISTA pogodba kot deterministične poti (le method:"ai").
  */
 function aiParseResponse(fields: ParsedReservation, via: string): NextResponse {
   const providerSlug = providerSlugFromName(fields.providerName);
@@ -213,9 +225,11 @@ function deterministicEmailResponse(
 }
 
 /**
- * Skupna BESEDILO kaskada (zavihek Besedilo + besedilo iz e-pošte):
- * AI najprej (ko je na voljo), iskrena deterministična rezerva (M1) —
- * prestavljena 1:1 iz bivše `text` veje (ista pogodba, isti viri).
+ * Skupna BESEDILO kaskada (zavihek Besedilo + besedilo iz e-pošte) —
+ * ISSUE #9 (ZERO-AI): DETERMINISTIČNI PARSER JE PRIMA (0 AI žetonov,
+ * 0 omrežja; prej AI prima + regex rezerva). Kaskada znotraj nje ostaja
+ * specifično-pred-splošnim: ICS zaznavanje (D6-B) → VEVENT parser →
+ * generični besedilni parser. Neprepoznano → iskren 422 (ročni vnos).
  */
 async function textParseCascade(text: string): Promise<NextResponse> {
   if (text.length > MAX_TEXT_CHARS) {
@@ -224,41 +238,14 @@ async function textParseCascade(text: string): Promise<NextResponse> {
       { status: 413 }
     );
   }
-  const completion = await generateCompletion(
-    [
-      {
-        role: "user" as const,
-        content: `${RESERVATION_PARSE_PROMPT}\n\n--- DOCUMENT TEXT ---\n${text}`,
-      },
-    ],
-    {
-      jsonMode: true,
-      maxTokens: 2048,
-      usageLog: { feature: "reservation_parse" },
-    }
-  );
-  if (!completion) {
-    // M1 (T5-D): AI nedosegljiv → deterministični parser nad prilepljenim
-    // besedilom (0 AI žetonov, enaka normalizacija kot AI pot).
-    return deterministicParseResponse(text);
-  }
-  const fields = normalizeParsedReservation(completion.content);
-  if (
-    fields.providerName == null &&
-    fields.reservationNumber == null &&
-    fields.startDateTime == null
-  ) {
-    // AI je odgovoril, a ničesar ni izluščil (deformiran izhod) → rezerva
-    // nad istim besedilom; če tudi ta ne prepozna nič → iskren 422 znotraj
-    // deterministicParseResponse (napaka je v dokumentu, ne v storitvi).
-    return deterministicParseResponse(text);
-  }
-  return aiParseResponse(fields, completion.source);
+  return deterministicParseResponse(text, "text-parser");
 }
 
 /**
- * Skupna PDF kaskada (zavihek Dokument + .pdf priloga iz e-pošte):
- * unpdf besedilna ekstrakcija (0 AI) → AI → iskrena deterministična rezerva.
+ * Skupna PDF kaskada (zavihek Dokument + .pdf priloga iz e-pošte) —
+ * ISSUE #9 (ZERO-AI): unpdf besedilna ekstrakcija (0 AI) → DETERMINISTIČNI
+ * parser (0 AI žetonov, 0 omrežja; prej AI prima + regex rezerva).
+ * Besedilno prazen/skeniran PDF → iskren 422 (nasvet: zavihek Slika).
  */
 async function pdfParseCascade(base64: string): Promise<NextResponse> {
   // unpdf besedilna ekstrakcija (0 AI) — isti cap kot ingest-pdf.
@@ -281,33 +268,9 @@ async function pdfParseCascade(base64: string): Promise<NextResponse> {
       { status: 422 }
     );
   }
-  const completion = await generateCompletion(
-    [
-      {
-        role: "user" as const,
-        content: `${RESERVATION_PARSE_PROMPT}\n\n--- DOCUMENT TEXT ---\n${pdfText.slice(0, 60_000)}`,
-      },
-    ],
-    {
-      jsonMode: true,
-      maxTokens: 2048,
-      usageLog: { feature: "reservation_parse" },
-    }
-  );
-  if (!completion) {
-    // M1 (T5-D): AI nedosegljiv → deterministični parser nad unpdf
-    // besedilom (ista besedila, ki bi jih dobil LLM — 0 AI žetonov).
-    return deterministicParseResponse(pdfText);
-  }
-  const fields = normalizeParsedReservation(completion.content);
-  if (
-    fields.providerName == null &&
-    fields.reservationNumber == null &&
-    fields.startDateTime == null
-  ) {
-    return deterministicParseResponse(pdfText);
-  }
-  return aiParseResponse(fields, completion.source);
+  // ISSUE #9 (ZERO-AI): besedilo iz PDF-a gre DIREKTNO v deterministični
+  // parser (0 AI žetonov) — via:"pdf-parser" iskreno razkrije kanal.
+  return deterministicParseResponse(pdfText, "pdf-parser");
 }
 
 export async function POST(request: Request) {
@@ -364,7 +327,9 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      // VLM (Gemini → z-ai veriga, F10) — isti strogi ekstraktor prompt.
+      // ISSUE #9: VLM (Gemini → z-ai veriga, F10) — EDINA AI pot te rute
+      // (sliko brez besedilne plasti zna prebrati le vizualni model); isti
+      // strogi ekstraktor prompt. Odpoved → pošten 502 (ročni vnos).
       const vision = await generateVisionCompletion(
         RESERVATION_PARSE_PROMPT,
         `data:${parsed.mime};base64,${parsed.base64}`,
@@ -436,7 +401,8 @@ export async function POST(request: Request) {
         // ponudnika + št. rezervacije → nadaljuj na besedilno kaskado.
       }
       // 2. besedilo (Subject + text/plain pred html→text) — ISTA kaskada
-      //    kot zavihek Besedilo (AI → deterministična rezerva):
+      //    kot zavihek Besedilo (ISSUE #9: deterministični text-parser,
+      //    0 AI žetonov):
       const emailText = emailTextForParsing(msg);
       if (emailText) {
         return await textParseCascade(emailText.slice(0, MAX_TEXT_CHARS));

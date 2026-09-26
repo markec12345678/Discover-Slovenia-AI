@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { checkAdmin } from "@/lib/auth-guards";
-import { generateCompletion } from "@/lib/ai-client";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limit";
 import { escapeHtml } from "@/lib/security";
@@ -28,14 +27,18 @@ function invalidateMarketplaceCache(context: string) {
 //
 // Ko admin odobri lokal:
 // 1. Status → approved → published
-// 2. AI avtomatsko generira: SEO meta, ključne besede, AI oznake
+//
+// Issue #9 ZERO-AI: AI auto-enrichment (SEO oznake/ključne besede, ki so se
+// tiho zapisale v Listing.specialties BREZ pregleda) je ODSTRANJEN —
+// edini ne-pregledani AI→DB zapis (§16/§24). Specialitete sedaj zapiše
+// IZKLJUČNO lastnik prek obrazca (human-in-the-loop).
 //
 // P4-2b: odobritev NE podeli več znaka "Preverjen partner" —
 // verifikacija (verifiedByAdmin + partnerStatus=verified) je ločena
 // eksplicitna admin odločitev: POST /api/admin/listings/[id]/verify.
 //
 // P3c-9: za izdelke/izkušnje (type=product|experience) velja enaka
-// moderacijska zanka (pending → published), brez AI enrichmenta (samo lokalci).
+// moderacijska zanka (pending → published).
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -206,15 +209,10 @@ export async function POST(
       },
     });
 
-    // 2. AI auto-enrichment (ne blokiraj odgovora)
-    enrichListingInBackground(id, listing.name, listing.description, listing.category).catch(
-      (e) => console.error("[approve] AI enrichment napaka:", e)
-    );
-
-    // 3. HARDENING S5: takojšnja osvežitev SEO predpomnilnika
+    // 2. HARDENING S5: takojšnja osvežitev SEO predpomnilnika
     invalidateMarketplaceCache("listing");
 
-    // 4. Audit log
+    // 3. Audit log
     await logAudit({
       actorRole: "admin",
       action: newStatus === "published" ? AUDIT_ACTIONS.LISTING_APPROVED : AUDIT_ACTIONS.LISTING_PUBLISHED,
@@ -224,7 +222,7 @@ export async function POST(
       metadata: { publishNow, partnerStatus: updated.partnerStatus },
     });
 
-    // 3. Pošlji email lastniku (ne blokiraj)
+    // 4. Pošlji email lastniku (ne blokiraj)
     if (listing.ownerId) {
       const owner = await db.owner.findUnique({
         where: { id: listing.ownerId },
@@ -250,62 +248,9 @@ export async function POST(
   }
 }
 
-// AI auto-enrichment — generira SEO meta, ključne besede, AI oznake
-async function enrichListingInBackground(
-  listingId: string,
-  name: string,
-  description: string,
-  category: string
-) {
-  const prompt = `Si SEO asistent za slovensko turistično platformo. Za lokal "${name}" (kategorija: ${category}) generiraj:
-
-VRNI SAMO JSON:
-{
-  "seoTitle": "naslov do 60 znakov za SEO",
-  "seoDescription": "meta description do 155 znakov",
-  "keywords": ["ključna1", "ključna2", "ključna3", "ključna4", "ključna5"],
-  "aiTags": ["tag1", "tag2", "tag3"]
-}
-
-Opis lokalca: ${description}`;
-
-  const result = await generateCompletion(
-    [
-      { role: "system", content: "Si SEO strokovnjak. Vedno odgovoriš z veljavnim JSON." },
-      { role: "user", content: prompt },
-    ],
-    { temperature: 0.4, jsonMode: true, usageLog: { feature: "approve" } }
-  );
-
-  if (!result?.content) return;
-
-  const jsonMatch = result.content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) return;
-
-  const parsed = JSON.parse(jsonMatch[0]);
-
-  // Shrani AI enrichment v specialties (kot AI tags + keywords)
-  const existingSpecialties = await db.listing.findUnique({
-    where: { id: listingId },
-    select: { specialties: true },
-  });
-
-  const existing = existingSpecialties?.specialties
-    ? (JSON.parse(existingSpecialties.specialties) as string[])
-    : [];
-
-  const aiTags = [...(parsed.aiTags || []), ...(parsed.keywords || [])];
-  const merged = [...new Set([...existing, ...aiTags])].slice(0, 15);
-
-  await db.listing.update({
-    where: { id: listingId },
-    data: {
-      specialties: JSON.stringify(merged),
-    },
-  });
-
-  console.log(`[approve] AI enrichment za ${name}: ${merged.length} tagov`);
-}
+// Issue #9 ZERO-AI: enrichListingInBackground (AI SEO oznake/ključne besede,
+// zapisane v Listing.specialties BREZ pregleda) je POPOLNOMA ODSTRANJEN —
+// glej opombo v glavi rute.
 
 // Email obvestilo o odobritvi
 async function sendApprovalEmail(email: string, name: string, listingName: string) {
@@ -318,8 +263,8 @@ async function sendApprovalEmail(email: string, name: string, listingName: strin
       "Lokal odobren in objavljen",
       `<p>Pozdravljeni <strong>${escapeHtml(name)}</strong>,</p>
       <p>Vaš lokal <strong>${escapeHtml(listingName)}</strong> je bil odobren in je sedaj objavljen na platformi Discover Slovenia AI.</p>
-      <p>AI ga lahko sedaj priporoča uporabnikom v itinererjih in iskanju.</p>
-      <p>Vaš profil je bil avtomatsko optimiziran z AI (SEO oznake, ključne besede).</p>`
+      <p>Sedaj ga lahko platforma priporoča uporabnikom v itinererjih in iskanju.</p>
+      <p>Za večjo vidljivost dopolnite opis, slike in specialitete v vašem ponudniškem panelu.</p>`
     ),
   });
 }
@@ -351,7 +296,7 @@ async function sendMarketplaceApprovalEmail(
       } in je sedaj objavljen${
         isExperience ? "a" : ""
       } na platformi Discover Slovenia AI.</p>
-      <p>Uporabniki jo lahko sedaj najdejo v tržnici in AI priporočilih.</p>`
+      <p>Uporabniki jo lahko sedaj najdejo v tržnici in priporočilih platforme.</p>`
     ),
   });
 }

@@ -1,11 +1,13 @@
 // ============================================================================
 // TASK 31 (Tier 1 #3) — /api/journey/bookings/parse: E-POŠTNI VHOD { email }
 // ----------------------------------------------------------------------------
-// Funkcionalni testi novega kanala (AI odpovedan → deterministična rezerva,
-// isti vzorec kot issue5-t5d/issue6-d6b suite) + source-contract kaskade.
+// Funkcionalni testi novega kanala (ISSUE #9: deterministični parser PRIMA,
+// 0 AI žetonov — omrežje, ki odbija VSE, dokazuje 0 odvisnosti; isti
+// vzorec kot issue5-t5d/issue6-d6b suite) + source-contract kaskade.
 //
 // Pokrito:
-//  A. preprosta e-pošta → 200 deterministic + fields (Subject s ponudnikom);
+//  A. preprosta e-pošta → 200 deterministic + via text-parser (Subject s
+//     ponudnikom — besedilna kaskada, 0 AI);
 //  B. quoted-printable + RFC 2047 Subject → dekodirano skozi celo pot;
 //  C. .ics priloga → via:"email-ics" (specifično pred splošnim, 0 AI);
 //  D. smeti brez glave → iskren 422 z nasvetom (zavihek Besedilo);
@@ -31,8 +33,8 @@ let seq = 0;
 beforeEach(() => {
   seq += 1;
   clearProviderRateLimits();
-  // VSI omrežni klici odbijejo → generateCompletion vrne null → REZERVA
-  // (deterministična pot — 0 AI žetonov, isti vzorec kot obstoječi suite).
+  // ISSUE #9: besedilna kaskada je čisto deterministična (0 AI) — omrežje,
+  // ki odbija VSE, dokazuje 0 odvisnosti (isti vzorec kot obstoječi suite).
   globalThis.fetch = (async () => {
     throw new Error(`test-offline-${seq}`);
   }) as unknown as typeof fetch;
@@ -58,7 +60,7 @@ function postEmail(raw: string, extra: Record<string, unknown> = {}) {
   );
 }
 
-describe("TASK 31: parse { email } — funkcionalno (AI odpovedan → rezerva)", () => {
+describe("TASK 31 + ISSUE #9: parse { email } — funkcionalno (0 AI, PRIMA)", () => {
   test("A: preprosta e-pošta → 200 deterministic + Subject s ponudnikom", async () => {
     const raw = [
       "From: potrditve@getyourguide.com",
@@ -84,7 +86,7 @@ describe("TASK 31: parse { email } — funkcionalno (AI odpovedan → rezerva)",
       };
     };
     expect(body.method).toBe("deterministic");
-    expect(body.via).toBe("fallback");
+    expect(body.via).toBe("text-parser");
     expect(body.persisted).toBe(false);
     expect(body.fields.providerName).toBe("GetYourGuide");
     expect(body.fields.reservationNumber).toBe("GYG-123456");
@@ -210,6 +212,10 @@ describe("TASK 31: parse { email } — source-contract", () => {
     expect(icsIdx).toBeGreaterThanOrEqual(0);
     expect(textIdx).toBeGreaterThan(icsIdx);
     expect(pdfIdx).toBeGreaterThan(textIdx);
+    // ISSUE #9 (ZERO-AI): CELA e-poštna kaskada je deterministična — v ruti
+    // ni klica generateCompletion (edini AI je VLM za sliko):
+    expect(routeSrc).not.toMatch(/generateCompletion\(/);
+    expect(routeSrc).toContain("generateVisionCompletion");
   });
 
   test("cap + MAX_RAW_EMAIL_CHARS spoštovan (413 pot)", () => {

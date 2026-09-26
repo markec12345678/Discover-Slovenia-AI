@@ -5,14 +5,15 @@ import { rateLimit } from "@/lib/rate-limit";
 import { toPublicProduct } from "@/lib/public-fields";
 
 // GET /api/recommendations/products?productId=XXX&limit=4&lang=sl|en
-// Vrne AI-priporočene podobne izdelke.
-// AI (GLM) izbere 4 najbolj smiselne iz 10 SQL kandidatov.
+// Vrne DETERMINISTIČNO priporočene podobne izdelke (ISSUE #9 ZERO-AI).
+// Uteženo točkovanje izbere 4 najbolj relevantne iz 10 SQL kandidatov
+// (kategorija/regija/ocena/cena/značke — 0 AI klicev, reproducibilno).
 // Rezultati so cachirani 24 ur (memory + data/ai-rec-cache.json).
 // P7-C2 (F5.3): dodan rate limit (60/10 min) — prej bi lahko javni bot
-// nežnostno sprožal AI klice (cache na Vercelu ni deloval, glej lib).
+// nežnostno silil izračune (cache na Vercelu ni deloval, glej lib).
 // ISSUE #4 §20 (1.97.0): vsak item nosi why (eno vrstico razloga, samo
-// dejstva iz kandidata) + whySource ("ai" | "deterministic") — ne črn
-// AI ranking. lang izbere jezikovno različico (cache hrani obe).
+// dejstva iz kandidata) + whySource — po ISSUE #9 vedno "deterministic".
+// lang izbere jezikovno različico (cache hrani obe).
 export async function GET(request: Request) {
   const limited = rateLimit(request, {
     limit: 60,
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
       );
     }
 
-    // === AI PRIPOROČILA (z 24h cache) ===
+    // === DETERMINISTIČNA PRIPOROČILA (z 24h cache — ISSUE #9) ===
     // §20: whys prihajajo z istim klicem (cache jih nosi v obeh jezikih).
     const { itemIds, whys, source } = await getRecommendedIds("product", productId);
 
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ products: [], total: 0, source });
     }
 
-    // Pridobi full podatke za AI-izbrane IDs (v vrstnem redu priporočila)
+    // Pridobi full podatke za izbrane IDs (v vrstnem redu priporočila)
     // P3c-8: kandidati v getRecommendedIds so že filtrirani na published —
     // a cache (24h) lahko zastara (item je medtem umaknjen iz javnosti),
     // zato obrambno filtriramo TUDI tukaj.
@@ -69,7 +70,7 @@ export async function GET(request: Request) {
       where: { id: { in: itemIds }, status: "published" },
     });
 
-    // Ohrani vrstni red AI priporočila
+    // Ohrani vrstni red priporočila (uteženo točkovanje)
     const ordered = itemIds
       .map((id) => rows.find((r) => r.id === id))
       .filter((r): r is NonNullable<typeof r> => r !== null)

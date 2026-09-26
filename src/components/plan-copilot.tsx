@@ -8,7 +8,6 @@ import {
   Send,
   Loader2,
   Calculator,
-  Sparkles,
   CircleSlash,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,8 +39,10 @@ interface PlanCopilotProps {
 interface ChatMessage {
   role: "user" | "assistant";
   text: string;
-  /** "computed" = čisto izračunano · "openrouter"/"gemini"/"puter"/
-   *  "z-ai-sdk" = AI iz dejstev · "fallback" = iskrena zavrnitev ugibanja */
+  /** ISSUE #9: "computed" = čisto izračunano (EDINA pot — AI fraziranje
+   *  je odstranjeno) · "fallback" = iskrena zavrnitev ugibanja (neprepoznan
+   *  namen). Legacy vrednosti ("openrouter"/"gemini"/"puter"/"z-ai-sdk")
+   *  se ne oddajajo več. */
   source?:
     | "computed"
     | "openrouter"
@@ -97,19 +98,6 @@ function sourceBadge(
       icon: Calculator,
       className:
         "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
-    };
-  }
-  if (
-    source === "openrouter" ||
-    source === "gemini" ||
-    source === "puter" ||
-    source === "z-ai-sdk"
-  ) {
-    return {
-      label: L.badgeAi[isEn ? "en" : "sl"],
-      icon: Sparkles,
-      className:
-        "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400",
     };
   }
   if (source === "fallback") {

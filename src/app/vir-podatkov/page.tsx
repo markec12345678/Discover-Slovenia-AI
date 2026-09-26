@@ -71,7 +71,7 @@ const SOURCES = [
   { id: "sloveniaInfo", name: "I feel Slovenia (STO) — slovenia.info", url: "https://www.slovenia.info" },
   { id: "wikipedia", name: "Wikipedia / Wikidata", url: "https://www.wikimedia.org" },
   { id: "openMeteo", name: "Open-Meteo", url: "https://open-meteo.com" },
-  { id: "zai", name: "z-ai-web-dev-sdk (GLM)", url: "https://z.ai" },
+  { id: "zai", name: "z-ai-web-dev-sdk (vizija — opcijsko)", url: "https://z.ai" },
 ] as const;
 
 export async function generateMetadata(): Promise<Metadata> {

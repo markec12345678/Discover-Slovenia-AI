@@ -101,15 +101,22 @@ describe("HARDENING I5: hasItineraryShape — crash-razredi zavrnjeni", () => {
   });
 });
 
-describe("HARDENING I6: z-ai-sdk TEXT pot ima timeout (kot VLM)", () => {
-  test("Promise.race + ZAI_TEXT_TIMEOUT_MS v text poti", () => {
-    expect(aiClientSrc).toContain("ZAI_TEXT_TIMEOUT_MS = 45_000");
-    expect(aiClientSrc).toContain("ZAI_TEXT_TIMEOUT");
-    // race je na chat.completions.create (text), ločeno od createVision (VLM)
-    const textRace = aiClientSrc.indexOf("ZAI_TEXT_TIMEOUT_MS");
-    const visionRace = aiClientSrc.indexOf("VLM_TIMEOUT_MS");
-    expect(textRace).toBeGreaterThan(-1);
-    expect(visionRace).toBeGreaterThan(-1);
+describe("HARDENING I6 (ISSUE #9): z-ai VLM pot ima timeout; TEXT pot ne obstaja več", () => {
+  test("VLM_TIMEOUT_MS + Promise.race na createVision (edini z-ai klic)", () => {
+    // ISSUE #9 (ZERO-AI): tekstovna z-ai noga (chat.completions.create z
+    // ZAI_TEXT_TIMEOUT_MS) je ODSTRANJENA — v ai-client ostane SAMO VLM.
+    expect(aiClientSrc).toContain("VLM_TIMEOUT_MS = 45_000");
     expect(aiClientSrc).toContain("Promise.race");
+    expect(aiClientSrc).toContain("createVision");
+    // tekstna noga NE obstaja več (0 LLM klicev kjer koli) — glava modula
+    // sme omenjati odstranjeno verigo (zgodovinski zapis), KODA pa ne sme
+    // vsebovati klica/definicije/uvoza.
+    expect(aiClientSrc).not.toContain("ZAI_TEXT_TIMEOUT");
+    expect(aiClientSrc).not.toMatch(/generateCompletion\s*\(/);
+    expect(aiClientSrc).not.toMatch(/function generateCompletion/);
+    expect(aiClientSrc).not.toMatch(/openrouter\s*:/i);
+    expect(aiClientSrc).not.toMatch(/puter\s*:/i);
+    expect(aiClientSrc).not.toContain('from "openai"');
+    expect(aiClientSrc).not.toContain("OpenAI(");
   });
 });

@@ -2,18 +2,18 @@
 
 import { useState } from "react";
 import { Sparkles, Loader2, Check, X, Wand2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 
 interface AutoTagResult {
   category: string;
   attributes: Record<string, boolean>;
   tags: string[];
   confidence: "high" | "medium" | "low";
-  source: "ai" | "fallback";
+  source: "deterministic";
 }
 
 interface AutoTagButtonProps {
@@ -26,14 +26,20 @@ interface AutoTagButtonProps {
 }
 
 /**
- * AutoTagButton — AI predlagalnik kategorije in atributov.
+ * AutoTagButton — DETERMINISTIČNI predlagalnik kategorije in atributov
+ * (Issue #9 ZERO-AI: slovar taksonomije SL+EN, vir "deterministic").
  *
- * Lastnik vnese opis, klikne "AI predlagaj tage", AI pa predlaga:
+ * Lastnik vnese opis, klikne "Predlagaj tage", slovar taksonomije pa predlaga:
  * - kategorijo
  * - atribute (organic, familyFriendly, itd.)
  * - proste tagi
  *
- * Lastnik lahko predloge aplikira z enim klikom ali ignorira.
+ * Lastnik lahko predloge aplikira z enim klikom ali ignorira
+ * (human-in-the-loop flow nespremenjen).
+ *
+ * Nove oznake: i18n ključi v imenskem prostoru "ownerPanel" (glej
+ * docs/audit/issue9-report-b.md — vrednosti SL/EN za sporočilne datoteke);
+ * t.has() pasti preprečijo surove ključe, dokler JSON ni popolnjen.
  */
 export function AutoTagButton({
   type,
@@ -44,6 +50,24 @@ export function AutoTagButton({
   disabled,
 }: AutoTagButtonProps) {
   const { toast } = useToast();
+  const t = useTranslations("ownerPanel");
+  // i18n z dvojno varovalko: dokler ključ ni v messages/*.json, velja SL literal
+  const tagSourceBadge = t.has("tagSourceDictionary")
+    ? t("tagSourceDictionary")
+    : "Slovar taksonomije";
+  const buttonLabel = t.has("autoTagButton") ? t("autoTagButton") : "Predlagaj tage";
+  const buttonLoading = t.has("autoTagButtonLoading")
+    ? t("autoTagButtonLoading")
+    : "Predlaga …";
+  const suggestionTitle = t.has("autoTagSuggestionTitle")
+    ? t("autoTagSuggestionTitle")
+    : "Predlog";
+  const toastReadyTitle = t.has("autoTagToastReady")
+    ? t("autoTagToastReady")
+    : "Predlog pripravljen! ✨";
+  const toastFailTitle = t.has("autoTagToastFail")
+    ? t("autoTagToastFail")
+    : "Predlog ni uspel";
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AutoTagResult | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -74,18 +98,18 @@ export function AutoTagButton({
         }),
       });
 
-      if (!res.ok) throw new Error("Napaka pri AI predlogu");
+      if (!res.ok) throw new Error("Napaka pri predlogu");
 
       const data: AutoTagResult = await res.json();
       setResult(data);
 
       toast({
-        title: "AI predlog pripravljen! ✨",
+        title: toastReadyTitle,
         description: `Kategorija: ${data.category} · ${Object.values(data.attributes).filter(Boolean).length} atributov · ${data.tags.length} tagov`,
       });
     } catch {
       toast({
-        title: "AI predlog ni uspel",
+        title: toastFailTitle,
         description: "Poskusite znova ali nastavite ročno.",
         variant: "destructive",
       });
@@ -131,24 +155,20 @@ export function AutoTagButton({
         ) : (
           <Wand2 className="size-3.5 text-primary" aria-hidden="true" />
         )}
-        {loading ? "AI predlaga..." : "AI predlagaj tage"}
+        {loading ? buttonLoading : buttonLabel}
       </Button>
 
       {showResult && result && (
         <Card className="border-primary/30 bg-primary/5 p-3">
           <div className="mb-2 flex items-center gap-2">
             <Sparkles className="size-4 text-primary" aria-hidden="true" />
-            <span className="text-sm font-semibold">AI predlog</span>
+            <span className="text-sm font-semibold">{suggestionTitle}</span>
+            {/* Vir: deterministični slovar taksonomije (Issue #9) — vedno poštena oznaka */}
             <Badge
               variant="secondary"
-              className={cn(
-                "ml-auto text-[9px]",
-                result.source === "fallback"
-                  ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-              )}
+              className="ml-auto bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
             >
-              {result.source === "fallback" ? "fallback" : "AI"}
+              {tagSourceBadge}
             </Badge>
             <Badge variant="outline" className="text-[9px]">
               {result.confidence === "high" ? "Visoka" : result.confidence === "medium" ? "Srednja" : "Nizka"} zaupanja

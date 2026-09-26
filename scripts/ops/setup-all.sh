@@ -4,8 +4,7 @@
 # ----------------------------------------------------------------------------
 # Zaporedje:
 #   1. doctor.sh               — revizija konfiguracije
-#   2. openrouter-verify.sh    — živi test primarnega providerja
-#   3. gemini-verify.sh        — živi test sekundarnega (poštena interpretacija)
+#   2. gemini-verify.sh        — živi test opcijske vision plasti (poštena interpretacija)
 #   4. github-secret-verify.sh — prisotnost CI secretov
 #   5. Navodila za koraka, ki zahtevata UPORABNIKOV token (Vercel/Render)
 #
@@ -23,7 +22,6 @@ step "1/4 Doctor (revizija)"
 bash "${HERE}/doctor.sh" || warn "Doctor je našel opozorila — glej zgoraj."
 
 step "2/4 OpenRouter verify (PRIMARNI provider)"
-bash "${HERE}/openrouter-verify.sh" --quick || RC=1
 
 step "3/4 Gemini verify (SEKUNDARNI provider)"
 bash "${HERE}/gemini-verify.sh" || RC=1
@@ -34,9 +32,9 @@ bash "${HERE}/github-secret-verify.sh" || warn "Manjkajoči secret-i: ./github-s
 step "ROČNA KORAKA (zahtevata uporabnikov žeton — skripta jih ne more pridobiti)"
 cat <<'EOF'
   ▸ Vercel:  token na https://vercel.com/account/tokens, Project ID v Settings → General
-      VERCEL_TOKEN=xxx VERCEL_PROJECT_ID=prj_xxx ./vercel-env-set.sh OPENROUTER_API_KEY GEMINI_API_KEY
+      VERCEL_TOKEN=xxx VERCEL_PROJECT_ID=prj_xxx ./vercel-env-set.sh GEMINI_API_KEY
   ▸ Render:  API key na https://dashboard.render.com/u/settings#api-keys, Service ID v Settings
-      RENDER_API_KEY=rnd_xxx RENDER_SERVICE_ID=srv-xxx ./render-env-set.sh OPENROUTER_API_KEY GEMINI_API_KEY
+      RENDER_API_KEY=rnd_xxx RENDER_SERVICE_ID=srv-xxx ./render-env-set.sh GEMINI_API_KEY
   ▸ Živi CI dokaz obeh ključev (GitHub runner, podprta regija):
       ./github-workflow-run.sh
 EOF

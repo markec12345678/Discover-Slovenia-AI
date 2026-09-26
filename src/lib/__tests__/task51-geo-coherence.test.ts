@@ -933,7 +933,7 @@ describe.skipIf(!hasKt)("TASK 51 §12: adversarial geografija (G-A1 … G-A10)",
       interests: ["narava", "mesta"],
       selectedProviderProducts: [ktSelection("411", 1)],
     });
-    expect(it.source).toBe("fallback");
+    expect(it.source).toBe("deterministic") // ISSUE #9: AI pot odstranjena — načrt je vedno determinističen (ne "fallback" degradacija);
     const fixed = allStops(it).filter((s) => s.destination_id === "kiwitaxi:411");
     expect(fixed.length).toBe(1);
     expect(fixed[0].estimated_cost).toBe(KT_411); // KT dataset = LOKALNI kanon
@@ -943,7 +943,7 @@ describe.skipIf(!hasKt)("TASK 51 §12: adversarial geografija (G-A1 … G-A10)",
   test("G-A8 AI 429/odpoved → fallback je GEOGRAFSKO KOHERENTEN (root-cause fix)", async () => {
     // AI odpoveduje (fetch zavrnjen) — fallback, urejen okoli sidrov
     const it = await generate({ days: 5, budget: 300, interests: ["narava", "mesta"] });
-    expect(it.source).toBe("fallback");
+    expect(it.source).toBe("deterministic") // ISSUE #9: AI pot odstranjena — načrt je vedno determinističen (ne "fallback" degradacija);
     const rep = assertGeoCoherent(it, ["narava", "mesta"]);
     // dokaz napredka: 0 vračanj; total ≤ stari oceni-red (T2 zgoraj)
     expect(rep.backtrackingEvents.length).toBe(0);
@@ -961,7 +961,7 @@ describe.skipIf(!hasKt)("TASK 51 §12: adversarial geografija (G-A1 … G-A10)",
         })
       )) as unknown as typeof fetch;
     const it = await generate({ days: 5, budget: 300, interests: ["narava", "mesta"] });
-    expect(it.source).toBe("fallback");
+    expect(it.source).toBe("deterministic") // ISSUE #9: AI pot odstranjena — načrt je vedno determinističen (ne "fallback" degradacija);
     assertGeoCoherent(it, ["narava", "mesta"]);
   });
 

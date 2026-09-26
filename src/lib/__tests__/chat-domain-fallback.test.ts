@@ -1,12 +1,13 @@
 // ============================================================================
-// ISSUE #2 §5 — REGRESIJSKI TESTI: deterministična domenska plast /api/chat
+// ISSUE #2 §5 → ISSUE #9 ZERO-AI — REGRESIJSKI TESTI: deterministična
+// domenska plast /api/chat (buildDomainAnswer — PRIMARNA pot)
 // ============================================================================
-// Zahteva: ko AI veriga ni dosegljiva (ni ključev), /api/chat NE simulira
-// LLM-ja, ampak odgovarja iz DEJANSKIH Discover podatkov (destinacije,
-// lokalni, izdelki, izkušnje, OSM kraji, vreme Open-Meteo) — pošteno
-// označeno, brez izmišljenih podatkov, z "od €X" (FROM_PRICE) semantiko,
-// ZUNANJA (nikoli "potrjeno") rezervacijsko semantiko in NEZNANO
-// razpoložljivostjo.
+// Zahteva: /api/chat NE kliče LLM-ja (Issue #9) — odgovarja iz DEJANSKIH
+// Discover podatkov (destinacije, lokalni, izdelki, izkušnje, OSM kraji,
+// vreme Open-Meteo), brez izmišljenih podatkov, z "od €X" (FROM_PRICE)
+// semantiko, ZUNANJA (nikoli "potrjeno") rezervacijsko semantiko in
+// NEZNANO razpoložljivostjo. Odgovor NIKOLI ne trdi udeležbe AI (AI ni
+// več pričakovana — predpona "AI trenutno ni dosegljiv" je odstranjena).
 //
 // Testi pokrivajo 10 tipov vprašanj iz Issue #2 §8 (glasovni klepet):
 // destinacija, itinerer, Journey, My Trip, vreme, aktivnost, restavracija,
@@ -14,8 +15,8 @@
 // ============================================================================
 import { describe, expect, test } from "bun:test";
 import {
-  buildDomainFallbackAnswer,
-  type DomainFallbackContext,
+  buildDomainAnswer,
+  type DomainContext,
   type DomainListing,
   type DomainProduct,
   type DomainExperience,
@@ -79,7 +80,7 @@ const OSM_PLACES: ChatPlace[] = [
   osmPlace("Gostilna Tartini"),
 ];
 
-const CONTEXT: DomainFallbackContext = {
+const CONTEXT: DomainContext = {
   listings: LISTINGS,
   products: PRODUCTS,
   experiences: EXPERIENCES,
@@ -99,24 +100,25 @@ const REAL_WEATHER: DailyForecast[] = [
 // ─── Testi ─────────────────────────────────────────────────────────────────
 
 describe("chat-domain-fallback — poštenost in izvor", () => {
-  test("① vsak odgovor nosi izrecno oznako, da AI ni dosegljiv (ni lažnega AI)", async () => {
+  test("① odgovor NIKOLI ne trdi udeležbe AI (Issue #9: AI ni več pričakovana — ne prazna obljuba, ne izgovor)", async () => {
     for (const lang of ["sl", "en"] as const) {
-      const a = await buildDomainFallbackAnswer(
+      const a = await buildDomainAnswer(
         "Kaj lahko vidim v Piranu?",
         lang,
         CONTEXT,
         { weather: NO_WEATHER }
       );
-      expect(a.message).toContain(
-        lang === "sl"
-          ? "AI trenutno ni dosegljiv"
-          : "AI is currently unavailable"
-      );
+      // Odstranjena predpona "AI trenutno ni dosegljiv" — AI ni več del
+      // poti, zato je kakršna koli omemba AI v odgovoru napačna.
+      expect(a.message).not.toContain("AI trenutno ni dosegljiv");
+      expect(a.message).not.toContain("AI is currently unavailable");
+      expect(a.message).not.toContain("sem AI");
+      expect(a.message.length).toBeGreaterThan(0);
     }
   });
 
   test("② neznano vprašanje → iskren odgovor BREZ ugibanja + realni primeri destinacij", async () => {
-    const a = await buildDomainFallbackAnswer(
+    const a = await buildDomainAnswer(
       "Povej mi šalo o programiranju.",
       "sl",
       CONTEXT,
@@ -135,7 +137,7 @@ describe("chat-domain-fallback — 10 tipov vprašanj (Issue #2 §8)", () => {
   test("③ DESTINACIJA: realni podatki Pirana (tagline/aktivnosti), ne trdo kodirano besedilo", async () => {
     const piran = DESTINATIONS.find((d) => d.name === "Piran");
     expect(piran).toBeTruthy();
-    const a = await buildDomainFallbackAnswer(
+    const a = await buildDomainAnswer(
       "Kaj lahko vidim v Piranu?",
       "sl",
       CONTEXT,
@@ -150,7 +152,7 @@ describe("chat-domain-fallback — 10 tipov vprašanj (Issue #2 §8)", () => {
   });
 
   test("④ VREME (z destinacijo): realna napoved Open-Meteo se prebere; null → izrecno nedosegljivo", async () => {
-    const ok = await buildDomainFallbackAnswer(
+    const ok = await buildDomainAnswer(
       "Kakšno bo vreme v Piranu?",
       "sl",
       CONTEXT,
@@ -160,7 +162,7 @@ describe("chat-domain-fallback — 10 tipov vprašanj (Issue #2 §8)", () => {
     expect(ok.message).toContain("21 °C");
     expect(ok.message).toContain("35%");
 
-    const bad = await buildDomainFallbackAnswer(
+    const bad = await buildDomainAnswer(
       "Kakšno bo vreme v Piranu?",
       "sl",
       CONTEXT,
@@ -172,7 +174,7 @@ describe("chat-domain-fallback — 10 tipov vprašanj (Issue #2 §8)", () => {
   });
 
   test("⑤ RESTAVRACIJA: realni OSM kraji se naštejo PO IMENU in pridejo na klient (mini zemljevid)", async () => {
-    const a = await buildDomainFallbackAnswer(
+    const a = await buildDomainAnswer(
       "Kje lahko jedem v Piranu?",
       "sl",
       CONTEXT,
@@ -185,7 +187,7 @@ describe("chat-domain-fallback — 10 tipov vprašanj (Issue #2 §8)", () => {
   });
 
   test("⑥ AKTIVNOSTI: aktivnosti destinacije + realne izkušnje iz konteksta", async () => {
-    const a = await buildDomainFallbackAnswer(
+    const a = await buildDomainAnswer(
       "Katere aktivnosti so v Piranu?",
       "sl",
       CONTEXT,
@@ -198,7 +200,7 @@ describe("chat-domain-fallback — 10 tipov vprašanj (Issue #2 §8)", () => {
   });
 
   test("⑦ CENA: FROM_PRICE semantika — 'od €X' iz realnih cen, nikoli živa cena", async () => {
-    const a = await buildDomainFallbackAnswer(
+    const a = await buildDomainAnswer(
       "Koliko stane obisk Pirana?",
       "sl",
       CONTEXT,
@@ -212,7 +214,7 @@ describe("chat-domain-fallback — 10 tipov vprašanj (Issue #2 §8)", () => {
   });
 
   test("⑧ ITINERER: usmeritev na načrtovalca z opisom realnih zmožnosti", async () => {
-    const a = await buildDomainFallbackAnswer(
+    const a = await buildDomainAnswer(
       "Kako naredim načrt potovanja?",
       "sl",
       CONTEXT,
@@ -224,7 +226,7 @@ describe("chat-domain-fallback — 10 tipov vprašanj (Issue #2 §8)", () => {
   });
 
   test("⑨ JOURNEY/PREVOZ: usmeritev na /potovanje z 'od €X' semantiko prevozov", async () => {
-    const a = await buildDomainFallbackAnswer(
+    const a = await buildDomainAnswer(
       "Kako pridem iz Ljubljane na obalo, kakšen prevoz?",
       "sl",
       CONTEXT,
@@ -235,7 +237,7 @@ describe("chat-domain-fallback — 10 tipov vprašanj (Issue #2 §8)", () => {
   });
 
   test("⑩ MY TRIP / STATUS REZERVACIJE: ZUNANJA semantika, NIKOLI 'potrjeno'", async () => {
-    const a = await buildDomainFallbackAnswer(
+    const a = await buildDomainAnswer(
       "Kakšen je status moje rezervacije?",
       "sl",
       CONTEXT,
@@ -248,7 +250,7 @@ describe("chat-domain-fallback — 10 tipov vprašanj (Issue #2 §8)", () => {
   });
 
   test("⑪ RAZPOLOŽLJIVOST: NEZNANO — nikoli izmišljeni prosti termini", async () => {
-    const a = await buildDomainFallbackAnswer(
+    const a = await buildDomainAnswer(
       "So termini razpoložljivi?",
       "sl",
       CONTEXT,
@@ -270,7 +272,7 @@ describe("chat-domain-fallback — enrichment in dvojezičnost", () => {
       rating: 4.6,
       priceRange: "€€",
     };
-    const a = await buildDomainFallbackAnswer(
+    const a = await buildDomainAnswer(
       "Kje lahko jedem v Piranu?",
       "sl",
       { ...CONTEXT, osmPlaces: [] }, // brez OSM → pride do baze
@@ -291,7 +293,7 @@ describe("chat-domain-fallback — enrichment in dvojezičnost", () => {
   });
 
   test("⑬ enricher napaka (baza pada) NE podre odgovora", async () => {
-    const a = await buildDomainFallbackAnswer("Kaj videti v Piranu?", "sl", CONTEXT, {
+    const a = await buildDomainAnswer("Kaj videti v Piranu?", "sl", CONTEXT, {
       weather: NO_WEATHER,
       enrich: async () => {
         throw new Error("db down");
@@ -300,8 +302,8 @@ describe("chat-domain-fallback — enrichment in dvojezičnost", () => {
     expect(a.message).toContain("Piran"); // osnovni podatki destinacije kljub temu
   });
 
-  test("⑭ EN jezik: angleški odgovor z enakimi realnimi podatki", async () => {
-    const a = await buildDomainFallbackAnswer(
+  test("⑭ EN jezik: angleški odgovor z enakimi realnimi podatki (brez omembe AI)", async () => {
+    const a = await buildDomainAnswer(
       "Where can I eat in Piran?",
       "en",
       CONTEXT,
@@ -309,11 +311,11 @@ describe("chat-domain-fallback — enrichment in dvojezičnost", () => {
     );
     expect(a.message).toContain("Restavracija Nejc");
     expect(a.message).toContain("community data");
-    expect(a.message).toContain("AI is currently unavailable");
+    expect(a.message).not.toContain("AI");
   });
 
   test("⑮ pozdrav: kratek pozdrav z realnimi primeri vprašanj (38 destinacij)", async () => {
-    const a = await buildDomainFallbackAnswer("Pozdravljen!", "sl", CONTEXT, {
+    const a = await buildDomainAnswer("Pozdravljen!", "sl", CONTEXT, {
       weather: NO_WEATHER,
     });
     expect(a.message).toContain("Pozdravljen");
@@ -324,7 +326,7 @@ describe("chat-domain-fallback — enrichment in dvojezičnost", () => {
 
 describe("chat-domain-fallback — OSM napaka (zunanja storitev down)", () => {
   test("⑯ kraj je bil IMENOVAN, OSM pa prazno → izrecno 'ni uspelo pridobiti' (NE sprašuje po kraju, ki ga uporabnik ravno povedal)", async () => {
-    const a = await buildDomainFallbackAnswer(
+    const a = await buildDomainAnswer(
       "Kje lahko jedem v Piranu?",
       "sl",
       { ...CONTEXT, osmPlaces: [] },

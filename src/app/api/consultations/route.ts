@@ -33,16 +33,19 @@ import {
 // (Booking.source = "consultation") → ponudnik vidi vrednost, ki jo
 // plača prek premium naročnine.
 //
+// Issue #9 ZERO-AI: odgovor je DETERMINISTIČEN (ocenjena izbira nad bazo
+// realnih ponudnikov — 0 AI, 0 omrežja).
+//
 // Pot:
 //   1. validacija (vsa polja, interesi/proračun iz fiksnih seznamov),
-//   2. dnevna meja na e-pošto (3/dan — varuje AI stroške, ne prihodek),
-//   3. kontekst iz baze (premium-aware) → AI globok odgovor (grounded)
-//      oz. iskren programski fallback,
+//   2. dnevna meja na e-pošto (3/dan — produktna varovalka enakovredne
+//      izkušnje za vse),
+//   3. kontekst iz baze (premium-aware) → deterministični osebni načrt,
 //   4. odgovor shranjen + zaseben accessToken (/konzultacija/{token}),
 //      B2B tracking citiranih partnerjev + dostavna e-pošta (fire-and-forget).
 // ============================================================================
 
-/** Dnevna meja globoke konzultacije na e-pošto (AI stroški, ne prihodek). */
+/** Dnevna meja globoke konzultacije na e-pošto (produktna varovalka). */
 const DAILY_CONSULTATIONS = 3;
 
 /** Začetek »danes« po Ljubljani (DST-varno — isti trik kot /api/ask-local). */
@@ -83,7 +86,8 @@ interface ConsultationRequest {
 }
 
 export async function POST(request: Request) {
-  // AI klic je drag — zmerno omejimo po IP (zloraba-varovalka)
+  // Zmerno omejimo po IP (zloraba-varovalka — dnevna meja na e-pošto je
+  // glavna produktna varovalka)
   const limited = rateLimit(request, {
     limit: 6,
     windowMs: 3600000,
@@ -179,14 +183,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    // === DNEVNA MEJA NA E-POŠTO (3/dan — poštena varovalka AI stroškov) ===
-    // RC-1 (revizija 1.36.0, P2): prej je bila meja count → AI klic (SEKUNDE)
-    // → create — dva paralelna POST-a sta oba prebrala isto število in oba
-    // pognala drag AI klic (meja 3/dan razbijljiva na 6+/dan). Zdaj: vrstica
-    // se ustvari NAJPREJ (status "pending" — ATOMARNO si prideli kvoto), šele
-    // nato preštejemo vključno z njo; če je čez mejo, svojo vrstico pobrišemo
-    // in vrnemo 429. AI klic teče šele za potrjeno kvoto; ob napaki AI se
-    // pending vrstica pobriše (kvota se sprosti).
+    // === DNEVNA MEJA NA E-POŠTO (3/dan — poštena produktna varovalka) ===
+    // RC-1 (revizija 1.36.0, P2): prej je bila meja count → generiranje
+    // (SEKUNDE) → create — dva paralelna POST-a sta oba prebrala isto
+    // število in oba pognala izračun (meja 3/dan razbijljiva na 6+/dan).
+    // Zdaj: vrstica se ustvari NAJPREJ (status "pending" — ATOMARNO si
+    // prideli kvoto), šele nato preštejemo vključno z njo; če je čez mejo,
+    // svojo vrstico pobrišemo in vrnemo 429. Izračun teče šele za
+    // potrjeno kvoto; ob napaki se pending vrstica pobriše (kvota se
+    // sprosti).
     const pendingConsultation = await db.consultation.create({
       data: {
         accessToken: randomId(24),
@@ -236,18 +241,18 @@ export async function POST(request: Request) {
       answer = generated.answer;
       answerSource = generated.answerSource;
 
-      // Ujeti partnerji (samo iz konteksta, podanega AI — ista disciplinirana
-      // ekstrakcija kot ask-local)
+      // Ujeti partnerji (samo iz konteksta, podanega motorju — ista
+      // disciplinirana ekstrakcija kot ask-local)
       partners = extractConsultPartners(answer, context.items);
       await trackConsultationPartnerExposure(
         context.items.filter((i) => partners.some((p) => p.name === i.name))
       ).catch(() => undefined);
-    } catch (aiError) {
-      // AI napaka → sprosti zahtevano kvoto (pending vrstica ven)
+    } catch (genError) {
+      // Napaka generiranja → sprosti zahtevano kvoto (pending vrstica ven)
       await db.consultation
         .delete({ where: { id: pendingConsultation.id } })
         .catch(() => undefined);
-      throw aiError;
+      throw genError;
     }
 
     // === SHRANI (zaseben dostop prek /konzultacija/{token}) ===

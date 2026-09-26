@@ -76,10 +76,11 @@ interface ExperienceModalProps {
 }
 
 /**
- * §20 (1.97.0): AI priporočilo z razložljivo why vrstico — ne črn AI
- * ranking. `whySource: "deterministic"` pomeni, da vrstico ni curirala
- * AI, ampak jo je koda sestavila iz podatkov izkušnje (UI pokaže
- * "(iz podatkov)").
+ * §20 (1.97.0): priporočilo z razložljivo why vrstico — ne črn ranking.
+ * `whySource: "deterministic"` pomeni, da vrstico je koda sestavila iz
+ * podatkov izkušnje (UI pokaže "(iz podatkov)"). ISSUE #9 (ZERO-AI):
+ * NOVE vrstice so VEDNO "deterministic" — "ai" ostaja samo za branje
+ * legacy cache zapisov (TTL 24 h).
  */
 interface RecommendedExperience extends Experience {
   why?: string;
@@ -89,7 +90,7 @@ interface RecommendedExperience extends Experience {
 interface RecommendationsResponse {
   experiences: RecommendedExperience[];
   total: number;
-  source?: "ai" | "fallback" | "cache";
+  source?: "deterministic" | "fallback" | "cache" | "ai";
 }
 
 // TASK 8 / F4-B (issue #8 Faza 4 — EN razširitev booking sklada): L-pattern
@@ -480,7 +481,9 @@ export function ExperienceModal({
   const [recommendations, setRecommendations] = useState<RecommendedExperience[]>([]);
   const [recLoading, setRecLoading] = useState(false);
   const [recError, setRecError] = useState<boolean>(false);
-  const [recSource, setRecSource] = useState<"ai" | "fallback" | "cache">("ai");
+  const [recSource, setRecSource] = useState<
+    "deterministic" | "fallback" | "cache" | "ai"
+  >("deterministic");
 
   const fetchRecommendations = useCallback(async (experienceId: string) => {
     setRecLoading(true);
@@ -495,7 +498,7 @@ export function ExperienceModal({
       if (!res.ok) throw new Error("Napaka pri priporočilih");
       const data: RecommendationsResponse = await res.json();
       setRecommendations(data.experiences ?? []);
-      setRecSource(data.source ?? "fallback");
+      setRecSource(data.source ?? "deterministic");
     } catch {
       setRecError(true);
       setRecommendations([]);
@@ -924,7 +927,7 @@ export function ExperienceModal({
             {/* UGC mnenja obiskovalcev (ločeno od demo ratinga) */}
             <ReviewSection key={`reviews-${experience.id}`} experienceId={experience.id} />
 
-            {/* Morda vam je všeč — AI priporočila */}
+            {/* Morda vam je všeč — deterministična priporočila (ISSUE #9: 0 AI) */}
             <RecommendationsSection
               loading={recLoading}
               error={recError}
@@ -1805,7 +1808,7 @@ function RecommendationsSection({
   items: RecommendedExperience[];
   currentId: string;
   onSelect?: (experience: Experience) => void;
-  source?: "ai" | "fallback" | "cache";
+  source?: "deterministic" | "fallback" | "cache" | "ai";
 }) {
   // §20: prevodi why vrstice — komponenta sicer nosi hardcoded SL besedila
   // (tržnica je slovenska površina), a why vrstica je NEW površina in
@@ -1816,8 +1819,10 @@ function RecommendationsSection({
   const locale = useLocale();
   const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
   const visible = items.filter((e) => e.id !== currentId).slice(0, 4);
-  const isAI = source === "ai" || source === "cache";
-  const sourceLabel = isAI ? "AI" : L.recs.similar[lang];
+  // ISSUE #9: vir je "deterministic" (cache = deterministični izračun iz
+  // predpomnilnika); "ai" ostaja samo za LEGACY cache zapise (TTL 24 h).
+  const isLegacyAi = source === "ai";
+  const sourceLabel = isLegacyAi ? "AI" : L.recs.similar[lang];
 
   if (loading) {
     return (
@@ -1856,13 +1861,13 @@ function RecommendationsSection({
         <Lightbulb className="size-4 text-primary" aria-hidden="true" />
         {L.recs.title[lang]}
         <Badge
-          variant={isAI ? "default" : "secondary"}
+          variant={isLegacyAi ? "default" : "secondary"}
           className="ml-auto gap-1 text-[10px]"
           title={
-            isAI ? L.recs.aiTitle[lang] : L.recs.similarTitle[lang]
+            isLegacyAi ? L.recs.aiTitle[lang] : L.recs.similarTitle[lang]
           }
         >
-          {isAI ? <Sparkles className="size-2.5" aria-hidden="true" /> : null}
+          {isLegacyAi ? <Sparkles className="size-2.5" aria-hidden="true" /> : null}
           {sourceLabel}
         </Badge>
       </h3>

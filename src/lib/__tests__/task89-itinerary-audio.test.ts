@@ -13,30 +13,31 @@
 //    in nenavadne ure gredo nespremenjene — iskren izvirnik),
 //  - chunkNarration (razrez ≤ meja PO STAVKIH; ovesno dolgi stavki po
 //    besedni meji; vsebina NIKOLI ne izgine; prazno → []),
-//  - concatWavBuffers (RIFF hoja po kosih — vir piše fmt+AIGC+LIST+data,
-//    NE kanonična 44-bajtna glava; pad byte pri lihih velikostih; formatna
-//    neusklajenost/smeti/trunciranje → null; en kos → validacija + passthrough),
-//  - narrationCacheKey (determinizem; loči dan/jezik/termin/datum/opis).
+//  - NARRATION_LIMITS (meje kosov — brskalniška sinteza tiho poreže dolge
+//    posamezne izgovore, zato komponenta izgovarja PO KOSIH).
+//    (Nekdanja strežniška TTS orodja — concatWavBuffers/narrationCacheKey —
+//    so ODSTRANJENA skupaj s strežniško potjo, ISSUE #9 Z9-D.)
 //
-// SOURCE-CONTRACT (readFileSync dejanskih datotek): /api/tts gradi skript
-// SAM iz strukturiranih podatkov (NE prostega besedila — varuje pred
-// zlorabo), zod vrata zrcalijo NARRATION_LIMITS, glasi tongtong/jam po
-// jeziku; TripTimeline + SharedTrip izrisujeta DayAudioButton (planner /
-// shared površina); komponenta ima fail-closed + print:hidden + iskreno
-// napako + analitiko; whitelist (klient + strežnik) + docs ANGLEŠKO NE —
+// SOURCE-CONTRACT (readFileSync/existsSync dejanskih datotek) — ISSUE #9
+// (ZERO-AI/GROUP C): strežniški TTS je ODSTRANJEN (tts-engine + /api/tts +
+// /api/itinerary/tts NE obstajajo več); DayAudioButton gradi skript NA
+// KLIENTU (ista čista lib funkcija) in ga izgovori BRKALNIŠKI glas
+// (window.speechSynthesis, isti vzorec kot glasovni klepet — lib/voice);
+// brskalnik brez govorne sinteze → dostopen tekstovni padec (»Prikaži
+// besedilo«). TripTimeline + SharedTrip izrisujeta DayAudioButton (planner
+// / shared površina); komponenta ima fail-closed + print:hidden + iskreno
+// napako + analitiko; whitelist (klient + strežnik) + docs —
 // docs/ANALYTICS-EVENTS.md dokumentira dogodek.
 // ============================================================================
 
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import {
   NARRATION_LIMITS,
   buildDayNarrationScript,
   chunkNarration,
-  concatWavBuffers,
-  narrationCacheKey,
   narrationStopsFromDay,
   speechDateLabel,
   speechTime,
@@ -91,53 +92,6 @@ function mkNarrDay(
   dateLabel?: string | null
 ): NarrationDayInput {
   return { dayNumber: n, stops, dateLabel: dateLabel ?? null };
-}
-
-// ── WAV fixture: ISTA ne-standardna postavitev kosov kot pravi TTS vir ────
-// (izmerjeno 2026-09-24: fmt(16) + AIGC(250|liho) + LIST(26) + data).
-// velikost PCM v bajtih; sampleRate/bit/kanali parameterizirani za negative.
-
-interface SrcWavOpts {
-  aigcSize?: number;
-  sampleRate?: number;
-  bits?: number;
-  channels?: number;
-}
-
-function makeSrcWav(pcmLen: number, opts: SrcWavOpts = {}): Buffer {
-  const {
-    aigcSize = 250,
-    sampleRate = 24000,
-    bits = 16,
-    channels = 1,
-  } = opts;
-  const pad = aigcSize % 2;
-  const listOff = 36 + 8 + aigcSize + pad;
-  const dataOff = listOff + 8 + 26;
-  const headerLen = dataOff + 8;
-  const total = headerLen + pcmLen;
-  const b = Buffer.alloc(total);
-  b.write("RIFF", 0, "ascii");
-  b.writeUInt32LE(total - 8, 4);
-  b.write("WAVE", 8, "ascii");
-  b.write("fmt ", 12, "ascii");
-  b.writeUInt32LE(16, 16);
-  b.writeUInt16LE(1, 20); // PCM
-  b.writeUInt16LE(channels, 22);
-  b.writeUInt32LE(sampleRate, 24);
-  b.writeUInt32LE((sampleRate * channels * bits) / 8, 28);
-  b.writeUInt16LE((channels * bits) / 8, 32);
-  b.writeUInt16LE(bits, 34);
-  b.write("AIGC", 36, "ascii");
-  b.writeUInt32LE(aigcSize, 40);
-  b.write("LIST", listOff, "ascii");
-  b.writeUInt32LE(26, listOff + 4);
-  b.write("data", dataOff, "ascii");
-  b.writeUInt32LE(pcmLen, dataOff + 4);
-  for (let i = 0; i < pcmLen; i++) {
-    b[headerLen + i] = (i % 251) + 1; // nikoli 0 → ločljivo od alloc(0)
-  }
-  return b;
 }
 
 // ---------------------------------------------------------------------------
@@ -419,229 +373,121 @@ describe("TASK 89: chunkNarration", () => {
 });
 
 // ---------------------------------------------------------------------------
-// concatWavBuffers — spajanje WAV (ne-standardna glava vira!)
+// SOURCE-CONTRACT — ISSUE #9 (ZERO-AI): strežniški TTS ODSTRANJEN
 // ---------------------------------------------------------------------------
 
-describe("TASK 89: concatWavBuffers", () => {
-  test("en veljaven kos → passthrough (ista referenca)", () => {
-    const a = makeSrcWav(1000);
-    expect(concatWavBuffers([a])).toBe(a);
-  });
-
-  test("en kos z liho AIGC goro (pad byte) → pravilen parse", () => {
-    const odd = makeSrcWav(100, { aigcSize: 251 });
-    expect(concatWavBuffers([odd])).toBe(odd);
-  });
-
-  test("dva kosa → kanonična glava + PCM v vrstnem redu", () => {
-    const a = makeSrcWav(1000);
-    const b = makeSrcWav(2000);
-    const merged = concatWavBuffers([a, b]);
-    expect(merged).not.toBeNull();
-    expect(merged!.length).toBe(44 + 3000);
-    expect(merged!.toString("ascii", 0, 4)).toBe("RIFF");
-    expect(merged!.readUInt32LE(4)).toBe(36 + 3000);
-    expect(merged!.toString("ascii", 8, 12)).toBe("WAVE");
-    expect(merged!.toString("ascii", 36, 40)).toBe("data");
-    expect(merged!.readUInt32LE(40)).toBe(3000);
-    // fmt: 24 kHz mono 16-bit PCM
-    expect(merged!.readUInt16LE(20)).toBe(1);
-    expect(merged!.readUInt16LE(22)).toBe(1);
-    expect(merged!.readUInt32LE(24)).toBe(24000);
-    expect(merged!.readUInt32LE(28)).toBe(48000);
-    expect(merged!.readUInt16LE(34)).toBe(16);
-    // PCM vrstni red: prvi bajt a, nato b na 44+1000
-    expect(merged![44]).toBe(a[336]);
-    expect(merged![44 + 1000]).toBe(b[336]);
-    expect(merged![44 + 2999]).toBe(b[335 + 2000]);
-  });
-
-  test("trije kosi (liha + soda AIGC mešano)", () => {
-    const a = makeSrcWav(1000);
-    const odd = makeSrcWav(100, { aigcSize: 251 });
-    const merged = concatWavBuffers([a, odd, a]);
-    expect(merged!.length).toBe(44 + 2100);
-  });
-
-  test("različen sampleRate → null (NE mešaj formatov)", () => {
-    const a = makeSrcWav(1000);
-    const bad = makeSrcWav(500, { sampleRate: 44100 });
-    expect(concatWavBuffers([a, bad])).toBeNull();
-  });
-
-  test("različen bits → null", () => {
-    const a = makeSrcWav(1000);
-    const bad = makeSrcWav(500, { bits: 8 });
-    expect(concatWavBuffers([a, bad])).toBeNull();
-  });
-
-  test("smeti (ne-WAV) → null tudi kot en sam kos", () => {
-    expect(concatWavBuffers([Buffer.from("hello world")])).toBeNull();
-  });
-
-  test("trunciran WAV (data obeta več, kot je v datoteki) → null", () => {
-    const a = makeSrcWav(1000);
-    const truncated = a.subarray(0, a.length - 100);
-    expect(concatWavBuffers([truncated])).toBeNull();
-  });
-
-  test("prazzen seznam → null", () => {
-    expect(concatWavBuffers([])).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// narrationCacheKey — determinizem
-// ---------------------------------------------------------------------------
-
-describe("TASK 89: narrationCacheKey", () => {
-  test("isti vhod → isti ključ (determinizem)", () => {
-    const day = mkNarrDay(
-      2,
-      [mkStop("Bled", { time: "09:00", description: "Opis." })],
-      "petek, 25. septembra"
-    );
-    expect(narrationCacheKey(day, "sl")).toBe(narrationCacheKey(day, "sl"));
-  });
-
-  test("različen dan/jezik/datum/termin → različen ključ", () => {
-    const base = mkNarrDay(2, [mkStop("Bled", { time: "09:00" })], "x");
-    expect(narrationCacheKey(mkNarrDay(3, [mkStop("Bled", { time: "09:00" })], "x"), "sl")).not.toBe(
-      narrationCacheKey(base, "sl")
-    );
-    expect(narrationCacheKey(base, "en")).not.toBe(narrationCacheKey(base, "sl"));
+describe("ISSUE #9: strežniški TTS ne obstaja več (0 strežniških AI klicev)", () => {
+  test("tts-engine + obe TTS ruti sta IZBRISANI (existsSync → false)", () => {
+    expect(existsSync(join(ROOT, "src/lib/tts-engine.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "src/app/api/tts/route.ts"))).toBe(false);
     expect(
-      narrationCacheKey(mkNarrDay(2, [mkStop("Bled", { time: "10:00" })], "x"), "sl")
-    ).not.toBe(narrationCacheKey(base, "sl"));
-    expect(narrationCacheKey(mkNarrDay(2, [mkStop("Bled", { time: "09:00" })], "y"), "sl")).not.toBe(
-      narrationCacheKey(base, "sl")
-    );
+      existsSync(join(ROOT, "src/app/api/itinerary/tts/route.ts"))
+    ).toBe(false);
   });
 
-  test("opis z zaporednimi presledki ne spremeni ključa (normalizacija)", () => {
-    const a = mkNarrDay(1, [mkStop("Bled", { description: "en   opis" })]);
-    const b = mkNarrDay(1, [mkStop("Bled", { description: "en opis" })]);
-    expect(narrationCacheKey(a, "sl")).toBe(narrationCacheKey(b, "sl"));
+  test("noben vir v src/ več ne kliče strežniškega TTS (rute/engine)", () => {
+    // rekurzivna hoja po src/ (brez testov) — ostankov pogodbe z odstranjeno
+    // plastjo (fetch "/api/tts" | "/api/itinerary/tts" | uvoz tts-engine)
+    // ne sme biti nikjer več.
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir)) {
+        const p = join(dir, entry);
+        if (statSync(p).isDirectory()) {
+          if (entry === "node_modules" || entry === "__tests__") continue;
+          walk(p);
+          continue;
+        }
+        if (!/\.(ts|tsx)$/.test(entry)) continue;
+        const text = readFileSync(p, "utf8");
+        if (
+          text.includes('"/api/tts"') ||
+          text.includes('"/api/itinerary/tts"') ||
+          text.includes("@/lib/tts-engine")
+        ) {
+          offenders.push(p);
+        }
+      }
+    };
+    walk(join(ROOT, "src"));
+    expect(offenders).toEqual([]);
   });
 
-  test("prazna imena postankov se odstranijo iz ključa", () => {
-    const a = mkNarrDay(1, [mkStop("Bled"), mkStop("")]);
-    const b = mkNarrDay(1, [mkStop("Bled")]);
-    expect(narrationCacheKey(a, "sl")).toBe(narrationCacheKey(b, "sl"));
-  });
-});
-
-// ---------------------------------------------------------------------------
-// SOURCE-CONTRACT — /api/tts (strežnik gradi skript SAM; zod vrata)
-// ---------------------------------------------------------------------------
-
-describe("TASK 89: /api/tts source-contract", () => {
-  const route = source("src/app/api/tts/route.ts");
-  // TASK 92: glas/SDK/timeout/predpomnilnik so se preselili v SKUPNO jedro
-  // src/lib/tts-engine.ts (isto pogodbo preverja task92 test — tu samo
-  // pot, da NE vzdržuje lokalne kopije).
-  const engine = source("src/lib/tts-engine.ts");
-
-  test("skript gradi STREŽNIK iz strukturiranih podatkov (ista lib funkcija)", () => {
-    expect(route).toContain("buildDayNarrationScript");
-    expect(route).toContain("narrationCacheKey");
-    expect(route).toContain("chunkNarration");
-    // WAV spajanje živi v jedru (isti RIFF parser kot TASK 89):
-    expect(engine).toContain("concatWavBuffers");
-    expect(route).not.toContain("concatWavBuffers");
-  });
-
-  test("VHOD NI prostho besedilo — zod sprejme SAMO strukturo dneva", () => {
-    // ne sme obstajati prosti 'text'/'input'/'script' vhod iz telesa zahteve
-    expect(route).not.toMatch(/z\.string\(\)[^;]*\b(script|narration|prompt)\b/i);
-    expect(route).toContain("stops: z.array(stopSchema)");
-    expect(route).toContain("dayNumber: z.number().int().min(1).max(30)");
-  });
-
-  test("zod vrata zrcalijo NARRATION_LIMITS (ENA resnica)", () => {
-    expect(route).toContain("NARRATION_LIMITS.maxStops");
-    expect(route).toContain("NARRATION_LIMITS.maxNameChars");
-    expect(route).toContain("NARRATION_LIMITS.maxDescriptionChars");
-    expect(route).toContain("NARRATION_LIMITS.maxTimeChars");
-    expect(route).toContain("NARRATION_LIMITS.maxDateLabelChars");
-  });
-
-  test("glasi po jeziku: sl → tongtong, en → jam (empirična izbira)", () => {
-    // TASK 92: VOICE_FOR_LANG je v jedru — pot ga NE podvaja
-    expect(engine).toContain('sl: "tongtong"');
-    expect(engine).toContain('en: "jam"');
-    expect(route).not.toContain('voice: "tongtong"');
-  });
-
-  test("SDK SAMO strežniško + časovni proračun na klic", () => {
-    expect(engine).toContain('import("z-ai-web-dev-sdk")');
-    expect(engine).toContain("TTS_CALL_TIMEOUT_MS");
-    expect(engine).toContain("withTimeout");
-    expect(route).not.toContain('import("z-ai-web-dev-sdk")');
-  });
-
-  test("iskrene napake: 503 tts_unavailable, 400 invalid_day/no_stops, 405 GET", () => {
-    expect(route).toContain('{ error: "tts_unavailable" }');
-    expect(route).toContain('{ error: "invalid_day" }');
-    expect(route).toContain('{ error: "no_stops" }');
-    expect(route).toContain("method_not_allowed");
-  });
-
-  test("LRU predpomnilnik po bajtih (32 MB varovalka)", () => {
-    // TASK 92: skupni ttsCache (ByteLruCache) v jedru — pot samo get/put
-    expect(engine).toContain("TTS_CACHE_MAX_BYTES");
-    expect(engine).toContain("ByteLruCache");
-    expect(route).toContain("ttsCache.get");
-    expect(route).toContain("ttsCache.put");
-    expect(route).not.toContain("CACHE_MAX_BYTES"); // lokalna kopija izrinjena
-  });
-
-  test("varovalka maxChunks (413 script_too_long)", () => {
-    expect(route).toContain("NARRATION_LIMITS.maxChunks");
-    expect(route).toContain('{ error: "script_too_long" }');
+  test("čista lib ostaja nedotaknjena (jedro izvoženih funkcij + ZERO-AI)", () => {
+    const lib = source("src/lib/itinerary-audio.ts");
+    expect(lib).toContain("export function buildDayNarrationScript");
+    expect(lib).toContain("export function chunkNarration");
+    expect(lib).toContain("export function speechTime");
+    expect(lib).toContain("export function speechDateLabel");
+    // ISSUE #9 Z9-D: strežniško-TTS orodja (WAV spajanje, ključ predpomnilnika)
+    // so ODSTRANJENA — nimajo več produkcijskega klicalca.
+    expect(lib).not.toContain("export function concatWavBuffers");
+    expect(lib).not.toContain("export function narrationCacheKey");
+    expect(lib).not.toContain("parseWav");
   });
 });
 
 // ---------------------------------------------------------------------------
-// SOURCE-CONTRACT — komponenta DayAudioButton
+// SOURCE-CONTRACT — komponenta DayAudioButton (brskalniški SpeechSynthesis)
 // ---------------------------------------------------------------------------
 
-describe("TASK 89: DayAudioButton source-contract", () => {
+describe("ISSUE #9: DayAudioButton — brskalniški SpeechSynthesis", () => {
   const comp = source("src/components/itinerary-audio.tsx");
+
+  test("skript gradi KLIENT (ista čista lib funkcija) + govori speechSynthesis", () => {
+    expect(comp).toContain("buildDayNarrationScript");
+    expect(comp).toContain("speechSynthesis");
+    expect(comp).toContain("SpeechSynthesisUtterance");
+    expect(comp).toContain("speechLanguageTag"); // sl → sl-SI / en → en-US
+    expect(comp).toContain("ttsSupported");
+    expect(comp).toContain("utterance.rate = 1");
+  });
+
+  test("DOLGA pripoved govori PO KOSIH (chunkNarration) — brez tihih rezov", () => {
+    // Brskalniška sinteza na nekaterih platformah tiho poreže posamezne
+    // dolge izgovore — komponenta razreže skript PO STAVKIH (ista čista
+    // funkcija kot nekdajna strežniška pot) in izgovarja zaporedno;
+    // seja (sessionRef) poskrbi, da Ustavi res ustavi vse kose.
+    expect(comp).toContain("chunkNarration");
+    expect(comp).toContain("speakNext");
+    expect(comp).toContain("sessionRef");
+    expect(comp).not.toContain("new SpeechSynthesisUtterance(text)");
+  });
+
+  test("NI strežniškega TTS klica, NI blob predpomnilnika, NI z-ai", () => {
+    expect(comp).not.toContain('"/api/tts"');
+    expect(comp).not.toContain('"/api/itinerary/tts"');
+    expect(comp).not.toContain("URL.createObjectURL");
+    expect(comp).not.toContain("z-ai");
+    expect(comp).not.toContain("cachedUrlFor");
+    expect(comp).not.toContain("rememberBlob");
+  });
 
   test("fail-closed: dan brez uporabnih postankov → brez gumba", () => {
     expect(comp).toContain("if (!available) return null");
-    expect(comp).toContain("usableStops.length > 0");
+    expect(comp).toContain("script !== null");
   });
 
-  test("klientni blob predpomnilnik (LRU) + objekt URL-ji", () => {
-    expect(comp).toContain("cachedUrlFor");
-    expect(comp).toContain("rememberBlob");
-    expect(comp).toContain("URL.createObjectURL");
-    expect(comp).toContain("URL.revokeObjectURL");
+  test("tekstovni padec: brskalnik brez govorne sinteze → Prikaži besedilo", () => {
+    expect(comp).toContain("Prikaži besedilo");
+    expect(comp).toContain("Show text");
+    expect(comp).toContain("Računalniški glas ni na voljo");
+    expect(comp).toContain("Computer voice unavailable");
+    expect(comp).toContain("speechOut === false");
   });
 
-  test("iskrena napaka (role=alert) + loading stanje + ustavljanje", () => {
+  test("iskrena napaka (role=alert) + ustavljanje (cancel) + print:hidden", () => {
     expect(comp).toContain('role="alert"');
-    expect(comp).toContain('"loading"');
-    expect(comp).toContain("stopPlayback");
-    expect(comp).toContain('audio.addEventListener("ended"');
-  });
-
-  test("print:hidden (dokument ostane dejstva, ne zvok) + a11y", () => {
+    expect(comp).toContain("speechSynthesis.cancel()");
     expect(comp).toContain("print:hidden");
     expect(comp).toContain("aria-label");
     expect(comp).toContain("L.buttonAria(dayNumber)");
   });
 
-  test("analitika: itinerary_audio_play s površino", () => {
+  test("analitika: itinerary_audio_play s površino (engine = browser)", () => {
     expect(comp).toContain('trackPlannerEvent("itinerary_audio_play"');
     expect(comp).toContain("surface");
-  });
-
-  test("POST /api/tts s strukturiranim telesom (lang + day)", () => {
-    expect(comp).toContain('"/api/tts"');
-    expect(comp).toContain("body: JSON.stringify");
+    expect(comp).toContain("browser-speech-synthesis");
   });
 });
 

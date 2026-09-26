@@ -1,5 +1,6 @@
 // ============================================================================
-// ISSUE #5 / T5-D (M1) — DETERMINISTIČNI PARSER REZERVACIJ (REZERVA BREZ AI)
+// ISSUE #5 / T5-D (M1) + ISSUE #9 (ZERO-AI) — DETERMINISTIČNI PARSER
+// REZERVACIJ (PRIMA, 0 AI)
 // ============================================================================
 // Vrzel (matrika M1): /api/journey/bookings/parse je bil za PDF IN besedilo
 // AI-ONLY — z odpovedanimi/odsotnimi ključi je VEDNO padel s 502 ("vnesi
@@ -7,20 +8,25 @@
 //
 // Fix (T5-D): lib/reservation-text-parse.ts — čist regex ekstraktor nad
 // besedilom potrdila (prilepljena e-pošta / unpdf besedilo iz PDF-a), izhod
-// gre skozi ISTO normalizacijo kot AI pot (imported-reservation.ts). Ruta
-// razkrije vir (method:"deterministic", via:"fallback"); če parser ne
-// prepozna ključnih polj → iskren 422 z nasvetom (nikoli prazen uspeh).
-// SLIKA ostaja AI-only (iz slike ni besedila za regex) — pošten 502.
+// gre skozi ISTO normalizacijo kot prejšnja AI pot (imported-reservation.ts).
+//
+// ISSUE #9 (ZERO-AI/GROUP C): OBRAT — deterministični parser je zdaj PRIMA
+// (generateCompletion ODSTRANJEN iz besedilne/PDF poti; via iskreno razkrije
+// kanal "text-parser"|"pdf-parser"); če parser ne prepozna ključnih polj →
+// iskren 422 z nasvetom (nikoli prazen uspeh). SLIKA ostaja VLM AI-only
+// (iz slike ni besedila za parser) — pošten 502.
 //
 // Test varuje:
 //   1. parser: realni formati (Booking.com SL, letalska PNR EN, KiwiTaxi
 //      transfer, GetYourGuide prosti zapis), cene EU/US, datumi SL/EN/ISO,
 //      izključitve lažnih zadetkov (datum kot cena, besedna št. rezervacije,
 //      "datum prihoda" hotel vs "prihod" prevoz), determinizem;
-//   2. source-contract: ruta poveže rezervo na OBEH poteh (pdf + text),
-//      slika ostane pošten 502; UI razkrije vir ("vgrajeni bralnik");
-//   3. funkcionalno: z omrežjem, ki odbija VSE (0 AI žetonov) → 200 z
-//      method:"deterministic" (besedilo IN PDF), neznano besedilo → 422.
+//   2. source-contract: deterministični parser je PRIMA na OBEH poteh
+//      (pdf + text, 0 AI — ISSUE #9), slika ostane pošten 502; UI razkrije
+//      vir ("vgrajeni bralnik");
+//   3. funkcionalno: z omrežjem, ki odbija VSE (0 AI žetonov, 0
+//      odvisnosti) → 200 z method:"deterministic" + via kanal parserja
+//      (besedilo IN PDF), neznano besedilo → 422; SLIKA → VLM-only 502.
 //      (Vzorec task50/issue5-t5b: NO mock.module, globalThis.fetch odbija.)
 // ============================================================================
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
@@ -262,24 +268,30 @@ describe("T5-D/M1: parseReservationText — cene in determinizem", () => {
 // 3. Source-contract — povezava rezerve na ruti + iskrenost vira v UI
 // ─────────────────────────────────────────────────────────────────────────
 
-describe("T5-D/M1: source-contract /api/journey/bookings/parse", () => {
-  test("rezerva obstaja in je vezana na OBEH poteh (pdf + text)", () => {
+describe("T5-D/M1 + ISSUE #9: source-contract /api/journey/bookings/parse", () => {
+  test("deterministični parser je PRIMA na OBEH poteh (pdf + text, 0 AI)", () => {
     expect(routeSrc).toContain("deterministicParseResponse");
-    expect(routeSrc).toContain("return deterministicParseResponse(pdfText)");
-    expect(routeSrc).toContain("return deterministicParseResponse(text)");
+    expect(routeSrc).toContain(
+      'deterministicParseResponse(pdfText, "pdf-parser")'
+    );
+    expect(routeSrc).toContain(
+      'deterministicParseResponse(text, "text-parser")'
+    );
   });
 
-  test("odgovor iskreno razkrije vir (method determinističnega, via fallback)", () => {
+  test("odgovor iskreno razkrije vir (method deterministic, via kanal parserja)", () => {
     expect(routeSrc).toContain('method: "deterministic"');
-    expect(routeSrc).toContain('via: "fallback"');
+    expect(routeSrc).toContain('"text-parser"');
+    expect(routeSrc).toContain('"pdf-parser"');
+    expect(routeSrc).not.toContain('via: "fallback"');
     expect(routeSrc).toContain("parseReservationText");
     expect(routeSrc).toContain("isReservationParseEmpty");
   });
 
-  test("deformiran AI izhod (nič izluščenega) pade na rezervo", () => {
-    expect(routeSrc).toMatch(
-      /fields\.providerName == null[\s\S]*?deterministicParseResponse/
-    );
+  test("ISSUE #9: besedilna/PDF pot NE kliče generateCompletion (0 AI)", () => {
+    // edini AI ostanek rute je VLM za SLIKO (generateVisionCompletion)
+    expect(routeSrc).not.toMatch(/generateCompletion\(/);
+    expect(routeSrc).toContain("generateVisionCompletion");
   });
 
   test("SLIKA ostaja AI-only — pošten 502 z nasvetom (brez tihe rezerve)", () => {
@@ -297,11 +309,12 @@ describe("T5-D/M1: source-contract /api/journey/bookings/parse", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// 4. Funkcionalno — odpoved VSEH AI providerjev → rezerva ODGOVORI
-//    (besedilo 200 fallback · neznano 422 · PDF 200 fallback; 0 AI žetonov)
-// ─────────────────────────────────────────────────────────────────────────
+// 4. Funkcionalno — ISSUE #9: besedilo/PDF sta deterministična PRIMA
+//    (omrežje odbija VSE — 0 AI žetonov, 0 odvisnosti); neznano 422;
+//    SLIKA ostane VLM AI-only → pošten 502 (isti mock okolje).
+// ---------------------------------------------------------------------------
 
-describe("T5-D/M1: funkcionalno — odpoved vseh AI providerjev", () => {
+describe("T5-D/M1 + ISSUE #9: funkcionalno — 0 AI v besedilni/PDF poti", () => {
   const originalFetch = globalThis.fetch;
   let seq = 0;
 
@@ -347,7 +360,7 @@ describe("T5-D/M1: funkcionalno — odpoved vseh AI providerjev", () => {
       fields: { providerName: string | null; reservationNumber: string | null };
     };
     expect(body.method).toBe("deterministic");
-    expect(body.via).toBe("fallback");
+    expect(body.via).toBe("text-parser");
     expect(body.persisted).toBe(false);
     expect(body.fields.providerName).toBe("Booking.com");
     expect(body.fields.reservationNumber).toBe("408.921.371.224");
@@ -372,7 +385,7 @@ describe("T5-D/M1: funkcionalno — odpoved vseh AI providerjev", () => {
     expect(body.error).toContain("ročno");
   }, 30_000);
 
-  test("PDF: 200 + method deterministic (unpdf besedilo → regex, 0 AI)", async () => {
+  test("PDF: 200 + method deterministic + via pdf-parser (unpdf → regex, 0 AI)", async () => {
     // PDF z besedilno plastjo (ista tehnika kot task95 fiksture; ASCII-only,
     // ker StandardFonts ne podpira č/š/ž — oznake EN delujejo brez njih).
     const doc = await PDFDocument.create();
@@ -415,11 +428,37 @@ describe("T5-D/M1: funkcionalno — odpoved vseh AI providerjev", () => {
       };
     };
     expect(body.method).toBe("deterministic");
-    expect(body.via).toBe("fallback");
+    expect(body.via).toBe("pdf-parser");
     expect(body.fields.providerName).toBe("Booking.com");
     expect(body.fields.reservationNumber).toBe("408.921.371.224");
     expect(body.fields.startDateTime).toBe("July 12, 2026");
     expect(body.fields.price).toBe(1250);
     expect(body.fields.currency).toBe("EUR");
   }, 60_000);
+
+  test("SLIKA: VLM AI-only — odpoved vseh providerjev → pošten 502 (ročni vnos)", async () => {
+    // ISSUE #9: iz slike NI besedilne plasti za parser — slika ostaja edina
+    // AI pot (generateVisionCompletion). Brez delujočega VLM-a → 502 z
+    // nasvetom (ročni vnos), NE tiha deterministična zamenjava vira.
+    const { POST } = await import("@/app/api/journey/bookings/parse/route");
+    const request = new Request(
+      "http://localhost/api/journey/bookings/parse",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-forwarded-for": `10.99.81.${seq}`,
+        },
+        body: JSON.stringify({
+          // 1x1 rdeč pixel PNG (veljaven data URL, brez besedila)
+          image:
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+        }),
+      }
+    );
+    const res = await POST(request);
+    expect(res.status).toBe(502);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toContain("ročno");
+  }, 30_000);
 });

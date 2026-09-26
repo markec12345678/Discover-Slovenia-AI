@@ -131,8 +131,8 @@ export type PlannerEventName =
   // F7: shranjen/urejen skupnostni vodnik na deljeni poti (avtor = lastnik)
   | "guide_saved"
   // F9 "Pogovor z načrtom": zastavljeno vprašanje o načrtu (source
-  // "computed" = deterministični odgovor; "puter"/"z-ai-sdk" = AI fraziranje
-  // dejstev; "fallback" = iskren zavrnitev ugibanja)
+  // "computed" = deterministični odgovor — ISSUE #9: EDINA pot, AI fraziranje
+  // je odstranjeno; "fallback" = iskren zavrnitev ugibanja)
   | "plan_qa_asked"
   // F13 "Preveri svoj načrt": oddano besedilo TUJEGA načrta v validator
   // (brez AI žetonov; worst = najhujša raven poročila)

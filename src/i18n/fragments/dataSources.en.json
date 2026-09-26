@@ -16,8 +16,8 @@
         "desc": "Real-time weather data. Free API with no key required."
       },
       "zai": {
-        "type": "AI",
-        "desc": "AI itinerary generation based on user preferences."
+        "type": "AI (optional — vision)",
+        "desc": "OPTIONAL layer for image understanding (Issue #9 ZERO-AI): reads text/names from screenshots for trip import and reservation confirmations. The platform core (planner, search, chat, guides) is 100% deterministic — 0 AI tokens."
       },
       "sloveniaInfo": {
         "type": "Official sources (RAG)",

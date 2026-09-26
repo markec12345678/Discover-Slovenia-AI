@@ -15,10 +15,11 @@
 //      aria-live statusna vrstica nad skeleti.
 //
 // ISKRENOST (kanon nalog 71/74): števec je DEJANSKI pretečeni čas, ne ocena.
-// Faze opisujejo DEJANSKI vrstni red dela na strežniku (api/itinerary/route.ts):
+// Faze opisujejo DEJANSKI vrstni red dela na strežniku (api/itinerary/route.ts;
+// ISSUE #9 ZERO-AI: sestava je DETERMINISTIČNA — 0 AI žetonov):
 //   supply  — vreme (T11) + supply iskanje + ranking engine (vzporedno, hitro)
-//   compose — AI sestavljanje (najdaljša faza; glavni porabnik časa)
-//   verify  — supply rebound/validacija + geo preverjanje po AI odgovoru
+//   compose — deterministična sestava poti (najdaljša faza; glavni porabnik časa)
+//   verify  — supply rebound/validacija + geo preverjanje sestavljenega načrta
 // Meje so ZNAČILNI časi, NE trditev o živem napredku — klient od odgovora
 // strežnika ne dobi faznih signalov, zato UI besedilo govori o DELU, ki ga
 // strežnik počne, namig "navadno 15–40 s" pa drži obljubo skromno.

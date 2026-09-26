@@ -1,0 +1,36 @@
+
+=== Z9-E MERITVE (dev, topli klici, 3× na pot) ===
+planner POST /api/itinerary                  200            21.3 ms
+planner POST /api/itinerary                  200            13.7 ms
+planner POST /api/itinerary                  200            17.1 ms
+refine POST /api/itinerary/refine            200            16.3 ms
+refine POST /api/itinerary/refine            200            10.1 ms
+refine POST /api/itinerary/refine            200            20.3 ms
+chat POST /api/chat                          200            13.5 ms
+chat POST /api/chat                          200            12.8 ms
+chat POST /api/chat                          200            13 ms
+chat POST /api/chat (vir)                    database       0 ms
+search POST /api/smart-search                500            824.1 ms
+search POST /api/smart-search                200            51.5 ms
+search POST /api/smart-search                200            17 ms
+search POST /api/smart-search (vir)          deterministic  0 ms
+poi POST /api/pois/describe (nov)            200            1001.6 ms
+poi POST /api/pois/describe (nov)            200            50.9 ms
+poi POST /api/pois/describe (nov)            200            54.7 ms
+poi POST /api/pois/describe (nov) (vir)      cache          0 ms
+poi POST /api/pois/describe (cache)          200            91.6 ms
+poi POST /api/pois/describe (cache)          200            31.9 ms
+poi POST /api/pois/describe (cache)          200            12.7 ms
+poi POST /api/pois/describe (cache) (vir)    cache          0 ms
+parse POST /api/journey/bookings/parse       200            297.7 ms
+parse POST /api/journey/bookings/parse       200            12.6 ms
+parse POST /api/journey/bookings/parse       200            9.2 ms
+parse POST /api/journey/bookings/parse (vir) text-parser    0 ms
+faq GET /destinacija/bled (SSR)              404            267.7 ms
+faq GET /destinacija/bled (SSR)              404            90 ms
+faq GET /destinacija/bled (SSR)              500            754 ms
+home GET / (baza)                            200            338.5 ms
+home GET / (baza)                            200            330.5 ms
+home GET / (baza)                            200            332 ms
+vpogledi (lib, 1000×)                        deterministic  0.001 ms
+priporočila (lib, 1000×)                     deterministic  0.002 ms

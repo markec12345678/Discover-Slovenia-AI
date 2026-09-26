@@ -47,7 +47,6 @@ if [ -n "$TARGET" ]; then
   check_one "$TARGET" || RC=1
 else
   # Privzeto: preveri oba AI ključa verige (OpenRouter primarni, Gemini sekundarni)
-  check_one "OPENROUTER_API_KEY" || RC=1
   check_one "GEMINI_API_KEY" || RC=1
 fi
 

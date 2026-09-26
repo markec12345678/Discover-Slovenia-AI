@@ -24,7 +24,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { generateCompletion } from "@/lib/ai-client";
 
 const ROOT = join(__dirname, "..", "..", "..");
 const read = (rel: string) => readFileSync(join(ROOT, rel), "utf8");
@@ -55,117 +54,11 @@ const adminListingPutSrc = read("src/app/api/admin/listings/[id]/route.ts");
 // FA-A1 — skupni proračun AI verige
 // ─────────────────────────────────────────────────────────────────────────
 
-describe("FA-A1: AI veriga ima SKUPNI wall-clock proračun", () => {
-  test("konstanti TOTAL_CHAIN_BUDGET_MS (150 s privzet) in MIN_LEG_MS (8 s)", () => {
-    expect(aiClientSrc).toContain("TOTAL_CHAIN_BUDGET_MS = 150_000");
-    expect(aiClientSrc).toContain("MIN_LEG_MS = 8_000");
-  });
-
-  test("options.totalBudgetMs je del javnega vmesnika (dokumentiran)", () => {
-    expect(aiClientSrc).toContain("totalBudgetMs?: number");
-    // opomba dokumentira Vercel maxDuration razlog (345 s > 300 s)
-    expect(aiClientSrc).toContain("FUNCTION_INVOCATION_TIMEOUT");
-  });
-
-  test("deadline + legBudgetMs: noga dobi min(lastna meja, preostanek)", () => {
-    const fn = aiClientSrc.slice(
-      aiClientSrc.indexOf("const deadline ="),
-      aiClientSrc.indexOf("const mapped =")
-    );
-    expect(fn).toContain("options?.totalBudgetMs ?? TOTAL_CHAIN_BUDGET_MS");
-    expect(fn).toContain("remaining < MIN_LEG_MS ? null : Math.min(capMs, remaining)");
-  });
-
-  test("VSE 4 noge so vezane na budget (orBudget/geminiBudget/puterBudget/zaiBudget)", () => {
-    expect(aiClientSrc).toContain("const orBudget = legBudgetMs(orTimeout);");
-    expect(aiClientSrc).toContain(
-      "const geminiBudget = legBudgetMs(GEMINI_TIMEOUT_MS);"
-    );
-    expect(aiClientSrc).toContain(
-      "const puterBudget = legBudgetMs(PUTER_TIMEOUT_MS);"
-    );
-    expect(aiClientSrc).toContain(
-      "const zaiBudget = legBudgetMs(ZAI_TEXT_TIMEOUT_MS);"
-    );
-    // preskok pod pragom (null) na vseh nogah
-    expect(aiClientSrc).toContain("orBudget !== null");
-    expect(aiClientSrc).toContain("geminiBudget !== null");
-    expect(aiClientSrc).toContain("puterBudget !== null");
-    expect(aiClientSrc).toContain("zaiBudget === null");
-  });
-
-  test("Gemini in Puter nogi imata per-klic timeout + maxRetries 0", () => {
-    // prej: SDK privzeto (Gemini/Puter brez RequestOptions v tej poti —
-    // retry 1× je tiho podvajal najslabšo časovnino)
-    expect(aiClientSrc).toContain(
-      "{ timeout: geminiBudget, maxRetries: 0 }"
-    );
-    expect(aiClientSrc).toContain(
-      "{ timeout: puterBudget, maxRetries: 0 }"
-    );
-    expect(aiClientSrc).toContain("{\n            timeout: orBudget,\n            maxRetries: 0,\n          }");
-  });
-
-  test("PUTER_TIMEOUT_MS konstanta (prej inline 45_000 v konstruktorju)", () => {
-    expect(aiClientSrc).toContain("const PUTER_TIMEOUT_MS = 45_000;");
-  });
-});
-
-describe("FA-A1: itinerary route je usklajen s klientom (90 s) in platformo (300 s)", () => {
-  test("klic podaja timeoutMs 65 s + totalBudgetMs 70 s", () => {
-    expect(itineraryRouteSrc).toContain(
-      "timeoutMs: 65_000, totalBudgetMs: 70_000"
-    );
-    // stari neusklajeni proračun je ODSTRANJEN
-    expect(itineraryRouteSrc).not.toContain("timeoutMs: 120_000");
-  });
-
-  test("komentar dokumentira obe meji (Vercel 504 + klientov abort)", () => {
-    expect(itineraryRouteSrc).toContain("FINAL ACCEPTANCE FA-A1");
-    expect(itineraryRouteSrc).toContain("GENERATION_TIMEOUT_SECONDS");
-  });
-
-  test("FA-A1-b: ZUNANJA trda meja AI faze (Promise.race, neodvisna od SDK)", () => {
-    // Vercel hkg1 runtime je obešal prošnjo ≥ 300 s kljub SDK budgetu
-    // (SDK abort tam očitno ni sprožil) — route ima zdaj svojo mejo.
-    expect(itineraryRouteSrc).toContain("const aiHardCapMs = 70_000;");
-    expect(itineraryRouteSrc).toContain(
-      "aiHardCapTimer = setTimeout(() => resolve(null), aiHardCapMs);"
-    );
-    expect(itineraryRouteSrc).toContain(
-      "if (aiHardCapTimer) clearTimeout(aiHardCapTimer);"
-    );
-    // race dejansko obdaja generateCompletion klic
-    const i = itineraryRouteSrc.indexOf("Promise.race([");
-    const j = itineraryRouteSrc.indexOf("generateCompletion(", i);
-    expect(j).toBeGreaterThan(i);
-  });
-});
-
-describe("FA-A1 (VEDENJE): preskočena veriga vrne null TAKOJ (brez omrežja)", () => {
-  test("totalBudgetMs: 1 → vse noge pod pragom → null v < 1 s", async () => {
-    const t0 = Date.now();
-    const result = await generateCompletion(
-      [{ role: "user", content: "test" }],
-      { totalBudgetMs: 1 }
-    );
-    const elapsed = Date.now() - t0;
-    expect(result).toBeNull();
-    expect(elapsed).toBeLessThan(1000);
-  });
-
-  test("totalBudgetMs: 0 → enako takojšen null (defenzivna meja)", async () => {
-    const result = await generateCompletion(
-      [{ role: "user", content: "test" }],
-      { totalBudgetMs: 0 }
-    );
-    expect(result).toBeNull();
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────
-// F-B — javna projekcija v recommendations rutah
-// ─────────────────────────────────────────────────────────────────────────
+// ISSUE #9 (ZERO-AI): FA-A1 razdeli (AI veriga proračun / itinerary race
+// uskladitev / takojšnji null) so ODSTRANJENI — tekstovna AI veriga
+// (generateCompletion: OpenRouter→Gemini→Puter→z-ai) ne obstaja več;
+// itinerary raba je čisto deterministična (0 LLM, 0 časovnih meja).
+// Preostali razdeli (F-B/F-C/FA-3-GAP/F-A) ostajajo — niso AI odvisni.
 
 describe("F-B: recommendations rute uporabljajo javne projekcije", () => {
   test("products: toPublicProduct + brez golic ...p spreadov", () => {

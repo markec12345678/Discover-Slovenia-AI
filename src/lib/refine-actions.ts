@@ -32,8 +32,10 @@ import {
 // poštenosti kot generateFallbackItinerary: NIč izmišljenih trditev, vsaka
 // sprememba se poroča v `changes`.
 //
-// AI pot (ko je vklopljen) dobi ISTO akcijo kot naravnojezični ukaz —
-// refine route pošlje instruction, AI pa ima polen kontekst.
+// ISSUE #9 (ZERO-AI): prostojezikovni ukazi se razčlenijo
+// DETERMINISTIČNO (src/lib/refine-command-parser.ts) in preslikajo na
+// ISTO akcijo — 0 LLM klicev. Tri nove akcije (ceneje/dražje/bolj
+// aktivno) pokrivajo zahtevane namene iz Issue #9 §7.
 // ============================================================================
 
 /** Kanonične akcije z dvojezičnimi navodili (za AI ukaz + za toast). */
@@ -88,6 +90,31 @@ export const QUICK_ACTIONS: {
     instruction: {
       sl: (d) => `Dan ${d}: naredi dan prijazen za družino z otroki — otrokom prijazni postanki, krajše vožnje.`,
       en: (d) => `Day ${d}: make the day family-friendly with kids — kid-friendly stops, shorter drives.`,
+    },
+  },
+  // ISSUE #9 §7 — tri nove DETERMINISTIČNE akcije (prosti jezik iz parserja):
+  {
+    id: "cheaper",
+    label: { sl: "Ceneje", en: "Cheaper" },
+    instruction: {
+      sl: (d) => `Dan ${d}: naredi dan cenejši — zamenjaj najdražji postanek z ustreznim cenejšim v istem območju.`,
+      en: (d) => `Day ${d}: make the day cheaper — swap the most expensive stop for a suitable cheaper one in the same area.`,
+    },
+  },
+  {
+    id: "pricier",
+    label: { sl: "Dražje", en: "Pricier" },
+    instruction: {
+      sl: (d) => `Dan ${d}: naredi dan bolj premium — zamenjaj najcenejši postanek z bogatejšo izkušnjo v istem območju.`,
+      en: (d) => `Day ${d}: make the day more premium — swap the cheapest stop for a richer experience in the same area.`,
+    },
+  },
+  {
+    id: "more_active",
+    label: { sl: "Bolj aktivno", en: "More active" },
+    instruction: {
+      sl: (d) => `Dan ${d}: bolj aktivno — zamenjaj vsaj en postanek z aktivnostjo (pohod, kolesarjenje, adrenalinski park, vodni športi).`,
+      en: (d) => `Day ${d}: more active — swap at least one stop for an activity (hiking, cycling, adventure park, water sports).`,
     },
   },
 ];
@@ -653,6 +680,199 @@ export function applyQuickAction(
           : isEn
           ? `Swapped ${swapTarget.destination_name} for ${cand.name} (family-friendly) on Day ${day}.`
           : `Zamenjan postanek ${swapTarget.destination_name} za ${cand.name} (prijazen za družine) v dnevu ${day}.`;
+      break;
+    }
+
+    // ------------------------------------------------------------------
+    // ISSUE #9 §7 — CENEJE / DRAŽJE: zamenjava najdražjega (oziroma
+    // najcenejšega) postanka dneva z ustreznim kandidatom V ISTEM območju
+    // (CANDIDATE_MAX_KM) in ZAĐOSTNJENO ceno (strogo manjšo / večjo).
+    // Deterministično, iz kanoničnih cen datasetta (costPerPerson).
+    // ------------------------------------------------------------------
+    case "cheaper":
+    case "pricier": {
+      const unknown = unknownStopIn(target);
+      if (unknown) {
+        changes.push({
+          kind: "cannot_transform",
+          day,
+          destination_id: unknown.destination_id,
+          destination_name: unknown.destination_name,
+          reason: "missing_destination_data",
+        });
+        return {
+          itinerary,
+          changes,
+          note: cannotTransformNote("missing_destination_data", day, isEn),
+        };
+      }
+
+      const wantCheaper = action === "cheaper";
+
+      // Slabost: najdražji postanek (za ceneje) / najcenejši (za dražje).
+      // Brez podatka o ceni destinacije (ni v datasetu) → ceni 0.
+      const costOf = (loc: LocationVisit): number => {
+        const dest = destinationById(loc.destination_id);
+        return dest ? dest.costPerPerson : 0;
+      };
+      const ordered = [...target.locations].sort((a, b) =>
+        wantCheaper ? costOf(b) - costOf(a) : costOf(a) - costOf(b)
+      );
+      // Preskoči postanke z ničelno ceno (ni kaj prihraniti /
+      // nadgrajevati s kanoničnimi podatki) — iskrena meja.
+      const swapTarget = ordered.find((l) => {
+        const cost = costOf(l);
+        return wantCheaper ? cost > 0 : cost >= 0 && destinationById(l.destination_id) !== undefined;
+      });
+
+      if (!swapTarget) {
+        note = isEn
+          ? `Day ${day} has no stop with a known price for this adjustment.`
+          : `Dan ${day} nima postanka z znano ceno za to prilagoditev.`;
+        break;
+      }
+      const swapCost = costOf(swapTarget);
+
+      const actionFilter = (d: (typeof DESTINATIONS)[number]) =>
+        wantCheaper ? d.costPerPerson < swapCost : d.costPerPerson > swapCost;
+
+      const candidates = replacementCandidates(
+        usedIds,
+        input,
+        actionFilter,
+        target.locations,
+        swapTarget
+      );
+
+      if (candidates.length === 0) {
+        const anyCandidate = DESTINATIONS.filter(
+          (d) => !usedIds.has(d.id) && seasonFits(d, input.season) && actionFilter(d)
+        );
+        const reason: "no_nearby_alternative" | "no_candidate" =
+          anyCandidate.length > 0 ? "no_nearby_alternative" : "no_candidate";
+        changes.push({ kind: "cannot_transform", day, reason });
+        note =
+          reason === "no_nearby_alternative"
+            ? cannotTransformNote("no_nearby_alternative", day, isEn)
+            : isEn
+              ? `No unused suitable destination is left for this swap.`
+              : `Za to zamenjavo ni več neuporabljene ustrezne destinacije.`;
+        break;
+      }
+
+      const cand = candidates[0];
+      target = {
+        ...target,
+        locations: target.locations.map((l) =>
+          l === swapTarget ? visitFrom(cand, l, input.groupSize, isEn) : l
+        ),
+      };
+      changes.push({
+        kind: "stop_replaced",
+        day,
+        destination_id: swapTarget.destination_id,
+        destination_name: swapTarget.destination_name,
+        replacement_id: cand.id,
+        replacement_name: cand.name,
+      });
+      const diff = Math.abs(swapCost - cand.costPerPerson);
+      note = wantCheaper
+        ? isEn
+          ? `Swapped ${swapTarget.destination_name} (€${swapCost}) for ${cand.name} (€${cand.costPerPerson}) on Day ${day} — saves €${diff} per person.`
+          : `Zamenjan postanek ${swapTarget.destination_name} (€${swapCost}) za ${cand.name} (€${cand.costPerPerson}) v dnevu ${day} — prihranek €${diff} na osebo.`
+        : isEn
+          ? `Swapped ${swapTarget.destination_name} (€${swapCost}) for ${cand.name} (€${cand.costPerPerson}) on Day ${day} — a richer experience.`
+          : `Zamenjan postanek ${swapTarget.destination_name} (€${swapCost}) za ${cand.name} (€${cand.costPerPerson}) v dnevu ${day} — bogatejša izkušnja.`;
+      break;
+    }
+
+    // ------------------------------------------------------------------
+    // ISSUE #9 §7 — BOLJ AKTIVNO: ista družina kot več narave/hrane,
+    // filter = destinacije z "aktivnosti" v bestFor.
+    // ------------------------------------------------------------------
+    case "more_active": {
+      const unknown = unknownStopIn(target);
+      if (unknown) {
+        changes.push({
+          kind: "cannot_transform",
+          day,
+          destination_id: unknown.destination_id,
+          destination_name: unknown.destination_name,
+          reason: "missing_destination_data",
+        });
+        return {
+          itinerary,
+          changes,
+          note: cannotTransformNote("missing_destination_data", day, isEn),
+        };
+      }
+
+      const actionFilter = (d: (typeof DESTINATIONS)[number]) =>
+        d.bestFor.includes("aktivnosti") || d.bestFor.includes("activities");
+
+      const weaknessOf = (loc: LocationVisit): number => {
+        const dest = destinationById(loc.destination_id);
+        if (!dest) return Infinity;
+        return actionFilter(dest)
+          ? interestScore(dest, input.interests) + 100
+          : 0;
+      };
+
+      const ordered = [...target.locations].sort((a, b) => weaknessOf(a) - weaknessOf(b));
+      const swapTarget = ordered.find((l) => weaknessOf(l) < 100);
+
+      if (!swapTarget) {
+        note = isEn
+          ? `Day ${day} already has an activity-focused stop.`
+          : `Dan ${day} že vsebuje postanek z aktivnostmi.`;
+        break;
+      }
+
+      const candidates = replacementCandidates(
+        usedIds,
+        input,
+        actionFilter,
+        target.locations,
+        swapTarget
+      );
+
+      if (candidates.length === 0) {
+        const anyCandidate = DESTINATIONS.filter(
+          (d) =>
+            !usedIds.has(d.id) &&
+            seasonFits(d, input.season) &&
+            actionFilter(d)
+        );
+        const reason: "no_nearby_alternative" | "no_candidate" =
+          anyCandidate.length > 0 ? "no_nearby_alternative" : "no_candidate";
+        changes.push({ kind: "cannot_transform", day, reason });
+        note =
+          reason === "no_nearby_alternative"
+            ? cannotTransformNote("no_nearby_alternative", day, isEn)
+            : isEn
+              ? `No unused suitable destination is left for this swap.`
+              : `Za to zamenjavo ni več neuporabljene ustrezne destinacije.`;
+        break;
+      }
+
+      const cand = candidates[0];
+      target = {
+        ...target,
+        locations: target.locations.map((l) =>
+          l === swapTarget ? visitFrom(cand, l, input.groupSize, isEn) : l
+        ),
+      };
+      changes.push({
+        kind: "stop_replaced",
+        day,
+        destination_id: swapTarget.destination_id,
+        destination_name: swapTarget.destination_name,
+        replacement_id: cand.id,
+        replacement_name: cand.name,
+      });
+      note = isEn
+        ? `Swapped ${swapTarget.destination_name} for ${cand.name} (an active destination) on Day ${day}.`
+        : `Zamenjan postanek ${swapTarget.destination_name} za ${cand.name} (aktivna destinacija) v dnevu ${day}.`;
       break;
     }
   }

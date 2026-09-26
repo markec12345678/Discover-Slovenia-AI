@@ -5,11 +5,11 @@ import { join } from "node:path";
 import {
   buildDeterministicWhy,
   cacheEntryHasValidWhy,
-  containsInventedClaims,
-  mapSelectionToWhys,
-  parseSelection,
+  rankExperienceCandidates,
+  rankProductCandidates,
+  scoreExperience,
+  scoreProduct,
   shouldServeFromCache,
-  type AiSelectionEntry,
   type CacheEntry,
   type ExperienceCandidate,
   type ProductCandidate,
@@ -251,168 +251,97 @@ describe("ISSUE #4 §20/§2: čistost razlogov — brez izmišljenih označ", ()
     }
   });
 
-  test("containsInventedClaims: prepozna izmišljene trditve (SL + EN)", () => {
-    expect(containsInventedClaims("Odlične recenzije obiskovalcev")).toBe(true);
-    expect(containsInventedClaims("Najbolj priljubljena izbira")).toBe(true);
-    expect(containsInventedClaims("Seasonal favorite")).toBe(true);
-    expect(containsInventedClaims("Fully accessible venue")).toBe(true);
-    expect(containsInventedClaims("Open all summer season")).toBe(true);
-    expect(containsInventedClaims("Top reviews")).toBe(true);
-    expect(containsInventedClaims("Dostopno za invalide")).toBe(true);
-    expect(containsInventedClaims("Vreme je vedno lepo")).toBe(true);
-    expect(containsInventedClaims("Odpoved ob slabem vremenu")).toBe(true);
-    expect(containsInventedClaims("Only 2 left in stock")).toBe(true);
-  });
-
-  test("containsInventedClaims: zakonite vrstice (samo kandidatova polja) ostanejo", () => {
-    expect(containsInventedClaims("ista regija in podobna cena, ocena 4,8")).toBe(false);
-    expect(containsInventedClaims("complementary activity, rating 4.9")).toBe(false);
-    expect(containsInventedClaims("bio, lokalno, od €12")).toBe(false);
-    expect(containsInventedClaims("trajanje 3 h, primerno za družine")).toBe(false);
-  });
-
-  test("mapper: AI why z izmišljeno trditvijo → iskrena deterministična zamenjava", () => {
-    const whys = mapSelectionToWhys(
-      [{ i: 0, why: "najboljše recenzije v regiji", whyEn: "top reviews" }],
-      PRODUCTS,
-      "product"
-    );
-    expect(whys).toHaveLength(1);
-    expect(whys[0].sourceSl).toBe("deterministic");
-    expect(whys[0].sourceEn).toBe("deterministic");
-    // Zamenjava je dejstva iz kandidata (ne izmišljena trditev)
-    expect(whys[0].sl).toContain("ocena 4,8");
-    expect(whys[0].sl).not.toMatch(/recenz|mnenj|review/i);
-    expect(whys[0].en).not.toMatch(/recenz|mnenj|review/i);
-  });
 });
 
 // ---------------------------------------------------------------------------
-// §3 — PRESIKAVA (mapper hardening)
+// §3 — ISSUE #9: DETERMINISTIČNO TOČKOVANJE (0 AI — razvrščanje)
 // ---------------------------------------------------------------------------
 
-describe("ISSUE #4 §20/§3: mapSelectionToWhys — preslikava AI izbire", () => {
-  test("veljavna izbira z AI why → itemi z why, whySource \"ai\"", () => {
-    const selection: AiSelectionEntry[] = [
-      { i: 2, why: "ista regija, podobna cena", whyEn: "same region, similar price" },
-      { i: 0, why: "complementary uporaba", whyEn: "complementary use" },
-    ];
-    const whys = mapSelectionToWhys(selection, PRODUCTS, "product");
-    expect(whys).toHaveLength(2);
-    expect(whys[0].id).toBe("p2");
-    expect(whys[0].sl).toBe("ista regija, podobna cena");
-    expect(whys[0].en).toBe("same region, similar price");
-    expect(whys[0].sourceSl).toBe("ai");
-    expect(whys[0].sourceEn).toBe("ai");
-    expect(whys[1].id).toBe("p0");
+describe("ISSUE #9 §14: uteženo točkovanje — signali iz realnih polj", () => {
+  test("ista kategorija (+3) močno pretehta različno kategorijo", () => {
+    const current: ProductCandidate = { ...PRODUCT_FULL };
+    const sameCat: ProductCandidate = { ...PRODUCT_FULL, id: "x1", name: "B", rating: 4.0 };
+    const otherCat: ProductCandidate = { ...PRODUCT_FULL, id: "x2", name: "A", category: "food", rating: 4.9 };
+    expect(scoreProduct(current, sameCat)).toBeGreaterThan(scoreProduct(current, otherCat));
   });
 
-  test("out-of-range i (≥ dolžina, negativen, necel) → vnos ZAVRNJEN", () => {
-    const whys = mapSelectionToWhys(
-      [
-        { i: 6, why: "x" }, // nad naborom (6 kandidatov → 0–5)
-        { i: -1, why: "x" },
-        { i: 1.5, why: "x" }, // necelo število
-        { i: "2", why: "x" } as unknown as AiSelectionEntry, // niz namesto številke
-        { i: 5, why: "veljaven" },
-      ],
-      PRODUCTS,
-      "product"
-    );
-    expect(whys).toHaveLength(1);
-    expect(whys[0].id).toBe("p5");
-    expect(whys[0].sl).toBe("veljaven");
+  test("ista regija (+2,5) preteže drugo regijo pri enaki oceni", () => {
+    const current: ProductCandidate = { ...PRODUCT_FULL };
+    const sameRegion: ProductCandidate = { ...PRODUCT_FULL, id: "r1", rating: 4.5 };
+    const otherRegion: ProductCandidate = { ...PRODUCT_FULL, id: "r2", destinationName: "Kras", rating: 4.5 };
+    expect(scoreProduct(current, sameRegion)).toBeGreaterThan(scoreProduct(current, otherRegion));
   });
 
-  test("podvojen i → drugi vnos ZAVRNJEN (brez duplikatov)", () => {
-    const whys = mapSelectionToWhys(
-      [
-        { i: 1, why: "prvi" },
-        { i: 1, why: "drugi" },
-        { i: 3, why: "drugi indeks" },
-      ],
-      PRODUCTS,
-      "product"
-    );
-    expect(whys).toHaveLength(2);
-    expect(whys[0].sl).toBe("prvi");
-    expect(whys[1].sl).toBe("drugi indeks");
+  test("bližina cene: ±30 % (+1) > ±60 % (+0,5) > daleč (0)", () => {
+    const current: ProductCandidate = { ...PRODUCT_FULL, price: 100 };
+    const near: ProductCandidate = { ...PRODUCT_FULL, price: 115 };
+    const mid: ProductCandidate = { ...PRODUCT_FULL, price: 155 };
+    const far: ProductCandidate = { ...PRODUCT_FULL, price: 300 };
+    expect(scoreProduct(current, near)).toBeGreaterThan(scoreProduct(current, mid));
+    expect(scoreProduct(current, mid)).toBeGreaterThan(scoreProduct(current, far));
   });
 
-  test("manjkajoč/prazen/napačen-tip why → deterministična zamenjava z whySource \"deterministic\"", () => {
-    const whys = mapSelectionToWhys(
-      [
-        { i: 0 }, // why povsem manjka
-        { i: 1, why: "" }, // prazen niz
-        { i: 2, why: 42 }, // napačen tip (številka)
-      ],
-      PRODUCTS,
-      "product"
-    );
-    expect(whys).toHaveLength(3);
-    for (const w of whys) {
-      expect(w.sourceSl).toBe("deterministic");
-      expect(w.sl).toBe(buildDeterministicWhy(PRODUCTS[0], "product", "sl"));
-    }
+  test("deljene značke izdelka dodajo točke (kap 1,2)", () => {
+    const current: ProductCandidate = { ...PRODUCT_FULL }; // organic + local
+    const both: ProductCandidate = { ...PRODUCT_FULL, id: "t1", rating: 0, price: 0, destinationName: null, category: "" };
+    const none: ProductCandidate = { ...PRODUCT_FULL, id: "t2", organic: false, local: false, rating: 0, price: 0, destinationName: null, category: "" };
+    expect(scoreProduct(current, both)).toBeGreaterThan(scoreProduct(current, none));
   });
 
-  test("AI why samo v SL (whyEn manjka) → SL \"ai\", EN iskreno \"deterministic\"", () => {
-    const whys = mapSelectionToWhys([{ i: 0, why: "ista regija" }], PRODUCTS, "product");
-    expect(whys[0].sourceSl).toBe("ai");
-    expect(whys[0].sl).toBe("ista regija");
-    expect(whys[0].sourceEn).toBe("deterministic");
-    expect(whys[0].en).toBe(buildDeterministicWhy(PRODUCTS[0], "product", "en"));
+  test("izkušnja: familyFriendly ujemanje + bližina trajanja dodata točki", () => {
+    const current: ExperienceCandidate = { ...EXPERIENCE_FULL };
+    const twin: ExperienceCandidate = { ...EXPERIENCE_FULL, id: "e1", rating: 0, pricePerPerson: 0, destinationName: null, category: "" };
+    const opposite: ExperienceCandidate = { ...EXPERIENCE_FULL, id: "e2", familyFriendly: false, durationHours: 8, rating: 0, pricePerPerson: 0, destinationName: null, category: "" };
+    expect(scoreExperience(current, twin)).toBeGreaterThan(scoreExperience(current, opposite));
   });
 
-  test("kap DEFAULT_LIMIT: 6 veljavnih vnosov → največ 4", () => {
-    const selection: AiSelectionEntry[] = [0, 1, 2, 3, 4, 5].map((i) => ({
-      i,
-      why: `razlog ${i}`,
-    }));
-    const whys = mapSelectionToWhys(selection, PRODUCTS, "product");
-    expect(whys).toHaveLength(4);
-    expect(whys[3].sl).toBe("razlog 3");
-  });
-
-  test("prazna izbira → prazen rezultat (iskrena praznina, ne izumi)", () => {
-    expect(mapSelectionToWhys([], PRODUCTS, "product")).toEqual([]);
+  test("TOČKOVANJE je čisto: isti vhod → isti izhod (0 ure/omrežja)", () => {
+    const a = scoreProduct(PRODUCT_FULL, PRODUCTS[0]);
+    const b = scoreProduct(PRODUCT_FULL, PRODUCTS[0]);
+    expect(a).toBe(b);
+    expect(Number.isFinite(a)).toBe(true);
   });
 });
 
-describe("ISSUE #4 §20/§3b: parseSelection — luščenje AI odgovora", () => {
-  test("nov obrazec {\"selection\":[…]} z ograjami ```json", () => {
-    const content = '```json\n{"selection":[{"i":3,"why":"ista regija","whyEn":"same region"},{"i":1,"why":"cena","whyEn":"price"}]}\n```';
-    const sel = parseSelection(content);
-    expect(sel).not.toBeNull();
-    expect(sel).toHaveLength(2);
-    expect(sel?.[0].i).toBe(3);
-    expect(sel?.[0].why).toBe("ista regija");
-    expect(sel?.[0].whyEn).toBe("same region");
+describe("ISSUE #9 §14: razvrščanje — deterministični vrstni red", () => {
+  test("rankProductCandidates: bolj relevanten kandidat je vedno prvi", () => {
+    const current: ProductCandidate = { ...PRODUCT_FULL };
+    const strong: ProductCandidate = { ...PRODUCT_FULL, id: "strong", rating: 4.9 };
+    const weak: ProductCandidate = { ...PRODUCT_FULL, id: "weak", category: "food", destinationName: "Kras", price: 999, organic: false, local: false };
+    const ranked = rankProductCandidates(current, [weak, strong]);
+    expect(ranked[0].id).toBe("strong");
+    expect(ranked[1].id).toBe("weak");
   });
 
-  test("dedni obrazec [3,1,4,2] (brez why) → izbira se OHRANI (why pride deterministično)", () => {
-    const sel = parseSelection("[3, 1, 4, 2]");
-    expect(sel).not.toBeNull();
-    expect(sel?.map((e) => e.i)).toEqual([3, 1, 4, 2]);
-    expect(sel?.[0].why).toBeUndefined();
-    const whys = mapSelectionToWhys(sel!, PRODUCTS, "product");
-    expect(whys).toHaveLength(4);
-    expect(whys.map((w) => w.id)).toEqual(["p3", "p1", "p4", "p2"]);
-    expect(whys.every((w) => w.sourceSl === "deterministic")).toBe(true);
+  test("izenačena ocena → razbremeni rating desc, nato ime asc (stabilno)", () => {
+    const current: ProductCandidate = { ...PRODUCT_FULL, category: "", destinationName: null, price: 0, organic: false, handmade: false, local: false, vegan: false };
+    const b: ProductCandidate = { ...current, id: "b", name: "B", rating: 4.5 };
+    const a: ProductCandidate = { ...current, id: "a", name: "A", rating: 4.5 };
+    const c: ProductCandidate = { ...current, id: "c", name: "C", rating: 4.7 };
+    const ranked = rankProductCandidates(current, [b, a, c]);
+    expect(ranked.map((r) => r.id)).toEqual(["c", "a", "b"]);
+    // Druga ista izvedba da IDENTIČEN vrstni red (reproducibilnost)
+    expect(rankProductCandidates(current, [b, a, c]).map((r) => r.id)).toEqual(["c", "a", "b"]);
   });
 
-  test("smeti → null (klicalec pade na SQL fallback)", () => {
-    expect(parseSelection("")).toBeNull();
-    expect(parseSelection("Nimam pojma, kaj bi izbral.")).toBeNull();
-    expect(parseSelection('{"selection": "ni-array"}')).toBeNull();
-    expect(parseSelection('{"selection": []}')).toBeNull();
+  test("rankExperienceCandidates: kategorija+regija prevestita ostalo", () => {
+    const current: ExperienceCandidate = { ...EXPERIENCE_FULL };
+    const twin: ExperienceCandidate = { ...EXPERIENCE_FULL, id: "twin", rating: 4.6 };
+    const stray: ExperienceCandidate = { ...EXPERIENCE_FULL, id: "stray", category: "wellness", destinationName: "Rogaška Slatina", rating: 5.0, durationHours: 9, pricePerPerson: 300, familyFriendly: false };
+    expect(rankExperienceCandidates(current, [stray, twin])[0].id).toBe("twin");
   });
 
-  test("nov obrazec ima prednost pred dednim (ograde okoli objekta)", () => {
-    // Notranji array NE sme zmagati nad objektom (sicer bi izgubili why)
-    const content = '{"selection":[{"i":2,"why":"a"}]}';
-    const sel = parseSelection(content);
-    expect(sel?.[0].why).toBe("a");
+  test("source-contract: modul je ZERO-AI (brez generateCompletion/ai-client uvoza)", () => {
+    const mod = source("src/lib/ai-recommendations.ts");
+    expect(mod).not.toContain('from "@/lib/ai-client"');
+    expect(mod).not.toMatch(/generateCompletion\s*\(/);
+    expect(mod).not.toContain("z-ai-web-dev-sdk");
+  });
+
+  test("ruti poročata izključno deterministic|cache vir (tipovno prek getRecommendedIds)", () => {
+    const lib = source("src/lib/ai-recommendations.ts");
+    expect(lib).toContain('source: "deterministic" | "cache"');
+    expect(lib).toContain('source: "deterministic"');
   });
 });
 

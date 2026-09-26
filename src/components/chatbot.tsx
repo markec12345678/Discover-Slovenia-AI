@@ -7,7 +7,7 @@ import {
   X,
   Send,
   Loader2,
-  Sparkles,
+  Database,
   Bot,
   Trash2,
   Landmark,
@@ -63,7 +63,7 @@ import {
 } from "@/lib/voice";
 
 // GEO-ODGOVORI: Leaflet vgreteni ŠTEKNO — komponenta se naloži šele, ko
-// prvi AI odgovor prinese kraje (ostale strani ne plačajo ~140 KB bundla).
+// prvi geo odgovor prinese kraje (ostale strani ne plačajo ~140 KB bundla).
 const ChatMiniMap = lazy(() => import("@/components/chat-mini-map"));
 
 /** Barve pinov po plasteh zaupanja — usklajeno s chat-mini-map.tsx. */
@@ -188,17 +188,19 @@ function CategoryChips({
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
-  /** DATA-LAYERS-RAG: uradni viri STO, poslani AI-ju ob tem odgovoru
+  /** DATA-LAYERS-RAG: uradni viri STO, priloženi odgovoru
    * (opcijsko — starejša/lokalna zgodovina jih nima). */
   sources?: StoCitation[];
-  /** GEO-ODGOVORI: kraji iz AI odgovora (OSM v bližini + T1 destinacije
+  /** GEO-ODGOVORI: kraji iz odgovora (OSM v bližini + T1 destinacije
    * iz odgovora) — izrišejo se kot mini zemljevid s pini (opcijsko). */
   places?: ChatPlace[];
 }
 
 interface ChatResponse {
   message: string;
-  source: "puter" | "z-ai-sdk" | "fallback";
+  /** Issue #9 ZERO-AI: odgovori so deterministični — vir je vedno naša
+   *  baza podatkov (baza + STO uzemljenje + OSM + Open-Meteo). */
+  source: "database";
   sources?: StoCitation[];
   places?: ChatPlace[];
   timestamp: string;
@@ -306,8 +308,8 @@ function clearChatHistory(): void {
 }
 
 // FW4.3: hitra vprašanja so TIPKE v sporočilih (chatbot.quickPrompt1–4) —
-// poslana vrednost je PREVEDEN niz, zato AI odgovarja v jeziku uporabnika
-// (system prompt chat API-ja dovoljuje jezik uporabnika).
+// poslana vrednost je PREVEDEN niz, zato deterministični domenski odgovor
+// sledi jeziku uporabnika (client pošilja locale ruti).
 const QUICK_PROMPT_KEYS = [
   "quickPrompt1",
   "quickPrompt2",
@@ -321,7 +323,7 @@ function makeWelcome(t: (k: string) => string): ChatMessage {
 }
 
 // ============================================================================
-// GEO-ODGOVORI — pododeli za izris krajev AI odgovora
+// GEO-ODGOVORI — pododeli za izris krajev geo odgovora
 // ============================================================================
 
 /** Ena vrstica seznama krajev — oštevilčena kot pin na zemljevidu. */
@@ -434,7 +436,7 @@ function PlaceRow({
           </p>
         )}
       </div>
-      {/* 1.42 (GEO → NAČRT): "+" — kraj iz AI odgovora neposredno v načrt.
+      {/* 1.42 (GEO → NAČRT): "+" — kraj iz odgovora neposredno v načrt.
           TASK 8 / D8-D: kanonska primitiva (44px dotik, enoten besednjak
           "Dodaj v mojo pot" / "V moji poti"). Dejanje ostaja ENKRATNO — po
           dodajanju gumb zamrzne (pointer-events-none, dedupe varuje
@@ -478,7 +480,7 @@ interface GeoPlacesSectionProps {
   addedPlaceIds?: ReadonlySet<string>;
 }
 
-/** Oddelek "Na zemljevidu" pod AI odgovorom: glava + čipi kategorij +
+/** Oddelek "Na zemljevidu" pod odgovorom: glava + čipi kategorij +
  *  mini mapa + seznam + legenda. Čipi (1.46) filtrirajo SEZNAM IN PINE —
  *  ista filtrirana množica poganja oba, zato sta številke vrstic in pinov
  *  vedno usklajeni. */
@@ -610,21 +612,21 @@ function GeoPlacesSection({
 }
 
 /**
- * Chatbot — lebdeči AI asistent z dostopom do vsebine platforme.
+ * Chatbot — lebdeči asistent z dostopom do vsebine platforme.
  *
- * Pozna: destinacije, lokale, izdelke, izkušnje, dogodke, AI itinerer.
- * Kontekst se gradi iz baze in pošlje GLM-ju (Puter API).
- * Fallback: deterministični odgovori če AI odpove.
+ * Pozna: destinacije, lokale, izdelke, izkušnje, dogodke, načrtovalec
+ * potovanj. Odgovori so DETERMINISTIČNI (Issue #9 ZERO-AI) — sestavljeni
+ * iz naše baze (baza + STO uradni viri + OSM kraji + Open-Meteo), nikoli
+ * iz zunanjega LLM klica.
  */
 export function Chatbot() {
   const t = useTranslations("chatbot");
-  // FW4.3-2: chat API-ju povemo jezik pogovora (en → angleški asistent)
+  // FW4.3-2: chat API-ju povemo jezik pogovora (en → angleški odgovori)
   const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(() => [makeWelcome(t)]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [source, setSource] = useState<"puter" | "z-ai-sdk" | "fallback">("puter");
   const [hasNewMessage, setHasNewMessage] = useState(false);
   // GEO-ODGOVORI: kraji trenutno povečanega zemljevida (fullscreen overlay)
   const [mapOverlay, setMapOverlay] = useState<ChatPlace[] | null>(null);
@@ -954,12 +956,12 @@ export function Chatbot() {
     setInput("");
     setLoading(true);
 
-    // ISSUE #5 T5-B / M3 (fix wave 1): klientni abort čakanja. Strežniška
-    // trda meja je 25 s + gradnja domenske rezerve — 30 s pokrije oboje,
-    // potem pa klient prekine fetch in pokaže OBSTOJEČE sporočilo o
-    // nedosegljivosti (offlineFallback v catchu). Prej fetch NI imel
-    // signal-a: obešajoča se prošnja je držala loader do ~150 s+ (vrzel
-    // T5-a1 #3). Timer se počisti ob koncu (finally) — tudi ob uspehu.
+    // ISSUE #5 T5-B / M3: klientni abort čakanja (hrešče tudi po #9 — kot
+    // omrežna varovalka). Ruta je deterministična (Issue #9 ZERO-AI) in
+    // odgovarja v milisekundah; 30 s meja pokrije izjemno počasen odziv
+    // (preobremenjen strežnik / hkratni OSM klic), nato klient prekine
+    // fetch in pokaže OBSTOJEČE sporočilo o nedosegljivosti (offlineFallback
+    // v catchu). Timer se počisti ob koncu (finally) — tudi ob uspehu.
     const controller = new AbortController();
     const abortTimer = setTimeout(() => controller.abort(), CHAT_FETCH_TIMEOUT_MS);
 
@@ -978,12 +980,11 @@ export function Chatbot() {
       if (!res.ok) throw new Error("Napaka pri chatu");
 
       const data: ChatResponse = await res.json();
-      setSource(data.source);
       const places = data.places ?? [];
       setMessages((prev) => [
         ...prev,
         // DATA-LAYERS-RAG: priloži citate uradnih virov (T2) — značke
-        // pod odgovorom, kadar je AI dobil uzemljenje za to vprašanje.
+        // pod odgovorom, kadar je uzemljenje našlo vire za to vprašanje.
         // GEO-ODGOVORI: priloži kraje — mini zemljevid s pini.
         {
           role: "assistant" as const,
@@ -1085,17 +1086,14 @@ export function Chatbot() {
             <div className="flex-1">
               <h2 className="flex items-center gap-1.5 text-sm font-bold">
                 {t("headerTitle")}
+                {/* Issue #9 ZERO-AI: ena sama poštena značka — odgovori so
+                    sestavljeni iz naše baze (nikoli iz AI). */}
                 <Badge
                   variant="secondary"
-                  className={cn(
-                    "gap-1 text-[9px]",
-                    source === "fallback"
-                      ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                      : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                  )}
+                  className="gap-1 bg-primary/10 text-[9px] text-primary"
                 >
-                  <Sparkles className="size-2.5" aria-hidden="true" />
-                  {source === "fallback" ? t("badgeFallback") : t("badgeAI")}
+                  <Database className="size-2.5" aria-hidden="true" />
+                  {t("badgeDatabase")}
                 </Badge>
               </h2>
               <p className="text-[11px] text-muted-foreground">
@@ -1143,7 +1141,7 @@ export function Chatbot() {
                 >
                   <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
 
-                  {/* GEO-ODGOVORI: mini zemljevid s pini — AI odgovor se
+                  {/* GEO-ODGOVORI: mini zemljevid s pini — odgovor se
                       izriše prostorsko (kje je hrana/pijača/tržnica …) */}
                   {msg.role === "assistant" && msg.places && msg.places.length > 0 ? (
                     <GeoPlacesSection
@@ -1163,7 +1161,7 @@ export function Chatbot() {
                   ) : null}
 
                   {/* DATA-LAYERS-RAG: značke uradnih virov (T2) — veriga
-                      "podatek → AI → vir → dejanje": citat STO + morebitna
+                      "podatek → odgovor → vir → dejanje": citat STO + morebitna
                       geopovezava na našo stran destinacije (zemljevid). */}
                   {msg.role === "assistant" && msg.sources && msg.sources.length > 0 ? (
                     <div className="mt-2.5 border-t border-border/60 pt-2.5">

@@ -3,19 +3,16 @@ import { checkAIHealth } from "@/lib/ai-client";
 import { rateLimit } from "@/lib/rate-limit";
 import { verifyCronAuth } from "@/lib/security";
 
-// GET /api/ai-health — zdravje AI providerjev (1.14.0: veriga
-// OpenRouter → Gemini → Puter → z-ai). Odgovor je POŠTEN po providerjih:
-// konfiguriranost, živ klic, model, odzivni čas in opis napake (brez
-// skrivnosti). OpenRouter/Gemini circuit breakerja health BEZ obvoza
-// resetira (detektor okrevanja).
+// GET /api/ai-health — ISSUE #9 (ZERO-AI): zdravje OPCIJSKE vision plasti
+// (edini ostanek AI: Gemini vision + z-ai VLM za razumevanje slik —
+// /api/itinerary/ingest-image + rezervacijski screenshot). Tekstovna
+// veriga (OpenRouter→Gemini→Puter→z-ai) ne obstaja več. Odgovor je
+// POŠTEN po providerjih: konfiguriranost, živ klic, model, odzivni čas
+// in opis napake (brez skrivnosti). Brez ključev je poročilo iskreno
+// (configured: false) — vizija je OPCIJA, jedro deluje brez nje.
 //
-// REVIZIJA #8 (P2 — availability/cost abuse): health je prej bil JAVEN —
-// ker uspešen health resetira circuit breaker, je lahko kateri koli
-// obiskovalec "prebujal" mrtvega providerja (breaker OPEN → javni health
-// → reset → naslednji AI klic spet čaka timeout mrtvega providerja).
-// Zdaj: CRON_SECRET (Bearer) ali admin geslo (x-admin-password) — enaka
-// avtorizacija kot cron rute; uporabniki imajo pri vrednosti statusa
-// povsod drugje (chat, konzultacije, fallback). Rate limit (12/10 min)
+// REVIZIJA #8 (P2): avtorizacija CRON_SECRET (Bearer) ali admin geslo
+// (x-admin-password) — enaka kot cron rute. Rate limit (12/10 min)
 // ostane kot drugi sloj za pooblaščene klicatelje.
 export async function GET(request: Request) {
   const unauthorized = verifyCronAuth(request);
@@ -33,9 +30,7 @@ export async function GET(request: Request) {
     status: report.active === "none" ? "down" : report.active === "z-ai-sdk" ? "fallback" : "ok",
     provider: report.active,
     providers: {
-      openrouter: report.openrouter,
       gemini: report.gemini,
-      puter: report.puter,
       zai: report.zai,
     },
     timestamp: new Date().toISOString(),

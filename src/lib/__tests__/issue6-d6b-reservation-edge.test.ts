@@ -4,8 +4,9 @@
 // Issue #6 izrecno zahteva robne primere za OBA deterministična parserja:
 //  · besedilnega (lib/reservation-text-parse.ts — Issue #5 / T5-D / M1);
 //  · ICS (lib/reservation-ics-parse.ts — Issue #6 / D6-B, NOV): .ics vsebina
-//    prilepljena v zavihek Besedilo; rezerva rute jo razbere z VEVENT
-//    parserjem PREJ generičnega besedilnega (specifično pred splošnim).
+//    prilepljena v zavihek Besedilo; ISSUE #9 (ZERO-AI): deterministična
+//    kaskada je zdaj PRIMA (prej rezerva) — VEVENT parser PREJ generičnega
+//    besedilnega (specifično pred splošnim), 0 AI žetonov.
 //
 // Pokriti robni primeri (kot jih našteva Issue #6):
 //  1. NASPROTNA datuma (konec pred začetkom) — parser NE validira vrstnega
@@ -22,7 +23,8 @@
 //  6. VEVENT brez števk v UID — koledar NI potrdilo → isReservationParseEmpty
 //     → ruta odgovori iskren 422 (nasvet: ročni vnos);
 //  7. source-contract rute: ICS zaznavanje PREJ generičnega besedilnega
-//     parserja + IDENTIČNA odgovorna pogodba (method/via/…/persisted).
+//     parserja + IDENTIČNA odgovorna pogodba (method/via/…/persisted;
+//     ISSUE #9: via kanal parserja — "text-parser" za besedilni vhod).
 //
 // TASK 76 higiena: datoteka dinamično uvaža route handler (@/app/api/…) →
 // troši žetone deljenega omejevalnika runnerja → okno OBVEZNO čistimo
@@ -532,30 +534,38 @@ describe("Issue #6 D6-B: source-contract /api/journey/bookings/parse", () => {
     // SPECIFIČNO PREJ SPLOŠNIM (vrstni red v isti funkciji):
     expect(icsProbeIdx).toBeLessThan(icsCallIdx);
     expect(icsCallIdx).toBeLessThan(textCallIdx);
-    // generični parser je ŠE VEDNO rezerva za navadno besedilo:
+    // generični parser ostaja pot za navadno (ne-ICS) besedilo:
     expect(routeSrc).toContain("parseReservationText");
   });
 
   test("odgovorna pogodba je IDENTIČNA (method/via/fields/persisted)", () => {
     expect(routeSrc).toContain('method: "deterministic"');
-    expect(routeSrc).toContain('via: "fallback"');
+    // ISSUE #9: via iskreno razkrije KANAL parserja (ne "fallback" več):
+    expect(routeSrc).toContain('"text-parser"');
+    expect(routeSrc).toContain('"pdf-parser"');
+    expect(routeSrc).not.toContain('via: "fallback"');
     expect(routeSrc).toContain("persisted: false");
     expect(routeSrc).toContain("needsConfirmation: fields.needsConfirmation");
-    // obe obstoječi poti rezerve (PDF + besedilo) ohranjeni:
-    expect(routeSrc).toContain("return deterministicParseResponse(pdfText)");
-    expect(routeSrc).toContain("return deterministicParseResponse(text)");
+    // obe obstoječi poti (PDF + besedilo) — ZDAJ PRIMA, ne rezerva:
+    expect(routeSrc).toContain(
+      'deterministicParseResponse(pdfText, "pdf-parser")'
+    );
+    expect(routeSrc).toContain(
+      'deterministicParseResponse(text, "text-parser")'
+    );
     // iskren 422 za ne-prepoznavo ostaja:
     expect(routeSrc).toContain("isReservationParseEmpty");
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// 9. Funkcionalno — odpoved VSEH AI providerjev → ICS rezerva ODGOVORI
-//    (plain-text .ics skozi TEXT kanal; 0 AI žetonov; isti vzorec kot
-//     issue5-t5d: globalThis.fetch odbija, NO mock.module)
+// 9. Funkcionalno — ISSUE #9 (ZERO-AI): ICS skozi TEXT kanal je že po
+//    konstrukciji determinističen (0 AI žetonov, 0 omrežja); omrežje,
+//    ki odbija VSE, dokazuje NIČ odvisnosti (isti vzorec kot issue5-t5d:
+//    globalThis.fetch odbija, NO mock.module)
 // ─────────────────────────────────────────────────────────────────────────
 
-describe("Issue #6 D6-B: funkcionalno — odpoved vseh AI providerjev (ICS)", () => {
+describe("Issue #6 D6-B + ISSUE #9: funkcionalno — ICS 0 AI (text kanal)", () => {
   const originalFetch = globalThis.fetch;
   let seq = 0;
 
@@ -564,8 +574,8 @@ describe("Issue #6 D6-B: funkcionalno — odpoved vseh AI providerjev (ICS)", ()
     // TASK 76 higiena: dinamični uvoz route handlerja troši žetone
     // deljenega omejevalnika runnerja → okno OBVEZNO počistimo.
     clearProviderRateLimits();
-    // VSI omrežni klici odbijejo → generateCompletion vrne null → REZERVA
-    // → znotraj nje ICS zaznavanje → parseIcsReservation.
+    // ISSUE #9: besedilna pot je čisto deterministična — omrežje, ki
+    // odbija VSE, ne more spremeniti izida (dokaz 0 odvisnosti).
     globalThis.fetch = (async () => {
       throw new Error(`test-offline-ics-${seq}`);
     }) as unknown as typeof fetch;
@@ -575,7 +585,7 @@ describe("Issue #6 D6-B: funkcionalno — odpoved vseh AI providerjev (ICS)", ()
     globalThis.fetch = originalFetch;
   });
 
-  test("ICS besedilo: 200 + method deterministic + via fallback (0 AI)", async () => {
+  test("ICS besedilo: 200 + method deterministic + via text-parser (0 AI)", async () => {
     const ics = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
@@ -617,7 +627,7 @@ describe("Issue #6 D6-B: funkcionalno — odpoved vseh AI providerjev (ICS)", ()
       };
     };
     expect(body.method).toBe("deterministic");
-    expect(body.via).toBe("fallback");
+    expect(body.via).toBe("text-parser");
     expect(body.persisted).toBe(false);
     expect(body.providerSlug).toBe("booking");
     expect(body.fields.providerName).toBe("Booking.com");

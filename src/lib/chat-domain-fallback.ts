@@ -1,21 +1,22 @@
 // ============================================================================
-// CHAT DOMAIN FALLBACK — deterministična plast odgovorov brez AI (Issue #2 §5)
+// CHAT DOMAIN ANSWER — deterministična (PRIMARNA) plast odgovorov klepeta
+// (Issue #2 §5 → Issue #9 ZERO-AI: pot AI verige je odstranjena)
 // ============================================================================
-// NAMEN: /api/chat mora uporabniku dati UPORABEN odgovor tudi, ko AI veriga
-// (OpenRouter → Gemini → Puter → z-ai) NI dosegljiva — brez uporabnikovega
-// API ključa in brez lažnega simuliranja LLM-ja. Ta modul NE generira
-// besedila po občutku — sestavlja odgovor IZKLJUČNO iz realnih podatkov,
-// ki jih pošlje klicalec (baza + statični DESTINATIONS + OSM kraji +
-// Open-Meteo napoved), pošteno označen z "AI trenutno ni dosegljiv".
+// NAMEN: /api/chat odgovarja IZKLJUČNO prek te plasti — deterministično,
+// brez runtime LLM klica. Modul NE generira besedila po občutku — sestavlja
+// odgovor IZKLJUČNO iz realnih podatkov, ki jih pošlje klicalec (baza +
+// statični DESTINATIONS + OSM kraji + Open-Meteo napoved), pošteno označen
+// z source "database" na ruti.
 //
-// RESNIK (isti vzorec kot ask-local buildFallbackAnswer):
+// RESNIK (isti vzorec kot ask-local buildDatabaseAnswer):
 //   - NIKOLI ne izmisli imena, cene, statusa ali razpoložljivosti;
 //   - cene izpisuje z "od €X" (FROM_PRICE semantika);
-//   - razpoložljivost: честo NEZNANO / NO_LIVE_DATA (brez lažnega LIVE);
+//   - razpoložljivost: pogosto NEZNANO / NO_LIVE_DATA (brez lažnega LIVE);
 //   - rezervacija: ZUNANJA pri ponudniku (nikoli "potrjeno");
-//   - vreme: realna Open-Meteo napoved ALI izrecno "ni na voljo".
+//   - vreme: realna Open-Meteo napoved ALI izrecno "ni na voljo";
+//   - odgovor NIKOLI ne trdi udeležbe AI (Issue #9 iskrenost vira).
 //
-// CISTOST: modul NE uvaža db/ai-client — vsi podatki pridejo prek argumentov
+// ČISTOST: modul NE uvaža db/ai-client — vsi podatki pridejo prek argumentov
 // (enricher callback za destinacijske poizvedbe v bazi vbrizga klicalec),
 // zato je popolnoma unit-testljiv.
 // ============================================================================
@@ -57,7 +58,7 @@ export interface DomainExperience {
   rating: number | null;
 }
 
-export interface DomainFallbackContext {
+export interface DomainContext {
   listings: DomainListing[];
   products: DomainProduct[];
   experiences: DomainExperience[];
@@ -67,7 +68,7 @@ export interface DomainFallbackContext {
   osmPlaces: ChatPlace[];
 }
 
-export interface DomainFallbackAnswer {
+export interface DomainAnswer {
   message: string;
   /** Pini za mini zemljevid v klepetu (T1 destinacija + OSM kraji). */
   places: ChatPlace[];
@@ -311,23 +312,18 @@ function minPrice(nums: Array<number | null | undefined>): number | null {
 
 // ─── Glavna funkcija ──────────────────────────────────────────────────────
 
-export async function buildDomainFallbackAnswer(
+export async function buildDomainAnswer(
   question: string,
   lang: "sl" | "en",
-  context: DomainFallbackContext,
+  context: DomainContext,
   options?: {
     enrich?: DestinationEnricher;
     weather?: WeatherFetcher;
   }
-): Promise<DomainFallbackAnswer> {
+): Promise<DomainAnswer> {
   const q = ` ${question.toLowerCase()} `;
   const sl = lang === "sl";
   const weatherFetch = options?.weather ?? fetchDailyForecast;
-
-  // Poštena oznaka izvora — enak vzorec kot ask-local fallback.
-  const NOTE = sl
-    ? "AI trenutno ni dosegljiv — odgovor je sestavljen iz naših realnih podatkov."
-    : "AI is currently unavailable — this answer is built from our real data.";
 
   // Ujemanje destinacij enkrat (t1 pini + primarna destinacija iz istega klica).
   const matchedPlaces = matchDestinationsInText(question);
@@ -396,8 +392,8 @@ export async function buildDomainFallbackAnswer(
       } else {
         lines.push(
           sl
-            ? "Vremenske napovedi trenutno ni uspelo pridobiti — živo vreme vidiš v načrtu (AI načrtovalec) in na zemljevidu."
-            : "Could not retrieve the forecast right now — live weather is shown in the itinerary (AI planner) and on the map."
+            ? "Vremenske napovedi trenutno ni uspelo pridobiti — živo vreme vidiš v načrtu in na zemljevidu."
+            : "Could not retrieve the forecast right now — live weather is shown in the itinerary and on the map."
         );
       }
     }
@@ -491,7 +487,7 @@ export async function buildDomainFallbackAnswer(
         : `More about ${dest.name}: /destinacija/${dest.slug}; trip planning: /nacrtuj.`
     );
 
-    return { message: `${NOTE}\n${lines.join("\n")}`, places };
+    return { message: `${lines.join("\n")}`, places };
   }
 
   // ── 2. NAMENSKA VPRAŠANJA BREZ DESTINACIJE ────────────────────────────
@@ -499,8 +495,8 @@ export async function buildDomainFallbackAnswer(
   if (isGreeting(q) && q.trim().length < 40) {
     return {
       message: sl
-        ? `${NOTE}\nPozdravljen! 🇸🇮 Lahko ti pomagam z informacijami o ${DESTINATIONS.length} destinacijah, lokalnih ponudnikih, izdelkih in izkušnjah. Vprašaj npr. »Kaj lahko vidim v Piranu?«, »Kje lahko jedem v Ljubljani?« ali »Kakšno bo vreme na Bledu?«`
-        : `${NOTE}\nHello! 🇸🇮 I can help with information about ${DESTINATIONS.length} destinations, local providers, products and experiences. Try asking e.g. "What can I see in Piran?", "Where can I eat in Ljubljana?" or "What's the weather like at Bled?"`,
+        ? `Pozdravljen! 🇸🇮 Lahko ti pomagam z informacijami o ${DESTINATIONS.length} destinacijah, lokalnih ponudnikih, izdelkih in izkušnjah. Vprašaj npr. »Kaj lahko vidim v Piranu?«, »Kje lahko jedem v Ljubljani?« ali »Kakšno bo vreme na Bledu?«`
+        : `Hello! 🇸🇮 I can help with information about ${DESTINATIONS.length} destinations, local providers, products and experiences. Try asking e.g. "What can I see in Piran?", "Where can I eat in Ljubljana?" or "What's the weather like at Bled?"`,
       places: [],
     };
   }
@@ -509,21 +505,21 @@ export async function buildDomainFallbackAnswer(
     const near = context.osmPlaces.slice(0, 4);
     if (near.length > 0) {
       return {
-        message: `${NOTE}\n${sl ? `Kraji v bližini (OpenStreetMap — skupnostni vir):\n${near.map(osmLine).join("\n")}` : `Places nearby (OpenStreetMap — community data):\n${near.map(osmLine).join("\n")}`}`,
+        message: `${sl ? `Kraji v bližini (OpenStreetMap — skupnostni vir):\n${near.map(osmLine).join("\n")}` : `Places nearby (OpenStreetMap — community data):\n${near.map(osmLine).join("\n")}`}`,
         places: [...near],
       };
     }
     const foodish = context.listings.slice(0, 3);
     if (foodish.length > 0) {
       return {
-        message: `${NOTE}\n${sl ? `Lokalni ponudniki iz naše baze:\n${foodish.map(listingLine).join("\n")}\nPovej destinacijo, in ti poiščem gostilne v bližini.` : `Local providers from our database:\n${foodish.map(listingLine).join("\n")}\nName a destination and I'll look up nearby places.`}`,
+        message: `${sl ? `Lokalni ponudniki iz naše baze:\n${foodish.map(listingLine).join("\n")}\nPovej destinacijo, in ti poiščem gostilne v bližini.` : `Local providers from our database:\n${foodish.map(listingLine).join("\n")}\nName a destination and I'll look up nearby places.`}`,
         places: [],
       };
     }
     return {
       message: sl
-        ? `${NOTE}\nPovej, kateri kraj te zanima, in ti poiščem gostilne ter restavracije v bližini (OpenStreetMap).`
-        : `${NOTE}\nTell me which place you're interested in and I'll look up nearby restaurants and inns (OpenStreetMap).`,
+        ? `Povej, kateri kraj te zanima, in ti poiščem gostilne ter restavracije v bližini (OpenStreetMap).`
+        : `Tell me which place you're interested in and I'll look up nearby restaurants and inns (OpenStreetMap).`,
       places: [],
     };
   }
@@ -531,8 +527,8 @@ export async function buildDomainFallbackAnswer(
   if (isWeather(q)) {
     return {
       message: sl
-        ? `${NOTE}\nZa konkretno napoved mi povej kraj (npr. »Kakšno bo vreme na Bledu?«). Živo vreme je sicer vgrajeno v vsak načrt (/nacrtuj) in na zemljevidu (/zemljevid) — vir Open-Meteo, brez API ključa.`
-        : `${NOTE}\nName a place for a concrete forecast (e.g. "What's the weather at Bled?"). Live weather is otherwise built into every itinerary (/nacrtuj) and shown on the map (/zemljevid) — source Open-Meteo, no API key needed.`,
+        ? `Za konkretno napoved mi povej kraj (npr. »Kakšno bo vreme na Bledu?«). Živo vreme je sicer vgrajeno v vsak načrt (/nacrtuj) in na zemljevidu (/zemljevid) — vir Open-Meteo, brez API ključa.`
+        : `Name a place for a concrete forecast (e.g. "What's the weather at Bled?"). Live weather is otherwise built into every itinerary (/nacrtuj) and shown on the map (/zemljevid) — source Open-Meteo, no API key needed.`,
       places: [],
     };
   }
@@ -551,8 +547,8 @@ export async function buildDomainFallbackAnswer(
       .slice(0, 3);
     return {
       message: sl
-        ? `${NOTE}\n${parts.length > 0 ? `Iz naše baze: ${parts.join(", ")}` : "Cenovnih podatkov trenutno ni v bazi."}${listingRanges.length > 0 ? ` Lokalni cenovni razponi: ${listingRanges.join(", ")}.` : ""} Natančne cene so vedno na strani posamezne ponudbe — pri ponudnikih, ki ne objavijo cene, prikažemo NEZNANO (nikoli izmišljene).`
-        : `${NOTE}\n${parts.length > 0 ? `From our database: ${parts.join(", ")}` : "No pricing data in the database right now."}${listingRanges.length > 0 ? ` Local price ranges: ${listingRanges.join(", ")}.` : ""} Exact prices are always on each offer's page — where a provider hasn't published a price we show UNKNOWN (never invented).`,
+        ? `${parts.length > 0 ? `Iz naše baze: ${parts.join(", ")}` : "Cenovnih podatkov trenutno ni v bazi."}${listingRanges.length > 0 ? ` Lokalni cenovni razponi: ${listingRanges.join(", ")}.` : ""} Natančne cene so vedno na strani posamezne ponudbe — pri ponudnikih, ki ne objavijo cene, prikažemo NEZNANO (nikoli izmišljene).`
+        : `${parts.length > 0 ? `From our database: ${parts.join(", ")}` : "No pricing data in the database right now."}${listingRanges.length > 0 ? ` Local price ranges: ${listingRanges.join(", ")}.` : ""} Exact prices are always on each offer's page — where a provider hasn't published a price we show UNKNOWN (never invented).`,
       places: [],
     };
   }
@@ -560,8 +556,8 @@ export async function buildDomainFallbackAnswer(
   if (isItinerary(q)) {
     return {
       message: sl
-        ? `${NOTE}\nNačrt potovanja zgradiš na /nacrtuj — podaj proračun, število dni, interese in sezono; načrtovalec sestavi dnevni red z realnimi postanki, prevozi (OSRM), vremenom (Open-Meteo) in oceno stroškov. Trenutno shranjen načrt in MOJA POT sta ti na voljo po ponovnem obisku strani.`
-        : `${NOTE}\nBuild your travel plan at /nacrtuj — set budget, days, interests and season; the planner produces a daily schedule with real stops, transfers (OSRM), weather (Open-Meteo) and a cost estimate. Your saved plan and MY TRIP are restored when you return.`,
+        ? `Načrt potovanja zgradiš na /nacrtuj — podaj proračun, število dni, interese in sezono; načrtovalec sestavi dnevni red z realnimi postanki, prevozi (OSRM), vremenom (Open-Meteo) in oceno stroškov. Trenutno shranjen načrt in MOJA POT sta ti na voljo po ponovnem obisku strani.`
+        : `Build your travel plan at /nacrtuj — set budget, days, interests and season; the planner produces a daily schedule with real stops, transfers (OSRM), weather (Open-Meteo) and a cost estimate. Your saved plan and MY TRIP are restored when you return.`,
       places: [],
     };
   }
@@ -569,8 +565,8 @@ export async function buildDomainFallbackAnswer(
   if (isJourney(q)) {
     return {
       message: sl
-        ? `${NOTE}\nPrevoze in transferje načrtuješ na /potovanje — iskanje ponudb prevozov (npr. KiwiTaxi), dodajanje v načrt in zunanja rezervacija pri ponudniku. Cene prevozov so "od €X" (od-cene) — končna cena se potrdi pri ponudniku.`
-        : `${NOTE}\nPlan transfers and transport at /potovanje — search transfer offers (e.g. KiwiTaxi), add them to your plan and book externally with the provider. Transfer prices are "from €X" — the final price is confirmed at the provider.`,
+        ? `Prevoze in transferje načrtuješ na /potovanje — iskanje ponudb prevozov (npr. KiwiTaxi), dodajanje v načrt in zunanja rezervacija pri ponudniku. Cene prevozov so "od €X" (od-cene) — končna cena se potrdi pri ponudniku.`
+        : `Plan transfers and transport at /potovanje — search transfer offers (e.g. KiwiTaxi), add them to your plan and book externally with the provider. Transfer prices are "from €X" — the final price is confirmed at the provider.`,
       places: [],
     };
   }
@@ -578,8 +574,8 @@ export async function buildDomainFallbackAnswer(
   if (isBookingOrMyTrip(q)) {
     return {
       message: sl
-        ? `${NOTE}\nMOJA POT (na /potovanje) prikazuje tvoje postanke in statuse rezervacij. Rezervacija poteka PRI PONUDNIKU (zunanja rezervacija) — status v aplikaciji je ZUNANJA REZERVACIJA, NIKOLI "potrjeno", dokler ponudnik ne potrdi. Živih booking API-jev trenutno ni v produkciji, zato statusov ne izmišljujemo.`
-        : `${NOTE}\nMY TRIP (at /potovanje) shows your stops and booking statuses. Booking happens WITH THE PROVIDER (external booking) — the in-app status is EXTERNAL, never "confirmed" until the provider confirms. There are no live booking APIs in production, so we never invent statuses.`,
+        ? `MOJA POT (na /potovanje) prikazuje tvoje postanke in statuse rezervacij. Rezervacija poteka PRI PONUDNIKU (zunanja rezervacija) — status v aplikaciji je ZUNANJA REZERVACIJA, NIKOLI "potrjeno", dokler ponudnik ne potrdi. Živih booking API-jev trenutno ni v produkciji, zato statusov ne izmišljujemo.`
+        : `MY TRIP (at /potovanje) shows your stops and booking statuses. Booking happens WITH THE PROVIDER (external booking) — the in-app status is EXTERNAL, never "confirmed" until the provider confirms. There are no live booking APIs in production, so we never invent statuses.`,
       places: [],
     };
   }
@@ -587,22 +583,22 @@ export async function buildDomainFallbackAnswer(
   if (isAvailability(q)) {
     return {
       message: sl
-        ? `${NOTE}\nRazpoložljivost posameznih terminov žal ne moremo preverjati v živo — pri ponudbah prikazujemo NEZNANO oz. "ni živih podatkov" in ne izmišljujemo prostih terminov. Končno razpoložljivost vedno potrdiš pri ponudniku (zunanja rezervacija).`
-        : `${NOTE}\nWe cannot check live availability of specific slots — offers show UNKNOWN / "no live data" and we never invent free slots. Final availability is always confirmed with the provider (external booking).`,
+        ? `Razpoložljivost posameznih terminov žal ne moremo preverjati v živo — pri ponudbah prikazujemo NEZNANO oz. "ni živih podatkov" in ne izmišljujemo prostih terminov. Končno razpoložljivost vedno potrdiš pri ponudniku (zunanja rezervacija).`
+        : `We cannot check live availability of specific slots — offers show UNKNOWN / "no live data" and we never invent free slots. Final availability is always confirmed with the provider (external booking).`,
       places: [],
     };
   }
 
   if (isActivity(q) && context.experiences.length > 0) {
     return {
-      message: `${NOTE}\n${sl ? `Izkušnje iz naše baze:\n${context.experiences.slice(0, 3).map(experienceLine).join("\n")}\nZa konkreten kraj povej destinacijo.` : `Experiences from our database:\n${context.experiences.slice(0, 3).map(experienceLine).join("\n")}\nName a destination for specific suggestions.`}`,
+      message: `${sl ? `Izkušnje iz naše baze:\n${context.experiences.slice(0, 3).map(experienceLine).join("\n")}\nZa konkreten kraj povej destinacijo.` : `Experiences from our database:\n${context.experiences.slice(0, 3).map(experienceLine).join("\n")}\nName a destination for specific suggestions.`}`,
       places: [],
     };
   }
 
   if (isAccommodation(q) && context.listings.length > 0) {
     return {
-      message: `${NOTE}\n${sl ? `Lokalni ponudniki iz naše baze:\n${context.listings.slice(0, 3).map(listingLine).join("\n")}\nZa konkreten kraj povej destinacijo.` : `Local providers from our database:\n${context.listings.slice(0, 3).map(listingLine).join("\n")}\nName a destination for specific suggestions.`}`,
+      message: `${sl ? `Lokalni ponudniki iz naše baze:\n${context.listings.slice(0, 3).map(listingLine).join("\n")}\nZa konkreten kraj povej destinacijo.` : `Local providers from our database:\n${context.listings.slice(0, 3).map(listingLine).join("\n")}\nName a destination for specific suggestions.`}`,
       places: [],
     };
   }
@@ -614,8 +610,8 @@ export async function buildDomainFallbackAnswer(
     .map((d) => `• ${d.name} — ${d.tagline} (${d.rating}/5)`);
   return {
     message: sl
-      ? `${NOTE}\nNa to vprašanje nimam pripravljenega odgovora iz naših podatkov — raje ne ugibam. Lahko pa ti pomagam z: destinacijami (kaj videti, aktivnosti), gostilnami in restavracijami v bližini kraja, vremenom za konkreten kraj, cenami izdelkov in izkušenj ter načrtovanjem potovanja.\nNajbolje ocenjene destinacije:\n${top3.join("\n")}`
-      : `${NOTE}\nI don't have an answer from our data for this question — I'd rather not guess. I can help with: destinations (what to see, activities), nearby restaurants and inns, weather for a specific place, product and experience prices, and trip planning.\nOur top-rated destinations:\n${top3.join("\n")}`,
+      ? `Na to vprašanje nimam pripravljenega odgovora iz naših podatkov — raje ne ugibam. Lahko pa ti pomagam z: destinacijami (kaj videti, aktivnosti), gostilnami in restavracijami v bližini kraja, vremenom za konkreten kraj, cenami izdelkov in izkušenj ter načrtovanjem potovanja.\nNajbolje ocenjene destinacije:\n${top3.join("\n")}`
+      : `I don't have an answer from our data for this question — I'd rather not guess. I can help with: destinations (what to see, activities), nearby restaurants and inns, weather for a specific place, product and experience prices, and trip planning.\nOur top-rated destinations:\n${top3.join("\n")}`,
     places: [],
   };
 }

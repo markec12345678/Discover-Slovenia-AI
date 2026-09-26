@@ -10,6 +10,7 @@ import {
   Loader2,
   RefreshCw,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ interface Insight {
 interface InsightsResponse {
   insights: Insight[];
   summary: string;
-  source: "ai" | "fallback";
+  source: "deterministic";
 }
 
 interface InsightsPanelProps {
@@ -54,17 +55,27 @@ const PRIORITY_LABEL: Record<Insight["priority"], string> = {
 };
 
 /**
- * InsightsPanel — AI poslovni vpogledi za admin/owner dashboard.
+ * InsightsPanel — DETERMINISTIČNI poslovni vpogledi za admin/owner
+ * dashboard (Issue #9 ZERO-AI: izračunani iz statistike baze — 0 AI).
  *
- * Prikazuje AI-generirane insights glede na statistiko:
+ * Prikazuje vpoglede, izračunane iz statistike:
  * - Trendi (rast/padec)
  * - Priporočila (kaj izboljšati)
  * - Anomalije (nenavadni vzorci)
  * - Priložnosti (neizkoriščeni potenciali)
+ *
+ * Nove oznake: i18n ključi v imenskem prostoru "adminInsights" (glej
+ * docs/audit/issue9-report-b.md — vrednosti SL/EN za sporočilne datoteke);
+ * t.has() varovalka prepreči surove ključe, dokler JSON ni popolnjen.
  */
 export function InsightsPanel({ type, ownerId, adminPassword }: InsightsPanelProps) {
   const [data, setData] = useState<InsightsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const t = useTranslations("adminInsights");
+  // i18n z dvojno varovalko: dokler ključ ni v messages/*.json, velja SL literal
+  const panelTitle = t.has("title") ? t("title") : "Vpogledi";
+  const sourceBadge = t.has("badge") ? t("badge") : "Izračunano iz statistike";
+  const emptyLabel = t.has("empty") ? t("empty") : "Ni vpogledov na voljo.";
 
   const fetchInsights = async () => {
     setLoading(true);
@@ -75,15 +86,15 @@ export function InsightsPanel({ type, ownerId, adminPassword }: InsightsPanelPro
       const headers: Record<string, string> = {};
       if (adminPassword) headers["x-admin-password"] = adminPassword;
 
-      const res = await fetch(`/api/ai-insights?${params.toString()}`, { headers });
+      const res = await fetch(`/api/insights?${params.toString()}`, { headers });
       if (!res.ok) throw new Error("Napaka");
       const result: InsightsResponse = await res.json();
       setData(result);
     } catch {
       setData({
         insights: [],
-        summary: "AI vpogledi trenutno niso na voljo.",
-        source: "fallback",
+        summary: "Vpogledi trenutno niso na voljo.",
+        source: "deterministic",
       });
     } finally {
       setLoading(false);
@@ -102,20 +113,15 @@ export function InsightsPanel({ type, ownerId, adminPassword }: InsightsPanelPro
             <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
               <Sparkles className="size-5 text-primary" aria-hidden="true" />
             </div>
-            AI vpogledi
+            {panelTitle}
           </CardTitle>
           <div className="flex items-center gap-2">
             {data && (
               <Badge
                 variant="secondary"
-                className={cn(
-                  "text-[10px]",
-                  data.source === "fallback"
-                    ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                )}
+                className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
               >
-                {data.source === "fallback" ? "fallback" : "AI"}
+                {sourceBadge}
               </Badge>
             )}
             <Button
@@ -186,7 +192,7 @@ export function InsightsPanel({ type, ownerId, adminPassword }: InsightsPanelPro
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Sparkles className="mb-2 size-8 text-muted-foreground/40" aria-hidden="true" />
             <p className="text-sm text-muted-foreground">
-              Ni AI vpogledov na voljo.
+              {emptyLabel}
             </p>
           </div>
         )}

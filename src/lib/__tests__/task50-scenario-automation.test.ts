@@ -205,7 +205,7 @@ describe.skipIf(!hasKt)("TASK 50 §21: scenario automation (deterministično, re
 
   test("S1 basic — generacija vrne veljaven izvedljiv načrt (fallback, SL)", async () => {
     const it = await generate();
-    expect(it.source).toBe("fallback"); // AI določno odpovedal → iskrena oznaka
+    expect(it.source).toBe("deterministic") // ISSUE #9: AI pot odstranjena — vedno deterministično; // AI določno odpovedal → iskrena oznaka
     expect(it.days.length).toBe(3);
     assertRealism(it);
     // Vsi postanki so REALNI T1 ID-ji (brez izmišljenih)
@@ -382,7 +382,7 @@ describe.skipIf(!hasKt)("TASK 50 §21: scenario automation (deterministično, re
     const it = await generate({
       selectedProviderProducts: [ktSelection("411", KT_411_PRICE)],
     });
-    expect(it.source).toBe("fallback"); // iskrena oznaka, ne lažni "ai"
+    expect(it.source).toBe("deterministic") // ISSUE #9: AI pot odstranjena — vedno deterministično; // iskrena oznaka, ne lažni "ai"
     // KT (lokalni dataset) še vedno kanonsko deluje:
     const stops = stopsWith(it, "kiwitaxi:411");
     expect(stops.length).toBe(1);

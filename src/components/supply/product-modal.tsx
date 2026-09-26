@@ -60,8 +60,8 @@ const L = {
   },
   about: { sl: "O objektu", en: "About" },
   readMore: { sl: "Preberi več na Wikipediji", en: "Read more on Wikipedia" },
-  aiTitle: { sl: "AI opis", en: "AI description" },
-  aiGenerating: { sl: "AI generira opis…", en: "AI is generating a description…" },
+  aiTitle: { sl: "Opis", en: "Description" },
+  aiGenerating: { sl: "Sestavljam opis…", en: "Building a description…" },
   unavailable: { sl: "Podatki trenutno niso na voljo.", en: "Data is currently unavailable." },
   contact: { sl: "Kontakt in informacije", en: "Contact & information" },
   phone: { sl: "Telefon", en: "Phone" },
@@ -130,7 +130,7 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
   const [wikiUrl, setWikiUrl] = useState<string | null>(null);
   const [aiDescription, setAiDescription] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiSource, setAiSource] = useState<"ai" | "fallback" | "cache">("ai");
+  const [aiSource, setAiSource] = useState<"deterministic" | "cache">("deterministic");
   const [addedState, setAddedState] = useState<"stop" | "selection" | "duplicate" | null>(null);
 
   const isSelected =
@@ -199,6 +199,9 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
     const fetchAiDescription = async () => {
       setAiLoading(true);
       try {
+        // ISSUE #9 (ZERO-AI): opis je DETERMINISTIČEN — /api/pois/describe
+        // ga sestavi iz strukturiranih polj (ime/kategorija/lokacija),
+        // 0 AI klicev; source je iskreno "deterministic"/"cache".
         const res = await fetch("/api/pois/describe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -486,18 +489,13 @@ export function ProductModal({ product, onClose, onAdded }: ProductModalProps) {
               </section>
             ) : null}
 
-            {/* AI opis (samo če Wikipedia nima) */}
+            {/* Opis (deterministično — ISSUE #9: sestavljen iz
+                strukturiranih polj, 0 AI) */}
             {!loading && !wikiExtract && (aiLoading || aiDescription) ? (
               <section>
                 <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                  <Sparkles className="size-3.5 text-primary" aria-hidden="true" />
+                  <MapPin className="size-3.5 text-primary" aria-hidden="true" />
                   {L.aiTitle[lang]}
-                  {aiSource === "ai" || aiSource === "cache" ? (
-                    <Badge variant="secondary" className="gap-1 text-[9px]">
-                      <Sparkles className="size-2.5" aria-hidden="true" />
-                      AI
-                    </Badge>
-                  ) : null}
                 </h3>
                 {aiLoading ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">

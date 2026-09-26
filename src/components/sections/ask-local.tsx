@@ -35,16 +35,18 @@ import { trackFunnel } from "@/lib/funnel";
 // ASK LOCAL — "Vprašaj lokalca" (homepage)
 // ============================================================================
 //
-// Grounded AI Q&A: obiskovalec zastavi vprašanje, AI "lokalnež" odgovori
-// SAMO na podlagi baze platforme (destinacije, lokali, izkušnje, izdelki,
-// dogodki) — to gradi obljubo "zero hallucination".
+// Database Q&A (Issue #9 ZERO-AI): obiskovalec zastavi vprašanje, odgovor
+// "lokalneža" pa se sestavi DETERMINISTIČNO — samo na podlagi baze
+// platforme (destinacije, lokali, izkušnje, izdelki, dogodki) — to gradi
+// obljubo "zero hallucination".
 //
-// Transparentnost: vsak odgovor je vidno označen — "Grounded AI" ali
-// "Brez povezave z AI — izključno iz baze" (iskrenost namesto pretvarjanja).
+// Transparentnost: vsak odgovor je vidno označen — "Odgovor izključno iz
+// naše baze" (novo, answerSource "database") oz. starejše vrednosti
+// "fallback"/"ai" iz zapisi pred #9 (iskrenost namesto pretvarjanja).
 //
 // B2B flywheel: odgovori, ki citirajo partnerje, pod odgovorom prikažejo
 // KLIKABILNE čipe priporočenih partnerjev (vodijo na things-to-do stran
-// destinacije) — AI priporočila tako dobijo merljivo klik-pot, partnerjev
+// destinacije) — priporočila tako dobijo merljivo klik-pot, partnerjev
 // zvezek ★ pa pove, kdo je premium (rahla prednost pri enakovrednih
 // možnostih — razloženo v diskretni opombi pod čipi).
 //
@@ -78,7 +80,8 @@ const KIND_LABEL: Record<string, string> = {
   dogodek: "Dogodek",
 };
 
-/** Partner, citiran v AI odgovoru (iz recommendedPartners JSON). */
+/** Partner, citiran v odgovoru (iz recommendedPartners JSON — odgovor ga
+ *  sestavlja izključno iz baze, Issue #9). */
 interface RecommendedPartner {
   name: string;
   kind: string;
@@ -301,7 +304,7 @@ export function AskLocal() {
             className="mb-3 border-primary/30 text-primary"
           >
             <MessageCircle className="size-3" aria-hidden="true" />
-            AI lokalna znanja
+            Lokalna znanja
           </Badge>
           <h2
             id="vprasi-lokalca-title"
@@ -547,9 +550,9 @@ function FreeLimitCard({ onConsult }: { onConsult: () => void }) {
             </p>
             <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
               Naslednje hitro vprašanje ti je na voljo jutri — meja je eno
-              vprašanje dnevno, ker vsak odgovor piše AI, ki bere našo bazo.
-              Globja osebna konzultacija pa je tu — prav tako brezplačna (do 3
-              dnevno).
+              vprašanje dnevno, ker vsak odgovor sestavimo previdno iz naše
+              baze realnih podatkov. Globja osebna konzultacija pa je tu —
+              prav tako brezplačna (do 3 dnevno).
             </p>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <Button
@@ -585,7 +588,10 @@ function AnswerCard({
   /** Odpre konzultacijski čarovnik (intencijski blok po odgovoru). */
   onConsult: () => void;
 }) {
-  const isFallback = item.answerSource === "fallback";
+  // Issue #9 ZERO-AI: novi zapisi so "database" (deterministično); starejši
+  // zapisi nosijo "fallback" oz. "ai" — UI znese vse tri (poštena zgodovina).
+  const isDatabase = item.answerSource === "database";
+  const isLegacyFallback = item.answerSource === "fallback";
 
   return (
     <Card
@@ -615,8 +621,18 @@ function AnswerCard({
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-semibold">AI lokalnež</span>
-              {isFallback ? (
+              <span className="text-sm font-semibold">Lokalec</span>
+              {/* Nova pot (#9): odgovor izključno iz naše baze. */}
+              {isDatabase ? (
+                <Badge
+                  variant="outline"
+                  className="border-primary/40 text-primary"
+                >
+                  <Database className="size-3" aria-hidden="true" />
+                  Odgovor izključno iz naše baze
+                </Badge>
+              ) : isLegacyFallback ? (
+                /* Starejši zapisi (answerSource "fallback") — pred #9. */
                 <Badge
                   variant="outline"
                   className="border-amber-300/60 text-amber-800 dark:border-amber-700/60 dark:text-amber-300"
@@ -625,6 +641,8 @@ function AnswerCard({
                   Brez povezave z AI — izključno iz baze
                 </Badge>
               ) : (
+                /* Starejši zapisi (answerSource "ai") — pred #9; ohranjeno
+                   zaradi poštene zgodovine javnih odgovorov. */
                 <Badge
                   variant="outline"
                   className="border-emerald-300/60 text-emerald-800 dark:border-emerald-700/60 dark:text-emerald-300"
@@ -706,7 +724,9 @@ function AnswerCard({
 function RecentQuestion({ item }: { item: LocalQuestionItem }) {
   const [expanded, setExpanded] = useState(false);
   const longAnswer = item.answer.length > EXPAND_THRESHOLD;
-  const isFallback = item.answerSource === "fallback";
+  // "database" (#9) in legacy "fallback" — oba izključno iz baze.
+  const isDatabaseOrLegacyFallback =
+    item.answerSource === "database" || item.answerSource === "fallback";
 
   return (
     <li className="rounded-lg border border-border/60 bg-muted/20 p-3 transition-colors hover:border-border sm:p-4">
@@ -739,7 +759,7 @@ function RecentQuestion({ item }: { item: LocalQuestionItem }) {
             {item.destinationName}
           </Badge>
         ) : null}
-        {isFallback ? (
+        {isDatabaseOrLegacyFallback ? (
           <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/80">
             <Database className="size-3" aria-hidden="true" />
             iz baze

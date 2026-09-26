@@ -1,12 +1,12 @@
 {
   "nav": {
     "destinations": "Destinations",
-    "planner": "AI Planner",
+    "planner": "Planner",
     "map": "Map",
     "listings": "Local businesses",
     "events": "Events",
     "join": "Join us",
-    "cta": "Plan with AI",
+    "cta": "Plan a trip",
     "providers": "For providers",
     "experiences": "Experiences",
     "guides": "Guides",
@@ -15,14 +15,14 @@
     "trips": "My trips",
     "goMode": "On the road",
     "tagline": "AI trips",
-    "searchAria": "AI search",
+    "searchAria": "Smart search",
     "journey": "Complete journey",
     "startAnywhere": "Start anywhere"
   },
   "hero": {
     "title": "What do you want to experience in Slovenia?",
-    "subtitle": "Tell the AI what you're looking for — in English or Slovenian. Every tip is verified on Slovenian ground, never copied from generic guides.",
-    "badge": "AI Concierge for Slovenia",
+    "subtitle": "Tell us what you're looking for — in English or Slovenian. Every tip is verified on Slovenian ground, not copied from foreign guides.",
+    "badge": "Local guide for Slovenia",
     "placeholder": "I'd like a 3-day relaxing trip with nature, great food and as little driving as possible …",
     "cta": "Build my trip",
     "ctaLoading": "Analyzing...",
@@ -179,7 +179,7 @@
     "title": "Explore Slovenia",
     "subtitle": "Map, events, local businesses, guides and more — all in one place.",
     "mapTitle": "Map",
-    "mapDesc": "An interactive map with sparkling pins, your AI itinerary route and POIs across all of Slovenia.",
+    "mapDesc": "An interactive map with sparkling pins, your itinerary route and POIs across all of Slovenia.",
     "eventsTitle": "Events",
     "eventsDesc": "A calendar of festivals, fairs and local events — with dates, locations and categories.",
     "localTitle": "Local businesses",
@@ -319,7 +319,7 @@
     "ariaLabel": "Page footer",
     "brandAriaLabel": "Discover Slovenia AI — home",
     "brandName": "Discover Slovenia AI",
-    "brandDescription": "An AI-powered travel planner for Slovenia and the western Balkans. Discover 38 destinations — from Lake Bled to the Ionian coast.",
+    "brandDescription": "A travel planner for Slovenia and the western Balkans powered by real data and a deterministic engine. Discover 38 destinations — Bled, Ljubljana, Piran and more.",
     "copyright": "© 2026 Discover Slovenia AI.",
     "exploreColumn": "Explore",
     "exploreAllDestinations": "All destinations",
@@ -331,7 +331,7 @@
     "exploreGuides": "Guides",
     "explorePass": "Slovenia Pass",
     "planColumn": "Plan",
-    "planPlanner": "AI planner",
+    "planPlanner": "Trip planner",
     "planQuiz": "Traveller quiz",
     "planStartAnywhere": "Start anywhere (link, image, PDF)",
     "planComparison": "Planner comparison",
@@ -365,13 +365,12 @@
     "send": "Send message",
     "clear": "Clear conversation",
     "cleared": "Conversation cleared",
-    "thinking": "AI is thinking...",
-    "offlineFallback": "Sorry, I'm having connection trouble right now. Please try again, or visit the AI planner on the Plan page.",
+    "thinking": "Searching our database…",
+    "offlineFallback": "Sorry, I'm having connection trouble right now. Please try again, or visit the trip planner.",
     "fabOpen": "Open AI chatbot",
     "fabClose": "Close chatbot",
     "dialogAriaLabel": "AI chatbot conversation",
-    "badgeAI": "AI",
-    "badgeFallback": "fallback",
+    "badgeDatabase": "From our database",
     "sourcesLabel": "Official sources (STO)",
     "sourceMap": "map",
     "placesLabel": "On the map",
@@ -417,8 +416,8 @@
     "voiceError": "Speech recognition failed. Try again or type your question."
   },
   "planner": {
-    "title": "AI trip planner",
-    "description": "Tell us your wishes and the AI will build a perfect itinerary",
+    "title": "Trip planner",
+    "description": "Tell us your wishes and we'll build a perfect itinerary",
     "daysLabel": "Number of days",
     "budgetLabel": "Budget (€)",
     "groupSizeLabel": "Group size",
@@ -503,10 +502,10 @@
     "moreTitle": "More about your trip",
     "moreDesc": "Recommendations, tips, events during your visit, packing list and timeline.",
     "submit": "Generate itinerary ✨",
-    "generating": "AI is thinking...",
+    "generating": "Composing your route…",
     "generatingStage": {
       "supply": "Gathering weather, stays and events…",
-      "compose": "The AI is composing your route…",
+      "compose": "Composing your route…",
       "verify": "Checking distances and quality…"
     },
     "generatingElapsed": "Elapsed: {time}",
@@ -533,10 +532,6 @@
     "resultTitle": "Your {days}-day itinerary",
     "badgeAI": "AI",
     "badgeSample": "Sample",
-    "engineLabel": "How to generate the plan?",
-    "engineAuto": "With AI",
-    "engineDeterministic": "Without AI",
-    "engineHint": "With AI: a tailored plan that takes a bit longer. Without AI: instant and identical for anyone with the same preferences.",
     "badgeDeterministic": "No AI",
     "totalBadge": "Total ~€{total}",
     "tripRangeTitle": "Trip timeframe",
@@ -597,7 +592,7 @@
     "sharedOpenError": "The shared plan could not be opened.",
     "addedToTripToast": "Added to your trip ✨",
     "generatedToast": "Itinerary generated!",
-    "generatedToastDescAI": "The AI has put together your perfect travel plan.",
+    "generatedToastDescAI": "The planner built your perfect trip plan.",
     "generatedToastDescSample": "A ready-made sample itinerary is shown.",
     "savedToast": "Plan saved!",
     "savedToastDesc": "You can copy the sharing link below.",
@@ -614,7 +609,7 @@
     "planUpdatedLoadErrorToast": "Could not load the update",
     "planUpdatedLoadErrorToastDesc": "Check your connection and try again, or open the shared link in a new tab.",
     "undoLabelPlanUpdate": "loading updated version",
-    "undoLabelRefine": "AI refinement",
+    "undoLabelRefine": "Refinement",
     "undoLabelRegenerate": "regeneration",
     "undoChip": "Previous version available ({label} · {count} in history)",
     "undoChipAction": "Undo",
@@ -623,7 +618,7 @@
     "saveErrorToastDesc": "Saving failed — please try again.",
     "saveErrorInline": "Saving failed — please try again",
     "removeEventAriaLabel": "Remove {name} from the trip",
-    "socialShareTitle": "My AI travel plan for Slovenia 🇸🇮",
+    "socialShareTitle": "My Slovenia trip plan 🇸🇮",
     "socialShareDescription": "{days}-day AI plan · €{total}",
     "ingestLabel": "Start from a link (YouTube, blog …)",
     "ingestPlaceholder": "https://www.youtube.com/watch?v=…",
@@ -720,7 +715,7 @@
       "book": "Book",
       "bookAria": "Book {name} — open booking options",
       "dayTotal": "Day {day} total:",
-      "aiTipTitle": "AI tip",
+      "aiTipTitle": "Tip",
       "tipOneDay": "For a perfect day, start early (before 9:00) to avoid the crowds.",
       "tipMultiDay": "Group your stops by region — Bled + Bohinj together, then the Soča valley the next day.",
       "priceUnverified": "Price unverified",
@@ -733,7 +728,7 @@
       "bookAtProviderAria": "Book {name} at the provider — opens an external site"
     },
     "smartSearch": {
-      "title": "AI search",
+      "title": "Smart search",
       "description": "Natural-language search across destinations, venues, products and experiences",
       "placeholder": "Describe what you're looking for... e.g. 'a quiet riverside weekend'",
       "queryAria": "Search query",
@@ -797,12 +792,12 @@
     "stopMovedToDayToastTitle": "Stop moved",
     "stopMovedToDayToastDesc": "Moved to day {day} — check the order and times.",
     "supplySelectedTitle": "Selected products ({count})",
-    "supplySelectedHint": "The AI will treat selected products as mandatory (it will not swap them for similar ones).",
+    "supplySelectedHint": "Selected products will be treated as mandatory (not swapped for similar ones).",
     "supplySelectedRemoveAria": "Remove {name} from selection",
     "supplyStopBadge": "Map",
     "supplyStopBadgeTitle": "Stop added from the supply map",
     "supplySelectedStateAria": "Change priority for {name}",
-    "supplySelectedStateTitle": "Click to cycle: mandatory → preferred → suggested (for the AI planner)",
+    "supplySelectedStateTitle": "Click to cycle: mandatory → preferred → suggested (for the planner)",
     "booking": {
       "heading": "Book this day",
       "intro": "Book accommodation, activities, dining and transport directly through our partners or local providers.",
@@ -878,7 +873,7 @@
     },
     "howTitle": "How we work",
     "howP1": "The platform takes no commission on bookings. Instead, local providers pay a flat monthly subscription for their presence on the platform. Users always book directly with the provider — no middlemen.",
-    "howP2": "The AI planner uses <sdk>z-ai-web-dev-sdk</sdk> to generate itineraries. Points of interest (POI) data comes from <osm>OpenStreetMap</osm> and <wiki>Wikipedia</wiki>. Weather data from <meteo>Open-Meteo</meteo>.",
+    "howP2": "The itinerary planner is a DETERMINISTIC engine — pure code over real data, 0 AI tokens (Issue #9). Points of interest (POI) data comes from <osm>OpenStreetMap</osm> and <wiki>Wikipedia</wiki>. Weather data from <meteo>Open-Meteo</meteo>.",
     "contactTitle": "Contact",
     "contactP": "Questions? Write to <email>info@discoverslovenia.ai</email> or visit the <contactPage>contact page</contactPage>.",
     "dataTitle": "Details",
@@ -977,7 +972,7 @@
     },
     "ctaTitle": "Plan your {seasonLower} trip to {name}",
     "ctaText": "The AI takes the season, the weather and your interests into account for the perfect plan.",
-    "ctaButton": "AI itinerary",
+    "ctaButton": "Build an itinerary",
     "ctaThingsToDo": "Things to do in {name}",
     "exploreTitle": "Also explore",
     "meta": {
@@ -1249,7 +1244,7 @@
     "faqTitle": "Frequently asked questions",
     "ctaTitle": "Put together the perfect {labelLower} in {name}",
     "ctaP": "The AI takes your budget, interests and time into account. {description}",
-    "ctaPlanner": "AI travel planner",
+    "ctaPlanner": "Trip planner",
     "ctaItineraries": "Ready-made itineraries",
     "elsewhereTitle": "{label} elsewhere",
     "elsewhereDesc": "Explore {labelLower} in other Slovenian destinations:",
@@ -1302,8 +1297,8 @@
         "a4": "{name} is reachable by car, train or bus. We recommend booking transport at least a week in advance, especially for Friday afternoon."
       },
       "ai": {
-        "q": "Can the AI put together an itinerary for {name}?",
-        "a": "Yes — our AI planner can build a fully tailored itinerary for {name} that reflects your interests, budget and available time. Give it a try on the Plan page."
+        "q": "Can you put together an itinerary for {name}?",
+        "a": "Yes — our planner can build a fully tailored itinerary for {name} that reflects your interests, budget and available time. Give it a try on the Plan page."
       }
     },
     "guideTypes": {
@@ -1460,22 +1455,22 @@
     "otherDestinationsTitle": "Other destinations",
     "personalizedTitle": "Want a personalised itinerary?",
     "personalizedText": "Our AI takes your budget, interests and season into account for the perfect plan.",
-    "personalizedButton": "Generate an AI itinerary",
+    "personalizedButton": "Generate an itinerary",
     "meta": {
       "notFound": "Itinerary not found",
       "title": "{duration} itinerary for {name} — {desc}",
-      "description": "The complete {durationLower} itinerary for {name}, {tagline}. {desc} — AI-recommended activities, accommodation and restaurants for a {days}-day visit.",
-      "ogDescription": "An AI-recommended {duration} itinerary with activities, accommodation and restaurants."
+      "description": "The complete {durationLower} itinerary for {name}, {tagline}. {desc} — recommended activities, accommodation and restaurants.",
+      "ogDescription": "A recommended {duration} itinerary with activities, accommodation and restaurants."
     }
   },
   "plannerPage": {
-    "badge": "AI Concierge",
+    "badge": "Slovenia guide",
     "title": "Plan your journey around Slovenia",
-    "subtitle": "Tell the AI what you want to experience. Within seconds you get a personal itinerary with real local providers, a map and booking options.",
+    "subtitle": "Tell us what you want to experience. Within seconds you get a personal itinerary with real local providers, a map and booking options.",
     "usp": "No sign-up · Free · Grounded in real providers",
     "meta": {
-      "title": "AI travel planner",
-      "description": "Tell the AI what you want to experience in Slovenia — days, budget, family, interests. In seconds you get a personal itinerary with a map, real local providers and booking options."
+      "title": "Trip Planner — Slovenia",
+      "description": "Tell us what you want to experience in Slovenia — days, budget, family, interests. In seconds you get a personal itinerary with a map, real local providers and booking options."
     }
   },
   "pregenTrips": {
@@ -1737,7 +1732,7 @@
     "styleLabel": "Your travel style",
     "recommendations": "Recommended destinations",
     "planCta": "Plan my trip",
-    "planCtaAria": "Plan my trip with the AI planner",
+    "planCtaAria": "Plan my trip with the planner",
     "restart": "Retake the quiz",
     "restartAria": "Restart the quiz from the beginning",
     "prompt": {
@@ -1774,8 +1769,8 @@
         "body": "The platform provides information about Slovenian tourist destinations, AI travel planning and links to local providers. The platform does not handle bookings — users book directly with the providers."
       },
       "s3": {
-        "title": "3. AI itineraries",
-        "body": "AI-generated itineraries are for information only. The platform accepts no liability for the accuracy of prices, availability or the quality of third-party services."
+        "title": "3. Itineraries",
+        "body": "Generated itineraries are for information only. The platform accepts no liability for the accuracy of prices, availability or the quality of third-party services."
       },
       "s4": {
         "title": "4. Affiliate links",
@@ -1829,8 +1824,8 @@
     },
     "faqTitle": "Frequently asked questions",
     "planTitle": "Plan your trip to {name}",
-    "planText": "Our AI can put together the perfect itinerary for {name} and the surrounding area — tailored to your budget, interests and season.",
-    "planButton": "AI travel planner",
+    "planText": "We can put together the perfect itinerary for {name} and the surrounding area — tailored to your budget, interests and season.",
+    "planButton": "Trip planner",
     "exploreTitle": "Also explore",
     "trackerTitle": "Things to do in {name} — Guide",
     "meta": {
@@ -1983,13 +1978,13 @@
     },
     "aiCta": {
       "title": "Slovenia first, then the Adriatic",
-      "body": "Before you head south, put together the Slovenian leg of your trip — our AI builds an itinerary from Lake Bled to Piran, tailored to your budget and the season.",
-      "button": "AI travel planner"
+      "body": "Before you head south, put together the Slovenian leg of your trip — our planner builds an itinerary from Lake Bled to Piran, tailored to your budget and the season.",
+      "button": "Trip planner"
     },
     "aiCtaLoop": {
       "title": "A loop made to measure",
-      "body": "This loop is only the starting point — our AI builds a Slovenia itinerary around your budget, the season and your departure day.",
-      "button": "AI travel planner"
+      "body": "This loop is only the starting point — our planner builds a Slovenia itinerary around your budget, the season and your departure day.",
+      "button": "Trip planner"
     },
     "related": {
       "title": "More Adriatic road trips",
@@ -2096,8 +2091,8 @@
     },
     "plan": {
       "title": "Plan your trip to {name}",
-      "text": "Our AI can build a complete itinerary for {name} and the surrounding area — tailored to your interests, dates, the weather forecast and who you travel with.",
-      "button": "AI trip planner"
+      "text": "We can build a complete itinerary for {name} and the surrounding area — tailored to your interests, dates, the weather forecast and who you travel with.",
+      "button": "Trip planner"
     },
     "nearby": {
       "title": "Nearby — the {region} region"
@@ -2320,5 +2315,25 @@
     "recsWhy": "Why: {why}",
     "recsWhyFromData": "· (from data)",
     "recsWhyFromDataTitle": "Reason composed from the recommended item's own data — not an AI pick."
+  },
+  "adminInsights": {
+    "title": "Insights",
+    "badge": "Computed from statistics",
+    "empty": "No insights available."
+  },
+  "story": {
+    "badge": "Our story"
+  },
+  "consultation": {
+    "badgeDeterministic": "From the platform database only",
+    "speaker": "Local"
+  },
+  "ownerPanel": {
+    "autoTagButton": "Suggest tags",
+    "autoTagButtonLoading": "Suggesting…",
+    "autoTagSuggestionTitle": "Suggestions",
+    "autoTagToastReady": "Suggestions ready",
+    "autoTagToastFail": "Suggestion failed",
+    "tagSourceDictionary": "Taxonomy dictionary"
   }
 }

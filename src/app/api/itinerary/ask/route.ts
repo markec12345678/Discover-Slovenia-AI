@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
-import { generateCompletion } from "@/lib/ai-client";
 import {
   answerPlanQuestion,
-  buildPlanFacts,
-  renderFactsSheet,
   buildUnknownAnswer,
   type PlanForecastDay,
   type PlanLang,
@@ -19,20 +16,19 @@ import type { Itinerary, PlannerInput } from "@/lib/types";
 
 // ============================================================================
 // POST /api/itinerary/ask — F9 "Pogovor z načrtom" (MindTrip chat-first,
-// naša izvedba: številke so VEDNO izračunane, AI le sfrazi)
+// naša izvedba: številke so VEDNO izračunane)
 // ============================================================================
 //
-// Vrstni red obravnave vprašanja:
-//   1. DETERMINISTIČNO (plan-qa.ts): namen se prepona z regex vzorci
+// ISSUE #9 (ZERO-AI / deterministic-first): AI noga (LLM fraziranje za
+// neprepoznane namene) je ODSTRANJENA. Vrstni red obravnave vprašanja:
+//   1. DETERMINISTIČNO (plan-qa.ts): namen se prepozna z regex vzorci
 //      (SL+EN), odgovor se sestavi iz ISTE plasti kot prikaz (geo-validacija,
-//      stroški vožnje F5.3, pakirni seznam F6.1). Deluje tudi brez AI
-//      žetonov — kot hitre akcije refine. Vir: "computed".
-//   2. AI (samo če namen ni prepoznan): vprašanje + TEKSTOVNI LIST DEJSTEV
-//      gresta k LLM s STROGIM sistemskim navodilom — odgovarja IZKLJUČNO
-//      iz dejstev; če dejstva ne vsebujejo odgovora, to izrecno pove.
-//      Vir: "puter" | "z-ai-sdk" (razkrit v UI).
-//   3. Iskren fallback (AI ni dosegljiv): sporočilo, da ne more odgovoriti
+//      stroški vožnje F5.3, pakirni seznam F6.1). 0 AI žetonov, 0 omrežja
+//      (razen žive napovedi za vremenska vprašanja). Vir: "computed".
+//   2. Iskren odklon (namen ni prepoznan): sporočilo, da ne more odgovoriti
 //      iz dejstev in da ne bo ugibal + primeri vprašanj. Vir: "fallback".
+// NAMERNO brez LLM: dobro definirana množica namenov + iskrena odklonitev
+// je zanesljivejša od generiranega ugibanja (Issue #9 §7/§47).
 //
 // Vremenska vprašanja: če ima načrt datum odhoda znotraj ~16-dnevnega
 // horizonta, strežnik pridobi ŽIVO napoved (Open-Meteo, isti vir kot
@@ -46,11 +42,6 @@ interface AskRequest {
 }
 
 const QUESTION_MAX = 500;
-
-/** Zgornja meja AI izpisa (kratki pogovorni odgovori, ne eseji).
- * F10: 600 → 1024 — Gemini thinking modeli porabijo del proračuna za
- * notranje razmišljanje; 600 je pri 4-povednih odgovorih rezalo vsebino. */
-const AI_MAX_TOKENS = 1024;
 
 export async function POST(request: Request) {
   const limited = rateLimit(request, {
@@ -102,7 +93,6 @@ export async function POST(request: Request) {
 
   const formData = body.formData ?? null;
   const lang: PlanLang = formData?.language === "en" ? "en" : "sl";
-  const isEn = lang === "en";
 
   // -----------------------------------------------------------------------
   // 1. DETERMINISTIČNA POT (brez AI — primarna)
@@ -146,77 +136,15 @@ export async function POST(request: Request) {
   }
 
   // -----------------------------------------------------------------------
-  // 2. AI POT — vprašanje + list dejstev, STROGO prizemljen odgovor
+  // 2. ISKREN ODKLON — namen ni prepoznan: ne morem odgovoriti, ne bom
+  //    ugibal (ISSUE #9: LLM fraziranje bi lahko izmislilo številko;
+  //    podprta množica namenov je eksplicitna in razširljiva v plan-qa.ts)
   // -----------------------------------------------------------------------
-  const facts = buildPlanFacts(itinerary, formData, lang);
-  const sheet = renderFactsSheet(facts, lang);
-
-  const systemPrompt = isEn
-    ? `You are a concise, honest travel-planning assistant. The user has a generated Slovenia itinerary and asks a question about IT.
-
-STRICT GROUNDING RULES:
-- Answer ONLY from the PLAN FACTS provided. Every number must come from the facts — never invent distances, prices, times or weather.
-- If the facts do not contain the answer, say so explicitly and point to what you can answer (driving/km, costs, busiest day, a specific day, weather in the plan, packing, feasibility warnings).
-- Do NOT recommend new destinations — this is a Q&A about the existing plan. For changes, the user has an "Adjust the itinerary" tool.
-- Max 4 short sentences. Plain text, no markdown, no lists longer than 5 items.
-- Disclose limits: attraction costs exclude accommodation/food; weather values are plan estimates, not a live forecast (unless stated otherwise in the facts).`
-    : `Si jedrnati, iskren pomočnik za načrtovanje potovanj. Uporabnik ima generiran slovenski itinerer in zastavi vprašanje O NJEM.
-
-STROGA PRAVILA PRIZEMLJENOSTI:
-- Odgovarjaj IZKLJUČNO iz PODATKOV O NAČRTU, ki so ti dani. Vsaka številka mora priti iz teh dejstev — nikoli ne izumi razdalj, cen, časov ali vremena.
-- Če dejstva ne vsebujejo odgovora, to IZRECNO povej in napoti na to, na kar lahko odgovoriš (vožnja/km, stroški, najbolj natrpan dan, posamezen dan, vreme v načrtu, pakiranje, opozorila o izvedljivosti).
-- NE predlagaj novih destinacij — to je vprašanje o obstoječem načrtu. Za spremembe ima uporabnik orodje „Prilagodi itinerer“.
-- Največ 4 kratke povedi. Navadno besedilo, brez markdowna, seznami največ 5 postavk.
-- Razkrivaj meje: stroški atrakcij NE vsebujejo nočitev/hrane; vrednosti vremena so ocene načrta, ne živa napoved (razen če dejstva izrecno pravijo drugače).`;
-
-  const userPrompt = isEn
-    ? `${sheet}
-
-USER QUESTION:
-"${question}"
-
-Answer (only from the facts above):`
-    : `${sheet}
-
-VPRAŠANJE UPORABNIKA:
-"${question}"
-
-Odgovor (samo iz dejstev zgoraj):`;
-
-  try {
-    const result = await generateCompletion(
-      [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      // F10: reasoningEffort "low" — fraziranje dejstev je mehanična naloga;
-      // globoko razmišljanje bi le poravnilo proračun (Gemini thinking).
-      { temperature: 0.3, maxTokens: AI_MAX_TOKENS, reasoningEffort: "low", usageLog: { feature: "ask" } }
-    );
-
-    const content = result?.content?.trim();
-    if (result && content) {
-      console.log(
-        `[itinerary/ask] AI odgovor (${result.source}) — vprašanje: "${question.slice(0, 80)}"`
-      );
-      return NextResponse.json({
-        answer: content.slice(0, 2000),
-        intent: "ai",
-        source: result.source,
-      });
-    }
-    throw new Error("Prazen odgovor AI");
-  } catch (error) {
-    // ---------------------------------------------------------------------
-    // 3. ISKREN FALLBACK — ne morem odgovoriti, ne bom ugibal
-    // ---------------------------------------------------------------------
-    console.error("[itinerary/ask] AI napaka:", error);
-    return NextResponse.json({
-      answer: buildUnknownAnswer(lang),
-      intent: "unknown",
-      source: "fallback",
-    });
-  }
+  return NextResponse.json({
+    answer: buildUnknownAnswer(lang),
+    intent: "unknown",
+    source: "fallback",
+  });
 }
 
 // ---------------------------------------------------------------------------

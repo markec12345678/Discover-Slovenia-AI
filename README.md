@@ -379,7 +379,7 @@ Kategorije — celoten seznam z navodili je v [`.env.example`](.env.example):
 - **Baza** — `DATABASE_URL` (PostgreSQL/Neon; shema je `postgresql`)
 - **Avtentikacija / admin** — `ADMIN_PASSWORD`, `NEXTAUTH_*`
 - **Cron** — `CRON_SECRET` (obvezno v produkciji; brez njega 401)
-- **AI** — `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `PUTER_AUTH_TOKEN`
+- **AI (OPCIJSKO — samo vizija)** — `GEMINI_API_KEY` (Issue #9 ZERO-AI: jedro deluje brez AI ključev; vizija samo za razumevanje slik)
   (strežniški env, nikoli `NEXT_PUBLIC_`)
 - **Provider poverilnice** — `VIATOR_API_KEY`, `GETYOURGUIDE_API_TOKEN`,
   `TIQETS_API_KEY`, `BOOKING_API_KEY`, `SKYSCANNER_API_KEY`,

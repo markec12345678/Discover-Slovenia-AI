@@ -45,7 +45,7 @@ check_url "/api/ai-health" "AI health" || RC=1
 # strežniku (NODE_ENV=development) verifyCronAuth dovoli klic brez secreta;
 # če ga imaš nastavljenega, se pripne samodejno (npr. za produkcijo podoben
 # zagon).
-step "AI veriga (GET /api/ai-health)"
+step "AI vision plast (GET /api/ai-health — Issue #9: opcijska)""
 if [ -n "${CRON_SECRET:-}" ]; then
   HEALTH="$(curl -sS -m 60 -H "Authorization: Bearer ${CRON_SECRET}" "${BASE}/api/ai-health" 2>/dev/null || echo '{}')"
 else
@@ -58,7 +58,7 @@ if [ -n "$HEALTH" ] && printf '%s' "$HEALTH" | jq -e '.providers' >/dev/null 2>&
   printf '%s' "$HEALTH" | jq -r '.providers | to_entries[] | "  · \(.key): \(.value.configured | select(. != null) // false) | ok=\(.value.ok) model=\(.value.model) \(.value.latencyMs // "" | select(. != "")) \(.value.error // "" | select(. != ""))"' 2>/dev/null \
     || printf '%s' "$HEALTH" | jq -c '.providers'
   if [ "$ACTIVE" = "none" ]; then
-    warn "NO provider živ — generacija pade na determinističen fallback."
+    warn "NO vision provider živ — slikovni vnos vrača 502 (jedro deluje deterministično)."
   fi
 else
   warn "AI health ni odgovoril z JSON (morda rate-limit 12/10 min — počakaj; v produkciji tudi 401 brez CRON_SECRET)."

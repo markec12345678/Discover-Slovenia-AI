@@ -472,7 +472,7 @@ describe.skipIf(!hasKt)("TASK 51 §16: pipeline integracija nad odzivom (mrtvi O
       interests: ["narava", "mesta"],
       selectedProviderProducts: [ktSel("411", 77)],
     });
-    expect(it.source).toBe("fallback");
+    expect(it.source).toBe("deterministic") // ISSUE #9: AI pot odstranjena — vedno deterministično;
 
     // (1) GEO UREJANJE — koherenca tudi pod hevristiko (offline urejanje)
     const rep = coherenceOf(it);

@@ -309,10 +309,11 @@ describe("ISSUE #4 VAL 8 §E: admin session — površine (page + rute + klicalc
       "checkAdmin(request))"
     );
     // starega vzorca (header niz) v API rutah NI več
+    // (Issue #9: /api/ai-insights → /api/insights — pot posodobljena)
     const stale = [
       "src/app/api/track-funnel/route.ts",
       "src/app/api/pois/describe/route.ts",
-      "src/app/api/ai-insights/route.ts",
+      "src/app/api/insights/route.ts",
       "src/app/api/admin/analytics/route.ts",
       "src/app/api/admin/approve/[id]/route.ts",
       "src/app/api/admin/push/send/route.ts",

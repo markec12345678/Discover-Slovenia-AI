@@ -1,76 +1,83 @@
 "use client";
 
 // ============================================================================
-// TASK 89 — ZVOČNI POVZETEK DNEVA: gumb »Poslušaj« (1.80.0)
+// ISSUE #9 / GROUP C — ZVOČNI POVZETEK DNEVA: BRKALNIŠKI TTS (ZERO-AI)
 // ============================================================================
 //
 // DayAudioButton se izriše v glavi vsakega dneva z uporabnimi postanki
 // (TripTimeline — rezultati načrtovalnika sl/en; SharedTrip — javni
-// deljeni načrt, sl-only). Klik:
+// deljeni načrt sl-only; JourneyTrip/MY TRIP — TASK 91).
 //
-//   idle → POST /api/tts (strukturirani podatki dneva) → blob → predvajaj
-//   playing → ustavi
-//   napaka → iskrena opomba (role=alert) — časovnica poti dela naprej
+// ISSUE #9 (ZERO-AI/deterministic-first): strežniški TTS (obe ruti za
+// zvočni povzetek + skupno jedro tts-engine) je ODSTRANJEN. Isto pripoved
+// povedo BRKALNIŠKI GLAS (Web Speech API — window.speechSynthesis), enako
+// kot glasovni klepet chatbota (Issue #2 §7):
 //
-// Klientni predpomnilnik blob URL-jev po istem ključu kot strežniški LRU
-// (narrationCacheKey — ista čista lib): ponovno poslušanje istega dneva
-// NE povzroči nove zahteve. Poganjanje: HTMLAudioElement (brez vizualnega
-// plejerja — dan je kratek poslušalni povzetek, ne glasbeni predvajalnik).
+//   idle    → zgradi skript NA KLIENTU (ista čista lib funkcija) → izgovori
+//   playing → ustavi (speechSynthesis.cancel)
+//   napaka  → iskrena opomba (role=alert) — časovnica poti dela naprej
 //
-// ISKRENOST: gumb se NE izriše, če dan nima uporabnih postankov
-// (fail-closed na obeh koncih — prav tako /api/tts zavrne). Loading je
-// viden (TTS traja merjeno 2–12 s), odpoved je jasna, ne tiha.
-// print:hidden — natisnjen dokument ostane dejstva, ne zvok.
+// DOLGI skripti se izgovorijo PO KOSIH (chunkNarration — ≤ 960 znakov po
+// stavčnih mejah, 0 izgube vsebine): sinteza na nekaterih platformah
+// (Chrome/Android, Safari) TIHO poreže posamezne dolge izgovore — razrez
+// po stavkih + zaporedna vrsta izgovorov poskrbi, da se povede CELA
+// pripoved (ZERO FEATURE LOSS glede na nekdanjo strežniško pot, ki je
+// razrezala po isti funkciji).
+//
+// ISKRENOST:
+//  - skript pripovedi je 100 % determinističen (buildDayNarrationScript iz
+//    čiste lib plasti — 0 omrežja, 0 AI žetonov, 0 podatkov na strežnik);
+//  - dan brez uporabnih postankov → gumb se NE izriše (fail-closed);
+//  - brskalnik brez speechSynthesis → dostopen tekstovni padec (gumb
+//    »Prikaži besedilo« pokaže pripoved namesto zvoka — vsebina NE izgine);
+//  - print:hidden — natisnjen dokument ostane dejstva, ne zvok.
+//
+// Nove UI vrstice (i18n ključi za prihodnjo selitev v src/i18n/messages —
+// src/i18n/** je v tem nalogi nerazmerljiv, zato živijo tu po vzorcu
+// NARRATION_LABELS, en vir resnice na jezik):
+//   audio.showScript      SL "Prikaži besedilo"               EN "Show text"
+//   audio.hideScript      SL "Skrij besedilo"                  EN "Hide text"
+//   audio.voiceUnavailable SL "Računalniški glas ni na voljo — besedilo je
+//                             prikazano spodaj."
+//                          EN "Computer voice unavailable — the text is
+//                              shown below."
 // ============================================================================
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader2, Square, Volume2 } from "lucide-react";
+import { Eye, EyeOff, Square, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   NARRATION_LABELS,
-  narrationCacheKey,
+  buildDayNarrationScript,
+  chunkNarration,
   type NarrationStopInput,
   type NarrationLang,
 } from "@/lib/itinerary-audio";
+import { speechLanguageTag, ttsSupported } from "@/lib/voice";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
 
-// ── Klientni predpomnilnik blob URL-jev (LRU, cap 12 dni) ─────────────────
+// ── Tekstovni padec (brskalnik brez govorne sinteze) ──────────────────────
+// (isti dvojezični vzorec kot NARRATION_LABELS v lib plasti)
 
-interface CachedAudio {
-  url: string;
-  at: number;
-}
-
-const BLOB_CACHE_MAX = 12;
-const blobCache = new Map<string, CachedAudio>(); // insertion order = LRU
-
-function cachedUrlFor(key: string): string | null {
-  const hit = blobCache.get(key);
-  if (!hit) return null;
-  blobCache.delete(key);
-  blobCache.set(key, hit); // osveži LRU pozicijo
-  return hit.url;
-}
-
-function rememberBlob(key: string, url: string): void {
-  if (blobCache.has(key)) {
-    const old = blobCache.get(key)!;
-    blobCache.delete(key);
-    URL.revokeObjectURL(old.url);
-  }
-  blobCache.set(key, { url, at: Date.now() });
-  while (blobCache.size > BLOB_CACHE_MAX) {
-    const oldestKey = blobCache.keys().next().value as string | undefined;
-    if (oldestKey === undefined) break;
-    const evicted = blobCache.get(oldestKey);
-    blobCache.delete(oldestKey);
-    if (evicted) URL.revokeObjectURL(evicted.url);
-  }
-}
+const SCRIPT_FALLBACK_LABELS: Record<
+  NarrationLang,
+  { show: string; hide: string; voiceUnavailable: string }
+> = {
+  sl: {
+    show: "Prikaži besedilo",
+    hide: "Skrij besedilo",
+    voiceUnavailable:
+      "Računalniški glas ni na voljo — besedilo je prikazano spodaj.",
+  },
+  en: {
+    show: "Show text",
+    hide: "Hide text",
+    voiceUnavailable:
+      "Computer voice unavailable — the text is shown below.",
+  },
+};
 
 // ── Gumb ──────────────────────────────────────────────────────────────────
-
-type AudioState = "idle" | "loading" | "playing";
 
 export interface DayAudioButtonProps {
   dayNumber: number;
@@ -92,140 +99,150 @@ export function DayAudioButton({
   surface,
   className,
 }: DayAudioButtonProps) {
-  const [state, setState] = useState<AudioState>("idle");
+  const [playing, setPlaying] = useState(false);
   const [error, setError] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  /** Blob URL, ki ga JE ustvaril ta gumb (za počistenje ob unmountu). */
-  const ownUrlRef = useRef<string | null>(null);
-  /** Ključ za katerega teče trenutno stanje (zastareli odgovori ne štejejo). */
-  const requestKeyRef = useRef<string | null>(null);
+  const [showScript, setShowScript] = useState(false);
+  /**
+   * Podpora govorne sinteze se preverja PO hidrataciji (server=false,
+   * klient=true bi bil hydration mismatch — isti vzorec kot chatbot).
+   * null = še neznano (SSR/prvi render → zvok, dokler ni dokazano drugače).
+   */
+  const [speechOut, setSpeechOut] = useState<boolean | null>(null);
+  /** Skript trenutno predvajanja (zastareli odgovori ne štejejo). */
+  const spokenScriptRef = useRef<string | null>(null);
+  /** Seja predvajanja: cancel/stop razveljavi vse čakajoče kose (onend
+   *  zastarega kosa NE sme sprožiti naslednjega — sicer bi »Ustavi«
+   *  nadaljeval z branjem). */
+  const sessionRef = useRef(0);
 
   const L = NARRATION_LABELS[lang];
-  // Fail-closed: dan brez uporabnih postankov → brez gumba (0 lažnih gumbov).
-  const usableStops = stops.filter(
-    (s) => typeof s.name === "string" && s.name.trim() !== ""
-  );
-  const cacheKey = narrationCacheKey(
-    { dayNumber, dateLabel: dateLabel ?? null, stops: usableStops },
+  const F = SCRIPT_FALLBACK_LABELS[lang];
+
+  // Skript zgradi KLIENT iz strukturiranih podatkov dneva — ISTA čista
+  // funkcija, ki jo je prej pognal strežnik (0 omrežja, 0 AI).
+  const script = buildDayNarrationScript(
+    { dayNumber, dateLabel: dateLabel ?? null, stops },
     lang
   );
-  const available = usableStops.length > 0;
+  // Fail-closed: dan brez uporabnih postankov → brez gumba (0 lažnih gumbov).
+  const available = script !== null && script !== "";
 
-  // Ustavi predvajanje ob odhodu s strani (ne predvajaj v prazno).
+  // Podpora + počisti govor ob odhodu s strani (ne predvajaj v prazno).
+  // setSpeechOut teče v mikrotasku (reakta pravilo: NE klicati setState
+  // sinhrono v efektu) — enak vzorec feature-detekcije kot chatbot.tsx.
   useEffect(() => {
+    const t = setTimeout(() => setSpeechOut(ttsSupported()), 0);
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = "";
-        audioRef.current = null;
-      }
-      // Blob ostaja v modulnem predpomnilniku (deli se med dnevi/gumbi);
-      // počisti se ob LRU izmetu — tukaj le ustavimo predvajanje.
+      clearTimeout(t);
+      sessionRef.current += 1; // umik s strani razveljavi sejo
+      if (ttsSupported()) window.speechSynthesis.cancel();
     };
   }, []);
 
   const stopPlayback = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    setState("idle");
+    sessionRef.current += 1; // v tekoči kosi → onend/onerror tiho končajo
+    if (ttsSupported()) window.speechSynthesis.cancel();
+    spokenScriptRef.current = null;
+    setPlaying(false);
   }, []);
 
   const startPlayback = useCallback(
-    (url: string) => {
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.addEventListener("ended", () => {
-        if (audioRef.current === audio) audioRef.current = null;
-        setState("idle");
-      });
-      audio.addEventListener("error", () => {
-        if (audioRef.current === audio) audioRef.current = null;
-        setState("idle");
-        setError(true);
-      });
-      void audio.play().catch(() => {
-        // Avtopredvajanje blokirano / kodek — iskrena napaka.
-        if (audioRef.current === audio) audioRef.current = null;
-        setState("idle");
-        setError(true);
-      });
-      setState("playing");
-    },
-    []
-  );
-
-  const handleClick = useCallback(async () => {
-    // Ustavi, če že predvaja (toggle — tipka je isto dejanje uporabnika).
-    if (state === "playing") {
-      stopPlayback();
-      return;
-    }
-    if (state === "loading") return; // klik med nalaganjem ne restarta
-
-    setError(false);
-    setState("loading");
-    requestKeyRef.current = cacheKey;
-
-    // 1) Klientni predpomnilnik — 0 zahtev.
-    const cached = cachedUrlFor(cacheKey);
-    if (cached) {
-      startPlayback(cached);
-      return;
-    }
-
-    // 2) Strežniška generacija iz strukturiranih podatkov dneva.
-    try {
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lang,
-          day: {
-            dayNumber,
-            dateLabel: dateLabel ?? null,
-            stops: usableStops,
-          },
-        }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
-      if (blob.size === 0) throw new Error("prazen odgovor");
-
-      // Zastareli odgovor (dan se je med nalaganjem spremenil) → ne
-      // predvajaj neveljavnega zvoka.
-      if (requestKeyRef.current !== cacheKey) return;
-
-      const url = URL.createObjectURL(blob);
-      ownUrlRef.current = url;
-      rememberBlob(cacheKey, url);
-      startPlayback(url);
+    (text: string) => {
+      if (!ttsSupported() || !text) return;
+      // Vsak nov začetek prekine morebitnega prejšnjega (ista disciplina
+      // kot glasovni klepet — en govor naenkrat).
+      window.speechSynthesis.cancel();
+      // Razrez na kose po stavčnih mejah (ista čista funkcija kot nekdajna
+      // strežniška pot): posamezen izgovor ostane kratek, dolga pripoved
+      // se izgovori V CELOTI po zaporednih izgovorih — brez tihih rezov.
+      const chunks = chunkNarration(text);
+      if (chunks.length === 0) return;
+      const session = ++sessionRef.current;
+      const speakNext = (i: number) => {
+        // Ustavljen/nadomeščen predvajalni sejo → tiho končaj (stop je stop).
+        if (session !== sessionRef.current) return;
+        if (i >= chunks.length) {
+          spokenScriptRef.current = null;
+          setPlaying(false);
+          return;
+        }
+        const utterance = new SpeechSynthesisUtterance(chunks[i]);
+        utterance.lang = speechLanguageTag(lang); // sl → sl-SI, en → en-US
+        utterance.rate = 1;
+        utterance.onend = () => speakNext(i + 1);
+        utterance.onerror = () => {
+          if (session !== sessionRef.current) return;
+          // Iskrenost: prekinitev (cancel) NI napaka uporabnika — napako
+          // pokažemo samo, če zaposnjeni skript NI bil nadomeščen z novim.
+          if (spokenScriptRef.current === text) setError(true);
+          spokenScriptRef.current = null;
+          setPlaying(false);
+        };
+        window.speechSynthesis.speak(utterance);
+      };
+      spokenScriptRef.current = text;
+      speakNext(0);
+      setPlaying(true);
 
       // Analitika: uspešen začetek poslušanja (enkrat na klik).
       trackPlannerEvent("itinerary_audio_play", {
         day: dayNumber,
         lang,
         surface,
-        bytes: blob.size,
+        engine: "browser-speech-synthesis",
       });
-    } catch {
-      if (requestKeyRef.current !== cacheKey) return;
-      setState("idle");
-      setError(true);
+    },
+    [lang, dayNumber, surface]
+  );
+
+  const handleClick = useCallback(() => {
+    if (!script) return;
+    // Ustavi, če že predvaja (toggle — tipka je isto dejanje uporabnika).
+    if (playing) {
+      stopPlayback();
+      return;
     }
-  }, [
-    state,
-    cacheKey,
-    lang,
-    dayNumber,
-    dateLabel,
-    usableStops,
-    startPlayback,
-    stopPlayback,
-  ]);
+    setError(false);
+    startPlayback(script);
+  }, [script, playing, startPlayback, stopPlayback]);
 
   if (!available) return null;
+
+  // Brskalnik brez govorne sinteze → DOSTOPEN TEKSTOVNI PADEC: gumb
+  // preklopi prikaz pripovedi (vsebina ostane dosegljiva, ne izgine).
+  if (speechOut === false) {
+    return (
+      <div className={className}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5 rounded-full text-xs font-medium print:hidden"
+          onClick={() => setShowScript((v) => !v)}
+          aria-expanded={showScript}
+          aria-controls={`day-script-${dayNumber}`}
+        >
+          {showScript ? (
+            <EyeOff className="size-3.5" aria-hidden="true" />
+          ) : (
+            <Eye className="size-3.5" aria-hidden="true" />
+          )}
+          <span>{showScript ? F.hide : F.show}</span>
+        </Button>
+        {showScript && (
+          <p
+            id={`day-script-${dayNumber}`}
+            className="mt-1 max-w-prose rounded-md border bg-muted/50 p-2 text-xs text-foreground print:hidden"
+          >
+            <span className="block text-muted-foreground">
+              {F.voiceUnavailable}
+            </span>
+            {script}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={className}>
@@ -234,21 +251,12 @@ export function DayAudioButton({
         variant="outline"
         size="sm"
         className="h-8 gap-1.5 rounded-full text-xs font-medium print:hidden"
-        onClick={() => void handleClick()}
+        onClick={handleClick}
         aria-label={
-          state === "playing"
-            ? L.stopButtonAria(dayNumber)
-            : L.buttonAria(dayNumber)
+          playing ? L.stopButtonAria(dayNumber) : L.buttonAria(dayNumber)
         }
-        disabled={state === "loading"}
       >
-        {state === "loading" ? (
-          <>
-            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-            <span className="hidden sm:inline">{L.loading}</span>
-            <span className="sr-only">{L.buttonAria(dayNumber)}</span>
-          </>
-        ) : state === "playing" ? (
+        {playing ? (
           <>
             <Square className="size-3 fill-current" aria-hidden="true" />
             <span>{L.stopButton}</span>

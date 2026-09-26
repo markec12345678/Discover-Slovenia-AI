@@ -26,7 +26,8 @@ banner "Doctor — konfiguracijska revizija"
 step "a) .env in ključi"
 if [ -f "$ENV_FILE" ]; then
   ok ".env obstaja."
-  for key in OPENROUTER_API_KEY GEMINI_API_KEY PUTER_AUTH_TOKEN DATABASE_URL; do
+  # ISSUE #9: AI ključi so OPCIJSKI (samo GEMINI_API_KEY za vizijo); OPENROUTER/PUTER ne obstajata več
+  for key in GEMINI_API_KEY DATABASE_URL; do
     val="$(env_get "$key" || true)"
     if [ -n "$val" ] && [ "$val" != "YOUR_${key}" ]; then
       info "  · ${key}: $(mask_secret "$val")"
@@ -41,7 +42,7 @@ fi
 # ── b) .env.example dokumentacija ────────────────────────────────────────
 step "b) .env.example dokumentacija"
 if [ -f "${REPO_ROOT}/.env.example" ]; then
-  for key in OPENROUTER_API_KEY GEMINI_API_KEY; do
+  for key in GEMINI_API_KEY; do
     if grep -q "^#${key}=" "${REPO_ROOT}/.env.example" 2>/dev/null || grep -q "^${key}=" "${REPO_ROOT}/.env.example" 2>/dev/null; then
       ok "${key} je dokumentiran v .env.example."
     else
@@ -71,7 +72,7 @@ step "e) GitHub (token + secreti)"
 if github_token >/dev/null 2>&1; then
   ok "GitHub token na voljo."
   SECRETS="$(gh_api GET "/repos/${GITHUB_REPO_SLUG}/actions/secrets" 2>/dev/null || echo '{}')"
-  for sname in OPENROUTER_API_KEY GEMINI_API_KEY; do
+  for sname in GEMINI_API_KEY; do
     if printf '%s' "$SECRETS" | jq -e --arg n "$sname" '.secrets[]? | select(.name == $n)' >/dev/null 2>&1; then
       ok "Actions secret ${sname}: obstaja."
     else
@@ -122,9 +123,9 @@ fi
 step "NASLEDNJI KORAKI (kar skripta NE more narediti namesto tebe)"
 cat <<'EOF'
   1. Vercel token:  https://vercel.com/account/tokens  → potem:
-       VERCEL_TOKEN=xxx VERCEL_PROJECT_ID=prj_xxx ./vercel-env-set.sh OPENROUTER_API_KEY GEMINI_API_KEY
+       VERCEL_TOKEN=xxx VERCEL_PROJECT_ID=prj_xxx ./vercel-env-set.sh GEMINI_API_KEY
   2. Render token:  https://dashboard.render.com/u/settings#api-keys → potem:
-       RENDER_API_KEY=rnd_xxx RENDER_SERVICE_ID=srv-xxx ./render-env-set.sh OPENROUTER_API_KEY GEMINI_API_KEY
+       RENDER_API_KEY=rnd_xxx RENDER_SERVICE_ID=srv-xxx ./render-env-set.sh GEMINI_API_KEY
   3. Po deployu:    ./deploy-check.sh https://tvoja-produkcija.vercel.app
 EOF
 exit 0

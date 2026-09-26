@@ -1,62 +1,56 @@
 /**
- * AI Priporočila za tržnico (izdelki + izkušnje)
+ * Priporočila za tržnico (izdelki + izkušnje) — DETERMINISTIČNA
  *
- * Uporablja GLM (preko Puter API / z-ai-web-dev-sdk) za kontekstualno
- * priporočanje podobnih izdelkov/izkušenj.
+ * ISSUE #9 (ZERO-AI / deterministic-first): GLM izbira (4 od 10) je
+ * ODSTRANJENA. Izbor je zdaj transparentno uteženo točkovanje nad ISTIM
+ * SQL kandidatskim naborom (ista kategorija ALI ista destinacija,
+ * featured desc → rating desc → reviewCount desc, 10 kandidatov) —
+ * 0 AI žetonov, 0 omrežja, reproducibilno.
  *
  * Strategija:
  * 1. Preveri filesystem cache (data/ai-rec-cache.json) — 24-urni TTL
- * 2. Če cache veljaven → vrni cached rezultat (0 AI stroškov)
- * 3. Če cache manjka/ potekel → pridobi 10 SQL kandidatov, GLM izbere 4
- * 4. Če AI odpove → fallback na SQL top-4 (vedno vrne rezultat)
+ * 2. Če cache veljaven → vrni cached rezultat (0 izračuna)
+ * 3. Sicer: SQL kandidati → DETERMINISTIČNO točkovanje → top 4
  *
  * Cache key: `product:{id}` ali `experience:{id}`
  *
  * ISSUE #4 §20 (VAL 5 sklop B, 1.97.0) — RAZLOŽLJIVA PRIPOROČILA:
- * priporočilo NI VEČ črni AI ranking — vsak priporočen item nosi `why`
- * (eno vrstico razloga) + `whySource` ("ai" | "deterministic"; isti kanon
- * iskrenosti kot itinerary `source: "fallback"`). UI nato izriše
- * "Zakaj: {why}" oziroma "Why: {why}" (+ "(iz podatkov)" kadar vrstica
- * ni AI-curirana).
+ * priporočilo NI črni ranking — vsak priporočen item nosi `why`
+ * (eno vrstico razloga) + `whySource` ("ai" | "deterministic";
+ * po ISSUE #9 so NOVE vrstice VEDNO "deterministic" — "ai" ostaja
+ * samo za branje legacy cache zapisov, MLADIČI 24 h). UI izriše
+ * "Zakaj: {why}" oziroma "Why: {why}" (+ "(iz podatkov)" kadar
+ * vrstica ni AI-curirana).
  *
- * ZAKON WHY VRSTICE: razlog sme navajati SAMO podatke, ki so bili poslani
- * v prompt (kategorija, regija, cena, ocena, opis, trajanje, značilnosti).
- * Dvojna obramba:
- *   1. prompt AI izrecno prepoveduje izmišljanje podatkov (recenzij,
- *      dostopnosti, sezon …), ki jih kandidat nima;
- *   2. containsInventedClaims() — preverljiv filter na AI odgovoru: why,
- *      ki omenja polja, ki jih v prompt NI, se ZAVRNE in zamenja z
- *      deterministično vrstico (buildDeterministicWhy).
- *
- * DETERMINISTIČNA VRSTICA (isti kanon kot buildStopReasons v
- * stop-insights.ts): sestavljena IZKLJUČNO iz prisotnih polj kandidata,
- * manjkajoče polje se preskoči (nikoli se ne izumi), jezikovno zavestna
- * (sl/en). Uporablja se: (a) kadar AI ne vrne why, (b) kadar AI why omenja
- * izmišljene podatke, (c) ob SQL fallbacku (top-4 po ratingu) — takrat
- * whySource pošteno pove "deterministic".
+ * ZAKON WHY VRSTICE: razlog sme navajati SAMO podatke, ki jih kandidat
+ * RESNIČNO ima (kategorija, regija, cena, ocena, trajanje, značilnosti).
+ * Deterministična vrstica (buildDeterministicWhy) sestavljena IZKLJUČNO
+ * iz prisotnih polj — manjkajoče polje se preskoči (nikoli se ne izumi),
+ * jezikovno zavestna (sl/en).
  *
  * SCORING MODEL — DOKUMENTACIJA (§20: "Če ni enotnega scoring modela, ga
- * dokumentiraj"): priporočila tržnice NIMAJO enotnega utežnega scoring
- * modela. Izbor je dvostopen: (1) SQL kandidatski nabor (featured desc →
- * rating desc → reviewCount desc; filter ista kategorija ALI ista
- * destinacija), (2) GLM kontekstualna izbira 4 od 10 po pravilih v
- * promptu (podobna kategorija, complementary uporaba, ista regija,
- * podobna cena). Preference/rating/price/category/region so torej upoštevane
- * (kot SQL vrstni red + prompt pravila); distance/opening/weather/
- * popularity/route fit v izbor tržnice NE vstopajo — kandidat teh polj ne
- * nosi in jih zato tudi why vrstica odkrito NE omenja (samo dejstva iz
- * kandidata). Za transparentnost RANGIRANJA supply seznamov skrbi ločen
- * modul src/lib/ranking-engine.ts — a ta je ADMIN/OWNER površina (vrstni
- * red ponudb), NI potnikov UI tržnice in tu NI priklopljen.
+ * dokumentiraj"; ISSUE #9 §14: transparentno uteženo točkovanje):
+ *   relevance = kategorija (ista: +3)
+ *             + regija/destinacija (ista: +2,5)
+ *             + ocena (rating × 0,4 — realni signal kvalitete)
+ *             + bližina cene (±30 %: +1; ±60 %: +0,5)
+ *             + značke izdelka (vsaka DELJENA značka s trenutnim
+ *               izdelkom: +0,4, kap 1,2 — bio/ročno/lokalno/vegansko)
+ *               oziroma pri izkušnjah: familyFriendly ujemanje (+0,5)
+ *               + bližina trajanja (±1,5×: +0,5)
+ * Vrstni red: score desc → rating desc → ime asc (POPOPOLNOMA
+ * deterministično — isti vhod vedno da isti izhod). Kandidatov polja
+ * (distance/opening/weather) v izbor tržnice NE vstopajo — kandidat teh
+ * polj ne nosi in jih zato why vrstica odkrito NE omenja (samo dejstva
+ * iz kandidata). Za transparentnost RANGIRANJA supply seznamov skrbi
+ * ločen modul src/lib/ranking-engine.ts — a ta je ADMIN/OWNER površina
+ * (vrstni red ponudb), NI potnikov UI tržnice in tu NI priklopljen.
  */
 
 import { promises as fs } from "fs";
 import path from "path";
 import { db } from "@/lib/db";
-import { generateCompletion } from "@/lib/ai-client";
-import { logFallbackUsage, logCacheUsage } from "@/lib/ai-usage";
-import { wrapProviderData, SYSTEM_DATA_GUARD } from "@/lib/ai-context";
-import { extractJsonObject } from "@/lib/imported-reservation";
+import { logCacheUsage } from "@/lib/ai-usage";
 
 // ============================================================================
 // TIPI
@@ -87,11 +81,13 @@ export interface RecommendationWhy {
   sourceEn: WhySource;
 }
 
-/** §20: cache zapis — whys so dodani (starejši zapisi ≤1.96 jih nimajo). */
+/** §20: cache zapis — whys so dodani (starejši zapisi ≤1.96 jih nimajo).
+ * ISSUE #9: novi zapisi nosijo source "deterministic"; "ai"/"fallback"
+ * ostajata v unionu SAMO za branje legacy zapisov (TTL 24 jih splakne). */
 export interface CacheEntry {
   cachedAt: number; // epoch ms
   itemIds: string[]; // IDs priporočenih itemov (v vrstnem redu)
-  source: "ai" | "fallback";
+  source: "deterministic" | "ai" | "fallback";
   /** §20: why vrstice (aligned s itemIds po vrstnem redu). Manjka v
    *  legacy zapisih → cacheEntryHasValidWhy() razglasi neveljavnost. */
   whys?: RecommendationWhy[];
@@ -413,245 +409,113 @@ export function buildDeterministicWhy(
 }
 
 // ============================================================================
-// §20 — FILTER IZMIŠLJENIH TRDITEV (preverljiva obramba nad AI odgovorom)
-// ============================================================================
-//
-// Oznake polj, ki jih v prompt NE pošiljamo. Kdor jih omenja v why, jih ni
-// mogel prebrati iz kandidata → izmišljena trditev → vrstico ZAVRNEMO in
-// iskreno zamenjamo z deterministično. (Prompt prepoveduje isto — to je
-// druga, preskušljiva plast; primarno obrambo piše prompt, sekundarno
-// preverja koda.)
-const INVENTED_CLAIM_MARKERS: string[] = [
-  "recenz", // recenzija/recenzij/recenziami — reviewCount NI v kandidatu
-  "mnenj", // mnenja obiskovalcev — ni v kandidatu
-  "review", // reviews/reviewed — ni v kandidatu
-  "sezon", // sezona/sezonsko — bestSeason NI v kandidatu
-  "season", // season/seasonal — ni v kandidatu
-  "dostopn", // dostopnost — Experience.accessibility NI v selectu kandidata
-  "accessible", // accessibility — ni v kandidatu
-  "odpiral", // odpiralni čas — NI v kandidatu
-  "opening", // opening hours — NI v kandidatu
-  "vreme", // vreme — NI v kandidatu
-  "weather", // weather — NI v kandidatu
-  "priljubljen", // popularnost — NI v kandidatu
-  "popular", // popular/popularity — NI v kandidatu
-  "bestseller", // prodajna uspešnost — NI v kandidatu
-  "stock", // zaloga — NI v kandidatu
-  "zalog", // zaloga/zalogi — NI v kandidatu
-];
-
-/**
- * §20: ali why omenja podatke, ki jih kandidat (in prompt) NIMA.
- * true → vrstica ni sestavljena iz kandidatovih polj → zavrni (iskrena
- * zamenjava z deterministično vrstico, whySource "deterministic").
- */
-export function containsInventedClaims(why: string): boolean {
-  const s = why.toLowerCase();
-  return INVENTED_CLAIM_MARKERS.some((m) => s.includes(m));
-}
-
-// ============================================================================
-// AI PROMPT BUILDER
+// ISSUE #9 §14 — DETERMINISTIČNO TOČKOVANJE (transparentno, realni signali)
 // ============================================================================
 
-function buildProductPrompt(current: ProductCandidate, candidates: ProductCandidate[]): string {
-  // P3c-4: ponudniška vsebina (naslov, opis) vstopa v prompt OVITA v
-  // <podatek> oznake (wrapProviderData) — system sporočilu je prilepljen
-  // SYSTEM_DATA_GUARD, ki oznako razglaša za podatek, ne navodilo.
-  const currentDesc = `TRENUTNI IZDELEK:
-- Naslov: ${wrapProviderData("naziv", current.name)}
-- Opis: ${wrapProviderData("opis", current.description)}
-- Kategorija: ${current.category}
-- Regija: ${current.destinationName ?? "ni znana"}
-- Cena: €${current.price}
-- Atributi: ${[current.organic && "bio", current.handmade && "ročno izdelano", current.local && "lokalno", current.vegan && "vegansko"].filter(Boolean).join(", ") || "brez"}
-- Ocena: ${current.rating}/5`;
-
-  const candidatesDesc = candidates
-    .map((c, i) =>
-      wrapProviderData(
-        "kandidat-izdelek",
-        `[${i}] ${c.name} — ${c.description.substring(0, 100)} (kategorija: ${c.category}, regija: ${c.destinationName ?? "neznana"}, cena: €${c.price}, ocena: ${c.rating})`
-      )
-    )
-    .join("\n");
-
-  return `Si strokovnjak za slovenske lokalne izdelke in kulinariko. Uporabnik gleda izdelek in mu želimo priporočiti 4 NAJBOLJ PODOBNE ali COMPLEMENTARY izdelke iz spodnjega seznama.
-
-${currentDesc}
-
-KANDIDATI (izberi 4):
-${candidatesDesc}
-
-Pravila:
-1. Izberi 4 izdelke ki so najbolj smiselni za uporabnika ki gleda trenutni izdelek
-2. Prioritiziraj: podobna kategorija, complementary uporaba (npr. vino + olje), ista regija, podobna cena
-3. Izogibaj se duplikatom (vsak indeks izberi največ enkrat)
-4. Za vsako izbiro napiši "why" — ENA vrstica razloga v slovenščini (do 90 znakov) in "whyEn" — isto vrstico v angleščini
-5. why sme navajati SAMO podatke iz kandidata (kategorija, regija, cena, ocena, opis, značilnosti) — NIKOLI ne izmisli podatkov (npr. recenzij, dostopnosti, sezon), ki niso v kandidatu.
-
-Odgovor (SAMO JSON objekt, brez dodatnega besedila):
-{"selection":[{"i":3,"why":"ista regija in podobna cena, ocena 4,8","whyEn":"same region and similar price, rating 4.8"},{"i":1,"why":"…","whyEn":"…"},{"i":7,"why":"…","whyEn":"…"},{"i":5,"why":"…","whyEn":"…"}]}`;
-}
-
-function buildExperiencePrompt(current: ExperienceCandidate, candidates: ExperienceCandidate[]): string {
-  // P3c-4: enaka ovijanja kot pri izdelkih (glej buildProductPrompt)
-  const currentDesc = `TRENUTNA IZKUŠNJA:
-- Naslov: ${wrapProviderData("naziv", current.name)}
-- Opis: ${wrapProviderData("opis", current.description)}
-- Kategorija: ${current.category}
-- Regija: ${current.destinationName ?? "ni znana"}
-- Cena: €${current.pricePerPerson}/osebo
-- Trajanje: ${current.durationHours}h
-- Za družine: ${current.familyFriendly ? "da" : "ne"}
-- Ocena: ${current.rating}/5`;
-
-  const candidatesDesc = candidates
-    .map((c, i) =>
-      wrapProviderData(
-        "kandidat-izkušnja",
-        `[${i}] ${c.name} — ${c.description.substring(0, 100)} (kategorija: ${c.category}, regija: ${c.destinationName ?? "neznana"}, cena: €${c.pricePerPerson}, trajanje: ${c.durationHours}h, ocena: ${c.rating})`
-      )
-    )
-    .join("\n");
-
-  return `Si strokovnjak za turizem in aktivnosti v Sloveniji. Uporabnik gleda izkušnjo in mu želimo priporočiti 4 NAJBOLJ PODOBNE ali COMPLEMENTARY izkušnje iz spodnjega seznama.
-
-${currentDesc}
-
-KANDIDATI (izberi 4):
-${candidatesDesc}
-
-Pravila:
-1. Izberi 4 izkušnje ki so najbolj smiselne za uporabnika ki gleda trenutno izkušnjo
-2. Prioritiziraj: podobna kategorija, complementary aktivnosti (npr. rafting + pohod), ista regija, podobna težavnost
-3. Izogibaj se duplikatom (vsak indeks izberi največ enkrat)
-4. Za vsako izbiro napiši "why" — ENA vrstica razloga v slovenščini (do 90 znakov) in "whyEn" — isto vrstico v angleščini
-5. why sme navajati SAMO podatke iz kandidata (kategorija, regija, cena, ocena, opis, trajanje, značilnosti) — NIKOLI ne izmisli podatkov (npr. recenzij, dostopnosti, sezon), ki niso v kandidatu.
-
-Odgovor (SAMO JSON objekt, brez dodatnega besedila):
-{"selection":[{"i":2,"why":"complementary aktivnost v isti regiji, ocena 4,9","whyEn":"complementary activity in the same region, rating 4.9"},{"i":5,"why":"…","whyEn":"…"},{"i":0,"why":"…","whyEn":"…"},{"i":8,"why":"…","whyEn":"…"}]}`;
-}
-
-// ============================================================================
-// AI KLIC + PARSING + §20 PRESIKAVA (mapper)
-// ============================================================================
-
-/** Surova izbira GLM (i + neobvezna why/whyEn — validacija v preslikavi). */
-export interface AiSelectionEntry {
-  i: unknown;
-  why?: unknown;
-  whyEn?: unknown;
+/** Bližina cene: ±30 % → 1 točka, ±60 % → 0,5 točke (0/neznano → 0). */
+function priceProximity(a: number, b: number): number {
+  if (!a || !b || a <= 0 || b <= 0) return 0;
+  const ratio = Math.max(a, b) / Math.min(a, b);
+  if (ratio <= 1.3) return 1;
+  if (ratio <= 1.6) return 0.5;
+  return 0;
 }
 
 /**
- * §20: izlušči selection iz AI odgovora. Podpira:
- *  1. nov obrazec: {"selection":[{"i":3,"why":"…","whyEn":"…"},…]}
- *     (ograje/```json okoli njega odpadejo — extractJsonObject);
- *  2. dedni obrazec: [3,1,7,5] (GLM občasno ignorira obrazec — izbira se
- *     ohrani, why pa zaradi odsotnosti izda deterministično — iskreno).
- * Vrne null, če nič smiselnega (klicalec pade na SQL fallback).
+ * Ocena relevantnosti kandidata-izdelka glede na trenutni izdelek.
+ * Signali (dokumentirani v glavi modula): ista kategorija, ista regija,
+ * ocena, bližina cene, deljene značke (bio/ročno/lokalno/vegansko).
+ * Čista funkcija — 0 omrežja, 0 ure, reproducibilna.
  */
-export function parseSelection(content: string): AiSelectionEntry[] | null {
-  if (!content) return null;
-
-  // 1) Nov obrazec — JSON objekt s "selection"
-  const obj = extractJsonObject(content);
-  if (obj && Array.isArray(obj.selection)) {
-    const entries: AiSelectionEntry[] = [];
-    for (const raw of obj.selection) {
-      if (typeof raw === "object" && raw !== null) {
-        const e = raw as Record<string, unknown>;
-        entries.push({ i: e.i, why: e.why, whyEn: e.whyEn });
-      }
-    }
-    if (entries.length > 0) return entries;
+export function scoreProduct(
+  current: ProductCandidate,
+  candidate: ProductCandidate
+): number {
+  let score = 0;
+  if (current.category && candidate.category === current.category) score += 3;
+  if (
+    current.destinationName &&
+    candidate.destinationName === current.destinationName
+  ) {
+    score += 2.5;
   }
-
-  // 2) Dedni obrazec — go JSON array indeksov
-  const match = content.match(/\[[\s\S]*?\]/);
-  if (match) {
-    try {
-      const arr = JSON.parse(match[0]);
-      if (Array.isArray(arr)) {
-        const entries = arr
-          .filter((n) => typeof n === "number" && Number.isInteger(n))
-          .map((n) => ({ i: n }) as AiSelectionEntry);
-        if (entries.length > 0) return entries;
-      }
-    } catch {
-      // neveljaven JSON → null (klicalec pade na SQL fallback)
-    }
-  }
-  return null;
+  if (candidate.rating > 0) score += candidate.rating * 0.4;
+  score += priceProximity(current.price, candidate.price);
+  let sharedTags = 0;
+  if (current.organic && candidate.organic) sharedTags += 1;
+  if (current.handmade && candidate.handmade) sharedTags += 1;
+  if (current.local && candidate.local) sharedTags += 1;
+  if (current.vegan && candidate.vegan) sharedTags += 1;
+  score += Math.min(sharedTags * 0.4, 1.2);
+  return score;
 }
 
 /**
- * §20: reši ENO jezikovno različico why za enega kandidata.
- * AI besedilo sprejmemo SAMO, če je veljaven neprazen niz BREZ izmišljenih
- * trditev — sicer iskrena deterministična zamenjava + izvor.
+ * Ocena relevantnosti kandidata-izkušnje glede na trenutno izkušnjo.
+ * Signali: ista kategorija, ista regija, ocena, bližina cene/osebo,
+ * familyFriendly ujemanje, bližina trajanja (±1,5×).
+ * Čista funkcija — 0 omrežja, 0 ure, reproducibilna.
  */
-function resolveWhyVariant(
-  raw: unknown,
-  candidate: ProductCandidate | ExperienceCandidate,
-  kind: RecommendationType,
-  locale: "sl" | "en"
-): { text: string; source: WhySource } {
-  const s = typeof raw === "string" ? raw.trim() : "";
-  if (s.length > 0 && !containsInventedClaims(s)) {
-    return { text: s, source: "ai" };
+export function scoreExperience(
+  current: ExperienceCandidate,
+  candidate: ExperienceCandidate
+): number {
+  let score = 0;
+  if (current.category && candidate.category === current.category) score += 3;
+  if (
+    current.destinationName &&
+    candidate.destinationName === current.destinationName
+  ) {
+    score += 2.5;
   }
-  return {
-    text: buildDeterministicWhy(candidate, kind, locale),
-    source: "deterministic",
-  };
+  if (candidate.rating > 0) score += candidate.rating * 0.4;
+  score += priceProximity(current.pricePerPerson, candidate.pricePerPerson);
+  if (current.familyFriendly === candidate.familyFriendly) score += 0.5;
+  if (
+    current.durationHours > 0 &&
+    candidate.durationHours > 0
+  ) {
+    const ratio =
+      Math.max(current.durationHours, candidate.durationHours) /
+      Math.min(current.durationHours, candidate.durationHours);
+    if (ratio <= 1.5) score += 0.5;
+  }
+  return score;
 }
 
 /**
- * §20 PRESIKAVA (mapper hardening): surovi AI selection → veljavne izbire
- * z why vrsticami. Pravila (vse zavrnitve so iskrene — manj priporočil je
- * pošteno, nadomeščanje z izmišljenimi pa ne):
- *  · i mora biti celo število znotraj [0, candidates.length) → sicer se
- *    vnos ZAVRNE (out-of-range);
- *  · podvojen i → drugi vnos se ZAVRNE;
- *  · why/whyEn ni veljaven niz (manjka/prazen/napačen tip) ALI omenja
- *    izmišljene podatke → TA jezik dobi deterministično vrstico
- *    (whySource "deterministic" — pošteno povedano, ne lažno "ai");
- *  · največ DEFAULT_LIMIT (4) vnosov (isti kap kot prejšnji parseIndices).
+ * Popolnoma determinističen vrstni red kandidatov-izdelkov:
+ * score desc → rating desc → ime asc. Izvozreno za teste (fixturei).
  */
-export function mapSelectionToWhys(
-  selection: AiSelectionEntry[],
-  candidates: ProductCandidate[] | ExperienceCandidate[],
-  kind: RecommendationType
-): RecommendationWhy[] {
-  const out: RecommendationWhy[] = [];
-  const seen = new Set<number>();
-  for (const entry of selection) {
-    if (out.length >= DEFAULT_LIMIT) break;
-    const i = entry.i;
-    if (
-      typeof i !== "number" ||
-      !Number.isInteger(i) ||
-      i < 0 ||
-      i >= candidates.length
-    ) {
-      continue; // §20: out-of-range indeks → vnos zavrnjen
-    }
-    if (seen.has(i)) continue; // §20: podvojen indeks → vnos zavrnjen
-    seen.add(i);
-    const candidate = candidates[i];
-    const sl = resolveWhyVariant(entry.why, candidate, kind, "sl");
-    const en = resolveWhyVariant(entry.whyEn, candidate, kind, "en");
-    out.push({
-      id: candidate.id,
-      sl: sl.text,
-      en: en.text,
-      sourceSl: sl.source,
-      sourceEn: en.source,
-    });
-  }
-  return out;
+export function rankProductCandidates(
+  current: ProductCandidate,
+  candidates: ProductCandidate[]
+): ProductCandidate[] {
+  return [...candidates].sort(
+    (a, b) =>
+      scoreProduct(current, b) - scoreProduct(current, a) ||
+      b.rating - a.rating ||
+      a.name.localeCompare(b.name)
+  );
 }
+
+/**
+ * Popolnoma determinističen vrstni red kandidatov-izkušenj:
+ * score desc → rating desc → ime asc. Izvozreno za teste (fixturei).
+ */
+export function rankExperienceCandidates(
+  current: ExperienceCandidate,
+  candidates: ExperienceCandidate[]
+): ExperienceCandidate[] {
+  return [...candidates].sort(
+    (a, b) =>
+      scoreExperience(current, b) - scoreExperience(current, a) ||
+      b.rating - a.rating ||
+      a.name.localeCompare(b.name)
+  );
+}
+
+// ============================================================================
 
 /** §20: popolnoma deterministična why (obe jezikovni različici) za
  *  fallback poti (SQL top-4, nabor ≤4, prazen nabor). */
@@ -668,126 +532,46 @@ function deterministicWhy(
   };
 }
 
-async function selectWithAI(
+/**
+ * ISSUE #9 (ZERO-AI): DETERMINISTIČNA izbira priporočil — uteženo
+ * točkovanje (scoreProduct/scoreExperience) nad SQL kandidati, top 4,
+ * why vrstice vedno deterministične (buildDeterministicWhy — samo
+ * dejstva iz kandidata). 0 AI žetonov, 0 omrežja, reproducibilno.
+ * Nabor ≤ 4 → vsi (isto kot prej); prazen nabor → prazna izbira
+ * (iskrena praznina, ne izumi).
+ */
+async function selectDeterministic(
   type: RecommendationType,
   currentId: string
 ): Promise<{
   itemIds: string[];
   whys: RecommendationWhy[];
-  source: "ai" | "fallback";
+  source: "deterministic";
 }> {
   if (type === "product") {
     const { current, candidates } = await fetchProductCandidates(currentId);
     if (!current || candidates.length === 0) {
       // §20: tudi prazna izbira nosi prazno why množico (oblika ostane)
-      return { itemIds: [], whys: [], source: "fallback" };
+      return { itemIds: [], whys: [], source: "deterministic" };
     }
-
-    // Če imamo manj kot 4 kandidate, vrni kar vse
-    if (candidates.length <= 4) {
-      // §20: ni AI izbire → whySource iskreno "deterministic"
-      return {
-        itemIds: candidates.map((c) => c.id),
-        whys: candidates.map((c) => deterministicWhy(c, "product")),
-        source: "fallback",
-      };
-    }
-
-    try {
-      const prompt = buildProductPrompt(current, candidates);
-      const result = await generateCompletion(
-        [
-          {
-            role: "system",
-            // P3c-4: varnostna stavba za <podatek> ovito ponudniško vsebino;
-            // §20: obrazec odgovora je JSON objekt s selection (i/why/whyEn).
-            content: `Si pomočnik za priporočanje slovenskih izdelkov. Vedno odgovoriš SAMO z veljavnim JSON objektom oblike {"selection":[{"i":<indeks>,"why":"<vrstica>","whyEn":"<vrstica>"}]}.\n\n${SYSTEM_DATA_GUARD}`,
-          },
-          { role: "user", content: prompt },
-        ],
-        { temperature: 0.3, usageLog: { feature: "recommend" } }
-      );
-
-      const selection = result?.content ? parseSelection(result.content) : null;
-
-      if (selection) {
-        const whys = mapSelectionToWhys(selection, candidates, "product");
-        if (whys.length > 0) {
-          const itemIds = whys.map((w) => w.id);
-          console.log(`[ai-rec] Product ${currentId} — AI izbral ${itemIds.length} (source: ${result?.source})`);
-          return { itemIds, whys, source: "ai" };
-        }
-      }
-    } catch (error) {
-      console.error("[ai-rec] Product AI napaka:", error);
-    }
-
-    // Fallback: top 4 po ratingu — ISSUE #4 §11: zapis (SQL je služil).
-    // §20: fallback nosi DETERMINISTIČNE why vrstice (iskrenost: ni AI
-    // izbire — UI pokaže "(iz podatkov)").
-    logFallbackUsage("recommend", 0, { metadata: { kind: type, path: "product-top-rating" } });
-    const top = candidates.slice(0, 4);
+    const top = rankProductCandidates(current, candidates).slice(0, DEFAULT_LIMIT);
     return {
       itemIds: top.map((c) => c.id),
       whys: top.map((c) => deterministicWhy(c, "product")),
-      source: "fallback",
-    };
-  } else {
-    const { current, candidates } = await fetchExperienceCandidates(currentId);
-    if (!current || candidates.length === 0) {
-      // §20: tudi prazna izbira nosi prazno why množico (oblika ostane)
-      return { itemIds: [], whys: [], source: "fallback" };
-    }
-
-    if (candidates.length <= 4) {
-      // §20: ni AI izbire → whySource iskreno "deterministic"
-      return {
-        itemIds: candidates.map((c) => c.id),
-        whys: candidates.map((c) => deterministicWhy(c, "experience")),
-        source: "fallback",
-      };
-    }
-
-    try {
-      const prompt = buildExperiencePrompt(current, candidates);
-      const result = await generateCompletion(
-        [
-          {
-            role: "system",
-            // P3c-4: varnostna stavba za <podatek> ovito ponudniško vsebino;
-            // §20: obrazec odgovora je JSON objekt s selection (i/why/whyEn).
-            content: `Si pomočnik za priporočanje turističnih izkušenj v Sloveniji. Vedno odgovoriš SAMO z veljavnim JSON objektom oblike {"selection":[{"i":<indeks>,"why":"<vrstica>","whyEn":"<vrstica>"}]}.\n\n${SYSTEM_DATA_GUARD}`,
-          },
-          { role: "user", content: prompt },
-        ],
-        { temperature: 0.3, usageLog: { feature: "recommend" } }
-      );
-
-      const selection = result?.content ? parseSelection(result.content) : null;
-
-      if (selection) {
-        const whys = mapSelectionToWhys(selection, candidates, "experience");
-        if (whys.length > 0) {
-          const itemIds = whys.map((w) => w.id);
-          console.log(`[ai-rec] Experience ${currentId} — AI izbral ${itemIds.length} (source: ${result?.source})`);
-          return { itemIds, whys, source: "ai" };
-        }
-      }
-    } catch (error) {
-      console.error("[ai-rec] Experience AI napaka:", error);
-    }
-
-    // ISSUE #4 §11: zapis fallbacka (SQL je služil).
-    // §20: fallback nosi DETERMINISTIČNE why vrstice (iskrenost: ni AI
-    // izbire — UI pokaže "(iz podatkov)").
-    logFallbackUsage("recommend", 0, { metadata: { kind: type, path: "experience-top-rating" } });
-    const top = candidates.slice(0, 4);
-    return {
-      itemIds: top.map((c) => c.id),
-      whys: top.map((c) => deterministicWhy(c, "experience")),
-      source: "fallback",
+      source: "deterministic",
     };
   }
+  const { current, candidates } = await fetchExperienceCandidates(currentId);
+  if (!current || candidates.length === 0) {
+    // §20: tudi prazna izbira nosi prazno why množico (oblika ostaja)
+    return { itemIds: [], whys: [], source: "deterministic" };
+  }
+  const top = rankExperienceCandidates(current, candidates).slice(0, DEFAULT_LIMIT);
+  return {
+    itemIds: top.map((c) => c.id),
+    whys: top.map((c) => deterministicWhy(c, "experience")),
+    source: "deterministic",
+  };
 }
 
 // ============================================================================
@@ -795,8 +579,10 @@ async function selectWithAI(
 // ============================================================================
 
 /**
- * Vrne AI-priporočene IDs za podan item (+ §20 why vrstice).
- * Najprej preveri cache (24h TTL), nato po potrebi pokliče AI.
+ * ISSUE #9 (ZERO-AI): vrne DETERMINISTIČNO priporočene IDs za podan item
+ * (+ §20 why vrstice — vedno iz realnih polj kandidata). Najprej cache
+ * (24 h TTL — čisti izračun se ne ponavlja), sicer točkovanje nad SQL
+ * kandidati. 0 AI klicev.
  */
 export async function getRecommendedIds(
   type: RecommendationType,
@@ -805,7 +591,7 @@ export async function getRecommendedIds(
   itemIds: string[];
   /** §20: why vrstice — aligned s itemIds (isti vrstni red). */
   whys: RecommendationWhy[];
-  source: "ai" | "fallback" | "cache";
+  source: "deterministic" | "cache";
 }> {
   const cacheKey = `${type}:${itemId}`;
   const store = await readCache();
@@ -824,10 +610,10 @@ export async function getRecommendedIds(
     };
   }
 
-  // 2. Generiraj z AI (z fallback)
-  const result = await selectWithAI(type, itemId);
+  // 2. Deterministična izbira (uteženo točkovanje — 0 AI)
+  const result = await selectDeterministic(type, itemId);
 
-  // 3. Shrani v cache (tudi fallback — da ne kličemo AI vsakič ko odpove)
+  // 3. Shrani v cache (da čisti izračun ne teče ob vsakem odpiranju modalov)
   store[cacheKey] = {
     cachedAt: Date.now(),
     itemIds: result.itemIds,

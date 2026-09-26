@@ -36,7 +36,10 @@ const REQUIRED_CONTROL_IDS = new Set([
 ]);
 
 describe("Issue #3 §3: AI kontrolna plast — pokritost nadzorov", () => {
-  test("QUICK_ACTIONS ostajajo NESPREMENJENE (isti 6 determinističnih id-jev)", () => {
+  test("QUICK_ACTIONS: prvih 6 NESPREMENJENIH + 3 nove (Issue #9 §7 — proste ukaze pokriva strežnik)", () => {
+    // Issue #3 je pribil prvih 6; Issue #9 §7 doda ceneje/dražje/bolj
+    // aktivno, da prosti čipi (planner-ai-controls) dobijo STREŽNIŠKO
+    // deterministično izvedbo (prej so odšli po AI poti).
     expect(QUICK_ACTIONS.map((a) => a.id)).toEqual([
       "less_driving",
       "rain_suitable",
@@ -44,6 +47,9 @@ describe("Issue #3 §3: AI kontrolna plast — pokritost nadzorov", () => {
       "more_nature",
       "more_food",
       "family_friendly",
+      "cheaper",
+      "pricier",
+      "more_active",
     ]);
   });
 

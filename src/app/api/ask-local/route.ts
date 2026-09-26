@@ -4,26 +4,26 @@ import { randomUUID } from "node:crypto";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { EVENTS } from "@/lib/events-data";
 import { db } from "@/lib/db";
-import { generateCompletion } from "@/lib/ai-client";
 import { rateLimit } from "@/lib/rate-limit";
-import { wrapProviderData, SYSTEM_DATA_GUARD } from "@/lib/ai-context";
 
-// POST /api/ask-local — "Vprašaj lokalca": grounded AI Q&A na podlagi baze
+// POST /api/ask-local — "Vprašaj lokalca": database Q&A na podlagi baze
 //
 // Diferenciacijska funkcija platforme: obiskovalec zastavi vprašanje
-// (npr. "Kam z otroki v deževni dan na Bledu?"), AI pa odgovori GROUNDED —
-// samo na podlagi realnih podatkov platforme (destinacije, lokali,
-// izkušnje, izdelki, dogodki). Če AI ni dosegljiv, se sestavi programski
-// fallback odgovor IZ ISTEGA KONTEKSTA (transparentno označen).
+// (npr. "Kam z otroki v deževni dan na Bledu?"), odgovor pa se sestavi
+// DETERMINISTIČNO — samo na podlagi realnih podatkov platforme
+// (destinacije, lokali, izkušnje, izdelki, dogodki), pošteno označen z
+// answerSource "database" (Issue #9 ZERO-AI: 0 runtime LLM klicev).
+// Starejši zapisi v bazi nosijo še vrednosti "ai"/"fallback" — UI znese
+// vse tri.
 //
 // Vprašanja + odgovori se shranjujejo javno (isPublic) = social proof
 // + vsebinski SEO material za homepage.
 //
-// B2B FLYWHEEL (monetizacijsko vozlišče): kontekst, podan AI, je
-// PREMIUM-AWARE — partnerji na premium/enterprise paketu (ali z aktivnim
-// sponzorstvom) dobijo pri enakovredni kakovosti rahlo prednost (isti
-// princip kot ranking-engine.ts calculatePremiumBoost). Vsak lokal, ki ga
-// AI dejansko citira v odgovoru, se zabeleži: Listing.aiRecommendations +
+// B2B FLYWHEEL (monetizacijsko vozlišče): kontekst je PREMIUM-AWARE —
+// partnerji na premium/enterprise paketu (ali z aktivnim sponzorstvom)
+// dobijo pri enakovredni kakovosti rahlo prednost (isti princip kot
+// ranking-engine.ts calculatePremiumBoost). Vsak lokal, ki ga odgovor
+// dejansko citira, se zabeleži: Listing.aiRecommendations +
 // ListingEvent { type: "ai_recommendation", source: "ask-local" } —
 // KONSISTENTNO s /api/listings/[slug]/track. Ujeta imena se shranijo kot
 // LocalQuestion.recommendedPartners (JSON) → klikabilni čipi na frontendu.
@@ -64,10 +64,19 @@ async function getOrCreateVisitorId(): Promise<{
   visitorId: string;
   isNew: boolean;
 }> {
-  const store = await cookies();
-  const existing = store.get(VISITOR_COOKIE)?.value;
-  if (existing && /^[a-z0-9-]{8,64}$/i.test(existing)) {
-    return { visitorId: existing, isNew: false };
+  try {
+    const store = await cookies();
+    const existing = store.get(VISITOR_COOKIE)?.value;
+    if (existing && /^[a-z0-9-]{8,64}$/i.test(existing)) {
+      return { visitorId: existing, isNew: false };
+    }
+  } catch {
+    // Piškotek ni na voljo, ker tečemo IZVEN Next request scope-a (npr.
+    // bun unit-test, ki kliče POST direktno). Produktne poti to nikoli ne
+    // sprožijo (route handler teče znotraj request scope-a); tu obravnavamo
+    // klic kot svežega anonimnega obiskovalca — IP rate limit (10/h) ostaja
+    // varovalka, dnevna kvota za ta klic pa se šteje po novem ID-ju.
+    return { visitorId: randomUUID(), isNew: false };
   }
   return { visitorId: randomUUID(), isNew: true };
 }
@@ -149,13 +158,6 @@ interface ContextItem {
   sponsoredActive: boolean;
 }
 
-const KIND_LABEL: Record<ContextItem["kind"], string> = {
-  lokal: "Lokal",
-  izkušnja: "Izkušnja",
-  izdelek: "Izdelek",
-  dogodek: "Dogodek",
-};
-
 // Preslikava ime → id (za ujemanje statičnih EVENTS prek destinationId)
 const DESTINATION_ID_BY_NAME = new Map<string, string>(
   DESTINATIONS.map((d) => [d.name, d.id])
@@ -175,13 +177,9 @@ function partnerWeight(plan: string | null, sponsoredActive: boolean): number {
   return planWeight + (sponsoredActive ? 1 : 0);
 }
 
-/** Ali je element premium partner (oznaka [premium partner] v kontekstu AI). */
-function isPremiumPartner(item: ContextItem): boolean {
-  return item.plan === "premium" || item.plan === "enterprise" || item.sponsoredActive;
-}
-
 export async function POST(request: Request) {
-  // Rate limit — AI klic je drag; 10 vprašanj na uro na IP
+  // Rate limit — 10 vprašanj na uro na IP (zloraba-varovalka; odgovor je
+  // danes determinističen, a kvota ostaja produkt/funnel — Issue #9)
   const limited = rateLimit(request, {
     limit: 10,
     windowMs: 3600000,
@@ -250,39 +248,20 @@ export async function POST(request: Request) {
     // Fokusiran: če je destinacija podana, vzami VSE zanjo; sicer splošni top.
     const context = await buildContext(destinationName || null);
 
-    // === AI ODGOVOR (grounded) ===
-    let answer: string;
-    let answerSource: "ai" | "fallback";
-
-    const aiResult = await generateCompletion(
-      [
-        { role: "system", content: buildSystemPrompt(destinationName || null, context) },
-        { role: "user", content: question },
-      ],
-      { temperature: 0.6, usageLog: { feature: "ask_local" } }
+    // === DATABASE ODGOVOR (Issue #9 ZERO-AI: primarni in edini) ===
+    // Deterministično sestavljen IZ ISTEGA KONTEKSTA (baza + statika) —
+    // iskrenost: answerSource je "database", brez pretvarjanja da je AI.
+    const answer = buildDatabaseAnswer(destinationName || null, context, question);
+    const answerSource = "database";
+    console.log(
+      `[ask-local] odgovor izključno iz baze (source: database) — vprašanje: "${question.substring(0, 60)}"`
     );
 
-    if (aiResult?.content) {
-      answer = aiResult.content.trim();
-      answerSource = "ai";
-      console.log(
-        `[ask-local] AI odgovor (source: ${aiResult.source}) — vprašanje: "${question.substring(0, 60)}"`
-      );
-    } else {
-      // Fallback — programsko sestavljen IZ ISTEGA KONTEKSTA (iskrenost:
-      // odgovor je označen answerSource="fallback", brez pretvarjanja da je AI)
-      answer = buildFallbackAnswer(destinationName || null, context, question);
-      answerSource = "fallback";
-      console.log(
-        `[ask-local] fallback odgovor (izključno iz baze) — vprašanje: "${question.substring(0, 60)}"`
-      );
-    }
-
     // === EKSTRAKCIJA PRIPOROČENIH PARTNERJEV IZ ODGOVORA ===
-    // Ujemanje imen SAMO iz konteksta, ki je bil podan AI (prepreči lažna
-    // ujemanja z imeni, ki jih odgovor slučajno vsebuje, a niso v kontekstu).
-    // Izpostavljenost je izpostavljenost — šteje TUDI fallback odgovor
-    // (obiskovalec je videl ime, partner je bil izpostavljen).
+    // Ujemanje imen SAMO iz konteksta, ki je bil podan odgovoru (prepreči
+    // lažna ujemanja z imeni, ki jih odgovor slučajno vsebuje, a niso v
+    // kontekstu). Izpostavljenost je izpostavljenost — obiskovalec je videl
+    // ime, partner je bil izpostavljen.
     const recommended = extractRecommendedPartners(answer, context.items);
     const partners: RecommendedPartner[] = recommended.map((i) => ({
       name: i.name,
@@ -464,7 +443,7 @@ async function buildContext(destinationName: string | null): Promise<{
   // PREMIUM-AWARE razvrščanje: namesto čistega `rating desc` v bazi
   // pridobimo 2× vrstic (isti where), nato v JS razvrstimo po:
   // 1) uteži partnerja (plan/sponzorstvo), 2) oceni, 3) featured.
-  // Premium partner je tako vidno izpostavljen AI-ju pri enakovredni
+  // Premium partner je tako vidno izpostavljen pri enakovredni
   // kakovosti — nikoli pa ne izrine bolje ocenjenega lokala s seznama.
   const fetchTake = take * 2;
 
@@ -603,58 +582,14 @@ async function buildContext(destinationName: string | null): Promise<{
   return { destinationSummary, items };
 }
 
-function buildSystemPrompt(
-  destinationName: string | null,
-  context: { destinationSummary: string; items: ContextItem[] }
-): string {
-  // P3c-4: vsak kontekstni element (ime + opis + meta — vse iz ponudniške
-  // vsebine ali njej enakovrednih nepreverjenih virov) je OVIT v
-  // <podatek> oznako; SYSTEM_DATA_GUARD (prilepljen na konec system
-  // sporočila) modelu naloži, da je to IZKLJUČNO podatek, ne navodilo.
-  const itemsContext = context.items
-    .map((i) => {
-      const parts = [
-        `- ${i.name} [${KIND_LABEL[i.kind]}${i.category ? `, ${i.category}` : ""}]`,
-        i.destinationName ? `v ${i.destinationName}` : "",
-        `: ${i.description.substring(0, 90)}`,
-        i.price ? `. ${i.price}.` : "",
-        i.rating != null ? `. Ocena: ${i.rating}/5.` : "",
-        // Premium partner (plan premium/enterprise ALI aktivno sponzorstvo)
-        // — oznaka, ki jo AI upošteva pri izbiri (pravilo 8 spodaj)
-        isPremiumPartner(i) ? " [premium partner]" : "",
-      ];
-      return wrapProviderData(i.kind, parts.filter(Boolean).join(" "));
-    })
-    .join("\n");
-
-  return `Si "Lokalec" — prijazen domačin, ki svetuje obiskovalcem turistične platforme Discover Slovenia AI. Odgovarjaš na vprašanja obiskovalcev.
-
-${destinationName ? `KONTEKST DESTINACIJE: ${context.destinationSummary}` : `RASPOLOŽLJIVE DESTINACIJE:\n${context.destinationSummary}`}
-
-PODATKI PLATFORME (lokalci, izkušnje, izdelki, dogodki):
-${itemsContext || "(ni dodatnih podatkov)"}
-
-PRAVILA ODGOVORA:
-1. Odgovori v slovenščini, s tonom prijazenega lokalca — toplo, konkretno, brez patosa.
-2. SAMO priporočila, ki obstajajo v zgornjih podatkih. Nikoli ne izmišljuj imen, cen, delovnih časov, naslovov ali ocen.
-3. Izberi 1–3 konkretna priporočila iz podatkov (ime + kratek razlog, zakaj paše vprašanju).
-4. Če podatki ne pokrivajo vprašanja, iskreno povej in predlagaj najbližjo alternativo IZ podatkov.
-5. Zaključi z enim kratkim praktičnim lokalnim nasvetom (kdaj priti, kaj vzeti s seboj ipd.) — brez izmišljenih podrobnosti.
-6. Jedrnato: največ ~1500 znakov, brez uvodnih fraz tipa "Kot AI".
-7. Piši čisto besedilo brez markdown oblik (brez krepilnih zvezdic, naslovnih lojter ipd.) — prikazan je kot navadno besedilo.
-8. Med kvalitativno enakovrednimi možnostmi raje izberi tisto z oznako [premium partner] — nikoli pa ne priporči slabše opcije le zaradi oznake. Imena citiraj točno tako, kot so zapisana v podatkih.
-
-${SYSTEM_DATA_GUARD}`;
-}
-
 // ============================================================================
-// FALLBACK — programski odgovor iz istega konteksta (brez AI)
+// DATABASE ODGOVOR — programski odgovor iz istega konteksta (brez AI)
 // ============================================================================
-// P3c-4(c): fallback IZPISUJE opise (prikaz podatka, ne prompt) — React
-// render besedila brez dangerouslySetInnerHTML sam escapira HTML, zato XSS
-// ni mogoč; opisi se tukaj namenoma NE ovijajo v <podatek> (ni AI poti).
+// Issue #9 ZERO-AI: TA funkcija je PRIMARNA (prej fallback). P3c-4(c):
+// izpis IZPISUJE opise (prikaz podatka, ne prompt) — React render besedila
+// brez dangerouslySetInnerHTML sam escapira HTML, zato XSS ni mogoč.
 
-function buildFallbackAnswer(
+function buildDatabaseAnswer(
   destinationName: string | null,
   context: { destinationSummary: string; items: ContextItem[] },
   question: string
@@ -693,8 +628,8 @@ function buildFallbackAnswer(
   );
 
   const intro = destinationName
-    ? `Iz naše baze za ${destinationName} (AI trenutno ni dosegljiv, a podatki so realni):`
-    : "Iz naše baze (AI trenutno ni dosegljiv, a podatki so realni):";
+    ? `Iz naše baze za ${destinationName}:`
+    : "Iz naše baze:";
 
   const tip = dest
     ? `Praktični nasvet: ${dest.name} je najlepše v glavni sezoni, rajši zgodaj zjutraj, ko je manj ljudi.`
@@ -708,12 +643,12 @@ function buildFallbackAnswer(
 // ============================================================================
 
 /**
- * Poišče kontekstne elemente (podane AI), katerih IME se pojavi v
- * odgovoru (case-insensitive substring). Imena krajša od 4 znakov se
- * preskočijo (preveč lažnih ujemanj — npr. "AS" v naslovnem stavku).
+ * Poišče kontekstne elemente, katerih IME se pojavi v odgovoru
+ * (case-insensitive substring). Imena krajša od 4 znakov se preskočijo
+ * (preveč lažnih ujemanj — npr. "AS" v naslovnem stavku).
  *
  * Omejitev na items iz konteksta je namenjena: partner lahko prejme
- * priporočilo SAMO iz konteksta, ki mu je bil dejansko izpostavljen AI.
+ * priporočilo SAMO iz konteksta, ki je bil dejansko podan odgovoru.
  */
 function extractRecommendedPartners(
   answer: string,

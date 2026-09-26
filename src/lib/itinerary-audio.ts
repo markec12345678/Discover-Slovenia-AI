@@ -1,33 +1,34 @@
 // ============================================================================
-// TASK 89 — ZVOČNI POVZETEK DNEVA (1.80.0): čista lib plast
+// TASK 89 / ISSUE #9 — ZVOČNI POVZETEK DNEVA: čista lib plast (ZERO-AI)
 // ============================================================================
 //
-// »Poslušaj dan« — TTS pripoved dnevnega načrta. Konkurenčna analiza
+// »Poslušaj dan« — pripoved dnevnega načrta. Konkurenčna analiza
 // (docs/AI/MINDTRIP-ANALIZA-2026-09-AGENT.md, inventar funkcij) je to
 // izrecno označila kot vrzeli: Mindtrip ima audio predvajanje itinerarja,
-// mi ne — in priložnost (»TTS priložnost!«). Ta plast omogoča:
+// mi ne — in priložnost. Ta plast omogoča:
 //
 //   popotnik na poti (telefon v žepu, hoja proti prvemu postanku) in
 //   uporabniki z okvarjenim vidom namesto BRANJA dneva poslušajo načrt.
 //
-// Vir zvoka: z-ai-web-dev-sdk (platformski SDK, BREZ uporabniških
-// poverilnic — nadaljevanje direktive »najprej vse brez ključa«).
+// Vir zvoka (ISSUE #9 ZERO-AI): BRKALNIŠKI GLAS (Web Speech API —
+// window.speechSynthesis), 0 strežniških klicev, 0 AI žetonov. Nekdanja
+// strežniška TTS pot (z-ai SDK + spajanje WAV + /api/tts ruti) je
+// ODSTRANJENA — isto besedilo pripoveduje naprava uporabnika.
 //
-// SLOJI (vzorec itinerary-weather.ts TASK 88):
+// SLOJI:
 //   1. TA DATOTEKA — čiste funkcije (0 omrežja, 0 db, 0 React): gradnja
-//      pripovedi IZKLJUČNO iz dejstev dneva, razrez na kose ≤ 1024 znakov
-//      (omejitev TTS API-ja), spajanje WAV bufferjev (ne-standardni
-//      AIGC/LIST kose v glavi vira moramo PARSIRATI po RIFF kosih, ne
-//      44-bajtna predpostavka — izmerjeno 2026-09-24).
-//   2. /api/tts — strežniška pot (zod vrata + SDK + predpomnilnik).
-//   3. itinerary-audio.tsx — gumb v glavi dneva (TripTimeline + SharedTrip
-//       + JourneyTrip/MY TRIP — TASK 91).
+//      pripovedi IZKLJUČNO iz dejstev dneva + razrez na kose ≤ 960 znakov
+//      po stavčnih mejah (brskalniška sinteza na nekaterih platformah
+//      TIHO poreže posamezne dolge izgovore — kosi + zaporedna vrsta
+//      izgovorov poskrbijo, da pripoved pade V CELOTI).
+//   2. itinerary-audio.tsx — gumb v glavi dneva (TripTimeline + SharedTrip
+//      + JourneyTrip/MY TRIP — TASK 91), izgovarja po kosih.
 //
 // ISKRENOST (kanon 71/74/77/88): pripoved je zgrajena SAMO iz podatkov,
 // ki dejansko obstajajo (imena, termini, opisi, datum). Prazen dan →
 // null → GUMB SE NE IZRIŠE (0 izmišljenih pripovedi). Podaljšano
-// besedilo se NE tiho reže — razreže se na kose po stavkih in se spoji
-// nazaj (celotna vsebina, le v več klicih).
+// besedilo se NE tiho reže — razreže se na kose po stavkih in se izgovori
+// nazaj (celotna vsebina, le v več izgovorih).
 // ============================================================================
 
 import type { DayPlan } from "@/lib/types";
@@ -54,12 +55,13 @@ export interface NarrationDayInput {
 
 export type NarrationLang = "sl" | "en";
 
-// ─── Omejitve (zrcalijo zod vrata /api/tts — ENA resnica v testih) ────────
+// ─── Omejitve (varujejo pošteno dolžino pripovedi + kratek posamezen
+// izgovor; NE odsev strežniških vrat — ti ne obstajajo več) ─────────────
 
 export const NARRATION_LIMITS = {
-  /** API TTS sprejme največ 1024 znakov na klic. */
+  /** Trda zgornja meja posameznega kosa (varovalka chunkerja). */
   maxChunkChars: 1024,
-  /** Varnostna meja razreza (stavki so lahko dolgi). */
+  /** Ciljna dolžina kosa (stavki so lahko dolgi — varnostna meja). */
   chunkTargetChars: 960,
   /** Zgornja meja postankov na dan (zod vrata). TASK 91: 8 → 16 — dan 1
    *  MY TRIP strukturno združi prihod + VSE izbrane postavke kategorij
@@ -76,7 +78,7 @@ export const NARRATION_LIMITS = {
   maxTimeChars: 24,
   /** Zgornja meja datumske oznake (zod vrata). */
   maxDateLabelChars: 80,
-  /** Koliko TTS klicev je še razumno na EN dan (varovalka zlorabe). */
+  /** Koliko izgovorov je še razumno na EN dan (varovalka zlorabe). */
   maxChunks: 4,
 } as const;
 
@@ -407,145 +409,3 @@ export function chunkNarration(
   return chunks;
 }
 
-// ─── Spajanje WAV bufferjev ───────────────────────────────────────────────
-
-interface WavInfo {
-  /** PCM podatki (brez glave). */
-  pcm: Buffer;
-  audioFormat: number;
-  channels: number;
-  sampleRate: number;
-  bitsPerSample: number;
-}
-
-/**
- * RIFF hoja po kosih: TTS vir NE piše kanonične 44-bajtne glave —
- * izmerjeno (2026-09-24): fmt(16) + AIGC(250) + LIST(26) + data. Zato
- * iščemo `fmt ` in `data` po pravih kosih z besedno poravnavo (pad byte
- * pri lihih velikostih — RIFF spec).
- */
-function parseWav(buf: Buffer): WavInfo | null {
-  if (buf.length < 44) return null;
-  if (buf.readUInt32BE(0) !== 0x52494646) return null; // "RIFF"
-  if (buf.readUInt32BE(8) !== 0x57415645) return null; // "WAVE"
-
-  let off = 12;
-  let fmt: WavInfo | null = null;
-  let pcm: Buffer | null = null;
-
-  while (off + 8 <= buf.length) {
-    const id = buf.toString("ascii", off, off + 4);
-    const size = buf.readUInt32LE(off + 4);
-    const dataOff = off + 8;
-    if (dataOff + size > buf.length) return null; // pokvarjen kos
-
-    if (id === "fmt " && size >= 16) {
-      fmt = {
-        pcm: Buffer.alloc(0),
-        audioFormat: buf.readUInt16LE(dataOff),
-        channels: buf.readUInt16LE(dataOff + 2),
-        sampleRate: buf.readUInt32LE(dataOff + 4),
-        bitsPerSample: buf.readUInt16LE(dataOff + 14),
-      };
-    } else if (id === "data") {
-      pcm = buf.subarray(dataOff, dataOff + size);
-    }
-
-    off = dataOff + size + (size % 2); // word-aligned naslednji kos
-  }
-
-  if (!fmt || !pcm) return null;
-  return { ...fmt, pcm };
-}
-
-/**
- * Spajanje VEČ WAV bufferjev istega formata v EN zapis.
- *
- * - en sam kos → vrnjen NESPREMENJEN (glava vira je veljavna);
- * - različni formati (sampleRate/kanali/bit) → null (ne mešamo
- *   nestandardnih zmes — iskrena napaka namesto pokvarjenega zvoka);
- * - napačen/pokvarjen vhod → null;
- * - izhod: čista kanonična glava RIFF(12) + fmt(16) + data.
- */
-export function concatWavBuffers(buffers: ReadonlyArray<Buffer>): Buffer | null {
-  if (buffers.length === 0) return null;
-  // Tudi en sam kos mora biti veljaven WAV (vhod je lahko smeti —
-  // vrata morajo zadržati ne-zvok, ne pa ga potisnil naprej).
-  if (buffers.some((b) => parseWav(b) == null)) return null;
-  if (buffers.length === 1) return buffers[0];
-
-  const parsed: WavInfo[] = [];
-  for (const b of buffers) {
-    const info = parseWav(b);
-    if (!info) return null;
-    parsed.push(info);
-  }
-
-  const first = parsed[0];
-  for (const p of parsed.slice(1)) {
-    if (
-      p.sampleRate !== first.sampleRate ||
-      p.channels !== first.channels ||
-      p.bitsPerSample !== first.bitsPerSample ||
-      p.audioFormat !== first.audioFormat
-    ) {
-      return null;
-    }
-  }
-
-  const totalData = parsed.reduce((sum, p) => sum + p.pcm.length, 0);
-  const byteRate = first.sampleRate * first.channels * (first.bitsPerSample / 8);
-  const blockAlign = first.channels * (first.bitsPerSample / 8);
-
-  const out = Buffer.alloc(44 + totalData);
-  out.write("RIFF", 0, "ascii");
-  out.writeUInt32LE(36 + totalData, 4); // velikost za to oznako + data
-  out.write("WAVE", 8, "ascii");
-  out.write("fmt ", 12, "ascii");
-  out.writeUInt32LE(16, 16); // velikost fmt kosa
-  out.writeUInt16LE(first.audioFormat, 20);
-  out.writeUInt16LE(first.channels, 22);
-  out.writeUInt32LE(first.sampleRate, 24);
-  out.writeUInt32LE(byteRate, 28);
-  out.writeUInt16LE(blockAlign, 32);
-  out.writeUInt16LE(first.bitsPerSample, 34);
-  out.write("data", 36, "ascii");
-  out.writeUInt32LE(totalData, 40);
-
-  let cursor = 44;
-  for (const p of parsed) {
-    p.pcm.copy(out, cursor);
-    cursor += p.pcm.length;
-  }
-
-  return out;
-}
-
-// ─── Ključ predpomnilnika ─────────────────────────────────────────────────
-
-/**
- * Deterministični ključ za predpomnilnik (strežniški LRU + klientni blob).
- * djb2 nad kanonično JSON obliko vhoda + jezik — isti dan vedno isti zvok.
- */
-export function narrationCacheKey(
-  day: NarrationDayInput,
-  lang: NarrationLang
-): string {
-  const canonical = JSON.stringify({
-    d: day.dayNumber,
-    date: typeof day.dateLabel === "string" ? day.dateLabel.trim() : "",
-    s: day.stops
-      .map((s) => [
-        (s.time ?? "").trim(),
-        s.name.trim(),
-        (s.description ?? "").replace(/\s+/g, " ").trim(),
-      ])
-      .filter((s) => s[1] !== ""),
-    lang,
-  });
-  let h = 5381;
-  for (let i = 0; i < canonical.length; i++) {
-    h = ((h * 33) ^ canonical.charCodeAt(i)) >>> 0;
-  }
-  return `n${h.toString(36)}`;
-}

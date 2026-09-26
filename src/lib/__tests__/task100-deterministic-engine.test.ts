@@ -453,32 +453,29 @@ describe("TASK 100: route wiring (source-contract)", () => {
     expect(route).not.toMatch(/const INDOOR_TYPES/);
   });
 
-  test("naravna pot (engine === \"deterministic\") se odloči PRED klicom LLM", () => {
-    const branch = route.indexOf('input.engine === "deterministic"');
-    // 1.88.1 (FA-A1-b): klic je ovit v Promise.race trdo mejo — await je
-    // zdaj na race, ne na samem klicu; vzorec sledi sintaksi, POMEN
-    // (vrstni red: deterministic veja PRED LLM klicem) ostaja nespremenjen.
-    const llmCall = route.indexOf("generateCompletion(");
-    expect(branch).toBeGreaterThan(-1);
-    expect(llmCall).toBeGreaterThan(-1);
-    expect(branch).toBeLessThan(llmCall);
+  test("ISSUE #9: ruti NI AI klicev — deterministični motor je kanonska pot", () => {
+    expect(route).not.toContain("generateCompletion(");
+    expect(route).not.toContain('from "@/lib/ai-client"');
+    // odgovor gre IZRECNO skozi buildDeterministicPlanResponse
+    const deleg = route.indexOf("return buildDeterministicPlanResponse(");
+    expect(deleg).toBeGreaterThan(-1);
   });
 
   test("engine validacija na meji (400 za neveljavno vrednost)", () => {
     expect(route).toContain("Motor generiranja je neveljaven (auto, deterministic)");
   });
 
-  test("SKUPNA veriga: naravna pot \"deterministic\", catch \"fallback\"", () => {
+  test("SKUPNA veriga: ena pot, ena oznaka — deterministična (brez catch/fallback veje)", () => {
     expect(route).toContain("async function buildDeterministicPlanResponse");
-    const natural = route.indexOf(
-      '[itinerary] TASK 100: naravna deterministična pot'
+    expect(route).toContain(
+      "[itinerary] ISSUE #9: deterministični motor je kanonska pot"
     );
-    expect(natural).toBeGreaterThan(-1);
-    // delegacija v catch poteče z oznako "fallback" (iskrena degradacija)
-    const catchIdx = route.indexOf("AI napaka, uporabljam fallback");
-    const delegAfterCatch = route.indexOf('"fallback"', catchIdx);
-    expect(catchIdx).toBeGreaterThan(-1);
-    expect(delegAfterCatch).toBeGreaterThan(catchIdx);
+    // ISSUE #9: AI ne more odpovedati — catch→fallback veja je odstranjena
+    expect(route).not.toContain("AI napaka, uporabljam fallback");
+    // delegacija nosi IZKLJUČNO "deterministic" (nikoli "fallback")
+    const deleg = route.indexOf("return buildDeterministicPlanResponse(");
+    const delegBlock = route.slice(deleg, deleg + 600);
+    expect(delegBlock).not.toContain('"fallback"');
   });
 
   test("observability union (logItineraryValidation) vključuje \"deterministic\"", () => {
@@ -496,19 +493,17 @@ describe("TASK 100: route wiring (source-contract)", () => {
 describe("TASK 100: frontend (source-contract)", () => {
   const planner = source("src/components/sections/itinerary-planner.tsx");
 
-  test("stikalo motorja: ENGINE_OPTIONS + toggleEngine + hint", () => {
-    expect(planner).toContain("const ENGINE_OPTIONS");
-    expect(planner).toContain("function toggleEngine");
-    expect(planner).toContain('t("engineHint")');
-    expect(planner).toContain('t("engineLabel")');
-    // privzeto stanje: neizbrano polje se bere kot "auto"
-    expect(planner).toContain('(formData.engine ?? "auto")');
+  test("ISSUE #9: stikalo motorja je ODSTRANJENO — deterministični motor je edina pot", () => {
+    // izbira AI/brez-AI ni več smiselna (AI pot ne obstaja) — toggle,
+    // ENGINE_OPTIONS in hint so odstranjeni (ZERO-AI, 0 mrtvih ključev)
+    expect(planner).not.toContain("const ENGINE_OPTIONS");
+    expect(planner).not.toContain("function toggleEngine");
+    expect(planner).not.toContain('t("engineHint")');
+    expect(planner).not.toContain('t("engineLabel")');
   });
 
-  test("stikalo pošilja engine v API (fetch body razširjen prek PlannerInput)", () => {
-    // formData: PlannerInput → ...input razširi tudi engine; analitika
-    // nosi kateri motor je zahteval uporabnik
-    expect(planner).toContain('engine: input.engine ?? "auto"');
+  test("ISSUE #9: analitika nosi engine deterministic (kontinuiteta polja)", () => {
+    expect(planner).toContain('engine: "deterministic"');
   });
 
   test("badge vira loči \"deterministic\" (tri stanja + lastna barva)", () => {
@@ -522,13 +517,7 @@ describe("TASK 100: frontend (source-contract)", () => {
         source(`src/i18n/messages/${loc}.json`)
       ) as { planner: Record<string, string> };
       const plannerNs = messages.planner;
-      for (const key of [
-        "engineLabel",
-        "engineAuto",
-        "engineDeterministic",
-        "engineHint",
-        "badgeDeterministic",
-      ]) {
+      for (const key of ["badgeDeterministic"]) {
         expect(plannerNs[key], `${loc}.${key}`).toBeTruthy();
         expect(plannerNs[key].length).toBeGreaterThan(0);
       }

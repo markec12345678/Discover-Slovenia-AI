@@ -251,31 +251,39 @@ describe("§10 refine: hitre akcije BREZ LLM (source-contract)", () => {
     "utf8"
   );
 
-  it("quick-action blok je PRED generateCompletion klicom (0 LLM klicev)", () => {
+  it("ISSUE #9: ruti NI več AI klicev (0 LLM — generateCompletion/ai-client odstranjena)", () => {
+    expect(route).not.toContain("generateCompletion(");
+    expect(route).not.toContain('from "@/lib/ai-client"');
+  });
+
+  it("quick-action blok (čipi) ostaja PRIMA — if (action && day) {", () => {
     const quickIdx = route.indexOf("if (action && day) {");
-    const llmIdx = route.indexOf("generateCompletion(");
     expect(quickIdx).toBeGreaterThan(-1);
-    expect(llmIdx).toBeGreaterThan(-1);
-    // zgodnji return pred LLM — deterministično-prima
-    expect(quickIdx).toBeLessThan(llmIdx);
   });
 
-  it("zgodnja pot vrača source 'deterministic' (ne 'fallback')", () => {
-    // iskrena oznaka: primarna deterministična pot, ne rezerva
-    const early = route.slice(0, route.indexOf("generateCompletion("));
-    expect(early).toContain('source: "deterministic"');
-    expect(early).toContain("applied: true");
+  it("izvedbena pot vrača source 'deterministic' + applied: true (iskrena oznaka)", () => {
+    expect(route).toContain('source: "deterministic"');
+    expect(route).toContain("applied: true");
   });
 
-  it("catch blok NE vsebuje več applyQuickAction (odmrli dvojnik odstranjen)", () => {
-    const catchIdx = route.indexOf("catch (error)");
-    const catchBlock = route.slice(catchIdx);
-    expect(catchIdx).toBeGreaterThan(-1);
-    expect(catchBlock).not.toContain("applyQuickAction");
+  it("ISSUE #9 §7: prosti jezik gre čez DETERMINISTIČNI parser (0 LLM)", () => {
+    expect(route).toContain("parseRefineCommand(");
+    expect(route).toContain('from "@/lib/refine-command-parser"');
+    // dodaj/odstrani destinacijo + hitre akcije iz besedila
+    expect(route).toContain('command.kind === "quick-action"');
+    expect(route).toContain('command.kind === "remove-place"');
+    expect(route).toContain('command.kind === "add-place"');
   });
 
-  it("§10 komentar dokumentira naročnikovo pravilo (kontekst za prihodnje)", () => {
-    expect(route).toContain("DETERMINISTIČNA ODLOČITEV");
+  it("echo odklonitev NE vsebuje applyQuickAction (odmrli dvojnik odstranjen)", () => {
+    const echoIdx = route.indexOf("const echoOriginal = async (");
+    const echoBlock = route.slice(echoIdx, route.indexOf("// --- 1)"));
+    expect(echoIdx).toBeGreaterThan(-1);
+    expect(echoBlock).not.toContain("applyQuickAction");
+  });
+
+  it("§10/§9 komentar dokumentira naročnikovo pravilo (kontekst za prihodnje)", () => {
+    expect(route).toContain("DETERMINISTIČNA IZVEDBA VSIH UKAZOV");
     expect(route).toContain("0 LLM");
   });
 });

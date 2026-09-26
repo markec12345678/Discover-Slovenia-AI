@@ -65,9 +65,11 @@ interface PlannerAiControlsProps {
   className?: string;
 }
 
-/** Dvojezične oznake (isti vzorec kot ItineraryRefiner — L konstanta). */
+/** Dvojezične oznake (isti vzorec kot ItineraryRefiner — L konstanta).
+ *  ISSUE #9 ZERO-AI: naslov NE trdi več »AI prilagoditve« — akcije so
+ *  DETERMINISTIČNE (refine-actions + ukazni parser, 0 AI žetonov). */
 const L = {
-  title: { sl: "AI prilagoditve", en: "AI adjustments" },
+  title: { sl: "Hitre prilagoditve", en: "Quick adjustments" },
   subtitle: {
     sl: "Kaj naj spremenim na tvoji poti?",
     en: "What should I change about your trip?",

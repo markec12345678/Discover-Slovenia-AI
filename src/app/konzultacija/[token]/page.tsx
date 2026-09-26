@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import {
   BadgeCheck,
   Bot,
@@ -94,7 +95,20 @@ export default async function ConsultationPage({ params }: PageProps) {
 
   if (!c || c.status !== "delivered" || !c.answer) notFound();
 
+  // Issue #9 ZERO-AI: novi odgovori so answerSource="deterministic"
+  // (motor = ocenjena izbira nad bazo, 0 AI). Zgodovinske vrstice "ai"/
+  // "fallback" ostanejo pošteno označene (takrat so bile res take).
   const isFallback = c.answerSource === "fallback";
+  const isAi = c.answerSource === "ai";
+
+  // Nove oznake: i18n ključi v imenskem prostoru "consultation" (glej
+  // docs/audit/issue9-report-b.md — vrednosti SL/EN za sporočilne datoteke);
+  // t.has() varovalka prepreči surove ključe, dokler JSON ni popolnjen.
+  const t = await getTranslations("consultation");
+  const badgeDeterministic = t.has("badgeDeterministic")
+    ? t("badgeDeterministic")
+    : "Izključno iz baze platforme";
+  const speakerLabel = t.has("speaker") ? t("speaker") : "Lokalec";
   const partners = safeParseConsultPartners(c.recommendedPartners) ?? [];
   let interests: string[] = [];
   try {
@@ -163,7 +177,16 @@ export default async function ConsultationPage({ params }: PageProps) {
                 <MessageCircle className="size-3" aria-hidden="true" />
                 Osebna konzultacija
               </Badge>
-              {isFallback ? (
+              {!isFallback && !isAi ? (
+                /* Novi deterministični odgovori — poštena oznaka vira */
+                <Badge
+                  variant="outline"
+                  className="border-emerald-300/60 text-emerald-800 dark:border-emerald-700/60 dark:text-emerald-300"
+                >
+                  <Database className="size-3" aria-hidden="true" />
+                  {badgeDeterministic}
+                </Badge>
+              ) : isFallback ? (
                 <Badge
                   variant="outline"
                   className="border-amber-300/60 text-amber-800 dark:border-amber-700/60 dark:text-amber-300"
@@ -202,7 +225,12 @@ export default async function ConsultationPage({ params }: PageProps) {
                 <Bot className="size-5" />
               </span>
               <div className="min-w-0 flex-1">
-                <span className="text-sm font-semibold">AI lokalnež</span>
+                <span className="text-sm font-semibold">
+                  {/* Zgodovinski "ai" odgovori so bili res AI — oznaka ostane
+                      poštena; novi (deterministic/fallback) nosijo osebnost
+                      lokalca brez trditve o AI. */}
+                  {isAi ? "AI lokalnež" : speakerLabel}
+                </span>
                 <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground/90">
                   {c.answer}
                 </p>

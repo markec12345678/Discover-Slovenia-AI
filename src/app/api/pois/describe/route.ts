@@ -2,19 +2,23 @@ import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { createHash } from "node:crypto";
-import { generateCompletion } from "@/lib/ai-client";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkAdmin } from "@/lib/auth-guards";
-import { SYSTEM_DATA_GUARD, wrapProviderData } from "@/lib/ai-context";
 
-// POST /api/pois/describe — generira AI opis za POI (z enkratnim cache-iranjem)
+// POST /api/pois/describe — deterministični opis POI-ja (z enkratnim
+// cache-iranjem)
 //
 // POI-ji iz OpenStreetMap imajo pogosto samo ime in koordinate — brez opisa.
-// Ta endpoint generira kratek (1-stavni) AI opis za podan POI in ga cache-ira
-// v data/poi-descriptions.json. Naslednji klic za isti POI prebere iz cache-a
-// (0 AI stroškov).
+// Ta endpoint SESTAVI kratek opis iz strukturiranih vhodnih polj (ime,
+// kategorija, podkategorija, naslov) — 0 AI klicev (Issue #9 ZERO-AI,
+// skupina A) — in ga cache-ira v data/poi-descriptions.json. Naslednji klic
+// za isti POI prebere iz cache-a (0 stroškov).
 //
-// Cache je permanenten — POI imena se ne spreminjajo.
+// Cache je permanenten — POI imena se ne spreminjajo. Vsak NOVI zapis ima
+// source "deterministic" (prejšnji bug: zapisi so se označili "ai" tudi
+// kadar je odgovoril fallback — z odstranitvijo AI poti je bug odpravljen
+// trajno). Starejši zapisi v cache datoteki lahko nosijo "ai"/"fallback" —
+// admin statistika jih šteje pošteno.
 
 interface DescribeRequest {
   id: string;
@@ -29,7 +33,8 @@ interface DescribeRequest {
 interface CacheEntry {
   description: string;
   generatedAt: number;
-  source: "ai" | "fallback";
+  /** "deterministic" za vse nove zapise (#9); "ai"/"fallback" = starejši. */
+  source: "deterministic" | "ai" | "fallback";
 }
 
 type CacheStore = Record<string, CacheEntry>;
@@ -55,7 +60,8 @@ async function writeCache(store: CacheStore): Promise<void> {
   }
 }
 
-// Kategorija → slovenski opis za kontekst
+// Kategorija → slovenska oznaka (ista preslikava kot prej; neznana →
+// "zanimivost" — iskrena rezerva, brez izmišljanja podrobnosti)
 const CATEGORY_LABELS: Record<string, string> = {
   attraction: "turistična atrakcija",
   museum: "muzej",
@@ -68,13 +74,27 @@ const CATEGORY_LABELS: Record<string, string> = {
   other: "zanimivost",
 };
 
+/**
+ * Deterministični graditelj opisa IZ strukturiranih polj (Issue #9 ZERO-AI):
+ * `${name} — ${categoryLabel} (subcategory) · address` — brez izmišljenih
+ * podrobnosti (cen, ur, zgodovine), ki jih vnosi ne nosijo.
+ */
+function buildPoiDescription(
+  name: string,
+  categoryLabel: string,
+  subcategory?: string,
+  address?: string
+): string {
+  return `${name} — ${categoryLabel}${subcategory ? ` (${subcategory})` : ""}${address ? ` · ${address}` : ""}`;
+}
+
 export async function POST(request: Request) {
-    // Rate limit AI POI opisov (cache-first)
+    // Rate limit POI opisov (cache-first)
     const limited = rateLimit(request, { limit: 60, windowMs: 600000, key: "poi-describe" });
     if (limited) return limited;
 
   // AUDIT 42 (42-e F7): brez meje velikosti telesa bi request.json()
-  // najprej prenesel/v pomnilnik naložil poljuben payload (OOM vektor na
+  // najprej prenesel/v pomnilniku naložil poljuben payload (OOM vektor na
   // self-hosted Render) — zavrnemo nad 32 KB, preden karkoli preberemo.
   const contentLength = Number(request.headers.get("content-length") ?? "0");
   if (Number.isFinite(contentLength) && contentLength > 32_768) {
@@ -100,10 +120,11 @@ export async function POST(request: Request) {
   //    pomeni, da lahko napadalec zastrupi cache za katerega koli POI ID-ja
   //    (spam opisi za vse obiskovalce) ali napihne data/poi-descriptions.json
   //    z megabajtnimi ključi. Zdaj: samo [A-Za-z0-9-], ≤ 64 znakov.
-  // 2. name/subcategory/address grejo v AI prompt in fallback opis —
-  //    kapirano (token-bomb + dolžina shranjenega opisa).
-  // 3. lat/lng morata biti števili (prej: body.lat.toFixed je metalo
-  //    neobdelan TypeError → 500, če je klient poslal string).
+  // 2. name/subcategory/address gredo v zapis opisa — kapirano (dolžina
+  //    shranjenega opisa; prej tudi token-bomb vektor za AI prompt).
+  // 3. lat/lng (če sta poslana) se v deterministični opis NE uporabljata —
+  //    klient ju pošilja iz historične oblike; strežnik ju brezobvezno
+  //    sprejme in ignorira (0 TypeError površin: nikoli se ne kliče .toFixed).
   const poiId = String(body.id);
   if (!/^[A-Za-z0-9-]{1,64}$/.test(poiId)) {
     return NextResponse.json(
@@ -116,8 +137,6 @@ export async function POST(request: Request) {
     typeof body.subcategory === "string" ? body.subcategory.slice(0, 80) : undefined;
   const address =
     typeof body.address === "string" ? body.address.slice(0, 200) : undefined;
-  const lat = typeof body.lat === "number" && Number.isFinite(body.lat) ? body.lat : null;
-  const lng = typeof body.lng === "number" && Number.isFinite(body.lng) ? body.lng : null;
 
   // 19c-5 (revizija 1.36.0, P2): cache ključ vključuje hash IMENA. Cache je
   // permanenten in javno zapisljiv (first-write-wins) — z ID-jem samim bi
@@ -130,7 +149,7 @@ export async function POST(request: Request) {
     .digest("hex")
     .slice(0, 12)}`;
 
-  // 1. Preveri cache
+  // 1. Preveri cache (perf — deterministični opisi so idempotentni)
   const store = await readCache();
   const cached = store[cacheKey];
   if (cached) {
@@ -141,96 +160,25 @@ export async function POST(request: Request) {
     });
   }
 
-  // 2. Generiraj AI opis
-  // 19c-5: ime/naslov/podkategorija so client vnosi v prompt — oviti v
-  // <podatek> + SYSTEM_DATA_GUARD v sistemskem sporočilu (enak vzorec kot
-  // ostale AI rute; prej surovi v user promptu).
+  // 2. Zgradi deterministični opis iz strukturiranih polj (0 AI)
   const categoryLabel = CATEGORY_LABELS[body.category] || "zanimivost";
-  const locationStr = address ? ` (${address})` : "";
-  const coordsStr = lat !== null && lng !== null ? ` koordinate ${lat.toFixed(4)}, ${lng.toFixed(4)}` : "";
+  const description = buildPoiDescription(name, categoryLabel, subcategory, address);
 
-  const prompt = `Generiraj kratek (1 stavek, max 120 znakov) informativen opis za slovensko turistično točko.
+  // 3. Shrani v cache (permanentno) — vir POŠTENO "deterministic"
+  store[cacheKey] = {
+    description,
+    generatedAt: Date.now(),
+    source: "deterministic",
+  };
+  await writeCache(store);
 
-IME: ${wrapProviderData("poi-ime", name, 120)}
-KATEGORIJA: ${categoryLabel}${subcategory ? ` (${subcategory})` : ""}
-LOKACIJA: ${wrapProviderData("poi-lokacija", locationStr || "Slovenija", 200)}${coordsStr}
+  console.log(`[poi-describe] deterministični opis za "${name}" (source: deterministic)`);
 
-Pravila:
-- 1 stavek, max 120 znakov
-- V slovenščini
-- Informativen in privlačen
-- Brez cen ali ur (te se spreminjajo)
-- Samo opis, brez "Ta POI je..." prefixa
-
-Primeri:
-- "Srednjeveški grad na pečini z razgledom na Blejsko jezero."
-- "Tradicionalna slovenska restavracija z lokalnimi specialitetami."
-- "Biser slovenskega alpskega sveta s kristalno čisto vodo."
-
-Odgovor (SAMO opis, brez prefixa):`;
-
-  try {
-    const result = await generateCompletion(
-      [
-        {
-          role: "system",
-          content:
-            "Si pomočnik za generiranje kratkih opisov slovenskih turističnih točk. Odgovoriš SAMO z opisom, brez dodatnega besedila. " +
-            SYSTEM_DATA_GUARD,
-        },
-        { role: "user", content: prompt },
-      ],
-      { temperature: 0.6, usageLog: { feature: "poi" } }
-    );
-
-    let description = result?.content?.trim() || "";
-    // Čiščenje: odstrani narekovaje če jih je AI dodal
-    description = description.replace(/^["'"]|["'"]$/g, "");
-    // Omeji na 150 znakov (varnost)
-    if (description.length > 150) {
-      description = description.substring(0, 147) + "...";
-    }
-
-    if (!description) {
-      // Fallback opis
-      description = `${name} — ${categoryLabel} v Sloveniji.`;
-    }
-
-    const source = result?.source === "fallback" ? "fallback" : "ai";
-
-    // 3. Shrani v cache (permanentno)
-    store[cacheKey] = {
-      description,
-      generatedAt: Date.now(),
-      source,
-    };
-    await writeCache(store);
-
-    console.log(`[poi-describe] AI opis za "${name}" (source: ${result?.source})`);
-
-    return NextResponse.json({
-      description,
-      source: result?.source || "fallback",
-      cached: false,
-    });
-  } catch (error) {
-    console.error("[poi-describe] AI napaka:", error);
-
-    // Fallback opis
-    const fallbackDesc = `${name} — ${categoryLabel} v Sloveniji.`;
-    store[cacheKey] = {
-      description: fallbackDesc,
-      generatedAt: Date.now(),
-      source: "fallback",
-    };
-    await writeCache(store);
-
-    return NextResponse.json({
-      description: fallbackDesc,
-      source: "fallback",
-      cached: false,
-    });
-  }
+  return NextResponse.json({
+    description,
+    source: "deterministic",
+    cached: false,
+  });
 }
 
 // GET — admin endpoint za statistiko cache-a
@@ -244,7 +192,10 @@ export async function GET(request: Request) {
   const entries = Object.values(store);
   return NextResponse.json({
     total: entries.length,
+    // Legacy zapisi (pred #9) — novi zapisi so vedno "deterministic",
+    // zato aiGenerated s časom naraste le še iz starejših zapisov.
     aiGenerated: entries.filter((e) => e.source === "ai").length,
     fallback: entries.filter((e) => e.source === "fallback").length,
+    deterministic: entries.filter((e) => e.source === "deterministic").length,
   });
 }

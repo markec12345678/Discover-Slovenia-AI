@@ -1,21 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   BookOpen,
   Sparkles,
-  Loader2,
   MapPin,
-  ExternalLink,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-// Note: AI generation happens via /api/ai-story endpoint (server-side)
 import { cn } from "@/lib/utils";
 
 // ============================================================================
-// AI STORY GENERATOR — čustvene zgodbe o lokalcih
+// ZGODBA LOKALCA — DETERMINISTIČNI graditelj iz strukturiranih polj
 // ============================================================================
 //
 // Turizem = zgodbe.
@@ -26,6 +23,11 @@ import { cn } from "@/lib/utils";
 //  iz okoliških gozdov..."
 //
 // [Obišči] [Kupi] [Dodaj v plan]
+//
+// Issue #9 ZERO-AI: zgodba se zgradi LOKALNO iz istih propsov (ime, opis,
+// podrobnosti, specialitete) — 0 omrežja, 0 strežniške AI. Nekdanja javna
+// neroute /api/ai-story (sprožila se je ob vsakem odprtju modala) je
+// ODSTRANJENA.
 // ============================================================================
 
 interface AIStoryProps {
@@ -45,6 +47,18 @@ interface Story {
   highlights: string[];
 }
 
+/** Lokalni (deterministični) graditelj zgodbe — izključno iz realnih polj. */
+function buildStoryLocal(props: AIStoryProps): Story {
+  return {
+    title: props.name,
+    story:
+      props.longDescription ||
+      props.description ||
+      "Lokalni ponudnik z avtentično slovensko izkušnjo.",
+    highlights: props.specialties?.slice(0, 3) || [],
+  };
+}
+
 export function AIStory({
   name,
   category,
@@ -54,65 +68,21 @@ export function AIStory({
   specialties,
   className,
 }: AIStoryProps) {
-  const [story, setStory] = useState<Story | null>(null);
-  const [loading, setLoading] = useState(false);
+  const t = useTranslations("story");
+  // i18n z dvojno varovalko: dokler ključ ni v messages/*.json, velja SL literal
+  const badgeLabel = t.has("badge") ? t("badge") : "Naša zgodba";
+
+  // Samodejni izračun ob renderju — hipen (čisto lokalno, brez omrežja);
+  // čisti izračun iz propsov, zato se pri spremembi lokalca sam posodobi.
+  const story = buildStoryLocal({
+    name,
+    category,
+    destinationName,
+    description,
+    longDescription,
+    specialties,
+  });
   const [expanded, setExpanded] = useState(false);
-
-  async function generateStory() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/ai-story", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          category,
-          destinationName,
-          description,
-          longDescription,
-          specialties,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setStory({
-          title: data.title || name,
-          story: data.story || longDescription || description || "",
-          highlights: data.highlights || [],
-        });
-      } else {
-        throw new Error("AI story API failed");
-      }
-    } catch {
-      // Fallback zgodba
-      setStory({
-        title: `${name}`,
-        story: longDescription || description || "Lokalni ponudnik z avtentično slovensko izkušnjo.",
-        highlights: specialties?.slice(0, 3) || [],
-      });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Auto-generiraj ob mount
-  useEffect(() => {
-    generateStory();
-  }, [name]);
-
-  if (loading) {
-    return (
-      <Card className={cn("border-primary/15", className)}>
-        <CardContent className="flex items-center gap-2 p-3">
-          <Loader2 className="size-4 animate-spin text-primary" aria-hidden="true" />
-          <span className="text-xs text-muted-foreground">AI pripoveduje zgodbo...</span>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!story) return null;
 
   return (
     <Card className={cn("border-primary/15 bg-gradient-to-br from-primary/5 to-transparent", className)}>
@@ -133,7 +103,7 @@ export function AIStory({
           </div>
           <Badge variant="secondary" className="text-[9px] gap-0.5 shrink-0">
             <Sparkles className="size-2" aria-hidden="true" />
-            AI Story
+            {badgeLabel}
           </Badge>
         </div>
 

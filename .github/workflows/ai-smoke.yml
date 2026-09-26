@@ -1,282 +1,48 @@
-name: AI Provider Smoke Test
+name: AI Vision Smoke Test
 
-# 1.14.0: ŽIVI test OBEH AI ključev iz GitHub runnerja (US regija —
-# podprta, za razliko od razvojnega sandboxa):
-#   · OPENROUTER_API_KEY — PRIMARNI provider (nex-agi/nex-n2.5-pro:free +
-#     notranji fallback mini + JSON mode). Deluje iz vsake regije.
-#   · GEMINI_API_KEY — SEKUNDARNI provider (chat + jsonMode + vision za
-#     F8 slikovni vnos). Vision ostaja na Geminiju: OpenRouter :free
-#     vision modeli so živo testirani in NEDELJUJEJO.
-# Zagon: ROČNO (workflow_dispatch) prek GitHub UI, APIja ali skripte:
-#   scripts/ops/github-workflow-run.sh
-# Namen: dokaz, da ključa in VSE končne točke, ki jih uporablja
-# src/lib/ai-client.ts, delujejo PRED deployom na Vercel/Render.
+# ISSUE #9 (ZERO-AI / deterministic-first): jedro platforme je 100 %
+# deterministično (0 AI ključev, 0 LLM klicev — CI funkcijski testi
+# preverjajo ravno to). AI ostaja IZKLJUČNO kot OPCIJSKA vizija
+# (razumevanje slik — "Začni s sliko" + rezervacijski screenshot),
+# strežena po GEMINI_API_KEY prek OpenAI-compat REST končne točke
+# (navaden fetch — paket `openai` je odstranjen iz odvisnosti).
 #
-# TEDENSKI RITAM (revizija 1.32.0, trditev "ci funkcionalni test ne preverja
-# dejanskega AI delovanja"): vsak ponedeljek ob 07:00 UTC se test zažene
-# SAMODEJNO (~5 klicev/teden — zanemarljivo za free tier kvote). Razlog:
-# funkcionalni dim v CI namerno nima AI ključev (preverja deterministicno
-# fallback pot), produkcijski monitor pa je GET-only — TAKO bi iztekel ali
-# rotiran API ključ v Vercel/Render env živel TIHO (produkcija bi nemoteno
-# padala na fallback). Tedenski živi klic naredi to nemogoče: rdeči run =
-# e-poštni alarm lastniku.
+# Ta workflow je ŽIVI test tega (edinega) preostalega AI ključa iz
+# GitHub runnerja (US regija — podprta, za razliko od razvojnega
+# sandboxa, ki je geo-blokiran). Zagon: ROČNO (workflow_dispatch) ali
+# TEDENSKO (PO 07:00 UTC — ~1 klic/teden, zanemarljivo za free tier).
+# Namen: rotiran/iztekel GEMINI_API_KEY v Vercel/Render env ne more
+# živeti TIHO — rdeči run = e-poštni alarm lastniku (slika-vnos bi
+# pošteno padel na 502, ostalo deluje normalno).
 #
-# Izkušnja iz prvega zagona (2026-09-15): gemini-3.6-flash je THINKING
-# model — max_tokens 16 je porabil za notranje razmišljanje (finish_reason
-# "length", completion_tokens 0). Zato so proračuni tu 512+ (v ai-client
-# so tla 512 iz istega razloga).
-#
-# Ključa sta Actions secreta OPENROUTER_API_KEY + GEMINI_API_KEY —
-# GitHub ju v logih samodejno maskira; v log se izpisujejo samo HTTP
-# kode, usage in vsebina odgovora.
+# ISSUE #9: OPENROUTER_API_KEY + PUTER_AUTH_TOKEN jobi/sonde so
+# ODSTRANJENI (tekstovna veriga ne obstaja več). Secret
+# OPENROUTER_API_KEY v GitHubu lahko lastnik izbriše (Settings →
+# Secrets → Actions).
 
 on:
   schedule:
-    # PO 07:00 UTC = PO 09:00 po slovenskem času (zunaj jutranjega
-    # vrha prometa; GitHub Actions ima sicer ~15 min jitter na cron).
+    # PO 07:00 UTC = PO 09:00 po slovenskem času (GitHub Actions ima
+    # sicer ~15 min jitter na cron).
     - cron: "0 7 * * 1"
   workflow_dispatch:
 
 jobs:
-  openrouter:
-    name: OpenRouter (PRIMARNI) — živi klic
-    runs-on: ubuntu-latest
-    timeout-minutes: 6
-
-    steps:
-      - name: 🔑 Key info (veljavnost + free tier)
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: |
-          set -euo pipefail
-          if [ -z "${OPENROUTER_API_KEY:-}" ]; then
-            echo "::error::Secret OPENROUTER_API_KEY ni nastavljen (Settings → Secrets → Actions)"
-            exit 1
-          fi
-          echo "→ GET /api/v1/key"
-          HTTP_CODE=$(curl -sS -o /tmp/or-key.json -w "%{http_code}" -m 30 \
-            "https://openrouter.ai/api/v1/key" \
-            -H "Authorization: Bearer ${OPENROUTER_API_KEY}")
-          echo "← HTTP ${HTTP_CODE} · free_tier=$(jq -r '.data.is_free_tier // "?"' /tmp/or-key.json) · usage=$(jq -r '.data.usage // "?"' /tmp/or-key.json)"
-          if [ "${HTTP_CODE}" != "200" ]; then
-            echo "::error::OpenRouter ključ ni veljaven (HTTP ${HTTP_CODE})"
-            cat /tmp/or-key.json
-            exit 1
-          fi
-          echo "::notice::OpenRouter ključ veljaven"
-
-      - name: 💬 Test chat — primarni model nex-agi/nex-n2.5-pro:free
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: |
-          set -euo pipefail
-          echo "→ POST /api/v1/chat/completions (nex-agi/nex-n2.5-pro:free)"
-          HTTP_CODE=$(curl -sS -o /tmp/or-chat.json -w "%{http_code}" -m 90 \
-            "https://openrouter.ai/api/v1/chat/completions" \
-            -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
-            -H "Content-Type: application/json" \
-            -H "HTTP-Referer: https://discover-slovenia.si" \
-            -H "X-Title: Discover-Slovenia-AI" \
-            -d '{
-              "model": "nex-agi/nex-n2.5-pro:free",
-              "messages": [{"role": "user", "content": "Odgovori samo z besedilom: SLOVENIJA-OPENROUTER-OK"}],
-              "max_tokens": 512,
-              "temperature": 0
-            }')
-          echo "← HTTP ${HTTP_CODE} · usage: $(jq -c '.usage.total_tokens // empty' /tmp/or-chat.json)"
-          if [ "${HTTP_CODE}" = "200" ]; then
-            CONTENT=$(jq -r '.choices[0].message.content // empty' /tmp/or-chat.json)
-            echo "← vsebina: ${CONTENT}"
-            if [ -z "${CONTENT}" ]; then
-              echo "::error::Prazna vsebina odgovora"; exit 1
-            fi
-            echo "::notice::OpenRouter primarni model deluje (pot generacije)"
-          elif [ "${HTTP_CODE}" = "429" ] && jq -r '.error.message // empty' /tmp/or-chat.json | grep -q "free-models-per-day"; then
-            # DNEVNA MEJA free tierja (~50/dan brez kredita): ključ je VELJAVEN
-            # (key-info korak zgoraj je 200), model pa je bil živo dokazan
-            # (2026-09-15: "Dnevni pobeg na Bled" — čist JSON v slovenščini).
-            # To ni napaka namestitve — naročena arhitektura TOČNO tu pase:
-            # "ostala dva, ko routeru zmanjka" (Gemini v produkciji).
-            echo "::warning::Dnevna meja free tierja dosežena — ključ veljaven (key-info 200), veriga pade na Gemini. Dodaj 10 USD kredita za 1000/dan ko raste promet."
-          else
-            echo "::error::OpenRouter chat odgovoril s HTTP ${HTTP_CODE}"
-            jq -r '.error.message // .' /tmp/or-chat.json | head -5
-            exit 1
-          fi
-
-      - name: 🧾 Test jsonMode response_format (pot generacije JSON)
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: |
-          set -euo pipefail
-          echo "→ POST chat/completions z response_format json_object"
-          HTTP_CODE=$(curl -sS -o /tmp/or-json.json -w "%{http_code}" -m 90 \
-            "https://openrouter.ai/api/v1/chat/completions" \
-            -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "model": "nex-agi/nex-n2.5-pro:free",
-              "messages": [
-                {"role": "system", "content": "Odgovarjaj SAMO z veljavnim JSON."},
-                {"role": "user", "content": "Vrni JSON: {\"status\":\"ok\",\"drzava\":\"Slovenija\"}"}
-              ],
-              "response_format": {"type": "json_object"},
-              "max_tokens": 512,
-              "temperature": 0
-            }')
-          echo "← HTTP ${HTTP_CODE}"
-          if [ "${HTTP_CODE}" = "429" ] && jq -r '.error.message // empty' /tmp/or-json.json | grep -q "free-models-per-day"; then
-            echo "::warning::jsonMode: dnevna meja free tierja — JSON podprtost je bila živo dokazana (2026-09-15)."
-          elif [ "${HTTP_CODE}" != "200" ]; then
-            echo "::error::OpenRouter jsonMode odgovoril s HTTP ${HTTP_CODE}"
-            jq -r '.error.message // .' /tmp/or-json.json | head -5
-            exit 1
-          else
-            CONTENT=$(jq -r '.choices[0].message.content // empty' /tmp/or-json.json)
-            echo "← vsebina: ${CONTENT}"
-            echo "${CONTENT}" | jq -e '.status' > /dev/null || {
-              echo "::error::jsonMode: odgovor ni veljaven JSON"; exit 1; }
-            echo "::notice::OpenRouter jsonMode deluje — generacija JSON varna"
-          fi
-
-      # INFORMACIJSKA sonda (ne podre joba): notranji fallback model.
-      # Free tier je prehoden (503/429) — če odpovedani, veriga gre še na
-      # gemini (spodaj), zato je to opozorilo, ne napaka.
-      - name: 🛟 Sonda notranji fallback mini (informacijsko)
-        continue-on-error: true
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: |
-          set -euo pipefail
-          HTTP_CODE=$(curl -sS -o /tmp/or-mini.json -w "%{http_code}" -m 90 \
-            "https://openrouter.ai/api/v1/chat/completions" \
-            -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "model": "nex-agi/nex-n2.5-mini:free",
-              "messages": [{"role": "user", "content": "Odgovori samo z besedilom: MINI-OK"}],
-              "max_tokens": 512,
-              "temperature": 0
-            }')
-          echo "← HTTP ${HTTP_CODE}"
-          if [ "${HTTP_CODE}" == "200" ] && [ -n "$(jq -r '.choices[0].message.content // empty' /tmp/or-mini.json)" ]; then
-            echo "::notice::Notranji fallback (mini) deluje"
-          else
-            echo "::warning::Notranji fallback trenutno ne odgovarja (prehodno) — zunanja veriga prevzame"
-          fi
-
-  gemini:
-    name: Gemini (SEKUNDARNI) — živi klic
+  gemini-vision:
+    name: Gemini (OPCIJSKA vizija) — živi klic
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - name: 💬 Test chat completion (generacijska pot)
+      - name: 🖼️ Test vision image_url (edina AI pot po Issue #9)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -euo pipefail
           if [ -z "${GEMINI_API_KEY:-}" ]; then
-            echo "::error::Secret GEMINI_API_KEY ni nastavljen (Settings → Secrets and variables → Actions)"
+            echo "::error::Secret GEMINI_API_KEY ni nastavljen (Settings → Secrets and variables → Actions). Brez njega slikovni vnos pošteno vrača 502 — jedro platforme deluje normalno (deterministično)."
             exit 1
           fi
-          echo "→ POST /v1beta/openai/chat/completions (model: gemini-3.6-flash)"
-          HTTP_CODE=$(curl -sS -o /tmp/gemini-smoke.json -w "%{http_code}" -m 45 \
-            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" \
-            -H "Authorization: Bearer ${GEMINI_API_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "model": "gemini-3.6-flash",
-              "messages": [{"role": "user", "content": "Odgovori samo z besedilom: SLOVENIJA-OK"}],
-              "max_tokens": 512,
-              "temperature": 0
-            }')
-          echo "← HTTP ${HTTP_CODE}"
-          echo "← usage: $(jq -c '.usage // empty' /tmp/gemini-smoke.json)"
-          if [ "${HTTP_CODE}" != "200" ]; then
-            echo "::error::Gemini API odgovoril s HTTP ${HTTP_CODE}"
-            cat /tmp/gemini-smoke.json
-            exit 1
-          fi
-          CONTENT=$(jq -r '.choices[0].message.content // empty' /tmp/gemini-smoke.json)
-          echo "← vsebina: ${CONTENT}"
-          if [ -z "${CONTENT}" ]; then
-            echo "::error::Prazna vsebina odgovora"
-            cat /tmp/gemini-smoke.json
-            exit 1
-          fi
-          echo "::notice::Gemini chat completion deluje (pot generacije itinererjev)"
-
-      - name: 🧾 Test jsonMode response_format (pot generacije JSON)
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          set -euo pipefail
-          # Free tier RPM (~10/min): prejšnji korak je porabil kvoto za to
-          # minuto — 12 s premora prepreči 429 (živo ugotovitev run #3).
-          sleep 12
-          echo "→ POST chat/completions z response_format json_object"
-          HTTP_CODE=$(curl -sS -o /tmp/gemini-json.json -w "%{http_code}" -m 45 \
-            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" \
-            -H "Authorization: Bearer ${GEMINI_API_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "model": "gemini-3.6-flash",
-              "messages": [
-                {"role": "system", "content": "Odgovarjaj SAMO z veljavnim JSON."},
-                {"role": "user", "content": "Vrni JSON: {\"status\":\"ok\",\"drzava\":\"Slovenija\"}"}
-              ],
-              "response_format": {"type": "json_object"},
-              "max_tokens": 512,
-              "temperature": 0
-            }')
-          echo "← HTTP ${HTTP_CODE}"
-          # 429 = RPM limit free tierja (chat klic pred tem je že dokazal
-          # ključ+model): ena ponovitev po 20 s; če še vedno 429 → opozorilo
-          # (ne napaka — jsonMode je bil živo dokazan v zagonu #2).
-          if [ "${HTTP_CODE}" = "429" ]; then
-            echo "::warning::429 (RPM free tier) — čakam 20 s in poskušam enkrat"
-            sleep 20
-            HTTP_CODE=$(curl -sS -o /tmp/gemini-json.json -w "%{http_code}" -m 45 \
-              "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" \
-              -H "Authorization: Bearer ${GEMINI_API_KEY}" \
-              -H "Content-Type: application/json" \
-              -d '{
-                "model": "gemini-3.6-flash",
-                "messages": [
-                  {"role": "system", "content": "Odgovarjaj SAMO z veljavnim JSON."},
-                  {"role": "user", "content": "Vrni JSON: {\"status\":\"ok\",\"drzava\":\"Slovenija\"}"}
-                ],
-                "response_format": {"type": "json_object"},
-                "max_tokens": 512,
-                "temperature": 0
-              }')
-            echo "← retry HTTP ${HTTP_CODE}"
-          fi
-          if [ "${HTTP_CODE}" = "429" ]; then
-            echo "::warning::jsonMode še vedno 429 (RPM) — chat klic zgoraj je dokazal ključ; jsonMode živo dokazan v zagonu #2 (2026-09-15)."
-            exit 0
-          fi
-          if [ "${HTTP_CODE}" != "200" ]; then
-            echo "::error::Gemini jsonMode odgovoril s HTTP ${HTTP_CODE} — generacijske rute bi padle na fallback!"
-            cat /tmp/gemini-json.json
-            exit 1
-          fi
-          CONTENT=$(jq -r '.choices[0].message.content // empty' /tmp/gemini-json.json)
-          echo "← vsebina: ${CONTENT}"
-          if [ -z "${CONTENT}" ]; then
-            echo "::error::jsonMode: prazna vsebina"
-            exit 1
-          fi
-          echo "${CONTENT}" | jq -e '.status' > /dev/null || {
-            echo "::error::jsonMode: odgovor ni veljaven JSON objekt"; exit 1; }
-          echo "::notice::Gemini jsonMode (response_format) deluje — generacija JSON varna"
-
-      - name: 🖼️ Test vision image_url (pot F8 slikovnega vnosa)
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          set -euo pipefail
           sleep 12  # RPM premor (free tier) — živo ugotovitev run #3
           # 1×1 PNG, generiran na mestu (brez zaupanja v prilepljen base64)
           PIXEL=$(python3 -c '
@@ -290,7 +56,7 @@ jobs:
                  + chunk(b"IEND", b""))
           print(base64.b64encode(png).decode())
           ')
-          echo "→ POST chat/completions z image_url delom"
+          echo "→ POST chat/completions z image_url delom (gemini-3.6-flash, reasoning_effort low — isti parametri kot ai-client)"
           HTTP_CODE=$(curl -sS -o /tmp/gemini-vision.json -w "%{http_code}" -m 45 \
             "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" \
             -H "Authorization: Bearer ${GEMINI_API_KEY}" \
@@ -304,11 +70,14 @@ jobs:
                   {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,${PIXEL}\"}}
                 ]
               }],
-              \"max_tokens\": 512
+              \"max_tokens\": 512,
+              \"reasoning_effort\": \"low\"
             }")
           echo "← HTTP ${HTTP_CODE}"
-          # 429 = RPM free tier (vision je bil živo zelen v zagonu #2):
-          # 1 ponovitev po 20 s; če še vedno 429 → opozorilo, ne napaka.
+          echo "← usage: $(jq -c '.usage // empty' /tmp/gemini-vision.json)"
+          # 429 = RPM free tier: 1 ponovitev po 20 s; če še vedno 429 →
+          # opozorilo (ne napaka — vision je bil živo zelen v zgodovinskih
+          # zagonih; ključ je dokazan z vsakim 200).
           if [ "${HTTP_CODE}" = "429" ]; then
             echo "::warning::vision 429 (RPM) — ponovitev po 20 s"
             sleep 20
@@ -325,43 +94,25 @@ jobs:
                     {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,${PIXEL}\"}}
                   ]
                 }],
-                \"max_tokens\": 512
+                \"max_tokens\": 512,
+                \"reasoning_effort\": \"low\"
               }")
             echo "← retry HTTP ${HTTP_CODE}"
           fi
           if [ "${HTTP_CODE}" = "429" ]; then
-            echo "::warning::vision še vedno 429 (RPM) — ključ+chat+jsonMode dokazani zgoraj; vision živo dokazan v zagonu #2."
+            echo "::warning::vision še vedno 429 (RPM) — prostovoljna plast; jedro deluje deterministično."
             exit 0
           fi
           if [ "${HTTP_CODE}" != "200" ]; then
-            echo "::error::Gemini vision odgovoril s HTTP ${HTTP_CODE}"
+            echo "::error::Gemini vision odgovoril s HTTP ${HTTP_CODE} — slikovni vnos bi padel na 502 (jedro neprizadeto)"
             cat /tmp/gemini-vision.json
             exit 1
           fi
-          echo "::notice::Gemini vision (image_url) deluje — F8 slikovni vnos ima produkcijsko pot"
-
-      # INFORMACIJSKA sonda (ne podre joba): ali compat plast sprejema
-      # reasoning_effort? Če DA, ga lahko prihodnje dodamo v ai-client za
-      # še manjše thinking proračune; če NE, ostajamo pri tlacet 512.
-      - name: 🔬 Sonda reasoning_effort (informacijsko)
-        continue-on-error: true
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          set -euo pipefail
-          HTTP_CODE=$(curl -sS -o /tmp/gemini-reasoning.json -w "%{http_code}" -m 45 \
-            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" \
-            -H "Authorization: Bearer ${GEMINI_API_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "model": "gemini-3.6-flash",
-              "messages": [{"role": "user", "content": "Reply: OK"}],
-              "reasoning_effort": "low",
-              "max_tokens": 512
-            }')
-          echo "← HTTP ${HTTP_CODE} (reasoning_effort: low)"
-          if [ "${HTTP_CODE}" == "200" ]; then
-            echo "::notice::reasoning_effort je PODPRT — kandidat za optimizacijo ai-client"
-          else
-            echo "::warning::reasoning_effort NI podprt — ai-client ostaja pri tlacet 512 žetonov"
+          CONTENT=$(jq -r '.choices[0].message.content // empty' /tmp/gemini-vision.json)
+          echo "← vsebina: ${CONTENT}"
+          if [ -z "${CONTENT}" ]; then
+            echo "::error::Prazna vsebina vision odgovora"
+            cat /tmp/gemini-vision.json
+            exit 1
           fi
+          echo "::notice::Gemini vision (image_url) deluje — slikovni vnos ima produkcijsko pot (Issue #9: edini AI ostanek)"

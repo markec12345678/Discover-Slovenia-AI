@@ -2335,7 +2335,7 @@ function StatisticsTab({
 
   return (
     <div className="space-y-6">
-      {/* AI vpogledi — analiza statistike z AI */}
+      {/* Vpogledi — deterministična analitika statistike (Issue #9: 0 AI) */}
       <InsightsPanel type="owner" />
 
       {/* ROI banner (top) */}

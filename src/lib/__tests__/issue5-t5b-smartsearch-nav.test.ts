@@ -15,7 +15,8 @@
 //   2. kanonične slug-e iz DESTINATIONS (id ≠ slug primeri),
 //   3. priklop v navigation.tsx + vse štiri skupine v smart-search.tsx
 //      (source-contract, vzorec fa-acceptance-fixes.test.ts),
-//   4. strežniško slug preslikavo v /api/smart-search (AI NE izmišlja slug-a).
+//   4. strežniško slug preslikavo v /api/smart-search (iskalnik NE izmišlja
+//      slug-a; Issue #9: iskanje je deterministično, source "deterministic").
 // ============================================================================
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -148,10 +149,10 @@ describe("T5-B/H1: priklop navigacije (source-contract)", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// 4. Strežniška slug preslikava (AI NE izmišlja slug-a)
+// 4. Strežniška slug preslikava (iskalnik NE izmišlja slug-a)
 // ─────────────────────────────────────────────────────────────────────────
 
-describe("T5-B/H1: /api/smart-search strežniško prilepi slug", () => {
+describe("T5-B/H1 → #9: /api/smart-search strežniško prilepi slug", () => {
   test("id → slug preslikava iz kanonskega dataseta (destSlugById)", () => {
     expect(smartSearchRouteSrc).toContain(
       "const destSlugById = new Map(DESTINATIONS.map((d) => [d.id, d.slug] as const))"
@@ -159,12 +160,23 @@ describe("T5-B/H1: /api/smart-search strežniško prilepi slug", () => {
     expect(smartSearchRouteSrc).toContain("slug: destSlugById.get(d.id) ?? d.id");
   });
 
-  test("fallback (keyword) pot vrača slug enako kot AI pot", () => {
-    expect(smartSearchRouteSrc).toContain("slug,");
+  test("deterministična pot vrača slug za VSE zadetke (pogodba iz T5-B ostaja)", () => {
+    // Issue #9: iskanje je deterministično — isti izhod, ista slug pogodba.
+    expect(smartSearchRouteSrc).toContain("deterministicSearch(");
+    expect(smartSearchRouteSrc).toContain("destinations: results.destinations.map");
   });
 
   test("odgovor deklarira slug v destinacijskih rezultatih (interface)", () => {
     expect(smartSearchRouteSrc).toMatch(/destinations:\s*Array<\{/);
     expect(smartSearchRouteSrc).toContain("slug: string;");
+  });
+
+  test("Issue #9 ZERO-AI: odgovor je pošteno označen source \"deterministic\" (nikoli ai/fallback)", () => {
+    expect(smartSearchRouteSrc).toContain('source: "deterministic"');
+    expect(smartSearchRouteSrc).not.toContain('source: "ai"');
+    expect(smartSearchRouteSrc).not.toContain('source: "fallback"');
+    // 0 AI odvisnosti na ruti.
+    expect(smartSearchRouteSrc).not.toContain('from "@/lib/ai-client"');
+    expect(smartSearchRouteSrc).not.toContain("generateCompletion");
   });
 });

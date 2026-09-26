@@ -46,6 +46,9 @@ import {
   MoreHorizontal,
   X,
   Volume2,
+  Square,
+  Eye,
+  EyeOff,
   FileText,
   Ticket,
   Footprints,
@@ -230,7 +233,13 @@ import { PlannerTrustLine } from "@/components/planner-trust-line";
 // pretvorba (buildItineraryGoView) + persistenca (saveItineraryGoTrip).
 import { buildItineraryGoView } from "@/lib/journey/itinerary-go";
 import { saveItineraryGoTrip } from "@/lib/journey/go-persist";
-import { buildItineraryAudioScript, planAudioCacheKey } from "@/lib/planner-audio";
+import { buildItineraryAudioScript } from "@/lib/planner-audio";
+import { chunkNarration } from "@/lib/itinerary-audio";
+// ISSUE #9 / GROUP C (ZERO-AI): zvočni povzetek načrta izgovori BRKALNIŠKI
+// glas (window.speechSynthesis) — isti vzorec kot glasovni klepet
+// (lib/voice, Issue #2 §7); strežniška TTS pot za načrt je ODSTRANJEN
+// (0 strežniških AI klicev, 0 žetonov).
+import { speechLanguageTag, ttsSupported } from "@/lib/voice";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import type { LocationVisit } from "@/lib/types";
 // TASK 8 / D8-F (D8-B §5): trak "Iz moje poti" nad obrazcem + prefill
@@ -270,18 +279,6 @@ const PACE_OPTIONS: { value: Pace; labelKey: string }[] = [
   { value: "slow", labelKey: "paceSlow" },
   { value: "balanced", labelKey: "paceBalanced" },
   { value: "fast", labelKey: "paceFast" },
-];
-
-// TASK 100 (TASK 99 na GitHubu): motor generiranja — "auto" (privzeto,
-// nazaj kompatibilno) = AI veriga z deterministično rezervo;
-// "deterministic" = načrt BREZ LLM klica (0 žetonov, trenuten, 100 %
-// reproducibilno — isti vhod vedno da isti načrt). LabelKey → "planner".
-const ENGINE_OPTIONS: {
-  value: NonNullable<PlannerInput["engine"]>;
-  labelKey: string;
-}[] = [
-  { value: "auto", labelKey: "engineAuto" },
-  { value: "deterministic", labelKey: "engineDeterministic" },
 ];
 
 // UI sprint (nabor #2 — dodatek raziskave): segment dneva Jutro/Popoldan/
@@ -548,30 +545,14 @@ export function ItineraryPlanner() {
     return map;
   }, [itinerary]);
 
-  // D2 (nabor #2): zvočni povzetek — skript se sestavi ČISTO iz podatkov
-  // načrta (ista čista funkcija na clientu, samo za prikaz razpoložljivosti
-  // in analitiko; STREŽNIK si ga ob klicu zgradi SAM iz strukturiranih
-  // podatkov — TASK 92). Null, če načrta ni.
-  //
-  // TASK 92: ključ razveljavitve je ZGOŠČENA VSEBINA (planAudioCacheKey,
-  // djb2) — prej `${locale}:${groupSize}:${chars}` je dva RAZLIČNA načrta z
-  // enako dolžino skripta izenačil in klient bi tiho predvajal STARI zvok.
+  // D2 (nabor #2) / ISSUE #9 (ZERO-AI): zvočni povzetek — skript se
+  // sestavi ČISTO iz podatkov načrta NA KLIENTU (ista čista funkcija,
+  // 0 omrežja, 0 AI žetonov) in ga izgovori BRKALNIŠKI glas
+  // (window.speechSynthesis). Null, če načrta ni (gumb se ne izriše).
   const audioScript = useMemo(
     () =>
       itinerary
         ? buildItineraryAudioScript({
-            itinerary,
-            dayKm,
-            groupSize: formData.groupSize,
-            locale: locale === "en" ? "en" : "sl",
-          })
-        : null,
-    [itinerary, dayKm, formData.groupSize, locale]
-  );
-  const audioKey = useMemo(
-    () =>
-      itinerary
-        ? planAudioCacheKey({
             itinerary,
             dayKm,
             groupSize: formData.groupSize,
@@ -658,15 +639,45 @@ export function ItineraryPlanner() {
   const [ingestPdfDragging, setIngestPdfDragging] = useState(false);
   const ingestPdfInputRef = useRef<HTMLInputElement | null>(null);
 
-  // === D2 (nabor #2, Mindtrip audio): "Poslušaj svoj načrt" — zvočni
-  // povzetek (TTS). Skript sestavimo deterministično iz podatkov načrta
-  // (0 AI); zvok generira /api/itinerary/tts ob kliku (ne predhodno). ===
-  const [audioLoading, setAudioLoading] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  // === D2 (nabor #2, Mindtrip audio) / ISSUE #9 (ZERO-AI): "Poslušaj
+  // svoj načrt" — zvočni povzetek. Skript sestavimo deterministično iz
+  // podatkov načrta NA KLIENTU (0 AI, 0 omrežja); izgovori ga BRKALNIŠKI
+  // glas (window.speechSynthesis — isti vir kot glasovni klepet).
+  // Nove UI vrstice (i18n ključi za prihodnjo selitev v src/i18n/messages
+  // — src/i18n/** je v tem nalogi nerazmerljiv, zato dvojezične konstante
+  // po vzorcu NARRATION_LABELS):
+  //   planner.listenStop      SL "Ustavi predvajanje"  EN "Stop playback"
+  //   planner.listenShowScript SL "Prikaži besedilo"   EN "Show text"
+  //   planner.listenHideScript SL "Skrij besedilo"     EN "Hide text"
+  //   planner.listenVoiceUnavailable
+  //     SL "Računalniški glas ni na voljo — besedilo je prikazano spodaj."
+  //     EN "Computer voice unavailable — the text is shown below." ===
+  const LISTEN_STOP_LABELS = { sl: "Ustavi predvajanje", en: "Stop playback" } as const;
+  const LISTEN_SCRIPT_LABELS = {
+    sl: {
+      show: "Prikaži besedilo",
+      hide: "Skrij besedilo",
+      voiceUnavailable:
+        "Računalniški glas ni na voljo — besedilo je prikazano spodaj.",
+    },
+    en: {
+      show: "Show text",
+      hide: "Hide text",
+      voiceUnavailable:
+        "Computer voice unavailable — the text is shown below.",
+    },
+  } as const;
+  const listenLang = locale === "en" ? "en" : "sl";
+  const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
-  // Ključ (dolžina skripta + skupina) — sprememba načrta razveljavi stari zvok
-  const [audioUrlKey, setAudioUrlKey] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  /** Seja zvočnega predvajanja (razrez po koseh): stop/nov začetek
+   *  razveljavi čakajoče kose — zastarel onend NE sme nadaljevati branja. */
+  const audioSessionRef = useRef(0);
+  // Brskalniška speechSynthesis (po hidrataciji — server=false, klient=true
+  // bi bil hydration mismatch; null = še neznano).
+  const [speechOut, setSpeechOut] = useState<boolean | null>(null);
+  // Tekstovni padec: pokaži/skrij pripoved, kadar glasa ni.
+  const [showAudioScript, setShowAudioScript] = useState(false);
 
   // F5.1: programatski fokus zemljevida ( gumb na kartici postanka)
   const [mapFocus, setMapFocus] = useState<{
@@ -1291,17 +1302,6 @@ export function ItineraryPlanner() {
     }));
   }
 
-  // TASK 100: motor generiranja — izbira MED dvema stanjema ("auto" je
-  // vedno izbrano, ko uporabnik ni dotaknil stikala — nazaj kompatibilno:
-  // stari odjemalci polja sploh ne pošljejo). Brez de-toggle: motor je
-  // OBVEZNA odločitev z jasnim privzetkom, ne filtrirna želja.
-  function toggleEngine(value: NonNullable<PlannerInput["engine"]>) {
-    fireStartedOnce();
-    setFormData((prev) =>
-      prev.engine === value ? prev : { ...prev, engine: value }
-    );
-  }
-
   // TASK 82: inline sporočila pod številskimi polji — izpeljana iz ISTIH
   // čistih funkcij kot validate() (enoobrazje: kar je rdeče pod poljem, je
   // tudi razlog zavrnjene oddaje). Prikaz samo po "touched".
@@ -1693,9 +1693,9 @@ export function ItineraryPlanner() {
       season: input.season,
       partyType: input.partyType ?? "none",
       pace: input.pace ?? "none",
-      // TASK 100: kateri motor je ZADEL načrt (auto = AI z rezervo,
-      // deterministic = brez LLM) — merimo povpraševanje po načrtu brez AI.
-      engine: input.engine ?? "auto",
+      // ISSUE #9: motor je vedno determinističen (AI pot odstranjena) —
+      // polje ostaja zaradi kontinuitete analitike (stare vrednosti "auto").
+      engine: "deterministic",
       has_start_date: Boolean(input.startDate),
       // TASK 80: prvo generiranje ali regeneracija (obstoječi načrt v
       // spominu) — ločujemo vrtince prvega skoka in ponovnih poskusov
@@ -1828,10 +1828,10 @@ export function ItineraryPlanner() {
       setEmailError(null);
       setRestoredVisible(false);
 
-      // D2: nov načrt → stari zvok ni več veljaven (ključ se spremeni;
-      // objektni URL počisti efekt ob spremembi audioUrl)
-      setAudioUrl(null);
-      setAudioUrlKey(null);
+      // D2 / ISSUE #9: nov načrt → prejšnja pripoved ZASTARA → govor
+      // takoj ustavimo (ne nadaljuj z besedilom, ki ga na zaslonu ni več).
+      if (ttsSupported()) window.speechSynthesis.cancel();
+      setAudioPlaying(false);
       setAudioError(null);
 
       // Funnel tracking + gamifikacijski dogodek (Slovenia Pass posluša)
@@ -2637,93 +2637,102 @@ export function ItineraryPlanner() {
     }
   }
 
-  // === D2 "Poslušaj svoj načrt": POST /api/itinerary/tts → WAV blob →
-  // predvajalnik pod akcijsko vrstico. TASK 92: klient pošlje STRUKTURIRANE
-  // podatke načrta (itinerary/dayKm/groupSize/locale) — skript si STREŽNIK
-  // zgradi SAM (ista čista funkcija; API ni več splošni text-to-speech).
-  // Stari zvok se razveljavi, ko se načrt spremeni (audioKey = zgoščena
-  // vsebina). ===
-  async function handleListenClick() {
-    if (!audioScript || !itinerary || audioLoading) return;
-    // že imamo svež zvok → preklopi predvajanje (istogumbna UX)
-    if (audioUrl && audioUrlKey === audioKey && audioRef.current) {
-      const el = audioRef.current;
-      if (el.paused) void el.play().catch(() => undefined);
-      else el.pause();
+  // === D2 "Poslušaj svoj načrt" / ISSUE #9 (ZERO-AI): skript se sestavi
+  // DETERMINISTIČNO iz podatkov načrta NA KLIENTU (ista čista funkcija —
+  // 0 AI žetonov, 0 omrežja) in ga izgovori BRKALNIŠKI glas
+  // (window.speechSynthesis; isti vzorec kot glasovni klepet chatbota).
+  // Strežniška TTS pot za načrt je ODSTRANJENA. ===
+  function handleListenClick() {
+    if (!audioScript || !itinerary) return;
+    // Toggle: če že govori → ustavi (istogumbna UX).
+    if (audioPlaying) {
+      audioSessionRef.current += 1; // čakajoči kosi → tiho končajo
+      if (ttsSupported()) window.speechSynthesis.cancel();
+      setAudioPlaying(false);
+      return;
+    }
+    // Brskalnik brez govorne sinteze → iskren tekstovni padec (pripoved
+    // se pokaže spodaj — vsebina NE izgine).
+    if (speechOut === false) {
+      setShowAudioScript(true);
+      return;
+    }
+    if (!ttsSupported()) {
+      setAudioError(t("listenError"));
       return;
     }
 
-    setAudioLoading(true);
     setAudioError(null);
     trackPlannerEvent("itinerary_audio_requested", {
       locale,
       chars: audioScript.chars,
       days: itinerary.days.length,
+      engine: "browser-speech-synthesis",
     });
-    try {
-      const res = await fetch("/api/itinerary/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          itinerary,
-          dayKm,
-          groupSize: formData.groupSize,
-          locale: locale === "en" ? "en" : "sl",
-        }),
-      });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        // I18N-FIX (1.33.0): strežniški SL detail v konzolo (dijagnostika),
-        // klient vidi t() — lokalizirano, ne surove napake.
-        if (data?.error) console.error("[itinerary/tts]", data.error);
-        throw new Error(t("listenError"));
+    // Vsak nov začetek prekine morebitnega prejšnjega (en govor naenkrat).
+    window.speechSynthesis.cancel();
+    // DOLGI skripti se izgovorijo PO KOSIH (chunkNarration ≤ 960 znakov po
+    // stavčnih mejah, 0 izgube vsebine): sinteza na nekaterih platformah
+    // tiho poreže posamezne dolge izgovore — zaporedna vrsta kosov poskrbi,
+    // da se povede CELOTI načrta (ZERO FEATURE LOSS).
+    const chunks = chunkNarration(audioScript.text);
+    if (chunks.length === 0) return;
+    const session = ++audioSessionRef.current;
+    const speakNext = (i: number) => {
+      // Ustavljen/nadomeščen sejo → tiho končaj (stop je stop).
+      if (session !== audioSessionRef.current) return;
+      if (i >= chunks.length) {
+        setAudioPlaying(false);
+        return;
       }
-      const blob = await res.blob();
-      if (blob.size === 0) throw new Error(t("listenError"));
-      // počisti starega (sprememba načrta → nov objekt URL)
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
-      const url = URL.createObjectURL(blob);
-      setAudioUrl(url);
-      setAudioUrlKey(audioKey);
-      trackPlannerEvent("itinerary_audio_ready", {
-        locale,
-        bytes: blob.size,
-        chunks: res.headers.get("X-Audio-Chunks") ?? "",
-        // TASK 92: strežniški predpomnilnik (hit = 0 novih TTS klicev)
-        cache: res.headers.get("X-TTS-Cache") ?? "",
-      });
-      // samodejno predvajanje ob prvi pripravi (naslednji render postavi src)
-      requestAnimationFrame(() => {
-        audioRef.current?.play().catch(() => undefined);
-      });
-    } catch (err) {
-      trackPlannerEvent("itinerary_audio_failed", { locale });
-      setAudioError(
-        err instanceof Error ? err.message : t("listenError")
-      );
-    } finally {
-      setAudioLoading(false);
-    }
+      const utterance = new SpeechSynthesisUtterance(chunks[i]);
+      utterance.lang = speechLanguageTag(locale); // sl → sl-SI, en → en-US
+      utterance.rate = 1;
+      // Iskrenost merjenja: "ready" = govor je DEJANSKO začel brati
+      // (enkrat na predvajanje — ob prvem kosu).
+      utterance.onstart = () => {
+        if (session !== audioSessionRef.current) return;
+        trackPlannerEvent("itinerary_audio_ready", {
+          locale,
+          engine: "browser-speech-synthesis",
+        });
+      };
+      utterance.onend = () => speakNext(i + 1);
+      utterance.onerror = (ev) => {
+        if (session !== audioSessionRef.current) return;
+        // Prekinitev s strani uporabnika (cancel) NI napaka — ne štejemo je.
+        const code = (ev as SpeechSynthesisErrorEvent).error;
+        if (code === "interrupted" || code === "canceled") return;
+        trackPlannerEvent("itinerary_audio_failed", { locale });
+        setAudioError(t("listenError"));
+        setAudioPlaying(false);
+      };
+      window.speechSynthesis.speak(utterance);
+    };
+    speakNext(0);
+    setAudioPlaying(true);
   }
 
-  // Čiščenje objektnih URL-jev (pomnilnik). NAMENOMO NE čistimo ob vsakem
-  // remontu komponente ( React effect cleanup) — v razvoju Fast Refresh
-  // remonta isto komponento in bi preklical PRAV GENERIRAN zvok ( opaženo
-  // v E2E: media error 4 po rebuildu). Čistimo OB MENJAVI ( handler zgoraj
-  // prekliče starega pred novim) in ob pravem koncu strani ( pagehide).
-  // Enkratna puščica ob client-side navigaciji z načrtovalca je neškodljiva
-  // ( brskalnik jo sprosti ob uničenju dokumenta).
+  // ISSUE #9: podpora brskalniškega TTS se preveri PO hidrataciji (server
+  // nima window.speechSynthesis — preverjanje pred hidratacijo bi povzročilo
+  // nesoglasje SSR/klient; isti vzorec kot chatbot).
   useEffect(() => {
-    const onHide = () => {
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    setSpeechOut(ttsSupported());
+  }, []);
+
+  // ISSUE #9: govor ustavimo ob odhodu s strani / unmountu komponente
+  // (ne predvajaj v prazno). Ni več objektnih URL-jev — nič za počistiti.
+  useEffect(() => {
+    const stop = () => {
+      audioSessionRef.current += 1; // čakajoči kosi → tiho končajo
+      if (ttsSupported()) window.speechSynthesis.cancel();
     };
-    window.addEventListener("pagehide", onHide);
+    window.addEventListener("pagehide", stop);
     return () => {
-      window.removeEventListener("pagehide", onHide);
+      window.removeEventListener("pagehide", stop);
+      stop();
     };
-  }, [audioUrl]);
+  }, []);
 
   // UI sprint: stanja nalaganja/napake/prazno kot spremenljivke — uporabljena
   // na obeh mestih (uvodni prostor brez načrta + urejanje z obstoječim načrtom)
@@ -3810,49 +3819,6 @@ export function ItineraryPlanner() {
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {t("paceHint")}
-                    </p>
-                  </div>
-
-                  {/* TASK 100 (TASK 99 na GitHubu): motor generiranja —
-                      odgovor na zahtevo po načrtu BREZ AI modela.
-                      "auto" (privzeto) = AI veriga z deterministično rezervo;
-                      "deterministic" = čist motor: 0 žetonov, trenuten,
-                      100 % reproducibilno. ISTA validacijska/obogatitvena
-                      veriga (supply, vreme, OSRM, geo-validacija) kot AI pot. */}
-                  <div className="space-y-2">
-                    <Label>
-                      <Sparkles className="size-4" aria-hidden />
-                      {t("engineLabel")}
-                    </Label>
-                    <div
-                      role="group"
-                      aria-label={t("engineLabel")}
-                      className="flex flex-wrap gap-1.5"
-                    >
-                      {ENGINE_OPTIONS.map((option) => {
-                        const selected =
-                          (formData.engine ?? "auto") === option.value;
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => toggleEngine(option.value)}
-                            aria-pressed={selected}
-                            className={cn(
-                              "inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
-                              "min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                              selected
-                                ? "border-primary bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
-                                : "border-border bg-muted text-muted-foreground hover:bg-muted/70"
-                            )}
-                          >
-                            {t(option.labelKey)}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {t("engineHint")}
                     </p>
                   </div>
 
@@ -5381,51 +5347,99 @@ export function ItineraryPlanner() {
                             <CalendarArrowDown className="size-4" aria-hidden />
                             {t("icsMenu")}
                           </DropdownMenuItem>
-                          {/* D2 (nabor #2, Mindtrip audio): zvočni povzetek
-                              načrta. Skript se sestavi deterministično (0 AI)
-                              iz podatkov načrta; TTS ga izgovori na strežniku.
+                          {/* D2 (nabor #2, Mindtrip audio) / ISSUE #9
+                              (ZERO-AI): zvočni povzetek načrta. Skript se
+                              sestavi deterministično (0 AI) iz podatkov
+                              načrta NA KLIENTU; izgovori ga BRKALNIŠKI glas
+                              (window.speechSynthesis — 0 strežniških klicev).
                               Pogoj enak prej: samo ko audioScript obstaja. */}
                           {audioScript && (
                             <DropdownMenuItem
                               onSelect={() => void handleListenClick()}
-                              disabled={audioLoading || loading}
+                              disabled={loading}
                               aria-label={t("listenButtonAria")}
-                              aria-expanded={Boolean(
-                                audioUrl && audioUrlKey === audioKey
-                              )}
+                              aria-expanded={audioPlaying}
                               className="gap-2"
                             >
-                              {audioLoading ? (
-                                <Loader2 className="size-4 animate-spin" aria-hidden />
+                              {audioPlaying ? (
+                                <Square className="size-4 fill-current" aria-hidden />
                               ) : (
                                 <Volume2 className="size-4" aria-hidden />
                               )}
-                              {audioLoading ? t("listenGenerating") : t("listenButton")}
+                              {audioPlaying
+                                ? LISTEN_STOP_LABELS[listenLang]
+                                : t("listenButton")}
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
 
-                    {/* D2: zvočni predvajalnik + poštena opomba ( računalniški
-                        glas, povzetek po dnevih — ne branje celotnih kartic) */}
+                    {/* D2 / ISSUE #9: brskalniški govor — stanje predvajanja
+                        (gumb Ustavi, ni strežniškega zvoka) + poštena opomba
+                        (računalniški glas, povzetek po dnevih — ne branje
+                        celotnih kartic). Brskalnik brez govorne sinteze →
+                        dostopen tekstovni padec (prikaži/skrij pripoved). */}
                     {audioError && (
                       <p role="alert" className="text-sm text-destructive">
                         {audioError}
                       </p>
                     )}
-                    {audioUrl && audioUrlKey === audioKey && (
-                      <div className="space-y-1.5 animate-in fade-in slide-in-from-bottom-1 duration-300">
-                        <audio
-                          ref={audioRef}
-                          controls
-                          preload="none"
-                          src={audioUrl}
-                          className="h-10 w-full max-w-md"
-                        />
+                    {audioPlaying && audioScript && (
+                      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-1 duration-300">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          aria-label={LISTEN_STOP_LABELS[listenLang]}
+                          onClick={() => {
+                            if (ttsSupported()) window.speechSynthesis.cancel();
+                            setAudioPlaying(false);
+                          }}
+                        >
+                          <Square className="size-3.5 fill-current" aria-hidden />
+                          {LISTEN_STOP_LABELS[listenLang]}
+                        </Button>
                         <p className="text-xs text-muted-foreground">
                           {t("listenHint")}
                         </p>
+                      </div>
+                    )}
+                    {audioScript && speechOut === false && (
+                      <div className="space-y-1.5 print:hidden">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          aria-expanded={showAudioScript}
+                          aria-controls="plan-audio-script"
+                          onClick={() => setShowAudioScript((v) => !v)}
+                        >
+                          {showAudioScript ? (
+                            <EyeOff className="size-3.5" aria-hidden />
+                          ) : (
+                            <Eye className="size-3.5" aria-hidden />
+                          )}
+                          {showAudioScript
+                            ? LISTEN_SCRIPT_LABELS[listenLang].hide
+                            : LISTEN_SCRIPT_LABELS[listenLang].show}
+                        </Button>
+                        {showAudioScript && (
+                          <p
+                            id="plan-audio-script"
+                            className="max-w-prose rounded-md border bg-muted/50 p-2 text-xs text-foreground"
+                          >
+                            <span className="block text-muted-foreground">
+                              {
+                                LISTEN_SCRIPT_LABELS[listenLang]
+                                  .voiceUnavailable
+                              }
+                            </span>
+                            {audioScript.text}
+                          </p>
+                        )}
                       </div>
                     )}
 

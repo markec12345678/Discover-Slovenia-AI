@@ -7,6 +7,72 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.116.0] — 2026-09-26 (ISSUE #9: ZERO-AI / DETERMINISTIC-FIRST — popolna odstranitev AI iz jedra, 0 žetonov)
+
+### Dodano
+
+- **ZERO-AI jedro (Z9-B)**: tekstovna LLM veriga (OpenRouter → Gemini →
+  Puter → z-ai) ODSTRANJENA z vseh rut jedra — načrtovalnik, refine, ask,
+  klepet, pametno iskanje, ask-local, POI opisi, priporočila, vpogledi,
+  tags, story, approve, SEO FAQ, konsultacije in besedilni parse
+  rezervacij so 100 % DETERMINISTIČNI. Novi moduli:
+  `deterministic-search.ts` (606 vrstic: ključne besede + vzdevki +
+  kanonske kategorije + predponsko/fuzzy ujemanje z diakritičnim
+  zlaganjem SL), `refine-command-parser.ts` (406: ukazna slovnica s
+  sklanjatvami + zavrnitev smeti), `deterministic-insights.ts` (171),
+  `auto-tag-taxonomy.ts` (338), `refine-actions.ts`; `ai-recommendations`
+  prepisan na eksplicitno točkovanje + TRANSPARENTNO utemeljitev
+  (`buildDeterministicWhy`); `seo-faq` deterministični graditelj iz
+  strukturiranih dejstev (izbrisan legacy `data/seo-faq-cache.json` —
+  SSR blokada + cache poisoning odstranjena); `/api/insights` zamenja
+  `/api/ai-insights` (isti pragovi/anomalije, 0 AI). Viri odgovorov so
+  trajno iskreni: `database` / `deterministic` / `cache` / `text-parser`.
+- **BREZPLAČEN GLAS (Z9-C)**: strežniški TTS (tts-engine + /api/tts +
+  /api/itinerary/tts) IZBRISAN — isto pripoved (ista čista lib funkcija)
+  izgovori BRKALNIŠKI glas (`window.speechSynthesis`, mikrofon =
+  SpeechRecognition): gumb »Poslušaj« na dnevih poti (planner/shared/
+  MY TRIP) + »Poslušaj načrt« v načrtovalniku; **izgovor PO KOSIH ≤ 960
+  znakov po stavčnih mejah** (brskalniška sinteza na nekaterih
+  platformah tiho poreže dolge izgovore — 0 izgube vsebine, seja
+  poskrbi da »Ustavi« res ustavi); brskalnik brez govora → dostopen
+  tekstovni padec / iskrena napaka (role=alert). 0 strežniških klicev,
+  0 503 v produkciji brez ključa.
+- **Z9-E verifikacija**: 3728 testov (147 datotek, vključno 4 novimi
+  suite-i #9), tsc 0, lint 0; izmerjene deterministicne latence (klepet
+  12–29 ms, iskanje 11–52 ms, refine 14–17 ms, parse 6–13 ms, vpogledi
+  ~0,001 ms — `scripts/tmp/perf-z9e.ts`); browser E2E desktop + mobilni
+  390×844 (0 preliva, 0 napak — dokazi `docs/evidence/issue9/`);
+  iskrenostni sweep UI (»AI razmišlja« → »Sestavljam tvojo pot…«,
+  »AI prilagoditve« → »Hitre prilagoditve« ipd. — 12 i18n ključev).
+- **Poročila**: `docs/audit/AI-ZERO-AUDIT.md` (inventar + matrika +
+  meritve) + `issue9-report-a.md` (skupina A) + `issue9-report-final.md`
+  (skupine B/C/D + jedro + Z9-E + ZERO-LOSS matrika).
+
+### Spremenjeno
+
+- **`ai-client.ts` → VISION-ONLY**: edini ostanek AI je OPCIJSKA vizija
+  (razumevanje slik: »Začni s sliko« + rezervacijski screenshot) —
+  Gemini prek navadnega `fetch` (OpenAI-compat REST) → z-ai VLM rezerva
+  (sandbox, dinamični uvoz, brez uporabniških poverilnic) → null
+  (brez ključa = privzeto; pošten 502 + ročna alternativa). Ujemanje z
+  destinacijami ostaja deterministično v klicalcu. `/api/ai-health` =
+  sonda vision plasti (CRON_SECRET/admin avtorizacija).
+
+### Odstranjeno
+
+- **`openai` npm paket** (package.json + lock). **Env**:
+  OPENROUTER_API_KEY/_MODEL/_FALLBACK_MODEL/_BASE_URL +
+  PUTER_AUTH_TOKEN/_BASE_URL/_MODEL (edini opcijski AI env ostane
+  GEMINI_API_KEY — vizija). **Mrtve rute**: /api/ai-insights,
+  /api/ai-story, /api/translate, /api/tts, /api/itinerary/tts.
+  **Skripti**: openrouter-verify.sh; ai-smoke.yml ↓ na vision-only.
+  **Mrtva TTS orodja**: concatWavBuffers, narrationCacheKey,
+  planAudioCacheKey (0 produkcijskih klicalcev).
+- **AI obogatitev v admin/approve** (edini ne-pregledani AI→DB zapis) —
+  odobritev poteka brez nje.
+
+---
+
 ## [1.115.1] — 2026-09-28 (ISSUE #7: PRODUCTION GOLDEN-PATH RECONCILIATION — audit + dokazane popravke)
 
 ### Dodano

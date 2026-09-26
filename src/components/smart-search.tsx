@@ -27,7 +27,6 @@ import { Badge } from "@/components/ui/badge";
 // rezultatov — iskanje z najvišjo namero je bila mrtva ulica (samo skok).
 import { AddToTripButton } from "@/components/add-to-trip-button";
 import type { MyTripInput } from "@/lib/my-trip";
-import { cn } from "@/lib/utils";
 import { useRouter } from "@/i18n/navigation";
 import {
   searchResultHref,
@@ -47,7 +46,9 @@ interface SearchResult {
   products: Array<{ id: string; name: string; category: string; reason: string }>;
   experiences: Array<{ id: string; name: string; category: string; reason: string }>;
   summary: string;
-  source: "ai" | "fallback";
+  /** Issue #9 ZERO-AI: iskanje je deterministično (ključne besede/vzdevki/
+   *  kategorije — nikoli AI). */
+  source: "deterministic";
 }
 
 // I18N-FIX (revizija 1.33.0, 16-d P2): primeri so bili hardkodirani SL —
@@ -62,10 +63,11 @@ interface SmartSearchProps {
 /**
  * SmartSearch — naravno-jezikovno iskanje po platformi.
  *
- * Uporabnik napiše naravno (npr. "miren vikend ob reki") in AI razume
- * namen ter vrne matching destinacije, lokale, izdelke in izkušnje.
+ * Uporabnik napiše naravno (npr. "miren vikend ob reki") in deterministični
+ * iskalnik (ključne besede, vzdevki, kategorije) vrne ujemajoče
+ * destinacije, lokale, izdelke in izkušnje.
  *
- * Rezultati so grupirani po kategoriji z AI-jevo razlago "zakaj".
+ * Rezultati so grupirani po kategoriji z razlago ujemanja "zakaj".
  */
 export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSearchProps) {
   const t = useTranslations("planner.smartSearch");
@@ -79,7 +81,7 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
   // TASK 4 / K-5 (UX FIX PASS): iskrena stanja iskanja — prej je bila napaka
   // tiho pogoltnjena (catch → setResults(null) → "ni zadetkov", kar je
   // ZAVAJAJOČE: iskanje NI uspelo, ni da ni zadetkov). Zdaj: izrecno
-  // sporočilo + elapsed hint (AI lahko traja) + abort ob spremembi vnosa
+  // sporočilo + elapsed hint + abort ob spremembi vnosa
   // (prej sta se zastareli odgovori lahko prekrivala).
   const [error, setError] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -88,14 +90,15 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
   const L = {
     searching: { sl: "Iščem …", en: "Searching …" },
     searchingSlow: {
-      sl: "AI razumevanje lahko traja nekaj sekund — po 15 s pade na hitro iskanje.",
-      en: "AI understanding can take a few seconds — after 15 s it falls back to fast search.",
+      sl: "Iskanje je običajno takojšnje — trenutno je odzivnost počasnejša.",
+      en: "Search is usually instant — the response is currently slower than usual.",
     },
     failed: {
       sl: "Iskanje trenutno ni uspelo — poskusi znova.",
       en: "Search failed right now — please try again.",
     },
     seconds: { sl: "s", en: "s" },
+    badge: { sl: "Deterministično iskanje", en: "Deterministic search" },
   } as const;
 
   // K-5: števec med nalaganjem (1 Hz, po koncu ponastavitev).
@@ -293,21 +296,17 @@ export function SmartSearch({ open, onOpenChange, onSelectDestination }: SmartSe
 
           {results && hasResults && (
             <div className="space-y-4 p-4">
-              {/* AI summary */}
+              {/* Povzetek + poštena značka vira (Issue #9: deterministično,
+                  nikoli AI) */}
               {results.summary && (
                 <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
                   <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
                   <p className="text-sm text-foreground">{results.summary}</p>
                   <Badge
                     variant="secondary"
-                    className={cn(
-                      "ml-auto shrink-0 text-[9px]",
-                      results.source === "fallback"
-                        ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                        : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                    )}
+                    className="ml-auto shrink-0 bg-muted text-[9px] text-muted-foreground"
                   >
-                    {results.source === "fallback" ? "fallback" : "AI"}
+                    {L.badge[isEn ? "en" : "sl"]}
                   </Badge>
                 </div>
               )}

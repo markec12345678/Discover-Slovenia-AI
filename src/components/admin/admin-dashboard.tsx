@@ -2284,7 +2284,7 @@ function StatsTab({ adminPassword }: { adminPassword: string }) {
       {/* Beta status kartica */}
       <BetaStatusCard />
 
-      {/* AI vpogledi — analiza statistike z AI */}
+      {/* Vpogledi — deterministična analitika statistike (Issue #9: 0 AI) */}
       <InsightsPanel type="admin" adminPassword={adminPassword} />
 
       {/* Affiliate monetizacija — kliki + konfiguriranost partnerjev (FAZA 15) */}
@@ -2954,9 +2954,10 @@ function AiUsageTab({ adminPassword }: { adminPassword: string }) {
         <CardHeader>
           <CardTitle className="text-base">Zadnje odpovedi (retry vidnost)</CardTitle>
           <CardDescription>
-            Poskusi verige so zapisani v vrstnem redu izvedbe — npr.
-            »openrouter:timeout« pomeni, da je free-vrsta globlja od proračuna
-            in je noga padla v rezervo.
+            Poskusi so zapisani v vrstnem redu izvedbe. Po Issue #9 (ZERO-AI)
+            dnevnik zajema le še opcijske vizualne klice in deterministične
+            meritve — zapisi »openrouter:*« iz nekdanje besedilne verige so
+            zgolj zgodovinski.
           </CardDescription>
         </CardHeader>
         <CardContent>

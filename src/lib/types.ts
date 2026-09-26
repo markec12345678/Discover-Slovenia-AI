@@ -529,12 +529,16 @@ export type QuickActionId =
   | "slower_pace"
   | "more_nature"
   | "more_food"
-  | "family_friendly";
+  | "family_friendly"
+  | "cheaper"
+  | "pricier"
+  | "more_active";
 
 /** Elemenarna sprememba, ki jo je prinesla hitra akcija (za prikaz + analitiko). */
 export interface RefineChange {
   kind:
     | "stop_removed"
+    | "stop_added"
     | "stop_replaced"
     | "day_reordered"
     | "day_simplified"

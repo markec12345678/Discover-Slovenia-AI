@@ -16,7 +16,6 @@ GITHUB_API="https://api.github.com"
 GITHUB_OWNER="markec12345678"
 GITHUB_REPO="Discover-Slovenia-AI"
 GITHUB_REPO_SLUG="${GITHUB_OWNER}/${GITHUB_REPO}"
-OPENROUTER_API="https://openrouter.ai/api/v1"
 GEMINI_API_BASE="https://generativelanguage.googleapis.com/v1beta/openai"
 
 # ─── Barve / izpis ────────────────────────────────────────────────────────

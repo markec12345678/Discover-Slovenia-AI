@@ -11,8 +11,7 @@ pridobiti uporabnik, skripta ne more namesto tebe prijaviti v tvoj račun).
 | Skripta | Namen | Kdaj pognati | Zahteve |
 |---|---|---|---|
 | `doctor.sh` | Konfiguracijska revizija vseh plasti (.env, gitignore, GitHub secreti, geo-blok, dev, DB) | vedno najprej; po vsaki spremembi | curl, jq |
-| `openrouter-verify.sh` | Živi test OPENROUTER_API_KEY (key info + primarni model + fallback + JSON mode) | po nastavitvi ključa; pred deployom | ključ v `.env` |
-| `gemini-verify.sh` | Živi test GEMINI_API_KEY s POŠTENO interpretacijo geo-bloka | po nastavitvi ključa | ključ v `.env` |
+| `gemini-verify.sh` | Živi test GEMINI_API_KEY (OPCIJSKA vision plast — Issue #9: edini AI ostanek) | Živi test GEMINI_API_KEY s POŠTENO interpretacijo geo-bloka | po nastavitvi ključa | ključ v `.env` |
 | `github-secret-set.sh` | Nastavi Actions secret (libsodium sealed box, PyNaCl) | nov/obnovljen ključ | git remote z žetonom ali `GITHUB_TOKEN`, `pynacl` |
 | `github-secret-verify.sh` | Seznam secretov + preverba prisotnosti | po set; v CI | git remote z žetonom |
 | `github-workflow-run.sh` | Sproži `ai-smoke.yml` in POČAKAJ rezultat (živi dokaz obeh ključev iz podprte regije) | pred deployom; po menjavi ključev | secret-i nastavljeni |
@@ -47,9 +46,9 @@ cd scripts/ops
 ```bash
 # Zgled: nastavitev OBEH AI ključev na Vercel + Render
 VERCEL_TOKEN=xxx VERCEL_PROJECT_ID=prj_xxx \
-  ./vercel-env-set.sh OPENROUTER_API_KEY GEMINI_API_KEY
+  ./vercel-env-set.sh GEMINI_API_KEY
 RENDER_API_KEY=rnd_xxx RENDER_SERVICE_ID=srv-xxx \
-  ./render-env-set.sh OPENROUTER_API_KEY GEMINI_API_KEY
+  ./render-env-set.sh GEMINI_API_KEY
 ```
 
 ## Geo-blok ( zakaj Gemini lokalno morda ne deluje )
@@ -67,7 +66,7 @@ Zato `gemini-verify.sh` 400 + "not supported" obravnava kot
 
 ## Varnost
 
-- Vsi ključi so **strežniški** env (`OPENROUTER_API_KEY`, `GEMINI_API_KEY`)
+- AI je po Issue #9 OPCIJSKA vision plast — edini **strežniški** env ključ je `GEMINI_API_KEY` (jedro deluje brez njega)
   — nikoli `NEXT_PUBLIC_`/`VITE_`.
 - `.env` je gitignored; vrednosti se v izpisih **maskirajo** (prvi 4 + zadnji
   4 znaki).

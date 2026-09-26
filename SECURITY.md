@@ -51,7 +51,7 @@ Popravljeni varnostni sajti, najdeni v 1.0:
 
 ## ⚠️ Kritično — stanje po revizijskem pregledu (2026-09-10)
 
-1. **PUTER_AUTH_TOKEN — zgodovina čista, token NI v aktivni uporabi.**
+1. **PUTER_AUTH_TOKEN — zgodovina čista, token NI v aktivni uporabi.** *(Issue #9 ZERO-AI: Puter podpora je ODSTRANJENA iz kode — spremenljivka ne obstaja več; ključ lahko lastnik trajno izbriše.)*
    Zgodovina je bila očiščena z `git filter-repo` v v1.1.0 (2026-09-08).
    Neodvisen revizijski pregled 2026-09-10 (**vseh 137 commitov, obe veji
    `main` + `master`**; vzorci: JWT `eyJ…`, `AIza…`, `ghp_…`, `github_pat_…`,
@@ -119,7 +119,8 @@ Pred deploy-em na production:
 - [x] Zamenjaj `ADMIN_PASSWORD` z močnim geslom *(narejeno v v1.1)*
 - [x] Zamenjaj `NEXTAUTH_SECRET` z naključnim stringom *(narejeno v v1.1)*
 - [x] **Git zgodovina** — očiščena (v1.1.0) + neodvisno preverjena 2026-09-10: brez skrivnosti
-- [x] **`PUTER_AUTH_TOKEN` ni v uporabi** (ni v Vercel env) — ob ponovni aktivaciji Puter AI generiraj NOV žeton (stari obravnavaj kot kompromitiranega)
+- [x] **`PUTER_AUTH_TOKEN` ni v uporabi** — Issue #9 ZERO-AI: Puter noge ni več v kodi; žeton izbriši iz Vercel/Render/GitHub (nepotreben)
+- [x] **`OPENROUTER_API_KEY` ni več v kodi** (Issue #9 ZERO-AI) — tekstovna AI veriga odstranjena; ključ izbriši iz Vercel/Render/GitHub (nepotreben). `GEMINI_API_KEY` ostaja OPCIJSKO (samo vision plast)
 - [ ] Odstrani neuporabljeni `VITE_GEMINI_API_KEY` iz Vercel env (legacy iz predhodnje faze; `VITE_` spremenljivke so lahko vidne client-side ob buildu). **F10 (1.13.0): naslednik je strežniški `GEMINI_API_KEY`** — shranjen kot GitHub Actions secret (enkripcija libsodium sealed box, API `actions/secrets`), v kodi ga bere IZKLJUČNO strežniški `src/lib/ai-client.ts`; nikoli ni v repozitoriju (.env* je gitignored). Ob nastavitvi na Vercel/Render: ime `GEMINI_API_KEY` (brez VITE_/NEXT_PUBLIC_ prefiksa). **1.14.0: enako velja za primarni `OPENROUTER_API_KEY`** — GitHub secret nastavljen prek `scripts/ops/github-secret-set.sh` (sealed box, maskirane vrednosti v vseh izpisih); za Vercel/Render sta pripravljeni `scripts/ops/vercel-env-set.sh` / `render-env-set.sh`, ki ključ pošljeta prek HTTPS API klica (type: encrypted) in vrednost NIKOLI ne izpišeta v celoti (maskiranje 4+4 znaki).
 - [ ] Nastavi prave Stripe ključe (`sk_live_*`)
 - [ ] Nastavi pravi SMTP strežnik

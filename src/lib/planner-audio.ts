@@ -3,28 +3,31 @@ import type { Itinerary } from "@/lib/types";
 // ============================================================================
 // D2 "Poslušaj svoj načrt" (nabor #2, Mindtrip aitravel.tools) — ČISTA
 // funkcija za zvočni povzetek itinerarja: iz obstoječih podatkov načrta
-// deterministično sestavi besedilo za TTS. NIč AI žetonov, nič skrivanja:
-// isto besedilo, ki ga vidi uporabnik na zaslonu (dnevi, postanki, km iz
-// geo-validacije, skupina, proračun).
+// deterministično sestavi besedilo za IZGOVOR. NIČ AI žetonov, nič
+// skrivanja: isto besedilo, ki ga vidi uporabnik na zaslonu (dnevi,
+// postanki, km iz geo-validacije, skupina, proračun).
+//
+// Vir zvoka (ISSUE #9 ZERO-AI): BRKALNIŠKI GLAS (window.speechSynthesis)
+// — nekdanja strežniška TTS pot (/api/itinerary/tts + tts-engine) je
+// ODSTRANJENA; komponenta skript izgovori NA KLIENTU po koseh
+// (chunkNarration, lib/itinerary-audio.ts).
 //
 // Načrt poštenosti:
 //  - km so zaokrožena na 5 in OZNAČENA kot "približno" (ista praksa kot
 //    značke ~km na karticah dni — src/lib/road-routing.ts round5)
-//  - dolžina skripta je OMEJENA (~1000 znakov): TTS omejitev je 1024 znaka
-//    na klic, zvok WAV (24 kHz PCM) pa zavzame ~4,2 KB na znak — povzetek
-//    po dnevh (ne vsa vsebina kartic) je izrecen kompromis, ne napaka
-//  - slovenščina: dvojina/mnoščina (1 dan / 2 dni / 5 dni; 1 oseba /
+//  - dolžina skripta je OMEJENA (~1000 znakov): poslušanje je POVZETEK
+//    po dnevh (ne vsa vsebina kartic) — izrecen kompromis, ne napaka
+//  - slovenščina: dvojina/množčina (1 dan / 2 dni / 5 dni; 1 oseba /
 //    2 osebi / 3-4 osebe / 5+ oseb)
 // ============================================================================
 
-/** Trdna zgornja meja skripta — klicev TTS (po povedeh) ne sme preseči
- *  ~1100 znakov, ker API zavrača > 1024 znaka na klic. */
+/** Trdna zgornja meja skripta — poslušanje je POVZETEK (kompromis je
+ *  izrecen), ne nadomestilo branja; komponenta kose izgovori po stavkih. */
 export const AUDIO_SCRIPT_MAX_CHARS = 1000;
 
-// ── TASK 92: strukturno minimalen načrt (ista disciplina kot TripEntryLike
-//    v itinerary-audio.ts) — pot /api/itinerary/tts sprejme STRUKTURIRANE
-//    podatke (ne prostega besedila!) in skript zgradi STREŽNIK s to isto
-//    čisto funkcijo; Itinerary iz types.ts to strukturo ZADOVOLJUJE.
+// ── Strukturno minimalen načrt (ista disciplina kot TripEntryLike
+//    v itinerary-audio.ts): skript se gradi iz STRUKTURIRANIH podatkov
+//    (ne prostega besedila); Itinerary iz types.ts to strukturo ZADOVOLJUJE.
 
 /** Dan v minimalni obliki za zvočni povzetek (imena postankov). */
 export interface AudioScriptDay {
@@ -163,59 +166,4 @@ export function buildItineraryAudioScript(
   if (text.length > AUDIO_SCRIPT_MAX_CHARS) text = build(2, false);
 
   return { text, chars: text.length };
-}
-
-// ── TASK 92: deterministični ključ predpomnilnika (djb2) ──────────────────
-//
-// Isti vzorec kot narrationCacheKey (TASK 89): kanonična JSON oblika vnosa
-// + djb2 zgoščevanje. ENA funkcija, ki jo uporabljata OBA konca:
-//   - KLIENT (itinerary-planner.tsx): točen ključ razveljavitve blob URL-ja
-//     (prej `${locale}:${groupSize}:${chars}` — dva RAZLIČNA načrta z enako
-//     dolžino skripta sta delila ključ in klient je tiho predvajal STARI
-//     zvok; zgoščena vsebina to izključi);
-//   - STREŽNIK (/api/itinerary/tts): ključ v skupni LRU predpomnilnik
-//     tts-engine (isti vhod → isti zvok, 0 novih TTS klicev).
-// Prefiks „p“ ločuje imenski prostor od „n“ (dnevna pripoved, TASK 89).
-
-/** Vnos, iz katerega se izračuna ključ (ista polja kot AudioScriptInput). */
-export interface PlanAudioKeyInput {
-  itinerary: Itinerary | AudioScriptItinerary;
-  dayKm: Record<number, number>;
-  groupSize: number;
-  locale: "sl" | "en";
-}
-
-/** Deterministični ključ zvočnega povzetka NAČRTA (djb2, baza 36).
- *
- * Kanonična oblika zajema NATANČNO tisto, kar vpliva na skript (dan + ime
- * postanka NEtrimano — graditelj vidi neobrezane nize; proraček/km
- * zaokrožena, ker skript uporablja zaokrožene vrednosti; skupina; jezik).
- * Nadmnožica je NAMENOMA dovoljena (deduplikacijo imen graditelj pusti v
- * ključu — raje zgrešitev predpomnilnika kot napačen zadetek). */
-export function planAudioCacheKey(input: PlanAudioKeyInput): string {
-  const { itinerary, dayKm, groupSize, locale } = input;
-  const canonical = JSON.stringify({
-    g: groupSize,
-    l: locale,
-    b: Math.round(itinerary.total_budget),
-    km: itinerary.days
-      .map((d) => {
-        const km = dayKm[d.day];
-        return [d.day, Number.isFinite(km) ? Math.round(km) : null];
-      })
-      .filter((e) => e[1] !== null),
-    d: itinerary.days.map((d) => [
-      d.day,
-      d.locations
-        .map((l) =>
-          typeof l.destination_name === "string" ? l.destination_name : ""
-        )
-        .filter((n) => n !== ""),
-    ]),
-  });
-  let h = 5381;
-  for (let i = 0; i < canonical.length; i++) {
-    h = ((h * 33) ^ canonical.charCodeAt(i)) >>> 0;
-  }
-  return `p${h.toString(36)}`;
 }

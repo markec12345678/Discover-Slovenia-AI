@@ -17,12 +17,13 @@
 //
 // SOURCE-CONTRACT (readFileSync dejanskih datotek): JourneyTrip izrisuje
 // DayAudioButton s surface="mytrip" + narrationStopsFromTripEntries +
-// speechTripDateLabel; komponenta sprejema mytrip v surface tipu; route
-// komentar slede novo mejo; analitični docs dopolnjen.
+// speechTripDateLabel; komponenta sprejema mytrip v surface tipu;
+// ISSUE #9 (ZERO-AI): strežniška TTS ruta ne obstaja več (brskalniški
+// SpeechSynthesis — isti vir kot chatbot); analitični docs dopolnjen.
 // ============================================================================
 
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -280,12 +281,13 @@ describe("SOURCE-CONTRACT: JourneyTrip (MY TRIP) izrisuje DayAudioButton", () =>
 });
 
 describe("SOURCE-CONTRACT: meja/analitika/docs usklajeni (ENA resnica)", () => {
-  test("lib meja je 16 in zod vrata uporabljajo KONSTANTO (ne literal)", () => {
+  test("ISSUE #9: lib meja ostaja 16; strežniška TTS ruta NE obstaja več", () => {
     const lib = source("src/lib/itinerary-audio.ts");
-    const route = source("src/app/api/tts/route.ts");
     expect(lib).toContain("maxStops: 16");
-    expect(route).toContain("NARRATION_LIMITS.maxStops");
-    expect(route).not.toContain(".max(8)");
+    // ZERO-AI (Issue #9, GROUP C): brskalniški SpeechSynthesis je edini vir
+    // zvoka — stara zod vrata so skupaj z ruto izbrisana (existsSync false).
+    expect(existsSync(join(ROOT, "src/app/api/tts/route.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "src/lib/tts-engine.ts"))).toBe(false);
   });
 
   test("planner-analytics komentar omejuje surface na planner|shared|mytrip", () => {

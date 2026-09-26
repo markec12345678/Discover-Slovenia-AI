@@ -1,12 +1,12 @@
 {
   "nav": {
     "destinations": "Destinacije",
-    "planner": "AI načrtovalec",
+    "planner": "Načrtovalec",
     "map": "Zemljevid",
     "listings": "Lokali",
     "events": "Dogodki",
     "join": "Pridruži se",
-    "cta": "Načrtuj z AI",
+    "cta": "Načrtuj potovanje",
     "providers": "Za ponudnike",
     "experiences": "Doživetja",
     "guides": "Vodiči",
@@ -15,14 +15,14 @@
     "trips": "Moja potovanja",
     "goMode": "Na poti",
     "tagline": "AI potovanja",
-    "searchAria": "AI iskanje",
+    "searchAria": "Pametno iskanje",
     "journey": "Celotno potovanje",
     "startAnywhere": "Začni kjerkoli"
   },
   "hero": {
     "title": "Kaj želiš doživeti v Sloveniji?",
-    "subtitle": "Povej AI, kaj iščeš — v slovenščini ali angleščini. Nasveti so preverjeni na slovenskih tleh, ne prepisani iz tujih vodičev.",
-    "badge": "AI Concierge za Slovenijo",
+    "subtitle": "Povej, kaj iščeš — v slovenščini ali angleščini. Nasveti so preverjeni na slovenskih tleh, ne prepisani iz tujih vodičev.",
+    "badge": "Lokalni vodnik za Slovenijo",
     "placeholder": "Želim 3-dnevni miren izlet z naravo, dobro hrano in čim manj vožnje …",
     "cta": "Sestavi mojo pot",
     "ctaLoading": "Analiziram...",
@@ -179,7 +179,7 @@
     "title": "Razišči Slovenijo",
     "subtitle": "Zemljevid, dogodki, lokali, vodiči in več — vse na enem mestu.",
     "mapTitle": "Zemljevid",
-    "mapDesc": "Interaktivni zemljevid z bleščečimi točkami, potjo AI itinererja in POI po celotni Sloveniji.",
+    "mapDesc": "Interaktivni zemljevid z bleščečimi točkami, potjo itinererja in POI po celotni Sloveniji.",
     "eventsTitle": "Dogodki",
     "eventsDesc": "Koledar festivalov, sejemov in lokalnih dogodkov — z datumom, lokacijo in kategorijo.",
     "localTitle": "Lokalni ponudniki",
@@ -319,7 +319,7 @@
     "ariaLabel": "Noga strani",
     "brandAriaLabel": "Discover Slovenia AI — domov",
     "brandName": "Discover Slovenia AI",
-    "brandDescription": "AI-poganjan načrtovalec potovanj za Slovenijo in zahodni Balkan. Odkrijte 38 destinacij — od Blejskega jezera do jonske obale.",
+    "brandDescription": "Načrtovalec potovanj za Slovenijo in zahodni Balkan z realnimi podatki in determinističnim motorjem. Odkrijte 38 destinacij — Bled, Ljubljana, Piran in več.",
     "copyright": "© 2026 Discover Slovenia AI.",
     "exploreColumn": "Razišči",
     "exploreAllDestinations": "Vse destinacije",
@@ -331,7 +331,7 @@
     "exploreGuides": "Vodiči",
     "explorePass": "Slovenia Pass",
     "planColumn": "Načrtuj",
-    "planPlanner": "AI načrtovalec",
+    "planPlanner": "Načrtovalec potovanj",
     "planQuiz": "Kviz za popotnike",
     "planStartAnywhere": "Začni kjerkoli (povezava, slika, PDF)",
     "planComparison": "Primerjava načrtovalcev",
@@ -365,13 +365,12 @@
     "send": "Pošlji sporočilo",
     "clear": "Počisti pogovor",
     "cleared": "Pogovor počiščen",
-    "thinking": "AI razmišlja...",
-    "offlineFallback": "Oprostite, trenutno imam težave z povezavo. Poskusite znova ali pa obiščite AI načrtovalec na strani Načrtuj.",
+    "thinking": "Iskanje po naši bazi…",
+    "offlineFallback": "Oprostite, trenutno imam težave z povezavo. Poskusite znova ali pa obiščite načrtovalca potovanj.",
     "fabOpen": "Odpri AI chatbot",
     "fabClose": "Zapri chatbot",
     "dialogAriaLabel": "AI chatbot pogovor",
-    "badgeAI": "AI",
-    "badgeFallback": "fallback",
+    "badgeDatabase": "Iz naše baze",
     "sourcesLabel": "Uradni viri (STO)",
     "sourceMap": "zemljevid",
     "placesLabel": "Na zemljevidu",
@@ -417,8 +416,8 @@
     "voiceError": "Prepoznavanje govora ni uspelo. Poskusi znova ali vpiši vprašanje."
   },
   "planner": {
-    "title": "AI načrtovalec potovanj",
-    "description": "Povej nam želje in AI sestavi popoln itinerer",
+    "title": "Načrtovalec potovanj",
+    "description": "Povej nam želje in sestavimo popoln itinerer",
     "daysLabel": "Število dni",
     "budgetLabel": "Proračun (€)",
     "groupSizeLabel": "Velikost skupine",
@@ -503,10 +502,10 @@
     "moreTitle": "Več o tvoji poti",
     "moreDesc": "Priporočila, nasveti, dogodki med obiskom, pakirni seznam in časovni pregled.",
     "submit": "Generiraj itinerer ✨",
-    "generating": "AI razmišlja...",
+    "generating": "Sestavljam tvojo pot…",
     "generatingStage": {
       "supply": "Zbiram vreme, nastanitve in dogodke…",
-      "compose": "AI sestavlja tvojo pot…",
+      "compose": "Sestavljam tvojo pot…",
       "verify": "Preverjam razdalje in kakovost…"
     },
     "generatingElapsed": "Preteklo: {time}",
@@ -533,10 +532,6 @@
     "resultTitle": "Vaš {days}-dnevni itinerer",
     "badgeAI": "AI",
     "badgeSample": "Predlog",
-    "engineLabel": "Kako zgenerirati načrt?",
-    "engineAuto": "Z AI",
-    "engineDeterministic": "Brez AI",
-    "engineHint": "Z AI: prilagojen načrt, ki traja nekaj več časa. Brez AI: takojšen in enak za vsakogar z istimi željami.",
     "badgeDeterministic": "Brez AI",
     "totalBadge": "Skupaj ~€{total}",
     "tripRangeTitle": "Okvir potovanja",
@@ -597,7 +592,7 @@
     "sharedOpenError": "Deljenega načrta ni bilo mogoče odpreti.",
     "addedToTripToast": "Dodano v tvojo pot ✨",
     "generatedToast": "Itinerer generiran!",
-    "generatedToastDescAI": "AI je sestavil vaš popoln načrt potovanja.",
+    "generatedToastDescAI": "Načrtovalec je sestavil vaš popoln načrt potovanja.",
     "generatedToastDescSample": "Prikazan je pripravljen predlog itinererja.",
     "savedToast": "Načrt shranjen!",
     "savedToastDesc": "Povezavo za deljenje lahko kopiraš spodaj.",
@@ -614,7 +609,7 @@
     "planUpdatedLoadErrorToast": "Posodobitve ni bilo mogoče naložiti",
     "planUpdatedLoadErrorToastDesc": "Preveri povezavo in poskusi znova ali odpri deljeno povezavo v novem zavihku.",
     "undoLabelPlanUpdate": "nalaganje posodobljene različice",
-    "undoLabelRefine": "AI prilagoditev",
+    "undoLabelRefine": "Prilagoditev",
     "undoLabelRegenerate": "regeneracija",
     "undoChip": "Prejšnja različica na voljo ({label} · {count} v zgodovini)",
     "undoChipAction": "Razveljavi",
@@ -623,7 +618,7 @@
     "saveErrorToastDesc": "Shranjevanje ni uspelo — poskusi znova.",
     "saveErrorInline": "Shranjevanje ni uspelo — poskusi znova",
     "removeEventAriaLabel": "Odstrani {name} iz poti",
-    "socialShareTitle": "Moj AI načrt potovanja po Sloveniji 🇸🇮",
+    "socialShareTitle": "Moj načrt potovanja po Sloveniji 🇸🇮",
     "socialShareDescription": "{days}-dnevni AI načrt · €{total}",
     "ingestLabel": "Začni s povezavo (YouTube, blog …)",
     "ingestPlaceholder": "https://www.youtube.com/watch?v=…",
@@ -720,7 +715,7 @@
       "book": "Rezerviraj",
       "bookAria": "Rezerviraj {name} — odpri rezervacijske možnosti",
       "dayTotal": "Dan {day} skupaj:",
-      "aiTipTitle": "AI nasvet",
+      "aiTipTitle": "Nasvet",
       "tipOneDay": "Za popoln dan začni zgodaj (pred 9:00) da izogneš se množicam.",
       "tipMultiDay": "Premikaj se po regijah — Bled + Bohinj istočasno, nato Soča naslednji dan.",
       "priceUnverified": "Cena ni preverjena",
@@ -733,7 +728,7 @@
       "bookAtProviderAria": "Rezerviraj {name} pri ponudniku — odpre zunanjo stran"
     },
     "smartSearch": {
-      "title": "AI iskanje",
+      "title": "Pametno iskanje",
       "description": "Naravno-jezikovno iskanje po destinacijah, lokalcih, izdelkih in izkušnjah",
       "placeholder": "Opiši kar iščeš... npr. 'miren vikend ob reki'",
       "queryAria": "Iskalni niz",
@@ -797,7 +792,7 @@
     "stopMovedToDayToastTitle": "Postanek prestavljen",
     "stopMovedToDayToastDesc": "Prestavljen v dan {day} — preveri zaporedje in čase.",
     "supplySelectedTitle": "Izbrani produkti ({count})",
-    "supplySelectedHint": "AI bo izbrane izdelke upošteval kot obvezne (ne jih zamenja s podobnimi).",
+    "supplySelectedHint": "Izbrani izdelki bodo obvezni (ne bodo zamenjani s podobnimi).",
     "supplySelectedRemoveAria": "Odstrani {name} iz izbire",
     "supplyStopBadge": "Zemljevid",
     "supplyStopBadgeTitle": "Postanek, dodan z zemljevida ponudbe",
@@ -878,7 +873,7 @@
     },
     "howTitle": "Kako delujemo",
     "howP1": "Platforma ne pobira provizij od rezervacij. Namesto tega lokalni ponudniki plačujejo pavšalno mesečno naročnino za prisotnost na platformi. Uporabniki vedno rezervirajo neposredno pri ponudniku — brez posrednikov.",
-    "howP2": "AI načrtovalec uporablja <sdk>z-ai-web-dev-sdk</sdk> za generiranje itinererjev. Podatki o točkah interesa (POI) prihajajo iz <osm>OpenStreetMap</osm> in <wiki>Wikipedie</wiki>. Vremenski podatki iz <meteo>Open-Meteo</meteo>.",
+    "howP2": "Načrtovalec itinererjev je DETERMINISTIČNI motor — čista koda nad realnimi podatki, 0 AI žetonov (Issue #9). Podatki o točkah interesa (POI) prihajajo iz <osm>OpenStreetMap</osm> in <wiki>Wikipedie</wiki>. Vremenski podatki iz <meteo>Open-Meteo</meteo>.",
     "contactTitle": "Kontakt",
     "contactP": "Imate vprašanja? Pišite nam na <email>info@discoverslovenia.ai</email> ali obiščite <contactPage>kontaktno stran</contactPage>.",
     "dataTitle": "Podatki",
@@ -977,7 +972,7 @@
     },
     "ctaTitle": "Načrtujte {seasonLower} potovanje v {name}",
     "ctaText": "AI upošteva sezono, vreme in vaše interese za popoln načrt.",
-    "ctaButton": "AI itinerer",
+    "ctaButton": "Sestavi itinerer",
     "ctaThingsToDo": "Kaj početi v {name}",
     "exploreTitle": "Raziščite tudi",
     "meta": {
@@ -1249,7 +1244,7 @@
     "faqTitle": "Pogosta vprašanja",
     "ctaTitle": "Sestavite popoln {labelLower} v {name}",
     "ctaP": "AI upošteva vaš proračun, interese in čas. {description}",
-    "ctaPlanner": "AI načrtovalec potovanj",
+    "ctaPlanner": "Načrtovalec potovanj",
     "ctaItineraries": "Pripravljeni itinererji",
     "elsewhereTitle": "{label} tudi drugje",
     "elsewhereDesc": "Raziščite {labelLower} v drugih slovenskih destinacijah:",
@@ -1302,8 +1297,8 @@
         "a4": "{name} je dostopen z avtomobilom, vlakom ali avtobusom. Priporočamo rezervacijo prevoza vsaj teden dni vnaprej, še posebej za petek popoldan."
       },
       "ai": {
-        "q": "Ali lahko AI sestavi itinerer za {name}?",
-        "a": "Da — naš AI načrtovalec lahko sestavi popolnoma prilagojen itinerer za {name}, ki upošteva vaše interese, proračun in čas. Preizkusite ga na strani Načrtuj."
+        "q": "Ali lahko sestavite itinerer za {name}?",
+        "a": "Da — načrtovalec lahko sestavi popolnoma prilagojen itinerer za {name}, ki upošteva vaše interese, proračun in čas. Preizkusite ga na strani Načrtuj."
       }
     },
     "guideTypes": {
@@ -1460,22 +1455,22 @@
     "otherDestinationsTitle": "Ostale destinacije",
     "personalizedTitle": "Želite personaliziran itinerer?",
     "personalizedText": "Naš AI upošteva vaš proračun, interese in sezono za popoln načrt.",
-    "personalizedButton": "Generiraj AI itinerer",
+    "personalizedButton": "Generiraj itinerer",
     "meta": {
       "notFound": "Itinerer ni najden",
       "title": "{duration} itinerer za {name} — {desc}",
-      "description": "Popoln {durationLower} itinerer za {name}, {tagline}. {desc} — AI-priporočene aktivnosti, nastanitve in restavracije za {days}-dnevni obisk.",
-      "ogDescription": "AI-priporočeni {duration} itinerer z aktivnostmi, nastanitvami in restavracijami."
+      "description": "Popoln {durationLower} itinerer za {name}, {tagline}. {desc} — priporočene aktivnosti, nastanitve in restavracije.",
+      "ogDescription": "Priporočen {duration} itinerer z aktivnostmi, nastanitvami in restavracijami."
     }
   },
   "plannerPage": {
-    "badge": "AI Concierge",
+    "badge": "Vodnik za Slovenijo",
     "title": "Načrtuj svojo pot po Sloveniji",
-    "subtitle": "Povej AI, kaj želiš doživeti. V nekaj sekundah dobiš osebni itinerer z realnimi lokalnimi ponudniki, zemljevidom in možnostjo rezervacije.",
+    "subtitle": "Povej, kaj želiš doživeti. V nekaj sekundah dobiš osebni itinerer z realnimi lokalnimi ponudniki, zemljevidom in možnostjo rezervacije.",
     "usp": "Brez prijave · Brezplačno · Grounded na realnih ponudnikih",
     "meta": {
-      "title": "AI načrtovalec potovanj",
-      "description": "Povej AI, kaj želiš doživeti v Sloveniji — dnevi, proračun, družina, interesi. V nekaj sekundah dobiš osebni itinerer z zemljevidom, realnimi lokalnimi ponudniki in možnostjo rezervacije."
+      "title": "Načrtovalec potovanj — Slovenija",
+      "description": "Povej, kaj želiš doživeti v Sloveniji — dnevi, proračun, družina, interesi. V nekaj sekundah dobiš osebni itinerer z zemljevidom, realnimi lokalnimi ponudniki in možnostjo rezervacije."
     }
   },
   "pregenTrips": {
@@ -1737,7 +1732,7 @@
     "styleLabel": "Tvoj stil potovanja",
     "recommendations": "Priporočene destinacije",
     "planCta": "Načrtuj moje potovanje",
-    "planCtaAria": "Načrtuj moje potovanje z AI načrtovalnikom",
+    "planCtaAria": "Načrtuj moje potovanje z načrtovalnikom",
     "restart": "Ponovi kviz",
     "restartAria": "Ponovi kviz od začetka",
     "prompt": {
@@ -1774,8 +1769,8 @@
         "body": "Platforma ponuja informacije o slovenskih turističnih destinacijah, AI načrtovanje potovanj in povezave do lokalnih ponudnikov. Platforma ne posreduje rezervacij — uporabniki rezervirajo neposredno pri ponudnikih."
       },
       "s3": {
-        "title": "3. AI itinererji",
-        "body": "AI-generirani itinererji so informativne narave. Platforma ne prevzema odgovornosti za točnost cen, razpoložljivost ali kakovost storitev tretjih oseb."
+        "title": "3. Itinererji",
+        "body": "Generirani itinererji so informativne narave. Platforma ne prevzema odgovornosti za točnost cen, razpoložljivost ali kakovost storitev tretjih oseb."
       },
       "s4": {
         "title": "4. Affiliate povezave",
@@ -1829,8 +1824,8 @@
     },
     "faqTitle": "Pogosta vprašanja",
     "planTitle": "Načrtujte potovanje v {name}",
-    "planText": "Naš AI vam lahko sestavi popoln itinerer za {name} in okolico — prilagojen vašemu proračunu, interesom in sezoni.",
-    "planButton": "AI načrtovalec potovanj",
+    "planText": "Sestavimo vam popoln itinerer za {name} in okolico — prilagojen vašemu proračunu, interesom in sezoni.",
+    "planButton": "Načrtovalec potovanj",
     "exploreTitle": "Raziščite tudi",
     "trackerTitle": "Kaj početi v {name} — Vodnik",
     "meta": {
@@ -1983,13 +1978,13 @@
     },
     "aiCta": {
       "title": "Najprej Slovenija, potem Jadran",
-      "body": "Preden se odpravite na jug, si sestavite slovenski del poti — naš AI pripravi itinerer od Blejskega jezera do Pirana, prilagojen proračunu in sezoni.",
-      "button": "AI načrtovalec potovanj"
+      "body": "Preden se odpravite na jug, si sestavite slovenski del poti — načrtovalec pripravi itinerer od Blejskega jezera do Pirana, prilagojen proračunu in sezoni.",
+      "button": "Načrtovalec potovanj"
     },
     "aiCtaLoop": {
       "title": "Krog po meri",
-      "body": "Ta krog je izhodišče — naš AI pripravi itinerer po Sloveniji, prilagojen vašemu proračunu, sezoni in dnevu odhoda.",
-      "button": "AI načrtovalec potovanj"
+      "body": "Ta krog je izhodišče — načrtovalec pripravi itinerer po Sloveniji, prilagojen vašemu proračunu, sezoni in dnevu odhoda.",
+      "button": "Načrtovalec potovanj"
     },
     "related": {
       "title": "Druga jadranska potovanja",
@@ -2096,8 +2091,8 @@
     },
     "plan": {
       "title": "Načrtujte potovanje v {name}",
-      "text": "Naš AI vam lahko sestavi popoln itinerer za {name} in okolico — prilagojen vašim interesom, datumom, vremenu in sestavi potne skupine.",
-      "button": "AI načrtovalec potovanj"
+      "text": "Sestavimo vam popoln itinerer za {name} in okolico — prilagojen vašim interesom, datumom, vremenu in sestavi potne skupine.",
+      "button": "Načrtovalec potovanj"
     },
     "nearby": {
       "title": "Blizu — regija {region}"
@@ -2320,5 +2315,25 @@
     "recsWhy": "Zakaj: {why}",
     "recsWhyFromData": "· (iz podatkov)",
     "recsWhyFromDataTitle": "Razlog je sestavljen iz podatkov o priporočenem artiklu — ni ga izbrala AI."
+  },
+  "adminInsights": {
+    "title": "Vpogledi",
+    "badge": "Izračunano iz statistike",
+    "empty": "Ni vpogledov na voljo."
+  },
+  "story": {
+    "badge": "Naša zgodba"
+  },
+  "consultation": {
+    "badgeDeterministic": "Izključno iz baze platforme",
+    "speaker": "Lokalec"
+  },
+  "ownerPanel": {
+    "autoTagButton": "Predlagaj tage",
+    "autoTagButtonLoading": "Predlagam…",
+    "autoTagSuggestionTitle": "Predlogi",
+    "autoTagToastReady": "Predlogi pripravljeni",
+    "autoTagToastFail": "Predlaganje ni uspelo",
+    "tagSourceDictionary": "Slovar taksonomije"
   }
 }

@@ -16,8 +16,8 @@
         "desc": "Vremenski podatki v realnem času. Brezplačni API brez ključa."
       },
       "zai": {
-        "type": "AI",
-        "desc": "AI generiranje itinererjev na podlagi uporabnikovih preferenc."
+        "type": "AI (opcijsko — vizija)",
+        "desc": "OPCIJSKA plast za razumevanje slik (Issue #9 ZERO-AI): prebere besedilo/imena s screenshot-a pri uvozu potovanja in rezervacijskih potrdil. Jedro platforme (načrtovalec, iskanje, klepet, vodiči) je 100 % deterministično — 0 AI žetonov."
       },
       "sloveniaInfo": {
         "type": "Uradni viri (RAG)",
