@@ -20,7 +20,7 @@ import {
   Star,
   Loader2,
   Eye,
-  EyeOff,
+  Search,
   Ticket,
   Landmark,
   Trees,
@@ -96,8 +96,34 @@ const T = {
   reset: { sl: "Ponastavi", en: "Reset" },
   hideRoute: { sl: "Skrij pot", en: "Hide route" },
   showRoute: { sl: "Pokaži pot", en: "Show route" },
-  hidePois: { sl: "Skrij POI", en: "Hide POI" },
-  showPois: { sl: "Pokaži POI", en: "Show POI" },
+  // ISSUE #12 (F12-1): MAP-FIRST SEARCH — iskanje na zemljevidu. Niza
+  // showPois/hidePois (Pokaži/Skrij POI gumb) sta ODSTRANJENA: supply sloj
+  // se vklopi SAMODEJNO ob search/kategorija kontekstu (nedvouen
+  // mentalni model: ko iščem, vidim rezultate — brez tehničnega predpogoja).
+  searchPlaceholder: {
+    sl: "Kaj iščeš? (npr. restavracije v Ljubljani)",
+    en: "What are you looking for? (e.g. restaurants in Ljubljana)",
+  },
+  searchAria: { sl: "Iskanje po zemljevidu", en: "Map search" },
+  searchResultsAria: { sl: "Rezultati iskanja", en: "Search results" },
+  searchClear: { sl: "Počisti iskanje", en: "Clear search" },
+  searchEmpty: {
+    sl: "Ni zadetkov — poskusi z drugo besedo (kraj, hrana, pohod, vino, muzej).",
+    en: "No matches — try another word (place, food, hike, wine, museum).",
+  },
+  searchError: {
+    sl: "Iskanje trenutno ni na voljo — poskusi znova.",
+    en: "Search is unavailable right now — try again.",
+  },
+  searchShowOnMap: { sl: "Prikaži na zemljevidu", en: "Show on map" },
+  searchKindDestination: { sl: "Destinacija", en: "Destination" },
+  searchKindListing: { sl: "Lokal", en: "Venue" },
+  searchKindProduct: { sl: "Izdelek", en: "Product" },
+  searchKindExperience: { sl: "Izkušnja", en: "Experience" },
+  searchNoGeo: {
+    sl: "Brez lokacije na zemljevidu — odpri podrobnosti",
+    en: "No map location — open details",
+  },
   chipsAria: {
     sl: "Filtriranje POI kategorij",
     en: "Filter POI categories",
@@ -231,6 +257,65 @@ const POI_CATEGORIES: {
   },
 ];
 
+// ISSUE #12 (F12-1): MAP-FIRST SEARCH — preslikava kategorij rezultatov
+// iskanja (DB nizi listingov/izkušenj) na KANONSKE ProductType čipe.
+// ISKRENOST: preslikamo SAMO semantično enakovredne pare; kategorije brez
+// ustreznega čipa (wellness, workshop, tasting, cultural, other) NE
+// aktivirajo ničesar — raje kot izmišljanje.
+const SEARCH_CATEGORY_TO_TYPE: Record<string, ProductType> = {
+  // Listing.category: hotel | restaurant | bar | activity | shop | transport | other
+  hotel: "accommodation",
+  restaurant: "restaurant",
+  bar: "restaurant",
+  activity: "activity",
+  shop: "shop",
+  transport: "transfer",
+  // Experience.category: tour | workshop | tasting | outdoor | cultural | adventure | wellness
+  tour: "tour",
+  outdoor: "activity",
+  adventure: "activity",
+};
+
+/** Oblika odgovora POST /api/smart-search (F12-1 geo razširitev). */
+interface MapSearchResponse {
+  destinations: Array<{
+    id: string;
+    slug: string;
+    name: string;
+    tagline: string;
+    reason: string;
+    lat: number;
+    lng: number;
+  }>;
+  listings: Array<{
+    id: string;
+    name: string;
+    category: string;
+    reason: string;
+    slug?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+  }>;
+  products: Array<{
+    id: string;
+    name: string;
+    category: string;
+    reason: string;
+    slug?: string | null;
+  }>;
+  experiences: Array<{
+    id: string;
+    name: string;
+    category: string;
+    reason: string;
+    slug?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+  }>;
+  summary: string;
+  source: "deterministic";
+}
+
 // 1.95.1: privzete kategorije ZEMLJEVIDA (9 lokalnih tipov — "vsa mesta
 // Balkana"). NAMENOMA lokalna konstanta, NE DEFAULT_SUPPLY_TYPES (strežniški
 // privzete supply poizvedbe ostanejo nespremenjene — čipi zemljevida
@@ -282,8 +367,16 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
   // 1.48: dvojezičnost (vzorec L iz map-section — prej hardcoded SL tudi na /en)
   const lang: MapLang = useLocale() === "en" ? "en" : "sl";
 
-  // === SUPPLY state (F1) ===
-  const [showPois, setShowPois] = useState(false);
+  // === SUPPLY state (F1 → ISSUE #12 F12-1) ===
+  // showPois (Pokaži/Skrij POI gumb) je ODSTRANJEN kot uporabniška
+  // odločitev: supply sloj se vklopi SAMODEJNO, ko obstaja SEARCH ali
+  // FILTER kontekst (issue §2: „Ko uporabnik išče, je zemljevid vedno
+  // vklopljen“ — brez tehničnega predpogoja „vklopi POI“). Svež obisk brez
+  // konteksta ostane enak dosedanjemu (destinacije + statični FSQ pini —
+  // brez nepotrebnih Overpass klicev; pan-storm varujejo debounce +
+  // rate limiti + z≥10 gating, ki ostajajo nespremenjeni).
+  /** Uporabnik je vsaj enkrat kliknil čip kategorije (filter kontekst). */
+  const [catsTouched, setCatsTouched] = useState(false);
   /** Aktivne (vklopljene) kategorije — izklop = skrivanje. */
   const [activeCats, setActiveCats] = useState<ReadonlySet<ProductType>>(
     () => new Set(DEFAULT_POI_CATS)
@@ -295,6 +388,17 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
   }>({ bbox: null, zoom: 8 });
   const [selectedProduct, setSelectedProduct] = useState<ProviderProduct | null>(null);
 
+  // === ISSUE #12 (F12-1): MAP-FIRST SEARCH state ==========================
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<MapSearchResponse | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState(false);
+  /** Zadetek, ki ga poudarimo (zlati marker — isti kanon kot deep-link). */
+  const highlightRef = useRef<L.Marker | null>(null);
+
+  /** Supply sloj je aktiven, ko obstaja iskalni ali filtrirni kontekst. */
+  const supplyActive = searchResults !== null || catsTouched;
+
   const selectedProducts = useAppStore((s) => s.selectedProducts);
   const selectedIds = useMemo(
     () =>
@@ -305,9 +409,10 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
   );
 
   // Viewport → bbox → supply query (debounce v hooku; zoom gating strežniško).
+  // F12-1: enabled IZVEDEN iz konteksta (search ‖ catsTouched) — ne iz gumba.
   const cats = useMemo(() => [...activeCats].sort(), [activeCats]);
   const supply = useSupplyQuery({
-    enabled: showPois,
+    enabled: supplyActive,
     cats,
     zoom: viewport.zoom,
     bbox: viewport.bbox,
@@ -349,6 +454,150 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     }
     return best.slug;
   }, [viewport]);
+
+  /** Počisti poudarni marker (zlati — isti kanon kot deep-link highlight). */
+  const clearHighlight = () => {
+    if (highlightRef.current) {
+      highlightRef.current.remove();
+      highlightRef.current = null;
+    }
+  };
+
+  /** Premakni viewport na lokacijo + (opcijsko) zlati poudarni marker. */
+  const flyTo = (lat: number, lng: number, label: string, zoom?: number) => {
+    const map = mapRef.current;
+    if (!map) return;
+    clearHighlight();
+    map.flyTo([lat, lng], zoom ?? 13, { duration: 0.8 });
+    const marker = L.marker([lat, lng], {
+      icon: L.divIcon({
+        className: "map-search-highlight",
+        html: `<div style="transform: translateY(-50%); font-size: 26px; line-height: 1;">📍</div>`,
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+      }),
+      zIndexOffset: 1000,
+      title: label,
+    });
+    marker
+      .bindPopup(
+        `<div style="min-width: 150px; font-family: sans-serif; font-weight: 700; font-size: 14px; line-height: 1.3;">${escapeHtml(label)}</div>`,
+        { maxWidth: 220 }
+      )
+      .addTo(map);
+    highlightRef.current = marker;
+  };
+
+  /** Klik na zadetek destinacije v seznamu: fly-to + kategorije ostanejo. */
+  const handleResultDestination = (d: MapSearchResponse["destinations"][number]) => {
+    flyTo(d.lat, d.lng, d.name, 12);
+    trackPlannerEvent("map_search_result_selected", {
+      kind: "destination",
+      has_geo: 1,
+    });
+  };
+
+  /** Klik na zadetek lokal/izkušnja: fly-to LE če ima geo (iskreno). */
+  const handleResultGeoItem = (
+    item: { name: string; lat?: number | null; lng?: number | null; slug?: string | null },
+    kind: "listing" | "experience"
+  ) => {
+    if (item.lat != null && item.lng != null) {
+      flyTo(item.lat, item.lng, item.name, 15);
+      trackPlannerEvent("map_search_result_selected", {
+        kind,
+        has_geo: 1,
+      });
+    } else {
+      // Brez geo: pošteno povedano, brez premika zemljevida (ne lažemo).
+      trackPlannerEvent("map_search_result_selected", {
+        kind,
+        has_geo: 0,
+      });
+    }
+  };
+
+  /** Počisti iskanje → nazaj na stanje brez search konteksta. */
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    setSearchResults(null);
+    setSearchError(false);
+    clearHighlight();
+  };
+
+  // === ISSUE #12 (F12-1): MAP-FIRST SEARCH ==================================
+  // Debounce 600 ms (isti ritem kot SmartSearch v navigaciji) → POST
+  // /api/smart-search (deterministični iskalnik Issue #9 — 0 AI). Zadetki:
+  //   · destinacije → FLY-TO (coords iz odgovora) + izpeljava kategorij;
+  //   · listingi/izkušnje z geo → fly-to + ZLATI poudarni marker (isti
+  //     kanon kot deep-link ?lat=&lng=&label=);
+  //   · izdelki (brez geo) ostanejo v seznamu — iskrena vrstica brez
+  //     lokacije, ne izmišljene koordinate.
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSearchResults(null);
+      setSearchError(false);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setSearchLoading(true);
+      setSearchError(false);
+      try {
+        const res = await fetch("/api/smart-search", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ query: q, limit: 3 }),
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`smart-search ${res.status}`);
+        const data = (await res.json()) as MapSearchResponse;
+        setSearchResults(data);
+        // Search kontekst aktivira supply sloj (supplyActive) + izpelje
+        // kategorije iz zadetkov (iskreno: samo semantično enakovredne
+        // preslikave — wellness/workshop/tasting NE aktivirajo ničesar).
+        const derived = new Set<ProductType>();
+        for (const l of data.listings) {
+          const t = SEARCH_CATEGORY_TO_TYPE[l.category];
+          if (t) derived.add(t);
+        }
+        for (const e of data.experiences) {
+          const t = SEARCH_CATEGORY_TO_TYPE[e.category];
+          if (t) derived.add(t);
+        }
+        if (derived.size > 0) setActiveCats(derived);
+        // Prvi zadetek z geo → fly-to (iskanje premakne viewport — §12).
+        const first =
+          data.destinations[0] ??
+          data.listings.find((l) => l.lat != null && l.lng != null) ??
+          data.experiences.find((e) => e.lat != null && e.lng != null);
+        if (first && "lat" in first && first.lat != null && first.lng != null) {
+          flyTo(first.lat, first.lng, first.name, "destination" in first ? 12 : 15);
+        }
+        trackPlannerEvent("map_search_submitted", {
+          locale: lang,
+          total:
+            data.destinations.length +
+            data.listings.length +
+            data.products.length +
+            data.experiences.length,
+          query_len: q.length,
+        });
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") return;
+        setSearchError(true);
+        setSearchResults(null);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 600);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+    // flyTo je stabilna closure nad mapRef (odvisnosti namerno minimalne).
+  }, [searchQuery, lang]);
 
   // Inicializiraj zemljevid (enkrat)
   useEffect(() => {
@@ -772,7 +1021,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     const layer = poiLayerRef.current;
     if (!layer) return;
 
-    if (!showPois || supply.products.length === 0) {
+    if (supply.products.length === 0) {
       layer.clearLayers();
       return;
     }
@@ -860,7 +1109,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     layer.clearLayers();
     layer.addLayers(markers);
     if (map) map.addLayer(layer);
-  }, [supply.products, showPois, lang]);
+  }, [supply.products, lang]);
 
   // === Render MAP PINS sloja (1.95.1) — statični FSQ =====================
   // Grid mehurčki (z≤10) v gridLayer; posamezni pini (z≥11) v pinsCluster.
@@ -1033,6 +1282,10 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
       else next.add(cat);
       return next;
     });
+    // F12-1: klik čipa = FILTER KONTEKST → supply sloj se vklopi samodejno
+    // (odstranjen predpogoj „Pokaži POI“ — čip zdaj NEPREPOSREDNO filtrira
+    // zemljevid in rezultate, kot zahteva issue §4).
+    setCatsTouched(true);
     // Telemetrija (komplement chat_geo_filtered s klepeta): meri, ali
     // multi-select čipi pomagajo tudi na brskalnem zemljevidu — in katere
     // kategorije uporabniki dejansko iščejo (hrana/nastanitve).
@@ -1043,9 +1296,13 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     });
   };
 
-  /** Prazno stanje → nazaj na privzetih 5 kategorij. */
+  /** Prazno stanje → nazaj na privzete kategorije (9 lokalnih tipov). */
   const resetCats = () => {
     setActiveCats(new Set(DEFAULT_POI_CATS));
+    // F12-1: ponastavitev = IZHOD iz konteksta (svež obisk: destinacije +
+    // statični pini, brez supply poizvedb) — skladno z "Prikaži privzeto".
+    setCatsTouched(false);
+    clearHighlight();
   };
 
   const handleResetView = () => {
@@ -1064,10 +1321,6 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
     setShowRoute((s) => !s);
   };
 
-  const togglePois = () => {
-    setShowPois((s) => !s);
-  };
-
   /** Dodajanje iz ProviderPanel/ProductCard (isti tok kot modal). */
   const handleAddProduct = (product: ProviderProduct) => {
     addProductToSelection(product, { locale: lang });
@@ -1082,7 +1335,11 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
       .join(" · ");
   }, [supply.products, lang]);
 
-  const zoomTooLow = showPois && Math.floor(viewport.zoom) < SUPPLY_MIN_ZOOM;
+  // F12-1: zoomTooLow je vezan na KONTEKST (iskanje/filter) — svež obisk
+  // brez konteksta namiga NE pokaže (prej: trajno viden, ker je bil gumb
+  // vedno izklopljen → namig vedno skrit; zdaj: kontekst brez približanja
+  // → iskren namig „približaj za lokalne točke“).
+  const zoomTooLow = supplyActive && Math.floor(viewport.zoom) < SUPPLY_MIN_ZOOM;
 
   return (
     <div className="relative h-full w-full">
@@ -1093,6 +1350,151 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         role="application"
         aria-label={T.mapAria[lang]}
       />
+
+      {/* ISSUE #12 (F12-1): GLAVNO ISKANJE — "Kaj iščeš?" nad zemljevidom.
+          Mobile: levo poravnano (ne prekriva desnega kontrolnega skladu);
+          sm+: sredinsko (Google Maps vzorec). Debounce 600 ms → prvi geo
+          zadetek premakne viewport (fly-to); rezultati klikabilni. */}
+      <div className="absolute left-3 top-3 z-[1001] w-[calc(100%-11.5rem)] sm:left-1/2 sm:w-[min(60vw,420px)] sm:-translate-x-1/2">
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-background/95 px-3 py-2 shadow-md backdrop-blur">
+          <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={T.searchPlaceholder[lang]}
+            aria-label={T.searchAria[lang]}
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground focus-visible:outline-none"
+          />
+          {searchLoading ? (
+            <Loader2 className="size-4 shrink-0 animate-spin text-primary" aria-hidden="true" />
+          ) : searchQuery ? (
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              aria-label={T.searchClear[lang]}
+              className="shrink-0 rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <X className="size-3.5" aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
+        {/* Rezultati — kompaktne vrstice (vrsta badge + ime + reason), klik =
+            fly-to (destinacija/geo zadetki) oz. poštena vrstica brez geo. */}
+        {searchResults || searchError ? (
+          <div
+            role="listbox"
+            aria-label={T.searchResultsAria[lang]}
+            className="mt-1 max-h-[45vh] overflow-y-auto scroll-area-custom rounded-lg border border-border bg-background/95 p-1 shadow-md backdrop-blur"
+          >
+            {searchError ? (
+              <p className="px-2 py-2 text-xs text-amber-700 dark:text-amber-400">
+                {T.searchError[lang]}
+              </p>
+            ) : searchResults &&
+              searchResults.destinations.length === 0 &&
+              searchResults.listings.length === 0 &&
+              searchResults.products.length === 0 &&
+              searchResults.experiences.length === 0 ? (
+              <p className="px-2 py-2 text-xs text-muted-foreground">
+                {T.searchEmpty[lang]}
+              </p>
+            ) : (
+              <>
+                {searchResults?.destinations.map((d) => (
+                  <button
+                    key={`d-${d.id}`}
+                    type="button"
+                    role="option"
+                    aria-selected={false}
+                    onClick={() => handleResultDestination(d)}
+                    className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Badge variant="secondary" className="mt-0.5 shrink-0 text-[10px]">
+                      {T.searchKindDestination[lang]}
+                    </Badge>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{d.name}</span>
+                      <span className="block truncate text-[11px] text-muted-foreground">{d.reason}</span>
+                    </span>
+                    <MapPin className="mt-1 size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                  </button>
+                ))}
+                {searchResults?.listings.map((l) => (
+                  <button
+                    key={`l-${l.id}`}
+                    type="button"
+                    role="option"
+                    aria-selected={false}
+                    onClick={() => handleResultGeoItem(l, "listing")}
+                    title={
+                      l.lat != null && l.lng != null
+                        ? T.searchShowOnMap[lang]
+                        : T.searchNoGeo[lang]
+                    }
+                    className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Badge variant="secondary" className="mt-0.5 shrink-0 text-[10px]">
+                      {T.searchKindListing[lang]}
+                    </Badge>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{l.name}</span>
+                      <span className="block truncate text-[11px] text-muted-foreground">{l.reason}</span>
+                    </span>
+                    {l.lat != null && l.lng != null ? (
+                      <MapPin className="mt-1 size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                    ) : null}
+                  </button>
+                ))}
+                {searchResults?.experiences.map((e) => (
+                  <button
+                    key={`e-${e.id}`}
+                    type="button"
+                    role="option"
+                    aria-selected={false}
+                    onClick={() => handleResultGeoItem(e, "experience")}
+                    title={
+                      e.lat != null && e.lng != null
+                        ? T.searchShowOnMap[lang]
+                        : T.searchNoGeo[lang]
+                    }
+                    className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Badge variant="secondary" className="mt-0.5 shrink-0 text-[10px]">
+                      {T.searchKindExperience[lang]}
+                    </Badge>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{e.name}</span>
+                      <span className="block truncate text-[11px] text-muted-foreground">{e.reason}</span>
+                    </span>
+                    {e.lat != null && e.lng != null ? (
+                      <MapPin className="mt-1 size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                    ) : null}
+                  </button>
+                ))}
+                {searchResults?.products.map((p) => (
+                  <a
+                    key={`p-${p.id}`}
+                    role="option"
+                    aria-selected={false}
+                    href={lang === "en" ? "/en/trznica" : "/trznica"}
+                    title={T.searchNoGeo[lang]}
+                    className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Badge variant="secondary" className="mt-0.5 shrink-0 text-[10px]">
+                      {T.searchKindProduct[lang]}
+                    </Badge>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{p.name}</span>
+                      <span className="block truncate text-[11px] text-muted-foreground">{p.reason}</span>
+                    </span>
+                  </a>
+                ))}
+              </>
+            )}
+          </div>
+        ) : null}
+      </div>
 
       {/* Kontrolni gumbi (zgoraj desno) — kompaktneje da ne prekrivajo */}
       <div className="absolute right-3 top-3 z-[1000] flex flex-col gap-1.5 max-h-[calc(100%-80px)] overflow-y-auto scroll-area-custom">
@@ -1129,22 +1531,11 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
           </Button>
         ) : null}
 
-        {/* POI (supply) layer toggle */}
-        <Button
-          type="button"
-          size="sm"
-          variant={showPois ? "default" : "secondary"}
-          onClick={togglePois}
-          className="shadow-md"
-          aria-pressed={showPois}
-        >
-          {showPois ? (
-            <Eye className="size-4" />
-          ) : (
-            <EyeOff className="size-4" />
-          )}
-          {showPois ? T.hidePois[lang] : T.showPois[lang]}
-        </Button>
+        {/* ISSUE #12 (F12-1): Pokaži/Skrij POI gumb ODSTRANJEN — supply
+            sloj se vklopi SAMODEJNO ob search/kategorija kontekstu (zgoraj:
+            supplyActive). Tehnični predpogoj za ogled rezultatov iskanja je
+            NEHAL obstajati (issue §2). Zoom-gating (z ≥ 10) ostaja kot
+            samodejna zaščita gostote. */}
 
         {/* F1: ProviderPanel — viri, statusi, ponudba v pogledu */}
         <ProviderPanel
@@ -1188,7 +1579,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
               >
                 <Icon className="size-3 shrink-0" aria-hidden />
                 <span className="truncate">{label[lang]}</span>
-                {on && showPois && !supply.loading ? (
+                {on && supplyActive && !supply.loading ? (
                   <span className="shrink-0 tabular-nums opacity-70">
                     {count}
                   </span>
@@ -1225,26 +1616,28 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
         ) : null}
       </div>
 
-      {/* Loading spinner za supply poizvedbo (zgornji levi, ne blokira) */}
-      {supply.loading && showPois ? (
-        <div className="absolute left-3 top-3 z-[1000] flex items-center gap-2 rounded-lg border border-border bg-background/95 px-3 py-1.5 text-xs shadow-md backdrop-blur">
+      {/* Loading spinner za supply poizvedbo (ne blokira) — F12-1: le ob
+          aktivnem kontekstu (iskanje/filter); POVEDAN pod iskalno vrstico
+          (zgornji levi prostor zdaj pripada iskanju) */}
+      {supply.loading && supplyActive ? (
+        <div className="absolute left-3 top-16 z-[1000] flex items-center gap-2 rounded-lg border border-border bg-background/95 px-3 py-1.5 text-xs shadow-md backdrop-blur">
           <Loader2 className="size-3.5 animate-spin text-primary" aria-hidden="true" />
           <span className="font-medium">{T.loadingPois[lang]}</span>
         </div>
       ) : null}
 
-      {/* Zoom hint (supply zahteva približanje) */}
+      {/* Zoom hint (supply zahteva približanje) — F12-1: pod iskalno vrstico */}
       {zoomTooLow && !supply.loading ? (
-        <div className="absolute left-3 top-3 z-[1000] max-w-[240px] rounded-lg border border-border bg-background/95 px-3 py-1.5 text-xs text-muted-foreground shadow-md backdrop-blur">
+        <div className="absolute left-3 top-16 z-[1000] max-w-[240px] rounded-lg border border-border bg-background/95 px-3 py-1.5 text-xs text-muted-foreground shadow-md backdrop-blur">
           {T.zoomHint[lang]}
         </div>
       ) : null}
 
       {/* Error/degraded badge (zgornji levi) — TASK 99-a: koda napake
           odloča o iskrenem besedilu (client-network → namig na povezavo,
-          sicer strežniška nedosegljivost virov) */}
-      {!supply.loading && supply.error && showPois ? (
-        <div className="absolute left-3 top-12 z-[1000] max-w-[240px] rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 shadow-md dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+          sicer strežniška nedosegljivost virov). F12-1: le ob kontekstu. */}
+      {!supply.loading && supply.error && supplyActive ? (
+        <div className="absolute left-3 top-24 z-[1000] max-w-[240px] rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 shadow-md dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
           {supply.error === "client-network"
             ? T.networkHint[lang]
             : T.degradedHint[lang]}
@@ -1269,7 +1662,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
               </Badge>
             </>
           ) : null}
-          {showPois && supply.products.length > 0 ? (
+          {supply.products.length > 0 ? (
             <>
               <span className="text-muted-foreground">·</span>
               <Badge variant="outline" className="max-w-[220px] truncate text-[10px]">
@@ -1277,7 +1670,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
               </Badge>
             </>
           ) : null}
-          {!showPois && pins.total === 0 ? (
+          {!supplyActive && pins.total === 0 ? (
             <Badge variant="outline" className="text-[10px]">
               {T.infoClickMarker[lang]}
             </Badge>

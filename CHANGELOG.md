@@ -7,6 +7,64 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.118.0] — 2026-09-26 (ISSUE #12 / F12-1: map-first Discovery — zemljevid vedno aktiven ob iskanju)
+
+### Dodano
+
+- **GLAVNO ISKANJE NA ZEMLJEVIDU („Kaj iščeš?“)**: iskalna vrstica nad
+  zemljevidom (`/zemljevid`, mobile levo / sm+ sredinsko — Google Maps
+  vzorec) → `POST /api/smart-search` (deterministični iskalnik Issue #9 —
+  0 AI, debounce 600 ms + AbortController, isti ritem kot SmartSearch).
+  Zadetki: destinacije → FLY-TO (coords v odgovoru) + izpeljava kategorij;
+  lokal/izkušnja z geo → fly-to + ZLATI poudarni marker (📍, isti kanon kot
+  deep-link highlight); izdelki → poštena vrstica „brez lokacije“
+  (NE izmišljene koordinate). Klik zadetka = `map_search_result_selected`.
+- **GEO RAZŠIRITEV `/api/smart-search`** (additive, nazaj kompatibilno):
+  select += `lat/lng` (Listing/Experience — TASK 86/87) + `slug` (vsi);
+  destinacije VEDNO nosijo koordinate (statični dataset → fly-to vir);
+  dopolnitev zadetkov poteka na RUTI prek id-map (iskalni moduli ostanejo
+  čisti — isti vhod → isti izhod).
+- **ISKRENOST preslikave kategorij**: `SEARCH_CATEGORY_TO_TYPE` — SAMO
+  semantično enakovredne pare (hotel→accommodation, restaurant/bar→
+  restaurant, tour→tour, outdoor/adventure→activity, shop→shop,
+  transport→transfer); wellness/workshop/tasting/cultural NE aktivirajo
+  ničesar (raje kot izmišljanje).
+- **Analitika**: `map_search_submitted` (locale, total, query_len — BREZ
+  besedila poizvedbe, PII disciplina) + `map_search_result_selected`
+  (kind, has_geo) — obe whitelisti + docs/ANALYTICS-EVENTS.md.
+
+### Spremenjeno
+
+- **Pokaži/Skrij POI gumb ODSTRANJEN** (issue §2): supply sloj se vklopi
+  SAMODEJNO ob SEARCH (rezultati ≠ null) ali FILTER kontekstu (klik čipa →
+  `catsTouched`); svež obisk brez konteksta ostane enak dosedanjemu
+  (destinacije + statični FSQ pini — brez nepotrebnih Overpass klicev).
+  `showPois` state, `togglePois`, `EyeOff` ikona in T niza so izginili
+  (mentalni model „vklopi POI za rezultate“ ne obstaja več).
+- **Badgeji vezani na kontekst**: loading spinner / zoomHint / error
+  badge se izrišejo LE ob aktivnem kontekstu (prej: vezani na gumb);
+  premaknjeni pod iskalno vrstico (zgornji levi prostor pripada iskanju).
+- `resetCats` → tudi IZHOD iz konteksta (`catsTouched=false` + clear
+  highlight) — „Prikaži privzeto“ = svež obisk.
+
+### Testi
+
+- 17 novih (issue12-f12-1-map-first-search.test.ts): source-contract
+  (gumb odstranjen — NE samo skrit; enabled izveden iz konteksta; iskanje +
+  fly-to + poudarni marker; iskrena preslikava kategorij; badgegi na
+  kontekstu; loadingPois pin ostaja task8-f3b; zoom-gating nedotaknjen;
+  TASK 76 higiena) + funkcionalno POST /api/smart-search (destinacijski
+  lat/lng ≡ slovenia-data NEODVISNO; izdelki brez geo iskreno).
+- Skupaj: 3770 testov (3753 + 17).
+
+### Dokumenti
+
+- docs/evidence/issue12/: 3 posnetka (iskanje Bled z rezultati, fly-to
+  z zlatim markerjem + POI badge, EN verzija) — dokazano živo: iskanje →
+  supply sloj SAMODEJNO aktiven (338 točk v pogledu) BREZ POI gumba.
+
+---
+
 ## [1.117.0] — 2026-09-26 (ISSUE #11 / D1: realne cene tržnice na postankih načrta)
 
 ### Dodano

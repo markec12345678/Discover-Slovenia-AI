@@ -82,6 +82,16 @@ export type PlannerEventName =
   // brskalnem zemljevidu, in katere kategorije uporabniki iščejo
   // (hrana/nastanitve so bile prej skrite pred uporabniki)
   | "map_poi_filtered"
+  // ISSUE #12 (F12-1): iskanje na zemljevidu oddano (props: locale, total,
+  // query_len — BREZ besedila poizvedbe, PII disciplina) — meri doseg
+  // map-first iskanja („Kaj iščeš?“ nad zemljevidom); skupaj z
+  // map_search_result_selected → stopnja uspešnosti zadetkov.
+  | "map_search_submitted"
+  // ISSUE #12 (F12-1): klik zadetka v rezultatih iskanja na zemljevidu
+  // (props: kind destination|listing|experience|product, has_geo 0|1) —
+  // meri prehod iskanje → zemljevid (fly-to); has_geo=0 pove, koliko
+  // zadetkov je iskreno brez lokacije (izdelki brez geo).
+  | "map_search_result_selected"
   // F1 (Supply Map, 1.49.0): viewport poizvedba supply sloja (props: zoom,
   // cats, products, degraded, ms) — strežniški dvojnik: supply_query
   | "supply_map_query"

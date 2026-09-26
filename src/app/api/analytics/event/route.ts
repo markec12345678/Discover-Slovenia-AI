@@ -48,6 +48,10 @@ const VALID_EVENTS = new Set([
   // (props: category, enabled 0|1, surface "map") — komplement
   // chat_geo_filtered za brskalni zemljevid
   "map_poi_filtered",
+  // ISSUE #12 (F12-1): iskanje na zemljevidu oddano (props: locale, total,
+  // query_len) + klik zadetka (props: kind, has_geo) — map-first Discovery
+  "map_search_submitted",
+  "map_search_result_selected",
   // F1 (Supply Map, 1.49.0): viewport poizvedba supply sloja (props:
   // zoom, cats, products, degraded, ms — strežniški dvojnik je supply_query)
   "supply_map_query",
