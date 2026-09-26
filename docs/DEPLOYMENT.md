@@ -9,6 +9,18 @@
 > **Dopolnilo (24. 9. 2026, 1.91.1):** primarna površina je zdaj **Render**
 > (`i-feel-slovenia.onrender.com`), Vercel pa sekundarna — glej razdelek 1a
 > (zastoj gradbene vrste) in README.
+>
+> **Dopolnilo (26. 9. 2026, 1.115.1 — ISSUE #7 / G-1):** odkrit zaostanek
+> Render deploja: produkcija je tekla **v1.102.0, 13 verzij za mainom**
+> (zadnji postavljen commit `5eb96e5`, 25. 9. 11:28; trojni dokaz: health
+> verzija + sitemap 1220≠1224 + `/en/trznica` 308≠200). Vzrok iz repa
+> nedosegljiv (brez `RENDER_API_KEY`: ne build logi, ne ročni deploy) —
+> **lastnikova akcija**: Render dashboard → zadnji build logi → „Manual
+> deploy" main → potrditi `health.version`. Protuteža v repu: NOVA
+> **VERZIJSKA VRATA DEPLOJA** — `functional-smoke.sh --expect-version` +
+> `prod-monitor.yml` (vsake 3 h, obe produkciji) zdaj rdeče alarmirata ob
+> driftu produkcija ≠ repo (prej se je verzija le izpisala; drift je bil
+> tiho zelen). Dokazi: `docs/audit/issue7-production-reconciliation.md`.
 
 ---
 

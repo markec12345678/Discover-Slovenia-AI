@@ -31,7 +31,19 @@ export async function POST(request: Request) {
   if (limited) return limited;
 
   try {
-    const body: unknown = await request.json();
+    // ISSUE #7 (G11, P3 fix): pokvarjen/nepopoln JSON telesa je NAPAČNA
+    // ZAHTEVA stranke (400) — ne strežniška napaka (500). Prej je parse
+    // izjema padla v splošni catch → 500 z generičnim sporočilom; isti
+    // vzorec pravilnega ravnanja že ima /api/journey/bookings/parse.
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Neveljaven JSON v zahtevi" },
+        { status: 400 }
+      );
+    }
     const b = (body ?? {}) as Record<string, unknown>;
 
     const itinerary = b.itinerary as unknown;

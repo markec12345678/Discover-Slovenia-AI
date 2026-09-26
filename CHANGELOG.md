@@ -7,6 +7,61 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.115.1] — 2026-09-28 (ISSUE #7: PRODUCTION GOLDEN-PATH RECONCILIATION — audit + dokazane popravke)
+
+### Dodano
+
+- **PRODUKCIJSKI AUDIT G1–G13** (celoten docs/audit/
+  `issue7-production-reconciliation.md`): GitHub HEAD 4fcc380 ≡ CI (run
+  36239495555, vsi jobi/koraki zeleni) ≡ Vercel produkcija (v1.115.0,
+  functional-smoke 18/18, sitemap 1224 URL) ≡ lokalni standalone build
+  (ista pot kot Docker/Render); zlata pot načrt→save→ogled→PDF→revizija→409
+  →parse→422 10/10; offline E2E 7/7 (brskalniška omrežna emulacija, SW ne
+  mock); mobilni UX 390px (tab vrstica, navigacija zavihkov, /pot render,
+  /en, back/reload, 0 napak, 0 preliva — 5 posnetkov
+  `docs/evidence/issue7-g13/`); G4 parser 11 formatov + iskrena zavrnitev
+  smeti; G9 register 38 destinacij (SI22/HR8/ME4/AL4, 0 duplikatov);
+  reprodukcijski skript `scripts/verify/issue7-golden-path-probes.ts`.
+- **VERZIJSKA VRATA DEPLOJA (G-1)**: `functional-smoke.sh --expect-version X`
+  — produkcija MORA odgovoriti z verzijo repa; neujemanje = RDEČE
+  („DRIFT VERZIJE: produkcija vX ≠ repo vY"). `prod-monitor.yml` obe
+  produkciji zdaj prejemata verzijo iz `package.json` checkouta. Dokazano
+  živo: Vercel ✅ ≡ 1.115.0; Render ❌ 1.102.0 (13 verzij za mainom —
+  odkrito s strani tega audita, monitor pa je bil tiho zelen).
+- **REGRESIJSKI TESTI** `issue7-g11-route-hardening.test.ts` (8 testov):
+  pokvarjen JSON → 400, enotna shareId validacija, source-contract pariteta
+  GET/PDF/PATCH, verzijska vrata skripte + monitorja.
+
+### Popravljeno
+
+- **G11-A (P3)**: `POST /api/itinerary/save` s pokvarjenim JSON telesa je
+  vračal **500** (parse izjema v splošnem catch) → zdaj **400**
+  „Neveljaven JSON v zahtevi" (isti vzorec kot bookings/parse; brez DB
+  dostopa, brez popuškanja notranjosti — telo je bilo tudi prej generično).
+- **G11-B (P3)**: `GET /api/itinerary/shared/{id}` je preverjal SAMO
+  dolžino shareId (neveljavni znaki → 404), PDF/PATCH pa polni `SHARE_ID_RE`
+  (→ 400) — isti vhod je dobil različne odgovore na različnih poteh. Zdaj
+  VSE tri rute uporabljajo isti kanon (neveljavna oblika → 400;
+  veljavna-oblika-neznana → 404, obstoj poti NE razkrije).
+- **G-4 (P3, dokumentacijska resnica)**: `prod-monitor.yml` job oznaki sta
+  bili OBRATNI od README kanona („Vercel (PRIMARNA)"/„Render
+  (SEKUNDARNA)", README/DEPLOYMENT pa Render primarna) → usklajeno.
+
+### Iskrene meje
+
+- **G-1 (P1) — Render 13 verzij za mainom NI popravljiv iz repozitorija**:
+  brez `RENDER_API_KEY`/dashboard dostopa ne moremo niti sprožiti deployja
+  niti prebrati build logov. Odkrito 2026-09-26 12:39 UTC (health verzija
+  1.102.0; sitemap 1220 ≠ 1224 URL; /en/trznica 308 ≠ 200 — trojni dokaz).
+  Verzijska vrata zdaj držijo drift VIDNO (monitor pošlje alarm). Lastnikova
+  akcija: Render dashboard → deploy main + pregled zadnjih build logov
+  (5eb96e5 je zadnji uspešen; 1.103.0+ nikoli ni bil postavljen).
+- CI quality job nima baze → DB-odvisen regresijski test (veljavna-oblika
+  neznana → 404) se pošteno preskoči brez `DATABASE_URL` (isti vzorec kot
+  task31-email-inbound).
+
+---
+
 ## [1.115.0] — 2026-09-28 (ISSUE #8 / TASK 39: Discovery UX 2.0 — Faza 4 „EN zaključek lijaka" — ZAKLJUČEK NALOGE)
 
 ### Dodano

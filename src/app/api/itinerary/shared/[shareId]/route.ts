@@ -72,7 +72,11 @@ export async function GET(
   try {
     const { shareId } = await params;
 
-    if (!shareId || shareId.length > 32) {
+    // ISSUE #7 (G11, P3 fix): ENOTNA validacija shareId čez VSE shared
+    // rute — prej je GET preverjal SAMO dolžino (neveljavni znaki →
+    // findUnique → 404), PDF/PATCH pa polni SHARE_ID_RE (→ 400). Isti
+    // vhod ni smel dobiti različnih odgovolov na različnih poteh.
+    if (!SHARE_ID_RE.test(shareId)) {
       return NextResponse.json(
         { error: "Neveljaven ID itinererja" },
         { status: 400 }

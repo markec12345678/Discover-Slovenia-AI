@@ -30,13 +30,17 @@
 #
 # ZAGON PROTI KATEREMU KOLI ŽIVEEMU STREŽNIKU (dev/prod):
 #   functional-smoke.sh [BASE_URL] [--ready-timeout S] [--get-only]
-#                       [--min-sitemap-urls N]
+#                       [--min-sitemap-urls N] [--expect-version X]
 #     BASE_URL           privzeto http://localhost:3000
 #     --ready-timeout S  koliko sekund čakati na pripravljenost (privzeto 90;
 #                        za Render free hladni zagon priporočeno 240+)
 #     --get-only         brez POST /api/itinerary (produkcija)
 #     --min-sitemap-urls N  prag regresije SEO površine (privzeto 650;
 #                        lokalno/produkcija ~733 URL — padec pod prag = alarm)
+#     --expect-version X  VRATA ZA DRIFT VERZIJE (ISSUE #7 / G-1): produkcija
+#                        MORA odgovoriti z verzijo X (iz package.json repa).
+#                        Neujemanje = RDEČE — zastoj deploja (npr. Render
+#                        13 verzij za mainom) ne sme biti tiho zelen.
 #
 # IZHOD: 0 = vsa preverjanja zelena · 1 = vsaj eno rdeče (z razlogom)
 # Odvisnosti: curl, jq (oba na GH Actions runnerjih in v razvojnem sandboxu);
@@ -59,6 +63,7 @@ while [ $# -gt 0 ]; do
     --get-only) GET_ONLY=1 ;;
     --ready-timeout) READY_TIMEOUT="${2:?--ready-timeout zahteva število}"; shift ;;
     --min-sitemap-urls) MIN_SITEMAP_URLS="${2:?--min-sitemap-urls zahteva število}"; shift ;;
+    --expect-version) EXPECT_VERSION="${2:?--expect-version zahteva verzijo (npr. 1.115.0)}"; shift ;;
     -h|--help) usage ;;
     -*) die "Neznana zastavica: $1 (glej --help)" ;;
     *) BASE_URL="$1" ;;
@@ -75,6 +80,7 @@ trap 'rm -rf "$TMP"' EXIT
 PASS=0
 FAIL=0
 VERSION_NOTE=""
+EXPECT_VERSION="${EXPECT_VERSION:-}"
 
 ok_check()  { PASS=$((PASS + 1)); ok "$1"; }
 bad_check() { FAIL=$((FAIL + 1)); err "$1"; }
@@ -245,6 +251,19 @@ for s in 1 2 3; do
   fi
   [ "$s" -lt 3 ] && sleep 5
 done
+
+# ── 7b: VRATA ZA DRIFT VERZIJE (ISSUE #7 / G-1) ────────────────────────────
+# PROD-MONITOR je 24 h gledal RDEČI drift nevidno: Render je bil 13 verzij
+# za mainom (1.102.0 vs 1.115.0), monitor pa zelena — preverjal je SAMO
+# health/SSR/SEO, ne ISTOST deplojane kode z repom. Zdaj: --expect-version
+# (prod-monitor poda verzijo iz package.json checkouta) neujemanje → RDEČE.
+if [ -n "$EXPECT_VERSION" ]; then
+  if [ "$VERSION_NOTE" = "$EXPECT_VERSION" ]; then
+    ok_check "verzija deploja ≡ repo (${EXPECT_VERSION})"
+  else
+    bad_check "DRIFT VERZIJE: produkcija v${VERSION_NOTE:-?} ≠ repo v${EXPECT_VERSION} — deployment je zastal za mainom (gl. Issue #7 / G-1)"
+  fi
+fi
 
 # ── 8/11: /api/listings (živa DB povezljivost) ────────────────────────────
 step "8/11 — GET /api/listings (DB povezljivost)"
