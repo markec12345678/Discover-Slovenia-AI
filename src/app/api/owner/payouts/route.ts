@@ -117,12 +117,16 @@ export async function GET(request: Request) {
         db.payoutEntry.count({
           where: { ownerId: owner.id, status: "pending" },
         }),
-        // Odprte postavke iz obdobij STAREJŠIH od poravnavanega meseca — te bo
-        // izdaja zajela kot „sweep" (tekoči mesec NE — pripada naslednji).
+        // Odprte NEVEZANE postavke iz obdobij STAREJŠIH od poravnavanega
+        // meseca — te bo izdaja zajela kot „sweep" (tekoči mesec NE — pripada
+        // naslednji). settlementId: null izključuje postavke, ki so ŽE VEZANE
+        // na izdano (še nepotrjeno) poravnavo — te pripadajo njej, ne naslednji
+        // izdaji (status pending se ohrani do potrditve uskladitve).
         db.payoutEntry.count({
           where: {
             ownerId: owner.id,
             status: "pending",
+            settlementId: null,
             periodEnd: { lte: last.start },
           },
         }),
@@ -152,7 +156,8 @@ export async function GET(request: Request) {
         settlementExists: Boolean(lastSettlement),
       },
       openPendingCount: openCount,
-      // Odprte postavke iz obdobij starejših od poravnavanega meseca (sweep).
+      // Odprte NEVEZANE postavke iz obdobij starejših od poravnavanega meseca
+      // (sweep) — izključene so tiste, ki so že vezane na izdano poravnavo.
       olderOpenCount,
       settlements,
       pendingEntries,

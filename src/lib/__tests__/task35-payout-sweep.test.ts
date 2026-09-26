@@ -31,14 +31,14 @@ const ledgerSrc = read("src/lib/payout-ledger.ts");
 // 1. SOURCE-CONTRACT — API (GET /api/owner/payouts)
 // ─────────────────────────────────────────────────────────────────────────
 describe("TASK 35: source-contract — GET olderOpenCount (API)", () => {
-  test("odgovor vrača olderOpenCount + dokumentiran sweep komentar", () => {
+  test("odgovor vrača olderOpenCount + dokumentiran NEVEZANI sweep komentar", () => {
     expect(routeSrc).toContain("olderOpenCount,");
     expect(routeSrc).toContain(
-      "Odprte postavke iz obdobij starejših od poravnavanega meseca (sweep)."
+      "Odprte NEVEZANE postavke iz obdobij STAREJŠIH od poravnavanega"
     );
   });
 
-  test("štetje zajame SAMO obdobja pred poravnavanim mesecem (periodEnd ≤ last.start, pending)", () => {
+  test("štetje zajame SAMO nevezane odprte postavke pred poravnavanim mesecem (settlementId null, periodEnd ≤ last.start)", () => {
     // Zadnji payoutEntry.count v GET (za openCount brez filtra, pred
     // pendingEntries findMany) je prav olderOpenCount števec.
     const sweepIdx = routeSrc.lastIndexOf("db.payoutEntry.count({");
@@ -54,12 +54,18 @@ describe("TASK 35: source-contract — GET olderOpenCount (API)", () => {
     // lastMonth.entryCount, tekočega meseca pa ne grejo v to izdajo).
     expect(block).toContain("periodEnd: { lte: last.start }");
     expect(block).toContain('status: "pending"');
+    // Postavke VEZANE na izdano (še nepotrjeno) poravnavo so status pending
+    // do potrditve — pripadajo Njej, ne naslednji izdaji → izključene.
+    expect(block).toContain("settlementId: null");
   });
 
-  test("domena: izdaja zajame vse odprto do vključno prejšnjega meseca (isti vir meje)", () => {
+  test("domena: izdaja zajame vse odprto do vključno prejšnjega meseca in postavke VEŽE na poravnavo (isti vir meje)", () => {
     // issuePayoutSettlement — vključna meja (lte last.end) je zgornja meja
     // sweepa; olderOpenCount je strogo pod-spodnji del istega obdobja.
     expect(ledgerSrc).toContain("periodEnd: { lte: last.end }");
+    // Vezava postavk ob izdaji (settlementId) — ravno ta polje ločuje
+    // „zajeto v obstoječi poravnavi“ od „čaka naslednjo izdajo“.
+    expect(ledgerSrc).toContain("settlementId: s.id");
   });
 });
 

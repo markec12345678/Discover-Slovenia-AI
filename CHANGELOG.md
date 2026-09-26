@@ -12,10 +12,12 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 ### Popravljeno
 
 - **POPRAVLJEN SWEEP PRIKAZ V ZAVIHKU IZPLAČILA (nadgradnja TASK 34)**.
-  GET /api/owner/payouts sedaj vrača `olderOpenCount` — odprte postavke iz
-  obdobij STAREJŠIH od poravnavanega meseca (`periodEnd ≤ last.start`,
-  status pending; postavke TEKOČEGA meseca namenoma NE — pripadajo šele
-  naslednji poravnavi). UI ga dosledno uporablja:
+  GET /api/owner/payouts sedaj vrača `olderOpenCount` — odprte NEVEZANE
+  postavke iz obdobij STAREJŠIH od poravnavanega meseca (`periodEnd ≤
+  last.start`, status pending, `settlementId: null`; postavke TEKOČEGA meseca
+  namenoma NE — pripadajo šele naslednji poravnavi; VEZANE postavke izdane
+  (še nepotrjene) poravnave tudi NE — pripadajo njej, saj status pending
+  preživi do potrditve uskladitve). UI ga dosledno uporablja:
   - gumb „Izdi poročilo o poravnavi“ je omogočen IZKLJUČNO, ko izdaja
     dejansko lahko nastane (`lastMonth.entryCount > 0 || olderOpenCount > 0`)
     — prej je bil omogočen tudi, če so odprte SAMO postavke tekočega meseca,
@@ -32,7 +34,8 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 - 7 novih source-contract testov (`task35-payout-sweep.test.ts`) z
   REGRESIJSKIMI varovalkami: stari lažni izračuni (`openPendingCount −
   lastMonth.entryCount`, „odprtih skupno“, „vidne v naslednji poravnavi“)
-  odklopljeni; canGenerate NE sme več gledati `openPendingCount > 0`.
+  odklopljeni; canGenerate NE sme več gledati `openPendingCount > 0`;
+  števec MORA izključevati vezane postavke (`settlementId: null`).
 
 ---
 
