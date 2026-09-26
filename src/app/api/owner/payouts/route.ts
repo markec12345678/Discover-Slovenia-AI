@@ -77,7 +77,7 @@ export async function GET(request: Request) {
     const current = monthRange(0);
     const last = monthRange(-1);
 
-    const [currentAgg, lastAgg, lastSettlement, settlements, openCount, pendingEntries] =
+    const [currentAgg, lastAgg, lastSettlement, settlements, openCount, olderOpenCount, pendingEntries] =
       await Promise.all([
         db.payoutEntry.aggregate({
           _count: true,
@@ -117,6 +117,15 @@ export async function GET(request: Request) {
         db.payoutEntry.count({
           where: { ownerId: owner.id, status: "pending" },
         }),
+        // Odprte postavke iz obdobij STAREJŠIH od poravnavanega meseca — te bo
+        // izdaja zajela kot „sweep" (tekoči mesec NE — pripada naslednji).
+        db.payoutEntry.count({
+          where: {
+            ownerId: owner.id,
+            status: "pending",
+            periodEnd: { lte: last.start },
+          },
+        }),
         db.payoutEntry.findMany({
           where: { ownerId: owner.id, status: "pending" },
           orderBy: { periodStart: "desc" },
@@ -143,6 +152,8 @@ export async function GET(request: Request) {
         settlementExists: Boolean(lastSettlement),
       },
       openPendingCount: openCount,
+      // Odprte postavke iz obdobij starejših od poravnavanega meseca (sweep).
+      olderOpenCount,
       settlements,
       pendingEntries,
     });
