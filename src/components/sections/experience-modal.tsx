@@ -60,6 +60,7 @@ import { AddToTripButton } from "@/components/add-to-trip-button";
 import { addBooking } from "@/lib/my-orders-storage";
 import {
   EXPERIENCE_CATEGORY_LABELS,
+  EXPERIENCE_CATEGORY_LABELS_EN,
   EXPERIENCE_CATEGORY_ICONS,
   LANGUAGE_LABELS,
   formatPrice,
@@ -89,6 +90,260 @@ interface RecommendationsResponse {
   experiences: RecommendedExperience[];
   total: number;
   source?: "ai" | "fallback" | "cache";
+}
+
+// TASK 8 / F4-B (issue #8 Faza 4 — EN razširitev booking sklada): L-pattern
+// slovar (SL+EN) za VES UI chrome modala + rezervacijski obrazec — toasti,
+// oznake, spec nalepke, arija, validacije, statusi razpoložljivosti, CTA.
+// RESNICA (§38, najvišja stava tukaj): "od" ↔ "from" od-cena, "zaseden" ↔
+// "sold out" (kapaciteta dneva), statusi rezervacije ("Potrjena" ↔
+// "Confirmed") — prevedeno z EXAKTNO ohranitvijo pomena. ZERO-LOSS: samo
+// nizi, nobena logika/vedenje/API se ne spreminja.
+const L = {
+  a11y: {
+    dialogDesc: {
+      sl: (name: string) =>
+        `Podrobnosti izkušnje ${name}: opis, cena, trajanje, skupina, kontakt ponudnika in možnost rezervacije.`,
+      en: (name: string) =>
+        `Experience details for ${name}: description, price, duration, group, provider contact and booking option.`,
+    },
+    verified: { sl: "Overjena izkušnja", en: "Verified experience" },
+    openGallery: {
+      sl: (n: number) => `Odpri galerijo slik (${n})`,
+      en: (n: number) => `Open the image gallery (${n})`,
+    },
+    showImage: {
+      sl: (n: number) => `Prikaži sliko ${n}`,
+      en: (n: number) => `Show image ${n}`,
+    },
+    imageAlt: {
+      sl: (name: string, n: number) => `${name} — slika ${n}`,
+      en: (name: string, n: number) => `${name} — image ${n}`,
+    },
+    openExperience: {
+      sl: (name: string) => `Odpri ${name}`,
+      en: (name: string) => `Open ${name}`,
+    },
+    bookingSection: { sl: "Rezervacija izkušnje", en: "Book this experience" },
+    bookingConfirmed: { sl: "Rezervacija potrjena", en: "Booking confirmed" },
+    decreaseGroup: { sl: "Zmanjšaj število oseb", en: "Decrease group size" },
+    increaseGroup: { sl: "Povečaj število oseb", en: "Increase group size" },
+  },
+  badge: {
+    featured: { sl: "Izpostavljeno", en: "Featured" },
+    familyFriendly: { sl: "Družinsko prijazno", en: "Family friendly" },
+    accessible: { sl: "Dostopno za invalide", en: "Wheelchair accessible" },
+  },
+  reviews: { sl: "mnenj", en: "reviews" },
+  price: {
+    from: { sl: "od", en: "from" },
+    perPerson: { sl: "/ osebo", en: "per person" },
+  },
+  info: {
+    duration: { sl: "Trajanje", en: "Duration" },
+    group: { sl: "Skupina", en: "Group" },
+    groupValue: {
+      sl: (min: number, max: number) => `${min}–${max} oseb`,
+      en: (min: number, max: number) => `${min}–${max} people`,
+    },
+    languages: { sl: "Jeziki", en: "Languages" },
+    location: { sl: "Lokacija", en: "Location" },
+  },
+  meeting: {
+    heading: { sl: "Točka srečanja", en: "Meeting point" },
+    showOnMap: { sl: "Prikaži na zemljevidu", en: "Show on map" },
+  },
+  attributes: { sl: "Atributi", en: "Attributes" },
+  provider: {
+    heading: { sl: "Ponudnik", en: "Provider" },
+    website: { sl: "Spletna stran", en: "Website" },
+    statsViews: { sl: "Ogledov", en: "Views" },
+    statsBookings: { sl: "Rezervacij", en: "Bookings" },
+  },
+  source: { sl: "Vir: Lokalni ponudnik", en: "Source: Local provider" },
+  booking: {
+    bookCta: { sl: "Rezerviraj termin", en: "Book a date" },
+    atProvider: { sl: "Pri ponudniku", en: "At the provider" },
+    noWebsite: {
+      sl: "Ponudnik nima spletne strani",
+      en: "The provider has no website",
+    },
+    successTitle: { sl: "Rezervacija potrjena!", en: "Booking confirmed!" },
+    successNote: {
+      sl: "Številko rezervacije shranite — vam bo v pomoč pri komunikaciji s ponudnikom.",
+      en: "Save your booking number — it helps when communicating with the provider.",
+    },
+    numberLabel: { sl: "Številka rezervacije", en: "Booking number" },
+    totalLabel: { sl: "Skupaj", en: "Total" },
+    dateLabel: { sl: "Datum", en: "Date" },
+    meetingLabel: { sl: "Srečanje", en: "Meeting" },
+    providerLabel: { sl: "Ponudnik", en: "Provider" },
+    statusLabel: { sl: "Status", en: "Status" },
+    statusConfirmed: { sl: "Potrjena", en: "Confirmed" },
+    newBooking: { sl: "Nova rezervacija", en: "New booking" },
+    formHeading: { sl: "Podatki za rezervacijo", en: "Booking details" },
+    cancel: { sl: "Prekliči", en: "Cancel" },
+    form: {
+      date: { sl: "Datum", en: "Date" },
+      groupSize: { sl: "Število oseb", en: "Group size" },
+      name: { sl: "Ime in priimek", en: "Full name" },
+      phone: { sl: "Telefon", en: "Phone" },
+      email: { sl: "E-pošta", en: "Email" },
+      notes: { sl: "Opombe (opcijsko)", en: "Notes (optional)" },
+      phName: { sl: "Janez Novak", en: "John Smith" },
+      phPhone: { sl: "+386 41 234 567", en: "+386 41 234 567" },
+      phEmail: { sl: "ime@primer.si", en: "you@example.com" },
+      phNotes: {
+        sl: "Alergije, želje glede termina, jezik vodenja …",
+        en: "Allergies, preferred time, tour language …",
+      },
+      groupHint: {
+        sl: (min: number, max: number) => `${min}–${max} oseb`,
+        en: (min: number, max: number) => `${min}–${max} people`,
+      },
+      sending: { sl: "Rezerviram…", en: "Booking…" },
+      confirm: { sl: "Potrdi rezervacijo", en: "Confirm booking" },
+      srSending: {
+        sl: "Rezervacija se pošilja, prosimo počakajte.",
+        en: "Sending your booking, please wait.",
+      },
+      demo: {
+        sl: "Demo način: rezervacija se takoj potrdi, plačila se ne zaračuna. Ko dodamo prave Stripe ključe, se bo vklopilo spletno plačilo.",
+        en: "Demo mode: the booking is confirmed instantly and no payment is charged. Once we add real Stripe keys, online payment will switch on.",
+      },
+      privacy: {
+        sl: "Podatke uporabimo izključno za izvedbo rezervacije.",
+        en: "Your details are used only to carry out this booking.",
+      },
+      people: {
+        sl: (n: number) => `${n} ${n === 1 ? "oseba" : "oseb"}`,
+        en: (n: number) => `${n} ${n === 1 ? "person" : "people"}`,
+      },
+    },
+    errors: {
+      dateRequired: {
+        sl: "Izberite datum rezervacije.",
+        en: "Choose a booking date.",
+      },
+      dateInvalid: {
+        sl: "Neveljaven datum rezervacije.",
+        en: "Invalid booking date.",
+      },
+      datePast: {
+        sl: "Datum rezervacije mora biti danes ali pozneje.",
+        en: "The booking date must be today or later.",
+      },
+      dateBlackout: {
+        sl: "Ta datum je zaprt — ponudnik ne sprejema rezervacij.",
+        en: "This date is closed — the provider is not taking bookings.",
+      },
+      dateOffSeason: {
+        sl: "Ta datum je izven sezone ponudnika.",
+        en: "This date is outside the provider's season.",
+      },
+      dateSoldOut: {
+        sl: "Ta datum je zaseden — kapaciteta dneva je dosežena.",
+        en: "This date is sold out — day capacity is reached.",
+      },
+      groupInvalid: {
+        sl: "Vnesite veljavno število oseb.",
+        en: "Enter a valid group size.",
+      },
+      groupRange: {
+        sl: (min: number, max: number) => `Med ${min} in ${max} oseb.`,
+        en: (min: number, max: number) => `Between ${min} and ${max} people.`,
+      },
+      groupRemaining: {
+        sl: (n: number) => `Na ta datum je prostih le ${n} mest.`,
+        en: (n: number) => `Only ${n} spots left on this date.`,
+      },
+      nameShort: {
+        sl: "Vnesite ime in priimek (vsaj 2 znaka).",
+        en: "Enter your full name (at least 2 characters).",
+      },
+      emailInvalid: {
+        sl: "Vnesite veljaven e-poštni naslov.",
+        en: "Enter a valid email address.",
+      },
+      phoneShort: {
+        sl: "Vnesite telefonsko številko (vsaj 5 znakov).",
+        en: "Enter a phone number (at least 5 characters).",
+      },
+      apiFailed: {
+        sl: "Rezervacija ni uspela — poskusite znova.",
+        en: "Booking failed — please try again.",
+      },
+    },
+    avail: {
+      blackout: {
+        sl: "Zaprt dan (ponudnik ne sprejema rezervacij) — izberite drug datum.",
+        en: "Closed day (the provider is not taking bookings) — pick another date.",
+      },
+      offSeason: {
+        sl: "Izven sezone ponudnika — izberite datum znotraj sezone.",
+        en: "Outside the provider's season — pick a date within the season.",
+      },
+      soldOut: {
+        sl: "Zaseden dan — kapaciteta dneva je dosežena.",
+        en: "Sold out — day capacity is reached.",
+      },
+      fewLeft: {
+        sl: (n: number) => `Še ${n} prostih mest na ta dan.`,
+        en: (n: number) => `Only ${n} spots left that day.`,
+      },
+      spotsLeft: {
+        sl: (n: number) => `Prostih mest na ta dan: ${n}.`,
+        en: (n: number) => `Spots left that day: ${n}.`,
+      },
+      timeNote: {
+        sl: "Točen čas obiska dogovorite z izvajalcem po potrditvi.",
+        en: "Arrange the exact visit time with the provider after confirmation.",
+      },
+      checking: {
+        sl: "Preverjam razpoložljivost…",
+        en: "Checking availability…",
+      },
+    },
+  },
+  recs: {
+    title: { sl: "Morda vam je všeč", en: "You may also like" },
+    similar: { sl: "Podobni", en: "Similar" },
+    aiTitle: {
+      sl: "AI (GLM) je izbral ta priporočila",
+      en: "AI (GLM) picked these recommendations",
+    },
+    similarTitle: {
+      sl: "Podobne izkušnje (fallback)",
+      en: "Similar experiences (fallback)",
+    },
+  },
+};
+
+// F4-B: EN imena jezikov za prikaz v modalu — LANGUAGE_LABELS iz lib
+// (marketplace-types) je SL-only skupna odvisnost, IZVEN lastništva te
+// naloge (lib ostaja nedotaknjen); EN preslikava je lokalna ovijalka.
+const LANGUAGE_LABELS_EN: Record<string, string> = {
+  sl: "Slovenian",
+  en: "English",
+  de: "German",
+  it: "Italian",
+  hr: "Croatian",
+  fr: "French",
+  es: "Spanish",
+  ru: "Russian",
+  nl: "Dutch",
+};
+
+function languageLabel(code: string, lang: "sl" | "en"): string {
+  if (lang === "en") return LANGUAGE_LABELS_EN[code] ?? code.toUpperCase();
+  return LANGUAGE_LABELS[code] ?? code.toUpperCase();
+}
+
+// F4-B: formatDuration iz lib je SL-only ("dni"); min/h sta jezikovno
+// nevtralna — EN obdelava lokalno (ista lib logika, ZERO-LOSS ovijalka).
+function formatDurationL(hours: number, lang: "sl" | "en"): string {
+  const s = formatDuration(hours);
+  return lang === "en" ? s.replace(" dni", " days") : s;
 }
 
 /* =============================================================
@@ -162,14 +417,14 @@ function parseLocalDate(s: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/** ISO datum iz strežnika → slovenski dolgi zapis (brez UTC zamika dneva). */
-function formatBookingDate(iso: string): string {
+/** ISO datum iz strežnika → dolgi zapis v jeziku uporabnika (brez UTC zamika dneva). */
+function formatBookingDate(iso: string, lang: "sl" | "en"): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   const d = m
     ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
     : new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("sl-SI", {
+  return d.toLocaleDateString(lang === "en" ? "en-GB" : "sl-SI", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -220,6 +475,8 @@ export function ExperienceModal({
   // §20: pošljemo lang, da strežnik izbere jezikovno različico why
   // vrstice (cache hrani obe — prvi obiskovalec ne zaključi jezika).
   const locale = useLocale();
+  // F4-B: jezik UI chroma (isti vir kot priporočila zgoraj).
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
   const [recommendations, setRecommendations] = useState<RecommendedExperience[]>([]);
   const [recLoading, setRecLoading] = useState(false);
   const [recError, setRecError] = useState<boolean>(false);
@@ -273,9 +530,9 @@ export function ExperienceModal({
     (src) => src.trim().length > 0
   ).length;
 
-  // Pretvori jezikovne kode v slovenska imena
+  // Pretvori jezikovne kode v imena v jeziku uporabnika (SL iz lib, EN lokalno)
   const languagesDisplay = experience.languages
-    .map((l) => LANGUAGE_LABELS[l] ?? l.toUpperCase())
+    .map((l) => languageLabel(l, lang))
     .join(", ");
 
   return (
@@ -287,8 +544,7 @@ export function ExperienceModal({
       >
         <DialogTitle className="sr-only">{experience.name}</DialogTitle>
         <DialogDescription id="experience-modal-desc" className="sr-only">
-          Podrobnosti izkušnje {experience.name}: opis, cena, trajanje, skupina,
-          kontakt ponudnika in možnost rezervacije.
+          {L.a11y.dialogDesc[lang](experience.name)}
         </DialogDescription>
 
         <div className="scroll-area-custom max-h-[88vh] overflow-y-auto">
@@ -297,7 +553,7 @@ export function ExperienceModal({
             {image ? (
               <img
                 src={image}
-                alt={`${experience.name} — slika ${activeImage + 1}`}
+                alt={L.a11y.imageAlt[lang](experience.name, activeImage + 1)}
                 className="size-full object-cover"
                 loading="lazy"
                 onError={(e) => {
@@ -319,12 +575,14 @@ export function ExperienceModal({
                 <span aria-hidden="true">
                   {EXPERIENCE_CATEGORY_ICONS[experience.category]}
                 </span>
-                {EXPERIENCE_CATEGORY_LABELS[experience.category]}
+                {lang === "en"
+                  ? EXPERIENCE_CATEGORY_LABELS_EN[experience.category]
+                  : EXPERIENCE_CATEGORY_LABELS[experience.category]}
               </Badge>
               {experience.featured ? (
                 <Badge className="bg-amber-400 text-amber-950 shadow-sm">
                   <Sparkles className="size-3" aria-hidden="true" />
-                  Izpostavljeno
+                  {L.badge.featured[lang]}
                 </Badge>
               ) : null}
             </div>
@@ -346,7 +604,7 @@ export function ExperienceModal({
             {/* Trajanje badge */}
             <Badge className="absolute bottom-4 right-4 bg-background/90 text-foreground backdrop-blur-sm">
               <Clock className="size-3" aria-hidden="true" />
-              {formatDuration(experience.durationHours)}
+              {formatDurationL(experience.durationHours, lang)}
             </Badge>
 
             {/* Ime + lokacija */}
@@ -358,7 +616,7 @@ export function ExperienceModal({
                 {experience.verified ? (
                   <CheckCircle2
                     className="size-5 text-primary"
-                    aria-label="Overjena izkušnja"
+                    aria-label={L.a11y.verified[lang]}
                   />
                 ) : null}
               </div>
@@ -379,7 +637,7 @@ export function ExperienceModal({
               <button
                 type="button"
                 onClick={() => setLightboxOpen(true)}
-                aria-label={`Odpri galerijo slik (${galleryCount})`}
+                aria-label={L.a11y.openGallery[lang](galleryCount)}
                 className="absolute inset-0 cursor-zoom-in"
               />
             ) : null}
@@ -393,7 +651,7 @@ export function ExperienceModal({
                   key={idx}
                   type="button"
                   onClick={() => setActiveImage(idx)}
-                  aria-label={`Prikaži sliko ${idx + 1}`}
+                  aria-label={L.a11y.showImage[lang](idx + 1)}
                   aria-pressed={idx === activeImage}
                   className={`relative size-16 shrink-0 overflow-hidden rounded-md border-2 transition-all ${
                     idx === activeImage
@@ -430,21 +688,21 @@ export function ExperienceModal({
                       {experience.rating.toFixed(1)}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      ({experience.reviewCount} mnenj)
+                      ({experience.reviewCount} {L.reviews[lang]})
                     </span>
                   </>
                 )}
               </div>
 
               <div className="text-right">
-                <div className="text-xs text-muted-foreground">od</div>
+                <div className="text-xs text-muted-foreground">{L.price.from[lang]}</div>
                 <div className="text-2xl font-bold text-foreground">
                   {formatPrice(
                     experience.pricePerPerson,
                     experience.currency
                   )}
                 </div>
-                <div className="text-xs text-muted-foreground">/ osebo</div>
+                <div className="text-xs text-muted-foreground">{L.price.perPerson[lang]}</div>
               </div>
             </div>
 
@@ -466,22 +724,25 @@ export function ExperienceModal({
             <div className="grid grid-cols-2 gap-3">
               <InfoItem
                 icon={Clock}
-                label="Trajanje"
-                value={formatDuration(experience.durationHours)}
+                label={L.info.duration[lang]}
+                value={formatDurationL(experience.durationHours, lang)}
               />
               <InfoItem
                 icon={Users}
-                label="Skupina"
-                value={`${experience.minGroupSize}–${experience.maxGroupSize} oseb`}
+                label={L.info.group[lang]}
+                value={L.info.groupValue[lang](
+                  experience.minGroupSize,
+                  experience.maxGroupSize
+                )}
               />
               <InfoItem
                 icon={Languages}
-                label="Jeziki"
+                label={L.info.languages[lang]}
                 value={languagesDisplay || "—"}
               />
               <InfoItem
                 icon={MapPin}
-                label="Lokacija"
+                label={L.info.location[lang]}
                 value={experience.destinationName ?? "—"}
               />
             </div>
@@ -491,7 +752,7 @@ export function ExperienceModal({
               <section>
                 <h3 className="flex items-center gap-2 text-sm font-semibold">
                   <Compass className="size-4 text-primary" aria-hidden="true" />
-                  Točka srečanja
+                  {L.meeting.heading[lang]}
                 </h3>
                 <div className="mt-3 rounded-lg border border-border/60 bg-muted/30 p-4">
                   <p className="flex items-start gap-2 text-sm text-foreground/80">
@@ -515,7 +776,7 @@ export function ExperienceModal({
                       className="mt-3 inline-flex w-fit items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
                     >
                       <MapPin className="size-4 text-primary" aria-hidden="true" />
-                      Prikaži na zemljevidu
+                      {L.meeting.showOnMap[lang]}
                     </a>
                   ) : null}
                 </div>
@@ -528,19 +789,19 @@ export function ExperienceModal({
                   className="inline-flex w-fit items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   <MapPin className="size-4 text-primary" aria-hidden="true" />
-                  Prikaži na zemljevidu
+                  {L.meeting.showOnMap[lang]}
                 </a>
               </section>
             ) : null}
 
             {/* Atributi */}
             <section>
-              <h3 className="text-sm font-semibold">Atributi</h3>
+              <h3 className="text-sm font-semibold">{L.attributes[lang]}</h3>
               <div className="mt-3 flex flex-wrap gap-2">
                 {experience.familyFriendly ? (
                   <Badge className="bg-primary text-primary-foreground">
                     <Baby className="size-3" aria-hidden="true" />
-                    Družinsko prijazno
+                    {L.badge.familyFriendly[lang]}
                   </Badge>
                 ) : null}
                 {experience.accessibility ? (
@@ -549,13 +810,13 @@ export function ExperienceModal({
                       className="size-3"
                       aria-hidden="true"
                     />
-                    Dostopno za invalide
+                    {L.badge.accessible[lang]}
                   </Badge>
                 ) : null}
                 {experience.featured ? (
                   <Badge className="bg-amber-400 text-amber-950">
                     <Sparkles className="size-3" aria-hidden="true" />
-                    Izpostavljeno
+                    {L.badge.featured[lang]}
                   </Badge>
                 ) : null}
               </div>
@@ -565,7 +826,7 @@ export function ExperienceModal({
             <section>
               <h3 className="flex items-center gap-2 text-sm font-semibold">
                 <Users className="size-4 text-primary" aria-hidden="true" />
-                Ponudnik
+                {L.provider.heading[lang]}
               </h3>
               <div className="mt-3 space-y-2">
                 <p className="text-sm font-medium">{experience.providerName}</p>
@@ -596,7 +857,7 @@ export function ExperienceModal({
                       className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
                     >
                       <Globe className="size-4 text-primary" aria-hidden="true" />
-                      Spletna stran
+                      {L.provider.website[lang]}
                       <ExternalLink className="size-3" aria-hidden="true" />
                     </a>
                   ) : null}
@@ -608,13 +869,17 @@ export function ExperienceModal({
             <section className="grid grid-cols-2 gap-3">
               <StatCard
                 icon={Eye}
-                label="Ogledov"
-                value={experience.viewCount.toLocaleString("sl-SI")}
+                label={L.provider.statsViews[lang]}
+                value={experience.viewCount.toLocaleString(
+                  lang === "en" ? "en-US" : "sl-SI"
+                )}
               />
               <StatCard
                 icon={Calendar}
-                label="Rezervacij"
-                value={experience.bookingCount.toLocaleString("sl-SI")}
+                label={L.provider.statsBookings[lang]}
+                value={experience.bookingCount.toLocaleString(
+                  lang === "en" ? "en-US" : "sl-SI"
+                )}
               />
             </section>
 
@@ -672,7 +937,7 @@ export function ExperienceModal({
             {/* Source note */}
             <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
               <Compass className="size-3" aria-hidden="true" />
-              Vir: Lokalni ponudnik
+              {L.source[lang]}
             </p>
           </div>
         </div>
@@ -764,6 +1029,10 @@ function BookingSection({
   onPhaseChange?: (phase: BookingPhase) => void;
 }) {
   const idPrefix = useId();
+  // F4-B: jezik UI chroma rezervacijskega toka (validacije, statusi,
+  // oznake) — isti L-pattern slovar kot ostali modal.
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
 
   // Mejne vrednosti skupine — spoštuj min/maxGroupSize izkušnje,
   // zamiljene smešne vrednosti (0, >100, min > max)
@@ -846,13 +1115,13 @@ function BookingSection({
     const next: BookingFieldErrors = {};
 
     if (!form.date.trim()) {
-      next.date = "Izberite datum rezervacije.";
+      next.date = L.booking.errors.dateRequired[lang];
     } else {
       const parsed = parseLocalDate(form.date);
       if (!parsed) {
-        next.date = "Neveljaven datum rezervacije.";
+        next.date = L.booking.errors.dateInvalid[lang];
       } else if (parsed < today) {
-        next.date = "Datum rezervacije mora biti danes ali pozneje.";
+        next.date = L.booking.errors.datePast[lang];
       } else if (
         // TASK 33: zaprt dan (blackout) ali izven sezone — koledar
         // ponudnika; strežnik isto preverja v transakciji (avtoriteta)
@@ -862,14 +1131,14 @@ function BookingSection({
       ) {
         next.date =
           selectedAvail.reason === "blackout"
-            ? "Ta datum je zaprt — ponudnik ne sprejema rezervacij."
-            : "Ta datum je izven sezone ponudnika.";
+            ? L.booking.errors.dateBlackout[lang]
+            : L.booking.errors.dateOffSeason[lang];
       } else if (
         selectedAvail &&
         !selectedAvail.past &&
         selectedAvail.remaining === 0
       ) {
-        next.date = "Ta datum je zaseden — kapaciteta dneva je dosežena.";
+        next.date = L.booking.errors.dateSoldOut[lang];
       }
     }
 
@@ -880,9 +1149,9 @@ function BookingSection({
       gs < 1 ||
       gs > 100
     ) {
-      next.groupSize = "Vnesite veljavno število oseb.";
+      next.groupSize = L.booking.errors.groupInvalid[lang];
     } else if (gs < minGroup || gs > maxGroup) {
-      next.groupSize = `Med ${minGroup} in ${maxGroup} oseb.`;
+      next.groupSize = L.booking.errors.groupRange[lang](minGroup, maxGroup);
     } else if (
       // TASK 33: skupina ne sme preseči prostih mest dneva
       selectedAvail &&
@@ -890,19 +1159,21 @@ function BookingSection({
       selectedAvail.remaining !== null &&
       gs > selectedAvail.remaining
     ) {
-      next.groupSize = `Na ta datum je prostih le ${selectedAvail.remaining} mest.`;
+      next.groupSize = L.booking.errors.groupRemaining[lang](
+        selectedAvail.remaining
+      );
     }
 
     if (form.name.trim().length < 2) {
-      next.name = "Vnesite ime in priimek (vsaj 2 znaka).";
+      next.name = L.booking.errors.nameShort[lang];
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      next.email = "Vnesite veljaven e-poštni naslov.";
+      next.email = L.booking.errors.emailInvalid[lang];
     }
 
     if (form.phone.trim().length < 5) {
-      next.phone = "Vnesite telefonsko številko (vsaj 5 znakov).";
+      next.phone = L.booking.errors.phoneShort[lang];
     }
 
     return next;
@@ -947,7 +1218,9 @@ function BookingSection({
 
       const data = (await res.json().catch(() => null)) as BookingResponse | null;
       if (!res.ok || !data?.success) {
-        throw new Error(data?.error || "Rezervacija ni uspela — poskusite znova.");
+        throw new Error(
+          data?.error || L.booking.errors.apiFailed[lang]
+        );
       }
 
       const gs = Number(form.groupSize.trim());
@@ -978,7 +1251,7 @@ function BookingSection({
       setApiError(
         err instanceof Error
           ? err.message
-          : "Rezervacija ni uspela — poskusite znova."
+          : L.booking.errors.apiFailed[lang]
       );
       setPhase("form");
     }
@@ -1026,7 +1299,7 @@ function BookingSection({
   /* --- IDLE: primarni CTA + sekundarna povezava --- */
   if (phase === "idle") {
     return (
-      <section aria-label="Rezervacija izkušnje" className="space-y-2">
+      <section aria-label={L.a11y.bookingSection[lang]} className="space-y-2">
         <Button
           type="button"
           size="lg"
@@ -1037,7 +1310,7 @@ function BookingSection({
           }}
         >
           <Calendar className="size-4" aria-hidden="true" />
-          Rezerviraj termin
+          {L.booking.bookCta[lang]}
         </Button>
         {experience.providerWebsite ? (
           <Button type="button" asChild size="lg" variant="outline" className="w-full gap-2">
@@ -1047,13 +1320,13 @@ function BookingSection({
               rel="noopener noreferrer sponsored"
             >
               <ExternalLink className="size-4" aria-hidden="true" />
-              Pri ponudniku
+              {L.booking.atProvider[lang]}
             </a>
           </Button>
         ) : (
           <Button type="button" size="lg" variant="outline" className="w-full gap-2" disabled>
             <Globe className="size-4" aria-hidden="true" />
-            Ponudnik nima spletne strani
+            {L.booking.noWebsite[lang]}
           </Button>
         )}
       </section>
@@ -1064,7 +1337,7 @@ function BookingSection({
   if (phase === "success" && success) {
     return (
       <section
-        aria-label="Rezervacija potrjena"
+        aria-label={L.a11y.bookingConfirmed[lang]}
         role="status"
         className="flex flex-col items-center gap-4 rounded-xl border border-primary/30 bg-primary/5 p-5 text-center sm:p-6"
       >
@@ -1074,40 +1347,39 @@ function BookingSection({
 
         <div>
           <h3 className="text-xl font-bold text-foreground">
-            Rezervacija potrjena!
+            {L.booking.successTitle[lang]}
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Številko rezervacije shranite — vam bo v pomoč pri komunikaciji s
-            ponudnikom.
+            {L.booking.successNote[lang]}
           </p>
         </div>
 
         <div className="w-full rounded-lg border border-border/60 bg-background p-4 text-left">
           <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-muted-foreground">Številka rezervacije</span>
+            <span className="text-muted-foreground">{L.booking.numberLabel[lang]}</span>
             <span className="font-mono font-bold text-foreground">
               {success.bookingNumber}
             </span>
           </div>
           <Separator className="my-3" />
           <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-muted-foreground">Skupaj</span>
+            <span className="text-muted-foreground">{L.booking.totalLabel[lang]}</span>
             <span className="font-bold tabular-nums text-foreground">
               {formatPrice(success.total, success.currency)}
             </span>
           </div>
           <Separator className="my-3" />
           <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-muted-foreground">Datum</span>
+            <span className="text-muted-foreground">{L.booking.dateLabel[lang]}</span>
             <span className="font-medium text-foreground">
-              {formatBookingDate(success.bookingDate)}
+              {formatBookingDate(success.bookingDate, lang)}
             </span>
           </div>
           {success.meetingPoint ? (
             <>
               <Separator className="my-3" />
               <div className="flex items-start justify-between gap-3 text-sm">
-                <span className="shrink-0 text-muted-foreground">Srečanje</span>
+                <span className="shrink-0 text-muted-foreground">{L.booking.meetingLabel[lang]}</span>
                 <span className="text-right font-medium text-foreground">
                   {success.meetingPoint}
                 </span>
@@ -1118,7 +1390,7 @@ function BookingSection({
             <>
               <Separator className="my-3" />
               <div className="flex items-start justify-between gap-3 text-sm">
-                <span className="shrink-0 text-muted-foreground">Ponudnik</span>
+                <span className="shrink-0 text-muted-foreground">{L.booking.providerLabel[lang]}</span>
                 <span className="min-w-0 text-right">
                   <span className="block font-medium text-foreground">
                     {success.providerName}
@@ -1137,9 +1409,11 @@ function BookingSection({
           ) : null}
           <Separator className="my-3" />
           <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-muted-foreground">Status</span>
+            <span className="text-muted-foreground">{L.booking.statusLabel[lang]}</span>
             <Badge className="bg-primary text-primary-foreground">
-              {success.status === "confirmed" ? "Potrjena" : success.status}
+              {success.status === "confirmed"
+                ? L.booking.statusConfirmed[lang]
+                : success.status}
             </Badge>
           </div>
         </div>
@@ -1151,7 +1425,7 @@ function BookingSection({
           className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
         >
           <RotateCcw className="size-4" aria-hidden="true" />
-          Nova rezervacija
+          {L.booking.newBooking[lang]}
         </Button>
       </section>
     );
@@ -1162,7 +1436,7 @@ function BookingSection({
 
   return (
     <section
-      aria-label="Rezervacija izkušnje"
+      aria-label={L.a11y.bookingSection[lang]}
       className="rounded-xl border border-primary/30 bg-primary/5 p-4 sm:p-5"
     >
       {/* Vrh: izkušnja + preklic */}
@@ -1170,12 +1444,12 @@ function BookingSection({
         <div className="min-w-0">
           <h3 className="flex items-center gap-2 text-sm font-semibold">
             <Calendar className="size-4 text-primary" aria-hidden="true" />
-            Podatki za rezervacijo
+            {L.booking.formHeading[lang]}
           </h3>
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
             {experience.name} ·{" "}
-            {formatPrice(experience.pricePerPerson, experience.currency)} /
-            osebo
+            {formatPrice(experience.pricePerPerson, experience.currency)}{" "}
+            {L.price.perPerson[lang]}
           </p>
         </div>
         <button
@@ -1184,7 +1458,7 @@ function BookingSection({
           disabled={sending}
           className="shrink-0 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
         >
-          Prekliči
+          {L.booking.cancel[lang]}
         </button>
       </div>
 
@@ -1208,7 +1482,7 @@ function BookingSection({
               className="mb-1.5 flex items-center gap-1.5 text-sm font-medium"
             >
               <Calendar className="size-3.5 text-muted-foreground" aria-hidden="true" />
-              Datum
+              {L.booking.form.date[lang]}
               <span className="text-destructive">*</span>
             </Label>
             <Input
@@ -1235,33 +1509,33 @@ function BookingSection({
               // TASK 33: proaktivni status dneva (pred submitom)
               <p className="mt-1 text-xs text-destructive">
                 {selectedAvail.reason === "blackout"
-                  ? "Zaprt dan (ponudnik ne sprejema rezervacij) — izberite drug datum."
-                  : "Izven sezone ponudnika — izberite datum znotraj sezone."}
+                  ? L.booking.avail.blackout[lang]
+                  : L.booking.avail.offSeason[lang]}
               </p>
             ) : selectedAvail &&
               !selectedAvail.past &&
               selectedAvail.remaining === 0 ? (
               <p className="mt-1 text-xs text-destructive">
-                Zaseden dan — kapaciteta dneva je dosežena.
+                {L.booking.avail.soldOut[lang]}
               </p>
             ) : selectedAvail &&
               !selectedAvail.past &&
               selectedAvail.remaining !== null ? (
               <p className="mt-1 text-xs text-muted-foreground">
                 {selectedAvail.remaining <= 5
-                  ? `Še ${selectedAvail.remaining} prostih mest na ta dan.`
-                  : `Prostih mest na ta dan: ${selectedAvail.remaining}.`}{" "}
-                Točen čas obiska dogovorite z izvajalcem po potrditvi.
+                  ? L.booking.avail.fewLeft[lang](selectedAvail.remaining)
+                  : L.booking.avail.spotsLeft[lang](selectedAvail.remaining)}{" "}
+                {L.booking.avail.timeNote[lang]}
               </p>
             ) : availLoading ? (
               <p className="mt-1 text-xs text-muted-foreground">
-                Preverjam razpoložljivost…
+                {L.booking.avail.checking[lang]}
               </p>
             ) : (
               // P4-9: iskrena mikrokopija — čas rezervacije se dogovori
               // neposredno z izvajalcem (obrazec zajema samo datum).
               <p className="mt-1 text-xs text-muted-foreground">
-                Točen čas obiska dogovorite z izvajalcem po potrditvi.
+                {L.booking.avail.timeNote[lang]}
               </p>
             )}
           </div>
@@ -1272,7 +1546,7 @@ function BookingSection({
               className="mb-1.5 flex items-center gap-1.5 text-sm font-medium"
             >
               <Users className="size-3.5 text-muted-foreground" aria-hidden="true" />
-              Število oseb
+              {L.booking.form.groupSize[lang]}
               <span className="text-destructive">*</span>
             </Label>
             <div className="flex items-center gap-2">
@@ -1281,7 +1555,7 @@ function BookingSection({
                 variant="outline"
                 size="icon"
                 className="size-9 shrink-0"
-                aria-label="Zmanjšaj število oseb"
+                aria-label={L.a11y.decreaseGroup[lang]}
                 disabled={sending || !canDecrease}
                 onClick={() => stepGroupSize(-1)}
               >
@@ -1311,7 +1585,7 @@ function BookingSection({
                 variant="outline"
                 size="icon"
                 className="size-9 shrink-0"
-                aria-label="Povečaj število oseb"
+                aria-label={L.a11y.increaseGroup[lang]}
                 disabled={sending || !canIncrease}
                 onClick={() => stepGroupSize(1)}
               >
@@ -1321,7 +1595,7 @@ function BookingSection({
                 id={`${idPrefix}-group-hint`}
                 className="text-xs text-muted-foreground"
               >
-                {minGroup}–{maxGroup} oseb
+                {L.booking.form.groupHint[lang](minGroup, maxGroup)}
               </span>
             </div>
             {errors.groupSize ? (
@@ -1343,14 +1617,14 @@ function BookingSection({
               className="mb-1.5 flex items-center gap-1.5 text-sm font-medium"
             >
               <User className="size-3.5 text-muted-foreground" aria-hidden="true" />
-              Ime in priimek
+              {L.booking.form.name[lang]}
               <span className="text-destructive">*</span>
             </Label>
             <Input
               id={`${idPrefix}-name`}
               type="text"
               autoComplete="name"
-              placeholder="Janez Novak"
+              placeholder={L.booking.form.phName[lang]}
               value={form.name}
               disabled={sending}
               required
@@ -1374,14 +1648,14 @@ function BookingSection({
               className="mb-1.5 flex items-center gap-1.5 text-sm font-medium"
             >
               <Phone className="size-3.5 text-muted-foreground" aria-hidden="true" />
-              Telefon
+              {L.booking.form.phone[lang]}
               <span className="text-destructive">*</span>
             </Label>
             <Input
               id={`${idPrefix}-phone`}
               type="tel"
               autoComplete="tel"
-              placeholder="+386 41 234 567"
+              placeholder={L.booking.form.phPhone[lang]}
               value={form.phone}
               disabled={sending}
               required
@@ -1409,7 +1683,7 @@ function BookingSection({
             className="mb-1.5 flex items-center gap-1.5 text-sm font-medium"
           >
             <Mail className="size-3.5 text-muted-foreground" aria-hidden="true" />
-            E-pošta
+            {L.booking.form.email[lang]}
             <span className="text-destructive">*</span>
           </Label>
           <Input
@@ -1417,7 +1691,7 @@ function BookingSection({
             type="email"
             inputMode="email"
             autoComplete="email"
-            placeholder="ime@primer.si"
+            placeholder={L.booking.form.phEmail[lang]}
             value={form.email}
             disabled={sending}
             required
@@ -1441,12 +1715,12 @@ function BookingSection({
             htmlFor={`${idPrefix}-notes`}
             className="mb-1.5 flex items-center gap-1.5 text-sm font-medium"
           >
-            Opombe (opcijsko)
+            {L.booking.form.notes[lang]}
           </Label>
           <Textarea
             id={`${idPrefix}-notes`}
             rows={3}
-            placeholder="Alergije, želje glede termina, jezik vodenja …"
+            placeholder={L.booking.form.phNotes[lang]}
             value={form.notes}
             disabled={sending}
             onChange={update("notes")}
@@ -1460,7 +1734,7 @@ function BookingSection({
             aria-live="polite"
           >
             <span className="text-muted-foreground">
-              {currentGs} {currentGs === 1 ? "oseba" : "oseb"} ×{" "}
+              {L.booking.form.people[lang](currentGs)} ×{" "}
               {formatPrice(experience.pricePerPerson, experience.currency)}
             </span>
             <span className="font-bold tabular-nums text-foreground">
@@ -1478,31 +1752,30 @@ function BookingSection({
           {sending ? (
             <>
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              Rezerviram…
+              {L.booking.form.sending[lang]}
             </>
           ) : (
             <>
               <Send className="size-4" aria-hidden="true" />
-              Potrdi rezervacijo
+              {L.booking.form.confirm[lang]}
             </>
           )}
         </Button>
 
         {/* Screen-reader status med pošiljanjem */}
         <p className="sr-only" role="status" aria-live="polite">
-          {sending ? "Rezervacija se pošilja, prosimo počakajte." : ""}
+          {sending ? L.booking.form.srSending[lang] : ""}
         </p>
 
         {/* Demo opomba (iskrena — kot v checkout modalu) + zasebnost */}
         <div className="flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 p-2.5 text-[11px] leading-relaxed text-amber-900 dark:border-amber-400/40 dark:bg-amber-950/30 dark:text-amber-100">
           <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
           <span>
-            Demo način: rezervacija se takoj potrdi, plačila se ne zaračuna.
-            Ko dodamo prave Stripe ključe, se bo vklopilo spletno plačilo.
+            {L.booking.form.demo[lang]}
           </span>
         </div>
         <p className="text-center text-[11px] text-muted-foreground">
-          Podatke uporabimo izključno za izvedbo rezervacije.
+          {L.booking.form.privacy[lang]}
         </p>
       </form>
     </section>
@@ -1539,16 +1812,19 @@ function RecommendationsSection({
   // modali se izrisujejo TUDI na EN whitelisti (/destinacija/…/things-to-do
   // prek seo-conversion) → zato next-intl (namespace marketplace).
   const t = useTranslations("marketplace");
+  // F4-B: L-pattern za chrome naslova/oddpisa priporočil (isti slovar L zgoraj)
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
   const visible = items.filter((e) => e.id !== currentId).slice(0, 4);
   const isAI = source === "ai" || source === "cache";
-  const sourceLabel = isAI ? "AI" : "Podobni";
+  const sourceLabel = isAI ? "AI" : L.recs.similar[lang];
 
   if (loading) {
     return (
-      <section aria-label="Morda vam je všeč">
+      <section aria-label={L.recs.title[lang]}>
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <Lightbulb className="size-4 text-primary" aria-hidden="true" />
-          Morda vam je všeč
+          {L.recs.title[lang]}
           <Badge variant="secondary" className="ml-auto gap-1 text-[10px]">
             <Sparkles className="size-2.5" aria-hidden="true" />
             AI
@@ -1575,14 +1851,16 @@ function RecommendationsSection({
   if (error || visible.length === 0) return null;
 
   return (
-    <section aria-label="Morda vam je všeč">
+    <section aria-label={L.recs.title[lang]}>
       <h3 className="flex items-center gap-2 text-sm font-semibold">
         <Lightbulb className="size-4 text-primary" aria-hidden="true" />
-        Morda vam je všeč
+        {L.recs.title[lang]}
         <Badge
           variant={isAI ? "default" : "secondary"}
           className="ml-auto gap-1 text-[10px]"
-          title={isAI ? "AI (GLM) je izbral ta priporočila" : "Podobne izkušnje (fallback)"}
+          title={
+            isAI ? L.recs.aiTitle[lang] : L.recs.similarTitle[lang]
+          }
         >
           {isAI ? <Sparkles className="size-2.5" aria-hidden="true" /> : null}
           {sourceLabel}
@@ -1597,7 +1875,7 @@ function RecommendationsSection({
               type="button"
               onClick={() => onSelect?.(e)}
               className="group flex flex-col overflow-hidden rounded-lg border border-border/60 bg-background text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
-              aria-label={`Odpri ${e.name}`}
+              aria-label={L.a11y.openExperience[lang](e.name)}
             >
               <div className="relative aspect-square w-full overflow-hidden bg-muted">
                 {img ? (

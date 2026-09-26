@@ -53,26 +53,128 @@ const ALL_VALUE = "all";
 
 // TASK 8 / F3-B: oznaka nalaganja v L-pattern (SL/EN — D8-A §13 „Nalagam…"
 // uhodi so trdi predpogoj za F3-E EN razširitev).
+// TASK 8 / F4-D (issue #8 Faza 4 / F3-E): CEL UI krom površine je zdaj v
+// L-pattern (glava, filtri, števec, EmptyState/ErrorState nizi klicatelja,
+// kartica, noga). Meja: PODATkovna plast (ime/opis lokala, specialitete,
+// odpiralni čas, naslov) prihaja iz /api/listings, ki (še) ne podpira
+// parametra `lang` — UI ostaja dvojezičen, vsebina kartic pa sledi jeziku
+// podatkov (dokumentirano v worklogu; API je izven lastništva naloge).
 const L = {
   loadingListings: { sl: "Nalagam lokale …", en: "Loading venues …" },
+  badge: { sl: "B2B imenik", en: "B2B directory" },
+  title: { sl: "Lokali v Sloveniji", en: "Venues in Slovenia" },
+  subtitle: {
+    sl: "Hotelir, restavracije in aktivnosti — neposredno od lastnikov",
+    en: "Hotels, restaurants and activities — directly from the owners",
+  },
+  filters: { sl: "Filtri", en: "Filters" },
+  clearFilters: { sl: "Počisti filtre", en: "Clear filters" },
+  allCategories: { sl: "Vse kategorije", en: "All categories" },
+  filterByCategory: {
+    sl: "Filtriraj po kategoriji",
+    en: "Filter by category",
+  },
+  allDestinations: { sl: "Vse destinacije", en: "All destinations" },
+  filterByDestination: {
+    sl: "Filtriraj po destinaciji",
+    en: "Filter by destination",
+  },
+  sortBy: { sl: "Razvrsti po", en: "Sort by" },
+  sortAria: { sl: "Razvrsti lokale", en: "Sort venues" },
+  // Števec: beseda + oblikovana številka + samostalnik (ista vizualna
+  // struktura kot prej — SL dvojina/množina, EN preprosta množina).
+  showing: { sl: "Prikazujem", en: "Showing" },
+  venueOne: { sl: "lokal", en: "venue" },
+  venueFew: { sl: "lokale", en: "venues" },
+  venueMany: { sl: "lokalov", en: "venues" },
+  error: {
+    sl: "Ne morem naložiti lokalov. Poskusite kasneje.",
+    en: "Cannot load venues. Please try again later.",
+  },
+  emptyTitle: {
+    sl: "Ni lokalov za izbrane filtre.",
+    en: "No venues match your filters.",
+  },
+  emptyDescription: {
+    sl: "Poskusite spremeniti filtre ali jih počistiti.",
+    en: "Try changing or clearing the filters.",
+  },
+  footerNote: {
+    sl: "Želite biti tukaj? Pridruži se in izpostavite svoj lokal.",
+    en: "Want to be listed here? Join us and feature your venue.",
+  },
+  joinCta: { sl: "Pridruži se", en: "Join us" },
+  details: { sl: "Podrobnosti", en: "Details" },
+  websiteSr: { sl: "Spletna stran", en: "Website" },
+  websiteAria: {
+    sl: "Spletna stran",
+    en: "Website of",
+  },
+  sort: {
+    featured: { sl: "Izpostavljeni", en: "Featured" },
+    rating: { sl: "Najvišja ocena", en: "Top rated" },
+    newest: { sl: "Najnovejši", en: "Newest" },
+  },
 } as const;
 
-// Možnosti za filter kategorije
-const CATEGORY_OPTIONS: { value: ListingCategory; label: string }[] = (
-  Object.keys(CATEGORY_LABELS) as ListingCategory[]
-).map((c) => ({ value: c, label: CATEGORY_LABELS[c] }));
+// TASK 8 / F4-D: EN oznake kategorij lokalov (zrcali CATEGORY_LABELS iz
+// listings-types.ts — skupna lib ostaja SL lastnina lastniškega portala,
+// prevod živi ob javni površini, enak vzorec kot EVENT_CATEGORY_LABELS_EN).
+const CATEGORY_LABELS_EN: Record<ListingCategory, string> = {
+  hotel: "Hotel",
+  restaurant: "Restaurant",
+  bar: "Bar",
+  activity: "Activity",
+  shop: "Shop",
+  transport: "Transport",
+  other: "Other",
+};
 
-// Možnosti za filter destinacije
+// F4-E §38 iskrena meja — NAMERNO IZVEN L slovarja (EN-only vrstica; SL
+// uporabnik je nikoli ne vidi). Imena lokalov so lastna imena (jezikovno
+// nevtralna), specialitete/opisi pa so PODATEK lastnikov v SL — okvir,
+// filtri in urniki so EN. Isti kanon kot marketplace DATA_LANGUAGE_NOTE_EN.
+const DATA_LANGUAGE_NOTE_EN =
+  "Venue names are proper names; descriptions come from the owners in Slovenian — filters and opening hours work in English.";
+
+// TASK 8 / F4-D: EN oznake paketov (zrcali PLAN_LABELS — "Premium"/
+// "Enterprise" sta že angleški, razlikuje se samo "Osnovni"/"Basic").
+const PLAN_LABELS_EN: Record<ListingPlan, string> = {
+  free: "Basic",
+  premium: "Premium",
+  enterprise: "Enterprise",
+};
+
+/** Oznaka kategorije v izbranem jeziku (F4-D: čista funkcija — testna). */
+export function categoryLabel(
+  category: ListingCategory,
+  lang: "sl" | "en"
+): string {
+  return lang === "en" ? CATEGORY_LABELS_EN[category] : CATEGORY_LABELS[category];
+}
+
+// Možnosti za filter kategorije (jezikovno odvisne — F4-D)
+const CATEGORY_OPTIONS = (
+  lang: "sl" | "en"
+): { value: ListingCategory; label: string }[] =>
+  (Object.keys(CATEGORY_LABELS) as ListingCategory[]).map((c) => ({
+    value: c,
+    label: categoryLabel(c, lang),
+  }));
+
+// Možnosti za filter destinacije (imena destinacij so lastna imena —
+// jezikovno nevtralna)
 const DESTINATION_OPTIONS = DESTINATIONS.map((d) => ({
   value: d.id,
   label: d.name,
 }));
 
-// Možnosti za sortiranje
-const SORT_OPTIONS: { value: string; label: string }[] = [
-  { value: "featured", label: "Izpostavljeni" },
-  { value: "rating", label: "Najvišja ocena" },
-  { value: "newest", label: "Najnovejši" },
+// Možnosti za sortiranje (vrednosti ostajajo enake — samo oznake se
+// prevajajo; logika sortiranja v API-ju je nedotaknjena)
+const SORT_OPTIONS = (lang: "sl" | "en"): { value: string; label: string }[] => [
+  { value: "featured", label: L.sort.featured[lang] },
+  { value: "rating", label: L.sort.rating[lang] },
+  { value: "newest", label: L.sort.newest[lang] },
 ];
 
 type ListingsResponse = {
@@ -87,6 +189,7 @@ type ListingsResponse = {
  */
 export function ListingsSection() {
   // TASK 8 / F3-B: jezik za L-pattern oznake nalaganja (SL privzeto).
+  // TASK 8 / F4-D: isti `lang` poganja ves UI krom površine.
   const locale = useLocale();
   const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
   const [category, setCategory] = useState<string>(ALL_VALUE);
@@ -119,13 +222,15 @@ export function ListingsSection() {
       setTotal(data.total ?? 0);
     } catch (err) {
       console.error("[listings] fetch napaka:", err);
-      setError("Ne morem naložiti lokalov. Poskusite kasneje.");
+      // F4-D: sporočilo napake v L-pattern (edini uporabniško vidni niz —
+      // throw zgoraj je interni, konča samo v konzoli).
+      setError(L.error[lang]);
       setListings([]);
       setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [category, destinationId, sort]);
+  }, [category, destinationId, sort, lang]);
 
   useEffect(() => {
     void fetchListings();
@@ -156,17 +261,23 @@ export function ListingsSection() {
             className="mb-3 gap-1.5 bg-primary/10 text-primary"
           >
             <Store className="size-3.5" aria-hidden="true" />
-            B2B imenik
+            {L.badge[lang]}
           </Badge>
           <h2
             id="lokali-title"
             className="text-3xl font-bold tracking-tight sm:text-4xl"
           >
-            Lokali v Sloveniji
+            {L.title[lang]}
           </h2>
           <p className="mt-3 text-base text-muted-foreground">
-            Hotelir, restavracije in aktivnosti — neposredno od lastnikov
+            {L.subtitle[lang]}
           </p>
+          {/* F4-E: tiha resnična vrstica — SAMO na EN */}
+          {lang === "en" && (
+            <p className="mt-3 text-xs text-muted-foreground/80">
+              {DATA_LANGUAGE_NOTE_EN}
+            </p>
+          )}
         </div>
 
         {/* Filter vrstica */}
@@ -174,7 +285,7 @@ export function ListingsSection() {
           <div className="mb-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Filter className="size-4 text-primary" aria-hidden="true" />
-              Filtri
+              {L.filters[lang]}
             </div>
             {hasActiveFilters ? (
               <Button
@@ -185,7 +296,7 @@ export function ListingsSection() {
                 className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
               >
                 <X className="size-3.5" aria-hidden="true" />
-                Počisti filtre
+                {L.clearFilters[lang]}
               </Button>
             ) : null}
           </div>
@@ -194,23 +305,23 @@ export function ListingsSection() {
             <FilterSelect
               value={category}
               onChange={setCategory}
-              placeholder="Vse kategorije"
-              ariaLabel="Filtriraj po kategoriji"
-              options={CATEGORY_OPTIONS}
+              placeholder={L.allCategories[lang]}
+              ariaLabel={L.filterByCategory[lang]}
+              options={CATEGORY_OPTIONS(lang)}
             />
             <FilterSelect
               value={destinationId}
               onChange={setDestinationId}
-              placeholder="Vse destinacije"
-              ariaLabel="Filtriraj po destinaciji"
+              placeholder={L.allDestinations[lang]}
+              ariaLabel={L.filterByDestination[lang]}
               options={DESTINATION_OPTIONS}
             />
             <FilterSelect
               value={sort}
               onChange={setSort}
-              placeholder="Razvrsti po"
-              ariaLabel="Razvrsti lokale"
-              options={SORT_OPTIONS}
+              placeholder={L.sortBy[lang]}
+              ariaLabel={L.sortAria[lang]}
+              options={SORT_OPTIONS(lang)}
               showAllOption={false}
             />
           </div>
@@ -228,9 +339,13 @@ export function ListingsSection() {
         ) : (
           <p className="mt-5 text-sm text-muted-foreground">
             <>
-              Prikazujem{" "}
+              {L.showing[lang]}{" "}
               <span className="font-semibold text-foreground">{total}</span>{" "}
-              {total === 1 ? "lokal" : total < 5 ? "lokale" : "lokalov"}
+              {total === 1
+                ? L.venueOne[lang]
+                : total < 5
+                  ? L.venueFew[lang]
+                  : L.venueMany[lang]}
             </>
           </p>
         )}
@@ -255,11 +370,11 @@ export function ListingsSection() {
               (Počisti filtre ob aktivnih filtrih). */
           <EmptyState
             icon={Store}
-            title="Ni lokalov za izbrane filtre."
-            description="Poskusite spremeniti filtre ali jih počistiti."
+            title={L.emptyTitle[lang]}
+            description={L.emptyDescription[lang]}
             action={
               hasActiveFilters
-                ? { label: "Počisti filtre", onClick: clearFilters, icon: X }
+                ? { label: L.clearFilters[lang], onClick: clearFilters, icon: X }
                 : undefined
             }
             className="mt-6 py-16"
@@ -270,6 +385,7 @@ export function ListingsSection() {
               <ListingCard
                 key={l.id}
                 listing={l}
+                lang={lang}
                 onOpen={() => setSelected(l)}
               />
             ))}
@@ -282,14 +398,12 @@ export function ListingsSection() {
             className="size-5 text-primary"
             aria-hidden="true"
           />
-          <p className="text-sm text-foreground/90">
-            Želite biti tukaj? Pridruži se in izpostavite svoj lokal.
-          </p>
+          <p className="text-sm text-foreground/90">{L.footerNote[lang]}</p>
           <a
             href="/za-ponudnike#pridruzi-se"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
           >
-            Pridruži se
+            {L.joinCta[lang]}
             <ArrowRight className="size-3.5" aria-hidden="true" />
           </a>
         </div>
@@ -348,12 +462,15 @@ function FilterSelect({
  */
 function ListingCard({
   listing,
+  lang,
   onOpen,
 }: {
   listing: Listing;
+  /** F4-D: jezik UI kroma kartice (kategorija, CTA, aria). */
+  lang: "sl" | "en";
   onOpen: () => void;
 }) {
-  const planStyles = getPlanCardStyles(listing.plan);
+  const planStyles = getPlanCardStyles(listing.plan, lang);
   const image = listing.images[0];
   const location = [listing.destinationName, listing.address]
     .filter(Boolean)
@@ -386,7 +503,7 @@ function ListingCard({
         {/* Badge kategorije (top-left) — skrčen na ozki sliki (~175px), da se ne prekriva s partner badgeom */}
         <Badge className="absolute left-3 top-3 max-w-[45%] bg-background/90 text-[10px] text-foreground backdrop-blur-sm sm:max-w-none sm:text-xs">
           <span aria-hidden="true">{CATEGORY_ICONS[listing.category]}</span>
-          <span className="truncate">{CATEGORY_LABELS[listing.category]}</span>
+          <span className="truncate">{categoryLabel(listing.category, lang)}</span>
         </Badge>
 
         {/* Partner badge (top-right) — samo ena glavna oznaka */}
@@ -478,7 +595,7 @@ function ListingCard({
             className="flex-1 justify-center"
             onClick={onOpen}
           >
-            Podrobnosti
+            {L.details[lang]}
           </Button>
           {listing.website ? (
             <Button
@@ -492,10 +609,10 @@ function ListingCard({
                 href={listing.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={`Spletna stran ${listing.name}`}
+                aria-label={`${L.websiteAria[lang]} ${listing.name}`}
               >
                 <Globe className="size-4" aria-hidden="true" />
-                <span className="sr-only">Spletna stran</span>
+                <span className="sr-only">{L.websiteSr[lang]}</span>
                 <ExternalLink className="size-3" aria-hidden="true" />
               </a>
             </Button>
@@ -514,8 +631,8 @@ function ListingCard({
             title: listing.name,
             subtitle:
               listing.reviewCount > 0
-                ? `${CATEGORY_LABELS[listing.category]} · ★ ${listing.rating.toFixed(1)}`
-                : CATEGORY_LABELS[listing.category],
+                ? `${categoryLabel(listing.category, lang)} · ★ ${listing.rating.toFixed(1)}`
+                : categoryLabel(listing.category, lang),
             href: "/lokali",
             image,
             source: "lokali",
@@ -526,17 +643,21 @@ function ListingCard({
   );
 }
 
-function getPlanCardStyles(plan: ListingPlan): {
+function getPlanCardStyles(plan: ListingPlan, lang: "sl" | "en"): {
   card: string;
   badge: React.ReactNode;
 } {
+  // F4-D: oznaka paketa v jeziku površine ("Osnovni"/"Basic") — vrednosti
+  // paketov (free/premium/enterprise) so identifikatorji in se NE prevajajo.
+  const planText =
+    lang === "en" ? PLAN_LABELS_EN[plan] : PLAN_LABELS[plan];
   if (plan === "enterprise") {
     return {
       card: "border-2 border-primary shadow-lg scale-[1.02]",
       badge: (
         <Badge className="absolute right-3 top-3 bg-primary text-primary-foreground shadow-sm">
           <Sparkles className="size-3" aria-hidden="true" />
-          {PLAN_LABELS[plan]}
+          {planText}
         </Badge>
       ),
     };
@@ -546,7 +667,7 @@ function getPlanCardStyles(plan: ListingPlan): {
       card: "border-primary",
       badge: (
         <Badge className="absolute right-3 top-3 bg-amber-400 text-amber-950 shadow-sm">
-          ★ {PLAN_LABELS[plan]}
+          ★ {planText}
         </Badge>
       ),
     };

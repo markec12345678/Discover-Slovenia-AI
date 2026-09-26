@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 import { signOut, useSession } from "next-auth/react";
 import {
   Loader2,
@@ -57,6 +58,14 @@ import { syncMyTripToServer } from "@/lib/my-trip-sync";
 // - "Shranjena potovanja": kartice itinererjev (ime, dnevi, datum, ogledi)
 // - "Moje AI konzultacije": SAMO s potrjeno e-pošto (zasebni dostavni kanal)
 // ============================================================================
+// TASK 8 / F4-C (issue #8 — faza 4 "EN razširitev"): CELoten chrome strani
+// je L-pattern dvojezičen (isti vzorec kot journey-planner / states družina
+// / my-trip-view). SL ostaja privzeti jezik površine; EN pokrije naslove,
+// account vrstico, gostov pogled, verifikacijski banner, kartice, števce,
+// toaste in prazna stanja. Datotečni nizi (imena potovanj, vprašanja
+// konzultacij, sporočila API-jev) prihajajo iz podatkov in ostanejo takšni,
+// kot so jih zapisali uporabniki/strežnik.
+// ============================================================================
 
 // === Odgovor GET /api/user/trips ===
 interface TripItem {
@@ -82,9 +91,11 @@ interface TripsResponse {
   user: { name: string | null; email: string };
 }
 
-function formatDate(iso: string): string {
+// F4-C: jezikovno zavesten format datuma (SL izhod nespremenjen — "sl-SI";
+// EN dobi "en-GB" danev-mesec-leto, ista zgradba kot prej).
+function formatDate(iso: string, lang: "sl" | "en"): string {
   try {
-    return new Intl.DateTimeFormat("sl-SI", {
+    return new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "sl-SI", {
       day: "numeric",
       month: "long",
       year: "numeric",
@@ -94,10 +105,139 @@ function formatDate(iso: string): string {
   }
 }
 
+// TASK 8 / F4-C: L-pattern slovar celotnega chroma strani (SL privzet).
+// Funkcijski listi pokrijejo slovensko množinsko logiko (1 načrt /
+// 2–4 načrti / 5+ načrtov — ISTA pogojna kot prej, nič se ne spremeni)
+// in angleško (1 plan / n plans).
+const L = {
+  title: { sl: "Moja potovanja", en: "My trips" },
+  open: { sl: "Odpri", en: "Open" },
+  errorTitle: { sl: "Napaka", en: "Error" },
+  errors: {
+    loadFailed: { sl: "Nalaganje ni uspelo.", en: "Loading failed." },
+    sendFailed: { sl: "Pošiljanje ni uspelo.", en: "Sending failed." },
+  },
+  toast: {
+    linkSent: { sl: "Povezava poslana", en: "Link sent" },
+    checkInbox: {
+      sl: "Preverite vaš e-poštni predal (tudi mapo neželena pošta).",
+      en: "Check your inbox (including the spam folder).",
+    },
+    tryAgain: { sl: "Poskusite znova.", en: "Please try again." },
+  },
+  guest: {
+    subtitleA: { sl: "Tvoji shranjeni načrti na", en: "Your saved plans live on" },
+    subtitleStrong: { sl: "tej napravi", en: "this device" },
+    subtitleB: { sl: "— brez računa.", en: "— no account needed." },
+    signIn: { sl: "Prijavi se", en: "Sign in" },
+    alertTitle: {
+      sl: "Načrti so shranjeni na tej napravi",
+      en: "Your plans are stored on this device",
+    },
+    alertText: {
+      sl: "Deljive povezave so javne in delujejo povsod. Z računom pa se načrti ob prijavi samodejno prenesejo v tvoj profil — videti jih boš na vsaki napravi.",
+      en: "Share links are public and work everywhere. With an account your plans sync into your profile at sign-in — you'll see them on every device.",
+    },
+    createAccount: { sl: "Ustvari račun", en: "Create an account" },
+    onThisDevice: { sl: "na tej napravi", en: "on this device" },
+  },
+  user: {
+    greeting: { sl: "Pozdravljeni,", en: "Welcome," },
+    signOut: { sl: "Odjavi se", en: "Sign out" },
+    account: { sl: "Račun", en: "Account" },
+  },
+  verify: {
+    title: { sl: "Potrdite svojo e-pošto", en: "Confirm your email" },
+    textA: {
+      sl: "Potrdite svojo e-pošto, da vidite zgodovino konzultacij — na",
+      en: "Confirm your email to see your consultation history — we've sent a link to",
+    },
+    textB: { sl: " ste prejeli povezavo.", en: "." },
+    resend: { sl: "Pošlji povezavo znova", en: "Send the link again" },
+  },
+  trips: {
+    heading: { sl: "Shranjena potovanja", en: "Saved trips" },
+    count: {
+      sl: (n: number) =>
+        n === 1 ? `${n} načrt` : n < 5 ? `${n} načrti` : `${n} načrtov`,
+      en: (n: number) => (n === 1 ? `${n} plan` : `${n} plans`),
+    },
+    days: {
+      sl: (n: number) =>
+        n === 1 ? `${n} dan` : n < 5 ? `${n} dnevi` : `${n} dni`,
+      en: (n: number) => (n === 1 ? `${n} day` : `${n} days`),
+    },
+    views: {
+      sl: (n: number) =>
+        n === 1 ? `${n} ogled` : n < 5 ? `${n} ogledi` : `${n} ogledov`,
+      en: (n: number) => (n === 1 ? `${n} view` : `${n} views`),
+    },
+    fallbackName: {
+      sl: (d: string) => `Potovanje ${d}`,
+      en: (d: string) => `Trip from ${d}`,
+    },
+    saved: {
+      sl: (d: string) => `Shranjeno ${d}`,
+      en: (d: string) => `Saved ${d}`,
+    },
+    emptyAction: { sl: "Načrtuj potovanje", en: "Plan a trip" },
+    emptyGuestTitle: {
+      sl: "Nimaš še shranjenih potovanj",
+      en: "No saved trips yet",
+    },
+    emptyGuestDesc: {
+      sl: "Načrtuj potovanje z AI načrtovalcem in ga shrani — pojavi se tukaj (na tej napravi).",
+      en: "Plan a trip with the AI planner and save it — it shows up here (on this device).",
+    },
+    emptyTitle: {
+      sl: "Nimate še shranjenih potovanj",
+      en: "No saved trips yet",
+    },
+    emptyDesc: {
+      sl: "Načrtujte potovanje z AI načrtovalcem in ga shranite — pojavi se tukaj.",
+      en: "Plan a trip with the AI planner and save it — it shows up here.",
+    },
+  },
+  consult: {
+    heading: { sl: "Moje AI konzultacije", en: "My AI consultations" },
+    count: {
+      sl: (n: number) =>
+        n === 1
+          ? `${n} konzultacija`
+          : n < 5
+          ? `${n} konzultacije`
+          : `${n} konzultacij`,
+      en: (n: number) => (n === 1 ? `${n} consultation` : `${n} consultations`),
+    },
+    answered: { sl: "Odgovorjen", en: "Answered" },
+    pending: { sl: "V pripravi", en: "In progress" },
+    answeredOn: {
+      sl: (d: string) => `Odgovorjen ${d}`,
+      en: (d: string) => `Answered ${d}`,
+    },
+    answerByEmail: {
+      sl: "Odgovor prispe na vašo e-pošto",
+      en: "The answer will arrive by email",
+    },
+    emptyTitle: {
+      sl: "Niste še oddali konzultacije",
+      en: "No consultations yet",
+    },
+    emptyDesc: {
+      sl: "Poiščite brezplačen nasvet lokalca — vpišite vprašanje in AI ekspert vam bo odgovoril po e-pošti.",
+      en: "Get free local advice — ask a question and the AI expert will answer by email.",
+    },
+    emptyAction: { sl: "Brezplačna konzultacija", en: "Free consultation" },
+  },
+} as const;
+
 export function MojaPotovanjaView() {
   const router = useRouter();
   const { toast } = useToast();
   const { data: session, status } = useSession();
+  // F4-C: jezik chroma (SL privzet — EN le, kadar locale zahteva; P4-8).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
 
   const [data, setData] = useState<TripsResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -146,7 +286,7 @@ export function MojaPotovanjaView() {
       .then(async (r) => {
         if (!r.ok) {
           const d = await r.json().catch(() => ({}));
-          throw new Error(d?.error ?? "Nalaganje ni uspelo.");
+          throw new Error(d?.error ?? L.errors.loadFailed[lang]);
         }
         return r.json() as Promise<TripsResponse>;
       })
@@ -156,7 +296,7 @@ export function MojaPotovanjaView() {
       .catch((e) => {
         if (!cancelled) {
           setLoadError(
-            e instanceof Error ? e.message : "Nalaganje ni uspelo."
+            e instanceof Error ? e.message : L.errors.loadFailed[lang]
           );
         }
       });
@@ -164,7 +304,7 @@ export function MojaPotovanjaView() {
     return () => {
       cancelled = true;
     };
-  }, [isUserSession]);
+  }, [isUserSession, lang]);
 
   // Ponovno pošiljanje verifikacijske povezave
   const resendVerification = async () => {
@@ -176,18 +316,18 @@ export function MojaPotovanjaView() {
         body: JSON.stringify({ action: "request" }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d?.error ?? "Pošiljanje ni uspelo.");
+      if (!res.ok) throw new Error(d?.error ?? L.errors.sendFailed[lang]);
       toast({
-        title: "Povezava poslana",
+        title: L.toast.linkSent[lang],
         description:
           d?.message ??
-          "Preverite vaš e-poštni predal (tudi mapo neželena pošta).",
+          L.toast.checkInbox[lang],
       });
     } catch (err) {
       toast({
         variant: "destructive",
-        title: "Napaka",
-        description: err instanceof Error ? err.message : "Poskusite znova.",
+        title: L.errorTitle[lang],
+        description: err instanceof Error ? err.message : L.toast.tryAgain[lang],
       });
     } finally {
       setResending(false);
@@ -217,32 +357,32 @@ export function MojaPotovanjaView() {
     return (
       <main className="flex-1 flex flex-col bg-muted/30">
         <section className="flex-1 mx-auto w-full max-w-5xl px-4 py-8 sm:py-10">
-          <h1 className="text-2xl font-bold sm:text-3xl">Moja potovanja</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">{L.title[lang]}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Tvoji shranjeni načrti na <strong>tej napravi</strong> — brez računa.
+            {L.guest.subtitleA[lang]}{" "}
+            <strong>{L.guest.subtitleStrong[lang]}</strong>{" "}
+            {L.guest.subtitleB[lang]}
           </p>
 
           {/* TASK 8 / D8-E: account vrstica — gumb "Prijavi se" preložen iz
               odstranjenega lastnega headerja (logotip → Navigation). */}
           <div className="mt-3">
             <Button asChild size="sm" className="gap-1.5 h-10">
-              <Link href="/prijava">Prijavi se</Link>
+              <Link href="/prijava">{L.guest.signIn[lang]}</Link>
             </Button>
           </div>
 
           {/* Iskrena razlaga lokalnega shranjevanja + ponudba sinhronizacije */}
           <Alert className="mt-6 border-primary/30 bg-primary/5">
             <CloudUpload className="size-4 text-primary" aria-hidden="true" />
-            <AlertTitle>Načrti so shranjeni na tej napravi</AlertTitle>
+            <AlertTitle>{L.guest.alertTitle[lang]}</AlertTitle>
             <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <span className="text-sm">
-                Deljive povezave so javne in delujejo povsod. Z računom pa se
-                načrti ob prijavi samodejeno prenesejo v tvoj profil — videti
-                jih boš na vsaki napravi.
+                {L.guest.alertText[lang]}
               </span>
               <Button asChild size="sm" className="gap-1.5 shrink-0">
                 <Link href="/prijava">
-                  Ustvari račun
+                  {L.guest.createAccount[lang]}
                   <ArrowRight className="size-3.5" aria-hidden="true" />
                 </Link>
               </Button>
@@ -260,11 +400,10 @@ export function MojaPotovanjaView() {
                 className="flex items-center gap-2 text-lg font-semibold"
               >
                 <HardDrive className="size-5 text-primary" aria-hidden="true" />
-                Shranjena potovanja
+                {L.trips.heading[lang]}
               </h2>
               <Badge variant="secondary">
-                {trips.length}
-                {trips.length === 1 ? " načrt" : trips.length < 5 ? " načrti" : " načrtov"}
+                {L.trips.count[lang](trips.length)}
               </Badge>
             </div>
 
@@ -276,9 +415,9 @@ export function MojaPotovanjaView() {
             ) : trips.length === 0 ? (
               <EmptyState
                 icon={Map}
-                title="Nimaš še shranjenih potovanj"
-                description="Načrtuj potovanje z AI načrtovalcem in ga shrani — pojavi se tukaj (na tej napravi)."
-                action={{ label: "Načrtuj potovanje", href: "/nacrtuj" }}
+                title={L.trips.emptyGuestTitle[lang]}
+                description={L.trips.emptyGuestDesc[lang]}
+                action={{ label: L.trips.emptyAction[lang], href: "/nacrtuj" }}
                 className="mt-4"
               />
             ) : (
@@ -288,22 +427,25 @@ export function MojaPotovanjaView() {
                     <Card className="h-full transition-shadow hover:shadow-md">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-base line-clamp-1">
-                          {trip.name ?? `Potovanje ${formatDate(trip.savedAt)}`}
+                          {trip.name ??
+                            L.trips.fallbackName[lang](
+                              formatDate(trip.savedAt, lang)
+                            )}
                         </CardTitle>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span className="inline-flex items-center gap-1">
                             <HardDrive className="size-3.5" aria-hidden="true" />
-                            na tej napravi
+                            {L.guest.onThisDevice[lang]}
                           </span>
                         </div>
                       </CardHeader>
                       <CardContent className="flex items-center justify-between gap-3 pt-0">
                         <span className="text-xs text-muted-foreground">
-                          Shranjeno {formatDate(trip.savedAt)}
+                          {L.trips.saved[lang](formatDate(trip.savedAt, lang))}
                         </span>
                         <Button asChild size="sm" className="gap-1.5 shrink-0">
                           <Link href={`/pot/${trip.shareId}`}>
-                            Odpri
+                            {L.open[lang]}
                             <ArrowRight className="size-3.5" aria-hidden="true" />
                           </Link>
                         </Button>
@@ -327,10 +469,10 @@ export function MojaPotovanjaView() {
       {/* Vsebina */}
       <section className="flex-1 mx-auto w-full max-w-5xl px-4 py-8 sm:py-10">
         <h1 className="text-2xl font-bold sm:text-3xl">
-          Moja potovanja
+          {L.title[lang]}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Pozdravljeni, <strong>{userName}</strong>!
+          {L.user.greeting[lang]} <strong>{userName}</strong>!
         </p>
 
         {/* TASK 8 / D8-E: account vrstica — "Odjavi se" + "Račun" preložena
@@ -344,13 +486,13 @@ export function MojaPotovanjaView() {
             onClick={() => void signOut({ callbackUrl: "/" })}
           >
             <LogOut className="size-4" aria-hidden="true" />
-            Odjavi se
+            {L.user.signOut[lang]}
           </Button>
           <Link
             href="/prijava"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            Račun
+            {L.user.account[lang]}
           </Link>
         </div>
 
@@ -358,11 +500,12 @@ export function MojaPotovanjaView() {
         {data && !emailVerified && (
           <Alert className="mt-6 border-amber-300/60 bg-amber-50 dark:bg-amber-950/20">
             <Mail className="size-4 text-amber-600" aria-hidden="true" />
-            <AlertTitle>Potrdite svojo e-pošto</AlertTitle>
+            <AlertTitle>{L.verify.title[lang]}</AlertTitle>
             <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <span className="text-sm">
-                Potrdite svojo e-pošto, da vidite zgodovino konzultacij — na{" "}
-                <strong>{data.user.email}</strong> ste prejeli povezavo.
+                {L.verify.textA[lang]}{" "}
+                <strong>{data.user.email}</strong>
+                {L.verify.textB[lang]}
               </span>
               <Button
                 size="sm"
@@ -375,7 +518,7 @@ export function MojaPotovanjaView() {
                 ) : (
                   <Send className="size-3.5" aria-hidden="true" />
                 )}
-                Pošlji povezavo znova
+                {L.verify.resend[lang]}
               </Button>
             </AlertDescription>
           </Alert>
@@ -385,7 +528,7 @@ export function MojaPotovanjaView() {
             istim naslovom „Napaka" in istim sporočilom (brez ponovitve —
             enako vedenje kot prej, samo enotna slovnica). */}
         {loadError && (
-          <ErrorState message={loadError} title="Napaka" className="mt-6" />
+          <ErrorState message={loadError} title={L.errorTitle[lang]} className="mt-6" />
         )}
 
         {/* Skeleton nalaganja — TASK 8 / F3-B: LoadingState (rows=2),
@@ -407,20 +550,19 @@ export function MojaPotovanjaView() {
                   className="flex items-center gap-2 text-lg font-semibold"
                 >
                   <Map className="size-5 text-primary" aria-hidden="true" />
-                  Shranjena potovanja
+                  {L.trips.heading[lang]}
                 </h2>
                 <Badge variant="secondary">
-                  {data.trips.length}
-                  {data.trips.length === 1 ? " načrt" : data.trips.length < 5 ? " načrti" : " načrtov"}
+                  {L.trips.count[lang](data.trips.length)}
                 </Badge>
               </div>
 
               {data.trips.length === 0 ? (
                 <EmptyState
                   icon={Map}
-                  title="Nimate še shranjenih potovanj"
-                  description="Načrtujte potovanje z AI načrtovalcem in ga shranite — pojavi se tukaj."
-                  action={{ label: "Načrtuj potovanje", href: "/nacrtuj" }}
+                  title={L.trips.emptyTitle[lang]}
+                  description={L.trips.emptyDesc[lang]}
+                  action={{ label: L.trips.emptyAction[lang], href: "/nacrtuj" }}
                   className="mt-4"
                 />
               ) : (
@@ -430,32 +572,29 @@ export function MojaPotovanjaView() {
                       <Card className="h-full transition-shadow hover:shadow-md">
                         <CardHeader className="pb-2">
                           <CardTitle className="text-base line-clamp-1">
-                            {trip.name ?? `Potovanje ${formatDate(trip.createdAt)}`}
+                            {trip.name ??
+                              L.trips.fallbackName[lang](
+                                formatDate(trip.createdAt, lang)
+                              )}
                           </CardTitle>
                           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                             <span className="inline-flex items-center gap-1">
                               <CalendarDays className="size-3.5" aria-hidden="true" />
-                              {trip.dayCount}
-                              {trip.dayCount === 1
-                                ? " dan"
-                                : trip.dayCount < 5
-                                ? " dnevi"
-                                : " dni"}
+                              {L.trips.days[lang](trip.dayCount)}
                             </span>
                             <span className="inline-flex items-center gap-1">
                               <Eye className="size-3.5" aria-hidden="true" />
-                              {trip.views}
-                              {trip.views === 1 ? " ogled" : trip.views < 5 ? " ogledi" : " ogledov"}
+                              {L.trips.views[lang](trip.views)}
                             </span>
                           </div>
                         </CardHeader>
                         <CardContent className="flex items-center justify-between gap-3 pt-0">
                           <span className="text-xs text-muted-foreground">
-                            Shranjeno {formatDate(trip.createdAt)}
+                            {L.trips.saved[lang](formatDate(trip.createdAt, lang))}
                           </span>
                           <Button asChild size="sm" className="gap-1.5 shrink-0">
                             <Link href={`/pot/${trip.shareId}`}>
-                              Odpri
+                              {L.open[lang]}
                               <ArrowRight className="size-3.5" aria-hidden="true" />
                             </Link>
                           </Button>
@@ -476,24 +615,19 @@ export function MojaPotovanjaView() {
                     className="flex items-center gap-2 text-lg font-semibold"
                   >
                     <MessageSquareText className="size-5 text-primary" aria-hidden="true" />
-                    Moje AI konzultacije
+                    {L.consult.heading[lang]}
                   </h2>
                   <Badge variant="secondary">
-                    {data.consultations.length}
-                    {data.consultations.length === 1
-                      ? " konzultacija"
-                      : data.consultations.length < 5
-                      ? " konzultacije"
-                      : " konzultacij"}
+                    {L.consult.count[lang](data.consultations.length)}
                   </Badge>
                 </div>
 
                 {data.consultations.length === 0 ? (
                   <EmptyState
                     icon={Sparkles}
-                    title="Niste še oddali konzultacije"
-                    description="Poiščite brezplačen nasvet lokalca — vpišite vprašanje in AI ekspert vam bo odgovoril po e-pošti."
-                    action={{ label: "Brezplačna konzultacija", href: "/#vprasi-lokalca" }}
+                    title={L.consult.emptyTitle[lang]}
+                    description={L.consult.emptyDesc[lang]}
+                    action={{ label: L.consult.emptyAction[lang], href: "/#vprasi-lokalca" }}
                     className="mt-4"
                   />
                 ) : (
@@ -506,16 +640,16 @@ export function MojaPotovanjaView() {
                               {c.status === "delivered" ? (
                                 <Badge className="gap-1 border-emerald-300/60 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800">
                                   <CheckCircle2 className="size-3" aria-hidden="true" />
-                                  Odgovorjen
+                                  {L.consult.answered[lang]}
                                 </Badge>
                               ) : (
                                 <Badge variant="outline" className="gap-1 text-amber-700 dark:text-amber-400">
                                   <Clock className="size-3" aria-hidden="true" />
-                                  V pripravi
+                                  {L.consult.pending[lang]}
                                 </Badge>
                               )}
                               <span className="text-xs text-muted-foreground">
-                                {formatDate(c.createdAt)}
+                                {formatDate(c.createdAt, lang)}
                               </span>
                             </div>
                           </CardHeader>
@@ -527,12 +661,14 @@ export function MojaPotovanjaView() {
                             <div className="mt-3 flex items-center justify-between gap-3">
                               <span className="text-xs text-muted-foreground">
                                 {c.status === "delivered" && c.deliveredAt
-                                  ? `Odgovorjen ${formatDate(c.deliveredAt)}`
-                                  : "Odgovor prispe na vašo e-pošto"}
+                                  ? L.consult.answeredOn[lang](
+                                      formatDate(c.deliveredAt, lang)
+                                    )
+                                  : L.consult.answerByEmail[lang]}
                               </span>
                               <Button asChild size="sm" className="gap-1.5 shrink-0">
                                 <Link href={`/konzultacija/${c.token}`}>
-                                  Odpri
+                                  {L.open[lang]}
                                   <ArrowRight className="size-3.5" aria-hidden="true" />
                                 </Link>
                               </Button>
@@ -559,4 +695,4 @@ export function MojaPotovanjaView() {
 /* ====================== PRAZNO STANJE ======================
  * TASK 8 / F3-B: lokalni klon EmptyState je ODSTRANJEN — površina
  * uporablja družinsko komponento @/components/states/empty-state
- * (isto besedilo, iste akcije, enotna črtkasta slovnica + CTA ≥44px). */
+ * (isto besedilo, iste akcije, enotna črtkasta slovnika + CTA ≥44px). */

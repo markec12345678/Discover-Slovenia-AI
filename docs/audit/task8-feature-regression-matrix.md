@@ -1,11 +1,11 @@
-# TASK 8 / ISSUE #8 — FEATURE-LOSS REGRESSION MATRIX (v1.114.0 „Faza 3 — En načrtovalnik, umirjena stanja")
+# TASK 8 / ISSUE #8 — FEATURE-LOSS REGRESSION MATRIX (v1.115.0 „Faza 4 — EN zaključek lijaka")
 
 > **Pravilo:** NI nezadane vrstice za izgubo funkcije (issue §1: ZERO FEATURE LOSS).
 > Metodologija: D8-A inventar (66 zmožnosti, `task8-d8a-ux-audit.md` §3) → po vsaki spremembi
 > preverjeno s source-contract testi + brskalniško verifikacijo (D8-H).
-> **Before** = dostopnost na v1.111.1 (HEAD `ac75070`) · **After** = v1.114.0 (Faza 1: v1.112.0 + Faza 2: v1.113.0 + Faza 3).
+> **Before** = dostopnost na v1.111.1 (HEAD `ac75070`) · **After** = v1.115.0 (Faza 1: v1.112.0 + Faza 2: v1.113.0 + Faza 3: v1.114.0 + Faza 4: v1.115.0).
 
-| Capability | Before (v1.111.1) | After (v1.114.0) | New access path | Verified | Evidence |
+| Capability | Before (v1.111.1) | After (v1.115.0) | New access path | Verified | Evidence |
 |---|---|---|---|---|---|
 | AI planning (klepet + /nacrtuj) | P (nav CTA + hero + FAB) | NESPREMENJENO — /nacrtuj ostaja jedro; FAB kanonski 44px dodaj v vrsticah | P | testi + browser (planner strip na /nacrtuj) | `task8-d-add-to-trip-surfaces.test.ts` (chatbot), screenshot task8-planner-*.png |
 | Deterministično načrtovanje | A (izbira motorja v obrazcu) | NESPREMENJENO | A | obstoječa suita | 3317 testov |
@@ -51,9 +51,20 @@
 
 SmartSearch vrstice · EventCard · ListingModal/kartica · hub/things-to-do destinacij · ExperienceModal · wishlist (most v pot) · klepet (44px) · journey-planner izbire · supply (write-through).
 
-## NAMERNO ODLADNJENO v fazo 4 (dokumentirano, ne izgubljeno)
+## NAMERNO ODLADNJENO (dokumentirano, ne izgubljeno — po Fazi 4)
 
-EN razširitev SL-only površin (F3-E — F3-B je pripravil ~12 "Nalagam" uhodov z L-patternom; vsaka površina individualno vrata) · popolna absorpcija /potovanje v /nacrtuj (Option B — odložena na podatke lijaka, 38-a §1 MERGE OPTIONS).
+Popolna absorpcija /potovanje v /nacrtuj (Option B — ostaja odložena na podatke lijaka, 38-a §1 MERGE OPTIONS; brez merjenega lijaka ni utemeljenega razloga za SEO tveganje) · EN vsebina kataloga tržnice/lokalov (imena/opisi so PODATKI ponudnikov — DB brez EN stolpcev; strojno prevajanje brez soglasja ponudnikov bi kršilo §49 NO FAKE DATA; iskrena meja je v UI vidna kot tiha vrstica na /en/trznica + /en/lokali) · ListingModal vsebina (datotečno izven F4-D lastništva; okvir strani je EN) · strežniška SL sporočila /api/bookings + /api/checkout (samo ob strežniški zavrnitvi — klientovi fallbacki so EN; API-datotečna naloga) · /konzultacija, /slovenia-pass, /za-ponudnike, auth strani (izven javnega lijaka — ostanejo SL po P4-8 kanonu).
+
+## FAZA 4 DODANE ZMOŽNOSTI (vse NADGRADNJE, brez izgube — v1.115.0)
+
+- **EN LIJAK ZAPRT (F3-E — „EN verified“ iz §57 DoD)**: EN whitelista odpre 5 novih poti — /trznica, /dozivetja, /lokali, /dogodki, /moja-potovanja (en vir resnice isEnRoute → proxy 208/308, jezikovno stikalo, hreflang en-US alternati, sitemap /en URL-ji — vse samodejno). Do Faze 4 je tuji turist na tržnici (BOOK korak! povezan iz navigacije) pristal na slovenski strani.
+- **TRŽNICA JEDRO (4-a)**: marketplace.tsx L slovar 2 → 61+ listov (razvrščanje, filtri, števci, toasti, prazna stanja, kartice) + stran generateMetadata SL/EN + hero L + wishlist-sheet 19 listov + locale-zavedni CTA.
+- **BOOKING STACK (4-b)**: product-modal 40 L listov, experience-modal 86, cart-drawer 21, checkout-modal 62 — „from ~X €“, 13 validacij, 7 statusov razpoložljivosti, 2-korakna blagajna vse dvojezično. booking-panel je bil ŽE dvojezičen (TASK 98) — zaklenjen s pogodbami (36 ključev parity).
+- **MOJA POTOVANJA (4-c)**: moja-potovanja-view 43+ listov (gost/račun/sinhronizacija/prazna stanja/toasti; datumi en-GB) + generateMetadata + hreflang.
+- **RAZISKOVANE POVRŠINE (4-d)**: listings 27 listov + EN kategorije; events-calendar ŽIVI S CELIM EN PODATKOVNIM SLOJEM (EVENTS_EN 30 dogodkov + oznake kategorij + meseci) — edina F4-E površina kjer je tudi VSEBINA EN; experiences + 3 strani generateMetadata.
+- **LUPINA + KONSOLIDACIJA (main)**: navigacija — zadnje 3 SL pušči na EN straneh (aria košarice, aria teme, gumb Svetla/Temna) → NAV_L (dostopnostna napaka ne le kozmetika) · review-section.tsx (504 vrstic — Mnenja/Overjena rezervacija/cela forma) → L · PRODUCT/EXPERIENCE_CATEGORY_LABELS_EN v skupnem libu (en kanon z lokalnimi mapami) + povezava modalov.
+- **§38 ISKRENE MEJE**: /en/trznica + /en/lokali nosijo tiho EN-only vrstico („Offer names and descriptions come from local providers in Slovenian — prices, filters and booking work in English.“) — NAMERNO izven L slovarjev (pariteta {sl,en} ostane čista); SL uporabnik je nikoli ne vidi. /moja-potovanja brez note (zbirka je osebno orodje, imena so uporabnikovi viri). Dogodki brez note (EN podatkovni sloj).
+- **BROWSER DOKAZI (D8-H)**: 7 viewportov (375/390/430/768/1024/1280/1440) × 4 nove EN strani = 28/28 brez preliva; EN zlata pot tržnica → modal → wishlist → „Add to my trip“ → /en/moja-potovanja („FROM FAVOURITES“ trak!) → dogodki → lokali; §47 metrike (mobilni 390: 1 primarni CTA + 1 nav; desktop: 7 povezav + 1 CTA); §58 vseh 5 stopenj (search/discover/add/plan/go) vidnih na homepageu SL+EN; 0 konzolnih napak; 5 posnetkov docs/evidence/task8-f4/; SL nič-izguba (ista SL vsebina, note nevidna).
 
 ## FAZA 2 DODANE ZMOŽNOSTI (vse NADGRADENE, brez izgube)
 
@@ -80,4 +91,4 @@ EN razširitev SL-only površin (F3-E — F3-B je pripravil ~12 "Nalagam" uhodov
 | Wishlist → pot | ročni dodaj na vrsticah | NADGRADENO — most (trak + prefill združitev) |
 
 ---
-**Sklep:** 0 vrstic izgube funkcije. 31/31 zmožnost potrjena + 6 novih Faza 3 vrstic (testi 3501 + brskalniški dokazi D8-H/F2/F3 + screenshots).
+**Sklep:** 0 vrstic izgube funkcije. 31/31 zmožnost potrjena + 6 novih Faza 3 vrstic + 8 Faza 4 vrstic (testi 3663 + brskalniški dokazi D8-H/F2/F3/F4 + screenshots vključno z docs/evidence/task8-f4/).

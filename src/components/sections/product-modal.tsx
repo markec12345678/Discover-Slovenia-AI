@@ -37,6 +37,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   PRODUCT_CATEGORY_LABELS,
+  PRODUCT_CATEGORY_LABELS_EN,
   PRODUCT_CATEGORY_ICONS,
   formatPrice,
   type Product,
@@ -73,12 +74,121 @@ interface RecommendationsResponse {
   source?: "ai" | "fallback" | "cache";
 }
 
+// TASK 8 / F4-B (issue #8 Faza 4 — EN razširitev booking sklada): L-pattern
+// slovar (SL+EN) za VES UI chrome modala — toasti, oznake, spec nalepke,
+// arija, CTA gumbi. Vsebina priporočil (why vrstica) je že dvojezična prek
+// API lang parametra + next-intl (marketplace.recsWhy*). ZERO-LOSS: samo
+// nizi, nobena logika/vedenje se ne spreminja.
+const L = {
+  a11y: {
+    dialogDesc: {
+      sl: (name: string) =>
+        `Podrobnosti izdelka ${name}: opis, cena, atributi, kontakt prodajalca in možnost nakupa.`,
+      en: (name: string) =>
+        `Product details for ${name}: description, price, attributes, seller contact and purchase option.`,
+    },
+    verified: { sl: "Overjen izdelek", en: "Verified product" },
+    openGallery: {
+      sl: (n: number) => `Odpri galerijo slik (${n})`,
+      en: (n: number) => `Open the image gallery (${n})`,
+    },
+    showImage: {
+      sl: (n: number) => `Prikaži sliko ${n}`,
+      en: (n: number) => `Show image ${n}`,
+    },
+    imageAlt: {
+      sl: (name: string, n: number) => `${name} — slika ${n}`,
+      en: (name: string, n: number) => `${name} — image ${n}`,
+    },
+    openProduct: {
+      sl: (name: string) => `Odpri ${name}`,
+      en: (name: string) => `Open ${name}`,
+    },
+  },
+  toast: {
+    outOfStockTitle: { sl: "Ni na zalogi", en: "Out of stock" },
+    outOfStockDesc: {
+      sl: "Ta izdelek je trenutno razprodan.",
+      en: "This product is currently sold out.",
+    },
+    addedTitle: { sl: "Dodano v košarico", en: "Added to cart" },
+    addedDesc: {
+      sl: (name: string) => `${name} — košarica se je odprla na desni.`,
+      en: (name: string) => `${name} — the cart just opened on the right.`,
+    },
+  },
+  badge: {
+    featured: { sl: "Izpostavljeno", en: "Featured" },
+    organic: { sl: "Ekološko", en: "Organic" },
+    handmade: { sl: "Ročna izdelava", en: "Handmade" },
+    local: { sl: "Lokalno", en: "Local" },
+    vegan: { sl: "Vegansko", en: "Vegan" },
+    freeShipping: { sl: "Brezplačna dostava", en: "Free shipping" },
+    shipsEU: { sl: "Dostava EU", en: "EU shipping" },
+    shipsWorld: { sl: "Dostava svet", en: "Worldwide shipping" },
+  },
+  reviews: { sl: "mnenj", en: "reviews" },
+  info: {
+    category: { sl: "Kategorija", en: "Category" },
+    location: { sl: "Lokacija", en: "Location" },
+    stock: { sl: "Zaloga", en: "Stock" },
+    weight: { sl: "Teža", en: "Weight" },
+    pieces: {
+      sl: (n: number) => `${n} kosov`,
+      en: (n: number) => `${n} pieces`,
+    },
+  },
+  attributes: { sl: "Atributi", en: "Attributes" },
+  seller: {
+    heading: { sl: "Prodajalec", en: "Seller" },
+    website: { sl: "Spletna stran", en: "Website" },
+    statsViews: { sl: "Ogledov", en: "Views" },
+    statsSold: { sl: "Prodanih", en: "Sold" },
+    visit: { sl: "Obišči prodajalca", en: "Visit seller" },
+    inquire: {
+      sl: "Povpraševanje pri prodajalcu",
+      en: "Ask the seller",
+    },
+    mailtoSubject: {
+      sl: (name: string) => `Povpraševanje: ${name}`,
+      en: (name: string) => `Inquiry: ${name}`,
+    },
+    noContact: {
+      sl: "Brez kontakt prodajalca",
+      en: "No seller contact",
+    },
+  },
+  cta: {
+    addToCart: {
+      sl: (price: string) => `V košarico — ${price}`,
+      en: (price: string) => `Add to cart — ${price}`,
+    },
+    outOfStock: { sl: "Ni na zalogi", en: "Out of stock" },
+  },
+  source: { sl: "Vir: Lokalni ponudnik", en: "Source: Local provider" },
+  recs: {
+    title: { sl: "Morda vam je všeč", en: "You may also like" },
+    similar: { sl: "Podobni", en: "Similar" },
+    aiTitle: {
+      sl: "AI (GLM) je izbral ta priporočila",
+      en: "AI (GLM) picked these recommendations",
+    },
+    similarTitle: {
+      sl: "Podobni izdelki (fallback)",
+      en: "Similar products (fallback)",
+    },
+  },
+};
+
 /**
  * ProductModal — podrobnosti izdelka iz tržnice.
  * Prikazuje veliko sliko, opis, atribute, kontakt prodajalca in CTA.
  * Na dnu je "Morda vam je všeč" z 4 podobnimi izdelki (ista kategorija/destinacija).
  */
 export function ProductModal({ product, onClose, onSelect }: ProductModalProps) {
+  // F4-B: jezik UI chroma (vsebina priporočil uporablja `locale` spodaj).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
   const [activeImage, setActiveImage] = useState(0);
   // FW2-B: celozaslonska galerija (lightbox) nad modalom
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -88,8 +198,8 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
   const handleAddToCart = (p: Product) => {
     if (p.stock <= 0) {
       toast({
-        title: "Ni na zalogi",
-        description: "Ta izdelek je trenutno razprodan.",
+        title: L.toast.outOfStockTitle[lang],
+        description: L.toast.outOfStockDesc[lang],
         variant: "destructive",
       });
       return;
@@ -106,8 +216,8 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
     });
     trackFunnel("add_to_cart");
     toast({
-      title: "Dodano v košarico",
-      description: `${p.name} — košarica se je odprla na desni.`,
+      title: L.toast.addedTitle[lang],
+      description: L.toast.addedDesc[lang](p.name),
     });
   };
 
@@ -130,7 +240,6 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
   // Priporočila — pridobi ko se product spremeni.
   // §20: pošljemo lang, da strežnik izbere jezikovno različico why
   // vrstice (cache hrani obe — prvi obiskovalec ne zaključi jezika).
-  const locale = useLocale();
   const [recommendations, setRecommendations] = useState<RecommendedProduct[]>([]);
   const [recLoading, setRecLoading] = useState(false);
   const [recError, setRecError] = useState<boolean>(false);
@@ -198,8 +307,7 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
       >
         <DialogTitle className="sr-only">{product.name}</DialogTitle>
         <DialogDescription id="product-modal-desc" className="sr-only">
-          Podrobnosti izdelka {product.name}: opis, cena, atributi, kontakt
-          prodajalca in možnost nakupa.
+          {L.a11y.dialogDesc[lang](product.name)}
         </DialogDescription>
 
         <div className="scroll-area-custom max-h-[88vh] overflow-y-auto">
@@ -208,7 +316,7 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
             {image ? (
               <img
                 src={image}
-                alt={`${product.name} — slika ${activeImage + 1}`}
+                alt={L.a11y.imageAlt[lang](product.name, activeImage + 1)}
                 className="size-full object-cover"
                 loading="lazy"
                 onError={(e) => {
@@ -230,12 +338,14 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
                 <span aria-hidden="true">
                   {PRODUCT_CATEGORY_ICONS[product.category]}
                 </span>
-                {PRODUCT_CATEGORY_LABELS[product.category]}
+                {lang === "en"
+                  ? PRODUCT_CATEGORY_LABELS_EN[product.category]
+                  : PRODUCT_CATEGORY_LABELS[product.category]}
               </Badge>
               {product.featured ? (
                 <Badge className="bg-amber-400 text-amber-950 shadow-sm">
                   <Sparkles className="size-3" aria-hidden="true" />
-                  Izpostavljeno
+                  {L.badge.featured[lang]}
                 </Badge>
               ) : null}
             </div>
@@ -261,7 +371,7 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
                 {product.verified ? (
                   <CheckCircle2
                     className="size-5 text-primary"
-                    aria-label="Overjen izdelek"
+                    aria-label={L.a11y.verified[lang]}
                   />
                 ) : null}
               </div>
@@ -282,7 +392,7 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
               <button
                 type="button"
                 onClick={() => setLightboxOpen(true)}
-                aria-label={`Odpri galerijo slik (${galleryCount})`}
+                aria-label={L.a11y.openGallery[lang](galleryCount)}
                 className="absolute inset-0 cursor-zoom-in"
               />
             ) : null}
@@ -296,7 +406,7 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
                   key={idx}
                   type="button"
                   onClick={() => setActiveImage(idx)}
-                  aria-label={`Prikaži sliko ${idx + 1}`}
+                  aria-label={L.a11y.showImage[lang](idx + 1)}
                   aria-pressed={idx === activeImage}
                   className={`relative size-16 shrink-0 overflow-hidden rounded-md border-2 transition-all ${
                     idx === activeImage
@@ -333,7 +443,7 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
                       {product.rating.toFixed(1)}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      ({product.reviewCount} mnenj)
+                      ({product.reviewCount} {L.reviews[lang]})
                     </span>
                   </>
                 )}
@@ -376,26 +486,30 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
             <div className="grid grid-cols-2 gap-3">
               <InfoItem
                 icon={Tag}
-                label="Kategorija"
-                value={PRODUCT_CATEGORY_LABELS[product.category]}
+                label={L.info.category[lang]}
+                value={
+                  lang === "en"
+                    ? PRODUCT_CATEGORY_LABELS_EN[product.category]
+                    : PRODUCT_CATEGORY_LABELS[product.category]
+                }
               />
               <InfoItem
                 icon={MapPin}
-                label="Lokacija"
+                label={L.info.location[lang]}
                 value={product.destinationName ?? "—"}
               />
               <InfoItem
                 icon={Boxes}
-                label="Zaloga"
+                label={L.info.stock[lang]}
                 value={
                   product.stock > 0
-                    ? `${product.stock} kosov`
-                    : "Ni na zalogi"
+                    ? L.info.pieces[lang](product.stock)
+                    : L.cta.outOfStock[lang]
                 }
               />
               <InfoItem
                 icon={Scale}
-                label="Teža"
+                label={L.info.weight[lang]}
                 value={product.weight ? `${product.weight} g` : "—"}
               />
             </div>
@@ -404,49 +518,49 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
             <section>
               <h3 className="flex items-center gap-2 text-sm font-semibold">
                 <Leaf className="size-4 text-primary" aria-hidden="true" />
-                Atributi
+                {L.attributes[lang]}
               </h3>
               <div className="mt-3 flex flex-wrap gap-2">
                 {product.organic ? (
                   <Badge className="bg-primary text-primary-foreground">
                     <Leaf className="size-3" aria-hidden="true" />
-                    Ekološko
+                    {L.badge.organic[lang]}
                   </Badge>
                 ) : null}
                 {product.handmade ? (
                   <Badge className="bg-blue-600 text-white">
                     <HandHeart className="size-3" aria-hidden="true" />
-                    Ročna izdelava
+                    {L.badge.handmade[lang]}
                   </Badge>
                 ) : null}
                 {product.local ? (
                   <Badge variant="secondary">
                     <MapPin className="size-3" aria-hidden="true" />
-                    Lokalno
+                    {L.badge.local[lang]}
                   </Badge>
                 ) : null}
                 {product.vegan ? (
                   <Badge variant="secondary">
                     <Leaf className="size-3" aria-hidden="true" />
-                    Vegansko
+                    {L.badge.vegan[lang]}
                   </Badge>
                 ) : null}
                 {product.shippingFree ? (
                   <Badge className="bg-amber-400 text-amber-950">
                     <Truck className="size-3" aria-hidden="true" />
-                    Brezplačna dostava
+                    {L.badge.freeShipping[lang]}
                   </Badge>
                 ) : null}
                 {product.shipsEurope ? (
                   <Badge variant="secondary">
                     <Globe className="size-3" aria-hidden="true" />
-                    Dostava EU
+                    {L.badge.shipsEU[lang]}
                   </Badge>
                 ) : null}
                 {product.shipsWorldwide ? (
                   <Badge variant="secondary">
                     <Globe2 className="size-3" aria-hidden="true" />
-                    Dostava svet
+                    {L.badge.shipsWorld[lang]}
                   </Badge>
                 ) : null}
               </div>
@@ -459,7 +573,7 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
                   className="size-4 text-primary"
                   aria-hidden="true"
                 />
-                Prodajalec
+                {L.seller.heading[lang]}
               </h3>
               <div className="mt-3 space-y-2">
                 <p className="text-sm font-medium">{product.sellerName}</p>
@@ -490,7 +604,7 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
                       className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
                     >
                       <Globe className="size-4 text-primary" aria-hidden="true" />
-                      Spletna stran
+                      {L.seller.website[lang]}
                       <ExternalLink className="size-3" aria-hidden="true" />
                     </a>
                   ) : null}
@@ -502,13 +616,17 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
             <section className="grid grid-cols-2 gap-3">
               <StatCard
                 icon={Eye}
-                label="Ogledov"
-                value={product.viewCount.toLocaleString("sl-SI")}
+                label={L.seller.statsViews[lang]}
+                value={product.viewCount.toLocaleString(
+                  lang === "en" ? "en-US" : "sl-SI"
+                )}
               />
               <StatCard
                 icon={TrendingUp}
-                label="Prodanih"
-                value={product.saleCount.toLocaleString("sl-SI")}
+                label={L.seller.statsSold[lang]}
+                value={product.saleCount.toLocaleString(
+                  lang === "en" ? "en-US" : "sl-SI"
+                )}
               />
             </section>
 
@@ -526,8 +644,10 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
               >
                 <ShoppingBag className="size-4" aria-hidden="true" />
                 {product.stock > 0
-                  ? `V košarico — ${formatPrice(product.price, product.currency)}`
-                  : "Ni na zalogi"}
+                  ? L.cta.addToCart[lang](
+                      formatPrice(product.price, product.currency)
+                    )
+                  : L.cta.outOfStock[lang]}
               </Button>
               <Button
                 type="button"
@@ -543,17 +663,21 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
                     rel="noopener noreferrer sponsored"
                   >
                     <ExternalLink className="size-4" aria-hidden="true" />
-                    Obišči prodajalca
+                    {L.seller.visit[lang]}
                   </a>
                 ) : product.sellerEmail ? (
-                  <a href={`mailto:${product.sellerEmail}?subject=Povpraševanje: ${encodeURIComponent(product.name)}`}>
+                  <a
+                    href={`mailto:${product.sellerEmail}?subject=${encodeURIComponent(
+                      L.seller.mailtoSubject[lang](product.name)
+                    )}`}
+                  >
                     <Mail className="size-4" aria-hidden="true" />
-                    Povpraševanje pri prodajalcu
+                    {L.seller.inquire[lang]}
                   </a>
                 ) : (
                   <span className="opacity-60 cursor-not-allowed">
                     <Package className="size-4" aria-hidden="true" />
-                    Brez kontakt prodajalca
+                    {L.seller.noContact[lang]}
                   </span>
                 )}
               </Button>
@@ -572,7 +696,7 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
             {/* Source note */}
             <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
               <Package className="size-3" aria-hidden="true" />
-              Vir: Lokalni ponudnik
+              {L.source[lang]}
             </p>
           </div>
         </div>
@@ -674,17 +798,20 @@ function RecommendationsSection({
   // kolektor-modal živi TUDI na dvojezičnih sekcijah → zato next-intl
   // (namespace marketplace).
   const t = useTranslations("marketplace");
+  // F4-B: L-pattern za chrome naslova/oddpisa priporočil (isti slovar L zgoraj)
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
   const visible = items.filter((p) => p.id !== currentId).slice(0, 4);
   const isAI = source === "ai" || source === "cache";
 
-  const sourceLabel = isAI ? "AI" : "Podobni";
+  const sourceLabel = isAI ? "AI" : L.recs.similar[lang];
 
   if (loading) {
     return (
-      <section aria-label="Morda vam je všeč">
+      <section aria-label={L.recs.title[lang]}>
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <Lightbulb className="size-4 text-primary" aria-hidden="true" />
-          Morda vam je všeč
+          {L.recs.title[lang]}
           <Badge variant="secondary" className="ml-auto gap-1 text-[10px]">
             <Sparkles className="size-2.5" aria-hidden="true" />
             AI
@@ -712,14 +839,16 @@ function RecommendationsSection({
   if (error || visible.length === 0) return null;
 
   return (
-    <section aria-label="Morda vam je všeč">
+    <section aria-label={L.recs.title[lang]}>
       <h3 className="flex items-center gap-2 text-sm font-semibold">
         <Lightbulb className="size-4 text-primary" aria-hidden="true" />
-        Morda vam je všeč
+        {L.recs.title[lang]}
         <Badge
           variant={isAI ? "default" : "secondary"}
           className="ml-auto gap-1 text-[10px]"
-          title={isAI ? "AI (GLM) je izbral ta priporočila" : "Podobni izdelki (fallback)"}
+          title={
+            isAI ? L.recs.aiTitle[lang] : L.recs.similarTitle[lang]
+          }
         >
           {isAI ? <Sparkles className="size-2.5" aria-hidden="true" /> : null}
           {sourceLabel}
@@ -734,7 +863,7 @@ function RecommendationsSection({
               type="button"
               onClick={() => onSelect?.(p)}
               className="group flex flex-col overflow-hidden rounded-lg border border-border/60 bg-background text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
-              aria-label={`Odpri ${p.name}`}
+              aria-label={L.a11y.openProduct[lang](p.name)}
             >
               <div className="relative aspect-square w-full overflow-hidden bg-muted">
                 {img ? (

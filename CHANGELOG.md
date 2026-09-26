@@ -7,6 +7,98 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.115.0] — 2026-09-28 (ISSUE #8 / TASK 39: Discovery UX 2.0 — Faza 4 „EN zaključek lijaka" — ZAKLJUČEK NALOGE)
+
+### Dodano
+
+- **EN LIJAK ZAPRT (F3-E — §37/§57 „EN verified"; 4 vzporedni agenti + main
+  integracija)**: EN whitelista (`EN_STATIC_ROUTES`) odpre 5 poti, ki so bile
+  do zdaj SL-only — **/trznica, /dozivetja, /lokali, /dogodki,
+  /moja-potovanja**. En vir resnice `isEnRoute` samodejno odpre: proxy
+  strežbo `/en/*` (prej 308 nazaj na SL), jezikovno stikalo, hreflang en-US
+  alternata (strani + sitemap), `/en` URL-je v sitemapu. Do te faze je tuji
+  turist na tržnici (BOOK korak lijaka — povezan iz navigacije!) pristal na
+  slovenski strani; /moja-potovanja (zbirka Moja pot) je bila nedosegljiva
+  v EN.
+- **TRŽNICA JEDRO (4-a)**: `marketplace.tsx` L-slovar 2 → 61+ listov
+  (razvrščanje, filtri, števci, napake, toasti, prazna stanja, kartice, CTA —
+  SL vrednosti dobesedno enake, EN iskren prevod §38: „od ~X €" → „from ~X
+  €"); `trznica/page.tsx` `generateMetadata()` (SL/EN naslov/opis po vzorcu
+  /potovanje) + hero L; `wishlist-sheet.tsx` 19 listov + locale-zavedni CTA
+  (`localePrefix`). 39 testov (`task8-f4a-trznica-en.test.ts`).
+- **BOOKING STACK (4-b)**: `product-modal` 40 L listov, `experience-modal`
+  86 (cena „od/from · per person", 13 validacij, 7 statusov
+  razpoložljivosti, cel booking tok), `cart-drawer` 21, `checkout-modal` 62
+  (2-korakna forma, pregled, plačilo, uspeh) — vsi dvojezični;
+  `booking-panel` je bil ŽE dvojezičen (TASK 98, `planner.booking` namespace)
+  — živahna predpostavka glavne faze je bila ZASTARELA; datoteka NI
+  spremenjena, zaklenjena s pogodbami (parity 36 ključev). 48 testov
+  (`task8-f4b-booking-en.test.ts`).
+- **MOJA POTOVANJA (4-c)**: `moja-potovanja-view` 43+ listov (gost/račun/
+  sinhronizacija/verifikacija/prazna stanja/toasti; `formatDate` en-GB),
+  `page.tsx` `generateMetadata` + `hreflangForPath`; `my-trip-view` je bil že
+  dvojezičen (38-c) — pokrit s pogodbami. 29 testov
+  (`task8-f4c-moja-potovanja-en.test.ts`).
+- **RAZISKOVANE POVRŠINE (4-d)**: `listings` 27 listov + EN oznake
+  kategorij/naročnin; `events-calendar` ŽIVI S CELIM EN PODATKOVNIM SLOJEM —
+  `EVENTS_EN` prekrivna plast (30 dogodkov, EN imena+opisi) + oznake
+  kategorij + meseci EN (`eventText` resolver po vzorcu
+  `matchEventsForItinerary`); experiences + 3 strani `generateMetadata`.
+  37 testov (`task8-f4d-explore-en.test.ts`).
+- **LUPINA (main)**: navigacija — zadnje 3 SL pušči na VSEH EN straneh
+  (aria „Odpri košarico", aria „Preklopi temo", gumb „Svetla/Temna" v Sheetu)
+  → `NAV_L` (aria na napačnem jeziku je dostopnostna napaka, ne le
+  kozmetika; `cartWithItems` tudi množinsko).
+- **REVIEW-SECTION (main)**: 504 vrstic, živi v EN modalih — „Mnenja
+  obiskovalcev"/„Napiši mnenje"/„Overjena rezervacija"/cela forma → L-vzorec
+  (validacije, toasti, zvezdice aria, datumi/povprečja po jeziku;
+  strežniška sporočila ostanejo v izvirnem jeziku — iskrena meja).
+- **KONSOLIDACIJA KATEGORIJ (main)**: `PRODUCT/EXPERIENCE_CATEGORY_LABELS_EN`
+  v skupnem `marketplace-types.ts` (dobesedno enake vrednosti kot lokalne
+  mape F4-A — en kanon) + povezava modalov (Badge + InfoItem po jeziku).
+
+### Iskrene meje (§38/§49)
+
+- Katalog tržnice/lokalov (imena, opisi) so PODATKI ponudnikov v slovenščini
+  (DB brez EN stolpcev) — strojno prevajanje brez soglasja bi kršilo NO
+  FAKE DATA. /en/trznica + /en/lokali zato nosijo tiho EN-only vrstico
+  („Offer names and descriptions come from local providers in Slovenian —
+  prices, filters and booking work in English.") — NAMERNO izven L slovarjev,
+  da paritetna pogodba {sl, en} ostane čista; SL uporabnik je ne vidi.
+  Dogodki note ne potrebujejo (EN podatkovni sloj); /moja-potovanja tudi ne
+  (zbirka je osebno orodje — imena shranjenih postavk so uporabnikovi viri).
+
+### Spremenjeno
+
+- `sitemap-urls.ts`: `getEnSitemapUrlCount()` odšteje 1 (/moja-potovanja je
+  osebna stran — namerno NI v sitemapu; whitelist ≠ sitemap: whitelist
+  odloča o strežbi/hreflang, sitemap o indeksabilnosti). `geo.test.ts`
+  posodobljen (negativne kontrole → /en/za-ponudnike + /en/slovenia-pass;
+  /en/dogodki je zdaj NAMERNO prisoten).
+- 4 zastarele asertacije v `task8-f3b-states-family.test.ts` (posodobljene
+  na L-ekvivalente — isti semantični pogodbi; precedens 38-b).
+
+### Vrata (zaključek faze)
+
+- `bun test` **3663/3663** (+162 od 1.114.0) · `tsc --noEmit` 0 · `eslint` 0
+  (vse spremenjene datoteke).
+- **BROWSER DOKAZI (D8-H)**: 7 viewportov (375/390/430/768/1024/1280/1440) ×
+  4 nove EN strani = **28/28 brez horizontalnega preliva**; EN zlata pot
+  dokazana: /en/trznica (hero + nota + zavihki + „from" cene + „Showing 6
+  products") → modal izdelka (EN krom + „Other" kategorija + „Visitor
+  reviews") → srček → wishlist list („Favorites", „1 saved", „Add to my
+  trip", „Saved locally in your browser — no account needed.") → toast
+  „Added to my trip" → /en/moja-potovanja („My trips", „FROM FAVOURITES"
+  trak, „Liked ≠ in the plan") → /en/dogodki („Ljubljana Winter Festival",
+  „Music", „January" — EN PODATKI) → /en/lokali („Showing 10 venues" +
+  nota); §47 metrike: mobilni 390 = 1 primarni CTA + 1 nav povezava,
+  desktop = 7 povezav + 1 primarni CTA; §58: vseh 5 stopenj poti
+  (poiščem/najdem/dodam/uredim/grem) vidnih na homepageu SL + EN; 0 napak v
+  konzoli na vseh preverjenih straneh; SL nič-izguba (ista SL vsebina, nota
+  nevidna na SL); 5 posnetkov v `docs/evidence/task8-f4/`.
+
+---
+
 ## [1.114.0] — 2026-09-28 (ISSUE #8 / TASK 38: Discovery UX 2.0 — Faza 3 „En načrtovalnik, umirjena stanja")
 
 ### Dodano

@@ -24,6 +24,10 @@ import { AddToTripButton } from "@/components/add-to-trip-button";
 import type { MyTripInput } from "@/lib/my-trip";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/marketplace-types";
+// TASK 8 / F4-A: localePrefix — CTA praznega stanja dobi /en prefix ročno
+// (družinska EmptyState riše href prek next/link, ne i18n Link — vrednost
+// zato pripnemo tukaj, da EN uporabnik ne izgubi jezika ob kliku).
+import { localePrefix } from "@/i18n/routing";
 import {
   getWishlist,
   addToWishlist,
@@ -81,6 +85,10 @@ export function WishlistHeartButton({
 }) {
   const { ids } = useWishlist();
   const saved = ids.has(entry.id);
+  // TASK 8 / F4-A: jezik za L-pattern aria/naslov srčka (SL privzeto) —
+  // srček delijo kartice tržnice IN modali (isti dvojezični vir).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
 
   const toggle = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
@@ -99,10 +107,10 @@ export function WishlistHeartButton({
       aria-pressed={saved}
       aria-label={
         saved
-          ? `Odstrani ${entry.name} iz priljubljenih`
-          : `Shrani ${entry.name} v priljubljene`
+          ? `${WL.heartRemoveVerb[lang]} ${entry.name} ${WL.heartRemoveSuffix[lang]}`
+          : `${WL.heartSaveVerb[lang]} ${entry.name} ${WL.heartSaveSuffix[lang]}`
       }
-      title={saved ? "Odstrani iz priljubljenih" : "Shrani v priljubljene"}
+      title={saved ? WL.heartRemoveTitle[lang] : WL.heartSaveTitle[lang]}
       className={cn(
         // z-[2] nad prosojnim "klik za galerijo" ulovačem v modalih
         "z-[2] flex size-11 items-center justify-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur-sm transition-all hover:scale-105 hover:bg-background focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none active:scale-95",
@@ -132,8 +140,38 @@ export function WishlistHeartButton({
 
 // TASK 8 / F3-B: CTA praznega stanja v L-pattern (SL/EN — predpriprava
 // na F3-E; isti vzorec kot L v AddToTripButton).
+// TASK 8 / F4-A (issue #8 Phase 4 — EN razširitev): WL razširjen na VSE
+// besedje lista in srčka (naslov, števci, aria oznake, vrstične značke,
+// noga) — SL vrednosti ostajajo dobesedno enake.
 const WL = {
   exploreCta: { sl: "Razišči tržnico", en: "Explore the marketplace" },
+  emptyTitle: { sl: "Ni še nič shranjenega.", en: "Nothing saved yet." },
+  emptyDescription: {
+    sl: "Klikni srček na izkušnji ali izdelku.",
+    en: "Tap the heart on an experience or product.",
+  },
+  title: { sl: "Priljubljene", en: "Favorites" },
+  openTrigger: { sl: "Odpri priljubljene", en: "Open favorites" },
+  countNone: { sl: "Nič shranjenega", en: "Nothing saved" },
+  countOne: { sl: "1 shranjeno", en: "1 saved" },
+  countFew: { sl: "shranjeni", en: "saved" },
+  countMany: { sl: "shranjenih", en: "saved" },
+  listAria: { sl: "Seznam priljubljenih", en: "Favorites list" },
+  localNote: {
+    sl: "Shranjeno lokalno v tvojem brskalniku — brez računa.",
+    en: "Saved locally in your browser — no account needed.",
+  },
+  typeExperience: { sl: "Izkušnja", en: "Experience" },
+  typeProduct: { sl: "Izdelek", en: "Product" },
+  heartSaveVerb: { sl: "Shrani", en: "Save" },
+  heartSaveSuffix: { sl: "v priljubljene", en: "to favorites" },
+  heartSaveTitle: { sl: "Shrani v priljubljene", en: "Save to favorites" },
+  heartRemoveVerb: { sl: "Odstrani", en: "Remove" },
+  heartRemoveSuffix: { sl: "iz priljubljenih", en: "from favorites" },
+  heartRemoveTitle: {
+    sl: "Odstrani iz priljubljenih",
+    en: "Remove from favorites",
+  },
 } as const;
 
 export function WishlistSheet({ scrolled }: { scrolled: boolean }) {
@@ -159,8 +197,8 @@ export function WishlistSheet({ scrolled }: { scrolled: boolean }) {
           size="icon"
           aria-label={
             count > 0
-              ? `Odpri priljubljene (${count} shranjenih)`
-              : "Odpri priljubljene"
+              ? `${WL.openTrigger[lang]} (${count} ${WL.countMany[lang]})`
+              : WL.openTrigger[lang]
           }
           className={cn(
             "relative",
@@ -197,15 +235,17 @@ export function WishlistSheet({ scrolled }: { scrolled: boolean }) {
               <Heart className="size-4" aria-hidden="true" />
             </span>
             <div className="flex flex-col">
-              <SheetTitle className="text-base font-bold">Priljubljene</SheetTitle>
+              <SheetTitle className="text-base font-bold">
+                {WL.title[lang]}
+              </SheetTitle>
               <SheetDescription className="text-xs">
                 {count === 0
-                  ? "Nič shranjenega"
+                  ? WL.countNone[lang]
                   : count === 1
-                    ? "1 shranjeno"
+                    ? WL.countOne[lang]
                     : count < 5
-                      ? `${count} shranjeni`
-                      : `${count} shranjenih`}
+                      ? `${count} ${WL.countFew[lang]}`
+                      : `${count} ${WL.countMany[lang]}`}
               </SheetDescription>
             </div>
           </div>
@@ -221,18 +261,21 @@ export function WishlistSheet({ scrolled }: { scrolled: boolean }) {
           <div className="flex flex-1 flex-col items-center justify-center px-6 py-10">
             <EmptyState
               icon={Heart}
-              title="Ni še nič shranjenega."
-              description="Klikni srček na izkušnji ali izdelku."
+              title={WL.emptyTitle[lang]}
+              description={WL.emptyDescription[lang]}
               action={{
                 label: WL.exploreCta[lang],
-                href: "/trznica",
+                // TASK 8 / F4-A: href dobi locale prefix (EN → /en/tržnica) —
+                // EmptyState družina riše gumb prek next/link, zato vrednost
+                // pripnemo tu (enak učinek kot i18n Link iz @/i18n/navigation).
+                href: `${localePrefix(locale)}/trznica`,
                 onClick: () => setOpen(false),
               }}
             />
           </div>
         ) : (
           <div className="scroll-area-custom flex-1 overflow-y-auto px-4 py-3">
-            <ul className="flex flex-col gap-3" aria-label="Seznam priljubljenih">
+            <ul className="flex flex-col gap-3" aria-label={WL.listAria[lang]}>
               {entries.map((item) => (
                 <WishlistRow
                   key={item.id}
@@ -248,7 +291,7 @@ export function WishlistSheet({ scrolled }: { scrolled: boolean }) {
         {/* Footer — iskrena opomba o zasebnosti (vse je lokalno) */}
         <div className="border-t border-border/60 px-4 py-3">
           <p className="text-center text-xs text-muted-foreground">
-            Shranjeno lokalno v tvojem brskalniku — brez računa.
+            {WL.localNote[lang]}
           </p>
         </div>
       </SheetContent>
@@ -290,13 +333,26 @@ function WishlistRow({
   onOpen: () => void;
   onRemove: () => void;
 }) {
+  // TASK 8 / F4-A: jezik za L-pattern besedje vrstice (SL privzeto). Aria
+  // predlogi sta dvojezični objekt na mestu (template literal z imenom).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  const openAria = {
+    sl: `Odpri ${item.name} v tržnici`,
+    en: `Open ${item.name} in the marketplace`,
+  };
+  const removeAria = {
+    sl: `Odstrani ${item.name} iz priljubljenih`,
+    en: `Remove ${item.name} from favorites`,
+  };
+
   return (
     <li className="flex items-center gap-3 rounded-lg border border-border/60 bg-background p-2.5">
       {/* Glavni del vrstice = gumb: klik odpre vnos v tržnici */}
       <button
         type="button"
         onClick={onOpen}
-        aria-label={`Odpri ${item.name} v tržnici`}
+        aria-label={openAria[lang]}
         className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
       >
         <span className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
@@ -321,7 +377,9 @@ function WishlistRow({
               ) : (
                 <ShoppingBag className="size-2.5" aria-hidden="true" />
               )}
-              {item.type === "experience" ? "Izkušnja" : "Izdelek"}
+              {item.type === "experience"
+                ? WL.typeExperience[lang]
+                : WL.typeProduct[lang]}
             </Badge>
           </span>
           <span className="mt-1 block truncate text-sm font-semibold text-foreground">
@@ -357,7 +415,7 @@ function WishlistRow({
         variant="ghost"
         size="icon"
         onClick={onRemove}
-        aria-label={`Odstrani ${item.name} iz priljubljenih`}
+        aria-label={removeAria[lang]}
         className="size-11 shrink-0 text-muted-foreground transition-colors hover:text-destructive"
       >
         <Trash2 className="size-4" aria-hidden="true" />

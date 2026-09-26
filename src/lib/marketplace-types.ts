@@ -103,6 +103,19 @@ export const PRODUCT_CATEGORY_LABELS: Record<ProductCategory, string> = {
   other: "Drugo",
 };
 
+// F4-E (main konsolidacija): EN oznake kategorij — vrednosti so DOBESEDNO
+// enake lokalnim mapam iz marketplace.tsx (F4-A), da je en kanon.
+// Oznaka kategorije je UI niz (ne podatkovni) — spada v jezik ogleda.
+export const PRODUCT_CATEGORY_LABELS_EN: Record<ProductCategory, string> = {
+  food: "Food",
+  wine: "Wine",
+  honey: "Honey",
+  oil: "Oil",
+  craft: "Craft",
+  souvenir: "Souvenir",
+  other: "Other",
+};
+
 // Emoji ikone za kategorije izdelkov
 export const PRODUCT_CATEGORY_ICONS: Record<ProductCategory, string> = {
   food: "🧀",
@@ -122,6 +135,18 @@ export const EXPERIENCE_CATEGORY_LABELS: Record<ExperienceCategory, string> = {
   outdoor: "Narava",
   cultural: "Kultura",
   adventure: "Avantura",
+  wellness: "Wellness",
+};
+
+// F4-E (main konsolidacija): EN oznake — ista vrednostna plat kot lokalna
+// mapa EXPERIENCE_CATEGORY_LABELS_L v marketplace.tsx (F4-A).
+export const EXPERIENCE_CATEGORY_LABELS_EN: Record<ExperienceCategory, string> = {
+  tour: "Guided tour",
+  workshop: "Workshop",
+  tasting: "Tasting",
+  outdoor: "Outdoors",
+  cultural: "Culture",
+  adventure: "Adventure",
   wellness: "Wellness",
 };
 

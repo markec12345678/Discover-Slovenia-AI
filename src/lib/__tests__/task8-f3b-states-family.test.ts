@@ -227,9 +227,18 @@ describe("F3-B rollout: moja-potovanja-view", () => {
 
   test("lokalni EmptyState klon je odstranjen (družina na 3 mestih, isto besedilo)", () => {
     expect(MOJA_SRC).not.toContain("function EmptyState");
-    expect(MOJA_SRC).toContain('action={{ label: "Načrtuj potovanje", href: "/nacrtuj" }');
+    // F4-C (EN razširitev): oznaki akcij sta zdaj L-pattern SL/EN — ISTI
+    // semantični pogodbi (prazno stanje + CTA /nacrtuj in /#vprasi-lokalca),
+    // posodobljeno po vzorcu task99-marketplace posodobitve iz F3-B.
     expect(MOJA_SRC).toContain(
-      'action={{ label: "Brezplačna konzultacija", href: "/#vprasi-lokalca" }}'
+      'action={{ label: L.trips.emptyAction[lang], href: "/nacrtuj" }'
+    );
+    expect(MOJA_SRC).toContain('emptyAction: { sl: "Načrtuj potovanje", en: "Plan a trip" }');
+    expect(MOJA_SRC).toContain(
+      'action={{ label: L.consult.emptyAction[lang], href: "/#vprasi-lokalca" }}'
+    );
+    expect(MOJA_SRC).toContain(
+      'emptyAction: { sl: "Brezplačna konzultacija", en: "Free consultation" }'
     );
   });
 
@@ -379,8 +388,13 @@ describe("F3-B rollout: wishlist-sheet prazno stanje", () => {
     expect(WISHLIST_SRC).toContain(
       'import { EmptyState } from "@/components/states/empty-state"'
     );
+    // TASK 8 / F4-A: wishlist href je locale-zavedajoč (localePrefix) —
+    // identitetni href "/trznica" ostaja v wishlistTripItem (most v zbirko).
     expect(WISHLIST_SRC).toContain('href: "/trznica"');
-    expect(WISHLIST_SRC).toContain('title="Ni še nič shranjenega."');
+    // TASK 8 / F4-A: naslov praznega stanja je zdaj dvojezičen (WL L-pattern)
+    // — prej pinjen SL literal title="Ni še nič shranjenega." (isti naslov
+    // v SL veji, zdaj kot WL.emptyTitle.sl).
+    expect(WISHLIST_SRC).toContain('emptyTitle: { sl: "Ni še nič shranjenega.", en: "Nothing saved yet." }');
   });
 
   test("CTA oznaka v L-pattern (SL + EN)", () => {
@@ -406,7 +420,9 @@ describe("F3-B rollout: EmptyState kloni poenoteni (isti besedili/akcije)", () =
       'import { EmptyState } from "@/components/states/empty-state"'
     );
     expect(EVENTS_SRC).not.toContain("function EmptyState");
-    expect(EVENTS_SRC).toContain('title="Ni dogodkov za izbrane filtre."');
+    // TASK 8 / F4-D: naslov praznega stanja je prešel v L-slovar površine
+    // (title={L.emptyTitle[lang]}) — SL besedilo ostaja dobesedno prisotno.
+    expect(EVENTS_SRC).toContain("Ni dogodkov za izbrane filtre.");
     expect(EVENTS_SRC).toContain("CalendarX");
   });
 

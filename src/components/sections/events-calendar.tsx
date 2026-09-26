@@ -37,13 +37,18 @@ import {
   EVENTS,
   EVENT_CATEGORIES,
   EVENT_CATEGORY_LABELS,
-  MONTH_OPTIONS,
   SLOVENIAN_MONTHS_FULL,
   formatEventDate,
   type EventItem,
   type EventCategory,
 } from "@/lib/events-data";
+// TASK 8 / F4-D (issue #8 Faza 4 / F3-E): EN prekrivna plast dogodkov —
+// EVENTS_EN (ime + opis po id-ju) in EVENT_CATEGORY_LABELS_EN. SL pot
+// ostaja nespremenjena (EVENTS + EVENT_CATEGORY_LABELS); resolucija sledi
+// vzorcu matchEventsForItinerary (events-match.ts): en?.name ?? ime.
+import { EVENTS_EN, EVENT_CATEGORY_LABELS_EN } from "@/lib/events-data-en";
 import { REGIONS } from "@/lib/slovenia-data";
+import { useLocale } from "next-intl";
 
 const ALL_VALUE = "all";
 
@@ -70,12 +75,120 @@ const CATEGORY_ICON: Record<EventCategory, LucideIcon> = {
   festival: PartyPopper,
 };
 
+// TASK 8 / F4-D: UI krom koledarja v L-pattern (SL/EN). Datume formatira
+// formatEventDate(event.date, event.endDate, lang) — istoimenski tretji
+// parameter obstaja od 1.29.0 (revizija #13), tu ga šele vklopimo.
+const L = {
+  headerBadge: { sl: "Vse leto", en: "All year round" },
+  title: { sl: "Koledar dogodkov", en: "Event calendar" },
+  subtitle: {
+    sl: "Festivali, prireditve in dogodki skozi vse leto",
+    en: "Festivals, happenings and events all year round",
+  },
+  allMonths: { sl: "Vsi meseci", en: "All months" },
+  filterByMonth: { sl: "Filtriraj po mesecu", en: "Filter by month" },
+  allCategories: { sl: "Vse kategorije", en: "All categories" },
+  filterByCategory: {
+    sl: "Filtriraj po kategoriji",
+    en: "Filter by category",
+  },
+  allRegions: { sl: "Vse regije", en: "All regions" },
+  filterByRegion: { sl: "Filtriraj po regiji", en: "Filter by region" },
+  noEvents: {
+    sl: "Ni dogodkov za izbrane filtre",
+    en: "No events match your filters",
+  },
+  oneEvent: { sl: "1 dogodek", en: "1 event" },
+  eventsCount: { sl: "dogodkov", en: "events" },
+  emptyTitle: {
+    sl: "Ni dogodkov za izbrane filtre.",
+    en: "No events match your filters.",
+  },
+  emptyDescription: {
+    sl: "Poskusite spremeniti mesec, kategorijo ali regijo.",
+    en: "Try changing the month, category or region.",
+  },
+  featured: { sl: "Izpostavljeno", en: "Featured" },
+  dateTitle: { sl: "Datum dogodka", en: "Event date" },
+  locationTitle: { sl: "Lokacija", en: "Location" },
+  admissionTitle: { sl: "Vstopnina", en: "Admission" },
+  free: { sl: "Brezplačno", en: "Free" },
+  website: { sl: "Spletna stran", en: "Website" },
+  exploreDestination: {
+    sl: "Razišči destinacijo",
+    en: "Explore the destination",
+  },
+} as const;
+
+// EN polna imena mesecev (F4-D — zrcalo SLOVENIAN_MONTHS_FULL; kratke EN
+// oblike že obstajajo v events-data kot ENGLISH_MONTHS_SHORT).
+const ENGLISH_MONTHS_FULL: string[] = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+/** Polna imena mesecev v izbranem jeziku (glava skupine + filter). */
+export function monthsFull(lang: "sl" | "en"): string[] {
+  return lang === "en" ? ENGLISH_MONTHS_FULL : SLOVENIAN_MONTHS_FULL;
+}
+
+/**
+ * Možnosti filtra meseca (vrednost = indeks meseca kot string — ISTA
+ * pogodba kot MONTH_OPTIONS iz events-data, samo oznake so jezikovne).
+ */
+export function monthOptions(
+  lang: "sl" | "en"
+): { value: string; label: string }[] {
+  return monthsFull(lang).map((label, idx) => ({ value: String(idx), label }));
+}
+
+/**
+ * F4-D: ime + opis dogodka v izbranem jeziku — EN prekrivna plast EVENTS_EN
+ * po id-ju z varnim fallbackom na SL (isti vzorec kot resolucija v
+ * matchEventsForItinerary / events-match.ts). Identifikatorji, datumi,
+ * kategorije, regije in slike se NE prevajajo.
+ */
+export function eventText(
+  event: Pick<EventItem, "id" | "name" | "description">,
+  lang: "sl" | "en"
+): { name: string; description: string } {
+  const en = lang === "en" ? EVENTS_EN[event.id] : undefined;
+  return {
+    name: en?.name ?? event.name,
+    description: en?.description ?? event.description,
+  };
+}
+
+/** Oznaka kategorije dogodka v izbranem jeziku (F4-D — čista funkcija). */
+export function eventCategoryLabel(
+  category: EventCategory,
+  lang: "sl" | "en"
+): string {
+  return lang === "en"
+    ? EVENT_CATEGORY_LABELS_EN[category]
+    : EVENT_CATEGORY_LABELS[category];
+}
+
 /**
  * EventsCalendar — koledar slovenskih festivaljev in prireditev.
  * "use client" zaradi filtrov (Select) in memoizacije.
  * Dogodki so uvoženi direktno iz events-data.ts (brez API klica).
  */
 export function EventsCalendar() {
+  // TASK 8 / F4-D: jezik koledarja — poganja UI krom (L), EN podatkovno
+  // plast (EVENTS_EN) in format datumov (formatEventDate, 3. parameter).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
   const [month, setMonth] = useState<string>(ALL_VALUE);
   const [category, setCategory] = useState<string>(ALL_VALUE);
   const [region, setRegion] = useState<string>(ALL_VALUE);
@@ -138,16 +251,16 @@ export function EventsCalendar() {
             className="mb-3 border-primary/30 text-primary"
           >
             <Calendar className="size-3" aria-hidden="true" />
-            Vse leto
+            {L.headerBadge[lang]}
           </Badge>
           <h2
             id="dogodki-title"
             className="text-3xl font-bold tracking-tight sm:text-4xl"
           >
-            Koledar dogodkov
+            {L.title[lang]}
           </h2>
           <p className="mt-3 text-base text-muted-foreground">
-            Festivali, prireditve in dogodki skozi vse leto
+            {L.subtitle[lang]}
           </p>
         </div>
 
@@ -156,25 +269,25 @@ export function EventsCalendar() {
           <FilterSelect
             value={month}
             onChange={setMonth}
-            placeholder="Vsi meseci"
-            ariaLabel="Filtriraj po mesecu"
-            options={MONTH_OPTIONS}
+            placeholder={L.allMonths[lang]}
+            ariaLabel={L.filterByMonth[lang]}
+            options={monthOptions(lang)}
           />
           <FilterSelect
             value={category}
             onChange={setCategory}
-            placeholder="Vse kategorije"
-            ariaLabel="Filtriraj po kategoriji"
+            placeholder={L.allCategories[lang]}
+            ariaLabel={L.filterByCategory[lang]}
             options={EVENT_CATEGORIES.map((c) => ({
               value: c.value,
-              label: `${c.icon} ${c.label}`,
+              label: `${c.icon} ${eventCategoryLabel(c.value, lang)}`,
             }))}
           />
           <FilterSelect
             value={region}
             onChange={setRegion}
-            placeholder="Vse regije"
-            ariaLabel="Filtriraj po regiji"
+            placeholder={L.allRegions[lang]}
+            ariaLabel={L.filterByRegion[lang]}
             options={REGIONS.map((r) => ({
               value: r.value,
               label: r.label,
@@ -185,18 +298,18 @@ export function EventsCalendar() {
         {/* Števec */}
         <p className="mt-6 text-center text-sm text-muted-foreground">
           {total === 0
-            ? "Ni dogodkov za izbrane filtre"
+            ? L.noEvents[lang]
             : total === 1
-              ? "1 dogodek"
-              : `${total} dogodkov`}
+              ? L.oneEvent[lang]
+              : `${total} ${L.eventsCount[lang]}`}
         </p>
 
         {/* Mesečni prikaz */}
         {groupedByMonth.length === 0 ? (
           <EmptyState
             icon={CalendarX}
-            title="Ni dogodkov za izbrane filtre."
-            description="Poskusite spremeniti mesec, kategorijo ali regijo."
+            title={L.emptyTitle[lang]}
+            description={L.emptyDescription[lang]}
             className="mt-8 py-16"
           />
         ) : (
@@ -206,6 +319,7 @@ export function EventsCalendar() {
                 key={group.month}
                 month={group.month}
                 events={group.events}
+                lang={lang}
               />
             ))}
           </div>
@@ -255,35 +369,49 @@ function FilterSelect({
 function MonthGroup({
   month,
   events,
+  lang,
 }: {
   month: number;
   events: EventItem[];
+  /** F4-D: jezik glave meseca (ime meseca + števec dogodkov). */
+  lang: "sl" | "en";
 }) {
   return (
     <div>
       {/* Glava meseca */}
       <div className="flex items-center gap-3 border-b border-border pb-3">
         <h3 className="text-xl font-bold text-primary sm:text-2xl">
-          {SLOVENIAN_MONTHS_FULL[month]}
+          {monthsFull(lang)[month]}
         </h3>
         <Badge variant="secondary" className="font-medium">
-          {events.length === 1 ? "1 dogodek" : `${events.length} dogodkov`}
+          {events.length === 1
+            ? L.oneEvent[lang]
+            : `${events.length} ${L.eventsCount[lang]}`}
         </Badge>
       </div>
 
       {/* Kartice dogodkov */}
       <div className="mt-5 grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-2">
         {events.map((event) => (
-          <EventCard key={event.id} event={event} />
+          <EventCard key={event.id} event={event} lang={lang} />
         ))}
       </div>
     </div>
   );
 }
 
-function EventCard({ event }: { event: EventItem }) {
+function EventCard({
+  event,
+  lang,
+}: {
+  event: EventItem;
+  /** F4-D: jezik kartice (ime/opis prek EVENTS_EN, kategorija, datumi). */
+  lang: "sl" | "en";
+}) {
   const CategoryIcon = CATEGORY_ICON[event.category];
   const isFree = event.priceRange === "brezplačno";
+  // F4-D: ime/opis v jeziku površine (EN prekrivna plast, fallback SL).
+  const text = eventText(event, lang);
 
   return (
     <Card className="group gap-0 overflow-hidden py-0 transition-all hover:shadow-lg">
@@ -293,7 +421,7 @@ function EventCard({ event }: { event: EventItem }) {
         <div className="relative w-28 shrink-0 overflow-hidden bg-muted sm:w-40">
           <img
             src={event.image}
-            alt={`${event.name} — ${event.location}`}
+            alt={`${text.name} — ${event.location}`}
             loading="lazy"
             className="aspect-square size-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
@@ -304,8 +432,8 @@ function EventCard({ event }: { event: EventItem }) {
                 aria-hidden="true"
               />
               {/* Besedilo ne spravi v 112px sliko — na mobilnem samo zvezdica + sr-only */}
-              <span className="sr-only sm:hidden">Izpostavljeno</span>
-              <span className="hidden sm:inline">Izpostavljeno</span>
+              <span className="sr-only sm:hidden">{L.featured[lang]}</span>
+              <span className="hidden sm:inline">{L.featured[lang]}</span>
             </Badge>
           ) : null}
         </div>
@@ -317,43 +445,43 @@ function EventCard({ event }: { event: EventItem }) {
             className={`w-fit ${CATEGORY_BADGE_CLASS[event.category]}`}
           >
             <CategoryIcon className="size-3" aria-hidden="true" />
-            {EVENT_CATEGORY_LABELS[event.category]}
+            {eventCategoryLabel(event.category, lang)}
           </Badge>
 
           {/* Ime */}
           <h4 className="text-base font-semibold leading-tight sm:text-lg">
-            {event.name}
+            {text.name}
           </h4>
 
           {/* Meta: datum, lokacija, cena */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
             <span
               className="inline-flex items-center gap-1.5"
-              title="Datum dogodka"
+              title={L.dateTitle[lang]}
             >
               <Calendar className="size-4 text-primary" aria-hidden="true" />
               <time
                 dateTime={event.date}
                 className="font-medium text-foreground/80"
               >
-                {formatEventDate(event.date, event.endDate)}
+                {formatEventDate(event.date, event.endDate, lang)}
               </time>
             </span>
             <span
               className="inline-flex items-center gap-1.5"
-              title="Lokacija"
+              title={L.locationTitle[lang]}
             >
               <MapPin className="size-4 text-primary" aria-hidden="true" />
               {event.location}
             </span>
             <span
               className="inline-flex items-center gap-1.5"
-              title="Vstopnina"
+              title={L.admissionTitle[lang]}
             >
               <Ticket className="size-4 text-primary" aria-hidden="true" />
               {isFree ? (
                 <span className="font-medium text-emerald-700 dark:text-emerald-400">
-                  Brezplačno
+                  {L.free[lang]}
                 </span>
               ) : (
                 <span className="font-medium text-foreground/80">
@@ -365,7 +493,7 @@ function EventCard({ event }: { event: EventItem }) {
 
           {/* Opis */}
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground line-clamp-2">
-            {event.description}
+            {text.description}
           </p>
 
           {/* CTA gumbi — TASK 8 / D8-D: kanonski "Dodaj v mojo pot" je ZDAJ
@@ -378,8 +506,12 @@ function EventCard({ event }: { event: EventItem }) {
               item={{
                 kind: "event",
                 refId: event.id,
-                title: event.name,
-                subtitle: `${formatEventDate(event.date, event.endDate)} · ${event.location}`,
+                title: text.name,
+                subtitle: `${formatEventDate(
+                  event.date,
+                  event.endDate,
+                  lang
+                )} · ${event.location}`,
                 // ISKRENOST href: dogodki nimajo interne podstrani — zbirka
                 // "Moja pot" sprejema SAMO notranje poti (my-trip.ts meja),
                 // zato vodi na koledar /dogodki (zunanja spletna stran
@@ -396,7 +528,7 @@ function EventCard({ event }: { event: EventItem }) {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Spletna stran
+                    {L.website[lang]}
                     <ExternalLink className="size-3.5" aria-hidden="true" />
                   </a>
                 </Button>
@@ -409,7 +541,7 @@ function EventCard({ event }: { event: EventItem }) {
                   className="text-primary hover:bg-primary/10 hover:text-primary"
                 >
                   <a href="/destinacije">
-                    Razišči destinacijo
+                    {L.exploreDestination[lang]}
                     <ArrowRight
                       className="size-3.5 transition-transform group-hover:translate-x-0.5"
                       aria-hidden="true"

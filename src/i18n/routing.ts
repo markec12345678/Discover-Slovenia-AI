@@ -6,8 +6,8 @@ import { defineRouting } from "next-intl/routing";
  * FW4.3-2 (EN Phase 2): javno sta zdaj slovenščina (default, brez prefix-a)
  * IN angleščina (`/en` prefix) — a LE za poti na EN whitelisti spodaj
  * (jedro lijaka: domov, načrtuj, destinacije s programatskimi podstranmi,
- * info/E-E-A-T strani). Vse ostale poti (ADRIA vodniki, blog, dogodki,
- * tržnica, admin/owner/auth …) ostanejo izključno slovenske — proxy
+ * info/E-E-A-T strani). Vse ostale poti (ADRIA vodniki, blog,
+ * admin/owner/auth …) ostanejo izključno slovenske — proxy
  * zahteve `/en/<nedovoljena-pot>` trajno (308) preusmeri na slovensko pot
  * (P4-8: nikoli mešanja jezikov, nikoli 404).
  *
@@ -85,6 +85,20 @@ export const EN_STATIC_ROUTES = new Set([
   // najbolj uporabna ravno na telefonu na poti (komponenta go-mode je
   // dvojezična, L vzorec; isti kanon kot /potovanje).
   "/na-poti",
+  // ISSUE #8 F4-E (Faza 4, 1.115.0): raziskovalne + zbirka + BOOK korak
+  // lijaka zdaj dvojezični (UI L-vzorec; dogodki imajo celo EN podatkovno
+  // plast EVENTS_EN). Iskrena meja, vidna v UI: imena/opisi izdelkov,
+  // izkušenj in lokalov so PODATKI ponudnikov v slovenščini (DB brez EN
+  // stolpcev — vsebina je lastna naloga, ne UI) — na /en/trznica in
+  // /en/lokali stoji zato tiha resnična vrstica (isti §38 kanon kot
+  // NO_LIVE_DATA).
+  "/trznica",
+  "/dozivetja",
+  "/lokali",
+  "/dogodki",
+  // Osebna zbirka: orodje uporabnika — okvir popolnoma EN; imena shranjenih
+  // postavk so uporabnikovi lastni viri (jezik neodvisen).
+  "/moja-potovanja",
 ]);
 
 /**

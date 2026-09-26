@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
+import { useLocale } from "next-intl";
 import { BadgeCheck, Loader2, MessageSquareQuote, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +26,7 @@ import { plannerSessionId } from "@/lib/planner-analytics";
 // Props (natanko en od obeh):
 //   productId     — prikaz v ProductModal
 //   experienceId  — prikaz v ExperienceModal
-//   title         — opcijski naslov sekcije (privzeto "Mnenja obiskovalcev")
+//   title         — opcijski naslov sekcije (privzeto po jeziku ogleda)
 // ============================================================================
 
 interface ReviewSectionProps {
@@ -33,6 +34,80 @@ interface ReviewSectionProps {
   experienceId?: string;
   title?: string;
 }
+
+// F4-E (main): ReviewSection živi v EN modalih (product/experience) — cel
+// L-vzorec (isti kanon kot ostala tržnica). Strežniška sporočila
+// (data.error) ostanejo v izvirnem jeziku — iskrena meja, dokumentirana
+// tudi v worklogu 4-b; klientovi fallbacki in vsa forma so dvojezični.
+const L = {
+  title: { sl: "Mnenja obiskovalcev", en: "Visitor reviews" },
+  loadingAria: { sl: "Nalaganje mnenj", en: "Loading reviews" },
+  fetchThrow: { sl: "Napaka pri pridobivanju mnenj", en: "Failed to load reviews" },
+  validation: {
+    author: { sl: "Ime mora imeti 2–60 znakov", en: "Name must be 2–60 characters" },
+    rating: { sl: "Izberite oceno od 1 do 5", en: "Pick a rating from 1 to 5" },
+    comment: {
+      sl: (min: number, max: number) => `Mnenje mora imeti ${min}–${max} znakov`,
+      en: (min: number, max: number) => `Review must be ${min}–${max} characters`,
+    },
+  },
+  post: {
+    fallbackError: {
+      sl: "Mnenja trenutno ni bilo mogoče objaviti",
+      en: "Your review could not be posted right now",
+    },
+    networkError: {
+      sl: "Mnenja ni bilo mogoče poslati — preverite povezavo",
+      en: "Could not send your review — check your connection",
+    },
+    toastTitle: { sl: "Mnenje objavljeno", en: "Review published" },
+    toastDescription: {
+      sl: "Hvala, da delite svojo izkušnjo z drugimi obiskovalci.",
+      en: "Thank you for sharing your experience with other visitors.",
+    },
+  },
+  verified: {
+    label: { sl: "Overjena rezervacija", en: "Verified booking" },
+    title: {
+      sl: "Ob objavi mnenja je obstajala potrjena rezervacija te izkušnje prek naše tržnice.",
+      en: "At the time of posting, a confirmed booking for this experience existed via our marketplace.",
+    },
+  },
+  stars: {
+    aria: { sl: (n: number) => `Ocena ${n} od 5`, en: (n: number) => `Rating ${n} of 5` },
+    one: { sl: "zvezdica", en: "star" },
+    many: { sl: "zvezdice", en: "stars" },
+    pick: { sl: "Izberi oceno", en: "Pick a rating" },
+  },
+  empty: {
+    sl: "Prvi podaj svoje mnenje — tvoja izkušnja pomaga drugim obiskovalcem pri odločitvi.",
+    en: "Be the first to review — your experience helps other visitors decide.",
+  },
+  form: {
+    writeFirst: { sl: "Napiši prvo mnenje", en: "Write the first review" },
+    write: { sl: "Napiši mnenje", en: "Write a review" },
+    aria: { sl: "Obrazec za novo mnenje", en: "New review form" },
+    nameLabel: { sl: "Ime", en: "Name" },
+    namePlaceholder: { sl: "npr. Ana Novak", en: "e.g. Ana Novak" },
+    nameHint: {
+      sl: "2–60 znakov. Ime bo objavljeno ob mnenju.",
+      en: "2–60 characters. Your name will be shown with the review.",
+    },
+    ratingLabel: { sl: "Ocena", en: "Rating" },
+    commentLabel: { sl: "Tvoje mnenje", en: "Your review" },
+    commentPlaceholder: {
+      sl: "Kaj ti je bilo všeč? Ali bi priporočil drugim?",
+      en: "What did you like? Would you recommend it to others?",
+    },
+    commentHint: {
+      sl: (cur: number, max: number) => `10–1000 znakov (${cur} / ${max})`,
+      en: (cur: number, max: number) => `10–1000 characters (${cur} / ${max})`,
+    },
+    submitting: { sl: "Objavljam…", en: "Publishing…" },
+    submit: { sl: "Objavi mnenje", en: "Publish review" },
+    cancel: { sl: "Prekliči", en: "Cancel" },
+  },
+} as const;
 
 interface ReviewItem {
   id: string;
@@ -62,19 +137,19 @@ const AUTHOR_MAX = 60;
 const COMMENT_MIN = 10;
 const COMMENT_MAX = 1000;
 
-/** Slovenski zapis povprečja: "4,6". */
-function formatAverage(avg: number): string {
-  return avg.toLocaleString("sl-SI", {
+/** Zapis povprečja po jeziku: sl "4,6" / en "4.6". */
+function formatAverage(avg: number, lang: "sl" | "en"): string {
+  return avg.toLocaleString(lang === "en" ? "en-GB" : "sl-SI", {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });
 }
 
-/** ISO datum → "5. september 2026" (sl-SI). */
-function formatReviewDate(iso: string): string {
+/** ISO datum → "5. september 2026" (sl-SI) / "5 September 2026" (en-GB). */
+function formatReviewDate(iso: string, lang: "sl" | "en"): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("sl-SI", {
+  return d.toLocaleDateString(lang === "en" ? "en-GB" : "sl-SI", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -82,12 +157,20 @@ function formatReviewDate(iso: string): string {
 }
 
 /** Zvezdice (samo za prikaz) — polnjene amber-400 do `rating`. */
-function StarRow({ rating, className }: { rating: number; className?: string }) {
+function StarRow({
+  rating,
+  className,
+  lang,
+}: {
+  rating: number;
+  className?: string;
+  lang: "sl" | "en";
+}) {
   return (
     <span
       className={`flex items-center gap-0.5 ${className ?? ""}`}
       role="img"
-      aria-label={`Ocena ${rating} od 5`}
+      aria-label={L.stars.aria[lang](rating)}
     >
       {[1, 2, 3, 4, 5].map((n) => (
         <Star
@@ -105,10 +188,15 @@ function StarRow({ rating, className }: { rating: number; className?: string }) 
 export function ReviewSection({
   productId,
   experienceId,
-  title = "Mnenja obiskovalcev",
+  title,
 }: ReviewSectionProps) {
   const { toast } = useToast();
   const uid = useId();
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  // Naslov: klicatelj lahko poda svojega (izvirni jezik); sicer jezik
+  // ogleda (F4-E — prej hardcodan SL default).
+  const heading = title ?? L.title[lang];
 
   const targetId = productId ?? experienceId;
   const targetParam = productId ? "productId" : "experienceId";
@@ -137,7 +225,7 @@ export function ReviewSection({
         `/api/reviews?${param}=${encodeURIComponent(id)}`,
         { cache: "no-store" }
       );
-      if (!res.ok) throw new Error("Napaka pri pridobivanju mnenj");
+      if (!res.ok) throw new Error(L.fetchThrow[lang]);
       const data: ReviewsResponse = await res.json();
       setReviews(data.reviews ?? []);
     } catch {
@@ -179,14 +267,14 @@ export function ReviewSection({
   const validateForm = (): string | null => {
     const name = authorName.trim();
     if (name.length < AUTHOR_MIN || name.length > AUTHOR_MAX) {
-      return "Ime mora imeti 2–60 znakov";
+      return L.validation.author[lang];
     }
     if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-      return "Izberite oceno od 1 do 5";
+      return L.validation.rating[lang];
     }
     const text = comment.trim();
     if (text.length < COMMENT_MIN || text.length > COMMENT_MAX) {
-      return `Mnenje mora imeti ${COMMENT_MIN}–${COMMENT_MAX} znakov`;
+      return L.validation.comment[lang](COMMENT_MIN, COMMENT_MAX);
     }
     return null;
   };
@@ -220,7 +308,9 @@ export function ReviewSection({
       const data: ReviewPostResponse = await res.json().catch(() => ({}));
 
       if (!res.ok || !data.success || !data.review) {
-        setFormError(data.error ?? "Mnenja trenutno ni bilo mogoče objaviti");
+        // Strežniško sporočilo (data.error) ostane v izvirnem jeziku —
+        // iskrena meja; fallback je jezik ogleda.
+        setFormError(data.error ?? L.post.fallbackError[lang]);
         return;
       }
 
@@ -232,11 +322,11 @@ export function ReviewSection({
       setComment("");
       setFormOpen(false);
       toast({
-        title: "Mnenje objavljeno",
-        description: "Hvala, da delite svojo izkušnjo z drugimi obiskovalci.",
+        title: L.post.toastTitle[lang],
+        description: L.post.toastDescription[lang],
       });
     } catch {
-      setFormError("Mnenja ni bilo mogoče poslati — preverite povezavo");
+      setFormError(L.post.networkError[lang]);
     } finally {
       setSubmitting(false);
     }
@@ -245,31 +335,31 @@ export function ReviewSection({
   const displayRating = hoverRating || rating;
 
   return (
-    <section aria-label={title}>
+    <section aria-label={heading}>
       {/* Header: povprečje UGC (ločeno od demo ratinga izdelka) */}
       <h3 className="flex flex-wrap items-center gap-2 text-sm font-semibold">
         <MessageSquareQuote className="size-4 text-primary" aria-hidden="true" />
-        {title}
+        {heading}
         {ugcCount > 0 ? (
           <span className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
             <Star
               className="size-3.5 fill-amber-400 text-amber-400"
               aria-hidden="true"
             />
-            <span className="tabular-nums">{formatAverage(ugcAverage)}</span>
+            <span className="tabular-nums">{formatAverage(ugcAverage, lang)}</span>
             <span>({ugcCount})</span>
           </span>
         ) : null}
         {ugcCount > 0 ? (
           <span className="ml-auto hidden text-[10px] uppercase tracking-wide text-muted-foreground/70 sm:inline">
-            Mnenja obiskovalcev
+            {L.title[lang]}
           </span>
         ) : null}
       </h3>
 
       {/* Loading — skeleton */}
       {loading ? (
-        <div className="mt-3 space-y-3" aria-label="Nalaganje mnenj">
+        <div className="mt-3 space-y-3" aria-label={L.loadingAria[lang]}>
           {Array.from({ length: 2 }).map((_, i) => (
             <div
               key={i}
@@ -314,22 +404,22 @@ export function ReviewSection({
                     {r.verified === true && (
                       <span
                         role="img"
-                        aria-label="Overjena rezervacija"
-                        title="Ob objavi mnenja je obstajala potrjena rezervacija te izkušnje prek naše tržnice."
+                        aria-label={L.verified.label[lang]}
+                        title={L.verified.title[lang]}
                         className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
                       >
                         <BadgeCheck className="size-3" aria-hidden="true" />
-                        Overjena rezervacija
+                        {L.verified.label[lang]}
                       </span>
                     )}
                   </p>
                   <div className="flex items-center gap-2">
-                    <StarRow rating={r.rating} />
+                    <StarRow rating={r.rating} lang={lang} />
                     <time
                       dateTime={r.createdAt}
                       className="text-[11px] text-muted-foreground"
                     >
-                      {formatReviewDate(r.createdAt)}
+                      {formatReviewDate(r.createdAt, lang)}
                     </time>
                   </div>
                 </div>
@@ -345,8 +435,7 @@ export function ReviewSection({
       {/* Prazen state (fetch uspešen, ni še mnenj) */}
       {!loading && !fetchError && ugcCount === 0 ? (
         <p className="mt-3 rounded-lg border border-dashed border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
-          Prvi podaj svoje mnenje — tvoja izkušnja pomaga drugim obiskovalcem
-          pri odločitvi.
+          {L.empty[lang]}
         </p>
       ) : null}
 
@@ -360,7 +449,9 @@ export function ReviewSection({
           onClick={() => setFormOpen(true)}
         >
           <MessageSquareQuote className="size-4" aria-hidden="true" />
-          {ugcCount === 0 && !loading ? "Napiši prvo mnenje" : "Napiši mnenje"}
+          {ugcCount === 0 && !loading
+            ? L.form.writeFirst[lang]
+            : L.form.write[lang]}
         </Button>
       ) : null}
 
@@ -370,11 +461,11 @@ export function ReviewSection({
           onSubmit={handleSubmit}
           noValidate
           className="mt-3 space-y-3 rounded-lg border border-border/60 bg-muted/20 p-4"
-          aria-label="Obrazec za novo mnenje"
+          aria-label={L.form.aria[lang]}
         >
           {/* Ime */}
           <div className="space-y-1.5">
-            <Label htmlFor={`${uid}-author`}>Ime</Label>
+            <Label htmlFor={`${uid}-author`}>{L.form.nameLabel[lang]}</Label>
             <Input
               id={`${uid}-author`}
               type="text"
@@ -383,21 +474,21 @@ export function ReviewSection({
               value={authorName}
               onChange={(e) => setAuthorName(e.target.value)}
               disabled={submitting}
-              placeholder="npr. Ana Novak"
+              placeholder={L.form.namePlaceholder[lang]}
               aria-describedby={`${uid}-author-hint`}
             />
             <p
               id={`${uid}-author-hint`}
               className="text-[11px] text-muted-foreground"
             >
-              2–60 znakov. Ime bo objavljeno ob mnenju.
+              {L.form.nameHint[lang]}
             </p>
           </div>
 
           {/* Ocena — interaktivne zvezdice */}
           <div className="space-y-1.5">
             <span id={`${uid}-rating-label`} className="text-sm font-medium">
-              Ocena
+              {L.form.ratingLabel[lang]}
             </span>
             <div
               role="radiogroup"
@@ -411,7 +502,7 @@ export function ReviewSection({
                   type="button"
                   role="radio"
                   aria-checked={rating === n}
-                  aria-label={`${n} ${n === 1 ? "zvezdica" : "zvezdice"}`}
+                  aria-label={`${n} ${n === 1 ? L.stars.one[lang] : L.stars.many[lang]}`}
                   disabled={submitting}
                   onClick={() => setRating(n)}
                   onMouseEnter={() => setHoverRating(n)}
@@ -433,14 +524,14 @@ export function ReviewSection({
                 className="ml-2 text-xs text-muted-foreground"
                 aria-live="polite"
               >
-                {rating > 0 ? `${rating} / 5` : "Izberi oceno"}
+                {rating > 0 ? `${rating} / 5` : L.stars.pick[lang]}
               </span>
             </div>
           </div>
 
           {/* Mnenje */}
           <div className="space-y-1.5">
-            <Label htmlFor={`${uid}-comment`}>Tvoje mnenje</Label>
+            <Label htmlFor={`${uid}-comment`}>{L.form.commentLabel[lang]}</Label>
             <Textarea
               id={`${uid}-comment`}
               rows={4}
@@ -448,18 +539,18 @@ export function ReviewSection({
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               disabled={submitting}
-              placeholder="Kaj ti je bilo všeč? Ali bi priporočil drugim?"
+              placeholder={L.form.commentPlaceholder[lang]}
               aria-describedby={`${uid}-comment-hint`}
             />
             <p
               id={`${uid}-comment-hint`}
               className="text-[11px] text-muted-foreground"
             >
-              10–1000 znakov ({comment.trim().length} / {COMMENT_MAX})
+              {L.form.commentHint[lang](comment.trim().length, COMMENT_MAX)}
             </p>
           </div>
 
-          {/* Napaka — inline, slovensko (iz strežnika ali client validacije) */}
+          {/* Napaka — inline (iz strežnika [izvirni jezik] ali client validacije [jezik ogleda]) */}
           {formError ? (
             <p
               role="alert"
@@ -481,7 +572,7 @@ export function ReviewSection({
               ) : (
                 <Star className="size-4" aria-hidden="true" />
               )}
-              {submitting ? "Objavljam…" : "Objavi mnenje"}
+              {submitting ? L.form.submitting[lang] : L.form.submit[lang]}
             </Button>
             <Button
               type="button"
@@ -492,7 +583,7 @@ export function ReviewSection({
               }}
               disabled={submitting}
             >
-              Prekliči
+              {L.form.cancel[lang]}
             </Button>
           </div>
         </form>

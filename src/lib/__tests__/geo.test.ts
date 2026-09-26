@@ -189,9 +189,13 @@ describe("sitemap.xml route", () => {
       `hreflang="en-US" href="https://${RENDER}/en/vodici/kotor-crna-gora-iz-slovenije"`,
     );
     expect(body).toContain(`https://${RENDER}/en/vodici`);
-    // EN poti, ki NISO na whitelisti (blog, dogodki), EN različice NIMAJO
+    // EN poti, ki NISO na whitelisti (blog, za ponudnike), EN različice
+    // NIMAJO. ISSUE #8 F4-E: /dogodki (in tržnica/lokali/doživetja) so zdaj
+    // NAMERNO na whitelisti — njihova /en ogledala so iskrena (UI L-vzorec;
+    // dogodki imajo celoten EN podatkovni sloj EVENTS_EN).
     expect(body).not.toContain("/en/blog");
-    expect(body).not.toContain("/en/dogodki");
+    expect(body).not.toContain("/en/za-ponudnike");
+    expect(body).not.toContain("/en/slovenia-pass");
   });
 });
 

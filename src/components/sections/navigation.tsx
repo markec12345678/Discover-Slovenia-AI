@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useTheme } from "next-themes";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Mountain, Sun, Moon, Compass, Search, ShoppingCart, Building2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -37,6 +37,22 @@ import { destinationHref } from "@/lib/search-result-nav";
  * na najširšem zaslonu). Ciljni model DISCOVER → PLAN → BOOK → GO zahteva,
  * da je centralni shranjeni objekt (MY TRIP) dosegljiv z vsake naprave.
  */
+
+// F4-E (issue #8 Faza 4): lupina mora biti dvojezična na VSEH EN straneh —
+// trije pušči (košarica aria, tema aria, gumb Svetla/Temna v Sheetu) so bili
+// zadnji SL-only nizi navigacije. aria-labeli gredo branju zaslona — SL
+// label na EN strani je dostopnostna napaka, ne le kozmetična.
+const NAV_L = {
+  cart: { sl: "Odpri košarico", en: "Open cart" },
+  cartWithItems: {
+    sl: (n: number) => `Odpri košarico (${n} izdelkov)`,
+    en: (n: number) => `Open cart (${n} items)`,
+  },
+  theme: { sl: "Preklopi temo", en: "Toggle theme" },
+  themeLight: { sl: "Svetla", en: "Light" },
+  themeDark: { sl: "Temna", en: "Dark" },
+} as const;
+
 function useNavLinks() {
   const t = useTranslations("nav");
   return [
@@ -95,6 +111,8 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
   const [scrolled, setScrolled] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
   const t = useTranslations("nav");
+  const navLocale = useLocale();
+  const lang: "sl" | "en" = navLocale === "en" ? "en" : "sl";
   const router = useRouter();
   const navLinks = useNavLinks();
   const secondaryLinks = useSecondaryLinks();
@@ -237,8 +255,8 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
               onClick={openCart}
               aria-label={
                 cartCount > 0
-                  ? `Odpri košarico (${cartCount} izdelkov)`
-                  : "Odpri košarico"
+                  ? NAV_L.cartWithItems[lang](cartCount)
+                  : NAV_L.cart[lang]
               }
               className={cn(
                 "relative",
@@ -281,7 +299,7 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
-              aria-label="Preklopi temo"
+              aria-label={NAV_L.theme[lang]}
               className={cn(
                 "hidden sm:inline-flex",
                 glass ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
@@ -399,7 +417,7 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                     variant="outline"
                     size="sm"
                     onClick={toggleTheme}
-                    aria-label="Preklopi temo"
+                    aria-label={NAV_L.theme[lang]}
                     className="gap-2"
                   >
                     {mounted && resolvedTheme === "dark" ? (
@@ -407,7 +425,9 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                     ) : (
                       <Moon className="size-4" aria-hidden="true" />
                     )}
-                    {mounted && resolvedTheme === "dark" ? "Svetla" : "Temna"}
+                    {mounted && resolvedTheme === "dark"
+                      ? NAV_L.themeLight[lang]
+                      : NAV_L.themeDark[lang]}
                   </Button>
                 </div>
 

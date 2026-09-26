@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useLocale } from "next-intl";
 import {
   ShoppingCart,
   Trash2,
@@ -28,12 +29,76 @@ import { CheckoutModal } from "@/components/checkout-modal";
 
 const FREE_SHIPPING_THRESHOLD = 50;
 
+// TASK 8 / F4-B (issue #8 Faza 4 — EN razširitev booking sklada): L-pattern
+// slovar (SL+EN) za VES UI chrome košarice — vrstice, povzetki, CTA, arija,
+// prazno stanje. RESNICA (§38): "Skupaj" ↔ "Total", "Brezplačna" ↔ "Free",
+// "Vse cene so v EUR" ↔ "All prices are in EUR" — EXAKTNA ohranitev pomena.
+// ZERO-LOSS: samo nizi, nobena logika/vedenje se ne spreminja.
+const L = {
+  a11y: {
+    close: { sl: "Zapri košarico", en: "Close the cart" },
+    removeItem: {
+      sl: (name: string) => `Odstrani ${name}`,
+      en: (name: string) => `Remove ${name}`,
+    },
+    decrease: {
+      sl: (name: string) => `Zmanjšaj količino za ${name}`,
+      en: (name: string) => `Decrease quantity of ${name}`,
+    },
+    increase: {
+      sl: (name: string) => `Povečaj količino za ${name}`,
+      en: (name: string) => `Increase quantity of ${name}`,
+    },
+  },
+  header: {
+    title: { sl: "Košarica", en: "Cart" },
+    empty: { sl: "Prazna košarica", en: "Empty cart" },
+    count: {
+      sl: (n: number) =>
+        `${n} ${n === 1 ? "izdelek" : n < 5 ? "izdelka" : "izdelkov"}`,
+      en: (n: number) => `${n} ${n === 1 ? "item" : "items"}`,
+    },
+  },
+  clear: { sl: "Izprazni košarico", en: "Clear cart" },
+  shipping: {
+    remainingPre: { sl: "Še", en: "Only" },
+    remainingPost: {
+      sl: "do brezplačne dostave",
+      en: "away from free shipping",
+    },
+    unlocked: { sl: "Brezplačna dostava!", en: "Free shipping!" },
+  },
+  summary: {
+    subtotal: { sl: "Vrednost izdelkov", en: "Subtotal" },
+    shipping: { sl: "Dostava", en: "Shipping" },
+    free: { sl: "Brezplačna", en: "Free" },
+    total: { sl: "Skupaj", en: "Total" },
+  },
+  checkoutCta: { sl: "Zaključi nakup", en: "Checkout" },
+  note: {
+    sl: "Vse cene so v EUR. Dostava se obračuna pri plačilu.",
+    en: "All prices are in EUR. Shipping is charged at payment.",
+  },
+  perPiece: { sl: "/ kos", en: "/ pc" },
+  empty: {
+    title: { sl: "Košarica je prazna", en: "Your cart is empty" },
+    desc: {
+      sl: "Brskajte po tržnici in dodajte slovenske izdelke.",
+      en: "Browse the marketplace and add Slovenian products.",
+    },
+    cta: { sl: "Nazaj v tržnico", en: "Back to the marketplace" },
+  },
+};
+
 /**
  * CartDrawer — stranski panel (Sheet) z vsebino košarice.
  * Odpre se iz navigation cart ikone ali pa avtomatsko ob addItem.
  * Gumb "Zaključi nakup" odpre CheckoutModal.
  */
 export function CartDrawer() {
+  // F4-B: jezik UI chroma (L-pattern, isti vzorec kot journey-planner).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
   const isOpen = useCart((s) => s.isOpen);
   const setCartOpen = useCart((s) => s.setCartOpen);
   const items = useCart((s) => s.items);
@@ -80,12 +145,12 @@ export function CartDrawer() {
               </span>
               <div className="flex flex-col">
                 <SheetTitle className="text-base font-bold">
-                  Košarica
+                  {L.header.title[lang]}
                 </SheetTitle>
                 <SheetDescription className="text-xs">
                   {count === 0
-                    ? "Prazna košarica"
-                    : `${count} ${count === 1 ? "izdelek" : count < 5 ? "izdelka" : "izdelkov"}`}
+                    ? L.header.empty[lang]
+                    : L.header.count[lang](count)}
                 </SheetDescription>
               </div>
             </div>
@@ -95,7 +160,7 @@ export function CartDrawer() {
               size="icon"
               className="size-8"
               onClick={() => setCartOpen(false)}
-              aria-label="Zapri košarico"
+              aria-label={L.a11y.close[lang]}
             >
               <X className="size-4" aria-hidden="true" />
             </Button>
@@ -123,7 +188,7 @@ export function CartDrawer() {
                 className="mt-4 inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-destructive"
               >
                 <Trash2 className="size-3.5" aria-hidden="true" />
-                Izprazni košarico
+                {L.clear[lang]}
               </button>
             </div>
           )}
@@ -139,14 +204,14 @@ export function CartDrawer() {
                       <Truck className="size-3.5" aria-hidden="true" />
                       {remainingForFree > 0 ? (
                         <>
-                          Še{" "}
+                          {L.shipping.remainingPre[lang]}{" "}
                           <span className="font-semibold text-foreground">
                             {formatEUR(remainingForFree)}
                           </span>{" "}
-                          do brezplačne dostave
+                          {L.shipping.remainingPost[lang]}
                         </>
                       ) : (
-                        "Brezplačna dostava!"
+                        L.shipping.unlocked[lang]
                       )}
                     </span>
                     <span className="tabular-nums">{freeShippingProgress}%</span>
@@ -157,13 +222,13 @@ export function CartDrawer() {
 
               {/* Povzetek cen */}
               <div className="space-y-1.5 text-sm">
-                <Row label="Vrednost izdelkov" value={formatEUR(subtotal)} />
+                <Row label={L.summary.subtotal[lang]} value={formatEUR(subtotal)} />
                 <Row
-                  label="Dostava"
+                  label={L.summary.shipping[lang]}
                   value={
                     shipping === 0 ? (
                       <span className="font-semibold text-primary">
-                        Brezplačna
+                        {L.summary.free[lang]}
                       </span>
                     ) : (
                       formatEUR(shipping)
@@ -172,7 +237,7 @@ export function CartDrawer() {
                 />
                 <Separator className="my-2" />
                 <div className="flex items-center justify-between">
-                  <span className="text-base font-semibold">Skupaj</span>
+                  <span className="text-base font-semibold">{L.summary.total[lang]}</span>
                   <span className="text-xl font-bold tabular-nums text-foreground">
                     {formatEUR(total)}
                   </span>
@@ -185,12 +250,12 @@ export function CartDrawer() {
                 className="mt-3 w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={handleCheckout}
               >
-                Zaključi nakup
+                {L.checkoutCta[lang]}
                 <ArrowRight className="size-4" aria-hidden="true" />
               </Button>
 
               <p className="mt-2 text-center text-[11px] text-muted-foreground">
-                Vse cene so v EUR. Dostava se obračuna pri plačilu.
+                {L.note[lang]}
               </p>
             </div>
           ) : null}
@@ -217,6 +282,9 @@ function CartLine({
   onUpdate: (productId: string, quantity: number) => void;
   onRemove: (productId: string) => void;
 }) {
+  // F4-B: jezik UI chroma vrstice (isti L slovar kot drawer zgoraj)
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
   return (
     <li className="flex gap-3 rounded-lg border border-border/60 bg-background p-2.5">
       {/* Slika */}
@@ -250,7 +318,7 @@ function CartLine({
             type="button"
             onClick={() => onRemove(item.productId)}
             className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-            aria-label={`Odstrani ${item.name}`}
+            aria-label={L.a11y.removeItem[lang](item.name)}
           >
             <Trash2 className="size-4" aria-hidden="true" />
           </button>
@@ -264,7 +332,7 @@ function CartLine({
               onClick={() => onUpdate(item.productId, item.quantity - 1)}
               disabled={item.quantity <= 1}
               className="flex size-7 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
-              aria-label={`Zmanjšaj količino za ${item.name}`}
+              aria-label={L.a11y.decrease[lang](item.name)}
             >
               <Minus className="size-3.5" aria-hidden="true" />
             </button>
@@ -278,7 +346,7 @@ function CartLine({
               type="button"
               onClick={() => onUpdate(item.productId, item.quantity + 1)}
               className="flex size-7 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              aria-label={`Povečaj količino za ${item.name}`}
+              aria-label={L.a11y.increase[lang](item.name)}
             >
               <Plus className="size-3.5" aria-hidden="true" />
             </button>
@@ -289,7 +357,7 @@ function CartLine({
               {formatEUR(item.price * item.quantity)}
             </span>
             <span className="text-[11px] text-muted-foreground">
-              {formatEUR(item.price)} / kos
+              {formatEUR(item.price)} {L.perPiece[lang]}
             </span>
           </div>
         </div>
@@ -299,15 +367,18 @@ function CartLine({
 }
 
 function EmptyCart({ onClose }: { onClose: () => void }) {
+  // F4-B: jezik UI chroma praznega stanja (isti L slovar)
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
       <span className="flex size-16 items-center justify-center rounded-full bg-muted">
         <ShoppingBag className="size-7 text-muted-foreground" aria-hidden="true" />
       </span>
       <div>
-        <p className="text-base font-semibold">Košarica je prazna</p>
+        <p className="text-base font-semibold">{L.empty.title[lang]}</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Brskajte po tržnici in dodajte slovenske izdelke.
+          {L.empty.desc[lang]}
         </p>
       </div>
       <Button
@@ -318,7 +389,7 @@ function EmptyCart({ onClose }: { onClose: () => void }) {
         className="mt-2 gap-1.5"
       >
         <ArrowRight className="size-4 rotate-180" aria-hidden="true" />
-        Nazaj v tržnico
+        {L.empty.cta[lang]}
       </Button>
     </div>
   );

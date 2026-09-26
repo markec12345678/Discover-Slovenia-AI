@@ -217,10 +217,16 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
 export function getEnSitemapUrlCount(): number {
   // stalne poti IZ whitelistE (EN_STATIC_ROUTES.size — samo-vzdrževno ob
   // dodajanju poti; 1.48: /zemljevid je 12. član; TASK 58: /potovanje 13.;
-  // TASK 64: /na-poti 14.)
+  // TASK 64: /na-poti 14.; ISSUE #8 F4-E: tržnica/doživetja/lokali/dogodki
+  // 15.–18. + moja-potovanja 19.) … Vendar /moja-potovanja je OSEBNA
+  // stran (zbirka uporabnika) — NAMERNO NI v SL sitemapu, zato tudi njena
+  // EN različica ne more zrcaliti: odštejemo 1 (EN whitelist ≠ EN sitemap;
+  // whitelist odloča o strežbi/jezikovnem stikalu/hreflang metadata strani,
+  // sitemap pa samo o indeksabilnih javnih straneh).
   // + 38 hub (GEO-A) + 38 + 190 + 152 + 152 + 22 vodnikov (ADRIA-EN + LOOP-EN + WINTER-EN)
   return (
-    EN_STATIC_ROUTES.size +
+    EN_STATIC_ROUTES.size -
+    1 + // /moja-potovanja: osebna stran — ni v sitemapu (glej komentar zgoraj)
     DESTINATIONS.length +
     DESTINATIONS.length +
     DESTINATIONS.length * 5 +
