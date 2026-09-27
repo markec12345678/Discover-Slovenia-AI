@@ -432,6 +432,20 @@
     "voiceDeniedDesc": "Erlaube den Mikrofonzugriff für diese Seite in den Browsereinstellungen.",
     "voiceError": "Spracherkennung fehlgeschlagen. Versuche es erneut oder tippe die Frage."
   },
+  "chatAsk": {
+    "askAbout": "Frag die KI über {name}",
+    "askStay": "Frag die KI, wo übernachten",
+    "askBestTime": "Frag die KI zur besten Reisezeit",
+    "askThingsToDo": "Frag die KI, was du unternehmen kannst",
+    "qHero": "Was muss ich in {name} sehen und erleben?",
+    "qStayRomantic": "Wo übernachten in {name} für einen romantischen Kurzurlaub?",
+    "qStayFamily": "Wo übernachten in {name} mit der Familie?",
+    "qStayBudget": "Wo günstig übernachten in {name}?",
+    "qStayWeekend": "Wo übernachten in {name} für ein Wochenende?",
+    "qBestTime": "Wann ist die beste Reisezeit für {name}?",
+    "qThingsToDo": "Was kann ich in {name} unternehmen?",
+    "qItinerary": "Was darf ich in {name} nicht verpassen?"
+  },
   "planner": {
     "title": "Reiseplaner",
     "description": "Sagen Sie uns Ihre Wünsche und wir erstellen einen perfekten Reiseplan",

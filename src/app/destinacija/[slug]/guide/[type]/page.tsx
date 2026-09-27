@@ -18,6 +18,11 @@ import {
 // EN whitelista ^/destinacija/[^/]+/guide/[^/]+$).
 import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
+// W9 (Issue #15): kontekstualni deep-link vsebina → klepet — persona
+// vprašanje "Kje spati v {name} {za romantični pobeg/z družino/…}?" v
+// uvodni kartici vodnika + prvi Chatbot na tej poti.
+import { ChatAskCta } from "@/components/chat-ask-cta";
+import { Chatbot } from "@/components/chatbot";
 import {
   GUIDE_TYPES,
   GUIDE_TYPE_META,
@@ -208,6 +213,20 @@ export default async function GuidePage({
   // FW4.3-2: vsa besedila prek fragmenta guidePage; locale iz proxy headerja
   const t = await getTranslations("guidePage");
   const locale = await getLocale();
+  // W9 (Issue #15): persona vprašanje v jeziku strani — ključ po tipu
+  // vodnika (kje spati × romantični pobeg / družina / budget / vikend).
+  const ta = await getTranslations("chatAsk");
+  const stayQuestionKey: Record<
+    GuideType,
+    "qStayRomantic" | "qStayFamily" | "qStayBudget" | "qStayWeekend"
+  > = {
+    "romanticni-pobeg": "qStayRomantic",
+    druzinski: "qStayFamily",
+    budget: "qStayBudget",
+    vikend: "qStayWeekend",
+  };
+  const guideQuestion = ta(stayQuestionKey[guideType], { name: dest.name });
+  const guideAskLabel = ta("askStay");
   // W1 faza 2a: DB sekcije izrisuje SAMO na SL (P4-8 — vsebina v bazi je
   // slovenska; EN je imel isto mejo, IT/DE jo podedujeta iskreno).
   const isSl = locale === "sl";
@@ -479,6 +498,18 @@ export default async function GuidePage({
               </div>
             </CardContent>
           </Card>
+
+          {/* W9 (Issue #15): persona vprašanje "Kje spati …" — inline CTA v
+              kontekstu vodnika; vprašanje se ob kliku izpolni v klepetu
+              (NIKOLI samodejno poslano — uredljivo pred pošiljanjem). */}
+          <div className="mt-4">
+            <ChatAskCta
+              question={guideQuestion}
+              label={guideAskLabel}
+              variant="inline"
+              surface="guide"
+            />
+          </div>
         </section>
 
         {/* Poudarjene aktivnosti (3 predlogi) */}
@@ -678,6 +709,9 @@ export default async function GuidePage({
       </div>
       </main>
       <Footer />
+      {/* W9 (Issue #15): klepet na vodniku — vnos se ob prvem odpiranju (FAB)
+          pred-izpolni s persona vprašanjem spanja v jeziku strani. */}
+      <Chatbot initialQuestion={guideQuestion} />
     </div>
   );
 }

@@ -432,6 +432,20 @@
     "voiceDeniedDesc": "Nelle impostazioni del browser consenti l'accesso al microfono per questo sito.",
     "voiceError": "Il riconoscimento vocale non è riuscito. Riprova oppure scrivi la domanda."
   },
+  "chatAsk": {
+    "askAbout": "Chiedi all'AI di {name}",
+    "askStay": "Chiedi all'AI dove dormire",
+    "askBestTime": "Chiedi all'AI il periodo migliore",
+    "askThingsToDo": "Chiedi all'AI cosa puoi fare",
+    "qHero": "Cosa devo vedere e vivere a {name}?",
+    "qStayRomantic": "Dove dormire a {name} per una fuga romantica?",
+    "qStayFamily": "Dove dormire a {name} con la famiglia?",
+    "qStayBudget": "Dove dormire a {name} spendendo poco?",
+    "qStayWeekend": "Dove dormire a {name} per un weekend?",
+    "qBestTime": "Quando è il periodo migliore per visitare {name}?",
+    "qThingsToDo": "Cosa posso fare a {name}?",
+    "qItinerary": "Cosa non devo perdermi a {name}?"
+  },
   "planner": {
     "title": "Pianificatore di viaggi",
     "description": "Dicci le tue preferenze e costruiremo un itinerario perfetto",

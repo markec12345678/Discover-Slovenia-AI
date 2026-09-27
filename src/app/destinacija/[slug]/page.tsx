@@ -42,6 +42,12 @@ import { PageViewTracker } from "@/components/page-view-tracker";
 import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
 // TASK 8 / D8-D (§3.3): kanonski "Dodaj v mojo pot" v hero območju hub strani
 import { DestinationAddToTrip } from "@/components/destination-add-to-trip";
+// W9 (Issue #15): kontekstualni deep-link vsebina → klepet — hero pas
+// "Vprašaj AI o {destinacija}" s pred-izpolnjenim, UREDLJIVIM vprašanjem
+// + prvi Chatbot na destinacijskih straneh (do W9 jih /destinacija/* ni
+// imel — vrzel iz benchmarka Trip Planner AI).
+import { ChatAskCta } from "@/components/chat-ask-cta";
+import { Chatbot } from "@/components/chatbot";
 import { Link } from "@/i18n/navigation";
 import { localePrefix } from "@/i18n/routing";
 import {
@@ -135,6 +141,10 @@ export default async function DestinationHubPage({
 
   const locale = await getLocale();
   const t = await getTranslations("destinationPage");
+  // W9 (Issue #15): klepet v jeziku strani — pas + pred-izpolnjen vnos
+  const ta = await getTranslations("chatAsk");
+  const heroQuestion = ta("qHero", { name: dest.name });
+  const heroAskLabel = ta("askAbout", { name: dest.name });
   // Vodniški tipi: oznake/opisi so v guidePage.guideTypes (večjezični vir
   // resnice — GUIDE_TYPE_META opisi so samo slovenski, P4-8)
   const tg = await getTranslations("guidePage");
@@ -324,6 +334,18 @@ export default async function DestinationHubPage({
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+        {/* W9 (Issue #15): hero pas "Vprašaj AI o {name}" — Trip Planner
+            AIjev kontekstualni deep-link vzorec: vprašanje je VIDNO TU in
+            se ob kliku izpolni v klepetu (NIKOLI se ne pošlje samodejno —
+            uporabnik ga uredi/izbriše in sam pošlje). */}
+        <div className="mb-10">
+          <ChatAskCta
+            question={heroQuestion}
+            label={heroAskLabel}
+            surface="hero"
+          />
+        </div>
+
         {/* TASK 8 / D8-D (§3.3, D8-A §9.4 mrtvi konec): kanonski "Dodaj v mojo
             pot" — hub strani destinacije prej NISO imele nobenega dodajanja v
             pot (samo skok v načrtovalnik na dnu). Zbirka referenc (ADD sloj). */}
@@ -623,6 +645,10 @@ export default async function DestinationHubPage({
       </div>
       </main>
       <Footer />
+      {/* W9 (Issue #15): prvi klepet na destinacijskih straneh — vnosno polje
+          se ob prvem odpiranju (FAB) pred-izpolni s hero vprašanjem v jeziku
+          strani; vstopni pas zgoraj odpre isti klepet z istim vprašanjem. */}
+      <Chatbot initialQuestion={heroQuestion} />
     </div>
   );
 }

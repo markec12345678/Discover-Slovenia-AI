@@ -181,4 +181,53 @@ describe("TASK 71: i18n pariteta SL/EN/IT/DE (regresijska varovalka)", () => {
     }
     expect(checked).toBeGreaterThan(50); // varovalka: preverba res pokrije slovar
   });
+
+  test("W9 (1.130.0): chatAsk ključi (kontekstualni deep-link vsebina → klepet) obstajajo v vseh jezikih", () => {
+    // W9 verifikacijsko merilo (4): paritetni testi razširjeni na nove ključe.
+    // Namespace chatAsk poganja pasove/gumbe "Vprašaj AI" na vseh 5
+    // destinacijskih pod-poteh (38×5 strani × 4 jeziki).
+    for (const key of [
+      "chatAsk.askAbout",
+      "chatAsk.askStay",
+      "chatAsk.askBestTime",
+      "chatAsk.askThingsToDo",
+      "chatAsk.qHero",
+      "chatAsk.qStayRomantic",
+      "chatAsk.qStayFamily",
+      "chatAsk.qStayBudget",
+      "chatAsk.qStayWeekend",
+      "chatAsk.qBestTime",
+      "chatAsk.qThingsToDo",
+      "chatAsk.qItinerary",
+    ]) {
+      expect(SL[key], `SL manjka "${key}"`).toBeDefined();
+      for (const { code, dict } of LOCALE_PAIRS) {
+        expect(dict[key], `jezik "${code}" manjka "${key}"`).toBeDefined();
+      }
+    }
+  });
+
+  test("W9: chatAsk vprašanja ohranjajo placeholder {name} v vseh jezikih", () => {
+    const placeholders = (s: string) => (s.match(/\{(\w+)\}/g) ?? []).sort();
+    for (const key of [
+      "chatAsk.askAbout",
+      "chatAsk.qHero",
+      "chatAsk.qStayRomantic",
+      "chatAsk.qStayFamily",
+      "chatAsk.qStayBudget",
+      "chatAsk.qStayWeekend",
+      "chatAsk.qBestTime",
+      "chatAsk.qThingsToDo",
+      "chatAsk.qItinerary",
+    ]) {
+      expect(placeholders(SL[key])).toEqual(["{name}"]);
+      for (const { code, dict } of LOCALE_PAIRS) {
+        expect(
+          placeholders(dict[key]),
+          `jezik "${code}" ${key} placeholder`
+        ).toEqual(["{name}"]);
+      }
+    }
+  });
+
 });

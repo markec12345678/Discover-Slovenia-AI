@@ -7,6 +7,70 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.130.0] — 2026-09-28 (W9: KONTEKSTUALNI DEEP-LINK VSEBINA → KLEPET — Issue #15, vrzel iz benchmarka Trip Planner AI)
+
+### Dodano
+
+- **`/destinacija/*` (38 × 5 pod-poti) DOBIVA KLEPET (do W9 ga NI imel).**
+  Chatbot je montiran na vseh 5 destinacijskih pod-poteh (hub, things-to-do,
+  best-time, guide, itinerary) — vrzel iz UX-workflow benchmarka 2026 (W9:
+  Trip Planner AIjev najmočnejši akvizicijski vzorec: vsebina → klepet s
+  pred-izpolnjenim vprašanjem; naša implementacija po kanonu ZERO FEATURE
+  LOSS).
+- **`Chatbot` DOBIVA NEOBVEZEN `initialQuestion` PROP + `CHAT_ASK_EVENT`.**
+  Vnosno polje se PRED-IZPOLNI (ob mountu — SSR/klient hidratacija skladna);
+  vstopne točke v vsebini oddajo `chat:ask` CustomEvent (ista konvencija kot
+  `chat:add-place` iz 1.42.0) → klepet se ODPRE + polje se izpolni. Varovalo
+  W9: NOBENO vprašanje se NE pošlje samodejno — uporabnik ga vidi, uredi/
+  izbriše in SAM pritisne Pošlji (merilo "vidno + uredljivo pred pošiljanjem");
+  klepet brez propa in brez dogodka je BIT-IDENTIČEN prejšnjemu (regresija
+  obstoječih 12+ površin — `<Chatbot />` brez pre-filla ostaja povsod).
+- **VSTOPNE TOČKE (4 tipi × 4 jeziki, strežniško iz slovarja `chatAsk`).**
+  (1) hub hero pas »Vprašaj AI o {name}«; (2) guide persona inline CTA
+  (»Kje spati v {name} za romantični pobeg / z družino / poceni / za
+  vikend?« — 4 osebe × 38 destinacij); (3) best-time pas (»Kdaj je najboljši
+  čas za obisk {name}?«); (4) things-to-do PRAZNO STANJE — SAMO na ne-SL
+  jezikih (SL ima žive DB sekcije ponudnikov; ne-SL iskrena P4-8 meja → AI
+  klepet prevzame vlogo svetovalca) + itinerary pas (»Kaj ne smem zamuditi
+  v {name}?«). Vprašanja so ŽIVO preverjena proti /api/chat v VSEH 4 jezikih
+  (domenski odgovor s STO viri, ne iskreni odklon: "spati"/"dormire"/
+  "übernachten"/"stay" sprožijo accommodation intent).
+- **`ChatAskCta` KOMPONENTA (band + inline).** Pas izpisuje vprašanje
+  VIDNO (transparentnost — točno to se bo izpolnilo) + aria-label; inline
+  kompaktne tipka v kartici. Telemetrija `chat_ask_cta_clicked`
+  (surface: hero|guide|best-time|things-to-do|itinerary + question_len) —
+  meri akvizicijski lijak vsebina → klepet.
+- **SLOVAR `chatAsk` (12 ključev × 4 jeziki).** Oznake + vprašanja z {name}
+  placeholderjem; task71 pariteta razširjena (+2 testa: obstoj ključev +
+  placeholderji); w9-chat-ask.test.ts (13 testov: pogodba dogodaja, SOURCE
+  CONTRACT poslušalca BEZ sendMessage (nikoli samodejno), neobvezen prop,
+  vstopne točke na 5 straneh, prazno-stanje pogoj, persona preslikava,
+  regresija obstoječih površin, ključne besede domenskega motorja).
+
+### Popravljeno
+
+- (ni popravljenih hroščev obstoječih funkcionalnosti — W9 je čisto
+  aditivna plast; suite 3905/3905 brez spremembe obstoječih pričakovank)
+
+### Preverjeno
+
+- Suite 3905/3905 (+15: 13 W9 + 2 task71); tsc + eslint čista.
+- Browser E2E: SL hub (CTA klik → pred-izpolnjen vnos → UREJENO vprašanje
+  "Kje spati v Bledu z družino?" → poslano → deterministični odgovor s 5 STO
+  viri), IT hub (pred-fill "Cosa devo vedere e vivere a Bled?" → poslano →
+  italijanski odgovor "La perla delle Alpi … Valutazione 4.8/5"), IT guide
+  persona (inline CTA → "Dove dormire a Bled con la famiglia?" → odgovor),
+  DE hub (FAB pred-fill "Was muss ich in Bled sehen und erleben?" +
+  nemški pozdrav), regresija domov (FAB → PRAZEN vnos), mobil 375 (pas + CTA
+  klik + odprt klepet + 0 preliva) — 12 PNG dokazov v w9-evidence/.
+- curl E2E: vseh 5 pod-poti × 4 jeziki (CTA izris + pravilen jezik), samo
+  ne-SL things-to-do pas (SL ima DB sekcije), interpolacija imen čez
+  destinacije (Piran/Maribor/Bohinj/Soča).
+- Opomba (dev-only artefakt, ne koda): ChunkLoadError ob Fast Refresh
+  rebuildu med testiranjem — sveža seja/branje potrdita pravilno vedenje.
+
+---
+
 ## [1.129.0] — 2026-09-27 (W1: JEZIKI IT + DE — Issue #15 V0, faza 2b-2 — NAČRTOVALNIK /it/nacrtuj + /de/nacrtuj ODPRTA)
 
 ### Dodano

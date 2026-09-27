@@ -432,6 +432,20 @@
     "voiceDeniedDesc": "Allow microphone access for this page in your browser settings.",
     "voiceError": "Speech recognition failed. Try again or type your question."
   },
+  "chatAsk": {
+    "askAbout": "Ask AI about {name}",
+    "askStay": "Ask AI where to stay",
+    "askBestTime": "Ask AI about the best time to visit",
+    "askThingsToDo": "Ask AI what you can do",
+    "qHero": "What must I see and experience in {name}?",
+    "qStayRomantic": "Where to stay in {name} for a romantic escape?",
+    "qStayFamily": "Where to stay in {name} with kids?",
+    "qStayBudget": "Where to stay in {name} on a budget?",
+    "qStayWeekend": "Where to stay in {name} for a weekend?",
+    "qBestTime": "When is the best time to visit {name}?",
+    "qThingsToDo": "What can I do in {name}?",
+    "qItinerary": "What must I not miss in {name}?"
+  },
   "planner": {
     "title": "Trip planner",
     "description": "Tell us your wishes and we'll build a perfect itinerary",

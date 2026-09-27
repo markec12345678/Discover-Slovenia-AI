@@ -116,6 +116,10 @@ export type PlannerEventName =
   // postanka (provenance t1|osm; day) — komplement chat_place_added:
   // razmerje doda/odstrani pove, kako dobro AI priporoča kraje
   | "chat_place_removed"
+  // W9 (Issue #15): klik na kontekstualni CTA vsebine → klepet s pred-
+  // izpolnjenim vprašanjem (surface: hero|guide|best-time|things-to-do|
+  // itinerary; question_len) — meri akvizicijski vzorec "vsebina → klepet"
+  | "chat_ask_cta_clicked"
   | "weather_alternative_used"
   // F5.4 "Začni s povezavo" ( url ingest — MindTrip "Start Anywhere")
   | "ingest_url_attempted"

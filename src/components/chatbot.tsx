@@ -54,6 +54,14 @@ import {
 // da je "V moji poti" resnica tudi na tej površini.
 import { addMyTripItem } from "@/lib/my-trip";
 import { AddToTripButton } from "@/components/add-to-trip-button";
+// W9 (Issue #15): kontekstualni deep-link vsebina → klepet — vstopne
+// točke v vsebini (guide/best-time/things-to-do/hero pasovi) odprejo
+// klepet s pred-izpolnjenim, UREDLJIVIM vprašanjem prek CustomEvent-a.
+import {
+  CHAT_ASK_EVENT,
+  CHAT_ASK_MAX,
+  type ChatAskDetail,
+} from "@/lib/chat-ask";
 import { useAppStore } from "@/lib/store";
 // GLASOVNI KLEPET (Issue #2 §6/§7/§8): brskalnikov STT/TTS brez AI ključa —
 // čisto plast v src/lib/voice.ts (podpora, jezikovna oznaka, čistitev besedila)
@@ -685,14 +693,27 @@ function GeoPlacesSection({
  * potovanj. Odgovori so DETERMINISTIČNI (Issue #9 ZERO-AI) — sestavljeni
  * iz naše baze (baza + STO uradni viri + OSM kraji + Open-Meteo), nikoli
  * iz zunanjega LLM klica.
+ *
+ * W9 (Issue #15, 1.130.0): neobvezen `initialQuestion` — stran (strežniško,
+ * v jeziku strani) poda privzeto vprašanje, s katerim se vnosno polje
+ * PRED-IZPOLNI ob prvem odpiranju (FAB). Vstopne točke v vsebini poleg
+ * tega oddajo CHAT_ASK_EVENT — klepet se odpre + polje se izpolni.
+ * V obeh primerih se NIČ ne pošlje samodejno (uredljivo pred pošiljanjem);
+ * brez propa in brez dogodka je obnašanje IDENTIČNO prejšnjemu (ZERO
+ * FEATURE LOSS — regresijsko merilo W9).
  */
-export function Chatbot() {
+export function Chatbot({ initialQuestion }: { initialQuestion?: string }) {
   const t = useTranslations("chatbot");
   // FW4.3-2: chat API-ju povemo jezik pogovora (en → angleški odgovori)
   const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(() => [makeWelcome(t)]);
-  const [input, setInput] = useState("");
+  // W9: pred-izpolnjen vnos (initialQuestion) — inicializator zagotavlja,
+  // da se izpolni SAMO ob mountu (SSR vrednost = klient hidratacija, ni
+  // mismatch-a); kasnejše odpiranje/zapiranje stanja ne povozijo.
+  const [input, setInput] = useState(
+    () => initialQuestion?.trim().slice(0, CHAT_ASK_MAX) ?? ""
+  );
   const [loading, setLoading] = useState(false);
   const [hasNewMessage, setHasNewMessage] = useState(false);
   // GEO-ODGOVORI: kraji trenutno povečanega zemljevida (fullscreen overlay)
@@ -750,6 +771,26 @@ export function Chatbot() {
   useEffect(() => {
     setVoiceIn(sttSupported());
     setVoiceOut(ttsSupported());
+  }, []);
+
+  // W9 (Issue #15): vstopne točke v vsebini (pasovi/gumbi ChatAskCta)
+  // oddajo CHAT_ASK_EVENT → odpre klepet + pred-izpolni vnos. NE pošlje
+  // ničesar — uporavnik vprašanje vidi, lahko ga uredi/izbriše in sam
+  // pritisne Pošlji (varovalo "vidno + uredljivo pred pošiljanjem").
+  // Pasivni poslušalec: obstoječe površine dogodka ne oddajo → nič se
+  // ne spremeni (bit-identična regresija).
+  useEffect(() => {
+    const onAsk = (e: Event) => {
+      const q = (e as CustomEvent<ChatAskDetail>).detail?.question;
+      if (typeof q !== "string" || !q.trim()) return;
+      setInput(q.trim().slice(0, CHAT_ASK_MAX));
+      setOpen(true);
+      setHasNewMessage(false);
+      // Fokus po renderu odprtega panela (brez črpanja layouta).
+      requestAnimationFrame(() => inputRef.current?.focus());
+    };
+    window.addEventListener(CHAT_ASK_EVENT, onAsk);
+    return () => window.removeEventListener(CHAT_ASK_EVENT, onAsk);
   }, []);
 
   // 1.123 (G5): persist širine pripete mape — branje PO hidrataciji

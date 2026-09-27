@@ -26,6 +26,11 @@ import { PageViewTracker } from "@/components/page-view-tracker";
 import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
 // TASK 8 / D8-D (§3.3): kanonski "Dodaj v mojo pot" v hero območju strani
 import { DestinationAddToTrip } from "@/components/destination-add-to-trip";
+// W9 (Issue #15): kontekstualni deep-link vsebina → klepet — prazno stanje
+// (ne-SL jeziki brez DB sekcij ponudnikov) ponudi AI klepet s pred-izpolnjenim
+// vprašanjem "Kaj lahko počnem v {name}?" + prvi Chatbot na tej poti.
+import { ChatAskCta } from "@/components/chat-ask-cta";
+import { Chatbot } from "@/components/chatbot";
 import { Link } from "@/i18n/navigation";
 import { localePrefix } from "@/i18n/routing";
 import {
@@ -118,6 +123,10 @@ export default async function ThingsToDoPage({
 
   const locale = await getLocale();
   const t = await getTranslations("thingsToDo");
+  // W9 (Issue #15): klepet v jeziku strani — prazno stanje + pred-izpolnjen vnos
+  const ta = await getTranslations("chatAsk");
+  const ttdQuestion = ta("qThingsToDo", { name: dest.name });
+  const ttdAskLabel = ta("askThingsToDo");
   // W1 faza 2a: DB sekcije (lokalci/izkušnje/izdelki) izrisuje SAMO na SL
   // (P4-8 — vsebina v bazi je slovenska; EN je imel isto mejo, IT/DE jo
   // podedujeta iskreno). AI FAQ prav tako (SL vsebina).
@@ -250,6 +259,20 @@ export default async function ThingsToDoPage({
 
         {/* Aktivnosti / Izkušnje — REALNA rezervacijska pot (enaka kot homepage) */}
         {/* P4-8: DB vsebina (imena ponudnikov) je slovenska — na EN skrito */}
+        {/* W9 (Issue #15): PRAZNO STANJE — na ne-SL jezikih DB sekcij ponudnikov
+            NI (P4-8 iskrena meja) → AI klepet prevzame vlogo svetovalca s
+            pred-izpolnjenim vprašanjem v jeziku strani (nikoli samodejno
+            poslano — uredljivo pred pošiljanjem). Na SL se pas ne izriše
+            (sekcije z realnimi ponudniki so žive). */}
+        {!isSl && (
+          <section className="mb-12" aria-label={ttdAskLabel}>
+            <ChatAskCta
+              question={ttdQuestion}
+              label={ttdAskLabel}
+              surface="things-to-do"
+            />
+          </section>
+        )}
         {isSl && seoExperiences.length > 0 && (
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-6">{t("experiencesTitle", { name: dest.name })}</h2>
@@ -361,6 +384,9 @@ export default async function ThingsToDoPage({
       </div>
       </main>
       <Footer />
+      {/* W9 (Issue #15): klepet na things-to-do — vnos se ob prvem odpiranju
+          (FAB) pred-izpolni z vprašanjem aktivnosti v jeziku strani. */}
+      <Chatbot initialQuestion={ttdQuestion} />
     </div>
   );
 }

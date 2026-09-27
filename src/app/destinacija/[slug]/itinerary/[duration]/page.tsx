@@ -23,6 +23,11 @@ import { hreflangForPath } from "@/components/seo";
 import { currentBaseUrl } from "@/lib/host";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
+// W9 (Issue #15): kontekstualni deep-link vsebina → klepet — pas
+// "Vprašaj AI o {name}" s pred-izpolnjenim vprašanjem o neizogibnem +
+// prvi Chatbot na tej poti.
+import { ChatAskCta } from "@/components/chat-ask-cta";
+import { Chatbot } from "@/components/chatbot";
 import { Link } from "@/i18n/navigation";
 import { localePrefix } from "@/i18n/routing";
 import { Calendar, Clock, Users, ArrowRight, Sparkles } from "lucide-react";
@@ -134,6 +139,10 @@ export default async function ItineraryPage({
 
   const locale = await getLocale();
   const t = await getTranslations("itineraryPage");
+  // W9 (Issue #15): klepet v jeziku strani — pas + pred-izpolnjen vnos
+  const ta = await getTranslations("chatAsk");
+  const itinQuestion = ta("qItinerary", { name: dest.name });
+  const itinAskLabel = ta("askAbout", { name: dest.name });
 
   // FW4.3-2 + W1 faza 2a: overlay po locale — tagline/description/highlights
   // v jeziku strani, identifikatorji/slike/cene ostanejo iz slovenskega vira.
@@ -293,10 +302,24 @@ export default async function ItineraryPage({
               {t("personalizedButton")}
             </Link>
           </Button>
+
+          {/* W9 (Issue #15): pas "Vprašaj AI o {name}" — vprašanje je VIDNO
+              TU in se ob kliku izpolni v klepetu (NIKOLI samodejno poslano
+              — uredljivo pred pošiljanjem). */}
+          <div className="mt-6">
+            <ChatAskCta
+              question={itinQuestion}
+              label={itinAskLabel}
+              surface="itinerary"
+            />
+          </div>
         </section>
       </div>
       </main>
       <Footer />
+      {/* W9 (Issue #15): klepet na itinerer strani — vnos se ob prvem
+          odpiranju (FAB) pred-izpolni z vprašanjem o neizogibnem. */}
+      <Chatbot initialQuestion={itinQuestion} />
     </div>
   );
 }

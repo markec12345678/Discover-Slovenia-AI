@@ -23,6 +23,11 @@ import { hreflangForPath } from "@/components/seo";
 import { currentBaseUrl } from "@/lib/host";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { AffiliateCtaBlock } from "@/components/sections/affiliate-cta-block";
+// W9 (Issue #15): kontekstualni deep-link vsebina → klepet — best-time pas
+// s pred-izpolnjenim vprašanjem "Kdaj je najboljši čas za obisk {name}?"
+// + prvi Chatbot na tej poti.
+import { ChatAskCta } from "@/components/chat-ask-cta";
+import { Chatbot } from "@/components/chatbot";
 import { Link } from "@/i18n/navigation";
 import { localePrefix } from "@/i18n/routing";
 import { Calendar, Sun, Leaf, Snowflake, Cloud, ArrowRight, Sparkles, MapPin } from "lucide-react";
@@ -131,6 +136,10 @@ export default async function BestTimeToVisitPage({
 
   const locale = await getLocale();
   const t = await getTranslations("bestTime");
+  // W9 (Issue #15): klepet v jeziku strani — best-time pas + pred-izpolnjen vnos
+  const ta = await getTranslations("chatAsk");
+  const btQuestion = ta("qBestTime", { name: dest.name });
+  const btAskLabel = ta("askBestTime");
 
   // FW4.3-2 + W1 faza 2a: overlay po locale — tagline v jeziku strani
   // (identifikatorji/slike/cene ostanejo iz slovenskega vira resnice).
@@ -259,6 +268,17 @@ export default async function BestTimeToVisitPage({
               </CardContent>
             </Card>
           )}
+
+          {/* W9 (Issue #15): best-time pas "Vprašaj AI o najboljšem času" —
+              vprašanje je VIDNO TU in se ob kliku izpolni v klepetu (NIKOLI
+              se ne pošlje samodejno — uredljivo pred pošiljanjem). */}
+          <div className="mt-4">
+            <ChatAskCta
+              question={btQuestion}
+              label={btAskLabel}
+              surface="best-time"
+            />
+          </div>
         </section>
 
         {/* Ostale sezone */}
@@ -348,6 +368,9 @@ export default async function BestTimeToVisitPage({
       </div>
       </main>
       <Footer />
+      {/* W9 (Issue #15): klepet na best-time strani — vnos se ob prvem
+          odpiranju (FAB) pred-izpolni z vprašanjem o najboljšem času. */}
+      <Chatbot initialQuestion={btQuestion} />
     </div>
   );
 }

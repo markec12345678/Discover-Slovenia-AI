@@ -432,6 +432,20 @@
     "voiceDeniedDesc": "V nastavitvah brskalnika dovoli dostop do mikrofona za to stran.",
     "voiceError": "Prepoznavanje govora ni uspelo. Poskusi znova ali vpiši vprašanje."
   },
+  "chatAsk": {
+    "askAbout": "Vprašaj AI o {name}",
+    "askStay": "Vprašaj AI, kje spati",
+    "askBestTime": "Vprašaj AI o najboljšem času obiska",
+    "askThingsToDo": "Vprašaj AI, kaj lahko počneš",
+    "qHero": "Kaj moram videti in doživeti v {name}?",
+    "qStayRomantic": "Kje spati v {name} za romantični pobeg?",
+    "qStayFamily": "Kje spati v {name} z družino?",
+    "qStayBudget": "Kje spati v {name} poceni?",
+    "qStayWeekend": "Kje spati v {name} za vikend?",
+    "qBestTime": "Kdaj je najboljši čas za obisk {name}?",
+    "qThingsToDo": "Kaj lahko počnem v {name}?",
+    "qItinerary": "Kaj ne smem zamuditi v {name}?"
+  },
   "planner": {
     "title": "Načrtovalec potovanj",
     "description": "Povej nam želje in sestavimo popoln itinerer",
