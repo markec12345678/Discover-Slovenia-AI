@@ -7,6 +7,39 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.121.0] — 2026-09-27 (ISSUE #13: UX BENCHMARK 2026 — read-only audit 8+ platform → načrt vrzeli G1–G9)
+
+### Dodano
+
+- **`docs/UX-BENCHMARK-2026-09-27.md`** — celovita UI/UX benchmark analiza
+  (naročilo: »analiziraj najboljše travel platforme … da ne izgubimo nič
+  funkcij«). Metoda: 10 web iskanj 2026 + obstoječe interne analize +
+  audit lastne kode + browser E2E. Teardowni: Mindtrip (chat-on-map,
+  drag-drop, Q2 2026 Sabre+PayPal agentic commerce; cene 20–30 % off,
+  login wall), Layla (booking logistika, klepet-checkout), Wanderlog
+  (drag-drop čez dneve, real-time sodelovanje + skupni budget, email-forward
+  import), Google Maps (vzorci ŽE prevzeti v Issue #12), Sygic/TripIt
+  (ročna kontrola, email parsing), GetYourGuide/Headout (social proof),
+  Booking.com (PROTIprimer — dark patterns), Roadtrippers (ob ruti —
+  imamo).
+- **Katalog 12 vzorcev (P1–P12)** z verdikti: 8–9 že imamo (P11
+  provenance = UNIKAT pred vsemi); **3 strukturne vrzeli** (G1 cross-day
+  drag, G2 real-time prisotnost, G3 email kanal) + ~6 polirnih (G4–G9).
+- **Načrt izboljšav z ZERO FEATURE LOSS:** valovi P0 (G1 cross-day drag &
+  drop — razširitev M7 kanona; G4 iskreni social-proof signali — samo
+  realni števci iz DB; G7 „najboljši dnevi" iz vremena), P1 (G5 split
+  map v klepetu, G3 email-forward vstop, G6 most klepet→BookingPanel),
+  P2 (G9 animacije, G2 prisotnost, bottom-nav aproksimacija). Vsaka točka
+  z implementacijsko noto + varovalom.
+- **Eksplicitno zavrnjeno:** urgency/scarcity, „For you" sledenje, login
+  wall, izmišljeni social proof, klepet-checkout, neviantne od-cene.
+- **Issue #13** ustvarjen z roadmapom + sprejemnimi kriteriji.
+
+### Spremenjeno
+
+- `package.json`: 1.120.2 → 1.121.0 (docs-audit verzija, prim. 1.101.0
+  konvencija).
+
 ## [1.120.2] — 2026-09-27 (HOTFIX: ops tooling resnica — dev-health.sh sintaksa [mrtev od 1.116.0] + podvojeni „000000“ prikaz)
 
 ### Popravljeno
