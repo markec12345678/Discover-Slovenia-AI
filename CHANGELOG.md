@@ -7,6 +7,95 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.120.1] — 2026-09-27 (HOTFIX: ops dokumentacijska resnica — deploy-check.sh vzorčni URL + CHANGELOG zaostanek)
+
+### Spremenjeno
+
+- **`scripts/ops/deploy-check.sh` vzorčni URL popravljen**: obe pojavitvi
+  zastarelega `discover-slovenia.vercel.app` (ki na Vercelu ne obstaja →
+  `DEPLOYMENT_NOT_FOUND`) nadomeščeni z dejanskima produkcijskima URL-jema
+  `i-feel-slovenia.vercel.app` / `i-feel-slovenia.onrender.com`. Past je
+  dokazana: med verifikacijo 2026-09-27 je vodila do lažnega alarma
+  „produkcija pade — 404“ (zgolj napačen URL v primeru uporabe). Vsa ostala
+  dokumentacija (README, DEPLOYMENT.md, prod-monitor.yml) že uporablja
+  pravilne URL-je — skripta je bila edini odmik.
+- **CHANGELOG zaostanek 1.119.0 / 1.120.0 dopolnjen** (spodaj): valova
+  F12-3 in F12-4 sta bili pushani brez vnosa v dnevnik sprememb.
+
+## [1.120.0] — 2026-09-26 (ISSUE #12 / F12-4: desktop razpored §9 + mobilni rezultati sheet §10)
+
+### Dodano
+
+- **HITRE NAMERE NAD ZEMLJEVIDOM (§16 hierarhija: 1. ISKANJE → 2. HITRE
+  NAMERE → 3. ZEMLJEVID)**: kategorije premaknjene iz DNA zemljevida v
+  vertikalni stack TIK pod iskalno vrstico — sredinsko na `sm+` (poravnano
+  z iskanjem), levo na mobilnem.
+- **MOBILNE HORIZONTALNE PRIMARNE KATEGORIJE (§10)**: `overflow-x-auto
+  nowrap` ena vrstica (E2E: scrollWidth 413 > clientWidth 182), scrollbar
+  skrit, ne razlijejo se; `sm+`: wrap; expander „Več“ isti vzorec.
+- **IZMENJAVA PROSTORA dropdown ↔ čipi** (Google Maps vzorec): med
+  aktivnim dropdownom čipi skriti; izbira zadetka ga ZAPRE prek
+  `resultsOpen` (kontekst/searchResults OSTA — supply sloj + izpeljane
+  kategorije žive); nov vnos ponovno odpre; clear = reset.
+- **MOBILNI BOTTOM SHEET POPUP (§10)**: `globals.css` media query —
+  `.leaflet-popup` `position:fixed/bottom:0` čez celo širino, zaobljeni
+  zgornji vogali, drag handle, tip skrit, `env(safe-area-inset-bottom)`
+  iOS home bar, close gumb 2 rem; info badge se umakne prek
+  `.map-shell:has(.leaflet-popup) .map-info-badge`; desktop popup
+  NEKROPSAN (absolute ob markerju).
+- **POPUP-PANE REPARENT NA MOBILNEM (kritično)**: `.leaflet-popup-pane`
+  privzeto živi ZNOTRAJ transformiranega `.leaflet-map-pane` →
+  transform-prednik = containing block za `position:fixed` → popup bi se
+  strnil na 0×0 (dokazano v E2E); `matchMedia` poslušalec prestavi pane k
+  containerju na mobilnem, nazaj v map-pane na desktopu (s poštenim
+  `closePopup` ob preklopu z odprtim popupom); poslušalec se počisti.
+
+### Spremenjeno
+
+- **STANJA V TOKU STACKA**: loading/zoom/error pod čipi — vedno pravilno
+  pozicionirana (prej fiksni `top-16/24` bi trčili); pogoji vezani na
+  kontekst F12-1 ostajajo.
+- **`pointer-events-none` wrapper**: zemljevid vlečljiv med paneli.
+- **ZOOM KONTROLA BOTTOMRIGHT** (Google Maps vzorec; privzeta top-left je
+  bila od F12-1 naprej vidno mrtva pod iskanjem).
+- 9 novih testov (stack pozicija / horizontalni scroll / izmenjava
+  `resultsOpen` klica / pointer-events / stanja pogoji / bottomright /
+  pane reparent / `globals.css` sheet pravila) — skupno **3800**; 9 E2E
+  posnetkov (desktop 1280, dropdown izmenjava, mobilni bottom sheet
+  390 stabilen 30 s+, deep-link Bled pin, „Dodaj v mojo pot“ ✓ Dodano,
+  EN različice).
+
+## [1.119.0] — 2026-09-26 (ISSUE #12 / F12-3: POI terminologija iz uporabniškega jezika + stanja v uporabniškem jeziku + ProviderPanel demotion)
+
+### Spremenjeno
+
+- **POI TERMINOLOGIJA IZGLAVLJENA IZ GLAVNEGA JEZIKA (§7)**: tehnični
+  izraz umaknjen iz vseh uporabniških nizov zemljevida (`loadingPois` →
+  „Nalagam lokalna mesta…“, `chipsAria` → „Filtriranje kategorij“, badge
+  → „X rezultatov · viri“; atribucija OSTM ostaja — transparentnost §7
+  zahteva); mrtvi `errorPois` ODSTRANJEN.
+- **i18n glavni jezik**: `exploreHub.mapDesc` +
+  `about.offerCards.destinationsDesc` brez POI; transparentnostne površine
+  (dataSources, about.howP2) POI ZADRŽEJO — §13 dovoljuje tehnični jezik
+  v podrobnostih.
+- **STANJA V UPORABNIŠKEM JEZIKU (§13)**: `degradedHint` = primer iz
+  issueja („Nekaterih lokalnih mest trenutno ni mogoče prikazati —
+  destinacije ostajajo“), `zoomHint` BREZ tehnične ravni „(z ≥ 10)“
+  (razlog ostaja v hooku); offline/networkHint nedotaknjen.
+- **ProviderPanel DEMOTION (§7/§16-7)**: sprožilec SAMO IKONA (vzorec
+  Google Maps Layers) z `aria-label`+`title` „Ponudba in viri
+  (napredno)“; dostopnost celovita, panel Sheet z viri/statusi/atribucijo
+  OSTAJE (§14 F).
+
+### Dodano
+
+- **EN RAZLOGI ZADETKOV**: `deterministicSearch` 4. argument `locale`
+  (privzeto SL — nazaj kompatibilno); `buildReason` dvojezičen; ruta
+  `reasonLocale` varovalka; map-view pošilja locale.
+- 14 novih testov (POI sweep / interna identifikatorja ostanejo / badge /
+  degradedHint primer / zoomHint / EN razlogi funkcionalno / panel
+  dostopnost / i18n zadržki) — skupno **3791**; 6 E2E posnetkov.
+
 ## [1.118.0] — 2026-09-26 (ISSUE #12 / F12-1: map-first Discovery — zemljevid vedno aktiven ob iskanju)
 
 ### Dodano

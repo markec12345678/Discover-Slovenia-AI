@@ -7,8 +7,8 @@
 # tam NI geo-blokiran, razliko od razvojnega sandboxa).
 #
 # UPORABA:
-#   ./deploy-check.sh https://discover-slovenia.vercel.app
-#   ./deploy-check.sh https://my-app.onrender.com
+#   ./deploy-check.sh https://i-feel-slovenia.vercel.app
+#   ./deploy-check.sh https://i-feel-slovenia.onrender.com
 # IZHOD: 0 = živa · 1 = odpoved
 # ============================================================================
 source "$(dirname "$0")/lib.sh"
@@ -17,7 +17,7 @@ require_cmd curl
 require_cmd jq
 
 URL="${1:-}"
-[ -n "$URL" ] || die "Uporaba: $0 PRODUKCIJSKI_URL   (npr. https://discover-slovenia.vercel.app)"
+[ -n "$URL" ] || die "Uporaba: $0 PRODUKCIJSKI_URL   (npr. https://i-feel-slovenia.vercel.app)"
 # odstrani morešenji zaključni /
 URL="${URL%/}"
 
