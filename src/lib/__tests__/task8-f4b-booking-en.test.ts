@@ -44,9 +44,11 @@ const leafCount = (src: string, key: "sl" | "en") =>
 const INLINE_PAIR = /sl:\s*"[^"]+"\s*,\s*en:\s*"[^"]+"/g;
 
 // Vsa 4 L-pattern ogrodja: [ime, izvor, pričakovani parov, inline parov]
+// 1.122.0 (G4): product-modal 40→42, experience-modal 86→88 — dodana
+// editorialRating + editorialRatingTitle (kvalifikator uredniške ocene).
 const L_FILES = [
-  ["product-modal", PRODUCT_MODAL, 40, 30],
-  ["experience-modal", EXPERIENCE_MODAL, 86, 55],
+  ["product-modal", PRODUCT_MODAL, 42, 30],
+  ["experience-modal", EXPERIENCE_MODAL, 88, 55],
   ["cart-drawer", CART_DRAWER, 21, 15],
   ["checkout-modal", CHECKOUT_MODAL, 62, 45],
 ] as const;
