@@ -7,6 +7,38 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.125.0] — 2026-09-27 (WORKFLOW BENCHMARK 2026 — read-only audit #2: odkrita Alma STB kot neposredna konkurentka + Mindtrip Q3/Q4 + vrzeli W1-W8)
+
+### Dodano
+
+- **docs/UX-WORKFLOW-BENCHMARK-2026-09-27.md** — drugi, WORKFLOW-fokusiran
+  audit dneva (prvi je gledal UI vzorce G1-G9; ta gleda end-to-end poti
+  uporabnika + nove igralce). Celota read-only: 0 vrstic produkcijske kode.
+- **Ključna odkritja terena:** (1) ALMA — virtualna svetovalka Slovenske
+  turisticne organizacije (slovenia.info, maja 2024, Creatim/Scoutbuddy,
+  OpenAI): 70.000+ vprasanj v 10 mesecih 2025, 88->91 % zadovoljstvo,
+  7 jezikov, najbolj dejavni uporabniki ITALIJANSKO in NEMSKO govoreci —
+  Travel Tech Project of the Year 2025; njena roadmap: Admin Alma
+  (destinacije dodajajo lokalne vsebine) + real-time voice vodic.
+  (2) Mindtrip dodal Events (dogodki po vibraciji + vstopnice), Google
+  Pins import, Collections (tematske sodelovalne wishlist), skupinski
+  klepet z @Mindtrip AI, receipts@mindtrip.ai email-forward. (3) Stardrift
+  (YC+Bain): preference learning + calendar sync.
+- **Vrzeli W1-W8 (ne prekrivajo se z zaprtimi G1-G9):** W1 jeziki IT+DE
+  (kritična — Almini najvecji uporabniki), W2 skupinski klepet z @AI v
+  poti, W3 kolekcije priljubljenih, W4 sezonska domaca stran, W5 visok
+  kontrast + reading mode (STB standard), W6 dogodki kot discovery
+  povrsina, W7 voice vodic v Go mode (TTS ze živ v klepetu), W8
+  razprševanje v manj znane regije kot AI nacelo. Valovi V0 (odločitev
+  lastnika: W1) / V1 (W2+W3) / V2 (W4+W5+W6+W8) z varovali ZERO LOSS.
+- **Zavrnjeno (posodobljeno):** agentic klepet-checkout (Mindtrip
+  Sabre+PayPal), preferencno kopicenje/»For you« sledenje, creator
+  monetizacija — vse z utemeljitvami v dokumentu.
+- **Paritete potrjene (brez dela):** ICS izvoz (=Stardrift), skupnostni
+  načrti (=Mindtrip Inspiration), ingest 4 kanali (=Start Anywhere),
+  G3 email vstop pripravljen (=receipts@), TTS (=Alma voice roadmap
+  predcasno), provenance/offline/brez racuna (unikat — pred vsemi).
+
 ## [1.124.0] — 2026-09-27 (ISSUE #13: P2 VAL — G9 drag ghost/snap duša + G2 prisotnost ob deljeni poti + P2-3 mobilna bottom-nav dokaz)
 
 ### Dodano
