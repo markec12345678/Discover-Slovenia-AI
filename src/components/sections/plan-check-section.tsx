@@ -88,7 +88,11 @@ function formatDriveMinutes(minutes: number, lang: string): string {
 export function PlanCheckSection() {
   const t = useTranslations("planCheck");
   const locale = useLocale();
-  const isEn = locale === "en";
+  // W1 (Issue #15): /api/plan-check je dvojezičen (SL/EN). Za it/de
+  // pošiljamo EN (referenčni mednarodni jezik platforme — isti fallback
+  // kanon kot podatkovne plasti; poročilo je kratko faktografsko
+  // besedilo, mtNotice pasica že postavlja pričakovanja).
+  const apiLang = locale === "sl" ? "sl" : "en";
 
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -103,13 +107,13 @@ export function PlanCheckSection() {
     setError(null);
     trackPlannerEvent("plan_check_submitted", {
       chars: trimmed.length,
-      lang: isEn ? "en" : "sl",
+      lang: apiLang,
     });
     try {
       const res = await fetch("/api/plan-check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: trimmed, lang: isEn ? "en" : "sl" }),
+        body: JSON.stringify({ text: trimmed, lang: apiLang }),
       });
       const data: unknown = await res.json();
       if (!res.ok) {
@@ -131,7 +135,7 @@ export function PlanCheckSection() {
     } finally {
       setLoading(false);
     }
-  }, [text, loading, isEn, t]);
+  }, [text, loading, apiLang, t]);
 
   // Ob uspehu pomakni poročilo v vid ( mobilni telefoni — dolga besedila)
   useEffect(() => {
@@ -203,7 +207,7 @@ export function PlanCheckSection() {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    setText(isEn ? EXAMPLE_EN : EXAMPLE_SL);
+                    setText(apiLang === "en" ? EXAMPLE_EN : EXAMPLE_SL);
                     setReport(null);
                     setError(null);
                   }}

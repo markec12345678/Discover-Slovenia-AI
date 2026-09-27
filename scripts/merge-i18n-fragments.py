@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-FW4.3-2: Zlije i18n fragmente (src/i18n/fragments/*.{sl,en}.json) v
-monolitne sporočilne datoteke (src/i18n/messages/{sl,en}.json).
+FW4.3-2: Zlije i18n fragmente (src/i18n/fragments/*.{sl,en,it,de}.json) v
+monolitne sporočilne datoteke (src/i18n/messages/{sl,en,it,de}.json).
 
 Vsak fragment je JSON z ENIM top-level imenskim prostorom (npr. {"about": {...}}).
 Merge je top-level: če imenski prostor že obstaja v cilju → NAPAKA (podvojitev),
@@ -9,6 +9,12 @@ razen če --force (prepiše s fragmentom).
 
 Po uspešnem mergeu se fragmenti NE izbrišejo (izbriše jih integracijski
 korak ročno po validaciji, da je merge idempotenten za ponovne poige).
+
+W1 (Issue #15 V0, 1.126.0): zanka razširjena na VSE javne jezike, za katere
+obstaja messages/<locale>.json (sl/en/it/de). IT/DE sta izdelana celovito
+(scripts/translate-locale.ts iz SL+EN para) — fragmenti zanje so opcijski
+(avtoriranje ostane SL/EN-first; it/de fragmenti se dodajo, ko stran
+potrebuje delo na svojih nizih).
 """
 import json
 import sys
@@ -17,6 +23,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 FRAGMENTS = ROOT / "src" / "i18n" / "fragments"
 MESSAGES = ROOT / "src" / "i18n" / "messages"
+
+# W1: vsi javni jeziki (samo tisti z obstoječo messages datoteko)
+LOCALES = tuple(
+    sorted(
+        p.stem
+        for p in MESSAGES.glob("*.json")
+        if p.stem in {"sl", "en", "it", "de"}
+    )
+)
 
 def deep_merge_counts(target: dict, fragment: dict, path: str = "") -> int:
     """Zlije fragment v target (globoko); vrne št. dodanih ključev."""
@@ -50,7 +65,7 @@ def main() -> None:
         return
 
     totals = {}
-    for locale in ("sl", "en"):
+    for locale in LOCALES:
         target_path = MESSAGES / f"{locale}.json"
         target = json.loads(target_path.read_text(encoding="utf-8"))
         before = flat_count(target)
@@ -70,19 +85,21 @@ def main() -> None:
         totals[locale] = (before, after)
         print(f"[{locale}] {before} → {after} ključev")
 
-    # Simetrija SL/EN (isti nabor top-level imenskih prostorov)
-    sl = json.loads((MESSAGES / "sl.json").read_text(encoding="utf-8"))
-    en = json.loads((MESSAGES / "en.json").read_text(encoding="utf-8"))
-    sl_ns, en_ns = set(sl.keys()), set(en.keys())
-    if sl_ns != en_ns:
-        print(f"NAPAKA: nesimetrija imenskih prostorov! SL-only: {sl_ns - en_ns}, EN-only: {en_ns - sl_ns}", file=sys.stderr)
-        sys.exit(1)
-    for ns in sl_ns:
-        c_sl, c_en = flat_count(sl[ns]), flat_count(en[ns])
-        if c_sl != c_en:
-            print(f"NAPAKA: ns '{ns}': SL {c_sl} ključev, EN {c_en} ključev", file=sys.stderr)
+    # Simetrija VSEH jezikov (isti nabor top-level imenskih prostorov + ključev)
+    base = json.loads((MESSAGES / f"{LOCALES[0]}.json").read_text(encoding="utf-8"))
+    base_ns = set(base.keys())
+    for locale in LOCALES[1:]:
+        other = json.loads((MESSAGES / f"{locale}.json").read_text(encoding="utf-8"))
+        other_ns = set(other.keys())
+        if base_ns != other_ns:
+            print(f"NAPAKA: nesimetrija imenskih prostorov! {LOCALES[0]}-only: {base_ns - other_ns}, {locale}-only: {other_ns - base_ns}", file=sys.stderr)
             sys.exit(1)
-    print(f"OK: simetrično — {len(sl_ns)} imenskih prostorov, {flat_count(sl)} ključev.")
+        for ns in base_ns:
+            c_base, c_other = flat_count(base[ns]), flat_count(other[ns])
+            if c_base != c_other:
+                print(f"NAPAKA: ns '{ns}': {LOCALES[0]} {c_base} ključev, {locale} {c_other} ključev", file=sys.stderr)
+                sys.exit(1)
+    print(f"OK: simetrično ({len(LOCALES)} jezikov) — {len(base_ns)} imenskih prostorov, {flat_count(base)} ključev.")
 
 if __name__ == "__main__":
     main()

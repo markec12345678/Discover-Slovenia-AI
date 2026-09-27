@@ -57,6 +57,25 @@ const EN_TAGLINE = "AI travel planner";
 const EN_DESCRIPTION =
   "Discover Slovenia with an AI-powered travel planner. 22 of the most beautiful destinations from Bled to Piran, with an interactive map, weather and direct bookings.";
 
+// W1 (Issue #15): IT/DE metapodatki homepage-a (ista zgradba kot EN).
+const LOCALE_META: Record<
+  string,
+  { tagline: string; description: string; og: string }
+> = {
+  it: {
+    tagline: "Pianificatore di viaggi AI",
+    description:
+      "Scopri la Slovenia con un pianificatore di viaggi basato sull'IA. Le destinazioni più belle da Bled a Pirano, con mappa interattiva, meteo e prenotazioni dirette.",
+    og: "it_IT",
+  },
+  de: {
+    tagline: "KI-Reiseplaner",
+    description:
+      "Entdecke Slowenien mit einem KI-gestützten Reiseplaner. Die schönsten Destinationen von Bled bis Piran, mit interaktiver Karte, Wetter und direkten Buchungen.",
+    og: "de_DE",
+  },
+};
+
 // TASK 8 / D8-F (issue #7): oznake zloženih <details> povzetkov (SL/EN) —
 // zmožnosti validatorja so ohranjene V CELÓTI, privzeto pa ne tekmujejo z
 // primarno AI zgodbo. Native <details> = brez JS, deluje tudi ob napaki.
@@ -75,6 +94,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
   const base = await currentBaseUrl();
   const isEn = locale === "en";
+  // W1: IT/DE uporabita svoja metapodatka (LOCALE_META); SL pade na layout.
+  const w1 = LOCALE_META[locale];
   const canonical = `${base}${localePrefix(locale)}`;
 
   return {
@@ -89,11 +110,22 @@ export async function generateMetadata(): Promise<Metadata> {
             locale: "en_US",
           },
         }
-      : {
-          // SL: pusti privzete vrednosti iz layout-a (buildSiteMetadata) —
-          // samo canonical/hreflang/og:url naredimo locale-zavedne.
-          openGraph: { url: canonical, locale: "sl_SI" },
-        }),
+      : w1
+        ? {
+            title: `${SITE_NAME} — ${w1.tagline}`,
+            description: w1.description,
+            openGraph: {
+              title: `${SITE_NAME} — ${w1.tagline}`,
+              description: w1.description,
+              url: canonical,
+              locale: w1.og,
+            },
+          }
+        : {
+            // SL: pusti privzete vrednosti iz layout-a (buildSiteMetadata) —
+            // samo canonical/hreflang/og:url naredimo locale-zavedne.
+            openGraph: { url: canonical, locale: "sl_SI" },
+          }),
     alternates: {
       canonical,
       languages: hreflangForPath(PATH, base),

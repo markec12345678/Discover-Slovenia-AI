@@ -42,6 +42,9 @@ import { ListingModal } from "@/components/sections/listing-modal";
 import { AddToTripButton } from "@/components/add-to-trip-button";
 import { trackFunnel } from "@/lib/funnel";
 import { REGIONS } from "@/lib/slovenia-data";
+import { BEST_FOR_EN, REGIONS_EN } from "@/lib/slovenia-data-en";
+import { bestForLabelFor, regionLabelFor } from "@/lib/slovenia-labels-it-de";
+import { pick } from "@/lib/i18n-pick";
 import { getDestinationProvenance } from "@/lib/destination-provenance";
 import {
   CATEGORY_LABELS,
@@ -68,8 +71,58 @@ const TYPE_LABELS: Record<DestinationType, string> = {
   castle: "Grad",
 };
 
-function regionLabel(value: string): string {
-  return REGIONS.find((r) => r.value === value)?.label ?? value;
+/** W1: tip destinacije po locale (prej SL tudi na EN — P4-8 dres). */
+const TYPE_LABELS_BY_LOCALE: Record<
+  "sl" | "en" | "it" | "de",
+  Record<DestinationType, string>
+> = {
+  sl: TYPE_LABELS,
+  en: {
+    lake: "Lake",
+    city: "City",
+    mountain: "Mountains",
+    cave: "Cave",
+    coast: "Coast",
+    river: "River",
+    spa: "Spa",
+    gorge: "Gorge",
+    castle: "Castle",
+  },
+  it: {
+    lake: "Lago",
+    city: "Città",
+    mountain: "Montagna",
+    cave: "Grotta",
+    coast: "Costa",
+    river: "Fiume",
+    spa: "Terme",
+    gorge: "Gola",
+    castle: "Castello",
+  },
+  de: {
+    lake: "See",
+    city: "Stadt",
+    mountain: "Gebirge",
+    cave: "Höhle",
+    coast: "Küste",
+    river: "Fluss",
+    spa: "Thermen",
+    gorge: "Klamm",
+    castle: "Burg",
+  },
+};
+
+function regionLabel(value: string, locale: string): string {
+  // W1: oznaka regije po locale (EN zgodovinsko prek REGIONS_EN na hubu;
+  // IT/DE prek slovenia-labels-it-de; fallback SL).
+  if (locale === "en") {
+    return REGIONS_EN[value] ?? REGIONS.find((r) => r.value === value)?.label ?? value;
+  }
+  return (
+    regionLabelFor(value, locale) ??
+    REGIONS.find((r) => r.value === value)?.label ??
+    value
+  );
 }
 
 interface AffiliateCta {
@@ -218,7 +271,7 @@ export function DestinationModal({
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
                 <Badge className="mb-2 bg-primary text-primary-foreground">
-                  {regionLabel(destination.region)}
+                  {regionLabel(destination.region, locale)}
                 </Badge>
                 <h2 className="text-2xl font-bold sm:text-3xl">
                   {destination.name}
@@ -241,7 +294,7 @@ export function DestinationModal({
                   kind: "destination",
                   refId: destination.slug,
                   title: destination.name,
-                  subtitle: regionLabel(destination.region),
+                  subtitle: regionLabel(destination.region, locale),
                   href: `/destinacija/${encodeURIComponent(destination.slug)}`,
                   image: destination.image,
                   source: "destination-modal",
@@ -282,22 +335,28 @@ export function DestinationModal({
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
                 <InfoItem
                   icon={MapPin}
-                  label="Regija"
-                  value={regionLabel(destination.region)}
+                  label={pick(locale, { sl: "Regija", en: "Region", it: "Regione", de: "Region" })}
+                  value={regionLabel(destination.region, locale)}
                 />
                 <InfoItem
                   icon={Tag}
-                  label="Tip"
-                  value={TYPE_LABELS[destination.type]}
+                  label={pick(locale, { sl: "Tip", en: "Type", it: "Tipo", de: "Typ" })}
+                  value={
+                    TYPE_LABELS_BY_LOCALE[
+                      (["sl", "en", "it", "de"] as const).includes(locale as "sl" | "en" | "it" | "de")
+                        ? (locale as "sl" | "en" | "it" | "de")
+                        : "sl"
+                    ][destination.type] ?? destination.type
+                  }
                 />
                 <InfoItem
                   icon={Clock}
-                  label="Trajanje"
+                  label={pick(locale, { sl: "Trajanje", en: "Duration", it: "Durata", de: "Dauer" })}
                   value={destination.duration}
                 />
                 <InfoItem
                   icon={Euro}
-                  label="Ocena obiska"
+                  label={pick(locale, { sl: "Ocena obiska", en: "Visit cost", it: "Costo della visita", de: "Besuchskosten" })}
                   value={`${destination.costPerPerson} €`}
                 />
               </div>
@@ -315,13 +374,22 @@ export function DestinationModal({
                     />
                     <span>
                       <span className="font-medium text-foreground/80">
-                        {locale === "en" ? "Opening hours" : "Odpiralni čas"}:
+                        {pick(locale, {
+                          sl: "Odpiralni čas",
+                          en: "Opening hours",
+                          it: "Orari di apertura",
+                          de: "Öffnungszeiten",
+                        })}
+                        :
                       </span>{" "}
-                      {locale === "en"
-                        ? destination.opening.noteEn
-                        : destination.opening.note}{" "}
+                      {/* W1: odpiralni note je podatkovna plast SL/EN — za
+                          it/de beremo EN različico (referenčni mednarodni
+                          jezik platforme; kratko faktografsko polje). */}
+                      {locale === "sl"
+                        ? destination.opening.note
+                        : destination.opening.noteEn}{" "}
                       <span className="text-muted-foreground/80">
-                        ({locale === "en" ? "source" : "vir"}:{" "}
+                        ({pick(locale, { sl: "vir", en: "source", it: "fonte", de: "Quelle" })}:{" "}
                         {destination.opening.source})
                       </span>
                     </span>
@@ -331,7 +399,9 @@ export function DestinationModal({
 
               {/* Poudarki */}
               <section>
-                <SectionTitle icon={Sparkles}>Poudarki</SectionTitle>
+                <SectionTitle icon={Sparkles}>
+                  {pick(locale, { sl: "Poudarki", en: "Highlights", it: "Punti forti", de: "Höhepunkte" })}
+                </SectionTitle>
                 <ul className="mt-3 space-y-2">
                   {destination.highlights.map((h) => (
                     <li
@@ -350,7 +420,9 @@ export function DestinationModal({
 
               {/* Aktivnosti */}
               <section>
-                <SectionTitle>Aktivnosti</SectionTitle>
+                <SectionTitle>
+                  {pick(locale, { sl: "Aktivnosti", en: "Activities", it: "Attività", de: "Aktivitäten" })}
+                </SectionTitle>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {destination.activities.map((a) => (
                     <Badge key={a} variant="secondary" className="text-xs">
@@ -360,13 +432,20 @@ export function DestinationModal({
                 </div>
               </section>
 
-              {/* Najboljše za */}
+              {/* Najboljše za (W1: oznake po locale — prej surovi SL ključi
+                  tudi na EN; identifikatorji ostanejo slovenski) */}
               <section>
-                <SectionTitle>Najboljše za</SectionTitle>
+                <SectionTitle>
+                  {pick(locale, { sl: "Najboljše za", en: "Best for", it: "Ideale per", de: "Am besten für" })}
+                </SectionTitle>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {destination.bestFor.map((b) => (
                     <Badge key={b} variant="outline" className="capitalize">
-                      {b}
+                      {locale === "sl"
+                        ? b
+                        : locale === "en"
+                          ? (BEST_FOR_EN[b] ?? b)
+                          : (bestForLabelFor(b, locale) ?? b)}
                     </Badge>
                   ))}
                 </div>
@@ -381,9 +460,16 @@ export function DestinationModal({
 
               {/* LOKALI V BLIŽINI — B2B listings */}
               <section>
-                <SectionTitle icon={Building2}>Lokali v bližini</SectionTitle>
+                <SectionTitle icon={Building2}>
+                  {pick(locale, { sl: "Lokali v bližini", en: "Places nearby", it: "Luoghi nelle vicinanze", de: "Orte in der Nähe" })}
+                </SectionTitle>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Hotelir, restavracije in aktivnosti — prijavljeni lastniki.
+                  {pick(locale, {
+                    sl: "Hotelir, restavracije in aktivnosti — prijavljeni lastniki.",
+                    en: "Hotels, restaurants and activities — registered owners.",
+                    it: "Hotel, ristoranti e attività — proprietari registrati.",
+                    de: "Hotels, Restaurants und Aktivitäten — registrierte Inhaber.",
+                  })}
                 </p>
 
                 {loadingNearby ? (
@@ -508,7 +594,7 @@ export function DestinationModal({
                     aria-hidden="true"
                   />
                   <span className="font-medium text-foreground/70">
-                    {locale === "en" ? "Source" : "Vir"}:
+                    {pick(locale, { sl: "Vir", en: "Source", it: "Fonte", de: "Quelle" })}:
                   </span>
                   {(() => {
                     const prov = getDestinationProvenance(destination);
@@ -527,15 +613,18 @@ export function DestinationModal({
                     }
                     return (
                       <span>
-                        {locale === "en"
-                          ? "Discover Slovenia editorial curation"
-                          : "Discover Slovenia — uredniška kuracija"}
+                        {pick(locale, {
+                          sl: "Discover Slovenia — uredniška kuracija",
+                          en: "Discover Slovenia editorial curation",
+                          it: "Discover Slovenia — curatela editoriale",
+                          de: "Discover Slovenia — redaktionelle Kuratierung",
+                        })}
                       </span>
                     );
                   })()}
                   <span aria-hidden="true">·</span>
                   <span>
-                    {locale === "en" ? "updated" : "posodobljeno"}{" "}
+                    {pick(locale, { sl: "posodobljeno", en: "updated", it: "aggiornato", de: "aktualisiert" })}{" "}
                     {getDestinationProvenance(destination).verifiedAt.replaceAll(
                       "-",
                       ". "

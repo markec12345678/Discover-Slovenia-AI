@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { buildStoGrounding } from "@/lib/rag/ground";
 import { maybeRefreshStoIndex } from "@/lib/rag/freshness";
-import type { StoCitation } from "@/lib/rag/types";
+import type { StoCitation, StoLang } from "@/lib/rag/types";
 import {
   detectGeoIntent,
   type ChatPlace,
@@ -11,6 +11,7 @@ import {
 import { fetchOverpassNearby } from "@/lib/overpass";
 import {
   buildDomainAnswer,
+  type ChatLang,
   type DomainListing,
   type DomainProduct,
   type DomainExperience,
@@ -54,8 +55,9 @@ interface ChatMessage {
 interface ChatRequest {
   messages: ChatMessage[];
   currentPage?: string; // npr. "homepage", "destinations", "marketplace"
-  /** FW4.3-2: jezik odgovora ("en" → angleški domenski odgovor; default "sl") */
-  language?: "sl" | "en";
+  /** FW4.3-2 + W1 (Issue #15): jezik odgovora — 4 javni jeziki ("en"/"it"/"de" →
+   * domenski odgovor v tem jeziku; default "sl"). */
+  language?: "sl" | "en" | "it" | "de";
 }
 
 export async function POST(request: Request) {
@@ -86,9 +88,12 @@ export async function POST(request: Request) {
   const recentMessages = body.messages.slice(-6);
   const lastUserMessage = [...recentMessages].reverse().find((m) => m.role === "user")?.content || "";
 
-  // FW4.3-2: jezik izpisa — client pošlje locale (enak vzorec kot
-  // /api/itinerary): "en" → angleški odgovori, vse ostalo slovensko.
-  const lang = body.language === "en" ? "en" : "sl";
+  // FW4.3-2 + W1: jezik izpisa — client pošlje locale (enak vzorec kot
+  // /api/itinerary). W1 doda it/de (domenska plast je 4-jezična); neznan
+  ///neveljaven jezik → slovensko (default, izvirnik).
+  const lang: ChatLang = ["sl", "en", "it", "de"].includes(body.language ?? "")
+    ? (body.language as ChatLang)
+    : "sl";
 
   // === GRADI KONTEKST IZ BAZE ===
   const [topListings, topProducts, topExperiences] = await Promise.all([
@@ -124,7 +129,10 @@ export async function POST(request: Request) {
   // DATA-LAYERS-RAG: T2 uzemljenje — uradni viri STO (slovenia.info),
   // poiskani po zadnjem uporabnikovem vprašanju. Citati gredo klientu kot
   // `sources` (značke virov pod odgovorom).
-  const stoGrounding = buildStoGrounding(lastUserMessage, lang, 5);
+  // W1: STO indeks je dvojezičen (SL/EN) — za it/de iščemo po EN straneh
+  // STO (slovenia.info/en obstaja); citati so povezave uradnih virov.
+  const stoLang: StoLang = lang === "sl" ? "sl" : "en";
+  const stoGrounding = buildStoGrounding(lastUserMessage, stoLang, 5);
 
   // GEO-ODGOVORI (Task 29): kraji v bližini prepoznane destinacije —
   // realni OSM podatki za mini zemljevid in domenski odgovor.

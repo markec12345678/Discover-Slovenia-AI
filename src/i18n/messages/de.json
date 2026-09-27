@@ -1,436 +1,436 @@
 {
   "nav": {
-    "destinations": "Destinations",
-    "planner": "Planner",
-    "map": "Map",
-    "listings": "Local businesses",
-    "events": "Events",
-    "join": "Join us",
-    "cta": "Plan a trip",
-    "providers": "For providers",
-    "experiences": "Experiences",
-    "guides": "Guides",
-    "marketplace": "Marketplace",
+    "destinations": "Destinationen",
+    "planner": "Planer",
+    "map": "Karte",
+    "listings": "Lokale",
+    "events": "Veranstaltungen",
+    "join": "Mitmachen",
+    "cta": "Reise planen",
+    "providers": "Für Anbieter",
+    "experiences": "Erlebnisse",
+    "guides": "Führer",
+    "marketplace": "Marktplatz",
     "pass": "Slovenia Pass",
-    "trips": "My trips",
-    "goMode": "On the road",
-    "tagline": "AI trips",
-    "searchAria": "Smart search",
-    "journey": "Complete journey",
-    "startAnywhere": "Start anywhere"
+    "trips": "Meine Reisen",
+    "goMode": "Unterwegs",
+    "tagline": "KI-Reisen",
+    "searchAria": "Intelligente Suche",
+    "journey": "Die ganze Reise",
+    "startAnywhere": "Überall starten"
   },
   "hero": {
-    "title": "What do you want to experience in Slovenia?",
-    "subtitle": "Tell us what you're looking for — in English or Slovenian. Every tip is verified on Slovenian ground, not copied from foreign guides.",
-    "badge": "Local guide for Slovenia",
-    "placeholder": "I'd like a 3-day relaxing trip with nature, great food and as little driving as possible …",
-    "cta": "Build my trip",
-    "ctaLoading": "Analyzing...",
-    "ctaMobile": "Build trip",
+    "title": "Was möchtest du in Slowenien erleben?",
+    "subtitle": "Sag uns, was du suchst — in deiner Sprache. Die Tipps sind vor Ort in Slowenien verifiziert, nicht aus ausländischen Reiseführern abgeschrieben.",
+    "badge": "Lokaler Führer für Slowenien",
+    "placeholder": "Ich möchte eine ruhige 3-Tages-Reise mit Natur, gutem Essen und so wenig Fahrt wie möglich …",
+    "cta": "Stelle meine Reise zusammen",
+    "ctaLoading": "Analysiere...",
+    "ctaMobile": "Reise erstellen",
     "ctaLoadingMobile": "...",
-    "ctaPrimary": "Plan your trip",
-    "ctaSecondary": "Explore destinations",
-    "sectionAriaLabel": "Discover Slovenia AI platform introduction",
-    "imageAlt": "Lake Bled with its island, church and castle at sunset",
-    "inputAriaLabel": "What do you want to experience in Slovenia?",
-    "chipsHint": "Or pick a wish — one click to a plan:",
-    "scrollCue": "Discover more",
-    "scrollCueAriaLabel": "Scroll down to the statistics",
-    "trustNoAccount": "No account needed",
-    "trustVerified": "verified distances & prices",
-    "trustUpdated": "updated September 2026",
-    "startAnywhere": "Already have your own sources? Start anywhere — link, image, PDF or Google pins"
+    "ctaPrimary": "Reise planen",
+    "ctaSecondary": "Destinationen entdecken",
+    "sectionAriaLabel": "Vorstellung der Plattform Discover Slovenia AI",
+    "imageAlt": "Der Bleder See mit Insel, Kirche und Burg im Abendlicht",
+    "inputAriaLabel": "Was möchtest du in Slowenien erleben?",
+    "chipsHint": "Oder wähle einen Wunsch — ein Klick bis zum Reiseplan:",
+    "scrollCue": "Mehr entdecken",
+    "scrollCueAriaLabel": "Nach unten zu den Statistiken scrollen",
+    "trustNoAccount": "Ohne Konto",
+    "trustVerified": "km und Preise geprüft",
+    "trustUpdated": "aktualisiert September 2026",
+    "startAnywhere": "Du hast schon eigene Quellen? Starte von überall — Link, Bild, PDF oder Google-Pins"
   },
   "heroChips": {
-    "calmWeekend": "Relaxed weekend",
-    "calmWeekendQuery": "A 3-day relaxed weekend with nature, great food and as little driving as possible",
-    "romantic": "Romantic",
-    "romanticQuery": "A romantic escape for two with a lake, wine and strolls",
-    "family": "Family",
-    "familyQuery": "A 3-day family trip (2 adults, 2 children)",
-    "foodWine": "Food & wine",
-    "foodWineQuery": "A journey through Slovenian food, wine and culinary regions",
-    "adventure": "Adventure",
-    "adventureQuery": "An adrenaline weekend — rafting on the Soča and mountain hikes",
-    "noCrowds": "No crowds",
-    "noCrowdsQuery": "Peaceful hikes in nature, away from the tourist crowds",
-    "natureFood": "Nature & food",
-    "natureFoodQuery": "Trip through Slovenian nature with great local restaurants — lakes, gorges and traditional food",
-    "seaMountains": "Sea + mountains",
-    "seaMountainsQuery": "Sea and mountains combined — Piran and the Coast plus day trips into Triglav National Park"
+    "calmWeekend": "Ruhiges Wochenende",
+    "calmWeekendQuery": "ruhiges 3-tägiges Wochenende mit Natur, gutem Essen und so wenig Fahrt wie möglich",
+    "romantic": "Romantisch",
+    "romanticQuery": "romantischer Ausflug für zwei mit See, Wein und Spaziergängen",
+    "family": "Familie",
+    "familyQuery": "3-tägiger Familienausflug (2 Erwachsene, 2 Kinder)",
+    "foodWine": "Essen & Wein",
+    "foodWineQuery": "Reise durch die slowenische Küche, den Wein und die kulinarischen Regionen",
+    "adventure": "Abenteuer",
+    "adventureQuery": "Adrenalin-Wochenende — Rafting an der Soča und Wanderungen in den Bergen",
+    "noCrowds": "Ohne Trubel",
+    "noCrowdsQuery": "ruhige Wanderungen in der Natur, abseits der Touristenmassen",
+    "natureFood": "Natur und Essen",
+    "natureFoodQuery": "Reise durch die slowenische Natur mit guten lokalen Gasthäusern — Seen, Schluchten und traditionelle Küche",
+    "seaMountains": "Meer + Berge",
+    "seaMountainsQuery": "Kombination aus Meer und Bergen — Piran und die Küste sowie Ausflüge in den Triglav-Nationalpark"
   },
   "heroTrust": {
-    "free": "Free",
-    "destinations": "38 destinations",
-    "aiSlovenian": "Slovenian-speaking AI",
-    "verifiedPartners": "Verified partners"
+    "free": "Kostenlos",
+    "destinations": "38 Destinationen",
+    "aiSlovenian": "KI auf Deutsch",
+    "verifiedPartners": "Geprüfte Partner"
   },
   "betaBanner": {
-    "active": "Beta period:",
-    "remainingPrefix": "All plans FREE for local businesses. Only",
-    "remainingSuffix": "more businesses until monetization.",
-    "remainingMobile": "FREE · only {count} businesses to go",
-    "join": "Join us",
-    "dismiss": "Close banner"
+    "active": "Beta-Phase:",
+    "remainingPrefix": "Alle Pakete KOSTENLOS für Einheimische. Noch",
+    "remainingSuffix": "Lokale bis zur Aktivierung der Monetarisierung.",
+    "remainingMobile": "KOSTENLOS · noch {count} Lokale",
+    "join": "Mitmachen",
+    "dismiss": "Banner schließen"
   },
   "stats": {
-    "sectionAriaLabel": "Platform and Slovenia statistics",
-    "coverageEyebrow": "We'll cover all of Slovenia",
-    "destinationsLabel": "top destinations — from Bled to Piran",
-    "visitorsLabel": "Visitors per year",
-    "forestLabel": "of Slovenia is forest",
-    "seasonsLabel": "Seasons of activity",
-    "fairEyebrow": "The fairest model",
-    "fairValue": "0 %",
-    "fairUnit": "commission",
-    "fairNote": "on direct bookings (competitors: 20–43 %)",
-    "commissionLead": "A",
-    "commissionRate": "12 %",
-    "commissionVerb": "commission applies",
-    "commissionEmphasis": "only when the AI brings in the booking",
-    "commissionTail": "— never otherwise.",
-    "freshnessUpdated": "Data refreshed: September 2026",
-    "freshnessSources": "visitor figures: STO/SURS",
-    "freshnessLink": "list of sources"
+    "sectionAriaLabel": "Statistiken der Plattform und Sloweniens",
+    "coverageEyebrow": "Wir decken ganz Slowenien ab",
+    "destinationsLabel": "Spitzen-Destinationen — von Bled bis Piran",
+    "visitorsLabel": "Besucher pro Jahr",
+    "forestLabel": "Sloweniens sind Wald",
+    "seasonsLabel": "Aktiv-Jahreszeiten",
+    "fairEyebrow": "Das fairste Modell",
+    "fairValue": "0 %",
+    "fairUnit": "Provision",
+    "fairNote": "bei Direktbuchungen (Wettbewerb: 20–43 %)",
+    "commissionLead": "Provision",
+    "commissionRate": "12 %",
+    "commissionVerb": "wird berechnet",
+    "commissionEmphasis": "ausschließlich, wenn die KI die Buchung bringt",
+    "commissionTail": "— niemals anders.",
+    "freshnessUpdated": "Daten aktualisiert: September 2026",
+    "freshnessSources": "Besucherzahlen: STO/SURS",
+    "freshnessLink": "Quellenverzeichnis"
   },
   "homeDest": {
-    "titleFeatured": "Popular destinations",
-    "titleAll": "Explore destinations",
-    "subtitleFeatured": "The six spots travellers search for most",
-    "subtitleAll": "The 39 most beautiful corners of the western Balkans",
-    "filters": "Filters",
-    "clearFilters": "Clear filters",
-    "countryPlaceholder": "All countries",
-    "countryAriaLabel": "Filter by country",
-    "regionPlaceholder": "All regions",
-    "regionAriaLabel": "Filter by region",
-    "interestPlaceholder": "All interests",
-    "interestAriaLabel": "Filter by interest",
-    "typePlaceholder": "All types",
-    "typeAriaLabel": "Filter by destination type",
-    "budgetPlaceholder": "Price (all)",
-    "budgetAriaLabel": "Filter by price",
-    "ratingPlaceholder": "Editorial rating (all)",
-    "ratingAriaLabel": "Filter by editorial rating",
-    "typeLake": "Lake",
-    "typeCity": "City",
-    "typeMountain": "Mountains",
-    "typeCave": "Cave",
-    "typeCoast": "Coast",
-    "typeRiver": "River",
-    "typeSpa": "Spa",
-    "typeGorge": "Gorge",
-    "typeCastle": "Castle",
-    "budgetLow": "€ — Budget",
-    "budgetMid": "€€ — Mid-range",
-    "budgetHigh": "€€€ — Premium",
+    "titleFeatured": "Beliebte Destinationen",
+    "titleAll": "Destinationen entdecken",
+    "subtitleFeatured": "Sechs Eckchen, die Besucher am häufigsten suchen",
+    "subtitleAll": "Die 39 schönsten Eckchen des westlichen Balkans",
+    "filters": "Filter",
+    "clearFilters": "Filter zurücksetzen",
+    "countryPlaceholder": "Alle Länder",
+    "countryAriaLabel": "Nach Land filtern",
+    "regionPlaceholder": "Alle Regionen",
+    "regionAriaLabel": "Nach Region filtern",
+    "interestPlaceholder": "Alle Interessen",
+    "interestAriaLabel": "Nach Interesse filtern",
+    "typePlaceholder": "Alle Typen",
+    "typeAriaLabel": "Nach Destinationstyp filtern",
+    "budgetPlaceholder": "Preis (alle)",
+    "budgetAriaLabel": "Nach Preis filtern",
+    "ratingPlaceholder": "Redaktionelle Bewertung (alle)",
+    "ratingAriaLabel": "Nach redaktioneller Bewertung filtern",
+    "typeLake": "See",
+    "typeCity": "Stadt",
+    "typeMountain": "Gebirge",
+    "typeCave": "Höhle",
+    "typeCoast": "Küste",
+    "typeRiver": "Fluss",
+    "typeSpa": "Thermen",
+    "typeGorge": "Klamm",
+    "typeCastle": "Burg",
+    "budgetLow": "€ — Günstig",
+    "budgetMid": "€€ — Mittel",
+    "budgetHigh": "€€€ — Gehoben",
     "rating45": "4.5+",
     "rating47": "4.7+",
     "rating49": "4.9+",
-    "showing": "Showing {count} of {total} destinations",
-    "viewAll": "Explore all 38 destinations",
-    "cardAriaLabel": "Open details for {name}",
-    "featuredBadge": "★ Recommended",
-    "ratingLabel": "/ 5 · editorial rating",
-    "editorialShort": "editorial",
-    "moreInfo": "More info",
-    "emptyTitle": "No destinations match your filters.",
-    "emptyHint": "Try changing or clearing the filters.",
+    "showing": "Zeige {count} von {total} Destinationen",
+    "viewAll": "Alle 38 Destinationen entdecken",
+    "cardAriaLabel": "Details für {name} öffnen",
+    "featuredBadge": "★ Empfohlen",
+    "ratingLabel": "/ 5 · redaktionelle Bewertung",
+    "editorialShort": "redaktionell",
+    "moreInfo": "Mehr erfahren",
+    "emptyTitle": "Keine Destinationen für die gewählten Filter.",
+    "emptyHint": "Versuche, die Filter zu ändern oder zurückzusetzen.",
     "imageAlt": "{name} — {tagline}",
-    "interestAll": "All",
-    "interestsAriaLabel": "Filter by interest",
-    "moreFilters": "More filters",
-    "moreFiltersWithCount": "More filters ({count})",
-    "sortLabel": "Sort destinations",
-    "sortRecommended": "Recommended",
-    "sortRating": "Top rated",
-    "sortPrice": "Cheapest",
-    "cardPrice": "≈ €{price}",
-    "cardPriceSr": " · estimated price per person"
+    "interestAll": "Alle",
+    "interestsAriaLabel": "Nach Interesse filtern",
+    "moreFilters": "Weitere Filter",
+    "moreFiltersWithCount": "Weitere Filter ({count})",
+    "sortLabel": "Destinationen sortieren",
+    "sortRecommended": "Empfohlen",
+    "sortRating": "Am besten bewertet",
+    "sortPrice": "Günstigste",
+    "cardPrice": "≈ {price} €",
+    "cardPriceSr": " · Preis pro Person (Schätzung)"
   },
   "homeExp": {
-    "eyebrow": "Experiences",
-    "title": "Endless experience options",
-    "subtitle": "Slovenia offers everything from Alpine peaks to the Adriatic coast — in an area smaller than Wales.",
-    "hikingTitle": "Hiking",
-    "hikingDesc": "Triglav, Mangart, Storžič — from gentle strolls to demanding ascents.",
-    "waterTitle": "Water adventures",
-    "waterDesc": "Rafting on the Soča, kayaking on the Kolpa, water skiing in Portorož.",
-    "historyTitle": "History & culture",
-    "historyDesc": "Medieval castles, Predjama, Ljubljana Castle, Soča Front museums.",
-    "natureTitle": "Nature & parks",
-    "natureDesc": "Triglav National Park, Lake Cerknica, Slovenia's forests.",
-    "foodTitle": "Gastronomy",
-    "foodDesc": "From kremšnita to štruklji, from Teran to rebula — 24 gastronomic regions.",
-    "gemsTitle": "Hidden gems",
-    "gemsDesc": "Vintgar Gorge, the Sečovlje salt pans, Logar Valley — off the beaten path.",
-    "hikingAlt": "Hiking trail below Mount Triglav",
-    "waterAlt": "Waterfalls of Slovenia among mossy rocks",
-    "historyAlt": "Ptuj castle above the old town",
-    "natureAlt": "Lake Bohinj with mountains in the background",
-    "foodAlt": "Traditional Slovenian dishes on the table",
-    "gemsAlt": "Vintgar Gorge with its turquoise river"
+    "eyebrow": "Erlebnisse",
+    "title": "Endlose Erlebnismöglichkeiten",
+    "subtitle": "Slowenien bietet alles von Alpengipfeln bis zur Adriaküste — auf einer Fläche kleiner als Wales.",
+    "hikingTitle": "Wandern",
+    "hikingDesc": "Triglav, Mangart, Storžič — von leichten Spaziergängen bis zu anspruchsvollen Aufstiegen.",
+    "waterTitle": "Wasserabenteuer",
+    "waterDesc": "Rafting an der Soča, Kajak auf der Kolpa, Wasserski in Portorož.",
+    "historyTitle": "Geschichte & Kultur",
+    "historyDesc": "Mittelalterliche Burgen, Predjama, Burg von Ljubljana, Museen der Isonzofront.",
+    "natureTitle": "Natur & Parks",
+    "natureDesc": "Triglav-Nationalpark, Cerknica-See, die slowenischen Wälder.",
+    "foodTitle": "Kulinarik",
+    "foodDesc": "Von der Bleder Cremeschnitte bis zu Štruklji, vom Teran bis zur Rebula — 24 gastronomische Regionen.",
+    "gemsTitle": "Versteckte Juwelen",
+    "gemsDesc": "Vintgar-Klamm, Salzfelder von Sečovlje, Logartal — abseits ausgetretener Pfade.",
+    "hikingAlt": "Wanderweg unterhalb des Triglav",
+    "waterAlt": "Sloweniens Wasserfälle zwischen schneebedeckten Felsen",
+    "historyAlt": "Burg Ptuj über der Altstadt",
+    "natureAlt": "Bohinjer See mit Bergen im Hintergrund",
+    "foodAlt": "Traditionelle slowenische Gerichte auf dem Tisch",
+    "gemsAlt": "Die Vintgar-Klamm mit türkisem Fluss"
   },
   "exploreHub": {
-    "badge": "More to explore",
-    "groupPlan": "Plan",
-    "groupExperience": "Experience",
-    "groupMore": "More",
-    "title": "Explore Slovenia",
-    "subtitle": "Map, events, local businesses, guides and more — all in one place.",
-    "mapTitle": "Map",
-    "mapDesc": "An interactive map with destinations, local places and your itinerary route across all of Slovenia.",
-    "eventsTitle": "Events",
-    "eventsDesc": "A calendar of festivals, fairs and local events — with dates, locations and categories.",
-    "localTitle": "Local businesses",
-    "localDesc": "Hotels, restaurants, attractions and activities from verified local partners with direct booking.",
-    "guidesTitle": "Guides & tips",
-    "guidesDesc": "What to do in Bled, 3 days in Slovenia, local food — and ask a local for insider tips.",
-    "marketTitle": "Marketplace",
-    "marketDesc": "Local products and experiences — honey, wines, crafts, rafting and food experiences straight from the providers.",
+    "badge": "Mehr zum Entdecken",
+    "groupPlan": "Planen",
+    "groupExperience": "Erleben",
+    "groupMore": "Mehr",
+    "title": "Entdecke Slowenien",
+    "subtitle": "Karte, Veranstaltungen, Lokale, Führer und mehr — alles an einem Ort.",
+    "mapTitle": "Karte",
+    "mapDesc": "Interaktive Karte mit Destinationen, lokalen Punkten und der Reiseroute durch ganz Slowenien.",
+    "eventsTitle": "Veranstaltungen",
+    "eventsDesc": "Kalender mit Festivals, Messen und lokalen Events — mit Datum, Ort und Kategorie.",
+    "localTitle": "Lokale Anbieter",
+    "localDesc": "Hotels, Restaurants, Sehenswürdigkeiten und Aktivitäten geprüfter lokaler Partner mit direkter Buchung.",
+    "guidesTitle": "Führer & Tipps",
+    "guidesDesc": "Was tun am Bled, 3 Tage in Slowenien, lokales Essen — und frag einen Einheimischen nach Geheimtipps.",
+    "marketTitle": "Marktplatz",
+    "marketDesc": "Lokale Produkte und Erlebnisse — Honig, Weine, Handwerk, Rafting und Gastro-Erlebnisse direkt von den Anbietern.",
     "passTitle": "Slovenia Pass",
-    "passDesc": "Visit regions, collect badges and unlock rewards — travelling through Slovenia as a game."
+    "passDesc": "Besuche Regionen, sammle Abzeichen und schalte Belohnungen frei — Slowenien-Reise als Spiel."
   },
   "affiliate": {
-    "badge": "Book directly",
-    "title": "Everything for your trip in one place",
-    "subtitle": "You book directly with the partner provider. Discover Slovenia never charges you for using the links.",
-    "partnerBadge": "Partner offer",
+    "badge": "Direkt buchen",
+    "title": "Alles für deine Reise an einem Ort",
+    "subtitle": "Die Buchung erfolgt direkt beim Partneranbieter. Discover Slovenia berechnet dir für die Nutzung des Links nichts.",
+    "partnerBadge": "Partnerangebot",
     "badgeShort": "Partner",
-    "tooltip": "Affiliate link — You will be redirected to an external site. Discover Slovenia AI may receive a commission.",
-    "book": "Book now",
-    "disclosure": "Some links are affiliate links. If you book through them, Discover Slovenia may receive a partner commission. The price you pay stays the same.",
-    "carsLabel": "Car rental",
-    "carsDesc": "Search across 10,000+ locations. Free cancellation in most cases.",
-    "carsAria": "Rent a car through DiscoverCars — opens a partner link",
-    "hotelsLabel": "Hotels & stays",
-    "hotelsDesc": "28 million stays worldwide. Free cancellation in most cases.",
-    "hotelsAria": "Book a stay on Booking.com — opens a partner link",
-    "activitiesLabel": "Activities & tours",
-    "activitiesDesc": "300,000+ experiences and tours. Free cancellation up to 24h before.",
-    "activitiesAria": "Book tours and experiences through GetYourGuide — opens a partner link",
-    "viatorLabel": "Guided tours & excursions",
-    "viatorDesc": "An alternative for excursions: 300,000+ tours, free cancellation up to 24h before.",
-    "viatorAria": "Book guided tours through Viator — opens a partner link",
-    "flightsLabel": "Flights",
-    "flightsDesc": "Compare flights from 1,200+ airlines. Lowest prices.",
-    "flightsAria": "Find flights through Skyscanner — opens a partner link",
-    "insuranceLabel": "Travel insurance",
-    "insuranceDesc": "Cover for adventurous activities (rafting, hiking).",
-    "insuranceAria": "Get travel insurance — opens a partner link",
-    "esimLabel": "eSIM for Slovenia",
-    "esimDesc": "Internet the moment you arrive — no physical SIM card and no pricier roaming.",
-    "esimAria": "Buy an eSIM through Airalo — opens a partner link",
+    "tooltip": "Partnerlink — Du wirst auf eine externe Seite weitergeleitet. Discover Slovenia AI kann eine Provision erhalten.",
+    "book": "Buchen",
+    "disclosure": "Einige Links sind Affiliate-Links. Wenn du über sie buchst, kann Discover Slovenia eine Partnerprovision erhalten. Der Preis steigt für dich dadurch nicht.",
+    "carsLabel": "Mietwagen",
+    "carsDesc": "Suche über 10.000+ Standorte. Meist kostenlose Stornierung.",
+    "carsAria": "Auto über DiscoverCars mieten — öffnet Partnerlink",
+    "hotelsLabel": "Hotels & Unterkünfte",
+    "hotelsDesc": "28 Mio. Unterkünfte weltweit. Meist kostenlose Stornierung.",
+    "hotelsAria": "Unterkunft auf Booking.com buchen — öffnet Partnerlink",
+    "activitiesLabel": "Aktivitäten & Ausflüge",
+    "activitiesDesc": "300.000+ Erlebnisse und Touren. Kostenlose Stornierung bis 24 h vorher.",
+    "activitiesAria": "Ausflüge und Erlebnisse über GetYourGuide buchen — öffnet Partnerlink",
+    "viatorLabel": "Geführte Touren",
+    "viatorDesc": "Alternative für Ausflüge: 300.000+ Touren, kostenlose Stornierung bis 24 h vorher.",
+    "viatorAria": "Geführte Touren über Viator buchen — öffnet Partnerlink",
+    "flightsLabel": "Flüge",
+    "flightsDesc": "Flugvergleich über 1.200+ Airlines. Tiefste Preise.",
+    "flightsAria": "Flüge über Skyscanner suchen — öffnet Partnerlink",
+    "insuranceLabel": "Reiseversicherung",
+    "insuranceDesc": "Absicherung für Abenteueraktivitäten (Rafting, Wandern).",
+    "insuranceAria": "Reiseversicherung abschließen — öffnet Partnerlink",
+    "esimLabel": "eSIM für Slowenien",
+    "esimDesc": "Internet sofort bei Ankunft — ohne physische SIM und ohne teureres Roaming.",
+    "esimAria": "eSIM über Airalo kaufen — öffnet Partnerlink",
     "transfersLabel": "Transfers",
-    "transfersDesc": "Airport and intercity transfers — comfort without a rental car.",
-    "transfersAria": "Book a transfer through Kiwitaxi — opens a partner link",
-    "transportLabel": "Trains & buses",
-    "transportDesc": "Intercity travel across Slovenia — for travellers without a car.",
-    "transportAria": "Find trains and buses through Omio — opens a partner link",
-    "ticketsLabel": "Tickets",
-    "ticketsDesc": "Tickets for attractions (Postojna, Bled Castle …) — no waiting in line.",
-    "ticketsAria": "Buy tickets through Tiqets — opens a partner link",
-    "stayGroup": "Stay",
-    "moveGroup": "Getting there",
-    "experienceGroup": "Experiences",
-    "essentialsGroup": "Travel essentials",
-    "handoffBadge": "Partner link only",
-    "handoffFlightsNote": "No live flight prices in the app — compare at Skyscanner.",
-    "handoffCarsNote": "Partner link only — rental offers at DiscoverCars.",
-    "handoffTransfersNote": "Published from-prices; availability at Kiwitaxi.",
-    "handoffTransportNote": "Rail/bus timetables and prices are not in the app — search at Omio."
+    "transfersDesc": "Flughafen- und Intercity-Transfers — Komfort ohne Mietwagen.",
+    "transfersAria": "Transfer über Kiwitaxi buchen — öffnet Partnerlink",
+    "transportLabel": "Züge & Busse",
+    "transportDesc": "Intercity-Verbindungen in Slowenien — für Reisende ohne Auto.",
+    "transportAria": "Züge und Busse über Omio suchen — öffnet Partnerlink",
+    "ticketsLabel": "Eintrittskarten",
+    "ticketsDesc": "Tickets für Sehenswürdigkeiten (Postojna, Burg Bled …) — ohne Warteschlangen.",
+    "ticketsAria": "Tickets über Tiqets kaufen — öffnet Partnerlink",
+    "stayGroup": "Aufenthalt",
+    "moveGroup": "Unterwegs",
+    "experienceGroup": "Erlebnisse",
+    "essentialsGroup": "Sicher reisen",
+    "handoffBadge": "Nur Partnerlink",
+    "handoffFlightsNote": "Keine Live-Flugpreise in der App — Vergleich bei Skyscanner.",
+    "handoffCarsNote": "Nur Partnerlink — Mietwagenangebot bei DiscoverCars.",
+    "handoffTransfersNote": "Veröffentlichte ab-Preise der Transfers; Verfügbarkeit bei Kiwitaxi.",
+    "handoffTransportNote": "Fahrpläne und Preise von Zügen/Bussen sind nicht in der App — Suche bei Omio."
   },
   "newsletter": {
-    "title": "Get Slovenia's hidden gems",
-    "subtitle": "Once a week: local spots, events and tips you won't find in guidebooks",
-    "emailLabel": "Email address for the newsletter signup",
-    "submit": "Sign me up",
-    "submitting": "Signing up...",
-    "submitAriaLabel": "Sign me up for the weekly newsletter",
-    "alreadySubscribed": "Already subscribed!",
-    "success": "You're subscribed! Check your inbox.",
-    "failed": "Signup failed — please try again.",
-    "pushTitle": "Want to get notified?",
-    "pushText": "With browser notifications we can tell you about new experiences, events during your visit — and remind you about your saved plan.",
-    "noSpam": "No spam — unsubscribe in one click."
+    "title": "Erhalte Sloweniens versteckte Juwelen",
+    "subtitle": "Einmal pro Woche: Lokale, Veranstaltungen und Tipps, die du in keinem Reiseführer findest",
+    "emailLabel": "E-Mail-Adresse für den Newsletter",
+    "submit": "Anmelden",
+    "submitting": "Melde an...",
+    "submitAriaLabel": "Zum wöchentlichen Newsletter anmelden",
+    "alreadySubscribed": "Schon angemeldet!",
+    "success": "Angemeldet! Prüfe dein Postfach.",
+    "failed": "Anmeldung fehlgeschlagen — versuche es erneut.",
+    "pushTitle": "Möchtest du benachrichtigt werden?",
+    "pushText": "Mit Browser-Benachrichtigungen können wir dir neue Erlebnisse und Veranstaltungen während deines Besuchs melden — und dich an deinen gespeicherten Plan erinnern.",
+    "noSpam": "Kein Spam — Abmeldung mit einem Klick."
   },
   "planCheck": {
-    "sectionAriaLabel": "Check your plan — free travel plan validation",
-    "eyebrow": "Free · no account · 0 AI tokens",
-    "title": "Check your plan",
-    "subtitle": "Paste a plan you got from ChatGPT, Mindtrip or Layla — we deterministically verify real-road distances, opening closures, duplicates and stop order. A report with cited sources, zero guesswork.",
-    "inputLabel": "Travel plan text",
-    "placeholder": "Paste your plan text …\n\nDay 1: Bled — lake and castle\n9:00–11:00 walk around the lake\n\nDay 2: Ljubljana — old town …",
-    "hint": "We only verify stops from our 38 destinations — we don't guess the rest.",
-    "tryExample": "Try an example (with deliberate mistakes)",
-    "checking": "Checking …",
-    "submit": "Check the plan",
+    "sectionAriaLabel": "Prüfe deinen Reiseplan — kostenlose Reiseplan-Prüfung",
+    "eyebrow": "Kostenlos · ohne Anmeldung · 0 KI-Tokens",
+    "title": "Prüfe deinen Reiseplan",
+    "subtitle": "Füge den Plan ein, den du von ChatGPT, Mindtrip oder Layla erhalten hast — wir prüfen deterministisch die Distanzen auf echten Straßen, Schließungen besuchter Orte, Duplikate und die Reihenfolge der Stopps. Bericht mit zitierten Quellen, ohne Rätselraten.",
+    "inputLabel": "Text des Reiseplans",
+    "placeholder": "Plantext einfügen …\n\nTag 1: Bled — See und Burg\n9:00–11:00 Spaziergang am See\n\nTag 2: Ljubljana — Altstadt …",
+    "hint": "Wir prüfen nur Stopps aus unseren 38 Destinationen — über die übrigen raten wir nicht.",
+    "tryExample": "Beispiel testen (mit absichtlichen Fehlern)",
+    "checking": "Prüfe …",
+    "submit": "Plan prüfen",
     "errors": {
-      "generic": "The check failed — please try again.",
-      "network": "Connection failed. Check your internet and try again."
+      "generic": "Prüfung fehlgeschlagen — versuche es erneut.",
+      "network": "Verbindung fehlgeschlagen. Prüfe das Internet und versuche es erneut."
     },
     "verdict": {
-      "errorTitle": "The plan has {count, plural, one {# serious issue} other {# serious issues}}",
-      "warnTitle": "{count, plural, one {# warning} other {# warnings}} worth a closer look",
-      "okTitle": "We found no issues in our checks",
-      "stats": "Serious: {errors} · Warnings: {warns} · Reorder suggestions: {zigzags} · Duplicates: {duplicates}"
+      "errorTitle": "Der Plan hat {count, plural, one {# ernste Warnung} other {# ernste Warnungen}}",
+      "warnTitle": "{count, plural, one {# Warnung} other {# Warnungen}} zum genaueren Hinsehen",
+      "okTitle": "Bei unseren Prüfungen haben wir keine Probleme gefunden",
+      "stats": "Ernste Warnungen: {errors} · Warnungen: {warns} · Umordnungsvorschläge: {zigzags} · Duplikate: {duplicates}"
     },
     "parsed": {
-      "title": "What we read from your plan",
-      "methodOsrm": "Real roads (OSRM)",
-      "methodHeuristic": "Distance estimate",
-      "stops": "Stops",
-      "days": "Days",
-      "km": "Total driving",
-      "startDate": "Start date",
-      "noDate": "not found",
-      "noHeadersNote": "We found no day headers in the text (e.g. \"Day 1\") — we checked as if all stops were on a single day."
+      "title": "Was wir aus dem Plan gelesen haben",
+      "methodOsrm": "Echte Straßen (OSRM)",
+      "methodHeuristic": "Distanzschätzung",
+      "stops": "Stopps",
+      "days": "Tage",
+      "km": "Fahrt gesamt",
+      "startDate": "Startdatum",
+      "noDate": "keine Angabe",
+      "noHeadersNote": "Im Text fanden wir keine Tagesüberschriften (z. B. „Tag 1“, „Day 2“) — wir haben geprüft, als lägen alle Stopps an einem Tag."
     },
-    "dayLabel": "Day",
+    "dayLabel": "Tag",
     "issues": {
-      "title": "Validator findings"
+      "title": "Warnungen des Prüfers"
     },
     "zigzag": {
-      "title": "Stop order can be improved",
-      "saving": "reordering saves ~{saved} km ({current} km → {optimized} km)",
-      "order": "Suggested order:",
-      "note": "We optimize the open path between stops (2-opt over real roads). If your day starts or ends elsewhere (e.g. a hotel), adjust the order."
+      "title": "Die Reihenfolge der Stopps lässt sich verbessern",
+      "saving": "die Umordnung spart ~{saved} km ({current} km → {optimized} km)",
+      "order": "Vorgeschlagene Reihenfolge:",
+      "note": "Die optimale Reihenfolge berechnen wir als offene Route zwischen den Stopps (2-opt über echte Straßen). Wenn du den Tag woanders beginnst oder beendest (z. B. Hotel), passe die Reihenfolge an."
     },
     "duplicates": {
-      "title": "Same place on multiple days",
-      "line": "— days {days} (a revisit? Fine if intentional)",
-      "note": "A 356-plan AI study found duplicate visits on 5.1% of days — so we surface them, not hide them."
+      "title": "Derselbe Ort an mehreren Tagen",
+      "line": "— Tage {days} (Erneuter Besuch? Wenn beabsichtigt, ist das okay)",
+      "note": "Eine Studie über 356 KI-Pläne fand bei 5,1 % der Tage doppelte Besuche — deshalb zeigen wir sie, statt sie zu verbergen."
     },
     "costs": {
-      "title": "Estimated driving costs",
-      "line": "Total ~{km} km — fuel ~€{fuelEur} + e-vignette €{vignetteEur} (vehicles up to 3.5 t).",
-      "note": "Estimates are based on published price lists (AMZS/DARS) at implementation time; the vignette is only needed for motorway driving."
+      "title": "Schätzung der Fahrkosten",
+      "line": "Gesamt ~{km} km — Kraftstoff ~{fuelEur} € + E-Vignette {vignetteEur} € (Fahrzeuge bis 3,5 t).",
+      "note": "Die Schätzungen beruhen auf veröffentlichten Preislisten (AMZS/DARS) zum Zeitpunkt der Implementierung; die Vignette ist nur für Autobahnfahrten nötig."
     },
     "sources": {
-      "title": "Why we check this way (sources)",
-      "limitation": "Honesty note: we can only verify stops matching our 38 destinations. Places outside that set we simply don't know — and we don't invent them.",
-      "limitationDuration": "We don't extract activity durations from text — the day-load estimate counts driving only.",
-      "zeroAi": "The check is 100% deterministic: 0 AI tokens, pure computation."
+      "title": "Warum wir so prüfen (Quellen)",
+      "limitation": "Ehrlich: Wir können nur Stopps prüfen, die zu unseren 38 Destinationen passen. Orte außerhalb dieser Menge kennen wir nicht — und erfinden sie nicht.",
+      "limitationDuration": "Aktivitätsdauern aus dem Text ziehen wir nicht heraus — die Tagesumfang-Schätzung zählt nur die Fahrt.",
+      "zeroAi": "Die Prüfung ist 100 % deterministisch: 0 KI-Tokens, reine Berechnung."
     }
   },
   "footer": {
-    "tagline": "Made in Slovenia",
-    "affiliateDisclaimer": "Affiliate links — we earn commission on bookings.",
-    "ariaLabel": "Page footer",
-    "brandAriaLabel": "Discover Slovenia AI — home",
+    "tagline": "Made in Slowenien",
+    "affiliateDisclaimer": "Affiliate-Links — wir verdienen eine Provision bei Buchungen.",
+    "ariaLabel": "Seitenfuß",
+    "brandAriaLabel": "Discover Slovenia AI — Startseite",
     "brandName": "Discover Slovenia AI",
-    "brandDescription": "A travel planner for Slovenia and the western Balkans powered by real data and a deterministic engine. Discover 38 destinations — Bled, Ljubljana, Piran and more.",
+    "brandDescription": "Reiseplaner für Slowenien und den westlichen Balkan mit echten Daten und deterministischer Engine. Entdecke 38 Destinationen — Bled, Ljubljana, Piran und mehr.",
     "copyright": "© 2026 Discover Slovenia AI.",
-    "exploreColumn": "Explore",
-    "exploreAllDestinations": "All destinations",
-    "exploreExperiences": "Experiences",
-    "exploreMap": "Map",
-    "exploreEvents": "Events",
-    "exploreLocal": "Local businesses",
-    "exploreMarket": "Marketplace",
-    "exploreGuides": "Guides",
+    "exploreColumn": "Entdecken",
+    "exploreAllDestinations": "Alle Destinationen",
+    "exploreExperiences": "Erlebnisse",
+    "exploreMap": "Karte",
+    "exploreEvents": "Veranstaltungen",
+    "exploreLocal": "Lokale Anbieter",
+    "exploreMarket": "Marktplatz",
+    "exploreGuides": "Führer",
     "explorePass": "Slovenia Pass",
-    "planColumn": "Plan",
-    "planPlanner": "Trip planner",
-    "planQuiz": "Traveller quiz",
-    "planStartAnywhere": "Start anywhere (link, image, PDF)",
-    "planComparison": "Planner comparison",
-    "planBookings": "Bookings",
-    "planMyTrips": "My trips",
-    "planLogin": "Sign in",
-    "providersColumn": "For providers",
-    "providersBecomePartner": "Become a partner",
-    "providersLogin": "Partner sign-in",
-    "providersPricing": "Plans and pricing",
-    "providersSignup": "Sign-up form",
-    "legalColumn": "Legal",
-    "legalTrust": "Trust and safety",
-    "legalPrivacy": "Privacy policy",
-    "legalTerms": "Terms of use",
-    "legalContact": "Contact",
-    "planGoMode": "On the road (Go Mode, offline)",
-    "planJourney": "Complete journey — providers (transfers, stays, activities)"
+    "planColumn": "Planen",
+    "planPlanner": "Reiseplaner",
+    "planQuiz": "Reise-Quiz",
+    "planStartAnywhere": "Überall starten (Link, Bild, PDF)",
+    "planComparison": "Planer-Vergleich",
+    "planBookings": "Buchungen",
+    "planMyTrips": "Meine Reisen",
+    "planLogin": "Anmelden",
+    "providersColumn": "Für Anbieter",
+    "providersBecomePartner": "Partner werden",
+    "providersLogin": "Anbieter-Login",
+    "providersPricing": "Pakete und Preise",
+    "providersSignup": "Anmeldeformular",
+    "legalColumn": "Rechtliches",
+    "legalTrust": "Vertrauen und Sicherheit",
+    "legalPrivacy": "Datenschutzerklärung",
+    "legalTerms": "Nutzungsbedingungen",
+    "legalContact": "Kontakt",
+    "planGoMode": "Unterwegs (Go Mode, offline)",
+    "planJourney": "Die ganze Reise — Anbieter (Transfers, Unterkunft, Aktivitäten)"
   },
   "chatbot": {
-    "headerTitle": "Slovenia AI",
-    "headerSubtitle": "Your personal guide to Slovenia",
-    "welcome": "Hello! 🇸🇮 I'm Slovenia AI — your personal guide to Slovenia. Ask me about destinations, locals, products or experiences. How can I help you?",
-    "quickPromptsLabel": "Quick questions",
-    "quickPrompt1": "What should I visit in Slovenia?",
-    "quickPrompt2": "Recommend a romantic weekend",
-    "quickPrompt3": "Where can I eat in Ljubljana?",
-    "quickPrompt4": "Where to go with the family?",
-    "inputPlaceholder": "Ask about Slovenia...",
-    "inputAriaLabel": "Message for the AI chatbot",
-    "send": "Send message",
-    "clear": "Clear conversation",
-    "cleared": "Conversation cleared",
-    "thinking": "Searching our database…",
-    "offlineFallback": "Sorry, I'm having connection trouble right now. Please try again, or visit the trip planner.",
-    "fabOpen": "Open AI chatbot",
-    "fabClose": "Close chatbot",
-    "dialogAriaLabel": "AI chatbot conversation",
-    "badgeDatabase": "From our database",
-    "sourcesLabel": "Official sources (STO)",
-    "sourceMap": "map",
-    "placesLabel": "On the map",
-    "mapExpand": "Enlarge map",
-    "mapExpandShort": "Enlarge",
-    "mapClose": "Close map",
-    "mapOverlayAria": "Map of recommended places",
-    "mapPinShort": "Pin",
-    "mapPinAria": "Pin the map beside the chat — it stays visible across follow-up questions (desktop only)",
-    "mapUnpinShort": "Unpin",
-    "mapUnpinAria": "Unpin the conversation map",
-    "splitMapTitle": "Conversation map",
-    "splitResizeAria": "Drag the divider or use arrow keys to resize the map",
-    "bookCta": "Book",
-    "bookCtaAria": "Book — offers for {name}",
-    "bookCtaTitle": "Offers and booking",
-    "bookDialogTitle": "Booking · {name}",
-    "bookDialogIntro": "Local providers and partner links for this destination. You always see the terms before booking — nothing is booked inside the chat.",
-    "bookDialogLoading": "Loading offers …",
-    "bookDialogError": "Offers could not be loaded right now. Try again or use the partner links below.",
-    "bookDialogRetry": "Try again",
-    "bookDialogEmpty": "No local providers for {name} yet — partner links below.",
-    "bookDialogPartners": "Partner links",
-    "bookDialogNote": "Partner links open the provider (affiliate, labelled). Local providers open via their website or contact — booking and terms always happen at the provider, never in the chat.",
-    "provenanceT1": "Verified",
-    "provenanceT1Title": "Our verified destination data",
-    "provenanceT1Legend": "verified (our data)",
-    "provenanceOsmTitle": "OpenStreetMap — community data, not officially verified",
-    "provenanceOsmLegend": "OpenStreetMap (community)",
-    "osmNote": "Opening hours are community data — verify before visiting.",
-    "provenanceT2Title": "Official source — Slovenian Tourist Board (slovenia.info)",
-    "provenanceT2Legend": "official STO source (article)",
-    "stoNote": "Teal pins are official STO articles — the link opens the original on slovenia.info.",
-    "catFilterAria": "Filter places by category",
-    "catFood": "Food",
-    "catDrinks": "Drinks",
-    "catMarket": "Markets & shops",
-    "catStay": "Stays",
-    "catDestination": "Destinations",
+    "headerTitle": "Slowenien KI",
+    "headerSubtitle": "Dein persönlicher Slowenien-Guide",
+    "welcome": "Hallo! 🇸🇮 Ich bin Slowenien KI — dein persönlicher Guide für Slowenien. Frag mich nach Destinationen, Lokalen, Produkten oder Erlebnissen. Wie kann ich helfen?",
+    "quickPromptsLabel": "Schnelle Fragen",
+    "quickPrompt1": "Was sollte man in Slowenien besuchen?",
+    "quickPrompt2": "Empfiehl ein romantisches Wochenende",
+    "quickPrompt3": "Wo kann ich in Ljubljana essen?",
+    "quickPrompt4": "Wohin mit der Familie?",
+    "inputPlaceholder": "Frag nach Slowenien...",
+    "inputAriaLabel": "Nachricht an den KI-Chatbot",
+    "send": "Nachricht senden",
+    "clear": "Chat zurücksetzen",
+    "cleared": "Chat zurückgesetzt",
+    "thinking": "Ich durchsuche unsere Datenbank…",
+    "offlineFallback": "Entschuldigung, gerade habe ich Verbindungsprobleme. Versuche es erneut oder besuche den Reiseplaner.",
+    "fabOpen": "KI-Chatbot öffnen",
+    "fabClose": "Chatbot schließen",
+    "dialogAriaLabel": "KI-Chatbot-Gespräch",
+    "badgeDatabase": "Aus unserer Datenbank",
+    "sourcesLabel": "Offizielle Quellen (STO)",
+    "sourceMap": "Karte",
+    "placesLabel": "Auf der Karte",
+    "mapExpand": "Karte vergrößern",
+    "mapExpandShort": "Vergrößern",
+    "mapClose": "Karte schließen",
+    "mapOverlayAria": "Karte der empfohlenen Orte",
+    "mapPinShort": "Anheften",
+    "mapPinAria": "Karte neben dem Chat anheften — sie bleibt bei weiteren Fragen sichtbar (nur Desktop)",
+    "mapUnpinShort": "Lösen",
+    "mapUnpinAria": "Karte des Gesprächs lösen",
+    "splitMapTitle": "Karte des Gesprächs",
+    "splitResizeAria": "Trennlinie ziehen oder Pfeiltasten links/rechts für die Kartenbreite",
+    "bookCta": "Buchen",
+    "bookCtaAria": "Buchen — Angebotsübersicht für {name}",
+    "bookCtaTitle": "Angebotsübersicht und Buchung",
+    "bookDialogTitle": "Buchung · {name}",
+    "bookDialogIntro": "Lokale Anbieter und Partnerlinks für diese Destination. Die Bedingungen siehst du immer vor der Buchung — im Chat wird nichts gebucht.",
+    "bookDialogLoading": "Lade Angebote …",
+    "bookDialogError": "Die Angebote konnten gerade nicht geladen werden. Versuche es erneut oder nutze die Partnerlinks unten.",
+    "bookDialogRetry": "Erneut versuchen",
+    "bookDialogEmpty": "Für {name} gibt es noch keine lokalen Anbieter — unten findest du Partnerlinks.",
+    "bookDialogPartners": "Partnerlinks",
+    "bookDialogNote": "Partnerlinks öffnen den Anbieter (Affiliate, gekennzeichnet). Lokale Anbieter öffnen sich über ihre Website oder ihren Kontakt — Buchung und Bedingungen liegen immer beim Anbieter, nie im Chat.",
+    "provenanceT1": "Geprüft",
+    "provenanceT1Title": "Unsere geprüften Daten zur Destination",
+    "provenanceT1Legend": "geprüft (unsere Daten)",
+    "provenanceOsmTitle": "OpenStreetMap — Community-Quelle, nicht offiziell verifiziert",
+    "provenanceOsmLegend": "OpenStreetMap (Community-Quelle)",
+    "osmNote": "Öffnungszeiten sind Community-Daten — bitte vor dem Besuch prüfen.",
+    "provenanceT2Title": "Offizielle Quelle — Slowenische Tourismusorganisation (slovenia.info)",
+    "provenanceT2Legend": "offizielle STO-Quelle (Artikel)",
+    "stoNote": "Türkise Pins sind offizielle STO-Artikel — der Link öffnet das Original auf slovenia.info.",
+    "catFilterAria": "Orte nach Kategorie filtern",
+    "catFood": "Essen",
+    "catDrinks": "Getränke",
+    "catMarket": "Märkte und Läden",
+    "catStay": "Unterkunft",
+    "catDestination": "Destinationen",
     "catService": "Services",
-    "catSource": "Official sources",
-    "catEmpty": "All categories are off — enable at least one.",
-    "catEmptyReset": "Show all",
-    "addPlace": "Add to plan",
-    "addPlaceAria": "Add {name} to your plan",
-    "addPlaceDone": "Added to plan",
-    "addPlaceAddedTitle": "Added to your plan",
-    "addPlaceAddedDesc": "{name} · Day {day} — see it on the Plan page",
-    "addPlaceDuplicateTitle": "Already in your plan",
-    "addPlaceNoPlanTitle": "No plan yet",
-    "addPlaceNoPlanDesc": "We saved {name} — create a plan on the Plan page and we'll add it automatically.",
-    "voiceStart": "Dictate your question (microphone)",
-    "voiceStop": "Stop dictation",
-    "voiceListening": "Listening … speak now",
-    "voiceSpeak": "Read aloud",
-    "voiceStopSpeak": "Stop reading",
-    "voiceNoSpeech": "I didn’t hear any speech — try again.",
-    "voiceDenied": "Microphone access was denied.",
-    "voiceDeniedDesc": "Allow microphone access for this page in your browser settings.",
-    "voiceError": "Speech recognition failed. Try again or type your question."
+    "catSource": "Offizielle Quellen",
+    "catEmpty": "Alle Kategorien sind aus — zeige mindestens eine.",
+    "catEmptyReset": "Alle zeigen",
+    "addPlace": "Zum Reiseplan",
+    "addPlaceAria": "{name} zum Reiseplan hinzufügen",
+    "addPlaceDone": "Zum Reiseplan hinzugefügt",
+    "addPlaceAddedTitle": "Zum Reiseplan hinzugefügt",
+    "addPlaceAddedDesc": "{name} · Tag {day} — sieh es dir auf der Seite „Reise planen“ an",
+    "addPlaceDuplicateTitle": "Schon im Reiseplan",
+    "addPlaceNoPlanTitle": "Noch kein Reiseplan",
+    "addPlaceNoPlanDesc": "Wir haben {name} gespeichert — erstelle einen Plan auf der Seite „Reise planen“ und wir fügen ihn automatisch hinzu.",
+    "voiceStart": "Frage diktieren (Mikrofon)",
+    "voiceStop": "Diktat stoppen",
+    "voiceListening": "Ich höre … sprich",
+    "voiceSpeak": "Vorlesen",
+    "voiceStopSpeak": "Vorlesen stoppen",
+    "voiceNoSpeech": "Ich habe keine Sprache gehört — versuche es erneut.",
+    "voiceDenied": "Mikrofonzugriff wurde abgelehnt.",
+    "voiceDeniedDesc": "Erlaube den Mikrofonzugriff für diese Seite in den Browsereinstellungen.",
+    "voiceError": "Spracherkennung fehlgeschlagen. Versuche es erneut oder tippe die Frage."
   },
   "planner": {
     "title": "Trip planner",
@@ -867,88 +867,88 @@
     "supplyCompanionLink": "Complete journey"
   },
   "common": {
-    "loading": "Loading...",
-    "error": "Error",
-    "close": "Close",
-    "save": "Save",
-    "cancel": "Cancel",
-    "search": "Search",
+    "loading": "Lädt...",
+    "error": "Fehler",
+    "close": "Schließen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "search": "Suche",
     "filter": "Filter",
-    "all": "All",
+    "all": "Alle",
     "details": "Details",
-    "retry": "Try again",
-    "emailPlaceholder": "you@email.com",
-    "invalidEmail": "Enter a valid email address.",
-    "readInEnglish": "Read in English",
-    "readInSlovenian": "Read in Slovenian"
+    "retry": "Erneut versuchen",
+    "emailPlaceholder": "deine@mail.de",
+    "invalidEmail": "Gib eine gültige E-Mail-Adresse ein.",
+    "readInEnglish": "Auf Englisch lesen",
+    "readInSlovenian": "Auf Slowenisch lesen"
   },
   "about": {
-    "badge": "About",
-    "title": "About Discover Slovenia AI",
-    "intro": "<strong>Discover Slovenia AI</strong> is an AI-powered travel platform connecting travellers with local providers across Slovenia. Our mission is to make discovering Slovenian destinations effortless — from Lake Bled to Piran — with artificial intelligence, an interactive map and direct links to local providers.",
-    "offerTitle": "What we offer",
+    "badge": "Über die Seite",
+    "title": "Über Discover Slovenia AI",
+    "intro": "<strong>Discover Slovenia AI</strong> ist eine KI-gestützte Tourismusplattform, die Reisende mit lokalen Anbietern in Slowenien verbindet. Unsere Mission ist es, die Entdeckung slowenischer Destinationen zu erleichtern — vom Bleder See bis Piran — mit künstlicher Intelligenz, interaktiver Karte und direkten Verbindungen zu lokalen Anbietern.",
+    "offerTitle": "Was wir bieten",
     "offerCards": {
-      "plannerTitle": "AI travel planner",
-      "plannerDesc": "Generates personalised itineraries based on your budget, interests and season.",
-      "destinationsTitle": "38 destinations",
-      "destinationsDesc": "From the Alps to the Adriatic — with an interactive map and thousands of local places.",
-      "providersTitle": "Local providers",
-      "providersDesc": "Direct links to hotels, restaurants and activities — you always book with the provider, at no extra cost.",
-      "languagesTitle": "4 languages",
-      "languagesDesc": "Slovene, English, German and Italian for global travellers."
+      "plannerTitle": "KI-Reiseplaner",
+      "plannerDesc": "Erzeugt personalisierte Reiserouten nach Budget, Interessen und Saison.",
+      "destinationsTitle": "38 Destinationen",
+      "destinationsDesc": "Von den Alpen bis zur Adria — mit interaktiver Karte und tausenden lokalen Punkten.",
+      "providersTitle": "Lokale Anbieter",
+      "providersDesc": "Direkte Verbindungen zu Hotels, Restaurants und Aktivitäten — die Buchung erfolgt immer beim Anbieter, ohne Mehrkosten für dich.",
+      "languagesTitle": "4 Sprachen",
+      "languagesDesc": "Slowenisch, Englisch, Deutsch und Italienisch für Reisende aus aller Welt."
     },
-    "howTitle": "How we work",
-    "howP1": "The platform takes no commission on bookings. Instead, local providers pay a flat monthly subscription for their presence on the platform. Users always book directly with the provider — no middlemen.",
-    "howP2": "The itinerary planner is a DETERMINISTIC engine — pure code over real data, 0 AI tokens (Issue #9). Points of interest (POI) data comes from <osm>OpenStreetMap</osm> and <wiki>Wikipedia</wiki>. Weather data from <meteo>Open-Meteo</meteo>.",
-    "contactTitle": "Contact",
-    "contactP": "Questions? Write to <email>info@discoverslovenia.ai</email> or visit the <contactPage>contact page</contactPage>.",
-    "dataTitle": "Details",
-    "dataTech": "Technology:",
-    "dataAi": "AI:",
-    "dataMap": "Map:",
-    "dataDb": "Database:",
-    "dataLicense": "Licence:",
+    "howTitle": "Wie wir funktionieren",
+    "howP1": "Die Plattform erhebt keine Provisionen auf Buchungen. Stattdessen zahlen lokale Anbieter eine pauschale Monatsgebühr für ihre Präsenz auf der Plattform. Nutzer buchen immer direkt beim Anbieter — ohne Zwischenhändler.",
+    "howP2": "Der Reiserouten-Planer ist eine DETERMINISTISCHE Engine — reiner Code über echten Daten, 0 KI-Tokens (Issue #9). Die POI-Daten stammen aus <osm>OpenStreetMap</osm> und <wiki>Wikipedia</wiki>. Die Wetterdaten aus <meteo>Open-Meteo</meteo>.",
+    "contactTitle": "Kontakt",
+    "contactP": "Fragen? Schreib uns an <email>info@discoverslovenia.ai</email> oder besuche die <contactPage>Kontaktseite</contactPage>.",
+    "dataTitle": "Daten",
+    "dataTech": "Technologie:",
+    "dataAi": "KI:",
+    "dataMap": "Karte:",
+    "dataDb": "Datenbank:",
+    "dataLicense": "Lizenz:",
     "dataRepo": "Repo:",
     "dataValues": {
       "tech": "Next.js 16, TypeScript, Prisma, Tailwind CSS, shadcn/ui",
       "ai": "z-ai-web-dev-sdk (GLM)",
       "map": "Leaflet + OpenStreetMap",
       "db": "SQLite (Prisma ORM)",
-      "license": "MIT (open source)"
+      "license": "MIT (Open Source)"
     },
-    "linkPrivacy": "Privacy policy",
-    "linkTerms": "Terms of use",
-    "linkSources": "Data sources",
+    "linkPrivacy": "Datenschutzerklärung",
+    "linkTerms": "Nutzungsbedingungen",
+    "linkSources": "Datenquelle",
     "meta": {
-      "title": "About us",
-      "description": "Discover Slovenia AI is an AI-powered travel platform for Slovenia. Meet our team, our mission and how the platform works."
+      "title": "Über die Seite",
+      "description": "Discover Slovenia AI ist eine KI-gestützte Tourismusplattform für Slowenien. Lerne Team, Mission und Funktionsweise der Plattform kennen."
     }
   },
   "affiliateCta": {
-    "sectionAria": "Booking for {destination}",
-    "title": "Book your visit to {destination}",
-    "subtitle": "We connect you with trusted partners — you book directly with them, with no middlemen and no extra costs.",
-    "disclosure": "Affiliate links: Booking.com, DiscoverCars, GetYourGuide. If you book through them we may receive a commission — the price stays the same for you.",
+    "sectionAria": "Buchung für {destination}",
+    "title": "Buche deinen Besuch in {destination}",
+    "subtitle": "Wir verbinden dich mit geprüften Partnern — du buchst direkt bei ihnen, ohne Zwischenhändler und ohne Mehrkosten.",
+    "disclosure": "Partnerlinks: Booking.com, DiscoverCars, GetYourGuide. Wenn du über sie buchst, können wir eine Provision erhalten — der Preis steigt für dich nicht.",
     "hotels": {
-      "label": "Stay",
-      "title": "Hotels and apartments",
-      "desc": "Find hotels and apartments in {destination}.",
-      "cta": "Find accommodation",
-      "aria": "Find accommodation in {destination} — opens Booking.com (affiliate link)"
+      "label": "Unterkunft",
+      "title": "Hotels und Apartments",
+      "desc": "Finde Hotels und Apartments in {destination}.",
+      "cta": "Unterkunft suchen",
+      "aria": "Unterkunft in {destination} suchen — öffnet Booking.com (Partnerlink)"
     },
     "cars": {
-      "label": "Car rental",
-      "title": "Compare providers",
-      "desc": "Free cancellation and side-by-side comparison in one place.",
-      "cta": "Rent a car",
-      "aria": "Rent a car for {destination} — opens DiscoverCars (affiliate link)"
+      "label": "Mietwagen",
+      "title": "Anbieter vergleichen",
+      "desc": "Kostenlose Stornierung und Anbietervergleich an einem Ort.",
+      "cta": "Auto mieten",
+      "aria": "Auto für {destination} mieten — öffnet DiscoverCars (Partnerlink)"
     },
     "activities": {
-      "label": "Tours and experiences",
-      "title": "Guided tours",
-      "desc": "Guided tours and activities with local providers.",
-      "cta": "See tours",
-      "aria": "See tours and experiences for {destination} — opens GetYourGuide (affiliate link)"
+      "label": "Touren & Erlebnisse",
+      "title": "Geführte Ausflüge",
+      "desc": "Geführte Ausflüge und Aktivitäten mit lokalen Anbietern.",
+      "cta": "Ausflüge ansehen",
+      "aria": "Touren und Erlebnisse für {destination} ansehen — öffnet GetYourGuide (Partnerlink)"
     }
   },
   "bestTime": {
@@ -1009,43 +1009,43 @@
     }
   },
   "collections": {
-    "eyebrow": "Curated categories",
-    "title": "Collections",
-    "subtitle": "Curated categories for every occasion — from winter packages to romantic escapes and eco local products.",
-    "explore": "Explore",
-    "openAria": "Open the {title} collection",
+    "eyebrow": "Kurierte Kategorien",
+    "title": "Kollektionen",
+    "subtitle": "Kurierte Kategorien für jeden Anlass — von Winterpaketen bis zu romantischen Ausflügen und Eco-Lokalprodukten.",
+    "explore": "Entdecken",
+    "openAria": "Kollektion {title} öffnen",
     "items": {
       "winter": {
-        "title": "Winter packages",
-        "description": "Skiing, wellness and hearty food for cold days"
+        "title": "Winterpakete",
+        "description": "Skifahren, Wellness und warme Küche für kalte Tage"
       },
       "summer": {
-        "title": "Summer packages",
-        "description": "Rafting, hiking and refreshing days by the water"
+        "title": "Sommerspakete",
+        "description": "Rafting, Wandern und Abkühlung am Wasser"
       },
       "romantic": {
-        "title": "Romantic escapes",
-        "description": "For couples — castles, the lake, vineyards"
+        "title": "Romantische Ausflüge",
+        "description": "Für Paare — Burgen, See, Weinberge"
       },
       "family": {
-        "title": "Family",
-        "description": "Kid-friendly activities and products"
+        "title": "Familie",
+        "description": "Kinderfreundliche Aktivitäten und Produkte"
       },
       "gourmet": {
-        "title": "Culinary experiences",
-        "description": "Wine tastings, cheese-making, cooking workshops"
+        "title": "Kulinarische Erlebnisse",
+        "description": "Weinverkostungen, Käsereien, Kochkurse"
       },
       "adventure": {
-        "title": "Adrenaline",
-        "description": "Rafting, skiing, climbing, zip-line"
+        "title": "Adrenalin",
+        "description": "Rafting, Skifahren, Klettern, Zipline"
       },
       "eco": {
-        "title": "Eco & local",
-        "description": "Organic products and sustainable experiences"
+        "title": "Eco und lokal",
+        "description": "Bio-Produkte und nachhaltige Erlebnisse"
       },
       "luxury": {
         "title": "Luxury",
-        "description": "High-end experiences and products"
+        "description": "Hochwertige Erlebnisse und Produkte"
       }
     }
   },
@@ -1070,183 +1070,183 @@
     "guideTitle": "This trip has a published author guide (tips and first-hand experience)"
   },
   "contact": {
-    "title": "Contact",
-    "intro": "Questions about the platform, partnerships or technical matters? Get in touch.",
+    "title": "Kontakt",
+    "intro": "Hast du Fragen zur Plattform, zur Zusammenarbeit oder zu technischen Angelegenheiten? Schreib uns.",
     "cards": {
-      "emailTitle": "Email",
-      "locationTitle": "Location",
-      "locationValue": "Slovenia 🇸🇮",
-      "languagesTitle": "Languages",
-      "languagesValue": "Slovenščina, English, Deutsch, Italiano",
-      "supportTitle": "Technical support"
+      "emailTitle": "E-Mail",
+      "locationTitle": "Standort",
+      "locationValue": "Slowenien 🇸🇮",
+      "languagesTitle": "Sprachen",
+      "languagesValue": "Slowenisch, English, Deutsch, Italiano",
+      "supportTitle": "Technischer Support"
     },
-    "providersTitle": "For providers",
-    "providersText": "Want to become part of the platform? Register on the provider portal.",
-    "providersLink": "Provider registration →",
+    "providersTitle": "Für Anbieter",
+    "providersText": "Möchtest du Teil der Plattform werden? Registriere dich im Anbieterportal.",
+    "providersLink": "Anbieter-Registrierung →",
     "meta": {
-      "title": "Contact",
-      "description": "Get in touch with the Discover Slovenia AI team. Email and contact information."
+      "title": "Kontakt",
+      "description": "Kontaktiere das Team von Discover Slovenia AI. E-Mail, Telefon und Kontaktinformationen."
     }
   },
   "dataSources": {
-    "title": "Data sources",
-    "intro": "Discover Slovenia AI uses the following data sources to bring you reliable information about Slovenian tourist destinations.",
+    "title": "Datenquelle",
+    "intro": "Die Plattform Discover Slovenia AI verwendet folgende Datenquellen, um qualitativ hochwertige Informationen über slowenische Reiseziele zu gewährleisten.",
     "sources": {
       "osm": {
-        "type": "POI database",
-        "desc": "POI data (points of interest) — attractions, museums, restaurants, hotels, viewpoints, natural landmarks, religious sites. Licence: ODbL."
+        "type": "POI-Datenbank",
+        "desc": "POI-Daten (Points of Interest) — Sehenswürdigkeiten, Museen, Restaurants, Hotels, Aussichtspunkte, Naturdenkmäler, Sakralbauten. Lizenz: ODbL."
       },
       "wikipedia": {
-        "type": "Descriptions",
-        "desc": "Descriptions of destinations and POIs. Licence: CC BY-SA."
+        "type": "Beschreibungen",
+        "desc": "Beschreibungen der Destinationen und POIs. Lizenz: CC BY-SA."
       },
       "openMeteo": {
-        "type": "Weather",
-        "desc": "Real-time weather data. Free API with no key required."
+        "type": "Wetter",
+        "desc": "Echtzeit-Wetterdaten. Kostenlose API ohne Schlüssel."
       },
       "zai": {
-        "type": "AI",
-        "desc": "AI itinerary generation based on user preferences."
+        "type": "KI",
+        "desc": "KI-Generierung von Reiserouten auf Basis der Nutzerpräferenzen."
       },
       "sloveniaInfo": {
-        "type": "Official sources (RAG)",
-        "desc": "Official tourism content from I feel Slovenia (Slovenian Tourist Board) — 664 structured sources from the slovenia.info llms.txt index, used by the AI as grounded answer context with citations. Updated: September 2026."
+        "type": "Offizielle Quellen (RAG)",
+        "desc": "Offizielle Tourismusinhalte von I feel Slovenia (Slowenische Tourismusorganisation) — 664 strukturierte Quellen aus dem llms.txt-Index von slovenia.info, die die KI als Grounding für Antworten mit Zitaten nutzt. Aktualisiert: September 2026."
       }
     },
-    "supplyTitle": "Travel providers (supply registry)",
-    "supplyIntro": "Each provider's status is derived directly from our provider registry — a single source of truth that also powers the supply map. Our honesty principle: a partner link is NOT inventory — live offers (prices, availability) appear only once API access is actually approved and connected.",
+    "supplyTitle": "Reiseanbieter (Supply Register)",
+    "supplyIntro": "Der Status jedes Anbieters leitet sich direkt aus unserem Anbieterregister ab — eine einzige Wahrheitsquelle, die auch die Angebotskarte speist. Unser Ehrlichkeitsprinzip: ein Partnerlink ist KEIN Bestand — Live-Angebote (Preise, Verfügbarkeit) erscheinen erst, wenn der API-Zugang tatsächlich genehmigt und angeschlossen ist.",
     "supplyGroup": {
-      "local": "Local sources (open data)",
-      "own": "Our marketplace",
-      "commercial": "Commercial partners"
+      "local": "Lokale Quellen (offene Daten)",
+      "own": "Eigener Marktplatz",
+      "commercial": "Kommerzielle Partner"
     },
-    "supplyDocs": "Official documentation",
-    "providersTitle": "Local providers",
-    "providersText": "Details about local providers (hotels, restaurants, activities, products, experiences) are contributed by registered providers through the B2B portal. Each provider is responsible for the accuracy of their own details.",
+    "supplyDocs": "Offizielle Dokumentation",
+    "providersTitle": "Lokale Anbieter",
+    "providersText": "Die Daten zu lokalen Anbietern (Hotels, Restaurants, Aktivitäten, Produkte, Erlebnisse) werden von registrierten Anbietern über das B2B-Portal beigesteuert. Jeder Anbieter ist für die Richtigkeit seiner Daten verantwortlich.",
     "meta": {
-      "title": "Data sources",
-      "description": "The list of data sources used by the Discover Slovenia AI platform."
+      "title": "Datenquelle",
+      "description": "Liste der Datenquellen, die die Plattform Discover Slovenia AI verwendet."
     },
     "prodStatus": {
-      "LIVE": "Live data",
-      "CONFIGURED": "Configured",
-      "NOT_CONFIGURED": "Not configured",
-      "PARTNER_ACCESS_REQUIRED": "Partner approval required",
-      "AFFILIATE_ONLY": "Affiliate link only"
+      "LIVE": "Live-Daten",
+      "CONFIGURED": "Konfiguriert",
+      "NOT_CONFIGURED": "Nicht konfiguriert",
+      "PARTNER_ACCESS_REQUIRED": "Partner-Freigabe erforderlich",
+      "AFFILIATE_ONLY": "Nur Partnerlink"
     },
     "prodPrice": {
-      "LIVE_PRICE": "live price quotes",
-      "FROM_PRICE": "published “from” prices",
-      "UNKNOWN": "prices unknown",
-      "NOT_SUPPORTED": "no prices"
+      "LIVE_PRICE": "Live-Preisnotierungen",
+      "FROM_PRICE": "veröffentlichte „ab“-Preise",
+      "UNKNOWN": "Preise unbekannt",
+      "NOT_SUPPORTED": "ohne Preise"
     },
     "prodAvailability": {
-      "LIVE": "live availability",
-      "UNKNOWN": "availability unknown",
-      "NOT_SUPPORTED": "no availability data"
+      "LIVE": "Live-Verfügbarkeit",
+      "UNKNOWN": "Verfügbarkeit unbekannt",
+      "NOT_SUPPORTED": "ohne Verfügbarkeitsdaten"
     },
     "prodMonetization": {
-      "CONFIGURED": "monetization configured",
-      "NOT_CONFIGURED": "monetization not configured",
-      "NOT_APPLICABLE": "not applicable for monetization"
+      "CONFIGURED": "Monetarisierung konfiguriert",
+      "NOT_CONFIGURED": "Monetarisierung nicht konfiguriert",
+      "NOT_APPLICABLE": "nicht monetarisierbar"
     },
-    "prodStageLabel": "Stage",
-    "prodPriceLabel": "Prices",
-    "prodAvailabilityLabel": "Availability",
-    "prodMonetizationLabel": "Monetization",
-    "prodLegendTitle": "What the statuses mean",
-    "prodLegend": "Live data: the provider's data actually flows into our system. Configured: access is set up, live verification is still pending. Not configured: self-serve access exists, but the key has not been entered yet. Partner approval required: the API requires an application/contract with the provider. Affiliate link only: the source has no inventory API — a link is NOT inventory.",
-    "capabilityTitle": "Booking layer capability matrix",
-    "capabilityIntro": "A formalization of each provider's state per the §5 matrix: discovery, affiliate, API search, quote, booking, cancellation, webhook, refund, credentials and E2E evidence. A “live” status means an actual live provider response — published “from” prices are NOT live quotes, a user's document import is NOT a provider confirmation. The matrix derives from the same registry that powers the supply map (no manual upkeep).",
-    "capabilityLegend": "live = actual live source response · coded, awaiting access = adapter wired, empty without credentials/approval · architecture (0 live) = state machine/channel exists, zero live calls · user-attested = manual entry/document import (the document is the attestation) · not supported = the source lacks this capability · not applicable = meaningless for this source · E2E not run = browser proof not yet performed",
-    "capabilityCredsPresent": "configured",
-    "capabilityCredsNone": "not required",
-    "capabilityCredsMissing": "missing: {vars}",
-    "capabilityManual": "Manual entry / document import",
+    "prodStageLabel": "Stufe",
+    "prodPriceLabel": "Preise",
+    "prodAvailabilityLabel": "Verfügbarkeit",
+    "prodMonetizationLabel": "Monetarisierung",
+    "prodLegendTitle": "Was die Status bedeuten",
+    "prodLegend": "Live-Daten: Die Anbieterdaten fließen tatsächlich in unser System. Konfiguriert: Der Zugang ist eingerichtet, die Live-Prüfung folgt noch. Nicht konfiguriert: Zugang wäre Self-Service möglich, der Schlüssel ist aber noch nicht hinterlegt. Partner-Freigabe erforderlich: Die API verlangt Registrierung/Vertrag beim Anbieter. Nur Partnerlink: Die Quelle hat keine Bestands-API — der Link ist KEIN Bestand.",
+    "capabilityTitle": "Fähigkeitsmatrix der Buchungsschicht",
+    "capabilityIntro": "Formalisierung des Status jedes Anbieters nach der Auftraggeber-Matrix (Abschnitt §5): Discovery, Affiliate, API-Suche, Preisnotierung, Buchung, Stornierung, Webhook, Rückerstattung, Credentials und E2E-Nachweis. Der Status „live“ bedeutet eine tatsächliche Live-Antwort des Anbieters — veröffentlichte „ab“-Preise sind KEINE Live-Notierung, der Upload eines Dokuments durch den Nutzer ist KEINE Anbieterbestätigung. Die Matrix leitet sich aus demselben Register ab wie die Angebotskarte (ohne manuelle Pflege).",
+    "capabilityLegend": "live = tatsächliche Live-Antwort der Quelle · kodiert, wartet auf Zugang = Adapter angeschlossen, leer ohne Credentials/Freigabe · Architektur (0 live) = State Machine/Kanal existiert, keine Live-Aufrufe · Nutzerangabe = manuelle Eingabe/Dokumentimport (Dokument ist eine Bescheinigung) · nicht unterstützt = die Quelle hat diese Fähigkeit nicht · ungültig = ergibt für diese Quelle keinen Sinn · E2E nicht durchgeführt = Browser-Nachweis wurde noch nicht erbracht",
+    "capabilityCredsPresent": "hinterlegt",
+    "capabilityCredsNone": "nicht erforderlich",
+    "capabilityCredsMissing": "fehlen: {vars}",
+    "capabilityManual": "Manuelle Eingabe / Dokumentimport",
     "freshness": {
-      "title": "Data freshness",
-      "intro": "For every major data set we publish its freshness and source type. Live means the fact was verified at display time; fresh and stale are decided by the age of capture; unknown means the capture time cannot be determined. The source type is a canonical term: LIVE (live source), STATIC (static snapshot or curated guide), USER (user-entered), PROVIDER (partner source), GENERATED (AI-generated).",
-      "disclaimer": "A snapshot of a places dataset is not the live state: the number of places in a static snapshot (e.g. Foursquare Open Places, {date}) does NOT mean the same number of places is currently open or live — a snapshot is the state at the day of capture.",
-      "colDataset": "Data set",
-      "colType": "Source type",
-      "colFreshness": "Freshness",
+      "title": "Datenfrische",
+      "intro": "Für jede wichtige Datenschicht veröffentlichen wir Frische und Quelltyp. Live bedeutet, dass der Datensatz bei der Anzeige geprüft wurde; frisch und veraltet richten sich nach dem Alter der Erfassung; unbekannt bedeutet, dass der Erfassungszeitpunkt nicht bestimmbar ist. Der Quelltyp ist ein kanonischer Begriff: LIVE (Live-Quelle), STATIC (statische Momentaufnahme bzw. kuratierte Daten), USER (Nutzereingabe), PROVIDER (Partnerquelle), GENERATED (KI-generiert).",
+      "disclaimer": "Eine Momentaufnahme der Ortsgesamtheit ist kein Live-Zustand: Die Punktzahl aus einer statischen Momentaufnahme (z. B. Foursquare Open Places, {date}) bedeutet NICHT, dass ebenso viele Orte derzeit geöffnet oder live sind — die Momentaufnahme ist der Zustand zum Erfassungstag.",
+      "colDataset": "Schicht",
+      "colType": "Quelltyp",
+      "colFreshness": "Frische",
       "colDetail": "Details",
       "rows": {
-        "destinations": "Destinations (editorial guide)",
-        "transfers": "Transfers (from-prices)",
-        "affiliate": "Affiliate offers"
+        "destinations": "Destinationen (redaktioneller Führer)",
+        "transfers": "Transfers (ab-Preise)",
+        "affiliate": "Affiliate-Angebote"
       },
-      "osmDetail": "live Overpass queries on every POI search (ODbL)",
-      "fsqDetail": "static snapshot of the places dataset — NOT the live state (refresh: bun run fsq:ingest)",
-      "openMeteoDetail": "live API; in-memory cache for 10–15 minutes",
-      "destinationsDetail": "editorially curated guide; data as of {date}",
-      "transfersDetail": "from-prices from a static inventory — no live prices via API (check with the provider)",
-      "affiliateDetail": "partner link only — no verified offer data"
+      "osmDetail": "Live-Overpass-Abfragen bei jeder POI-Suche (ODbL)",
+      "fsqDetail": "statische Momentaufnahme der Ortsgesamtheit — KEIN Live-Zustand (Aktualisierung: bun run fsq:ingest)",
+      "openMeteoDetail": "Live-API; In-Memory-Cache 10–15 Minuten",
+      "destinationsDetail": "redaktionell kuratierter Führer; Datenstand {date}",
+      "transfersDetail": "ab-Preise aus statischem Bestand — Live-Preise über API nicht verfügbar (beim Anbieter prüfen)",
+      "affiliateDetail": "nur Partnerlink — ohne geprüfte Angebotsdaten"
     },
     "destinationContent": {
-      "title": "Destination content provenance (38 destinations)",
-      "intro": "Every destination in the editorial guide carries a record of source and date: either an externally verified source (the destination's official site or a canonical STO page), or Discover Slovenia editorial curation (honestly labelled, no invented source). The same record is available via the API (provenance field + X-Data-As-Of header) and on each destination's page.",
-      "statsLine": "{total} destinations · {official} with an official source · {internal} editorially curated · updated {asOf}",
+      "title": "Provenanz der Destinationen-Inhalte (38 Destinationen)",
+      "intro": "Jede Destination im redaktionellen Führer trägt ein Quellen- und Datumsregister: ob sie eine externe geprüfte Quelle hat (offizielle Destinationenseite oder kanonische STO-Seite), oder ob es redaktionell kuratierte Inhalte von Discover Slovenia sind (ehrlich gekennzeichnet, ohne erfundene Quelle). Dasselbe Register ist über die API abrufbar (Feld provenance + Header X-Data-As-Of) und auf der Seite jeder Destination.",
+      "statsLine": "{total} Destinationen · {official} mit offizieller Quelle · {internal} redaktionell kuratiert · aktualisiert {asOf}",
       "colDestination": "Destination",
-      "colSource": "Official source",
-      "colVerified": "Verified",
-      "internalTitle": "Editorial curation",
-      "internalNote": "The remaining {internal} destinations have no externally verified source — their content is curated by the Discover Slovenia editorial team (descriptions, highlights, prices, seasonal advice). Last content change: {asOf}. The ★ rating is always editorial, never a user review.",
-      "langTitle": "Language of record",
-      "langNote": "Slovenian is the source of record (slovenia-data.ts); the English version is an overlay translation keyed by the same ID. German and Italian are not supported in the content set.",
-      "nistTitle": "NiST and official data (an honest decision)",
-      "nistNote": "Issue #4 mentions NiST (the STO national data centre) as a potential source. Search on 2026-09-25: we could not verifiably reach a public portal with structured, machine-readable data. We do not copy — or invent — a source that cannot be verified; instead we use verifiable public sources as a provenance-carrying source layer (source, date, period, unit): official destination sites (5), canonical STO slovenia.info pages (4), and an honest editorial-curation label for the rest. If NiST becomes publicly available with structured data, it can be added as a source following the same pattern."
+      "colSource": "Offizielle Quelle",
+      "colVerified": "Geprüft",
+      "internalTitle": "Redaktionelle Kuratierung",
+      "internalNote": "Die übrigen {internal} Destinationen haben keine externe geprüfte Quelle — die Inhalte kuratiert die Redaktion von Discover Slovenia (Beschreibungen, Highlights, Preise, Saisontipps). Datum der letzten Inhaltsänderung: {asOf}. Die ★-Bewertung ist stets redaktionell, nie eine Nutzerrezension.",
+      "langTitle": "Registersprache",
+      "langNote": "Slowenisch ist die Wahrheitsquelle (slovenia-data.ts); die englische Version ist eine überlagerte Übersetzung mit derselben ID. Deutsch und Italienisch sind überlagerte Übersetzungen in Phase 1 (KI, mit mtNotice-Hinweis).",
+      "nistTitle": "NiST und offizielle Daten (ehrliche Entscheidung)",
+      "nistNote": "Issue #4 erwähnt NiST (nationales STO-Datenzentrum) als potenzielle Quelle. Recherche 2026-09-25: Ein öffentliches Portal mit strukturierten, maschinenlesbaren Daten haben wir nicht überprüfbar erreicht. Wir kopieren und erfinden keine nicht überprüfbare Quelle — stattdessen nutzen wir überprüfbare öffentliche Quellen als Quellenschicht mit Provenanz (Quelle, Datum, Zeitraum, Einheit): offizielle Destinationenseiten (5), kanonische STO-Seiten von slovenia.info (4) und die ehrliche Kennzeichnung redaktioneller Kuratierung für den Rest. Sollte NiST öffentlich mit strukturierten Daten zugänglich werden, können wir es nach demselben Muster als Quelle ergänzen."
     }
   },
   "demoScenarios": {
-    "badge": "Try it in 30 seconds",
-    "title": "What do you want to experience?",
-    "subtitle": "Click one of the options and the AI instantly builds your plan",
-    "customTitle": "Write your own",
-    "customSubtitle": "Or pick one above",
+    "badge": "In 30 Sekunden testen",
+    "title": "Was möchtest du erleben?",
+    "subtitle": "Klicke eine Option an und die KI stellt deinen Plan sofort zusammen",
+    "customTitle": "Schreib dein eigenes",
+    "customSubtitle": "Oder scrolle nach oben",
     "tags": {
-      "twoDays": "2 days",
-      "oneDay": "1 day",
-      "nature": "nature",
-      "food": "food",
-      "today": "today",
-      "family": "family",
-      "fiveHours": "5 hours",
-      "romance": "romance",
-      "budget": "budget",
-      "local": "local"
+      "twoDays": "2 Tage",
+      "oneDay": "1 Tag",
+      "nature": "Natur",
+      "food": "Kulinarik",
+      "today": "heute",
+      "family": "Familie",
+      "fiveHours": "5 Stunden",
+      "romance": "Romantik",
+      "budget": "günstig",
+      "local": "lokal"
     },
     "scenarios": {
       "river": {
-        "title": "A quiet weekend by the river",
-        "query": "A quiet weekend by the river with great food"
+        "title": "Ruhiges Wochenende am Fluss",
+        "query": "Ruhiges Wochenende am Fluss mit gutem Essen"
       },
       "family": {
-        "title": "A family day out today",
-        "query": "A family day out with kids today, 5 hours"
+        "title": "Familienausflug heute",
+        "query": "Familienausflug für Kinder heute, 5 Stunden"
       },
       "romantic": {
-        "title": "A romantic weekend with wine",
-        "query": "A romantic weekend with wine and great restaurants"
+        "title": "Romantisches Wochenende mit Wein",
+        "query": "Romantisches Wochenende mit Wein und guten Restaurants"
       },
       "budget": {
-        "title": "A cheaper trip without the crowds",
-        "query": "A cheap trip without the crowds, nature and peace"
+        "title": "Günstigerer Ausflug ohne Trubel",
+        "query": "Günstiger Ausflug ohne Trubel, Natur und Ruhe"
       },
       "food": {
-        "title": "The best local food",
-        "query": "The best local food in Bela krajina, traditional cuisine"
+        "title": "Bestes lokales Essen",
+        "query": "Bestes lokales Essen in der Bela krajina, traditionelle Küche"
       }
     }
   },
   "destinationsPage": {
-    "badge": "Destinations",
-    "title": "All 38 destinations — Slovenia and the western Balkans",
-    "subtitle": "From Lake Bled and the peaks of the Julian Alps to the narrow streets of Piran — filter by region, interests, type and price and find your own corner of Slovenia.",
-    "statsLine": "38 destinations · 6 filters · No sign-up",
+    "badge": "Destinationen",
+    "title": "Alle 38 Destinationen — Slowenien und der westliche Balkan",
+    "subtitle": "Vom Bleder See und den Gipfeln der Julischen Alpen bis zu den engen Gassen von Piran — filtere nach Region, Interessen, Typ und Preis und finde dein Eckchen Slowenien.",
+    "statsLine": "38 Destinationen · 6 Filter · Ohne Anmeldung",
     "meta": {
-      "title": "All 38 destinations — Slovenia and the western Balkans",
-      "description": "Explore 38 destinations across Slovenia and the western Balkans — from Lake Bled to Sarandë. Filter by country, region, interests, type, price and rating."
+      "title": "Alle 38 Destinationen — Slowenien und der westliche Balkan",
+      "description": "Entdecke 38 Destinationen Sloweniens und des westlichen Balkans — vom Bleder See bis Saranda. Filter nach Land, Region, Interessen, Typ, Preis und Bewertung."
     }
   },
   "guidePage": {
@@ -1500,118 +1500,118 @@
     }
   },
   "pregenTrips": {
-    "badge": "Popular itineraries",
-    "title": "Or pick a tried-and-tested itinerary",
-    "subtitle": "The AI then personalises it further around your wishes",
-    "planCta": "Plan it",
-    "dayOne": "day",
-    "dayOther": "days",
+    "badge": "Beliebte Pläne",
+    "title": "Oder wähle eine geprüfte Route",
+    "subtitle": "Die KI personalisiert sie zusätzlich nach deinen Wünschen",
+    "planCta": "Planen",
+    "dayOne": "Tag",
+    "dayOther": "Tage",
     "trips": {
       "bled-1-day": {
-        "title": "Bled in a day",
-        "query": "One day in Bled — castle, island, Vintgar and Bled cream cake",
+        "title": "Bled an einem Tag",
+        "query": "Ein Tag in Bled — Burg, Insel, Vintgar und Cremeschnitte",
         "dest1": "Bled",
         "dest2": "Vintgar",
-        "hl1": "Bled Castle",
-        "hl2": "Pletna boat ride",
-        "hl3": "Vintgar Gorge",
-        "alt": "Lake Bled with the island and castle on the cliff"
+        "hl1": "Burg Bled",
+        "hl2": "Pletna-Fahrt",
+        "hl3": "Vintgar-Klamm",
+        "alt": "Der Bleder See mit Insel und Burg auf dem Fels"
       },
       "ljubljana-2-days": {
-        "title": "Ljubljana weekend",
-        "query": "Two days in Ljubljana — culture, food and the castle",
+        "title": "Wochenende Ljubljana",
+        "query": "Zwei Tage in Ljubljana — Kultur, Essen und Burg",
         "dest1": "Ljubljana",
-        "hl1": "Old town centre",
-        "hl2": "Ljubljana Castle",
-        "hl3": "Triple Bridge",
-        "alt": "Ljubljana — old town on the banks of the Ljubljanica"
+        "hl1": "Altstadt",
+        "hl2": "Burg Ljubljana",
+        "hl3": "Drei Brücken",
+        "alt": "Ljubljana — historischer Kern an der Ljubljanica"
       },
       "soca-3-days": {
-        "title": "Soča adventure",
-        "query": "Three days on the Soča — rafting, hikes and local food",
-        "dest1": "Soča River",
+        "title": "Soča-Abenteuer",
+        "query": "Drei Tage an der Soča — Rafting, Wandern und lokales Essen",
+        "dest1": "Fluss Soča",
         "dest2": "Kobarid",
         "dest3": "Bovec",
-        "hl1": "Rafting on the Soča",
-        "hl2": "Kobarid Museum",
-        "hl3": "Boka Waterfall",
-        "alt": "The emerald Soča river between Alpine peaks"
+        "hl1": "Rafting an der Soča",
+        "hl2": "Museum Kobarid",
+        "hl3": "Boka-Wasserfall",
+        "alt": "Der smaragdgrüne Fluss Soča zwischen Alpengipfeln"
       },
       "piran-coast": {
-        "title": "Coast and Piran",
-        "query": "A weekend on the coast — Piran, Portorož and local food",
+        "title": "Küste und Piran",
+        "query": "Wochenende an der Küste — Piran, Portorož und lokales Essen",
         "dest1": "Piran",
         "dest2": "Portorož",
-        "hl1": "Tartini Square",
-        "hl2": "The waterfront",
-        "hl3": "Olive oil",
-        "alt": "Piran — Venetian coastal town with St George's church"
+        "hl1": "Tartini-Platz",
+        "hl2": "Küste",
+        "hl3": "Olivenöl",
+        "alt": "Piran — venezianische Küstenstadt mit der Kirche St. Georg"
       },
       "bela-krajina": {
-        "title": "Exploring Bela krajina",
-        "query": "Two days in Bela krajina — honey, food and nature on the Kolpa",
+        "title": "Bela krajina entdecken",
+        "query": "Zwei Tage in der Bela krajina — Honig, Essen und Natur an der Kolpa",
         "dest1": "Črnomelj",
-        "hl1": "Local honey",
-        "hl2": "Traditional food",
-        "hl3": "The Kolpa",
-        "alt": "Jurjevanje festival in Bela krajina — folk dancers in white costumes"
+        "hl1": "Lokaler Honig",
+        "hl2": "Traditionelle Küche",
+        "hl3": "Kolpa",
+        "alt": "Jurjevanje in der Bela krajina — Volkstänze in weißen Trachten"
       },
       "triglav-park": {
-        "title": "Triglav National Park",
-        "query": "Three days in Triglav National Park — Bohinj, Triglav and waterfalls",
+        "title": "Triglav-Nationalpark",
+        "query": "Drei Tage im Triglav-Nationalpark — Bohinj, Triglav und Wasserfälle",
         "dest1": "Bohinj",
         "dest2": "Triglav",
-        "hl1": "Lake Bohinj",
-        "hl2": "Climbing Triglav",
-        "hl3": "Savica Waterfall",
-        "alt": "Triglav — Slovenia's highest peak above the Seven Lakes Valley"
+        "hl1": "Bohinjer See",
+        "hl2": "Triglav-Besteigung",
+        "hl3": "Savica-Wasserfall",
+        "alt": "Triglav — Sloweniens höchster Gipfel über dem Sieben-Seen-Tal"
       }
     }
   },
   "privacy": {
-    "title": "Privacy policy",
-    "lastUpdated": "Last updated:",
+    "title": "Datenschutzerklärung",
+    "lastUpdated": "Letzte Aktualisierung:",
     "sections": {
       "s1": {
-        "title": "1. General",
-        "body": "Discover Slovenia AI (the \"platform\") respects your privacy. This policy describes what data we collect, how we use it and what rights you have."
+        "title": "1. Allgemeines",
+        "body": "Discover Slovenia AI (die „Plattform\") respektiert deine Privatsphäre. Diese Richtlinie beschreibt, welche Daten wir erheben, wie wir sie verwenden und welche Rechte du hast."
       },
       "s2": {
-        "title": "2. Visitor data",
-        "body": "<strong>We do not collect visitors' personal data</strong> without explicit consent. We only track anonymous analytics (page views, clicks) to improve the platform."
+        "title": "2. Besucherdaten",
+        "body": "<strong>Wir erheben keine personenbezogenen Daten von Besuchern</strong> ohne ausdrückliche Einwilligung. Wir verfolgen nur anonyme Analysedaten (Seitenaufrufe, Klicks) zur Verbesserung der Plattform."
       },
       "s3": {
         "title": "3. Newsletter",
-        "body": "If you subscribe to the newsletter, we store your email address. We use it solely to send you travel guides and tips. You can unsubscribe at any time."
+        "body": "Wenn du dich zum Newsletter anmeldest, speichern wir deine E-Mail-Adresse. Wir verwenden sie ausschließlich für den Versand von Reiseführern und Tipps. Du kannst dich jederzeit abmelden."
       },
       "s4": {
-        "title": "4. Providers (B2B)",
-        "body": "Registered providers supply their name, email, company name and password. Passwords are stored with bcrypt hashing (12 rounds). Business details (address, phone, website) are publicly displayed on the platform."
+        "title": "4. Anbieter (B2B)",
+        "body": "Registrierte Anbieter geben an: Name, E-Mail, Firmenname und Passwort. Passwörter werden mit bcrypt-Hashing (12 Runden) gespeichert. Geschäftsdaten (Adresse, Telefon, Website) werden öffentlich auf der Plattform angezeigt."
       },
       "s5": {
-        "title": "5. Leads (JoinUs form)",
-        "body": "When you fill in the \"Join us\" form, we store: name, email, phone, company name, type, town and preferred plan. We use this data solely to contact you about your enquiry."
+        "title": "5. Leads (JoinUs-Formular)",
+        "body": "Wenn du das Formular „Mitmachen“ ausfüllst, speichern wir: Name, E-Mail, Telefon, Firmenname, Typ, Ort und gewünschtes Paket. Diese Daten verwenden wir ausschließlich, um dich zu deiner Anmeldung zu kontaktieren."
       },
       "s6": {
         "title": "6. Cookies",
-        "body": "The platform uses strictly necessary cookies to function (authentication, language preferences). We do not use marketing or tracking cookies."
+        "body": "Die Plattform verwendet unbedingt erforderliche Cookies für den Betrieb (Authentifizierung, Spracheinstellungen). Wir verwenden keine Marketing- oder Tracking-Cookies."
       },
       "s7": {
-        "title": "7. Payments (Stripe)",
-        "body": "Payments are processed by Stripe. We never store credit card details. Stripe is PCI-DSS certified."
+        "title": "7. Zahlungen (Stripe)",
+        "body": "Zahlungen werden über Stripe abgewickelt. Wir speichern keine Kreditkartendaten. Stripe ist PCI-DSS-zertifiziert."
       },
       "s8": {
-        "title": "8. Your rights",
-        "body": "Under the GDPR you have the right to access, rectification, erasure and portability of your data. To exercise your rights, write to <email>privacy@discoverslovenia.ai</email>."
+        "title": "8. Deine Rechte",
+        "body": "Nach der DSGVO hast du das Recht auf: Auskunft, Berichtigung, Löschung und Übertragbarkeit deiner Daten. Zur Ausübung deiner Rechte schreibe an <email>privacy@discoverslovenia.ai</email>."
       },
       "s9": {
-        "title": "9. Contact",
-        "body": "For privacy questions: <email>privacy@discoverslovenia.ai</email>"
+        "title": "9. Kontakt",
+        "body": "Fragen zum Datenschutz: <email>privacy@discoverslovenia.ai</email>"
       }
     },
     "meta": {
-      "title": "Privacy policy",
-      "description": "Privacy policy of the Discover Slovenia AI platform. How we handle personal data."
+      "title": "Datenschutzerklärung",
+      "description": "Datenschutzerklärung der Plattform Discover Slovenia AI. Wie wir mit personenbezogenen Daten umgehen."
     }
   },
   "quiz": {
@@ -1783,53 +1783,53 @@
     }
   },
   "terms": {
-    "title": "Terms of use",
-    "lastUpdated": "Last updated:",
+    "title": "Nutzungsbedingungen",
+    "lastUpdated": "Letzte Aktualisierung:",
     "sections": {
       "s1": {
-        "title": "1. Acceptance of terms",
-        "body": "By using the Discover Slovenia AI platform you accept these terms of use."
+        "title": "1. Annahme der Bedingungen",
+        "body": "Mit der Nutzung der Plattform Discover Slovenia AI nimmst du diese Nutzungsbedingungen an."
       },
       "s2": {
-        "title": "2. The service",
-        "body": "The platform provides information about Slovenian tourist destinations, AI travel planning and links to local providers. The platform does not handle bookings — users book directly with the providers."
+        "title": "2. Der Dienst",
+        "body": "Die Plattform bietet Informationen zu slowenischen Tourismus-Destinationen, KI-Reiseplanung und Verbindungen zu lokalen Anbietern. Die Plattform vermittelt keine Buchungen — Nutzer buchen direkt bei den Anbietern."
       },
       "s3": {
-        "title": "3. Itineraries",
-        "body": "Generated itineraries are for information only. The platform accepts no liability for the accuracy of prices, availability or the quality of third-party services."
+        "title": "3. Reiserouten",
+        "body": "Generierte Reiserouten dienen der Information. Die Plattform übernimmt keine Haftung für die Richtigkeit von Preisen, Verfügbarkeit oder Qualität von Dienstleistungen Dritter."
       },
       "s4": {
-        "title": "4. Affiliate links",
-        "body": "The platform contains affiliate links (Booking.com, DiscoverCars, GetYourGuide, Skyscanner, World Nomads, SafetyWing, Airalo, Kiwitaxi, Omio, Tiqets and Viator). If you make a booking through one of these links, Discover Slovenia may receive an affiliate commission. The price you pay never goes up because of it; you complete the booking and any payment directly with the partner, whose terms apply."
+        "title": "4. Affiliate-Links",
+        "body": "Die Plattform enthält Affiliate-Links (Booking.com, DiscoverCars, GetYourGuide, Skyscanner, World Nomads, SafetyWing, Airalo, Kiwitaxi, Omio, Tiqets und Viator). Wenn du über diese Links buchst, kann Discover Slovenia eine Partnerprovision erhalten. Der Preis erhöht sich für dich dadurch nicht; Buchung und etwaige Zahlungsdienstleistungen führst du direkt beim Partner aus, für den seine Bedingungen gelten."
       },
       "s5": {
-        "title": "5. Providers (B2B)",
-        "body": "Registered providers are responsible for the accuracy of their details. The flat subscription (Premium €149/month, Enterprise €499/month) is billed monthly. You can cancel at any time with 30 days' notice."
+        "title": "5. Anbieter (B2B)",
+        "body": "Registrierte Anbieter sind für die Richtigkeit ihrer Daten verantwortlich. Die Pauschalgebühr (Premium 149 €/Monat, Enterprise 499 €/Monat) wird monatlich abgerechnet. Eine Kündigung ist jederzeit mit 30-tägiger Frist möglich."
       },
       "s6": {
-        "title": "6. Beta period",
-        "body": "During the beta period (up to 30 active venues) all plans are free. Once monetisation is switched on, beta users keep 6 months of free access."
+        "title": "6. Beta-Phase",
+        "body": "Während der Beta-Phase (bis zu 30 aktive Lokale) sind alle Pakete kostenlos. Nach Aktivierung der Monetarisierung erhalten Beta-Nutzer 6 Monate kostenlosen Zugang."
       },
       "s7": {
-        "title": "7. Intellectual property",
-        "body": "The platform's content is released under the MIT licence. Destination images come from open sources (Unsplash, OpenStreetMap). The website code is open source on GitHub."
+        "title": "7. Geistiges Eigentum",
+        "body": "Die Inhalte der Plattform sind durch die MIT-Lizenz geschützt. Die Destinationenbilder stammen aus offenen Quellen (Unsplash, OpenStreetMap). Der Web-Code ist Open Source auf GitHub."
       },
       "s8": {
-        "title": "8. Limitation of liability",
-        "body": "The platform accepts no liability for any damage arising from the use of information or links to third parties."
+        "title": "8. Haftungsbeschränkung",
+        "body": "Die Plattform haftet nicht für Schäden, die aus der Nutzung von Informationen oder Verbindungen zu Dritten entstehen."
       },
       "s9": {
-        "title": "9. Changes to the terms",
-        "body": "These terms may be updated. We will notify registered users by email about important changes."
+        "title": "9. Änderungen der Bedingungen",
+        "body": "Die Bedingungen können aktualisiert werden. Über wichtige Änderungen informieren wir registrierte Nutzer per E-Mail."
       },
       "s10": {
-        "title": "10. Contact",
-        "body": "Questions: <email>info@discoverslovenia.ai</email>"
+        "title": "10. Kontakt",
+        "body": "Fragen: <email>info@discoverslovenia.ai</email>"
       }
     },
     "meta": {
-      "title": "Terms of use",
-      "description": "Terms of use of the Discover Slovenia AI platform."
+      "title": "Nutzungsbedingungen",
+      "description": "Nutzungsbedingungen der Plattform Discover Slovenia AI."
     }
   },
   "thingsToDo": {
@@ -1864,108 +1864,108 @@
   },
   "trustSafety": {
     "hero": {
-      "title": "Trust and safety",
-      "subtitle": "How we verify partners, how AI ranking works and how we protect your data."
+      "title": "Vertrauen und Sicherheit",
+      "subtitle": "Wie wir Partner prüfen, wie das KI-Ranking funktioniert und wie wir deine Daten schützen."
     },
     "partner": {
-      "title": "How we verify partners",
+      "title": "Wie wir Partner prüfen",
       "adminApproval": {
-        "title": "Admin approval",
-        "body": "Every venue must be manually approved by our team before it goes live. We check: correct contact details, category fit, and the quality of photos and descriptions. Unapproved venues are invisible to users and the AI cannot recommend them."
+        "title": "Admin-Freigabe",
+        "body": "Jedes Lokal muss vor der Veröffentlichung manuell von unserem Team freigegeben werden. Wir prüfen: Korrektheit der Kontaktdaten, Passung der Kategorie, Qualität von Bildern und Beschreibung. Ungeprüfte Lokale sind für Nutzer nicht sichtbar und können von der KI nicht empfohlen werden."
       },
       "qualityScore": {
         "title": "Partner Quality Score (0-100)",
-        "body": "Every venue gets an automatically calculated Quality Score from 7 signals: profile completeness (30%), photo quality (15%), description quality (15%), AI tags (10%), admin verification (10%), ratings (10%) and data freshness (10%).",
+        "body": "Jedes Lokal hat einen automatisch berechneten Quality Score aus 7 Signalen: Profilvollständigkeit (30 %), Fotoqualität (15 %), Beschreibungsqualität (15 %), KI-Tags (10 %), Admin-Verifizierung (10 %), Bewertungen (10 %), Datenfrische (10 %).",
         "badgeVerified": "Verified (Q>40)",
-        "badgePremium": "👑 Premium (paying)",
+        "badgePremium": "👑 Premium (zahlend)",
         "badgeFeatured": "⭐ Featured (Q>90 + Premium + Verified)"
       },
       "vlm": {
-        "title": "VLM image review",
-        "body": "Every image on the platform is checked with a Vision Language Model (VLM). We verify: match with the venue's name, absence of watermarks, and the quality and appropriateness of the content."
+        "title": "VLM-Bildprüfung",
+        "body": "Alle Bilder auf der Plattform werden mit einem Vision Language Model (VLM) geprüft. Wir prüfen: Übereinstimmung mit dem Lokalnamen, Abwesenheit von Wasserzeichen, Qualität und Angemessenheit der Inhalte."
       }
     },
     "ranking": {
-      "title": "How AI ranking works",
-      "intro": "AI recommendations rest on 5 dimensions with clearly defined weights. Money cannot buy the top spot.",
+      "title": "Wie das KI-Ranking funktioniert",
+      "intro": "KI-Empfehlungen beruhen auf 5 Dimensionen mit klaren Gewichten. Zahlung kann Platz 1 nicht kaufen.",
       "dimensions": {
-        "relevance": "Match with the user's search (destination, interests, category)",
-        "quality": "Quality of the venue's profile (0-100)",
-        "rating": "User ratings (0-5 stars)",
-        "distance": "Geographic proximity to other stops in the itinerary",
-        "premiumBoost": "A maximum 5% boost for paying partners — it can never outweigh relevance"
+        "relevance": "Übereinstimmung mit der Nutzersuche (Destination, Interessen, Kategorie)",
+        "quality": "Profilqualität des Lokals (0-100)",
+        "rating": "Nutzerbewertungen (0-5 Sterne)",
+        "distance": "Geografische Nähe zu anderen Orten der Reiseroute",
+        "premiumBoost": "Maximal 5 % Boost für zahlende Partner — kann die Relevanz nicht übersteigen"
       },
-      "warningTitle": "Our rule: the AI never recommends a poor venue just because it pays",
-      "warningText": "Venues rated below 3.5 get no premium boost. Relevance (60%) always dominates over Premium (5%)."
+      "warningTitle": "Regel: Die KI empfiehlt nie ein schlechtes Lokal nur, weil es zahlt",
+      "warningText": "Lokale mit Bewertung unter 3,5 bekommen keinen Premium-Boost. Relevanz (60 %) dominiert immer über Premium (5 %)."
     },
     "transparency": {
-      "title": "Recommendation transparency",
-      "intro": "Every AI recommendation is clearly labelled. Users always know what is an advertisement and what is organic.",
+      "title": "Transparenz der Empfehlungen",
+      "intro": "Jede KI-Empfehlung ist klar gekennzeichnet. Der Nutzer weiß, was Werbung ist und was organisch.",
       "labels": {
         "featured": {
           "badge": "⭐ Featured",
-          "desc": "A verified partner with a high-quality profile and Premium membership. Quality Score > 90."
+          "desc": "Geprüfter Partner mit hochwertigem Profil und Premium-Mitgliedschaft. Quality Score > 90."
         },
         "premium": {
           "badge": "👑 Premium",
-          "desc": "A partner supporting the platform's development with an extended profile. Boost capped at 5%."
+          "desc": "Der Partner unterstützt die Plattform-Entwicklung und hat ein erweitertes Profil. Boost max. 5 %."
         },
         "verified": {
-          "badge": "✓ Verified",
-          "desc": "Details checked by the Discover Slovenia AI team."
+          "badge": "✓ Geprüft",
+          "desc": "Die Daten wurden vom Team von Discover Slovenia AI verifiziert."
         },
         "affiliate": {
-          "badge": "🔗 Affiliate link",
-          "desc": "An affiliate link — Discover Slovenia AI may receive a commission. Always clearly labelled."
+          "badge": "🔗 Partnerlink",
+          "desc": "Affiliate-Link — Discover Slovenia AI kann eine Provision erhalten. Immer klar gekennzeichnet."
         },
         "organic": {
-          "badge": "(no label)",
-          "desc": "An organic recommendation — a free venue the AI recommended on relevance alone."
+          "badge": "(ohne Kennzeichnung)",
+          "desc": "Organische Empfehlung — kostenloses Lokal, von der KI aufgrund der Relevanz empfohlen."
         }
       }
     },
     "dataProtection": {
-      "title": "Data protection",
+      "title": "Datenschutz",
       "gdpr": {
-        "title": "GDPR compliance",
-        "desc": "Privacy policy, cookies, the right to be forgotten. DPAs for premium partners."
+        "title": "DSGVO-Konformität",
+        "desc": "Datenschutzerklärung, Cookies, Recht auf Vergessenwerden. DPA für Premium-Partner."
       },
       "free": {
-        "title": "Free for users",
-        "desc": "Users never pay for AI features. Monetisation comes only from providers."
+        "title": "Kostenlos für Nutzer",
+        "desc": "Der Nutzer zahlt nie für KI-Funktionen. Monetarisierung nur über Anbieter."
       },
       "noMiddlemen": {
-        "title": "No middlemen",
-        "desc": "The AI connects travellers with providers. The traveller books directly with the provider."
+        "title": "Ohne Zwischenhändler",
+        "desc": "Die KI verbindet Reisende und Anbieter. Die Buchung erfolgt direkt beim Anbieter."
       },
       "auditLog": {
-        "title": "Audit log",
-        "desc": "All admin actions (approvals, rejections, sponsorships) are logged and traceable."
+        "title": "Audit-Log",
+        "desc": "Alle Admin-Aktionen (Freigabe, Ablehnung, Sponsoring) werden protokolliert und sind nachvollziehbar."
       }
     },
     "meta": {
-      "title": "Trust and safety",
-      "description": "How we verify partners, how AI ranking works and how we protect your data."
+      "title": "Vertrauen und Sicherheit",
+      "description": "Wie wir Partner prüfen, wie das KI-Ranking funktioniert und wie wir deine Daten schützen."
     }
   },
   "welcomeBack": {
-    "title": "Welcome back! 👋",
-    "knowsLabel": "The AI already knows:",
-    "visitedCount": "{count} destinations visited",
-    "quizCta": "Answer the <quizLink>2-minute quiz</quizLink> and the AI will put together a trip made to measure.",
-    "close": "Close",
+    "title": "Willkommen zurück! 👋",
+    "knowsLabel": "Die KI weiß schon:",
+    "visitedCount": "{count} besuchte Destinationen",
+    "quizCta": "Beantworte das <quizLink>2-Minuten-Quiz</quizLink> und die KI stellt dir eine maßgeschneiderte Reise zusammen.",
+    "close": "Schließen",
     "interests": {
-      "narava": "nature",
-      "kulinarika": "local food",
-      "hrana": "local food",
-      "avantura": "adventure",
-      "kultura": "culture"
+      "narava": "Natur",
+      "kulinarika": "lokales Essen",
+      "hrana": "lokales Essen",
+      "avantura": "Abenteuer",
+      "kultura": "Kultur"
     },
     "groups": {
-      "solo": "solo",
-      "par": "couple",
-      "druzina": "family",
-      "prijatelji": "friends"
+      "solo": "allein",
+      "par": "Paar",
+      "druzina": "Familie",
+      "prijatelji": "Freunde"
     }
   },
   "adriaGuidePage": {
@@ -2139,203 +2139,203 @@
     }
   },
   "pwa": {
-    "install": "Install app",
-    "installAria": "Install the app (works offline too)",
-    "installIosTitle": "Installing on iPhone/iPad",
-    "installIosHint": "Safari doesn't offer an install button — use the Share menu:",
-    "installIosStep1": "Tap the Share button (square with an arrow up) in Safari's toolbar",
-    "installIosStep2": "Choose “Add to Home Screen”",
-    "installIosStep3": "Confirm — the app opens full screen and your plans stay available offline",
-    "installDoneTitle": "App installed",
-    "installDoneBody": "Discover Slovenia AI is now on your home screen — plans remain available even without a connection.",
+    "install": "App installieren",
+    "installAria": "App installieren (funktioniert auch offline)",
+    "installIosTitle": "Installation auf iPhone/iPad",
+    "installIosHint": "Safari bietet keinen Installations-Button — nutze das Teilen-Menü:",
+    "installIosStep1": "Tippe auf den Teilen-Button (Quadrat mit Pfeil nach oben) in der Safari-Leiste",
+    "installIosStep2": "Wähle „Zum Home-Bildschirm hinzufügen“",
+    "installIosStep3": "Bestätige — die App öffnet sich im Vollbild und die Pläne bleiben auch offline verfügbar",
+    "installDoneTitle": "App installiert",
+    "installDoneBody": "Discover Slovenia AI ist jetzt auf deinem Home-Bildschirm — die Pläne sind auch ohne Verbindung verfügbar.",
     "offline": "Offline",
-    "offlineAria": "Offline — saved plans still available",
-    "offlineToastTitle": "You're offline",
-    "offlineToastBody": "Plans saved on this device remain available. New generations need a connection.",
-    "onlineToastTitle": "Back online",
-    "onlineToastBody": "All data is refreshing again.",
-    "updateTitle": "New app version",
-    "updateBody": "An update is ready. Refresh the page to apply it.",
-    "updateAction": "Refresh"
+    "offlineAria": "Offline — die Pläne sind verfügbar",
+    "offlineToastTitle": "Offline",
+    "offlineToastBody": "Die auf diesem Gerät gespeicherten Pläne bleiben zugänglich. Neue Generierungen brauchen eine Verbindung.",
+    "onlineToastTitle": "Verbindung wiederhergestellt",
+    "onlineToastBody": "Alle Daten werden wieder aktualisiert.",
+    "updateTitle": "Neue App-Version",
+    "updateBody": "Wir haben ein Update vorbereitet. Lade die Seite neu, damit es wirklich wirksam wird.",
+    "updateAction": "Neu laden"
   },
   "validatorTelemetry": {
-    "sectionAriaLabel": "Public itinerary-validator telemetry",
-    "eyebrow": "Telemetry · public numbers · 0 AI tokens",
-    "title": "How many mistakes does our validator catch?",
-    "subtitle": "Everyone else promises accuracy. We count it: every completed plan check is recorded server-side, every issue by type — and the numbers are public for all.",
-    "liveTitle": "Our numbers (counted server-side, no personal data)",
-    "detailsSummary": "Counting details and public studies",
+    "sectionAriaLabel": "Öffentliche Telemetrie des Plan-Prüfers",
+    "eyebrow": "Telemetrie · öffentliche Zahlen · 0 KI-Tokens",
+    "title": "Wie viele Fehler fängt unser Prüfer ab?",
+    "subtitle": "Alle anderen versprechen dir Genauigkeit. Wir zählen sie: Jede abgeschlossene Planprüfung wird serverseitig erfasst, jede Warnung nach Art — und die Zahlen sind für alle öffentlich.",
+    "liveTitle": "Unsere Zahlen (serverseitig gezählt, ohne personenbezogene Daten)",
+    "detailsSummary": "Details zur Zählung und öffentliche Studien",
     "stats": {
-      "plansLabel": "Plans checked",
-      "plansSince": "counting since {date}",
-      "noSince": "counting since the 1.21.0 release",
-      "issuesLabel": "Issues found",
-      "issuesSplit": "{errors} critical · {warns} warnings",
-      "avgLabel": "Issues per plan",
-      "avgSub": "average per checked plan",
-      "zigzagLabel": "Zig-zag days",
-      "zigzagSaved": "~{km} km of wasted driving",
-      "duplicatesLabel": "Cross-day duplicates",
-      "duplicatesSub": "same place on ≥ 2 days",
-      "daysLabel": "Days parsed",
-      "daysSub": "{stops} recognized stops"
+      "plansLabel": "Geprüfte Pläne",
+      "plansSince": "wir zählen seit {date}",
+      "noSince": "wir zählen seit Installation 1.21.0",
+      "issuesLabel": "Gefundene Warnungen",
+      "issuesSplit": "{errors} ernst · {warns} Warnungen",
+      "avgLabel": "Warnungen pro Plan",
+      "avgSub": "Durchschnitt pro geprüftem Plan",
+      "zigzagLabel": "Zickzack-Tage",
+      "zigzagSaved": "~{km} km überflüssige Fahrt",
+      "duplicatesLabel": "Duplikate über Tage",
+      "duplicatesSub": "derselbe Ort an ≥ 2 Tagen",
+      "daysLabel": "Gelesene Tage",
+      "daysSub": "{stops} erkannte Stopps"
     },
     "rules": {
-      "title": "Which rules trigger most often",
-      "subtitle": "By issue type (critical and warnings together); top 6 shown.",
-      "day_km": "Too many kilometres per day",
-      "day_stops": "Too many stops per day",
-      "leg_distance": "Overly long leg between stops",
-      "day_overload": "Overloaded day (activity + driving)",
-      "schedule_gap": "Schedule not feasible (too little time to drive)",
-      "schedule_overlap": "Overlapping time slots",
-      "duplicate_stop": "Same place twice in one day",
-      "missing_coords": "Unknown location (missing coordinates)",
-      "closed_month": "Closed in the month of visit",
-      "closed_weekday": "Closed on the weekday of visit"
+      "title": "Welche Regeln am häufigsten auslösen",
+      "subtitle": "Nach Warnungsart (ernste und Warnungen zusammen); maximal die 6 häufigsten.",
+      "day_km": "Zu viele Kilometer pro Tag",
+      "day_stops": "Zu viele Stopps pro Tag",
+      "leg_distance": "Zu lange Etappe zwischen zwei Stopps",
+      "day_overload": "Überladener Tag (Aktivität + Fahrt)",
+      "schedule_gap": "Zeitplan nicht machbar (zu wenig Fahrzeit)",
+      "schedule_overlap": "Überlappende Termine",
+      "duplicate_stop": "Derselbe Ort zweimal am selben Tag",
+      "missing_coords": "Unbekannter Ort (fehlende Koordinaten)",
+      "closed_month": "Schließung im Besuchsmonat",
+      "closed_weekday": "Schließung am Wochentag des Besuchs"
     },
     "studies": {
-      "title": "Public studies on AI itinerary errors",
-      "subtitle": "The most-cited independent numbers — with sources.",
+      "title": "Öffentliche Studien zu Fehlern in KI-Plänen",
+      "subtitle": "Die meistzitierten unabhängigen Zahlen — mit Quellen.",
       "mem": {
-        "label": "MonkeyEatingMango: 43.2% of AI-plan days carry a fault",
-        "note": "A 356-trip study (9/2026): 43.2% of days contain at least one fault; 9.5% of days zig-zag."
+        "label": "MonkeyEatingMango: 43,2 % der KI-Plantage tragen einen Fehler",
+        "note": "Studie über 356 Reisen (9/2026): 43,2 % der Tage enthalten mindestens einen Fehler; 9,5 % der Tage sind Zickzack."
       },
       "bbc": {
-        "label": "BBC: 37% of AI-plan users found too little information",
-        "note": "Survey (9/2025): ~33% encountered inaccuracies."
+        "label": "BBC: 37 % der KI-Plan-Nutzern fehlen Daten",
+        "note": "Umfrage (9/2025): ~33 % stießen auf ungenaue Daten."
       },
       "tow": {
-        "label": "Tow Center: 37–94% citation-error rates in AI search",
-        "note": "AI search review: the share of wrong citations ranges from 37 to 94%."
+        "label": "Tow Center: 37–94 % Zitierfehler bei KI-Suchmaschinen",
+        "note": "Übersicht KI-Suchmaschinen: der Anteil falscher Zitate reicht von 37 bis 94 %."
       },
-      "note": "Their numbers are theirs, ours are ours. Public studies measure AI plans in general; ours count what our validator actually finds on Slovenian plans — since we started counting."
+      "note": "Ihre Zahlen sind ihre, unsere sind unsere. Die öffentlichen Studien messen KI-Pläne allgemein; unsere zählen, was unser Prüfer bei Slowenien-Plänen tatsächlich findet — seitdem wir zählen."
     },
     "method": {
-      "title": "How we count (honestly)",
-      "counting": "Only a completed check counts — the event is written by the server when the report is computed, not on click.",
-      "start": "Counting starts with version 1.21.0; we do not back-fill history.",
-      "privacy": "No personal data: we store only counts (days, stops, issue types) — never the plan text.",
-      "cache": "The page reads numbers from a 60-second cache, so they may lag by a minute.",
-      "dataLink": "Methodology and data sources",
-      "cta": "Check your plan ↑"
+      "title": "Wie wir zählen (ehrlich)",
+      "counting": "Gezählt wird nur die abgeschlossene Prüfung — das Ereignis schreibt der Server bei der Berichtsberechnung, nicht beim Klick.",
+      "start": "Die Zählung beginnt mit Version 1.21.0; die Geschichte datieren wir nicht zurück.",
+      "privacy": "Ohne personenbezogene Daten: Wir speichern nur Ziffern (Tage, Stopps, Warnungsarten) — nie Plantexte.",
+      "cache": "Die Seite liest die Zahlen aus einem 60-Sekunden-Cache, kann also eine Minute hinterherhinken.",
+      "dataLink": "Methodik und Datenquellen",
+      "cta": "Prüfe deinen Plan ↑"
     },
     "states": {
-      "loading": "Loading the validator's public numbers …",
-      "unavailable": "Telemetry is temporarily unavailable — the public studies below stand independently of it.",
-      "empty": "No completed checks since counting started — the numbers will grow with every report. Until then, the public studies below explain why we count."
+      "loading": "Lade die öffentlichen Zahlen des Prüfers …",
+      "unavailable": "Die Telemetrie ist gerade nicht verfügbar — die öffentlichen Studien unten gelten unabhängig davon.",
+      "empty": "Seit Installation der Zählung gab es noch keine abgeschlossenen Prüfungen — die Zahlen wachsen mit jedem Bericht. Derweil sagen die öffentlichen Studien unten, warum wir zählen."
     }
   },
   "comparison": {
     "meta": {
-      "title": "AI Trip Planner Comparison for Slovenia — No Signup",
-      "description": "An honest comparison of general AI planners (Mindtrip, Layla, Wanderlog) vs. a Slovenia specialist. Plan without an account, in English or Slovenian."
+      "title": "Vergleich der KI-Reiseplaner für Slowenien",
+      "description": "Ehrlicher Vergleich allgemeiner KI-Reiseplaner (Mindtrip, Layla, Wanderlog) mit einem Slowenien-Spezialisten. Plane ohne Anmeldung, auf Deutsch oder Englisch."
     },
-    "badge": "An honest comparison · no signup",
-    "title": "Which AI trip planner is right for Slovenia?",
-    "intro": "This is not a marketing brochure. Our editorial principle is honesty — so we admit where general planners beat us, and show where a Slovenia specialist gives you more. The decision is yours.",
-    "updated": "Updated: 17 September 2026. Comparisons age — check the date before deciding.",
-    "generalistsTitle": "What general AI planners do well",
-    "generalistsIntro": "Mindtrip, Layla, Wanderlog, ChatGPT and peers are good products. For these cases, they are the right choice:",
+    "badge": "Ehrlicher Vergleich · ohne Anmeldung",
+    "title": "Welcher KI-Reiseplaner ist der richtige für Slowenien?",
+    "intro": "Dieser Vergleich ist keine Marketing-Broschüre. Unser redaktionelles Prinzip ist Ehrlichkeit — deshalb geben wir zu, wo allgemeine Planer besser sind als wir, und zeigen, wo ein Slowenien-Spezialist mehr liefert. Die Entscheidung überlassen wir dir.",
+    "updated": "Aktualisiert: 17. September 2026. Vergleiche altern — prüfe das Datum vor der Entscheidung.",
+    "generalistsTitle": "Was allgemeine KI-Reiseplaner hervorragend machen",
+    "generalistsIntro": "Mindtrip, Layla, Wanderlog, ChatGPT und Verwandte sind gute Produkte. Für folgende Fälle sind sie die richtige Wahl:",
     "generalists": {
-      "coverageTitle": "Global coverage",
-      "coverageDesc": "Tokyo, Lisbon and Patagonia in the same chat. We cover Slovenia only.",
-      "bookingTitle": "Flights and hotels",
-      "bookingDesc": "Integrations with major booking systems worldwide. With us you book local experiences and products, not flights.",
-      "collabTitle": "Group planning",
-      "collabDesc": "Real-time collaboration with family or friends. We offer itinerary sharing with polls, not collaborative editing.",
-      "scaleTitle": "Maturity and scale",
-      "scaleDesc": "Millions of users and large review bases. We are a young platform with a narrow but deep focus."
+      "coverageTitle": "Globale Abdeckung",
+      "coverageDesc": "Ein Plan für Tokio, Lissabon und Patagonien im selben Chat. Wir decken nur Slowenien ab.",
+      "bookingTitle": "Flüge und Hotels",
+      "bookingDesc": "Integrationen mit großen Buchungssystemen weltweit. Bei uns buchst du lokale Erlebnisse und Produkte, keine Flüge.",
+      "collabTitle": "Gruppenplanung",
+      "collabDesc": "Echtzeit-Zusammenarbeit mit Familie oder Freunden. Wir bieten Plan-Sharing mit Umfrage, keine Gruppenbearbeitung.",
+      "scaleTitle": "Reife und Größe",
+      "scaleDesc": "Millionen Nutzer und große Bewertungsdatenbanken. Wir sind eine junge Plattform mit engem, aber tiefem Fokus."
     },
-    "problemsTitle": "Where generalists disappoint on Slovenia trips",
-    "problemsIntro": "These are not invented pitfalls — they are documented in AI planner reviews (2025–2026) and in our own testing:",
+    "problemsTitle": "Wo Generalisten bei Slowenien-Reisen enttäuschen",
+    "problemsIntro": "Das sind keine erfundenen Fallen — dokumentiert in Bewertungen von KI-Reiseplanern (2025–2026) und in unseren eigenen Tests:",
     "problems": {
-      "priceTitle": "Prices far from reality",
-      "priceDesc": "Mindtrip reviewers report price deviations of 20–30 %. For a city break that is an annoyance; for a €300 weekend budget it is the difference between two days.",
-      "closedTitle": "Closed venues in the plan",
-      "closedDesc": "The classic trap: the AI includes an attraction on a day it is closed (the famous “Louvre is closed on Tuesdays”). Without checking opening hours, it cannot know.",
-      "genericTitle": "Generic top-10 lists",
-      "genericDesc": "The same list for everyone. Slovenia is small, but local depth — when Vintgar Gorge has no queue, where the authentic kremšnita is — requires specialized, curated data."
+      "priceTitle": "Preise fernab der Realität",
+      "priceDesc": "Mindtrip-Rezensenten berichten von Preisabweichungen bis zu 20–30 %. Für einen Städte-Trip ist das ärgerlich; für ein Wochenende mit 300 € Budget ist es der Unterschied zwischen zwei Tagen.",
+      "closedTitle": "Geschlossene Orte im Plan",
+      "closedDesc": "Die klassische Falle: Die KI legt eine Sehenswürdigkeit auf einen Tag, an dem sie geschlossen ist (bekanntes Beispiel: „Der Louvre ist dienstags geschlossen“). Ohne Prüfung der Öffnungszeiten kann sie das nicht wissen.",
+      "genericTitle": "Generische Sehenswürdigkeitenlisten",
+      "genericDesc": "Dieselbe Top-10 für jeden. Slowenien ist klein, aber die lokale Tiefe — wann zur Vintgar-Klamm ohne Schlange, wo die Cremeschnitte wirklich die richtige ist — erfordert spezialisierte, gepflegte Daten."
     },
-    "tableTitle": "The comparison at a glance",
+    "tableTitle": "Der Vergleich auf einen Blick",
     "table": {
-      "caption": "Comparison of general AI trip planners with the Discover Slovenia AI platform",
-      "colWhat": "What we compare",
-      "colGeneral": "General planners",
+      "caption": "Vergleich allgemeiner KI-Reiseplaner mit der Plattform Discover Slovenia AI",
+      "colWhat": "Was wir vergleichen",
+      "colGeneral": "Allgemeine Planer",
       "colOurs": "Discover Slovenia AI",
       "rows": {
         "focus": {
-          "label": "Focus",
-          "general": "The whole world",
-          "ours": "Slovenia only — deep and verified"
+          "label": "Fokus",
+          "general": "Die ganze Welt",
+          "ours": "Nur Slowenien — tief und geprüft"
         },
         "account": {
-          "label": "Account needed to save a plan",
-          "general": "Often required (Google/Apple)",
-          "ours": "Not needed — anonymous saving and sharing"
+          "label": "Konto zum Speichern des Plans",
+          "general": "Oft erforderlich (Google/Apple)",
+          "ours": "Nicht nötig — anonymes Speichern und Teilen"
         },
         "validation": {
-          "label": "Checking hours and prices",
-          "general": "Not systematic",
-          "ours": "Sources + “verify before visiting” warnings + geo-validation"
+          "label": "Prüfung von Zeiten und Preisen",
+          "general": "Nicht systematisch",
+          "ours": "Quellen + Hinweise „vor dem Besuch prüfen“ + Geo-Validierung"
         },
         "feasibility": {
-          "label": "Day feasibility (distances, times)",
-          "general": "Rarely checked",
-          "ours": "Real km and minutes from road routing; a warning when the day is too tight"
+          "label": "Machbarkeit des Tages (Distanzen, Zeiten)",
+          "general": "Selten geprüft",
+          "ours": "Echte km und Minuten aus dem Routing, Warnung bei zu vollem Tag"
         },
         "language": {
-          "label": "Slovenian language",
-          "general": "English or machine translation",
-          "ours": "Slovenian is core to the product (and English)"
+          "label": "Sprache",
+          "general": "Englisch oder maschinelle Übersetzung",
+          "ours": "Produkt auf Slowenisch, Englisch, Italienisch und Deutsch"
         },
         "booking": {
-          "label": "Bookings",
-          "general": "Global flights and hotels",
-          "ours": "Local experiences and a marketplace of Slovenian providers"
+          "label": "Buchungen",
+          "general": "Globale Flüge und Hotels",
+          "ours": "Lokale Erlebnisse und Marktplatz mit slowenischen Anbietern"
         },
         "offline": {
           "label": "Plan offline",
-          "general": "Often app-only",
-          "ours": "Yes — install as an app (PWA)"
+          "general": "Oft nur in Apps",
+          "ours": "Ja — als App installierbar (PWA)"
         },
         "beyond": {
-          "label": "Trips outside Slovenia",
-          "general": "Yes — the whole world",
-          "ours": "No — we honestly recommend a generalist"
+          "label": "Reisen außerhalb Sloweniens",
+          "general": "Ja — die ganze Welt",
+          "ours": "Nein — wir empfehlen offen einen Generalisten"
         }
       },
-      "note": "The table is fair to both sides: the last row is an admission, not a flaw we would hide."
+      "note": "Die Tabelle ist fair zu beiden Seiten: Die letzte Zeile ist ein Eingeständnis, kein versteckter Mangel."
     },
-    "practiceTitle": "What this means in practice",
+    "practiceTitle": "Was das in der Praxis bedeutet",
     "practice": {
-      "ex1Title": "December, 15:40, Vintgar Gorge",
-      "ex1Desc": "A generalist may happily slot the gorge into a late-afternoon plan. Our planner knows it closes at 16:00 in winter and warns you to move it to the morning — with the data source.",
-      "ex2Title": "Bled → Bohinj in “about 30 minutes”?",
-      "ex2Desc": "Time estimates “from the model's memory” can be off. Our stop-to-stop connectors carry actual kilometres and minutes from real-road routing — including winter sections.",
-      "ex3Title": "What will the day really cost?",
-      "ex3Desc": "Ticket and local-specialty prices come from a curated dataset with sources — the sum on a day card means something. When data is missing, we say so and add a warning."
+      "ex1Title": "Dezember, 15:40 Uhr, Vintgar-Klamm",
+      "ex1Desc": "Ein Generalist kann die Klamm beruhigt in den späten Nachmittag legen. Unser Planer weiß, dass sie im Winter um 16:00 schließt, und warnt dich, sie auf den Vormittag zu legen — mit der Datenquelle.",
+      "ex2Title": "Bled → Bohinj „etwa 30 Minuten“?",
+      "ex2Desc": "Zeitschätzungen „aus dem Gedächtnis des Modells“ können abweichen. Die Verbindungen zwischen Stopps tragen bei uns echte Kilometer und Minuten aus dem Routing auf echten Straßen — inklusive Winterabschnitten.",
+      "ex3Title": "Was kostet der Tag wirklich?",
+      "ex3Desc": "Ticketpreise und lokale Spezialitäten schöpfen wir aus einem gepflegten Datensatz mit Quellen — die Summe auf der Tageskarte bedeutet etwas. Fehlt ein Datum, sagen wir das und ergänzen einen Hinweis."
     },
-    "notForYouTitle": "When Discover Slovenia AI is NOT right for you",
-    "notForYouBody": "If you are planning a cross-border trip, need flights or a hotel abroad — pick a generalist (Layla, Wanderlog, or a ChatGPT/Gemini chat). That is fine; we use them for our own foreign trips too. We would love to see you on the Slovenian leg.",
-    "ctaTitle": "Try it without an account",
-    "ctaBody": "From question to itinerary: 30 seconds. Required account: none. Language: Slovenian or English.",
-    "ctaPrimary": "Build my itinerary",
-    "ctaSecondary": "Explore destinations",
-    "faqTitle": "Frequently asked questions",
+    "notForYouTitle": "Wann Discover Slovenia AI NICHT für dich passt",
+    "notForYouBody": "Wenn du eine Reise über die Grenze planst, Flüge oder ein Hotel im Ausland brauchst — wähle einen Generalisten (Layla, Wanderlog oder einen Chat mit ChatGPT/Gemini). Das ist okay; auch wir nutzen sie für Auslandsreisen. Gerne sehen wir dich aber auf dem slowenischen Teil der Route.",
+    "ctaTitle": "Probiere es ohne Anmeldung",
+    "ctaBody": "Von der Frage zum Plan: 30 Sekunden. Benötigtes Konto: keins. Sprache: Deutsch, Englisch, Slowenisch oder Italienisch.",
+    "ctaPrimary": "Stelle meinen Plan zusammen",
+    "ctaSecondary": "Destinationen entdecken",
+    "faqTitle": "Häufige Fragen",
     "faq": {
-      "q1": "Do I need an account to plan a trip?",
-      "a1": "No. You create, save and share itineraries entirely without signing up — it works anonymously. A free account is optional and only adds trip history under My trips.",
-      "q2": "How much does it cost?",
-      "a2": "The planner, itineraries, guides and sharing are free. The platform earns from local experience bookings and marketplace sales — not from your data.",
-      "q3": "What if I am travelling outside Slovenia?",
-      "a3": "Honestly: for cross-border trips use a generalist (for example Layla, Wanderlog, Mindtrip) or an AI chat. We cover Slovenia only — but we cover it deeply, with verified local data.",
-      "q4": "How reliable is your data?",
-      "a4": "Destination data is editorially curated, prices and opening hours carry sources, and every itinerary goes through geo-validation with warnings. When we are not sure, it says “verify before visiting”. The methodology is public on the Data sources page.",
-      "q5": "I have been using Mindtrip — why switch?",
-      "a5": "Mindtrip is a good generalist; their iOS app remains available, though their website was unreachable as of September 2026 when this was written. For Slovenia trips you get here: planning without an account, Slovenian as a core language, verified local data, and bookings with local providers. Judge for yourself — a no-signup try takes 30 seconds."
+      "q1": "Brauche ich ein Konto, um eine Reise zu planen?",
+      "a1": "Nein. Du erstellst, speicherst und teilst den Plan völlig ohne Anmeldung — es funktioniert anonym. Das kostenlose Konto ist optional und ergänzt nur den Reiseverlauf auf der Seite „Meine Reisen“.",
+      "q2": "Was kostet die Nutzung?",
+      "a2": "Planer, Reiserouten, Führer und Teilen sind kostenlos. Die Plattform verdient an Buchungen lokaler Erlebnisse und Verkäufen im Marktplatz — nicht an deinen Daten.",
+      "q3": "Was, wenn ich außerhalb Sloweniens reise?",
+      "a3": "Ehrlich: Für Grenzübertritte nutze einen Generalisten (etwa Layla, Wanderlog, Mindtrip) oder einen KI-Chat. Wir decken nur Slowenien ab — aber tief, mit geprüften lokalen Daten.",
+      "q4": "Wie zuverlässig sind eure Daten?",
+      "a4": "Destinationendaten pflegen wir redaktionell, Preise und Öffnungszeiten haben Quellen, und jeder Plan durchläuft eine Geo-Validierung mit Warnungen. Sind wir unsicher, steht dort „vor dem Besuch prüfen“. Die Methodik ist öffentlich auf der Seite „Datenquelle“.",
+      "q5": "Bisher habe ich Mindtrip genutzt — warum wechseln?",
+      "a5": "Mindtrip ist ein guter Generalist; ihre iOS-App bleibt verfügbar, ihre Website war zum Zeitpunkt der Schriftsetzung (September 2026) unerreichbar. Für Slowenien-Reisen bekommst du bei uns: Planung ohne Anmeldung, Deutsch als Produktsprache, geprüfte lokale Daten und Buchungen bei lokalen Anbietern. Urteile selbst — der Test ohne Anmeldung dauert 30 Sekunden."
     },
-    "sources": "Based on publicly available reviews (2025–2026) and the platform's editorial analysis (September 2026). More: <linkSources>data sources</linkSources> · <linkTrust>trust and safety</linkTrust> · <linkAbout>about</linkAbout>"
+    "sources": "Der Vergleich beruht auf öffentlich zugänglichen Bewertungen (2025–2026) und der redaktionellen Analyse der Plattform (September 2026). Mehr: <linkSources>Datenquelle</linkSources> · <linkTrust>Vertrauen und Sicherheit</linkTrust> · <linkAbout>über die Seite</linkAbout>"
   },
   "marketplace": {
     "recsWhy": "Why: {why}",
@@ -2348,7 +2348,7 @@
     "empty": "No insights available."
   },
   "story": {
-    "badge": "Our story"
+    "badge": "Unsere Geschichte"
   },
   "consultation": {
     "badgeDeterministic": "From the platform database only",
@@ -2363,8 +2363,8 @@
     "tagSourceDictionary": "Taxonomy dictionary"
   },
   "mtNotice": {
-    "title": "Machine translation",
-    "body": "This page is machine-translated (AI) from the Slovenian original and awaits human review. The Slovenian and English versions are canonical.",
-    "dismiss": "Got it"
+    "title": "Maschinelle Übersetzung",
+    "body": "Diese Seite wurde maschinell (KI) aus dem slowenischen Original übersetzt und wartet auf die menschliche Überprüfung. Maßgeblich sind die slowenische und die englische Version.",
+    "dismiss": "Verstanden"
   }
 }

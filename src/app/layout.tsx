@@ -9,6 +9,7 @@ import { SessionProviderWrapper } from "@/components/session-provider";
 import { ServiceWorkerRegister } from "@/components/sw-register";
 import { PwaUpdateToast } from "@/components/pwa/pwa-update-toast";
 import { CartDrawer } from "@/components/cart-drawer";
+import { MachineTranslationNotice } from "@/components/mt-notice";
 import {
   WebSiteJsonLd,
   OrganizationJsonLd,
@@ -91,6 +92,10 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <SessionProviderWrapper>
+              {/* W1 (Issue #15 V0): iskrena oznaka strojnega prevoda — samo
+                  za it/de (glej mt-notice.tsx; proxy guard zagotavlja, da
+                  ta locale nastopi le na IT/DE whitelistnih poteh). */}
+              <MachineTranslationNotice />
               {children}
               {/* Košarica tržnice — globalno montirana (odpre se iz navigacije ali ob dodajanju) */}
               <CartDrawer />

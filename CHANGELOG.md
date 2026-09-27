@@ -7,6 +7,98 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.126.0] — 2026-09-27 (W1: JEZIKI IT + DE — Issue #15 V0, faza 1 — Alma pariteta odkrivanja in svetovanja)
+
+### Dodano
+
+- **ITALIJANŠČINA in NEMŠČINA kot javna jezika platforme (faza 1).** Alma
+  (STB, slovenia.info) dokazuje, da so IT/DE govoreči najdejavnejši
+  vprašalci o slovenskem turizmu (70.000+ vprašanj, najbolj dejavni
+  uporabniki ravno it/de) — do zdaj smo bili SL/EN samo (W1, kritična
+  vrzela iz UX-WORKFLOW-BENCHMARK-2026-09-27.md).
+- **IT/DE whitelist (faza 1 — jedro odkrivanja + svetovanja):** `/`,
+  `/destinacije`, `/primerjava`, `/o-strani`, `/kontakt`,
+  `/pogoji-uporabe`, `/politika-zasebnosti`, `/vir-podatkov`,
+  `/zaupanje-in-varnost`. Namerno izven (poštena meja, W1-faza-2):
+  `/nacrtuj` (pogon itinererja izpisuje SL/EN), L-vzorčne poti
+  (/trznica, /dozivetja, /lokali, /dogodki, /zemljevid, /potovanje,
+  /na-poti, /moja-potovanja), /vodici, /destinacija/*. Isti P4-8 kanon:
+  nikoli mešanja jezikov, nikoli 404 — proxy 308 na slovensko pot.
+- **messages/it.json + messages/de.json (~880 nizov vsak):** vsi
+  namespacei, ki se izrišejo na IT/DE poteh (hero, homeDest, chatbot,
+  footer, nav, primerjava, info strani …), prevedeni (AI-podprto z
+  ročno revizijo skupin; preostali namespacei = EN vrednosti, ki se na
+  IT/DE poteh NIKOLI ne izrišejo — varuje jih whitelist guard).
+  Pariteta 4 jezikov varovana z razširjenim task71 testom (+ mtNotice
+  obstoj + placeholder ohranjenost).
+- **slovenia-data-it.ts + slovenia-data-de.ts (38/38 destinacij):** IT/DE
+  prekrivne plasti za kartice destinacij (tagline, description,
+  highlights, activities, duration) — isti vzorec kot
+  slovenia-data-en.ts; identifikatorji/coordi/cene ostanejo slovenski
+  vir resnice. Veljavnost dolžin seznamov potrjena ob generiranju.
+- **slovenia-labels-it-de.ts:** ročni prevodi oznak držav/regij/
+  interesov/bestFor (isti kanon kot _EN različice; neznan ključ → SL).
+- **Klepet (domenska plast) 4-jezičen:** chat-domain-fallback.ts
+  preoblikovan v jezikovne mape (L() izbirnik) — IT/DE odgovori za vse
+  10 tipov vprašanj + ključne besede namigovanja razširjene na IT/DE
+  (ciao, ristorante, meteo, prezzo, come arrivare, prenotazione,
+  verfügbar …). POPRAVLJEN prejšnji P4-8 prekršek: EN odgovori so
+  zdaj uporabili EN overlay (prej so izpisovali slovenski tagline).
+  /api/chat + chatbot klient pošljata aktivni locale (validirano).
+- **mtNotice (iskrena oznaka strojnega prevoda):** pasica na it/de
+  straneh (odkljukljiva, localStorage) — provenance kanon platforme:
+  prevod je strojni (AI) do človeške revizije; SL in EN sta kanonična.
+- **hreflang + sitemap + og:locale:** it-IT/de-DE alternati samo za
+  poti z IT/DE različico (hreflangForPath); sitemap +18 IT/DE URL-jev s
+  hreflang gručami (skupno 1242 URL); ogLocale() helper zamenja
+  trdo kodirane ternarije po straneh; home metadata za it/de.
+- **LanguageSwitcher 4 jeziki:** Deutsch/Italiano (pripravljena že od
+  TASK 32) se samodejno prikažeta nazaj; ponuja SAMO jezike z različico
+  za aktualno pot; popravljen hrošč stripLocalePrefix pri točno
+  /{locale}. NAV_L (košarica/tema aria) + navigation lupina 4-jezična.
+- **Vreme 4-jezično (klepet):** weatherCodeToTextIt/De + dispečer
+  weatherCodeToTextFor.
+- **merge-i18n-fragments.py:** zanka razširjena na vse javne jezike z
+  obstoječo messages datoteko (simetrija 4 jezikov).
+
+### Popravljeno
+
+- **DestinationModal (tudi za EN!):** naslovi sekcij (Poudarki/
+  Aktivnosti/Najboljše za/Lokali v bližini), InfoItem oznake (Regija/
+  Tip/Trajanje/Ocena obiska), TYPE_LABELS, bestFor oznake, regionLabel,
+  provenance noga — prej trdo kodirana slovenščina tudi na EN (P4-8
+  dres, ujet ob W1 reviziji). Zdaj 4-jezično (pick helper).
+- **DestinationsSection:** oznake filtrov (države/regije/interesi) +
+  overlay kartic po locale (withLocaleOverlay).
+- **validator-telemetry:** Intl formati po locale (it-IT/de-DE) + vir
+  podatkov link z localePrefix.
+- **plan-check:** za it/de pošilja EN ruti (referenčni mednarodni jezik
+  platforme — isti fallback kanon kot podatkovne plasti).
+- **home-entry-row + navigation aria + chatbot jezik:** 4-jezično.
+
+### Tehnično
+
+- proxy.ts: generalni whitelist guard (isLocaleRoute) nadomešča
+  EN-only guard + LEGACY_LOCALE_PREFIXES odstranjen (/de, /it sta živa
+  locale prefixa — stare povezave pridejo na pravo vsebino namesto 308).
+- routing.ts: locales [sl, en, it, de], ITDE_STATIC_ROUTES,
+  isItDeRoute, isLocaleRoute (generalizacija isEnRoute).
+- task32-blog-en.test.ts: posodobljen za W1 svet (prevoda obstajata,
+  4 locale, generalni guard) z zgodovinsko kontekstualizacijo.
+- scripts/translate-locale.ts + scripts/translate-destinations.ts:
+  LLM prevajalna orodja (batch + validacija + cache + 429 backoff) —
+  za prihodnje W1-faze (L-vzorčne komponente, planner pogon).
+- sitemap števec: +18 (ITDE ×2); geo.test hreflang gruče.
+
+### Varovala (ZERO FEATURE LOSS)
+
+- SL ostaja default/izvirnik; EN vedenje nespremenjeno (razen
+  dokumentiranih P4-8 popravkov overlayja/modala).
+- Nikoli delno prevedena stran: poti brez celovite IT/DE različice
+  ostanejo slovenske (308), ne mešane.
+- Paritetni testi 4 jezikov; mtNotice odkrito označuje strojni prevod.
+- Testni suite: 3846/3846 zelenih (task71 razširjen, task32 posodobljen).
+
 ## [1.125.0] — 2026-09-27 (WORKFLOW BENCHMARK 2026 — read-only audit #2: odkrita Alma STB kot neposredna konkurentka + Mindtrip Q3/Q4 + vrzeli W1-W8)
 
 ### Dodano

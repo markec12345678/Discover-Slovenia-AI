@@ -298,30 +298,34 @@ describe("TASK 32: /vodici stran — izris brezpogojno", () => {
 // ============================================================================
 // 7. DE/IT ČIŠČENJE
 // ============================================================================
-describe("TASK 32: čiščenje stare neveljavne vsebine de/it", () => {
-  test("mrtvi delni prevodi de.json/it.json NE obstajata (request.ts ju nikoli ni nalagal)", () => {
+describe("TASK 32 → W1: jeziki de/it sta zdaj ŽIVA (celovita prevoda)", () => {
+  // ZGODOVINA: TASK 32 (P4-8) je izbrisal mrtva delna prevoda de.json/it.json
+  // (nikoli naložena) in umaknil /de + /it iz javnega dostopa (308).
+  // W1 (Issue #15 V0, 1.126.0) je dodal CELOVITA prevoda (AI-podprta z
+  // mtNotice oznako) — /de in /it sta živa locale prefixa na IT/DE
+  // whitelisti; neveljavne poti varuje generalni 308 guard (P4-8 kanon).
+  test("celovita prevoda de.json/it.json OBSTOJATA (W1; več ne »mrtva«)", () => {
     expect(existsSync(join(process.cwd(), "src/i18n/messages/de.json"))).toBe(
-      false
+      true
     );
     expect(existsSync(join(process.cwd(), "src/i18n/messages/it.json"))).toBe(
-      false
+      true
     );
   });
 
-  test("routing.locales ostajata natanko [sl, en] (default sl)", () => {
-    expect(routing.locales).toEqual(["sl", "en"]);
+  test("routing.locales so natanko [sl, en, it, de] (default sl — W1)", () => {
+    expect(routing.locales).toEqual(["sl", "en", "it", "de"]);
     expect(routing.defaultLocale).toBe("sl");
   });
 
-  test("308 legacy preusmeritve za /de in /it so OHRANJENE v proxy.ts (stare povezave ≠ 404)", () => {
+  test("generalni whitelist guard 308 v proxy.ts nadomešča legacy blok (P4-8)", () => {
     const proxy = source("src/proxy.ts");
-    expect(proxy.includes('LEGACY_LOCALE_PREFIXES = ["/de", "/it"]')).toBe(
-      true
-    );
+    expect(proxy.includes("isLocaleRoute")).toBe(true);
+    expect(proxy.includes("LEGACY_LOCALE_PREFIXES")).toBe(false);
     expect(proxy.includes("308")).toBe(true);
   });
 
-  test("request.ts nalaja samo locale iz routing.locales (de/it nikoli ne moreta priti do sporočil)", () => {
+  test("request.ts nalaja samo locale iz routing.locales (4 javni jeziki)", () => {
     const request = source("src/i18n/request.ts");
     expect(request.includes("routing.locales.includes")).toBe(true);
     expect(request.includes("routing.defaultLocale")).toBe(true);

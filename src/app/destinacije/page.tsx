@@ -10,7 +10,7 @@ import { CollectionsSection } from "@/components/sections/collections";
 import { Reveal } from "@/components/reveal";
 import { Badge } from "@/components/ui/badge";
 import { localePrefix } from "@/i18n/routing";
-import { hreflangForPath } from "@/components/seo";
+import { hreflangForPath, ogLocale } from "@/components/seo";
 import { currentBaseUrl } from "@/lib/host";
 
 /**
@@ -44,7 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description: t("meta.description"),
       url: `${base}${prefixed}`,
       type: "website",
-      locale: locale === "en" ? "en_US" : "sl_SI",
+      locale: ogLocale(locale),
     },
   };
 }

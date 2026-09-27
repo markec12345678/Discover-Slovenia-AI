@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { isEnRoute, routing, type Locale } from "./i18n/routing";
+import { isLocaleRoute, routing, type Locale } from "./i18n/routing";
 
 /**
  * Header, ki ga next-intl uporablja za prenos locale-a iz middleware-a
@@ -24,20 +24,15 @@ const HEADER_INTERNAL_PASS = "x-dsa-proxy-qk7f42";
  */
 const COOKIE_LOCALE = "NEXT_LOCALE";
 
-/**
- * Legacy locale prefixi — prej javno dostopni (delno prevedene strani),
- * umaknjeni s P4-8 dokler prevodi niso celoviti (roadmap C5).
- * Stari URL-ji se trajno (308) preusmerijo na slovensko pot.
- *
- * FW4.3-2: "en" je ODSTRANJEN s tega seznama — angleščina je zdaj javna
- * (jedro lijaka, glej EN whitelist v src/i18n/routing.ts). /de in /it
- * ostajata legacy (308) do celovitih prevodov.
- *
- * TASK 32 (Tier 1 #5): mrtvi delni prevodi de.json/it.json so izbrisani
- * (request.ts nalaga samo sl+en) — 308 preusmeritve pa OSTAJO: stare
- * zunanje povezave ne smejo postati 404.
+/*
+ * ZGODOVINA legacy prefixov (P4-8 → W1): /de in /it sta bila med
+ * FW4.3-2 in 1.125.0 legacy 308 preusmeritvi na slovensko pot (delni mrtvi
+ * prevodi so bili odstranjeni s TASK 32). W1 (Issue #15 V0, 1.126.0) jima
+ * je dodal CELOVITA prevoda — /de in /it sta zdaj ŽIVA locale prefixa.
+ * Stare zunanje povezave tako pristanejo na pravi (nemški/italijanski)
+ * vsebini namesto na 308; poti brez IT/DE različice pa varuje generalni
+ * whitelist guard spodaj (korak 2b — 308 na slovensko, nikoli 404).
  */
-const LEGACY_LOCALE_PREFIXES = ["/de", "/it"] as const;
 
 /**
  * Proxy (prej "middleware" — Next.js 16 konvencija) — custom i18n
@@ -99,20 +94,10 @@ export default function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // 1b. LEGACY locale prefixi (/en, /de, /it) → trajna (308) preusmeritev
-  //     na slovensko pot. P4-8: te strani so bile delno prevedene (nav in
-  //     noga v tujem jeziku, vsebina hardcoded slovenščina) — mešanje
-  //     jezikov. Javno je zdaj samo sl; hreflang alternati so umaknjeni,
-  //     kazalniki/povezave na /de… pa pripeljejo na pravo (slovensko)
-  //     vsebino in ne na 404.
-  if (LEGACY_LOCALE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
-    const prefix = LEGACY_LOCALE_PREFIXES.find(
-      (p) => pathname === p || pathname.startsWith(`${p}/`)
-    )!;
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = pathname.slice(prefix.length) || "/";
-    return NextResponse.redirect(redirectUrl, 308);
-  }
+  // 1b. W1 (1.126.0): /de in /it nista več legacy 308 — živita kot polna
+  //     locale prefixa (korak 2 spodaj ju prepozna in validira proti
+  //     whitelistam; neveljavne poti 308 varuje korak 2b). /en je javen od
+  //     FW4.3-2. Edini posebni primer ostaja /sl → / (default brez prefixa).
 
   // 2. Zaznaj locale iz URL prefix-a
   let locale: Locale = routing.defaultLocale;
@@ -128,13 +113,17 @@ export default function middleware(request: NextRequest) {
     }
   }
 
-  // 2b. FW4.3-2 EN WHITELISTA GUARD: angleščina živi SAMO na whitelisti
-  //     (jedro lijaka — glej isEnRoute v src/i18n/routing.ts). Zahteve
-  //     /en/<pot-ki-nima-EN> (npr. /en/vodici, /en/admin, /en/blog) se
-  //     trajno (308) preusmerijo na slovensko pot: nikoli mešanja jezikov
-  //     (P4-8), nikoli 404, iskalniki sledijo na kanonično slovensko
-  //     različico.
-  if (locale === "en" && !isEnRoute(pathWithoutLocale)) {
+  // 2b. WHITELISTA GUARD (FW4.3-2 + W1 generalizacija): vsak NE-default
+  //     locale živi SAMO na svoji whitelisti (EN: jedro lijaka; IT/DE:
+  //     W1 faza 1 — glej isEnRoute/isItDeRoute v src/i18n/routing.ts).
+  //     Zahteve /{locale}/<pot-brez-različice> (npr. /it/nacrtuj,
+  //     /en/vodici, /de/blog) se trajno (308) preusmerijo na slovensko
+  //     pot: nikoli mešanja jezikov (P4-8), nikoli 404, iskalniki sledijo
+  //     na kanonično slovensko različico.
+  if (
+    locale !== routing.defaultLocale &&
+    !isLocaleRoute(pathWithoutLocale, locale)
+  ) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = pathWithoutLocale;
     return NextResponse.redirect(redirectUrl, 308);

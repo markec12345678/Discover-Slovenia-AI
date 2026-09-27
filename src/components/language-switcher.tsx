@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { isEnRoute, routing } from "@/i18n/routing";
+import { isLocaleRoute, routing } from "@/i18n/routing";
 
 /**
  * Seznam vseh jezikov, ki jih platforma pozna (zastavica + avtohtono ime).
@@ -25,76 +25,87 @@ const LANGUAGES: { code: string; flag: string; label: string }[] = [
 ];
 
 /**
- * Javno dostopni jeziki = routing.locales (FW4.3-2: "sl" + "en").
- * Deutsch/Italiano ostajata skrita, dokler ne dobita celovitih prevodov
- * (P4-8; roadmap C5) — takrat se samodejno prikažeta nazaj.
+ * Javno dostopni jeziki = routing.locales. FW4.3-2: "sl" + "en";
+ * W1 (Issue #15 V0, 1.126.0): + "it" + "de" (faza 1 — IT/DE whitelist).
+ * Deutsch/Italiano sta bila od TASK 32 skrita (P4-8) — zdaj, ko imata
+ * celovita prevoda, se samodejno prikažeta nazaj.
  */
 const AVAILABLE_LANGUAGES = LANGUAGES.filter((l) =>
   (routing.locales as readonly string[]).includes(l.code)
 );
 
 /**
- * Language Switcher — dropdown z javno dostopnimi jeziki.
- *
- * FW4.3-2: javna "sl" + "en" (EN na whitelisti — jedro lijaka).
- * - Trenutni jezik prikazan z zastavico emoji in Globe ikono.
- * - Klik na jezik → navigacija OHRANI trenutno stran (samo doda/odstrani
- *   `/en` prefix); hash se ohrani.
- * - Na straneh BREZ EN različice (npr. /vodici) se preklopnik skrije
- *   (P4-8) — preklop na neobstoječo verzijo bi bil lažen.
+ * Odstrani locale prefix (/en, /it, /de) iz ZUNANJEGA URL-ja → notranja
+ * (slovenska) pot za whitelistne preverbe in gradnjo cilja.
  *
  * Opomba: `usePathname()` (next/navigation) vrača ZUNANJI URL — torej S
- * `/en` prefix-om, kadar uporabnik brska angleško (proxy rewrite je
- * klientu prozoren). Zato prefix tu NORMALIZIRAMO (odstranimo), da dobimo
- * notranjo (slovensko) pot za isEnRoute() preverbo in gradnjo cilja.
+ * locale prefix-om, kadar uporabnik brska v tujem jeziku (proxy rewrite je
+ * klientu prozoren). Deluje neodvisno od tega, ali usePathname vrača
+ * zunanjo ali notranjo pot.
+ */
+function stripLocalePrefix(rawPathname: string): string {
+  const prefixes = routing.locales.filter((l) => l !== routing.defaultLocale);
+  // W1: točno "/{locale}" (brez pod-poti) → "/" — lookahead spodaj namreč
+  // zahteva "/" ZA prefixom in ga pri korenu ne najde (hrošč ujet na /it).
+  if (prefixes.some((p) => rawPathname === `/${p}`)) return "/";
+  return rawPathname.replace(
+    new RegExp(`^/(${prefixes.join("|")})(?=/)`),
+    ""
+  );
+}
+
+/**
+ * Language Switcher — dropdown z javno dostopnimi jeziki.
+ *
+ * FW4.3-2 + W1: javni jeziki so "sl" + "en" + "it" + "de" (vsak na svoji
+ * whitelisti — routing.ts).
+ * - Trenutni jezik prikazan z zastavico emoji in Globe ikono.
+ * - Klik na jezik → navigacija OHRANI trenutno stran (samo zamenja locale
+ *   prefix); hash se ohrani.
+ * - Jeziki, ki za AKTUALNO POT nimajo različice, se v meniju NE pokažejo
+ *   (P4-8 + W1) — ponuditi neobstoječo verzijo bi bilo lažno (proxy bi
+ *   uporabnika takoj 308 preusmeril nazaj na slovensko).
+ * - Če za aktualno pot ni NOBENE alternativne različice, se preklopnik
+ *   skrije (isti kanon kot prej — preklop nima pomena).
  */
 export function LanguageSwitcher() {
   const locale = useLocale() as string;
   const rawPathname = usePathname() ?? "/";
 
-  // P4-8: z enim javnim jezikom preklopnik nima pomena — se skrije.
-  if (AVAILABLE_LANGUAGES.length <= 1) return null;
+  // Normaliziraj pot: odstrani locale prefix, če je prisoten (zunanji URL).
+  const pathname = stripLocalePrefix(rawPathname);
 
-  // Normaliziraj pot: odstrani `/en` prefix, če je prisoten (zunanji URL).
-  // Deluje neodvisno od tega, ali usePathname vrača zunanjo ali notranjo pot.
-  const pathname =
-    rawPathname === "/en"
-      ? "/"
-      : rawPathname.replace(/^\/en(?=\/)/, "");
+  // Jeziki, ki za TO pot res imajo različico (SL vedno — izvirnik).
+  const offered = AVAILABLE_LANGUAGES.filter(
+    (l) => l.code === routing.defaultLocale || isLocaleRoute(pathname, l.code)
+  );
 
-  // FW4.3-2: EN živi SAMO na whitelisti (jedro lijaka). Na straneh brez EN
-  // različice (npr. /vodici) se preklopnik NE pokaže: ponuditi EN bi bilo
-  // lažno (proxy bi uporabnika takoj 308 preusmeril nazaj na slovensko).
-  const hasEn = isEnRoute(pathname);
-  if (locale === routing.defaultLocale && !hasEn) return null;
+  // Nobena alternativa → preklopnik nima pomena — se skrije.
+  const alternatives = offered.filter((l) => l.code !== locale);
+  if (alternatives.length === 0) return null;
 
-  const current =
-    AVAILABLE_LANGUAGES.find((l) => l.code === locale) ?? AVAILABLE_LANGUAGES[0];
+  const current = AVAILABLE_LANGUAGES.find((l) => l.code === locale) ?? offered[0];
 
   const switchTo = (next: string) => {
     if (next === locale) return;
 
     // Ohrani hash (npr. `#destinacije`) pri preklopu jezika
-    const hash =
-      typeof window !== "undefined" ? window.location.hash : "";
+    const hash = typeof window !== "undefined" ? window.location.hash : "";
 
-    // FW4.3-2: preklop OHRANI trenutno stran (prej je vodil na /{locale}
-    // domov). Default locale ("sl") nima prefix-a; "en" ga ima. Na poti
-    // brez EN različice preklop na EN vodi na domov angleške različice
-    // (edina smiselna tarča — proxy bi pot sicer 308 vrnil nazaj).
-    const cleanPath = pathname === "/" ? "/" : pathname;
-    const target =
-      next === routing.defaultLocale
-        ? cleanPath
-        : hasEn
-          ? `/en${cleanPath === "/" ? "" : cleanPath}`
-          : "/en";
+    // Preklop OHRANI trenutno stran, kadar ima ciljni jezik različico;
+    // sicer vodi na domov ciljnega jezika (edina smiselna tarča — proxy
+    // bi pot sicer 308 vrnil nazaj). Default locale nima prefix-a.
+    const target = isLocaleRoute(pathname, next)
+      ? next === routing.defaultLocale
+        ? pathname
+        : `/${next}${pathname === "/" ? "" : pathname}`
+      : `/${next}`;
 
-    // TRDA navigacija (ne router.push): proxy REWITA `/en` interno na isto
-    // pot kot SL, zato sta `/en/…` in `/…` ista RSC drevesa — client router
-    // bi pri soft navigaciji izračunal PRAZNO drevesno razliko in vsebine
-    // sploh ne zamenjal. Trdi skok zagotovi poln SSR v novem jeziku in
-    // počisti Router Cache (standarden vzorec za preklop locale-a).
+    // TRDA navigacija (ne router.push): proxy REWITA locale prefix interno
+    // na isto pot kot SL, zato sta `/en/…` in `/…` ista RSC drevesa — client
+    // router bi pri soft navigaciji izračunal PRAZNO drevesno razliko in
+    // vsebine sploh ne zamenjal. Trdi skok zagotovi poln SSR v novem jeziku
+    // in počisti Router Cache (standarden vzorec za preklop locale-a).
     // (eslint-disable: pravilo @next/next/no-location-assign-relative-destination
     // iz eslint-config-next 16.3.5 tu lažno pozitivno svaruje — hard navigacija
     // je NAMENJENA, glej zgornji komentar.)
@@ -118,7 +129,7 @@ export function LanguageSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[160px]">
-        {AVAILABLE_LANGUAGES.map((lang) => (
+        {offered.map((lang) => (
           <DropdownMenuItem
             key={lang.code}
             onClick={() => switchTo(lang.code)}

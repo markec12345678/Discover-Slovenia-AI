@@ -107,3 +107,6 @@ e2e-*-shots/
 # local z-ai SDK override (test-time zero-AI simulation — never commit)
 .z-ai-config
 e2e-fa1-shots-2/
+
+# W1: prevajalski predpomnilnik (LLM batch cache — nikoli v repo)
+.translate-cache/

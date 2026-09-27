@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { localePrefix } from "@/i18n/routing";
-import { hreflangForPath } from "@/components/seo";
+import { hreflangForPath, ogLocale } from "@/components/seo";
 import { currentBaseUrl } from "@/lib/host";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +64,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description: t("meta.description"),
       url: `${base}${prefixed}`,
       type: "website",
-      locale: locale === "en" ? "en_US" : "sl_SI",
+      locale: ogLocale(locale),
     },
   };
 }

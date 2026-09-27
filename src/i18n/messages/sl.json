@@ -2361,5 +2361,10 @@
     "autoTagToastReady": "Predlogi pripravljeni",
     "autoTagToastFail": "Predlaganje ni uspelo",
     "tagSourceDictionary": "Slovar taksonomije"
+  },
+  "mtNotice": {
+    "title": "Strojni prevod",
+    "body": "Ta stran je prevedena strojno (AI) iz slovenskega izvirnika in čaka na človeško revizijo. Uveljavljena sta slovenski in angleški prevod.",
+    "dismiss": "Razumem"
   }
 }

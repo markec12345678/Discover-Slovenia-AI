@@ -1137,7 +1137,13 @@ export function Chatbot() {
         body: JSON.stringify({
           messages: newMessages,
           currentPage: typeof window !== "undefined" ? window.location.pathname : undefined,
-          language: locale === "en" ? "en" : "sl",
+          // W1 (Issue #15): jezik odgovora = aktivni locale (4 javni jeziki;
+          // validirano — neznan locale pade na slovensko, kot prej).
+          language: (["sl", "en", "it", "de"] as const).includes(
+            locale as "sl" | "en" | "it" | "de"
+          )
+            ? (locale as "sl" | "en" | "it" | "de")
+            : "sl",
         }),
       });
 

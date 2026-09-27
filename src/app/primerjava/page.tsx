@@ -3,7 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { Link } from "@/i18n/navigation";
 import { localePrefix } from "@/i18n/routing";
-import { hreflangForPath, faqJsonLd } from "@/components/seo";
+import { hreflangForPath, faqJsonLd, ogLocale } from "@/components/seo";
 import { currentBaseUrl } from "@/lib/host";
 import { safeJsonLd } from "@/lib/security";
 import { Card, CardContent } from "@/components/ui/card";
@@ -82,7 +82,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description: t("meta.description"),
       url: `${base}${prefixed}`,
       type: "website",
-      locale: locale === "en" ? "en_US" : "sl_SI",
+      locale: ogLocale(locale),
     },
   };
 }

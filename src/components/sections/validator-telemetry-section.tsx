@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { ValidatorPublicStats } from "@/lib/validator-stats";
+import { localePrefix } from "@/i18n/routing";
 
 // ============================================================================
 // VALIDATOR TELEMETRY SECTION — "Koliko napak ujame naš preverjevalnik?" (F17)
@@ -109,6 +110,10 @@ export function ValidatorTelemetrySection() {
   const t = useTranslations("validatorTelemetry");
   const locale = useLocale();
   const isEn = locale === "en";
+  // W1 (Issue #15): Intl oznake po localeju (it-IT/de-DE za nova jezika;
+  // ne-SL ločilo decimalk pika, SL vejica — kot prej).
+  const intlLocale =
+    locale === "it" ? "it-IT" : locale === "de" ? "de-DE" : isEn ? "en-GB" : "sl-SI";
 
   const [stats, setStats] = useState<ValidatorPublicStats | null>(null);
   const [unavailable, setUnavailable] = useState(false);
@@ -130,17 +135,17 @@ export function ValidatorTelemetrySection() {
     };
   }, []);
 
-  const nf = new Intl.NumberFormat(isEn ? "en-GB" : "sl-SI");
+  const nf = new Intl.NumberFormat(intlLocale);
 
   const sinceLabel = stats?.since
     ? new Date(`${stats.since}T00:00:00`).toLocaleDateString(
-        isEn ? "en-GB" : "sl-SI",
+        intlLocale,
         { day: "numeric", month: "long", year: "numeric" }
       )
     : null;
 
   const avgLabel = stats
-    ? stats.avgIssuesPerPlan.toFixed(1).replace(".", isEn ? "." : ",")
+    ? stats.avgIssuesPerPlan.toFixed(1).replace(".", locale === "sl" ? "," : ".")
     : "";
 
   const cards: StatCardData[] = stats
@@ -408,7 +413,7 @@ export function ValidatorTelemetrySection() {
               </ul>
               <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-border/70 pt-4 text-sm">
                 <a
-                  href={isEn ? "/en/vir-podatkov" : "/vir-podatkov"}
+                  href={`${localePrefix(locale)}/vir-podatkov`}
                   className="font-medium text-primary underline decoration-border underline-offset-4 hover:decoration-primary"
                 >
                   {t("method.dataLink")}

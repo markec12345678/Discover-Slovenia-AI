@@ -1,6 +1,11 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { ADRIA_GUIDES } from "@/lib/adria-guides";
-import { isEnRoute, EN_STATIC_ROUTES } from "@/i18n/routing";
+import {
+  isEnRoute,
+  EN_STATIC_ROUTES,
+  isItDeRoute,
+  ITDE_STATIC_ROUTES,
+} from "@/i18n/routing";
 
 // Skupni seznam vseh URL-jev, ki jih generira platforma.
 // Uporablja ga /sitemap.xml route handler in /api/admin/indexing za poročanje o indeksaciji.
@@ -180,37 +185,66 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
 
   // === FW4.3-2: EN različice (samo poti na EN whitelisti — jedro lijaka)
   // ZA VSAK SL URL z EN različico se doda /en URL istih lastnosti ter
-  // se OBEJEMA prilepita hreflang alternati (xhtml:link v sitemap.xml).
+  // se VSEM prilepijo hreflang alternati (xhtml:link v sitemap.xml).
   // GEO poti (/llms.txt, /rss.xml) in uredniške SL vsebine (dogodki,
   // tržnica …) EN različice NIMAJO (proxy jih 308 preusmeri na SL).
   // ADRIA-EN + SLO-LOOP-EN + SLO-WINTER-EN: /vodici seznam + vsi vodniki so
-  // NA whitelisti (full prevodi). ===
+  // NA whitelisti (full prevodi).
+  // === W1 (Issue #15 V0, 1.126.0): IT + DE različice (faza 1 — samo poti
+  // na IT/DE whitelisti: jedro odkrivanja + svetovanja). Isti kanon: za
+  // vsak SL URL z IT/DE različico se dodata /it in /de URL ter hreflang
+  // gruča vključi it-IT/de-DE (samo kadar različica obstaja). ===
   const enUrls: SitemapUrl[] = [];
+  const itdeUrls: SitemapUrl[] = [];
   for (const u of urls) {
-    if (!isEnRoute(u.path)) continue;
-    const enPath = u.path === "/" ? "/en" : `/en${u.path}`;
-    const enUrl: SitemapUrl = {
-      ...u,
-      url: `${baseUrl}${enPath}`,
-      path: enPath,
-      category: `${u.category} (EN)`,
-    };
-    // hreflang gruča: sl-SI (slovenska pot), en-US (angleška pot),
-    // x-default (slovenska — privzeti jezik platforme)
-    u.alternates = [
+    const enOk = isEnRoute(u.path);
+    const itdeOk = isItDeRoute(u.path);
+    if (!enOk && !itdeOk) continue;
+
+    // hreflang gruča: sl-SI (slovenska pot) + vsi javni jeziki s različico
+    // (en-US / it-IT / de-DE) + x-default (slovenska — privzeti jezik)
+    const cluster: { hreflang: string; url: string }[] = [
       { hreflang: "sl-SI", url: u.url },
-      { hreflang: "en-US", url: enUrl.url },
-      { hreflang: "x-default", url: u.url },
     ];
-    enUrl.alternates = [
-      { hreflang: "sl-SI", url: u.url },
-      { hreflang: "en-US", url: enUrl.url },
-      { hreflang: "x-default", url: u.url },
-    ];
-    enUrls.push(enUrl);
+    const variants: SitemapUrl[] = [];
+
+    if (enOk) {
+      const enPath = u.path === "/" ? "/en" : `/en${u.path}`;
+      const enUrl: SitemapUrl = {
+        ...u,
+        url: `${baseUrl}${enPath}`,
+        path: enPath,
+        category: `${u.category} (EN)`,
+      };
+      cluster.push({ hreflang: "en-US", url: enUrl.url });
+      variants.push(enUrl);
+      enUrls.push(enUrl);
+    }
+
+    if (itdeOk) {
+      for (const l of ["it", "de"] as const) {
+        const p = u.path === "/" ? `/${l}` : `/${l}${u.path}`;
+        const variant: SitemapUrl = {
+          ...u,
+          url: `${baseUrl}${p}`,
+          path: p,
+          category: `${u.category} (${l.toUpperCase()})`,
+        };
+        cluster.push({
+          hreflang: l === "it" ? "it-IT" : "de-DE",
+          url: variant.url,
+        });
+        variants.push(variant);
+        itdeUrls.push(variant);
+      }
+    }
+
+    cluster.push({ hreflang: "x-default", url: u.url });
+    u.alternates = cluster;
+    for (const v of variants) v.alternates = cluster;
   }
 
-  return [...urls, ...enUrls];
+  return [...urls, ...enUrls, ...itdeUrls];
 }
 
 /** Število EN URL-jev (FW4.3-2 + ADRIA-EN + GEO-A) — za poročanje brez gradnje seznama. */
@@ -241,7 +275,9 @@ export function getTotalSitemapUrlCount(): number {
   // 22 stalnih (TASK 58: +/potovanje; TASK 64: +/na-poti) + 38 hub (GEO-A)
   // + 38 + 190 + 152 + 152 + 22 vodnikov (ADRIA+LOOP+WINTER)
   // + EN (FW4.3-2 + GEO-A hub + vsi vodniki + primerjava + zemljevid +
-  // potovanje + na-poti) = 764 skupaj
+  // potovanje + na-poti)
+  // + W1 (Issue #15): IT/DE različice statičnih poti faze 1
+  // (ITDE_STATIC_ROUTES × 2 jezika = 18 URL) = 782 skupaj
   return (
     22 +
     DESTINATIONS.length +
@@ -250,7 +286,8 @@ export function getTotalSitemapUrlCount(): number {
     DESTINATIONS.length * 4 +
     DESTINATIONS.length * 4 +
     ADRIA_GUIDES.length +
-    getEnSitemapUrlCount()
+    getEnSitemapUrlCount() +
+    ITDE_STATIC_ROUTES.size * 2
   );
 }
 

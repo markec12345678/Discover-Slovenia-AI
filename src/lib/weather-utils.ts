@@ -47,6 +47,59 @@ export function weatherCodeToTextEn(code: number): string {
   return "variable";
 }
 
+/**
+ * WMO weather code → italijansko besedilo (W1, Issue #15 V0).
+ * Pokriva IT kontekst klepeta (chat-domain-fallback).
+ */
+export function weatherCodeToTextIt(code: number): string {
+  if (code === 0) return "cielo sereno";
+  if (code <= 3) return "parzialmente nuvoloso";
+  if (code <= 48) return "nebbia";
+  if (code <= 67) return "pioggia";
+  if (code <= 77) return "neve";
+  if (code <= 82) return "rovesci";
+  if (code <= 86) return "rovesci di neve";
+  if (code <= 99) return "temporale";
+  return "variabile";
+}
+
+/**
+ * WMO weather code → nemško besedilo (W1, Issue #15 V0).
+ * Pokriva DE kontekst klepeta (chat-domain-fallback).
+ */
+export function weatherCodeToTextDe(code: number): string {
+  if (code === 0) return "klar";
+  if (code <= 3) return "teilweise bewölkt";
+  if (code <= 48) return "Nebel";
+  if (code <= 67) return "Regen";
+  if (code <= 77) return "Schnee";
+  if (code <= 82) return "Schauer";
+  if (code <= 86) return "Schneeschauer";
+  if (code <= 99) return "Gewitter";
+  return "wechselhaft";
+}
+
+/**
+ * WMO weather code → besedilo v podanem klepetnem jeziku (W1 dispečer).
+ * SL/EN ostajata kanonični ( obstoječi funkciji); it/de sta dodana
+ * za klepetno domensko plast. Neznan jezik → slovensko (default).
+ */
+export function weatherCodeToTextFor(
+  lang: "sl" | "en" | "it" | "de",
+  code: number
+): string {
+  switch (lang) {
+    case "en":
+      return weatherCodeToTextEn(code);
+    case "it":
+      return weatherCodeToTextIt(code);
+    case "de":
+      return weatherCodeToTextDe(code);
+    default:
+      return weatherCodeToText(code);
+  }
+}
+
 /** WMO weather code → emoji ikona. */
 export function weatherCodeToIcon(code: number): string {
   if (code === 0) return "☀️";

@@ -40,6 +40,12 @@ import {
   COUNTRIES_EN,
 } from "@/lib/slovenia-data-en";
 import {
+  withLocaleOverlay,
+  countryLabelFor,
+  interestLabelFor,
+  regionLabelFor,
+} from "@/lib/slovenia-labels-it-de";
+import {
   DESTINATIONS_SORT_OPTIONS,
   sortDestinations,
   type DestinationsSort,
@@ -84,8 +90,9 @@ const RATING_OPTIONS: { value: string; labelKey: string }[] = [
 ];
 
 /**
- * FW4.3-2: regija po locale — na EN preslikana prek REGIONS_EN
- * (identifikatorji ostanejo slovenski, prikaz je angleški).
+ * FW4.3-2 + W1: regija po locale — na EN preslikana prek REGIONS_EN,
+ * na IT/DE prek REGIONS_IT/REGIONS_DE (identifikatorji ostanejo slovenski,
+ * prikaz je jezikoven).
  */
 function regionLabel(value: string, locale: string): string {
   if (locale === "en") {
@@ -95,6 +102,8 @@ function regionLabel(value: string, locale: string): string {
       value
     );
   }
+  const itDe = regionLabelFor(value, locale);
+  if (itDe) return itDe;
   return REGIONS.find((r) => r.value === value)?.label ?? value;
 }
 
@@ -103,6 +112,7 @@ function regionLabel(value: string, locale: string): string {
  * description, highlights, activities, duration) zamenjana z angleškimi
  * viri iz slovenia-data-en.ts; id/slug/name/slike/cene ostanejo izvirni.
  * Vrne isti objekt, če overlay manjka.
+ * W1: za it/de obstaja generaliziran withLocaleOverlay (slovenia-labels-it-de).
  */
 function withEnOverlay(d: Destination): Destination {
   const en = getEnDestination(d.id);
@@ -194,18 +204,19 @@ export function DestinationsSection({
     [featured, featuredList, filtered, sort]
   );
 
-  // FW4.3-2: na EN prikazujemo overlay (tagline/highlights/duration …);
-  // id/slug/name/slike/cene ostanejo iz slovenskega vira resnice.
+  // FW4.3-2 + W1: na ne-SL prikazujemo jezikovni overlay (tagline/
+  // highlights/duration …); id/slug/name/slike/cene ostanejo iz slovenskega
+  // vira resnice. SL → identiteta (withLocaleOverlay vrača izvirnik).
   const displayList = useMemo(
-    () => (isEn ? list.map(withEnOverlay) : list),
-    [list, isEn]
+    () => (isEn ? list.map(withEnOverlay) : list.map((d) => withLocaleOverlay(d, locale))),
+    [list, isEn, locale]
   );
 
-  // FW4.3-2: modal prejme EN overlay destinacijo (description/activities
-  // se uporabita znotraj modala); identifikatorji ostanejo izvirni.
+  // FW4.3-2 + W1: modal prejme jezikovni overlay destinacijo (description/
+  // activities se uporabita znotraj modala); identifikatorji ostanejo izvirni.
   const selectedDisplay = useMemo(
-    () => (isEn && selected ? withEnOverlay(selected) : selected),
-    [selected, isEn]
+    () => (isEn && selected ? withEnOverlay(selected) : selected ? withLocaleOverlay(selected, locale) : selected),
+    [selected, isEn, locale]
   );
 
   return (
@@ -278,7 +289,12 @@ export function DestinationsSection({
               ariaLabel={t("countryAriaLabel")}
               options={COUNTRIES.map((c) => ({
                 value: c.value,
-                label: isEn ? (COUNTRIES_EN[c.value] ?? c.label) : c.label,
+                // W1: oznake po locale (EN zgodovinsko prek COUNTRIES_EN,
+                // IT/DE prek slovenia-labels-it-de; fallback SL).
+                label:
+                  isEn
+                    ? (COUNTRIES_EN[c.value] ?? c.label)
+                    : (countryLabelFor(c.value, locale) ?? c.label),
               }))}
             />
             <FilterSelect
@@ -292,7 +308,7 @@ export function DestinationsSection({
                   country === ALL_VALUE || COUNTRY_OF_REGION[r.value] === country
               ).map((r) => ({
                 value: r.value,
-                label: isEn ? (REGIONS_EN[r.value] ?? r.label) : r.label,
+                label: regionLabel(r.value, locale),
               }))}
             />
           </div>
@@ -317,7 +333,11 @@ export function DestinationsSection({
                 value={i.value}
                 active={interest === i.value}
                 icon={i.icon}
-                label={isEn ? (INTERESTS_EN[i.value] ?? i.label) : i.label}
+                label={
+                  isEn
+                    ? (INTERESTS_EN[i.value] ?? i.label)
+                    : (interestLabelFor(i.value, locale) ?? i.label)
+                }
                 onChange={() => setInterest(i.value)}
               />
             ))}

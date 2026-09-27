@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Mountain, Sun, Moon, Compass, Search, ShoppingCart, Building2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { pick } from "@/lib/i18n-pick";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -42,16 +43,20 @@ import { destinationHref } from "@/lib/search-result-nav";
 // trije pušči (košarica aria, tema aria, gumb Svetla/Temna v Sheetu) so bili
 // zadnji SL-only nizi navigacije. aria-labeli gredo branju zaslona — SL
 // label na EN strani je dostopnostna napaka, ne le kozmetična.
+// W1 (Issue #15): razširjeno na 4 javne jezike (it/de) prek pick().
 const NAV_L = {
-  cart: { sl: "Odpri košarico", en: "Open cart" },
-  cartWithItems: {
-    sl: (n: number) => `Odpri košarico (${n} izdelkov)`,
-    en: (n: number) => `Open cart (${n} items)`,
-  },
-  theme: { sl: "Preklopi temo", en: "Toggle theme" },
-  themeLight: { sl: "Svetla", en: "Light" },
-  themeDark: { sl: "Temna", en: "Dark" },
-} as const;
+  cart: (l: string) => pick(l, { sl: "Odpri košarico", en: "Open cart", it: "Apri il carrello", de: "Warenkorb öffnen" }),
+  cartWithItems: (l: string, n: number) =>
+    pick(l, {
+      sl: `Odpri košarico (${n} izdelkov)`,
+      en: `Open cart (${n} items)`,
+      it: `Apri il carrello (${n} articoli)`,
+      de: `Warenkorb öffnen (${n} Artikel)`,
+    }),
+  theme: (l: string) => pick(l, { sl: "Preklopi temo", en: "Toggle theme", it: "Cambia tema", de: "Design wechseln" }),
+  themeLight: (l: string) => pick(l, { sl: "Svetla", en: "Light", it: "Chiaro", de: "Hell" }),
+  themeDark: (l: string) => pick(l, { sl: "Temna", en: "Dark", it: "Scuro", de: "Dunkel" }),
+};
 
 function useNavLinks() {
   const t = useTranslations("nav");
@@ -112,7 +117,8 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
   const [progress, setProgress] = React.useState(0);
   const t = useTranslations("nav");
   const navLocale = useLocale();
-  const lang: "sl" | "en" = navLocale === "en" ? "en" : "sl";
+  // W1: jezik lupine = aktivni locale (4 javni jeziki; pick() validira).
+  const lang = navLocale;
   const router = useRouter();
   const navLinks = useNavLinks();
   const secondaryLinks = useSecondaryLinks();
@@ -255,8 +261,8 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
               onClick={openCart}
               aria-label={
                 cartCount > 0
-                  ? NAV_L.cartWithItems[lang](cartCount)
-                  : NAV_L.cart[lang]
+                  ? NAV_L.cartWithItems(lang, cartCount)
+                  : NAV_L.cart(lang)
               }
               className={cn(
                 "relative",
@@ -299,7 +305,7 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
-              aria-label={NAV_L.theme[lang]}
+              aria-label={NAV_L.theme(lang)}
               className={cn(
                 "hidden sm:inline-flex",
                 glass ? "text-foreground" : "text-white hover:bg-white/10 hover:text-white"
@@ -417,7 +423,7 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                     variant="outline"
                     size="sm"
                     onClick={toggleTheme}
-                    aria-label={NAV_L.theme[lang]}
+                    aria-label={NAV_L.theme(lang)}
                     className="gap-2"
                   >
                     {mounted && resolvedTheme === "dark" ? (
@@ -426,8 +432,8 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                       <Moon className="size-4" aria-hidden="true" />
                     )}
                     {mounted && resolvedTheme === "dark"
-                      ? NAV_L.themeLight[lang]
-                      : NAV_L.themeDark[lang]}
+                      ? NAV_L.themeLight(lang)
+                      : NAV_L.themeDark(lang)}
                   </Button>
                 </div>
 

@@ -3,7 +3,7 @@ import { safeJsonLd } from "@/lib/security";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { Destination } from "@/lib/types";
 import { DEFAULT_BASE_URL } from "@/lib/host";
-import { isEnRoute } from "@/i18n/routing";
+import { isEnRoute, isItDeRoute } from "@/i18n/routing";
 
 // SEO-2: BASE_URL ni več statičen — funkcije sprejmejo `baseUrl` (host-zavedno,
 // iz resolveBaseUrlFromHeaders/currentBaseUrl iz lib/host.ts). Privzeta vrednost
@@ -13,13 +13,15 @@ import { isEnRoute } from "@/i18n/routing";
 // hreflang en-US SE IZDA SAMO za poti z EN različico; ostale poti (npr.
 // /vodici/*, /blog/*) imajo samo sl-SI + x-default — Google tako ne vidi
 // alternatov, ki bi jih proxy 308 preusmeril.
-// P4-8 za /de in /it ostaja: trajno (308) preusmerjena na slovensko pot
-// (glej src/proxy.ts) — zato ZA NJIH ne objavljemo hreflang alternat.
+// W1 (Issue #15 V0, 1.126.0): italijanščina in nemščina sta javni na IT/DE
+// whitelisti (faza 1 — isItDeRoute) — hreflang it-IT/de-DE se izda samo za
+// poti z IT/DE različico; za vse ostale poti proxy 308 preusmeri nazaj na
+// slovensko, zato alternatov ne objavimo (isti kanon kot EN).
 
 // === HREFLANG HELPER ===
 // Vrne alternates.languages za Next.js metadata — hreflang za javne jezike.
-// `path` je vedno SLOVENSKA pot (brez /en prefix-a); helper sam odloči,
-// ali EN alternat (baseUrl + /en + path) obstaja (isEnRoute).
+// `path` je vedno SLOVENSKA pot (brez locale prefix-a); helper sam odloči,
+// kateri alternati (en/it/de) obstajajo (isEnRoute / isItDeRoute).
 export function hreflangForPath(path: string, baseUrl: string = DEFAULT_BASE_URL) {
   // Normalizirana pot brez trailling slash ("/" ostane "/")
   const clean = path === "/" ? "/" : `/${path.replace(/^\/+|\/+$/g, "")}`;
@@ -29,9 +31,31 @@ export function hreflangForPath(path: string, baseUrl: string = DEFAULT_BASE_URL
   if (isEnRoute(clean)) {
     languages["en-US"] = `${baseUrl}/en${clean === "/" ? "" : clean}`;
   }
+  // W1 faza 1: IT/DE alternati — samo za poti na IT/DE whitelisti
+  if (isItDeRoute(clean)) {
+    languages["it-IT"] = `${baseUrl}/it${clean === "/" ? "" : clean}`;
+    languages["de-DE"] = `${baseUrl}/de${clean === "/" ? "" : clean}`;
+  }
   // x-default → slovenščina (privzeti jezik platforme)
   languages["x-default"] = `${baseUrl}${clean}`;
   return languages;
+}
+
+// === OG:LOCALE HELPER (W1) ===
+// openGraph.locale iz aktivnega locale-a — prej trdo kodiran ternarni
+// `locale === "en" ? "en_US" : "sl_SI"` po straneh; W1 doda it_IT/de_DE.
+// (Strani na IT/DE whitelisti prek te funkcije povedo pravi og:locale.)
+export function ogLocale(locale: string): string {
+  switch (locale) {
+    case "en":
+      return "en_US";
+    case "it":
+      return "it_IT";
+    case "de":
+      return "de_DE";
+    default:
+      return "sl_SI";
+  }
 }
 
 // === FAQ SCHEMA ===

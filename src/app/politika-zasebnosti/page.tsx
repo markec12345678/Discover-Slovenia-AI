@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { localePrefix } from "@/i18n/routing";
-import { hreflangForPath } from "@/components/seo";
+import { hreflangForPath, ogLocale } from "@/components/seo";
 import { currentBaseUrl } from "@/lib/host";
 // TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer;
 // LanguageToggle odstranjen (stran je na EN whitelisti — EN_STATIC_ROUTES
@@ -48,7 +48,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description: t("meta.description"),
       url: `${base}${prefixed}`,
       type: "website",
-      locale: locale === "en" ? "en_US" : "sl_SI",
+      locale: ogLocale(locale),
     },
   };
 }

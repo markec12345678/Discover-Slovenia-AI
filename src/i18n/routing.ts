@@ -23,7 +23,7 @@ import { defineRouting } from "next-intl/routing";
  * `/`); "en" ga ima (`/en/…`).
  */
 export const routing = defineRouting({
-  locales: ["sl", "en"],
+  locales: ["sl", "en", "it", "de"],
   defaultLocale: "sl",
   localePrefix: "as-needed",
 });
@@ -110,6 +110,48 @@ export function isEnRoute(pathname: string): boolean {
   if (EN_STATIC_ROUTES.has(pathname)) return true;
   if (EN_ADRIA_ROUTES.some((re) => re.test(pathname))) return true;
   return EN_DESTINATION_SUBROUTES.some((re) => re.test(pathname));
+}
+
+// ============================================================================
+// W1 IT/DE WHITELISTA (Issue #15 V0, faza 1 — 1.126.0) — edini vir resnice
+// o tem, kje italijanščina in nemščina ŽIVITA v fazi 1.
+// Namerno IZVEN (poštena meja, W1-faza-2 — proxy 308 na slovensko):
+//   /nacrtuj (pogon itinererja izpisuje SL/EN), L-vzorčne poti (/trznica,
+//   /dozivetja, /lokali, /dogodki, /zemljevid, /potovanje, /na-poti,
+//   /moja-potovanja — inline SL/EN slovarji v komponentah), /vodici
+//   (vsebinska plast ADRIA-EN), /destinacija/* (×38 vsebinskih plasti).
+// Uporabniki: src/proxy.ts (308 guard), language-switcher (vidnost),
+// hreflangForPath (alternati), sitemap-urls.ts (IT/DE URL-ji).
+// ============================================================================
+
+/** Statične poti z IT/DE različico (jedro odkrivanja + svetovanja). */
+export const ITDE_STATIC_ROUTES = new Set([
+  "/",
+  "/destinacije",
+  "/primerjava",
+  "/o-strani",
+  "/kontakt",
+  "/pogoji-uporabe",
+  "/politika-zasebnosti",
+  "/vir-podatkov",
+  "/zaupanje-in-varnost",
+]);
+
+/** Ali ima ta POT (brez locale prefix-a!) IT/DE različico (W1 faza 1). */
+export function isItDeRoute(pathname: string): boolean {
+  return ITDE_STATIC_ROUTES.has(pathname);
+}
+
+/**
+ * Ali ima ta POT (brez locale prefix-a!) različico v podanem JAVNEM jeziku.
+ * Generalizacija isEnRoute (W1): default vedno res (SL je izvirnik),
+ * "en" po EN whitelisti, "it"/"de" po IT/DE whitelisti (faza 1).
+ */
+export function isLocaleRoute(pathname: string, locale: string): boolean {
+  if (locale === routing.defaultLocale) return true;
+  if (locale === "en") return isEnRoute(pathname);
+  if (locale === "it" || locale === "de") return isItDeRoute(pathname);
+  return false;
 }
 
 /** Locale prefix za URL-je: "" za default ("sl"), "/en" za angleščino. */
