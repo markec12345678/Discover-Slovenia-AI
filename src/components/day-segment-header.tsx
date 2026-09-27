@@ -16,7 +16,8 @@ const SEGMENT_ICONS: Record<DaySegment, typeof Sun> = {
 
 interface DaySegmentHeaderProps {
   segment: DaySegment;
-  lang: "sl" | "en";
+  /** W1-2b-2: 4-jezično (DAY_SEGMENT_LABELS nosi it/de). */
+  lang: "sl" | "en" | "it" | "de";
   className?: string;
 }
 

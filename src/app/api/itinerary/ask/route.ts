@@ -8,10 +8,10 @@ import {
 } from "@/lib/plan-qa";
 import {
   fetchDailyForecast,
-  weatherCodeToText,
-  weatherCodeToTextEn,
+  weatherCodeToTextFor,
 } from "@/lib/weather-utils";
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { PL, type PlannerLang } from "@/lib/planner-lang";
 import type { Itinerary, PlannerInput } from "@/lib/types";
 
 // ============================================================================
@@ -51,17 +51,35 @@ export async function POST(request: Request) {
   });
   if (limited) return limited;
 
+  let rawBody = "";
   let body: AskRequest;
   try {
-    body = (await request.json()) as AskRequest;
+    rawBody = await request.text();
+    body = JSON.parse(rawBody) as AskRequest;
   } catch {
-    return NextResponse.json({ error: "Neveljaven JSON" }, { status: 400 });
+    // Jezikovna oznaka je običajno berljiva tudi iz neveljavnega telesa
+    // (isti peek vzorec kot /api/itinerary — W1-2b-1).
+    const peek = rawBody.match(/"language"\s*:\s*"(en|it|de)"/);
+    const peekLang = peek ? (peek[1] as PlannerLang) : "sl";
+    return NextResponse.json(
+      { error: PL(peekLang, { sl: "Neveljaven JSON", en: "Invalid JSON", it: "JSON non valido", de: "Ungültiges JSON" }) },
+      { status: 400 }
+    );
   }
+
+  // Jezik napak + odgovorov — podani jezik (W1-2b-2: 4-jezično);
+  // manjkajoč/neprepoznan → SL (nazaj-kompatibilno).
+  const errLang: PlannerLang =
+    (body as Partial<AskRequest> | null)?.formData?.language === "en" ||
+    (body as Partial<AskRequest> | null)?.formData?.language === "it" ||
+    (body as Partial<AskRequest> | null)?.formData?.language === "de"
+      ? ((body as Partial<AskRequest>).formData!.language as PlannerLang)
+      : "sl";
 
   const itinerary = body?.itinerary;
   if (!itinerary || !Array.isArray(itinerary.days) || itinerary.days.length === 0) {
     return NextResponse.json(
-      { error: "Manjka itinerer (itinerary.days)" },
+      { error: PL(errLang, { sl: "Manjka itinerer (itinerary.days)", en: "Missing itinerary (itinerary.days)", it: "Itinerario mancante (itinerary.days)", de: "Reiseplan fehlt (itinerary.days)" }) },
       { status: 400 }
     );
   }
@@ -71,7 +89,7 @@ export async function POST(request: Request) {
   // (enako mejo ima itinerary/save za persistenco).
   if (JSON.stringify(itinerary).length >= 100_000) {
     return NextResponse.json(
-      { error: "Itinerer je prevelok za analizo" },
+      { error: PL(errLang, { sl: "Itinerer je prevelik za analizo", en: "Itinerary is too large to analyze", it: "L'itinerario è troppo grande per l'analisi", de: "Der Reiseplan ist für die Analyse zu groß" }) },
       { status: 400 }
     );
   }
@@ -80,19 +98,22 @@ export async function POST(request: Request) {
     typeof body.question === "string" ? body.question.trim() : "";
   if (question.length < 3) {
     return NextResponse.json(
-      { error: "Manjka ali prekratko vprašanje (vsaj 3 znaki)" },
+      { error: PL(errLang, { sl: "Manjka ali prekratko vprašanje (vsaj 3 znaki)", en: "Missing or too short question (at least 3 characters)", it: "Domanda mancante o troppo breve (almeno 3 caratteri)", de: "Frage fehlt oder ist zu kurz (mind. 3 Zeichen)" }) },
       { status: 400 }
     );
   }
   if (question.length > QUESTION_MAX) {
     return NextResponse.json(
-      { error: `Vprašanje je predolgo (max ${QUESTION_MAX} znakov)` },
+      { error: PL(errLang, { sl: `Vprašanje je predolgo (max ${QUESTION_MAX} znakov)`, en: `Question is too long (max ${QUESTION_MAX} characters)`, it: `La domanda è troppo lunga (max ${QUESTION_MAX} caratteri)`, de: `Die Frage ist zu lang (max. ${QUESTION_MAX} Zeichen)` }) },
       { status: 400 }
     );
   }
 
   const formData = body.formData ?? null;
-  const lang: PlanLang = formData?.language === "en" ? "en" : "sl";
+  const lang: PlanLang =
+    formData?.language === "en" || formData?.language === "it" || formData?.language === "de"
+      ? formData.language
+      : "sl";
 
   // -----------------------------------------------------------------------
   // 1. DETERMINISTIČNA POT (brez AI — primarna)
@@ -154,7 +175,7 @@ export async function POST(request: Request) {
 
 async function buildForecastForItinerary(
   itinerary: Itinerary,
-  lang: "sl" | "en"
+  lang: PlannerLang
 ): Promise<PlanForecastDay[] | null> {
   const startISO = itinerary?.tripStartDate;
   if (!startISO || !/^\d{4}-\d{2}-\d{2}$/.test(startISO)) return null;
@@ -183,10 +204,7 @@ async function buildForecastForItinerary(
 
   return forecast.map((f, i) => ({
     day: i + 1,
-    text:
-      lang === "en"
-        ? weatherCodeToTextEn(f.weatherCode)
-        : weatherCodeToText(f.weatherCode),
+    text: weatherCodeToTextFor(lang, f.weatherCode),
     tempMax: f.tempMax,
     rainProb: f.precipitationProbabilityMax,
   }));

@@ -20,6 +20,8 @@ import {
   formatEventDate,
 } from "@/lib/events-data";
 import { EVENT_CATEGORY_LABELS_EN } from "@/lib/events-data-en";
+import { EVENT_CATEGORY_LABELS_IT } from "@/lib/events-data-it";
+import { EVENT_CATEGORY_LABELS_DE } from "@/lib/events-data-de";
 // TASK 8 / D8-D (§3.3 write-through): dogodek, preklopljen V NAČRT, se
 // registrira tudi v zbirko "Moja pot" (čista lib — SSR-varna brez okna).
 import { addMyTripItem } from "@/lib/my-trip";
@@ -72,10 +74,11 @@ const CATEGORY_ICON: Record<string, LucideIcon> = {
 const FALLBACK_BADGE_CLASS = "bg-muted text-foreground";
 
 /** Jezik sekcije (1.29.0, revizija #13) — privzeto SL (/pot stran). */
-export type EventsLang = "sl" | "en";
+export type EventsLang = "sl" | "en" | "it" | "de";
 
 // UI nizi — komponenta je skupna plannerju (next-intl, EN prek locale) in
 // /pot strani (SL-only) → jezik nosi eksplicitni prop, ne globalni intl.
+// W1-2b-2: IT/DE eksplicitna (dogodki imajo EVENTS_IT/DE prekrivne plasti).
 const STRINGS: Record<
   EventsLang,
   {
@@ -121,11 +124,45 @@ const STRINGS: Record<
     website: "Website",
     yourTripSubtitle: (range) => `Your trip runs ${range}`,
   },
+  it: {
+    defaultTitle: "Cosa succede durante la tua visita",
+    duringBadge: "Durante la tua visita",
+    duringBadgeTitle: "Questo evento si svolge durante la tua visita",
+    dateTitle: "Data dell'evento",
+    locationTitle: "Luogo dell'evento",
+    admissionTitle: "Ingresso",
+    free: "Gratuito",
+    inYourTrip: "Nel tuo viaggio",
+    addToMyTrip: "Aggiungi al mio viaggio",
+    inTrip: "Nel viaggio",
+    website: "Sito web",
+    yourTripSubtitle: (range) => `Il tuo viaggio è ${range}`,
+  },
+  de: {
+    defaultTitle: "Was während deines Besuchs los ist",
+    duringBadge: "Während deines Besuchs",
+    duringBadgeTitle: "Dieses Ereignis findet während deines Besuchs statt",
+    dateTitle: "Ereignisdatum",
+    locationTitle: "Veranstaltungsort",
+    admissionTitle: "Eintritt",
+    free: "Kostenlos",
+    inYourTrip: "In deiner Reise",
+    addToMyTrip: "Zu meiner Reise hinzufügen",
+    inTrip: "In der Reise",
+    website: "Webseite",
+    yourTripSubtitle: (range) => `Deine Reise läuft ${range}`,
+  },
 };
 
 function categoryLabel(category: string, lang: EventsLang): string {
   const labels = (
-    lang === "en" ? EVENT_CATEGORY_LABELS_EN : EVENT_CATEGORY_LABELS
+    lang === "en"
+      ? EVENT_CATEGORY_LABELS_EN
+      : lang === "it"
+        ? EVENT_CATEGORY_LABELS_IT
+        : lang === "de"
+          ? EVENT_CATEGORY_LABELS_DE
+          : EVENT_CATEGORY_LABELS
   ) as Record<string, string>;
   return labels[category] ?? category;
 }
@@ -367,13 +404,14 @@ export function ItineraryEventsSection({
   );
 
   // FW4.2: podnaslov z okvirjem potovanja (samo če so datumi znani) —
-  // SL: slovenska sklonska fraza (tripDuringPhraseSI); EN: EN format datuma
+  // SL: slovenska sklonska fraza (tripDuringPhraseSI); IT/DE: lastni formati
+  // (s.yourTripSubtitle + formatEventDate v jeziku sekcije)
   const duringSubtitle = tripStartDate
-    ? lang === "en"
-      ? s.yourTripSubtitle(
-          formatEventDate(tripStartDate, tripEndDate, "en")
+    ? lang === "sl"
+      ? `Tvoja pot je ${tripDuringPhraseSI(tripStartDate, tripEndDate)}`
+      : s.yourTripSubtitle(
+          formatEventDate(tripStartDate, tripEndDate, lang)
         )
-      : `Tvoja pot je ${tripDuringPhraseSI(tripStartDate, tripEndDate)}`
     : null;
 
   if (variant === "section") {

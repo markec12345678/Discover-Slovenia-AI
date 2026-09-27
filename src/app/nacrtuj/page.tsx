@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { localePrefix } from "@/i18n/routing";
 import { Link } from "@/i18n/navigation";
 import { hreflangForPath } from "@/components/seo";
+import { ogLocaleFor } from "@/lib/slovenia-labels-it-de";
 import { currentBaseUrl } from "@/lib/host";
 
 /**
@@ -46,7 +47,8 @@ export async function generateMetadata(): Promise<Metadata> {
       description: t("meta.description"),
       url: `${base}${prefixed}`,
       type: "website",
-      locale: locale === "en" ? "en_US" : "sl_SI",
+      // W1-2b-2: 4-jezični og:locale (isti pomočnik kot destinacijske plasti)
+      locale: ogLocaleFor(locale),
     },
   };
 }

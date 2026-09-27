@@ -24,6 +24,7 @@
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { Itinerary, QuickActionId } from "@/lib/types";
+import type { PlannerLang } from "@/lib/planner-lang";
 
 // ---------------------------------------------------------------------------
 // TIPI
@@ -60,8 +61,9 @@ export type RefineCommand =
   | { kind: "unknown" };
 
 export interface ParseRefineContext {
-  lang?: "sl" | "en";
-  /** ISO datum začetka potovanja (za razrešitev "sobota"/"saturday"). */
+  /** W1-2b-2: 4-jezično (vzroki so SL+EN+IT+DE vseh slovarjev). */
+  lang?: PlannerLang;
+  /** ISO datum začetka potovanja (za razrešitev "sobota"/"saturday"/"sabato"/"Samstag"). */
   tripStartDate?: string | null;
   /** Število dni načrta (za njegove meje). */
   daysCount?: number;
@@ -74,16 +76,25 @@ export interface ParseRefineContext {
 function normalize(s: string): string {
   return s
     .toLowerCase()
-    .replaceAll("č", "c")
-    .replaceAll("š", "s")
-    .replaceAll("ž", "z")
-    .replaceAll("ć", "c")
+    .replace(/[čć]/g, "c")
+    .replace(/ž/g, "z")
+    .replace(/š/g, "s")
+    .replace(/đ/g, "d")
+    // W1-2b-2: IT/DE diakritika (à è ì ò ù é ö ä ü ß …) — vzorci so
+    // zapisani BREZ narekovajev, torej vhod mora slediti (isti kanon kot
+    // plan-qa stripDiacritics)
+    .replace(/[àáâä]/g, "a")
+    .replace(/[èéêë]/g, "e")
+    .replace(/[ìíîï]/g, "i")
+    .replace(/[òóôö]/g, "o")
+    .replace(/[ùúûü]/g, "u")
+    .replace(/ß/g, "ss")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 // ---------------------------------------------------------------------------
-// SLOVARJI SINONIMOV (SL+EN) — razširljiva gramatika (Issue #9 §7)
+// SLOVARJI SINONIMOV (SL+EN+IT+DE — W1-2b-2) — razširljiva gramatika (Issue #9 §7)
 // ---------------------------------------------------------------------------
 
 /** Akcija → vzorci (normalizirani, delne besede so OK). */
@@ -98,6 +109,12 @@ const ACTION_PATTERNS: ReadonlyArray<{
       "kratje voznje", "manj kilometrov", "manj km",
       "less driving", "shorter drive", "less km", "fewer kilometers",
       "krajse", "krajs", "shorter day",
+      // IT
+      "meno guida", "meno chilometri", "meno km", "guida piu breve",
+      "tratti piu brevi", "spostamenti piu brevi",
+      // DE
+      "weniger fahrt", "weniger fahren", "kuzere fahrt", "weniger km",
+      "weniger kilometer", "kurzere strecke",
     ],
   },
   {
@@ -106,6 +123,12 @@ const ACTION_PATTERNS: ReadonlyArray<{
       "dezev", "deze", "notranj", "v zaprtih", "v notranj",
       "slabo vreme", "ob dezu", "za dez",
       "indoor", "rainy", "rain suitable", "bad weather", "if it rains",
+      // IT
+      "pioggia", "piove", "al coperto", "cattivo tempo", "brutto tempo",
+      "in caso di pioggia", "interno",
+      // DE
+      "regen", "bei regen", "innen", "schlechtes wetter", "regenschauer",
+      "innenraum", "regentauglich",
     ],
   },
   {
@@ -114,6 +137,11 @@ const ACTION_PATTERNS: ReadonlyArray<{
       "pocasnej", "pocasneje", "pocasni", "bolj mir", "mirneje",
       "bolj sproscen", "sprostitev", "manj hitro",
       "slower", "slower pace", "calm", "more relaxed", "relaxed",
+      // IT
+      "ritmo piu calmo", "piu calmo", "piu rilassato", "tranquillo",
+      "meno frenetico", "andatura piu lenta",
+      // DE
+      "langsamer", "ruhiger", "entspannter", "gemutlicher", "mehr zeit",
     ],
   },
   {
@@ -121,6 +149,10 @@ const ACTION_PATTERNS: ReadonlyArray<{
     patterns: [
       "vec narave", "bolj naravno", "narava", "v naravo",
       "more nature", "nature", "outdoors", "vec naravn",
+      // IT
+      "piu natura", "natura", "all'aperto", "natura nel",
+      // DE
+      "mehr natur", "natur", "im freien", "mehr im grunen",
     ],
   },
   {
@@ -130,6 +162,12 @@ const ACTION_PATTERNS: ReadonlyArray<{
       "hrana", "gastro", "vecerja", "zajtrk",
       "more food", "lunch", "dinner", "breakfast", "more food stops",
       "gastronom",
+      // IT
+      "piu cibo", "pranzo", "cena", "colazione", "gastronomia",
+      "cucina locale", "piu ristoranti",
+      // DE
+      "mehr essen", "mittagessen", "abendessen", "fruhstuck", "kulinarik",
+      "gastronomie", "mehr restaurants", "kuche",
     ],
   },
   {
@@ -137,6 +175,12 @@ const ACTION_PATTERNS: ReadonlyArray<{
     patterns: [
       "druzin", "za otroke", "otroci", "otroc", "otrokom",
       "family", "kids", "with children", "child friendly", "kid friendly",
+      // IT
+      "famiglia", "famiglie", "bambini", "per i bambini", "adatto ai bambini",
+      "con bambini",
+      // DE
+      "familie", "familien", "kindern", "mit kindern", "kinderfreundlich",
+      "fur kinder",
     ],
   },
   {
@@ -145,6 +189,12 @@ const ACTION_PATTERNS: ReadonlyArray<{
       "ceneje", "cenejs", "poceni", "nizji proracun", "manj strosek",
       "manj stroskov", "prihrani", "varcevanje", "cheap", "cheaper",
       "less expensive", "budget friendly", "save money", "on a budget",
+      // IT
+      "piu economico", "economico", "risparmiare", "risparmio",
+      "budget piu basso", "meno costoso", "conveniente",
+      // DE
+      "gunstiger", "gunstig", "sparen", "geld sparen", "billiger",
+      "niedrigeres budget", "weniger kosten",
     ],
   },
   {
@@ -152,6 +202,12 @@ const ACTION_PATTERNS: ReadonlyArray<{
     patterns: [
       "drazje", "drazj", "visji proracun", "premium", "luksuzno",
       "luxury", "more expensive", "higher end", " upscale",
+      // IT
+      "piu costoso", "piu premium", "lusso", "di fascia alta",
+      "budget piu alto", "qualcosa di piu",
+      // DE
+      "teurer", "mehr luxus", "luxurios", "hochwertiger", "premium",
+      "hohere budget", "gehobene",
     ],
   },
   {
@@ -161,42 +217,94 @@ const ACTION_PATTERNS: ReadonlyArray<{
       "adrenalin", "sportneje", "vec sporta",
       "more active", "more activities", "more activity", "adrenaline",
       "more sport", "more action",
+      // IT
+      "piu attivo", "piu attivita", "attivita", "sport", "adrenalina",
+      "movimento",
+      // DE
+      "aktiver", "mehr aktivitat", "aktivitaten", "sport", "adrenalin",
+      "bewegung", "mehr action",
     ],
   },
 ];
 
-/** Dodajanje/odstranjevanje krajev (pred nazivom destinacije). */
-const ADD_PREFIXES = ["dodaj", "vkljuci", "obiskaj", "zelim", "hocem", "add ", "include ", "visit ", "insert "];
-const REMOVE_PREFIXES = ["odstrani", "brisi", "izpusti", "pocisti", "remove ", "drop ", "delete ", "without ", "brez "];
+/** Dodajanje/odstranjevanje krajev (pred nazivom destinacije; SL+EN+IT+DE). */
+const ADD_PREFIXES = [
+  "dodaj", "vkljuci", "obiskaj", "zelim", "hocem",
+  "add ", "include ", "visit ", "insert ",
+  // IT
+  "aggiungi", "includi", "visita ", "vorrei", "voglio",
+  // DE
+  "fuge", "erganze", "besuche", "ich mochte", "binde",
+];
+const REMOVE_PREFIXES = [
+  "odstrani", "brisi", "izpusti", "pocisti",
+  "remove ", "drop ", "delete ", "without ", "brez ",
+  // IT
+  "rimuovi", "elimina", "togli", "senza ", "escludi",
+  // DE
+  "entferne", "losche", "streiche", "ohne ","lass weg", "weglassen",
+];
 
-/** Prepoznani, a (še) nepodprti nameni (iskrena odklonitev, ne tiho). */
+/** Prepoznani, a (še) nepodprti nameni (iskrena odklonitev, ne tiho; SL+EN+IT+DE). */
 const UNSUPPORTED_INTENTS: ReadonlyArray<{ intent: string; patterns: string[] }> = [
   {
     intent: "move-day",
-    patterns: ["prestavi", "premakni", "zamenjaj dan", "prestavljen", "move ", "reschedule", "shift to"],
+    patterns: [
+      "prestavi", "premakni", "zamenjaj dan", "prestavljen",
+      "move ", "reschedule", "shift to",
+      "sposta", "riprogramma", "anticipa", "posticipa",
+      "verschiebe", "umplanen", "verschiebung", "verlege",
+    ],
   },
   {
     intent: "swap-activity",
-    patterns: ["zamenjaj aktivnost", "zamenjaj postanek", "swap activity", "swap stop", "exchange "],
+    patterns: [
+      "zamenjaj aktivnost", "zamenjaj postanek",
+      "swap activity", "swap stop", "exchange ",
+      "sostituisci attivita", "cambia attivita", "scambia",
+      "tausche aktivitat", "aktivitat tauschen", "ersetze",
+    ],
   },
   {
     intent: "duration",
-    patterns: ["daljse", "dodaj noc", "dodaj eno noc", "daljsi", "longer", "extra day", "add a day", "add one day", "krajse potovanje", "shorter trip", "manj dni", "vec dni", "more days", "fewer days"],
+    patterns: [
+      "daljse", "dodaj noc", "dodaj eno noc", "daljsi",
+      "longer", "extra day", "add a day", "add one day",
+      "krajse potovanje", "shorter trip", "manj dni", "vec dni", "more days", "fewer days",
+      "piu giorni", "un giorno in piu", "aggiungi un giorno", "togli un giorno",
+      "meno giorni", "viaggio piu lungo", "viaggio piu corto",
+      "mehr tage", "einen tag mehr", "tag hinzufugen", "einen tag weniger",
+      "reise langer", "reise kurzer", "weniger tage",
+    ],
   },
   {
     intent: "party-type",
-    patterns: ["za par", "romanticno", "za dva", "solo", "sam", "za prijatelje", "s prijatelji", "couple", "solo trip", "friends trip", "with friends", "honeymoon"],
+    patterns: [
+      "za par", "romanticno", "za dva", "solo", "sam", "za prijatelje", "s prijatelji",
+      "couple", "solo trip", "friends trip", "with friends", "honeymoon",
+      "per la coppia", "da solo", "con gli amici", "romantico", "luna di miele",
+      "als paar", "romantik", "alleine", "mit freunden", "flitterwochen",
+    ],
   },
   {
     intent: "outdoor-only",
-    patterns: ["samo zunaj", "vec zunaj", "outdoor only", "more outdoor", "zunaj"],
+    patterns: [
+      "samo zunaj", "vec zunaj",
+      "outdoor only", "more outdoor", "zunaj",
+      "solo all'aperto", "piu all'aperto",
+      "nur draussen", "mehr draussen",
+    ],
   },
 ];
 
-/** Dnevi tedna (SL+EN) — razrešijo se glede na tripStartDate.
+/** Dnevi tedna (SL+EN+IT+DE) — razrešijo se glede na tripStartDate.
  * SL uporablja DEBLJE (sodbene oblike se sklanjajo: sobota/soboto/sobote …). */
 const WEEKDAYS_SL = ["ponedeljk", "torek", "sred", "cetrtk", "petk", "sobot", "nedelj"];
 const WEEKDAYS_EN = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const WEEKDAYS_IT = ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato", "domenica"];
+const WEEKDAYS_DE = ["montag", "dienstag", "mittwoch", "donnerstag", "freitag", "samstag", "sonntag"];
+/** IT/DE vrstni red = ponedeljek-prvi (kot SL/EN polji). */
+const WEEKDAYS_ALL = [WEEKDAYS_SL, WEEKDAYS_EN, WEEKDAYS_IT, WEEKDAYS_DE];
 
 // ---------------------------------------------------------------------------
 // POMOŽNIKI
@@ -210,9 +318,12 @@ function findFirst(text: string, patterns: string[]): string | null {
   return null;
 }
 
-/** "dan 2" / "day 3" / "2. dan" → 2/3 (1-based, vezan na daysCount). */
+/** "dan 2" / "day 3" / "2. dan" / "giorno 2" / "2. tag" → 2/3 (1-based, vezan na daysCount). */
 function parseExplicitDay(text: string, daysCount?: number): number | undefined {
-  const m = text.match(/(?:dan|day|dneva)\s+(\d{1,2})/) ?? text.match(/(\d{1,2})\s*\.\s*(?:dan|day)/);
+  const m =
+    text.match(/(?:dan|day|dneva|giorno|giornata|tag|jour)\s+(\d{1,2})/) ??
+    text.match(/(\d{1,2})\s*\.\s*(?:dan|day|tag)/) ??
+    text.match(/(\d{1,2})\s*°?\s*(?:giorno|giornata)/);
   if (!m) return undefined;
   const n = parseInt(m[1], 10);
   if (!Number.isInteger(n) || n < 1 || n > 31) return undefined;
@@ -220,32 +331,40 @@ function parseExplicitDay(text: string, daysCount?: number): number | undefined 
   return n;
 }
 
-/** "prvi/zadnji dan", "sobota", "saturday" → dan glede na tripStartDate. */
+/** "prvi/zadnji dan", "sobota", "saturday", "sabato", "Samstag" → dan glede na tripStartDate. */
 function parseNamedDay(
   text: string,
   ctx: ParseRefineContext
 ): number | undefined {
   const days = Math.max(1, ctx.daysCount ?? 1);
-  if (text.includes("prvi dan") || text.includes("first day")) return 1;
-  if (text.includes("zadnji dan") || text.includes("last day")) return days;
+  if (
+    /(prvi dan|first day|primo giorno|prima giornata|erster tag|erste tag)/.test(text)
+  )
+    return 1;
+  if (
+    /(zadnji dan|last day|ultimo giorno|ultima giornata|letzter tag|letzte tag)/.test(text)
+  )
+    return days;
 
   // Danes/t jutri nista smiselna za načrt — preskoči.
-  for (let i = 0; i < 7; i++) {
-    if (text.includes(WEEKDAYS_SL[i]) || text.includes(WEEKDAYS_EN[i])) {
-      const start = ctx.tripStartDate;
-      if (!start || !/^\d{4}-\d{2}-\d{2}$/.test(start)) return undefined;
-      const startDate = new Date(`${start}T00:00:00Z`);
-      if (Number.isNaN(startDate.getTime())) return undefined;
-      const startDow = startDate.getUTCDay(); // JS: 0=nedelja, 1=ponedeljek …
-      // WEEKDAYS polje je PONEDELJEK-prvo (i=0 je ponedeljek) → JS dow:
-      // ponedeljek(0)→1 … sobota(5)→6, nedelja(6)→0.
-      const targetDow = (i + 1) % 7;
-      // Prvi POJAVA tega dneva v [start, start+days) — "danes" ne šteje
-      // (0 pomeni isti dan → naslednji teden, konsistentno z "na soboto").
-      const offset = (targetDow - startDow + 7) % 7;
-      const dayIdx = offset === 0 ? 7 : offset;
-      const day = dayIdx + 1;
-      return day <= days ? day : undefined;
+  for (const WEEKDAYS of WEEKDAYS_ALL) {
+    for (let i = 0; i < 7; i++) {
+      if (text.includes(WEEKDAYS[i])) {
+        const start = ctx.tripStartDate;
+        if (!start || !/^\d{4}-\d{2}-\d{2}$/.test(start)) return undefined;
+        const startDate = new Date(`${start}T00:00:00Z`);
+        if (Number.isNaN(startDate.getTime())) return undefined;
+        const startDow = startDate.getUTCDay(); // JS: 0=nedelja, 1=ponedeljek …
+        // WEEKDAYS polje je PONEDELJEK-prvo (i=0 je ponedeljek) → JS dow:
+        // ponedeljek(0)→1 … sobota(5)→6, nedelja(6)→0.
+        const targetDow = (i + 1) % 7;
+        // Prvi POJAVA tega dneva v [start, start+days) — "danes" ne šteje
+        // (0 pomeni isti dan → naslednji teden, konsistentno z "na soboto").
+        const offset = (targetDow - startDow + 7) % 7;
+        const dayIdx = offset === 0 ? 7 : offset;
+        const day = dayIdx + 1;
+        return day <= days ? day : undefined;
+      }
     }
   }
   return undefined;

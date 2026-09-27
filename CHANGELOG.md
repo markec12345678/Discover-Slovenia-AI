@@ -7,6 +7,88 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.129.0] — 2026-09-27 (W1: JEZIKI IT + DE — Issue #15 V0, faza 2b-2 — NAČRTOVALNIK /it/nacrtuj + /de/nacrtuj ODPRTA)
+
+### Dodano
+
+- **`/it/nacrtuj` + `/de/nacrtuj` STA ŽIVI (odprtje ITDE whitelist-e).**
+  Proxy 308 meja je padla — najgloblja produktova stran (planner) je zdaj
+  dostopna Alminim najbolj dejavnim uporabnikom v njihovem jeziku. Sitemap
+  +4 URL (2386); hreflang gruča (sl+en+it+de+x-default) + og:locale
+  it_IT/de_DE prek `ogLocaleFor` (isti pomočnik kot destinacijske plasti).
+- **PLAN Q&A 4-JEZIČNO (`plan-qa.ts` + `plan-facts.ts`).** `PlanLang` je
+  zdaj `PlannerLang` re-export (4-jezično); namenski vzorci (PATTERNS)
+  razširjeni z IT/DE ključnimi besedami (meteo/prevision/wetter/quanti km/
+  wie viel/costo/kosten/valigia/packliste/packing …), razreševanje dni
+  (giorno 2 / 2. Tag / primo-ultimo giorno / erster-letzter Tag / sabato /
+  Samstag), EXAMPLE_QUESTIONS ×4, `renderFactsSheet` (AI grounding list)
+  ×4, vseh 11 odgovorov (help/drive/busiest/cost/weather/day/packing/
+  warnings/stops/family/out-of-range) ×4 s PL() pogodbo.
+- **PAMETNI PAKIRNI SEZNAM 4-JEZIČNO (`packing-smart.ts`).** Vsi predmeti,
+  razlogi (Giorno/Tag prefixi), typeLabel-i (lago/See, grotta/Höhle …),
+  metoda opombe in družinsko/gastro kandidatski regexi IT/DE.
+- **HITRE AKCIJE + NL UKAZNI PARSER SL+EN+IT+DE (`refine-actions.ts`,
+  `refine-command-parser.ts`).** QUICK_ACTIONS (9 akcij) z IT/DE labelami
+  in navodili; parser: ~130 IT/DE vzorcev (akcije, dodaj/odstrani predpone,
+  nepodprti nameni, dnevi tedna), `normalize()` razširjen z IT/DE
+  diakritiko (à è ì ò ù ö ä ü ß — fiks: "più natura" se prej NI prepoznal),
+  eksplicitni + imenovani dnevi (giorno/Tag/primo/ultimo/erster/letzter).
+- **IZVOZI 4-JEZIČNO.** `planner-audio.ts` (zvočni povzetek — uvod/km/
+  zaključek ×4, brskalniški glasovi it-IT/de-DE), `ics-export.ts` (koledar
+  X-WR-CALNAME/SUMMARY/DESCRIPTION + lokalizirana imena datotek
+  viaggio-/reise-), `formatEventDate` (IT/DE meseci — IT brez pik, DE s
+  pikami), `DAY_SEGMENT_LABELS` (Mattina/Pomeriggio/Sera …).
+- **KOMPONENTE PLANNERJA 4-JEZIČNO.** `plan-copilot.tsx`,
+  `itinerary-refiner.tsx`, `planner-ai-controls.tsx` (L slovarji ×4 +
+  4-smerno posredovanje jezika API-jem), `itinerary-events.tsx`
+  (EventsLang ×4 + STRINGS + kategorije IT/DE iz overlayjev),
+  `day-segment-header.tsx`, `planner-trust-line.tsx` (PL() — fiks SL
+  uhoda "Pot: 1 težav/Razdalje izračunane/Vreme preverjeno" na IT strani),
+  LISTEN oznake (Poslušaj/Ustavi) ×4.
+- **API RUTI 4-JEZIČNO.** `/api/itinerary/ask` (jezik napak iz
+  formData.language + JSON peek + weatherCodeToTextFor dispečer),
+  `/api/itinerary/refine` (4-jezični lang threading čez vse plasti —
+  supply/events/crowd/geo/reasons/validation evidence + parserjeva
+  sporočila ×4; visitFrom nosi tagline iz IT/DE overlayjev).
+
+### Popravljeno
+
+- **Latentna P4-8 hrošča (Go Mode push):** `router.push("/na-poti")` je
+  vodil vse uporabnike na SL stran — zdaj SL → `/na-poti`, EN/IT/DE →
+  `/en/na-poti` (Go pogled je SL/EN L-vzorec; IT/DE dedijo EN — PL
+  konvencija prehodnega obdobja). Enak vzorec za povezavo "Celotno
+  potovanje" (supply companion) na `/en/potovanje`.
+- **Parser diakritika (IT/DE):** "più natura", "günstiger", "ritmo più
+  calmo" se prej niso prepoznali (normalize je odstranil samo SL/HR
+  diakritiko) — ujet z testom.
+
+### Testi
+
+- `w1-2b-planner-4lang.test.ts` razširjen z 20 testi W1-2b-2: Q&A IT/DE
+  (nameni, dnevi, izven obsega, unknown), facts sheet ×4, pakirni seznam
+  IT/DE (kosi/razlogi/metoda + zero-regression SL/EN), parser IT/DE
+  (akcije/dodaj-odstrani/dnevi/weekday/nepodprti), QUICK_ACTIONS pogodba,
+  applyQuickAction IT izpis, zvočni povzetek IT/DE, ICS ×4 + imena
+  datotek, formatEventDate/DAY_SEGMENT_LABELS, ROUTING pogodba (/nacrtuj
+  odprt, L-poti ostanejo 308). `task8-f3a` source-contract posodobljen za
+  4-jezično povezavo. Suite 3890/3890; tsc + eslint čista.
+- Browser E2E: /it/nacrtuj (naslov, H1, obrazec, čipi »Meno guida ·
+  Adatto alla pioggia · Più natura …«, refine POST 200 + IT undo toast,
+  trust line »Percorso/Distanze calcolate/Meteo verificato« — 0 SL uhodov),
+  /de/nacrtuj (naslov + čipi »Weniger Fahrt/Mehr Natur«), hreflang/og,
+  mobil 375 brez preliva; API E2E: ask IT (»Viaggio intero: ~…«), refine
+  DE (»mehr Essen« → nemška opomba), rain_suitable IT (IT opomba + IT
+  tagline na zamenjanih postankih). 4 PNG v w1-faza2b2-evidence/.
+
+### Meja (iskrena, P4-8)
+
+- L-vzorčne poti (/trznica, /dozivetja, /lokali, /dogodki, /potovanje,
+  /na-poti, /moja-potovanja), /vodici in /pot ostajajo izven IT/DE
+  whitelist-e (proxy 308 na SL) — njihovi inline SL/EN slovarji so
+  naslednja naloga; IT/DE uporabniki dostopajo do plannerja, ki je ZDAJ
+  povsem 4-jezičen. **W1 (IT/DE) je s tem POMEMBEN del zaključen:
+  odkrivanje + svetovanje + destinacije + zemljevid + NAČRTOVALNIK.**
+
 ## [1.128.0] — 2026-09-27 (W1: JEZIKI IT + DE — Issue #15 V0, faza 2b-1 — planner pogon 4-jezičen + UI nivo)
 
 ### Dodano

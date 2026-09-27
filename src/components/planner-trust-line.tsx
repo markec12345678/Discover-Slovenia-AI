@@ -5,6 +5,7 @@ import { useLocale } from "next-intl";
 import { Check, TriangleAlert, Route, CloudSun, DoorOpen } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { PL } from "@/lib/planner-lang";
 import type { GeoValidation, Itinerary } from "@/lib/types";
 
 // ============================================================================
@@ -54,41 +55,57 @@ interface PlannerTrustLineProps {
 }
 
 const L = {
-  routeVerified: { sl: "Pot preverjena", en: "Route verified" },
+  routeVerified: { sl: "Pot preverjena", en: "Route verified", it: "Percorso verificato", de: "Route verifiziert" },
   routeWarn: {
     sl: "Pot: {count} opozorila",
     en: "Route: {count} warnings",
+    it: "Percorso: {count} avvisi",
+    de: "Route: {count} Warnungen",
   },
   routeError: {
     sl: "Pot: {count} težav",
     en: "Route: {count} issues",
+    it: "Percorso: {count} problemi",
+    de: "Route: {count} Probleme",
   },
-  distances: { sl: "Razdalje izračunane", en: "Distances calculated" },
+  distances: { sl: "Razdalje izračunane", en: "Distances calculated", it: "Distanze calcolate", de: "Entfernungen berechnet" },
   distancesHeuristic: {
     sl: "Razdalje ocenjene (približek)",
     en: "Distances estimated (approximate)",
+    it: "Distanze stimate (approssimative)",
+    de: "Entfernungen geschätzt (ungefähr)",
   },
-  weather: { sl: "Vreme preverjeno", en: "Weather checked" },
+  weather: { sl: "Vreme preverjeno", en: "Weather checked", it: "Meteo verificato", de: "Wetter geprüft" },
   // K-2: pošteni oznaki nad oceno (NIKOLI ✓)
   weatherEstimated: {
     sl: "Vreme: sezonska ocena",
     en: "Weather: seasonal estimate",
+    it: "Meteo: stima stagionale",
+    de: "Wetter: Saisonschätzung",
   },
   weatherPartial: {
     sl: "Vreme: delno preverjeno",
     en: "Weather: partially checked",
+    it: "Meteo: parzialmente verificato",
+    de: "Wetter: teilweise geprüft",
   },
   openAtYourTime: {
     sl: "Odprto ob tvojem času",
     en: "Open at your time",
+    it: "Aperto nei tuoi orari",
+    de: "Zu deiner Zeit geöffnet",
   },
   closedAtYourTime: {
     sl: "{count} krajev zaprtih ob obisku",
     en: "{count} places closed during your visit",
+    it: "{count} luoghi chiusi durante la visita",
+    de: "{count} Orte während des Besuchs geschlossen",
   },
   detailsAria: {
     sl: "Prikaži podrobnosti izračunov",
     en: "Show calculation details",
+    it: "Mostra i dettagli dei calcoli",
+    de: "Berechnungsdetails anzeigen",
   },
 } as const;
 
@@ -106,8 +123,9 @@ export function PlannerTrustLine({
   className,
 }: PlannerTrustLineProps) {
   const locale = useLocale();
-  const isEn = locale === "en";
-  const lng = isEn ? "en" : "sl";
+  // W1-2b-2: 4-jezično (L slovar zgoraj nosi it/de)
+  const lng: "sl" | "en" | "it" | "de" =
+    locale === "en" || locale === "it" || locale === "de" ? locale : "sl";
   const fmt = (s: string, count?: number) =>
     count === undefined ? s : s.replace("{count}", String(count));
 
@@ -260,7 +278,12 @@ export function PlannerTrustLine({
         "flex flex-wrap items-center gap-x-4 gap-y-1.5",
         className
       )}
-      aria-label={isEn ? "Trip verification summary" : "Zbirka preverb poti"}
+      aria-label={PL(lng, {
+        sl: "Zbirka preverb poti",
+        en: "Trip verification summary",
+        it: "Riepilogo di verifica del viaggio",
+        de: "Verifizierungsübersicht der Reise",
+      })}
     >
       {items.map((item) => (
         <li key={item.id} className="list-none">

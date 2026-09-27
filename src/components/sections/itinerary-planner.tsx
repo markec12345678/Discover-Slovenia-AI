@@ -248,6 +248,9 @@ import { chunkNarration } from "@/lib/itinerary-audio";
 // (0 strežniških AI klicev, 0 žetonov).
 import { speechLanguageTag, ttsSupported } from "@/lib/voice";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
+import { getItDestination } from "@/lib/slovenia-data-it";
+import { getDeDestination } from "@/lib/slovenia-data-de";
+import { PL } from "@/lib/planner-lang";
 import type { LocationVisit } from "@/lib/types";
 // TASK 8 / D8-F (D8-B §5): trak "Iz moje poti" nad obrazcem + prefill
 // dogodek (destinacije → PRAZNA formData.preferredDestinations izbira).
@@ -472,8 +475,12 @@ export function ItineraryPlanner() {
   // TASK 4 / K-7: navigacija na /na-poti ob zagonu Go Mode
   const router = useRouter();
   // FW4.3: locale določa jezik AI itinererja ("en" → angleški izpis;
-  // API sprejme language polje, default "sl")
+  // API sprejme language polje, default "sl").
+  // W1-2b-2: 4-jezično — planner pogon, pakirni seznam, Q&A, refine,
+  // izvozi (ICS/audio) in dogodki zdaj sprejemajo it/de.
   const locale = useLocale();
+  const lang: "sl" | "en" | "it" | "de" =
+    locale === "en" || locale === "it" || locale === "de" ? locale : "sl";
 
   const [formData, setFormData] = useState<PlannerInput>({
     budget: 500,
@@ -509,7 +516,7 @@ export function ItineraryPlanner() {
     () =>
       itinerary
         ? (itinerary.geoValidation ??
-          validateItineraryGeo(itinerary, locale === "en" ? "en" : "sl"))
+          validateItineraryGeo(itinerary, lang))
         : null,
     [itinerary, locale]
   );
@@ -563,7 +570,7 @@ export function ItineraryPlanner() {
             itinerary,
             dayKm,
             groupSize: formData.groupSize,
-            locale: locale === "en" ? "en" : "sl",
+            locale: lang,
           })
         : null,
     [itinerary, dayKm, formData.groupSize, locale]
@@ -659,7 +666,14 @@ export function ItineraryPlanner() {
   //   planner.listenVoiceUnavailable
   //     SL "Računalniški glas ni na voljo — besedilo je prikazano spodaj."
   //     EN "Computer voice unavailable — the text is shown below." ===
-  const LISTEN_STOP_LABELS = { sl: "Ustavi predvajanje", en: "Stop playback" } as const;
+  // W1-2b-2: 4-jezične oznake poslušanja (govorijo brskalnikovi glasovi
+  // it-IT/de-DE — speechLanguageTag pokriva vse štiri)
+  const LISTEN_STOP_LABELS = {
+    sl: "Ustavi predvajanje",
+    en: "Stop playback",
+    it: "Ferma la riproduzione",
+    de: "Wiedergabe stoppen",
+  } as const;
   const LISTEN_SCRIPT_LABELS = {
     sl: {
       show: "Prikaži besedilo",
@@ -673,8 +687,20 @@ export function ItineraryPlanner() {
       voiceUnavailable:
         "Computer voice unavailable — the text is shown below.",
     },
+    it: {
+      show: "Mostra il testo",
+      hide: "Nascondi il testo",
+      voiceUnavailable:
+        "Voce del computer non disponibile — il testo è mostrato sotto.",
+    },
+    de: {
+      show: "Text anzeigen",
+      hide: "Text ausblenden",
+      voiceUnavailable:
+        "Computerstimme nicht verfügbar — der Text steht unten.",
+    },
   } as const;
-  const listenLang = locale === "en" ? "en" : "sl";
+  const listenLang = lang;
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
   /** Seja zvočnega predvajanja (razrez po koseh): stop/nov začetek
@@ -1682,10 +1708,15 @@ export function ItineraryPlanner() {
     if (dayIdx === -1) return;
 
     const groupSize = formData?.groupSize || 2;
-    const isEn = locale === "en";
-    const tagline = isEn
-      ? DESTINATIONS_EN[dest.id]?.tagline ?? dest.tagline
-      : dest.tagline;
+    // W1-2b-2: tagline v jeziku UI (IT/DE overlayja faze 2a)
+    const tagline =
+      lang === "en"
+        ? DESTINATIONS_EN[dest.id]?.tagline ?? dest.tagline
+        : lang === "it"
+          ? getItDestination(dest.id)?.tagline ?? dest.tagline
+          : lang === "de"
+            ? getDeDestination(dest.id)?.tagline ?? dest.tagline
+            : dest.tagline;
     const visit: LocationVisit = {
       destination_id: dest.id,
       destination_name: dest.name,
@@ -1814,7 +1845,7 @@ export function ItineraryPlanner() {
         signal: controller.signal,
         body: JSON.stringify({
           ...input,
-          language: locale === "en" ? "en" : "sl",
+          language: lang,
           ...(selectedProducts.length > 0
             ? { selectedProviderProducts: selectedProducts }
             : {}),
@@ -1853,7 +1884,7 @@ export function ItineraryPlanner() {
       // (naporno, a mogoče) NE šteje kot unrealistic_day.
       const geoForAnalytics =
         data.geoValidation ??
-        validateItineraryGeo(data, locale === "en" ? "en" : "sl");
+        validateItineraryGeo(data, lang);
       for (const issue of geoForAnalytics.issues) {
         if (issue.level === "error") {
           trackPlannerEvent("unrealistic_day", {
@@ -1988,7 +2019,9 @@ export function ItineraryPlanner() {
   function handleStartGoMode() {
     if (!itinerary) return;
     const view = buildItineraryGoView(itinerary, {
-      lang: locale === "en" ? "en" : "sl",
+      // W1-2b-2: Go pogled je SL/EN (L vzorec) — IT/DE dedejita EN
+      // (PL konvencija prehodnega obdobja; /en/na-poti je na EN whitelisti)
+      lang: lang === "sl" ? "sl" : "en",
       name: deriveSavedTripName(itinerary),
     });
     const saved = saveItineraryGoTrip(view, { shareId: activeShareId });
@@ -1998,18 +2031,24 @@ export function ItineraryPlanner() {
       persisted: saved,
     });
     if (saved) {
-      router.push("/na-poti");
+      // W1-2b-2: jezikovno pravilna destinacija — SL → /na-poti, EN/IT/DE →
+      // /en/na-poti (EN whitelist; IT/DE dedejijo EN Go sopotnika)
+      router.push(lang === "sl" ? "/na-poti" : "/en/na-poti");
     } else {
       // Poln/zasebni localStorage — iskren toast (načrt NE more na napravo)
       toast({
-        title:
-          locale === "en"
-            ? "Cannot store the plan on this device"
-            : "Načrta ni bilo mogoče shraniti na to napravo",
-        description:
-          locale === "en"
-            ? "Browser storage is full or blocked (private mode) — On-the-road needs the plan on the device."
-            : "Shramba brskalnika je polna ali blokirana (zasebni način) — Na poti potrebuje načrt na napravi.",
+        title: PL(lang, {
+          sl: "Načrta ni bilo mogoče shraniti na to napravo",
+          en: "Cannot store the plan on this device",
+          it: "Impossibile salvare il piano su questo dispositivo",
+          de: "Der Plan ließ sich auf diesem Gerät nicht speichern",
+        }),
+        description: PL(lang, {
+          sl: "Shramba brskalnika je polna ali blokirana (zasebni način) — Na poti potrebuje načrt na napravi.",
+          en: "Browser storage is full or blocked (private mode) — On-the-road needs the plan on the device.",
+          it: "L'archiviazione del browser è piena o bloccata (modalità privata) — „Sulla strada“ richiede il piano sul dispositivo.",
+          de: "Der Browserspeicher ist voll oder blockiert (Privatmodus) — „Unterwegs“ braucht den Plan auf dem Gerät.",
+        }),
         variant: "destructive",
       });
     }
@@ -2672,7 +2711,7 @@ export function ItineraryPlanner() {
   function handleIcsDownload() {
     if (!itinerary) return;
     const ics = buildItineraryICS(itinerary, {
-      lang: locale === "en" ? "en" : "sl",
+      lang: lang,
       url: shareUrl ?? undefined,
     });
     if (!ics) {
@@ -2690,7 +2729,7 @@ export function ItineraryPlanner() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = icsFileName(itinerary, locale === "en" ? "en" : "sl");
+      a.download = icsFileName(itinerary, lang);
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -2924,10 +2963,12 @@ export function ItineraryPlanner() {
           <div>
             {DEMO_PREVIEW_STOPS.map((stop, i) => {
               const dest = destinationById(stop.id);
+              // W1-2b-2: IT/DE dedejijo EN imena (PL konvencija — lastna
+              // imena; "Lake Bohinj" je bližje kot slovenski kanon)
               const name =
-                locale === "en"
-                  ? DEMO_PREVIEW_NAMES_EN[stop.id]
-                  : dest?.name ?? stop.id;
+                lang === "sl"
+                  ? dest?.name ?? stop.id
+                  : DEMO_PREVIEW_NAMES_EN[stop.id] ?? dest?.name ?? stop.id;
               return (
                 <div key={stop.id}>
                   {i > 0 && (
@@ -4078,7 +4119,10 @@ export function ItineraryPlanner() {
                 <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] leading-snug text-muted-foreground">
                   <span>{t("supplyCompanionLine")}</span>
                   <Link
-                    href={locale === "en" ? "/en/potovanje" : "/potovanje"}
+                    // W1-2b-2: /potovanje je SL/EN (L vzorec) — IT/DE
+                    // dedejijo EN različico (PL konvencija prehodnega obdobja;
+                    // besedilo povezave ostane v jeziku UI)
+                    href={lang === "sl" ? "/potovanje" : "/en/potovanje"}
                     className="inline-flex items-center gap-0.5 font-medium text-primary underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
                   >
                     {t("supplyCompanionLink")}
@@ -4843,7 +4887,7 @@ export function ItineraryPlanner() {
                               {showSegHeader && seg && (
                                 <DaySegmentHeader
                                   segment={seg}
-                                  lang={locale === "en" ? "en" : "sl"}
+                                  lang={lang}
                                 />
                               )}
                               <div
@@ -5850,7 +5894,7 @@ export function ItineraryPlanner() {
                 <ItineraryEventsSection
                   className="order-12"
                   events={itinerary.events}
-                  lang={locale === "en" ? "en" : "sl"}
+                  lang={lang}
                   tripStartDate={itinerary.tripStartDate}
                   tripEndDate={itinerary.tripEndDate}
                   addedEventIds={(itinerary.addedEvents ?? []).map(

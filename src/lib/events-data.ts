@@ -76,6 +76,18 @@ export const ENGLISH_MONTHS_SHORT: string[] = [
   "Dec",
 ];
 
+// W1-2b-2: IT/DE meseci (formatEventDate dispečer — kratke oblike;
+// IT deli EN slog brez pik, DE deli SL slog s piko po številkah dni)
+export const ITALIAN_MONTHS_SHORT: string[] = [
+  "gen", "feb", "mar", "apr", "mag", "giu",
+  "lug", "ago", "set", "ott", "nov", "dic",
+];
+
+export const GERMAN_MONTHS_SHORT: string[] = [
+  "Jan.", "Feb.", "März", "Apr.", "Mai", "Juni",
+  "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez.",
+];
+
 export const SLOVENIAN_MONTHS_FULL: string[] = [
   "Januar",
   "Februar",
@@ -635,10 +647,19 @@ export const EVENTS: EventItem[] = [
 export function formatEventDate(
   date: string,
   endDate?: string,
-  lang: "sl" | "en" = "sl"
+  lang: "sl" | "en" | "it" | "de" = "sl"
 ): string {
-  const isEn = lang === "en";
-  const months = isEn ? ENGLISH_MONTHS_SHORT : SLOVENIAN_MONTHS_SHORT;
+  // W1-2b-2: 4-jezični dispečer — IT deli EN slog (brez pik po dnevih),
+  // DE deli SL slog (s piko); meseci so jezikovno lastni (events-data-it/-de).
+  const isEn = lang === "en" || lang === "it";
+  const months =
+    lang === "en"
+      ? ENGLISH_MONTHS_SHORT
+      : lang === "it"
+        ? ITALIAN_MONTHS_SHORT
+        : lang === "de"
+          ? GERMAN_MONTHS_SHORT
+          : SLOVENIAN_MONTHS_SHORT;
   const start = new Date(date);
   const startDay = start.getDate();
   const startMonth = months[start.getMonth()];

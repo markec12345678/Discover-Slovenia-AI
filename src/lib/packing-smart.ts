@@ -25,6 +25,7 @@
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { DayPlan, Itinerary, PlannerInput } from "@/lib/types";
+import { PL, type PlannerLang } from "@/lib/planner-lang";
 
 // --- Vrste -------------------------------------------------------------
 
@@ -63,7 +64,8 @@ export interface SmartPackingInput {
   itinerary: Itinerary;
   /** Interesi/tip skupine (planner ga ima, shranjeni načrti ne — opcijsko) */
   input?: PlannerInput | null;
-  lang?: "sl" | "en";
+  /** W1-2b-2: 4-jezično (PL pogodba). */
+  lang?: PlannerLang;
 }
 
 // --- Konstante ----------------------------------------------------------
@@ -183,16 +185,21 @@ function readWeatherFacts(days: DayPlan[]): DayWeatherFacts {
   return { rainDays, snowDays, maxTemp, minTemp };
 }
 
-/** "Dan 2" / "Day 2" za razloge. */
-function dayRef(i: number, isEn: boolean): string {
-  return isEn ? `Day ${i + 1}` : `Dan ${i + 1}`;
+/** "Dan 2" / "Day 2" / "Giorno 2" / "Tag 2" za razloge. */
+function dayRef(i: number, lang: PlannerLang): string {
+  return PL(lang, {
+    sl: `Dan ${i + 1}`,
+    en: `Day ${i + 1}`,
+    it: `Giorno ${i + 1}`,
+    de: `Tag ${i + 1}`,
+  });
 }
 
 /** Razlog "Dan 1, Dan 3: dež (napoved)" — kap prvih 2 dni. */
-function daysReason(idxs: number[], isEn: boolean, fact: string): string {
+function daysReason(idxs: number[], lang: PlannerLang, fact: string): string {
   const daysPart = idxs
     .slice(0, MAX_REASON_DAYS)
-    .map((i) => dayRef(i, isEn))
+    .map((i) => dayRef(i, lang))
     .join(", ");
   return `${daysPart}: ${fact}`;
 }
@@ -226,13 +233,13 @@ function typeReason(
   facts: StopTypeFacts,
   type: string,
   typeLabel: string,
-  isEn: boolean
+  lang: PlannerLang
 ): string {
   const entries = facts.typed.get(type) ?? [];
   const shown = entries.slice(0, MAX_REASON_DAYS);
   const part = shown
-    .map((e) => `${dayRef(e.day, isEn)}: ${e.name}`)
-    .join(isEn ? "; " : "; ");
+    .map((e) => `${dayRef(e.day, lang)}: ${e.name}`)
+    .join("; ");
   return `${part} (${typeLabel})`;
 }
 
@@ -246,7 +253,10 @@ export function buildSmartPackingList(
     : [];
   if (days.length === 0) return null;
 
-  const isEn = input?.lang === "en";
+  const lang: PlannerLang =
+    input?.lang === "en" || input?.lang === "it" || input?.lang === "de"
+      ? input.lang
+      : "sl";
   const planner = input?.input ?? null;
   const interests = Array.isArray(planner?.interests)
     ? planner.interests.map((i) => i.toString().trim().toLowerCase())
@@ -275,21 +285,34 @@ export function buildSmartPackingList(
     }
   }
 
-  const methodNote = isEn
-    ? method === "forecast"
-      ? "Built from the daily forecast attached to this plan (Open-Meteo, at generation time)."
+  const methodNote =
+    method === "forecast"
+      ? PL(lang, {
+          sl: "Sestavljeno iz dnevne napovedi, priložene temu načrtu (Open-Meteo, ob generiranju).",
+          en: "Built from the daily forecast attached to this plan (Open-Meteo, at generation time).",
+          it: "Composta dalla previsione giornaliera allegata a questo piano (Open-Meteo, alla generazione).",
+          de: "Erstellt aus der Tagesvorhersage, die an diesem Plan hängt (Open-Meteo, zum Erstellungszeitpunkt).",
+        })
       : horizonNote
-        ? `Departure is more than ${FORECAST_HORIZON_DAYS} days away — no daily forecast exists yet. These are seasonal recommendations and will not update automatically.`
+        ? PL(lang, {
+            sl: `Odhod je več kot ${FORECAST_HORIZON_DAYS} dni stran — dnevna napoved še ne obstaja. Priporočila so sezonska in se ne bodo samodejno posodobila.`,
+            en: `Departure is more than ${FORECAST_HORIZON_DAYS} days away — no daily forecast exists yet. These are seasonal recommendations and will not update automatically.`,
+            it: `La partenza è tra più di ${FORECAST_HORIZON_DAYS} giorni — la previsione giornaliera non esiste ancora. Questi sono consigli stagionali e non si aggiorneranno automaticamente.`,
+            de: `Der Abflug liegt mehr als ${FORECAST_HORIZON_DAYS} Tage entfernt — es gibt noch keine Tagesvorhersage. Dies sind Saisonempfehlungen und aktualisieren sich nicht automatisch.`,
+          })
         : pastNote
-          ? "The trip date has already passed — seasonal recommendations."
-          : "No departure date on this plan — seasonal recommendations."
-    : method === "forecast"
-      ? "Sestavljeno iz dnevne napovedi, priložene temu načrtu (Open-Meteo, ob generiranju)."
-      : horizonNote
-        ? `Odhod je več kot ${FORECAST_HORIZON_DAYS} dni stran — dnevna napoved še ne obstaja. Priporočila so sezonska in se ne bodo samodejno posodobila.`
-        : pastNote
-          ? "Datum potovanja je že mimo — sezonska priporočila."
-          : "Načrt brez datuma odhoda — sezonska priporočila.";
+          ? PL(lang, {
+              sl: "Datum potovanja je že mimo — sezonska priporočila.",
+              en: "The trip date has already passed — seasonal recommendations.",
+              it: "La data del viaggio è già passata — consigli stagionali.",
+              de: "Das Reisedatum ist bereits vergangen — Saisonempfehlungen.",
+            })
+          : PL(lang, {
+              sl: "Načrt brez datuma odhoda — sezonska priporočila.",
+              en: "No departure date on this plan — seasonal recommendations.",
+              it: "Piano senza data di partenza — consigli stagionali.",
+              de: "Plan ohne Abreisedatum — Saisonempfehlungen.",
+            });
 
   // --- Sezona (fallback iz meseca datuma ali input) ----------------------
   const month = startISO ? monthOf(startISO) : null;
@@ -314,14 +337,24 @@ export function buildSmartPackingList(
 
   // === OBLAČILA (osnova + količine) ===
   const daysCount = days.length;
+  const daysWordSl =
+    daysCount === 1 ? "dan" : daysCount === 2 ? "dneva" : "dni";
   push({
     id: "clothes-base",
-    label: isEn ? "Clothes for the trip (+1 spare set)" : "Oblačila za potovanje (+1 rezervni komplet)",
+    label: PL(lang, {
+      sl: "Oblačila za potovanje (+1 rezervni komplet)",
+      en: "Clothes for the trip (+1 spare set)",
+      it: "Vestiti per il viaggio (+1 completo di riserva)",
+      de: "Kleidung für die Reise (+1 Wechselset)",
+    }),
     category: "clothing",
     quantity: `× ${daysCount + 1}`,
-    reason: isEn
-      ? `${daysCount}-day plan — pack one spare set`
-      : `načrt na ${daysCount} ${daysCount === 1 ? "dan" : daysCount === 2 ? "dneva" : "dni"} — en rezervni komplet`,
+    reason: PL(lang, {
+      sl: `načrt na ${daysCount} ${daysWordSl} — en rezervni komplet`,
+      en: `${daysCount}-day plan — pack one spare set`,
+      it: `piano di ${daysCount} ${daysCount === 1 ? "giorno" : "giorni"} — un completo di riserva`,
+      de: `${daysCount}-Tage-Plan — ein Wechselset einpacken`,
+    }),
   });
 
   const tempSpread =
@@ -331,18 +364,36 @@ export function buildSmartPackingList(
   if (tempSpread !== null && tempSpread >= 12) {
     push({
       id: "layers-mix",
-      label: isEn ? "Layered clothing (big day-to-day swings)" : "Oblačila v slojih (velike razlike med dnevi)",
+      label: PL(lang, {
+        sl: "Oblačila v slojih (velike razlike med dnevi)",
+        en: "Layered clothing (big day-to-day swings)",
+        it: "Vestiti a strati (forti escursioni termiche)",
+        de: "Zwiebellook (große Tagesschwankungen)",
+      }),
       category: "clothing",
-      reason: isEn
-        ? `forecast range ${weather.minTemp}–${weather.maxTemp} °C across days`
-        : `napoved ${weather.minTemp}–${weather.maxTemp} °C med dnevi`,
+      reason: PL(lang, {
+        sl: `napoved ${weather.minTemp}–${weather.maxTemp} °C med dnevi`,
+        en: `forecast range ${weather.minTemp}–${weather.maxTemp} °C across days`,
+        it: `intervallo previsto ${weather.minTemp}–${weather.maxTemp} °C tra i giorni`,
+        de: `Vorhersagebereich ${weather.minTemp}–${weather.maxTemp} °C über die Tage`,
+      }),
     });
   } else if (method === "season" && (season === "spring" || season === "autumn")) {
     push({
       id: "layers-season",
-      label: isEn ? "Layers for changeable weather" : "Sloji za spremenljivo vreme",
+      label: PL(lang, {
+        sl: "Sloji za spremenljivo vreme",
+        en: "Layers for changeable weather",
+        it: "Strati per meteo variabile",
+        de: "Schichten für wechselhaftes Wetter",
+      }),
       category: "clothing",
-      reason: isEn ? "spring/autumn season" : "pomlad/jesenska sezona",
+      reason: PL(lang, {
+        sl: "pomlad/jesenska sezona",
+        en: "spring/autumn season",
+        it: "stagione primaverile/autunnale",
+        de: "Frühlings-/Herbstsaison",
+      }),
     });
   }
 
@@ -352,16 +403,27 @@ export function buildSmartPackingList(
   ) {
     push({
       id: "thermal",
-      label: isEn ? "Thermal base layers + hat and gloves" : "Termično spodnje perilo + kapa in rokavice",
+      label: PL(lang, {
+        sl: "Termično spodnje perilo + kapa in rokavice",
+        en: "Thermal base layers + hat and gloves",
+        it: "Intimo termico + cappello e guanti",
+        de: "Thermounterwäsche + Mütze und Handschuhe",
+      }),
       category: "clothing",
       reason:
         weather.minTemp !== null && weather.minTemp <= 5
-          ? isEn
-            ? `coldest day: ${weather.minTemp} °C`
-            : `najhladnejši dan: ${weather.minTemp} °C`
-          : isEn
-            ? "winter season"
-            : "zimska sezona",
+          ? PL(lang, {
+              sl: `najhladnejši dan: ${weather.minTemp} °C`,
+              en: `coldest day: ${weather.minTemp} °C`,
+              it: `giorno più freddo: ${weather.minTemp} °C`,
+              de: `kältester Tag: ${weather.minTemp} °C`,
+            })
+          : PL(lang, {
+              sl: "zimska sezona",
+              en: "winter season",
+              it: "stagione invernale",
+              de: "Wintersaison",
+            }),
     });
   }
 
@@ -369,38 +431,71 @@ export function buildSmartPackingList(
   if (weather.rainDays.length > 0) {
     push({
       id: "rain-jacket",
-      label: isEn ? "Rain jacket (compact)" : "Dežna jakna (kompaktna)",
+      label: PL(lang, {
+        sl: "Dežna jakna (kompaktna)",
+        en: "Rain jacket (compact)",
+        it: "Giacca antipioggia (compatta)",
+        de: "Regenjacke (kompakt)",
+      }),
       category: "weather",
       reason: daysReason(
         weather.rainDays,
-        isEn,
-        isEn ? "rain in forecast" : "dež v napovedi"
+        lang,
+        PL(lang, {
+          sl: "dež v napovedi",
+          en: "rain in forecast",
+          it: "pioggia in previsione",
+          de: "Regen in der Vorhersage",
+        })
       ),
     });
   } else if (method === "season" && (season === "autumn" || season === "spring")) {
     push({
       id: "rain-jacket",
-      label: isEn ? "Rain jacket (compact)" : "Dežna jakna (kompaktna)",
+      label: PL(lang, {
+        sl: "Dežna jakna (kompaktna)",
+        en: "Rain jacket (compact)",
+        it: "Giacca antipioggia (compatta)",
+        de: "Regenjacke (kompakt)",
+      }),
       category: "weather",
-      reason: isEn ? "autumn/spring rain is common" : "jesensko/pomladno deževje je pogosto",
+      reason: PL(lang, {
+        sl: "jesensko/pomladno deževje je pogosto",
+        en: "autumn/spring rain is common",
+        it: "in autunno/primavera la pioggia è frequente",
+        de: "Herbst-/Frühlingsregen ist häufig",
+      }),
     });
   }
 
   if (weather.snowDays.length > 0 || (method === "season" && season === "winter")) {
     push({
       id: "winter-footwear",
-      label: isEn ? "Winter footwear (snow-ready)" : "Zimska obutev (primerna za sneg)",
+      label: PL(lang, {
+        sl: "Zimska obutev (primerna za sneg)",
+        en: "Winter footwear (snow-ready)",
+        it: "Calzature invernali (adatte alla neve)",
+        de: "Winter footwear (schneetauglich)",
+      }),
       category: "weather",
       reason:
         weather.snowDays.length > 0
           ? daysReason(
               weather.snowDays,
-              isEn,
-              isEn ? "snow in forecast" : "sneg v napovedi"
+              lang,
+              PL(lang, {
+                sl: "sneg v napovedi",
+                en: "snow in forecast",
+                it: "neve in previsione",
+                de: "Schnee in der Vorhersage",
+              })
             )
-          : isEn
-            ? "winter season"
-            : "zimska sezona",
+          : PL(lang, {
+              sl: "zimska sezona",
+              en: "winter season",
+              it: "stagione invernale",
+              de: "Wintersaison",
+            }),
     });
   }
 
@@ -410,31 +505,42 @@ export function buildSmartPackingList(
   if (hot) {
     push({
       id: "sun-cream",
-      label: isEn ? "Sunscreen SPF 50 + sun hat" : "Sončna krema SPF 50 + kapa za sonce",
+      label: PL(lang, {
+        sl: "Sončna krema SPF 50 + kapa za sonce",
+        en: "Sunscreen SPF 50 + sun hat",
+        it: "Crema solare SPF 50 + cappello da sole",
+        de: "Sonnencreme SPF 50 + Sonnenhut",
+      }),
       category: "health",
       reason:
         weather.maxTemp !== null && weather.maxTemp >= 25
-          ? isEn
-            ? `warmest day: ${weather.maxTemp} °C`
-            : `najtoplejši dan: ${weather.maxTemp} °C`
-          : isEn
-            ? "summer season"
-            : "poletna sezona",
+          ? PL(lang, {
+              sl: `najtoplejši dan: ${weather.maxTemp} °C`,
+              en: `warmest day: ${weather.maxTemp} °C`,
+              it: `giorno più caldo: ${weather.maxTemp} °C`,
+              de: `wärmster Tag: ${weather.maxTemp} °C`,
+            })
+          : PL(lang, {
+              sl: "poletna sezona",
+              en: "summer season",
+              it: "stagione estiva",
+              de: "Sommersaison",
+            }),
     });
   }
 
   // === AKTIVNOSTI (iz DEJANSKIH postankov na načrtu) ===
   const typeLabel = (t: string): string =>
     ({
-      lake: isEn ? "lake" : "jezero",
-      city: isEn ? "city" : "mesto",
-      mountain: isEn ? "mountain" : "gora",
-      cave: isEn ? "cave" : "jama",
-      coast: isEn ? "coast" : "obala",
-      river: isEn ? "river" : "reka",
-      spa: isEn ? "thermal spa" : "terme",
-      gorge: isEn ? "gorge" : "soteska",
-      castle: isEn ? "castle" : "grad",
+      lake: PL(lang, { sl: "jezero", en: "lake", it: "lago", de: "See" }),
+      city: PL(lang, { sl: "mesto", en: "city", it: "città", de: "Stadt" }),
+      mountain: PL(lang, { sl: "gora", en: "mountain", it: "montagna", de: "Berg" }),
+      cave: PL(lang, { sl: "jama", en: "cave", it: "grotta", de: "Höhle" }),
+      coast: PL(lang, { sl: "obala", en: "coast", it: "costa", de: "Küste" }),
+      river: PL(lang, { sl: "reka", en: "river", it: "fiume", de: "Fluss" }),
+      spa: PL(lang, { sl: "terme", en: "thermal spa", it: "terme", de: "Thermalbad" }),
+      gorge: PL(lang, { sl: "soteska", en: "gorge", it: "gorge", de: "Schlucht" }),
+      castle: PL(lang, { sl: "grad", en: "castle", it: "castello", de: "Burg" }),
     })[t] ?? t;
 
   const hasWater = ["lake", "coast", "river"].some((t) => stops.types.has(t));
@@ -442,27 +548,53 @@ export function buildSmartPackingList(
   if ((hasWater && (hot || method === "forecast")) || hasSpa) {
     push({
       id: "swimwear",
-      label: isEn ? "Swimwear + quick-dry towel" : "Kopalke + hitro sušeča brisača",
+      label: PL(lang, {
+        sl: "Kopalke + hitro sušeča brisača",
+        en: "Swimwear + quick-dry towel",
+        it: "Costume + asciugamano veloce",
+        de: "Badekleidung + schnell trocknendes Handtuch",
+      }),
       category: "activity",
       reason: hasSpa
-        ? typeReason(stops, "spa", typeLabel("spa"), isEn) +
-            (isEn ? " — indoor pools, year-round" : " — notranji bazeni, vse leto")
+        ? typeReason(stops, "spa", typeLabel("spa"), lang) +
+            PL(lang, {
+              sl: " — notranji bazeni, vse leto",
+              en: " — indoor pools, year-round",
+              it: " — piscine interne, tutto l'anno",
+              de: " — Innenpools, ganzjährig",
+            })
         : [
             ...(["lake", "coast", "river"] as const)
               .filter((t) => stops.types.has(t))
               .flatMap((t) =>
                 (stops.typed.get(t) ?? []).slice(0, 1).map(
-                  (e) => `${dayRef(e.day, isEn)}: ${e.name}`
+                  (e) => `${dayRef(e.day, lang)}: ${e.name}`
                 )
               ),
-          ].join("; ") + ` (${isEn ? "water on the plan" : "voda na načrtu"})`,
+          ].join("; ") +
+            ` (${PL(lang, {
+              sl: "voda na načrtu",
+              en: "water on the plan",
+              it: "acqua nel piano",
+              de: "Wasser im Plan",
+            })})`,
     });
   } else if (hasWater && method === "season" && season === "summer") {
     push({
       id: "swimwear",
-      label: isEn ? "Swimwear + quick-dry towel" : "Kopalke + hitro sušeča brisača",
+      label: PL(lang, {
+        sl: "Kopalke + hitro sušeča brisača",
+        en: "Swimwear + quick-dry towel",
+        it: "Costume + asciugamano veloce",
+        de: "Badekleidung + schnell trocknendes Handtuch",
+      }),
       category: "activity",
-      reason: isEn ? "water stops + summer season" : "vodni postanki + poletna sezona",
+      reason: PL(lang, {
+        sl: "vodni postanki + poletna sezona",
+        en: "water stops + summer season",
+        it: "tappe d'acqua + stagione estiva",
+        de: "Wasser-Stopps + Sommersaison",
+      }),
     });
   }
 
@@ -470,53 +602,86 @@ export function buildSmartPackingList(
     const first = stops.types.has("gorge") ? "gorge" : "mountain";
     push({
       id: "hiking-boots",
-      label: isEn ? "Sturdy hiking footwear" : "Čvrsta pohodniška obutev",
+      label: PL(lang, {
+        sl: "Čvrsta pohodniška obutev",
+        en: "Sturdy hiking footwear",
+        it: "Calzature da trekking robuste",
+        de: "Robustes Schuhwerk zum Wandern",
+      }),
       category: "activity",
-      reason: typeReason(stops, first, typeLabel(first), isEn),
+      reason: typeReason(stops, first, typeLabel(first), lang),
     });
     push({
       id: "water-bottle",
-      label: isEn ? "Water bottle (0.5–1 l per person)" : "Flaša vode (0,5–1 l na osebo)",
+      label: PL(lang, {
+        sl: "Flaša vode (0,5–1 l na osebo)",
+        en: "Water bottle (0.5–1 l per person)",
+        it: "Bottiglia d'acqua (0,5–1 l a persona)",
+        de: "Wasserflasche (0,5–1 l pro Person)",
+      }),
       category: "health",
-      reason: isEn
-        ? "mountain/gorge stops — drinking water matters on trails"
-        : "gorski/soteski postanki — pitna voda je na poti pomembna",
+      reason: PL(lang, {
+        sl: "gorski/soteski postanki — pitna voda je na poti pomembna",
+        en: "mountain/gorge stops — drinking water matters on trails",
+        it: "tappe in montagna/nelle gorge — l'acqua conta sui sentieri",
+        de: "Berg-/Schlucht-Stopps — Trinkwasser zählt auf Wegen",
+      }),
     });
   }
 
   if (stops.types.has("cave")) {
     push({
       id: "cave-warm-layer",
-      label: isEn ? "Warm layer for caves (8–12 °C year-round)" : "Topla plast za jame (8–12 °C vse leto)",
+      label: PL(lang, {
+        sl: "Topla plast za jame (8–12 °C vse leto)",
+        en: "Warm layer for caves (8–12 °C year-round)",
+        it: "Strato caldo per le grotte (8–12 °C tutto l'anno)",
+        de: "Warme Schicht für Höhlen (8–12 °C ganzjährig)",
+      }),
       category: "activity",
-      reason: typeReason(stops, "cave", typeLabel("cave"), isEn),
+      reason: typeReason(stops, "cave", typeLabel("cave"), lang),
     });
   }
 
   if (stops.types.has("city") || stops.types.has("castle")) {
     push({
       id: "walking-shoes",
-      label: isEn ? "Comfortable walking shoes" : "Udobje za hojo (superge)",
+      label: PL(lang, {
+        sl: "Udobje za hojo (superge)",
+        en: "Comfortable walking shoes",
+        it: "Scarpe comode per camminare",
+        de: "Bequeme Schuhe zum Laufen",
+      }),
       category: "activity",
       reason:
         stops.types.has("city")
-          ? typeReason(stops, "city", typeLabel("city"), isEn)
-          : typeReason(stops, "castle", typeLabel("castle"), isEn),
+          ? typeReason(stops, "city", typeLabel("city"), lang)
+          : typeReason(stops, "castle", typeLabel("castle"), lang),
     });
   }
 
   // === INTERESI / SKUPINA (iz inputa, če je na voljo) ===
-  if (/dru[žz]in|otrok|family|kids|children/.test(groupHaystack) || partyType === "family") {
+  if (/dru[žz]in|otrok|family|kids|children|famigli|bambin|kinder|familien/.test(groupHaystack) || partyType === "family") {
     push({
       id: "kids-kit",
-      label: isEn ? "Kids' kit (car games, wet wipes, snacks)" : "Otroški pripomočki (igrice za vožnjo, vlažilne robčki, prigrizki)",
+      label: PL(lang, {
+        sl: "Otroški pripomočki (igrice za vožnjo, vlažilne robčki, prigrizki)",
+        en: "Kids' kit (car games, wet wipes, snacks)",
+        it: "Kit per bambini (giochi in auto, salviette, spuntini)",
+        de: "Kinder-Set (Autospiele, Feuchttücher, Snacks)",
+      }),
       category: "kids",
     });
   }
-  if (/kulinar|hran|jest|gastro|vino|food|cuisine|wine/.test(groupHaystack)) {
+  if (/kulinar|hran|jest|gastro|vino|food|cuisine|wine|cucina|gastronom|essen|kuche|wein/.test(groupHaystack)) {
     push({
       id: "luggage-room",
-      label: isEn ? "A little spare luggage room for local treats" : "Rahel prtljačni prostor za lokalne dobrote",
+      label: PL(lang, {
+        sl: "Rahel prtljačni prostor za lokalne dobrote",
+        en: "A little spare luggage room for local treats",
+        it: "Un po' di spazio in valigia per le specialità locali",
+        de: "Etwas Platz im Gepäck für lokale Schmankerl",
+      }),
       category: "other" as PackingCategory,
     });
   }
@@ -525,37 +690,72 @@ export function buildSmartPackingList(
   if (daysCount > 5) {
     push({
       id: "power-bank",
-      label: isEn ? "Power bank" : "Power bank",
+      label: PL(lang, { sl: "Power bank", en: "Power bank", it: "Power bank", de: "Powerbank" }),
       category: "tech",
-      reason: isEn ? `${daysCount}-day plan` : `načrt na ${daysCount} dni`,
+      reason: PL(lang, {
+        sl: `načrt na ${daysCount} dni`,
+        en: `${daysCount}-day plan`,
+        it: `piano di ${daysCount} giorni`,
+        de: `${daysCount}-Tage-Plan`,
+      }),
     });
     push({
       id: "laundry",
-      label: isEn ? "Plan a laundry stop mid-trip" : "Načrtuj pralni servis na polovici potovanja",
+      label: PL(lang, {
+        sl: "Načrtuj pralni servis na polovici potovanja",
+        en: "Plan a laundry stop mid-trip",
+        it: "Prevedi una lavanderia a metà viaggio",
+        de: "Wäschestopp in der Reisemitte einplanen",
+      }),
       category: "clothing",
-      reason: isEn ? "pack light, wash once" : "pakiraj lahko, enkrat operi",
+      reason: PL(lang, {
+        sl: "pakiraj lahko, enkrat operi",
+        en: "pack light, wash once",
+        it: "fai bagaglio leggero, lava una volta",
+        de: "leicht packen, einmal waschen",
+      }),
     });
   }
 
   // === VEDNO ===
   push({
     id: "cash-eur",
-    label: isEn ? "Euros in cash (smaller local spots)" : "Gotovina v evrih (manjši lokalci)",
+    label: PL(lang, {
+      sl: "Gotovina v evrih (manjši lokalci)",
+      en: "Euros in cash (smaller local spots)",
+      it: "Contanti in euro (posti locali più piccoli)",
+      de: "Bargeld in Euro (kleinere lokale Betriebe)",
+    }),
     category: "documents",
   });
   push({
     id: "eu-plugs",
-    label: isEn ? "EU sockets — no adapter needed" : "VTIČNICE EU — adapter ni potreben",
+    label: PL(lang, {
+      sl: "VTIČNICE EU — adapter ni potreben",
+      en: "EU sockets — no adapter needed",
+      it: "PRESESE EU — nessun adattatore necessario",
+      de: "EU-STECKDOSEN — kein Adapter nötig",
+    }),
     category: "tech",
   });
   push({
     id: "foldable-bag",
-    label: isEn ? "Foldable bag for souvenirs" : "Zložljiva torba za spominke",
+    label: PL(lang, {
+      sl: "Zložljiva torba za spominke",
+      en: "Foldable bag for souvenirs",
+      it: "Borsa pieghevole per i ricordi",
+      de: "Faltbare Tasche für Souvenirs",
+    }),
     category: "other" as PackingCategory,
   });
   push({
     id: "id-doc",
-    label: isEn ? "ID card / passport" : "Osebni dokument / potni list",
+    label: PL(lang, {
+      sl: "Osebni dokument / potni list",
+      en: "ID card / passport",
+      it: "Documento d'identità / passaporto",
+      de: "Ausweis / Reisepass",
+    }),
     category: "documents",
   });
 

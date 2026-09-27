@@ -11,6 +11,9 @@
 // Ta modul je ČISTA FUNKCIJA (isto na strani strežnika in klienta) —
 // uporablja jo /api/itinerary/ask (deterministični odgovori + AI kontekst).
 //
+// W1-faza-2b-2 (1.129.0): PlanLang je zdaj 4-jezičen (planner-lang kanon) —
+// geo-validacija (2b-1) sprejema it/de, izpis lista pa sledi PL() pogodbi.
+//
 
 import type {
   Itinerary,
@@ -20,8 +23,12 @@ import type {
 } from "@/lib/types";
 import { validateItineraryGeo } from "@/lib/geo-validation";
 import { computeTripDriveCosts } from "@/lib/trip-costs";
+import { PL, type PlannerLang } from "@/lib/planner-lang";
 
-export type PlanLang = "sl" | "en";
+/** W1-faza-2b-2: javna povezava ostaja `PlanLang` (nazaj-kompatibilno). */
+export type { PlannerLang as PlanLang } from "@/lib/planner-lang";
+
+type PlanLang = PlannerLang;
 
 /** Dejstva o enem dnevu načrta (vse številke izračunane, ne ugibane). */
 export interface PlanDayFacts {
@@ -199,109 +206,168 @@ export function buildPlanFacts(
  * List dejstev kot TEKSTOVNI list za AI kontekst (grounding).
  * AI dobe ISTE številke kot deterministični odgovori — nič drugega ne sme
  * izmišljevati (strežniški sistemski prompt to izrecno zahteva).
+ * W1-faza-2b-2: 4-jezično (PL pogodba).
  */
 export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
-  const isEn = lang === "en";
   const lines: string[] = [];
 
   lines.push(
-    isEn
-      ? `PLAN FACTS (computed — the ONLY source of numbers allowed):`
-      : `DEJSTVA O NAČRTU (izračunano — EDINI dovoljen vir številk):`
+    PL(lang, {
+      sl: `DEJSTVA O NAČRTU (izračunano — EDINI dovoljen vir številk):`,
+      en: `PLAN FACTS (computed — the ONLY source of numbers allowed):`,
+      it: `DATI DEL PIANO (calcolati — l'UNICA fonte di numeri ammessa):`,
+      de: `PLANFAKTEN (berechnet — die EINZIG erlaubte Zahlenquelle):`,
+    })
   );
   lines.push(
-    isEn
-      ? `- ${facts.days} day(s), group of ${facts.groupSize}, ${facts.totalStops} stop(s) total`
-      : `- ${facts.days} dni, skupina ${facts.groupSize} oseb, skupaj ${facts.totalStops} postankov`
+    PL(lang, {
+      sl: `- ${facts.days} dni, skupina ${facts.groupSize} oseb, skupaj ${facts.totalStops} postankov`,
+      en: `- ${facts.days} day(s), group of ${facts.groupSize}, ${facts.totalStops} stop(s) total`,
+      it: `- ${facts.days} giorno/i, gruppo di ${facts.groupSize} persone, ${facts.totalStops} tappe in totale`,
+      de: `- ${facts.days} Tag/e, Gruppe von ${facts.groupSize} Personen, insgesamt ${facts.totalStops} Stopps`,
+    })
   );
 
   const routing =
     facts.routingMethod === "osrm"
-      ? isEn
-        ? "real roads (OSRM)"
-        : "realne ceste (OSRM)"
+      ? PL(lang, {
+          sl: "realne ceste (OSRM)",
+          en: "real roads (OSRM)",
+          it: "strade reali (OSRM)",
+          de: "echte Straßen (OSRM)",
+        })
       : facts.routingMethod === "mixed"
-        ? isEn
-          ? "mixed (OSRM + estimate)"
-          : "mešano (OSRM + ocena)"
-        : isEn
-          ? "estimate (haversine × 1.3)"
-          : "ocena (haversine × 1.3)";
+        ? PL(lang, {
+            sl: "mešano (OSRM + ocena)",
+            en: "mixed (OSRM + estimate)",
+            it: "misto (OSRM + stima)",
+            de: "gemischt (OSRM + Schätzung)",
+          })
+        : PL(lang, {
+            sl: "ocena (haversine × 1.3)",
+            en: "estimate (haversine × 1.3)",
+            it: "stima (haversine × 1,3)",
+            de: "Schätzung (Haversine × 1,3)",
+          });
 
   lines.push(
-    isEn
-      ? `- total driving: ${facts.tripKm} km, ${facts.drivingMinutes} min (${routing})`
-      : `- skupna vožnja: ${facts.tripKm} km, ${facts.drivingMinutes} min (${routing})`
+    PL(lang, {
+      sl: `- skupna vožnja: ${facts.tripKm} km, ${facts.drivingMinutes} min (${routing})`,
+      en: `- total driving: ${facts.tripKm} km, ${facts.drivingMinutes} min (${routing})`,
+      it: `- guida totale: ${facts.tripKm} km, ${facts.drivingMinutes} min (${routing})`,
+      de: `- Gesamtfahrt: ${facts.tripKm} km, ${facts.drivingMinutes} Min (${routing})`,
+    })
   );
 
   lines.push(
-    isEn
-      ? `- attractions cost: €${facts.estimatedCost} (excludes accommodation, food, shopping)`
-      : `- stroški atrakcij: €${facts.estimatedCost} (BREZ nočitev, hrane, nakupov)`
+    PL(lang, {
+      sl: `- stroški atrakcij: €${facts.estimatedCost} (BREZ nočitev, hrane, nakupov)`,
+      en: `- attractions cost: €${facts.estimatedCost} (excludes accommodation, food, shopping)`,
+      it: `- costi attrazioni: ${facts.estimatedCost} € (ESCLUSI pernottamento, cibo, acquisti)`,
+      de: `- Kosten der Sehenswürdigkeiten: ${facts.estimatedCost} € (OHNE Übernachtung, Essen, Einkäufe)`,
+    })
   );
 
   if (facts.driveCosts) {
     lines.push(
-      isEn
-        ? `- driving costs: fuel €${facts.driveCosts.fuelEur} + vignette €${facts.driveCosts.vignetteEur} = €${facts.driveCosts.totalEur} (AMZS/DARS tariffs)`
-        : `- stroški vožnje: gorivo ${facts.driveCosts.fuelEur} € + vinjeta ${facts.driveCosts.vignetteEur} € = ${facts.driveCosts.totalEur} € (tarife AMZS/DARS)`
+      PL(lang, {
+        sl: `- stroški vožnje: gorivo ${facts.driveCosts.fuelEur} € + vinjeta ${facts.driveCosts.vignetteEur} € = ${facts.driveCosts.totalEur} € (tarife AMZS/DARS)`,
+        en: `- driving costs: fuel €${facts.driveCosts.fuelEur} + vignette €${facts.driveCosts.vignetteEur} = €${facts.driveCosts.totalEur} (AMZS/DARS tariffs)`,
+        it: `- costi di guida: carburante ${facts.driveCosts.fuelEur} € + vignetta ${facts.driveCosts.vignetteEur} € = ${facts.driveCosts.totalEur} € (tariffe AMZS/DARS)`,
+        de: `- Fahrkosten: Kraftstoff ${facts.driveCosts.fuelEur} € + Vignette ${facts.driveCosts.vignetteEur} € = ${facts.driveCosts.totalEur} € (AMZS/DARS-Tarife)`,
+      })
     );
   } else {
     lines.push(
-      isEn
-        ? `- driving costs: unknown (no coordinates in plan — do NOT guess)`
-        : `- stroški vožnje: neznani (načrt nima koordinat — NE ugibaj)`
+      PL(lang, {
+        sl: `- stroški vožnje: neznani (načrt nima koordinat — NE ugibaj)`,
+        en: `- driving costs: unknown (no coordinates in plan — do NOT guess)`,
+        it: `- costi di guida: sconosciuti (il piano non ha coordinate — NON indovinare)`,
+        de: `- Fahrkosten: unbekannt (keine Koordinaten im Plan — NICHT raten)`,
+      })
     );
   }
 
   if (facts.budgetGoal) {
     lines.push(
-      isEn
-        ? `- user's budget goal: €${facts.budgetGoal}`
-        : `- uporabnikov proračunski cilj: ${facts.budgetGoal} €`
+      PL(lang, {
+        sl: `- uporabnikov proračunski cilj: ${facts.budgetGoal} €`,
+        en: `- user's budget goal: €${facts.budgetGoal}`,
+        it: `- obiettivo di budget dell'utente: ${facts.budgetGoal} €`,
+        de: `- Budgetziel des Nutzers: ${facts.budgetGoal} €`,
+      })
     );
   }
 
   if (facts.busiest) {
     lines.push(
-      isEn
-        ? `- busiest day: day ${facts.busiest.day} (${facts.busiest.loadMinutes} min total load)`
-        : `- najbolj natrpan dan: ${facts.busiest.day}. (${facts.busiest.loadMinutes} min skupnega obsega)`
+      PL(lang, {
+        sl: `- najbolj natrpan dan: ${facts.busiest.day}. (${facts.busiest.loadMinutes} min skupnega obsega)`,
+        en: `- busiest day: day ${facts.busiest.day} (${facts.busiest.loadMinutes} min total load)`,
+        it: `- giorno più intenso: giorno ${facts.busiest.day} (${facts.busiest.loadMinutes} min di carico totale)`,
+        de: `- vollster Tag: Tag ${facts.busiest.day} (${facts.busiest.loadMinutes} Min Gesamtlast)`,
+      })
     );
   }
 
   if (facts.warnings > 0) {
     lines.push(
-      isEn
-        ? `- feasibility warnings: ${facts.warnings} (${facts.errors} error-level)`
-        : `- opozorila o izvedljivosti: ${facts.warnings} (od tega ${facts.errors} ravni ERROR)`
+      PL(lang, {
+        sl: `- opozorila o izvedljivosti: ${facts.warnings} (od tega ${facts.errors} ravni ERROR)`,
+        en: `- feasibility warnings: ${facts.warnings} (${facts.errors} error-level)`,
+        it: `- avvisi di fattibilità: ${facts.warnings} (di cui ${facts.errors} di livello ERROR)`,
+        de: `- Machbarkeitswarnungen: ${facts.warnings} (davon ${facts.errors} auf ERROR-Niveau)`,
+      })
     );
   } else {
     lines.push(
-      isEn
-        ? `- feasibility warnings: none`
-        : `- opozorila o izvedljivosti: brez`
+      PL(lang, {
+        sl: `- opozorila o izvedljivosti: brez`,
+        en: `- feasibility warnings: none`,
+        it: `- avvisi di fattibilità: nessuno`,
+        de: `- Machbarkeitswarnungen: keine`,
+      })
     );
   }
 
   for (const c of facts.closedNotices) {
-    lines.push(isEn ? `- closure: ${c.message}` : `- zaprtje: ${c.message}`);
-  }
-
-  lines.push(isEn ? `Per day:` : `Po dnevih:`);
-  for (const d of facts.perDay) {
-    const dateStr = d.date ? ` (${d.date})` : "";
     lines.push(
-      isEn
-        ? `- Day ${d.day}${dateStr}: ${d.stops} stop(s) [${d.names.join(", ")}], ${d.km} km, ${d.drivingMinutes} min driving, ${d.activityMinutes} min activities, €${d.cost}, weather: ${d.weather} ${d.temp}°C${d.warnings > 0 ? `, ${d.warnings} warning(s)` : ""}`
-        : `- Dan ${d.day}${dateStr}: ${d.stops} postankov [${d.names.join(", ")}], ${d.km} km, ${d.drivingMinutes} min vožnje, ${d.activityMinutes} min aktivnosti, ${d.cost} €, vreme: ${d.weather} ${d.temp} °C${d.warnings > 0 ? `, ${d.warnings} opozoril` : ""}`
+      PL(lang, {
+        sl: `- zaprtje: ${c.message}`,
+        en: `- closure: ${c.message}`,
+        it: `- chiusura: ${c.message}`,
+        de: `- Schließung: ${c.message}`,
+      })
     );
   }
 
   lines.push(
-    isEn
-      ? `Weather values above are the estimates baked into the plan at generation time — NOT a live forecast.`
-      : `Vrednosti vremena zgoraj so ocene, zadete v načrt ob generiranju — NISO živa napoved.`
+    PL(lang, {
+      sl: `Po dnevih:`,
+      en: `Per day:`,
+      it: `Per giorno:`,
+      de: `Pro Tag:`,
+    })
+  );
+  for (const d of facts.perDay) {
+    const dateStr = d.date ? ` (${d.date})` : "";
+    lines.push(
+      PL(lang, {
+        sl: `- Dan ${d.day}${dateStr}: ${d.stops} postankov [${d.names.join(", ")}], ${d.km} km, ${d.drivingMinutes} min vožnje, ${d.activityMinutes} min aktivnosti, ${d.cost} €, vreme: ${d.weather} ${d.temp} °C${d.warnings > 0 ? `, ${d.warnings} opozoril` : ""}`,
+        en: `- Day ${d.day}${dateStr}: ${d.stops} stop(s) [${d.names.join(", ")}], ${d.km} km, ${d.drivingMinutes} min driving, ${d.activityMinutes} min activities, €${d.cost}, weather: ${d.weather} ${d.temp}°C${d.warnings > 0 ? `, ${d.warnings} warning(s)` : ""}`,
+        it: `- Giorno ${d.day}${dateStr}: ${d.stops} tappe [${d.names.join(", ")}], ${d.km} km, ${d.drivingMinutes} min di guida, ${d.activityMinutes} min di attività, ${d.cost} €, meteo: ${d.weather} ${d.temp} °C${d.warnings > 0 ? `, ${d.warnings} avvisi` : ""}`,
+        de: `- Tag ${d.day}${dateStr}: ${d.stops} Stopps [${d.names.join(", ")}], ${d.km} km, ${d.drivingMinutes} Min Fahrt, ${d.activityMinutes} Min Aktivitäten, ${d.cost} €, Wetter: ${d.weather} ${d.temp} °C${d.warnings > 0 ? `, ${d.warnings} Warnungen` : ""}`,
+      })
+    );
+  }
+
+  lines.push(
+    PL(lang, {
+      sl: `Vrednosti vremena zgoraj so ocene, zadete v načrt ob generiranju — NISO živa napoved.`,
+      en: `Weather values above are the estimates baked into the plan at generation time — NOT a live forecast.`,
+      it: `I valori del meteo sopra sono stime inserite nel piano alla generazione — NON sono una previsione live.`,
+      de: `Die Wetterwerte oben sind Schätzungen aus der Planerstellung — KEINE Live-Vorhersage.`,
+    })
   );
 
   return lines.join("\n");

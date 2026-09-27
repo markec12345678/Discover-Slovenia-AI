@@ -133,3 +133,13 @@ export const EVENTS_DE: Record<string, EventDe> = {
     description: "Traditionelle Dezembermesse in Postojna nahe der Grotte mit Handwerksprodukten der Karstregion, Schinken, Teran-Wein, Keramik und Weihnachtsbeleuchtung. Live-Musik jeden Abend.",
   },
 };
+
+/** DE oznake kategorij dogodkov (W1-2b-2 — zrcali EVENT_CATEGORY_LABELS). */
+export const EVENT_CATEGORY_LABELS_DE: Record<EventCategory, string> = {
+  festival: "Festival",
+  glasba: "Musik",
+  sport: "Sport",
+  kultura: "Kultur",
+  hrana: "Essen & Trinken",
+  tradicija: "Tradition",
+};

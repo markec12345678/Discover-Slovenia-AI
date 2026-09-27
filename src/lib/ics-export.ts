@@ -1,4 +1,5 @@
 import type { Itinerary } from "@/lib/types";
+import { PL, type PlannerLang } from "@/lib/planner-lang";
 
 // ============================================================================
 // ICS EXPORT (F5.2) — itinerer kot koledarska datoteka (.ics, RFC 5545)
@@ -90,8 +91,8 @@ function localDateISO(offsetDays: number): string {
 }
 
 interface BuildIcsOptions {
-  /** Jezik opisov dogodkov */
-  lang?: "sl" | "en";
+  /** Jezik opisov dogodkov (W1-2b-2: 4-jezično). */
+  lang?: PlannerLang;
   /** Izvor načrta ( deljiva povezava) — zapiše se v DESCRIPTION/URL */
   url?: string;
 }
@@ -104,7 +105,10 @@ export function buildItineraryICS(
   itinerary: Itinerary,
   options: BuildIcsOptions = {}
 ): string | null {
-  const lang = options.lang === "en" ? "en" : "sl";
+  const lang: PlannerLang =
+    options.lang === "en" || options.lang === "it" || options.lang === "de"
+      ? options.lang
+      : "sl";
   const days = Array.isArray(itinerary.days) ? itinerary.days : [];
   const totalStops = days.reduce(
     (n, d) => n + (d.locations?.length ?? 0),
@@ -126,17 +130,22 @@ export function buildItineraryICS(
     "METHOD:PUBLISH",
     icsFoldLine(
       `X-WR-CALNAME:${icsEscape(
-        lang === "en"
-          ? `Slovenia trip (${days.length} days)`
-          : `Pot po Sloveniji (${days.length} ${days.length === 1 ? "dan" : days.length === 2 ? "dneva" : "dni"})`
+        PL(lang, {
+          sl: `Pot po Sloveniji (${days.length} ${days.length === 1 ? "dan" : days.length === 2 ? "dneva" : "dni"})`,
+          en: `Slovenia trip (${days.length} days)`,
+          it: `Viaggio in Slovenia (${days.length} ${days.length === 1 ? "giorno" : "giorni"})`,
+          de: `Slowenien-Reise (${days.length} ${days.length === 1 ? "Tag" : "Tage"})`,
+        })
       )}`
     ),
   ];
 
-  const relativeNote =
-    lang === "en"
-      ? "Dates are relative (no start date in the plan) — please reschedule events in your calendar."
-      : "Datumi so relativni (načrt brez datuma odhoda) — dogodke prestavi v koledarju na prave dneve.";
+  const relativeNote = PL(lang, {
+    sl: "Datumi so relativni (načrt brez datuma odhoda) — dogodke prestavi v koledarju na prave dneve.",
+    en: "Dates are relative (no start date in the plan) — please reschedule events in your calendar.",
+    it: "Le date sono relative (il piano non ha data di partenza) — sposta gli eventi nel calendario ai giorni giusti.",
+    de: "Die Daten sind relativ (kein Abreisedatum im Plan) — bitte Termine im Kalender auf die richtigen Tage verschieben.",
+  });
 
   let emitted = 0;
   for (const day of days) {
@@ -167,7 +176,12 @@ export function buildItineraryICS(
       if (loc.notes) descParts.push(loc.notes);
       if (loc.reason) {
         descParts.push(
-          lang === "en" ? `Why: ${loc.reason}` : `Zakaj: ${loc.reason}`
+          PL(lang, {
+            sl: `Zakaj: ${loc.reason}`,
+            en: `Why: ${loc.reason}`,
+            it: `Perché: ${loc.reason}`,
+            de: `Warum: ${loc.reason}`,
+          })
         );
       }
       // TASK 50 (§10): estimated_cost je lahko NaN/null (strežniško
@@ -178,9 +192,12 @@ export function buildItineraryICS(
         Number.isFinite(loc.estimated_cost)
       ) {
         descParts.push(
-          lang === "en"
-            ? `Estimated cost: €${loc.estimated_cost}`
-            : `Ocena stroška: ${loc.estimated_cost} €`
+          PL(lang, {
+            sl: `Ocena stroška: ${loc.estimated_cost} €`,
+            en: `Estimated cost: €${loc.estimated_cost}`,
+            it: `Costo stimato: ${loc.estimated_cost} €`,
+            de: `Geschätzte Kosten: ${loc.estimated_cost} €`,
+          })
         );
       }
       if (!hasRealDates) descParts.push(relativeNote);
@@ -194,7 +211,12 @@ export function buildItineraryICS(
         `DTEND:${icsLocalDateTime(dayDate, slot.end)}`,
         icsFoldLine(
           `SUMMARY:${icsEscape(
-            (lang === "en" ? `Day ${day.day}` : `Dan ${day.day}`) +
+            PL(lang, {
+              sl: `Dan ${day.day}`,
+              en: `Day ${day.day}`,
+              it: `Giorno ${day.day}`,
+              de: `Tag ${day.day}`,
+            }) +
               " · " +
               (loc.destination_name ?? "")
           )}`
@@ -216,13 +238,18 @@ export function buildItineraryICS(
 /**
  * Ime datoteke za prenos.
  * I18N-FIX (revizija 1.33.0, 16-d P3): ime je bilo vedno SL
- * ("pot-slovenija-…") tudi pri EN izvozu — zdaj sledi jeziku izvoza.
+ * ("pot-slovenija-…") tudi pri EN izvozu — zdaj sledi jeziku izvoza
+ * (W1-2b-2: tudi IT/DE).
  */
-export function icsFileName(itinerary: Itinerary, lang: "sl" | "en" = "sl"): string {
+export function icsFileName(itinerary: Itinerary, lang: PlannerLang = "sl"): string {
   const days = itinerary.days?.length ?? 0;
   const firstStop =
     itinerary.days?.[0]?.locations?.[0]?.destination_id ?? "plan";
-  return lang === "en"
-    ? `trip-slovenia-${days}d-${firstStop}.ics`
-    : `pot-slovenija-${days}d-${firstStop}.ics`;
+  return lang === "sl"
+    ? `pot-slovenija-${days}d-${firstStop}.ics`
+    : lang === "it"
+      ? `viaggio-slovenia-${days}g-${firstStop}.ics`
+      : lang === "de"
+        ? `reise-slowenien-${days}t-${firstStop}.ics`
+        : `trip-slovenia-${days}d-${firstStop}.ics`;
 }

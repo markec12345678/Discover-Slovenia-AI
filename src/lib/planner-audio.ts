@@ -1,4 +1,5 @@
 import type { Itinerary } from "@/lib/types";
+import { PL, type PlannerLang } from "@/lib/planner-lang";
 
 // ============================================================================
 // D2 "Poslušaj svoj načrt" (nabor #2, Mindtrip aitravel.tools) — ČISTA
@@ -47,7 +48,8 @@ interface AudioScriptInput {
   dayKm: Record<number, number>;
   /** velikost skupine iz obrazca (samo za uvodno poved) */
   groupSize: number;
-  locale: "sl" | "en";
+  /** W1-2b-2: 4-jezično (PL pogodba — glasovni povzetek v jeziku UI). */
+  locale: PlannerLang;
 }
 
 export interface AudioScript {
@@ -63,18 +65,12 @@ function slOseb(n: number): string {
   return "oseb";
 }
 
-/** Seznam imen v Slovenščini: "A, B in C" (zadnji veznik). */
-function slJoin(names: string[]): string {
+/** Seznami imen: SL "A, B in C" / IT "A, B e C" / ostalo "A, B and C". */
+function joinFor(lang: PlannerLang, names: string[]): string {
   if (names.length === 0) return "";
   if (names.length === 1) return names[0];
-  return `${names.slice(0, -1).join(", ")} in ${names[names.length - 1]}`;
-}
-
-/** Angleško: "A, B and C". */
-function enJoin(names: string[]): string {
-  if (names.length === 0) return "";
-  if (names.length === 1) return names[0];
-  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  const conj = lang === "sl" ? " in " : lang === "it" ? " e " : " and ";
+  return `${names.slice(0, -1).join(", ")}${conj}${names[names.length - 1]}`;
 }
 
 /** Zaokroži km na 5 — brez lažne natančnosti (ista praksa kot road-routing). */
@@ -97,9 +93,14 @@ export function buildItineraryAudioScript(
   const days = itinerary.days;
   if (days.length === 0) return null;
 
-  const isSl = locale === "sl";
+  const lang = locale;
   const budget = Math.round(itinerary.total_budget);
-  const dayWord = isSl ? (days.length === 1 ? "dan" : "dni") : days.length === 1 ? "day" : "days";
+  const dayWord = PL(lang, {
+    sl: days.length === 1 ? "dan" : "dni",
+    en: days.length === 1 ? "day" : "days",
+    it: days.length === 1 ? "giorno" : "giorni",
+    de: days.length === 1 ? "Tag" : "Tage",
+  });
 
   // Seznami imen postankov po dnevih (deduplicirani znotraj dneva, redni vrstni red)
   const namesPerDay: string[][] = days.map((d) => {
@@ -118,23 +119,41 @@ export function buildItineraryAudioScript(
     if (km === undefined || !Number.isFinite(km) || km <= 0) return "";
     const r = round5(km);
     if (r <= 0) return "";
-    return isSl
-      ? ` Približno ${r} kilometrov vožnje.`
-      : ` About ${r} kilometers of driving.`;
+    return PL(lang, {
+      sl: ` Približno ${r} kilometrov vožnje.`,
+      en: ` About ${r} kilometers of driving.`,
+      it: ` Circa ${r} chilometri di guida.`,
+      de: ` Etwa ${r} Kilometer Fahrt.`,
+    });
   };
 
   function build(maxNames: number, includeKm: boolean): string {
-    const intro = isSl
-      ? `Tvoje potovanje po Sloveniji traja ${days.length} ${dayWord}. ` +
+    const intro = PL(lang, {
+      sl:
+        `Tvoje potovanje po Sloveniji traja ${days.length} ${dayWord}. ` +
         (groupSize === 1
           ? "Potuješ sam. "
           : `Skupaj vas je ${groupSize} ${slOseb(groupSize)}. `) +
-        `Okvirni proračun je ${budget} evrov.`
-      : `Your trip around Slovenia lasts ${days.length} ${dayWord}. ` +
+        `Okvirni proračun je ${budget} evrov.`,
+      en:
+        `Your trip around Slovenia lasts ${days.length} ${dayWord}. ` +
         (groupSize === 1
           ? "You are traveling solo. "
           : `There are ${groupSize} of you on this trip. `) +
-        `The estimated budget is ${budget} euros.`;
+        `The estimated budget is ${budget} euros.`,
+      it:
+        `Il tuo viaggio in Slovenia dura ${days.length} ${dayWord}. ` +
+        (groupSize === 1
+          ? "Viaggi da solo. "
+          : `Siete in ${groupSize} persone in questo viaggio. `) +
+        `Il budget stimato è di ${budget} euro.`,
+      de:
+        `Deine Reise durch Slowenien dauert ${days.length} ${dayWord}. ` +
+        (groupSize === 1
+          ? "Du reist allein. "
+          : `Ihr seid ${groupSize} Personen auf dieser Reise. `) +
+        `Das geschätzte Budget beträgt ${budget} Euro.`,
+    });
 
     const daySentences = days.map((d, i) => {
       const all = namesPerDay[i];
@@ -142,17 +161,28 @@ export function buildItineraryAudioScript(
       const extra = all.length - names.length;
       const namesText =
         extra > 0
-          ? isSl
-            ? `${slJoin(names)} in še ${extra} ${extra === 1 ? "postanek" : extra < 5 ? "postanke" : "postankov"}.`
-            : `${enJoin(names)} and ${extra} more stop${extra > 1 ? "s" : ""}.`
-          : isSl
-            ? `${slJoin(names)}.`
-            : `${enJoin(names)}.`;
+          ? PL(lang, {
+              sl: `${joinFor(lang, names)} in še ${extra} ${extra === 1 ? "postanek" : extra < 5 ? "postanke" : "postankov"}.`,
+              en: `${joinFor(lang, names)} and ${extra} more stop${extra > 1 ? "s" : ""}.`,
+              it: `${joinFor(lang, names)} e altre ${extra} ${extra === 1 ? "tappa" : "tappe"}.`,
+              de: `${joinFor(lang, names)} und ${extra} weitere Stopps.`,
+            })
+          : `${joinFor(lang, names)}.`;
       const km = includeKm ? withKm(d.day, dayKm[d.day]) : "";
-      return isSl ? `Dan ${d.day}: ${namesText}${km}` : `Day ${d.day}: ${namesText}${km}`;
+      return PL(lang, {
+        sl: `Dan ${d.day}: ${namesText}${km}`,
+        en: `Day ${d.day}: ${namesText}${km}`,
+        it: `Giorno ${d.day}: ${namesText}${km}`,
+        de: `Tag ${d.day}: ${namesText}${km}`,
+      });
     });
 
-    const outro = isSl ? "Lepo potovanje!" : "Have a great trip!";
+    const outro = PL(lang, {
+      sl: "Lepo potovanje!",
+      en: "Have a great trip!",
+      it: "Buon viaggio!",
+      de: "Gute Reise!",
+    });
     return `${intro} ${daySentences.join(" ")} ${outro}`;
   }
 

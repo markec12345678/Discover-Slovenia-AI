@@ -309,3 +309,315 @@ describe("W1-faza-2b: enrich moduli 4-jezično", () => {
     expect(buildCrowdNotices(plan, baseInput, "it")).toEqual([]);
   });
 });
+
+// ===========================================================================
+// W1-FAZA-2B-2 (1.129.0): plan-qa + packing-smart + refine + parser + izvozi
+// ===========================================================================
+
+import {
+  answerPlanQuestion,
+  EXAMPLE_QUESTIONS,
+  buildUnknownAnswer,
+} from "@/lib/plan-qa";
+import { renderFactsSheet, buildPlanFacts } from "@/lib/plan-facts";
+import { buildSmartPackingList } from "@/lib/packing-smart";
+import { parseRefineCommand } from "@/lib/refine-command-parser";
+import { applyQuickAction, QUICK_ACTIONS } from "@/lib/refine-actions";
+import { buildItineraryAudioScript } from "@/lib/planner-audio";
+import { buildItineraryICS, icsFileName } from "@/lib/ics-export";
+import { formatEventDate } from "@/lib/events-data";
+import { DAY_SEGMENT_LABELS } from "@/lib/day-segments";
+
+describe("W1-faza-2b-2: PLAN Q&A 4-jezično", () => {
+  test("EXAMPLE_QUESTIONS nosi vse štiri jezike", () => {
+    expect(EXAMPLE_QUESTIONS.it[0]).toContain("km");
+    expect(EXAMPLE_QUESTIONS.de[0]).toContain("km");
+    expect(EXAMPLE_QUESTIONS.sl.length).toBe(EXAMPLE_QUESTIONS.it.length);
+  });
+
+  test("vprašanje v IT jeziku → deterministični odgovor v IT", () => {
+    const it = generateDeterministicItinerary({ ...baseInput, language: "it", days: 2 });
+    const res = answerPlanQuestion({
+      question: "Quanti km e quanta guida in tutto?",
+      itinerary: it,
+      input: { ...baseInput, language: "it" },
+      lang: "it",
+    });
+    expect(res).not.toBeNull();
+    expect(res!.intent).toBe("drive_total");
+    expect(res!.text).toContain("Viaggio intero:");
+    expect(res!.text).toContain("al volante");
+    expect(res!.text).not.toMatch(/[šžč]/); // brez SL mešanja
+  });
+
+  test("vprašanje v DE jeziku → odgovor v DE (pakirni namen)", () => {
+    const de = generateDeterministicItinerary({ ...baseInput, language: "de", days: 2 });
+    const res = answerPlanQuestion({
+      question: "Was soll ich einpacken?",
+      itinerary: de,
+      input: { ...baseInput, language: "de" },
+      lang: "de",
+    });
+    expect(res).not.toBeNull();
+    expect(res!.intent).toBe("packing");
+    expect(res!.text).toContain("Packliste");
+  });
+
+  test("IT dnevi (giorno 2) se razrešijo; izven obsega iskreno", () => {
+    const it = generateDeterministicItinerary({ ...baseInput, language: "it", days: 2 });
+    const oor = answerPlanQuestion({
+      question: "Cosa c'è il giorno 7?",
+      itinerary: it,
+      input: { ...baseInput, language: "it" },
+      lang: "it",
+    });
+    expect(oor!.intent).toBe("out_of_range");
+    expect(oor!.text).toContain("solo 2");
+    expect(oor!.text).toContain("giorni");
+  });
+
+  test("DE vremenski namen + vremenske besede v DE", () => {
+    const de = generateDeterministicItinerary({ ...baseInput, language: "de", days: 2 });
+    const res = answerPlanQuestion({
+      question: "Wie ist das Wetter im Plan?",
+      itinerary: de,
+      input: { ...baseInput, language: "de" },
+      lang: "de",
+    });
+    expect(res!.intent).toBe("weather");
+    expect(res!.text).toContain("Wetter");
+  });
+
+  test("buildUnknownAnswer IT/DE — brez SL", () => {
+    expect(buildUnknownAnswer("it")).toContain("non tirerò a indovinare");
+    expect(buildUnknownAnswer("de")).toContain("und ich rate nicht");
+    // zero regression
+    expect(buildUnknownAnswer("sl")).toContain("ugibati pa ne bom");
+  });
+
+  test("renderFactsSheet 4-jezično (AI grounding list)", () => {
+    const it = generateDeterministicItinerary({ ...baseInput, language: "it", days: 2 });
+    const facts = buildPlanFacts(it, { ...baseInput, language: "it" }, "it");
+    const sheet = renderFactsSheet(facts, "it");
+    expect(sheet).toContain("DATI DEL PIANO");
+    expect(sheet).toContain("Per giorno:");
+    const de = generateDeterministicItinerary({ ...baseInput, language: "de", days: 2 });
+    const factsDe = buildPlanFacts(de, { ...baseInput, language: "de" }, "de");
+    expect(renderFactsSheet(factsDe, "de")).toContain("PLANFAKTEN");
+    // zero regression SL
+    const sl = generateDeterministicItinerary({ ...baseInput, language: "sl", days: 2 });
+    const factsSl = buildPlanFacts(sl, baseInput, "sl");
+    expect(renderFactsSheet(factsSl, "sl")).toContain("DEJSTVA O NAČRTU");
+  });
+});
+
+describe("W1-faza-2b-2: PAMETNI PAKIRNI SEZNAM 4-jezično", () => {
+  test("kosi + metoda opomba v IT/DE", () => {
+    const it = generateDeterministicItinerary({ ...baseInput, language: "it", days: 2 });
+    const listIt = buildSmartPackingList({
+      itinerary: it,
+      input: { ...baseInput, language: "it" },
+      lang: "it",
+    });
+    expect(listIt).not.toBeNull();
+    const labels = listIt!.items.map((i) => i.label).join(" | ");
+    expect(labels).toContain("Costume"); // Swimwear (Bled poleti)
+    expect(labels).not.toMatch(/Kopalke/);
+    expect(listIt!.methodNote).toMatch(/previsione|stagionali/);
+
+    const de = generateDeterministicItinerary({ ...baseInput, language: "de", days: 2 });
+    const listDe = buildSmartPackingList({
+      itinerary: de,
+      input: { ...baseInput, language: "de" },
+      lang: "de",
+    });
+    const labelsDe = listDe!.items.map((i) => i.label).join(" | ");
+    expect(labelsDe).toContain("Badekleidung");
+    expect(listDe!.methodNote).toMatch(/vorhersage|Vorhersage|Saison/i);
+  });
+
+  test("razlogi nosijo Giorno/Tag prefixe (dayRef)", () => {
+    const it = generateDeterministicItinerary({ ...baseInput, language: "it", days: 2 });
+    const list = buildSmartPackingList({
+      itinerary: it,
+      input: { ...baseInput, language: "it" },
+      lang: "it",
+    });
+    const reasons = list!.items.map((i) => i.reason ?? "").join(" | ");
+    expect(reasons).toMatch(/Giorno \d/);
+    const de = generateDeterministicItinerary({ ...baseInput, language: "de", days: 2 });
+    const listDe = buildSmartPackingList({
+      itinerary: de,
+      input: { ...baseInput, language: "de" },
+      lang: "de",
+    });
+    expect(listDe!.items.map((i) => i.reason ?? "").join(" | ")).toMatch(/Tag \d/);
+  });
+
+  test("zero regression SL/EN", () => {
+    const sl = generateDeterministicItinerary({ ...baseInput, language: "sl", days: 2 });
+    const list = buildSmartPackingList({
+      itinerary: sl,
+      input: baseInput,
+      lang: "sl",
+    });
+    expect(list!.items.map((i) => i.label).join(" | ")).toContain("Kopalke");
+    const en = generateDeterministicItinerary({ ...baseInput, language: "en", days: 2 });
+    const listEn = buildSmartPackingList({
+      itinerary: en,
+      input: { ...baseInput, language: "en" },
+      lang: "en",
+    });
+    expect(listEn!.items.map((i) => i.label).join(" | ")).toContain("Swimwear");
+  });
+});
+
+describe("W1-faza-2b-2: UKAZNI PARSER SL+EN+IT+DE", () => {
+  test("IT hitre akcije prostega besedila", () => {
+    expect(parseRefineCommand("meno guida").kind).toBe("quick-action");
+    expect(parseRefineCommand("più natura").kind).toBe("quick-action");
+    expect(parseRefineCommand("ritmo più calmo").kind).toBe("quick-action");
+    expect(parseRefineCommand("più economico").kind).toBe("quick-action");
+    expect(parseRefineCommand("più attivo").kind).toBe("quick-action");
+  });
+
+  test("DE hitre akcije prostega besedila", () => {
+    expect(parseRefineCommand("weniger Fahrt").kind).toBe("quick-action");
+    expect(parseRefineCommand("mehr Natur").kind).toBe("quick-action");
+    expect(parseRefineCommand("langsamer").kind).toBe("quick-action");
+    expect(parseRefineCommand("günstiger").kind).toBe("quick-action");
+    expect(parseRefineCommand("mehr Essen").kind).toBe("quick-action");
+  });
+
+  test("IT/DE dodajanje/odstranjevanje destinacij", () => {
+    const addIt = parseRefineCommand("aggiungi Piran");
+    expect(addIt.kind).toBe("add-place");
+    if (addIt.kind === "add-place") expect(addIt.placeName).toBe("Piran");
+    const rmDe = parseRefineCommand("entferne Bled");
+    expect(rmDe.kind).toBe("remove-place");
+    if (rmDe.kind === "remove-place") expect(rmDe.placeName).toBe("Bled");
+  });
+
+  test("IT/DE eksplicitni dnevi (giorno 2 / 2. Tag)", () => {
+    const it = parseRefineCommand("più natura il giorno 2", { daysCount: 3 });
+    expect(it.kind).toBe("quick-action");
+    if (it.kind === "quick-action") expect(it.day).toBe(2);
+    const de = parseRefineCommand("mehr Natur am 2. Tag", { daysCount: 3 });
+    expect(de.kind).toBe("quick-action");
+    if (de.kind === "quick-action") expect(de.day).toBe(2);
+  });
+
+  test("IT/DE imenovani dnevi (primo/ultimo/erster/letzter + dnevi tedna)", () => {
+    const primo = parseRefineCommand("più natura il primo giorno", { daysCount: 3 });
+    expect(primo.kind).toBe("quick-action");
+    if (primo.kind === "quick-action") expect(primo.day).toBe(1);
+    const ultimo = parseRefineCommand("weniger Fahrt ultimo giorno", { daysCount: 3 });
+    expect(ultimo.kind).toBe("quick-action");
+    if (ultimo.kind === "quick-action") expect(ultimo.day).toBe(3);
+    // sabato glede na znani start (2026-10-05 = ponedeljek → sabata = dan 6)
+    const sab = parseRefineCommand("più cibo di sabato", {
+      tripStartDate: "2026-10-05",
+      daysCount: 8,
+    });
+    expect(sab.kind).toBe("quick-action");
+    if (sab.kind === "quick-action") expect(sab.day).toBe(6);
+    // Samstag
+    const sam = parseRefineCommand("mehr Essen am Samstag", {
+      tripStartDate: "2026-10-05",
+      daysCount: 8,
+    });
+    expect(sam.kind).toBe("quick-action");
+    if (sam.kind === "quick-action") expect(sam.day).toBe(6);
+  });
+
+  test("IT/DE NEPODPRTI nameni ostanejo iskreni (ne tiho)", () => {
+    expect(parseRefineCommand("sposta il giorno 2").kind).toBe("unsupported");
+    expect(parseRefineCommand("verschiebe den Tag").kind).toBe("unsupported");
+    expect(parseRefineCommand("un giorno in più").kind).toBe("unsupported");
+  });
+
+  test("zero regression SL/EN vzorci", () => {
+    expect(parseRefineCommand("manj vožnje").kind).toBe("quick-action");
+    expect(parseRefineCommand("more nature").kind).toBe("quick-action");
+    expect(parseRefineCommand("dodaj Bled").kind).toBe("add-place");
+  });
+});
+
+describe("W1-faza-2b-2: HITRE AKCIJE + IZVOZI 4-jezično", () => {
+  test("QUICK_ACTIONS nosijo it/de oznake in navodila", () => {
+    const qa = QUICK_ACTIONS.find((q) => q.id === "less_driving")!;
+    expect(qa.label.it).toBe("Meno guida");
+    expect(qa.label.de).toBe("Weniger Fahrt");
+    expect(qa.instruction.it!(2)).toContain("Giorno 2");
+    expect(qa.instruction.de!(2)).toContain("Tag 2");
+    expect(qa.instruction.sl(2)).toContain("Dan 2"); // zero regression
+  });
+
+  test("applyQuickAction izpis v IT (manj vožnje — miren dan)", () => {
+    const it = generateDeterministicItinerary({ ...baseInput, language: "it", days: 2 });
+    const res = applyQuickAction(it, { ...baseInput, language: "it" }, "slower_pace", 1, "it");
+    expect(res.note).toMatch(/Giorno 1|una sola tappa|fascia oraria/);
+    expect(res.note).not.toMatch(/[šžč]/);
+  });
+
+  test("zvočni povzetek v IT/DE (brskalniški glas)", () => {
+    const it = generateDeterministicItinerary({ ...baseInput, language: "it", days: 2 });
+    const scriptIt = buildItineraryAudioScript({
+      itinerary: it,
+      dayKm: { 1: 40, 2: 30 },
+      groupSize: 2,
+      locale: "it",
+    });
+    expect(scriptIt).not.toBeNull();
+    expect(scriptIt!.text).toContain("viaggio in Slovenia dura");
+    expect(scriptIt!.text).toContain("Buon viaggio!");
+    const de = generateDeterministicItinerary({ ...baseInput, language: "de", days: 2 });
+    const scriptDe = buildItineraryAudioScript({
+      itinerary: de,
+      dayKm: {},
+      groupSize: 2,
+      locale: "de",
+    });
+    expect(scriptDe!.text).toContain("Reise durch Slowenien");
+    expect(scriptDe!.text).toContain("Gute Reise!");
+  });
+
+  test("ICS izvoz + ime datoteke v IT/DE", () => {
+    const it = generateDeterministicItinerary({ ...baseInput, language: "it", days: 2 });
+    const icsIt = buildItineraryICS(it, { lang: "it" });
+    expect(icsIt).not.toBeNull();
+    expect(icsIt!).toContain("Viaggio in Slovenia");
+    expect(icsIt!).toMatch(/SUMMARY:Giorno \d/);
+    expect(icsFileName(it, "it")).toMatch(/^viaggio-slovenia-/);
+    const de = generateDeterministicItinerary({ ...baseInput, language: "de", days: 2 });
+    expect(icsFileName(de, "de")).toMatch(/^reise-slowenien-/);
+    // zero regression SL/EN
+    const sl = generateDeterministicItinerary(baseInput);
+    expect(icsFileName(sl, "sl")).toMatch(/^pot-slovenija-/);
+    expect(icsFileName(sl, "en")).toMatch(/^trip-slovenia-/);
+  });
+
+  test("formatEventDate + DAY_SEGMENT_LABELS 4-jezično", () => {
+    expect(formatEventDate("2026-07-15", undefined, "it")).toBe("15 lug 2026");
+    expect(formatEventDate("2026-07-15", undefined, "de")).toBe("15. Juli 2026");
+    expect(formatEventDate("2026-07-15", undefined, "en")).toBe("15 Jul 2026");
+    expect(formatEventDate("2026-07-15", undefined, "sl")).toBe("15. jul 2026");
+    expect(DAY_SEGMENT_LABELS.morning.it).toBe("Mattina");
+    expect(DAY_SEGMENT_LABELS.evening.de).toBe("Abend");
+    expect(DAY_SEGMENT_LABELS.morning.sl).toBe("Jutro"); // zero regression
+  });
+});
+
+describe("W1-faza-2b-2: ROUTING — /nacrtuj odprt za IT/DE", () => {
+  test("ITDE_STATIC_ROUTES vsebuje /nacrtuj (proxy ne 308-a več)", async () => {
+    const routing = await import("@/i18n/routing");
+    expect(routing.isItDeRoute("/nacrtuj")).toBe(true);
+    // okoljske varovalke ostanejo zaprte (P4-8)
+    expect(routing.isItDeRoute("/trznica")).toBe(false);
+    expect(routing.isItDeRoute("/potovanje")).toBe(false);
+    expect(routing.isItDeRoute("/pot")).toBe(false);
+    expect(routing.isItDeRoute("/na-poti")).toBe(false);
+    expect(routing.isLocaleRoute("/nacrtuj", "it")).toBe(true);
+    expect(routing.isLocaleRoute("/nacrtuj", "de")).toBe(true);
+  });
+});

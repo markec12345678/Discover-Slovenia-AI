@@ -34,6 +34,11 @@ import { useAppStore } from "@/lib/store";
 import type { Itinerary, PlannerInput } from "@/lib/types";
 import { QUICK_ACTIONS } from "@/lib/refine-actions";
 import { trackPlannerEvent, markResultEngaged } from "@/lib/planner-analytics";
+import type { PlannerLang } from "@/lib/planner-lang";
+
+/** W1-2b-2: jezik UI — 4-smerno iz locale (neznano → SL). */
+const langOf = (locale: string): PlannerLang =>
+  locale === "en" || locale === "it" || locale === "de" ? locale : "sl";
 
 // ============================================================================
 // PLANNER AI CONTROLS — Issue #3 §3 "AI = CONTROL LAYER"
@@ -65,69 +70,92 @@ interface PlannerAiControlsProps {
   className?: string;
 }
 
-/** Dvojezične oznake (isti vzorec kot ItineraryRefiner — L konstanta).
+/** Večjezične oznake (isti vzorec kot ItineraryRefiner — L konstanta;
+ *  W1-2b-2: tudi IT/DE).
  *  ISSUE #9 ZERO-AI: naslov NE trdi več »AI prilagoditve« — akcije so
  *  DETERMINISTIČNE (refine-actions + ukazni parser, 0 AI žetonov). */
 const L = {
-  title: { sl: "Hitre prilagoditve", en: "Quick adjustments" },
+  title: { sl: "Hitre prilagoditve", en: "Quick adjustments", it: "Modifiche rapide", de: "Schnelle Anpassungen" },
   subtitle: {
     sl: "Kaj naj spremenim na tvoji poti?",
     en: "What should I change about your trip?",
+    it: "Cosa devo cambiare del tuo viaggio?",
+    de: "Was soll ich an deiner Reise ändern?",
   },
-  adjustDay: { sl: "Dan", en: "Day" },
-  wholeTrip: { sl: "cela pot", en: "whole trip" },
+  adjustDay: { sl: "Dan", en: "Day", it: "Giorno", de: "Tag" },
+  wholeTrip: { sl: "cela pot", en: "whole trip", it: "intero viaggio", de: "ganze Reise" },
   // TASK 4 / K-8: VIDNA ločba obsega — skupinski oznaki nad čipi. VLM
   // revizija: "chips do not visually indicate which day they affect … no
   // text explaining scope" (a11y imena so ga nosila, vidno ne).
   scopeDayLabel: {
     sl: "Za izbrani dan:",
     en: "For the selected day:",
+    it: "Per il giorno selezionato:",
+    de: "Für den ausgewählten Tag:",
   },
   scopeTripLabel: {
     sl: "Za celotno pot:",
     en: "For the whole trip:",
+    it: "Per l'intero viaggio:",
+    de: "Für die ganze Reise:",
   },
   quickActionsHint: {
     sl: "Hitre akcije delujejo tudi brez AI (deterministično)",
     en: "Quick actions also work without AI (deterministic)",
+    it: "Le azioni rapide funzionano anche senza AI (deterministico)",
+    de: "Schnellaktionen funktionieren auch ohne KI (deterministisch)",
   },
   inputLabel: {
     sl: "Prosti ukaz za prilagoditev",
     en: "Free-form adjustment instruction",
+    it: "Istruzione libera per la modifica",
+    de: "Freiform-Anweisung zur Anpassung",
   },
   inputPlaceholder: {
     sl: "npr. dodaj Piran, odstrani Kranj, sprememi tempo …",
     en: "e.g. add Piran, remove Kranj, change the pace …",
+    it: "es. aggiungi Piran, rimuovi Kranj, cambia il ritmo …",
+    de: "z. B. füge Piran hinzu, entferne Kranj, ändere das Tempo …",
   },
-  send: { sl: "Pošlji", en: "Send" },
-  loading: { sl: "Prilagajam …", en: "Adjusting …" },
+  send: { sl: "Pošlji", en: "Send", it: "Invia", de: "Senden" },
+  loading: { sl: "Prilagajam …", en: "Adjusting …", it: "Modifico …", de: "Passe an …" },
   // TASK 4 / K-4: IZHOD iz dolgega refine klica (živi dokaz: 8–11 min
   // spinnerja brez preklica) — Prekliči + števec dejansko pretečenega časa
   // (isti kanon iskrenosti kot generacija TASK 77).
-  cancel: { sl: "Prekliči", en: "Cancel" },
-  seconds: { sl: "s", en: "s" },
+  cancel: { sl: "Prekliči", en: "Cancel", it: "Annulla", de: "Abbrechen" },
+  seconds: { sl: "s", en: "s", it: "s", de: "s" },
   loadingSlowHint: {
     sl: "AI lahko potrebuje do ~60 s — lahko prekličeš.",
     en: "AI can take up to ~60 s — you can cancel.",
+    it: "L'AI può richiedere fino a ~60 s — puoi annullare.",
+    de: "Die KI kann bis zu ~60 s brauchen — du kannst abbrechen.",
   },
   toastCancelled: {
     sl: "Prilagoditev preklicana — načrt ni spremenjen",
     en: "Adjustment cancelled — itinerary unchanged",
+    it: "Modifica annullata — itinerario invariato",
+    de: "Anpassung abgebrochen — Reiseplan unverändert",
   },
-  toastUpdated: { sl: "Itinerer posodobljen!", en: "Itinerary updated!" },
+  toastUpdated: { sl: "Itinerer posodobljen!", en: "Itinerary updated!", it: "Itinerario aggiornato!", de: "Reiseplan aktualisiert!" },
   toastStillFailing: {
     sl: "Posodobljeno — a dan še vedno ni izvedljiv",
     en: "Updated — but the day is still not doable",
+    it: "Aggiornato — ma il giorno non è ancora fattibile",
+    de: "Aktualisiert — aber der Tag ist noch nicht machbar",
   },
-  toastNoChange: { sl: "Ni sprememb", en: "No changes" },
-  toastFailed: { sl: "Posodobitev ni uspela", en: "Update failed" },
+  toastNoChange: { sl: "Ni sprememb", en: "No changes", it: "Nessuna modifica", de: "Keine Änderungen" },
+  toastFailed: { sl: "Posodobitev ni uspela", en: "Update failed", it: "Aggiornamento non riuscito", de: "Aktualisierung fehlgeschlagen" },
   toastTimeout: {
     sl: "Prilagoditev je trajala predolgo — poskusi znova (hitre akcije delujejo takoj)",
     en: "The adjustment took too long — try again (quick actions work instantly)",
+    it: "La modifica ha richiesto troppo tempo — riprova (le azioni rapide sono immediate)",
+    de: "Die Anpassung hat zu lange gedauert — versuche es erneut (Schnellaktionen wirken sofort)",
   },
   errorGeneric: {
     sl: "Napaka pri posodobitvi",
     en: "Error while updating",
+    it: "Errore durante l'aggiornamento",
+    de: "Fehler beim Aktualisieren",
   },
 } as const;
 
@@ -138,31 +166,37 @@ const L = {
  */
 export const AI_CONTROL_FREE_ACTIONS: {
   id: string;
-  label: { sl: string; en: string };
-  instruction: { sl: string; en: string };
+  label: { sl: string; en: string; it?: string; de?: string };
+  instruction: { sl: string; en: string; it?: string; de?: string };
 }[] = [
   {
     id: "cheaper",
-    label: { sl: "Ceneje", en: "Cheaper" },
+    label: { sl: "Ceneje", en: "Cheaper", it: "Più economico", de: "Günstiger" },
     instruction: {
       sl: "Naredi načrt ceneje — prednost imajo brezplačne in cenejše dejavnosti, skupni strošek potovanja naj se zniža.",
       en: "Make the itinerary cheaper — prioritize free and inexpensive activities and lower the overall trip cost.",
+      it: "Rendi l'itinerario più economico — dai priorità alle attività gratuite ed economiche e riduci il costo complessivo del viaggio.",
+      de: "Mach den Reiseplan günstiger — priorisiere kostenlose und preiswerte Aktivitäten und senke die Gesamtkosten der Reise.",
     },
   },
   {
     id: "more_active",
-    label: { sl: "Bolj aktivno", en: "More active" },
+    label: { sl: "Bolj aktivno", en: "More active", it: "Più attivo", de: "Aktiver" },
     instruction: {
       sl: "Naredi načrt bolj aktiven — dodaj pohode in telesno dejavne izkušnje.",
       en: "Make the itinerary more active — add hikes and physically active experiences.",
+      it: "Rendi l'itinerario più attivo — aggiungi escursioni ed esperienze fisicamente attive.",
+      de: "Mach den Reiseplan aktiver — füge Wanderungen und körperlich aktive Erlebnisse hinzu.",
     },
   },
   {
     id: "calmer",
-    label: { sl: "Bolj mirno", en: "Calmer" },
+    label: { sl: "Bolj mirno", en: "Calmer", it: "Più tranquillo", de: "Ruhiger" },
     instruction: {
       sl: "Naredi načrt bolj miren — manj postankov na dan in več časa za vsak kraj.",
       en: "Make the itinerary calmer — fewer stops per day and more time at each place.",
+      it: "Rendi l'itinerario più tranquillo — meno tappe al giorno e più tempo in ogni luogo.",
+      de: "Mach den Reiseplan ruhiger — weniger Stopps pro Tag und mehr Zeit an jedem Ort.",
     },
   },
 ];
@@ -198,7 +232,7 @@ export function PlannerAiControls({
 }: PlannerAiControlsProps) {
   const { toast } = useToast();
   const locale = useLocale();
-  const isEn = locale === "en";
+  const lang = langOf(locale);
   const t = useTranslations("planner");
   const [instruction, setInstruction] = useState("");
   const [loading, setLoading] = useState(false);
@@ -276,7 +310,7 @@ export function PlannerAiControls({
           itinerary,
           formData: {
             ...formData,
-            language: isEn ? "en" : "sl",
+            language: lang,
             ...(useAppStore.getState().selectedProducts.length > 0
               ? {
                   selectedProviderProducts:
@@ -295,7 +329,7 @@ export function PlannerAiControls({
         const err = await res.json().catch(() => ({}));
         throw new Error(
           (err as { error?: string }).error ||
-            L.errorGeneric[isEn ? "en" : "sl"]
+            L.errorGeneric[lang]
         );
       }
 
@@ -336,15 +370,15 @@ export function PlannerAiControls({
           toast({
             title:
               validation?.status === "still_failing"
-                ? L.toastStillFailing[isEn ? "en" : "sl"]
-                : L.toastUpdated[isEn ? "en" : "sl"],
+                ? L.toastStillFailing[lang]
+                : L.toastUpdated[lang],
             description: toastDescription,
             variant:
               validation?.status === "still_failing" ? "destructive" : "default",
           });
         } else if (data.note || validation?.statusNote) {
           toast({
-            title: L.toastNoChange[isEn ? "en" : "sl"],
+            title: L.toastNoChange[lang],
             description: toastDescription,
             variant:
               validation?.status === "still_failing" ? "destructive" : "default",
@@ -365,8 +399,8 @@ export function PlannerAiControls({
         });
         toast({
           title: timedOut
-            ? L.toastTimeout[isEn ? "en" : "sl"]
-            : L.toastCancelled[isEn ? "en" : "sl"],
+            ? L.toastTimeout[lang]
+            : L.toastCancelled[lang],
           variant: timedOut ? "destructive" : "default",
         });
       } else {
@@ -376,9 +410,9 @@ export function PlannerAiControls({
           placement: "control_strip",
         });
         toast({
-          title: L.toastFailed[isEn ? "en" : "sl"],
+          title: L.toastFailed[lang],
           description:
-            err instanceof Error ? err.message : L.errorGeneric[isEn ? "en" : "sl"],
+            err instanceof Error ? err.message : L.errorGeneric[lang],
           variant: "destructive",
         });
       }
@@ -405,10 +439,10 @@ export function PlannerAiControls({
         </span>
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-semibold leading-tight sm:text-base">
-            {L.title[isEn ? "en" : "sl"]}
+            {L.title[lang]}
           </h3>
           <p className="text-xs text-muted-foreground">
-            {L.subtitle[isEn ? "en" : "sl"]}
+            {L.subtitle[lang]}
           </p>
         </div>
         <div className="flex items-center gap-1.5">
@@ -422,7 +456,7 @@ export function PlannerAiControls({
           >
             <SelectTrigger
               className="h-8 w-[120px] text-xs"
-              aria-label={L.adjustDay[isEn ? "en" : "sl"]}
+              aria-label={L.adjustDay[lang]}
             >
               <SelectValue />
             </SelectTrigger>
@@ -443,7 +477,7 @@ export function PlannerAiControls({
       {dayNumbers.length > 0 && (
         <div className="mt-3 space-y-2">
           <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/90">
-            {L.scopeDayLabel[isEn ? "en" : "sl"]}{" "}
+            {L.scopeDayLabel[lang]}{" "}
             <span className="font-semibold text-foreground/80">
               {t("dayTitle", { day: quickDay })}
             </span>
@@ -451,7 +485,7 @@ export function PlannerAiControls({
           <div
             className="flex flex-wrap gap-1.5"
             role="group"
-            aria-label={`${L.scopeDayLabel[isEn ? "en" : "sl"]} ${t("dayTitle", { day: quickDay })}`}
+            aria-label={`${L.scopeDayLabel[lang]} ${t("dayTitle", { day: quickDay })}`}
           >
             {QUICK_ACTIONS.map((qa) => {
             const Icon = ACTION_ICONS[qa.id] ?? Sparkles;
@@ -462,12 +496,12 @@ export function PlannerAiControls({
                 type="button"
                 onClick={() =>
                   handleRefine(
-                    qa.instruction[isEn ? "en" : "sl"](quickDay),
+                    (qa.instruction[lang] ?? qa.instruction.en)(quickDay),
                     { action: qa.id, day: quickDay }
                   )
                 }
                 disabled={loading}
-                aria-label={`${qa.label[isEn ? "en" : "sl"]} — ${t("dayTitle", { day: quickDay })}`}
+                aria-label={`${qa.label[lang] ?? qa.label.en} — ${t("dayTitle", { day: quickDay })}`}
                 className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-border/70 bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:opacity-50"
               >
                 {busy ? (
@@ -475,7 +509,7 @@ export function PlannerAiControls({
                 ) : (
                   <Icon className="size-3.5 text-primary" aria-hidden="true" />
                 )}
-                {qa.label[isEn ? "en" : "sl"]}
+                {qa.label[lang]}
               </button>
             );
           })}
@@ -484,12 +518,12 @@ export function PlannerAiControls({
               OBSTOJEČA prosto-besedilna pot (celoten načrt, brez action) */}
           </div>
           <p className="pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/90">
-            {L.scopeTripLabel[isEn ? "en" : "sl"]}
+            {L.scopeTripLabel[lang]}
           </p>
           <div
             className="flex flex-wrap gap-1.5"
             role="group"
-            aria-label={L.scopeTripLabel[isEn ? "en" : "sl"]}
+            aria-label={L.scopeTripLabel[lang]}
           >
             {AI_CONTROL_FREE_ACTIONS.map((fa) => {
             const Icon = FREE_ACTION_ICONS[fa.id] ?? Sparkles;
@@ -499,14 +533,14 @@ export function PlannerAiControls({
                 key={fa.id}
                 type="button"
                 onClick={() =>
-                  handleRefine(fa.instruction[isEn ? "en" : "sl"], {
+                  handleRefine(fa.instruction[lang] ?? fa.instruction.en, {
                     action: fa.id,
                     day: null,
                   })
                 }
                 disabled={loading}
-                aria-label={fa.label[isEn ? "en" : "sl"]}
-                title={L.wholeTrip[isEn ? "en" : "sl"]}
+                aria-label={fa.label[lang] ?? fa.label.en}
+                title={L.wholeTrip[lang]}
                 className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:border-primary/50 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:opacity-50"
               >
                 {busy ? (
@@ -514,7 +548,7 @@ export function PlannerAiControls({
                 ) : (
                   <Icon className="size-3.5" aria-hidden="true" />
                 )}
-                {fa.label[isEn ? "en" : "sl"]}
+                {fa.label[lang]}
               </button>
             );
           })}
@@ -535,15 +569,15 @@ export function PlannerAiControls({
             aria-hidden="true"
           />
           <span className="text-xs font-medium text-muted-foreground">
-            {L.loading[isEn ? "en" : "sl"]} {elapsedSeconds > 0 && (
+            {L.loading[lang]} {elapsedSeconds > 0 && (
               <span className="tabular-nums">
-                · {elapsedSeconds} {L.seconds[isEn ? "en" : "sl"]}
+                · {elapsedSeconds} {L.seconds[lang]}
               </span>
             )}
           </span>
           {elapsedSeconds >= 10 && (
             <span className="text-xs text-muted-foreground/80">
-              {L.loadingSlowHint[isEn ? "en" : "sl"]}
+              {L.loadingSlowHint[lang]}
             </span>
           )}
           <Button
@@ -553,7 +587,7 @@ export function PlannerAiControls({
             onClick={handleCancel}
             className="ml-auto shrink-0 gap-1.5"
           >
-            {L.cancel[isEn ? "en" : "sl"]}
+            {L.cancel[lang]}
           </Button>
         </div>
       )}
@@ -564,11 +598,11 @@ export function PlannerAiControls({
           type="text"
           value={instruction}
           onChange={(e) => setInstruction(e.target.value)}
-          placeholder={L.inputPlaceholder[isEn ? "en" : "sl"]}
+          placeholder={L.inputPlaceholder[lang]}
           disabled={loading}
           maxLength={500}
           className="flex-1 bg-background"
-          aria-label={L.inputLabel[isEn ? "en" : "sl"]}
+          aria-label={L.inputLabel[lang]}
         />
         {loading ? (
           <Button
@@ -577,9 +611,9 @@ export function PlannerAiControls({
             size="sm"
             onClick={handleCancel}
             className="shrink-0 gap-1.5"
-            aria-label={L.cancel[isEn ? "en" : "sl"]}
+            aria-label={L.cancel[lang]}
           >
-            {L.cancel[isEn ? "en" : "sl"]}
+            {L.cancel[lang]}
           </Button>
         ) : (
           <Button
@@ -587,18 +621,18 @@ export function PlannerAiControls({
             disabled={loading || !instruction.trim()}
             size="sm"
             className="shrink-0 gap-1.5"
-            aria-label={L.send[isEn ? "en" : "sl"]}
+            aria-label={L.send[lang]}
           >
             <Send className="size-4" aria-hidden="true" />
             <span className="hidden sm:inline">
-              {L.send[isEn ? "en" : "sl"]}
+              {L.send[lang]}
             </span>
           </Button>
         )}
       </form>
 
       <p className="mt-1.5 text-[11px] text-muted-foreground/80">
-        {L.quickActionsHint[isEn ? "en" : "sl"]}
+        {L.quickActionsHint[lang]}
       </p>
     </div>
   );

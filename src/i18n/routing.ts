@@ -113,17 +113,20 @@ export function isEnRoute(pathname: string): boolean {
 }
 
 // ============================================================================
-// W1 IT/DE WHITELISTA (Issue #15 V0, 1.126.0; faza 2a — 1.127.0) — edini
-// vir resnice o tem, kje italijanščina in nemščina ŽIVITA.
+// W1 IT/DE WHITELISTA (Issue #15 V0, 1.126.0; faza 2a — 1.127.0; faza
+// 2b-2 — 1.129.0) — edini vir resnice o tem, kje italijanščina in nemščina
+// ŽIVITA.
 // FAZA 1 (1.126.0): jedro odkrivanja + svetovanja (statične poti).
 // FAZA 2a (1.127.0): + destinacijske plasti (/destinacija/* ×38 — podatkovni
 // overlayji slovenia-data-it/-de iz 1.126.0 so zdaj živi tudi na straneh)
 // + /zemljevid (jezikovno nevtralni POI-ji; UI 4-jezičen).
-// Namerno ŠE VEDNO IZVEN (iskrena meja, W1-faza-2b — proxy 308 na slovensko):
-//   /nacrtuj (pogon itinererja izpisuje SL/EN — cca 25 lib modulov z
-//   lang-vejami; lastna naloga), L-vzorčne poti (/trznica, /dozivetja,
-//   /lokali, /dogodki, /potovanje, /na-poti, /moja-potovanja — inline SL/EN
-//   slovarji v komponentah), /vodici (vsebinska plast ADRIA-EN).
+// FAZA 2b-2 (1.129.0): + /nacrtuj — planner POGON je 4-jezičen (2b-1:
+// /api/itinerary jedro; 2b-2: plan-qa, packing-smart, refine-actions,
+// ukazni parser SL+EN+IT+DE, planner-audio, ICS izvoz, komponente).
+// Namerno ŠE VEDNO IZVEN (iskrena meja — proxy 308 na slovensko):
+//   L-vzorčne poti (/trznica, /dozivetja, /lokali, /dogodki, /potovanje,
+//   /na-poti, /moja-potovanja — inline SL/EN slovarji v komponentah), /vodici
+//   (vsebinska plast ADRIA-EN), /pot (skupnost — SL kanon).
 // Uporabniki: src/proxy.ts (308 guard), language-switcher (vidnost),
 // hreflangForPath (alternati), sitemap-urls.ts (IT/DE URL-ji).
 // ============================================================================
@@ -142,6 +145,9 @@ export const ITDE_STATIC_ROUTES = new Set([
   // W1 faza 2a: zemljevid — POI imena so jezikovno nevtralni viri (OSM/FSQ),
   // UI (T slovar) je 4-jezičen, iskanje ima IT/DE razloge zadetkov.
   "/zemljevid",
+  // W1 faza 2b-2 (1.129.0): načrtovalnik — pogon (deterministični motor,
+  // Q&A, pakirni seznam, hitre akcije, NL ukazi, izvozi) je 4-jezičen.
+  "/nacrtuj",
 ]);
 
 /**

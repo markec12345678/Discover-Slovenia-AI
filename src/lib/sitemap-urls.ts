@@ -279,7 +279,8 @@ export function getTotalSitemapUrlCount(): number {
   // + W1 faza 1 (1.126.0): IT/DE statične poti (9 × 2 = 18 URL)
   // + W1 faza 2a (1.127.0): IT/DE + /zemljevid (10 × 2 = 20) + destinacijske
   // plasti ×38 (hub 38 + things-to-do 38 + itinererji 190 + sezone 152 +
-  // vodniki 152 = 570 × 2 jezika = 1140) = skupaj 2384
+  // vodniki 152 = 570 × 2 jezika = 1140)
+  // + W1 faza 2b-2 (1.129.0): IT/DE + /nacrtuj (11 × 2) = skupaj 2386
   return (
     22 +
     DESTINATIONS.length +

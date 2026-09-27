@@ -18,6 +18,11 @@ import { useToast } from "@/hooks/use-toast";
 import type { Itinerary, PlannerInput } from "@/lib/types";
 import { EXAMPLE_QUESTIONS } from "@/lib/plan-qa";
 import { trackPlannerEvent, markResultEngaged } from "@/lib/planner-analytics";
+import type { PlannerLang } from "@/lib/planner-lang";
+
+/** W1-2b-2: jezik UI — 4-smerno iz locale (neznano → SL). */
+const langOf = (locale: string): PlannerLang =>
+  locale === "en" || locale === "it" || locale === "de" ? locale : "sl";
 
 // ============================================================================
 // F9 — PlanCopilot: "Vprašaj o načrtu" (klepet z izračunanimi dejstvi)
@@ -57,44 +62,54 @@ interface ChatMessage {
 const MAX_MESSAGES = 20;
 
 const L = {
-  title: { sl: "Vprašaj o načrtu", en: "Ask about the plan" },
+  title: { sl: "Vprašaj o načrtu", en: "Ask about the plan", it: "Chiedi del piano", de: "Frag den Plan ab" },
   subtitle: {
     sl: "Odgovori so izračunani iz tvojega načrta — AI le sfrazi, ne izmišljuje",
     en: "Answers are computed from your plan — AI only phrases, never invents",
+    it: "Le risposte sono calcolate dal tuo piano — l'AI formula soltanto, non inventa",
+    de: "Antworten werden aus deinem Plan berechnet — die KI formuliert nur, erfindet nichts",
   },
   placeholder: {
     sl: "npr. Kateri dan je najbolj natrpan?",
     en: "e.g. Which day is the busiest?",
+    it: "es. Quale giorno è il più intenso?",
+    de: "z. B. Welcher Tag ist der vollste?",
   },
-  send: { sl: "Pošlji vprašanje", en: "Send question" },
+  send: { sl: "Pošlji vprašanje", en: "Send question", it: "Invia domanda", de: "Frage senden" },
   inputLabel: {
     sl: "Vprašanje o načrtu",
     en: "Question about the plan",
+    it: "Domanda sul piano",
+    de: "Frage zum Plan",
   },
-  loading: { sl: "Preračunavam …", en: "Computing …" },
-  suggestions: { sl: "Predlogi vprašanj", en: "Suggested questions" },
-  badgeComputed: { sl: "izračunano", en: "computed" },
-  badgeAi: { sl: "AI · samo fraziranje dejstev", en: "AI · phrasing facts only" },
-  badgeFallback: { sl: "brez ugibanja", en: "no guessing" },
-  toastFailed: { sl: "Odgovor ni uspel", en: "Could not answer" },
+  loading: { sl: "Preračunavam …", en: "Computing …", it: "Calcolo …", de: "Berechne …" },
+  suggestions: { sl: "Predlogi vprašanj", en: "Suggested questions", it: "Domande suggerite", de: "Vorgeschlagene Fragen" },
+  badgeComputed: { sl: "izračunano", en: "computed", it: "calcolato", de: "berechnet" },
+  badgeAi: { sl: "AI · samo fraziranje dejstev", en: "AI · phrasing facts only", it: "AI · formula solo i fatti", de: "KI · formuliert nur Fakten" },
+  badgeFallback: { sl: "brez ugibanja", en: "no guessing", it: "senza tirare a indovinare", de: "kein Raten" },
+  toastFailed: { sl: "Odgovor ni uspel", en: "Could not answer", it: "Risposta non riuscita", de: "Antwort fehlgeschlagen" },
   errorGeneric: {
     sl: "Napaka pri pridobivanju odgovora",
     en: "Error while getting the answer",
+    it: "Errore durante il recupero della risposta",
+    de: "Fehler beim Abrufen der Antwort",
   },
   resetNote: {
     sl: "Zgodovina se počisti, ko se načrt spremeni — odgovori vedno veljajo za trenutni načrt.",
     en: "History clears when the plan changes — answers always match the current plan.",
+    it: "La cronologia si azzera quando il piano cambia — le risposte valgono sempre per il piano attuale.",
+    de: "Die Historie wird geleert, wenn sich der Plan ändert — Antworten gelten immer für den aktuellen Plan.",
   },
 } as const;
 
 /** Vir odgovora → (badge label, ikona, barve). */
 function sourceBadge(
   source: ChatMessage["source"],
-  isEn: boolean
+  lang: PlannerLang
 ): { label: string; icon: React.ComponentType<{ className?: string }>; className: string } | null {
   if (source === "computed") {
     return {
-      label: L.badgeComputed[isEn ? "en" : "sl"],
+      label: L.badgeComputed[lang],
       icon: Calculator,
       className:
         "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
@@ -102,7 +117,7 @@ function sourceBadge(
   }
   if (source === "fallback") {
     return {
-      label: L.badgeFallback[isEn ? "en" : "sl"],
+      label: L.badgeFallback[lang],
       icon: CircleSlash,
       className: "bg-muted text-muted-foreground",
     };
@@ -113,7 +128,7 @@ function sourceBadge(
 export function PlanCopilot({ itinerary, formData }: PlanCopilotProps) {
   const { toast } = useToast();
   const locale = useLocale();
-  const isEn = locale === "en";
+  const lang = langOf(locale);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -153,7 +168,7 @@ export function PlanCopilot({ itinerary, formData }: PlanCopilotProps) {
           // P4-8 isti razred buga kot nav.tagline: formData STATE nima polja
           // language (vstavi se šele ob generiranju) — vstavimo ga tukaj iz
           // locale strani, da so odgovori vedno v jeziku uporabnika.
-          formData: { ...formData, language: isEn ? "en" : "sl" },
+          formData: { ...formData, language: lang },
           question: q,
         }),
       });
@@ -167,7 +182,7 @@ export function PlanCopilot({ itinerary, formData }: PlanCopilotProps) {
 
       if (!res.ok || !data.answer) {
         throw new Error(
-          data.error || L.errorGeneric[isEn ? "en" : "sl"]
+          data.error || L.errorGeneric[lang]
         );
       }
 
@@ -183,21 +198,21 @@ export function PlanCopilot({ itinerary, formData }: PlanCopilotProps) {
       trackPlannerEvent("plan_qa_asked", {
         intent: data.intent ?? "unknown",
         source: data.source ?? "unknown",
-        locale: isEn ? "en" : "sl",
+        locale: lang,
         via,
       });
     } catch (err) {
       const msg =
         err instanceof Error
           ? err.message
-          : L.errorGeneric[isEn ? "en" : "sl"];
+          : L.errorGeneric[lang];
       trackPlannerEvent("plan_qa_asked", {
         intent: "error",
         source: "error",
         via,
       });
       toast({
-        title: L.toastFailed[isEn ? "en" : "sl"],
+        title: L.toastFailed[lang],
         description: msg,
         variant: "destructive",
       });
@@ -213,7 +228,7 @@ export function PlanCopilot({ itinerary, formData }: PlanCopilotProps) {
     ask(input, "input");
   }
 
-  const suggestions = EXAMPLE_QUESTIONS[isEn ? "en" : "sl"].slice(0, 4);
+  const suggestions = EXAMPLE_QUESTIONS[lang].slice(0, 4);
 
   return (
     <Card className="border-primary/30 bg-primary/5">
@@ -228,10 +243,10 @@ export function PlanCopilot({ itinerary, formData }: PlanCopilotProps) {
           </div>
           <div className="flex-1">
             <h3 className="text-sm font-semibold sm:text-base">
-              {L.title[isEn ? "en" : "sl"]}
+              {L.title[lang]}
             </h3>
             <p className="text-xs text-muted-foreground">
-              {L.subtitle[isEn ? "en" : "sl"]}
+              {L.subtitle[lang]}
             </p>
           </div>
         </div>
@@ -241,13 +256,13 @@ export function PlanCopilot({ itinerary, formData }: PlanCopilotProps) {
           ref={scrollRef}
           role="log"
           aria-live="polite"
-          aria-label={L.title[isEn ? "en" : "sl"]}
+          aria-label={L.title[lang]}
           className="max-h-80 space-y-2.5 overflow-y-auto rounded-lg border border-border/60 bg-background/50 p-3"
         >
           {messages.length === 0 && !loading && (
             <div className="py-1">
               <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                {L.suggestions[isEn ? "en" : "sl"]}
+                {L.suggestions[lang]}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {suggestions.map((q) => (
@@ -274,7 +289,7 @@ export function PlanCopilot({ itinerary, formData }: PlanCopilotProps) {
                 </div>
               );
             }
-            const badge = sourceBadge(m.source, isEn);
+            const badge = sourceBadge(m.source, lang);
             const BadgeIcon = badge?.icon;
             return (
               <div key={m.ts + i} className="flex justify-start">
@@ -303,7 +318,7 @@ export function PlanCopilot({ itinerary, formData }: PlanCopilotProps) {
           {loading && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-              {L.loading[isEn ? "en" : "sl"]}
+              {L.loading[lang]}
             </div>
           )}
         </div>
@@ -315,18 +330,18 @@ export function PlanCopilot({ itinerary, formData }: PlanCopilotProps) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={L.placeholder[isEn ? "en" : "sl"]}
+            placeholder={L.placeholder[lang]}
             disabled={loading}
             maxLength={500}
             className="flex-1 bg-background"
-            aria-label={L.inputLabel[isEn ? "en" : "sl"]}
+            aria-label={L.inputLabel[lang]}
           />
           <Button
             type="submit"
             disabled={loading || !input.trim()}
             size="icon"
             className="shrink-0"
-            aria-label={L.send[isEn ? "en" : "sl"]}
+            aria-label={L.send[lang]}
           >
             {loading ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -338,7 +353,7 @@ export function PlanCopilot({ itinerary, formData }: PlanCopilotProps) {
 
         {messages.length > 0 && (
           <p className="mt-1.5 text-[11px] text-muted-foreground/80">
-            {L.resetNote[isEn ? "en" : "sl"]}
+            {L.resetNote[lang]}
           </p>
         )}
       </CardContent>

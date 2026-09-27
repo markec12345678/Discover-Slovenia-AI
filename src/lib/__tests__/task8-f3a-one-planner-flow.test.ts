@@ -227,7 +227,9 @@ describe("F3-A itinerary-planner (source-contract)", () => {
   test("vedno vidna tiha povezava na korak ponudnikov (locale-zavedajoča)", () => {
     expect(PLANNER_SRC).toContain('t("supplyCompanionLine")');
     expect(PLANNER_SRC).toContain('t("supplyCompanionLink")');
-    expect(PLANNER_SRC).toContain('locale === "en" ? "/en/potovanje" : "/potovanje"');
+    // W1-2b-2: 4-jezično — SL → /potovanje, EN/IT/DE → /en/potovanje
+    // (IT/DE dedejijo EN različico, PL konvencija prehodnega obdobja)
+    expect(PLANNER_SRC).toContain('lang === "sl" ? "/potovanje" : "/en/potovanje"');
   });
 
   test("povezava NI odvisna od trenutne izbire (vidna tudi brez čipov)", () => {

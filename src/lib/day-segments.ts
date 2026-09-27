@@ -18,10 +18,10 @@ export type DaySegment = "morning" | "afternoon" | "evening";
 /** Oznake segmentov (L vzorec — dvajezična polja, kot journey/trip-view).
  *  Površine z next-intl lahko uporabijo lastne ključe; SharedTrip (samo SL)
  *  bere .sl direktno — ena resnica za besedilo. */
-export const DAY_SEGMENT_LABELS: Record<DaySegment, { sl: string; en: string }> = {
-  morning: { sl: "Jutro", en: "Morning" },
-  afternoon: { sl: "Popoldan", en: "Afternoon" },
-  evening: { sl: "Večer", en: "Evening" },
+export const DAY_SEGMENT_LABELS: Record<DaySegment, { sl: string; en: string; it: string; de: string }> = {
+  morning: { sl: "Jutro", en: "Morning", it: "Mattina", de: "Vormittag" },
+  afternoon: { sl: "Popoldan", en: "Afternoon", it: "Pomeriggio", de: "Nachmittag" },
+  evening: { sl: "Večer", en: "Evening", it: "Sera", de: "Abend" },
 };
 
 /** time_slot → segment dneva; null pri neznanem (brez ugibanj). */

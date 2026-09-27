@@ -133,3 +133,13 @@ export const EVENTS_IT: Record<string, EventIt> = {
     description: "Una tradizionale fiera di dicembre a Postojna vicino alla grotta, con prodotti artigianali della regione carsica, prosciutto, vino Teran, ceramica e luci di Natale. Musica dal vivo ogni sera.",
   },
 };
+
+/** IT oznake kategorij dogodkov (W1-2b-2 — zrcali EVENT_CATEGORY_LABELS). */
+export const EVENT_CATEGORY_LABELS_IT: Record<EventCategory, string> = {
+  festival: "Festival",
+  glasba: "Musica",
+  sport: "Sport",
+  kultura: "Cultura",
+  hrana: "Cibo & bevande",
+  tradicija: "Tradizione",
+};
