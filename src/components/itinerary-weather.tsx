@@ -49,7 +49,8 @@ export function WeatherChip({
   lang,
 }: {
   w: TripWeatherDay;
-  lang: "sl" | "en";
+  /** W1-faza-2b: 4-jezični tok (TRIP_WEATHER_LABELS ima it/de). */
+  lang: "sl" | "en" | "it" | "de";
 }) {
   const dayText = TRIP_WEATHER_LABELS.day[lang](w);
   return (
@@ -85,7 +86,7 @@ export interface ItineraryForecast {
 export function useItineraryForecast(
   days: ReadonlyArray<DayPlan>,
   tripStartDate: string | null | undefined,
-  lang: "sl" | "en"
+  lang: "sl" | "en" | "it" | "de"
 ): ItineraryForecast {
   const plan = useMemo(
     () => itineraryWeatherPlan(days, tripStartDate),
@@ -189,7 +190,8 @@ export function ItineraryWeatherNotes({
 }: {
   unavailable: boolean;
   notPublished: boolean;
-  lang: "sl" | "en";
+  /** W1-faza-2b: 4-jezični tok. */
+  lang: "sl" | "en" | "it" | "de";
 }) {
   if (!unavailable && !notPublished) return null;
   return (

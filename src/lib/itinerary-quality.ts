@@ -1,4 +1,5 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { PL } from "@/lib/planner-lang";
 import { computeTripDriveCosts } from "@/lib/trip-costs";
 import {
   AVG_SPEED_KMH,
@@ -267,42 +268,61 @@ export function sanitizeAiRationale(raw: unknown): string | null {
 export function buildFallbackRationale(
   input: PlannerInput,
   quality: ItineraryQuality,
-  lang: "sl" | "en" = "sl"
+  lang: "sl" | "en" | "it" | "de" = "sl"
 ): string {
   // F15: tempo v utemeljitvi — SAMO kadar je izrecno izbran (slow/fast);
   // "balanced" ali neizbrano ne spremeni besedila (nazaj kompatibilno).
-  const paceNoteEn =
+  // W1-faza-2b: 4-jezično (PL) — IT/DE prevodi, manjkajoč bi dedil EN.
+  const paceNote =
     input.pace === "slow"
-      ? " The slow pace means fewer stops with more time at each."
+      ? PL(lang, {
+          sl: " Počasen tempo pomeni manj postankov z več časa na vsakem.",
+          en: " The slow pace means fewer stops with more time at each.",
+          it: " Il ritmo lento significa meno tappe con più tempo per ciascuna.",
+          de: " Das langsame Tempo bedeutet weniger Stopps mit mehr Zeit an jedem Ort.",
+        })
       : input.pace === "fast"
-      ? " The fast pace packs more places into each day."
+      ? PL(lang, {
+          sl: " Hiter tempo zajame več mest v vsakem dnevu.",
+          en: " The fast pace packs more places into each day.",
+          it: " Il ritmo sostenuto comprende più luoghi in ogni giornata.",
+          de: " Das schnelle Tempo packt mehr Orte in jeden Tag.",
+        })
       : "";
-  const paceNoteSl =
-    input.pace === "slow"
-      ? " Počasen tempo pomeni manj postankov z več časa na vsakem."
-      : input.pace === "fast"
-      ? " Hiter tempo zajame več mest v vsakem dnevu."
-      : "";
-  if (lang === "en") {
-    const interests =
-      input.interests.length > 0
-        ? `with wishes: ${input.interests.slice(0, 3).join(", ")}`
-        : "based on general preferences";
-    const driving =
-      quality.drivingMinutes > 0
-        ? `total driving ~${formatDrivingMinutes(quality.drivingMinutes)}`
-        : "destinations are right next to each other";
-    return `The trip is planned for a ${input.days}-day journey ${interests}. Destinations are chosen by interest match, seasonal suitability and geographic proximity (${driving}).${paceNoteEn}`;
-  }
   const interests =
     input.interests.length > 0
-      ? `z željami: ${input.interests.slice(0, 3).join(", ")}`
-      : "glede na splošne želje";
+      ? PL(lang, {
+          sl: `z željami: ${input.interests.slice(0, 3).join(", ")}`,
+          en: `with wishes: ${input.interests.slice(0, 3).join(", ")}`,
+          it: `con le preferenze: ${input.interests.slice(0, 3).join(", ")}`,
+          de: `mit Wünschen: ${input.interests.slice(0, 3).join(", ")}`,
+        })
+      : PL(lang, {
+          sl: "glede na splošne želje",
+          en: "based on general preferences",
+          it: "in base alle preferenze generali",
+          de: "auf Basis allgemeiner Vorlieben",
+        });
   const driving =
     quality.drivingMinutes > 0
-      ? `skupna vožnja ~${formatDrivingMinutes(quality.drivingMinutes)}`
-      : "destinacije so v neposredni bližini";
-  return `Pot je sestavljena za ${input.days}-dnevno potovanje ${interests}. Destinacije so izbrane po ujemanju s interesi, sezonski ustreznosti in geografski bližini (${driving}).${paceNoteSl}`;
+      ? PL(lang, {
+          sl: `skupna vožnja ~${formatDrivingMinutes(quality.drivingMinutes)}`,
+          en: `total driving ~${formatDrivingMinutes(quality.drivingMinutes)}`,
+          it: `guida totale ~${formatDrivingMinutes(quality.drivingMinutes)}`,
+          de: `Gesamtfahrt ~${formatDrivingMinutes(quality.drivingMinutes)}`,
+        })
+      : PL(lang, {
+          sl: "destinacije so v neposredni bližini",
+          en: "destinations are right next to each other",
+          it: "le destinazioni sono vicinissime tra loro",
+          de: "die Ziele liegen direkt nebeneinander",
+        });
+  return PL(lang, {
+    sl: `Pot je sestavljena za ${input.days}-dnevno potovanje ${interests}. Destinacije so izbrane po ujemanju s interesi, sezonski ustreznosti in geografski bližini (${driving}).${paceNote}`,
+    en: `The trip is planned for a ${input.days}-day journey ${interests}. Destinations are chosen by interest match, seasonal suitability and geographic proximity (${driving}).${paceNote}`,
+    it: `Il viaggio è pianificato per un percorso di ${input.days} giorni ${interests}. Le destinazioni sono scelte per corrispondenza con gli interessi, idoneità stagionale e vicinanza geografica (${driving}).${paceNote}`,
+    de: `Die Reise ist für eine ${input.days}-tägige Fahrt geplant ${interests}. Ziele werden nach Interessensübereinstimmung, Saison eignung und geografischer Nähe gewählt (${driving}).${paceNote}`,
+  });
 }
 
 /** "1h 35 min" / "45 min" / "—" (0 min → ni vožnje med znanimi točkami). */

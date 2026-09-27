@@ -12,8 +12,13 @@
  * odgovoru NE zaupamo (vsako polje preverjeno po tipu).
  */
 
-/** Jeznik (Stanje) — vpliva samo na besedilo condition. */
-export type WeatherLang = "sl" | "en";
+/**
+ * Jeznik (Stanje) — vpliva samo na besedilo condition.
+ * W1-faza-2b (Issue #15): razširjeno na IT/DE (dispečer
+ * weatherCodeToTextFor pokriva vse štiri; parse plasti uporabljajo
+ * isti ternary vzorec — IT/DE podedujeta EN besedilo).
+ */
+export type WeatherLang = "sl" | "en" | "it" | "de";
 
 /** WMO weather code → slovensko besedilo. */
 export function weatherCodeToText(code: number): string {
@@ -277,7 +282,8 @@ export function parseOpenMeteoCurrent(
 
   const payload: CurrentWeatherPayload = {
     condition:
-      lang === "en" ? weatherCodeToTextEn(code) : weatherCodeToText(code),
+      // W1-faza-2b: polni 4-jezični dispečer (pravo IT/DE besedilo)
+      weatherCodeToTextFor(lang, code),
     temp: Math.round(temp),
     humidity: Math.round(humidity),
     windSpeed: Math.round(windSpeed),
@@ -329,7 +335,8 @@ export function parseOpenMeteoToday(
 
   return {
     condition:
-      lang === "en" ? weatherCodeToTextEn(code[0]) : weatherCodeToText(code[0]),
+      // W1-faza-2b: polni 4-jezični dispečer (pravo IT/DE besedilo)
+      weatherCodeToTextFor(lang, code[0]),
     icon: weatherCodeToIcon(code[0]),
     tempMax: Math.round(tempMax[0]),
     precipitationProbabilityMax,

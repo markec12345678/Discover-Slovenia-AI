@@ -14,6 +14,7 @@
 // ============================================================================
 
 import type { Itinerary, LocationVisit } from "@/lib/types";
+import { PL } from "@/lib/planner-lang";
 import type { ProviderProduct } from "./types";
 import { availabilityNote } from "./availability-note";
 import { haversineKm } from "@/lib/geo-distance";
@@ -96,7 +97,8 @@ export function insertProductStop(
   it: Itinerary,
   product: ProviderProduct,
   opts: {
-    locale: "sl" | "en";
+    /** W1-faza-2b: 4-jezični tok (PL helper). */
+    locale: "sl" | "en" | "it" | "de";
     destinationCoords: Map<string, { lat: number; lng: number }>;
   }
 ): AddProductResult {
@@ -139,7 +141,7 @@ export function insertProductStop(
   const dayIdx = it.days.findIndex((d) => d.day === best.day);
   if (dayIdx === -1) return { ok: false, reason: "no-days" };
 
-  const isEn = opts.locale === "en";
+  const locale = opts.locale;
   const duration = TYPE_DURATION_H[product.type] ?? 2;
 
   const notesParts: string[] = [];
@@ -148,22 +150,27 @@ export function insertProductStop(
   if (product.address) notesParts.push(product.address);
   if (product.price) {
     // AUDIT 42, točka 10: enota + „od" vedno zraven cene (nikoli gol €X).
+    // W1-faza-2b: 4-jezično (PL).
     const unit = product.price.unit.replace(/_/g, " ");
     const from = product.price.fromPrice
-      ? isEn
-        ? "from "
-        : "od "
+      ? PL(locale, { sl: "od ", en: "from ", it: "da ", de: "ab " })
       : "";
     notesParts.push(
-      isEn
-        ? `price: ${from}€${product.price.amount} (${unit})`
-        : `cena: ${from}${product.price.amount} € (${unit})`
+      PL(locale, {
+        sl: `cena: ${from}${product.price.amount} € (${unit})`,
+        en: `price: ${from}€${product.price.amount} (${unit})`,
+        it: `prezzo: ${from}${product.price.amount} € (${unit})`,
+        de: `Preis: ${from}${product.price.amount} € (${unit})`,
+      })
     );
   }
   notesParts.push(
-    isEn
-      ? `Added from the supply map · source: ${product.license?.source ?? product.provider}`
-      : `Dodano z zemljevida ponudbe · vir: ${product.license?.source ?? product.provider}`
+    PL(locale, {
+      sl: `Dodano z zemljevida ponudbe · vir: ${product.license?.source ?? product.provider}`,
+      en: `Added from the supply map · source: ${product.license?.source ?? product.provider}`,
+      it: `Aggiunto dalla mappa delle offerte · fonte: ${product.license?.source ?? product.provider}`,
+      de: `Von der Angebotskarte hinzugefügt · Quelle: ${product.license?.source ?? product.provider}`,
+    })
   );
   // TASK 47 (§6/§13): ISKRENA razpoložljivost je del provenance vsakega
   // supply postanka — negotovost ostane negotovost (nikoli „na voljo za

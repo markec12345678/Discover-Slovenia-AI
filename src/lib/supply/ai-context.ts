@@ -183,7 +183,8 @@ export async function fetchAiSupplyContext(
   opts: {
     pax?: number;
     date?: string;
-    locale: "sl" | "en";
+    /** W1-faza-2b: 4-jezični tok (searchSupply normalizira na kanonične vrednosti). */
+    locale: "sl" | "en" | "it" | "de";
     /** Testi vbrizgajo adapterje; produkcija dobi privzete (realne). */
     adapters?: SupplyAdapter[];
   }

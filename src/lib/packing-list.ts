@@ -1,3 +1,4 @@
+import { PL } from "@/lib/planner-lang";
 // ============================================================================
 // PAKIRNI SEZNAM — deterministične hevristike glede na sezono/interese/dneve
 // ============================================================================
@@ -22,7 +23,8 @@ export interface PackingListInput {
   days: number;
   // FW4.3/P4-8 (EN-fallback fix): jezik izpisa — "sl" (privzeto) ali "en".
   // Fallback pot brez AI je prej izpisovala slovensko tudi za EN uporabnike.
-  lang?: "sl" | "en";
+  // W1-faza-2b (Issue #15): razširjeno na IT/DE (4-jezične tabele spodaj).
+  lang?: "sl" | "en" | "it" | "de";
 }
 
 /** Max število elementov na pakirnem seznamu (berljivost). */
@@ -76,6 +78,44 @@ const ALWAYS_ITEMS_EN = [
   "Foldable bag for souvenirs",
 ];
 
+// --- W1-faza-2b: IT različice (Issue #15 — Alma pariteta) ---
+const SEASON_ITEMS_IT: Record<string, string[]> = {
+  winter: [
+    "Strati caldi di abbigliamento",
+    "Cappello e guanti",
+    "Calzature da neve",
+    "Crema viso antifreddo",
+  ],
+  summer: ["Crema solare SPF 50", "Costume da bagno", "Cappello per il sole"],
+  spring: ["Giacca leggera antivento", "Strati per il meteo variabile"],
+  autumn: ["Giacca antipioggia", "Scarpe da trekking chiuse"],
+};
+
+const ALWAYS_ITEMS_IT = [
+  "Euro in contanti (esercizi locali più piccoli)",
+  "Nessun adattatore necessario (prese EU)",
+  "Borsa pieghevole per i souvenir",
+];
+
+// --- W1-faza-2b: DE različice (Issue #15 — Alma pariteta) ---
+const SEASON_ITEMS_DE: Record<string, string[]> = {
+  winter: [
+    "Warme Kleidungsschichten",
+    "Mütze und Handschuhe",
+    "Schneetaugliches Schuhwerk",
+    "Kälteschutzcreme fürs Gesicht",
+  ],
+  summer: ["Sonnencreme SPF 50", "Badekleidung", "Sonnenhut"],
+  spring: ["Leichte winddichte Jacke", "Schichten für wechselhaftes Wetter"],
+  autumn: ["Regenjacke", "Geschlossene Wanderschuhe"],
+};
+
+const ALWAYS_ITEMS_DE = [
+  "Euro in Bargeld (kleinere lokale Läden)",
+  "Kein Adapter nötig (EU-Steckdosen)",
+  "Faltbare Tasche für Souvenirs",
+];
+
 /** Kratek, berljiv hevristični seznam — glede komentar zgoraj za pravila. */
 export function buildPackingList(input: PackingListInput): string[] {
   const season = (input?.season ?? "").toString().trim().toLowerCase();
@@ -84,9 +124,24 @@ export function buildPackingList(input: PackingListInput): string[] {
     : [];
   const groupType = (input?.groupType ?? "").toString().trim().toLowerCase();
   const days = Number.isFinite(input?.days) ? Number(input.days) : 0;
-  const isEn = input?.lang === "en";
-  const seasonItems = isEn ? SEASON_ITEMS_EN : SEASON_ITEMS;
-  const alwaysItems = isEn ? ALWAYS_ITEMS_EN : ALWAYS_ITEMS;
+  // W1-faza-2b: izbira tabel po jeziku (IT/DE svoji tabeli; neprepoznan → SL)
+  const lang = input?.lang ?? "sl";
+  const seasonItems =
+    lang === "en"
+      ? SEASON_ITEMS_EN
+      : lang === "it"
+      ? SEASON_ITEMS_IT
+      : lang === "de"
+      ? SEASON_ITEMS_DE
+      : SEASON_ITEMS;
+  const alwaysItems =
+    lang === "en"
+      ? ALWAYS_ITEMS_EN
+      : lang === "it"
+      ? ALWAYS_ITEMS_IT
+      : lang === "de"
+      ? ALWAYS_ITEMS_DE
+      : ALWAYS_ITEMS;
 
   const haystack = [...interests, groupType].join(" ");
   const items: string[] = [];
@@ -95,47 +150,85 @@ export function buildPackingList(input: PackingListInput): string[] {
   if (seasonItems[season]) items.push(...seasonItems[season]);
   if (season === "spring" || season === "autumn") {
     items.push(
-      isEn
-        ? "Sunscreen (spring/autumn UV too)"
-        : "Sončna krema (tudi pomladi/jeseni UV)"
+      PL(lang, {
+        sl: "Sončna krema (tudi pomladi/jeseni UV)",
+        en: "Sunscreen (spring/autumn UV too)",
+        it: "Crema solare (UV anche in primavera/autunno)",
+        de: "Sonnencreme (UV auch im Frühjahr/Herbst)",
+      })
     );
   } else if (season === "summer") {
-    items.push(isEn ? "Shorts for hot afternoons" : "Rajčke za vroče popoldne");
+    items.push(
+      PL(lang, {
+        sl: "Rajčke za vroče popoldne",
+        en: "Shorts for hot afternoons",
+        it: "Pantaloncini per i pomeriggi caldi",
+        de: "Shorts für heiße Nachmittage",
+      })
+    );
   } else if (season === "winter") {
-    items.push(isEn ? "Thermal base layers" : "Termično spodnje perilo");
+    items.push(
+      PL(lang, {
+        sl: "Termično spodnje perilo",
+        en: "Thermal base layers",
+        it: "Intimo termico",
+        de: "Thermounterwäsche",
+      })
+    );
   }
 
   // === Interesi ===
   if (/narav|pohod|gore?|planin|nature|hike|hiking|mountain/.test(haystack)) {
     items.push(
-      ...(isEn
+      ...(lang === "en"
         ? ["Hiking boots", "Water bottle or hydration pack"]
+        : lang === "it"
+        ? ["Scarpe da trekking", "Borraccia o zaino con idratazione"]
+        : lang === "de"
+        ? ["Wanderschuhe", "Trinkflasche oder Trinkrucksack"]
         : ["Pohodniški čevlji", "Camelbak/voda"])
     );
   }
   if (/avantur|adrenalin|raft|kajak|canyon|bike|kolo|adventur/.test(haystack)) {
-    items.push(isEn ? "Quick-dry clothing" : "Hitro sušeča se obleka");
+    items.push(
+      PL(lang, {
+        sl: "Hitro sušeča se obleka",
+        en: "Quick-dry clothing",
+        it: "Vestiti a asciugatura rapida",
+        de: "Schnell trocknende Kleidung",
+      })
+    );
   }
   if (/kulinar|hran|jest|gastro|vino|food|cuisine|wine/.test(haystack)) {
     items.push(
-      isEn
-        ? "A little spare luggage room for local treats"
-        : "Rahel prtljačni prostor za lokalne dobrote"
+      PL(lang, {
+        sl: "Rahel prtljačni prostor za lokalne dobrote",
+        en: "A little spare luggage room for local treats",
+        it: "Un po' di spazio in valigia per i prodotti locali",
+        de: "Etwas Platz im Gepäck für lokale Köstlichkeiten",
+      })
     );
   }
   if (/dru[žz]in|otrok|family|kids|children/.test(haystack)) {
     items.push(
-      isEn
-        ? "Kids' kit (car games, wet wipes)"
-        : "Otroški pripomočki (igrice za vožnjo, vlažilne robčice)"
+      PL(lang, {
+        sl: "Otroški pripomočki (igrice za vožnjo, vlažilne robčice)",
+        en: "Kids' kit (car games, wet wipes)",
+        it: "Kit per bambini (giochi per l'auto, salviette umide)",
+        de: "Kinder-Set (Autospiele, Feuchttücher)",
+      })
     );
   }
 
   // === Dolžina potovanja ===
   if (days > 5) {
     items.push(
-      ...(isEn
+      ...(lang === "en"
         ? ["Power bank", "Laundry service mid-trip"]
+        : lang === "it"
+        ? ["Power bank", "Servizio lavanderia a metà viaggio"]
+        : lang === "de"
+        ? ["Powerbank", "Wäscheservice unterwegs"]
         : ["Power bank", "Pralni servis med potovanjem"])
     );
   }

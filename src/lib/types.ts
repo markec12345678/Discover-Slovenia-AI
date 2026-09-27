@@ -132,9 +132,11 @@ export interface PlannerInput {
   // kompatibilno s starejšimi načrti); poganja datumski events match,
   // AI kontekst in prikaz datumov na dnevih
   startDate?: string;
-  // NOVO (FW4.3): jezik AI izpisa — "sl" (privzeto) ali "en". Client
+  // NOVO (FW4.3): jezik izpisa — "sl" (privzeto) ali "en". Client
   // (itinerary-planner) pošlje locale; itinerer se generira v tem jeziku.
-  language?: "sl" | "en";
+  // W1-faza-2b (Issue #15): razširjeno na "it"/"de" — pogon prek PL()
+  // helperja (manjkajoč prevod deduje EN, nikoli SL za IT/DE uporabnike).
+  language?: "sl" | "en" | "it" | "de";
   // NOVO (WEATHER-CONTEXT / t11): tip potne skupine — opcijsko; oblikuje
   // ritem in izbor načrta (družina → krajši prevozi in otrokom prijazne
   // lokacije, par → mirnejši tempo ...). Nazaj kompatibilno.

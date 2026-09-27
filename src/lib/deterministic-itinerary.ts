@@ -22,6 +22,10 @@
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
+// W1-faza-2b: IT/DE overlayji (faza 2a) + PL jezikovni helper pogona
+import { getItDestination } from "@/lib/slovenia-data-it";
+import { getDeDestination } from "@/lib/slovenia-data-de";
+import { PL } from "@/lib/planner-lang";
 import { PACE_FALLBACK } from "@/lib/pace-types";
 import { nextSlot, type SlotCursor } from "@/lib/schedule-slots";
 import { parseISODateLocal } from "@/lib/trip-dates";
@@ -172,10 +176,16 @@ export function generateDeterministicItinerary(
 ): Itinerary {
   const source = opts.source ?? "fallback";
   // P4-8 (EN-fallback fix): jezik vsega determinističnega besedila — prej
-  // je izpisoval slovensko tudi za EN uporabnike (mešanje jezikov)
-  const isEn = input.language === "en";
-  const taglineOf = (d: (typeof DESTINATIONS)[number]): string =>
-    isEn ? (DESTINATIONS_EN[d.id]?.tagline ?? d.tagline) : d.tagline;
+  // je izpisoval slovensko tudi za EN uporabnike (mešanje jezikov).
+  // W1-faza-2b: IT/DE — tagline prek IT/DE overlayjev (faza 2a), ostali
+  // nizi prek PL() (manjkajoč prevod deduje EN, nikoli SL).
+  const lang = input.language ?? "sl";
+  const taglineOf = (d: (typeof DESTINATIONS)[number]): string => {
+    if (lang === "en") return DESTINATIONS_EN[d.id]?.tagline ?? d.tagline;
+    if (lang === "it") return getItDestination(d.id)?.tagline ?? DESTINATIONS_EN[d.id]?.tagline ?? d.tagline;
+    if (lang === "de") return getDeDestination(d.id)?.tagline ?? DESTINATIONS_EN[d.id]?.tagline ?? d.tagline;
+    return d.tagline;
+  };
 
   // TASK 62: PRIVZETI bazen ostane SLOVENSKI (znamba platforme + geo-koherentna
   // sidra TASK 51). Regionalne destinacije (HR/ME/AL) vstopijo SAMO z izrecna
@@ -442,8 +452,14 @@ export function generateDeterministicItinerary(
         estimated_cost: cost,
         // Deževen dan: transparenten razlog notranje izbire (resnična
         // večinska napoved sidr — ne izmišljen status); P4-8: EN različica
+        // W1-faza-2b: IT/DE različice (PL — manjkajoč prevod deduje EN)
         notes: rainy
-          ? `${taglineOf(dest)} — ${isEn ? "rainy day, so an indoor/flexible pick" : "deževen dan, zato notranja/prilagodljiva izbira"}`
+          ? `${taglineOf(dest)} — ${PL(lang, {
+              sl: "deževen dan, zato notranja/prilagodljiva izbira",
+              en: "rainy day, so an indoor/flexible pick",
+              it: "giornata di pioggia, quindi una scelta al chiuso/flessibile",
+              de: "Regentag, daher eine Innen-/flexible Wahl",
+            })}`
           : taglineOf(dest),
       });
     }
@@ -459,7 +475,12 @@ export function generateDeterministicItinerary(
       // TASK 4 / K-2: weatherEstimated=true pomeni, da to NI realna napoved —
       // enrichWithRealWeather ga ob uspehu preklopi na realnega (false);
       // TrustLine na podlagi tega ne izriše "✓ Vreme preverjeno".
-      weather: { condition: input.season === "winter" ? "sneg" : "sončno", temp: input.season === "winter" ? 2 : 22 },
+      // W1-faza-2b: fallback besedilo v jeziku pogona (prej SL-only —
+      // latenten hrošč: EN je dobil "sneg"/"sončno").
+      weather: {
+        condition: input.season === "winter" ? PL(lang, { sl: "sneg", en: "snow", it: "neve", de: "Schnee" }) : PL(lang, { sl: "sončno", en: "sunny", it: "soleggiato", de: "sonnig" }),
+        temp: input.season === "winter" ? 2 : 22,
+      },
       weatherEstimated: true,
     });
   }
@@ -467,28 +488,46 @@ export function generateDeterministicItinerary(
   return {
     days,
     total_budget: totalCost,
-    recommendations: isEn
-      ? [
-          "Book accommodation at least 2 weeks ahead",
-          "Download an offline map for hiking",
-          "Bring water bottles — tap water is drinkable everywhere",
-        ]
-      : [
-          "Rezerviraj nastanitev vsaj 2 tedna vnaprej",
-          "Prenesi offline zemljevid za pohode",
-          "Vzemi plastenke za vodo — pitna voda je povsod",
-        ],
-    tips: isEn
-      ? [
-          "Start early in the morning for fewer crowds and better light",
-          "Check the mountain weather on the day itself",
-          "Local shops have the best prices for snacks",
-        ]
-      : [
-          "Začni zgodaj zjutraj za manj ljudi in boljšo svetlobo",
-          "V gorah preveri vreme isti dan",
-          "Lokalni marketi imajo najboljše cene za prigrizke",
-        ],
+    recommendations: [
+      PL(lang, {
+        sl: "Rezerviraj nastanitev vsaj 2 tedna vnaprej",
+        en: "Book accommodation at least 2 weeks ahead",
+        it: "Prenota l'alloggio almeno 2 settimane prima",
+        de: "Buche die Unterkunft mindestens 2 Wochen im Voraus",
+      }),
+      PL(lang, {
+        sl: "Prenesi offline zemljevid za pohode",
+        en: "Download an offline map for hiking",
+        it: "Scarica una mappa offline per le escursioni",
+        de: "Lade eine Offline-Karte für Wanderungen herunter",
+      }),
+      PL(lang, {
+        sl: "Vzami plastenke za vodo — pitna voda je povsod",
+        en: "Bring water bottles — tap water is drinkable everywhere",
+        it: "Porta borracce — l'acqua del rubinetto è potabile ovunque",
+        de: "Nimm Trinkflaschen mit — Leitungswasser ist überall trinkbar",
+      }),
+    ],
+    tips: [
+      PL(lang, {
+        sl: "Začni zgodaj zjutraj za manj ljudi in boljšo svetlobo",
+        en: "Start early in the morning for fewer crowds and better light",
+        it: "Inizia presto al mattino per meno folla e luce migliore",
+        de: "Starte früh am Morgen für weniger Menschen und besseres Licht",
+      }),
+      PL(lang, {
+        sl: "V gorah preveri vreme isti dan",
+        en: "Check the mountain weather on the day itself",
+        it: "Controlla il meteo in montagna il giorno stesso",
+        de: "Prüfe das Bergwetter am Tag selbst",
+      }),
+      PL(lang, {
+        sl: "Lokalni marketi imajo najboljše cene za prigrizke",
+        en: "Local shops have the best prices for snacks",
+        it: "I negozi locali hanno i migliori prezzi per gli spuntini",
+        de: "Lokale Geschäfte haben die besten Preise für Snacks",
+      }),
+    ],
     source,
   };
 }

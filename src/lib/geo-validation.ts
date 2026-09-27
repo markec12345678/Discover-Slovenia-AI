@@ -35,6 +35,7 @@
 // ============================================================================
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { PL } from "@/lib/planner-lang";
 import { dayISOForDayNumber, parseISODateLocal } from "@/lib/trip-dates";
 import {
   AVG_SPEED_KMH,
@@ -139,10 +140,13 @@ const OPENING = new Map(
 
 const DEST_BY_ID = new Map(DESTINATIONS.map((d) => [d.id, d]));
 
-/** Imena dni v tednu ( getDay konvencija: 0=ned … 6=sob) — za sporočila. */
+/** Imena dni v tednu ( getDay konvencija: 0=ned … 6=sob) — za sporočila.
+ * W1-faza-2b: IT/DE dodana (SL akuzativne oblike ohranjene — "je nedeljo"). */
 const WEEKDAY_LABELS: Record<Lang, string[]> = {
   sl: ["nedeljo", "ponedeljek", "torek", "sredo", "četrtek", "petek", "soboto"],
   en: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+  it: ["domenica", "lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato"],
+  de: ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"],
 };
 
 /** Zaokroži na 5 (km ali minute) — brez lažne natančnosti "137 km". */
@@ -205,17 +209,24 @@ function coordsOfStop(s: LocationVisit): { lat: number; lng: number } | null {
 // struktura issue ostane strojno berljiva: rule + day + level)
 // ---------------------------------------------------------------------------
 
-type Lang = "sl" | "en";
+type Lang = "sl" | "en" | "it" | "de";
 
 function msgDayKm(lang: Lang, km: number): string {
-  return lang === "en"
-    ? `~${km} km of driving in one day (comfortable limit is around ${THRESHOLDS.dayKm.warn} km)`
-    : `~${km} km vožnje v enem dnevu (udoben okvir je okoli ${THRESHOLDS.dayKm.warn} km)`;
+  // W1-faza-2b: 4-jezično (PL)
+  return PL(lang, {
+    sl: `~${km} km vožnje v enem dnevu (udoben okvir je okoli ${THRESHOLDS.dayKm.warn} km)`,
+    en: `~${km} km of driving in one day (comfortable limit is around ${THRESHOLDS.dayKm.warn} km)`,
+    it: `~${km} km di guida in un giorno (il limite confortevole è circa ${THRESHOLDS.dayKm.warn} km)`,
+    de: `~${km} km Fahrt an einem Tag (komfortable Grenze liegt bei rund ${THRESHOLDS.dayKm.warn} km)`,
+  });
 }
 function msgDayStops(lang: Lang, stops: number): string {
-  return lang === "en"
-    ? `${stops} main stops in one day — very little time to actually experience each place`
-    : `${stops} glavnih postankov v enem dnevu — zelo malo časa, da karkoli res doživiš`;
+  return PL(lang, {
+    sl: `${stops} glavnih postankov v enem dnevu — zelo malo časa, da karkoli res doživiš`,
+    en: `${stops} main stops in one day — very little time to actually experience each place`,
+    it: `${stops} tappe principali in un giorno — pochissimo tempo per vivere davvero ogni luogo`,
+    de: `${stops} Hauptstopps an einem Tag — sehr wenig Zeit, um jeden Ort wirklich zu erleben`,
+  });
 }
 function msgLegDistance(
   lang: Lang,
@@ -225,15 +236,21 @@ function msgLegDistance(
   level: GeoIssueLevel
 ): string {
   const limit = level === "error" ? THRESHOLDS.legKm.error : THRESHOLDS.legKm.warn;
-  return lang === "en"
-    ? `${from} → ${to}: ~${km} km in one leg (long transfers work best above ${limit} km only with a clear reason)`
-    : `${from} → ${to}: ~${km} km v enem kosu (prenose nad ${limit} km se splača le s dobrim razlogom)`;
+  return PL(lang, {
+    sl: `${from} → ${to}: ~${km} km v enem kosu (prenose nad ${limit} km se splača le s dobrim razlogom)`,
+    en: `${from} → ${to}: ~${km} km in one leg (long transfers work best above ${limit} km only with a clear reason)`,
+    it: `${from} → ${to}: ~${km} km in un'unica tratta (i trasferimenti oltre ${limit} km convengono solo con un buon motivo)`,
+    de: `${from} → ${to}: ~${km} km in einer Etappe (Transfers über ${limit} km lohnen sich nur mit gutem Grund)`,
+  });
 }
 function msgDayOverload(lang: Lang, activityH: number, drivingH: number): string {
   const total = Math.round((activityH + drivingH) * 10) / 10;
-  return lang === "en"
-    ? `Day is overloaded: ~${total} h of activities + driving (${activityH} h + ${drivingH} h)`
-    : `Dan je preobremenjen: ~${total} h aktivnosti in vožnje skupaj (${activityH} h + ${drivingH} h)`;
+  return PL(lang, {
+    sl: `Dan je preobremenjen: ~${total} h aktivnosti in vožnje skupaj (${activityH} h + ${drivingH} h)`,
+    en: `Day is overloaded: ~${total} h of activities + driving (${activityH} h + ${drivingH} h)`,
+    it: `Giornata sovraccarica: ~${total} h di attività e guida insieme (${activityH} h + ${drivingH} h)`,
+    de: `Tag überladen: ~${total} h Aktivitäten und Fahrt zusammen (${activityH} h + ${drivingH} h)`,
+  });
 }
 function msgScheduleGap(
   lang: Lang,
@@ -244,39 +261,60 @@ function msgScheduleGap(
   level: GeoIssueLevel
 ): string {
   if (level === "error") {
-    return lang === "en"
-      ? `Schedule doesn't work: ${from} → ${to} has only ${gapH.toFixed(1)} h between time slots, but the drive alone takes ~${driveH.toFixed(1)} h`
-      : `Urnik ne gre skupaj: ${from} → ${to} ima samo ${gapH.toFixed(1)} h med termini, sama vožnja pa vzame ~${driveH.toFixed(1)} h`;
+    return PL(lang, {
+      sl: `Urnik ne gre skupaj: ${from} → ${to} ima samo ${gapH.toFixed(1)} h med termini, sama vožnja pa vzame ~${driveH.toFixed(1)} h`,
+      en: `Schedule doesn't work: ${from} → ${to} has only ${gapH.toFixed(1)} h between time slots, but the drive alone takes ~${driveH.toFixed(1)} h`,
+      it: `Il programma non funziona: ${from} → ${to} ha solo ${gapH.toFixed(1)} h tra gli orari, ma la sola guida richiede ~${driveH.toFixed(1)} h`,
+      de: `Zeitplan funktioniert nicht: ${from} → ${to} hat nur ${gapH.toFixed(1)} h zwischen den Zeitfenstern, allein die Fahrt dauert aber ~${driveH.toFixed(1)} h`,
+    });
   }
-  return lang === "en"
-    ? `Tight schedule: ${from} → ${to} — the ${gapH.toFixed(1)} h gap barely covers the ~${driveH.toFixed(1)} h drive (no buffer)`
-    : `Napak urnik: ${from} → ${to} — vrzel ${gapH.toFixed(1)} h komaj pokrije vožnjo ~${driveH.toFixed(1)} h (brez rezerve)`;
+  return PL(lang, {
+    sl: `Napak urnik: ${from} → ${to} — vrzel ${gapH.toFixed(1)} h komaj pokrije vožnjo ~${driveH.toFixed(1)} h (brez rezerve)`,
+    en: `Tight schedule: ${from} → ${to} — the ${gapH.toFixed(1)} h gap barely covers the ~${driveH.toFixed(1)} h drive (no buffer)`,
+    it: `Programma tirato: ${from} → ${to} — l'intervallo di ${gapH.toFixed(1)} h copre a malapena la guida di ~${driveH.toFixed(1)} h (senza riserve)`,
+    de: `Knapper Zeitplan: ${from} → ${to} — das ${gapH.toFixed(1)}-h-Fenster deckt die ~${driveH.toFixed(1)} h Fahrt kaum ab (ohne Puffer)`,
+  });
 }
 function msgScheduleOverlap(lang: Lang, a: string, b: string): string {
-  return lang === "en"
-    ? `Time slots overlap: ${a} and ${b} — one of them has to move`
-    : `Termini se prekrivajo: ${a} in ${b} — enega bo treba prestaviti`;
+  return PL(lang, {
+    sl: `Termini se prekrivajo: ${a} in ${b} — enega bo treba prestaviti`,
+    en: `Time slots overlap: ${a} and ${b} — one of them has to move`,
+    it: `Orari sovrapposti: ${a} e ${b} — uno dei due deve spostarsi`,
+    de: `Zeitfenster überschneiden sich: ${a} und ${b} — eines muss weichen`,
+  });
 }
 function msgDuplicateStop(lang: Lang, name: string): string {
-  return lang === "en"
-    ? `${name} appears twice on the same day without an apparent reason`
-    : `${name} je isti dan na programu dvakrat brez očitnega razloga`;
+  return PL(lang, {
+    sl: `${name} je isti dan na programu dvakrat brez očitnega razloga`,
+    en: `${name} appears twice on the same day without an apparent reason`,
+    it: `${name} compare due volte lo stesso giorno senza motivo apparente`,
+    de: `${name} erscheint zweimal am selben Tag ohne erkennbaren Grund`,
+  });
 }
 function msgMissingCoords(lang: Lang, name: string, id: string): string {
-  return lang === "en"
-    ? `Cannot verify "${name}" (${id}) — unknown destination, distances for this day may be understated`
-    : `"${name}" (${id}) ne morem preveriti — neznana destinacija, razdalje tega dne so lahko podcenjene`;
+  return PL(lang, {
+    sl: `"${name}" (${id}) ne morem preveriti — neznana destinacija, razdalje tega dne so lahko podcenjene`,
+    en: `Cannot verify "${name}" (${id}) — unknown destination, distances for this day may be understated`,
+    it: `Impossibile verificare "${name}" (${id}) — destinazione sconosciuta, le distanze di questo giorno potrebbero essere sottostimate`,
+    de: `"${name}" (${id}) kann nicht geprüft werden — unbekanntes Ziel, die Distanzen dieses Tags sind möglicherweise unterschätzt`,
+  });
 }
 
 function msgTimeSlotInvalid(lang: Lang, name: string, slot: string): string {
-  return lang === "en"
-    ? `Time slot of "${name}" is not valid (${slot}): it ends before or exactly when it starts — one of the times must be wrong`
-    : `Termin "${name}" ni veljaven (${slot}): konča se pred ali natanko takrat, ko se začne — eden od časov je napačen`;
+  return PL(lang, {
+    sl: `Termin "${name}" ni veljaven (${slot}): konča se pred ali natanko takrat, ko se začne — eden od časov je napačen`,
+    en: `Time slot of "${name}" is not valid (${slot}): it ends before or exactly when it starts — one of the times must be wrong`,
+    it: `L'orario di "${name}" non è valido (${slot}): termina prima o esattamente quando inizia — una delle due ore è sbagliata`,
+    de: `Zeitfenster von "${name}" ist ungültig (${slot}): endet vor oder genau zum Beginn — eine der Zeiten muss falsch sein`,
+  });
 }
 function msgDurationInvalid(lang: Lang, name: string): string {
-  return lang === "en"
-    ? `"${name}" has a non-positive duration — a stop must take some time`
-    : `"${name}" ima nepozitivno trajanje — postanek mora trajati nekaj časa`;
+  return PL(lang, {
+    sl: `"${name}" ima nepozitivno trajanje — postanek mora trajati nekaj časa`,
+    en: `"${name}" has a non-positive duration — a stop must take some time`,
+    it: `"${name}" ha una durata non positiva — una tappa deve richiedere del tempo`,
+    de: `"${name}" hat eine nicht-positive Dauer — ein Stopp muss etwas Zeit beanspruchen`,
+  });
 }
 
 function msgClosedMonth(
@@ -286,6 +324,17 @@ function msgClosedMonth(
   source: string,
   isDestinationLevel: boolean
 ): string {
+  // W1-faza-2b: 4-jezično (SL rodovna oblika "zaprta" ostaja samo v SL)
+  if (lang === "it") {
+    return isDestinationLevel
+      ? `${name} è chiuso in questo periodo (${note}; fonte: ${source}) — la tappa come pianificata non è possibile, sostituiscila con una destinazione aperta`
+      : `${name} è chiuso in questo periodo (${note}; fonte: ${source}) — verifica se la principale attrazione è aperta nella tua data`;
+  }
+  if (lang === "de") {
+    return isDestinationLevel
+      ? `${name} ist in dieser Zeit geschlossen (${note}; Quelle: ${source}) — der geplante Stopp ist nicht möglich, tausche ihn gegen ein offenes Ziel`
+      : `${name} ist in dieser Zeit geschlossen (${note}; Quelle: ${source}) — prüfe, ob die Hauptsehenswürdigkeit an deinem Datum offen ist`;
+  }
   return lang === "en"
     ? isDestinationLevel
       ? `${name} is closed in this period (${note}; source: ${source}) — the stop as planned is not possible, swap it for an open destination`
@@ -303,6 +352,14 @@ function msgClosedWeekday(
   source: string
 ): string {
   const day = WEEKDAY_LABELS[lang][weekday] ?? String(weekday);
+  // W1-faza-2b: 4-jezično (SL "je nedeljo" akuzativ; IT/DE brez člana v
+  // predlogi "è domenica" / "ist ein Sonntag")
+  if (lang === "it") {
+    return `Questo giorno è ${day}, quando la principale attrazione di ${name} è chiusa (${note}; fonte: ${source}) — il paese stesso è aperto, ma pianifica castello/museo per un altro giorno`;
+  }
+  if (lang === "de") {
+    return `Dieser Tag ist ein ${day}, an dem die Hauptsehenswürdigkeit in ${name} geschlossen ist (${note}; Quelle: ${source}) — der Ort selbst ist offen, aber plane Burg/Museum für einen anderen Tag`;
+  }
   return lang === "en"
     ? `This day falls on a ${day}, when the main sight at ${name} is closed (${note}; source: ${source}) — the town itself is open, but plan the castle/museum for another day`
     : `Ta dan je ${day}, ko je glavna znamenitost v ${name} zaprta (${note}; vir: ${source}) — samo kraj je odprt, grad/muzej pa preveri za drug dan`;

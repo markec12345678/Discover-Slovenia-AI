@@ -52,6 +52,7 @@
 // ============================================================================
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { PL } from "@/lib/planner-lang";
 import { recomputeTotalBudget } from "@/lib/itinerary-quality";
 import { isProviderSlug } from "./registry";
 import { insertProductStop } from "./stop-insert";
@@ -486,13 +487,14 @@ export function validateItinerarySupply(
   it: Itinerary,
   authority: SupplyAuthority,
   opts: {
-    lang: "sl" | "en";
+    /** W1-faza-2b: 4-jezični tok (PL helper). */
+    lang: "sl" | "en" | "it" | "de";
     groupSize?: number;
     reinsertFixed?: boolean;
     reinsertFixedFrom?: "selection" | "current";
   }
 ): { itinerary: Itinerary; report: SupplyValidationReport } {
-  const lang = opts.lang === "en" ? "en" : "sl";
+  const lang = opts.lang ?? "sl";
   const reinsertFixed = opts.reinsertFixed !== false; // privzeto DA
   const reinsertFrom = opts.reinsertFixedFrom ?? "selection";
 
@@ -657,10 +659,12 @@ export function validateItinerarySupply(
         fixedStop = {
           ...fixedStop,
           estimated_cost: Number.NaN,
-          notes:
-            opts.lang === "en"
-              ? "Price not verified — provider is not connected on the server. Check the price and availability with the provider before booking."
-              : "Cena ni preverjena — vir ni strežniško priključen. Ceno in razpoložljivost preveri pri ponudniku pred rezervacijo.",
+          notes: PL(opts.lang, {
+            sl: "Cena ni preverjena — vir ni strežniško priključen. Ceno in razpoložljivost preveri pri ponudniku pred rezervacijo.",
+            en: "Price not verified — provider is not connected on the server. Check the price and availability with the provider before booking.",
+            it: "Prezzo non verificato — il fornitore non è collegato sul server. Verifica prezzo e disponibilità presso il fornitore prima di prenotare.",
+            de: "Preis nicht überprüft — der Anbieter ist serverseitig nicht angebunden. Prüfe Preis und Verfügbarkeit vor der Buchung beim Anbieter.",
+          }),
         };
         report.issues.push({
           day: day.day,
@@ -717,10 +721,12 @@ export function validateItinerarySupply(
         fixedStop = {
           ...fixedStop,
           estimated_cost: Number.NaN,
-          notes:
-            opts.lang === "en"
-              ? "Price not verified — provider is not connected on the server. Check the price and availability with the provider before booking."
-              : "Cena ni preverjena — vir ni strežniško priključen. Ceno in razpoložljivost preveri pri ponudniku pred rezervacijo.",
+          notes: PL(opts.lang, {
+            sl: "Cena ni preverjena — vir ni strežniško priključen. Ceno in razpoložljivost preveri pri ponudniku pred rezervacijo.",
+            en: "Price not verified — provider is not connected on the server. Check the price and availability with the provider before booking.",
+            it: "Prezzo non verificato — il fornitore non è collegato sul server. Verifica prezzo e disponibilità presso il fornitore prima di prenotare.",
+            de: "Preis nicht überprüft — der Anbieter ist serverseitig nicht angebunden. Prüfe Preis und Verfügbarkeit vor der Buchung beim Anbieter.",
+          }),
         };
         report.issues.push({
           day: day.day,
@@ -827,10 +833,12 @@ export function validateItinerarySupply(
                   ? {
                       ...s,
                       estimated_cost: Number.NaN,
-                      notes:
-                        opts.lang === "en"
-                          ? "Price not verified — provider is not connected on the server. Check the price and availability with the provider before booking."
-                          : "Cena ni preverjena — vir ni strežniško priključen. Ceno in razpoložljivost preveri pri ponudniku pred rezervacijo.",
+                      notes: PL(opts.lang, {
+                        sl: "Cena ni preverjena — vir ni strežniško priključen. Ceno in razpoložljivost preveri pri ponudniku pred rezervacijo.",
+                        en: "Price not verified — provider is not connected on the server. Check the price and availability with the provider before booking.",
+                        it: "Prezzo non verificato — il fornitore non è collegato sul server. Verifica prezzo e disponibilità presso il fornitore prima di prenotare.",
+                        de: "Preis nicht überprüft — der Anbieter ist serverseitig nicht angebunden. Prüfe Preis und Verfügbarkeit vor der Buchung beim Anbieter.",
+                      }),
                     }
                   : s
               ),

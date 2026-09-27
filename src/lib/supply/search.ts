@@ -18,6 +18,7 @@ import type {
   ProductType,
   ProviderSlug,
   SupplyQuery,
+  SupplyQueryInput,
   SupplySearchResponse,
   ProviderProduct,
 } from "./types";
@@ -157,7 +158,13 @@ export function parseSupplyQuery(params: {
   pax?: string | null;
   locale?: string | null;
 }): ParsedSupplyQueryResult {
-  const locale: "sl" | "en" = params.locale === "en" ? "en" : "sl";
+  // W1-faza-2b (Issue #15): IT/DE dedijo EN sloj ponudbe (isti kanon kot
+  // destinacijske DB sekcije v fazi 2a — nikoli SL za tuje uporabnike);
+  // neprepoznan podatek ostane SL (nazaj-kompatibilno).
+  const locale: "sl" | "en" =
+    params.locale === "en" || params.locale === "it" || params.locale === "de"
+      ? "en"
+      : "sl";
 
   // Zoom NAJPREJ — meja površine je odvisna od njega.
   const zoom = clampZoom(Number(params.zoom ?? "8"));
@@ -222,10 +229,15 @@ export function parseSupplyQuery(params: {
  *  4. dedupe (čez-vir) → cap (zoom) → counts
  */
 export async function searchSupply(
-  query: SupplyQuery,
+  query: SupplyQueryInput,
   adapters: SupplyAdapter[] = defaultAdapters()
 ): Promise<SupplySearchResponse> {
   const zoom = clampZoom(query.zoom);
+
+  // W1-faza-2b: normalizacija jezika na interni "sl" | "en" sloj — IT/DE
+  // dedijo EN (kanon faze 2a); adapterji ostanejo na 2-jezičnem sloju.
+  const supplyLocale: "sl" | "en" = query.locale === "sl" ? "sl" : "en";
+  const query2: SupplyQuery = { ...query, locale: supplyLocale };
 
   // 1) Kategorije: prazne → privzete; nato zoom gating po taksonomiji.
   const requestedCats =
@@ -254,7 +266,7 @@ export async function searchSupply(
 
   if (runnable.length > 0) {
     const settled = await Promise.allSettled(
-      runnable.map((a) => runAdapter(a, { ...query, zoom, cats: visibleCats }))
+      runnable.map((a) => runAdapter(a, { ...query2, zoom, cats: visibleCats }))
     );
     for (let i = 0; i < settled.length; i++) {
       const res = settled[i];

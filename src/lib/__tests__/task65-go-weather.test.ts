@@ -520,14 +520,34 @@ describe("TASK 65: GET /api/weather — route integracija (mock vir)", () => {
     expect(res.status).toBe(400);
   });
 
-  test("⑧ napačen lang (ne-sl/ne-en) → fail-closed na privzeti SL", async () => {
+  test("⑧ napačen lang (neprepoznan) → fail-closed na privzeti SL", async () => {
+    mockFetchOnce(OM_OK);
+    const res = await weatherGET(
+      new Request("http://localhost/api/weather?lat=42.42&lng=18.77&lang=xx")
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { condition: string };
+    expect(body.condition).toBe("delno oblačno"); // slovenščina, ne izjema
+  });
+
+  test("⑧b W1-faza-2b: lang=de → nemško besedilo (4-jezična pogodba)", async () => {
     mockFetchOnce(OM_OK);
     const res = await weatherGET(
       new Request("http://localhost/api/weather?lat=42.42&lng=18.77&lang=de")
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as { condition: string };
-    expect(body.condition).toBe("delno oblačno"); // slovenščina, ne izjema
+    expect(body.condition).toBe("teilweise bewölkt"); // DE, ne SL izjema
+  });
+
+  test("⑧c W1-faza-2b: lang=it → italijansko besedilo (4-jezična pogodba)", async () => {
+    mockFetchOnce(OM_OK);
+    const res = await weatherGET(
+      new Request("http://localhost/api/weather?lat=42.42&lng=18.77&lang=it")
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { condition: string };
+    expect(body.condition).toBe("parzialmente nuvoloso"); // IT, ne SL izjema
   });
 });
 

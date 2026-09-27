@@ -1,5 +1,9 @@
 import { EVENTS } from "@/lib/events-data";
 import { EVENTS_EN } from "@/lib/events-data-en";
+// W1-faza-2b (Issue #15): IT/DE prekrivni plasti dogodkov (LLM prevod z
+// jezikovno varovalko — vira EN/SL, isti vzorec kot DESTINATIONS_EN)
+import { EVENTS_IT } from "@/lib/events-data-it";
+import { EVENTS_DE } from "@/lib/events-data-de";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { ItineraryEvent } from "@/lib/types";
 
@@ -80,8 +84,9 @@ export function matchEventsForItinerary(
   days: MatchableDay[] | null | undefined,
   limit = 6,
   tripWindow?: TripWindow | null,
-  /** 1.29.0 (revizija #13): "en" → ime/opis iz EVENTS_EN prekrivne plasti. */
-  lang: "sl" | "en" = "sl"
+  /** 1.29.0 (revizija #13): "en" → ime/opis iz EVENTS_EN prekrivne plasti.
+   * W1-faza-2b: "it"/"de" → EVENTS_IT/EVENTS_DE (isti vzorec). */
+  lang: "sl" | "en" | "it" | "de" = "sl"
 ): ItineraryEvent[] {
   if (!Array.isArray(days) || days.length === 0) return [];
 
@@ -176,16 +181,24 @@ export function matchEventsForItinerary(
   // prevedeno ime/opis; identifikatorji/datumi/ključi ostanejo skupni
   // (isti vzorec kot DESTINATIONS_EN v stop-insights/refine-actions).
   return scored.slice(0, Math.max(0, limit)).map(({ event }) => {
-    const en = lang === "en" ? EVENTS_EN[event.id] : undefined;
+    // W1-faza-2b: jezikovna prekrivna plast (SL izvirnik; EN/IT/DE overlay)
+    const overlay =
+      lang === "en"
+        ? EVENTS_EN[event.id]
+        : lang === "it"
+        ? EVENTS_IT[event.id]
+        : lang === "de"
+        ? EVENTS_DE[event.id]
+        : undefined;
     return {
       id: event.id,
-      name: en?.name ?? event.name,
+      name: overlay?.name ?? event.name,
       date: event.date,
       endDate: event.endDate,
       location: event.location,
       category: event.category,
       priceRange: event.priceRange,
-      description: en?.description ?? event.description,
+      description: overlay?.description ?? event.description,
       website: event.website,
     };
   });

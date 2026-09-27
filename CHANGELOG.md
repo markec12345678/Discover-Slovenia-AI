@@ -7,6 +7,82 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.128.0] — 2026-09-27 (W1: JEZIKI IT + DE — Issue #15 V0, faza 2b-1 — planner pogon 4-jezičen + UI nivo)
+
+### Dodano
+
+- **PLANNER POGON 4-JEZIČEN (jedro — `/api/itinerary` celotna deterministična
+  veriga).** `PlannerInput.language` razširjen na `"sl" | "en" | "it" | "de"`
+  + nov skupni helper `src/lib/planner-lang.ts` (`PL()` — enakovreden chat
+  `L()` / komponentnemu `pick()`): eksplicitni IT/DE prevodi zmagovalijo,
+  manjkajoč prevod deduje EN (nikoli SL za italijanske/nemške uporabnike —
+  P4-8), neznan jezik → SL (nazaj-kompatibilno s shranjenimi načrti).
+  Prevedeni moduli glavne poti: deterministic-itinerary (tagline iz IT/DE
+  overlayjev + deževen note + recommendations + tips), enrichWithRealWeather
+  (vremenski pogoji + dež alternativni tipi), itinerary-quality (razlog
+  poti), geo-validation (vseh 12 sporočil graditeljev + dnevi tedna),
+  stop-insights (vse razlage postankov + interes/sezonske oznake IT/DE +
+  trajanja), packing-list (sezonske/vedno/pogojne tabele), crowd-alternatives,
+  events-match (30 dogodkov × IT/DE prekrivni plasti `events-data-it/-de.ts`
+  — LLM prevod iz EN vira z jezikovno varovalko), supply plast
+  (availability-note, canonical price/source notes, stop-insert,
+  price_unverified opombe), trip-weather G7 čipi, formatDayLabel (IT/DE prek
+  `Intl.DateTimeFormat`), /api/weather (polni dispečer
+  `weatherCodeToTextFor`), /api/itinerary napake (10 nizov — prej SL-only
+  tudi za EN!).
+- **UI NIVO 100 % PREVEDEN (LLM dopolnitev vrzeli).** Z-ai API okreval →
+  `scripts/translate-locale-fill.ts` (nova skripta "fill-gaps": ohrani ročne
+  prevode faze 1, dopolni SAMO placeholder ključe, predpomnilnik za
+  vznovljivost med klici): 602 IT + 602 DE ključev (planner 404, quiz 84,
+  adriaGuidePage 31, vodiciPage 20, communityTrips 18, blogSection 11,
+  plannerPage 6, ownerPanel 6 …) + 14 ročnih DE popravkov (LLM je za 14
+  planner nizov vrnil EN — Machbarkeitsprüfung, Gruppengröße, Kalender …).
+  Vsi 4 slovarji zdaj 100 % prevedeni (1779 ključev × 4).
+- **TESTI: nova regresijska varovalka `w1-2b-planner-4lang.test.ts` (18
+  testov)** — PL() pogodba (dedovanje EN/nikoli SL), IT/DE izpisi vseh
+  modulov, SL/EN nespremenjeni (zero regression), vremenski dispečer,
+  Intl dnevi. Task65 razširjen (de/it so zdaj veljavna jezika vremenskega
+  API-ja). Task71 razširjen s TIPOVNO PARITETO polj (varovalka razreda
+  hrošča smartSearch.examples — spodaj).
+
+### Popravljeno
+
+- **LATENTNI HROŠČ (P4-8): vremenski fallback `deterministic-itinerary` je
+  bil SL-only** — EN uporabnik je ob odpovedi Open-Meteo dobil "sneg"/"sončno"
+  (slovensko). Zdaj: pogon jezikovno pravilen za vse 4 jezike.
+- **LATENTNI HROŠČ (P4-8): 10 napak validacije `/api/itinerary` je bilo
+  SL-only** — EN uporabnik je dobil slovenske napake (npr. "Število dni mora
+  biti celo število…"). Zdaj: napake v jeziku zahteve (it/de prek PL, JSON
+  peek regex pri neveljavnem telesu).
+- **HROŠČ SKRIPTE translate-locale-fill: polja so se pokvarila v nize**
+  (`planner.smartSearch.examples` — 6 primerov pametnega iskanja je postalo
+  "a,b,c" niz → /it padel z `exampleQueries.map is not a function`).
+  Popravljeno v obeh jezikih + varovalka v skripti (polja se ne nadomeščajo)
+  + task71 tipovna pariteta polj za vse prihodnje prevajalne spremembe.
+- **HROŠČ (ufnjen s strani task47 testa): `canonicalPriceNote` je izpustil
+  pogoj `fromPrice`** — "od 51 €" se je izrisalo tudi brez "od" cene. Pogoj
+  vrnjen; test zelen.
+
+### Tehnično
+
+- Supply plast: `SupplyQueryInput` (javni 4-jezični vhod) z normalizacijo na
+  interni "sl" | "en" sloj v `searchSupply` (IT/DE dedijo EN — kanon faze
+  2a; adapterji nedotaknjeni). `WeatherLang` razširjen; parse plasti prek
+  polnega dispečerja (pravo IT/DE besedilo, ne EN dedovanje).
+- `/it/nacrtuj` in `/de/nacrtuj` OSTAJATA NA 308 (iskrena meja P4-8): planner
+  STRAN za IT/DE se odpre šele, ko so prevedene vse odvisnosti pogona
+  (plan-qa ~45, packing-smart ~65, refine-actions ~48 + NL parser ~130
+  vzorcev, PDF/audio/email izvozi) — faza 2b-2 (naslednja seja). Sama
+  GENERACIJA itinererja v it/de pa je že danes živa prek API-ja (0 mešanja:
+  vsi izpisni nizi v jeziku pogona).
+- Suite 3867/3867 (3846 + 18 novih + 2 task65 + 1 task71); tsc + eslint
+  čista; browser E2E: SL načrtovalec generira (POST 200, recommendations +
+  razlogi), /it + /de domov, /it pametno iskanje (IT primeri), /it
+  destinacije, 308 meja, mobil 375 brez preliva, 0 console/page napak
+  (6 PNG dokazov v w1-faza2b-evidence/).
+
+---
+
 ## [1.127.0] — 2026-09-27 (W1: JEZIKI IT + DE — Issue #15 V0, faza 2a — destinacijske plasti + zemljevid)
 
 ### Dodano

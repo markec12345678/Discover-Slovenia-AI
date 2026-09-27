@@ -137,6 +137,27 @@ describe("TASK 71: i18n pariteta SL/EN/IT/DE (regresijska varovalka)", () => {
     }
   });
 
+  test("W1-faza-2b: polja (arrays) ostanejo POLJA v vseh jezikih (tipovna pariteta)", () => {
+    // Hrošč translate-locale-fill: flat/rebuild je smartSearch.examples
+    // v IT/DE spremenil v niz ("a,b,c") → exampleQueries.map je padel na /it.
+    // Ta varovalka tipovno pariteto zavaruje za VSE poljske ključe.
+    const isArray = (v: unknown) => Array.isArray(v);
+    for (const key of slKeys) {
+      if (isArray(SL[key])) {
+        for (const { code, dict } of LOCALE_PAIRS) {
+          expect(
+            isArray(dict[key]),
+            `jezik "${code}" ključ "${key}": SL je polje, ${code} pa ne`
+          ).toBe(true);
+          expect(
+            (dict[key] as unknown as unknown[]).length,
+            `jezik "${code}" ključ "${key}": dolžina polja`
+          ).toBe((SL[key] as unknown as unknown[]).length);
+        }
+      }
+    }
+  });
+
   test("W1: IT/DE placeholderji so ohranjeni (vzorčni nizi z {…})", () => {
     // Vzorčna preverba placeholderjev čez cel slovar: za vsak niz s
     // placeholderjem v SL (ki obstaja tudi v EN) mora imeti IT/DE enake

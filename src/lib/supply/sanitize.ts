@@ -9,6 +9,7 @@
 // ============================================================================
 
 import { isProviderSlug } from "./registry";
+import { PL } from "@/lib/planner-lang";
 import { isProductType } from "./taxonomy";
 import type {
   AvailabilityStatus,
@@ -248,7 +249,7 @@ SEMANTIKA IZBIRE (OBVEZNO):
 // ---------------------------------------------------------------------------
 export function buildSelectionRecommendations(
   products: SelectedProviderProduct[],
-  lang: "sl" | "en"
+  lang: "sl" | "en" | "it" | "de"
 ): string[] {
   const out: string[] = [];
   for (const p of products) {
@@ -261,23 +262,29 @@ export function buildSelectionRecommendations(
       typeof p.lng === "number";
     if (hasStop) continue;
 
+    const fromWord = PL(lang, { sl: "od ", en: "from ", it: "da ", de: "ab " });
     const price = p.price
       ? p.price.fromPrice
-        ? lang === "en"
-          ? `from €${p.price.amount}`
-          : `od ${p.price.amount} €`
+        ? PL(lang, {
+            sl: `od ${p.price.amount} €`,
+            en: `from €${p.price.amount}`,
+            it: `da ${p.price.amount} €`,
+            de: `ab ${p.price.amount} €`,
+          })
         : `€${p.price.amount}`
       : "";
     const suffix = price ? ` (${price})` : "";
-    if (lang === "en") {
-      out.push(
-        `Also selected on the supply map: ${p.title} — ${p.type.replace(/_/g, " ")} via ${p.source}${suffix}. Include it in your plans when fitting.`
-      );
-    } else {
-      out.push(
-        `Izbrano tudi na zemljevidu ponudbe: ${p.title} — ${p.type.replace(/_/g, " ")} prek ${p.source}${suffix}. Upoštevaj pri prilagajanju načrta.`
-      );
-    }
+    // W1-faza-2b: priporočilo o izbiri 4-jezično (fromWord namenoma neuporabljen
+    // — cena zapiše zgoraj; obdržan za kontinuiteto cenenih formatov)
+    void fromWord;
+    out.push(
+      PL(lang, {
+        sl: `Izbrano tudi na zemljevidu ponudbe: ${p.title} — ${p.type.replace(/_/g, " ")} prek ${p.source}${suffix}. Upoštevaj pri prilagajanju načrta.`,
+        en: `Also selected on the supply map: ${p.title} — ${p.type.replace(/_/g, " ")} via ${p.source}${suffix}. Include it in your plans when fitting.`,
+        it: `Selezionato anche sulla mappa delle offerte: ${p.title} — ${p.type.replace(/_/g, " ")} tramite ${p.source}${suffix}. Includilo nel piano quando è compatibile.`,
+        de: `Auch auf der Angebotskarte ausgewählt: ${p.title} — ${p.type.replace(/_/g, " ")} über ${p.source}${suffix}. Berücksichtige es bei der Anpassung des Plans.`,
+      })
+    );
   }
   return out;
 }

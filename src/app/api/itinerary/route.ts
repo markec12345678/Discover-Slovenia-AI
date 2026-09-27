@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { PL, type PlannerLang } from "@/lib/planner-lang";
 import { DESTINATIONS, normalizeInterests } from "@/lib/slovenia-data";
 import { db } from "@/lib/db";
 import { logAIUsage } from "@/lib/ai-usage";
@@ -12,8 +13,7 @@ import {
 } from "@/lib/deterministic-itinerary";
 import {
   fetchDailyForecast,
-  weatherCodeToText,
-  weatherCodeToTextEn,
+  weatherCodeToTextFor,
   type DailyForecast,
 } from "@/lib/weather-utils";
 import { PARTY_TYPES } from "@/lib/party-types";
@@ -149,11 +149,27 @@ export async function POST(request: Request) {
     if (limited) return limited;
 
   let input: PlannerInput;
+  let rawBody = "";
   try {
-    input = (await request.json()) as PlannerInput;
+    rawBody = await request.text();
+    input = JSON.parse(rawBody) as PlannerInput;
   } catch {
-    return NextResponse.json({ error: "Neveljaven JSON" }, { status: 400 });
+    // W1-faza-2b: niti pri neveljavnem JSON poskusimo izluščiti jezik
+    // (regex peek — telo je neveljavno, a jezikovna oznaka je običajno
+    // prebrisljiva); sicer SL (nazaj-kompatibilno).
+    const peek = rawBody.match(/"language"\s*:\s*"(en|it|de)"/);
+    const peekLang = peek ? (peek[1] as "en" | "it" | "de") : "sl";
+    return NextResponse.json(
+      { error: PL(peekLang, { sl: "Neveljaven JSON", en: "Invalid JSON", it: "JSON non valido", de: "Ungültiges JSON" }) },
+      { status: 400 }
+    );
   }
+
+  // W1-faza-2b: jezik napak — uporabi podani jezik (tudi pri zavrnjenih
+  // vhodih); manjkajoč/neprepoznan → SL (nazaj-kompatibilno). Prej so bili
+  // napaki SL-only — EN uporabnik je dobil slovenske napake (latenten P4-8).
+  const errLang = (input as Partial<PlannerInput> | null)?.language ?? "sl";
+
 
   // Validacija
   if (
@@ -164,7 +180,7 @@ export async function POST(request: Request) {
     !input?.groupSize
   ) {
     return NextResponse.json(
-      { error: "Manjkajo obvezna polja: budget, days, interests, season, groupSize" },
+      { error: PL(errLang, { sl: "Manjkajo obvezna polja: budget, days, interests, season, groupSize", en: "Missing required fields: budget, days, interests, season, groupSize", it: "Campi obbligatori mancanti: budget, days, interests, season, groupSize", de: "Pflichtfelder fehlen: budget, days, interests, season, groupSize" }) },
       { status: 400 }
     );
   }
@@ -179,7 +195,7 @@ export async function POST(request: Request) {
     input.days > 14
   ) {
     return NextResponse.json(
-      { error: "Število dni mora biti celo število med 1 in 14" },
+      { error: PL(errLang, { sl: "Število dni mora biti celo število med 1 in 14", en: "Days must be a whole number between 1 and 14", it: "I giorni devono essere un numero intero tra 1 e 14", de: "Tage müssen eine ganze Zahl zwischen 1 und 14 sein" }) },
       { status: 400 }
     );
   }
@@ -190,7 +206,7 @@ export async function POST(request: Request) {
   const VALID_SEASONS = ["spring", "summer", "autumn", "winter"] as const;
   if (!VALID_SEASONS.includes(input.season as (typeof VALID_SEASONS)[number])) {
     return NextResponse.json(
-      { error: "Sezona je neveljavna (spring, summer, autumn, winter)" },
+      { error: PL(errLang, { sl: "Sezona je neveljavna (spring, summer, autumn, winter)", en: "Season is invalid (spring, summer, autumn, winter)", it: "Stagione non valida (spring, summer, autumn, winter)", de: "Saison ist ungültig (spring, summer, autumn, winter)" }) },
       { status: 400 }
     );
   }
@@ -201,7 +217,7 @@ export async function POST(request: Request) {
     input.budget > 100_000
   ) {
     return NextResponse.json(
-      { error: "Proračun je neveljaven (število 0–100000)" },
+      { error: PL(errLang, { sl: "Proračun je neveljaven (število 0–100000)", en: "Budget is invalid (number 0–100000)", it: "Budget non valido (numero 0–100000)", de: "Budget ist ungültig (Zahl 0–100000)" }) },
       { status: 400 }
     );
   }
@@ -211,7 +227,7 @@ export async function POST(request: Request) {
     input.groupSize > 20
   ) {
     return NextResponse.json(
-      { error: "Velikost skupine je neveljavna (1–20)" },
+      { error: PL(errLang, { sl: "Velikost skupine je neveljavna (1–20)", en: "Group size is invalid (1–20)", it: "Dimensione del gruppo non valida (1–20)", de: "Gruppengröße ist ungültig (1–20)" }) },
       { status: 400 }
     );
   }
@@ -223,7 +239,7 @@ export async function POST(request: Request) {
     !PARTY_TYPES.includes(input.partyType)
   ) {
     return NextResponse.json(
-      { error: "Tip potne skupine je neveljaven (couple, family, friends, solo)" },
+      { error: PL(errLang, { sl: "Tip potne skupine je neveljaven (couple, family, friends, solo)", en: "Party type is invalid (couple, family, friends, solo)", it: "Tipo di gruppo non valido (couple, family, friends, solo)", de: "Reisetyp ist ungültig (couple, family, friends, solo)" }) },
       { status: 400 }
     );
   }
@@ -232,7 +248,7 @@ export async function POST(request: Request) {
   // če JE podan, mora biti iz dovoljenega nabora
   if (input.pace !== undefined && !PACES.includes(input.pace)) {
     return NextResponse.json(
-      { error: "Tempo potovanja je neveljaven (slow, balanced, fast)" },
+      { error: PL(errLang, { sl: "Tempo potovanja je neveljaven (slow, balanced, fast)", en: "Travel pace is invalid (slow, balanced, fast)", it: "Ritmo di viaggio non valido (slow, balanced, fast)", de: "Reisetempo ist ungültig (slow, balanced, fast)" }) },
       { status: 400 }
     );
   }
@@ -246,7 +262,7 @@ export async function POST(request: Request) {
     input.engine !== "deterministic"
   ) {
     return NextResponse.json(
-      { error: "Motor generiranja je neveljaven (auto, deterministic)" },
+      { error: PL(errLang, { sl: "Motor generiranja je neveljaven (auto, deterministic)", en: "Generation engine is invalid (auto, deterministic)", it: "Motore di generazione non valido (auto, deterministic)", de: "Generierungs-Engine ist ungültig (auto, deterministic)" }) },
       { status: 400 }
     );
   }
@@ -255,7 +271,7 @@ export async function POST(request: Request) {
   // ne v preteklosti, max ~400 dni naprej). Neveljaven → jasna napaka 400.
   if (input.startDate !== undefined && !isValidStartDate(input.startDate)) {
     return NextResponse.json(
-      { error: "Datum odhoda je neveljaven (ISO format, ne v preteklosti, max 400 dni naprej)" },
+      { error: PL(errLang, { sl: "Datum odhoda je neveljaven (ISO format, ne v preteklosti, max 400 dni naprej)", en: "Departure date is invalid (ISO format, not in the past, max 400 days ahead)", it: "Data di partenza non valida (formato ISO, non nel passato, max 400 giorni avanti)", de: "Abreisedatum ist ungültig (ISO-Format, nicht in der Vergangenheit, max 400 Tage im Voraus)" }) },
       { status: 400 }
     );
   }
@@ -327,11 +343,14 @@ export async function POST(request: Request) {
       `- ${d.id} (${d.name}, ${d.country}): ${d.type}/${d.region}, ${d.duration}, €${d.costPerPerson}/osebo, ocena ${d.rating}, aktivnosti: ${d.activities.join(", ")}. Najboljše za: ${d.bestFor.join(", ")}. Sezona: ${d.bestSeason.join(", ")}${d.opening ? `. Odpiralni čas (vir ${d.opening.source}): ${d.opening.note}` : ""}`
   ).join("\n");
 
-  // FW4.3: jezik AI izpisa — client pošlje locale ("en" → angleški
-  // itinerer za tuje obiskovalce; vse ostalo logiko ostaja enako).
+  // FW4.3: jezik izpisa — client pošlje locale ("en" → angleški itinerer
+  // za tuje obiskovalce; vse ostalo logiko ostaja enako).
+  // W1-faza-2b (Issue #15): 4-jezični tok (sl/en/it/de) — poti, ki še nimajo
+  // IT/DE prevodov, dedijo EN prek PL() helperja (nikoli SL fallback za
+  // IT/DE uporabnike — P4-8).
   // Zdaj pred ranking klicem — partner kontekst (t12 faza 1) nosi jezikovno
   // odvisne praktične podatke (sezona/vreme/parkiranje).
-  const lang = input.language === "en" ? "en" : "sl";
+  const lang = (input.language ?? "sl") as PlannerLang;
 
   // === RANKING ENGINE + WEATHER-CONTEXT + TASK 47 SUPPLY CONTEXT ===
   // (vzporedno — supply iskanje je hitro: kiwitaxi v pomnilniku ~2 ms,
@@ -515,7 +534,7 @@ export async function POST(request: Request) {
 async function enrichWithRealWeather(
   itinerary: Itinerary,
   startDate?: string,
-  lang: "sl" | "en" = "sl"
+  lang: PlannerLang = "sl"
 ): Promise<Itinerary> {
   try {
     const firstLoc = itinerary.days[0]?.locations?.[0];
@@ -557,10 +576,8 @@ async function enrichWithRealWeather(
       itinerary.days[i] = {
         ...itinerary.days[i],
         weather: {
-          condition:
-            lang === "en"
-              ? weatherCodeToTextEn(forecast.weatherCode)
-              : weatherCodeToText(forecast.weatherCode),
+          // W1-faza-2b: 4-jezični dispečer (weatherCodeToTextFor)
+          condition: weatherCodeToTextFor(lang, forecast.weatherCode),
           temp: Math.round(forecast.tempMax),
         },
         // TASK 4 / K-2: realna Open-Meteo napoved — izrecni marker za
@@ -569,12 +586,14 @@ async function enrichWithRealWeather(
       };
 
       // Dež alternative — dodaj v tips, če je verjetnost padavin visoka
-      // (P4-8: EN uporabnik dobi EN tip)
+      // (P4-8: EN uporabnik dobi EN tip; W1-faza-2b: IT/DE različice)
       if ((forecast.precipitationProbabilityMax ?? 0) >= 60) {
-        const tip =
-          lang === "en"
-            ? `Day ${i + 1}: rain likely — alternatives: Postojna/Škocjan Caves, museums, Terme Olimia thermal spa.`
-            : `Dan ${i + 1}: verjeten dež — alternative: Postojnska/Škocjanske jame, muzeji, terme Terme Olimia.`;
+        const tip = PL(lang, {
+          sl: `Dan ${i + 1}: verjeten dež — alternative: Postojnska/Škocjanske jame, muzeji, terme Terme Olimia.`,
+          en: `Day ${i + 1}: rain likely — alternatives: Postojna/Škocjan Caves, museums, Terme Olimia thermal spa.`,
+          it: `Giorno ${i + 1}: pioggia probabile — alternative: Grotte di Postumia/Škocjan, musei, terme di Terme Olimia.`,
+          de: `Tag ${i + 1}: Regen wahrscheinlich — Alternativen: Postojna-/Škocjan-Höhlen, Museen, Therme Terme Olimia.`,
+        });
         if (!tips.includes(tip)) tips.push(tip);
       }
     }
@@ -615,7 +634,8 @@ async function buildDeterministicPlanResponse(
     fixedDestinationIds: string[];
     tripWindow: TripWindow | null;
     tripEnd: string | undefined;
-    lang: "sl" | "en";
+    /** W1-faza-2b: 4-jezični tok (sl/en/it/de) prek PL() helperja. */
+    lang: PlannerLang;
   },
   source: "fallback" | "deterministic"
 ): Promise<NextResponse> {

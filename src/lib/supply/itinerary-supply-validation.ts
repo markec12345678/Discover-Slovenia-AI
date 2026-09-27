@@ -28,6 +28,7 @@
 // ============================================================================
 
 import type { Itinerary, LocationVisit } from "@/lib/types";
+import { PL } from "@/lib/planner-lang";
 import { isProviderSlug } from "./registry";
 import { availabilityNote } from "./availability-note";
 import type {
@@ -125,23 +126,31 @@ export function buildKnownSupplyIndex(
 // KANONSKA OPOMBA (notes) — deterministična, izključno iz supply sloja
 // ---------------------------------------------------------------------------
 
-/** Format cene z enoto (isti vzorec kot insertProductStop — kontinuiteta). */
+/**
+ * Format cene z enoto (isti vzorec kot insertProductStop — kontinuiteta).
+ * W1-faza-2b (Issue #15): 4-jezično (SL/EN/IT/DE).
+ */
 function canonicalPriceNote(
   price: PriceInfo | undefined,
-  lang: "sl" | "en"
+  lang: "sl" | "en" | "it" | "de"
 ): string | undefined {
   if (!price) return undefined;
   const unit = price.unit.replace(/_/g, " ");
-  const from = price.fromPrice ? (lang === "en" ? "from " : "od ") : "";
-  return lang === "en"
-    ? `price: ${from}€${price.amount} (${unit})`
-    : `cena: ${from}${price.amount} € (${unit})`;
+  const from = price.fromPrice
+    ? PL(lang, { sl: "od ", en: "from ", it: "da ", de: "ab " })
+    : "";
+  return PL(lang, {
+    sl: `cena: ${from}${price.amount} € (${unit})`,
+    en: `price: ${from}€${price.amount} (${unit})`,
+    it: `prezzo: ${from}${price.amount} € (${unit})`,
+    de: `Preis: ${from}${price.amount} € (${unit})`,
+  });
 }
 
 /** Sestavi kanonsko opombo supply postanka (isti duh kot insertProductStop). */
 export function canonicalSupplyNotes(
   entry: KnownSupplyEntry,
-  lang: "sl" | "en"
+  lang: "sl" | "en" | "it" | "de"
 ): string {
   const parts: string[] = [];
   if (entry.description) parts.push(entry.description.slice(0, 120));
@@ -156,7 +165,15 @@ export function canonicalSupplyNotes(
       ? availabilityNote("not_supported", lang)
       : undefined);
   if (avail) parts.push(avail);
-  parts.push(lang === "en" ? `source: ${entry.source}` : `vir: ${entry.source}`);
+  // W1-faza-2b: oznaka vira 4-jezično
+  parts.push(
+    PL(lang, {
+      sl: `vir: ${entry.source}`,
+      en: `source: ${entry.source}`,
+      it: `fonte: ${entry.source}`,
+      de: `Quelle: ${entry.source}`,
+    })
+  );
   return parts.join(" · ");
 }
 

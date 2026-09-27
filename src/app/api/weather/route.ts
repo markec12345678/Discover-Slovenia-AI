@@ -9,8 +9,7 @@ import {
   parseOpenMeteoToday,
   todayISOSI,
   weatherCodeToIcon,
-  weatherCodeToText,
-  weatherCodeToTextEn,
+  weatherCodeToTextFor,
   type CurrentWeatherPayload,
   type TodayOutlookPayload,
 } from "@/lib/weather-utils";
@@ -63,15 +62,16 @@ export async function GET(request: Request) {
     );
   }
 
-  // TASK 65: jezik besedila (fail-closed na privzeti sl — samo "en" preklopi)
-  const lang = searchParams.get("lang") === "en" ? "en" : "sl";
+  // TASK 65: jezik besedila (fail-closed na privzeti sl — "en"/"it"/"de"
+  // preklopi; W1-faza-2b: 4-jezični dispečer namesto ternary)
+  const rawLang = searchParams.get("lang");
+  const lang: "sl" | "en" | "it" | "de" =
+    rawLang === "en" || rawLang === "it" || rawLang === "de" ? rawLang : "sl";
 
   // TASK 66: jezikovne preslikave WMO kode → besedilo/ikona (isti kanon kot
   // parse plasti — samo tukaj za mapiranje DailyForecast → odgovor).
-  const codeText =
-    lang === "en"
-      ? (code: number) => weatherCodeToTextEn(code)
-      : (code: number) => weatherCodeToText(code);
+  // W1-faza-2b: weatherCodeToTextFor dispečer pokriva vse 4 jezike.
+  const codeText = (code: number) => weatherCodeToTextFor(lang, code);
 
   // ---------------------------------------------------------------------
   // TASK 66 — NAČIN B: dnevna napoved za datumsko okno (MY TRIP)

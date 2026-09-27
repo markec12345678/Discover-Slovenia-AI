@@ -170,7 +170,7 @@ export function parseTripWeatherResponse(json: unknown): TripWeatherDay[] | null
 // ---------------------------------------------------------------------------
 
 export const TRIP_WEATHER_LABELS = {
-  /** Čip dneva — „do 26 °C · padavine 10 %". */
+  /** Čip dneva — „do 26 °C · padavine 10 %" (W1-faza-2b: + IT/DE). */
   day: {
     sl: (d: TripWeatherDay) =>
       d.precipitationProbabilityMax != null
@@ -180,17 +180,34 @@ export const TRIP_WEATHER_LABELS = {
       d.precipitationProbabilityMax != null
         ? `up to ${d.tempMax} °C · rain ${d.precipitationProbabilityMax} %`
         : `up to ${d.tempMax} °C`,
+    it: (d: TripWeatherDay) =>
+      d.precipitationProbabilityMax != null
+        ? `fino a ${d.tempMax} °C · pioggia ${d.precipitationProbabilityMax} %`
+        : `fino a ${d.tempMax} °C`,
+    de: (d: TripWeatherDay) =>
+      d.precipitationProbabilityMax != null
+        ? `bis ${d.tempMax} °C · Regen ${d.precipitationProbabilityMax} %`
+        : `bis ${d.tempMax} °C`,
   },
   /** Vir (label izrecno — isti kanon kot Go Mode / zemljevid). */
-  source: { sl: "vir: Open-Meteo", en: "source: Open-Meteo" },
+  source: {
+    sl: "vir: Open-Meteo",
+    en: "source: Open-Meteo",
+    it: "fonte: Open-Meteo",
+    de: "Quelle: Open-Meteo",
+  },
   /** Izpad vira — časovnica poti dela naprej (iskrena opomba). */
   unavailable: {
     sl: "Vreme trenutno ni na voljo — načrt potovanja deluje nespremenjeno.",
     en: "Weather is not available right now — the trip plan keeps working.",
+    it: "Il meteo non è disponibile al momento — il piano di viaggio continua a funzionare.",
+    de: "Das Wetter ist derzeit nicht verfügbar — der Reiseplan funktioniert weiterhin.",
   },
   /** Dnevi obstajajo, njihova realna napoved pa NE (preteklost/čez horizont). */
   notPublished: {
     sl: "Vreme za dneve tega potovanja ni na voljo — Open-Meteo objavlja napoved le za prihodnje dneve (do ~16 dni vnaprej).",
     en: "Weather for this trip's days is not available — Open-Meteo publishes forecasts for future days only (up to ~16 days ahead).",
+    it: "Il meteo per i giorni di questo viaggio non è disponibile — Open-Meteo pubblica previsioni solo per i giorni futuri (fino a ~16 giorni).",
+    de: "Wetter für die Tage dieser Reise ist nicht verfügbar — Open-Meteo veröffentlicht nur Vorhersagen für kommende Tage (bis ~16 Tage im Voraus).",
   },
 } as const;

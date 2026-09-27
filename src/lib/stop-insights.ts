@@ -1,4 +1,7 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
+import { getItDestination } from "@/lib/slovenia-data-it";
+import { getDeDestination } from "@/lib/slovenia-data-de";
+import { PL } from "@/lib/planner-lang";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import { legKey, type LegRouteIndex } from "@/lib/road-routing";
 import {
@@ -127,24 +130,49 @@ interface ReasonContext {
   season: PlannerInput["season"];
   /** Indeksi deževnih dni (iz sidrnih napovedi ali pogoja dneva). */
   rainyDays: Set<number>;
-  /** Jezik razlage. */
-  lang: "sl" | "en";
+  /** Jezik razlage (W1-faza-2b: 4-jezično). */
+  lang: "sl" | "en" | "it" | "de";
   /** F5.6: indeks nog (realne ceste, OSRM) — opcijsko; razdalje v razlagah
    *  so potem realne cestne razdalje. */
   legs?: LegRouteIndex;
 }
 
-const SEASON_LABELS: Record<string, { sl: string; en: string }> = {
-  spring: { sl: "pomlad", en: "spring" },
-  summer: { sl: "poletje", en: "summer" },
-  autumn: { sl: "jesen", en: "autumn" },
-  winter: { sl: "zima", en: "winter" },
+// W1-faza-2b: 4-jezične sezonske oznake (PL vzorec)
+const SEASON_LABELS: Record<string, { sl: string; en: string; it: string; de: string }> = {
+  spring: { sl: "pomlad", en: "spring", it: "primavera", de: "Frühjahr" },
+  summer: { sl: "poletje", en: "summer", it: "estate", de: "Sommer" },
+  autumn: { sl: "jesen", en: "autumn", it: "autunno", de: "Herbst" },
+  winter: { sl: "zima", en: "winter", it: "inverno", de: "Winter" },
 };
 
 /** Vrednosti interesov so SL (isti nabor kot INTERESTS) — za EN razlago
  *  se preslikajo v ustrezne angleške izraze (znani enum, ni prevajanja
  *  prostega besedila). F15: izvoženo — uporablja ga tudi quality card
  *  (meta vrstica na EN strani). */
+/** W1-faza-2b: IT preslikave interesov (isti kanonični enum). */
+export const INTEREST_LABELS_IT: Record<string, string> = {
+  narava: "natura",
+  kultura: "cultura",
+  hrana: "gastronomia",
+  avantura: "avventura",
+  adrenalin: "adrenalina",
+  romantika: "romanticismo",
+  družina: "famiglia",
+  wellness: "benessere",
+};
+
+/** W1-faza-2b: DE preslikave interesov (isti kanonični enum). */
+export const INTEREST_LABELS_DE: Record<string, string> = {
+  narava: "Natur",
+  kultura: "Kultur",
+  hrana: "Essen & Wein",
+  avantura: "Abenteuer",
+  adrenalin: "Adrenalin",
+  romantika: "Romantik",
+  družina: "Familie",
+  wellness: "Wellness",
+};
+
 export const INTEREST_LABELS_EN: Record<string, string> = {
   narava: "nature",
   kultura: "culture",
@@ -189,19 +217,26 @@ export function buildStopReason(
 ): string | null {
   const dest = destinationById(visit.destination_id);
   if (!dest) return null;
-  const isEn = ctx.lang === "en";
+  const lang = ctx.lang;
   const parts: string[] = [];
 
   // 1) Ujemani interesi (bestFor ∩ interesi potnika) — najmočnejše dejstvo
+  // W1-faza-2b: 4-jezično (interest oznake prek lastnih IT/DE preslikav)
   const matched = dest.bestFor.filter((b) => ctx.interests.includes(b));
   if (matched.length > 0) {
-    const shown = isEn
-      ? matched.slice(0, 2).map((m) => INTEREST_LABELS_EN[m] ?? m)
-      : matched.slice(0, 2);
+    const shown = matched.slice(0, 2).map((m) => {
+      if (lang === "en") return INTEREST_LABELS_EN[m] ?? m;
+      if (lang === "it") return INTEREST_LABELS_IT[m] ?? m;
+      if (lang === "de") return INTEREST_LABELS_DE[m] ?? m;
+      return m;
+    });
     parts.push(
-      isEn
-        ? `matches your interests (${shown.join(", ")})`
-        : `ugotavljen interes: ${shown.join(", ")}`
+      PL(lang, {
+        sl: `ugotavljen interes: ${shown.join(", ")}`,
+        en: `matches your interests (${shown.join(", ")})`,
+        it: `corrisponde ai tuoi interessi (${shown.join(", ")})`,
+        de: `passt zu deinen Interessen (${shown.join(", ")})`,
+      })
     );
   }
 
@@ -212,12 +247,18 @@ export function buildStopReason(
   if (partyTag && dest.bestFor.includes(partyTag)) {
     parts.push(
       ctx.partyType === "family"
-        ? isEn
-          ? "family-friendly (location tag)"
-          : "primerno za družine (oznaka lokacije)"
-        : isEn
-        ? "suitable for couples (location tag)"
-        : "primerno za pare (oznaka lokacije)"
+        ? PL(lang, {
+            sl: "primerno za družine (oznaka lokacije)",
+            en: "family-friendly (location tag)",
+            it: "adatto alle famiglie (etichetta della località)",
+            de: "familienfreundlich (Ortskennzeichnung)",
+          })
+        : PL(lang, {
+            sl: "primerno za pare (oznaka lokacije)",
+            en: "suitable for couples (location tag)",
+            it: "adatto alle coppie (etichetta della località)",
+            de: "geeignet für Paare (Ortskennzeichnung)",
+          })
     );
   }
 
@@ -230,18 +271,31 @@ export function buildStopReason(
     if (km !== null) {
       if (km <= 30) {
         parts.push(
-          isEn ? `only ~${km} km from the previous stop` : `samo približno ${km} km od prejšnjega postanka`
+          PL(lang, {
+            sl: `samo približno ${km} km od prejšnjega postanka`,
+            en: `only ~${km} km from the previous stop`,
+            it: `solo ~${km} km dalla tappa precedente`,
+            de: `nur ~${km} km vom vorherigen Stopp`,
+          })
         );
       } else if (km <= 70) {
         parts.push(
-          isEn ? `~${km} km from the previous stop` : `približno ${km} km od prejšnjega postanka`
+          PL(lang, {
+            sl: `približno ${km} km od prejšnjega postanka`,
+            en: `~${km} km from the previous stop`,
+            it: `~${km} km dalla tappa precedente`,
+            de: `~${km} km vom vorherigen Stopp`,
+          })
         );
       } else {
         // Pošteno opozorilo — to je točno vrzel, ki jo je odkril geo validator
         parts.push(
-          isEn
-            ? `~${km} km from the previous stop (long drive — consider adjusting this day)`
-            : `približno ${km} km od prejšnjega postanka (daljša vožnja — razmisli o prilagoditvi dneva)`
+          PL(lang, {
+            sl: `približno ${km} km od prejšnjega postanka (daljša vožnja — razmisli o prilagoditvi dneva)`,
+            en: `~${km} km from the previous stop (long drive — consider adjusting this day)`,
+            it: `~${km} km dalla tappa precedente (lunga tratta — valuta di adeguare questa giornata)`,
+            de: `~${km} km vom vorherigen Stopp (lange Fahrt — erwäge, diesen Tag anzupassen)`,
+          })
         );
       }
     }
@@ -249,7 +303,12 @@ export function buildStopReason(
     const km = roadKmBetween(nearestOther, visit, ctx.legs);
     if (km !== null && km <= 25) {
       parts.push(
-        isEn ? "close to the other stops of this day" : "blizu ostalih postankov tega dneva"
+        PL(lang, {
+          sl: "blizu ostalih postankov tega dneva",
+          en: "close to the other stops of this day",
+          it: "vicino alle altre tappe di questa giornata",
+          de: "nah an den anderen Stopps dieses Tages",
+        })
       );
     }
   }
@@ -259,20 +318,40 @@ export function buildStopReason(
   const suitability = weatherSuitabilityOf(dest.type);
   if (rainy && suitability === "indoor") {
     parts.push(
-      isEn ? "indoor — fine even in bad weather" : "notranja izbira — uporabna tudi ob dežju"
+      PL(lang, {
+        sl: "notranja izbira — uporabna tudi ob dežju",
+        en: "indoor — fine even in bad weather",
+        it: "al chiuso — adatto anche con il brutto tempo",
+        de: "innen — auch bei schlechtem Wetter geeignet",
+      })
     );
   } else if (rainy && suitability === "outdoor") {
     parts.push(
-      isEn
-        ? "outdoor — check the forecast for this day"
-        : "zunanja aktivnost — za ta dan preveri vreme"
+      PL(lang, {
+        sl: "zunanja aktivnost — za ta dan preveri vreme",
+        en: "outdoor — check the forecast for this day",
+        it: "all'aperto — controlla le previsioni per questa giornata",
+        de: "im Freien — prüfe die Vorhersage für diesen Tag",
+      })
     );
   }
 
   // 5) Sezona (samo če je v sezoni in ni že pokrito z drugim dejstvom)
   if (parts.length < 4 && dest.bestSeason.includes(ctx.season)) {
-    const lbl = SEASON_LABELS[ctx.season]?.[ctx.lang] ?? ctx.season;
-    parts.push(isEn ? `in season (${lbl})` : `v sezoni (${lbl})`);
+    const lbl = PL(ctx.lang, {
+      sl: SEASON_LABELS[ctx.season]?.sl ?? ctx.season,
+      en: SEASON_LABELS[ctx.season]?.en ?? ctx.season,
+      it: SEASON_LABELS[ctx.season]?.it ?? ctx.season,
+      de: SEASON_LABELS[ctx.season]?.de ?? ctx.season,
+    });
+    parts.push(
+      PL(ctx.lang, {
+        sl: `v sezoni (${lbl})`,
+        en: `in season (${lbl})`,
+        it: `di stagione (${lbl})`,
+        de: `in der Saison (${lbl})`,
+      })
+    );
   }
 
   if (parts.length === 0) return null;
@@ -290,7 +369,7 @@ export function buildStopReasons(
     PlannerInput,
     "interests" | "season" | "partyType" | "language"
   >,
-  lang: "sl" | "en" = "sl",
+  lang: "sl" | "en" | "it" | "de" = "sl",
   /** F5.6: indeks nog (realne ceste, OSRM) — opcijsko; brez njega hevristika. */
   legs?: LegRouteIndex
 ): Itinerary {
@@ -336,10 +415,18 @@ export function buildStopReasons(
   return { ...itinerary, days };
 }
 
-/** Trajanje destinacije v jeziku prikaza (SL dataset / EN prekrivna plast). */
-export function durationLabelFor(id: string, lang: "sl" | "en"): string | null {
+/**
+ * Trajanje destinacije v jeziku prikaza (SL dataset / EN prekrivna plast).
+ * W1-faza-2b: IT/DE prekrivni plasti (faza 2a) z EN dedovanjem.
+ */
+export function durationLabelFor(
+  id: string,
+  lang: "sl" | "en" | "it" | "de"
+): string | null {
   const d = destinationById(id);
   if (!d) return null;
   if (lang === "en") return DESTINATIONS_EN[id]?.duration ?? d.duration;
+  if (lang === "it") return getItDestination(id)?.duration ?? DESTINATIONS_EN[id]?.duration ?? d.duration;
+  if (lang === "de") return getDeDestination(id)?.duration ?? DESTINATIONS_EN[id]?.duration ?? d.duration;
   return d.duration;
 }
