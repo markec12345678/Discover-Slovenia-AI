@@ -128,6 +128,15 @@ const L = {
     shipsWorld: { sl: "Dostava svet", en: "Worldwide shipping" },
   },
   reviews: { sl: "mnenj", en: "reviews" },
+  // P0-2 (Issue #13 / G4 — UX BENCHMARK 2026): kvalifikator uredniške
+  // ocene — demo ocena CSV-seeda se v glavi modala NIKOLI več predstavi
+  // kot števec mnenj („(128 mnenj)"); realna UGC mnenja ŽIVijo spodaj v
+  // ReviewSection (isti kanon karticam tržnice).
+  editorialRating: { sl: "uredniška ocena", en: "editorial rating" },
+  editorialRatingTitle: {
+    sl: "Ocena uredništva Discover Slovenia (ne števec obiskovalskih mnenj).",
+    en: "Discover Slovenia editorial rating (not a visitor review count).",
+  },
   info: {
     category: { sl: "Kategorija", en: "Category" },
     location: { sl: "Lokacija", en: "Location" },
@@ -433,8 +442,14 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
             {/* Rating + cena */}
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div className="flex items-center gap-1.5">
-                {product.reviewCount > 0 && (
-                  <>
+                {/* P0-2 (Issue #13 / G4): demo ocena = URREDNIŠKA s
+                    kvalifikatorjem (izmišljeni števec „(128 mnenj)" ODSTRANJEN
+                    — realna UGC mnenja živijo v ReviewSection spodaj). */}
+                {product.rating > 0 && (
+                  <span
+                    className="flex items-center gap-1.5"
+                    title={L.editorialRatingTitle[lang]}
+                  >
                     <Star
                       className="size-4 fill-amber-400 text-amber-400"
                       aria-hidden="true"
@@ -443,9 +458,9 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
                       {product.rating.toFixed(1)}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      ({product.reviewCount} {L.reviews[lang]})
+                      · {L.editorialRating[lang]}
                     </span>
-                  </>
+                  </span>
                 )}
               </div>
 

@@ -7,6 +7,62 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.122.0] — 2026-09-27 (ISSUE #13: P0 VAL — G1 cross-day drag + G4 iskreni social proof + G7 najboljši dnevi)
+
+### Dodano
+
+- **G1 (P0-1): vlečenje postanka MED DNEVI (drag & drop)** —
+  `moveStopAcrossDays` v `src/lib/planner-reorder.ts` (+205): drag dvojnik
+  `moveStopToDay` (D6-B), ISTI kanon invalidacije (routeGeometry OBEH dni +
+  quality/geoValidation/legs). CELA kartica dneva je veljavna spustna
+  tarča (highlight ring); termin vlečenega postanka se PRERAČUNA po kanonu
+  chat-add 1.42.0 (za zadnjim postankom +0,5 h premora, konec ≤ 23:30;
+  vrzel, ki ne sprejme celega trajanja, pusti lastni termin — varovalka).
+  Vsa polja potujejo (intentLocked); termini ostalih postankov cilja se ne
+  prerazporejajo. KPI ločuje `via: "drag"` od puščic. **ZERO LOSS:**
+  puščici (prejšnji/naslednji dan) in NL ukaz OSTAJO — trije vhodi
+  (miš/dotik-tipkovnica/AI) za isto dejanje.
+- **G4 (P0-2): iskreni social-proof signali na tržnici** —
+  `/api/products` + `/api/experiences`: REALNI UGC agregat iz Review tabel
+  (ena `groupBy` poizvedba na zahtevo — `ugcReviewCount`/`ugcRating`).
+  Kartice: „★ 4,7 (3 mnenja)" SAMO ob realnih mnenjih (SL množinska
+  slovnica 1/2/3–4/5+, locale decimalna vejica); demo ocena CSV-seeda
+  postane „4,7 · uredniška ocena" s kvalifikatorjem (izmišljeni števec
+  „(128 mnenj)" ODSTRANJEN — razlika vs Mindtrip). Modali: enak
+  kvalifikator + title razlaga; realna UGC mnenja živijo v ReviewSection.
+  Prazno → BREZ signala (nikoli „0 mnenj").
+- **G7 (P0-3): „Najboljši dnevi" v datumskem polju načrtovalnika** —
+  nova komponenta `StartDateWeatherStrip` (Kayak/Hopper date-picker
+  vzorec): živi vremenski pas okoli izbire (7 dni, izbor v sredini ±3) iz
+  obstoječega `/api/weather` (Open-Meteo, 15-min cache) — sidro
+  geometrijsko središče Slovenije (pošteno „osrednja Slovenija", ker
+  destinacija pred generacijo ni znana). Čip „🎯 Najboljši dan za začetek:
+  sob" (čista hevristika: manj padavin, topleje — razlošena v title);
+  dnevi >7 dni naprej označeni ≈ + opomba negotovosti; izbor čez horizont
+  (~16 dni) → iskreno „napoved še ni na voljo". Klik na dnevni čip
+  nastavi datum (neposredna odločitvena podpora). **ZERO LOSS:**
+  vremenska kartica dneva po generaciji ostaja; napaka fetcha → iskrena
+  odsotnost (polje ostane funkcionalno).
+- i18n: 8 novih ključev `planner.weatherStrip*` (SL + EN).
+
+### Popravljeno
+
+- **Mobile preliv na /nacrtuj (375 px: dokument 484 px → 375 px):** grid
+  `sm:grid-cols-2` je imel IMPLICITNO auto kolono na mobilnem (max-content
+  razširitev s strani novih vremenskih čipov) → eksplicitna
+  `grid-cols-1` (minmax(0,1fr) track) + `min-w-0` na pasu; čipi sedaj
+  drsijo ZNOTRAJ pasu. Vrstni red in skladiščenje polj nespremenjena.
+
+### Dokazi (browser E2E, ux-verify-13/)
+
+- `g1-cross-day-drag.png` (Bohinj Dan 1 → Dan 2 drag + povratna puščica),
+  `g4-marketplace-cards.png`, `g4-experience-modal.png`,
+  `g4-product-modal.png`, `g7-weather-strip.png` (+ mobile). Toast
+  „Postanek prestavljen / Prestavljen v dan 2"; UGC „4,7 (3 mnenja)" /
+  dvojina „(2 mnenji)"; uredniška „4,7 · uredniška ocena".
+
+---
+
 ## [1.121.0] — 2026-09-27 (ISSUE #13: UX BENCHMARK 2026 — read-only audit 8+ platform → načrt vrzeli G1–G9)
 
 ### Dodano

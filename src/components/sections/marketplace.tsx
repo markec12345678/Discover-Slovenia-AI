@@ -202,6 +202,22 @@ const L = {
       en: "is currently sold out.",
     },
     addedToCart: { sl: "Dodano v košarico", en: "Added to cart" },
+    // P0-2 (Issue #13 / G4 — UX BENCHMARK 2026): iskreni social-proof signali.
+    reviews: { sl: "mnenj", en: "reviews" },
+    reviewOne: { sl: "mnenje", en: "review" },
+    reviewTwo: { sl: "mnenji", en: "reviews" },
+    reviewFew: { sl: "mnenja", en: "reviews" },
+    // Kvalifikator uredniške ocene (demo ocena CSV-seeda NIKOLI ni števec
+    // mnenj — razlika vs Mindtripova izmišljena social proofa):
+    editorialRating: { sl: "uredniška ocena", en: "editorial rating" },
+    editorialRatingTitle: {
+      sl: "Ocena uredništva Discover Slovenia (ne števec obiskovalskih mnenj).",
+      en: "Discover Slovenia editorial rating (not a visitor review count).",
+    },
+    ugcTitle: {
+      sl: "Povprečje objavljenih mnenj obiskovalcev.",
+      en: "Average of published visitor reviews.",
+    },
   },
   badge: {
     organic: { sl: "Ekološko", en: "Organic" },
@@ -229,6 +245,25 @@ const L = {
     perPerson: { sl: "/ osebo", en: "/ person" },
   },
 } as const;
+
+// P0-2 (Issue #13 / G4 — UX BENCHMARK 2026): pomožniki za iskrene
+// social-proof signale na karticah — slovenska množinska slovnica
+// (1 mnenje / 2 mnenji / 3–4 mnenja / 5+ mnenj; EN: review/reviews) in
+// locale-zavedno povprečje (SL „4,8" / EN „4.8" — kanon review-section).
+function reviewsLabel(count: number, lang: "sl" | "en"): string {
+  if (lang === "en") return count === 1 ? L.card.reviewOne[lang] : L.card.reviews[lang];
+  if (count === 1) return L.card.reviewOne[lang];
+  if (count === 2) return L.card.reviewTwo[lang];
+  if (count >= 3 && count <= 4) return L.card.reviewFew[lang];
+  return L.card.reviews[lang];
+}
+
+function formatRatingValue(value: number, lang: "sl" | "en"): string {
+  return value.toLocaleString(lang === "en" ? "en-GB" : "sl-SI", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+}
 
 // TASK 8 / F4-A: dvojezične oznake kategorij — LOKALNE preslikave (L
 // vzorec). SL vrednosti so identične PRODUCT/EXPERIENCE_CATEGORY_LABELS iz
@@ -1042,21 +1077,46 @@ function ProductCard({
           </p>
         </div>
 
-        {/* Rating — samo ob pravih mnenjih (P4-9: iskrena komunikacija) */}
-        {product.reviewCount > 0 && (
-          <div className="flex items-center gap-1.5">
+        {/* P0-2 (Issue #13 / G4 — UX BENCHMARK 2026): ISKRENI social-proof
+            signali (vzorec GetYourGuide, pošteno po naše):
+              1. SAMO realni UGC števci iz agregata Review tabel —
+                 „★ 4,8 (23 mnenj)"; PRAZNO → NIČ (nikoli „0 mnenj");
+              2. demo ocena CSV-seeda ostaja kot URREDNIŠKA ocena s
+                 kvalifikatorjem (nikoli več izmišljeni števec „(128)"). */}
+        {(product.ugcReviewCount ?? 0) > 0 && product.ugcRating != null ? (
+          <div
+            className="flex items-center gap-1.5"
+            title={L.card.ugcTitle[lang]}
+          >
             <Star
               className="size-4 fill-amber-400 text-amber-400"
               aria-hidden="true"
             />
             <span className="text-xs font-medium tabular-nums sm:text-sm">
-              {product.rating.toFixed(1)}
+              {formatRatingValue(product.ugcRating, lang)}
             </span>
             <span className="text-[11px] text-muted-foreground sm:text-xs">
-              ({product.reviewCount})
+              ({product.ugcReviewCount}{" "}
+              {reviewsLabel(product.ugcReviewCount ?? 0, lang)})
             </span>
           </div>
-        )}
+        ) : product.rating > 0 ? (
+          <div
+            className="flex items-center gap-1.5"
+            title={L.card.editorialRatingTitle[lang]}
+          >
+            <Star
+              className="size-3.5 fill-muted-foreground/70 text-muted-foreground/70"
+              aria-hidden="true"
+            />
+            <span className="text-xs text-muted-foreground sm:text-sm">
+              {formatRatingValue(product.rating, lang)}
+            </span>
+            <span className="text-[11px] text-muted-foreground/80 sm:text-xs">
+              · {L.card.editorialRating[lang]}
+            </span>
+          </div>
+        ) : null}
 
         {/* Cena */}
         <div className="flex items-baseline gap-2">
@@ -1214,21 +1274,44 @@ function ExperienceCard({
           </p>
         </div>
 
-        {/* Rating — samo ob pravih mnenjih (P4-9: iskrena komunikacija) */}
-        {experience.reviewCount > 0 && (
-          <div className="flex items-center gap-1.5">
+        {/* P0-2 (Issue #13 / G4 — UX BENCHMARK 2026): ISKRENI social-proof
+            signali — isti kanon kot ProductCard zgoraj (realni UGC agregat
+            FIRST, uredniška ocena s kvalifikatorjem kot varovalo, prazno →
+            nič). */}
+        {(experience.ugcReviewCount ?? 0) > 0 && experience.ugcRating != null ? (
+          <div
+            className="flex items-center gap-1.5"
+            title={L.card.ugcTitle[lang]}
+          >
             <Star
               className="size-4 fill-amber-400 text-amber-400"
               aria-hidden="true"
             />
             <span className="text-xs font-medium tabular-nums sm:text-sm">
-              {experience.rating.toFixed(1)}
+              {formatRatingValue(experience.ugcRating, lang)}
             </span>
             <span className="text-[11px] text-muted-foreground sm:text-xs">
-              ({experience.reviewCount})
+              ({experience.ugcReviewCount}{" "}
+              {reviewsLabel(experience.ugcReviewCount ?? 0, lang)})
             </span>
           </div>
-        )}
+        ) : experience.rating > 0 ? (
+          <div
+            className="flex items-center gap-1.5"
+            title={L.card.editorialRatingTitle[lang]}
+          >
+            <Star
+              className="size-3.5 fill-muted-foreground/70 text-muted-foreground/70"
+              aria-hidden="true"
+            />
+            <span className="text-xs text-muted-foreground sm:text-sm">
+              {formatRatingValue(experience.rating, lang)}
+            </span>
+            <span className="text-[11px] text-muted-foreground/80 sm:text-xs">
+              · {L.card.editorialRating[lang]}
+            </span>
+          </div>
+        ) : null}
 
         {/* Cena — §38 resnica: „od" je OD-cena na osebo, ne končna cena
             (F4-A: EN plat „from … / person", ista resnica) */}

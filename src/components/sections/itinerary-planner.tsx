@@ -157,6 +157,13 @@ import { optimizeDayOrder } from "@/lib/route-order";
 // čiste deterministične operacije (isti invalidacijski kanon kot F16).
 // D6-B (Issue #6, M7+): moveStopToDay — prestavitev postanka MED dnevi.
 import { reorderStopInItinerary, moveStopToDay } from "@/lib/planner-reorder";
+// P0-1 (Issue #13 / G1 — UX BENCHMARK 2026): moveStopAcrossDays — drag &
+// drop postanka MED DNEVI (Wanderlog/Mindtrip vzorec). LOČEN import zaradi
+// izvorne pogodbe issue6-d6b testa (natančen niz prve vrstice).
+import { moveStopAcrossDays } from "@/lib/planner-reorder";
+// P0-3 (Issue #13 / G7 — UX BENCHMARK 2026): „Najboljši dnevi" — živi
+// vremenski pas pod datumskim poljem (Kayak/Hopper date-picker vzorec).
+import { StartDateWeatherStrip } from "@/components/sections/start-date-weather-strip";
 import {
   addDay as addDayToItinerary,
   removeDay as removeDayFromItinerary,
@@ -1574,6 +1581,54 @@ export function ItineraryPlanner() {
     toast({
       title: t("stopMovedToDayToastTitle"),
       description: t("stopMovedToDayToastDesc", { day: targetDayNumber }),
+    });
+  }
+
+  // P0-1 (Issue #13 / G1 — UX BENCHMARK 2026): DRAG & DROP postanka MED
+  // DNEVI (Wanderlog/Mindtrip vzorec). Spust kjerkoli na DRUGEM dnevu
+  // (kartica dneva / katerikoli postanek znotraj njega) prestavi postanek
+  // NA KONEC tega dneva prek čiste operacije moveStopAcrossDays (0 AI,
+  // 0 omrežja). TERMIN se preračuna po kanonu chat-add 1.42.0 („za zadnjim
+  // postankom" — novočasen, brez prekrivanja; vrzel, ki ne sprejme celega
+  // trajanja, pusti postankov lastni termin — varovalka). intentLocked
+  // potuje (§21); termini ostalih postankov cilja se ne prerazporejajo;
+  // invalidacija obeh dni + strukturnih metrik (isti kanon kot puščice).
+  // Varovalo ZERO LOSS: puščici (prejšnji/naslednji dan) in NL ukaz
+  // OSTANEJO — trije vhodi (miš/dotik-tipkovnica/AI) za isto dejanje.
+  function applyStopCrossDayDrop(
+    sourceDayNumber: number,
+    fromIdx: number,
+    targetDay: DayPlan
+  ) {
+    if (!itinerary) return;
+    const next = moveStopAcrossDays(
+      itinerary,
+      sourceDayNumber,
+      fromIdx,
+      targetDay.day,
+      targetDay.locations.length
+    );
+    if (next === itinerary) return; // no-op (meja / varovalka)
+    setItinerary(next);
+    persistItinerary(next, formData);
+    markResultEngaged();
+    // Strukturna sprememba — zastareli deljeni link se umakne (kanon F16):
+    if (shareUrl) {
+      setShareUrl(null);
+      setCopied(false);
+    }
+    // KPI P0-1 (UX-BENCHMARK §6): via loči DRAG od puščic (adopcija G1);
+    // crossDay flag je izrecna zaveza iz načrta Issue #13.
+    trackPlannerEvent("stop_moved_to_day", {
+      from_day: sourceDayNumber,
+      to_day: targetDay.day,
+      via: "drag",
+      crossDay: true,
+      locale,
+    });
+    toast({
+      title: t("stopMovedToDayToastTitle"),
+      description: t("stopMovedToDayToastDesc", { day: targetDay.day }),
     });
   }
 
@@ -3740,7 +3795,12 @@ export function ItineraryPlanner() {
                   </button>
                   {advancedOpen && (
                     <div className="space-y-4">
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      {/* grid-cols-1 (ne implicitna auto kolona): minmax(0,1fr)
+                          track se NE razširi na max-content otrok — vremenski
+                          pas G7 drsi ZNOTRAJ svoje širine (mobile preliv
+                          484→375 px preverjen). Nižji breakpoint ostaja
+                          eno-stolpčen kot prej (ZERO LOSS). */}
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {/* WEATHER-CONTEXT: tip potne skupine — oblikuje ritem in
                       izbor načrta (opcijsno); "Sam" sinhronizira številko */}
                   <div className="space-y-2">
@@ -3877,6 +3937,19 @@ export function ItineraryPlanner() {
                     <p className="text-xs text-muted-foreground">
                       {t("startDateHint")}
                     </p>
+                    {/* P0-3 (Issue #13 / G7 — UX BENCHMARK 2026): živi
+                        vremenski pas okoli izbire + čip najboljšega dneva
+                        (odločitveni pomočnik PRED generacijo; obstoječa
+                        vremenska kartica dneva po generaciji ostane).
+                        Iskrena odsotnost ob napaki/horizontu — ZERO LOSS. */}
+                    <StartDateWeatherStrip
+                      startDate={formData.startDate}
+                      days={formData.days}
+                      onSelectDate={(iso) => {
+                        fireStartedOnce();
+                        setFormData((p) => ({ ...p, startDate: iso }));
+                      }}
+                    />
                   </div>
                       </div>
 
@@ -4490,7 +4563,41 @@ export function ItineraryPlanner() {
                       key={day.day}
                       id={`day-card-${day.day}`}
                       data-day={day.day}
-                      className="scroll-mt-[130px] lg:scroll-mt-24"
+                      className={cn(
+                        "scroll-mt-[130px] lg:scroll-mt-24 transition-shadow",
+                        // P0-1 (Issue #13 / G1): med CROSS-DAY vlečenjem je
+                        // CELA kartica dneva veljavna spustna tarča —
+                        // highlight ciljnega dneva (vzorec Wanderlog/
+                        // Mindtrip). Spust kjerkoli na dnevu prestavi
+                        // postanek na konec tega dneva.
+                        dragging &&
+                          dragging.day !== day.day &&
+                          dragOver?.day === day.day &&
+                          "ring-2 ring-primary/60 border-primary/50"
+                      )}
+                      // P0-1 (G1): dragover/drop na KARTICI dneva pokrijeta
+                      // vrzeli med postanki, glavo dneva in PRAZNE dneve
+                      // (postankovne vrstice imajo lastne handljerje, ki
+                      // znotraj-dnevni kanon M7 pustijo NESPREMENJEN —
+                      // isti dogodki bubblajo sem in kartica odloči SAMO
+                      // za cross-day). preventDefault tu odpre spust na
+                      // katerem koli odmostru v bubblu.
+                      onDragOver={(e) => {
+                        if (!dragging || dragging.day === day.day) return;
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                        setDragOver({
+                          day: day.day,
+                          idx: day.locations.length,
+                        });
+                      }}
+                      onDrop={(e) => {
+                        if (!dragging || dragging.day === day.day) return;
+                        e.preventDefault();
+                        applyStopCrossDayDrop(dragging.day, dragging.idx, day);
+                        setDragging(null);
+                        setDragOver(null);
+                      }}
                     >
                       <CardHeader>
                         <div className="flex flex-wrap items-center justify-between gap-2">

@@ -58,9 +58,37 @@ export async function GET(request: Request) {
       languages: JSON.parse(e.languages || "[]") as string[],
     }));
 
+    // P0-2 (Issue #13 / G4 — UX BENCHMARK 2026): REALNI UGC agregat mnenj iz
+    // Review tabel — iskreni social-proof signali na karticah kataloga
+    // (enaka slovnica kot /api/products: demo ocena ostaja uredniška,
+    // števci mnenj so SAMO realne vrstice; prazno → brez signala).
+    const reviewAgg = parsed.length
+      ? await db.review.groupBy({
+          by: ["experienceId"],
+          where: { experienceId: { in: parsed.map((e) => e.id) } },
+          _count: { _all: true },
+          _avg: { rating: true },
+        })
+      : [];
+    const ugcById = new Map(
+      reviewAgg.map((r) => [r.experienceId as string, r])
+    );
+    const withUgc = parsed.map((e) => {
+      const agg = ugcById.get(e.id);
+      const count = agg?._count._all ?? 0;
+      return {
+        ...e,
+        ugcReviewCount: count,
+        ugcRating:
+          count > 0 && agg?._avg.rating != null
+            ? Math.round(agg._avg.rating * 10) / 10
+            : null,
+      };
+    });
+
     return NextResponse.json({
-      experiences: parsed,
-      total: parsed.length,
+      experiences: withUgc,
+      total: withUgc.length,
     });
   } catch (error) {
     console.error("[experiences] GET napaka:", error);

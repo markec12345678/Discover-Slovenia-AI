@@ -189,3 +189,208 @@ export function moveStopToDay(
     legs: undefined,
   };
 }
+
+// ============================================================================
+// PRESTAVLJANJE POSTANKA MED DNEVI Z VLEČENJEM (Issue #13 / P0-1 / G1 —
+// UX BENCHMARK 2026: cross-day drag & drop, Wanderlog/Mindtrip vzorec)
+// ============================================================================
+// NAMEN: drag & drop je bil (M7 + D6-B) omejen na ZNOTRAJ dneva; med dnevi
+// sta obstajala SAMO puščici (prejšnji/naslednji dan) in NL ukaz. Vrzel G1
+// benchmarka je MIŠKO vlečenje postanka na DRUG dan — ta čista funkcija je
+// drag dvojnik moveStopToDay (ISTI kanon invalidacije, ista varovalna
+// slovnika no-op vračil).
+//
+// SEMANTIKA (ogledalo D6-B + kanon termina chat-add 1.42.0):
+//  · postanek se odstrani iz IZVORNEGA dneva in vstavi na toIdx v CILJNI
+//    dan (toIdx ≥ dolžina cilja → priloga na konec — primarni drag UX:
+//    spust kjerkoli na dnevu pomeni „na konec tega dneva");
+//  · TERMIN prestavljenega postanka se PRERAČUNA po kanonu chat-add 1.42.0
+//    (appendSlotAfter): nov termin začne po koncu PREDHODNIKA v ciljnem
+//    dnevu (+30 min premora, najkasneje 23:30 konec, sloti se NIKOLI ne
+//    prekrivajo). Pri vstavitvi na sredino se konec prilagodi pred
+//    NASLEDVNIKA; če vrzel ne zadošča (≤30 min), postanek pošteno obdrži
+//    SVOJEGA (varovalka — ne stlačimo termina). Trajanje se prebere iz
+//    postankovega termina (nerazpoznaven → 2 h, kanon povprečnega obiska);
+//  · VSA ostala polja potujejo (intentLocked — §21 ročna namernost);
+//  · termini OSTALIH postankov ciljnega dneva se NE prerazporejajo
+//    (kronologija cilja ostane — isti kanon kot D6-B moveStopToDay);
+//  · invalidacija: routeGeometry OBEH dni + itinerary.quality/
+//    geoValidation/legs (kanon applyOptimalOrder / moveStopToDay).
+//
+// Čista funkcija: enak vhod → enak izhod; 0 omrežja; 0 ure; bun-testabilna.
+// ============================================================================
+
+/** Začetek termina "HH:MM-HH:MM" v urah (null, če nerazpoznaven). */
+function slotStartHours(slot: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})/.exec(slot.trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return h + min / 60;
+}
+
+/** Konec termina "HH:MM-HH:MM" v urah (null, če nerazpoznaven). */
+function slotEndHours(slot: string): number | null {
+  const m = /(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/.exec(slot.trim());
+  if (!m) return null;
+  const h = Number(m[3]);
+  const min = Number(m[4]);
+  if (h > 23 || min > 59) return null;
+  return h + min / 60;
+}
+
+/** Trajanje termina v urah (null, če nerazpoznaven ali nestreten). */
+function slotDurationHours(slot: string): number | null {
+  const m = /(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/.exec(slot.trim());
+  if (!m) return null;
+  const start = Number(m[1]) + Number(m[2]) / 60;
+  const end = Number(m[3]) + Number(m[4]) / 60;
+  if (end <= start) return null;
+  return end - start;
+}
+
+/** Ura "H" → "HH:MM" (kanon chat-add 1.42.0 appendSlotAfter). */
+function formatSlot(h: number): string {
+  const hh = Math.min(23, Math.floor(h));
+  const mm = Math.round((h - Math.floor(h)) * 60);
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
+
+/**
+ * Nov termin za VLEČENI postanek po kanonu chat-add (1.42.0): začne po
+ * predhodniku (+0,5 h premora). Vrne null, če termin ne gre pošteno v vrzel
+ * — klicatelj potem obdrži postankov SVOJ termin (varovalka, isti kanon
+ * kot znotraj-dnevni ročni prestavki: ne stlačimo termina samodejno).
+ *
+ *  · brez predhodnika in nasledvnika (prazen ciljni dan): večerni termin
+ *    19:00+ (kanon chat-add za prazen dan; obreznitev ob 23:30 zamakne
+ *    start — sloti se nikoli ne prekrivajo);
+ *  · ČISTA PRILOGA na konec (s predhodnikom, brez nasledvnika): kanon
+ *    appendSlotAfter dobesedno — start = max(predhodnikov konec + 0,5 h,
+ *    12), konec najkasneje 23:30, obreznjen konec zamakne start;
+ *  · VSTAVITEV NA SREDINO (z nasledvnikom): termin mora pasti V CELOTI
+ *    (začetek 9:00 brez predhodnika / predhodnikov konec + 0,5 h; konec
+ *    strogo pred nasledvnikovim začetkom) — sicer null (varovalka;
+ *    2 h postanek v 30 min vrzeli bi bil zavajajoč).
+ */
+function draggedSlotAfter(
+  predecessor: LocationVisit | undefined,
+  successor: LocationVisit | undefined,
+  durationH: number
+): string | null {
+  const prevEnd = predecessor
+    ? slotEndHours(predecessor.time_slot ?? "")
+    : null;
+  const nextStart = successor
+    ? slotStartHours(successor.time_slot ?? "")
+    : null;
+
+  // Brez predhodnika: prazen dan → večer (chat-add); začetek dneva → 9:00.
+  let start: number;
+  if (prevEnd != null) {
+    start = successor ? prevEnd + 0.5 : Math.max(prevEnd + 0.5, 12);
+  } else {
+    start = successor ? 9 : 19;
+  }
+
+  let end = Math.min(23.5, start + durationH);
+  if (!successor) {
+    // Čista priloga na konec (chat-add kanon): obreznjen konec zamakne
+    // start — tudi obrezan slot NIKOLI ne prekriva predhodnika.
+    if (end < start + durationH) {
+      start = Math.max(start, end - durationH);
+    }
+  } else {
+    // Vstavitev na sredino: NE prekrivaj nasledvnika in NE stlači termina —
+    // vrzel mora sprejeti CELOTNO trajanje, sicer varovalka (null).
+    if (nextStart != null && end > nextStart) return null;
+  }
+  // Vrzel, ki ne zadošča (≤ 0,5 h) → null (klicatelj obdrži svoj termin).
+  if (end - start < 0.5) return null;
+  return `${formatSlot(start)}-${formatSlot(end)}`;
+}
+
+/**
+ * Prestavi postanek iz dneva fromDay (indeks fromIdx) v ciljni dan toDay na
+ * položaj toIdx (toIdx ≥ dolžina cilja → priloga na konec). Termin vlečenega
+ * postanka se preračuna po kanonu chat-add 1.42.0 („za zadnjim postankom");
+ * vsa ostala polja (tudi intentLocked) potujejo; termini ostalih postankov
+ * cilja se ne prerazporejajo; invalidacija obeh dni + strukturnih metrik.
+ *
+ * Varovalke (vračajo VHODNO referenco — no-op): cilj/izvor ne obstaja,
+ * target === source, indeks izven meja.
+ */
+export function moveStopAcrossDays(
+  it: Itinerary,
+  fromDay: number,
+  fromIdx: number,
+  toDay: number,
+  toIdx: number
+): Itinerary {
+  if (!it || !Array.isArray(it.days)) return it;
+  if (toDay === fromDay) return it; // isti dan → znotraj-dnevni kanon (M7)
+  const dayIdx = it.days.findIndex((d) => d.day === fromDay);
+  if (dayIdx < 0) return it;
+  const targetIdx = it.days.findIndex((d) => d.day === toDay);
+  if (targetIdx < 0) return it; // ciljni dan ne obstaja (meja / luknja)
+
+  const day = it.days[dayIdx];
+  const target = it.days[targetIdx];
+  const locations = Array.isArray(day.locations) ? day.locations : [];
+  const targetLocations = Array.isArray(target.locations)
+    ? target.locations
+    : [];
+  if (fromIdx < 0 || fromIdx >= locations.length) return it;
+
+  // Vstavitveni položaj v cilju (negativen/prehoden → varovalka no-op,
+  // prevelik → priloga na konec — primarni drag UX):
+  if (toIdx < 0) return it;
+  const insertAt = Math.min(toIdx, targetLocations.length);
+
+  // Array move brez mutantiranja vhoda (splice kanon):
+  const movedSource = locations.slice();
+  const [stop] = movedSource.splice(fromIdx, 1);
+
+  // Termin vlečenega postanka — kanon chat-add 1.42.0 (glej zgoraj):
+  const duration = slotDurationHours(stop.time_slot ?? "") ?? 2;
+  const newSlot = draggedSlotAfter(
+    insertAt > 0 ? targetLocations[insertAt - 1] : undefined,
+    insertAt < targetLocations.length
+      ? targetLocations[insertAt]
+      : undefined,
+    duration
+  );
+  const stopWithSlot: LocationVisit =
+    newSlot != null ? { ...stop, time_slot: newSlot } : stop;
+
+  // Izgorni dan: krajši seznam; geometrija je vezana na staro sestavo.
+  const sourceDay: DayPlan = {
+    ...day,
+    locations: movedSource,
+    routeGeometry: undefined,
+  };
+  // Ciljni dan: postanek vstavljen na položaj (vsa polja + intentLocked
+  // potujejo z njim — nikoli ne delamo kopije z izgubljenimi polji):
+  const nextTargetLocations = targetLocations.slice();
+  nextTargetLocations.splice(insertAt, 0, stopWithSlot);
+  const nextTargetDay: DayPlan = {
+    ...target,
+    locations: nextTargetLocations,
+    routeGeometry: undefined,
+  };
+
+  const nextDays = it.days.slice();
+  nextDays[dayIdx] = sourceDay;
+  nextDays[targetIdx] = nextTargetDay;
+
+  return {
+    ...it,
+    days: nextDays,
+    // Strukturne metrike so bile izračunane za STARO sestavo — umaknjene,
+    // kartice jih preračunajo na mestu uporabe (hevristika, odkrito).
+    quality: undefined,
+    geoValidation: undefined,
+    legs: undefined,
+  };
+}

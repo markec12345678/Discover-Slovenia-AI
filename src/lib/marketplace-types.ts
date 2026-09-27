@@ -42,8 +42,16 @@ export interface Product {
   plan: string;
   featured: boolean;
   verified: boolean;
+  // Demo ocena iz CSV-seeda (uredniška — na karticah se prikaže SAMO s
+  // kvalifikatorjem „uredniška ocena", nikoli kot števec mnenj).
   rating: number;
   reviewCount: number;
+  // P0-2 (Issue #13 / G4 — UX BENCHMARK 2026): REALNI UGC agregat iz Review
+  // tabel (števec + povprečje ObjAVLJENIH mnenj obiskovalcev). null/0 = ni
+  // realnih mnenj → kartica NE pokaže social-proof signala (nikoli „0
+  // mnenj“; nikoli izmišljenih števcev — razlika vs Mindtrip).
+  ugcReviewCount?: number;
+  ugcRating?: number | null;
   shippingFree: boolean;
   shipsEurope: boolean;
   shipsWorldwide: boolean;
@@ -84,8 +92,12 @@ export interface Experience {
   plan: string;
   featured: boolean;
   verified: boolean;
+  // Demo ocena iz CSV-seeda (uredniška — enak kanon kot pri Product).
   rating: number;
   reviewCount: number;
+  // P0-2 (Issue #13 / G4): realni UGC agregat (glej Product.ugcReviewCount).
+  ugcReviewCount?: number;
+  ugcRating?: number | null;
   familyFriendly: boolean;
   accessibility: boolean;
   viewCount: number;

@@ -136,6 +136,14 @@ const L = {
     accessible: { sl: "Dostopno za invalide", en: "Wheelchair accessible" },
   },
   reviews: { sl: "mnenj", en: "reviews" },
+  // P0-2 (Issue #13 / G4 — UX BENCHMARK 2026): kvalifikator uredniške
+  // ocene — isti kanon kot product-modal (demo ocena NIKOLI kot števec
+  // mnenj; realna UGC mnenja živijo v ReviewSection).
+  editorialRating: { sl: "uredniška ocena", en: "editorial rating" },
+  editorialRatingTitle: {
+    sl: "Ocena uredništva Discover Slovenia (ne števec obiskovalskih mnenj).",
+    en: "Discover Slovenia editorial rating (not a visitor review count).",
+  },
   price: {
     from: { sl: "od", en: "from" },
     perPerson: { sl: "/ osebo", en: "per person" },
@@ -681,8 +689,13 @@ export function ExperienceModal({
             {/* Rating + cena */}
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div className="flex items-center gap-1.5">
-                {experience.reviewCount > 0 && (
-                  <>
+                {/* P0-2 (Issue #13 / G4): demo ocena = URREDNIŠKA s
+                    kvalifikatorjem (izmišljeni števec mnenj ODSTRANJEN). */}
+                {experience.rating > 0 && (
+                  <span
+                    className="flex items-center gap-1.5"
+                    title={L.editorialRatingTitle[lang]}
+                  >
                     <Star
                       className="size-4 fill-amber-400 text-amber-400"
                       aria-hidden="true"
@@ -691,9 +704,9 @@ export function ExperienceModal({
                       {experience.rating.toFixed(1)}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      ({experience.reviewCount} {L.reviews[lang]})
+                      · {L.editorialRating[lang]}
                     </span>
-                  </>
+                  </span>
                 )}
               </div>
 

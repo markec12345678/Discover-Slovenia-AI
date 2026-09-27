@@ -59,9 +59,40 @@ export async function GET(request: Request) {
       images: JSON.parse(p.images || "[]") as string[],
     }));
 
+    // P0-2 (Issue #13 / G4 — UX BENCHMARK 2026): REALNI UGC agregat mnenj iz
+    // Review tabel — iskreni social-proof signali na karticah kataloga.
+    // NAMERNO ločeno od demo rating/reviewCount stolpcev (CSV seed): demo
+    // ocena ostaja uredniška (s kvalifikatorjem v UI), števci mnenj pa so
+    // SAMO realne vrstice. Prazno agregat = 0 → kartica ne pokaže signala
+    // (nikoli „0 mnenj“, nikoli izmišljenih števcev). Ena groupBy poizvedba
+    // na zahtevo (limit ≤ 100) — ne ena po izdelku.
+    const reviewAgg = parsed.length
+      ? await db.review.groupBy({
+          by: ["productId"],
+          where: { productId: { in: parsed.map((p) => p.id) } },
+          _count: { _all: true },
+          _avg: { rating: true },
+        })
+      : [];
+    const ugcById = new Map(
+      reviewAgg.map((r) => [r.productId as string, r])
+    );
+    const withUgc = parsed.map((p) => {
+      const agg = ugcById.get(p.id);
+      const count = agg?._count._all ?? 0;
+      return {
+        ...p,
+        ugcReviewCount: count,
+        ugcRating:
+          count > 0 && agg?._avg.rating != null
+            ? Math.round(agg._avg.rating * 10) / 10
+            : null,
+      };
+    });
+
     return NextResponse.json({
-      products: parsed,
-      total: parsed.length,
+      products: withUgc,
+      total: withUgc.length,
     });
   } catch (error) {
     console.error("[products] GET napaka:", error);
