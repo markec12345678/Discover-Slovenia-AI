@@ -22,7 +22,8 @@ banner "Dev health — ${BASE}"
 check_url() {
   local path="$1" label="$2" expect="${3:-200}"
   local code
-  code="$(curl -sS -o /dev/null -m 15 -w "%{http_code}" "${BASE}${path}" 2>/dev/null || echo "000")"
+  # ločena dodelitev fallbacka (|| echo "000" bi se zlepil s -w izpisom → 000000)
+  code="$(curl -sS -o /dev/null -m 15 -w "%{http_code}" "${BASE}${path}" 2>/dev/null)" || code=000
   if [ "$code" = "$expect" ]; then
     ok "${label} — HTTP ${code}"
     return 0
@@ -45,7 +46,7 @@ check_url "/api/ai-health" "AI health" || RC=1
 # strežniku (NODE_ENV=development) verifyCronAuth dovoli klic brez secreta;
 # če ga imaš nastavljenega, se pripne samodejno (npr. za produkcijo podoben
 # zagon).
-step "AI vision plast (GET /api/ai-health — Issue #9: opcijska)""
+step "AI vision plast (GET /api/ai-health — Issue #9: opcijska)"
 if [ -n "${CRON_SECRET:-}" ]; then
   HEALTH="$(curl -sS -m 60 -H "Authorization: Bearer ${CRON_SECRET}" "${BASE}/api/ai-health" 2>/dev/null || echo '{}')"
 else

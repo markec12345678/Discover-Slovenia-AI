@@ -7,6 +7,28 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.120.2] — 2026-09-27 (HOTFIX: ops tooling resnica — dev-health.sh sintaksa [mrtev od 1.116.0] + podvojeni „000000“ prikaz)
+
+### Popravljeno
+
+- **`scripts/ops/dev-health.sh` SINTAKSA**: odvečen zaklepajoči narekovaj
+  v `step "AI vision plast (GET /api/ai-health — Issue #9: opcijska)""`
+  (uključeno v `07b2396` / 1.116.0, ZERO-AI val) je odprl niz, ki je
+  pogoltnil vse do naslednjega narekovaja → bash **ni mogel parsati
+  datoteke** → skripta (razvojna) MRTEVA od 1.116.0. CI je ni ujel, ker
+  CI teče `functional-smoke.sh` (zdrav); `bash -n` sedaj čist, poln zagon
+  overjen (vse rute 200, AI plast poroča).
+- **Podvojeni „000000“ prikaz v 5 ops skriptah**: vzorec
+  `code="$(curl … -w "%{http_code}" … || echo "000")"` ob timeoutu/
+  povezavni napaki ZLEPI curl-jev `-w` izpis („000“) z fallbackom
+  („000“) → prikaz „000000“ namesto „000“ (opaženo v realnem izpisu
+  deploy-checka med verifikacijo 1.120.1). Popravljeno po kanonu iz
+  `functional-smoke.sh` (ločena dodelitev `… ) || code=000`):
+  `deploy-check.sh` (r. 31), `dev-health.sh` (r. 26), `doctor.sh` (r. 94,
+  108), `lib.sh` (`http_json`, r. 125 — porabnik `gemini-verify.sh`).
+  Dokazi: mrtvi URL → `❌ / — 000`; `http_json` live `HTTP_CODE=[200]`,
+  dead `HTTP_CODE=[000]`.
+
 ## [1.120.1] — 2026-09-27 (HOTFIX: ops dokumentacijska resnica — deploy-check.sh vzorčni URL + CHANGELOG zaostanek)
 
 ### Spremenjeno

@@ -87,10 +87,11 @@ fi
 step "f) Gemini geo-blok sonda (1 mini klic)"
 G_KEY="$(env_get GEMINI_API_KEY || true)"
 if [ -n "$G_KEY" ]; then
+  # ločena dodelitev fallbacka (|| echo "000" bi se zlepil s -w izpisom → 000000)
   code="$(curl -sS -o /tmp/ops-doctor-gemini.json -m 20 -w "%{http_code}" \
     "${GEMINI_API_BASE}/chat/completions" \
     -H "Authorization: Bearer ${G_KEY}" -H "Content-Type: application/json" \
-    -d '{"model":"gemini-3.6-flash","messages":[{"role":"user","content":"OK"}],"max_tokens":512}' 2>/dev/null || echo "000")"
+    -d '{"model":"gemini-3.6-flash","messages":[{"role":"user","content":"OK"}],"max_tokens":512}' 2>/dev/null)" || code=000
   if [ "$code" = "200" ]; then
     ok "Gemini deluje IZ TEGA STROJA (regija podprta)."
   elif [ "$code" = "400" ] && grep -qi "not supported" /tmp/ops-doctor-gemini.json 2>/dev/null; then
@@ -104,7 +105,7 @@ fi
 
 # ── g) Dev strežnik ──────────────────────────────────────────────────────
 step "g) Dev strežnik (localhost:3000)"
-code="$(curl -sS -o /dev/null -m 10 -w "%{http_code}" "http://localhost:3000/" 2>/dev/null || echo "000")"
+code="$(curl -sS -o /dev/null -m 10 -w "%{http_code}" "http://localhost:3000/" 2>/dev/null)" || code=000
 if [ "$code" = "200" ]; then ok "Dev strežnik teče (200)."; else info "Dev strežnik ne teče (HTTP ${code}) — poženi: bun run dev"; fi
 
 # ── h) Prisma DB ─────────────────────────────────────────────────────────

@@ -26,7 +26,9 @@ banner "Deploy check — ${URL}"
 RC=0
 
 for path in "/" "/en" "/en/nacrtuj"; do
-  code="$(curl -sS -o /dev/null -m 20 -w "%{http_code}" -L "${URL}${path}" 2>/dev/null || echo "000")"
+  # vzorec iz functional-smoke.sh: ločena dodelitev fallbacka — || echo "000"
+  # bi se ZLEPIL s curl -w izpisom ("000"+"000"="000000" ob timeoutu)
+  code="$(curl -sS -o /dev/null -m 20 -w "%{http_code}" -L "${URL}${path}" 2>/dev/null)" || code=000
   if [ "$code" = "200" ]; then ok "${path} — 200"; else err "${path} — ${code}"; RC=1; fi
 done
 

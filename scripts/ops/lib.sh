@@ -120,7 +120,9 @@ http_json() {
   [ -n "$auth_header" ] && args+=(-H "$auth_header")
   args+=(-H "Content-Type: application/json")
   [ -n "$data" ] && args+=(-d "$data")
-  HTTP_CODE="$(curl "${args[@]}" "$url" || echo "000")"
+  # ločena dodelitev fallbacka — || echo "000" bi se ZLEPIL s curl -w izpisom
+  # (HTTP_CODE bi postal "000000" namesto "000" ob timeoutu/povezavni napaki)
+  HTTP_CODE="$(curl "${args[@]}" "$url")" || HTTP_CODE=000
 }
 
 # ─── Skupne konstante testov ──────────────────────────────────────────────
