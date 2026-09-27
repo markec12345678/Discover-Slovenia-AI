@@ -7,6 +7,60 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.123.0] — 2026-09-27 (ISSUE #13: P1 VAL — G5 persistent split mapa + G6 most klepet→rezervacija + G3 email-forward vstop)
+
+### Dodano
+
+- **G5 (P1-1): persistent resizable split mapa ob klepetu (desktop lg+)** —
+  gumb „Pripni" na geo odgovoru (skrit na mobilnem) odpne mini-mapo iz
+  toka sporočil v STALEN desni pane klepeta (Mindtripov vzorec
+  „mapa ob raziskovanju"): panel zraste v vrstico klepet (sm:w-96) +
+  vlečljiva ločnica + mapa (320–480 px, privzeto 384; persist v
+  localStorage `dsa-chat-split-width`). Naslednji geo odgovor POSODOBI
+  vsebino pripete mape (brez scrollanja nazaj), pane ostane do odpina.
+  Polno interaktivna (zoom s koleščkom, zoomControl), `ResizeObserver`
+  (debounce 120 ms) previja Leaflet ob vleki ločnice. Ločnica: pointer
+  capture drag + tipkovnica ←/→ (24 px korak) + separator ARIA
+  (valuenow/min/max). Telemetrija `chat_map_pinned`/`chat_map_unpinned`
+  (PlannerEventName kanon). **ZERO LOSS:** fullscreen „Povečaj" ostaja,
+  compact mini-map je privzeta, mobilni vidi SAMO compact + fullscreen
+  (pane/ločnica/pin skriti `hidden lg:*`).
+- **G6 (P1-2): most klepet→rezervacija** — gumb „Rezerviraj" (ikona
+  Ticket) poleg „+" v vrstici kraja geo odgovora, SAMO za T1 destinacije
+  s slugom (OSM lokali/T2 članki rezervabilni niso). Odpre
+  `chat-booking-bridge.tsx`: kontekstualni dialog z lokalnimi ponudniki
+  (ISTA API pot POST `/api/itinerary/bookings`, ISTA kartice —
+  ExperienceCard/ListingCard/ProductCard/AffiliateCard/EmptyState sedaj
+  IZVOŠENI iz booking-panel.tsx, ena vizualna pot z načrtovalcem) +
+  affiliate vrstico (Booking.com/GetYourGuide/Tiqets prek `/go?dest=`).
+  Keyed-state fetch (G7 kanon — setState samo v `.then`), iskreni
+  loading/error/retry/empty. **NIKOLI klepet-checkout** (zavrnjen Layla
+  vzorec, §5/§7 benchmarka): dialog je SAMO pregled + povezave, poštena
+  nota „nikoli v klepetu" v nogi. Telemetrija `booking_cta_clicked` z
+  novo plasiravno `chat_geo`. Gumb deluje tudi v fullscreen overlayju in
+  na mobilnem.
+- **G3 (P1-3): email-forward vstopna točka (env-poganjan naslov)** —
+  zavihek „E-pošta" dodajanja rezervacije (/pot/[shareId]) sedaj prikaže
+  NASLOV za posredovanje potrdil (TripIt vzorec) SAMO ko je
+  `NEXT_PUBLIC_RESERVATIONS_EMAIL` nastavljen (dokumentiran v
+  .env.example: objavi ŠTEKNO, ko imaš vhodni kanal, npr. Cloudflare
+  Email Workers → webhook → bookings/parse { email }); naslov s Kopiraj
+  gumbom (clipboard + 2 s potrditvijo). Brez env ostane ISKRENA nota
+  „kanal v pripravi" — nikoli izmišljen, neobstoječ naslov. Ročno
+  lepljenje surove e-pošte (RFC 5322 MIME parser, TASK 31) deluje
+  neodvisno — varovalo: brez IMAP strežnika v repu.
+
+### Spremenjeno
+
+- `chat-mini-map.tsx`: nov `variant="split"` (h-full + zoomControl +
+  scrollWheelZoom; overlay zdaj tudi scrollWheelZoom — Google Maps
+  vedenje fullscreen mape, dotik na mobilnem nezadet); `ResizeObserver`
+  z debounce 120 ms na kontejner (Leaflet sam ne opazi resize).
+- `planner-analytics.ts`: PlannerEventName razširjen z
+  `chat_map_pinned`/`chat_map_unpinned` (tipizirana telemetrija).
+- i18n: +18 parov SL/EN v `chatbot` ns (mapPin*/mapUnpin*/split*/
+  book* — pariteta task71 varovana).
+
 ## [1.122.0] — 2026-09-27 (ISSUE #13: P0 VAL — G1 cross-day drag + G4 iskreni social proof + G7 najboljši dnevi)
 
 ### Dodano

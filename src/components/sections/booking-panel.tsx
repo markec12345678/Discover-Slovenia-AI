@@ -46,7 +46,9 @@ import type { DayPlan } from "@/lib/types";
 // dest je opcijsken za nove providerje (esim deluje brez njega).
 // TASK 97: "tickets" (Tiqets — vstopnice) dodan k unionu; zavarovanje ima
 // lastni izgrajevalnik spodaj (days parameter, ne dest).
-const goHref = (
+// 1.123 (G6): izvoženo za chat-booking-bridge — ISTA pot kot klepet in
+// planner (en vir resnice za /go povezave, brez podvajanja).
+export const goHref = (
   provider:
     | "hotels"
     | "cars"
@@ -273,7 +275,9 @@ function FeaturedVerifiedBadges({
   );
 }
 
-function AffiliateCard({
+// 1.123 (G6): izvoženo za chat-booking-bridge (klepet→rezervacija) —
+// ISTA vizualna pot kot booking plošča (en vir, ne podvojena logika).
+export function AffiliateCard({
   href,
   icon,
   partnerName,
@@ -347,7 +351,8 @@ function AffiliateCard({
   );
 }
 
-function ListingCard({ listing }: { listing: BookingListing }) {
+// 1.123 (G6): izvoženo — glej AffiliateCard zgoraj.
+export function ListingCard({ listing }: { listing: BookingListing }) {
   const t = useTranslations("planner.booking");
   const img = safeJsonImages(listing.images);
   const contact = getContactLink(listing);
@@ -419,7 +424,8 @@ function ListingCard({ listing }: { listing: BookingListing }) {
   );
 }
 
-function ExperienceCard({ exp }: { exp: BookingExperience }) {
+// 1.123 (G6): izvoženo — glej AffiliateCard zgoraj.
+export function ExperienceCard({ exp }: { exp: BookingExperience }) {
   const t = useTranslations("planner.booking");
   const img = safeJsonImages(exp.images);
   const contact = getExperienceContact(exp);
@@ -484,7 +490,8 @@ function ExperienceCard({ exp }: { exp: BookingExperience }) {
   );
 }
 
-function ProductCard({ product }: { product: BookingProduct }) {
+// 1.123 (G6): izvoženo — glej AffiliateCard zgoraj.
+export function ProductCard({ product }: { product: BookingProduct }) {
   const t = useTranslations("planner.booking");
   const img = safeJsonImages(product.images);
   const contact = getProductContact(product);
@@ -545,7 +552,8 @@ function ProductCard({ product }: { product: BookingProduct }) {
   );
 }
 
-function EmptyState({ icon, text }: { icon: React.ReactNode; text: string }) {
+// 1.123 (G6): izvoženo — glej AffiliateCard zgoraj.
+export function EmptyState({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed bg-background/50 py-6 text-center">
       <div className="text-muted-foreground">{icon}</div>

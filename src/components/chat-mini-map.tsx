@@ -30,7 +30,7 @@ const PIN_COLORS = {
 export interface ChatMiniMapProps {
   places: ChatPlace[];
   /** overlay = velik prikaz čez cel zaslon (zoom kontrola, večji zoom) */
-  variant?: "compact" | "overlay";
+  variant?: "compact" | "overlay" | "split";
   className?: string;
 }
 
@@ -46,8 +46,11 @@ export function ChatMiniMap({ places, variant = "compact", className }: ChatMini
     const map = L.map(containerRef.current, {
       center: [46.15, 14.47],
       zoom: variant === "overlay" ? 13 : 12,
-      scrollWheelZoom: false,
-      zoomControl: variant === "overlay",
+      // 1.123 (G5): "split" je stalna pripeta mapa ob klepetu — polno
+      // interaktivna (zoom s koleščkom, kot Google/Mindtrip split pane).
+      // compact ostane brez koleščka (vtorjen scrolling sporočil).
+      scrollWheelZoom: variant === "overlay" || variant === "split",
+      zoomControl: variant === "overlay" || variant === "split",
       attributionControl: true,
     });
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -63,6 +66,26 @@ export function ChatMiniMap({ places, variant = "compact", className }: ChatMini
       markersRef.current = [];
     };
   }, [variant]);
+
+  // 1.123 (G5): ResizeObserver — Leaflet NE opazi spremembe velikosti
+  // kontejnerja sam. Pri persistent split mapi uporabnik VLEČE ločnico
+  // (širina se spreminja med 320–480px); tudi overlay se umirja postopoma.
+  // Debounce ~120ms: umiri cascade drag-move dogodkov.
+  useEffect(() => {
+    const el = containerRef.current;
+    const map = mapRef.current;
+    if (!el || !map || typeof ResizeObserver === "undefined") return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const ro = new ResizeObserver(() => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => map.invalidateSize(), 120);
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
 
   // Risanje pinov + prilagoditev pogleda
   useEffect(() => {
@@ -118,7 +141,6 @@ export function ChatMiniMap({ places, variant = "compact", className }: ChatMini
       padding: variant === "overlay" ? [40, 40] : [24, 24],
       maxZoom: 15,
     });
-
     // Leaflet ob skritem/ničelnem kontejnerju napačno izmeri velikost — ob
     // prikazu (lazy load / ekspanzija) previj (isti vzorec kot
     // trip-map-panel). VEČ klicev: lazy chunk + flex layout overlayja se
@@ -144,7 +166,7 @@ export function ChatMiniMap({ places, variant = "compact", className }: ChatMini
       aria-label={`Zemljevid s ${places.length} priporočenimi kraji`}
       className={cn(
         "w-full overflow-hidden rounded-lg border border-border/60",
-        variant === "overlay" ? "h-full" : "h-40",
+        variant === "compact" ? "h-40" : "h-full",
         className
       )}
     />

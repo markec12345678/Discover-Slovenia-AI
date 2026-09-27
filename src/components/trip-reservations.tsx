@@ -52,8 +52,18 @@ import {
   CircleAlert,
   CircleCheck,
   Mail,
+  Copy,
+  Check,
 } from "lucide-react";
 import { getEditToken } from "@/lib/itinerary-share";
+
+// 1.123 (G3 — ISSUE #13): naslov za posredovanje potrdil (TripIt vzorec
+// email-forward uvoza). Env-poganjan: lastnik ga nastavi, ko pripravi
+// vhodni poštni kanal (npr. Cloudflare Email Workers → webhook →
+// bookings/parse); BREZ nastavitve izrišemo iskreno noto "kanal v
+// pripravi" (nikoli izmišljen naslov, ki ne deluje — §5 benchmarka).
+// NEXT_PUBLIC_* se vdel ob buildu — varen za klient.
+const RESERVATIONS_EMAIL = process.env.NEXT_PUBLIC_RESERVATIONS_EMAIL ?? "";
 
 interface BookingRow {
   provider: string;
@@ -145,6 +155,8 @@ export function TripReservations({ shareId }: { shareId: string }) {
   // TASK 31 (Tier 1 #3): surova e-pošta (izvorna koda / .eml) — čist MIME
   // bralnik na strežniku razširi glavo + priloge (ICS/PDF) v polja.
   const [rawEmail, setRawEmail] = useState("");
+  // 1.123 (G3): povratna zanka "Kopiraj" naslova (2 s potrditev).
+  const [emailCopied, setEmailCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileKind, setFileKind] = useState<"image" | "pdf" | null>(null);
   const [fileData, setFileData] = useState<string | null>(null);
@@ -658,11 +670,53 @@ export function TripReservations({ shareId }: { shareId: string }) {
                   )}
                   Preberi e-pošto
                 </Button>
-                <p className="text-[11px] leading-snug text-muted-foreground">
-                  {"Samodejno posredovanje (naslov "}
-                  <em>rezervacije@…</em>
-                  {", kamor posreduješ potrdila) bo omogočeno, ko aktiviramo vhodni poštni kanal — danes deluje ročno lepljenje."}
-                </p>
+                {/* 1.123 (G3 — ISSUE #13): email-forward vstopna točka —
+                    NASLOV se prikaže SAMO ko je env nastavljen (lastnik
+                    pripravi vhodni kanal → naslov takoj zaživi, brez
+                    deploya kode). Brez nastavitve ostane iskrena nota
+                    "kanal v pripravi" ( obstoječe stanje) — nikoli
+                    izmišljen, neobstoječ naslov. Kopiraj gumb = clipboard
+                    + 2 s potrditev ( CircleCheck vzorec po cele strani). */}
+                {RESERVATIONS_EMAIL ? (
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] leading-snug text-muted-foreground">
+                    <span>Potrdila lahko posreduješ na naslov:</span>
+                    <code
+                      className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground"
+                    >
+                      {RESERVATIONS_EMAIL}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard
+                          ?.writeText(RESERVATIONS_EMAIL)
+                          .then(() => {
+                            setEmailCopied(true);
+                            setTimeout(() => setEmailCopied(false), 2000);
+                          })
+                          .catch(() => {
+                            /* clipboard zavrnjen ( permission) — naslov
+                               ostane označljiv ročno */
+                          });
+                      }}
+                      className="inline-flex min-h-6 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-label="Kopiraj naslov za posredovanje potrdil"
+                    >
+                      {emailCopied ? (
+                        <Check className="size-3 text-emerald-600" aria-hidden />
+                      ) : (
+                        <Copy className="size-3" aria-hidden />
+                      )}
+                      {emailCopied ? "Skopirano" : "Kopiraj"}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-[11px] leading-snug text-muted-foreground">
+                    {"Samodejno posredovanje (naslov "}
+                    <em>rezervacije@…</em>
+                    {", kamor posreduješ potrdila) bo omogočeno, ko aktiviramo vhodni poštni kanal — danes deluje ročno lepljenje."}
+                  </p>
+                )}
               </TabsContent>
             </Tabs>
 

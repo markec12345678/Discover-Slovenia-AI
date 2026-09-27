@@ -82,6 +82,14 @@ export type PlannerEventName =
   // brskalnem zemljevidu, in katere kategorije uporabniki iščejo
   // (hrana/nastanitve so bile prej skrite pred uporabniki)
   | "map_poi_filtered"
+  // 1.123 (G5 — ISSUE #13): uporabnik je PRIPNIL persistent split map ob
+  // klepetu (props: places, surface chat) — meri doseg Mindtripovega
+  // vzorca "stala mapa ob raziskovanju" na desktopu; komplement
+  // chat_map_unpinned (življenjska doba pane-a).
+  | "chat_map_pinned"
+  // 1.123 (G5 — ISSUE #13): uporabnik je OD PINIL persistent map (pane
+  // zaprt) — skupaj s chat_map_pinned da trajanje uporabe pripete mape.
+  | "chat_map_unpinned"
   // ISSUE #12 (F12-1): iskanje na zemljevidu oddano (props: locale, total,
   // query_len — BREZ besedila poizvedbe, PII disciplina) — meri doseg
   // map-first iskanja („Kaj iščeš?“ nad zemljevidom); skupaj z

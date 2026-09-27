@@ -25,6 +25,9 @@ import {
   MicOff,
   Volume2,
   Square,
+  Pin,
+  PinOff,
+  Ticket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +68,23 @@ import {
 // GEO-ODGOVORI: Leaflet vgreteni ŠTEKNO — komponenta se naloži šele, ko
 // prvi geo odgovor prinese kraje (ostale strani ne plačajo ~140 KB bundla).
 const ChatMiniMap = lazy(() => import("@/components/chat-mini-map"));
+
+// 1.123 (G6 — most klepet→rezervacija): kontekstualni pregled ponudb
+// destinacije iz AI odgovora. PARIRAJOČE komponente booking-plošče
+// (ExperienceCard/ListingCard/ProductCard/AffiliateCard) — ISTA vizualna
+// pot kot čip "Vstopnice". NIKOLI checkout v klepetu (§7 protiprimer).
+const BookingBridgeDialog = lazy(() =>
+  import("@/components/chat-booking-bridge").then((m) => ({
+    default: m.BookingBridgeDialog,
+  }))
+);
+
+// 1.123 (G5 — persistent split map): meje širine pripete mape (px) in
+// ključ persista. Privzeto 384 (usb id sm:w-96 klepeta — simetrično).
+const CHAT_SPLIT_MIN_W = 320;
+const CHAT_SPLIT_MAX_W = 480;
+const CHAT_SPLIT_DEFAULT_W = 384;
+const CHAT_SPLIT_W_KEY = "dsa-chat-split-width";
 
 /** Barve pinov po plasteh zaupanja — usklajeno s chat-mini-map.tsx. */
 const PLACE_PIN_COLORS: Record<"t1" | "osm" | "t2", string> = {
@@ -332,6 +352,7 @@ function PlaceRow({
   index,
   added = false,
   onAdd,
+  onBook,
 }: {
   place: ChatPlace;
   index: number;
@@ -339,6 +360,10 @@ function PlaceRow({
   added?: boolean;
   /** 1.42: dejanje "Dodaj v načrt" (Mindtripov "+", po našem modelu). */
   onAdd?: (place: ChatPlace) => void;
+  /** 1.123 (G6): dejanje "Rezerviraj" — odpre kontekstualni pregled
+   *  ponudb destinacije (samo T1 destinacije s slugom; OSM kraji in T2
+   *  članki rezervabilni niso). */
+  onBook?: (place: ChatPlace) => void;
 }) {
   const t = useTranslations("chatbot");
   const Icon = CATEGORY_ICONS[place.category] ?? Info;
@@ -465,6 +490,24 @@ function PlaceRow({
           />
         </span>
       )}
+      {/* 1.123 (G6 — ISSUE #13): "Rezerviraj" poleg "+" — most
+          klepet→rezervacija. SAMO T1 destinacije s slugom (te imajo
+          ponudnike v booking skladišču); OSM lokali imajo svoj kontakt na
+          zemljevidu, T2 članki niso postanek. ISTA pot kot čip "Vstopnice"
+          na kartici postanka (lokalni ponudniki + affiliate /go) — nikoli
+          klepet-checkout (zavrnjen Layla vzorec, §5/§7 benchmarka). */}
+      {onBook && place.provenance === "t1" && place.slug ? (
+        <button
+          type="button"
+          onClick={() => onBook(place)}
+          className="inline-flex shrink-0 items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-1 text-[10px] font-semibold text-primary transition-colors hover:border-primary/50 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={t("bookCtaAria", { name: place.name })}
+          title={t("bookCtaTitle")}
+        >
+          <Ticket className="size-3" aria-hidden />
+          {t("bookCta")}
+        </button>
+      ) : null}
     </li>
   );
 }
@@ -478,6 +521,11 @@ interface GeoPlacesSectionProps {
   onAddPlace?: (place: ChatPlace) => void;
   /** 1.42: ID-ji krajev, že dodanih v načrt (✓ stanje). */
   addedPlaceIds?: ReadonlySet<string>;
+  /** 1.123 (G5): dejanje "Pripni zemljevid" — persistent split mapa
+   *  (desktop lg+) s FILTRIRANO množico tega odgovora. */
+  onPin?: (places: ChatPlace[]) => void;
+  /** 1.123 (G6): dejanje "Rezerviraj" za T1 destinacije v vrsticah. */
+  onBookPlace?: (place: ChatPlace) => void;
 }
 
 /** Oddelek "Na zemljevidu" pod odgovorom: glava + čipi kategorij +
@@ -489,6 +537,8 @@ function GeoPlacesSection({
   onExpand,
   onAddPlace,
   addedPlaceIds,
+  onPin,
+  onBookPlace,
 }: GeoPlacesSectionProps) {
   const t = useTranslations("chatbot");
   // 1.46: izklopljene kategorije (multi-select; prazna množica = vse)
@@ -543,6 +593,22 @@ function GeoPlacesSection({
           <Maximize2 className="size-3" aria-hidden />
           {t("mapExpandShort")}
         </button>
+        {/* 1.123 (G5 — ISSUE #13): "Pripni" — mini-map se odpne iz toka
+            sporočil v PERSISTENT desni pane klepeta (samo desktop lg+;
+            mobilni ostane compact + fullscreen). Varovalo: povečava
+            (fullscreen) ostaja; compact je privzeta izkušnja. */}
+        {onPin && (
+          <button
+            type="button"
+            onClick={() => onPin(filtered)}
+            className="hidden lg:inline-flex lg:min-h-6 lg:shrink-0 lg:items-center lg:gap-1 lg:rounded-md lg:px-1.5 lg:py-0.5 lg:text-[10px] lg:font-medium lg:text-muted-foreground lg:transition-colors lg:hover:bg-muted lg:hover:text-foreground"
+            aria-label={t("mapPinAria")}
+            title={t("mapPinAria")}
+          >
+            <Pin className="size-3" aria-hidden />
+            {t("mapPinShort")}
+          </button>
+        )}
       </div>
 
       {/* 1.46: čipi kategorij — multi-select filter nad seznamom in pini */}
@@ -582,6 +648,7 @@ function GeoPlacesSection({
                 index={i}
                 added={addedPlaceIds?.has(p.id)}
                 onAdd={onAddPlace}
+                onBook={onBookPlace}
               />
             ))}
           </ul>
@@ -648,6 +715,17 @@ export function Chatbot() {
   // pri vrhu strani) pa vrne — vsebina je vedno nad gumbom. Samo mobilno
   // (< sm); desktop FAB ostane vedno viden.
   const [fabHidden, setFabHidden] = useState(false);
+  // 1.123 (G5 — ISSUE #13): PERSISTENT SPLIT MAP — kraji pripete mape desno
+  // od klepeta (desktop lg+). Pin na geo odgovoru; naslednji geo odgovor
+  // posodobi VSEBINO (večdnevno raziskovanje — Mindtripov vzorec), pane
+  // ostane, dokler ga uporabnik ne odpne. null = ni pripeto (compact).
+  const [splitMap, setSplitMap] = useState<ChatPlace[] | null>(null);
+  // Širina pripete mape (px) — vlečljiva ločnica, persist v localStorage.
+  const [splitWidth, setSplitWidth] = useState<number>(CHAT_SPLIT_DEFAULT_W);
+  const splitDragRef = useRef<{ startX: number; startW: number } | null>(null);
+  // 1.123 (G6 — ISSUE #13): most klepet→rezervacija — T1 destinacija, za
+  // katero je odprt kontekstualni pregled ponudb (BookingBridgeDialog).
+  const [bookingPlace, setBookingPlace] = useState<ChatPlace | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -673,6 +751,92 @@ export function Chatbot() {
     setVoiceIn(sttSupported());
     setVoiceOut(ttsSupported());
   }, []);
+
+  // 1.123 (G5): persist širine pripete mape — branje PO hidrataciji
+  // (server ne pozna localStorage; privzeta širina = začetni render).
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(CHAT_SPLIT_W_KEY);
+      const n = raw === null ? NaN : Number(raw);
+      if (Number.isFinite(n)) {
+        setSplitWidth(
+          Math.min(CHAT_SPLIT_MAX_W, Math.max(CHAT_SPLIT_MIN_W, n))
+        );
+      }
+    } catch {
+      // zasebni način brskalnika — ostane privzeta širina
+    }
+  }, []);
+
+  /** 1.123 (G5): pripni zemljevid tega odgovora (desktop pane). */
+  function handlePinMap(places: ChatPlace[]) {
+    setSplitMap(places);
+    trackPlannerEvent("chat_map_pinned", {
+      places: places.length,
+      surface: "chat",
+    });
+  }
+
+  /** 1.123 (G5): odpni persistent map (compact + fullscreen ostaneta). */
+  function handleUnpinMap() {
+    setSplitMap(null);
+    trackPlannerEvent("chat_map_unpinned", { surface: "chat" });
+  }
+
+  function persistSplitWidth(w: number) {
+    try {
+      window.localStorage.setItem(CHAT_SPLIT_W_KEY, String(w));
+    } catch {
+      // zasebni način — neuspešen persist ni napaka uporabnika
+    }
+  }
+
+  /** 1.123 (G5): ločnica — pointer capture drag (desktop). Panel je
+   *  desno zasidran → vleka LEVI ŠIRI mapo (delta = startX − clientX). */
+  function handleDividerDown(e: React.PointerEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    splitDragRef.current = { startX: e.clientX, startW: splitWidth };
+  }
+  function handleDividerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const st = splitDragRef.current;
+    if (!st) return;
+    const delta = st.startX - e.clientX;
+    setSplitWidth(
+      Math.min(CHAT_SPLIT_MAX_W, Math.max(CHAT_SPLIT_MIN_W, st.startW + delta))
+    );
+  }
+  function handleDividerEnd() {
+    if (!splitDragRef.current) return;
+    splitDragRef.current = null;
+    persistSplitWidth(splitWidth);
+  }
+  /** Tipkovnica: ← širi, → oža (24px korak) — dostopna tudi brez miške. */
+  function handleDividerKey(e: React.KeyboardEvent<HTMLDivElement>) {
+    const step = e.key === "ArrowLeft" ? 24 : e.key === "ArrowRight" ? -24 : 0;
+    if (step === 0) return;
+    e.preventDefault();
+    setSplitWidth((w) => {
+      const next = Math.min(
+        CHAT_SPLIT_MAX_W,
+        Math.max(CHAT_SPLIT_MIN_W, w + step)
+      );
+      persistSplitWidth(next);
+      return next;
+    });
+  }
+
+  /** 1.123 (G6): odpri kontekstualni pregled ponudb destinacije iz klepeta
+   *  — ISTA pot kot čip "Vstopnice" (lokalni ponudniki + affiliate /go),
+   *  nikoli checkout v klepetu. Telemetrija na obstoječem dogodku
+   *  booking_cta_clicked z novo plasiravno vrednostjo "chat_geo". */
+  function handleBookPlace(place: ChatPlace) {
+    setBookingPlace(place);
+    trackPlannerEvent("booking_cta_clicked", {
+      placement: "chat_geo",
+      destination: place.name,
+    });
+  }
 
   /** §7: prebere odgovor ( ali ustavi morebitnega prejšnjega). */
   function speakMessage(idx: number, text: string) {
@@ -981,6 +1145,10 @@ export function Chatbot() {
 
       const data: ChatResponse = await res.json();
       const places = data.places ?? [];
+      // 1.123 (G5): nov geo odgovor posodobi pripeto mapo — vsebina sledi
+      // zadnjemu odgovoru, pane ostane, dokler ga uporabnik ne odpne
+      // (persistent = pri večkratnih vprašanjih ni treba scrollati nazaj).
+      if (places.length > 0) setSplitMap(places);
       setMessages((prev) => [
         ...prev,
         // DATA-LAYERS-RAG: priloži citate uradnih virov (T2) — značke
@@ -1071,13 +1239,30 @@ export function Chatbot() {
         )}
       </button>
 
-      {/* Chat panel */}
+      {/* Chat panel
+          1.123 (G5): ko je mapa pripeta (splitMap ≠ null), panel na lg+
+          zraste v VRSTICO — klepet (fiksna sm:w-96) + vlečljiva ločnica +
+          persistent mapa (320–480px). Mobilni (< lg) pane/ločnice sploh
+          ne vidita (hidden lg:*) — compact mini-map + fullscreen ostaneta
+          edini mobilni izkušnji (varovalo ZERO LOSS). */}
       {open && (
         <div
-          className="dsa-chat-panel fixed bottom-20 right-4 z-50 flex h-[32rem] max-h-[calc(100vh-6rem)] w-[calc(100vw-2rem)] flex-col rounded-2xl border border-border bg-background shadow-2xl sm:right-6 sm:w-96"
+          className={cn(
+            "dsa-chat-panel fixed bottom-20 right-4 z-50 flex h-[32rem] max-h-[calc(100vh-6rem)] w-[calc(100vw-2rem)] flex-col rounded-2xl border border-border bg-background shadow-2xl sm:right-6 sm:w-96",
+            splitMap &&
+              "lg:w-auto lg:flex-row lg:max-w-[calc(100vw-3rem)]"
+          )}
           role="dialog"
           aria-label={t("dialogAriaLabel")}
         >
+          {/* Levi stolpec: klepet — brez pripete mape IDENTIČNA razporeditev
+              kot prej (flex-1 v stolpcu); s pripeto mapo fiksna širina. */}
+          <div
+            className={cn(
+              "flex min-w-0 flex-1 flex-col",
+              splitMap && "lg:flex-none lg:w-96"
+            )}
+          >
           {/* Header */}
           <div className="flex items-center gap-3 border-b border-border bg-primary/5 p-4 rounded-t-2xl">
             <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
@@ -1157,6 +1342,8 @@ export function Chatbot() {
                       }}
                       onAddPlace={handleAddPlace}
                       addedPlaceIds={addedPlaceIds}
+                      onPin={handlePinMap}
+                      onBookPlace={handleBookPlace}
                     />
                   ) : null}
 
@@ -1320,6 +1507,75 @@ export function Chatbot() {
               </Button>
             </div>
           </form>
+          </div>
+
+          {/* 1.123 (G5): vlečljiva ločnica med klepetom in pripeto mapo
+              (samo lg+). Pointer capture — miška ne more "ubežati";
+              tipkovnica ←/→ prilagodi širino (44px dosegljivost). */}
+          {splitMap && (
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label={t("splitResizeAria")}
+              aria-valuenow={splitWidth}
+              aria-valuemin={CHAT_SPLIT_MIN_W}
+              aria-valuemax={CHAT_SPLIT_MAX_W}
+              tabIndex={0}
+              onPointerDown={handleDividerDown}
+              onPointerMove={handleDividerMove}
+              onPointerUp={handleDividerEnd}
+              onPointerCancel={handleDividerEnd}
+              onKeyDown={handleDividerKey}
+              className="hidden lg:block lg:w-1.5 lg:shrink-0 lg:cursor-col-resize lg:touch-none lg:bg-border/60 lg:transition-colors lg:hover:bg-primary/50 lg:focus-visible:bg-primary lg:focus-visible:outline-none"
+            />
+          )}
+
+          {/* 1.123 (G5): PERSISTENT pripeta mapa — vsebina = zadnji geo
+              odgovor (posodablja se z vsakim novim). Polno interaktivna
+              (zoom s koleščkom); ResizеObserver v ChatMiniMap previja
+              Leaflet ob vleki. Odpne gumb v glavi pana. */}
+          {splitMap && (
+            <aside
+              className="hidden min-w-0 lg:flex lg:flex-col lg:shrink-0"
+              style={{ width: splitWidth }}
+              aria-label={t("splitMapTitle")}
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-border bg-primary/5 px-3 py-2">
+                <p className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold">
+                  <MapPin className="size-3.5 shrink-0 text-primary" aria-hidden />
+                  <span className="truncate">
+                    {t("splitMapTitle")}
+                    <span className="ml-1 font-normal text-muted-foreground">
+                      {" · "}
+                      {splitMap.length}
+                    </span>
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  onClick={handleUnpinMap}
+                  className="flex min-h-6 shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label={t("mapUnpinAria")}
+                  title={t("mapUnpinAria")}
+                >
+                  <PinOff className="size-3" aria-hidden />
+                  {t("mapUnpinShort")}
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-hidden p-1.5">
+                <Suspense
+                  fallback={
+                    <div
+                      className="h-full w-full animate-pulse rounded-lg bg-muted"
+                      aria-hidden
+                    />
+                  }
+                >
+                  <ChatMiniMap places={splitMap} variant="split" />
+                </Suspense>
+              </div>
+            </aside>
+          )}
         </div>
       )}
 
@@ -1417,6 +1673,7 @@ export function Chatbot() {
                       index={i}
                       added={addedPlaceIds.has(p.id)}
                       onAdd={handleAddPlace}
+                      onBook={handleBookPlace}
                     />
                   ))}
               </ul>
@@ -1443,6 +1700,18 @@ export function Chatbot() {
           </div>
         </div>
       )}
+
+      {/* 1.123 (G6 — ISSUE #13): most klepet→rezervacija — kontekstualni
+          pregled ponudb destinacije iz AI odgovora. Lazy (teža booking
+          plošče se naloži šele ob prvem "Rezerviraj"). NIKOLI checkout
+          v klepetu — dialog je SAMO pregled + povezave (ista pot kot čip
+          "Vstopnice" na kartici postanka). */}
+      <Suspense fallback={null}>
+        <BookingBridgeDialog
+          place={bookingPlace}
+          onClose={() => setBookingPlace(null)}
+        />
+      </Suspense>
     </>
   );
 }
