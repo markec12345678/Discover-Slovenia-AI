@@ -761,19 +761,43 @@ export function localProviders(): ProviderRegistryEntry[] {
  * affiliate | planned. Izpeljano IZKLJUČNO iz registra — UI nikoli ne barva
  * po svoje.
  */
-export function statusLabel(status: SupplyStatus): { sl: string; en: string } {
+export function statusLabel(
+  status: SupplyStatus,
+  /** W1 faza 2a: UI jezik (privzeto SL — nazaj kompatibilno). */
+  uiLang: "sl" | "en" | "it" | "de" = "sl"
+): { sl: string; en: string; it: string; de: string } {
   switch (status) {
     case "local":
-      return { sl: "Lokalni vir", en: "Local source" };
+      return {
+        sl: "Lokalni vir",
+        en: "Local source",
+        it: "Fonte locale",
+        de: "Lokale Quelle",
+      };
     case "live":
-      return { sl: "Živa ponudba", en: "Live inventory" };
+      return {
+        sl: "Živa ponudba",
+        en: "Live inventory",
+        it: "Inventario live",
+        de: "Live-Bestand",
+      };
     case "static":
-      return { sl: "Objavljeni podatki", en: "Published data" };
+      return {
+        sl: "Objavljeni podatki",
+        en: "Published data",
+        it: "Dati pubblicati",
+        de: "Veröffentlichte Daten",
+      };
     case "search":
-      return { sl: "Iskanje", en: "Search" };
+      return { sl: "Iskanje", en: "Search", it: "Ricerca", de: "Suche" };
     case "affiliate":
-      return { sl: "Povezava partnerja", en: "Partner link" };
+      return {
+        sl: "Povezava partnerja",
+        en: "Partner link",
+        it: "Link del partner",
+        de: "Partner-Link",
+      };
     case "planned":
-      return { sl: "Načrtovano", en: "Planned" };
+      return { sl: "Načrtovano", en: "Planned", it: "Previsto", de: "Geplant" };
   }
 }

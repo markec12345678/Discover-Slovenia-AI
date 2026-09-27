@@ -276,8 +276,10 @@ export function getTotalSitemapUrlCount(): number {
   // + 38 + 190 + 152 + 152 + 22 vodnikov (ADRIA+LOOP+WINTER)
   // + EN (FW4.3-2 + GEO-A hub + vsi vodniki + primerjava + zemljevid +
   // potovanje + na-poti)
-  // + W1 (Issue #15): IT/DE različice statičnih poti faze 1
-  // (ITDE_STATIC_ROUTES × 2 jezika = 18 URL) = 782 skupaj
+  // + W1 faza 1 (1.126.0): IT/DE statične poti (9 × 2 = 18 URL)
+  // + W1 faza 2a (1.127.0): IT/DE + /zemljevid (10 × 2 = 20) + destinacijske
+  // plasti ×38 (hub 38 + things-to-do 38 + itinererji 190 + sezone 152 +
+  // vodniki 152 = 570 × 2 jezika = 1140) = skupaj 2384
   return (
     22 +
     DESTINATIONS.length +
@@ -287,7 +289,15 @@ export function getTotalSitemapUrlCount(): number {
     DESTINATIONS.length * 4 +
     ADRIA_GUIDES.length +
     getEnSitemapUrlCount() +
-    ITDE_STATIC_ROUTES.size * 2
+    // W1 faza 2a: IT/DE = statične poti + vse destinacijske pod-poti
+    // (ISTE formule kot SL jedro nad isto whitelistno GEO-A).
+    (ITDE_STATIC_ROUTES.size +
+      DESTINATIONS.length +
+      DESTINATIONS.length +
+      DESTINATIONS.length * 5 +
+      DESTINATIONS.length * 4 +
+      DESTINATIONS.length * 4) *
+      2
   );
 }
 

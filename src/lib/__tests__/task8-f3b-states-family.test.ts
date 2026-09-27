@@ -486,17 +486,16 @@ describe("F3-B i18n: SL/EN pariteta novih oznak (predpogoj za F3-E)", () => {
     }
   });
 
-  test("chatbot / map-view (zlati standardi) NISTA bila dotaknjena v tem valu", () => {
+  test("chatbot / map-view (zlati standardi) ohranjena (W1: 4-jezično)", () => {
     // chatbot ima že svoj i18n besednjak (t("thinking")), map-view oznaka
-    // je že dvojezična — ohranjena namerno (ne regresiramo).
-    // ISSUE #12 (F12-3, §7): literal NAMERNO posodobljen — „POI“ tehnični
-    // izraz se umakne iz glavnega uporabniškega jezika (pin ščiti
-    // DVOJEZIČNOST slovarja, ne staro besedilo).
+    // je bila dvojezična — W1 faza 2a (Issue #15) jo je razširila na
+    // 4 javne jezike (pin ščiti VEČJEZIČNOST slovarja, ne staro besedilo).
     const chatbotSrc = read("components/chatbot.tsx");
     expect(chatbotSrc).toContain('t("thinking")');
     const mapSrc = read("components/sections/map-view.tsx");
-    expect(mapSrc).toContain(
-      'loadingPois: { sl: "Nalagam lokalna mesta…", en: "Loading local places…" }'
-    );
+    expect(mapSrc).toContain('loadingPois: {');
+    expect(mapSrc).toContain('sl: "Nalagam lokalna mesta…",');
+    expect(mapSrc).toContain('it: "Caricamento dei luoghi locali…",');
+    expect(mapSrc).toContain('de: "Lokale Orte werden geladen…",');
   });
 });

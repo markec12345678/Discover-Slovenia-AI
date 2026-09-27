@@ -54,6 +54,28 @@ const L = {
     addAria: (title: string) => `Add ${title} to my trip`,
     removeAria: (title: string) => `${title} is in your trip — click to remove`,
   },
+  it: {
+    add: "Aggiungi al mio viaggio",
+    added: "Nel mio viaggio",
+    toastAdded: "Aggiunto al mio viaggio",
+    toastRemoved: "Rimosso dal mio viaggio",
+    undo: "Aggiungi di nuovo",
+    openTrip: "Apri il viaggio",
+    capNotice: "La raccolta è piena — l'idea più vecchia è stata sostituita.",
+    addAria: (title: string) => `Aggiungi ${title} al mio viaggio`,
+    removeAria: (title: string) => `${title} è nel tuo viaggio — clicca per rimuovere`,
+  },
+  de: {
+    add: "Zu meiner Reise hinzufügen",
+    added: "In meiner Reise",
+    toastAdded: "Zu meiner Reise hinzugefügt",
+    toastRemoved: "Aus meiner Reise entfernt",
+    undo: "Wieder hinzufügen",
+    openTrip: "Reise öffnen",
+    capNotice: "Deine Sammlung ist voll — die älteste Idee wurde ersetzt.",
+    addAria: (title: string) => `Füge ${title} zu meiner Reise hinzu`,
+    removeAria: (title: string) => `${title} ist in deiner Reise — klicke zum Entfernen`,
+  },
 } as const;
 
 type Lang = keyof typeof L;
@@ -94,7 +116,12 @@ export function AddToTripButton({
   className?: string;
 }) {
   const locale = useLocale();
-  const s = locale === "en" ? L.en : L.sl;
+  // W1 faza 2a (Issue #15): 4 javni jeziki — it/de imata lastne nize
+  // (gumb živi na destinacijskih straneh, ki so zdaj 4-jezične).
+  const s =
+    locale === "en" || locale === "it" || locale === "de"
+      ? L[locale]
+      : L.sl;
   const { isIn, add, remove } = useMyTrip();
   const { toast } = useToast();
   const router = useRouter();

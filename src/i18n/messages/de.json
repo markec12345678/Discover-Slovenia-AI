@@ -952,60 +952,60 @@
     }
   },
   "bestTime": {
-    "breadcrumbHome": "Home",
-    "breadcrumbCurrent": "Best time — {season}",
+    "breadcrumbHome": "Startseite",
+    "breadcrumbCurrent": "Beste Reisezeit — {season}",
     "seasons": {
       "pomlad": {
-        "label": "Spring",
-        "months": " March–May",
-        "desc": "Blooms, mild weather, fewer tourists"
+        "label": "Frühling",
+        "months": " März–Mai",
+        "desc": "Blütezeit, mildes Wetter, weniger Touristen"
       },
       "poletje": {
-        "label": "Summer",
-        "months": " June–August",
-        "desc": "Warm, ideal for the water and hiking"
+        "label": "Sommer",
+        "months": " Juni–August",
+        "desc": "Warm, ideal für Wasser und Wanderungen"
       },
       "jesen": {
-        "label": "Autumn",
+        "label": "Herbst",
         "months": " September–November",
-        "desc": "Autumn colours, wine, fewer crowds"
+        "desc": "Herbstfarben, Wein, weniger Trubel"
       },
       "zima": {
         "label": "Winter",
-        "months": " December–February",
-        "desc": "Skiing, festive markets, wellness"
+        "months": " Dezember–Februar",
+        "desc": "Skifahren, Weihnachtsmärkte, Wellness"
       }
     },
-    "bestSeasonBadge": "✓ Best season",
-    "heroTitle": "Best time to visit {name}",
-    "overviewTitle": "{name} in {seasonLower}",
-    "bestCardTitle": "{season} is the ideal season for {name}!",
-    "bestCardText": "{name} is at its very best this season — {taglineLower}.",
-    "offCardTitle": "{season} isn't the main season for {name}",
-    "offCardText": "But that can be an advantage — fewer tourists, lower prices and a different experience.",
-    "allSeasonsTitle": "All seasons for {name}",
-    "bestBadge": "★ Best",
-    "faqTitle": "Frequently asked questions",
+    "bestSeasonBadge": "✓ Beste Saison",
+    "heroTitle": "Beste Reisezeit für {name}",
+    "overviewTitle": "{name} im {seasonLower}",
+    "bestCardTitle": "{season} ist die ideale Saison für {name}!",
+    "bestCardText": "{name} steht in dieser Saison in vollem Glanz — {taglineLower}.",
+    "offCardTitle": "{season} ist nicht die Hauptsaison für {name}",
+    "offCardText": "Das kann aber ein Vorteil sein — weniger Touristen, niedrigere Preise und ein anderes Erlebnis.",
+    "allSeasonsTitle": "Alle Jahreszeiten für {name}",
+    "bestBadge": "★ Beste",
+    "faqTitle": "Häufige Fragen",
     "faq": {
-      "q1": "When is the best time to visit {name}?",
-      "a1": "{season} is a great time to visit {name}. Temperatures are {temp}, which is ideal for exploring. Spring and autumn bring fewer tourists and lower prices.",
-      "q2": "What's the weather like in {name} in {seasonLower}?",
-      "a2": "In {seasonLower}, temperatures in {name} are usually {temp}. We recommend dressing in layers.",
-      "q3": "Which activities are available in {name} in {seasonLower}?",
-      "a3": "{season} in {name} offers a range of activities — from hiking to fine food. Check our list of things to do in {name}.",
-      "q4": "Do I need a reservation to visit {name}?",
-      "a4": "We recommend booking accommodation at least 2 weeks in advance, especially in high season. Use our AI planner to optimise your itinerary."
+      "q1": "Wann ist die beste Reisezeit für {name}?",
+      "a1": "{season} ist eine großartige Zeit für {name}. Die Temperaturen liegen bei {temp} — ideal zum Erkunden. Frühling und Herbst bieten weniger Touristen und niedrigere Preise.",
+      "q2": "Wie ist das Wetter in {name} im {seasonLower}?",
+      "a2": "Im {seasonLower} liegen die Temperaturen in {name} üblicherweise bei {temp}. Wir empfehlen Zwiebellook.",
+      "q3": "Welche Aktivitäten gibt es in {name} im {seasonLower}?",
+      "a3": "{season} in {name} bietet vielfältige Aktivitäten — von Wanderungen bis Kulinarik. Schau in unsere Liste der Dinge, die man in {name} tun kann.",
+      "q4": "Brauche ich eine Reservierung für {name}?",
+      "a4": "Wir empfehlen, die Unterkunft mindestens 2 Wochen im Voraus zu buchen, besonders in der Hochsaison. Nutze unseren KI-Reiseplaner, um die Route zu optimieren."
     },
-    "ctaTitle": "Plan your {seasonLower} trip to {name}",
-    "ctaText": "The AI takes the season, the weather and your interests into account for the perfect plan.",
-    "ctaButton": "Build an itinerary",
-    "ctaThingsToDo": "Things to do in {name}",
-    "exploreTitle": "Also explore",
+    "ctaTitle": "Plane deine {seasonLower}-Reise nach {name}",
+    "ctaText": "Die KI berücksichtigt Saison, Wetter und deine Interessen für den perfekten Plan.",
+    "ctaButton": "KI-Reiseroute",
+    "ctaThingsToDo": "Was tun in {name}",
+    "exploreTitle": "Auch entdecken",
     "meta": {
-      "notFound": "Page not found",
-      "title": "Best time to visit {name} — {season}",
-      "description": "When to visit {name}? {season} ({months}): {desc}. Temperatures {temp}. Tips, activities and a {seasonLower} itinerary for {name}.",
-      "ogDescription": "{desc}. Temperatures {temp}. A guide to {name} in {seasonLower}."
+      "notFound": "Seite nicht gefunden",
+      "title": "Beste Reisezeit für {name} — {season}",
+      "description": "Wann nach {name} reisen? {season} ({months}): {desc}. Temperaturen {temp}. Tipps, Aktivitäten und {seasonLower}-Reiseroute für {name}.",
+      "ogDescription": "{desc}. Temperaturen {temp}. Guide für {name} im {seasonLower}."
     }
   },
   "collections": {
@@ -1250,174 +1250,174 @@
     }
   },
   "guidePage": {
-    "metaNotFound": "Guide not found",
-    "breadcrumbHome": "Home",
+    "metaNotFound": "Guide nicht gefunden",
+    "breadcrumbHome": "Startseite",
     "breadcrumbAria": "Breadcrumb",
-    "editorialRating": "Editorial rating {rating}★",
+    "editorialRating": "Redaktionelle Bewertung {rating}★",
     "introHeading": "{label} in {name}",
-    "metaLine": "Duration: {duration} · Price range: {price}",
-    "highlightsTitle": "Featured activities",
-    "fallbackHighlight": "A local experience",
-    "experiencesTitle": "Experiences in {name} for a {labelLower}",
-    "allExperiences": "All experiences",
-    "listingsTitle": "Recommended local spots in {name}",
-    "allListings": "All local spots",
-    "relatedTitle": "Related guides",
-    "thingsToDoTitle": "Things to do in {name}",
-    "thingsToDoDesc": "All {count} sights and activities in {name}.",
-    "bestTimeTitle": "Best time to visit {name}",
-    "bestTimeDesc": "A season-by-season guide — spring, summer, autumn, winter.",
-    "faqTitle": "Frequently asked questions",
-    "ctaTitle": "Put together the perfect {labelLower} in {name}",
-    "ctaP": "The AI takes your budget, interests and time into account. {description}",
-    "ctaPlanner": "Trip planner",
-    "ctaItineraries": "Ready-made itineraries",
-    "elsewhereTitle": "{label} elsewhere",
-    "elsewhereDesc": "Explore {labelLower} in other Slovenian destinations:",
+    "metaLine": "Dauer: {duration} · Preisrahmen: {price}",
+    "highlightsTitle": "Aktivitäten im Fokus",
+    "fallbackHighlight": "Lokales Erlebnis",
+    "experiencesTitle": "Erlebnisse in {name} für den {labelLower}",
+    "allExperiences": "Alle Erlebnisse",
+    "listingsTitle": "Empfohlene lokale Anbieter in {name}",
+    "allListings": "Alle lokalen Anbieter",
+    "relatedTitle": "Verwandte Guides",
+    "thingsToDoTitle": "Was tun in {name}",
+    "thingsToDoDesc": "Alle {count} Sehenswürdigkeiten und Aktivitäten in {name}.",
+    "bestTimeTitle": "Beste Reisezeit für {name}",
+    "bestTimeDesc": "Guide durch die Jahreszeiten — Frühling, Sommer, Herbst, Winter.",
+    "faqTitle": "Häufige Fragen",
+    "ctaTitle": "Stelle deinen perfekten {labelLower} in {name} zusammen",
+    "ctaP": "Die KI berücksichtigt dein Budget, deine Interessen und deine Zeit. {description}",
+    "ctaPlanner": "KI-Reiseplaner",
+    "ctaItineraries": "Fertige Reiserouten",
+    "elsewhereTitle": "{label} auch anderswo",
+    "elsewhereDesc": "Entdecke den {labelLower} in anderen slowenischen Reisezielen:",
     "meta": {
-      "title": "{title} — {label} guide",
-      "ogDescription": "{description} A guide to {name}.",
-      "keywordGuide": "guide",
-      "keywordTravel": "travel",
-      "keywordSlovenia": "Slovenia"
+      "title": "{title} — {labelLower}-Guide",
+      "ogDescription": "{description} Ein Guide für {name}.",
+      "keywordGuide": "Guide",
+      "keywordTravel": "Reise",
+      "keywordSlovenia": "Slowenien"
     },
     "faqs": {
       "romanticni-pobeg": {
-        "q1": "What makes {name} special for a romantic escape?",
-        "a1": "{name} offers a unique blend of nature, cultural sights and cuisine. A romantic escape to {name} is perfect for anniversaries, Valentine's Day or proposals — the emphasis is on privacy, views and local flavours.",
-        "q2": "How much does a romantic escape to {name} cost?",
-        "a2": "A romantic escape to {name} typically costs {price}, including a room with a view, dinner for two and one experience (for example a tasting or a boat ride).",
-        "q3": "When is the best time for a romantic visit to {name}?",
-        "a3": "Spring (April–June) and early autumn (September–October) bring the most romantic atmosphere to {name} — pleasant temperatures, fewer tourists and beautiful colours in nature.",
-        "q4": "Which places to stay in {name} are the most romantic?",
-        "a4": "For a romantic escape we recommend boutique hotels and rooms with a view. Browse our lists of local spots in {name} — every provider is hand-picked."
+        "q1": "Was macht {name} besonders für einen Romantik-Trip?",
+        "a1": "{name} bietet eine einzigartige Kombination aus Natur, kulturellen Sehenswürdigkeiten und Kulinarik. Ein Romantik-Trip nach {name} ist perfekt für Jahrestage, Valentinstag oder Anträge — im Fokus stehen Privatsphäre, Ausblicke und lokale Aromen.",
+        "q2": "Was kostet ein Romantik-Trip nach {name}?",
+        "a2": "Der Preis für einen Romantik-Trip nach {name} liegt üblicherweise bei {price}, inklusive Unterkunft mit Ausblick, Dinner für zwei und einem Erlebnis (z. B. Verkostung oder Fahrt).",
+        "q3": "Wann ist die beste Zeit für einen romantischen Besuch in {name}?",
+        "a3": "Frühling (April–Juni) und früher Herbst (September–Oktober) bieten die romantischste Atmosphäre in {name} — angenehme Temperaturen, weniger Touristen und wunderbare Naturfarben.",
+        "q4": "Welche Unterkünfte in {name} sind am romantischsten?",
+        "a4": "Für einen Romantik-Trip empfehlen wir Boutique-Hotels und Unterkünfte mit Ausblick. Schau in unsere Listen lokaler Anbieter in {name} — alle mit handverlesenen Anbietern."
       },
       "druzinski": {
-        "q1": "Is {name} suitable for a visit with children?",
-        "a1": "Yes — {name} is an excellent family destination with safe walking trails, child-friendly restaurants and interactive experiences. Most attractions are accessible with pushchairs too.",
-        "q2": "How much does a family trip to {name} cost?",
-        "a2": "A family trip to {name} (2 adults + 2 children) usually costs {price}, including a family room, meals and attraction tickets. Children under 6 often enter free of charge.",
-        "q3": "Which activities in {name} are suitable for children?",
-        "a3": "{name} offers a variety of family activities — from easier walks and cycling to museums with interactive exhibitions, workshops and tastings. Our AI recommendations take the age of the children into account.",
-        "q4": "When is the best time for a family visit to {name}?",
-        "a4": "School holidays (summer, October, February) are ideal for a family visit to {name}. In summer all the outdoor attractions are open, while winter brings skiing and winter festivals."
+        "q1": "Ist {name} für einen Besuch mit Kindern geeignet?",
+        "a1": "Ja — {name} ist ein hervorragendes Familienziel mit sicheren Wanderwegen, kinderfreundlichen Restaurants und interaktiven Erlebnissen. Die meisten Attraktionen sind auch mit Kinderwagen zugänglich.",
+        "q2": "Was kostet ein Familienausflug nach {name}?",
+        "a2": "Ein Familienausflug nach {name} (2 Erwachsene + 2 Kinder) kostet üblicherweise {price}, inklusive Familienzimmer, Mahlzeiten und Eintrittskarten. Kinder bis 6 Jahre haben oft freien Eintritt.",
+        "q3": "Welche Aktivitäten in {name} sind für Kinder geeignet?",
+        "a3": "{name} bietet vielfältige Familienaktivitäten — von leichten Wanderungen und Radfahren über Museen mit interaktiven Ausstellungen bis zu Workshops und Verkostungen. Unsere KI-Empfehlungen berücksichtigen das Alter der Kinder.",
+        "q4": "Wann ist die beste Zeit für einen Familienbesuch in {name}?",
+        "a4": "Die Schulferien (Sommer, Oktober, Februar) sind ideal für einen Familienbesuch in {name}. Im Sommer sind alle Außenattraktionen geöffnet, im Winter gibt es Skifahren und Winterfestivals."
       },
       "budget": {
-        "q1": "How much does a visit to {name} cost on a budget?",
-        "a1": "On a limited budget you can visit {name} for {price}, including a bed in a hostel or private room, local food from the markets and free activities.",
-        "q2": "Which free activities are available in {name}?",
-        "a2": "{name} offers plenty of free activities — strolls through the old town, visits to churches, walking trails in the surroundings and public beaches. Museum tickets often carry student discounts.",
-        "q3": "How can I save on transport to {name}?",
-        "a3": "For affordable travel to {name} we recommend the train or bus (search via FlixBus or Slovenian Railways). In {name} you can use local public transport or a bike (many destinations have bike-share schemes).",
-        "q4": "Can I find cheap accommodation in {name}?",
-        "a4": "Yes — {name} has hostels, private rooms via Airbnb and family guesthouses. Prices are lower out of season (November–March, apart from holidays)."
+        "q1": "Was kostet ein Besuch in {name} mit begrenztem Budget?",
+        "a1": "Mit begrenztem Budget kannst du {name} für {price} besuchen, inklusive Unterkunft im Hostel oder Privatzimmer, lokalem Essen von den Märkten und kostenlosen Aktivitäten.",
+        "q2": "Welche kostenlosen Aktivitäten gibt es in {name}?",
+        "a2": "{name} bietet zahlreiche kostenlose Aktivitäten — Spaziergänge durch die Altstadt, Kirchenbesuche, Wanderwege in der Umgebung und öffentliche Strände. Museumstickets haben oft Studentenrabatte.",
+        "q3": "Wie spare ich bei der Anreise nach {name}?",
+        "a3": "Für eine günstige Anreise nach {name} empfehlen wir Zug oder Bus (Suche über FlixBus oder die slowenische Bahn). In {name} kannst du öffentliche Verkehrsmittel oder das Fahrrad nutzen (viele Reiseziele haben Verleihsysteme).",
+        "q4": "Finde ich günstige Unterkünfte in {name}?",
+        "a4": "Ja — in {name} gibt es Hostels, Privatzimmer über Airbnb und familiengeführte Pensionen. Die Preise sind außerhalb der Saison niedriger (November–März, außer an Feiertagen)."
       },
       "vikend": {
-        "q1": "What to do in {name} over a weekend?",
-        "a1": "A weekend in {name} leaves room for the main sights, local cuisine and at least one experience. Friday evening is ideal for arriving and a stroll, Saturday for the headline attractions, Sunday for unwinding.",
-        "q2": "How much does a weekend in {name} cost?",
-        "a2": "A weekend in {name} (2 nights, 3 meals a day, attractions) costs roughly {price}. You can save with early-bird bookings and by shopping at local markets.",
-        "q3": "When is the best time for a weekend escape to {name}?",
-        "a3": "{name} works for a weekend escape all year round. Spring and autumn offer the best weather for exploring, summer brings more events, and winter means fewer tourists and lower prices.",
-        "q4": "How do I get to {name} for a weekend?",
-        "a4": "{name} is reachable by car, train or bus. We recommend booking transport at least a week in advance, especially for Friday afternoon."
+        "q1": "Was tun in {name} am Wochenende?",
+        "a1": "Ein Wochenende in {name} ermöglicht die Erkundung der wichtigsten Sehenswürdigkeiten, der lokalen Kulinarik und mindestens eines Erlebnisses. Freitags abends eignet sich ideal für Ankunft und Spaziergang, Samstag für die Hauptattraktionen, Sonntag zur Entspannung.",
+        "q2": "Was kostet ein Wochenende in {name}?",
+        "a2": "Ein Wochenende in {name} (2 Nächte, 3 Mahlzeiten pro Tag, Attraktionen) kostet etwa {price}. Sparen kannst du mit Frühbuchungen und lokalen Märkten.",
+        "q3": "Wann ist die beste Zeit für einen Wochenend-Trip nach {name}?",
+        "a3": "{name} eignet sich das ganze Jahr über für einen Wochenend-Trip. Frühling und Herbst bieten das beste Wetter zum Erkunden, im Sommer gibt es mehr Veranstaltungen, im Winter weniger Touristen und niedrigere Preise.",
+        "q4": "Wie komme ich für ein Wochenende nach {name}?",
+        "a4": "{name} ist mit dem Auto, Zug oder Bus erreichbar. Wir empfehlen, die Anreise mindestens eine Woche im Voraus zu buchen, besonders für Freitagnachmittag."
       },
       "ai": {
-        "q": "Can you put together an itinerary for {name}?",
-        "a": "Yes — our planner can build a fully tailored itinerary for {name} that reflects your interests, budget and available time. Give it a try on the Plan page."
+        "q": "Kann die KI eine Reiseroute für {name} erstellen?",
+        "a": "Ja — unser KI-Reiseplaner erstellt eine vollständig maßgeschneiderte Reiseroute für {name}, die deine Interessen, dein Budget und deine Zeit berücksichtigt. Probiere es auf der Seite „Reise planen“."
       }
     },
     "guideTypes": {
       "romanticni-pobeg": {
-        "label": "Romantic escape",
-        "shortLabel": "Romantic",
-        "description": "An escape for two — romantic activities, candlelit dinners, private experiences and rooms with a view.",
-        "title": "A romantic escape to {name}",
-        "intro": "{name} — {tagline}. This guide is designed for couples looking for private moments: romantic lakeside or seaside strolls, candlelit dinners, private tastings and rooms with a view. Every recommendation is hand-picked for an unforgettable escape for two.",
-        "durationLabel": "2 days / 1 night",
-        "priceRange": "€180–350 per couple",
-        "bestFor": "Couples · Newlyweds · Anniversaries",
-        "metaKeyword": "romance",
+        "label": "Romantik-Trip",
+        "shortLabel": "Romantik",
+        "description": "Auszeit zu zweit — romantische Aktivitäten, Dinner bei Kerzenschein, private Erlebnisse und Unterkünfte mit Ausblick.",
+        "title": "Romantik-Trip nach {name}",
+        "intro": "{name} — {tagline}. Dieser Guide ist für Paare gedacht, die private Momente suchen: romantische Spaziergänge am See oder Meer, Dinner bei Kerzenschein, private Verkostungen und Unterkünfte mit Ausblick. Alle Empfehlungen sind handverlesen für einen unvergesslichen Trip zu zweit.",
+        "durationLabel": "2 Tage / 1 Nacht",
+        "priceRange": "180–350 € / Paar",
+        "bestFor": "Paare · Frischvermählte · Jahrestage",
+        "metaKeyword": "Romantik",
         "h1": {
-          "title": "A romantic stroll along {hl1}",
-          "description": "Begin the day with a leisurely stroll along {hl1} in {name}. The morning light and thinner crowds make for the perfect atmosphere for two."
+          "title": "Romantischer Spaziergang entlang {hl1}",
+          "description": "Beginne den Tag mit einem entspannten Spaziergang entlang {hl1Lower} in {name}. Das Morgenlicht und weniger Touristen schaffen die perfekte Atmosphäre für zwei."
         },
         "h2": {
-          "title": "A private experience: {hl2}",
-          "description": "In the afternoon, take time for a private experience in {name} — a tasting, a boat ride or a local workshop. Our recommendations are tried and tested for couples."
+          "title": "Privates Erlebnis: {hl2}",
+          "description": "Nimm dir nachmittags Zeit für ein privates Erlebnis in {name} — eine Verkostung, eine Bootsfahrt oder ein lokaler Workshop. Unsere Empfehlungen sind für Paare geprüft."
         },
         "h3": {
-          "title": "A candlelit dinner in {name}",
-          "description": "Round off the day with a romantic dinner at one of the selected restaurants in {name}. Local chefs serve seasonal menus with wines from Slovenian vineyards."
+          "title": "Dinner bei Kerzenschein in {name}",
+          "description": "Beende den Tag mit einem romantischen Dinner in einem der ausgewählten Restaurants in {name}. Lokale Küchenchefs bieten saisonale Menüs mit Weinen slowenischer Weingüter."
         }
       },
       "druzinski": {
-        "label": "Family trip",
-        "shortLabel": "Family",
-        "description": "Family-friendly activities for all ages — safe walking trails, attractions for children, kids' menus and interactive experiences.",
-        "title": "A family trip to {name}",
-        "intro": "Planning a family trip to {name}? This guide brings together safe walking trails, interactive experiences for children, family-friendly restaurants with kids' menus and accommodation with family rooms. {name} is a great choice for unforgettable family memories.",
-        "durationLabel": "2–3 days",
-        "priceRange": "€120–260 per family",
-        "bestFor": "Families with children · Multi-generational trips",
-        "metaKeyword": "family",
+        "label": "Familienausflug",
+        "shortLabel": "Familie",
+        "description": "Familienfreundliche Aktivitäten für alle Altersgruppen — sichere Wanderwege, Attraktionen, Kindergerichte und interaktive Erlebnisse.",
+        "title": "Familienausflug nach {name}",
+        "intro": "Du planst einen Familienausflug nach {name}? Dieser Guide verbindet sichere Wanderwege, interaktive Erlebnisse für Kinder, familienfreundliche Restaurants mit Kindergerichten und Unterkünfte mit Familienzimmern. {name} ist eine hervorragende Wahl für unvergessliche Familienerinnerungen.",
+        "durationLabel": "2–3 Tage",
+        "priceRange": "120–260 € / Familie",
+        "bestFor": "Familien mit Kindern · Mehrgenerationen-Reisen",
+        "metaKeyword": "Familie",
         "h1": {
-          "title": "A family visit: {hl1}",
-          "description": "{hl1} in {name} is child-friendly — interactive displays, safe paths and often workshops for the youngest visitors."
+          "title": "Familienbesuch: {hl1}",
+          "description": "{hl1} in {name} ist kinderfreundlich — interaktive Ausstellungen, sichere Wege und oft Workshops für die Kleinsten."
         },
         "h2": {
-          "title": "Unwinding at {hl2}",
-          "description": "{hl2} offers space for a picnic and some downtime. Children can play while the grown-ups enjoy the nature of {name}."
+          "title": "Entspannung an {hl2}",
+          "description": "{hl2} bietet Raum für Picknick und Entspannung. Kinder können spielen, Erwachsene die Natur von {name} genießen."
         },
         "h3": {
-          "title": "A family dinner in {name}",
-          "description": "Choose a restaurant with a children's menu in {name}. Local pizzas, pasta and traditional Slovenian dishes go down well with every age."
+          "title": "Familien-Dinner in {name}",
+          "description": "Wähle ein Restaurant mit Kinderkarte in {name}. Lokale Pizzen, Pasta und traditionelle slowenische Gerichte kommen bei allen Altersgruppen an."
         }
       },
       "budget": {
-        "label": "Budget-friendly visit",
-        "shortLabel": "Budget",
-        "description": "Maximum experience on a minimal budget — free attractions, a local picnic, cheap beds and public transport.",
-        "title": "{name} on a budget",
-        "intro": "{name} can be enjoyed even on a small budget. This guide covers free attractions, local markets, affordable beds and public transport. Every suggestion is tried and tested for travellers who want the maximum experience at the minimum cost.",
-        "durationLabel": "1–2 days",
-        "priceRange": "€30–80 per person",
-        "bestFor": "Students · Backpackers · Budget travellers",
-        "metaKeyword": "budget-friendly",
+        "label": "Spar-Trip",
+        "shortLabel": "Spar",
+        "description": "Maximales Erlebnis mit minimalem Budget — kostenlose Attraktionen, lokales Picknick, günstige Unterkünfte und öffentliche Verkehrsmittel.",
+        "title": "{name} mit kleinem Budget",
+        "intro": "Auch {name} lässt sich mit kleinem Budget besuchen. Dieser Guide stellt kostenlose Attraktionen, lokale Märkte, günstige Unterkünfte und öffentliche Verkehrsmittel vor. Die Empfehlungen sind für Reisende gedacht, die das Maximum erleben und das Minimum ausgeben wollen.",
+        "durationLabel": "1–2 Tage",
+        "priceRange": "30–80 € / Person",
+        "bestFor": "Studierende · Backpacker · Budget-Reisende",
+        "metaKeyword": "günstig",
         "h1": {
-          "title": "A free visit: {hl1}",
-          "description": "{hl1} in {name} is free to admire from the outside. A stroll beside it offers wonderful photo opportunities and a taste of local culture."
+          "title": "Kostenloser Besuch: {hl1}",
+          "description": "{hl1} in {name} ist von außen kostenlos zu bewundern. Ein Spaziergang daran vorbei bietet wunderbare Fotomotive und ein Kulturerlebnis."
         },
         "h2": {
-          "title": "A picnic by {hl2}",
-          "description": "Buy local cheese, bread and fruit at the market in {name} and lay out a picnic. What you save on a meal leaves more for experiences."
+          "title": "Picknick an {hl2}",
+          "description": "Kaufe lokale Käse, Brot und Obst auf dem Markt in {name} und organisiere ein Picknick. Die Ersparnis bei den Mahlzeiten lässt mehr Raum für Erlebnisse."
         },
         "h3": {
-          "title": "A walk to {hl3}",
-          "description": "{hl3} is free to explore on foot or by bike. Waymarked trails in {name} suit every level."
+          "title": "Wanderung zu {hl3}",
+          "description": "{hl3} ist kostenlos zu Fuß oder mit dem Fahrrad zu erkunden. In {name} sind die markierten Wanderwege für alle Niveaus geeignet."
         }
       },
       "vikend": {
-        "label": "Weekend escape",
-        "shortLabel": "Weekend",
-        "description": "The perfect two-day escape — Friday evening to Sunday afternoon. A balanced programme of headline sights and local cuisine.",
-        "title": "A weekend in {name}",
-        "intro": "The perfect weekend escape to {name} — Friday evening to Sunday afternoon. A balanced programme of headline sights, local cuisine and time to unwind. {name} is close enough for a short break and rich enough for a full weekend.",
-        "durationLabel": "Weekend (Friday–Sunday)",
-        "priceRange": "€150–280 per person",
-        "bestFor": "Working people · Friends · Quick escapes",
-        "metaKeyword": "weekend escape",
+        "label": "Wochenend-Trip",
+        "shortLabel": "Wochenende",
+        "description": "Die perfekte Auszeit über 2 Tage — von Freitagabend bis Sonntagnachmittag. Ausgewogenes Programm mit Hauptsehenswürdigkeiten und lokaler Kulinarik.",
+        "title": "Wochenende in {name}",
+        "intro": "Der perfekte Wochenend-Trip nach {name} — von Freitagabend bis Sonntagnachmittag. Ausgewogenes Programm mit Hauptsehenswürdigkeiten, lokaler Kulinarik und Zeit zum Entspannen. {name} ist nah genug für eine kurze Auszeit und reichhaltig genug für ein ganzes Wochenende.",
+        "durationLabel": "Wochenende (Freitag–Sonntag)",
+        "priceRange": "150–280 € / Person",
+        "bestFor": "Berufstätige · Freunde · Kurztrip",
+        "metaKeyword": "Wochenend-Trip",
         "h1": {
-          "title": "Friday: arrival and a stroll around {name}",
-          "description": "After arriving in {name}, settle in and take an unhurried stroll through the old town. Enjoy a local coffee and plan the two days ahead."
+          "title": "Freitag: Ankunft und Spaziergang durch {name}",
+          "description": "Nach der Ankunft in {name} beziehe deine Unterkunft und nimm dir Zeit für einen entspannten Spaziergang durch die Altstadt. Genieße einen lokalen Kaffee und plane die nächsten zwei Tage."
         },
         "h2": {
-          "title": "Saturday: {hl1} and the surroundings",
-          "description": "Devote the main day to the headline sights — {hl1}, the local museum and lunch at a traditional restaurant in {name}."
+          "title": "Samstag: {hl1} und Umgebung",
+          "description": "Widme den Haupttag den wichtigsten Sehenswürdigkeiten — {hl1Lower}, das lokale Museum und ein Mittagessen in einem traditionellen Restaurant in {name}."
         },
         "h3": {
-          "title": "Sunday: {hl2} and departure",
-          "description": "Use the last day for {hl2} and some shopping for local keepsakes. One more local coffee in {name} before you set off home."
+          "title": "Sonntag: {hl2} und Abreise",
+          "description": "Nutze den letzten Tag für {hl2Lower} und den Kauf lokaler Andenken. Vor der Abreise noch ein letzter lokaler Kaffee in {name}."
         }
       }
     }
@@ -1425,68 +1425,68 @@
   "itineraryPage": {
     "durations": {
       "1-dan": {
-        "label": "1 day",
-        "desc": "A quick visit"
+        "label": "1 Tag",
+        "desc": "Kurzer Besuch"
       },
       "vikend": {
-        "label": "Weekend (2 days)",
-        "desc": "The perfect weekend escape"
+        "label": "Wochenende (2 Tage)",
+        "desc": "Das perfekte Wochenende"
       },
       "3-dnevi": {
-        "label": "3 days",
-        "desc": "An in-depth visit"
+        "label": "3 Tage",
+        "desc": "Vertiefter Besuch"
       },
       "5-dnevi": {
-        "label": "5 days",
-        "desc": "The complete experience"
+        "label": "5 Tage",
+        "desc": "Vollständiges Erlebnis"
       },
       "7-dnevi": {
-        "label": "7 days",
-        "desc": "A week of exploring"
+        "label": "7 Tage",
+        "desc": "Eine Woche voller Entdeckungen"
       }
     },
     "travelerTypes": {
       "pari": {
-        "label": "For couples",
-        "desc": "A romantic escape"
+        "label": "Für Paare",
+        "desc": "Romantischer Kurztrip"
       },
       "druzina": {
-        "label": "Family",
-        "desc": "Fun for all ages"
+        "label": "Familien",
+        "desc": "Spaß für alle Altersgruppen"
       },
       "solo": {
-        "label": "Solo traveller",
-        "desc": "Explore at your own pace"
+        "label": "Solo-Reisende",
+        "desc": "Auf eigene Faust entdecken"
       },
       "avanturist": {
-        "label": "Adventurer",
-        "desc": "Adrenaline and nature"
+        "label": "Abenteurer",
+        "desc": "Adrenalin und Natur"
       }
     },
-    "headline": "{duration} itinerary for {name}",
-    "overviewTitle": "Trip overview",
-    "unitDay": "day",
-    "unitDays": "days",
-    "costLabel": "estimate / person",
-    "ratingLabel": "editorial destination rating",
-    "daysTitle": "Suggested daily schedule",
-    "dayLabel": "Day {day}",
-    "dayFirst": "Arrival and exploring {name}",
-    "dayLast": "Final day and departure",
-    "dayMiddle": "A full day of exploring",
-    "hoursLabel": "4-6 hours",
-    "perPerson": "€/person",
-    "travelerTypesTitle": "Itineraries by traveller type",
-    "generateButton": "Generate itinerary",
-    "otherDestinationsTitle": "Other destinations",
-    "personalizedTitle": "Want a personalised itinerary?",
-    "personalizedText": "Our AI takes your budget, interests and season into account for the perfect plan.",
-    "personalizedButton": "Generate an itinerary",
+    "headline": "{duration}-Reiseroute für {name}",
+    "overviewTitle": "Reiseübersicht",
+    "unitDay": "Tag",
+    "unitDays": "Tage",
+    "costLabel": "Schätzung / Person",
+    "ratingLabel": "redaktionelle Bewertung des Reiseziels",
+    "daysTitle": "Empfohlener Tagesablauf",
+    "dayLabel": "Tag {day}",
+    "dayFirst": "Ankunft und Erkundung von {name}",
+    "dayLast": "Letzter Tag und Abreise",
+    "dayMiddle": "Ganztägiges Entdecken",
+    "hoursLabel": "4–6 Stunden",
+    "perPerson": "€/Person",
+    "travelerTypesTitle": "Reiserouten nach Reisertyp",
+    "generateButton": "Reiseroute erstellen",
+    "otherDestinationsTitle": "Weitere Reiseziele",
+    "personalizedTitle": "Möchtest du eine personalisierte Reiseroute?",
+    "personalizedText": "Unsere KI berücksichtigt dein Budget, deine Interessen und die Saison für den perfekten Plan.",
+    "personalizedButton": "KI-Reiseroute erstellen",
     "meta": {
-      "notFound": "Itinerary not found",
-      "title": "{duration} itinerary for {name} — {desc}",
-      "description": "The complete {durationLower} itinerary for {name}, {tagline}. {desc} — recommended activities, accommodation and restaurants.",
-      "ogDescription": "A recommended {duration} itinerary with activities, accommodation and restaurants."
+      "notFound": "Reiseroute nicht gefunden",
+      "title": "{duration}-Reiseroute für {name} — {desc}",
+      "description": "Die vollständige {durationLower}-Reiseroute für {name}, {tagline}. {desc} — KI-empfohlene Aktivitäten, Unterkünfte und Restaurants für einen {days}-Tage-Besuch.",
+      "ogDescription": "KI-empfohlene {duration}-Reiseroute mit Aktivitäten, Unterkünften und Restaurants."
     }
   },
   "plannerPage": {
@@ -1833,33 +1833,33 @@
     }
   },
   "thingsToDo": {
-    "breadcrumbHome": "Home",
-    "heroTitle": "Things to do in {name}",
-    "heroStats": "{highlights} highlights · {activities} activities · Editorial rating {rating}★",
-    "aboutTitle": "About {name}",
-    "highlightsTitle": "Top highlights",
-    "experiencesTitle": "Activities and experiences in {name}",
-    "listingsTitle": "Locals in {name}",
-    "productsTitle": "Local products from {name}",
-    "bestTimeTitle": "Best time to visit {name}",
+    "breadcrumbHome": "Startseite",
+    "heroTitle": "Was tun in {name}",
+    "heroStats": "{highlights} Highlights · {activities} Aktivitäten · Redaktionelle Bewertung {rating}★",
+    "aboutTitle": "Über {name}",
+    "highlightsTitle": "Top-Highlights",
+    "experiencesTitle": "Aktivitäten und Erlebnisse in {name}",
+    "listingsTitle": "Lokale Anbieter in {name}",
+    "productsTitle": "Lokale Produkte aus {name}",
+    "bestTimeTitle": "Beste Reisezeit für {name}",
     "seasons": {
-      "pomlad": "Spring",
-      "poletje": "Summer",
-      "jesen": "Autumn",
+      "pomlad": "Frühling",
+      "poletje": "Sommer",
+      "jesen": "Herbst",
       "zima": "Winter"
     },
-    "faqTitle": "Frequently asked questions",
-    "planTitle": "Plan your trip to {name}",
-    "planText": "We can put together the perfect itinerary for {name} and the surrounding area — tailored to your budget, interests and season.",
-    "planButton": "Trip planner",
-    "exploreTitle": "Also explore",
-    "trackerTitle": "Things to do in {name} — Guide",
+    "faqTitle": "Häufige Fragen",
+    "planTitle": "Plane deine Reise nach {name}",
+    "planText": "Unsere KI erstellt dir eine perfekte Reiseroute für {name} und Umgebung — angepasst an dein Budget, deine Interessen und die Saison.",
+    "planButton": "KI-Reiseplaner",
+    "exploreTitle": "Auch entdecken",
+    "trackerTitle": "Was tun in {name} — Guide",
     "meta": {
-      "notFound": "Destination not found",
-      "title": "Things to do in {name} — {name} Travel Guide",
-      "description": "Discover the best activities, attractions and experiences in {name}, {tagline}. A guide with {count} major highlights, local providers and AI-powered recommendations.",
-      "ogTitle": "Things to do in {name} — Discover Slovenia AI",
-      "ogDescription": "{count} highlights, local restaurants, activities and experiences in {name}."
+      "notFound": "Reiseziel nicht gefunden",
+      "title": "Was tun in {name} — {name}-Guide",
+      "description": "Entdecke die besten Aktivitäten, Sehenswürdigkeiten und Erlebnisse in {name}, {tagline}. Guide mit {count} Top-Highlights, lokalen Anbietern und KI-Empfehlungen.",
+      "ogTitle": "Was tun in {name} — Discover Slovenia AI",
+      "ogDescription": "{count} Highlights, lokale Restaurants, Aktivitäten und Erlebnisse in {name}."
     }
   },
   "trustSafety": {
@@ -2069,74 +2069,74 @@
     "emptyDescription": "Try selecting a different category."
   },
   "destinationPage": {
-    "breadcrumbHome": "Home",
-    "breadcrumbDestinations": "Destinations",
-    "meta": {
-      "notFound": "Destination not found",
-      "title": "{name} — {tagline} | Slovenia Travel Guide",
-      "description": "{name}: {tagline}. Recommended visit length: {duration}. Highlights: {highlights}. Ready-made itineraries, travel guides by trip type and the best time to visit.",
-      "ogTitle": "{name} — destination guide",
-      "ogDescription": "{name}: {tagline}. Things to do, itineraries by length and the best time to visit."
-    },
-    "heroStats": "{highlights} highlights · {duration} · {budget}",
-    "aboutTitle": "About {name}",
+    "breadcrumbHome": "Startseite",
+    "breadcrumbDestinations": "Reiseziele",
+    "heroStats": "{highlights} Highlights · {duration} · {budget}",
+    "aboutTitle": "Über {name}",
+    "highlightsTitle": "Top-Highlights",
     "facts": {
-      "duration": "Recommended visit length",
+      "duration": "Empfohlene Aufenthaltsdauer",
       "budget": "Budget",
-      "person": "person",
-      "bestFor": "Great for",
-      "season": "Best season"
-    },
-    "highlightsTitle": "Top highlights",
-    "thingsToDo": {
-      "title": "Things to do in {name}",
-      "text": "The detailed guide with activities, local providers, experiences and FAQs — {highlights} top highlights in one place.",
-      "button": "Open the {name} guide"
-    },
-    "itineraries": {
-      "title": "Ready-made itineraries for {name}"
+      "person": "Person",
+      "bestFor": "Ideal für",
+      "season": "Beste Reisezeit"
     },
     "durations": {
-      "d1": "1 day",
-      "weekend": "Weekend (2 days)",
-      "d3": "3 days",
-      "d5": "5 days",
-      "d7": "7 days"
+      "d1": "1 Tag",
+      "weekend": "Wochenende (2 Tage)",
+      "d3": "3 Tage",
+      "d5": "5 Tage",
+      "d7": "7 Tage"
+    },
+    "itineraries": {
+      "title": "Fertige Reiserouten für {name}"
     },
     "guides": {
-      "title": "Guides by trip type — {name}"
+      "title": "Guides nach Reiseart — {name}"
     },
     "bestTime": {
-      "title": "Best time to visit {name}"
+      "title": "Beste Reisezeit für {name}"
     },
-    "seasons": {
-      "pomlad": "Spring",
-      "poletje": "Summer",
-      "jesen": "Autumn",
-      "zima": "Winter"
-    },
-    "plan": {
-      "title": "Plan your trip to {name}",
-      "text": "We can build a complete itinerary for {name} and the surrounding area — tailored to your interests, dates, the weather forecast and who you travel with.",
-      "button": "Trip planner"
+    "thingsToDo": {
+      "title": "Was tun in {name}",
+      "text": "Die ausführliche Seite mit Aktivitäten, lokalen Anbietern, Erlebnissen und häufigen Fragen — {highlights} Top-Highlights an einem Ort.",
+      "button": "Guide für {name} öffnen"
     },
     "nearby": {
-      "title": "Nearby — the {region} region"
+      "title": "In der Nähe — Region {region}"
     },
     "explore": {
-      "title": "Also explore",
-      "all": "All destinations"
+      "title": "Auch entdecken",
+      "all": "Alle Reiseziele"
     },
-    "trackerTitle": "{name} — Destination",
+    "plan": {
+      "title": "Plane deine Reise nach {name}",
+      "text": "Wir erstellen dir eine komplette Reiseroute für {name} und Umgebung — abgestimmt auf deine Interessen, Termine, die Wettervorhersage und deine Reisegruppe.",
+      "button": "Reiseplaner"
+    },
+    "seasons": {
+      "pomlad": "Frühling",
+      "poletje": "Sommer",
+      "jesen": "Herbst",
+      "zima": "Winter"
+    },
     "source": {
-      "title": "Content source",
-      "sourceLabel": "Source",
-      "updatedLabel": "Updated",
-      "openingLabel": "Opening hours",
-      "sourceShort": "source",
-      "externalSr": "opens on an external site",
-      "langNote": "Slovenian is the source of record; the English version is a translation."
-    }
+      "title": "Quelle der Inhalte",
+      "sourceLabel": "Quelle",
+      "sourceShort": "Quelle",
+      "updatedLabel": "Aktualisiert",
+      "openingLabel": "Öffnungszeiten",
+      "externalSr": "öffnet auf einer externen Seite",
+      "langNote": "Die Quelle ist slowenisch; diese Version ist eine Übersetzung."
+    },
+    "meta": {
+      "notFound": "Reiseziel nicht gefunden",
+      "title": "{name} — {tagline} | Slowenien Reiseführer",
+      "description": "{name}: {tagline}. Empfohlene Aufenthaltsdauer: {duration}. Highlights: {highlights}. Fertige Reiserouten, Guides nach Reiseart und die beste Reisezeit.",
+      "ogTitle": "{name} — Reiseführer für das Reiseziel",
+      "ogDescription": "{name}: {tagline}. Was tun, Reiserouten nach Länge und die beste Reisezeit."
+    },
+    "trackerTitle": "{name} — Reiseziel"
   },
   "pwa": {
     "install": "App installieren",

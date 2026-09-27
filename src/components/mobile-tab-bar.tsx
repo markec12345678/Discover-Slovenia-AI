@@ -57,6 +57,28 @@ const L = {
     myTripBadge: (n: number) =>
       n === 1 ? "1 idea in my trip" : `${n} ideas in my trip`,
   },
+  // W1 faza 2a (Issue #15): mobilna vrstica živi na destinacijskih straneh
+  // — IT/DE imata svoje oznake (isti vzorec kot Navigation NAV_L).
+  it: {
+    explore: "Esplora",
+    map: "Mappa",
+    plan: "Pianifica",
+    myTrip: "Il mio viaggio",
+    more: "Altro",
+    moreAria: "Apri il menù",
+    myTripBadge: (n: number) =>
+      n === 1 ? "1 idea nel mio viaggio" : `${n} idee nel mio viaggio`,
+  },
+  de: {
+    explore: "Entdecken",
+    map: "Karte",
+    plan: "Planen",
+    myTrip: "Meine Reise",
+    more: "Mehr",
+    moreAria: "Menü öffnen",
+    myTripBadge: (n: number) =>
+      n === 1 ? "1 Idee in meiner Reise" : `${n} Ideen in meiner Reise`,
+  },
 } as const;
 
 /** Poti, ki živijo SAMO v mobilnem Sheet meniju (Več je zanje sidro). */
@@ -119,7 +141,11 @@ const TABS: TabDef[] = [
 export function MobileTabBar({ onMore }: { onMore: () => void }) {
   const rawPathname = usePathname() ?? "/";
   const locale = useLocale() as string;
-  const t = L[locale === "en" ? "en" : "sl"];
+  // W1 faza 2a: 4 javni jeziki (vrstica živi na destinacijskih straneh)
+  const t =
+    locale === "en" || locale === "it" || locale === "de"
+      ? L[locale]
+      : L.sl;
   const { count } = useMyTrip();
 
   // FW4.3-2: usePathname vrača ZUNANJI URL — odstrani `/en` prefix, da

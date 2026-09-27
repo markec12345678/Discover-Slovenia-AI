@@ -226,14 +226,18 @@ describe("TASK 99-a: networkHint — pariteta SL/EN (map-view tabela T)", () => 
     expect(mapView).toContain("networkHint: {");
   });
 
-  test("networkHint ima SL in EN, oba neprazna, EN ni kopija SL", () => {
+  test("networkHint ima SL/EN (in W1 IT/DE), vsi neprazni, EN ni kopija SL", () => {
+    // W1 faza 2a: T slovar je 4-jezičen — pariteta razširjena; regex
+    // zajame vse štiri jezikovne veje po vrstnem redu sl,en,it,de.
     const m = mapView.match(
-      /networkHint:\s*\{\s*sl:\s*"([^"]+)",\s*en:\s*"([^"]+)",\s*\}/
+      /networkHint:\s*\{\s*sl:\s*"([^"]+)",\s*en:\s*"([^"]+)",\s*it:\s*"([^"]+)",\s*de:\s*"([^"]+)",\s*\}/
     );
     expect(m).not.toBeNull();
-    const [sl, en] = [m?.[1] ?? "", m?.[2] ?? ""];
+    const [sl, en, it, de] = [m?.[1] ?? "", m?.[2] ?? "", m?.[3] ?? "", m?.[4] ?? ""];
     expect(sl.trim().length).toBeGreaterThan(0);
     expect(en.trim().length).toBeGreaterThan(0);
+    expect(it.trim().length).toBeGreaterThan(0);
+    expect(de.trim().length).toBeGreaterThan(0);
     expect(en).not.toBe(sl); // resničen prevod, ne copy-paste
     // Iskrenost: SL ne obtožuje virov (ključna beseda obstoječe oznake):
     expect(sl).not.toContain("viri");

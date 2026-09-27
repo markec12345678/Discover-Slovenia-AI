@@ -33,28 +33,40 @@ const PATH = "/zemljevid";
 
 /** Dvojezični nizi heroja (server komponenta — getLocale iz next-intl). */
 const L = {
-  badge: { sl: "Zemljevid", en: "Map" },
+  badge: { sl: "Zemljevid", en: "Map", it: "Mappa", de: "Karte" },
   title: {
     sl: "Interaktivni zemljevid Slovenije in Balkana",
     en: "Interactive map of Slovenia & the Balkans",
+    it: "Mappa interattiva della Slovenia e dei Balcani",
+    de: "Interaktive Karte von Slowenien und dem Balkan",
   },
   subtitle: {
     sl: (n: number) =>
       `${n} destinacij od Alp do Albanije na enem zemljevidu — z bencinskimi postajami, restavracijami, nastanitvami in drugimi lokalnimi točkami, s podrobnostmi o vsaki lokaciji in potjo vašega AI itinererja.`,
     en: (n: number) =>
       `${n} destinations from the Alps to Albania on a single map — with petrol stations, restaurants, stays and other local places, details for every location and your AI itinerary route once you build one.`,
+    it: (n: number) =>
+      `${n} destinazioni dalle Alpi all'Albania su un'unica mappa — con stazioni di benzina, ristoranti, alloggi e altri luoghi locali, dettagli per ogni posizione e il percorso del tuo itinerario AI.`,
+    de: (n: number) =>
+      `${n} Reiseziele von den Alpen bis Albanien auf einer Karte — mit Tankstellen, Restaurants, Unterkünften und weiteren lokalen Orten, Details zu jeder Position und der Route deiner KI-Reiseroute.`,
   },
   hint: {
     sl: "Kliknite marker za podrobnosti · Brez prijave",
     en: "Tap a marker for details · No sign-up required",
+    it: "Tocca un marker per i dettagli · Senza registrazione",
+    de: "Tippe auf einen Marker für Details · Ohne Registrierung",
   },
   metaTitle: {
     sl: "Interaktivni zemljevid Slovenije in Balkana",
     en: "Interactive map of Slovenia & the Balkans",
+    it: "Mappa interattiva della Slovenia e dei Balcani",
+    de: "Interaktive Karte von Slowenien und dem Balkan",
   },
   metaDescription: {
     sl: "Raziščite Slovenijo in Balkan na interaktivnem zemljevidu — destinacije, bencinske postaje, restavracije, nastanitve, lokalne ponudnike in pot svojega AI itinererja.",
     en: "Explore Slovenia and the Balkans on an interactive map — destinations, petrol stations, restaurants, stays, local providers and your AI itinerary route.",
+    it: "Esplora Slovenia e Balcani su una mappa interattiva — destinazioni, stazioni di benzina, ristoranti, alloggi, fornitori locali e il percorso del tuo itinerario AI.",
+    de: "Entdecke Slowenien und den Balkan auf einer interaktiven Karte — Reiseziele, Tankstellen, Restaurants, Unterkünfte, lokale Anbieter und die Route deiner KI-Reiseroute.",
   },
 } as const;
 
@@ -62,7 +74,9 @@ type PageLang = keyof typeof L.badge;
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
-  const lang: PageLang = locale === "en" ? "en" : "sl";
+  // W1 (Issue #15 faza 2a): 4 javni jeziki
+  const lang: PageLang =
+    locale === "en" || locale === "it" || locale === "de" ? locale : "sl";
   const base = await currentBaseUrl();
   const prefixed = `${localePrefix(locale)}${PATH}`;
 
@@ -78,7 +92,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function MapPage() {
   const locale = await getLocale();
-  const lang: PageLang = locale === "en" ? "en" : "sl";
+  // W1 (Issue #15 faza 2a): 4 javni jeziki
+  const lang: PageLang =
+    locale === "en" || locale === "it" || locale === "de" ? locale : "sl";
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

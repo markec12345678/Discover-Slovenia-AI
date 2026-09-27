@@ -35,32 +35,72 @@ const MapView = dynamic(
 // ============================================================================
 
 const L = {
-  badge: { sl: "Interaktivni zemljevid", en: "Interactive map" },
+  badge: {
+    sl: "Interaktivni zemljevid",
+    en: "Interactive map",
+    it: "Mappa interattiva",
+    de: "Interaktive Karte",
+  },
   // 1.95.1: regija (Slovenija + zahodni Balkan) + statični FSQ točke
   title: {
     sl: "Odkrijte Slovenijo in Balkan na zemljevidu",
     en: "Discover Slovenia & the Balkans on the map",
+    it: "Scopri Slovenia e Balcani sulla mappa",
+    de: "Entdecke Slowenien und den Balkan auf der Karte",
   },
   subtitle: {
     sl: (n: number) =>
       `${n} destinacij od Alp do Albanije — plus bencinske postaje, restavracije, nastanitve in druge lokalne točke. Kliknite marker za podrobnosti, vreme in rezervacije.`,
     en: (n: number) =>
       `${n} destinations from the Alps to Albania — plus petrol stations, restaurants, stays and other local places. Tap a marker for details, weather and bookings.`,
+    it: (n: number) =>
+      `${n} destinazioni dalle Alpi all'Albania — più stazioni di benzina, ristoranti, alloggi e altri luoghi locali. Tocca un marker per dettagli, meteo e prenotazioni.`,
+    de: (n: number) =>
+      `${n} Reiseziele von den Alpen bis Albanien — dazu Tankstellen, Restaurants, Unterkünfte und weitere lokale Orte. Tippe auf einen Marker für Details, Wetter und Buchungen.`,
   },
-  loading: { sl: "Nalagam zemljevid…", en: "Loading map…" }, // rezerva za prihodnjo uporabo znotraj komponente
+  loading: {
+    sl: "Nalagam zemljevid…",
+    en: "Loading map…",
+    it: "Caricamento della mappa…",
+    de: "Karte wird geladen…",
+  }, // rezerva za prihodnjo uporabo znotraj komponente
   routeBadge: {
     sl: (n: number) => `Pot iz AI itinererja (${n} postankov)`,
     en: (n: number) => `Route from AI itinerary (${n} stops)`,
+    it: (n: number) => `Percorso dall'itinerario AI (${n} tappe)`,
+    de: (n: number) => `Route aus der KI-Reiseroute (${n} Stopps)`,
   },
-  statDestinationsUnit: { sl: "destinacij", en: "destinations" },
-  statRegionsUnit: { sl: "regij", en: "regions" },
+  statDestinationsUnit: {
+    sl: "destinacij",
+    en: "destinations",
+    it: "destinazioni",
+    de: "Reiseziele",
+  },
+  statRegionsUnit: { sl: "regij", en: "regions", it: "regioni", de: "Regionen" },
   statRatingPrefix: {
     sl: "povprečna ocena",
     en: "average rating",
+    it: "valutazione media",
+    de: "durchschnittliche Bewertung",
   },
-  legendClick: { sl: "Kliknite marker za podrobnosti", en: "Tap a marker for details" },
-  legendRoute: { sl: "Črtkana črta = predlagana pot", en: "Dashed line = suggested route" },
-  legendSource: { sl: "Podatki: OpenStreetMap", en: "Data: OpenStreetMap" },
+  legendClick: {
+    sl: "Kliknite marker za podrobnosti",
+    en: "Tap a marker for details",
+    it: "Tocca un marker per i dettagli",
+    de: "Tippe auf einen Marker für Details",
+  },
+  legendRoute: {
+    sl: "Črtkana črta = predlagana pot",
+    en: "Dashed line = suggested route",
+    it: "Linea tratteggiata = percorso suggerito",
+    de: "Gestrichelte Linie = vorgeschlagene Route",
+  },
+  legendSource: {
+    sl: "Podatki: OpenStreetMap",
+    en: "Data: OpenStreetMap",
+    it: "Dati: OpenStreetMap",
+    de: "Daten: OpenStreetMap",
+  },
 } as const;
 
 /** Statistika huba — izključno iz uredniškega dataseta (brez ročnih številk). */
@@ -74,7 +114,9 @@ const MAP_STATS = (() => {
     count: DESTINATIONS.length,
     regions,
     // 1 decimalna mesta, SL decimalna vejica
-    rating: avg.toFixed(1).replace(".", ","),
+    // W1: decimalna vejica za vse jezike razen EN — vrednost je odvisna od
+  // trenutnega jezika, zato se formatira v render poti (spodaj).
+rating: avg.toFixed(1),
   };
 })();
 
@@ -92,7 +134,10 @@ export function MapSection({ hideHeader = false }: { hideHeader?: boolean }) {
   const [selected, setSelected] = useState<Destination | null>(null);
   const routeCoords = useAppStore((s) => s.routeCoords);
   const routeByDay = useAppStore((s) => s.routeByDay);
-  const lang = useLocale() === "en" ? "en" : "sl";
+  const locale = useLocale();
+  // W1 (Issue #15 faza 2a): 4 javni jeziki — it/de imata lastne nize
+  const lang =
+    locale === "en" || locale === "it" || locale === "de" ? locale : "sl";
 
   return (
     <section
@@ -138,7 +183,7 @@ export function MapSection({ hideHeader = false }: { hideHeader?: boolean }) {
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
             <Star className="size-3.5 text-primary" aria-hidden />
             {L.statRatingPrefix[lang]}{" "}
-            <b className="font-semibold text-foreground">{MAP_STATS.rating}</b>
+            <b className="font-semibold text-foreground">{MAP_STATS.rating.replace(".", lang === "en" ? "." : ",")}</b>
           </span>
         </div>
 

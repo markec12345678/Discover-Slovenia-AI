@@ -197,3 +197,33 @@ export function bestForLabelFor(value: string, locale: string): string | null {
   if (locale === "de") return BEST_FOR_DE[value] ?? null;
   return null;
 }
+
+// ============================================================================
+// W1 faza 2a (Issue #15, 1.127.0): pomočniki destinacijskih strani ×4 jeziki
+// ============================================================================
+
+/**
+ * OG locale oznaka po next-intl locale (OpenGraph og:locale kanon).
+ * W1 faza 2a: IT/DE stranem pripadajoča it_IT/de_DE oznaka (prej binarno
+ * en_US/sl_SI).
+ */
+export function ogLocaleFor(locale: string): string {
+  if (locale === "en") return "en_US";
+  if (locale === "it") return "it_IT";
+  if (locale === "de") return "de_DE";
+  return "sl_SI";
+}
+
+/**
+ * Locale-zavedna „mala začetnica" za {…Lower} ICU substitute v predlogah.
+ *
+ * SL — cela vrednost mala (kot v izvirniku; slovenščina brez velikih
+ * začetnic sredini stavka). EN/IT — samo prva črka mala (naravno sredini
+ * stavka). DE — OHRANI veliko začetnico: nemški samostalniki so vedno
+ * veliki („im Frühling", ne „im frühling" — pravopisna obveznost).
+ */
+export function localeLower(s: string, locale: string): string {
+  if (locale === "de") return s;
+  if (locale === "sl") return s.toLowerCase();
+  return s.charAt(0).toLowerCase() + s.slice(1);
+}

@@ -7,6 +7,90 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.127.0] — 2026-09-27 (W1: JEZIKI IT + DE — Issue #15 V0, faza 2a — destinacijske plasti + zemljevid)
+
+### Dodano
+
+- **DESTINACIJSKE PLASTI V ITALIJANŠČINI IN NEMŠČINI (×38 destinacij × 5
+  pod-poti = 570 strani na jezik).** IT/DE whitelist razširjena z
+  `/destinacija/[slug]` (hub), `/things-to-do`, `/itinerary/[duration]`,
+  `/best-time-to-visit/[season]`, `/guide/[type]` — podatkovni overlayji
+  (slovenia-data-it/-de, 38/38 destinacij iz 1.126.0) so zdaj živi tudi na
+  straneh, ne samo v karticah. Italijanski uporabnik klikne kartico
+  »Piran« na /it in pristane na CELI italijanski strani destinacije — ne
+  več na 308 preusmeritvi v slovenščino.
+- **ROČNI PREVODI 5 destinacijskih namespaceov (273 ključev × 2 jezika =
+  546 nizov):** destinationPage (44), thingsToDo (24), bestTime (41),
+  itineraryPage (41), guidePage (123 — največji: vodniki po tipu potovanja
+  s FAQ + 3-poudarkovnimi razdelki h1–h3). Z-ai API je bil v vztrajnem
+  429 (>24 h), zato discipliniran ročni prevod (isti vzorec kot faza 1);
+  ICU placeholderji varovani s skripto (135 nizov preverjenih ×2).
+- **ZEMLJEVID 4-JEZIČEN (`/zemljevid` na IT/DE whitelisti).** POI imena so
+  jezikovno nevtralni viri (OSM/FSQ); UI slovar (map-view T ~64 nizov,
+  map-section, hub hero) je zdaj 4-jezičen. Iskanje na zemljevidu dela v
+  italijanščini in nemščini: CATEGORY_ALIASES razširjen z ~90 IT/DE
+  sinonimi (ristoranti/musei/wandern/Burg …) + IT/DE stopbesede; razlogi
+  zadetkov (buildReason) izpisani v jeziku UI (»Corrisponde alla tua
+  ricerca (categoria: food)«).
+- **SEO: hreflang gruče it-IT/de-DE na vseh 570 destinacijskih straneh ×2**
+  (sl-SI + en-US + it-IT + de-DE + x-default), og:locale (it_IT/de_DE),
+  locale-zavedni canonical, IT/DE ključne besede v meta. Sitemap: 1242 →
+  **2384 URL** (+1140: 570 × 2 jezika).
+- **AddToTripButton + MobileTabBar + ProviderPanel v 4 jezikih** (gumb
+  »Aggiungi al mio viaggio« / »Zu meiner Reise hinzufügen« na destinacijskih
+  straneh; mobilna spodnja vrstica Esplora/Mappa/Pianifica/Altro; panel virov
+  s statusi).
+- **localeLower (DE pravopis):** nemški samostalniki OHRANIJO veliko
+  začetnico v {…Lower} predlogah (»Stelle deinen perfekten Romantik-Trip«,
+  ne ~~romantik-trip~~); IT/EN prva črka mala, SL cela mala (kot prej).
+- **statusLabel (register virov) 4-jezičen:** Lokalni vir/Fonte locale/
+  Lokale Quelle … (badge v panelu virov v jeziku UI).
+
+### Spremenjeno
+
+- **Vzorec EN-overlay → withLocaleOverlay (locale-splošen):** 5
+  destinacijskih strani zdaj uporablja enega pomočnika za vse 4 jezike
+  (getEnDestination/REGIONS_EN/BEST_FOR_EN veje zamenjane z
+  withLocaleOverlay + regionLabelFor/bestForLabelFor). Og note (odpiralni
+  čas) so PODATKOVNA plast zapisa — IT/DE vidita EN varianto (isti kanon
+  kot /en pogled; langNote ostaja iskrena o prevodu).
+- **DB sekcije (lokalci/izkušnje/izdelki) izrisujejo SAMO na SL straneh**
+  (P4-8): EN je imel to mejo že prej — IT/DE jo podedujeta iskreno (prazna
+  poizvedba na NE-SL jezikih, brez mešanja). Enako AI FAQ (SL vsebina).
+- **Map search razlogi + supply poizvedbe:** smart-search sprejema
+  locale "sl|en|it|de"; supply poizvedbe pošiljajo UI jezik skozi
+  (strežnik normalizira — imena ponudnikov so podatkovna plast, §38).
+- **Izbira jezikovnega stikala na destinacijskih straneh:** 4 jeziki s
+  povezavami v istem jeziku (isLocaleRoute nad novimi regexi).
+
+### Varnostno / odklanjanje
+
+- **Namerno IZVEN (ista iskrena meja, W1-faza-2b):** `/nacrtuj` (pogon
+  itinererja izpisuje SL/EN — cca 25 lib modulov z lang-vejami, lastna
+  naloga), L-vzorčne poti (/trznica, /dozivetja, /lokali, /dogodki,
+  /potovanje, /na-poti, /moja-potovanja — inline SL/EN slovarji),
+  /vodici (vsebinska plast ADRIA-EN). Proxy 308 na slovensko pot (P4-8:
+  nikoli mešanja, nikoli 404).
+- **Register accessNote/labels ostajajo {sl,en}** (provenance podrobnosti —
+  tehnični zapisi z ukazi; IT/DE vidita SL izvirnik, isti §38 vzorec kot
+  imena ponudnikov iz DB).
+
+### Preverjeno
+
+- Suite 3846/3846 zelenih; tsc čist; eslint čist (2 testi prilagojena novi
+  4-jezični pogodbi: issue12-f12-1 source-contract, task99a/task8-f3b
+  pins).
+- Browser E2E (1440×900 + mobil 375): /it/destinacija/bled (hub + things-
+  to-do + guide + best-time + itinerary — naslovi, overlayji, regije
+  »Alta Carniola«/»Oberkrain«, bestFor preslikave, AddToTrip IT), /de
+  (guide z ohranjeno veliko začetnico), /it/zemljevid (iskanje
+  »ristoranti« → zadetki + ITALIJANSKI razlogi), preklop DE→IT na guide,
+  308 meje (/it/nacrtuj, /it/trznica …), hreflang gruča 5 jezikov,
+  mobil 375 brez preliva, 0 page/console napak. 9 PNG dokazov v
+  w1-faza2a-evidence/.
+
+---
+
 ## [1.126.0] — 2026-09-27 (W1: JEZIKI IT + DE — Issue #15 V0, faza 1 — Alma pariteta odkrivanja in svetovanja)
 
 ### Dodano

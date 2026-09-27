@@ -5,7 +5,14 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { localePrefix } from "@/i18n/routing";
 import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
-import { getEnDestination, REGIONS_EN } from "@/lib/slovenia-data-en";
+import { REGIONS_EN } from "@/lib/slovenia-data-en";
+// W1 faza 2a (Issue #15): IT/DE overlay + oznake + og:locale/localeLower
+import {
+  localeLower,
+  ogLocaleFor,
+  regionLabelFor,
+  withLocaleOverlay,
+} from "@/lib/slovenia-labels-it-de";
 // TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer;
 // LanguageToggle odstranjen (LanguageSwitcher v Navigation pokriva SL⇄EN —
 // EN whitelista ^/destinacija/[^/]+/guide/[^/]+$).
@@ -107,12 +114,11 @@ const HIGHLIGHT_ICONS: Record<GuideType, typeof Heart[]> = {
 
 /**
  * Label v levem kontekstu: SL — cela oznaka malo (kot v izvirniku),
- * EN — samo prva črka mala (naravno sredini stavka).
+ * EN/IT — samo prva črka mala (naravno sredini stavka), DE — OHRANI
+ * veliko začetnico (nemški samostalniki so vedno veliki — W1 faza 2a).
  */
 function lowerLabel(label: string, locale: string): string {
-  return locale === "sl"
-    ? label.toLowerCase()
-    : label.charAt(0).toLowerCase() + label.slice(1);
+  return localeLower(label, locale);
 }
 
 // generateStaticParams: 38 destinacij × 4 tipi = 152 kombinacij
@@ -143,14 +149,13 @@ export async function generateMetadata({
   const label = t(`guideTypes.${guideType}.label`);
   const labelLower = lowerLabel(label, locale);
   const title = t(`guideTypes.${guideType}.title`, { name });
-  const tagline =
-    locale === "en"
-      ? (getEnDestination(dest.id)?.tagline ?? dest.tagline)
-      : dest.tagline;
+  // W1 faza 2a: overlay po locale (EN/IT/DE tagline iz svoje plasti)
+  const tagline = withLocaleOverlay(dest, locale).tagline;
   const intro = t(`guideTypes.${guideType}.intro`, {
     name,
-    // SL izpis privatnega uvoda je z malo začetnico (kot v izvirniku)
-    tagline: locale === "sl" ? tagline.toLowerCase() : tagline,
+    // SL izpis privatnega uvoda je z malo začetnico (kot v izvirniku);
+    // DE ohrani veliko (pravopis) — localeLower
+    tagline: localeLower(tagline, locale),
   });
   // SEO-2: canonical/hreflang na DEJANSKEM gostitelju (FW4.3-2: + locale prefix)
   const base = await currentBaseUrl();
@@ -169,7 +174,7 @@ export async function generateMetadata({
       t(`guideTypes.${guideType}.metaKeyword`),
       locale === "en"
         ? (REGIONS_EN[dest.region] ?? dest.region)
-        : dest.region,
+        : (regionLabelFor(dest.region, locale) ?? dest.region),
     ].filter(Boolean),
     openGraph: {
       title: `${title} — Discover Slovenia AI`,
@@ -179,7 +184,7 @@ export async function generateMetadata({
       }),
       images: [{ url: dest.image, width: 1200, height: 800 }],
       type: "website",
-      locale: locale === "en" ? "en_US" : "sl_SI",
+      locale: ogLocaleFor(locale),
       url: `${base}${prefixed}`,
     },
     alternates: {
@@ -203,32 +208,32 @@ export default async function GuidePage({
   // FW4.3-2: vsa besedila prek fragmenta guidePage; locale iz proxy headerja
   const t = await getTranslations("guidePage");
   const locale = await getLocale();
-  const isEn = locale === "en";
+  // W1 faza 2a: DB sekcije izrisuje SAMO na SL (P4-8 — vsebina v bazi je
+  // slovenska; EN je imel isto mejo, IT/DE jo podedujeta iskreno).
+  const isSl = locale === "sl";
+  const overlaid = withLocaleOverlay(dest, locale);
 
-  const meta = GUIDE_TYPE_META[guideType]; // emoji (skupen za oba jezika)
+  const meta = GUIDE_TYPE_META[guideType]; // emoji (skupen za vse jezike)
   const details = GUIDE_DETAILS[guideType];
   const Icon = details.icon;
 
   const name = dest.name;
   const label = t(`guideTypes.${guideType}.label`);
   const labelLower = lowerLabel(label, locale);
-  const tagline = isEn
-    ? (getEnDestination(dest.id)?.tagline ?? dest.tagline)
-    : dest.tagline;
+  const tagline = overlaid.tagline;
   const title = t(`guideTypes.${guideType}.title`, { name });
   const intro = t(`guideTypes.${guideType}.intro`, {
     name,
-    // SL izpis privatnega uvoda je z malo začetnico (kot v izvirniku)
-    tagline: isEn ? tagline : tagline.toLowerCase(),
+    // SL izpis privatnega uvoda je z malo začetnico (kot v izvirniku);
+    // DE ohrani veliko (pravopis) — localeLower
+    tagline: localeLower(tagline, locale),
   });
   const durationLabel = t(`guideTypes.${guideType}.durationLabel`);
   const priceRange = t(`guideTypes.${guideType}.priceRange`);
   const typeDescription = t(`guideTypes.${guideType}.description`);
 
-  // Poudarki destinacije — na EN iz EN prekrivne plasti
-  const destHighlights = isEn
-    ? (getEnDestination(dest.id)?.highlights ?? dest.highlights)
-    : dest.highlights;
+  // Poudarki destinacije — v jeziku strani (W1 faza 2a: locale overlay)
+  const destHighlights = overlaid.highlights;
   const fallbackHl = t("fallbackHighlight");
   const pickHl = (i: number) =>
     destHighlights[i] ??
@@ -237,9 +242,10 @@ export default async function GuidePage({
   const hl1 = pickHl(0);
   const hl2 = pickHl(1);
   const hl3 = pickHl(2);
-  // SL izpis uporablja male začetnice poudarkov (kot v izvirniku); EN poudarki
-  // so lastna imena in ostanejo z veliko začetnico — zato dve vrednosti.
-  const lowerHl = (s: string) => (isEn ? s : s.toLowerCase());
+  // SL izpis uporablja male začetnice poudarkov (kot v izvirniku); EN/IT
+  // poudarki so lastna imena in ostanejo z veliko začetnico; DE veliko
+  // (pravopis) — localeLower pokriva vse tri primere.
+  const lowerHl = (s: string) => localeLower(s, locale);
   const hlParams = {
     name,
     hl1,
@@ -275,16 +281,16 @@ export default async function GuidePage({
   // Pridobi povezane lokale in izkušnje iz baze (filtrirano po tipu vodnika)
   // — PREDPOMNJENO (glej src/lib/seo-page-data.ts: fix produkcijskih 500 pod
   // vzporednim obremenjevanjem, 2026-09-13; identične poizvedbe kot prej).
-  // P4-8: DB vsebina (imena ponudnikov) je slovenska — na EN sekcij NE
-  // izrisujemo in sploh ne povprašujemo po bazi.
-  const { listings: seoListings, experiences: seoExperiences } = isEn
-    ? EMPTY_SEO_GUIDE
-    : await getSeoGuideData(
+  // P4-8: DB vsebina (imena ponudnikov) je slovenska — na EN/IT/DE sekcij
+  // NE izrisujemo in sploh ne povprašujemo po bazi.
+  const { listings: seoListings, experiences: seoExperiences } = isSl
+    ? await getSeoGuideData(
         dest.id,
         dest.name,
         details.listingCategories,
         details.experienceCategories
-      );
+      )
+    : EMPTY_SEO_GUIDE;
 
   // JSON-LD: FAQPage + BreadcrumbList + TouristTrip (prevedene vrednosti)
   const breadcrumbs = breadcrumbJsonLd([
@@ -308,9 +314,10 @@ export default async function GuidePage({
       address: {
         "@type": "PostalAddress",
         addressCountry: "SI",
-        addressRegion: isEn
-          ? (REGIONS_EN[dest.region] ?? dest.region)
-          : dest.region,
+        addressRegion:
+          locale === "en"
+            ? (REGIONS_EN[dest.region] ?? dest.region)
+            : (regionLabelFor(dest.region, locale) ?? dest.region),
       },
     },
     offers: {

@@ -115,10 +115,12 @@ describe("ISSUE #12 F12-1: Pokaži/Skrij POI gumb ODSTRANJEN (mentalni model)", 
     expect(mapViewSrc).toContain("supply.error && supplyActive");
   });
 
-  test("loadingPois literal OSTAJA v dvojezičnem slovarju (pin task8-f3b)", () => {
+  test("loadingPois literal OSTAJA v večjezičnem slovarju (pin task8-f3b)", () => {
     // F12-3: besedilo je zdaj UPORABNIŠKI jezik („POI“ umaknjen iz §7);
-    // pin ščiti dvojezičnost slovarja (task8-f3b namensko posodobljen).
-    expect(mapViewSrc).toContain('loadingPois: { sl: "Nalagam lokalna mesta…"');
+    // pin ščiti večjezičnost slovarja (task8-f3b namensko posodobljen;
+    // W1 faza 2a: slovar je 4-jezičen — ključ + SL vrednost sta trdo vezana).
+    expect(mapViewSrc).toContain('loadingPois: {');
+    expect(mapViewSrc).toContain('sl: "Nalagam lokalna mesta…"');
   });
 
   test("zoom-gating ostaja NEDOTAKNJEN (samozaščita gostote — z ≥ 10)", () => {
@@ -276,19 +278,24 @@ describe("ISSUE #12 F12-3: EN razlogi zadetkov (uporabniški jezik na /en)", () 
   const deterministicSearchSrc = read("src/lib/deterministic-search.ts");
 
   test("SOURCE-CONTRACT: iskalnik sprejema locale (4. arg, privzeto SL)", () => {
+    // W1 faza 2a (Issue #15): pogodba razširjena na 4 javne jezike —
+    // zemljevid pošilja it/de, razlogi sledijo UI jeziku (P4-8).
     expect(deterministicSearchSrc).toContain(
-      'locale: "sl" | "en" = "sl"'
+      'locale: "sl" | "en" | "it" | "de" = "sl"'
     );
     // Dvojezična razlaga zadetka (prej SL-only tudi na /en):
     expect(deterministicSearchSrc).toContain('"Matches your search"');
     expect(deterministicSearchSrc).toContain('"Ujema se z iskalnim nizom"');
+    // IT/DE razlogi (W1 faza 2a):
+    expect(deterministicSearchSrc).toContain('"Corrisponde alla tua ricerca"');
+    expect(deterministicSearchSrc).toContain('"Entspricht deiner Suche"');
     // Vsa štiri mesta klica buildReason nosijo locale:
     expect(deterministicSearchSrc.match(/buildReason\([^)]*locale\)/g)?.length).toBe(4);
   });
 
   test("SOURCE-CONTRACT: ruta sprejema locale + map-view ga pošilja v telesu", () => {
-    expect(smartSearchRouteSrc).toContain('locale?: "sl" | "en"');
-    expect(smartSearchRouteSrc).toContain('const reasonLocale = body.locale === "en" ? "en" : "sl"');
+    expect(smartSearchRouteSrc).toContain('locale?: "sl" | "en" | "it" | "de"');
+    expect(smartSearchRouteSrc).toContain('body.locale === "en" || body.locale === "it" || body.locale === "de"');
     expect(smartSearchRouteSrc).toContain("reasonLocale");
     expect(mapViewSrc).toContain("{ query: q, limit: 3, locale: lang }");
   });
@@ -434,8 +441,8 @@ describe("ISSUE #12 F12-2: primarne kategorije (5 skupin + expander Več)", () =
     expect(mapViewSrc).toContain("moreCatsOpen");
     expect(mapViewSrc).toContain("setMoreCatsOpen");
     expect(mapViewSrc).toContain("POI_CATEGORIES.map");
-    expect(mapViewSrc).toContain('moreCats: { sl: "Več", en: "More" }');
-    expect(mapViewSrc).toContain('fewerCats: { sl: "Manj", en: "Less" }');
+    expect(mapViewSrc).toContain('moreCats: { sl: "Več", en: "More", it: "Altro", de: "Mehr" }');
+    expect(mapViewSrc).toContain('fewerCats: { sl: "Manj", en: "Less", it: "Meno", de: "Weniger" }');
   });
 
   test("toggleGroup: multi-select nad skupino (vklop VSEH tipov + kontekst)", () => {
@@ -457,26 +464,31 @@ describe("ISSUE #12 F12-2: marker result card (issue §6 struktura)", () => {
     expect(mapViewSrc).toContain('class="map-poi-cta map-poi-add"');
     expect(mapViewSrc).toContain("data-poi-add=");
     expect(mapViewSrc).toContain("+ ${T.addToTrip[lang]}");
-    expect(mapViewSrc).toContain('addToTrip: { sl: "Dodaj v mojo pot"');
+    expect(mapViewSrc).toContain('addToTrip: {');
+    expect(mapViewSrc).toContain('sl: "Dodaj v mojo pot",');
   });
 
   test("delegacija: map-poi-add → addProductToSelection z iskrenim odzivom", () => {
     expect(mapViewSrc).toContain(
       'target.classList.contains("map-poi-add")'
     );
+    // W1 faza 2a: jezik opomb = jezik ITINERERJA (pogon SL/EN — IT/DE
+    // uporabnik vidi SL opombe, ker itinerer ostaja SL; P4-8 doslednost
+    // znotraj itinererja). Regex sprejme mapiranje lang → sl/en.
     expect(mapViewSrc).toMatch(
-      /map-poi-add[\s\S]{0,400}addProductToSelection\(product, \{ locale: lang \}\)/
+      /map-poi-add[\s\S]{0,500}addProductToSelection\(product,[\s\S]{0,120}locale: lang === "en" \? "en" : "sl"/
     );
     // Iskreni odzivi: dodano/duplikat → ✓; limit → besedilo (popup NE zapre):
-    expect(mapViewSrc).toContain('addedToTrip: { sl: "✓ Dodano"');
-    expect(mapViewSrc).toContain('addLimitReached: { sl: "Doseženih največ izbir"');
+    expect(mapViewSrc).toContain('sl: "✓ Dodano",');
+    expect(mapViewSrc).toContain('sl: "Doseženih največ izbir",');
     // Podrobnosti ostane (sekundarna) — modal pot:
     expect(mapViewSrc).toContain("setSelectedProduct(product)");
   });
 
   test("★ ocena POGOJNA (brez ocene → vrstice NI — ne izmišljujemo)", () => {
     expect(mapViewSrc).toContain("product.rating != null");
-    expect(mapViewSrc).toContain('reviewsUnit: { sl: "mnenj"');
+    expect(mapViewSrc).toContain('reviewsUnit: {');
+    expect(mapViewSrc).toContain('sl: "mnenj",');
   });
 
   test("Navigiraj: Google Maps iz koordinat (target _blank + noopener)", () => {
@@ -506,7 +518,8 @@ describe("ISSUE #12 F12-3 (§7): POI terminologija IZGLAVLJENA iz glavnega jezik
   });
 
   test("badge supply sloja: rezultati v uporabniškem jeziku + atribucija OSTANE", () => {
-    expect(mapViewSrc).toContain('supplyUnit: { sl: "rezultatov", en: "results" }');
+    expect(mapViewSrc).toContain('supplyUnit: {');
+    expect(mapViewSrc).toContain('sl: "rezultatov",');
     expect(mapViewSrc).toContain("{supply.products.length} {T.supplyUnit[lang]} · {sourcesLabel}");
     // Transparentnost virov (issue §7: atribucija mora ostati dostopna):
     expect(mapViewSrc).toContain("sourcesLabel");
@@ -538,7 +551,8 @@ describe("ISSUE #12 F12-3 (§13): stanja v uporabniškem jeziku", () => {
   });
 
   test("loading v uporabniškem jeziku (mesta, ne POI) + offline ostaja iskren", () => {
-    expect(mapViewSrc).toContain('loadingPois: { sl: "Nalagam lokalna mesta…", en: "Loading local places…" }');
+    expect(mapViewSrc).toContain('loadingPois: {');
+    expect(mapViewSrc).toContain('sl: "Nalagam lokalna mesta…",');
     expect(mapViewSrc).toContain('sl: "Ni internetne povezave — destinacije ostajajo na voljo."');
   });
 

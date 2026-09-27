@@ -3,7 +3,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
-import { getEnDestination, REGIONS_EN } from "@/lib/slovenia-data-en";
+import { REGIONS_EN } from "@/lib/slovenia-data-en";
+// W1 faza 2a (Issue #15): IT/DE overlay + oznake + og:locale/localeLower
+import {
+  localeLower,
+  ogLocaleFor,
+  regionLabelFor,
+  withLocaleOverlay,
+} from "@/lib/slovenia-labels-it-de";
 // TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer;
 // LanguageToggle odstranjen (LanguageSwitcher v Navigation pokriva SL⇄EN —
 // EN whitelista ^/destinacija/[^/]+/best-time-to-visit/[^/]+$).
@@ -69,7 +76,10 @@ export async function generateMetadata({
   const seasonLabel = t(s.labelKey);
   const seasonMonths = t(s.monthsKey);
   const seasonDesc = t(s.descKey);
-  const region = locale === "en" ? (REGIONS_EN[dest.region] ?? dest.region) : dest.region;
+  const region =
+    locale === "en"
+      ? (REGIONS_EN[dest.region] ?? dest.region)
+      : (regionLabelFor(dest.region, locale) ?? dest.region);
   // SEO-2: canonical/hreflang na DEJANSKEM gostitelju
   const base = await currentBaseUrl();
   return {
@@ -80,23 +90,27 @@ export async function generateMetadata({
       months: seasonMonths,
       desc: seasonDesc,
       temp: s.temp,
-      seasonLower: seasonLabel.toLowerCase(),
+      seasonLower: localeLower(seasonLabel, locale),
     }),
     keywords:
       locale === "en"
         ? [dest.name, "best time", seasonLabel, "when to visit", "weather", "Slovenia", region]
-        : [dest.name, "najboljši čas", seasonLabel, "kdaj obiskati", "vreme", "Slovenija", dest.region],
+        : locale === "it"
+          ? [dest.name, "periodo migliore", seasonLabel, "quando visitare", "meteo", "Slovenia", region]
+          : locale === "de"
+            ? [dest.name, "beste Reisezeit", seasonLabel, "wann besuchen", "Wetter", "Slowenien", region]
+            : [dest.name, "najboljši čas", seasonLabel, "kdaj obiskati", "vreme", "Slovenija", dest.region],
     openGraph: {
       title: t("meta.title", { name: dest.name, season: seasonLabel }),
       description: t("meta.ogDescription", {
         desc: seasonDesc,
         temp: s.temp,
         name: dest.name,
-        seasonLower: seasonLabel.toLowerCase(),
+        seasonLower: localeLower(seasonLabel, locale),
       }),
       images: [{ url: dest.image, width: 1200, height: 800 }],
       type: "website",
-      locale: locale === "en" ? "en_US" : "sl_SI",
+      locale: ogLocaleFor(locale),
     },
     alternates: {
       canonical: `${base}${localePrefix(locale)}/destinacija/${dest.slug}/best-time-to-visit/${s.slug}`,
@@ -118,13 +132,14 @@ export default async function BestTimeToVisitPage({
   const locale = await getLocale();
   const t = await getTranslations("bestTime");
 
-  // FW4.3-2: EN overlay — tagline v angleščini (identifikatorji/slike/cene
-  // ostanejo iz slovenskega vira resnice).
-  const en = locale === "en" ? getEnDestination(dest.id) : undefined;
-  const tagline = en?.tagline ?? dest.tagline;
+  // FW4.3-2 + W1 faza 2a: overlay po locale — tagline v jeziku strani
+  // (identifikatorji/slike/cene ostanejo iz slovenskega vira resnice).
+  const tagline = withLocaleOverlay(dest, locale).tagline;
 
   const seasonLabel = t(s.labelKey);
-  const seasonLower = seasonLabel.toLowerCase();
+  // W1 faza 2a: DE ohranja veliko začetnico („im Frühling“ — pravopis);
+  // SL cela mala, EN/IT prva črka mala (naravno sredini stavka).
+  const seasonLower = localeLower(seasonLabel, locale);
   const seasonMonths = t(s.monthsKey);
   const seasonDesc = t(s.descKey);
 
@@ -224,7 +239,7 @@ export default async function BestTimeToVisitPage({
                     {t("bestCardTitle", { season: seasonLabel, name: dest.name })}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {t("bestCardText", { name: dest.name, taglineLower: tagline.toLowerCase() })}
+                    {t("bestCardText", { name: dest.name, taglineLower: localeLower(tagline, locale) })}
                   </p>
                 </div>
               </CardContent>

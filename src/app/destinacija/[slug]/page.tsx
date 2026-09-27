@@ -3,7 +3,15 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
-import { BEST_FOR_EN, getEnDestination, REGIONS_EN } from "@/lib/slovenia-data-en";
+import { BEST_FOR_EN, REGIONS_EN } from "@/lib/slovenia-data-en";
+// W1 faza 2a (Issue #15): IT/DE overlayji (slovenia-data-it/-de) + oznake
+// + og:locale pomočnik — isti vzorec kot EN (FW4.3-2).
+import {
+  bestForLabelFor,
+  ogLocaleFor,
+  regionLabelFor,
+  withLocaleOverlay,
+} from "@/lib/slovenia-labels-it-de";
 import { getDestinationProvenance } from "@/lib/destination-provenance";
 // TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation (solid: hero ni na
 // vrhu strani, nad njim so breadcrumbs) + Footer. Lebdeči LanguageToggle je
@@ -78,10 +86,11 @@ export async function generateMetadata({
   const t = await getTranslations("destinationPage");
   const locale = await getLocale();
   if (!dest) return { title: t("meta.notFound") };
-  // FW4.3-2: EN overlay za tekstovna polja (id/slug/name/slike/cene ostanejo izvirni)
-  const en = locale === "en" ? getEnDestination(dest.id) : undefined;
-  const tagline = en?.tagline ?? dest.tagline;
-  const duration = en?.duration ?? dest.duration;
+  // FW4.3-2 + W1 faza 2a: tekstovni overlay po locale (id/slug/name/slike/
+  // cene ostanejo izvirni — en vir resnice).
+  const overlaid = withLocaleOverlay(dest, locale);
+  const tagline = overlaid.tagline;
+  const duration = overlaid.duration;
   // SEO-2: canonical/hreflang na DEJANSKEM gostitelju (ne statična domena)
   const base = await currentBaseUrl();
   return {
@@ -94,15 +103,19 @@ export async function generateMetadata({
     }),
     keywords:
       locale === "en"
-        ? [dest.name, "Slovenia", "travel guide", "itinerary", "best time to visit", ...dest.highlights]
-        : [dest.name, "Slovenija", "vodnik", "itinerer", "kaj početi", "najboljši čas obiska", ...dest.highlights],
+        ? [dest.name, "Slovenia", "travel guide", "itinerary", "best time to visit", ...overlaid.highlights]
+        : locale === "it"
+          ? [dest.name, "Slovenia", "guida di viaggio", "itinerario", "periodo migliore", ...overlaid.highlights]
+          : locale === "de"
+            ? [dest.name, "Slowenien", "Reiseführer", "Reiseroute", "beste Reisezeit", ...overlaid.highlights]
+            : [dest.name, "Slovenija", "vodnik", "itinerer", "kaj početi", "najboljši čas obiska", ...dest.highlights],
     // OG sliko generira datotečna konvencija opengraph-image.tsx (namenska
     // 1200×630 z imenom/taglinom/dejstvi — močnejša od generične fotografije)
     openGraph: {
       title: t("meta.ogTitle", { name: dest.name }),
       description: t("meta.ogDescription", { name: dest.name, tagline }),
       type: "website",
-      locale: locale === "en" ? "en_US" : "sl_SI",
+      locale: ogLocaleFor(locale),
     },
     alternates: {
       canonical: `${base}${localePrefix(locale)}/destinacija/${dest.slug}`,
@@ -122,31 +135,43 @@ export default async function DestinationHubPage({
 
   const locale = await getLocale();
   const t = await getTranslations("destinationPage");
-  // Vodniški tipi: oznake/opisi so v guidePage.guideTypes (dvojezični vir
+  // Vodniški tipi: oznake/opisi so v guidePage.guideTypes (večjezični vir
   // resnice — GUIDE_TYPE_META opisi so samo slovenski, P4-8)
   const tg = await getTranslations("guidePage");
-  const isEn = locale === "en";
 
-  // FW4.3-2: EN overlay — tagline/description/highlights/duration v angleščini,
-  // identifikatorji/slike/cene ostanejo iz slovenskega vira resnice.
-  const en = isEn ? getEnDestination(dest.id) : undefined;
-  const tagline = en?.tagline ?? dest.tagline;
-  const description = en?.description ?? dest.description;
-  const highlights = en?.highlights ?? dest.highlights;
-  const duration = en?.duration ?? dest.duration;
-  const regionBadge = isEn ? (REGIONS_EN[dest.region] ?? dest.region) : dest.region;
-  // bestFor vsebuje slovenske besede (romantika, družina …) — na EN se
-  // preslikajo (P4-8: nikoli mešanja jezikov)
-  const bestFor = isEn
-    ? dest.bestFor.map((b) => BEST_FOR_EN[b] ?? b)
-    : dest.bestFor;
+  // FW4.3-2 + W1 faza 2a: overlay po locale — tagline/description/highlights/
+  // duration v jeziku strani, identifikatorji/slike/cene ostanejo iz
+  // slovenskega vira resnice.
+  const overlaid = withLocaleOverlay(dest, locale);
+  const tagline = overlaid.tagline;
+  const description = overlaid.description;
+  const highlights = overlaid.highlights;
+  const duration = overlaid.duration;
+  // regija: EN ima lastno preslikko (FW4.3-2), IT/DE iz W1 oznak; neznane
+  // vrednosti padejo na SL izvirnik (P4-8: nikoli mešanja znotraj pogleda).
+  const regionBadge =
+    locale === "en"
+      ? (REGIONS_EN[dest.region] ?? dest.region)
+      : (regionLabelFor(dest.region, locale) ?? dest.region);
+  // bestFor vsebuje ključne besede (romantika, družina …) — preslikava po
+  // locale (P4-8: nikoli mešanja jezikov).
+  const bestFor = dest.bestFor.map((b) =>
+    locale === "en"
+      ? (BEST_FOR_EN[b] ?? b)
+      : (bestForLabelFor(b, locale) ?? b)
+  );
 
   const base = await currentBaseUrl();
 
   // Sezonske oznake: bestSeason vsebuje ključe spring/summer/autumn/winter
-  const seasonLabels: Record<string, string> = isEn
-    ? { spring: "Spring", summer: "Summer", autumn: "Autumn", winter: "Winter" }
-    : { spring: "Pomlad", summer: "Poletje", autumn: "Jesen", winter: "Zima" };
+  const seasonLabels: Record<string, string> =
+    locale === "en"
+      ? { spring: "Spring", summer: "Summer", autumn: "Autumn", winter: "Winter" }
+      : locale === "it"
+        ? { spring: "Primavera", summer: "Estate", autumn: "Autunno", winter: "Inverno" }
+        : locale === "de"
+          ? { spring: "Frühling", summer: "Sommer", autumn: "Herbst", winter: "Winter" }
+          : { spring: "Pomlad", summer: "Poletje", autumn: "Jesen", winter: "Zima" };
 
   // Trajanja itinererjev: ključi iz DURATION_SLUGS, oznake iz i18n
   const durationLabels: Record<string, string> = {
@@ -209,7 +234,15 @@ export default async function DestinationHubPage({
     containsPlace: [
       {
         "@type": "Place",
-        name: isEn ? `Things to do in ${dest.name}` : `Kaj početi v ${dest.name}`,
+        // W1 faza 2a: stvari-za-početi ime v jeziku strani (4 jeziki)
+        name:
+          locale === "en"
+            ? `Things to do in ${dest.name}`
+            : locale === "it"
+              ? `Cosa fare a ${dest.name}`
+              : locale === "de"
+                ? `Was tun in ${dest.name}`
+                : `Kaj početi v ${dest.name}`,
         url: `${base}/destinacija/${dest.slug}/things-to-do`,
       },
       ...GUIDE_TYPES.map((g) => ({
@@ -431,7 +464,13 @@ export default async function DestinationHubPage({
                       {t("source.openingLabel")}:
                     </span>
                     <span>
-                      {isEn ? dest.opening.noteEn : dest.opening.note}{" "}
+                      {/* W1 faza 2a: odpiralni čas je PODATKOVNA plast zapisa
+                          (vir ima SL + EN varianto) — IT/DE vidita EN
+                          varianto (isti kanon kot /en pogled; langNote spodaj
+                          ostaja iskrena o prevodu). */}
+                      {locale === "sl"
+                        ? dest.opening.note
+                        : (dest.opening.noteEn ?? dest.opening.note)}{" "}
                       <span className="text-muted-foreground/80">
                         ({t("source.sourceShort").toLowerCase()}:{" "}
                         {dest.opening.source})

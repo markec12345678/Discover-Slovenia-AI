@@ -3,7 +3,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
-import { getEnDestination, REGIONS_EN } from "@/lib/slovenia-data-en";
+import { REGIONS_EN } from "@/lib/slovenia-data-en";
+// W1 faza 2a (Issue #15): IT/DE overlay + oznake + og:locale/localeLower
+import {
+  localeLower,
+  ogLocaleFor,
+  regionLabelFor,
+  withLocaleOverlay,
+} from "@/lib/slovenia-labels-it-de";
 // TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer;
 // LanguageToggle odstranjen (LanguageSwitcher v Navigation pokriva SL⇄EN —
 // EN whitelista ^/destinacija/[^/]+/itinerary/[^/]+$).
@@ -73,18 +80,21 @@ export async function generateMetadata({
   const t = await getTranslations("itineraryPage");
   const locale = await getLocale();
   if (!dest || !dur) return { title: t("meta.notFound") };
-  // FW4.3-2: EN overlay za tekstovna polja (id/slug/name/slike/cene ostanejo izvirni)
-  const en = locale === "en" ? getEnDestination(dest.id) : undefined;
-  const tagline = en?.tagline ?? dest.tagline;
+  // FW4.3-2 + W1 faza 2a: overlay po locale (id/slug/name/slike/cene izvirni)
+  const overlaid = withLocaleOverlay(dest, locale);
+  const tagline = overlaid.tagline;
   const durLabel = t(dur.labelKey);
   const durDesc = t(dur.descKey);
-  const region = locale === "en" ? (REGIONS_EN[dest.region] ?? dest.region) : dest.region;
+  const region =
+    locale === "en"
+      ? (REGIONS_EN[dest.region] ?? dest.region)
+      : (regionLabelFor(dest.region, locale) ?? dest.region);
   // SEO-2: canonical/hreflang na DEJANSKEM gostitelju
   const base = await currentBaseUrl();
   return {
     title: t("meta.title", { duration: durLabel, name: dest.name, desc: durDesc }),
     description: t("meta.description", {
-      durationLower: durLabel.toLowerCase(),
+      durationLower: localeLower(durLabel, locale),
       name: dest.name,
       tagline,
       desc: durDesc,
@@ -93,13 +103,17 @@ export async function generateMetadata({
     keywords:
       locale === "en"
         ? [dest.name, "itinerary", durLabel, "travel", "Slovenia", "plan", region]
-        : [dest.name, "itinerer", durLabel, "potovanje", "Slovenija", "načrt", dest.region],
+        : locale === "it"
+          ? [dest.name, "itinerario", durLabel, "viaggio", "Slovenia", "piano", region]
+          : locale === "de"
+            ? [dest.name, "Reiseroute", durLabel, "Reise", "Slowenien", "Plan", region]
+            : [dest.name, "itinerer", durLabel, "potovanje", "Slovenija", "načrt", dest.region],
     openGraph: {
       title: t("headline", { duration: durLabel, name: dest.name }),
       description: t("meta.ogDescription", { duration: durLabel }),
       images: [{ url: dest.image, width: 1200, height: 800 }],
       type: "website",
-      locale: locale === "en" ? "en_US" : "sl_SI",
+      locale: ogLocaleFor(locale),
     },
     alternates: {
       canonical: `${base}${localePrefix(locale)}/destinacija/${dest.slug}/itinerary/${dur.slug}`,
@@ -121,12 +135,12 @@ export default async function ItineraryPage({
   const locale = await getLocale();
   const t = await getTranslations("itineraryPage");
 
-  // FW4.3-2: EN overlay — tagline/description/highlights v angleščini,
-  // identifikatorji/slike/cene ostanejo iz slovenskega vira resnice.
-  const en = locale === "en" ? getEnDestination(dest.id) : undefined;
-  const tagline = en?.tagline ?? dest.tagline;
-  const description = en?.description ?? dest.description;
-  const highlights = en?.highlights ?? dest.highlights;
+  // FW4.3-2 + W1 faza 2a: overlay po locale — tagline/description/highlights
+  // v jeziku strani, identifikatorji/slike/cene ostanejo iz slovenskega vira.
+  const overlaid = withLocaleOverlay(dest, locale);
+  const tagline = overlaid.tagline;
+  const description = overlaid.description;
+  const highlights = overlaid.highlights;
 
   const durLabel = t(dur.labelKey);
   const durDesc = t(dur.descKey);

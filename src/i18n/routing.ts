@@ -113,13 +113,17 @@ export function isEnRoute(pathname: string): boolean {
 }
 
 // ============================================================================
-// W1 IT/DE WHITELISTA (Issue #15 V0, faza 1 — 1.126.0) — edini vir resnice
-// o tem, kje italijanščina in nemščina ŽIVITA v fazi 1.
-// Namerno IZVEN (poštena meja, W1-faza-2 — proxy 308 na slovensko):
-//   /nacrtuj (pogon itinererja izpisuje SL/EN), L-vzorčne poti (/trznica,
-//   /dozivetja, /lokali, /dogodki, /zemljevid, /potovanje, /na-poti,
-//   /moja-potovanja — inline SL/EN slovarji v komponentah), /vodici
-//   (vsebinska plast ADRIA-EN), /destinacija/* (×38 vsebinskih plasti).
+// W1 IT/DE WHITELISTA (Issue #15 V0, 1.126.0; faza 2a — 1.127.0) — edini
+// vir resnice o tem, kje italijanščina in nemščina ŽIVITA.
+// FAZA 1 (1.126.0): jedro odkrivanja + svetovanja (statične poti).
+// FAZA 2a (1.127.0): + destinacijske plasti (/destinacija/* ×38 — podatkovni
+// overlayji slovenia-data-it/-de iz 1.126.0 so zdaj živi tudi na straneh)
+// + /zemljevid (jezikovno nevtralni POI-ji; UI 4-jezičen).
+// Namerno ŠE VEDNO IZVEN (iskrena meja, W1-faza-2b — proxy 308 na slovensko):
+//   /nacrtuj (pogon itinererja izpisuje SL/EN — cca 25 lib modulov z
+//   lang-vejami; lastna naloga), L-vzorčne poti (/trznica, /dozivetja,
+//   /lokali, /dogodki, /potovanje, /na-poti, /moja-potovanja — inline SL/EN
+//   slovarji v komponentah), /vodici (vsebinska plast ADRIA-EN).
 // Uporabniki: src/proxy.ts (308 guard), language-switcher (vidnost),
 // hreflangForPath (alternati), sitemap-urls.ts (IT/DE URL-ji).
 // ============================================================================
@@ -135,11 +139,29 @@ export const ITDE_STATIC_ROUTES = new Set([
   "/politika-zasebnosti",
   "/vir-podatkov",
   "/zaupanje-in-varnost",
+  // W1 faza 2a: zemljevid — POI imena so jezikovno nevtralni viri (OSM/FSQ),
+  // UI (T slovar) je 4-jezičen, iskanje ima IT/DE razloge zadetkov.
+  "/zemljevid",
 ]);
 
-/** Ali ima ta POT (brez locale prefix-a!) IT/DE različico (W1 faza 1). */
+/**
+ * Destinacijske pod-poti z IT/DE različico (faza 2a — enake kot EN
+ * whitelistna GEO-A: hub + things-to-do + itinererji + sezone + vodniki;
+ * ×38 destinacij). Vsebino pokrivajo slovenia-data-it/-de overlayji
+ * (tagline/description/highlights/activities/duration — 1.126.0).
+ */
+const ITDE_DESTINATION_SUBROUTES = [
+  /^\/destinacija\/[^/]+$/,
+  /^\/destinacija\/[^/]+\/things-to-do$/,
+  /^\/destinacija\/[^/]+\/itinerary\/[^/]+$/,
+  /^\/destinacija\/[^/]+\/best-time-to-visit\/[^/]+$/,
+  /^\/destinacija\/[^/]+\/guide\/[^/]+$/,
+];
+
+/** Ali ima ta POT (brez locale prefix-a!) IT/DE različico (W1 faza 2a). */
 export function isItDeRoute(pathname: string): boolean {
-  return ITDE_STATIC_ROUTES.has(pathname);
+  if (ITDE_STATIC_ROUTES.has(pathname)) return true;
+  return ITDE_DESTINATION_SUBROUTES.some((re) => re.test(pathname));
 }
 
 /**

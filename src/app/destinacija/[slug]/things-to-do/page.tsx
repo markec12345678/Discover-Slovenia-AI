@@ -3,7 +3,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { DESTINATIONS, getDestinationById } from "@/lib/slovenia-data";
-import { getEnDestination, REGIONS_EN } from "@/lib/slovenia-data-en";
+import { REGIONS_EN } from "@/lib/slovenia-data-en";
+// W1 faza 2a (Issue #15): IT/DE overlay + oznake + og:locale (1.126.0 plasti)
+import {
+  ogLocaleFor,
+  regionLabelFor,
+  withLocaleOverlay,
+} from "@/lib/slovenia-labels-it-de";
 // TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer;
 // LanguageToggle odstranjen (LanguageSwitcher v Navigation pokriva SL⇄EN —
 // EN whitelista ^/destinacija/[^/]+/things-to-do$).
@@ -59,11 +65,14 @@ export async function generateMetadata({
   const t = await getTranslations("thingsToDo");
   const locale = await getLocale();
   if (!dest) return { title: t("meta.notFound") };
-  // FW4.3-2: EN overlay za tekstovna polja (id/slug/name/slike/cene ostanejo izvirni)
-  const en = locale === "en" ? getEnDestination(dest.id) : undefined;
-  const tagline = en?.tagline ?? dest.tagline;
-  const highlights = en?.highlights ?? dest.highlights;
-  const region = locale === "en" ? (REGIONS_EN[dest.region] ?? dest.region) : dest.region;
+  // FW4.3-2 + W1 faza 2a: overlay po locale (id/slug/name/slike/cene izvirni)
+  const overlaid = withLocaleOverlay(dest, locale);
+  const tagline = overlaid.tagline;
+  const highlights = overlaid.highlights;
+  const region =
+    locale === "en"
+      ? (REGIONS_EN[dest.region] ?? dest.region)
+      : (regionLabelFor(dest.region, locale) ?? dest.region);
   // SEO-2: canonical/hreflang na DEJANSKEM gostitelju (ne statična domena)
   const base = await currentBaseUrl();
   return {
@@ -76,7 +85,11 @@ export async function generateMetadata({
     keywords:
       locale === "en"
         ? [dest.name, "things to do", "activities", "attractions", "Slovenia", region, ...highlights]
-        : [dest.name, "kaj početi", "aktivnosti", "znamenitosti", "Slovenija", dest.region, ...dest.highlights],
+        : locale === "it"
+          ? [dest.name, "cosa fare", "attività", "attrazioni", "Slovenia", region, ...highlights]
+          : locale === "de"
+            ? [dest.name, "was tun", "Aktivitäten", "Sehenswürdigkeiten", "Slowenien", region, ...highlights]
+            : [dest.name, "kaj početi", "aktivnosti", "znamenitosti", "Slovenija", dest.region, ...dest.highlights],
     openGraph: {
       title: t("meta.ogTitle", { name: dest.name }),
       description: t("meta.ogDescription", {
@@ -85,7 +98,7 @@ export async function generateMetadata({
       }),
       images: [{ url: dest.image, width: 1200, height: 800 }],
       type: "website",
-      locale: locale === "en" ? "en_US" : "sl_SI",
+      locale: ogLocaleFor(locale),
     },
     alternates: {
       canonical: `${base}${localePrefix(locale)}/destinacija/${dest.slug}/things-to-do`,
@@ -105,41 +118,46 @@ export default async function ThingsToDoPage({
 
   const locale = await getLocale();
   const t = await getTranslations("thingsToDo");
-  const isEn = locale === "en";
+  // W1 faza 2a: DB sekcije (lokalci/izkušnje/izdelki) izrisuje SAMO na SL
+  // (P4-8 — vsebina v bazi je slovenska; EN je imel isto mejo, IT/DE jo
+  // podedujeta iskreno). AI FAQ prav tako (SL vsebina).
+  const isSl = locale === "sl";
 
-  // FW4.3-2: EN overlay — tagline/description/highlights v angleščini,
-  // identifikatorji/slike/cene ostanejo iz slovenskega vira resnice.
-  const en = isEn ? getEnDestination(dest.id) : undefined;
-  const tagline = en?.tagline ?? dest.tagline;
-  const description = en?.description ?? dest.description;
-  const highlights = en?.highlights ?? dest.highlights;
-  const regionBadge = isEn ? (REGIONS_EN[dest.region] ?? dest.region) : dest.region;
+  // FW4.3-2 + W1 faza 2a: overlay po locale — tagline/description/highlights
+  // v jeziku strani, identifikatorji/slike/cene ostanejo iz slovenskega vira.
+  const overlaid = withLocaleOverlay(dest, locale);
+  const tagline = overlaid.tagline;
+  const description = overlaid.description;
+  const highlights = overlaid.highlights;
+  const regionBadge =
+    locale === "en"
+      ? (REGIONS_EN[dest.region] ?? dest.region)
+      : (regionLabelFor(dest.region, locale) ?? dest.region);
 
   // Pridobi povezane lokale, izkušnje in izdelke iz baze — PREDPOMNJENO
   // (glej src/lib/seo-page-data.ts: fix produkcijskih 500 pod vzporednim
   // obremenjevanjem, 2026-09-13; identične poizvedbe kot prej).
-  // (P4-8: na EN se te sekcije NE izrisujejo — vsebina v bazi je slovenska —
-  // zato se na EN sploh NE povprašuje po bazi; enak vzorec kot guide/[type])
-  const { listings: seoListings, experiences: seoExperiences, products } = isEn
-    ? EMPTY_SEO_THINGS_TO_DO
-    : await getSeoThingsToDoData(dest.id, dest.name);
+  // (P4-8: na EN/IT/DE se te sekcije NE izrisujejo — vsebina v bazi je
+  // slovenska — zato se tam sploh NE povprašuje po bazi; enak vzorec kot
+  // guide/[type])
+  const { listings: seoListings, experiences: seoExperiences, products } = isSl
+    ? await getSeoThingsToDoData(dest.id, dest.name)
+    : EMPTY_SEO_THINGS_TO_DO;
 
   const totalActivities = seoListings.length + seoExperiences.length;
   // SEO-2: host-zavedni JSON-LD (breadcrumb items + destinationSchema)
   const base = await currentBaseUrl();
 
-  // FW4.3-2: JSON-LD description/tagline/highlights v jeziku strani (EN overlay)
-  const jsonLd = destinationSchema(
-    isEn && en ? { ...dest, ...en } : dest,
-    base
-  );
+  // FW4.3-2 + W1 faza 2a: JSON-LD description/tagline/highlights v jeziku
+  // strani (locale overlay)
+  const jsonLd = destinationSchema(withLocaleOverlay(dest, locale), base);
 
   // AI-generirane FAQ za SEO rich snippets (z 90-dnevnim cache-om).
-  // P4-8: AI FAQ vsebina je slovenska — na EN se NE izrisuje niti ne
+  // P4-8: AI FAQ vsebina je slovenska — na EN/IT/DE se NE izrisuje niti ne
   // generira (prepovedano mešanje jezikov).
-  const aiFaqs = isEn
-    ? []
-    : (await getFaqForPage(dest.slug, dest.name, "things-to-do")).faqs;
+  const aiFaqs = isSl
+    ? (await getFaqForPage(dest.slug, dest.name, "things-to-do")).faqs
+    : [];
 
   const faqs = aiFaqs.map((f) => ({ q: f.question, a: f.answer }));
 
@@ -232,7 +250,7 @@ export default async function ThingsToDoPage({
 
         {/* Aktivnosti / Izkušnje — REALNA rezervacijska pot (enaka kot homepage) */}
         {/* P4-8: DB vsebina (imena ponudnikov) je slovenska — na EN skrito */}
-        {!isEn && seoExperiences.length > 0 && (
+        {isSl && seoExperiences.length > 0 && (
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-6">{t("experiencesTitle", { name: dest.name })}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -245,7 +263,7 @@ export default async function ThingsToDoPage({
 
         {/* Lokalci — REALNI lead capture (povpraševanje ponudniku) */}
         {/* P4-8: DB vsebina (imena ponudnikov) je slovenska — na EN skrito */}
-        {!isEn && seoListings.length > 0 && (
+        {isSl && seoListings.length > 0 && (
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-6">{t("listingsTitle", { name: dest.name })}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -258,7 +276,7 @@ export default async function ThingsToDoPage({
 
         {/* Lokalni izdelki */}
         {/* P4-8: DB vsebina (imena izdelkov) je slovenska — na EN skrito */}
-        {!isEn && products.length > 0 && (
+        {isSl && products.length > 0 && (
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-6">{t("productsTitle", { name: dest.name })}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

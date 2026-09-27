@@ -104,13 +104,19 @@ export function normalize(s: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-// ─── 2. TOKENIZACIJA + SL/EN STOPBESEDE ────────────────────────────────────
+// ─── 2. TOKENIZACIJA + SL/EN/IT/DE STOPBESEDE ─────────────────────────
 
 const STOPWORDS = new Set([
   // SL (naloga #9: v, na, za, je, in, kaj, kje, kako, do, iz, pri, ob, z, s)
   "v", "na", "za", "je", "in", "kaj", "kje", "kako", "do", "iz", "pri", "ob", "z", "s",
   // EN (naloga #9: in, at, for, the, a, to, of, near, what, where)
   "at", "for", "the", "a", "to", "of", "near", "what", "where",
+  // IT (W1 faza 2a: vprašalnice/predlogi/členi — nikoli ime destinacije)
+  "dove", "cosa", "come", "con", "che", "per", "una", "uno", "del", "della", "degli",
+  "nelle", "sul", "sulla", "alla", "nel", "sono", "trovare", "trovo",
+  // DE (W1 faza 2a: členi/vezniki/predlogi)
+  "der", "die", "das", "und", "ist", "von", "mit", "im", "ein", "eine",
+  "nach", "bei", "auf", "wo", "was", "wie", "fur", "ich", "finden",
 ]);
 
 /** Razbij niz na iskalne žetone (≥ 2 znaka, brez stopbesed). */
@@ -133,41 +139,81 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
     "hrana", "jedi", "jesti", "kulinarika", "restavracija", "gostilna", "kuhinja",
     "večerja", "kosilo", "zajtrk", "pica", "burger",
     "food", "eat", "restaurant", "cuisine", "dinner", "lunch", "breakfast",
+    // W1 faza 2a (IT/DE zemljevid — iskanje deluje v jeziku UI;
+    // namerno BREZ „cena“ — slovenska „cena“ pomeni „price“, ne večerja)
+    "ristorante", "ristoranti", "mangiare", "cucina", "pranzo", "colazione",
+    "pizzeria", "cibo", "osteria", "trattoria",
+    "essen", "restaurants", "kuche", "abendessen", "mittagessen", "fruhstuck",
+    "gasthaus", "gasthof", "wirtshaus", "keller", "brau",
   ],
   wine: [
     "vino", "vina", "vinu", "vinska", "vinski", "vinske", "degustacija", "vinoteka",
     "wine", "tasting", "winery", "cellar",
+    // W1 faza 2a (IT/DE)
+    "cantina", "vini", "enoteca", "vigneto", "uva", "degustazione",
+    "wein", "weingut", "weinkeller", "weingarten", "trauben",
   ],
   hiking: [
     "pohod", "pohodi", "pohodništvo", "tura", "ture", "izlet", "sprehod", "gora", "gore",
     "hiking", "hike", "walk", "mountain", "trekking", "trail",
+    // W1 faza 2a (IT/DE)
+    "escursione", "escursioni", "passeggiata", "camminata", "sentiero", "montagna",
+    "tappa", "trekking",
+    "wandern", "wanderung", "spaziergang", "berg", "berge", "pfad", "steig",
   ],
   culture: [
     "muzej", "muzeji", "galerija", "kultura", "zgodovina", "spomenik", "grad", "cerkev",
     "umetnost", "dediscina",
     "museum", "gallery", "culture", "history", "monument", "castle", "church", "art", "heritage",
+    // W1 faza 2a (IT/DE)
+    "museo", "musei", "galleria", "cultura", "storia", "monumento", "castello",
+    "chiesa", "arte", "patrimonio", "cattedrale", "basilica",
+    "museen", "galerie", "kultur", "geschichte", "denkmal", "burg", "kirche",
+    "kunste", "erbe", "kathedrale",
   ],
   wellness: [
     "wellness", "sauna", "savna", "terme", "kopališče", "masaža",
     "spa", "massage", "pool",
+    // W1 faza 2a (IT/DE)
+    "benessere", "piscina", "bagni", "termali",
+    "schwimmbad", "thermalbad", "therme", "heubad",
   ],
   water: [
     "kajak", "rafting", "sup", "kanu", "čoln", "splav", "jadranje", "veslanje",
     "kayak", "canoe", "boat", "sailing", "raft",
+    // W1 faza 2a (IT/DE)
+    "barca", "canoa", "vela", "rafting", "sup",
+    "boot", "segeln", "rudern", "floß",
   ],
-  ski: ["smuči", "smučanje", "sankanje", "ski", "smuci", "snowboard"],
+  ski: ["smuči", "smučanje", "sankanje", "ski", "smuci", "snowboard",
+    // W1 faza 2a (IT/DE)
+    "sci", "scii", "sciare", "pista", "slittino",
+    "skifahren", "schneebrett", "rodeln", "piste",
+  ],
   accommodation: [
     "nočitev", "nastanitev", "hotel", "hostel", "apartma", "sobe", "spanje",
     "bed", "sleep", "stay", "rooms",
+    // W1 faza 2a (IT/DE)
+    "alloggio", "alloggi", "dormire", "camere", "appartamento", "pensione",
+    "hotel", "hoteles",
+    "ubernachten", "unterkunft", "zimmer", "ferienwohnung", "pension", "schlafen",
   ],
   nature: [
     "narava", "jezero", "jezeru", "reka", "reki", "reke", "gora", "gori", "gozd",
     "slap", "jama", "park", "morje", "morju", "obala", "plaža",
     "nature", "lake", "river", "forest", "waterfall", "cave", "beach", "sea",
+    // W1 faza 2a (IT/DE)
+    "natura", "lago", "fiume", "bosco", "foresta", "cascata", "grotta", "grotte",
+    "spiaggia", "mare", "costa", "parco", "monte", "valle", "sorgente",
+    "natur", "fluss", "wald", "wasserfall", "hohle", "strand", "meer", "kuste",
+    "park", "tal", "quelle",
   ],
   family: [
     "družina", "družine", "otroci", "otrok", "otroško",
     "family", "kids", "children", "playground",
+    // W1 faza 2a (IT/DE; „parco“ pripada naravi — večinski pomen)
+    "famiglia", "famiglie", "bambini", "bambino", "giochi",
+    "familie", "familien", "kinder", "spielplatz",
   ],
 };
 
@@ -514,32 +560,49 @@ function deterministicSort<T extends { score: number; rating: number | null; nam
 }
 
 /** Pošten determinističen razlog zadetka (iz DEJANSKIH signalov ujemanja).
- *  ISSUE #12 (F12-3, §13): razlog je UPORABNIŠKI tekst → dvojezičen
+ *  ISSUE #12 (F12-3, §13): razlog je UPORABNIŠKI tekst → večjezičen
  *  (prej seveda SL tudi na /en — kategorije v razlogu so kanonski
- *  identifikatorji (food/wine/hiking …) in ostanejo jezikovno nevtralni). */
+ *  identifikatorji (food/wine/hiking …) in ostanejo jezikovno nevtralni).
+ *  W1 faza 2a (Issue #15): zemljevid je 4-jezičen — razlogi sledijo UI
+ *  jeziku (P4-8: nikoli mešanja znotraj pogleda). */
 function buildReason(
   matchedTokens: string[],
   matchedCategories: string[],
-  locale: "sl" | "en" = "sl"
+  locale: "sl" | "en" | "it" | "de" = "sl"
 ): string {
+  // oznaki za_uporabniški_jezik (kategorije ostanejo kanonski ID-ji)
+  const kwLabel =
+    locale === "en"
+      ? "keywords"
+      : locale === "it"
+        ? "parole chiave"
+        : locale === "de"
+          ? "Schlüsselwörter"
+          : "ključne besede";
+  const catLabel =
+    locale === "en"
+      ? "category"
+      : locale === "it"
+        ? "categoria"
+        : locale === "de"
+          ? "Kategorie"
+          : "kategorija";
+  const matchLead =
+    locale === "en"
+      ? "Matches your search"
+      : locale === "it"
+        ? "Corrisponde alla tua ricerca"
+        : locale === "de"
+          ? "Entspricht deiner Suche"
+          : "Ujema se z iskalnim nizom";
   const parts: string[] = [];
   if (matchedTokens.length > 0) {
-    parts.push(
-      `${locale === "en" ? "keywords" : "ključne besede"}: ${matchedTokens.slice(0, 4).join(", ")}`
-    );
+    parts.push(`${kwLabel}: ${matchedTokens.slice(0, 4).join(", ")}`);
   }
   if (matchedCategories.length > 0) {
-    parts.push(
-      `${locale === "en" ? "category" : "kategorija"}: ${matchedCategories.slice(0, 3).join(", ")}`
-    );
+    parts.push(`${catLabel}: ${matchedCategories.slice(0, 3).join(", ")}`);
   }
-  return parts.length > 0
-    ? locale === "en"
-      ? `Matches your search (${parts.join(" · ")})`
-      : `Ujema se z iskalnim nizom (${parts.join(" · ")})`
-    : locale === "en"
-      ? "Matches your search"
-      : "Ujema se z iskalnim nizom";
+  return parts.length > 0 ? `${matchLead} (${parts.join(" · ")})` : matchLead;
 }
 
 // ─── 8. GLAVNA FUNKCIJA ────────────────────────────────────────────────────
@@ -552,7 +615,8 @@ function buildReason(
  *                 products, experiences
  * @param limit    maksimalno število zadetkov na kategorijo (1–5)
  * @param locale   jezik razlogov (issue #12 F12-3: "en" → EN razlogi;
- *                 privzeto "sl" — nazaj kompatibilno s 3-arg klici)
+ *                 W1 faza 2a: "it"/"de" → IT/DE razlogi; privzeto "sl" —
+ *                 nazaj kompatibilno s 3-arg klici)
  * @returns        per-kategorija seznami (destinacije vedno iz statičnih
  *                 DESTINATIONS; prazne mreže → prazni seznami)
  */
@@ -560,7 +624,7 @@ export function deterministicSearch(
   query: string,
   datasets: DeterministicSearchDatasets,
   limit: number,
-  locale: "sl" | "en" = "sl"
+  locale: "sl" | "en" | "it" | "de" = "sl"
 ): DeterministicSearchResult {
   const safeLimit = Math.min(Math.max(Math.floor(limit) || 3, 1), 5);
   const queryTokens = tokenize(query);

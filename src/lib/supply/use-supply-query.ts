@@ -56,7 +56,12 @@ interface UseSupplyQueryOpts {
   zoom: number;
   /** Trenutni bbox viewporta [s,w,n,e]. */
   bbox: [number, number, number, number] | null;
-  locale: "sl" | "en";
+  /**
+   * W1 faza 2a (Issue #15): zemljevid je 4-jezičen — klient pošlje UI jezik,
+   * strežnik pa normalizira (samo "en" odpre EN vejo; "it"/"de" → varna SL —
+   * imena ponudnikov so podatkovna plast, isti §38 kanon kot tržnica).
+   */
+  locale: "sl" | "en" | "it" | "de";
 }
 
 export function useSupplyQuery({
