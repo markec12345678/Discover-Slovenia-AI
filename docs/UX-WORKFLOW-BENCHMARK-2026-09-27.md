@@ -272,3 +272,103 @@ dokazano (G1–G9) tudi v načrtovalni strojni sobi.
 
 **Največja odločitev za lastnika: W1 (IT/DE jeziki).** Vse ostalo je
 izvedbeno znotraj obstoječih vzorcev.
+
+---
+
+---
+
+# DODATEK — 2026-09-27/28 (večerni delta): pokritost 10/10 + teren se je premaknil
+
+> **Sprožilec:** nadaljevanje naročila ("odlicno nadaljuj") — dopolnitev
+> prekinjene vzporedne raziskave (zastale slike 19-a). Celotna raziskava
+> zdaj pokriva **10 platform**: Alma, Mindtrip, Stardrift, Wanderlog
+> (jutranji audit) + Wonderplan, Trip Planner AI (raziskava 19-b,
+> `research/wonderplan-tripplanner.md`) + **Layla, Roam Around, Google
+> Gemini/AI Mode** (dodatek 20, `research/layla-gemini-roamaround-mindtrip.md`).
+> Metoda: VLM analiza zastalih slik + živa curl preverba vsake trditve +
+> 10 iskanj.
+
+## A. Teren se je premaknil (živo preverjeno)
+
+1. **MINDTRIP JE ČRN.** `mindtrip.ai` (tudi `/login`, `api.`, `app.`) →
+   302 → `images.mindtrip.ai/heroku/construction.html` — »Under
+   Construction. Please check back for exciting updates!« Celoten urad
+   (marketing + aplikacija + API) je temen, brez ene novinarske omembe,
+   medtem ko ga recenzije od 22.–23. 9. 2026 še vedno navajajo med
+   vrhunska orodja. `/heroku/` pot = signal selitve infrastrukture.
+   **Posledice:** (a) zanesljivost je jarek — naša disciplina uptime +
+   provenance plasti je *demonstriran* diferenciator; (b) odprto je
+   časovno okno akvizicije (W10); (c) jutranji §1.2 opisuje žive funkcije,
+   ki jih zvečera ni več — delta preverbe so stalna nujnost.
+2. **Layla → Expedia veriga.** Layla AI GmbH (Berlin) je prevzela Roam
+   Around (PhocusWire); Expedia Group je 31. 7. 2026 prevzela Laylo.
+   `layla.ai` = bot-zid (429/Vercel checkpoint); `itslayla.com` (nekdanja
+   tržna domena) je zdaj **nepovezana Shopify modna trgovina**. Klepet-prvi
+   polni lijak (ideja → itinerer → rezervacija) z Expedia inventarjem —
+   naša G5/G6 ostajata iskrena protuteža; ničesar novega za kopiranje.
+3. **Roam Around teče kot legacy** (`roamaround.app`, živ): tekstovni
+   itinererji brez zemljevida, Google login zid, **token ekonomija** z
+   deljenjem-z-dobičkom (»Share and earn 3 free tokens«) in WordPress
+   embedom. Zabeleženo pod »ne kopiramo (zaenkrat)«.
+4. **Google komoditizira generični AI itinerer.** Časovnica uradnih objav:
+   AI Mode Canvas itinererji (17. 11. 2025) → vodila za promptanje poti
+   (14. 1. 2026) → »7 načinov« (17. 4. 2026) → Gemini itinererji, ki
+   »žonglirajo obstoječe načrte« (6. 8. 2026) + Gems. **Prosti
+   privzeti konkurent** — vertikalna globina (podatki, provenance,
+   offline GPS, skupnost, lastna ponudba) je edini anti-komoditizacijski
+   sklad. To *potrjuje* strategijo, ne odpira UI vrzeli.
+
+## B. Stanje W1 (posodobitev)
+
+**W1 (IT/DE) se izvaja** — po odobritvi lastnika: 1.126.0 (faza 1),
+1.127.0 (faza 2a: /destinacija/* + /zemljevid, 570 strani/jezik),
+1.128.0 (faza 2b-1: planner pogon 4-jezičen + UI 100 %) — **vse v
+produkciji**. Ostanki: faza 2b-2 (plan-qa/packing-smart/refine+parser,
+odprtje /it/nacrtuj + /de/nacrtuj) — Issue #15.
+
+## C. Nove vrzeli (W9–W10) — dokazano, prioritizirano
+
+| ID | Vrzel | Resnost | Dokaz |
+|---|---|---|---|
+| **W9** | **Kontekstualni deep-link vsebina → klepet** — Trip Planner AIjev najmočnejši akvizicijski vzorec: vsak vodniški razdelek ponudi klepet z *vnaprej-izpolnjenim, namenu-skaldnim* vprašanjem (`layla.ai/chat?ask=…`). Mi: Chatbot živi na 12+ površinah, a **/destinacija/* (38 × 5 pod-poti) klepeta nima** in pre-fill mehanizma ni nikjer (rg: 0 zadetkov initialPrompt/searchParams v klepetu) | 🟠 srednja | tripplanner.ai/paris (19-b) + naša koda |
+| **W10** | **Časovno okno akvizicije: »Mindtrip alternativa«** — mindtrip.ai je črn (živo preverjeno), recenzije ga še navajajo, iskanja alternativ pristanejo NA construction page. Iskrena vsebina (blog primerjava: deterministic engine, provenance, offline Go, /pot skupnost) | 🟡 nizka (časovno občutljiva — okno se zapre, ko se Mindtrip vrne) | curl 302 → construction.html + recenzijski zamik |
+
+**W9 oblika (zero feature loss):** obstoječi Chatbot dobi neobvezen
+`initialQuestion` prop (odpre se s pred-izpolnjenim, UREDNIM vprašanjem —
+uporabnik lahko popravi/izbriše pred pošiljanjem). Vstopne točke: guide
+razdelki »kje spati« (persona vprašanja), best-time pas, things-to-do
+prazna stanja, /destinacija hero pas »Vprašaj AI o {destinacija}«.
+*Varovalo:* klepet brez pre-filla ostaja nespremenjen povsod; nobeno
+vprašanje se ne pošlje samodejno; G5/G6 poti nespremenjene.
+
+## D. Kaj NE kopiramo (dodatek)
+
+7. **Roam Aroundovo deljenje-z-dobičkom** (»Share and earn 3 free
+   tokens«) — usmerjeno napotništvo zaenkrat zavrnjeno: kompleksnost
+   (token knjigovodstvo, goljufijska površina) + nasprotuje našemu
+   brezpogojnemu skupnostnemu deljenju (/pot). Embed vzorec za bloge
+   ostaja odprt za prihodnje (nizka prioriteta).
+
+## E. Posodobljena lestvica (celotna, 10/10 platform)
+
+| Vrzel | Resnost | Stanje |
+|---|---|---|
+| W1 jeziki IT/DE | 🔴 | **v izvedbi** (1.128.0 v produkciji; 2b-2 ostanka) |
+| W2 skupinski klepet @AI | 🟠 | odprto |
+| W3 kolekcije »someday« | 🟠 | odprto (obstoječe »zbirke« = kurirane VSEBINSKE, ne uporabniške wishlist) |
+| W9 vsebina → klepet pre-fill | 🟠 | **novo** |
+| W4 sezonska domača | 🟡 | odprto |
+| W5 kontrast/branje | 🟡 | odprto |
+| W6 events discovery | 🟡 | odprto |
+| W10 Mindtrip-alternativa okno | 🟡 | **novo, časovno občutljivo** |
+| W7 voice v Go | 🟢 | prihodnost |
+| W8 razpršitev v AI | 🟢 | polir |
+
+**Kategorija po popolni pokritosti:** pol se utrjuje med *klepet-prvi
+lijaki z OTA denarjem* (Layla←Expedia; Mindtrip←Sabre/PayPal, zdaj črna)
+in *prostimi privzetimi* (Google AI Mode/Gemini). Ostali so login-zidani
+generatorji kvizov (Wonderplan), SEO lijaki (tripplanner.ai) ali legacy
+token posestvi (Roam Around). **Nihče v kategoriji ne združuje: načrti
+brez računa + deterministični motor + provenance plasti + offline GPS Go
++ lastna ponudba tržnice + skupnostni načrti.** W-list + W9/W10 je
+celotna, iskrena razdalja do terena.
