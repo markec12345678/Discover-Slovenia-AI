@@ -74,7 +74,10 @@ server.log
 # Z.ai sandbox ostanki (niso del projekta)
 /.zscripts/
 /examples/
-/mini-services/
+# ISSUE #13 / P2-2: mini-services/ je zdaj PROJEKTNI (trip-presence je
+# del repota — presence-core test teče v glavnem CI-ju); ignoriramo SAMO
+# njihove node_modules (vsak servis ima lasten package.json).
+/mini-services/*/node_modules/
 /Caddyfile
 /sandbox-keepalive.sh
 /sandbox-logs/

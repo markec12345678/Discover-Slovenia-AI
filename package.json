@@ -1,6 +1,6 @@
 {
   "name": "nextjs_tailwind_shadcn_ts",
-  "version": "1.123.0",
+  "version": "1.124.0",
   "private": true,
   "scripts": {
     "dev": "bash -c 'set -a; source .env; set +a; next dev -p 3000 --webpack 2>&1 | tee dev.log'",
@@ -78,6 +78,7 @@
     "react-resizable-panels": "^3.0.3",
     "recharts": "^2.15.4",
     "sharp": "^0.34.3",
+    "socket.io-client": "^4.8.4",
     "sonner": "^2.0.6",
     "stripe": "^22.2.2",
     "tailwind-merge": "^3.3.1",

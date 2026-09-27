@@ -705,6 +705,29 @@ export function ItineraryPlanner() {
     idx: number;
   } | null>(null);
 
+  // G9 (Issue #13 / P2-1): kratki "snap" pulz ciljne kartice po spustu —
+  // čista vizualna duša (globals.css .dsa-drop-snap, 150 ms ease-out;
+  // prefers-reduced-motion → CSS animacija izklopi). Stanje {day, idx}
+  // označuje NOVO mesto vlečenega postanka (within-day: ciljni idx;
+  // cross-day: konec ciljnega dneva → snap na kartici dneva).
+  const [snapDrop, setSnapDrop] = useState<{
+    day: number;
+    idx: number;
+  } | null>(null);
+  const snapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggerSnap = useCallback((day: number, idx: number) => {
+    if (snapTimer.current) clearTimeout(snapTimer.current);
+    setSnapDrop({ day, idx });
+    // 220 ms > 150 ms animacije (izklop po zaključku, brez bliskanja).
+    snapTimer.current = setTimeout(() => setSnapDrop(null), 220);
+  }, []);
+  useEffect(
+    () => () => {
+      if (snapTimer.current) clearTimeout(snapTimer.current);
+    },
+    []
+  );
+
   // D6-B (Issue #6, M7+): dan, ki ČAKA na potrditev odstranitve. Nastane
   // SAMO pri kliku „Odstrani dan" na dnevu S postanki (destruktiven popravek
   // — uniči vse njegove postanke); prazen dan (nič ne izgubi) se odstrani
@@ -4573,7 +4596,12 @@ export function ItineraryPlanner() {
                         dragging &&
                           dragging.day !== day.day &&
                           dragOver?.day === day.day &&
-                          "ring-2 ring-primary/60 border-primary/50"
+                          "ring-2 ring-primary/60 border-primary/50",
+                        // G9 (Issue #13 / P2-1): snap pulz kartice dneva po
+                        // CROSS-DAY spustu (idx -1 = sentinel celi dan).
+                        snapDrop?.day === day.day &&
+                          snapDrop.idx === -1 &&
+                          "dsa-drop-snap"
                       )}
                       // P0-1 (G1): dragover/drop na KARTICI dneva pokrijeta
                       // vrzeli med postanki, glavo dneva in PRAZNE dneve
@@ -4595,6 +4623,11 @@ export function ItineraryPlanner() {
                         if (!dragging || dragging.day === day.day) return;
                         e.preventDefault();
                         applyStopCrossDayDrop(dragging.day, dragging.idx, day);
+                        // G9: snap pulz na ciljni kartici dneva. idx = -1 je
+                        // SENTINEL za cross-day (cel dan snapped): handler
+                        // vidi ŠE STARO day.locations.length, render pa NOVO
+                        // (+1) — idx bi zadel le po sreči.
+                        triggerSnap(day.day, -1);
                         setDragging(null);
                         setDragOver(null);
                       }}
@@ -4817,13 +4850,27 @@ export function ItineraryPlanner() {
                                 id={`stop-row-${day.day}-${idx}`}
                                 className={cn(
                                   "rounded-lg border bg-card/50 p-4 transition-shadow",
+                                  // G9 (Issue #13 / P2-1): ghost vlečene
+                                  // kartice — izvor med vlečenjem zbledi in
+                                  // se rahlo nagne (vizualna metafora
+                                  // "letenja"; globals.css .dsa-drag-ghost,
+                                  // prefers-reduced-motion → brez rotacije).
+                                  dragging &&
+                                    dragging.day === day.day &&
+                                    dragging.idx === idx &&
+                                    "dsa-drag-ghost",
                                   // M7: vizualni odziv cilja spusta (samo
                                   // znotraj istega dneva, ne na sam izvor):
                                   dragging &&
                                     dragOver?.day === day.day &&
                                     dragOver.idx === idx &&
                                     !(dragging.day === day.day && dragging.idx === idx) &&
-                                    "ring-2 ring-primary/50 border-primary/40"
+                                    "ring-2 ring-primary/50 border-primary/40",
+                                  // G9: snap pulz po spustu — vlečeni postanek
+                                  // pristane na NOVEM mestu (ciljni idx).
+                                  snapDrop?.day === day.day &&
+                                    snapDrop.idx === idx &&
+                                    "dsa-drop-snap"
                                 )}
                                 // M7 (Issue #5 / T5-D): HTML5 vlečenje (miš);
                                 // dotik/tipkovnica/bralniki imajo puščici ↑/↓.
@@ -4851,6 +4898,8 @@ export function ItineraryPlanner() {
                                     dragging.idx !== idx
                                   ) {
                                     applyStopReorder(day, dragging.idx, idx);
+                                    // G9: snap pulz na novem mestu postanka.
+                                    triggerSnap(day.day, idx);
                                   }
                                   setDragging(null);
                                   setDragOver(null);

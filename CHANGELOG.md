@@ -7,6 +7,85 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.124.0] — 2026-09-27 (ISSUE #13: P2 VAL — G9 drag ghost/snap duša + G2 prisotnost ob deljeni poti + P2-3 mobilna bottom-nav dokaz)
+
+### Dodano
+
+- **G9 (P2-1): drag ghost + drop-snap duša vlečenja postankov** — vlečena
+  kartica dobi ghost stanje (`.dsa-drag-ghost`: opacity 0,6 + rotate 2° +
+  scale 0,98 — Google/Mindtrip „letenje" metafora), spust pa se zasne z
+  150 ms „snap" pulzom (`.dsa-drop-snap` keyframes: 0,96 → 1,015 → 1,
+  ease-out) na NOVEM mestu postanka (within-day: ciljni idx) oziroma na
+  kartici ciljnega dneva (cross-day: idx −1 sentinel — handler vidi še
+  staro `day.locations.length`, render pa novo, zato indeksiranje ne bi
+  zanesljivo zadelo). Stanje `snapDrop` + `triggerSnap` (timeout 220 ms >
+  150 ms animacije, clearTimeout cleanup ob unmountu). **VAROVALO
+  (načrt):** `@media (prefers-reduced-motion: reduce)` izklopi rotacijo
+  in snap animacijo (samo mehki opacity naglas ostane — informativen, ne
+  vestibularno moteč). **ZERO LOSS:** puščici ↑/↓ in NL ukaz ostanejo
+  (trije vhodi kanon M7/G1); M7 ring cilja in G1 highlight dneva
+  nespremenjena.
+- **G2 (P2-2): prisotnost ob deljeni poti („✍ ureja v živo")** — nov
+  mini-service `mini-services/trip-presence` (socket.io, KONSTANTNI port
+  3003, path `/` po gateway kanonu; soba `trip:{shareId}`; agregat
+  `presence:state {viewers, editors:[{name}]}` BREZ socket ID-jev).
+  Čista logika v `presence-core.ts` (zero-dep → bun-testabilna v glavnem
+  CI-ju): sanitizeName (trim/max 40/kontrolni znaki ven, prazno → null),
+  isValidShareId (isti RE kanon kot /pot stran), EDIT_TTL_MS 6 s +
+  BROADCAST_INTERVAL_MS 2 s. Frontend: `use-trip-presence` hook (LAZY
+  dynamic import socket.io-client — teža šele na /pot; RELATIVNA
+  povezava `path "/" + XTransformPort` — NIKOLI absolutna URL;
+  OMEJENI reconnect 4 poskusi, potem tiho odneha; disconnect → prisotnost
+  pošteno pade na 0) + `TripPresence` komponenta na /pot nad sekcijo
+  sodelovanja: chip „✍ {ime} ureja …" (PencilLine, motion-safe utrip) +
+  „{n} na strani" (od 2+). **Iskrenost:** editing signal SAMO iz
+  dejanskih vnosov (document input — tipkanje, ne klik; debounce 1 s);
+  self-suppression (edini urejevalec z mojim imenom → brez chipa);
+  1 obiskovalec brez urejanja → NIČ (praznina je poštena); anonimen
+  urejevalec → „Obiskovalec ureja …". i18n SL/EN (vzorec L objekta).
+  Dostopnost: aria-live polite. **VAROVALO (načrt):** prisotnost je ČISTO
+  kozmetična plast — CAS (contentVersion) ostaja edina resnica o
+  konfliktih; mrtv/izklopljen service → /pot deluje nespremenjeno
+  (fail-silent, brez spinnerjev/napak). README mini-servisa dokumentira
+  produkcijo (izven Vercela; dokler ne teče, frontend ničesar ne prikazuje).
+- **P2-3 (dokaz): mobilna bottom-nav vrstica ŽE izpolnjuje spec** —
+  benchmark je predlagal razširitev sticky-mobile-cta v 4-slotno vrstico;
+  MobileTabBar (TASK 8/D8-E) že daje 5 zavihkov (Razišči · Zemljevid ·
+  Načrtuj sredinski · Moja pot s števčno značko · Več → Sheet meni) z
+  dot-tarčami ≥44 px (izmerjeno 55), safe-area insetom in chat FAB
+  dvigom (`body[data-mobile-tabbar]` globals pravila) na VSEH straneh z
+  lupino. Ta val doda le E2E dokaz (375 px: 5 zavihkov, FAB nad vrstico)
+  + source-contract test P2-3 sekcije — ZERO novih vrstic UI kode
+  (proti duplikaciji navigacije).
+
+### Spremenjeno
+
+- `use-trip-presence`: nameRef posodobitev v efektu (NE v render fazi —
+  React opozorilo o side-effect v renderu odstranjeno).
+- Glavni `package.json`: nova odvisnost `socket.io-client` (frontend,
+  LAZY naložen izključno na /pot); mini-service ima lasten
+  `package.json` z `socket.io` (neodvisen bun projekt, `bun --hot`).
+
+### Testi
+
+- `mini-services/trip-presence/presence-core.test.ts` (13 testov):
+  sanitizacija (ne-niz/prazno/whitespace/40 znakov/kontrolni), shareId
+  kanon, buildState agregat (brez socketId/editingAt v izhodu, TTL meja,
+  editingAt=0 nikoli, več urejevalcev), EDIT_TTL/BROADCAST konstanti.
+- `src/lib/__tests__/task13-p2-ux-benchmark.test.ts` (31 testov,
+  source-contract): G9 CSS (keyframes/ghost/reduce-motion blok) +
+  planner (snapDrop/triggerSnap/cleanup, ghost na izvoru, snap na obeh
+  ciljih, trigger klica v obeh drop poteh, ZERO LOSS puščic); G2
+  strežnik (port 3003/path/dogodki/soba), core (konstante/izvozi),
+  klient (lazy/relativna/omejeni reconnect/debounce/pošteno 0),
+  komponenta (SL+EN/praznina/self-suppression/input ne klik/aria-live/
+  motion-safe), /pot vpenjanje (nad sodelovanjem); P2-3 dokaz (5 slotov/
+  44 px/safe-area/aria-current/FAB dvig/lupina).
+- Poln lokalni suite: 3844 pass / 0 fail (prejšnji val 3800 — rast
+  izključno iz novih testov).
+
+---
+
 ## [1.123.0] — 2026-09-27 (ISSUE #13: P1 VAL — G5 persistent split mapa + G6 most klepet→rezervacija + G3 email-forward vstop)
 
 ### Dodano

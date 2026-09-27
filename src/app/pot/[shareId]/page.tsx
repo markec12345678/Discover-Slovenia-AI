@@ -10,6 +10,7 @@ import { resolveTripRole, roleAtLeast } from "@/lib/trip-permissions";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { SharedTrip } from "@/components/shared-trip";
 import { TripCollaboration } from "@/components/trip-collaboration";
+import { TripPresence } from "@/components/trip-presence";
 import { TripReservations } from "@/components/trip-reservations";
 import { TripBudgetCard } from "@/components/trip-budget-card";
 import { TripDocumentsCard } from "@/components/trip-documents-card";
@@ -456,6 +457,11 @@ export default async function SharedTripPage({
         initialVersion={saved.contentVersion}
         formData={saved.formData}
       />
+
+      {/* === ISSUE #13 / P2-2 (UX-BENCHMARK §4 G2): PRISOTNOST — „✍ ureja
+          v živo" indikator (Wanderlog vzorec). ČISTO kozmetična plast nad
+          CAS; mrtv mini-service → rendera NIČ (praznina je poštena). === */}
+      <TripPresence shareId={shareId} />
 
       {/* === ISSUE #4 §13 (val 2): SODELOVANJE — vloga, vabila, revokacija,
           javna/zasebna povezava + preimenovanje s CAS. Lastniku pokaže

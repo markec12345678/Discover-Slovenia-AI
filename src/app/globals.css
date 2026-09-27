@@ -476,3 +476,47 @@ header.sticky,
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* ============================================================================
+   G9 (Issue #13 / P2-1 · UX-BENCHMARK 2026 §4): drag ghost + drop-snap duša
+   ============================================================================
+   HTML5 vlečenje postankov je funkcionalno od M7 (znotraj dneva) in G1
+   (cross-day) — vendar BREZ vizualnega odziva vlečene kartice. Vzorec
+   Google/Mindtrip "drag ghost": izvorna kartica med vlečenjem zbledi in se
+   rahlo nagne (vizualna metafora "letenja"), spust pa se zasne v ciljno
+   mesto s kratkim 150 ms "snap" pulzom.
+   Varovalo (načrt Issue #13): prefers-reduced-motion → brez rotacije in
+   brez snap animacije (samo mehki opacity naglas ostane — informativen,
+   ne vestibularno moteč). */
+
+@keyframes dsa-drop-snap {
+  0% {
+    transform: scale(0.96);
+  }
+  60% {
+    transform: scale(1.015);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.dsa-drop-snap {
+  animation: dsa-drop-snap 150ms ease-out;
+}
+
+.dsa-drag-ghost {
+  opacity: 0.6;
+  transform: rotate(2deg) scale(0.98);
+  transition:
+    opacity 150ms ease-out,
+    transform 150ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dsa-drag-ghost {
+    transform: none;
+    transition: opacity 150ms ease-out;
+  }
+  .dsa-drop-snap {
+    animation: none;
+  }
+}

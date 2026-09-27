@@ -1,0 +1,13 @@
+{
+  "name": "trip-presence",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Prisotnost ob deljeni poti (/pot) — Issue #13 P2-2 / UX-BENCHMARK G2. Kozmetična plast nad CAS; izklopljen service = vse deluje.",
+  "scripts": {
+    "dev": "bun --hot index.ts",
+    "start": "bun index.ts"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.1"
+  }
+}
