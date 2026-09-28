@@ -24,6 +24,9 @@ import {
   Check,
   Minus,
   X,
+  Radar,
+  PowerOff,
+  ShieldAlert,
 } from "lucide-react";
 
 /**
@@ -40,6 +43,14 @@ import {
  * Vzorec: /o-strani (server komponenta, getTranslations, hreflang,
  * canonical z locale prefix-om). Vsa besedila: i18n ns "comparison"
  * (fragments/comparison.{sl,en}.json, zlito v messages).
+ *
+ * W10 (Issue #15, 1.133.0 — časovno okno »Mindtrip alternativa«): nad intro
+ * je dodana TERENSKA SEKCIJA (datirane preverbe iz raziskave Task 20, živo
+ * re-preverjene 28. 9. 2026: Mindtrip celoten splet črn; Layla bot-zid +
+ * Expedia prevzem; Google komoditizacija) — G4 kanon: brez izmišljenih
+ * števcev, vsaka trditev z datumom, brez ugibanj o vzrokih. CTA razširjen
+ * na ZLATE POTI (/nacrtuj + /zemljevid + /#skupnost). FAQ q6 nov
+ * (»Kaj se je zgodilo z Mindtripom?« — iskren odgovor za iste poizvedbe).
  */
 
 const PATH = "/primerjava";
@@ -90,7 +101,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ComparisonPage() {
   const t = await getTranslations("comparison");
 
-  const faqs = ([1, 2, 3, 4, 5] as const).map((i) => ({
+  const faqs = ([1, 2, 3, 4, 5, 6] as const).map((i) => ({
     q: t(`faq.q${i}` as const),
     a: t(`faq.a${i}` as const),
   }));
@@ -115,6 +126,55 @@ export default async function ComparisonPage() {
           {t("intro")}
         </p>
         <p className="mt-2 text-xs text-muted-foreground/80">{t("updated")}</p>
+
+        {/* W10: terenska sekcija — datirane preverbe terena (iskrena meja:
+            to so točkovna opažanja z datumom, ne stalne trditve). */}
+        <section className="mt-10" aria-labelledby="field-title">
+          <Card className="border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/20">
+            <CardContent className="p-5 sm:p-6">
+              <Badge
+                variant="outline"
+                className="mb-3 border-amber-500/50 text-amber-800 dark:text-amber-300"
+              >
+                <Radar className="mr-1 size-3.5" aria-hidden="true" />
+                {t("fieldBadge")}
+              </Badge>
+              <h2 id="field-title" className="text-2xl font-bold">
+                {t("fieldTitle")}
+              </h2>
+              <p className="mt-2 text-muted-foreground">{t("fieldIntro")}</p>
+              <div className="mt-5 space-y-4">
+                {(
+                  [
+                    ["mindtrip", PowerOff],
+                    ["layla", ShieldAlert],
+                    ["google", Globe],
+                  ] as const
+                ).map(([key, Icon]) => (
+                  <div key={key} className="flex gap-4">
+                    <span
+                      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                      aria-hidden="true"
+                    >
+                      <Icon className="size-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold">
+                        {t(`field.${key}Title` as const)}
+                      </h3>
+                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                        {t(`field.${key}Desc` as const)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+                {t("fieldNote")}
+              </p>
+            </CardContent>
+          </Card>
+        </section>
 
         {/* 1. Kaj generalisti delajo odlično (iskrenost najprej) */}
         <section className="mt-12" aria-labelledby="generalists-title">
@@ -268,12 +328,21 @@ export default async function ComparisonPage() {
                 {t("ctaTitle")}
               </h2>
               <p className="mt-2 text-muted-foreground">{t("ctaBody")}</p>
-              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Button asChild size="lg">
                   <Link href="/nacrtuj">{t("ctaPrimary")}</Link>
                 </Button>
                 <Button asChild size="lg" variant="outline">
                   <Link href="/destinacije">{t("ctaSecondary")}</Link>
+                </Button>
+                {/* W10: zlate poti — zemljevid in skupnost (galerija javnih
+                    poti na /nacrtuj#skupnost, kartice vodijo v /pot/[shareId])
+                    poleg načrtovalnika. */}
+                <Button asChild size="lg" variant="outline">
+                  <Link href="/zemljevid">{t("ctaMap")}</Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link href="/nacrtuj#skupnost">{t("ctaCommunity")}</Link>
                 </Button>
               </div>
             </CardContent>

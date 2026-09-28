@@ -2242,15 +2242,15 @@
   },
   "comparison": {
     "meta": {
-      "title": "Vergleich der KI-Reiseplaner für Slowenien",
-      "description": "Ehrlicher Vergleich allgemeiner KI-Reiseplaner (Mindtrip, Layla, Wanderlog) mit einem Slowenien-Spezialisten. Plane ohne Anmeldung, auf Deutsch oder Englisch."
+      "title": "Mindtrip-Alternative für Slowenien? Ehrlicher Vergleich",
+      "description": "Du suchst eine Mindtrip-Alternative? Feldcheck vom 28.09.2026: ehrlicher Vergleich allgemeiner KI-Planer mit einem Slowenien-Spezialisten — ohne Anmeldung, in 4 Sprachen."
     },
     "badge": "Ehrlicher Vergleich · ohne Anmeldung",
     "title": "Welcher KI-Reiseplaner ist der richtige für Slowenien?",
     "intro": "Dieser Vergleich ist keine Marketing-Broschüre. Unser redaktionelles Prinzip ist Ehrlichkeit — deshalb geben wir zu, wo allgemeine Planer besser sind als wir, und zeigen, wo ein Slowenien-Spezialist mehr liefert. Die Entscheidung überlassen wir dir.",
-    "updated": "Aktualisiert: 17. September 2026. Vergleiche altern — prüfe das Datum vor der Entscheidung.",
+    "updated": "Aktualisiert: 28. September 2026. Vergleiche altern — prüfe das Datum vor der Entscheidung.",
     "generalistsTitle": "Was allgemeine KI-Reiseplaner hervorragend machen",
-    "generalistsIntro": "Mindtrip, Layla, Wanderlog, ChatGPT und Verwandte sind gute Produkte. Für folgende Fälle sind sie die richtige Wahl:",
+    "generalistsIntro": "Mindtrip, Layla, Wanderlog, ChatGPT und Verwandte sind gute Produkte (zur aktuellen Erreichbarkeit siehe den Feldbericht oben). Ein Generalist ist die richtige Wahl für:",
     "generalists": {
       "coverageTitle": "Globale Abdeckung",
       "coverageDesc": "Ein Plan für Tokio, Lissabon und Patagonien im selben Chat. Wir decken nur Slowenien ab.",
@@ -2301,7 +2301,7 @@
         "language": {
           "label": "Sprache",
           "general": "Englisch oder maschinelle Übersetzung",
-          "ours": "Produkt auf Slowenisch, Englisch, Italienisch und Deutsch"
+          "ours": "Vier Sprachen als Produktkern (SL/EN/IT/DE)"
         },
         "booking": {
           "label": "Buchungen",
@@ -2333,7 +2333,7 @@
     "notForYouTitle": "Wann Discover Slovenia AI NICHT für dich passt",
     "notForYouBody": "Wenn du eine Reise über die Grenze planst, Flüge oder ein Hotel im Ausland brauchst — wähle einen Generalisten (Layla, Wanderlog oder einen Chat mit ChatGPT/Gemini). Das ist okay; auch wir nutzen sie für Auslandsreisen. Gerne sehen wir dich aber auf dem slowenischen Teil der Route.",
     "ctaTitle": "Probiere es ohne Anmeldung",
-    "ctaBody": "Von der Frage zum Plan: 30 Sekunden. Benötigtes Konto: keins. Sprache: Deutsch, Englisch, Slowenisch oder Italienisch.",
+    "ctaBody": "Von der Frage zum Plan: 30 Sekunden. Konto nötig: keins. Sprache: Slowenisch, Englisch, Italienisch oder Deutsch.",
     "ctaPrimary": "Stelle meinen Plan zusammen",
     "ctaSecondary": "Destinationen entdecken",
     "faqTitle": "Häufige Fragen",
@@ -2347,9 +2347,25 @@
       "q4": "Wie zuverlässig sind eure Daten?",
       "a4": "Destinationendaten pflegen wir redaktionell, Preise und Öffnungszeiten haben Quellen, und jeder Plan durchläuft eine Geo-Validierung mit Warnungen. Sind wir unsicher, steht dort „vor dem Besuch prüfen“. Die Methodik ist öffentlich auf der Seite „Datenquelle“.",
       "q5": "Bisher habe ich Mindtrip genutzt — warum wechseln?",
-      "a5": "Mindtrip ist ein guter Generalist; ihre iOS-App bleibt verfügbar, ihre Website war zum Zeitpunkt der Schriftsetzung (September 2026) unerreichbar. Für Slowenien-Reisen bekommst du bei uns: Planung ohne Anmeldung, Deutsch als Produktsprache, geprüfte lokale Daten und Buchungen bei lokalen Anbietern. Urteile selbst — der Test ohne Anmeldung dauert 30 Sekunden."
+      "a5": "Mindtrip war ein guter Generalist; bei unserer Prüfung am 28.09.2026 war ihr gesamtes Web (Seite, Login, API) unerreichbar, und über die Ursache können wir nicht urteilen. Für Slowenien-Reisen bekommst du hier: Planung ohne Anmeldung, vier Sprachen, verifizierte lokale Daten und Buchungen bei lokalen Anbietern. Urteile selbst — der Test ohne Anmeldung dauert 30 Sekunden.",
+      "q6": "Was ist mit Mindtrip passiert?",
+      "a6": "Ehrlich: Wir wissen nur, was wir geprüft haben. Am 28. September 2026 zeigte ihr gesamtes Web (mindtrip.ai, Login, API) eine „Under Construction“-Seite; wir fanden keine Presseberichterstattung, während Reviews vom 22.–23.09. sie weiter unter die besten kostenlosen KI-Reiseplaner einreihen. Wir spekulieren nicht über Ursachen oder Zukunft — prüfe den aktuellen Stand direkt bei ihnen."
     },
-    "sources": "Der Vergleich beruht auf öffentlich zugänglichen Bewertungen (2025–2026) und der redaktionellen Analyse der Plattform (September 2026). Mehr: <linkSources>Datenquelle</linkSources> · <linkTrust>Vertrauen und Sicherheit</linkTrust> · <linkAbout>über die Seite</linkAbout>"
+    "sources": "Der Vergleich beruht auf öffentlich zugänglichen Bewertungen (2025–2026) und der redaktionellen Analyse der Plattform (September 2026). Mehr: <linkSources>Datenquelle</linkSources> · <linkTrust>Vertrauen und Sicherheit</linkTrust> · <linkAbout>über die Seite</linkAbout>",
+    "ctaMap": "Karte öffnen",
+    "ctaCommunity": "Community-Pläne ansehen",
+    "fieldBadge": "Feld · geprüft am 28.09.2026",
+    "fieldTitle": "Das Feld hat sich bewegt — was wir am 28. September 2026 live geprüft haben",
+    "fieldIntro": "Ein ehrlicher Vergleich braucht datierte Prüfungen, keine ewigen Behauptungen. Dies sind punktuelle Befunde unserer eigenen Prüfungen (öffentlicher Seitenzugriff, offizielle Quellen) — ändert sich das Feld, aktualisieren wir diesen Abschnitt.",
+    "field": {
+      "mindtripTitle": "Mindtrip: das gesamte Web-Erbe ist unerreichbar",
+      "mindtripDesc": "Bei unserer Prüfung am 28.09.2026 zeigten mindtrip.ai, Login und API durchweg eine „Under Construction“-Seite (die Weiterleitung führt auf ihr Bild-CDN). Wir fanden keine Presseberichterstattung zum Ausfall, während Reviews vom 22.–23.09. Mindtrip weiter unter den besten Tools führen — der Review-Zyklus hinkt der Realität hinterher. Über die Ursache raten wir nicht; prüfe den aktuellen Stand direkt bei ihnen.",
+      "laylaTitle": "Layla: für viele Besucher hinter einer Wand",
+      "laylaDesc": "Bei unseren Prüfungen lieferte layla.ai den Fehler 429 und eine Browser-Sicherheitsprüfung; die frühere Marketing-Domain itslayla.com ist heute ein unverbundener Mode-Shop. Die Expedia Group hat Layla am 31.07.2026 übernommen — die Chat-first-Funnels der Kategorie laufen jetzt auf OTA-Geld, was nicht automatisch bessere Erlebnisse für jeden Besucher bedeutet.",
+      "googleTitle": "Google: generische KI-Reiserouten sind jetzt gratis",
+      "googleDesc": "Nach Googles offizieller Blog-Zeitleiste (Nov 2025 → Aug 2026) können AI Mode und Gemini kostenlos einen Reiseplan erstellen. „Eine KI schreibt deinen Plan“ ist kein Unterscheidungsmerkmal mehr — Daten-Tiefe, überprüfbare Quellen und Offline-Nutzung schon."
+    },
+    "fieldNote": "Dies sind datierte Punktprüfungen — keine Daueraussagen. Kommt Mindtrip zurück (und wir hoffen es), aktualisieren wir diesen Abschnitt; der Vergleich bleibt in beide Richtungen ehrlich."
   },
   "marketplace": {
     "recsWhy": "Warum: {why}",

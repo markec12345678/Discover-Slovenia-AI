@@ -48,7 +48,7 @@ export async function GET(req: Request) {
       `- [Doživetja](${base}/dozivetja): izkušnje in aktivnosti z neposrednimi rezervacijami.`,
       `- [Tržnica](${base}/trznica): lokalni izdelki in darila slovenskih ponudnikov.`,
       `- [Vodiči](${base}/vodici): vodniki po tipih potovanj.`,
-      `- [Primerjava AI načrtovalcev](${base}/primerjava): iskrena primerjava splošnih AI načrtovalcev (Mindtrip, Layla, Wanderlog) s specializom za Slovenijo — brez prijave, slovenščina in angleščina, geo-validacija, lokalne rezervacije.`,
+      `- [Primerjava AI načrtovalcev / Mindtrip alternativa](${base}/primerjava): iskrena primerjava splošnih AI načrtovalcev (Mindtrip, Layla, Wanderlog) s specializom za Slovenijo — brez prijave, 4 jeziki (SL/EN/IT/DE), geo-validacija, lokalne rezervacije; terenska sekcija z datirano preverbo (Mindtripov celoten splet nedosegljiv ob preverbi 28. 9. 2026, Layla za bot-zidom, Google komoditizacija generičnih itinerarjev).`,
       `- [O strani](${base}/o-strani): metodologija, viri podatkov in uredniška načela (E-E-A-T).`,
       `- [RSS](${base}/rss.xml): kanal novih vodnikov in strani.`,
       "",

@@ -110,3 +110,6 @@ e2e-fa1-shots-2/
 
 # W1: prevajalski predpomnilnik (LLM batch cache — nikoli v repo)
 .translate-cache/
+
+# one-off local E2E runner scripts (audit artifacts, not part of the product)
+/w[0-9]*-e2e*.sh

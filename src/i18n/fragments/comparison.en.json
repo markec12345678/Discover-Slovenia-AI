@@ -1,15 +1,15 @@
 {
   "comparison": {
     "meta": {
-      "title": "AI Trip Planner Comparison for Slovenia — No Signup",
-      "description": "An honest comparison of general AI planners (Mindtrip, Layla, Wanderlog) vs. a Slovenia specialist. Plan without an account, in English or Slovenian."
+      "title": "Mindtrip Alternative for Slovenia? An Honest Comparison",
+      "description": "Looking for a Mindtrip alternative? Field-checked 28 Sep 2026: an honest comparison of general AI planners vs. a Slovenia specialist — no signup, 4 languages."
     },
     "badge": "An honest comparison · no signup",
     "title": "Which AI trip planner is right for Slovenia?",
     "intro": "This is not a marketing brochure. Our editorial principle is honesty — so we admit where general planners beat us, and show where a Slovenia specialist gives you more. The decision is yours.",
-    "updated": "Updated: 17 September 2026. Comparisons age — check the date before deciding.",
+    "updated": "Updated: 28 September 2026. Comparisons age — check the date before deciding.",
     "generalistsTitle": "What general AI planners do well",
-    "generalistsIntro": "Mindtrip, Layla, Wanderlog, ChatGPT and peers are good products. For these cases, they are the right choice:",
+    "generalistsIntro": "Mindtrip, Layla, Wanderlog, ChatGPT and kin are good products (for current availability see the field report above). A generalist is the right choice for:",
     "generalists": {
       "coverageTitle": "Global coverage",
       "coverageDesc": "Tokyo, Lisbon and Patagonia in the same chat. We cover Slovenia only.",
@@ -60,7 +60,7 @@
         "language": {
           "label": "Slovenian language",
           "general": "English or machine translation",
-          "ours": "Slovenian is core to the product (and English)"
+          "ours": "Four languages as product core (SL/EN/IT/DE)"
         },
         "booking": {
           "label": "Bookings",
@@ -92,7 +92,7 @@
     "notForYouTitle": "When Discover Slovenia AI is NOT right for you",
     "notForYouBody": "If you are planning a cross-border trip, need flights or a hotel abroad — pick a generalist (Layla, Wanderlog, or a ChatGPT/Gemini chat). That is fine; we use them for our own foreign trips too. We would love to see you on the Slovenian leg.",
     "ctaTitle": "Try it without an account",
-    "ctaBody": "From question to itinerary: 30 seconds. Required account: none. Language: Slovenian or English.",
+    "ctaBody": "From question to plan: 30 seconds. Account required: none. Language: Slovenian, English, Italian or German.",
     "ctaPrimary": "Build my itinerary",
     "ctaSecondary": "Explore destinations",
     "faqTitle": "Frequently asked questions",
@@ -106,8 +106,24 @@
       "q4": "How reliable is your data?",
       "a4": "Destination data is editorially curated, prices and opening hours carry sources, and every itinerary goes through geo-validation with warnings. When we are not sure, it says “verify before visiting”. The methodology is public on the Data sources page.",
       "q5": "I have been using Mindtrip — why switch?",
-      "a5": "Mindtrip is a good generalist; their iOS app remains available, though their website was unreachable as of September 2026 when this was written. For Slovenia trips you get here: planning without an account, Slovenian as a core language, verified local data, and bookings with local providers. Judge for yourself — a no-signup try takes 30 seconds."
+      "a5": "Mindtrip was a good generalist; at our check on 28 Sep 2026 their entire web estate (site, login, API) was unreachable, and we can't judge the cause. For Slovenia trips you get here: planning without an account, four languages, verified local data and bookings with local providers. Judge for yourself — a no-signup trial takes 30 seconds.",
+      "q6": "What happened to Mindtrip?",
+      "a6": "Honestly: we only know what we verified. On 28 September 2026 their entire web estate (mindtrip.ai, login, API) served an \"Under Construction\" page; we found no press coverage of the outage, while reviews from 22–23 Sep still rank it among the best free AI trip planners. We don't speculate about causes or the future — check their site directly for the current state."
     },
-    "sources": "Based on publicly available reviews (2025–2026) and the platform's editorial analysis (September 2026). More: <linkSources>data sources</linkSources> · <linkTrust>trust and safety</linkTrust> · <linkAbout>about</linkAbout>"
+    "sources": "Based on publicly available reviews (2025–2026) and the platform's editorial analysis (September 2026). More: <linkSources>data sources</linkSources> · <linkTrust>trust and safety</linkTrust> · <linkAbout>about</linkAbout>",
+    "ctaMap": "Open the map",
+    "ctaCommunity": "See community plans",
+    "fieldBadge": "Field · verified 28 Sep 2026",
+    "fieldTitle": "The field moved — what we verified live on 28 September 2026",
+    "fieldIntro": "An honest comparison needs dated checks, not eternal claims. These are point-in-time findings from our own verifications (public page access, official sources) — when the field changes, we update this section.",
+    "field": {
+      "mindtripTitle": "Mindtrip: the whole web estate is unreachable",
+      "mindtripDesc": "As of our check on 28 Sep 2026, mindtrip.ai, its login and its API all served an \"Under Construction\" page (the redirect leads to their image CDN). We found no press coverage of the outage, while reviews from 22–23 Sep still rank Mindtrip among the best tools — the review cycle lags reality. We won't guess at the cause; check their site for the current state.",
+      "laylaTitle": "Layla: behind a wall for many visitors",
+      "laylaDesc": "At our checks layla.ai returned HTTP 429 and a browser security checkpoint; the former marketing domain itslayla.com is now an unrelated fashion shop. Expedia Group acquired Layla on 31 Jul 2026 — the chat-first funnels in this category now run on OTA money, which doesn't automatically mean a better experience for every visitor.",
+      "googleTitle": "Google: generic AI itineraries are now free",
+      "googleDesc": "By Google's official blog timeline (Nov 2025 → Aug 2026), AI Mode and Gemini can assemble an itinerary for free. \"An AI writes your plan\" is no longer a differentiator between tools — data depth, verifiable sources and offline use are."
+    },
+    "fieldNote": "These are dated, point-in-time checks — not standing claims. If Mindtrip comes back (and we hope it does), we'll update this section; the comparison stays honest both ways."
   }
 }

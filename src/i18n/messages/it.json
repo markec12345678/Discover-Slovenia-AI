@@ -2242,15 +2242,15 @@
   },
   "comparison": {
     "meta": {
-      "title": "Confronto dei pianificatori di viaggi AI per la Slovenia",
-      "description": "Confronto onesto dei pianificatori AI generalisti (Mindtrip, Layla, Wanderlog) con uno specialista della Slovenia. Pianifica senza registrazione, in italiano o inglese."
+      "title": "Alternativa a Mindtrip per la Slovenia? Confronto onesto",
+      "description": "Cerchi un'alternativa a Mindtrip? Verifica sul campo (28 set 2026): confronto onesto tra generalisti e uno specialista della Slovenia. Senza registrazione, 4 lingue."
     },
     "badge": "Confronto onesto · senza registrazione",
     "title": "Quale pianificatore di viaggi AI è giusto per la Slovenia?",
     "intro": "Questo confronto non è un dépliant marketing. Il nostro principio editoriale è l'onestà — quindi ammettiamo dove i pianificatori generalisti sono migliori di noi e mostriamo dove uno specialista della Slovenia rende di più. La decisione la lasciamo a te.",
-    "updated": "Aggiornato: 17 settembre 2026. I confronti invecchiano — controlla la data prima di decidere.",
+    "updated": "Aggiornato: 28 settembre 2026. I confronti invecchiano — controlla la data prima di decidere.",
     "generalistsTitle": "Cosa fanno benissimo i pianificatori AI generalisti",
-    "generalistsIntro": "Mindtrip, Layla, Wanderlog, ChatGPT e affini sono buoni prodotti. Per i seguenti casi sono la scelta giusta:",
+    "generalistsIntro": "Mindtrip, Layla, Wanderlog, ChatGPT e affini sono buoni prodotti (per la disponibilità attuale vedi il rapporto sul campo qui sopra). Un generalista è la scelta giusta per:",
     "generalists": {
       "coverageTitle": "Copertura globale",
       "coverageDesc": "Un piano per Tokyo, Lisbona e Patagonia nella stessa chat. Noi copriamo solo la Slovenia.",
@@ -2301,7 +2301,7 @@
         "language": {
           "label": "Lingua",
           "general": "Inglese o traduzione automatica",
-          "ours": "Prodotto in sloveno, inglese, italiano e tedesco"
+          "ours": "Quattro lingue come nucleo del prodotto (SL/EN/IT/DE)"
         },
         "booking": {
           "label": "Prenotazioni",
@@ -2333,7 +2333,7 @@
     "notForYouTitle": "Quando Discover Slovenia AI NON fa per te",
     "notForYouBody": "Se pianifichi un viaggio oltre confine, ti servono voli o un hotel all'estero — scegli un generalista (Layla, Wanderlog o una chat con ChatGPT/Gemini). Va bene così; anche noi li usiamo per i viaggi all'estero. Ma ci piace vederti sul tratto sloveno del percorso.",
     "ctaTitle": "Prova senza registrazione",
-    "ctaBody": "Dalla domanda al piano: 30 secondi. Account richiesto: nessuno. Lingua: italiano, inglese, sloveno o tedesco.",
+    "ctaBody": "Dalla domanda al piano: 30 secondi. Account richiesto: nessuno. Lingua: sloveno, inglese, italiano o tedesco.",
     "ctaPrimary": "Crea il mio piano",
     "ctaSecondary": "Esplora le destinazioni",
     "faqTitle": "Domande frequenti",
@@ -2347,9 +2347,25 @@
       "q4": "Quanto sono affidabili i vostri dati?",
       "a4": "I dati delle destinazioni sono curati editorialmente, prezzi e orari hanno fonti, e ogni piano passa da una geo-validazione con avvisi. Quando non siamo sicuri, c'è scritto «verifica prima di visitare». La metodologia è pubblica sulla pagina Fonte dei dati.",
       "q5": "Finora usavo Mindtrip — perché passare?",
-      "a5": "Mindtrip è un buon generalista; la loro app iOS resta disponibile, mentre il loro sito web al momento della scrittura (settembre 2026) era irraggiungibile. Per i viaggi in Slovenia da noi ottieni: pianificazione senza registrazione, l'italiano come lingua del prodotto, dati locali verificati e prenotazioni presso fornitori locali. Giudica tu — la prova senza registrazione dura 30 secondi."
+      "a5": "Mindtrip era un buon generalista; alla nostra verifica del 28 set 2026 tutto il loro web (sito, login, API) era irraggiungibile e non possiamo giudicarne la causa. Per i viaggi in Slovenia qui trovi: pianificazione senza registrazione, quattro lingue, dati locali verificati e prenotazioni con fornitori locali. Giudica tu — la prova senza registrazione richiede 30 secondi.",
+      "q6": "Cosa è successo a Mindtrip?",
+      "a6": "Con onestà: sappiamo solo ciò che abbiamo verificato. Il 28 settembre 2026 tutto il loro web (mindtrip.ai, login, API) mostrava una pagina \"Under Construction\"; non abbiamo trovato copertura stampa, mentre le recensioni del 22–23 set li collocano ancora tra i migliori pianificatori AI gratuiti. Non speculiamo su cause o futuro — verifica lo stato attuale direttamente sul loro sito."
     },
-    "sources": "Il confronto si basa su recensioni pubblicamente accessibili (2025–2026) e sull'analisi editoriale della piattaforma (settembre 2026). Altro: <linkSources>fonte dei dati</linkSources> · <linkTrust>fiducia e sicurezza</linkTrust> · <linkAbout>sul sito</linkAbout>"
+    "sources": "Il confronto si basa su recensioni pubblicamente accessibili (2025–2026) e sull'analisi editoriale della piattaforma (settembre 2026). Altro: <linkSources>fonte dei dati</linkSources> · <linkTrust>fiducia e sicurezza</linkTrust> · <linkAbout>sul sito</linkAbout>",
+    "ctaMap": "Apri la mappa",
+    "ctaCommunity": "Guarda i piani della community",
+    "fieldBadge": "Teren · verificato il 28 set 2026",
+    "fieldTitle": "Il terreno si è mosso — cosa abbiamo verificato in diretta il 28 settembre 2026",
+    "fieldIntro": "Un confronto onesto richiede verifiche datate, non affermazioni eterne. Questi sono rilievi puntuali delle nostre verifiche (accesso pubblico alle pagine, fonti ufficiali) — quando il terreno cambia, aggiorniamo questa sezione.",
+    "field": {
+      "mindtripTitle": "Mindtrip: tutto il loro web è irraggiungibile",
+      "mindtripDesc": "Alla verifica del 28 set 2026 mindtrip.ai, il login e l'API mostravano tutti una pagina \"Under Construction\" (il reindirizzamento porta al loro CDN delle immagini). Non abbiamo trovato copertura stampa dell'interruzione, mentre le recensioni del 22–23 set li indicano ancora tra i migliori strumenti — il ciclo delle recensioni è in ritardo rispetto alla realtà. Non speculiamo sulla causa; verifica lo stato attuale direttamente da loro.",
+      "laylaTitle": "Layla: dietro un muro per molti visitatori",
+      "laylaDesc": "Alle nostre verifiche layla.ai restituiva l'errore 429 e un controllo di sicurezza del browser; l'ex dominio marketing itslayla.com è oggi un negozio di moda non correlato. Il gruppo Expedia ha acquisito Layla il 31 lug 2026 — i funnel chat-first della categoria girano ormai su denaro OTA, che non significa automaticamente un'esperienza migliore per ogni visitatore.",
+      "googleTitle": "Google: gli itinerari AI generici ora sono gratuiti",
+      "googleDesc": "Secondo la timeline ufficiale dei blog Google (nov 2025 → ago 2026), AI Mode e Gemini sanno comporre un itinerario gratis. \"Un'AI ti scrive il piano\" non è più un differenziale tra strumenti — lo sono la profondità dei dati, le fonti verificabili e l'uso offline."
+    },
+    "fieldNote": "Sono verifiche puntuali datate — non affermazioni permanenti. Se Mindtrip torna (e lo speriamo), aggiorneremo questa sezione; il confronto resta onesto in entrambe le direzioni."
   },
   "marketplace": {
     "recsWhy": "Perché: {why}",
