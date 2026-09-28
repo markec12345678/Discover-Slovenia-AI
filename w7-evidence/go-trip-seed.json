@@ -1,0 +1,51 @@
+{
+  "version": 2,
+  "kind": "itinerary",
+  "savedAt": "2026-09-28T16:00:00.000Z",
+  "view": {
+    "title": { "sl": "Bled in okolica", "en": "Bled and its surroundings" },
+    "days": [
+      {
+        "dateLabel": { "sl": "28. september", "en": "28 September" },
+        "date": "2026-09-28",
+        "entries": [
+          {
+            "key": "day1-blejski-grad",
+            "category": "attractions",
+            "icon": "🏰",
+            "title": "Blejski grad",
+            "providerLabel": { "sl": "Zavod za varstvo kulturne dediščine", "en": "Institute for Cultural Heritage" },
+            "time": { "start": "18:00" },
+            "location": "Grajska cesta 25, Bled",
+            "lat": 46.3614,
+            "lng": 14.0936,
+            "durationMin": 90,
+            "status": "INFO",
+            "statusLabel": { "sl": "Samo informacija — brez rezervacije", "en": "Information only — no booking" },
+            "cancellation": { "sl": "Ni rezervacije — nič za preklicati.", "en": "No booking — nothing to cancel." },
+            "bookingId": null
+          },
+          {
+            "key": "day1-vintgar",
+            "category": "attractions",
+            "icon": "🏞️",
+            "title": "Soteska Vintgar",
+            "providerLabel": { "sl": "Zavod Vintgar", "en": "Vintgar Institute" },
+            "time": { "start": "20:00" },
+            "location": "Vintgarska cesta 2, Gorje",
+            "lat": 46.3672,
+            "lng": 14.1061,
+            "durationMin": 120,
+            "status": "INFO",
+            "statusLabel": { "sl": "Samo informacija — brez rezervacije", "en": "Information only — no booking" },
+            "cancellation": { "sl": "Ni rezervacije — nič za preklicati.", "en": "No booking — nothing to cancel." },
+            "bookingId": null
+          }
+        ]
+      }
+    ],
+    "externalCards": [],
+    "confirmation": { "confirmedCount": 0, "note": { "sl": "", "en": "" } },
+    "generatedAt": "2026-09-28T16:00:00.000Z"
+  }
+}

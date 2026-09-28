@@ -7,6 +7,83 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.138.0] — 2026-09-28 (W7: VOICE VODIČ V GO MODE — Issue #15, val V2; zadnja vrzel iz workflow benchmarka Alma)
+
+### Dodano
+
+- **GUMB »PREBERI« NA POSTANKIH GO MODE** (vrzel W7 — Alma roadmap
+  »zgodbe ob pravem trenutku na poti«; mi smo imeli TTS danes le v
+  klepetu in povzetku dneva načrta). Na /na-poti ima NASLEDNJA kartica
+  poln gumb, preostali postanki dneva pa ikonski: izgovor postanka
+  (brskalniški speechSynthesis — 0 strežniških klicev, deluje tudi brez
+  signala). Pripoved se gradi IZKLJUČNO iz dejstev kartice (naslov,
+  ponudnik, termin, lokacija, GPS-razdalja s »premica« razkritjem,
+  priporočeno trajanje) — isto znanje kot zaslon, povedano z glasom
+  (telefon v žepu, hoja proti postanku).
+- **GUMB »KAJ JE V BLIŽINI« NA GPS KARTICI** (speechSynthesis +
+  geolokacija, točno kot v benchmarku): destinacije okoli živega GPS
+  (ime + razdalja + smer), deterministično iz destinacijskega paketa na
+  napravi — deluje tudi offline. SAMO kadar obstaja živi položaj
+  (izklop GPS ga počisti → gumb izgine) in vsaj ena destinacija v
+  radiju 100 km (0 → gumba ni — iskrena odsotnost, kanon DistanceChip).
+- **W8 načelo razpršitve v govoru**: destinacije geo-ob postankih dneva
+  (≤ 2 km) se IZVZAMEJO iz »kaj je v bližini« — bližina je za
+  odkrivanje, ne ponavljanje dneva.
+- **SL številke V BESEDAH v govoru** (ista izmera kot itinerary-audio:
+  števke sredi SL stavka bi brskalniški glas izgovoril kot angleške
+  besede) — nova čista plast v go-audio.ts: kardinalni števnik 1–100,
+  fraze za kilometre/minute/ure s pravilno sklanjatvijo (»dva kilometra
+  proti severozahod, premica«, »dve uri«, »devetindevetdeset minut«),
+  vključno s pravilom, da je sestavljeni »1« vedno »ena«
+  (enaindvajset, enaintrideset). EN pusti števke (nativna izgovorjava).
+- **Čisti sloj `src/lib/journey/go-audio.ts`** (0 omrežja, 0 React, 0 AI
+  žetonov — Issue #9): buildStopNarration, nearbyDestinations,
+  buildNearbyNarration, GO_AUDIO_LABELS (SL/EN — Go Mode je SL/EN
+  površina, kanon go-view GO_LABELS).
+- **`GoAudioButton`** (src/components/sections/go-audio-button.tsx):
+  predvajanje PO KOSIH (chunkNarration ≤ 960 — sinteza na nekaterih
+  platformah tiho poreže dolge izgovore), en govor naenkrat
+  (toggle ustavi), iskrena napaka (role=alert, Go Mode dela naprej),
+  DOSTOPEN TEKSTOVNI PADEC za brskalnik brez govorne sinteze (vzorec
+  TASK 89: vsebina ne izgine).
+- **Telemetrija**: OBSTOJEČI dogodek `itinerary_audio_play` (0 novih
+  imen, strežniška bela lista nespremenjena) z novo vrednostjo
+  `surface: "go"` + `kind: stop|nearby` (doseg W7; vzorec W4
+  »hero-seasonal«).
+- **Regresijski test `w7-go-audio.test.ts`** (40 testov): števila v
+  besedah (rodovi, sestavljene oblike, padci >100), pripoved postanka
+  ×2 jezika (vse povedi, manjkajoča dejstva, fail-closed naslov,
+  timeNote se NE pripoveduje, brez števk v SL, premica razkritje),
+  nearby (radij/šteto/razvrstitev/izvzem postankov/determinizem/prazna
+  kategorija), chunking kompozibilnost, source contract (priključek na
+  3 površine Go Mode, geo.position fail-closed, telemetrija brez novih
+  imen, DistanceChip/NavButton varovala, tekstovni padec, pariteta
+  label, čist sloj).
+
+### Popravljeno
+
+- **slCardinal sestavljeni »1«**: pravilna slovenščina za 21/31/41/… je
+  »enaindvajset« (sestavljeni »1« je vedno »ena«) — popravljen iz
+  »enindvajset« v isti commit uvajanju (nikoli ni prišel v releas).
+
+### Varovala (ZERO FEATURE LOSS)
+
+- **Zaslon Go Mode NESPREMENJEN** (DistanceChip, LegChip, ETA, vreme,
+  NavButton, opravljanje — gumbi so DODATNE površine na obstoječih
+  karticah; kanon cardinalLabel/GO_LABELS nedotaknjen, test task64
+  zelen).
+- **Manjkajoče dejstvo → manjka poved** (NE izmišljujemo termina,
+  lokacije, razdalje); prazen naslov → gumba NI; timeNote (meta-razlaga)
+  se NE pripoveduje — ostane na zaslonu (kanon TASK 91).
+- **Razdalja v govoru je PREMICA — izrecno povedana** (ista resnica kot
+  DistanceChip na zaslonu, ne vožnja).
+- Izklop GPS počisti položaj → »kaj je v bližini« naravno izgine
+  (use-geolocation.stop → setPosition(null)).
+- Zasebnost nespremenjena: destinacije so javni paket; GPS živi samo v
+  pomnilniku seje (0 novih shranjevanj).
+
+---
+
 ## [1.137.0] — 2026-09-28 (W8: RAZPRŠITEV KOT AI NAČELO — Issue #15, val V2; vrzel iz workflow benchmarka Alma)
 
 ### Dodano

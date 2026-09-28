@@ -79,6 +79,11 @@ import {
   goNavLinks,
   isCoarsePointer,
 } from "@/lib/journey/go-nav";
+import { GoAudioButton } from "@/components/sections/go-audio-button";
+import {
+  buildNearbyNarration,
+  buildStopNarration,
+} from "@/lib/journey/go-audio";
 
 // ---------------------------------------------------------------------------
 // Oznake (L vzorec — enak kanon kot journey-planner/journey-trip)
@@ -546,6 +551,35 @@ export function GoMode() {
     return { unknown: true as const };
   }, [view, now, geo.position, lang]);
 
+  // ----------------------------------------------------------------------
+  // W7 — VOICE VODIČ: skripti izgovora (deterministično iz dejstev istega
+  // pogleda, ki ga vidi zaslon — Issue #9 ZERO-AI). »Kaj je v bližini«
+  // izvzame geo-točke današnjih postankov (W8 načelo razpršitve:
+  // bližina je za ODKRIVANJE, ne ponavljanje dneva). Izklop GPS počisti
+  // položaj → gumb naravno izgine (fail-closed, kanon DistanceChip).
+  // ----------------------------------------------------------------------
+  /** Geo-točke današnjih postankov (izvzem iz »kaj je v bližini«). */
+  const dayStopCoords = useMemo(() => {
+    if (!view) return [];
+    return [view.next, ...view.remaining, ...view.done]
+      .filter((c): c is GoEntryCard => c != null)
+      .map((c) =>
+        typeof c.entry.lat === "number" && typeof c.entry.lng === "number"
+          ? { lat: c.entry.lat, lng: c.entry.lng }
+          : null
+      )
+      .filter((p): p is { lat: number; lng: number } => p !== null);
+  }, [view]);
+  /** Pripoved »kaj je v bližini« — SAMO z živim GPS (sicer null → brez
+   *  gumba); 0 destinacij v radiju → null (iskrena odsotnost). */
+  const nearbyScript = useMemo(
+    () =>
+      geo.position
+        ? buildNearbyNarration(geo.position, lang, dayStopCoords)
+        : null,
+    [geo.position, lang, dayStopCoords]
+  );
+
   const toggleDone = useCallback((key: string) => {
     setDone((prev) => {
       const next = { ...prev };
@@ -851,6 +885,16 @@ export function GoMode() {
                   {L.duration[lang]} ~{view.next.entry.durationMin} {L.min[lang]}
                 </Badge>
               )}
+              {/* W7 — glasovni vodik: izgovor NASLEDNJEGA postanka (ista
+                  dejstva kot zaslon, povedana z brskalniškim glasom —
+                  telefon v žepu, hoja proti postanku). Fail-closed: brez
+                  uporabne pripovedi ga NI (nikoli 0-dejavni gumb). */}
+              <GoAudioButton
+                script={buildStopNarration(view.next, lang)}
+                lang={lang}
+                kind="stop"
+                title={view.next.entry.title}
+              />
             </div>
 
             {/* ISSUE #4 §9: status ur ob TRENUTKU (OPEN/CLOSED/UNKNOWN)
@@ -934,6 +978,15 @@ export function GoMode() {
             </p>
           </div>
           <div className="flex shrink-0 gap-2">
+            {/* W7 — »kaj je v bližini«: destinacije okoli živega GPS
+                (deterministično iz paketa — deluje tudi brez signala).
+                SAMO kadar obstaja položaj (izklop GPS ga počisti) in
+                pripoved (0 destinacij v radiju → iskrena odsotnost). */}
+            <GoAudioButton
+              script={nearbyScript}
+              lang={lang}
+              kind="nearby"
+            />
             {geo.status === "idle" || geo.status === "denied" || geo.status === "unavailable" || geo.status === "error" ? (
               <Button
                 onClick={geo.start}
@@ -1038,6 +1091,16 @@ export function GoMode() {
                     />
                   </div>
                   <div className="flex shrink-0 gap-2">
+                    {/* W7 — glasovni vodik tudi na preostalih postankih
+                        dneva (samo ikona — kartica je kompaktna; polno
+                        dejanje razkrije ARIA oznaka). */}
+                    <GoAudioButton
+                      script={buildStopNarration(card, lang)}
+                      lang={lang}
+                      kind="stop"
+                      title={card.entry.title}
+                      iconOnly
+                    />
                     <NavButton
                       card={card}
                       lang={lang}
