@@ -128,6 +128,14 @@ export type PlannerEventName =
   // CAS PATCH prek updateItinerary; meri, ali skupinsko odločanje prek @AI
   // dejansko spremeni načrt (komplement chat_place_added za osebni klepet).
   | "chat_group_place_added"
+  // W1 KPI (Issue #15, benchmark §6): jezikovni dogodek seje — izstreli se
+  // ob prvem prikazu strani v danem locale-u (root layout, enkrat na
+  // (seja, locale) par — največ 4 na sejo). Meri "delež sej v it/de locale",
+  // vrstico 1 KPI načrta za W1: brez tega dogodka je jezik merljiv ŠELE v
+  // planner_started (le seje, ki začnejo načrtovati). Locale določa URL
+  // prefix (proxy.ts — deterministično, brez ugibanja Accept-Language);
+  // preklop srednje-seje (sl → it) se iskreno šteje v OBA jezika.
+  | "session_locale"
   // W3 (Issue #15): uporabnik je preklopil list "Priljubljene" v razdelke
   // (view destination|theme; groups = št. razdelkov; items) — meri Mindtripov
   // vzorec "someday collections" (delež uporabe zbirk nad ploščnim seznamom).
@@ -302,6 +310,46 @@ export function trackIngestCompleted(mode: IngestMode): void {
     mode,
     session_count: bumpIngestCount(mode),
   });
+}
+
+// ---------------------------------------------------------------------------
+// W1 KPI (Issue #15, benchmark §6): jezikovni dogodek seje — delež sej v
+// sl/en/it/de. Enkrat na (seja, locale) par: sessionStorage varovalo (isti
+// vzorec kot dsa_planner_ingest_count — brez PII, brez piškotkov na strežniku)
+// + v-spominu Set kot padec za zasebni način (dogodek se NE ponovi na vsakem
+// kliku znotraj enega nalaganja strani).
+// ---------------------------------------------------------------------------
+
+const LOCALE_SEEN_KEY = "dsa_planner_locale_seen";
+const localeSeenInMemory = new Set<string>();
+
+/** Ali je ta locale v tej seji brskalnika ŽE izstreljen (bodi false → preskoči).
+ *  sessionStorage (ne localStorage) = enkrat NA SEJO brskalnika; preklop
+ *  locale-a srednje-seje (sl → it) veljavno izstreli DRUG dogodek — meri
+ *  "delež sej, ki so uporabile locale X", ne le prvi prikaz. */
+function shouldFireSessionLocale(locale: string): boolean {
+  if (localeSeenInMemory.has(locale)) return false;
+  localeSeenInMemory.add(locale);
+  try {
+    const raw = sessionStorage.getItem(LOCALE_SEEN_KEY);
+    const seen = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    if (seen[locale] === true) return false;
+    seen[locale] = true;
+    sessionStorage.setItem(LOCALE_SEEN_KEY, JSON.stringify(seen));
+  } catch {
+    // Zasebni način / poln sessionStorage — nad spominom Set-a ni vztrajnosti:
+    // ob POLNEM reloadu v zasebnem načinu se dogodek ponovi (enkrat na
+    // nalaganje, NE na vsak klik) — iskrena meja brez piškotkov.
+  }
+  return true;
+}
+
+/** W1 KPI: izstreli `session_locale { locale }` enkrat na (seja, locale).
+ *  Kliče ga SessionLocaleKpi v root layoutu (useLocale iz next-intl —
+ *  locale določa proxy.ts URL prefix, nikoli klientni ugib). */
+export function trackSessionLocale(locale: string): void {
+  if (!shouldFireSessionLocale(locale)) return;
+  trackPlannerEvent("session_locale", { locale });
 }
 
 /** Fire-and-forget dogodek — POST /api/analytics/event (nikoli ne vrže).

@@ -7,6 +7,54 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.139.0] — 2026-09-28 (W1 KPI: JEZIKOVNI DOGADEK SEJE — Issue #15, benchmark §6; zadnja neizvedena vrstica KPI načrta)
+
+### Dodano
+
+- **`session_locale` — jezikovni dogodek seje** (W1 KPI, benchmark §6
+  vrstica 1: »delež sej v it/de locale — jezikovni event dodati«).
+  Vsebinski valovi W1 so odprli IT/DE (1.126–1.129), a je meritev
+  ostala neizvedena: jezik je bil merljiv ŠELE v `planner_started`
+  { locale } — torej samo za seje, ki so že začele načrtovati. Nova
+  komponenta `SessionLocaleKpi` (root layout, brez UI — vrne null,
+  0 CLS) izstreli dogodek ob prvem prikazu katerekoli strani v danem
+  locale-u: **enkrat na (seja, locale) par, največ 4 na sejo**;
+  preklop srednje-seje (sl → it) se iskreno šteje v OBA jezika
+  (meri »delež sej, ki so uporabile locale X«). Skupaj z obstoječim
+  `planner_started{locale}` → popoln jezikovni konverzijski lijak
+  (KPI vrstica 2: it/de seja → generiran načrt).
+- **Varovala (isti kanon kot dsa_planner_ingest_count):**
+  sessionStorage `dsa_planner_locale_seen` (enkrat NA SEJO brskalnika,
+  brez PII, brez piškotkov na strežniku) + v-spominu Set kot padec za
+  zasebni način (fail-open — dogodek se izstreli vseeno, a ENKRAT na
+  nalaganje strani, ne na vsak klik); pokvarjen JSON v storage →
+  neviden (0 izgubljenih meritev). Locale prihaja IZKLJUČNO iz
+  `useLocale()` (next-intl) — določa ga proxy.ts iz URL prefixa,
+  klient nikoli ne ugiba brskalniškega jezika (determinizem kanona).
+- **Telemetrija po kanonu paritete W3:** dogodek je v klientnem
+  `PlannerEventName` union-u IN strežniški `VALID_EVENTS` listi
+  (preverja ga regresijski test w3 paritete — 0 tihih 400) + vrstica
+  v `docs/ANALYTICS-EVENTS.md` (zlata pot, pred `planner_started` —
+  najzgodnejši korak seje).
+
+### Testirano
+
+- Nov regresijski test `w1-session-locale-kpi.test.ts` (13): telemetrija
+  (union + whitelist + docs + izvoz + ključ), funkcionalno z mocki
+  (enkrat-na-(seja, locale), preklop srednje-seje, persistenca
+  ključa, fail-open enkrat-na-nalaganje, pokvarjen JSON), source-contract
+  komponente (use client, useLocale, effect [locale], return null, brez
+  ugibanja klientnega jezika) + montaža v layoutu znotraj
+  NextIntlClientProvider + lijak s `planner_started{locale}`.
+- Polna suite: **4113 testov = 4104 pass + 9 prej-oddanih okoljskih
+  OSRM napak** (enak nabor kot W4–W8, 0 novih). `tsc` 0 napak,
+  `eslint` 0 napak.
+- Živi E2E v brskalniku: glej `w1-kpi-evidence/` (dogodek se res
+  izstreli, reload NE podvoji, IT stran izstreli drugi locale v isti
+  seji).
+
+---
+
 ## [1.138.0] — 2026-09-28 (W7: VOICE VODIČ V GO MODE — Issue #15, val V2; zadnja vrzel iz workflow benchmarka Alma)
 
 ### Dodano

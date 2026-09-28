@@ -152,6 +152,11 @@ const VALID_EVENTS = new Set([
   "chat_group_ai_asked",
   // W2: kraj iz AI odgovora dodan v DELJENO pot (CAS PATCH)
   "chat_group_place_added",
+  // W1 KPI (Issue #15, benchmark §6): jezikovni dogodek seje (locale;
+  // enkrat na (seja, locale) par, kliče ga SessionLocaleKpi v root layoutu)
+  // — meri delež sej v sl/en/it/de, preden katerikoli uporabnik začne
+  // načrtovalnik (komplement planner_started{locale} = konverzijski lijak)
+  "session_locale",
   // W9 (Issue #15): klik kontekstualnega CTA vsebine → klepet s pred-izpolnjenim vprašanjem
   "chat_ask_cta_clicked",
   // 1.123 (G5): pripen/odpin persistent split map ob klepetu

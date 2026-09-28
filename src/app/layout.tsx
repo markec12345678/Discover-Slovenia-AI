@@ -10,6 +10,7 @@ import { ServiceWorkerRegister } from "@/components/sw-register";
 import { PwaUpdateToast } from "@/components/pwa/pwa-update-toast";
 import { CartDrawer } from "@/components/cart-drawer";
 import { MachineTranslationNotice } from "@/components/mt-notice";
+import { SessionLocaleKpi } from "@/components/session-locale-kpi";
 import {
   WebSiteJsonLd,
   OrganizationJsonLd,
@@ -106,6 +107,10 @@ export default async function RootLayout({
                   za it/de (glej mt-notice.tsx; proxy guard zagotavlja, da
                   ta locale nastopi le na IT/DE whitelistnih poteh). */}
               <MachineTranslationNotice />
+              {/* W1 KPI (Issue #15, benchmark §6): jezikovni dogodek seje —
+                  brez UI (vrne null), izstreli session_locale enkrat na
+                  (seja, locale) par; locale iz useLocale (proxy.ts). */}
+              <SessionLocaleKpi />
               {children}
               {/* Košarica tržnice — globalno montirana (odpre se iz navigacije ali ob dodajanju) */}
               <CartDrawer />
