@@ -914,6 +914,15 @@
     "readInEnglish": "Auf Englisch lesen",
     "readInSlovenian": "Auf Slowenisch lesen"
   },
+  "a11y": {
+    "menuAria": "Barrierefreiheits-Einstellungen",
+    "menuTitle": "Barrierefreiheit",
+    "contrastLabel": "Hoher Kontrast",
+    "contrastHint": "Kräftigere Farben und Ränder für leichteres Lesen.",
+    "readingLabel": "Lesemodus",
+    "readingHint": "Größere Schrift und großzügigerer Zeilenabstand.",
+    "osNote": "Ohne Auswahl folgen wir der Kontrasteinstellung deines Systems."
+  },
   "about": {
     "badge": "Über die Seite",
     "title": "Über Discover Slovenia AI",

@@ -7,6 +7,55 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.135.0] — 2026-09-28 (W5: VISOK KONTRAST + BRALNI NAČIN — Issue #15, val V2; vrzel iz workflow benchmarka STB)
+
+### Dodano
+
+- **VISOK KONTRAST** (vrzel W5 — STB portal kot nacionalni standard
+  dostopnosti). Nova PLAST nad obstoječo arhitekturo CSS spremenljivk
+  (Tailwind 4 `@theme inline` → `--background` …): `.contrast-high` razred
+  na `<html>` prepisuje paleto za svetlo (čisto bela + skoraj črno, meje
+  0.55 namesto 0.9, utišano besedilo 0.28 namesto 0.5) IN temno temo
+  (čisto črno/belo, meje 55 % bele). NIČ nove infrastrukture — dark mode,
+  reduced-motion in ARIA ostanejo nespremenjeni (regresijsko preverjeno).
+- **BRALNI NAČIN** (tipografska povečava): `html.reading-mode` dvigne
+  osnovni korak pisave na 112,5 % (vse rem vrstice se skalirajo
+  sorazmerno — kot brskalnikovo povečanje, varno za flex/grid vstave) +
+  gostejši vrstični presledek odstavkov/seznamskih elementov (1,7).
+  Iskrena meja: to je povečava tipografije, NE preoblikovanje strani v
+  golo besedilo (zemljevidi/karte/dialogi ostanejo — zero feature loss).
+- **Nastavitveni meni ob preklopu teme** (`A11yControls`): ikona
+  dostopnosti v navigaciji (desktop: ob preklopu teme; mobilni: v Sheet
+  meniju ob jezikovnem preklopu) odpre dropdown z dvema stikaloma
+  (shadcn Switch — keyboard dostopna, ≥44px vrstice). Aktivni način
+  pokaže točko na ikoni. vsa nizovje v novem `a11y` slovarju ×4 jeziki.
+- **Stanje preživi osvežitve**: localStorage `dsa-a11y` + NO-FLASH skript
+  v layout `<head>` naloži razrede PRED prvim barvanjem (isti ključ, isti
+  vzorec kot next-themes). Korupcija/tuje vrednosti varno padejo na
+  privzeto (`parseA11yPrefs` — čista funkcija, testirana).
+- **Regresijski test `w5-a11y-modes.test.ts`** (19 testov): parse/resolve/
+  razredi (vključno "eksplicitni OFF preglasi OS"), CSS source contract
+  (svetla + temna paleta, `:not(.contrast-off)` varovalo, bralni korak),
+  Navigation vhodne točke (desktop + mobilni), hydration varnost,
+  obstoječa infrastruktura nespremenjena, i18n 7 ključev ×4.
+
+### Varovala (ZERO FEATURE LOSS)
+
+- **OS spoštovanje (zahteva benchmarka)**: brez shranjene izbire CSS
+  upošteva `@media (prefers-contrast: more)` — vrednosti se primejo, RAZEN
+  če je uporabnik izrecno izklopal (`.contrast-off` varovalni razred —
+  človekova izbira zmaga nad nastavitvijo OS; stikalo vedno zapiše
+  eksplicitno izbiro). `matchMedia` poslušalec osveži stanje stikala tudi
+  ob spremembi OS nastavitve med sejo.
+- Dark mode / reduced-motion / ARIA / prilagojeni scrollbar: nespremenjeni
+  (grep varovala v testu).
+- Stanje stikal se izrisuje šele po mountu (checked=false) — ni lažnega
+  stanja med hidracijo.
+- Ikona nad herojem sledi isti lupini kot preklop teme (bela pisava,
+  hover belo); v Sheet meniju svetla lupina.
+
+---
+
 ## [1.134.0] — 2026-09-28 (W4: SEZONSKI PAS HEROJA — Issue #15, val V2; vrzel iz workflow benchmarka STB)
 
 ### Dodano

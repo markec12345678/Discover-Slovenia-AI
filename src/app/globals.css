@@ -134,6 +134,124 @@
   }
 }
 
+/* ============================================================================
+   W5 (Issue #15, 1.135.0): VISOK KONTRAST + BRALNI NAČIN
+   ============================================================================
+   STB portal kot nacionalni standard dostopnosti (vrzel W5). Oba načina
+   sta PLAST nad obstoječo arhitekturo CSS spremenljivk — NIČ nove
+   infrastrukture, dark mode / reduced-motion / ARIA ostanejo nespremenjeni.
+
+   Prednost (varovala):
+     1. EKPLICITNA uporabničeva izbira (razred na <html> iz localStorage —
+        isti vir kot next-themes): .contrast-high / .contrast-off
+     2. OS zahteva (@media prefers-contrast: more) — velja, RAZEN če je
+        uporabnik izrecno izklopal (.contrast-off)
+     3. Privzeta paleta (zgoraj :root / .dark)
+
+   .contrast-off sam ničen ne spremeni — je LE varovalni "ne" proti
+   OS povpraševanju (izrecna izbira človeka zmaga nad nastavitvijo OS).
+   ============================================================================ */
+
+/* --- 1) OS zahteva po večjem kontrastu (privzeto ON, če uporabnik ni
+       izrecno rekel ne) — ISTA paleta kot eksplicitni .contrast-high --- */
+@media (prefers-contrast: more) {
+  :root:not(.contrast-off) {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.1 0.01 150);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.1 0.01 150);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.1 0.01 150);
+    --primary: oklch(0.38 0.11 158);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.95 0.005 145);
+    --secondary-foreground: oklch(0.2 0.02 150);
+    --muted: oklch(0.95 0.005 145);
+    --muted-foreground: oklch(0.28 0.01 150);
+    --accent: oklch(0.95 0.02 50);
+    --accent-foreground: oklch(0.25 0.06 40);
+    --destructive: oklch(0.45 0.22 27);
+    --border: oklch(0.55 0.01 145);
+    --input: oklch(0.45 0.01 145);
+    --ring: oklch(0.38 0.11 158);
+  }
+  html.dark:not(.contrast-off) {
+    --background: oklch(0.1 0 0);
+    --foreground: oklch(1 0 0);
+    --card: oklch(0.13 0 0);
+    --card-foreground: oklch(1 0 0);
+    --popover: oklch(0.13 0 0);
+    --popover-foreground: oklch(1 0 0);
+    --primary: oklch(0.8 0.12 160);
+    --primary-foreground: oklch(0.1 0 0);
+    --secondary: oklch(0.24 0 0);
+    --secondary-foreground: oklch(1 0 0);
+    --muted: oklch(0.24 0 0);
+    --muted-foreground: oklch(0.88 0.005 145);
+    --accent: oklch(0.4 0.06 50);
+    --accent-foreground: oklch(1 0 0);
+    --destructive: oklch(0.72 0.19 22);
+    --border: oklch(1 0 0 / 55%);
+    --input: oklch(1 0 0 / 60%);
+    --ring: oklch(0.8 0.12 160);
+  }
+}
+
+/* --- 2) EKPLICITNA uporabničeva izbira — ista paleta, po OS bloku,
+       da izrecni DA/NE vedno odloči (specificiteta + vrstni red) --- */
+:root.contrast-high {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.1 0.01 150);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.1 0.01 150);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.1 0.01 150);
+  --primary: oklch(0.38 0.11 158);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.95 0.005 145);
+  --secondary-foreground: oklch(0.2 0.02 150);
+  --muted: oklch(0.95 0.005 145);
+  --muted-foreground: oklch(0.28 0.01 150);
+  --accent: oklch(0.95 0.02 50);
+  --accent-foreground: oklch(0.25 0.06 40);
+  --destructive: oklch(0.45 0.22 27);
+  --border: oklch(0.55 0.01 145);
+  --input: oklch(0.45 0.01 145);
+  --ring: oklch(0.38 0.11 158);
+}
+html.dark.contrast-high {
+  --background: oklch(0.1 0 0);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.13 0 0);
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0.13 0 0);
+  --popover-foreground: oklch(1 0 0);
+  --primary: oklch(0.8 0.12 160);
+  --primary-foreground: oklch(0.1 0 0);
+  --secondary: oklch(0.24 0 0);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.24 0 0);
+  --muted-foreground: oklch(0.88 0.005 145);
+  --accent: oklch(0.4 0.06 50);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.72 0.19 22);
+  --border: oklch(1 0 0 / 55%);
+  --input: oklch(1 0 0 / 60%);
+  --ring: oklch(0.8 0.12 160);
+}
+
+/* --- Bralni način — TIPOGRAFSKA povečava (ne preoblikovanje vsebine):
+       112,5 % osnovnega koraka (Tailwind rem vrstice se skalirajo
+       sorazmerno — kot brskalnikovo povečanje, varno za flex/grid vstave)
+       + gostejši vrstični presledek odstavkov/seznamskih elementov. --- */
+html.reading-mode {
+  font-size: 112.5%;
+}
+html.reading-mode p,
+html.reading-mode li {
+  line-height: 1.7;
+}
+
 /* Custom scrollbar for long lists */
 .scroll-area-custom::-webkit-scrollbar {
   width: 6px;

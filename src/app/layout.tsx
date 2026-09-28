@@ -80,6 +80,16 @@ export default async function RootLayout({
         {/* Strukturirani podatki za SEO (WebSite + Organization) — host-zavedni */}
         <WebSiteJsonLd baseUrl={siteBase} />
         <OrganizationJsonLd baseUrl={siteBase} />
+        {/* W5 (Issue #15): dostopnost brez utripanja — razrede visokega
+            kontrasta / bralnega načina naloži IZ localStorage PRED prvim
+            barvanjem (isti ključ dsa-a11y kot src/lib/a11y-mode.ts; isti
+            vzorec kot next-themes). Brez OS fallbacka — CSS že spoštuje
+            prefers-contrast: more, ko ni shranjene izbire. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=localStorage.getItem("dsa-a11y");if(!s)return;var p=JSON.parse(s);var r=document.documentElement;if(p&&p.contrast==="on")r.classList.add("contrast-high");else if(p&&p.contrast==="off")r.classList.add("contrast-off");if(p&&p.reading===true)r.classList.add("reading-mode");}catch(e){}})();`,
+          }}
+        />
       </head>
       <body
         className={`${geistSans.variable} font-sans antialiased bg-background text-foreground`}

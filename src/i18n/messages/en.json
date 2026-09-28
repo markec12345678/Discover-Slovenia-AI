@@ -914,6 +914,15 @@
     "readInEnglish": "Read in English",
     "readInSlovenian": "Read in Slovenian"
   },
+  "a11y": {
+    "menuAria": "Accessibility settings",
+    "menuTitle": "Accessibility",
+    "contrastLabel": "High contrast",
+    "contrastHint": "Stronger colours and borders for easier reading.",
+    "readingLabel": "Reading mode",
+    "readingHint": "Larger text and more generous line spacing.",
+    "osNote": "Without a choice, we follow your system's increased-contrast setting."
+  },
   "about": {
     "badge": "About",
     "title": "About Discover Slovenia AI",

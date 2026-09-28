@@ -21,6 +21,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { PwaHeaderIcons } from "@/components/pwa/pwa-header-icons";
 import { SmartSearch } from "@/components/smart-search";
 import { WishlistSheet } from "@/components/wishlist-sheet";
+import { A11yControls } from "@/components/a11y-controls";
 import { useCart } from "@/lib/cart-store";
 import { destinationHref } from "@/lib/search-result-nav";
 
@@ -323,6 +324,20 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
               )}
             </Button>
 
+            {/* W5 (Issue #15): dostopnost — visok kontrast + bralni način
+                (STB nacionalni standard); ikona OB preklopu teme, enaka
+                lupina (bela pisava nad herojem, temna po odscrollu).
+                Na mobilnem dostopen v meniju (razbremenjen header) — isto
+                kot preklop teme. */}
+            <div
+              className={cn(
+                "hidden sm:inline-flex",
+                !glass && "[&>button]:text-white [&>button:hover]:bg-white/10 [&>button:hover]:text-white"
+              )}
+            >
+              <A11yControls scrolled={glass} />
+            </div>
+
             <div className={cn("hidden sm:block", glass ? "" : "[&>button]:text-white [&>button:hover]:bg-white/10")}>
               <LanguageSwitcher />
             </div>
@@ -419,22 +434,27 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
 
                 <div className="mt-4 flex items-center justify-between gap-3 px-4">
                   <LanguageSwitcher />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={toggleTheme}
-                    aria-label={NAV_L.theme(lang)}
-                    className="gap-2"
-                  >
-                    {mounted && resolvedTheme === "dark" ? (
-                      <Sun className="size-4" aria-hidden="true" />
-                    ) : (
-                      <Moon className="size-4" aria-hidden="true" />
-                    )}
-                    {mounted && resolvedTheme === "dark"
-                      ? NAV_L.themeLight(lang)
-                      : NAV_L.themeDark(lang)}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleTheme}
+                      aria-label={NAV_L.theme(lang)}
+                      className="gap-2"
+                    >
+                      {mounted && resolvedTheme === "dark" ? (
+                        <Sun className="size-4" aria-hidden="true" />
+                      ) : (
+                        <Moon className="size-4" aria-hidden="true" />
+                      )}
+                      {mounted && resolvedTheme === "dark"
+                        ? NAV_L.themeLight(lang)
+                        : NAV_L.themeDark(lang)}
+                    </Button>
+                    {/* W5: dostopnost tudi v mobilnem meniju — svetla lupina
+                        (Sheet je na svetlem ozadju) */}
+                    <A11yControls scrolled />
+                  </div>
                 </div>
 
                 <div className="mt-auto px-4 pb-6">
