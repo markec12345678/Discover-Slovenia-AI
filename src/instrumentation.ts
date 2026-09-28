@@ -893,6 +893,56 @@ export async function register() {
         detail: String(error),
       });
     }
+
+    // Startup SHEMA migracija — W2 (Issue #15, 1.131.0): skupinski klepet
+    // z @AI — aditivna stolpca TripComment.isAI + TripComment.payload
+    // (strežniško izstavljene AI vrstice + JSON priloga places/sources).
+    // Idempotentna, additive-only, fail-open, skupna zastavica
+    // DSA_DISABLE_SCHEMA_MIGRATION. Glej src/lib/trip-chat-migration.ts.
+    try {
+      const { migrateTripChatColumns } = await import(
+        "./lib/trip-chat-migration"
+      );
+      const r = await migrateTripChatColumns();
+      if (r.columnsAdded.length > 0) {
+        console.log(
+          `[instrumentation] Shema migracija (klepet @AI): dodani ` +
+            `stolpci [${r.columnsAdded.join(", ")}] na TripComment (${r.dialect})`
+        );
+        recordStartupStep({
+          name: "schema:trip-chat-ai",
+          status: "ok",
+          detail: `dodani stolpci: ${r.columnsAdded.join(", ")} (${r.dialect})`,
+        });
+      } else if (r.dialect === "unknown") {
+        console.warn(
+          "[instrumentation] Shema migracija (klepet @AI): stanja ni " +
+            "bilo mogoče preveriti (DB nedosegljiva?) — preskočeno (fail-open)."
+        );
+        recordStartupStep({
+          name: "schema:trip-chat-ai",
+          status: "unknown",
+          detail: "DB nedosegljiva — stanja stolpcev ni bilo mogoče preveriti",
+        });
+      } else {
+        recordStartupStep({
+          name: "schema:trip-chat-ai",
+          status: "ok",
+          detail: "stolpca že prisotna",
+        });
+      }
+    } catch (error) {
+      // Fail-open: migracija NE sme podreti zagona strežnika.
+      console.error(
+        "[instrumentation] Shema migracija (klepet @AI) ni uspela:",
+        error
+      );
+      recordStartupStep({
+        name: "schema:trip-chat-ai",
+        status: "failed",
+        detail: String(error),
+      });
+    }
   } else {
     recordStartupStep({
       name: "schema:listing-practical",
@@ -931,6 +981,11 @@ export async function register() {
     });
     recordStartupStep({
       name: "schema:trip-revisions",
+      status: "skipped",
+      detail: "DSA_DISABLE_SCHEMA_MIGRATION=1",
+    });
+    recordStartupStep({
+      name: "schema:trip-chat-ai",
       status: "skipped",
       detail: "DSA_DISABLE_SCHEMA_MIGRATION=1",
     });

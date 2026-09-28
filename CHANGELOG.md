@@ -7,6 +7,99 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.131.0] — 2026-09-28 (W2: SKUPINSKI KLEPET Z @AI — Issue #15, vrzel iz workflow benchmarka Mindtrip)
+
+### Dodano
+
+- **SKUPINSKI KLEPET Z @AI na `/pot/[shareId]`** (vrzel W2 — Mindtripov
+  vzorec »skupinski klepet z @Mindtrip AI«, po našem kanonu). Obstoječa
+  sekcija komentarjev (P1-2a) postane **klepet v živo**: zgodovina
+  TripComment vrstic ostane NESPREMENJENA (ZERO FEATURE LOSS — ista tabela,
+  nič migracije vsebine), všečki (srčki) ostajajo, seznam pa dobi
+  kronološki vrstni red, samodejni drs na dno (samo če je uporabnik ob
+  dnu — ne puli brskalnika) in **iskren indikator živosti** (»v živo« /
+  »osveževanje vsakih 6 s« — socket je kozmetika, ne obljuba).
+- **@AI SVETOVALEC v klepetu** — uporabnik omeni `@AI` v sporočilu (ali
+  pritisne tipko `@AI`, ki žeton vstavi na položaj kazalca): sporočilo se
+  NAJPREJ objavi kot navadna vrstica (vidna vsem), nato strežnik izstavi
+  odgovor. **Značka AI je STREŽNIŠKA** — vrstico `isAI=true, authorName
+  "AI svetovalec"` izda IZKLJUČNO nova ruta `POST /api/trip-comments/
+  ai-reply`; navaden POST zavrne rezervirana imena (»AI svetovalec« /
+  »AI advisor« / …, normalizirano po diakritiki) → klient ne more ponarediti
+  AI identitete. Indikator tipkanja (»AI svetovalec piše …«) je lokalen —
+  vpraševalec vidi, da se računa; napaka AI NE poje uporabnikovega sporočila
+  (ostane objavljeno + izpiše se iskrena napaka).
+- **ISTI DETERMINISTIČNI POGON KOT OSEBNI KLEPET** — jedro /api/chat
+  (baza + STO uzemljenje T2 + OSM geo kraji T3 + `buildDomainAnswer`) je
+  izvlečeno v `src/lib/chat-engine.ts` (`answerChatQuestion`) → skupinski
+  @AI odgovori so POŠTENO groundani na istih virih (0 runtime LLM klicev,
+  `source: "database"`), SL-only (površina /pot, P4-8 kanon). Pogodba je
+  varovana z updateanimi Issue #9 ZERO-AI testi (engine NE uvaža ai-client,
+  route poganja engine, kontekst DB/STO/OSM se ne sme izgubiti).
+- **AI PREDLAGA — ČLOVEK ODLOČA: gumb »Dodaj v pot«.** AI odgovor lahko
+  nosi prilogo `payload` (JSON: `places` ≤ 8 ChatPlace + `sources` ≤ 5
+  StoCitation — kapice izgradnje na strežniku, validacija pri vsakem
+  branju s strani klienta `parseAiPayload`). Predlogi krajev se izrišejo z
+  gumbom **»Dodaj v pot« — ISTI kanon kot klepet »+«** (1.42.0): čisti
+  algoritem `addChatPlaceToItinerary` (najbližji dan, slot za zadnjim
+  postankom, poštena porekla v notesih) + **CAS PATCH** deljene poti prek
+  `updateItinerary` (sveža vsebina+verzija z `?warm=1` — ogled se NE šteje;
+  409 = sočasno urejanje, iskreno sporočilo). Uradni viri (T2) nimajo
+  gumba (1.44 kanon — članek ni postanek); dedupe → »Kraj je že v poti«;
+  po uspehu se stran osveži (isti vzorec kot obnova revizije).
+- **ŽIVOST V DVEH PLASTEH (kanon: DB je edina resnica).** (1) POLLING:
+  inkrementalni `GET /api/trip-comments?shareId=&since=<ISO>` na vsakih
+  6 s, SAMO ob vidnem zavihku (visibilitychange + takojšen dotik ob
+  vrnitvi), prekrivno okno 2 s na `since` (serverless ure se razhajajo) +
+  dedupe po ID → vrstica nikoli ne podvoji; brez `since` ostane STARA
+  pogodba (DESC, limit 100) — povratna združljivost. (2) SOCKET
+  POSPEŠITEV: mini-service trip-presence (3003) dobi dogodek
+  `chat:signal` → broadcast `chat:new {commentId?, at}` BREZ vsebine —
+  prisotni takoj poberejo vrstice iz DB (mrtv service → polling mirno
+  prevzame; soba je resnica strežnika — signal tujemu shareId se zavrne).
+- **DELJEN SOCKET SINGLETON** (`src/lib/trip-presence-socket.ts`) —
+  prisotnost in klepet zdaj delita ENO socket.io povezavo na brskalnik
+  (acquire/release z referenčnim štetjem) → **števec prisotnih ostane
+  iskren** (2 osebi vidita »2 na strani«, ne 3). `use-trip-presence` je
+  prevezan na singleton: listenerji se odstranjujejo PO IMENU (nikoli
+  `removeAllListeners` — socket ima so-consumerja); LAZY import, RELATIVNA
+  povezava (`/?XTransformPort=3003`) in omejeni reconnect (4 poskusi)
+  ostajajo nespremenjeni.
+
+### Spremenjeno
+
+- **Prisma `TripComment` + 2 aditivna stolpca** (`isAI Boolean @default
+  (false)`, `payload String?`) — commited SQL migracija
+  `20260928120000_trip_chat_ai` (zgodovinsko-vrstična resnica za migrate
+  deploy + CI drift vrata) + **STARTUP shema migracija**
+  `src/lib/trip-chat-migration.ts` (idempotentna, additive-only, fail-open —
+  DEJANSKI mehanizem na Vercelu/Neonu; registrirana v instrumentation.ts kot
+  startup korak `schema:trip-chat-ai`, vidna v /api/health).
+- **Telemetrija** (ista kanalizacija kot planner dogodki): NOVA dogodka
+  `chat_group_ai_asked` (question_len, surface trip-chat) in
+  `chat_group_place_added` (provenance t1|osm, day, surface) — merita
+  Mindtripov vzorec »@AI v skupini«: delež skupin, ki vprašajo AI, in
+  delež AI predlogov, ki dejansko spremenijo načrt (komplement
+  `chat_place_added` za osebni klepet).
+- **`/pot/[shareId]` RSC** posreduje `isAI` + `payload` v začetnih vrsticah
+  klepeta (aditivno — stari klienti prezrejo).
+
+### Varovala (ZERO FEATURE LOSS)
+
+- Obstoječa zgodovina komentarjev se prikaže kot klepet (isti vir, isti
+  API, stara DESC pogodba brez `since` nespremenjena).
+- Všečki, glasovanja, ankete, dnevnik, prisotnost, revizije, vabila —
+  nedotaknjeni (sprememba je čisto aditivna na eni sekciji).
+- AI vrstice obstoječim potovalcem ne spremenijo ničesar (vidne kot
+  sporočila svetovalca z značko in viri).
+- Testna pogodba: **34 novih W2 testov** (čiste funkcije @AI omemba/
+  rezervirana imena/priloga; startup migracija idempotentnost na sqlite
+  mock-u; SOURCE CONTRACT čez shemo, migracije, obe API ruti, UI, hook-a,
+  mini-service in singleton) + 2 prirejeni obstoječi testi (chat-engine
+  izvleček, G2 socket singleton domovina).
+
+---
+
 ## [1.130.0] — 2026-09-28 (W9: KONTEKSTUALNI DEEP-LINK VSEBINA → KLEPET — Issue #15, vrzel iz benchmarka Trip Planner AI)
 
 ### Dodano

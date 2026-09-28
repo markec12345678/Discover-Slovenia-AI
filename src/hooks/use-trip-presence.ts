@@ -8,6 +8,11 @@
  * `/?XTransformPort=3003` — RELATIVNA pot, kanon sandboxa; za produkcijo
  * glej mini-services/trip-presence/README.md).
  *
+ * W2 (Issue #15, 1.131.0): povezavo zdaj DELI use-trip-chat prek modulskega
+ * singletona src/lib/trip-presence-socket.ts (en vtičnik na brskalnik —
+ * števec prisotnih ostane iskren). Listeneri se dodajajo/odstranjujejo
+ * PO IMENU (nikoli removeAllListeners — socket ima lahko so-consumerja).
+ *
  * VAROVALO (najpomembnejše — iz načrta Issue #13):
  * - prisotnost je ČISTO kozmetična plast nad CAS (TASK 28 ostaja resnica);
  * - service mrtven/izklopljen → hook tiho odneha po 4 reconnect poskusih
@@ -21,12 +26,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-
-/** Port mini-servisa (konstanta kanona; glej README mini-servisa). */
-const TRIP_PRESENCE_PORT = 3003;
-
-/** Omejeni reconnect: po 4 poskusih tiho odnehamo (kozmetična plast). */
-const RECONNECT_ATTEMPTS = 4;
+import type { Socket } from "socket.io-client";
+import { acquireTripSocket, releaseTripSocket } from "@/lib/trip-presence-socket";
 
 /** Debounce editing-signala (1 s — tipkanje v izbruhih). */
 const EDITING_DEBOUNCE_MS = 1_000;
@@ -56,7 +57,7 @@ export function useTripPresence(
   const [editors, setEditors] = useState<Array<{ name: string | null }>>([]);
   const [connected, setConnected] = useState(false);
 
-  const socketRef = useRef<import("socket.io-client").Socket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const lastEditSignal = useRef(0);
   const nameRef = useRef<string | null | undefined>(name);
 
@@ -66,7 +67,7 @@ export function useTripPresence(
     nameRef.current = name;
   }, [name]);
 
-  const joinRoom = useCallback((sock: import("socket.io-client").Socket) => {
+  const joinRoom = useCallback((sock: Socket) => {
     sock.emit("presence:join", {
       shareId,
       name: nameRef.current ?? null,
@@ -75,52 +76,62 @@ export function useTripPresence(
 
   useEffect(() => {
     let disposed = false;
-    let sock: import("socket.io-client").Socket | null = null;
+    // Lastni listeneri (imensko odstranjevanje v cleanup-u — socket je
+    // DELJEN od W2, removeAllListeners bi pobrisal še use-trip-chat).
+    // Handlerji sprejemajo unknown (socket.io oddaja poljubne tovore) —
+    // validacija je znotraj handlerja (defenzivni kanon).
+    let handlers: Array<[string, (data?: unknown) => void]> | null = null;
+    let sock: Socket | null = null;
 
     // LAZY load — teža šele na /pot; ob napaki tiho odnehamo.
-    import("socket.io-client")
-      .then(({ io }) => {
+    acquireTripSocket()
+      .then((s) => {
         if (disposed) return;
-        const s = io({
-          // Kanon sandboxa: path "/" + XTransformPort query → gateway.
-          // (RELATIVNA povezava — NIKOLI absolutna URL s portom.)
-          path: "/",
-          query: { XTransformPort: String(TRIP_PRESENCE_PORT) },
-          reconnectionAttempts: RECONNECT_ATTEMPTS,
-          reconnectionDelay: 800,
-          reconnectionDelayMax: 3_000,
-          timeout: 5_000,
-        });
         sock = s;
         socketRef.current = s;
 
-        s.on("connect", () => {
+        const onConnect = () => {
           setConnected(true);
           joinRoom(s);
-        });
-        s.on("disconnect", () => {
+        };
+        const onDisconnect = () => {
           setConnected(false);
           // Prisotnost pade na 0 — iskren prikaz (samo med pot prekinitvami).
           setViewers(0);
           setEditors([]);
-        });
-        s.on("presence:state", (state: PresenceStatePayload) => {
-          if (!state || typeof state !== "object") return;
+        };
+        const onState = (state: unknown) => {
+          const p = state as Partial<PresenceStatePayload> | null;
+          if (!p || typeof p !== "object") return;
           setViewers(
-            typeof state.viewers === "number" && state.viewers >= 0
-              ? state.viewers
+            typeof p.viewers === "number" && p.viewers >= 0
+              ? p.viewers
               : 0
           );
-          setEditors(Array.isArray(state.editors) ? state.editors : []);
-        });
+          setEditors(Array.isArray(p.editors) ? p.editors : []);
+        };
         // Fail-silent kanon (G3/G6 isti vzorec): napaka povezave je
         // KOZMETIČNA izguba, nikoli uporabniška napaka.
-        s.on("connect_error", () => {
+        const onConnectError = () => {
           setConnected(false);
-        });
-        s.on("reconnect_failed", () => {
+        };
+        const onReconnectFailed = () => {
           setConnected(false);
-        });
+        };
+
+        handlers = [
+          ["connect", onConnect],
+          ["disconnect", onDisconnect],
+          ["presence:state", onState],
+          ["connect_error", onConnectError],
+          ["reconnect_failed", onReconnectFailed],
+        ];
+
+        s.on("connect", onConnect);
+        s.on("disconnect", onDisconnect);
+        s.on("presence:state", onState);
+        s.on("connect_error", onConnectError);
+        s.on("reconnect_failed", onReconnectFailed);
       })
       .catch(() => {
         // Modul nedosegljiv (nikoli v praksi) — tiho.
@@ -128,9 +139,14 @@ export function useTripPresence(
 
     return () => {
       disposed = true;
-      sock?.removeAllListeners();
-      sock?.close();
+      const s = sock ?? socketRef.current;
+      if (s && handlers) {
+        for (const [event, fn] of handlers) {
+          s.off(event, fn);
+        }
+      }
       socketRef.current = null;
+      releaseTripSocket();
     };
   }, [joinRoom]);
 

@@ -32,6 +32,11 @@ const ROOT = join(import.meta.dir, "..", "..", "..");
 const read = (rel: string) => readFileSync(join(ROOT, rel), "utf8");
 
 const chatRouteSrc = read("src/app/api/chat/route.ts");
+// W2 (1.131.0): jedro determinističnega odgovora je izvlečeno iz route v
+// src/lib/chat-engine.ts (isti vir za /api/chat in skupinski klepet @AI) —
+// pogodba preverja OBE plasti: route uporablja engine, engine pa ohranja
+// buildDomainAnswer + STO + OSM kontekst.
+const chatEngineSrc = read("src/lib/chat-engine.ts");
 const smartSearchRouteSrc = read("src/app/api/smart-search/route.ts");
 const askLocalRouteSrc = read("src/app/api/ask-local/route.ts");
 const poisDescribeRouteSrc = read("src/app/api/pois/describe/route.ts");
@@ -64,13 +69,20 @@ describe("ISSUE #9 A(a): 4 rute skupine A — ZERO AI odvisnosti", () => {
   }
 
   test("chat: domenska plast PRIMA — buildDomainAnswer + vir \"database\"", () => {
-    expect(chatRouteSrc).toContain("buildDomainAnswer");
+    // W2 (1.131.0): route poganja izvlečeni engine; odgovor ostaja
+    // determinističen z virom "database" (nikoli "ai"/"fallback").
+    expect(chatRouteSrc).toContain('from "@/lib/chat-engine"');
+    expect(chatRouteSrc).toContain("answerChatQuestion");
     expect(chatRouteSrc).toContain('source: "database"');
     expect(chatRouteSrc).not.toContain('source: "ai"');
     expect(chatRouteSrc).not.toContain('source: "fallback"');
-    // Deterministični kontekst ostaja (baza + STO + OSM + enrichment).
-    expect(chatRouteSrc).toContain("buildStoGrounding");
-    expect(chatRouteSrc).toContain("fetchOverpassNearby");
+    // Deterministični kontekst ostaja v src/lib/chat-engine.ts (W2 izvleček
+    // — ista semantika: baza + STO + OSM + enrichment).
+    expect(chatEngineSrc).toContain("buildDomainAnswer");
+    expect(chatEngineSrc).toContain("buildStoGrounding");
+    expect(chatEngineSrc).toContain("fetchOverpassNearby");
+    expect(chatEngineSrc).not.toContain('from "@/lib/ai-client"');
+    expect(chatEngineSrc).not.toContain("generateCompletion");
   });
 
   test("smart-search: deterministični iskalnik + vir \"deterministic\"", () => {

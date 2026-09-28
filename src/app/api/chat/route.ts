@@ -1,21 +1,11 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
-import { buildStoGrounding } from "@/lib/rag/ground";
 import { maybeRefreshStoIndex } from "@/lib/rag/freshness";
-import type { StoCitation, StoLang } from "@/lib/rag/types";
-import {
-  detectGeoIntent,
-  type ChatPlace,
-} from "@/lib/geo-intent";
-import { fetchOverpassNearby } from "@/lib/overpass";
-import {
-  buildDomainAnswer,
-  type ChatLang,
-  type DomainListing,
-  type DomainProduct,
-  type DomainExperience,
-} from "@/lib/chat-domain-fallback";
+import type { ChatLang } from "@/lib/chat-domain-fallback";
+// W2 (Issue #15, 1.131.0): jedro odgovora je zdaj deljena knjižnica
+// src/lib/chat-engine.ts — isto deterministično telo uporabljata
+// /api/chat in /api/trip-comments/ai-reply (skupinski klepet z @AI).
+import { answerChatQuestion } from "@/lib/chat-engine";
 
 // POST /api/chat — klepetalnik z dostopom do vsebine platforme
 //
@@ -44,7 +34,7 @@ import {
 //
 // 1.45.0 (§7 trojna svežina): indeks, po katerem išče buildStoGrounding,
 // je baseline (git) ali sveži overlay — fire-and-forget osvežitev spodaj
-// NIKOLI ne blokira odgovora (strežemo kar imamo, svežina od naslednje
+// NIKOLI ne blokira odgovora (strežamo kar imamo, svežina od naslednje
 // zahteve); tedensko pa jo predgreje /api/cron/sto-reingest.
 
 interface ChatMessage {
@@ -95,137 +85,15 @@ export async function POST(request: Request) {
     ? (body.language as ChatLang)
     : "sl";
 
-  // === GRADI KONTEKST IZ BAZE ===
-  const [topListings, topProducts, topExperiences] = await Promise.all([
-    db.listing.findMany({
-      where: { status: "published", featured: true },
-      take: 10,
-      select: {
-        name: true, category: true, destinationName: true,
-        description: true, rating: true, priceRange: true,
-      },
-      orderBy: { rating: "desc" },
-    }).catch(() => []),
-    db.product.findMany({
-      where: { status: "published", featured: true },
-      take: 10,
-      select: {
-        name: true, category: true, destinationName: true,
-        description: true, price: true, rating: true,
-      },
-      orderBy: { rating: "desc" },
-    }).catch(() => []),
-    db.experience.findMany({
-      where: { status: "published", featured: true },
-      take: 10,
-      select: {
-        name: true, category: true, destinationName: true,
-        description: true, pricePerPerson: true, rating: true,
-      },
-      orderBy: { rating: "desc" },
-    }).catch(() => []),
-  ]);
+  // W2: jedro (baza + STO + OSM + domenska plast) — src/lib/chat-engine.ts.
+  const answer = await answerChatQuestion(lastUserMessage, lang);
 
-  // DATA-LAYERS-RAG: T2 uzemljenje — uradni viri STO (slovenia.info),
-  // poiskani po zadnjem uporabnikovem vprašanju. Citati gredo klientu kot
-  // `sources` (značke virov pod odgovorom).
-  // W1: STO indeks je dvojezičen (SL/EN) — za it/de iščemo po EN straneh
-  // STO (slovenia.info/en obstaja); citati so povezave uradnih virov.
-  const stoLang: StoLang = lang === "sl" ? "sl" : "en";
-  const stoGrounding = buildStoGrounding(lastUserMessage, stoLang, 5);
-
-  // GEO-ODGOVORI (Task 29): kraji v bližini prepoznane destinacije —
-  // realni OSM podatki za mini zemljevid in domenski odgovor.
-  const geoIntent = detectGeoIntent(lastUserMessage);
-  const osmPlaces: ChatPlace[] =
-    geoIntent.location && geoIntent.categories.length > 0
-      ? await fetchOverpassNearby(
-          { lat: geoIntent.location.lat, lng: geoIntent.location.lng },
-          geoIntent.categories
-        )
-      : [];
-
-  // Issue #2 §5 → Issue #9: DETERMINISTIČNA DOMENSKA PLAST — PRIMARNA (in
-  // edina) pot. Odgovor je sestavljen IZ REALNIH podatkov (baza + statika +
-  // OSM + Open-Meteo), pošteno označen z source "database". NIKOLI ne
-  // simulira LLM-ja in ne izmišljuje podatkov.
-  //
-  // Enrichment: za prepoznano destinacijo dodamo še njene vrstice iz baze
-  // (isti vzorec kot ask-local) — featured top-10 namreč ni nujno ravno za
-  // ta kraj. Poizvedba je PODPRTA s .catch(() => []) — baza ne sme podreti
-  // odgovora.
-  const answer = await buildDomainAnswer(
-    lastUserMessage,
-    lang,
-    {
-      listings: topListings as DomainListing[],
-      products: topProducts as DomainProduct[],
-      experiences: topExperiences as DomainExperience[],
-      osmPlaces,
-    },
-    {
-      enrich: async (destinationName) => {
-        const [ls, ps, es] = await Promise.all([
-          db.listing
-            .findMany({
-              where: { status: "published", destinationName },
-              take: 3,
-              select: {
-                name: true,
-                category: true,
-                destinationName: true,
-                description: true,
-                rating: true,
-                priceRange: true,
-              },
-            })
-            .catch(() => []),
-          db.product
-            .findMany({
-              where: { status: "published", destinationName },
-              take: 3,
-              select: {
-                name: true,
-                category: true,
-                destinationName: true,
-                price: true,
-                rating: true,
-              },
-            })
-            .catch(() => []),
-          db.experience
-            .findMany({
-              where: { status: "published", destinationName },
-              take: 3,
-              select: {
-                name: true,
-                category: true,
-                destinationName: true,
-                pricePerPerson: true,
-                rating: true,
-              },
-            })
-            .catch(() => []),
-        ]);
-        return {
-          listings: ls as DomainListing[],
-          products: ps as DomainProduct[],
-          experiences: es as DomainExperience[],
-        };
-      },
-    }
-  );
-
-  // DATA-LAYERS-RAG: citati T2 (samo kadar je bilo uzemljenje aktivno —
-  // prazen seznam pomeni "ni uradnih virov za to vprašanje").
-  const sources: StoCitation[] = stoGrounding.active ? stoGrounding.citations : [];
-
-  console.log(`[chat] deterministični odgovor (source: database) — vprašanje: "${lastUserMessage.substring(0, 60)}..."${stoGrounding.active ? ` [T2 uzemljenje: ${stoGrounding.citations.length} uradnih virov STO]` : ""}${osmPlaces.length > 0 ? ` [GEO: ${geoIntent.location?.name} · ${osmPlaces.length} OSM krajev]` : ""}`);
+  console.log(`[chat] deterministični odgovor (source: database) — vprašanje: "${lastUserMessage.substring(0, 60)}..."${answer.sources.length > 0 ? ` [T2 uzemljenje: ${answer.sources.length} uradnih virov STO]` : ""}${answer.places.length > 0 ? ` [GEO: ${answer.places.length} krajev]` : ""}`);
 
   return NextResponse.json({
     message: answer.message,
     source: "database",
-    sources,
+    sources: answer.sources,
     places: answer.places,
     timestamp: new Date().toISOString(),
   });

@@ -120,6 +120,14 @@ export type PlannerEventName =
   // izpolnjenim vprašanjem (surface: hero|guide|best-time|things-to-do|
   // itinerary; question_len) — meri akvizicijski vzorec "vsebina → klepet"
   | "chat_ask_cta_clicked"
+  // W2 (Issue #15): vprašanje @AI svetovalca v skupinskem klepetu na /pot
+  // (question_len) — meri Mindtripov vzorec "@AI v skupini"; AI odgovori so
+  // deterministični (isti pogon kot /api/chat). Komplement chat_group_place_added.
+  | "chat_group_ai_asked"
+  // W2: kraj iz AI odgovora dodan v DELJENO pot (provenance t1|osm; day) —
+  // CAS PATCH prek updateItinerary; meri, ali skupinsko odločanje prek @AI
+  // dejansko spremeni načrt (komplement chat_place_added za osebni klepet).
+  | "chat_group_place_added"
   | "weather_alternative_used"
   // F5.4 "Začni s povezavo" ( url ingest — MindTrip "Start Anywhere")
   | "ingest_url_attempted"

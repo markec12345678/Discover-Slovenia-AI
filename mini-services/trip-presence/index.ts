@@ -9,10 +9,18 @@
  * Dogodki (client → server):
  *   "presence:join"    {shareId, name|null}  — vstop v sobo trip:{shareId}
  *   "presence:editing" {shareId}             — heartbeat "jaz urejam"
+ *   "chat:signal"      {shareId, commentId?} — W2 (Issue #15): signal
+ *                        "nova vrstica v skupinskem klepetu" (objavljena
+ *                        prek DB) → takojšnje obvestilo sobe (chat:new),
+ *                        da prisotni poberejo sveže vrstice namesto čakanja
+ *                        na polling. Vsebina NE potuje sem — DB ostaja
+ *                        edina resnica (isti kanon kot CAS nad prisotnostjo).
  *   ob disconnect: samodejni izstop
  *
  * Dogodki (server → client, oddaja vso sobo):
  *   "presence:state" {viewers, editors:[{name}]} — agregat BREZ socket ID
+ *   "chat:new"       {commentId?, at}            — W2: signal nove vrstice
+ *                        (pospešitev pollinga; brez vsebine)
  *
  * VAROVALO (načrt Issue #13): prisotnost je ČISTO kozmetična plast.
  * CAS (compare-and-swap na contentVersion) ostaja EDINA resnica o
@@ -101,6 +109,27 @@ io.on("connection", (socket) => {
     // shareId v payloadu ignoriramo — soba je resnica strežnika.
     void raw;
     peer.editingAt = Date.now();
+  });
+
+  // W2 (Issue #15, 1.131.0): skupinski klepet z @AI — signal nove vrstice.
+  // Klient po uspešnem POST/ai-reply odda chat:signal; soba dobi chat:new
+  // (BREZ vsebine — vsak klient pobere vrstice iz DB prek ?since= pollinga).
+  // Obrambno parsanje: shareId mora SOVPADATI s sobo oddajnika (signal
+  // tujemu tripu se tiho zavrže), commentId je opcijsen string (samo za
+  // dedupe na klientu, nikoli za prikaz).
+  socket.on("chat:signal", (raw: unknown) => {
+    const shareId = roomOf(socket);
+    if (!shareId) return;
+    const payload = (raw ?? {}) as { shareId?: unknown; commentId?: unknown };
+    if (payload.shareId !== shareId) return; // soba je resnica strežnika
+    const commentId =
+      typeof payload.commentId === "string" && payload.commentId.length > 0
+        ? payload.commentId.slice(0, 64)
+        : undefined;
+    io.to(`trip:${shareId}`).emit("chat:new", {
+      ...(commentId !== undefined ? { commentId } : {}),
+      at: Date.now(),
+    });
   });
 
   socket.on("disconnect", () => {

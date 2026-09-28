@@ -250,11 +250,27 @@ model TripVote {
 // Komentarji obiskovalcev na deljenih potovanjih (/pot/[shareId]) — P1
 // Skupinsko planiranje: pohitri odločanje (vprašanja, dogovori "vidimo se ob 9h").
 // Anonimno (authorName 1–60 znakov) — brez računa, enako kot glasovanje.
+//
+// W2 (Issue #15, 1.131.0): SKUPINSKI KLEPET Z @AI — obstoječi komentarji
+// postanejo zgodovina klepeta (nič migracije vsebine, ZERO FEATURE LOSS).
+// Aditivni stolpci:
+//   - isAI: vrstica je AI svetovalec — izda jo IZKLJUČNO strežnik
+//     (/api/trip-comments/ai-reply); ljudje z istim imenom ne morejo
+//     ponarediti značke (POST zavrne rezervirana imena).
+//   - payload: JSON { places: ChatPlace[], sources: StoCitation[] } samo
+//     za AI vrstice — predlogi krajev (gumb "Dodaj v pot", isti kanon kot
+//     klepet "+") + citati uradnih virov STO. Veljavnost preverja klient
+//     (parseAiPayload — nikoli ne zaupamo shranjenemu JSON-u).
 model TripComment {
   id          String   @id @default(cuid())
   shareId     String
   authorName  String
   text        String   // 2–500 znakov
+  // W2: AI svetovalec — strežniško izstavljena vrstica (deterministična
+  // domenska plast, enaka kot /api/chat — 0 runtime LLM klicev).
+  isAI        Boolean  @default(false)
+  // W2: JSON priloga AI odgovora (places/sources) — nullable, samo isAI.
+  payload     String?
   createdAt   DateTime @default(now())
 
   @@index([shareId])

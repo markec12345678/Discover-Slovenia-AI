@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { communityTripGate } from "@/lib/trip-permissions";
+// W2 (Issue #15, 1.131.0): rezervirana imena AI svetovalca — ljudje ne
+// morejo ponarediti značke v navadnem komentarju.
+import { isReservedAuthorName } from "@/lib/trip-chat";
 
 // ============================================================================
 // TRIP COMMENTS — komentarji obiskovalcev na deljenem potovanju
@@ -12,12 +15,21 @@ import { communityTripGate } from "@/lib/trip-permissions";
 // Mindtrip-style social layer. Komentarji so anonimni (authorName, brez
 // računa) in vezani samo na shareId.
 //
+// W2 (Issue #15, 1.131.0) — SKUPINSKI KLEPET Z @AI nad ISTO tabelo:
+//   - GET  dobi neobvezen parameter `since` (ISO datum): vrne SAMO novejše
+//     vrstice v KRONOLOŠKEM vrstnem redu (ASC) — inkrementalni polling
+//     klienta use-trip-chat (brez `since` ostane starej pogodba: DESC,
+//     najnovejši najprej, limit 100);
+//   - obe obliki vrneta tudi isAI + payload (aditivno — stari klienti
+//     prezrejo; payload je JSON priloga SAMO AI vrstic);
+//   - POST zavrne REZERVIRANA imena AI svetovalca (značka je strežniška —
+//     izdaje jo izključno /api/trip-comments/ai-reply).
+//
 // Kontrakt (konsumira ga TripSocial / P1-2a frontend):
-//   GET  /api/trip-comments?shareId=xxx
-//        → { comments: [{ id, authorName, text, createdAt }] }  (najnovejši
-//           najprej, limit 100)
+//   GET  /api/trip-comments?shareId=xxx[&since=ISO]
+//        → { comments: [{ id, authorName, text, isAI, payload, createdAt }] }
 //   POST /api/trip-comments  body { shareId, authorName, text }
-//        → { success: true, comment: { id, authorName, text, createdAt } }
+//        → { success: true, comment: { id, authorName, text, isAI, payload, createdAt } }
 //
 // Validacija: shareId hex ≤ 32, authorName trim 1–60, text trim 2–500.
 // Potovanje mora obstajati (SavedItinerary) — sicer 404.
@@ -39,7 +51,7 @@ interface CommentBody {
 }
 
 // ============================================================================
-// GET — seznam komentarjev za potovanje (najnovejši najprej)
+// GET — seznam komentarjev za potovanje
 // ============================================================================
 export async function GET(request: Request) {
   const limited = rateLimit(request, {
@@ -79,21 +91,39 @@ export async function GET(request: Request) {
       if (gate) return gate;
     }
 
+    // W2: inkrementalni polling — SAMO vrstice, novejše od `since` (ISO),
+    // v kronološkem vrstnem redu (klepet doda na konec). Neveljaven `since`
+    // se TIHO ignorira (pade na staro pogodbo DESC) — polling klient vedno
+    // pošilja veljaven ISO iz zadnje prejete vrstice.
+    const sinceRaw = url.searchParams.get("since");
+    const sinceMs = sinceRaw ? Date.parse(sinceRaw) : Number.NaN;
+    const useSince = Number.isFinite(sinceMs) && sinceMs > 0;
+
     const comments = await db.tripComment.findMany({
-      where: { shareId },
-      orderBy: { createdAt: "desc" },
+      where: {
+        shareId,
+        ...(useSince ? { createdAt: { gt: new Date(sinceMs) } } : {}),
+      },
+      orderBy: { createdAt: useSince ? "asc" : "desc" },
       take: COMMENTS_LIMIT,
       select: {
         id: true,
         authorName: true,
         text: true,
+        // W2: aditivno — značka AI svetovalca + JSON priloga (places/sources).
+        isAI: true,
+        payload: true,
         createdAt: true,
       },
     });
 
     return NextResponse.json({
       comments: comments.map((c) => ({
-        ...c,
+        id: c.id,
+        authorName: c.authorName,
+        text: c.text,
+        isAI: c.isAI,
+        payload: c.payload,
         createdAt: c.createdAt.toISOString(),
       })),
     });
@@ -130,6 +160,18 @@ export async function POST(request: Request) {
     if (!SHARE_ID_RE.test(shareId)) {
       return NextResponse.json(
         { error: "Manjka ali neveljaven ID deljenega potovanja (shareId)" },
+        { status: 400 }
+      );
+    }
+
+    // W2: značka AI svetovalca je STREŽNIŠKA — ime, ki bi ponaredilo AI
+    // identiteto, zavrnemo (povedano pošteno, brez razkritja mehanizma).
+    if (isReservedAuthorName(authorName)) {
+      return NextResponse.json(
+        {
+          error:
+            "To ime je rezervirano za AI svetovalca — izberi svoje ime (za odgovor AI upovi @AI v sporočilu).",
+        },
         { status: 400 }
       );
     }
@@ -175,6 +217,8 @@ export async function POST(request: Request) {
         id: true,
         authorName: true,
         text: true,
+        isAI: true,
+        payload: true,
         createdAt: true,
       },
     });
@@ -182,7 +226,11 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       comment: {
-        ...comment,
+        id: comment.id,
+        authorName: comment.authorName,
+        text: comment.text,
+        isAI: comment.isAI,
+        payload: comment.payload,
         createdAt: comment.createdAt.toISOString(),
       },
     });

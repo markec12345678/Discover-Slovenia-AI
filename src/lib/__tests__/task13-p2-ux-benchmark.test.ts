@@ -27,6 +27,11 @@ const globalsSrc = read("src/app/globals.css");
 const presenceCoreSrc = read("mini-services/trip-presence/presence-core.ts");
 const presenceSrvSrc = read("mini-services/trip-presence/index.ts");
 const presenceHookSrc = read("src/hooks/use-trip-presence.ts");
+// W2 (1.131.0): konfiguracija povezave (LAZY import, path "", XTransformPort,
+// omejeni reconnect) je prestavljena v DELJEN singleton
+// src/lib/trip-presence-socket.ts — ena povezava na brskalnik (prisotnost +
+// skupinski klepet), da števec prisotnih ostane iskren.
+const presenceSocketLibSrc = read("src/lib/trip-presence-socket.ts");
 const presenceCompSrc = read("src/components/trip-presence.tsx");
 const potPageSrc = read("src/app/pot/[shareId]/page.tsx");
 const tabbarSrc = read("src/components/mobile-tab-bar.tsx");
@@ -161,22 +166,37 @@ describe("G2 (P2-2): presence-core — čista logika (zero-dep)", () => {
 
 describe("G2 (P2-2): use-trip-presence — klient (fail-silent kanon)", () => {
   const code = stripComments(presenceHookSrc);
+  // W2: povezavo hrani deljen singleton — konfiguracija se preverja tam.
+  const socketLib = stripComments(presenceSocketLibSrc);
 
   test("LAZY dynamic import socket.io-client (teža šele na /pot)", () => {
-    expect(code).toContain('import("socket.io-client")');
+    // W2: LAZY import živi v singleton knjižnici (edini lastnik povezave).
+    expect(socketLib).toContain('import("socket.io-client")');
   });
 
   test("RELATIVNA povezava: path '/' + XTransformPort query — NIKOLI absolutna URL", () => {
-    expect(code).toContain('path: "/"');
-    expect(code).toContain("XTransformPort");
-    // Prepoved absolutnih naslovov (kanon gatewaya).
+    expect(socketLib).toContain('path: "/"');
+    expect(socketLib).toContain("XTransformPort");
+    // Prepoved absolutnih naslovov (kanon gatewaya) — v obeh plasteh.
+    expect(socketLib).not.toMatch(/(http|ws):\/\/localhost/);
+    expect(socketLib).not.toMatch(/io\(\s*["']http/);
     expect(code).not.toMatch(/(http|ws):\/\/localhost/);
     expect(code).not.toMatch(/io\(\s*["']http/);
   });
 
   test("OMEJENI reconnect (kozmetična plast — po 4 poskusih tiho odneha)", () => {
-    expect(code).toContain("reconnectionAttempts");
-    expect(code).toMatch(/RECONNECT_ATTEMPTS = 4/);
+    expect(socketLib).toContain("reconnectionAttempts");
+    expect(socketLib).toMatch(/RECONNECT_ATTEMPTS = 4/);
+  });
+
+  test("W2: DELJEN singleton povezave (iskren števec prisotnih)", () => {
+    // ena povezava na brskalnik — acquire/release z referenčnim štetjem
+    expect(socketLib).toContain("acquireTripSocket");
+    expect(socketLib).toContain("releaseTripSocket");
+    expect(code).toContain("acquireTripSocket()");
+    expect(code).toContain("releaseTripSocket()");
+    // hook NIKOLI ne zapre/čisti SO-CONSUMERJEVIH listenerjev
+    expect(code).not.toContain("removeAllListeners()");
   });
 
   test("editing signal debauncan 1 s + poslan SAMO na povezan socket", () => {

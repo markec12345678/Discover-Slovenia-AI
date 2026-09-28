@@ -226,12 +226,16 @@ export default async function SharedTripPage({
     console.error("[pot] tripVote groupBy napaka:", e);
   }
 
-  // === Začetni komentarji in všečki (P1-2a social layer) — ne-kritično:
-  // ob napaki nadaljujemo s praznimi (stran se mora izrisati). ===
+  // === Začetne vrstice klepeta/komentarjev in všečki (P1-2a + W2 skupinski
+  // klepet z @AI) — ne-kritično: ob napaki nadaljujemo s praznimi (stran se
+  // mora izrisati). W2: isAI + payload (priloga AI odgovorov) sta aditivni —
+  // obstoječa zgodovina komentarjev postane zgodovina klepeta. ===
   let initialComments: {
     id: string;
     authorName: string;
     text: string;
+    isAI: boolean;
+    payload: string | null;
     createdAt: string;
   }[] = [];
   try {
@@ -239,10 +243,22 @@ export default async function SharedTripPage({
       where: { shareId },
       orderBy: { createdAt: "desc" },
       take: 100,
-      select: { id: true, authorName: true, text: true, createdAt: true },
+      select: {
+        id: true,
+        authorName: true,
+        text: true,
+        // W2 (Issue #15, 1.131.0): značka AI svetovalca + JSON priloga.
+        isAI: true,
+        payload: true,
+        createdAt: true,
+      },
     });
     initialComments = comments.map((c) => ({
-      ...c,
+      id: c.id,
+      authorName: c.authorName,
+      text: c.text,
+      isAI: c.isAI,
+      payload: c.payload,
       createdAt: c.createdAt.toISOString(),
     }));
   } catch (e) {
@@ -512,7 +528,9 @@ export default async function SharedTripPage({
         />
       </div>
 
-      {/* === KOMENTARJI IN VŠEČKI (skupinsko planiranje, P1-2a) === */}
+      {/* === SKUPINSKI KLEPET Z @AI + VŠEČKI (P1-2a + W2, Issue #15) —
+          zgodovina komentarjev postane klepet; @AI svetovalec odgovarja
+          deterministično, predloge krajev doda v pot človek === */}
       <div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6 lg:px-8">
         <TripSocial
           shareId={shareId}

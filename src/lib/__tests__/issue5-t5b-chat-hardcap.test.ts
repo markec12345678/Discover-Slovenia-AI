@@ -27,6 +27,9 @@ const ROOT = join(__dirname, "..", "..", "..");
 const read = (rel: string) => readFileSync(join(ROOT, rel), "utf8");
 
 const chatRouteSrc = read("src/app/api/chat/route.ts");
+// W2 (1.131.0): jedro odgovora (buildDomainAnswer + STO + OSM + DB kontekst)
+// je izvlečeno v src/lib/chat-engine.ts — pogodba preverja OBE plasti.
+const chatEngineSrc = read("src/lib/chat-engine.ts");
 const chatbotSrc = read("src/components/chatbot.tsx");
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -49,8 +52,11 @@ describe("Issue #9 ZERO-AI: /api/chat brez AI (domenska plast prima)", () => {
   });
 
   test("ruta POKLIČE buildDomainAnswer (deterministični primarni odgovor)", () => {
-    expect(chatRouteSrc).toContain("buildDomainAnswer");
-    expect(chatRouteSrc).toMatch(/await buildDomainAnswer\(/);
+    // W2: ruta poganja izvlečeni engine (isti deterministični tok);
+    // buildDomainAnswer živi v src/lib/chat-engine.ts.
+    expect(chatRouteSrc).toContain("answerChatQuestion");
+    expect(chatEngineSrc).toContain("buildDomainAnswer");
+    expect(chatEngineSrc).toMatch(/await buildDomainAnswer\(/);
   });
 
   test("odgovor je pošteno označen source \"database\" (nikoli ai/fallback)", () => {
@@ -62,12 +68,18 @@ describe("Issue #9 ZERO-AI: /api/chat brez AI (domenska plast prima)", () => {
   test("kontekst ostaja: baza + STO uzemljenje + OSM enrichment se NE sme izgubiti", () => {
     // Deterministični kontekst hrani domenski odgovor (naloga #9: "keep
     // deterministic context-building (DB queries, STO grounding, OSM
-    // enrichment callbacks)").
-    expect(chatRouteSrc).toContain("buildStoGrounding");
+    // enrichment callbacks)"). W2: živi v src/lib/chat-engine.ts (izvleček
+    // iz route — ista semantika, en vir za obe ruti klepeta).
+    expect(chatEngineSrc).toContain("buildStoGrounding");
     expect(chatRouteSrc).toContain("maybeRefreshStoIndex");
-    expect(chatRouteSrc).toContain("detectGeoIntent");
-    expect(chatRouteSrc).toContain("fetchOverpassNearby");
-    expect(chatRouteSrc).toContain("db.listing.findMany");
+    expect(chatEngineSrc).toContain("detectGeoIntent");
+    expect(chatEngineSrc).toContain("fetchOverpassNearby");
+    // DB kontekst (featured lokal/izdelek/izkušnja + enrich) — trije viri;
+    // prirejeno večvrstičnemu formatiranju izvlečka.
+    expect(chatEngineSrc).toContain("db.listing");
+    expect(chatEngineSrc).toContain("db.product");
+    expect(chatEngineSrc).toContain("db.experience");
+    expect(chatEngineSrc).toContain("enrich:");
   });
 });
 
