@@ -23,7 +23,7 @@ import {
   buildCrowdNotices,
   tripOverlapsPeakWeekend,
 } from "@/lib/crowd-alternatives";
-import { matchEventsForItinerary, type TripWindow } from "@/lib/events-match";
+import { matchEventsForItinerary, matchEventsOutsideTrip, type TripWindow } from "@/lib/events-match";
 import {
   isValidStartDate,
   tripEndDateISO,
@@ -703,6 +703,18 @@ async function buildDeterministicPlanResponse(
       lang,
     });
     plan.events = matchEventsForItinerary(plan.days, 6, tripWindow, lang);
+
+    // W6 (Issue #15): brskalni pas "Kaj se dogaja izven tvojih datumov" —
+    // KOMPLEMENT glavnega matcha (isti nabor destinacij/regij, dogodki, ki
+    // se s potovanjem NE prekrivajo + izključeni že prikazani). Varovalo:
+    // datumsko ujemanje ostane PRIMARNO — pas je dodaten.
+    plan.outsideEvents = matchEventsOutsideTrip(
+      plan.days,
+      plan.events.map((e) => e.id),
+      tripWindow,
+      6,
+      lang
+    );
 
     // FW4.2: okvir potovanja tudi na determinističnem načrtu (isti enrich kot AI pot)
     if (input.startDate) {

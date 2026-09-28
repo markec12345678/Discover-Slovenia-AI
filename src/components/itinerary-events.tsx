@@ -1,6 +1,7 @@
 import {
   CalendarDays,
   Check,
+  Compass,
   ExternalLink,
   MapPin,
   Music,
@@ -22,6 +23,10 @@ import {
 import { EVENT_CATEGORY_LABELS_EN } from "@/lib/events-data-en";
 import { EVENT_CATEGORY_LABELS_IT } from "@/lib/events-data-it";
 import { EVENT_CATEGORY_LABELS_DE } from "@/lib/events-data-de";
+// W6 (Issue #15): telemetrija vstopničnega CTA — ISTA G6 pot (listing_click
+// funnel korak; klik na partnerja prek /go redirecta šteje strežniško).
+// Modul je SSR-varen (fetch šele ob klicu — kliše se SAMO v klientu ob kliku).
+import { trackFunnel } from "@/lib/funnel";
 // TASK 8 / D8-D (§3.3 write-through): dogodek, preklopljen V NAČRT, se
 // registrira tudi v zbirko "Moja pot" (čista lib — SSR-varna brez okna).
 import { addMyTripItem } from "@/lib/my-trip";
@@ -94,6 +99,13 @@ const STRINGS: Record<
     inTrip: string;
     website: string;
     yourTripSubtitle: (range: string) => string;
+    // W6 (Issue #15): brskalni pas "izven tvojih datumov" + vstopnični CTA
+    browseTitle: string;
+    browseHint: string;
+    browseAriaLabel: string;
+    ticketsCta: string;
+    ticketsPartner: string;
+    ticketsNote: string;
   }
 > = {
   sl: {
@@ -109,6 +121,14 @@ const STRINGS: Record<
     inTrip: "V poti",
     website: "Spletna stran",
     yourTripSubtitle: (range) => `Tvoja pot je ${range}`,
+    browseTitle: "Kaj se dogaja izven tvojih datumov",
+    browseHint:
+      "Dogodki na istih destinacijah, ki se ne prekrivajo s tvojo potjo — premisli datume ali načrtuj nov obisk.",
+    browseAriaLabel: "Brskalni pas dogodkov izven tvojih datumov",
+    ticketsCta: "Išči vstopnice",
+    ticketsPartner: "Tiqets",
+    ticketsNote:
+      "Partnerska povezava (Tiqets) — zunanja rezervacija; pogoje in razpoložljivost preveri pri partnerju.",
   },
   en: {
     defaultTitle: "What's on during your visit",
@@ -123,6 +143,14 @@ const STRINGS: Record<
     inTrip: "In trip",
     website: "Website",
     yourTripSubtitle: (range) => `Your trip runs ${range}`,
+    browseTitle: "What's on outside your dates",
+    browseHint:
+      "Events at the same destinations that don't overlap your trip — consider shifting dates or planning another visit.",
+    browseAriaLabel: "Browse band of events outside your dates",
+    ticketsCta: "Search for tickets",
+    ticketsPartner: "Tiqets",
+    ticketsNote:
+      "Partner link (Tiqets) — external booking; check terms and availability with the partner.",
   },
   it: {
     defaultTitle: "Cosa succede durante la tua visita",
@@ -137,6 +165,14 @@ const STRINGS: Record<
     inTrip: "Nel viaggio",
     website: "Sito web",
     yourTripSubtitle: (range) => `Il tuo viaggio è ${range}`,
+    browseTitle: "Cosa succede fuori dalle tue date",
+    browseHint:
+      "Eventi nelle stesse destinazioni che non si sovrappongono al tuo viaggio — valuta di spostare le date o di pianificare un'altra visita.",
+    browseAriaLabel: "Striscia di esplorazione eventi fuori dalle tue date",
+    ticketsCta: "Cerca biglietti",
+    ticketsPartner: "Tiqets",
+    ticketsNote:
+      "Link partner (Tiqets) — prenotazione esterna; condizioni e disponibilità presso il partner.",
   },
   de: {
     defaultTitle: "Was während deines Besuchs los ist",
@@ -151,6 +187,14 @@ const STRINGS: Record<
     inTrip: "In der Reise",
     website: "Webseite",
     yourTripSubtitle: (range) => `Deine Reise läuft ${range}`,
+    browseTitle: "Was außerhalb deiner Termine los ist",
+    browseHint:
+      "Veranstaltungen an denselben Destinationen, die sich nicht mit deiner Reise überschneiden — verschiebe die Termine oder plane einen weiteren Besuch.",
+    browseAriaLabel: "Stöberband mit Veranstaltungen außerhalb deiner Termine",
+    ticketsCta: "Tickets suchen",
+    ticketsPartner: "Tiqets",
+    ticketsNote:
+      "Partnerlink (Tiqets) — externe Buchung; Bedingungen und Verfügbarkeit beim Partner prüfen.",
   },
 };
 
@@ -338,6 +382,79 @@ function EventMiniCard({ event, lang, duringVisit, added, onToggle }: EventMiniC
   );
 }
 
+// ============================================================================
+// W6 (Issue #15): BRSKALNI PAS — kompaktna kartica dogodka IZVEN okvirja
+// potovanja. NAMENOMA brez "Dodaj v mojo pot": dogodek se ne prekriva s
+// potjo — dodatev bi bilo LAŽNO razporejanje (kanon iskrenosti: zbirka ≠
+// razporejevalnik datumov, ki jih uporabnik ni izbral). Brskanje + uradna
+// spletna stran dogodka + pasovni vstopnični CTA (G6 pot).
+// ============================================================================
+interface EventBrowseChipProps {
+  event: ItineraryEvent;
+  lang: EventsLang;
+}
+
+function EventBrowseChip({ event, lang }: EventBrowseChipProps) {
+  const s = STRINGS[lang];
+  const badgeClass =
+    CATEGORY_BADGE_CLASS[event.category] ?? FALLBACK_BADGE_CLASS;
+  const CategoryIcon = CATEGORY_ICON[event.category] ?? CalendarDays;
+  const isFree = event.priceRange === "brezplačno";
+
+  return (
+    <article className="w-64 shrink-0 snap-start rounded-lg border border-border/60 bg-card/50 p-3.5 transition-colors hover:border-primary/30">
+      <div className="flex items-center justify-between gap-2">
+        <Badge className={cn("shrink-0 gap-1", badgeClass)}>
+          <CategoryIcon className="size-3" aria-hidden="true" />
+          {categoryLabel(event.category, lang)}
+        </Badge>
+      </div>
+      <h4 className="mt-2 line-clamp-2 text-sm font-semibold leading-snug">
+        {event.name}
+      </h4>
+      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+        <time
+          dateTime={event.date}
+          className="flex items-center gap-1.5"
+          title={s.dateTitle}
+        >
+          <CalendarDays className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+          <span className="font-medium text-foreground/80">
+            {formatEventDate(event.date, event.endDate, lang)}
+          </span>
+        </time>
+        <span className="flex items-center gap-1.5" title={s.locationTitle}>
+          <MapPin className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+          {event.location}
+        </span>
+        <span className="flex items-center gap-1.5" title={s.admissionTitle}>
+          <Ticket className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+          {isFree ? (
+            <span className="font-medium text-emerald-700 dark:text-emerald-400">
+              {s.free}
+            </span>
+          ) : (
+            <span className="font-medium text-foreground/80">
+              {event.priceRange}
+            </span>
+          )}
+        </span>
+      </div>
+      {event.website && (
+        <a
+          href={event.website}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+        >
+          {s.website}
+          <ExternalLink className="size-3" aria-hidden="true" />
+        </a>
+      )}
+    </article>
+  );
+}
+
 interface ItineraryEventsSectionProps {
   /** Dogodki med obiskom (API vrne max 6) */
   events?: ItineraryEvent[];
@@ -356,6 +473,14 @@ interface ItineraryEventsSectionProps {
   addedEventIds?: string[];
   /** FW4.2: preklop "Dodaj v mojo pot" — samo planner kontekst (lastnik načrta) */
   onToggleEvent?: (event: ItineraryEvent) => void;
+  /** W6 (Issue #15): dogodki NA ISTIH destinacijah, ki se NE prekrivajo z
+   *  okvirjem potovanja — brskalni pas "Kaj se dogaja izven tvojih datumov"
+   *  (API jih izračuna ob generiranju + refine). Odsotno/prazno → pas se
+   *  ne izriše (/pot brez sprememb). */
+  outsideEvents?: ItineraryEvent[];
+  /** W6: cilj vstopničnega CTA — /go/tickets?dest=… (goHref iz
+   *  booking-panel, ISTA G6 pot). Odsotno → CTA se ne izriše. */
+  ticketsHref?: string;
 }
 
 export function ItineraryEventsSection({
@@ -368,6 +493,8 @@ export function ItineraryEventsSection({
   tripEndDate,
   addedEventIds,
   onToggleEvent,
+  outsideEvents,
+  ticketsHref,
 }: ItineraryEventsSectionProps) {
   const s = STRINGS[lang];
   const sectionTitle = title ?? s.defaultTitle;
@@ -378,6 +505,10 @@ export function ItineraryEventsSection({
   // Varnostna meja — API vrne max 6, a tudi stari shranjeni načrti so varni
   const safeEvents = events.slice(0, 6);
   const addedSet = new Set(addedEventIds ?? []);
+
+  // W6: brskalni pas — ista varnostna meja (API vrne max 6); praznina ne
+  // sproži pasu (iskrenost: ni dogodkov izven datumov → pas ni)
+  const safeOutside = (outsideEvents ?? []).slice(0, 6);
 
   const grid = (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -414,6 +545,53 @@ export function ItineraryEventsSection({
         )
     : null;
 
+  // W6: brskalni pas "Kaj se dogaja izven tvojih datumov" — horizontalni
+  // scroll trak kompaktnih kartic + pasovni vstopnični CTA (ISTA G6 pot:
+  // /go/tickets?dest=… prek goHref, telemetrija listing_click + strežniški
+  // redirect tracking). VAROVALO: datumsko ujemanje ostane PRIMARNO — pas
+  // je DODATEN, pod glavno mrežo, in se ne izriše brez podatkov.
+  const browseBand = safeOutside.length > 0 && (
+    <div
+      className="mt-4 border-t border-border/60 pt-4"
+      aria-label={s.browseAriaLabel}
+    >
+      <h3 className="flex items-center gap-2 text-sm font-semibold">
+        <Compass className="size-4 shrink-0 text-primary" aria-hidden="true" />
+        {s.browseTitle}
+      </h3>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+        {s.browseHint}
+      </p>
+      <div
+        className="mt-3 flex snap-x gap-3 overflow-x-auto pb-2"
+        role="list"
+      >
+        {safeOutside.map((event) => (
+          <div key={event.id} role="listitem" className="flex">
+            <EventBrowseChip event={event} lang={lang} />
+          </div>
+        ))}
+      </div>
+      {ticketsHref && (
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <a
+            href={ticketsHref}
+            onClick={() => trackFunnel("listing_click", ticketsHref)}
+            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-primary/40 bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition-colors hover:border-primary/60 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <Ticket className="size-4 shrink-0" aria-hidden="true" />
+            {s.ticketsCta}
+            <span className="text-muted-foreground">· {s.ticketsPartner}</span>
+            <ExternalLink className="size-3.5 shrink-0" aria-hidden="true" />
+          </a>
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            {s.ticketsNote}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
   if (variant === "section") {
     return (
       <section className={className} aria-label={sectionTitle}>
@@ -425,6 +603,7 @@ export function ItineraryEventsSection({
           <p className="mb-4 text-sm text-muted-foreground">{duringSubtitle}</p>
         )}
         {grid}
+        {browseBand}
       </section>
     );
   }
@@ -441,7 +620,10 @@ export function ItineraryEventsSection({
             <CardDescription>{duringSubtitle}</CardDescription>
           )}
         </CardHeader>
-        <CardContent>{grid}</CardContent>
+        <CardContent>
+          {grid}
+          {browseBand}
+        </CardContent>
       </Card>
     </section>
   );

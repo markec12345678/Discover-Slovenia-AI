@@ -209,7 +209,7 @@ import {
 } from "@/lib/itinerary-undo";
 import { addSavedTrip, deriveSavedTripName } from "@/lib/my-trips-storage";
 import { cn } from "@/lib/utils";
-import { BookingPanel, type BookingData } from "@/components/sections/booking-panel";
+import { BookingPanel, goHref, type BookingData } from "@/components/sections/booking-panel";
 import { ItineraryRefiner } from "@/components/sections/itinerary-refiner";
 import { PlanCopilot } from "@/components/plan-copilot";
 import { PlannerDayNav } from "@/components/planner-day-nav";
@@ -5891,6 +5891,10 @@ export function ItineraryPlanner() {
                 {/* Sekcija se sama skrije, če events ni prisoten/prazen */}
                 {/* FW4.2: dogodki z okvirjem potovanja + "Dodaj v mojo pot" */}
                 {/* 1.29.0 (revizija #13): EN locale → prevedena sekcija (EVENTS_EN) */}
+                {/* W6 (Issue #15): + brskalni pas "Kaj se dogaja izven tvojih
+                    datumov" (komplement okvirja) + vstopnični CTA po ISTI G6
+                    poti (goHref "tickets" prek /go redirecta; dest = prvi
+                    postanek načrta — deterministično iz days[0]). */}
                 <ItineraryEventsSection
                   className="order-12"
                   events={itinerary.events}
@@ -5901,6 +5905,15 @@ export function ItineraryPlanner() {
                     (ev) => ev.id
                   )}
                   onToggleEvent={toggleAddedEvent}
+                  outsideEvents={itinerary.outsideEvents}
+                  ticketsHref={
+                    itinerary.days[0]?.locations[0]?.destination_name
+                      ? goHref(
+                          "tickets",
+                          itinerary.days[0].locations[0].destination_name
+                        )
+                      : undefined
+                  }
                 />
 
                 {/* F6.1: pameten pakirni seznam — iz dnevne napovedi + dejanskih

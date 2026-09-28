@@ -203,3 +203,125 @@ export function matchEventsForItinerary(
     };
   });
 }
+
+// ============================================================================
+// W6 (Issue #15, 1.136.0): BRSKALNI PAS "Kaj se dogaja izven tvojih datumov"
+// ============================================================================
+// Mindtrip Events vzorec (raziskava Task 19-b): prosto brskanje dogodkov
+// poleg datumsko vezanih. Po našem kanonu:
+//   - ISTI nabor kandidatov kot matchEventsForItinerary (destinacije/regije
+//     itinererja) — brskamo NAD istim vsebinskim videnjem, ne splošnega;
+//   - KOMPLEMENT okvirja: dogodki, ki se s potovanjem NE prekrivajo
+//     (varovalo benchmarka: datumsko ujemanje ostane PRIMARNO — ta plast
+//     je dodaten pas, nikoli nadomestilo);
+//   - izključeni so tudi dogodki, ki jih glavna sekcija ŽE prikazuje;
+//   - samo PRIHAJAJOČI (niso se končali) znotraj 12-mesečnega obzorja —
+//     "premisli datume ali načrtuj nov obisk", ne arhiv;
+//   - brez okvirja potovanja ni "izven datumov" → praznina (iskrena meja).
+// ============================================================================
+
+export function matchEventsOutsideTrip(
+  days: MatchableDay[] | null | undefined,
+  /** ID-ji dogodkov, ki jih glavna sekcija ŽE prikazuje (izključimo). */
+  excludeIds: string[] | Set<string>,
+  tripWindow: TripWindow | null | undefined,
+  limit = 6,
+  lang: "sl" | "en" | "it" | "de" = "sl"
+): ItineraryEvent[] {
+  // Iskrena meja: "izven tvojih datumov" potrebuje okvir potovanja
+  if (tripWindow == null) return [];
+  if (!Array.isArray(days) || days.length === 0) return [];
+
+  const exclude =
+    excludeIds instanceof Set ? excludeIds : new Set(excludeIds);
+
+  // 1–2. Unikatni destination_id-ji + regije (ISTA logika kot glavni match)
+  const destIds = new Set<string>();
+  for (const day of days) {
+    if (!day || !Array.isArray(day.locations)) continue;
+    for (const loc of day.locations) {
+      const id = loc?.destination_id;
+      if (typeof id === "string" && id.trim()) destIds.add(id.trim());
+    }
+  }
+  if (destIds.size === 0) return [];
+
+  const regions = new Set<string>();
+  for (const id of destIds) {
+    const dest = DESTINATIONS.find((d) => d.id === id);
+    if (dest) regions.add(dest.region);
+  }
+
+  // 3. Direktne zadetke + regijski fallback (ista pragmatika < 3)
+  const direct = EVENTS.filter(
+    (e) => typeof e.destinationId === "string" && destIds.has(e.destinationId)
+  );
+  const pool =
+    direct.length < 3
+      ? [
+          ...direct,
+          ...EVENTS.filter(
+            (e) => regions.has(e.region) && !destIds.has(e.destinationId ?? "")
+          ),
+        ]
+      : direct;
+
+  const todayMs = startOfToday();
+  const horizonMs = todayMs + HORIZON_MS;
+
+  type Scored = {
+    event: (typeof EVENTS)[number];
+    startMs: number;
+  };
+  const scored: Scored[] = [];
+
+  for (const event of pool) {
+    if (exclude.has(event.id)) continue;
+    const startMs = parseDateMs(event.date);
+    if (startMs === null) continue;
+    const endMs = parseDateMs(event.endDate) ?? startMs;
+
+    // KOMPLEMENT: prekrivanje z okvirjem potovanja → IZVEN pasu NE sodi
+    // (to je definicija "izven tvojih datumov")
+    const overlapsTrip =
+      startMs <= tripWindow.endMs && endMs >= tripWindow.startMs;
+    if (overlapsTrip) continue;
+
+    // Samo prihajajoči (se še ni končal) v 12-mesečnem obzorju — brskanje
+    // za prihodnje odločitve, ne arhiv preteklih dogodkov
+    if (endMs < todayMs) continue;
+    if (startMs > horizonMs) continue;
+
+    scored.push({ event, startMs });
+  }
+
+  // Razvrstitev: featured prvi, nato najbližji datum naraščajoče
+  scored.sort((a, b) => {
+    if (a.event.featured !== b.event.featured) {
+      return a.event.featured ? -1 : 1;
+    }
+    return a.startMs - b.startMs;
+  });
+
+  return scored.slice(0, Math.max(0, limit)).map(({ event }) => {
+    const overlay =
+      lang === "en"
+        ? EVENTS_EN[event.id]
+        : lang === "it"
+        ? EVENTS_IT[event.id]
+        : lang === "de"
+        ? EVENTS_DE[event.id]
+        : undefined;
+    return {
+      id: event.id,
+      name: overlay?.name ?? event.name,
+      date: event.date,
+      endDate: event.endDate,
+      location: event.location,
+      category: event.category,
+      priceRange: event.priceRange,
+      description: overlay?.description ?? event.description,
+      website: event.website,
+    };
+  });
+}

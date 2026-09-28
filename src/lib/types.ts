@@ -278,6 +278,12 @@ export interface Itinerary {
   // NOVO: dogodki, ki se zgodijo na obiskanih destinacijah (matched iz
   // events-data.ts ob generiranju / ob ogledu deljenega potovanja)
   events?: ItineraryEvent[];
+  // W6 (Issue #15, 1.136.0): dogodki NA ISTIH destinacijah/regijah, ki se
+  // pa NE prekrivajo z okvirjem potovanja — brskalni pas "Kaj se dogaja
+  // izven tvojih datumov" na /nacrtuj (Mindtrip Events vzorec; datumsko
+  // ujemanje ostane primarno). Opcijsko + nazaj kompatibilno (stari shranjeni
+  // načrti pas ne izrišejo).
+  outsideEvents?: ItineraryEvent[];
   // NOVO: AI pakirni seznam (AI predlog ali deterministična hevristika)
   packingList?: string[];
   // NOVO (FW4.1): strukturne metrike kakovosti — deterministično izračunane

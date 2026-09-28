@@ -26,7 +26,7 @@ import { PL, type PlannerLang } from "@/lib/planner-lang";
 import { getItDestination } from "@/lib/slovenia-data-it";
 import { getDeDestination } from "@/lib/slovenia-data-de";
 import { buildCrowdNotices } from "@/lib/crowd-alternatives";
-import { matchEventsForItinerary } from "@/lib/events-match";
+import { matchEventsForItinerary, matchEventsOutsideTrip } from "@/lib/events-match";
 import { tripWindowMs } from "@/lib/trip-dates";
 import { isPartyType } from "@/lib/party-types";
 import { applyQuickAction, QUICK_ACTIONS } from "@/lib/refine-actions";
@@ -437,6 +437,16 @@ export async function POST(request: Request) {
       mutated.days,
       6,
       refineTripWindow,
+      lang
+    );
+    // W6 (Issue #15): brskalni pas se preračuna skupaj z glavnimi dogodki
+    // (zamenjava postanka spremeni nabor destinacij → tudi izven-datumski
+    // kandidati se spremenijo; izključeni ostanejo že prikazani)
+    mutated.outsideEvents = matchEventsOutsideTrip(
+      mutated.days,
+      mutated.events.map((e) => e.id),
+      refineTripWindow,
+      6,
       lang
     );
     mutated.crowdNotices = buildCrowdNotices(

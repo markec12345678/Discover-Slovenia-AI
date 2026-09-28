@@ -7,6 +7,61 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.136.0] — 2026-09-28 (W6: DOGODKI KOT ODKRIVANJE + VSTOPNICE — Issue #15, val V2; vrzel iz workflow benchmarka Mindtrip)
+
+### Dodano
+
+- **BRSKALNI PAS »Kaj se dogaja izven tvojih datumov«** na /nacrtuj (vrzel
+  W6 — Mindtrip Events vzorec prostega brskanja; mi smo imeli Dogodke le
+  datumsko vezane na pot). Pod glavno mrežo sekcije dogodkov se izriše
+  horizontalni scroll trak kompaktnih kartic (kategorija, ime, datum,
+  lokacija, vstopnina, uradna spletna stran) — dogodki NA ISTIH
+  destinacijah/regijah itinererja, ki se pa NE prekrivajo z okvirjem
+  potovanja (»premisli datume ali načrtuj nov obisk«).
+- **Deterministični komplement matcher** (`matchEventsOutsideTrip` v
+  events-match.ts): ISTA logika kandidatov kot glavni match
+  (destinationId + regijski fallback), komplement prekrivanja z okvirjem,
+  izključeni že prikazani ID-ji, samo prihajajoči znotraj 12-mesečnega
+  obzorja, featured prvi + najbližji datum. 0 AI, enaka jezikovna
+  prekrivna plast (EN/IT/DE overlay). Iskrena meja: brez okvirja
+  potovanja NI »izven datumov« → pas se ne izriše.
+- **VSTOPNIČNI CTA po ISTI G6 POTI**: pas nosi gumb »Išči vstopnice ·
+  Tiqets« → `/go/tickets?dest=…` (goHref iz booking-panel — en vir resnice
+  za /go povezave; dest = prvi postanek načrta, deterministično iz
+  `days[0].locations[0].destination_name`). Telemetrija:
+  **`listing_click`** (obstoječi funnel korak — NIČ novih imen) +
+  strežniški redirect tracking na /go (isti kot vsi partnerji). Iskrena
+  partnerska nota ob gumbu (zunanja rezervacija, pogoje preveri pri
+  partnerju).
+- **API izračuna pas ob generiranju IN refine** (`outsideEvents` na
+  načrtu, opcijsko + nazaj kompatibilno — stari shranjeni načrti pas ne
+  izrišejo; zamenjava postanka pri refine preračuna oba nabora).
+- **Nizi pasu ×4 jeziki** (browseTitle/hint/aria + ticketsCta/partner/
+  nota — isti STRINGS vzorec kot obstoječa sekcija).
+- **Regresijski test `w6-events-browse.test.ts`** (18 testov): komplement
+  (brez okvirja → [], noben vrnjeni dogodek se ne prekriva, izključeni
+  ID-ji, isti nabor, limit, featured+datum razvrstitev, EN overlay isti
+  ID-ji), glavni match ohranja tier -1 prednost, source contract API
+  (generiranje + refine) + planner (goHref tickets), nizi ×4, ISKRENOST:
+  brskalne kartice NIMAJO »Dodaj v mojo pot« (izven datumov = ne lažemo
+  z razporejanjem), /pot stran NESPREMENJENA (brez propov pas se ne
+  izriše).
+
+### Varovala (ZERO FEATURE LOSS)
+
+- **Datumsko ujemanje ostane PRIMARNO** (zahteva benchmarka): glavni
+  match nespremenjen (tier -1 prekrivanje prvi), pas je DODATEN — pod
+  glavno mrežo, znotraj obstoječe sekcije, skrit če ni podatkov.
+- Glavna sekcija (naslov, badge »Med tvojim obiskom«, »Dodaj v mojo
+  pot«, write-through v Moja pot) — nespremenjena.
+- Brskalne kartice NAMENOMA brez »Dodaj v mojo pot«: dogodek izven
+  okvirja potovanja bi bil lažno razporejanje (iskrenost: zbirka ≠
+  razporejevalnik datumov, ki jih uporabnik ni izbral).
+- Maksimalno 6 kartic pasu (ista varnostna meja kot glavna sekcija);
+  horizontalni scroll na mobilnem (375 px preverjeno).
+
+---
+
 ## [1.135.0] — 2026-09-28 (W5: VISOK KONTRAST + BRALNI NAČIN — Issue #15, val V2; vrzel iz workflow benchmarka STB)
 
 ### Dodano
