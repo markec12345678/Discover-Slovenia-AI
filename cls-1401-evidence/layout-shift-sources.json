@@ -44,5 +44,37 @@
       "fantom_81px_pod_nogo": "zaprta vsebina <details> embed bloka raztegne drsljivo območje ~81 px pod nogo (Chrome laid-out skrite škatle) — DOKAZANO obstoječe v produkciji 1.140.0 (ista vrzela + isti skriti gumb na bb183cd77d); namenoma nepopravljeno v 1.140.1 (nevidno, iframe višino določa blogger)"
     }
   },
-  "produkcija_po_popravku": "ČAKA na uvod (kvota Vercel računa 100/100; samodejni uvajalni nadzornik /home/z/vercel-auto-deploy-1401.sh poskuša vsakih 15 min; dokaz bo dopolnjen po uvedbi)"
+  "po_popravku_PRODUKCIJA_1.140.1_28.9_ziva": {
+    "_uvod": "dpl_8CAWQCx7 iz 4545690, uvedena 28. 9. 20:27:53 UTC (samodejni uvajalnik, poskus 2 — rolling okno kvote se je sprostilo ~23 h pred napovedanim resetom 29. 9. 20:11 UTC); nadzornik se samodejno ustavil 20:42:53 po idempotenčni preverbi",
+    "embed_/pot/embed/bb183cd77d": {
+      "viewport": "412x823",
+      "skupni_CLS": 0.0,
+      "zamikov": 0,
+      "preliv": "scrollW=412 clientW=412 (brez preliva)",
+      "napake": "0 napak strani, 0 konzolnih sporočil (ni hidratacijskega neskladja)",
+      "posnetek": "cls-after-prod-embed.png"
+    },
+    "polna_/pot/bb183cd77d": {
+      "viewport": "412x823",
+      "skupni_CLS": 0.0,
+      "zamikov": 0,
+      "preliv": "scrollW=412 clientW=412 (brez preliva)",
+      "napake": "0 napak strani, 0 konzolnih sporočil",
+      "posnetek": "cls-after-prod-full.png"
+    },
+    "lighthouse_mobile_simulate_nad_produkcijo": {
+      "embed_/pot/embed/bb183cd77d": {"perf": 0.58, "cls": 0.0, "lcp_ms": 4727, "tbt_ms": 820, "fcp_ms": 2101, "runWarnings": 0},
+      "polna_/pot/bb183cd77d": {"perf": 0.80, "cls": 0.0, "lcp_ms": 2708, "tbt_ms": 636, "fcp_ms": 1434, "runWarnings": 0},
+      "opomba": "veljavni teki = samo teki brez runWarnings (kanon E2E-GATES.md §T3); LCP na obeh poteh ostaja prva OSM ploščica (znano, dokumentirano)"
+    },
+    "SSR_dokazi_produkcija": {
+      "h-[500px]_rezervacija": 1,
+      "Nalagam_placeholder": 1,
+      "preconnect_rel": 3,
+      "preconnect_href": "https://a.tile.openstreetmap.org (+ b/c)",
+      "odsek_Nacrt_po_dnevih_v_SSR": "da (naslov prisoten v strežniškem HTML-ju)",
+      "primerjava_pred_popravkom": "pred: h-[500px] ODSOTEN, 'Nalagam' ODSOTEN, preconnecti ODSOTNI, odsek se izriše šele ob hidrataciji"
+    },
+    "hladni_zagon_opomba": "nov deployment ima po 1. hladen zagon ~90 s (dokumentiran pojav — E2E-GATES.md; topla instanca odgovori v ~1 s)"
+  }
 }

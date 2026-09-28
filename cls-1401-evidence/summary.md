@@ -5,11 +5,11 @@ dimom nad ŽIVO produkcijo (ne le CI standalone)
 
 ## Povzetek številk
 
-| Stran | CLS pred (1.140.0, produkcija) | CLS po (1.140.1, lokalni dev) | Prag vrat |
-|---|---|---|---|
-| `/pot/embed/bb183cd77d` | **0.3805** | **0.0000** (412px) / 0.026 periodično (375px) | 0.10 |
-| `/pot/bb183cd77d` | **0.3393** | (ista komponenta — enak popravek) | 0.10 |
-| 5 kanonskih strani vrat | 0.0023–0.0051 (vedno zeleno) | nedotaknjene | 0.10 |
+| Stran | CLS pred (1.140.0, produkcija) | CLS po (1.140.1, lokalni dev) | CLS po (1.140.1, PRODUKCIJA) | Prag vrat |
+|---|---|---|---|---|
+| `/pot/embed/bb183cd77d` | **0.3805** | **0.0000** (412px) / 0.026 periodično (375px) | **0.0000** (412×823, 0 zamikov) | 0.10 |
+| `/pot/bb183cd77d` | **0.3393** | (ista komponenta — enak popravek) | **0.0000** (412×823, 0 zamikov) | 0.10 |
+| 5 kanonskih strani vrat | 0.0023–0.0051 (vedno zeleno) | nedotaknjene | (niso cilj popravka) | 0.10 |
 
 ## Diagnostika (5 kanonskih strani — VSE NAD izhodišči 1.107.0)
 
@@ -56,10 +56,32 @@ skoči z y=323/388 na končni položaj, ker:
   **veljavni so SAMO teki brez runWarnings**.
 - LCP element na /pot poteh = OSM ploščica (resource load delay ~1.8 s).
 
-## Status uvoda
+## Status uvoda — ŽIV V PRODUKCIJI (28. 9. 2026, 20:27:53 UTC)
 
-1.140.1 je na GitHubu (`512ee07`); uvod ČAKA na dnevno kvoto Vercel računa
-(100/100 — drugi projekti lastnika; reset 29. 9. 20:11 UTC, okno rolling).
-Samodejni uvajalni nadzornik (`/home/z/vercel-auto-deploy-1401.sh`)
-poskuša vsakih 15 min z idempotenco pred vsakim poskusom in samo-ustavitvijo.
-Produkcijski „po“ dokaz bo dopolnjen po uvedbi.
+1.140.1 je uvedena v produkcijo (**dpl_8CAWQCx7** iz `4545690`): samodejni
+uvajalni nadzornik je uspel v poskus 2, ko se je ROLLING okno dnevne kvote
+Vercel računa sprostilo ~23 h pred napovedanim resetom (29. 9. 20:11 UTC);
+nadzornik se je samodejno ustavil ob 20:42:53 po idempotenčni preverbi
+(kvota ni bila zapravljena). Iskren podatek: odgovor API-ja pri uspešnem
+poskusu ni vseboval `uid` na vrhu, zato ga je skripta razvrstila kot
+„nenavaden odgovor“ — deployment pa je bil ustvarjen in READY (potrjeno z
+`GET /v6/deployments`). Webhook za push `512ee07` je ostal tih
+(isti vzorec kot a1f4095/5608f9e).
+
+### Produkcijski „po“ dokazi (dopolnjeno po uvedbi)
+
+- **Performance API layout-shift (412×823):** obe poti **CLS 0.0000**,
+  0 zamikov, 0 napak strani, 0 konzolnih sporočil, brez preliva
+  (scrollW=412=clientW) — posnetka `cls-after-prod-embed.png` /
+  `cls-after-prod-full.png`.
+- **Lighthouse mobile/simulate nad produkcijo (0 runWarnings):**
+  embed perf 0.58 / CLS **0** / LCP 4.7 s; polna perf 0.80 / CLS **0** /
+  LCP 2.7 s (`lighthouse-prod-1.140.1.json`).
+- **SSR dokazi v strežniškem HTML-ju produkcije:** višinska rezervacija
+  `h-[500px]` ✓, placeholder „Nalagam“ ✓, 3 preconnecti na
+  a/b/c.tile.openstreetmap.org ✓, naslov odseka „Načrt po dnevih“ ✓ —
+  pred popravkom je bilo vse to ODSOTNO.
+- Hladen zagon prvega obiska po uvodu traja ~90 s (znani pojav,
+  dokumentiran v E2E-GATES.md; topla instanca ~1 s).
+- Merilno pot potuje z dokazi: `layout-shift-sources.json` (razdelek
+  `po_popravku_PRODUKCIJA_1.140.1_28.9_ziva`).

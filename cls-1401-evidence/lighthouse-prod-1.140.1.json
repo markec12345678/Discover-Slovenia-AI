@@ -1,0 +1,26 @@
+{
+ "_opomba": "Lighthouse mobile/simulate nad ŽIVO produkcijo 1.140.1 (i-feel-slovenia.vercel.app, dpl_8CAWQCx7), 28. 9. 2026 ~20:35–20:41 UTC; PONOVNI ZAGON po CLS popravku — /pot poti sta bili v 1.140.0 izven kanonskih vrat (CLS 0.3805/0.3393); veljavni so SAMO teki brez runWarnings (glej docs/E2E-GATES.md §T3); lighthouse@13.5.0 + Chrome for Testing 153 (ms-playwright); funkcija ogreta s 3–4 curl pred vsakim tekom (hladen zagon ~90 s je znani pojav)",
+ "strani": {
+  "/pot/embed/bb183cd77d": {
+   "perf": 0.58,
+   "lcp_ms": 4727,
+   "cls": 0.0,
+   "tbt_ms": 820,
+   "fcp_ms": 2101,
+   "opozorila": []
+  },
+  "/pot/bb183cd77d": {
+   "perf": 0.8,
+   "lcp_ms": 2708,
+   "cls": 0.0,
+   "tbt_ms": 636,
+   "fcp_ms": 1434,
+   "opozorila": []
+  }
+ },
+ "primerjava_pred_popravkom_1.140.0": {
+  "/pot/embed/bb183cd77d": {"cls": 0.3805},
+  "/pot/bb183cd77d": {"cls": 0.3393},
+  "sklep": "CLS na obeh /pot poteh 0.3805/0.3393 → 0.0000 — popravek (SSR rezervacija zemljevida + preconnect) je potrjen v produkciji; LCP ostaja prva OSM Leaflet ploščica (resource load delay — znano, dokumentirano v summary.md)"
+ }
+}

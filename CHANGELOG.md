@@ -52,6 +52,13 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
   Metodološka izkušnja: hladen zagon Vercel funkcij obesu `_rsc`
   prednalaganja → sled odprta → Lantern ekstrapolira napihnjen LCP
   (12 s) — veljavni so SAMO teki brez opozoril (ponovitev: 3,7 s).
+- **Produkcijska potrditev 1.140.1** (uvedena 28. 9. 20:27:53 UTC,
+  dpl_8CAWQCx7 — samodejni uvajalni nadzornik po sprostitvi rolling
+  kvote): obe /pot poti CLS **0.0000** v produkciji (Performance API
+  412×823 z 0 zamikov/napak + Lighthouse mobile/simulate z 0 runWarnings
+  [embed perf 0.58; polna 0.80] + SSR dokazi v strežniškem HTML-ju
+  [h-[500px] rezervacija, »Nalagam«, 3 preconnecti, odsek »Načrt po
+  dnevih« — pred popravkom vse odstranjeno] — cls-1401-evidence/).
 - Znana minor artefakt (obstoječe, namenoma NIPOPRAVLJENO v tej
   verziji): zaprt `<details>` embed bloka raztegne drsljivo območje
   ~81 px pod nogo (Chrome laid-out skrite škatle) — nevidno, enako v
