@@ -7,6 +7,55 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.133.0] — 2026-09-28 (W10: OKNO MINDTRIP ALTERNATIVA — Issue #15, časovno okno akvizicije; vrzel iz raziskave Task 20 / workflow benchmarka)
+
+### Dodano
+
+- **TERENSKA SEKCIJA na `/primerjava`** (vrzel W10 — časovno okno
+  »Mindtrip alternativa«: iskalci alternativ iščejo ODGOVOR danes, ne
+  feature-matriko). Nad intro je dodana sekcija z datiranimi terenskimi
+  preverbami (28. 9. 2026, živo re-potrjene isti dan): **Mindtrip** — cel
+  splet črn (302 → heroku/construction.html), nič medijske pokritosti,
+  recenzije 22.–23. 9. se še navajajo med top (recenzijski cikel zaostaja);
+  **Layla** — bot-zid 429 + itslayla.com danes modna trgovina + prevzem
+  Expedia 31. 7. 2026; **Google** — komoditizacija generičnih itinerarjev
+  po uradni časovnici blogov. **G4 kanon dosledno**: 0 izmišljenih števcev,
+  vsaka trditev z datumom, izrecno NE-ugibanje o vzrokih.
+- **Meta `title`/`description` v 4 jezikih** ciljata poizvedbo
+  »Mindtrip alternativa/alternative« (SEO osnova okna; hreflang že obstaja).
+- **Nov FAQ q6 »Kaj se je zgodilo z Mindtripom?«** — iskren odgovor za iste
+  poizvedbe, po katerih prihajajo obiskovalci (ne prikrivanje, ne
+  špekuliranje).
+- **CTA razširjen na ZLATE POTI**: `/nacrtuj` + `/zemljevid` +
+  `/nacrtuj#skupnost` (galerija CommunityTrips — preverjeno živa v
+  produkciji; kartice vodijo v `/pot/[shareId]`).
+- **Skript `scripts/w10-update-comparison.py`** — 4-jezikovna posodobitev
+  terenskih preverb (dry-run privzeto, eksplicitna potrebna potrditev).
+- **Regresijski test `w10-comparison.test.ts`** (10 testov): pariteta
+  93 ključev ×4 jezike, FAQ 6, G4 varovala (prepovedane izmišljene
+  številke/vzroki v nizih), meta ciljanje, zlate poti v source, svežina
+  datuma, fragment==messages.
+
+### Popravljeno
+
+- **FAQ a5**: nepreverjena trditev o iOS aplikaciji ODSTRANJENA (G4 —
+  trditev brez vira ne ostane).
+- **W1 doslednost**: tabela in ctaBody zdaj govorita 4 jezike (stran je
+  nastala pred W1 valom).
+- **`updated` 17. → 28. 9. 2026** + vrstica `llms.txt` posodobljena (namen
+  + 4 jeziki + datirana preverba).
+
+### Varovala (ZERO FEATURE LOSS)
+
+- Ploščata primerjalna tabela ostaja nedotaknjena pod terensko sekcijo
+  (iskrenost najprej: kaj generalisti delajo odlično).
+- Vse terenske trditve so točkovna opažanja Z DATUMOM, ne stalne trditve
+  (iskrena meja — teren se lahko spremeni).
+- Nič odstranjene funkcionalnosti; `.gitignore` le izloči lokalne
+  E2E runnerje (`/w[0-9]*-e2e*.sh`) iz repa.
+
+---
+
 ## [1.132.0] — 2026-09-28 (W3: KOLEKCIJE PRILJUBLJENIH — Issue #15, val V1; vrzel iz workflow benchmarka Mindtrip)
 
 ### Dodano
