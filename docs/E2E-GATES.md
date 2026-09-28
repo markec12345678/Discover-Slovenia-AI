@@ -103,6 +103,26 @@ Vse tri skripte tečejo identično lokalno (isti izhodni statusi). Priročnik:
 # perf/CWV vrata:   bash scripts/ops/lighthouse-gates.sh   # builda sam, če ni
 ```
 
+**Produkcijska diagnostika (izkušnja 1.140.1, 28. 9. 2026):** vrata merijo
+standalone build na localhost; Lighthouse lahko teče tudi proti živi
+produkciji (Vercel = pravi standalone build), a z iskrenimi omejitvami:
+
+1. **Hladen zagon funkcije obesi sled:** prvi zadetek hladne Vercel
+   funkcije pusti `_rsc` prednalaganja odprta → sled se ne zaključi →
+   runWarning „page loaded too slowly“ + `observedLCP: null` → Lantern
+   ekstrapolira napihnjen LCP (izmerjeno 12,0 s; ponovitev na ogreti
+   funkciji: 3,7 s). **Veljavni so SAMO teki brez runWarnings** —
+   zavrzene teke dokumentiraj kot artefakt hladnega zagona, ne regresijo.
+2. **Ni primerljivo 1:1 s CI baseline** (druga naprava + realno omrežje;
+   TBT/CLS/kategorije so robustni, LCP/SpeedIndex nosita omrežni pečat) —
+   to je diagnostika, ne vrata.
+3. **CLS najbolj pošteno izmeri Performance API v brskalniku**
+   (`layout-shift` z `buffered: true` + viri: node, previousRect,
+   currentRect) — tako je bil odkrit CLS 0.38/0.34 na /pot poteh (LCP
+   element = Leaflet ploščica; odsek zemljevida se je materializiral šele
+   ob hidrataciji — popravek 1.140.1: SSR rezervacija višine + `deriveRoute`
+   iz propa).
+
 ## Meje (iskrene)
 
 - Offline zemljevid pokriva SAMO že videna območja (tiles cache-first —

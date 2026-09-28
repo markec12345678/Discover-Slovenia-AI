@@ -7,6 +7,67 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.140.1] — 2026-09-28 (CLS NA /pot POTEH: rezervacija zemljevida v SSR + preconnect na OSM ploščice)
+
+### Popravljeno
+
+- **CLS na deljenih poteh 0.34/0.38 → ~0** (odkritje produkcijske
+  Lighthouse diagnostike 1.140.0, 28. 9. — `/pot/[shareId]` CLS 0.3393,
+  `/pot/embed/[shareId]` CLS 0.3805; prag vrat 0.10 presežen 3,4–3,8×).
+  Performance API z viri na živi produkciji je razkril EN sam zamik, ki
+  je premaknil vse pod zemljevidom (»Načrt po dnevih« z y≈323/388 na
+  končni položaj ob hidrataciji). Dva vzroka, oba popravljena:
+  1. **Glavni:** pogoj izrisa odseka zemljevida je bral Zustand shrambo
+     (`routeByDay`), ki je med strežniškim izrisom PRAZNA — napolni se
+     šele v `useEffect` po mount-u → CELoten odsek (naslov + zemljevid +
+     legenda) se je materializiral šele ob hidrataciji. Popravek: logika
+     izvlečena v čisto `deriveRoute(it)` v `src/lib/store.ts` (en vir
+     resnice — `setItinerary` kliče isto funkcijo, vedenje identično:
+     barve dni, OSM-node veja, null-island varovalo, OSRM geometrija);
+     `SharedTrip` jo pokliče DIREKTNO na itinerer-ju propu (`useMemo`)
+     → SSR izriše odsek, hidratacijska skladnost pa ostane (prvi klientni
+     render = ista izpeljava iz istega propa).
+  2. `dynamic(ssr:false)` ne izriše NIČ v strežniškem HTML-ju (niti
+     loading placeholder — dokaz: SSR brez `map-shell`/`h-[500px]`/
+     »Nalagam«) → 500/600 px prostora brez rezervacije. Popravek: MapView
+     je ovit v SSR-div s fiksno višino `h-[500px] sm:h-[600px]`, ki se
+     točno ujema s placeholderjem IN z MapView lastno višino (višine
+     pred/po identične na vseh prelomih — čist popravek zamika, brez
+     vizualne spremembe).
+- **Preconnect na OSM ploščice** (`<link rel="preconnect">` za
+  a/b/c.tile.openstreetmap.org, React 19 Float dvigne v `<head>`): LCP
+  na OBEH /pot poteh je prva Leafletova ploščica (diagnostika: resource
+  load delay ~1,8 s — zemljevid se prikaže šele po hidriranju); odprta
+  povezava od vznožja strežniškega izrisa prihrani DNS+TLS ob prvi
+  zahtevi ploščice. Iskrena lekcija: `preconnect()` iz react-dom v RSC
+  okolju namiga NI izstrelil (izmerjeno) — JSX `<link>` pot deluje.
+
+### Dokumentirano
+
+- **Diagnostika produkcije 1.140.0** (prvi Lighthouse nad živo
+  produkcijo, ne le CI standalone): 5 kanonskih strani vrat VSE ZELENO in
+  NAD izhodišči 1.107.0 (`/` perf 0.61/LCP 4,0 s; `/destinacije` 0.66/
+  3,7 s; `/destinacija/bled` 0.76/3,9 s; `/na-poti` 0.90/1,8 s;
+  `/zemljevid` 0.74/3,1 s — 14 verzij dela ni povzročilo perf regresije).
+  Metodološka izkušnja: hladen zagon Vercel funkcij obesu `_rsc`
+  prednalaganja → sled odprta → Lantern ekstrapolira napihnjen LCP
+  (12 s) — veljavni so SAMO teki brez opozoril (ponovitev: 3,7 s).
+- Znana minor artefakt (obstoječe, namenoma NIPOPRAVLJENO v tej
+  verziji): zaprt `<details>` embed bloka raztegne drsljivo območje
+  ~81 px pod nogo (Chrome laid-out skrite škatle) — nevidno, enako v
+  1.140.0; iframe višino določa blogger.
+
+### Testi
+
+- NOVA regresijska varovalka `cls-map-reservation.test.ts` (11 testov):
+  funkcionalno `deriveRoute` (dataset razresitev, OSM-node veja,
+  null-island, barve dni, geometry passthrough, prazen dan) +
+  source-contract SSR rezervacije (izpeljava iz PROPA ne shrambe,
+  višinska ovojnica, preconnect povezave, prepoved vračanja uvoza iz
+  react-dom, en-vir-resnice v store). Suite 4142 → **4153**.
+
+---
+
 ## [1.140.0] — 2026-09-28 (D7: BLOG-EMBED DELJENIH POTI — Issue #15, benchmark dodatek D/7; zadnja odprta vrstica benchmarka)
 
 ### Dodano

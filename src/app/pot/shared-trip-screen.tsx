@@ -443,6 +443,18 @@ export async function SharedTripScreen({
     <div
       className={`${embedShell} min-h-screen flex flex-col bg-background`}
     >
+      {/* 1.140.1: preconnect na OSM ploščice (Leaflet {s} = a/b/c). LCP
+          element na OBEH /pot poteh je prva Leafletova ploščica (produkcijska
+          diagnostika 28. 9.: resource load delay ~1.8 s — zemljevid se
+          prikaže šele po hidriranju). Odprta povezava od vznožja strežniškega
+          izrisa prihrani DNS+TLS (~200–400 ms) ob prvi zahtevi ploščice.
+          React 19 Float sam dvigne <link> v <head> (preverjeno v SSR HTML;
+          preconnect() iz react-dom v RSC okolju namiga NI izstrelil). BREZ
+          crossorigin: ploščice se nalagajo kot navadne <img> (brez CORS) —
+          anonimna povezava bi odprla NAPAČEN skupno povezavo. */}
+      <link rel="preconnect" href="https://a.tile.openstreetmap.org" />
+      <link rel="preconnect" href="https://b.tile.openstreetmap.org" />
+      <link rel="preconnect" href="https://c.tile.openstreetmap.org" />
       {/* TASK 8 / D8-E (P-NAV-1): enotna lupina (Navigation + Footer) —
           prej sirota z lastnim v-strani headerjem (ta ostaja nespremenjen
           znotraj SharedTrip). print-hide: header se NE natisne v PDF.

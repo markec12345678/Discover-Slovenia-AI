@@ -47,7 +47,7 @@ import { SocialShare } from "@/components/social-share";
 // D7 (1.140.0): blog-embed blok (iframe snippet + kopiraj) v sekciji deljenja
 import { TripEmbedCode } from "@/components/trip-embed-code";
 import { useToast } from "@/hooks/use-toast";
-import { useAppStore, DAY_COLORS } from "@/lib/store";
+import { useAppStore, DAY_COLORS, deriveRoute } from "@/lib/store";
 // TASK 28 (Tier 1 #1): live-sync indikator — polling strežniške verzije poti
 // (viden zavihek, 20 s) → banner „posodobljeno drugje — Osveži".
 import { useTripVersionPoll } from "@/hooks/use-trip-version-poll";
@@ -180,8 +180,23 @@ export function SharedTrip({
   baseUrl,
 }: SharedTripProps) {
   const setItinerary = useAppStore((s) => s.setItinerary);
-  const routeCoords = useAppStore((s) => s.routeCoords);
-  const routeByDay = useAppStore((s) => s.routeByDay);
+  // 1.140.1 (CLS na /pot poteh — glavni vzrok): pot izpeljemo DIREKTNO iz
+  // itinerer-je PROPA (ista čista funkcija kot store::deriveRoute) — SSR
+  // tako izriše odsek zemljevida ŽE v strežniškem HTML-ju. Prej sta
+  // routeCoords/routeByDay prihajala IZKLJUČNO iz Zustand shrambe, ki je
+  // med SSR PRAZNA (napolni se šele v useEffect po mount-u) → pogoj
+  // „routeByDay.length > 0“ je bil med SSR lažno negativen → celoten odsek
+  // (naslov + 500/600 px zemljevida + legenda) se je materializiral šele
+  // ob hidrataciji in premaknil vse pod sabo (izmerjeno na produkciji
+  // 1.140.0: EN zamik 0.3393 polna stran / 0.3805 embed). Hidratacijska
+  // skladnost: prvi klientni render uporabi ISTO izpeljavo iz istega propa
+  // → drevo se ujema s SSR; setItinerary effect spodaj store napolni za
+  // MapView-ove notranje odvisnosti (pini/izbire) — vrednosti so enake,
+  // saj gre za isto čisto funkcijo na istem vhodu.
+  const { routeCoords, routeByDay } = useMemo(
+    () => deriveRoute(itinerary),
+    [itinerary]
+  );
   // TASK 4 / K-7: navigacija na /na-poti po zagonu Go Mode
   const router = useRouter();
 
@@ -510,7 +525,20 @@ export function SharedTrip({
               </Badge>
             </div>
             <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
-              <MapView routeCoords={routeCoords} routeByDay={routeByDay} />
+              {/* 1.140.1 (CLS na /pot poteh: 0.38 → ~0): dynamic(ssr:false) v
+                  strežniškem HTML-ju ne izriše NIČ — niti loading placeholder
+                  (produkcija 1.140.0 dokaz: SSR brez map-shell / h-[500px] /
+                  „Nalagam“) — 500/600 px zemljevida se materializira šele ob
+                  hidriranju in premakne VSE pod sabo (izmerjen EN sam zamik:
+                  0.3805 embed / 0.3393 polna stran, Performance API na živi
+                  produkciji). Fiksna ovojnica rezervira prostor od PRVEGA
+                  izrisa; loading placeholder (h-[500px] sm:h-[600px]) in
+                  MapView lastna višina se točno prilegata, višine pred/po
+                  ostanejo identične na vseh prelomih (lg: h-full + min-h
+                  [600px] znotraj 600px ovojnice = 600, kot prej). */}
+              <div className="h-[500px] w-full sm:h-[600px]">
+                <MapView routeCoords={routeCoords} routeByDay={routeByDay} />
+              </div>
             </div>
             {/* Legenda dni */}
             {routeByDay.length > 1 && (

@@ -62,6 +62,81 @@ interface AppState {
 }
 
 /**
+ * 1.140.1 (CLS na /pot poteh): ČISTA izpeljava poti iz itinererja —
+ * izluščena iz setItinerary, da jo strežniški izris (SharedTrip) pokliče
+ * DIREKTNO na propu. Prej je odsek zemljevida čakal na store, ki se
+ * napolni šele ob hidrataciji (useEffect) → celoten odsek (naslov +
+ * 500/600 px + legenda) se je materializiral šele po mount-u in premaknil
+ * vse pod sabo (CLS 0.34 polna stran / 0.38 embed — izmerjeno na živi
+ * produkciji 1.140.0, Performance API layout-shift z viri). setItinerary
+ * kliče ISTO funkcijo: vedenje (barve dni, OSM-node veja, null-island
+ * varovalo, OSRM geometrija) ostane identično — en vir resnice.
+ */
+export function deriveRoute(it: Itinerary): {
+  routeCoords: RouteCoord[];
+  routeByDay: DayRoute[];
+} {
+  // Izpelji koordinate poti iz itinererja — grupirano po dnevih
+  const allCoords: RouteCoord[] = [];
+  const byDay: DayRoute[] = [];
+  const seen = new Set<string>();
+
+  it.days.forEach((dayPlan) => {
+    const dayCoords: RouteCoord[] = [];
+    dayPlan.locations.forEach((loc) => {
+      const dest = DESTINATIONS.find((d) => d.id === loc.destination_id);
+      if (dest) {
+        const coord: RouteCoord = {
+          lat: dest.coords.lat,
+          lng: dest.coords.lng,
+          name: dest.name,
+          day: dayPlan.day,
+        };
+        allCoords.push(coord);
+        dayCoords.push(coord);
+        seen.add(loc.destination_id);
+      } else if (
+        // 1.42 (GEO → NAČRT): OSM kraj iz AI klepeta — lastne koordinate
+        // (destination_id "osm-node-…" ni v T1 datasetu, pin pa živi na
+        // zemljevidu poti kot vsak drug postanek dneva)
+        typeof loc.lat === "number" &&
+        typeof loc.lng === "number" &&
+        Number.isFinite(loc.lat) &&
+        Number.isFinite(loc.lng) &&
+        // TASK 50 (§14 GEO): null island (0,0) NI veljavna koordinata —
+        // AI haluciniran ID (živi dokaz: "socca" z lat 0/lng 0) bi sicer
+        // risal pin + pot čez pol Afrike. Isto pravilo kot strežniška
+        // coordsOfStop/geo validacija (missing_coords). Geo panel postanek
+        // pošteno javi kot neznano destinacijo — brez pina je iskreno.
+        !(loc.lat === 0 && loc.lng === 0)
+      ) {
+        const coord: RouteCoord = {
+          lat: loc.lat,
+          lng: loc.lng,
+          name: loc.destination_name,
+          day: dayPlan.day,
+        };
+        allCoords.push(coord);
+        dayCoords.push(coord);
+        seen.add(loc.destination_id);
+      }
+    });
+
+    if (dayCoords.length > 0) {
+      byDay.push({
+        day: dayPlan.day,
+        color: DAY_COLORS[(dayPlan.day - 1) % DAY_COLORS.length],
+        coords: dayCoords,
+        // F5.6: geometrija po realnih cestah (OSRM) — samo kadar jo ima dan
+        geometry: dayPlan.routeGeometry,
+      });
+    }
+  });
+
+  return { routeCoords: allCoords, routeByDay: byDay };
+}
+
+/**
  * Zustand store za deljenje AI itinererja med komponentami.
  * ItineraryPlanner nastavi itinerer, MapSection ga bere za prikaz poti.
  */
@@ -79,64 +154,9 @@ export const useAppStore = create<AppState>((set) => ({
       return;
     }
 
-    // Izpelji koordinate poti iz itinererja — grupirano po dnevih
-    const allCoords: RouteCoord[] = [];
-    const byDay: DayRoute[] = [];
-    const seen = new Set<string>();
+    const { routeCoords, routeByDay } = deriveRoute(it);
 
-    it.days.forEach((dayPlan) => {
-      const dayCoords: RouteCoord[] = [];
-      dayPlan.locations.forEach((loc) => {
-        const dest = DESTINATIONS.find((d) => d.id === loc.destination_id);
-        if (dest) {
-          const coord: RouteCoord = {
-            lat: dest.coords.lat,
-            lng: dest.coords.lng,
-            name: dest.name,
-            day: dayPlan.day,
-          };
-          allCoords.push(coord);
-          dayCoords.push(coord);
-          seen.add(loc.destination_id);
-        } else if (
-          // 1.42 (GEO → NAČRT): OSM kraj iz AI klepeta — lastne koordinate
-          // (destination_id "osm-node-…" ni v T1 datasetu, pin pa živi na
-          // zemljevidu poti kot vsak drug postanek dneva)
-          typeof loc.lat === "number" &&
-          typeof loc.lng === "number" &&
-          Number.isFinite(loc.lat) &&
-          Number.isFinite(loc.lng) &&
-          // TASK 50 (§14 GEO): null island (0,0) NI veljavna koordinata —
-          // AI haluciniran ID (živi dokaz: "socca" z lat 0/lng 0) bi sicer
-          // risal pin + pot čez pol Afrike. Isto pravilo kot strežniška
-          // coordsOfStop/geo validacija (missing_coords). Geo panel postanek
-          // pošteno javi kot neznano destinacijo — brez pina je iskreno.
-          !(loc.lat === 0 && loc.lng === 0)
-        ) {
-          const coord: RouteCoord = {
-            lat: loc.lat,
-            lng: loc.lng,
-            name: loc.destination_name,
-            day: dayPlan.day,
-          };
-          allCoords.push(coord);
-          dayCoords.push(coord);
-          seen.add(loc.destination_id);
-        }
-      });
-
-      if (dayCoords.length > 0) {
-        byDay.push({
-          day: dayPlan.day,
-          color: DAY_COLORS[(dayPlan.day - 1) % DAY_COLORS.length],
-          coords: dayCoords,
-          // F5.6: geometrija po realnih cestah (OSRM) — samo kadar jo ima dan
-          geometry: dayPlan.routeGeometry,
-        });
-      }
-    });
-
-    set({ itinerary: it, routeCoords: allCoords, routeByDay: byDay });
+    set({ itinerary: it, routeCoords, routeByDay });
   },
 }));
 
