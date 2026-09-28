@@ -370,6 +370,8 @@ export function ProductModal({ product, onClose, onSelect }: ProductModalProps) 
                 price: product.price,
                 destination: product.destinationName ?? null,
                 slug: product.slug,
+                // W3 (Issue #15): kategorija ob shranjevanju — razdelki lista po temi
+                category: product.category,
               }}
             />
 

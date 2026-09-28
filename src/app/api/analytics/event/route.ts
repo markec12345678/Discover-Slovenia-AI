@@ -131,6 +131,52 @@ const VALID_EVENTS = new Set([
   // P1-3 (recenzija): preimenovano iz user_abandoned_after_result — proxy
   // signal "rezultat prikazan, sledeni dogodek ni bil zaznan v merjenem oknu"
   "result_session_ended_without_action",
+  // ------------------------------------------------------------------------
+  // W3 (Issue #15) — BACKFILL + NOVI DOGODKI. Revizija 1.132.0 je odkrila,
+  // da je bila ta whitelist zadnjič osvežena pri 1.118.0: 18 novejših
+  // dogodkov klientnega union-a (PlannerEventName) tukaj MANJKALO — njihovi
+  // fire-and-forget POST-i so tiho dobivali 400 (dogodka NI bilo v DB).
+  // Vključno z W2 (chat_group_*) in W9 (chat_ask_cta_clicked) lastnimi
+  // meritvami. Popravljeno: whitelist je od zdaj POPOLNA preslika union-a
+  // (regresijski test w3-collections.test.ts vsak član union-a preveri
+  // proti tej seznamu — past se ne more več ponoviti).
+  // ------------------------------------------------------------------------
+  // W3: uporabnik je preklopil list "Priljubljene" v razdelke (view
+  // destination|theme; groups; items) — meri Mindtripov vzorec "someday
+  // collections" nad našim ploščnim seznamom ("Vse" ostaja privzeto)
+  "wishlist_collection_used",
+  // W3: klik "Načrtuj" na razdelku zbirke (view; items; has_destination)
+  // — most zbirka → načrtovalnik prek obstoječega handoff kanona "Moja pot"
+  "wishlist_collection_planned",
+  // W2 (Issue #15): vprašanje @AI svetovalca v skupinskem klepetu na /pot
+  "chat_group_ai_asked",
+  // W2: kraj iz AI odgovora dodan v DELJENO pot (CAS PATCH)
+  "chat_group_place_added",
+  // W9 (Issue #15): klik kontekstualnega CTA vsebine → klepet s pred-izpolnjenim vprašanjem
+  "chat_ask_cta_clicked",
+  // 1.123 (G5): pripen/odpin persistent split map ob klepetu
+  "chat_map_pinned",
+  "chat_map_unpinned",
+  // M7 (Issue #5 / T5-D): ročno prestavljanje + strukturno urejanje dni
+  "stop_reordered",
+  "day_added",
+  "day_removed",
+  // D6-B (Issue #6): postanek prestavljen v prejšnji/naslednji dan
+  "stop_moved_to_day",
+  // TASK 28 (Tier 1 #1): polling je zaznal novejšo strežniško različico povezane pote
+  "plan_update_detected",
+  "plan_update_loaded",
+  "plan_update_load_failed",
+  // TASK 8 / F3-C: uspešno zaključen uvoz vira (povezava/slika/PDF/točke)
+  "ingest_completed",
+  // ISSUE #4 §22: razveljavljen zadnji destruktiven prehod + padec PATCH v klasično pot
+  "itinerary_undo",
+  "save_inplace_fallback",
+  // TASK 4 / K-4: preklic in timeout refine klica (NAMERNI izbiri, ne napaki)
+  "refine_cancelled",
+  "refine_timeout",
+  // TASK 4 / K-7: AI itinerer zagnan v Go Mode (most PLAN → GO)
+  "go_mode_started",
 ]);
 
 /** Omejitve velikosti props (proti zlorabi analitičnega endpointa).

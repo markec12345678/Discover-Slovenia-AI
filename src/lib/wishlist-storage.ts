@@ -21,6 +21,11 @@ const NAME_MAX_LENGTH = 120;
 const IMAGE_MAX_LENGTH = 600;
 const ID_MAX_LENGTH = 64;
 const SLUG_MAX_LENGTH = 160;
+// W3 (Issue #15): kategorija izkušnje/izdelka ob shranjevanju — dodatno,
+// NEOBVEZNO polje (starejši vnosi pred 1.132.0 ga nimajo → tema "Drugo",
+// iskren fallback, brez izmišljanja). Kap je obrambna (kategorije so
+ // kratki nizi iz D8-B taksonomije tržnice).
+const CATEGORY_MAX_LENGTH = 40;
 
 /** Dogodki, ki jih ta modul sproži na window (notranja sinkronizacija UI). */
 const WISHLIST_CHANGED_EVENT = "dai:wishlist-changed";
@@ -45,6 +50,9 @@ export interface WishlistEntry {
   destination: string | null;
   /** Slug za poizvedbo /api/{experiences|products}/[slug], če vnos ni v naloženem seznamu. */
   slug: string | null;
+  /** W3: kategorija izkušnje/izdelka (D8-B taksonomija) — NEOBVEZNO;
+   *  manjka pri starejših vnosih (razdelki po temi → iskreno "Drugo"). */
+  category?: string | null;
   savedAt: string; // ISO
 }
 
@@ -65,6 +73,7 @@ interface StoredEntry {
   price: unknown;
   destination: unknown;
   slug: unknown;
+  category?: unknown;
   savedAt: unknown;
 }
 
@@ -96,6 +105,13 @@ function sanitizeEntry(entry: StoredEntry): WishlistEntry | null {
     slug:
       typeof entry.slug === "string" && entry.slug.trim()
         ? entry.slug.slice(0, SLUG_MAX_LENGTH)
+        : null,
+    // W3: kategorija — neobvezna; trim + lowercase (kanonična oblika
+    // taksonomije), kap CATEGORY_MAX_LENGTH. Neveljavna vrsta → null
+    // (starejši vnosi brez kategorije ostanejo veljavni vnosi).
+    category:
+      typeof entry.category === "string" && entry.category.trim()
+        ? entry.category.trim().toLowerCase().slice(0, CATEGORY_MAX_LENGTH)
         : null,
     savedAt: typeof entry.savedAt === "string" ? entry.savedAt : new Date().toISOString(),
   };

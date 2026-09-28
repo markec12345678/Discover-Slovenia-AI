@@ -394,7 +394,18 @@ describe("F3-B rollout: wishlist-sheet prazno stanje", () => {
     // TASK 8 / F4-A: naslov praznega stanja je zdaj dvojezičen (WL L-pattern)
     // — prej pinjen SL literal title="Ni še nič shranjenega." (isti naslov
     // v SL veji, zdaj kot WL.emptyTitle.sl).
-    expect(WISHLIST_SRC).toContain('emptyTitle: { sl: "Ni še nič shranjenega.", en: "Nothing saved yet." }');
+    // W3 (Issue #15, 1.132.0): WL razširjen na 4 javne jezike — SL/EN
+    // vrednosti DOBESEDNO enake (zero-loss), IT/DE dodani (list je dosegljiv
+    // iz navigacije na it/de poteh). Pogodba sledi novi kanonični vrstici.
+    expect(WISHLIST_SRC).toContain(
+      'emptyTitle: { sl: "Ni še nič shranjenega.", en: "Nothing saved yet.", it: "Ancora nulla di salvato.", de: "Noch nichts gespeichert." }'
+    );
+    // W3: ostale ključe praznega stanja prav tako 4-jezično
+    expect(WISHLIST_SRC).toContain('it: "Esplora il mercato"');
+    expect(WISHLIST_SRC).toContain('de: "Marktplatz entdecken"');
+    expect(WISHLIST_SRC).toContain(
+      'emptyDescription: {'
+    );
   });
 
   test("CTA oznaka v L-pattern (SL + EN)", () => {

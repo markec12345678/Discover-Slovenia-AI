@@ -128,6 +128,14 @@ export type PlannerEventName =
   // CAS PATCH prek updateItinerary; meri, ali skupinsko odločanje prek @AI
   // dejansko spremeni načrt (komplement chat_place_added za osebni klepet).
   | "chat_group_place_added"
+  // W3 (Issue #15): uporabnik je preklopil list "Priljubljene" v razdelke
+  // (view destination|theme; groups = št. razdelkov; items) — meri Mindtripov
+  // vzorec "someday collections" (delež uporabe zbirk nad ploščnim seznamom).
+  | "wishlist_collection_used"
+  // W3: klik "Načrtuj" na razdelku zbirke (view; items; has_destination 0|1)
+  // — meri most zbirka → načrtovalnik (someday → konkreten načrt prek
+  // obstoječega handoff kanona "Moja pot").
+  | "wishlist_collection_planned"
   | "weather_alternative_used"
   // F5.4 "Začni s povezavo" ( url ingest — MindTrip "Start Anywhere")
   | "ingest_url_attempted"

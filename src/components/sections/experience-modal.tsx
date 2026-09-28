@@ -609,6 +609,8 @@ export function ExperienceModal({
                 price: experience.pricePerPerson,
                 destination: experience.destinationName ?? null,
                 slug: experience.slug,
+                // W3 (Issue #15): kategorija ob shranjevanju — razdelki lista po temi
+                category: experience.category,
               }}
             />
 

@@ -1055,6 +1055,8 @@ function ProductCard({
             price: product.price,
             destination: product.destinationName ?? null,
             slug: product.slug,
+            // W3 (Issue #15): kategorija ob shranjevanju — razdelki lista po temi
+            category: product.category,
           }}
         />
 
@@ -1253,6 +1255,8 @@ function ExperienceCard({
             price: experience.pricePerPerson,
             destination: experience.destinationName ?? null,
             slug: experience.slug,
+            // W3 (Issue #15): kategorija ob shranjevanju — razdelki lista po temi
+            category: experience.category,
           }}
         />
 

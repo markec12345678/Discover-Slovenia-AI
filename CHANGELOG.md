@@ -7,6 +7,67 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.132.0] — 2026-09-28 (W3: KOLEKCIJE PRILJUBLJENIH — Issue #15, val V1; vrzel iz workflow benchmarka Mindtrip)
+
+### Dodano
+
+- **RAZDELKI LISTA „Priljubljene“** (vrzel W3 — Mindtripov vzorec
+  „someday collections“, po našem kanonu). List v navigaciji dobi preklop
+  pogledov: **„Vse“** (ploščen seznam — privzeto, nedotaknjena izkušnja,
+  varovalo specifikacije) / **„Po destinaciji“** / **„Po temi“**. Razdelki
+  po destinaciji uporabljajo ISTO resolucijsko pravilo kot most v
+  my-trip-view (neobčutljivo ujemanje imena/slug-a proti T1 datasetu;
+  nerazrešljivo besedilo ostane iskerno vidno brez ID-ja). Teme so
+  **semenske teme intent čipov načrtovalnika** (hrana / kultura /
+  aktivnosti / mir / drugo) — deterministična preslikava iz
+  (type + category) vnosa, 0 AI.
+- **Gumb „Načrtuj“ na razdelku zbirke** — most „someday“ → konkreten
+  načrt prek OBSTOJEČEGA handoff kanona (enak kot ToastAction „Načrtuj“ v
+  my-trip-view): vnosi razdelka → zbirka „Moja pot“ (identiteta kind:refId,
+  dedup čez površine), razrešena destinacija sproži `dai:my-trip-prefill`,
+  `setMyTripHandoff` + navigacija na /nacrtuj (locale-zavedajoča —
+  it/de/de pote ostanejo v jeziku). NO silent AI — razpored sestavi
+  uporabnik sam (trak „Iz moje poti“ + „Uporabi v načrtu“).
+- **Kategorija ob shranjevanju** (dodatno, neobvezno polje WishlistEntry):
+  srčki na 4 površinah (kartice izdelkov/izkušenj tržnice + oba modala)
+  zapišejo kategorijo izkušnje/izdelka ob shranjevanju — razdelki po temi
+  imajo torej realne podatke. Starejši vnosi brez kategorije ostanejo
+  veljavni → iskren razdelek „Drugo“ (brez izmišljanja tem).
+- **4-jezični WL slovar lista** (SL primarna resnica, EN referenčni par —
+  vrednosti DOBESEDNO enake; IT/DE dodani po kanonu mtNotice): list je
+  dosegljiv iz navigacije na VSEH poteh vključno z /it in /de — prej so
+  it/de uporabniki videli slovenske nize. Aria oznake srčka in vrstic
+  prav tako 4-jezične.
+- **Telemetrija W3**: `wishlist_collection_used` (preklop pogleda — doseg
+  kolekcij nad ploščnim seznamom) + `wishlist_collection_planned` (klik
+  „Načrtuj“ — most zbirka → načrt). Oba v klientnem union-u IN strežniški
+  whitelisti (kanon) + vrstici v docs/ANALYTICS-EVENTS.md.
+
+### Popravljeno
+
+- **BACKFILL STREŽNIŠKE WHITELISTE (18 dogodkov)**: revizija ob W3 je
+  odkrila, da je bila `VALID_EVENTS` lista (/api/analytics/event) zadnjič
+  osvežena pri 1.118.0 — 18 novejših dogodkov klientnega union-a je
+  manjkalo (vključno z W2 `chat_group_*` in W9 `chat_ask_cta_clicked`
+  lastnimi meritvami); njihovi fire-and-forget POST-i so tiho dobivali
+  400, vrstic v DB ni bilo. Vsi dodani nazaj + nov regresijski test
+  preverja vsak član union-a proti whitelisti (past se ne more tiho
+  ponoviti).
+
+### Varovala (ZERO FEATURE LOSS)
+
+- Ploščen seznam ostaja kot „Vse“ (privzeto ob vsakem odpiranju lista).
+- Dodajanje prek obstoječega srčka se NE spremeni (kategorija je dodatno
+  polje; dedup/FIFO/60 kapa nespremenjeni).
+- Vrstice razdelkov so ISTA WishlistRow (odpiranje v tržnici, „V pot“,
+  odstranjevanje — identično delujejo v vseh pogledih).
+- Share kolekcije teče prek obstoječega share kanona poti (zbirka ≠
+  razporejevalnik — izmišljanje datumov/ur bi bilo lažno razporejanje).
+- Preklop pogledov se prikaže šele od 2 vnosov (1 vnos nima kaj
+  razdelkovati); vse nadaljnje akcije ≥44px dotik.
+
+---
+
 ## [1.131.0] — 2026-09-28 (W2: SKUPINSKI KLEPET Z @AI — Issue #15, vrzel iz workflow benchmarka Mindtrip)
 
 ### Dodano

@@ -100,6 +100,43 @@ function assertLeafParity(node: unknown, path: string): number {
   return leaves;
 }
 
+/**
+ * W3 (Issue #15, 1.132.0): 4-jezična pariteta za WL (wishlist-sheet) —
+ * list je { sl, en, it, de } s ŠTIRIMI nepraznimi nizi (list je dosegljiv
+ * iz navigacije na it/de poteh — nikoli delno preveden). SL/EN vrednosti
+ * so DOBESEDNO enake starejšim (zero-loss); it/de sta strojni prevodi po
+ * kanonu mtNotice. Vrne število listov.
+ */
+function assertLeafParity4(node: unknown, path: string): number {
+  if (typeof node !== "object" || node === null) {
+    throw new Error(`${path}: list mora biti objekt { sl, en, it, de }`);
+  }
+  const rec = node as Record<string, unknown>;
+  const keys = Object.keys(rec);
+  if (
+    keys.length === 4 &&
+    keys.includes("sl") &&
+    keys.includes("en") &&
+    keys.includes("it") &&
+    keys.includes("de")
+  ) {
+    for (const lang of ["sl", "en", "it", "de"] as const) {
+      if (typeof rec[lang] !== "string") {
+        throw new Error(`${path}: ${lang} mora biti niz`);
+      }
+      if ((rec[lang] as string).trim().length === 0) {
+        throw new Error(`${path}: ${lang} vrednost je prazna`);
+      }
+    }
+    return 1;
+  }
+  let leaves = 0;
+  for (const [k, v] of Object.entries(rec)) {
+    leaves += assertLeafParity4(v, `${path}.${k}`);
+  }
+  return leaves;
+}
+
 const marketL = evalObject(extractConstObject(MARKET_SRC, "L"));
 const pageL = evalObject(extractConstObject(PAGE_SRC, "L"));
 const wishlistWL = evalObject(extractConstObject(WISHLIST_SRC, "WL"));
@@ -330,8 +367,12 @@ describe("F4-A wishlist-sheet: /trznica href locale-zavedanje + besedje", () => 
     expect(WISHLIST_SRC).toContain("refId: entry.id,");
   });
 
-  test("WL slovar ima popolno SL/EN pariteto (vedenjsko, ≥19 listov)", () => {
-    const leaves = assertLeafParity(wishlistWL, "WL");
+  test("WL slovar ima popolno 4-jezično pariteto (vedenjsko, ≥19 listov — W3)", () => {
+    // W3 (1.132.0): WL je razširjen na 4 javne jezike (list je dosegljiv iz
+    // navigacije na VSEH poteh, vključno z /it in /de). Pogodba: vsak list
+    // ima sl+en+it+de, vsi neprazni. SL/EN vrednosti ostajajo dobesedno
+    // enake starejšim (zero-loss nad obstoječo izkušnjo).
+    const leaves = assertLeafParity4(wishlistWL, "WL");
     expect(leaves).toBeGreaterThanOrEqual(19);
     const wl = wishlistWL as Record<string, { sl: string; en: string }>;
     expect(wl.exploreCta.sl).toBe("Razišči tržnico");
@@ -391,21 +432,26 @@ describe("F4-A wishlist-sheet: /trznica href locale-zavedanje + besedje", () => 
 // 7. I18N varnost — jezik se razrešuje po useLocale (ne po URL-u/potepanju)
 // ---------------------------------------------------------------------------
 describe("F4-A i18n: jezikovna resolucija (L vzorec, zlati standard)", () => {
-  test("vse tri datoteke razrešijo jezik prek useLocale z EN varnimi tipi", () => {
-    for (const [name, src] of [
-      ["marketplace", MARKET_SRC],
-      ["wishlist-sheet", WISHLIST_SRC],
-    ] as const) {
-      expect(src).toContain("useLocale");
-      const langLines = src.match(
-        /const lang: "sl" \| "en" = locale === "en" \? "en" : "sl";/g
-      );
-      // marketplace: sekcija + 2 kartici; wishlist: sheet + srček + vrstica
-      expect(langLines?.length).toBeGreaterThanOrEqual(
-        name === "marketplace" ? 3 : 3
-      );
-      void name;
-    }
+  test("vse tri datoteke razrešijo jezik prek useLocale z varnimi tipi", () => {
+    // marketplace: sekcija + 2 kartici (isti vzorec); wishlist-sheet: W3
+    // (1.132.0) je trije „sl|en" izbire nadomestil z ENIM deljenim
+    // helperjem pickWishlistLang (4-jezično — list je na it/de poteh) —
+    // resolucija ŠE VEDNO teče po useLocale (ne po URL-u/potepanju).
+    expect(MARKET_SRC).toContain("useLocale");
+    expect(WISHLIST_SRC).toContain("useLocale");
+    const langLines = MARKET_SRC.match(
+      /const lang: "sl" \| "en" = locale === "en" \? "en" : "sl";/g
+    );
+    // marketplace: sekcija + 2 kartici
+    expect(langLines?.length).toBeGreaterThanOrEqual(3);
+    // wishlist-sheet: helper definiran + uporabljen na vseh treh mestih
+    // (sheet + srček + vrstica) — nikoli več ročnih ternary-jev
+    expect(WISHLIST_SRC).toContain(
+      'function pickWishlistLang(locale: string): WishlistLang {'
+    );
+    expect(
+      (WISHLIST_SRC.match(/pickWishlistLang\(locale\)/g) ?? []).length
+    ).toBeGreaterThanOrEqual(3);
   });
 
   test("trznica/page razreši jezik strežniško (getLocale, async)", () => {

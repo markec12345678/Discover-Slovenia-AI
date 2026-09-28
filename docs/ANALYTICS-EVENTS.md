@@ -20,6 +20,20 @@
 - **Proxy signali so označeni.** `result_session_ended_without_action` NE
   pomeni nezadovoljstvo (glej definicijo).
 
+## Revizija whitelist 1.132.0 (W3 backfill)
+
+Revizija ob W3 je odkrila, da je bila strežniška `VALID_EVENTS` lista zadnjič
+v celoti osvežena pri 1.118.0 — **18 novejših dogodkov** klientnega union-a
+je manjkalo (`chat_group_ai_asked`, `chat_group_place_added`,
+`chat_ask_cta_clicked`, `chat_map_pinned/unpinned`, `day_added/removed`,
+`stop_reordered/moved_to_day`, `plan_update_*`, `ingest_completed`,
+`itinerary_undo`, `save_inplace_fallback`, `refine_cancelled/timeout`,
+`go_mode_started`). Njihovi fire-and-forget POST-i so tiho dobivali 400 —
+vrstic v DB ni bilo (W2/W9 meritve so bile podcenjene). Vsi so dodani
+nazaj; regresijski test (`w3-collections.test.ts`) od zdaj preverja, da je
+vsak član `PlannerEventName` union-a prisoten v strežniški whitelisti —
+past se ne more tiho ponoviti.
+
 ## Zlata pot (v tem vrstnem redu)
 
 | Dogodek | Kdaj se sproži | Enkrat / večkrat | Obvezni props | Pomen / metrika |
@@ -61,6 +75,9 @@
 | `chat_place_added` (1.42) | klik „+“ na kraju v AI klepetu, ki ga doda v načrt | vsak uspešen dodatek (tudi consume iz sessionStorage) | `provenance` (`t1`/`osm`), `category`, `day?`, `stashed?` (=1, če je čakal na prvi načrt), `locale` | zaključek zanke „pogovor → dejanje“ (Mindtripov „+“); `stashed` delež pove, koliko uporabnikov išče kraje PRED ustvarjanjem načrta |
 | `chat_place_removed` (1.43) | klik „Odstrani“ na kartici postanka, dodanega iz klepeta | vsak uspešen en-klik odstranitev | `provenance` (`t1`/`osm`), `day`, `locale` | komplement `chat_place_added`: razmerje doda/odstrani pove, kako dobro AI priporoča kraje (visok odstotek odstranitev = slaba priporočila); samo klepet postanki — AI generirani gredo skozi `stop_removed` (refine pot) |
 | `itinerary_audio_play` (1.80; 1.81 `surface=mytrip`) | uspešen začetek predvajanja **zvočnega povzetka dneva** (TASK 89/91, gumb „Poslušaj“/„Listen“ v glavi dneva) | vsak uspešen začetek (napake se NE štejejo) | `day`, `lang` (`sl`/`en`), `surface` (`planner`/`shared`/`mytrip`), `bytes` (velikost zvoka) | doseg TTS zmožnosti (vrzel do Mindtripa — audio itinerar); `surface=shared` pove, ali poslušajo tudi obiskovalci deljenih povezav (prijatelji brez računa); `surface=mytrip` (1.81) ali poslušajo POTNIKI svoj potrjen načrt med potovanjem; `bytes` posredna dolžina poslušanja |
+
+| `wishlist_collection_used` (1.132.0, Issue #15 W3) | uporabnik je preklopil list „Priljubljene“ v razdelke **Po destinaciji** ali **Po temi** (kolekcije „someday“ — Mindtripov vzorec, po našem kanonu) | vsak preklop v ne-„Vse“ pogled („Vse“ = obstoječa izkušnja, brez dogodka) | `view` (`destination`/`theme`), `groups` (št. razdelkov), `items` | doseg kolekcij nad ploščnim seznamom; delež sej z ≥ 1 preklopom pove, ali razdelki dejansko pomagajo organizirati shranjeno — brez tega bi razdelke odstravili (isti test kot `chat_geo_filtered` za čipe) |
+| `wishlist_collection_planned` (1.132.0, Issue #15 W3) | klik **„Načrtuj“** na razdelku zbirke (vnosi razdelka → zbirka „Moja pot“ + handoff na /nacrtuj; razrešena destinacija sproži `dai:my-trip-prefill`) | vsak klik | `view` (`destination`/`theme`), `items`, `has_destination` (0/1) | most **zbirka → načrt** („someday“ → konkreten načrt prek obstoječega handoff kanona — NO silent AI, razpored sestavi uporabnik); skupaj z `wishlist_collection_used` → delež zbirk, ki prerastejo v načrtovanje |
 
 ## Strežniški dogodki (piše jih IZKLJUČNO strežnik — klient jih NE more oddati)
 
