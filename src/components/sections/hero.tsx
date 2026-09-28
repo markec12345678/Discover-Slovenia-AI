@@ -1,7 +1,9 @@
 import Image from "next/image";
-import { ChevronDown, ShieldCheck } from "lucide-react";
+import { ChevronDown, Leaf, ShieldCheck, Snowflake, Sun, Flower2 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { HeroQuickInput } from "@/components/hero-quick-input";
+import { ChatAskCta } from "@/components/chat-ask-cta";
+import { currentSeason, type Season } from "@/lib/season";
 
 /**
  * Hero sekcija — "WOW ob prvem obisku"
@@ -14,9 +16,36 @@ import { HeroQuickInput } from "@/components/hero-quick-input";
  * - Vrh zajamčen pod navigacijo (-mt-16) → prozorna nav nad fotografijo
  *   (pattern GYG/Airbnb — navigacija "lebdi" nad herojem)
  * - Scroll cue s mehakim utripanjem (dolžina strani ~20 sekcij)
+ *
+ * W4 (Issue #15, 1.134.0): SEZONSKI PAS — hero vsebina dinamizirana po
+ * mesecu (STB vzorec "Perfect autumn day"). Deterministična preslikava
+ * mesec → sezona (src/lib/season.ts, 0 AI); opis sezone se PONOVNO
+ * UPORABI iz OBSTOJEČEGA bestTime slovarja (1 vir resnice, 4 jeziki,
+ * brez novih opisov). CTA = W9 kanon (klepet s pred-izpolnjenim UREDITLJIVIM
+ * vprašanjem, nikoli se ne pošlje samodejno) — vprašanja so živo preverjena
+ * proti /api/chat (domenski utemeljeni odgovori v vseh 4 jezikih).
+ * VAROVALA: H1 vprašanje ostaja; čip "Brez gužve" ostaja; pas je DODATEN
+ * in podrejen enovitemu AI vnosu zgoraj (D8-F hierarhija) — ne tekmuje z
+ * primarno akcijo.
  */
+
+/** Ikona sezone (lucide) — vizualni naglas pasu, aria-hidden. */
+const SEASON_ICON: Record<Season, typeof Leaf> = {
+  zima: Snowflake,
+  pomlad: Flower2,
+  poletje: Sun,
+  jesen: Leaf,
+};
+
 export async function Hero() {
   const t = await getTranslations("hero");
+  // W4: opis sezone iz OBSTOJEČEGA bestTime slovarja (ena resnica o sezonah)
+  const tBestTime = await getTranslations("bestTime");
+  const season = currentSeason();
+  const SeasonIcon = SEASON_ICON[season];
+  const seasonKicker = `${tBestTime(`seasons.${season}.label` as const)} · ${tBestTime(
+    `seasons.${season}.desc` as const
+  )}`;
   return (
     <section
       id="vrh"
@@ -76,6 +105,27 @@ export async function Hero() {
           <span aria-hidden="true" className="text-amber-300/80">·</span>
           <span>{t("trustUpdated")}</span>
         </p>
+
+        {/* W4 (Issue #15): SEZONSKI PAS — vsebina heroja diha z letnim
+            časom (STB "Perfect autumn day" vzorec). Kicker = obstoječi
+            bestTime opis sezone (1 vir resnice); CTA = W9 kanon — klepet s
+            pred-izpolnjenim UREDITLJIVIM vprašanjem, ki se NIKOLI ne pošlje
+            samodejno. Telemetrija: chat_ask_cta_clicked s površino
+            "hero-seasonal" + season prop (KPI W4). */}
+        <div className="mt-7 flex w-full flex-col items-center gap-2.5 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+          <p className="flex items-center gap-2 text-xs font-medium text-white/85 drop-shadow-[0_1px_8px_rgba(0,0,0,0.5)] sm:text-sm">
+            <SeasonIcon className="size-4 shrink-0 text-amber-300" aria-hidden="true" />
+            <span className="text-balance">{seasonKicker}</span>
+          </p>
+          <ChatAskCta
+            variant="inline"
+            surface="hero-seasonal"
+            season={season}
+            label={t(`seasonal.${season}.ctaLabel` as const)}
+            question={t(`seasonal.${season}.question` as const)}
+            className="border-white/30 bg-white/10 text-white backdrop-blur-md hover:border-white/50 hover:bg-white/20 focus-visible:ring-white/50"
+          />
+        </div>
       </div>
 
       {/* Scroll cue — namig na 20+ sekcij vsebine pod herojem */}

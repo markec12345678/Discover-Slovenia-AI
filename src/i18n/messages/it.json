@@ -39,7 +39,25 @@
     "trustNoAccount": "Senza account",
     "trustVerified": "km e prezzi verificati",
     "trustUpdated": "aggiornato settembre 2026",
-    "startAnywhere": "Hai già le tue fonti? Inizia da dove vuoi — link, foto, PDF o pin di Google"
+    "startAnywhere": "Hai già le tue fonti? Inizia da dove vuoi — link, foto, PDF o pin di Google",
+    "seasonal": {
+      "zima": {
+        "ctaLabel": "Chiedi all'IA dell'inverno a Bled",
+        "question": "Cosa vedere e vivere a Bled in inverno?"
+      },
+      "pomlad": {
+        "ctaLabel": "Chiedi all'IA della primavera sulla Soča",
+        "question": "Cosa vedere e vivere sul fiume Soča in primavera?"
+      },
+      "poletje": {
+        "ctaLabel": "Chiedi all'IA dell'estate sulla Soča",
+        "question": "Cosa vedere e vivere sul fiume Soča in estate?"
+      },
+      "jesen": {
+        "ctaLabel": "Chiedi all'IA dell'autunno a Bled",
+        "question": "Cosa vedere e vivere a Bled in autunno?"
+      }
+    }
   },
   "heroChips": {
     "calmWeekend": "Weekend tranquillo",

@@ -88,7 +88,17 @@ const COLLAPSIBLE = {
     planCheck: "Verify an existing plan",
     telemetry: "Validator telemetry",
   },
-} as const;
+  // W4 (Issue #15): 4 javni jeziki (W1 doslednost — prej so it/de
+  // uporabniki na domači strani videli slovenske oznake)
+  it: {
+    planCheck: "Verifica un piano esistente",
+    telemetry: "Telemetria del validatore",
+  },
+  de: {
+    planCheck: "Bestehenden Plan prüfen",
+    telemetry: "Validator-Telemetrie",
+  },
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
@@ -134,7 +144,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export default async function Home() {
   const locale = await getLocale();
-  const labels = locale === "en" ? COLLAPSIBLE.en : COLLAPSIBLE.sl;
+  // W4: 4-jezikovni slovar z iskrenim SL fallbackom (neznani locale → SL,
+  // primarni jezik platforme)
+  const labels = COLLAPSIBLE[locale] ?? COLLAPSIBLE.sl;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

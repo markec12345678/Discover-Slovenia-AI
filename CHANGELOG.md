@@ -7,6 +7,65 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.134.0] — 2026-09-28 (W4: SEZONSKI PAS HEROJA — Issue #15, val V2; vrzel iz workflow benchmarka STB)
+
+### Dodano
+
+- **SEZONSKI PAS NA HEROJU** (vrzel W4 — STB vzorec »Perfect autumn day«:
+  turizem je hiper-sezonski, statičen hero govori enako vsepovsod). Vsebina
+  heroja se dinamizira po mesecu: zimski/pomladni/poletni/jesenski pas pod
+  vrstico zaupanja — ikona sezone + kicker (»Jesen · Barve lista, vino,
+  manj gneče«) + CTA. **Deterministično, 0 AI, brez nove infrastrukture**:
+  preslikava mesec → sezona je statična mapa (`src/lib/season.ts`,
+  `seasonForMonth`/`currentSeason`, TOTALNA funkcija — nikoli ne vrže);
+  opis sezone se PONOVNO UPORABI iz obstoječega **bestTime** slovarja
+  (1 vir resnice o sezonah, isti mejni meseci, 4 jeziki — NIČ novih opisov).
+- **Sezonski CTA po W9 kanonu** — gumb odpre AI klepet s pred-izpolnjenim
+  UREDITLJIVIM vprašanjem (nikoli se ne pošlje samodejno). Vprašanja so
+  zasidrana na **top-3 ocenjene destinacije baze** (Bled pozimi/jeseni,
+  Reka Soča pomladi/poleti) in **živo preverjena proti /api/chat v vseh
+  4 jezikih** — vsa 4 letna časi vračajo domenske utemeljene odgovore
+  (opis, ocena, priporočena dolžina, strošek, aktivnosti, viri STO/OSM),
+  ne iskreni odklon.
+- **Telemetrija KPI W4 (»sezonski CTA klik«)**: obstoječi dogodek
+  `chat_ask_cta_clicked` s novo vrednostjo površine `hero-seasonal` +
+  propom `season` — **NIČ novih imen dogodkov** (strežniška whitelista
+  nespremenjena; površina je prop, ne ime — past iz W3 se ne more zgoditi).
+- **Hero pill za temno ozadje heroja**: ChatAskCta inline varianta s
+  className preklopom (border-white/30 bg-white/10 backdrop-blur — isti
+  jezik kot intent čipi) — razširitev obstoječe komponente, ne dvojnik.
+- **Regresijski test `w4-seasonal-hero.test.ts`** (20 testov): 12-mesečna
+  preslikava + mejni dec↔jan + totalnost (negativni/modul/NaN), i18n
+  vsebina 4 sezone × 4 jeziki (neprazni, vprašalna oblika, zasidrana na
+  Bled/Soča), bestTime kot vir kickerja, SOURCE CONTRACT Hero
+  (deterministična sezona, CTA kanon, varovala H1/čipi/dominantni vnos),
+  ChatAskCta varovala (obstoječe površine ostanejo, season neobvezen,
+  whitelist nedotaknjena), COLLAPSIBLE 4-jezičnost.
+
+### Popravljeno
+
+- **W1 doslednost domače strani**: oznaki zloženih `<details>` povzetkov
+  (»Preveri svoj obstoječi načrt« / »Telemetrija validatorja«) sta bili
+  SL/EN — IT/DE uporabniki so videli slovenske nize. Razširjeno na 4 javne
+  jezike z iskrenim SL fallbackom (`COLLAPSIBLE[locale] ?? COLLAPSIBLE.sl`).
+
+### Varovala (ZERO FEATURE LOSS)
+
+- **H1 vprašanje ostaja** (»Kaj želiš doživeti v Sloveniji?«) — sezonski
+  pas je DODATEN, zadnji v vsebinskem stolpcu heroja.
+- **Čip »Brez gužve« ostaja** — QUICK_ACTIONS 8 vnosov nespremenjenih
+  (regresijsko preverjeno).
+- **Enoviti AI vnos ostaja dominanten** (D8-F hierarhija): pas stoji POD
+  vrstico zaupanja, ne tekmuje z vhodom; 44px dotik na mobilnem.
+- Vprašanje se ob kliku NE pošlje samodejno (W9 varovalo — samo pred-fill
+  klepeta, uporabnik sam odloči).
+- Iskrena meja (dokumentirana v season.ts): sezona se računa ob izrisu
+  strežnika; pri hipotetičnem statičnem buildu bi se zmrznila na
+  build-datum (kozmetična meja — napačen mesec pokaže napačno sezono,
+  nikoli napačne podatke).
+
+---
+
 ## [1.133.0] — 2026-09-28 (W10: OKNO MINDTRIP ALTERNATIVA — Issue #15, časovno okno akvizicije; vrzel iz raziskave Task 20 / workflow benchmarka)
 
 ### Dodano

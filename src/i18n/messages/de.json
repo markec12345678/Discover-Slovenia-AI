@@ -39,7 +39,25 @@
     "trustNoAccount": "Ohne Konto",
     "trustVerified": "km und Preise geprüft",
     "trustUpdated": "aktualisiert September 2026",
-    "startAnywhere": "Du hast schon eigene Quellen? Starte von überall — Link, Bild, PDF oder Google-Pins"
+    "startAnywhere": "Du hast schon eigene Quellen? Starte von überall — Link, Bild, PDF oder Google-Pins",
+    "seasonal": {
+      "zima": {
+        "ctaLabel": "Frag die KI nach Winter in Bled",
+        "question": "Was kann man in Bled im Winter sehen und erleben?"
+      },
+      "pomlad": {
+        "ctaLabel": "Frag die KI nach Frühling an der Soča",
+        "question": "Was kann man an der Soča im Frühling sehen und erleben?"
+      },
+      "poletje": {
+        "ctaLabel": "Frag die KI nach Sommer an der Soča",
+        "question": "Was kann man an der Soča im Sommer sehen und erleben?"
+      },
+      "jesen": {
+        "ctaLabel": "Frag die KI nach Herbst in Bled",
+        "question": "Was kann man in Bled im Herbst sehen und erleben?"
+      }
+    }
   },
   "heroChips": {
     "calmWeekend": "Ruhiges Wochenende",

@@ -23,10 +23,17 @@ import { trackPlannerEvent } from "@/lib/planner-analytics";
 //             to vprašanje se bo izpolnilo).
 //  - "inline": kompaktne tipka v kartici (guide persona) — ikona + oznaka;
 //             vprašanje se izpolni v klepetu.
+//
+// W4 (Issue #15, 1.134.0): nov površinski vrednosti "hero-seasonal" (sezonski
+// pas domače strani) + neobvezen prop `season` — isti dogodek
+// chat_ask_cta_clicked (že v strežniški whitelisti, NIČ novih imen), z
+// dodatnim propom za segmentacijo po sezoni (KPI W4: sezonski CTA klik).
+// Površina "hero" (destinacijske strani) ostaja nespremenjena.
 // ============================================================================
 
 export type ChatAskSurface =
   | "hero"
+  | "hero-seasonal"
   | "guide"
   | "best-time"
   | "things-to-do"
@@ -37,6 +44,7 @@ export function ChatAskCta({
   label,
   variant = "band",
   surface,
+  season,
   className,
 }: {
   /** Pred-izpolnjeno vprašanje (jezik strani, strežniško sestavljeno). */
@@ -47,6 +55,9 @@ export function ChatAskCta({
   variant?: "band" | "inline";
   /** Telemetrija: kje v lijaku se je klik zgodil. */
   surface: ChatAskSurface;
+  /** W4: sezona sezonskega pasu (hero-seasonal) — samo telemetrija,
+   *  ne vpliva na obnašanje. */
+  season?: string;
   className?: string;
 }) {
   const q = question.trim().slice(0, 500);
@@ -55,6 +66,7 @@ export function ChatAskCta({
     trackPlannerEvent("chat_ask_cta_clicked", {
       surface,
       question_len: q.length,
+      ...(season ? { season } : {}),
     });
     openChatWithQuestion(q);
   }

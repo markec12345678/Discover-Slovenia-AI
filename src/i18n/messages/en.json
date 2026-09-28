@@ -39,7 +39,25 @@
     "trustNoAccount": "No account needed",
     "trustVerified": "verified distances & prices",
     "trustUpdated": "updated September 2026",
-    "startAnywhere": "Already have your own sources? Start anywhere — link, image, PDF or Google pins"
+    "startAnywhere": "Already have your own sources? Start anywhere — link, image, PDF or Google pins",
+    "seasonal": {
+      "zima": {
+        "ctaLabel": "Ask AI about winter in Bled",
+        "question": "What to see and experience in Bled in winter?"
+      },
+      "pomlad": {
+        "ctaLabel": "Ask AI about spring on the Soča",
+        "question": "What to see and experience on the Soča river in spring?"
+      },
+      "poletje": {
+        "ctaLabel": "Ask AI about summer on the Soča",
+        "question": "What to see and experience on the Soča river in summer?"
+      },
+      "jesen": {
+        "ctaLabel": "Ask AI about autumn in Bled",
+        "question": "What to see and experience in Bled in autumn?"
+      }
+    }
   },
   "heroChips": {
     "calmWeekend": "Relaxed weekend",

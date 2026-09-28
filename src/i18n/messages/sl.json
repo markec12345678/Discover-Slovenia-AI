@@ -39,7 +39,25 @@
     "trustNoAccount": "Brez računa",
     "trustVerified": "km in cene preverjeni",
     "trustUpdated": "posodobljeno september 2026",
-    "startAnywhere": "Imaš že svoje vire? Začni od drugje — povezava, slika, PDF ali Google pins"
+    "startAnywhere": "Imaš že svoje vire? Začni od drugje — povezava, slika, PDF ali Google pins",
+    "seasonal": {
+      "zima": {
+        "ctaLabel": "Vprašaj AI o zimi na Bledu",
+        "question": "Kaj videti in doživeti na Bledu pozimi?"
+      },
+      "pomlad": {
+        "ctaLabel": "Vprašaj AI o pomladi ob Soči",
+        "question": "Kaj videti in doživeti ob reki Soči spomladi?"
+      },
+      "poletje": {
+        "ctaLabel": "Vprašaj AI o poletju ob Soči",
+        "question": "Kaj videti in doživeti ob reki Soči poleti?"
+      },
+      "jesen": {
+        "ctaLabel": "Vprašaj AI o jeseni na Bledu",
+        "question": "Kaj videti in doživeti na Bledu jeseni?"
+      }
+    }
   },
   "heroChips": {
     "calmWeekend": "Miren vikend",
