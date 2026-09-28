@@ -1,0 +1,48 @@
+{
+  "_metoda": "Performance API layout-shift z viri (buffered: true) v brskalniku — najpoštenejši inštrument za CLS na živi strani (glej docs/E2E-GATES.md §T3)",
+  "pred_popravkom_PRODUKCIJA_1.140.0_28.9": {
+    "embed_/pot/embed/bb183cd77d": {
+      "viewport": "412x823",
+      "skupni_CLS": 0.3805,
+      "zamiki": [
+        {
+          "t_ms": 1171,
+          "v": 0.3805,
+          "viri": [
+            {"el": "SECTION mb-10 space-y-8 (Načrt po dnevih)", "prej_y": 323, "prej_h": 414, "zdaj_y": 0},
+            {"el": "SECTION mb-10", "prej_y": 771, "prej_h": 52, "zdaj_y": 0}
+          ],
+          "razlaga": "CEL odsek zemljevida (naslov + 500px + legenda) se materializira šele ob hidrataciji — routeByDay iz Zustand shrambe je med SSR PRAZEN; vse pod njim se premakne"
+        }
+      ]
+    },
+    "polna_/pot/bb183cd77d": {
+      "viewport": "412x823",
+      "skupni_CLS": 0.3393,
+      "zamiki": [
+        {"t_ms": 970, "v": 0.3393, "viri": [{"el": "SECTION mb-10 space-y-8 (Načrt po dnevih)", "prej_y": 388, "prej_h": 414, "zdaj_y": 0}]}
+      ]
+    },
+    "SSR_dokazi": {
+      "strezniski_HTML_embed": "map-shell: ODSOTEN · h-[500px]: ODSOTEN · 'Nalagam': ODSOTEN (dynamic ssr:false ne izriše niti placeholderja)",
+      "LCP_element": "img.leaflet-tile (b.tile.openstreetmap.org) — resource load delay ~1.7–1.8 s (zemljevid se zažene šele po hidriranju)"
+    }
+  },
+  "po_popravku_LOKALNI_dev_1.140.1": {
+    "embed_/pot/embed/08ec4c69ae": {
+      "viewport_412": {"skupni_CLS": 0.0, "zamikov": 0},
+      "viewport_375": {"skupni_CLS": 0.026, "zamikov": 1, "opomba": "posodobitve v živo (periodične) — pod pragom vrat 0.10"},
+      "SSR_dokazi": {
+        "odsek_zemljevida_v_SSR": true,
+        "visinska_rezervacija_h-500_sm-600_v_SSR": true,
+        "preconnect_v_head": ["a.tile.openstreetmap.org", "b.tile.openstreetmap.org", "c.tile.openstreetmap.org"]
+      },
+      "hidratacija": "0 konzolnih napak, 0 napak strani (ni hidratacijskega neskladja)",
+      "mobil_375": "scrollW=375 clientW=375 (brez preliva)"
+    },
+    "znana_obstoječa_artefakt_ne_iz_popravka": {
+      "fantom_81px_pod_nogo": "zaprta vsebina <details> embed bloka raztegne drsljivo območje ~81 px pod nogo (Chrome laid-out skrite škatle) — DOKAZANO obstoječe v produkciji 1.140.0 (ista vrzela + isti skriti gumb na bb183cd77d); namenoma nepopravljeno v 1.140.1 (nevidno, iframe višino določa blogger)"
+    }
+  },
+  "produkcija_po_popravku": "ČAKA na uvod (kvota Vercel računa 100/100; samodejni uvajalni nadzornik /home/z/vercel-auto-deploy-1401.sh poskuša vsakih 15 min; dokaz bo dopolnjen po uvedbi)"
+}

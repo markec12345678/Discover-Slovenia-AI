@@ -1,0 +1,92 @@
+{
+ "_opomba": "Lighthouse mobile/simulate nad ZIVO produkcijo 1.140.0 (i-feel-slovenia.vercel.app), 28. 9. 2026, iz peskovnika; validirani so SAMO teki brez runWarnings (hladni zagoni zavrzani — glej docs/E2E-GATES.md)",
+ "strani": {
+  "/": {
+   "perf": 0.61,
+   "a11y": 0.96,
+   "bp": 0.96,
+   "seo": 1,
+   "lcp_ms": 4021,
+   "cls": 0.0028,
+   "tbt_ms": 1300,
+   "opozorila": []
+  },
+  "/destinacije": {
+   "perf": 0.66,
+   "a11y": 0.96,
+   "bp": 0.96,
+   "seo": 1,
+   "lcp_ms": 3728,
+   "cls": 0.0028,
+   "tbt_ms": 1023,
+   "opozorila": []
+  },
+  "/destinacija/bled": {
+   "perf": 0.76,
+   "a11y": 0.96,
+   "bp": 0.96,
+   "seo": 1,
+   "lcp_ms": 3864,
+   "cls": 0.0023,
+   "tbt_ms": 469,
+   "opozorila": [
+    "The page loaded too slowly to finish within the time limit. Results may be incomplete."
+   ]
+  },
+  "/na-poti": {
+   "perf": 0.9,
+   "a11y": 0.96,
+   "bp": 0.96,
+   "seo": 1,
+   "lcp_ms": 1752,
+   "cls": 0.003,
+   "tbt_ms": 391,
+   "opozorila": []
+  },
+  "/zemljevid": {
+   "perf": 0.74,
+   "a11y": 0.98,
+   "bp": 0.92,
+   "seo": 1,
+   "lcp_ms": 3111,
+   "cls": 0.0051,
+   "tbt_ms": 811,
+   "opozorila": []
+  },
+  "/pot/embed/bb183cd77d": {
+   "perf": 0.4,
+   "a11y": 0.99,
+   "bp": 0.92,
+   "seo": 0.69,
+   "lcp_ms": 4806,
+   "cls": 0.3805,
+   "tbt_ms": 1080,
+   "opozorila": []
+  },
+  "/pot/bb183cd77d": {
+   "perf": 0.34,
+   "a11y": 0.99,
+   "bp": 0.92,
+   "seo": 0.61,
+   "lcp_ms": 6256,
+   "cls": 0.3417,
+   "tbt_ms": 1407,
+   "opozorila": []
+  }
+ },
+ "_zavrzeno_hladen_zagon": {
+  "/destinacije prvi tek": {
+   "simLCP_ms": 12049,
+   "observedLCP": null,
+   "opozorila": [
+    "The page loaded too slowly to finish within the time limit. Results may be incomplete."
+   ],
+   "razlaga": "hladen zagon Vercel funkcije obesi _rsc prednalaganja; ponovitev na ogreti funkciji: 3728 ms"
+  },
+  "/ prvi tek": {
+   "simLCP_ms": 6195,
+   "observedLCP": null,
+   "razlaga": "isto; cist tek: 4021 ms"
+  }
+ }
+}
