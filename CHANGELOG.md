@@ -7,6 +7,72 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.140.0] — 2026-09-28 (D7: BLOG-EMBED DELJENIH POTI — Issue #15, benchmark dodatek D/7; zadnja odprta vrstica benchmarka)
+
+### Dodano
+
+- **Blog-embed deljenih poti** (benchmark dodatek D, točka 7 — Roam
+  Aroundov »Embed on your site« vzorec za WordPress/bloggerje, BREZ
+  zavrnjene token ekonomije »share and earn«, ki ostaja pod »ne
+  kopiramo«). Javna pot dobi v sekciji deljenja zložljiv blok
+  **»Vdelaj na svojo stran ali blog«**: čist HTML iframe snippet
+  (nič skriptov, ki bi jih moral blogger zaupati) + gumb kopiraj z
+  rezervo (Clipboard API → skrita textarea/execCommand — nov skupni
+  `src/lib/clipboard.ts`). Načrt v vdelavi ostane **živ**: bralec
+  bloga ob vsakem obisku dobi trenutno stanje s strežnika (spremembe
+  poti se pokažejo brez ponovnega lepljenja kode).
+- **Nova pot `/pot/embed/[shareId]`** — namenjena vdelavi: isto
+  varnostno jedro kot polna stran (SHARE_ID_RE vrata, isPublic +
+  resolveTripRole → 404 za zasebne pote), a brez lupine
+  (Navigation/Footer) in brez skupnostnih/pooblaščenih ploskev;
+  poizvedbe slednjih se v embed načinu PRESKOČIJO (lažji DB ogled).
+  Atribucijski pas na dnu (Discover Slovenia AI + »Odpri celoten
+  načrt«, target=_blank) — poštena menjava za brezplačno vdelavo.
+  PageViewTracker nosi `/pot/embed/…` → blog promet ločeno merljiv.
+- **Varnostno jedro glav (next.config.ts):** CSP refaktoriran v
+  skupni graditelj `buildCsp(frameAncestors)` — ena resnica za obe
+  politiki; pravilo `/pot/embed/:path*` preglasi splošno politiko
+  (isti vzorec kot /sw.js): CSP klon z `frame-ancestors *` (dovoli
+  vdelavo s katere koli domene — pote je javna, omrežna površina se
+  NE razširi) + `X-Frame-Options: ALLOWALL` (neveljavna vrednost —
+  izbris glave ni možen; v brskalnikih, ki podpirata oboje, CSP
+  prevlada). **Vsa ostala površina ostaja XFO DENY +
+  frame-ancestors 'none'.** Klikjacking analiza: embed izris NE
+  vsebuje pooblaščenih urejalnih ploskev (TripCollaboration/Guide/
+  Documents/Push izključeni); next-auth piškotek SameSite=Lax se v
+  tujem iframe-u NE pošlje — ostanejo samo javna dejanja (glasovanje,
+  fork), identična direktnemu obisku.
+- **Refaktor iste resnice:** logika `/pot/[shareId]` izvlečena v
+  skupni `src/app/pot/shared-trip-screen.tsx` (SharedTripScreen —
+  polna stran in embed delita varnostna vrata + nalagalnik; strani
+  sta tanki ovojnici). Zasebna pot v tujem iframe-u pomeni 404 —
+  njene vdelave UI NE ponudi (blok se prikaže SAMO na javnih poteh).
+- **Telemetrija po kanonu paritete W3:** `trip_embed_copied`
+  (union + strežniška VALID_EVENTS + vrstica v
+  docs/ANALYTICS-EVENTS.md) — vsak USPEŠEN copy (padec obeh
+  mehanizmov se ne šteje — lažnega »Kopirano!« ne izpišemo in
+  dogodka ne pišemo); path=/pot/{shareId} pove, KATERA pot se
+  vdeluje; skupaj s page_view na /pot/embed/* → koliko snippet-ov
+  dejansko prinese embed ogled.
+
+### Testirano
+
+- Regresijska varovalka `d7-blog-embed` (29 preizkusov): telemetrija
+  (pariteta 3 mest), varnostno jedro konfiguracije (pravilo obstaja
+  in stoji ZA splošnim — vrstni red preglasitve; CSP klon se razlikuje
+  SAMO v frame-ancestors; globalni XFO DENY nespremenjen),
+  source-contract poti (tanki ovojnici, noindex+canonical, izključitev
+  ploskev, ≥5 `if (!embed)` varoval poizvedb, ločena PageView pot,
+  isPublic+baseUrl vrata), funkcionalno (snippet: escape naslova z
+  narekovaji, lazy, referrerpolicy, trailing slash, 0 skriptov;
+  copyToClipboard SSR-varno).
+- Živo na localhost:3000 — glave preverjene z curl na obeh poteh
+  (embed: ALLOWALL + frame-ancestors *; polna stran: DENY +
+  'none' — nespremenjeno), E2E brskalniški dokazi v
+  `d7-embed-evidence/`.
+
+---
+
 ## [1.139.0] — 2026-09-28 (W1 KPI: JEZIKOVNI DOGADEK SEJE — Issue #15, benchmark §6; zadnja neizvedena vrstica KPI načrta)
 
 ### Dodano

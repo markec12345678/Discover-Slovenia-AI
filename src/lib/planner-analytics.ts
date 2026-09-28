@@ -144,6 +144,10 @@ export type PlannerEventName =
   // — meri most zbirka → načrtovalnik (someday → konkreten načrt prek
   // obstoječega handoff kanona "Moja pot").
   | "wishlist_collection_planned"
+  // D7 (Issue #15 benchmark dodatek D/7): kopiranje iframe snippet-a za
+  // vdelavo javne poti na tujo stran/blog (path=/pot/… pove, KATERA pot) —
+  // meri interes za blog-embed vzorec (Roam Around brez token ekonomije).
+  | "trip_embed_copied"
   | "weather_alternative_used"
   // F5.4 "Začni s povezavo" ( url ingest — MindTrip "Start Anywhere")
   | "ingest_url_attempted"

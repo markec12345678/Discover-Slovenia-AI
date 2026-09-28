@@ -262,8 +262,9 @@ describe("§15 agregator + UI (source-contract)", () => {
   });
 
   test("/pot stran izrisuje TripDocumentsCard", () => {
+    // D7 (1.140.0): izris seje živi v skupnem SharedTripScreen (page.tsx tanka)
     const page = readFileSync(
-      `${ROOT}/src/app/pot/[shareId]/page.tsx`,
+      `${ROOT}/src/app/pot/shared-trip-screen.tsx`,
       "utf8"
     );
     expect(page).toContain("TripDocumentsCard");

@@ -47,7 +47,9 @@ const versionRouteSrc = read("src/app/api/trip/[shareId]/version/route.ts");
 const sharedRouteSrc = read("src/app/api/itinerary/shared/[shareId]/route.ts");
 const shareLibSrc = read("src/lib/itinerary-share.ts");
 const tripVersionLibSrc = read("src/lib/trip-version.ts");
-const potPageSrc = read("src/app/pot/[shareId]/page.tsx");
+// D7 (1.140.0): nalagalnik /pot seje živi v skupnem SharedTripScreen
+// (page.tsx je tanka ovojnica) — source-contract bere zaslon.
+const potPageSrc = read("src/app/pot/shared-trip-screen.tsx");
 const sharedTripSrc = read("src/components/shared-trip.tsx");
 const plannerSrc = read("src/components/sections/itinerary-planner.tsx");
 const hookSrc = read("src/hooks/use-trip-version-poll.ts");

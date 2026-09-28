@@ -346,8 +346,14 @@ vprašanje se ne pošlje samodejno; G5/G6 poti nespremenjene.
 7. **Roam Aroundovo deljenje-z-dobičkom** (»Share and earn 3 free
    tokens«) — usmerjeno napotništvo zaenkrat zavrnjeno: kompleksnost
    (token knjigovodstvo, goljufijska površina) + nasprotuje našemu
-   brezpogojnemu skupnostnemu deljenju (/pot). Embed vzorec za bloge
-   ostaja odprt za prihodnje (nizka prioriteta).
+   brezpogojnemu skupnostnemu deljenju (/pot). ~~Embed vzorec za bloge
+   ostaja odprt za prihodnje (nizka prioriteta).~~ **Embed vzorec je
+   ZAPRT z 1.140.0 (D7):** javna pot na /pot/[shareId] ponudi čist
+   iframe snippet (»Vdelaj na svojo stran ali blog«) → živ prikaz na
+   /pot/embed/[shareId] (brez lupine/urejalnih ploskev, atribucijski
+   pas, CSP frame-ancestors * SAMO za to pot — vse ostalo ostaja XFO
+   DENY); telemetrija trip_embed_copied + page_view /pot/embed/*.
+   Token ekonomija ostaja ZAVRNJENA.
 
 ## E. Posodobljena lestvica (celotna, 10/10 platform)
 

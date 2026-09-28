@@ -34,7 +34,9 @@ const SHELL_PAGES: string[] = [
   "src/app/destinacija/[slug]/guide/[type]/page.tsx",
   "src/app/destinacija/[slug]/itinerary/[duration]/page.tsx",
   "src/app/destinacija/[slug]/best-time-to-visit/[season]/page.tsx",
-  "src/app/pot/[shareId]/page.tsx",
+  // D7 (1.140.0): lupina /pot seje živi v skupnem SharedTripScreen (page.tsx
+  // je tanka ovojnica) — list sledi lokaciji lupine.
+  "src/app/pot/shared-trip-screen.tsx",
   "src/app/moja-potovanja/page.tsx",
   "src/app/primerjava/page.tsx",
   "src/app/konzultacija/[token]/page.tsx",
@@ -256,7 +258,8 @@ describe("TASK 8 / D8-E: lupina na prej sirotih straneh (P-NAV-1)", () => {
   });
 
   test("pot/[shareId]: print čistost — Navigation v print-hide, Footer skrit prek .pot-page footer pravila", () => {
-    const src = read("src/app/pot/[shareId]/page.tsx");
+    // D7 (1.140.0): izris lupine je v skupnem zaslonu (page.tsx tanka ovojnica)
+    const src = read("src/app/pot/shared-trip-screen.tsx");
     expect(src).toContain('className="print-hide"');
     expect(src).toContain("pot-page");
     expect(globalsSrc).toContain(".pot-page footer {");

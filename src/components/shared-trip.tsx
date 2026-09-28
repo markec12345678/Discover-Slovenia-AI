@@ -44,6 +44,8 @@ import { warmOfflinePlanCache, getEditToken } from "@/lib/itinerary-share";
 import { SmartPackingSection } from "@/components/packing-smart";
 import { BudgetPanel } from "@/components/budget-panel";
 import { SocialShare } from "@/components/social-share";
+// D7 (1.140.0): blog-embed blok (iframe snippet + kopiraj) v sekciji deljenja
+import { TripEmbedCode } from "@/components/trip-embed-code";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore, DAY_COLORS } from "@/lib/store";
 // TASK 28 (Tier 1 #1): live-sync indikator — polling strežniške verzije poti
@@ -142,6 +144,19 @@ interface SharedTripProps {
    * njih). Default null = nazaj-kompatibilno za obstoječe klice.
    */
   formData?: PlannerInput | null;
+  /**
+   * D7 (1.140.0): javnost pote — embed blok („Vdelaj na svojo stran“)
+   * se prikaže SAMO na javnih poteh (zasebna pot v tujem iframe-u pomeni
+   * 404 — ponuditi njeno vdelavo bi bilo laž). Default undefined = skrito
+   * (nazaj-kompatibilno za obstoječe klice/teste).
+   */
+  isPublic?: boolean;
+  /**
+   * D7 (1.140.0): absolutni origin s strežnika (currentBaseUrl) — podlaga
+   * za iframe snippet. Default undefined = embed blok skrit (brez origina
+   * ne moremo izstaviti poštene kode; klient origin ne ugiba iz window).
+   */
+  baseUrl?: string;
 }
 
 interface LocationVoteProps {
@@ -161,6 +176,8 @@ export function SharedTrip({
   initialVotes,
   initialVersion,
   formData = null,
+  isPublic,
+  baseUrl,
 }: SharedTripProps) {
   const setItinerary = useAppStore((s) => s.setItinerary);
   const routeCoords = useAppStore((s) => s.routeCoords);
@@ -872,6 +889,20 @@ export function SharedTrip({
               variant="inline"
             />
           </div>
+
+          {/* === D7 (1.140.0, benchmark dodatek D/7): BLOG-EMBED —
+                  „Vdelaj na svojo stran ali blog“ (Roam Aroundov vzorec,
+                  brez zavrnjene token ekonomije). SAMO na javnih poteh z
+                  strežniškim originom (zasebna pot v tujem iframe-u = 404 —
+                  njene vdelave NE ponujamo; <details> drži sekcijo
+                  kompaktnej). === */}
+          {isPublic === true && baseUrl ? (
+            <TripEmbedCode
+              shareId={shareId}
+              title={title}
+              baseUrl={baseUrl}
+            />
+          ) : null}
         </section>
 
         {/* === SEO noga === */}

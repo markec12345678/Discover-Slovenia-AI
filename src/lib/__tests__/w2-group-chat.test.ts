@@ -387,7 +387,9 @@ describe("W2: SOURCE CONTRACT — UI (TripSocial → skupinski klepet)", () => {
   });
 
   test("/pot RSC posreduje isAI + payload v začetnih vrsticah", () => {
-    const page = read("src/app/pot/[shareId]/page.tsx");
+    // D7 (1.140.0): logika /pot seje je izvlečena v skupni SharedTripScreen
+    // (page.tsx je tanka ovojnica) — source-contract bere zaslon.
+    const page = read("src/app/pot/shared-trip-screen.tsx");
     expect(page).toContain("isAI: true");
     expect(page).toContain("payload: true");
   });

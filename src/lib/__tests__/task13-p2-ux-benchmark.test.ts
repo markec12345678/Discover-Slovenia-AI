@@ -33,7 +33,9 @@ const presenceHookSrc = read("src/hooks/use-trip-presence.ts");
 // skupinski klepet), da števec prisotnih ostane iskren.
 const presenceSocketLibSrc = read("src/lib/trip-presence-socket.ts");
 const presenceCompSrc = read("src/components/trip-presence.tsx");
-const potPageSrc = read("src/app/pot/[shareId]/page.tsx");
+// D7 (1.140.0): lupina + izris /pot seje živita v skupnem SharedTripScreen
+// (page.tsx je tanka ovojnica) — source-contract bere zaslon.
+const potPageSrc = read("src/app/pot/shared-trip-screen.tsx");
 const tabbarSrc = read("src/components/mobile-tab-bar.tsx");
 const pkgSrc = read("package.json");
 

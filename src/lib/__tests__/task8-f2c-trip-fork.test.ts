@@ -179,7 +179,11 @@ describe("F2-C: SharedTrip priklop (source-contract)", () => {
 // ─────────────────────────────────────────────────────────────────────────
 
 describe("F2-C: /pot/[shareId] server stran (source-contract)", () => {
-  const src = source("src/app/pot/[shareId]/page.tsx");
+  // D7 (1.140.0): nalagalnik + izris sta izvlečena v skupni SharedTripScreen
+  // (page.tsx je tanka ovojnica z dynamic + metadata) — pogodba je
+  // razdeljena na obe datoteki, saj je tam razdeljena tudi resnica.
+  const src = source("src/app/pot/shared-trip-screen.tsx");
+  const routeSrc = source("src/app/pot/[shareId]/page.tsx");
 
   test("select vsebuje formData", () => {
     expect(src).toContain("formData: true,");
@@ -197,8 +201,8 @@ describe("F2-C: /pot/[shareId] server stran (source-contract)", () => {
   });
 
   test("ZERO-LOSS: sila-dinamičnost, metadata, JSON-LD, lupina, print, vse kartice", () => {
-    expect(src).toContain('export const dynamic = "force-dynamic"');
-    expect(src).toContain("index: false");
+    expect(routeSrc).toContain('export const dynamic = "force-dynamic"');
+    expect(routeSrc).toContain("index: false");
     expect(src).toContain("safeJsonLd(touristTrip)");
     expect(src).toContain("<Navigation solid />");
     expect(src).toContain("<Footer />");
@@ -212,8 +216,11 @@ describe("F2-C: /pot/[shareId] server stran (source-contract)", () => {
     expect(src).toContain("<TripPolls");
     expect(src).toContain("<TripSocial");
     expect(src).toContain("<TripDiary");
-    expect(src).toContain("<TripPushCard shareId={shareId}");
-    expect(src).toContain("<PageViewTracker path={`/pot/${shareId}`}");
+    expect(src).toContain("<TripPushCard");
+    // D7 (1.140.0): pot je v zaslonu ternary (embed ločeno meri) — obe
+    // vrednosti sta prisotni, pogodba PageViewTracker pa živi naprej
+    expect(src).toContain("`/pot/${shareId}`");
+    expect(src).toContain("`/pot/embed/${shareId}`");
     expect(src).toContain("initialVersion={saved.contentVersion}");
   });
 });

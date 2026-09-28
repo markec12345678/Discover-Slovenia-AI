@@ -19,6 +19,38 @@ try {
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+// D7 (1.140.0, Issue #15 benchmark dodatek D/7): CSP graditelj — ENA resnica
+// za obe politiki. Splošna stran in embed potečka delita VSE direktive,
+// razlikuje se SAMO frame-ancestors ('none' vs '*' za /pot/embed/*).
+// Prej je bila CSP zapisana kot en literal znotraj securityHeaders — z D7
+// jo izluščimo v skupni graditelj, da embed klon NIKOLI ne zaostane za
+// glavno politiko (edini dovoljeni razlik je frame-ancestors; dokazano v
+// regresijskem testu d7-blog-embed).
+const buildCsp = (frameAncestors: string) =>
+  [
+    "default-src 'self'",
+    // Next.js App Router potrebuje inline skripte za hydration
+    `script-src 'self' 'unsafe-inline'${
+      process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""
+    }`,
+    "style-src 'self' 'unsafe-inline'",
+    // slike: local + data URI + vsi https (unsplash, OSM tiles, zunanje iz DB)
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    // D2 (zvočni povzetek): <audio> z blob: URL ( WAV iz /api/itinerary/tts)
+    // — blob je istega dokumenta ( brez omrežja), zato varen vir za media
+    "media-src 'self' blob:",
+    // API klici: SAMO lastni origin — zunanje API-je (Open-Meteo, AI
+    // providerji) klient nikoli ne kliče direktno (server-side proxy).
+    `connect-src 'self' blob:${
+      process.env.NODE_ENV === "development" ? " ws: wss:" : ""
+    }`,
+    `frame-ancestors ${frameAncestors}`,
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+  ].join("; ");
+
 const securityHeaders = [
   // Prepreči MIME-type sniffing
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -54,31 +86,11 @@ const securityHeaders = [
   //     gostiteljev ni mogoče enumerirati. Meji sta moderacija + write-time
   //     validacija URL-jev (external-url.ts), ne CSP.
   //   frame-ancestors 'none' prepreči embedding (strožje od XFO DENY).
+  //   D7 (1.140.0): vrednost zdaj gradi buildCsp() zgoraj (ena resnica za
+  //   obe politiki — direktivi so nespremenjene, le zapis preurejen).
   {
     key: "Content-Security-Policy",
-    value: [
-      "default-src 'self'",
-      // Next.js App Router potrebuje inline skripte za hydration
-      `script-src 'self' 'unsafe-inline'${
-        process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""
-      }`,
-      "style-src 'self' 'unsafe-inline'",
-      // slike: local + data URI + vsi https (unsplash, OSM tiles, zunanje iz DB)
-      "img-src 'self' data: blob: https:",
-      "font-src 'self' data:",
-      // D2 (zvočni povzetek): <audio> z blob: URL ( WAV iz /api/itinerary/tts)
-      // — blob je istega dokumenta ( brez omrežja), zato varen vir za media
-      "media-src 'self' blob:",
-      // API klici: SAMO lastni origin — zunanje API-je (Open-Meteo, AI
-      // providerji) klient nikoli ne kliče direktno (server-side proxy).
-      `connect-src 'self' blob:${
-        process.env.NODE_ENV === "development" ? " ws: wss:" : ""
-      }`,
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "object-src 'none'",
-    ].join("; "),
+    value: buildCsp("'none'"),
   },
 ];
 
@@ -212,6 +224,41 @@ const nextConfig: NextConfig = {
         source: "/pot/:path*",
         headers: [
           { key: "X-Robots-Tag", value: "noindex, follow" },
+        ],
+      },
+      // ─────────────────────────────────────────────────────────────────────
+      // D7 (1.140.0): BLOG-EMBED DELJENIH POTI — /pot/embed/[shareId] je pot,
+      // NAMENJENA vdelavi v iframe na tujih straneh (WordPress/bloggerji;
+      // Roam Aroundov „Embed on your site“ vzorec, brez zavrnjene token
+      // ekonomije — benchmark dodatek D/7). Splošna politika zgoraj (XFO
+      // DENY + frame-ancestors 'none') blokira VSAKO vdelavo — za to pot jo
+      // nadomestimo (kasnejše specifičnejše pravilo preglasi isti ključ,
+      // isti vzorec kot /sw.js):
+      //
+      //   - CSP: buildCsp("*") — ISTA politika kot stran, razlikuje se SAMO
+      //     frame-ancestors * (dovoli vdelavo s katere koli domene: pote je
+      //     javna — isPublic vrata + 404 za zasebne — in vdelava NE razširi
+      //     omrežne površine: connect/img ostajata tesni).
+      //   - X-Frame-Options: ALLOWALL — neveljavna vrednost po RFC 7035;
+      //     moderni brskalniki neveljaven XFO ignorirajo, CSP frame-ancestors
+      //     (ki v brskalnikih, ki podpirata oboje, PREVLADA) ostaja edina
+      //     resnica. XFO globalnega pravila tu ne moremo „izbrisati“
+      //     (headers() ne podpira odstranjevanja ključa) — nadomestitev z
+      //     neveljavno vrednostjo je edini pošteni mehanizem.
+      //   - Klikjacking površina: embed izris NE vsebuje pooblaščenih
+      //     urejalnih ploskev (TripCollaboration/TripGuide/TripDocuments/
+      //     TripPush so izključeni; next-auth piškotek je SameSite=Lax → se
+      //     v tujem iframe-u NE pošlje); ostanejo samo javna dejanja
+      //     (glasovanje, fork), ista kot pri direktnem obisku.
+      //   - X-Robots-Tag pravilo /pot/:path* zgoraj velja TUDI tu (drug
+      //     ključ, pravili se SEŠTEJETA) → embed pote nikoli ne indeksiramo
+      //     ločeno; generateMetadata dodno še robots noindex + canonical.
+      // ─────────────────────────────────────────────────────────────────────
+      {
+        source: "/pot/embed/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: buildCsp("*") },
+          { key: "X-Frame-Options", value: "ALLOWALL" },
         ],
       },
     ];

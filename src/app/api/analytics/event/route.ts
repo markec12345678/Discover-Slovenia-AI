@@ -148,6 +148,9 @@ const VALID_EVENTS = new Set([
   // W3: klik "Načrtuj" na razdelku zbirke (view; items; has_destination)
   // — most zbirka → načrtovalnik prek obstoječega handoff kanona "Moja pot"
   "wishlist_collection_planned",
+  // D7 (Issue #15 benchmark dodatek D/7): kopiranje iframe snippet-a za
+  // vdelavo javne poti na tujo stran/blog (path=/pot/… pove, katera pot)
+  "trip_embed_copied",
   // W2 (Issue #15): vprašanje @AI svetovalca v skupinskem klepetu na /pot
   "chat_group_ai_asked",
   // W2: kraj iz AI odgovora dodan v DELJENO pot (CAS PATCH)
