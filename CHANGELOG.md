@@ -7,6 +7,51 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.137.0] — 2026-09-28 (W8: RAZPRŠITEV KOT AI NAČELO — Issue #15, val V2; vrzel iz workflow benchmarka Alma)
+
+### Dodano
+
+- **RAZPRŠITVENI NAMIG V KLEPET ODGOVORIH** (vrzel W8 — Alma strateško
+  usmerja v manj znane regije; mi smo imeli »Brez gužve« intent čip,
+  klepet odgovorov o vrhunskih točkah pa razpršitvenega sporočila ni).
+  Odgovori o 5 javno dokumentiranih vrhunskih točkah (Bled, Vintgarska
+  soteska, Postojnska jama, Piran, Ljubljana) dobijo DODATEN odstavek:
+  iskrena uredniška trditev o vzorcu obiskanosti (julij/avgust ob
+  vikendih — ISTA resnica kot plast crowdNotices na načrtu) + jutranji
+  prihod kot nasvet + **2 najbližji mirnejši alternativi v bližini
+  (≤ 60 km, ne-vrhunske)** z razdaljo — npr. Bled → Bohinj (19 km),
+  Triglav (19 km). Deterministično (0 LLM, Issue #9 kanon), 4 jeziki
+  (SL s pravilno sklanjatvijo rodu).
+- **ISTA plast za OSEBNI in SKUPINSKI klepet** — chat-engine
+  (answerChatQuestion) porablja buildDomainAnswer, zato @AI svetovalec v
+  skupinskem klepetu na /pot (W2) samodejno dobi isti namig.
+- **Čisti funkciji v crowd-alternatives** (`chatDiffusionAlternatives`,
+  `chatDiffusionHint`): bližina kot edini razlog alterniv (klepet nima
+  sezonskega/interesnega konteksta potnika), razvrstitev po bližini,
+  ne-vrhunske → null (namig se NE izmišljuje tam, kjer uredniške
+  trditve o pritisku ni).
+- **Regresijski test `w8-chat-diffusion.test.ts`** (17 testov): alternative
+  (2 najbližji, ne-vrhunske, ≤60 km, razvrstitev), namig ×4 jeziki z
+  imenom + vzorcem + alternativami + sklanjatvijo, integration
+  buildDomainAnswer (Bled → namig + POPOLN glavni odgovor; Soča → BREZ
+  namiga; EN/IT/DE), source contract varoval.
+
+### Varovala (ZERO FEATURE LOSS)
+
+- **BREZ spreminjanja izbire uporabnika** (zahteva benchmarka): namig je
+  DODATEN odstavek, ki IMENUJE uporabnikovo destinacijo; glavni odgovor
+  (opis, ocena, trajanje, strošek, aktivnosti, povezave) ostane popoln —
+  alternativne so PREDLOG (»če želiš manj gneče«), nikoli zamenjava.
+- **Nikoli skrito preusmerjanje**: namig vedno eksplicitno poimenuje
+  destinacijo uporabnika + alternative z razdaljo pred zaključno
+  vrstico povezav.
+- Obstoječa plast crowdNotices (itinerer) NESPREMENJENA (isti
+  HIGH_DEMAND_IDS nabor, ista sezonska meja, isti startDate varovalo).
+- Iskrenost: trditev o gneči je UREDNIŠKA in javno dokumentirana
+  (vzorec, ne status) — nikoli »danes je zaseden«.
+
+---
+
 ## [1.136.0] — 2026-09-28 (W6: DOGODKI KOT ODKRIVANJE + VSTOPNICE — Issue #15, val V2; vrzel iz workflow benchmarka Mindtrip)
 
 ### Dodano

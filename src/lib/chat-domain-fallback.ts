@@ -31,6 +31,10 @@
 
 import { DESTINATIONS, COUNTRIES } from "@/lib/slovenia-data";
 import { matchDestinationsInText, type ChatPlace } from "@/lib/geo-intent";
+// W8 (Issue #15, 1.137.0): razpršitev kot AI načelo — ob vrhunskih točkah
+// iskren namig o vzorcu obiskanosti + mirnejše alternative v bližini
+// (deterministično iz crowd-alternatives — ISTA uredniška resnica).
+import { chatDiffusionHint } from "@/lib/crowd-alternatives";
 import {
   fetchDailyForecast,
   weatherCodeToTextFor,
@@ -759,6 +763,16 @@ export async function buildDomainAnswer(
         })
       );
     }
+
+    // W8 (Issue #15): RAZPRŠITEV kot AI načelo — ob VRHUNSKIH točkah
+    // (javno dokumentiran obiskovalni pritisk) dodaten odstavek z iskrenim
+    // namigom + mirnejšimi alternativami v bližini (≤ 60 km).
+    // VAROVALO (benchmark): BREZ spreminjanja izbire uporabnika — namig
+    // IMENUJE njihovo destinacijo, alternative so PREDLOG (»če želiš manj
+    // gneče«), glavni odgovor ostane popoln. Ne-vrhunske destinacije →
+    // null → brez namiga (ni izmišljevanja tam, kjer trditve ni).
+    const diffusion = chatDiffusionHint(dest.id, lang);
+    if (diffusion) lines.push(diffusion);
 
     lines.push(
       L(lang, {

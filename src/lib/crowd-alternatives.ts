@@ -163,3 +163,77 @@ export function buildCrowdNotices(
 
   return notices;
 }
+
+// ============================================================================
+// W8 (Issue #15, 1.137.0): RAZPRŠITEV KOT AI NAČELO — namig v KLEPET odgovorih
+// ============================================================================
+// Vrzel W8 (benchmark §3): Alma strateško usmerja v manj znane regije; mi
+// imamo »Brez gužve« intent čip, klepet odgovorov o vrhunskih točkah pa
+// razpršitvena sporočila ni imel. Po našem kanonu (Issue #9 — 0 LLM):
+// DETERMINISTIČEN namig nad ISTO uredniško resnico o vzorcu obiskanosti
+// (julij/avgust + vikendi, javno dokumentirano) + alternative izračunane
+// IZ obstoječih podatkov (bližina ≤ 60 km, ne-vrhunske točke).
+//
+// VAROVALO (zahteva benchmarka): BREZ spreminjanja izbire uporabnika —
+// namig je DODATEN odstavek, ki IMENUJE uporabnikovo destinacijo in
+// alternative ponudi kot predlog (»če želiš manj gneče«). Nikoli skrito
+// preusmerjanje — odgovor o njihovi izbiri ostane popoln.
+// ============================================================================
+
+/**
+ * W8: kandidati alternativ za KLEPET — 2 najbližji ne-vrhunski destinaciji
+ * (≤ 60 km). Klepet nima sezonskega/interesnega konteksta potnika → razlog
+ * je ČISTA bližina (deterministično, razumljivo, pošteno). Čista funkcija.
+ */
+export function chatDiffusionAlternatives(destId: string): CrowdAlternative[] {
+  const origin = DESTINATIONS.find((d) => d.id === destId);
+  if (!origin || !HIGH_DEMAND_IDS.has(origin.id)) return [];
+
+  return DESTINATIONS.filter(
+    (d) =>
+      d.id !== origin.id &&
+      !HIGH_DEMAND_IDS.has(d.id) &&
+      haversineKm(origin.coords, d.coords) <= MAX_ALTERNATIVE_KM
+  )
+    .map((d) => ({
+      destination_id: d.id,
+      destination_name: d.name,
+      slug: d.slug,
+      distanceKm: Math.round(haversineKm(origin.coords, d.coords)),
+      // klepet nima interesnega konteksta — bližina je edini razlog
+      matchedInterests: [],
+    }))
+    .sort((a, b) => a.distanceKm - b.distanceKm)
+    .slice(0, 2);
+}
+
+/**
+ * W8: iskren razpršitveni namig za klepet o VRHUNSKI točki (4 jeziki).
+ * Vrne null za ne-vrhunske destinacije — namig se ne izmišljuje tam, kjer
+ * uredniške trditve o obiskovalnem pritisku ni.
+ */
+export function chatDiffusionHint(
+  destId: string,
+  lang: "sl" | "en" | "it" | "de" = "sl"
+): string | null {
+  const origin = DESTINATIONS.find((d) => d.id === destId);
+  if (!origin || !HIGH_DEMAND_IDS.has(origin.id)) return null;
+
+  const alts = chatDiffusionAlternatives(destId);
+  const altText = alts
+    .map((a) => `${a.destination_name} (${a.distanceKm} km)`)
+    .join(", ");
+
+  if (lang === "en") {
+    return `Crowd note: ${origin.name} is usually very busy on July and August weekends — an early-morning arrival helps${altText ? `; if you'd prefer fewer crowds nearby: ${altText}` : ""}.`;
+  }
+  if (lang === "it") {
+    return `Nota sull'affollamento: ${origin.name} è di solito molto affollato nei weekend di luglio e agosto — un arrivo al mattino aiuta${altText ? `; se preferisci meno folla nelle vicinanze: ${altText}` : ""}.`;
+  }
+  if (lang === "de") {
+    return `Hinweis zum Andrang: ${origin.name} ist an Wochenenden im Juli und August meist sehr voll — eine Ankunft am Morgen hilft${altText ? `; wenn du in der Nähe weniger Trubel möchtest: ${altText}` : ""}.`;
+  }
+  return `Opomba o gneči: ${origin.name} je julija in avgusta ob vikendih običajno zelo obiskan${
+    NAME_GENDER[origin.id] === "f" ? "a" : ""
+  } — jutranji prihod pomaga${altText ? `; če želiš manj gneče v bližini: ${altText}` : ""}.`;
+}
