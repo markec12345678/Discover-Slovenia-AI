@@ -226,22 +226,31 @@ describe("TASK 99-a: networkHint — pariteta SL/EN (map-view tabela T)", () => 
     expect(mapView).toContain("networkHint: {");
   });
 
-  test("networkHint ima SL/EN (in W1 IT/DE), vsi neprazni, EN ni kopija SL", () => {
+  test("networkHint ima SL/EN (in W1 IT/DE + W12 FR/ES), vsi neprazni, EN ni kopija SL", () => {
     // W1 faza 2a: T slovar je 4-jezičen — pariteta razširjena; regex
-    // zajame vse štiri jezikovne veje po vrstnem redu sl,en,it,de.
+    // zajame jezikovne veje po vrstnem redu sl,en,it,de.
+    // W12 faza 2a (1.145.0): T slovar je 6-jezičen (+fr,es).
     const m = mapView.match(
-      /networkHint:\s*\{\s*sl:\s*"([^"]+)",\s*en:\s*"([^"]+)",\s*it:\s*"([^"]+)",\s*de:\s*"([^"]+)",\s*\}/
+      /networkHint:\s*\{\s*sl:\s*"([^"]+)",\s*en:\s*"([^"]+)",\s*it:\s*"([^"]+)",\s*de:\s*"([^"]+)",\s*fr:\s*"([^"]+)",\s*es:\s*"([^"]+)",\s*\}/
     );
     expect(m).not.toBeNull();
-    const [sl, en, it, de] = [m?.[1] ?? "", m?.[2] ?? "", m?.[3] ?? "", m?.[4] ?? ""];
+    const [sl, en, it, de, fr, es] = [
+      m?.[1] ?? "", m?.[2] ?? "", m?.[3] ?? "", m?.[4] ?? "", m?.[5] ?? "", m?.[6] ?? "",
+    ];
     expect(sl.trim().length).toBeGreaterThan(0);
     expect(en.trim().length).toBeGreaterThan(0);
     expect(it.trim().length).toBeGreaterThan(0);
     expect(de.trim().length).toBeGreaterThan(0);
+    expect(fr.trim().length).toBeGreaterThan(0);
+    expect(es.trim().length).toBeGreaterThan(0);
     expect(en).not.toBe(sl); // resničen prevod, ne copy-paste
+    expect(fr).not.toBe(en); // W12: resničen FR prevod
+    expect(es).not.toBe(en); // W12: resničen ES prevod
     // Iskrenost: SL ne obtožuje virov (ključna beseda obstoječe oznake):
     expect(sl).not.toContain("viri");
     expect(en).not.toContain("sources");
+    expect(fr).not.toContain("sources");
+    expect(es).not.toContain("fuentes");
   });
 
   test("ista pot ključa v obeh jezikih: T.networkHint[lang] se dejansko izrise", () => {

@@ -7,6 +7,81 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.145.0] — 2026-09-29 (W12 „ODKRITEV V ŠESTIH JEZIKIH", faza 2a — destinacijske plasti + zemljevid za FR/ES)
+
+### Dodano
+
+- **W12 (smer 2, faza 2a) — peti jezikovni val nadaljevanje**:
+  FR/ES whitelist razširjena z `/zemljevid` in vsemi 5 destinacijskimi
+  pod-poti (`/destinacija/[slug]` hub + `things-to-do` +
+  `itinerary/[duration]` + `best-time-to-visit/[season]` + `guide/[type]`,
+  ×38 destinacij = 570 strani na jezik). Podatkovni overlayji
+  (slovenia-data-fr/-es, 38/38 iz 1.144.0) so zdaj ŽIVI na straneh, ne
+  samo v karticah — francoski uporabnik klikne „Piran“ na /fr in pristane
+  na CELI francoski strani destinacije (isti mejnik kot W1 faza 2a za
+  IT/DE, 1.127.0). Vsa besedila pridejo IZ messages/fr/es (1828 nizov
+  ×2, prevedeno že v fazi 1) — 0 novih LLM klicev, 0 stroškov.
+- **ZEMLJEVID 6-JEZIČEN (`/zemljevid` na FR/ES whitelisti)**: hero
+  (naslov/podnaslov/namig/meta ×6), map-section statistika + legendi
+  (decimalna vejica za FR/ES — kanon „vse razen EN“), map-view T slovar
+  (41+ nizov ×6: iskanje, kategorije čipov, stanja iskrenosti, pini),
+  PRIMARY_CATEGORIES (5 skupin) in TAKSONOMIJA (vseh 20 tipov ×6 —
+  popup badge-i na zemljevidu; it/de sta bila doslej {sl,en} —
+  odkrito in popravljenostno razširjeno), ProviderPanel + statusLabel
+  (register virov) ×6.
+- **ISKANJE NA ZEMLJEVIDU DELA V FRANCOŠČINI IN ŠPANŠČINI**:
+  CATEGORY_ALIASES + ~90 FR/ES sinonimov (randonnée/musée/château/
+  bien-être/senderismo/bodega/esquí/bienestar/alojamiento …) +
+  FR/ES stopbesede (où/quoi/dónde/cómo … — nikoli ime destinacije);
+  razlogi zadetkov v UI jeziku („Correspond à votre recherche
+  (mots-clés: ljubljana · catégorie: food)“ / „Coincide con tu
+  búsqueda (categoría: hiking)“ — P4-8: nikoli mešanja znotraj pogleda).
+- **SEO: hreflang gruče fr-FR/es-ES na vseh 570 destinacijskih straneh
+  ×2 + /zemljevid ×2**: og:locale fr_FR/es_ES (ogLocaleFor — že iz
+  1.144.0), locale-zavedni canonical, FR/ES ključne besede v meta
+  (hub + things-to-do + itinerary + best-time: „guide de voyage /
+  itinéraire / meilleure période“ / „guía de viaje / itinerario /
+  mejor época“). Sezone na hubu ×6 (Printemps/Été/Automne/Hiver,
+  Primavera/Verano/Otoño/Invierno), naslov „Que faire à X“ /
+  „Qué hacer en X“ ×6.
+- **Sitemap: 2404 → 3546 URL** (+1142: 570 destinacijskih strani × 2
+  jezika + /zemljevid × 2; formula števca posodobljena — vrata
+  enakosti formule ≡ seznam).
+- **Supply sloj: FR/ES dedita EN** (isti §38 kanon kot IT/DE — imena
+  ponudnikov so PODATKOVNA plast; use-supply-query + supply/search
+  locale normalizacija razširjena). Opombe postanka na zemljevidu
+  ostanejo vezane na jezik itinererja (pogon je 4-jezičen — faza 2b).
+
+### Spremenjeno
+
+- **isFrEsRoute: 9 statičnih + 5 regexov destinacijskih pod-poti** —
+  proxy 308, jezikovno stikalo (vidnost), hreflangForPath in
+  sitemap-urls sledijo SAMODEJNO (isti vir resnice kot IT/DE faza 2a).
+- **`/fr/nacrtuj` ostaja 308 → SL** (iskrena meja faze 2b — planner
+  pogon je 4-jezičen; ista meja kot /it/nacrtuj pred 1.128.0).
+
+### Dokazano
+
+- Suite **4248/4248** zelenih (+9: faza 2a pogodbe v w12 testu —
+  whitelist 10+5 vzorcev, taksonomija ×6, iskanje FR/ES sinonimi/
+  stopbesede/razlogi, sitemap 580+580, supply dedovanje EN, keywords
+  ×6; issue12-f12-1 + task99a paritete razširjene na 6 jezikov);
+  tsc 0 napak; eslint čist.
+- Brskalniška zlata pot (dev): /fr/zemljevid — naslov „Carte
+  interactive de la Slovénie et des Balkans“, navigacija/statistika/
+  legenda/iskalni placeholder francoski (decimalna vejica „4,5“),
+  iskanje „restaurants à Ljubljana“ → zadetki z razlogom „Correspond à
+  votre recherche (mots-clés: ljubljana · catégorie: food)“; preklop
+  stikala Français → Español → /es/zemljevid s španskim naslovom,
+  iskanje „senderismo“ → „Coincide con tu búsqueda (categoría:
+  hiking)“; /es/destinacija/bled — „La perla de los Alpes“, regija
+  „Alta Carniola“, „Añadir a mi viaje“, „Qué hacer en Bled“, celoten
+  španski opis; mobilni viewport 390×844 brez preliva; 0 konzolnih
+  napak. Dokazi w12-dokazi/{fr-zemljevid-iskanje,es-zemljevid-iskanje,
+  es-zemljevid-mobil-390,es-destinacija-bled-mobil}.png.
+
+---
+
 ## [1.144.0] — 2026-09-29 (W12 „ODKRITEV V ŠESTIH JEZIKIH": francoščina in španščina kot javna jezika — jedro odkrivanja + svetovanja)
 
 ### Dodano

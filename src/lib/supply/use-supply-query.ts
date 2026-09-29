@@ -57,11 +57,12 @@ interface UseSupplyQueryOpts {
   /** Trenutni bbox viewporta [s,w,n,e]. */
   bbox: [number, number, number, number] | null;
   /**
-   * W1 faza 2a (Issue #15): zemljevid je 4-jezičen — klient pošlje UI jezik,
-   * strežnik pa normalizira (samo "en" odpre EN vejo; "it"/"de" → varna SL —
-   * imena ponudnikov so podatkovna plast, isti §38 kanon kot tržnica).
+   * W12 faza 2a (1.145.0): zemljevid je 6-jezičen — klient pošlje UI jezik,
+   * strežnik pa normalizira (samo "en" odpre EN vejo; "it"/"de"/"fr"/"es" →
+   * varna SL — imena ponudnikov so podatkovna plast, isti §38 kanon kot
+   * tržnica; glej supply/search.ts).
    */
-  locale: "sl" | "en" | "it" | "de";
+  locale: "sl" | "en" | "it" | "de" | "fr" | "es";
 }
 
 export function useSupplyQuery({

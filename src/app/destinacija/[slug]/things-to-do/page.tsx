@@ -94,7 +94,11 @@ export async function generateMetadata({
           ? [dest.name, "cosa fare", "attività", "attrazioni", "Slovenia", region, ...highlights]
           : locale === "de"
             ? [dest.name, "was tun", "Aktivitäten", "Sehenswürdigkeiten", "Slowenien", region, ...highlights]
-            : [dest.name, "kaj početi", "aktivnosti", "znamenitosti", "Slovenija", dest.region, ...dest.highlights],
+            : locale === "fr"
+              ? [dest.name, "que faire", "activités", "attractions", "Slovénie", region, ...highlights]
+              : locale === "es"
+                ? [dest.name, "qué hacer", "actividades", "atracciones", "Eslovenia", region, ...highlights]
+                : [dest.name, "kaj početi", "aktivnosti", "znamenitosti", "Slovenija", dest.region, ...dest.highlights],
     openGraph: {
       title: t("meta.ogTitle", { name: dest.name }),
       description: t("meta.ogDescription", {

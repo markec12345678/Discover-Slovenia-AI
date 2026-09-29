@@ -280,8 +280,9 @@ describe("ISSUE #12 F12-3: EN razlogi zadetkov (uporabniški jezik na /en)", () 
   test("SOURCE-CONTRACT: iskalnik sprejema locale (4. arg, privzeto SL)", () => {
     // W1 faza 2a (Issue #15): pogodba razširjena na 4 javne jezike —
     // zemljevid pošilja it/de, razlogi sledijo UI jeziku (P4-8).
+    // W12 faza 2a (1.145.0): razširjena na 6 jezikov (fr/es).
     expect(deterministicSearchSrc).toContain(
-      'locale: "sl" | "en" | "it" | "de" = "sl"'
+      'locale: "sl" | "en" | "it" | "de" | "fr" | "es" = "sl"'
     );
     // Dvojezična razlaga zadetka (prej SL-only tudi na /en):
     expect(deterministicSearchSrc).toContain('"Matches your search"');
@@ -289,13 +290,18 @@ describe("ISSUE #12 F12-3: EN razlogi zadetkov (uporabniški jezik na /en)", () 
     // IT/DE razlogi (W1 faza 2a):
     expect(deterministicSearchSrc).toContain('"Corrisponde alla tua ricerca"');
     expect(deterministicSearchSrc).toContain('"Entspricht deiner Suche"');
+    // FR/ES razlogi (W12 faza 2a — 1.145.0):
+    expect(deterministicSearchSrc).toContain('"Correspond à votre recherche"');
+    expect(deterministicSearchSrc).toContain('"Coincide con tu búsqueda"');
     // Vsa štiri mesta klica buildReason nosijo locale:
     expect(deterministicSearchSrc.match(/buildReason\([^)]*locale\)/g)?.length).toBe(4);
   });
 
   test("SOURCE-CONTRACT: ruta sprejema locale + map-view ga pošilja v telesu", () => {
-    expect(smartSearchRouteSrc).toContain('locale?: "sl" | "en" | "it" | "de"');
-    expect(smartSearchRouteSrc).toContain('body.locale === "en" || body.locale === "it" || body.locale === "de"');
+    expect(smartSearchRouteSrc).toContain('locale?: "sl" | "en" | "it" | "de" | "fr" | "es"');
+    expect(smartSearchRouteSrc).toContain(
+      'body.locale === "en" ||\n    body.locale === "it" ||\n    body.locale === "de" ||\n    body.locale === "fr" ||\n    body.locale === "es"'
+    );
     expect(smartSearchRouteSrc).toContain("reasonLocale");
     expect(mapViewSrc).toContain("{ query: q, limit: 3, locale: lang }");
   });
@@ -441,8 +447,13 @@ describe("ISSUE #12 F12-2: primarne kategorije (5 skupin + expander Več)", () =
     expect(mapViewSrc).toContain("moreCatsOpen");
     expect(mapViewSrc).toContain("setMoreCatsOpen");
     expect(mapViewSrc).toContain("POI_CATEGORIES.map");
-    expect(mapViewSrc).toContain('moreCats: { sl: "Več", en: "More", it: "Altro", de: "Mehr" }');
-    expect(mapViewSrc).toContain('fewerCats: { sl: "Manj", en: "Less", it: "Meno", de: "Weniger" }');
+    // W12 faza 2a: moreCats/fewerCats razširjena na 6 jezikov
+    expect(mapViewSrc).toContain('sl: "Več"');
+    expect(mapViewSrc).toContain('fr: "Plus"');
+    expect(mapViewSrc).toContain('es: "Más"');
+    expect(mapViewSrc).toContain('sl: "Manj"');
+    expect(mapViewSrc).toContain('fr: "Moins"');
+    expect(mapViewSrc).toContain('es: "Menos"');
   });
 
   test("toggleGroup: multi-select nad skupino (vklop VSEH tipov + kontekst)", () => {
@@ -496,7 +507,9 @@ describe("ISSUE #12 F12-2: marker result card (issue §6 struktura)", () => {
       "https://www.google.com/maps/dir/?api=1&destination="
     );
     expect(mapViewSrc).toContain('rel="noopener noreferrer"');
-    expect(mapViewSrc).toContain('navigate: { sl: "Navigiraj"');
+    expect(mapViewSrc).toContain('sl: "Navigiraj"');
+    expect(mapViewSrc).toContain('fr: "Naviguer"');
+    expect(mapViewSrc).toContain('es: "Navegar"');
   });
 });
 

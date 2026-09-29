@@ -47,87 +47,126 @@ import { cn } from "@/lib/utils";
 const L = {
   // F12-3 (§7): ikonski sprožilec — isti niz za aria-label + title
   // (dostopnost nespremenjena, vizualna teža zmanjšana).
-  // W1 faza 2a (Issue #15): 4 javni jeziki (zemljevid je 4-jezičen).
+  // W12 faza 2a (1.145.0): 6 javnih jezikov (zemljevid je 6-jezičen).
   triggerAria: {
     sl: "Ponudba in viri (napredno)",
     en: "Supply and sources (advanced)",
     it: "Offerta e fonti (avanzato)",
     de: "Angebot und Quellen (erweitert)",
+    fr: "Offre et sources (avancé)",
+    es: "Oferta y fuentes (avanzado)",
   },
   title: {
     sl: "Zemljevid ponudbe",
     en: "Supply map",
     it: "Mappa dell'offerta",
     de: "Angebotskarte",
+    fr: "Carte de l'offre",
+    es: "Mapa de oferta",
   },
   desc: {
     sl: "Lokalna ponudba (odprti podatki) in komercialni partnerji z jasnimi statusi virov.",
     en: "Local supply (open data) and commercial partners with clear source statuses.",
     it: "Offerta locale (dati aperti) e partner commerciali con stati delle fonti chiari.",
     de: "Lokales Angebot (offene Daten) und kommerzielle Partner mit klaren Quellenstatus.",
+    fr: "Offre locale (données ouvertes) et partenaires commerciaux avec des statuts de sources clairs.",
+    es: "Oferta local (datos abiertos) y socios comerciales con estados de fuentes claros.",
   },
   productsTitle: {
     sl: "Ponudba v pogledu",
     en: "Supply in view",
     it: "Offerta in vista",
     de: "Angebot im Blick",
+    fr: "Offre dans la vue",
+    es: "Oferta en la vista",
   },
   productsNone: {
     sl: "Približajte zemljevid ali vklopite kategorije.",
     en: "Zoom in or enable categories.",
     it: "Ingrandisci la mappa o attiva le categorie.",
     de: "Zoome in die Karte oder aktiviere Kategorien.",
+    fr: "Zoomez sur la carte ou activez des catégories.",
+    es: "Amplía el mapa o activa categorías.",
   },
   productsLoading: {
     sl: "Nalagam…",
     en: "Loading…",
     it: "Caricamento…",
     de: "Wird geladen…",
+    fr: "Chargement…",
+    es: "Cargando…",
   },
   productsDegraded: {
     sl: "Nekateri viri trenutno niso dosegljavi — lokalna plast ostaja.",
     en: "Some sources are unreachable right now — the local layer remains.",
     it: "Alcune fonti non sono raggiungibili al momento — il livello locale resta.",
     de: "Einige Quellen sind derzeit nicht erreichbar — die lokale Ebene bleibt.",
+    fr: "Certaines sources sont inaccessibles pour le moment — la couche locale reste.",
+    es: "Algunas fuentes no son accesibles ahora mismo — la capa local permanece.",
   },
   localGroup: {
     sl: "Lokalni viri (odprti podatki)",
     en: "Local sources (open data)",
     it: "Fonti locali (dati aperti)",
     de: "Lokale Quellen (offene Daten)",
+    fr: "Sources locales (données ouvertes)",
+    es: "Fuentes locales (datos abiertos)",
   },
   commercialGroup: {
     sl: "Komercialni partnerji",
     en: "Commercial partners",
     it: "Partner commerciali",
     de: "Kommerzielle Partner",
+    fr: "Partenaires commerciaux",
+    es: "Socios comerciales",
   },
   ownGroup: {
     sl: "Naša tržnica",
     en: "Our marketplace",
     it: "La nostra vetrina",
     de: "Unser Marktplatz",
+    fr: "Notre marketplace",
+    es: "Nuestro marketplace",
   },
   open: {
     sl: "Odpri pri partnerju",
     en: "Open at partner",
     it: "Apri dal partner",
     de: "Beim Partner öffnen",
+    fr: "Ouvrir chez le partenaire",
+    es: "Abrir en el socio",
   },
-  active: { sl: "aktiven sloj", en: "active layer", it: "livello attivo", de: "aktive Ebene" },
-  notActive: { sl: "ni sloja", en: "no layer", it: "nessun livello", de: "keine Ebene" },
+  active: {
+    sl: "aktiven sloj",
+    en: "active layer",
+    it: "livello attivo",
+    de: "aktive Ebene",
+    fr: "couche active",
+    es: "capa activa",
+  },
+  notActive: {
+    sl: "ni sloja",
+    en: "no layer",
+    it: "nessun livello",
+    de: "keine Ebene",
+    fr: "pas de couche",
+    es: "sin capa",
+  },
   statusLegend: {
     sl: "Status pove, KAJ dejansko imamo: živi inventar, objavljene podatke, iskanje, samo povezavo partnerja ali lokalne odprte podatke. Affiliate povezava NI inventar.",
     en: "The status tells what we actually have: live inventory, published data, search, a partner link only, or local open data. An affiliate link is NOT inventory.",
     it: "Lo stato dice cosa abbiamo davvero: inventario live, dati pubblicati, ricerca, solo un collegamento al partner o dati aperti locali. Un link affiliate NON è inventario.",
     de: "Der Status sagt, was wir tatsächlich haben: Live-Bestand, veröffentlichte Daten, Suche, nur einen Partner-Link oder lokale offene Daten. Ein Affiliate-Link ist KEIN Bestand.",
+    fr: "Le statut indique ce que nous avons réellement : inventaire en direct, données publiées, recherche, simple lien partenaire ou données ouvertes locales. Un lien affilié n'est PAS un inventaire.",
+    es: "El estado indica lo que realmente tenemos: inventario en vivo, datos publicados, búsqueda, solo un enlace de socio o datos abiertos locales. Un enlace de afiliado NO es inventario.",
   },
 } as const;
 
 interface ProviderPanelProps {
-  /** W1 faza 2a: 4 javni jeziki (zemljevid); registarske accessNote/labels
-   *  ostanejo {sl,en} — provenance v izvirnem jeziku (§38 vzorec). */
-  lang: "sl" | "en" | "it" | "de";
+  /** W12 faza 2a (1.145.0): 6 javnih jezikov (zemljevid); registarske
+   *  accessNote/labels ostanejo {sl,en} — provenance v izvirnem jeziku
+   *  (§38 vzorec). */
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es";
   /** Produkti trenutnega viewporta (seznam — dostopnostna alternativa). */
   products: ProviderProduct[];
   loading: boolean;
@@ -324,12 +363,12 @@ function ProviderRow({
   affiliateHref,
 }: {
   entry: ProviderRegistryEntry;
-  lang: "sl" | "en" | "it" | "de";
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es";
   affiliateHref?: string;
 }) {
-  // W1 faza 2a: statusBadge v UI jeziku; labels/accessNote so register-
-  // atribucija (vir) — IT/DE vidita SL izvirnik (isti §38 kanon kot imena
-  // ponudnikov iz DB na /it/trznica).
+  // W12 faza 2a: statusBadge v UI jeziku (×6); labels/accessNote so
+  // register-atribucija (vir) — fr/es vidita SL izvirnik (isti §38 kanon
+  // kot IT/DE iz W1 faze 2a).
   const regLang: "sl" | "en" = lang === "en" ? "en" : "sl";
   const status = statusLabel(entry.status, lang)[lang];
   const label = entry.labels[regLang];

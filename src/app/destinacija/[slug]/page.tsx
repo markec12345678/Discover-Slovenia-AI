@@ -114,7 +114,11 @@ export async function generateMetadata({
           ? [dest.name, "Slovenia", "guida di viaggio", "itinerario", "periodo migliore", ...overlaid.highlights]
           : locale === "de"
             ? [dest.name, "Slowenien", "Reiseführer", "Reiseroute", "beste Reisezeit", ...overlaid.highlights]
-            : [dest.name, "Slovenija", "vodnik", "itinerer", "kaj početi", "najboljši čas obiska", ...dest.highlights],
+            : locale === "fr"
+              ? [dest.name, "Slovénie", "guide de voyage", "itinéraire", "meilleure période", ...overlaid.highlights]
+              : locale === "es"
+                ? [dest.name, "Eslovenia", "guía de viaje", "itinerario", "mejor época", ...overlaid.highlights]
+                : [dest.name, "Slovenija", "vodnik", "itinerer", "kaj početi", "najboljši čas obiska", ...dest.highlights],
     // OG sliko generira datotečna konvencija opengraph-image.tsx (namenska
     // 1200×630 z imenom/taglinom/dejstvi — močnejša od generične fotografije)
     openGraph: {
@@ -181,7 +185,11 @@ export default async function DestinationHubPage({
         ? { spring: "Primavera", summer: "Estate", autumn: "Autunno", winter: "Inverno" }
         : locale === "de"
           ? { spring: "Frühling", summer: "Sommer", autumn: "Herbst", winter: "Winter" }
-          : { spring: "Pomlad", summer: "Poletje", autumn: "Jesen", winter: "Zima" };
+          : locale === "fr"
+            ? { spring: "Printemps", summer: "Été", autumn: "Automne", winter: "Hiver" }
+            : locale === "es"
+              ? { spring: "Primavera", summer: "Verano", autumn: "Otoño", winter: "Invierno" }
+              : { spring: "Pomlad", summer: "Poletje", autumn: "Jesen", winter: "Zima" };
 
   // Trajanja itinererjev: ključi iz DURATION_SLUGS, oznake iz i18n
   const durationLabels: Record<string, string> = {
@@ -252,7 +260,11 @@ export default async function DestinationHubPage({
               ? `Cosa fare a ${dest.name}`
               : locale === "de"
                 ? `Was tun in ${dest.name}`
-                : `Kaj početi v ${dest.name}`,
+                : locale === "fr"
+                  ? `Que faire à ${dest.name}`
+                  : locale === "es"
+                    ? `Qué hacer en ${dest.name}`
+                    : `Kaj početi v ${dest.name}`,
         url: `${base}/destinacija/${dest.slug}/things-to-do`,
       },
       ...GUIDE_TYPES.map((g) => ({

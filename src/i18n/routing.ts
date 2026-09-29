@@ -171,7 +171,7 @@ export function isItDeRoute(pathname: string): boolean {
 }
 
 // ============================================================================
-// W12 FR/ES WHITELISTA (smer 2, faza 1 — 1.144.0) — edini vir resnice o
+// W12 FR/ES WHITELISTA (smer 2, faza 1 — 1.144.0; faza 2a — 1.145.0) — edini vir resnice o
 // tem, kje francoščina in španščina ŽIVITA. Vzorec 1:1 po W1 fazi 1
 // (IT/DE, 1.126.0): jedro odkrivanja + svetovanja (statične poti).
 // Trgi: FR — francosko govoreča Zahodna Evropa (med največjimi virnimi
@@ -181,14 +181,16 @@ export function isItDeRoute(pathname: string): boolean {
 // Namerno ŠE VEDNO IZVEN (iskrena meja — proxy 308 na slovensko):
 //   /nacrtuj (planner pogon je 4-jezičen — fr/es pride v fazi 2b),
 //   L-vzorčne poti (/trznica, /dozivetja, /lokali, /dogodki, /potovanje,
-//   /na-poti, /moja-potovanja), /zemljevid (faza 2a kandidat),
-//   /destinacija/* (faza 2a kandidat — podatkovne plasti obstajajo že
-//   za kartice na /destinacije), /vodici, /pot.
+//   /na-poti, /moja-potovanja), /vodici, /pot.
+// FAZA 2a (1.145.0): + /zemljevid (POI imena so jezikovno nevtralni viri
+// OSM/FSQ; UI T slovarji ×6; iskanje ima FR/ES razloge zadetkov) +
+// destinacijske pod-poti (/destinacija/* ×38 — overlayji slovenia-data-fr/-es
+// iz 1.144.0 so zdaj živi tudi na straneh, ne samo v karticah).
 // Uporabniki: src/proxy.ts (308 guard), language-switcher (vidnost),
 // hreflangForPath (alternati), sitemap-urls.ts (FR/ES URL-ji).
 // ============================================================================
 
-/** Statične poti s FR/ES različico (jedro odkrivanja + svetovanja). */
+/** Statične poti s FR/ES različico (jedro odkrivanja + svetovanja + zemljevid). */
 export const FRES_STATIC_ROUTES = new Set([
   "/",
   "/destinacije",
@@ -199,11 +201,30 @@ export const FRES_STATIC_ROUTES = new Set([
   "/politika-zasebnosti",
   "/vir-podatkov",
   "/zaupanje-in-varnost",
+  // W12 faza 2a: zemljevid — POI imena so jezikovno nevtralni viri (OSM/FSQ),
+  // UI (T slovarji map-view/map-section/hero) je 6-jezičen, iskanje ima
+  // FR/ES sinonime + razloge zadetkov (isti kanon kot W1 faza 2a za IT/DE).
+  "/zemljevid",
 ]);
 
-/** Ali ima ta POT (brez locale prefix-a!) FR/ES različico (W12 faza 1). */
+/**
+ * Destinacijske pod-poti s FR/ES različico (faza 2a — enake kot IT/DE
+ * whitelistna GEO-A: hub + things-to-do + itinererji + sezone + vodniki;
+ * ×38 destinacij). Vsebino pokrivajo slovenia-data-fr/-es overlayji
+ * (tagline/description/highlights/activities/duration — 1.144.0).
+ */
+const FRES_DESTINATION_SUBROUTES = [
+  /^\/destinacija\/[^/]+$/,
+  /^\/destinacija\/[^/]+\/things-to-do$/,
+  /^\/destinacija\/[^/]+\/itinerary\/[^/]+$/,
+  /^\/destinacija\/[^/]+\/best-time-to-visit\/[^/]+$/,
+  /^\/destinacija\/[^/]+\/guide\/[^/]+$/,
+];
+
+/** Ali ima ta POT (brez locale prefix-a!) FR/ES različico (W12 faza 2a). */
 export function isFrEsRoute(pathname: string): boolean {
-  return FRES_STATIC_ROUTES.has(pathname);
+  if (FRES_STATIC_ROUTES.has(pathname)) return true;
+  return FRES_DESTINATION_SUBROUTES.some((re) => re.test(pathname));
 }
 
 /**

@@ -104,7 +104,11 @@ export async function generateMetadata({
           ? [dest.name, "periodo migliore", seasonLabel, "quando visitare", "meteo", "Slovenia", region]
           : locale === "de"
             ? [dest.name, "beste Reisezeit", seasonLabel, "wann besuchen", "Wetter", "Slowenien", region]
-            : [dest.name, "najboljši čas", seasonLabel, "kdaj obiskati", "vreme", "Slovenija", dest.region],
+            : locale === "fr"
+              ? [dest.name, "meilleure période", seasonLabel, "quand visiter", "météo", "Slovénie", region]
+              : locale === "es"
+                ? [dest.name, "mejor época", seasonLabel, "cuándo visitar", "clima", "Eslovenia", region]
+                : [dest.name, "najboljši čas", seasonLabel, "kdaj obiskati", "vreme", "Slovenija", dest.region],
     openGraph: {
       title: t("meta.title", { name: dest.name, season: seasonLabel }),
       description: t("meta.ogDescription", {

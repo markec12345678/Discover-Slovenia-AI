@@ -82,35 +82,73 @@ const T = {
     en: "Attractions",
     it: "Attrazioni",
     de: "Sehenswürdigkeiten",
+    fr: "Attractions",
+    es: "Atracciones",
   },
-  catMuseum: { sl: "Muzeji", en: "Museums", it: "Musei", de: "Museen" },
-  catNatural: { sl: "Narava", en: "Nature", it: "Natura", de: "Natur" },
+  catMuseum: {
+    sl: "Muzeji",
+    en: "Museums",
+    it: "Musei",
+    de: "Museen",
+    fr: "Musées",
+    es: "Museos",
+  },
+  catNatural: {
+    sl: "Narava",
+    en: "Nature",
+    it: "Natura",
+    de: "Natur",
+    fr: "Nature",
+    es: "Naturaleza",
+  },
   catViewpoint: {
     sl: "Razgledišča",
     en: "Viewpoints",
     it: "Punti panoramici",
     de: "Aussichtspunkte",
+    fr: "Points de vue",
+    es: "Miradores",
   },
   catReligious: {
     sl: "Religiozno",
     en: "Religious",
     it: "Religioso",
     de: "Religiöses",
+    fr: "Religieux",
+    es: "Religioso",
   },
   catRestaurant: {
     sl: "Hrana & pijača",
     en: "Food & drink",
     it: "Cibo e bevande",
     de: "Essen & Trinken",
+    fr: "Restauration",
+    es: "Comida y bebida",
   },
   catAccommodation: {
     sl: "Nastanitve",
     en: "Stays",
     it: "Alloggi",
     de: "Unterkünfte",
+    fr: "Hébergements",
+    es: "Alojamientos",
   },
-  catShop: { sl: "Trgovine", en: "Shops", it: "Negozi", de: "Geschäfte" },
-  catPetrol: { sl: "Bencinske", en: "Petrol", it: "Benzina", de: "Tankstellen" },
+  catShop: {
+    sl: "Trgovine",
+    en: "Shops",
+    it: "Negozi",
+    de: "Geschäfte",
+    fr: "Magasins",
+    es: "Tiendas",
+  },
+  catPetrol: {
+    sl: "Bencinske",
+    en: "Petrol",
+    it: "Benzina",
+    de: "Tankstellen",
+    fr: "Stations-service",
+    es: "Gasolineras",
+  },
   // TASK 45: aktivnosti/ture (Viator Partner API) — izrecna izbira
   // (default: false; naročniška zahteva §9: sloj OFF → 0 API klicev).
   catActivity: {
@@ -118,29 +156,58 @@ const T = {
     en: "Activities",
     it: "Attività",
     de: "Aktivitäten",
+    fr: "Activités",
+    es: "Actividades",
   },
-  catTour: { sl: "Ture", en: "Tours", it: "Tour", de: "Touren" },
+  catTour: {
+    sl: "Ture",
+    en: "Tours",
+    it: "Tour",
+    de: "Touren",
+    fr: "Circuits",
+    es: "Tours",
+  },
   // TASK 43: transfer sloj (KiwiTaxi) — izrecna izbira (default: false):
   // sloj se prikaže SAMO ko ga uporabnik vklopi (naročniška zahteva §9).
-  catTransfer: { sl: "Transferji", en: "Transfers", it: "Transfer", de: "Transfers" },
+  catTransfer: {
+    sl: "Transferji",
+    en: "Transfers",
+    it: "Transfer",
+    de: "Transfers",
+    fr: "Transferts",
+    es: "Traslados",
+  },
   allDestinations: {
     sl: "Vse destinacije",
     en: "All destinations",
     it: "Tutte le destinazioni",
     de: "Alle Reiseziele",
+    fr: "Toutes les destinations",
+    es: "Todos los destinos",
   },
-  reset: { sl: "Ponastavi", en: "Reset", it: "Reimposta", de: "Zurücksetzen" },
+  reset: {
+    sl: "Ponastavi",
+    en: "Reset",
+    it: "Reimposta",
+    de: "Zurücksetzen",
+    fr: "Réinitialiser",
+    es: "Restablecer",
+  },
   hideRoute: {
     sl: "Skrij pot",
     en: "Hide route",
     it: "Nascondi percorso",
     de: "Route ausblenden",
+    fr: "Masquer l'itinéraire",
+    es: "Ocultar ruta",
   },
   showRoute: {
     sl: "Pokaži pot",
     en: "Show route",
     it: "Mostra percorso",
     de: "Route anzeigen",
+    fr: "Afficher l'itinéraire",
+    es: "Mostrar ruta",
   },
   // ISSUE #12 (F12-1): MAP-FIRST SEARCH — iskanje na zemljevidu. Niza
   // showPois/hidePois (Pokaži/Skrij POI gumb) sta ODSTRANJENA: supply sloj
@@ -151,72 +218,96 @@ const T = {
     en: "What are you looking for? (e.g. restaurants in Ljubljana)",
     it: "Cosa cerchi? (es. ristoranti a Lubiana)",
     de: "Wonach suchst du? (z. B. Restaurants in Ljubljana)",
+    fr: "Que cherchez-vous ? (ex. restaurants à Ljubljana)",
+    es: "¿Qué buscas? (ej. restaurantes en Liubliana)",
   },
   searchAria: {
     sl: "Iskanje po zemljevidu",
     en: "Map search",
     it: "Ricerca sulla mappa",
     de: "Kartensuche",
+    fr: "Recherche sur la carte",
+    es: "Búsqueda en el mapa",
   },
   searchResultsAria: {
     sl: "Rezultati iskanja",
     en: "Search results",
     it: "Risultati della ricerca",
     de: "Suchergebnisse",
+    fr: "Résultats de recherche",
+    es: "Resultados de búsqueda",
   },
   searchClear: {
     sl: "Počisti iskanje",
     en: "Clear search",
     it: "Cancella ricerca",
     de: "Suche löschen",
+    fr: "Effacer la recherche",
+    es: "Borrar búsqueda",
   },
   searchEmpty: {
     sl: "Ni zadetkov — poskusi z drugo besedo (kraj, hrana, pohod, vino, muzej).",
     en: "No matches — try another word (place, food, hike, wine, museum).",
     it: "Nessun risultato — prova con un'altra parola (luogo, cibo, escursione, vino, museo).",
     de: "Keine Treffer — versuche ein anderes Wort (Ort, Essen, Wanderung, Wein, Museum).",
+    fr: "Aucun résultat — essayez un autre mot (lieu, restauration, randonnée, vin, musée).",
+    es: "Sin resultados — prueba con otra palabra (lugar, comida, senderismo, vino, museo).",
   },
   searchError: {
     sl: "Iskanje trenutno ni na voljo — poskusi znova.",
     en: "Search is unavailable right now — try again.",
     it: "La ricerca non è disponibile al momento — riprova.",
     de: "Die Suche ist derzeit nicht verfügbar — versuche es erneut.",
+    fr: "La recherche est indisponible pour le moment — réessayez.",
+    es: "La búsqueda no está disponible ahora mismo — inténtalo de nuevo.",
   },
   searchShowOnMap: {
     sl: "Prikaži na zemljevidu",
     en: "Show on map",
     it: "Mostra sulla mappa",
     de: "Auf der Karte zeigen",
+    fr: "Afficher sur la carte",
+    es: "Mostrar en el mapa",
   },
   searchKindDestination: {
     sl: "Destinacija",
     en: "Destination",
     it: "Destinazione",
     de: "Reiseziel",
+    fr: "Destination",
+    es: "Destino",
   },
   searchKindListing: {
     sl: "Lokal",
     en: "Venue",
     it: "Locale",
     de: "Anbieter",
+    fr: "Établissement",
+    es: "Local",
   },
   searchKindProduct: {
     sl: "Izdelek",
     en: "Product",
     it: "Prodotto",
     de: "Produkt",
+    fr: "Produit",
+    es: "Producto",
   },
   searchKindExperience: {
     sl: "Izkušnja",
     en: "Experience",
     it: "Esperienza",
     de: "Erlebnis",
+    fr: "Expérience",
+    es: "Experiencia",
   },
   searchNoGeo: {
     sl: "Brez lokacije na zemljevidu — odpri podrobnosti",
     en: "No map location — open details",
     it: "Nessuna posizione sulla mappa — apri i dettagli",
     de: "Kein Standort auf der Karte — Details öffnen",
+    fr: "Sans position sur la carte — ouvrir les détails",
+    es: "Sin ubicación en el mapa — abrir detalles",
   },
   chipsAria: {
     // ISSUE #12 (F12-3, §7): „POI“ je tehnični izraz — izglavljen iz
@@ -225,10 +316,26 @@ const T = {
     en: "Filter categories",
     it: "Filtra le categorie",
     de: "Kategorien filtern",
+    fr: "Filtrer les catégories",
+    es: "Filtrar categorías",
   },
   // ISSUE #12 (F12-2): „+ Več" expander (5 primarnih → vseh 12 čipov).
-  moreCats: { sl: "Več", en: "More", it: "Altro", de: "Mehr" },
-  fewerCats: { sl: "Manj", en: "Less", it: "Meno", de: "Weniger" },
+  moreCats: {
+    sl: "Več",
+    en: "More",
+    it: "Altro",
+    de: "Mehr",
+    fr: "Plus",
+    es: "Más",
+  },
+  fewerCats: {
+    sl: "Manj",
+    en: "Less",
+    it: "Meno",
+    de: "Weniger",
+    fr: "Moins",
+    es: "Menos",
+  },
   // ISSUE #12 (F12-2): marker result card (issue §6) — primarna akcija je
   // DODAJ V MOJO POT; sekundarni Podrobnosti + Navigiraj.
   addToTrip: {
@@ -236,32 +343,56 @@ const T = {
     en: "Add to my trip",
     it: "Aggiungi al mio viaggio",
     de: "Zu meiner Reise hinzufügen",
+    fr: "Ajouter à mon voyage",
+    es: "Añadir a mi viaje",
   },
-  addedToTrip: { sl: "✓ Dodano", en: "✓ Added", it: "✓ Aggiunto", de: "✓ Hinzugefügt" },
+  addedToTrip: {
+    sl: "✓ Dodano",
+    en: "✓ Added",
+    it: "✓ Aggiunto",
+    de: "✓ Hinzugefügt",
+    fr: "✓ Ajouté",
+    es: "✓ Añadido",
+  },
   addLimitReached: {
     sl: "Doseženih največ izbir",
     en: "Selection limit reached",
     it: "Limite di selezione raggiunto",
     de: "Auswahlmaximum erreicht",
+    fr: "Limite de sélection atteinte",
+    es: "Límite de selección alcanzado",
   },
-  navigate: { sl: "Navigiraj", en: "Navigate", it: "Naviga", de: "Navigieren" },
+  navigate: {
+    sl: "Navigiraj",
+    en: "Navigate",
+    it: "Naviga",
+    de: "Navigieren",
+    fr: "Naviguer",
+    es: "Navegar",
+  },
   reviewsUnit: {
     sl: "mnenj",
     en: "reviews",
     it: "recensioni",
     de: "Bewertungen",
+    fr: "avis",
+    es: "reseñas",
   },
   emptyText: {
     sl: "Vse kategorije so izklopljene — točke niso prikazane.",
     en: "All categories are off — no places are shown.",
     it: "Tutte le categorie sono disattivate — nessun luogo viene mostrato.",
     de: "Alle Kategorien sind aus — es werden keine Orte angezeigt.",
+    fr: "Toutes les catégories sont désactivées — aucun lieu n'est affiché.",
+    es: "Todas las categorías están desactivadas — no se muestra ningún lugar.",
   },
   emptyReset: {
     sl: "Prikaži privzeto",
     en: "Show defaults",
     it: "Mostra predefiniti",
     de: "Standard anzeigen",
+    fr: "Afficher les valeurs par défaut",
+    es: "Mostrar predeterminadas",
   },
   // ISSUE #12 (F12-3, §7+§13): uporabniški jezik stanj — „POI“ tehnični
   // izraz se umika iz glavnega UX (issue §7); vsa stanja ostajajo ISKRENA.
@@ -270,6 +401,8 @@ const T = {
     en: "Loading local places…",
     it: "Caricamento dei luoghi locali…",
     de: "Lokale Orte werden geladen…",
+    fr: "Chargement des lieux locaux…",
+    es: "Cargando lugares locales…",
   },
   // ISSUE #12 (F12-3): števec rezultatov supply sloja v glavnem jeziku
   // (prej „X POI · viri“ — zdaj rezultati + atribucija virov ostane).
@@ -278,43 +411,64 @@ const T = {
     en: "results",
     it: "risultati",
     de: "Ergebnisse",
+    fr: "résultats",
+    es: "resultados",
   },
   mapAria: {
     sl: "Interaktivni zemljevid Slovenije in Balkana z destinacijami, bencinskimi, restavracijami in nastanitvami",
     en: "Interactive map of Slovenia and the Balkans with destinations, petrol stations, restaurants and stays",
     it: "Mappa interattiva della Slovenia e dei Balcani con destinazioni, stazioni di benzina, ristoranti e alloggi",
     de: "Interaktive Karte von Slowenien und dem Balkan mit Reisezielen, Tankstellen, Restaurants und Unterkünften",
+    fr: "Carte interactive de la Slovénie et des Balkans avec destinations, stations-service, restaurants et hébergements",
+    es: "Mapa interactivo de Eslovenia y los Balcanes con destinos, gasolineras, restaurantes y alojamientos",
   },
   infoDestUnit: {
     sl: "destinacij",
     en: "destinations",
     it: "destinazioni",
     de: "Reiseziele",
+    fr: "destinations",
+    es: "destinos",
   },
   infoClickMarker: {
     sl: "Klikni marker",
     en: "Tap a marker",
     it: "Tocca un marker",
     de: "Tippe auf einen Marker",
+    fr: "Touchez un marqueur",
+    es: "Toca un marcador",
   },
-  editorial: { sl: "uredniška", en: "editorial", it: "editoriale", de: "redaktionell" },
+  editorial: {
+    sl: "uredniška",
+    en: "editorial",
+    it: "editoriale",
+    de: "redaktionell",
+    fr: "éditorial",
+    es: "editorial",
+  },
   moreInfo: {
     sl: "Več informacij →",
     en: "More info →",
     it: "Ulteriori informazioni →",
     de: "Weitere Infos →",
+    fr: "Plus d'informations →",
+    es: "Más información →",
   },
   details: {
     sl: "Podrobnosti →",
     en: "Details →",
     it: "Dettagli →",
     de: "Details →",
+    fr: "Détails →",
+    es: "Detalles →",
   },
   day: {
     sl: (n: number) => `Dan ${n}`,
     en: (n: number) => `Day ${n}`,
     it: (n: number) => `Giorno ${n}`,
     de: (n: number) => `Tag ${n}`,
+    fr: (n: number) => `Jour ${n}`,
+    es: (n: number) => `Día ${n}`,
   },
   // F1 (Supply Map):
   // ISSUE #12 (F12-3, §13): zoom hint BREZ tehnične ravni „z ≥ 10“ —
@@ -324,6 +478,8 @@ const T = {
     en: "Zoom in for local places.",
     it: "Ingrandisci la mappa per i luoghi locali.",
     de: "Zoome in die Karte für lokale Orte.",
+    fr: "Zoomez sur la carte pour voir les lieux locaux.",
+    es: "Amplía el mapa para ver los lugares locales.",
   },
   // ISSUE #12 (F12-3, §13): PRIMER IZ ISSUEJA — „Nekaterih lokalnih mest
   // trenutno ni mogoče prikazati.“ (prej: „Nekateri viri … niso dosegljivi“).
@@ -333,6 +489,8 @@ const T = {
     en: "Some local places can't be shown right now — destinations remain.",
     it: "Alcuni luoghi locali non possono essere mostrati al momento — le destinazioni restano disponibili.",
     de: "Einige lokale Orte können derzeit nicht angezeigt werden — die Reiseziele bleiben verfügbar.",
+    fr: "Certains lieux locaux ne peuvent pas être affichés pour le moment — les destinations restent disponibles.",
+    es: "Algunos lugares locales no se pueden mostrar ahora mismo — los destinos siguen disponibles.",
   },
   // TASK 99-a (§15): iskrena oznaka za "client-network" — napaka je na
   // STRANI ODJEMALCA (offline), zato NE obtožuje virov/ponudnikov.
@@ -341,39 +499,58 @@ const T = {
     en: "You appear to be offline — destinations remain available.",
     it: "Nessuna connessione a Internet — le destinazioni restano disponibili.",
     de: "Keine Internetverbindung — die Reiseziele bleiben verfügbar.",
+    fr: "Vous semblez être hors ligne — les destinations restent disponibles.",
+    es: "Parece que estás sin conexión — los destinos siguen disponibles.",
   },
   // MAP PINS sloj (1.95.1) — statični FSQ: bencinske/restavracije/
   // nastanitve SI+HR+ME+AL.
-  pinsUnit: { sl: "točk", en: "places", it: "luoghi", de: "Orte" },
+  pinsUnit: {
+    sl: "točk",
+    en: "places",
+    it: "luoghi",
+    de: "Orte",
+    fr: "lieux",
+    es: "lugares",
+  },
   pinsCappedHint: {
     sl: "Prikazanih najboljše ocenjenih — približajte za vse.",
     en: "Showing best-rated — zoom in for all.",
     it: "Mostrati i meglio valutati — ingrandisci per vederli tutti.",
     de: "Am besten bewertete werden angezeigt — zoome für alle.",
+    fr: "Les mieux notés sont affichés — zoomez pour tout voir.",
+    es: "Se muestran los mejor valorados — amplía para verlos todos.",
   },
   pinsError: {
     sl: "Točk ni bilo mogoče naložiti — premaknite zemljevid in poskusite znova.",
     en: "Places could not be loaded — move the map and try again.",
     it: "Impossibile caricare i luoghi — sposta la mappa e riprova.",
     de: "Orte konnten nicht geladen werden — verschiebe die Karte und versuche es erneut.",
+    fr: "Impossible de charger les lieux — déplacez la carte et réessayez.",
+    es: "No se pudieron cargar los lugares — mueve el mapa e inténtalo de nuevo.",
   },
   pinsCellTitle: {
     sl: (n: number) => `${n} točk na tem območju`,
     en: (n: number) => `${n} places in this area`,
     it: (n: number) => `${n} luoghi in quest'area`,
     de: (n: number) => `${n} Orte in diesem Gebiet`,
+    fr: (n: number) => `${n} lieux dans cette zone`,
+    es: (n: number) => `${n} lugares en esta zona`,
   },
   pinsCellZoom: {
     sl: "Približaj to območje",
     en: "Zoom into this area",
     it: "Ingrandizza quest'area",
     de: "In dieses Gebiet zoomen",
+    fr: "Zoomez sur cette zone",
+    es: "Amplía esta zona",
   },
   pinsReviews: {
     sl: (n: number) => `${n} mnenj`,
     en: (n: number) => `${n} reviews`,
     it: (n: number) => `${n} recensioni`,
     de: (n: number) => `${n} Bewertungen`,
+    fr: (n: number) => `${n} avis`,
+    es: (n: number) => `${n} reseñas`,
   },
   // Atribucija (Apache-2.0) — ISTA vrednost kot MAP_PINS_SOURCE v
   // src/lib/map-pins.ts (server; klient ne sme uvažati node:fs plasti).
@@ -382,6 +559,8 @@ const T = {
     en: "Foursquare Open Places (Apache-2.0)",
     it: "Foursquare Open Places (Apache-2.0)",
     de: "Foursquare Open Places (Apache-2.0)",
+    fr: "Foursquare Open Places (Apache-2.0)",
+    es: "Foursquare Open Places (Apache-2.0)",
   },
 } as const;
 
@@ -393,7 +572,8 @@ type MapLang = keyof typeof T.allDestinations;
 // Ikone se prekrivajo namenoma s klepetom tam, kjer je semantika ista.
 const POI_CATEGORIES: {
   value: ProductType;
-  label: { sl: string; en: string };
+  // W12 faza 2a: 6 jezikov (T.catXxx vnosi so sedaj ×6 — isti vir resnice)
+  label: Record<MapLang, string>;
   icon: ComponentType<{ className?: string }>;
   default: boolean;
 }[] = [
@@ -514,15 +694,16 @@ interface MapSearchResponse {
 // izgubljena (guardrail matrika).
 const PRIMARY_CATEGORIES: {
   key: string;
-  label: { sl: string; en: string };
+  // W12 faza 2a: 6 jezikov (zemljevid je 6-jezičen)
+  label: Record<MapLang, string>;
   icon: ComponentType<{ className?: string }>;
   types: ProductType[];
 }[] = [
-  { key: "food", label: { sl: "Hrana", en: "Food" }, icon: Utensils, types: ["restaurant"] },
-  { key: "stay", label: { sl: "Spanje", en: "Stays" }, icon: BedDouble, types: ["accommodation"] },
-  { key: "sights", label: { sl: "Ogledi", en: "Sights" }, icon: Landmark, types: ["attraction", "museum", "viewpoint", "religious"] },
-  { key: "nature", label: { sl: "Narava", en: "Nature" }, icon: Trees, types: ["natural"] },
-  { key: "activities", label: { sl: "Aktivnosti", en: "Activities" }, icon: Compass, types: ["activity", "tour"] },
+  { key: "food", label: { sl: "Hrana", en: "Food", it: "Cibo", de: "Essen", fr: "Restauration", es: "Comida" }, icon: Utensils, types: ["restaurant"] },
+  { key: "stay", label: { sl: "Spanje", en: "Stays", it: "Alloggi", de: "Unterkünfte", fr: "Hébergements", es: "Alojamientos" }, icon: BedDouble, types: ["accommodation"] },
+  { key: "sights", label: { sl: "Ogledi", en: "Sights", it: "Visite", de: "Sehenswertes", fr: "Visites", es: "Visitas" }, icon: Landmark, types: ["attraction", "museum", "viewpoint", "religious"] },
+  { key: "nature", label: { sl: "Narava", en: "Nature", it: "Natura", de: "Natur", fr: "Nature", es: "Naturaleza" }, icon: Trees, types: ["natural"] },
+  { key: "activities", label: { sl: "Aktivnosti", en: "Activities", it: "Attività", de: "Aktivitäten", fr: "Activités", es: "Actividades" }, icon: Compass, types: ["activity", "tour"] },
 ];
 
 // 1.95.1: privzete kategorije ZEMLJEVIDA (9 lokalnih tipov — "vsa mesta
@@ -575,9 +756,11 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
   const [showRoute, setShowRoute] = useState(true);
   // 1.48: dvojezičnost (vzorec L iz map-section — prej hardcoded SL tudi na /en)
   const locale = useLocale();
-  // W1 (Issue #15 faza 2a): 4 javni jeziki — it/de padeta v svoj vejo
+  // W12 faza 2a (1.145.0): 6 javnih jezikov — fr/es padeta v svoj vejo
   const lang: MapLang =
-    locale === "en" || locale === "it" || locale === "de" ? locale : "sl";
+    locale === "en" || locale === "it" || locale === "de" || locale === "fr" || locale === "es"
+      ? locale
+      : "sl";
 
   // === SUPPLY state (F1 → ISSUE #12 F12-1) ===
   // showPois (Pokaži/Skrij POI gumb) je ODSTRANJEN kot uporabniška

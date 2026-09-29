@@ -15,6 +15,17 @@ import type { ProductType } from "./types";
 /** Različica taksonomije — dvignitev ob dodajanju novih tipov. */
 export const TAXONOMY_VERSION = 1;
 
+/** Oznaka taksonomije — 6 javnih jezikov (W12 faza 2a; it/de/fr/es dodani
+ *  zato, ker se label izrisuje v Leaflet popup badge-ih z label[lang]). */
+export interface TaxonomyLabel {
+  sl: string;
+  en: string;
+  it: string;
+  de: string;
+  fr: string;
+  es: string;
+}
+
 export interface TaxonomyEntry {
   /** Kanonski tip. */
   type: ProductType;
@@ -23,8 +34,8 @@ export interface TaxonomyEntry {
   /** Barva pina/čipa (semantične barve kategorij — izjema od pravila
    *  "NO blue" kot doslej pri CATEGORY_META). */
   color: string;
-  /** Dvojezična oznaka (L vzorec: label[lang]). */
-  label: { sl: string; en: string };
+  /** 6-jezična oznaka (L vzorec: label[lang]). */
+  label: TaxonomyLabel;
   /**
    * Najmanjši zoom, pri katerem se tip sploh prikaže (gostota!):
    * restavracije so goste → šele od z13; nastanitve/atrakcije prej.
@@ -44,7 +55,7 @@ export const TAXONOMY: Record<ProductType, TaxonomyEntry> = {
     type: "attraction",
     icon: "🎯",
     color: "#d97706",
-    label: { sl: "Atrakcija", en: "Attraction" },
+    label: { sl: "Atrakcija", en: "Attraction", it: "Attrazione", de: "Sehenswürdigkeit", fr: "Attraction", es: "Atracción" },
     minZoom: 8,
     osmFilters: [
       "nwr[tourism=attraction]",
@@ -57,7 +68,7 @@ export const TAXONOMY: Record<ProductType, TaxonomyEntry> = {
     type: "museum",
     icon: "🏛️",
     color: "#7c3aed",
-    label: { sl: "Muzej", en: "Museum" },
+    label: { sl: "Muzej", en: "Museum", it: "Museo", de: "Museum", fr: "Musée", es: "Museo" },
     minZoom: 10,
     osmFilters: ["nwr[tourism=museum]"],
   },
@@ -65,7 +76,7 @@ export const TAXONOMY: Record<ProductType, TaxonomyEntry> = {
     type: "viewpoint",
     icon: "👁️",
     color: "#059669",
-    label: { sl: "Razgledišče", en: "Viewpoint" },
+    label: { sl: "Razgledišče", en: "Viewpoint", it: "Punto panoramico", de: "Aussichtspunkt", fr: "Point de vue", es: "Mirador" },
     minZoom: 10,
     osmFilters: ["nwr[tourism=viewpoint]", "nwr[tourism=picnic_site]"],
   },
@@ -73,7 +84,7 @@ export const TAXONOMY: Record<ProductType, TaxonomyEntry> = {
     type: "natural",
     icon: "🌿",
     color: "#16a34a",
-    label: { sl: "Narava", en: "Nature" },
+    label: { sl: "Narava", en: "Nature", it: "Natura", de: "Natur", fr: "Nature", es: "Naturaleza" },
     minZoom: 8,
     osmFilters: [
       "nwr[natural=peak]",
@@ -88,7 +99,7 @@ export const TAXONOMY: Record<ProductType, TaxonomyEntry> = {
     type: "religious",
     icon: "⛪",
     color: "#9333ea",
-    label: { sl: "Religiozno", en: "Religious" },
+    label: { sl: "Religiozno", en: "Religious", it: "Religioso", de: "Religiöses", fr: "Religieux", es: "Religioso" },
     minZoom: 11,
     osmFilters: ["nwr[amenity=place_of_worship]", "nwr[historic=church]"],
   },
@@ -96,7 +107,7 @@ export const TAXONOMY: Record<ProductType, TaxonomyEntry> = {
     type: "restaurant",
     icon: "🍽️",
     color: "#dc2626",
-    label: { sl: "Restavracija", en: "Restaurant" },
+    label: { sl: "Restavracija", en: "Restaurant", it: "Ristorante", de: "Restaurant", fr: "Restaurant", es: "Restaurante" },
     minZoom: 13,
     osmFilters: [
       "nwr[amenity=restaurant]",
@@ -109,7 +120,7 @@ export const TAXONOMY: Record<ProductType, TaxonomyEntry> = {
     type: "accommodation",
     icon: "🏨",
     color: "#0891b2",
-    label: { sl: "Nastanitev", en: "Stay" },
+    label: { sl: "Nastanitev", en: "Stay", it: "Alloggio", de: "Unterkunft", fr: "Hébergement", es: "Alojamiento" },
     minZoom: 11,
     osmFilters: [
       "nwr[tourism=hotel]",
@@ -126,7 +137,7 @@ export const TAXONOMY: Record<ProductType, TaxonomyEntry> = {
     type: "shop",
     icon: "🛍️",
     color: "#ea580c",
-    label: { sl: "Trgovina", en: "Shop" },
+    label: { sl: "Trgovina", en: "Shop", it: "Negozio", de: "Geschäft", fr: "Magasin", es: "Tienda" },
     minZoom: 13,
     osmFilters: [
       "nwr[shop=gift]",
@@ -142,7 +153,7 @@ export const TAXONOMY: Record<ProductType, TaxonomyEntry> = {
     type: "petrol",
     icon: "⛽",
     color: "#b91c1c",
-    label: { sl: "Bencinska", en: "Petrol station" },
+    label: { sl: "Bencinska", en: "Petrol station", it: "Benzinaio", de: "Tankstelle", fr: "Station-service", es: "Gasolinera" },
     minZoom: 12,
     osmFilters: ["nwr[amenity=fuel]"],
   },
@@ -152,63 +163,63 @@ export const TAXONOMY: Record<ProductType, TaxonomyEntry> = {
     type: "activity",
     icon: "🧭",
     color: "#0d9488",
-    label: { sl: "Aktivnost", en: "Activity" },
+    label: { sl: "Aktivnost", en: "Activity", it: "Attività", de: "Aktivität", fr: "Activité", es: "Actividad" },
     minZoom: 9,
   },
   tour: {
     type: "tour",
     icon: "🚌",
     color: "#7c2d12",
-    label: { sl: "Izlet / tura", en: "Tour" },
+    label: { sl: "Izlet / tura", en: "Tour", it: "Escursione", de: "Ausflug", fr: "Circuit", es: "Tour" },
     minZoom: 9,
   },
   ticket: {
     type: "ticket",
     icon: "🎟️",
     color: "#b45309",
-    label: { sl: "Vstopnica", en: "Ticket" },
+    label: { sl: "Vstopnica", en: "Ticket", it: "Biglietto", de: "Ticket", fr: "Billet", es: "Entrada" },
     minZoom: 11,
   },
   transfer: {
     type: "transfer",
     icon: "🚕",
     color: "#334155",
-    label: { sl: "Transfer", en: "Transfer" },
+    label: { sl: "Transfer", en: "Transfer", it: "Transfer", de: "Transfer", fr: "Transfert", es: "Traslado" },
     minZoom: 10,
   },
   car_rental: {
     type: "car_rental",
     icon: "🚗",
     color: "#57534e",
-    label: { sl: "Najem avta", en: "Car rental" },
+    label: { sl: "Najem avta", en: "Car rental", it: "Noleggio auto", de: "Mietwagen", fr: "Location de voiture", es: "Alquiler de coche" },
     minZoom: 11,
   },
   transport: {
     type: "transport",
     icon: "🚆",
     color: "#0f766e",
-    label: { sl: "Prevoz", en: "Transport" },
+    label: { sl: "Prevoz", en: "Transport", it: "Trasporto", de: "Transport", fr: "Transport", es: "Transporte" },
     minZoom: 9,
   },
   flight: {
     type: "flight",
     icon: "✈️",
     color: "#475569",
-    label: { sl: "Let", en: "Flight" },
+    label: { sl: "Let", en: "Flight", it: "Volo", de: "Flug", fr: "Vol", es: "Vuelo" },
     minZoom: 7,
   },
   esim: {
     type: "esim",
     icon: "📶",
     color: "#65a30d",
-    label: { sl: "eSIM", en: "eSIM" },
+    label: { sl: "eSIM", en: "eSIM", it: "eSIM", de: "eSIM", fr: "eSIM", es: "eSIM" },
     minZoom: 5,
   },
   insurance: {
     type: "insurance",
     icon: "🛡️",
     color: "#78716c",
-    label: { sl: "Zavarovanje", en: "Insurance" },
+    label: { sl: "Zavarovanje", en: "Insurance", it: "Assicurazione", de: "Versicherung", fr: "Assurance", es: "Seguro" },
     minZoom: 5,
   },
 
@@ -219,7 +230,7 @@ export const TAXONOMY: Record<ProductType, TaxonomyEntry> = {
     type: "event",
     icon: "🎭",
     color: "#9f1239",
-    label: { sl: "Dogodek", en: "Event" },
+    label: { sl: "Dogodek", en: "Event", it: "Evento", de: "Veranstaltung", fr: "Événement", es: "Evento" },
     minZoom: 10,
   },
 
@@ -228,7 +239,7 @@ export const TAXONOMY: Record<ProductType, TaxonomyEntry> = {
     type: "poi",
     icon: "📍",
     color: "#6b7280",
-    label: { sl: "Drugo", en: "Other" },
+    label: { sl: "Drugo", en: "Other", it: "Altro", de: "Sonstiges", fr: "Autre", es: "Otro" },
     minZoom: 12,
   },
 };
@@ -246,7 +257,7 @@ export function taxonomyOf(type: ProductType): TaxonomyEntry {
 export function categoryMetaFor(type: string): {
   icon: string;
   color: string;
-  label: { sl: string; en: string };
+  label: TaxonomyLabel;
 } {
   return isProductType(type) ? TAXONOMY[type] : TAXONOMY.poi;
 }

@@ -763,9 +763,9 @@ export function localProviders(): ProviderRegistryEntry[] {
  */
 export function statusLabel(
   status: SupplyStatus,
-  /** W1 faza 2a: UI jezik (privzeto SL — nazaj kompatibilno). */
-  uiLang: "sl" | "en" | "it" | "de" = "sl"
-): { sl: string; en: string; it: string; de: string } {
+  /** W12 faza 2a (1.145.0): UI jezik — 6 javnih jezikov (privzeto SL). */
+  uiLang: "sl" | "en" | "it" | "de" | "fr" | "es" = "sl"
+): { sl: string; en: string; it: string; de: string; fr: string; es: string } {
   switch (status) {
     case "local":
       return {
@@ -773,6 +773,8 @@ export function statusLabel(
         en: "Local source",
         it: "Fonte locale",
         de: "Lokale Quelle",
+        fr: "Source locale",
+        es: "Fuente local",
       };
     case "live":
       return {
@@ -780,6 +782,8 @@ export function statusLabel(
         en: "Live inventory",
         it: "Inventario live",
         de: "Live-Bestand",
+        fr: "Inventaire en direct",
+        es: "Inventario en vivo",
       };
     case "static":
       return {
@@ -787,17 +791,35 @@ export function statusLabel(
         en: "Published data",
         it: "Dati pubblicati",
         de: "Veröffentlichte Daten",
+        fr: "Données publiées",
+        es: "Datos publicados",
       };
     case "search":
-      return { sl: "Iskanje", en: "Search", it: "Ricerca", de: "Suche" };
+      return {
+        sl: "Iskanje",
+        en: "Search",
+        it: "Ricerca",
+        de: "Suche",
+        fr: "Recherche",
+        es: "Búsqueda",
+      };
     case "affiliate":
       return {
         sl: "Povezava partnerja",
         en: "Partner link",
         it: "Link del partner",
         de: "Partner-Link",
+        fr: "Lien partenaire",
+        es: "Enlace de socio",
       };
     case "planned":
-      return { sl: "Načrtovano", en: "Planned", it: "Previsto", de: "Geplant" };
+      return {
+        sl: "Načrtovano",
+        en: "Planned",
+        it: "Previsto",
+        de: "Geplant",
+        fr: "Prévu",
+        es: "Previsto",
+      };
   }
 }

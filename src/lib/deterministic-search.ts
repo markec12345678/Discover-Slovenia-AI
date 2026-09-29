@@ -104,7 +104,7 @@ export function normalize(s: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-// ─── 2. TOKENIZACIJA + SL/EN/IT/DE STOPBESEDE ─────────────────────────
+// ─── 2. TOKENIZACIJA + SL/EN/IT/DE/FR/ES STOPBESEDE ───────────────────────
 
 const STOPWORDS = new Set([
   // SL (naloga #9: v, na, za, je, in, kaj, kje, kako, do, iz, pri, ob, z, s)
@@ -117,6 +117,13 @@ const STOPWORDS = new Set([
   // DE (W1 faza 2a: členi/vezniki/predlogi)
   "der", "die", "das", "und", "ist", "von", "mit", "im", "ein", "eine",
   "nach", "bei", "auf", "wo", "was", "wie", "fur", "ich", "finden",
+  // FR (W12 faza 2a: vprašalnice/predlogi/členi — nikoli ime destinacije;
+  // normalize() odstrani diakritike: „où“ → „ou“)
+  "ou", "quoi", "comment", "avec", "que", "pour", "une", "des", "dans",
+  "sur", "sont", "trouver", "cherche", "veux", "je", "est", "les",
+  // ES (W12 faza 2a: „dónde“ → „donde“, „cómo“ → „como“ ipd.)
+  "donde", "como", "con", "para", "una", "uno", "del", "las", "los",
+  "hay", "encontrar", "quiero", "busco", "esta", "estan", "algun",
 ]);
 
 /** Razbij niz na iskalne žetone (≥ 2 znaka, brez stopbesed). */
@@ -145,6 +152,11 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
     "pizzeria", "cibo", "osteria", "trattoria",
     "essen", "restaurants", "kuche", "abendessen", "mittagessen", "fruhstuck",
     "gasthaus", "gasthof", "wirtshaus", "keller", "brau",
+    // W12 faza 2a (FR/ES zemljevid)
+    "restaurant", "restaurants", "manger", "cuisine", "dejeuner", "diner",
+    "petit-dejeuner", "nourriture", "bistro", "brasserie",
+    "restaurante", "restaurantes", "comer", "cocina", "almuerzo", "cena",
+    "desayuno", "comida", "tapas", "taberna",
   ],
   wine: [
     "vino", "vina", "vinu", "vinska", "vinski", "vinske", "degustacija", "vinoteka",
@@ -152,6 +164,9 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
     // W1 faza 2a (IT/DE)
     "cantina", "vini", "enoteca", "vigneto", "uva", "degustazione",
     "wein", "weingut", "weinkeller", "weingarten", "trauben",
+    // W12 faza 2a (FR/ES)
+    "vin", "vins", "cave", "degustation", "vignoble", "raisin", "chateau",
+    "bodega", "bodegas", "cata", "vinedo", "uva", "cavas",
   ],
   hiking: [
     "pohod", "pohodi", "pohodništvo", "tura", "ture", "izlet", "sprehod", "gora", "gore",
@@ -160,6 +175,11 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
     "escursione", "escursioni", "passeggiata", "camminata", "sentiero", "montagna",
     "tappa", "trekking",
     "wandern", "wanderung", "spaziergang", "berg", "berge", "pfad", "steig",
+    // W12 faza 2a (FR/ES)
+    "randonnee", "randonnees", "rando", "promenade", "marche", "sentier",
+    "montagne", "balade",
+    "excursion", "excursiones", "senderismo", "sendero", "caminata",
+    "montana", "paseo", "trekking",
   ],
   culture: [
     "muzej", "muzeji", "galerija", "kultura", "zgodovina", "spomenik", "grad", "cerkev",
@@ -170,6 +190,11 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
     "chiesa", "arte", "patrimonio", "cattedrale", "basilica",
     "museen", "galerie", "kultur", "geschichte", "denkmal", "burg", "kirche",
     "kunste", "erbe", "kathedrale",
+    // W12 faza 2a (FR/ES)
+    "musee", "musees", "galerie", "culture", "histoire", "monument", "chateau",
+    "eglise", "art", "patrimoine", "cathedrale", "basilique",
+    "museos", "galeria", "cultura", "historia", "monumento", "castillo",
+    "iglesia", "arte", "patrimonio", "catedral", "basilica",
   ],
   wellness: [
     "wellness", "sauna", "savna", "terme", "kopališče", "masaža",
@@ -177,6 +202,9 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
     // W1 faza 2a (IT/DE)
     "benessere", "piscina", "bagni", "termali",
     "schwimmbad", "thermalbad", "therme", "heubad",
+    // W12 faza 2a (FR/ES; „bien-être“ normalizira v „bienetre“)
+    "bienetre", "piscine", "bains", "thermaux", "thalasso",
+    "bienestar", "banos", "termales", "masaje", "piscinas",
   ],
   water: [
     "kajak", "rafting", "sup", "kanu", "čoln", "splav", "jadranje", "veslanje",
@@ -184,11 +212,18 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
     // W1 faza 2a (IT/DE)
     "barca", "canoa", "vela", "rafting", "sup",
     "boot", "segeln", "rudern", "floß",
+    // W12 faza 2a (FR/ES)
+    "bateau", "canoe", "voile", "kayak", "rafting", "sup", "rame",
+    "barco", "canoa", "vela", "kayak", "rafting", "sup", "remo",
   ],
-  ski: ["smuči", "smučanje", "sankanje", "ski", "smuci", "snowboard",
+  ski: [
+    "smuči", "smučanje", "sankanje", "ski", "smuci", "snowboard",
     // W1 faza 2a (IT/DE)
     "sci", "scii", "sciare", "pista", "slittino",
     "skifahren", "schneebrett", "rodeln", "piste",
+    // W12 faza 2a (FR/ES; „esquí“ normalizira v „esqui“)
+    "ski", "skier", "piste", "luge", "snowboard", "stations",
+    "esqui", "esquiar", "pistas", "trineo", "snowboard",
   ],
   accommodation: [
     "nočitev", "nastanitev", "hotel", "hostel", "apartma", "sobe", "spanje",
@@ -197,6 +232,11 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
     "alloggio", "alloggi", "dormire", "camere", "appartamento", "pensione",
     "hotel", "hoteles",
     "ubernachten", "unterkunft", "zimmer", "ferienwohnung", "pension", "schlafen",
+    // W12 faza 2a (FR/ES)
+    "hebergement", "hebergements", "dormir", "chambres", "appartement",
+    "hotel", "hotels", "nuit", "logement", "gite",
+    "alojamiento", "alojamientos", "hospedarse", "habitaciones", "apartamento",
+    "pension", "hotel", "hoteles", "alojar",
   ],
   nature: [
     "narava", "jezero", "jezeru", "reka", "reki", "reke", "gora", "gori", "gozd",
@@ -207,6 +247,13 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
     "spiaggia", "mare", "costa", "parco", "monte", "valle", "sorgente",
     "natur", "fluss", "wald", "wasserfall", "hohle", "strand", "meer", "kuste",
     "park", "tal", "quelle",
+    // W12 faza 2a (FR/ES; „forêt“ → „foret“, „rivière“ → „riviere“,
+    // „côte“ → „cote“, „grotte“ že iz IT)
+    "nature", "lac", "lacs", "fleuve", "riviere", "foret", "cascade",
+    "grotte", "plage", "mer", "cote", "parc", "mont", "vallee", "source",
+    "naturaleza", "lago", "lagos", "rio", "bosque", "cascada", "gruta",
+    "cueva", "playa", "mar", "costa", "parque", "monte", "valle", "fuente",
+    "manantial",
   ],
   family: [
     "družina", "družine", "otroci", "otrok", "otroško",
@@ -214,6 +261,9 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
     // W1 faza 2a (IT/DE; „parco“ pripada naravi — večinski pomen)
     "famiglia", "famiglie", "bambini", "bambino", "giochi",
     "familie", "familien", "kinder", "spielplatz",
+    // W12 faza 2a (FR/ES; „niños“ normalizira v „ninos“)
+    "famille", "familles", "enfants", "enfant", "jeux", "enfants",
+    "familia", "familias", "ninos", "nino", "juegos", "infantil",
   ],
 };
 
@@ -564,11 +614,12 @@ function deterministicSort<T extends { score: number; rating: number | null; nam
  *  (prej seveda SL tudi na /en — kategorije v razlogu so kanonski
  *  identifikatorji (food/wine/hiking …) in ostanejo jezikovno nevtralni).
  *  W1 faza 2a (Issue #15): zemljevid je 4-jezičen — razlogi sledijo UI
- *  jeziku (P4-8: nikoli mešanja znotraj pogleda). */
+ *  jeziku (P4-8: nikoli mešanja znotraj pogleda).
+ *  W12 faza 2a (1.145.0): + fr/es — isti kanon. */
 function buildReason(
   matchedTokens: string[],
   matchedCategories: string[],
-  locale: "sl" | "en" | "it" | "de" = "sl"
+  locale: "sl" | "en" | "it" | "de" | "fr" | "es" = "sl"
 ): string {
   // oznaki za_uporabniški_jezik (kategorije ostanejo kanonski ID-ji)
   const kwLabel =
@@ -578,7 +629,11 @@ function buildReason(
         ? "parole chiave"
         : locale === "de"
           ? "Schlüsselwörter"
-          : "ključne besede";
+          : locale === "fr"
+            ? "mots-clés"
+            : locale === "es"
+              ? "palabras clave"
+              : "ključne besede";
   const catLabel =
     locale === "en"
       ? "category"
@@ -586,7 +641,11 @@ function buildReason(
         ? "categoria"
         : locale === "de"
           ? "Kategorie"
-          : "kategorija";
+          : locale === "fr"
+            ? "catégorie"
+            : locale === "es"
+              ? "categoría"
+              : "kategorija";
   const matchLead =
     locale === "en"
       ? "Matches your search"
@@ -594,7 +653,11 @@ function buildReason(
         ? "Corrisponde alla tua ricerca"
         : locale === "de"
           ? "Entspricht deiner Suche"
-          : "Ujema se z iskalnim nizom";
+          : locale === "fr"
+            ? "Correspond à votre recherche"
+            : locale === "es"
+              ? "Coincide con tu búsqueda"
+              : "Ujema se z iskalnim nizom";
   const parts: string[] = [];
   if (matchedTokens.length > 0) {
     parts.push(`${kwLabel}: ${matchedTokens.slice(0, 4).join(", ")}`);
@@ -615,8 +678,9 @@ function buildReason(
  *                 products, experiences
  * @param limit    maksimalno število zadetkov na kategorijo (1–5)
  * @param locale   jezik razlogov (issue #12 F12-3: "en" → EN razlogi;
- *                 W1 faza 2a: "it"/"de" → IT/DE razlogi; privzeto "sl" —
- *                 nazaj kompatibilno s 3-arg klici)
+ *                 W1 faza 2a: "it"/"de" → IT/DE razlogi; W12 faza 2a:
+ *                 "fr"/"es" → FR/ES razlogi; privzeto "sl" — nazaj
+ *                 kompatibilno s 3-arg klici)
  * @returns        per-kategorija seznami (destinacije vedno iz statičnih
  *                 DESTINATIONS; prazne mreže → prazni seznami)
  */
@@ -624,7 +688,7 @@ export function deterministicSearch(
   query: string,
   datasets: DeterministicSearchDatasets,
   limit: number,
-  locale: "sl" | "en" | "it" | "de" = "sl"
+  locale: "sl" | "en" | "it" | "de" | "fr" | "es" = "sl"
 ): DeterministicSearchResult {
   const safeLimit = Math.min(Math.max(Math.floor(limit) || 3, 1), 5);
   const queryTokens = tokenize(query);

@@ -34,12 +34,15 @@ const MapView = dynamic(
 // (vzorec L iz stop-insights — prej hardcoded SL tudi na /en).
 // ============================================================================
 
+// W12 faza 2a (1.145.0): + fr/es — isti kanon kot W1 faza 2a za IT/DE.
 const L = {
   badge: {
     sl: "Interaktivni zemljevid",
     en: "Interactive map",
     it: "Mappa interattiva",
     de: "Interaktive Karte",
+    fr: "Carte interactive",
+    es: "Mapa interactivo",
   },
   // 1.95.1: regija (Slovenija + zahodni Balkan) + statični FSQ točke
   title: {
@@ -47,6 +50,8 @@ const L = {
     en: "Discover Slovenia & the Balkans on the map",
     it: "Scopri Slovenia e Balcani sulla mappa",
     de: "Entdecke Slowenien und den Balkan auf der Karte",
+    fr: "Découvrez la Slovénie et les Balkans sur la carte",
+    es: "Descubre Eslovenia y los Balcanes en el mapa",
   },
   subtitle: {
     sl: (n: number) =>
@@ -57,49 +62,74 @@ const L = {
       `${n} destinazioni dalle Alpi all'Albania — più stazioni di benzina, ristoranti, alloggi e altri luoghi locali. Tocca un marker per dettagli, meteo e prenotazioni.`,
     de: (n: number) =>
       `${n} Reiseziele von den Alpen bis Albanien — dazu Tankstellen, Restaurants, Unterkünfte und weitere lokale Orte. Tippe auf einen Marker für Details, Wetter und Buchungen.`,
+    fr: (n: number) =>
+      `${n} destinations des Alpes à l'Albanie — plus stations-service, restaurants, hébergements et autres lieux locaux. Touchez un marqueur pour les détails, la météo et les réservations.`,
+    es: (n: number) =>
+      `${n} destinos de los Alpes a Albania — además gasolineras, restaurantes, alojamientos y otros lugares locales. Toca un marcador para ver detalles, el tiempo y reservas.`,
   },
   loading: {
     sl: "Nalagam zemljevid…",
     en: "Loading map…",
     it: "Caricamento della mappa…",
     de: "Karte wird geladen…",
+    fr: "Chargement de la carte…",
+    es: "Cargando el mapa…",
   }, // rezerva za prihodnjo uporabo znotraj komponente
   routeBadge: {
     sl: (n: number) => `Pot iz AI itinererja (${n} postankov)`,
     en: (n: number) => `Route from AI itinerary (${n} stops)`,
     it: (n: number) => `Percorso dall'itinerario AI (${n} tappe)`,
     de: (n: number) => `Route aus der KI-Reiseroute (${n} Stopps)`,
+    fr: (n: number) => `Itinéraire du voyage IA (${n} arrêts)`,
+    es: (n: number) => `Ruta del itinerario IA (${n} paradas)`,
   },
   statDestinationsUnit: {
     sl: "destinacij",
     en: "destinations",
     it: "destinazioni",
     de: "Reiseziele",
+    fr: "destinations",
+    es: "destinos",
   },
-  statRegionsUnit: { sl: "regij", en: "regions", it: "regioni", de: "Regionen" },
+  statRegionsUnit: {
+    sl: "regij",
+    en: "regions",
+    it: "regioni",
+    de: "Regionen",
+    fr: "régions",
+    es: "regiones",
+  },
   statRatingPrefix: {
     sl: "povprečna ocena",
     en: "average rating",
     it: "valutazione media",
     de: "durchschnittliche Bewertung",
+    fr: "note moyenne",
+    es: "valoración media",
   },
   legendClick: {
     sl: "Kliknite marker za podrobnosti",
     en: "Tap a marker for details",
     it: "Tocca un marker per i dettagli",
     de: "Tippe auf einen Marker für Details",
+    fr: "Touchez un marqueur pour les détails",
+    es: "Toca un marcador para ver los detalles",
   },
   legendRoute: {
     sl: "Črtkana črta = predlagana pot",
     en: "Dashed line = suggested route",
     it: "Linea tratteggiata = percorso suggerito",
     de: "Gestrichelte Linie = vorgeschlagene Route",
+    fr: "Ligne pointillée = itinéraire suggéré",
+    es: "Línea discontinua = ruta sugerida",
   },
   legendSource: {
     sl: "Podatki: OpenStreetMap",
     en: "Data: OpenStreetMap",
     it: "Dati: OpenStreetMap",
     de: "Daten: OpenStreetMap",
+    fr: "Données : OpenStreetMap",
+    es: "Datos: OpenStreetMap",
   },
 } as const;
 
@@ -135,9 +165,11 @@ export function MapSection({ hideHeader = false }: { hideHeader?: boolean }) {
   const routeCoords = useAppStore((s) => s.routeCoords);
   const routeByDay = useAppStore((s) => s.routeByDay);
   const locale = useLocale();
-  // W1 (Issue #15 faza 2a): 4 javni jeziki — it/de imata lastne nize
+  // W12 faza 2a (1.145.0): 6 javnih jezikov — fr/es imata lastne nize
   const lang =
-    locale === "en" || locale === "it" || locale === "de" ? locale : "sl";
+    locale === "en" || locale === "it" || locale === "de" || locale === "fr" || locale === "es"
+      ? locale
+      : "sl";
 
   return (
     <section

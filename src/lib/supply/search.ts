@@ -161,8 +161,13 @@ export function parseSupplyQuery(params: {
   // W1-faza-2b (Issue #15): IT/DE dedijo EN sloj ponudbe (isti kanon kot
   // destinacijske DB sekcije v fazi 2a — nikoli SL za tuje uporabnike);
   // neprepoznan podatek ostane SL (nazaj-kompatibilno).
+  // W12 faza 2a (1.145.0): FR/ES dedita EN sloj ponudbe (isti kanon).
   const locale: "sl" | "en" =
-    params.locale === "en" || params.locale === "it" || params.locale === "de"
+    params.locale === "en" ||
+    params.locale === "it" ||
+    params.locale === "de" ||
+    params.locale === "fr" ||
+    params.locale === "es"
       ? "en"
       : "sl";
 

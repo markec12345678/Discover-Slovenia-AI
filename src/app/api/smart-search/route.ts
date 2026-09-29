@@ -29,8 +29,8 @@ interface SmartSearchRequest {
   limit?: number; // default 3 per kategorijo
   /** ISSUE #12 (F12-3, §13): jezik razlogov zadetkov ("en"/"it"/"de" →
    *  prevod razlogov; privzeto SL — nazaj kompatibilno s starejšimi
-   *  klienti brez polja). W1 faza 2a: zemljevid je 4-jezičen. */
-  locale?: "sl" | "en" | "it" | "de";
+   *  klienti brez polja). W12 faza 2a: zemljevid je 6-jezičen. */
+  locale?: "sl" | "en" | "it" | "de" | "fr" | "es";
 }
 
 interface SearchResults {
@@ -111,10 +111,15 @@ export async function POST(request: Request) {
   }
 
   const limit = Math.min(Math.max(body.limit ?? 3, 1), 5);
-  // F12-3 + W1 faza 2a: jezik razlogov — eksplicitni "en"/"it"/"de" odprejo
-  // svojo vejo (sicer SL; katera koli druga vrednost varno pade v privzeto SL).
-  const reasonLocale: "sl" | "en" | "it" | "de" =
-    body.locale === "en" || body.locale === "it" || body.locale === "de"
+  // F12-3 + W1 faza 2a + W12 faza 2a: jezik razlogov — eksplicitni
+  // "en"/"it"/"de"/"fr"/"es" odprejo svojo vejo (sicer SL; katera koli
+  // druga vrednost varno pade v privzeto SL).
+  const reasonLocale: "sl" | "en" | "it" | "de" | "fr" | "es" =
+    body.locale === "en" ||
+    body.locale === "it" ||
+    body.locale === "de" ||
+    body.locale === "fr" ||
+    body.locale === "es"
       ? body.locale
       : "sl";
 

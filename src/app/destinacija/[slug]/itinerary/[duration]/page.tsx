@@ -112,7 +112,11 @@ export async function generateMetadata({
           ? [dest.name, "itinerario", durLabel, "viaggio", "Slovenia", "piano", region]
           : locale === "de"
             ? [dest.name, "Reiseroute", durLabel, "Reise", "Slowenien", "Plan", region]
-            : [dest.name, "itinerer", durLabel, "potovanje", "Slovenija", "načrt", dest.region],
+            : locale === "fr"
+              ? [dest.name, "itinéraire", durLabel, "voyage", "Slovénie", "plan", region]
+              : locale === "es"
+                ? [dest.name, "itinerario", durLabel, "viaje", "Eslovenia", "plan", region]
+                : [dest.name, "itinerer", durLabel, "potovanje", "Slovenija", "načrt", dest.region],
     openGraph: {
       title: t("headline", { duration: durLabel, name: dest.name }),
       description: t("meta.ogDescription", { duration: durLabel }),

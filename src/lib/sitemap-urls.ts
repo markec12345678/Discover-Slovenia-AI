@@ -312,6 +312,9 @@ export function getTotalSitemapUrlCount(): number {
   // vodniki 152 = 570 × 2 jezika = 1140)
   // + W1 faza 2b-2 (1.129.0): IT/DE + /nacrtuj (11 × 2) = skupaj 2386
   // + W12 faza 1 (1.144.0): FR/ES statične poti (9 × 2 = 18 URL) = 2404
+  // + W12 faza 2a (1.145.0): FR/ES + /zemljevid (10 × 2) + destinacijske
+  //   plasti ×38 (hub + things-to-do + itinererji 5 + sezone 4 + vodniki 4
+  //   = 15 × 38 = 570 × 2 jezika = 1140) = skupaj 3546
   return (
     22 +
     DESTINATIONS.length +
@@ -330,9 +333,16 @@ export function getTotalSitemapUrlCount(): number {
       DESTINATIONS.length * 4 +
       DESTINATIONS.length * 4) *
       2 +
-    // W12 faza 1: FR/ES = samo statično jedro (9 poti × 2 jezika) — vseh
-    // 9 je v SL sitemapu (za razliko od EN brez /moja-potovanja izjeme).
-    FRES_STATIC_ROUTES.size * 2
+    // W12 faza 2a: FR/ES = statične poti (10, vključno /zemljevid — vseh
+    // 10 je v SL sitemapu) + destinacijske pod-poti (ISTA formula kot
+    // IT/DE nad isto whitelistno GEO-A ×38).
+    (FRES_STATIC_ROUTES.size +
+      DESTINATIONS.length +
+      DESTINATIONS.length +
+      DESTINATIONS.length * 5 +
+      DESTINATIONS.length * 4 +
+      DESTINATIONS.length * 4) *
+      2
   );
 }
 
