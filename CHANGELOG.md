@@ -79,6 +79,22 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
   španski opis; mobilni viewport 390×844 brez preliva; 0 konzolnih
   napak. Dokazi w12-dokazi/{fr-zemljevid-iskanje,es-zemljevid-iskanje,
   es-zemljevid-mobil-390,es-destinacija-bled-mobil}.png.
+- **PRODUKCIJA (Vercel 1.145.0, webhook za cc53946, ~20:40 UTC /
+  22:40 slovensko)**: CI zelen (run 395, suite 4248/4248); health
+  {"status":"ok","version":"1.145.0"}; /fr/zemljevid 200 (naslov
+  „Carte interactive de la Slovénie et des Balkans“ + hreflang fr-FR +
+  francoska statistika/legenda); PRODUKCIJSKO ISKANJE deluje
+  („restaurants à Ljubljana“ → „Destination Ljubljana — Correspond à
+  votre recherche (mots-clés: ljubljana · catégorie: food)“, 0
+  konzolnih napak); /es/zemljevid 200; /fr/destinacija/bled 200 („Bled
+  — Perle des Alpes… | Guide de voyage en Slovénie“ + og:locale fr_FR
+  + „Que faire à Bled“ + regija „Haute-Carniole“);
+  /es/destinacija/piran/things-to-do 200 (pod-poti žive); meja faze 2b
+  živa (/fr/nacrtuj → 308 → SL; /fr/trznica → 308); sitemap **3546
+  URL** (2404 + 1142 — FR/ES destinacijske pod-poti ×570 ×2 +
+  /zemljevid ×2, hreflang gruče); dokaza w12-dokazi/{fr-prod-zemljevid,
+  fr-prod-zemljevid-iskanje}.png. Render fast-reject ~1 s = kvota
+  (Issue #7, pričakovano — catch-up 1. 10. ~02:00 slovensko).
 
 ---
 
