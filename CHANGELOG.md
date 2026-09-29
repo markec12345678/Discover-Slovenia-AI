@@ -85,6 +85,15 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
   skript end-to-end validiran proti živi API. Pričakovani potek: 1. 10.
   samodejni build → Render 1.140.2 živ → verzija vrata zelena → monitor
   e-poštni alarmi (rdeč od 26. 9.) prenehajo.
+- **MONITOR-RETRY 2 v functional-smoke.sh** (lažni rdeči Vercel tek
+  07:05 UTC): hladen zagon Vercel funkcije za `/` je izmerjenih **116,9 s**
+  (toplo 1,3 s); dotlejšnji proračun ponovitve (60 + 5 + 60 s) ni zadosel,
+  ker opuščena zahteva pri 60 s očitno prekine ogrevanje — 2 vzorca sta
+  dobila 000 (health + verzija 1.140.2 sta šla skrozi; 16 ok / 2
+  neuspešnih; tek 04:42 istih vzorcev zelen). Popravek: 000 dobi drugi
+  poskus z `-m 150` (merjen proračun ~215 s), 5xx ostaja na `-m 60`
+  (strežnik odgovarja — to ni hladen zagon). Validirano: `bash -n` + topla
+  pot 200.
 
 ---
 
