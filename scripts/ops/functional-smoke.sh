@@ -91,11 +91,20 @@ bad_check() { FAIL=$((FAIL + 1)); err "$1"; }
 # ponovitev ne spremeni izida, samo potrdi, da vztraja. 4xx se NE ponavlja
 # (namerno stanje, npr. pričakovani 404). Trajna napaka ostane rdeča tudi po
 # ponovitvi — prava okvara namreč vztraja, enkratni blisk pa ne.
+# MONITOR-RETRY 2 (revizija 1.140.2-ops, 29. 9. 2026): 000 dobi DRUGI poskus
+# z -m 150 (ne 60) — izmerjen hladen zagon Vercel funkcije za / je 116,9 s
+# (toplo 1,3 s); opuščena zahteva pri 60 s očitno PREKINE ogrevanje, zato
+# 60+5+60 s ni zadoslo (lažni rdeči tek 07:05 UTC: 16 ok / 2 neuspešnih, oba
+# vzorca 000). 5xx ostaja na -m 60 (strežnik ODGOVARJA — to ni hladen zagon).
 fetch() { # $1=pot, $2=izhodna datoteka
   local code
   code=$(curl -sS -m 60 -o "$2" -w "%{http_code}" "${BASE_URL}$1" 2>/dev/null) || code=000
   case "$code" in
-    000|5*)
+    000)
+      sleep 5
+      code=$(curl -sS -m 150 -o "$2" -w "%{http_code}" "${BASE_URL}$1" 2>/dev/null) || code=000
+      ;;
+    5*)
       sleep 5
       code=$(curl -sS -m 60 -o "$2" -w "%{http_code}" "${BASE_URL}$1" 2>/dev/null) || code=000
       ;;
