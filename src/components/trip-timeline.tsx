@@ -45,6 +45,7 @@ import { dayCostSummary, totalUnknownCostStops } from "@/lib/cost-truth";
 import { dayISOForDayNumber } from "@/lib/trip-dates";
 import { formatDayLabel } from "@/lib/itinerary-weather";
 import { narrationStopsFromDay } from "@/lib/itinerary-audio";
+import { gmapsDayUrl } from "@/lib/gmaps-day-export";
 import { cn } from "@/lib/utils";
 import type { DayPlan, Itinerary, LocationVisit, PlannerInput } from "@/lib/types";
 
@@ -347,15 +348,49 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs, className
               )}
             </div>
             {/* TASK 89: zvočni povzetek dneva (TTS, brez ključa) — desno
-                v glavi dneva; fail-closed brez uporabnih postankov. */}
-            <DayAudioButton
-              dayNumber={day.day}
-              dateLabel={audioDateLabel}
-              stops={audioStops}
-              lang={lang}
-              surface="planner"
-              className="ml-auto shrink-0 self-center"
-            />
+                v glavi dneva; fail-closed brez uporabnih postankov.
+                W11-A (1.141.0) „Dan v žepu": Google Maps pilula pred njim —
+                izvoz VESGA dneva kot navigacijska povezava (protejip
+                Wanderlog Pro funkcije, zastonj; en postanek <2 koordinat →
+                iskreno brez povezave). PRAVA povezava (<a>), ne gumb —
+                middle-click/kopiranje delujeta; noopener (zunanja stran). */}
+            <div className="ml-auto flex shrink-0 items-center gap-2 self-center print:hidden">
+              {(() => {
+                const g = gmapsDayUrl(day);
+                return g.url ? (
+                  <a
+                    href={g.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() =>
+                      trackPlannerEvent("day_export_gmaps", {
+                        day: day.day,
+                        stops: g.stops,
+                        skipped: g.skipped,
+                        truncated: g.truncated,
+                      })
+                    }
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-background px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={t("gmapsDayAria", { day: day.day })}
+                    title={t("gmapsDayAria", { day: day.day })}
+                  >
+                    <Navigation className="size-3.5 text-primary" aria-hidden="true" />
+                    <span className="hidden sm:inline">Google Maps</span>
+                    <span className="sr-only sm:hidden">
+                      {t("gmapsDayAria", { day: day.day })}
+                    </span>
+                  </a>
+                ) : null;
+              })()}
+              <DayAudioButton
+                dayNumber={day.day}
+                dateLabel={audioDateLabel}
+                stops={audioStops}
+                lang={lang}
+                surface="planner"
+                className="shrink-0 self-center"
+              />
+            </div>
           </div>
 
           {/* Vertikalna črta */}

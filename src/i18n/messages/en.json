@@ -783,7 +783,8 @@
       "bookAtProvider": "Book at the provider",
       "bookAtProviderAria": "Book {name} at the provider — opens an external site",
       "marketplaceFrom": "From €{price} on the marketplace",
-      "marketplaceCount": "{count, plural, one {# experience} other {# experiences}}"
+      "marketplaceCount": "{count, plural, one {# experience} other {# experiences}}",
+      "gmapsDayAria": "Open day {day} in Google Maps (navigate the whole day)"
     },
     "smartSearch": {
       "title": "Smart search",

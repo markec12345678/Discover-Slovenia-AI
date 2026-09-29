@@ -128,6 +128,10 @@ const VALID_EVENTS = new Set([
   "planner_cancelled",
   // TASK 89: uspešen začetek zvočnega povzetka dneva (TTS)
   "itinerary_audio_play",
+  // W11-A „Dan v žepu" (1.141.0): klik „Google Maps" pilule v glavi dneva
+  // (props: day, stops, skipped, truncated) — izvoz dneva kot navigacijska
+  // povezava; pariteta s klient union (test W3 whitelist pariteta)
+  "day_export_gmaps",
   // P1-3 (recenzija): preimenovano iz user_abandoned_after_result — proxy
   // signal "rezultat prikazan, sledeni dogodek ni bil zaznan v merjenem oknu"
   "result_session_ended_without_action",

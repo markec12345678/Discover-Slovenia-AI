@@ -783,7 +783,8 @@
       "bookAtProvider": "Bei Anbieter buchen",
       "bookAtProviderAria": "Buche {name} beim Anbieter — öffnet externe Seite",
       "marketplaceFrom": "Auf dem Marktplatz ab €{price}",
-      "marketplaceCount": "{count, plural, one {# Erlebnis} two {# Erlebnisse} few {# Erlebnisse} other {# Erlebnisse}}"
+      "marketplaceCount": "{count, plural, one {# Erlebnis} two {# Erlebnisse} few {# Erlebnisse} other {# Erlebnisse}}",
+      "gmapsDayAria": "Tag {day} in Google Maps öffnen (Navigation für den ganzen Tag)"
     },
     "smartSearch": {
       "title": "Intelligente Suche",

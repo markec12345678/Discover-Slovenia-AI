@@ -7,6 +7,80 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.141.0] — 2026-09-29 (W11-A „DAN V ŽEPU": izvoz dneva kot Google Maps navigacijska povezava)
+
+### Dodano
+
+- **W11-A „Dan v žepu"** — gumb/pilula „Google Maps" v glavi vsakega dneva
+  časovnice (`/načrtuj` → „Več o tvoji poti"): en klik odpre **celoten dan**
+  kot Google Maps navigacijo (uradni Maps URLs API: `maps/dir/?api=1&origin=
+  …&destination=…&waypoints=…`). Kontekst: svež konkurenčni benchmark
+  (29. 9. 2026, vir monkeytravel.app „Wanderlog vs Mindtrip 2026", posod.
+  8. 9. 2026) — **Wanderlog je „Google Maps export" premaknil v plačljiv
+  Pro tier ($39.99/leto)** (skupaj z offline dostopom in Gmail scanningom);
+  Mindtrip ponuja navigacijo le do posameznega kraja. Pri nas: **0 €, 0
+  odvisnosti, 0 AI, 0 omrežnih klicev** — čista URL konstrukcija iz koordinat,
+  ki jih engine že ima (T1 dataset + lastne supply/klepet koordinate).
+- **Nov modul `src/lib/gmaps-day-export.ts`** (`gmapsDayUrl`): razreševanje
+  koordinat po istem kanonu kot `geo-validation.ts coordsOfStop` (T1 dataset
+  → lastne lat/lng → null island (0,0) iskreno preskočen); prag **2 znani
+  postanki** (manj = brez povezave — Google Maps za eno točko ne sestavi
+  poti); **zdrava meja 11 postankov** (Google URL API: max 9 vmesnih) —
+  ob prekoračitvi obdrži prvih 10 + zadnjega („kje končam dan" je pomembnejši
+  od sredinskih), kar je izrecno sporočeno prek `truncated` flaga; fiksno
+  6 decimalk (≈ 11 cm — obilno za navigacijo).
+- **Telemetrija `day_export_gmaps`** (props: day, stops, skipped,
+  truncated) — meri doseg brezplačnega protejipa Wanderlog Pro funkcije;
+  dodana v KLIENT union (`PlannerEventName`) **in strežniško whitelist
+  (`/api/analytics/event` VALID_EVENTS)** — paritetni test W3 je med
+  razvojem dejansko ujel manjkajoči strežniški vnos (0 tihih 400).
+- **i18n ×4** (`planner.timeline.gmapsDayAria`): SL/EN/IT/DE (vidni
+  napisek „Google Maps" je blagovna znamka — enak v vseh jezikih; aria-label
+  + title sta prevedena).
+- **A11y/detajli**: PRAVA `<a>` povezava (ne gumb — middle-click/kopiranje
+  delujeta), `target="_blank" rel="noopener noreferrer"`, `focus-visible`
+  obroba, `print:hidden` (PDF izvoz ostane čist), pilula vizuelno usklajena
+  z DayAudioButton družino (h-8 rounded-full).
+
+### Dokazano
+
+- **13 novih unit testov** (`gmaps-day-export.test.ts`): T1 razreševanje,
+  lastne koordinate, null island, prag 2, waypoints format (%7C, 3 in 4
+  postanki), fiksne decimalkе brez znanstvene notacije, zdrava meja
+  (15 postankov → 10 + zadnji, truncated; natanko 11 → brez krajšanja),
+  DayPlan kompatibilnost. Suite 4156 → **4169**.
+- **Brskalniško (agent-browser, dev 1.141.0)**: zlata pot → 7-dnevni
+  itinerer → 7 pilul v glavah dni (aria-label SL, realne koordinate);
+  **klik pilule je dejansko odprl Google Maps navigacijo** „Ljubljana →
+  Postojna Cave, Jamska cesta 30" (Google je sam razrešil naš URL v
+  konkretno naslovno pot!) + telemetrija oddana; 0 napak strani, 0
+  konzolnih opozoril; dokaz v `w11-dokazi/gmaps-pilule.png`.
+
+### Operativa (svež konkurenčni benchmark 29. 9. 2026 — vhodni val W11)
+
+- **Signal 1 (Wanderlog)**: Pro tier push ($39.99/leto) — offline, Gmail
+  scanning, **Google Maps export**, route optimisation zdaj plačljivi;
+  „Import from anywhere" (2026 Apple) + live flight updates kot novejši
+  potezi. Naš odgovor: export brezplačen (ta release); import
+  (povezava/slika/PDF/pins/e-pošta) že močnejši od njihovega; offline
+  (PWA + E2E) že doma.
+- **Signal 2 (Mindtrip)**: Flights (5. 2026) + Stays (7. 2026) — zavoj v
+  booking; login zid pred prvim itinererjem. Naš odgovor: gost načrtuje BREZ
+  računa (dev_setup), rezervacije ostajajo lokalni ponudniki (nič
+  konkurenčnega booking spora).
+- **Signal 3 (MonkeyTravel, konkurent — zavzet prizadevno)**: „neither
+  reliably hands you a day you can actually walk" — njihova niša: brez
+  računa, razpored kot izhod, 3 proračuni, 30 s. Naša prednost: engine že
+  JAMČI koherenco dneva (TASK 50 urnik repair + TASK 51 geo koherenca,
+  backtracking=0), 5 proračunskih vedric, ~5 s generacija. **W11-B
+  (naslednji val): narediti to odličnost VIDNO v UI** (značka „0 cik-cak",
+  razponi kosila/večerje) — izdelano zanje, še ne pokazano.
+- Layla/Roam Around iskanje je dalo šum (neuporabni zadetki) — brez
+  signala; trendi članki potrdijo naš komplet (personalizacija, offline,
+  kolaboracija, proračun).
+
+---
+
 ## [1.140.2] — 2026-09-29 (LCP NA /pot POTEH: vzporeden zagon Leaflet uvoza + samodejna SSR rezervacija v monitorju)
 
 ### Popravljeno

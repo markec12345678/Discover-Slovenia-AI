@@ -783,7 +783,8 @@
       "bookAtProvider": "Rezerviraj pri ponudniku",
       "bookAtProviderAria": "Rezerviraj {name} pri ponudniku — odpre zunanjo stran",
       "marketplaceFrom": "Na tržnici od €{price}",
-      "marketplaceCount": "{count, plural, one {# izkušnja} two {# izkušnji} few {# izkušnje} other {# izkušenj}}"
+      "marketplaceCount": "{count, plural, one {# izkušnja} two {# izkušnji} few {# izkušnje} other {# izkušenj}}",
+      "gmapsDayAria": "Odpri dan {day} v Google Maps (navigacija po celotnem dnevu)"
     },
     "smartSearch": {
       "title": "Pametno iskanje",

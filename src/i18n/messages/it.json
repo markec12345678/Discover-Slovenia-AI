@@ -783,7 +783,8 @@
       "bookAtProvider": "Prenota dal fornitore",
       "bookAtProviderAria": "Prenota {name} dal fornitore — apre un sito esterno",
       "marketplaceFrom": "Da €{price} sul marketplace",
-      "marketplaceCount": "{count, plural, one {# esperienza} two {# esperienze} few {# esperienze} other {# esperienze}}"
+      "marketplaceCount": "{count, plural, one {# esperienza} two {# esperienze} few {# esperienze} other {# esperienze}}",
+      "gmapsDayAria": "Apri il giorno {day} in Google Maps (navigazione per l'intera giornata)"
     },
     "smartSearch": {
       "title": "Ricerca intelligente",
