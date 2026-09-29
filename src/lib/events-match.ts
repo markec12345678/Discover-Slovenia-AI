@@ -85,8 +85,10 @@ export function matchEventsForItinerary(
   limit = 6,
   tripWindow?: TripWindow | null,
   /** 1.29.0 (revizija #13): "en" → ime/opis iz EVENTS_EN prekrivne plasti.
-   * W1-faza-2b: "it"/"de" → EVENTS_IT/EVENTS_DE (isti vzorec). */
-  lang: "sl" | "en" | "it" | "de" = "sl"
+   * W1-faza-2b: "it"/"de" → EVENTS_IT/EVENTS_DE (isti vzorec).
+   * W12-faza-2b: "fr"/"es" → dedita EVENTS_EN (isti §38 kanon kot
+   * supply plast faze 2a — NI novih EVENTS_FR/ES podatkovnih plasti). */
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es" = "sl"
 ): ItineraryEvent[] {
   if (!Array.isArray(days) || days.length === 0) return [];
 
@@ -182,8 +184,9 @@ export function matchEventsForItinerary(
   // (isti vzorec kot DESTINATIONS_EN v stop-insights/refine-actions).
   return scored.slice(0, Math.max(0, limit)).map(({ event }) => {
     // W1-faza-2b: jezikovna prekrivna plast (SL izvirnik; EN/IT/DE overlay)
+    // W12-faza-2b: FR/ES dedita EVENTS_EN (isti kanon kot supply plast faze 2a)
     const overlay =
-      lang === "en"
+      lang === "en" || lang === "fr" || lang === "es"
         ? EVENTS_EN[event.id]
         : lang === "it"
         ? EVENTS_IT[event.id]
@@ -226,7 +229,8 @@ export function matchEventsOutsideTrip(
   excludeIds: string[] | Set<string>,
   tripWindow: TripWindow | null | undefined,
   limit = 6,
-  lang: "sl" | "en" | "it" | "de" = "sl"
+  /** W12-faza-2b: FR/ES dedita EVENTS_EN (isti §38 kanon — glej zgornji match). */
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es" = "sl"
 ): ItineraryEvent[] {
   // Iskrena meja: "izven tvojih datumov" potrebuje okvir potovanja
   if (tripWindow == null) return [];
@@ -304,8 +308,9 @@ export function matchEventsOutsideTrip(
   });
 
   return scored.slice(0, Math.max(0, limit)).map(({ event }) => {
+    // W12-faza-2b: FR/ES dedita EVENTS_EN (isti kanon kot supply plast faze 2a)
     const overlay =
-      lang === "en"
+      lang === "en" || lang === "fr" || lang === "es"
         ? EVENTS_EN[event.id]
         : lang === "it"
         ? EVENTS_IT[event.id]

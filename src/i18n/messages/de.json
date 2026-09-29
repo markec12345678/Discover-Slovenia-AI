@@ -586,7 +586,7 @@
     "restoredChip": "Dein letzter Plan wurde wiederhergestellt",
     "restoredChipDismiss": "Benachrichtigung über wiederhergestellten Plan ausblenden",
     "resultTitle": "Dein {days}-Tages-Reiseplan",
-    "badgeAI": "AI",
+    "badgeAI": "KI",
     "badgeSample": "Beispiel",
     "badgeDeterministic": "Ohne KI",
     "totalBadge": "Gesamt ~€{total}",
@@ -1016,7 +1016,7 @@
       },
       "jesen": {
         "label": "Herbst",
-        "months": " september–november",
+        "months": " September–November",
         "desc": "Herbstfarben, Wein, weniger Trubel"
       },
       "zima": {
@@ -1093,7 +1093,7 @@
         "description": "Bio-Produkte und nachhaltige Erlebnisse"
       },
       "luxury": {
-        "title": "Luxury",
+        "title": "Luxus",
         "description": "Hochwertige Erlebnisse und Produkte"
       }
     }
@@ -1301,7 +1301,7 @@
   "guidePage": {
     "metaNotFound": "Guide nicht gefunden",
     "breadcrumbHome": "Startseite",
-    "breadcrumbAria": "Breadcrumb",
+    "breadcrumbAria": "Breadcrumb-Navigation",
     "editorialRating": "Redaktionelle Bewertung {rating}★",
     "introHeading": "{label} in {name}",
     "metaLine": "Dauer: {duration} · Preisrahmen: {price}",
@@ -1534,7 +1534,7 @@
     "meta": {
       "notFound": "Reiseroute nicht gefunden",
       "title": "{duration}-Reiseroute für {name} — {desc}",
-      "description": "Die vollständige {durationLower}-Reiseroute für {name}, {tagline}. {desc} — KI-empfohlene Aktivitäten, Unterkünfte und Restaurants für einen {days}-Tage-Besuch.",
+      "description": "Die vollständige {durationLower}-Reiseroute für {name}, {tagline}. {desc} — KI-empfohlene Aktivitäten, Unterkünfte und Restaurants.",
       "ogDescription": "KI-empfohlene {duration}-Reiseroute mit Aktivitäten, Unterkünften und Restaurants."
     }
   },
@@ -1923,11 +1923,11 @@
         "body": "Jedes Lokal muss vor der Veröffentlichung manuell von unserem Team freigegeben werden. Wir prüfen: Korrektheit der Kontaktdaten, Passung der Kategorie, Qualität von Bildern und Beschreibung. Ungeprüfte Lokale sind für Nutzer nicht sichtbar und können von der KI nicht empfohlen werden."
       },
       "qualityScore": {
-        "title": "Partner Quality Score (0-100)",
+        "title": "Partner-Qualitätsscore (0-100)",
         "body": "Jedes Lokal hat einen automatisch berechneten Quality Score aus 7 Signalen: Profilvollständigkeit (30 %), Fotoqualität (15 %), Beschreibungsqualität (15 %), KI-Tags (10 %), Admin-Verifizierung (10 %), Bewertungen (10 %), Datenfrische (10 %).",
-        "badgeVerified": "Verified (Q>40)",
+        "badgeVerified": "Geprüft (Q>40)",
         "badgePremium": "👑 Premium (zahlend)",
-        "badgeFeatured": "⭐ Featured (Q>90 + Premium + Verified)"
+        "badgeFeatured": "⭐ Empfohlen (Q>90 + Premium + Geprüft)"
       },
       "vlm": {
         "title": "VLM-Bildprüfung",
@@ -1952,7 +1952,7 @@
       "intro": "Jede KI-Empfehlung ist klar gekennzeichnet. Der Nutzer weiß, was Werbung ist und was organisch.",
       "labels": {
         "featured": {
-          "badge": "⭐ Featured",
+          "badge": "⭐ Empfohlen",
           "desc": "Geprüfter Partner mit hochwertigem Profil und Premium-Mitgliedschaft. Quality Score > 90."
         },
         "premium": {
@@ -2097,7 +2097,7 @@
       "readMore": "Mehr erfahren →"
     },
     "adria": {
-      "badge": "Cross-border",
+      "badge": "Grenzüberschreitend",
       "title": "Adriatische Roadtrips aus Slowenien",
       "description": "Grenzüberschreitende Roadtrip-Führer — Kroatien, Bosnien und Herzegowina, Montenegro und Albanien mit deinem eigenen Auto aus Slowenien: Routen, Mautgebühren, Grenzformalitäten und wo man jeden Abend parken kann.",
       "countriesAria": "Reise durch: {countries}",

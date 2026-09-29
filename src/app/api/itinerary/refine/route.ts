@@ -25,6 +25,10 @@ import { validateItineraryGeo } from "@/lib/geo-validation";
 import { PL, type PlannerLang } from "@/lib/planner-lang";
 import { getItDestination } from "@/lib/slovenia-data-it";
 import { getDeDestination } from "@/lib/slovenia-data-de";
+// W12-faza-2b: FR/ES destinacijski overlayji (faza 1 — tagline v visitFrom
+// noši Agent 1 v refine-actions; tu za parserjevo DODAJ vejo notes).
+import { getFrDestination } from "@/lib/slovenia-data-fr";
+import { getEsDestination } from "@/lib/slovenia-data-es";
 import { buildCrowdNotices } from "@/lib/crowd-alternatives";
 import { matchEventsForItinerary, matchEventsOutsideTrip } from "@/lib/events-match";
 import { tripWindowMs } from "@/lib/trip-dates";
@@ -135,12 +139,16 @@ function buildValidationEvidence(
             en: `Day ${day}: still not realistically doable after this change — see the feasibility warnings below the plan.`,
             it: `Giorno ${day}: dopo la modifica non è ancora realisticamente fattibile — vedi gli avvisi di fattibilità sotto il piano.`,
             de: `Tag ${day}: nach der Änderung immer noch nicht realistisch machbar — siehe Machbarkeitswarnungen unter dem Plan.`,
+            fr: `Jour ${day} : après la modification, il n'est toujours pas réalisable de façon réaliste — consulte les avertissements de faisabilité sous le plan.`,
+            es: `Día ${day}: tras el cambio sigue sin ser viable de forma realista — mira los avisos de viabilidad bajo el plan.`,
           })
         : PL(lang, {
             sl: `Načrt ima po spremembi še vedno opozorila ravni ERROR o izvedljivosti — poglej ploščo pod načrtom.`,
             en: `The itinerary still has error-level feasibility warnings after this change — see the panel below the plan.`,
             it: `L'itinerario ha ancora avvisi di fattibilità di livello ERROR dopo la modifica — vedi il pannello sotto il piano.`,
             de: `Der Reiseplan hat nach der Änderung weiterhin ERROR-level Machbarkeitswarnungen — siehe das Panel unter dem Plan.`,
+            fr: `L'itinéraire comporte encore des avertissements de faisabilité de niveau ERROR après la modification — consulte le panneau sous le plan.`,
+            es: `El itinerario sigue teniendo avisos de viabilidad de nivel ERROR tras el cambio — mira el panel bajo el plan.`,
           });
   } else if (status === "warn") {
     statusNote =
@@ -150,12 +158,16 @@ function buildValidationEvidence(
             en: `Day ${day} is doable after the change, but ${afterSnap.issues} warning(s) remain — see the feasibility panel.`,
             it: `Il giorno ${day} è fattibile dopo la modifica, ma restano ${afterSnap.issues} avvisi — vedi il pannello di fattibilità.`,
             de: `Tag ${day} ist nach der Änderung machbar, aber ${afterSnap.issues} Warnung(en) bleiben — siehe Machbarkeitspanel.`,
+            fr: `Le jour ${day} est réalisable après la modification, mais ${afterSnap.issues} avertissement(s) restent — consulte le panneau de faisabilité.`,
+            es: `El día ${day} es viable tras el cambio, pero quedan ${afterSnap.issues} aviso(s) — mira el panel de viabilidad.`,
           })
         : PL(lang, {
             sl: `Po spremembi je izvedljivo, a ostaja ${afterSnap.issues} opozoril — poglej ploščo izvedljivosti.`,
             en: `Doable after the change, but ${afterSnap.issues} warning(s) remain — see the feasibility panel.`,
             it: `Fattibile dopo la modifica, ma restano ${afterSnap.issues} avvisi — vedi il pannello di fattibilità.`,
             de: `Nach der Änderung machbar, aber ${afterSnap.issues} Warnung(en) bleiben — siehe Machbarkeitspanel.`,
+            fr: `Réalisable après la modification, mais ${afterSnap.issues} avertissement(s) restent — consulte le panneau de faisabilité.`,
+            es: `Viable tras el cambio, pero quedan ${afterSnap.issues} aviso(s) — mira el panel de viabilidad.`,
           });
   }
 
@@ -299,9 +311,14 @@ export async function POST(request: Request) {
 
   // FW4.3/P4-8 (EN-fallback fix) + W1-2b-2 (IT/DE): jezik — prej SL prompt +
   // SL opomba tudi za EN uporabnike (refine je vračal slovenske odgovore
-  // EN potnikom); zdaj 4-jezično iz podanega language polja
+  // EN potnikom); zdaj iz podanega language polja.
+  // W12-faza-2b: 6-jezično (fr/es) — isti PL kanon.
   const lang: PlannerLang =
-    formData?.language === "en" || formData?.language === "it" || formData?.language === "de"
+    formData?.language === "en" ||
+    formData?.language === "it" ||
+    formData?.language === "de" ||
+    formData?.language === "fr" ||
+    formData?.language === "es"
       ? formData.language
       : "sl";
 
@@ -682,6 +699,8 @@ export async function POST(request: Request) {
           en: `${command.placeName} is not in your current itinerary.`,
           it: `${command.placeName} non è nell'itinerario attuale.`,
           de: `${command.placeName} ist nicht im aktuellen Reiseplan.`,
+          fr: `${command.placeName} n'est pas dans l'itinéraire actuel.`,
+          es: `${command.placeName} no está en el itinerario actual.`,
         }),
         "parser-remove-place-missing"
       );
@@ -696,6 +715,8 @@ export async function POST(request: Request) {
           en: `Removed ${command.placeName} (${removed} stop${removed > 1 ? "s" : ""}).`,
           it: `Rimossa la tappa ${command.placeName}${removed > 1 ? ` (${removed}×)` : ""}.`,
           de: `Stopp ${command.placeName} entfernt${removed > 1 ? ` (${removed}×)` : ""}.`,
+          fr: `Étape ${command.placeName} supprimée${removed > 1 ? ` (${removed}×)` : ""}.`,
+          es: `Parada ${command.placeName} eliminada${removed > 1 ? ` (${removed}×)` : ""}.`,
         }),
       },
       {
@@ -720,12 +741,16 @@ export async function POST(request: Request) {
               en: `${command.placeName} is already in your itinerary.`,
               it: `${command.placeName} è già nell'itinerario.`,
               de: `${command.placeName} ist bereits im Reiseplan.`,
+              fr: `${command.placeName} est déjà dans l'itinéraire.`,
+              es: `${command.placeName} ya está en el itinerario.`,
             })
           : PL(lang, {
               sl: `${command.placeName} ni v našem naboru destinacij.`,
               en: `${command.placeName} is not in our destination dataset.`,
               it: `${command.placeName} non è nel nostro dataset di destinazioni.`,
               de: `${command.placeName} ist nicht in unserem Ziel-Datensatz.`,
+              fr: `${command.placeName} ne fait pas partie de notre ensemble de destinations.`,
+              es: `${command.placeName} no está en nuestro conjunto de destinos.`,
             }),
         alreadyIn ? "parser-add-place-duplicate" : "parser-add-place-unknown"
       );
@@ -752,6 +777,9 @@ export async function POST(request: Request) {
       ["09:00-13:00", "14:00-18:00", "18:00-22:00"].find((t) => !taken.has(t)) ??
       "14:00-18:00";
     const groupSize = formData?.groupSize ?? 2;
+    // W12-faza-2b: FR/ES tagline iz slovenia-data-fr/-es overlayjev (W12
+    // faza 1, 38/38 — isti vzorec kot getItDestination/getDeDestination;
+    // manjkajoč overlay dedi dest.tagline, nikoli EN za SL uporabnika).
     const tagline =
       lang === "en"
         ? DESTINATIONS_EN[dest.id]?.tagline ?? dest.tagline
@@ -759,7 +787,11 @@ export async function POST(request: Request) {
           ? getItDestination(dest.id)?.tagline ?? dest.tagline
           : lang === "de"
             ? getDeDestination(dest.id)?.tagline ?? dest.tagline
-            : dest.tagline;
+            : lang === "fr"
+              ? getFrDestination(dest.id)?.tagline ?? dest.tagline
+              : lang === "es"
+                ? getEsDestination(dest.id)?.tagline ?? dest.tagline
+                : dest.tagline;
     const newVisit: LocationVisit = {
       destination_id: dest.id,
       destination_name: dest.name,
@@ -788,6 +820,8 @@ export async function POST(request: Request) {
           en: `Added ${dest.name} to Day ${dayIdx + 1} (${slot}).`,
           it: `Aggiunto ${dest.name} al giorno ${dayIdx + 1} (${slot}).`,
           de: `${dest.name} zu Tag ${dayIdx + 1} hinzugefügt (${slot}).`,
+          fr: `${dest.name} ajouté au jour ${dayIdx + 1} (${slot}).`,
+          es: `${dest.name} añadido al día ${dayIdx + 1} (${slot}).`,
         }),
       },
       {
@@ -800,12 +834,17 @@ export async function POST(request: Request) {
 
   // --- 5) NEPODPRT (prepoznan) namen — iskrena odklonitev ---
   if (command.kind === "unsupported") {
-    const intentLabels: Record<string, { sl: string; en: string; it: string; de: string }> = {
-      "move-day": { sl: "prestavljanje dni", en: "moving days", it: "spostare i giorni", de: "Tage verschieben" },
-      "swap-activity": { sl: "zamenjava posamezne aktivnosti", en: "swapping an individual activity", it: "sostituire una singola attività", de: "eine einzelne Aktivität tauschen" },
-      duration: { sl: "sprememba trajanja potovanja", en: "changing trip duration", it: "cambiare la durata del viaggio", de: "Reisedauer ändern" },
-      "party-type": { sl: "sprememba sestave skupine", en: "changing party type", it: "cambiare la composizione del gruppo", de: "Gruppenzusammensetzung ändern" },
-      "outdoor-only": { sl: "samo zunanji program", en: "outdoor-only program", it: "programma solo all'aperto", de: "nur Outdoor-Programm" },
+    // W12-faza-2b: 6-jezični labels (fr/es) — sicer bi ?.[lang] padel na
+    // surov intent ID namesto lokalizirane oznake.
+    const intentLabels: Record<
+      string,
+      { sl: string; en: string; it: string; de: string; fr: string; es: string }
+    > = {
+      "move-day": { sl: "prestavljanje dni", en: "moving days", it: "spostare i giorni", de: "Tage verschieben", fr: "déplacer des jours", es: "mover días" },
+      "swap-activity": { sl: "zamenjava posamezne aktivnosti", en: "swapping an individual activity", it: "sostituire una singola attività", de: "eine einzelne Aktivität tauschen", fr: "échanger une activité individuelle", es: "cambiar una actividad individual" },
+      duration: { sl: "sprememba trajanja potovanja", en: "changing trip duration", it: "cambiare la durata del viaggio", de: "Reisedauer ändern", fr: "modifier la durée du voyage", es: "cambiar la duración del viaje" },
+      "party-type": { sl: "sprememba sestave skupine", en: "changing party type", it: "cambiare la composizione del gruppo", de: "Gruppenzusammensetzung ändern", fr: "modifier la composition du groupe", es: "cambiar la composición del grupo" },
+      "outdoor-only": { sl: "samo zunanji program", en: "outdoor-only program", it: "programma solo all'aperto", de: "nur Outdoor-Programm", fr: "programme uniquement en extérieur", es: "programa solo al aire libre" },
     };
     const label =
       intentLabels[command.matchedIntent]?.[lang] ?? command.matchedIntent;
@@ -815,6 +854,8 @@ export async function POST(request: Request) {
         en: `"${label}" is recognized, but deterministic execution does not support it yet. Supported commands: cheaper · pricier · more nature · more food · more active · less driving · slower pace · rain-suitable · family-friendly · add <destination> · remove <destination> · day <n>.`,
         it: `"${label}" è riconosciuto, ma l'esecuzione deterministica non lo supporta ancora. Comandi supportati: più economico · più premium · più natura · più cibo · più attivo · meno guida · ritmo più calmo · adatto alla pioggia · adatto alle famiglie · aggiungi <destinazione> · rimuovi <destinazione> · giorno <n>.`,
         de: `"${label}" wird erkannt, aber die deterministische Ausführung unterstützt ihn noch nicht. Unterstützte Befehle: günstiger · Premium · mehr Natur · mehr Essen · aktiver · weniger Fahrt · langsameres Tempo · regentauglich · familienfreundlich · füge <Ziel> hinzu · entferne <Ziel> · Tag <n>.`,
+        fr: `"${label}" est reconnu, mais l'exécution déterministe ne le prend pas encore en charge. Commandes prises en charge : moins cher · plus cher · plus de nature · plus de gastronomie · plus actif · moins de conduite · rythme plus calme · adapté à la pluie · pour la famille · ajoute <destination> · retire <destination> · jour <n>.`,
+        es: `"${label}" está reconocido, pero la ejecución determinista aún no lo admite. Comandos admitidos: más económico · más caro · más naturaleza · más gastronomía · más activo · menos conducción · ritmo más tranquilo · apto para lluvia · apto para niños · añade <destino> · quita <destino> · día <n>.`,
       }),
       "parser-unsupported"
     );
@@ -827,6 +868,8 @@ export async function POST(request: Request) {
       en: `Command not recognized — the plan is unchanged. Supported commands: cheaper · pricier · more nature · more food · more active · less driving · slower pace · rain-suitable · family-friendly · add <destination> · remove <destination> · day <n>.`,
       it: `Comando non riconosciuto — il piano è invariato. Comandi supportati: più economico · più premium · più natura · più cibo · più attivo · meno guida · ritmo più calmo · adatto alla pioggia · adatto alle famiglie · aggiungi <destinazione> · rimuovi <destinazione> · giorno <n>.`,
       de: `Befehl nicht erkannt — der Plan ist unverändert. Unterstützte Befehle: günstiger · Premium · mehr Natur · mehr Essen · aktiver · weniger Fahrt · langsameres Tempo · regentauglich · familienfreundlich · füge <Ziel> hinzu · entferne <Ziel> · Tag <n>.`,
+      fr: `Commande non reconnue — le plan est inchangé. Commandes prises en charge : moins cher · plus cher · plus de nature · plus de gastronomie · plus actif · moins de conduite · rythme plus calme · adapté à la pluie · pour la famille · ajoute <destination> · retire <destination> · jour <n>.`,
+      es: `Comando no reconocido — el plan no cambia. Comandos admitidos: más económico · más caro · más naturaleza · más gastronomía · más activo · menos conducción · ritmo más tranquilo · apto para lluvia · apto para niños · añade <destino> · quita <destino> · día <n>.`,
     }),
     "parser-unknown"
   );

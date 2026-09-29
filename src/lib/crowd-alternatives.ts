@@ -99,7 +99,7 @@ const MAX_ALTERNATIVE_KM = 60;
 export function buildCrowdNotices(
   itinerary: Itinerary,
   input: PlannerInput,
-  lang: "sl" | "en" | "it" | "de" = "sl"
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es" = "sl"
 ): CrowdNotice[] {
   if (!input.startDate) return [];
 
@@ -146,6 +146,7 @@ export function buildCrowdNotices(
         destination_name: origin.name,
         // W1-faza-2b: 4-jezično — IT/DE nimata slovenske sklanjatve
         // (NAME_GENDER je SL-only rodovna oblika).
+        // W12-faza-2b: FR/ES (isti vzorec — brez SL sklanjatve).
         reason:
           lang === "en"
             ? `${origin.name} is usually very busy on weekends in July and August — consider a morning visit or a quieter alternative nearby.`
@@ -153,6 +154,10 @@ export function buildCrowdNotices(
             ? `${origin.name} è di solito molto affollato nei weekend di luglio e agosto — valuta una visita mattutina o un'alternativa più tranquilla nelle vicinanze.`
             : lang === "de"
             ? `${origin.name} ist an Wochenenden im Juli und August meist sehr voll — erwäge einen Morgenbesuch oder eine ruhigere Alternative in der Nähe.`
+            : lang === "fr"
+            ? `${origin.name} est généralement très fréquenté les week-ends de juillet et août — envisage une visite matinale ou une alternative plus calme à proximité.`
+            : lang === "es"
+            ? `${origin.name} suele estar muy concurrido los fines de semana de julio y agosto — considera una visita por la mañana o una alternativa más tranquila cerca.`
             : `${origin.name} je julija in avgusta ob vikendih običajno zelo obiskan${
                 NAME_GENDER[origin.id] === "f" ? "a" : ""
               } — razmislite o jutranjem prihodu ali mirnejši alternativi v bližini.`,

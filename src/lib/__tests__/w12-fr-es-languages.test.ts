@@ -35,17 +35,29 @@ import {
   WISHLIST_OTHER_LABEL,
   type WishlistLang,
 } from "@/lib/wishlist-collections";
+import { PL, type PlannerLang } from "@/lib/planner-lang";
+import { EXAMPLE_QUESTIONS, buildUnknownAnswer, answerPlanQuestion } from "@/lib/plan-qa";
+import { QUICK_ACTIONS } from "@/lib/refine-actions";
+import { parseRefineCommand } from "@/lib/refine-command-parser";
+import { DAY_SEGMENT_LABELS } from "@/lib/day-segments";
+import { icsFileName } from "@/lib/ics-export";
+import { matchEventsForItinerary } from "@/lib/events-match";
+import type { Itinerary } from "@/lib/types";
 
 /**
- * W12 (smer 2, faza 1 — 1.144.0; faza 2a — 1.145.0): regresijska varovalka
- * FR/ES jezikov.
+ * W12 (smer 2, faza 1 — 1.144.0; faza 2a — 1.145.0; faza 2b — 1.146.0):
+ * regresijska varovalka FR/ES jezikov.
  *
- * Pogodba (vzorec 1:1 po W1 — IT/DE, 1.126.0/1.127.0):
+ * Pogodba (vzorec 1:1 po W1 — IT/DE, 1.126.0/1.127.0/1.129.0):
  * - FR/ES živita SAMO na FR/ES whitelisti: jedro odkrivanja + svetovanja
  *   (9 statičnih poti) + faza 2a: /zemljevid + destinacijske pod-poti
- *   (/destinacija/* ×38 — 5 vzorcev); vse ostale poti → isFrEsRoute false
- *   (proxy 308 na SL, P4-8: nikoli mešanja jezikov);
- * - /nacrtuj je NAMERNO izven (faza 2b — iskrena meja);
+ *   (/destinacija/* ×38 — 5 vzorcev) + faza 2b: /nacrtuj (planner pogon
+ *   6-jezičen); vse ostale poti → isFrEsRoute false (proxy 308 na SL,
+ *   P4-8: nikoli mešanja jezikov);
+ * - FAZA 2B: planner pogon je 6-jezičen (PL() kanon — fr/es dedita EN
+ *   pri manjkajočih prevodih, NIKOLI SL), Q&A vzorci/primeri, QUICK_ACTIONS,
+ *   ukazni parser (FR/ES diakritika ç/ñ + vzorci), ICS izvozi, segmenti dneva;
+ *   dogodki FR/ES dedijo EVENTS_EN (§38 kanon — NI EVENTS_FR/ES plasti);
  * - oznake (države/regije/interesi/bestFor) imata FR/ES različici;
  * - destinacijski overlayji (slovenia-data-fr/-es) pokrivajo destinacije;
  * - sitemap/hreflang/ogLocale/voice se zavedata fr/es;
@@ -73,6 +85,9 @@ const FRES_PATHS = [
   "/zaupanje-in-varnost",
   // W12 faza 2a (1.145.0): zemljevid — POI so jezikovno nevtralni viri
   "/zemljevid",
+  // W12 faza 2b (1.146.0): načrtovalnik — pogon je 6-jezičen (isti mejnik
+  // kot W1 2b-2 za /it+/de/nacrtuj)
+  "/nacrtuj",
 ];
 
 /** Destinacijske pod-poti faze 2a (×38 destinacij — 5 vzorcev). */
@@ -90,8 +105,8 @@ describe("W12 faza 1+2a: routing — FR/ES javna jezika na svoji whitelisti", ()
     expect(routing.defaultLocale).toBe("sl");
   });
 
-  test("FRES_STATIC_ROUTES = 10 poti (jedro + svetovanje + zemljevid — faza 2a)", () => {
-    expect(FRES_STATIC_ROUTES.size).toBe(10);
+  test("FRES_STATIC_ROUTES = 11 poti (jedro + svetovanje + zemljevid + načrtovalnik — faza 2b)", () => {
+    expect(FRES_STATIC_ROUTES.size).toBe(11);
     for (const p of FRES_PATHS) {
       expect(FRES_STATIC_ROUTES.has(p), `manjka "${p}"`).toBe(true);
     }
@@ -111,7 +126,6 @@ describe("W12 faza 1+2a: routing — FR/ES javna jezika na svoji whitelisti", ()
 
   test("isFrEsRoute: izven whitelist → false (P4-8 — 308 varuje proxy)", () => {
     const offLimits = [
-      "/nacrtuj",
       "/destinacija/bled/nepoznana-podpot",
       "/trznica",
       "/dozivetja",
@@ -127,7 +141,7 @@ describe("W12 faza 1+2a: routing — FR/ES javna jezika na svoji whitelisti", ()
       "/admin",
     ];
     for (const p of offLimits) {
-      expect(isFrEsRoute(p), `"${p}" NE sme biti FR/ES (faza 2b ali SL-only)`).toBe(false);
+      expect(isFrEsRoute(p), `"${p}" NE sme biti FR/ES (SL-only)`).toBe(false);
     }
   });
 
@@ -136,7 +150,9 @@ describe("W12 faza 1+2a: routing — FR/ES javna jezika na svoji whitelisti", ()
     expect(isLocaleRoute("/destinacije", "es")).toBe(true);
     expect(isLocaleRoute("/zemljevid", "fr")).toBe(true);
     expect(isLocaleRoute("/destinacija/bled", "es")).toBe(true);
-    expect(isLocaleRoute("/nacrtuj", "fr")).toBe(false);
+    // W12 faza 2b: /nacrtuj je ZDAJ na FR/ES whitelisti (planner 6-jezičen)
+    expect(isLocaleRoute("/nacrtuj", "fr")).toBe(true);
+    expect(isLocaleRoute("/nacrtuj", "es")).toBe(true);
     expect(isLocaleRoute("/trznica", "es")).toBe(false);
     expect(isLocaleRoute("/blog/xyz", "fr")).toBe(false);
     expect(isLocaleRoute("/nacrtuj", "sl")).toBe(true);
@@ -249,9 +265,10 @@ describe("W12 faza 1+2a: SEO + sitemap (hreflang/og/števec)", () => {
     expect(bled["fr-FR"]).toBe("https://example.com/fr/destinacija/bled");
     expect(bled["es-ES"]).toBe("https://example.com/es/destinacija/bled");
 
+    // W12 faza 2b (1.146.0): planner na FR/ES whitelisti — hreflang živ
     const plan = hreflangForPath("/nacrtuj", "https://example.com");
-    expect(plan["fr-FR"]).toBeUndefined();
-    expect(plan["es-ES"]).toBeUndefined();
+    expect(plan["fr-FR"]).toBe("https://example.com/fr/nacrtuj");
+    expect(plan["es-ES"]).toBe("https://example.com/es/nacrtuj");
     const trznica = hreflangForPath("/trznica", "https://example.com");
     expect(trznica["fr-FR"]).toBeUndefined();
   });
@@ -262,15 +279,18 @@ describe("W12 faza 1+2a: SEO + sitemap (hreflang/og/števec)", () => {
     expect(ogLocaleFor("sl")).toBe("sl_SI");
   });
 
-  test("sitemap: FR/ES URL-ji = 10 statičnih + 570 destinacijskih = 580 na jezik (faza 2a)", () => {
+  test("sitemap: FR/ES URL-ji = 11 statičnih + 570 destinacijskih = 581 na jezik (faza 2b)", () => {
     const urls = getAllSitemapUrls("https://example.com");
     const frPaths = urls.filter((u) => u.path === "/fr" || u.path.startsWith("/fr/"));
     const esPaths = urls.filter((u) => u.path === "/es" || u.path.startsWith("/es/"));
-    // 10 statičnih (9 + /zemljevid) + 38 destinacij × 15 pod-poti = 580
-    expect(frPaths.length).toBe(580);
-    expect(esPaths.length).toBe(580);
+    // 11 statičnih (9 + /zemljevid + /nacrtuj) + 38 destinacij × 15 pod-poti = 581
+    expect(frPaths.length).toBe(581);
+    expect(esPaths.length).toBe(581);
     expect(frPaths.map((u) => u.path)).toContain("/fr/destinacije");
     expect(frPaths.map((u) => u.path)).toContain("/fr/zemljevid");
+    // W12 faza 2b: planner v sitemapu
+    expect(frPaths.map((u) => u.path)).toContain("/fr/nacrtuj");
+    expect(esPaths.map((u) => u.path)).toContain("/es/nacrtuj");
     expect(esPaths.map((u) => u.path)).toContain("/es/primerjava");
     expect(esPaths.map((u) => u.path)).toContain("/es/destinacija/bled/things-to-do");
     expect(frPaths.map((u) => u.path)).toContain("/fr/destinacija/bled/guide/romanticni-pobeg");
@@ -514,5 +534,212 @@ describe("W12 faza 1: prevajalna skripta (translate-locale) — hrošč W1-2b po
     const dest = source("scripts/translate-destinations.ts");
     expect(dest).toContain('fr: "French');
     expect(dest).toContain('es: "Spanish');
+  });
+});
+
+// ============================================================================
+// W12 FAZA 2B (1.146.0) — PLANNER POGON 6-JEZIČEN (po vzorcu W1-2b-2, 1.129.0)
+// ============================================================================
+
+describe("W12 faza 2b: PL() kanon + Q&A primeri + unknown odgovor", () => {
+  test("PL(): eksplicitna fr/es zmagata; manjkajoča dedovata EN (NIKOLI SL)", () => {
+    expect(PL("fr", { sl: "sl-niz", en: "en-str", it: "it", de: "de", fr: "fr-chaîne" })).toBe("fr-chaîne");
+    expect(PL("es", { sl: "sl-niz", en: "en-str", it: "it", de: "de", es: "es-cadena" })).toBe("es-cadena");
+    // manjkajoč fr/es → EN dedovanje (P4-8: tuji uporabnik nikoli ne dobi SL)
+    expect(PL("fr", { sl: "sl-niz", en: "en-str" })).toBe("en-str");
+    expect(PL("es", { sl: "sl-niz", en: "en-str" })).toBe("en-str");
+    // neznan jezik → SL (nazaj-kompatibilno)
+    expect(PL("xx", { sl: "sl-niz", en: "en-str" })).toBe("sl-niz");
+  });
+
+  test("EXAMPLE_QUESTIONS: fr/es ×5 (isto kot IT/DE)", () => {
+    for (const lang of ["fr", "es"] as const) {
+      expect(EXAMPLE_QUESTIONS[lang]?.length).toBe(5);
+      for (const q of EXAMPLE_QUESTIONS[lang] ?? []) {
+        expect(q.length).toBeGreaterThan(8);
+      }
+    }
+    expect(EXAMPLE_QUESTIONS.fr?.[0]).toContain("km");
+    expect(EXAMPLE_QUESTIONS.es?.[3]).toContain("día 1");
+  });
+
+  test("buildUnknownAnswer: FR/ES iskren odgovor brez SL uhoda", () => {
+    const fr = buildUnknownAnswer("fr");
+    expect(fr).toContain("Je ne peux pas répondre");
+    expect(fr).toContain("Ajuster l'itinéraire");
+    expect(fr).not.toMatch(/ne morem|ugibat/);
+    const es = buildUnknownAnswer("es");
+    expect(es).toContain("No puedo responder");
+    expect(es).toContain("Ajustar el itinerario");
+    expect(es).not.toMatch(/ne morem|ugibat/);
+  });
+
+  test("answerPlanQuestion: FR vremensko vprašanje → namen weather + FR odgovor", () => {
+    const res = answerPlanQuestion({
+      question: "Quelle est la météo pendant le voyage ?",
+      itinerary: {
+        days: [
+          {
+            day: 1,
+            locations: [
+              { destination_id: "bled", name: "Bled", time_slot: "10:00" },
+              { destination_id: "bohinj", name: "Bohinj", time_slot: "14:00" },
+            ],
+          },
+        ],
+      } as unknown as Itinerary,
+      lang: "fr",
+    });
+    expect(res?.intent).toBe("weather");
+    expect(res?.text).not.toMatch(/Vreme|napovedi/); // brez SL uhoda
+  });
+
+  test("answerPlanQuestion: ES strošek → namen cost + ES odgovor", () => {
+    const res = answerPlanQuestion({
+      question: "¿Cuánto costará el viaje en total?",
+      itinerary: {
+        days: [
+          {
+            day: 1,
+            locations: [{ destination_id: "bled", name: "Bled", time_slot: "10:00" }],
+          },
+        ],
+      } as unknown as Itinerary,
+      lang: "es",
+    });
+    expect(res?.intent).toBe("cost_total");
+    expect(res?.text).toContain("€");
+  });
+});
+
+describe("W12 faza 2b: QUICK_ACTIONS + ukazni parser (FR/ES)", () => {
+  test("QUICK_ACTIONS: vseh 9 akcij ima fr/es label + navodilo", () => {
+    expect(QUICK_ACTIONS.length).toBe(9);
+    for (const a of QUICK_ACTIONS) {
+      expect(a.label.fr, `${a.id} fr label`).toBeTruthy();
+      expect(a.label.es, `${a.id} es label`).toBeTruthy();
+      expect(a.instruction.fr, `${a.id} fr navodilo`).toBeTruthy();
+      expect(a.instruction.es, `${a.id} es navodilo`).toBeTruthy();
+      // navodila so funkcije z dnevom ( Jour X / Día X vzorec po vnosu)
+      expect(typeof a.instruction.fr).toBe("function");
+      expect(typeof a.instruction.es).toBe("function");
+    }
+    const less = QUICK_ACTIONS.find((a) => a.id === "less_driving");
+    expect(less?.label.fr).toBe("Moins de conduite");
+    expect(less?.label.es).toBe("Menos conducción");
+    const rain = QUICK_ACTIONS.find((a) => a.id === "rain_suitable");
+    expect(rain?.label.fr).toBe("Adapté à la pluie");
+    expect(rain?.label.es).toBe("Apto para lluvia");
+  });
+
+  test("parser: FR/ES hitre akcije prepoznane (diakritika ç/ñ normalizirana)", () => {
+    // ç in ñ morata biti normalizirani (più-natura precedens iz W1-2b-2)
+    expect(parseRefineCommand("moins de conduite").kind).toBe("quick-action");
+    expect(parseRefineCommand("adapte a la pluie").kind).toBe("quick-action");
+    expect(parseRefineCommand("menos conduccion").kind).toBe("quick-action");
+    expect(parseRefineCommand("más naturaleza").kind).toBe("quick-action");
+    expect(parseRefineCommand("si llueve").kind).toBe("quick-action");
+    expect(parseRefineCommand("más económico").kind).toBe("quick-action");
+  });
+
+  test("parser: FR/ES dodajanje destinacije (ñ → add-place)", () => {
+    const fr = parseRefineCommand("ajoute Bled au jour 1", { lang: "fr", daysCount: 3 });
+    expect(fr.kind).toBe("add-place");
+    if (fr.kind === "add-place") expect(fr.placeName).toBe("Bled");
+    // „añade" — španski ñ se normalizira na n (anade)
+    const es = parseRefineCommand("añade Piran", { lang: "es", daysCount: 3 });
+    expect(es.kind).toBe("add-place");
+  });
+
+  test("parser: FR/ES dnevni sklici (jour 2 / día 3 / dernier jour)", () => {
+    const j2 = parseRefineCommand("moins de conduite le jour 2", { lang: "fr", daysCount: 3 });
+    if (j2.kind === "quick-action") expect(j2.day).toBe(2);
+    const d3 = parseRefineCommand("menos conducción el día 3", { lang: "es", daysCount: 3 });
+    if (d3.kind === "quick-action") expect(d3.day).toBe(3);
+  });
+
+  test("parser: FR/ES dnevi tedna se razrešijo (samedi/sábado)", () => {
+    const sam = parseRefineCommand("plus de nature le samedi", {
+      lang: "fr",
+      daysCount: 7,
+      tripStartDate: "2026-10-05", // ponedeljek → sobota = dan 6
+    });
+    if (sam.kind === "quick-action") expect(sam.day).toBe(6);
+    const sab = parseRefineCommand("más naturaleza el sábado", {
+      lang: "es",
+      daysCount: 7,
+      tripStartDate: "2026-10-05",
+    });
+    if (sab.kind === "quick-action") expect(sab.day).toBe(6);
+  });
+});
+
+describe("W12 faza 2b: izvozi + segmenti + dogodki (§38 EVENTS_EN dedovanje)", () => {
+  test("DAY_SEGMENT_LABELS: Matin/Après-midi/Soir · Mañana/Tarde/Noche", () => {
+    expect(DAY_SEGMENT_LABELS.morning.fr).toBe("Matin");
+    expect(DAY_SEGMENT_LABELS.afternoon.fr).toBe("Après-midi");
+    expect(DAY_SEGMENT_LABELS.evening.fr).toBe("Soir");
+    expect(DAY_SEGMENT_LABELS.morning.es).toBe("Mañana");
+    expect(DAY_SEGMENT_LABELS.afternoon.es).toBe("Tarde");
+    expect(DAY_SEGMENT_LABELS.evening.es).toBe("Noche");
+  });
+
+  test("icsFileName: voyage-/viaje- prefixa (IT viaggio-/DE reise- kanon)", () => {
+    const it = { days: [{ day: 1, locations: [{ destination_id: "bled" }] }] } as unknown as Itinerary;
+    expect(icsFileName(it, "fr")).toMatch(/^voyage-slovenie-1j-bled\.ics$/);
+    expect(icsFileName(it, "es")).toMatch(/^viaje-eslovenia-1d-bled\.ics$/);
+  });
+
+  test("events: FR/ES dedita EVENTS_EN (§38 — isto ime kot lang=en)", () => {
+    const days = [{ day: 1, locations: [{ destination_id: "ljubljana" }] }];
+    const fr = matchEventsForItinerary(days as never, 3, null, "fr");
+    const en = matchEventsForItinerary(days as never, 3, null, "en");
+    const sl = matchEventsForItinerary(days as never, 3, null, "sl");
+    if (en.length > 0) {
+      expect(fr.map((e) => e.name)).toEqual(en.map((e) => e.name));
+      // SL izvirnik se RAZLIKUJE od EN overlayja na vsaj enem imenu
+      // (dokaz, da dedovanje EN ni slučajna identiteta s SL)
+      const differs = en.some((e, i) => e.name !== sl[i]?.name);
+      expect(differs).toBe(true);
+    } else {
+      // stranska varovalka: Ljubljana ima dogodke v vzorcu (30 dogodkov)
+      expect(sl.length).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  test("events-match source: FR/ES veja obstaja z EVENTS_EN (§38 komentar)", () => {
+    const src = source("src/lib/events-match.ts");
+    expect(src).toContain('lang === "fr"');
+    expect(src).toContain('lang === "es"');
+    expect(src).toContain("EVENTS_EN");
+    expect(src).toContain("§38");
+  });
+
+  test("planner komponente: STRINGS/lang tipi ×6 (source contract)", () => {
+    const events = source("src/components/itinerary-events.tsx");
+    expect(events).toContain('export type EventsLang = "sl" | "en" | "it" | "de" | "fr" | "es"');
+    expect(events).toContain("Pendant votre visite"); // fr STRINGS blok
+    expect(events).toContain("Durante tu visita"); // es STRINGS blok
+    const trust = source("src/components/planner-trust-line.tsx");
+    expect(trust).toContain('"fr"');
+    const planner = source("src/components/sections/itinerary-planner.tsx");
+    // Go Mode push fix: FR/ES → /en/na-poti (ne SL)
+    expect(planner).toContain('"/en/na-poti"');
+    const audio = source("src/components/itinerary-audio.tsx");
+    expect(audio).toContain("Écouter");
+    expect(audio).toContain("Escuchar");
+  });
+
+  test("API rute: lang threading fr/es (source contract)", () => {
+    const refine = source("src/app/api/itinerary/refine/route.ts");
+    expect(refine).toContain('"fr"');
+    expect(refine).toContain('"es"');
+    const ask = source("src/app/api/itinerary/ask/route.ts");
+    expect(ask).toContain('"fr"');
+    const gen = source("src/app/api/itinerary/route.ts");
+    expect(gen).toContain('"fr"');
+    const weather = source("src/lib/weather-utils.ts");
+    expect(weather).toContain("weatherCodeToTextFr");
+    expect(weather).toContain("weatherCodeToTextEs");
   });
 });

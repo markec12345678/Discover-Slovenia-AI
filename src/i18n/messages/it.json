@@ -586,7 +586,7 @@
     "restoredChip": "Ripristinato il tuo ultimo piano",
     "restoredChipDismiss": "Nascondi la notifica di piano ripristinato",
     "resultTitle": "Il tuo itinerario di {days} giorni",
-    "badgeAI": "AI",
+    "badgeAI": "IA",
     "badgeSample": "Esempio",
     "badgeDeterministic": "Senza AI",
     "totalBadge": "Totale ~€{total}",
@@ -870,7 +870,7 @@
       "tabAccommodation": "Alloggio",
       "tabActivities": "Attività",
       "tabDining": "Ristorazione",
-      "tabTransport": "Transport",
+      "tabTransport": "Trasporti",
       "contactWebsite": "Sito web",
       "contactEmail": "Invia una richiesta",
       "contactPhone": "Chiama",
@@ -1093,7 +1093,7 @@
         "description": "Prodotti biologici ed esperienze sostenibili"
       },
       "luxury": {
-        "title": "Luxury",
+        "title": "Lusso",
         "description": "Esperienze e prodotti di alta qualità"
       }
     }
@@ -1301,7 +1301,7 @@
   "guidePage": {
     "metaNotFound": "Guida non trovata",
     "breadcrumbHome": "Home",
-    "breadcrumbAria": "Breadcrumb",
+    "breadcrumbAria": "Percorso di navigazione",
     "editorialRating": "Valutazione editoriale {rating}★",
     "introHeading": "{label} a {name}",
     "metaLine": "Durata: {duration} · Fascia di prezzo: {price}",
@@ -1534,7 +1534,7 @@
     "meta": {
       "notFound": "Itinerario non trovato",
       "title": "Itinerario di {duration} per {name} — {desc}",
-      "description": "L'itinerario completo di {durationLower} per {name}, {tagline}. {desc} — attività, alloggi e ristoranti consigliati dalla AI per una visita di {days} giorni.",
+      "description": "L'itinerario completo di {durationLower} per {name}, {tagline}. {desc} — attività, alloggi e ristoranti consigliati.",
       "ogDescription": "Itinerario di {duration} consigliato dalla AI con attività, alloggi e ristoranti."
     }
   },
@@ -1923,11 +1923,11 @@
         "body": "Ogni locale deve essere approvato manualmente dal nostro team prima della pubblicazione. Verifichiamo: correttezza dei contatti, adeguatezza della categoria, qualità di foto e descrizione. I locali non verificati non sono visibili agli utenti e l'IA non può raccomandarli."
       },
       "qualityScore": {
-        "title": "Partner Quality Score (0-100)",
+        "title": "Punteggio di qualità del partner (0-100)",
         "body": "Ogni locale ha un Quality Score calcolato automaticamente da 7 segnali: completezza del profilo (30%), qualità delle foto (15%), qualità della descrizione (15%), tag IA (10%), verifica admin (10%), valutazioni (10%), freschezza dei dati (10%).",
-        "badgeVerified": "Verified (Q>40)",
+        "badgeVerified": "Verificato (Q>40)",
         "badgePremium": "👑 Premium (pagante)",
-        "badgeFeatured": "⭐ Featured (Q>90 + Premium + Verified)"
+        "badgeFeatured": "⭐ In evidenza (Q>90 + Premium + Verificato)"
       },
       "vlm": {
         "title": "Verifica delle immagini con VLM",
@@ -1952,7 +1952,7 @@
       "intro": "Ogni raccomandazione IA è chiaramente etichettata. L'utente sa cosa è pubblicità e cosa è organico.",
       "labels": {
         "featured": {
-          "badge": "⭐ Featured",
+          "badge": "⭐ In evidenza",
           "desc": "Partner verificato con profilo di alta qualità e iscrizione Premium. Quality Score > 90."
         },
         "premium": {
@@ -1988,7 +1988,7 @@
         "desc": "L'IA collega il turista al fornitore. La prenotazione avviene direttamente presso il fornitore."
       },
       "auditLog": {
-        "title": "Audit log",
+        "title": "Registro di audit",
         "desc": "Tutte le azioni admin (approvazione, rifiuto, sponsorizzazione) sono registrate e tracciabili."
       }
     },
@@ -2097,7 +2097,7 @@
       "readMore": "Leggi →"
     },
     "adria": {
-      "badge": "Cross-border",
+      "badge": "Oltre confine",
       "title": "Road trip adriatici dalla Slovenia",
       "description": "Guide per road trip transfrontalieri — Croazia, Bosnia ed Erzegovina, Montenegro e Albania con la propria auto dalla Slovenia: itinerari, pedaggi, formalità di frontiera e dove parcheggiare ogni sera.",
       "countriesAria": "Viaggio attraverso: {countries}",

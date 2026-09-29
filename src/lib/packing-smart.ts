@@ -21,6 +21,9 @@
 // Deterministična čista funkcija (enak input = enak output) — teče na
 // clientu (planner + /pot iz shranjenih načrtov, isto za VSE stare načrte —
 // nič sprememb API) in bi lahko tudi na strežniku. Brez stranskih učinkov.
+//
+// W12-faza-2b: PL nizi razširjeni na 6 jezikov (fr/es eksplicitna, po
+// isti PL pogodbi — „Jour X“ / „Día X“ prefiksi v razlogih).
 // ============================================================================
 
 import { DESTINATIONS } from "@/lib/slovenia-data";
@@ -64,7 +67,7 @@ export interface SmartPackingInput {
   itinerary: Itinerary;
   /** Interesi/tip skupine (planner ga ima, shranjeni načrti ne — opcijsko) */
   input?: PlannerInput | null;
-  /** W1-2b-2: 4-jezično (PL pogodba). */
+  /** W1-2b-2: 4-jezično (PL pogodba); W12-faza-2b: 6-jezično (fr/es). */
   lang?: PlannerLang;
 }
 
@@ -185,13 +188,16 @@ function readWeatherFacts(days: DayPlan[]): DayWeatherFacts {
   return { rainDays, snowDays, maxTemp, minTemp };
 }
 
-/** "Dan 2" / "Day 2" / "Giorno 2" / "Tag 2" za razloge. */
+/** "Dan 2" / "Day 2" / "Giorno 2" / "Tag 2" / "Jour 2" / "Día 2" za razloge. */
 function dayRef(i: number, lang: PlannerLang): string {
   return PL(lang, {
     sl: `Dan ${i + 1}`,
     en: `Day ${i + 1}`,
     it: `Giorno ${i + 1}`,
     de: `Tag ${i + 1}`,
+    // W12-faza-2b: FR/ES prefikse razlogov
+    fr: `Jour ${i + 1}`,
+    es: `Día ${i + 1}`,
   });
 }
 
@@ -254,7 +260,11 @@ export function buildSmartPackingList(
   if (days.length === 0) return null;
 
   const lang: PlannerLang =
-    input?.lang === "en" || input?.lang === "it" || input?.lang === "de"
+    input?.lang === "en" ||
+    input?.lang === "it" ||
+    input?.lang === "de" ||
+    input?.lang === "fr" ||
+    input?.lang === "es"
       ? input.lang
       : "sl";
   const planner = input?.input ?? null;
@@ -292,6 +302,8 @@ export function buildSmartPackingList(
           en: "Built from the daily forecast attached to this plan (Open-Meteo, at generation time).",
           it: "Composta dalla previsione giornaliera allegata a questo piano (Open-Meteo, alla generazione).",
           de: "Erstellt aus der Tagesvorhersage, die an diesem Plan hängt (Open-Meteo, zum Erstellungszeitpunkt).",
+          fr: "Composée à partir de la prévision quotidienne attachée à ce plan (Open-Meteo, à la génération).",
+          es: "Compuesta a partir del pronóstico diario adjunto a este plan (Open-Meteo, al generarlo).",
         })
       : horizonNote
         ? PL(lang, {
@@ -299,6 +311,8 @@ export function buildSmartPackingList(
             en: `Departure is more than ${FORECAST_HORIZON_DAYS} days away — no daily forecast exists yet. These are seasonal recommendations and will not update automatically.`,
             it: `La partenza è tra più di ${FORECAST_HORIZON_DAYS} giorni — la previsione giornaliera non esiste ancora. Questi sono consigli stagionali e non si aggiorneranno automaticamente.`,
             de: `Der Abflug liegt mehr als ${FORECAST_HORIZON_DAYS} Tage entfernt — es gibt noch keine Tagesvorhersage. Dies sind Saisonempfehlungen und aktualisieren sich nicht automatisch.`,
+            fr: `Le départ est à plus de ${FORECAST_HORIZON_DAYS} jours — la prévision quotidienne n'existe pas encore. Ce sont des recommandations saisonnières et elles ne se mettront pas à jour automatiquement.`,
+            es: `La salida está a más de ${FORECAST_HORIZON_DAYS} días — aún no existe el pronóstico diario. Estas son recomendaciones estacionales y no se actualizarán automáticamente.`,
           })
         : pastNote
           ? PL(lang, {
@@ -306,12 +320,16 @@ export function buildSmartPackingList(
               en: "The trip date has already passed — seasonal recommendations.",
               it: "La data del viaggio è già passata — consigli stagionali.",
               de: "Das Reisedatum ist bereits vergangen — Saisonempfehlungen.",
+              fr: "La date du voyage est déjà passée — recommandations saisonnières.",
+              es: "La fecha del viaje ya ha pasado — recomendaciones estacionales.",
             })
           : PL(lang, {
               sl: "Načrt brez datuma odhoda — sezonska priporočila.",
               en: "No departure date on this plan — seasonal recommendations.",
               it: "Piano senza data di partenza — consigli stagionali.",
               de: "Plan ohne Abreisedatum — Saisonempfehlungen.",
+              fr: "Plan sans date de départ — recommandations saisonnières.",
+              es: "Plan sin fecha de salida — recomendaciones estacionales.",
             });
 
   // --- Sezona (fallback iz meseca datuma ali input) ----------------------
@@ -346,6 +364,8 @@ export function buildSmartPackingList(
       en: "Clothes for the trip (+1 spare set)",
       it: "Vestiti per il viaggio (+1 completo di riserva)",
       de: "Kleidung für die Reise (+1 Wechselset)",
+      fr: "Vêtements pour le voyage (+1 tenue de rechange)",
+      es: "Ropa para el viaje (+1 muda de repuesto)",
     }),
     category: "clothing",
     quantity: `× ${daysCount + 1}`,
@@ -354,6 +374,8 @@ export function buildSmartPackingList(
       en: `${daysCount}-day plan — pack one spare set`,
       it: `piano di ${daysCount} ${daysCount === 1 ? "giorno" : "giorni"} — un completo di riserva`,
       de: `${daysCount}-Tage-Plan — ein Wechselset einpacken`,
+      fr: `plan de ${daysCount} ${daysCount === 1 ? "jour" : "jours"} — une tenue de rechange`,
+      es: `plan de ${daysCount} ${daysCount === 1 ? "día" : "días"} — una muda de repuesto`,
     }),
   });
 
@@ -369,6 +391,8 @@ export function buildSmartPackingList(
         en: "Layered clothing (big day-to-day swings)",
         it: "Vestiti a strati (forti escursioni termiche)",
         de: "Zwiebellook (große Tagesschwankungen)",
+        fr: "Vêtements en couches (fortes différences entre les jours)",
+        es: "Ropa por capas (grandes diferencias entre días)",
       }),
       category: "clothing",
       reason: PL(lang, {
@@ -376,6 +400,8 @@ export function buildSmartPackingList(
         en: `forecast range ${weather.minTemp}–${weather.maxTemp} °C across days`,
         it: `intervallo previsto ${weather.minTemp}–${weather.maxTemp} °C tra i giorni`,
         de: `Vorhersagebereich ${weather.minTemp}–${weather.maxTemp} °C über die Tage`,
+        fr: `plage prévue ${weather.minTemp}–${weather.maxTemp} °C entre les jours`,
+        es: `rango previsto ${weather.minTemp}–${weather.maxTemp} °C entre los días`,
       }),
     });
   } else if (method === "season" && (season === "spring" || season === "autumn")) {
@@ -386,6 +412,8 @@ export function buildSmartPackingList(
         en: "Layers for changeable weather",
         it: "Strati per meteo variabile",
         de: "Schichten für wechselhaftes Wetter",
+        fr: "Couches pour temps changeant",
+        es: "Capas para clima cambiante",
       }),
       category: "clothing",
       reason: PL(lang, {
@@ -393,6 +421,8 @@ export function buildSmartPackingList(
         en: "spring/autumn season",
         it: "stagione primaverile/autunnale",
         de: "Frühlings-/Herbstsaison",
+        fr: "saison printemps/automne",
+        es: "temporada de primavera/otoño",
       }),
     });
   }
@@ -408,6 +438,8 @@ export function buildSmartPackingList(
         en: "Thermal base layers + hat and gloves",
         it: "Intimo termico + cappello e guanti",
         de: "Thermounterwäsche + Mütze und Handschuhe",
+        fr: "Sous-vêtements thermiques + bonnet et gants",
+        es: "Ropa térmica + gorro y guantes",
       }),
       category: "clothing",
       reason:
@@ -417,12 +449,16 @@ export function buildSmartPackingList(
               en: `coldest day: ${weather.minTemp} °C`,
               it: `giorno più freddo: ${weather.minTemp} °C`,
               de: `kältester Tag: ${weather.minTemp} °C`,
+              fr: `jour le plus froid : ${weather.minTemp} °C`,
+              es: `día más frío: ${weather.minTemp} °C`,
             })
           : PL(lang, {
               sl: "zimska sezona",
               en: "winter season",
               it: "stagione invernale",
               de: "Wintersaison",
+              fr: "saison hivernale",
+              es: "temporada de invierno",
             }),
     });
   }
@@ -436,6 +472,8 @@ export function buildSmartPackingList(
         en: "Rain jacket (compact)",
         it: "Giacca antipioggia (compatta)",
         de: "Regenjacke (kompakt)",
+        fr: "Veste de pluie (compacte)",
+        es: "Chaqueta impermeable (compacta)",
       }),
       category: "weather",
       reason: daysReason(
@@ -446,6 +484,8 @@ export function buildSmartPackingList(
           en: "rain in forecast",
           it: "pioggia in previsione",
           de: "Regen in der Vorhersage",
+          fr: "pluie dans les prévisions",
+          es: "lluvia en el pronóstico",
         })
       ),
     });
@@ -457,6 +497,8 @@ export function buildSmartPackingList(
         en: "Rain jacket (compact)",
         it: "Giacca antipioggia (compatta)",
         de: "Regenjacke (kompakt)",
+        fr: "Veste de pluie (compacte)",
+        es: "Chaqueta impermeable (compacta)",
       }),
       category: "weather",
       reason: PL(lang, {
@@ -464,6 +506,8 @@ export function buildSmartPackingList(
         en: "autumn/spring rain is common",
         it: "in autunno/primavera la pioggia è frequente",
         de: "Herbst-/Frühlingsregen ist häufig",
+        fr: "la pluie est fréquente en automne/printemps",
+        es: "la lluvia es frecuente en otoño/primavera",
       }),
     });
   }
@@ -476,6 +520,8 @@ export function buildSmartPackingList(
         en: "Winter footwear (snow-ready)",
         it: "Calzature invernali (adatte alla neve)",
         de: "Winter footwear (schneetauglich)",
+        fr: "Chaussures d'hiver (adaptées à la neige)",
+        es: "Calzado de invierno (apto para nieve)",
       }),
       category: "weather",
       reason:
@@ -488,6 +534,8 @@ export function buildSmartPackingList(
                 en: "snow in forecast",
                 it: "neve in previsione",
                 de: "Schnee in der Vorhersage",
+                fr: "neige dans les prévisions",
+                es: "nieve en el pronóstico",
               })
             )
           : PL(lang, {
@@ -495,6 +543,8 @@ export function buildSmartPackingList(
               en: "winter season",
               it: "stagione invernale",
               de: "Wintersaison",
+              fr: "saison hivernale",
+              es: "temporada de invierno",
             }),
     });
   }
@@ -510,6 +560,8 @@ export function buildSmartPackingList(
         en: "Sunscreen SPF 50 + sun hat",
         it: "Crema solare SPF 50 + cappello da sole",
         de: "Sonnencreme SPF 50 + Sonnenhut",
+        fr: "Crème solaire SPF 50 + chapeau de soleil",
+        es: "Crema solar SPF 50 + gorro para el sol",
       }),
       category: "health",
       reason:
@@ -519,12 +571,16 @@ export function buildSmartPackingList(
               en: `warmest day: ${weather.maxTemp} °C`,
               it: `giorno più caldo: ${weather.maxTemp} °C`,
               de: `wärmster Tag: ${weather.maxTemp} °C`,
+              fr: `jour le plus chaud : ${weather.maxTemp} °C`,
+              es: `día más caluroso: ${weather.maxTemp} °C`,
             })
           : PL(lang, {
               sl: "poletna sezona",
               en: "summer season",
               it: "stagione estiva",
               de: "Sommersaison",
+              fr: "saison estivale",
+              es: "temporada de verano",
             }),
     });
   }
@@ -532,15 +588,16 @@ export function buildSmartPackingList(
   // === AKTIVNOSTI (iz DEJANSKIH postankov na načrtu) ===
   const typeLabel = (t: string): string =>
     ({
-      lake: PL(lang, { sl: "jezero", en: "lake", it: "lago", de: "See" }),
-      city: PL(lang, { sl: "mesto", en: "city", it: "città", de: "Stadt" }),
-      mountain: PL(lang, { sl: "gora", en: "mountain", it: "montagna", de: "Berg" }),
-      cave: PL(lang, { sl: "jama", en: "cave", it: "grotta", de: "Höhle" }),
-      coast: PL(lang, { sl: "obala", en: "coast", it: "costa", de: "Küste" }),
-      river: PL(lang, { sl: "reka", en: "river", it: "fiume", de: "Fluss" }),
-      spa: PL(lang, { sl: "terme", en: "thermal spa", it: "terme", de: "Thermalbad" }),
-      gorge: PL(lang, { sl: "soteska", en: "gorge", it: "gorge", de: "Schlucht" }),
-      castle: PL(lang, { sl: "grad", en: "castle", it: "castello", de: "Burg" }),
+      // W12-faza-2b: FR/ES typeLabel-i (lago/See → lac/lago vzorec)
+      lake: PL(lang, { sl: "jezero", en: "lake", it: "lago", de: "See", fr: "lac", es: "lago" }),
+      city: PL(lang, { sl: "mesto", en: "city", it: "città", de: "Stadt", fr: "ville", es: "ciudad" }),
+      mountain: PL(lang, { sl: "gora", en: "mountain", it: "montagna", de: "Berg", fr: "montagne", es: "montaña" }),
+      cave: PL(lang, { sl: "jama", en: "cave", it: "grotta", de: "Höhle", fr: "grotte", es: "cueva" }),
+      coast: PL(lang, { sl: "obala", en: "coast", it: "costa", de: "Küste", fr: "côte", es: "costa" }),
+      river: PL(lang, { sl: "reka", en: "river", it: "fiume", de: "Fluss", fr: "rivière", es: "río" }),
+      spa: PL(lang, { sl: "terme", en: "thermal spa", it: "terme", de: "Thermalbad", fr: "thermes", es: "balneario" }),
+      gorge: PL(lang, { sl: "soteska", en: "gorge", it: "gorge", de: "Schlucht", fr: "gorge", es: "desfiladero" }),
+      castle: PL(lang, { sl: "grad", en: "castle", it: "castello", de: "Burg", fr: "château", es: "castillo" }),
     })[t] ?? t;
 
   const hasWater = ["lake", "coast", "river"].some((t) => stops.types.has(t));
@@ -553,6 +610,8 @@ export function buildSmartPackingList(
         en: "Swimwear + quick-dry towel",
         it: "Costume + asciugamano veloce",
         de: "Badekleidung + schnell trocknendes Handtuch",
+        fr: "Maillot de bain + serviette à séchage rapide",
+        es: "Baño + toalla de secado rápido",
       }),
       category: "activity",
       reason: hasSpa
@@ -562,6 +621,8 @@ export function buildSmartPackingList(
               en: " — indoor pools, year-round",
               it: " — piscine interne, tutto l'anno",
               de: " — Innenpools, ganzjährig",
+              fr: " — piscines intérieures, toute l'année",
+              es: " — piscinas interiores, todo el año",
             })
         : [
             ...(["lake", "coast", "river"] as const)
@@ -577,6 +638,8 @@ export function buildSmartPackingList(
               en: "water on the plan",
               it: "acqua nel piano",
               de: "Wasser im Plan",
+              fr: "eau dans le plan",
+              es: "agua en el plan",
             })})`,
     });
   } else if (hasWater && method === "season" && season === "summer") {
@@ -587,6 +650,8 @@ export function buildSmartPackingList(
         en: "Swimwear + quick-dry towel",
         it: "Costume + asciugamano veloce",
         de: "Badekleidung + schnell trocknendes Handtuch",
+        fr: "Maillot de bain + serviette à séchage rapide",
+        es: "Baño + toalla de secado rápido",
       }),
       category: "activity",
       reason: PL(lang, {
@@ -594,6 +659,8 @@ export function buildSmartPackingList(
         en: "water stops + summer season",
         it: "tappe d'acqua + stagione estiva",
         de: "Wasser-Stopps + Sommersaison",
+        fr: "étapes aquatiques + saison estivale",
+        es: "paradas de agua + temporada de verano",
       }),
     });
   }
@@ -607,6 +674,8 @@ export function buildSmartPackingList(
         en: "Sturdy hiking footwear",
         it: "Calzature da trekking robuste",
         de: "Robustes Schuhwerk zum Wandern",
+        fr: "Chaussures de randonnée robustes",
+        es: "Calzado de montaña robusto",
       }),
       category: "activity",
       reason: typeReason(stops, first, typeLabel(first), lang),
@@ -618,6 +687,9 @@ export function buildSmartPackingList(
         en: "Water bottle (0.5–1 l per person)",
         it: "Bottiglia d'acqua (0,5–1 l a persona)",
         de: "Wasserflasche (0,5–1 l pro Person)",
+        // W12-faza-2b: decimalna vejica (kanon „vse razen EN")
+        fr: "Gourde (0,5–1 l par personne)",
+        es: "Botella de agua (0,5–1 l por persona)",
       }),
       category: "health",
       reason: PL(lang, {
@@ -625,6 +697,8 @@ export function buildSmartPackingList(
         en: "mountain/gorge stops — drinking water matters on trails",
         it: "tappe in montagna/nelle gorge — l'acqua conta sui sentieri",
         de: "Berg-/Schlucht-Stopps — Trinkwasser zählt auf Wegen",
+        fr: "étapes montagne/gorges — l'eau compte sur les sentiers",
+        es: "paradas de montaña/desfiladeros — el agua importa en los senderos",
       }),
     });
   }
@@ -637,6 +711,8 @@ export function buildSmartPackingList(
         en: "Warm layer for caves (8–12 °C year-round)",
         it: "Strato caldo per le grotte (8–12 °C tutto l'anno)",
         de: "Warme Schicht für Höhlen (8–12 °C ganzjährig)",
+        fr: "Couche chaude pour les grottes (8–12 °C toute l'année)",
+        es: "Capa abrigada para las cuevas (8–12 °C todo el año)",
       }),
       category: "activity",
       reason: typeReason(stops, "cave", typeLabel("cave"), lang),
@@ -651,6 +727,8 @@ export function buildSmartPackingList(
         en: "Comfortable walking shoes",
         it: "Scarpe comode per camminare",
         de: "Bequeme Schuhe zum Laufen",
+        fr: "Chaussures confortables pour marcher",
+        es: "Zapatos cómodos para caminar",
       }),
       category: "activity",
       reason:
@@ -661,7 +739,8 @@ export function buildSmartPackingList(
   }
 
   // === INTERESI / SKUPINA (iz inputa, če je na voljo) ===
-  if (/dru[žz]in|otrok|family|kids|children|famigli|bambin|kinder|familien/.test(groupHaystack) || partyType === "family") {
+  // W12-faza-2b: FR/ES kandidatski vzorci (enfant/famille/bebe/ninos …)
+  if (/dru[žz]in|otrok|family|kids|children|famigli|bambin|kinder|familien|enfant|famille|bebe|ninos|nino|familia/.test(groupHaystack) || partyType === "family") {
     push({
       id: "kids-kit",
       label: PL(lang, {
@@ -669,11 +748,14 @@ export function buildSmartPackingList(
         en: "Kids' kit (car games, wet wipes, snacks)",
         it: "Kit per bambini (giochi in auto, salviette, spuntini)",
         de: "Kinder-Set (Autospiele, Feuchttücher, Snacks)",
+        fr: "Kit enfants (jeux pour la voiture, lingettes, collations)",
+        es: "Kit para niños (juegos para el coche, toallitas, snacks)",
       }),
       category: "kids",
     });
   }
-  if (/kulinar|hran|jest|gastro|vino|food|cuisine|wine|cucina|gastronom|essen|kuche|wein/.test(groupHaystack)) {
+  // W12-faza-2b: FR/ES gastro vzorci (gastro/gastronom/restaur/bistrot/bodega/tapas)
+  if (/kulinar|hran|jest|gastro|vino|food|cuisine|wine|cucina|gastronom|essen|kuche|wein|restaur|bistrot|bodega|tapas/.test(groupHaystack)) {
     push({
       id: "luggage-room",
       label: PL(lang, {
@@ -681,6 +763,8 @@ export function buildSmartPackingList(
         en: "A little spare luggage room for local treats",
         it: "Un po' di spazio in valigia per le specialità locali",
         de: "Etwas Platz im Gepäck für lokale Schmankerl",
+        fr: "Un peu d'espace dans la valise pour les produits locaux",
+        es: "Un poco de espacio en la maleta para los productos locales",
       }),
       category: "other" as PackingCategory,
     });
@@ -690,13 +774,15 @@ export function buildSmartPackingList(
   if (daysCount > 5) {
     push({
       id: "power-bank",
-      label: PL(lang, { sl: "Power bank", en: "Power bank", it: "Power bank", de: "Powerbank" }),
+      label: PL(lang, { sl: "Power bank", en: "Power bank", it: "Power bank", de: "Powerbank", fr: "Power bank", es: "Power bank" }),
       category: "tech",
       reason: PL(lang, {
         sl: `načrt na ${daysCount} dni`,
         en: `${daysCount}-day plan`,
         it: `piano di ${daysCount} giorni`,
         de: `${daysCount}-Tage-Plan`,
+        fr: `plan de ${daysCount} jours`,
+        es: `plan de ${daysCount} días`,
       }),
     });
     push({
@@ -706,6 +792,8 @@ export function buildSmartPackingList(
         en: "Plan a laundry stop mid-trip",
         it: "Prevedi una lavanderia a metà viaggio",
         de: "Wäschestopp in der Reisemitte einplanen",
+        fr: "Prévois un passage en laverie à mi-voyage",
+        es: "Planifica una lavandería a mitad del viaje",
       }),
       category: "clothing",
       reason: PL(lang, {
@@ -713,6 +801,8 @@ export function buildSmartPackingList(
         en: "pack light, wash once",
         it: "fai bagaglio leggero, lava una volta",
         de: "leicht packen, einmal waschen",
+        fr: "packe léger, lave une fois",
+        es: "equipaje ligero, lava una vez",
       }),
     });
   }
@@ -725,6 +815,8 @@ export function buildSmartPackingList(
       en: "Euros in cash (smaller local spots)",
       it: "Contanti in euro (posti locali più piccoli)",
       de: "Bargeld in Euro (kleinere lokale Betriebe)",
+      fr: "Euros en espèces (les petits commerces locaux)",
+      es: "Euros en efectivo (negocios locales más pequeños)",
     }),
     category: "documents",
   });
@@ -735,6 +827,8 @@ export function buildSmartPackingList(
       en: "EU sockets — no adapter needed",
       it: "PRESESE EU — nessun adattatore necessario",
       de: "EU-STECKDOSEN — kein Adapter nötig",
+      fr: "PRISES EU — aucun adaptateur nécessaire",
+      es: "ENCHUFES EU — no hace falta adaptador",
     }),
     category: "tech",
   });
@@ -745,6 +839,8 @@ export function buildSmartPackingList(
       en: "Foldable bag for souvenirs",
       it: "Borsa pieghevole per i ricordi",
       de: "Faltbare Tasche für Souvenirs",
+      fr: "Sac pliable pour les souvenirs",
+      es: "Bolsa plegable para los recuerdos",
     }),
     category: "other" as PackingCategory,
   });
@@ -755,6 +851,8 @@ export function buildSmartPackingList(
       en: "ID card / passport",
       it: "Documento d'identità / passaporto",
       de: "Ausweis / Reisepass",
+      fr: "Pièce d'identité / passeport",
+      es: "Documento de identidad / pasaporte",
     }),
     category: "documents",
   });

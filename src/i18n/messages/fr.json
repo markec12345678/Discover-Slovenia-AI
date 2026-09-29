@@ -171,7 +171,7 @@
     "title": "Infinies possibilités d'expériences",
     "subtitle": "La Slovénie offre tout, des sommets alpins à la côte adriatique — sur une superficie inférieure à celle du Pays de Galles.",
     "hikingTitle": "Randonnée",
-    "hikingDesc": "Triglav, Mangart, Storžič — od lahnih sprehodov do zahtevnih vzponov.",
+    "hikingDesc": "Triglav, Mangart, Storžič — des balades faciles aux ascensions exigeantes.",
     "waterTitle": "Aventures aquatiques",
     "waterDesc": "Rafting sur l'Isonzo, kayak sur la Kolpa, ski nautique à Portorož.",
     "historyTitle": "Histoire & culture",
@@ -181,11 +181,11 @@
     "foodTitle": "Gastronomie",
     "foodDesc": "De la kremšnita aux štruklji, du Teran à la rebula — 24 régions gastronomiques.",
     "gemsTitle": "Trésors cachés",
-    "gemsDesc": "Vintgarska soteska, soline Sečovlje, Logarska dolina — izven utirjenih poti.",
-    "hikingAlt": "Pohodniška pot pod Triglavom",
-    "waterAlt": "Slapovi Slovenije med snežinskimi skalami",
-    "historyAlt": "Ptujski grad nad starim mestnim jedrom",
-    "natureAlt": "Bohinjsko jezero z gorami v ozadju",
+    "gemsDesc": "Les gorges de Vintgar, les salines de Sečovlje, la vallée de Logar — hors des sentiers battus.",
+    "hikingAlt": "Sentier de randonnée sous le Triglav",
+    "waterAlt": "Les cascades de Slovénie parmi les rochers enneigés",
+    "historyAlt": "Le château de Ptuj dominant la vieille ville",
+    "natureAlt": "Le lac de Bohinj avec les montagnes en arrière-plan",
     "foodAlt": "Plats traditionnels slovènes sur la table",
     "gemsAlt": "La gorge de Vintgar avec sa rivière turquoise"
   },
@@ -496,7 +496,7 @@
     "seasonAutumn": "Automne",
     "seasonWinter": "Hiver",
     "startDateLabel": "Date de départ",
-    "startDateOptional": "(neobvezno)",
+    "startDateOptional": "(facultatif)",
     "startDateHint": "Pour les événements ayant lieu pendant votre séjour.",
     "weatherStripLabel": "Météo autour de vos dates",
     "weatherStripRegion": "Slovénie centrale",
@@ -2099,7 +2099,7 @@
     "adria": {
       "badge": "Transfrontalier",
       "title": "Voyages sur la route adriatique depuis la Slovénie",
-      "description": "Road trip vodniki čez mejo — Hrvaška, Bosna, Črna gora in Albanija z osebnim avtom iz Slovenije: poti, cestnine, mejne formalnosti in kam vsak večer parkirati.",
+      "description": "Guides de road trip au-delà de la frontière — Croatie, Bosnie-Herzégovine, Monténégro et Albanie avec votre propre voiture depuis la Slovénie : itinéraires, péages, formalités de frontière et où se garer chaque soir.",
       "countriesAria": "Voyage à travers : {countries}",
       "readMore": "Lire →"
     }

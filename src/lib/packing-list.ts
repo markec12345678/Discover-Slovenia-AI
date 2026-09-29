@@ -24,7 +24,8 @@ export interface PackingListInput {
   // FW4.3/P4-8 (EN-fallback fix): jezik izpisa — "sl" (privzeto) ali "en".
   // Fallback pot brez AI je prej izpisovala slovensko tudi za EN uporabnike.
   // W1-faza-2b (Issue #15): razširjeno na IT/DE (4-jezične tabele spodaj).
-  lang?: "sl" | "en" | "it" | "de";
+  // W12-faza-2b: razširjeno na FR/ES (6-jezične tabele spodaj).
+  lang?: "sl" | "en" | "it" | "de" | "fr" | "es";
 }
 
 /** Max število elementov na pakirnem seznamu (berljivost). */
@@ -116,6 +117,44 @@ const ALWAYS_ITEMS_DE = [
   "Faltbare Tasche für Souvenirs",
 ];
 
+// --- W12-faza-2b: FR različice (planner 6-jezičen) ---
+const SEASON_ITEMS_FR: Record<string, string[]> = {
+  winter: [
+    "Couches de vêtements chaudes",
+    "Bonnet et gants",
+    "Chaussures adaptées à la neige",
+    "Crème visage anti-froid",
+  ],
+  summer: ["Crème solaire SPF 50", "Maillot de bain", "Chapeau de soleil"],
+  spring: ["Veste légère coupe-vent", "Couches pour temps changeant"],
+  autumn: ["Veste de pluie", "Chaussures de randonnée fermées"],
+};
+
+const ALWAYS_ITEMS_FR = [
+  "Euros en espèces (petits commerces locaux)",
+  "Aucun adaptateur nécessaire (prises EU)",
+  "Sac pliable pour les souvenirs",
+];
+
+// --- W12-faza-2b: ES različice (planner 6-jezičen) ---
+const SEASON_ITEMS_ES: Record<string, string[]> = {
+  winter: [
+    "Capas de ropa abrigada",
+    "Gorro y guantes",
+    "Calzado apto para la nieve",
+    "Crema facial para el frío",
+  ],
+  summer: ["Crema solar SPF 50", "Baño", "Gorro para el sol"],
+  spring: ["Chaqueta ligera cortavientos", "Capas para clima cambiante"],
+  autumn: ["Chaqueta impermeable", "Botas de senderismo cerradas"],
+};
+
+const ALWAYS_ITEMS_ES = [
+  "Euros en efectivo (negocios locales más pequeños)",
+  "No hace falta adaptador (enchufes EU)",
+  "Bolsa plegable para los recuerdos",
+];
+
 /** Kratek, berljiv hevristični seznam — glede komentar zgoraj za pravila. */
 export function buildPackingList(input: PackingListInput): string[] {
   const season = (input?.season ?? "").toString().trim().toLowerCase();
@@ -125,6 +164,7 @@ export function buildPackingList(input: PackingListInput): string[] {
   const groupType = (input?.groupType ?? "").toString().trim().toLowerCase();
   const days = Number.isFinite(input?.days) ? Number(input.days) : 0;
   // W1-faza-2b: izbira tabel po jeziku (IT/DE svoji tabeli; neprepoznan → SL)
+  // W12-faza-2b: FR/ES svoji tabeli (isti vzorec)
   const lang = input?.lang ?? "sl";
   const seasonItems =
     lang === "en"
@@ -133,6 +173,10 @@ export function buildPackingList(input: PackingListInput): string[] {
       ? SEASON_ITEMS_IT
       : lang === "de"
       ? SEASON_ITEMS_DE
+      : lang === "fr"
+      ? SEASON_ITEMS_FR
+      : lang === "es"
+      ? SEASON_ITEMS_ES
       : SEASON_ITEMS;
   const alwaysItems =
     lang === "en"
@@ -141,6 +185,10 @@ export function buildPackingList(input: PackingListInput): string[] {
       ? ALWAYS_ITEMS_IT
       : lang === "de"
       ? ALWAYS_ITEMS_DE
+      : lang === "fr"
+      ? ALWAYS_ITEMS_FR
+      : lang === "es"
+      ? ALWAYS_ITEMS_ES
       : ALWAYS_ITEMS;
 
   const haystack = [...interests, groupType].join(" ");
@@ -155,6 +203,8 @@ export function buildPackingList(input: PackingListInput): string[] {
         en: "Sunscreen (spring/autumn UV too)",
         it: "Crema solare (UV anche in primavera/autunno)",
         de: "Sonnencreme (UV auch im Frühjahr/Herbst)",
+        fr: "Crème solaire (UV aussi au printemps/automne)",
+        es: "Crema solar (también hay UV en primavera/otoño)",
       })
     );
   } else if (season === "summer") {
@@ -164,6 +214,8 @@ export function buildPackingList(input: PackingListInput): string[] {
         en: "Shorts for hot afternoons",
         it: "Pantaloncini per i pomeriggi caldi",
         de: "Shorts für heiße Nachmittage",
+        fr: "Short pour les après-midis chauds",
+        es: "Pantalones cortos para las tardes calurosas",
       })
     );
   } else if (season === "winter") {
@@ -173,6 +225,8 @@ export function buildPackingList(input: PackingListInput): string[] {
         en: "Thermal base layers",
         it: "Intimo termico",
         de: "Thermounterwäsche",
+        fr: "Sous-vêtements thermiques",
+        es: "Ropa térmica",
       })
     );
   }
@@ -186,6 +240,10 @@ export function buildPackingList(input: PackingListInput): string[] {
         ? ["Scarpe da trekking", "Borraccia o zaino con idratazione"]
         : lang === "de"
         ? ["Wanderschuhe", "Trinkflasche oder Trinkrucksack"]
+        : lang === "fr"
+        ? ["Chaussures de randonnée", "Gourde ou sac d'hydratation"]
+        : lang === "es"
+        ? ["Botas de senderismo", "Botella o mochila de hidratación"]
         : ["Pohodniški čevlji", "Camelbak/voda"])
     );
   }
@@ -196,6 +254,8 @@ export function buildPackingList(input: PackingListInput): string[] {
         en: "Quick-dry clothing",
         it: "Vestiti a asciugatura rapida",
         de: "Schnell trocknende Kleidung",
+        fr: "Vêtements à séchage rapide",
+        es: "Ropa de secado rápido",
       })
     );
   }
@@ -206,6 +266,8 @@ export function buildPackingList(input: PackingListInput): string[] {
         en: "A little spare luggage room for local treats",
         it: "Un po' di spazio in valigia per i prodotti locali",
         de: "Etwas Platz im Gepäck für lokale Köstlichkeiten",
+        fr: "Un peu d'espace dans la valise pour les produits locaux",
+        es: "Un poco de espacio en la maleta para los productos locales",
       })
     );
   }
@@ -216,6 +278,8 @@ export function buildPackingList(input: PackingListInput): string[] {
         en: "Kids' kit (car games, wet wipes)",
         it: "Kit per bambini (giochi per l'auto, salviette umide)",
         de: "Kinder-Set (Autospiele, Feuchttücher)",
+        fr: "Kit enfants (jeux pour la voiture, lingettes humides)",
+        es: "Kit para niños (juegos para el coche, toallitas húmedas)",
       })
     );
   }
@@ -229,6 +293,10 @@ export function buildPackingList(input: PackingListInput): string[] {
         ? ["Power bank", "Servizio lavanderia a metà viaggio"]
         : lang === "de"
         ? ["Powerbank", "Wäscheservice unterwegs"]
+        : lang === "fr"
+        ? ["Power bank", "Laverie à mi-voyage"]
+        : lang === "es"
+        ? ["Power bank", "Lavandería a mitad del viaje"]
         : ["Power bank", "Pralni servis med potovanjem"])
     );
   }

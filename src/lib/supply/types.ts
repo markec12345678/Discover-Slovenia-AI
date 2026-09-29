@@ -258,9 +258,10 @@ export interface SupplyQuery {
  * W1-faza-2b (Issue #15): JAVNI vhod iskanja ponudbe — jezik je 4-jezičen
  * (UI locale), searchSupply pa ga normalizira na interni "sl" | "en" sloj
  * (IT/DE dedijo EN — isti kanon kot destinacijske DB sekcije v fazi 2a).
+ * W12-faza-2b: FR/ES po istem dednem kanonu (use-supply-query že 6-jezičen).
  */
 export type SupplyQueryInput = Omit<SupplyQuery, "locale"> & {
-  locale: "sl" | "en" | "it" | "de";
+  locale: "sl" | "en" | "it" | "de" | "fr" | "es";
 };
 
 /** Rezultat enega adapterja (telemetrija/UX stanje plasti). */

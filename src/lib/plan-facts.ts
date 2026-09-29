@@ -14,6 +14,9 @@
 // W1-faza-2b-2 (1.129.0): PlanLang je zdaj 4-jezičen (planner-lang kanon) —
 // geo-validacija (2b-1) sprejema it/de, izpis lista pa sledi PL() pogodbi.
 //
+// W12-faza-2b: PlanLang je 6-jezičen (fr/es) — izpis lista sledi isti PL()
+// pogodbi („Jour X“ / „Día X“ vzorec za dneve; decimalna vejica × 1,3).
+//
 
 import type {
   Itinerary,
@@ -126,6 +129,10 @@ export function buildPlanFacts(
 
   // Geo-validacija = ISTA plast kot prikaz (km, minute, opozorila). Brez
   // indeksa nog → hevristika, pošteno razkrita prek routingMethod.
+  // W12-faza-2b: geo-validation Lang je razširjen na 6 jezikov —
+  // PlannerLang se zdaj prelije BREZ prehodnega kasta (varovalka, ki jo je
+  // dodal Agent 1, je odstranjena; opozorila so za fr/es eksplicitno
+  // lokalizirana).
   const geo: GeoValidation = validateItineraryGeo(itinerary, lang);
 
   // Stroški vožnje (F5.3): gorivo + e-vinjeta — ISTA čista funkcija kot
@@ -207,6 +214,7 @@ export function buildPlanFacts(
  * AI dobe ISTE številke kot deterministični odgovori — nič drugega ne sme
  * izmišljevati (strežniški sistemski prompt to izrecno zahteva).
  * W1-faza-2b-2: 4-jezično (PL pogodba).
+ * W12-faza-2b: 6-jezično (fr/es eksplicitna po isti PL pogodbi).
  */
 export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
   const lines: string[] = [];
@@ -217,6 +225,8 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
       en: `PLAN FACTS (computed — the ONLY source of numbers allowed):`,
       it: `DATI DEL PIANO (calcolati — l'UNICA fonte di numeri ammessa):`,
       de: `PLANFAKTEN (berechnet — die EINZIG erlaubte Zahlenquelle):`,
+      fr: `FAITS DU PLAN (calculés — la SEULE source de chiffres autorisée) :`,
+      es: `DATOS DEL PLAN (calculados — la ÚNICA fuente de números permitida):`,
     })
   );
   lines.push(
@@ -225,6 +235,8 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
       en: `- ${facts.days} day(s), group of ${facts.groupSize}, ${facts.totalStops} stop(s) total`,
       it: `- ${facts.days} giorno/i, gruppo di ${facts.groupSize} persone, ${facts.totalStops} tappe in totale`,
       de: `- ${facts.days} Tag/e, Gruppe von ${facts.groupSize} Personen, insgesamt ${facts.totalStops} Stopps`,
+      fr: `- ${facts.days} jour(s), groupe de ${facts.groupSize} personnes, ${facts.totalStops} étapes au total`,
+      es: `- ${facts.days} día(s), grupo de ${facts.groupSize} personas, ${facts.totalStops} paradas en total`,
     })
   );
 
@@ -235,6 +247,8 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
           en: "real roads (OSRM)",
           it: "strade reali (OSRM)",
           de: "echte Straßen (OSRM)",
+          fr: "routes réelles (OSRM)",
+          es: "carreteras reales (OSRM)",
         })
       : facts.routingMethod === "mixed"
         ? PL(lang, {
@@ -242,12 +256,16 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
             en: "mixed (OSRM + estimate)",
             it: "misto (OSRM + stima)",
             de: "gemischt (OSRM + Schätzung)",
+            fr: "mixte (OSRM + estimation)",
+            es: "mixto (OSRM + estimación)",
           })
         : PL(lang, {
             sl: "ocena (haversine × 1.3)",
             en: "estimate (haversine × 1.3)",
             it: "stima (haversine × 1,3)",
             de: "Schätzung (Haversine × 1,3)",
+            fr: "estimation (haversine × 1,3)",
+            es: "estimación (haversine × 1,3)",
           });
 
   lines.push(
@@ -256,6 +274,8 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
       en: `- total driving: ${facts.tripKm} km, ${facts.drivingMinutes} min (${routing})`,
       it: `- guida totale: ${facts.tripKm} km, ${facts.drivingMinutes} min (${routing})`,
       de: `- Gesamtfahrt: ${facts.tripKm} km, ${facts.drivingMinutes} Min (${routing})`,
+      fr: `- conduite totale : ${facts.tripKm} km, ${facts.drivingMinutes} min (${routing})`,
+      es: `- conducción total: ${facts.tripKm} km, ${facts.drivingMinutes} min (${routing})`,
     })
   );
 
@@ -265,6 +285,8 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
       en: `- attractions cost: €${facts.estimatedCost} (excludes accommodation, food, shopping)`,
       it: `- costi attrazioni: ${facts.estimatedCost} € (ESCLUSI pernottamento, cibo, acquisti)`,
       de: `- Kosten der Sehenswürdigkeiten: ${facts.estimatedCost} € (OHNE Übernachtung, Essen, Einkäufe)`,
+      fr: `- coûts des attractions : ${facts.estimatedCost} € (SANS hébergement, repas, achats)`,
+      es: `- costes de las atracciones: ${facts.estimatedCost} € (SIN alojamiento, comida, compras)`,
     })
   );
 
@@ -275,6 +297,8 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
         en: `- driving costs: fuel €${facts.driveCosts.fuelEur} + vignette €${facts.driveCosts.vignetteEur} = €${facts.driveCosts.totalEur} (AMZS/DARS tariffs)`,
         it: `- costi di guida: carburante ${facts.driveCosts.fuelEur} € + vignetta ${facts.driveCosts.vignetteEur} € = ${facts.driveCosts.totalEur} € (tariffe AMZS/DARS)`,
         de: `- Fahrkosten: Kraftstoff ${facts.driveCosts.fuelEur} € + Vignette ${facts.driveCosts.vignetteEur} € = ${facts.driveCosts.totalEur} € (AMZS/DARS-Tarife)`,
+        fr: `- coûts de conduite : carburant ${facts.driveCosts.fuelEur} € + vignette ${facts.driveCosts.vignetteEur} € = ${facts.driveCosts.totalEur} € (tarifs AMZS/DARS)`,
+        es: `- costes de conducción: combustible ${facts.driveCosts.fuelEur} € + viñeta ${facts.driveCosts.vignetteEur} € = ${facts.driveCosts.totalEur} € (tarifas AMZS/DARS)`,
       })
     );
   } else {
@@ -284,6 +308,8 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
         en: `- driving costs: unknown (no coordinates in plan — do NOT guess)`,
         it: `- costi di guida: sconosciuti (il piano non ha coordinate — NON indovinare)`,
         de: `- Fahrkosten: unbekannt (keine Koordinaten im Plan — NICHT raten)`,
+        fr: `- coûts de conduite : inconnus (le plan n'a pas de coordonnées — NE PAS deviner)`,
+        es: `- costes de conducción: desconocidos (el plan no tiene coordenadas — NO adivines)`,
       })
     );
   }
@@ -295,6 +321,8 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
         en: `- user's budget goal: €${facts.budgetGoal}`,
         it: `- obiettivo di budget dell'utente: ${facts.budgetGoal} €`,
         de: `- Budgetziel des Nutzers: ${facts.budgetGoal} €`,
+        fr: `- objectif de budget de l'utilisateur : ${facts.budgetGoal} €`,
+        es: `- objetivo de presupuesto del usuario: ${facts.budgetGoal} €`,
       })
     );
   }
@@ -306,6 +334,8 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
         en: `- busiest day: day ${facts.busiest.day} (${facts.busiest.loadMinutes} min total load)`,
         it: `- giorno più intenso: giorno ${facts.busiest.day} (${facts.busiest.loadMinutes} min di carico totale)`,
         de: `- vollster Tag: Tag ${facts.busiest.day} (${facts.busiest.loadMinutes} Min Gesamtlast)`,
+        fr: `- jour le plus chargé : jour ${facts.busiest.day} (${facts.busiest.loadMinutes} min de charge totale)`,
+        es: `- día más intenso: día ${facts.busiest.day} (${facts.busiest.loadMinutes} min de carga total)`,
       })
     );
   }
@@ -317,6 +347,8 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
         en: `- feasibility warnings: ${facts.warnings} (${facts.errors} error-level)`,
         it: `- avvisi di fattibilità: ${facts.warnings} (di cui ${facts.errors} di livello ERROR)`,
         de: `- Machbarkeitswarnungen: ${facts.warnings} (davon ${facts.errors} auf ERROR-Niveau)`,
+        fr: `- avertissements de faisabilité : ${facts.warnings} (dont ${facts.errors} de niveau ERROR)`,
+        es: `- avisos de viabilidad: ${facts.warnings} (de los cuales ${facts.errors} de nivel ERROR)`,
       })
     );
   } else {
@@ -326,6 +358,8 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
         en: `- feasibility warnings: none`,
         it: `- avvisi di fattibilità: nessuno`,
         de: `- Machbarkeitswarnungen: keine`,
+        fr: `- avertissements de faisabilité : aucun`,
+        es: `- avisos de viabilidad: ninguno`,
       })
     );
   }
@@ -337,6 +371,8 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
         en: `- closure: ${c.message}`,
         it: `- chiusura: ${c.message}`,
         de: `- Schließung: ${c.message}`,
+        fr: `- fermeture : ${c.message}`,
+        es: `- cierre: ${c.message}`,
       })
     );
   }
@@ -347,6 +383,9 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
       en: `Per day:`,
       it: `Per giorno:`,
       de: `Pro Tag:`,
+      // W12-faza-2b: FR/ES („Jour X“ / „Día X“ vzorec spodaj)
+      fr: `Par jour :`,
+      es: `Por día:`,
     })
   );
   for (const d of facts.perDay) {
@@ -357,6 +396,8 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
         en: `- Day ${d.day}${dateStr}: ${d.stops} stop(s) [${d.names.join(", ")}], ${d.km} km, ${d.drivingMinutes} min driving, ${d.activityMinutes} min activities, €${d.cost}, weather: ${d.weather} ${d.temp}°C${d.warnings > 0 ? `, ${d.warnings} warning(s)` : ""}`,
         it: `- Giorno ${d.day}${dateStr}: ${d.stops} tappe [${d.names.join(", ")}], ${d.km} km, ${d.drivingMinutes} min di guida, ${d.activityMinutes} min di attività, ${d.cost} €, meteo: ${d.weather} ${d.temp} °C${d.warnings > 0 ? `, ${d.warnings} avvisi` : ""}`,
         de: `- Tag ${d.day}${dateStr}: ${d.stops} Stopps [${d.names.join(", ")}], ${d.km} km, ${d.drivingMinutes} Min Fahrt, ${d.activityMinutes} Min Aktivitäten, ${d.cost} €, Wetter: ${d.weather} ${d.temp} °C${d.warnings > 0 ? `, ${d.warnings} Warnungen` : ""}`,
+        fr: `- Jour ${d.day}${dateStr} : ${d.stops} étapes [${d.names.join(", ")}], ${d.km} km, ${d.drivingMinutes} min de conduite, ${d.activityMinutes} min d'activités, ${d.cost} €, météo : ${d.weather} ${d.temp} °C${d.warnings > 0 ? `, ${d.warnings} avertissements` : ""}`,
+        es: `- Día ${d.day}${dateStr}: ${d.stops} paradas [${d.names.join(", ")}], ${d.km} km, ${d.drivingMinutes} min de conducción, ${d.activityMinutes} min de actividades, ${d.cost} €, clima: ${d.weather} ${d.temp} °C${d.warnings > 0 ? `, ${d.warnings} avisos` : ""}`,
       })
     );
   }
@@ -367,6 +408,8 @@ export function renderFactsSheet(facts: PlanFacts, lang: PlanLang): string {
       en: `Weather values above are the estimates baked into the plan at generation time — NOT a live forecast.`,
       it: `I valori del meteo sopra sono stime inserite nel piano alla generazione — NON sono una previsione live.`,
       de: `Die Wetterwerte oben sind Schätzungen aus der Planerstellung — KEINE Live-Vorhersage.`,
+      fr: `Les valeurs météo ci-dessus sont des estimations intégrées au plan à la génération — CE NE SONT PAS des prévisions en direct.`,
+      es: `Los valores de clima de arriba son estimaciones integradas en el plan al generarlo — NO son un pronóstico en vivo.`,
     })
   );
 

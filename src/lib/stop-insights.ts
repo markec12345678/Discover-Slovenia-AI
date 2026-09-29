@@ -1,6 +1,8 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { getItDestination } from "@/lib/slovenia-data-it";
 import { getDeDestination } from "@/lib/slovenia-data-de";
+import { getFrDestination } from "@/lib/slovenia-data-fr";
+import { getEsDestination } from "@/lib/slovenia-data-es";
 import { PL } from "@/lib/planner-lang";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import { legKey, type LegRouteIndex } from "@/lib/road-routing";
@@ -130,19 +132,23 @@ interface ReasonContext {
   season: PlannerInput["season"];
   /** Indeksi deževnih dni (iz sidrnih napovedi ali pogoja dneva). */
   rainyDays: Set<number>;
-  /** Jezik razlage (W1-faza-2b: 4-jezično). */
-  lang: "sl" | "en" | "it" | "de";
+  /** Jezik razlage (W1-faza-2b: 4-jezično; W12-faza-2b: 6-jezično fr/es). */
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es";
   /** F5.6: indeks nog (realne ceste, OSRM) — opcijsko; razdalje v razlagah
    *  so potem realne cestne razdalje. */
   legs?: LegRouteIndex;
 }
 
 // W1-faza-2b: 4-jezične sezonske oznake (PL vzorec)
-const SEASON_LABELS: Record<string, { sl: string; en: string; it: string; de: string }> = {
-  spring: { sl: "pomlad", en: "spring", it: "primavera", de: "Frühjahr" },
-  summer: { sl: "poletje", en: "summer", it: "estate", de: "Sommer" },
-  autumn: { sl: "jesen", en: "autumn", it: "autunno", de: "Herbst" },
-  winter: { sl: "zima", en: "winter", it: "inverno", de: "Winter" },
+// W12-faza-2b: FR/ES (printemps/été/automne/hiver · primavera/verano/otoño/invierno)
+const SEASON_LABELS: Record<
+  string,
+  { sl: string; en: string; it: string; de: string; fr: string; es: string }
+> = {
+  spring: { sl: "pomlad", en: "spring", it: "primavera", de: "Frühjahr", fr: "printemps", es: "primavera" },
+  summer: { sl: "poletje", en: "summer", it: "estate", de: "Sommer", fr: "été", es: "verano" },
+  autumn: { sl: "jesen", en: "autumn", it: "autunno", de: "Herbst", fr: "automne", es: "otoño" },
+  winter: { sl: "zima", en: "winter", it: "inverno", de: "Winter", fr: "hiver", es: "invierno" },
 };
 
 /** Vrednosti interesov so SL (isti nabor kot INTERESTS) — za EN razlago
@@ -171,6 +177,30 @@ export const INTEREST_LABELS_DE: Record<string, string> = {
   romantika: "Romantik",
   družina: "Familie",
   wellness: "Wellness",
+};
+
+/** W12-faza-2b: FR preslikave interesov (isti kanonični enum). */
+export const INTEREST_LABELS_FR: Record<string, string> = {
+  narava: "nature",
+  kultura: "culture",
+  hrana: "gastronomie",
+  avantura: "aventure",
+  adrenalin: "adrénaline",
+  romantika: "romantisme",
+  družina: "famille",
+  wellness: "bien-être",
+};
+
+/** W12-faza-2b: ES preslikave interesov (isti kanonični enum). */
+export const INTEREST_LABELS_ES: Record<string, string> = {
+  narava: "naturaleza",
+  kultura: "cultura",
+  hrana: "gastronomía",
+  avantura: "aventura",
+  adrenalin: "adrenalina",
+  romantika: "romanticismo",
+  družina: "familia",
+  wellness: "bienestar",
 };
 
 export const INTEREST_LABELS_EN: Record<string, string> = {
@@ -222,12 +252,15 @@ export function buildStopReason(
 
   // 1) Ujemani interesi (bestFor ∩ interesi potnika) — najmočnejše dejstvo
   // W1-faza-2b: 4-jezično (interest oznake prek lastnih IT/DE preslikav)
+  // W12-faza-2b: 6-jezično (FR/ES preslikave zgoraj)
   const matched = dest.bestFor.filter((b) => ctx.interests.includes(b));
   if (matched.length > 0) {
     const shown = matched.slice(0, 2).map((m) => {
       if (lang === "en") return INTEREST_LABELS_EN[m] ?? m;
       if (lang === "it") return INTEREST_LABELS_IT[m] ?? m;
       if (lang === "de") return INTEREST_LABELS_DE[m] ?? m;
+      if (lang === "fr") return INTEREST_LABELS_FR[m] ?? m;
+      if (lang === "es") return INTEREST_LABELS_ES[m] ?? m;
       return m;
     });
     parts.push(
@@ -236,6 +269,8 @@ export function buildStopReason(
         en: `matches your interests (${shown.join(", ")})`,
         it: `corrisponde ai tuoi interessi (${shown.join(", ")})`,
         de: `passt zu deinen Interessen (${shown.join(", ")})`,
+        fr: `correspond à tes intérêts (${shown.join(", ")})`,
+        es: `coincide con tus intereses (${shown.join(", ")})`,
       })
     );
   }
@@ -252,12 +287,16 @@ export function buildStopReason(
             en: "family-friendly (location tag)",
             it: "adatto alle famiglie (etichetta della località)",
             de: "familienfreundlich (Ortskennzeichnung)",
+            fr: "adapté aux familles (étiquette du lieu)",
+            es: "apto para familias (etiqueta del lugar)",
           })
         : PL(lang, {
             sl: "primerno za pare (oznaka lokacije)",
             en: "suitable for couples (location tag)",
             it: "adatto alle coppie (etichetta della località)",
             de: "geeignet für Paare (Ortskennzeichnung)",
+            fr: "adapté aux couples (étiquette du lieu)",
+            es: "apto para parejas (etiqueta del lugar)",
           })
     );
   }
@@ -276,6 +315,8 @@ export function buildStopReason(
             en: `only ~${km} km from the previous stop`,
             it: `solo ~${km} km dalla tappa precedente`,
             de: `nur ~${km} km vom vorherigen Stopp`,
+            fr: `seulement ~${km} km de l'étape précédente`,
+            es: `solo ~${km} km de la parada anterior`,
           })
         );
       } else if (km <= 70) {
@@ -285,6 +326,8 @@ export function buildStopReason(
             en: `~${km} km from the previous stop`,
             it: `~${km} km dalla tappa precedente`,
             de: `~${km} km vom vorherigen Stopp`,
+            fr: `~${km} km de l'étape précédente`,
+            es: `~${km} km de la parada anterior`,
           })
         );
       } else {
@@ -295,6 +338,8 @@ export function buildStopReason(
             en: `~${km} km from the previous stop (long drive — consider adjusting this day)`,
             it: `~${km} km dalla tappa precedente (lunga tratta — valuta di adeguare questa giornata)`,
             de: `~${km} km vom vorherigen Stopp (lange Fahrt — erwäge, diesen Tag anzupassen)`,
+            fr: `~${km} km de l'étape précédente (long trajet — envisage d'ajuster cette journée)`,
+            es: `~${km} km de la parada anterior (trayecto largo — considera ajustar este día)`,
           })
         );
       }
@@ -308,6 +353,8 @@ export function buildStopReason(
           en: "close to the other stops of this day",
           it: "vicino alle altre tappe di questa giornata",
           de: "nah an den anderen Stopps dieses Tages",
+          fr: "proche des autres étapes de ce jour",
+          es: "cerca de las otras paradas de este día",
         })
       );
     }
@@ -323,6 +370,8 @@ export function buildStopReason(
         en: "indoor — fine even in bad weather",
         it: "al chiuso — adatto anche con il brutto tempo",
         de: "innen — auch bei schlechtem Wetter geeignet",
+        fr: "en intérieur — adapté même par mauvais temps",
+        es: "en interior — apto incluso con mal tiempo",
       })
     );
   } else if (rainy && suitability === "outdoor") {
@@ -332,6 +381,8 @@ export function buildStopReason(
         en: "outdoor — check the forecast for this day",
         it: "all'aperto — controlla le previsioni per questa giornata",
         de: "im Freien — prüfe die Vorhersage für diesen Tag",
+        fr: "en extérieur — vérifie la météo pour ce jour",
+        es: "al aire libre — consulta el pronóstico para este día",
       })
     );
   }
@@ -343,6 +394,8 @@ export function buildStopReason(
       en: SEASON_LABELS[ctx.season]?.en ?? ctx.season,
       it: SEASON_LABELS[ctx.season]?.it ?? ctx.season,
       de: SEASON_LABELS[ctx.season]?.de ?? ctx.season,
+      fr: SEASON_LABELS[ctx.season]?.fr ?? ctx.season,
+      es: SEASON_LABELS[ctx.season]?.es ?? ctx.season,
     });
     parts.push(
       PL(ctx.lang, {
@@ -350,6 +403,8 @@ export function buildStopReason(
         en: `in season (${lbl})`,
         it: `di stagione (${lbl})`,
         de: `in der Saison (${lbl})`,
+        fr: `de saison (${lbl})`,
+        es: `en temporada (${lbl})`,
       })
     );
   }
@@ -369,7 +424,7 @@ export function buildStopReasons(
     PlannerInput,
     "interests" | "season" | "partyType" | "language"
   >,
-  lang: "sl" | "en" | "it" | "de" = "sl",
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es" = "sl",
   /** F5.6: indeks nog (realne ceste, OSRM) — opcijsko; brez njega hevristika. */
   legs?: LegRouteIndex
 ): Itinerary {
@@ -418,15 +473,19 @@ export function buildStopReasons(
 /**
  * Trajanje destinacije v jeziku prikaza (SL dataset / EN prekrivna plast).
  * W1-faza-2b: IT/DE prekrivni plasti (faza 2a) z EN dedovanjem.
+ * W12-faza-2b: FR/ES prekrivni plasti (W12 faza 1) z EN dedovanjem —
+ * getFrDestination/getEsDestination (slovenia-data-fr/-es, 38/38 overlayjev).
  */
 export function durationLabelFor(
   id: string,
-  lang: "sl" | "en" | "it" | "de"
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es"
 ): string | null {
   const d = destinationById(id);
   if (!d) return null;
   if (lang === "en") return DESTINATIONS_EN[id]?.duration ?? d.duration;
   if (lang === "it") return getItDestination(id)?.duration ?? DESTINATIONS_EN[id]?.duration ?? d.duration;
   if (lang === "de") return getDeDestination(id)?.duration ?? DESTINATIONS_EN[id]?.duration ?? d.duration;
+  if (lang === "fr") return getFrDestination(id)?.duration ?? DESTINATIONS_EN[id]?.duration ?? d.duration;
+  if (lang === "es") return getEsDestination(id)?.duration ?? DESTINATIONS_EN[id]?.duration ?? d.duration;
   return d.duration;
 }

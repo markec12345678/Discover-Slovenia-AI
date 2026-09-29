@@ -136,7 +136,8 @@ export interface PlannerInput {
   // (itinerary-planner) pošlje locale; itinerer se generira v tem jeziku.
   // W1-faza-2b (Issue #15): razširjeno na "it"/"de" — pogon prek PL()
   // helperja (manjkajoč prevod deduje EN, nikoli SL za IT/DE uporabnike).
-  language?: "sl" | "en" | "it" | "de";
+  // W12-faza-2b: razširjeno na "fr"/"es" (planner ploskev /fr+/es/nacrtuj).
+  language?: "sl" | "en" | "it" | "de" | "fr" | "es";
   // NOVO (WEATHER-CONTEXT / t11): tip potne skupine — opcijsko; oblikuje
   // ritem in izbor načrta (družina → krajši prevozi in otrokom prijazne
   // lokacije, par → mirnejši tempo ...). Nazaj kompatibilno.

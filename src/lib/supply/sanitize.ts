@@ -249,7 +249,7 @@ SEMANTIKA IZBIRE (OBVEZNO):
 // ---------------------------------------------------------------------------
 export function buildSelectionRecommendations(
   products: SelectedProviderProduct[],
-  lang: "sl" | "en" | "it" | "de"
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es"
 ): string[] {
   const out: string[] = [];
   for (const p of products) {
@@ -262,7 +262,8 @@ export function buildSelectionRecommendations(
       typeof p.lng === "number";
     if (hasStop) continue;
 
-    const fromWord = PL(lang, { sl: "od ", en: "from ", it: "da ", de: "ab " });
+    // W12-faza-2b: FR/ES („à partir de“/„desde“ kanon)
+    const fromWord = PL(lang, { sl: "od ", en: "from ", it: "da ", de: "ab ", fr: "à partir de ", es: "desde " });
     const price = p.price
       ? p.price.fromPrice
         ? PL(lang, {
@@ -270,6 +271,8 @@ export function buildSelectionRecommendations(
             en: `from €${p.price.amount}`,
             it: `da ${p.price.amount} €`,
             de: `ab ${p.price.amount} €`,
+            fr: `à partir de ${p.price.amount} €`,
+            es: `desde ${p.price.amount} €`,
           })
         : `€${p.price.amount}`
       : "";
@@ -283,6 +286,8 @@ export function buildSelectionRecommendations(
         en: `Also selected on the supply map: ${p.title} — ${p.type.replace(/_/g, " ")} via ${p.source}${suffix}. Include it in your plans when fitting.`,
         it: `Selezionato anche sulla mappa delle offerte: ${p.title} — ${p.type.replace(/_/g, " ")} tramite ${p.source}${suffix}. Includilo nel piano quando è compatibile.`,
         de: `Auch auf der Angebotskarte ausgewählt: ${p.title} — ${p.type.replace(/_/g, " ")} über ${p.source}${suffix}. Berücksichtige es bei der Anpassung des Plans.`,
+        fr: `Également sélectionné sur la carte des offres : ${p.title} — ${p.type.replace(/_/g, " ")} via ${p.source}${suffix}. Prends-le en compte en adaptant le plan.`,
+        es: `También seleccionado en el mapa de ofertas: ${p.title} — ${p.type.replace(/_/g, " ")} vía ${p.source}${suffix}. Tómalo en cuenta al ajustar el plan.`,
       })
     );
   }

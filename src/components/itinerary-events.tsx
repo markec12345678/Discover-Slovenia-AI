@@ -78,8 +78,11 @@ const CATEGORY_ICON: Record<string, LucideIcon> = {
 
 const FALLBACK_BADGE_CLASS = "bg-muted text-foreground";
 
-/** Jezik sekcije (1.29.0, revizija #13) — privzeto SL (/pot stran). */
-export type EventsLang = "sl" | "en" | "it" | "de";
+/** Jezik sekcije (1.29.0, revizija #13) — privzeto SL (/pot stran).
+ *  W1-2b-2: + it/de (EVENTS_IT/DE prekrivni plasti).
+ *  W12-faza-2b: + fr/es (§38 kanon: dogodki dedijo EVENTS_EN podatkovno
+ *  plast — STRATEŠKA ODLOČITEV Taska 30; UI nizi in kategorije so pravi fr/es). */
+export type EventsLang = "sl" | "en" | "it" | "de" | "fr" | "es";
 
 // UI nizi — komponenta je skupna plannerju (next-intl, EN prek locale) in
 // /pot strani (SL-only) → jezik nosi eksplicitni prop, ne globalni intl.
@@ -196,6 +199,73 @@ const STRINGS: Record<
     ticketsNote:
       "Partnerlink (Tiqets) — externe Buchung; Bedingungen und Verfügbarkeit beim Partner prüfen.",
   },
+  // W12-faza-2b: FR/ES UI nizi ( podatkovna plast imen/opisov deduje EVENTS_EN
+  // po §38 — STRATEŠKA ODLOČITEV Taska 30: NI novih EVENTS_FR/ES overlayjev)
+  fr: {
+    defaultTitle: "Ce qui se passe pendant votre visite",
+    duringBadge: "Pendant votre visite",
+    duringBadgeTitle: "Cet événement a lieu pendant votre visite",
+    dateTitle: "Date de l'événement",
+    locationTitle: "Lieu de l'événement",
+    admissionTitle: "Entrée",
+    free: "Gratuit",
+    inYourTrip: "Dans votre voyage",
+    addToMyTrip: "Ajouter à mon voyage",
+    inTrip: "Dans le voyage",
+    website: "Site web",
+    yourTripSubtitle: (range) => `Votre voyage se déroule ${range}`,
+    browseTitle: "Ce qui se passe en dehors de vos dates",
+    browseHint:
+      "Événements dans les mêmes destinations qui ne chevauchent pas votre voyage — pensez à décaler vos dates ou à planifier une autre visite.",
+    browseAriaLabel: "Bandeau d'exploration des événements en dehors de vos dates",
+    ticketsCta: "Rechercher des billets",
+    ticketsPartner: "Tiqets",
+    ticketsNote:
+      "Lien partenaire (Tiqets) — réservation externe ; vérifiez les conditions et la disponibilité auprès du partenaire.",
+  },
+  es: {
+    defaultTitle: "Qué pasa durante tu visita",
+    duringBadge: "Durante tu visita",
+    duringBadgeTitle: "Este evento tiene lugar durante tu visita",
+    dateTitle: "Fecha del evento",
+    locationTitle: "Lugar del evento",
+    admissionTitle: "Entrada",
+    free: "Gratis",
+    inYourTrip: "En tu viaje",
+    addToMyTrip: "Añadir a mi viaje",
+    inTrip: "En el viaje",
+    website: "Sitio web",
+    yourTripSubtitle: (range) => `Tu viaje transcurre ${range}`,
+    browseTitle: "Qué pasa fuera de tus fechas",
+    browseHint:
+      "Eventos en las mismas destinos que no se solapan con tu viaje — plantéate cambiar las fechas o planificar otra visita.",
+    browseAriaLabel: "Banda de exploración de eventos fuera de tus fechas",
+    ticketsCta: "Buscar entradas",
+    ticketsPartner: "Tiqets",
+    ticketsNote:
+      "Enlace de afiliado (Tiqets) — reserva externa; comprueba las condiciones y la disponibilidad con el socio.",
+  },
+};
+
+// W12-faza-2b: FR/ES oznake kategorij dogodkov — LOKALNO v komponenti
+// (ista struktura kot EVENT_CATEGORY_LABELS_EN/IT/DE v lib; lib ostaja nedotaknjen
+// po Agent 1 kanonu — dogodki FR/ES dedijo EVENTS_EN podatke, kategorije so UI nizi).
+const EVENT_CATEGORY_LABELS_FR: Record<string, string> = {
+  festival: "Festival",
+  glasba: "Musique",
+  sport: "Sport",
+  kultura: "Culture",
+  hrana: "Gastronomie & boissons",
+  tradicija: "Tradition",
+};
+
+const EVENT_CATEGORY_LABELS_ES: Record<string, string> = {
+  festival: "Festival",
+  glasba: "Música",
+  sport: "Deporte",
+  kultura: "Cultura",
+  hrana: "Comida y bebida",
+  tradicija: "Tradición",
 };
 
 function categoryLabel(category: string, lang: EventsLang): string {
@@ -206,7 +276,11 @@ function categoryLabel(category: string, lang: EventsLang): string {
         ? EVENT_CATEGORY_LABELS_IT
         : lang === "de"
           ? EVENT_CATEGORY_LABELS_DE
-          : EVENT_CATEGORY_LABELS
+          : lang === "fr"
+            ? EVENT_CATEGORY_LABELS_FR
+            : lang === "es"
+              ? EVENT_CATEGORY_LABELS_ES
+              : EVENT_CATEGORY_LABELS
   ) as Record<string, string>;
   return labels[category] ?? category;
 }

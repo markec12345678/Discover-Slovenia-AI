@@ -55,57 +55,73 @@ interface PlannerTrustLineProps {
 }
 
 const L = {
-  routeVerified: { sl: "Pot preverjena", en: "Route verified", it: "Percorso verificato", de: "Route verifiziert" },
+  routeVerified: { sl: "Pot preverjena", en: "Route verified", it: "Percorso verificato", de: "Route verifiziert", fr: "Itinéraire vérifié", es: "Itinerario verificado" },
   routeWarn: {
     sl: "Pot: {count} opozorila",
     en: "Route: {count} warnings",
     it: "Percorso: {count} avvisi",
     de: "Route: {count} Warnungen",
+    fr: "Itinéraire : {count} avertissements",
+    es: "Itinerario: {count} avisos",
   },
   routeError: {
     sl: "Pot: {count} težav",
     en: "Route: {count} issues",
     it: "Percorso: {count} problemi",
     de: "Route: {count} Probleme",
+    fr: "Itinéraire : {count} problèmes",
+    es: "Itinerario: {count} problemas",
   },
-  distances: { sl: "Razdalje izračunane", en: "Distances calculated", it: "Distanze calcolate", de: "Entfernungen berechnet" },
+  distances: { sl: "Razdalje izračunane", en: "Distances calculated", it: "Distanze calcolate", de: "Entfernungen berechnet", fr: "Distances calculées", es: "Distancias calculadas" },
   distancesHeuristic: {
     sl: "Razdalje ocenjene (približek)",
     en: "Distances estimated (approximate)",
     it: "Distanze stimate (approssimative)",
     de: "Entfernungen geschätzt (ungefähr)",
+    fr: "Distances estimées (approximatives)",
+    es: "Distancias estimadas (aproximadas)",
   },
-  weather: { sl: "Vreme preverjeno", en: "Weather checked", it: "Meteo verificato", de: "Wetter geprüft" },
+  weather: { sl: "Vreme preverjeno", en: "Weather checked", it: "Meteo verificato", de: "Wetter geprüft", fr: "Météo vérifiée", es: "Clima verificado" },
   // K-2: pošteni oznaki nad oceno (NIKOLI ✓)
   weatherEstimated: {
     sl: "Vreme: sezonska ocena",
     en: "Weather: seasonal estimate",
     it: "Meteo: stima stagionale",
     de: "Wetter: Saisonschätzung",
+    fr: "Météo : estimation saisonnière",
+    es: "Clima: estimación estacional",
   },
   weatherPartial: {
     sl: "Vreme: delno preverjeno",
     en: "Weather: partially checked",
     it: "Meteo: parzialmente verificato",
     de: "Wetter: teilweise geprüft",
+    fr: "Météo : partiellement vérifiée",
+    es: "Clima: parcialmente verificado",
   },
   openAtYourTime: {
     sl: "Odprto ob tvojem času",
     en: "Open at your time",
     it: "Aperto nei tuoi orari",
     de: "Zu deiner Zeit geöffnet",
+    fr: "Ouvert à ton heure",
+    es: "Abierto a tu hora",
   },
   closedAtYourTime: {
     sl: "{count} krajev zaprtih ob obisku",
     en: "{count} places closed during your visit",
     it: "{count} luoghi chiusi durante la visita",
     de: "{count} Orte während des Besuchs geschlossen",
+    fr: "{count} lieux fermés pendant votre visite",
+    es: "{count} lugares cerrados durante tu visita",
   },
   detailsAria: {
     sl: "Prikaži podrobnosti izračunov",
     en: "Show calculation details",
     it: "Mostra i dettagli dei calcoli",
     de: "Berechnungsdetails anzeigen",
+    fr: "Afficher les détails des calculs",
+    es: "Mostrar los detalles de los cálculos",
   },
 } as const;
 
@@ -124,8 +140,15 @@ export function PlannerTrustLine({
 }: PlannerTrustLineProps) {
   const locale = useLocale();
   // W1-2b-2: 4-jezično (L slovar zgoraj nosi it/de)
-  const lng: "sl" | "en" | "it" | "de" =
-    locale === "en" || locale === "it" || locale === "de" ? locale : "sl";
+  // W12-faza-2b: 6-jezično — /fr+/es/nacrtuj planner ploskvi
+  const lng: "sl" | "en" | "it" | "de" | "fr" | "es" =
+    locale === "en" ||
+    locale === "it" ||
+    locale === "de" ||
+    locale === "fr" ||
+    locale === "es"
+      ? locale
+      : "sl";
   const fmt = (s: string, count?: number) =>
     count === undefined ? s : s.replace("{count}", String(count));
 
@@ -283,6 +306,8 @@ export function PlannerTrustLine({
         en: "Trip verification summary",
         it: "Riepilogo di verifica del viaggio",
         de: "Verifizierungsübersicht der Reise",
+        fr: "Résumé de vérification du voyage",
+        es: "Resumen de verificación del viaje",
       })}
     >
       {items.map((item) => (

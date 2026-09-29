@@ -50,66 +50,100 @@ import type { LocationVisit } from "@/lib/types";
 
 interface StopInsightsProps {
   visit: LocationVisit;
-  /** Jezik prikaza ("sl" | "en" — vse ostale treated kot "sl"). */
+  /** Jezik prikaza (6 jezikov — W12-faza-2b; neznan → SL). */
   locale: string;
 }
 
-const SEASON_LABELS: Record<string, { sl: string; en: string }> = {
-  spring: { sl: "pomlad", en: "spring" },
-  summer: { sl: "poletje", en: "summer" },
-  autumn: { sl: "jesen", en: "autumn" },
-  winter: { sl: "zima", en: "winter" },
+type UiLang = "sl" | "en" | "it" | "de" | "fr" | "es";
+
+function uiLang(locale: string): UiLang {
+  return locale === "en" || locale === "it" || locale === "de" || locale === "fr" || locale === "es"
+    ? (locale as UiLang)
+    : "sl";
+}
+
+const SEASON_LABELS: Record<string, Record<UiLang, string>> = {
+  spring: { sl: "pomlad", en: "spring", it: "primavera", de: "Frühling", fr: "printemps", es: "primavera" },
+  summer: { sl: "poletje", en: "summer", it: "estate", de: "Sommer", fr: "été", es: "verano" },
+  autumn: { sl: "jesen", en: "autumn", it: "autunno", de: "Herbst", fr: "automne", es: "otoño" },
+  winter: { sl: "zima", en: "winter", it: "inverno", de: "Winter", fr: "hiver", es: "invierno" },
 };
 
-const DATA_AS_OF_LABEL = {
+const DATA_AS_OF_LABEL: Record<UiLang, string> = {
   sl: "13. sep. 2026",
   en: "Sep 13, 2026",
+  it: "13 set 2026",
+  de: "13. Sep. 2026",
+  fr: "13 sept. 2026",
+  es: "13 sept 2026",
 };
 
 const L = {
-  why: { sl: "Zakaj ta postanek:", en: "Why this stop:" },
-  practical: { sl: "Praktični podatki", en: "Practical info" },
-  duration: { sl: "Trajanje", en: "Duration" },
-  price: { sl: "Okvirna cena", en: "Estimate" },
-  season: { sl: "Sezona", en: "Season" },
-  opening: { sl: "Odpiralni čas", en: "Opening hours" },
-  weather: { sl: "Vremenska ustreznost", en: "Weather fit" },
+  why: { sl: "Zakaj ta postanek:", en: "Why this stop:", it: "Perché questa tappa:", de: "Warum dieser Stopp:", fr: "Pourquoi cet arrêt :", es: "Por qué esta parada :" },
+  practical: { sl: "Praktični podatki", en: "Practical info", it: "Informazioni pratiche", de: "Praktische Infos", fr: "Infos pratiques", es: "Información práctica" },
+  duration: { sl: "Trajanje", en: "Duration", it: "Durata", de: "Dauer", fr: "Durée", es: "Duración" },
+  price: { sl: "Okvirna cena", en: "Estimate", it: "Stima", de: "Schätzung", fr: "Estimation", es: "Estimación" },
+  season: { sl: "Sezona", en: "Season", it: "Stagione", de: "Saison", fr: "Saison", es: "Temporada" },
+  opening: { sl: "Odpiralni čas", en: "Opening hours", it: "Orari di apertura", de: "Öffnungszeiten", fr: "Horaires d'ouverture", es: "Horario de apertura" },
+  weather: { sl: "Vremenska ustreznost", en: "Weather fit", it: "Idoneità meteo", de: "Wetter-Eignung", fr: "Adaptation météo", es: "Aptitud climática" },
   weatherIndoor: {
     sl: "notranja aktivnost — primerna tudi ob dežju",
     en: "indoor — fine in bad weather",
+    it: "attività al coperto — adatta anche con la pioggia",
+    de: "Innenaktivität — auch bei Regen geeignet",
+    fr: "activité intérieure — convient aussi par temps de pluie",
+    es: "actividad interior — apta también con lluvia",
   },
   weatherMixed: {
     sl: "mešano — kraj ponuja tudi notranje vsebine",
     en: "mixed — indoor options available too",
+    it: "mista — opzioni al coperto disponibili",
+    de: "gemischt — Innenoptionen ebenfalls verfügbar",
+    fr: "mixte — des options intérieures aussi",
+    es: "mixta — también hay opciones interiores",
   },
   weatherOutdoor: {
     sl: "zunanja aktivnost — odvisna od vremena",
     en: "outdoor — weather-dependent",
+    it: "attività all'aperto — dipende dal meteo",
+    de: "Outdoor-Aktivität — wetterabhängig",
+    fr: "activité extérieure — dépend de la météo",
+    es: "actividad exterior — depende del clima",
   },
-  source: { sl: "Vir", en: "Source" },
-  sourceName: { sl: "Uredniški vodnik destinacij", en: "Editorial destination guide" },
-  updated: { sl: "posodobljeno", en: "updated" },
+  source: { sl: "Vir", en: "Source", it: "Fonte", de: "Quelle", fr: "Source", es: "Fuente" },
+  sourceName: { sl: "Uredniški vodnik destinacij", en: "Editorial destination guide", it: "Guida editoriale alle destinazioni", de: "Redaktioneller Reiseführer", fr: "Guide éditorial des destinations", es: "Guía editorial de destinos" },
+  updated: { sl: "posodobljeno", en: "updated", it: "aggiornato", de: "aktualisiert", fr: "mis à jour", es: "actualizado" },
   // ISSUE #4 §17 (VAL 5 sklop A): enotna vrstica svežine destinationContent
-  freshness: { sl: "Svežina", en: "Freshness" },
-  dataAsOf: { sl: "podatki od", en: "data as of" },
-  perPerson: { sl: "/ osebo", en: "/ person" },
+  freshness: { sl: "Svežina", en: "Freshness", it: "Freschezza", de: "Frische", fr: "Fraîcheur", es: "Frescura" },
+  dataAsOf: { sl: "podatki od", en: "data as of", it: "dati al", de: "Daten vom", fr: "données au", es: "datos al" },
+  perPerson: { sl: "/ osebo", en: "/ person", it: "/ persona", de: "/ Person", fr: "/ personne", es: "/ persona" },
   warning: {
     sl: "Pred obiskom preveri urnike, cene in dostopnost na uradni strani lokacije.",
     en: "Before visiting, check opening hours, prices and availability on the location's official site.",
+    it: "Prima della visita, verifica orari, prezzi e disponibilità sul sito ufficiale della località.",
+    de: "Prüfe vor dem Besuch Öffnungszeiten, Preise und Verfügbarkeit auf der offiziellen Website des Ortes.",
+    fr: "Avant la visite, vérifie les horaires, les prix et la disponibilité sur le site officiel du lieu.",
+    es: "Antes de visitar, comprueba horarios, precios y disponibilidad en el sitio oficial del lugar.",
   },
-  details: { sl: "Podrobnosti o lokaciji", en: "Location details" },
+  details: { sl: "Podrobnosti o lokaciji", en: "Location details", it: "Dettagli del luogo", de: "Details zum Ort", fr: "Détails du lieu", es: "Detalles del lugar" },
   methodNote: {
     sl: "Razdalje v razlagah so približek — izračun iz koordinat (cestni faktor 1,3), ne navigacijski podatek.",
     en: "Distances in the reasons are estimates computed from coordinates (road factor 1.3) — not navigation data.",
+    it: "Le distanze nelle spiegazioni sono stime calcolate dalle coordinate (fattore stradale 1,3) — non dati di navigazione.",
+    de: "Die Entfernungen in den Begründungen sind Schätzungen aus Koordinaten (Straßenfaktor 1,3) — keine Navigationsdaten.",
+    fr: "Les distances dans les explications sont des estimations calculées à partir des coordonnées (facteur route 1,3) — pas des données de navigation.",
+    es: "Las distancias en las explicaciones son estimaciones calculadas desde las coordenadas (factor carretera 1,3) — no son datos de navegación.",
   },
 } as const;
 
 function label(key: keyof typeof L, locale: string): string {
-  return locale === "en" ? L[key].en : L[key].sl;
+  return L[key][uiLang(locale)];
 }
 
 export function StopInsights({ visit, locale }: StopInsightsProps) {
-  const lang = locale === "en" ? "en" : "sl";
+  // W12-faza-2b: 6-jezično (razlogi iz API so ×6 — buildFallbackRationale;
+  // predpona ne sme biti SL uhod na FR/ES/IT/DE straneh, P4-8)
+  const lang = uiLang(locale);
   const dest = destinationById(visit.destination_id);
 
   const duration = dest ? durationLabelFor(dest.id, lang) : null;
@@ -119,7 +153,7 @@ export function StopInsights({ visit, locale }: StopInsightsProps) {
   // F5.5: preverjeni odpiralni časi ( SAMO obstoječi vnos — z virom)
   const opening = dest?.opening;
   const openingNote = opening
-    ? lang === "en"
+    ? lang === "en" || lang === "it" || lang === "de" || lang === "fr" || lang === "es"
       ? opening.noteEn
       : opening.note
     : null;

@@ -157,10 +157,11 @@ export async function POST(request: Request) {
     // W1-faza-2b: niti pri neveljavnem JSON poskusimo izluščiti jezik
     // (regex peek — telo je neveljavno, a jezikovna oznaka je običajno
     // prebrisljiva); sicer SL (nazaj-kompatibilno).
-    const peek = rawBody.match(/"language"\s*:\s*"(en|it|de)"/);
-    const peekLang = peek ? (peek[1] as "en" | "it" | "de") : "sl";
+    // W12-faza-2b: fr/es v peek vzorcu (ista 6-jezična planner ploskev).
+    const peek = rawBody.match(/"language"\s*:\s*"(en|it|de|fr|es)"/);
+    const peekLang = peek ? (peek[1] as "en" | "it" | "de" | "fr" | "es") : "sl";
     return NextResponse.json(
-      { error: PL(peekLang, { sl: "Neveljaven JSON", en: "Invalid JSON", it: "JSON non valido", de: "Ungültiges JSON" }) },
+      { error: PL(peekLang, { sl: "Neveljaven JSON", en: "Invalid JSON", it: "JSON non valido", de: "Ungültiges JSON", fr: "JSON invalide", es: "JSON no válido" }) },
       { status: 400 }
     );
   }
@@ -180,7 +181,7 @@ export async function POST(request: Request) {
     !input?.groupSize
   ) {
     return NextResponse.json(
-      { error: PL(errLang, { sl: "Manjkajo obvezna polja: budget, days, interests, season, groupSize", en: "Missing required fields: budget, days, interests, season, groupSize", it: "Campi obbligatori mancanti: budget, days, interests, season, groupSize", de: "Pflichtfelder fehlen: budget, days, interests, season, groupSize" }) },
+      { error: PL(errLang, { sl: "Manjkajo obvezna polja: budget, days, interests, season, groupSize", en: "Missing required fields: budget, days, interests, season, groupSize", it: "Campi obbligatori mancanti: budget, days, interests, season, groupSize", de: "Pflichtfelder fehlen: budget, days, interests, season, groupSize", fr: "Champs obligatoires manquants : budget, days, interests, season, groupSize", es: "Faltan campos obligatorios: budget, days, interests, season, groupSize" }) },
       { status: 400 }
     );
   }
@@ -195,7 +196,7 @@ export async function POST(request: Request) {
     input.days > 14
   ) {
     return NextResponse.json(
-      { error: PL(errLang, { sl: "Število dni mora biti celo število med 1 in 14", en: "Days must be a whole number between 1 and 14", it: "I giorni devono essere un numero intero tra 1 e 14", de: "Tage müssen eine ganze Zahl zwischen 1 und 14 sein" }) },
+      { error: PL(errLang, { sl: "Število dni mora biti celo število med 1 in 14", en: "Days must be a whole number between 1 and 14", it: "I giorni devono essere un numero intero tra 1 e 14", de: "Tage müssen eine ganze Zahl zwischen 1 und 14 sein", fr: "Le nombre de jours doit être un nombre entier entre 1 et 14", es: "Los días deben ser un número entero entre 1 y 14" }) },
       { status: 400 }
     );
   }
@@ -206,7 +207,7 @@ export async function POST(request: Request) {
   const VALID_SEASONS = ["spring", "summer", "autumn", "winter"] as const;
   if (!VALID_SEASONS.includes(input.season as (typeof VALID_SEASONS)[number])) {
     return NextResponse.json(
-      { error: PL(errLang, { sl: "Sezona je neveljavna (spring, summer, autumn, winter)", en: "Season is invalid (spring, summer, autumn, winter)", it: "Stagione non valida (spring, summer, autumn, winter)", de: "Saison ist ungültig (spring, summer, autumn, winter)" }) },
+      { error: PL(errLang, { sl: "Sezona je neveljavna (spring, summer, autumn, winter)", en: "Season is invalid (spring, summer, autumn, winter)", it: "Stagione non valida (spring, summer, autumn, winter)", de: "Saison ist ungültig (spring, summer, autumn, winter)", fr: "La saison est invalide (spring, summer, autumn, winter)", es: "La temporada no es válida (spring, summer, autumn, winter)" }) },
       { status: 400 }
     );
   }
@@ -217,7 +218,7 @@ export async function POST(request: Request) {
     input.budget > 100_000
   ) {
     return NextResponse.json(
-      { error: PL(errLang, { sl: "Proračun je neveljaven (število 0–100000)", en: "Budget is invalid (number 0–100000)", it: "Budget non valido (numero 0–100000)", de: "Budget ist ungültig (Zahl 0–100000)" }) },
+      { error: PL(errLang, { sl: "Proračun je neveljaven (število 0–100000)", en: "Budget is invalid (number 0–100000)", it: "Budget non valido (numero 0–100000)", de: "Budget ist ungültig (Zahl 0–100000)", fr: "Le budget est invalide (nombre 0–100000)", es: "El presupuesto no es válido (número 0–100000)" }) },
       { status: 400 }
     );
   }
@@ -227,7 +228,7 @@ export async function POST(request: Request) {
     input.groupSize > 20
   ) {
     return NextResponse.json(
-      { error: PL(errLang, { sl: "Velikost skupine je neveljavna (1–20)", en: "Group size is invalid (1–20)", it: "Dimensione del gruppo non valida (1–20)", de: "Gruppengröße ist ungültig (1–20)" }) },
+      { error: PL(errLang, { sl: "Velikost skupine je neveljavna (1–20)", en: "Group size is invalid (1–20)", it: "Dimensione del gruppo non valida (1–20)", de: "Gruppengröße ist ungültig (1–20)", fr: "La taille du groupe est invalide (1–20)", es: "El tamaño del grupo no es válido (1–20)" }) },
       { status: 400 }
     );
   }
@@ -239,7 +240,7 @@ export async function POST(request: Request) {
     !PARTY_TYPES.includes(input.partyType)
   ) {
     return NextResponse.json(
-      { error: PL(errLang, { sl: "Tip potne skupine je neveljaven (couple, family, friends, solo)", en: "Party type is invalid (couple, family, friends, solo)", it: "Tipo di gruppo non valido (couple, family, friends, solo)", de: "Reisetyp ist ungültig (couple, family, friends, solo)" }) },
+      { error: PL(errLang, { sl: "Tip potne skupine je neveljaven (couple, family, friends, solo)", en: "Party type is invalid (couple, family, friends, solo)", it: "Tipo di gruppo non valido (couple, family, friends, solo)", de: "Reisetyp ist ungültig (couple, family, friends, solo)", fr: "Le type de groupe de voyage est invalide (couple, family, friends, solo)", es: "El tipo de grupo de viaje no es válido (couple, family, friends, solo)" }) },
       { status: 400 }
     );
   }
@@ -248,7 +249,7 @@ export async function POST(request: Request) {
   // če JE podan, mora biti iz dovoljenega nabora
   if (input.pace !== undefined && !PACES.includes(input.pace)) {
     return NextResponse.json(
-      { error: PL(errLang, { sl: "Tempo potovanja je neveljaven (slow, balanced, fast)", en: "Travel pace is invalid (slow, balanced, fast)", it: "Ritmo di viaggio non valido (slow, balanced, fast)", de: "Reisetempo ist ungültig (slow, balanced, fast)" }) },
+      { error: PL(errLang, { sl: "Tempo potovanja je neveljaven (slow, balanced, fast)", en: "Travel pace is invalid (slow, balanced, fast)", it: "Ritmo di viaggio non valido (slow, balanced, fast)", de: "Reisetempo ist ungültig (slow, balanced, fast)", fr: "Le rythme de voyage est invalide (slow, balanced, fast)", es: "El ritmo de viaje no es válido (slow, balanced, fast)" }) },
       { status: 400 }
     );
   }
@@ -262,7 +263,7 @@ export async function POST(request: Request) {
     input.engine !== "deterministic"
   ) {
     return NextResponse.json(
-      { error: PL(errLang, { sl: "Motor generiranja je neveljaven (auto, deterministic)", en: "Generation engine is invalid (auto, deterministic)", it: "Motore di generazione non valido (auto, deterministic)", de: "Generierungs-Engine ist ungültig (auto, deterministic)" }) },
+      { error: PL(errLang, { sl: "Motor generiranja je neveljaven (auto, deterministic)", en: "Generation engine is invalid (auto, deterministic)", it: "Motore di generazione non valido (auto, deterministic)", de: "Generierungs-Engine ist ungültig (auto, deterministic)", fr: "Le moteur de génération est invalide (auto, deterministic)", es: "El motor de generación no es válido (auto, deterministic)" }) },
       { status: 400 }
     );
   }
@@ -271,7 +272,7 @@ export async function POST(request: Request) {
   // ne v preteklosti, max ~400 dni naprej). Neveljaven → jasna napaka 400.
   if (input.startDate !== undefined && !isValidStartDate(input.startDate)) {
     return NextResponse.json(
-      { error: PL(errLang, { sl: "Datum odhoda je neveljaven (ISO format, ne v preteklosti, max 400 dni naprej)", en: "Departure date is invalid (ISO format, not in the past, max 400 days ahead)", it: "Data di partenza non valida (formato ISO, non nel passato, max 400 giorni avanti)", de: "Abreisedatum ist ungültig (ISO-Format, nicht in der Vergangenheit, max 400 Tage im Voraus)" }) },
+      { error: PL(errLang, { sl: "Datum odhoda je neveljaven (ISO format, ne v preteklosti, max 400 dni naprej)", en: "Departure date is invalid (ISO format, not in the past, max 400 days ahead)", it: "Data di partenza non valida (formato ISO, non nel passato, max 400 giorni avanti)", de: "Abreisedatum ist ungültig (ISO-Format, nicht in der Vergangenheit, max 400 Tage im Voraus)", fr: "La date de départ est invalide (format ISO, pas dans le passé, max 400 jours à l'avance)", es: "La fecha de salida no es válida (formato ISO, no en el pasado, máx. 400 días por delante)" }) },
       { status: 400 }
     );
   }
@@ -348,6 +349,7 @@ export async function POST(request: Request) {
   // W1-faza-2b (Issue #15): 4-jezični tok (sl/en/it/de) — poti, ki še nimajo
   // IT/DE prevodov, dedijo EN prek PL() helperja (nikoli SL fallback za
   // IT/DE uporabnike — P4-8).
+  // W12-faza-2b: 6-jezični tok (fr/es) — isti PL() kanon.
   // Zdaj pred ranking klicem — partner kontekst (t12 faza 1) nosi jezikovno
   // odvisne praktične podatke (sezona/vreme/parkiranje).
   const lang = (input.language ?? "sl") as PlannerLang;
@@ -586,13 +588,16 @@ async function enrichWithRealWeather(
       };
 
       // Dež alternative — dodaj v tips, če je verjetnost padavin visoka
-      // (P4-8: EN uporabnik dobi EN tip; W1-faza-2b: IT/DE različice)
+      // (P4-8: EN uporabnik dobi EN tip; W1-faza-2b: IT/DE različice;
+      // W12-faza-2b: FR/ES različice — ista kanonska destinacija imena)
       if ((forecast.precipitationProbabilityMax ?? 0) >= 60) {
         const tip = PL(lang, {
           sl: `Dan ${i + 1}: verjeten dež — alternative: Postojnska/Škocjanske jame, muzeji, terme Terme Olimia.`,
           en: `Day ${i + 1}: rain likely — alternatives: Postojna/Škocjan Caves, museums, Terme Olimia thermal spa.`,
           it: `Giorno ${i + 1}: pioggia probabile — alternative: Grotte di Postumia/Škocjan, musei, terme di Terme Olimia.`,
           de: `Tag ${i + 1}: Regen wahrscheinlich — Alternativen: Postojna-/Škocjan-Höhlen, Museen, Therme Terme Olimia.`,
+          fr: `Jour ${i + 1} : pluie probable — alternatives : grottes de Postojna/Škocjan, musées, thermes de Terme Olimia.`,
+          es: `Día ${i + 1}: lluvia probable — alternativas: cuevas de Postojna/Škocjan, museos, Terme Olimia.`,
         });
         if (!tips.includes(tip)) tips.push(tip);
       }

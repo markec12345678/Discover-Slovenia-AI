@@ -7,6 +7,109 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.146.0] — 2026-09-29 (W12 „ODKRITEV V ŠESTIH JEZIKIH", faza 2b — NAČRTOVALNIK /fr/nacrtuj + /es/nacrtuj ODPRTA)
+
+### Dodano
+
+- **`/fr/nacrtuj` + `/es/nacrtuj` STA ŽIVI (odprtje FR/ES whitelist-e za
+  planner).** Proxy 308 meja je padla — najgloblja produktova stran je
+  zdaj dostopna francoskim in španskim uporabnikom v njihovem jeziku
+  (isti mejnik kot W1 faza 2b-2 za /it+/de/nacrtuj, 1.129.0). Sitemap
+  +2 URL (3548); hreflang gruča (7 jezikov) + og:locale fr_FR/es_ES
+  (ogLocaleFor — isti pomočnik kot ostale plasti).
+- **PLAN Q&A 6-JEZIČNO (`plan-qa.ts` + `plan-facts.ts`).** PlannerLang
+  re-export je zdaj 6-jezičen; namenski vzorci razširjeni s FR/ES
+  ključnimi besedami (météo/prévisions/pluie/combien/coût/valise/clima/
+  pronóstico/lluvia/cuesta/maleta …), razreševanje dni (jour 2 / 2e jour /
+  premier-dernier jour / día 3 / primer-último día / samedi-sábado),
+  EXAMPLE_QUESTIONS ×6, renderFactsSheet ×6 („FAITS DU PLAN“ /
+  „DATOS DEL PLAN“), vseh 11 odgovorov ×6 s PL() pogodbo;
+  stripDiacritics + ç/ñ/ã/õ/œ (diakritika-neobčutljivo ujemanje).
+- **PAMETNI PAKIRNI SEZNAM + KLASIČNI SEZNAM 6-JEZIČNO**
+  (`packing-smart.ts`, `packing-list.ts`): predmeti, razlogi („Jour 1“ /
+  „Día 1“ prefixi), typeLabel-i (lac/grotte/massif/desfiladero/château …),
+  metoda opombe, FR/ES družinski/gastro kandidatski regexi;
+  SEASON/ALWAYS_ITEMS tabeli FR/ES.
+- **HITRE AKCIJE + NL UKAZNI PARSER FR/ES** (`refine-actions.ts`,
+  `refine-command-parser.ts`). QUICK_ACTIONS (9 akcij) s FR/ES labelami
+  in navodili („Moins de conduite“ / „Menos conducción“, „Adapté à la
+  pluie“ / „Apto para lluvia“ …); parser: ~159 novih FR/ES vzorcev
+  (akcije, dodaj/odstrani predponi — „ajoute/añade“ z ñ-normalizacijo,
+  nepodprti nameni, dnevi tedna lundi–dimanche/lunes–domingo),
+  normalize() + ç/ñ/ã/õ/œ.
+- **IZVOZI 6-JEZIČNO**: `planner-audio.ts` (intro/km/zaključek ×6 —
+  „Bon voyage !“ / „¡Buen viaje!“; glasovi fr-FR/es-ES že iz voice.ts),
+  `ics-export.ts` (X-WR-CALNAME/SUMMARY/DESCRIPTION ×6 + imena datotek
+  voyage-slovenie-…/viaje-eslovenia-…), `formatEventDate` (polni FR/ES
+  meseci brez pik — „15 juillet 2026“ / „15 julio 2026“),
+  DAY_SEGMENT_LABELS (Matin/Après-midi/Soir · Mañana/Tarde/Noche).
+- **KOMPONENTE PLANNERJA 6-JEZIČNO**: plan-copilot, planner-ai-controls
+  (L slovarji ×6 + posredovanje jezika API-jem), itinerary-events
+  (EventsLang + STRINGS + FR/ES kategorije dogodkov — Festival/Musique/
+  Sport/Culture/Gastronomie & boissons/Tradition · Música/Deporte/Comida
+  y bebida/Tradición), itinerary-weather, planner-trust-line,
+  day-segment-header, itinerary-audio (LISTEN oznake Écouter/Arrêter ·
+  Escuchar/Detener; vsebina pripovedi deduje EN po §38),
+  itinerary-refiner; itinerary-planner lang union ×6.
+- **API RUTE + PODATKOVNA PLAST 6-JEZIČNO**: /api/itinerary (generacija
+  + validacijski nizi), /ask (jezik napak + JSON peek), /refine (lang
+  threading čez vse plasti + intentLabels fr/es + FR/ES seznami
+  podprtih ukazov + tagline iz FR/ES overlayjev), /api/weather;
+  stop-insights (vpogledi + INTEREST_LABELS ×6), geo-validation (12 msg
+  funkcij + dnevi tedna ×6), weather-utils (weatherCodeToTextFr/Es —
+  9 kod ×2), crowd-alternatives, itinerary-quality, supply/* (7
+  datotek — PL klici ×6).
+- **DOGODKI: FR/ES DEDITA EVENTS_EN** (§38 kanon — isti vzorec kot
+  supply plast faze 2a; NI novih EVENTS_FR/ES podatkovnih plasti):
+  francoski/španski načrt dobi angleska imena/opise dogodkov,
+  formatEventDate/dnevi tedna sta FR/ES.
+- **GO MODE PUSH FIX (P4-8)**: `lang` union v itinerary-planner je
+  razširjen na 6 — FR/ES uporabniki gredo na /en/na-poti (ne več SL
+  pot — Go pogled je SL/EN L-vzorec; EN dedovanje po PL konvenciji).
+- **PREVODSKA KVALITETA: 173 PUŠČENIH NIZOV POPEDELJENIH** v
+  messages/fr/es/it/de (fazni-1 generator je pustil identične SL vire —
+  odkrito z novim kvalitetnim varovalnim testom: „0 fallbackov“ je
+  gledal le prazne/EN-identične, ne SL-identične): fr 8 + es 93 +
+  it 10 + de 9 prevodov (homeExp/affiliate razdelki, alt opisi,
+  planner nizi) + 2 ICU normalizaciji; NOV regresijski test
+  `w12-translation-quality.test.ts` (neprevedeni = 0 za vse 4 jezike +
+  ICU placeholderji ≡ SL vir — varovalka proti regresiji).
+
+### Spremenjeno
+
+- **isFrEsRoute: 11 statičnih poti** (+/nacrtuj) — proxy 308, jezikovno
+  stikalo, hreflangForPath in sitemap-urls sledijo SAMODEJNO; formula
+  števca 3546 → 3548.
+- **planner-lang.ts: PlannerLang = 6 jezikov** (PlannerStrings z
+  opcijskima fr/es — EN dedovanje kot prehodna varovalka, NIKOLI SL
+  fallback za tuje uporabnike — P4-8).
+- geo-validation `Lang` je zdaj identičen PlannerLang (prehodna
+  tipska varovalka v plan-facts.ts odstranjena).
+
+### Dokazano
+
+- Suite **4270/4270** zelenih (+22: faza 2b pogodbe — PL() kanon fr/es,
+  EXAMPLE_QUESTIONS, unknown/cost/weather odgovori FR/ES brez SL uhodov,
+  QUICK_ACTIONS ×9 fr/es, parser FR/ES [akcije/dodajanje/dnevi/weekday],
+  DAY_SEGMENT_LABELS, ICS imena datotek, EVENTS_EN dedovanje fr/es,
+  source-contract komponent + API; prevajalska kvaliteta ×6) ;
+  tsc 0 napak; eslint čist.
+
+### Meja (iskrena, P4-8)
+
+- L-vzorčne poti (/trznica, /dozivetja, /lokali, /dogodki, /potovanje,
+  /na-poti, /moja-potovanja), /vodici in /pot ostajajo izven FR/ES
+  whitelist-e (proxy 308 na SL) — njihovi inline SL/EN slovarji so
+  naslednja naloga; 2-jezike planner pod-površine (stop-insights,
+  planner-meal-stop, start-date-weather-strip — `locale === "en"`
+  vzorec) ostajajo SL/EN po istem IT/DE precedensu iz 1.129.0 (FR/ES
+  dedijo EN kjer ima pogon EN plast, sicer SL kanon postaja — iskreno
+  dokumentirano). **W12 (FR/ES) je s tem POMEMBEN del zaključen:
+  odkrivanje + svetovanje + destinacije + zemljevid + NAČRTOVALNIK —
+  celoten jedrni lijak v 6 jezikih.**
+
+---
+
 ## [1.145.0] — 2026-09-29 (W12 „ODKRITEV V ŠESTIH JEZIKIH", faza 2a — destinacijske plasti + zemljevid za FR/ES)
 
 ### Dodano

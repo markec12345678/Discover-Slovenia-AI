@@ -61,9 +61,11 @@ export type RefineCommand =
   | { kind: "unknown" };
 
 export interface ParseRefineContext {
-  /** W1-2b-2: 4-jezično (vzroki so SL+EN+IT+DE vseh slovarjev). */
+  /** W1-2b-2: 4-jezično; W12-faza-2b: 6-jezično (vzroki so SL+EN+IT+DE+FR+ES
+   *  vseh slovarjev). */
   lang?: PlannerLang;
-  /** ISO datum začetka potovanja (za razrešitev "sobota"/"saturday"/"sabato"/"Samstag"). */
+  /** ISO datum začetka potovanja (za razrešitev "sobota"/"saturday"/"sabato"/
+   *  "Samstag"/"samedi"/"sabado"). */
   tripStartDate?: string | null;
   /** Število dni načrta (za njegove meje). */
   daysCount?: number;
@@ -83,18 +85,23 @@ function normalize(s: string): string {
     // W1-2b-2: IT/DE diakritika (à è ì ò ù é ö ä ü ß …) — vzorci so
     // zapisani BREZ narekovajev, torej vhod mora slediti (isti kanon kot
     // plan-qa stripDiacritics)
-    .replace(/[àáâä]/g, "a")
+    .replace(/[àáâäã]/g, "a")
     .replace(/[èéêë]/g, "e")
     .replace(/[ìíîï]/g, "i")
-    .replace(/[òóôö]/g, "o")
+    .replace(/[òóôöõ]/g, "o")
     .replace(/[ùúûü]/g, "u")
     .replace(/ß/g, "ss")
+    // W12-faza-2b: FR/ES diakritika (ç/ñ/ã/õ) + redka ligatura œ —
+    // npr. „añade“→„anade“, „français“→„francais“, „niños“→„ninos“
+    .replace(/ç/g, "c")
+    .replace(/ñ/g, "n")
+    .replace(/œ/g, "oe")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 // ---------------------------------------------------------------------------
-// SLOVARJI SINONIMOV (SL+EN+IT+DE — W1-2b-2) — razširljiva gramatika (Issue #9 §7)
+// SLOVARJI SINONIMOV (SL+EN+IT+DE+FR+ES — W12-faza-2b) — razširljiva gramatika (Issue #9 §7)
 // ---------------------------------------------------------------------------
 
 /** Akcija → vzorci (normalizirani, delne besede so OK). */
@@ -115,6 +122,12 @@ const ACTION_PATTERNS: ReadonlyArray<{
       // DE
       "weniger fahrt", "weniger fahren", "kuzere fahrt", "weniger km",
       "weniger kilometer", "kurzere strecke",
+      // FR (W12-faza-2b)
+      "moins de conduite", "moins de km", "trajets plus courts",
+      "moins de kilometres", "conduire moins",
+      // ES (W12-faza-2b)
+      "menos conduccion", "menos km", "trayectos mas cortos",
+      "menos kilometros", "conducir menos",
     ],
   },
   {
@@ -129,6 +142,12 @@ const ACTION_PATTERNS: ReadonlyArray<{
       // DE
       "regen", "bei regen", "innen", "schlechtes wetter", "regenschauer",
       "innenraum", "regentauglich",
+      // FR (W12-faza-2b)
+      "pluie", "il pleut", "s'il pleut", "interieur", "en cas de pluie",
+      "mauvais temps",
+      // ES (W12-faza-2b)
+      "lluvia", "llueve", "si llueve", "interior", "en caso de lluvia",
+      "mal tiempo",
     ],
   },
   {
@@ -142,6 +161,12 @@ const ACTION_PATTERNS: ReadonlyArray<{
       "meno frenetico", "andatura piu lenta",
       // DE
       "langsamer", "ruhiger", "entspannter", "gemutlicher", "mehr zeit",
+      // FR (W12-faza-2b)
+      "rythme plus calme", "plus calme", "plus detendu", "moins presse",
+      "plus lent",
+      // ES (W12-faza-2b)
+      "ritmo mas tranquilo", "mas tranquilo", "mas relajado",
+      "menos apurado", "mas lento",
     ],
   },
   {
@@ -153,6 +178,10 @@ const ACTION_PATTERNS: ReadonlyArray<{
       "piu natura", "natura", "all'aperto", "natura nel",
       // DE
       "mehr natur", "natur", "im freien", "mehr im grunen",
+      // FR (W12-faza-2b)
+      "plus de nature", "nature", "plein air", "dehors",
+      // ES (W12-faza-2b)
+      "mas naturaleza", "naturaleza", "aire libre", "al aire libre",
     ],
   },
   {
@@ -168,6 +197,12 @@ const ACTION_PATTERNS: ReadonlyArray<{
       // DE
       "mehr essen", "mittagessen", "abendessen", "fruhstuck", "kulinarik",
       "gastronomie", "mehr restaurants", "kuche",
+      // FR (W12-faza-2b)
+      "plus de gastronomie", "dejeuner", "diner", "petit-dejeuner",
+      "restaurants", "plus de food",
+      // ES (W12-faza-2b)
+      "mas gastronomia", "almuerzo", "comida", "cena", "desayuno",
+      "restaurantes", "mas comida",
     ],
   },
   {
@@ -181,6 +216,12 @@ const ACTION_PATTERNS: ReadonlyArray<{
       // DE
       "familie", "familien", "kindern", "mit kindern", "kinderfreundlich",
       "fur kinder",
+      // FR (W12-faza-2b)
+      "famille", "enfants", "pour les enfants", "adapte aux enfants",
+      "avec enfants",
+      // ES (W12-faza-2b)
+      "familia", "ninos", "para los ninos", "apto para ninos",
+      "con ninos",
     ],
   },
   {
@@ -195,6 +236,12 @@ const ACTION_PATTERNS: ReadonlyArray<{
       // DE
       "gunstiger", "gunstig", "sparen", "geld sparen", "billiger",
       "niedrigeres budget", "weniger kosten",
+      // FR (W12-faza-2b)
+      "plus economique", "economique", "moins cher", "economiser",
+      "budget", "pas cher",
+      // ES (W12-faza-2b)
+      "mas economico", "economico", "menos caro", "ahorrar",
+      "presupuesto", "barato",
     ],
   },
   {
@@ -208,6 +255,10 @@ const ACTION_PATTERNS: ReadonlyArray<{
       // DE
       "teurer", "mehr luxus", "luxurios", "hochwertiger", "premium",
       "hohere budget", "gehobene",
+      // FR (W12-faza-2b)
+      "plus cher", "plus haut de gamme", "luxe", "qualite",
+      // ES (W12-faza-2b)
+      "mas caro", "mas exclusivo", "lujo", "calidad",
     ],
   },
   {
@@ -223,11 +274,16 @@ const ACTION_PATTERNS: ReadonlyArray<{
       // DE
       "aktiver", "mehr aktivitat", "aktivitaten", "sport", "adrenalin",
       "bewegung", "mehr action",
+      // FR (W12-faza-2b)
+      "plus actif", "plus d'activites", "activites", "mouvement",
+      // ES (W12-faza-2b)
+      "mas activo", "mas actividades", "actividades", "deporte",
+      "adrenalina", "movimiento",
     ],
   },
 ];
 
-/** Dodajanje/odstranjevanje krajev (pred nazivom destinacije; SL+EN+IT+DE). */
+/** Dodajanje/odstranjevanje krajev (pred nazivom destinacije; SL+EN+IT+DE+FR+ES). */
 const ADD_PREFIXES = [
   "dodaj", "vkljuci", "obiskaj", "zelim", "hocem",
   "add ", "include ", "visit ", "insert ",
@@ -235,6 +291,10 @@ const ADD_PREFIXES = [
   "aggiungi", "includi", "visita ", "vorrei", "voglio",
   // DE
   "fuge", "erganze", "besuche", "ich mochte", "binde",
+  // FR (W12-faza-2b)
+  "ajoute", "inclus", "visite", "je voudrais", "je veux", "mets",
+  // ES (W12-faza-2b; „añade“→„anade“ po normalize)
+  "anade", "incluye", "visita", "quisiera", "quiero", "pon",
 ];
 const REMOVE_PREFIXES = [
   "odstrani", "brisi", "izpusti", "pocisti",
@@ -243,9 +303,14 @@ const REMOVE_PREFIXES = [
   "rimuovi", "elimina", "togli", "senza ", "escludi",
   // DE
   "entferne", "losche", "streiche", "ohne ","lass weg", "weglassen",
+  // FR (W12-faza-2b)
+  "enleve", "retire", "supprime", "sans ", "enlever",
+  // ES (W12-faza-2b)
+  "quita", "elimina", "saca", "sin ", "retira",
 ];
 
-/** Prepoznani, a (še) nepodprti nameni (iskrena odklonitev, ne tiho; SL+EN+IT+DE). */
+/** Prepoznani, a (še) nepodprti nameni (iskrena odklonitev, ne tiho;
+ *  SL+EN+IT+DE+FR+ES — W12-faza-2b). */
 const UNSUPPORTED_INTENTS: ReadonlyArray<{ intent: string; patterns: string[] }> = [
   {
     intent: "move-day",
@@ -254,6 +319,10 @@ const UNSUPPORTED_INTENTS: ReadonlyArray<{ intent: string; patterns: string[] }>
       "move ", "reschedule", "shift to",
       "sposta", "riprogramma", "anticipa", "posticipa",
       "verschiebe", "umplanen", "verschiebung", "verlege",
+      // FR (W12-faza-2b)
+      "deplace", "reporte", "change le jour", "decale",
+      // ES (W12-faza-2b)
+      "mueve", "reprograma", "aplaza", "cambia el dia",
     ],
   },
   {
@@ -263,6 +332,10 @@ const UNSUPPORTED_INTENTS: ReadonlyArray<{ intent: string; patterns: string[] }>
       "swap activity", "swap stop", "exchange ",
       "sostituisci attivita", "cambia attivita", "scambia",
       "tausche aktivitat", "aktivitat tauschen", "ersetze",
+      // FR (W12-faza-2b)
+      "change l'activite", "remplace l'activite", "echange",
+      // ES (W12-faza-2b)
+      "cambia la actividad", "sustituye", "intercambia",
     ],
   },
   {
@@ -275,6 +348,12 @@ const UNSUPPORTED_INTENTS: ReadonlyArray<{ intent: string; patterns: string[] }>
       "meno giorni", "viaggio piu lungo", "viaggio piu corto",
       "mehr tage", "einen tag mehr", "tag hinzufugen", "einen tag weniger",
       "reise langer", "reise kurzer", "weniger tage",
+      // FR (W12-faza-2b)
+      "plus de jours", "un jour de plus", "ajoute un jour", "retire un jour",
+      "moins de jours", "voyage plus long", "voyage plus court",
+      // ES (W12-faza-2b)
+      "mas dias", "un dia mas", "anade un dia", "quita un dia",
+      "menos dias", "viaje mas largo", "viaje mas corto",
     ],
   },
   {
@@ -284,6 +363,10 @@ const UNSUPPORTED_INTENTS: ReadonlyArray<{ intent: string; patterns: string[] }>
       "couple", "solo trip", "friends trip", "with friends", "honeymoon",
       "per la coppia", "da solo", "con gli amici", "romantico", "luna di miele",
       "als paar", "romantik", "alleine", "mit freunden", "flitterwochen",
+      // FR (W12-faza-2b)
+      "en couple", "seul", "entre amis", "romantique", "lune de miel",
+      // ES (W12-faza-2b)
+      "en pareja", "solo", "con amigos", "romantico", "luna de miel",
     ],
   },
   {
@@ -293,18 +376,26 @@ const UNSUPPORTED_INTENTS: ReadonlyArray<{ intent: string; patterns: string[] }>
       "outdoor only", "more outdoor", "zunaj",
       "solo all'aperto", "piu all'aperto",
       "nur draussen", "mehr draussen",
+      // FR (W12-faza-2b)
+      "qu'en exterieur", "plus d'exterieur", "que dehors",
+      // ES (W12-faza-2b)
+      "solo al aire libre", "mas al aire libre",
     ],
   },
 ];
 
-/** Dnevi tedna (SL+EN+IT+DE) — razrešijo se glede na tripStartDate.
- * SL uporablja DEBLJE (sodbene oblike se sklanjajo: sobota/soboto/sobote …). */
+/** Dnevi tedna (SL+EN+IT+DE+FR+ES — W12-faza-2b) — razrešijo se glede na
+ *  tripStartDate. SL uporablja DEBLJE (sodbene oblike se sklanjajo:
+ *  sobota/soboto/sobote …); FR/ES so lastne polje (lundi..dimanche / lunes..domingo). */
 const WEEKDAYS_SL = ["ponedeljk", "torek", "sred", "cetrtk", "petk", "sobot", "nedelj"];
 const WEEKDAYS_EN = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const WEEKDAYS_IT = ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato", "domenica"];
 const WEEKDAYS_DE = ["montag", "dienstag", "mittwoch", "donnerstag", "freitag", "samstag", "sonntag"];
-/** IT/DE vrstni red = ponedeljek-prvi (kot SL/EN polji). */
-const WEEKDAYS_ALL = [WEEKDAYS_SL, WEEKDAYS_EN, WEEKDAYS_IT, WEEKDAYS_DE];
+// W12-faza-2b: FR/ES dnevi tedna („mercredi“/„miercoles“ brez diakritike po normalize)
+const WEEKDAYS_FR = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+const WEEKDAYS_ES = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"];
+/** IT/DE/FR/ES vrstni red = ponedeljek-prvi (kot SL/EN polji). */
+const WEEKDAYS_ALL = [WEEKDAYS_SL, WEEKDAYS_EN, WEEKDAYS_IT, WEEKDAYS_DE, WEEKDAYS_FR, WEEKDAYS_ES];
 
 // ---------------------------------------------------------------------------
 // POMOŽNIKI
@@ -318,12 +409,13 @@ function findFirst(text: string, patterns: string[]): string | null {
   return null;
 }
 
-/** "dan 2" / "day 3" / "2. dan" / "giorno 2" / "2. tag" → 2/3 (1-based, vezan na daysCount). */
+/** "dan 2" / "day 3" / "2. dan" / "giorno 2" / "2. tag" / "jour 2" / "día 2" →
+ *  2/3 (1-based, vezan na daysCount). W12-faza-2b: jour/journee/dia. */
 function parseExplicitDay(text: string, daysCount?: number): number | undefined {
   const m =
-    text.match(/(?:dan|day|dneva|giorno|giornata|tag|jour)\s+(\d{1,2})/) ??
-    text.match(/(\d{1,2})\s*\.\s*(?:dan|day|tag)/) ??
-    text.match(/(\d{1,2})\s*°?\s*(?:giorno|giornata)/);
+    text.match(/(?:dan|day|dneva|giorno|giornata|tag|jour|journee|dia)\s+(\d{1,2})/) ??
+    text.match(/(\d{1,2})\s*\.\s*(?:dan|day|tag|jour|dia)/) ??
+    text.match(/(\d{1,2})\s*°?\s*(?:giorno|giornata|jour|dia)/);
   if (!m) return undefined;
   const n = parseInt(m[1], 10);
   if (!Number.isInteger(n) || n < 1 || n > 31) return undefined;
@@ -331,18 +423,20 @@ function parseExplicitDay(text: string, daysCount?: number): number | undefined 
   return n;
 }
 
-/** "prvi/zadnji dan", "sobota", "saturday", "sabato", "Samstag" → dan glede na tripStartDate. */
+/** "prvi/zadnji dan", "sobota", "saturday", "sabato", "Samstag", "premier/dernier
+ *  jour", "primer/último día", "lundi/domingo" … → dan glede na tripStartDate.
+ *  W12-faza-2b: FR/ES prvi/zadnji-dan fraze + FR/ES dnevi tedna (WEEKDAYS_ALL). */
 function parseNamedDay(
   text: string,
   ctx: ParseRefineContext
 ): number | undefined {
   const days = Math.max(1, ctx.daysCount ?? 1);
   if (
-    /(prvi dan|first day|primo giorno|prima giornata|erster tag|erste tag)/.test(text)
+    /(prvi dan|first day|primo giorno|prima giornata|erster tag|erste tag|premier jour|premiere journee|primer dia|primera jornada)/.test(text)
   )
     return 1;
   if (
-    /(zadnji dan|last day|ultimo giorno|ultima giornata|letzter tag|letzte tag)/.test(text)
+    /(zadnji dan|last day|ultimo giorno|ultima giornata|letzter tag|letzte tag|dernier jour|derniere journee|ultimo dia|ultima jornada)/.test(text)
   )
     return days;
 

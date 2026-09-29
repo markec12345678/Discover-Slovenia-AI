@@ -56,11 +56,49 @@ import {
 import { speechLanguageTag, ttsSupported } from "@/lib/voice";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
 
+// ── Jezik gumba dneva ─────────────────────────────────────────────────
+// W12-faza-2b: UI jezik se razširi na 6 (planner ploskve /fr+/es/nacrtuj),
+// VSEBINA pripovedi (lib buildDayNarrationScript — težka SL slovnica
+// speechTime) ostaja sl|en: FR/ES dedijeta EN plast po §38 kanonu ( isti
+// vzorec kot dogodki/supply). Glas sledi VSEBINI (en-US), ne UI jeziku.
+export type DayAudioLang = NarrationLang | "fr" | "es";
+
+/** FR/ES UI oznake (ista oblika kot NARRATION_LABELS v lib). */
+const NARRATION_LABELS_FR: typeof NARRATION_LABELS.en = {
+  button: "Écouter",
+  buttonAria: (n) => `Écouter le résumé audio du jour ${n}`,
+  stopButton: "Arrêter",
+  stopButtonAria: (n) => `Arrêter le résumé audio du jour ${n}`,
+  loading: "Chargement de l'audio …",
+  error: "Le résumé audio n'est pas disponible pour le moment.",
+};
+
+const NARRATION_LABELS_ES: typeof NARRATION_LABELS.en = {
+  button: "Escuchar",
+  buttonAria: (n) => `Escuchar el resumen de audio del día ${n}`,
+  stopButton: "Detener",
+  stopButtonAria: (n) => `Detener el resumen de audio del día ${n}`,
+  loading: "Cargando audio …",
+  error: "El resumen de audio no está disponible en este momento.",
+};
+
+function narrationLabelsFor(lang: DayAudioLang): typeof NARRATION_LABELS.en {
+  if (lang === "fr") return NARRATION_LABELS_FR;
+  if (lang === "es") return NARRATION_LABELS_ES;
+  return NARRATION_LABELS[lang];
+}
+
+/** Vsebina pripovedi (lib slovnica) — FR/ES dedijeta EN plast (§38). */
+function narrationContentLang(lang: DayAudioLang): NarrationLang {
+  return lang === "fr" || lang === "es" ? "en" : lang;
+}
+
 // ── Tekstovni padec (brskalnik brez govorne sinteze) ──────────────────────
 // (isti dvojezični vzorec kot NARRATION_LABELS v lib plasti)
+// W12-faza-2b: + FR/ES (UI nizi; pripoved sama deduje EN po §38)
 
 const SCRIPT_FALLBACK_LABELS: Record<
-  NarrationLang,
+  DayAudioLang,
   { show: string; hide: string; voiceUnavailable: string }
 > = {
   sl: {
@@ -75,6 +113,18 @@ const SCRIPT_FALLBACK_LABELS: Record<
     voiceUnavailable:
       "Computer voice unavailable — the text is shown below.",
   },
+  fr: {
+    show: "Afficher le texte",
+    hide: "Masquer le texte",
+    voiceUnavailable:
+      "Voix de l'ordinateur indisponible — le texte est affiché ci-dessous.",
+  },
+  es: {
+    show: "Mostrar el texto",
+    hide: "Ocultar el texto",
+    voiceUnavailable:
+      "Voz del ordenador no disponible — el texto se muestra abajo.",
+  },
 };
 
 // ── Gumb ──────────────────────────────────────────────────────────────────
@@ -85,7 +135,8 @@ export interface DayAudioButtonProps {
   dateLabel?: string | null;
   /** Postanki dneva (preslikani iz day.locations — narrationStopsFromDay). */
   stops: ReadonlyArray<NarrationStopInput>;
-  lang: NarrationLang;
+  /** W12-faza-2b: 6-jezični UI (vsebina pripovedi FR/ES dedijo EN — §38). */
+  lang: DayAudioLang;
   /** Površina za analitiko: planner | shared | mytrip (TASK 91). */
   surface: "planner" | "shared" | "mytrip";
   className?: string;
@@ -115,14 +166,17 @@ export function DayAudioButton({
    *  nadaljeval z branjem). */
   const sessionRef = useRef(0);
 
-  const L = NARRATION_LABELS[lang];
+  const L = narrationLabelsFor(lang);
   const F = SCRIPT_FALLBACK_LABELS[lang];
+  // Vsebina pripovedi — FR/ES dedijeta EN plast (§38): isti čist pogon,
+  // glas sledi vsebini (en-US), ne UI jeziku.
+  const contentLang = narrationContentLang(lang);
 
   // Skript zgradi KLIENT iz strukturiranih podatkov dneva — ISTA čista
   // funkcija, ki jo je prej pognal strežnik (0 omrežja, 0 AI).
   const script = buildDayNarrationScript(
     { dayNumber, dateLabel: dateLabel ?? null, stops },
-    lang
+    contentLang
   );
   // Fail-closed: dan brez uporabnih postankov → brez gumba (0 lažnih gumbov).
   const available = script !== null && script !== "";
@@ -167,7 +221,9 @@ export function DayAudioButton({
           return;
         }
         const utterance = new SpeechSynthesisUtterance(chunks[i]);
-        utterance.lang = speechLanguageTag(lang); // sl → sl-SI, en → en-US
+        // Glas sledi VSEBINI pripovedi (sl → sl-SI, en → en-US; FR/ES
+        // vsebina deduje EN → en-US glas — dosleden par besedilo/glas)
+        utterance.lang = speechLanguageTag(contentLang);
         utterance.rate = 1;
         utterance.onend = () => speakNext(i + 1);
         utterance.onerror = () => {
@@ -192,7 +248,7 @@ export function DayAudioButton({
         engine: "browser-speech-synthesis",
       });
     },
-    [lang, dayNumber, surface]
+    [lang, contentLang, dayNumber, surface]
   );
 
   const handleClick = useCallback(() => {

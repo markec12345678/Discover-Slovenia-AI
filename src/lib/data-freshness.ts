@@ -188,8 +188,10 @@ export function classifyFreshness(
  */
 export function freshnessLabel(
   f: DataFreshness,
-  locale: "sl" | "en"
+  locale: "sl" | "en" | "it" | "de" | "fr" | "es"
 ): string {
+  // W12-faza-2b: 6-jezično (stop-insights komponenta pošlje UI jezik;
+  // P4-8: tuji uporabnik nikoli ne dobi slovenske oznake)
   if (locale === "en") {
     switch (f) {
       case "fresh":
@@ -200,6 +202,54 @@ export function freshnessLabel(
         return "live";
       default:
         return "unknown";
+    }
+  }
+  if (locale === "it") {
+    switch (f) {
+      case "fresh":
+        return "fresco";
+      case "stale":
+        return "scaduto";
+      case "live":
+        return "in tempo reale";
+      default:
+        return "sconosciuto";
+    }
+  }
+  if (locale === "de") {
+    switch (f) {
+      case "fresh":
+        return "frisch";
+      case "stale":
+        return "veraltet";
+      case "live":
+        return "live";
+      default:
+        return "unbekannt";
+    }
+  }
+  if (locale === "fr") {
+    switch (f) {
+      case "fresh":
+        return "frais";
+      case "stale":
+        return "périmé";
+      case "live":
+        return "en direct";
+      default:
+        return "inconnu";
+    }
+  }
+  if (locale === "es") {
+    switch (f) {
+      case "fresh":
+        return "fresco";
+      case "stale":
+        return "caducado";
+      case "live":
+        return "en vivo";
+      default:
+        return "desconocido";
     }
   }
   switch (f) {

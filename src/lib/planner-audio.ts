@@ -48,7 +48,8 @@ interface AudioScriptInput {
   dayKm: Record<number, number>;
   /** velikost skupine iz obrazca (samo za uvodno poved) */
   groupSize: number;
-  /** W1-2b-2: 4-jezično (PL pogodba — glasovni povzetek v jeziku UI). */
+  /** W1-2b-2: 4-jezično (PL pogodba — glasovni povzetek v jeziku UI);
+   *  W12-faza-2b: 6-jezično (fr/es — glasova fr-FR/es-ES izbere voice.ts). */
   locale: PlannerLang;
 }
 
@@ -65,11 +66,13 @@ function slOseb(n: number): string {
   return "oseb";
 }
 
-/** Seznami imen: SL "A, B in C" / IT "A, B e C" / ostalo "A, B and C". */
+/** Seznami imen: SL "A, B in C" / IT "A, B e C" / FR "A, B et C" /
+ *  ES "A, B y C" / ostalo "A, B and C". W12-faza-2b: FR/ES veznika. */
 function joinFor(lang: PlannerLang, names: string[]): string {
   if (names.length === 0) return "";
   if (names.length === 1) return names[0];
-  const conj = lang === "sl" ? " in " : lang === "it" ? " e " : " and ";
+  const conj =
+    lang === "sl" ? " in " : lang === "it" ? " e " : lang === "fr" ? " et " : lang === "es" ? " y " : " and ";
   return `${names.slice(0, -1).join(", ")}${conj}${names[names.length - 1]}`;
 }
 
@@ -100,6 +103,9 @@ export function buildItineraryAudioScript(
     en: days.length === 1 ? "day" : "days",
     it: days.length === 1 ? "giorno" : "giorni",
     de: days.length === 1 ? "Tag" : "Tage",
+    // W12-faza-2b: FR/ES
+    fr: days.length === 1 ? "jour" : "jours",
+    es: days.length === 1 ? "día" : "días",
   });
 
   // Seznami imen postankov po dnevih (deduplicirani znotraj dneva, redni vrstni red)
@@ -124,6 +130,8 @@ export function buildItineraryAudioScript(
       en: ` About ${r} kilometers of driving.`,
       it: ` Circa ${r} chilometri di guida.`,
       de: ` Etwa ${r} Kilometer Fahrt.`,
+      fr: ` Environ ${r} kilomètres de conduite.`,
+      es: ` Aproximadamente ${r} kilómetros de conducción.`,
     });
   };
 
@@ -153,6 +161,19 @@ export function buildItineraryAudioScript(
           ? "Du reist allein. "
           : `Ihr seid ${groupSize} Personen auf dieser Reise. `) +
         `Das geschätzte Budget beträgt ${budget} Euro.`,
+      // W12-faza-2b: FR/ES intro
+      fr:
+        `Ton voyage en Slovénie dure ${days.length} ${dayWord}. ` +
+        (groupSize === 1
+          ? "Tu voyages seul. "
+          : `Vous êtes ${groupSize} personnes pour ce voyage. `) +
+        `Le budget estimé est de ${budget} euros.`,
+      es:
+        `Tu viaje por Eslovenia dura ${days.length} ${dayWord}. ` +
+        (groupSize === 1
+          ? "Viajas solo. "
+          : `Son ${groupSize} personas en este viaje. `) +
+        `El presupuesto estimado es de ${budget} euros.`,
     });
 
     const daySentences = days.map((d, i) => {
@@ -166,6 +187,8 @@ export function buildItineraryAudioScript(
               en: `${joinFor(lang, names)} and ${extra} more stop${extra > 1 ? "s" : ""}.`,
               it: `${joinFor(lang, names)} e altre ${extra} ${extra === 1 ? "tappa" : "tappe"}.`,
               de: `${joinFor(lang, names)} und ${extra} weitere Stopps.`,
+              fr: `${joinFor(lang, names)} et ${extra} ${extra === 1 ? "étape" : "étapes"} de plus.`,
+              es: `${joinFor(lang, names)} y ${extra} ${extra === 1 ? "parada" : "paradas"} más.`,
             })
           : `${joinFor(lang, names)}.`;
       const km = includeKm ? withKm(d.day, dayKm[d.day]) : "";
@@ -174,6 +197,8 @@ export function buildItineraryAudioScript(
         en: `Day ${d.day}: ${namesText}${km}`,
         it: `Giorno ${d.day}: ${namesText}${km}`,
         de: `Tag ${d.day}: ${namesText}${km}`,
+        fr: `Jour ${d.day} : ${namesText}${km}`,
+        es: `Día ${d.day}: ${namesText}${km}`,
       });
     });
 
@@ -182,6 +207,8 @@ export function buildItineraryAudioScript(
       en: "Have a great trip!",
       it: "Buon viaggio!",
       de: "Gute Reise!",
+      fr: "Bon voyage !",
+      es: "¡Buen viaje!",
     });
     return `${intro} ${daySentences.join(" ")} ${outro}`;
   }

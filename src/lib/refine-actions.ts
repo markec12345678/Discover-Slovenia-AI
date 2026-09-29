@@ -2,6 +2,9 @@ import { DESTINATIONS } from "@/lib/slovenia-data";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import { getItDestination } from "@/lib/slovenia-data-it";
 import { getDeDestination } from "@/lib/slovenia-data-de";
+// W12-faza-2b: FR/ES prekrivni plasti (faza 1 je zgenerirala obe — 38/38)
+import { getFrDestination } from "@/lib/slovenia-data-fr";
+import { getEsDestination } from "@/lib/slovenia-data-es";
 import { recomputeTotalBudget } from "@/lib/itinerary-quality";
 import { reslotLocations } from "@/lib/schedule-slots";
 import { PL, type PlannerLang } from "@/lib/planner-lang";
@@ -41,106 +44,128 @@ import {
 // aktivno) pokrivajo zahtevane namene iz Issue #9 §7.
 // ============================================================================
 
-/** Kanonične akcije z večjezičnimi navodili (za AI ukaz + za toast; W1-2b-2: 4-jezično). */
+/** Kanonične akcije z večjezičnimi navodili (za AI ukaz + za toast;
+ *  W1-2b-2: 4-jezično; W12-faza-2b: 6-jezično — fr/es po istem vzorcu). */
 export const QUICK_ACTIONS: {
   id: QuickActionId;
-  label: { sl: string; en: string; it?: string; de?: string };
+  label: { sl: string; en: string; it?: string; de?: string; fr?: string; es?: string };
   instruction: {
     sl: (day: number) => string;
     en: (day: number) => string;
     it?: (day: number) => string;
     de?: (day: number) => string;
+    fr?: (day: number) => string;
+    es?: (day: number) => string;
   };
 }[] = [
   {
     id: "less_driving",
-    label: { sl: "Manj vožnje", en: "Less driving", it: "Meno guida", de: "Weniger Fahrt" },
+    label: { sl: "Manj vožnje", en: "Less driving", it: "Meno guida", de: "Weniger Fahrt", fr: "Moins de conduite", es: "Menos conducción" },
     instruction: {
       sl: (d) => `Dan ${d}: manj vožnje — združi geografsko bližje postanke in odstrani najbolj oddaljenega, če je dan preveč razpotegnjen.`,
       en: (d) => `Day ${d}: less driving — group geographically close stops together and drop the most distant one if the day is too stretched.`,
       it: (d) => `Giorno ${d}: meno guida — raggruppa le tappe geograficamente vicine ed elimina la più lontana se la giornata è troppo tirata.`,
       de: (d) => `Tag ${d}: weniger Fahrt — geografisch nahe Stopps bündeln und den entferntesten streichen, wenn der Tag zu gestreckt ist.`,
+      // W12-faza-2b: FR/ES navodila
+      fr: (d) => `Jour ${d} : moins de conduite — regroupe les étapes géographiquement proches et retire la plus éloignée si la journée est trop étirée.`,
+      es: (d) => `Día ${d}: menos conducción — agrupa las paradas geográficamente cercanas y quita la más lejana si el día está demasiado estirado.`,
     },
   },
   {
     id: "rain_suitable",
-    label: { sl: "Primerno za dež", en: "Rain-suitable", it: "Adatto alla pioggia", de: "Regentauglich" },
+    label: { sl: "Primerno za dež", en: "Rain-suitable", it: "Adatto alla pioggia", de: "Regentauglich", fr: "Adapté à la pluie", es: "Apto para lluvia" },
     instruction: {
       sl: (d) => `Dan ${d}: naredi dan primeren za dež — zamenjaj zunanje aktivnosti z notranjimi (jame, muzeji, terme, mestna jedra).`,
       en: (d) => `Day ${d}: make the day rain-suitable — swap outdoor activities for indoor ones (caves, museums, thermal spas, old towns).`,
       it: (d) => `Giorno ${d}: rendi la giornata adatta alla pioggia — sostituisci le attività all'aperto con interne (grotte, musei, terme, centri storici).`,
       de: (d) => `Tag ${d}: regentauglich machen — Outdoor-Aktivitäten durch Indoor tauschen (Höhlen, Museen, Thermen, Altstädte).`,
+      fr: (d) => `Jour ${d} : adapte la journée à la pluie — remplace les activités en extérieur par des activités intérieures (grottes, musées, thermes, centres-villes).`,
+      es: (d) => `Día ${d}: haz el día apto para lluvia — cambia las actividades al aire libre por interiores (cuevas, museos, balnearios, cascos históricos).`,
     },
   },
   {
     id: "slower_pace",
-    label: { sl: "Počasnejši tempo", en: "Slower pace", it: "Ritmo più calmo", de: "Langsameres Tempo" },
+    label: { sl: "Počasnejši tempo", en: "Slower pace", it: "Ritmo più calmo", de: "Langsameres Tempo", fr: "Rythme plus calme", es: "Ritmo más tranquilo" },
     instruction: {
       sl: (d) => `Dan ${d}: počasnejši tempo — manj postankov, več časa na vsakem.`,
       en: (d) => `Day ${d}: slower pace — fewer stops, more time at each.`,
       it: (d) => `Giorno ${d}: ritmo più calmo — meno tappe, più tempo in ognuna.`,
       de: (d) => `Tag ${d}: langsameres Tempo — weniger Stopps, mehr Zeit an jedem.`,
+      fr: (d) => `Jour ${d} : rythme plus calme — moins d'étapes, plus de temps à chacune.`,
+      es: (d) => `Día ${d}: ritmo más tranquilo — menos paradas, más tiempo en cada una.`,
     },
   },
   {
     id: "more_nature",
-    label: { sl: "Več narave", en: "More nature", it: "Più natura", de: "Mehr Natur" },
+    label: { sl: "Več narave", en: "More nature", it: "Più natura", de: "Mehr Natur", fr: "Plus de nature", es: "Más naturaleza" },
     instruction: {
       sl: (d) => `Dan ${d}: več narave — zamenjaj vsaj en postanek z naravno destinacijo (jezero, gora, soteska, reka).`,
       en: (d) => `Day ${d}: more nature — swap at least one stop for a natural destination (lake, mountain, gorge, river).`,
       it: (d) => `Giorno ${d}: più natura — sostituisci almeno una tappa con una destinazione naturale (lago, montagna, gorge, fiume).`,
       de: (d) => `Tag ${d}: mehr Natur — tausche mindestens einen Stopp gegen ein Naturziel (See, Berg, Schlucht, Fluss).`,
+      fr: (d) => `Jour ${d} : plus de nature — remplace au moins une étape par une destination nature (lac, montagne, gorge, rivière).`,
+      es: (d) => `Día ${d}: más naturaleza — cambia al menos una parada por un destino natural (lago, montaña, desfiladero, río).`,
     },
   },
   {
     id: "more_food",
-    label: { sl: "Več hrane", en: "More food", it: "Più cibo", de: "Mehr Essen" },
+    label: { sl: "Več hrane", en: "More food", it: "Più cibo", de: "Mehr Essen", fr: "Plus de gastronomie", es: "Más gastronomía" },
     instruction: {
       sl: (d) => `Dan ${d}: več hrane in lokalne kulinarike — vključi postanek z gastronomskim poudarkom.`,
       en: (d) => `Day ${d}: more food and local cuisine — include a stop with a gastronomic focus.`,
       it: (d) => `Giorno ${d}: più cibo e cucina locale — includi una tappa con focus gastronomico.`,
       de: (d) => `Tag ${d}: mehr Essen und regionale Küche — nimm einen Stopp mit gastronomischem Fokus auf.`,
+      fr: (d) => `Jour ${d} : plus de gastronomie et de cuisine locale — inclus une étape à focus gastronomique.`,
+      es: (d) => `Día ${d}: más gastronomía y cocina local — incluye una parada con foco gastronómico.`,
     },
   },
   {
     id: "family_friendly",
-    label: { sl: "Za družino", en: "For families", it: "Adatto alle famiglie", de: "Familienfreundlich" },
+    label: { sl: "Za družino", en: "For families", it: "Adatto alle famiglie", de: "Familienfreundlich", fr: "Adapté aux enfants", es: "Apto para niños" },
     instruction: {
       sl: (d) => `Dan ${d}: naredi dan prijazen za družino z otroki — otrokom prijazni postanki, krajše vožnje.`,
       en: (d) => `Day ${d}: make the day family-friendly with kids — kid-friendly stops, shorter drives.`,
       it: (d) => `Giorno ${d}: rendi la giornata adatta alle famiglie con bambini — tappe kid-friendly, guidate più brevi.`,
       de: (d) => `Tag ${d}: familienfreundlich machen — kinderfreundliche Stopps, kürzere Fahrten.`,
+      fr: (d) => `Jour ${d} : rends la journée adaptée aux familles avec enfants — étapes adaptées aux enfants, trajets plus courts.`,
+      es: (d) => `Día ${d}: haz el día apto para familias con niños — paradas aptas para niños, trayectos más cortos.`,
     },
   },
   // ISSUE #9 §7 — tri nove DETERMINISTIČNE akcije (prosti jezik iz parserja):
   {
     id: "cheaper",
-    label: { sl: "Ceneje", en: "Cheaper", it: "Più economico", de: "Günstiger" },
+    label: { sl: "Ceneje", en: "Cheaper", it: "Più economico", de: "Günstiger", fr: "Plus économique", es: "Más económico" },
     instruction: {
       sl: (d) => `Dan ${d}: naredi dan cenejši — zamenjaj najdražji postanek z ustreznim cenejšim v istem območju.`,
       en: (d) => `Day ${d}: make the day cheaper — swap the most expensive stop for a suitable cheaper one in the same area.`,
       it: (d) => `Giorno ${d}: rendi la giornata più economica — sostituisci la tappa più costosa con una più economica adatta nella stessa zona.`,
       de: (d) => `Tag ${d}: günstiger machen — tausche den teuersten Stopp gegen einen passenden günstigeren im selben Gebiet.`,
+      fr: (d) => `Jour ${d} : rends la journée moins chère — remplace l'étape la plus chère par une moins chère adaptée dans la même zone.`,
+      es: (d) => `Día ${d}: abarata el día — cambia la parada más cara por otra más barata y adecuada en la misma zona.`,
     },
   },
   {
     id: "pricier",
-    label: { sl: "Dražje", en: "Pricier", it: "Più premium", de: "Premium" },
+    label: { sl: "Dražje", en: "Pricier", it: "Più premium", de: "Premium", fr: "Plus haut de gamme", es: "Más exclusivo" },
     instruction: {
       sl: (d) => `Dan ${d}: naredi dan bolj premium — zamenjaj najcenejši postanek z bogatejšo izkušnjo v istem območju.`,
       en: (d) => `Day ${d}: make the day more premium — swap the cheapest stop for a richer experience in the same area.`,
       it: (d) => `Giorno ${d}: rendi la giornata più premium — sostituisci la tappa più economica con un'esperienza più ricca nella stessa zona.`,
       de: (d) => `Tag ${d}: hochwertiger machen — tausche den günstigsten Stopp gegen ein reicheres Erlebnis im selben Gebiet.`,
+      fr: (d) => `Jour ${d} : rends la journée plus haut de gamme — remplace l'étape la moins chère par une expérience plus riche dans la même zone.`,
+      es: (d) => `Día ${d}: haz el día más exclusivo — cambia la parada más barata por una experiencia más rica en la misma zona.`,
     },
   },
   {
     id: "more_active",
-    label: { sl: "Bolj aktivno", en: "More active", it: "Più attivo", de: "Aktiver" },
+    label: { sl: "Bolj aktivno", en: "More active", it: "Più attivo", de: "Aktiver", fr: "Plus actif", es: "Más activo" },
     instruction: {
       sl: (d) => `Dan ${d}: bolj aktivno — zamenjaj vsaj en postanek z aktivnostjo (pohod, kolesarjenje, adrenalinski park, vodni športi).`,
       en: (d) => `Day ${d}: more active — swap at least one stop for an activity (hiking, cycling, adventure park, water sports).`,
       it: (d) => `Giorno ${d}: più attivo — sostituisci almeno una tappa con un'attività (trekking, cicloturismo, parco avventura, sport acquatici).`,
       de: (d) => `Tag ${d}: aktiver — tausche mindestens einen Stopp gegen eine Aktivität (Wandern, Radfahren, Abenteuerpark, Wassersport).`,
+      fr: (d) => `Jour ${d} : plus actif — remplace au moins une étape par une activité (randonnée, vélo, parc aventure, sports nautiques).`,
+      es: (d) => `Día ${d}: más activo — cambia al menos una parada por una actividad (senderismo, ciclismo, parque de aventuras, deportes acuáticos).`,
     },
   },
 ];
@@ -203,7 +228,8 @@ function replacementCandidates(
 }
 
 /** Zgradi LocationVisit iz destinacije (isti časovni okvir kot izvirnik;
- *  W1-2b-2: tagline v jeziku pogona — IT/DE overlayja iz faze 2a). */
+ *  W1-2b-2: tagline v jeziku pogona — IT/DE overlayja iz faze 2a;
+ *  W12-faza-2b: tudi FR/ES overlayja iz faze 1 W12). */
 function visitFrom(
   dest: (typeof DESTINATIONS)[number],
   original: LocationVisit,
@@ -217,7 +243,11 @@ function visitFrom(
         ? getItDestination(dest.id)?.tagline ?? dest.tagline
         : lang === "de"
           ? getDeDestination(dest.id)?.tagline ?? dest.tagline
-          : dest.tagline;
+          : lang === "fr"
+            ? getFrDestination(dest.id)?.tagline ?? dest.tagline
+            : lang === "es"
+              ? getEsDestination(dest.id)?.tagline ?? dest.tagline
+              : dest.tagline;
   return {
     ...original,
     destination_id: dest.id,
@@ -291,7 +321,7 @@ function unknownStopIn(day: DayPlan): LocationVisit | null {
   return day.locations.find((l) => !destinationById(l.destination_id)) ?? null;
 }
 
-/** Poštena opomba o nezmožnosti varne transformacije (4-jezično). */
+/** Poštena opomba o nezmožnosti varne transformacije (6-jezično, W12-faza-2b). */
 function cannotTransformNote(
   reason: "missing_destination_data" | "no_nearby_alternative",
   day: number,
@@ -303,6 +333,8 @@ function cannotTransformNote(
       en: `Day ${day}: I don't have enough verified data about this day's stops (an unknown destination) to safely make this change — nothing was modified.`,
       it: `Giorno ${day}: non ho abbastanza dati verificati sulle tappe di questo giorno (una destinazione sconosciuta) per fare questa modifica in sicurezza — non ho cambiato nulla.`,
       de: `Tag ${day}: Ich habe nicht genug geprüfte Daten zu den Stopps dieses Tages (unbekanntes Ziel), um diese Änderung sicher durchzuführen — nichts wurde geändert.`,
+      fr: `Jour ${day} : je n'ai pas assez de données vérifiées sur les étapes de ce jour (destination inconnue) pour faire ce changement en sécurité — rien n'a été modifié.`,
+      es: `Día ${day}: no tengo suficientes datos verificados sobre las paradas de este día (un destino desconocido) para hacer este cambio con seguridad — no he cambiado nada.`,
     });
   }
   return PL(lang, {
@@ -310,6 +342,8 @@ function cannotTransformNote(
     en: `Day ${day}: no suitable unused destination is close enough to this day's other stops (within ~${CANDIDATE_MAX_KM} km) — a far-away swap would only add driving, so nothing was changed.`,
     it: `Giorno ${day}: nessuna destinazione adatta non usata è abbastanza vicina alle altre tappe del giorno (entro ~${CANDIDATE_MAX_KM} km) — uno scambio lontano aggiungerebbe solo guida, quindi non ho cambiato nulla.`,
     de: `Tag ${day}: Kein passendes ungenutztes Ziel liegt nahe genug an den anderen Stopps des Tages (innerhalb ~${CANDIDATE_MAX_KM} km) — ein ferner Tausch würde nur Fahrt hinzufügen, deshalb wurde nichts geändert.`,
+    fr: `Jour ${day} : aucune destination adaptée et inutilisée n'est assez proche des autres étapes du jour (fourchette ~${CANDIDATE_MAX_KM} km) — un échange lointain n'ajouterait que de la conduite, donc rien n'a été modifié.`,
+    es: `Día ${day}: ningún destino adecuado sin usar está lo bastante cerca de las otras paradas del día (margen de ~${CANDIDATE_MAX_KM} km) — un cambio lejano solo añadiría conducción, así que no he cambiado nada.`,
   });
 }
 
@@ -393,6 +427,8 @@ export function applyQuickAction(
         en: "This day does not exist.",
         it: "Questo giorno non esiste.",
         de: "Dieser Tag existiert nicht.",
+        fr: "Ce jour n'existe pas.",
+        es: "Este día no existe.",
       }),
     };
   }
@@ -460,6 +496,8 @@ export function applyQuickAction(
           en: `Removed ${removed.destination_name} (the most distant stop) — Day ${day} now has ~${kmAfter} km of driving instead of ~${kmBefore} km.`,
           it: `Rimossa la tappa più lontana ${removed.destination_name} — il giorno ${day} ora ha ~${kmAfter} km di guida invece di ~${kmBefore} km.`,
           de: `Entfernter entferntester Stopp ${removed.destination_name} — Tag ${day} hat jetzt ~${kmAfter} km Fahrt statt ~${kmBefore} km.`,
+          fr: `Étape la plus éloignée retirée : ${removed.destination_name} — le jour ${day} a maintenant ~${kmAfter} km de conduite au lieu de ~${kmBefore} km.`,
+          es: `Se ha quitado la parada más lejana ${removed.destination_name} — el día ${day} ahora tiene ~${kmAfter} km de conducción en vez de ~${kmBefore} km.`,
         });
       } else if (changes.some((c) => c.kind === "day_reordered")) {
         note = PL(lang, {
@@ -467,6 +505,8 @@ export function applyQuickAction(
           en: `Reordered Day ${day} stops into the shortest route (~${kmAfter} km).`,
           it: `Tappe del giorno ${day} riordinate nel percorso più breve (~${kmAfter} km).`,
           de: `Stopps von Tag ${day} in die kürzeste Route umsortiert (~${kmAfter} km).`,
+          fr: `Étapes du jour ${day} réorganisées en itinéraire le plus court (~${kmAfter} km).`,
+          es: `Paradas del día ${day} reordenadas en la ruta más corta (~${kmAfter} km).`,
         });
       } else {
         note = PL(lang, {
@@ -474,6 +514,8 @@ export function applyQuickAction(
           en: `Day ${day} already has little driving (~${kmBefore} km) — nothing to remove.`,
           it: `Il giorno ${day} ha già poca guida (~${kmBefore} km) — nulla da eliminare.`,
           de: `Tag ${day} hat bereits wenig Fahrt (~${kmBefore} km) — nichts zu entfernen.`,
+          fr: `Le jour ${day} a déjà peu de conduite (~${kmBefore} km) — rien à retirer.`,
+          es: `El día ${day} ya tiene poca conducción (~${kmBefore} km) — nada que quitar.`,
         });
       }
       break;
@@ -511,6 +553,8 @@ export function applyQuickAction(
           en: `Day ${day} already has indoor-suitable stops.`,
           it: `Le tappe del giorno ${day} sono già adatte al maltempo.`,
           de: `Die Stopps von Tag ${day} sind bereits für Schlechtwetter geeignet.`,
+          fr: `Les étapes du jour ${day} sont déjà adaptées au mauvais temps.`,
+          es: `Las paradas del día ${day} ya son aptas para el mal tiempo.`,
         });
         break;
       }
@@ -572,6 +616,13 @@ export function applyQuickAction(
         de: swapCount === 1
           ? `1 Outdoor-Stopp von Tag ${day} gegen eine Indoor-Wahl nahe der Route getauscht (Höhlen, Altstädte, Thermen).`
           : `${swapCount} Outdoor-Stopps von Tag ${day} gegen Indoor-Wahlen nahe der Route getauscht (Höhlen, Altstädte, Thermen).`,
+        // W12-faza-2b: FR/ES (enostno/dvojino v FR, splošno v ES)
+        fr: swapCount === 1
+          ? `Remplacée 1 étape en extérieur du jour ${day} par un choix intérieur près de l'itinéraire (grottes, centres-villes, thermes).`
+          : `Remplacées ${swapCount} étapes en extérieur du jour ${day} par des choix intérieurs près de l'itinéraire (grottes, centres-villes, thermes).`,
+        es: swapCount === 1
+          ? `Cambiada 1 parada al aire libre del día ${day} por una elección interior cerca de la ruta (cuevas, cascos históricos, balnearios).`
+          : `Cambiadas ${swapCount} paradas al aire libre del día ${day} por elecciones interiores cerca de la ruta (cuevas, cascos históricos, balnearios).`,
       });
       break;
     }
@@ -613,6 +664,8 @@ export function applyQuickAction(
           en: `Day ${day} now has a single stop (${best.destination_name}) with a full day at a calmer pace.`,
           it: `Il giorno ${day} ora ha una sola tappa (${best.destination_name}) — l'intera giornata a un ritmo più calmo.`,
           de: `Tag ${day} hat jetzt nur einen Stopp (${best.destination_name}) — der ganze Tag in ruhigerem Tempo.`,
+          fr: `Le jour ${day} n'a plus qu'une seule étape (${best.destination_name}) — la journée entière à un rythme plus calme.`,
+          es: `El día ${day} ahora tiene una sola parada (${best.destination_name}) — el día entero a un ritmo más tranquilo.`,
         });
       } else {
         const loc = target.locations[0];
@@ -627,6 +680,8 @@ export function applyQuickAction(
           en: `Day ${day} already has a single stop — the time slot was widened to the whole day.`,
           it: `Il giorno ${day} ha già una sola tappa — la fascia oraria è stata estesa all'intera giornata.`,
           de: `Tag ${day} hat bereits einen einzelnen Stopp — das Zeitfenster wurde auf den ganzen Tag erweitert.`,
+          fr: `Le jour ${day} a déjà une seule étape — le créneau horaire a été élargi à la journée entière.`,
+          es: `El día ${day} ya tiene una sola parada — el horario se ha ampliado a todo el día.`,
         });
       }
       break;
@@ -690,6 +745,8 @@ export function applyQuickAction(
           en: `Day ${day} already matches this focus.`,
           it: `Il giorno ${day} risponde già a questo focus.`,
           de: `Tag ${day} entspricht diesem Schwerpunkt bereits.`,
+          fr: `Le jour ${day} correspond déjà à ce focus.`,
+          es: `El día ${day} ya responde a este enfoque.`,
         });
         break;
       }
@@ -722,6 +779,8 @@ export function applyQuickAction(
                 en: `No unused suitable destination is left for this swap.`,
                 it: `Non resta nessuna destinazione adatta non usata per questo scambio.`,
                 de: `Es ist kein passendes ungenutztes Ziel für diesen Tausch übrig.`,
+                fr: `Il ne reste aucune destination adaptée et inutilisée pour cet échange.`,
+                es: `No queda ningún destino adecuado sin usar para este cambio.`,
               });
         break;
       }
@@ -748,6 +807,8 @@ export function applyQuickAction(
               en: `Swapped ${swapTarget.destination_name} for ${cand.name} (a natural destination) on Day ${day}.`,
               it: `Sostituita la tappa ${swapTarget.destination_name} con ${cand.name} (una destinazione naturale) nel giorno ${day}.`,
               de: `Stopp ${swapTarget.destination_name} gegen ${cand.name} (ein Naturziel) an Tag ${day} getauscht.`,
+              fr: `Étape ${swapTarget.destination_name} remplacée par ${cand.name} (une destination nature) au jour ${day}.`,
+              es: `Parada ${swapTarget.destination_name} cambiada por ${cand.name} (un destino natural) en el día ${day}.`,
             })
           : action === "more_food"
           ? PL(lang, {
@@ -755,12 +816,16 @@ export function applyQuickAction(
               en: `Swapped ${swapTarget.destination_name} for ${cand.name} (a food-focused stop) on Day ${day}.`,
               it: `Sostituita la tappa ${swapTarget.destination_name} con ${cand.name} (una tappa gastronomica) nel giorno ${day}.`,
               de: `Stopp ${swapTarget.destination_name} gegen ${cand.name} (ein Gastronomie-Stopp) an Tag ${day} getauscht.`,
+              fr: `Étape ${swapTarget.destination_name} remplacée par ${cand.name} (une étape gastronomique) au jour ${day}.`,
+              es: `Parada ${swapTarget.destination_name} cambiada por ${cand.name} (una parada gastronómica) en el día ${day}.`,
             })
           : PL(lang, {
               sl: `Zamenjan postanek ${swapTarget.destination_name} za ${cand.name} (prijazen za družine) v dnevu ${day}.`,
               en: `Swapped ${swapTarget.destination_name} for ${cand.name} (family-friendly) on Day ${day}.`,
               it: `Sostituita la tappa ${swapTarget.destination_name} con ${cand.name} (adatta alle famiglie) nel giorno ${day}.`,
               de: `Stopp ${swapTarget.destination_name} gegen ${cand.name} (familienfreundlich) an Tag ${day} getauscht.`,
+              fr: `Étape ${swapTarget.destination_name} remplacée par ${cand.name} (adaptée aux familles) au jour ${day}.`,
+              es: `Parada ${swapTarget.destination_name} cambiada por ${cand.name} (apta para familias) en el día ${day}.`,
             });
       break;
     }
@@ -813,6 +878,8 @@ export function applyQuickAction(
           en: `Day ${day} has no stop with a known price for this adjustment.`,
           it: `Il giorno ${day} non ha una tappa con prezzo noto per questa modifica.`,
           de: `Tag ${day} hat keinen Stopp mit bekanntem Preis für diese Anpassung.`,
+          fr: `Le jour ${day} n'a aucune étape avec un prix connu pour cet ajustement.`,
+          es: `El día ${day} no tiene ninguna parada con precio conocido para este ajuste.`,
         });
         break;
       }
@@ -844,6 +911,8 @@ export function applyQuickAction(
                 en: `No unused suitable destination is left for this swap.`,
                 it: `Non resta nessuna destinazione adatta non usata per questo scambio.`,
                 de: `Es ist kein passendes ungenutztes Ziel für diesen Tausch übrig.`,
+                fr: `Il ne reste aucune destination adaptée et inutilisée pour cet échange.`,
+                es: `No queda ningún destino adecuado sin usar para este cambio.`,
               });
         break;
       }
@@ -870,12 +939,16 @@ export function applyQuickAction(
             en: `Swapped ${swapTarget.destination_name} (€${swapCost}) for ${cand.name} (€${cand.costPerPerson}) on Day ${day} — saves €${diff} per person.`,
             it: `Sostituita la tappa ${swapTarget.destination_name} (€${swapCost}) con ${cand.name} (€${cand.costPerPerson}) nel giorno ${day} — risparmio di €${diff} a persona.`,
             de: `Stopp ${swapTarget.destination_name} (€${swapCost}) gegen ${cand.name} (€${cand.costPerPerson}) an Tag ${day} getauscht — spart €${diff} pro Person.`,
+            fr: `Étape ${swapTarget.destination_name} (€${swapCost}) remplacée par ${cand.name} (€${cand.costPerPerson}) au jour ${day} — économie de €${diff} par personne.`,
+            es: `Parada ${swapTarget.destination_name} (€${swapCost}) cambiada por ${cand.name} (€${cand.costPerPerson}) en el día ${day} — ahorro de €${diff} por persona.`,
           })
         : PL(lang, {
             sl: `Zamenjan postanek ${swapTarget.destination_name} (€${swapCost}) za ${cand.name} (€${cand.costPerPerson}) v dnevu ${day} — bogatejša izkušnja.`,
             en: `Swapped ${swapTarget.destination_name} (€${swapCost}) for ${cand.name} (€${cand.costPerPerson}) on Day ${day} — a richer experience.`,
             it: `Sostituita la tappa ${swapTarget.destination_name} (€${swapCost}) con ${cand.name} (€${cand.costPerPerson}) nel giorno ${day} — un'esperienza più ricca.`,
             de: `Stopp ${swapTarget.destination_name} (€${swapCost}) gegen ${cand.name} (€${cand.costPerPerson}) an Tag ${day} getauscht — ein reicheres Erlebnis.`,
+            fr: `Étape ${swapTarget.destination_name} (€${swapCost}) remplacée par ${cand.name} (€${cand.costPerPerson}) au jour ${day} — une expérience plus riche.`,
+            es: `Parada ${swapTarget.destination_name} (€${swapCost}) cambiada por ${cand.name} (€${cand.costPerPerson}) en el día ${day} — una experiencia más rica.`,
           });
       break;
     }
@@ -921,6 +994,8 @@ export function applyQuickAction(
           en: `Day ${day} already has an activity-focused stop.`,
           it: `Il giorno ${day} contiene già una tappa con attività.`,
           de: `Tag ${day} enthält bereits einen Stopp mit Aktivitäten.`,
+          fr: `Le jour ${day} contient déjà une étape axée activités.`,
+          es: `El día ${day} ya contiene una parada con actividades.`,
         });
         break;
       }
@@ -951,6 +1026,8 @@ export function applyQuickAction(
                 en: `No unused suitable destination is left for this swap.`,
                 it: `Non resta nessuna destinazione adatta non usata per questo scambio.`,
                 de: `Es ist kein passendes ungenutztes Ziel für diesen Tausch übrig.`,
+                fr: `Il ne reste aucune destination adaptée et inutilisée pour cet échange.`,
+                es: `No queda ningún destino adecuado sin usar para este cambio.`,
               });
         break;
       }
@@ -975,6 +1052,8 @@ export function applyQuickAction(
         en: `Swapped ${swapTarget.destination_name} for ${cand.name} (an active destination) on Day ${day}.`,
         it: `Sostituita la tappa ${swapTarget.destination_name} con ${cand.name} (una destinazione attiva) nel giorno ${day}.`,
         de: `Stopp ${swapTarget.destination_name} gegen ${cand.name} (ein aktives Ziel) an Tag ${day} getauscht.`,
+        fr: `Étape ${swapTarget.destination_name} remplacée par ${cand.name} (une destination active) au jour ${day}.`,
+        es: `Parada ${swapTarget.destination_name} cambiada por ${cand.name} (un destino activo) en el día ${day}.`,
       });
       break;
     }

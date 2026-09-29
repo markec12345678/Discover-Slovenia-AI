@@ -41,9 +41,16 @@ import {
   markResultEngaged,
 } from "@/lib/planner-analytics";
 
-/** W1-2b-2: jezik UI — 4-smerno iz locale (neznano → SL). */
+/** W1-2b-2: jezik UI — 4-smerno iz locale (neznano → SL).
+ *  W12-faza-2b: 6-smerno — /fr+/es/nacrtuj sta javni planner ploskvi. */
 const langOf = (locale: string): PlannerLang =>
-  locale === "en" || locale === "it" || locale === "de" ? locale : "sl";
+  locale === "en" ||
+  locale === "it" ||
+  locale === "de" ||
+  locale === "fr" ||
+  locale === "es"
+    ? locale
+    : "sl";
 
 interface ItineraryRefinerProps {
   itinerary: Itinerary;
@@ -68,98 +75,125 @@ interface HistoryEntry {
 }
 
 // FAZA 4-2 — večjezične oznake (prej komponenta trdo kodirana SL, EN
-// uporabniki so videli slovenščino; W1-2b-2: tudi IT/DE)
+// uporabniki so videli slovenščino; W1-2b-2: tudi IT/DE;
+// W12-faza-2b: tudi FR/ES)
 const L = {
-  title: { sl: "Prilagodi itinerer", en: "Adjust the itinerary", it: "Adatta l'itinerario", de: "Reiseplan anpassen" },
+  title: { sl: "Prilagodi itinerer", en: "Adjust the itinerary", it: "Adatta l'itinerario", de: "Reiseplan anpassen", fr: "Ajuster l'itinéraire", es: "Ajustar el itinerario" },
   subtitle: {
     sl: "Opiši spremembo ali uporabi hitro akcijo za posamezen dan",
     en: "Describe a change or use a quick action for a specific day",
     it: "Descrivi una modifica o usa un'azione rapida per un giorno specifico",
     de: "Beschreibe eine Änderung oder nutze eine Schnellaktion für einen bestimmten Tag",
+    fr: "Décris un changement ou utilise une action rapide pour un jour précis",
+    es: "Describe un cambio o usa una acción rápida para un día concreto",
   },
-  history: { sl: "Zgodovina sprememb", en: "Change history", it: "Cronologia delle modifiche", de: "Änderungshistorie" },
+  history: { sl: "Zgodovina sprememb", en: "Change history", it: "Cronologia delle modifiche", de: "Änderungshistorie", fr: "Historique des modifications", es: "Historial de cambios" },
   inputLabel: {
     sl: "Ukaz za prilagoditev itinererja",
     en: "Instruction for adjusting the itinerary",
     it: "Istruzione per adattare l'itinerario",
     de: "Anweisung zum Anpassen des Reiseplans",
+    fr: "Instruction pour ajuster l'itinéraire",
+    es: "Instrucción para ajustar el itinerario",
   },
   inputPlaceholder: {
     sl: "npr. Dodaj več pohodov v naravo",
     en: "e.g. Add more hikes in nature",
     it: "es. Aggiungi più escursioni nella natura",
     de: "z. B. Mehr Wanderungen in der Natur",
+    fr: "ex. Ajoute plus de randonnées en nature",
+    es: "ej. Añade más senderismo en la naturaleza",
   },
-  send: { sl: "Pošlji ukaz", en: "Send instruction", it: "Invia istruzione", de: "Anweisung senden" },
+  send: { sl: "Pošlji ukaz", en: "Send instruction", it: "Invia istruzione", de: "Anweisung senden", fr: "Envoyer l'instruction", es: "Enviar instrucción" },
   loading: {
     sl: "Prilagajam itinerer …",
     en: "Adjusting the itinerary …",
     it: "Adatto l'itinerario …",
     de: "Passe den Reiseplan an …",
+    fr: "J'ajuste l'itinéraire …",
+    es: "Ajustando el itinerario …",
   },
   // TASK 4 / K-4: IZHOD iz dolgega refine klica — Prekliči + števec (isti
   // kanon kot PlannerAiControls / generacija TASK 77).
-  cancel: { sl: "Prekliči", en: "Cancel", it: "Annulla", de: "Abbrechen" },
-  seconds: { sl: "s", en: "s", it: "s", de: "s" },
+  cancel: { sl: "Prekliči", en: "Cancel", it: "Annulla", de: "Abbrechen", fr: "Annuler", es: "Cancelar" },
+  seconds: { sl: "s", en: "s", it: "s", de: "s", fr: "s", es: "s" },
   loadingSlowHint: {
     sl: "AI lahko potrebuje do ~60 s — lahko prekličeš.",
     en: "AI can take up to ~60 s — you can cancel.",
     it: "L'AI può richiedere fino a ~60 s — puoi annullare.",
     de: "Die KI kann bis zu ~60 s brauchen — du kannst abbrechen.",
+    fr: "L'IA peut prendre jusqu'à ~60 s — tu peux annuler.",
+    es: "La IA puede tardar hasta ~60 s — puedes cancelar.",
   },
   toastCancelled: {
     sl: "Prilagoditev preklicana — načrt ni spremenjen",
     en: "Adjustment cancelled — itinerary unchanged",
     it: "Modifica annullata — itinerario invariato",
     de: "Anpassung abgebrochen — Reiseplan unverändert",
+    fr: "Ajustement annulé — l'itinéraire est inchangé",
+    es: "Ajuste cancelado — el itinerario no ha cambiado",
   },
   toastTimeout: {
     sl: "Prilagoditev je trajala predolgo — poskusi znova",
     en: "The adjustment took too long — try again",
     it: "La modifica ha richiesto troppo tempo — riprova",
     de: "Die Anpassung hat zu lange gedauert — versuche es erneut",
+    fr: "L'ajustement a pris trop de temps — réessaie",
+    es: "El ajuste ha tardado demasiado — inténtalo de nuevo",
   },
-  adjustDay: { sl: "Prilagodi ta dan", en: "Adjust this day", it: "Adatta questo giorno", de: "Diesen Tag anpassen" },
-  day: { sl: "Dan", en: "Day", it: "Giorno", de: "Tag" },
-  dayPlaceholder: { sl: "izberi dan", en: "pick a day", it: "scegli un giorno", de: "Tag wählen" },
+  adjustDay: { sl: "Prilagodi ta dan", en: "Adjust this day", it: "Adatta questo giorno", de: "Diesen Tag anpassen", fr: "Ajuster ce jour", es: "Ajustar este día" },
+  day: { sl: "Dan", en: "Day", it: "Giorno", de: "Tag", fr: "Jour", es: "Día" },
+  dayPlaceholder: { sl: "izberi dan", en: "pick a day", it: "scegli un giorno", de: "Tag wählen", fr: "choisis un jour", es: "elige un día" },
   quickActionsHint: {
     sl: "Hitre akcije delujejo tudi brez AI (deterministično)",
     en: "Quick actions also work without AI (deterministic)",
     it: "Le azioni rapide funzionano anche senza AI (deterministico)",
     de: "Schnellaktionen funktionieren auch ohne KI (deterministisch)",
+    fr: "Les actions rapides fonctionnent aussi sans IA (déterministe)",
+    es: "Las acciones rápidas también funcionan sin IA (determinista)",
   },
-  toastUpdated: { sl: "Itinerer posodobljen!", en: "Itinerary updated!", it: "Itinerario aggiornato!", de: "Reiseplan aktualisiert!" },
+  toastUpdated: { sl: "Itinerer posodobljen!", en: "Itinerary updated!", it: "Itinerario aggiornato!", de: "Reiseplan aktualisiert!", fr: "Itinéraire mis à jour !", es: "¡Itinerario actualizado!" },
   toastUpdatedDesc: {
     sl: (i: string) => `Upoštevano: "${i}"`,
     en: (i: string) => `Applied: "${i}"`,
     it: (i: string) => `Applicato: "${i}"`,
     de: (i: string) => `Angewendet: "${i}"`,
+    fr: (i: string) => `Appliqué : « ${i} »`,
+    es: (i: string) => `Aplicado: «${i}»`,
   },
-  toastPartial: { sl: "Delna posodobitev", en: "Partial update", it: "Aggiornamento parziale", de: "Teilweise aktualisiert" },
+  toastPartial: { sl: "Delna posodobitev", en: "Partial update", it: "Aggiornamento parziale", de: "Teilweise aktualisiert", fr: "Mise à jour partielle", es: "Actualización parcial" },
   toastStillFailing: {
     sl: "Posodobljeno — a dan še vedno ni izvedljiv",
     en: "Updated — but the day is still not doable",
     it: "Aggiornato — ma il giorno non è ancora fattibile",
     de: "Aktualisiert — aber der Tag ist noch nicht machbar",
+    fr: "Mis à jour — mais le jour n'est toujours pas faisable",
+    es: "Actualizado — pero el día sigue sin ser viable",
   },
-  toastFailed: { sl: "Posodobitev ni uspela", en: "Update failed", it: "Aggiornamento non riuscito", de: "Aktualisierung fehlgeschlagen" },
+  toastFailed: { sl: "Posodobitev ni uspela", en: "Update failed", it: "Aggiornamento non riuscito", de: "Aktualisierung fehlgeschlagen", fr: "Échec de la mise à jour", es: "Error al actualizar" },
   toastFailedDesc: {
     sl: "Napaka pri posodobitvi",
     en: "Error while updating",
     it: "Errore durante l'aggiornamento",
     de: "Fehler beim Aktualisieren",
+    fr: "Erreur lors de la mise à jour",
+    es: "Error al actualizar",
   },
   toastQuickNoChange: {
     sl: "Ni sprememb",
     en: "No changes",
     it: "Nessuna modifica",
     de: "Keine Änderungen",
+    fr: "Aucun changement",
+    es: "Sin cambios",
   },
   errorGeneric: {
     sl: "Napaka pri posodobitvi",
     en: "Error while updating",
     it: "Errore durante l'aggiornamento",
     de: "Fehler beim Aktualisieren",
+    fr: "Erreur lors de la mise à jour",
+    es: "Error al actualizar",
   },
 } as const;
 
@@ -544,7 +578,7 @@ export function ItineraryRefiner({
                   {h.source === "ai"
                     ? "AI"
                     : h.source === "deterministic"
-                    ? PL(lang, { sl: "brez AI", en: "no AI", it: "senza AI", de: "ohne KI" })
+                    ? PL(lang, { sl: "brez AI", en: "no AI", it: "senza AI", de: "ohne KI", fr: "sans IA", es: "sin IA" })
                     : "fallback"}
                 </Badge>
                 <span className="text-muted-foreground">{h.instruction}</span>

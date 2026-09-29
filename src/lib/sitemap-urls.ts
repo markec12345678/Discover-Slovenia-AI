@@ -315,6 +315,7 @@ export function getTotalSitemapUrlCount(): number {
   // + W12 faza 2a (1.145.0): FR/ES + /zemljevid (10 × 2) + destinacijske
   //   plasti ×38 (hub + things-to-do + itinererji 5 + sezone 4 + vodniki 4
   //   = 15 × 38 = 570 × 2 jezika = 1140) = skupaj 3546
+  // + W12 faza 2b (1.146.0): FR/ES + /nacrtuj (11 × 2) = skupaj 3548
   return (
     22 +
     DESTINATIONS.length +

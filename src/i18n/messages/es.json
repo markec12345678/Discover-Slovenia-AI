@@ -168,24 +168,24 @@
   },
   "homeExp": {
     "eyebrow": "Experiencias",
-    "title": "Neskončne možnosti doživetij",
-    "subtitle": "Slovenija ponuja vse od alpskih vrhov do jadranske obale — na površini manjši od Walesa.",
-    "hikingTitle": "Pohodništvo",
-    "hikingDesc": "Triglav, Mangart, Storžič — od lahnih sprehodov do zahtevnih vzponov.",
-    "waterTitle": "Vodne avanture",
-    "waterDesc": "Rafting na Soči, kajak na Kolpi, smučanje na vodi v Portorožu.",
-    "historyTitle": "Zgodovina & kultura",
-    "historyDesc": "Srednjeveški gradovi, Predjama, Ljubljanski grad, muzeji Soške fronte.",
-    "natureTitle": "Narava & parki",
-    "natureDesc": "Triglavski narodni park, Cerkniško jezero, slovenski gozdovi.",
+    "title": "Infinitas posibilidades de experiencias",
+    "subtitle": "Eslovenia lo ofrece todo, de las cumbres alpinas a la costa adriática — en una superficie más pequeña que Gales.",
+    "hikingTitle": "Senderismo",
+    "hikingDesc": "Triglav, Mangart, Storžič — desde paseos suaves hasta ascensiones exigentes.",
+    "waterTitle": "Aventuras acuáticas",
+    "waterDesc": "Rafting en el Soča, kayak en el Kolpa, esquí acuático en Portorož.",
+    "historyTitle": "Historia & cultura",
+    "historyDesc": "Castillos medievales, Predjama, el castillo de Ljubljana, museos del frente del Isonzo.",
+    "natureTitle": "Naturaleza & parques",
+    "natureDesc": "El parque nacional del Triglav, el lago de Cerknica, los bosques eslovenos.",
     "foodTitle": "Gastronomía",
     "foodDesc": "De kremšnita a štruklji, de Teran a rebula — 24 regiones gastronómicas.",
-    "gemsTitle": "Skrite dragulje",
-    "gemsDesc": "Vintgarska soteska, soline Sečovlje, Logarska dolina — izven utirjenih poti.",
-    "hikingAlt": "Pohodniška pot pod Triglavom",
-    "waterAlt": "Slapovi Slovenije med snežinskimi skalami",
-    "historyAlt": "Ptujski grad nad starim mestnim jedrom",
-    "natureAlt": "Bohinjsko jezero z gorami v ozadju",
+    "gemsTitle": "Joyas ocultas",
+    "gemsDesc": "La garganta de Vintgar, las salinas de Sečovlje, el valle de Logar — fuera de los caminos trillados.",
+    "hikingAlt": "Ruta de senderismo bajo el Triglav",
+    "waterAlt": "Las cascadas de Eslovenia entre rocas nevadas",
+    "historyAlt": "El castillo de Ptuj sobre el casco antiguo",
+    "natureAlt": "El lago de Bohinj con las montañas de fondo",
     "foodAlt": "Platos tradicionales eslovenos en la mesa",
     "gemsAlt": "Cañón de Vintgar con su río turquesa"
   },
@@ -211,19 +211,19 @@
   },
   "affiliate": {
     "badge": "Reserva directamente",
-    "title": "Vse za vaše potovanje na enem mestu",
-    "subtitle": "Rezervacijo opravite neposredno pri partnerskem ponudniku. Discover Slovenia vam za uporabo povezave ne zaračuna ničesar.",
-    "partnerBadge": "Partnerska ponudba",
+    "title": "Todo para tu viaje en un solo lugar",
+    "subtitle": "La reserva se realiza directamente con el proveedor asociado. Discover Slovenia no te cobra nada por usar los enlaces.",
+    "partnerBadge": "Oferta de afiliado",
     "badgeShort": "Afiliado",
-    "tooltip": "Partnerska povezava — Preusmerjeni boste na zunanjo stran. Discover Slovenia AI lahko prejme provizijo.",
+    "tooltip": "Enlace de afiliado — Serás redirigido a un sitio externo. Discover Slovenia AI puede recibir una comisión.",
     "book": "Reserva ahora",
     "disclosure": "Algunos enlaces son de afiliado. Si reservas a través de ellos, Discover Slovenia puede recibir una comisión de afiliado. El precio que pagas no cambia.",
     "carsLabel": "Alquiler de coches",
     "carsDesc": "Búsqueda en 10.000+ ubicaciones. Cancelación gratuita en la mayoría de los casos.",
     "carsAria": "Alquila un coche a través de DiscoverCars — abre un enlace de afiliado",
-    "hotelsLabel": "Hoteli & nastanitve",
-    "hotelsDesc": "28 mio nastanitev po vsem svetu. Brezplačna odpoved večinoma.",
-    "hotelsAria": "Rezerviraj nastanitev na Booking.com — odpre partnersko povezavo",
+    "hotelsLabel": "Hoteles & alojamientos",
+    "hotelsDesc": "28 millones de alojamientos en todo el mundo. Cancelación gratuita en la mayoría de los casos.",
+    "hotelsAria": "Reserva un alojamiento en Booking.com — abre un enlace de afiliado",
     "activitiesLabel": "Actividades & excursiones",
     "activitiesDesc": "300.000+ experiencias y excursiones. Cancelación gratuita hasta 24h antes.",
     "activitiesAria": "Reserva excursiones y experiencias a través de GetYourGuide — abre un enlace de afiliado",
@@ -233,30 +233,30 @@
     "flightsLabel": "Vuelos",
     "flightsDesc": "Comparación de vuelos de 1.200+ aerolíneas. Los precios más bajos.",
     "flightsAria": "Encuentra vuelos a través de Skyscanner — abre un enlace de afiliado",
-    "insuranceLabel": "Potno zavarovanje",
-    "insuranceDesc": "Zavarovanje za pustolovske aktivnosti (rafting, pohodništvo).",
-    "insuranceAria": "Skleni potno zavarovanje — odpre partnersko povezavo",
+    "insuranceLabel": "Seguro de viaje",
+    "insuranceDesc": "Seguro para actividades de aventura (rafting, senderismo).",
+    "insuranceAria": "Contrata un seguro de viaje — abre un enlace de afiliado",
     "esimLabel": "eSIM para Eslovenia",
     "esimDesc": "Internet nada más llegar — sin tarjeta SIM física ni roaming más caro.",
     "esimAria": "Compra una eSIM a través de Airalo — abre un enlace de afiliado",
-    "transfersLabel": "Transferji",
-    "transfersDesc": "Letališčki in medkrajevni transferji — udobje brez najema avta.",
-    "transfersAria": "Rezerviraj transfer prek Kiwitaxija — odpre partnersko povezavo",
-    "transportLabel": "Vlaki & avtobusi",
-    "transportDesc": "Medkrajevni prevozi po Sloveniji — za potnike brez avta.",
-    "transportAria": "Poišči vlake in avtobuse prek Omio — odpre partnersko povezavo",
-    "ticketsLabel": "Vstopnice",
-    "ticketsDesc": "Vstopnice za znamenitosti (Postojna, Grad Bled …) — brez čakalnih vrst.",
-    "ticketsAria": "Kupi vstopnice prek Tiqetsa — odpre partnersko povezavo",
-    "stayGroup": "Bivanje",
-    "moveGroup": "Na pot",
+    "transfersLabel": "Transfers",
+    "transfersDesc": "Transfers del aeropuerto y entre ciudades — comodidad sin coche de alquiler.",
+    "transfersAria": "Reserva un transfer a través de Kiwitaxi — abre un enlace de afiliado",
+    "transportLabel": "Trenes & autobuses",
+    "transportDesc": "Desplazamientos entre ciudades por Eslovenia — para viajeros sin coche.",
+    "transportAria": "Busca trenes y autobuses a través de Omio — abre un enlace de afiliado",
+    "ticketsLabel": "Entradas",
+    "ticketsDesc": "Entradas para las atracciones (Postojna, Castillo de Bled …) — sin colas.",
+    "ticketsAria": "Compra entradas a través de Tiqets — abre un enlace de afiliado",
+    "stayGroup": "Estancia",
+    "moveGroup": "Cómo llegar",
     "experienceGroup": "Experiencias",
     "essentialsGroup": "Esenciales del viaje",
     "handoffBadge": "Solo enlace de afiliado",
-    "handoffFlightsNote": "Brez živih cen letov v aplikaciji — primerjava pri Skyscannerju.",
+    "handoffFlightsNote": "Sin precios de vuelos en vivo en la aplicación — compara en Skyscanner.",
     "handoffCarsNote": "Solo enlace de afiliado — ofertas de alquiler en DiscoverCars.",
-    "handoffTransfersNote": "Objavljene od-cene prevozov; razpoložljivost pri Kiwitaxiju.",
-    "handoffTransportNote": "Vozni redi in cene vlakov/avtobusov niso v aplikaciji — iskanje pri Omio."
+    "handoffTransfersNote": "Precios «desde» publicados para los transfers; disponibilidad en Kiwitaxi.",
+    "handoffTransportNote": "Los horarios y precios de trenes/autobuses no están en la aplicación — busca en Omio."
   },
   "newsletter": {
     "title": "Descubre los tesoros ocultos de Eslovenia",
@@ -274,18 +274,18 @@
   },
   "planCheck": {
     "sectionAriaLabel": "Comprueba tu plan — validación gratuita de tu plan de viaje",
-    "eyebrow": "Brezplačno · brez prijave · 0 AI žetonov",
+    "eyebrow": "Gratis · sin registro · 0 tokens de IA",
     "title": "Comprueba tu plan",
     "subtitle": "Pega un plan que hayas obtenido de ChatGPT, Mindtrip o Layla — verificamos deterministamente las distancias por carreteras reales, cierres de lugares visitados, duplicados y el orden de las paradas. Un informe con fuentes citadas, sin suposiciones.",
-    "inputLabel": "Besedilo potovalnega načrta",
+    "inputLabel": "Texto del plan de viaje",
     "placeholder": "Pega el texto de tu plan …\n\nDía 1: Bled — lago y castillo\n9:00–11:00 paseo alrededor del lago\n\nDía 2: Liubliana — casco antiguo …",
     "hint": "Preveriamo samo postanke iz naših 38 destinacij — ostalih ne ugibamo.",
     "tryExample": "Probar un ejemplo (con errores deliberados)",
-    "checking": "Preverjam …",
+    "checking": "Comprobando …",
     "submit": "Verificar el plan",
     "errors": {
-      "generic": "Preverjanje ni uspelo — poskusi znova.",
-      "network": "Povezava ni uspela. Preveri internet in poskusi znova."
+      "generic": "La comprobación ha fallado — inténtalo de nuevo.",
+      "network": "La conexión ha fallado. Comprueba tu internet e inténtalo de nuevo."
     },
     "verdict": {
       "errorTitle": "El plan tiene {count, plural, one {# advertencia más grave} two {# advertencias más graves} few {# advertencias más graves} other {# advertencias más graves}}",
@@ -295,18 +295,18 @@
     },
     "parsed": {
       "title": "Lo que hemos leído en tu plan",
-      "methodOsrm": "Realne ceste (OSRM)",
-      "methodHeuristic": "Ocena razdalj",
+      "methodOsrm": "Carreteras reales (OSRM)",
+      "methodHeuristic": "Estimación de distancias",
       "stops": "Paradas",
-      "days": "Dnevi",
-      "km": "Vožnja skupaj",
-      "startDate": "Začetni datum",
-      "noDate": "ni podatka",
-      "noHeadersNote": "V besedilu nismo našli glav dni (npr. »Dan 1«, »Day 2«) — preverjali smo, kot da so vsi postanki v enem dnevu."
+      "days": "Días",
+      "km": "Conducción total",
+      "startDate": "Fecha de inicio",
+      "noDate": "sin datos",
+      "noHeadersNote": "No encontramos encabezados de días en el texto (p. ej. «Día 1», «Day 2») — comprobamos como si todas las paradas fueran de un solo día."
     },
-    "dayLabel": "Dan",
+    "dayLabel": "Día",
     "issues": {
-      "title": "Opozorila validatorja"
+      "title": "Avisos del validador"
     },
     "zigzag": {
       "title": "Se puede mejorar el orden de las paradas",
@@ -315,14 +315,14 @@
       "note": "Calculamos el orden óptimo como una ruta abierta entre paradas (2-opt sobre carreteras reales). Si tu día empieza o termina en otro lugar (por ejemplo, un hotel), ajusta el orden."
     },
     "duplicates": {
-      "title": "Isti kraj v več dnevih",
-      "line": "— dnevi {days} (ponovni obisk? Če je namenjen, je to v redu)",
-      "note": "Študija 356 AI-načrtov je v 5,1 % dni našla podvojene obiske — zato jih prikažemo, ne skrijemo."
+      "title": "El mismo lugar en varios días",
+      "line": "— días {days} (¿una visita repetida? Si es intencionado, no hay problema)",
+      "note": "Un estudio de 356 planes con IA encontró visitas duplicadas en el 5,1 % de los días — por eso las mostramos, no las ocultamos."
     },
     "costs": {
-      "title": "Ocena stroškov vožnje",
-      "line": "Skupaj ~{km} km — gorivo ~{fuelEur} € + e-vinjeta {vignetteEur} € (vozila do 3,5 t).",
-      "note": "Ocene temeljijo na objavljenih cenikih (AMZS/DARS) ob času implementacije; vinjeta je potrebna le ob vožnji po avtocestah."
+      "title": "Estimación de los costes de conducción",
+      "line": "Total ~{km} km — combustible ~{fuelEur} € + e-viñeta {vignetteEur} € (vehículos de hasta 3,5 t).",
+      "note": "Las estimaciones se basan en las tarifas publicadas (AMZS/DARS) en el momento de la implementación; la viñeta solo es necesaria para circular por autopistas."
     },
     "sources": {
       "title": "Por qué lo verificamos así (fuentes)",
@@ -1474,8 +1474,8 @@
   "itineraryPage": {
     "durations": {
       "1-dan": {
-        "label": "1 dan",
-        "desc": "Hitri obisk"
+        "label": "1 día",
+        "desc": "Una visita rápida"
       },
       "vikend": {
         "label": "Fin de semana (2 días)",
@@ -1516,13 +1516,13 @@
     "overviewTitle": "Resumen del viaje",
     "unitDay": "día",
     "unitDays": "días",
-    "costLabel": "ocena / osebo",
+    "costLabel": "estimación / persona",
     "ratingLabel": "valoración editorial del destino",
-    "daysTitle": "Predlagani dnevni razpored",
-    "dayLabel": "Dan {day}",
-    "dayFirst": "Prihod in raziskovanje {name}",
-    "dayLast": "Zadnji dan in odhod",
-    "dayMiddle": "Celodnevno raziskovanje",
+    "daysTitle": "Programa diario sugerido",
+    "dayLabel": "Día {day}",
+    "dayFirst": "Llegada y exploración de {name}",
+    "dayLast": "Último día y salida",
+    "dayMiddle": "Un día completo de exploración",
     "hoursLabel": "4-6 horas",
     "perPerson": "€/persona",
     "travelerTypesTitle": "Itinerarios por tipo de viajero",
@@ -1885,7 +1885,7 @@
     "breadcrumbHome": "Inicio",
     "heroTitle": "Qué hacer en {name}",
     "heroStats": "{highlights} atractivos · {activities} actividades · Valoración editorial {rating}★",
-    "aboutTitle": "O {name}",
+    "aboutTitle": "Sobre {name}",
     "highlightsTitle": "Principales atractivos",
     "experiencesTitle": "Actividades y experiencias en {name}",
     "listingsTitle": "Locales en {name}",
@@ -2002,7 +2002,7 @@
     "knowsLabel": "La IA ya sabe:",
     "visitedCount": "{count} destinos visitados",
     "quizCta": "Responde al <quizLink>test de 2 minutos</quizLink> y la AI preparará un viaje a medida.",
-    "close": "Zapri",
+    "close": "Cerrar",
     "interests": {
       "narava": "naturaleza",
       "kulinarika": "comida local",
@@ -2011,10 +2011,10 @@
       "kultura": "cultura"
     },
     "groups": {
-      "solo": "sam/a",
-      "par": "par",
-      "druzina": "družina",
-      "prijatelji": "prijatelji"
+      "solo": "solo",
+      "par": "pareja",
+      "druzina": "familia",
+      "prijatelji": "amigos"
     }
   },
   "adriaGuidePage": {
@@ -2075,33 +2075,33 @@
   },
   "vodiciPage": {
     "meta": {
-      "title": "Vodiči in nasveti za Slovenijo",
-      "description": "Kaj početi na Bledu, 3 dni v Sloveniji, najlepši izleti in lokalna hrana — vodiči, nasveti, krožna potovanja po Sloveniji, jadranski road tripi in odgovori lokalcev."
+      "title": "Guías y consejos para Eslovenia",
+      "description": "Qué hacer en Bled, 3 días en Eslovenia, las mejores excursiones y la comida local — guías, consejos, viajes circulares por Eslovenia, road trips por el Adriático y respuestas de los locales."
     },
-    "badge": "Vodiči",
-    "title": "Vodiči in nasveti za Slovenijo",
-    "intro": "Kaj početi na Bledu, kako preživeti 3 dni po Sloveniji, najlepši izleti in kje jesti lokalno — vodiči, nasveti in odgovori lokalcev.",
-    "editorsLine": "Zgodbe in nasveti urednikov · Vprašajte lokalce",
+    "badge": "Guías",
+    "title": "Guías y consejos para Eslovenia",
+    "intro": "Qué hacer en Bled, cómo pasar 3 días en Eslovenia, las excursiones más bonitas y dónde comer como un local — guías, consejos y respuestas de los locales.",
+    "editorsLine": "Historias y consejos de los editores · Pregunta a los locales",
     "loops": {
-      "badge": "Domači krog",
-      "title": "Slovenija v enem krogu",
-      "description": "Krožna potovanja po Sloveniji z lastnim avtom — teden ali deset dni po Alpah, Soči, Krasu in obali, vikend Ljubljana–Bled in družinski krog z otroki: poti, vinjeta, vstopnine in kje spati.",
-      "countriesAria": "Krožno potovanje po Sloveniji",
-      "readMore": "Preberi →"
+      "badge": "Circuito nacional",
+      "title": "Eslovenia en un solo circuito",
+      "description": "Viajes circulares por Eslovenia con tu propio coche — una semana o diez días por los Alpes, el Soča, el Karst y la costa, un fin de semana Ljubljana–Bled y un circuito familiar con niños: rutas, viñeta, entradas y dónde dormir.",
+      "countriesAria": "Un viaje circular por Eslovenia",
+      "readMore": "Leer →"
     },
     "winters": {
       "badge": "Zimski vodici",
-      "title": "Slovenija pozimi",
+      "title": "Eslovenia en invierno",
       "description": "Od adventne Ljubljane (sejem 27. 11.–15. 1.) in božičnega Bohinja prek silvestrovanja in januarskega smučanja do februarskih počitnic z otroki — zimski vodiki s cenami vstopnic, zimskimi gumami in množicami.",
-      "countriesAria": "Zimsko potovanje po Sloveniji",
-      "readMore": "Preberi →"
+      "countriesAria": "Un viaje de invierno por Eslovenia",
+      "readMore": "Leer →"
     },
     "adria": {
       "badge": "Transfronterizo",
-      "title": "Jadranska potovanja iz Slovenije",
-      "description": "Road trip vodniki čez mejo — Hrvaška, Bosna, Črna gora in Albanija z osebnim avtom iz Slovenije: poti, cestnine, mejne formalnosti in kam vsak večer parkirati.",
+      "title": "Road trips por el Adriático desde Eslovenia",
+      "description": "Guías de road trip más allá de la frontera — Croacia, Bosnia y Herzegovina, Montenegro y Albania con tu propio coche desde Eslovenia: rutas, peajes, formalidades fronterizas y dónde aparcar cada tarde.",
       "countriesAria": "Viaje a través de: {countries}",
-      "readMore": "Preberi →"
+      "readMore": "Leer →"
     }
   },
   "blogSection": {
@@ -2423,9 +2423,9 @@
     "autoTagButton": "Sugerir etiquetas",
     "autoTagButtonLoading": "Sugerir...",
     "autoTagSuggestionTitle": "Sugerencias",
-    "autoTagToastReady": "Predlogi pripravljeni",
+    "autoTagToastReady": "Sugerencias listas",
     "autoTagToastFail": "Predlaganje no uspelo",
-    "tagSourceDictionary": "Slovar taksonomije"
+    "tagSourceDictionary": "Diccionario de taxonomía"
   },
   "mtNotice": {
     "title": "Traducción automática",

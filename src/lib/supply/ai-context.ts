@@ -183,8 +183,9 @@ export async function fetchAiSupplyContext(
   opts: {
     pax?: number;
     date?: string;
-    /** W1-faza-2b: 4-jezični tok (searchSupply normalizira na kanonične vrednosti). */
-    locale: "sl" | "en" | "it" | "de";
+    /** W1-faza-2b: 4-jezični tok (searchSupply normalizira na kanonične vrednosti).
+     *  W12-faza-2b: FR/ES dedita EN (isti §38 kanon kot supply plast faze 2a). */
+    locale: "sl" | "en" | "it" | "de" | "fr" | "es";
     /** Testi vbrizgajo adapterje; produkcija dobi privzete (realne). */
     adapters?: SupplyAdapter[];
   }

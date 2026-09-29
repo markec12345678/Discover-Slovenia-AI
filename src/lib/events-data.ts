@@ -88,6 +88,21 @@ export const GERMAN_MONTHS_SHORT: string[] = [
   "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez.",
 ];
 
+// W12-faza-2b: FR/ES meseci (formatEventDate dispečer). Kanon: IT je brez pik
+// s KRATKIMI oblikami, DE deli SL slog s piko; FR kratke oblike bi nosile
+// pike (janv./févr./avr. …) — zato kanon zahteva POLNE mesece BREZ pik
+// („15 janvier 2027“); ES kratke oblike (en./feb.) so neredke — polne mesece
+// („15 enero 2027“). Oba jezika delita EN slog številk dni (brez pik).
+export const FRENCH_MONTHS_SHORT: string[] = [
+  "janvier", "février", "mars", "avril", "mai", "juin",
+  "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+];
+
+export const SPANISH_MONTHS_SHORT: string[] = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
 export const SLOVENIAN_MONTHS_FULL: string[] = [
   "Januar",
   "Februar",
@@ -643,15 +658,18 @@ export const EVENTS: EventItem[] = [
  * - večdnevni različen mesec: "15. jan – 15. feb 2027"
  * EN: enak razpon logike, brez pik po številkah dni: "15 Jan 2027",
  * "15 – 17 Jan 2027", "15 Jan – 15 Feb 2027".
+ * W12-faza-2b: FR/ES — obe delita EN slog (brez pik po dnevih), meseci
+ * so polne oblike brez pik („15 janvier 2027" / "15 enero 2027").
  */
 export function formatEventDate(
   date: string,
   endDate?: string,
-  lang: "sl" | "en" | "it" | "de" = "sl"
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es" = "sl"
 ): string {
   // W1-2b-2: 4-jezični dispečer — IT deli EN slog (brez pik po dnevih),
   // DE deli SL slog (s piko); meseci so jezikovno lastni (events-data-it/-de).
-  const isEn = lang === "en" || lang === "it";
+  // W12-faza-2b: FR/ES pridružita EN slogu (brez pik); meseci lastni zgoraj.
+  const isEn = lang === "en" || lang === "it" || lang === "fr" || lang === "es";
   const months =
     lang === "en"
       ? ENGLISH_MONTHS_SHORT
@@ -659,7 +677,11 @@ export function formatEventDate(
         ? ITALIAN_MONTHS_SHORT
         : lang === "de"
           ? GERMAN_MONTHS_SHORT
-          : SLOVENIAN_MONTHS_SHORT;
+          : lang === "fr"
+            ? FRENCH_MONTHS_SHORT
+            : lang === "es"
+              ? SPANISH_MONTHS_SHORT
+              : SLOVENIAN_MONTHS_SHORT;
   const start = new Date(date);
   const startDay = start.getDate();
   const startMonth = months[start.getMonth()];

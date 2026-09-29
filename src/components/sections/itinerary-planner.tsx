@@ -250,7 +250,10 @@ import { speechLanguageTag, ttsSupported } from "@/lib/voice";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 import { getItDestination } from "@/lib/slovenia-data-it";
 import { getDeDestination } from "@/lib/slovenia-data-de";
-import { PL } from "@/lib/planner-lang";
+// W12-faza-2b: FR/ES overlayja iz faze 1 (tagline postankov v predlogih)
+import { getFrDestination } from "@/lib/slovenia-data-fr";
+import { getEsDestination } from "@/lib/slovenia-data-es";
+import { PL, type PlannerLang } from "@/lib/planner-lang";
 import type { LocationVisit } from "@/lib/types";
 // TASK 8 / D8-F (D8-B §5): trak "Iz moje poti" nad obrazcem + prefill
 // dogodek (destinacije → PRAZNA formData.preferredDestinations izbira).
@@ -478,9 +481,17 @@ export function ItineraryPlanner() {
   // API sprejme language polje, default "sl").
   // W1-2b-2: 4-jezično — planner pogon, pakirni seznam, Q&A, refine,
   // izvozi (ICS/audio) in dogodki zdaj sprejemajo it/de.
+  // W12-faza-2b: 6-jezično — /fr+/es/nacrtuj po istem vzorcu (PlannerLang
+  // je skupni tip pogona; FR/ES ne padeta več na SL — P4-8).
   const locale = useLocale();
-  const lang: "sl" | "en" | "it" | "de" =
-    locale === "en" || locale === "it" || locale === "de" ? locale : "sl";
+  const lang: PlannerLang =
+    locale === "en" ||
+    locale === "it" ||
+    locale === "de" ||
+    locale === "fr" ||
+    locale === "es"
+      ? locale
+      : "sl";
 
   const [formData, setFormData] = useState<PlannerInput>({
     budget: 500,
@@ -668,11 +679,14 @@ export function ItineraryPlanner() {
   //     EN "Computer voice unavailable — the text is shown below." ===
   // W1-2b-2: 4-jezične oznake poslušanja (govorijo brskalnikovi glasovi
   // it-IT/de-DE — speechLanguageTag pokriva vse štiri)
+  // W12-faza-2b: 6-jezične (fr-FR/es-ES glasovi že pokriti v voice.ts)
   const LISTEN_STOP_LABELS = {
     sl: "Ustavi predvajanje",
     en: "Stop playback",
     it: "Ferma la riproduzione",
     de: "Wiedergabe stoppen",
+    fr: "Arrêter la lecture",
+    es: "Detener la reproducción",
   } as const;
   const LISTEN_SCRIPT_LABELS = {
     sl: {
@@ -698,6 +712,18 @@ export function ItineraryPlanner() {
       hide: "Text ausblenden",
       voiceUnavailable:
         "Computerstimme nicht verfügbar — der Text steht unten.",
+    },
+    fr: {
+      show: "Afficher le texte",
+      hide: "Masquer le texte",
+      voiceUnavailable:
+        "Voix de l'ordinateur indisponible — le texte est affiché ci-dessous.",
+    },
+    es: {
+      show: "Mostrar el texto",
+      hide: "Ocultar el texto",
+      voiceUnavailable:
+        "Voz del ordenador no disponible — el texto se muestra abajo.",
     },
   } as const;
   const listenLang = lang;
@@ -1709,6 +1735,7 @@ export function ItineraryPlanner() {
 
     const groupSize = formData?.groupSize || 2;
     // W1-2b-2: tagline v jeziku UI (IT/DE overlayja faze 2a)
+    // W12-faza-2b: tudi FR/ES (overlayja iz W12 faze 1)
     const tagline =
       lang === "en"
         ? DESTINATIONS_EN[dest.id]?.tagline ?? dest.tagline
@@ -1716,7 +1743,11 @@ export function ItineraryPlanner() {
           ? getItDestination(dest.id)?.tagline ?? dest.tagline
           : lang === "de"
             ? getDeDestination(dest.id)?.tagline ?? dest.tagline
-            : dest.tagline;
+            : lang === "fr"
+              ? getFrDestination(dest.id)?.tagline ?? dest.tagline
+              : lang === "es"
+                ? getEsDestination(dest.id)?.tagline ?? dest.tagline
+                : dest.tagline;
     const visit: LocationVisit = {
       destination_id: dest.id,
       destination_name: dest.name,
@@ -2021,6 +2052,7 @@ export function ItineraryPlanner() {
     const view = buildItineraryGoView(itinerary, {
       // W1-2b-2: Go pogled je SL/EN (L vzorec) — IT/DE dedejita EN
       // (PL konvencija prehodnega obdobja; /en/na-poti je na EN whitelisti)
+      // W12-faza-2b: tudi FR/ES dedejita EN Go sopotnika (isti kanon)
       lang: lang === "sl" ? "sl" : "en",
       name: deriveSavedTripName(itinerary),
     });
@@ -2033,6 +2065,7 @@ export function ItineraryPlanner() {
     if (saved) {
       // W1-2b-2: jezikovno pravilna destinacija — SL → /na-poti, EN/IT/DE →
       // /en/na-poti (EN whitelist; IT/DE dedejijo EN Go sopotnika)
+      // W12-faza-2b: FR/ES → EN pot (P4-8 precedens — Go pogled je SL/EN L-vzorec)
       router.push(lang === "sl" ? "/na-poti" : "/en/na-poti");
     } else {
       // Poln/zasebni localStorage — iskren toast (načrt NE more na napravo)
@@ -2042,12 +2075,16 @@ export function ItineraryPlanner() {
           en: "Cannot store the plan on this device",
           it: "Impossibile salvare il piano su questo dispositivo",
           de: "Der Plan ließ sich auf diesem Gerät nicht speichern",
+          fr: "Impossible d'enregistrer le plan sur cet appareil",
+          es: "No se pudo guardar el plan en este dispositivo",
         }),
         description: PL(lang, {
           sl: "Shramba brskalnika je polna ali blokirana (zasebni način) — Na poti potrebuje načrt na napravi.",
           en: "Browser storage is full or blocked (private mode) — On-the-road needs the plan on the device.",
           it: "L'archiviazione del browser è piena o bloccata (modalità privata) — „Sulla strada“ richiede il piano sul dispositivo.",
           de: "Der Browserspeicher ist voll oder blockiert (Privatmodus) — „Unterwegs“ braucht den Plan auf dem Gerät.",
+          fr: "Le stockage du navigateur est plein ou bloqué (mode privé) — „Sur la route“ a besoin du plan sur l'appareil.",
+          es: "El almacenamiento del navegador está lleno o bloqueado (modo privado) — „En camino“ necesita el plan en el dispositivo.",
         }),
         variant: "destructive",
       });
@@ -2965,6 +3002,7 @@ export function ItineraryPlanner() {
               const dest = destinationById(stop.id);
               // W1-2b-2: IT/DE dedejijo EN imena (PL konvencija — lastna
               // imena; "Lake Bohinj" je bližje kot slovenski kanon)
+              // W12-faza-2b: FR/ES prav tako dedejijo EN imena
               const name =
                 lang === "sl"
                   ? dest?.name ?? stop.id
@@ -4122,6 +4160,7 @@ export function ItineraryPlanner() {
                     // W1-2b-2: /potovanje je SL/EN (L vzorec) — IT/DE
                     // dedejijo EN različico (PL konvencija prehodnega obdobja;
                     // besedilo povezave ostane v jeziku UI)
+                    // W12-faza-2b: FR/ES → EN pot (isti P4-8 precedens)
                     href={lang === "sl" ? "/potovanje" : "/en/potovanje"}
                     className="inline-flex items-center gap-0.5 font-medium text-primary underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
                   >

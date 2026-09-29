@@ -178,10 +178,12 @@
   SL privzeto, EN na jedru lijaka (`/en/…`), IT/DE na domači strani,
   destinacijah, zemljevidu in načrtovalniku (`/it/…`, `/de/…` — W1,
   1.126.0–1.129.0), FR/ES na domači strani, destinacijah, destinacijskih
-  pod-potih in zemljevidu (`/fr/…`, `/es/…` — W12: faza 1 [1.144.0:
-  jedro odkrivanja + svetovanja] + faza 2a [1.145.0: /destinacija/* ×38
-  + /zemljevid 6-jezičen z FR/ES iskanjem in razlogi zadetkov];
-  načrtovalnik je faza 2b);
+  pod-potih, zemljevidu in načrtovalniku (`/fr/…`, `/es/…` — W12: faza 1
+  [1.144.0: jedro odkrivanja + svetovanja] + faza 2a [1.145.0:
+  /destinacija/* ×38 + /zemljevid 6-jezičen z FR/ES iskanjem in razlogi
+  zadetkov] + faza 2b [1.146.0: /fr/nacrtuj + /es/nacrtuj — planner
+  pogon 6-jezičen: Q&A, pakirni seznam, hitre akcije, NL ukazni parser
+  z diakritiko ç/ñ, ICS/zvočni izvozi, dogodki dedijo EVENTS_EN]);
   poti brez različice se varno preusmerijo (308), nikoli mešanje jezikov.
 - **PWA** — načrti brez povezave (aktivno Go Mode potovanje tudi na splošni offline
   strani), pameten pakirni seznam z razlogi, proračun na osebo,
@@ -562,7 +564,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.145.0**.
+Trenutna verzija: **1.146.0**.
 
 ---
 

@@ -23,8 +23,11 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { DESTINATIONS_EN } from "@/lib/slovenia-data-en";
 // W1-faza-2b: IT/DE overlayji (faza 2a) + PL jezikovni helper pogona
+// W12-faza-2b: FR/ES overlayja (faza 1) — tagline postankov v jeziku UI
 import { getItDestination } from "@/lib/slovenia-data-it";
 import { getDeDestination } from "@/lib/slovenia-data-de";
+import { getFrDestination } from "@/lib/slovenia-data-fr";
+import { getEsDestination } from "@/lib/slovenia-data-es";
 import { PL } from "@/lib/planner-lang";
 import { PACE_FALLBACK } from "@/lib/pace-types";
 import { nextSlot, type SlotCursor } from "@/lib/schedule-slots";
@@ -179,11 +182,14 @@ export function generateDeterministicItinerary(
   // je izpisoval slovensko tudi za EN uporabnike (mešanje jezikov).
   // W1-faza-2b: IT/DE — tagline prek IT/DE overlayjev (faza 2a), ostali
   // nizi prek PL() (manjkajoč prevod deduje EN, nikoli SL).
+  // W12-faza-2b: FR/ES — isti vzorec (overlayja iz W12 faze 1; EN varovalka).
   const lang = input.language ?? "sl";
   const taglineOf = (d: (typeof DESTINATIONS)[number]): string => {
     if (lang === "en") return DESTINATIONS_EN[d.id]?.tagline ?? d.tagline;
     if (lang === "it") return getItDestination(d.id)?.tagline ?? DESTINATIONS_EN[d.id]?.tagline ?? d.tagline;
     if (lang === "de") return getDeDestination(d.id)?.tagline ?? DESTINATIONS_EN[d.id]?.tagline ?? d.tagline;
+    if (lang === "fr") return getFrDestination(d.id)?.tagline ?? DESTINATIONS_EN[d.id]?.tagline ?? d.tagline;
+    if (lang === "es") return getEsDestination(d.id)?.tagline ?? DESTINATIONS_EN[d.id]?.tagline ?? d.tagline;
     return d.tagline;
   };
 
@@ -459,6 +465,8 @@ export function generateDeterministicItinerary(
               en: "rainy day, so an indoor/flexible pick",
               it: "giornata di pioggia, quindi una scelta al chiuso/flessibile",
               de: "Regentag, daher eine Innen-/flexible Wahl",
+              fr: "jour de pluie, donc un choix intérieur/flexible",
+              es: "día de lluvia, así que una elección interior/flexible",
             })}`
           : taglineOf(dest),
       });

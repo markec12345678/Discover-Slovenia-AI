@@ -171,26 +171,29 @@ export function isItDeRoute(pathname: string): boolean {
 }
 
 // ============================================================================
-// W12 FR/ES WHITELISTA (smer 2, faza 1 — 1.144.0; faza 2a — 1.145.0) — edini vir resnice o
-// tem, kje francoščina in španščina ŽIVITA. Vzorec 1:1 po W1 fazi 1
-// (IT/DE, 1.126.0): jedro odkrivanja + svetovanja (statične poti).
+// W12 FR/ES WHITELISTA (smer 2, faza 1 — 1.144.0; faza 2a — 1.145.0; faza
+// 2b — 1.146.0) — edini vir resnice o tem, kje francoščina in španščina
+// ŽIVITA. Vzorec 1:1 po W1 fazah 1/2a/2b (IT/DE, 1.126.0/1.127.0/1.129.0).
 // Trgi: FR — francosko govoreča Zahodna Evropa (med največjimi virnimi
 // turističnimi trgi za Slovenijo); ES — španijsko govoreči jug Evrope +
 // Latinska Amerika (najhitreje rastoče skupine poizvedb o „Eslovenia").
 // Oba jezika sta v benchmarku Alma (STB) naslednja po IT/DE.
 // Namerno ŠE VEDNO IZVEN (iskrena meja — proxy 308 na slovensko):
-//   /nacrtuj (planner pogon je 4-jezičen — fr/es pride v fazi 2b),
 //   L-vzorčne poti (/trznica, /dozivetja, /lokali, /dogodki, /potovanje,
 //   /na-poti, /moja-potovanja), /vodici, /pot.
 // FAZA 2a (1.145.0): + /zemljevid (POI imena so jezikovno nevtralni viri
 // OSM/FSQ; UI T slovarji ×6; iskanje ima FR/ES razloge zadetkov) +
 // destinacijske pod-poti (/destinacija/* ×38 — overlayji slovenia-data-fr/-es
 // iz 1.144.0 so zdaj živi tudi na straneh, ne samo v karticah).
+// FAZA 2b (1.146.0): + /nacrtuj — planner POGON je 6-jezičen (plan-qa,
+// packing-smart, refine-actions, ukazni parser, planner-audio, ICS izvoz,
+// komponente; dogodki FR/ES dedijo EVENTS_EN po §38 kanonu — isti mejnik
+// kot W1 faza 2b-2 za /it+/de/nacrtuj v 1.129.0).
 // Uporabniki: src/proxy.ts (308 guard), language-switcher (vidnost),
 // hreflangForPath (alternati), sitemap-urls.ts (FR/ES URL-ji).
 // ============================================================================
 
-/** Statične poti s FR/ES različico (jedro odkrivanja + svetovanja + zemljevid). */
+/** Statične poti s FR/ES različico (jedro + svetovanje + zemljevid + načrtovalnik). */
 export const FRES_STATIC_ROUTES = new Set([
   "/",
   "/destinacije",
@@ -205,6 +208,9 @@ export const FRES_STATIC_ROUTES = new Set([
   // UI (T slovarji map-view/map-section/hero) je 6-jezičen, iskanje ima
   // FR/ES sinonime + razloge zadetkov (isti kanon kot W1 faza 2a za IT/DE).
   "/zemljevid",
+  // W12 faza 2b (1.146.0): načrtovalnik — pogon (deterministični motor,
+  // Q&A, pakirni seznam, hitre akcije, NL ukazi, izvozi) je 6-jezičen.
+  "/nacrtuj",
 ]);
 
 /**

@@ -132,25 +132,27 @@ export function buildKnownSupplyIndex(
  */
 function canonicalPriceNote(
   price: PriceInfo | undefined,
-  lang: "sl" | "en" | "it" | "de"
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es"
 ): string | undefined {
   if (!price) return undefined;
   const unit = price.unit.replace(/_/g, " ");
   const from = price.fromPrice
-    ? PL(lang, { sl: "od ", en: "from ", it: "da ", de: "ab " })
+    ? PL(lang, { sl: "od ", en: "from ", it: "da ", de: "ab ", fr: "a partir de ", es: "desde " })
     : "";
   return PL(lang, {
     sl: `cena: ${from}${price.amount} € (${unit})`,
     en: `price: ${from}€${price.amount} (${unit})`,
     it: `prezzo: ${from}${price.amount} € (${unit})`,
     de: `Preis: ${from}${price.amount} € (${unit})`,
+    fr: `prix : ${from}${price.amount} € (${unit})`,
+    es: `precio: ${from}${price.amount} € (${unit})`,
   });
 }
 
 /** Sestavi kanonsko opombo supply postanka (isti duh kot insertProductStop). */
 export function canonicalSupplyNotes(
   entry: KnownSupplyEntry,
-  lang: "sl" | "en" | "it" | "de"
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es"
 ): string {
   const parts: string[] = [];
   if (entry.description) parts.push(entry.description.slice(0, 120));
@@ -172,6 +174,8 @@ export function canonicalSupplyNotes(
       en: `source: ${entry.source}`,
       it: `fonte: ${entry.source}`,
       de: `Quelle: ${entry.source}`,
+      fr: `source : ${entry.source}`,
+      es: `fuente: ${entry.source}`,
     })
   );
   return parts.join(" · ");

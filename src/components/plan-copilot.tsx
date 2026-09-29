@@ -20,9 +20,16 @@ import { EXAMPLE_QUESTIONS } from "@/lib/plan-qa";
 import { trackPlannerEvent, markResultEngaged } from "@/lib/planner-analytics";
 import type { PlannerLang } from "@/lib/planner-lang";
 
-/** W1-2b-2: jezik UI — 4-smerno iz locale (neznano → SL). */
+/** W1-2b-2: jezik UI — 4-smerno iz locale (neznano → SL).
+ *  W12-faza-2b: 6-smerno — /fr+/es/nacrtuj sta javni planner ploskvi. */
 const langOf = (locale: string): PlannerLang =>
-  locale === "en" || locale === "it" || locale === "de" ? locale : "sl";
+  locale === "en" ||
+  locale === "it" ||
+  locale === "de" ||
+  locale === "fr" ||
+  locale === "es"
+    ? locale
+    : "sl";
 
 // ============================================================================
 // F9 — PlanCopilot: "Vprašaj o načrtu" (klepet z izračunanimi dejstvi)
@@ -62,43 +69,53 @@ interface ChatMessage {
 const MAX_MESSAGES = 20;
 
 const L = {
-  title: { sl: "Vprašaj o načrtu", en: "Ask about the plan", it: "Chiedi del piano", de: "Frag den Plan ab" },
+  title: { sl: "Vprašaj o načrtu", en: "Ask about the plan", it: "Chiedi del piano", de: "Frag den Plan ab", fr: "Pose une question sur le plan", es: "Pregunta sobre el plan" },
   subtitle: {
     sl: "Odgovori so izračunani iz tvojega načrta — AI le sfrazi, ne izmišljuje",
     en: "Answers are computed from your plan — AI only phrases, never invents",
     it: "Le risposte sono calcolate dal tuo piano — l'AI formula soltanto, non inventa",
     de: "Antworten werden aus deinem Plan berechnet — die KI formuliert nur, erfindet nichts",
+    fr: "Les réponses sont calculées à partir de ton plan — l'IA ne fait que formuler, elle n'invente jamais",
+    es: "Las respuestas se calculan a partir de tu plan — la IA solo redacta, nunca inventa",
   },
   placeholder: {
     sl: "npr. Kateri dan je najbolj natrpan?",
     en: "e.g. Which day is the busiest?",
     it: "es. Quale giorno è il più intenso?",
     de: "z. B. Welcher Tag ist der vollste?",
+    fr: "ex. Quel jour est le plus chargé ?",
+    es: "ej. ¿Qué día es el más cargado?",
   },
-  send: { sl: "Pošlji vprašanje", en: "Send question", it: "Invia domanda", de: "Frage senden" },
+  send: { sl: "Pošlji vprašanje", en: "Send question", it: "Invia domanda", de: "Frage senden", fr: "Envoyer la question", es: "Enviar pregunta" },
   inputLabel: {
     sl: "Vprašanje o načrtu",
     en: "Question about the plan",
     it: "Domanda sul piano",
     de: "Frage zum Plan",
+    fr: "Question sur le plan",
+    es: "Pregunta sobre el plan",
   },
-  loading: { sl: "Preračunavam …", en: "Computing …", it: "Calcolo …", de: "Berechne …" },
-  suggestions: { sl: "Predlogi vprašanj", en: "Suggested questions", it: "Domande suggerite", de: "Vorgeschlagene Fragen" },
-  badgeComputed: { sl: "izračunano", en: "computed", it: "calcolato", de: "berechnet" },
-  badgeAi: { sl: "AI · samo fraziranje dejstev", en: "AI · phrasing facts only", it: "AI · formula solo i fatti", de: "KI · formuliert nur Fakten" },
-  badgeFallback: { sl: "brez ugibanja", en: "no guessing", it: "senza tirare a indovinare", de: "kein Raten" },
-  toastFailed: { sl: "Odgovor ni uspel", en: "Could not answer", it: "Risposta non riuscita", de: "Antwort fehlgeschlagen" },
+  loading: { sl: "Preračunavam …", en: "Computing …", it: "Calcolo …", de: "Berechne …", fr: "Je calcule …", es: "Calculando …" },
+  suggestions: { sl: "Predlogi vprašanj", en: "Suggested questions", it: "Domande suggerite", de: "Vorgeschlagene Fragen", fr: "Questions suggérées", es: "Preguntas sugeridas" },
+  badgeComputed: { sl: "izračunano", en: "computed", it: "calcolato", de: "berechnet", fr: "calculé", es: "calculado" },
+  badgeAi: { sl: "AI · samo fraziranje dejstev", en: "AI · phrasing facts only", it: "AI · formula solo i fatti", de: "KI · formuliert nur Fakten", fr: "IA · formule uniquement les faits", es: "IA · solo redacta los hechos" },
+  badgeFallback: { sl: "brez ugibanja", en: "no guessing", it: "senza tirare a indovinare", de: "kein Raten", fr: "sans deviner", es: "sin adivinar" },
+  toastFailed: { sl: "Odgovor ni uspel", en: "Could not answer", it: "Risposta non riuscita", de: "Antwort fehlgeschlagen", fr: "Impossible de répondre", es: "No se pudo responder" },
   errorGeneric: {
     sl: "Napaka pri pridobivanju odgovora",
     en: "Error while getting the answer",
     it: "Errore durante il recupero della risposta",
     de: "Fehler beim Abrufen der Antwort",
+    fr: "Erreur lors de la récupération de la réponse",
+    es: "Error al obtener la respuesta",
   },
   resetNote: {
     sl: "Zgodovina se počisti, ko se načrt spremeni — odgovori vedno veljajo za trenutni načrt.",
     en: "History clears when the plan changes — answers always match the current plan.",
     it: "La cronologia si azzera quando il piano cambia — le risposte valgono sempre per il piano attuale.",
     de: "Die Historie wird geleert, wenn sich der Plan ändert — Antworten gelten immer für den aktuellen Plan.",
+    fr: "L'historique s'efface quand le plan change — les réponses correspondent toujours au plan actuel.",
+    es: "El historial se borra cuando cambia el plan — las respuestas siempre corresponden al plan actual.",
   },
 } as const;
 

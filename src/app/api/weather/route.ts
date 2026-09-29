@@ -63,14 +63,18 @@ export async function GET(request: Request) {
   }
 
   // TASK 65: jezik besedila (fail-closed na privzeti sl — "en"/"it"/"de"
-  // preklopi; W1-faza-2b: 4-jezični dispečer namesto ternary)
+  // preklopi; W1-faza-2b: 4-jezični dispečer namesto ternary;
+  // W12-faza-2b: 6-jezično — fr/es po istem dispečerju v weather-utils)
   const rawLang = searchParams.get("lang");
-  const lang: "sl" | "en" | "it" | "de" =
-    rawLang === "en" || rawLang === "it" || rawLang === "de" ? rawLang : "sl";
+  const lang: "sl" | "en" | "it" | "de" | "fr" | "es" =
+    rawLang === "en" || rawLang === "it" || rawLang === "de" || rawLang === "fr" || rawLang === "es"
+      ? rawLang
+      : "sl";
 
   // TASK 66: jezikovne preslikave WMO kode → besedilo/ikona (isti kanon kot
   // parse plasti — samo tukaj za mapiranje DailyForecast → odgovor).
   // W1-faza-2b: weatherCodeToTextFor dispečer pokriva vse 4 jezike.
+  // W12-faza-2b: … in FR/ES (6-jezični dispečer).
   const codeText = (code: number) => weatherCodeToTextFor(lang, code);
 
   // ---------------------------------------------------------------------

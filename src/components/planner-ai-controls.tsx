@@ -36,9 +36,16 @@ import { QUICK_ACTIONS } from "@/lib/refine-actions";
 import { trackPlannerEvent, markResultEngaged } from "@/lib/planner-analytics";
 import type { PlannerLang } from "@/lib/planner-lang";
 
-/** W1-2b-2: jezik UI — 4-smerno iz locale (neznano → SL). */
+/** W1-2b-2: jezik UI — 4-smerno iz locale (neznano → SL).
+ *  W12-faza-2b: 6-smerno — /fr+/es/nacrtuj sta javni planner ploskvi. */
 const langOf = (locale: string): PlannerLang =>
-  locale === "en" || locale === "it" || locale === "de" ? locale : "sl";
+  locale === "en" ||
+  locale === "it" ||
+  locale === "de" ||
+  locale === "fr" ||
+  locale === "es"
+    ? locale
+    : "sl";
 
 // ============================================================================
 // PLANNER AI CONTROLS — Issue #3 §3 "AI = CONTROL LAYER"
@@ -71,19 +78,21 @@ interface PlannerAiControlsProps {
 }
 
 /** Večjezične oznake (isti vzorec kot ItineraryRefiner — L konstanta;
- *  W1-2b-2: tudi IT/DE).
+ *  W1-2b-2: tudi IT/DE; W12-faza-2b: tudi FR/ES).
  *  ISSUE #9 ZERO-AI: naslov NE trdi več »AI prilagoditve« — akcije so
  *  DETERMINISTIČNE (refine-actions + ukazni parser, 0 AI žetonov). */
 const L = {
-  title: { sl: "Hitre prilagoditve", en: "Quick adjustments", it: "Modifiche rapide", de: "Schnelle Anpassungen" },
+  title: { sl: "Hitre prilagoditve", en: "Quick adjustments", it: "Modifiche rapide", de: "Schnelle Anpassungen", fr: "Ajustements rapides", es: "Ajustes rápidos" },
   subtitle: {
     sl: "Kaj naj spremenim na tvoji poti?",
     en: "What should I change about your trip?",
     it: "Cosa devo cambiare del tuo viaggio?",
     de: "Was soll ich an deiner Reise ändern?",
+    fr: "Que dois-je changer dans ton voyage ?",
+    es: "¿Qué debo cambiar de tu viaje?",
   },
-  adjustDay: { sl: "Dan", en: "Day", it: "Giorno", de: "Tag" },
-  wholeTrip: { sl: "cela pot", en: "whole trip", it: "intero viaggio", de: "ganze Reise" },
+  adjustDay: { sl: "Dan", en: "Day", it: "Giorno", de: "Tag", fr: "Jour", es: "Día" },
+  wholeTrip: { sl: "cela pot", en: "whole trip", it: "intero viaggio", de: "ganze Reise", fr: "voyage entier", es: "viaje completo" },
   // TASK 4 / K-8: VIDNA ločba obsega — skupinski oznaki nad čipi. VLM
   // revizija: "chips do not visually indicate which day they affect … no
   // text explaining scope" (a11y imena so ga nosila, vidno ne).
@@ -92,70 +101,90 @@ const L = {
     en: "For the selected day:",
     it: "Per il giorno selezionato:",
     de: "Für den ausgewählten Tag:",
+    fr: "Pour le jour sélectionné :",
+    es: "Para el día seleccionado:",
   },
   scopeTripLabel: {
     sl: "Za celotno pot:",
     en: "For the whole trip:",
     it: "Per l'intero viaggio:",
     de: "Für die ganze Reise:",
+    fr: "Pour tout le voyage :",
+    es: "Para todo el viaje:",
   },
   quickActionsHint: {
     sl: "Hitre akcije delujejo tudi brez AI (deterministično)",
     en: "Quick actions also work without AI (deterministic)",
     it: "Le azioni rapide funzionano anche senza AI (deterministico)",
     de: "Schnellaktionen funktionieren auch ohne KI (deterministisch)",
+    fr: "Les actions rapides fonctionnent aussi sans IA (déterministe)",
+    es: "Las acciones rápidas también funcionan sin IA (determinista)",
   },
   inputLabel: {
     sl: "Prosti ukaz za prilagoditev",
     en: "Free-form adjustment instruction",
     it: "Istruzione libera per la modifica",
     de: "Freiform-Anweisung zur Anpassung",
+    fr: "Instruction libre pour l'ajustement",
+    es: "Instrucción libre para el ajuste",
   },
   inputPlaceholder: {
     sl: "npr. dodaj Piran, odstrani Kranj, sprememi tempo …",
     en: "e.g. add Piran, remove Kranj, change the pace …",
     it: "es. aggiungi Piran, rimuovi Kranj, cambia il ritmo …",
     de: "z. B. füge Piran hinzu, entferne Kranj, ändere das Tempo …",
+    fr: "ex. ajoute Piran, retire Kranj, change le rythme …",
+    es: "ej. añade Piran, quita Kranj, cambia el ritmo …",
   },
-  send: { sl: "Pošlji", en: "Send", it: "Invia", de: "Senden" },
-  loading: { sl: "Prilagajam …", en: "Adjusting …", it: "Modifico …", de: "Passe an …" },
+  send: { sl: "Pošlji", en: "Send", it: "Invia", de: "Senden", fr: "Envoyer", es: "Enviar" },
+  loading: { sl: "Prilagajam …", en: "Adjusting …", it: "Modifico …", de: "Passe an …", fr: "J'ajuste …", es: "Ajustando …" },
   // TASK 4 / K-4: IZHOD iz dolgega refine klica (živi dokaz: 8–11 min
   // spinnerja brez preklica) — Prekliči + števec dejansko pretečenega časa
   // (isti kanon iskrenosti kot generacija TASK 77).
-  cancel: { sl: "Prekliči", en: "Cancel", it: "Annulla", de: "Abbrechen" },
-  seconds: { sl: "s", en: "s", it: "s", de: "s" },
+  cancel: { sl: "Prekliči", en: "Cancel", it: "Annulla", de: "Abbrechen", fr: "Annuler", es: "Cancelar" },
+  seconds: { sl: "s", en: "s", it: "s", de: "s", fr: "s", es: "s" },
   loadingSlowHint: {
     sl: "AI lahko potrebuje do ~60 s — lahko prekličeš.",
     en: "AI can take up to ~60 s — you can cancel.",
     it: "L'AI può richiedere fino a ~60 s — puoi annullare.",
     de: "Die KI kann bis zu ~60 s brauchen — du kannst abbrechen.",
+    fr: "L'IA peut prendre jusqu'à ~60 s — tu peux annuler.",
+    es: "La IA puede tardar hasta ~60 s — puedes cancelar.",
   },
   toastCancelled: {
     sl: "Prilagoditev preklicana — načrt ni spremenjen",
     en: "Adjustment cancelled — itinerary unchanged",
     it: "Modifica annullata — itinerario invariato",
     de: "Anpassung abgebrochen — Reiseplan unverändert",
+    fr: "Ajustement annulé — l'itinéraire est inchangé",
+    es: "Ajuste cancelado — el itinerario no ha cambiado",
   },
-  toastUpdated: { sl: "Itinerer posodobljen!", en: "Itinerary updated!", it: "Itinerario aggiornato!", de: "Reiseplan aktualisiert!" },
+  toastUpdated: { sl: "Itinerer posodobljen!", en: "Itinerary updated!", it: "Itinerario aggiornato!", de: "Reiseplan aktualisiert!", fr: "Itinéraire mis à jour !", es: "¡Itinerario actualizado!" },
   toastStillFailing: {
     sl: "Posodobljeno — a dan še vedno ni izvedljiv",
     en: "Updated — but the day is still not doable",
     it: "Aggiornato — ma il giorno non è ancora fattibile",
     de: "Aktualisiert — aber der Tag ist noch nicht machbar",
+    fr: "Mis à jour — mais le jour n'est toujours pas faisable",
+    es: "Actualizado — pero el día sigue sin ser viable",
   },
-  toastNoChange: { sl: "Ni sprememb", en: "No changes", it: "Nessuna modifica", de: "Keine Änderungen" },
-  toastFailed: { sl: "Posodobitev ni uspela", en: "Update failed", it: "Aggiornamento non riuscito", de: "Aktualisierung fehlgeschlagen" },
+  toastNoChange: { sl: "Ni sprememb", en: "No changes", it: "Nessuna modifica", de: "Keine Änderungen", fr: "Aucun changement", es: "Sin cambios" },
+  toastFailed: { sl: "Posodobitev ni uspela", en: "Update failed", it: "Aggiornamento non riuscito", de: "Aktualisierung fehlgeschlagen", fr: "Échec de la mise à jour", es: "Error al actualizar" },
   toastTimeout: {
     sl: "Prilagoditev je trajala predolgo — poskusi znova (hitre akcije delujejo takoj)",
     en: "The adjustment took too long — try again (quick actions work instantly)",
     it: "La modifica ha richiesto troppo tempo — riprova (le azioni rapide sono immediate)",
     de: "Die Anpassung hat zu lange gedauert — versuche es erneut (Schnellaktionen wirken sofort)",
+    fr: "L'ajustement a pris trop de temps — réessaie (les actions rapides sont immédiates)",
+    es: "El ajuste ha tardado demasiado — inténtalo de nuevo (las acciones rápidas son inmediatas)",
   },
   errorGeneric: {
     sl: "Napaka pri posodobitvi",
     en: "Error while updating",
     it: "Errore durante l'aggiornamento",
     de: "Fehler beim Aktualisieren",
+    fr: "Erreur lors de la mise à jour",
+    es: "Error al actualizar",
   },
 } as const;
 
@@ -166,37 +195,43 @@ const L = {
  */
 export const AI_CONTROL_FREE_ACTIONS: {
   id: string;
-  label: { sl: string; en: string; it?: string; de?: string };
-  instruction: { sl: string; en: string; it?: string; de?: string };
+  label: { sl: string; en: string; it?: string; de?: string; fr?: string; es?: string };
+  instruction: { sl: string; en: string; it?: string; de?: string; fr?: string; es?: string };
 }[] = [
   {
     id: "cheaper",
-    label: { sl: "Ceneje", en: "Cheaper", it: "Più economico", de: "Günstiger" },
+    label: { sl: "Ceneje", en: "Cheaper", it: "Più economico", de: "Günstiger", fr: "Moins cher", es: "Más barato" },
     instruction: {
       sl: "Naredi načrt ceneje — prednost imajo brezplačne in cenejše dejavnosti, skupni strošek potovanja naj se zniža.",
       en: "Make the itinerary cheaper — prioritize free and inexpensive activities and lower the overall trip cost.",
       it: "Rendi l'itinerario più economico — dai priorità alle attività gratuite ed economiche e riduci il costo complessivo del viaggio.",
       de: "Mach den Reiseplan günstiger — priorisiere kostenlose und preiswerte Aktivitäten und senke die Gesamtkosten der Reise.",
+      fr: "Rends l'itinéraire moins cher — donne la priorité aux activités gratuites et bon marché et réduis le coût total du voyage.",
+      es: "Haz el itinerario más barato — prioriza las actividades gratuitas y económicas y reduce el coste total del viaje.",
     },
   },
   {
     id: "more_active",
-    label: { sl: "Bolj aktivno", en: "More active", it: "Più attivo", de: "Aktiver" },
+    label: { sl: "Bolj aktivno", en: "More active", it: "Più attivo", de: "Aktiver", fr: "Plus actif", es: "Más activo" },
     instruction: {
       sl: "Naredi načrt bolj aktiven — dodaj pohode in telesno dejavne izkušnje.",
       en: "Make the itinerary more active — add hikes and physically active experiences.",
       it: "Rendi l'itinerario più attivo — aggiungi escursioni ed esperienze fisicamente attive.",
       de: "Mach den Reiseplan aktiver — füge Wanderungen und körperlich aktive Erlebnisse hinzu.",
+      fr: "Rends l'itinéraire plus actif — ajoute des randonnées et des expériences physiquement actives.",
+      es: "Haz el itinerario más activo — añade senderismo y experiencias físicamente activas.",
     },
   },
   {
     id: "calmer",
-    label: { sl: "Bolj mirno", en: "Calmer", it: "Più tranquillo", de: "Ruhiger" },
+    label: { sl: "Bolj mirno", en: "Calmer", it: "Più tranquillo", de: "Ruhiger", fr: "Plus calme", es: "Más tranquilo" },
     instruction: {
       sl: "Naredi načrt bolj miren — manj postankov na dan in več časa za vsak kraj.",
       en: "Make the itinerary calmer — fewer stops per day and more time at each place.",
       it: "Rendi l'itinerario più tranquillo — meno tappe al giorno e più tempo in ogni luogo.",
       de: "Mach den Reiseplan ruhiger — weniger Stopps pro Tag und mehr Zeit an jedem Ort.",
+      fr: "Rends l'itinéraire plus calme — moins d'étapes par jour et plus de temps sur chaque lieu.",
+      es: "Haz el itinerario más tranquilo — menos paradas por día y más tiempo en cada lugar.",
     },
   },
 ];

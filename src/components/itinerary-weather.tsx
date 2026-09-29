@@ -49,8 +49,9 @@ export function WeatherChip({
   lang,
 }: {
   w: TripWeatherDay;
-  /** W1-faza-2b: 4-jezični tok (TRIP_WEATHER_LABELS ima it/de). */
-  lang: "sl" | "en" | "it" | "de";
+  /** W1-faza-2b: 4-jezični tok (TRIP_WEATHER_LABELS ima it/de).
+   *  W12-faza-2b: 6-jezični tok (fr/es po istem vzorcu — /fr+/es/nacrtuj). */
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es";
 }) {
   const dayText = TRIP_WEATHER_LABELS.day[lang](w);
   return (
@@ -86,7 +87,7 @@ export interface ItineraryForecast {
 export function useItineraryForecast(
   days: ReadonlyArray<DayPlan>,
   tripStartDate: string | null | undefined,
-  lang: "sl" | "en" | "it" | "de"
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es"
 ): ItineraryForecast {
   const plan = useMemo(
     () => itineraryWeatherPlan(days, tripStartDate),
@@ -190,8 +191,9 @@ export function ItineraryWeatherNotes({
 }: {
   unavailable: boolean;
   notPublished: boolean;
-  /** W1-faza-2b: 4-jezični tok. */
-  lang: "sl" | "en" | "it" | "de";
+  /** W1-faza-2b: 4-jezični tok.
+   *  W12-faza-2b: 6-jezični tok (fr/es po istem vzorcu). */
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es";
 }) {
   if (!unavailable && !notPublished) return null;
   return (

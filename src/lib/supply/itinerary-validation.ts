@@ -487,8 +487,9 @@ export function validateItinerarySupply(
   it: Itinerary,
   authority: SupplyAuthority,
   opts: {
-    /** W1-faza-2b: 4-jezični tok (PL helper). */
-    lang: "sl" | "en" | "it" | "de";
+    /** W1-faza-2b: 4-jezični tok (PL helper).
+     *  W12-faza-2b: 6-jezični tok (fr/es po istem PL kanonu). */
+    lang: "sl" | "en" | "it" | "de" | "fr" | "es";
     groupSize?: number;
     reinsertFixed?: boolean;
     reinsertFixedFrom?: "selection" | "current";
@@ -664,6 +665,8 @@ export function validateItinerarySupply(
             en: "Price not verified — provider is not connected on the server. Check the price and availability with the provider before booking.",
             it: "Prezzo non verificato — il fornitore non è collegato sul server. Verifica prezzo e disponibilità presso il fornitore prima di prenotare.",
             de: "Preis nicht überprüft — der Anbieter ist serverseitig nicht angebunden. Prüfe Preis und Verfügbarkeit vor der Buchung beim Anbieter.",
+            fr: "Prix non vérifié — le fournisseur n'est pas connecté côté serveur. Vérifie le prix et la disponibilité auprès du fournisseur avant de réserver.",
+            es: "Precio no verificado — el proveedor no está conectado en el servidor. Comprueba el precio y la disponibilidad con el proveedor antes de reservar.",
           }),
         };
         report.issues.push({
@@ -726,6 +729,8 @@ export function validateItinerarySupply(
             en: "Price not verified — provider is not connected on the server. Check the price and availability with the provider before booking.",
             it: "Prezzo non verificato — il fornitore non è collegato sul server. Verifica prezzo e disponibilità presso il fornitore prima di prenotare.",
             de: "Preis nicht überprüft — der Anbieter ist serverseitig nicht angebunden. Prüfe Preis und Verfügbarkeit vor der Buchung beim Anbieter.",
+            fr: "Prix non vérifié — le fournisseur n'est pas connecté côté serveur. Vérifie le prix et la disponibilité auprès du fournisseur avant de réserver.",
+            es: "Precio no verificado — el proveedor no está conectado en el servidor. Comprueba el precio y la disponibilidad con el proveedor antes de reservar.",
           }),
         };
         report.issues.push({
@@ -838,6 +843,8 @@ export function validateItinerarySupply(
                         en: "Price not verified — provider is not connected on the server. Check the price and availability with the provider before booking.",
                         it: "Prezzo non verificato — il fornitore non è collegato sul server. Verifica prezzo e disponibilità presso il fornitore prima di prenotare.",
                         de: "Preis nicht überprüft — der Anbieter ist serverseitig nicht angebunden. Prüfe Preis und Verfügbarkeit vor der Buchung beim Anbieter.",
+                        fr: "Prix non vérifié — le fournisseur n'est pas connecté côté serveur. Vérifie le prix et la disponibilité auprès du fournisseur avant de réserver.",
+                        es: "Precio no verificado — el proveedor no está conectado en el servidor. Comprueba el precio y la disponibilidad con el proveedor antes de reservar.",
                       }),
                     }
                   : s

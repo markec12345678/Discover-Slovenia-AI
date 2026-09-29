@@ -170,7 +170,8 @@ export function parseTripWeatherResponse(json: unknown): TripWeatherDay[] | null
 // ---------------------------------------------------------------------------
 
 export const TRIP_WEATHER_LABELS = {
-  /** Čip dneva — „do 26 °C · padavine 10 %" (W1-faza-2b: + IT/DE). */
+  /** Čip dneva — „do 26 °C · padavine 10 %" (W1-faza-2b: + IT/DE;
+   *  W12-faza-2b: + FR/ES po istem vzorcu komponentne faze). */
   day: {
     sl: (d: TripWeatherDay) =>
       d.precipitationProbabilityMax != null
@@ -188,6 +189,14 @@ export const TRIP_WEATHER_LABELS = {
       d.precipitationProbabilityMax != null
         ? `bis ${d.tempMax} °C · Regen ${d.precipitationProbabilityMax} %`
         : `bis ${d.tempMax} °C`,
+    fr: (d: TripWeatherDay) =>
+      d.precipitationProbabilityMax != null
+        ? `jusqu'à ${d.tempMax} °C · pluie ${d.precipitationProbabilityMax} %`
+        : `jusqu'à ${d.tempMax} °C`,
+    es: (d: TripWeatherDay) =>
+      d.precipitationProbabilityMax != null
+        ? `hasta ${d.tempMax} °C · lluvia ${d.precipitationProbabilityMax} %`
+        : `hasta ${d.tempMax} °C`,
   },
   /** Vir (label izrecno — isti kanon kot Go Mode / zemljevid). */
   source: {
@@ -195,6 +204,8 @@ export const TRIP_WEATHER_LABELS = {
     en: "source: Open-Meteo",
     it: "fonte: Open-Meteo",
     de: "Quelle: Open-Meteo",
+    fr: "source : Open-Meteo",
+    es: "fuente: Open-Meteo",
   },
   /** Izpad vira — časovnica poti dela naprej (iskrena opomba). */
   unavailable: {
@@ -202,6 +213,8 @@ export const TRIP_WEATHER_LABELS = {
     en: "Weather is not available right now — the trip plan keeps working.",
     it: "Il meteo non è disponibile al momento — il piano di viaggio continua a funzionare.",
     de: "Das Wetter ist derzeit nicht verfügbar — der Reiseplan funktioniert weiterhin.",
+    fr: "La météo n'est pas disponible pour le moment — le plan de voyage continue de fonctionner.",
+    es: "El clima no está disponible en este momento — el plan del viaje sigue funcionando.",
   },
   /** Dnevi obstajajo, njihova realna napoved pa NE (preteklost/čez horizont). */
   notPublished: {
@@ -209,5 +222,7 @@ export const TRIP_WEATHER_LABELS = {
     en: "Weather for this trip's days is not available — Open-Meteo publishes forecasts for future days only (up to ~16 days ahead).",
     it: "Il meteo per i giorni di questo viaggio non è disponibile — Open-Meteo pubblica previsioni solo per i giorni futuri (fino a ~16 giorni).",
     de: "Wetter für die Tage dieser Reise ist nicht verfügbar — Open-Meteo veröffentlicht nur Vorhersagen für kommende Tage (bis ~16 Tage im Voraus).",
+    fr: "La météo pour les jours de ce voyage n'est pas disponible — Open-Meteo publie des prévisions uniquement pour les jours à venir (jusqu'à ~16 jours à l'avance).",
+    es: "El clima para los días de este viaje no está disponible — Open-Meteo publica pronósticos solo para los días futuros (hasta ~16 días por adelantado).",
   },
 } as const;

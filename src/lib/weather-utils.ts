@@ -17,8 +17,9 @@
  * W1-faza-2b (Issue #15): razširjeno na IT/DE (dispečer
  * weatherCodeToTextFor pokriva vse štiri; parse plasti uporabljajo
  * isti ternary vzorec — IT/DE podedujeta EN besedilo).
+ * W12-faza-2b: FR/ES po istem vzorcu (planner ploskev /fr+/es/nacrtuj).
  */
-export type WeatherLang = "sl" | "en" | "it" | "de";
+export type WeatherLang = "sl" | "en" | "it" | "de" | "fr" | "es";
 
 /** WMO weather code → slovensko besedilo. */
 export function weatherCodeToText(code: number): string {
@@ -85,12 +86,45 @@ export function weatherCodeToTextDe(code: number): string {
 }
 
 /**
- * WMO weather code → besedilo v podanem klepetnem jeziku (W1 dispečer).
+ * WMO weather code → francosko besedilo (W12-faza-2b).
+ * Pokriva FR planner ploskev (/fr/nacrtuj — itinerer, ask, vremenski čipi).
+ */
+export function weatherCodeToTextFr(code: number): string {
+  if (code === 0) return "ciel dégagé";
+  if (code <= 3) return "partiellement nuageux";
+  if (code <= 48) return "brouillard";
+  if (code <= 67) return "pluie";
+  if (code <= 77) return "neige";
+  if (code <= 82) return "averses";
+  if (code <= 86) return "averses de neige";
+  if (code <= 99) return "orage";
+  return "variable";
+}
+
+/**
+ * WMO weather code → špansko besedilo (W12-faza-2b).
+ * Pokriva ES planner ploskev (/es/nacrtuj — itinerer, ask, vremenski čipi).
+ */
+export function weatherCodeToTextEs(code: number): string {
+  if (code === 0) return "cielo despejado";
+  if (code <= 3) return "parcialmente nublado";
+  if (code <= 48) return "niebla";
+  if (code <= 67) return "lluvia";
+  if (code <= 77) return "nieve";
+  if (code <= 82) return "chubascos";
+  if (code <= 86) return "chubascos de nieve";
+  if (code <= 99) return "tormenta";
+  return "variable";
+}
+
+/**
+ * WMO weather code → besedilo v podanem jeziku (W1 dispečer).
  * SL/EN ostajata kanonični ( obstoječi funkciji); it/de sta dodana
- * za klepetno domensko plast. Neznan jezik → slovensko (default).
+ * za klepetno domensko plast; W12-faza-2b: fr/es za planner ploskev.
+ * Neznan jezik → slovensko (default).
  */
 export function weatherCodeToTextFor(
-  lang: "sl" | "en" | "it" | "de",
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es",
   code: number
 ): string {
   switch (lang) {
@@ -100,6 +134,10 @@ export function weatherCodeToTextFor(
       return weatherCodeToTextIt(code);
     case "de":
       return weatherCodeToTextDe(code);
+    case "fr":
+      return weatherCodeToTextFr(code);
+    case "es":
+      return weatherCodeToTextEs(code);
     default:
       return weatherCodeToText(code);
   }

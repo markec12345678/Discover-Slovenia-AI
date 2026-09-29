@@ -195,10 +195,12 @@ export function itineraryWeatherPlan(
  * Ključ trenutne zahteve (za varovalko zastarelosti v komponenti):
  * drugačen načrt ali jezik → odgovor NI več aktualen → brez čipov.
  * Brez načrta → null.
+ * W12-faza-2b: 6-jezično (fr/es — ključ nosi samo oznako, vsebina je
+ * pri /api/weather, ki ima svoj dispečer).
  */
 export function itineraryWeatherRequestKey(
   plan: ItineraryWeatherPlan | null,
-  lang: "sl" | "en" | "it" | "de"
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es"
 ): string | null {
   if (!plan) return null;
   return `${lang}|${plan.groups
@@ -273,10 +275,12 @@ const EN_MONTHS = [
  * surova vrednost (defenzivno, isti kanon kot trip-dates).
  * W1-faza-2b: IT/DE prek Intl („martedì, 14 settembre" /
  * „Dienstag, 14. September") — brez ročnih tabel dni/mescev.
+ * W12-faza-2b: FR/ES prek Intl („mardi, 14 septembre" /
+ * „martes, 14 de septiembre") — isti vzorec kot IT/DE.
  */
 export function formatDayLabel(
   isoDate: string,
-  lang: "sl" | "en" | "it" | "de"
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es"
 ): string {
   if (lang === "sl") return formatDayLabelSI(isoDate);
   const ms = parseISODateLocal(isoDate);
@@ -285,8 +289,15 @@ export function formatDayLabel(
   if (lang === "en") {
     return `${EN_WEEKDAYS[dt.getDay()]}, ${dt.getDate()} ${EN_MONTHS[dt.getMonth()]}`;
   }
-  // IT/DE: Intl formatiranje (imenovalnik + dan + mesec)
-  const locale = lang === "it" ? "it-IT" : "de-DE";
+  // IT/DE/FR/ES: Intl formatiranje (imenovalnik + dan + mesec)
+  const locale =
+    lang === "it"
+      ? "it-IT"
+      : lang === "de"
+      ? "de-DE"
+      : lang === "fr"
+      ? "fr-FR"
+      : "es-ES";
   const weekday = new Intl.DateTimeFormat(locale, { weekday: "long" }).format(dt);
   const dayMonth = new Intl.DateTimeFormat(locale, {
     day: "numeric",

@@ -264,11 +264,12 @@ export function sanitizeAiRationale(raw: unknown): string | null {
  * Sestavljena iz vnosnih želja + strukturnih dejstev poti — brez izmišljenih
  * trditev. P4-8 (EN-fallback fix): lang "en" izpiše angleško (fallback pot
  * prej mešala jezike za EN uporabnike).
+ * W12-faza-2b: 6-jezično (fr/es po PL pogodbi — „jour/journée · día").
  */
 export function buildFallbackRationale(
   input: PlannerInput,
   quality: ItineraryQuality,
-  lang: "sl" | "en" | "it" | "de" = "sl"
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es" = "sl"
 ): string {
   // F15: tempo v utemeljitvi — SAMO kadar je izrecno izbran (slow/fast);
   // "balanced" ali neizbrano ne spremeni besedila (nazaj kompatibilno).
@@ -280,6 +281,8 @@ export function buildFallbackRationale(
           en: " The slow pace means fewer stops with more time at each.",
           it: " Il ritmo lento significa meno tappe con più tempo per ciascuna.",
           de: " Das langsame Tempo bedeutet weniger Stopps mit mehr Zeit an jedem Ort.",
+          fr: " Le rythme lent signifie moins d'étapes avec plus de temps pour chacune.",
+          es: " El ritmo lento significa menos paradas con más tiempo en cada una.",
         })
       : input.pace === "fast"
       ? PL(lang, {
@@ -287,6 +290,8 @@ export function buildFallbackRationale(
           en: " The fast pace packs more places into each day.",
           it: " Il ritmo sostenuto comprende più luoghi in ogni giornata.",
           de: " Das schnelle Tempo packt mehr Orte in jeden Tag.",
+          fr: " Le rythme soutenu regroupe plus de lieux dans chaque journée.",
+          es: " El ritmo rápido incluye más lugares en cada día.",
         })
       : "";
   const interests =
@@ -296,12 +301,16 @@ export function buildFallbackRationale(
           en: `with wishes: ${input.interests.slice(0, 3).join(", ")}`,
           it: `con le preferenze: ${input.interests.slice(0, 3).join(", ")}`,
           de: `mit Wünschen: ${input.interests.slice(0, 3).join(", ")}`,
+          fr: `selon tes envies : ${input.interests.slice(0, 3).join(", ")}`,
+          es: `según tus preferencias: ${input.interests.slice(0, 3).join(", ")}`,
         })
       : PL(lang, {
           sl: "glede na splošne želje",
           en: "based on general preferences",
           it: "in base alle preferenze generali",
           de: "auf Basis allgemeiner Vorlieben",
+          fr: "selon des envies générales",
+          es: "según preferencias generales",
         });
   const driving =
     quality.drivingMinutes > 0
@@ -310,18 +319,24 @@ export function buildFallbackRationale(
           en: `total driving ~${formatDrivingMinutes(quality.drivingMinutes)}`,
           it: `guida totale ~${formatDrivingMinutes(quality.drivingMinutes)}`,
           de: `Gesamtfahrt ~${formatDrivingMinutes(quality.drivingMinutes)}`,
+          fr: `conduite totale ~${formatDrivingMinutes(quality.drivingMinutes)}`,
+          es: `conducción total ~${formatDrivingMinutes(quality.drivingMinutes)}`,
         })
       : PL(lang, {
           sl: "destinacije so v neposredni bližini",
           en: "destinations are right next to each other",
           it: "le destinazioni sono vicinissime tra loro",
           de: "die Ziele liegen direkt nebeneinander",
+          fr: "les destinations sont juste à côté les unes des autres",
+          es: "los destinos están muy cerca unos de otros",
         });
   return PL(lang, {
     sl: `Pot je sestavljena za ${input.days}-dnevno potovanje ${interests}. Destinacije so izbrane po ujemanju s interesi, sezonski ustreznosti in geografski bližini (${driving}).${paceNote}`,
     en: `The trip is planned for a ${input.days}-day journey ${interests}. Destinations are chosen by interest match, seasonal suitability and geographic proximity (${driving}).${paceNote}`,
     it: `Il viaggio è pianificato per un percorso di ${input.days} giorni ${interests}. Le destinazioni sono scelte per corrispondenza con gli interessi, idoneità stagionale e vicinanza geografica (${driving}).${paceNote}`,
     de: `Die Reise ist für eine ${input.days}-tägige Fahrt geplant ${interests}. Ziele werden nach Interessensübereinstimmung, Saison eignung und geografischer Nähe gewählt (${driving}).${paceNote}`,
+    fr: `Le voyage est planifié pour un parcours de ${input.days} jours ${interests}. Les destinations sont choisies selon la correspondance avec tes intérêts, la pertinence saisonnière et la proximité géographique (${driving}).${paceNote}`,
+    es: `El viaje está planificado para un recorrido de ${input.days} días ${interests}. Los destinos se eligen por coincidencia con tus intereses, idoneidad estacional y cercanía geográfica (${driving}).${paceNote}`,
   });
 }
 

@@ -97,8 +97,9 @@ export function insertProductStop(
   it: Itinerary,
   product: ProviderProduct,
   opts: {
-    /** W1-faza-2b: 4-jezični tok (PL helper). */
-    locale: "sl" | "en" | "it" | "de";
+    /** W1-faza-2b: 4-jezični tok (PL helper).
+     *  W12-faza-2b: FR/ES po istem PL kanonu. */
+    locale: "sl" | "en" | "it" | "de" | "fr" | "es";
     destinationCoords: Map<string, { lat: number; lng: number }>;
   }
 ): AddProductResult {
@@ -150,10 +151,10 @@ export function insertProductStop(
   if (product.address) notesParts.push(product.address);
   if (product.price) {
     // AUDIT 42, točka 10: enota + „od" vedno zraven cene (nikoli gol €X).
-    // W1-faza-2b: 4-jezično (PL).
+    // W1-faza-2b: 4-jezično (PL) · W12-faza-2b: FR/ES („à partir de"/„desde").
     const unit = product.price.unit.replace(/_/g, " ");
     const from = product.price.fromPrice
-      ? PL(locale, { sl: "od ", en: "from ", it: "da ", de: "ab " })
+      ? PL(locale, { sl: "od ", en: "from ", it: "da ", de: "ab ", fr: "à partir de ", es: "desde " })
       : "";
     notesParts.push(
       PL(locale, {
@@ -161,6 +162,8 @@ export function insertProductStop(
         en: `price: ${from}€${product.price.amount} (${unit})`,
         it: `prezzo: ${from}${product.price.amount} € (${unit})`,
         de: `Preis: ${from}${product.price.amount} € (${unit})`,
+        fr: `prix : ${from}${product.price.amount} € (${unit})`,
+        es: `precio: ${from}${product.price.amount} € (${unit})`,
       })
     );
   }
@@ -170,6 +173,8 @@ export function insertProductStop(
       en: `Added from the supply map · source: ${product.license?.source ?? product.provider}`,
       it: `Aggiunto dalla mappa delle offerte · fonte: ${product.license?.source ?? product.provider}`,
       de: `Von der Angebotskarte hinzugefügt · Quelle: ${product.license?.source ?? product.provider}`,
+      fr: `Ajouté depuis la carte des offres · source : ${product.license?.source ?? product.provider}`,
+      es: `Añadido desde el mapa de ofertas · fuente: ${product.license?.source ?? product.provider}`,
     })
   );
   // TASK 47 (§6/§13): ISKRENA razpoložljivost je del provenance vsakega
