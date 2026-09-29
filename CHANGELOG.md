@@ -57,6 +57,20 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
   prejme začeto obljubo, `map-section.tsx` NIMA vzorca — popravek je
   namerno samo /pot). Suite 4153 → **4156**.
 
+### Operativa
+
+- **Obnova žetonov po .env incidentu** (29. 9. ~06:40 UTC): okolje je ob
+  restartu 04:38 UTC prepisalo `.env` na samo `DATABASE_URL` (VERCEL_TOKEN
+  in vsi ostali ključi izgubljeni — webhook je 1.140.2 vseeno sam
+  uveljavil). Lastnik je prilepil sveža `VERCEL_TOKEN` + `GITHUB_TOKEN`
+  žetona; oba verificirana proti živim API-jem (Vercel `/v2/user` 200,
+  GitHub repo 200 + push dovoljenje). Vercel API zmožnost nazaj
+  (GET `/v6/deployments` potrjuje obe 1.140.2 uvedbi READY), GitHub API
+  dostop (repo + Actions) nazaj. Obrambna kopija ključev izven repa
+  (`/home/z/.env-keys-backup`, chmod 600) — lekcija incidenta: brez
+  kopije je bila obnova nemogoča. Verzija ostaja 1.140.2 (operativni
+  dogodek, brez sprememb kode — precedens docs-only commitov).
+
 ---
 
 ## [1.140.1] — 2026-09-28 (CLS NA /pot POTEH: rezervacija zemljevida v SSR + preconnect na OSM ploščice)
