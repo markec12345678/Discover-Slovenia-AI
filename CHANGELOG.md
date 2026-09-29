@@ -55,6 +55,15 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
   Postojna Cave, Jamska cesta 30" (Google je sam razrešil naš URL v
   konkretno naslovno pot!) + telemetrija oddana; 0 napak strani, 0
   konzolnih opozoril; dokaz v `w11-dokazi/gmaps-pilule.png`.
+- **Produkcijsko (agent-browser, Vercel 1.141.0, 29. 9. ~12:50 slovensko)**:
+  enaka zlata pot na `i-feel-slovenia.vercel.app` → 3-dnevni itinerer →
+  3 pilule; klik pilule Dan 1 je brskalnik navigiral NA DEJANSKI Google
+  Maps URL (`maps/dir/?api=1&origin=46.283300,13.883300…` — Bohinj
+  koordinate); telemetrija POST 200; novo kodo potrjeno tudi v
+  produkcijskem bundle (`gmapsDay` v `nacrtuj/page-*.js`) + obe CLS
+  regresijski vratci še zeleni po uvajanju (`h-[500px]`, „Načrt po
+  dnevih"); CI na b2c8106 zelen (suite 4169); dokaz v
+  `w11-dokazi/gmaps-pilule-prod.png`.
 
 ### Operativa (svež konkurenčni benchmark 29. 9. 2026 — vhodni val W11)
 
