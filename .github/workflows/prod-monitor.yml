@@ -15,6 +15,18 @@ name: Production Health Monitor
 # migracija), SSR strani SL+EN, sitemap z pragom ≥ 650 URL (SEO regresija),
 # 3 vzorčne globoke strani, /api/listings (živa DB povezljivost), 404.
 #
+# RENDER CATCH-UP JOB (Issue #7 — 29. 9. 2026): korenski vzrok Render drifta
+# je dokazan z API diagnostiko — free plan kvota 500 build minut/mesec je
+# IZČRPANA (~50 uspešnih build-ov × ~4 min od 11.–25. 9.); vsak deploy od
+# 25. 9. 11:36 naprej je zavrnjen v ~1 s (PRE-BUILD zavrnitev — builder se
+# niti ne zažene; zadnji uspeh: 5eb96e5 / v1.102.0). Kvota se ponastavi
+# 1. dan v mesecu. Ta job vsake 3 h IDEMPOTENTNO preveri stanje in če je
+# Render za mainom sproži deploy (POST /deploys) — zavrnjeni poskusi
+# (~1 s) ne trošijo minut, zato job varno čaka na ponastavitev kvote.
+# Varovanje: po RESNI build napaki (trajanje > 90 s) 24 h hlajenje.
+# API ključ: GitHub secret RENDER_API_KEY (sealed box — scripts/ops/
+# github-secret-set.sh).
+#
 # VERZIJSKA VRATA (ISSUE #7 / G-1, 1.115.1): --expect-version prejme verzijo
 # iz package.json checkouta (main). Neujemanje (produkcija ≠ repo) = RDEČE —
 # odkrito 2026-09-26: Render je bil 13 verzij za mainom (1.102.0), monitor
@@ -91,3 +103,98 @@ jobs:
 
       - name: 🩺 Health + funkcionalni dim (GET-only, retry za hladni zagon + verzija ≡ repo)
         run: bash scripts/ops/functional-smoke.sh https://i-feel-slovenia.onrender.com --get-only --ready-timeout 240 --expect-version "$(jq -r .version package.json)"
+
+  render-catchup:
+    name: Render catch-up (Issue #7 — samodejna uveljavitev main)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: 📥 Checkout (main HEAD za primerjavo)
+        uses: actions/checkout@v4
+
+      - name: 🚀 Uveljavi main na Render (idempotentno, varuje kvoto build minut)
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SERVICE_ID: srv-dai6n3jm8hqs73f22iu0
+        run: |
+          set -euo pipefail
+          API="https://api.render.com/v1"
+          AUTH="Authorization: Bearer ${RENDER_API_KEY}"
+          HEAD_SHA="$(git rev-parse HEAD)"
+
+          # ── 1) zadnji Render deploy ──
+          LATEST="$(curl -sS -m 30 -H "$AUTH" "${API}/services/${SERVICE_ID}/deploys?limit=1")"
+          STATUS="$(printf '%s' "$LATEST" | jq -r '.[0].deploy.status // "?"')"
+          COMMIT="$(printf '%s' "$LATEST" | jq -r '.[0].deploy.commit.id // "-"')"
+          DID="$(printf '%s' "$LATEST" | jq -r '.[0].deploy.id // "-"')"
+          echo "Render zadnji deploy: ${STATUS} @ ${COMMIT:0:7} (main = ${HEAD_SHA:0:7})"
+
+          # ── 2) IDEMPOTENCA: že usklajeno ──
+          if [ "$STATUS" = "live" ] && [ "$COMMIT" = "$HEAD_SHA" ]; then
+            echo "✅ Render JE usklajen z main (${HEAD_SHA:0:7}) — nič za storiti"
+            exit 0
+          fi
+
+          # ── 3) build v teku → ne dvojno sproži ──
+          case "$STATUS" in
+            created|build_in_progress|update_in_progress)
+              echo "ℹ️ Render build že v teku (${STATUS}) — ne sprožam novega (idempotenca)"
+              exit 0 ;;
+          esac
+
+          # ── 4) hlajenje po RESNI build napaki (> 90 s trajanja) v zadnjih 24 h ──
+          #      fast-reject (~1 s) = kvota build minut — to NI napaka, samo čakanje
+          if [ "$STATUS" = "build_failed" ]; then
+            S0="$(printf '%s' "$LATEST" | jq -r '.[0].deploy.startedAt // ""')"
+            S1="$(printf '%s' "$LATEST" | jq -r '.[0].deploy.finishedAt // ""')"
+            if [ -n "$S0" ] && [ -n "$S1" ]; then
+              DUR=$(( $(date -u -d "$S1" +%s) - $(date -u -d "$S0" +%s) ))
+              AGE=$(( $(date -u +%s) - $(date -u -d "$S1" +%s) ))
+              if [ "$DUR" -gt 90 ] && [ "$AGE" -lt 86400 ]; then
+                echo "⚠️ Zadnji deploy je RESNI build padec (trajanje ${DUR}s, pred $((AGE/3600)) h) — 24 h hlajenje (varovanje kvote); diagnostika: Render dashboard → logi builda"
+                exit 0
+              fi
+            fi
+          fi
+
+          # ── 5) sproži deploy za main ──
+          echo "Sprožam deploy za main ${HEAD_SHA:0:7} …"
+          NEWID="$(curl -sS -m 30 -X POST -H "$AUTH" -H "Content-Type: application/json" \
+            -d '{"clearCache":"do_not_clear"}' \
+            "${API}/services/${SERVICE_ID}/deploys" | jq -r '.id // empty')"
+          if [ -z "$NEWID" ]; then
+            echo "❌ POST /deploys ni vrnil id — API napaka (ključ? servis?)"
+            exit 1
+          fi
+          echo "Deploy sprožen: ${NEWID} — opazujem do ~12 min"
+
+          # ── 6) počakaj izid ──
+          FINAL="timeout"
+          for i in $(seq 1 24); do
+            sleep 30
+            FINAL="$(curl -sS -m 30 -H "$AUTH" "${API}/services/${SERVICE_ID}/deploys/${NEWID}" | jq -r '.status // "?"')"
+            echo "  t+$((i*30))s: ${FINAL}"
+            case "$FINAL" in live|build_failed|update_failed|canceled|deactivated) break ;; esac
+          done
+
+          case "$FINAL" in
+            live)
+              echo "✅ Deploy LIVE — Render uveljavi main ${HEAD_SHA:0:7}; naslednji smoke tek bo potrdil verzijo ≡ repo"
+              exit 0 ;;
+            build_failed|update_failed)
+              D="$(curl -sS -m 30 -H "$AUTH" "${API}/services/${SERVICE_ID}/deploys/${NEWID}")"
+              S0="$(printf '%s' "$D" | jq -r '.startedAt // ""')"
+              S1="$(printf '%s' "$D" | jq -r '.finishedAt // ""')"
+              DUR=0; [ -n "$S0" ] && [ -n "$S1" ] && DUR=$(( $(date -u -d "$S1" +%s) - $(date -u -d "$S0" +%s) ))
+              if [ "$DUR" -le 90 ]; then
+                echo "ℹ️ PRE-BUILD zavrnitev (~${DUR}s) — kvota free build minut še ni ponastavljena (reset 1. dan v mesecu). Prihodnji tek (3 h) poskusi znova; zavrnjeni poskusi NE trošijo minut."
+                exit 0
+              else
+                echo "❌ RESNI build padec (trajanje ${DUR}s) — glej Render dashboard → logi builda (config; glej docs/DEPLOYMENT.md za docker rollback)"
+                exit 1
+              fi ;;
+            *)
+              echo "ℹ️ Build še teče po 12 min (${FINAL}) — naslednji tek (3 h) prevzame"
+              exit 0 ;;
+          esac

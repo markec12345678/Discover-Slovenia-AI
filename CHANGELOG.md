@@ -70,6 +70,21 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
   (`/home/z/.env-keys-backup`, chmod 600) — lekcija incidenta: brez
   kopije je bila obnova nemogoča. Verzija ostaja 1.140.2 (operativni
   dogodek, brez sprememb kode — precedens docs-only commitov).
+- **KORENSKI VZROK Render drifta dokazan + SAMODEJNI CATCH-UP** (Issue #7,
+  29. 9. ~07:00 UTC): lastnik je prilepil še `RENDER_API_KEY` (prav tako v
+  `.env` + GitHub secret `RENDER_API_KEY` prek sealed box). API diagnostika:
+  zadnji uspešen Render deploy je `5eb96e5` (v1.102.0, 25. 9. 11:28 UTC);
+  **vsak deploy od 11:36 naprej (50+) je zavrnjen v ~1 s** — pre-build
+  zavrnitev, ker je **free plan kvota 500 build minut/mesec izčrpana**
+  (~50 uspešnih build-ov × ~4 min od 11.–25. 9.); ročno potrjeno
+  (trigger=api → build_failed v 1 s). Kvota se ponastavi 1. dan v mesecu.
+  Nov **`render-catchup` job v prod-monitor.yml** (vsake 3 h): idempotentno
+  preveri Render live ≡ main; če zaostaja → POST /deploy; fast-reject
+  zavrnitve (~1 s, kvota) ne trošijo minut → job varno čaka na ponastavitev;
+  po RESNI build napaki (>90 s trajanja) 24 h hlajenje (varovanje kvote);
+  skript end-to-end validiran proti živi API. Pričakovani potek: 1. 10.
+  samodejni build → Render 1.140.2 živ → verzija vrata zelena → monitor
+  e-poštni alarmi (rdeč od 26. 9.) prenehajo.
 
 ---
 
