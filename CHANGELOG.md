@@ -83,6 +83,25 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
   razredi) od i18n slovarja v payloadu — vseh 6 pojavitev „0 cik-cak"
   je 1 povzetek + 3 dnevne značke IZRISANE + 2 slovarska; žetoni
   izrisani ZGOLJ ob upravičenih postankih.
+- **Produkcijsko (agent-browser, Vercel 1.143.0, 29. 9. ~15:40 slovensko)**:
+  zlata pot na `i-feel-slovenia.vercel.app` → svež 3-dnevni itinerer
+  („Bohinj · Triglav · Reka Soča") → Shrani (POST /api/itinerary/save
+  200) → deljena pot `/pot/2a5b5b9e00`: **3 Google Maps pilule + 4
+  značke „0 cik-cak"** (povzetek + 3 dnevne) v izrisanem DOM;
+  **klik pilule Dan 1 navigiral brskalnik NA DEJANSKI Google Maps URL**
+  (`maps/dir/46.2833,13.8833/46.3794,13.8462/…` — Bohinj → Triglav);
+  telemetrija POST 200 na produkcijski `/api/analytics/event`;
+  0 napak strani. Stara pot `bb183cd77d` (1 postanek Bled): ISKRENO
+  vedenje — povzetek edini (vsak dan trivialen <2 postanka), pilule in
+  dnevne značke pravilno IZOSTANEJO (ni dokaza, ni trditve). Obe CLS
+  regresijski vratci še zeleni po uvajanju (`h-[500px]` +
+  „Načrt po dnevih" na /pot/embed/bb183cd77d). Nova koda potrjena v
+  produkcijskem bundle (literali „Vsi dnevi: 0 cik-cak" + „kosilo
+  12–14" + `surface:"shared"` v chunku `8661-a0b17e1657973b01.js`;
+  imena funkcij so minificirana — literali so dokaz). CI na d2d42f5
+  zelen (suite 4211). Render autoDeploy za d2d42f5: fast-reject ~1 s
+  (kvota, Issue #7 — pričakovano). Dokaz
+  `w11-dokazi/w11c-deljena-pot-prod.png`.
 
 ### Zavestno NAREJENO (design odločitve)
 
