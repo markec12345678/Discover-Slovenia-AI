@@ -7,6 +7,102 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.143.0] — 2026-09-29 (W11-C „DOKAZLJIVO UREJEN DAN — DELJENA POT": reliefi W11-A in W11-B na /pot poteh — dokaz potuje NAPREJ k prijateljem in blogom)
+
+### Dodano
+
+- **W11-C — tretji relief W11 vala (UX)**: W11-A (Google Maps izvoz
+  dneva) in W11-B (značka „0 cik-cak" + obročni žetoni) sta bila doslej
+  VIDNA samo na načrtovalski površini (`trip-timeline.tsx`, /nacrtuj).
+  W11-C oba prenese na **deljeno pot** (`shared-trip.tsx`) — ISTA
+  komponenta izrisuje `/pot/[shareId]` IN `/pot/embed/[shareId]`, zato
+  reliefi samodejno pokrijeta obe poti (polna stran + blog embed).
+  Razlog: deljena povezava je kanal, po katerem načrt potuje NAPREJ —
+  k prijateljem brez računa in na tuje bloge. Trditev kakovosti
+  („0 cik-cak", obroki v kanonskem razponu) in „Dan v žepu" (Google
+  Maps navigacija) sta točno tisti dve stvari, ki jih MonkeyTravelova
+  niša obija („neither reliably hands you a day you can actually
+  walk") — kdor odpre deljeno povezavo, vidi DOKAZ, ne obljubo.
+- **Značka „0 cik-cak" v glavi vsakega dneva deljene poti** + povzetek
+  **„Vsi dnevi: 0 cik-cak"** med značkami glave (poleg „AI načrt",
+  proračun, ogledi): ISTA čista funkcija kot planner
+  (`dayZigzagQuality`, M3 kanon — ena resnica v lib, NI duplikatne
+  logike v komponenti). Iskrenostna disciplina §8 nespremenjena:
+  SAMO ob dokazu (vsi postanki z koordinatami, ≥2, 0 vračanj; za
+  povzetek VSI dnevi). Vidna TUDI v PDF — trditev potuje z natisnjenim
+  deljenim načrtom naprej.
+- **Google Maps pilula v glavi dneva deljene poti** (W11-A „Dan v žepu"):
+  PRAVA `<a>` povezava (ne gumb; middle-click/kopiranje delujeta),
+  `noopener noreferrer`, `print:hidden` (PDF ostane čist — navigacija
+  je dejanje, ne vsebina), aria-label + title SL. Sedi PRED zvočnim
+  povzetkom dneva (TASK 89) v desnem ovoju glave — enaka kompozicija
+  kot planner.
+- **Obročni žetoni na karticah postankov deljene poti**
+  (`LocationCard`): „kosilo 12–14 ✓" / „večerja 18–21 ✓" — ista
+  `mealStopWindow` funkcija; SL besedila hardcodana (celotna
+  shared-trip površina je SL — enaka konvencija kot „Dan N" in
+  zvočni gumb `lang="sl"`).
+
+### Telemetrija
+
+- **`day_export_gmaps` razširjen z `surface: "shared"`**: ISTI dogodek
+  kot W11-A (že v klientni union + strežniški whitelisti — 0 strežniških
+  sprememb), nov prop loči izvoze načrtovalca od izvozov obiskovalcev
+  deljenih povezav/embedov. **Popravljena vrzel W11-A**: dogodek NI
+  bil dokumentiran v `docs/ANALYTICS-EVENTS.md` (najden ob W11-C
+  reviziji) — vrstica dodana ZDAJ skupaj z razširitvijo surface.
+
+### Dokazano
+
+- **25 novih unit testov** (`w11c-shared-relief.test.ts`,
+  source-contract vzorec kot task89): lib uvozi (ena resnica —
+  dayZigzagQuality/mealStopWindow/gmapsDayUrl iz istih modulov kot
+  planner), NI lokalne kopije kanonov (findBacktrackingEvents/R_VISIT/
+  api=1/maps/dir NE smejo puhteti v komponenti), iskrenostna disciplina
+  (značka samo ob dokazu; povzetek zahteva vse dneve), print disciplina
+  (značke VIDNE v PDF, pilula print:hidden), pilula PRED zvočnim
+  gumbom, telemetrija s surface + whitelisti + dokumentacija, ni
+  regresij (zvočni gumb, vremenski čip, indeks dneva). Suite
+  4186 → **4211**.
+- **Brskalniško (agent-browser, dev 1.143.0)**: zlata pot → 3-dnevni
+  itinerer → „Shrani itinerer" (POST /api/itinerary/save 200) →
+  deljena pot `/pot/30229b0c68`: **3 pilule + 4 značke** (povzetek +
+  3 dnevne) v izrisanem DOM; **klik pilule Dan 1 navigiral brskalnik
+  NA DEJANSKI Google Maps URL** (`maps/dir/?api=1&origin=46.056900,
+  14.505800` — Ljubljana → Triglav); telemetrija POST 200; 0 napak
+  strani. Embed pot `/pot/embed/…`: ISTI reliefi (4 značke + 3 pilule
+  + žetoni) v SSR. **Pozitivni dokaz žetonov**: ročno sestavljen
+  itinerer z Gostilno Na Poti (12:30) in Restavracijo Barkolina
+  (18:30) → OBA žetona izrisana („kosilo 12–14 ✓" + „večerja 18–21 ✓",
+  potrdil innerText v brskalniku); ISKRENO MOLČANJE potrjeno na
+  prvotnem itinererju brez gastronomskih postankov (0 žetonov —
+  pravilno). Dokaza `w11-dokazi/w11c-deljena-pot-dev.png` +
+  `w11-dokazi/w11c-zetoni-obrokov-dev.png`.
+- **SSR kontekstna preverba** (curl + kontekstna analiza HTML):
+  razlikovanje IZRISANEGA (Route/UtensilsCrossed ikone + emerald
+  razredi) od i18n slovarja v payloadu — vseh 6 pojavitev „0 cik-cak"
+  je 1 povzetek + 3 dnevne značke IZRISANE + 2 slovarska; žetoni
+  izrisani ZGOLJ ob upravičenih postankih.
+
+### Zavestno NAREJENO (design odločitve)
+
+- **Pilula print:hidden, značke pa VIDNE v PDF**: navigacija je
+  DEJANJE (klik — nesmiselna v tisku), trditev kakovosti pa VSEBINA,
+  ki potuje z natisnjenim načrtom naprej (isti princip kot W11-B).
+- **Telemetrija samo za izvoz (dejanje), ne za ogled značk**: deljena
+  pot doda `surface: "shared"` obstoječemu dogodku — 0 novih dogodkov,
+  0 strežniških sprememb (pariteta whitelist ostaja).
+- **Embed dobi reliefe BREZ lastne logike**: ena komponenta — ena
+  resnica; bloggerji in njihovi bralci vidijo isti dokaz kot lastnik
+  načrta.
+- **Napake okolja (OOM sandbox) niso napake kode**: 3× jedro pobilo
+  next-server med ponovnimi prevajanja /pot + Chrome (3,9 GB box);
+  dokazi zato iz SSR kontekstne analize + kratkih brskalniških oken —
+  enakovredno pokritje, 0 lažnih pozitivnih (i18n slovar izrecno
+  izločen iz preverb).
+
+---
+
 ## [1.142.0] — 2026-09-29 (W11-B „DOKAZLJIVO UREJEN DAN": odličnost engine-a VIDNA v UI — značka „0 cik-cak" + obroki v kanonskem razponu)
 
 ### Dodano

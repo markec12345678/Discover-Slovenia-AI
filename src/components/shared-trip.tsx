@@ -18,11 +18,13 @@ import {
   Lightbulb,
   Loader2,
   MapPin,
+  Navigation,
   Printer,
   RefreshCw,
   Route,
   Sparkles,
   ThumbsUp,
+  UtensilsCrossed,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,6 +36,14 @@ import { saveItineraryGoTrip } from "@/lib/journey/go-persist";
 import { DayAudioButton } from "@/components/itinerary-audio";
 import { DaySegmentHeader } from "@/components/day-segment-header";
 import { segmentBoundaryAt } from "@/lib/day-segments";
+// W11-C „Dokazljivo urejen dan — deljena pot" (1.143.0): ISTI čisti
+// funkciji kot planner (ena resnica v lib) — značka „0 cik-cak" +
+// obročni žetoni na karticah postankov z obroki.
+import { dayZigzagQuality, mealStopWindow } from "@/lib/day-quality";
+// W11-A „Dan v žepu" na deljeni poti: izvoz dneva kot Google Maps
+// navigacijska povezava (protejip Wanderlog Pro funkcije, zastonj).
+import { gmapsDayUrl } from "@/lib/gmaps-day-export";
+import { trackPlannerEvent } from "@/lib/planner-analytics";
 import { ItineraryEventsSection } from "@/components/itinerary-events";
 import {
   ItineraryWeatherNotes,
@@ -446,6 +456,20 @@ export function SharedTrip({
     return Array.from(seen).slice(0, 5);
   }, [itinerary]);
 
+  // W11-C „Dokazljivo urejen dan": kakovost vseh dni izračunamo ENKRAT
+  // (ista čista funkcija kot planner — ena resnica v lib). Povzetek se
+  // pokaže SAMO, če so vsi dnevi z ≥2 postankoma preverljivi in vsi z 0
+  // vračanj — sicer iskreno molčimo (ne lažemo z zelenim).
+  const zigzagAllDays = useMemo(
+    () => itinerary.days.map((d) => dayZigzagQuality(d)),
+    [itinerary]
+  );
+  const showZigzagSummary =
+    zigzagAllDays.length > 0 &&
+    zigzagAllDays.every(
+      (q) => q.stops < 2 || (q.verifiable && q.zigzagFree)
+    );
+
   return (
     <main className="min-h-screen bg-background">
       {/* === TASK 28 (Tier 1 #1): LIVE-SYNC BANNER === */}
@@ -521,6 +545,19 @@ export function SharedTrip({
                 ? "Načrt brez AI (deterministični motor)"
                 : "Predloga načrta"}
             </Badge>
+            {/* W11-C: povzetek koherence — enoten dokaz čez celoten načrt.
+                Vidno TUDI v PDF (trditev kakovosti potuje z deljenim
+                načrtom naprej — isti vzorec kot planner). Samo ob dokazu. */}
+            {showZigzagSummary && (
+              <Badge
+                variant="outline"
+                className="gap-1.5 border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                title="Deterministično preverjeno: zaporedje postankov se ne vrača čez že obiskano območje (ista preverba kot naš načrtovalni motor)."
+              >
+                <Route className="size-3.5" aria-hidden="true" />
+                Vsi dnevi: 0 cik-cak
+              </Badge>
+            )}
             <Badge variant="outline" className="gap-1.5">
               <Eye className="size-3.5" aria-hidden="true" />
               {views}
@@ -612,7 +649,7 @@ export function SharedTrip({
             </div>
           )}
 
-          {itinerary.days.map((day) => {
+          {itinerary.days.map((day, dayIdx) => {
             const dayColor =
               DAY_COLORS[(day.day - 1) % DAY_COLORS.length] ?? "#2d6a3e";
 
@@ -633,6 +670,9 @@ export function SharedTrip({
 
             // TASK 88: živa napoved tega dne (ob datumu + geo sidru)
             const liveWeather = chipFor(day.day);
+
+            // W11-C: kakovost TEGA dneva (iz skupnega memo-ja — ena resnica)
+            const zigzag = zigzagAllDays[dayIdx];
 
             // TASK 89: postanki dneva za zvočni povzetek (ista preslikava
             // kot TripTimeline — ena resnica v lib).
@@ -659,29 +699,85 @@ export function SharedTrip({
                         </span>
                       )}
                     </h3>
-                    {/* TASK 88: ŽIVI čip premošča statični posnetek; brez njega
-                        ostane prikaz iz časa generiranja (lahko zastarel). */}
-                    {liveWeather ? (
-                      <WeatherChip w={liveWeather} lang="sl" />
-                    ) : (
-                      day.weather && (
-                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <CloudSun className="size-3.5" aria-hidden="true" />
-                          {day.weather.condition} · {day.weather.temp}°C
-                        </div>
-                      )
-                    )}
+                    {/* TASK 88: ŽIVI čip premošča statični posnetek; brez
+                        njega ostane prikaz iz časa generiranja (lahko
+                        zastarel). W11-C „Dokazljivo urejen dan" poleg njega:
+                        značka 0 cik-cak — ISTA deterministična preverba
+                        kot engine (M3, geo-coherence); pokaže se SAMO ob
+                        dokazu (vsi postanki z koordinatami, ≥2, 0 vračanj).
+                        Vidna tudi v PDF. */}
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      {liveWeather ? (
+                        <WeatherChip w={liveWeather} lang="sl" />
+                      ) : (
+                        day.weather && (
+                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <CloudSun className="size-3.5" aria-hidden="true" />
+                            {day.weather.condition} · {day.weather.temp}°C
+                          </div>
+                        )
+                      )}
+                      {zigzag?.verifiable && zigzag.zigzagFree && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                          title="Deterministično preverjeno: zaporedje postankov se ne vrača čez že obiskano območje (ista preverba kot naš načrtovalni motor)."
+                        >
+                          <Route className="size-3" aria-hidden="true" />
+                          0 cik-cak
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {/* TASK 89: zvočni povzetek dneva (TTS, brez ključa) —
-                      deljeni načrt lahko posluša tudi prijatelj brez računa. */}
-                  <DayAudioButton
-                    dayNumber={day.day}
-                    dateLabel={audioDateLabel}
-                    stops={audioStops}
-                    lang="sl"
-                    surface="shared"
-                    className="ml-auto shrink-0 self-center"
-                  />
+                      deljeni načrt lahko posluša tudi prijatelj brez
+                      računa. W11-A „Dan v žepu" pred njim: Google Maps
+                      pilula — izvoz VESGA dneva kot navigacijska povezava
+                      (protejip Wanderlog Pro funkcije, zastonj; postanek
+                      brez koordinat → iskreno brez povezave). PRAVA
+                      povezava (<a>), ne gumb — middle-click/kopiranje
+                      delujeta; noopener (zunanja stran); print:hidden
+                      (PDF ostane čist — navigacija je dejanje, ne vsebina). */}
+                  <div className="ml-auto flex shrink-0 items-center gap-2 self-center print:hidden">
+                    {(() => {
+                      const g = gmapsDayUrl(day);
+                      return g.url ? (
+                        <a
+                          href={g.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() =>
+                            trackPlannerEvent("day_export_gmaps", {
+                              day: day.day,
+                              stops: g.stops,
+                              skipped: g.skipped,
+                              truncated: g.truncated,
+                              surface: "shared",
+                            })
+                          }
+                          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-background px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          aria-label={`Odpri dan ${day.day} v Google Maps (navigacija po celotnem dnevu)`}
+                          title={`Odpri dan ${day.day} v Google Maps (navigacija po celotnem dnevu)`}
+                        >
+                          <Navigation
+                            className="size-3.5 text-primary"
+                            aria-hidden="true"
+                          />
+                          <span className="hidden sm:inline">Google Maps</span>
+                          <span className="sr-only sm:hidden">
+                            Odpri dan {day.day} v Google Maps
+                          </span>
+                        </a>
+                      ) : null;
+                    })()}
+                    <DayAudioButton
+                      dayNumber={day.day}
+                      dateLabel={audioDateLabel}
+                      stops={audioStops}
+                      lang="sl"
+                      surface="shared"
+                      className="shrink-0 self-center"
+                    />
+                  </div>
                 </div>
 
                 {/* Lokacije v dnevu */}
@@ -985,6 +1081,9 @@ interface LocationCardProps {
 }
 
 function LocationCard({ visit, vote }: LocationCardProps) {
+  // W11-C: obrok v kanonskem razponu (kosilo 12–14 / večerja 18–21) —
+  // ista čista funkcija kot planner; žeton SAMO ob dokazu.
+  const mealWindow = mealStopWindow(visit);
   return (
     <Card className="overflow-hidden border-border/60 transition-all hover:border-primary/30 hover:shadow-md">
       <CardContent className="p-4">
@@ -1035,6 +1134,22 @@ function LocationCard({ visit, vote }: LocationCardProps) {
             <Badge variant="secondary" className="gap-1 text-xs">
               <Euro className="size-3" aria-hidden="true" />
               {visit.estimated_cost}
+            </Badge>
+          )}
+          {/* W11-C: obrok v kanonskem razponu — urnik (TASK 50) obroke
+              drži v pravem času, ker termini rastejo iz voženj. Žeton
+              samo ob dokazu (razpon + parsabilen termin). */}
+          {mealWindow && (
+            <Badge
+              className="gap-1 border-emerald-300 bg-emerald-100 text-xs text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+              title={
+                mealWindow === "lunch"
+                  ? "Obrok je v kanonskem razponu kosila (12:00–14:00) — urnik raste iz dejanskih voženj."
+                  : "Obrok je v kanonskem razponu večerje (18:00–21:00) — urnik raste iz dejanskih voženj."
+              }
+            >
+              <UtensilsCrossed className="size-3" aria-hidden="true" />
+              {mealWindow === "lunch" ? "kosilo 12–14 ✓" : "večerja 18–21 ✓"}
             </Badge>
           )}
 

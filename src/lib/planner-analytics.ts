@@ -239,10 +239,11 @@ export type PlannerEventName =
   // bytes) — doseg TTS zmožnosti
   | "itinerary_audio_play"
   // W11-A „Dan v žepu" (1.141.0): klik „Google Maps" pilule v glavi dneva
-  // (props: day, stops, skipped, truncated) — izvoz dneva kot navigacijska
-  // povezava. Meri doseg BREZPLAČNEGA protejipa Wanderlog Pro funkcije
-  // ($39.99/leto tam; 0 € tu) in kolikokrat se izkoristi geo-koherenca
-  // engine-a (Task 50/51) v praksi.
+  // (props: day, stops, skipped, truncated, surface planner|shared — W11-C
+  // 1.143.0 je pilulo prinesel na deljeno pot) — izvoz dneva kot
+  // navigacijska povezava. Meri doseg BREZPLAČNEGA protejipa Wanderlog Pro
+  // funkcije ($39.99/leto tam; 0 € tu) in kolikokrat se izkoristi
+  // geo-koherenca engine-a (Task 50/51) v praksi.
   | "day_export_gmaps"
   // P1-3: proxy signal — rezultat prikazan, sledeni dogodek ni bil zaznan
   // v merjenem oknu (NE pomeni "uporabnik ni bil zadovoljen")
