@@ -76,6 +76,30 @@ const L = {
     addAria: (title: string) => `Füge ${title} zu meiner Reise hinzu`,
     removeAria: (title: string) => `${title} ist in deiner Reise — klicke zum Entfernen`,
   },
+  // W12 (smer 2, faza 1): FR/ES — gumb živi v modalu destinacij
+  // (/destinacije je na FR/ES whitelisti).
+  fr: {
+    add: "Ajouter à mon voyage",
+    added: "Dans mon voyage",
+    toastAdded: "Ajouté à mon voyage",
+    toastRemoved: "Retiré de mon voyage",
+    undo: "Remettre",
+    openTrip: "Ouvrir le voyage",
+    capNotice: "Votre collection est pleine — l'idée la plus ancienne a été remplacée.",
+    addAria: (title: string) => `Ajouter ${title} à mon voyage`,
+    removeAria: (title: string) => `${title} est dans votre voyage — cliquez pour retirer`,
+  },
+  es: {
+    add: "Añadir a mi viaje",
+    added: "En mi viaje",
+    toastAdded: "Añadido a mi viaje",
+    toastRemoved: "Eliminado de mi viaje",
+    undo: "Volver a añadir",
+    openTrip: "Abrir el viaje",
+    capNotice: "Tu colección está llena — la idea más antigua fue reemplazada.",
+    addAria: (title: string) => `Añadir ${title} a mi viaje`,
+    removeAria: (title: string) => `${title} está en tu viaje — haz clic para quitar`,
+  },
 } as const;
 
 type Lang = keyof typeof L;
@@ -118,8 +142,9 @@ export function AddToTripButton({
   const locale = useLocale();
   // W1 faza 2a (Issue #15): 4 javni jeziki — it/de imata lastne nize
   // (gumb živi na destinacijskih straneh, ki so zdaj 4-jezične).
+  // W12 (smer 2, faza 1): +fr/es (modal destinacij na /destinacije).
   const s =
-    locale === "en" || locale === "it" || locale === "de"
+    locale === "en" || locale === "it" || locale === "de" || locale === "fr" || locale === "es"
       ? L[locale]
       : L.sl;
   const { isIn, add, remove } = useMyTrip();

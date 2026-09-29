@@ -1180,10 +1180,12 @@ export function Chatbot({ initialQuestion }: { initialQuestion?: string }) {
           currentPage: typeof window !== "undefined" ? window.location.pathname : undefined,
           // W1 (Issue #15): jezik odgovora = aktivni locale (4 javni jeziki;
           // validirano — neznan locale pade na slovensko, kot prej).
-          language: (["sl", "en", "it", "de"] as const).includes(
-            locale as "sl" | "en" | "it" | "de"
+          // W12 (smer 2, faza 1): +fr/es — pošljemo DEJANSKI locale; strežnik
+          // ga preslika na EN (referenčni jezik domenske plast klepeta).
+          language: (["sl", "en", "it", "de", "fr", "es"] as const).includes(
+            locale as "sl" | "en" | "it" | "de" | "fr" | "es"
           )
-            ? (locale as "sl" | "en" | "it" | "de")
+            ? (locale as "sl" | "en" | "it" | "de" | "fr" | "es")
             : "sl",
         }),
       });

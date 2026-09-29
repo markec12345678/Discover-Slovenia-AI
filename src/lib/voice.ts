@@ -42,6 +42,12 @@ export function speechLanguageTag(locale: string): string {
       return "de-DE";
     case "it":
       return "it-IT";
+    // W12 (smer 2, faza 1): klepetbot na /fr in /es (home je na FR/ES
+    // whitelisti) — STT/TTS v govorjenem jeziku uporabnika.
+    case "fr":
+      return "fr-FR";
+    case "es":
+      return "es-ES";
     default:
       return "sl-SI";
   }

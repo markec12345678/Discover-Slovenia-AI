@@ -28,6 +28,9 @@ const TARGETS = (process.argv[2] ?? "it,de").split(",").map((s) => s.trim());
 const LANG_NAMES: Record<string, string> = {
   it: "Italian",
   de: "German (Standard German, Hochdeutsch)",
+  // W12 (smer 2, faza 1): francoska in španska različica slovarjev.
+  fr: "French (Standard French, français standard)",
+  es: "Spanish (Castilian Spanish, español de España)",
 };
 
 // ── pomožniki ─────────────────────────────────────────────────────────────
@@ -50,7 +53,21 @@ function flat(obj: unknown, prefix = ""): Flat {
 
 /** Obnovi gnezdeno drevo z enako obliko kot vir (leaf → translated). */
 function rebuild(template: unknown, translations: Flat, prefix = ""): unknown {
-  if (typeof template !== "object" || template === null || Array.isArray(template)) {
+  // W12 popravek (hrošč iz W1-faze-2b, dokumentiran v task71 testu):
+  // flat() razširi POLJA na indeksirane ključe (…examples.0 … .5), rebuild
+  // pa jih je prej spremenil nazaj v niz "a,b,c" (String(template)) — tipovna
+  // pariteta je padla. Zdaj polja ostanejo POLJA: vsak element dobi svoj
+  // prevod (ali izvirnik, če prevod manjka).
+  if (Array.isArray(template)) {
+    return template.map((item, i) => {
+      const p = `${prefix}.${i}`;
+      if (typeof item === "object" && item !== null) {
+        return rebuild(item, translations, p);
+      }
+      return translations[p] ?? String(item);
+    });
+  }
+  if (typeof template !== "object" || template === null) {
     return translations[prefix] ?? String(template);
   }
   const out: Record<string, unknown> = {};
@@ -111,7 +128,7 @@ async function translateBatch(
     `1. Return ONLY a valid JSON object: {"<key>": "<translation>"} for every input key — no markdown, no commentary.`,
     `2. Preserve ICU placeholders exactly ({name}, {count}, …) — never translate, reorder or drop them.`,
     `3. Use the Slovenian (sl) text as source of truth; the English (en) text is context/reference for tone.`,
-    `4. Tone: warm, honest, professional tourism copy. Keep numbers, prices, units, brand names (e.g. Bled, Triglav, kremšnita) sensible — use established ${target === "it" ? "Italian" : "German"} tourism naming.`,
+    `4. Tone: warm, honest, professional tourism copy. Keep numbers, prices, units, brand names (e.g. Bled, Triglav, kremšnita) sensible — use established ${langName} tourism naming.`,
     `5. Keep the translation concise — roughly the same length as the source.`,
     `6. Escape newlines as \\n and quotes as \\" in JSON values.`,
   ].join("\n");

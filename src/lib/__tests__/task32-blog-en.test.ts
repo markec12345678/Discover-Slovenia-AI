@@ -313,8 +313,8 @@ describe("TASK 32 → W1: jeziki de/it sta zdaj ŽIVA (celovita prevoda)", () =>
     );
   });
 
-  test("routing.locales so natanko [sl, en, it, de] (default sl — W1)", () => {
-    expect(routing.locales).toEqual(["sl", "en", "it", "de"]);
+  test("routing.locales so natanko [sl, en, it, de, fr, es] (default sl — W1 + W12)", () => {
+    expect(routing.locales).toEqual(["sl", "en", "it", "de", "fr", "es"]);
     expect(routing.defaultLocale).toBe("sl");
   });
 

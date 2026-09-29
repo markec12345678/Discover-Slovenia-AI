@@ -45,18 +45,22 @@ import { destinationHref } from "@/lib/search-result-nav";
 // zadnji SL-only nizi navigacije. aria-labeli gredo branju zaslona — SL
 // label na EN strani je dostopnostna napaka, ne le kozmetična.
 // W1 (Issue #15): razširjeno na 4 javne jezike (it/de) prek pick().
+// W12 (smer 2, faza 1): +fr/es (navigacijska lupina je na vseh FR/ES
+// whitelistnih poteh — /, /destinacije, /primerjava, info strani).
 const NAV_L = {
-  cart: (l: string) => pick(l, { sl: "Odpri košarico", en: "Open cart", it: "Apri il carrello", de: "Warenkorb öffnen" }),
+  cart: (l: string) => pick(l, { sl: "Odpri košarico", en: "Open cart", it: "Apri il carrello", de: "Warenkorb öffnen", fr: "Ouvrir le panier", es: "Abrir el carrito" }),
   cartWithItems: (l: string, n: number) =>
     pick(l, {
       sl: `Odpri košarico (${n} izdelkov)`,
       en: `Open cart (${n} items)`,
       it: `Apri il carrello (${n} articoli)`,
       de: `Warenkorb öffnen (${n} Artikel)`,
+      fr: `Ouvrir le panier (${n} articles)`,
+      es: `Abrir el carrito (${n} artículos)`,
     }),
-  theme: (l: string) => pick(l, { sl: "Preklopi temo", en: "Toggle theme", it: "Cambia tema", de: "Design wechseln" }),
-  themeLight: (l: string) => pick(l, { sl: "Svetla", en: "Light", it: "Chiaro", de: "Hell" }),
-  themeDark: (l: string) => pick(l, { sl: "Temna", en: "Dark", it: "Scuro", de: "Dunkel" }),
+  theme: (l: string) => pick(l, { sl: "Preklopi temo", en: "Toggle theme", it: "Cambia tema", de: "Design wechseln", fr: "Changer le thème", es: "Cambiar el tema" }),
+  themeLight: (l: string) => pick(l, { sl: "Svetla", en: "Light", it: "Chiaro", de: "Hell", fr: "Clair", es: "Claro" }),
+  themeDark: (l: string) => pick(l, { sl: "Temna", en: "Dark", it: "Scuro", de: "Dunkel", fr: "Sombre", es: "Oscuro" }),
 };
 
 function useNavLinks() {

@@ -174,9 +174,12 @@
   partner/admin ob ustvarjanju vnese pin lokacije (geo koordinate — tudi v onboarding
   čarovniku), javni imenik pa glob-povezuje na zemljevid točno na lokaciji;
   B2B portala za ponudnike (`/owner`) in administratorje (`/admin`).
-- **Slovensko + angleško + italijansko + nemško izkušnja** — SL privzeto,
-  EN na jedru lijaka (`/en/…`), IT/DE na domači strani, destinacijah,
-  zemljevidu in načrtovalniku (`/it/…`, `/de/…` — W1, 1.126.0–1.129.0);
+- **Slovensko + angleško + italijansko + nemško + francosko + špansko izkušnja** —
+  SL privzeto, EN na jedru lijaka (`/en/…`), IT/DE na domači strani,
+  destinacijah, zemljevidu in načrtovalniku (`/it/…`, `/de/…` — W1,
+  1.126.0–1.129.0), FR/ES na jedru odkrivanja + svetovanja (`/fr/…`,
+  `/es/…` — W12, 1.144.0: domov, destinacije, primerjava, info strani;
+  načrtovalnik/destinacijske pod-poti so faza 2a/2b);
   poti brez različice se varno preusmerijo (308), nikoli mešanje jezikov.
 - **PWA** — načrti brez povezave (aktivno Go Mode potovanje tudi na splošni offline
   strani), pameten pakirni seznam z razlogi, proračun na osebo,
@@ -365,7 +368,7 @@ endpointi v `src/app/api/`.
 | Styling | Tailwind CSS 4 + shadcn/ui + Framer Motion |
 | Podatki | Prisma 6 + PostgreSQL (Neon) — 30 modelov |
 | Avtentikacija | NextAuth.js v4 (JWT seje, `tokenVersion` invalidacija) |
-| i18n | next-intl — SL privzeti + EN/IT/DE whitelist (IT/DE: domov, destinacije, zemljevid, načrtovalnik — W1) |
+| i18n | next-intl — SL privzeti + EN/IT/DE/FR/ES whitelist (EN: jedro lijaka; IT/DE: domov, destinacije, zemljevid, načrtovalnik — W1; FR/ES: jedro odkrivanja + svetovanja — W12) |
 | AI | SAMO opcijska vizija (razumevanje slik): Gemini → z-ai-web-dev-sdk VLM rezerva; jedro 100 % deterministično — 0 žetonov (Issue #9) |
 | Zemljevid | Leaflet + OSM Overpass; FSQ OS Places lokalna množica |
 | Plačila | Stripe (checkout + webhooki; fail-closed brez ključev) |
@@ -557,7 +560,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.143.0**.
+Trenutna verzija: **1.144.0**.
 
 ---
 

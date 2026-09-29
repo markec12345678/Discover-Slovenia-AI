@@ -22,13 +22,18 @@ const LANGUAGES: { code: string; flag: string; label: string }[] = [
   { code: "en", flag: "🇬🇧", label: "English" },
   { code: "de", flag: "🇩🇪", label: "Deutsch" },
   { code: "it", flag: "🇮🇹", label: "Italiano" },
+  // W12 (smer 2, faza 1 — 1.144.0): francoščina in španščina kot javna
+  // jezika (jedro odkrivanja + svetovanja). Vidna SAMO na FR/ES whitelistnih
+  // poteh (isLocaleRoute) — drugje ju filter skrije (ne ponujamo različice,
+  // ki je ni).
+  { code: "fr", flag: "🇫🇷", label: "Français" },
+  { code: "es", flag: "🇪🇸", label: "Español" },
 ];
 
 /**
  * Javno dostopni jeziki = routing.locales. FW4.3-2: "sl" + "en";
  * W1 (Issue #15 V0, 1.126.0): + "it" + "de" (faza 1 — IT/DE whitelist).
- * Deutsch/Italiano sta bila od TASK 32 skrita (P4-8) — zdaj, ko imata
- * celovita prevoda, se samodejno prikažeta nazaj.
+ * W12 (smer 2, faza 1 — 1.144.0): + "fr" + "es" (FR/ES whitelist).
  */
 const AVAILABLE_LANGUAGES = LANGUAGES.filter((l) =>
   (routing.locales as readonly string[]).includes(l.code)

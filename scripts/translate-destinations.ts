@@ -20,6 +20,17 @@ const TARGETS = (process.argv[2] ?? "it,de").split(",").map((s) => s.trim());
 const LANG_NAMES: Record<string, string> = {
   it: "Italian",
   de: "German (Standard German, Hochdeutsch)",
+  // W12 (smer 2, faza 1): francoski in španski overlayji destinacij.
+  fr: "French (Standard French, français standard)",
+  es: "Spanish (Castilian Spanish, español de España)",
+};
+
+/** Primeri uveljavljenih turističnih poimenovanj po ciljnem jeziku. */
+const NAMING_EXAMPLES: Record<string, { lang: string; places: string; days: string }> = {
+  it: { lang: "Italian", places: "Lago di Bled, Grotte di Postumia", days: "1-2 giorni" },
+  de: { lang: "German", places: "Bleder See, Postojna-Höhle", days: "1–2 Tage" },
+  fr: { lang: "French", places: "Lac de Bled, Grottes de Postojna", days: "1-2 jours" },
+  es: { lang: "Spanish", places: "Lago de Bled, Cuevas de Postojna", days: "1-2 días" },
 };
 
 interface OverlayEntry {
@@ -66,8 +77,8 @@ async function translateDestination(
     `1. Return ONLY valid JSON: {"tagline": "…", "description": "…", "highlights": ["…", …], "activities": ["…", …], "duration": "…"} — no markdown, no commentary.`,
     `2. Slovenian (sl) is the source of truth; English (en) is context/reference.`,
     `3. highlights and activities MUST have exactly ${sl.highlights.length} and ${sl.activities.length} items respectively (same as source).`,
-    `4. Use established ${target === "it" ? "Italian" : "German"} tourism naming (e.g. ${target === "it" ? "Lago di Bled, Grotte di Postumia" : "Bleder See, Postojna-Höhle"}). Keep place names recognisable.`,
-    `5. duration: keep the same day-range, translate the unit (e.g. "${target === "it" ? "1-2 giorni" : "1–2 Tage"}").`,
+    `4. Use established ${NAMING_EXAMPLES[target]?.lang ?? "local"} tourism naming (e.g. ${NAMING_EXAMPLES[target]?.places ?? "recognisable place names"}). Keep place names recognisable.`,
+    `5. duration: keep the same day-range, translate the unit (e.g. "${NAMING_EXAMPLES[target]?.days ?? "1-2 days"}").`,
     `6. Tone: warm, honest, professional tourism copy; similar length as source.`,
   ].join("\n");
 
@@ -84,7 +95,14 @@ async function translateDestination(
         thinking: { type: "disabled" },
       });
       const raw = completion.choices[0]?.message?.content ?? "";
-      const v = parseJsonLoose(raw) as Partial<OverlayEntry>;
+      const parsed = parseJsonLoose(raw) as Record<string, unknown>;
+      // W12 popravek (portoroz): model včasih izpiše ključe s presledkom
+      // pred dvopičjem ({"tagline ": …}) — JSON je veljaven, a bi validacija
+      // padla na v.tagline === undefined. Normaliziramo ključe (strip
+      // okolnih presledkov) pred validacijo — prihodnje varno za vse.
+      const v: Partial<OverlayEntry> = Object.fromEntries(
+        Object.entries(parsed).map(([k, val]) => [k.trim(), val])
+      ) as Partial<OverlayEntry>;
       if (
         typeof v.tagline !== "string" || v.tagline.trim().length < 5 ||
         typeof v.description !== "string" || v.description.trim().length < 40 ||
@@ -130,7 +148,7 @@ ${entries}
 };
 
 /** ${locale.toUpperCase()} overlay za destinacijo po id (fallback null → SL izvirnik). */
-export function get${locale === "it" ? "It" : "De"}Destination(id: string): DestinationEn | null {
+export function get${locale.charAt(0).toUpperCase()}${locale.slice(1)}Destination(id: string): DestinationEn | null {
   return DESTINATIONS_${locale.toUpperCase()}[id] ?? null;
 }
 `;
@@ -139,12 +157,19 @@ function emitLocale(locale: string, data: Record<string, OverlayEntry>) {
   const headerNote =
     locale === "it"
       ? "IT prekrivna plast za slovenia-data.ts (W1 faza 1)."
-      : "DE prekrivna plast za slovenia-data.ts (W1 faza 1).";
+      : locale === "de"
+        ? "DE prekrivna plast za slovenia-data.ts (W1 faza 1)."
+        : `${locale.toUpperCase()} prekrivna plast za slovenia-data.ts (W12 faza 1 — smer 2).`;
   const entries = Object.entries(data)
     .map(([id, v]) => {
       const hl = v.highlights.map((h) => JSON.stringify(h)).join(", ");
       const ac = v.activities.map((a) => JSON.stringify(a)).join(", ");
-      return `  ${id}: {\n    tagline: ${JSON.stringify(v.tagline)},\n    description: ${JSON.stringify(v.description)},\n    highlights: [${hl}],\n    activities: [${ac}],\n    duration: ${JSON.stringify(v.duration)},\n  },`;
+      // W12 popravek: id-ji s pomišljajem (nova-gorica …) NISO veljavni
+      // necitirani JS ključi (sintaksna napaka "Expected a semicolon").
+      // Citiramo točno tiste, ki niso čisti identifikatorji (isti vzorec
+      // kot ročno popravljena IT/DE datoteka iz W1).
+      const key = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(id) ? id : JSON.stringify(id);
+      return `  ${key}: {\n    tagline: ${JSON.stringify(v.tagline)},\n    description: ${JSON.stringify(v.description)},\n    highlights: [${hl}],\n    activities: [${ac}],\n    duration: ${JSON.stringify(v.duration)},\n  },`;
     })
     .join("\n");
   const out = TEMPLATE(locale, headerNote, entries);

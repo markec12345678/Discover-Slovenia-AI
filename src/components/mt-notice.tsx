@@ -11,12 +11,14 @@ import { Bot, X } from "lucide-react";
  * so STROJNI (LLM, iz slovenskega izvirnika) in čakajo človeško revizijo.
  * Uporabniku v italijanščini/nemščini to POŠTENO povemo (enkrat, odkljukljivo)
  * in navežemo na uveljavljena kanonična jezika (SL = izvirnik, EN = referenca).
+ * W12 (smer 2, faza 1 — 1.144.0): isto velja za FR/ES — strojni prevodi,
+ * ista iskrena nota.
  *
- * - Prikazuje se SAMO za locale "it"/"de" (na SL/EN ni prevoda — ni note).
+ * - Prikazuje se SAMO za locale "it"/"de"/"fr"/"es" (na SL/EN ni prevoda — ni note).
  * - Lokalna odpoved (localStorage) — brez piškotkov/računa (isti kanon
  *   kot wishlist: stanje uporabnika ostaja pri uporabniku).
- * - Montiran v root layoutu: proxy guard zagotavlja, da locale it/de
- *   nastopi SAMO na IT/DE whitelistnih poteh (nikoli admin/owner/API).
+ * - Montiran v root layoutu: proxy guard zagotavlja, da locale it/de/fr/es
+ *   nastopi SAMO na ustreznih whitelistnih poteh (nikoli admin/owner/API).
  */
 const STORAGE_KEY_PREFIX = "dsa-mt-notice-dismissed-";
 
@@ -26,7 +28,7 @@ export function MachineTranslationNotice() {
   const [dismissed, setDismissed] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (locale !== "it" && locale !== "de") return;
+    if (locale !== "it" && locale !== "de" && locale !== "fr" && locale !== "es") return;
     // Branje localStorage v async callbacku (isti vzorec kot beta-banner —
     // setState nikoli sinhrono v telesu effekta; hkrati ohranja hydration
     // konzistentnost: prvi render = null na strežniku IN klientu).
@@ -49,7 +51,7 @@ export function MachineTranslationNotice() {
     };
   }, [locale]);
 
-  if (locale !== "it" && locale !== "de") return null;
+  if (locale !== "it" && locale !== "de" && locale !== "fr" && locale !== "es") return null;
   if (dismissed !== false) return null;
 
   const dismiss = () => {

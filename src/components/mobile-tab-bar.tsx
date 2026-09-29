@@ -79,6 +79,28 @@ const L = {
     myTripBadge: (n: number) =>
       n === 1 ? "1 Idee in meiner Reise" : `${n} Ideen in meiner Reise`,
   },
+  // W12 (smer 2, faza 1): FR/ES — vrstica je globalni krom (živi tudi na
+  // FR/ES whitelistnih poteh — /, /destinacije, info strani).
+  fr: {
+    explore: "Explorer",
+    map: "Carte",
+    plan: "Planifier",
+    myTrip: "Mon voyage",
+    more: "Plus",
+    moreAria: "Ouvrir le menu",
+    myTripBadge: (n: number) =>
+      n === 1 ? "1 idée dans mon voyage" : `${n} idées dans mon voyage`,
+  },
+  es: {
+    explore: "Explorar",
+    map: "Mapa",
+    plan: "Planificar",
+    myTrip: "Mi viaje",
+    more: "Más",
+    moreAria: "Abrir el menú",
+    myTripBadge: (n: number) =>
+      n === 1 ? "1 idea en mi viaje" : `${n} ideas en mi viaje`,
+  },
 } as const;
 
 /** Poti, ki živijo SAMO v mobilnem Sheet meniju (Več je zanje sidro). */
@@ -142,8 +164,9 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
   const rawPathname = usePathname() ?? "/";
   const locale = useLocale() as string;
   // W1 faza 2a: 4 javni jeziki (vrstica živi na destinacijskih straneh)
+  // W12 (smer 2, faza 1): +fr/es (globalni krom na FR/ES poteh)
   const t =
-    locale === "en" || locale === "it" || locale === "de"
+    locale === "en" || locale === "it" || locale === "de" || locale === "fr" || locale === "es"
       ? L[locale]
       : L.sl;
   const { count } = useMyTrip();

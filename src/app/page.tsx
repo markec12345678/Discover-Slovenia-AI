@@ -74,6 +74,19 @@ const LOCALE_META: Record<
       "Entdecke Slowenien mit einem KI-gestützten Reiseplaner. Die schönsten Destinationen von Bled bis Piran, mit interaktiver Karte, Wetter und direkten Buchungen.",
     og: "de_DE",
   },
+  // W12 (smer 2, faza 1): FR/ES metapodatki homepage-a (ista zgradba kot IT/DE).
+  fr: {
+    tagline: "Planificateur de voyages IA",
+    description:
+      "Découvrez la Slovénie avec un planificateur de voyages propulsé par l'IA. Les plus belles destinations de Bled à Piran, avec carte interactive, météo et réservations directes.",
+    og: "fr_FR",
+  },
+  es: {
+    tagline: "Planificador de viajes con IA",
+    description:
+      "Descubre Eslovenia con un planificador de viajes con IA. Los destinos más bellos de Bled a Piran, con mapa interactivo, meteorología y reservas directas.",
+    og: "es_ES",
+  },
 };
 
 // TASK 8 / D8-F (issue #7): oznake zloženih <details> povzetkov (SL/EN) —
@@ -97,6 +110,16 @@ const COLLAPSIBLE = {
   de: {
     planCheck: "Bestehenden Plan prüfen",
     telemetry: "Validator-Telemetrie",
+  },
+  // W12 (smer 2, faza 1): FR/ES oznake zloženih povzetkov (ista doslednost
+  // kot W4 — francoski/španski uporabnik NE vidi slovenskih oznak).
+  fr: {
+    planCheck: "Vérifier un plan existant",
+    telemetry: "Télémétrie du validateur",
+  },
+  es: {
+    planCheck: "Verificar un plan existente",
+    telemetry: "Telemetría del validador",
   },
 };
 

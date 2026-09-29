@@ -3,6 +3,8 @@ import slMessages from "@/i18n/messages/sl.json";
 import enMessages from "@/i18n/messages/en.json";
 import itMessages from "@/i18n/messages/it.json";
 import deMessages from "@/i18n/messages/de.json";
+import frMessages from "@/i18n/messages/fr.json";
+import esMessages from "@/i18n/messages/es.json";
 
 /**
  * TASK 71 (raziskava TASK 68 P4+P6): regresijska varovalka paritete i18n.
@@ -17,6 +19,9 @@ import deMessages from "@/i18n/messages/de.json";
  * it.json in de.json (AI-podprta prevoda, označena z mtNotice v UI) morata
  * imeti ENAKO množico ključev kot sl/en, sicer bi italijanski/nemški
  * pogled tiho padal v mešane jezike (P4-8).
+ *
+ * W12 (smer 2, faza 1 — 1.144.0): pariteta razširjena na 6 javnih jezikov
+ * (+ fr/es — isti kanon, isti P4-8 razlog).
  *
  * NAMERNE izjeme, ki jih ta test NE preverja:
  * - ICU placeholderji se med jezikoma LAHKO razlikujejo (SL potrebuje
@@ -47,19 +52,26 @@ const SL = flat(slMessages);
 const EN = flat(enMessages);
 const IT = flat(itMessages);
 const DE = flat(deMessages);
+const FR = flat(frMessages);
+const ES = flat(esMessages);
 const slKeys = Object.keys(SL).sort();
 const enKeys = Object.keys(EN).sort();
 const itKeys = Object.keys(IT).sort();
 const deKeys = Object.keys(DE).sort();
+const frKeys = Object.keys(FR).sort();
+const esKeys = Object.keys(ES).sort();
 
-/** W1: vsi javni jeziki s pari ključev (za parametrizirane preverbe). */
+/** W1: vsi javni jeziki s pari ključev (za parametrizirane preverbe).
+ *  W12: +fr/es. */
 const LOCALE_PAIRS = [
   { code: "en", keys: enKeys, dict: EN },
   { code: "it", keys: itKeys, dict: IT },
   { code: "de", keys: deKeys, dict: DE },
+  { code: "fr", keys: frKeys, dict: FR },
+  { code: "es", keys: esKeys, dict: ES },
 ] as const;
 
-describe("TASK 71: i18n pariteta SL/EN/IT/DE (regresijska varovalka)", () => {
+describe("TASK 71: i18n pariteta SL/EN/IT/DE/FR/ES (regresijska varovalka)", () => {
   test("vsi javni jeziki imajo identično množico ploščih ključev", () => {
     for (const { code, keys } of LOCALE_PAIRS) {
       expect(keys, `jezik "${code}" se razlikuje od SL`).toEqual(slKeys);
@@ -123,17 +135,25 @@ describe("TASK 71: i18n pariteta SL/EN/IT/DE (regresijska varovalka)", () => {
     expect(DE["hero.chipsHint"]).not.toBe(SL["hero.chipsHint"]);
     expect(IT["hero.chipsHint"].length).toBeGreaterThan(10);
     expect(DE["hero.chipsHint"].length).toBeGreaterThan(10);
+    // W12: FR/ES — enak kanon (strojni prevod, ne kopija)
+    expect(FR["hero.chipsHint"]).not.toBe(SL["hero.chipsHint"]);
+    expect(ES["hero.chipsHint"]).not.toBe(SL["hero.chipsHint"]);
+    expect(FR["hero.chipsHint"].length).toBeGreaterThan(10);
+    expect(ES["hero.chipsHint"].length).toBeGreaterThan(10);
   });
 
   test("W1: mtNotice (iskrena oznaka strojnega prevoda) obstaja v vseh jezikih", () => {
     // Provenance kanon: IT/DE sta strojna prevoda — nota mora obstajati
     // v vseh štirih jezikih (na SL/EN se ne prikaže, a ključi morajo
     // obstajati zaradi paritete).
+    // W12: +FR/ES (nota se prikazuje tudi na fr/es poteh).
     for (const key of ["mtNotice.title", "mtNotice.body", "mtNotice.dismiss"]) {
       expect(SL[key], `SL manjka "${key}"`).toBeDefined();
       expect(EN[key], `EN manjka "${key}"`).toBeDefined();
       expect(IT[key], `IT manjka "${key}"`).toBeDefined();
       expect(DE[key], `DE manjka "${key}"`).toBeDefined();
+      expect(FR[key], `FR manjka "${key}"`).toBeDefined();
+      expect(ES[key], `ES manjka "${key}"`).toBeDefined();
     }
   });
 
@@ -158,7 +178,7 @@ describe("TASK 71: i18n pariteta SL/EN/IT/DE (regresijska varovalka)", () => {
     }
   });
 
-  test("W1: IT/DE placeholderji so ohranjeni (vzorčni nizi z {…})", () => {
+  test("W1: IT/DE/FR/ES placeholderji so ohranjeni (vzorčni nizi z {…})", () => {
     // Vzorčna preverba placeholderjev čez cel slovar: za vsak niz s
     // placeholderjem v SL (ki obstaja tudi v EN) mora imeti IT/DE enake
     // placeholderje (presek — SL ima 5 dokumentiranih sklonjinskih

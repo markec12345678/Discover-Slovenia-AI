@@ -102,25 +102,21 @@ function assertLeafParity(node: unknown, path: string): number {
 
 /**
  * W3 (Issue #15, 1.132.0): 4-jezična pariteta za WL (wishlist-sheet) —
- * list je { sl, en, it, de } s ŠTIRIMI nepraznimi nizi (list je dosegljiv
- * iz navigacije na it/de poteh — nikoli delno preveden). SL/EN vrednosti
- * so DOBESEDNO enake starejšim (zero-loss); it/de sta strojni prevodi po
+ * W12 (smer 2, 1.144.0): razširjeno na 6 jezikov (+fr/es — list je dosegljiv
+ * iz navigacije tudi na /fr in /es poteh). List je { sl, en, it, de, fr, es }
+ * s ŠESTIMI nepraznimi nizi — nikoli delno preveden. SL/EN vrednosti so
+ * DOBESEDNO enake starejšim (zero-loss); it/de/fr/es so strojni prevodi po
  * kanonu mtNotice. Vrne število listov.
  */
 function assertLeafParity4(node: unknown, path: string): number {
+  const LANGS = ["sl", "en", "it", "de", "fr", "es"] as const;
   if (typeof node !== "object" || node === null) {
-    throw new Error(`${path}: list mora biti objekt { sl, en, it, de }`);
+    throw new Error(`${path}: list mora biti objekt { sl, en, it, de, fr, es }`);
   }
   const rec = node as Record<string, unknown>;
   const keys = Object.keys(rec);
-  if (
-    keys.length === 4 &&
-    keys.includes("sl") &&
-    keys.includes("en") &&
-    keys.includes("it") &&
-    keys.includes("de")
-  ) {
-    for (const lang of ["sl", "en", "it", "de"] as const) {
+  if (keys.length === LANGS.length && LANGS.every((l) => keys.includes(l))) {
+    for (const lang of LANGS) {
       if (typeof rec[lang] !== "string") {
         throw new Error(`${path}: ${lang} mora biti niz`);
       }
@@ -367,11 +363,11 @@ describe("F4-A wishlist-sheet: /trznica href locale-zavedanje + besedje", () => 
     expect(WISHLIST_SRC).toContain("refId: entry.id,");
   });
 
-  test("WL slovar ima popolno 4-jezično pariteto (vedenjsko, ≥19 listov — W3)", () => {
-    // W3 (1.132.0): WL je razširjen na 4 javne jezike (list je dosegljiv iz
-    // navigacije na VSEH poteh, vključno z /it in /de). Pogodba: vsak list
-    // ima sl+en+it+de, vsi neprazni. SL/EN vrednosti ostajajo dobesedno
-    // enake starejšim (zero-loss nad obstoječo izkušnjo).
+  test("WL slovar ima popolno 6-jezično pariteto (vedenjsko, ≥19 listov — W3+W12)", () => {
+    // W3 (1.132.0): WL je razširjen na 4 javne jezike; W12 (1.144.0) doda
+    // fr/es (list je dosegljiv iz navigacije na VSEH poteh). Pogodba: vsak
+    // list ima sl+en+it+de+fr+es, vsi neprazni. SL/EN vrednosti ostajajo
+    // dobesedno enake starejšim (zero-loss nad obstoječo izkušnjo).
     const leaves = assertLeafParity4(wishlistWL, "WL");
     expect(leaves).toBeGreaterThanOrEqual(19);
     const wl = wishlistWL as Record<string, { sl: string; en: string }>;

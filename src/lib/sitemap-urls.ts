@@ -5,6 +5,8 @@ import {
   EN_STATIC_ROUTES,
   isItDeRoute,
   ITDE_STATIC_ROUTES,
+  isFrEsRoute,
+  FRES_STATIC_ROUTES,
 } from "@/i18n/routing";
 
 // Skupni seznam vseh URL-jev, ki jih generira platforma.
@@ -194,15 +196,22 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
   // na IT/DE whitelisti: jedro odkrivanja + svetovanja). Isti kanon: za
   // vsak SL URL z IT/DE različico se dodata /it in /de URL ter hreflang
   // gruča vključi it-IT/de-DE (samo kadar različica obstaja). ===
+  // === W12 (smer 2, faza 1 — 1.144.0): FR + ES različice — isti kanon,
+  // samo poti na FR/ES whitelisti (jedro odkrivanja + svetovanja, 9
+  // statičnih poti × 2 jezika = 18 URL-jev; /nacrtuj in /zemljevid
+  // NAMERNO izven — faza 2a/2b). ===
   const enUrls: SitemapUrl[] = [];
   const itdeUrls: SitemapUrl[] = [];
+  const fresUrls: SitemapUrl[] = [];
   for (const u of urls) {
     const enOk = isEnRoute(u.path);
     const itdeOk = isItDeRoute(u.path);
-    if (!enOk && !itdeOk) continue;
+    const fresOk = isFrEsRoute(u.path);
+    if (!enOk && !itdeOk && !fresOk) continue;
 
     // hreflang gruča: sl-SI (slovenska pot) + vsi javni jeziki s različico
-    // (en-US / it-IT / de-DE) + x-default (slovenska — privzeti jezik)
+    // (en-US / it-IT / de-DE / fr-FR / es-ES) + x-default (slovenska —
+    // privzeti jezik)
     const cluster: { hreflang: string; url: string }[] = [
       { hreflang: "sl-SI", url: u.url },
     ];
@@ -239,12 +248,33 @@ export function getAllSitemapUrls(baseUrl: string = BASE_URL): SitemapUrl[] {
       }
     }
 
+    // W12 (smer 2, faza 1): FR/ES različice — isti kanon kot IT/DE zanka
+    // zgoraj (fresOk ⊆ itdeOk za vse poti whitelist-a — gruča je vedno
+    // popolna za jedro odkrivanja).
+    if (fresOk) {
+      for (const l of ["fr", "es"] as const) {
+        const p = u.path === "/" ? `/${l}` : `/${l}${u.path}`;
+        const variant: SitemapUrl = {
+          ...u,
+          url: `${baseUrl}${p}`,
+          path: p,
+          category: `${u.category} (${l.toUpperCase()})`,
+        };
+        cluster.push({
+          hreflang: l === "fr" ? "fr-FR" : "es-ES",
+          url: variant.url,
+        });
+        variants.push(variant);
+        fresUrls.push(variant);
+      }
+    }
+
     cluster.push({ hreflang: "x-default", url: u.url });
     u.alternates = cluster;
     for (const v of variants) v.alternates = cluster;
   }
 
-  return [...urls, ...enUrls, ...itdeUrls];
+  return [...urls, ...enUrls, ...itdeUrls, ...fresUrls];
 }
 
 /** Število EN URL-jev (FW4.3-2 + ADRIA-EN + GEO-A) — za poročanje brez gradnje seznama. */
@@ -281,6 +311,7 @@ export function getTotalSitemapUrlCount(): number {
   // plasti ×38 (hub 38 + things-to-do 38 + itinererji 190 + sezone 152 +
   // vodniki 152 = 570 × 2 jezika = 1140)
   // + W1 faza 2b-2 (1.129.0): IT/DE + /nacrtuj (11 × 2) = skupaj 2386
+  // + W12 faza 1 (1.144.0): FR/ES statične poti (9 × 2 = 18 URL) = 2404
   return (
     22 +
     DESTINATIONS.length +
@@ -298,7 +329,10 @@ export function getTotalSitemapUrlCount(): number {
       DESTINATIONS.length * 5 +
       DESTINATIONS.length * 4 +
       DESTINATIONS.length * 4) *
-      2
+      2 +
+    // W12 faza 1: FR/ES = samo statično jedro (9 poti × 2 jezika) — vseh
+    // 9 je v SL sitemapu (za razliko od EN brez /moja-potovanja izjeme).
+    FRES_STATIC_ROUTES.size * 2
   );
 }
 

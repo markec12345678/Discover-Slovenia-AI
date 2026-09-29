@@ -77,8 +77,11 @@ describe("W1 KPI telemetrija: session_locale (kanon paritete W3)", () => {
   });
 
   test("vrstica v docs/ANALYTICS-EVENTS.md (dokumentirana metrika)", () => {
-    expect(EVENTS_DOC).toContain("| `session_locale` (1.139.0, W1 KPI) |");
-    expect(EVENTS_DOC).toContain("delež sej v it/de locale");
+    // W12 (1.144.0): vrstica razširjena s fr/es — zgodovinski W1 prefix
+    // ostane kot sidro + nova pričakovanja.
+    expect(EVENTS_DOC).toContain("`session_locale` (1.139.0, W1 KPI; 1.144.0 W12 +fr/es)");
+    expect(EVENTS_DOC).toContain("delež sej v it/de (W1) + fr/es (W12) locale");
+    expect(EVENTS_DOC).toContain("`sl`/`en`/`it`/`de`/`fr`/`es`");
   });
 
   test("lijak: planner_started že nosi locale (konverzija po jeziku)", () => {

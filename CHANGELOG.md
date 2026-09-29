@@ -7,6 +7,118 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.144.0] — 2026-09-29 (W12 „ODKRITEV V ŠESTIH JEZIKIH": francoščina in španščina kot javna jezika — jedro odkrivanja + svetovanja)
+
+### Dodano
+
+- **W12 (smer 2, faza 1) — četrti jezikovni val**: francoščina (`/fr`) in
+  španščina (`/es`) sta javna jezika platforme. Trga: FR — frankofonska
+  Zahodna Evropa (med največjimi virnimi turističnimi trgi Slovenije);
+  ES — španško-govoreči jug Evrope + Latinska Amerika (najhitreje
+  rastoče skupine poizvedb o „Eslovenia"). Oba jezika sta v benchmarku
+  Alma (STB) naslednja po IT/DE (W1). Vzorec 1:1 po W1 fazi 1 —
+  iskrena faza 1 (samo jedro), ne vsesplošna obljuba.
+- **FR/ES whitelist (9 statičnih poti)**: `/`, `/destinacije`,
+  `/primerjava`, `/o-strani`, `/kontakt`, `/pogoji-uporabe`,
+  `/politika-zasebnosti`, `/vir-podatkov`, `/zaupanje-in-varnost`.
+  NAMERNO izven (P4-8 — proxy 308 na slovensko): `/nacrtuj` (pogon je
+  4-jezičen — faza 2b), `/zemljevid` + `/destinacija/*` (faza 2a),
+  L-vzorčne poti in `/pot`. Nikoli mešanja jezikov, nikoli 404.
+- **`messages/fr.json` + `messages/es.json`** (1833 nizov × 2):
+  AI-podprt prevod po kanonu W1 (SL vir resnice, EN referenca,
+  ICU placeholderji validirani, polja ostanejo polja — hrošč W1-2b
+  popravljen v `rebuild()`), predpomnilnik `.translate-cache/`,
+  multi-pass celjenje EN-fallbackov. Označeno z mtNotice (iskrena
+  nota o strojnem prevodu — prikaže se na fr/es straneh).
+- **`slovenia-data-fr.ts` + `slovenia-data-es.ts`** (38 destinacij × 2):
+  overlayji tekstovnih polj (tagline/description/highlights/activities/
+  duration) po vzorcu -en/-it/-de; identifikatorji ostanejo izvirni.
+- **Oznake FR/ES** (`slovenia-labels-fr-es.ts`): države/regije/interesi/
+  bestFor — turistična poimenovanja po uveljavljeni praksi (Haute-Carniole,
+  Bouches de Kotor, Eslovenia, Bahía de Kotor …). Neznan ključ →
+  identiteta (isti P4-8 kanon).
+- **Globalni krom v 6 jezikih**: jezikovno stikalo (+🇫🇷/+🇪🇸, vidno
+  SAMO na poteh z različico — `isLocaleRoute`), mt-notice, mobilna
+  vrstica zavihkov, wishlist list/srček (WL slovar + teme), navigacija
+  (aria), vstopna vrstica tem domov, modal destinacij (14 pick()
+  mest + tipi + regije/bestFor oznake).
+- **SEO/sitemap**: hreflang fr-FR/es-ES SAMO na FR/ES poteh (isti
+  kanon kot EN/IT/DE), `og:locale` fr_FR/es_ES, 18 novih sitemap URL-jev
+  (9 poti × 2) s simetrično hreflang gručo (sl+en+it+de+fr+es+x-default
+  = 7 jezikov), `knowsLanguage`/`inLanguage`/`availableLanguage`
+  razširjeni.
+- **Klepet (iskrena meja faze 1)**: klient pošlje dejanski locale
+  (fr/es); strežniška domenska plast je 4-jezična, zato fr/es preslika
+  na **EN** (referenčni mednarodni jezik platforme — isti kanon kot
+  mt-notice in odpiralni časi v modalu). Francoski/španski uporabnik
+  NE dobi slovenskih (zanj nerazumljivih) odgovorov.
+- **Glasovni klepetbot**: STT/TTS v govorjenem jeziku uporabnika
+  (`fr-FR`/`es-ES`).
+- **Intl formatiranje** telemetrije validatorja: fr-FR/es-ES.
+
+### Dokazano
+
+- **Nov regresijski test** `w12-fr-es-languages.test.ts` (source-contract
+  vzorec kot W11-C): routing whitelist resnica (9 poti + 16 izven),
+  podmnožica IT/DE (hreflang gruča popolna), oznake FR/ES (števci ključev
+  kot IT), overlay pokritost 38/38 × 2, identiteta neznanega id-ja,
+  SEO hreflang/og/schema, sitemap 18 URL + formula = seznam, globalni
+  krom (switcher/mt-notice/tab-bar/wishlist/voice/pick), klepet fr/es →
+  EN preslikava, prevajalna skripta (polja ostanejo polja).
+- **task71 pariteta razširjena na 6 jezikov** (+fr/es slovarja morajo
+  imeti identično množico ploščih ključev — sicer bi FR/ES pogled tiho
+  padal v mešane jezike).
+
+### Popravljeni
+
+- **Homepage metapodatki FR/ES** (`page.tsx`): `LOCALE_META` (naslov/
+  description/og) in `COLLAPSIBLE` (zložene oznake validatorja) sta bila
+  v prvi iteraciji pozabljena — francoski/španski uporabnik je videl
+  slovenski naslov „AI načrtovalec potovanj" in `og:locale sl_SI`.
+  Zdaj: „Planificateur de voyages IA" / „Planificador de viajes con IA"
+  + `og:locale fr_FR`/`es_ES` (ista zgradba kot IT/DE iz W1).
+- **Generator overlayjev — 2 hrošča** (`translate-destinations.ts`):
+  ① id-ji s pomišljajem (nova-gorica, plitvicka-jezera …) so bili
+  emitirani kot NECITIRANI JS ključi → sintaksna napaka „Expected a
+  semicolon" (celoten strežnik 500). Citiramo točno ne-identifikatorje
+  (isti vzorec kot ročno popravljena IT/DE datoteka W1). ② model je pri
+  portorošu vrnil ključe s presledkom (`"tagline " :`) — JSON veljaven,
+  validacija pa padla. Ključi se pred validacijo normalizirajo (trim).
+- **Regija-test popravljen na vir resnice**: prva iteracija je trdila
+  „21 regij kot IT" — tipkarska napaka (noben kanon nima 21; SL `REGIONS`
+  ima 20: 9 SI + 5 HR + 4 ME + 2 AL). Test zdaj zahteva POSELNO
+  množico ključev = SL kanonu (močnejša, samopoopravljiva trditev).
+- **Wishlist testa (F3-B, F4-A) posodobljena na 6-jezikovno kanono**:
+  helper `assertLeafParity4` je zahteval TOČNO 4 ključe {sl,en,it,de} —
+  W12 razširitev WL na 6 ga je zlomila. Zdaj preverja {sl,en,it,de,fr,es}
+  (list dosegljiv iz navigacije na vseh 6 jezikov — nikoli delno
+  preveden).
+- **portorož FR dokončan ročno**: LLM je za to destinacijo vztrajno
+  vračal pokvarjen JSON kljub 6 ponovnim poskusom (edini tak primer od
+  76 klicev). Prevod po EN referenci + IT/DE/ES terminološkem kanonu
+  („bien-être" kot ES „bienestar"; „Salines de Sečovlje" kot IT
+  „Saline di Sicciole") — zapisan v predpomnilnik, emitter ga prevzame
+  kot vsak drug vnos.
+
+### Dokazano (brskalniška samo-preverba)
+
+- **Dev zlata pot na /fr**: domača stran (naslov FR, mtNotice, vsebina)
+  → jezikovno stikalo (6 jezikov, preklop na /es preverjen) →
+  /fr/destinacije (naslov „38 destinations — Slovénie et Balkans
+  occidentaux") → Bledov modal s POLEPŠANIMI polji („Perle des Alpes
+  avec son château médiéval et son île", „lac de Bled" v opisu) —
+  identifikatorji (id/slug/coords) ostanejo izvirni. Portoroževa
+  kartica prav tako (ročni prevod živ). /es ogled enakovreden.
+- **Meja faze 1 živa**: `/fr/zemljevid` → 308 → SL (proxy ščiti
+  ne-pokrite poti; `/it/zemljevid` → 200 — IT ima fazo 2a). Navigacijske
+  povezave na ne-whitelist poti sledijo istemu kanonu.
+- **Whitelist poti**: /fr/{o-strani,kontakt,primerjava} vse 200.
+- **Konzola čista** (0 napak; samo znano modalno aria opozorilo,
+  prisotno tudi na SL straneh — ni W12 regresija).
+- **Full suite 4239/4239 zeleno** (168 datotek) po vseh popravkih.
+
+---
+
 ## [1.143.0] — 2026-09-29 (W11-C „DOKAZLJIVO UREJEN DAN — DELJENA POT": reliefi W11-A in W11-B na /pot poteh — dokaz potuje NAPREJ k prijateljem in blogom)
 
 ### Dodano

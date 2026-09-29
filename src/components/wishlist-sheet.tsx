@@ -183,9 +183,12 @@ export function WishlistHeartButton({
   );
 }
 
-/** W3: izbor jezika WL slovarja — 4 javni jeziki, neznani → SL (default). */
+/** W3: izbor jezika WL slovarja — 6 javnih jezikov, neznani → SL (default).
+ *  W12 (smer 2, faza 1): +fr/es. */
 function pickWishlistLang(locale: string): WishlistLang {
-  return locale === "en" || locale === "it" || locale === "de" ? locale : "sl";
+  return locale === "en" || locale === "it" || locale === "de" || locale === "fr" || locale === "es"
+    ? locale
+    : "sl";
 }
 
 /**
@@ -204,64 +207,78 @@ function pickWishlistLang(locale: string): WishlistLang {
 // list je dosegljiv iz navigacije na VSEH poteh, vključno z it/de.
 // Nove ključe W3: preklop pogledov, razdelki, gumb "Načrtuj", povratna
 // obvestila mostu v "Moja pot".
+// W12 (smer 2, faza 1): +fr/es — list je globalni krom (navigacija na
+// FR/ES whitelistnih poteh).
 const WL = {
-  exploreCta: { sl: "Razišči tržnico", en: "Explore the marketplace", it: "Esplora il mercato", de: "Marktplatz entdecken" },
-  emptyTitle: { sl: "Ni še nič shranjenega.", en: "Nothing saved yet.", it: "Ancora nulla di salvato.", de: "Noch nichts gespeichert." },
+  exploreCta: { sl: "Razišči tržnico", en: "Explore the marketplace", it: "Esplora il mercato", de: "Marktplatz entdecken", fr: "Explorer le marché", es: "Explorar el mercado" },
+  emptyTitle: { sl: "Ni še nič shranjenega.", en: "Nothing saved yet.", it: "Ancora nulla di salvato.", de: "Noch nichts gespeichert.", fr: "Rien d'enregistré pour l'instant.", es: "Aún nada guardado." },
   emptyDescription: {
     sl: "Klikni srček na izkušnji ali izdelku.",
     en: "Tap the heart on an experience or product.",
     it: "Tocca il cuore su un'esperienza o un prodotto.",
     de: "Tippe auf das Herz bei einem Erlebnis oder Produkt.",
+    fr: "Touchez le cœur sur une expérience ou un produit.",
+    es: "Toca el corazón en una experiencia o producto.",
   },
-  title: { sl: "Priljubljene", en: "Favorites", it: "Preferiti", de: "Favoriten" },
-  openTrigger: { sl: "Odpri priljubljene", en: "Open favorites", it: "Apri i preferiti", de: "Favoriten öffnen" },
-  countNone: { sl: "Nič shranjenega", en: "Nothing saved", it: "Niente di salvato", de: "Nichts gespeichert" },
-  countOne: { sl: "1 shranjeno", en: "1 saved", it: "1 salvato", de: "1 gespeichert" },
-  countFew: { sl: "shranjeni", en: "saved", it: "salvati", de: "gespeichert" },
-  countMany: { sl: "shranjenih", en: "saved", it: "salvati", de: "gespeichert" },
-  listAria: { sl: "Seznam priljubljenih", en: "Favorites list", it: "Elenco dei preferiti", de: "Favoritenliste" },
+  title: { sl: "Priljubljene", en: "Favorites", it: "Preferiti", de: "Favoriten", fr: "Favoris", es: "Favoritos" },
+  openTrigger: { sl: "Odpri priljubljene", en: "Open favorites", it: "Apri i preferiti", de: "Favoriten öffnen", fr: "Ouvrir les favoris", es: "Abrir favoritos" },
+  countNone: { sl: "Nič shranjenega", en: "Nothing saved", it: "Niente di salvato", de: "Nichts gespeichert", fr: "Rien d'enregistré", es: "Nada guardado" },
+  countOne: { sl: "1 shranjeno", en: "1 saved", it: "1 salvato", de: "1 gespeichert", fr: "1 enregistré", es: "1 guardado" },
+  countFew: { sl: "shranjeni", en: "saved", it: "salvati", de: "gespeichert", fr: "enregistrés", es: "guardados" },
+  countMany: { sl: "shranjenih", en: "saved", it: "salvati", de: "gespeichert", fr: "enregistrés", es: "guardados" },
+  listAria: { sl: "Seznam priljubljenih", en: "Favorites list", it: "Elenco dei preferiti", de: "Favoritenliste", fr: "Liste des favoris", es: "Lista de favoritos" },
   localNote: {
     sl: "Shranjeno lokalno v tvojem brskalniku — brez računa.",
     en: "Saved locally in your browser — no account needed.",
     it: "Salvato localmente nel tuo browser — senza account.",
     de: "Lokal in deinem Browser gespeichert — ohne Konto.",
+    fr: "Enregistré localement dans votre navigateur — sans compte.",
+    es: "Guardado localmente en tu navegador — sin cuenta.",
   },
-  typeExperience: { sl: "Izkušnja", en: "Experience", it: "Esperienza", de: "Erlebnis" },
-  typeProduct: { sl: "Izdelek", en: "Product", it: "Prodotto", de: "Produkt" },
-  heartSaveVerb: { sl: "Shrani", en: "Save", it: "Salva", de: "Speichern" },
-  heartSaveSuffix: { sl: "v priljubljene", en: "to favorites", it: "nei preferiti", de: "zu den Favoriten" },
-  heartSaveTitle: { sl: "Shrani v priljubljene", en: "Save to favorites", it: "Salva nei preferiti", de: "Zu Favoriten speichern" },
-  heartRemoveVerb: { sl: "Odstrani", en: "Remove", it: "Rimuovi", de: "Entfernen" },
-  heartRemoveSuffix: { sl: "iz priljubljenih", en: "from favorites", it: "dai preferiti", de: "aus den Favoriten" },
+  typeExperience: { sl: "Izkušnja", en: "Experience", it: "Esperienza", de: "Erlebnis", fr: "Expérience", es: "Experiencia" },
+  typeProduct: { sl: "Izdelek", en: "Product", it: "Prodotto", de: "Produkt", fr: "Produit", es: "Producto" },
+  heartSaveVerb: { sl: "Shrani", en: "Save", it: "Salva", de: "Speichern", fr: "Enregistrer", es: "Guardar" },
+  heartSaveSuffix: { sl: "v priljubljene", en: "to favorites", it: "nei preferiti", de: "zu den Favoriten", fr: "aux favoris", es: "en favoritos" },
+  heartSaveTitle: { sl: "Shrani v priljubljene", en: "Save to favorites", it: "Salva nei preferiti", de: "Zu Favoriten speichern", fr: "Enregistrer dans les favoris", es: "Guardar en favoritos" },
+  heartRemoveVerb: { sl: "Odstrani", en: "Remove", it: "Rimuovi", de: "Entfernen", fr: "Retirer", es: "Quitar" },
+  heartRemoveSuffix: { sl: "iz priljubljenih", en: "from favorites", it: "dai preferiti", de: "aus den Favoriten", fr: "des favoris", es: "de favoritos" },
   heartRemoveTitle: {
     sl: "Odstrani iz priljubljenih",
     en: "Remove from favorites",
     it: "Rimuovi dai preferiti",
     de: "Aus Favoriten entfernen",
+    fr: "Retirer des favoris",
+    es: "Quitar de favoritos",
   },
   // W3: preklop pogledov (ploščen seznam ostaja kot "Vse" — varovalo)
-  viewAll: { sl: "Vse", en: "All", it: "Tutto", de: "Alle" },
-  viewDestination: { sl: "Destinacije", en: "Destinations", it: "Destinazioni", de: "Reiseziele" },
-  viewTheme: { sl: "Teme", en: "Themes", it: "Temi", de: "Themen" },
+  viewAll: { sl: "Vse", en: "All", it: "Tutto", de: "Alle", fr: "Tout", es: "Todo" },
+  viewDestination: { sl: "Destinacije", en: "Destinations", it: "Destinazioni", de: "Reiseziele", fr: "Destinations", es: "Destinos" },
+  viewTheme: { sl: "Teme", en: "Themes", it: "Temi", de: "Themen", fr: "Thèmes", es: "Temas" },
   viewsAria: {
     sl: "Način prikaza priljubljenih",
     en: "Favorites display mode",
     it: "Modalità di visualizzazione dei preferiti",
     de: "Anzeigemodus der Favoriten",
+    fr: "Mode d'affichage des favoris",
+    es: "Modo de visualización de favoritos",
   },
   // W3: razdelki + most v načrt (isti handoff kanon kot my-trip-view)
-  planSection: { sl: "Načrtuj", en: "Plan", it: "Pianifica", de: "Planen" },
+  planSection: { sl: "Načrtuj", en: "Plan", it: "Pianifica", de: "Planen", fr: "Planifier", es: "Planificar" },
   plannedTitle: {
     sl: "Dodano v »Moja pot«",
     en: "Added to “My trip”",
     it: "Aggiunto a “Il mio viaggio”",
     de: "Zu „Meine Reise“ hinzugefügt",
+    fr: "Ajouté à « Mon voyage »",
+    es: "Añadido a «Mi viaje»",
   },
   plannedNote: {
     sl: "Vnosi razdelka so v zbirki — nadaljuj na načrtovanje.",
     en: "The section items are in the collection — continue planning.",
     it: "Gli elementi della sezione sono nella raccolta — continua la pianificazione.",
     de: "Die Einträge der Sammlung sind gespeichert — plane weiter.",
+    fr: "Les éléments de la section sont dans la collection — continuez la planification.",
+    es: "Los elementos de la sección están en la colección — continúa planificando.",
   },
 } as const;
 
@@ -659,12 +676,16 @@ function WishlistRow({
     en: `Open ${item.name} in the marketplace`,
     it: `Apri ${item.name} nel mercato`,
     de: `${item.name} im Marktplatz öffnen`,
+    fr: `Ouvrir ${item.name} dans le marché`,
+    es: `Abrir ${item.name} en el mercado`,
   };
   const removeAria = {
     sl: `Odstrani ${item.name} iz priljubljenih`,
     en: `Remove ${item.name} from favorites`,
     it: `Rimuovi ${item.name} dai preferiti`,
     de: `${item.name} aus den Favoriten entfernen`,
+    fr: `Retirer ${item.name} des favoris`,
+    es: `Quitar ${item.name} de favoritos`,
   };
 
   return (

@@ -397,10 +397,11 @@ describe("F3-B rollout: wishlist-sheet prazno stanje", () => {
     // W3 (Issue #15, 1.132.0): WL razširjen na 4 javne jezike — SL/EN
     // vrednosti DOBESEDNO enake (zero-loss), IT/DE dodani (list je dosegljiv
     // iz navigacije na it/de poteh). Pogodba sledi novi kanonični vrstici.
+    // W12 (smer 2, 1.144.0): +fr/es — ista vrstica zdaj 6-jezikovna.
     expect(WISHLIST_SRC).toContain(
-      'emptyTitle: { sl: "Ni še nič shranjenega.", en: "Nothing saved yet.", it: "Ancora nulla di salvato.", de: "Noch nichts gespeichert." }'
+      'emptyTitle: { sl: "Ni še nič shranjenega.", en: "Nothing saved yet.", it: "Ancora nulla di salvato.", de: "Noch nichts gespeichert.", fr: "Rien d\'enregistré pour l\'instant.", es: "Aún nada guardado." }'
     );
-    // W3: ostale ključe praznega stanja prav tako 4-jezično
+    // W3: ostale ključe praznega stanja prav tako 4-jezično (+ W12: 6)
     expect(WISHLIST_SRC).toContain('it: "Esplora il mercato"');
     expect(WISHLIST_SRC).toContain('de: "Marktplatz entdecken"');
     expect(WISHLIST_SRC).toContain(

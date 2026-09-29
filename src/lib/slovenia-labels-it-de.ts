@@ -14,6 +14,20 @@ import type { Destination } from "@/lib/types";
 import { getEnDestination } from "./slovenia-data-en";
 import { getItDestination } from "./slovenia-data-it";
 import { getDeDestination } from "./slovenia-data-de";
+// W12 (smer 2, faza 1): FR/ES oznake in overlay getterji (slovenia-data-fr/-es
+// generirata isti vzorec kot -it/-de).
+import {
+  COUNTRIES_FR,
+  REGIONS_FR,
+  INTERESTS_FR,
+  BEST_FOR_FR,
+  COUNTRIES_ES,
+  REGIONS_ES,
+  INTERESTS_ES,
+  BEST_FOR_ES,
+} from "./slovenia-labels-fr-es";
+import { getFrDestination } from "./slovenia-data-fr";
+import { getEsDestination } from "./slovenia-data-es";
 
 // ─── ITALIJANŠČINA ──────────────────────────────────────────────────────────
 
@@ -166,7 +180,11 @@ export function withLocaleOverlay(d: Destination, locale: string): Destination {
         ? (getItDestination(d.id) ?? undefined)
         : locale === "de"
           ? (getDeDestination(d.id) ?? undefined)
-          : undefined;
+          : locale === "fr"
+            ? (getFrDestination(d.id) ?? undefined)
+            : locale === "es"
+              ? (getEsDestination(d.id) ?? undefined)
+              : undefined;
   return overlay ? { ...d, ...overlay } : d;
 }
 
@@ -174,6 +192,8 @@ export function withLocaleOverlay(d: Destination, locale: string): Destination {
 export function countryLabelFor(value: string, locale: string): string | null {
   if (locale === "it") return COUNTRIES_IT[value] ?? null;
   if (locale === "de") return COUNTRIES_DE[value] ?? null;
+  if (locale === "fr") return COUNTRIES_FR[value] ?? null;
+  if (locale === "es") return COUNTRIES_ES[value] ?? null;
   return null; // EN ima svoj COUNTRIES_EN pri klicatelju (FW4.3-2 vzorec)
 }
 
@@ -181,6 +201,8 @@ export function countryLabelFor(value: string, locale: string): string | null {
 export function regionLabelFor(value: string, locale: string): string | null {
   if (locale === "it") return REGIONS_IT[value] ?? null;
   if (locale === "de") return REGIONS_DE[value] ?? null;
+  if (locale === "fr") return REGIONS_FR[value] ?? null;
+  if (locale === "es") return REGIONS_ES[value] ?? null;
   return null;
 }
 
@@ -188,6 +210,8 @@ export function regionLabelFor(value: string, locale: string): string | null {
 export function interestLabelFor(value: string, locale: string): string | null {
   if (locale === "it") return INTERESTS_IT[value] ?? null;
   if (locale === "de") return INTERESTS_DE[value] ?? null;
+  if (locale === "fr") return INTERESTS_FR[value] ?? null;
+  if (locale === "es") return INTERESTS_ES[value] ?? null;
   return null;
 }
 
@@ -195,6 +219,8 @@ export function interestLabelFor(value: string, locale: string): string | null {
 export function bestForLabelFor(value: string, locale: string): string | null {
   if (locale === "it") return BEST_FOR_IT[value] ?? null;
   if (locale === "de") return BEST_FOR_DE[value] ?? null;
+  if (locale === "fr") return BEST_FOR_FR[value] ?? null;
+  if (locale === "es") return BEST_FOR_ES[value] ?? null;
   return null;
 }
 
@@ -211,6 +237,8 @@ export function ogLocaleFor(locale: string): string {
   if (locale === "en") return "en_US";
   if (locale === "it") return "it_IT";
   if (locale === "de") return "de_DE";
+  if (locale === "fr") return "fr_FR";
+  if (locale === "es") return "es_ES";
   return "sl_SI";
 }
 

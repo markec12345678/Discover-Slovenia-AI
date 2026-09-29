@@ -1,0 +1,2435 @@
+{
+  "nav": {
+    "destinations": "Destinations",
+    "planner": "Planificateur",
+    "map": "Carte",
+    "listings": "Établissements locaux",
+    "events": "Événements",
+    "join": "Rejoignez-nous",
+    "cta": "Planifiez votre voyage",
+    "providers": "Pour les prestataires",
+    "experiences": "Expériences",
+    "guides": "Guides",
+    "marketplace": "Marketplace",
+    "pass": "Slovenia Pass",
+    "trips": "Mes voyages",
+    "goMode": "En route",
+    "tagline": "Voyages IA",
+    "searchAria": "Recherche intelligente",
+    "journey": "Voyage complet",
+    "startAnywhere": "Commencez n'importe où"
+  },
+  "hero": {
+    "title": "Que souhaitez-vous vivre en Slovénie ?",
+    "subtitle": "Dites-nous ce que vous cherchez — en français ou en anglais. Tous nos conseils sont vérifiés sur place en Slovénie, pas copiés de guides étrangers.",
+    "badge": "Guide local pour la Slovénie",
+    "placeholder": "Je souhaite un escapade de 3 jours en pleine nature, avec de bons repas et le moins de conduite possible …",
+    "cta": "Construire mon voyage",
+    "ctaLoading": "Analyse en cours...",
+    "ctaMobile": "Construire le voyage",
+    "ctaLoadingMobile": "...",
+    "ctaPrimary": "Planifier le voyage",
+    "ctaSecondary": "Explorer les destinations",
+    "sectionAriaLabel": "Présentation de la plateforme Discover Slovenia AI",
+    "imageAlt": "Le lac de Bled avec son île, son église et son château au coucher du soleil",
+    "inputAriaLabel": "Que souhaitez-vous vivre en Slovénie?",
+    "chipsHint": "Ou choisissez un souhait — un clic jusqu'au plan :",
+    "scrollCue": "Découvrir plus",
+    "scrollCueAriaLabel": "Faire défiler vers les statistiques",
+    "trustNoAccount": "Pas de compte nécessaire",
+    "trustVerified": "distances et prix vérifiés",
+    "trustUpdated": "mis à jour septembre 2026",
+    "startAnywhere": "Vous avez déjà vos propres sources ? Commencez où vous voulez — lien, image, PDF ou épingles Google",
+    "seasonal": {
+      "zima": {
+        "ctaLabel": "Demander à l'IA ce qu'il y a à faire à Bled en hiver",
+        "question": "Que voir et que faire à Bled en hiver ?"
+      },
+      "pomlad": {
+        "ctaLabel": "Demander à l'IA ce qu'il y a à faire sur la Soča au printemps",
+        "question": "Que voir et que faire sur la rivière Soča au printemps ?"
+      },
+      "poletje": {
+        "ctaLabel": "Demander à l'IA ce qu'il y a à faire sur la Soča en été",
+        "question": "Que voir et que faire sur la rivière Soča en été ?"
+      },
+      "jesen": {
+        "ctaLabel": "Demander à l'IA ce qu'il y a à faire à Bled en automne",
+        "question": "Que voir et que faire à Bled en automne ?"
+      }
+    }
+  },
+  "heroChips": {
+    "calmWeekend": "Weekend détente",
+    "calmWeekendQuery": "Weekend de 3 jours détente avec la nature, de bons repas et le moins de conduite possible",
+    "romantic": "Romantique",
+    "romanticQuery": "Une échappée romantique à deux avec un lac, du vin et des promenades",
+    "family": "Famille",
+    "familyQuery": "Escapade en famille de 3 jours (2 adultes, 2 enfants)",
+    "foodWine": "Hrana & vin",
+    "foodWineQuery": "Voyage à travers la nourriture, le vin et les régions culinaires slovènes",
+    "adventure": "Aventure",
+    "adventureQuery": "Weekend d'adrénaline — rafting sur la Soča et randonnées en montagne",
+    "noCrowds": "Pas de foule",
+    "noCrowdsQuery": "Randonnées paisibles en nature, loin des foules touristiques",
+    "natureFood": "Nature et nourriture",
+    "natureFoodQuery": "Voyage à travers la nature slovène avec de bonnes tavernes locales — lacs, gorges et nourriture traditionnelle",
+    "seaMountains": "Mer + montagnes",
+    "seaMountainsQuery": "Combinaison de mer et de montagnes — Piran et la côte ainsi que les excursions dans le parc national du Triglav"
+  },
+  "heroTrust": {
+    "free": "Gratuit",
+    "destinations": "38 destinations",
+    "aiSlovenian": "IA en slovène",
+    "verifiedPartners": "Partenaires vérifiés"
+  },
+  "betaBanner": {
+    "active": "Période bêta :",
+    "remainingPrefix": "Tous les plans GRATUITS pour les établissements. Encore",
+    "remainingSuffix": "établissements avant l'activation de la monétisation.",
+    "remainingMobile": "GRATUIT · encore {count} établissements",
+    "join": "Rejoignez-nous",
+    "dismiss": "Fermer la bannière"
+  },
+  "stats": {
+    "sectionAriaLabel": "Statistiques de la plateforme et de la Slovénie",
+    "coverageEyebrow": "Nous couvrirons toute la Slovénie",
+    "destinationsLabel": "destinations de premier plan — de Bled à Piran",
+    "visitorsLabel": "Visiteurs par an",
+    "forestLabel": "de la Slovénie est couverte de forêts",
+    "seasonsLabel": "Saisons d'activité",
+    "fairEyebrow": "Le modèle le plus équitable",
+    "fairValue": "0 %",
+    "fairUnit": "commissions",
+    "fairNote": "sur les réservations directes (concurrents : 20–43 %)",
+    "commissionLead": "Commission",
+    "commissionRate": "12 %",
+    "commissionVerb": "est appliquée",
+    "commissionEmphasis": "uniquement quand l'AI génère la réservation",
+    "commissionTail": "— jamais autrement.",
+    "freshnessUpdated": "Données mises à jour : septembre 2026",
+    "freshnessSources": "chiffres des visiteurs : STO/SURS",
+    "freshnessLink": "liste des sources"
+  },
+  "homeDest": {
+    "titleFeatured": "Destinations populaires",
+    "titleAll": "Explorer les destinations",
+    "subtitleFeatured": "Les six endroits que les voyageurs recherchent le plus",
+    "subtitleAll": "39 plus beaux coins des Balkans occidentaux",
+    "filters": "Filtres",
+    "clearFilters": "Effacer les filtres",
+    "countryPlaceholder": "Tous les pays",
+    "countryAriaLabel": "Filtrer par pays",
+    "regionPlaceholder": "Toutes les régions",
+    "regionAriaLabel": "Filtrer par région",
+    "interestPlaceholder": "Tous les intérêts",
+    "interestAriaLabel": "Filtrer par intérêt",
+    "typePlaceholder": "Tous les types",
+    "typeAriaLabel": "Filtrer par type de destination",
+    "budgetPlaceholder": "Prix (tous)",
+    "budgetAriaLabel": "Filtrer par prix",
+    "ratingPlaceholder": "Note éditoriale (toutes)",
+    "ratingAriaLabel": "Filtrer par note éditoriale",
+    "typeLake": "Lac",
+    "typeCity": "Ville",
+    "typeMountain": "Montagnes",
+    "typeCave": "Grotte",
+    "typeCoast": "Côte",
+    "typeRiver": "Rivière",
+    "typeSpa": "Station thermale",
+    "typeGorge": "Gorge",
+    "typeCastle": "Château",
+    "budgetLow": "€ — Faible",
+    "budgetMid": "€€ — Moyen",
+    "budgetHigh": "€€€ — Élevé",
+    "rating45": "4.5+",
+    "rating47": "4.7+",
+    "rating49": "4.9+",
+    "showing": "Affichage de {count} sur {total} destinations",
+    "viewAll": "Explorer les 38 destinations",
+    "cardAriaLabel": "Ouvrir les détails pour {name}",
+    "featuredBadge": "★ Recommandé",
+    "ratingLabel": "/ 5 · note éditoriale",
+    "editorialShort": "éditorial",
+    "moreInfo": "Plus d'informations",
+    "emptyTitle": "Aucune destination ne correspond à vos filtres.",
+    "emptyHint": "Essayez de modifier ou de supprimer les filtres.",
+    "imageAlt": "{name} — {tagline}",
+    "interestAll": "Tous",
+    "interestsAriaLabel": "Filtrer par intérêt",
+    "moreFilters": "Plus de filtres",
+    "moreFiltersWithCount": "Plus de filtres ({count})",
+    "sortLabel": "Trier les destinations",
+    "sortRecommended": "Recommandé",
+    "sortRating": "Mieux noté",
+    "sortPrice": "Le moins cher",
+    "cardPrice": "≈ {price} €",
+    "cardPriceSr": " · prix estimé par personne"
+  },
+  "homeExp": {
+    "eyebrow": "Expériences",
+    "title": "Infinies possibilités d'expériences",
+    "subtitle": "La Slovénie offre tout, des sommets alpins à la côte adriatique — sur une superficie inférieure à celle du Pays de Galles.",
+    "hikingTitle": "Randonnée",
+    "hikingDesc": "Triglav, Mangart, Storžič — od lahnih sprehodov do zahtevnih vzponov.",
+    "waterTitle": "Aventures aquatiques",
+    "waterDesc": "Rafting sur l'Isonzo, kayak sur la Kolpa, ski nautique à Portorož.",
+    "historyTitle": "Histoire & culture",
+    "historyDesc": "Châteaux médiévaux, Predjama, château de Ljubljana, musées du front de l'Isonzo.",
+    "natureTitle": "Nature & parcs",
+    "natureDesc": "Parc national du Triglav, lac de Cerknica, forêts slovènes.",
+    "foodTitle": "Gastronomie",
+    "foodDesc": "De la kremšnita aux štruklji, du Teran à la rebula — 24 régions gastronomiques.",
+    "gemsTitle": "Trésors cachés",
+    "gemsDesc": "Vintgarska soteska, soline Sečovlje, Logarska dolina — izven utirjenih poti.",
+    "hikingAlt": "Pohodniška pot pod Triglavom",
+    "waterAlt": "Slapovi Slovenije med snežinskimi skalami",
+    "historyAlt": "Ptujski grad nad starim mestnim jedrom",
+    "natureAlt": "Bohinjsko jezero z gorami v ozadju",
+    "foodAlt": "Plats traditionnels slovènes sur la table",
+    "gemsAlt": "La gorge de Vintgar avec sa rivière turquoise"
+  },
+  "exploreHub": {
+    "badge": "Plus à explorer",
+    "groupPlan": "Planifier",
+    "groupExperience": "Expériences",
+    "groupMore": "Plus",
+    "title": "Explorez la Slovénie",
+    "subtitle": "Carte, événements, entreprises locales, guides et plus — tout en un seul endroit.",
+    "mapTitle": "Carte",
+    "mapDesc": "Carte interactive avec des destinations, des lieux locaux et votre itinéraire à travers toute la Slovénie.",
+    "eventsTitle": "Événements",
+    "eventsDesc": "Calendrier des festivals, foires et événements locaux — avec dates, lieux et catégories.",
+    "localTitle": "Entreprises locales",
+    "localDesc": "Hôtels, restaurants, attractions et activités de partenaires locaux vérifiés avec réservation directe.",
+    "guidesTitle": "Guides & conseils",
+    "guidesDesc": "Que faire à Bled, 3 jours en Slovénie, cuisine locale — et demandez à un habitant des conseils d'initié.",
+    "marketTitle": "Marché",
+    "marketDesc": "Produits et expériences locaux — miel, vins, artisanat, rafting et expériences gastronomiques directement des fournisseurs.",
+    "passTitle": "Slovenia Pass",
+    "passDesc": "Visitez les régions, collectez des badges et débloquez des récompenses — voyagez à travers la Slovénie comme un jeu."
+  },
+  "affiliate": {
+    "badge": "Réservez directement",
+    "title": "Tout pour votre voyage en un seul endroit",
+    "subtitle": "Vous réservez directement auprès du partenaire. Discover Slovenia ne vous facture rien pour l'utilisation des liens.",
+    "partnerBadge": "Offre partenaire",
+    "badgeShort": "Partenaire",
+    "tooltip": "Lien partenaire — Vous serez redirigé vers un site externe. Discover Slovenia AI peut recevoir une commission.",
+    "book": "Réserver maintenant",
+    "disclosure": "Certains liens sont des liens d'affiliation. Si vous réservez via ces liens, Discover Slovenia peut recevoir une commission d'affiliation. Le prix que vous payez reste le même.",
+    "carsLabel": "Location de voiture",
+    "carsDesc": "Recherche parmi 10 000+ emplacements. Annulation gratuite dans la plupart des cas.",
+    "carsAria": "Louez une voiture via DiscoverCars — ouvre un lien d'affiliation",
+    "hotelsLabel": "Hôtels & hébergements",
+    "hotelsDesc": "28 millions d'hébergements dans le monde. Annulation gratuite dans la plupart des cas.",
+    "hotelsAria": "Réservez votre hébergement sur Booking.com — ouvre un lien partenaire",
+    "activitiesLabel": "Activités & excursions",
+    "activitiesDesc": "300 000+ expériences et excursions. Annulation gratuite jusqu'à 24h avant.",
+    "activitiesAria": "Réservez des excursions et des expériences via GetYourGuide — ouvre un lien d'affiliation",
+    "viatorLabel": "Visites guidées & excursions",
+    "viatorDesc": "Alternative aux visites : 300 000+ visites, annulation gratuite jusqu'à 24h avant.",
+    "viatorAria": "Réservez des visites guidées via Viator — ouvre un lien partenaire",
+    "flightsLabel": "Vols",
+    "flightsDesc": "Comparez les vols de 1 200+ compagnies aériennes. Les prix les plus bas.",
+    "flightsAria": "Trouvez des vols via Skyscanner — ouvre un lien d'affiliation",
+    "insuranceLabel": "Assurance voyage",
+    "insuranceDesc": "Couverture pour les activités d'aventure (rafting, randonnée).",
+    "insuranceAria": "Souscrivez une assurance voyage — ouvre un lien partenaire",
+    "esimLabel": "eSIM pour la Slovénie",
+    "esimDesc": "Internet dès votre arrivée — sans carte SIM physique et sans roaming plus cher.",
+    "esimAria": "Achetez une eSIM via Airalo — ouvre un lien d'affiliation",
+    "transfersLabel": "Transferts",
+    "transfersDesc": "Transferts aéroport et interurbains — confort sans location de voiture.",
+    "transfersAria": "Réservez un transfert via Kiwitaxi — ouvre un lien partenaire",
+    "transportLabel": "Trains & bus",
+    "transportDesc": "Transports interurbains en Slovénie — pour les voyageurs sans voiture.",
+    "transportAria": "Trouvez des trains et des bus via Omio — ouvre un lien partenaire",
+    "ticketsLabel": "Billets",
+    "ticketsDesc": "Billets pour les attractions (Postojna, Château de Bled…) — pas de file d'attente.",
+    "ticketsAria": "Achetez vos billets via Tiqets — ouvre un lien partenaire",
+    "stayGroup": "Hébergement",
+    "moveGroup": "Se rendre sur place",
+    "experienceGroup": "Expériences",
+    "essentialsGroup": "Essentiels du voyage",
+    "handoffBadge": "Lien d'affiliation uniquement",
+    "handoffFlightsNote": "Pas de prix de vols en direct dans l'application — comparez sur Skyscanner.",
+    "handoffCarsNote": "Lien d'affiliation uniquement — offres de location chez DiscoverCars.",
+    "handoffTransfersNote": "Prix de transferts publiés ; disponibilité sur Kiwitaxi.",
+    "handoffTransportNote": "Horaires et prix des trains/bus ne sont pas dans l'application — recherchez sur Omio."
+  },
+  "newsletter": {
+    "title": "Découvrez les trésors cachés de Slovénie",
+    "subtitle": "Une fois par semaine : lieux, événements et conseils que vous ne trouverez pas dans les guides",
+    "emailLabel": "Adresse e-mail pour l'inscription à la newsletter",
+    "submit": "M'abonner",
+    "submitting": "Inscription en cours...",
+    "submitAriaLabel": "M'abonner à la newsletter hebdomadaire",
+    "alreadySubscribed": "Déjà abonné !",
+    "success": "Abonné ! Vérifiez votre boîte de réception.",
+    "failed": "L'inscription a échoué — veuillez réessayer.",
+    "pushTitle": "Vous souhaitez être informé ?",
+    "pushText": "Avec les notifications du navigateur, nous pouvons vous informer de nouvelles expériences, d'événements pendant votre visite — et vous rappeler votre plan sauvegardé.",
+    "noSpam": "Pas de spam — désabonnement en un clic."
+  },
+  "planCheck": {
+    "sectionAriaLabel": "Vérifiez votre plan — validation gratuite de votre voyage",
+    "eyebrow": "Gratuit · sans inscription · 0 jetons IA",
+    "title": "Vérifiez votre plan",
+    "subtitle": "Collez un plan que vous avez obtenu de ChatGPT, Mindtrip ou Layla — nous vérifions déterministiquement les distances sur les routes réelles, les fermetures, les doublons et l'ordre des arrêts. Un rapport avec des sources citées, sans suppositions.",
+    "inputLabel": "Texte du plan de voyage",
+    "placeholder": "Collez votre texte de plan ...\n\nJour 1 : Bled — lac et château\n9:00–11:00 promenade autour du lac\n\nJour 2 : Ljubljana — vieille ville ...",
+    "hint": "Nous vérifions uniquement les arrêts de nos 38 destinations — nous ne devinons pas les autres.",
+    "tryExample": "Essayer un exemple (avec des erreurs volontaires)",
+    "checking": "Vérification en cours…",
+    "submit": "Vérifier le plan",
+    "errors": {
+      "generic": "La vérification a échoué — veuillez réessayer.",
+      "network": "La connexion a échoué. Vérifiez votre connexion Internet et réessayez."
+    },
+    "verdict": {
+      "errorTitle": "Le plan présente {count, plural, one {# avertissement plus sérieux} two {# avertissements plus sérieux} few {# avertissements plus sérieux} other {# avertissements plus sérieux}}",
+      "warnTitle": "{count, plural, one {# avertissement} other {# avertissements}} méritent un examen plus approfondi",
+      "okTitle": "Nous n'avons trouvé aucun problème lors de nos vérifications",
+      "stats": "Plus sérieux : {errors} · Avertissements : {warns} · Suggestions de réorganisation : {zigzags} · Doublons : {duplicates}"
+    },
+    "parsed": {
+      "title": "Ce que nous avons compris dans votre plan",
+      "methodOsrm": "Routes réelles (OSRM)",
+      "methodHeuristic": "Estimation des distances",
+      "stops": "Arrêts",
+      "days": "Jours",
+      "km": "Conduite totale",
+      "startDate": "Date de début",
+      "noDate": "non trouvé",
+      "noHeadersNote": "Nous n'avons trouvé aucun en-tête de jour dans le texte (par exemple, « Jour 1 », « Day 2 ») — nous avons vérifié comme si tous les arrêts étaient sur une seule journée."
+    },
+    "dayLabel": "Jour",
+    "issues": {
+      "title": "Résultats du validateur"
+    },
+    "zigzag": {
+      "title": "L'ordre des arrêts peut être amélioré",
+      "saving": "la réorganisation économise ~{saved} km ({current} km → {optimized} km)",
+      "order": "Ordre suggéré :",
+      "note": "Nous calculons l'ordre optimal en tant que chemin ouvert entre les arrêts (2-opt sur les routes réelles). Si votre journée commence ou se termine ailleurs (par exemple, un hôtel), ajustez l'ordre."
+    },
+    "duplicates": {
+      "title": "Même lieu sur plusieurs jours",
+      "line": "— jours {days} (une visite répétée ? Si c'est intentionnel, c'est bien)",
+      "note": "Une étude de 356 plans AI a trouvé des visites dupliquées sur 5,1 % des jours — nous les affichons donc, nous ne les cachons pas."
+    },
+    "costs": {
+      "title": "Estimation des coûts de trajet",
+      "line": "Total ~{km} km — carburant ~{fuelEur} € + e-vignette {vignetteEur} € (véhicules jusqu'à 3,5 t).",
+      "note": "Les estimations sont basées sur les tarifs publiés (AMZS/DARS) au moment de la mise en œuvre ; la vignette est nécessaire uniquement pour la conduite sur autoroutes."
+    },
+    "sources": {
+      "title": "Pourquoi nous vérifions ainsi (sources)",
+      "limitation": "Transparence : nous ne pouvons vérifier que les arrêts correspondant à nos 38 destinations. Les lieux en dehors de ce nous ne les connaissons pas — et nous ne les inventons pas.",
+      "limitationDuration": "Nous n'extrayons pas les durées d'activité du texte — l'estimation de la charge journalière ne compte que la conduite.",
+      "zeroAi": "La vérification est 100 % déterministe : 0 jetons IA, pur calcul."
+    }
+  },
+  "footer": {
+    "tagline": "Fabriqué en Slovénie",
+    "affiliateDisclaimer": "Liens d'affiliation — nous gagnons une commission sur les réservations.",
+    "ariaLabel": "Pied de page",
+    "brandAriaLabel": "Discover Slovenia AI — accueil",
+    "brandName": "Discover Slovenia AI",
+    "brandDescription": "Planificateur de voyages pour la Slovénie et les Balkans occidentaux, alimenté par des données réelles et un moteur déterministe. Découvrez 38 destinations — Bled, Ljubljana, Piran et plus encore.",
+    "copyright": "© 2026 Discover Slovenia AI.",
+    "exploreColumn": "Explorer",
+    "exploreAllDestinations": "Toutes les destinations",
+    "exploreExperiences": "Expériences",
+    "exploreMap": "Carte",
+    "exploreEvents": "Événements",
+    "exploreLocal": "Prestataires locaux",
+    "exploreMarket": "Place de marché",
+    "exploreGuides": "Guides",
+    "explorePass": "Slovenia Pass",
+    "planColumn": "Planifier",
+    "planPlanner": "Planificateur de voyage",
+    "planQuiz": "Quiz pour voyageurs",
+    "planStartAnywhere": "Commencez n'importe où (lien, image, PDF)",
+    "planComparison": "Comparaison des planificateurs",
+    "planBookings": "Réservations",
+    "planMyTrips": "Mes voyages",
+    "planLogin": "Se connecter",
+    "providersColumn": "Pour les fournisseurs",
+    "providersBecomePartner": "Devenir partenaire",
+    "providersLogin": "Connexion partenaire",
+    "providersPricing": "Forfaits et prix",
+    "providersSignup": "Formulaire d'inscription",
+    "legalColumn": "Légal",
+    "legalTrust": "Confiance et sécurité",
+    "legalPrivacy": "Politique de confidentialité",
+    "legalTerms": "Conditions d'utilisation",
+    "legalContact": "Contact",
+    "planGoMode": "En route (Mode Go, hors ligne)",
+    "planJourney": "Voyage complet — prestataires (transferts, séjours, activités)"
+  },
+  "chatbot": {
+    "headerTitle": "Slovénie IA",
+    "headerSubtitle": "Votre guide personnel de Slovénie",
+    "welcome": "Bonjour ! 🇸🇮 Je suis Slovenie AI — votre guide personnel en Slovénie. Demandez-moi des informations sur les destinations, les habitants, les produits ou les expériences. Comment puis-je vous aider ?",
+    "quickPromptsLabel": "Questions rapides",
+    "quickPrompt1": "Que visiter en Slovénie ?",
+    "quickPrompt2": "Recommande un week-end romantique",
+    "quickPrompt3": "Où peut-on manger à Ljubljana ?",
+    "quickPrompt4": "Où aller en famille ?",
+    "inputPlaceholder": "Demandez-moi sur la Slovénie...",
+    "inputAriaLabel": "Message pour l'assistant IA",
+    "send": "Envoyer le message",
+    "clear": "Effacer la conversation",
+    "cleared": "Conversation effacée",
+    "thinking": "Recherche dans notre base de données…",
+    "offlineFallback": "Nous sommes désolés, nous rencontrons actuellement des problèmes de connexion. Veuillez réessayer ou visiter le planificateur de voyages.",
+    "fabOpen": "Ouvrir l'assistant IA",
+    "fabClose": "Fermer l'assistant IA",
+    "dialogAriaLabel": "Conversation avec l'assistant IA",
+    "badgeDatabase": "De notre base de données",
+    "sourcesLabel": "Sources officielles (STO)",
+    "sourceMap": "carte",
+    "placesLabel": "Sur la carte",
+    "mapExpand": "Agrandir la carte",
+    "mapExpandShort": "Agrandir",
+    "mapClose": "Fermer la carte",
+    "mapOverlayAria": "Carte des lieux recommandés",
+    "mapPinShort": "Épingler",
+    "mapPinAria": "Épingler la carte à côté du chat — elle reste visible lors des questions suivantes (ordinateur uniquement)",
+    "mapUnpinShort": "Détacher",
+    "mapUnpinAria": "Détacher la carte de la conversation",
+    "splitMapTitle": "Carte de la conversation",
+    "splitResizeAria": "Faites glisser le séparateur ou utilisez les touches fléchées gauche/droite pour redimensionner la carte",
+    "bookCta": "Réserver",
+    "bookCtaAria": "Réserver — offres pour {name}",
+    "bookCtaTitle": "Offres et réservation",
+    "bookDialogTitle": "Réservation · {name}",
+    "bookDialogIntro": "Prestataires locaux et liens de partenaires pour cette destination. Vous voyez toujours les conditions avant de réserver — rien n'est réservé dans le chat.",
+    "bookDialogLoading": "Chargement des offres...",
+    "bookDialogError": "Impossible de charger les offres pour le moment. Réessayez ou utilisez les liens de partenaires ci-dessous.",
+    "bookDialogRetry": "Réessayer",
+    "bookDialogEmpty": "Aucun prestataire local pour {name} pour l'instant — liens de partenaires ci-dessous.",
+    "bookDialogPartners": "Liens de partenaires",
+    "bookDialogNote": "Les liens de partenaires ouvrent le prestataire (partenaire, étiqueté). Les prestataires locaux s'ouvrent via leur site web ou contact — la réservation et les conditions se font toujours chez le prestataire, jamais dans le chat.",
+    "provenanceT1": "Vérifié",
+    "provenanceT1Title": "Nos données de destination vérifiées",
+    "provenanceT1Legend": "vérifié (nos données)",
+    "provenanceOsmTitle": "OpenStreetMap — données communautaires, non vérifiées officiellement",
+    "provenanceOsmLegend": "OpenStreetMap (source communautaire)",
+    "osmNote": "Les horaires d'ouverture sont des données communautaires — vérifiez avant de visiter.",
+    "provenanceT2Title": "Source officielle — Slovenska turistična organizacija (slovenia.info)",
+    "provenanceT2Legend": "source officielle STO (article)",
+    "stoNote": "Les épingles turquoise sont des articles officiels STO — le lien ouvre l'original sur slovenia.info.",
+    "catFilterAria": "Filtrer les lieux par catégorie",
+    "catFood": "Nourriture",
+    "catDrinks": "Boissons",
+    "catMarket": "Marchés et boutiques",
+    "catStay": "Hébergement",
+    "catDestination": "Destinations",
+    "catService": "Services",
+    "catSource": "Sources officielles",
+    "catEmpty": "Toutes les catégories sont désactivées — activez au moins une.",
+    "catEmptyReset": "Afficher tout",
+    "addPlace": "Ajouter au plan",
+    "addPlaceAria": "Ajouter {name} à votre plan",
+    "addPlaceDone": "Ajouté au plan",
+    "addPlaceAddedTitle": "Ajouté à votre plan",
+    "addPlaceAddedDesc": "{name} · Jour {day} — consultez-le sur la page Planifier",
+    "addPlaceDuplicateTitle": "Déjà dans votre plan",
+    "addPlaceNoPlanTitle": "Pas encore de plan",
+    "addPlaceNoPlanDesc": "{name} a été enregistré — créez un plan sur la page Planifier et nous l'ajouterons automatiquement.",
+    "voiceStart": "Dictez votre question (microphone)",
+    "voiceStop": "Arrêter la dictée",
+    "voiceListening": "Écoute... parlez maintenant",
+    "voiceSpeak": "Lire à haute voix",
+    "voiceStopSpeak": "Arrêter la lecture",
+    "voiceNoSpeech": "Je n'ai rien entendu — essayez à nouveau.",
+    "voiceDenied": "L'accès au microphone a été refusé.",
+    "voiceDeniedDesc": "Dans les paramètres du navigateur, autorisez l'accès au microphone pour ce site.",
+    "voiceError": "La reconnaissance vocale a échoué. Essayez à nouveau ou tapez votre question."
+  },
+  "chatAsk": {
+    "askAbout": "Demandez à l'IA à propos de {name}",
+    "askStay": "Demandez à l'IA où loger",
+    "askBestTime": "Demandez à l'IA quand est le meilleur moment pour visiter",
+    "askThingsToDo": "Demandez à l'IA que vous pouvez faire",
+    "qHero": "Que dois-je voir et vivre à {name} ?",
+    "qStayRomantic": "Où loger à {name} pour une escapade romantique ?",
+    "qStayFamily": "Où loger à {name} en famille ?",
+    "qStayBudget": "Où loger à {name} à petit prix ?",
+    "qStayWeekend": "Où loger à {name} pour un week-end ?",
+    "qBestTime": "Quand est le meilleur moment pour visiter {name} ?",
+    "qThingsToDo": "Que puis-je faire à {name} ?",
+    "qItinerary": "Que ne dois-je pas manquer à {name} ?"
+  },
+  "planner": {
+    "title": "Planificateur de voyage",
+    "description": "Dites-nous vos envies et nous élaborerons un itinéraire parfait",
+    "daysLabel": "Nombre de jours",
+    "budgetLabel": "Budget (€)",
+    "groupSizeLabel": "Taille du groupe",
+    "partyTypeLabel": "Qui voyage ?",
+    "partyTypeOptional": "(facultatif)",
+    "partyCouple": "Couple",
+    "partyFamily": "Famille avec enfants",
+    "partyFriends": "Amis",
+    "partySolo": "Seul",
+    "paceLabel": "Quel rythme ?",
+    "paceOptional": "(facultatif)",
+    "paceSlow": "Lent",
+    "paceBalanced": "Équilibré",
+    "paceFast": "Rapide",
+    "paceHint": "Lent = moins d'endroits, plus de temps à chacun. Rapide = plus d'endroits par jour.",
+    "optimizeOrderButton": "Ordre optimal",
+    "optimizeOrderSaving": "économise ~{km} km",
+    "optimizeOrderAria": "Réorganise les étapes du jour {day} dans un ordre optimal, économisant environ {km} kilomètres de conduite",
+    "optimizeToastTitle": "Ordre optimisé",
+    "optimizeToastDesc": "Économie d'environ {km} km de conduite (estimation × 1,3 par rapport à la distance à vol d'oiseau).",
+    "optimizeAlreadyTitle": "La journée est déjà optimale",
+    "optimizeAlreadyDesc": "L'ordre des étapes est déjà parmi les plus courts possibles.",
+    "seasonLabel": "Saison",
+    "seasonPlaceholder": "Sélectionner une saison",
+    "seasonSpring": "Printemps",
+    "seasonSummer": "Été",
+    "seasonAutumn": "Automne",
+    "seasonWinter": "Hiver",
+    "startDateLabel": "Date de départ",
+    "startDateOptional": "(neobvezno)",
+    "startDateHint": "Pour les événements ayant lieu pendant votre séjour.",
+    "weatherStripLabel": "Météo autour de vos dates",
+    "weatherStripRegion": "Slovénie centrale",
+    "weatherStripBest": "Meilleur jour pour commencer : {day}",
+    "weatherStripBestTitle": "Le jour avec le moins de pluie et la température maximale pendant la journée parmi les jours de votre voyage avec une prévision — une heuristique, pas une promesse.",
+    "weatherStripUncertainNote": "les prévisions au-delà de 7 jours sont incertaines",
+    "weatherStripUnavailable": "Aucune prévision disponible pour cette date — l'horizon météo est d'environ 16 jours.",
+    "weatherStripDayAria": "Choisissez {day} ({date}) — {condition}, jusqu'à {temp} °C",
+    "interestsLabel": "Centres d'intérêt",
+    "nlLabel": "Dis-nous ce que tu veux",
+    "nlPlaceholder": "par ex. 3 jours en famille, on aime la nature et l'eau",
+    "nlSubmit": "Composer mon itinéraire ✨",
+    "nlHint": "Écrivez librement en slovène ou en anglais — je déterminerai les jours, le groupe, le rythme et les intérêts moi-même.",
+    "nlAriaLabel": "Souhaits en langage naturel — créer un plan à partir de la description",
+    "advancedToggle": "Paramètres détaillés",
+    "summaryDaysChip": "{days} jours",
+    "summaryEdit": "Modifier",
+    "summaryEditAria": "Modifier les paramètres du plan (jours, budget, groupe, intérêts)",
+    "startSourcesLink": "Commencez avec vos propres sources",
+    "startSourcesAria": "Commencez avec vos propres sources — lien, image, PDF ou Google pins",
+    "summaryClose": "Fermer",
+    "summaryCloseAria": "Fermer l'édition — retourner au plan",
+    "railPrompt": "Que dois-je modifier dans votre voyage ?",
+    "railExamples": "par ex. Moins de conduite · Ajouter Bled · Version moins chère · Plus de nature",
+    "railTabRefine": "Modifier le plan",
+    "railTabAsk": "Demander",
+    "statusKmLabel": "Conduite totale",
+    "statusTimeLabel": "Temps de conduite",
+    "statusCostLabel": "Coût estimé",
+    "statusFeasibilityLabel": "Fiabilité",
+    "statusOk": "Tout est bon",
+    "statusWarnCount": "{count} avertissements",
+    "statusErrorCount": "{count} critiques",
+    "statusDetails": "Détails du calcul",
+    "legAria": "Conduite de {from} à {to} : environ {km} km, environ {min} minutes",
+    "legSugLabel": "Stops sur la route",
+    "legSugLoading": "Recherche d'arrêts dignes d'intérêt...",
+    "legSugEmpty": "Rien de notable sur cette étape.",
+    "legSugError": "Impossible de charger les suggestions pour le moment.",
+    "legSugRetry": "Réessayer",
+    "legSugAdd": "Ajouter",
+    "legSugAddAria": "Ajouter {name} à cette étape (environ {km} km de détour)",
+    "legSugDetour": "+{km} km hors de l'itinéraire",
+    "legSugDetourTitle": "Détour estimé : environ {km} km ou {min} minutes ({source})",
+    "legSugAddedTitle": "Postanek ajouté",
+    "legSugAddedDesc": "{name} est maintenant le jour {day} — les km du jour seront recalculés.",
+    "mealTitle": "Déjeuner lors d'un long trajet",
+    "mealArrive": "Le trajet prend ~{min} min — vous arriverez vers ≈{time}, avant la fin de la plage déjeuner. Déjeunez à {place} à l'arrivée.",
+    "mealDepart": "Tu pars vers ≈{time} — déjà dans la fenêtre de déjeuner. Dîne à {place} avant de partir.",
+    "mealEnroute": "Le trajet dure ~{min} min et traverse la fenêtre de déjeuner — {place} se trouve juste sur la route ({km} km en détour), déjeuner là-bas vers ≈{time}.",
+    "mealHonest": "Le trajet dure ~{min} min et il n'y a pas de ville juste sur la route. Dîne à {placeFrom} avant de partir (≈{depart}) ou décide de grignoter et de prendre un repas chaud à {placeTo} vers ≈{arrive}.",
+    "mealSpecialtiesLabel": "Spécialités régionales :",
+    "mealAboutPlace": "Plus sur {place}",
+    "mealHonestyNote": "Nous vous guidons par région et heure — nous ne recommandons pas de restaurants spécifiques, de prix ou d'horaires, car nous ne pouvons pas les vérifier.",
+    "mealDismiss": "Ignorer la suggestion de déjeuner",
+    "optimizeContextual": "J'ai trouvé un itinéraire plus court",
+    "optimizeContextualSaving": "tu économises environ {km} km",
+    "optimizeLockedHint": "Les étapes fixes (tes choix) restent à leur place",
+    "moreTitle": "Plus sur votre voyage",
+    "moreDesc": "Recommandations, conseils, événements pendant votre visite, liste de bagages et calendrier.",
+    "submit": "Générer l'itinéraire ✨",
+    "generating": "Élaboration de votre voyage...",
+    "generatingStage": {
+      "supply": "Récupération des météo, hébergements et événements…",
+      "compose": "Composition de votre itinéraire…",
+      "verify": "Vérification des distances et de la qualité…"
+    },
+    "generatingElapsed": "Temps écoulé: {time}",
+    "generatingHint": "jusqu'à ~90 s (la file d'attente IA gratuite peut causer un retard)",
+    "errorTimeout": "La génération a pris trop de temps (plus de 90 s) — vérifiez votre connexion et réessayez.",
+    "validationDays": "Le nombre de jours doit être un entier compris entre 1 et 14.",
+    "validationBudget": "Le budget doit être supérieur à 0 €.",
+    "validationBudgetMax": "Le budget doit être au maximum de 100 000 €.",
+    "validationGroupSize": "La taille du groupe doit être un entier compris entre 1 et 20.",
+    "validationInterests": "Sélectionnez au moins un intérêt.",
+    "validationStartDate": "La date de départ est invalide — choisissez une date d'aujourd'hui ou à venir.",
+    "validationToastTitle": "Vérifiez vos saisies",
+    "errorGenerating": "Erreur lors de la génération",
+    "errorGeneratingFallback": "Erreur lors de la génération de l'itinéraire",
+    "emptyTitle": "Votre itinéraire s'affichera ici",
+    "emptyHint": "Remplissez le formulaire et cliquez sur \"Générer l'itinéraire\".",
+    "emptyDemoChip": "Exemple d'itinéraire",
+    "emptyDemoDayLabel": "Jour 1 · Gorenjska",
+    "emptyDemoCaption": "Voici à quoi ressemble un résumé de journée — heures, prix et distances entre les étapes.",
+    "emptyDemoCta": "Essayer cet exemple",
+    "emptyDemoQuery": "Bled, Gorge de Vintgar et Bohinj — 1 jour dans la nature",
+    "restoredChip": "Votre dernier plan restauré",
+    "restoredChipDismiss": "Masquer l'avis de plan restauré",
+    "resultTitle": "Votre itinéraire de {days} jours",
+    "badgeAI": "IA",
+    "badgeSample": "Exemple",
+    "badgeDeterministic": "Sans IA",
+    "totalBadge": "Total ~€{total}",
+    "tripRangeTitle": "Période du voyage",
+    "crowdAlternativesLabel": "Alternatives plus calmes à proximité :",
+    "dayTitle": "Jour {day}",
+    "dayNavAriaLabel": "Naviguer entre les jours du voyage",
+    "qaRefine": "Ajuster",
+    "qaSave": "Enregistrer",
+    "myEventsTitle": "Mes événements",
+    "myEventsDescOutside": "Hors de vos jours de voyage — ajoute une date de départ pour les placer à un jour spécifique.",
+    "myEventsDescNoDate": "Ajoute une date de départ pour attacher les événements à des jours spécifiques.",
+    "recommendationsTitle": "Recommandations",
+    "tipsTitle": "Conseils",
+    "geoValidation": {
+      "title": "Vérification de faisabilité",
+      "subtitleOk": "Tous les jours sont géographiquement et temporellement réalisables.",
+      "subtitleWarn": "Certains jours sont chargés — voir les avertissements ci-dessous.",
+      "subtitleError": "Certains jours ne sont pas réalisables dans la réalité — des ajustements sont recommandés.",
+      "tripKmBadge": "total ~{km} km",
+      "dayLabel": "Jour {day}",
+      "dayKmBadge": "~{km} km",
+      "warnBadge": "Jour chargé",
+      "errorBadge": "Pas réalisable",
+      "issuesAriaLabel": "Avertissements de faisabilité par jour",
+      "adjustCta": "Ajuster cette journée ↓",
+      "methodTitle": "Comment avons-nous vérifié ?",
+      "methodNote": "Les estimations sont calculées à partir des coordonnées géographiques des destinations (distance à vol d'oiseau × 1,3 pour les routes réelles, moyenne de 55 km/h) — pas de données de trafic en temps réel. Les temps de conduite sont arrondis.",
+      "levelsNote": "{warn} avertissements (exigeant, mais possible) et {error} avertissements critiques (pas réalisable dans la réalité).",
+      "methodNoteOsrm": "Les distances et les temps de conduite sont des VALEURS ROUTIÈRES RÉELLES (itinéraire OSRM / OpenStreetMap) entre les arrêts consécutifs — pas de données de trafic en temps réel. Les temps sont arrondis à 5 minutes.",
+      "methodNoteMixed": "Les distances et les temps sont majoritairement des valeurs routières réelles (OSRM / OpenStreetMap) ; les tronçons sans données routières sont estimés (ligne droite × 1,3, 55 km/h). Pas de données de trafic en temps réel."
+    },
+    "saveShare": "Enregistrer et partager",
+    "saving": "Enregistrement en cours...",
+    "saveShareAriaLabel": "Enregistrer l'itinéraire et créer un lien partageable",
+    "goModeButton": "Démarrer Sur la route",
+    "goModeButtonAria": "Démarrer Sur la route avec ce plan — un compagnon sur votre téléphone (fonctionne aussi hors ligne)",
+    "emailButton": "Envoyer par e-mail",
+    "emailButtonAriaLabel": "Envoyer l'itinéraire à une adresse e-mail",
+    "emailMenu": "E-mail",
+    "icsMenu": "Télécharger .ics",
+    "moreActions": "Plus",
+    "myTripPrefillApplied": "Appliqué à votre plan",
+    "myTripPrefillKept": "Vos choix de destination restent inchangés",
+    "myTripPrefillSource": "Mon voyage",
+    "shareLinkAriaLabel": "Lien partageable vers l'itinéraire",
+    "copyAriaLabel": "Copier le lien partageable",
+    "copy": "Copier",
+    "copied": "Copié !",
+    "shareHint": "Quiconque ouvrira ce lien verra votre plan — également sur son téléphone.",
+    "emailSend": "Envoyer",
+    "emailSending": "Envoi en cours...",
+    "emailSendAriaLabel": "Envoyer l'itinéraire par e-mail",
+    "emailSendFailed": "L'envoi a échoué — veuillez réessayer.",
+    "emailSent": "Itinéraire envoyé à {email}!",
+    "sharedOpenedToast": "Plan partagé ouvert ! 🇸🇮",
+    "sharedOpenedWithName": "Le plan \"{name}\" est chargé dans le planificateur.",
+    "sharedOpenedNoName": "Le plan partagé est chargé dans le planificateur.",
+    "sharedOpenError": "Impossible d'ouvrir le plan partagé.",
+    "addedToTripToast": "Ajouté à votre voyage ✨",
+    "generatedToast": "Itinéraire généré !",
+    "generatedToastDescAI": "Le planificateur a élaboré votre plan de voyage parfait.",
+    "generatedToastDescSample": "Un exemple d'itinéraire prêt à l'emploi est affiché.",
+    "savedToast": "Plan enregistré !",
+    "savedToastDesc": "Vous pouvez copier le lien de partage ci-dessous.",
+    "savedUpdatedToast": "Voyage mis à jour (v{version})",
+    "savedUpdatedToastDesc": "Même lien partagé, contenu frais — la version précédente est conservée dans l'historique.",
+    "planUpdatedBannerTitle": "Le voyage lié a été mis à jour ailleurs",
+    "planUpdatedBannerDesc": "Quelqu'un a enregistré une version plus récente (version serveur {version}). Chargez-la pour voir le plan à jour.",
+    "planUpdatedLocalEdits": "Attention : vos modifications locales ne sont pas enregistrées — le chargement les remplacera. Enregistrez d'abord sous forme de nouveau lien si vous souhaitez les conserver.",
+    "planUpdatedLoadButton": "Charger la version mise à jour",
+    "planUpdatedLoading": "Chargement...",
+    "planUpdatedDismiss": "Pas maintenant",
+    "planUpdatedLoadedToast": "Version mise à jour chargée",
+    "planUpdatedLoadedToastDesc": "La version serveur {version} a remplacé la vue locale — la précédente reste dans l'historique d'annulation.",
+    "planUpdatedLoadErrorToast": "Impossible de charger la mise à jour",
+    "planUpdatedLoadErrorToastDesc": "Vérifiez votre connexion et réessayez, ou ouvrez le lien partagé dans un nouvel onglet.",
+    "undoLabelPlanUpdate": "chargement de la version mise à jour",
+    "undoLabelRefine": "Ajustement",
+    "undoLabelRegenerate": "régénération",
+    "undoChip": "Version précédente disponible ({label} · {count} dans l'historique)",
+    "undoChipAction": "Annuler",
+    "undoChipDismiss": "Effacer l'historique d'annulation",
+    "saveErrorToastTitle": "Erreur lors de l'enregistrement",
+    "saveErrorToastDesc": "L'enregistrement a échoué — veuillez réessayer.",
+    "saveErrorInline": "L'enregistrement a échoué — veuillez réessayer",
+    "removeEventAriaLabel": "Supprimer {name} du voyage",
+    "socialShareTitle": "Mon voyage en Slovénie 🇸🇮",
+    "socialShareDescription": "Plan IA de {days} jours · €{total}",
+    "ingestLabel": "Commencer avec un lien (YouTube, blog...)",
+    "ingestPlaceholder": "https://www.youtube.com/watch?v=…",
+    "ingestButton": "Détecter",
+    "ingestButtonAria": "Détecter les destinations à partir du lien",
+    "ingestHint": "Collez un lien vers une vidéo ou un article sur la Slovénie — je vais reconnaître les destinations et créer une base de votre plan.",
+    "ingestError": "Le lien n'a pas pu être lu.",
+    "ingestSuccessToast": "Destinations reconnues",
+    "ingestSuccessToastDesc": "À partir de la source : {names} — création de votre itinéraire ...",
+    "ingestSource": "Source : {title}",
+    "ingestDetected": "Détecté :",
+    "icsButton": "Calendrier (.ics)",
+    "icsButtonAria": "Télécharger l'itinéraire en tant que fichier calendrier",
+    "icsToastTitle": "Calendrier téléchargé",
+    "icsToastDesc": "Importez le fichier dans Calendrier Apple, Google Calendar ou Outlook — chaque arrêt devient un événement.",
+    "icsToastDescNoDates": "Note : le plan n'a pas de date de départ, donc les dates sont relatives — déplacez les événements dans votre calendrier.",
+    "icsEmptyToastTitle": "Rien à exporter",
+    "icsEmptyToastDesc": "Le plan n'a pas d'arrêts avec une plage horaire valide.",
+    "icsError": "Le fichier calendrier n'a pas pu être créé.",
+    "mapFocusAria": "Afficher {name} sur la carte",
+    "mapFocusTitle": "Afficher sur la carte",
+    "mapPanel": {
+      "title": "Votre itinéraire sur la carte",
+      "allDays": "Tous les jours",
+      "dayLabel": "Jour",
+      "hint": "Cliquez sur un numéro pour sauter à l'arrêt ; les filtres de jours masquent/affichent des jours spécifiques.",
+      "legendAria": "Filtrer les jours sur la carte",
+      "mapAria": "Carte de l'itinéraire en Slovénie avec les étapes",
+      "hintRoads": "Les lignes suivent les routes réelles (OSRM/OpenStreetMap). Cliquez sur un numéro pour sauter à l'arrêt ; les filtres de jours masquent/affichent des jours spécifiques."
+    },
+    "ingestTabLink": "Lien",
+    "ingestTabImage": "Image",
+    "ingestImageLabel": "Commencer avec une image (photo, capture d'écran...)",
+    "ingestImageButton": "Détecter",
+    "ingestImageButtonAria": "Détecter les destinations à partir de l'image",
+    "ingestImageHint": "Téléchargez ou collez une photo/capture d'écran sur la Slovénie — l'IA lit les noms qu'elle contient ; la correspondance avec les destinations est déterministe (comme pour les liens).",
+    "ingestImageDrop": "Déposez une image ici (JPEG, PNG, WebP ; jusqu'à ~4,5 MB)",
+    "ingestImageBrowse": "Choisir une image",
+    "ingestImagePaste": "… ou collez depuis le presse-papiers (Ctrl/Cmd+V)",
+    "ingestImageRemove": "Supprimer l'image",
+    "ingestImageMethod": "détection d'image : lecture IA + correspondance déterministe",
+    "ingestImageMethodVia": "détection d'image : lecture IA ({provider}) + correspondance déterministe",
+    "ingestImageError": "L'image n'a pas pu être reconnue.",
+    "ingestImageSuccessToast": "Destinations reconnues sur l'image",
+    "ingestImageSuccessToastDesc": "Depuis l'image : {names} — je crée votre itinéraire...",
+    "ingestImageSource": "Source : votre image",
+    "ingestTabPins": "Points",
+    "ingestPinsLabel": "Importer les lieux sauvegardés (Google Maps)",
+    "ingestPinsPlaceholder": "Bled\nPiran\nGorge de Vintgar …\n(collez un JSON, KML ou une liste de lieux)",
+    "ingestPinsButton": "Reconnaître",
+    "ingestPinsButtonAria": "Reconnaître les destinations à partir des lieux enregistrés",
+    "ingestPinsFile": "Choisir un fichier",
+    "ingestPinsFileAria": "Choisir un fichier de lieux enregistrés (.json, .kml, .txt)",
+    "ingestPinsHint": "Google Maps → Sauvegardés : exportez via Google Takeout (JSON/KML) ou collez simplement une liste. J'associe les points à nos 38 destinations par nom ou proximité (à 25 km) — sans IA, entièrement déterministe.",
+    "ingestPinsError": "Les lieux n'ont pas pu être reconnus.",
+    "ingestPinsSourceFile": "Source : {name}",
+    "ingestPinsSourcePaste": "Source : points collés",
+    "ingestPinsMeta": "{total} lieux au total ({format}) · {unmatched} non reconnus — en dehors de nos 38 destinations",
+    "ingestPinsFormatGeojson": "Export JSON Google",
+    "ingestPinsFormatKml": "KML",
+    "ingestPinsFormatText": "liste de texte",
+    "ingestPinsSuccessToast": "Destinations reconnues à partir des points",
+    "ingestPinsSuccessToastDesc": "À partir de vos points : {names} — création de votre itinéraire ...",
+    "ingestTabPdf": "PDF",
+    "ingestPdfLabel": "Commencer avec un PDF",
+    "ingestPdfButton": "Reconnaître les destinations",
+    "ingestPdfButtonAria": "Reconnaître les destinations slovènes dans le PDF téléchargé",
+    "ingestPdfMethod": "Couche de texte du PDF · sans IA",
+    "ingestPdfBrowse": "Télécharger un PDF",
+    "ingestPdfDrop": "un guide de voyage, un itinéraire exporté... ou glissez-le ici",
+    "ingestPdfHint": "Je lis la couche de texte du PDF et je reconnais déterministiquement nos destinations (0 IA).",
+    "ingestPdfScanned": "PDF scanné ? Utilisez l'onglet Image.",
+    "ingestPdfRemove": "Supprimer le PDF",
+    "ingestPdfError": "Le PDF n'a pas pu être traité.",
+    "ingestPdfSource": "Source : PDF",
+    "ingestPdfSourceFile": "Source : {name} ({pages} p.)",
+    "ingestPdfSuccessToast": "Destinations reconnues depuis le PDF",
+    "ingestPdfSuccessToastDesc": "Depuis le PDF : {names} — je crée votre itinéraire...",
+    "listenButton": "Écouter l'itinéraire",
+    "listenButtonAria": "Écouter le résumé audio de votre itinéraire (voix d'ordinateur)",
+    "listenGenerating": "Préparation de l'audio...",
+    "listenError": "Impossible de préparer l'audio.",
+    "listenHint": "Résumé audio de votre itinéraire (voix d'ordinateur — TTS) : jours, étapes et kilomètres approximatifs.",
+    "timeline": {
+      "daysPlan": "Plan de {count} jours",
+      "dayLabel": "Jour {day}",
+      "navigate": "Navigation",
+      "navigateAria": "Navigation vers {name}",
+      "save": "Enregistrer",
+      "saving": "Enregistrement...",
+      "saved": "Lien copié !",
+      "saveError": "Erreur lors de l'enregistrement",
+      "saveAria": "Enregistrer l'itinéraire et copier le lien partageable",
+      "book": "Réserver",
+      "bookAria": "Réserver {name} é ouvrir les options de réservation",
+      "dayTotal": "Jour {day} total :",
+      "aiTipTitle": "Astuce",
+      "tipOneDay": "Pour une journée parfaite, commencez tôt (avant 9h00) pour éviter la foule.",
+      "tipMultiDay": "Déplacez-vous par régions — Bled + Bohinj le même jour, puis la vallée de la Soča le lendemain.",
+      "priceUnverified": "Prix non vérifié",
+      "unknownCostCount": "{count, plural, one {# arrêt avec prix inconnu} two {# arrêts avec prix inconnu} few {# arrêts avec prix inconnu} other {# arrêts avec prix inconnu}}",
+      "budgetUnknownNote": "{count, plural, one {inclut # prix inconnu} two {inclut # prix inconnus} few {inclut # prix inconnus} other {inclut # prix inconnus}}",
+      "bookingNone": "Aucune réservation",
+      "bookingExternal": "Réservation externe à travers le fournisseur",
+      "bookingConfirmed": "Confirmé par le fournisseur",
+      "bookAtProvider": "Réserver auprès du fournisseur",
+      "bookAtProviderAria": "Réserver {name} auprès du fournisseur é ouvrir un site externe",
+      "marketplaceFrom": "Dès é {price} € sur la place de marché",
+      "marketplaceCount": "{count, plural, one {# expérience} two {# expériences} few {# expériences} other {# expériences}}",
+      "gmapsDayAria": "Ouvrir le jour {day} dans Google Maps (navigation pour toute la journée)",
+      "zigzagBadge": "0 zig-zag",
+      "zigzagTitle": "Vérification déterministe : l'ordre des arrêts ne revient jamais sur une zone déjà visitée (même vérification que notre moteur de planification).",
+      "zigzagSummary": "Tous les jours : 0 zig-zag",
+      "mealLunchWindow": "déjeuner 12-14 ✓",
+      "mealLunchTitle": "Le repas se situe dans la plage de déjeuner canonique (12:00-14:00) — l'emploi du temps se développe à partir des trajets réels.",
+      "mealDinnerWindow": "dâner 18-21 ✓",
+      "mealDinnerTitle": "Le repas se situe dans la plage de dâner canonique (18:00-21:00) — l'emploi du temps se développe à partir des trajets réels."
+    },
+    "smartSearch": {
+      "title": "Recherche intelligente",
+      "description": "Recherche en langage naturel dans les destinations, les lieux, les produits et les expériences",
+      "placeholder": "Décrivez ce que vous cherchez... par ex. 'un week-end tranquille au bord de la rivière'",
+      "queryAria": "Terme de recherche",
+      "clearAria": "Effacer la recherche",
+      "examplesTitle": "Exemples de questions",
+      "examples": [
+        "un week-end tranquille au bord de la rivière",
+        "où aller avec les enfants s'il pleut",
+        "un dîner romantique près de Bled",
+        "une aventure en montagne",
+        "vin et fromage locaux",
+        "un voyage en famille à la côte"
+      ],
+      "noResults": "Aucun résultat trouvé pour \"{query}\"",
+      "destinations": "Destinations",
+      "listings": "Lieux",
+      "products": "Produits",
+      "experiences": "Expériences"
+    },
+    "bookingCtaStrip": "Réserver l'hébergement, les expériences et le transport",
+    "bookingOffersCount": "{count, plural, one {# offre} two {# offres} few {# offres} other {# offres}}",
+    "bookingCtaDay": "Réserver",
+    "bookingCtaDayAria": "Accéder aux options de réservation pour le jour {day} ({count} offres)",
+    "bookingCtaStop": "Billets",
+    "bookingCtaStopAria": "Réserver des expériences ou des billets pour {name}",
+    "bookingCtaStopTitle": "Réserver des expériences, des billets ou un hébergement pour cette étape",
+    "chatPlaceAddedTitle": "Ajouté à votre plan",
+    "chatPlaceAddedDesc": "{name} · Jour {day}",
+    "chatPlaceDuplicateTitle": "Ce lieu est déjà dans votre plan",
+    "chatStashTitle": "Ajouté depuis le chat IA",
+    "chatStashDesc": "{names}",
+    "chatStopBadge": "Depuis le chat",
+    "chatStopBadgeTitle": "Arrêt ajouté depuis le chat IA — son origine est notée dans la description",
+    "chatStopRemove": "Supprimer",
+    "chatStopRemoveAria": "Supprimer {name} du plan",
+    "chatStopRemoveTitle": "Cet arrêt a été ajouté depuis le chat IA — un seul clic pour le supprimer du plan",
+    "chatStopRemovedTitle": "Supprimé du plan",
+    "moveStopUpAria": "Déplacer {name} d'une position vers le haut",
+    "moveStopUpTitle": "Déplacer vers le haut",
+    "moveStopDownAria": "Déplacer {name} d'une position vers le bas",
+    "moveStopDownTitle": "Déplacer vers le bas",
+    "dragHandleTitle": "Glisser pour réorganiser (ou utiliser les flèches ↑/↓)",
+    "stopReorderedToastTitle": "Ordre mis à jour",
+    "addDay": "Ajouter un jour",
+    "addDayAria": "Ajouter un jour vide à la fin du plan",
+    "addDayMaxTitle": "Maximum atteint",
+    "addDayMaxDesc": "Le plan est limité à {max} jours (même limite que le formulaire).",
+    "dayAddedToastTitle": "Jour ajouté",
+    "dayAddedToastDesc": "Le jour {day} est vide — ajoutez des arrêts depuis la carte ou le chat.",
+    "removeDayAria": "Supprimer le jour {day} du plan",
+    "removeDayTitle": "Supprimer ce jour",
+    "removeDayMinTitle": "Au moins un jour doit rester",
+    "dayRemovedToastTitle": "Jour supprimé",
+    "dayRemovedToastDesc": "Le jour {day} a été supprimé, les autres ont été renumérotés — enregistrez pour conserver les modifications.",
+    "removeDayConfirmTitle": "Supprimer le jour {day} ?",
+    "removeDayConfirmDesc": "Ce jour contient {count} arrêts — leur suppression les supprimera du plan.",
+    "removeDayConfirmCancel": "Annuler",
+    "removeDayConfirmAction": "Supprimer le jour",
+    "moveStopToPrevDayAria": "Déplacer {name} au jour précédent",
+    "moveStopToNextDayAria": "Déplacer {name} au jour suivant",
+    "stopMovedToDayToastTitle": "Arrêt déplacé",
+    "stopMovedToDayToastDesc": "Déplacé vers le jour {day} — vérifiez l'ordre et les heures.",
+    "supplySelectedTitle": "Produits sélectionnés ({count})",
+    "supplySelectedHint": "Les produits sélectionnés seront obligatoires (non remplacés par des produits similaires).",
+    "supplySelectedRemoveAria": "Retirer {name} de la sélection",
+    "supplyStopBadge": "Carte",
+    "supplyStopBadgeTitle": "Arrêt ajouté depuis la carte des offres",
+    "supplySelectedStateAria": "Changer la priorité de sélection pour {name}",
+    "supplySelectedStateTitle": "Cliquez pour faire défiler : obligatoire à préféré à suggéré (pour le planificateur)",
+    "booking": {
+      "heading": "Réserver ce jour",
+      "intro": "Réservez l'hébergement, les activités, la restauration et le transport directement via nos partenaires ou des prestataires locaux.",
+      "tabAccommodation": "Hébergement",
+      "tabActivities": "Activités",
+      "tabDining": "Restauration",
+      "tabTransport": "Transport",
+      "contactWebsite": "Site web",
+      "contactEmail": "Envoyer une demande",
+      "contactPhone": "Appeler",
+      "badgeFeatured": "En vedette",
+      "badgeVerified": "Vérifié",
+      "badgeLocal": "Local",
+      "pricePerPerson": "€{price}/personne",
+      "ctaSearch": "Recherche",
+      "ctaTickets": "Billets",
+      "ctaRental": "Location",
+      "ctaTransfer": "Transfert",
+      "ctaEsim": "eSIM",
+      "ctaInsurance": "Assurance",
+      "hotelsDesc": "Recherchez des hôtels et des appartements à {dest}",
+      "hotelsEmpty": "Aucun hôtel dans notre base de données pour {dest} pour l'instant. Réservez via Booking.com ci-dessus.",
+      "activitiesDesc": "Découvrez les visites guidées et expériences à {dest}",
+      "ticketsDesc": "Billets pour les attractions et les musées — sans attente",
+      "activitiesEmpty": "Aucune expérience dans notre base de données pour {dest} pour le moment. Trouvez des activités sur GetYourGuide ci-dessus.",
+      "localProducts": "Produits locaux",
+      "diningEmpty": "Aucun restaurant ou produit local dans notre base de données pour {dest} pour le moment.",
+      "carsDesc": "Louez une voiture à {dest} — dates de reprise flexibles",
+      "trainsDesc": "Trains et bus entre les destinations — voyage sans voiture",
+      "transferDesc": "Transfert de l'aéroport de Ljubljana à {dest} — sans attente",
+      "esimDesc": "eSIM pour la Slovénie — internet dès votre arrivée, sans carte SIM physique",
+      "flightsDesc": "Vols vers Ljubljana (Aéroport Jože Pučnik) — comparaison des prix",
+      "insuranceDaysDesc": "Assurance voyage pour un voyage de {days} jours — incluant les activités d'aventure",
+      "insuranceDesc": "Assurance voyage — incluant les activités d'aventure",
+      "handoffRentalNote": "Lien partenaire uniquement aujourd'hui — les offres de location, les prix et la disponibilité sont sur DiscoverCars.",
+      "handoffRailNote": "Les horaires et les prix des trains/bus ne sont pas disponibles dans l'application — recherchez sur Omio.",
+      "handoffFlightNote": "Lien partenaire — pas de prix de vols en direct dans l'application (comparez sur Skyscanner).",
+      "handoffTransferNote": "Prix à partir de — disponibilité et réservation sur Kiwitaxi."
+    },
+    "supplyCompanionLine": "Vous recherchez des transferts, des séjours ou les prix réels des fournisseurs ?",
+    "supplyCompanionLink": "Voyage complet"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "close": "Fermer",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "search": "Recherche",
+    "filter": "Filtre",
+    "all": "Tous",
+    "details": "Détails",
+    "retry": "Réessayer",
+    "emailPlaceholder": "ton@email.com",
+    "invalidEmail": "Entrez une adresse e-mail valide.",
+    "readInEnglish": "Lire en anglais",
+    "readInSlovenian": "Lire en slovène"
+  },
+  "a11y": {
+    "menuAria": "Paramètres d'accessibilité",
+    "menuTitle": "Accessibilité",
+    "contrastLabel": "Contraste élevé",
+    "contrastHint": "Des couleurs plus contrastées et des bordures pour une lecture plus facile.",
+    "readingLabel": "Mode lecture",
+    "readingHint": "Police plus grande et interlignage plus généreux.",
+    "osNote": "Sans sélection, nous suivons les paramètres de contraste élevé de votre système."
+  },
+  "about": {
+    "badge": "À propos",
+    "title": "À propos de Discover Slovenia AI",
+    "intro": "<strong>Discover Slovenia AI</strong> est une plateforme touristique alimentée par l'IA, qui connecte les voyageurs avec des prestataires locaux en Slovénie. Notre mission est de faciliter la découverte des destinations slovènes — du lac de Bled à Piran — grâce à l'intelligence artificielle, une carte interactive et des liens directs vers les prestataires locaux.",
+    "offerTitle": "Ce que nous proposons",
+    "offerCards": {
+      "plannerTitle": "Planificateur de voyage IA",
+      "plannerDesc": "Génère des itinéraires personnalisés en fonction du budget, des intérêts et de la saison.",
+      "destinationsTitle": "38 destinations",
+      "destinationsDesc": "Des Alpes à l'Adriatique — avec une carte interactive et des milliers de lieux locaux.",
+      "providersTitle": "Prestataires locaux",
+      "providersDesc": "Liens directs vers les hôtels, restaurants et activités — vous réservez toujours directement avec le prestataire, sans frais supplémentaires.",
+      "languagesTitle": "4 langues",
+      "languagesDesc": "Slovène, anglais, allemand et italien pour les voyageurs du monde entier."
+    },
+    "howTitle": "Comment nous fonctionnons",
+    "howP1": "La plateforme ne prélève aucune commission sur les réservations. À la place, les fournisseurs locaux paient un abonnement mensuel fixe pour leur présence sur la plateforme. Les utilisateurs réservent toujours directement auprès du fournisseur — sans intermédiaires.",
+    "howP2": "Le planificateur d'itinéraire est un moteur DÉTERMINISTIQUE — du code pur sur des données réelles, 0 jetons IA (Problème n°9). Les données sur les points d'intérêt (POI) proviennent de <osm>OpenStreetMap</osm> et de <wiki>Wikipédia</wiki>. Les données météo proviennent de <meteo>Open-Meteo</meteo>.",
+    "contactTitle": "Contact",
+    "contactP": "Des questions? Écrivez-nous à <email>info@discoverslovenia.ai</email> ou visitez la <contactPage>page de contact</contactPage>.",
+    "dataTitle": "Informations",
+    "dataTech": "Technologie:",
+    "dataAi": "IA:",
+    "dataMap": "Carte:",
+    "dataDb": "Base de données:",
+    "dataLicense": "Licence:",
+    "dataRepo": "Dépôt:",
+    "dataValues": {
+      "tech": "Next.js 16, TypeScript, Prisma, Tailwind CSS, shadcn/ui",
+      "ai": "z-ai-web-dev-sdk (GLM)",
+      "map": "Leaflet + OpenStreetMap",
+      "db": "SQLite (Prisma ORM)",
+      "license": "MIT (open source)"
+    },
+    "linkPrivacy": "Politique de confidentialité",
+    "linkTerms": "Conditions d'utilisation",
+    "linkSources": "Sources de données",
+    "meta": {
+      "title": "À propos de nous",
+      "description": "Discover Slovenia AI est une plateforme touristique alimentée par l'IA pour la Slovénie. Rencontrez notre équipe, notre mission et comment fonctionne la plateforme."
+    }
+  },
+  "affiliateCta": {
+    "sectionAria": "Réservation pour {destination}",
+    "title": "Réservez votre visite à {destination}",
+    "subtitle": "Nous vous connectons avec des partenaires de confiance — vous réservez directement auprès d'eux, sans intermédiaires et sans frais supplémentaires.",
+    "disclosure": "Liens d'affiliation : Booking.com, DiscoverCars, GetYourGuide. Si vous réservez via ces liens, nous pouvons recevoir une commission — le prix pour vous reste identique.",
+    "hotels": {
+      "label": "Hébergement",
+      "title": "Hôtels et appartements",
+      "desc": "Trouvez des hôtels et des appartements à {destination}.",
+      "cta": "Trouver un hébergement",
+      "aria": "Trouver un hébergement à {destination} — ouvre Booking.com (lien partenaire)"
+    },
+    "cars": {
+      "label": "Location de voiture",
+      "title": "Comparer les offres",
+      "desc": "Annulation gratuite et comparaison des offres sur un seul site.",
+      "cta": "Louer une voiture",
+      "aria": "Louer une voiture pour {destination} — ouvre DiscoverCars (lien partenaire)"
+    },
+    "activities": {
+      "label": "Visites et expériences",
+      "title": "Visites guidées",
+      "desc": "Visites guidées et activités avec des prestataires locaux.",
+      "cta": "Voir les visites",
+      "aria": "Voir les visites et expériences pour {destination} — ouvre GetYourGuide (lien partenaire)"
+    }
+  },
+  "bestTime": {
+    "breadcrumbHome": "Accueil",
+    "breadcrumbCurrent": "Meilleure période — {season}",
+    "seasons": {
+      "pomlad": {
+        "label": "Printemps",
+        "months": " mars–mai",
+        "desc": "Fleurs, temps doux, moins de touristes"
+      },
+      "poletje": {
+        "label": "Été",
+        "months": " juin–août",
+        "desc": "Chaud, idéal pour les activités aquatiques et les randonnées"
+      },
+      "jesen": {
+        "label": "Automne",
+        "months": " septembre–novembre",
+        "desc": "Couleurs d'automne, vin, moins de foule"
+      },
+      "zima": {
+        "label": "Hiver",
+        "months": " décembre–février",
+        "desc": "Ski, marchés de Noël, bien-être"
+      }
+    },
+    "bestSeasonBadge": "✓ Meilleure saison",
+    "heroTitle": "Meilleure période pour visiter {name}",
+    "overviewTitle": "{name} en {seasonLower}",
+    "bestCardTitle": "{season} est la saison idéale pour {name}!",
+    "bestCardText": "{name} est à son apogée cette saison — {taglineLower}.",
+    "offCardTitle": "{season} n'est pas la saison principale pour {name}",
+    "offCardText": "Cependant, cela peut être un avantage — moins de touristes, des prix plus bas et une expérience différente.",
+    "allSeasonsTitle": "Toutes les saisons pour {name}",
+    "bestBadge": "★ Meilleur",
+    "faqTitle": "Questions fréquentes",
+    "faq": {
+      "q1": "Quand est la meilleure période pour visiter {name}?",
+      "a1": "{season} est un moment idéal pour visiter {name}. Les températures sont de {temp}, ce qui est parfait pour explorer. Le printemps et l'automne attirent moins de touristes et des prix plus bas.",
+      "q2": "Quel temps fait-il à {name} en {seasonLower}?",
+      "a2": "En {seasonLower}, les températures à {name} sont généralement de {temp}. Nous vous recommandons de vous vêtir en couches.",
+      "q3": "Quelles activités sont disponibles à {name} en {seasonLower}?",
+      "a3": "{season} à {name} propose une variété d'activités — de la randonnée à la gastronomie. Consultez notre liste des choses à faire à {name}.",
+      "q4": "Est-ce que j'ai besoin d'une réservation pour visiter {name}?",
+      "a4": "Nous recommandons de réserver votre hébergement au moins 2 semaines à l'avance, surtout en haute saison. Utilisez notre planificateur IA pour optimiser votre itinéraire."
+    },
+    "ctaTitle": "Planifiez votre voyage de {seasonLower} à {name}",
+    "ctaText": "L'IA prend en compte la saison, la météo et vos intérêts pour élaborer le plan parfait.",
+    "ctaButton": "Créer un itinéraire",
+    "ctaThingsToDo": "Que faire à {name}",
+    "exploreTitle": "À explorer également",
+    "meta": {
+      "notFound": "Page non trouvée",
+      "title": "Meilleure période pour visiter {name} — {season}",
+      "description": "Quand visiter {name}? {season} ({months}) : {desc}. Températures {temp}. Conseils, activités et itinéraire de {seasonLower} pour {name}.",
+      "ogDescription": "{desc}. Températures {temp}. Guide de {name} en {seasonLower}."
+    }
+  },
+  "collections": {
+    "eyebrow": "Catégories sélectionnées",
+    "title": "Collections",
+    "subtitle": "Catégories sélectionnées pour chaque occasion — des packages d'hiver aux évasions romantiques et aux produits éco-locaux.",
+    "explore": "Explorer",
+    "openAria": "Ouvrir la collection {title}",
+    "items": {
+      "winter": {
+        "title": "Packages d'hiver",
+        "description": "Ski, bien-être et cuisine réconfortante pour les jours froids"
+      },
+      "summer": {
+        "title": "Packages d'été",
+        "description": "Rafting, randonnées et rafraîchissement au bord de l'eau"
+      },
+      "romantic": {
+        "title": "Écapes romantiques",
+        "description": "Pour les couples — châteaux, lac, vignobles"
+      },
+      "family": {
+        "title": "Familial",
+        "description": "Activités et produits adaptés aux enfants"
+      },
+      "gourmet": {
+        "title": "Expériences culinaires",
+        "description": "Dégustations de vin, ateliers de fromagerie, cours de cuisine"
+      },
+      "adventure": {
+        "title": "Adrénaline",
+        "description": "Rafting, ski, escalade, tyrolienne"
+      },
+      "eco": {
+        "title": "Éco et local",
+        "description": "Produits biologiques et expériences durables"
+      },
+      "luxury": {
+        "title": "Luxe",
+        "description": "Expériences et produits haut de gamme"
+      }
+    }
+  },
+  "communityTrips": {
+    "badge": "Communauté",
+    "title": "La planification communautaire",
+    "subtitle": "Itinéraires publics créés par les visiteurs — consultez, votez, empruntez une idée.",
+    "cta": "Créez votre propre plan",
+    "fallbackName": "Autour de la Slovénie avec l'IA",
+    "openButton": "Ouvrir le plan",
+    "openAria": "Ouvrir le plan : {name} ({days})",
+    "coverAlt": "Voyage {name} — {destination}",
+    "created": "Créé {time}",
+    "durationTitle": "Durée du voyage",
+    "viewsTitle": "Vues de la page partagée",
+    "activitiesTitle": "Nombre total d'activités",
+    "createdTitle": "Date de création du plan",
+    "daysCount": "{count, plural, one {# jour} two {# jours} few {# jours} other {# jours}}",
+    "viewsCount": "{count, plural, one {# vue} two {# vues} few {# vues} other {# vues}}",
+    "activitiesCount": "{count, plural, one {# activité} two {# activités} few {# activités} other {# activités}}",
+    "guideBadge": "Guide",
+    "guideTitle": "Ce voyage dispose d'un guide d'auteur publié (conseils et expérience de l'auteur)"
+  },
+  "contact": {
+    "title": "Contact",
+    "intro": "Des questions sur la plateforme, les partenariats ou les aspects techniques ? Contactez-nous.",
+    "cards": {
+      "emailTitle": "Email",
+      "locationTitle": "Localisation",
+      "locationValue": "Slovénie 🇸🇮",
+      "languagesTitle": "Langues",
+      "languagesValue": "Slovène, Anglais, Allemand, Italien",
+      "supportTitle": "Support technique"
+    },
+    "providersTitle": "Pour les prestataires",
+    "providersText": "Vous souhaitez rejoindre la plateforme ? Inscrivez-vous sur le portail des prestataires.",
+    "providersLink": "Inscription des prestataires →",
+    "meta": {
+      "title": "Contact",
+      "description": "Contactez l'équipe de Discover Slovenia AI. Email et coordonnées."
+    }
+  },
+  "dataSources": {
+    "title": "Sources de données",
+    "intro": "La plateforme Discover Slovenia AI utilise les sources de données suivantes pour vous fournir des informations fiables sur les destinations touristiques slovènes.",
+    "sources": {
+      "osm": {
+        "type": "Base de données POI",
+        "desc": "Données POI (points d'intérêt) — attractions, musées, restaurants, hôtels, points de vue, sites naturels, lieux religieux. Licence : ODbL."
+      },
+      "wikipedia": {
+        "type": "Descriptions",
+        "desc": "Descriptions des destinations et des POI. Licence : CC BY-SA."
+      },
+      "openMeteo": {
+        "type": "Météo",
+        "desc": "Données météo en temps réel. API gratuite sans clé requise."
+      },
+      "zai": {
+        "type": "IA",
+        "desc": "Génération d'itinéraire IA basée sur les préférences de l'utilisateur."
+      },
+      "sloveniaInfo": {
+        "type": "Sources officielles (RAG)",
+        "desc": "Contenu touristique officiel de I feel Slovenia (Organisation slovène du tourisme) — 664 sources structurées de l'index slovenia.info llms.txt, utilisées par l'IA comme contexte de réponse avec citations. Mis à jour : septembre 2026."
+      }
+    },
+    "supplyTitle": "Fournisseurs de voyages (registre de l'offre)",
+    "supplyIntro": "Le statut de chaque fournisseur est dérivé directement de notre registre de fournisseurs — une seule source de vérité qui alimente également la carte des offres. Notre principe d'honnêteté : un lien partenaire N'EST PAS un inventaire — les offres en direct (prix, disponibilité) n'apparaissent qu'une fois l'accès à l'API approuvé et connecté.",
+    "supplyGroup": {
+      "local": "Sources locales (données ouvertes)",
+      "own": "Notre place de marché",
+      "commercial": "Partenaires commerciaux"
+    },
+    "supplyDocs": "Documentation officielle",
+    "providersTitle": "Fournisseurs locaux",
+    "providersText": "Les informations sur les fournisseurs locaux (hôtels, restaurants, activités, produits, expériences) sont fournies par des fournisseurs enregistrés via le portail B2B. Chaque fournier est responsable de l'exactitude de ses propres données.",
+    "meta": {
+      "title": "Sources de données",
+      "description": "Liste des sources de données utilisées par la plateforme Discover Slovenia AI."
+    },
+    "prodStatus": {
+      "LIVE": "Données en direct",
+      "CONFIGURED": "Configuré",
+      "NOT_CONFIGURED": "Non configuré",
+      "PARTNER_ACCESS_REQUIRED": "Approbation partenaire requise",
+      "AFFILIATE_ONLY": "Lien d'affiliation uniquement"
+    },
+    "prodPrice": {
+      "LIVE_PRICE": "devis de prix en direct",
+      "FROM_PRICE": "prix « à partir de » publiés",
+      "UNKNOWN": "prix inconnus",
+      "NOT_SUPPORTED": "pas de prix"
+    },
+    "prodAvailability": {
+      "LIVE": "disponibilité en direct",
+      "UNKNOWN": "disponibilité inconnue",
+      "NOT_SUPPORTED": "pas de données de disponibilité"
+    },
+    "prodMonetization": {
+      "CONFIGURED": "monétisation configurée",
+      "NOT_CONFIGURED": "monétisation non configurée",
+      "NOT_APPLICABLE": "non soumis à la monétisation"
+    },
+    "prodStageLabel": "Niveau",
+    "prodPriceLabel": "Prix",
+    "prodAvailabilityLabel": "Disponibilité",
+    "prodMonetizationLabel": "Monétisation",
+    "prodLegendTitle": "Que signifient les statuts",
+    "prodLegend": "Données en direct : les données du fournisseur s'actualisent effectivement dans notre système. Configuré : l'accès est paramétré, la vérification en direct est en attente. Non configuré : l'accès en auto-service existe, mais la clé n'a pas encore été saisie. Approbation partenaire requise : l'API nécessite une demande/contrat avec le fournisseur. Lien d'affiliation uniquement : la source n'a pas d'API d'inventaire — un lien n'est PAS un inventaire.",
+    "capabilityTitle": "Matrice des capacités de la couche de réservation",
+    "capabilityIntro": "Formalisation de l'état de chaque prestataire selon la matrice des clients (section §5) : découverte, affiliation, recherche d'API, devis, réservation, annulation, webhook, remboursement, informations d'authentification et preuve E2E. Un statut \"en direct\" signifie une réponse réelle du prestataire — les prix \"à partir\" publiés ne sont PAS des devis en direct, l'importation de document par l'utilisateur n'est PAS une confirmation du prestataire. La matrice est dérivée du même registre qui alimente la carte des offres (sans maintenance manuelle).",
+    "capabilityLegend": "živo = réponse réelle et en direct de la source · codé, en attente d'accès = adaptateur connecté, vide sans identifiants/approbation · architecture (0 en direct) = machine à états/canal existe, aucun appel en direct · déclaration de l'utilisateur = saisie manuelle/import de document (le document est la certification) · non pris en charge = la source ne dispose pas de cette capacité · non applicable = sans objet pour cette source · E2E non exécuté = la preuve par navigateur n'a pas encore été effectuée",
+    "capabilityCredsPresent": "configuré",
+    "capabilityCredsNone": "non requis",
+    "capabilityCredsMissing": "manquant : {vars}",
+    "capabilityManual": "Saisie manuelle / import de document",
+    "freshness": {
+      "title": "Fraîcheur des données",
+      "intro": "Pour chaque ensemble de données principal, nous publions sa fraîcheur et son type de source. En direct signifie que le fait a été vérifié au moment de l'affichage ; frais et obsolète sont déterminés par l'âge de la capture ; inconnu signifie que l'heure de capture ne peut pas être déterminée. Le type de source est un terme canonique : LIVE (source en direct), STATIC (instantané statique ou guide géré), USER (saisie utilisateur), PROVIDER (source partenaire), GENERATED (généré par IA).",
+      "disclaimer": "Un instantané d'un ensemble de lieux n'est pas l'état en direct : le nombre de lieux dans un instantané statique (par ex. Foursquare Open Places, {date}) NE signifie pas que le même nombre de lieux est actuellement ouvert ou actif — un instantané est l'état au jour de la capture.",
+      "colDataset": "Couche",
+      "colType": "Type de source",
+      "colFreshness": "Simplicité",
+      "colDetail": "Détails",
+      "rows": {
+        "destinations": "Destinations (guide éditorial)",
+        "transfers": "Transferts (prix à partir de)",
+        "affiliate": "Offres d'affiliation"
+      },
+      "osmDetail": "requêtes Overpass en direct à chaque recherche de POI (ODbL)",
+      "fsqDetail": "instantané statique de l'ensemble de lieux — PAS l'état en direct (rafraîchissement : bun run fsq:ingest)",
+      "openMeteoDetail": "API en direct ; cache en mémoire de 10–15 minutes",
+      "destinationsDetail": "guide géré éditorialement ; données au {date}",
+      "transfersDetail": "prix à partir de d'un inventaire statif — pas de prix en direct via l'API (vérifier auprès du fournisseur)",
+      "affiliateDetail": "lien partenaire uniquement — aucune donnée vérifiée d'offre"
+    },
+    "destinationContent": {
+      "title": "Origine du contenu des destinations (38 destinations)",
+      "intro": "Chaque destination dans le guide éditorial porte une mention de source et de date : soit une source vérifiée externement (site officiel de la destination ou page STO canonique), soit un contenu géré par l'équipe éditoriale Discover Slovenia (étiqueté honnêtement, sans source inventée). La même mention est disponible via l'API (champ provenance + en-tête X-Data-As-Of) et sur la page de chaque destination.",
+      "statsLine": "{total} destinations · {official} avec source officielle · {internal} gérées éditorialement · mises à jour le {asOf}",
+      "colDestination": "Destination",
+      "colSource": "Source officielle",
+      "colVerified": "Vérifié",
+      "internalTitle": "Curation éditoriale",
+      "internalNote": "Les {internal} destinations restantes n'ont pas de source externe vérifiée — leur contenu est géré par l'éditorial Discover Slovenia (descriptions, points forts, prix, conseils saisonniers). Dernière modification du contenu : {asOf}. La notation ★ est toujours éditoriale, jamais un avis utilisateur.",
+      "langTitle": "Langue de référence",
+      "langNote": "Le slovène est la source de référence (slovenia-data.ts) ; la version anglaise est une traduction superposée basée sur le même ID. L'allemand et l'italien ne sont pas pris en charge dans l'ensemble de contenu.",
+      "nistTitle": "NiST et données officielles (une décision honnête)",
+      "nistNote": "Le numéro #4 mentionne NiST (centre de données nationales STO) comme source potentielle. Recherche du 2026-09-25 : nous n'avons pas pu atteindre de manière vérifiable un portail public avec des structurées, lisibles par machine. Nous ne copions ni n'inventons une source qui ne peut pas être vérifiée ; à la place, nous utilisons des sources publiques vérifiables comme couche source avec provenance (source, date, période, unité) : sites officiels de destination (5), pages STO canoniques slovenia.info (4) et une étiquette honnête de curation éditoriale pour le reste. Si NiST devient public avec des données structurées, il peut être ajouté comme source suivant le même modèle."
+    }
+  },
+  "demoScenarios": {
+    "badge": "Essayez en 30 secondes",
+    "title": "Que souhaitez-vous vivre ?",
+    "subtitle": "Cliquez sur l'une des options et l'IA crée instantanément votre plan",
+    "customTitle": "Créez votre propre",
+    "customSubtitle": "Ou choisissez une option ci-dessus",
+    "tags": {
+      "twoDays": "2 jours",
+      "oneDay": "1 jour",
+      "nature": "nature",
+      "food": "gastronomie",
+      "today": "aujourd'hui",
+      "family": "famille",
+      "fiveHours": "5 heures",
+      "romance": "romantique",
+      "budget": "économique",
+      "local": "local"
+    },
+    "scenarios": {
+      "river": {
+        "title": "Un week-end tranquille au bord de la rivière",
+        "query": "Un week-end tranquille au bord de la rivière avec une bonne cuisine"
+      },
+      "family": {
+        "title": "Une journée en famille aujourd'hui",
+        "query": "Une journée en famille avec les enfants aujourd'hui, 5 heures"
+      },
+      "romantic": {
+        "title": "Un week-end romantique avec du vin",
+        "query": "Un week-end romantique avec du vin et de bons restaurants"
+      },
+      "budget": {
+        "title": "Une excursion économique sans foule",
+        "query": "Une excursion économique sans foule, nature et tranquillité"
+      },
+      "food": {
+        "title": "Meilleure cuisine locale",
+        "query": "Meilleure cuisine locale de la région de Bela krajina, cuisine traditionnelle"
+      }
+    }
+  },
+  "destinationsPage": {
+    "badge": "Destinations",
+    "title": "38 destinations — Slovénie et Balkans occidentaux",
+    "subtitle": "Du lac de Bled et des sommets des Alpes juliennes aux ruelles étroites de Pirane — filtrez par région, intérêts, type et prix et trouvez votre coin de Slovénie.",
+    "statsLine": "38 destinations · 6 filtres · Pas d'inscription",
+    "meta": {
+      "title": "38 destinations — Slovénie et Balkans occidentaux",
+      "description": "Explorez 38 destinations en Slovénie et dans les Balkans occidentaux — du lac de Bled à Sarandë. Filtrez par pays, région, intérêts, type, prix et évaluation."
+    }
+  },
+  "guidePage": {
+    "metaNotFound": "Guide non trouvé",
+    "breadcrumbHome": "Accueil",
+    "breadcrumbAria": "Fil d'Ariane",
+    "editorialRating": "Note éditoriale {rating}★",
+    "introHeading": "{label} à {name}",
+    "metaLine": "Durée : {duration} · Classement tarifaire : {price}",
+    "highlightsTitle": "Activités mises en avant",
+    "fallbackHighlight": "Une expérience locale",
+    "experiencesTitle": "Expériences à {name} pour {labelLower}",
+    "allExperiences": "Toutes les expériences",
+    "listingsTitle": "Lieux locaux recommandés à {name}",
+    "allListings": "Tous les lieux locaux",
+    "relatedTitle": "Guides connexes",
+    "thingsToDoTitle": "Que faire à {name}",
+    "thingsToDoDesc": "Toutes les {count} attractions et activités à {name}.",
+    "bestTimeTitle": "Meilleure période pour visiter {name}",
+    "bestTimeDesc": "Guide par saison — printemps, été, automne, hiver.",
+    "faqTitle": "Questions fréquentes",
+    "ctaTitle": "Composez le {labelLower} parfait à {name}",
+    "ctaP": "L'IA prend en compte votre budget, vos intérêts et votre temps. {description}",
+    "ctaPlanner": "Planificateur de voyage",
+    "ctaItineraries": "Itinéraires prêts à l'emploi",
+    "elsewhereTitle": "{label} ailleurs",
+    "elsewhereDesc": "Explorez le {labelLower} dans d'autres destinations slovènes :",
+    "meta": {
+      "title": "{title} — Guide {labelLower}",
+      "ogDescription": "{description} Guide de {name}.",
+      "keywordGuide": "guide",
+      "keywordTravel": "voyage",
+      "keywordSlovenia": "Slovénie"
+    },
+    "faqs": {
+      "romanticni-pobeg": {
+        "q1": "Qu'est-ce qui rend {name} spécial pour une escapade romantique?",
+        "a1": "{name} offre une combinaison unique de nature, de sites culturels et de cuisine. Une escapade romantique à {name} est parfaite pour les anniversaires, la Saint-Valentin ou les demandes en mariage — l'accent est mis sur la vie privée, les vues et les saveurs locales.",
+        "q2": "Combien coûte une escapade romantique à {name}?",
+        "a2": "Le prix d'une escapade romantique à {name} se situe généralement entre {price}, y compris une chambre avec vue, un dîner à deux et une expérience (par exemple une dégustation ou une balade en bateau).",
+        "q3": "Quand est la meilleure période pour une visite romantique de {name}?",
+        "a3": "Le printemps (avril-juin) et le début de l'automne (septembre-octobre) apportent l'atmosphère la plus romantique à {name} — des températures agréables, moins de touristes et de magnifiques couleurs dans la nature.",
+        "q4": "Quels sont les hébergements les plus romantiques à {name}?",
+        "a4": "Pour une escapade romantique, nous recommandons les boutiques-hôtels et les hébergements avec vue. Parcourez nos sélections d'adresses locales à {name} — tous les prestataires sont sélectionnés à la main."
+      },
+      "druzinski": {
+        "q1": "{name} est-il adapté à une visite avec des enfants ?",
+        "a1": "Oui — {name} est une destination de famille excellente avec des sentiers de randonnée sécurisés, des restaurants adaptés aux enfants et des expériences interactives. La plupart des attractions sont accessibles avec des poussettes.",
+        "q2": "Combien coûte un voyage familial à {name} ?",
+        "a2": "Un voyage familial à {name} (2 adultes + 2 enfants) coûte généralement {price}, y compris une chambre familiale, les repas et les billets d'attraction. Les enfants de moins de 6 ans entrent souvent gratuitement.",
+        "q3": "Quelles activités à {name} sont adaptées aux enfants ?",
+        "a3": "{name} propose une variété d'activités familiales — des randonnées et cyclismes plus faciles aux musées avec des expositions interactives, des ateliers et des dégustations. Nos recommandations IA prennent en compte l'âge des enfants.",
+        "q4": "Quand est la meilleure période pour une visite en famille à {name} ?",
+        "a4": "Les vacances scolaires (été, octobre, février) sont idéales pour une visite en famille à {name}. En été, toutes les attractions extérieures sont ouvertes, tandis qu'en hiver, le ski et les festivals d'hiver sont disponibles."
+      },
+      "budget": {
+        "q1": "Combien coûte une visite à {name} avec un budget limité ?",
+        "a1": "Avec un budget limité, vous pouvez visiter {name} pour {price}, y compris un lit en auberge ou en chambre privée, de la nourriture locale des marchés et des activités gratuites.",
+        "q2": "Quelles sont les activités gratuites disponibles à {name} ?",
+        "a2": "{name} offre de nombreuses activités gratuites — des promenades dans la vieille ville, des visites d'églises, des sentiers de randonnée dans les environs et des plages publiques. Les billets de musée ont souvent des réductions pour les étudiants.",
+        "q3": "Comment économiser sur le transport pour aller à {name} ?",
+        "a3": "Pour un transport abordable vers {name}, nous recommandons le train ou le bus (recherche via FlixBus ou les chemins de fer slovènes). À {name}, vous pouvez utiliser les transports en commun locaux ou un vélo (de nombreuses destinations ont des systèmes de vélos en libre-service).",
+        "q4": "Puis-je trouver un hébergement bon marché à {name} ?",
+        "a4": "Oui — {name} dispose d'auberges de jeunesse, de chambres privées via Airbnb et de pensions familiales. Les prix sont plus bas en dehors de la haute saison (novembre–mars, à l'exception des jours fériés)."
+      },
+      "vikend": {
+        "q1": "Que faire à {name} pendant un week-end?",
+        "a1": "Un week-end à {name} permet d'explorer les principales attractions, la gastronomie locale et au moins une expérience. Le vendredi soir est idéal pour arriver et se promener, le samedi pour les attractions principales, et le dimanche pour se détendre.",
+        "q2": "Combien coûte un week-end à {name}?",
+        "a2": "Un week-end à {name} (2 nuits, 3 repas par jour, attractions) coûte environ {price}. Vous pouvez économiser avec des réservations anticipées et en faisant vos courses sur les marchés locaux.",
+        "q3": "Quand est la meilleure période pour un week-end à {name}?",
+        "a3": "{name} est parfait pour un week-end toute l'année. Le printemps et l'automne offrent le meilleur temps pour explorer, l'été apporte plus d'événements, et l'hiver signifie moins de touristes et des prix plus bas.",
+        "q4": "Comment se rendre à {name} pour un week-end?",
+        "a4": "{name} est accessible en voiture, en train ou en bus. Nous recommandons de réserver votre transport au moins une semaine à l'avance, surtout pour l'après-midi du vendredi."
+      },
+      "ai": {
+        "q": "Pouvez-vous créer un itinéraire pour {name} ?",
+        "a": "Oui — notre planificateur peut créer un itinéraire entièrement personnalisé pour {name}, qui prend en compte vos intérêts, votre budget et votre temps disponible. Essayez-le sur la page Planifier."
+      }
+    },
+    "guideTypes": {
+      "romanticni-pobeg": {
+        "label": "Évasion romantique",
+        "shortLabel": "Romantique",
+        "description": "Une escapade à deux — activités romantiques, dîners aux chandelles, expériences privées et chambres avec vue.",
+        "title": "Une évasion romantique à {name}",
+        "intro": "{name} — {tagline}. Ce guide est conçu pour les couples à la recherche de moments privés : des promenades romantiques au bord du lac ou de la mer, des dîners aux chandelles, des dégustations privées et des chambres avec vue. Toutes nos recommandations sont sélectionnées à la main pour une escapade inoubliable à deux.",
+        "durationLabel": "2 jours / 1 nuit",
+        "priceRange": "180–350 € / couple",
+        "bestFor": "Couples · Nouvellement mariés · Anniversaires",
+        "metaKeyword": "romantisme",
+        "h1": {
+          "title": "Une promenade romantique le long de {hl1}",
+          "description": "Commencez la journée par une promenade tranquille le long de {hl1Lower} à {name}. La lumière du matin et la foule plus réduite créent l'atmosphère parfaite pour un couple."
+        },
+        "h2": {
+          "title": "Une expérience privée : {hl2}",
+          "description": "L'après-midi, prenez le temps d'une expérience privée à {name} — une dégustation, une balade en bateau ou un atelier local. Nos recommandations sont testées et approuvées pour les couples."
+        },
+        "h3": {
+          "title": "Un dîner aux chandelles à {name}",
+          "description": "Terminez la journée par un dîner romantique dans l'un des restaurants sélectionnés de {name}. Les chefs locaux proposent des menus saisonniers avec des vins des vignobles slovènes."
+        }
+      },
+      "druzinski": {
+        "label": "Voyage familial",
+        "shortLabel": "Familial",
+        "description": "Activités familiales pour tous les âges — sentiers de randonnée sécurisés, attractions pour enfants, menus enfants et expériences interactives.",
+        "title": "Un voyage familial à {name}",
+        "intro": "Planifiez un voyage familial à {name} ? Ce guide rassemble les sentiers de randonnée sécurisés, les expériences interactives pour enfants, les restaurants familiaux avec menus enfants et les hébergements avec chambres familiales. {name} est un excellent choix pour des souvenirs familiaux inoubliables.",
+        "durationLabel": "2–3 jours",
+        "priceRange": "120–260 € / famille",
+        "bestFor": "Familles avec enfants · Voyages multi-générationnels",
+        "metaKeyword": "famille",
+        "h1": {
+          "title": "Une visite en famille : {hl1}",
+          "description": "{hl1} à {name} est convivial pour les enfants — expositions interactives, sentiers sécurisés et souvent des ateliers pour les plus jeunes."
+        },
+        "h2": {
+          "title": "Se détendre à {hl2}",
+          "description": "{hl2} offre un espace pour un pique-nique et du repos. Les enfants peuvent jouer tandis que les adultes profitent de la nature de {name}."
+        },
+        "h3": {
+          "title": "Un dîner en famille à {name}",
+          "description": "Choisissez un restaurant avec un menu enfant à {name}. Les pizzas locales, les pâtes et les plats traditionnels slovènes sont appréciés de tous les âges."
+        }
+      },
+      "budget": {
+        "label": "Visite économique",
+        "shortLabel": "Budget",
+        "description": "Une expérience maximale avec un budget minimal : attractions gratuites, pique-nique local, hébergements bon marché et transports en commun.",
+        "title": "{name} avec un budget limité",
+        "intro": "{name} peut également être visité avec un petit budget. Ce guide présente les attractions gratuites, les marchés locaux, les hébergements abordables et les transports en commun. Toutes les suggestions sont testées pour les voyageurs qui veulent une expérience maximale à un coût minimal.",
+        "durationLabel": "1–2 jours",
+        "priceRange": "30–80 € / personne",
+        "bestFor": "Étudiants · Voyageurs en sac à dos · Voyageurs au budget serré",
+        "metaKeyword": "abordable",
+        "h1": {
+          "title": "Visite gratuite : {hl1}",
+          "description": "{hl1} à {name} est gratuite à admirer de l'extérieur. Une promenade le long de elle offre de magnifiques opportunités photos et une expérience culturelle."
+        },
+        "h2": {
+          "title": "Pique-nique près de {hl2}",
+          "description": "Achetez du fromage local, du pain et des fruits sur le marché de {name} et organisez un pique-nique. L'économie sur un repas vous laisse plus pour les expériences."
+        },
+        "h3": {
+          "title": "Randonnée jusqu'à {hl3}",
+          "description": "{hl3} est gratuite à explorer à pied ou à vélo. Les sentiers balisés à {name} conviennent à tous les niveaux."
+        }
+      },
+      "vikend": {
+        "label": "Évasion de week-end",
+        "shortLabel": "Week-end",
+        "description": "L'évasion parfaite de 2 jours — vendredi soir à dimanche après-midi. Un programme équilibré avec les principales attractions et la cuisine locale.",
+        "title": "Un week-end à {name}",
+        "intro": "L'évasion de week-end parfaite à {name} — vendredi soir à dimanche après-midi. Un programme équilibré avec les principales attractions, la cuisine locale et du temps pour vous détendre. {name} est assez proche pour un court séjour et assez riche pour un week-end complet.",
+        "durationLabel": "Week-end (vendredi–dimanche)",
+        "priceRange": "150–280 € / personne",
+        "bestFor": "Actifs · Amis · Escapes rapides",
+        "metaKeyword": "évasion week-end",
+        "h1": {
+          "title": "Vendredi : arrivée et promenade dans {name}",
+          "description": "Après votre arrivée à {name}, installez-vous et prenez le temps d'une promenade détendue dans la vieille ville. Profitez d'un café local et planifiez les deux jours à venir."
+        },
+        "h2": {
+          "title": "Samedi : {hl1} et ses environs",
+          "description": "Consacrez la journée principale aux attractions principales — {hl1Lower}, le musée local et le déjeuner dans un restaurant traditionnel de {name}."
+        },
+        "h3": {
+          "title": "Dimanche : {hl2} et départ",
+          "description": "Dernier jour dédié à {hl2Lower} et aux achats de souvenirs locaux. Un dernier café local à {name} avant de repartir."
+        }
+      }
+    }
+  },
+  "itineraryPage": {
+    "durations": {
+      "1-dan": {
+        "label": "1 jour",
+        "desc": "Une visite rapide"
+      },
+      "vikend": {
+        "label": "Week-end (2 jours)",
+        "desc": "Le week-end parfait pour s'évader"
+      },
+      "3-dnevi": {
+        "label": "3 jours",
+        "desc": "Une visite approfondie"
+      },
+      "5-dnevi": {
+        "label": "5 jours",
+        "desc": "Une expérience complète"
+      },
+      "7-dnevi": {
+        "label": "7 jours",
+        "desc": "Une semaine d'exploration"
+      }
+    },
+    "travelerTypes": {
+      "pari": {
+        "label": "Pour les couples",
+        "desc": "Une escapade romantique"
+      },
+      "druzina": {
+        "label": "Familial",
+        "desc": "Divertissement pour tous les âges"
+      },
+      "solo": {
+        "label": "Voyageur solo",
+        "desc": "Explorer à votre propre rythme"
+      },
+      "avanturist": {
+        "label": "Aventurier",
+        "desc": "Adrénaline et nature"
+      }
+    },
+    "headline": "Itinéraire {duration} pour {name}",
+    "overviewTitle": "Aperçu du voyage",
+    "unitDay": "jour",
+    "unitDays": "jours",
+    "costLabel": "estimation / personne",
+    "ratingLabel": "note éditoriale de la destination",
+    "daysTitle": "Programme quotidien suggéré",
+    "dayLabel": "Jour {day}",
+    "dayFirst": "Arrivée et exploration de {name}",
+    "dayLast": "Dernier jour et départ",
+    "dayMiddle": "Une journée entière d'exploration",
+    "hoursLabel": "4-6 heures",
+    "perPerson": "€/personne",
+    "travelerTypesTitle": "Itinéraires par type de voyageur",
+    "generateButton": "Générer l'itinéraire",
+    "otherDestinationsTitle": "Autres destinations",
+    "personalizedTitle": "Vous souhaitez un itinéraire personnalisé ?",
+    "personalizedText": "Notre IA prend en compte votre budget, vos intérêts et la saison pour créer le plan parfait.",
+    "personalizedButton": "Générer un itinéraire",
+    "meta": {
+      "notFound": "Itinéraire non trouvé",
+      "title": "Itinéraire {duration} pour {name} — {desc}",
+      "description": "L'itinéraire complet de {durationLower} pour {name}, {tagline}. {desc} — activités, hébergements et restaurants recommandés.",
+      "ogDescription": "Un itinéraire {duration} recommandé avec des activités, des hébergements et des restaurants."
+    }
+  },
+  "plannerPage": {
+    "badge": "Guide de la Slovénie",
+    "title": "Planifiez votre voyage en Slovénie",
+    "subtitle": "Dites-nous ce que vous souhaitez vivre. En quelques secondes, obtenez un itinéraire personnel avec des fournisseurs locaux réels, une carte et la possibilité de réserver.",
+    "usp": "Pas d'inscription · Gratuit · Basé sur des fournisseurs réels",
+    "meta": {
+      "title": "Planificateur de voyage — Slovénie",
+      "description": "Dites-nous ce que vous souhaitez vivre en Slovénie — jours, budget, famille, intérêts. En quelques secondes, obtenez un itinéraire personnel avec une carte, des fournisseurs locaux réels et la possibilité de réserver."
+    }
+  },
+  "pregenTrips": {
+    "badge": "Itinéraires populaires",
+    "title": "Ou choisissez un itinéraire éprouvé",
+    "subtitle": "L'IA l'adapte ensuite davantage selon vos souhaits",
+    "planCta": "Planifier",
+    "dayOne": "jour",
+    "dayOther": "jours",
+    "trips": {
+      "bled-1-day": {
+        "title": "Bled en une journée",
+        "query": "Un jour à Bled — château, île, Vintgar et la kremšnita",
+        "dest1": "Bled",
+        "dest2": "Vintgar",
+        "hl1": "Château de Bled",
+        "hl2": "Promenade en barque Pletna",
+        "hl3": "Gorge de Vintgar",
+        "alt": "Le lac de Bled avec son île et son château sur l'île"
+      },
+      "ljubljana-2-days": {
+        "title": "Weekend à Ljubljana",
+        "query": "Deux jours à Ljubljana — culture, gastronomie et château",
+        "dest1": "Ljubljana",
+        "hl1": "Centre-ville historique",
+        "hl2": "Château de Ljubljana",
+        "hl3": "Triple Pont",
+        "alt": "Ljubljana — vieille ville sur les rives de la Ljubljanica"
+      },
+      "soca-3-days": {
+        "title": "Aventure Soča",
+        "query": "Trois jours sur la Soča — rafting, randonnées et cuisine locale",
+        "dest1": "Rivière Soča",
+        "dest2": "Kobarid",
+        "dest3": "Bovec",
+        "hl1": "Rafting sur la Soča",
+        "hl2": "Musée de Kobarid",
+        "hl3": "Chute Boka",
+        "alt": "La rivière émeraude Soča entre les sommets alpins"
+      },
+      "piran-coast": {
+        "title": "La côte et Piran",
+        "query": "Un week-end en bord de mer — Piran, Portorož et la cuisine locale",
+        "dest1": "Piran",
+        "dest2": "Portorož",
+        "hl1": "Place Tartini",
+        "hl2": "Le front de mer",
+        "hl3": "Huile d'olive",
+        "alt": "Piran — ville côtière vénitienne avec l'église Saint-Georges"
+      },
+      "bela-krajina": {
+        "title": "Découverte de la Bela krajina",
+        "query": "Deux jours en Bela krajina — miel, cuisine et nature sur la Kolpa",
+        "dest1": "Črnomelj",
+        "hl1": "Miel local",
+        "hl2": "Cuisine traditionnelle",
+        "hl3": "La Kolpa",
+        "alt": "Fête de la Saint-Georges en Bela krajina — danses folkloriques en costumes blancs"
+      },
+      "triglav-park": {
+        "title": "Parc national du Triglav",
+        "query": "Trois jours dans le parc national du Triglav — Bohinj, Triglav et les chutes d'eau",
+        "dest1": "Bohinj",
+        "dest2": "Triglav",
+        "hl1": "Lac Bohinj",
+        "hl2": "Ascension du Triglav",
+        "hl3": "Chute Savica",
+        "alt": "Triglav — plus haut sommet de Slovénie au-dessus de la vallée des Sept Lacs"
+      }
+    }
+  },
+  "privacy": {
+    "title": "Politique de confidentialité",
+    "lastUpdated": "Dernière mise à jour :",
+    "sections": {
+      "s1": {
+        "title": "1. Généralités",
+        "body": "Discover Slovenia AI (« la plateforme ») respecte votre vie privée. Cette politique décrit les données que nous collectons, la manière dont nous les utilisons et les droits dont vous disposez."
+      },
+      "s2": {
+        "title": "2. Données des visiteurs",
+        "body": "<strong>Nous ne collectons pas de données personnelles des visiteurs</strong> sans consentement explicite. Nous ne suivons que des données analytiques anonymes (vues de page, clics) afin d'améliorer la plateforme."
+      },
+      "s3": {
+        "title": "3. Newsletter",
+        "body": "Si vous vous abonnez à la newsletter, nous stockons votre adresse e-mail. Nous l'utilisons exclusivement pour vous envoyer des guides de voyage et des conseils. Vous pouvez vous désabonner à tout moment."
+      },
+      "s4": {
+        "title": "4. Prestataires (B2B)",
+        "body": "Les prestataires inscrits fournissent : nom, e-mail, nom de l'entreprise et mot de passe. Les mots de passe sont stockés avec un hachage bcrypt (12 rounds). Les informations professionnelles (adresse, téléphone, site web) sont affichées publiquement sur la plateforme."
+      },
+      "s5": {
+        "title": "5. Clients potentiels (formulaire Rejoignez-nous)",
+        "body": "Lorsque vous remplissez le formulaire « Rejoignez-nous », nous stockons : nom, e-mail, téléphone, nom de l'entreprise, type, ville et forfait souhaité. Nous utilisons ces données exclusivement pour vous contacter concernant votre demande."
+      },
+      "s6": {
+        "title": "6. Cookies",
+        "body": "La plateforme utilise des cookies strictement nécessaires à son fonctionnement (authentification, préférences linguistiques). Nous n'utilisons pas de cookies marketing ou de suivi."
+      },
+      "s7": {
+        "title": "7. Paiements (Stripe)",
+        "body": "Les paiements sont traités par Stripe. Nous ne stockons jamais les données des cartes de crédit. Stripe est certifié PCI-DSS."
+      },
+      "s8": {
+        "title": "8. Vos droits",
+        "body": "Conformément au RGPD, vous avez le droit d'accéder, de corriger, de supprimer et de transférer vos données. Pour exercer vos droits, envoyez un e-mail à <email>privacy@discoverslovenia.ai</email>."
+      },
+      "s9": {
+        "title": "9. Contact",
+        "body": "Pour toute question concernant la confidentialité : <email>privacy@discoverslovenia.ai</email>"
+      }
+    },
+    "meta": {
+      "title": "Politique de confidentialité",
+      "description": "Politique de confidentialité de la plateforme Discover Slovenia AI. Comment nous gérons vos données personnelles."
+    }
+  },
+  "quiz": {
+    "badge": "Vous ne savez pas par où commencer ? ⭐ Quiz de 2 minutes",
+    "title": "Quel type de voyageur êtes-vous ?",
+    "subtitle": "Répondez à 5 questions et l'AI vous concoctera un voyage sur mesure",
+    "skip": "Passer le quiz",
+    "progress": "Question {current} sur {total}",
+    "percent": "{value} %",
+    "progressAria": "Progression du quiz",
+    "back": "Retour",
+    "backAria": "Retour à la question précédente",
+    "questions": {
+      "tempo": {
+        "title": "Quel rythme vous convient ?",
+        "options": {
+          "sproscen": {
+            "label": "Relâché(e)",
+            "desc": "Doucement, sans emploi du temps"
+          },
+          "uravnotezen": {
+            "label": "Équilibré(e)",
+            "desc": "Un mélange de calme et de mouvement"
+          },
+          "akcija": {
+            "label": "Action",
+            "desc": "Du lever au coucher du soleil"
+          }
+        }
+      },
+      "vibe": {
+        "title": "Qu'est-ce qui vous attire le plus?",
+        "options": {
+          "narava": {
+            "label": "Nature & randonnées",
+            "desc": "Lacs, gorges, montagnes"
+          },
+          "hrana": {
+            "label": "Cuisine & vin",
+            "desc": "Auberges et dégustations"
+          },
+          "adrenalin": {
+            "label": "Adrénaline & sport",
+            "desc": "Rafting, cyclisme, ski"
+          },
+          "kultura": {
+            "label": "Culture & villes",
+            "desc": "Villes anciennes, châteaux, musées"
+          }
+        }
+      },
+      "season": {
+        "title": "Quand souhaitez-vous voyager ?",
+        "options": {
+          "spring": {
+            "label": "Printemps",
+            "desc": "Fleurs et verdure fraîche"
+          },
+          "summer": {
+            "label": "Été",
+            "desc": "Baignade et de longs jours"
+          },
+          "autumn": {
+            "label": "Automne",
+            "desc": "Les couleurs et la bora dans les vignobles"
+          },
+          "winter": {
+            "label": "Hiver",
+            "desc": "Ski et ambiance festive"
+          }
+        }
+      },
+      "group": {
+        "title": "Qui voyagez-vous avec ?",
+        "options": {
+          "solo": {
+            "label": "Seul(e)",
+            "desc": "Liberté sans compromis"
+          },
+          "par": {
+            "label": "Couple",
+            "desc": "Romance pour deux"
+          },
+          "druzina": {
+            "label": "Familles avec enfants",
+            "desc": "Divertissement pour tous les âges"
+          },
+          "prijatelji": {
+            "label": "Amis",
+            "desc": "L'équipe et les rires"
+          }
+        }
+      },
+      "budget": {
+        "title": "Quel est votre budget ?",
+        "options": {
+          "low": {
+            "label": "Budget",
+            "desc": "Abordable mais judicieux"
+          },
+          "mid": {
+            "label": "Moyenne gamme",
+            "desc": "Confort sans excès"
+          },
+          "lux": {
+            "label": "Sans limites",
+            "desc": "Expériences haut de gamme"
+          }
+        }
+      }
+    },
+    "styles": {
+      "narava": {
+        "label": "Amateur de nature",
+        "desc": "Paix, air pur et sentiers qui se terminent au bord d'un lac. Votre Slovénie : parc national du Triglav, la Soča et le Bohinj."
+      },
+      "hrana": {
+        "label": "Gourmet",
+        "desc": "Vous voyagez avec votre estomac. Votre Slovénie : auberges avec des ingrédients locaux, routes du vin de Štajerska et Dolenjska."
+      },
+      "adrenalin": {
+        "label": "Aventurier",
+        "desc": "L'adrénaline est votre carburant. Votre Slovénie : rafting sur la Soča, canyoning dans les gorges et ski à Vogel."
+      },
+      "kultura": {
+        "label": "Chercheur de culture",
+        "desc": "L'histoire et l'effervescence des villes vous rendent heureux. Votre Slovénie : Ljubljana, Ptuj, Celje et Piran."
+      },
+      "budget": {
+        "label": "Explorateur budgétaire",
+        "desc": "Vous voyez beaucoup, vous dépensez peu. Votre Slovénie : sentiers gratuits, transports en commun et marchés locaux."
+      },
+      "luxury": {
+        "label": "Voyageur de luxe",
+        "desc": "Sans compromis. Votre Slovénie : stations de bien-être, dégustations premium et expériences hôtelières."
+      }
+    },
+    "seasons": {
+      "spring": "printemps",
+      "summer": "été",
+      "autumn": "automne",
+      "winter": "hiver"
+    },
+    "styleLabel": "Votre style de voyage",
+    "recommendations": "Destinations recommandées",
+    "planCta": "Planifier mon voyage",
+    "planCtaAria": "Planifier mon voyage avec le planificateur",
+    "restart": "Refaire le quiz",
+    "restartAria": "Recommencer le quiz depuis le début",
+    "prompt": {
+      "template": "Planifiez un voyage de 3 jours pour un voyageur qui adore {interest}, préfère {season}, voyage {group}, avec un budget {budget}",
+      "interest": {
+        "narava": "nature et randonnées",
+        "hrana": "cuisine locale et vin",
+        "adrenalin": "adrénaline et sports",
+        "kultura": "culture et villes"
+      },
+      "group": {
+        "solo": "seul",
+        "par": "en couple",
+        "druzina": "en famille",
+        "prijatelji": "entre amis"
+      },
+      "budget": {
+        "low": "budget",
+        "mid": "moyenne gamme",
+        "lux": "sans limites"
+      }
+    }
+  },
+  "terms": {
+    "title": "Conditions d'utilisation",
+    "lastUpdated": "Dernière mise à jour :",
+    "sections": {
+      "s1": {
+        "title": "1. Acceptation des conditions",
+        "body": "L'utilisation de la plateforme Discover Slovenia AI implique l'acceptation de ces conditions d'utilisation."
+      },
+      "s2": {
+        "title": "2. Le service",
+        "body": "La plateforme fournit des informations sur les destinations touristiques slovènes, la planification de voyage par IA et des liens vers des prestataires locaux. La plateforme ne gère pas les réservations — les utilisateurs réservent directement auprès des prestataires."
+      },
+      "s3": {
+        "title": "3. Itinéraires",
+        "body": "Les itinéraires générés sont à titre informatif. La plateforme n'assume aucune responsabilité concernant l'exactitude des prix, la disponibilité ou la qualité des services de tiers."
+      },
+      "s4": {
+        "title": "4. Liens affiliés",
+        "body": "La plateforme contient des liens affiliés (Booking.com, DiscoverCars, GetYourGuide, Skyscanner, World Nomads, SafetyWing, Airalo, Kiwitaxi, Omio, Tiqets et Viator). Si vous effectuez une réservation via l'un de ces liens, Discover Slovenia peut recevoir une commission d'affiliation. Le prix que vous payez n'augmente pas à cause de cela ; vous effectuez la réservation et tout paiement directement auprès du partenaire, dont les conditions s'appliquent."
+      },
+      "s5": {
+        "title": "5. Prestataires (B2B)",
+        "body": "Les prestataires enregistrés sont responsables de l'exactitude de leurs informations. L'abonnement forfaitaire (Premium 149 €/mois, Enterprise 499 €/mois) est facturé mensuellement. Vous pouvez vous désabonner à tout moment avec un préavis de 30 jours."
+      },
+      "s6": {
+        "title": "6. Période bêta",
+        "body": "Pendant la période bêta (jusqu'à 30 lieux actifs), tous les plans sont gratuits. Une fois la monétisation activée, les utilisateurs bêta conservent 6 mois d'accès gratuit."
+      },
+      "s7": {
+        "title": "7. Propriété intellectuelle",
+        "body": "Le contenu de la plateforme est protégé par la licence MIT. Les images des destinations proviennent de sources ouvertes (Unsplash, OpenStreetMap). Le code du site est open source sur GitHub."
+      },
+      "s8": {
+        "title": "8. Limitation de responsabilité",
+        "body": "La plateforme n'assume aucune responsabilité concernant les dommages découlant de l'utilisation d'informations ou de liens vers des tiers."
+      },
+      "s9": {
+        "title": "9. Modifications des conditions",
+        "body": "Ces conditions peuvent être mises à jour. Nous informerons les utilisateurs enregistrés par courriel des modifications importantes."
+      },
+      "s10": {
+        "title": "10. Contact",
+        "body": "Questions : <email>info@discoverslovenia.ai</email>"
+      }
+    },
+    "meta": {
+      "title": "Conditions d'utilisation",
+      "description": "Conditions d'utilisation de la plateforme Discover Slovenia AI."
+    }
+  },
+  "thingsToDo": {
+    "breadcrumbHome": "Accueil",
+    "heroTitle": "Que faire à {name}",
+    "heroStats": "{highlights} attractions · {activities} activités · Note éditoriale {rating}★",
+    "aboutTitle": "À propos de {name}",
+    "highlightsTitle": "Principales attractions",
+    "experiencesTitle": "Activités et expériences à {name}",
+    "listingsTitle": "Locaux à {name}",
+    "productsTitle": "Produits locaux de {name}",
+    "bestTimeTitle": "Meilleur moment pour visiter {name}",
+    "seasons": {
+      "pomlad": "Printemps",
+      "poletje": "Été",
+      "jesen": "Automne",
+      "zima": "Hiver"
+    },
+    "faqTitle": "Questions fréquentes",
+    "planTitle": "Planifiez votre voyage à {name}",
+    "planText": "Nous pouvons élaborer pour vous l'itinéraire parfait pour {name} et ses environs — adapté à votre budget, à vos intérêts et à la saison.",
+    "planButton": "Planificateur de voyage",
+    "exploreTitle": "Explorez aussi",
+    "trackerTitle": "Que faire à {name} — Guide",
+    "meta": {
+      "notFound": "Destination non trouvée",
+      "title": "Que faire à {name} — Guide de voyage {name}",
+      "description": "Découvrez les meilleures activités, attractions et expériences à {name}, {tagline}. Un guide avec {count} principales attractions, fournisseurs locaux et recommandations IA.",
+      "ogTitle": "Que faire à {name} — Discover Slovenia AI",
+      "ogDescription": "{count} attractions, restaurants locaux, activités et expériences à {name}."
+    }
+  },
+  "trustSafety": {
+    "hero": {
+      "title": "Confiance et sécurité",
+      "subtitle": "Nous vérifions nos partenaires, expliquons le fonctionnement du classement IA et protégeons vos données."
+    },
+    "partner": {
+      "title": "Nous vérifions nos partenaires",
+      "adminApproval": {
+        "title": "Approbation administrative",
+        "body": "Chaque lieu doit être approuvé manuellement par notre équipe avant d'être publié. Nous vérifions : l'exactitude des coordonnées, l'adéquation de la catégorie, et la qualité des photos et des descriptions. Les lieux non approuvés sont invisibles pour les utilisateurs et l'IA ne peut pas les recommander."
+      },
+      "qualityScore": {
+        "title": "Score de Qualité Partenaire (0-100)",
+        "body": "Chaque lieu reçoit un Score de Qualité automatiquement calculé à partir de 7 signaux : complétude du profil (30%), qualité des photos (15%), qualité de la description (15%), balises IA (10%), vérification administrative (10%), évaluations (10%) et fraîcheur des données (10%).",
+        "badgeVerified": "Vérifié (Q>40)",
+        "badgePremium": "👑 Premium (payant)",
+        "badgeFeatured": "⭐ En vedette (Q>90 + Premium + Vérifié)"
+      },
+      "vlm": {
+        "title": "Vérification des images VLM",
+        "body": "Toutes les images sur la plateforme sont vérifiées par un Modèle Vision-Langage (VLM). Nous vérifions : la correspondance avec le nom du lieu, l'absence de filigrane, et la qualité et l'adéquation du contenu."
+      }
+    },
+    "ranking": {
+      "title": "Fonctionnement du classement par IA",
+      "intro": "Les recommandations de l'IA reposent sur 5 dimensions avec des poids clairement définis. L'argent ne peut acheter la première place.",
+      "dimensions": {
+        "relevance": "Correspondance avec la recherche de l'utilisateur (destination, intérêts, catégorie)",
+        "quality": "Qualité du profil du lieu (0-100)",
+        "rating": "Évaluations des utilisateurs (0-5 étoiles)",
+        "distance": "Proximité géographique avec les autres étapes de l'itinéraire",
+        "premiumBoost": "Un boost maximal de 5% pour les partenaires payants — il ne peut jamais surpasser la pertinence"
+      },
+      "warningTitle": "Notre règle : l'IA ne recommande jamais un lieu médiocre uniquement parce qu'il paie",
+      "warningText": "Les lieux notés en dessous de 3,5 n'obtiennent pas de boost premium. La pertinence (60%) domine toujours sur le Premium (5%)."
+    },
+    "transparency": {
+      "title": "Transparence des recommandations",
+      "intro": "Chaque recommandation de l'IA est clairement étiquetée. L'utilisateur sait toujours ce qui est une publicité et ce qui est organique.",
+      "labels": {
+        "featured": {
+          "badge": "⭐ En vedette",
+          "desc": "Partenaire vérifié avec un profil de haute qualité et un adhésion Premium. Score de qualité > 90."
+        },
+        "premium": {
+          "badge": "👑 Premium",
+          "desc": "Partenaire soutenant le développement de la plateforme avec un profil élargi. Boost maximal de 5%."
+        },
+        "verified": {
+          "badge": "✓ Vérifié",
+          "desc": "Données vérifiées par l'équipe Discover Slovenia AI."
+        },
+        "affiliate": {
+          "badge": "🔗 Lien partenaire",
+          "desc": "Lien partenaire — Discover Slovenia AI peut recevoir une commission. Toujours clairement indiqué."
+        },
+        "organic": {
+          "badge": "(sans étiquette)",
+          "desc": "Recommandation organique — lieu gratuit recommandé par l'IA en fonction de la pertinence uniquement."
+        }
+      }
+    },
+    "dataProtection": {
+      "title": "Protection des données",
+      "gdpr": {
+        "title": "Conformité RGPD",
+        "desc": "Politique de confidentialité, cookies, droit à l'oubli. APD pour les partenaires premium."
+      },
+      "free": {
+        "title": "Gratuit pour les utilisateurs",
+        "desc": "Les utilisateurs ne paient jamais pour les fonctionnalités IA. La monétisation ne provient que des prestataires."
+      },
+      "noMiddlemen": {
+        "title": "Sans intermédiaires",
+        "desc": "L'IA relie les voyageurs aux prestataires. Le voyageur réserve directement auprès du prestataire."
+      },
+      "auditLog": {
+        "title": "Journal d'audit",
+        "desc": "Toutes les actions administratives (approbations, refus, parrainages) sont enregistrées et traçables."
+      }
+    },
+    "meta": {
+      "title": "Confiance et sécurité",
+      "description": "Nous vérifions nos partenaires, expliquons le fonctionnement du classement IA et protégeons vos données."
+    }
+  },
+  "welcomeBack": {
+    "title": "Bon retour parmi nous ! 👋",
+    "knowsLabel": "L' IA sait déjà :",
+    "visitedCount": "{count} destinations visitées",
+    "quizCta": "Répondez au <quizLink>quiz de 2 minutes</quizLink> pour que l' IA crée un voyage sur mesure.",
+    "close": "Fermer",
+    "interests": {
+      "narava": "nature",
+      "kulinarika": "cuisine locale",
+      "hrana": "cuisine locale",
+      "avantura": "aventure",
+      "kultura": "culture"
+    },
+    "groups": {
+      "solo": "solo",
+      "par": "couple",
+      "druzina": "famille",
+      "prijatelji": "amis"
+    }
+  },
+  "adriaGuidePage": {
+    "meta": {
+      "notFound": "Guide non trouvé"
+    },
+    "breadcrumb": {
+      "aria": "Fil d'Ariane",
+      "home": "Accueil",
+      "guides": "Guides"
+    },
+    "hero": {
+      "countriesAria": "Pays sur la route : {countries}",
+      "readTime": "min de lecture",
+      "startingPoint": "point de départ"
+    },
+    "credit": {
+      "photo": "Photo :"
+    },
+    "route": {
+      "title": "L'itinéraire en bref",
+      "intro": "Un itinéraire de {days} {daysWord} à travers {count} {countryWord} — {km} kilomètres au total.",
+      "introLoop": "Un circuit de {days} jours en Slovénie — {km} kilomètres au total.",
+      "nightsOne": "nuit",
+      "nightsTwo": "nuits",
+      "nightsFew": "nuits",
+      "nightsMany": "nuits",
+      "daysOne": "jour",
+      "daysOther": "jours"
+    },
+    "practical": {
+      "title": "Conseils pratiques avant de partir"
+    },
+    "faq": {
+      "title": "Questions fréquentes"
+    },
+    "aiCta": {
+      "title": "La Slovénie d'abord, puis l'Adriatique",
+      "body": "Avant de vous diriger vers le sud, planifiez la partie slovène de votre voyage — le planificateur prépare un itinéraire du lac de Bled à Piran, adapté à votre budget et à la saison.",
+      "button": "Planificateur de voyage"
+    },
+    "aiCtaLoop": {
+      "title": "Un circuit sur mesure",
+      "body": "Cette boucle est seulement un point de départ — notre planificateur crée un itinéraire en Slovénie en fonction de votre budget, de la saison et de votre jour de départ.",
+      "button": "Planificateur de voyage"
+    },
+    "related": {
+      "title": "Plus de road trips adriatiques",
+      "titleLoop": "Voyages associés",
+      "meta": "{days} {daysWord} · {km} km"
+    },
+    "slovenia": {
+      "title": "La partie slovène du trajet",
+      "description": "Les escales en Slovénie sur ce trajet — guides, activités et conseils pratiques.",
+      "titleLoop": "Destinations sur le circuit",
+      "descriptionLoop": "Toutes les escales du circuit — guides, activités et conseils pratiques pour chacune."
+    }
+  },
+  "vodiciPage": {
+    "meta": {
+      "title": "Guides et conseils pour la Slovénie",
+      "description": "Que faire au lac de Bled, 3 jours en Slovénie, les plus belles excursions et la cuisine locale — guides, conseils, voyages en boucle en Slovénie, road trips adriatiques et réponses des locaux."
+    },
+    "badge": "Guides",
+    "title": "Guides et conseils pour la Slovénie",
+    "intro": "Que faire à Bled, comment passer 3 jours en Slovénie, les plus belles excursions et où manger comme un local — guides, conseils et réponses des habitants.",
+    "editorsLine": "Histoires et conseils rédactionnels · Interrogez les locaux",
+    "loops": {
+      "badge": "Boucle locale",
+      "title": "La Slovénie en une boucle",
+      "description": "Voyages en boucle en Slovénie en voiture — une semaine ou dix jours à travers les Alpes, la Soča, le Karst et la côte, un week-end Ljubljana-Bled et une boucle familiale avec enfants : itinéraires, vignette électronique, billets et où dormir.",
+      "countriesAria": "Un voyage en boucle en Slovénie",
+      "readMore": "Lire →"
+    },
+    "winters": {
+      "badge": "Guides d'hiver",
+      "title": "Slovénie en hiver",
+      "description": "De la festive Ljubljana (marché de Noël du 27/11 au 15/01) et de Noël à Bohinj en passant par le Nouvel An et le ski en janvier jusqu'aux vacances de février en famille — guides d'hiver avec prix des billets, pneus neige et foules.",
+      "countriesAria": "Un voyage d'hiver en Slovénie",
+      "readMore": "Lire →"
+    },
+    "adria": {
+      "badge": "Transfrontalier",
+      "title": "Voyages sur la route adriatique depuis la Slovénie",
+      "description": "Road trip vodniki čez mejo — Hrvaška, Bosna, Črna gora in Albanija z osebnim avtom iz Slovenije: poti, cestnine, mejne formalnosti in kam vsak večer parkirati.",
+      "countriesAria": "Voyage à travers : {countries}",
+      "readMore": "Lire →"
+    }
+  },
+  "blogSection": {
+    "badge": "Blog & guides",
+    "title": "Histoires de Slovénie",
+    "intro": "Guides, conseils et inspiration pour votre prochain voyage",
+    "readMore": "Lire la suite",
+    "readTime": "{minutes} min de lecture",
+    "readArticleAria": "Lire l'article : {title}",
+    "dialogDescription": "L'article complet {title} par {author}.",
+    "relatedDestination": "Destination liée",
+    "exploreDestination": "Explorez la destination",
+    "emptyTitle": "Il n'y a pas d'articles dans cette catégorie.",
+    "emptyDescription": "Essayez de sélectionner une autre catégorie."
+  },
+  "destinationPage": {
+    "breadcrumbHome": "Accueil",
+    "breadcrumbDestinations": "Destinations",
+    "meta": {
+      "notFound": "Destination non trouvée",
+      "title": "{name} — {tagline} | Guide de voyage en Slovénie",
+      "description": "{name} : {tagline}. Durée de séjour recommandée : {duration}. Attractions : {highlights}. Itinéraires prêts à l'emploi, guides par type de voyage et meilleure période pour visiter.",
+      "ogTitle": "{name} — guide de destination",
+      "ogDescription": "{name} : {tagline}. Que faire, itinéraires par durée et meilleure période de visite."
+    },
+    "heroStats": "{highlights} points forts · {duration} · {budget}",
+    "aboutTitle": "À propos de {name}",
+    "facts": {
+      "duration": "Durée de séjour recommandée",
+      "budget": "Classement tarifaire",
+      "person": "personne",
+      "bestFor": "Idéal pour",
+      "season": "Meilleure saison"
+    },
+    "highlightsTitle": "Principales attractions",
+    "thingsToDo": {
+      "title": "Que faire à {name}",
+      "text": "La page détaillée avec activités, prestataires locaux, expériences et questions fréquemment posées — {highlights} principales attractions en un seul endroit.",
+      "button": "Ouvrir le guide {name}"
+    },
+    "itineraries": {
+      "title": "Itinéraires prêts à l'emploi pour {name}"
+    },
+    "durations": {
+      "d1": "1 jour",
+      "weekend": "Week-end (2 jours)",
+      "d3": "3 jours",
+      "d5": "5 jours",
+      "d7": "7 jours"
+    },
+    "guides": {
+      "title": "Guides par type de voyage — {name}"
+    },
+    "bestTime": {
+      "title": "Meilleure période pour visiter {name}"
+    },
+    "seasons": {
+      "pomlad": "Printemps",
+      "poletje": "Été",
+      "jesen": "Automne",
+      "zima": "Hiver"
+    },
+    "plan": {
+      "title": "Planifiez votre voyage à {name}",
+      "text": "Nous pouvons vous élaborer un itinéraire complet pour {name} et ses environs — adapté à vos intérêts, dates, prévisions météo et composition de votre groupe.",
+      "button": "Planificateur de voyage"
+    },
+    "nearby": {
+      "title": "À proximité — région {region}"
+    },
+    "explore": {
+      "title": "À explorer aussi",
+      "all": "Toutes les destinations"
+    },
+    "trackerTitle": "{name} — Destination",
+    "source": {
+      "title": "Source du contenu",
+      "sourceLabel": "Source",
+      "updatedLabel": "Mis à jour",
+      "openingLabel": "Horaires d'ouverture",
+      "sourceShort": "source",
+      "externalSr": "s'ouvre sur un site externe",
+      "langNote": "Le slovène est la source de référence ; la version anglaise est une traduction."
+    }
+  },
+  "pwa": {
+    "install": "Installer l'application",
+    "installAria": "Installez l'application (fonctionne également hors ligne)",
+    "installIosTitle": "Installation sur iPhone/iPad",
+    "installIosHint": "Safari ne propose pas de bouton d'installation — utilisez le menu Partager :",
+    "installIosStep1": "Appuyez sur le bouton Partager (carré avec une flèche vers le haut) dans la barre d'outils de Safari",
+    "installIosStep2": "Sélectionnez « Ajouter à l'écran d'accueil »",
+    "installIosStep3": "Confirmez — l'application s'ouvre en plein écran et vos plans restent accessibles hors ligne",
+    "installDoneTitle": "Application installée",
+    "installDoneBody": "Discover Slovenia AI est maintenant sur votre écran d'accueil — les plans restent disponibles même sans connexion.",
+    "offline": "Hors ligne",
+    "offlineAria": "Hors ligne — les plans enregistrés sont toujours disponibles",
+    "offlineToastTitle": "Vous êtes hors ligne",
+    "offlineToastBody": "Les plans enregistrés sur cet appareil restent accessibles. Les nouvelles générations nécessitent une connexion.",
+    "onlineToastTitle": "Connexion rétablie",
+    "onlineToastBody": "Toutes les données se rafraîchissent à nouveau.",
+    "updateTitle": "Nouvelle version de l'application",
+    "updateBody": "Une mise à jour est prête. Actualisez la page pour l'appliquer.",
+    "updateAction": "Actualiser"
+  },
+  "validatorTelemetry": {
+    "sectionAriaLabel": "Télémétrie publique du validateur d'itinéraires",
+    "eyebrow": "Télémétrie · chiffres publics · 0 jetons IA",
+    "title": "Combien d'erreurs notre validateur détecte-t-il ?",
+    "subtitle": "Les autres promettent la précision. Nous la comptons : chaque vérification de plan terminée est enregistrée sur le serveur, chaque problème par type — et les chiffres sont publics pour tous.",
+    "liveTitle": "Nos chiffres (comptés côté serveur, sans données personnelles)",
+    "detailsSummary": "Détails du comptage et études publiques",
+    "stats": {
+      "plansLabel": "Plans vérifiés",
+      "plansSince": "comptage depuis {date}",
+      "noSince": "comptage depuis la version 1.21.0",
+      "issuesLabel": "Avertissements trouvés",
+      "issuesSplit": "{errors} critiques · {warns} avertissements",
+      "avgLabel": "Alertes par plan",
+      "avgSub": "moyenne par plan validé",
+      "zigzagLabel": "Jours en zig-zag",
+      "zigzagSaved": "~{km} km de conduite superflue",
+      "duplicatesLabel": "Doublons entre jours",
+      "duplicatesSub": "même lieu sur ≥ 2 jours",
+      "daysLabel": "Jours analysés",
+      "daysSub": "{stops} arrêts reconnus"
+    },
+    "rules": {
+      "title": "Quelles règles sont le plus souvent déclenchées",
+      "subtitle": "Par type d'alerte (critiques et avertissements ensemble) ; les 6 plus fréquentes sont affichées.",
+      "day_km": "Trop de kilomètres par jour",
+      "day_stops": "Trop d'arrêts par jour",
+      "leg_distance": "Étape trop longue entre les arrêts",
+      "day_overload": "Jour surchargé (activité + conduite)",
+      "schedule_gap": "Emploi du temps irréalisable (trop peu de temps pour conduire)",
+      "schedule_overlap": "Chevauchements d'horaires",
+      "duplicate_stop": "Même lieu deux fois en un jour",
+      "missing_coords": "Emplacement inconnu (coordonnées manquantes)",
+      "closed_month": "Fermé le mois de la visite",
+      "closed_weekday": "Fermé le jour de la semaine de la visite"
+    },
+    "studies": {
+      "title": "Études publiques sur les erreurs des plans IA",
+      "subtitle": "Les chiffres indépendants les plus cités — avec sources.",
+      "mem": {
+        "label": "MonkeyEatingMango : 43,2 % des jours de plans IA contiennent une erreur",
+        "note": "Étude de 356 voyages (9/2026) : 43,2 % des jours contiennent au moins une erreur ; 9,5 % des jours sont en zig-zag."
+      },
+      "bbc": {
+        "label": "BBC : 37 % des utilisateurs de plans IA manquent de données",
+        "note": "Enquête (9/2025) : ~33 % ont rencontré des informations inexactes."
+      },
+      "tow": {
+        "label": "Tow Center : 37–94 % d'erreurs de citation dans les moteurs de recherche IA",
+        "note": "Analyse des moteurs de recherche IA : le taux de citations erronées varie de 37 à 94 %."
+      },
+      "note": "Leurs chiffres sont les leurs, les nôtres sont les nôtres. Les études publiques mesurent les plans IA en général ; les nôtres comptent ce que notre validateur trouve réellement dans les plans slovènes — depuis que nous avons commencé à compter."
+    },
+    "method": {
+      "title": "Comment nous comptons (de manière transparente)",
+      "counting": "Seuls les contrôles terminés sont comptabilisés — l'événement est enregistré par le serveur lors du calcul du rapport, pas au clic.",
+      "start": "Le comptage commence avec la version 1.21.0 ; nous ne complétons pas l'historique rétrospectivement.",
+      "privacy": "Sans données personnelles : nous stockons uniquement des chiffres (jours, arrêts, types d'alertes) — jamais le texte du plan.",
+      "cache": "La page lit les chiffres à partir d'un cache de 60 secondes, ils peuvent donc avoir un retard d'une minute.",
+      "dataLink": "Méthodologie et sources de données",
+      "cta": "Vérifiez votre plan ↑"
+    },
+    "states": {
+      "loading": "Chargement des statistiques publiques du validateur …",
+      "unavailable": "La télémétrie est temporairement indisponible — les études publiques ci-dessous restent valides indépendamment.",
+      "empty": "Aucun contrôle terminé depuis le début du comptage — les chiffres augmenteront avec chaque rapport. En attendant, les études publiques ci-dessous expliquent pourquoi nous comptons."
+    }
+  },
+  "comparison": {
+    "meta": {
+      "title": "Alternative à Mindtrip pour la Slovénie — une comparaison honnête",
+      "description": "Vous cherchez une alternative à Mindtrip ? Terrain vérifié le 28.09.2026 : comparaison honnête des généralistes IA vs un spécialiste de la Slovénie — sans inscription, dans 4 langues."
+    },
+    "badge": "Comparaison honnête · inscription requise",
+    "title": "Quel planificateur de voyage en IA est le bon pour la Slovénie ?",
+    "intro": "Votre comparaison n'est pas une brochure marketing. Notre principe éditorial est la franchise — nous admettons là où les généralistes nous surpassent, et nous montrons où un spécialiste de la Slovénie vous offre plus. La décision vous appartient.",
+    "updated": "Mis à jour : 28 septembre 2026. Les comparaisons vieillissent — vérifiez la date avant de prendre une décision.",
+    "generalistsTitle": "Ce que les planificateurs IA généralistes font bien",
+    "generalistsIntro": "Mindtrip, Layla, Wanderlog, ChatGPT et apparentés sont de bons produits (pour la disponibilité actuelle, voir le rapport sur le terrain ci-dessus). Un généraliste est le bon choix pour :",
+    "generalists": {
+      "coverageTitle": "Couverture mondiale",
+      "coverageDesc": "Programme pour Tokyo, Lisbonne et Patagonie dans le même chat. Nous couvrons uniquement la Slovénie.",
+      "bookingTitle": "Vols et hôtels",
+      "bookingDesc": "Intégrations avec les grands systèmes de réservation du monde entier. Chez nous, vous réservez des expériences et produits locaux, pas des vols.",
+      "collabTitle": "Planification de groupe",
+      "collabDesc": "Collaboration en temps réel avec la famille ou des amis. Nous proposons le partage d'itinéraire avec sondage, pas l'édition collaborative.",
+      "scaleTitle": "Maturité et ampleur",
+      "scaleDesc": "Des millions d'utilisateurs et de grandes bases d'avis. Nous sommes une plateforme jeune avec un étroit mais profond focus."
+    },
+    "problemsTitle": "Où les généralités déçoivent en Slovénie",
+    "problemsIntro": "Ce ne sont pas des pièges inventés — ils sont documentés dans les avis des planificateurs IA (2025-2026) et dans nos propres tests :",
+    "problems": {
+      "priceTitle": "Prix éloignés de la réalité",
+      "priceDesc": "Les utilisateurs de Mindtrip rapportent des écarts de prix de 20 à 30 %. Pour un city-break, c'est agaçant ; pour un week-end avec un budget de 300 €, c'est la différence entre deux jours.",
+      "closedTitle": "Lieux fermés dans l'itinéraire",
+      "closedDesc": "Le piège classique : l'IA inclut une attraction un jour où elle est fermée (l'exemple célèbre : \"le Louvre est fermé le mardi\"). Sans vérifier les horaires d'ouverture, elle ne peut pas le savoir.",
+      "genericTitle": "Listes génériques du top 10",
+      "genericDesc": "La même liste du top 10 pour tout le monde. La Slovénie est petite, mais riche en profondeur locale — quand Vintgar n'a pas de file d'attente, où se trouve la vraie kremšnita — nécessite des données spécialisées et curatées."
+    },
+    "tableTitle": "La comparaison en un clin d'œil",
+    "table": {
+      "caption": "Comparaison des planificateurs de voyage IA généraux avec la plateforme Discover Slovenia AI",
+      "colWhat": "Quoi nous comparons",
+      "colGeneral": "Planificateurs généraux",
+      "colOurs": "Discover Slovenia AI",
+      "rows": {
+        "focus": {
+          "label": "Focus",
+          "general": "Dans le monde entier",
+          "ours": "Uniquement la Slovénie — approfondi et vérifié"
+        },
+        "account": {
+          "label": "Compte nécessaire pour enregistrer un plan",
+          "general": "Souvent requis (Google/Apple)",
+          "ours": "Non nécessaire — enregistrement et partage anonymes"
+        },
+        "validation": {
+          "label": "Vérification des horaires et des prix",
+          "general": "Pas systématique",
+          "ours": "Sources + avertissements \"vérifier avant de visiter\" + validation géographique"
+        },
+        "feasibility": {
+          "label": "Faisabilité de la journée (distances, temps)",
+          "general": "Rarement vérifiée",
+          "ours": "Vrais km et minutes du routage routier ; un avertissement lorsque la journée est trop chargée"
+        },
+        "language": {
+          "label": "Langue slovène",
+          "general": "Anglais ou traduction automatique",
+          "ours": "Quatre langues comme cœur du produit (SL/EN/IT/DE)"
+        },
+        "booking": {
+          "label": "Réservations",
+          "general": "Vols et hôtels mondiaux",
+          "ours": "Expériences locales et place de marché avec des fournisseurs slovènes"
+        },
+        "offline": {
+          "label": "Plan hors ligne",
+          "general": "Souvent uniquement dans les applications",
+          "ours": "Oui — installez comme une application (PWA)"
+        },
+        "beyond": {
+          "label": "Voyages en dehors de Slovénie",
+          "general": "Oui — dans le monde entier",
+          "ours": "Non — nous recommandons honnêtement un généraliste"
+        }
+      },
+      "note": "Le tableau est loyal pour les deux parties : la dernière ligne est une reconnaissance, et non un défaut que nous cacherions."
+    },
+    "practiceTitle": "Ce que cela signifie en pratique",
+    "practice": {
+      "ex1Title": "15h40, décembre, Gorge de Vintgar",
+      "ex1Desc": "Un généraliste pourrait intégrer sereinement la gorge dans un programme de fin d'après-midi. Notre planificateur sait qu'elle ferme à 16h00 en hiver et vous avertit de la déplacer en matinée — avec la source des données.",
+      "ex2Title": "Bled → Bohinj \"environ 30 minutes\" ?",
+      "ex2Desc": "Les estimations de temps \"de la mémoire du modèle\" peuvent être inexactes. Nos connecteurs entre les étapes indiquent les kilomètres et les minutes réels issus du routage sur de vraies routes — y compris les tronçons hivernaux.",
+      "ex3Title": "Combien coûtera réellement votre journée ?",
+      "ex3Desc": "Les prix des billets et des spécialités locales proviennent d'un ensemble de données curaté avec sources — le total sur la carte journalière a un sens. Lorsque les données manquent, nous le disons et ajoutons un avertissement."
+    },
+    "notForYouTitle": "Quand Discover Slovenia AI n'est pas fait pour vous",
+    "notForYouBody": "Si vous prévoyez un voyage à l'étranger, avez besoin de vols ou d'hôtels à l'étranger — choisissez un généraliste (Layla, Wanderlog ou un chat avec ChatGPT/Gemini). C'est bien ; nous les utilisons aussi pour nos propres voyages à l'étranger. Nous aimerions vous voir sur le segment slovène de votre voyage.",
+    "ctaTitle": "Essayez sans inscription",
+    "ctaBody": "De la question au plan : 30 secondes. Compte requis : aucun. Langue : slovène, anglais, italien ou allemand.",
+    "ctaPrimary": "Créer mon itinéraire",
+    "ctaSecondary": "Explorer les destinations",
+    "faqTitle": "Questions fréquemment posées",
+    "faq": {
+      "q1": "Ai-je besoin d'un compte pour planifier un voyage ?",
+      "a1": "Non. Vous créez, enregistrez et partagez des itinéraires sans inscription du tout — cela fonctionne de manière anonyme. Un compte gratuit est facultatif et n'ajoute que l'historique des voyages sous Mes voyages.",
+      "q2": "Combien ça coûte d'utiliser ?",
+      "a2": "Le planificateur, les itinéraires, les guides et le partage sont gratuits. La plateforme gagne de la sur les réservations d'expériences locales et les ventes sur la place de marché — pas avec vos données.",
+      "q3": "Que se passe-t-il si je voyage en dehors de la Slovénie ?",
+      "a3": "Honnêtement : pour les voyages transfrontaliers, utilisez un généraliste (par exemple Layla, Wanderlog, Mindtrip) ou un chatbot IA. Nous couvrons uniquement la Slovénie — mais nous la couvrons en profondeur, avec des données locales vérifiées.",
+      "q4": "Dans quelle mesure vos données sont-elles fiables ?",
+      "a4": "Les données des destinations sont éditorialement vérifiées, les prix et les horaires d'ouverture ont des sources, et chaque itinéraire subit une validation géographique avec des avertissements. Quand nous ne sommes pas sûrs, il est écrit \"vérifiez avant de visiter\". La méthodologie est publique sur la page Sources de données.",
+      "q5": "Jusqu'à présent, j'utilisais Mindtrip — pourquoi changer ?",
+      "a5": "Mindtrip était un bon généraliste ; lors de notre vérification le 28 septembre 2026, l'ensemble de leur environnement web (site, connexion, API) était inaccessible, et nous ne pouvons juger la cause. Pour les voyages en Slovénie, vous obtenez ici : une planification sans inscription, quatre langues, des données locales vérifiées et des réservations auprès de fournisseurs locaux. Jugez par vous-même — un essai sans inscription dure 30 secondes.",
+      "q6": "Que s'est-il passé avec Mindtrip ?",
+      "a6": "Honnêtement : nous ne savons que ce que nous avons vérifié. Le 28 septembre 2026, l'ensemble de leur environnement web (mindtrip.ai, connexion, API) affichait une page \"En construction\" ; nous n'avons trouvé aucune couverture médiatique de la panne, tandis que les critiques du 22-23 septembre le classent toujours parmi les meilleurs outils IA de planification de voyages gratuits. Nous ne spéculons pas sur les causes ou l'avenir — vérifiez leur site directement pour l'état actuel."
+    },
+    "sources": "Cette comparaison repose sur des avis publics (2025-2026) et notre analyse éditoriale de la plateforme (septembre 2026). Plus : <linkSources>sources de données</linkSources> · <linkTrust>confiance et sécurité</linkTrust> · <linkAbout>à propos</linkAbout>",
+    "ctaMap": "Ouvrir la carte",
+    "ctaCommunity": "Voir les plans communautaires",
+    "fieldBadge": "Sur le terrain · vérifié le 28 sept. 2026",
+    "fieldTitle": "Le terrain a évolué — ce que nous avons vérifié en direct le 28 septembre 2026",
+    "fieldIntro": "Une comparaison honnête nécessite des vérifications datées, non des affirmations éternelles. Ce sont les constats ponctuels de nos propres vérifications (accès public aux pages, sources officielles) — lorsque le terrain change, nous mettons à jour cette section.",
+    "field": {
+      "mindtripTitle": "Mindtrip : l'ensemble du site est inaccessible",
+      "mindtripDesc": "Lors de notre vérification du 28 sept. 2026, mindtrip.ai, sa connexion et son API affichaient tous une page « En construction » (la redirection mène à leur CDN d'images). Nous n'avons trouvé aucune couverture médiatique de l'indisponibilité, tandis que les avis des 22-23 sept. classent encore Mindtrip parmi les meilleurs outils — le cycle des retards par rapport à la réalité. Nous ne spéculons pas sur la cause ; vérifiez leur site pour l'état actuel.",
+      "laylaTitle": "Layla : inaccessible pour de nombreux visiteurs",
+      "laylaDesc": "Lors de nos vérifications, layla.ai a retourné une erreur 429 et un contrôle de sécurité du navigateur ; l'ancien domaine marketing itslayla.com est aujourd'hui une boutique de mode sans lien. Expedia Group a repris Layla le 31 juil. 2026 — les chatbots-first de cette catégorie fonctionnent désormais avec des fonds OTA, ce qui n'implique pas automatiquement une meilleure expérience pour chaque visiteur.",
+      "googleTitle": "Google : les itinéraires génériques par IA sont désormais gratuits",
+      "googleDesc": "Selon la chronologie officielle des blogs Google (novembre 2025 → août 2026), AI Mode et Gemini pourront composer un itinéraire gratuitement. « Une IA rédige votre programme » n'est donc plus un différenciateur entre les outils — la profondeur des données, la vérifiabilité des sources et l'utilisation hors ligne sont primordiales."
+    },
+    "fieldNote": "Ce sont des vérifications datées, ponctuelles — non des affirmations permanentes. Si Mindtrip revient (et nous l'espérons), nous mettrons à jour cette section ; la comparaison reste honnête dans les deux sens."
+  },
+  "marketplace": {
+    "recsWhy": "Pourquoi : {why}",
+    "recsWhyFromData": "· (à partir des données)",
+    "recsWhyFromDataTitle": "La raison est composée à partir des données de l'article recommandé — ce n'est pas un choix d'IA."
+  },
+  "adminInsights": {
+    "title": "Aperçus",
+    "badge": "Calculé à partir des statistiques",
+    "empty": "Aucun aperçu disponible."
+  },
+  "story": {
+    "badge": "Notre histoire"
+  },
+  "consultation": {
+    "badgeDeterministic": "Uniquement depuis la base de données de la plateforme",
+    "speaker": "Local"
+  },
+  "ownerPanel": {
+    "autoTagButton": "Suggérer des étiquettes",
+    "autoTagButtonLoading": "Suggestion en cours...",
+    "autoTagSuggestionTitle": "Suggestions",
+    "autoTagToastReady": "Suggestions prêtes",
+    "autoTagToastFail": "La suggestion a échoué",
+    "tagSourceDictionary": "Dictionnaire de taxonomie"
+  },
+  "mtNotice": {
+    "title": "Traduction automatique",
+    "body": "Cette page est tradite automatiquement (IA) à partir de l'original slovène et attend une révision humaine. Les versions slovène et anglaise sont les références.",
+    "dismiss": "Compris"
+  }
+}

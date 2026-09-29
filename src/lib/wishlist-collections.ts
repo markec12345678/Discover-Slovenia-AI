@@ -22,8 +22,9 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { WishlistEntry } from "@/lib/wishlist-storage";
 
-/** Jeziki, ki jih nosi WL slovar lista priljubljenih (W3: 4-jezično). */
-export type WishlistLang = "sl" | "en" | "it" | "de";
+/** Jeziki, ki jih nosi WL slovar lista priljubljenih (W3: 4-jezično;
+ *  W12 smer 2 faza 1: +fr/es — list je globalni krom). */
+export type WishlistLang = "sl" | "en" | "it" | "de" | "fr" | "es";
 
 /**
  * Tema zbirke — semenske teme iz intent čipov načrtovalnika (bestFor
@@ -189,37 +190,49 @@ export const WISHLIST_THEME_LABELS: Record<
     en: "Food & drink",
     it: "Cibo e bevande",
     de: "Essen & Trinken",
+    fr: "Gastronomie & boissons",
+    es: "Comida y bebida",
   },
   kultura: {
     sl: "Kultura in obrt",
     en: "Culture & crafts",
     it: "Cultura e artigianato",
     de: "Kultur & Handwerk",
+    fr: "Culture et artisanat",
+    es: "Cultura y artesanía",
   },
   aktivnosti: {
     sl: "Aktivnosti in avantura",
     en: "Activities & adventure",
     it: "Attività e avventura",
     de: "Aktivitäten & Abenteuer",
+    fr: "Activités et aventure",
+    es: "Actividades y aventura",
   },
   mir: {
     sl: "Mir in wellness",
     en: "Calm & wellness",
     it: "Quiet e benessere",
     de: "Ruhe & Wellness",
+    fr: "Calme & bien-être",
+    es: "Calma y bienestar",
   },
   drugo: {
     sl: "Drugo",
     en: "Other",
     it: "Altro",
     de: "Sonstiges",
+    fr: "Autre",
+    es: "Otro",
   },
 };
 
-/** Oznaka "Drugo" za razdelke po destinaciji — 4 jeziki (isti kanon). */
+/** Oznaka "Drugo" za razdelke po destinaciji — 6 jezikov (isti kanon). */
 export const WISHLIST_OTHER_LABEL: Record<WishlistLang, string> = {
   sl: "Drugo",
   en: "Other",
   it: "Altro",
   de: "Sonstiges",
+  fr: "Autre",
+  es: "Otro",
 };

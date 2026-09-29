@@ -112,8 +112,20 @@ export function ValidatorTelemetrySection() {
   const isEn = locale === "en";
   // W1 (Issue #15): Intl oznake po localeju (it-IT/de-DE za nova jezika;
   // ne-SL ločilo decimalk pika, SL vejica — kot prej).
+  // W12 (smer 2, faza 1): +fr-FR/es-ES (odsek je na domači strani — FR/ES
+  // whitelist); neznani locale ostane sl-SI.
   const intlLocale =
-    locale === "it" ? "it-IT" : locale === "de" ? "de-DE" : isEn ? "en-GB" : "sl-SI";
+    locale === "it"
+      ? "it-IT"
+      : locale === "de"
+        ? "de-DE"
+        : locale === "fr"
+          ? "fr-FR"
+          : locale === "es"
+            ? "es-ES"
+            : isEn
+              ? "en-GB"
+              : "sl-SI";
 
   const [stats, setStats] = useState<ValidatorPublicStats | null>(null);
   const [unavailable, setUnavailable] = useState(false);

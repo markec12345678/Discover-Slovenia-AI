@@ -101,6 +101,41 @@ const L = {
       events: "Veranstaltungen — Veranstaltungskalender öffnen",
     } as Record<ChipKey, string>,
   },
+  // W12 (smer 2, faza 1): FR/ES različica — domov je na FR/ES whitelisti.
+  fr: {
+    title: "Explorer par thème",
+    chips: {
+      nature: "Nature",
+      food: "Gastronomie",
+      cities: "Villes",
+      experiences: "Expériences",
+      events: "Événements",
+    } as Record<ChipKey, string>,
+    aria: {
+      nature: "Nature — ouvrir les destinations",
+      food: "Gastronomie — ouvrir les adresses",
+      cities: "Villes — ouvrir les destinations",
+      experiences: "Expériences — ouvrir les expériences",
+      events: "Événements — ouvrir le calendrier des événements",
+    } as Record<ChipKey, string>,
+  },
+  es: {
+    title: "Explora por tema",
+    chips: {
+      nature: "Naturaleza",
+      food: "Gastronomía",
+      cities: "Ciudades",
+      experiences: "Experiencias",
+      events: "Eventos",
+    } as Record<ChipKey, string>,
+    aria: {
+      nature: "Naturaleza — abrir destinos",
+      food: "Gastronomía — abrir locales",
+      cities: "Ciudades — abrir destinos",
+      experiences: "Experiencias — abrir experiencias",
+      events: "Eventos — abrir el calendario de eventos",
+    } as Record<ChipKey, string>,
+  },
 } as const;
 
 export async function HomeEntryRow() {
@@ -112,7 +147,11 @@ export async function HomeEntryRow() {
         ? L.it
         : locale === "de"
           ? L.de
-          : L.sl;
+          : locale === "fr"
+            ? L.fr
+            : locale === "es"
+              ? L.es
+              : L.sl;
 
   return (
     <section aria-labelledby="home-entry-row-title" className="py-6 sm:py-8">

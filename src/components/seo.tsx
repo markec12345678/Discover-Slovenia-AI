@@ -3,7 +3,7 @@ import { safeJsonLd } from "@/lib/security";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import type { Destination } from "@/lib/types";
 import { DEFAULT_BASE_URL } from "@/lib/host";
-import { isEnRoute, isItDeRoute } from "@/i18n/routing";
+import { isEnRoute, isItDeRoute, isFrEsRoute } from "@/i18n/routing";
 
 // SEO-2: BASE_URL ni več statičen — funkcije sprejmejo `baseUrl` (host-zavedno,
 // iz resolveBaseUrlFromHeaders/currentBaseUrl iz lib/host.ts). Privzeta vrednost
@@ -17,11 +17,14 @@ import { isEnRoute, isItDeRoute } from "@/i18n/routing";
 // whitelisti (faza 1 — isItDeRoute) — hreflang it-IT/de-DE se izda samo za
 // poti z IT/DE različico; za vse ostale poti proxy 308 preusmeri nazaj na
 // slovensko, zato alternatov ne objavimo (isti kanon kot EN).
+// W12 (smer 2, faza 1 — 1.144.0): francoščina in španščina sta javni na
+// FR/ES whitelisti (isFrEsRoute) — hreflang fr-FR/es-ES samo za poti z
+// FR/ES različico (isti kanon).
 
 // === HREFLANG HELPER ===
 // Vrne alternates.languages za Next.js metadata — hreflang za javne jezike.
 // `path` je vedno SLOVENSKA pot (brez locale prefix-a); helper sam odloči,
-// kateri alternati (en/it/de) obstajajo (isEnRoute / isItDeRoute).
+// kateri alternati (en/it/de/fr/es) obstajajo (isEnRoute / isItDeRoute / isFrEsRoute).
 export function hreflangForPath(path: string, baseUrl: string = DEFAULT_BASE_URL) {
   // Normalizirana pot brez trailling slash ("/" ostane "/")
   const clean = path === "/" ? "/" : `/${path.replace(/^\/+|\/+$/g, "")}`;
@@ -36,6 +39,11 @@ export function hreflangForPath(path: string, baseUrl: string = DEFAULT_BASE_URL
     languages["it-IT"] = `${baseUrl}/it${clean === "/" ? "" : clean}`;
     languages["de-DE"] = `${baseUrl}/de${clean === "/" ? "" : clean}`;
   }
+  // W12 faza 1: FR/ES alternati — samo za poti na FR/ES whitelisti
+  if (isFrEsRoute(clean)) {
+    languages["fr-FR"] = `${baseUrl}/fr${clean === "/" ? "" : clean}`;
+    languages["es-ES"] = `${baseUrl}/es${clean === "/" ? "" : clean}`;
+  }
   // x-default → slovenščina (privzeti jezik platforme)
   languages["x-default"] = `${baseUrl}${clean}`;
   return languages;
@@ -44,7 +52,8 @@ export function hreflangForPath(path: string, baseUrl: string = DEFAULT_BASE_URL
 // === OG:LOCALE HELPER (W1) ===
 // openGraph.locale iz aktivnega locale-a — prej trdo kodiran ternarni
 // `locale === "en" ? "en_US" : "sl_SI"` po straneh; W1 doda it_IT/de_DE.
-// (Strani na IT/DE whitelisti prek te funkcije povedo pravi og:locale.)
+// W12 doda fr_FR/es_ES.
+// (Strani na whitelistah prek te funkcije povedo pravi og:locale.)
 export function ogLocale(locale: string): string {
   switch (locale) {
     case "en":
@@ -53,6 +62,10 @@ export function ogLocale(locale: string): string {
       return "it_IT";
     case "de":
       return "de_DE";
+    case "fr":
+      return "fr_FR";
+    case "es":
+      return "es_ES";
     default:
       return "sl_SI";
   }
@@ -116,7 +129,7 @@ export function destinationSchema(dest: Destination, baseUrl: string = DEFAULT_B
     // pravih uporabniških recenzij (izmišljeni reviewCount = napihnjen
     // social proof + tveganje za Google rich-results kazni).
     touristType: dest.bestFor.map((b) => b.charAt(0).toUpperCase() + b.slice(1)),
-    availableLanguage: ["Slovenian", "English", "German", "Italian"],
+    availableLanguage: ["Slovenian", "English", "German", "Italian", "French", "Spanish"],
     containsPlace: DESTINATIONS
       .filter((d) => d.region === dest.region && d.id !== dest.id)
       .slice(0, 5)
@@ -233,7 +246,7 @@ export function websiteSchema(baseUrl: string = DEFAULT_BASE_URL) {
       target: `${baseUrl}/destinacije?q={search_term_string}`,
       "query-input": "required name=search_term_string",
     },
-    inLanguage: ["sl-SI", "en-US", "de-DE", "it-IT"],
+    inLanguage: ["sl-SI", "en-US", "de-DE", "it-IT", "fr-FR", "es-ES"],
   };
 }
 
@@ -248,7 +261,7 @@ export function organizationSchema(baseUrl: string = DEFAULT_BASE_URL) {
     logo: `${baseUrl}/icon-512.png`,
     description: "AI turistična platforma za Slovenijo — destinacije, tržnica, B2B portali.",
     areaServed: "SI",
-    knowsLanguage: ["sl", "en", "de", "it"],
+    knowsLanguage: ["sl", "en", "de", "it", "fr", "es"],
   };
 }
 

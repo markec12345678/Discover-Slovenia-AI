@@ -23,7 +23,7 @@ import { defineRouting } from "next-intl/routing";
  * `/`); "en" ga ima (`/en/…`).
  */
 export const routing = defineRouting({
-  locales: ["sl", "en", "it", "de"],
+  locales: ["sl", "en", "it", "de", "fr", "es"],
   defaultLocale: "sl",
   localePrefix: "as-needed",
 });
@@ -170,15 +170,53 @@ export function isItDeRoute(pathname: string): boolean {
   return ITDE_DESTINATION_SUBROUTES.some((re) => re.test(pathname));
 }
 
+// ============================================================================
+// W12 FR/ES WHITELISTA (smer 2, faza 1 — 1.144.0) — edini vir resnice o
+// tem, kje francoščina in španščina ŽIVITA. Vzorec 1:1 po W1 fazi 1
+// (IT/DE, 1.126.0): jedro odkrivanja + svetovanja (statične poti).
+// Trgi: FR — francosko govoreča Zahodna Evropa (med največjimi virnimi
+// turističnimi trgi za Slovenijo); ES — španijsko govoreči jug Evrope +
+// Latinska Amerika (najhitreje rastoče skupine poizvedb o „Eslovenia").
+// Oba jezika sta v benchmarku Alma (STB) naslednja po IT/DE.
+// Namerno ŠE VEDNO IZVEN (iskrena meja — proxy 308 na slovensko):
+//   /nacrtuj (planner pogon je 4-jezičen — fr/es pride v fazi 2b),
+//   L-vzorčne poti (/trznica, /dozivetja, /lokali, /dogodki, /potovanje,
+//   /na-poti, /moja-potovanja), /zemljevid (faza 2a kandidat),
+//   /destinacija/* (faza 2a kandidat — podatkovne plasti obstajajo že
+//   za kartice na /destinacije), /vodici, /pot.
+// Uporabniki: src/proxy.ts (308 guard), language-switcher (vidnost),
+// hreflangForPath (alternati), sitemap-urls.ts (FR/ES URL-ji).
+// ============================================================================
+
+/** Statične poti s FR/ES različico (jedro odkrivanja + svetovanja). */
+export const FRES_STATIC_ROUTES = new Set([
+  "/",
+  "/destinacije",
+  "/primerjava",
+  "/o-strani",
+  "/kontakt",
+  "/pogoji-uporabe",
+  "/politika-zasebnosti",
+  "/vir-podatkov",
+  "/zaupanje-in-varnost",
+]);
+
+/** Ali ima ta POT (brez locale prefix-a!) FR/ES različico (W12 faza 1). */
+export function isFrEsRoute(pathname: string): boolean {
+  return FRES_STATIC_ROUTES.has(pathname);
+}
+
 /**
  * Ali ima ta POT (brez locale prefix-a!) različico v podanem JAVNEM jeziku.
  * Generalizacija isEnRoute (W1): default vedno res (SL je izvirnik),
  * "en" po EN whitelisti, "it"/"de" po IT/DE whitelisti (faza 1).
+ * W12 (smer 2, faza 1): "fr"/"es" po FR/ES whitelisti.
  */
 export function isLocaleRoute(pathname: string, locale: string): boolean {
   if (locale === routing.defaultLocale) return true;
   if (locale === "en") return isEnRoute(pathname);
   if (locale === "it" || locale === "de") return isItDeRoute(pathname);
+  if (locale === "fr" || locale === "es") return isFrEsRoute(pathname);
   return false;
 }
 
