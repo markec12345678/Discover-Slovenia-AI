@@ -59,6 +59,26 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ### Operativa
 
+- **3. restart okolja + živa CI validacija vseh treh novih mehanizmov** (29. 9.
+  08:07–08:32 UTC): restart peskovnika je spet pobrisal `.env` (3. incident) —
+  tokrat je z njim padel tudi `~/.env-keys-backup` (nova lekcija: backup
+  izven repa ne preživi celotnega reseta peskovnika). Obnova BREZ lastnikove
+  akcije: `GITHUB_TOKEN` rešen iz git remote URL (žeton je vgrajen v origin —
+  preživi reset), `RENDER_TOKEN` iz lastnikovega sporočila (Task ID 20);
+  `VERCEL_TOKEN` izgubljen (3.×), a dokazano nekritičen — vse avtonomne poti
+  (webhook uvajanje, CI monitor, render-catchup) delujejo brez njega.
+  `workflow_dispatch` tek 36542925633 (08:28 UTC) je živo validiral VSE tri
+  nove mehanizme: (1) MONITOR-RETRY 2 — Vercel job ZELEN, smoke **18/18 ok**
+  (ob 07:05 je isti job padel 16/2 na lažnem rdečem; retry z `-m 150` je v
+  teku rešil hladen zagon ~133 s), verzija 1.140.2 ≡ repo ×3; (2)
+  `render-catchup` — prvi živi tek ZELEN: zaznal drift → POST
+  `dep-datndcg93c1s73bagvf0` → zavrnjen v 0,8 s → pravilno klasificiran kot
+  PRE-BUILD zavrnitev (kvota, ni napaka — zavrnjeni poskusi ne trošijo
+  minut); (3) nov `/pot` SSR gate — prvi CI tek, ZELEN (200 + `h-[500px]` +
+  »Načrt po dnevih«). Skupni run rdeč IZKLJUČNO zaradi Render drift joba —
+  dizajniran verziji alarm Issue #7, ki izgine, ko catch-up ob resetu kvote
+  (1. 10.) uveljavi main. Verzija ostaja 1.140.2 (operativni dogodek,
+  docs-only — precedens).
 - **Obnova žetonov po .env incidentu** (29. 9. ~06:40 UTC): okolje je ob
   restartu 04:38 UTC prepisalo `.env` na samo `DATABASE_URL` (VERCEL_TOKEN
   in vsi ostali ključi izgubljeni — webhook je 1.140.2 vseeno sam
