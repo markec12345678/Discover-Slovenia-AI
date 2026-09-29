@@ -65,6 +65,17 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
   kanon); obročni žetoni za ta vnos upravičeno izostali (deterministična
   pot brez restavracijskih postankov — iskreno brez dokaza); 0 napak
   strani, 0 konzolnih opozoril; dokaz `w11-dokazi/zigzag-znacka-dev.png`.
+- **Produkcijsko (agent-browser, Vercel 1.142.0, 29. 9. ~14:40 slovensko)**:
+  enaka zlata pot na `i-feel-slovenia.vercel.app` → **4 zigzag značke**
+  (3 dnevne + povzetek „Vsi dnevi: 0 cik-cak") + **3 Google Maps pilule
+  W11-A sočasno** (sožitje obeh W11 reliefov potrjeno — zemljevid
+  izvoza + dokaz koherence v isti glavi dneva); 0 napak strani;
+  CI na dce446c zelen (suite 4186); dokaz `w11-dokazi/zigzag-znacka-prod.png`.
+  Prvi scheduled tek NOVE vsebine monitorja (14:18 slovensko, 18 min
+  zamika): Vercel job zelen (vključno /pot SSR gate), catch-up zelen
+  (kvota klasifikacija), Render job 17 ok / 1 rdeč = IZKLJUČNO
+  dizajniran verzija-drift alarm (v1.102.0 ≠ repo; Issue #7 — izgine
+  1. 10. ob resetu kvote).
 
 ### Zavestno NAREJENO (design odločitve)
 
