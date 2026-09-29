@@ -1,0 +1,33 @@
+{
+  "_metoda": "ista kot timeline-before.json — Performance API resource časovnica v brskalniku (agent-browser 412×823) na ŽIVI produkciji 1.140.2 (webhook uvedel b7f07be ~05:07 UTC, health 1.140.2 ob 05:10 UTC)",
+  "_pot": "https://i-feel-slovenia.vercel.app/pot/embed/bb183cd77d",
+  "topla_meritev_1.140.2": {
+    "html_responseEnd": 658,
+    "val1_chunkov": "435–586",
+    "val2_chunkov": "666–758",
+    "map_leaflet_chunki": {"zagon": 773, "konec": 803, "zamik_za_koncem_vala2_ms": 15},
+    "prve_ploscice_OSM": {"zagon": 1012, "konec": 1021}
+  },
+  "hladna_meritev_1.140.2_prvi_obisk_novega_deploja": {
+    "html_responseEnd": 20144,
+    "val2_chunkov": "20735–21102",
+    "map_leaflet_chunki": {"zagon": 21127, "konec": 21540, "zamik_za_koncem_vala2_ms": 25},
+    "prve_ploscice_OSM": {"zagon": 21622, "konec": 21667}
+  },
+  "primerjava_podpisa_PRESKOKA": {
+    "pred_1.140.1_topla": "map chunk zagon +117 ms ZA koncem vala 2 (1445 po 1328) — uvoz je čakal na hidratacijski izris dynamic komponente; ploščice 1971",
+    "po_1.140.2_topla": "map chunk zagon +15 ms ZA koncem vala 2 (773 po 758) — uvoz se sproži OB EVALUACIJI MODULA, VZPOREDNO s hidratacijo; ploščice 1012 (ista seansa, chunki iz predpomnilnika)",
+    "po_1.140.2_hladna": "map chunk zagon +25 ms ZA koncem vala 2 (21127 po 21102), ~410 ms pravi download — VZPOREDNO s hidratacijo; ploščice 21622",
+    "sklep": "PODPIS POTRJEN: uvoz ne čaka več na hidratacijski render (117 ms → 15/25 ms); odločilen izid je Lighthouse mobile/simulate (svež profil, simuliran 4G), kjer je serializacija odpravljena — glej lighthouse-prod-1.140.2.json"
+  },
+  "SSR_dokazi_produkcija_1.140.2": {
+    "h-[500px]": 1, "Nalagam": 1, "Načrt_po_dnevih": 2, "preconnect": 3,
+    "sklep": "SSR izris NEPOMEMENJEN (ista rezervacija kot 1.140.1) — window varovalka preprečuje uvoz na strežniku"
+  },
+  "napake": "0 napak strani, 0 konzolnih sporočil, zemljevid se prikaže (.leaflet-container, 15 ploščic)",
+  "metodološke_lekcije": [
+    "npx lighthouse pod bun danes zavrnil z 'unsettled top-level await' po sveži namestitvi v npx predpomnilnik — obhod: direkten node zagon CLI iz ~/.npm/_npx/…/lighthouse/cli/index.js",
+    "prvi lighthouse po zagonu: 'Browser tab has unexpectedly crashed' (prehoden) — ponovitev čista (0 runWarnings)",
+    "hladen dokument ~20 s onesnaša absolutne čase časovnice — primerjava PODPISA (zamaknitve med fazami) ostane veljavna"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+ "_opomba": "Lighthouse mobile/simulate nad ŽIVO produkcijo (i-feel-slovenia.vercel.app, 1.140.2 = b7f07be, webhook uvedel ~05:07 UTC 29. 9. 2026), ~05:17–05:25 UTC; PONOVNI ZAGON po LCP popravku; veljavni so SAMO teki brez runWarnings (kanon E2E-GATES.md §T3); funkciji pred vsakim tekom ogreti s 2 curl (hladen zagon ~20–90 s je znan); lighthouse@13.5.0 zagnan DIREKTNO z node (npx pod bun zavrnil z 'unsettled top-level await' — lekcija v timeline-after.json)",
+ "strani": {
+  "/pot/embed/bb183cd77d": {
+   "perf": 0.81, "lcp_ms": 3609, "cls": 0.0, "tbt_ms": 255, "fcp_ms": 1881, "opozorila": []
+  },
+  "/pot/bb183cd77d": {
+   "perf": 0.79, "lcp_ms": 1961, "cls": 0.0, "tbt_ms": 871, "fcp_ms": 1407, "opozorila": []
+  }
+ },
+ "primerjava_1.140.1_v_1.140.2": {
+  "/pot/embed/bb183cd77d": {
+   "perf": "0.58 → 0.81 (+0.23)",
+   "lcp_ms": "4727 → 3609 (−1118 ms, −24 %)",
+   "fcp_ms": "2101 → 1881",
+   "tbt_ms": "820 → 255 (−565 ms — vzporeden uvoz razbremenil glavno nit hidratacije)",
+   "cls": "0 → 0 (ohranjeno)"
+  },
+  "/pot/bb183cd77d": {
+   "perf": "0.80 → 0.79 (znotraj šuma)",
+   "lcp_ms": "2708 → 1961 (−747 ms, −28 %)",
+   "fcp_ms": "1434 → 1407",
+   "tbt_ms": "636 → 871 (+235 ms — Leaflet init zdej znotraj TBT okna ker se mapa prikaže prej; documented šum ±57 %, prag vrat 2500 ms z veliko rezervo)",
+   "cls": "0 → 0 (ohranjeno)"
+  }
+ },
+ "sklep": "LCP na OBEH /pot poteh izboljšan za četrtino ali več (−24 %/−28 %) z ENO vezano spremembo (zgodnji zagon uvoza); CLS 0 ostaja; embed perf +0.23 je največji posamični perf skok te poti doslej"
+}

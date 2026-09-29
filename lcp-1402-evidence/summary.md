@@ -59,11 +59,30 @@ razširitev na /pot: `docs/E2E-GATES.md` §T4.
 - Testna pot `ee5bba7df0` (sveža — prejšnja `08ec4c69ae` po resetu lokalne
   DB ne obstaja več)
 
-## Produkcijski „po“ dokazi
+## Produkcijski „po“ dokazi (1.140.2 ŽIVA — webhook uvedel b7f07be ~05:07 UTC)
 
-Dopolnjeno po uvedbi (isti inštrumenti kot izhodišče): `timeline-after.json`
-(pričakovano: zagon chunka ~ob evaluaciji modula, ne ~445 ms za
-hidratacijo) + Lighthouse mobile/simulate pred/pos.
+| Meritev (mobile/simulate, 0 runWarnings) | 1.140.1 | 1.140.2 | Δ |
+|---|---|---|---|
+| embed `/pot/embed/bb183cd77d` perf | 0.58 | **0.81** | **+0.23** |
+| embed LCP | 4727 ms | **3609 ms** | **−24 %** |
+| embed TBT | 820 ms | **255 ms** | −565 ms |
+| polna `/pot/bb183cd77d` perf | 0.80 | 0.79 | šum |
+| polna LCP | 2708 ms | **1961 ms** | **−28 %** |
+| CLS (obe poti) | 0 | **0** | ohranjeno ✓ |
+
+- **Časovnica (podpis preskoka):** map chunk se zdaj zažene **+15 ms za
+  koncem vala 2 chunkov** (topla; hladna +25 ms) — ob evaluaciji modula,
+  vzporedno s hidratacijo; prej **+117 ms** (čakanje na hidratacijski
+  izris dynamic komponente). Ploščice (LCP) na topli isti seansi:
+  1971 → 1012 ms (`timeline-after.json`).
+- **SSR dokazi na produkciji 1.140.2:** `h-[500px]` 1× · „Nalagam“ 1× ·
+  „Načrt po dnevih“ 2× · 3 preconnecti — identično 1.140.1 (popravek ni
+  spral strežniškega izrisa; window varovalka deluje).
+- 0 napak strani/konzole; zemljevid se prikaže (15 ploščic).
+- Metodološke lekcije: npx lighthouse pod bun zavrnil z „unsettled
+  top-level await“ po sveži namestitvi → direkten `node` zagon CLI;
+  prehoden „Browser tab crashed“ na prvem teku → čista ponovitev
+  (0 runWarnings).
 
 ## Iskrene opombe
 
