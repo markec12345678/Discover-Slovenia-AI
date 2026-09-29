@@ -784,7 +784,14 @@
       "bookAtProviderAria": "Buche {name} beim Anbieter — öffnet externe Seite",
       "marketplaceFrom": "Auf dem Marktplatz ab €{price}",
       "marketplaceCount": "{count, plural, one {# Erlebnis} two {# Erlebnisse} few {# Erlebnisse} other {# Erlebnisse}}",
-      "gmapsDayAria": "Tag {day} in Google Maps öffnen (Navigation für den ganzen Tag)"
+      "gmapsDayAria": "Tag {day} in Google Maps öffnen (Navigation für den ganzen Tag)",
+      "zigzagBadge": "0 Zickzack",
+      "zigzagTitle": "Deterministisch geprüft: Die Reihenfolge der Stopps kehrt nie in ein bereits besuchtes Gebiet zurück (dieselbe Prüfung wie in unserer Planungs-Engine).",
+      "zigzagSummary": "Alle Tage: 0 Zickzack",
+      "mealLunchWindow": "Mittagessen 12–14 ✓",
+      "mealLunchTitle": "Die Mahlzeit liegt im kanonischen Mittagsfenster (12:00–14:00) — der Zeitplan wächst aus den echten Fahrstrecken.",
+      "mealDinnerWindow": "Abendessen 18–21 ✓",
+      "mealDinnerTitle": "Die Mahlzeit liegt im kanonischen Abendfenster (18:00–21:00) — der Zeitplan wächst aus den echten Fahrstrecken."
     },
     "smartSearch": {
       "title": "Intelligente Suche",

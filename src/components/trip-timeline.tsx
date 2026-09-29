@@ -20,6 +20,7 @@ import {
   Coffee,
   Calendar,
   Check,
+  Route,
   Loader2,
   ExternalLink,
 } from "lucide-react";
@@ -46,6 +47,7 @@ import { dayISOForDayNumber } from "@/lib/trip-dates";
 import { formatDayLabel } from "@/lib/itinerary-weather";
 import { narrationStopsFromDay } from "@/lib/itinerary-audio";
 import { gmapsDayUrl } from "@/lib/gmaps-day-export";
+import { dayZigzagQuality, mealStopWindow } from "@/lib/day-quality";
 import { cn } from "@/lib/utils";
 import type { DayPlan, Itinerary, LocationVisit, PlannerInput } from "@/lib/types";
 
@@ -244,6 +246,22 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs, className
   // ISSUE #4 §6: skupno št. postankov z neznano ceno (glava načrta).
   const unknownTotal = useMemo(() => totalUnknownCostStops(days), [days]);
 
+  // W11-B „DOKAZLJIVO UREJEN DAN": kakovost vseh dni izračunamo ENKRAT
+  // (ista čista funkcija kot značka v glavi vsakega dneva — ena resnica).
+  // Povzetek se pokaže SAMO, če so VSI dnevi z ≥2 postankoma preverljivi
+  // in VSI z 0 vračanj — sicer iskreno molčimo (ne lažemo z zelenim).
+  const zigzagAllDays = useMemo(
+    () => days.map((d) => dayZigzagQuality(d)),
+    [days]
+  );
+  const showZigzagSummary =
+    zigzagAllDays.length > 0 &&
+    zigzagAllDays.every(
+      (q) =>
+        (q.stops < 2) ||
+        (q.verifiable && q.zigzagFree)
+    );
+
   // Shrani itinerer in kopiraj deljivo povezavo (uporabi store + helper)
   const handleSaveItinerary = useCallback(async () => {
     if (saveState === "saving") return;
@@ -300,15 +318,34 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs, className
               </span>
             )}
           </div>
+          {/* W11-B: povzetek koherence — enoten dokaz čez celoten načrt.
+              Vidno TUDI v PDF (ni print:hidden) — to je trditev kakovosti,
+              ki jo posredujemo naprej z deljenim načrtom. */}
+          {showZigzagSummary && (
+            <>
+              <div className="h-6 w-px bg-border" />
+              <div className="flex items-center gap-2">
+                <Route className="size-5 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                <span
+                  className="font-semibold text-emerald-700 dark:text-emerald-400"
+                  title={t("zigzagTitle")}
+                >
+                  {t("zigzagSummary")}
+                </span>
+              </div>
+            </>
+          )}
         </div>
       )}
 
       {/* Timeline za vsak dan */}
-      {days.map((day) => {
+      {days.map((day, dayIdx) => {
         // ISSUE #4 §6: dnevni strošek s PLAŠČEM NEZNANEGA — NaN (cena ni
         // preverjena) se NE šteje kot €0 (prej: `|| 0` je neznanje tiho
         // pretvoril v „brezplačno"). Čista funkcija = ena resnica (testirana).
         const cost = dayCostSummary(day.locations);
+        // W11-B: kakovost TEGA dneva (iz skupnega memo-ja — ena resnica)
+        const zigzag = zigzagAllDays[dayIdx];
         // TASK 88: realni datum dneva (ob znanem odhodu) + živa napoved
         const dayISO = tripStartDate
           ? dayISOForDayNumber(tripStartDate, day.day)
@@ -335,17 +372,32 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs, className
                 )}
               </h3>
               {/* TASK 88: ŽIVI čip premošča statični posnetek; brez njega
-                  ostane prikaz obdobja generiranja (danes že zastarel). */}
-              {liveWeather ? (
-                <WeatherChip w={liveWeather} lang={lang} />
-              ) : (
-                day.weather && (
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Cloud className="size-3.5" aria-hidden="true" />
-                    {day.weather.condition} · {day.weather.temp}°C
-                  </div>
-                )
-              )}
+                  ostane prikaz obdobja generiranja (danes že zastarel).
+                  W11-B „DOKAZLJIVO UREJEN DAN" poleg njega: značka 0 cik-cak —
+                  ISTA deterministična preverba kot engine (M3, geo-coherence);
+                  pokaže se SAMO ob dokazu (vsi postanki z koordinatami, ≥2,
+                  0 vračanj) — sicer iskreno molčimo. Vidna tudi v PDF. */}
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                {liveWeather ? (
+                  <WeatherChip w={liveWeather} lang={lang} />
+                ) : (
+                  day.weather && (
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Cloud className="size-3.5" aria-hidden="true" />
+                      {day.weather.condition} · {day.weather.temp}°C
+                    </div>
+                  )
+                )}
+                {zigzag?.verifiable && zigzag.zigzagFree && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                    title={t("zigzagTitle")}
+                  >
+                    <Route className="size-3" aria-hidden="true" />
+                    {t("zigzagBadge")}
+                  </span>
+                )}
+              </div>
             </div>
             {/* TASK 89: zvočni povzetek dneva (TTS, brez ključa) — desno
                 v glavi dneva; fail-closed brez uporabnih postankov.
@@ -409,6 +461,11 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs, className
                 day.locations,
                 idx
               );
+
+              // W11-B: obrok v kanonskem razponu (kosilo 12–14 / večerja
+              // 18–21) — čista funkcija, ista ključna-besedna baza kot
+              // inferCategory + geo-intent food. Žeton SAMO ob dokazu.
+              const mealWindow = mealStopWindow(visit);
 
               // ISSUE #4 §3: rezervacijska resnica TEGA postanka. Status
               // pride iz JourneyBooking prekrivke (ali optimističnega
@@ -511,6 +568,27 @@ export function TripTimeline({ days, totalBudget, tripStartDate, legs, className
                               >
                                 <Euro className="size-2.5" aria-hidden="true" />
                                 {t("priceUnverified")}
+                              </Badge>
+                            )}
+                            {/* W11-B: obrok v kanonskem razponu — urnik
+                                (TASK 50) obroke drži v pravem času, ker
+                                termini rastejo iz voženj. Žeton samo ob
+                                dokazu (razpon + parsabilen termin). */}
+                            {mealWindow && (
+                              <Badge
+                                className="bg-emerald-100 text-[10px] gap-0.5 border-emerald-300 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                                title={t(
+                                  mealWindow === "lunch"
+                                    ? "mealLunchTitle"
+                                    : "mealDinnerTitle"
+                                )}
+                              >
+                                <UtensilsCrossed className="size-2.5" aria-hidden="true" />
+                                {t(
+                                  mealWindow === "lunch"
+                                    ? "mealLunchWindow"
+                                    : "mealDinnerWindow"
+                                )}
                               </Badge>
                             )}
                             {/* ISSUE #4 §3: življenjski cikel rezervacije —

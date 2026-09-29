@@ -784,7 +784,14 @@
       "bookAtProviderAria": "Rezerviraj {name} pri ponudniku — odpre zunanjo stran",
       "marketplaceFrom": "Na tržnici od €{price}",
       "marketplaceCount": "{count, plural, one {# izkušnja} two {# izkušnji} few {# izkušnje} other {# izkušenj}}",
-      "gmapsDayAria": "Odpri dan {day} v Google Maps (navigacija po celotnem dnevu)"
+      "gmapsDayAria": "Odpri dan {day} v Google Maps (navigacija po celotnem dnevu)",
+      "zigzagBadge": "0 cik-cak",
+      "zigzagTitle": "Deterministično preverjeno: zaporedje postankov se ne vrača čez že obiskano območje (ista preverba kot naš načrtovalni motor).",
+      "zigzagSummary": "Vsi dnevi: 0 cik-cak",
+      "mealLunchWindow": "kosilo 12–14 ✓",
+      "mealLunchTitle": "Obrok je v kanonskem razponu kosila (12:00–14:00) — urnik raste iz dejanskih voženj.",
+      "mealDinnerWindow": "večerja 18–21 ✓",
+      "mealDinnerTitle": "Obrok je v kanonskem razponu večerje (18:00–21:00) — urnik raste iz dejanskih voženj."
     },
     "smartSearch": {
       "title": "Pametno iskanje",

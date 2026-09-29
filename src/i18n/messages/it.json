@@ -784,7 +784,14 @@
       "bookAtProviderAria": "Prenota {name} dal fornitore — apre un sito esterno",
       "marketplaceFrom": "Da €{price} sul marketplace",
       "marketplaceCount": "{count, plural, one {# esperienza} two {# esperienze} few {# esperienze} other {# esperienze}}",
-      "gmapsDayAria": "Apri il giorno {day} in Google Maps (navigazione per l'intera giornata)"
+      "gmapsDayAria": "Apri il giorno {day} in Google Maps (navigazione per l'intera giornata)",
+      "zigzagBadge": "0 zig-zag",
+      "zigzagTitle": "Verificato in modo deterministico: l'ordine delle tappe non torna mai su un'area già visitata (lo stesso controllo del nostro motore).",
+      "zigzagSummary": "Tutti i giorni: 0 zig-zag",
+      "mealLunchWindow": "pranzo 12–14 ✓",
+      "mealLunchTitle": "Il pasto cade nella finestra canonica del pranzo (12:00–14:00) — l'orario nasce dalle vere percorrenze.",
+      "mealDinnerWindow": "cena 18–21 ✓",
+      "mealDinnerTitle": "Il pasto cade nella finestra canonica della cena (18:00–21:00) — l'orario nasce dalle vere percorrenze."
     },
     "smartSearch": {
       "title": "Ricerca intelligente",

@@ -1,5 +1,5 @@
-import { DESTINATIONS } from "@/lib/slovenia-data";
-import type { DayPlan, LocationVisit } from "@/lib/types";
+import { coordsOfStop } from "@/lib/geo-validation";
+import type { DayPlan } from "@/lib/types";
 
 // ============================================================================
 // W11-A „DAN V ŽEPU" — izvoz dneva kot Google Maps navigacijska povezava
@@ -27,31 +27,14 @@ import type { DayPlan, LocationVisit } from "@/lib/types";
 // (uradni Maps URLs API: https://developers.google.com/maps/documentation/urls)
 // ============================================================================
 
-/** T1 koordinate (isti vir kot geo-validation.ts coordsOfStop — ena resnica). */
-const T1_COORDS = new Map(DESTINATIONS.map((d) => [d.id, d.coords]));
-
 /** Google Maps URL API: origin + 9 waypoints + destination. */
 export const GMAPS_MAX_STOPS = 11;
 
 /**
- * Koordinate postanka — T1 dataset ALI lastne (supply/klepet postanki nosijo
- * lastne lat/lng). TOČNO (0,0) je null island (geo sentinel „ni podatka") —
- * enaka semantika kot coordsOfStop v geo-validation.ts: iskreno preskočimo,
- * namesto absurdnih razdalj. */
-function coordsOfVisit(visit: LocationVisit): { lat: number; lng: number } | null {
-  const t1 = T1_COORDS.get(visit.destination_id);
-  if (t1) return t1;
-  if (
-    typeof visit.lat === "number" &&
-    typeof visit.lng === "number" &&
-    Number.isFinite(visit.lat) &&
-    Number.isFinite(visit.lng) &&
-    !(visit.lat === 0 && visit.lng === 0)
-  ) {
-    return { lat: visit.lat, lng: visit.lng };
-  }
-  return null;
-}
+ * Koordinate postanka — IZVOŽENI kanon coordsOfStop (geo-validation):
+ * T1 dataset ALI lastne lat/lng (supply/klepet), TOČNO (0,0) = null island
+ * iskreno preskočen. W11-B: odstranjena zasebna duplikatna kopija — ena
+ * resnica, izvožena iz geo-validation.ts. */
 
 /** Fiksno 6 decimalk (≈ 11 cm natančnost — obilno za navigacijo). */
 function fixed6(n: number): string {
@@ -80,7 +63,7 @@ export interface GmapsDayResult {
  * · >11 → prvih 10 + zadnji (glej zgornjo zdravo mejo).
  */
 export function gmapsDayUrl(day: Pick<DayPlan, "locations">): GmapsDayResult {
-  const resolved = day.locations.map(coordsOfVisit);
+  const resolved = day.locations.map(coordsOfStop);
   const known = resolved.filter((c): c is { lat: number; lng: number } => c !== null);
   const skipped = resolved.length - known.length;
 

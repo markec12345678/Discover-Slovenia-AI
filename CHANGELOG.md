@@ -7,6 +7,79 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.142.0] — 2026-09-29 (W11-B „DOKAZLJIVO UREJEN DAN": odličnost engine-a VIDNA v UI — značka „0 cik-cak" + obroki v kanonskem razponu)
+
+### Dodano
+
+- **W11-B „Dokazljivo urejen dan"** — odličnost, ki jo engine JAMČI
+  (TASK 50 urnik repair + TASK 51 geo urejanje, M3 backtracking = 0),
+  je dosedaj bila NEVIDNA uporabniku. MonkeyTravel o konkurentih:
+  „neither reliably hands you a day you can actually walk" — mi ga
+  oddamo, in to DOKAZANO pokažemo. Trije novi vizualni dokazi:
+  1. **Značka „0 cik-cak" v glavi vsakega dneva** (čista pilula,
+     smaragdna): ISTA deterministična preverba kot engine —
+     `findBacktrackingEvents` (M3, R_VISIT 30 km / D_LEFT 45 km,
+     dokumentirana pragova v geo-coherence.ts). Prikaz SAMO ob dokazu:
+     vsi postanki dneva imajo koordinate IN ≥2 postanka IN 0 vračanj;
+     sicer značka izostane (ne lažemo z zelenim — §8 iskrenostna
+     disciplina). Vidna tudi v PDF izvozu (ni print:hidden) — trditev
+     kakovosti se posreduje z deljenim načrtom.
+  2. **Povzetek „Vsi dnevi: 0 cik-cak"** v glavi časovnice: enoten dokaz
+     čez celoten itinerar (pokaže se le, če so VSI dnevi z ≥2 postankoma
+     preverljivi in vsi z 0 vračanj; trivialni enopostankovni dnevi ne
+     štejejo kot „dokaz").
+  3. **Obročni žetoni na postankih z obroki**: „kosilo 12–14 ✓" /
+     „večerja 18–21 ✓" — kanonska gostinska razpona; urnik (TASK 50)
+     obroke drži v pravem času, ker termini rastejo iz dejanskih voženj.
+     Žeton samo ob dokazu (razpon + parsabilen termin + ključne besede
+     SL/EN/IT/DE kanona — isti nabor kot inferCategory + geo-intent
+     food, razširjen na IT/DE).
+- **Nov modul `src/lib/day-quality.ts`**: `dayZigzagQuality` (M3 kanon)
+  in `mealStopWindow` (kanonska razpona) — 0 omrežja, 0 AI, 0 stanja.
+- **`coordsOfStop` IZVOŽEN iz geo-validation.ts** (prej zasebna): ena
+  resolucija koordinat postanka za geo-validation, gmaps-day-export
+  (W11-A) in day-quality (W11-B) — odstranjena duplikatna privatna
+  kopija iz W11-A modula (ista semantika, ena resnica).
+- **i18n ×4** (`planner.timeline.*`): zigzagBadge/zigzagTitle/
+  zigzagSummary + mealLunchWindow/mealLunchTitle/mealDinnerWindow/
+  mealDinnerTitle — SL/EN/IT/DE.
+
+### Dokazano
+
+- **17 novih unit testov** (`day-quality.test.ts`): koherenten dan
+  (Bled → Vintgar), klasični cik-cak (Bled → Piran → nazaj; 1 M3
+  dogodek), gruča < 45 km NI cik-cak (Triglav → Soča → Bohinj —
+  legitimna lokalna raziskava), <2 postanka → nič ne trdimo,
+  manjkajoče koordinate → fail-closed (NE lažno zeleno — ravno
+  manjkajoči postanek bi lahko bil vračanje), lastne koordinate,
+  null island (0,0), prazen dan; obroki: kosilo 13:00, večerja 19:30,
+  med razponoma 16:00 → null, 11:30 → null (zunaj [12,14)), ne-obročni
+  postanek ob 13:00 → null, neparsabilen termin → null, IT/DE ključne
+  besede (Ristorante / Wirtshaus), 21:00 natanko → null (zgornja meja
+  izključena). Suite 4169 → **4186**.
+- **Brskalniško (agent-browser, dev 1.142.0)**: zlata pot → 3-dnevni
+  itinerer → razširjen odsek „Več o tvoji poti" → **4 smaragdne značke**
+  (3 dnevne „0 cik-cak" + povzetek „Vsi dnevi: 0 cik-cak"), vsaka s
+  razlago v title; strežniški log istega teka neodvisno potrdil
+  `TASK 51 … backtracking=0` (server-side M3 ≡ client-side M3 — isti
+  kanon); obročni žetoni za ta vnos upravičeno izostali (deterministična
+  pot brez restavracijskih postankov — iskreno brez dokaza); 0 napak
+  strani, 0 konzolnih opozoril; dokaz `w11-dokazi/zigzag-znacka-dev.png`.
+
+### Zavestno NAREJENO (design odločitve)
+
+- **Ni telemetrije za pasivne žetone**: meritve so dejanja uporabnika
+  (kliki/izvozi — npr. `day_export_gmaps` W11-A), ne impresije.
+  Pasivni žetoni ne smejo napihniti števcev (dokumentirano — anti-
+  vzorec „impression tracking").
+- **Fail-closed preverljivost**: dan z manjkajočo koordinato KATEREGA
+  koli postanka NI preverljiv (manjkajoči postanek bi lahko bil ravno
+  vračanje) — značka izostane; NE „best effort" zelene.
+- **Trivialni dnevi (0–1 postanek) niso „dokazani"** — nima smisla
+  trditi koherenco za prazno pot; v povzetku se štejejo kot nevtralni.
+
+---
+
 ## [1.141.0] — 2026-09-29 (W11-A „DAN V ŽEPU": izvoz dneva kot Google Maps navigacijska povezava)
 
 ### Dodano

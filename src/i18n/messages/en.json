@@ -784,7 +784,14 @@
       "bookAtProviderAria": "Book {name} at the provider — opens an external site",
       "marketplaceFrom": "From €{price} on the marketplace",
       "marketplaceCount": "{count, plural, one {# experience} other {# experiences}}",
-      "gmapsDayAria": "Open day {day} in Google Maps (navigate the whole day)"
+      "gmapsDayAria": "Open day {day} in Google Maps (navigate the whole day)",
+      "zigzagBadge": "0 zig-zag",
+      "zigzagTitle": "Deterministically verified: the order of stops never returns over an already-visited area (the same check our planning engine runs).",
+      "zigzagSummary": "All days: 0 zig-zag",
+      "mealLunchWindow": "lunch 12–14 ✓",
+      "mealLunchTitle": "The meal sits in the canonical lunch window (12:00–14:00) — the schedule grows out of actual drives.",
+      "mealDinnerWindow": "dinner 18–21 ✓",
+      "mealDinnerTitle": "The meal sits in the canonical dinner window (18:00–21:00) — the schedule grows out of actual drives."
     },
     "smartSearch": {
       "title": "Smart search",

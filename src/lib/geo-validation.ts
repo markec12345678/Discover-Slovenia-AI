@@ -188,8 +188,12 @@ function classifySlot(slot: unknown): SlotKind {
  *  TOČNO (0,0) je null island — geo sentinel "ni podatka", ki ga AI odmev
  *  izpljune namesto koordinat (živ primer: refine "socca" @ 0,0 bi izračunal
  *  ~6.920 km nogo). Enak izid kot manjkajoče koordinate: iskreno
- *  "ne morem preveriti", ne absurdne razdalje. */
-function coordsOfStop(s: LocationVisit): { lat: number; lng: number } | null {
+ *  "ne morem preveriti", ne absurdne razdalje.
+ *
+ *  W11-B (izvožena): to je ZDAJ ena izvožena resnica za resolucijo koordinat
+ *  postanka — uporabljajo jo geo-validation, gmaps-day-export (W11-A) in
+ *  day-quality (W11-B). Prej tri identične privatne kopije. */
+export function coordsOfStop(s: LocationVisit): { lat: number; lng: number } | null {
   const t1 = COORDS.get(s.destination_id);
   if (t1) return t1;
   if (
