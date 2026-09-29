@@ -140,3 +140,31 @@ produkciji (Vercel = pravi standalone build), a z iskrenimi omejitvami:
 - Lighthouse „simulate“ je model (Lantern), ne instrumentalna meritev
   realnega uporabnika (RUM) — field podatkov (CrUX) za i-feel-slovenia
   še ni (domain je nov); ko bodo, se pragovi umaknejo RUM resnici.
+
+## T4 — /pot poti: vrzel, ki je zaprla 1.140.2 (samodejno vsakih 3 h)
+
+**Vrzeli (iskren zapis):** CLS 0.3805/0.3393 na `/pot/[shareId]` in
+`/pot/embed/[shareId]` je živela 14 verzij neodkrite, ker /pot poti niso
+bile v NOBENEM samodejnem pregledu (T2 vrata: 5 kanonskih strani; smoke:
+sitemap vzorčenje; odkrita šele z ročno produkcijsko diagnostiko §T3).
+
+**Zaprtje (1.140.2):** `prod-monitor.yml` (vercel job) vsake 3 h preveri
+strežniški HTML javne testne poti `/pot/embed/bb183cd77d`:
+`h-[500px]` (višinska rezervacija) + `»Načrt po dnevih«` (odsek v SSR) —
+izginotje katerega koli = rdeči alarm CLS regresije razreda 1.140.0. Ena
+ponovitev po 20 s za hladni zagon. To je GET-varovalka (SSR razred),
+ne meritev CLS — prag CLS ostane v Lighthouse vratih/T3 diagnostiki.
+
+**Recept za polno vključitev /pot v CI Lighthouse vrata (T2 — PREDLAGANO,
+neizvedeno; potrebuje lastnikov `workflow_dispatch` zagon za validacijo):**
+1. CI DB je po `prisma db push` PRAZNA — /pot potrebuje sejano javno pot:
+   po zagonu standalone strežnika izvedi zlato pot prek API-ja
+   (`POST /api/itinerary` → `POST /api/itinerary/save` → `shareId`), nato
+   `PAGES="/,/destinacije,/destinacija/bled,/na-poti,/zemljevid,/pot/$SHARE_ID"`.
+2. Embed pot ima NAMENOM `noindex` (iframe vdelava) → Lighthouse SEO
+   kategorija bo rdeča „page blocked from indexing“ — zato /pot/embed
+   zahteva izjemo za SEO prag (per-stran override v lighthouse-gates.sh)
+   ALI meri samo polno pot `/pot/$SHARE_ID`.
+3. LCP prag 5000 ms na /pot bi bil izhodišče novo-izmerjen (produkcija
+   1.140.1: polna 2.7 s, embed 4.7 s mobile/simulate) — ne prevzemi
+   kanonskega baseline-a brez meritve.

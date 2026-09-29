@@ -47,6 +47,39 @@ jobs:
       - name: 🩺 Health + funkcionalni dim (GET-only + verzija ≡ repo)
         run: bash scripts/ops/functional-smoke.sh https://i-feel-slovenia.vercel.app --get-only --ready-timeout 120 --expect-version "$(jq -r .version package.json)"
 
+      - name: 🗺️ /pot embed SSR rezervacija (CLS razred regresije — 1.140.2)
+        run: |
+          # VRZELI VRAT, ki je pustila CLS 0.38 skozi (1.140.0): /pot poti
+          # niso bile v NOBENEM samodejnem pregledu (Lighthouse vrata merijo
+          # 5 kanonskih strani, smoke vzorči sitemap). Ta korak (vsake 3 h)
+          # preveri, da strežniški HTML JAVNE testne poti vsebuje višinsko
+          # rezervacijo zemljevida (h-[500px]) IN odsek »Načrt po dnevih« —
+          # izginotje katerega koli = CLS regresija razreda 1.140.0
+          # (odsek, ki se izriše šele ob hidrataciji, premakne vse pod sabo).
+          # Testna pot bb183cd77d: anonimna, ustvarjena prek produkcijskega
+          # API-ja (Task ID 14), samo bralna — obstane, dokler je DB živa.
+          URL="https://i-feel-slovenia.vercel.app/pot/embed/bb183cd77d"
+          fetch() { curl -sS -m 90 -o /tmp/pot-embed.html -w '%{http_code}' "$URL"; }
+          CODE="$(fetch)"
+          if [ "$CODE" != "200" ]; then
+            echo "hladen zagon ($CODE) — ena ponovitev po 20 s (isti vzorec kot monitor-retry v smoke)"
+            sleep 20
+            CODE="$(fetch)"
+          fi
+          if [ "$CODE" != "200" ]; then
+            echo "❌ /pot/embed vrnil $CODE (pričakovano 200)"
+            exit 1
+          fi
+          if ! grep -qF 'h-[500px]' /tmp/pot-embed.html; then
+            echo "❌ SSR višinska rezervacija zemljevida MANJKA (h-[500px]) — CLS regresija razreda 1.140.0!"
+            exit 1
+          fi
+          if ! grep -qF 'Načrt po dnevih' /tmp/pot-embed.html; then
+            echo "❌ Odsek zemljevida izginil iz SSR (»Načrt po dnevih«) — CLS regresija razreda 1.140.0!"
+            exit 1
+          fi
+          echo "✅ /pot/embed: 200 + SSR višinska rezervacija (h-[500px]) + odsek zemljevida (Načrt po dnevih)"
+
   render:
     name: Render (PRIMARNA produkcija — hladni zagoni)
     runs-on: ubuntu-latest

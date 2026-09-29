@@ -1,0 +1,24 @@
+{
+  "_metoda": "Performance API getEntriesByType('resource') v brskalniku (agent-browser, 412×823) na TOPLO produkcijski funkciji 1.140.1 — časovnica, kdaj se DEJANSKO naloži Leaflet chunk glede na HTML/hidratacijo; brez throttlinga (realna omrežna pot sandbox → Vercel)",
+  "_datum": "2026-09-29 ~04:50 UTC",
+  "_pot": "https://i-feel-slovenia.vercel.app/pot/embed/bb183cd77d",
+  "casovnica_ms": {
+    "html_responseEnd": 889,
+    "domInteractive": 893,
+    "domComplete": 1394,
+    "zacetni_js_grafi": "682–1003 (2 valova: 682–734, 1000–1328)",
+    "map_leaflet_chunki": {
+      "zagon": 1445,
+      "konec": 1898,
+      "datoteke": ["7173-*.js", "618.*.js", "2579.*.js", "d0deef33.*.js", "8272.*.js"],
+      "razlaga": "zagon ~445 ms ZA začetkom drugega vala chunkov ≈ ob prvi izrisu dynamic komponente MED hidratacijo — SERIJSKO za hidratacijo"
+    },
+    "prve_ploscice_OSM": {
+      "zagon": 1971,
+      "konec": "1986–2023",
+      "razlaga": "takoj po chunku (1898) + Leaflet init (~70 ms); LCP element na obeh /pot poteh je prva ploščica"
+    }
+  },
+  "hipoteza": "če uvoz začnemo ob EVALUACIJI MODULA shared-trip.tsx (~1030 ms, ko se njegov chunk izvrednoti), chunk teče VZPOREDNO s hidratacijo → ploščice prej → LCP prej",
+  "_opomba": "na simuliranem počasnem 4G (Lighthouse mobile/simulate) je serializacija RELATIVNO VEČJA (download ~5–10× daljši, CPU enak) — pričakovani donos večji kot tu"
+}

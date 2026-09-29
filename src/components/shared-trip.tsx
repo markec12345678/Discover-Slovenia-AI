@@ -92,9 +92,32 @@ function MapLoadingState() {
   );
 }
 
-// Client-only load Leaflet zemljevida (enak vzorec kot map-section.tsx)
+// 1.140.2 (LCP na /pot poteh — dokumentirana naslednja meja): uvoz
+// Leafletovega chunka se je prej sprožil ŠELE ob prvi izrisu dynamic
+// komponente MED hidratacijo (produkcija 1.140.1, izmerjena časovnica:
+// chunk zagon ~1445 ms ~ 445 ms ZA začetkom hidratacije — serijsko za
+// njo; prva OSM ploščica = LCP element šele 1971 ms). Zdaj obljubo uvoza
+// ZAČNEMO ob EVALUACIJI MODULA (vzporedno s hidratacijo) — dynamic()
+// prejme že začeto obljubo, zemljevid se prikaže prej.
+//
+// VAROVALKA `typeof window`: modul se evaluira TUDI na strežniku (SSR
+// client komponent) in v bun testih — Leaflet dostopa do window ob uvozu
+// (zato ssr:false), zato uvoz začnemo SAMO v brskalniku. Strežniški izris
+// se ne spremeni (dynamic ssr:false izriše loading tudi prej).
+//
+// NAMERNO SAMO tukaj (stran deljene pote): /pot poti sta edini, kjer je
+// LCP element ploščica zemljevida; na straneh z drugačnim LCP (hero
+// slika na /) bi prednalaganje Leafleta tekmovalo za pasovno širino in
+// pokvarilo NJIHOV LCP (map-section.tsx puščamo nedotaknjen).
+const mapViewModule =
+  typeof window === "undefined"
+    ? null
+    : import("@/components/sections/map-view").then((m) => m.MapView);
+
 const MapView = dynamic(
-  () => import("@/components/sections/map-view").then((m) => m.MapView),
+  // v brskalniku je obljuba ŽE začeta (zgoraj); izraz je varovalka za
+  // robne primere (npr. testni runtime z definiranim window brez predstarta)
+  () => mapViewModule ?? import("@/components/sections/map-view").then((m) => m.MapView),
   {
     ssr: false,
     loading: () => <MapLoadingState />,

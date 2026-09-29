@@ -7,6 +7,58 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.140.2] — 2026-09-29 (LCP NA /pot POTEH: vzporeden zagon Leaflet uvoza + samodejna SSR rezervacija v monitorju)
+
+### Popravljeno
+
+- **LCP na deljenih poteh — zgodnejši zagon Leaflet uvoza** (nadaljevanje
+  1.140.1; dokumentirana naslednja meja). Izmerjena časovnica na topli
+  produkciji 1.140.1 (Performance API, brez throttlinga): Leafletov chunk
+  se je naložil ŠELE ob prvi izrisu `dynamic` komponente MED hidratacijo
+  (zagon ~1445 ms ≈ 445 ms ZA začetkom hidratacije — serijsko za njo),
+  prva OSM ploščica (LCP element na obeh /pot poteh) pa šele ~1971 ms.
+  Popravek: obljuba uvoza `map-view` se začne ŽE ob EVALUACIJI MODULA
+  (`const mapViewModule = typeof window === "undefined" ? null :
+  import(…)`), `dynamic()` pa prejme že začeto obljubo (`() =>
+  mapViewModule ?? import(…)`) → chunk teče VZPOREDNO s hidratacijo,
+  zemljevid in ploščice pridejo prej.
+  - **Varovalka `typeof window` je obvezna** (regresijsko varovana):
+    modul se evaluira tudi na strežniku (SSR client komponent) in v bun
+    testih; Leaflet dostopa do `window` ob uvozu (zato `ssr:false`) —
+    brez varovalke bi se SSR sesul.
+  - **NAMERNO samo `/pot` poti** (`shared-trip.tsx`; `map-section.tsx`
+    ostaja nedotaknjen, regresijsko varovano): zgodnji zagon ~450 KB
+    Leafleta je smislen SAMO kjer je LCP element ploščica; drugod (hero
+    slika na `/`) bi prednalaganje tekmovalo za pasovno širino NJIHOVEGA
+    LCP.
+  - SSR izris se ne spremeni (dokazano: odsek + višinska ovojnica +
+    placeholder + 3 preconnecti ostanejo v strežniškem HTML-ju; 0 napak
+    hidratacije; CLS lokalno 0.0026/0.0000 — drobni zamik je umiritev
+    pisav, kategorialno drugačen od nekdanjega skoka odseka).
+
+### Dodano
+
+- **Samodejna preverba SSR rezervacije /pot v monitorju (vsake 3 h) —
+  zaprtje vrzeli, ki je pustila CLS 0.38 skozi**: /pot poti niso bile v
+  NOBENEM samodejnem pregledu (Lighthouse vrata: 5 kanonskih strani;
+  smoke: sitemap). Nov korak v `prod-monitor.yml` (vercel job) preveri,
+  da strežniški HTML javne testne poti `/pot/embed/bb183cd77d` vsebuje
+  višinsko rezervacijo `h-[500px]` IN odsek »Načrt po dnevih« —
+  izginotje katerega koli = rdeči alarm CLS regresije razreda 1.140.0
+  (SSR odsek, ki se izriše šele ob hidrataciji, premakne vse pod sabo).
+  Ena ponovitev po 20 s za hladni zagon (isti vzorec kot monitor-retry).
+  Recept za nadaljnjo razširitev CI Lighthouse vrat na /pot (standalone
+  + sejanje poti prek API-ja) je dokumentiran v `docs/E2E-GATES.md`.
+
+### Testi
+
+- Razširjena regresijska varovalka `cls-map-reservation.test.ts` (11 →
+  14): pogodbe zgodnjega zagona (window varovalka prisotna, `dynamic`
+  prejme začeto obljubo, `map-section.tsx` NIMA vzorca — popravek je
+  namerno samo /pot). Suite 4153 → **4156**.
+
+---
+
 ## [1.140.1] — 2026-09-28 (CLS NA /pot POTEH: rezervacija zemljevida v SSR + preconnect na OSM ploščice)
 
 ### Popravljeno

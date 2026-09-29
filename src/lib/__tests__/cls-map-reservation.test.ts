@@ -247,3 +247,48 @@ describe("1.140.1 source-contract: preconnect na OSM ploščice", () => {
     expect(SCREEN_SRC).not.toContain('from "react-dom"');
   });
 });
+
+// ── SOURCE-CONTRACT: zgodnji zagon Leaflet uvoza (LCP, 1.140.2) ───────────
+//
+// ODKRITJE (produkcija 1.140.1, topla funkcija, Performance API časovnica):
+//   · Leaflet chunk se je naložil ŠELE ob prvi izrisu dynamic komponente
+//     MED hidratacijo (zagon ~1445 ms ≈ 445 ms ZA začetkom hidratacije)
+//     → serijsko ZA njo; prva OSM ploščica (LCP) šele 1971 ms.
+// POPRAVEK: obljuba uvoza se začne ob EVALUACIJI MODULA (vzporedno s
+//   hidratacijo); dynamic() prejme že začeto obljubo.
+describe("1.140.2 source-contract: zgodnji zagon Leaflet uvoza (LCP)", () => {
+  test("uvoz se začne ob evaluaciji modula Z window varovalko (SSR/bun-test varno)", () => {
+    // Leaflet dostopa do window OB UVOZU (zato ssr:false) — modul se
+    // evaluira tudi na strežniku (SSR client komponent) in v bun testih,
+    // zato MORA biti zagon pogojen z typeof window. Odstranitev varovalke
+    // = sesutje SSR → test pade.
+    expect(SHARED_TRIP_SRC).toContain("typeof window === \"undefined\"");
+    expect(SHARED_TRIP_SRC).toContain("const mapViewModule =");
+    expect(SHARED_TRIP_SRC).toContain(
+      'import("@/components/sections/map-view").then((m) => m.MapView);'
+    );
+  });
+
+  test("dynamic() prejme ŽE ZAČETO obljubo (ne čakanje na prvi izris)", () => {
+    // dynamic loader vrača mapViewModule (obljuba, začeta ob evaluaciji
+    // modula v brskalniku) z ?? varovalko za robne runtime. Vračanje na
+    // golo () => import(…) (serijsko za hidratacijo) = vračanje LCP
+    // zamika ~450 ms → test pade.
+    expect(SHARED_TRIP_SRC).toContain(
+      "() => mapViewModule ?? import(\"@/components/sections/map-view\").then((m) => m.MapView)"
+    );
+  });
+
+  test("map-section.tsx NIMA zgodnjega zagona (popravek je NAMERNO samo /pot)", () => {
+    // Zgodnji zagon Leafleta je smiseln SAMO na straneh, kjer je LCP
+    // element ploščica (obe /pot poti). Drugod (npr. hero slika na /) bi
+    // prednalaganje ~450 KB tekmovalo za pasovno širino NJIHOVEGA LCP.
+    // Razširitev vzorca na map-section = zavrta izboljšava tu → test pade.
+    const MAP_SECTION_SRC = readFileSync(
+      new URL("../../components/sections/map-section.tsx", import.meta.url),
+      "utf8"
+    );
+    expect(MAP_SECTION_SRC).not.toContain("const mapViewModule =");
+    expect(MAP_SECTION_SRC).not.toContain("typeof window === \"undefined\"");
+  });
+});
