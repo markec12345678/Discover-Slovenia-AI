@@ -8,6 +8,7 @@ import { tripWindowMs } from "@/lib/trip-dates";
 import { resolveTripRole, roleAtLeast } from "@/lib/trip-permissions";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { SharedTrip } from "@/components/shared-trip";
+import { Chatbot } from "@/components/chatbot";
 import { TripCollaboration } from "@/components/trip-collaboration";
 import { TripPresence } from "@/components/trip-presence";
 import { TripReservations } from "@/components/trip-reservations";
@@ -629,6 +630,16 @@ export async function SharedTripScreen({
               skrije obstoječe .pot-page footer pravilo — URL nogica ostane
               edina) */}
           <Footer />
+
+          {/* ISSUE #16 faza 4 — klepet je asistent ZNOTRAJ potovanja (#16
+              §Klepet): deljena pot je bila zadnja površina brez asistentnika
+              (audit #16: Chatbot na 18 straneh, /pot/[shareId] NE) — gledalec
+              deljene poti lahko vpraša (npr. „Kaj početi na Bledu?") in
+              doda v SVOJO zbirko. print:hidden: PDF izvoz ostane čist
+              (recept .pot-page — tu zadostuje Tailwind pomočnik). */}
+          <div className="print:hidden">
+            <Chatbot />
+          </div>
         </>
       )}
     </div>

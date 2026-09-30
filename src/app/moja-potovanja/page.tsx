@@ -3,6 +3,7 @@ import { getLocale } from "next-intl/server";
 
 import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
+import { Chatbot } from "@/components/chatbot";
 import { MojaPotovanjaView } from "./moja-potovanja-view";
 import { hreflangForPath } from "@/components/seo";
 import { currentBaseUrl } from "@/lib/host";
@@ -66,6 +67,11 @@ export default function MojaPotovanjaPage() {
       <Navigation solid />
       <MojaPotovanjaView />
       <Footer />
+      {/* ISSUE #16 faza 4 — klepet je asistent ZNOTRAJ potovanja (#16 §Klepet):
+          hub brez asistentnika je bil zadnja vrzel (audit #16: Chatbot na
+          18 straneh, /moja-potovanja NE) — „Najdi mi dobro kosilo blizu
+          naslednje točke“ mora delovati tudi iz mojega huba. */}
+      <Chatbot />
     </div>
   );
 }

@@ -7,6 +7,51 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.151.0] — 2026-09-30 (ISSUE #16 „UX/IA KONSOLIDACIJA", faza 4 — KLEPET KOT ASISTENT ZNOTRAJ POTOVANJA: zadnji 2 površini)
+
+### Dodano
+
+- **KLEPET NA HUBU `/moja-potovanja` (`page.tsx`).** Issue #16 §Klepet:
+  „Klepet naj ne postane še en ločen ›izdelek‹ znotraj aplikacije. Ostane
+  **asistent znotraj uporabnikovega potovanja**." Audit #16 vrzel #6:
+  Chatbot je bil montiran na 18 straneh z AddToTrip na karticah krajev —
+  MANJKAL je prav na osrednjem trip hubu (uporabnik sredi SVOJE poti ni
+  imel asistentnika: „Najdi mi dobro kosilo blizu naslednje točke" ni
+  delovalo iz huba). Zdaj je `<Chatbot />` montiran za Footerjem (lupina
+  ostaja: Navigation solid + MojaPotovanjaView + Footer + klepet) — enak
+  kanon kot ostalih 18 strani.
+- **KLEPET NA DELJENI POTI `/pot/[shareId]` (`shared-trip-screen.tsx`).**
+  Zadnja površina brez asistentnika: gledalec deljene poti lahko vpraša
+  (npr. „Kaj početi na Bledu?") in doda v SVOJO zbirko (kanonski
+  write-through iz faze 3 deluje povsod). Ovojnica `print:hidden` — PDF
+  izvoz poti ostane čist (recept `.pot-page` — URL nogica ostaja edina
+  v printu; tu zadostuje Tailwind pomočnik).
+
+### Spremenjeno
+
+- **NOV test `issue16-f4-chat-assistant.test.ts`** (22 varovalk,
+  source-contract readFileSync — kanon Task 28/33/34): hub Chatbot za
+  Footerjem + dokumentiran namen (#16 §Klepet); deljena pot Chatbot v
+  print:hidden + za Footerjem; **referendum zero-loss — vseh 20 strani**
+  (18 obstoječih + 2 novi) ima montiran `<Chatbot` (popis v samem testu
+  kot živi inventar #16).
+
+### Dokazano
+
+- Suite **4313/4313** zelenih (+22); tsc 0 napak; eslint čist.
+- Dev E2E brskalniško (dokazi `issue16-dokazi/f4-*.png`): /moja-potovanja
+  klepet odprt → vprašanje → SL odgovor + AddToTrip kartice; /pot/[shareId]
+  klepet prisoten; 0 napak strani/konzole.
+
+### Meja (iskrena)
+
+- Chatbot komponenta je NENAMENJENA za print (print:hidden) na deljeni
+  poti; na hubu tisk ni kanonična operacija.
+- Faza #16 5 (analitika lupine + StickyMobileCTA dolg) sledi — zadnja
+  faza načrta.
+
+---
+
 ## [1.150.0] — 2026-09-30 (ISSUE #16 „UX/IA KONSOLIDACIJA", faza 3 — ZEMLJEVID POI POPUP: kanonski write-through v OBE plasti)
 
 ### Dodano
