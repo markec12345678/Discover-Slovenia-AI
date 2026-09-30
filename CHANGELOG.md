@@ -7,6 +7,34 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.156.0] — 2026-09-30 (#19 DISCOVER: FAZA E — responsive verifikacija 72 meritev + 4 prezentacijski popravki)
+
+### Popravljeno (4, čisto prezentacijski — 0 funkcionalnih sprememb)
+
+- **`/nacrtuj` ingest tablist `flex-wrap`** — 5 zavihkov pri 360px štrli 3px
+  čez (edini realni overflow v 72-merilnem sweepu); ozko polje zdaj ovije.
+- **Iskalna vrstica zemljevida** — vhod 20px → 28px (vrstica 44px) + gumb
+  Počisti 22px → 26px (WCAG 2.2 SC 2.5.8).
+- **Gumb »Preskoči kviz«** — 16px → 28px.
+- **Zemljevid grozdni mehurčki** — Leaflet privzeti zabojčik 12×12 → izrecna
+  dotikalna tarča 44×30 (vidni mehurček ~24×24+ je imel ožji zadetek od
+  vizuala); idiomatska velikost grozda, vizualno identična.
+
+### Dodano (dokumentacija)
+
+- **`docs/RESPONSIVE-VERIFICATION.md`** — FAZA E dokaz: 72 meritev (5 mobilnih
+  širin × 7 površin + 6 jezikov @ 320 + desktop 1280/1920): **0 prelivov,
+  0 slik brez alt, 0 resnih tarč < 24px** (WCAG-inline izjeme dokumentirane),
+  h1 pravilen v vseh jezikih. Merilni artefakti (hidriranje, restart, neterror,
+  OOM) + 2 predobstoječi težavi odkriti in dokumentirani (§25).
+- **`scripts/ops/faza-e-responsive.sh`** — ponovljiva sweep skripta (OOM-odporna,
+  hydration-odporna, z restart-nadzorom).
+
+### Regresija
+
+- eslint 0 · **bun test 4413/4413** (73.059 expect) · zlata pot zemljevida
+  (grozd → popup odprt — MutationObserver dokaz) · 8 AFTER screenshotov.
+
 ## [1.155.1] — 2026-09-30 (#19 DISCOVER: FAZA C-3 — DOM-meritveni audit gostote/ritma + 1 realni popravek ritma)
 
 ### Spremenjeno

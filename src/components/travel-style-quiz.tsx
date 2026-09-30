@@ -364,7 +364,7 @@ export function TravelStyleQuiz() {
               onClick={() => {
                 document.getElementById("načrtuj")?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
-              className="mt-3 rounded-sm text-xs text-muted-foreground underline underline-offset-4 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="mt-3 rounded-sm py-1.5 text-xs text-muted-foreground underline underline-offset-4 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {t("skip")}
             </button>

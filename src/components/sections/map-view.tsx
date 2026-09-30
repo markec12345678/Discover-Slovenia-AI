@@ -1680,10 +1680,19 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
       for (const cell of pins.cells) {
         const dominant = cell.cats[0]?.type ?? "poi";
         const meta = taxonomyOf(dominant);
+        // FAZA E (#19 §17/§19): dotikalna tarča grozda — divIcon brez
+        // iconSize pusti Leafletov PRIVZETI zabojčik 12×12 (izmerjeno),
+        // viden mehurček pa ~24×24+; zadetek na robu mehurčka je deloval
+        // le prek DOM bubblinga otroka. Izrecna tarča 44×30 s sredinsko
+        // pritrjenim mehurčkom (left/top 50 % + translate) = idiomska
+        // velikost grozda leaflet.markercluster (~40–52 px), vizualno
+        // identična, dotik na celem območju.
         const icon = L.divIcon({
           className: "map-grid-bubble",
+          iconSize: [44, 30],
+          iconAnchor: [22, 15],
           html: `
-            <div style="position: absolute; transform: translate(-50%, -50%); white-space: nowrap;">
+            <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); white-space: nowrap;">
               <div style="
                 display: inline-flex; align-items: center; gap: 4px;
                 padding: 3px 9px; border-radius: 9999px;
@@ -1934,7 +1943,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={T.searchPlaceholder[lang]}
             aria-label={T.searchAria[lang]}
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground focus-visible:outline-none"
+            className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none placeholder:text-muted-foreground focus-visible:outline-none"
           />
           {searchLoading ? (
             <Loader2 className="size-4 shrink-0 animate-spin text-primary" aria-hidden="true" />
@@ -1943,7 +1952,7 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
               type="button"
               onClick={handleClearSearch}
               aria-label={T.searchClear[lang]}
-              className="shrink-0 rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <X className="size-3.5" aria-hidden="true" />
             </button>

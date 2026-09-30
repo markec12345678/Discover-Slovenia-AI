@@ -3203,10 +3203,13 @@ export function ItineraryPlanner() {
                 >
                   <div className="space-y-2">
                     {/* Zavihek vira: Povezava | Slika (F8) */}
+                    {/* FAZA E (#19 §17): flex-wrap — 5 zavihkov pri 360px
+                        štrli 3px čez (izmerjeno); ozko polje zdaj ovije v
+                        2 vrstici, široko nespremenjeno. */}
                     <div
                       role="tablist"
                       aria-label={t("ingestLabel")}
-                      className="flex items-center gap-1"
+                      className="flex flex-wrap items-center gap-1"
                     >
                       {(
                         [
