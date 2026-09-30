@@ -7,6 +7,65 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.153.1] — 2026-09-30 (QH: SLOVENIA PASS — posvečeni testi vrzeli 17-A + 2 popravljeni latentna hrošča)
+
+### Popravljeno
+
+- **ZNAČKA „Slovenia Master" („Obiskal vseh 9 regij") je štela tudi BALKANSKE
+  regije.** T1 dataset pokriva Slovenijo IN Balkan (zemljevid „Slovenija in
+  Balkan" — dalmacija, istra, kvartner, lika, kontinentalna-hrvaska,
+  boka-kotorska, crnogorsko-primorje, severna/osrednja-crna-gora,
+  osrednja-albanija, juana-albanija = 11 regij), `recordItineraryGenerated` /
+  `markRegionVisited` / `recordDestinationViewed` pa zapišejo vsako regijo
+  obiska. Pogoj `visitedRegions.length >= 9` je tako lahko odklenil master z
+  IZKLJUČNO balkanskim itinererjem (10+ regij) brez enega obiska Slovenije;
+  števec „Obiskane regije" je ob tem lahko pokazal „10/9"+. Zdaj: master
+  zahteva VSEH 9 slovenskih regij (kanonski seznam `PASS_REGIONS` v lib),
+  števec šteje SAMO slovenske regije, balkanski obiski se v visitedRegions
+  zapišejo iskreno (točke + značka explorer „3+ regije" po opisu ne omejeta
+  na Slovenijo) — 0 sprememb vedenja za čisto slovenske uporabnike.
+- **PRIVZETO STANJE je DELILO mutable tabele z modulnim objektom („duhovni"
+  vnosi po propadu persistente).** `loadPass()` je ob praznem/neberljivem
+  storage-u vračal PLITVO kopijo `{ ...DEFAULT_PASS }` — tabele
+  (visitedRegions, badges, viewedListingIds, awardedDestinationIds) so bile
+  DELJENE reference: prva mutacija po praznem storage-u je onesnažila
+  privzetek za CELO sejo. V produkciji vidno, če persistenta spodleti
+  (zasebni način: `setItem` meče, `getItem` vrne null → uporabnik bi videl
+  regije/značke/lokalce, ki jih ni obiskal). Zdaj `freshPass()` vsakemu
+  privzetemu branju vrne LASTNE tabele.
+
+### Spremenjeno
+
+- **ENA TOČKA RESNICE za prikaz potnega lista:** kanonski seznam 9 slovenskih
+  regij (`PASS_REGIONS`), števec obiskanih slovenskih regij
+  (`countVisitedSlovenianRegions`) in pogoji odklopa značk
+  (`computeUnlockedBadges` — persistirano ∪ pogoji stanja) zdaj živijo SAMO
+  v `src/lib/pass-logic.ts`; komponenta `slovenia-pass.tsx` ne duplicira več
+  lokalnega seznama regij niti pogojev značk (drift tveganje istega razreda
+  kot refId split, popravljen v 1.153.0).
+
+### Dodano
+
+- **NOV test `issue17-slovenia-pass.test.ts`** (43 varovalk — zapira vrzel
+  kandidata #4 zaključnega audita #17/17-A: „Slovenia Pass nima posvečenega
+  testa", zadnja funkcija §4 brez lastne evidence). Pokriva: sanitizacijo
+  stanja (pokvarjen JSON, delni/ne-veljavni tipi), vseh 5 mutacij
+  (awardPoints, markRegionVisited, recordItineraryGenerated +50/idempotenca
+  po NABORU destinacij, recordDestinationViewed +10/idempotenca/neznana
+  destinacija = poštena meja, recordListingViewed +5/idempotenca), števce
+  kategorij po TIPU/bestFor/kategoriji obiska (tudi napačno pripeta
+  kategorija NE šteje za tujo destinacijo), vseh 6 pogojev značk, MASTER FIX
+  (izključno balkanski itinerer ≥9 regij NE odklene master; 8 slovenskih +
+  3 balkanske tudi ne; dopolnjena 9. slovenska ga odklene), FRESH DEFAULT
+  FIX (privzeta branja ne delijo tabel), dogodke (passUpdated/passToast
+  sporočila vključno z objavo novih značk), integriteto PASS_BADGES /
+  PASS_REGIONS, PODATKOVNO POGODBO (vsaka od 9 slovenskih regij ima ≥1
+  destinacijo v T1 — master je dosegljiv, ne mrtva značka) in
+  source-contract (komponenta posluša vseh 5 dogodkov; razpošiljalci
+  oddajajo kanonske detajle; stran mountira sekcijo + klepeta).
+
+---
+
 ## [1.153.0] — 2026-09-30 (ISSUE #17 „FINAL PRODUCT COMPLETION" §5 — KANONSKA IDENTITETA „DODAJ V MOJO POT" IZ KLEPETA)
 
 ### Popravljeno

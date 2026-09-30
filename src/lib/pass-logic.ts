@@ -59,6 +59,41 @@ export interface PassMutationResult {
 
 export const PASS_STORAGE_KEY = "discoverslovenia_pass";
 
+/** Prikazni podatki regije na digitalnem potnem listu. */
+export interface PassRegionInfo {
+  id: string;
+  name: string;
+  emoji: string;
+}
+
+/**
+ * KANONSKIH 9 SLOVENSKIH regij digitalnega potnega lista (mreža na kartici).
+ * ENA točka resnice za komponento in logiko (1.153.1): DESTINATIONS pokriva
+ * tudi Balkan (dalmacija, istra, kvartner, … — zemljevid „Slovenija in
+ * Balkan“), zato „vseh 9 regij“ (master) in števec „X/9“ smeta šteti SAMO
+ * te regije — balkanski obiski se v visitedRegions zapišejo iskreno (točke,
+ * explorer „3+ regije“), a master/števec ne razumejo kot slovenske.
+ */
+export const PASS_REGIONS: PassRegionInfo[] = [
+  { id: "gorenjska", name: "Gorenjska", emoji: "🏔️" },
+  { id: "primorska", name: "Primorska", emoji: "🌊" },
+  { id: "osrednja", name: "Osrednja Slovenija", emoji: "🏛️" },
+  { id: "kras", name: "Kras", emoji: "🪨" },
+  { id: "stajerska", name: "Štajerska", emoji: "🍇" },
+  { id: "koroska", name: "Koroška", emoji: "🌲" },
+  { id: "prekmurje", name: "Prekmurje", emoji: "🌾" },
+  { id: "dolenjska", name: "Dolenjska", emoji: "🍷" },
+  { id: "bela-krajina", name: "Bela krajina", emoji: "🍯" },
+];
+
+/** Koliko od 9 slovenskih regij je obiskanih (balkanski vnosi se ne štejejo). */
+export function countVisitedSlovenianRegions(visitedRegions: string[]): number {
+  return PASS_REGIONS.reduce(
+    (n, r) => (visitedRegions.includes(r.id) ? n + 1 : n),
+    0
+  );
+}
+
 export const PASS_BADGES: BadgeInfo[] = [
   { id: "explorer", name: "Explorer", emoji: "🗺️", description: "Obiskal 3+ regije" },
   { id: "nature", name: "Nature Lover", emoji: "🌿", description: "Obiskal 5+ naravnih destinacij" },
@@ -68,26 +103,40 @@ export const PASS_BADGES: BadgeInfo[] = [
   { id: "master", name: "Slovenia Master", emoji: "👑", description: "Obiskal vseh 9 regij" },
 ];
 
-const DEFAULT_PASS: SloveniaPassData = {
-  visitedRegions: [],
-  points: 0,
-  badges: [],
-  natureVisits: 0,
-  foodVisits: 0,
-  activityVisits: 0,
-  viewedListingIds: [],
-  awardedDestinationIds: [],
-  lastItineraryKey: null,
-};
+/**
+ * SVEŽ privzeti pass — VSAKO klicanje dobi LASTNE tabele (1.153.1).
+ * Prejšnja plitva kopija (`{ ...DEFAULT_PASS }`) je delila mutable tabele
+ * (visitedRegions, badges, viewedListingIds, awardedDestinationIds) z
+ * modulnim objektom: prva mutacija po praznem storage-u je onesnažila
+ * privzetek za CELO sejo — spet vidno, če persistenta kasneje spodleti
+ * (zasebni način: setItem met, getItem vrne null → uporabnik bi videl
+ * duhovne regije/značke/lokalce, ki jih ni obiskal).
+ */
+function freshPass(): SloveniaPassData {
+  return {
+    visitedRegions: [],
+    points: 0,
+    badges: [],
+    natureVisits: 0,
+    foodVisits: 0,
+    activityVisits: 0,
+    viewedListingIds: [],
+    awardedDestinationIds: [],
+    lastItineraryKey: null,
+  };
+}
 
 // Pogoji za odklep posamezne značke
+// master (1.153.1): VSEH 9 slovenskih regij — ne zgolj poljubnih 9 regij
+// (prej je pogoj štel surovo dolžino seznama, kar je lahko odklenil
+// izključno balkanski itinerer — dalmacija + istra + kvartner + … je 11 regij).
 const BADGE_CONDITIONS: Record<string, (p: SloveniaPassData) => boolean> = {
   explorer: (p) => p.visitedRegions.length >= 3,
   nature: (p) => p.natureVisits >= 5,
   foodie: (p) => p.foodVisits >= 3,
   adventure: (p) => p.activityVisits >= 3,
   local: (p) => p.viewedListingIds.length >= 5,
-  master: (p) => p.visitedRegions.length >= 9,
+  master: (p) => PASS_REGIONS.every((r) => p.visitedRegions.includes(r.id)),
 };
 
 // Naravni tipi destinacij (za števec natureVisits)
@@ -102,7 +151,7 @@ const ACTIVITY_BEST_FOR = new Set(["avantura", "adrenalin", "aktivnosti", "pohod
 // ============================================================================
 
 export function loadPass(): SloveniaPassData {
-  if (typeof window === "undefined") return { ...DEFAULT_PASS };
+  if (typeof window === "undefined") return freshPass();
   try {
     const stored = localStorage.getItem(PASS_STORAGE_KEY);
     if (stored) {
@@ -112,7 +161,7 @@ export function loadPass(): SloveniaPassData {
   } catch {
     // Pokvarjen JSON — začni na novo
   }
-  return { ...DEFAULT_PASS };
+  return freshPass();
 }
 
 /** Združi shranjene podatke s privzetimi vrednostmi (migracije/varnost). */
@@ -159,6 +208,20 @@ function unlockBadges(pass: SloveniaPassData): string[] {
     }
   }
   return newBadges;
+}
+
+/**
+ * VSE trenutno odklenjene značke (persistirane ∪ pogojev trenutnega stanja).
+ * Ena točka resnice za prikaz (komponenta) — 1.153.1: prej je komponenta
+ * pogoje duplicirala lokalno (drift tveganje istega razreda kot refId split
+ * v 1.153.0).
+ */
+export function computeUnlockedBadges(pass: SloveniaPassData): Set<string> {
+  const unlocked = new Set<string>(pass.badges);
+  for (const badge of PASS_BADGES) {
+    if (BADGE_CONDITIONS[badge.id]?.(pass)) unlocked.add(badge.id);
+  }
+  return unlocked;
 }
 
 function announceBadges(newBadges: string[]) {

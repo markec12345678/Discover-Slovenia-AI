@@ -14,7 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   PASS_BADGES,
+  PASS_REGIONS,
   PASS_STORAGE_KEY,
+  computeUnlockedBadges,
+  countVisitedSlovenianRegions,
   loadPass,
   recordDestinationViewed,
   recordItineraryGenerated,
@@ -31,24 +34,16 @@ import {
 //
 // Obiskano: 3 regije · Točke: 420 · Značke: 🌿 Nature · 🍷 Food Lover
 //
-// Logika (točke/regije/značke) živi v src/lib/pass-logic.ts:
+// Logika (točke/regije/značke/pogoji značk/seznam regij) živi V src/lib/
+// pass-logic.ts (ena točka resnice, 1.153.1):
 //   - "itineraryGenerated" → +50 točk + regije + števci kategorij
 //   - "destinationViewed"  → +10 točk + obisk regije
 //   - "listingViewed"      → +5 točk + števec lokalov
 // Stanje se persistira v localStorage "discoverslovenia_pass".
+// Števec „X/9“ in master štetajta SAMO slovenske regije (PASS_REGIONS) —
+// balkanski obiski (dalmacija, istra, …) se pripišejo pošteno, a se ne
+// štejejo kot slovenske regije potnega lista.
 // ============================================================================
-
-const REGIONS = [
-  { id: "gorenjska", name: "Gorenjska", emoji: "🏔️" },
-  { id: "primorska", name: "Primorska", emoji: "🌊" },
-  { id: "osrednja", name: "Osrednja Slovenija", emoji: "🏛️" },
-  { id: "kras", name: "Kras", emoji: "🪨" },
-  { id: "stajerska", name: "Štajerska", emoji: "🍇" },
-  { id: "koroska", name: "Koroška", emoji: "🌲" },
-  { id: "prekmurje", name: "Prekmurje", emoji: "🌾" },
-  { id: "dolenjska", name: "Dolenjska", emoji: "🍷" },
-  { id: "bela-krajina", name: "Bela krajina", emoji: "🍯" },
-];
 
 const EMPTY_PASS: SloveniaPassData = {
   visitedRegions: [],
@@ -102,20 +97,18 @@ export function SloveniaPass() {
     };
   }, []);
 
-  // Update badges based on progress (regije + števci)
-  const updatedBadges = PASS_BADGES.map((b) => {
-    let unlocked = pass.badges.includes(b.id);
-    if (b.id === "explorer" && pass.visitedRegions.length >= 3) unlocked = true;
-    if (b.id === "master" && pass.visitedRegions.length >= 9) unlocked = true;
-    if (b.id === "nature" && pass.natureVisits >= 5) unlocked = true;
-    if (b.id === "foodie" && pass.foodVisits >= 3) unlocked = true;
-    if (b.id === "adventure" && pass.activityVisits >= 3) unlocked = true;
-    if (b.id === "local" && pass.viewedListingIds.length >= 5) unlocked = true;
-    return { ...b, unlocked };
-  });
+  // Odklenjenost značk — izpeljano IZKLJUČNO iz lib pogojev (1.153.1:
+  // prej duplicirano v komponenti — drift tveganje); števec master šteje
+  // samo slovenske regije (PASS_REGIONS), ne vse obiskane.
+  const unlockedBadges = computeUnlockedBadges(pass);
+  const updatedBadges = PASS_BADGES.map((b) => ({
+    ...b,
+    unlocked: unlockedBadges.has(b.id),
+  }));
 
+  const slovenianVisited = countVisitedSlovenianRegions(pass.visitedRegions);
   const unlockedCount = updatedBadges.filter((b) => b.unlocked).length;
-  const nextRegion = REGIONS.find((r) => !pass.visitedRegions.includes(r.id));
+  const nextRegion = PASS_REGIONS.find((r) => !pass.visitedRegions.includes(r.id));
 
   if (!hydrated) return null;
 
@@ -149,11 +142,11 @@ export function SloveniaPass() {
                 Obiskane regije
               </h4>
               <Badge variant="secondary" className="text-[10px]">
-                {pass.visitedRegions.length}/9
+                {slovenianVisited}/{PASS_REGIONS.length}
               </Badge>
             </div>
             <div className="grid grid-cols-3 gap-1.5">
-              {REGIONS.map((region) => {
+              {PASS_REGIONS.map((region) => {
                 const visited = pass.visitedRegions.includes(region.id);
                 return (
                   <div
