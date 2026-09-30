@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { toPublicListing } from "@/lib/public-fields";
 import { parseSeasons } from "@/lib/listing-practical";
@@ -12,7 +13,16 @@ export async function GET(request: Request) {
     const destinationId = searchParams.get("destinationId");
     const plan = searchParams.get("plan");
     const featured = searchParams.get("featured");
-    const limit = parseInt(searchParams.get("limit") || "50", 10);
+    // QH 1.153.2 (popravljen latentni hrošč #1): ?limit=abc je parseInt-ra
+    // dal NaN → Math.min(NaN, 100) = NaN → Prisma je zavrla `take` →
+    // PrismaClientValidationError → 500 na JAVNI ruti (produkcijsko
+    // potrjeno na Vercelu 1.153.0: /api/listings?limit=abc → 500).
+    // Varovalka: neveljavna/nenegativna/nenaravna vrednost → privzeti 50.
+    const rawLimit = parseInt(searchParams.get("limit") || "50", 10);
+    const limit =
+      Number.isFinite(rawLimit) && rawLimit > 0
+        ? Math.min(rawLimit, 100)
+        : 50;
     const sort = searchParams.get("sort") || "featured"; // featured | rating | newest
 
     // Zgradi where pogoj — samo PUBLISHED lokalci so javno vidni
@@ -24,22 +34,27 @@ export async function GET(request: Request) {
     if (plan && plan !== "all") where.plan = plan;
     if (featured === "true") where.featured = true;
 
-    // Sortiranje
-    let orderBy: Record<string, string> = {};
+    // Sortiranje — Prisma orderBy POLJE (deluje tudi na SQLite)
+    // QH 1.153.2 (popravljen latentni hrošč #2): privzeti "featured" sort je
+    // v komentarju obljubljal »featured first, then by rating«, a izvajal SAMO
+    // { featured: "desc" } — vrstni red neizpostavljenih je bil po vstavitvi
+    // (produkcija: Kavarna 4.4 pred Piran 4.9). Stara opomba, da "SQLite ne
+    // podpira kompleksnih orderBy", je bila napačna: Prisma polje orderBy se
+    // prevede v večstolpčni ORDER BY, ki SQLite podpira v celoti.
+    let orderBy: Prisma.ListingOrderByWithRelationInput[];
     if (sort === "rating") {
-      orderBy = { rating: "desc" };
+      orderBy = [{ rating: "desc" }];
     } else if (sort === "newest") {
-      orderBy = { createdAt: "desc" };
+      orderBy = [{ createdAt: "desc" }];
     } else {
-      // featured: featured first, then by rating
-      // SQLite ne podpira kompleksnih orderBy, zato najprej featured
-      orderBy = { featured: "desc" };
+      // featured (privzeto): izpostavljeni najprej, nato po oceni
+      orderBy = [{ featured: "desc" }, { rating: "desc" }];
     }
 
     const listings = await db.listing.findMany({
       where,
       orderBy,
-      take: Math.min(limit, 100),
+      take: limit, // varovalna vrednost iz zgornje preverbe ( že cap-ana)
     });
 
     // Razčleni JSON polja (images, specialties)

@@ -7,6 +7,57 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.153.2] — 2026-09-30 (QH: LOKALI — posvečena evidence vrzeli 17-A #5 + 2 POPRAVLJENA produkcijsko potrjena latentna hrošča /api/listings)
+
+### Popravljeno
+
+- **`GET /api/listings?limit=abc` → HTTP 500 (javna ruta!).** `parseInt("abc")`
+  je dal `NaN` → `Math.min(NaN, 100)` = `NaN` → Prisma je ZAVRNILA argument
+  `take` → `PrismaClientValidationError` → 500 `{"error":"Napaka pri
+  pridobivanju lokalov"}`. Produkcijsko potrjeno na Vercelu 1.153.0
+  (30. 9. 2026): `curl /api/listings?limit=abc` → 500. UI pošlje vedno
+  `limit=50`, zato je bila napaka LATENTNA — aktivira jo vsak ročni/klientni
+  klic s smetanim parametrom. Popravek: varovalka
+  `Number.isFinite(rawLimit) && rawLimit > 0` (neveljavna, negativna ali
+  degenerirana vrednost → privzeti 50; cap 100 ostaja).
+- **Privzeti „featured" sort NI izvajal obljubljene sekundarne ureditve po
+  oceni.** Komentar v kodi je obljavljal „featured first, then by rating", a
+  `orderBy` je bil `{ featured: "desc" }` SAMO — vrstni red neizpostavljenih
+  lokalov je sledil vstavitvenemu redu. Produkcijsko potrjeno (Vercel
+  1.153.0): Kavarna Zvezda (4.4) je bila uvrščena pred Piran Sunset Kayak
+  (4.9). Napačna opomba „SQLite ne podpira kompleksnih orderBy" — Prisma
+  `orderBy` POLJE se prevede v večstolpčni ORDER BY, ki SQLite podpira v
+  celoti. Popravek: `orderBy: [{ featured: "desc" }, { rating: "desc" }]`.
+
+### Dodano
+
+- **NOV test `issue17-lokali-listings.test.ts` (24 varovalk)** — zapira vrzel
+  kandidata #5 zaključnega audita 17-A (»evidence za /lokali je posredna«).
+  Struktura po konvenciji task28: UNIT (FW1 `toPublicListing` sanitizacija —
+  interna/admin polja stripana, social proof ohranjen) · SOURCE-CONTRACT
+  (limit varovalka, sekundarna ureditev, toPublicListing v obeh rutah,
+  published-only vrata [slug] rute, kanonska AddToTripButton identiteta
+  kartica ↔ modal `kind:listing/refId:id/source:lokali/href:/lokali`) ·
+  FUNKCIONALNO (DB-gated, pošten skip; semena z REALNIM Ownerjem — Listing
+  .ownerId je FK — in semena izven try/catch, da napaka sejanja pade GLASNO
+  in ne more lažno zeleneti): samo-published (osnutek/zavrnjen nevidna),
+  FW1 functional (ownerId/ownerEmail/rejectionReason/aiRecommendations NE
+  iztečejo kljub realnim vrednostim v DB), vsi filtri (category/
+  destinationId/plan/featured + sentinel „all"), vsi sorti (featured s
+  sekundarno oceno — diskriminira popravek, rating, newest, neveljaven →
+  featured), limit robustnost (abc/-5/0 → 200 s privzetim, >100 cap),
+  [slug] ruta (published 200 + sanitiziran, osnutek 404, neobstoječ 404,
+  viewCount async increment s pollingom). Suite 4413/4413 (+24), tsc 0,
+  eslint 0; TASK 76 higiena (clearProviderRateLimits) upoštevana.
+- **DEV E2E (agent-browser) z dokazi:** `/lokali` — seznam v POPRAVLJENEM
+  vrstnem redu (izpostavljeni → ocena), filter kategorije (Restavracija → 2
+  lokalca, števec „Prikazujem 2 lokale" s pravilno dvojino), modal s
+  podrobnostmi, kanonski Add prek obeh površin (kartica + modal → ISTI
+  refId → 1 vnos, kartica prepozna „V moji poti"), 0 konzolnih/page napak.
+  Dokazi: `qh-dokazi/dev-lokali-{seznam-sort,filter-kategorija,modal}.png`.
+
+---
+
 ## [1.153.1] — 2026-09-30 (QH: SLOVENIA PASS — posvečeni testi vrzeli 17-A + 2 popravljeni latentna hrošča)
 
 ### Popravljeno
