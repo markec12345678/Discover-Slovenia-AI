@@ -409,8 +409,11 @@ describe("F3-D my-trip-view (source-contract)", () => {
     expect(hookSrc).toContain('"use client"');
   });
 
-  test("ZERO-LOSS: pogled ostaja collection-gated + obstoječe akcije", () => {
-    expect(MY_TRIP_VIEW_SRC).toContain("if (count === 0) return null;");
+  test("ZERO-LOSS: obstoječe akcije + Issue #16 faza 2 hub (vedno viden + POJDI)", () => {
+    // ISSUE #16 faza 2: razdelek je VEDNO viden — prazna zbirka = okvir
+    // ODKRIJ (prej: return null tišina).
+    expect(MY_TRIP_VIEW_SRC).not.toContain("if (count === 0) return null;");
+    expect(MY_TRIP_VIEW_SRC).toContain('title: "Zbirka je še prazna"');
     expect(MY_TRIP_VIEW_SRC).toContain('continue: "Nadaljuj načrtovanje"');
     expect(MY_TRIP_VIEW_SRC).toContain("setMyTripHandoff()");
     expect(MY_TRIP_VIEW_SRC).toContain("clearMyTripItems()");

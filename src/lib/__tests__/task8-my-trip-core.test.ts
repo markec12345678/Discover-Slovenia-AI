@@ -305,8 +305,12 @@ describe("TASK 8 / D8-C — source-contract primitiv", () => {
     expect(VIEW_SRC).toContain("setMyTripHandoff()");
     expect(VIEW_SRC).toContain('clear: "Počisti"');
     expect(VIEW_SRC).toContain("clearMyTripItems()");
-    // prazen seznam = brez hrupa (ni praznega bloka)
-    expect(VIEW_SRC).toContain("if (count === 0) return null;");
+    // ISSUE #16 faza 2: hub je VEDNO viden — prazna zbirka = okvir ODKRIJ
+    // (prej: return null tišina) + korak POJDI („Kam zdaj?“) ko je
+    // dai:go-trip aktiven — podrobneje v issue16-f2-my-trip-hub.test.ts.
+    expect(VIEW_SRC).not.toContain("if (count === 0) return null;");
+    expect(VIEW_SRC).toContain('title: "Zbirka je še prazna"');
+    expect(VIEW_SRC).toContain("loadGoTrip()");
     // EN pariteta
     expect(VIEW_SRC).toContain('continue: "Continue planning"');
     // odstotek: 44px tarče

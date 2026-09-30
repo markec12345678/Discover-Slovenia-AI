@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import {
@@ -12,6 +12,7 @@ import {
   Heart,
   Mountain,
   MapPin,
+  Navigation,
   ShoppingBag,
   Sparkles,
   Trash2,
@@ -41,6 +42,7 @@ import {
   type MyTripItem,
   type MyTripKind,
 } from "@/lib/my-trip";
+import { loadGoTrip } from "@/lib/journey/go-persist";
 import { cn } from "@/lib/utils";
 
 /**
@@ -48,8 +50,15 @@ import { cn } from "@/lib/utils";
  *
  * ADD sloj (zbirka referenc) — NI razporejevalnik: razporejanje ostane v
  * /nacrtuj ("Nadaljuj načrtovanje" handoff), rezervacije v booking stanju.
- * Prikazuje se SAMO, ko zbirka ni prazna (prazen seznam = brez hrupa;
- * obstoječe prazne razrede strani pokrijejo napredek).
+ *
+ * ISSUE #16 faza 2 (UX/IA KONSOLIDACIJA §2 — centralni trip hub): razdelek
+ * je VEDNO viden — prazna zbirka NI več tišina (prej: return null), ampak
+ * okvir naslednjega koraka ODKRIJ ("Odkrij destinacije"). Hub odgovarja na
+ * vprašanje „Kaj je moja pot in kaj je naslednji korak?“:
+ *  - pot v teku (dai:go-trip) → trak NA POTI s primarnim CTA „Kam zdaj?“
+ *    (korak POJDI, /na-poti — prej hub NI imel NOBENEGA vhoda v Go Mode);
+ *  - zbirka neprazna → "Nadaljuj načrtovanje" (korak NAČRTUJ, obstoječe);
+ *  - zbirka prazna → "Odkrij destinacije" (korak ODKRIJ).
  *
  * Gost in prijavljeni uporabnik vidita isto zbirko (localStorage, brez PII).
  */
@@ -67,6 +76,21 @@ const L = {
     remove: (title: string) => `Odstrani ${title} iz moje poti`,
     cleared: "Zbirka izpraznjena",
     undo: "Obnovi",
+    // ISSUE #16 faza 2 — hub je VEDNO viden: prazno stanje = okvir ODKRIJ
+    empty: {
+      subtitle: "Tukaj bo zrasla tvoja pot — iz destinacij, lokalov, dogodkov in doživetij.",
+      title: "Zbirka je še prazna",
+      body: "Razišči Slovenijo in z gumbom „Dodaj v mojo pot“ shrani, kar te zanima — vse se steka sem.",
+      cta: "Odkrij destinacije",
+      ctaAria: "Odpri seznam destinacij in začni odkrivati",
+    },
+    // ISSUE #16 faza 2 — korak POJDI: „Kam zdaj?“ ko je pot v teku
+    go: {
+      label: "Na poti",
+      title: "Tvoja pot je v teku",
+      body: "Nadaljuj v Na poti — naslednja točka, navigacija, vreme in glasovni vodič.",
+      cta: "Kam zdaj?",
+    },
     // TASK 8 / F3-D: trak "Iz priljubljenih" — most wishlist → zbirka/načrt
     // (ista meja kot PlannerMyTripStrip: zbirka ≠ razporejevalnik, NO
     // silent AI — načrt sestavi uporabnik v načrtovalniku).
@@ -107,6 +131,21 @@ const L = {
     remove: (title: string) => `Remove ${title} from my trip`,
     cleared: "Collection cleared",
     undo: "Restore",
+    // ISSUE #16 faza 2 — hub is ALWAYS visible: empty state = ODKRIJ frame
+    empty: {
+      subtitle: "Your trip will grow here — from destinations, venues, events and experiences.",
+      title: "Your collection is empty",
+      body: "Explore Slovenia and use the “Add to my trip” button to save what interests you — it all flows into this hub.",
+      cta: "Discover destinations",
+      ctaAria: "Open the destinations list and start exploring",
+    },
+    // ISSUE #16 faza 2 — POJDI step: “Where to now?” when a trip is underway
+    go: {
+      label: "On the road",
+      title: "Your trip is underway",
+      body: "Continue in Go Mode — next stop, navigation, weather and the audio guide.",
+      cta: "Where to now?",
+    },
     // TASK 8 / F3-D: wishlist bridge strip labels (collection layer only).
     wishlist: {
       title: "From favourites",
@@ -200,7 +239,13 @@ export function MyTripView({ className }: { className?: string }) {
     [wishlistEntries, lang]
   );
 
-  if (count === 0) return null;
+  // ISSUE #16 faza 2: detekcija poti v teku (dai:go-trip) → korak POJDI.
+  // Hydration-varen vzorec (SSR brez localStorage; prvi klientski effect
+  // prebere — isti kanon kot useMyTrip/useWishlist).
+  const [goActive, setGoActive] = useState(false);
+  useEffect(() => {
+    setGoActive(loadGoTrip() !== null);
+  }, []);
 
   const handleContinue = () => {
     setMyTripHandoff();
@@ -288,12 +333,17 @@ export function MyTripView({ className }: { className?: string }) {
           >
             <Compass className="size-5 text-primary" aria-hidden="true" />
             {s.title}
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-sm font-semibold text-primary">
-              {count}
-            </span>
+            {count > 0 && (
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-sm font-semibold text-primary">
+                {count}
+              </span>
+            )}
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">{s.subtitle(count)}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {count === 0 ? s.empty.subtitle : s.subtitle(count)}
+          </p>
         </div>
+        {count > 0 && (
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -311,7 +361,59 @@ export function MyTripView({ className }: { className?: string }) {
             {s.continue}
           </button>
         </div>
+        )}
       </div>
+
+      {/* ISSUE #16 faza 2 — korak POJDI: trak NA POTI, ko je pot v teku
+          (dai:go-trip). Hub odgovarja „Kaj je naslednji korak?" — med
+          potovanjem je to POJDI („Kam zdaj?"), ne načrtovanje. */}
+      {goActive && (
+        <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <Navigation className="size-4 text-primary" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+                  {s.go.label}
+                </p>
+                <p className="mt-0.5 text-sm">
+                  <span className="font-medium">{s.go.title}.</span>{" "}
+                  <span className="text-muted-foreground">{s.go.body}</span>
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/na-poti"
+              className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
+            >
+              {s.go.cta}
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* ISSUE #16 faza 2 — prazno stanje zbirke: okvir ODKRIJ (prej: razdelek
+          skrit). Wishlist trak spodaj ostaja viden tudi tu (most iz
+          priljubljenih v zbirko — korak DODAJ). */}
+      {count === 0 && (
+        <div className="mt-4 rounded-xl border border-dashed p-6 text-center">
+          <Compass className="mx-auto size-8 text-muted-foreground" aria-hidden="true" />
+          <p className="mt-2 text-sm font-medium">{s.empty.title}</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+            {s.empty.body}
+          </p>
+          <Link
+            href="/destinacije"
+            aria-label={s.empty.ctaAria}
+            className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
+          >
+            <Compass className="size-4" aria-hidden="true" />
+            {s.empty.cta}
+          </Link>
+        </div>
+      )}
 
       {/* TASK 8 / F3-D (audit §4 "wishlist→trip auto-bridge"): trak
           "Iz priljubljenih" — utišana kartica (ista vizualna slovnica kot
@@ -396,6 +498,7 @@ export function MyTripView({ className }: { className?: string }) {
         </div>
       )}
 
+      {count > 0 && (
       <div className="mt-4 space-y-5">
         {groups.map(({ kind, items: groupItems }) => {
           const Icon = KIND_ICON[kind];
@@ -454,6 +557,7 @@ export function MyTripView({ className }: { className?: string }) {
           );
         })}
       </div>
+      )}
     </section>
   );
 }

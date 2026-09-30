@@ -7,6 +7,63 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.149.0] — 2026-09-30 (ISSUE #16 „UX/IA KONSOLIDACIJA", faza 2 — MOJA POT HUB: vedno viden + „Kaj je naslednji korak?" + korak POJDI)
+
+### Dodano
+
+- **MYTRIPVIEW JE VEDNO VIDEN (`my-trip-view.tsx`).** Issue #16 §2 (osrednji
+  trip hub): „Uporabnik mora imeti en jasen odgovor na vprašanje: Kaj je
+  moja pot in kaj je naslednji korak?" Prazna zbirka NI več tišina (prej:
+  `if (count === 0) return null;`) — zdaj je to **okvir ODKRIJ**: kartica
+  „Zbirka je še prazna" z razlago toku („z gumbom „Dodaj v mojo pot" se vse
+  steka sem") in primarnim CTA **„Odkrij destinacije"** → /destinacije
+  (korak ODKRIJ iz modela ODKRIJ → DODAJ → MOJA POT → NAČRTUJ → POJDI).
+  Števčna značka naslova se skrije pri 0 (brez hrupa); gumba Počisti/
+  Nadaljuj se izrišeta samo pri neprazni zbirki.
+- **KORAK POJDI — TRAK „NA POTI" S CTA „KAM ZDAJ?"** Ko je v localStorage
+  aktivna pot (`dai:go-trip`), hub pokaže trak z oznako NA POTI, naslovom
+  „Tvoja pot je v teku." in **primarnim CTA „Kam zdaj?" → /na-poti**
+  (Navigation ikona, primary tint). Prej hub /moja-potovanja NI imel
+  NOBENEGA vhoda v Go Mode (največja vrzel audita #16 za hub — med
+  potovanjem je naslednji korak POJDI, ne načrtovanje). Detekcija je
+  hydration-varna (`useState(false)` + branje `loadGoTrip()` SAMO v
+  efektu — isti kanon kot useMyTrip/useWishlist; SSR brez localStorage).
+- **Novi nizi SL + EN** (L tabela — /moja-potovanja je SL/EN whitelistna
+  pot): empty.subtitle/title/body/cta/ctaAria + go.label/title/body/cta
+  („Kam zdaj?" / „Where to now?").
+
+### Spremenjeno
+
+- Testne pogodbe usklajene z modelom #16 §2: `task8-my-trip-core` +
+  `task8-f3cd` + `task8-f4c` (collection-gate trditve preoblikovane iz
+  „return null ostaja" v „hub vedno viden"); **NOV test
+  `issue16-f2-my-trip-hub.test.ts`** — 13 varovalk (prazno stanje SL+EN,
+  CTA hrefi, goActive hydration-varnost, zero-loss [Nadaljuj/Počisti/
+  wishlist most/skupine], 44px dot-tarče).
+
+### Dokazano
+
+- Suite **4285/4285** zelenih (+13); tsc 0 napak; eslint čist.
+- Brskalniški E2E (dev, 3 dokazi `issue16-dokazi/f2-*.png`): prazno
+  stanje (eval: „Zbirka je še prazna … Odkrij destinacije"); zbirka
+  (seed 2 predmeta → skupine Destinacije/Lokali + „Nadaljuj načrtovanje");
+  GO trak (seed `dai:go-trip` V2 → „Na poti — Tvoja pot je v teku …
+  Kam zdaj?" + povezava /na-poti v DOM); 0 napak strani/konzole.
+
+### Meja (iskrena)
+
+- Trak NA POTI se osveži ob mountu komponente (prehod na /moja-potovanja)
+  — živi pretok localStorage sprememb med drugimi zavihki ne posluša
+  (isti kanon kot ostale localStorage ploskve; cross-tab dogodki niso
+  zahtevani z issue #16).
+- Hub ostaja SL/EN (pot je izven IT/DE/FR/ES whitelist — §38 nespremenjeno
+  od prej).
+- Faze #16 3–5 (zemljevid POI kanonski write-through; klepet na
+  /moja-potovanja + /pot/[shareId]; analitika lupine + StickyMobileCTA
+  dolg) sledijo.
+
+---
+
 ## [1.148.0] — 2026-09-30 (ISSUE #16 „UX/IA KONSOLIDACIJA — ONE JOURNEY, ONE HOME, ZERO FEATURE LOSS", faza 1 — LUPINA ENEGA POTOVANJA: ODKRIJ | ZEMLJEVID | MOJA POT | POJDI | VEČ)
 
 ### Dodano

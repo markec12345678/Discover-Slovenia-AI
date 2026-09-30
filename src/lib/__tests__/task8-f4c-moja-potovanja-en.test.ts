@@ -391,8 +391,13 @@ describe("F4-C zero-loss: moja-potovanja-view (zbirka + sinhronizacija + stanja)
 });
 
 describe("F4-C zero-loss: my-trip-view (collection gate + most + handoff)", () => {
-  test("collection gate ostaja NETAKNJEN (testna pogodba: count === 0 → null)", () => {
-    expect(MYTRIP_SRC).toContain("if (count === 0) return null;");
+  test("collection gate: ISSUE #16 faza 2 — hub je VEDNO viden (prej: count === 0 → null tišina)", () => {
+    // ISSUE #16 §2 (centralni trip hub): prazna zbirka = okvir ODKRIJ
+    // ("Odkrij destinacije"), ne skrit razdelek. Zero-loss pogodbe —
+    // issue16-f2-my-trip-hub.test.ts (13 varovalk).
+    expect(MYTRIP_SRC).not.toContain("if (count === 0) return null;");
+    expect(MYTRIP_SRC).toContain('title: "Zbirka je še prazna"');
+    expect(MYTRIP_SRC).toContain('cta: "Discover destinations"');
   });
 
   test("most „Iz priljubljenih“: ISTI dai:my-trip-prefill dogodek + quick-add", () => {
