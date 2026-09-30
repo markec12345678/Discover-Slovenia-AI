@@ -30,7 +30,11 @@ import {
 import { useTripChat, type TripChatItem } from "@/hooks/use-trip-chat";
 // W2: čisti helperji @AI (omemba, rezervirano ime, JSON priloga)
 import { AI_ADVISOR_NAME, isAiMention, parseAiPayload } from "@/lib/trip-chat";
-// W2: "Dodaj v pot" — ISTI kanon kot klepet "+" (addChatPlaceToItinerary)
+// W2: "Dodaj v pot" — isti dodajalni algoritem kot klepet "+"
+// (addChatPlaceToItinerary). MEJA (issue #17 §5): ta gumb piše SAMO v
+// DELJENO pot (kolaborativni dokument, CAS PATCH) — osebne zbirke
+// "Moja pot" NE dotika (klepetov "+" po D8-D hkrati write-through v
+// zbirko; tu je dejanje urejanje skupnega dokumenta, ne osebna zbirka).
 import {
   addChatPlaceToItinerary,
   isValidChatPlace,
@@ -502,8 +506,11 @@ export function TripSocial({
     [submitting, shareId, authorName, text, toast, appendLocal, emitChatSignal, askAi]
   );
 
-  // === "Dodaj v pot" — ISTI kanon kot klepet "+" (čisti algoritem +
-  // CAS PATCH deljene poti; AI samo PREDLAGA, človek odloča) ===
+  // === "Dodaj v pot" — isti dodajalni algoritem kot klepet "+" (čisti
+  // algoritem addChatPlaceToItinerary + CAS PATCH deljene poti; AI samo
+  // PREDLAGA, človek odloča). MEJA (#17 §5): piše SAMO v deljeno pot, ne
+  // v osebno zbirko "Moja pot" (to delata klepet "+" in ostale
+  // površine odkrivanja) ===
   const addPlaceToTrip = useCallback(
     async (place: ChatPlace) => {
       if (!shareId || addingPlaceId) return;

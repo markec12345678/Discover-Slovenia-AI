@@ -44,6 +44,7 @@ import { trackPlannerEvent } from "@/lib/planner-analytics";
 import {
   CHAT_ADD_PLACE_EVENT,
   addChatPlaceToItinerary,
+  chatPlaceTripItem,
   stashChatPlace,
   readLastItinerary,
   persistLastItinerary,
@@ -481,15 +482,7 @@ function PlaceRow({
           className={cn("shrink-0", added && "pointer-events-none")}
         >
           <AddToTripButton
-            item={{
-              kind: place.slug ? "destination" : "poi",
-              refId: place.id,
-              title: place.name,
-              href: place.slug
-                ? `/destinacija/${place.slug}`
-                : `/zemljevid?lat=${place.lat}&lng=${place.lng}&zoom=15&label=${encodeURIComponent(place.name)}`,
-              source: "klepet",
-            }}
+            item={chatPlaceTripItem(place)}
             variant="icon"
             added={added}
             onToggle={(next) => {
@@ -1071,21 +1064,14 @@ export function Chatbot({ initialQuestion }: { initialQuestion?: string }) {
    *      in ga samodejno dodamo, ko uporabnik ustvari/obnovi načrt
    */
   function handleAddPlace(place: ChatPlace) {
-    // TASK 8 / D8-D: write-through v zbirko "Moja pot" — destinacija s slugom
-    // dobi notranjo povezavo, ostali kraji pošteno geo-globoko povezavo na
-    // zemljevid (vzorec TASK 86). Samo javni povzetki, brez PII.
-    addMyTripItem({
-      kind: place.slug ? "destination" : "poi",
-      refId: place.id,
-      title: place.name,
-      subtitle: [place.category, place.rating ? `★ ${place.rating}` : null]
-        .filter(Boolean)
-        .join(" · "),
-      href: place.slug
-        ? `/destinacija/${place.slug}`
-        : `/zemljevid?lat=${place.lat}&lng=${place.lng}&zoom=15&label=${encodeURIComponent(place.name)}`,
-      source: "klepet",
-    });
+    // TASK 8 / D8-D: write-through v zbirko "Moja pot". ISSUE #17 §5:
+    // identiteta prihaja iz ENEGA kanona (chatPlaceTripItem — destinacija
+    // piše refId = SLUG [kanon destination-modalja/huba/konzultacije/
+    // smart-searcha], OSM lokal pa kind "product" + refId "osm:node-X"
+    // [kanon supply write-throughja iz F3]) — isti objekt iz katere koli
+    // površine → isti zapis, dedup kind:refId ga ne more razcepeti.
+    // Samo javni povzetki, brez PII.
+    addMyTripItem(chatPlaceTripItem(place));
     const evt = new CustomEvent<ChatPlace>(CHAT_ADD_PLACE_EVENT, {
       detail: place,
       cancelable: true,

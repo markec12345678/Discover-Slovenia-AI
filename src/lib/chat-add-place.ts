@@ -44,6 +44,79 @@ export {
   LAST_ITINERARY_KEY,
   readLastItinerary,
 } from "@/lib/itinerary-persist";
+import type { MyTripInput } from "@/lib/my-trip";
+
+// ============================================================================
+// KANONSKA IDENTITETA ZBIRKE „MOJA POT" IZ KLEPETA (ISSUE #17 §5)
+// ============================================================================
+// F3 (1.150.0) je poenotil write-through zemljevida (POI popup piše v obe
+// plasti), a audit #17 §5 je odkril 2 identitetna razcepa KLEPETA proti
+// kanonu vseh ostalih površin:
+//   1) DESTINACIJA: klepet je pisal refId „t1-bled" (geo-intent id), ostale
+//      površine (destination-modal/hub/konzultacija/smart-search) pa „bled"
+//      (SLUG) → isti Bled je zaradi dedup kind:refId obstal 2× v zbirki;
+//   2) OSM LOKAL: klepet je pisal kind „poi" + refId „osm-node-123",
+//      zemljevid (supply write-through) pa kind „product" + refId
+//      „osm:node-123" (osm-adapter id) → isti lokal 2×.
+// Preslikava spodaj je ENA točka resnice za obliko vnosa klepeta (vzorec
+// src/lib/supply/my-trip-item.ts — 0 odvisnosti od Reacta, unit-testabilna):
+//   - T1 destinacija → kind „destination", refId = SLUG (kanon ostalih
+//     površin odkrivanja);
+//   - OSM lokal → kind „product", refId „osm:${type}-${id}" (kanon supply
+//     write-throughja — supplyTripKind VSE OSM tipe preslika v „product");
+//   - obrambno (neznan vir brez sluga) → kind „poi", surov id — iskrena
+//     meja brez ugibanja supply identitete.
+// ============================================================================
+
+/**
+ * Klepetov kraj → PREDMET zbirke „Moja pot" (kanonska identiteta kind:refId).
+ * Uporabljata jo OBE klepetovi dodajalni površini (AddToTripButton na kartici
+ * kraja + handleAddPlace v Chatbot) — en vir resnice, dedup čez površine.
+ */
+export function chatPlaceTripItem(place: ChatPlace): MyTripInput {
+  const subtitle = [
+    place.category,
+    place.rating ? `★ ${place.rating}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  // T1 destinacija — kanon refId = slug (klepet je bil edina površina, ki
+  // je pisala interni geo-intent id „t1-*"; ostale pišejo slug).
+  if (place.slug) {
+    return {
+      kind: "destination",
+      refId: place.slug,
+      title: place.name,
+      subtitle: subtitle || undefined,
+      href: `/destinacija/${place.slug}`,
+      source: "klepet",
+    };
+  }
+  // OSM lokal — kanon supply write-throughja: kind „product" (KIND_BY_TYPE
+  // fallback pokrije vse OSM tipe: attraction/museum/restaurant/…), refId
+  // „osm:node-X" (osm-adapter id oblika; klepetov id je „osm-node-X").
+  if (place.id.startsWith("osm-")) {
+    return {
+      kind: "product",
+      refId: `osm:${place.id.slice(4)}`,
+      title: place.name,
+      subtitle: subtitle || undefined,
+      // geo glob-povezava (vzorec TASK 86 — isti href vzorec kot prej)
+      href: `/zemljevid?lat=${place.lat}&lng=${place.lng}&zoom=15&label=${encodeURIComponent(place.name)}`,
+      source: "klepet",
+    };
+  }
+  // Obrambno: neznan vir brez sluga (npr. prihodnji vir krajev) — ne
+  // ugibamo supply identitete; splošna vrsta „poi" s surovim id-jem.
+  return {
+    kind: "poi",
+    refId: place.id,
+    title: place.name,
+    subtitle: subtitle || undefined,
+    href: `/zemljevid?lat=${place.lat}&lng=${place.lng}&zoom=15&label=${encodeURIComponent(place.name)}`,
+    source: "klepet",
+  };
+}
 
 /** Tipična trajanja/cene po kategoriji — HEVRISTIKA, pošteno razkrita v
  *  notesih postanka (ocena, ne obljb — prava cena je v ponudbi gostilne). */

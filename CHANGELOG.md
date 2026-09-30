@@ -7,6 +7,57 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.153.0] — 2026-09-30 (ISSUE #17 „FINAL PRODUCT COMPLETION" §5 — KANONSKA IDENTITETA „DODAJ V MOJO POT" IZ KLEPETA)
+
+### Popravljeno
+
+- **2 IDENTITETNA RAZCEPA klepeta proti kanonu vseh ostalih površin (audit
+  #17 §5 — 22 Add-površin, vse kanonske `addMyTripItem`, 0 zapisov mimo
+  `my-trip.ts`; a dedup `kind:refId` je bil pri klepetu razceplen):**
+  1. **DESTINACIJA:** klepet je pisal `refId: "t1-bled"` (interna oblika
+     geo-intent id-ja), destination-modal/hub/konzultacija/smart-search pa
+     `refId: "bled"` (SLUG) → isti Bled, dodan iz klepeta IN iz strani
+     destinacije, je v zbirki „Moja pot" obstal **2×** (dedup ga ni prepoznal
+     kot isti objekt).
+  2. **OSM LOKAL:** klepet je pisal `kind: "poi"` + `refId: "osm-node-123"`,
+     zemljevid (F3 supply write-through) pa `kind: "product"` + `refId:
+     "osm:node-123"` (osm-adapter oblika) → isti lokal 2×.
+- **ENO točka resnice `chatPlaceTripItem(place)`** v `src/lib/chat-add-place.ts`
+  (vzorec `supply/my-trip-item.ts` — 0 odvisnosti od Reacta, unit-testabilna):
+  OBE klepetovi dodajalni površini (AddToTripButton na kartici kraja +
+  handleAddPlace) zdaj uporabljata isti preslikovalnik. T1 destinacija →
+  `destination` + SLUG; OSM lokal → `product` + `osm:node-X` (VES spekter
+  OSM tipov — attraction/museum/restaurant/viewpoint/natural/… — konvergira
+  v `product`, ker `KIND_BY_TYPE` pokrije le activity/tour/ticket/event);
+  obrambno: neznan vir brez sluga → `poi` s surovim id (iskrena meja brez
+  ugibanja supply identitete). Acceptance #17 §5 — „Add iz katere koli
+  površine → isti canonical MyTrip zapis" — je zdaj dokazljivo izpolnjen
+  (prečni unit testi: klepet ↔ destination-modal ↔ supplyTripItem).
+- **Stari zapisi v obstoječih zbirkah uporabnikov** (oblika `t1-*`/`poi`)
+  ostanejo berljivi (sanitizacija `my-trip.ts` jih ohrani) — sprememba je
+  naprej-usmerjena (idempotentni re-add z novim kanonom zapis osveži).
+
+### Dokumentirano
+
+- **trip-social „Dodaj v pot" (meja poštenja):** komentarja (uvozni + veja)
+  sta trdila „ISTI kanon kot klepet +". Po D8-D klepetov „+" piše tudi v
+  osebno zbirko; ta gumb pa ZAVESNO piše SAMO v deljeno pot (kolaborativni
+  dokument, CAS PATCH). Komentarja zdaj izrecno razložita mejo (dejanje =
+  urejanje skupnega dokumenta, ne osebna zbirka) — dokumentacija resnice,
+  brez spremembe vedenja.
+
+### Dodano
+
+- **NOV test `issue17-canonical-add-identity.test.ts`** (11 varovalk,
+  unit + source-contract — kanon Task 28/33/34): T1 → slug kanon; OSM →
+  product/`osm:` kanon; prečna identiteta z destination-modalom in
+  `supplyTripItem` (myTripKey enakost); ves spekter OSM tipov → product;
+  obrambna veja; subtitle brez PII; source-contract: OBE klepetovi površini
+  uporabljata `chatPlaceTripItem`, 0 inline `refId: place.id` ostankov,
+  destination-modal ostaja na slug kanonu.
+
+---
+
 ## [1.152.0] — 2026-09-30 (ISSUE #16 „UX/IA KONSOLIDACIJA", faza 5 — ANALITIKA LUPINE + STICKYMOBILECTA DOLG: zadnja faza načrta)
 
 ### Dodano
