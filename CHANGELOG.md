@@ -7,6 +7,36 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.155.1] — 2026-09-30 (#19 DISCOVER: FAZA C-3 — DOM-meritveni audit gostote/ritma + 1 realni popravek ritma)
+
+### Spremenjeno
+
+- **DemoScenarios `py-12` → `py-20`** — edini izmerjeni outlayer ritma brez
+  design namena (zastrikal je tok 80→48→80 med Stats in Affiliate; DOM
+  meritev: 8/12 glavnih sekcij py-20). Podnaslov po C-2 konvenciji
+  (`text-foreground-subtle`). Zdaj 10/12 sekcij py-20 (izjeme z namernim
+  designom: Hero, kompakten vstopni pas HomeEntryRow D8-B).
+
+### Dodano (dokumentacija — BASELINE-VISUAL.md §6 dodatek)
+
+- **§2.4 gostota kartic OVREGENA z meritvijo** (4 vrstice / 1–3 badgeov /
+  1–3 gumbov = zdravo; progresivno razkrivanje že v kodi iz prejšnjih
+  valov) — pravilo #19: ovrgnjene hipoteze se dokumentirajo.
+- **§2.5 merilni artefakt dokumentiran**: »−24px vrzeli« =
+  framer-motion `Reveal` inicialni `y: 24` transform za ne-scrollane
+  sekcije — ni realnega prekrivanja.
+- **Radij (§3)**: distribucija lg/full/md/xl/2xl = zdrava hierarhija, brez
+  sprememb. **Stanja (§3)**: kanonska družina `states/` + 12+ površin +
+  testi; ročni nizi v sankcioniranem L-pattern slovarju.
+
+### Preverjanje (FAZA D regresija)
+
+- Lint 0; **test suite 4413/4413 zelenih**; ritam verificiran v browserju
+  (vse sekcije 80/80 razen namernih); **320px hard gate: 0 preliva**;
+  konzola brez napak.
+
+---
+
 ## [1.155.0] — 2026-09-30 (#19 DISCOVER: FAZA C-2 — tipografska hierarhija: vsebinski podnaslovi + poenotena teža naslovov kartic)
 
 ### Dodano

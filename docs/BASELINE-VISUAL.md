@@ -90,3 +90,32 @@ aplikaciji (ne le domača stran), z varovalkami: FUNCTION-PARITY-BEFORE.md je
 pogodba (0 izgub), po vsaki koherentni množici sprememb FAZA D regresija
 (suite/tsc/lint/E2E + zlata pot), FAZA E responsive (320 hard gate ostaja),
 FAZA F FUNCTION-PARITY-AFTER.md.
+
+## 6. DODATEK (FAZA C, 30. 9. 2026 zvečer) — DOM-meritve gostote/ritma
+
+Po zaključenih C-1 (CTA + elevacija) in C-2 (tipografija) sem izmeril
+preostala dva kandidata §2 (pravilo #19: samo izmerjeno gre v implementacijo):
+
+**§2.4 Gostota kartic — OVREGENO z meritvijo.** Kartice na `/` (destinacije,
+zbirke, izkušnje): 4 vizualne vrstice, 1–3 badgeov, 1–3 gumbov — zdrava
+gostota. Koda že ima progresivno razkrivanje iz prejšnjih valov (compact
+meta pas, specialties cap 2–3, `+X` badge za skrite destinacije v
+community-trips, demoted akcije). NILO popravkov.
+
+**§2.5 Ritam sekcij — izmerjeno, 1 realni popravek.** Kanonski ritem = py-20
+(80/80), 8/12 glavnih sekcij sekcij ga drži. Izjeme z namernim designom:
+Hero (special, nav overlap), HomeEntryRow (32/32 kompakten vstopni pas
+D8-B), `<details>` pasovi (0/0, declutter D8-F). **Edini outlayer brez
+namena: DemoScenarios py-12 (48)** — zastrikalo tok 80→48→80 med Stats in
+Affiliate → popravljen na py-20 (1.155.1).
+
+**Merilni artefakt (dokumentiran, da ga prihodnji auditi ne lovi):**
+»negativne vrzeli −24px« med sekcijami v getBoundingClientRect so
+framer-motion `Reveal` inicialni `y: 24` transform za sekcije, ki še niso
+scrollane v pogled — NI realnega prekrivanja (po animaciji transform → 0).
+
+**Radij (§3 issueja):** distribucija lg(304)/full(288)/md(207)/xl(82)/2xl(33)
+je zdrava hierarhija (kontrole → kartice → paneli → velike površine) — brez
+sprememb. **Stanja (§3):** kanonska družina `states/` (loading/empty/error,
+TASK 8 / F3-B) + 12+ površin + testne varovalke; ročni nizi so v
+sankcioniranem L-pattern slovarju — brez sprememb.

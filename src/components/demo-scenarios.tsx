@@ -71,7 +71,10 @@ export function DemoScenarios({ onSelect, onCustom }: DemoScenariosProps) {
   const t = useTranslations("demoScenarios");
 
   return (
-    <section className="py-12">
+    /* #19 FAZA C-3: py-12 → py-20 — poravnavo na kanonski ritam glavnih
+       sekcij (DOM-meritev: 8/12 sekcij py-20; tu med Stats in Affiliate
+       je 48 zastrikalo tok 80→48→80; BASELINE-VISUAL §2.5) */
+    <section className="py-20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto mb-8 max-w-2xl text-center">
           <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-[0.22em] text-primary">
@@ -80,7 +83,7 @@ export function DemoScenarios({ onSelect, onCustom }: DemoScenariosProps) {
           <h2 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl">
             {t("title")}
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-foreground-subtle">
             {t("subtitle")}
           </p>
         </div>
