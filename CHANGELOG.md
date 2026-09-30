@@ -7,6 +7,16 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.156.1] — 2026-09-30 (#19 DISCOVER: FAZA F — FUNCTION-PARITY-AFTER)
+
+### Dodano (dokumentacija — pogodba »0 izgub«)
+
+- **`docs/FUNCTION-PARITY-AFTER.md`** — končni revizor paritete: git-diff
+  dokaz (20 src datotek, +66/−24, 0 dodanih/izbrisanih, 0 API/route dotikov,
+  4413 → 4413 testov) + 20/20 območij BEFORE inventure potrjenih + življenjske
+  poti (§21) z browser dokazi FAZE C/E. **Verdikt: 0 izgub, 100 % pariteta.**
+  2 predobstoječi težavi dokumentirani (§25).
+
 ## [1.156.0] — 2026-09-30 (#19 DISCOVER: FAZA E — responsive verifikacija 72 meritev + 4 prezentacijski popravki)
 
 ### Popravljeno (4, čisto prezentacijski — 0 funkcionalnih sprememb)
