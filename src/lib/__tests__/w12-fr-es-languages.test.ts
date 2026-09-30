@@ -376,19 +376,51 @@ describe("W12 faza 1: globalni krom (switcher/mt-notice/tab-bar/wishlist/voice)"
   });
 });
 
-describe("W12 faza 1: klepet — fr/es pošlje locale, strežnik odgovori v EN", () => {
+describe("W12 1.147.0: klepet — domenska plast 6-jezična (PRAVI FR/ES odgovori)", () => {
   test("klient pošlje DEJANSKI locale (fr/es vključno) — validacijski seznam 6", () => {
     const src = source("src/components/chatbot.tsx");
     expect(src).toContain('"sl", "en", "it", "de", "fr", "es"');
   });
 
-  test("strežnik: ChatRequest sprejme fr/es; preslikava na EN (referenčni jezik)", () => {
+  test("strežnik: ChatRequest sprejme fr/es; NEPOSREDNO v domensko plast (ne EN preslikava)", () => {
     const src = source("src/app/api/chat/route.ts");
     // tip dovoljuje fr/es …
     expect(src).toContain('"sl" | "en" | "it" | "de" | "fr" | "es"');
-    // … preslikava fr/es → "en" (NE slovensko — P4-8 za FR/ES uporabnika)
-    expect(src).toContain('requested === "fr" || requested === "es"');
-    expect(src).toContain('? "en"');
+    // … in jezik gre NEPOSREDNO v ChatLang (6-jezična domena — 1.147.0)
+    expect(src).toContain('["sl", "en", "it", "de", "fr", "es"].includes(body.language ?? "")');
+    // stara prehodna preslikava fr/es → EN je ODSTRANJENA
+    expect(src.includes('? "en"')).toBe(false);
+  });
+
+  test("ChatLang je 6-jezičen; domena (L tabele) vrača PRAVI francoski/španski odgovor", async () => {
+    const { buildDomainAnswer } = await import("@/lib/chat-domain-fallback");
+    const fr = await buildDomainAnswer("bled", "fr", {
+      listings: [],
+      products: [],
+      experiences: [],
+      osmPlaces: [],
+    });
+    // pravi francoski odgovor (ne EN, ne SL)
+    expect(fr.message).toContain("visite recommandée");
+    expect(fr.message).toContain("par personne");
+    expect(fr.message).not.toContain("Ocena"); // SL leak
+    expect(fr.message).not.toContain("Rated"); // EN leak
+    // razpršitveni namig prav tako francosko
+    expect(fr.message).toContain("Note sur l'affluence");
+    const es = await buildDomainAnswer("hola", "es", {
+      listings: [],
+      products: [],
+      experiences: [],
+      osmPlaces: [],
+    });
+    expect(es.message).toContain("¡Hola!");
+    expect(es.message).toContain("Puedo ayudarte");
+  });
+
+  test("vremenska besedila (WMO) fr/es v klepetni domeni", async () => {
+    const { weatherCodeToTextFor } = await import("@/lib/weather-utils");
+    expect(weatherCodeToTextFor("fr", 0)).toBe("ciel dégagé");
+    expect(weatherCodeToTextFor("es", 61)).toBe("lluvia");
   });
 });
 

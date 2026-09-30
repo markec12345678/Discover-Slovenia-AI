@@ -83,18 +83,12 @@ export async function POST(request: Request) {
   // FW4.3-2 + W1: jezik izpisa — client pošlje locale (enak vzorec kot
   // /api/itinerary). W1 doda it/de (domenska plast je 4-jezična); neznan
   ///neveljaven jezik → slovensko (default, izvirnik).
-  // W12 (smer 2, faza 1): fr/es → EN — domenska plast klepeta je (še)
-  // 4-jezična; EN je referenčni mednarodni jezik platforme (isti kanon kot
-  // mt-notice in odpiralni note v modalu). Francoski/španski uporabnik
-  // tako NE dobi slovenskih (zanj nerazumljivih) odgovorov.
-  const requested = body.language ?? "";
-  const lang: ChatLang = (["sl", "en", "it", "de"] as const).includes(
-    requested as "sl" | "en" | "it" | "de"
-  )
-    ? (requested as ChatLang)
-    : requested === "fr" || requested === "es"
-      ? "en"
-      : "sl";
+  // W12 (smer 2, faza 1): fr/es → EN — prehodna preslikava.
+  // W12 (1.147.0): domenska plast klepeta je zdaj 6-jezična — fr/es gresta
+  // NEPOSREDNO v L() tabele (pravi francoski/španjski odgovori, ne EN).
+  const lang: ChatLang = ["sl", "en", "it", "de", "fr", "es"].includes(body.language ?? "")
+    ? (body.language as ChatLang)
+    : "sl";
 
   // W2: jedro (baza + STO + OSM + domenska plast) — src/lib/chat-engine.ts.
   const answer = await answerChatQuestion(lastUserMessage, lang);

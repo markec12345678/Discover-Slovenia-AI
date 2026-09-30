@@ -213,13 +213,14 @@ export function chatDiffusionAlternatives(destId: string): CrowdAlternative[] {
 }
 
 /**
- * W8: iskren razpršitveni namig za klepet o VRHUNSKI točki (4 jeziki).
+ * W8: iskren razpršitveni namig za klepet o VRHUNSKI točki (W1: 4 jeziki;
+ * W12 1.147.0: + FR/ES — domena klepeta je zdaj 6-jezična).
  * Vrne null za ne-vrhunske destinacije — namig se ne izmišljuje tam, kjer
  * uredniške trditve o obiskovalnem pritisku ni.
  */
 export function chatDiffusionHint(
   destId: string,
-  lang: "sl" | "en" | "it" | "de" = "sl"
+  lang: "sl" | "en" | "it" | "de" | "fr" | "es" = "sl"
 ): string | null {
   const origin = DESTINATIONS.find((d) => d.id === destId);
   if (!origin || !HIGH_DEMAND_IDS.has(origin.id)) return null;
@@ -237,6 +238,12 @@ export function chatDiffusionHint(
   }
   if (lang === "de") {
     return `Hinweis zum Andrang: ${origin.name} ist an Wochenenden im Juli und August meist sehr voll — eine Ankunft am Morgen hilft${altText ? `; wenn du in der Nähe weniger Trubel möchtest: ${altText}` : ""}.`;
+  }
+  if (lang === "fr") {
+    return `Note sur l'affluence : ${origin.name} est généralement très fréquenté les week-ends de juillet et août — une arrivée tôt le matin aide${altText ? ` ; si tu préfères moins de monde à proximité : ${altText}` : ""}.`;
+  }
+  if (lang === "es") {
+    return `Nota sobre la afluencia: ${origin.name} suele estar muy concurrido los fines de semana de julio y agosto — una llegada temprano ayuda${altText ? `; si prefieres menos gente cerca: ${altText}` : ""}.`;
   }
   return `Opomba o gneči: ${origin.name} je julija in avgusta ob vikendih običajno zelo obiskan${
     NAME_GENDER[origin.id] === "f" ? "a" : ""

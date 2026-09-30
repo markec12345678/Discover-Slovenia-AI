@@ -45,10 +45,10 @@ export interface ChatEngineAnswer {
  *   1. izpis featured vrstic iz baze (lokal/izdelek/izkušnja) — kontekst;
  *   2. T2 uzemljenje po STO indeksu (buildStoGrounding);
  *   3. geo intent + Overpass kraji v bližini (6 s timeout varuje javni API);
- *   4. buildDomainAnswer (domenska plast — 4-jezična).
+ *   4. buildDomainAnswer (domenska plast — W12 1.147.0: 6-jezična).
  *
  * @param question zadnje uporabnikovo vprašanje (poganja uzemljenje/geo)
- * @param lang     jezik odgovora ("sl" | "en" | "it" | "de")
+ * @param lang     jezik odgovora ("sl" | "en" | "it" | "de" | "fr" | "es")
  */
 export async function answerChatQuestion(
   question: string,

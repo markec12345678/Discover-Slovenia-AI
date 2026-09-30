@@ -514,17 +514,38 @@ export function DestinationModal({
                       aria-hidden="true"
                     />
                     <p className="mt-2 text-sm font-medium">
-                      Ni registriranih lokalov v bližini.
+                      {pick(locale, {
+                        sl: "Ni registriranih lokalov v bližini.",
+                        en: "No registered places nearby.",
+                        it: "Nessun locale registrato nelle vicinanze.",
+                        de: "Keine registrierten Orte in der Nähe.",
+                        fr: "Aucun lieu enregistré à proximité.",
+                        es: "No hay lugares registrados cerca.",
+                      })}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Postanite prvi!
+                      {pick(locale, {
+                        sl: "Postanite prvi!",
+                        en: "Be the first!",
+                        it: "Sii il primo!",
+                        de: "Sei der Erste!",
+                        fr: "Soyez le premier !",
+                        es: "¡Sé el primero!",
+                      })}
                     </p>
                     <a
                       href="/za-ponudnike#pridruzi-se"
                       onClick={() => onClose()}
                       className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80"
                     >
-                      Pridruži se
+                      {pick(locale, {
+                        sl: "Pridruži se",
+                        en: "Join us",
+                        it: "Unisciti",
+                        de: "Mach mit",
+                        fr: "Rejoignez-nous",
+                        es: "Únete",
+                      })}
                       <ArrowRight className="size-3" aria-hidden="true" />
                     </a>
                   </div>
@@ -544,7 +565,14 @@ export function DestinationModal({
                       onClick={() => onClose()}
                       className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80"
                     >
-                      Vsi lokalci v regiji
+                      {pick(locale, {
+                        sl: "Vsi lokalci v regiji",
+                        en: "All places in the region",
+                        it: "Tutti i locali nella regione",
+                        de: "Alle Orte in der Region",
+                        fr: "Tous les lieux de la région",
+                        es: "Todos los lugares de la región",
+                      })}
                       <ArrowRight className="size-3.5" aria-hidden="true" />
                     </a>
                   </>
@@ -553,9 +581,25 @@ export function DestinationModal({
 
               {/* REZERVACIJSKI CTA */}
               <section className="rounded-xl border border-border/60 bg-muted/30 p-4">
-                <h3 className="text-base font-semibold">Rezerviraj direktno</h3>
+                <h3 className="text-base font-semibold">
+                  {pick(locale, {
+                    sl: "Rezerviraj direktno",
+                    en: "Book directly",
+                    it: "Prenota direttamente",
+                    de: "Direkt buchen",
+                    fr: "Réservez en direct",
+                    es: "Reserva directamente",
+                  })}
+                </h3>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Preverjene partnerske povezave za hitro in varno rezervacijo.
+                  {pick(locale, {
+                    sl: "Preverjene partnerske povezave za hitro in varno rezervacijo.",
+                    en: "Verified partner links for a fast and secure booking.",
+                    it: "Link partner verificati per una prenotazione rapida e sicura.",
+                    de: "Geprüfte Partner-Links für schnelle und sichere Buchung.",
+                    fr: "Liens partenaires vérifiés pour une réservation rapide et sûre.",
+                    es: "Enlaces de socios verificados para una reserva rápida y segura.",
+                  })}
                 </p>
 
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -593,7 +637,14 @@ export function DestinationModal({
                           {cta.externalOnly ? (
                             <span className="mt-1 inline-flex items-center gap-1 text-[10px] leading-none text-muted-foreground">
                               <ExternalLink className="size-3" aria-hidden="true" />
-                              Zunanja rezervacija pri ponudniku
+                              {pick(locale, {
+                                sl: "Zunanja rezervacija pri ponudniku",
+                                en: "External booking with the provider",
+                                it: "Prenotazione esterna presso il fornitore",
+                                de: "Externe Buchung beim Anbieter",
+                                fr: "Réservation externe auprès du prestataire",
+                                es: "Reserva externa con el proveedor",
+                              })}
                             </span>
                           ) : null}
                         </span>
@@ -607,8 +658,14 @@ export function DestinationModal({
                 </div>
 
                 <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-                  Affiliate povezave — podpora projektu brez dodatnih stroškov
-                  za vas.
+                  {pick(locale, {
+                    sl: "Affiliate povezave — podpora projektu brez dodatnih stroškov za vas.",
+                    en: "Affiliate links — supporting the project at no extra cost to you.",
+                    it: "Link affiliate — sostengono il progetto senza costi extra per te.",
+                    de: "Affiliate-Links — sie unterstützen das Projekt ohne Mehrkosten für dich.",
+                    fr: "Liens affiliés — ils soutiennent le projet sans coût supplémentaire pour vous.",
+                    es: "Enlaces de afiliados — apoyan el proyecto sin coste adicional para ti.",
+                  })}
                 </p>
               </section>
 

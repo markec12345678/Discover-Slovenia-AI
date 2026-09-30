@@ -7,6 +7,89 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.147.0] — 2026-09-30 (W12 „ODKRITEV V ŠESTIH JEZIKIH", faza 2c — KLEPET 6-JEZIČEN: domenska plast vrača PRAVE FR/ES odgovore)
+
+### Dodano
+
+- **DOMENSKA PLAST KLEPETA 6-JEZIČNA (`chat-domain-fallback.ts`, +308
+  vrstic).** Prehodna preslikava fr/es → EN iz faze 1 (P4-8 začasna
+  rešitev) je ODSTRANJENA — francoski in španski uporabnik zdaj dobi
+  PRAVE francoske/španske odgovore (isti mejnik kot W1 1.128.0 za
+  IT/DE domensko plast). `ChatLang` union ×6; vseh 33 L() tabel
+  prevedenih: destinacijska kartica („Note 4,8/5, visite recommandée :
+  2 jours, coût estimé à partir de 25 € par personne" — FR tipografija
+  s presledkom pred `:`/`!`, « narekovaji », nbsp pred %/°C/€),
+  vreme („Prévisions … jusqu'à X °C"), restavracije, namestitve,
+  aktivnosti, cene, razpoložljivost, potovanja, rezervacije in iskreni
+  fallback „Je n'ai pas de réponse dans nos données pour cette
+  question — je préfère ne pas deviner" / „No tengo una respuesta de
+  nuestros datos para esta pregunta — prefiero no adivinar" (W9 kanon
+  iskrenosti ×6).
+- **NAMENSKI PREPOZNAVALNIK ×6**: 11 naborov ključnih besed razširjenih
+  z FR/ES (~150 novih vzorcev): pozdravi (bonjour/bonsoir/salut/
+  coucou/bonne journée · hola/buenos días/buenas tardes/qué tal),
+  restavracije (restaurant/resto/bistrot/brasserie/manger/déjeuner/
+  où manger · restaurante/comer/almuerzo/cena), namestitve (hôtel/
+  auberge/dormir · hotel/alojamiento/dormir), aktivnosti, cene
+  (combien/coût/valise · cuesta/cuánto), vreme (météo/prévisions/
+  pluie · clima/pronóstico/lluvia), itinererji (itinéraire/jour 2/
+  premier jour · itinerario/día 3/primer día), potovanja, rezervacije
+  in razpoložljivost.
+- **DESTINACIJSKI OVERLAYJI ŽIVI V KLEPETU**: `localizedDest` zdaj
+  uporablja `getFrDestination`/`getEsDestination` — FR/ES uporabnik
+  v klepetu vidi francoske/španske tagline in opise (1.144.0 overlayji
+  so živi na straneh OD 1.145.0, zdaj pa tudi v svetovanju);
+  `COUNTRY_LABELS` fr/es („Haute-Carniole", „Littoral" …),
+  `RATING_WORD` + `FROM_PRICE_PER_PERSON` ×6.
+- **RAZPRŠITVENI NAMIG FR/ES** (`crowd-alternatives.ts`, W8 kanon
+  iskrene gneče): „Note sur l'affluence : Bled est généralement très
+  fréquenté les week-ends de juillet et août — une arrivée tôt le
+  matin aide…" / „Nota sobre la afluencia: … una llegada temprano
+  ayuda…".
+- **DESTINACIJSKI MODAL — ZADNJIH 8 SL-ONLY NIZOV NA 6 JEZIKOV**
+  (`destination-modal.tsx`): prazno stanje lokalov („Aucun lieu
+  enregistré à proximité / Soyez le premier !" · „No hay lugares
+  registrados cerca / ¡Sé el primero!"), „Tous les lieux de la
+  région" / „Todos los lugares de la región", rezervacijski CTA
+  („Réservez en direct" + opis partnerskih povezav + „Réservation
+  externe auprès du prestataire") — pick() tabele po nav/footer
+  kanonu; modal je bil zadnja površina s SL-only nizi na FR/ES poteh.
+- **API KLEPET `/api/chat`**: jezik gre NEPOSREDNO v domensko plast
+  (validacija 6 jezikov, brez vmesne EN preslikave); neznan/nepodan →
+  SL (default, izvirnik). `chat-engine.ts` JSDoc usklajen (6 jezikov).
+
+### Spremenjeno
+
+- Testna pogodba `w12-fr-es-languages.test.ts`: blok „strežnik odgovori
+  v EN" preimenovan v „domenska plast 6-jezična (PRAVI FR/ES
+  odgovori)" — `buildDomainAnswer("bled", "fr")` vrača „visite
+  recommandée"/„par personne"/„Note sur l'affluence" brez SL/EN uhodov
+  (negativne trditve `not.toContain("Ocena")`/`not.toContain("Rated")`);
+  `buildDomainAnswer("hola", "es")` → „¡Hola!"/„Puedo ayudarte";
+  `weatherCodeToTextFor("fr", 0)` = „ciel dégagé",
+  `weatherCodeToTextFor("es", 61)` = „lluvia"; stara preslikava
+  fr/es → EN je varovano ODSOTNA (`src.includes('? "en"')` === false).
+
+### Dokazano
+
+- Suite **4272/4272** zelenih (+2: domenska plast 6-jezična pogodba —
+  pravi FR/ES odgovori, vremenska besedila, direktnejski threading);
+  tsc 0 napak; eslint čist.
+
+### Meja (iskrena, P4-8)
+
+- STO uzemljenje (T2, slovenia.info indeks) ostaja SL/EN — podatkovni
+  vir je dvojezičen; FR/ES uporabniki dedijo EN kanon (isti §38
+  precedens kot IT/DE od 1.128.0 in dogodki/deljeni prispevki).
+- L-vzorčne poti (/trznica, /dozivetja, /lokali, /dogodki, /potovanje,
+  /na-poti, /moja-potovanja), /vodici in /pot ostajajo izven FR/ES
+  whitelist-e (proxy 308 na SL) — nespremenjeno od 1.146.0.
+- **W12 (FR/ES) je s fazo 2c ZAKLJUČEN celoten jedrni lijak v 6
+  jezikih: odkrivanje + svetovanje + destinacije + zemljevid +
+  načrtovalnik + KLEPET.**
+
+---
+
 ## [1.146.0] — 2026-09-29 (W12 „ODKRITEV V ŠESTIH JEZIKIH", faza 2b — NAČRTOVALNIK /fr/nacrtuj + /es/nacrtuj ODPRTA)
 
 ### Dodano
