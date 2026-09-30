@@ -8,6 +8,7 @@ import { Compass, Map as MapIcon, Menu, Navigation, Route } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "@/i18n/navigation";
 import { useMyTrip } from "@/hooks/use-my-trip";
+import { trackPlannerEvent } from "@/lib/planner-analytics";
 
 /**
  * MobileTabBar — mobilna spodnja navigacijska vrstica (TASK 8 / D8-E,
@@ -141,6 +142,15 @@ const MORE_MENU_ROUTES = [
 /** Oznake zavihkov (samo nizinski ključi — brez aria/badge pomočnikov). */
 type TabLabelKey = "explore" | "map" | "myTrip" | "go" | "more";
 
+/** ISSUE #16 F5 „analitika lupine": preslikava zavihka → dogodkovni tab. */
+const TAB_EVENT: Record<TabLabelKey, "explore" | "map" | "my_trip" | "go" | "more"> = {
+  explore: "explore",
+  map: "map",
+  myTrip: "my_trip",
+  go: "go",
+  more: "more",
+};
+
 interface TabDef {
   href: string | null;
   icon: typeof Compass;
@@ -201,9 +211,21 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
       : L.sl;
   const { count } = useMyTrip();
 
+  // ISSUE #16 F5 „analitika lupine": vsak klik zavihka izstreli
+  // shell_nav_clicked {tab, surface: "tabbar"} (fire-and-forget, brez PII —
+  // pri my_trip tudi items = velikost zbirke ob kliku, meri "zbirka → hub").
+  const trackTab = (labelKey: TabLabelKey) => {
+    trackPlannerEvent(
+      "shell_nav_clicked",
+      labelKey === "myTrip"
+        ? { tab: TAB_EVENT[labelKey], surface: "tabbar", items: count }
+        : { tab: TAB_EVENT[labelKey], surface: "tabbar" }
+    );
+  };
+
   // FW4.3-2: usePathname vrača ZUNANJI URL — odstrani `/en` prefix, da
   // ujemanje zavihkov deluje tudi na angleški različici (isti vzorec kot
-  // StickyMobileCTA / LanguageSwitcher).
+  // LanguageSwitcher; upokojena StickyMobileCTA ga je uporabljala enako).
   const pathname =
     rawPathname === "/en" ? "/" : rawPathname.replace(/^\/en(?=\/)/, "");
 
@@ -240,6 +262,7 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
               <Link
                 key={tab.href}
                 href={tab.href as string}
+                onClick={() => trackTab(tab.labelKey)}
                 aria-current={active ? "page" : undefined}
                 className="flex min-h-[44px] flex-col items-center justify-end gap-0.5 rounded-lg pb-2 pt-1 text-[11px] font-medium"
               >
@@ -273,7 +296,10 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
               <button
                 key="tab-more"
                 type="button"
-                onClick={onMore}
+                onClick={() => {
+                  trackTab("more");
+                  onMore();
+                }}
                 aria-haspopup="dialog"
                 aria-label={t.moreAria}
                 aria-current={active ? "page" : undefined}
@@ -294,6 +320,7 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
             <Link
               key={tab.href}
               href={tab.href}
+              onClick={() => trackTab(tab.labelKey)}
               aria-current={active ? "page" : undefined}
               className={cn(
                 "flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-[11px] font-medium transition-colors",

@@ -552,20 +552,11 @@ header.sticky,
   height: 1px;
 }
 
-/* Chat FAB dvig, ko je sticky mobilni CTA bar viden (samo mobile) */
-@media (max-width: 639px) {
-  body[data-sticky-cta="true"] .dsa-chat-fab {
-    bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
-  }
-  body[data-sticky-cta="true"] .dsa-chat-panel {
-    bottom: calc(9.5rem + env(safe-area-inset-bottom, 0px));
-  }
-}
-
-/* TASK 8 / D8-E (issue #8 §52): chat FAB + panel dvig nad spodnjo mobilno
-   tab vrstico (MobileTabBar). Vrstica je vidna na VSEH <lg zaslonih (ne
-   samo <sm kot StickyMobileCTA), zato je breakpoint 1023px. Isti vzorec
-   kot data-sticky-cta zgoraj (tab vrstica ~4.5rem + safe-area). */
+/* TASK 8 / D8-E (issue #8 §52) + ISSUE #16 F5 (dolg): chat FAB + panel dvig
+   nad spodnjo mobilno tab vrstico (MobileTabBar). Vrstica je vidna na VSEH
+   <lg zaslonih, zato je breakpoint 1023px. Prej je obstajal vzporeden dvig
+   za upokojeni StickyMobileCTA (data-sticky-cta, <sm) — komponenta je v
+   fazi 5 IZBRISANA (0 uporabnikov od D8-F), prav tako njena CSS pravila. */
 @media (max-width: 1023px) {
   body[data-mobile-tabbar="true"] .dsa-chat-fab {
     bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));

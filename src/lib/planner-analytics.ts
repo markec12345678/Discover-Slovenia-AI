@@ -245,6 +245,17 @@ export type PlannerEventName =
   // funkcije ($39.99/leto tam; 0 € tu) in kolikokrat se izkoristi
   // geo-koherenca engine-a (Task 50/51) v praksi.
   | "day_export_gmaps"
+  // ISSUE #16 faza 5 „analitika lupine" (1.152.0): klik na vstop NOVE
+  // lupine ODKRIJ → DODAJ → MOJA POT → NAČRTUJ → POJDI (props: tab
+  // explore|map|my_trip|go|more, surface tabbar|header|sheet|dropdown;
+  // + items [samo my_trip klik — velikost zbirke], label [samo sheet/
+  // dropdown vnosi ravni-2 — href]) — meri, ali je preoblikovana IA
+  // (F1: 5-zavihek lupina + Več progressive disclosure) DEJANSKO v
+  // uporabi: katere vstopne točke ljudje kličejo, ali MOJA POT hub in
+  // POJDI (prej pokopan v nogi) dobivata promet, ali „Več" menija kdo
+  // odpira in KATERO vsebino ravni-2 iščejo (progressive disclosure
+  // upravičenje). Brez tega je preoblikovanje F1–F4 nemerljivo.
+  | "shell_nav_clicked"
   // P1-3: proxy signal — rezultat prikazan, sledeni dogodek ni bil zaznan
   // v merjenem oknu (NE pomeni "uporabnik ni bil zadovoljen")
   | "result_session_ended_without_action";

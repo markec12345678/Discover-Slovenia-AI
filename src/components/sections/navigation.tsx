@@ -32,6 +32,7 @@ import { WishlistSheet } from "@/components/wishlist-sheet";
 import { A11yControls } from "@/components/a11y-controls";
 import { useCart } from "@/lib/cart-store";
 import { destinationHref } from "@/lib/search-result-nav";
+import { trackPlannerEvent } from "@/lib/planner-analytics";
 
 
 /**
@@ -95,10 +96,12 @@ const NAV_L = {
 function useNavLinks() {
   const t = useTranslations("nav");
   return [
-    { href: "/destinacije", label: t("discover") },
-    { href: "/moja-potovanja", label: t("myTrip") },
-    { href: "/zemljevid", label: t("map") },
-    { href: "/na-poti", label: t("go") },
+    // ISSUE #16 F5: `tab` je analitska preslikava za shell_nav_clicked
+    // (explore|map|my_trip|go — isti kanon kot MobileTabBar TAB_EVENT).
+    { href: "/destinacije", label: t("discover"), tab: "explore" as const },
+    { href: "/moja-potovanja", label: t("myTrip"), tab: "my_trip" as const },
+    { href: "/zemljevid", label: t("map"), tab: "map" as const },
+    { href: "/na-poti", label: t("go"), tab: "go" as const },
   ];
 }
 
@@ -186,6 +189,26 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
       router.push(destinationHref(destIdOrSlug));
     },
     [router]
+  );
+
+  // ISSUE #16 F5 „analitika lupine": klik na vstop lupine ODKRIJ ·
+  // MOJA POT · ZEMLJEVID · POJDI · VEČ. Površine: header (desktop vrstica
+  // + sprožilec Več), dropdown (desktop Več vnosi ravni-2 — label = href),
+  // sheet (mobilni Več meni; primarne povezave nosijo svoj tab, ravni-2
+  // vnosi tab "more" + label). Fire-and-forget, brez PII (isti kanon kot
+  // MobileTabBar TAB_EVENT / planner-analytics.ts).
+  const trackShellNav = React.useCallback(
+    (
+      tab: "explore" | "map" | "my_trip" | "go" | "more",
+      surface: "header" | "dropdown" | "sheet",
+      label?: string
+    ) => {
+      trackPlannerEvent(
+        "shell_nav_clicked",
+        label ? { tab, surface, label } : { tab, surface }
+      );
+    },
+    []
   );
 
   // "Steklo" = odscrollano ALI vedno (podstrani brez heroja)
@@ -287,6 +310,7 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
               <Link
                 key={link.href}
                 href={link.href}
+                onClick={() => trackShellNav(link.tab, "header")}
                 className={cn(
                   "rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   glass
@@ -303,6 +327,7 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                 disclosure). Skupine: Odkrij več · Načrtuj in orodja · Račun. */}
             <DropdownMenu>
               <DropdownMenuTrigger
+                onClick={() => trackShellNav("more", "header")}
                 className={cn(
                   "inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition-colors outline-none",
                   glass
@@ -317,21 +342,36 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                 <DropdownMenuLabel>{t("moreHeading")}</DropdownMenuLabel>
                 {moreLinks.map((link) => (
                   <DropdownMenuItem asChild key={link.href}>
-                    <Link href={link.href}>{link.label}</Link>
+                    <Link
+                      href={link.href}
+                      onClick={() => trackShellNav("more", "dropdown", link.href)}
+                    >
+                      {link.label}
+                    </Link>
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>{t("toolsHeading")}</DropdownMenuLabel>
                 {toolLinks.map((link) => (
                   <DropdownMenuItem asChild key={link.href}>
-                    <Link href={link.href}>{link.label}</Link>
+                    <Link
+                      href={link.href}
+                      onClick={() => trackShellNav("more", "dropdown", link.href)}
+                    >
+                      {link.label}
+                    </Link>
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>{t("accountHeading")}</DropdownMenuLabel>
                 {accountLinks.map((link) => (
                   <DropdownMenuItem asChild key={link.href}>
-                    <Link href={link.href}>{link.label}</Link>
+                    <Link
+                      href={link.href}
+                      onClick={() => trackShellNav("more", "dropdown", link.href)}
+                    >
+                      {link.label}
+                    </Link>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -481,11 +521,13 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                   aria-label="Mobilna navigacija"
                 >
                   {/* Issue #16 faza 1 — primarne povezave (4): isti vrstni red
-                      kot tab vrstica (Odkrij · Moja pot · Zemljevid · Pojdi) */}
+                      kot tab vrstica (Odkrij · Moja pot · Zemljevid · Pojdi).
+                      F5: sheet klik nosi svoj tab (analitika lupine). */}
                   {navLinks.map((link) => (
                     <SheetClose asChild key={link.href}>
                       <Link
                         href={link.href}
+                        onClick={() => trackShellNav(link.tab, "sheet")}
                         className="rounded-md px-3 py-3 text-base font-medium text-foreground/90 transition-colors hover:bg-accent hover:text-accent-foreground"
                       >
                         {link.label}
@@ -503,6 +545,7 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                     <SheetClose asChild key={link.href}>
                       <Link
                         href={link.href}
+                        onClick={() => trackShellNav("more", "sheet", link.href)}
                         className="rounded-md px-3 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-accent hover:text-accent-foreground"
                       >
                         {link.label}
@@ -519,6 +562,7 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                     <SheetClose asChild key={link.href}>
                       <Link
                         href={link.href}
+                        onClick={() => trackShellNav("more", "sheet", link.href)}
                         className="rounded-md px-3 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-accent hover:text-accent-foreground"
                       >
                         {link.label}
@@ -535,6 +579,7 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                     <SheetClose asChild key={link.href}>
                       <Link
                         href={link.href}
+                        onClick={() => trackShellNav("more", "sheet", link.href)}
                         className="rounded-md px-3 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-accent hover:text-accent-foreground"
                       >
                         {link.label}

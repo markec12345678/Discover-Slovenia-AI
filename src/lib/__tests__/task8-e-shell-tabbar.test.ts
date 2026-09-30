@@ -19,8 +19,8 @@
 //     + 2 novi: Primerjava, Prijava — prej samo noga).
 //  4. Lupina (Navigation solid + Footer) na 19 prej sirotih straneh
 //     (D8-A §2.4 jih šteje 17 + /moja-potovanja + /pot/[shareId] po nalogi
-//     D8-E); StickyMobileCTA upokojen na straneh z lupino (ostane samo
-//     domača stran — druga faza).
+//     D8-E); StickyMobileCTA upokojen na straneh z lupino in (ISSUE #16 F5)
+//     POPOLNOMA izbrisan iz repa (0 uporabnikov po umiku domače strani D8-F).
 // Source-contract (readFileSync) — brez uvozov @/app → brez TASK 76
 // obveznosti (kanon Task 28/33/34/35).
 // ============================================================================
@@ -61,7 +61,7 @@ const SHELL_PAGES: string[] = [
   "src/app/politika-zasebnosti/page.tsx",
 ];
 
-/** Strani, kjer je bil StickyMobileCTA upokojen (ostane SAMO domača stran). */
+/** Strani, kjer je bil StickyMobileCTA upokojen (umik zaključen z izbrisom F5). */
 const RETIRED_CTA_PAGES: string[] = [
   "src/app/slovenia-pass/page.tsx",
   "src/app/lokali/page.tsx",
@@ -135,7 +135,10 @@ describe("ISSUE #16 faza 1: MobileTabBar — ODKRIJ | ZEMLJEVID | MOJA POT | POJ
 
   test("onMore prop odpre OBSTOJEČI Sheet meni (ne nov meni)", () => {
     expect(tabbarSrc).toContain("onMore: () => void");
-    expect(tabbarSrc).toContain("onClick={onMore}");
+    // ISSUE #16 F5: gumb Več najprej izstreli shell_nav_clicked {tab: more},
+    // nato odpre meni — onMore živi v istem handlerju (analitika lupine).
+    expect(tabbarSrc).toContain('trackTab("more");');
+    expect(tabbarSrc).toMatch(/trackTab\("more"\);[\s\S]{0,80}onMore\(\)/);
     expect(tabbarSrc).toContain('aria-haspopup="dialog"');
   });
 
@@ -214,14 +217,16 @@ describe("ISSUE #16 faza 1: Navigation — tab bar + pregrupiran Sheet + Več dr
   });
 
   test("desktop navigacija #16: Odkrij · Moja pot · Zemljevid · Pojdi + Več dropdown (progressive disclosure)", () => {
-    // useNavLinks — 4 povezave po modelu #16
-    for (const [href, key] of [
-      ["/destinacije", "discover"],
-      ["/moja-potovanja", "myTrip"],
-      ["/zemljevid", "map"],
-      ["/na-poti", "go"],
+    // useNavLinks — 4 povezave po modelu #16 (+ F5 analitski tab)
+    for (const [href, key, tab] of [
+      ["/destinacije", "discover", "explore"],
+      ["/moja-potovanja", "myTrip", "my_trip"],
+      ["/zemljevid", "map", "map"],
+      ["/na-poti", "go", "go"],
     ] as const) {
-      expect(navSrc).toContain(`{ href: "${href}", label: t("${key}") }`);
+      expect(navSrc).toContain(
+        `{ href: "${href}", label: t("${key}"), tab: "${tab}" as const }`
+      );
     }
     expect(navSrc).toContain('hidden items-center gap-1 lg:flex');
     // Več dropdown s skupinami
@@ -345,23 +350,39 @@ describe("TASK 8 / D8-E: lupina na prej sirotih straneh (P-NAV-1)", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// 4. STICKYMOBILECTA — upokojen na straneh z lupino (ostane samo domov)
+// 4. STICKYMOBILECTA — POPOLNOMA upokojen in IZBRISAN (ISSUE #16 F5 dolg)
 // ─────────────────────────────────────────────────────────────────────────
-describe("TASK 8 / D8-E: StickyMobileCTA upokojen na straneh z lupino", () => {
+describe("ISSUE #16 F5: StickyMobileCTA izbrisan (0 uporabnikov → dolg odstranjen)", () => {
   for (const page of RETIRED_CTA_PAGES) {
-    test(`${page} NE uvoza več StickyMobileCTA`, () => {
+    test(`${page} NE uvoza StickyMobileCTA`, () => {
       expect(read(page)).not.toContain("sticky-mobile-cta");
     });
   }
 
-  test("domača stran (druga faza D8-F) ga ŠE vedno uporablja; komponenta ostaja v repu", () => {
-    expect(read("src/app/page.tsx")).toContain("StickyMobileCTA");
-    const comp = read("src/components/sticky-mobile-cta.tsx");
-    expect(comp).toContain("UPOKOJEN");
+  test("komponenta NE obstaja več v repu (izbris v fazi 5)", () => {
+    let exists = true;
+    try {
+      read("src/components/sticky-mobile-cta.tsx");
+    } catch {
+      exists = false;
+    }
+    expect(exists).toBe(false);
   });
 
-  test("data-sticky-cta CSS pravila OSTAJAJO (domača stran jih še rabi)", () => {
-    expect(globalsSrc).toContain('body[data-sticky-cta="true"] .dsa-chat-fab');
+  test("domača stran ne referencira komponente (le dokumentacijski komentar o umiku)", () => {
+    const home = stripComments(read("src/app/page.tsx"));
+    expect(home).not.toContain("StickyMobileCTA");
+    expect(home).not.toContain("sticky-mobile-cta");
+  });
+
+  test("data-sticky-cta CSS pravila ODSTRANJENA ( ostane samo data-mobile-tabbar dvig)", () => {
+    expect(globalsSrc).not.toContain('body[data-sticky-cta="true"]');
+    expect(globalsSrc).toContain('body[data-mobile-tabbar="true"] .dsa-chat-fab');
+  });
+
+  test("nobena lupina ne uvaža več sticky-mobile-cta", () => {
+    expect(tabbarSrc).not.toContain('from "@/components/sticky-mobile-cta"');
+    expect(navSrc).not.toContain('from "@/components/sticky-mobile-cta"');
   });
 });
 

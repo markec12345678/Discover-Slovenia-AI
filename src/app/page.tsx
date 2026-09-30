@@ -48,7 +48,8 @@ import { SITE_NAME } from "@/lib/seo";
  *
  * StickyMobileCTA: UPOKOJEN na domači strani (D8-B §6.2 — mobilno tab
  * bar ostalih površin pokriva "Načrtuj"; "Za ponudnike" živi v nogi +
- * meniju). Komponenta sama ostaja za ostale strani, ki je še uporabljajo.
+ * meniju). ISSUE #16 F5 (dolg): s tem umikom je imela komponenta 0
+ * uporabnikov — IZBRISANA iz repa (skupaj z data-sticky-cta CSS pravili).
  */
 const PATH = "/";
 

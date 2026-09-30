@@ -7,6 +7,67 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.152.0] — 2026-09-30 (ISSUE #16 „UX/IA KONSOLIDACIJA", faza 5 — ANALITIKA LUPINE + STICKYMOBILECTA DOLG: zadnja faza načrta)
+
+### Dodano
+
+- **DOGODEK `shell_nav_clicked` (analitika lupine).** Issue #16: „Kako vemo,
+  da preoblikovana IA deluje?" Faze F1–F4 so preoblikovale vsako površino
+  (5-zavihek lupina ODKRIJ | ZEMLJEVID | MOJA POT | POJDI | VEČ + Več
+  progressive disclosure) — brez telemetrije je bilo preoblikovanje
+  NEMERLJIVO. Vsak klik vstopa lupine zdaj izstreli
+  `shell_nav_clicked { tab, surface }`:
+  - `tab` ∈ `explore|map|my_trip|go|more` (isti kanon po vseh površinah),
+  - `surface` ∈ `tabbar` (mobilna vrstica — vseh 5 zavihkov vklj. Več),
+    `header` (desktop 4 povezave + sprožilec Več), `dropdown` (desktop Več
+    vnosi ravni-2), `sheet` (mobilni Več meni — primarne povezave nosijo
+    svoj tab, ravni-2 vnosi tab „more"),
+  - `items` (samo my_trip klik — velikost zbirke ob kliku: meri „zbirka →
+    hub" prehode), `label` (samo sheet/dropdown — href vnosa ravni-2,
+    stabilen v vseh jezikih).
+  Meri: katere vstopne točke dobivajo promet, ali MOJA POT hub (prej 1 klik
+  v meniju) in POJDI (prej pokopan v nogi) sadita, ali kdo odpira „Več" in
+  KATERO vsebino ravni-2 išče (upravičenje progressive disclosure); skupaj
+  s `planner_started` → lijak lupina → načrtovanje. Fire-and-forget, brez
+  PII (isti kanon kot vsa pilotna analitika — `docs/ANALYTICS-EVENTS.md`).
+- **NOV test `issue16-f5-shell-analytics.test.ts`** (20 varovalk,
+  source-contract readFileSync — kanon Task 28/33/34): dogodek v union-u +
+  strežniški whitelisti + dokumentaciji (W3 pariteta — 0 tihih 400);
+  MobileTabBar TAB_EVENT preslikava + `items` prop + Več gumb
+  (trackTab + onMore); Navigation trackShellNav vseh 4 površin (header
+  povezave/sprožilec, dropdown ×3 skupine z label, sheet ×4 skupine);
+  StickyMobileCTA dolg poravnan (+2 posodobljeni varovalki v task8-e).
+
+### Odstranjeno
+
+- **STICKYMOBILECTA DOLG (issue #16 faza 5).** Komponenta
+  `sticky-mobile-cta.tsx` je imela 0 uporabnikov od D8-F (D8-B §6.2 jo je
+  upokojil na zadnji površini — domači strani; MobileTabBar pokriva
+  „Načrtuj", „Za ponudnike" živi v nogi + meniju). Izbrisana iz repa skupaj
+  z `data-sticky-cta` CSS pravili v globals.css (dvig chat FAB nad tab
+  vrstico `data-mobile-tabbar` OSTAJA — F1 lupina). Testa
+  `task8-e-shell-tabbar.test.ts` / `task8-f-homepage-planner.test.ts`
+  posodobljena: izbris popolnoma dokumentiran (0 mrtve kode, 0 mrtev CSS).
+
+### Dokazano
+
+- Suite **4335/4335** zelenih (4313 + 22: nov issue16-f5 + posodobljeni
+  task8-e/task8-f3cd source-contracti); tsc 0 napak; eslint čist.
+- Dev E2E brskalniško: klik zavihka MOJA POT → POST /api/analytics/event
+  200 → vrstica `planner_shell_nav_clicked` v DB z `{tab: my_trip,
+  surface: tabbar, items: N}` (dokaz issue16-dokazi/f5-*.png).
+
+### Meja (iskrena)
+
+- Dogodek pokriva VSTOPE lupine (navigacija), ne mikro-interakcij znotraj
+  strani (odprtje Sheet dropdowna na več kot en klik itd.) — natančnost
+  „vsak klik vstopa" je namerno minimalna (isti fire-and-forget kanon).
+- Začetna analitika je kumulativna (brez cohort polja) — zadostuje za
+  doseg/udeležbo po `tab`/`surface`; izboljšave po potrebi po prvih
+  meritvah.
+
+---
+
 ## [1.151.0] — 2026-09-30 (ISSUE #16 „UX/IA KONSOLIDACIJA", faza 4 — KLEPET KOT ASISTENT ZNOTRAJ POTOVANJA: zadnji 2 površini)
 
 ### Dodano

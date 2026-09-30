@@ -189,6 +189,11 @@ const VALID_EVENTS = new Set([
   "refine_timeout",
   // TASK 4 / K-7: AI itinerer zagnan v Go Mode (most PLAN → GO)
   "go_mode_started",
+  // ISSUE #16 faza 5 „analitika lupine" (1.152.0): klik na vstop lupine
+  // ODKRIJ|ZEMLJEVID|MOJA POT|POJDI|VEČ (props: tab, surface; items pri
+  // my_trip; label pri sheet/dropdown vnosih ravni-2) — pariteta s klient
+  // union (test W3 whitelist pariteta)
+  "shell_nav_clicked",
 ]);
 
 /** Omejitve velikosti props (proti zlorabi analitičnega endpointa).
