@@ -41,6 +41,13 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* #19 FAZA C: ELEVACIJSKA LESTVICA — 3 stopnje za celoten produkt
+     (BASELINE-VISUAL §2.2: card = mirovalna površina, raised = interaktivno
+     dvig/hover, overlay = lebdeči elementi nad vsebino). Ena lestvica namesto
+     mešanice xs/sm/md/lg/xl po površinah. */
+  --shadow-card: 0 1px 2px 0 oklch(0.2 0.02 150 / 0.05), 0 1px 3px 1px oklch(0.2 0.02 150 / 0.07);
+  --shadow-raised: 0 2px 4px -1px oklch(0.2 0.02 150 / 0.08), 0 6px 16px -4px oklch(0.2 0.02 150 / 0.14);
+  --shadow-overlay: 0 8px 24px -6px oklch(0.2 0.02 150 / 0.18), 0 24px 56px -16px oklch(0.2 0.02 150 / 0.3);
 }
 
 :root {

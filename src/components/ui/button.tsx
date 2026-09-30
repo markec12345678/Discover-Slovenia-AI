@@ -9,10 +9,15 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        /* #19 FAZA C-1: CTA hierarhija — primarni gumb nosi elevacijo
+           (shadow-md → hover shadow-lg + 1px dvig) + notranji obroč
+           (bevel) za ločitev od fotografij/površin; sekundarni (outline,
+           secondary) ostanejo mirni, terciarni (ghost) brez sence —
+           enotna lestvica po celotni aplikaciji (BASELINE-VISUAL §2.1). */
         default:
-          "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
+          "bg-primary text-primary-foreground shadow-md ring-1 ring-inset ring-primary-foreground/15 hover:bg-primary/90 hover:shadow-lg hover:-translate-y-px active:translate-y-0 active:shadow-md",
         destructive:
-          "bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "bg-destructive text-white shadow-md ring-1 ring-inset ring-white/20 hover:bg-destructive/90 hover:shadow-lg hover:-translate-y-px active:translate-y-0 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
           "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
         secondary:

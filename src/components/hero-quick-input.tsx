@@ -92,7 +92,7 @@ export function HeroQuickInput() {
           <Button
             onClick={() => handleSubmit()}
             disabled={loading || !input.trim()}
-            className="rounded-xl shrink-0 gap-1.5 shadow-md transition-all hover:shadow-lg hover:brightness-110"
+            className="rounded-xl shrink-0 gap-1.5"
             size="lg"
           >
             {loading ? (

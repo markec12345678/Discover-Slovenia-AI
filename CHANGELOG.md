@@ -7,6 +7,66 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.154.0] — 2026-09-30 (#19 DISCOVER: Premium Product Presentation — FAZA A/B baseline + FAZA C-1 CTA hierarhija & elevacijska lestvica)
+
+### Dodano (FAZA A/B — dokumentacija, commiti e92b8de + ca16086)
+
+- **`docs/FUNCTION-PARITY-BEFORE.md` (678 vrstic)** — popolna funkcionalna
+  inventura za pogodbo „0 izgub" iz #19: 39 rut + 6 ne-API handlerjev,
+  20 območij (navigacija, CTA-ji, 22 »Dodaj v mojo pot« površin, modali,
+  planner, zemljevid, Na poti, klepet, booking/handoff, Google Pins uvoz,
+  računi/uvoz, socialno, zbirke, 6 jezikov, 144 API endpointov, PWA,
+  Slovenia Pass) + 2 izkreni aneksa (funkcije, ki jih ni bilo mogoče
+  popolnoma preveriti, + viri).
+- **`docs/BASELINE-VISUAL.md` (92 vrstice)** — izhodiščno vizualno stanje po
+  pravilu #19 (»ne izmišljuj problemov«): DOM-diagnostika 320/1280px na 7
+  ploskvah (0 preliva, 0 rezanega besedila, 0 premajhnih tarč, 0 slik brez
+  alt — »×2 sliki« so bile artefakt Chrome neterror), VLM triaža (sivi
+  placeholderji = lazy-load artefakt; hero kontrast = že pokrit s 3-plastnim
+  overlayjem), 5 BEFORE dokazov v `qh19-baseline/`. Ugotovitev: izdelek je
+  STRUKTURNO čist — FAZA C se osredotoči na prezentacijski jezik:
+  1) CTA hierarhija, 2) elevation konsistentnost, 3) tipografska hierarhija,
+  4) gostota kartic, 5) ritam sekcij (barvni ton SUBJEKTIVEN — brez mandata
+  ne spreminjamo).
+
+### Spremenjeno (FAZA C-1 — prva koherentna množica: CTA hierarhija + elevacija)
+
+- **Elevacijska lestvica kot design tokeni (globals.css `@theme`)** — tri
+  stopnje namesto mešanice xs/sm/md/lg/xl po površinah (BASELINE §2.2):
+  `--shadow-card` (mirovalne kartice), `--shadow-raised` (interaktivni
+  dvig / popover / dropdown), `--shadow-overlay` (dialogi, sheet-i, sub-menu
+  — 24px/56px dvoslojna senca). Tailwind 4 generira utility razrede
+  `shadow-card/raised/overlay`.
+- **`button.tsx` primarni variant (default) — pravi »pop« CTA:**
+  `shadow-md` mirovalna + `hover:shadow-lg` + `hover:-translate-y-px`
+  dvig + `active:translate-y-0` pritisk + `ring-1 ring-inset
+  ring-primary-foreground/15` bevel (ločitev od fotografij — svetel rob na
+  temni zeleni, temen na svetli v dark mode). Isti tretma za `destructive`
+  (potrditveni dialogi). Sekundarni (outline/secondary) OSTANEJO mirni,
+  terciarni (ghost) brez sence — hierarhija: primarni dvignjen, ostali
+  umaknjeni (BASELINE §2.1).
+- **`card.tsx`** — `shadow-sm` → `shadow-card` (kanonska mirovalna raven).
+- **`dialog.tsx` / `sheet.tsx`** — `shadow-lg` → `shadow-overlay`;
+  **`popover.tsx` / `dropdown-menu.tsx`** — `shadow-md` → `shadow-raised`
+  (sub-content → `shadow-overlay`). Celoten floating layer zdaj na enotni
+  lestvici.
+- **`hero-quick-input.tsx`** — primarni gumb »Sestavi mojo pot« prevzame
+  kanonski variant (odstranjeni duplikatni inline `shadow-md/hover:shadow-lg/
+  brightness-110`; `rounded-xl` ostane za skladnost s steklenim panelom).
+
+### Preverjanje (FAZA D regresija za množico 1)
+
+- Lint 0; **test suite 4413/4413 zelenih** (0 fail, 73059 expect).
+- Prevod CSS: `.shadow-card/.shadow-raised/.shadow-overlay` generirani z
+  pravimi vrednostmi; izračunan stil primarnega gumba potrjuje
+  `inset bevel 1px + shadow-md` (+ hover/active razredi prisotni).
+- Zlata pot (agent-browser): čip »Miren vikend« → `/nacrtuj` → avtomatsko
+  generiran itinerer (Bled/Bohinj) ✓; sheet »Priljubljene« nosi
+  `shadow-overlay` ✓; **320px hard gate: 0 horizontalnega preliva** ✓;
+  konzola brez napak (samo znani Fast Refresh + next-auth dev warningi).
+
+---
+
 ## [1.153.2] — 2026-09-30 (QH: LOKALI — posvečena evidence vrzeli 17-A #5 + 2 POPRAVLJENA produkcijsko potrjena latentna hrošča /api/listings)
 
 ### Popravljeno
