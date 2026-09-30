@@ -269,7 +269,7 @@ export function ListingsSection() {
           >
             {L.title[lang]}
           </h2>
-          <p className="mt-3 text-base text-muted-foreground">
+          <p className="mt-3 text-base text-foreground-subtle">
             {L.subtitle[lang]}
           </p>
           {/* F4-E: tiha resnična vrstica — SAMO na EN */}

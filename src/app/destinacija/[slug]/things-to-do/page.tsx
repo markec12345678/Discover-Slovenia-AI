@@ -310,7 +310,10 @@ export default async function ThingsToDoPage({
               {products.map((p) => (
                 <Card key={p.id}>
                   <CardContent className="p-4">
-                    <h3 className="font-medium text-sm mb-1">{p.name}</h3>
+                    {/* #19 FAZA C-2: teža naslova kartice poenotena na
+                        font-semibold (kot listings/destinations/collections
+                        kartice — BASELINE §2.3) */}
+                    <h3 className="font-semibold text-sm mb-1">{p.name}</h3>
                     <p className="text-xs text-muted-foreground line-clamp-1 mb-2">{p.description}</p>
                     <span className="font-bold text-primary">{p.price}€</span>
                   </CardContent>

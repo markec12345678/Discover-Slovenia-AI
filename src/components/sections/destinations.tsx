@@ -234,7 +234,7 @@ export function DestinationsSection({
           >
             {featured ? t("titleFeatured") : t("titleAll")}
           </h2>
-          <p className="mt-3 text-base text-muted-foreground">
+          <p className="mt-3 text-base text-foreground-subtle">
             {featured
               ? t("subtitleFeatured")
               : t("subtitleAll")}

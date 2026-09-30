@@ -312,7 +312,7 @@ export function AskLocal() {
           >
             Vprašaj lokalca
           </h2>
-          <p className="mt-3 text-base text-muted-foreground">
+          <p className="mt-3 text-base text-foreground-subtle">
             Odgovori temeljijo na naši bazi realnih destinacij, lokalov in
             izkušenj — brez izmišljotin. Hitro vprašanje (1 na dan) in globja
             osebna konzultacija sta brezplačna.

@@ -47,7 +47,9 @@ export function SectionHeader({
         {title}
       </h2>
       {subtitle ? (
-        <p className="max-w-2xl text-balance text-base text-muted-foreground sm:text-lg">
+        /* #19 FAZA C-2: vsebinski podnaslov — foreground-subtle (višji
+           kontrast od muted, ki se bere kot metapodatki; BASELINE §2.3) */
+        <p className="max-w-2xl text-balance text-base text-foreground-subtle sm:text-lg">
           {subtitle}
         </p>
       ) : null}

@@ -67,6 +67,44 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.155.0] — 2026-09-30 (#19 DISCOVER: FAZA C-2 — tipografska hierarhija: vsebinski podnaslovi + poenotena teža naslovov kartic)
+
+### Dodano
+
+- **Semantični žeton `--foreground-subtle`** (globals.css, vseh 6 blokov
+  palete: svetli `oklch(0.42 0.02 150)` ≈ 5,7:1 na ozadju, temni
+  `oklch(0.82 0.02 145)`, visokokontrastni ≈ foreground) + preslikava v
+  `@theme` → utility `text-foreground-subtle`. Korak med
+  `text-muted-foreground` (metapodatki, 4,3:1) in `text-foreground` —
+  rešitev BASELINE-VISUAL §2.3: »podnaslovi se berejo kot metapodatki«.
+  Rezervirana barva ZA vsebinske lede, ki nosijo pomen, ne za metadata
+  (cena, časi, oznake — ti ostanejo muted).
+
+### Spremenjeno
+
+- **`SectionHeader`** (kanonska komponenta naslovov sekcij): podnaslov
+  `text-muted-foreground` → `text-foreground-subtle`.
+- **6 vsebinskih ledev sekcij** po produktu (vsi so preverjeno opisna
+  vsebina, ne metapodatki): `destinations`, `listings`, `collections`,
+  `community-trips`, `ask-local`, `blog` — `mt-3 text-base
+  text-muted-foreground` → `text-foreground-subtle`.
+- **Poenotenje teže naslova kartice**: things-to-do lokalni izdelki
+  (`destinacija/[slug]/things-to-do`) `font-medium` → `font-semibold` —
+  zadnji outlayer; naslovi kartic po produktu so zdaj 100 % `font-semibold`
+  (survey 48/48 površin).
+
+### Preverjanje (FAZA D regresija)
+
+- Lint 0; **test suite 4413/4413 zelenih** (0 fail, 73059 expect).
+- Utility `text-foreground-subtle` generiran v prevajanem CSS
+  (`color: var(--foreground-subtle)`); izračunana barva v browserju:
+  svetli `oklch(0.42 0.02 150)`, temni (`.dark`) `oklch(0.82 0.02 145)`.
+- SSR potrdi razred na `/` (2 sekciji), `/destinacije`, `/nacrtuj`,
+  `/vodici`.
+- **320px hard gate: 0 horizontalnega preliva**; konzola brez napak.
+
+---
+
 ## [1.153.2] — 2026-09-30 (QH: LOKALI — posvečena evidence vrzeli 17-A #5 + 2 POPRAVLJENA produkcijsko potrjena latentna hrošča /api/listings)
 
 ### Popravljeno

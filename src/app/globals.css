@@ -6,6 +6,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* #19 FAZA C-2: vsebinski podnaslovi — korak med muted-foreground
+     (metapodatki) in foreground; generira utility text-foreground-subtle */
+  --color-foreground-subtle: var(--foreground-subtle);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -60,6 +63,8 @@
      Kontrast belega besedila na primarni se izboljša (~5,2:1). */
   --background: oklch(0.99 0.005 145);
   --foreground: oklch(0.2 0.02 150);
+  /* #19 FAZA C-2: vsebinski podnaslovi (ledes) — ~5.7:1 na ozadju */
+  --foreground-subtle: oklch(0.42 0.02 150);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.2 0.02 150);
   --popover: oklch(1 0 0);
@@ -96,6 +101,7 @@
 .dark {
   --background: oklch(0.16 0.01 150);
   --foreground: oklch(0.96 0.005 145);
+  --foreground-subtle: oklch(0.82 0.02 145);
   --card: oklch(0.21 0.01 150);
   --card-foreground: oklch(0.96 0.005 145);
   --popover: oklch(0.21 0.01 150);
@@ -165,6 +171,7 @@
   :root:not(.contrast-off) {
     --background: oklch(1 0 0);
     --foreground: oklch(0.1 0.01 150);
+    --foreground-subtle: oklch(0.2 0.01 150);
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.1 0.01 150);
     --popover: oklch(1 0 0);
@@ -185,6 +192,7 @@
   html.dark:not(.contrast-off) {
     --background: oklch(0.1 0 0);
     --foreground: oklch(1 0 0);
+    --foreground-subtle: oklch(0.95 0 0);
     --card: oklch(0.13 0 0);
     --card-foreground: oklch(1 0 0);
     --popover: oklch(0.13 0 0);
@@ -209,6 +217,7 @@
 :root.contrast-high {
   --background: oklch(1 0 0);
   --foreground: oklch(0.1 0.01 150);
+  --foreground-subtle: oklch(0.2 0.01 150);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.1 0.01 150);
   --popover: oklch(1 0 0);
@@ -229,6 +238,7 @@
 html.dark.contrast-high {
   --background: oklch(0.1 0 0);
   --foreground: oklch(1 0 0);
+  --foreground-subtle: oklch(0.95 0 0);
   --card: oklch(0.13 0 0);
   --card-foreground: oklch(1 0 0);
   --popover: oklch(0.13 0 0);

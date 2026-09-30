@@ -112,7 +112,7 @@ export function BlogSection() {
           >
             {t("title")}
           </h2>
-          <p className="mt-3 text-base text-muted-foreground">
+          <p className="mt-3 text-base text-foreground-subtle">
             {t("intro")}
           </p>
         </div>
