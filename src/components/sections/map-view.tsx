@@ -49,6 +49,8 @@ import { useMapPins } from "@/lib/map-pins-client";
 import { SUPPLY_MIN_ZOOM } from "@/lib/supply/zoom";
 import { getProvider } from "@/lib/supply/registry";
 import { addProductToSelection } from "@/lib/supply/selection";
+import { addMyTripItem } from "@/lib/my-trip";
+import { supplyTripItem } from "@/lib/supply/my-trip-item";
 import { ProductModal } from "@/components/supply/product-modal";
 import { ProviderPanel } from "@/components/supply/provider-panel";
 
@@ -1279,6 +1281,12 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
       // + telemetrija supply_add_to_plan). Vizualni odziv: gumb se
       // prebarva v „✓ Dodano" (popup ostane odprt — uporabnik vidi potrditev;
       // duplikat/limit → iskren besedilni odziv, popup NE zapre).
+      // ISSUE #16 faza 3 — KANONSKI WRITE-THROUGH: gumb obljublja „moja
+      // pot", zato izdelek zdaj pristane TUDI v zbirki dai:my-trip-items
+      // (prej JE SAMO supply izbira — napačna semantika; ProductModal in
+      // ProductCard [isti vir] pišeta v OBE plasti). addMyTripItem je
+      // idempotenten (dedup kind:refId) — klic neodvisno od supply izida,
+      // enak vzorec kot ProductModal handleToggleTrip.
       if (target.classList.contains("map-poi-add")) {
         const id = target.getAttribute("data-poi-id");
         const product = productsRef.current.find((p) => p.id === id);
@@ -1289,6 +1297,9 @@ export function MapView({ routeCoords, routeByDay, onOpenDestination }: MapViewP
           const result = addProductToSelection(product, {
             locale: lang === "en" ? "en" : "sl",
           });
+          // ISSUE #16 faza 3: zbirka „Moja pot“ (source „zemljevid“ — isti
+          // vir kot ProductModal/ProductCard na tej površini).
+          addMyTripItem(supplyTripItem(product, lang === "en" ? "en" : "sl", "zemljevid"));
           if (result.added) {
             target.textContent = T.addedToTrip[lang];
             (target as HTMLButtonElement).disabled = true;

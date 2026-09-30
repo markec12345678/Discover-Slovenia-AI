@@ -7,6 +7,52 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.150.0] — 2026-09-30 (ISSUE #16 „UX/IA KONSOLIDACIJA", faza 3 — ZEMLJEVID POI POPUP: kanonski write-through v OBE plasti)
+
+### Dodano
+
+- **POI POPUP „+ DODAJ V MOJO POT" PIŠE V ZBIRKO (`map-view.tsx`).** Audit
+  #16 vrzel: popup na /zemljevid je klical IZKLJUČNO `addProductToSelection`
+  (supply izbira načrtovalnika) — ne pa zbirke `dai:my-trip-items`.
+  Oznaka je obljubljala „moja pot", podatki pa niso prispevali v hub
+  /moja-potovanja (zadnja površina z napačno semantiko — ostanek problema
+  D8-A P-CTA-1). Zdaj handler kliče `addMyTripItem(supplyTripItem(product,
+  …, "zemljevid"))` NEODVISNO od supply izida — idempotenten dedup
+  kind:refId, enak kanonski vzorec kot ProductModal handleToggleTrip in
+  ProductCard onToggle (isti vir podatkov, isti source „zemljevid").
+  Supply mehanika (dedup + kap + persist + telemetrija
+  supply_add_to_plan + iskreni odzivi ✓/limit) ostaja NESPREMENJENA.
+
+### Spremenjeno
+
+- **NOV test `issue16-f3-map-write-through.test.ts`** (6 varovalk): uvoza
+  addMyTripItem/supplyTripItem; klic v map-poi-add vejavti PRED
+  vejitvami result (neodvisno od supply izida); supply mehanika +
+  iskreni odzivi ostajajo (regex pogodba issue12 F12-2 NEspremenjena);
+  kanonska vzorca ProductModal/ProductCard kot referendum zero-loss.
+
+### Dokazano
+
+- Suite **4291/4291** zelenih (+6); tsc 0 napak; eslint čist.
+- Brskalniški E2E (dev, 2 dokaza `issue16-dokazi/f3-*.png`): iskanje
+  „restavracije Ljubljana" aktivira supply sloj (100 POI markerjev) →
+  klik POI („Kavarna Mango", fsq:4b912173…) → popup z gumbom „+ Dodaj v
+  mojo pot" → klik → **OBE plasti potrjeni**: sessionStorage
+  `dai:supply-selection` vsebuje izdelek (zero loss) IN localStorage
+  `dai:my-trip-items` vsebuje `{kind: "product", refId: "fsq:…", title:
+  "Kavarna Mango", source: "zemljevid"}` (popravek); gumb → „✓ Dodano";
+  drugi klik → še vedno 1 vnos (idempotentnost); 0 napak strani/konzole.
+
+### Meja (iskrena)
+
+- Popup je DOM-delegiran handler (ne React komponenta) — odstranitev iz
+  zbirke ostaja v hubu /moja-potovanja oz. ProductModal (isti kanon kot
+  prej; popup nima toggle-odstrani, ker se zapre ob kliku drugam).
+- Fazi #16 4–5 (klepet na /moja-potovanja + /pot/[shareId]; analitika
+  lupine + StickyMobileCTA dolg) sledita.
+
+---
+
 ## [1.149.0] — 2026-09-30 (ISSUE #16 „UX/IA KONSOLIDACIJA", faza 2 — MOJA POT HUB: vedno viden + „Kaj je naslednji korak?" + korak POJDI)
 
 ### Dodano
