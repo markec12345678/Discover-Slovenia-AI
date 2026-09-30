@@ -17,7 +17,17 @@
     "tagline": "Viajes con IA",
     "searchAria": "Búsqueda inteligente",
     "journey": "Viaje completo",
-    "startAnywhere": "Empieza en cualquier lugar"
+    "startAnywhere": "Empieza en cualquier lugar",
+    "discover": "Descubrir",
+    "myTrip": "Mi viaje",
+    "go": "Ir",
+    "more": "Más",
+    "moreHeading": "Descubrir más",
+    "toolsHeading": "Planificar y herramientas",
+    "accountHeading": "Cuenta",
+    "login": "Iniciar sesión",
+    "compare": "Comparación",
+    "sheetSlogan": "La IA compone tu itinerario en segundos."
   },
   "hero": {
     "title": "¿Qué quieres vivir en Eslovenia?",

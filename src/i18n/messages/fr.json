@@ -17,7 +17,17 @@
     "tagline": "Voyages IA",
     "searchAria": "Recherche intelligente",
     "journey": "Voyage complet",
-    "startAnywhere": "Commencez n'importe où"
+    "startAnywhere": "Commencez n'importe où",
+    "discover": "Découvrir",
+    "myTrip": "Mon voyage",
+    "go": "Aller",
+    "more": "Plus",
+    "moreHeading": "Découvrir plus",
+    "toolsHeading": "Planifier et outils",
+    "accountHeading": "Compte",
+    "login": "Connexion",
+    "compare": "Comparaison",
+    "sheetSlogan": "L'IA compose votre itinéraire en quelques secondes."
   },
   "hero": {
     "title": "Que souhaitez-vous vivre en Slovénie ?",

@@ -4,7 +4,7 @@ import * as React from "react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useTheme } from "next-themes";
 import { useLocale, useTranslations } from "next-intl";
-import { Mountain, Sun, Moon, Compass, Search, ShoppingCart, Building2 } from "lucide-react";
+import { Mountain, Sun, Moon, Compass, Search, ShoppingCart, Building2, ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { pick } from "@/lib/i18n-pick";
@@ -15,6 +15,14 @@ import {
   SheetTitle,
   SheetClose,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { MyTripAccountSync } from "@/components/my-trip-account-sync";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -63,44 +71,78 @@ const NAV_L = {
   themeDark: (l: string) => pick(l, { sl: "Temna", en: "Dark", it: "Scuro", de: "Dunkel", fr: "Sombre", es: "Oscuro" }),
 };
 
+/**
+ * ISSUE #16 (UX/IA KONSOLIDACIJA — ONE JOURNEY, ONE HOME, ZERO FEATURE
+ * LOSS) faza 1: primarna navigacija sledi mentalnemu modelu
+ * ODKRIJ → DODAJ → MOJA POT → NAČRTUJ → POJDI (issue §Navigacijska
+ * arhitektura — Desktop: Odkrij · Moja pot · Zemljevid · Pojdi · Več).
+ *
+ * - Odkrij (/destinacije) — primarna vstopna površina raziskovanja.
+ * - Moja pot (/moja-potovanja) — osrednji trip hub (issue §2).
+ * - Zemljevid (/zemljevid) — samostojna discovery površina (issue §4).
+ * - Pojdi (/na-poti) — ločen aktivni način, PREJ dosegljiv samo prek noge
+ *   in Sheet menija (revizija TASK 4/K-12 ga je dodala v Sheet — zdaj
+ *   prvič v DESKTOP primarni vrstici).
+ * - "Več" (dropdown) — progressive disclosure (issue §5): Doživetja,
+ *   Vodiči, Dogodki, Lokali, Tržnica, Slovenia Pass se umaknejo iz primarne
+ *   vrstice (ne izgubijo!); + skupini Načrtuj in orodja ter Račun.
+ * - CTA "Načrtuj potovanje" ostaja primarna akcija (korak NAČRTUJ).
+ *
+ * Prej (FW3 + Issue #3): 5 kategorij odkrivanja (Destinacije/Doživetja/
+ * Zemljevid/Vodiči/Moja potovanja) — preurejeno po issue #16, ZERO LOSS
+ * (vseh 13 prejšnjih ciljev + 2 novi [Primerjava, Prijava] dosegljivih).
+ */
 function useNavLinks() {
   const t = useTranslations("nav");
   return [
-    { href: "/destinacije", label: t("destinations") },
-    { href: "/dozivetja", label: t("experiences") },
+    { href: "/destinacije", label: t("discover") },
+    { href: "/moja-potovanja", label: t("myTrip") },
     { href: "/zemljevid", label: t("map") },
-    { href: "/vodici", label: t("guides") },
-    { href: "/moja-potovanja", label: t("trips") },
+    { href: "/na-poti", label: t("go") },
   ];
 }
 
 /**
- * Sekundarne povezave (nivo 2 — "raziskovanje") — prikazane samo v
- * mobilnem meniju pod glavnimi povezavami, da desktop ostane minimalen.
- * TASK 4 / K-12 (UX FIX PASS): "Na poti" (GO MODE) DODAN — prej dosegljiv
- * SAMO iz noge (revizija: mobilni meni ga NI imel; GO člen
- * DISCOVER→PLAN→BOOK→GO ni bil v primarni navigaciji na mobilnem).
+ * "Več" — skupina ODKRIJ VEČ (issue #16 §5: odkrivanje ostaja dostopno,
+ * a izven primarne vrstice — progressive disclosure, ne feature reduction).
+ * Vsebuje bivše primarne povezave (Doživetja, Vodiči) + bivše sekundarne
+ * odkrivalne (Dogodki, Lokali, Tržnica, Slovenia Pass).
  */
-function useSecondaryLinks() {
+function useMoreLinks() {
   const t = useTranslations("nav");
   return [
-    { href: "/na-poti", label: t("goMode") },
-    // TASK 8 / F3-A (issue #8 §43 NO PARALLEL APP): /potovanje je bil
-    // dosegljiv SAMO iz noge + Go Mode praznega stanja (38-a §1e — nikjer
-    // v navigaciji). Korak ponudnikov enega načrtovalnika zasluži Sheet
-    // vrstico (mobilni uporabniki niso imeli NOBENE poti do njega).
-    { href: "/potovanje", label: t("journey") },
-    // TASK 8 / F3-C (issue #8 §25, audit §3 rec 3): "Začni kjerkoli" v
-    // mobilnem listu "Več" — uvoz virov (povezava/slika/PDF/pins) sicer
-    // nima NOBENE ne-hero poti na mobilnem. Sidro na plannerju razširi
-    // obrazec in pomakne na blok #start-kjerkoli. ZA /potovanje (F3-A
-    // vrstica ostaja).
-    { href: "/nacrtuj#start-kjerkoli", label: t("startAnywhere") },
+    { href: "/dozivetja", label: t("experiences") },
+    { href: "/vodici", label: t("guides") },
     { href: "/dogodki", label: t("events") },
     { href: "/lokali", label: t("listings") },
     { href: "/trznica", label: t("marketplace") },
     { href: "/slovenia-pass", label: t("pass") },
   ];
+}
+
+/**
+ * "Več" — skupina NAČRTUJ IN ORODJA (issue #16: koraki načrtovanja in
+ * orodja). /potovanje je korak ponudnikov ENEGA načrtovalnika (issue #8
+ * §43 NO PARALLEL APP); Začni kjerkoli je uvoz virov (F3-C); Primerjava
+ * je iskrena primerjava načrtovalnikov (prej dosegljiva SAMO iz noge —
+ * audit Issue #16: vrzel, dodana v Več).
+ */
+function useToolLinks() {
+  const t = useTranslations("nav");
+  return [
+    { href: "/potovanje", label: t("journey") },
+    { href: "/nacrtuj#start-kjerkoli", label: t("startAnywhere") },
+    { href: "/primerjava", label: t("compare") },
+  ];
+}
+
+/**
+ * "Več" — skupina RAČUN (issue #16 §5: administrativne funkcije pod Več).
+ * Prijava je bila prej dosegljiva SAMO iz noge (audit Issue #16: vrzel).
+ */
+function useAccountLinks() {
+  const t = useTranslations("nav");
+  return [{ href: "/prijava", label: t("login") }];
 }
 
 /**
@@ -126,7 +168,9 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
   const lang = navLocale;
   const router = useRouter();
   const navLinks = useNavLinks();
-  const secondaryLinks = useSecondaryLinks();
+  const moreLinks = useMoreLinks();
+  const toolLinks = useToolLinks();
+  const accountLinks = useAccountLinks();
 
   // ISSUE #5 T5-B / H1 (fix wave 1): SmartSearch rezultati so bili MRTVI
   // KLIKI — <SmartSearch> je bil izrisan BREZ onSelectDestination, zato je
@@ -233,8 +277,8 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
             </span>
           </Link>
 
-          {/* Desktop navigacija — 5 glavnih povezav (FW3 hierarhija + Issue #3
-              Moja potovanja — centralni objekt MY TRIP dosegljiv na desktopu) */}
+          {/* Desktop navigacija — Issue #16 faza 1: Odkrij · Moja pot ·
+              Zemljevid · Pojdi + "Več" (dropdown — progressive disclosure) */}
           <nav
             className="hidden items-center gap-1 lg:flex"
             aria-label="Glavna navigacija"
@@ -253,6 +297,45 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                 {link.label}
               </Link>
             ))}
+
+            {/* Issue #16 §5 — "Več": napredne funkcije se NE odstranijo,
+                ampak se umaknejo iz primarne navigacije (progressive
+                disclosure). Skupine: Odkrij več · Načrtuj in orodja · Račun. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition-colors outline-none",
+                  glass
+                    ? "text-foreground/80 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    : "text-white/85 hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/60"
+                )}
+              >
+                {t("more")}
+                <ChevronDown className="size-3.5" aria-hidden="true" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-60">
+                <DropdownMenuLabel>{t("moreHeading")}</DropdownMenuLabel>
+                {moreLinks.map((link) => (
+                  <DropdownMenuItem asChild key={link.href}>
+                    <Link href={link.href}>{link.label}</Link>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>{t("toolsHeading")}</DropdownMenuLabel>
+                {toolLinks.map((link) => (
+                  <DropdownMenuItem asChild key={link.href}>
+                    <Link href={link.href}>{link.label}</Link>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>{t("accountHeading")}</DropdownMenuLabel>
+                {accountLinks.map((link) => (
+                  <DropdownMenuItem asChild key={link.href}>
+                    <Link href={link.href}>{link.label}</Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </nav>
 
           {/* Desno: offline/install (PWA) + cart + wishlist + smart search + theme toggle + language switcher + CTA + mobile menu */}
@@ -397,6 +480,8 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                   className="mt-2 flex flex-col gap-1 px-2"
                   aria-label="Mobilna navigacija"
                 >
+                  {/* Issue #16 faza 1 — primarne povezave (4): isti vrstni red
+                      kot tab vrstica (Odkrij · Moja pot · Zemljevid · Pojdi) */}
                   {navLinks.map((link) => (
                     <SheetClose asChild key={link.href}>
                       <Link
@@ -408,12 +493,45 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                     </SheetClose>
                   ))}
 
-                  {/* FW3: sekundarne povezave (nivo 2) pod ločilom */}
+                  {/* Issue #16 §5 — "Več" skupina ODKRIJ VEČ (prej
+                      "Razišči več" + primarne Doživetja/Vodiči) */}
                   <div className="my-2 h-px bg-border" aria-hidden="true" />
                   <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    Razišči več
+                    {t("moreHeading")}
                   </p>
-                  {secondaryLinks.map((link) => (
+                  {moreLinks.map((link) => (
+                    <SheetClose asChild key={link.href}>
+                      <Link
+                        href={link.href}
+                        className="rounded-md px-3 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-accent hover:text-accent-foreground"
+                      >
+                        {link.label}
+                      </Link>
+                    </SheetClose>
+                  ))}
+
+                  {/* Issue #16 — skupina NAČRTUJ IN ORODJA */}
+                  <div className="my-2 h-px bg-border" aria-hidden="true" />
+                  <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    {t("toolsHeading")}
+                  </p>
+                  {toolLinks.map((link) => (
+                    <SheetClose asChild key={link.href}>
+                      <Link
+                        href={link.href}
+                        className="rounded-md px-3 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-accent hover:text-accent-foreground"
+                      >
+                        {link.label}
+                      </Link>
+                    </SheetClose>
+                  ))}
+
+                  {/* Issue #16 — skupina RAČUN (prijava prej samo noga) */}
+                  <div className="my-2 h-px bg-border" aria-hidden="true" />
+                  <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    {t("accountHeading")}
+                  </p>
+                  {accountLinks.map((link) => (
                     <SheetClose asChild key={link.href}>
                       <Link
                         href={link.href}
@@ -472,7 +590,7 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                     </Button>
                   </SheetClose>
                   <p className="mt-3 text-center text-xs text-muted-foreground">
-                    AI vam sestavi itinerer v sekundah.
+                    {t("sheetSlogan")}
                   </p>
                 </div>
               </SheetContent>

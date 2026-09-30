@@ -1,17 +1,26 @@
 // ============================================================================
-// TASK 8 / D8-E (issue #8 §52 — Discovery UX 2.0) — ENOTNA LUPINA + MOBILNA
-// TAB VRSTICA · source-contract
+// TASK 8 / D8-E (issue #8 §52 — Discovery UX 2.0) · preoblikovano v ISSUE #16
+// (UX/IA KONSOLIDACIJA — ONE JOURNEY, ONE HOME, ZERO FEATURE LOSS) fazi 1 ·
+// source-contract
 // ----------------------------------------------------------------------------
-// Pokriva dve spremembi (D8-B §6.1 + §6.2, popravlja P-NAV-1):
+// Pokriva (issue #16 §Navigacijska arhitektura — mentalni model
+// ODKRIJ → DODAJ → MOJA POT → NAČRTUJ → POJDI):
 //  1. MobileTabBar (src/components/mobile-tab-bar.tsx): 5 zavihkov <lg
-//     (Razišči / Zemljevid / Načrtuj sredinski / Moja pot s števčno značko
-//     / Več → obstoječi Sheet meni), body[data-mobile-tabbar] dvig chat FAB.
-//  2. Lupina (Navigation solid + Footer) na 19 prej sirotih straneh
+//     (Odkrij / Zemljevid / Moja pot SREDINSKI s števčno značko / Pojdi /
+//     Več → obstoječi Sheet meni), body[data-mobile-tabbar] dvig chat FAB.
+//     POJDI (/na-poti) ima ZDAJ lastni zavihek (prej pokopan pod Več —
+//     največja IA vrzel audita #16); NAČRTUJ zapusti vrstico (korak živi v
+//     kontekstu Moja pot: /nacrtuj + /potovanje osvetlita MOJA POT).
+//  2. Desktop navigacija: Odkrij · Moja pot · Zemljevid · Pojdi + "Več"
+//     dropdown (progressive disclosure — skupine Odkrij več / Načrtuj in
+//     orodja / Račun).
+//  3. Mobilni Sheet: 15 povezav (4 primarne + 6 Odkrij več + 3 orodja +
+//     Prijava + za ponudnike + CTA) — ZERO LOSS (vseh 13 prejšnjih ciljev
+//     + 2 novi: Primerjava, Prijava — prej samo noga).
+//  4. Lupina (Navigation solid + Footer) na 19 prej sirotih straneh
 //     (D8-A §2.4 jih šteje 17 + /moja-potovanja + /pot/[shareId] po nalogi
-//     D8-E); LanguageToggle lebdeča pilula odstranjena (LanguageSwitcher v
-//     Navigation pokriva isto SL⇄EN dejanje na EN-whitelistanih straneh),
-//     StickyMobileCTA upokojen na straneh z lupino (ostane samo domača
-//     stran — druga faza).
+//     D8-E); StickyMobileCTA upokojen na straneh z lupino (ostane samo
+//     domača stran — druga faza).
 // Source-contract (readFileSync) — brez uvozov @/app → brez TASK 76
 // obveznosti (kanon Task 28/33/34/35).
 // ============================================================================
@@ -78,37 +87,46 @@ function stripComments(src: string): string {
 // ─────────────────────────────────────────────────────────────────────────
 // 1. MOBILE TAB BAR — vir, zavihki, značka, onMore, dostopnost
 // ─────────────────────────────────────────────────────────────────────────
-describe("TASK 8 / D8-E: MobileTabBar — 5 zavihkov + značka + Več", () => {
+describe("ISSUE #16 faza 1: MobileTabBar — ODKRIJ | ZEMLJEVID | MOJA POT | POJDI | VEČ", () => {
   test("datoteka obstaja in je klientna komponenta", () => {
     expect(tabbarSrc.startsWith('"use client";')).toBe(true);
     expect(tabbarSrc).toContain("export function MobileTabBar");
   });
 
-  test("5 zavihkov: oznake (SL+EN) + povezave", () => {
-    // SL oznake
-    for (const label of ["Razišči", "Zemljevid", "Načrtuj", "Moja pot", "Več"]) {
+  test("5 zavihkov po modelu #16: oznake (SL+EN) + povezave", () => {
+    // SL oznake (issue #16 §Navigacijska arhitektura — Mobile)
+    for (const label of ["Odkrij", "Zemljevid", "Moja pot", "Pojdi", "Več"]) {
       expect(tabbarSrc).toContain(`"${label}"`);
     }
     // EN oznake (isti komponent, L vzorec)
-    for (const label of ["Explore", "Map", "Plan", "My trip", "More"]) {
+    for (const label of ["Discover", "Map", "My trip", "Go", "More"]) {
       expect(tabbarSrc).toContain(`"${label}"`);
     }
-    // hrefs
+    // hrefs — POJDI zdaj lastni zavihek, NAČRTUJ zapušča vrstico
     expect(tabbarSrc).toContain('href: "/destinacije"');
     expect(tabbarSrc).toContain('href: "/zemljevid"');
-    expect(tabbarSrc).toContain('href: "/nacrtuj"');
     expect(tabbarSrc).toContain('href: "/moja-potovanja"');
+    expect(tabbarSrc).toContain('href: "/na-poti"');
+    expect(tabbarSrc).not.toContain('href: "/nacrtuj"');
   });
 
-  test("aktivacijska logika: /destinacija/* → Razišči, /potovanje → Načrtuj, Več samo za Sheet poti", () => {
+  test("aktivacijska logika #16: /destinacija/* → Odkrij; /nacrtuj + /potovanje → Moja pot (korak NAČRTUJ); /na-poti → Pojdi", () => {
     expect(tabbarSrc).toContain('p === "/destinacije" || p.startsWith("/destinacija")');
-    expect(tabbarSrc).toContain('p === "/nacrtuj" || p.startsWith("/potovanje")');
-    // Več kot sidro za poti, ki živijo SAMO v Sheet meniju (dvh. /na-poti)
-    expect(tabbarSrc).toContain('"/na-poti"');
+    // Moja pot = hub + korak NAČRTUJ (issue #16: načrtovanje je del poti)
+    expect(tabbarSrc).toContain('p === "/moja-potovanja"');
+    expect(tabbarSrc).toContain('p === "/nacrtuj"');
+    expect(tabbarSrc).toContain('p.startsWith("/potovanje")');
+    // POJDI lastni zavihek
+    expect(tabbarSrc).toContain('p === "/na-poti" || p.startsWith("/na-poti/")');
+    // Več kot sidro za Sheet poti (/na-poti ODSTRANJEN iz seznama)
     expect(tabbarSrc).toContain("MORE_MENU_ROUTES.some");
+    expect(tabbarSrc).toContain('"/primerjava"');
+    expect(tabbarSrc).toContain('"/prijava"');
+    expect(tabbarSrc).toContain('"/dozivetja"');
+    expect(tabbarSrc).toContain('"/vodici"');
   });
 
-  test("števčna značka iz zbirke Moja pot (useMyTrip count)", () => {
+  test("števčna značka iz zbirke Moja pot (useMyTrip count) — na SREDINSKEM kroglici", () => {
     expect(tabbarSrc).toContain('from "@/hooks/use-my-trip"');
     expect(tabbarSrc).toContain("useMyTrip()");
     expect(tabbarSrc).toContain("{ count }");
@@ -129,10 +147,15 @@ describe("TASK 8 / D8-E: MobileTabBar — 5 zavihkov + značka + Več", () => {
     expect(tabbarSrc).toContain('aria-current={active ? "page" : undefined}');
   });
 
-  test("sredinski zavihek Načrtuj je poudarjen (polnjen primarni kroglec)", () => {
+  test("sredinski zavihek MOJA POT je poudarjen (polnjen primarni kroglec + značka na njem)", () => {
     expect(tabbarSrc).toContain("center: true");
     expect(tabbarSrc).toContain("bg-primary text-primary-foreground");
     expect(tabbarSrc).toContain("rounded-full");
+    // značka na sredinskem kroglicu (bg-background kontrast nad primarnim)
+    const centerIdx = tabbarSrc.indexOf("if (tab.center)");
+    const badgeIdx = tabbarSrc.indexOf("aria-label={t.myTripBadge(count)}");
+    expect(badgeIdx).toBeGreaterThan(centerIdx);
+    expect(tabbarSrc).toContain("ring-2 ring-primary");
   });
 
   test("postavi body[data-mobile-tabbar] ob mountu + počisti ob unmountu", () => {
@@ -142,10 +165,10 @@ describe("TASK 8 / D8-E: MobileTabBar — 5 zavihkov + značka + Več", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// 2. NAVIGATION — tab bar vgrajen, Sheet (13 destinacij) OHRANJEN, desktop
-//    nespremenjen, hamburger odstranjen
+// 2. NAVIGATION — tab bar vgrajen, Sheet (15 povezav, skupine #16) OHRANJEN,
+//    desktop Odkrij·Moja pot·Zemljevid·Pojdi + Več dropdown
 // ─────────────────────────────────────────────────────────────────────────
-describe("TASK 8 / D8-E: Navigation — tab bar + ohranjen mobilni Sheet", () => {
+describe("ISSUE #16 faza 1: Navigation — tab bar + pregrupiran Sheet + Več dropdown", () => {
   test("Navigation izrisuje MobileTabBar z onMore → setMobileOpen", () => {
     expect(navSrc).toContain('from "@/components/mobile-tab-bar"');
     expect(navSrc).toContain("<MobileTabBar onMore={() => setMobileOpen(true)} />");
@@ -159,16 +182,19 @@ describe("TASK 8 / D8-E: Navigation — tab bar + ohranjen mobilni Sheet", () =>
     expect(navSrc).not.toContain('aria-label="Odpri meni"');
   });
 
-  test("mobilni Sheet: VSEH 13 link ciljev (5 primarnih + 6 sekundarnih + za ponudnike + CTA; F3-A dodal /potovanje)", () => {
+  test("mobilni Sheet: VSEH 15 link ciljev (4 primarni + 6 Odkrij več + 3 orodja + Prijava + za ponudnike + CTA) — ZERO LOSS + 2 novi", () => {
     const sheet = navSrc.slice(navSrc.indexOf("<SheetContent"));
-    // Primarne + sekundarne povezave se izrisujejo iz ISTIH seznamov kot
-    // desktop (useNavLinks/useSecondaryLinks) — Sheet ju preslika v celoti.
+    // Vse skupine se izrisujejo iz seznamov (isti vir kot desktop Več)
     expect(sheet).toContain("navLinks.map");
-    expect(sheet).toContain("secondaryLinks.map");
-    // Seznama vsebujeta vseh 11 povezav (5 primarnih + 6 sekundarnih):
-    // TASK 8 / F3-A: /potovanje dodan v sekundarne povezave (prej dosegljiv
-    // samo iz noge — 38-a §1e; korak ponudnikov enega načrtovalnika).
-    for (const href of ["/destinacije", "/dozivetja", "/zemljevid", "/vodici", "/moja-potovanja", "/na-poti", "/potovanje", "/dogodki", "/lokali", "/trznica", "/slovenia-pass"]) {
+    expect(sheet).toContain("moreLinks.map");
+    expect(sheet).toContain("toolLinks.map");
+    expect(sheet).toContain("accountLinks.map");
+    // ZERO LOSS: vseh 13 prejšnjih ciljev + 2 nova (primerjava, prijava)
+    for (const href of [
+      "/destinacije", "/moja-potovanja", "/zemljevid", "/na-poti",
+      "/dozivetja", "/vodici", "/dogodki", "/lokali", "/trznica", "/slovenia-pass",
+      "/potovanje", "/nacrtuj#start-kjerkoli", "/primerjava", "/prijava",
+    ]) {
       expect(navSrc).toContain(`href: "${href}"`);
     }
     // Za ponudnike + CTA Načrtuj sta v Sheetu dobesedno
@@ -177,16 +203,33 @@ describe("TASK 8 / D8-E: Navigation — tab bar + ohranjen mobilni Sheet", () =>
     // Vsebina Sheeta: naslov + jezikovni preklopnik + tema (isti kot prej)
     expect(sheet).toContain("Discover Slovenia AI");
     expect(sheet).toContain("<LanguageSwitcher />");
-    expect(sheet).toContain("Razišči več");
+    // naslovi skupin prek i18n (prej hardkodiran SL niz "Razišči več")
+    expect(sheet).toContain('t("moreHeading")');
+    expect(sheet).toContain('t("toolsHeading")');
+    expect(sheet).toContain('t("accountHeading")');
     expect(sheet).toContain("SheetClose");
+    // slogan CTA prek i18n (prej hardkodiran SL niz)
+    expect(sheet).toContain('t("sheetSlogan")');
+    expect(sheet).not.toContain("AI vam sestavi itinerer v sekundah.");
   });
 
-  test("desktop navigacija NEspremenjena: 5 glavnih povezav + CTA + za ponudnike", () => {
-    // useNavLinks (5 povezav) ostaja
-    for (const href of ["/destinacije", "/dozivetja", "/zemljevid", "/vodici", "/moja-potovanja"]) {
-      expect(navSrc).toContain(`href: "${href}"`);
+  test("desktop navigacija #16: Odkrij · Moja pot · Zemljevid · Pojdi + Več dropdown (progressive disclosure)", () => {
+    // useNavLinks — 4 povezave po modelu #16
+    for (const [href, key] of [
+      ["/destinacije", "discover"],
+      ["/moja-potovanja", "myTrip"],
+      ["/zemljevid", "map"],
+      ["/na-poti", "go"],
+    ] as const) {
+      expect(navSrc).toContain(`{ href: "${href}", label: t("${key}") }`);
     }
     expect(navSrc).toContain('hidden items-center gap-1 lg:flex');
+    // Več dropdown s skupinami
+    expect(navSrc).toContain("<DropdownMenu>");
+    expect(navSrc).toContain("<DropdownMenuTrigger");
+    expect(navSrc).toContain('t("more")');
+    expect(navSrc).toContain("ChevronDown");
+    // za ponudnike + CTA načrtuj ostajata
     expect(navSrc).toContain('href="/za-ponudnike"');
     expect(navSrc).toContain('href="/nacrtuj"');
     // desne kontrole ostanejo

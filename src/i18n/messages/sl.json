@@ -17,7 +17,17 @@
     "tagline": "AI potovanja",
     "searchAria": "Pametno iskanje",
     "journey": "Celotno potovanje",
-    "startAnywhere": "Začni kjerkoli"
+    "startAnywhere": "Začni kjerkoli",
+    "discover": "Odkrij",
+    "myTrip": "Moja pot",
+    "go": "Pojdi",
+    "more": "Več",
+    "moreHeading": "Odkrij več",
+    "toolsHeading": "Načrtuj in orodja",
+    "accountHeading": "Račun",
+    "login": "Prijava",
+    "compare": "Primerjava",
+    "sheetSlogan": "AI vam sestavi itinerer v sekundah."
   },
   "hero": {
     "title": "Kaj želiš doživeti v Sloveniji?",

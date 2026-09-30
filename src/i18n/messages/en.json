@@ -17,7 +17,17 @@
     "tagline": "AI trips",
     "searchAria": "Smart search",
     "journey": "Complete journey",
-    "startAnywhere": "Start anywhere"
+    "startAnywhere": "Start anywhere",
+    "discover": "Discover",
+    "myTrip": "My trip",
+    "go": "Go",
+    "more": "More",
+    "moreHeading": "Discover more",
+    "toolsHeading": "Plan & tools",
+    "accountHeading": "Account",
+    "login": "Sign in",
+    "compare": "Compare planners",
+    "sheetSlogan": "AI builds your itinerary in seconds."
   },
   "hero": {
     "title": "What do you want to experience in Slovenia?",

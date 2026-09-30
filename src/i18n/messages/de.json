@@ -17,7 +17,17 @@
     "tagline": "KI-Reisen",
     "searchAria": "Intelligente Suche",
     "journey": "Die ganze Reise",
-    "startAnywhere": "Überall starten"
+    "startAnywhere": "Überall starten",
+    "discover": "Entdecken",
+    "myTrip": "Meine Reise",
+    "go": "Los",
+    "more": "Mehr",
+    "moreHeading": "Mehr entdecken",
+    "toolsHeading": "Planen & Werkzeuge",
+    "accountHeading": "Konto",
+    "login": "Anmelden",
+    "compare": "Vergleich",
+    "sheetSlogan": "Die KI erstellt deinen Reiseplan in Sekunden."
   },
   "hero": {
     "title": "Was möchtest du in Slowenien erleben?",

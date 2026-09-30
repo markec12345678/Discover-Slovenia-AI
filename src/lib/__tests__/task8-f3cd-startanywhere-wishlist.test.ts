@@ -318,7 +318,10 @@ describe("F3-C footer + navigation + nacrtuj/page (source-contract)", () => {
   });
 
   test("mobilni Sheet \"Več\": startAnywhere ZA /potovanje (F3-A vrstica ostaja)", () => {
-    expect(NAV_SRC).toContain('{ href: "/na-poti", label: t("goMode") }');
+    // Issue #16 faza 1: /na-poti je ZDAJ primarna povezava (label t("go")
+    // — prej sekundarna s t("goMode")); /potovanje + startAnywhere živita
+    // v skupini Načrtuj in orodja (vrstni red ohranjen).
+    expect(NAV_SRC).toContain('{ href: "/na-poti", label: t("go") }');
     expect(NAV_SRC).toContain('{ href: "/potovanje", label: t("journey") }');
     expect(NAV_SRC).toContain('{ href: "/nacrtuj#start-kjerkoli", label: t("startAnywhere") }');
     const journeyIdx = NAV_SRC.indexOf('{ href: "/potovanje", label: t("journey") }');
@@ -457,8 +460,10 @@ describe("F3-C/D ZERO-LOSS markerji", () => {
     expect(FOOTER_SRC).toContain('key: "planPlanner"');
   });
 
-  test("navigacija: /na-poti + /potovanje sekundarni povezavi ostajata", () => {
-    expect(NAV_SRC).toContain('{ href: "/na-poti", label: t("goMode") }');
+  test("navigacija: /na-poti + /potovanje povezavi ostajata (Issue #16: primarna + orodja)", () => {
+    // Issue #16 faza 1: /na-poti je ZDAJ PRIMARNA povezava (prej sekundarna)
+    // — ZERO LOSS; /potovanje živi v skupini Načrtuj in orodja.
+    expect(NAV_SRC).toContain('{ href: "/na-poti", label: t("go") }');
     expect(NAV_SRC).toContain('{ href: "/potovanje", label: t("journey") }');
   });
 

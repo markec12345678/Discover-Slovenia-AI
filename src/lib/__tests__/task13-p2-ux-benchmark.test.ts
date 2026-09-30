@@ -271,8 +271,8 @@ describe("P2-3: MobileTabBar ŽE izpolnjuje specifikacijo (dokaz TASK 8/D8-E)", 
     globalsSrc.indexOf('body[data-mobile-tabbar="true"]')
   );
 
-  test("4+ slotov: Razišči · Zemljevid · Načrtuj · Moja pot · Več (nad spec 4-slot)", () => {
-    for (const label of ["explore", "map", "plan", "myTrip", "more"]) {
+  test("4+ slotov: Odkrij · Zemljevid · Moja pot · Pojdi · Več (nad spec 4-slot; Issue #16 model)", () => {
+    for (const label of ["explore", "map", "myTrip", "go", "more"]) {
       expect(code).toContain(label);
     }
   });

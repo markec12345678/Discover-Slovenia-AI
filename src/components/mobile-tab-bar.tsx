@@ -3,7 +3,7 @@
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import { useLocale } from "next-intl";
-import { Compass, Map as MapIcon, Menu, Route, Wand2 } from "lucide-react";
+import { Compass, Map as MapIcon, Menu, Navigation, Route } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Link } from "@/i18n/navigation";
@@ -11,26 +11,40 @@ import { useMyTrip } from "@/hooks/use-my-trip";
 
 /**
  * MobileTabBar — mobilna spodnja navigacijska vrstica (TASK 8 / D8-E,
- * issue #8 §52 / D8-B §6.2).
+ * issue #8 §52 / D8-B §6.2; preoblikovano v Issue #16 fazi 1).
+ *
+ * ISSUE #16 (UX/IA KONSOLIDACIJA — ONE JOURNEY, ONE HOME, ZERO FEATURE
+ * LOSS): mentalni model ODKRIJ → DODAJ → MOJA POT → NAČRTUJ → POJDI.
+ * Vrstica sledi issue §Navigacijska arhitektura (Mobile):
+ *
+ *   ODKRIJ | ZEMLJEVID | MOJA POT | POJDI | VEČ
+ *
+ * - ODKRIJ (/destinacije) — primarna vstopna površina raziskovanja (detajl
+ *   destinacije je del odkrivanja: /destinacija/*).
+ * - ZEMLJEVID (/zemljevid) — samostojna močna discovery površina (#16 §4).
+ * - MOJA POT (/moja-potovanja) — SREDINSKI poudarjen zavihek + števčna
+ *   značka iz zbirke dai:my-trip-items: osrednji trip hub aplikacije
+ *   (#16 §2 „Kaj je moja pot in kaj je naslednji korak?"). Aktivna TUDI
+ *   na /nacrtuj + /potovanje (korak NAČRTUJ živi v kontekstu Moja pot —
+ *   isto staro pravilo aktivnosti, preneseno z upokojenega zavihka
+ *   Načrtuj: načrtovanje je del poti, ne vzporedna aplikacija).
+ * - POJDI (/na-poti) — ločen aktivni način (#16 §3) zdaj v primarni
+ *   vrstici (prej pokopan pod Več — največja IA vrzel audita).
+ * - VEČ — odpre obstoječi mobilni Sheet meni iz Navigation (progressive
+ *   disclosure #16 §5 — ne izguba funkcij; /na-poti je iz MORE_MENU_ROUTES
+ *   odstranjen, ker ima ZDAJ lastni zavihek).
  *
  * Nadomešča hamburger gumb v headerju (meni OSTAJA — odpre se prek zavihka
- * "Več" in Sheet vsebuje vseh 13 destinacij) in StickyMobileCTA na straneh
- * z lupino. Vidna SAMO <lg (desktop header ostaja nespremenjen).
- *
- * 5 zavihkov: Razišči (/destinacije) · Zemljevid (/zemljevid) ·
- * Načrtuj (/nacrtuj — sredinski, poudarjen) · Moja pot (/moja-potovanja,
- * števčna značka iz zbirke dai:my-trip-items) · Več (odpre obstoječi
- * mobilni Sheet meni iz Navigation — NE nov meni).
+ * "Več" in Sheet vsebuje vseh 15 destinacij). Vidna SAMO <lg (desktop
+ * header ima svojo strukturo Odkrij · Moja pot · Zemljevid · Pojdi · Več).
  *
  * Aktivno stanje (startsWith logika, dokumentirano):
- * - /destinacije + /destinacija/* → Razišči (detajl destinacije je del
- *   odkrivanja)
+ * - /destinacije + /destinacija/* → Odkrij
  * - /zemljevid → Zemljevid
- * - /nacrtuj + /potovanje → Načrtuj (oba načrtovalnika — D8-B IA: PLAN)
- * - /moja-potovanja → Moja pot
- * - /na-poti, /dogodki, /lokali, /trznica, /slovenia-pass, /za-ponudnike →
- *   Več (te poti živijo SAMO v Sheet meniju → "Več" kot sidro; /na-poti je
- *   GO ločen način, a živi pod Več v meniju, zato tam tudi ostane)
+ * - /moja-potovanja + /nacrtuj + /potovanje → Moja pot (hub + načrtovanje)
+ * - /na-poti → Pojdi
+ * - /dozivetja, /vodici, /dogodki, /lokali, /trznica, /slovenia-pass,
+ *   /za-ponudnike, /primerjava, /prijava → Več (poti, ki živijo v Sheetu)
  *
  * Tehnično: postavi body[data-mobile-tabbar="true"] (globals.css dviga
  * chat FAB/panel nad vrstico), pb-[env(safe-area-inset-bottom)] za iPhone,
@@ -38,20 +52,20 @@ import { useMyTrip } from "@/hooks/use-my-trip";
  */
 const L = {
   sl: {
-    explore: "Razišči",
+    explore: "Odkrij",
     map: "Zemljevid",
-    plan: "Načrtuj",
     myTrip: "Moja pot",
+    go: "Pojdi",
     more: "Več",
     moreAria: "Odpri meni",
     myTripBadge: (n: number) =>
       n === 1 ? "1 ideja v moji poti" : `${n} idej v moji poti`,
   },
   en: {
-    explore: "Explore",
+    explore: "Discover",
     map: "Map",
-    plan: "Plan",
     myTrip: "My trip",
+    go: "Go",
     more: "More",
     moreAria: "Open menu",
     myTripBadge: (n: number) =>
@@ -60,10 +74,10 @@ const L = {
   // W1 faza 2a (Issue #15): mobilna vrstica živi na destinacijskih straneh
   // — IT/DE imata svoje oznake (isti vzorec kot Navigation NAV_L).
   it: {
-    explore: "Esplora",
+    explore: "Scopri",
     map: "Mappa",
-    plan: "Pianifica",
     myTrip: "Il mio viaggio",
+    go: "Vai",
     more: "Altro",
     moreAria: "Apri il menù",
     myTripBadge: (n: number) =>
@@ -72,8 +86,8 @@ const L = {
   de: {
     explore: "Entdecken",
     map: "Karte",
-    plan: "Planen",
     myTrip: "Meine Reise",
+    go: "Los",
     more: "Mehr",
     moreAria: "Menü öffnen",
     myTripBadge: (n: number) =>
@@ -81,21 +95,23 @@ const L = {
   },
   // W12 (smer 2, faza 1): FR/ES — vrstica je globalni krom (živi tudi na
   // FR/ES whitelistnih poteh — /, /destinacije, info strani).
+  // Issue #16 faza 1: oznake po novem modelu (Odkrij/Pojdi namesto
+  // Razišči/Načrtuj v sredini).
   fr: {
-    explore: "Explorer",
+    explore: "Découvrir",
     map: "Carte",
-    plan: "Planifier",
     myTrip: "Mon voyage",
+    go: "Aller",
     more: "Plus",
     moreAria: "Ouvrir le menu",
     myTripBadge: (n: number) =>
       n === 1 ? "1 idée dans mon voyage" : `${n} idées dans mon voyage`,
   },
   es: {
-    explore: "Explorar",
+    explore: "Descubrir",
     map: "Mapa",
-    plan: "Planificar",
     myTrip: "Mi viaje",
+    go: "Ir",
     more: "Más",
     moreAria: "Abrir el menú",
     myTripBadge: (n: number) =>
@@ -103,18 +119,27 @@ const L = {
   },
 } as const;
 
-/** Poti, ki živijo SAMO v mobilnem Sheet meniju (Več je zanje sidro). */
+/**
+ * Poti, ki živijo v Sheet meniju ("Več" je zanje sidro) — Issue #16 §5
+ * progressive disclosure. /na-poti je IZ seznama (lastni zavihek POJDI);
+ * /dozivetja + /vodici sta PRIDRUŽENA (iz primarne vrstice sta se umaknila
+ * pod Več — odkrivanje ostaja dostopno, a izven primarnih 5);
+ * /primerjava + /prijava sta dodani (prej samo noga — vrzel audita).
+ */
 const MORE_MENU_ROUTES = [
-  "/na-poti",
+  "/dozivetja",
+  "/vodici",
   "/dogodki",
   "/lokali",
   "/trznica",
   "/slovenia-pass",
   "/za-ponudnike",
+  "/primerjava",
+  "/prijava",
 ];
 
 /** Oznake zavihkov (samo nizinski ključi — brez aria/badge pomočnikov). */
-type TabLabelKey = "explore" | "map" | "plan" | "myTrip" | "more";
+type TabLabelKey = "explore" | "map" | "myTrip" | "go" | "more";
 
 interface TabDef {
   href: string | null;
@@ -139,18 +164,23 @@ const TABS: TabDef[] = [
     match: (p) => p === "/zemljevid",
   },
   {
-    href: "/nacrtuj",
-    icon: Wand2,
-    labelKey: "plan",
-    center: true,
-    match: (p) => p === "/nacrtuj" || p.startsWith("/potovanje"),
-  },
-  {
     href: "/moja-potovanja",
     icon: Route,
     labelKey: "myTrip",
+    center: true,
     badge: true,
-    match: (p) => p === "/moja-potovanja",
+    // Hub Moja pot + korak NAČRTUJ (issue #16: načrtovanje je del poti —
+    // /nacrtuj + /potovanje osvetlita MOJA POT, ne vzparenega zavihka).
+    match: (p) =>
+      p === "/moja-potovanja" ||
+      p === "/nacrtuj" ||
+      p.startsWith("/potovanje"),
+  },
+  {
+    href: "/na-poti",
+    icon: Navigation,
+    labelKey: "go",
+    match: (p) => p === "/na-poti" || p.startsWith("/na-poti/"),
   },
   {
     href: null,
@@ -201,8 +231,10 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
           const Icon = tab.icon;
           const label = t[tab.labelKey];
 
-          // Sredinski zavihek (Načrtuj) — poudarjena primarna akcija:
-          // napolnjen dvignjen kroglec (premium center action).
+          // Sredinski zavihek (MOJA POT — issue #16 §2 osrednji trip hub):
+          // poudarjena primarna akcija — napolnjen dvignjen kroglec
+          // (premium center action) + števčna značka zbirke dai:my-trip-items
+          // (bg-background kontrast nad primarnim kroglecem).
           if (tab.center) {
             return (
               <Link
@@ -213,11 +245,20 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
               >
                 <span
                   className={cn(
-                    "-mt-5 flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-4 ring-background transition-transform active:scale-95",
+                    "-mt-5 relative flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-4 ring-background transition-transform active:scale-95",
                     active && "shadow-primary/30"
                   )}
                 >
                   <Icon className="size-5" aria-hidden="true" />
+                  {/* Števčna značka zbirke "Moja pot" na kroglici */}
+                  {tab.badge && count > 0 ? (
+                    <span
+                      className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-background px-1 text-[10px] font-bold leading-none text-foreground shadow-sm ring-2 ring-primary"
+                      aria-label={t.myTripBadge(count)}
+                    >
+                      {count > 99 ? "99+" : count}
+                    </span>
+                  ) : null}
                 </span>
                 <span className={active ? "text-primary" : "text-muted-foreground"}>
                   {label}
@@ -261,17 +302,10 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
+              {/* Značka zbirke "Moja pot" živi ZDAJ na sredinskem kroglici
+                  (issue #16 — Moja pot je hub); ostali zavihki so brez nje. */}
               <span className="relative">
                 <Icon className="size-5" aria-hidden="true" />
-                {/* Števčna značka zbirke "Moja pot" (dai:my-trip-items) */}
-                {tab.badge && count > 0 ? (
-                  <span
-                    className="absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground shadow-sm"
-                    aria-label={t.myTripBadge(count)}
-                  >
-                    {count > 99 ? "99+" : count}
-                  </span>
-                ) : null}
               </span>
               <span>{label}</span>
             </Link>

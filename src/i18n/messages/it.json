@@ -17,7 +17,17 @@
     "tagline": "Viaggi AI",
     "searchAria": "Ricerca intelligente",
     "journey": "Viaggio completo",
-    "startAnywhere": "Inizia da ovunque"
+    "startAnywhere": "Inizia da ovunque",
+    "discover": "Scopri",
+    "myTrip": "Il mio viaggio",
+    "go": "Vai",
+    "more": "Altro",
+    "moreHeading": "Scopri di più",
+    "toolsHeading": "Pianifica e strumenti",
+    "accountHeading": "Account",
+    "login": "Accedi",
+    "compare": "Confronto",
+    "sheetSlogan": "L'IA compone il tuo itinerario in pochi secondi."
   },
   "hero": {
     "title": "Cosa vuoi vivere in Slovenia?",

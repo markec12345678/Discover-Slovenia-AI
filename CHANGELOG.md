@@ -7,6 +7,89 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.148.0] — 2026-09-30 (ISSUE #16 „UX/IA KONSOLIDACIJA — ONE JOURNEY, ONE HOME, ZERO FEATURE LOSS", faza 1 — LUPINA ENEGA POTOVANJA: ODKRIJ | ZEMLJEVID | MOJA POT | POJDI | VEČ)
+
+### Dodano
+
+- **MOBILNA TAB VRSTICA PO MODELU #16 (`mobile-tab-bar.tsx`).** Novih 5
+  zavihkov po issue §Navigacijska arhitektura (Mobile):
+  **ODKRIJ | ZEMLJEVID | MOJA POT | POJDI | VEČ**. **POJDI (/na-poti) ima
+  ZDAJ lastni zavihek** — prej pokopan pod „Več" (največja IA vrzel
+  audita: ločen aktivni način #16 §3 ni bil v primarni navigaciji);
+  ikona Navigation. **MOJA POT je novi SREDINSKI poudarjen zavihek**
+  (napolnjen dvignjen kroglec) s števčno značko zbirke `dai:my-trip-items`
+  na kroglici (`bg-background` + `ring-2 ring-primary` kontrast nad
+  primarnim) — osrednji trip hub aplikacije (#16 §2). **NAČRTUJ zapusti
+  vrstico** (korak živi v kontekstu Moja pot: `/nacrtuj` + `/potovanje`
+  osvetlita MOJA POT — načrtovanje je del poti, ne vzporedna aplikacija;
+  dostop: hub „Nadaljuj načrtovanje" + Sheet CTA + hero). Oznake ×6
+  (Odkrij/Discover/Scopri/Entdecken/Découvrir/Descubrir ·
+  Pojdi/Go/Vai/Los/Aller/Ir — prej Razišči/Explore, Načrtuj/Plan).
+  `MORE_MENU_ROUTES`: `/na-poti` odstranjen (lastni zavihek);
+  `/dozivetja` + `/vodici` pridružena (umaknjena iz primarne vrstice —
+  odkrivanje ostaja dostopno); **`/primerjava` + `/prijava` dodana**
+  (prej dosegljivi SAMO iz noge — vrzel audita).
+- **DESKTOP NAVIGACIJA PO MODELU #16 (`navigation.tsx`).** Odkrij ·
+  Moja pot · Zemljevid · **Pojdi** + **„Več"** — POJDI je prvič v desktop
+  primarni vrstici (prej samo noga + Sheet). „Več" je nov DropdownMenu
+  (shadcn/ui) s tremi skupinami po #16 §5 progressive disclosure:
+  **Odkrij več** (Doživetja, Vodiči, Dogodki, Lokali, Tržnica, Slovenia
+  Pass — bivše primarne/sekundarne povezave, NE izgubljene),
+  **Načrtuj in orodja** (Celotno potovanje, Začni kjerkoli, Primerjava),
+  **Račun** (Prijava — prej samo noga). Trigger je steklo-zaveden (bela
+  pisava nad herojem / foreground po odscrollu) + ChevronDown;
+  vsebina portala s standardnimi DropdownMenuLabel/Separator.
+  CTA „Načrtuj potovanje" ostaja primarna akcija (korak NAČRTUJ).
+- **MOBILNI SHEET PREGRUPIRAN (15 povezav — ZERO LOSS + 2 novi).**
+  Primarne (4): Odkrij, Moja pot, Zemljevid, Pojdi (isti vrstni red kot
+  tab vrstica). Skupine z naslovi prek i18n: ODKRIJ VEČ (6), NAČRTUJ IN
+  ORODJA (3), RAČUN (Prijava). Za ponudnike (poudarjen) + jezik/tema/
+  dostopnost + CTA ostajajo. Vseh 13 prejšnjih ciljev Sheet-a ohranjenih
+  + 2 nova (Primerjava, Prijava).
+- **I18N — 10 NOVIH `nav` KLJUČEV ×6** (`messages/{sl,en,it,de,fr,es}.json`):
+  `discover`, `myTrip`, `go`, `more`, `moreHeading`, `toolsHeading`,
+  `accountHeading`, `login`, `compare`, `sheetSlogan`. **Zadnja 2
+  hardkodirana SL niza Sheet-a prevedena** („Razišči več" →
+  `moreHeading`, „AI vam sestavi itinerer v sekundah." → `sheetSlogan`)
+  — F4-E je popravil samo aria labele; tabela nav ključev je zdaj
+  popolnoma 6-jezična (28 ključev ×6, pariteta task71).
+
+### Spremenjeno
+
+- Testna pogodba `task8-e-shell-tabbar.test.ts` preoblikovana na model
+  #16 (zavihki/oznake/hrefi/aktivacijske formule vključno z
+  `/nacrtuj`+`/potovanje` → Moja pot; ZERO LOSS trditev: vseh 14 hrefov
+  +Sheet struktura + dropdown; negativna trditev `href: "/nacrtuj"` NE
+  v tab vrstici). `task8-f3cd` (2 trditvi: `/na-poti` zdaj primarna
+  `t("go")`; ZERO LOSS marker) + `task13-p2` (ključi oznak) usklajena.
+  `task8-f3a` literal `{ href: "/potovanje", label: t("journey") }`
+  ohranjen nedotaknjen (vrstni red v skupini orodij ohranjen).
+
+### Dokazano
+
+- Suite **4272/4272** zelenih (72.552 expect); tsc 0 napak; eslint čist;
+  i18n pariteta ×6 (13.153 expect) zelenih.
+- Brskalniški E2E (dev, 4 dokaza `issue16-dokazi/`): desktop 1440px —
+  „Več" dropdown odprt s tremi skupinami (10 menuitemov); mobil 390px —
+  tab vrstica ODKRIJ·ZEMLJEVID·MOJA POT·POJDI·VEČ; Sheet s skupinami
+  ODKRIJ VEČ/NAČRTUJ IN ORODJA/RAČUN; `/na-poti` — `aria-current="page"`
+  na zavihku POJDI (izris `eval`); 0 napak strani, 0 konzolnih napak.
+
+### Meja (iskrena)
+
+- Desktop aktivno stanje povezav: primarna vrstica nima per-route
+  highlighta (kot prej — hover only); aktivnost modela živi v mobilni
+  tab vrstici.
+- `/prijava` ostaja SL-only (§38 — B2C prijava ni na EN/IT/DE/FR/ES
+  whitelisti; 308 na SL, isti precedens kot noga).
+- Faze #16 2–5 (hub Moja pot z okvirom „naslednji korak" + POJDI vhodom;
+  zemljevid POI popup kanonski write-through; klepet na
+  /moja-potovanja + /pot/[shareId]; analitika lupine + StickyMobileCTA
+  dolg) sledijo v naslednjih verzijah — audit + fazni načrt v worklogu
+  (Task I16-0).
+
+---
+
 ## [1.147.0] — 2026-09-30 (W12 „ODKRITEV V ŠESTIH JEZIKIH", faza 2c — KLEPET 6-JEZIČEN: domenska plast vrača PRAVE FR/ES odgovore)
 
 ### Dodano
