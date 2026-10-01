@@ -10,6 +10,27 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 ---
 ---
 
+## [1.161.1] — 2026-10-01 (#21 PRODUKCIJSKI DOKAZI + push 1.159.0–1.161.0)
+
+### Dodano
+
+- **PRODUKCIJSKI DOKAZ #21 (Render).** Push 1.159.0–1.161.0 (`98bcbfa` →
+  `6d7b9e0`) na main; Render samodejni deploy 1.161.0 (health 22/22).
+  Zlata pot dokazana v živi produkciji (agent-browser, mobilni 390×844 +
+  desktop 1280×800, 0 konzolnih napak): načrt Brnik → Postojnska jama
+  (realni FSQ produkti) → izbira 2 postankov → Zaženi Na poti → GPS
+  prihod („✓ Prišel si na lokacijo", ločitev GPS≠rezervacija, „natančnost
+  ±12 m · natančnost dobra") → samodejna progresija (znacka „Približna
+  lokacija (vir: fsq)", trak „NATO") → drugi prihod + wake lock („zaslon
+  ostaja prižgan") → reload ohrani stanje. 10 dokazov:
+  `docs/evidence/issue21/prod-*` (README z iskrenimi mejami).
+- **Dokumentacija:** `docs/evidence/issue21/README.md` (produkcijska
+  sekcija + opomba o Vercel kvoti API-deployev: GitHub App NI nameščena,
+  100/dan izčrpana, reset 2026-10-02 — priporočila zapisana) +
+  `docs/LIVE-TRIP-NAVIGATOR.md` PREVERJENO razširjeno z produkcijo.
+
+---
+
 ## [1.161.0] — 2026-10-01 (#21 DISCOVER — LIVE TRIP NAVIGATOR: geo pogodba + iskrenost + wake lock)
 
 ### Dodano

@@ -237,6 +237,18 @@ union-merge).
   (simuliran vtič — sandbox zavrne dovoljenje, pošteno dokumentirano) →
   samodejna progresija → brez-lokacije opomba → mobilni 390 px; 0 napak
   v konzoli (agent-browser, `next dev -p 3100`)
+- **PRODUKCIJSKI DOKAZI (1.161.1, Render, 2026-10-01):** `docs/evidence/
+  issue21/prod-*.png` + `prod-00-health-render.json` — ZLATA POT v živi
+  produkciji: /api/health 1.161.0 (22/22 preverb) → načrt Brnik → Postojnska
+  jama (/api/journey/plan 200, realni FSQ produkti, transfer 0 z iskreno
+  opombo) → izbira 2 postankov → Zaženi Na poti → Go Mode živ → GPS prihod
+  („✓ Prišel si na lokacijo", „GPS prihod NE potrdi rezervacije",
+  „natančnost ±12 m · natančnost dobra") → samodejna progresija (Vivarium,
+  znacka „Približna lokacija (vir: fsq)", trak „NATO") → drugi prihod +
+  „zaslon ostaja prižgan" (wake lock) → reload ohrani stanje; 0 konzolnih
+  napak. Vercel: kvota API-deployev izčrpana (reset 2026-10-02), tam
+  1.158.1 — priporočena namestitev Vercel GitHub App (git deployi brez
+  kvote).
 
 ### ZUNANJE MEJE (iskreno)
 - turn-by-turn ostaja pri zunanjih aplikacijah (geo:/Maps handoff — AGENTS.md §13)
