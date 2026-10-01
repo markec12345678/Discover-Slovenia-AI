@@ -7,6 +7,23 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.163.1] — 2026-10-01 (#23 PRODUKCIJSKI DOKAZI)
+
+### Dodano
+
+- **PRODUKCIJSKI DOKAZ #23 (Render 1.163.0).** Zlata pot vodene plasti
+  dokazana v živi produkciji (agent-browser, mobilni 390×844, 0 konzolnih
+  napak, 0 page errorjev): first-run kartica (5 nameri + „Ne vem — pokaži
+  mi") → VODENA POT (dai:guided-tour) → dodaj Bled → toast z dvojno akcijo
+  (Odpri pot + Načrtuj potovanje) → trak na domov „Tvoja zbirka ima 1
+  postanek" (Korak 2/5, pravilna slovenska množina) → hub chain indikator →
+  returning banner „Tvoja pot je aktivna [Nadaljuj na poti]" → /na-poti
+  terminalno stanje „POT ZAKLJUČENA 🎉 1 dan · 2 opravljenih" + /en trak
+  („Your collection has 1 stop"). 8 dokazov: `docs/evidence/issue23/`
+  (README z dokaznimi pripravami in iskrenimi mejami).
+
+---
+
 ## [1.163.0] — 2026-10-01 (#23 GUIDED PLATFORM EXPERIENCE)
 
 ### Dodano — vodena plast: Discover vodi uporabnika skozi lastno platformo
