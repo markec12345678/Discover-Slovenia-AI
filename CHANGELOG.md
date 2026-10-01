@@ -10,6 +10,34 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 ---
 ---
 
+## [1.162.4] — 2026-10-01 (#22 PRODUKCIJSKI DOKAZI + status)
+
+### Dodano
+
+- **PRODUKCIJSKI DOKAZ #22 (Render 1.162.0 → 1.162.3).** Zlata pot
+  dokazana v živi produkciji (agent-browser, mobilni 390×844, 0 konzolnih
+  napak): banner ⚪/🟢/🟠 z DEJANSKIMI številkami (rezerva 182/137 min,
+  zamuda 39 min) → konflikt kartica (FACTS→RAZLOG→POSLEDICA + akcije) →
+  RECOVERY MODE (Nadaljuj/Preskoči/Preuredi + »Odločiš ti«) → preskok →
+  samodejna progresija → PROST ČAS (147/108 min + izrecna varnostna
+  rezerva) → 4 kandidati iz živih FSQ pinov → v1 iskrena opomba → v2
+  DODAJANJE USPEŠNO (✓ Don Andro, ključ nearby:…, viden v dnevu) →
+  Nadaljuj na poti (gostov pogled → svež v2 v /na-poti). 16 dokazov:
+  `docs/evidence/issue22/` (README z dokaznimi pripravami in mejami).
+- **Status:** `docs/TRAVEL-GUARDIAN-STATUS.md` (CURRENT STATE →
+  IMPLEMENTATION → TEST → PRODUCTION EVIDENCE → FINAL STATUS; vseh 13 §26
+  dostavljivcev pokritih).
+
+### Popravljeno (med produkcjskimi dokazi ujeti — 1.162.1–1.162.3)
+
+- **1.162.1/1.162.2 nearby kandidati:** abort ob vsaki GPS fiksaciji (2 s)
+  je ubil fetch, dedupe ključ pa prepovedoval ponovni poskus — kandidati so
+  ostali prazni kljub 166 pinom. Korensko: last-write-wins PO KLJUČU, brez
+  AbortControllerja; regresijsko zaklenjeno.
+- **1.162.3 Nadaljuj na poti v gostovem pogledu:** gumb je bil sprva samo
+  na karticah prijavljenih — lokalna potovanja (primarni tok brez računa)
+  so ostala brez člena. Dopolnjeno + dokazano v produkciji.
+
 ## [1.162.0] — 2026-10-01 (#22 TRAVEL GUARDIAN)
 
 ### Dodano
