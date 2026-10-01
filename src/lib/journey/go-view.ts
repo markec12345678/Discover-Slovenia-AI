@@ -81,6 +81,9 @@ export interface GoEntryCard {
 export interface GoView {
   title: { sl: string; en: string };
   destinationLabel: string;
+  /** ISSUE #22: indeks aktivnega dneva v trip.days (za add-stop/edit
+   *  akcije Guardian UX — aditivno, brez spremembe obstoječih polj). */
+  activeDayIndex: number;
   /** Aktiven dan (datum + zakaj JE ta dan aktiven — iskrenost). */
   activeDayLabel: { sl: string; en: string };
   activeDayNote?: { sl: string; en: string };
@@ -486,6 +489,7 @@ export function buildGoView(
       en: `ON THE ROAD — ${trip.title.en.replace(/^MY TRIP — /, "")}`,
     },
     destinationLabel: trip.title.en.replace(/^MY TRIP — /, ""),
+    activeDayIndex: active?.index ?? 0,
     activeDayLabel: active?.day.dateLabel ?? {
       sl: "Ni dni v načrtu",
       en: "No days in the plan",

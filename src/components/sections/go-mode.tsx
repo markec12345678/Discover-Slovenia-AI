@@ -83,6 +83,7 @@ import {
   loadGoTrip,
   saveGoProgress,
   saveGoSkipped,
+  saveItineraryGoTrip,
   type GoTripRecord,
 } from "@/lib/journey/go-persist";
 import {
@@ -108,12 +109,41 @@ import {
   GO_NAV_LABELS,
   goNavLinks,
   isCoarsePointer,
+  pickGoNavHref,
 } from "@/lib/journey/go-nav";
 import { GoAudioButton } from "@/components/sections/go-audio-button";
 import {
   buildNearbyNarration,
   buildStopNarration,
 } from "@/lib/journey/go-audio";
+// ISSUE #22 — TRAVEL GUARDIAN (1.162.0): stanje dneva, konflikti, recovery,
+// jutranji povzetek in pametni prosti čas (vse čisti projekcijski moduli).
+import { buildGuardian } from "@/lib/journey/trip-health";
+import { assessRecovery } from "@/lib/journey/recovery";
+import { buildDayStartSummary } from "@/lib/journey/day-start";
+import {
+  detectFreeTimeWindow,
+  filterNearbyCandidates,
+  nearbyBbox,
+  NEARBY_CATEGORY_OF,
+  CATEGORY_TO_PRODUCT_TYPES,
+  type GuardianNearbyCategory,
+  type NearbyCandidate,
+  type NearbyFit,
+} from "@/lib/journey/free-time";
+import {
+  addNearbyStopToRecord,
+  canAddNearbyStops,
+} from "@/lib/journey/go-edit";
+import type { RecoverySuggestionAction } from "@/lib/journey/recovery";
+import type {
+  GuardianActionId,
+  GuardianConflict,
+} from "@/lib/journey/conflict-detect";
+import { GuardianBanner } from "@/components/sections/go-mode/guardian-banner";
+import { GuardianConflictCard } from "@/components/sections/go-mode/guardian-conflict";
+import { GuardianFreeTimeSection } from "@/components/sections/go-mode/guardian-free-time";
+import { GuardianDayStartSection } from "@/components/sections/go-mode/guardian-day-start";
 
 // ---------------------------------------------------------------------------
 // Oznake (L vzorec — enak kanon kot journey-planner/journey-trip)
@@ -785,6 +815,266 @@ export function GoMode() {
     setSkipped({});
   }, []);
 
+  // ----------------------------------------------------------------------
+  // ISSUE #22 — TRAVEL GUARDIAN (1.162.0): stanje dneva + konflikti +
+  // recovery + jutranji povzetek + prosti čas. Vse ČISTE projekcije
+  // ISTIH podatkov, ki jih vidi zaslon (0 novih virov resnice, 0 nove
+  // persistance — slika dneva se preračuna iz (pot + progress + ura + GPS),
+  // kanon #21 §9).
+  // ----------------------------------------------------------------------
+  const guardian = useMemo(
+    () =>
+      view && now
+        ? buildGuardian({
+            view,
+            now,
+            position: geo.position,
+            bookingRows,
+          })
+        : null,
+    [view, now, geo.position, bookingRows]
+  );
+
+  const recovery = useMemo(
+    () =>
+      view && now && guardian
+        ? assessRecovery({
+            view,
+            now,
+            conflicts: guardian.conflicts,
+            position: geo.position,
+          })
+        : null,
+    [view, now, guardian, geo.position]
+  );
+
+  const dayStart = useMemo(
+    () =>
+      view && now
+        ? buildDayStartSummary({
+            view,
+            now,
+            conflicts: guardian?.conflicts ?? [],
+            gpsActive: geo.status === "active",
+          })
+        : null,
+    [view, now, guardian, geo.status]
+  );
+
+  const freeTime = useMemo(
+    () =>
+      view && now
+        ? detectFreeTimeWindow({
+            view,
+            now,
+            position: geo.position,
+            arrived: view.next?.travel?.status === "arrived",
+          })
+        : null,
+    [view, now, geo.position]
+  );
+
+  // SMART FREE-TIME kandidati (§9/§11): SAMO po uporabnikovi izbiri
+  // kategorije + živem oknu — /api/map/pins z bbox okoli GPS (groba
+  // posplošitev ~5 km, brez natančne pozicije naprej), nato ČISTI
+  // varnostni filter (celotna zanka ≤ okno − rezerva). Fail-closed:
+  // napaka/brez signala → iskrena opomba, načrt deluje naprej.
+  const [nearbyCategory, setNearbyCategory] =
+    useState<GuardianNearbyCategory | null>(null);
+  const [nearbyFits, setNearbyFits] = useState<NearbyFit[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [nearbyUnavailable, setNearbyUnavailable] = useState(false);
+  const [nearbyFeedback, setNearbyFeedback] = useState<{
+    sl: string;
+    en: string;
+  } | null>(null);
+
+  /** Ključ nalaganja: kategorija + groba pozicija (~100 m) + dolžina okna —
+   *  refetch SAMO ob dejanski spremembi (nov fix < 100 m tika ne sproži). */
+  const nearbyLastKeyRef = useRef<string | null>(null);
+  const nbLat = geo.position?.lat ?? null;
+  const nbLng = geo.position?.lng ?? null;
+  const nbMinutes = freeTime?.minutes ?? null;
+  const nbKey =
+    nearbyCategory != null && nbLat != null && nbLng != null && nbMinutes != null
+      ? `${nearbyCategory}@${nbLat.toFixed(3)},${nbLng.toFixed(3)}@${nbMinutes}`
+      : null;
+
+  useEffect(() => {
+    if (
+      !view ||
+      !now ||
+      !freeTime ||
+      nearbyCategory == null ||
+      nbLat == null ||
+      nbLng == null
+    ) {
+      return;
+    }
+    if (nbKey == null || nearbyLastKeyRef.current === nbKey) return;
+    nearbyLastKeyRef.current = nbKey;
+    let active = true;
+    const controller = new AbortController();
+    (async () => {
+      setNearbyLoading(true);
+      try {
+        const cats = CATEGORY_TO_PRODUCT_TYPES[nearbyCategory].join(",");
+        const bbox = nearbyBbox({ lat: nbLat, lng: nbLng }, 5);
+        const res = await fetch(
+          `/api/map/pins?bbox=${encodeURIComponent(bbox)}&zoom=13&cats=${encodeURIComponent(cats)}`,
+          { signal: controller.signal }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as {
+          pins?: { id: string; name: string; lat: number; lng: number; type: string }[];
+        };
+        if (!active) return;
+        const candidates: NearbyCandidate[] = (data.pins ?? [])
+          .map((p) => {
+            const category = NEARBY_CATEGORY_OF[p.type as keyof typeof NEARBY_CATEGORY_OF];
+            if (category == null) return null;
+            return {
+              key: p.id,
+              title: p.name,
+              lat: p.lat,
+              lng: p.lng,
+              category,
+            } satisfies NearbyCandidate;
+          })
+          .filter((c): c is NearbyCandidate => c != null);
+        const next = view.next;
+        const nextStop =
+          next && next.geo.lat != null && next.geo.lng != null
+            ? { lat: next.geo.lat, lng: next.geo.lng }
+            : null;
+        const fits = filterNearbyCandidates({
+          candidates,
+          position: { lat: nbLat, lng: nbLng },
+          window: freeTime,
+          now,
+          exclude: dayStopCoords,
+          nextStop,
+          category: nearbyCategory,
+        });
+        if (!active) return;
+        setNearbyFits(fits);
+        setNearbyUnavailable(false);
+      } catch {
+        if (!active) return;
+        setNearbyFits([]);
+        setNearbyUnavailable(true);
+      } finally {
+        if (active) setNearbyLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [view, now, freeTime, nearbyCategory, nbLat, nbLng, nbMinutes, nbKey, dayStopCoords]);
+
+  /** §9 E2E-8: dodaj kandidata v mojo pot (SAMO v2 zapis — čista projekcija
+   *  go-edit.ts + persistanca saveItineraryGoTrip; v1: iskrena opomba). */
+  const addNearby = useCallback(
+    (fit: NearbyFit) => {
+      if (!record || !view) return;
+      if (!canAddNearbyStops(record)) {
+        setNearbyFeedback({
+          sl: "Ta pot je kanonična (iz načrtovalnika potovanj) — dodajanje med potjo ni mogoče. Odpri lokacijo na zemljevidu.",
+          en: "This trip is canonical (from the journey planner) — adding stops mid-trip is not possible. Open the location on the map.",
+        });
+        return;
+      }
+      const updated = addNearbyStopToRecord(
+        record,
+        {
+          id: fit.candidate.key,
+          name: fit.candidate.title,
+          lat: fit.candidate.lat,
+          lng: fit.candidate.lng,
+          category: fit.candidate.category,
+        },
+        view.activeDayIndex
+      );
+      if (!updated) return;
+      const shareId = record.version === 2 ? record.shareId : undefined;
+      if (!saveItineraryGoTrip(updated.view, { shareId })) return;
+      setRecord(updated);
+      setNearbyFeedback({
+        sl: `✓ ${fit.candidate.title} dodan na konec dneva.`,
+        en: `✓ ${fit.candidate.title} added to the end of the day.`,
+      });
+    },
+    [record, view]
+  );
+
+  /** §8: Guardian akcije — vse izvede uporabnik prek obstoječih mehanizmov
+   *  (navigacijski handoff #21, preskok #21, planer, rezervacija pri
+   *  ponudniku). Guardian SAMO predlaga — nikoli ne piše rezervacij. */
+  const onGuardianAction = useCallback(
+    (
+      action: RecoverySuggestionAction | GuardianActionId,
+      conflict: GuardianConflict
+    ) => {
+      if (!view || !record) return;
+      if (action === "NAVIGATE" && view.next) {
+        const links = goNavLinks(view.next.entry, geo.position ?? null);
+        if (links != null) {
+          if (isCoarsePointer()) {
+            window.location.href = links.geo;
+          } else {
+            window.open(links.web, "_blank", "noopener,noreferrer");
+          }
+        }
+        return;
+      }
+      if (action === "SKIP") {
+        toggleSkip(conflict.stopKey);
+        return;
+      }
+      if (action === "COMPLETE") {
+        toggleDone(conflict.stopKey);
+        return;
+      }
+      if (action === "ADJUST_PLAN") {
+        // ISTA destinacija kot gumb „Nazaj na načrt" (en vir resnice).
+        const href =
+          record.version === 2
+            ? record.shareId
+              ? `/pot/${record.shareId}`
+              : "/nacrtuj"
+            : "/potovanje";
+        window.location.assign(href);
+        return;
+      }
+      if (action === "VIEW_BOOKING" || action === "CONTINUE") {
+        // Odpri rezervacijo pri ponudniku (kanonični vir) — sicer nadaljuj
+        // tok: pomakni se na NASLEDNJE (primarna odločitev ostane vidna).
+        if (action === "VIEW_BOOKING" && view.next && conflict.stopKey === view.next.entry.key) {
+          const url = view.next.entry.bookingUrl ?? view.next.entry.sourceUrl;
+          if (url) {
+            window.open(url, "_blank", "noopener,noreferrer");
+            return;
+          }
+        }
+        document
+          .getElementById("naslednje")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    },
+    [view, record, geo.position, toggleSkip, toggleDone]
+  );
+
+  /** §13: ZAČNI DAN — vklopi GPS (permission SAMO na uporabnikovo dejanje,
+   *  kanon #21 §9) + pomakni na naslednji cilj (živi tok prevzame). */
+  const startDay = useCallback(() => {
+    if (geo.status !== "active") geo.start();
+    document
+      .getElementById("naslednje")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [geo]);
+
+
   // --- Skeleton (SSR == prvi klientni render; ura še ni hydratana) ---
   if (!now) {
     return (
@@ -867,6 +1157,27 @@ export function GoMode() {
         </CardContent>
       </Card>
 
+      {/* === ISSUE #22 (1.162.0) — TRAVEL GUARDIAN: stanje dneva ===
+          🟢/🟠/🔴/⚪ na enem pogledu z DEJANSKIMI številkami (ONE DECISION
+          AT A TIME §21 — tehniški izraz "Trip Health" NI izpisan §30.E).
+          Konflikt kartica (samo ob pozornosti) nosi FACTS → RAZLOG →
+          POSLEDICO + uporabnikove akcije (§8 — Discover nikoli ne spremeni
+          rezervacije namesto uporabnika). ZAČNI DAN povzetek (§13) ponudi
+          jutranji vstop v živi tok. */}
+      {guardian && <GuardianBanner snapshot={guardian} lang={lang} />}
+      {guardian && guardian.topConflict && (
+        <GuardianConflictCard
+          conflict={guardian.topConflict}
+          recovery={recovery}
+          lang={lang}
+          onAction={onGuardianAction}
+          isNextStop={guardian.topConflict.stopKey === view.next?.entry.key}
+        />
+      )}
+      {dayStart?.applicable && (
+        <GuardianDayStartSection summary={dayStart} lang={lang} onStartDay={startDay} />
+      )}
+
       {/* === ISSUE #4 §16 (val 4): DNEVNA NAVIGACIJA — preklapljanje dni ===
           Zahteva naročnika (§16): "navigate days" tudi brez signala —
           prej je bil aktiven dan SAMODEN (po datumu) in so bili kasnejši
@@ -939,7 +1250,7 @@ export function GoMode() {
           NASLEDNJE je druga kartica (ne četrta) — primarni tok po GLAVI.
           GPS NADZOR (HOW) je premaknjen POD naslednjo kartico. */}
       {view.next ? (
-        <Card className="border-emerald-500 ring-1 ring-emerald-500/50">
+        <Card id="naslednje" className="border-emerald-500 ring-1 ring-emerald-500/50">
           <CardContent className="space-y-4 p-4 sm:p-6">
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
@@ -1260,6 +1571,28 @@ export function GoMode() {
             {t(GO_LABELS.noEntryLeft)}
           </CardContent>
         </Card>
+      )}
+
+      {/* === ISSUE #22 §9/§10 (1.162.0) — SMART FREE-TIME ===
+          SAMO kadar DEJANSKO obstaja prosto okno (fiksni termin v prihodnosti
+          − vožnja − varnostna rezerva ≥ 30 min); kandidati so prefiltrirani
+          skozi varnostna vrata (celotna zanka ≤ okno — zamuda ni mogoča). */}
+      {freeTime && (
+        <GuardianFreeTimeSection
+          window={freeTime}
+          lang={lang}
+          selectedCategory={nearbyCategory}
+          onCategorySelect={(cat) => {
+            setNearbyCategory(cat);
+            setNearbyFeedback(null);
+          }}
+          fits={nearbyFits}
+          loading={nearbyLoading}
+          unavailable={nearbyUnavailable}
+          canAdd={record != null && canAddNearbyStops(record)}
+          note={nearbyFeedback}
+          onAdd={addNearby}
+        />
       )}
 
       {/* === TASK 102 — SHEMA DNEVA + ZEMLJEVID DNEVA (ISSUE #21 §10) ===

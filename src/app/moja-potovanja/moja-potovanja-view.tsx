@@ -20,6 +20,7 @@ import {
   ArrowRight,
   HardDrive,
   CloudUpload,
+  Footprints,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,10 @@ import { LoadingState } from "@/components/states/loading-state";
 import { ErrorState } from "@/components/states/error-state";
 import { EmptyState } from "@/components/states/empty-state";
 import { useToast } from "@/hooks/use-toast";
+// ISSUE #22 §30.C (1.162.0): »Nadaljuj na poti« — Moja potovanja → Go Mode
+// člen (zmanjšana vrzel: uporabnik ni moral vedeti za /pot → Zaženi Na poti).
+import { saveItineraryGoTrip } from "@/lib/journey/go-persist";
+import { buildItineraryGoView } from "@/lib/journey/itinerary-go";
 // FW2-C: lokalna zgodovina naročil/rezervacij (localStorage številke + javni
 // lookup API-ji) — neodvisna od /api/user/trips, zato render tudi med nalaganjem.
 import { MyOrdersSection } from "@/components/my-orders-section";
@@ -112,6 +117,12 @@ function formatDate(iso: string, lang: "sl" | "en"): string {
 const L = {
   title: { sl: "Moja potovanja", en: "My trips" },
   open: { sl: "Odpri", en: "Open" },
+  resume: { sl: "Nadaljuj na poti", en: "Continue on the road" },
+  resumeBusy: { sl: "Nadaljujem …", en: "Continuing …" },
+  resumeError: {
+    sl: "Te poti ni bilo mogoče naložiti — odpiram njeno stran.",
+    en: "Could not load this trip — opening its page.",
+  },
   errorTitle: { sl: "Napaka", en: "Error" },
   errors: {
     loadFailed: { sl: "Nalaganje ni uspelo.", en: "Loading failed." },
@@ -241,6 +252,9 @@ export function MojaPotovanjaView() {
 
   const [data, setData] = useState<TripsResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // ISSUE #22 §30.C: Nadaljuj na poti — nalagalnik (per shareId) za
+  // prenos shranjene poti v Go Mode (naprava) + preusmeritev na /na-poti.
+  const [resumingTripId, setResumingTripId] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
   // TASK 4 / K-6: gostova LOKALNA potovanja (hidrirajo se TEKOM mounta —
   // localStorage je klient-only, da ni hydration mismatcha).
@@ -331,6 +345,39 @@ export function MojaPotovanjaView() {
       });
     } finally {
       setResending(false);
+    }
+  };
+
+  /** ISSUE #22 §30.C: Nadaljuj na poti — pridobi shranjeno pot, zgradi Go
+   *  Mode zapis (MyTripView na napravi) in preusmeri na /na-poti. Napaka
+   *  (zasebna pot/dostop) → iskren odprt potn strani (tam je poln tok). */
+  const resumeTrip = async (shareId: string, fallbackName: string) => {
+    if (resumingTripId) return;
+    setResumingTripId(shareId);
+    try {
+      const res = await fetch(
+        `/api/itinerary/shared/${encodeURIComponent(shareId)}`
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as {
+        name?: string | null;
+        itinerary?: unknown;
+      };
+      if (data.itinerary == null) throw new Error("no itinerary");
+      const view = buildItineraryGoView(data.itinerary as never, {
+        lang: "sl",
+        name: data.name ?? fallbackName,
+      });
+      if (saveItineraryGoTrip(view, { shareId })) {
+        router.push(lang === "sl" ? "/na-poti" : "/en/na-poti");
+        return;
+      }
+      throw new Error("persist failed");
+    } catch {
+      toast({ description: L.resumeError[lang] });
+      router.push(`/pot/${shareId}`);
+    } finally {
+      setResumingTripId(null);
     }
   };
 
@@ -588,16 +635,35 @@ export function MojaPotovanjaView() {
                             </span>
                           </div>
                         </CardHeader>
-                        <CardContent className="flex items-center justify-between gap-3 pt-0">
+                        <CardContent className="flex flex-wrap items-center justify-between gap-2 pt-0">
                           <span className="text-xs text-muted-foreground">
                             {L.trips.saved[lang](formatDate(trip.createdAt, lang))}
                           </span>
-                          <Button asChild size="sm" className="gap-1.5 shrink-0">
-                            <Link href={`/pot/${trip.shareId}`}>
-                              {L.open[lang]}
-                              <ArrowRight className="size-3.5" aria-hidden="true" />
-                            </Link>
-                          </Button>
+                          <div className="flex shrink-0 gap-2">
+                            {/* ISSUE #22 §30.C: MOJA POT → NA POTI člen —
+                                uporabnik nadaljuje pot BREZ znanja URL-jev
+                                (isti vzorec kot „Zaženi Na poti" na /pot). */}
+                            <Button
+                              size="sm"
+                              className="gap-1.5"
+                              disabled={resumingTripId === trip.shareId}
+                              onClick={() => resumeTrip(trip.shareId, trip.name ?? "")}
+                              aria-label={`${L.resume[lang]}: ${trip.name ?? trip.shareId}`}
+                            >
+                              {resumingTripId === trip.shareId ? (
+                                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                              ) : (
+                                <Footprints className="size-3.5" aria-hidden="true" />
+                              )}
+                              {L.resume[lang]}
+                            </Button>
+                            <Button asChild size="sm" variant="outline" className="gap-1.5 shrink-0">
+                              <Link href={`/pot/${trip.shareId}`}>
+                                {L.open[lang]}
+                                <ArrowRight className="size-3.5" aria-hidden="true" />
+                              </Link>
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     </li>
