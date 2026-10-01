@@ -11,9 +11,22 @@
 //
 // Hidracija: vse iz localStorage/ure/GPS se rendera TEKOM mounta (mounted
 // gate) — SSR in klient se strinjata (skeleton), ni mismatch-a.
+//
+// ISSUE #21 — LIVE TRIP NAVIGATOR (1.159.0):
+//  - ARRIVAL UX: »Približuješ se — X m« → »✓ Prišel si na lokacijo« (stabilen
+//    geofence + hystereza + min. čas — čista plast travel-state.ts); prihod
+//    je IZRECNO ločen od rezervacije (GPS nikoli ne potrdi rezervacije §3);
+//  - SAMODEJNA NAPREDOVANJA (§12): po opravitvi/preskoku naslednji postanek
+//    zasede kartico BREZ vračanja v planer (deterministicen vrstni red);
+//  - PRESKOK pod nadzorom uporabnika (§5) + Obnovi;
+//  - GPS življenjski cikel: en sam auto-retry (hook), zastarelost fiksacije
+//    se IZREČNO pokaže (§6 — ne izrekamo svežine);
+//  - REZERVACIJSKI KONTEKST (§11, samo za branje): učinkovite JourneyBooking
+//    vrstice prek istega GET kanala kot MOJA POT (status ostaja resnica
+//    strežnika — Go Mode NE piše rezervacij, le prebere jih).
 // ============================================================================
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 import {
   AlertTriangle,
@@ -30,6 +43,7 @@ import {
   Phone,
   RotateCcw,
   Route as RouteIcon,
+  SkipForward,
   Trash2,
   Wand2,
 } from "lucide-react";
@@ -63,10 +77,22 @@ import { useGeolocation, type GeoStatus } from "@/lib/journey/use-geolocation";
 import {
   clearGoTrip,
   loadGoProgress,
+  loadGoSkipped,
   loadGoTrip,
   saveGoProgress,
+  saveGoSkipped,
   type GoTripRecord,
 } from "@/lib/journey/go-persist";
+import {
+  ARRIVAL_LABELS,
+  positionAgeMs,
+  type ArrivalContext,
+} from "@/lib/journey/travel-state";
+import { plannerSessionId } from "@/lib/planner-analytics";
+import {
+  CONFIRMATION_STATUS_LABELS,
+} from "@/lib/journey/booking";
+import type { ConfirmationStatus } from "@/lib/journey/types";
 import {
   goWeatherTarget,
   observedTimeLabel,
@@ -118,6 +144,15 @@ const L = {
   done: { sl: "Opravljeno", en: "Completed" },
   complete: { sl: "Opravi", en: "Done" },
   restore: { sl: "Obnovi", en: "Restore" },
+  // ISSUE #21 §5: preskok pod nadzorom uporabnika (Preskoči ≠ Opravi).
+  skip: { sl: "Preskoči", en: "Skip" },
+  skippedSection: { sl: "Preskočeno", en: "Skipped" },
+  skipHint: {
+    sl: "Preskočeni postanek ni opravljen — vrneš ga lahko z Obnovi.",
+    en: "A skipped stop is not completed — you can bring it back with Restore.",
+  },
+  // ISSUE #21 §11: rezervacijski žeton (samo iz DEJANSKE vrstice).
+  bookingChip: { sl: "Rezervacija", en: "Booking" },
   laterDays: { sl: "Naslednji dnevi", en: "Coming days" },
   // ISSUE #4 §16 (val 4): dnevna navigacija — preklapljanje dni.
   dayNav: { sl: "Dnevi poti", en: "Trip days" },
@@ -410,8 +445,15 @@ export function GoMode() {
   // react-hooks/set-state-in-effect), SSR in prvi klientni render sta skeleton.
   const [record, setRecord] = useState<GoTripRecord | null>(null);
   const [done, setDone] = useState<Record<string, string>>({});
+  // ISSUE #21 §5: preskočeni postanki (ločeno od done — Preskoči ≠ Opravi).
+  const [skipped, setSkipped] = useState<Record<string, string>>({});
   const [now, setNow] = useState<Date | null>(null);
   const [showDone, setShowDone] = useState(false);
+  const [showSkipped, setShowSkipped] = useState(false);
+  // ISSUE #21: kontekst prihoda naslednjega postanka (hystereza +
+  // stabilnost čez fiksacije) — živi SAMO v seji (ref): 0 persistencje,
+  // po refreshu klasifikacija iskreno začne na novo.
+  const arrivalRef = useRef<ArrivalContext | null>(null);
   // ISSUE #4 §16 (val 4): DNEVNA NAVIGACIJA — ročno izbrani dan (null =
   // samodejno po datumu). Preživi tick ure/geo — uporabnikova izbira je
   // stabilna, dokler jo ne resetira (gumb »Danes«).
@@ -422,6 +464,7 @@ export function GoMode() {
     const hydrate = setTimeout(() => {
       setRecord(loadGoTrip());
       setDone(loadGoProgress());
+      setSkipped(loadGoSkipped());
       setNow(new Date());
     }, 0);
     // Živa ura: osvežitev vsakih 30 s (setState v interval-callbacku —
@@ -448,10 +491,21 @@ export function GoMode() {
   const view = useMemo(
     () =>
       trip && now
-        ? buildGoView(trip, now, geo.position, done, { dayOverride })
+        ? buildGoView(trip, now, geo.position, done, {
+            dayOverride,
+            skipped,
+            arrivalContext: arrivalRef.current,
+          })
         : null,
-    [trip, now, geo.position, done, dayOverride]
+    [trip, now, geo.position, done, skipped, dayOverride]
   );
+
+  // ISSUE #21: novi kontekst prihoda gre nazaj v ref PO renderu (brez
+  // dodatnega render krogotočka — ref pisanje ne sproži re-rendera;
+  // naslednja fiksacija/ura ga uporabi za hysterezo in stabilnost).
+  useEffect(() => {
+    arrivalRef.current = view?.arrivalContext ?? null;
+  }, [view]);
 
   // ----------------------------------------------------------------------
   // TASK 65 — VREME PRI NASLEDNJI POSTANKI (živi Open-Meteo prek
@@ -580,6 +634,93 @@ export function GoMode() {
     [geo.position, lang, dayStopCoords]
   );
 
+  // ----------------------------------------------------------------------
+  // ISSUE #21 §11 — REZERVACIJSKI KONTEKST (SAMO ZA BRANJE): učinkovite
+  // JourneyBooking vrstice za danes relevantne postanke (isti GET kanal
+  // kot MOJA POT prekrivka — provider:productId, obseg seje). Go Mode NE
+  // piše rezervacij (piše le EXTERNAL handoff ob kliku — obstoječe);
+  // status ostaja resnica strežnika, brez vrstice žetona NI (iskrena
+  // odsotnost). Fail-closed: napaka omrežja NE blokira načrta.
+  // ----------------------------------------------------------------------
+  const [bookingRows, setBookingRows] = useState<
+    { key: string; status: string; providerBookingId: string | null }[]
+  >([]);
+  const overlayProducts = useMemo(() => {
+    if (!view) return [];
+    const entries = [view.next, ...view.remaining, ...view.skipped]
+      .filter((c): c is GoEntryCard => c != null)
+      .map((c) => c.entry);
+    const keys = entries
+      .filter(
+        (e) =>
+          e.provider != null &&
+          e.providerProductId != null &&
+          e.status === "EXTERNAL"
+      )
+      .map((e) => `${e.provider}:${e.providerProductId}`);
+    return Array.from(new Set(keys)).slice(0, 20);
+  }, [view]);
+  const overlayQuery =
+    overlayProducts.length > 0 ? overlayProducts.join(",") : null;
+
+  useEffect(() => {
+    if (!overlayQuery) {
+      setBookingRows([]);
+      return;
+    }
+    let active = true;
+    const sid = plannerSessionId();
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/journey/bookings?products=${encodeURIComponent(overlayQuery)}&sessionKey=${encodeURIComponent(sid)}`
+        );
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          bookings?: {
+            provider: string;
+            providerProductId: string;
+            status: string;
+            providerBookingId?: string | null;
+          }[];
+        };
+        if (active && Array.isArray(data.bookings)) {
+          setBookingRows(
+            data.bookings.map((b) => ({
+              key: `${b.provider}:${b.providerProductId}`,
+              status: b.status,
+              providerBookingId: b.providerBookingId ?? null,
+            }))
+          );
+        }
+      } catch {
+        // Neblokirajoče — prekrivka je izboljšava, ne obveza (brez nje
+        // vidimo enako iskrene načrtovane statuse).
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [overlayQuery]);
+
+  /** Žeton rezervacije za postanek (SAMO če DEJANSKA vrstica obstaja). */
+  const bookingRowByKey = useMemo(
+    () => new Map(bookingRows.map((r) => [r.key, r] as const)),
+    [bookingRows]
+  );
+
+  const bookingBadgeOf = useCallback(
+    (entry: { provider?: string; providerProductId?: string }) => {
+      if (entry.provider == null || entry.providerProductId == null) return null;
+      const row = bookingRowByKey.get(`${entry.provider}:${entry.providerProductId}`);
+      if (!row) return null;
+      const label =
+        CONFIRMATION_STATUS_LABELS[row.status as ConfirmationStatus];
+      return { status: row.status, label };
+    },
+    [bookingRowByKey]
+  );
+
   const toggleDone = useCallback((key: string) => {
     setDone((prev) => {
       const next = { ...prev };
@@ -588,12 +729,41 @@ export function GoMode() {
       saveGoProgress(next);
       return next;
     });
+    // ISSUE #21 §12: opravitev/postanek izstopi iz preskokov (ena resnica
+    // na postanek: ali je opravljen ALI preskočen ALI odprt — nikoli oboje).
+    setSkipped((prev) => {
+      if (!prev[key]) return prev;
+      const nextS = { ...prev };
+      delete nextS[key];
+      saveGoSkipped(nextS);
+      return nextS;
+    });
+  }, []);
+
+  /** ISSUE #21 §5: preskok pod nadzorom uporabnika — postanek IZPADA iz
+   * naslednjega toka (a ostaja danes; Obnovi ga vrne). NI opravitev. */
+  const toggleSkip = useCallback((key: string) => {
+    setSkipped((prev) => {
+      const next = { ...prev };
+      if (next[key]) delete next[key];
+      else next[key] = new Date().toISOString();
+      saveGoSkipped(next);
+      return next;
+    });
+    setDone((prev) => {
+      if (!prev[key]) return prev;
+      const nextD = { ...prev };
+      delete nextD[key];
+      saveGoProgress(nextD);
+      return nextD;
+    });
   }, []);
 
   const endGoMode = useCallback(() => {
     clearGoTrip();
     setRecord(null);
     setDone({});
+    setSkipped({});
   }, []);
 
   // --- Skeleton (SSR == prvi klientni render; ura še ni hydratana) ---
@@ -819,6 +989,35 @@ export function GoMode() {
               </div>
             </div>
 
+            {/* === ISSUE #21 — ARRIVAL UX (§7, §10): Približuješ se → ✓ Prišel si.
+                STABILEN prihod (geofence + hystereza + min. čas — čista plast
+                travel-state.ts). role=status: bralniki zaslišijo prehod.
+                GPS prihod je IZRECNO ločen od rezervacije (dve resnici §3). === */}
+            {view.next.travel?.status === "near_destination" &&
+              view.next.travel.arrivalM != null && (
+                <p
+                  role="status"
+                  className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+                >
+                  <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {ARRIVAL_LABELS.near[lang](view.next.travel.arrivalM)}
+                </p>
+              )}
+            {view.next.travel?.status === "arrived" && (
+              <div
+                role="status"
+                className="space-y-1 rounded-lg border border-emerald-400 bg-emerald-50 px-3 py-2 dark:border-emerald-700 dark:bg-emerald-950"
+              >
+                <p className="flex items-center gap-2 text-sm font-semibold text-emerald-900 dark:text-emerald-200">
+                  <span aria-hidden>✓</span>
+                  {ARRIVAL_LABELS.arrived[lang](view.next.entry.title)}
+                </p>
+                <p className="text-xs text-emerald-800/80 dark:text-emerald-300/80">
+                  {t(ARRIVAL_LABELS.arrivedHint)}
+                </p>
+              </div>
+            )}
+
             {/* === TASK 65: VREME PRI NASLEDNJI POSTANKI ===
                 Živi Open-Meteo (prek /api/weather, brez ključa). ISKRENOST:
                 postanek brez geo → trak SE NE PRIKAŽE (kot razdalja); napaka
@@ -880,6 +1079,17 @@ export function GoMode() {
               {/* ISSUE #4 §8: vožnja od prejšnjega postanka (OSRM/ocena). */}
               <LegChip card={view.next} lang={lang} />
               <Badge variant="secondary">{t(view.next.entry.statusLabel)}</Badge>
+              {/* ISSUE #21 §11: DEJANSKI rezervacijski status iz JourneyBooking
+                  vrstice (samo za branje; brez vrstice žetona NI — ne
+                  izmišljujemo rezervacije). */}
+              {(() => {
+                const b = bookingBadgeOf(view.next.entry);
+                return b?.label ? (
+                  <Badge className="border-violet-300 bg-violet-50 text-violet-900 hover:bg-violet-50 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200">
+                    {t(L.bookingChip)}: {t(b.label)}
+                  </Badge>
+                ) : null;
+              })()}
               {view.next.entry.durationMin != null && (
                 <Badge variant="outline">
                   {L.duration[lang]} ~{view.next.entry.durationMin} {L.min[lang]}
@@ -923,7 +1133,9 @@ export function GoMode() {
             <EntryLinks card={view.next} lang={lang} />
 
             {/* TASK 67: navigacijski handoff + opravljanje — navigacija je
-                prva akcija ob postanku, opravi druga (mobilno: skupaj full-width) */}
+                prva akcija ob postanku, opravi druga (mobilno: skupaj full-width).
+                ISSUE #21 §5: PRESKOČI je tretja, tiha akcija (ghost — ne
+                tekmuje z Navgiraj/Opravi; preskok ≠ opravitev). */}
             <div className="flex flex-col gap-2 sm:flex-row">
               <NavButton
                 card={view.next}
@@ -933,9 +1145,25 @@ export function GoMode() {
               <Button
                 onClick={() => toggleDone(view.next!.entry.key)}
                 size="lg"
-                className="h-12 flex-1 text-base"
+                className={`h-12 flex-1 text-base ${
+                  view.next.travel?.status === "arrived"
+                    ? "bg-emerald-600 hover:bg-emerald-700"
+                    : ""
+                }`}
               >
-                <span className="truncate">✓ {t(L.complete)}: {view.next.entry.title}</span>
+                <span className="truncate">
+                  ✓ {t(L.complete)}: {view.next.entry.title}
+                </span>
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => toggleSkip(view.next!.entry.key)}
+                className="h-12 shrink-0 px-4 text-muted-foreground"
+                aria-label={`${t(L.skip)}: ${view.next.entry.title}`}
+                title={t(L.skipHint)}
+              >
+                <SkipForward className="mr-1 h-4 w-4" aria-hidden="true" />
+                {t(L.skip)}
               </Button>
             </div>
           </CardContent>
@@ -970,6 +1198,24 @@ export function GoMode() {
                   {L.gps.accuracy[lang](geo.position.accuracyM)}
                 </span>
               )}
+              {/* ISSUE #21 §6: zastarela fiksacija se IZREČNO pokaže (ne
+                  izrekamo svežine — ura že tiktaka vsakih 30 s). */}
+              {geo.status === "active" &&
+                geo.position &&
+                view?.positionStale &&
+                now && (
+                  <span className="text-xs font-normal text-amber-700 dark:text-amber-400">
+                    {ARRIVAL_LABELS.stale[lang](
+                      Math.max(
+                        1,
+                        Math.round(
+                          positionAgeMs(geo.position.timestamp, now.getTime()) /
+                            60_000
+                        )
+                      )
+                    )}
+                  </span>
+                )}
             </p>
             <p className="text-xs text-muted-foreground">
               {geo.position
@@ -1073,6 +1319,15 @@ export function GoMode() {
                       <Badge variant="secondary">
                         {t(card.entry.statusLabel)}
                       </Badge>
+                      {/* ISSUE #21 §11: dejanski rezervacijski status (branje). */}
+                      {(() => {
+                        const b = bookingBadgeOf(card.entry);
+                        return b?.label ? (
+                          <Badge className="border-violet-300 bg-violet-50 text-violet-900 hover:bg-violet-50 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200">
+                            {t(L.bookingChip)}: {t(b.label)}
+                          </Badge>
+                        ) : null;
+                      })()}
                     </div>
                     {card.entry.timeNote && !card.entry.time && (
                       <p className="text-xs italic text-muted-foreground">
@@ -1161,6 +1416,58 @@ export function GoMode() {
                       variant="ghost"
                       size="sm"
                       onClick={() => toggleDone(card.entry.key)}
+                      className="h-11 shrink-0"
+                      aria-label={`${t(L.restore)}: ${card.entry.title}`}
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* === ISSUE #21 §5: PRESKOČENI POSTANKI (zložljivo — kot opravljeno,
+          a izrecno ločeno: preskok NI opravitev; Obnovi vrne v načrt) === */}
+      {view.skipped.length > 0 && (
+        <section aria-label={t(L.skippedSection)} className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setShowSkipped((v) => !v)}
+            aria-expanded={showSkipped}
+            className="flex w-full items-center justify-between rounded-lg border bg-muted/40 px-4 py-3 text-sm font-medium hover:bg-muted/60"
+          >
+            <span>
+              ⏭ {t(L.skippedSection)} ({view.skipped.length})
+            </span>
+            {showSkipped ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </button>
+          {showSkipped && (
+            <div className="space-y-2">
+              {view.skipped.map((card) => (
+                <Card key={card.entry.key} className="opacity-75">
+                  <CardContent className="flex items-center justify-between gap-3 p-3">
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-2 text-sm font-medium">
+                        <span aria-hidden>{card.entry.icon}</span>
+                        <span className="text-muted-foreground">
+                          {card.entry.title}
+                        </span>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t(L.skipHint)}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleSkip(card.entry.key)}
                       className="h-11 shrink-0"
                       aria-label={`${t(L.restore)}: ${card.entry.title}`}
                     >

@@ -19,6 +19,9 @@ import type { MyTripView } from "./trip-view";
 
 const GO_TRIP_KEY = "dai:go-trip";
 const GO_PROGRESS_KEY = "dai:go-progress";
+/** ISSUE #21: uporabniško PRESKOČENI postanki (ločeno od done — preskok
+ * ≠ opravilo; §5 ročni nadzor). Isti varnostni vzorec kot progress. */
+const GO_SKIPPED_KEY = "dai:go-skipped";
 const MAX_PROGRESS_KEYS = 200; // varovalka pred napihnjenim zapisi
 
 /** Persistiran zapis Go Mode potovanja (v1 — selektivna migracija po potrebi). */
@@ -185,12 +188,13 @@ export function loadGoTrip(): GoTripRecord | null {
   }
 }
 
-/** Počisti Go Mode načrt (+ progres — skupaj sta eno potovanje). */
+/** Počisti Go Mode načrt (+ progres + preskoke — skupaj so eno potovanje). */
 export function clearGoTrip(): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(GO_TRIP_KEY);
     window.localStorage.removeItem(GO_PROGRESS_KEY);
+    window.localStorage.removeItem(GO_SKIPPED_KEY);
   } catch {
     // neblokirajoče
   }
@@ -237,6 +241,51 @@ export function saveGoProgress(progress: Record<string, string>): void {
     const trimmed: Record<string, string> = {};
     for (const k of keys.slice(-MAX_PROGRESS_KEYS)) trimmed[k] = progress[k];
     window.localStorage.setItem(GO_PROGRESS_KEY, JSON.stringify(trimmed));
+  } catch {
+    // neblokirajoče
+  }
+}
+
+// ---------------------------------------------------------------------------
+// GO SKIPPED (ISSUE #21 — uporabniško preskočeni postanki te naprave)
+// ---------------------------------------------------------------------------
+
+/** Preberi preskočene postanke (ključ vnosa → ISO čas preskoka). */
+export function loadGoSkipped(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(GO_SKIPPED_KEY);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return {};
+    }
+    const out: Record<string, string> = {};
+    let count = 0;
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof v === "string" && count < MAX_PROGRESS_KEYS) {
+        out[k] = v;
+        count++;
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/** Zapiši preskočene postanke (celotni map — atomarno). */
+export function saveGoSkipped(skipped: Record<string, string>): void {
+  if (typeof window === "undefined") return;
+  try {
+    const keys = Object.keys(skipped);
+    if (keys.length === 0) {
+      window.localStorage.removeItem(GO_SKIPPED_KEY);
+      return;
+    }
+    const trimmed: Record<string, string> = {};
+    for (const k of keys.slice(-MAX_PROGRESS_KEYS)) trimmed[k] = skipped[k];
+    window.localStorage.setItem(GO_SKIPPED_KEY, JSON.stringify(trimmed));
   } catch {
     // neblokirajoče
   }

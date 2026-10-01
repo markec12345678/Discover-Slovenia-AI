@@ -246,6 +246,17 @@ export function buildStopNarration(
         `${cap(slKmPhrase(km))} proti ${card.bearingLabel.sl}, premica.`
       );
     }
+    // ISSUE #21 §14 — živa navigacijska dejstva (deterministično iz travel
+    // state; SAMO dejstva, ki jih GPS dejansko podpira).
+    if (
+      card.travel?.status === "near_destination" &&
+      card.travel.arrivalM != null
+    ) {
+      parts.push(`Kmalu boš tam — približno ${card.travel.arrivalM} metrov.`);
+    }
+    if (card.travel?.status === "arrived") {
+      parts.push("Prišel si na lokacijo.");
+    }
     if (e.durationMin != null && e.durationMin > 0) {
       parts.push(`Priporočeno trajanje: ${slDurationPhrase(e.durationMin)}.`);
     }
@@ -263,6 +274,16 @@ export function buildStopNarration(
       const km = Math.round(card.distanceKm);
       const kmText = km === 1 ? "about 1 kilometer" : `about ${km} kilometers`;
       parts.push(`${cap(kmText)} toward the ${card.bearingLabel.en}, as the crow flies.`);
+    }
+    // ISSUE #21 §14 — arrival facts (deterministic, from travel state only).
+    if (
+      card.travel?.status === "near_destination" &&
+      card.travel.arrivalM != null
+    ) {
+      parts.push(`Almost there — about ${card.travel.arrivalM} meters.`);
+    }
+    if (card.travel?.status === "arrived") {
+      parts.push("You have arrived at the location.");
     }
     if (e.durationMin != null && e.durationMin > 0) {
       if (e.durationMin >= 60 && e.durationMin % 60 === 0) {

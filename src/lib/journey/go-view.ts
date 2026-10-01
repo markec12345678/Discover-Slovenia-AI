@@ -21,6 +21,13 @@
 
 import { haversineKm } from "@/lib/geo-corridor";
 import type { DayRouteSummary, MyTripDay, MyTripView, TripEntry } from "./trip-view";
+import {
+  classifyArrival,
+  isPositionStale,
+  resolveTravelStatus,
+  type ArrivalContext,
+  type TravelStatus,
+} from "./travel-state";
 
 // ---------------------------------------------------------------------------
 // VHODNE OBLIKE
@@ -51,6 +58,15 @@ export interface GoEntryCard {
   bearingLabel?: { sl: string; en: string };
   /** Minute do realnega začetka (SAMO pri realnem času dneva). */
   countdownMin?: number;
+  /** ISSUE #21 — TRAVEL state (LOČEN od rezervacijskega statusa; samo
+   * naslednji postanek ima živi kontekst bližine/prihoda). */
+  travel?: {
+    status: TravelStatus;
+    /** Razdalja do cilja v metrih (SAMO iz dejanske fiksacije). */
+    arrivalM?: number;
+    /** Ali je prihod STABILEN (geofence + hystereza + min. čas). */
+    stable?: boolean;
+  };
 }
 
 /** Pogled „na poti" za en aktiven dan. */
@@ -71,10 +87,17 @@ export interface GoView {
   remaining: GoEntryCard[];
   /** Opravljeni postanki aktivnega dne. */
   done: (GoEntryCard & { doneAt: string })[];
+  /** ISSUE #21: uporabniško PRESKOČENI postanki dneva (ročni nadzor §5). */
+  skipped: (GoEntryCard & { skippedAt: string })[];
   /** Povzetek kasnejših dni (datum + št. postankov). */
   laterDays: { dateLabel: { sl: string; en: string }; count: number }[];
   /** Ali je GPS položaj na voljo (prikaz razdalj). */
   positionAvailable: boolean;
+  /** ISSUE #21: ali je fiksacija ZASTARELA (ne izrekamo svežine — §6). */
+  positionStale: boolean;
+  /** ISSUE #21: kontekst prihoda naslednjega postanka (klicnik ga drži v
+   * seji — ref; NI persistiran: po refreshu klasifikacija začne na novo). */
+  arrivalContext: ArrivalContext | null;
   generatedAt: string;
   /** ISSUE #4 §16 (val 4): DNEVNA NAVIGACIJA — celoten seznam dni za
    * preklapljanje (ročna izbira dneva + povratek na današnjega). Prazno,
@@ -250,15 +273,32 @@ function toCard(
  * ISSUE #4 §16 (val 4): `opts.dayOverride` — ROČNA izbira dneva (dnevna
  * navigacija v Go Mode). Kadar je podan veljaven indeks, se pokaže TA dan
  * (iskrena opomba: ročna izbora, ne današnji datum); `laterDays` sledijo
- * izbranemu dnevu. Brez opts ( obstoječi klici) — samodejna izbira po
+ * izbranemu dnevu. Brez opts (obstoječi klici) — samodejna izbira po
  * datumu, obnašanje BITNO-IDENTIČNO prejšnjemu.
+ *
+ * ISSUE #21 — LIVE TRIP NAVIGATOR (1.159.0):
+ *  - `opts.skipped` — uporabniško preskočeni postanki (ročni nadzor §5,
+ *    ločeno od done: preskočen ≠ opravljen);
+ *  - `opts.arrivalContext` — prejšnji kontekst prihoda naslednjega postanka
+ *    (hystereza + stabilnost čez fiksacije); buildGoView vrne NOV kontekst
+ *    v `view.arrivalContext` (klicnik ga drži v seji — ref);
+ *  - naslednji postanek dobi `travel` (navigating / near_destination /
+ *    arrived — STABILEN prihod zahteva geofence + hysterezo + min. čas §7).
+ *    TRAVEL state je VESLOJ LOČEN od rezervacijskega statusa (§3) — GPS
+ *    prihod NIKOLI ne potrdi rezervacije.
  */
 export function buildGoView(
   trip: MyTripView,
   now: Date,
   position: GoPosition | null,
   done: GoDoneMap,
-  opts?: { dayOverride?: number | null }
+  opts?: {
+    dayOverride?: number | null;
+    /** ISSUE #21: preskočeni postanki (ključ → ISO čas preskoka). */
+    skipped?: GoDoneMap;
+    /** ISSUE #21: prejšnji kontekst prihoda (za hysterezo/stabilnost). */
+    arrivalContext?: ArrivalContext | null;
+  }
 ): GoView {
   const today = isoOf(now);
   const auto = pickActiveDay(trip.days, now);
@@ -285,20 +325,64 @@ export function buildGoView(
   const isToday = active?.day.date === today;
 
   const entries = active?.day.entries ?? [];
+  const skippedMap = opts?.skipped ?? {};
   const notDone: TripEntry[] = [];
   const doneCards: (GoEntryCard & { doneAt: string })[] = [];
+  const skippedCards: (GoEntryCard & { skippedAt: string })[] = [];
   for (const e of entries) {
     const doneAt = done[e.key];
+    const skippedAt = skippedMap[e.key];
     if (doneAt && typeof doneAt === "string") {
       doneCards.push({ ...toCard(e, position, isToday, now), doneAt });
+    } else if (skippedAt && typeof skippedAt === "string") {
+      // ISSUE #21 §5: preskok je uporabnikova izrecna izbira — postanek
+      // IZPADA iz "naslednji" tok (a ostaja danes, Obnovi ga vrne).
+      skippedCards.push({ ...toCard(e, position, isToday, now), skippedAt });
     } else {
       notDone.push(e);
     }
   }
 
   const [nextEntry, ...restEntries] = notDone;
-  const next =
-    nextEntry != null ? toCard(nextEntry, position, isToday, now) : undefined;
+
+  // ISSUE #21 — ARRIVAL DETECTION za naslednji postanek (deterministično:
+  // GPS fiksacija + geo postanka + prejšnji kontekst; brez para → unknown,
+  // fail-closed — razdalje/prihod preprosto NI, kanon DistanceChip).
+  const arrival =
+    nextEntry != null
+      ? classifyArrival(
+          nextEntry.key,
+          { position, stop: nextEntry },
+          opts?.arrivalContext ?? null,
+          now.getTime()
+        )
+      : null;
+
+  const next: GoEntryCard | undefined =
+    nextEntry != null
+      ? (() => {
+          const card = toCard(nextEntry, position, isToday, now);
+          // TRAVEL state (LOČEN od rezervacij §3): completed/skipped tu ne
+          // moreta nastopiti (naslednji je po definiciji ne-opravljen in
+          // ne-preskočen) — izpeljava je poštena in deterministicna.
+          const status = resolveTravelStatus({
+            isNext: true,
+            arrival: arrival
+              ? { state: arrival.state, stable: arrival.stable }
+              : null,
+          });
+          return {
+            ...card,
+            travel: {
+              status,
+              ...(arrival?.distanceM != null
+                ? { arrivalM: arrival.distanceM }
+                : {}),
+              ...(status === "arrived" ? { stable: true } : {}),
+            },
+          };
+        })()
+      : undefined;
   const remaining = restEntries.map((e) => toCard(e, position, isToday, now));
 
   const laterDays =
@@ -339,8 +423,12 @@ export function buildGoView(
     dayHasRealTime,
     remaining,
     done: doneCards,
+    skipped: skippedCards,
     laterDays,
     positionAvailable: position != null,
+    positionStale:
+      position != null && isPositionStale(position.timestamp, now.getTime()),
+    arrivalContext: arrival?.context ?? null,
     generatedAt: new Date().toISOString(),
     daySwitcher,
     dayManuallySelected: overrideIndex != null,

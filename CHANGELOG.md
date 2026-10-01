@@ -9,6 +9,75 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.159.0] — 2026-10-01 (#21 DISCOVER — LIVE TRIP NAVIGATOR: FAZA jedra)
+
+### Dodano
+
+- **TRAVEL STATE — kanonični model potovalnega stanja (§3).** NOVA čista
+  plast `src/lib/journey/travel-state.ts` (0 omrežja, 0 db, 0 AI —
+  deterministična, testno zaklenjena): `TravelStatus` =
+  `upcoming | active | navigating | near_destination | arrived |
+  completed | skipped`. **VESOJ LOČEN od rezervacijskega statusa**
+  (JourneyBooking ostaja edina resnica rezervacij — modul ne uvaža
+  rezervacijskih modulov; GPS prihod NIKOLI ne potrdi rezervacije).
+- **ARRIVAL DETECTION (§7).** `classifyArrival`: prag prihoda glede na
+  natančnost fiksacije `clamp(60 m, accuracy+10 m, 150 m)`, NEAR območje
+  300 m, HYSTEREZA 75 m (GPS šum ne utripa stanj — vzpon takojšen, izstop
+  čez prag+histereza), MIN. STABILNOST 8 s (prihod mora vzdržati, preden
+  je izpisljiv). Fail-closed: brez GPS para → unknown (razdalje/prihoda
+  preprosto NI — kanon DistanceChip).
+- **ARRIVAL UX v Go Mode (§10).** »Približuješ se — X m« (amber trak) →
+  »✓ Prišel si na lokacijo {naslov}« (emerald trak, `role="status"` za
+  bralnike) z izrecno opombo, da GPS prihod NE potrdi rezervacije.
+  Zaključek ostaja uporabnikova IZRECNA potrditev (gumb poudarjen).
+- **PRESKOK pod nadzorom uporabnika (§5).** Nov gumb Preskoči (ghost — ne
+  tekmuje z Navigiraj/Opravi) + zložljiv razdelek Preskočeno z Obnovi.
+  Ločena persistenca `dai:go-skipped` (isti varnostni vzorec kot
+  progress); Preskoči ≠ Opravi — done/skip se izključujeta (ena resnica
+  na postanek).
+- **SAMODEJNA NAPREDOVANJA (§12).** Po opravitvi/preskoku naslednji
+  postanek deterministično zasede kartico BREZ vračanja v planer
+  (vrstni red načrta ostaja avtoriteta — GPS ne prerazporeja).
+- **STABILNI VSEBINSKI KLJUČI (§19).** `TripEntry.key` za AI itinererje:
+  `itin-d{dan}-{destinacija}` (+ `-2/-3` ob ponovitvi) namesto pozicijskega
+  `itin-d{dan}-i{indeks}-{dest}`. Preurejen načrt (vstavljen postanek) NE
+  razveljavi več napredka dneva — done/skip PREŽIVITA ponovni zagon z
+  urejenim načrtom (ključna regresija #21, test ⑥/⑦). Stari zapisi
+  ostanejo veljavni (ključi živijo v shranjenem pogledu).
+- **GPS ŽIVLJENJSKI CIKEL (§6).** use-geolocation: EN sam samodejni
+  ponovni poskus po PREHODNI napaki (timeout/signal, 4 s — ne po zavrnitvi
+  dovoljenja, ne v zanki); uspešna fiksacija ponastavi proračun;
+  stop/unmount počistita TUDI časovnik; ZASTARELA fiksacija (>60 s) se v
+  Go Mode izrecno pokaže (»zadnja fiksacija pred X min« — ne izrekamo
+  svežine).
+- **REZERVACIJSKI KONTEKST v Go Mode (§11 — SAMO BRANJE).** Prekrivka
+  učinkovitih JourneyBooking vrstic (isti GET kanal kot MOJA POT:
+  `provider:productId`, obseg seje) → žeton »Rezervacija: {status}` na
+  naslednjem/ostalih postankih. Brez vrstice žetona NI; Go Mode NE piše
+  rezervacij (piše le obstoječi EXTERNAL handoff ob kliku).
+- **GLASOVNE FRAZE PRIHODA (§14).** buildStopNarration razširjena
+  deterministično: »Kmalu boš tam — približno X metrov.« / »Prišel si na
+  lokacijo.« (SL+EN) — samo iz travel dejstev, 0 AI.
+- **DOKUMENTACIJA.** `docs/LIVE-TRIP-NAVIGATOR.md`: 10 arhitekturnih
+  odločitev (§23), matrika napak (§18), offline matrika (§15), zasebnost
+  (§16), dosežki/meje.
+
+### Testi
+
+- NOVO `issue21-travel-state.test.ts` (43) + `issue21-go-travel.test.ts`
+  (38): geo contract, prag/histereza/stabilnost, 7 travel stanj,
+  ločitev od rezervacij (source contract), preskoki, stabilni ključi
+  (regresija preureditve), persistenca skipped, pripovedi, GPS cikel,
+  Go Mode source contract (arrival UX, SAMO-GET prekrivka).
+
+### Meje (iskrene)
+
+- Turn-by-turn ostaja pri zunanjih aplikacijah (geo:/Maps — AGENTS.md §13);
+  ETA ostaja označena hevristika (premica ×1,3/55 km/h — promet NEZNANO).
+- Wake lock in multi-device napredek nista jedro #21 (dokumentirano).
+- Živi GPS tok na mobilni napravi je produkcijski dokaz, ki ga peskovnik
+  ne more izvesti (dokumentirano kot zunanja meja).
+
 ## [1.158.1] — 2026-10-01 (#20 FAZA 2 — produkcijski popravek)
 
 ### Popravljeno

@@ -111,6 +111,41 @@ function iconForLoc(loc: LocationVisit): string {
   return "📍";
 }
 
+// ---------------------------------------------------------------------------
+// ISSUE #21 — STABILNI VSEBINSKI KLJUČI POSTANKOV (§19 podatkovna
+// doslednost): prej `itin-d{dan}-i{indeks}-{dest}` (POZICIJSKI — vsak
+// vstavek/premak postanka je razveljavil napredek celega dneva, ker so se
+// indeksi premaknili). Zdaj ključ nosi SAMO VSEBINO (dan + destinacija),
+// ponovitev iste destinacije v dnevu dobi priponko -2/-3. Preurejen
+// načrt (vstavljen/dodan postanek) ohrani ključe obstoječih postankov →
+// done/skip napredek PREŽIVI ponovni zagon Go Mode z istim načrtom.
+// Stari zapisi (že shranjeni z pozicijskimi ključi) ostanejo veljavni —
+// ključi živijo znotraj shranjenega vgleda (view) v dai:go-trip.
+// ---------------------------------------------------------------------------
+
+/** Sanitizacija ID-ja v ključ (mala črka/številke/črtica — napadanost ne). */
+function keySlug(id: string): string {
+  const s = id
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return s === "" ? "stop" : s;
+}
+
+/** Vsebinski ključ postanka: `itin-d{dan}-{destinacija}` (+ -2/-3 ob
+ * ponovitvi iste destinacije v istem dnevu). Deterministicen, stabilen
+ * glede preurejanja — testno zaklenjen (issue21-go-travel). */
+function itinStopKey(
+  dayNo: number,
+  destinationId: string,
+  seenInDay: Map<string, number>
+): string {
+  const base = `itin-d${dayNo}-${keySlug(destinationId)}`;
+  const n = (seenInDay.get(base) ?? 0) + 1;
+  seenInDay.set(base, n);
+  return n === 1 ? base : `${base}-${n}`;
+}
+
 const STATUS_PLANNED = {
   status: "INFO" as const,
   label: {
@@ -198,6 +233,9 @@ export function buildItineraryGoView(
         : null;
 
     const locations = Array.isArray(day.locations) ? day.locations : [];
+    // ISSUE #21: ključi so VSEBINSKI (dan+destinacija) — stabilni glede
+    // preurejanja; Map se počisti po dnevu (ponovitve štejejo znotraj dneva).
+    const seenInDay = new Map<string, number>();
 
     const entries: TripEntry[] = locations.map((loc, idx) => {
       const coords = coordsOfLoc(loc);
@@ -214,7 +252,7 @@ export function buildItineraryGoView(
           ? legOf(locations[idx - 1].destination_id, loc.destination_id)
           : null;
       return {
-        key: `itin-d${dayNo}-i${idx}-${loc.destination_id}`,
+        key: itinStopKey(dayNo, loc.destination_id, seenInDay),
         category: "attractions" as const,
         icon: iconForLoc(loc),
         title: loc.destination_name || loc.destination_id,
