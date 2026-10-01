@@ -13,6 +13,7 @@ import {
   slMinPhrase,
 } from "@/lib/journey/go-audio";
 import type { GoEntryCard, GoPosition } from "@/lib/journey/go-view";
+import { resolveStopGeo } from "@/lib/journey/resolve-stop-geo";
 import type { TripEntry } from "@/lib/journey/trip-view";
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { chunkNarration } from "@/lib/itinerary-audio";
@@ -73,7 +74,10 @@ function mkCard(
   over: Partial<TripEntry> & { title: string },
   card: { distanceKm?: number; bearingLabel?: { sl: string; en: string } } = {}
 ): GoEntryCard {
-  return { entry: mkEntry(over), ...card };
+  const entry = mkEntry(over);
+  // ISSUE #21 §4 (1.161.0): geo je obvezna projekcija vnosa — fixture
+  // gradi isto resnico kot produkcijska pot (resolveStopGeo).
+  return { entry, geo: resolveStopGeo(entry), ...card };
 }
 
 const bledCoords = DESTINATIONS.find((d) => d.id === "bled")!.coords;

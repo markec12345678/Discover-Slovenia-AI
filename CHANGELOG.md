@@ -8,6 +8,65 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 ---
 
 ---
+---
+
+## [1.161.0] — 2026-10-01 (#21 DISCOVER — LIVE TRIP NAVIGATOR: geo pogodba + iskrenost + wake lock)
+
+### Dodano
+
+- **GEO DATA CONTRACT (§4).** NOVA čista plast
+  `src/lib/journey/resolve-stop-geo.ts`: `resolveStopGeo()` — ENA kanonska
+  geo resolucija vsakega postanka (lat/lng + naslov + vir + ID vira +
+  precision), klasifikacija `GeoPrecision = exact | approximate | missing |
+  invalid` (exact = SAMO lastna tržnica — edini per-objekt preverjen vir,
+  dokaz #20: 0/20 zunanjih; approximate = vsi zunanji viri, poimenovani).
+  `isNavigableGeo()` — fail-closed pogoj za navigacijski cilj (§18-7/8).
+  VSE kartice Go Mode (`next`/`nextAfter`/`remaining`/`done`/`skipped`)
+  nosijo `geo` projekcijo — pogledi se NE morejo raziti (§19).
+- **ISKRENA GEO NATANČNOST V UI (§4/§18-7/8).** Naslednji postanek pokaže
+  »Preverjena lokacija« (own) / »Približna lokacija (vir: fsq)« (zunanji);
+  cilj brez uporabne lokacije dobi IZRECNO opombo »Lokacija ni znana —
+  navigacija ni na voljo« oz. »…podatki vira so napačni…« (ne tiha luknja
+  tam, kjer bi bil gumb NAVIGIRAJ).
+- **RAZRED NATANČNOSTI GPS (§6).** `accuracyClassOf()` v travel-state.ts
+  (high ≤ 50 m / medium ≤ 200 m / low > 200 m; null kadar vir ni podal —
+  ne izmišljujemo). Go Mode ob ±X m pokaže še razred (»natančnost srednja«).
+- **SCREEN WAKE LOCK (konkurenčna delta D1).** NOVI hook
+  `src/lib/journey/use-wake-lock.ts`: dokler je GPS watch aktiven, zaslon
+  OSTANE prižgan (vodilči — Wanderlog/TripIt/Roadtrippers — ga ob vožnji
+  ugasnejo in uporabnik odklepava zaslon, da vidi naslednji postanek).
+  Iskreno: samo `request("screen")`; sprostitev ob izklopu GPS/unmount;
+  ponovni poskus ob vrnitvi zavihka (W3C: hidden izgubi lock); brez
+  podpore NIČ ne obljubimo (Safari < 16.4/Firefox — tiho brez). Prikaz
+  SAMO dejanskega stanja (`held`), ne obljube.
+- **KONSISTENČNI TEST (§24-F3/§19).** `issue21-consistency.test.ts`: isti
+  vnos skozi VSE projekcije (next/nextAfter/remaining/done/skipped/line) +
+  persistenca roundtrip (shrani→naloži→zgradi) + stabilni ključi po
+  preureditvi — identiteta (ključ/naslov/čas/geo/vir) identična povsod.
+
+### Popravljeno
+
+- **STALE-ARRIVAL GUARD (§18-5).** Zastarela fiksacija (> 60 s) prej
+  LAHKO sprožila »Prišel si« — tudi če je uporabnik že 2 km daleč.
+  Zdaj klasifikacija prihoda prejme null → travel iskreno pade na
+  `active` (razdalja/smer na karticah ostanejo, a so OZNAČENE zastarele);
+  guard zmaga tudi nad histerezo (prejšnji arrived kontekst se pobriše).
+
+### Dokumentacija
+
+- `docs/LIVE-TRIP-NAVIGATOR.md`: odsek 1.161.0 (geo pogodba, guard,
+  razred natančnosti, wake lock, konsistenčni test) — ZUNANJE MEJE
+  osvežene (wake lock zdaj DELA; native Live Activities ostajajo
+  platformna meja spletne aplikacije — iskreno zapisano).
+
+### Testi
+
+- 42 novih (issue21-stop-geo 15, issue21-wake-lock 10, issue21-consistency
+  6, + razširitve go-travel ⑦/⑦b/⑨ in travel-state 5b) — regresija
+  **4608 pass** (bazna 4566 + 42), tsc 0, lint 0. Edini fail ostaja znana
+  sandbox DB odvisnost (issue7-g11 ④, DATABASE_URL; produkcija Neon).
+
+---
 
 ## [1.159.0] — 2026-10-01 (#21 DISCOVER — LIVE TRIP NAVIGATOR: FAZA jedra)
 

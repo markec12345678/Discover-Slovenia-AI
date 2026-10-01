@@ -19,6 +19,7 @@ import { join } from "node:path";
 
 import type { MyTripDay, MyTripView, TripEntry } from "@/lib/journey/trip-view";
 import { buildGoView } from "@/lib/journey/go-view";
+import { resolveStopGeo } from "@/lib/journey/resolve-stop-geo";
 import { buildItineraryGoView } from "@/lib/journey/itinerary-go";
 import {
   clearGoTrip,
@@ -144,17 +145,52 @@ describe("ISSUE #21: buildGoView — travel status naslednjega", () => {
     expect(v.arrivalContext).toBeNull();
   });
 
-  test("⑦ zastarela fiksacija (2 min) se razkrije (positionStale)", () => {
+  test("⑦ zastarela fiksacija (2 min) se razkrije (positionStale) + NE more dati prihoda", () => {
     const v = buildGoView(trip, NOW, posAt(0.002, 120_000), {});
     expect(v.positionStale).toBe(true);
+    // §18-5 STALE-ARRIVAL GUARD (1.161.0): 222 m od cilja, a fiksacija je
+    // 2 min stara — travel IZRECNO pade na active (ne near_destination).
+    expect(v.next?.travel?.status).toBe("active");
+    expect(v.next?.travel?.arrivalM).toBeUndefined();
     const fresh = buildGoView(trip, NOW, posAt(0.002, 5_000), {});
     expect(fresh.positionStale).toBe(false);
+    expect(fresh.next?.travel?.status).toBe("near_destination");
+  });
+
+  test("⑦b STALE GUARD zmaga nad histerezo: 2 min stara fiksacija z 10 s starim arrived kontekstom → NE arrived", () => {
+    // Uporabnik je lahko odšel 2 km naprej — stara fiksacija ne sme
+    // ohranjati »prišel si« niti iz prejšnjega (svežega) stanja.
+    const v = buildGoView(trip, NOW, posAt(0.0004, 120_000), {}, {
+      arrivalContext: {
+        key: "a",
+        state: "arrived",
+        sinceMs: NOW.getTime() - 10_000,
+        lastDistanceM: 44,
+      },
+    });
+    expect(v.positionStale).toBe(true);
+    expect(v.next?.travel?.status).toBe("active");
+    expect(v.next?.travel?.arrivalM).toBeUndefined();
+    expect(v.arrivalContext).toBeNull(); // kontekst se POČISTI (iskrena null)
   });
 
   test("⑧ preostali postanki NIMajo travel konteksta (samo naslednji je živ)", () => {
     const v = buildGoView(trip, NOW, posAt(0.009), {});
     expect(v.next?.travel).toBeDefined();
     expect(v.remaining.every((c) => c.travel == null)).toBe(true);
+  });
+
+  test("⑨ RAZRED NATANČNOSTI (§6, 1.161.0): ±X m → high/medium/low; brez natančnosti → null", () => {
+    const at = (accuracyM?: number) =>
+      buildGoView(trip, NOW, { ...posAt(0.009), ...(accuracyM != null ? { accuracyM } : {}) }, {})
+        .positionAccuracyClass;
+    expect(at(20)).toBe("high");
+    expect(at(50)).toBe("high"); // meja vključno
+    expect(at(50.1)).toBe("medium");
+    expect(at(200)).toBe("medium"); // meja vključno
+    expect(at(200.1)).toBe("low");
+    expect(at(1000)).toBe("low");
+    expect(at(undefined)).toBe(null); // vir ni podal — NE izmišljujemo razreda
   });
 });
 
@@ -392,7 +428,7 @@ describe("ISSUE #21: buildStopNarration — prihodne fraze", () => {
 
   test("① near_destination + metri → »Kmalu boš tam — približno X metrov.«", () => {
     const out = buildStopNarration(
-      { entry: base, travel: { status: "near_destination", arrivalM: 222 } },
+      { entry: base, geo: resolveStopGeo(base), travel: { status: "near_destination", arrivalM: 222 } },
       "sl"
     );
     expect(out).toContain("Kmalu boš tam — približno 222 metrov.");
@@ -400,15 +436,15 @@ describe("ISSUE #21: buildStopNarration — prihodne fraze", () => {
 
   test("② arrived → »Prišel si na lokacijo.« (EN različica)", () => {
     expect(
-      buildStopNarration({ entry: base, travel: { status: "arrived" } }, "sl")
+      buildStopNarration({ entry: base, geo: resolveStopGeo(base), travel: { status: "arrived" } }, "sl")
     ).toContain("Prišel si na lokacijo.");
     expect(
-      buildStopNarration({ entry: base, travel: { status: "arrived" } }, "en")
+      buildStopNarration({ entry: base, geo: resolveStopGeo(base), travel: { status: "arrived" } }, "en")
     ).toContain("You have arrived at the location.");
   });
 
   test("③ BREZ travel → pripoved nespremenjena (regresija W7)", () => {
-    const out = buildStopNarration({ entry: base }, "sl");
+    const out = buildStopNarration({ entry: base, geo: resolveStopGeo(base) }, "sl");
     expect(out).not.toContain("Kmalu boš tam");
     expect(out).not.toContain("Prišel si na lokacijo");
     expect(out).toContain("Postanek: Bled.");
@@ -416,7 +452,7 @@ describe("ISSUE #21: buildStopNarration — prihodne fraze", () => {
 
   test("④ near_destination BREZ metrov → fraze NI (ne izmišljujemo)", () => {
     const out = buildStopNarration(
-      { entry: base, travel: { status: "near_destination" } },
+      { entry: base, geo: resolveStopGeo(base), travel: { status: "near_destination" } },
       "sl"
     );
     expect(out).not.toContain("Kmalu boš tam");

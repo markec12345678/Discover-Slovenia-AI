@@ -18,6 +18,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
+  ACCURACY_CLASS_LABELS,
+  ACCURACY_THRESHOLDS,
+  accuracyClassOf,
   ARRIVAL_LABELS,
   arriveRadiusM,
   classifyArrival,
@@ -279,6 +282,42 @@ describe("ISSUE #21: starost fiksacije", () => {
   test("③ lasten prag", () => {
     expect(isPositionStale(NOW - 120_000, NOW, 60_000)).toBe(true);
     expect(isPositionStale(NOW - 30_000, NOW, 60_000)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 5b — RAZRED NATANČNOSTI (§6, 1.161.0)
+// ---------------------------------------------------------------------------
+
+describe("ISSUE #21 §6: accuracyClassOf — razred natančnosti fiksacije", () => {
+  test("① pragi sta vključujoči meji (50/200 m)", () => {
+    expect(ACCURACY_THRESHOLDS.highMaxM).toBe(50);
+    expect(ACCURACY_THRESHOLDS.mediumMaxM).toBe(200);
+    expect(accuracyClassOf(50)).toBe("high");
+    expect(accuracyClassOf(50.01)).toBe("medium");
+    expect(accuracyClassOf(200)).toBe("medium");
+    expect(accuracyClassOf(200.01)).toBe("low");
+  });
+
+  test("② ni natančnosti / neveljavna → null (ne izmišljujemo razreda)", () => {
+    expect(accuracyClassOf(undefined)).toBe(null);
+    expect(accuracyClassOf(null)).toBe(null);
+    expect(accuracyClassOf(Number.NaN)).toBe(null);
+    expect(accuracyClassOf(-5)).toBe(null);
+  });
+
+  test("③ skladnost z pragom prihoda: low natančnost NE razširi praga preko stropa", () => {
+    // natančnost 800 m → razred low, a prag prihoda ostane pri stropu 150 m
+    expect(accuracyClassOf(800)).toBe("low");
+    expect(arriveRadiusM(800)).toBe(DEFAULT_ARRIVAL_CONFIG.arriveMaxM);
+  });
+
+  test("④ oznake razredov so dvojezične in nenastete", () => {
+    for (const cls of ["high", "medium", "low"] as const) {
+      expect(ACCURACY_CLASS_LABELS[cls].sl.length).toBeGreaterThan(0);
+      expect(ACCURACY_CLASS_LABELS[cls].en.length).toBeGreaterThan(0);
+      expect(ACCURACY_CLASS_LABELS[cls].sl).not.toBe(ACCURACY_CLASS_LABELS[cls].en);
+    }
   });
 });
 

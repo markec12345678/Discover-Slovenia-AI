@@ -290,6 +290,43 @@ export function isPositionStale(
 }
 
 // ---------------------------------------------------------------------------
+// KLASIFIKACIJA NATANČNOSTI (§6: uporabnik vidi KAKO natančno, ne samo da)
+// ---------------------------------------------------------------------------
+
+/** Iskrena razredba natančnosti fiksacije (prikaz + odločitve UI). */
+export type AccuracyClass = "high" | "medium" | "low";
+
+/** Praga razredov (m) — testno zaklenjena konstanta (kanon projekta). */
+export const ACCURACY_THRESHOLDS = {
+  /** high: ±do 50 m — tipičen mestni GPS s patrjenjem. */
+  highMaxM: 50,
+  /** medium: ±do 200 m — še vedno uporabno za razdaljo/smer. */
+  mediumMaxM: 200,
+  /** low: čez 200 m — prikaz opozorila; arrival že pokrit prek stropa
+   *  arriveMaxM (slaba fiksacija NE razširi praga — iskrenost §7). */
+} as const;
+
+/**
+ * Razred natančnosti fiksacije. null = natančnost NEZNANA (vir je ni podal)
+ * — nikoli ne izmišljujemo razreda (isti kanon kot razdalja: kar ni, ni).
+ */
+export function accuracyClassOf(accuracyM: number | undefined | null): AccuracyClass | null {
+  if (typeof accuracyM !== "number" || !Number.isFinite(accuracyM) || accuracyM < 0) {
+    return null;
+  }
+  if (accuracyM <= ACCURACY_THRESHOLDS.highMaxM) return "high";
+  if (accuracyM <= ACCURACY_THRESHOLDS.mediumMaxM) return "medium";
+  return "low";
+}
+
+/** Oznake razredov (dvojezične — za prikaz ob ±X m). */
+export const ACCURACY_CLASS_LABELS: Record<AccuracyClass, { sl: string; en: string }> = {
+  high: { sl: "natančnost dobra", en: "accuracy good" },
+  medium: { sl: "natančnost srednja", en: "accuracy medium" },
+  low: { sl: "natančnost nizka", en: "accuracy low" },
+};
+
+// ---------------------------------------------------------------------------
 // UI OZNAKE (dvojezične — L vzorec, ISKRENE)
 // ---------------------------------------------------------------------------
 

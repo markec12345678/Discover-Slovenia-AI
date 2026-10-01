@@ -1,4 +1,4 @@
-# LIVE TRIP NAVIGATOR — arhitektura (Issue #21, 1.159.0 + 1.160.0)
+# LIVE TRIP NAVIGATOR — arhitektura (Issue #21, 1.159.0 + 1.160.0 + 1.161.0)
 
 > **Discover ne samo načrtuje potovanje. Ob »Začni pot« postane živi sopotnik:
 > ve, kje si, kateri cilj je naslednji, vodi te do njja, zazna prihod in
@@ -202,11 +202,49 @@ union-merge).
 - 81 novih testov (vedenjski + source-contract); regresija obstoječih paketov
   (task64/w7/wave4/task73/t5d/wave2/calm) 152/152 zelenih
 
+### IMPLEMENTIRANO (1.161.0 — geo pogodba + iskrenost + wake lock)
+- **GEO DATA CONTRACT (§4):** `resolve-stop-geo.ts` — ENA kanonska geo
+  resolucija postanka: `GeoPrecision = exact | approximate | missing |
+  invalid` (exact = SAMO lastna tržnica; approximate = zunanji viri,
+  poimenovani; dokaz #20: 0/20 zunanjih s preverjenimi koordinatami) +
+  naslov/vir/ID vira. `isNavigableGeo()` = fail-closed pogoj za cilj.
+  VSE kartice Go Mode nosijo `geo` projekcijo → §19 divergenca nemogoča.
+- **ISKRENA GEO OZNAKA NA CILJU (§18-7/8):** »Preverjena lokacija« /
+  »Približna lokacija (vir: fsq)« / izrecna opomba, kadar navigacija NI
+  mogoča (prej: tiha odsotnost gumba NAVIGIRAJ).
+- **STALE-ARRIVAL GUARD (§18-5):** zastarela fiksacija (> 60 s) NE more
+  več sprožiti near/arrived — travel iskreno pade na `active`; razdalja/
+  smer ostanejo na karticah, a OZNAČENE zastarele; guard zmaga nad
+  histerezo (prejšnji arrived kontekst se pobriše v null).
+- **RAZRED NATANČNOSTI (§6):** `accuracyClassOf` — high ≤ 50 m /
+  medium ≤ 200 m / low > 200 m (null, kadar vir ni podal); Go Mode ga
+  pokaže ob ±X m. Skladno s stropom praga prihoda (low NE razširi).
+- **SCREEN WAKE LOCK (konkurenčna delta D1):** `use-wake-lock.ts` —
+  zaslon ostaja prižgan DOKLER je GPS watch aktiven; sprostitev ob
+  izklopu/unmount; ponovni poskus ob vrnitvi zavihka (W3C semantika);
+  brez podpore nič ne obljavimo (prikaz samo dejanskega `held`).
+  Odgovor na dokumentirano zunanjo mejo 1.159.0 (zaslon ugasne →
+  watchPosition se ustavi) — vodilči te težave niso rešili.
+- **KONSISTENČNI TEST (§24-F3):** `issue21-consistency.test.ts` — isti
+  vnos skozi vse projicije + persistenca roundtrip: identiteta identična.
+
+### PREVERJENO (1.161.0)
+- 42 novih testov (issue21-stop-geo 15, issue21-wake-lock 10,
+  issue21-consistency 6, razširitve ⑦/⑦b/⑨ + 5b) — regresija 4608 pass,
+  tsc 0, lint 0; edini fail ostaja znana sandbox DB odvisnost (issue7-g11 ④)
+- LOKALNI E2E dokazi: `docs/evidence/issue21/` (6 PNG + README) — prazno
+  stanje → geo znacke (exact/approximate/missing VSE tri) → GPS prihod
+  (simuliran vtič — sandbox zavrne dovoljenje, pošteno dokumentirano) →
+  samodejna progresija → brez-lokacije opomba → mobilni 390 px; 0 napak
+  v konzoli (agent-browser, `next dev -p 3100`)
+
 ### ZUNANJE MEJE (iskreno)
 - turn-by-turn ostaja pri zunanjih aplikacijah (geo:/Maps handoff — AGENTS.md §13)
 - ETA ostaja hevristika premica ×1,3/55 km/h (živi OSRM od pozicije NI uveden —
   etika javnega strežnika; promet izrecno NEZNANO)
-- wake lock (zaslon ugasne → watchPosition se ustavi) — ni v jedru #21
+- native Live Activities/Dynamic Island (zaklenjen zaslon iOS) — meja
+  SPLETNE aplikacije: wake lock (1.161.0) pokriva splošen primer;
+  nativen prikaz na zaklenjenem zaslonu zahteva domačo aplikacijo
 - multi-device napredek (sinhronizacija done/skipped) — precedens UserTripItem
 - produkcijski dokaz pravega GPS toka zahteva mobilno napravo (sandbox nima GPS)
 

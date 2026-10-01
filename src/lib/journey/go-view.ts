@@ -22,10 +22,13 @@
 import { haversineKm } from "@/lib/geo-corridor";
 import type { DayRouteSummary, MyTripDay, MyTripView, TripEntry } from "./trip-view";
 import type { GoDayLineItem } from "./day-line";
+import { resolveStopGeo, type StopGeo } from "./resolve-stop-geo";
 import {
+  accuracyClassOf,
   classifyArrival,
   isPositionStale,
   resolveTravelStatus,
+  type AccuracyClass,
   type ArrivalContext,
   type TravelStatus,
 } from "./travel-state";
@@ -53,6 +56,10 @@ export type GoDoneMap = Record<string, string>;
 /** Ena kartica na časovnici Go Mode. */
 export interface GoEntryCard {
   entry: TripEntry;
+  /** ISSUE #21 §4 (1.161.0) — KANONSKA geo projekcija postanka (ena
+   *  resnica o lokaciji: precision exact/approximate/missing/invalid +
+   *  vir + naslov; vse odločitve o navigaciji/labelah gredo čeznjo). */
+  geo: StopGeo;
   /** Premica (haversine) od GPS do postanka — SAMO če obstajata obe geo. */
   distanceKm?: number;
   /** Kardinalna smer do postanka (sever/…) — SAMO če obstajata obe geo. */
@@ -103,6 +110,9 @@ export interface GoView {
   positionAvailable: boolean;
   /** ISSUE #21: ali je fiksacija ZASTARELA (ne izrekamo svežine — §6). */
   positionStale: boolean;
+  /** ISSUE #21 §6 (1.161.0) — razred natančnosti fiksacije (high/medium/
+   *  low; null = vir natančnosti ni podal — ne izmišljujemo razreda). */
+  positionAccuracyClass: AccuracyClass | null;
   /** ISSUE #21: kontekst prihoda naslednjega postanka (klicnik ga drži v
    * seji — ref; NI persistiran: po refreshu klasifikacija začne na novo). */
   arrivalContext: ArrivalContext | null;
@@ -259,7 +269,7 @@ function toCard(
   isToday: boolean,
   now: Date
 ): GoEntryCard {
-  const card: GoEntryCard = { entry };
+  const card: GoEntryCard = { entry, geo: resolveStopGeo(entry) };
   if (position && entry.lat != null && entry.lng != null) {
     const km = haversineKm(position.lat, position.lng, entry.lat, entry.lng);
     card.distanceKm = Math.round(km * 10) / 10;
@@ -353,6 +363,15 @@ export function buildGoView(
 
   const [nextEntry, ...restEntries] = notDone;
 
+  // ISSUE #21 §18-5 (1.161.0) — STALE-ARRIVAL GUARD: zastarela fiksacija
+  // (> STALE_POSITION_MS) NE sme sprožiti near/arrived — uporabnik bi lahko
+  // šel 2 km naprej, mi pa bi še vedno trdili „prišel si“. Razdalja/smer na
+  // karticah ostanejo (kontekst je uporaben, OZNAČEN kot zastarel), a
+  // klasifikacija prihoda prejme null → travel iskreno pade na active.
+  const positionStale =
+    position != null && isPositionStale(position.timestamp, now.getTime());
+  const arrivalPosition = positionStale ? null : position;
+
   // ISSUE #21 — ARRIVAL DETECTION za naslednji postanek (deterministično:
   // GPS fiksacija + geo postanka + prejšnji kontekst; brez para → unknown,
   // fail-closed — razdalje/prihod preprosto NI, kanon DistanceChip).
@@ -360,7 +379,7 @@ export function buildGoView(
     nextEntry != null
       ? classifyArrival(
           nextEntry.key,
-          { position, stop: nextEntry },
+          { position: arrivalPosition, stop: nextEntry },
           opts?.arrivalContext ?? null,
           now.getTime()
         )
@@ -482,8 +501,9 @@ export function buildGoView(
     skipped: skippedCards,
     laterDays,
     positionAvailable: position != null,
-    positionStale:
-      position != null && isPositionStale(position.timestamp, now.getTime()),
+    positionStale,
+    positionAccuracyClass:
+      position?.accuracyM != null ? accuracyClassOf(position.accuracyM) : null,
     arrivalContext: arrival?.context ?? null,
     generatedAt: new Date().toISOString(),
     daySwitcher,

@@ -75,6 +75,7 @@ import {
 } from "@/lib/journey/go-view";
 import { GoDayLine } from "@/components/sections/go-day-line";
 import { useGeolocation, type GeoStatus } from "@/lib/journey/use-geolocation";
+import { useWakeLock } from "@/lib/journey/use-wake-lock";
 import {
   clearGoTrip,
   loadGoProgress,
@@ -85,10 +86,12 @@ import {
   type GoTripRecord,
 } from "@/lib/journey/go-persist";
 import {
+  ACCURACY_CLASS_LABELS,
   ARRIVAL_LABELS,
   positionAgeMs,
   type ArrivalContext,
 } from "@/lib/journey/travel-state";
+import { STOP_GEO_LABELS, isNavigableGeo } from "@/lib/journey/resolve-stop-geo";
 import { plannerSessionId } from "@/lib/planner-analytics";
 import {
   CONFIRMATION_STATUS_LABELS,
@@ -138,6 +141,11 @@ const L = {
     accuracy: {
       sl: (m: number) => `natančnost ±${Math.round(m)} m`,
       en: (m: number) => `accuracy ±${Math.round(m)} m`,
+    },
+    // ISSUE #21 §10 (1.161.0): wake lock — prikaz SAMO dejanskega stanja.
+    wake: {
+      sl: "zaslon ostaja prižgan",
+      en: "screen stays on",
     },
   },
   next: { sl: "Naslednje", en: "Next" },
@@ -466,6 +474,10 @@ export function GoMode() {
   // stabilna, dokler jo ne resetira (gumb »Danes«).
   const [dayOverride, setDayOverride] = useState<number | null>(null);
   const geo = useGeolocation();
+  // ISSUE #21 §10 (1.161.0) — WAKE LOCK (konkurenčna delta D1): dokler je
+  // GPS watch aktiven, držimo zaslon prižgan (vodilči ga ob vožnji ugasne).
+  // Iskreno: brez podpore nič ne obljubimo; brskalnik lahko odvzame (held).
+  const wake = useWakeLock(geo.status === "active");
 
   useEffect(() => {
     const hydrate = setTimeout(() => {
@@ -1085,6 +1097,20 @@ export function GoMode() {
               <DistanceChip card={view.next} lang={lang} />
               {/* ISSUE #4 §8: vožnja od prejšnjega postanka (OSRM/ocena). */}
               <LegChip card={view.next} lang={lang} />
+              {/* ISSUE #21 §4 (1.161.0) — ISKRENA GEO NATANČNOST CILJA:
+                  lastna tržnica = preverjeno, zunanji viri = približno
+                  (vir poimenovan — uporabnik ve, čemur zaupa). missing/
+                  invalid se pokaže nad gumbi (NAVIGIRAJ tam ne obstaja). */}
+              {view.next.geo.precision === "exact" && (
+                <Badge variant="outline" className="font-normal text-muted-foreground">
+                  {t(STOP_GEO_LABELS.exact)}
+                </Badge>
+              )}
+              {view.next.geo.precision === "approximate" && (
+                <Badge variant="outline" className="font-normal text-muted-foreground">
+                  {STOP_GEO_LABELS.approximate[lang](view.next.geo.source)}
+                </Badge>
+              )}
               <Badge variant="secondary">{t(view.next.entry.statusLabel)}</Badge>
               {/* ISSUE #21 §11: DEJANSKI rezervacijski status iz JourneyBooking
                   vrstice (samo za branje; brez vrstice žetona NI — ne
@@ -1138,6 +1164,24 @@ export function GoMode() {
             </p>
 
             <EntryLinks card={view.next} lang={lang} />
+
+            {/* ISSUE #21 §4/§18-7/8 (1.161.0) — cilj BREZ uporabne lokacije:
+                NAVIGIRAJ izrecno NE obstaja in to POVEMO (ne tiha luknja —
+                „kje je gumb?“ je slaba izkušnja; „vir lokacije je podal
+                napačne podatke“ je iskrena resnica). */}
+            {!isNavigableGeo(view.next.geo) && (
+              <p
+                className="flex items-center gap-1.5 rounded-lg border border-dashed px-3 py-2 text-xs text-muted-foreground"
+                role="note"
+              >
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {t(
+                  view.next.geo.precision === "invalid"
+                    ? STOP_GEO_LABELS.invalid
+                    : STOP_GEO_LABELS.missing
+                )}
+              </p>
+            )}
 
             {/* TASK 67: navigacijski handoff + opravljanje — navigacija je
                 prva akcija ob postanku, opravi druga (mobilno: skupaj full-width).
@@ -1249,6 +1293,22 @@ export function GoMode() {
               {geo.status === "active" && geo.position?.accuracyM != null && (
                 <span className="text-xs font-normal text-muted-foreground">
                   {L.gps.accuracy[lang](geo.position.accuracyM)}
+                </span>
+              )}
+              {/* ISSUE #21 §6 (1.161.0) — RAZRED natančnosti (high/medium/
+                  low): uporabnik vidi KAKO natančno je fiksacija, ne samo
+                  ±X m — nizka opozori, da razdalji ne gre zaupati do metre. */}
+              {geo.status === "active" && view?.positionAccuracyClass != null && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  · {t(ACCURACY_CLASS_LABELS[view.positionAccuracyClass])}
+                </span>
+              )}
+              {/* ISSUE #21 §10 (1.161.0) — WAKE LOCK: prikaz SAMO kadar je
+                  DEJANSKO pridržan (brez obljub, ki jih brskalnik lahko
+                  prelomi — battery saver/vidnost ga odvzame). */}
+              {geo.status === "active" && wake.held && (
+                <span className="text-xs font-normal text-emerald-700 dark:text-emerald-400">
+                  · {t(L.gps.wake)}
                 </span>
               )}
               {/* ISSUE #21 §6: zastarela fiksacija se IZREČNO pokaže (ne
