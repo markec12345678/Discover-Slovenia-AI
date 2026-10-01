@@ -131,28 +131,102 @@ produkcijsko pot prvič).
 
 ---
 
-## 3. LASTNI CHECKOUT — STRIPE (§4 — P0): TEHNIČNO DOKONČAN, ZUNANJI BLOKER
+## 3. LASTNI CHECKOUT — STRIPE (§4 — P0): AKTIVACIJSKA POT ZAKLJUČENA (1.158.0), ZUNANJI BLOKER = KLJUČI
 
-- **Implementacija obstaja in je fail-closed:** brez `STRIPE_SECRET_KEY`
-  → 503 (napaka konfiguracije, ne tiha demo nadgradnja); demo veja
-  SAMO z izrecnim `DSA_DEMO_PAYMENTS=1` → 501. Vir:
-  `src/app/api/stripe/checkout/route.ts:145-159`.
-- **Webhook:** `stripe-signature` glava obvezna + `constructEvent`
-  overitev + `ProcessedStripeEvent` PK dedup (atomarna P2002) —
-  `src/app/api/stripe/webhook/route.ts:19-78`.
-- **Booking lifecycle (§9):** 13 statusov (1.86.0), ločeno
-  `paymentStatus` (demo/unpaid NIKOLI v provizijsko osnovo),
-  `payoutStatus` state machine, idempotenčni `PayoutEntry`
-  (`bookingId` unique). Klientski payload NE MORE ponarediti
-  `confirmed` (strežniška overitev prevladuje — TASK 49 vzorec);
-  testi: `task99-booking-lifecycle`, `task81/100b` migracije,
-  7 datotek z Stripe pokritostjo.
-- **Zunanji aktivacijski bloker (iskreno, NE simuliran):** Stripe
-  račun + ključi (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
-  cene izdelkov/izkušenj, izplačilni račun). Tehnična aktivacijska
-  pot je zaključena; do takrat ostaja status NOT CONFIGURED — točno
-  kot zahteva Issue #20 §4 (»če manjka Stripe account, blockerja ne
-  simuliraj«).
+> **Iskrena dopolnitev FAZE 2 (1.158.0):** oznaka FAZE 1 »tehnično
+> dokončan, zunanji bloker« je bila po neodvisni verifikaciji PREVEČŠNA
+> za B2C obseg — produkcijska veja `/api/checkout` (izdelki) in
+> `/api/bookings` (izkušnje) je bila **501 TODO tudi ob prisotnih
+> ključih** (zaključeni so bili samo B2B tokovi: naročnina,
+> sponzorstvo, provizijski račun). FAZA 2 je dopolnila manjkajoči B2C del.
+
+Struktura po Issue #20 §15: **CURRENT STATE → ROOT CAUSE / GAP →
+IMPLEMENTATION → TEST → PRODUCTION EVIDENCE → FINAL STATUS**.
+
+### CURRENT STATE (pred 1.158.0)
+B2B tokovi (subscription `mode:"subscription"`; sponsorship in
+commission_invoice `mode:"payment"`) so bili produkcijsko zaključeni.
+B2C tok (§4: »product/experience → checkout session → payment result →
+webhook → idempotent state transition → order/booking state →
+user-facing confirmation«) pa je bil v `/api/checkout` in
+`/api/bookings` **izrecen 501 TODO** — dodaja `STRIPE_SECRET_KEY`
+tržnice NE bi vklopilo (UI `checkout-modal` je medtem obljubljal
+»ko bomo dodali prave Stripe ključe, se bo vklopilo pravo plačevanje«).
+Webhook je obdelal samo subscription/sponsorship/commission dogodke —
+brez primerov za Order/Booking.
+
+### ROOT CAUSE / GAP
+Demo pot je nastala prva (1.36.0, P7-C3/P7-C4 varovalke), produkcijska
+veja pa je ostala načrtovana v komentarjih (»TODO: ko boš dodal realne
+Stripe ključe …«) brez implementacije — FAZA 1 (1.157.0) jo je v tem
+dokumentu po pomoti označila kot zaključeno.
+
+### IMPLEMENTATION (1.158.0, 2026-10-01)
+Cela B2C veriga je zdaj implementirana (isti vzorci kot B2B tokovi):
+1. **`POST /api/checkout`** (izdelki): atomarna SERIALIZABLE
+   transakcija (dedup po aktivnih vrsticah + pogojni decrement zaloge +
+   `Order` `status:"pending"`, `paymentMethod:"stripe"`, brez `paidAt`)
+   → Stripe Checkout Session (`mode:"payment"`, cene iz DB v centih +
+   poštnina kot postavka, `metadata.type=marketplace_order` +
+   `orderNumber`, `expires_at` 60 min) → `{ url }` za preusmeritev.
+   Kompenzacija: napaka ustvarjanja seje → takojšnja sprostitev
+   rezervacije (brez seje ni webhook-a, ki bi jo sprostil).
+2. **`POST /api/bookings`** (izkušnje): ista transakcija kot demo pot
+   (dedup + TASK 33 koledar — pending ZASEDA kapaciteto dneva) z
+   `status:"pending"`, brez `confirmedAt` → Checkout Session
+   (`metadata.type=marketplace_booking` + `bookingNumber`) → `{ url }`.
+3. **Webhook `/api/stripe/webhook`** (ZA `constructEvent` overitvijo in
+   dedup markerjem — klientski payload NE MORE ponarediti »paid«):
+   `checkout.session.completed` + `marketplace_order` → preverba
+   `payment_status` + zneska (P3b-6) → pogojni prehod `pending→paid` +
+   `paidAt` (idempotenca RC-4) → e-pošta kupcu; `marketplace_booking` →
+   preverba → pogojni prehod `pending→confirmed` + `confirmedAt` +
+   **`paymentStatus:"paid"`** (edini writer — provizijska osnova FW1) →
+   bookingCount + e-pošta gostu in ponudniku.
+4. **Življenjska doba (§9 pending/fail/cancelled):**
+   `checkout.session.expired` in `async_payment_failed` → idempotentna
+   sprostitev: `releasePendingOrder` (PREKLIČI-NATO-SPROSTI: pogojni
+   `updateMany pending→cancelled`, nato vrnitev zaloge + saleCount;
+   smer napake varna — zaloga pod-štetja, preprodaja nemogoča) in
+   `releasePendingBooking` (kapaciteta se sprosti prek statusa
+   »cancelled«). Refund (`charge.refunded`) ostaja dokumentiran
+   nedokončan del do aktivacije računa (brez živega računa ga ni mogoče
+   pošteno preveriti).
+5. **Uporabniška potrditev:** preusmeritev modalov ob `{ url }` +
+   `PaymentReturnBanner` na `/trznica?placilo=uspeh|preklicano` in
+   `/dozivetja?…` (izriše se SAMO ob parametru `placilo`; demo tok
+   bannera nikoli ne sproži).
+6. Čista plast `src/lib/marketplace-checkout.ts` (brez db/env) +
+   db-plast `src/lib/marketplace-checkout-server.ts`.
+
+### TEST
+37 novih testov (`issue20-marketplace-checkout.test.ts`): vedenjski
+(line items, okno rezervacije, diskriminator, preverba plačila
+pozitivno/negativno, razčlenitev items pozitivno/negativno) +
+source-contract zaklepniki (503 NE 501, pending+stripe v transakciji,
+metadata, povratni URL-ji, kompenzacija, dedup po aktivnih vrsticah,
+webhook veji ZA podpisom+dedupom, pogojni prehodi, sprostitve,
+frontend preusmeritev + banner, demo v produkciji izrecen). Stara
+Stripe pokritost (7 datotek) ostaja zelena; demo pot je nespremenjena
+(ZERO FEATURE LOSS).
+
+### PRODUCTION EVIDENCE
+Živi dokaz aktivacije zahteva Stripe račun (zunanji bloker) — do
+takrat so dokazi STRUKTURNI: vsak-push CI (tsc 0, lint 0, cel suite) +
+37 novih testov. Brez ključev obe ruti iskreno vračata **503** (izpis:
+»Plačila niso konfigurirana …«) — NE 501 in NIKOLI tiho demo plačilo.
+
+### FINAL STATUS
+**Stripe = NOT CONFIGURED (⚪)** — tehnična aktivacijska pot za vse
+lastne tokove (B2B naročnina/sponzorstvo/provizija + B2C
+izdelki/izkušnje) je zdaj ZAKLJUČENA. Aktivacija je čisto zunanje
+dejanje: Stripe račun → `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`
+v env (Render/Vercel) → prijava webhook dogodkov
+`checkout.session.completed | expired | async_payment_failed`,
+`customer.subscription.*`, `invoice.payment_failed` na
+`/api/stripe/webhook` → produkcijski smoke prvega pravega
+naročila/rezervacije. Do takrat `own` ostaja 🟡 CONFIGURED (CTA
+own_checkout ni produkcijsko verifikovan).
 
 ---
 
@@ -223,17 +297,23 @@ vrednosti env (test kanarček). Jedro: `src/lib/supply/activation-check.ts`
 
 ---
 
-## 9. REGRESIJSKI STATUS (1.157.0)
+## 9. REGRESIJSKI STATUS (1.158.0)
 
-`bun test` 4413 (4412 pass + 1 DB-gated skip) · `bun run lint` 0 ·
-`bunx tsc --noEmit` 0 — vključno z novimi 12 testi activation-check
-in posodobljenimi 4 testi matrike (task53 ⑦, task52 §0 implicitno,
-task84, task87). Produkcijski smoke: §2 zgoraj (5 dokazov).
+`bun test` 4462 (4461 pass + 1 DB-gated preskok brez baze — CI-semantika:
+v CI s Postgresom je ta test zelen, glej vsak-push CI) ·
+`bun run lint` 0 · `bunx tsc --noEmit` 0 — vključno z novimi 37 testi
+`issue20-marketplace-checkout` (1.157.0: 4425; 1.156.2: 4413).
+Produkcijski smoke: §2 (faza 1, 5 dokazov) + strukturni dokazi §3
+(faza 2 — živi smoke čaka Stripe račun).
 
 ---
 
 *Zgodovina faz: 1.157.0 (faza 1 — §3 lastna tržnica produkcijsko
 preverjena + dvig LIVE_DATA_VERIFIED, §11 activation:check, §5 ta
 dokument, §12 README uskladitev, §4/§6/§7/§9/§10 dokumentirana
-stanja). Naslednje faze: aktivacija Stripe računa (zunanje), prvi
-partner-submitted geo zapis (zunanje), odložitev UI origin (§7).*
+stanja) · **1.158.0 (faza 2 — §4 B2C aktivacijska pot implementirana:
+pending rezervacije + Stripe seje + webhook prehodi + sprostitve +
+povratni banner; iskrena popravka oznake faze 1; JourneyBooking ima
+14 statusov — 13 + DRAFT iz Issue #4)**. Naslednji koraki: aktivacija
+Stripe računa (zunanje), prvi partner-submitted geo zapis (zunanje),
+odložitev UI origin (§7).*

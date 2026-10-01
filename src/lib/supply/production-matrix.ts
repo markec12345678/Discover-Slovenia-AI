@@ -288,6 +288,12 @@ const MATRIX: Record<ProviderSlug, Omit<ProductionMatrixEntry, "slug">> = {
     // Stopnja ostaja POD PRODUCTION_ACTIVE: Stripe checkout je zunanji
     // aktivacijski bloker (brez STRIPE_SECRET_KEY → 503 fail-closed) in
     // partner-submitted geo zapis v produkciji še ni bil opravljen.
+    // ISSUE #20 §4 FAZA 2 (1.158.0): B2C aktivacijska pot je zdaj
+    // IMPLEMENTIRANA (prej 501 TODO tudi ob ključih) — pending rezervacija →
+    // Stripe Checkout Session (marketplace_order/marketplace_booking) →
+    // webhook prehodi + sprostitve (glej marketplace-checkout*.ts);
+    // aktivacija je od zdaj čisto zunanje dejanje (račun + ključi + prijava
+    // webhook dogodkov).
     stage: "LIVE_DATA_VERIFIED",
     // Iskreni razlog, zakaj NAPREJ ne more (naslednja stopnja): Stripe
     // checkout ključi (STRIPE_SECRET_KEY) niso v env → CTA booking ni
@@ -298,7 +304,7 @@ const MATRIX: Record<ProviderSlug, Omit<ProductionMatrixEntry, "slug">> = {
     cta: "own_checkout",
     aiIntegrated: true, // priklopljen na supply search → AI kontekst izbire
     docsUrl: "",
-    note: "Lastna tržnica: Listingi (TASK 84) IN izkušnje (TASK 87) z geo stolpci na supply zemljevidu — rezervacija prek lastnega Stripe toka. Izkušnje imajo pravo ceno (per_person), listingi obseg €. Zapis BREZ koordinat je iskreno izpuščen; prazna tržnica = „no-listings“. ISSUE #20 §3 (2026-10-01): živi podatki preverjeni (2 geo listinga, dokazi docs/evidence/issue20/); PRODUCTION_ACTIVE čaka Stripe ključe (checkout) in prvi partner-submitted geo zapis.",
+    note: "Lastna tržnica: Listingi (TASK 84) IN izkušnje (TASK 87) z geo stolpci na supply zemljevidu — rezervacija prek lastnega Stripe toka. Izkušnje imajo pravo ceno (per_person), listingi obseg €. Zapis BREZ koordinat je iskreno izpuščen; prazna tržnica = „no-listings“. ISSUE #20 §3 (2026-10-01): živi podatki preverjeni (2 geo listinga, dokazi docs/evidence/issue20/). ISSUE #20 §4 FAZA 2 (1.158.0): B2C checkout aktivacijska pot zaključena (prej 501 TODO) — PRODUCTION_ACTIVE čaka Stripe račun/ključe (zunanje) in prvi partner-submitted geo zapis.",
   },
 
   // === A — ACTIVITIES / EXPERIENCES (§7) ================================

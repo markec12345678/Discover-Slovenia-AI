@@ -76,6 +76,10 @@ interface CheckoutResponse {
   total?: number;
   status?: string;
   error?: string;
+  // ISSUE #20 §4 FAZA 2 (1.158.0): produkcijski Stripe tok — strežnik
+  // vrne URL Stripe Checkout seje za preusmeritev (naročilo tedaj še
+  // čaka na webhook potrditev; demo odgovor URL-ja nikoli nima).
+  url?: string;
 }
 
 // TASK 8 / F4-B (issue #8 Faza 4 — EN razširitev booking sklada): L-pattern
@@ -314,6 +318,23 @@ export function CheckoutModal({ open, onOpenChange }: CheckoutModalProps) {
 
       if (!res.ok || !data.success) {
         throw new Error(data.error || L.errors.payFailed[lang]);
+      }
+
+      // ISSUE #20 §4 FAZA 2 (1.158.0): PRODUCTION Stripe tok — preusmeritev
+      // na Stripe Checkout (plačilo pri zunanem ponudniku). Naročilo je že
+      // ustvarjeno kot PENDING (z rezervirano zalogo); po plačilu ga webhook
+      // označi "paid" in kupec se vrne na /trznica (banner "Plačilo
+      // uspešno"). Košarico počistimo ZDAJ (rezervacija obstaja; ob preklicu
+      // uporabnik enostavno znova sestavi košarico) in številko zapišemo v
+      // lokalno zgodovino — enako kot demo pot.
+      if (data.url) {
+        if (data.orderNumber) {
+          addOrderNumber(data.orderNumber);
+          rememberCheckoutEmail(buyer.email);
+        }
+        clearCart();
+        window.location.href = data.url;
+        return;
       }
 
       setOrderNumber(data.orderNumber ?? "");

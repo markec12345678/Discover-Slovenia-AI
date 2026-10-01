@@ -396,6 +396,10 @@ interface BookingResponse {
   meetingPoint?: string | null;
   providerName?: string;
   providerEmail?: string;
+  // ISSUE #20 §4 FAZA 2 (1.158.0): produkcijski Stripe tok — URL Checkout
+  // seje za preusmeritev (rezervacija tedaj še čaka na webhook potrditev;
+  // demo odgovor URL-ja nikoli nima).
+  url?: string;
 }
 
 /** TASK 33 (Tier 2 #1): dnevni pogled javnega koledarja razpoložljivosti
@@ -1239,6 +1243,21 @@ function BookingSection({
         throw new Error(
           data?.error || L.booking.errors.apiFailed[lang]
         );
+      }
+
+      // ISSUE #20 §4 FAZA 2 (1.158.0): PRODUCTION Stripe tok — preusmeritev
+      // na Stripe Checkout. Rezervacija je že ustvarjena kot PENDING (z
+      // zasedeno kapaciteto dneva); po plačilu jo webhook potrdi
+      // ("confirmed" + "paid") in gost se vrne na /dozivetja (banner
+      // "Plačilo uspešno"). Številko zapišemo v lokalno zgodovino in
+      // atribucijsko oznako počistimo — enako kot demo pot.
+      if (data.url) {
+        if (data.bookingNumber) {
+          addBooking(data.bookingNumber);
+        }
+        clearConsultationRef();
+        window.location.href = data.url;
+        return;
       }
 
       const gs = Number(form.groupSize.trim());

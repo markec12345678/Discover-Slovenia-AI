@@ -7,13 +7,26 @@ import {
   paymentConfirmationEmail,
   adminAlertEmail,
   commissionInvoicePaidEmail,
+  orderConfirmationEmail,
+  bookingConfirmationEmail,
+  providerBookingNotificationEmail,
 } from "@/lib/email-templates";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { activateSponsorship } from "@/lib/sponsorships";
+import {
+  resolveMarketplaceType,
+  validateMarketplacePayment,
+} from "@/lib/marketplace-checkout";
+import {
+  releasePendingBooking,
+  releasePendingOrder,
+} from "@/lib/marketplace-checkout-server";
 
-// POST /api/stripe/webhook — Stripe webhook za subscription dogodke
+// POST /api/stripe/webhook — Stripe webhook (subscription dogodki + ISSUE
+// #20 §4 FAZA 2: lastna tržnica — marketplace_order/marketplace_booking
+// prehodi in sprostitve ob poteku seje)
 // Demo mode: samo logiraj
-// Production mode: verify signature in obdelaj event (aktivacija, update, cancel, failed)
+// Production mode: verify signature in obdelaj event (aktivacija, update, cancel, failed, marketplace paid/expired)
 export async function POST(request: Request) {
   const payload = await request.text();
   const signature = request.headers.get("stripe-signature");
@@ -121,6 +134,240 @@ export async function POST(request: Request) {
         const type = cs.metadata?.type;
         const customerId =
           typeof cs.customer === "string" ? cs.customer : cs.customer?.id;
+
+        // ISSUE #20 §4 FAZA 2 (1.158.0): LASTNA TRŽNICA (B2C) — najprej
+        // diskriminator metadata.type (marketplace_order |
+        // marketplace_booking); ostale veje (commission_invoice /
+        // sponsorship / subscription) so nespremenjene.
+        const marketplaceType = resolveMarketplaceType(cs.metadata);
+
+        // === MARKETPLACE ORDER — NAROČILO IZDELKOV (Issue #20 §4 FAZA 2) ===
+        if (marketplaceType === "marketplace_order" && cs.metadata?.orderNumber) {
+          const order = await db.order.findUnique({
+            where: { orderNumber: cs.metadata.orderNumber },
+            select: {
+              orderNumber: true,
+              buyerEmail: true,
+              buyerName: true,
+              subtotal: true,
+              shippingCost: true,
+              total: true,
+              status: true,
+              items: true,
+            },
+          });
+          if (!order) {
+            console.error(
+              `[stripe/webhook] marketplace_order: naročilo ${cs.metadata.orderNumber} ni najdeno`
+            );
+            break;
+          }
+          // P3b-6 (skupna preverba z booking vejo): bremenitev mora biti
+          // PRAVZAPOR opravljena (payment_status "paid" — async plačila,
+          // npr. SEPA, pošljejo completed še PRED bremenitvijo) in vsaj v
+          // znesku naročila (cs.amount_total je v CENTIH).
+          const orderCheck = validateMarketplacePayment({
+            paymentStatus: cs.payment_status,
+            amountTotalCents: cs.amount_total,
+            expectedTotalCents: Math.round(order.total * 100),
+          });
+          if (!orderCheck.ok) {
+            console.error(
+              `[stripe/webhook] marketplace_order ${order.orderNumber} ZAVRNJEN: ${orderCheck.reason}`
+            );
+            break;
+          }
+          // Idempotenten pogojni prehod pending → paid (RC-4 vzorec:
+          // updateMany s pogojem — točno en potrdilni učinek tudi ob
+          // sočasni/retry dostavi istega eventa).
+          const markPaid = await db.order.updateMany({
+            where: { orderNumber: order.orderNumber, status: "pending" },
+            data: { status: "paid", paidAt: new Date() },
+          });
+          if (markPaid.count === 0) {
+            // Že plačano (retry) ALI je bila vrstica medtem preklicana
+            // (potekla seja + zamujeno completed — redka tekma). Če je bilo
+            // plačilo dejansko bremenjeno, je potrebna ročna uskladitev.
+            console.error(
+              `[stripe/webhook] marketplace_order ${order.orderNumber}: prehod pending→paid NI bil izveden (status=${order.status}) — če je bilo plačilo dejansko bremenjeno, je potrebna ročna uskladitev/refund.`
+            );
+            break;
+          }
+          // Potrditveni email kupcu — NE-BLOKIRAJOČE (isti vzorec kot demo
+          // pot v /api/checkout: naročilo je varno shranjeno kot "paid").
+          try {
+            const parsed = JSON.parse(order.items) as Array<{
+              name?: unknown;
+              quantity?: unknown;
+              price?: unknown;
+            }>;
+            const emailItems = Array.isArray(parsed)
+              ? parsed.flatMap((p) =>
+                  p &&
+                  typeof p === "object" &&
+                  typeof p.name === "string" &&
+                  typeof p.quantity === "number" &&
+                  typeof p.price === "number"
+                    ? [
+                        {
+                          name: p.name,
+                          quantity: p.quantity,
+                          price: p.price,
+                        },
+                      ]
+                    : []
+                )
+              : [];
+            const mail = orderConfirmationEmail({
+              orderNumber: order.orderNumber,
+              buyerName: order.buyerName,
+              items: emailItems,
+              subtotal: order.subtotal,
+              shipping: order.shippingCost,
+              total: order.total,
+            });
+            await sendEmail({
+              to: order.buyerEmail,
+              subject: mail.subject,
+              html: mail.html,
+              text: mail.text,
+            });
+          } catch (emailErr) {
+            console.error(
+              "[stripe/webhook] marketplace_order email napaka:",
+              emailErr
+            );
+          }
+          console.log(
+            `[stripe/webhook] marketplace_order ${order.orderNumber} plačan`
+          );
+          break;
+        }
+
+        // === MARKETPLACE BOOKING — REZERVACIJA IZKUŠNJE (Issue #20 §4 FAZA 2) ===
+        if (
+          marketplaceType === "marketplace_booking" &&
+          cs.metadata?.bookingNumber
+        ) {
+          const booking = await db.booking.findUnique({
+            where: { bookingNumber: cs.metadata.bookingNumber },
+            select: {
+              bookingNumber: true,
+              experienceId: true,
+              experienceName: true,
+              bookingDate: true,
+              groupSize: true,
+              pricePerPerson: true,
+              total: true,
+              status: true,
+              guestName: true,
+              guestEmail: true,
+              guestPhone: true,
+              meetingPoint: true,
+              providerName: true,
+              providerEmail: true,
+            },
+          });
+          if (!booking) {
+            console.error(
+              `[stripe/webhook] marketplace_booking: rezervacija ${cs.metadata.bookingNumber} ni najdena`
+            );
+            break;
+          }
+          // P3b-6: enaka preverba kot marketplace_order.
+          const bookingCheck = validateMarketplacePayment({
+            paymentStatus: cs.payment_status,
+            amountTotalCents: cs.amount_total,
+            expectedTotalCents: Math.round(booking.total * 100),
+          });
+          if (!bookingCheck.ok) {
+            console.error(
+              `[stripe/webhook] marketplace_booking ${booking.bookingNumber} ZAVRNJEN: ${bookingCheck.reason}`
+            );
+            break;
+          }
+          // Idempotenten pogojni prehod pending → confirmed + paid.
+          // FW1 (audit R3 🔴 #1): paymentStatus "paid" zapiše IZKLJUČNO ta
+          // overjeni prehod — provizijska osnova (lib/commissions.ts) tako
+          // vstopi SAMO dejansko plačana rezervacija.
+          const markConfirmed = await db.booking.updateMany({
+            where: { bookingNumber: booking.bookingNumber, status: "pending" },
+            data: {
+              status: "confirmed",
+              confirmedAt: new Date(),
+              paymentStatus: "paid",
+            },
+          });
+          if (markConfirmed.count === 0) {
+            console.error(
+              `[stripe/webhook] marketplace_booking ${booking.bookingNumber}: prehod pending→confirmed NI bil izveden (status=${booking.status}) — če je bilo plačilo dejansko bremenjeno, je potrebna ročna uskladitev/refund.`
+            );
+            break;
+          }
+          // bookingCount (isti vzorec kot demo pot v /api/bookings)
+          try {
+            await db.experience.update({
+              where: { id: booking.experienceId },
+              data: { bookingCount: { increment: 1 } },
+            });
+          } catch {
+            // Izkušnja morda ne obstaja več — rezervacija je že varno
+            // potrjena zgoraj (snapshot je shranjen na vrstici).
+          }
+          // E-pošta gostu + ponudniku — NE-BLOKIRAJOČE (isti vzorec kot
+          // demo pot).
+          try {
+            const guestMail = bookingConfirmationEmail({
+              bookingNumber: booking.bookingNumber,
+              guestName: booking.guestName,
+              experienceName: booking.experienceName,
+              bookingDate: booking.bookingDate,
+              groupSize: booking.groupSize,
+              pricePerPerson: booking.pricePerPerson,
+              total: booking.total,
+              meetingPoint: booking.meetingPoint,
+              providerName: booking.providerName,
+            });
+            await sendEmail({
+              to: booking.guestEmail,
+              subject: guestMail.subject,
+              html: guestMail.html,
+              text: guestMail.text,
+            });
+          } catch (emailErr) {
+            console.error(
+              "[stripe/webhook] marketplace_booking email gostu napaka:",
+              emailErr
+            );
+          }
+          try {
+            const providerMail = providerBookingNotificationEmail({
+              bookingNumber: booking.bookingNumber,
+              experienceName: booking.experienceName,
+              bookingDate: booking.bookingDate,
+              groupSize: booking.groupSize,
+              guestName: booking.guestName,
+              guestEmail: booking.guestEmail,
+              guestPhone: booking.guestPhone ?? "",
+              total: booking.total,
+            });
+            await sendEmail({
+              to: booking.providerEmail,
+              subject: providerMail.subject,
+              html: providerMail.html,
+              text: providerMail.text,
+            });
+          } catch (emailErr) {
+            console.error(
+              "[stripe/webhook] marketplace_booking email ponudniku napaka:",
+              emailErr
+            );
+          }
+          console.log(
+            `[stripe/webhook] marketplace_booking ${booking.bookingNumber} potrjena + plačana`
+          );
+          break;
+        }
 
         // === COMMISSION INVOICE CHECKOUT (Faza 5 — provizijski račun) ===
         if (type === "commission_invoice" && cs.metadata?.invoiceId) {
@@ -532,6 +779,48 @@ export async function POST(request: Request) {
 
           console.log(
             `[stripe/webhook] invoice.payment_failed → owner ${owner.id} status=past_due`
+          );
+        }
+        break;
+      }
+
+      // ISSUE #20 §4 FAZA 2 (1.158.0): LASTNA TRŽNICA — sprostitev
+      // rezervacij ob POTEKU seje (kupec ni plačal v 60-minutnem oknu) ali
+      // PROPADU asinhronega plačila (npr. SEPA bremenitev je padla po
+      // completed z payment_status "unpaid" — tisto completed dostavo je
+      // validateMarketplacePayment že odklonila, vrstica je ostala pending).
+      // Oba dogodka vodita v isti idempotentni popravni ukaz; subscription
+      // dogodki teh tipov seje NE morejo imeti (njihove seje so mode
+      // "subscription" brez marketplace metadata).
+      case "checkout.session.expired":
+      case "checkout.session.async_payment_failed": {
+        const cs = event.data.object as Stripe.Checkout.Session;
+        const marketplaceType = resolveMarketplaceType(cs.metadata);
+        if (
+          marketplaceType === "marketplace_order" &&
+          cs.metadata?.orderNumber
+        ) {
+          const released = await releasePendingOrder(cs.metadata.orderNumber);
+          console.log(
+            `[stripe/webhook] ${event.type} → marketplace_order ${cs.metadata.orderNumber}: ${
+              released
+                ? "rezervacija sproščena (status cancelled, zaloga + saleCount vračana)"
+                : "ni bilo pending vrstice (idempotentno — že obdelano)"
+            }`
+          );
+        } else if (
+          marketplaceType === "marketplace_booking" &&
+          cs.metadata?.bookingNumber
+        ) {
+          const released = await releasePendingBooking(
+            cs.metadata.bookingNumber
+          );
+          console.log(
+            `[stripe/webhook] ${event.type} → marketplace_booking ${cs.metadata.bookingNumber}: ${
+              released
+                ? "rezervacija preklicana (kapaciteta dneva sproščena)"
+                : "ni bilo pending vrstice (idempotentno — že obdelano)"
+            }`
           );
         }
         break;

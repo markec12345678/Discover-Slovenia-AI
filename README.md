@@ -19,7 +19,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.157.0 ŽIVA · 4413 testov · ISSUE #20 (DISCOVER — Production Activation & Live Supply Readiness) FAZA 1 (1. 10. 2026): lastna tržnica PRODUKCIJSKO PREVERJENA skozi celotno pot (2 geo listinga: supply → marker → POI popup → Dodaj v mojo pot → hub; dokazi `docs/evidence/issue20/`) → matrika own dvignjena PRODUCTION_CONFIGURED → **LIVE_DATA_VERIFIED** (Stripe checkout ostaja iskren NOT CONFIGURED bloker) · NOV `bun run activation:check` (§11: iskren izpis ACTIVE/CONFIGURED/NOT CONFIGURED/BLOCKED za vseh 16 providerjev, 12 testov) · `docs/PRODUCTION-ACTIVATION-STATUS.md` (§5 master matrika) · README usklajen (4413/4142 popravek §12) · prej ISSUE #19 (DISCOVER — Premium Product Presentation) ZAPRT 1. 10. 2026: koherentna premium prezentacija z **ZERO FEATURE LOSS** — faza A inventura [`docs/FUNCTION-PARITY-BEFORE.md`](docs/FUNCTION-PARITY-BEFORE.md) (39 strani, 144 API, 387 funkcij, 20 območij) → B izhodišče [`BASELINE-VISUAL.md`](docs/BASELINE-VISUAL.md) (triaža REALNO vs ARTEFAKT) → C-1/2/3 implementacija (CTA hierarhija + 3-stopnjska elevacija, tipografski žeton `--foreground-subtle` + 48/48 naslovi, ritem py-20 — 20 datotek, +66/−24, 0 API dotikov) → D regresija po fazah (4413/4413, lint 0, tsc 0) → E responsive [`RESPONSIVE-VERIFICATION.md`](docs/RESPONSIVE-VERIFICATION.md) (72 meritev: 5 širin × 7 površin + 6 jezikov @320 + desktop; 0 prelivov, 0 noAlt; 4 prezentacijski popravki dotikalnih tarč WCAG 2.5.8) → F revizor [`FUNCTION-PARITY-AFTER.md`](docs/FUNCTION-PARITY-AFTER.md) (verdikt 0 izgub / 100 % pariteta) → G produkcijska kontrola na Vercelu 1.156.0 (3 zlate poti: hero čip → načrtovalnik s samodejnim 3-dnevnim itinererjem; Bled → Dodaj → hub Moja pot; zemljevid iskanje → POI popup → Dodaj v OBE plasti + ✓ Dodano; desktop 1280 + mobil 390 ×7 + 320 prag 0 preliva; 0 page/console napak; 13 dokazov `qh19-faza-g/`) · CI zelen · OBE PRODUKCIJI ŽIVI (faza 1.157.0 bo na obeh po pushu — glej prod-monitor) · prej: 1.153.2 QH LOKALI · RENDER (primarna) AutoDeploy obnovljen — ISSUE #10 ZAPRT 1. 10. 2026 (drift 13+ verzij razrešen: catch-up job + lastnikov vklop AutoDeploy; dokaz: push eb7432f → Render samodejni build v ~7 min; prod-monitor run 36824446081 vsi jobi zeleni, verzija ≡ repo na obeh, /en/trznica 200, sitemap 3548 = 3548) · VERCEL (sekundarna) 1.156.2 ŽIVA · lint 0 · tsc 0 |
+| **Stanje** | v1.158.0 ŽIVA · 4462 testov · ISSUE #20 (DISCOVER — Production Activation & Live Supply Readiness) FAZA 2 (1. 10. 2026): §4 B2C checkout AKTIVACIJSKA POT ZAKLJUČENA — `/api/checkout` (izdelki) in `/api/bookings` (izkušnje) sta prej bila 501 TODO tudi ob ključih; zdaj: pending rezervacija (atomarna zaloga/kapaciteta) → Stripe Checkout Session (`metadata.type=marketplace_order|marketplace_booking`, 60-min okno) → `{ url }` → webhook `checkout.session.completed` (edini writer »paid«/»confirmed«; P3b-6 preverba zneska) + `expired|async_payment_failed` sprostitve + `PaymentReturnBanner` na /trznica in /dozivetja; brez ključev iskreno 503 (NE 501) — stanje NOT CONFIGURED do Stripe računa; 37 novih testov (`issue20-marketplace-checkout`), iskrena popravka oznake faze 1 v statusnem dokumentu · prej FAZA 1 (1. 10. 2026): lastna tržnica PRODUKCIJSKO PREVERJENA skozi celotno pot (2 geo listinga: supply → marker → POI popup → Dodaj v mojo pot → hub; dokazi `docs/evidence/issue20/`) → matrika own dvignjena PRODUCTION_CONFIGURED → **LIVE_DATA_VERIFIED** (Stripe checkout ostaja iskren NOT CONFIGURED bloker) · NOV `bun run activation:check` (§11: iskren izpis ACTIVE/CONFIGURED/NOT CONFIGURED/BLOCKED za vseh 16 providerjev, 12 testov) · `docs/PRODUCTION-ACTIVATION-STATUS.md` (§5 master matrika) · README usklajen (4413/4142 popravek §12) · prej ISSUE #19 (DISCOVER — Premium Product Presentation) ZAPRT 1. 10. 2026: koherentna premium prezentacija z **ZERO FEATURE LOSS** — faza A inventura [`docs/FUNCTION-PARITY-BEFORE.md`](docs/FUNCTION-PARITY-BEFORE.md) (39 strani, 144 API, 387 funkcij, 20 območij) → B izhodišče [`BASELINE-VISUAL.md`](docs/BASELINE-VISUAL.md) (triaža REALNO vs ARTEFAKT) → C-1/2/3 implementacija (CTA hierarhija + 3-stopnjska elevacija, tipografski žeton `--foreground-subtle` + 48/48 naslovi, ritem py-20 — 20 datotek, +66/−24, 0 API dotikov) → D regresija po fazah (4413/4413, lint 0, tsc 0) → E responsive [`RESPONSIVE-VERIFICATION.md`](docs/RESPONSIVE-VERIFICATION.md) (72 meritev: 5 širin × 7 površin + 6 jezikov @320 + desktop; 0 prelivov, 0 noAlt; 4 prezentacijski popravki dotikalnih tarč WCAG 2.5.8) → F revizor [`FUNCTION-PARITY-AFTER.md`](docs/FUNCTION-PARITY-AFTER.md) (verdikt 0 izgub / 100 % pariteta) → G produkcijska kontrola na Vercelu 1.156.0 (3 zlate poti: hero čip → načrtovalnik s samodejnim 3-dnevnim itinererjem; Bled → Dodaj → hub Moja pot; zemljevid iskanje → POI popup → Dodaj v OBE plasti + ✓ Dodano; desktop 1280 + mobil 390 ×7 + 320 prag 0 preliva; 0 page/console napak; 13 dokazov `qh19-faza-g/`) · CI zelen · OBE PRODUKCIJI ŽIVI (faza 1.157.0 bo na obeh po pushu — glej prod-monitor) · prej: 1.153.2 QH LOKALI · RENDER (primarna) AutoDeploy obnovljen — ISSUE #10 ZAPRT 1. 10. 2026 (drift 13+ verzij razrešen: catch-up job + lastnikov vklop AutoDeploy; dokaz: push eb7432f → Render samodejni build v ~7 min; prod-monitor run 36824446081 vsi jobi zeleni, verzija ≡ repo na obeh, /en/trznica 200, sitemap 3548 = 3548) · VERCEL (sekundarna) 1.156.2 ŽIVA · lint 0 · tsc 0 |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -49,10 +49,10 @@
 | Journey orkestracija, MY TRIP časovnica, natisljivi potrditveni dokument | lastna koda |
 | Zunanje booking predaje (`/go`) in affiliate preusmeritve — 9 partnerjev na načrtovalniku (nastanitev, aktivnosti, vstopnice, najem, vlaki, transferji, leti, eSIM, zavarovanje) | 16-provider omrežje |
 | Dvojezična booking plošča načrtovalnika (vsi naslovi, opisi, CTA-ji, prazna stanja in opis zavarovanja z dnevi načrta — SL + EN; 1.85.0) | next-intl (`planner.booking`, 33 ključev) |
-| Polni booking lifecycle potovanja (13 statusov + prehodi; POST/GET/PATCH `/api/journey/bookings` — checkout handoff zapisi EXTERNAL, MY TRIP prekrivka iz realnih vrstic, provider prehodi fail-closed za žetonom; 1.86.0) | Prisma `JourneyBooking` + `lib/journey/booking.ts` |
+| Polni booking lifecycle potovanja (14 statusov, zadnji DRAFT iz Issue #4, + prehodi; POST/GET/PATCH `/api/journey/bookings` — checkout handoff zapisi EXTERNAL, MY TRIP prekrivka iz realnih vrstic, provider prehodi fail-closed za žetonom; 1.86.0) | Prisma `JourneyBooking` + `lib/journey/booking.ts` |
 | Marketplace payout + customer state (payoutStatus not_due→due→processing→paid, gostov zahtevek preklica z AuditLog, lastnikova vidnost; 1.86.0) | Prisma `Booking` + `lib/marketplace-types.ts` |
 | **Deterministični motor načrta kot naravna pot** (`engine="deterministic"`: 0 LLM žetonov, 100 % reproducibilno, isti vhod → isti načrt; ISTA validacijska/obogatitvena veriga kot AI pot — supply, vreme, OSRM, geo-validacija; stikalo "Z AI / Brez AI" v UI; 1.87.0) | `lib/deterministic-itinerary.ts` + `/api/itinerary` |
-| Lastna tržnica (partnerji, izdelki, izkušnje) z lastnim checkoutom in pini na supply zemljevidu (listingi in izkušnje s koordinatami) | lastna baza + Stripe (demo mode brez ključev) |
+| Lastna tržnica (partnerji, izdelki, izkušnje) z lastnim checkoutom in pini na supply zemljevidu (listingi in izkušnje s koordinatami) | lastna baza + Stripe (tehnična aktivacijska pot zaključena 1.158.0 — do ključev iskren demo mode / 503) |
 
 ### 🟡 Pripravljeno, čaka na aktivacijo ponudnika
 
@@ -316,11 +316,16 @@ iskreno prazne sloje.
   — uporabnik rezervira pri ponudniku; platforma ne predstavlja, da je rezervacija
   potrjena.
 - Affiliate preusmeritve (Viator, Booking, DiscoverCars, Skyscanner, …).
-- Lastna tržnica: naročnina (premium/enterprise) ima PRAVI Stripe Checkout
-  (zahteva `STRIPE_SECRET_KEY`); checkout izdelkov/izkušenj je DEMO ali 501 —
-  real-money tok (Stripe Checkout Session) je aktivacijski blocker (TODO),
-  ne varnostna napaka: demo veja samo z izrecnim `DSA_DEMO_PAYMENTS=1`,
-  sicer produkcija fail-closed 501 (nikoli tiho fake plačilo).
+- Lastna tržnica: VSI lastni tokovi (naročnina premium/enterprise,
+  sponzorstva, provizijski računi, izdelki, izkušnje) imajo PRAVO Stripe
+  Checkout aktivacijsko pot (1.158.0): izdelki/izkušnje → pending vrstica
+  (atomarna rezervacija zaloge/kapacitete) → Stripe Checkout Session →
+  webhook `checkout.session.completed` (edini writer »paid«/»confirmed«;
+  preverba payment_status + zneska) → e-pošta + povratni banner;
+  `checkout.session.expired | async_payment_failed` rezervacijo sprostita.
+  Brez `STRIPE_SECRET_KEY` je tržnica iskreno zaprta s 503 (demo veja samo
+  z izrecnim `DSA_DEMO_PAYMENTS=1` — nikoli tiho fake plačilo); do ključev
+  status NOT CONFIGURED (zunanji aktivacijski bloker, ne tehnična luža).
 
 **Pripravljeno (arhitektura, NE predstavljati kot produkcijsko aktivno):**
 - 7 provider API adapterjev (CODE_READY) — aktivacija samo z realno poverilnico,
@@ -411,7 +416,7 @@ dodatnih prenosov. Osvežitev feedov: `bun run fsq:ingest` / `bun run kiwitaxi:i
 Preverjanje:
 
 ```bash
-bun test                 # 4413 testov (4412 pass + 1 DB-gated preskok brez baze —
+bun test                 # 4462 testov (4461 pass + 1 DB-gated preskok brez baze —
                          #  CI-semantika; z veljavno postgres bazo teče tudi ta)
 bun run lint             # eslint
 bunx tsc --noEmit        # tipi

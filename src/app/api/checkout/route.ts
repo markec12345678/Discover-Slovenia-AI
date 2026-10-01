@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import Stripe from "stripe";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { randomId } from "@/lib/security";
 import { sendEmail, isEmailDemo } from "@/lib/email";
 import { orderConfirmationEmail } from "@/lib/email-templates";
-import { isStripeDemo } from "@/lib/stripe-server";
+import { isStripeConfigured, isStripeDemo } from "@/lib/stripe-server";
+import {
+  MARKETPLACE_ORDER_TYPE,
+  ORDER_ACTIVE_STATUSES,
+  buildOrderCheckoutLineItems,
+  checkoutExpiresAt,
+} from "@/lib/marketplace-checkout";
+import { releasePendingOrder } from "@/lib/marketplace-checkout-server";
 
 /**
  * POST /api/checkout
@@ -18,9 +26,14 @@ import { isStripeDemo } from "@/lib/stripe-server";
  * - Validira vhod (email, ime, naslov required; items ne sme biti prazen)
  * - Server-side izračuna subtotal, shipping, total (ne zaupaj clientu)
  * - Generira orderNumber: IF-<leto>-<naključni ID> (nerodljiv)
- * - DEMO mode (STRIPE_SECRET_KEY vsebuje "demo_placeholder"):
+ * - DEMO mode (brez realnih ključev; v produkciji SAMO z DSA_DEMO_PAYMENTS=1):
  *     - direktno ustvari Order s status="paid" + paidAt=now
- * - PRODUCTION mode: TODO — Stripe Checkout Session
+ * - PRODUCTION mode (Issue #20 §4 FAZA 2, 1.158.0): atomarno ustvari
+ *     PENDING Order (rezervira zalogo) → Stripe Checkout Session (payment
+ *     mode, metadata type=marketplace_order) → vrne { url } za preusmeritev.
+ *     "paid" zapiše IZKLJUČNO overjeni webhook (checkout.session.completed
+ *     z preverbo payment_status + zneska); potek/plačilni propad seje
+ *     (expired | async_payment_failed) zalogo sprosti.
  * - Shrani Order v bazo
  * - Pošlje potrditveni email kupcu (ne-blokirajoče — glej /api/listing-inquiry vzorec)
  * - Vrne { success, orderNumber, total, status }
@@ -265,7 +278,11 @@ export async function POST(request: Request) {
     };
     const findRecentDuplicate = async (): Promise<string | null> => {
       const recent = await db.order.findMany({
-        where: { buyerEmail: email, createdAt: { gte: dupWindowStart } },
+        where: {
+          buyerEmail: email,
+          createdAt: { gte: dupWindowStart },
+          ...(dedupStatusFilter ? { status: dedupStatusFilter } : {}),
+        },
         select: { orderNumber: true, items: true },
       });
       for (const r of recent) {
@@ -338,24 +355,37 @@ export async function POST(request: Request) {
     // 19e-1 (revizija 1.36.0, P2): prej INLINE detekcija po odstopnosti
     // ključa — v produkciji z unset STRIPE_SECRET_KEY bi se naročilo tiho
     // zapisalo kot "paid". Zdaj skupni fail-closed helper: demo v produkciji
-    // zahteva izrecni DSA_DEMO_PAYMENTS=1, sicer 501 (enak odgovor kot ob
-    // prisotnem ključu — tržnica še nima produkcijske plačilne poti).
+    // zahteva izrecni DSA_DEMO_PAYMENTS=1, sicer fail-closed napaka.
     const isDemo = isStripeDemo();
 
-    // P7-C3/P7-C4 (P1): fail-closed kot /api/bookings — naročila v
-    // produkciji NE smejo biti zapisana kot "paid" brez Stripe Checkout
-    // Session-a in webhook potrditve (prej: status "paid" + lažen
-    // stripeSessionId tudi ob pravih ključih; produkcija ni bila dosegljiva
-    // iz mrtve TODO veje za return-om).
-    if (!isDemo) {
+    // ISSUE #20 §4 FAZA 2 (1.158.0): PRODUCTION MODE za izdelke — prej je
+    // bila tu 501 varovalka (TODO). Zdaj je tu PRAVA aktivacijska pot:
+    // pending Order (atomarno rezervira zalogo) → Stripe Checkout Session
+    // (payment mode, metadata type=marketplace_order) → url preusmeritev →
+    // webhook checkout.session.completed (edini writer "paid") /
+    // checkout.session.expired|async_payment_failed (sprosti zalogo).
+    // P7-C3/P7-C4 (P1) ostaja v veljavi: brez Stripe Checkout seje in
+    // webhook potrditve naročilo NIKOLI ni "paid".
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    if (!isDemo && (!isStripeConfigured() || !stripeKey)) {
       return NextResponse.json(
         {
           success: false,
-          error: "Kartično plačilo tržnice še ni konfigurirano v produkcijskem načinu.",
+          error:
+            "Plačila niso konfigurirana (STRIPE_SECRET_KEY manjka). Nastavite Stripe ključe ali DSA_DEMO_PAYMENTS=1 za demo način.",
         },
-        { status: 501 }
+        { status: 503 }
       );
     }
+
+    // ISSUE #20 §4 FAZA 2: v produkciji dedup zajema SAMO aktivne naročilne
+    // vrstice (pending = seja še čaka na plačilo, paid = opravljeno).
+    // Preklicana (potekla/plačilno propadla) vrstica NOVEGA poskusa NE
+    // blokira — njena rezervacija je bila sproščena. Demo (kjer so vrstice
+    // vedno "paid") se obnaša nespremenjeno.
+    const dedupStatusFilter = isDemo
+      ? undefined
+      : { in: [...ORDER_ACTIVE_STATUSES] };
 
     // Pripravi items JSON za bazo (AGREGIRANO + sortirano — kanonska oblika)
     const itemsJson = JSON.stringify(
@@ -399,8 +429,13 @@ export async function POST(request: Request) {
           return await db.$transaction(
             async (tx) => {
               // 1) Dedup — isto košarico + isti kupec v 10 min → idempotentno
+              //    (produkcija: samo aktivne vrstice — glej dedupStatusFilter)
               const recent = await tx.order.findMany({
-                where: { buyerEmail: email, createdAt: { gte: dupWindowStart } },
+                where: {
+                  buyerEmail: email,
+                  createdAt: { gte: dupWindowStart },
+                  ...(dedupStatusFilter ? { status: dedupStatusFilter } : {}),
+                },
                 select: { orderNumber: true, items: true },
               });
               for (const r of recent) {
@@ -422,7 +457,11 @@ export async function POST(request: Request) {
                   throw new StockChangedError(item.name);
                 }
               }
-              // 3) Ustvari naročilo (demo: status "paid" — glej 501 varovalko)
+              // 3) Ustvari naročilo. ISSUE #20 §4 FAZA 2 (1.158.0):
+              //    demo = takoj "paid" (izrecen demo z DSA_DEMO_PAYMENTS=1 v
+              //    produkciji); produkcija = "pending" + paymentMethod
+              //    "stripe" — "paid" in paidAt bo zapisal IZKLJUČNO overjeni
+              //    Stripe webhook po preverjeni bremenitvi (P7-C3/P7-C4).
               const created = await tx.order.create({
                 data: {
                   orderNumber,
@@ -433,15 +472,15 @@ export async function POST(request: Request) {
                   buyerCity: city,
                   buyerPostalCode: postalCode,
                   buyerCountry: country,
-                  status: "paid",
-                  paymentMethod: "demo",
+                  status: isDemo ? "paid" : "pending",
+                  paymentMethod: isDemo ? "demo" : "stripe",
                   stripeSessionId: null,
                   subtotal,
                   shippingCost: shipping,
                   total,
                   currency: "EUR",
                   items: itemsJson,
-                  paidAt: new Date(),
+                  paidAt: isDemo ? new Date() : null,
                 },
                 select: { orderNumber: true },
               });
@@ -499,7 +538,95 @@ export async function POST(request: Request) {
         { status: 409 }
       );
     }
-    const order = { orderNumber: outcome.orderNumber, status: "paid" as const };
+    const createdOrderNumber = outcome.orderNumber;
+
+    // === PRODUCTION MODE (Issue #20 §4 FAZA 2) — Stripe Checkout Session ===
+    // Pending naročilo (z rezervirano zalogo) že varno obstaja v bazi; zdaj
+    // odpremo plačilno sejo in shranimo njen ID. Ta koda NE piše "paid" —
+    // to stori izključno webhook po overitvi podpisa in zneska.
+    if (!isDemo) {
+      if (!stripeKey) {
+        // Defenzivna tipovska ozka vrata — 503 preverba zgoraj že varuje.
+        return NextResponse.json(
+          { success: false, error: "Stripe ni konfiguriran" },
+          { status: 503 }
+        );
+      }
+      try {
+        const stripe = new Stripe(stripeKey, {
+          // FIXME: stripe v22 tipi pričakujejo le LatestApiVersion
+          // ("2026-05-27.dahlia"); pin ostaja na "2024-12-18.acacia"
+          // (nespremenjeno obnašanje, enako ostalim Stripe rutam).
+          apiVersion: "2024-12-18.acacia" as NonNullable<
+            ConstructorParameters<typeof Stripe>[1]
+          >["apiVersion"],
+        });
+        const baseUrl =
+          process.env.NEXTAUTH_URL ??
+          (process.env.VERCEL_URL
+            ? `https://${process.env.VERCEL_URL}`
+            : "http://localhost:3000");
+
+        const checkoutSession = await stripe.checkout.sessions.create({
+          mode: "payment",
+          customer_email: email,
+          // Cene so STREŽNIŠKE (iz DB, glej override zgoraj) — line items
+          // iz kanonskih agregiranih postavk + poštnina kot lastna postavka.
+          line_items: buildOrderCheckoutLineItems(
+            canonicalItems.map((i) => ({
+              productId: i.productId,
+              name: i.name,
+              quantity: i.quantity,
+              unitAmountCents: Math.round(i.price * 100),
+            })),
+            Math.round(shipping * 100)
+          ),
+          metadata: {
+            type: MARKETPLACE_ORDER_TYPE,
+            orderNumber: createdOrderNumber,
+          },
+          // Rezervacija zaloge je časovno OMEJENA (60 min) — po poteku jo
+          // webhook checkout.session.expired sprosti (glej
+          // marketplace-checkout-server.ts).
+          expires_at: checkoutExpiresAt(),
+          success_url: `${baseUrl}/trznica?placilo=uspeh&narocilo=${createdOrderNumber}`,
+          cancel_url: `${baseUrl}/trznica?placilo=preklicano`,
+        });
+
+        await db.order.update({
+          where: { orderNumber: createdOrderNumber },
+          data: { stripeSessionId: checkoutSession.id },
+        });
+
+        return NextResponse.json({
+          success: true,
+          url: checkoutSession.url,
+          orderNumber: createdOrderNumber,
+          total,
+          status: "pending" as const,
+          demo: false,
+        });
+      } catch (error) {
+        // KOMPENZACIJA (Issue #20 §4 FAZA 2): seja ni nastala → pending
+        // vrstica NIMA webhook-a, ki bi jo sprostil — prekličemo jo takoj
+        // in vrnemo zalogo (best-effort; smer morebitne napake je varna:
+        // zaloga pod-šteta, preprodaja ni mogoča).
+        await releasePendingOrder(createdOrderNumber).catch((e) => {
+          console.error(
+            "[checkout] kompenzacija releasePendingOrder napaka:",
+            e
+          );
+        });
+        console.error("[checkout] stripe session napaka:", error);
+        return NextResponse.json(
+          { error: "Napaka pri pripravi plačila. Poskusite znova." },
+          { status: 500 }
+        );
+      }
+    }
+
+    // === DEMO MODE — direktno "paid" (izključno demo; glej 503 vrata) ===
+    const order = { orderNumber: createdOrderNumber, status: "paid" as const };
 
     // === Potrditveni email kupcu — NE-BLOKIRAJOČE (fire-and-forget) ===
     // Naročilo je že varno shranjeno v bazi — morebitna napaka emaila NE sme
@@ -543,13 +670,8 @@ export async function POST(request: Request) {
       orderNumber: order.orderNumber,
       total,
       status: order.status,
-      demo: isDemo,
+      demo: true,
     });
-
-    // === PRODUCTION MODE ===
-    // (onemogočeno — 501 varovalka zgoraj; ko bo implementirano: Stripe
-    // Checkout Session z line_items iz sanitizedItems, Order s status
-    // "pending" + stripeSessionId, webhook posodobi na "paid")
   } catch (error) {
     console.error("[api/checkout] napaka:", error);
     // INFO-LEAK FIX (revizija 1.33.0, 16-b P2): raw Prisma/DB napake so

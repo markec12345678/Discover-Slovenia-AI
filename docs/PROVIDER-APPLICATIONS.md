@@ -51,7 +51,9 @@ Prejšnje žive preverbe pogodb: 2026-09-18 (TASK 45 Viator, TASK 46 GYG).
 **Povzetek (productionSummary):** 16 vnosov · **4 PRODUCTION ACTIVE**
 (osm, sto, kiwitaxi, fsq) · **1 LIVE DATA VERIFIED (own — Issue #20 §3,
 2026-10-01: 2 produkcijska geo listinga preverjena skozi celotno pot;
-PRODUCTION_ACTIVE čaka Stripe ključe + prvi partner-submitted geo zapis)**
+Issue #20 §4 FAZA 2, 1.158.0: B2C checkout aktivacijska pot zaključena
+(prej 501 TODO) — PRODUCTION_ACTIVE čaka Stripe račun/ključe + prvi
+partner-submitted geo zapis)**
 · **7 CODE READY** (viator, getyourguide, tiqets, booking, skyscanner,
 airalo, travelpayouts — adapterji priključeni, iskreno prazni do
 ključev/žetonov) · **4 CONTRACT VERIFIED** (discovercars, omio,

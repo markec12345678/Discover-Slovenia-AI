@@ -3,6 +3,7 @@ import { getLocale } from "next-intl/server";
 import { Compass } from "lucide-react";
 
 import { Navigation } from "@/components/sections/navigation";
+import { PaymentReturnBanner } from "@/components/payment-return-banner";
 import { Footer } from "@/components/sections/footer";
 import { Chatbot } from "@/components/chatbot";
 import { ExperiencesSection } from "@/components/sections/experiences";
@@ -75,6 +76,9 @@ export default async function ExperiencesPage() {
     <div className="min-h-screen flex flex-col bg-background">
       <Navigation solid />
       <main className="flex-grow">
+        {/* ISSUE #20 §4 FAZA 2 (1.158.0): banner povratka s Stripe Checkout
+            (izriše se SAMO ob ?placilo=uspeh|preklicano — sicer null) */}
+        <PaymentReturnBanner />
         {/* Glava strani — F4-D: hero v jeziku zahteve */}
         <section
           className="py-12 sm:py-16"

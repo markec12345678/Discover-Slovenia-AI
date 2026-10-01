@@ -7,6 +7,85 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.158.0] — 2026-10-01 (#20 DISCOVER: Production Activation — FAZA 2 §4 P0)
+
+### Dodano
+
+- **§4 LASTNI CHECKOUT (B2C) — TEHNIČNA AKTIVACIJSKA POT ZAKLJUČENA.**
+  Do 1.157.0 je bila produkcijska veja `/api/checkout` (izdelki) in
+  `/api/bookings` (izkušnje) 501 TODO — CELO s prisotnimi Stripe ključi
+  bi bila tržnica ostala zaprta (UI je medtem obljubljal nasprotno).
+  Zdaj je cela veriga implementirana: **pending vrstica (atomarna
+  rezervacija zaloge/kapacitete v SERIALIZABLE transakciji) → Stripe
+  Checkout Session (payment mode, `metadata.type=marketplace_order |
+  marketplace_booking`, `expires_at` 60 min) → `{ url }` preusmeritev →
+  webhook `checkout.session.completed` (EDINI writer »paid«/
+  »confirmed«, preverba `payment_status` + zneska po P3b-6) →
+  uporabniška potrditev** (e-pošta + `PaymentReturnBanner` na
+  /trznica in /dozivetja). Življenjska doba: `checkout.session.expired`
+  in `async_payment_failed` idempotentno sprostita rezervacijo
+  (`releasePendingOrder` — preklic najprej, nato vrnitev zaloge +
+  saleCount; `releasePendingBooking` — kapaciteta se sprosti prek
+  statusa »cancelled«). Kompenzacija na ruti: če ustvarjanje seje pade
+  takoj po zapisu pending vrstice, se rezervacija takoj sprosti (brez
+  seje ni webhook-a). Stanje ostaja **iskreno NOT CONFIGURED** do
+  Stripe računa + ključev (zunanji aktivacijski bloker — issue §4:
+  »blockerja ne simuliraj«); brez `STRIPE_SECRET_KEY` obe ruti
+  fail-closed **503** (prej 501).
+
+- **§4 PODPORA — `src/lib/marketplace-checkout.ts`** (pure, brez db/env):
+  `buildOrderCheckoutLineItems` (strežniške cene v centih + poštnina
+  kot lastna postavka), `validateMarketplacePayment` (P3b-6 preverba
+  plačila za obe veji), `resolveMarketplaceType` (diskriminator
+  metadata.type), `checkoutExpiresAt` (60-min okno rezervacije),
+  `orderItemsForStockRestore` (striktna razčlenitev — nikoli ne ugiba),
+  `ORDER_/BOOKING_ACTIVE_STATUSES` (produkcjski dedup zajema samo
+  pending/paid oz. pending/confirmed — preklicana vrstica novega
+  poskusa ne blokira).
+
+- **§4 PODPORA — `src/lib/marketplace-checkout-server.ts`** (db-plast):
+  `releasePendingOrder` (PREKLIČI-NATO-SPROSTI vrstni red: pogojni
+  `updateMany` je atomarna idempotenčna vrata; zaloga vračana
+  posamično z `updateMany` — izbrisan izdelek ni napaka; smer napake
+  varna: zaloga pod-štetja, preprodaja nemogoča) in
+  `releasePendingBooking`.
+
+- **§4 TESTI — `issue20-marketplace-checkout.test.ts` (37 testov)**:
+  vedenjski testi čiste plasti (line items, okno, diskriminator,
+  preverba plačila pozitivno/negativno, razčlenitev items
+  pozitivno/negativno) + source-contract zaklepniki: 503 fail-closed
+  (NE 501), pending+stripe zapis v transakciji, metadata, povratni
+  URL-ji, kompenzacija, dedup po aktivnih vrsticah, webhook veji ZA
+  podpisom+dedupom (klient NE MORE ponarediti »paid«), pogojni prehodi
+  (idempotenca), expired/async sprostitve, frontend preusmeritev ob
+  `{ url }` na obeh modalih + banner na obeh straneh, demo v
+  produkciji še vedno izrecen (`DSA_DEMO_PAYMENTS=1`).
+
+### Spremenjeno
+
+- **`/api/checkout` + `/api/bookings`**: demo pot nespremenjena
+  (ZERO FEATURE LOSS); produkcija: dedup zajema samo aktivne vrstice;
+  `Order.status`/`Booking.status` življenjska doba zdaj izrecna —
+  `pending → paid|confirmed` (webhook) oz. `pending → cancelled`
+  (expired/async neuspeh/kompenzacija). `checkout-modal` in
+  `experience-modal`: ob odgovoru `{ url }` preusmeritev na Stripe
+  (zapis številke v lokalno zgodovino + počiščenje košarice/atribucije
+  enako kot demo pot).
+- **`docs/PRODUCTION-ACTIVATION-STATUS.md` §3**: prejšnja oznaka
+  »tehnično dokončan, zunanji bloker« je bila po neodvisni verifikaciji
+  PREVEČŠNA za B2C obseg (501 TODO) — usklajeno z dejanskim stanjem:
+  aktivacijska pot zdaj res zaključena, bloker je IZKLJUČNO zunanji
+  (Stripe račun + ključi). §9: JourneyBooking ima 14 statusov (13 +
+  DRAFT iz Issue #4); webhook dedup se nahaja na
+  `webhook/route.ts:81-93` (popravek vrstic).
+- **`.env.example` + README**: Stripe odsek dokumentira, kateri
+  dogodki morajo biti prijavljeni na `/api/stripe/webhook` za B2C tok
+  (`checkout.session.completed | expired | async_payment_failed`) in
+  da je po 1.158.0 za vklop tržnice dovolj ključ (brez spremembe kode).
+
+---
+
+
 ## [1.157.0] — 2026-10-01 (#20 DISCOVER: Production Activation — FAZA 1)
 
 ### Dodano

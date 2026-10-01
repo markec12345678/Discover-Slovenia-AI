@@ -6,6 +6,7 @@ import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
 import { Chatbot } from "@/components/chatbot";
 import { MarketplaceSection } from "@/components/sections/marketplace";
+import { PaymentReturnBanner } from "@/components/payment-return-banner";
 import { Reveal } from "@/components/reveal";
 import { Badge } from "@/components/ui/badge";
 
@@ -62,6 +63,9 @@ export default async function MarketplacePage() {
     <div className="min-h-screen flex flex-col bg-background">
       <Navigation solid />
       <main className="flex-grow">
+        {/* ISSUE #20 §4 FAZA 2 (1.158.0): banner povratka s Stripe Checkout
+            (izriše se SAMO ob ?placilo=uspeh|preklicano — sicer null) */}
+        <PaymentReturnBanner />
         {/* Glava strani */}
         <section
           className="py-12 sm:py-16"
