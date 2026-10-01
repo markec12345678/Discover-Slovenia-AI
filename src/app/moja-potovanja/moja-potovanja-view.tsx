@@ -486,16 +486,35 @@ export function MojaPotovanjaView() {
                           </span>
                         </div>
                       </CardHeader>
-                      <CardContent className="flex items-center justify-between gap-3 pt-0">
+                      <CardContent className="flex flex-wrap items-center justify-between gap-2 pt-0">
                         <span className="text-xs text-muted-foreground">
                           {L.trips.saved[lang](formatDate(trip.savedAt, lang))}
                         </span>
-                        <Button asChild size="sm" className="gap-1.5 shrink-0">
-                          <Link href={`/pot/${trip.shareId}`}>
-                            {L.open[lang]}
-                            <ArrowRight className="size-3.5" aria-hidden="true" />
-                          </Link>
-                        </Button>
+                        <div className="flex shrink-0 gap-2">
+                          {/* ISSUE #22 §30.C: MOJA POT → NA POTI člen tudi za
+                              GOSTE (lokalna potovanja so primarni tok brez
+                              računa — isti vzorec kot prijavljene kartice). */}
+                          <Button
+                            size="sm"
+                            className="gap-1.5"
+                            disabled={resumingTripId === trip.shareId}
+                            onClick={() => resumeTrip(trip.shareId, trip.name ?? "")}
+                            aria-label={`${L.resume[lang]}: ${trip.name ?? trip.shareId}`}
+                          >
+                            {resumingTripId === trip.shareId ? (
+                              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <Footprints className="size-3.5" aria-hidden="true" />
+                            )}
+                            {L.resume[lang]}
+                          </Button>
+                          <Button asChild size="sm" variant="outline" className="gap-1.5 shrink-0">
+                            <Link href={`/pot/${trip.shareId}`}>
+                              {L.open[lang]}
+                              <ArrowRight className="size-3.5" aria-hidden="true" />
+                            </Link>
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   </li>
