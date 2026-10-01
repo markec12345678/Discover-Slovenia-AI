@@ -205,12 +205,17 @@ describe("ISSUE #22 E: go-mode.tsx — source contract", () => {
     expect(iFree).toBeGreaterThan(iNext); // sekundarna informacija (§21)
     // Dedupe ključ preprečuje refetch ob vsakem GPS tiku.
     expect(src).toContain("nearbyLastKeyRef.current === nbKey");
-    // PROD REGRESIJA (dokaz #22): prekinjeni tek (abort ob novi fiksaciji)
-    // preskoči finally reset — dedupe veja MORA resetirati loading, sicer
-    // skeleton v kandidatih obtiči za vedno.
-    expect(src).toMatch(
-      /nearbyLastKeyRef\.current === nbKey[\s\S]{0,200}?setNearbyLoading\(false\)/
-    );
+    // PROD REGRESIJA (dokaz #22): nalagalnik je LAST-WRITE-WINS PO KLJUČU —
+    // BREZ AbortControllerja (abort ob vsaki 2-s fiksaciji je ubil vse
+    // fetche, dedupe pa prepovedoval ponovni poskus → vedno prazno).
+    // Zastareli izpisi se zavžejo s primerjavo ključa.
+    const nbStart = src.indexOf("Nalagalnik kandidatov");
+    const nbEnd = src.indexOf("}, [view, now, freeTime, nearbyCategory");
+    const nbSection = src.slice(nbStart, nbEnd);
+    expect(nbStart).toBeGreaterThan(-1);
+    expect(nbSection).not.toContain("signal:"); // brez aborta (zadnji zmaguje)
+    expect(nbSection).toContain("nearbyLastKeyRef.current !== runKey) return;");
+    expect(nbSection).toContain("setNearbyFits(fits)");
     // Bbox je GROBA posplošitev pozicije (ne nosimo točne lokacije naprej).
     expect(src).toContain("nearbyBbox({ lat: nbLat, lng: nbLng }, 5)");
   });

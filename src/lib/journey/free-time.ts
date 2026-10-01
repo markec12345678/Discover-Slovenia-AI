@@ -358,7 +358,7 @@ export const FREE_TIME_LABELS = {
     en: "opening hours unknown — check before visiting",
   },
   empty: {
-    sl: "V bližini ni ničesar, kar bi utegnil še zdereč v okno.",
+    sl: "V bližini ni ničesar, kar bi se še spravilo v tvoje okno.",
     en: "Nothing nearby fits your window in time.",
   },
   unavailable: {

@@ -900,6 +900,11 @@ export function GoMode() {
       ? `${nearbyCategory}@${nbLat.toFixed(3)},${nbLng.toFixed(3)}@${nbMinutes}`
       : null;
 
+  // Nalagalnik kandidatov: LAST-WRITE-WINS PO KLJUČU (brez AbortController —
+  // PROD DOKAZ #22: abort ob vsaki GPS fiksaciji (2 s) je ubil vsak fetch,
+  // dedupe pa prepovedoval ponovni poskus; rezultat = vedno prazno). Vsak
+  // tek teče do konca; zastareli izpisi se zavržejo s primerjavo ključa
+  // (novejša zahteva je med tem zmagala). Brez signala NI AbortError catch-a.
   useEffect(() => {
     if (
       !view ||
@@ -911,31 +916,22 @@ export function GoMode() {
     ) {
       return;
     }
-    // Dedupe: kombinacija (kategorija, groba pozicija, okno) se NI spremenila
-    // → brez nalaganja. OBVEZNO resetiramo loading: prejšnji tek je bil
-    // prekinjen (cleanup ob novi fiksaciji), njegov finally pa je active-guard
-    // preskočil — brez tega bi skeleton obtičil za vedno (prod dokaz #22).
-    if (nbKey == null || nearbyLastKeyRef.current === nbKey) {
-      setNearbyLoading(false);
-      return;
-    }
-    nearbyLastKeyRef.current = nbKey;
-    let active = true;
-    const controller = new AbortController();
+    if (nbKey == null || nearbyLastKeyRef.current === nbKey) return; // dedupe
+    const runKey = nbKey;
+    nearbyLastKeyRef.current = runKey;
     (async () => {
       setNearbyLoading(true);
       try {
         const cats = CATEGORY_TO_PRODUCT_TYPES[nearbyCategory].join(",");
         const bbox = nearbyBbox({ lat: nbLat, lng: nbLng }, 5);
         const res = await fetch(
-          `/api/map/pins?bbox=${encodeURIComponent(bbox)}&zoom=13&cats=${encodeURIComponent(cats)}`,
-          { signal: controller.signal }
+          `/api/map/pins?bbox=${encodeURIComponent(bbox)}&zoom=13&cats=${encodeURIComponent(cats)}`
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as {
           pins?: { id: string; name: string; lat: number; lng: number; type: string }[];
         };
-        if (!active) return;
+        if (nearbyLastKeyRef.current !== runKey) return; // nadigrana zahteva
         const candidates: NearbyCandidate[] = (data.pins ?? [])
           .map((p) => {
             const category = NEARBY_CATEGORY_OF[p.type as keyof typeof NEARBY_CATEGORY_OF];
@@ -963,21 +959,17 @@ export function GoMode() {
           nextStop,
           category: nearbyCategory,
         });
-        if (!active) return;
+        if (nearbyLastKeyRef.current !== runKey) return; // nadigrana zahteva
         setNearbyFits(fits);
         setNearbyUnavailable(false);
       } catch {
-        if (!active) return;
+        if (nearbyLastKeyRef.current !== runKey) return;
         setNearbyFits([]);
         setNearbyUnavailable(true);
       } finally {
-        if (active) setNearbyLoading(false);
+        if (nearbyLastKeyRef.current === runKey) setNearbyLoading(false);
       }
     })();
-    return () => {
-      active = false;
-      controller.abort();
-    };
   }, [view, now, freeTime, nearbyCategory, nbLat, nbLng, nbMinutes, nbKey, dayStopCoords]);
 
   /** §9 E2E-8: dodaj kandidata v mojo pot (SAMO v2 zapis — čista projekcija
