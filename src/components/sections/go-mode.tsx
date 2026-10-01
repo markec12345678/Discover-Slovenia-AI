@@ -911,7 +911,14 @@ export function GoMode() {
     ) {
       return;
     }
-    if (nbKey == null || nearbyLastKeyRef.current === nbKey) return;
+    // Dedupe: kombinacija (kategorija, groba pozicija, okno) se NI spremenila
+    // → brez nalaganja. OBVEZNO resetiramo loading: prejšnji tek je bil
+    // prekinjen (cleanup ob novi fiksaciji), njegov finally pa je active-guard
+    // preskočil — brez tega bi skeleton obtičil za vedno (prod dokaz #22).
+    if (nbKey == null || nearbyLastKeyRef.current === nbKey) {
+      setNearbyLoading(false);
+      return;
+    }
     nearbyLastKeyRef.current = nbKey;
     let active = true;
     const controller = new AbortController();

@@ -205,6 +205,12 @@ describe("ISSUE #22 E: go-mode.tsx — source contract", () => {
     expect(iFree).toBeGreaterThan(iNext); // sekundarna informacija (§21)
     // Dedupe ključ preprečuje refetch ob vsakem GPS tiku.
     expect(src).toContain("nearbyLastKeyRef.current === nbKey");
+    // PROD REGRESIJA (dokaz #22): prekinjeni tek (abort ob novi fiksaciji)
+    // preskoči finally reset — dedupe veja MORA resetirati loading, sicer
+    // skeleton v kandidatih obtiči za vedno.
+    expect(src).toMatch(
+      /nearbyLastKeyRef\.current === nbKey[\s\S]{0,200}?setNearbyLoading\(false\)/
+    );
     // Bbox je GROBA posplošitev pozicije (ne nosimo točne lokacije naprej).
     expect(src).toContain("nearbyBbox({ lat: nbLat, lng: nbLng }, 5)");
   });
