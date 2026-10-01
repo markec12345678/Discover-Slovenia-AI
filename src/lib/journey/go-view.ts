@@ -21,6 +21,7 @@
 
 import { haversineKm } from "@/lib/geo-corridor";
 import type { DayRouteSummary, MyTripDay, MyTripView, TripEntry } from "./trip-view";
+import type { GoDayLineItem } from "./day-line";
 import {
   classifyArrival,
   isPositionStale,
@@ -81,6 +82,13 @@ export interface GoView {
   activeDayRoute?: DayRouteSummary;
   /** Naslednji ne-opravljeni postanek dneva. */
   next?: GoEntryCard;
+  /** TASK 102 — ISSUE #21 §10/§12: postanek PO trenutnem (»NASLEDNJE PO
+   *  TEM«) — prvi iz remaining, SAMO če obstaja (iskrena odsotnost sicer). */
+  nextAfter?: GoEntryCard;
+  /** TASK 102 — ISSUE #21 §10: SHEMA DNEVA — celoten dan po vrstnem redu
+   *  načrta z živimi stanji (opravljen/preskočen/trenutni/prihodnji).
+   *  Projekcija ISTIH podatkov (0 novih virov resnice), deluje offline. */
+  line: GoDayLineItem[];
   /** Ali aktiven dan sploh ima kakšen realen čas (za iskreno opombo). */
   dayHasRealTime: boolean;
   /** Ostali ne-opravljeni postanki dneva (po vrstnem redu načrta). */
@@ -385,6 +393,52 @@ export function buildGoView(
       : undefined;
   const remaining = restEntries.map((e) => toCard(e, position, isToday, now));
 
+  // TASK 102 — ISSUE #21 §10/§12: »NASLEDNJE PO TEM« — prvi postanek po
+  // trenutnem (iskrena odsotnost, ko ga ni — zadnji postanek dneva).
+  const nextAfter: GoEntryCard | undefined =
+    restEntries.length > 0
+      ? toCard(restEntries[0], position, isToday, now)
+      : undefined;
+
+  // TASK 102 — ISSUE #21 §10: SHEMA DNEVA — cel dan po VRSTNEM REDU NAČRTA
+  // (stanja so projekcija done/skipped/next: done in skipped ohranita svoje
+  // mesto v zaporedju; trenutni cilj dobi živi state (arrived SAMO stabilen
+  // §7) + razdaljo, kadar je GPS para znana; prihodnji so brez razdalje).
+  const line: GoDayLineItem[] = entries.map((e) => {
+    const doneAt = done[e.key];
+    const skippedAt = skippedMap[e.key];
+    const geo =
+      typeof e.lat === "number" && typeof e.lng === "number"
+        ? { lat: e.lat, lng: e.lng }
+        : {};
+    if (doneAt && typeof doneAt === "string") {
+      return { key: e.key, icon: e.icon, title: e.title, ...geo, state: "done" as const };
+    }
+    if (skippedAt && typeof skippedAt === "string") {
+      return { key: e.key, icon: e.icon, title: e.title, ...geo, state: "skipped" as const };
+    }
+    if (e.key === nextEntry?.key) {
+      return {
+        key: e.key,
+        icon: e.icon,
+        title: e.title,
+        ...geo,
+        ...(e.time?.start ? { timeStart: e.time.start } : {}),
+        state:
+          next?.travel?.status === "arrived" ? ("arrived" as const) : ("current" as const),
+        ...(arrival?.distanceM != null ? { distanceM: arrival.distanceM } : {}),
+      };
+    }
+    return {
+      key: e.key,
+      icon: e.icon,
+      title: e.title,
+      ...geo,
+      ...(e.time?.start ? { timeStart: e.time.start } : {}),
+      state: "upcoming" as const,
+    };
+  });
+
   const laterDays =
     active == null
       ? []
@@ -420,6 +474,8 @@ export function buildGoView(
     ...(active?.note ? { activeDayNote: active.note } : {}),
     ...(active?.day.route ? { activeDayRoute: active.day.route } : {}),
     ...(next != null ? { next } : {}),
+    ...(nextAfter != null ? { nextAfter } : {}),
+    line,
     dayHasRealTime,
     remaining,
     done: doneCards,

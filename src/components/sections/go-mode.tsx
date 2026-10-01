@@ -73,6 +73,7 @@ import {
   GO_LABELS,
   type GoEntryCard,
 } from "@/lib/journey/go-view";
+import { GoDayLine } from "@/components/sections/go-day-line";
 import { useGeolocation, type GeoStatus } from "@/lib/journey/use-geolocation";
 import {
   clearGoTrip,
@@ -140,6 +141,12 @@ const L = {
     },
   },
   next: { sl: "Naslednje", en: "Next" },
+  // TASK 102 — ISSUE #21 §10/§12: »NASLEDNJE PO TEM« (postanek po trenutnem).
+  nextAfter: { sl: "Nato", en: "Then" },
+  nextAfterEmpty: {
+    sl: "To je zadnji postanek dneva.",
+    en: "This is the last stop of the day.",
+  },
   today: { sl: "Danes načrtovano", en: "Planned today" },
   done: { sl: "Opravljeno", en: "Completed" },
   complete: { sl: "Opravi", en: "Done" },
@@ -1166,6 +1173,41 @@ export function GoMode() {
                 {t(L.skip)}
               </Button>
             </div>
+
+            {/* === TASK 102 — ISSUE #21 §10/§12: »NASLEDNJE PO TEM« ===
+                Kompaktni napovednik naslednjega cilja po trenutnem —
+                uporabnik se NE vrača v planer po naslednji cilj (§12).
+                Zadnji postanek dneva → iskrena opomba (brez izmišljanja). */}
+            <div
+              className="rounded-lg border border-dashed px-3 py-2 text-sm"
+              role="note"
+              aria-label={t(L.nextAfter)}
+            >
+              {view.nextAfter ? (
+                <p className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {t(L.nextAfter)}
+                  </span>
+                  <span className="font-medium">
+                    {view.nextAfter.entry.icon} {view.nextAfter.entry.title}
+                  </span>
+                  {view.nextAfter.entry.time?.start && (
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      {view.nextAfter.entry.time.start}
+                    </span>
+                  )}
+                  {view.nextAfter.distanceKm != null && (
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      · {view.nextAfter.distanceKm} km ({t(L.inAir)})
+                    </span>
+                  )}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {t(L.nextAfterEmpty)}
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -1175,6 +1217,17 @@ export function GoMode() {
           </CardContent>
         </Card>
       )}
+
+      {/* === TASK 102 — SHEMA DNEVA + ZEMLJEVID DNEVA (ISSUE #21 §10) ===
+          Cel dan na en pogled (odgovor na najmočnejšo prednost vodilčih —
+          vizualni pregled), a ISKRENO: shematsko po vrstnem redu načrta,
+          deluje offline; polni zemljevid je IZRECNO zunanji handoff
+          (isti kanon kot NAVIGIRAJ — fail-closed brez koordinat). */}
+      <GoDayLine
+        line={view.line}
+        origin={geo.position}
+        lang={lang}
+      />
 
       {/* === GPS NADZOR (HOW) — TASK 8 / F2-B: premaknjen pod NASLEDNJO
           (§24: navigacijska orodja sledijo primarnemu toku, ne prekinjajo

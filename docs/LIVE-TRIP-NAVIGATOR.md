@@ -1,4 +1,4 @@
-# LIVE TRIP NAVIGATOR — arhitektura (Issue #21, 1.159.0)
+# LIVE TRIP NAVIGATOR — arhitektura (Issue #21, 1.159.0 + 1.160.0)
 
 > **Discover ne samo načrtuje potovanje. Ob »Začni pot« postane živi sopotnik:
 > ve, kje si, kateri cilj je naslednji, vodi te do njja, zazna prihod in
@@ -48,6 +48,12 @@ REDU NAČRTA (determinizem §5 — GPS NE prerazporeja vrstnega reda).
 0 AI, 0 hevistik bližine — uporabnikov načrt je avtoriteta. Ročni nadzor:
 `dayOverride` (dnevni switcher), **PRESKOČI (novo 1.159.0)** — izrecna
 uporabnikova izbira, ločena od opravitve; OBNOVI vrne postanek v tok.
+
+**1.160.0:** poleg `next` pogled nosi še **`nextAfter`** (postanek po
+trenutnem — »NASLEDNJE PO TEM« na hero kartici, §10/§12) in **`line`**
+(projekcija celotnega dneva po vrstnem redu načrta z živimi stanji —
+shema dneva; `day-line.ts` + GoDayLine komponenta). Oba sta projekciji
+ISTIH podatkov (0 novih virov resnice), delujeta offline.
 
 ### ⑤ Kdo določa arrival?
 
@@ -174,7 +180,25 @@ union-merge).
 - stabilni vsebinski ključi (napredek preživi preureditev načrta)
 - glasovne fraze prihoda (deterministično, SL+EN)
 
-### PREVERJENO
+### IMPLEMENTIRANO (1.160.0 — dnevni pregled)
+- **SHEMA DNEVA** (GoDayLine + `go-view.line`): cel dan po vrstnem redu načrta
+  z živimi stanji (✓ opravljeno / preskočeno / trenutni cilj + razdalja /
+  prišel si) — projekcija istih podatkov, deluje OFFLINE (odgovor na
+  Wanderlogovo glavno prednost, brez paywalla in brez tile-ov)
+- **ZEMLJEVID DNEVA** (`buildDayMapUrl`): cel dan kot POT z vmesnimi točkami
+  (uradni Maps URL API; GPS izhodišče, fail-closed po postanku, strop 10,
+  0 besedila v URL — injekcijsko varno)
+- **»NASLEDNJE PO TEM«** (`go-view.nextAfter`): postanek po trenutnem na hero
+  kartici (§10/§12 — uporabnik se NE vrača v planer)
+- popravljeni tipovni napaki fixture-a iz 1.159.0 (issue21-go-travel.test)
+- konkurenčna analiza: `docs/COMPETITIVE-ANALYSIS-TRIP-NAVIGATOR.md`
+
+### PREVERJENO (1.160.0)
+- 22 novih testov (task102-day-line: URL fail-closed semantika, strop 10,
+  injekcijska varnost, vrstni red/stanja sheme, stabilen arrival, nextAfter)
+- tsc 0 napak; lint 0; celotna regresija 4566 pass (bazna 4544 + 22)
+
+### PREVERJENO (1.159.0)
 - 81 novih testov (vedenjski + source-contract); regresija obstoječih paketov
   (task64/w7/wave4/task73/t5d/wave2/calm) 152/152 zelenih
 

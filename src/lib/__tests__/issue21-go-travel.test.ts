@@ -226,7 +226,16 @@ function mkLoc(id: string, name = id): LocationVisit {
 
 function mkItin(locations: LocationVisit[]): Itinerary {
   return {
-    days: [{ day: 1, locations }],
+    days: [
+      // DayPlan.weather je obvezen v tipu (a Go Mode ga ne bere) — pošten
+      // sezonsko mesto; weatherEstimated: true (NE trdimo realne napovedi).
+      {
+        day: 1,
+        locations,
+        weather: { condition: "nic", temp: 0 },
+        weatherEstimated: true,
+      },
+    ],
     total_budget: 0,
     recommendations: [],
     tips: [],
@@ -257,7 +266,12 @@ describe("ISSUE #21: buildItineraryGoView — stabilni ključi", () => {
 
   test("③ ista destinacija v RAZLIČNIH dneh = različna ključa (dan je obseg)", () => {
     const itin = mkItin([mkLoc("bled")]);
-    itin.days.push({ day: 2, locations: [mkLoc("bled")] });
+    itin.days.push({
+      day: 2,
+      locations: [mkLoc("bled")],
+      weather: { condition: "nic", temp: 0 },
+      weatherEstimated: true,
+    });
     const v = buildItineraryGoView(itin, { lang: "sl" });
     expect(v.days[0].entries[0].key).toBe("itin-d1-bled");
     expect(v.days[1].entries[0].key).toBe("itin-d2-bled");
