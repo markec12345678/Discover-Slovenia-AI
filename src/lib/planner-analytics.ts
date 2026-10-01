@@ -230,6 +230,16 @@ export type PlannerEventName =
   // TASK 4 / K-7: AI itinerer zagnan v Go Mode (props: via, days,
   // persisted) — most PLAN → GO, ki ga revizija ni imela
   | "go_mode_started"
+  // ISSUE #23 (1.163.0): vodena plast (props: state, surface; action pri
+  // kliku) — brez PII, brez imen postankov (samo ključi stanj)
+  | "guidance_shown"
+  | "guidance_action_clicked"
+  | "guidance_dismissed"
+  | "guidance_completed"
+  | "first_run_started"
+  | "first_run_completed"
+  | "intent_selected"
+  | "next_step_completed"
   // TASK 77: uporabnik je kliknil Prekliči med generiranjem (props: elapsed
   // v s) — NAMERNA izbira, ne napaka; meri, kako pogosto so čakalne dobe
   // nedopustne in ali gumb rešuje ujetost v skeletu

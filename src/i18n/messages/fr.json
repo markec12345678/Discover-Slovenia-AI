@@ -661,7 +661,7 @@
     "generatedToastDescAI": "Le planificateur a élaboré votre plan de voyage parfait.",
     "generatedToastDescSample": "Un exemple d'itinéraire prêt à l'emploi est affiché.",
     "savedToast": "Plan enregistré !",
-    "savedToastDesc": "Vous pouvez copier le lien de partage ci-dessous.",
+    "savedToastDesc": "Tu le retrouveras dans Mes voyages. Prochaine étape : réserve les prestataires ou lance En route. Tu peux copier le lien de partage ci-dessous.",
     "savedUpdatedToast": "Voyage mis à jour (v{version})",
     "savedUpdatedToastDesc": "Même lien partagé, contenu frais — la version précédente est conservée dans l'historique.",
     "planUpdatedBannerTitle": "Le voyage lié a été mis à jour ailleurs",
@@ -2025,7 +2025,14 @@
       "par": "couple",
       "druzina": "famille",
       "prijatelji": "amis"
-    }
+    },
+    "continueTitle": "On continue ton voyage ?",
+    "continueTrip": "Ton voyage est actif",
+    "continueTripDesc": "Reprends là où tu t'es arrêté.",
+    "continueTripCount": "Ta collection compte {count, plural, one {# étape} other {# étapes}}.",
+    "nextStop": "Prochaine étape : {next}.",
+    "ctaGo": "Continuer en route",
+    "ctaPlan": "Planifier un voyage"
   },
   "adriaGuidePage": {
     "meta": {
@@ -2441,5 +2448,68 @@
     "title": "Traduction automatique",
     "body": "Cette page est tradite automatiquement (IA) à partir de l'original slovène et attend une révision humaine. Les versions slovène et anglaise sont les références.",
     "dismiss": "Compris"
+  },
+  "guidance": {
+    "chain": {
+      "label": "Progression du voyage",
+      "discover": "Découvrir",
+      "plan": "Planifier",
+      "book": "Réserver",
+      "go": "En route",
+      "finish": "Terminer"
+    },
+    "msg": {
+      "newUser": "Bienvenue ! Découvre la Slovénie, rassemble des étapes et crée ton voyage.",
+      "discovering": "Bon retour ! Qu'est-ce qui t'intéresse aujourd'hui ?",
+      "building": "Ta collection compte {count, plural, one {# étape} other {# étapes}} — la prochaine étape est un plan.",
+      "ready": "Le plan est enregistré — réserve les prestataires ou commence ton voyage.",
+      "bookingPending": "Certains prestataires sélectionnés ne sont pas encore réservés.",
+      "started": "Ton voyage est actif — prochaine étape : {next}.",
+      "startedNextDay": "Les étapes d'aujourd'hui sont terminées — {count, plural, one {# étape} other {# étapes}} t'attendent plus tard.",
+      "navigating": "Tu approches de la destination — il est temps de naviguer.",
+      "arrived": "Tu es arrivé — termine l'étape et continue.",
+      "freeTime": "Tu as environ {minutes} minutes de temps libre.",
+      "needsAttention": "Ton prochain rendez-vous est menacé — consulte l'étape la plus sûre.",
+      "blocked": "Le plan est bloqué — vois ce qui reste possible.",
+      "recovery": "Récupération en cours — choisis comment continuer.",
+      "completed": "Voyage terminé — {done} terminées, {skipped} ignorées.",
+      "unknown": "L'état ne peut pas être lu pour le moment — ton voyage enregistré reste disponible."
+    },
+    "actions": {
+      "discover": "Découvrir des destinations",
+      "plan": "Planifier un voyage",
+      "openTrips": "Mes voyages",
+      "book": "Réserver",
+      "startTrip": "Commencer le voyage",
+      "goMode": "Continuer en route",
+      "navigate": "Naviguer",
+      "completeStop": "Terminer l'étape",
+      "freeTime": "Utiliser le temps libre",
+      "recovery": "Voir les options",
+      "newTrip": "Planifier un nouveau voyage",
+      "askDiscover": "Demander à Discover"
+    },
+    "welcome": {
+      "title": "Bienvenue sur Discover Slovenia",
+      "lead": "Nous t'aidons à découvrir la Slovénie, à composer ton voyage, à trouver des offres et à t'accompagner pendant ton voyage.",
+      "question": "Que veux-tu faire ?",
+      "intentPlan": "Je planifie un voyage",
+      "intentDiscover": "Montre-moi la Slovénie",
+      "intentFind": "Trouve-moi quelque chose",
+      "intentHelp": "J'ai besoin d'aide",
+      "intentDontKnow": "Je ne sais pas — montre-moi",
+      "dismiss": "Pas maintenant",
+      "helpQuestion": "Comment Discover peut-il m'aider à planifier un voyage en Slovénie ?"
+    },
+    "tour": {
+      "badge": "Parcours guidé",
+      "hint": "Discover te guide à travers les étapes — suis le bouton principal.",
+      "completed": "Parcours guidé terminé — bravo !",
+      "end": "Terminer le parcours guidé"
+    },
+    "a11y": {
+      "dismiss": "Fermer la carte d'accompagnement",
+      "stepOf": "Étape {index} sur {total}"
+    }
   }
 }

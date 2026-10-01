@@ -15,6 +15,8 @@ import { Footer } from "@/components/sections/footer";
 import { BetaBanner } from "@/components/beta-banner";
 import { Chatbot } from "@/components/chatbot";
 import { WelcomeBackWrapper } from "@/components/welcome-back-wrapper";
+import { GuidanceFirstRunCard } from "@/components/guidance/first-run-card";
+import { GuidanceStrip } from "@/components/guidance/guidance-strip";
 import { DemoScenariosWrapper } from "@/components/demo-scenarios-wrapper";
 import { PreGeneratedItinerariesWrapper } from "@/components/pre-generated-itineraries-wrapper";
 import { NewsletterSection } from "@/components/newsletter-section";
@@ -186,12 +188,25 @@ export default async function Home() {
         {/* 2. Nadaljuj svojo pot — kontinuacija na VRHU (D8-B §7):
             vračajoči uporabnik vidi nadaljevanje takoj pod herojem,
             demo scenariji (za pilotske predstavitve) pa so premaknjeni
-            niže — ne tekmujejo z osebnim nadaljevanjem. */}
+            niže — ne tekmujejo z osebnim nadaljevanjem.
+            ISSUE #23 (1.163.0): PRVI obisk tu dobi FIRST-RUN kartico
+            (dobrodošlica + nameni + „Ne vem — pokaži mi") — nikoli
+            hkrati z welcome banerjem (prvi ≠ vračajoči, §33). */}
         <WelcomeBackWrapper />
+        <GuidanceFirstRunCard />
 
         {/* 3. Vstopna vrstica — Narava · Hrana · Mesta · Doživetja ·
             Dogodki (vizualni žetoni → obstoječe strani odkrivanja) */}
         <HomeEntryRow />
+
+        {/* ISSUE #23 (1.163.0) — VODENI TRAK: stanje-veden „naslednji
+            korak" (ODKRIJ → NAČRTUJ → REZERVIRAJ → NA POTI → ZAKLJUČI)
+            iz determinističnega jedra. NEW_USER je nameno skrit — ta
+            stanje pokriva first-run kartica nad njim. Obstoječi CTA-ji
+            ostajajo (zero feature loss). */}
+        <div className="mx-auto w-full max-w-6xl px-4 pt-6">
+          <GuidanceStrip surface="home" hideStates={["NEW_USER"]} />
+        </div>
 
         {/* 4. Priljubljene destinacije — samo 6 kartic (featured), ostalih
             16 na /destinacije (progresivno razkrivanje, ne vizualni overload) */}

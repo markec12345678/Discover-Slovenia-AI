@@ -16,6 +16,13 @@
       "par": "couple",
       "druzina": "family",
       "prijatelji": "friends"
-    }
+    },
+    "continueTitle": "Shall we continue your trip?",
+    "continueTrip": "Your trip is active",
+    "continueTripDesc": "Continue where you left off.",
+    "continueTripCount": "Your collection has {count, plural, one {# stop} other {# stops}}.",
+    "nextStop": "Next stop: {next}.",
+    "ctaGo": "Continue on the road",
+    "ctaPlan": "Plan a trip"
   }
 }

@@ -661,7 +661,7 @@
     "generatedToastDescAI": "El planificador ha preparado tu plan de viaje perfecto.",
     "generatedToastDescSample": "Se muestra un itinerario de ejemplo preparado.",
     "savedToast": "¡Plan guardado!",
-    "savedToastDesc": "Puedes copiar el enlace de abajo para compartirlo.",
+    "savedToastDesc": "Lo encontrarás en Mis viajes. Siguiente paso: reserva proveedores o inicia En camino. Puedes copiar el enlace de abajo para compartirlo.",
     "savedUpdatedToast": "Viaje actualizado (v{version})",
     "savedUpdatedToastDesc": "Mismo enlace compartido, contenido fresco — la versión anterior se ha guardado en el historial.",
     "planUpdatedBannerTitle": "El viaje vinculado se ha actualizado en otro lugar",
@@ -2025,7 +2025,14 @@
       "par": "pareja",
       "druzina": "familia",
       "prijatelji": "amigos"
-    }
+    },
+    "continueTitle": "¿Continuamos tu viaje?",
+    "continueTrip": "Tu viaje está activo",
+    "continueTripDesc": "Continúa donde lo dejaste.",
+    "continueTripCount": "Tu colección tiene {count, plural, one {# parada} other {# paradas}}.",
+    "nextStop": "Próxima parada: {next}.",
+    "ctaGo": "Continuar en camino",
+    "ctaPlan": "Planificar un viaje"
   },
   "adriaGuidePage": {
     "meta": {
@@ -2441,5 +2448,68 @@
     "title": "Traducción automática",
     "body": "Esta página está traducida automáticamente (IA) del original esloveno y espera una revisión humana. Las versiones eslovena e inglesa son las canónicas.",
     "dismiss": "Entendido"
+  },
+  "guidance": {
+    "chain": {
+      "label": "Progreso del viaje",
+      "discover": "Descubre",
+      "plan": "Planifica",
+      "book": "Reserva",
+      "go": "En camino",
+      "finish": "Concluye"
+    },
+    "msg": {
+      "newUser": "¡Bienvenido! Descubre Eslovenia, recopila paradas y crea tu viaje.",
+      "discovering": "¡Bienvenido de nuevo! ¿Qué te interesa hoy?",
+      "building": "Tu colección tiene {count, plural, one {# parada} other {# paradas}} — el siguiente paso es un plan.",
+      "ready": "El plan está guardado — reserva proveedores o empieza tu viaje.",
+      "bookingPending": "Algunos proveedores seleccionados aún no están reservados.",
+      "started": "Tu viaje está activo — próxima parada: {next}.",
+      "startedNextDay": "Las paradas de hoy están completadas — más adelante te esperan {count, plural, one {# parada} other {# paradas}}.",
+      "navigating": "Te acercas al destino — es hora de navegar.",
+      "arrived": "Has llegado — completa la parada y continúa.",
+      "freeTime": "Tienes unos {minutes} minutos de tiempo libre.",
+      "needsAttention": "Tu próxima cita está en riesgo — consulta el paso más seguro.",
+      "blocked": "El plan está bloqueado — mira qué sigue siendo posible.",
+      "recovery": "Recuperación en curso — elige cómo continuar.",
+      "completed": "Viaje terminado — {done} completadas, {skipped} omitidas.",
+      "unknown": "El estado no se puede leer en este momento — tu viaje guardado sigue disponible."
+    },
+    "actions": {
+      "discover": "Descubrir destinos",
+      "plan": "Planificar un viaje",
+      "openTrips": "Mis viajes",
+      "book": "Reservar",
+      "startTrip": "Empezar el viaje",
+      "goMode": "Continuar en camino",
+      "navigate": "Navegar",
+      "completeStop": "Completar parada",
+      "freeTime": "Aprovechar el tiempo libre",
+      "recovery": "Ver opciones",
+      "newTrip": "Planificar un nuevo viaje",
+      "askDiscover": "Preguntar a Discover"
+    },
+    "welcome": {
+      "title": "Bienvenido a Discover Slovenia",
+      "lead": "Te ayudamos a descubrir Eslovenia, a montar tu viaje, a encontrar ofertas y a acompañarte durante el viaje.",
+      "question": "¿Qué te gustaría hacer?",
+      "intentPlan": "Estoy planificando un viaje",
+      "intentDiscover": "Muéstrame Eslovenia",
+      "intentFind": "Encuéntrame algo",
+      "intentHelp": "Necesito ayuda",
+      "intentDontKnow": "No sé — muéstrame",
+      "dismiss": "Ahora no",
+      "helpQuestion": "¿Cómo puede Discover ayudarme a planificar un viaje por Eslovenia?"
+    },
+    "tour": {
+      "badge": "Ruta guiada",
+      "hint": "Discover te guía por los pasos — sigue el botón principal.",
+      "completed": "¡Ruta guiada completada — buen trabajo!",
+      "end": "Terminar la ruta guiada"
+    },
+    "a11y": {
+      "dismiss": "Cerrar la tarjeta de guía",
+      "stepOf": "Paso {index} de {total}"
+    }
   }
 }

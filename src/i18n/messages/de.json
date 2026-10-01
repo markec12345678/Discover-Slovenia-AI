@@ -661,7 +661,7 @@
     "generatedToastDescAI": "Der Planer hat Ihren perfekten Reiseplan erstellt.",
     "generatedToastDescSample": "Ein fertiger Beispiel-Itinerar wird angezeigt.",
     "savedToast": "Plan gespeichert!",
-    "savedToastDesc": "Den Link zum Teilen kannst du unten kopieren.",
+    "savedToastDesc": "Du findest ihn unter Meine Reisen. Nächster Schritt: Anbieter buchen oder Unterwegs starten. Den Link zum Teilen kannst du unten kopieren.",
     "savedUpdatedToast": "Reise aktualisiert (v{version})",
     "savedUpdatedToastDesc": "Gleicher geteilter Link, frischer Inhalt — die vorherige Version wird im Verlauf gespeichert.",
     "planUpdatedBannerTitle": "Der verknüpfte Trip wurde woanders aktualisiert",
@@ -2025,7 +2025,14 @@
       "par": "Paar",
       "druzina": "Familie",
       "prijatelji": "Freunde"
-    }
+    },
+    "continueTitle": "Setzen wir deine Reise fort?",
+    "continueTrip": "Deine Reise ist aktiv",
+    "continueTripDesc": "Mach dort weiter, wo du aufgehört hast.",
+    "continueTripCount": "Deine Sammlung hat {count, plural, one {# Stopp} other {# Stopps}}.",
+    "nextStop": "Nächster Stopp: {next}.",
+    "ctaGo": "Unterwegs fortfahren",
+    "ctaPlan": "Reise planen"
   },
   "adriaGuidePage": {
     "meta": {
@@ -2441,5 +2448,68 @@
     "title": "Maschinelle Übersetzung",
     "body": "Diese Seite wurde maschinell (KI) aus dem slowenischen Original übersetzt und wartet auf die menschliche Überprüfung. Maßgeblich sind die slowenische und die englische Version.",
     "dismiss": "Verstanden"
+  },
+  "guidance": {
+    "chain": {
+      "label": "Reise-Fortschritt",
+      "discover": "Entdecken",
+      "plan": "Planen",
+      "book": "Buchen",
+      "go": "Unterwegs",
+      "finish": "Abschließen"
+    },
+    "msg": {
+      "newUser": "Willkommen! Entdecke Slowenien, sammle Stopps und stelle deine Reise zusammen.",
+      "discovering": "Willkommen zurück! Was interessiert dich heute?",
+      "building": "Deine Sammlung hat {count, plural, one {# Stopp} other {# Stopps}} — der nächste Schritt ist ein Plan.",
+      "ready": "Der Plan ist gespeichert — buche Anbieter oder starte deine Reise.",
+      "bookingPending": "Einige ausgewählte Anbieter sind noch nicht gebucht.",
+      "started": "Deine Reise ist aktiv — nächster Stopp: {next}.",
+      "startedNextDay": "Die heutigen Stopps sind erledigt — später erwarten dich {count, plural, one {# Stopp} other {# Stopps}}.",
+      "navigating": "Du näherst dich dem Ziel — Zeit zu navigieren.",
+      "arrived": "Du bist angekommen — Stopp abschließen und weitergehen.",
+      "freeTime": "Du hast etwa {minutes} Minuten Freizeit.",
+      "needsAttention": "Dein nächster Termin ist gefährdet — sieh dir den sichersten Schritt an.",
+      "blocked": "Der Plan ist blockiert — sieh, was noch möglich ist.",
+      "recovery": "Wiederherstellung läuft — wähle, wie du fortfährst.",
+      "completed": "Reise abgeschlossen — {done} erledigt, {skipped} übersprungen.",
+      "unknown": "Der Status kann derzeit nicht gelesen werden — deine gespeicherte Reise bleibt verfügbar."
+    },
+    "actions": {
+      "discover": "Reiseziele entdecken",
+      "plan": "Reise planen",
+      "openTrips": "Meine Reisen",
+      "book": "Buchen",
+      "startTrip": "Reise starten",
+      "goMode": "Unterwegs fortfahren",
+      "navigate": "Navigieren",
+      "completeStop": "Stopp abschließen",
+      "freeTime": "Freizeit nutzen",
+      "recovery": "Optionen ansehen",
+      "newTrip": "Neue Reise planen",
+      "askDiscover": "Discover fragen"
+    },
+    "welcome": {
+      "title": "Willkommen bei Discover Slovenia",
+      "lead": "Wir helfen dir, Slowenien zu entdecken, deine Reise zusammenzustellen, Angebote zu finden und dich auf der Reise zu begleiten.",
+      "question": "Was möchtest du tun?",
+      "intentPlan": "Ich plane eine Reise",
+      "intentDiscover": "Zeig mir Slowenien",
+      "intentFind": "Finde etwas für mich",
+      "intentHelp": "Ich brauche Hilfe",
+      "intentDontKnow": "Ich weiß es nicht — zeig es mir",
+      "dismiss": "Jetzt nicht",
+      "helpQuestion": "Wie kann Discover mir helfen, eine Reise durch Slowenien zu planen?"
+    },
+    "tour": {
+      "badge": "Geführter Weg",
+      "hint": "Discover führt dich durch die Schritte — folge der Haupt-Schaltfläche.",
+      "completed": "Geführter Weg abgeschlossen — großartig!",
+      "end": "Geführten Weg beenden"
+    },
+    "a11y": {
+      "dismiss": "Guidance-Karte schließen",
+      "stepOf": "Schritt {index} von {total}"
+    }
   }
 }

@@ -37,7 +37,7 @@ import { EmptyState } from "@/components/states/empty-state";
 import { useToast } from "@/hooks/use-toast";
 // ISSUE #22 §30.C (1.162.0): »Nadaljuj na poti« — Moja potovanja → Go Mode
 // člen (zmanjšana vrzel: uporabnik ni moral vedeti za /pot → Zaženi Na poti).
-import { saveItineraryGoTrip } from "@/lib/journey/go-persist";
+import { saveItineraryGoTrip, loadGoTrip } from "@/lib/journey/go-persist";
 import { buildItineraryGoView } from "@/lib/journey/itinerary-go";
 // FW2-C: lokalna zgodovina naročil/rezervacij (localStorage številke + javni
 // lookup API-ji) — neodvisna od /api/user/trips, zato render tudi med nalaganjem.
@@ -118,6 +118,9 @@ const L = {
   title: { sl: "Moja potovanja", en: "My trips" },
   open: { sl: "Odpri", en: "Open" },
   resume: { sl: "Nadaljuj na poti", en: "Continue on the road" },
+  // ISSUE #23 (1.163.0) §19: kontekst "kje sem bil" — kartica, ki je
+  // TRENUTNO aktivna v Go Mode, je vidno označena (iskrena vezava).
+  onTrip: { sl: "NA POTI", en: "ON THE ROAD" },
   resumeBusy: { sl: "Nadaljujem …", en: "Continuing …" },
   resumeError: {
     sl: "Te poti ni bilo mogoče naložiti — odpiram njeno stran.",
@@ -259,6 +262,22 @@ export function MojaPotovanjaView() {
   // TASK 4 / K-6: gostova LOKALNA potovanja (hidrirajo se TEKOM mounta —
   // localStorage je klient-only, da ni hydration mismatcha).
   const [localTrips, setLocalTrips] = useState<TrackedTrip[] | null>(null);
+  // ISSUE #23 (1.163.0): shareId POTI, ki je trenutno AKTIVNA v Go Mode
+  // (dai:go-trip v2) — za iskreno oznako „NA POTI" na kartici. Klient-only
+  // branje v efektu (hidration-safe).
+  const [activeGoShareId, setActiveGoShareId] = useState<string | null>(null);
+  useEffect(() => {
+    // queueMicrotask: setState NI sinhrono v telesu efekta (vzorec
+    // use-wake-lock.ts — react-hooks/set-state-in-effect disciplina).
+    queueMicrotask(() => {
+      try {
+        const rec = loadGoTrip();
+        if (rec?.version === 2 && rec.shareId) setActiveGoShareId(rec.shareId);
+      } catch {
+        // obrambni vzorec — pokvarjen zapis se ignorira
+      }
+    });
+  }, []);
 
   const isUserSession =
     status === "authenticated" && session?.user?.accountType === "user";
@@ -478,6 +497,11 @@ export function MojaPotovanjaView() {
                             L.trips.fallbackName[lang](
                               formatDate(trip.savedAt, lang)
                             )}
+                          {activeGoShareId === trip.shareId && (
+                            <span className="ml-2 inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 align-middle text-[10px] font-semibold tracking-wide text-emerald-700 dark:text-emerald-400">
+                              {L.onTrip[lang]}
+                            </span>
+                          )}
                         </CardTitle>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span className="inline-flex items-center gap-1">
@@ -642,6 +666,11 @@ export function MojaPotovanjaView() {
                               L.trips.fallbackName[lang](
                                 formatDate(trip.createdAt, lang)
                               )}
+                            {activeGoShareId === trip.shareId && (
+                              <span className="ml-2 inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 align-middle text-[10px] font-semibold tracking-wide text-emerald-700 dark:text-emerald-400">
+                                {L.onTrip[lang]}
+                              </span>
+                            )}
                           </CardTitle>
                           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                             <span className="inline-flex items-center gap-1">

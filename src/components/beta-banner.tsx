@@ -17,18 +17,43 @@ interface BetaStatus {
  * BetaBanner — prikazuje pasico na vrhu strani med beta obdobjem.
  * Poudarja da so vsi paketi brezplačni dokler se platforma polni.
  * Client-side fetch iz /api/beta-status
+ *
+ * ISSUE #23 (1.163.0) §33: zavrnitev je zdaj TRAJNA (localStorage) —
+ * sporočilo za ponudnike, ki se je poprej vračalo ob VSAKEM nalaganju
+ * (vsa 3 dno-mesta mobilnega pogleda: tab vrstica + chat FAB + pasica),
+ * je za popotnika čist šum.
  */
+const BETA_DISMISSED_KEY = "dsa-beta-dismissed";
+
 export function BetaBanner() {
   const t = useTranslations("betaBanner");
   const [status, setStatus] = useState<BetaStatus | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
+    // queueMicrotask: setState NI sinhrono v telesu efekta (vzorec
+    // use-wake-lock.ts — react-hooks/set-state-in-effect disciplina).
+    queueMicrotask(() => {
+      try {
+        setDismissed(window.localStorage.getItem(BETA_DISMISSED_KEY) === "1");
+      } catch {
+        // zasebni način — velja samo za to sejo
+      }
+    });
     fetch("/api/beta-status")
       .then((r) => r.json())
       .then(setStatus)
       .catch(() => {});
   }, []);
+
+  const dismiss = () => {
+    setDismissed(true);
+    try {
+      window.localStorage.setItem(BETA_DISMISSED_KEY, "1");
+    } catch {
+      // zasebni način — velja samo za to sejo
+    }
+  };
 
   if (!status || !status.isActive || dismissed) return null;
 
@@ -59,7 +84,7 @@ export function BetaBanner() {
           </Button>
           <button
             type="button"
-            onClick={() => setDismissed(true)}
+            onClick={dismiss}
             className="-m-1 rounded-md p-2 transition-colors hover:bg-primary-foreground/20 active:bg-primary-foreground/30"
             aria-label={t("dismiss")}
           >

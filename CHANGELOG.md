@@ -7,6 +7,67 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.163.0] — 2026-10-01 (#23 GUIDED PLATFORM EXPERIENCE)
+
+### Dodano — vodena plast: Discover vodi uporabnika skozi lastno platformo
+
+- **Deterministično jedro** `src/lib/guidance/` (types + guide-engine +
+  guidance-snapshot): `selectGuidance(input) → Guidance` — čista funkcija
+  (isti vhodi → isti izhod, ura parameter, 0 I/O), vzorec trip-health (#22).
+  14 stanj + UNKNOWN, prioritete §32 (BLOCKED > NEEDS_ATTENTION > ARRIVED >
+  NAVIGATING > RECOVERY > FREE_TIME > COMPLETED > TRIP_STARTED > TRIP_READY
+  > BOOKING_PENDING > TRIP_BUILDING > DISCOVERING > NEW_USER), veriga
+  ODKRIJ → NAČRTUJ → REZERVIRAJ → NA POTI → ZAKLJUČI. 0 novih virov
+  resnice — bere SAMO kanonične (my-trip, my-trips, go-persist, buildGoView);
+  GPS pozicija NI vhod traku (zasebnost §16/§30).
+- **First-run kartica** (domov, prvi obisk): dobrodošlica + 5 nameri
+  (Načrtujem pot / Odkrij mi Slovenijo / Najdi mi nekaj / Želim pomoč /
+  **Ne vem — pokaži mi**) — „Ne vem" vklopi VODENO POT (dai:guided-tour),
+  ki traku sledi do zagona poti (first_run_completed). Trajno
+  dsa_first_run_seen; vračajoči uporabnik dobi stanje-veden welcome baner
+  (nikoli oba — §33).
+- **Vodeni trak** (domov) + **chain indikator** (hub): ena razlaga + ena
+  primarna akcija na trenutek; zavrnitev session-scoped (naslednja seja se
+  ponudi znova); kritična stanja niso dismissible (§40.20).
+- **Terminalno stanje COMPLETED** (Go Mode): zadnji postanek zadnjega dne
+  → POT ZAKLJUČENA povzetek (dnevi + opravljeni/preskočeni celega potovanja)
+  + Odpri shranjeno pot / Moja potovanja / Načrtuj novo. Poprej golo
+  „ni več postankov" (največja vrzel verige iz revizije Faze A). Dan z
+  nadaljnjimi dnevi ostane pri iskrenem noEntryLeft.
+- **Naslednji korak po vsakem dejanju** (§13): add-to-trip toast dobi
+  „Načrtuj potovanje" (6 jezikov; „Odpri pot" ostane prvi); planner po
+  SHRANI toast ponudi „Zaženi Na poti" + opis omenja Moja potovanja in
+  rezervacije; kartice /moja-potovanja dobijo iskreno oznako NA POTI za
+  aktivno pot.
+- **Analitika (§35):** 8 dogodkov (guidance_shown/action_clicked/dismissed/
+  completed, first_run_started/completed, intent_selected,
+  next_step_completed) — 3-datotečna zaklenjenost, props SAMO ključi
+  (state/surface/action/intent), 0 PII.
+- **i18n:** ns `guidance` (~47 ključev) + welcomeBack razširitev (7) — vsi
+  v 6 jezikih (pariteta testno izsiljena); Go Mode COMPLETED v {sl, en}
+  L-canonu (obstoječa iskrena meja /na-poti).
+- **Dokumentacija:** docs/GUIDANCE-ARCHITECTURE.md (vklj. CURRENT → NEW
+  matriko), docs/GUIDANCE-STATE-MATRIX.md, docs/GUIDANCE-EVIDENCE.md
+  (G1–G10 zlata pot + lokalni/produkcijski dokazi).
+
+### Popravljeno (iz revizije Faze A — higiiena brez spremembe obnašanja)
+
+- **#kviz mrtvo sidro:** welcome banner je vodil na `#kviz` (na domov ne
+  obstaja) → legacy preusmeritev je METILA sidro. Sedaj `/nacrtuj#kviz`.
+- **visitCount dvojna semantika:** dodajanje destinacije in zaključek
+  onboardinga sta napihovala števec obiskov (banner „dobrodošel nazaj" brez
+  vračanja). Sedaj seje šteje SAMO WelcomeBackWrapper (1×/sejo).
+- **BetaBanner:** zavrnitev je trajna (localStorage) — sporočilo za
+  ponudnike se ni več vračalo ob vsakem nalaganju (manj šuma na dnu
+  mobilnega pogleda, §33).
+- **Mrtev TripProfileOnboarding odstranjen** (286 vrstic, nikoli montiran,
+  SL-only, 0 testov — nič izgubljene uporabniške funkcije).
+
+### Testi
+
+- +46 (issue23-guidance-core 21 + issue23-guidance-ux 25); regresija
+  4.710 pass (+21), 0 produktovih regresij; tsc 0, lint 0.
+
 ---
 ---
 

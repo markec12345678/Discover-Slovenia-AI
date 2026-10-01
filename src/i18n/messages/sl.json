@@ -661,7 +661,7 @@
     "generatedToastDescAI": "Načrtovalec je sestavil vaš popoln načrt potovanja.",
     "generatedToastDescSample": "Prikazan je pripravljen predlog itinererja.",
     "savedToast": "Načrt shranjen!",
-    "savedToastDesc": "Povezavo za deljenje lahko kopiraš spodaj.",
+    "savedToastDesc": "Našel ga boš v Moja potovanja. Naslednji korak: rezerviraj ponudnike ali Zaženi Na poti. Povezavo za deljenje lahko kopiraš spodaj.",
     "savedUpdatedToast": "Pot posodobljena (v{version})",
     "savedUpdatedToastDesc": "Ista deljena povezava, sveža vsebina — prejšnja različica je shranjena v zgodovini.",
     "planUpdatedBannerTitle": "Povezana pot je bila posodobljena drugje",
@@ -2025,7 +2025,14 @@
       "par": "par",
       "druzina": "družina",
       "prijatelji": "prijatelji"
-    }
+    },
+    "continueTitle": "Nadaljujeva tvojo pot?",
+    "continueTrip": "Tvoja pot je aktivna",
+    "continueTripDesc": "Nadaljuj, kjer si ostal.",
+    "continueTripCount": "Tvoja zbirka ima {count, plural, one {# postanek} two {# postanka} few {# postanki} other {# postankov}}.",
+    "nextStop": "Naslednji cilj: {next}.",
+    "ctaGo": "Nadaljuj na poti",
+    "ctaPlan": "Načrtuj potovanje"
   },
   "adriaGuidePage": {
     "meta": {
@@ -2441,5 +2448,68 @@
     "title": "Strojni prevod",
     "body": "Ta stran je prevedena strojno (AI) iz slovenskega izvirnika in čaka na človeško revizijo. Uveljavljena sta slovenski in angleški prevod.",
     "dismiss": "Razumem"
+  },
+  "guidance": {
+    "chain": {
+      "label": "Napredek poti",
+      "discover": "Odkrij",
+      "plan": "Načrtuj",
+      "book": "Rezerviraj",
+      "go": "Na poti",
+      "finish": "Zaključi"
+    },
+    "msg": {
+      "newUser": "Dobrodošel! Odkrij Slovenijo, zberi postanke in sestavi svojo pot.",
+      "discovering": "Dobrodošel nazaj! Kaj te danes zanima?",
+      "building": "Tvoja zbirka ima {count, plural, one {# postanek} two {# postanka} few {# postanki} other {# postankov}} — naslednji korak je načrt.",
+      "ready": "Načrt je shranjen — rezerviraj ponudnike ali začni pot.",
+      "bookingPending": "Nekateri izbrani ponudniki še niso rezervirani.",
+      "started": "Pot je aktivna — naslednji cilj: {next}.",
+      "startedNextDay": "Današnji postanki so opravljeni — kasneje te čaka {count, plural, one {# postanek} two {# postanka} few {# postanki} other {# postankov}}.",
+      "navigating": "Približuješ se cilju — čas za navigacijo.",
+      "arrived": "Prišel si — opravi postanek in nadaljuj.",
+      "freeTime": "Imaš približno {minutes} min prostega časa.",
+      "needsAttention": "Naslednji termin je časovno ogrožen — poglej najvarnejši korak.",
+      "blocked": "Načrt je blokiran — poglej, kaj je še mogoče.",
+      "recovery": "Obnova poteka — izberi, kako nadaljuješ.",
+      "completed": "Pot je zaključena — {done} opravljenih, {skipped} preskočenih.",
+      "unknown": "Stanja trenutno ni mogoče prebrati — tvoja shranjena pot ostaja na voljo."
+    },
+    "actions": {
+      "discover": "Odkrij destinacije",
+      "plan": "Načrtuj potovanje",
+      "openTrips": "Moja potovanja",
+      "book": "Rezerviraj",
+      "startTrip": "Začni pot",
+      "goMode": "Nadaljuj na poti",
+      "navigate": "Navigiraj",
+      "completeStop": "Opravi postanek",
+      "freeTime": "Izkoristi prost čas",
+      "recovery": "Poglej rešitve",
+      "newTrip": "Načrtuj novo pot",
+      "askDiscover": "Vprašaj Discover"
+    },
+    "welcome": {
+      "title": "Dobrodošel v Discover Slovenia",
+      "lead": "Pomagamo ti odkriti Slovenijo, sestaviti svojo pot, poiskati ponudbe in te spremljati med potovanjem.",
+      "question": "Kaj želiš narediti?",
+      "intentPlan": "Načrtujem pot",
+      "intentDiscover": "Odkrij mi Slovenijo",
+      "intentFind": "Najdi mi nekaj",
+      "intentHelp": "Želim pomoč",
+      "intentDontKnow": "Ne vem — pokaži mi",
+      "dismiss": "Ne zdaj",
+      "helpQuestion": "Kako mi lahko Discover pomaga načrtovati potovanje po Sloveniji?"
+    },
+    "tour": {
+      "badge": "Vodena pot",
+      "hint": "Discover te vodi skozi korake — sledi glavnemu gumbu.",
+      "completed": "Vodena pot je zaključena — odlično!",
+      "end": "Zaključi vodeno pot"
+    },
+    "a11y": {
+      "dismiss": "Zapri vodeno kartico",
+      "stepOf": "Korak {index} od {total}"
+    }
   }
 }

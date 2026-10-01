@@ -26,6 +26,7 @@ import { Link } from "@/i18n/navigation";
 import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
 import { useMyTrip } from "@/hooks/use-my-trip";
+import { GuidanceChainProgress } from "@/components/guidance/chain-progress";
 // TASK 8 / F3-D (issue #8, audit §4): most "Priljubljene" → načrt — ISTI
 // prefill dogodek kot trak načrtovalnika (identiteta destinacij T1) + javni
 // wishlist hook (isti vir resnice kot srček/list) + čista preslikava vnosa.
@@ -362,6 +363,14 @@ export function MyTripView({ className }: { className?: string }) {
           </button>
         </div>
         )}
+      </div>
+
+      {/* ISSUE #23 (1.163.0) — VERIŽNI NAPREDEK: poenoten pogled,
+          kje v zlati poti uporabnik je (ODKRIJ → NAČRTUJ → REZERVIRAJ →
+          NA POTI → ZAKLJUČI). Informacijsko (brez CTA — obstoječi gumbi
+          razdelka ostanejo primarni, §33). Iz determinističnega jedra. */}
+      <div className="mt-3">
+        <GuidanceChainProgress />
       </div>
 
       {/* ISSUE #16 faza 2 — korak POJDI: trak NA POTI, ko je pot v teku

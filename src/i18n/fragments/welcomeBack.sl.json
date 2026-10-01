@@ -16,6 +16,13 @@
       "par": "par",
       "druzina": "družina",
       "prijatelji": "prijatelji"
-    }
+    },
+    "continueTitle": "Nadaljujeva tvojo pot?",
+    "continueTrip": "Tvoja pot je aktivna",
+    "continueTripDesc": "Nadaljuj, kjer si ostal.",
+    "continueTripCount": "Tvoja zbirka ima {count, plural, one {# postanek} two {# postanka} few {# postanki} other {# postankov}}.",
+    "nextStop": "Naslednji cilj: {next}.",
+    "ctaGo": "Nadaljuj na poti",
+    "ctaPlan": "Načrtuj potovanje"
   }
 }

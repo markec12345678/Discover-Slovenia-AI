@@ -74,6 +74,7 @@ import {
   type GoEntryCard,
 } from "@/lib/journey/go-view";
 import { GoDayLine } from "@/components/sections/go-day-line";
+import { TripComplete } from "@/components/sections/go-mode/trip-complete";
 import { useGeolocation, type GeoStatus } from "@/lib/journey/use-geolocation";
 import { useWakeLock } from "@/lib/journey/use-wake-lock";
 import {
@@ -1564,6 +1565,33 @@ export function GoMode() {
             </div>
           </CardContent>
         </Card>
+      ) : view.remaining.length === 0 &&
+        view.laterDays.every((d) => d.count === 0) &&
+        view.done.length + view.skipped.length > 0 ? (
+        /* === ISSUE #23 (1.163.0) — TERMINALNO STANJE: zadnji postanek
+            zadnjega dne opravljen → povzetek POT ZAKLJUČENA + naslednji
+            koraki (deljenje/nova pot). Prej: golo „ni več postankov"
+            (revizija Faze A: največja vrzel verige). Dan z nadaljnjimi
+            dnevi OSTANE pri iskrenem noEntryLeft sporočilu. === */
+        <TripComplete
+          lang={lang}
+          days={trip?.days.length ?? 1}
+          doneTotal={
+            trip?.days.reduce(
+              (sum, d) => sum + d.entries.filter((e) => done[e.key]).length,
+              0,
+            ) ?? view.done.length
+          }
+          skippedTotal={
+            trip?.days.reduce(
+              (sum, d) => sum + d.entries.filter((e) => skipped[e.key]).length,
+              0,
+            ) ?? view.skipped.length
+          }
+          savedTripHref={
+            record?.version === 2 && record.shareId ? `/pot/${record.shareId}` : null
+          }
+        />
       ) : (
         <Card>
           <CardContent className="p-6 text-center text-sm text-muted-foreground">

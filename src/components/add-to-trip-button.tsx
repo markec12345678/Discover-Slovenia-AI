@@ -8,6 +8,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
 import { useMyTrip } from "@/hooks/use-my-trip";
 import { addMyTripItem, removeMyTripItem, type MyTripInput } from "@/lib/my-trip";
+import { trackPlannerEvent } from "@/lib/planner-analytics";
 import { cn } from "@/lib/utils";
 
 /**
@@ -39,6 +40,9 @@ const L = {
     toastRemoved: "Odstranjeno iz moje poti",
     undo: "Dodaj nazaj",
     openTrip: "Odpri pot",
+    // ISSUE #23 (1.163.0): naslednji korak po dodajanju (§13) — toast
+    // poveduje NE SAMO kam je padel predmet, ampak kaj je naslednje.
+    planTrip: "Načrtuj potovanje",
     capNotice: "Zbirka je polna — najstarejša ideja je zamenjana.",
     addAria: (title: string) => `Dodaj ${title} v mojo pot`,
     removeAria: (title: string) => `${title} je v tvoji poti — klikni za odstranitev`,
@@ -50,6 +54,7 @@ const L = {
     toastRemoved: "Removed from my trip",
     undo: "Add back",
     openTrip: "Open trip",
+    planTrip: "Plan a trip",
     capNotice: "Your trip collection is full — the oldest idea was replaced.",
     addAria: (title: string) => `Add ${title} to my trip`,
     removeAria: (title: string) => `${title} is in your trip — click to remove`,
@@ -61,6 +66,7 @@ const L = {
     toastRemoved: "Rimosso dal mio viaggio",
     undo: "Aggiungi di nuovo",
     openTrip: "Apri il viaggio",
+    planTrip: "Pianifica un viaggio",
     capNotice: "La raccolta è piena — l'idea più vecchia è stata sostituita.",
     addAria: (title: string) => `Aggiungi ${title} al mio viaggio`,
     removeAria: (title: string) => `${title} è nel tuo viaggio — clicca per rimuovere`,
@@ -72,6 +78,7 @@ const L = {
     toastRemoved: "Aus meiner Reise entfernt",
     undo: "Wieder hinzufügen",
     openTrip: "Reise öffnen",
+    planTrip: "Reise planen",
     capNotice: "Deine Sammlung ist voll — die älteste Idee wurde ersetzt.",
     addAria: (title: string) => `Füge ${title} zu meiner Reise hinzu`,
     removeAria: (title: string) => `${title} ist in deiner Reise — klicke zum Entfernen`,
@@ -85,6 +92,7 @@ const L = {
     toastRemoved: "Retiré de mon voyage",
     undo: "Remettre",
     openTrip: "Ouvrir le voyage",
+    planTrip: "Planifier un voyage",
     capNotice: "Votre collection est pleine — l'idée la plus ancienne a été remplacée.",
     addAria: (title: string) => `Ajouter ${title} à mon voyage`,
     removeAria: (title: string) => `${title} est dans votre voyage — cliquez pour retirer`,
@@ -96,6 +104,7 @@ const L = {
     toastRemoved: "Eliminado de mi viaje",
     undo: "Volver a añadir",
     openTrip: "Abrir el viaje",
+    planTrip: "Planificar un viaje",
     capNotice: "Tu colección está llena — la idea más antigua fue reemplazada.",
     addAria: (title: string) => `Añadir ${title} a mi viaje`,
     removeAria: (title: string) => `${title} está en tu viaje — haz clic para quitar`,
@@ -170,12 +179,30 @@ export function AddToTripButton({
           title: s.toastAdded,
           description: item.title,
           action: (
-            <ToastAction
-              altText={s.openTrip}
-              onClick={() => router.push("/moja-potovanja#moja-pot")}
-            >
-              {s.openTrip}
-            </ToastAction>
+            <>
+              {/* ISSUE #23: „Odpri pot" ostane prvi (zero feature loss);
+                  „Načrtuj" je novi NASLEDNJI KORAK (§13) — vedno veljaven,
+                  ker je zbirka pravkar dobila 1+ predmetov. */}
+              <ToastAction
+                altText={s.openTrip}
+                onClick={() => router.push("/moja-potovanja#moja-pot")}
+              >
+                {s.openTrip}
+              </ToastAction>
+              <ToastAction
+                altText={s.planTrip}
+                onClick={() => {
+                  trackPlannerEvent("guidance_action_clicked", {
+                    state: "TRIP_BUILDING",
+                    surface: "add_toast",
+                    action: "plan",
+                  });
+                  router.push("/nacrtuj");
+                }}
+              >
+                {s.planTrip}
+              </ToastAction>
+            </>
           ),
         });
         if (result.evictedTitle) {

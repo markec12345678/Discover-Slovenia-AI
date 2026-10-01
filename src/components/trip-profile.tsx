@@ -2,11 +2,11 @@
 
 import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { Sparkles, Heart, Mountain, UtensilsCrossed, Users, Clock, X } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { Link } from "@/i18n/navigation";
+import { useGuidance } from "@/hooks/use-guidance";
+import { trackPlannerEvent } from "@/lib/planner-analytics";
 
 // ============================================================================
 // AI MEMORY / TRIP PROFILE — osebni asistent ki si zapomni preference
@@ -92,11 +92,13 @@ export function useTripProfile() {
     setProfile(() => {
       const base = readStoredProfile();
       if (base.visitedDestinations.includes(destId)) return base;
+      // ISSUE #23 (1.163.0): POPRAVEK dvojne semantike — visitCount šteje
+      // SEJE (edini lastnik: WelcomeBackWrapper, 1×/sejo). Dodajanje
+      // destinacije NI nov obisk (prej je napihnilo števec → banner
+      // „dobrodošel nazaj" brez vračanja uporabnika).
       const updated = {
         ...base,
         visitedDestinations: [...base.visitedDestinations, destId],
-        visitCount: base.visitCount + 1,
-        lastVisit: new Date().toISOString(),
       };
       persistProfile(updated);
       return updated;
@@ -106,12 +108,11 @@ export function useTripProfile() {
   const completeOnboarding = useCallback((data: Partial<TripProfile>) => {
     setProfile(() => {
       const base = readStoredProfile();
+      // ISSUE #23: tudi tu NE štejemo obiska (seje šteje wrapper).
       const updated = {
         ...base,
         ...data,
         onboardingCompleted: true,
-        visitCount: base.visitCount + 1,
-        lastVisit: new Date().toISOString(),
       };
       persistProfile(updated);
       return updated;
@@ -136,292 +137,6 @@ export function useTripProfile() {
   };
 }
 
-// ============================================================================
-// ONBOARDING MODAL — prvi obisk, zbiranje preferenc
-// ============================================================================
-
-const INTEREST_OPTIONS = [
-  { id: "narava", label: "Narava", icon: Mountain },
-  // TAG-ALIGN (P1, recenzija Faze 4): "kulinarika" → kanonični "hrana"
-  // (ujema se z bestFor destinacij in vrednostjo žetona v plannerju).
-  // Stari shranjeni profili z "kulinarika" se pri prikazu preslikajo
-  // (glej interestLabels spodaj).
-  { id: "hrana", label: "Lokalna hrana", icon: UtensilsCrossed },
-  { id: "avantura", label: "Avantura", icon: Sparkles },
-  { id: "kultura", label: "Kultura", icon: Heart },
-];
-
-const GROUP_OPTIONS = [
-  { id: "solo", label: "Sam/a" },
-  { id: "par", label: "Par" },
-  { id: "druzina", label: "Družina" },
-  { id: "prijatelji", label: "Prijatelji" },
-];
-
-const BUDGET_OPTIONS = [
-  { id: "low", label: "Budžetno (<€50/dan)" },
-  { id: "mid", label: "Udobje (€50-150/dan)" },
-  { id: "lux", label: "Luksuz (€150+/dan)" },
-];
-
-// Travel style matching (Layla.ai inspiracija)
-const TRAVEL_STYLES = [
-  { id: "foodie", label: "Foodie", emoji: "🍷", desc: "Lokalna hrana in vino" },
-  { id: "adventurer", label: "Adventurer", emoji: "🧗", desc: "Aktivnosti in adrenalin" },
-  { id: "nature", label: "Nature Lover", emoji: "🌿", desc: "Mir in narava" },
-  { id: "culture", label: "Culture Seeker", emoji: "🏛️", desc: "Zgodovina in kultura" },
-  { id: "budget", label: "Budget Traveler", emoji: "💸", desc: "Ceneje in pametneje" },
-  { id: "luxury", label: "Luxury", emoji: "👑", desc: "Vrhunsko in ekskluzivno" },
-];
-
-interface OnboardingModalProps {
-  open: boolean;
-  onComplete: (profile: Partial<TripProfile>) => void;
-  onClose: () => void;
-}
-
-export function TripProfileOnboarding({ open, onComplete, onClose }: OnboardingModalProps) {
-  const [step, setStep] = useState(0);
-  const [interests, setInterests] = useState<string[]>([]);
-  const [groupType, setGroupType] = useState<string | null>(null);
-  const [budgetRange, setBudgetRange] = useState<string | null>(null);
-  const [travelStyle, setTravelStyle] = useState<string | null>(null);
-
-  if (!open) return null;
-
-  const toggleInterest = (id: string) => {
-    setInterests((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
-
-  const handleComplete = () => {
-    onComplete({ interests, groupType, budgetRange, travelStyle });
-    setStep(0);
-    setInterests([]);
-    setGroupType(null);
-    setBudgetRange(null);
-    setTravelStyle(null);
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <Card className="w-full max-w-md mx-4 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
-        <CardContent className="p-6">
-          {/* Close */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-4 top-4 rounded-full p-1.5 text-muted-foreground hover:bg-muted"
-            aria-label="Zapri"
-          >
-            <X className="size-4" aria-hidden="true" />
-          </button>
-
-          {/* Progress dots */}
-          <div className="mb-6 flex justify-center gap-2">
-            {[0, 1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className={cn(
-                  "h-2 rounded-full transition-all",
-                  i === step ? "w-8 bg-primary" : i < step ? "w-2 bg-primary/50" : "w-2 bg-muted"
-                )}
-              />
-            ))}
-          </div>
-
-          {/* Step 0: Interests */}
-          {step === 0 && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <div className="mb-2 flex justify-center">
-                  <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
-                    <Sparkles className="size-6 text-primary" aria-hidden="true" />
-                  </div>
-                </div>
-                <h3 className="text-lg font-bold">Kaj ti je všeč?</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  AI bo uporabil to za boljša priporočila
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {INTEREST_OPTIONS.map((opt) => {
-                  const Icon = opt.icon;
-                  const selected = interests.includes(opt.id);
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => toggleInterest(opt.id)}
-                      className={cn(
-                        "flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all",
-                        selected
-                          ? "border-primary bg-primary/5 scale-105"
-                          : "border-border/60 hover:border-primary/30"
-                      )}
-                    >
-                      <Icon className={cn("size-6", selected ? "text-primary" : "text-muted-foreground")} aria-hidden="true" />
-                      <span className="text-sm font-medium">{opt.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <Button
-                className="w-full"
-                disabled={interests.length === 0}
-                onClick={() => setStep(1)}
-              >
-                Naprej
-              </Button>
-            </div>
-          )}
-
-          {/* Step 1: Group type */}
-          {step === 1 && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <div className="mb-2 flex justify-center">
-                  <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
-                    <Users className="size-6 text-primary" aria-hidden="true" />
-                  </div>
-                </div>
-                <h3 className="text-lg font-bold">S kom potuješ?</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  AI bo prilagodil aktivnosti
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {GROUP_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setGroupType(opt.id)}
-                    className={cn(
-                      "rounded-xl border-2 p-4 text-sm font-medium transition-all",
-                      groupType === opt.id
-                        ? "border-primary bg-primary/5 scale-105"
-                        : "border-border/60 hover:border-primary/30"
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setStep(0)}>
-                  Nazaj
-                </Button>
-                <Button
-                  className="flex-1"
-                  disabled={!groupType}
-                  onClick={() => setStep(2)}
-                >
-                  Naprej
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Travel style (Layla.ai inspiracija) */}
-          {step === 2 && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <div className="mb-2 flex justify-center">
-                  <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
-                    <Sparkles className="size-6 text-primary" aria-hidden="true" />
-                  </div>
-                </div>
-                <h3 className="text-lg font-bold">Kakšen popotnik si?</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  AI bo izbral ustrezne ponudnike
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {TRAVEL_STYLES.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setTravelStyle(opt.id)}
-                    className={cn(
-                      "flex flex-col items-center gap-1 rounded-xl border-2 p-3 transition-all",
-                      travelStyle === opt.id
-                        ? "border-primary bg-primary/5 scale-105"
-                        : "border-border/60 hover:border-primary/30"
-                    )}
-                  >
-                    <span className="text-2xl" aria-hidden="true">{opt.emoji}</span>
-                    <span className="text-sm font-medium">{opt.label}</span>
-                    <span className="text-[10px] text-muted-foreground text-center">{opt.desc}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>
-                  Nazaj
-                </Button>
-                <Button
-                  className="flex-1"
-                  disabled={!travelStyle}
-                  onClick={() => setStep(3)}
-                >
-                  Naprej
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Budget */}
-          {step === 3 && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <div className="mb-2 flex justify-center">
-                  <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
-                    <Clock className="size-6 text-primary" aria-hidden="true" />
-                  </div>
-                </div>
-                <h3 className="text-lg font-bold">Kakšen je tvoj proračun?</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  AI bo izbral ustrezne ponudnike
-                </p>
-              </div>
-              <div className="space-y-2">
-                {BUDGET_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setBudgetRange(opt.id)}
-                    className={cn(
-                      "w-full rounded-xl border-2 p-4 text-sm font-medium transition-all text-left",
-                      budgetRange === opt.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border/60 hover:border-primary/30"
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>
-                  Nazaj
-                </Button>
-                <Button
-                  className="flex-1"
-                  disabled={!budgetRange}
-                  onClick={handleComplete}
-                >
-                  <Sparkles className="size-4 mr-1" aria-hidden="true" />
-                  Začni
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 // ============================================================================
 // WELCOME BACK BANNER — za vračajoče uporabnike
@@ -435,6 +150,11 @@ interface WelcomeBackProps {
 export function WelcomeBackBanner({ profile, onDismiss }: WelcomeBackProps) {
   // FW4.3-2: besedila bannerja prek fragmentov welcomeBack.{sl,en}
   const t = useTranslations("welcomeBack");
+  // ISSUE #23 (1.163.0) §19: STANJE-VEDNO nadaljevanje — banner ni več
+  // samo pasiven povzetek profila; iz determinističnega jedra izpelje
+  // dejanski naslednji korak (aktivna pot → NADALJUJ; zbirka → NAČRTUJ;
+  // sicer obstoječi povzetek/kviz CTA — zero feature loss).
+  const { guidance } = useGuidance("home");
 
   // Prikaz že od 2. obiska (ne glede na zaključen onboarding — kviz ga zdaj zaključi)
   if (profile.visitCount < 2) return null;
@@ -466,6 +186,15 @@ export function WelcomeBackBanner({ profile, onDismiss }: WelcomeBackProps) {
     Boolean(profile.groupType) ||
     profile.visitedDestinations.length > 0;
 
+  // ISSUE #23 §19 — kontekstualno nadaljevanje (stanje iz jedra, ne ugiban):
+  const goState = guidance?.state ?? null;
+  const isOnTrip =
+    goState === "TRIP_STARTED" ||
+    goState === "COMPLETED" ||
+    (goState !== null &&
+      ["NAVIGATING", "ARRIVED", "FREE_TIME", "NEEDS_ATTENTION", "BLOCKED", "RECOVERY"].includes(goState));
+  const isBuilding = goState === "TRIP_BUILDING";
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-3 animate-in fade-in slide-in-from-top-2 duration-500">
       <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
@@ -475,10 +204,51 @@ export function WelcomeBackBanner({ profile, onDismiss }: WelcomeBackProps) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold">
-              {t("title")}
+              {isOnTrip ? t("continueTrip") : isBuilding ? t("continueTitle") : t("title")}
             </p>
             <p className="text-xs text-muted-foreground">
-              {knowsSomething ? (
+              {isOnTrip && guidance?.facts.nextStopTitle ? (
+                <>
+                  {t("nextStop", { next: guidance.facts.nextStopTitle })}{" "}
+                  <Link
+                    href="/na-poti"
+                    className="font-medium text-primary hover:underline"
+                    onClick={() =>
+                      trackPlannerEvent("guidance_action_clicked", {
+                        state: goState ?? "TRIP_STARTED",
+                        surface: "home",
+                        action: "go_mode",
+                      })
+                    }
+                  >
+                    {t("ctaGo")}
+                  </Link>
+                </>
+              ) : isOnTrip ? (
+                <>
+                  {t("continueTripDesc")}{" "}
+                  <Link href="/na-poti" className="font-medium text-primary hover:underline">
+                    {t("ctaGo")}
+                  </Link>
+                </>
+              ) : isBuilding ? (
+                <>
+                  {t("continueTripCount", { count: guidance?.facts.myTripCount ?? 0 })}{" "}
+                  <Link
+                    href="/nacrtuj"
+                    className="font-medium text-primary hover:underline"
+                    onClick={() =>
+                      trackPlannerEvent("guidance_action_clicked", {
+                        state: "TRIP_BUILDING",
+                        surface: "home",
+                        action: "plan",
+                      })
+                    }
+                  >
+                    {t("ctaPlan")}
+                  </Link>
+                </>
+              ) : knowsSomething ? (
                 <>
                   {t("knowsLabel")} {topInterests}
                   {profile.groupType && ` · ${groupLabels[profile.groupType] || profile.groupType}`}
@@ -488,14 +258,17 @@ export function WelcomeBackBanner({ profile, onDismiss }: WelcomeBackProps) {
               ) : (
                 // next-intl v4 uradni vzorec: tag v sporočilu
                 // (<quizLink>…</quizLink>) + chunk handler.
+                // ISSUE #23: POPRAVEK sidra — kviz živi na /nacrtuj#kviz;
+                // prejšnji "#kviz" je padel na legacy preusmeritev BREZ
+                // sidra (uporabnik pristane na vrhu nacrtuj, ne pri kvizu).
                 t.rich("quizCta", {
                   quizLink: (chunks) => (
-                    <a
-                      href="#kviz"
+                    <Link
+                      href="/nacrtuj#kviz"
                       className="font-medium text-primary hover:underline"
                     >
                       {chunks}
-                    </a>
+                    </Link>
                   ),
                 })
               )}

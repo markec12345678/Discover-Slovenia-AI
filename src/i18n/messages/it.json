@@ -661,7 +661,7 @@
     "generatedToastDescAI": "Il pianificatore ha creato il tuo piano di viaggio perfetto.",
     "generatedToastDescSample": "Viene mostrato un itinerario di esempio pronto.",
     "savedToast": "Piano salvato!",
-    "savedToastDesc": "Puoi copiare il link di condivisione qui sotto.",
+    "savedToastDesc": "Lo troverai in I miei viaggi. Prossimo passo: prenota i fornitori o avvia In viaggio. Puoi copiare il link di condivisione qui sotto.",
     "savedUpdatedToast": "Viaggio aggiornato (v{version})",
     "savedUpdatedToastDesc": "Stesso link condiviso, contenuti aggiornati — la versione precedente è conservata nella cronologia.",
     "planUpdatedBannerTitle": "Il viaggio collegato è stato aggiornato altrove",
@@ -2025,7 +2025,14 @@
       "par": "coppia",
       "druzina": "famiglia",
       "prijatelji": "amici"
-    }
+    },
+    "continueTitle": "Continuiamo il tuo viaggio?",
+    "continueTrip": "Il tuo viaggio è attivo",
+    "continueTripDesc": "Riprendi da dove eri rimasto.",
+    "continueTripCount": "La tua raccolta ha {count, plural, one {# tappa} other {# tappe}}.",
+    "nextStop": "Prossima tappa: {next}.",
+    "ctaGo": "Continua in viaggio",
+    "ctaPlan": "Pianifica un viaggio"
   },
   "adriaGuidePage": {
     "meta": {
@@ -2441,5 +2448,68 @@
     "title": "Traduzione automatica",
     "body": "Questa pagina è tradotta automaticamente (IA) dall'originale sloveno ed è in attesa di revisione umana. Le versioni slovena e inglese sono quelle di riferimento.",
     "dismiss": "Ho capito"
+  },
+  "guidance": {
+    "chain": {
+      "label": "Progresso del viaggio",
+      "discover": "Scopri",
+      "plan": "Pianifica",
+      "book": "Prenota",
+      "go": "In viaggio",
+      "finish": "Concludi"
+    },
+    "msg": {
+      "newUser": "Benvenuto! Scopri la Slovenia, raccogli le tappe e costruisci il tuo viaggio.",
+      "discovering": "Bentornato! Cosa ti interessa oggi?",
+      "building": "La tua raccolta ha {count, plural, one {# tappa} other {# tappe}} — il prossimo passo è un piano.",
+      "ready": "Il piano è salvato — prenota i fornitori o inizia il viaggio.",
+      "bookingPending": "Alcuni fornitori selezionati non sono ancora prenotati.",
+      "started": "Il viaggio è attivo — prossima tappa: {next}.",
+      "startedNextDay": "Le tappe di oggi sono completate — più avanti ti aspettano {count, plural, one {# tappa} other {# tappe}}.",
+      "navigating": "Ti stai avvicinando alla destinazione — è ora di navigare.",
+      "arrived": "Sei arrivato — completa la tappa e continua.",
+      "freeTime": "Hai circa {minutes} minuti di tempo libero.",
+      "needsAttention": "Il prossimo impegno è a rischio — controlla il passo più sicuro.",
+      "blocked": "Il piano è bloccato — guarda cosa è ancora possibile.",
+      "recovery": "Recupero in corso — scegli come continuare.",
+      "completed": "Viaggio concluso — {done} completate, {skipped} saltate.",
+      "unknown": "Lo stato non può essere letto al momento — il tuo viaggio salvato resta disponibile."
+    },
+    "actions": {
+      "discover": "Scopri destinazioni",
+      "plan": "Pianifica un viaggio",
+      "openTrips": "I miei viaggi",
+      "book": "Prenota",
+      "startTrip": "Inizia il viaggio",
+      "goMode": "Continua in viaggio",
+      "navigate": "Naviga",
+      "completeStop": "Completa la tappa",
+      "freeTime": "Usa il tempo libero",
+      "recovery": "Vedi le opzioni",
+      "newTrip": "Pianifica un nuovo viaggio",
+      "askDiscover": "Chiedi a Discover"
+    },
+    "welcome": {
+      "title": "Benvenuto in Discover Slovenia",
+      "lead": "Ti aiutiamo a scoprire la Slovenia, a costruire il tuo viaggio, a trovare offerte e ad accompagnarti durante il viaggio.",
+      "question": "Cosa vorresti fare?",
+      "intentPlan": "Pianifico un viaggio",
+      "intentDiscover": "Mostrami la Slovenia",
+      "intentFind": "Trova qualcosa per me",
+      "intentHelp": "Ho bisogno di aiuto",
+      "intentDontKnow": "Non lo so — mostramelo",
+      "dismiss": "Non ora",
+      "helpQuestion": "Come può Discover aiutarmi a pianificare un viaggio in Slovenia?"
+    },
+    "tour": {
+      "badge": "Percorso guidato",
+      "hint": "Discover ti guida attraverso i passaggi — segui il pulsante principale.",
+      "completed": "Percorso guidato completato — ottimo!",
+      "end": "Termina il percorso guidato"
+    },
+    "a11y": {
+      "dismiss": "Chiudi la scheda guida",
+      "stepOf": "Passo {index} di {total}"
+    }
   }
 }

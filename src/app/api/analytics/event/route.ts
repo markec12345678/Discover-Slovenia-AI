@@ -189,6 +189,15 @@ const VALID_EVENTS = new Set([
   "refine_timeout",
   // TASK 4 / K-7: AI itinerer zagnan v Go Mode (most PLAN → GO)
   "go_mode_started",
+  // ISSUE #23 (1.163.0): vodena plast — brez PII (samo state/surface/action)
+  "guidance_shown",
+  "guidance_action_clicked",
+  "guidance_dismissed",
+  "guidance_completed",
+  "first_run_started",
+  "first_run_completed",
+  "intent_selected",
+  "next_step_completed",
   // ISSUE #16 faza 5 „analitika lupine" (1.152.0): klik na vstop lupine
   // ODKRIJ|ZEMLJEVID|MOJA POT|POJDI|VEČ (props: tab, surface; items pri
   // my_trip; label pri sheet/dropdown vnosih ravni-2) — pariteta s klient

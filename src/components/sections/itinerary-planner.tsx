@@ -151,6 +151,7 @@ import { removeSelectedProduct } from "@/lib/supply/selection";
 import type { SelectedProviderProduct } from "@/lib/supply/types";
 import { persistSelection } from "@/lib/supply/selection-persist";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { trackFunnel } from "@/lib/funnel";
 import { optimizeDayOrder } from "@/lib/route-order";
 // M7 (Issue #5 / T5-D): ročno prestavljanje + dodajanje/odstranjevanje dneva —
@@ -2175,6 +2176,24 @@ export function ItineraryPlanner() {
       toast({
         title: t("savedToast"),
         description: t("savedToastDesc"),
+        // ISSUE #23 (1.163.0) §13/§14: po SHRANI uporabnik izve NASLEDNJI
+        // KORAK (Moja potovanja + rezervacije + Zaženi Na poti) — poprej
+        // je toast omenil samo deljivo povezavo (revizija: vrzel PLAN→SAVE).
+        action: (
+          <ToastAction
+            altText={t("goModeButton")}
+            onClick={() => {
+              trackPlannerEvent("guidance_action_clicked", {
+                state: "TRIP_READY",
+                surface: "planner",
+                action: "go_mode",
+              });
+              handleStartGoMode();
+            }}
+          >
+            {t("goModeButton")}
+          </ToastAction>
+        ),
       });
     } catch {
       trackPlannerEvent("save_failed", { locale });

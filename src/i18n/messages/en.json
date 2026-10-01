@@ -661,7 +661,7 @@
     "generatedToastDescAI": "The planner built your perfect trip plan.",
     "generatedToastDescSample": "A ready-made sample itinerary is shown.",
     "savedToast": "Plan saved!",
-    "savedToastDesc": "You can copy the sharing link below.",
+    "savedToastDesc": "You'll find it in My travels. Next step: book providers or start On the road. You can copy the sharing link below.",
     "savedUpdatedToast": "Trip updated (v{version})",
     "savedUpdatedToastDesc": "Same shared link, fresh content — the previous version is kept in history.",
     "planUpdatedBannerTitle": "The linked trip has been updated elsewhere",
@@ -2025,7 +2025,14 @@
       "par": "couple",
       "druzina": "family",
       "prijatelji": "friends"
-    }
+    },
+    "continueTitle": "Shall we continue your trip?",
+    "continueTrip": "Your trip is active",
+    "continueTripDesc": "Continue where you left off.",
+    "continueTripCount": "Your collection has {count, plural, one {# stop} other {# stops}}.",
+    "nextStop": "Next stop: {next}.",
+    "ctaGo": "Continue on the road",
+    "ctaPlan": "Plan a trip"
   },
   "adriaGuidePage": {
     "meta": {
@@ -2441,5 +2448,68 @@
     "title": "Machine translation",
     "body": "This page is machine-translated (AI) from the Slovenian original and awaits human review. The Slovenian and English versions are canonical.",
     "dismiss": "Got it"
+  },
+  "guidance": {
+    "chain": {
+      "label": "Trip progress",
+      "discover": "Discover",
+      "plan": "Plan",
+      "book": "Book",
+      "go": "On the road",
+      "finish": "Finish"
+    },
+    "msg": {
+      "newUser": "Welcome! Discover Slovenia, collect stops and build your trip.",
+      "discovering": "Welcome back! What are you interested in today?",
+      "building": "Your collection has {count, plural, one {# stop} other {# stops}} — the next step is a plan.",
+      "ready": "Your plan is saved — book providers or start your trip.",
+      "bookingPending": "Some selected providers are not booked yet.",
+      "started": "Your trip is active — next stop: {next}.",
+      "startedNextDay": "Today's stops are done — {count, plural, one {# stop} other {# stops}} ahead later.",
+      "navigating": "You are approaching the destination — time to navigate.",
+      "arrived": "You have arrived — complete the stop and continue.",
+      "freeTime": "You have about {minutes} minutes of free time.",
+      "needsAttention": "Your next appointment is at risk — check the safest next step.",
+      "blocked": "The plan is blocked — see what is still possible.",
+      "recovery": "Recovery in progress — choose how to continue.",
+      "completed": "Trip finished — {done} completed, {skipped} skipped.",
+      "unknown": "State cannot be read right now — your saved trip remains available."
+    },
+    "actions": {
+      "discover": "Discover destinations",
+      "plan": "Plan a trip",
+      "openTrips": "My travels",
+      "book": "Book",
+      "startTrip": "Start trip",
+      "goMode": "Continue on the road",
+      "navigate": "Navigate",
+      "completeStop": "Complete stop",
+      "freeTime": "Use free time",
+      "recovery": "See options",
+      "newTrip": "Plan a new trip",
+      "askDiscover": "Ask Discover"
+    },
+    "welcome": {
+      "title": "Welcome to Discover Slovenia",
+      "lead": "We help you discover Slovenia, build your trip, find offers and stay with you while you travel.",
+      "question": "What would you like to do?",
+      "intentPlan": "I'm planning a trip",
+      "intentDiscover": "Show me Slovenia",
+      "intentFind": "Find me something",
+      "intentHelp": "I need help",
+      "intentDontKnow": "I don't know — show me",
+      "dismiss": "Not now",
+      "helpQuestion": "How can Discover help me plan a trip around Slovenia?"
+    },
+    "tour": {
+      "badge": "Guided path",
+      "hint": "Discover guides you through the steps — follow the main button.",
+      "completed": "Guided path complete — great job!",
+      "end": "End guided path"
+    },
+    "a11y": {
+      "dismiss": "Close guidance card",
+      "stepOf": "Step {index} of {total}"
+    }
   }
 }
