@@ -10,6 +10,54 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 ---
 ---
 
+## [1.162.0] — 2026-10-01 (#22 TRAVEL GUARDIAN)
+
+### Dodano
+
+- **TRAVEL GUARDIAN & DYNAMIC TRIP INTELLIGENCE (issue #22).** Nova ČISTA
+  projekcijska plast na #21 (brez podvajanja modelov, 0 nove persistance,
+  0 AI kot vira resnice): `/na-poti` zdaj razume stanje celotnega dne.
+  - **Stanje dneva (§4):** 🟢 VSE TEČE PO NAČRTU / 🟠 POTREBUJE TVOJO
+    POZORNOST / 🔴 ZA NADALJEVANJE JE POTREBEN POSEG / ⚪ PODATKOV NI
+    DOVOLJ — banner ob glavi z eno vrstico DEJSTEV (aria-live; strojno
+    izpeljano, pozitiven status samo z dokazom).
+  - **Časovna rezerva (§5):** ETA (hevristika kanon Go Mode) + rezerva do
+    fiksnega termina; fail-closed (brez GPS/stale/missing-geo → UNKNOWN);
+    DataQuality (VERIFIED/ESTIMATED/UNKNOWN/STALE/MISSING §18) na vsakem
+    rezultatu.
+  - **Konflikti (§6):** 10 determinističnih vrst (ogrožen termin, ozek
+    prihod, prekrivanje, prekratek prehod, že teče, zamujen, manjkajoča
+    lokacija, neznan trajanje, zaprto ob prihodu, preklicana rezervacija) —
+    vsak s FACTS → RAZLOG → POSLEDICA + uporabnikove akcije.
+  - **RECOVERY MODE (§7/§8):** zamujen/preskočen/preklican/daleč+zamuda —
+    kaj se je spremenilo, kaj ostaja veljavno, naslednji izvedljivi cilj;
+    predlogi [Nadaljuj][Preskoči][Preuredi] zahtevajo potrditev
+    (Guardian NIKOLI ne piše rezervacij).
+  - **ZAČNI DAN (§13):** jutranji povzetek (postanki, rezervacije, prvi
+    cilj, znana pot, opozorila, manjkajoči podatki) → en gumb v živi tok.
+  - **SMART FREE-TIME (§9–§11):** okno samo, če ga podatki podpirajo
+    (termin − vožnja − varnostna rezerva 15 min + 10 %);
+    [Znamenitosti][Hrana][Kava][Sprehod] → max 4 kandidati iz zemljevida,
+    vsak spravi CELOTNO zanko (tja + obisk + do termina) v okno — zamuda
+    zaradi predloga ni mogoča; [V mojo pot] (v2 zapisi).
+  - **NADALJUJ NA POTI (§30.C):** Moja potovanja → Go Mode člen na karticah
+    shranjenih poti (zmanjšana vrzel produktnega toka).
+- **Dokumentacija:** `docs/TRAVEL-GUARDIAN.md` — arhitektura, ADR, offline
+  matrika zmožnosti (§17), data-quality legenda (§18), zasebnostna revizija
+  (§19/§20 — 0 analitike s pozicijo; nearby bbox = groba posplošitev), UX
+  vhodna mapa (§30.L).
+
+### Tehnično
+
+- Novi čisti moduli: `time-reserve.ts`, `conflict-detect.ts`,
+  `trip-health.ts` (sestavni koren `buildGuardian`), `recovery.ts`,
+  `day-start.ts`, `free-time.ts`, `go-edit.ts` (+`activeDayIndex` v GoView —
+  aditivno). Guardian podkomponente: `go-mode/guardian-{banner,conflict,
+  free-time,day-start}.tsx` (strategija E #21: dodajanje, ne predelava).
+- Testi: +81 (32 core + 17 recovery + 15 free-time + 17 UX source
+  contract); celota 4.689 zelenih, lint 0, tsc 0; zero feature loss
+  (obstoječi #21/task64/task65/task102 testi nedotaknjeni).
+
 ## [1.161.1] — 2026-10-01 (#21 PRODUKCIJSKI DOKAZI + push 1.159.0–1.161.0)
 
 ### Dodano
