@@ -21,7 +21,8 @@
 
 ## 2. Lokalni dokazi (dev, 1.163.0)
 
-> Izpolni se po lokalni verifikaciji (agent-browser na :3000).
+> Lokalni dev zahteva produkcijsko bazo (Postgres) — verifikacija je bila
+> izvedena DIREKTNO na produkciji (Render), kar je močnejši dokaz (§38).
 
 | Surface | State | Guidance | Action | Result | Dokaz |
 |---|---|---|---|---|---|
@@ -32,21 +33,21 @@
 | Go Mode | COMPLETED | POT ZAKLJUČENA povzetek | Odpri shranjeno pot | /pot/{shareId} | (screenshot) |
 | /moja-potovanja | TRIP_STARTED | NA POTI oznaka na aktivni kartici | Nadaljuj | /na-poti | (screenshot) |
 
-## 3. Produkcijski dokazi (Render, po pushu)
+## 3. Produkcijski dokazi (Render 1.163.0 — ŽIVO, 2026-10-01)
 
-> Izpolni se po deployju: https://i-feel-slovenia.onrender.com — različica
-> se zapiše ob vsakem dokazu (vzorec iz #21/#22: docs/evidence/issue21/,
-> docs/evidence/issue22/).
+> Polna tabela + dokazne priprave: `docs/evidence/issue23/README.md`
+> (8 PNG dokazov, mobilni 390×844, 0 konzolnih napak, 0 page errorjev).
 
-| # | Path | Surface | State | Rezultat | Dokaz (PNG/JSON) | Verzija |
-|---|---|---|---|---|---|---|
-| prod-1 | / | domov | NEW_USER | first-run kartica vidna, 0 konzolnih napak | docs/evidence/issue23/prod-01-home-first-run.png | (izpolni) |
-| prod-2 | / | domov | TRIP_BUILDING | trak + NAČRTUJ + chain 2/5 | docs/evidence/issue23/prod-02-home-building.png | (izpolni) |
-| prod-3 | /destinacija/… | dodaj | TRIP_BUILDING | toast z »Načrtuj potovanje« | docs/evidence/issue23/prod-03-add-toast.png | (izpolni) |
-| prod-4 | /moja-potovanja | hub | TRIP_READY/… | chain indikator + NA POTI oznaka | docs/evidence/issue23/prod-04-hub.png | (izpolni) |
-| prod-5 | /nacrtuj | planner | TRIP_READY | toast po shranitvi z Zaženi | docs/evidence/issue23/prod-05-planner-toast.png | (izpolni) |
-| prod-6 | /na-poti | go | COMPLETED | POT ZAKLJUČENA povzetek + akcije | docs/evidence/issue23/prod-06-complete.png | (izpolni) |
-| prod-7 | /en | domov (EN) | TRIP_BUILDING | trak v angleščini (6 jezikov dokaz) | docs/evidence/issue23/prod-07-en.png | (izpolni) |
+| Surface | State | Guidance | Action | Result | Production Evidence |
+|---|---|---|---|---|---|
+| / (prvi obisk) | NEW_USER | first-run kartica (5 nameri + „Ne vem") | klik namera | navigacija + intent_selected | prod-01-home-first-run.png |
+| / (po dodajanju) | TRIP_BUILDING | trak Korak 2/5 + VODENA POT + [NAČRTUJ] | sledi glavnemu gumbu | /nacrtuj | prod-02-home-building-tour.png |
+| destinacijski modal | dodaj | toast [Odpri pot][Načrtuj potovanje] | klik Načrtuj | naslednji korak | prod-03-add-toast.png (VLM-potrjen) |
+| /moja-potovanja | TRIP_BUILDING | chain indikator (informacijsko) | — | Korak 2/5 viden | prod-04-hub-chain.png |
+| / (2. seja) | TRIP_STARTED | banner „Tvoja pot je aktivna" [NADALJUJ] | klik | /na-poti | prod-05-returning-banner.png |
+| /na-poti (konec) | COMPLETED | „POT ZAKLJUČENA 🎉 1 dan · 2 opravljenih" + akcije | Načrtuj novo | /nacrtuj | prod-06-go-complete.png |
+| /en | TRIP_BUILDING | trak v angleščini (6-jezični dokaz) | — | Step 2 of 5 | prod-07-en-strip.png |
+| / (po zaključku) | COMPLETED | trak Korak 5/5 „Pot je zaključena" | — | terminalno stanje | prod-08-home-completed.png |
 
 ## 4. Meje in znane omejitve (iskreno)
 
