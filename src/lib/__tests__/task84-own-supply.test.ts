@@ -435,12 +435,18 @@ describe("own supply aktivacija (source-contract)", () => {
     expect(searchSrc).toContain("./providers/own/adapter");
   });
 
-  test("production-matrix: own je PRODUCTION_CONFIGURED (NE ACTIVE — iskrenost)", () => {
+  test("production-matrix: own je LIVE_DATA_VERIFIED (NE ACTIVE — iskrenost; Issue #20 §3)", () => {
     const own = matrix.match(/\n  own: \{([\s\S]*?)\n  \},/)!;
     const body = own[1];
-    expect(body).toContain('stage: "PRODUCTION_CONFIGURED"');
-    // iskreni blokirni razlog (ne Active!): živi podatki še manjkajo
-    expect(body).toContain('blockedReason: "NO_LIVE_DATA"');
+    // Issue #20 §3 (1.157.0, 2026-10-01): dvig na podlagi produkcijskih
+    // dokazov (2 geo listinga: supply → marker → My Trip; dokazi
+    // docs/evidence/issue20/). NE PRODUCTION_ACTIVE — Stripe bloker.
+    expect(body).toContain('stage: "LIVE_DATA_VERIFIED"');
+    expect(body).not.toContain('stage: "PRODUCTION_ACTIVE"');
+    // NO_LIVE_DATA odstranjen (ni več res); ostane iskren razlog za
+    // NAPREJ: Stripe checkout ključi (NOT_CONFIGURED) — Issue #20 §4.
+    expect(body).toContain('blockedReason: "NOT_CONFIGURED"');
+    expect(body).not.toContain('blockedReason: "NO_LIVE_DATA"');
     expect(body).toContain("aiIntegrated: true");
   });
 });

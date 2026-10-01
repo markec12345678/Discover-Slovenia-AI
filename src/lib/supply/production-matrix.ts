@@ -273,21 +273,32 @@ const MATRIX: Record<ProviderSlug, Omit<ProductionMatrixEntry, "slug">> = {
     accessKind: "DIRECT_BOOKING",
     // TASK 84 (1.75.0): geo stolpca Listing (lat/lng) + own adapter
     // (providers/own/adapter.ts) + register active → sloj priklopljen na
-    // /api/supply/search. Pipeline je E2E preverjen na testnem listingu v
-    // dev instanci (koordinate → pin → supply odgovor); PRODUKCIJSKI živi
-    // podatki čakajo prve partnerjeve listinge s koordinatami (stopnja
-    // iskreno ostaja PRODUCTION_CONFIGURED, NE PRODUCTION_ACTIVE).
-    // TASK 87 (1.78.0): DRUGI vir — Experience geo stolpca; adapter zdaj
-    // združuje listinge IN izkušnje (price → FROM_PRICE: objavljene cene
-    // izkušenj, listingi ostanejo brez številčne cene).
-    stage: "PRODUCTION_CONFIGURED",
-    blockedReason: "NO_LIVE_DATA",
+    // /api/supply/search. TASK 87 (1.78.0): DRUGI vir — Experience geo
+    // stolpca; adapter združuje listinge IN izkušnje (price → FROM_PRICE:
+    // objavljene cene izkušenj, listingi ostanejo brez številčne cene).
+    //
+    // ISSUE #20 §3 (1.157.0, 2026-10-01): dvig PRODUCTION_CONFIGURED →
+    // LIVE_DATA_VERIFIED na podlagi produkcijskih dokazov — 2 objavljena
+    // listinga z veljavnimi koordinatami (Postojnska jama — partner;
+    // Kavarna Zvezda — Ljubljana; geo-dopolnitev vzdrževalca, ker so
+    // produkcijski demo partnerji po P7-A inertni) preverjena skozi
+    // celotno pot: supply odgovor (provider "own", id "own:{listingId}",
+    // bookingMode own_marketplace) → marker na zemljevidu → POI popup →
+    // „+ Dodaj v mojo pot" → hub Moja pot (dokazi: docs/evidence/issue20/).
+    // Stopnja ostaja POD PRODUCTION_ACTIVE: Stripe checkout je zunanji
+    // aktivacijski bloker (brez STRIPE_SECRET_KEY → 503 fail-closed) in
+    // partner-submitted geo zapis v produkciji še ni bil opravljen.
+    stage: "LIVE_DATA_VERIFIED",
+    // Iskreni razlog, zakaj NAPREJ ne more (naslednja stopnja): Stripe
+    // checkout ključi (STRIPE_SECRET_KEY) niso v env → CTA booking ni
+    // produkcijsko verifikovan. NE NO_LIVE_DATA (živi podatki SO preverjeni).
+    blockedReason: "NOT_CONFIGURED",
     price: "FROM_PRICE", // TASK 87: objavljena pricePerPerson izkušenj (per_person, NISO živi citat); listingi priceRange obseg → brez
     availability: "NOT_SUPPORTED", // Stripe checkout, ne koledar
     cta: "own_checkout",
     aiIntegrated: true, // priklopljen na supply search → AI kontekst izbire
     docsUrl: "",
-    note: "Lastna tržnica: Listingi (TASK 84) IN izkušnje (TASK 87) z geo stolpci na supply zemljevidu — rezervacija prek lastnega Stripe toka. Izkušnje imajo pravo ceno (per_person), listingi obseg €. Zapis BREZ koordinat je iskreno izpuščen; prazna tržnica = „no-listings“. Product še brez geo.",
+    note: "Lastna tržnica: Listingi (TASK 84) IN izkušnje (TASK 87) z geo stolpci na supply zemljevidu — rezervacija prek lastnega Stripe toka. Izkušnje imajo pravo ceno (per_person), listingi obseg €. Zapis BREZ koordinat je iskreno izpuščen; prazna tržnica = „no-listings“. ISSUE #20 §3 (2026-10-01): živi podatki preverjeni (2 geo listinga, dokazi docs/evidence/issue20/); PRODUCTION_ACTIVE čaka Stripe ključe (checkout) in prvi partner-submitted geo zapis.",
   },
 
   // === A — ACTIVITIES / EXPERIENCES (§7) ================================

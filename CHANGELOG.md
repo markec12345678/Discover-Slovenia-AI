@@ -7,6 +7,80 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.157.0] — 2026-10-01 (#20 DISCOVER: Production Activation — FAZA 1)
+
+### Dodano
+
+- **§11 ENOTEN PRODUCTION ACTIVATION CHECK** — `bun run activation:check`
+  (tabela) / `--json`: iskren izpis stanja vseh 16 providerjev v štirih
+  stanjih (🟢 ACTIVE / 🟡 CONFIGURED / ⚪ NOT CONFIGURED / 🔴 BLOCKED) +
+  stopnja, live-data Boolean, vrsta dostopa, CTA, klasifikacija cen/
+  razpoložljivosti in ENV prisotnost IZKLJUČNO kot Boolean (test kanarček:
+  vrednosti nikoli ne zapuste plasti). Jedro mehansko izpeljano iz
+  production-matrix + registra (`src/lib/supply/activation-check.ts` —
+  agent stanj NE more »lepšati«); tanek CLI ovoj
+  (`scripts/activation-check.ts`); 12 testov
+  (`issue20-activation-check.test.ts`): pokritost 16/16, neodvisna
+  replikacija preslikave, ACTIVE ≡ productionSummary, kanarček, CLI
+  source-contract.
+
+- **§5 `docs/PRODUCTION-ACTIVATION-STATUS.md`** — glavni deliverable:
+  master aktivacijska matrika (manjkajoča predpogoj · koda · testi ·
+  točen aktivacijski korak · pričakovano vedenje po ponudniku) + statusi
+  vseh delovnih sklopov issueja (§3 tržnica, §4 checkout, §6 affiliate,
+  §7 leta-origin, §9 booking lifecycle, §10 e-pošta).
+
+### Spremenjeno
+
+- **§3 LASTNA TRŽNICA: PRODUKCIJSKO PREVERJENA + dvig stopnje** —
+  ugotovitev: 0 od 20 objavljenih zapisov (10 listingov + 10 izkušenj)
+  je imelo koordinate → lastni sloj iskreno prazen (NO_LIVE_DATA točen).
+  Geo-dopolnitev vzdrževalca za 2 REALNA lokala (Postojnska jama —
+  partner; Kavarna Zvezda — Ljubljana; demo partnerji po P7-A inertni),
+  nato **celotna pot produkcijsko dokazana na Render (primarna)**:
+  supply odgovor (`provider:"own"`, `id:"own:{listingId}"`,
+  `bookingMode:"own_marketplace"`, `geoPrecision:"exact"`) → marker →
+  POI popup → »+ Dodaj v mojo pot« → »✓ Dodano« + localStorage
+  (`refId:"own:…"`, `source:"zemljevid"`) → hub »Moja pot 1«.
+  **Matrika: own PRODUCTION_CONFIGURED → LIVE_DATA_VERIFIED**
+  (`NO_LIVE_DATA` odstranjen; nov iskreni razlog za naprej:
+  `NOT_CONFIGURED` — Stripe checkout ključi). PRODUCTION_ACTIVE čaka
+  Stripe (§4) + prvi partner-submitted geo zapis. Dokazi:
+  `docs/evidence/issue20/` (3 PNG + summary.md z JSON odgovori).
+- **Posodobljeni source-contract testi matrike** za novo stopnjo own:
+  `task53 ⑦` (števci: 1 LIVE_DATA_VERIFIED, 0 PRODUCTION_CONFIGURED),
+  `task84` (LIVE_DATA_VERIFIED + NOT_CONFIGURED checkout + NE ACTIVE),
+  `task87`, `task52 §0` (invarianta blokirnega razloga ostaja).
+- **§12 README uskladitev** — zastareli zapis »4142 testov« popravljen v
+  dejansko stanje (4413: 4412 pass + 1 DB-gated preskok brez baze —
+  CI-semantika); dodan `bun run activation:check` v blok preverjanja.
+  `docs/PROVIDER-APPLICATIONS.md` (vrstica own + povzetek) usklajen z
+  matriko.
+
+### Dokumentirana stanja (brez lažnih zmogljivosti — Issue #20 temeljno pravilo)
+
+- **§4 Stripe checkout**: implementacija obstaja in je fail-closed (503
+  brez `STRIPE_SECRET_KEY`; demo le z `DSA_DEMO_PAYMENTS=1` → 501);
+  webhook: podpis + `ProcessedStripeEvent` dedup. Zunanji bloker: Stripe
+  račun/ključi — NE simuliran, status ostaja NOT CONFIGURED.
+- **§6 Affiliate**: 0 aktivnih; poti in fail-closed vedenje dokumentirani
+  po ponudniku (runbooki v PROVIDER-APPLICATIONS §4).
+- **§7 Leta — origin**: SupplyQuery brez izvornega letališča potrjeno;
+  adapterja vračata iskreno opombo »origin-required«; polni UI vnos
+  odložen do prvega aktiviranega letnega vira (najmanjša pravilna
+  sprememba).
+- **§9 Booking lifecycle**: 13 statusov + ločeni paymentStatus/payoutStatus
+  + idempotenca (PayoutEntry unique) — kode+testno preverjeno.
+- **§10 E-pošta inbound**: dormant po zasnovi (`DSA_EMAIL_INBOUND_TOKEN`
+  + ponudnik vhodne pošte) — javni naslov NI izmišljen.
+
+### Regresija
+
+`bun test` 4413 (4412 pass + 1 DB-gated skip) · `bun run lint` 0 ·
+`bunx tsc --noEmit` 0 · produkcijski smoke §3: 5/5 dokazov.
+
+---
+
 ## [1.156.2] — 2026-10-01 (#19 DISCOVER: FAZA G — produkcijska kontrola kakovosti + zaključek)
 
 ### Dodano (dokumentacija — zaključek issueja)

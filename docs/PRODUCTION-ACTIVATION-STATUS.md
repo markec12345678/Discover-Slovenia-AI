@@ -1,0 +1,239 @@
+# PRODUCTION ACTIVATION STATUS — Issue #20
+
+> **En vir resnice o dejanski produkcijski aktivaciji** vseh zmožnosti.
+> Izpeljano iz `src/lib/supply/production-matrix.ts` + `registry.ts`
+> (mehansko, brez lastnih odločitev). Živi izpis: `bun run activation:check`
+> (tabela) ali `bun run activation:check -- --json`.
+>
+> Ustvarjeno v okviru [Issue #20](https://github.com/markec12345678/Discover-Slovenia-AI/issues/20)
+> (faza 1.157.0). Štiri stanja po §11: **ACTIVE / CONFIGURED /
+> NOT CONFIGURED / BLOCKED** — pravila preslikave so v
+> [`src/lib/supply/activation-check.ts`](../src/lib/supply/activation-check.ts)
+> in testno zaklenjena (`issue20-activation-check.test.ts`, 12 testov).
+
+---
+
+## 0. Kako brati stanja (§11)
+
+| Stanje | Pomen | Pravilo |
+|---|---|---|
+| 🟢 **ACTIVE** | živo dokazano, polno produkcijsko | matrika: `PRODUCTION_ACTIVE` |
+| 🟡 **CONFIGURED** | sloj priklopljen in DEJANSKO teče (lahko že z živimi podatki), polna aktivacija (booking/CTA) še ni dokazana | stopnja ≥ `PRODUCTION_CONFIGURED` in < `PRODUCTION_ACTIVE` |
+| ⚪ **NOT CONFIGURED** | ključ/ID je self-serve dostopen, a NI v env | `blockedReason: NOT_CONFIGURED` |
+| 🔴 **BLOCKED** | potrebna zunanja odobritev/pogodba, vir nima te vrste dostopa, ali je psevdo-vir | vse ostalo |
+
+ENV prisotnost v izpisu je IZKLJUČNO Boolean (`IME:✓/✗`) — vrednosti
+nikoli ne zapustejo plasti (test kanarček). Cena `FROM_PRICE` pomeni
+objavljeno/izpeljano ceno, **NIKOLI živega citata**.
+
+---
+
+## 1. MASTER ACTIVATION MATRIX (§5 — vseh 16 vnosov)
+
+Stolpci po Issue #20 §5: manjkajoča zunanja predpogoj · stanje kode ·
+stanje testov · točen aktivacijski korak · pričakovano uporabniško vedenje.
+
+| Provider | Manjka zunanja predpogoj | Koda | Testi (dat. z omembo) | Točen aktivacijski korak | Uporabniško vedenje po aktivaciji |
+|---|---|---|---|---|---|
+| **osm** 🟢 | — (nič) | adapter živ | 32 | nič (že aktivno) | živi POI po viewportu (info_only, atribucija ODbL) |
+| **fsq** 🟢 | — (snapshot nameščen) | lokalni sloj | 20 | osvežitev: `bun run fsq:ingest` | 125.446 POI sloj SI+HR+ME+AL (info_only) |
+| **sto** 🟢 | — | RAG ingest | 7 | tedenski cron `sto-reingest` | klepet/RAG z uradno vsebino slovenia.info |
+| **own** 🟡 | Stripe ključi (checkout — §4); prvi partner-submitted geo zapis | adapter živ, LIVE_DATA_VERIFIED | 12 (+116 geo testov) | Stripe: račun → `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` v env → payout? | živi lastni lokali na zemljevidu ✓ (že zdaj); rezervacija po ključih |
+| **viator** ⚪ | `VIATOR_API_KEY` (self-serve: partnerresources.viator.com → Affiliate API) | adapter priklopljen (iskreno prazen) | 29 | partner portal → ključ v env | živi produkti+cene na sloju; productUrl deep-link |
+| **getyourguide** 🔴 | žeton izda partner manager (NI self-serve) | adapter priklopljen | 19 | partner.getyourguide.com → odobritev → `GETYOURGUIDE_API_TOKEN` (+`_PARTNER_ID`) | živi produkti + Option 1 booking povezave |
+| **tiqets** 🔴 | odobritev affiliate prijave prek Awin | adapter priklopljen | 11 | Awin → cread.php URL → `TIQETS_AFFILIATE_URL`/`_API_KEY` | vstopnice z objavljenimi cenami |
+| **booking** 🔴 | Managed Affiliate Partner status (Demand API) + `BOOKING_AFFILIATE_ID` | adapter priklopljen | 17 | partnerhub prijava (aid) → env | nastanitve s FROM_PRICE per_night |
+| **kiwitaxi** 🟢 | monetizacija: `KIWITAXI_PAP_ID` (inventar ŽE aktiven) | CSV feed + adapter | 40 | partner račun → PAP ID → env | transferji že živi (9.614); `/go/transfers` postane monetiziran |
+| **discovercars** 🔴 | Search API le B4B pogodba; affiliate code self-serve | brez adapterja | 0 | affiliate prijava → a_aid → `DISCOVERCARS_AFFILIATE_URL/CODE` | `/go/cars` monetiziran (brez inventarja) |
+| **omio** 🔴 | odobritev programa (tracking URL format po odobritvi) | brez adapterja | 0 | program → `OMIO_AFFILIATE_URL` (https) | `/go/transport` monetiziran |
+| **skyscanner** 🔴 | Impact račun → mediaPartnerId; Travel API „za uveljavljena podjetja" | adapter priklopljen (origin gate §7) | 10 | Impact → `SKYSCANNER_MEDIA_PARTNER_ID` (+ API ključ po odobritvi) | letni rezultati (izhodišče glej §7) |
+| **airalo** 🔴 | OAuth2 CLIENT_ID/SECRET po odobritvi Partner API | adapter priklopljen | 8 | odobritev → obe poverilnici v env (DELNA konfiguracija = NE konfigurirano) | eSIM paketi s cenami |
+| **worldnomads** 🔴 | CJ partner URL (self-serve prijava) | affiliate-only | 0 | CJ dashboard → `WORLDNOMADS_AFFILIATE_URL` | `/go/insurance` monetiziran (prednostni) |
+| **safetywing** 🔴 | Ambassador program ID | affiliate-only | 0 | program → `SAFETYWING_AMBASSADOR_ID` | `/go/insurance` monetiziran (rezerva WN) |
+| **travelpayouts** ⚪ | `TRAVELPAYOUTS_TOKEN` (self-serve) + `TRAVELPAYOUTS_ORIGIN` | adapter priklopljen | 10 | račun → developers/api → token + IATA izhodišče | nov search vir letov (citat ≠ sedeži) |
+
+**Povzetek (bun run activation:check):** 16 · 🟢 4 · 🟡 1 · ⚪ 2 · 🔴 9.
+Psevdo-vir `manual` (DISCOVERED) NI vnos registra in se v poročilu ne
+prikaže (testno zaklenjeno).
+
+---
+
+## 2. LASTNA TRŽNICA (§3 — P0) — PRODUKCIJSKO PREVERJENO ✅
+
+Struktura po Issue #20 §15: **CURRENT STATE → ROOT CAUSE / GAP →
+IMPLEMENTATION → TEST → PRODUCTION EVIDENCE → FINAL STATUS**.
+
+### CURRENT STATE (pred 1.157.0)
+`own` = PRODUCTION_CONFIGURED / NO_LIVE_DATA: adapter, geo stolpci in
+supply priklop obstajajo, vendar ima **0 od 20 objavljenih zapisov
+(10 listingov + 10 izkušenj) koordinate** → lastni sloj na zemljevidu
+je bil iskreno prazen.
+
+### ROOT CAUSE / GAP
+Produkcijska baza je bila napolnjena z demo-seedom (2026-09-16, glej
+`scripts/seed-demo.ts`), ki pred TASK 84 ni vseboval geo polj; nikoli
+ni bil opravljen naknadni geo-vnos. Produkcijski demo partnerji so po
+P7-A **inertni** (naključna gesla — prijava nemogoča po zasnovi), zato
+owner-UI pot v produkciji ni bila na voljo brez pravega partnerja.
+
+### IMPLEMENTATION (1.157.0, 2026-10-01)
+- **Geo-dopolnitev vzdrževalca** (transparenten popravek podatkov, ne
+  nov demo inventar): 2 REALNA lokala na REALNIH naslovih sta dobila
+  veljavne koordinate — `postojna-jama-partner` (Jamska cesta 30,
+  6230 Postojna → 45.7819, 14.2137) in `kavarna-zvezda-ljubljana`
+  (Krojaška ulica 5, 1000 Ljubljana → 46.0513, 14.5058). Ostalih 18
+  zapisov je iskreno ostalo brez koordinat (izpuščeni iz sloja).
+- **Matrika dvignjena s snapshotom**: own → `LIVE_DATA_VERIFIED`
+  (`blockedReason: NO_LIVE_DATA` odstranjen; nov iskreni razlog za
+  NAPREJ: `NOT_CONFIGURED` — Stripe checkout ključi). Vir:
+  `src/lib/supply/production-matrix.ts` (komentar vsebuje dokazno pot).
+
+### TEST
+- Adapter vrata so bila ŽE pokrita (116 testov: `task84-own-supply` /
+  `task85-listing-geo-form` / `task87-experience-geo` — viewport,
+  cat-gating, kap, DB napaka → MEČE, neveljavne koordinate → null,
+  zapis brez koordinat → izpuščen).
+- Novo (1.157.0): preslikava activation-check zaklenjena z 12 testi
+  (`issue20-activation-check.test.ts`) — pokritost 16/16, mehanska
+  preslikava iz matrike, kanarček proti izdaji env vrednosti.
+- Posodobljeni source-contract testi za novo stopnjo own:
+  `task84` (LIVE_DATA_VERIFIED + NOT_CONFIGURED checkout), `task87`,
+  `task53 ⑦` (števci stopenj), `task52 §0` (invarianta razloga).
+
+### PRODUCTION EVIDENCE (Render — PRIMARNA produkcija, 2026-10-01 ~08:50 UTC)
+1. **Supply odgovor vsebuje točen source** — `GET /api/supply/search?
+   bbox=45.77,14.19,45.79,14.24&zoom=14&cats=poi` → `provider: "own"`,
+   `id: "own:cmtvgsm0t000mq5udjus7fcmo"`, `bookingMode:
+   "own_marketplace"`, `geoPrecision: "exact"`, naslov/ocena prisotni.
+2. **Marker na zemljevidu** — /zemljevid iskanje »restavracije
+   Ljubljana« → zadetek »Lokal Kavarna Zvezda — Ljubljana« → supply
+   sloj (940 markerjev) → produktni marker → POI popup z naslovom,
+   oceno (★ 4.4 · 156), kategorijo. 📸 `p1-own-poi-popup.png`
+3. **Add v My Trip** — gumb »+ Dodaj v mojo pot« → »✓ Dodano« +
+   `dai:my-trip-items` vsebuje `{kind:"product",
+   refId:"own:cmtvgslvj000kq5ud6j8b42es", source:"zemljevid"}` —
+   kanonski write-through (#16 F3) z lastnim tržničnim produktom.
+   📸 `p2-dodano-gumb.png`
+4. **Hub** — /moja-potovanja → »Moja pot 1« vsebuje »Kavarna Zvezda —
+   Ljubljana«. 📸 `p3-hub-moja-pot.png`
+5. **Zapis brez koordinat je izpuščen** — pred popravkom je bil lastni
+   sloj prazen kljub 20 objavljenim zapisom (0 v supply odgovoru —
+   dokazano z metodo: `own` count 0 @ 2026-10-01 ~08:35 UTC).
+
+### FINAL STATUS
+**own = LIVE_DATA_VERIFIED (🟡 CONFIGURED)** — živi podatki produkcijsko
+preverjeni skozi celotno pot; PRODUCTION_ACTIVE čaka Stripe ključe
+(checkout, §4) in prvi partner-submitted geo zapis. Owner → create/
+update → moderacija → published → geo validacija je kode+testno
+preverjena (`/api/owner/listings/[id]` zod lat/lng + revalidacija;
+demo računi v produkciji inertni po P7-A — pravi partner bo opravil
+produkcijsko pot prvič).
+
+---
+
+## 3. LASTNI CHECKOUT — STRIPE (§4 — P0): TEHNIČNO DOKONČAN, ZUNANJI BLOKER
+
+- **Implementacija obstaja in je fail-closed:** brez `STRIPE_SECRET_KEY`
+  → 503 (napaka konfiguracije, ne tiha demo nadgradnja); demo veja
+  SAMO z izrecnim `DSA_DEMO_PAYMENTS=1` → 501. Vir:
+  `src/app/api/stripe/checkout/route.ts:145-159`.
+- **Webhook:** `stripe-signature` glava obvezna + `constructEvent`
+  overitev + `ProcessedStripeEvent` PK dedup (atomarna P2002) —
+  `src/app/api/stripe/webhook/route.ts:19-78`.
+- **Booking lifecycle (§9):** 13 statusov (1.86.0), ločeno
+  `paymentStatus` (demo/unpaid NIKOLI v provizijsko osnovo),
+  `payoutStatus` state machine, idempotenčni `PayoutEntry`
+  (`bookingId` unique). Klientski payload NE MORE ponarediti
+  `confirmed` (strežniška overitev prevladuje — TASK 49 vzorec);
+  testi: `task99-booking-lifecycle`, `task81/100b` migracije,
+  7 datotek z Stripe pokritostjo.
+- **Zunanji aktivacijski bloker (iskreno, NE simuliran):** Stripe
+  račun + ključi (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+  cene izdelkov/izkušenj, izplačilni račun). Tehnična aktivacijska
+  pot je zaključena; do takrat ostaja status NOT CONFIGURED — točno
+  kot zahteva Issue #20 §4 (»če manjka Stripe account, blockerja ne
+  simuliraj«).
+
+---
+
+## 4. AFFILIATE MONETIZACIJA (§6): POT DOKUMENTIRANA, 0 AKTIVNIH
+
+Vseh 11 affiliate env spremenljivk manjka (Boolean izpisi v
+`activation:check`). Vsaka ima: env handling (fail-closed — brez ID-ja
+redirect vodi na čisto partnersko stran, `monetized: false`, NIKOLI
+lažnega sledenja), host allowlist v `/go/[provider]`, telemetrijo
+(`monetized` flag). Točni koraki po ponudniku: §1 tabela zgoraj +
+`docs/PROVIDER-APPLICATIONS.md` §4 (runbooki). Pričakovano vedenje:
+`/go/*` postane monetiziran BREZ spremembe kode.
+
+---
+
+## 5. LETI — ORIGIN (§7): ODLOČITEV + DOKAZ
+
+**Ugotovitev:** `SupplyQuery` (`src/lib/supply/types.ts:240-255`) nima
+izvornega letališča — potrjeno. Arhitektura je pripravljena: adapterja
+Skyscanner/Travelpayouts ob prisotnem žetonu BREZ izhodišča vrneta
+`[]` z opombo **»origin-required«** (registry.ts:539-543, 691-695 —
+`deps.originPlaceId` resolver pripravljen); `TRAVELPAYOUTS_ORIGIN`
+(IATA) je operaterska konfiguracija, ki se NE šteje kot konfiguracija
+vira (TASK 53 §21).
+
+**Odločitev (1.157.0):** vnos poljubnega `origin` v SupplyQuery brez
+semantične spremembe JE izvedljiv (opcijsko polje), vendar obema
+letnima providerjama manjkata žetoni (BLOCKED) — UI, ki bi zahtevalo
+izhodišče, bi danes služilo izključno opombi »origin-required«.
+Skladno z načelom najmanjše pravilne spremembe se polni UI vnos
+odloži do prvega aktiviranega letnega vira; stanje `origin-required`
+je že danes jasno prikazano v supply odgovoru (adapter note) in
+zaklenjeno s testi (`task53-no-credential-mode` — origin gate).
+
+---
+
+## 6. E-POŠTA / RESERVATION IMPORT (§10): DORMANT, POT DOKUMENTIRANA
+
+`/api/journey/bookings/email-inbound` je tehnično pripravljen (surovo
+RFC 5322 → OSNUTEK DRAFT; `SESSION_KEY_RE` vrata). Aktivacija zahteva:
+(1) `DSA_EMAIL_INBOUND_TOKEN` v env, (2) naključni posredovalni naslov
+pri ponudniku vhodne pošte (SendGrid Inbound Parse / Postmark / SES).
+Brez tega je kanal iskreno zaprt (404/401) — javnega naslova NI
+smemo izmisliti (Issue #20 §10). Konzistenca koda ↔ README ↔ UI:
+preverjena (UI zavihek Pošta kaže dormant stanje z navodili).
+
+---
+
+## 7. ENOTEN PRODUCTION ACTIVATION CHECK (§11) ✅
+
+```bash
+bun run activation:check           # tabela: stanje, stopnja, live, dostop, CTA, cena, env Boolean
+bun run activation:check -- --json # strojno berljivo (CI/dokumentacija)
+```
+
+Izpis vsebuje IZKLJUČNO stanja/Booleane/klasifikacije — nobene
+vrednosti env (test kanarček). Jedro: `src/lib/supply/activation-check.ts`
+(prehodno izključno iz matrike+registra — agent stanj NE more
+»lepšati«); ovoj: `scripts/activation-check.ts` (tanjek, testirano).
+
+---
+
+## 8. README USKLADITEV (§12) ✅
+
+- Popravljen zastareli zapis »4142 testov« → dejansko stanje suite-a
+  (4413 testov: 4412 pass + 1 DB-gated preskok brez baze — CI-semantika).
+- Zgodovinski auditi niso spreminjani; dodana omemba `activation:check`.
+
+---
+
+## 9. REGRESIJSKI STATUS (1.157.0)
+
+`bun test` 4413 (4412 pass + 1 DB-gated skip) · `bun run lint` 0 ·
+`bunx tsc --noEmit` 0 — vključno z novimi 12 testi activation-check
+in posodobljenimi 4 testi matrike (task53 ⑦, task52 §0 implicitno,
+task84, task87). Produkcijski smoke: §2 zgoraj (5 dokazov).
+
+---
+
+*Zgodovina faz: 1.157.0 (faza 1 — §3 lastna tržnica produkcijsko
+preverjena + dvig LIVE_DATA_VERIFIED, §11 activation:check, §5 ta
+dokument, §12 README uskladitev, §4/§6/§7/§9/§10 dokumentirana
+stanja). Naslednje faze: aktivacija Stripe računa (zunanje), prvi
+partner-submitted geo zapis (zunanje), odložitev UI origin (§7).*

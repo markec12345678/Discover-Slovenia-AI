@@ -544,7 +544,9 @@ describe("experience geo aktivacija (source-contract)", () => {
   test("production-matrix: own price FROM_PRICE (objavljene cene izkušenj)", () => {
     const own = matrix.match(/\n  own: \{([\s\S]*?)\n  \},/)!;
     expect(own[1]).toContain('price: "FROM_PRICE"');
-    expect(own[1]).toContain('stage: "PRODUCTION_CONFIGURED"');
+    // Issue #20 §3 (1.157.0): own dvignjen na LIVE_DATA_VERIFIED (dokazi
+    // docs/evidence/issue20/ — 2 geo listinga produkcijsko preverjena).
+    expect(own[1]).toContain('stage: "LIVE_DATA_VERIFIED"');
   });
 
   test("adapter: dva vira (listing + experience findMany, Promise.all)", () => {

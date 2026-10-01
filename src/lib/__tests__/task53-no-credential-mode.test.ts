@@ -237,7 +237,7 @@ describe("TASK 53 §20: NO-CREDENTIAL MODE (današnje stanje instance)", () => {
     }
   });
 
-  test("⑦ matrika: 16 vnosov, 4 PRODUCTION ACTIVE (+fsq TASK 61), 7 CODE_READY, 4 CONTRACT_VERIFIED, 1 PRODUCTION_CONFIGURED (+own TASK 84)", () => {
+  test("⑦ matrika: 16 vnosov, 4 PRODUCTION ACTIVE (+fsq TASK 61), 7 CODE_READY, 4 CONTRACT_VERIFIED, 1 LIVE_DATA_VERIFIED (+own, Issue #20 §3)", () => {
     const matrix = productionMatrix();
     expect(matrix.length).toBe(16);
     const byStage = new Map<string, number>();
@@ -245,9 +245,12 @@ describe("TASK 53 §20: NO-CREDENTIAL MODE (današnje stanje instance)", () => {
     expect(byStage.get("PRODUCTION_ACTIVE")).toBe(4); // osm, sto, kiwitaxi + fsq (TASK 61)
     expect(byStage.get("CODE_READY")).toBe(7);
     expect(byStage.get("CONTRACT_VERIFIED")).toBe(4); // discovercars, omio, wn, sw
-    // TASK 84 (1.75.0): own — sloj priklopljen (adapter + register active),
-    // živi partnerjevi listingi s koordinatami še manjkajo (NO_LIVE_DATA)
-    expect(byStage.get("PRODUCTION_CONFIGURED")).toBe(1);
+    // Issue #20 §3 (1.157.0, 2026-10-01): own — dvig PRODUCTION_CONFIGURED
+    // → LIVE_DATA_VERIFIED na podlagi produkcijskih dokazov (2 geo listinga
+    // preverjena skozi supply → marker → My Trip; dokazi
+    // docs/evidence/issue20/). PRODUCTION_ACTIVE še NE (Stripe bloker).
+    expect(byStage.get("LIVE_DATA_VERIFIED")).toBe(1);
+    expect(byStage.get("PRODUCTION_CONFIGURED") ?? 0).toBe(0);
   });
 });
 

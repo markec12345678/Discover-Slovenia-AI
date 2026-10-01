@@ -19,7 +19,7 @@
 |---|---|
 | **Live aplikacija** | <https://i-feel-slovenia.onrender.com> (Render, primarna) · <https://i-feel-slovenia.vercel.app> (Vercel, sekundarna) |
 | **Dokumentacija** | [docs/](docs/) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) |
-| **Stanje** | v1.156.2 ŽIVA · 4413 testov · ISSUE #19 (DISCOVER — Premium Product Presentation) ZAPRT 1. 10. 2026: koherentna premium prezentacija z **ZERO FEATURE LOSS** — faza A inventura [`docs/FUNCTION-PARITY-BEFORE.md`](docs/FUNCTION-PARITY-BEFORE.md) (39 strani, 144 API, 387 funkcij, 20 območij) → B izhodišče [`BASELINE-VISUAL.md`](docs/BASELINE-VISUAL.md) (triaža REALNO vs ARTEFAKT) → C-1/2/3 implementacija (CTA hierarhija + 3-stopnjska elevacija, tipografski žeton `--foreground-subtle` + 48/48 naslovi, ritem py-20 — 20 datotek, +66/−24, 0 API dotikov) → D regresija po fazah (4413/4413, lint 0, tsc 0) → E responsive [`RESPONSIVE-VERIFICATION.md`](docs/RESPONSIVE-VERIFICATION.md) (72 meritev: 5 širin × 7 površin + 6 jezikov @320 + desktop; 0 prelivov, 0 noAlt; 4 prezentacijski popravki dotikalnih tarč WCAG 2.5.8) → F revizor [`FUNCTION-PARITY-AFTER.md`](docs/FUNCTION-PARITY-AFTER.md) (verdikt 0 izgub / 100 % pariteta) → G produkcijska kontrola na Vercelu 1.156.0 (3 zlate poti: hero čip → načrtovalnik s samodejnim 3-dnevnim itinererjem; Bled → Dodaj → hub Moja pot; zemljevid iskanje → POI popup → Dodaj v OBE plasti + ✓ Dodano; desktop 1280 + mobil 390 ×7 + 320 prag 0 preliva; 0 page/console napak; 13 dokazov `qh19-faza-g/`) · prej: 1.153.2 QH LOKALI (2 produkcijsko potrjena hrošča /api/listings) · CI zelen · OBE PRODUKCIJI ŽIVI NA 1.156.2 ≡ main: RENDER (primarna) AutoDeploy obnovljen — ISSUE #10 ZAPRT 1. 10. 2026 (drift 13+ verzij razrešen: catch-up job + lastnikov vklop AutoDeploy; dokaz: push eb7432f → Render samodejni build v ~7 min; prod-monitor run 36824446081 vsi jobi zeleni, verzija ≡ repo na obeh, /en/trznica 200, sitemap 3548 = 3548) · VERCEL (sekundarna) 1.156.2 ŽIVA · lint 0 · tsc 0 |
+| **Stanje** | v1.157.0 ŽIVA · 4413 testov · ISSUE #20 (DISCOVER — Production Activation & Live Supply Readiness) FAZA 1 (1. 10. 2026): lastna tržnica PRODUKCIJSKO PREVERJENA skozi celotno pot (2 geo listinga: supply → marker → POI popup → Dodaj v mojo pot → hub; dokazi `docs/evidence/issue20/`) → matrika own dvignjena PRODUCTION_CONFIGURED → **LIVE_DATA_VERIFIED** (Stripe checkout ostaja iskren NOT CONFIGURED bloker) · NOV `bun run activation:check` (§11: iskren izpis ACTIVE/CONFIGURED/NOT CONFIGURED/BLOCKED za vseh 16 providerjev, 12 testov) · `docs/PRODUCTION-ACTIVATION-STATUS.md` (§5 master matrika) · README usklajen (4413/4142 popravek §12) · prej ISSUE #19 (DISCOVER — Premium Product Presentation) ZAPRT 1. 10. 2026: koherentna premium prezentacija z **ZERO FEATURE LOSS** — faza A inventura [`docs/FUNCTION-PARITY-BEFORE.md`](docs/FUNCTION-PARITY-BEFORE.md) (39 strani, 144 API, 387 funkcij, 20 območij) → B izhodišče [`BASELINE-VISUAL.md`](docs/BASELINE-VISUAL.md) (triaža REALNO vs ARTEFAKT) → C-1/2/3 implementacija (CTA hierarhija + 3-stopnjska elevacija, tipografski žeton `--foreground-subtle` + 48/48 naslovi, ritem py-20 — 20 datotek, +66/−24, 0 API dotikov) → D regresija po fazah (4413/4413, lint 0, tsc 0) → E responsive [`RESPONSIVE-VERIFICATION.md`](docs/RESPONSIVE-VERIFICATION.md) (72 meritev: 5 širin × 7 površin + 6 jezikov @320 + desktop; 0 prelivov, 0 noAlt; 4 prezentacijski popravki dotikalnih tarč WCAG 2.5.8) → F revizor [`FUNCTION-PARITY-AFTER.md`](docs/FUNCTION-PARITY-AFTER.md) (verdikt 0 izgub / 100 % pariteta) → G produkcijska kontrola na Vercelu 1.156.0 (3 zlate poti: hero čip → načrtovalnik s samodejnim 3-dnevnim itinererjem; Bled → Dodaj → hub Moja pot; zemljevid iskanje → POI popup → Dodaj v OBE plasti + ✓ Dodano; desktop 1280 + mobil 390 ×7 + 320 prag 0 preliva; 0 page/console napak; 13 dokazov `qh19-faza-g/`) · CI zelen · OBE PRODUKCIJI ŽIVI (faza 1.157.0 bo na obeh po pushu — glej prod-monitor) · prej: 1.153.2 QH LOKALI · RENDER (primarna) AutoDeploy obnovljen — ISSUE #10 ZAPRT 1. 10. 2026 (drift 13+ verzij razrešen: catch-up job + lastnikov vklop AutoDeploy; dokaz: push eb7432f → Render samodejni build v ~7 min; prod-monitor run 36824446081 vsi jobi zeleni, verzija ≡ repo na obeh, /en/trznica 200, sitemap 3548 = 3548) · VERCEL (sekundarna) 1.156.2 ŽIVA · lint 0 · tsc 0 |
 
 **Kazalo:** [Trenutno stanje](#trenutno-stanje) · [Kaj lahko uporabnik počne](#kaj-lahko-uporabnik-počne) ·
 [Geografska pokritost](#geografska-pokritost) · [Journey orkestracija](#journey-orkestracija) ·
@@ -411,10 +411,11 @@ dodatnih prenosov. Osvežitev feedov: `bun run fsq:ingest` / `bun run kiwitaxi:i
 Preverjanje:
 
 ```bash
-bun test                 # 4142 testov (4133 pass + 9 prej-oddanih okoljskih OSRM —
-                         #  potrebujejo zunanji routing servis, niso regresija)
+bun test                 # 4413 testov (4412 pass + 1 DB-gated preskok brez baze —
+                         #  CI-semantika; z veljavno postgres bazo teče tudi ta)
 bun run lint             # eslint
 bunx tsc --noEmit        # tipi
+bun run activation:check # iskren izpis aktivacije vseh 16 providerjev (Issue #20 §11)
 ```
 
 Demo računi (samo lokalni seed; fiksni gesli veljata le z
@@ -472,7 +473,7 @@ Kategorije — celoten seznam z navodili je v [`.env.example`](.env.example):
   nadzornik 20:12 → uspeh 20:27:53 → živa 20:31; hladen prvi obisk ~90 s
   (znani pojav, topla instanca ~1 s); Render — AutoDeploy obnovljen 1. 10.
   2026 [Issue #10 ZAPRT: catch-up job + samodejni build pusha eb7432f v ~7 min;
-  obe produkciji 1.156.2 ≡ main])
+  obe produkciji 1.156.2 ≡ main; 1.157.0 = faza 1 issueja #20])
 - **Baza:** Neon PostgreSQL (pooler, `connection_limit=1`); migracije na produkcijo:
   `./scripts/ops/migrate-deploy.sh "<neon-url>"`
 - **CI (GitHub Actions):** lint + typecheck + build proti `postgres:16-alpine`
@@ -568,7 +569,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.156.2**.
+Trenutna verzija: **1.157.0**.
 
 ---
 

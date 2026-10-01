@@ -34,7 +34,7 @@ Prejšnje žive preverbe pogodb: 2026-09-18 (TASK 45 Viator, TASK 46 GYG).
 | **OSM** | Lokalni (odprti) | ✅ `osm-adapter.ts` | ODbL (odprta) | OPEN DATA | brez ključa | ✅ AKTIVEN | ✅ žive Overpass poizvedbe | NOT SUPPORTED | NOT SUPPORTED | info_only | ✅ | **ACTIVE** |
 | **Foursquare Open Places** | Lokalni (odprti) | ✅ `providers/fsq/*` (TASK 53/61) | Apache-2.0 | OPEN DATA (množica NAMEŠČENA, lokalno strežena) | `FSQ_PLACES_DIR` privzeto `./data/fsq-places` (nastavljeno) | ✅ | ✅ (SI+HR+ME+AL, 125.446 POI; `bun run fsq:ingest`) | NOT SUPPORTED | NOT SUPPORTED | info_only | ✅ | **ACTIVE** |
 | **slovenia.info (STO)** | Lokalni (vsebina) | ingest + RAG (ni sloj zemljevida) | llms.txt (uradna vsebina) | STATIC CONTENT | brez ključa | ✅ (RAG vir) | ✅ ingest 2026-09-17 + tedenski cron | NOT SUPPORTED | NOT SUPPORTED | info_only | ✅ (RAG) | **ACTIVE** (ne-sloj) |
-| **Lastna tržnica (own)** | Own | ✅ `providers/own/adapter` (TASK 84) | lastna | DIRECT BOOKING (geo: lat/lng na Listingu) | — | ✅ sloj priklopljen (prazna tržnica = iskreno „no-listings") | ✅ E2E na testnem listingu (dev) | NOT SUPPORTED (priceRange je obseg) | NOT SUPPORTED (Stripe, ne koledar) | own_checkout | ✅ priklopljen | **PRODUCTION CONFIGURED** (NO_LIVE_DATA — živi partnerjevi listingi s koordinatami še manjkajo) |
+| **Lastna tržnica (own)** | Own | ✅ `providers/own/adapter` (TASK 84) | lastna | DIRECT BOOKING (geo: lat/lng na Listingu) | — | ✅ sloj priklopljen (prazna tržnica = iskreno „no-listings") | ✅ **PRODUKCIJSKO preverjeno 2026-10-01** (Issue #20 §3: 2 geo listinga — Postojnska jama, Kavarna Zvezda — skozi supply → marker → My Trip; dokazi `docs/evidence/issue20/`) | FROM PRICE (izkušnje per_person; priceRange je obseg) | NOT SUPPORTED (Stripe, ne koledar) | own_checkout | ✅ priklopljen | **LIVE DATA VERIFIED** (NE ACTIVE — Stripe checkout ključi NOT CONFIGURED, Issue #20 §4) |
 | **Viator** | A — activities | ✅ `providers/viator/*` | ✅ živo preverjena | AFFILIATE DEEP LINK (API danes NE dostopen) | API key MISSING | ❌ (iskreno prazen sloj) | ❌ (vrata živa: 401 brez ključa) | FROM PRICE (ko bo aktiven) | UNKNOWN (nad Basic tierjem) | affiliate_redirect | ✅ priklopljen | **CODE READY / NOT CONFIGURED** |
 | **GetYourGuide** | A — activities | ✅ `providers/getyourguide/*` | ✅ živo preverjena | AFFILIATE DEEP LINK (API danes NE dostopen) | API token MISSING (NI self-serve) | ❌ (iskreno prazen sloj) | ❌ (vrata živa: „X-ACCESS-TOKEN missing") | FROM PRICE (ko bo aktiven) | UNKNOWN | affiliate_redirect | ✅ priklopljen | **CODE READY / PARTNER APPROVAL REQUIRED** |
 | **Tiqets** | A — activities | ✅ `providers/tiqets/adapter.ts` (TASK 53) | ✅ (portal živ) | AFFILIATE DEEP LINK | API key MISSING (izda se po Awin odobritvi) | ❌ (iskreno prazen sloj) | ❌ (vrata živa: 401 „key incorrect") | FROM PRICE (ko bo aktiven) | UNKNOWN (Distributor tier) | affiliate_redirect | ✅ priklopljen | **CODE READY / PARTNER APPROVAL REQUIRED** |
@@ -49,8 +49,9 @@ Prejšnje žive preverbe pogodb: 2026-09-18 (TASK 45 Viator, TASK 46 GYG).
 | **Travelpayouts** | Infra/vir | ✅ `providers/travelpayouts/adapter.ts` (TASK 53) | ✅ (docs živi) | SEARCH API (self-serve) | token MISSING (ni računa) | ❌ (iskreno prazen sloj) | ❌ (vrata živa: 401 brez žetona) | FROM PRICE (predpomnjene, ni živi citat) | UNKNOWN | affiliate_redirect (hosti že dovoljeni v /go) | ✅ priklopljen | **CODE READY / NOT CONFIGURED** (izhodišče letov določa `TRAVELPAYOUTS_ORIGIN`) |
 
 **Povzetek (productionSummary):** 16 vnosov · **4 PRODUCTION ACTIVE**
-(osm, sto, kiwitaxi, fsq) · **1 PRODUCTION CONFIGURED (own — TASK 84:
-sloj priklopljen, živi partnerjevi listingi s koordinatami še manjkajo)**
+(osm, sto, kiwitaxi, fsq) · **1 LIVE DATA VERIFIED (own — Issue #20 §3,
+2026-10-01: 2 produkcijska geo listinga preverjena skozi celotno pot;
+PRODUCTION_ACTIVE čaka Stripe ključe + prvi partner-submitted geo zapis)**
 · **7 CODE READY** (viator, getyourguide, tiqets, booking, skyscanner,
 airalo, travelpayouts — adapterji priključeni, iskreno prazni do
 ključev/žetonov) · **4 CONTRACT VERIFIED** (discovercars, omio,
