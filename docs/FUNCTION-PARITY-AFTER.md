@@ -77,6 +77,41 @@ lastnikovih operacij, ne prezentacijske faze.
 
 **ZERO FEATURE LOSS. 100 % FUNCTION PARITY.** Vsa #19 implementacija (FAZE
 C+E) je izključno prezentacijski sloj na skupnih primitivih; funkcionalna
-inventura BEFORE ostaja 1:1 veljavna. Produkcijska verifikacija (Vercel
-1.156.0 deploy + zdravstvene poti) sledi ob sprostitvi kvote (1. 10. 20:52
-Ljubljana).
+inventura BEFORE ostaja 1:1 veljavna.
+
+---
+
+## Dodatek — FAZA G: PRODUKCIJSKA KONTROLA KAKOVOSTI (1. 10. 2026)
+
+> Issue §23 PHASE G: »final review iz perspektive prvega uporabnika —
+> rezultat mora izgledati in se obnašati kot koherenten komercialni
+> potovalni izdelek.« Izvedeno na produkciji (Vercel **1.156.0** =
+> kodno identičen HEAD-u; 1.156.1/1.156.2 sta docs-only).
+
+**Zlata pot na produkciji (browser, agent-browser):**
+
+| Pot | Rezultat |
+|---|---|
+| Hero čip »Miren vikend« → `/nacrtuj` | samodejno generiran **3-dnevni itinerer** (dnevi 1–3, 9 hitrih prilagoditev, zemljevid poti, rezervacije — 6 ponudb) ✓ |
+| `/destinacija/bled` → »Dodaj v mojo pot« | localStorage `dai:my-trip-items` (source: `destinacija-hub`) + toast → hub `/moja-potovanja` prikazuje »Moja pot 1 — DESTINACIJE (1)« ✓ |
+| `/zemljevid` → iskanje »restavracije Ljubljana« | zadetki **z razlogi** → supply sloj samodejno aktiven (839 markerjev) → fly-to → POI popup (Kratochwill 🍽️) → »+ Dodaj v mojo pot« → **OBE plasti** (localStorage product `fsq:4bf6a187…` source `zemljevid` + sessionStorage `dai:supply-selection`) + gumb »✓ Dodano« ✓ |
+
+**Površine:** desktop 1280 (domov, načrtovalnik, hub, zemljevid) + mobil
+390 (domov s tab vrstico in značko »2 idej v moji poti« — pravilen števec,
+/nacrtuj, /zemljevid, /moja-potovanja »Moja pot 2«, /na-poti, /destinacije,
+/destinacija/bled) + **320 trdni prag** (domov: 0 preliva, 320 = 320).
+
+**0 page errors · 0 console errors** v celotni seji. 13 dokazov PNG:
+`qh19-faza-g/prod-g-*.png`.
+
+Opazovanje (ni napaka): prvi klik hero čipa je enkratno obtičal na RSC
+prehodu (fetch 200, navigacija se ni zavezala) — NEPOVRATLJIVO na ponovitvi
+in direktni navigaciji; ista seja je imela CDP timeout ob prvem odpiranju
+(artefakt merilne povezave, 0 konzolnih napak). Na dev je C-1 zlata pot že
+bila browser-dokazana.
+
+**Verdikt FAZE G:** izdelek se obnaša kot koherentna komercialna
+potovalna platforma — enoten CTA/rezultat hierarhičen, tipografija in
+elevacija dosledni, mobilna tab vrstica + značka števca pravilna, vse
+zlate poti (ODKRIJ → DODAJ → MOJA POT → NAČRTUJ; ZEMLJEVID → KRAJ → DODAJ)
+delujejo na produkciji.

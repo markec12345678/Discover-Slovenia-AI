@@ -7,6 +7,28 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.156.2] — 2026-10-01 (#19 DISCOVER: FAZA G — produkcijska kontrola kakovosti + zaključek)
+
+### Dodano (dokumentacija — zaključek issueja)
+
+- **FAZA G izvedena na produkciji** (Vercel 1.156.0 = kodno identičen
+  HEAD-u; 1.156.1/1.156.2 docs-only): final review iz perspektive prvega
+  uporabnika — **3 zlate poti browser-dokazane**: hero čip »Miren vikend« →
+  /nacrtuj (samodejni 3-dnevni itinerer) · /destinacija/bled → Dodaj → hub
+  »Moja pot 1« · /zemljevid iskanje »restavracije Ljubljana« → POI popup →
+  Dodaj v OBE plasti (zbirka + supply izbira) + »✓ Dodano«.
+- **Površine:** desktop 1280 ×4 + mobil 390 ×7 (tab vrstica z značko
+  »2 idej v moji poti« — pravilen števec) + **320 trdni prag** (0 preliva).
+- **0 page errors · 0 console errors** v celotni seji; 13 dokazov PNG
+  (`qh19-faza-g/prod-g-*.png`); opazovanje enkratnega RSC zamika dokumentirano
+  (nepovratljivo, 0 konzolnih napak).
+- **`docs/FUNCTION-PARITY-AFTER.md`** dodatek FAZE G (izpolnjena obljuba
+  »produkcijska verifikacija sledi«); **README** status usklajen
+  (1.152.0 → 1.156.x, #19 v vrstici Stanje). **ISSUE #19 ZAPRT** — vsi
+  sprejemni kriteriji §26 pokriti (funkcionalnost: 0 izgub; UX: hierarhija
+  dvignjena; kakovost: suite 4413/4413, lint 0, tsc 0, zlata pot, mobilna +
+  desktop QA).
+
 ## [1.156.1] — 2026-09-30 (#19 DISCOVER: FAZA F — FUNCTION-PARITY-AFTER)
 
 ### Dodano (dokumentacija — pogodba »0 izgub«)
