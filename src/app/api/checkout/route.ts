@@ -245,6 +245,42 @@ export async function POST(request: Request) {
       item.price = dbProduct.price;
     }
 
+    // --- Preveri ali je Stripe v demo načinu ---
+    // 19e-1 (revizija 1.36.0, P2): prej INLINE detekcija po odstopnosti
+    // ključa — v produkciji z unset STRIPE_SECRET_KEY bi se naročilo tiho
+    // zapisalo kot "paid". Zdaj skupni fail-closed helper: demo v produkciji
+    // zahteva izrecni DSA_DEMO_PAYMENTS=1, sicer fail-closed napaka.
+    const isDemo = isStripeDemo();
+
+    // ISSUE #20 §4 FAZA 2 (1.158.0): PRODUCTION MODE za izdelke — prej je
+    // bila tu 501 varovalka (TODO). Zdaj je tu PRAVA aktivacijska pot:
+    // pending Order (atomarno rezervira zalogo) → Stripe Checkout Session
+    // (payment mode, metadata type=marketplace_order) → url preusmeritev →
+    // webhook checkout.session.completed (edini writer "paid") /
+    // checkout.session.expired|async_payment_failed (sprosti zalogo).
+    // P7-C3/P7-C4 (P1) ostaja v veljavi: brez Stripe Checkout seje in
+    // webhook potrditve naročilo NIKOLI ni "paid".
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    if (!isDemo && (!isStripeConfigured() || !stripeKey)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Plačila niso konfigurirana (STRIPE_SECRET_KEY manjka). Nastavite Stripe ključe ali DSA_DEMO_PAYMENTS=1 za demo način.",
+        },
+        { status: 503 }
+      );
+    }
+
+    // ISSUE #20 §4 FAZA 2: v produkciji dedup zajema SAMO aktivne naročilne
+    // vrstice (pending = seja še čaka na plačilo, paid = opravljeno).
+    // Preklicana (potekla/plačilno propadla) vrstica NOVEGA poskusa NE
+    // blokira — njena rezervacija je bila sproščena. Demo (kjer so vrstice
+    // vedno "paid") se obnaša nespremenjeno.
+    const dedupStatusFilter = isDemo
+      ? undefined
+      : { in: [...ORDER_ACTIVE_STATUSES] };
+
     // FW1: DEDUP PRE-CHECK — pred preverjanjem zaloge. Duplikatni request
     // (dvoklik/retry) mora dobiti 409 s številko PRVEGA naročila TUDI takrat,
     // ko je prvotno naročilo medtem porabilo zadnjo zalogo (sicer bi kupec
@@ -350,42 +386,6 @@ export async function POST(request: Request) {
     // daljši format ne seka starih številk (različna dolžina = vedno unikatno).
     const year = new Date().getFullYear();
     const orderNumber = `IF-${year}-${randomId(12)}`;
-
-    // --- Preveri ali je Stripe v demo načinu ---
-    // 19e-1 (revizija 1.36.0, P2): prej INLINE detekcija po odstopnosti
-    // ključa — v produkciji z unset STRIPE_SECRET_KEY bi se naročilo tiho
-    // zapisalo kot "paid". Zdaj skupni fail-closed helper: demo v produkciji
-    // zahteva izrecni DSA_DEMO_PAYMENTS=1, sicer fail-closed napaka.
-    const isDemo = isStripeDemo();
-
-    // ISSUE #20 §4 FAZA 2 (1.158.0): PRODUCTION MODE za izdelke — prej je
-    // bila tu 501 varovalka (TODO). Zdaj je tu PRAVA aktivacijska pot:
-    // pending Order (atomarno rezervira zalogo) → Stripe Checkout Session
-    // (payment mode, metadata type=marketplace_order) → url preusmeritev →
-    // webhook checkout.session.completed (edini writer "paid") /
-    // checkout.session.expired|async_payment_failed (sprosti zalogo).
-    // P7-C3/P7-C4 (P1) ostaja v veljavi: brez Stripe Checkout seje in
-    // webhook potrditve naročilo NIKOLI ni "paid".
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
-    if (!isDemo && (!isStripeConfigured() || !stripeKey)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Plačila niso konfigurirana (STRIPE_SECRET_KEY manjka). Nastavite Stripe ključe ali DSA_DEMO_PAYMENTS=1 za demo način.",
-        },
-        { status: 503 }
-      );
-    }
-
-    // ISSUE #20 §4 FAZA 2: v produkciji dedup zajema SAMO aktivne naročilne
-    // vrstice (pending = seja še čaka na plačilo, paid = opravljeno).
-    // Preklicana (potekla/plačilno propadla) vrstica NOVEGA poskusa NE
-    // blokira — njena rezervacija je bila sproščena. Demo (kjer so vrstice
-    // vedno "paid") se obnaša nespremenjeno.
-    const dedupStatusFilter = isDemo
-      ? undefined
-      : { in: [...ORDER_ACTIVE_STATUSES] };
 
     // Pripravi items JSON za bazo (AGREGIRANO + sortirano — kanonska oblika)
     const itemsJson = JSON.stringify(

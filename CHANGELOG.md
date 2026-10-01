@@ -7,6 +7,24 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+---
+
+## [1.158.1] — 2026-10-01 (#20 FAZA 2 — produkcijski popravek)
+
+### Popravljeno
+
+- **`/api/checkout`: TDZReferenceError → produkcijski 500 (namesto 503)
+  ob veljavni košarici brez Stripe ključev.** Vzrok: blok
+  `isDemo`/503-vrata/`dedupStatusFilter` je bil deklariran ZA prvim
+  klicem `findRecentDuplicate()` (ki filter uporablja) → »Cannot
+  access 'dedupStatusFilter' before initialization« → splošni 500.
+  Ujeto s produkcijskim smokom FAZE 2 (POST z veljavnim izdelkom na
+  Render je vrnil 500; testi so source-contract in vrstnega reda niso
+  preverjali). Popravek: blok prestavljen PRED dedup pre-check.
+  `/api/bookings` vrstni reda ni imel (deklaracije so pred
+  transakcijo). Regresijska vrata: 2 nova testov vrstnega reda
+  (checkout ⑧ + bookings ⑧) — deklaracija pred prvo uporabo.
+
 ## [1.158.0] — 2026-10-01 (#20 DISCOVER: Production Activation — FAZA 2 §4 P0)
 
 ### Dodano

@@ -242,6 +242,17 @@ describe("ISSUE #20 §4 FAZA 2: /api/checkout — produkcijska veja (source-cont
     expect(r).toContain('status: "pending" as const');
     expect(r).toContain("demo: false");
   });
+
+  test("⑧ VRSTNI RED DEKLARACIJ (regresija 1.158.1 — produkcijski 500): dedupStatusFilter in isDemo morata biti deklarirana PRED prvim klicem findRecentDuplicate (TDZ)", () => {
+    const isDemoIdx = r.indexOf("const isDemo = isStripeDemo()");
+    const filterIdx = r.indexOf("const dedupStatusFilter = isDemo");
+    const callIdx = r.indexOf("const earlyDup = await findRecentDuplicate();");
+    const dupWindowIdx = r.indexOf("const dupWindowStart = new Date(");
+    expect(isDemoIdx).toBeGreaterThan(-1);
+    expect(filterIdx).toBeGreaterThan(isDemoIdx);
+    expect(callIdx).toBeGreaterThan(filterIdx);
+    expect(dupWindowIdx).toBeGreaterThan(filterIdx);
+  });
 });
 
 describe("ISSUE #20 §4 FAZA 2: /api/bookings — produkcijska veja (source-contract)", () => {
@@ -292,6 +303,15 @@ describe("ISSUE #20 §4 FAZA 2: /api/bookings — produkcijska veja (source-cont
     expect(r).toContain('status: "pending" as const');
     expect(r).toContain('status: "confirmed" as const');
     expect(r).toContain("providerBookingNotificationEmail");
+  });
+
+  test("⑧ VRSTNI RED DEKLARACIJ (regresija 1.158.1): isDemo/dedupStatusFilter deklarirana PRED transakcijo, ki ju uporablja (TDZ)", () => {
+    const isDemoIdx = r.indexOf("const isDemo = isStripeDemo()");
+    const filterIdx = r.indexOf("const dedupStatusFilter = isDemo");
+    const txIdx = r.indexOf("db.$transaction(");
+    expect(isDemoIdx).toBeGreaterThan(-1);
+    expect(filterIdx).toBeGreaterThan(isDemoIdx);
+    expect(txIdx).toBeGreaterThan(filterIdx);
   });
 });
 
