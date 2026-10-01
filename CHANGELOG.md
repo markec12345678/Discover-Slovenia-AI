@@ -11,6 +11,14 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ### Dodano (dokumentacija — zaključek issueja)
 
+- **ISSUE #10 ZAPRT** (Render deploy reconciliation): Render (PRIMARNA) usklajen
+  z mainom — **obe produkciji živi na 1.156.2 ≡ main**. Vzrok: AutoDeploy na
+  Render strani je bil izklopljen/prekinjen (drift 13+ verzij, forenzika 26. 9.);
+  zdaj dokazano delujoč (push `eb7432f` → Render samodejni build v ~7 min, brez
+  catch-up posredovanja). DoD 5/5: verzija ≡ repo ✓ · `/en/trznica` 200 ✓ ·
+  sitemap 3548 = 3548 ✓ · prod-monitor run 36824446081 vsi jobi zeleni ✓ ·
+  vzrok dokumentiran ✓. Catch-up job ostaja kot varnostna mreža.
+
 - **FAZA G izvedena na produkciji** (Vercel 1.156.0 = kodno identičen
   HEAD-u; 1.156.1/1.156.2 docs-only): final review iz perspektive prvega
   uporabnika — **3 zlate poti browser-dokazane**: hero čip »Miren vikend« →
