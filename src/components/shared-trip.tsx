@@ -672,7 +672,10 @@ export function SharedTrip({
       )}
 
       {/* === Hero === */}
-      <div className="border-b border-border bg-gradient-to-b from-primary/10 to-transparent">
+      {/* ISSUE #24 Sklop 6: shared-hero — ob tiskanju POLNE strani ga skrije
+          CSS pravilo `.pot-page .shared-hero` (platnica ga nadomesti);
+          EMBED (pot-embed-page) ohrani hero — iframe nima platnice. */}
+      <div className="shared-hero border-b border-border bg-gradient-to-b from-primary/10 to-transparent">
         <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
           <Badge variant="secondary" className="mb-3 gap-1.5">
             <MapPin className="size-3.5" aria-hidden="true" />

@@ -49,7 +49,7 @@ const L = {
       "Skupni dnevnik vašega potovanja: vsak član lahko zapiše spomin iz določenega dne, doda kraj in oceno. Ko se poslavlja od vas,",
     cardPrintStrong: "natisnite stran",
     cardOutro:
-      "(gumb zgoraj) — dnevnik je del PDF-ja, vaš papirnati spominskat. Zavestno brez fotografij: vaše slike ostanejo pri vas.",
+      "(gumb zgoraj) — dnevnik je del PDF-ja, vaša papirnata spominska knjiga. Zavestno brez fotografij: vaše slike ostanejo pri vas.",
     dayLabel: "Dan",
     selectDayAria: "Izberi dan",
     generalOption: "Splošno (brez dneva)",

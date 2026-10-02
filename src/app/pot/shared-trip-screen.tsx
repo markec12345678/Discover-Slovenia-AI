@@ -21,6 +21,13 @@ import { TripPolls } from "@/components/trip-polls";
 import { TripSocial } from "@/components/trip-social";
 import { TripPushCard } from "@/components/trip-push-card";
 import { PrintQr } from "./[shareId]/print-qr";
+// ISSUE #24 Sklop 6 (1.168.0): tiskana platnica poti (»travel book lite«) —
+// print-only RSC blok na vrhu PDF izhoda (skrit na zaslonu).
+import { PrintCover } from "./[shareId]/print-cover";
+import {
+  computePrintCoverStats,
+  type ExpenseSummary,
+} from "@/lib/print-book";
 // TASK 8 / D8-E (P-NAV-1): enotna lupina — Navigation solid + Footer.
 // Obe sta znotraj .pot-page: standardni Footer se v PDF izhodu skrije
 // samodejno (obstoječe .pot-page footer print pravilo), Navigation pa
@@ -399,6 +406,31 @@ export async function SharedTripScreen({
     }
   }
 
+  // === ISSUE #24 Sklop 6 (1.168.0): zbroj zabeleženih stroškov za tiskano
+  // platnico (ne-kritično — ob napaki platnica izpusti ploščico stroškov).
+  // Zasebnost: stroški so skupnostna plast (enako kot jih TripBudgetCard
+  // prikaže VSEM gledalcem javne poti — API kontrakt /expenses) — zato tudi
+  // strežniški zbroj ni nova razkritja. D7: embed nima platnice.
+  let expenseSummary: ExpenseSummary | null = null;
+  if (!embed) {
+    try {
+      const agg = await db.tripExpense.aggregate({
+        where: { shareId },
+        _sum: { amountEur: true },
+        _count: { _all: true },
+      });
+      const total = agg._sum.amountEur;
+      expenseSummary =
+        typeof total === "number" && Number.isFinite(total)
+          ? { totalEur: total, count: agg._count._all }
+          : agg._count._all === 0
+            ? { totalEur: 0, count: 0 }
+            : null;
+    } catch (e) {
+      console.error("[pot] tripExpense aggregate napaka:", e);
+    }
+  }
+
   // === F12: oznake dni za dnevnik — "Dan N — destinacije" (index = N-1) ===
   // Iz načrta (po filtriranju veljavnih dni); vrzeli (ne-sekvenčni day.day)
   // zapolnimo z "Dan N", da izbirnik ostane konsistenten z SharedTrip sidri.
@@ -442,6 +474,11 @@ export async function SharedTripScreen({
       console.error("[pot] tripGuide findUnique napaka:", e);
     }
   }
+
+  // === ISSUE #24 Sklop 6 (1.168.0): statistika tiskane platnice — čisti
+  // delivec nad itinererjem + zbrojem stroškov (fail-closed: manjkajoči
+  // podatek → ploščica se izpusti, nikoli izmišljena vrednost). ===
+  const coverStats = computePrintCoverStats(saved.itinerary, expenseSummary);
 
   // === JSON-LD: TouristTrip ===
   const dayCount = saved.itinerary.days.length;
@@ -523,6 +560,21 @@ export async function SharedTripScreen({
         title={name}
       />
 
+      {/* === ISSUE #24 Sklop 6 (1.168.0): TISKANA PLATNICA (»travel book
+             lite«) — SAMO v PDF izhodu (hidden na zaslonu, print:block pri
+             tiskanju; izrise se PRED načrtom = naslovnica knjige). Čisti
+             podatki: ime, datumi, statistika — brez izmišljenih vsebin.
+             D7: embed nima platnice (blogger iframe tiska itinerer +
+             atribucijski pas). === */}
+      {!embed && (
+        <PrintCover
+          name={name}
+          lang={lang}
+          stats={coverStats}
+          createdAt={saved.createdAt.toISOString()}
+        />
+      )}
+
       <SharedTrip
         itinerary={saved.itinerary}
         shareId={shareId}
@@ -576,8 +628,10 @@ export async function SharedTripScreen({
 
           {/* === ISSUE #4 §13 (val 2): SODELOVANJE — vloga, vabila, revokacija,
               javna/zasebna povezava + preimenovanje s CAS. Lastniku pokaže
-              upravljanje, povabljenim sprejem, obiskovalcem stanje. === */}
-          <div className="mx-auto max-w-5xl px-4 pb-10 pt-2 sm:px-6 lg:px-8">
+              upravljanje, povabljenim sprejem, obiskovalcem stanje.
+              ISSUE #24 Sklop 6: print:hidden — upravljalna ploskev ni
+              vsebina knjige (obrazci/gumbi na papiru brez pomena). === */}
+          <div className="mx-auto max-w-5xl px-4 pb-10 pt-2 sm:px-6 lg:px-8 print:hidden">
             <TripCollaboration shareId={shareId} initialName={saved.name} />
           </div>
 
@@ -585,10 +639,13 @@ export async function SharedTripScreen({
               vnos rezervacij (parse → predogled → potrditev; DRAFT ostane
               vidno označen) + 5 vednic proračuna (ocena/denar ločeno, neznane
               cene nikoli €0). === */}
-          <div className="mx-auto max-w-5xl px-4 pb-10 pt-2 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-5xl px-4 pb-10 pt-2 sm:px-6 lg:px-8 print:hidden">
             <TripReservations shareId={shareId} />
           </div>
-          <div className="mx-auto max-w-5xl px-4 pb-10 pt-2 sm:px-6 lg:px-8">
+          {/* ISSUE #24 Sklop 6: proračunska kartica print:hidden — njena
+              VSEBINA (zbroj) se izpiše na platnici (strežniški agregat
+              TripExpense); interaktivni vnosi/gumbi ostanejo izven knjige. */}
+          <div className="mx-auto max-w-5xl px-4 pb-10 pt-2 sm:px-6 lg:px-8 print:hidden">
             <TripBudgetCard
               shareId={shareId}
               dayCount={saved.itinerary.days.length}
@@ -600,7 +657,10 @@ export async function SharedTripScreen({
               povezava. Binarna vsebina se NE shranjuje (zasebnost — isti
               vzorec kot dnevnik/parse). Offline: strežniško izrisan HTML →
               SW predpomnjen. === */}
-          <div className="mx-auto max-w-5xl px-4 pb-10 pt-2 sm:px-6 lg:px-8">
+          {/* ISSUE #24 Sklop 6: print:hidden — povezave do dokumentov so na
+              papirju mrtve besedilo (QR na koncu knjige pokrije „najdi
+              online“); vnosni obrazec papirja ne zanima. === */}
+          <div className="mx-auto max-w-5xl px-4 pb-10 pt-2 sm:px-6 lg:px-8 print:hidden">
             <TripDocumentsCard shareId={shareId} />
           </div>
 
@@ -649,8 +709,10 @@ export async function SharedTripScreen({
             />
           </div>
 
-          {/* === DNEVNI OPOMNIKI ZA TO POTOVANJE (retencijski motor, 3b) === */}
-          <div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6 lg:px-8">
+          {/* === DNEVNI OPOMNIKI ZA TO POTOVANJE (retencijski motor, 3b) —
+              ISSUE #24 Sklop 6: print:hidden — prijava na opomnike na papirju
+              nima pomena. === */}
+          <div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6 lg:px-8 print:hidden">
             <TripPushCard
               shareId={shareId}
               days={saved.itinerary.days.length}

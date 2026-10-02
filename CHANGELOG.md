@@ -7,6 +7,73 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.168.0] — 2026-10-02 (#24 Sklop 6: PDF povzetek poti — »travel book lite«)
+
+### Dodano
+
+- **TISKANA PLATNICA POTI (P3 backlog, Polarsteps Travel Book vzorec —
+  DO NOT COPY monetizacije, naša različica je BREZPLAČNA in poštena).**
+  »Natisni / Shrani kot PDF« na /pot/[shareId] zdaj izpiše ČISTO knjigo
+  poti namesto zaporedja vseh interaktivnih kart: na vrhu PDF izhoda se
+  izriše **platnica** (strežniški RSC blok, na zaslonu skrit — `hidden
+  print:block`, izrise se PRED načrtom kot naslovnica): znamka, ime poti,
+  datumska obsega (veljaven `tripStartDate` → »12.–14. septembra 2026«,
+  DST-varno prek trip-dates kanona) + datum ustvarjanja (SL genitiv
+  »2. oktobra 2026« — isti kanon kot obsega), ter statistiko
+  IZKLJUČNO iz podatkov: dnevi, postanki, čas vožnje (POŠTEN dvostopenjski
+  vir: `quality.drivingMinutes` FW4.1, kadar obstaja; sicer KANONSKA
+  hevristika aplikacije — `heuristicLeg` po zaporednih postankih znotraj
+  dneva, isti vir številk kot povezovalnik plannerja in strežniški PDF
+  izvoz, v UI z oznako ocene »~«; sanitizacija ob shranjevanju sicer
+  `quality` odstrani, zato na /pot živi hevristična pot; nepoznana noga
+  (manjkajoča koordinata) → ploščica se izpusti, skupka NE zanižujemo),
+  ≈ ocena vstopnin (vsota `estimated_cost` veljavnih postankov) in
+  zabeleženi stroški (strežniški agregat `TripExpense` — skupnostna
+  plast, enako vidna vsem gledalcem kot v proračunski kartici; 0 vnosov
+  → ploščica izpuščena). Iskrenost P11 fail-closed: manjkajoč podatek →
+  ploščica/vrstica se NE izriše (nikoli »0 min« ali »€0« za neznane
+  vrednosti). Množine SL so usklajene s strežniškim PDF izvozom
+  (1 dan / 2 dneva / 3+ dni; 2–4 postanki).
+- **Čista higiena PDF izhoda**: upravljalne karte, ki na papirju nimajo
+  pomena, se ob tiskanju skrijejo (`print:hidden`): sodelovanje
+  (vabila/ vloge), rezervacije (vnosni obrazec), proračun (njegov zbroj
+  se izpiše na platnici), dokumenti (mrtve povezave na papirju — QR na
+  koncu knjige pokrije »najdi online«) in opomniki (prijava). Vsebina
+  knjige ostaja: **načrt (dni/postanki) + avtorski vodnik + potni
+  dnevnik (spomini)** + URL nogica in QR koda (obstoječi kanon FW2-A).
+- **Nov čisti delivec `src/lib/print-book.ts`** (`computePrintCoverStats`,
+  `formatDrivingMinutes`, `ExpenseSummary`): deterministična statistika
+  platnice z defenzivnimi varovali nad neznanim JSON (stari shranjeni
+  načrti, pokvarjeni vnosi): postanki štejejo SAMO z veljavnim imenom,
+  ocena vstopnin SAMO za te postanke (števec in znesek opisujeta ISTI
+  nabor), vožnja SAMO iz kvalitete, datumska obsega SAMO pri uspešno
+  parsanem ISO startu (namenoma NE `isValidStartDate` — ta zavrača
+  pretekle datume, spomine pa tiskamo tudi PO končani poti).
+- **D7 embed varovalo**: platnica živi SAMO na polni strani — blogger
+  iframe tiska itinerer + atribucijski pas (brez nje, brez poizvedbe
+  stroškov).
+- **Razmejitev kanalov izvoza (brez duplikacije)**: obstoječi strežniški
+  PDF izvoz (pdf-lib, `/api/itinerary/shared/[shareId]/pdf` — prenos
+  DATOTEKE z lastno glavo: dnevi/postanki/vir/proračun/datumi + dnevi,
+  etape, rezervacije, nasveti) ostaja NETAKNJEN; ta sklop ureja IZKLJUČNO
+  brskalniško tiskalno pot (»Natisni« → Shrani kot PDF), ki vsebuje
+  polno skupnostno vsebino (vodnik + dnevnik spominov = srce
+  »travel booka«) in je bila pred tem umazana (upravljalne karte so se
+  natiskale) ter brez platnice.
+
+### Testi
+
+- 42 novih testov (`issue24-s6-print-book.test.ts`): funkcionalno
+  (štetje, vsote, zaokroževanja, defenziva nad pokvarjenim JSON, datumske
+  obsege, fail-closed vožnja/stroški), pogodbenski viri vseh plasti
+  (komponenta: strežniška/print-only/aria-hidden/{sl,en} pariteta/
+  množine; ekran: platnica PRED SharedTrip, !embed vrata, agregat v
+  try/catch, print:hidden ×5, dnevnik+vodnik NISTA skrita; regresija
+  print CSS kanona in URL nogice/QR) + iskrenost (vse vrednosti IZKLJUČNO
+  iz `stats` prop — nobenih izmišljenih vsebin, brez omrežja/okna).
+
+---
+
 ## [1.167.0] — 2026-10-02 (#24 Sklop 5: Poštena delitev stroškov med potnike)
 
 ### Dodano

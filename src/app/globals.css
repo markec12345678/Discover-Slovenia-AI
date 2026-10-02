@@ -469,6 +469,15 @@ header.sticky,
     display: none !important;
   }
 
+  /* ISSUE #24 Sklop 6 (1.168.0) — »travel book lite«: hero glavo deljene
+     poti (badge + naslov + žetoni) na POLNI strani v PDF nadomesti
+     tiskana platnica (PrintCover) — ponovitve naslova/datumov na vrhu
+     knjige so šum. SCOPE: SAMO .pot-page — embed (pot-embed-page) nima
+     platnice in ohrani svojo hero glavo. */
+  .pot-page .shared-hero {
+    display: none !important;
+  }
+
   /* Povezave naj bodo prepoznavne */
   .pot-page a {
     text-decoration: underline !important;
