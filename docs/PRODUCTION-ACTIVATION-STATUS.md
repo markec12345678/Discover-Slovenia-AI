@@ -287,6 +287,19 @@ vrednosti env (test kanarček). Jedro: `src/lib/supply/activation-check.ts`
 (prehodno izključno iz matrike+registra — agent stanj NE more
 »lepšati«); ovoj: `scripts/activation-check.ts` (tanjek, testirano).
 
+**ENV DOKUMENTACIJA (1.163.4 — pripravljenost na vstavitev ključev).**
+`.env.example` pokriva vsako produkcijsko env ime: dodan
+`JOURNEY_PROVIDER_TOKEN` (§9 kanal ponudniških prehodov — fail-closed 503
+brez žetona), zastavice zagona/izdelave (`DSA_DISABLE_SCHEMA_MIGRATION`,
+`DSA_DISABLE_BASELINE_RESOLVE`, `DSA_DISABLE_IMAGE_MIGRATION`,
+`DSA_PRISMA_QUERY_LOG`, `DSA_LOW_MEMORY_BUILD`, `DIST_DIR`,
+`DSA_ALLOWED_DEV_ORIGINS`), razvojna orodja (`BASE_URL`, `RUN_AT_UTC`,
+`ADMIN_DEMO_SEED`, `DEV_FIXED_DEMO_PASSWORDS`); mrtvi `APP_URL` odstranjen,
+`STRIPE_PUBLISHABLE_KEY` pošteno označen NEBRAAN (čisti strežniški
+redirect tok). Drift med kodo in dokumentacijo varuje pogodbenski test
+`issue20-env-documentation-contract` (5 testov: brano → dokumentirano;
+dokumentirano → brano ali izrecna izjema).
+
 ---
 
 ## 8. README USKLADITEV (§12) ✅
@@ -297,7 +310,7 @@ vrednosti env (test kanarček). Jedro: `src/lib/supply/activation-check.ts`
 
 ---
 
-## 9. REGRESIJSKI STATUS (1.158.0)
+## 9. REGRESIJSKI STATUS (zadnja: 1.163.4)
 
 `bun test` 4462 (4461 pass + 1 DB-gated preskok brez baze — CI-semantika:
 v CI s Postgresom je ta test zelen, glej vsak-push CI) ·
@@ -305,6 +318,11 @@ v CI s Postgresom je ta test zelen, glej vsak-push CI) ·
 `issue20-marketplace-checkout` (1.157.0: 4425; 1.156.2: 4413).
 Produkcijski smoke: §2 (faza 1, 5 dokazov) + strukturni dokazi §3
 (faza 2 — živi smoke čaka Stripe račun).
+
+**1.163.4:** `bun test` 4757 (4756 pass + 1 DB-gated preskok brez baze —
+CI-semantika: v CI s Postgresom je ta test zelen) · `bun run lint` 0 ·
+`bunx tsc --noEmit` 0 — vključno s 5 novimi testi env dokumentacije
+(`issue20-env-documentation-contract`).
 
 ---
 

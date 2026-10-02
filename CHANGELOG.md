@@ -7,6 +7,58 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.163.4] — 2026-10-02 (#20: pripravljenost na vstavitev ključev — env dokumentacija popolna + pogodbenska varovalka)
+
+### Dodano
+
+- **POGODBENSKI TEST ENV DOKUMENTACIJE (`issue20-env-documentation-contract`,
+  5 testov).** Vsako produkcijsko env ime, ki ga koda bere (src brez testov,
+  scripts, `next.config.ts`), mora biti dokumentirano v `.env.example`
+  (aktivno ali komentirano `#IME=`); obratno: dokumentirano ime, ki ni brano
+  in ni izrecna izjema (platforma `VERCEL_URL` ipd., bash `VERCEL_TOKEN` za
+  `scripts/ops/*.sh`, `STRIPE_PUBLISHABLE_KEY` označen NEBRAAN), je MRTVA
+  dokumentacija → test spodleti. Preprečuje dva realna scenarija:
+  (a) uporabnik priskrbi ključ, a ne ve, pod katerim imenom ga nastaviti v
+  Render/Vercel nadzorni plošči; (b) uporabnik nastavi ključ, ki ga koda ne
+  bere (nastavitev ne stori nič). Povezuje se z §11 `activation:check`
+  (iskren izpis env prisotnosti po ponudnikih).
+
+### Popravljeno
+
+- **`.env.example` POPOLN za vstavitev zunanjih ključev (revizija 1.163.4).**
+  Dodanih 12 prej nedokumentiranih imen, branih v produkcijski kodi:
+  - `JOURNEY_PROVIDER_TOKEN` (ISSUE #20 §9 — kanal ponudniških prehodov
+    rezervacij, `PATCH /api/journey/bookings`, fail-closed 503 brez žetona,
+    timing-safe primerjava; vklop ob prvem ponudniškem webhooku je čisto
+    konfiguracijsko dejanje),
+  - zastavice zagona: `DSA_DISABLE_SCHEMA_MIGRATION` (izklop VSEH zagonskih
+    shem), `DSA_DISABLE_BASELINE_RESOLVE`, `DSA_DISABLE_IMAGE_MIGRATION`,
+    `DSA_PRISMA_QUERY_LOG`,
+  - zastavice izdelave: `DSA_LOW_MEMORY_BUILD` (Render 512 MB builder),
+    `DIST_DIR` (vzporedni E2E agenti), `DSA_ALLOWED_DEV_ORIGINS` (dev
+    predogled skozi proxy),
+  - razvojna orodja: `BASE_URL`, `RUN_AT_UTC` (cron-runner),
+    `ADMIN_DEMO_SEED`, `DEV_FIXED_DEMO_PASSWORDS` (seed-demo).
+- Mrtvi `APP_URL` ODSTRANJEN iz `.env.example` (ime v kodi ni bilo več
+  brano nikjer — absolutne povezave izpelje `src/lib/host.ts` iz glave
+  Host; build-time meta uporablja `NEXT_PUBLIC_BASE_URL`).
+- `STRIPE_PUBLISHABLE_KEY` pošteno označen NI POTREBEN (celoten plačilni
+  tok je čisti strežniški redirect — Checkout Session → `{ url }`; koda
+  imena ne bere od 1.158.0) — ob aktivaciji Stripe računa nastavimo samo
+  štiri spremenljivke, publishable ključ iz nadzorne plošče ostane
+  neizkoriščen.
+
+### Spremenjeno
+
+- **README §12 uskladitev (ponovno):** glavna statusna vrstica je zaostala
+  na v1.159.0/4545 (faze #21/#22/#23 je niso osvežile) → v1.163.4 ŽIVA ·
+  4757 testov s povzetkom zaključene verige issue-jev; števec v navodilih
+  za preverjanje usklajen (4757: 4756 pass + 1 DB-gated preskok brez baze —
+  CI-semantika).
+- `docs/PRODUCTION-ACTIVATION-STATUS.md`: §7 dopolnilo ENV DOKUMENTACIJA
+  (pripravljenost ključev 1.163.4) + §9 regresijski niz podaljšan do
+  1.163.4.
+
 ## [1.163.3] — 2026-10-02 (#22: jutranji dokaz + vreme utrjeno)
 
 ### Dodano
