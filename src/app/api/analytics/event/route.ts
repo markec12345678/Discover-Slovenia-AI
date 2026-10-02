@@ -203,6 +203,9 @@ const VALID_EVENTS = new Set([
   // my_trip; label pri sheet/dropdown vnosih ravni-2) — pariteta s klient
   // union (test W3 whitelist pariteta)
   "shell_nav_clicked",
+  // #24 Sklop 3 (1.165.0): »Zemljevid mojih potovanj« naložil pine
+  // (props: trips, pins — samo števci) — pariteta s klient union
+  "my_trips_map_opened",
 ]);
 
 /** Omejitve velikosti props (proti zlorabi analitičnega endpointa).

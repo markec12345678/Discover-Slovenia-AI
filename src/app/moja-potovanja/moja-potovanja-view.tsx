@@ -48,6 +48,9 @@ import { getSavedTrips, type TrackedTrip } from "@/lib/my-trips-storage";
 // TASK 8 / D8-B §4: zbirka "Moja pot" (ADD sloj) — kanonski pogled nad
 // dai:my-trip-items, skupen gostu in prijavljenemu uporabniku.
 import { MyTripView } from "@/components/my-trip-view";
+// #24 Sklop 3 (1.165.0): »Zemljevid mojih potovanj« — Polarsteps vzorec
+// profilnega pregleda nad seznamom kartic (gost + prijavljeni).
+import { MyTripsMap } from "@/components/my-trips-map";
 // TASK 8 / F2-A: pull sinhronizacija zbirke ob obisku (prijavljeni uporabnik)
 import { syncMyTripToServer } from "@/lib/my-trip-sync";
 
@@ -545,6 +548,22 @@ export function MojaPotovanjaView() {
                 ))}
               </ul>
             )}
+
+            {/* #24 Sklop 3 (1.165.0): ZEMLJEVID MOJIH POTOVANJ — vsa lokalna
+                potovanja te naprave na enem zemljevidu (Polarsteps profilni
+                globus). Ime poti z enakim fallbackom kot kartice zgoraj. */}
+            {localTrips !== null && trips.length > 0 && (
+              <MyTripsMap
+                className="mt-4"
+                lang={lang}
+                trips={trips.map((t) => ({
+                  shareId: t.shareId,
+                  label:
+                    t.name ??
+                    L.trips.fallbackName[lang](formatDate(t.savedAt, lang)),
+                }))}
+              />
+            )}
           </section>
         </section>
       </main>
@@ -718,6 +737,20 @@ export function MojaPotovanjaView() {
                   ))}
                 </ul>
               )}
+
+              {/* #24 Sklop 3 (1.165.0): ZEMLJEVID MOJIH POTOVANJ — vsa
+                  shranjena potovanja računa na enem zemljevidu; zasebne poti
+                  so vključene (session lastnik — endpoint čita userId). */}
+              <MyTripsMap
+                className="mt-4"
+                lang={lang}
+                trips={data.trips.map((t) => ({
+                  shareId: t.shareId,
+                  label:
+                    t.name ??
+                    L.trips.fallbackName[lang](formatDate(t.createdAt, lang)),
+                }))}
+              />
             </section>
 
             {/* === MOJE AI KONZULTACIJE (samo potrjena e-pošta) === */}

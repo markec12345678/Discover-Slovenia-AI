@@ -266,6 +266,11 @@ export type PlannerEventName =
   // odpira in KATERO vsebino ravni-2 iščejo (progressive disclosure
   // upravičenje). Brez tega je preoblikovanje F1–F4 nemerljivo.
   | "shell_nav_clicked"
+  // #24 Sklop 3 (1.165.0): »Zemljevid mojih potovanj« uspešno naložil pine
+  // (props: trips = zahtevanih, pins = poti z vsaj enim pinom) — meri doseg
+  // Polarsteps vzorca profilnega pregleda potovanj na /moja-potovanja;
+  // brez PII (samo števci, nikoli imena poti)
+  | "my_trips_map_opened"
   // P1-3: proxy signal — rezultat prikazan, sledeni dogodek ni bil zaznan
   // v merjenem oknu (NE pomeni "uporabnik ni bil zadovoljen")
   | "result_session_ended_without_action";

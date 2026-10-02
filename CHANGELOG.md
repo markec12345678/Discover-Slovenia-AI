@@ -7,6 +7,61 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.165.0] — 2026-10-02 (#24 Sklop 3: Zemljevid mojih potovanj)
+
+### Dodano
+
+- **ZEMLJEVID MOJIH POTOVANJ — Polarsteps vzorec »profilnega globusa« (P3,
+  edini NEW FEATURE CANDIDATE benchmarka Round 2).** Hub /moja-potovanja
+  nad seznamom kartic zdaj izriše VSA uporabnikova potovanja na ENEM
+  zemljevidu (`src/components/my-trips-map.tsx` — kompaktna delovna
+  različica po kanonu TripMapPanel F5.1): ena črtkana polyline + majhni
+  piki po poti (barva = pot, obstoječa paleta DAY_COLORS), interaktivna
+  legenda z žetoni poti (vklop/izklop prikaza), klik pika → popup z
+  imenom postanka + dan + povezava »Odpri pot« (/pot/{shareId}). Deluje
+  za GOSTA (lokalna potovanja iz dai:my-trips) IN prijavljenega (poti
+  računa — vključno z zasebnimi, session lastnik).
+- **POST /api/trips/map-pins** — nova varna množična poizvedba pinov:
+  telo `{ ids: string[] }` (1–50, deduplicirano, vsak id prek skupnega
+  kanona `SHARE_ID_RE` iz trip-permissions; velikostno varovalo 8 KB pred
+  parsiranjem), odgovor `{ pins: [{ shareId, stops: [{lat,lng,name,day}] }]
+  }`. Varnost/iskrenost: javne poti → pini (ISTE informacije kot javna
+  stran /pot); zasebne poti → SAMO lastnik (session userId), drugače TIHO
+  izpust brez potrditve obstoja (enako načelo kot 404 na /pot); **števec
+  ogledov SE NE poveča** (pregled zemljevida ni obisk poti —
+  /api/itinerary/shared ostaja edini štever); rate limit 30/min na IP.
+  Pine izlušči čisti delivec `src/lib/trips-map-pins.ts`
+  (`pinsFromItinerary`/`pinsFromItineraryJson`) nad IZVOŽENIM kanonom
+  koordinat `coordsOfStop` (T1 dataset → lastne OSM koordinate → null
+  island izpust); cap 120 pinov na pot; vsaka neznana oblika pošteno
+  vrne [], posamezen smeten postanek se preskoči.
+- **Telemetrija `my_trips_map_opened`** (props: trips, pins — samo
+  števci, brez PII) — kliče se SAMO ob uspešnem prikazu pinov; pariteta
+  klient union (`planner-analytics.ts`) ↔ strežniška allowlista
+  (`api/analytics/event`) ohranjena.
+
+### Iskrenost (meje, dokumentirane)
+
+- Ravne črtkane črte (brez OSRM geometrije) — hint pod zemljevidom to
+  pove; poti brez znanih koordinat se ne prikažejo; napaka nalaganja →
+  komponenta izgine (fail-closed, seznam kartic ostaja polna vrednost).
+- Imena poti so uporabniška vsebina: VES tekst v tooltipu/popupu gre skozi
+  `escapeHtml`, href poti skozi `encodeURIComponent`.
+
+### Testi
+
+- 33 novih testov (`issue24-s3-trips-map.test.ts`): funkcionalno
+  pinsFromItinerary (T1/OSM koordinate, null island, neveljavne oblike,
+  day atribucija, cap, vrstni red, imena), pogodbene varovalne route
+  (rate limit, SHARE_ID_RE, meja 50, zasebne poti samo lastnik, nikakršen
+  zapis na DB, čisti helper kot edini vir), komponenta (escapeHtml,
+  encodeURIComponent, telemetrija samo ob uspehu, fail-closed, Rules of
+  Hooks, a11y aria-pressed/aria-busy/sr-only/role=img, dvojezičnost
+  {sl,en}), integracija hub (obe veji, isti fallback imen kot kartice)
+  in pariteta analitike.
+
+---
+
 ## [1.164.0] — 2026-10-02 (#24 Sklop 1: /pot dvojezičnost + vodeni trak na načrtovalniku)
 
 ### Dodano
