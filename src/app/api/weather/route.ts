@@ -157,7 +157,8 @@ export async function GET(request: Request) {
   }
 
   // ---------------------------------------------------------------------
-  // NAČIN A (nespremenjen — TASK 65 backward compat)
+  // NAČIN A (TASK 65 backward compat; 1.163.3: izrecna meja trajanja —
+  // pariteta z NAČINOM B, obesen vir prej ni imel nobene meje)
   // ---------------------------------------------------------------------
   // TASK 65: današnja dnevna napoved (samo dobesedno "1" jo vklopi)
   const withDaily = searchParams.get("daily") === "1";
@@ -165,7 +166,12 @@ export async function GET(request: Request) {
   try {
     const url = openMeteoCurrentUrl(lat, lng, withDaily);
 
-    const res = await fetch(url, { next: { revalidate: 600 } }); // cache 10 min
+    // 1.163.3 (#22): TimeoutError po 4 s → iskren 502 (prej je obesen vir
+    // visel brez meje — edini nenačin brez signala v tej poti).
+    const res = await fetch(url, {
+      next: { revalidate: 600 }, // cache 10 min
+      signal: AbortSignal.timeout(4000),
+    });
     if (!res.ok) {
       throw new Error(`Open-Meteo: ${res.status}`);
     }

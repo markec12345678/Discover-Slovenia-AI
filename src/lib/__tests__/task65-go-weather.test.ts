@@ -549,6 +549,35 @@ describe("TASK 65: GET /api/weather — route integracija (mock vir)", () => {
     const body = (await res.json()) as { condition: string };
     expect(body.condition).toBe("parzialmente nuvoloso"); // IT, ne SL izjema
   });
+
+  test("⑧d 1.163.3 (#22): obesen vir — init.signal meja (AbortSignal) + TimeoutError → iskren 502", async () => {
+    // (a) POGODBA: NAČIN A pošlje izrecno mejo trajanja (pariteta z NAČINOM B
+    //     — prej je bil edini fetch brez signala; obesen vir je visel v
+    //     nedogled).
+    let seenSignal: unknown = undefined;
+    globalThis.fetch = (async (
+      _url: unknown,
+      init?: { signal?: unknown }
+    ) => {
+      seenSignal = init?.signal;
+      // (b) simuliran obesen vir po izteku meje: DOMException TimeoutError —
+      //     natanko taka, kot jo sproži AbortSignal.timeout v Node 18+.
+      throw new DOMException(
+        "The operation was aborted due to timeout",
+        "TimeoutError"
+      );
+    }) as unknown as typeof fetch;
+
+    const res = await weatherGET(
+      new Request("http://localhost/api/weather?lat=42.42&lng=18.77")
+    );
+    // (c) iskren 502 — ne neskončno čakanje, ne izmišljeno vreme
+    expect(res.status).toBe(502);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toContain("ni na voljo");
+    // (d) pogodba meje: signal je pravi AbortSignal (ne undefined)
+    expect(seenSignal).toBeInstanceOf(AbortSignal);
+  });
 });
 
 // ---------------------------------------------------------------------------

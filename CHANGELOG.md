@@ -7,6 +7,37 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.163.3] — 2026-10-02 (#22: jutranji dokaz + vreme utrjeno)
+
+### Dodano
+
+- **JUTRANJI ZAČNI DAN produkcijsko dokazan (prod-17/18/19).** Na Renderu
+  (1.163.1, mobilni 390×844, 09:42–09:52 UTC — brskalnik sandboxa ima
+  lokalni čas UTC, zato je bilo jutranje okno `hour < 11` po uri naprave
+  dejansko odprto, brez simulacije časa): DOBRO JUTRO kartica z dejanskimi
+  številkami (2 postanka · 2 rezervaciji · prvi cilj Bohinj 09:00 · znana
+  pot ~65 km) in iskrenim opozorilom o zamujenem terminu SOČASNO s konflikt
+  kartico (neodvisni projekciji); klik [ZAČNI DAN] → zavrnjen GPS → iskreno
+  sporočilo z navodilom + [Vklopi GPS], jutranja kartica ostane (dan se ni
+  začel — programsko potrjeno); GPS aktivacija → kartica pravilno izgine
+  (pogoj `!gpsActive`) in Guardian prevzame (🟠 iskren zamudni termin +
+  ocena iz premice izrecno označena). 0 konzolnih napak, 0 page errorjev.
+  Skupaj 19 dokazov (docs/evidence/issue22/) — vseh 13 §26 dostavljivcev
+  #22 zdaj PRODUCTION VERIFIED (TRAVEL-GUARDIAN-STATUS.md posodobljen).
+
+### Popravljeno
+
+- **/api/weather NAČIN A: izrecna meja trajanja.** `AbortSignal.timeout(4000)`
+  — pariteta z NAČINOM B (obesen vir Open-Metea prej ni imel NOBENE meje —
+  edini fetch v tej poti brez signala). TimeoutError → iskren 502, ne
+  neskončno čakanje. Nov test ⑧d (task65-go-weather.test.ts): simuliran
+  TimeoutError → 502 + pogodba `init.signal instanceof AbortSignal`. Vreme
+  502 na Renderu je bila PREHODNA napaka vira — vsi trije načini
+  (`current` / `daily=1` / `start+end`) ob ponovni preverbi vračajo 200 s
+  svežimi podatki.
+
+---
+
 ## [1.163.2] — 2026-10-02 (#22 REMAINING: vrzel update-pot)
 
 ### Popravljeno
