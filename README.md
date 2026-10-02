@@ -574,7 +574,7 @@ Podrobna zgodovina implementacije (naloge, auditi, odločitve, živi dokazi) se 
 ločeno od tega README-ja: [CHANGELOG.md](CHANGELOG.md) (vse verzije po Keep a
 Changelog), [docs/](docs/) (dokumentacija nalog in auditov) ter git zgodovina.
 Pravila za razvoj in prispevke: [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
-Trenutna verzija: **1.157.0**.
+Trenutna verzija: **1.163.5**.
 
 ---
 

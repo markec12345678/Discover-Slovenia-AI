@@ -7,6 +7,39 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.163.5] — 2026-10-02 (#24: UI/UX & WORKFLOW BENCHMARK ROUND 2 — analiza, načrt in dokazi)
+
+### Dodano
+
+- **UI/UX & WORKFLOW BENCHMARK — DRUGA RUNDA (`docs/UIUX-BENCHMARK-2026-10-02.md`).**
+  Issue #24 zahteva analizo pred spremembami; trije vzporedni tiri:
+  (A) inšpekcija HEAD 1.163.4 (40 poti, tokovi A–H, državni modeli — vsaka
+  trditev s potjo datoteke); (B) konkurenčna raziskava 27 spletnih iskanj ×
+  6 produktov (Wanderlog, TripIt, Sygic/Tripomatic, Roadtrippers,
+  **Komoot in Polarsteps — NOVA, nikoli prej benchmarkirana**), vsak vzorec z
+  virom; (C) produkcijski brskalniški audit v živo — **0 horizontalnega
+  prelivanja na širinah 320/390/430/1280/1440, 0 napak strani, 0 konzolnih
+  napak**, hidracija + zlata pot + write-through Dodaj potrjeni.
+- **Dokazi `docs/evidence/issue24/`** — 12 posnetkov produkcije (Render
+  1.163.4) + README z matriko meritev, vključno z izmerjenimi hladnimi
+  zagoni Render free tier (3× timeout 25–60 s → P0 operativno priporočilo:
+  primarna domena na Vercel ali plačani nivo — odločitev lastnika).
+- **Izvršni sklep Round 2:** pariteta ali prednost v ~27/29 vzorčnih
+  področjih; **P0 v kodi NI najdene**; 2× P2 (TripSocial {sl,en}
+  L-vzorec — diary/polls/presence so že dvojezični, klepet pa SL-only;
+  GuidanceStrip na /nacrtuj — guide-engine površina `planner` obstaja,
+  neizkoriščena), 8× P3 INVESTIGATE + 1 NEW FEATURE CANDIDATE (»zemljevid
+  mojih potovanj«), DO-NOT-COPY dopolnjen (waypoint-paywall, pasivno
+  sledenje po privzetem, OT urejanje, native turn-by-turn). Implementacijska
+  faza po §19 ločena in priporočena <1 delovnega dneva.
+
+### Popravljeno
+
+- **README statusna vrstica** (zaostala na 1.157.0) → usklajena z dejansko
+  verzijo (dokumentacijska konsistentnost — ugotovitev tira A).
+
+---
+
 ## [1.163.4] — 2026-10-02 (#20: pripravljenost na vstavitev ključev — env dokumentacija popolna + pogodbenska varovalka)
 
 ### Dodano
