@@ -22,6 +22,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocale } from "next-intl";
 import {
   Card,
   CardContent,
@@ -99,27 +100,235 @@ interface ParsedFields {
   notes: string | null;
 }
 
-const STATUS_BADGES: Record<string, { label: string; cls: string }> = {
+// ISSUE #24 Sklop 1 (1.164.0): L-vzorec {sl,en} — prej SL-only
+// (per-ključna oblika {sl,en} po vzorcu journey-planner/journey-trip;
+// interpolacijske vrednosti so čiste funkcije).
+const L = {
+  httpError: {
+    sl: (status: number) => `Napaka ${status}`,
+    en: (status: number) => `Error ${status}`,
+  },
+  title: { sl: "Rezervacije", en: "Reservations" },
+  statusDraft: {
+    sl: "Osnutek — čaka potrditev",
+    en: "Draft — awaiting confirmation",
+  },
+  statusConfirmed: {
+    sl: "Potrjeno (uporabniški vnos)",
+    en: "Confirmed (user entry)",
+  },
+  statusExternal: {
+    sl: "Zunanja rezervacija — pri ponudniku",
+    en: "External booking — at the provider",
+  },
+  statusSelected: { sl: "Izbrano", en: "Selected" },
+  statusCancelled: { sl: "Preklicano", en: "Cancelled" },
+  statusFailed: { sl: "Spodletelo", en: "Failed" },
+  sourceUser: { sl: "ročni vnos", en: "manual entry" },
+  sourceImported: {
+    sl: "uvoženo iz dokumenta",
+    en: "imported from a document",
+  },
+  bookingNo: {
+    sl: (n: string) => `Št. rezervacije: ${n}`,
+    en: (n: string) => `Booking no.: ${n}`,
+  },
+  when: {
+    sl: (v: string) => `Kdaj: ${v}`,
+    en: (v: string) => `When: ${v}`,
+  },
+  where: {
+    sl: (v: string) => `Kje: ${v}`,
+    en: (v: string) => `Where: ${v}`,
+  },
+  amount: {
+    sl: (v: string) => `Znesek: ${v}`,
+    en: (v: string) => `Amount: ${v}`,
+  },
+  cancelBy: {
+    sl: (v: string) => `Odpoved do: ${v}`,
+    en: (v: string) => `Cancel by: ${v}`,
+  },
+  confirmReservation: { sl: "Potrdi rezervacijo", en: "Confirm reservation" },
+  cancel: { sl: "Prekliči", en: "Cancel" },
+  empty: {
+    sl: "Še ni rezervacij. Dodaj ročno ali uvozi potrdilo ponudnika (slika/PDF/e-pošta).",
+    en: "No reservations yet. Add one manually or import a provider confirmation (image/PDF/email).",
+  },
+  tabManual: { sl: "Ročno", en: "Manual" },
+  tabDoc: { sl: "Dokument", en: "Document" },
+  tabText: { sl: "Besedilo", en: "Text" },
+  tabEmail: { sl: "E-pošta", en: "Email" },
+  manualNote: {
+    sl: "Vnesi podatke svoje rezervacije. Zapis je tvoj vnos (izrecno označen) — nikoli providerjeva potrditev prek naše integracije.",
+    en: "Enter your reservation details. The record is your own entry (explicitly labelled) — never a provider confirmation through our integration.",
+  },
+  docNote: {
+    sl: "Naloži potrdilo ponudnika — AI prebere SAMO podatke, ki so v njem; ti jih pred shranjevanjem pregledaš in potrdiš.",
+    en: "Upload a provider confirmation — the AI reads ONLY the data in it; you review and confirm it before saving.",
+  },
+  chooseFile: { sl: "Izberi sliko ali PDF", en: "Choose an image or PDF" },
+  readDocument: { sl: "Preberi dokument", en: "Read document" },
+  textNote: {
+    sl: "Prilepi besedilo potrditvene e-pošte (rezervacija, let, vstopnica …).",
+    en: "Paste the text of a confirmation email (booking, flight, ticket …).",
+  },
+  textAria: {
+    sl: "Besedilo potrditve rezervacije",
+    en: "Reservation confirmation text",
+  },
+  textPlaceholder: {
+    sl: "Primer: GetYourGuide — št. rezervacije GYG-123456, Bled, 12.07.2026 10:00, 2 osebi, 58 EUR …",
+    en: "Example: GetYourGuide — booking no. GYG-123456, Bled, 12.07.2026 10:00, 2 people, 58 EUR …",
+  },
+  readText: { sl: "Preberi besedilo", en: "Read text" },
+  emailPastePrefix: { sl: "Prilepi ", en: "Paste " },
+  emailRawStrong: {
+    sl: "surovo potrditveno e-pošto",
+    en: "the raw confirmation email",
+  },
+  emailPasteMid: {
+    sl: " (celotna izvorna koda, ne vidni del): v Gmailu",
+    en: " (the entire source code, not just the visible part): in Gmail",
+  },
+  emailGmailItem: { sl: "⋮ → Pokaži izvorno kodo", en: "⋮ → Show original" },
+  emailOutlookMid: {
+    sl: ", v Outlooku shrani kot",
+    en: ", in Outlook save it as",
+  },
+  emailOutlookMid2: {
+    sl: " in odpri z urejevalnikom besedila, v Apple Mail pa ",
+    en: " and open it in a text editor; in Apple Mail ",
+  },
+  emailAppleItem: {
+    sl: "Pogled → Sporočilo → Izvorna koda",
+    en: "View → Message → Raw Source",
+  },
+  emailReaderNote: {
+    sl: ". Bralnik razbere glavo, telo in priloge (.ics / .pdf).",
+    en: ". The reader parses the header, body and attachments (.ics / .pdf).",
+  },
+  emailAria: {
+    sl: "Surova e-pošta s potrditvijo rezervacije",
+    en: "Raw reservation confirmation email",
+  },
+  emailPlaceholder: {
+    sl: "From: potrditve@getyourguide.com\r\nSubject: GetYourGuide — potrditev GYG-123456\r\nContent-Type: text/plain …\r\n\r\nVaša rezervacija je potrjena …",
+    en: "From: confirmations@getyourguide.com\r\nSubject: GetYourGuide — confirmation GYG-123456\r\nContent-Type: text/plain …\r\n\r\nYour booking is confirmed …",
+  },
+  readEmail: { sl: "Preberi e-pošto", en: "Read email" },
+  forwardTo: {
+    sl: "Potrdila lahko posreduješ na naslov:",
+    en: "You can forward confirmations to:",
+  },
+  copyAddressAria: {
+    sl: "Kopiraj naslov za posredovanje potrdil",
+    en: "Copy the address for forwarding confirmations",
+  },
+  copied: { sl: "Skopirano", en: "Copied" },
+  copy: { sl: "Kopiraj", en: "Copy" },
+  forwardingPrefix: {
+    sl: "Samodejno posredovanje (naslov ",
+    en: "Automatic forwarding (the address ",
+  },
+  forwardingAddress: { sl: "rezervacije@…", en: "reservations@…" },
+  forwardingSuffix: {
+    sl: ", kamor posreduješ potrdila) bo omogočeno, ko aktiviramo vhodni poštni kanal — danes deluje ročno lepljenje.",
+    en: " you forward confirmations to) will be enabled once we activate the inbound mail channel — for now, pasting manually works.",
+  },
+  parsedDeterministic: {
+    sl: "Prebrano z vgrajenim bralnikom (brez AI) — preveri polja pred potrditvijo.",
+    en: "Read with the built-in reader (no AI) — check the fields before confirming.",
+  },
+  parsedAi: {
+    sl: (parseVia: string) =>
+      `Prebrano z AI (${parseVia}) — preveri polja pred potrditvijo.`,
+    en: (parseVia: string) =>
+      `Read with AI (${parseVia}) — check the fields before confirming.`,
+  },
+  fileUnsupported: {
+    sl: "Podprta je slika (JPEG/PNG/WebP) ali PDF.",
+    en: "An image (JPEG/PNG/WebP) or a PDF is supported.",
+  },
+  fileTooLarge: {
+    sl: "Datoteka je prevelika (slika do 4,5 MB / PDF do 6 MB).",
+    en: "The file is too large (image up to 4.5 MB / PDF up to 6 MB).",
+  },
+  fileUnreadable: {
+    sl: "Datoteke ni bilo mogoče prebrati.",
+    en: "The file could not be read.",
+  },
+  needTextOrFile: {
+    sl: "Prilepi besedilo potrditve (vsaj 20 znakov) ali izberi datoteko.",
+    en: "Paste the confirmation text (at least 20 characters) or choose a file.",
+  },
+  needRawEmail: {
+    sl: "Prilepi SUROVO e-pošto (glava s Subject/From + telo — vsaj 40 znakov).",
+    en: "Paste the RAW email (header with Subject/From + body — at least 40 characters).",
+  },
+  providerRequired: {
+    sl: "Ime ponudnika je obvezno.",
+    en: "The provider name is required.",
+  },
+  providerLabel: { sl: "Ponudnik *", en: "Provider *" },
+  providerPlaceholder: { sl: "npr. GetYourGuide", en: "e.g. GetYourGuide" },
+  numberLabel: { sl: "Št. rezervacije", en: "Booking no." },
+  numberPlaceholder: { sl: "npr. GYG-123456", en: "e.g. GYG-123456" },
+  startLabel: { sl: "Datum/čas (od)", en: "Date/time (from)" },
+  startPlaceholder: { sl: "npr. 12.07.2026 10:00", en: "e.g. 12.07.2026 10:00" },
+  endLabel: { sl: "Do (opcijsko)", en: "To (optional)" },
+  locationLabel: { sl: "Kraj/lokacija", en: "Place/location" },
+  locationPlaceholder: { sl: "npr. Bled", en: "e.g. Bled" },
+  guestLabel: { sl: "Gost/potnik", en: "Guest/traveller" },
+  priceLabel: { sl: "Znesek", en: "Amount" },
+  pricePlaceholder: { sl: "npr. 58", en: "e.g. 58" },
+  currencyLabel: { sl: "Valuta", en: "Currency" },
+  cancelDeadlineLabel: {
+    sl: "Rok za brezplačno odpoved",
+    en: "Free cancellation deadline",
+  },
+  cancelDeadlinePlaceholder: {
+    sl: "npr. 24 h pred začetkom",
+    en: "e.g. 24 h before start",
+  },
+  confirmAndSave: {
+    sl: "Potrdi in shrani rezervacijo",
+    en: "Confirm and save the reservation",
+  },
+  saveDraft: { sl: "Shrani kot osnutek", en: "Save as draft" },
+  saveNote: {
+    sl: "S shranjevanjem potrjuješ, da so podatki iz tvojega potrdila ponudnika. Zapis je vedno označen z izvorom (ročni vnos / uvoženo) — nikoli kot providerjeva potrditev prek naše integracije.",
+    en: "By saving, you confirm the data comes from your provider's confirmation. The record is always labelled with its origin (manual entry / imported) — never as a provider confirmation through our integration.",
+  },
+  addReservation: { sl: "Dodaj rezervacijo", en: "Add a reservation" },
+} as const;
+
+// ISSUE #24 Sklop 1 (1.164.0): oznake statusov/izvorov {sl,en} — razred
+// (cls) ostaja skupen (jezikovno nevtralen), besedilo prihaja iz L.
+const STATUS_BADGES: Record<
+  string,
+  { label: { sl: string; en: string }; cls: string }
+> = {
   DRAFT: {
-    label: "Osnutek — čaka potrditev",
+    label: L.statusDraft,
     cls: "border-amber-500/50 text-amber-700 bg-amber-50",
   },
   CONFIRMED: {
-    label: "Potrjeno (uporabniški vnos)",
+    label: L.statusConfirmed,
     cls: "border-violet-500/50 text-violet-700 bg-violet-50",
   },
   EXTERNAL: {
-    label: "Zunanja rezervacija — pri ponudniku",
+    label: L.statusExternal,
     cls: "border-violet-500/40 text-violet-700",
   },
-  SELECTED: { label: "Izbrano", cls: "border-border text-muted-foreground" },
-  CANCELLED: { label: "Preklicano", cls: "border-border text-muted-foreground" },
-  FAILED: { label: "Spodletelo", cls: "border-destructive/40 text-destructive" },
+  SELECTED: { label: L.statusSelected, cls: "border-border text-muted-foreground" },
+  CANCELLED: { label: L.statusCancelled, cls: "border-border text-muted-foreground" },
+  FAILED: { label: L.statusFailed, cls: "border-destructive/40 text-destructive" },
 };
 
-const SOURCE_LABELS: Record<string, string> = {
-  USER: "ročni vnos",
-  IMPORTED: "uvoženo iz dokumenta",
+const SOURCE_LABELS: Record<string, { sl: string; en: string }> = {
+  USER: L.sourceUser,
+  IMPORTED: L.sourceImported,
 };
 
 function errText(e: unknown): string {
@@ -140,6 +349,9 @@ async function apiJson(
 }
 
 export function TripReservations({ shareId }: { shareId: string }) {
+  // ISSUE #24 Sklop 1 (1.164.0): jezik površine ({sl,en} — SL privzeto).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -193,7 +405,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
         return;
       }
       if (!r.ok) {
-        setLoadError(`Napaka ${r.status}`);
+        setLoadError(L.httpError[lang](r.status));
         return;
       }
       const data = (await r.json()) as { bookingList?: BookingRow[] };
@@ -202,7 +414,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
     } catch (e) {
       setLoadError(errText(e));
     }
-  }, [shareId]);
+  }, [shareId, lang]);
 
   useEffect(() => {
     void load();
@@ -218,11 +430,11 @@ export function TripReservations({ shareId }: { shareId: string }) {
     const isImage = /^image\/(jpeg|png|webp)$/.test(f.type);
     const isPdf = f.type === "application/pdf";
     if (!isImage && !isPdf) {
-      setParseError("Podprta je slika (JPEG/PNG/WebP) ali PDF.");
+      setParseError(L.fileUnsupported[lang]);
       return;
     }
     if (f.size > (isImage ? 4.5 * 1024 * 1024 : 6 * 1024 * 1024)) {
-      setParseError("Datoteka je prevelika (slika do 4,5 MB / PDF do 6 MB).");
+      setParseError(L.fileTooLarge[lang]);
       return;
     }
     const reader = new FileReader();
@@ -231,16 +443,14 @@ export function TripReservations({ shareId }: { shareId: string }) {
       setFileName(f.name);
       setFileKind(isImage ? "image" : "pdf");
     };
-    reader.onerror = () => setParseError("Datoteke ni bilo mogoče prebrati.");
+    reader.onerror = () => setParseError(L.fileUnreadable[lang]);
     reader.readAsDataURL(f);
-  }, []);
+  }, [lang]);
 
   // ── Parse (stateless — 0 zapisov) ────────────────────────────────────
   const parseDocument = useCallback(async () => {
     if (!fileData && rawText.trim().length < 20) {
-      setParseError(
-        "Prilepi besedilo potrditve (vsaj 20 znakov) ali izberi datoteko."
-      );
+      setParseError(L.needTextOrFile[lang]);
       return;
     }
     setParsing(true);
@@ -264,7 +474,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
         error?: string;
       } | null;
       if (!r.ok || !data?.fields) {
-        setParseError(data?.error ?? `Napaka ${r.status}`);
+        setParseError(data?.error ?? L.httpError[lang](r.status));
         return;
       }
       setFields(data.fields);
@@ -276,14 +486,12 @@ export function TripReservations({ shareId }: { shareId: string }) {
     } finally {
       setParsing(false);
     }
-  }, [fileData, fileKind, rawText]);
+  }, [fileData, fileKind, rawText, lang]);
 
   // ── Parse e-pošte (TASK 31: surova RFC 5322 → MIME → polja) ────────
   const parseRawEmail = useCallback(async () => {
     if (rawEmail.trim().length < 40) {
-      setParseError(
-        "Prilepi SUROVO e-pošto (glava s Subject/From + telo — vsaj 40 znakov)."
-      );
+      setParseError(L.needRawEmail[lang]);
       return;
     }
     setParsing(true);
@@ -301,7 +509,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
         error?: string;
       } | null;
       if (!r.ok || !data?.fields) {
-        setParseError(data?.error ?? `Napaka ${r.status}`);
+        setParseError(data?.error ?? L.httpError[lang](r.status));
         return;
       }
       setFields(data.fields);
@@ -313,13 +521,13 @@ export function TripReservations({ shareId }: { shareId: string }) {
     } finally {
       setParsing(false);
     }
-  }, [rawEmail]);
+  }, [rawEmail, lang]);
 
   // ── Zapis (ročni vnos USER / uvožen IMPORTED) ───────────────────────
   const saveReservation = useCallback(
     async (status: "DRAFT" | "CONFIRMED") => {
       if (!fields.providerName?.trim()) {
-        setParseError("Ime ponudnika je obvezno.");
+        setParseError(L.providerRequired[lang]);
         return;
       }
       setBusy(true);
@@ -351,7 +559,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
           error?: string;
         } | null;
         if (!r.ok) {
-          setParseError(data?.error ?? `Napaka ${r.status}`);
+          setParseError(data?.error ?? L.httpError[lang](r.status));
           return;
         }
         // Počisti formo + osveži seznam
@@ -385,7 +593,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
         setBusy(false);
       }
     },
-    [editToken, fields, fromParse, load, shareId]
+    [editToken, fields, fromParse, load, shareId, lang]
   );
 
   // ── Potrditev/preklic obstoječega osnutka ───────────────────────────
@@ -442,7 +650,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <TicketCheck className="size-5 text-primary" aria-hidden />
-          Rezervacije
+          {L.title[lang]}
           {bookings.length > 0 ? (
             <Badge variant="secondary" className="ml-1 font-normal">
               {bookings.length}
@@ -461,7 +669,10 @@ export function TripReservations({ shareId }: { shareId: string }) {
             {bookings.map((b, i) => {
               const badge =
                 STATUS_BADGES[b.status] ??
-                ({ label: b.status, cls: "border-border" } as const);
+                ({
+                  label: { sl: b.status, en: b.status },
+                  cls: "border-border",
+                } as const);
               return (
                 <li
                   key={`${b.provider}-${b.createdAt}-${i}`}
@@ -472,32 +683,34 @@ export function TripReservations({ shareId }: { shareId: string }) {
                       {b.summary.providerName ?? b.provider}
                     </span>
                     <Badge variant="outline" className={badge.cls}>
-                      {badge.label}
+                      {badge.label[lang]}
                     </Badge>
                     {b.source && SOURCE_LABELS[b.source] ? (
                       <span className="text-[11px] text-muted-foreground">
-                        ({SOURCE_LABELS[b.source]})
+                        ({SOURCE_LABELS[b.source][lang]})
                       </span>
                     ) : null}
                   </div>
                   <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
                     {b.summary.reservationNumber ? (
-                      <div>Št. rezervacije: {b.summary.reservationNumber}</div>
+                      <div>{L.bookingNo[lang](b.summary.reservationNumber)}</div>
                     ) : null}
                     {b.summary.startDateTime ? (
-                      <div>Kdaj: {b.summary.startDateTime}</div>
+                      <div>{L.when[lang](b.summary.startDateTime)}</div>
                     ) : null}
                     {b.summary.locationName ? (
-                      <div>Kje: {b.summary.locationName}</div>
+                      <div>{L.where[lang](b.summary.locationName)}</div>
                     ) : null}
                     {b.confirmedPrice != null ? (
                       <div className="font-medium text-foreground">
-                        Znesek: {Math.round(b.confirmedPrice)} {b.currency}
+                        {L.amount[lang](
+                          `${Math.round(b.confirmedPrice)} ${b.currency}`
+                        )}
                       </div>
                     ) : null}
                     {b.summary.cancellationDeadline ? (
                       <div className="text-amber-700">
-                        Odpoved do: {b.summary.cancellationDeadline}
+                        {L.cancelBy[lang](b.summary.cancellationDeadline)}
                       </div>
                     ) : null}
                   </div>
@@ -517,7 +730,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
                         className="gap-1.5"
                       >
                         <CircleCheck className="size-4" aria-hidden />
-                        Potrdi rezervacijo
+                        {L.confirmReservation[lang]}
                       </Button>
                       <Button
                         size="sm"
@@ -531,7 +744,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
                         }
                         disabled={busy}
                       >
-                        Prekliči
+                        {L.cancel[lang]}
                       </Button>
                     </div>
                   ) : null}
@@ -541,8 +754,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
           </ul>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Še ni rezervacij. Dodaj ročno ali uvozi potrdilo ponudnika
-            (slika/PDF/e-pošta).
+            {L.empty[lang]}
           </p>
         )}
 
@@ -552,31 +764,28 @@ export function TripReservations({ shareId }: { shareId: string }) {
             <Tabs defaultValue="manual">
               <TabsList className="mb-2">
                 <TabsTrigger value="manual" className="gap-1.5">
-                  <PenLine className="size-3.5" aria-hidden /> Ročno
+                  <PenLine className="size-3.5" aria-hidden /> {L.tabManual[lang]}
                 </TabsTrigger>
                 <TabsTrigger value="doc" className="gap-1.5">
-                  <FileText className="size-3.5" aria-hidden /> Dokument
+                  <FileText className="size-3.5" aria-hidden /> {L.tabDoc[lang]}
                 </TabsTrigger>
                 <TabsTrigger value="text" className="gap-1.5">
-                  <ClipboardType className="size-3.5" aria-hidden /> Besedilo
+                  <ClipboardType className="size-3.5" aria-hidden /> {L.tabText[lang]}
                 </TabsTrigger>
                 <TabsTrigger value="email" className="gap-1.5">
-                  <Mail className="size-3.5" aria-hidden /> E-pošta
+                  <Mail className="size-3.5" aria-hidden /> {L.tabEmail[lang]}
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="manual">
                 <p className="mb-2 text-xs text-muted-foreground">
-                  Vnesi podatke svoje rezervacije. Zapis je tvoj vnos
-                  (izrecno označen) — nikoli providerjeva potrditev prek naše
-                  integracije.
+                  {L.manualNote[lang]}
                 </p>
               </TabsContent>
 
               <TabsContent value="doc" className="space-y-2">
                 <p className="text-xs text-muted-foreground">
-                  Naloži potrdilo ponudnika — AI prebere SAMO podatke, ki so v
-                  njem; ti jih pred shranjevanjem pregledaš in potrdiš.
+                  {L.docNote[lang]}
                 </p>
                 <input
                   ref={fileRef}
@@ -592,7 +801,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
                   className="gap-1.5"
                 >
                   <ImageIcon className="size-4" aria-hidden />
-                  Izberi sliko ali PDF
+                  {L.chooseFile[lang]}
                 </Button>
                 {fileName ? (
                   <p className="text-xs text-muted-foreground">
@@ -608,20 +817,19 @@ export function TripReservations({ shareId }: { shareId: string }) {
                   {parsing ? (
                     <Loader2 className="size-4 animate-spin" aria-hidden />
                   ) : null}
-                  Preberi dokument
+                  {L.readDocument[lang]}
                 </Button>
               </TabsContent>
 
               <TabsContent value="text" className="space-y-2">
                 <p className="text-xs text-muted-foreground">
-                  Prilepi besedilo potrditvene e-pošte (rezervacija, let,
-                  vstopnica …).
+                  {L.textNote[lang]}
                 </p>
                 <Textarea
-                  aria-label="Besedilo potrditve rezervacije"
+                  aria-label={L.textAria[lang]}
                   value={rawText}
                   onChange={(e) => setRawText(e.target.value)}
-                  placeholder="Primer: GetYourGuide — št. rezervacije GYG-123456, Bled, 12.07.2026 10:00, 2 osebi, 58 EUR …"
+                  placeholder={L.textPlaceholder[lang]}
                   rows={5}
                   maxLength={20000}
                 />
@@ -634,26 +842,27 @@ export function TripReservations({ shareId }: { shareId: string }) {
                   {parsing ? (
                     <Loader2 className="size-4 animate-spin" aria-hidden />
                   ) : null}
-                  Preberi besedilo
+                  {L.readText[lang]}
                 </Button>
               </TabsContent>
 
               <TabsContent value="email" className="space-y-2">
                 <p className="text-xs text-muted-foreground">
-                  Prilepi <strong>surovo potrditveno e-pošto</strong> (celotna
-                  izvorna koda, ne vidni del): v Gmailu{" "}
-                  <em>⋮ → Pokaži izvorno kodo</em>, v Outlooku shrani kot{" "}
-                  <em>.eml</em> in odpri z urejevalnikom besedila, v Apple
-                  Mail pa <em>Pogled → Sporočilo → Izvorna koda</em>. Bralnik
-                  razbere glavo, telo in priloge (.ics / .pdf).
+                  {L.emailPastePrefix[lang]}
+                  <strong>{L.emailRawStrong[lang]}</strong>
+                  {L.emailPasteMid[lang]}{" "}
+                  <em>{L.emailGmailItem[lang]}</em>
+                  {L.emailOutlookMid[lang]}{" "}
+                  <em>.eml</em>
+                  {L.emailOutlookMid2[lang]}
+                  <em>{L.emailAppleItem[lang]}</em>
+                  {L.emailReaderNote[lang]}
                 </p>
                 <Textarea
-                  aria-label="Surova e-pošta s potrditvijo rezervacije"
+                  aria-label={L.emailAria[lang]}
                   value={rawEmail}
                   onChange={(e) => setRawEmail(e.target.value)}
-                  placeholder={
-                    "From: potrditve@getyourguide.com\r\nSubject: GetYourGuide — potrditev GYG-123456\r\nContent-Type: text/plain …\r\n\r\nVaša rezervacija je potrjena …"
-                  }
+                  placeholder={L.emailPlaceholder[lang]}
                   rows={7}
                   className="font-mono text-xs"
                 />
@@ -668,7 +877,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
                   ) : (
                     <Mail className="size-4" aria-hidden />
                   )}
-                  Preberi e-pošto
+                  {L.readEmail[lang]}
                 </Button>
                 {/* 1.123 (G3 — ISSUE #13): email-forward vstopna točka —
                     NASLOV se prikaže SAMO ko je env nastavljen (lastnik
@@ -679,7 +888,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
                     + 2 s potrditev ( CircleCheck vzorec po cele strani). */}
                 {RESERVATIONS_EMAIL ? (
                   <div className="flex flex-wrap items-center gap-1.5 text-[11px] leading-snug text-muted-foreground">
-                    <span>Potrdila lahko posreduješ na naslov:</span>
+                    <span>{L.forwardTo[lang]}</span>
                     <code
                       className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground"
                     >
@@ -700,21 +909,21 @@ export function TripReservations({ shareId }: { shareId: string }) {
                           });
                       }}
                       className="inline-flex min-h-6 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      aria-label="Kopiraj naslov za posredovanje potrdil"
+                      aria-label={L.copyAddressAria[lang]}
                     >
                       {emailCopied ? (
                         <Check className="size-3 text-emerald-600" aria-hidden />
                       ) : (
                         <Copy className="size-3" aria-hidden />
                       )}
-                      {emailCopied ? "Skopirano" : "Kopiraj"}
+                      {emailCopied ? L.copied[lang] : L.copy[lang]}
                     </button>
                   </div>
                 ) : (
                   <p className="text-[11px] leading-snug text-muted-foreground">
-                    {"Samodejno posredovanje (naslov "}
-                    <em>rezervacije@…</em>
-                    {", kamor posreduješ potrdila) bo omogočeno, ko aktiviramo vhodni poštni kanal — danes deluje ročno lepljenje."}
+                    {L.forwardingPrefix[lang]}
+                    <em>{L.forwardingAddress[lang]}</em>
+                    {L.forwardingSuffix[lang]}
                   </p>
                 )}
               </TabsContent>
@@ -730,45 +939,45 @@ export function TripReservations({ shareId }: { shareId: string }) {
             {parseVia ? (
               <p className="text-[11px] text-muted-foreground">
                 {parseMethod === "deterministic"
-                  ? "Prebrano z vgrajenim bralnikom (brez AI) — preveri polja pred potrditvijo."
-                  : `Prebrano z AI (${parseVia}) — preveri polja pred potrditvijo.`}
+                  ? L.parsedDeterministic[lang]
+                  : L.parsedAi[lang](parseVia)}
               </p>
             ) : null}
 
             {/* Predogled — uredljiva polja (ista forma za ročni vnos) */}
             <div className="grid gap-2.5 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="res-provider">Ponudnik *</Label>
+                <Label htmlFor="res-provider">{L.providerLabel[lang]}</Label>
                 <Input
                   id="res-provider"
                   value={fields.providerName ?? ""}
                   onChange={(e) => set("providerName", e.target.value)}
-                  placeholder="npr. GetYourGuide"
+                  placeholder={L.providerPlaceholder[lang]}
                   maxLength={200}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="res-number">Št. rezervacije</Label>
+                <Label htmlFor="res-number">{L.numberLabel[lang]}</Label>
                 <Input
                   id="res-number"
                   value={fields.reservationNumber ?? ""}
                   onChange={(e) => set("reservationNumber", e.target.value)}
-                  placeholder="npr. GYG-123456"
+                  placeholder={L.numberPlaceholder[lang]}
                   maxLength={200}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="res-start">Datum/čas (od)</Label>
+                <Label htmlFor="res-start">{L.startLabel[lang]}</Label>
                 <Input
                   id="res-start"
                   value={fields.startDateTime ?? ""}
                   onChange={(e) => set("startDateTime", e.target.value)}
-                  placeholder="npr. 12.07.2026 10:00"
+                  placeholder={L.startPlaceholder[lang]}
                   maxLength={200}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="res-end">Do (opcijsko)</Label>
+                <Label htmlFor="res-end">{L.endLabel[lang]}</Label>
                 <Input
                   id="res-end"
                   value={fields.endDateTime ?? ""}
@@ -777,17 +986,17 @@ export function TripReservations({ shareId }: { shareId: string }) {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="res-location">Kraj/lokacija</Label>
+                <Label htmlFor="res-location">{L.locationLabel[lang]}</Label>
                 <Input
                   id="res-location"
                   value={fields.locationName ?? ""}
                   onChange={(e) => set("locationName", e.target.value)}
-                  placeholder="npr. Bled"
+                  placeholder={L.locationPlaceholder[lang]}
                   maxLength={200}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="res-guest">Gost/potnik</Label>
+                <Label htmlFor="res-guest">{L.guestLabel[lang]}</Label>
                 <Input
                   id="res-guest"
                   value={fields.guestName ?? ""}
@@ -796,7 +1005,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="res-price">Znesek</Label>
+                <Label htmlFor="res-price">{L.priceLabel[lang]}</Label>
                 <Input
                   id="res-price"
                   value={fields.price != null ? String(fields.price) : ""}
@@ -806,12 +1015,12 @@ export function TripReservations({ shareId }: { shareId: string }) {
                     set("price", v !== "" && Number.isFinite(n) ? n : null);
                   }}
                   inputMode="decimal"
-                  placeholder="npr. 58"
+                  placeholder={L.pricePlaceholder[lang]}
                   maxLength={12}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="res-currency">Valuta</Label>
+                <Label htmlFor="res-currency">{L.currencyLabel[lang]}</Label>
                 <Input
                   id="res-currency"
                   value={fields.currency ?? ""}
@@ -823,12 +1032,12 @@ export function TripReservations({ shareId }: { shareId: string }) {
                 />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="res-cancel">Rok za brezplačno odpoved</Label>
+                <Label htmlFor="res-cancel">{L.cancelDeadlineLabel[lang]}</Label>
                 <Input
                   id="res-cancel"
                   value={fields.cancellationDeadline ?? ""}
                   onChange={(e) => set("cancellationDeadline", e.target.value)}
-                  placeholder="npr. 24 h pred začetkom"
+                  placeholder={L.cancelDeadlinePlaceholder[lang]}
                   maxLength={200}
                 />
               </div>
@@ -846,7 +1055,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
                 ) : (
                   <CircleCheck className="size-4" aria-hidden />
                 )}
-                Potrdi in shrani rezervacijo
+                {L.confirmAndSave[lang]}
               </Button>
               <Button
                 size="sm"
@@ -854,7 +1063,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
                 onClick={() => void saveReservation("DRAFT")}
                 disabled={busy}
               >
-                Shrani kot osnutek
+                {L.saveDraft[lang]}
               </Button>
               <Button
                 size="sm"
@@ -865,14 +1074,11 @@ export function TripReservations({ shareId }: { shareId: string }) {
                 }}
                 disabled={busy}
               >
-                Prekliči
+                {L.cancel[lang]}
               </Button>
             </div>
             <p className="text-[11px] leading-snug text-muted-foreground">
-              S shranjevanjem potrjuješ, da so podatki iz tvojega potrdila
-              ponudnika. Zapis je vedno označen z izvorom (ročni vnos /
-              uvoženo) — nikoli kot providerjeva potrditev prek naše
-              integracije.
+              {L.saveNote[lang]}
             </p>
           </div>
         ) : (
@@ -883,7 +1089,7 @@ export function TripReservations({ shareId }: { shareId: string }) {
             className="gap-1.5"
           >
             <Plus className="size-4" aria-hidden />
-            Dodaj rezervacijo
+            {L.addReservation[lang]}
           </Button>
         )}
       </CardContent>

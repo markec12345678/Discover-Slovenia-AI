@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getLocale } from "next-intl/server";
 import { getSharedItinerary } from "../shared-trip-screen";
 import { SharedTripScreen } from "../shared-trip-screen";
 
@@ -21,16 +22,20 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { shareId } = await params;
   const saved = await getSharedItinerary(shareId);
+  // ISSUE #24 Sklop 1 (1.164.0): /pot je dvojezična — metadata sledita
+  // jeziku strani (prej SL-only, 1.29.0 revizija #13).
+  const locale = await getLocale();
+  const isEn = locale === "en";
 
   if (!saved) {
     return {
       // template v layoutu sam pripne " | Discover Slovenia AI"
-      title: "Itinerer ne obstaja",
+      title: isEn ? "Itinerary does not exist" : "Itinerer ne obstaja",
       robots: { index: false, follow: false },
     };
   }
 
-  const name = saved.name || "AI načrt potovanja";
+  const name = saved.name || (isEn ? "AI travel plan" : "AI načrt potovanja");
   const firstDay = saved.itinerary.days[0];
   const dayCount = saved.itinerary.days.length;
   const totalBudget =
@@ -42,7 +47,9 @@ export async function generateMetadata({
     .filter(Boolean)
     .slice(0, 3)
     .join(", ");
-  const description = `${dayCount}-dnevni AI načrt potovanja po Sloveniji${destNames ? ` — ${destNames}` : ""}. Skupni proračun ~€${totalBudget}.`;
+  const description = isEn
+    ? `${dayCount}-day AI travel plan around Slovenia${destNames ? ` — ${destNames}` : ""}. Total budget ~€${totalBudget}.`
+    : `${dayCount}-dnevni AI načrt potovanja po Sloveniji${destNames ? ` — ${destNames}` : ""}. Skupni proračun ~€${totalBudget}.`;
 
   return {
     // template v layoutu sam pripne " | Discover Slovenia AI" (sicer se pripona podvoji)

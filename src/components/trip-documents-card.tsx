@@ -20,6 +20,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useState } from "react";
+import { useLocale } from "next-intl";
 import {
   Card,
   CardContent,
@@ -65,27 +66,118 @@ interface DocumentRow {
   isAuthor?: boolean;
 }
 
-/** Kanonske oznake (§15 taksonomija — SL). */
-const TYPE_LABELS: Record<string, string> = {
-  booking_confirmation: "Potrditev rezervacije",
-  voucher: "Vavčer",
-  ticket: "Vstopnica",
-  receipt: "Račun",
-  note: "Zapisek",
-};
-
-const FORMAT_LABELS: Record<string, string> = {
-  pdf: "PDF",
-  image: "Slika",
-  text: "Besedilo",
-  link: "Povezava",
-  none: "—",
-};
-
-const SOURCE_LABELS: Record<string, string> = {
-  USER: "ročni vnos",
-  IMPORTED: "iz dokumenta",
-};
+// ISSUE #24 Sklop 1 (1.164.0): L-vzorec {sl,en} — prej SL-only
+const L = {
+  sl: {
+    /** Kanonske oznake (§15 taksonomija — SL). */
+    typeLabels: {
+      booking_confirmation: "Potrditev rezervacije",
+      voucher: "Vavčer",
+      ticket: "Vstopnica",
+      receipt: "Račun",
+      note: "Zapisek",
+    } as Record<string, string>,
+    formatLabels: {
+      pdf: "PDF",
+      image: "Slika",
+      text: "Besedilo",
+      link: "Povezava",
+      none: "—",
+    } as Record<string, string>,
+    sourceLabels: {
+      USER: "ročni vnos",
+      IMPORTED: "iz dokumenta",
+    } as Record<string, string>,
+    errorTripNotFound: "Potovanje ni najdeno.",
+    errorLoad: "Dokumentov ni bilo mogoče naložiti.",
+    errorLoadOffline: "Dokumentov ni bilo mogoče naložiti (brez signala?).",
+    errorTitleRequired: "Naslov dokumenta je obvezen (2–160 znakov).",
+    errorSave: "Dokumenta ni bilo mogoče shraniti.",
+    errorSaveOffline: "Shranjevanje ni uspelo (brez signala?).",
+    errorDelete: "Brisanje ni uspelo.",
+    errorDeleteOffline: "Brisanje ni uspelo (brez signala?).",
+    successSaved: "Dokument shranjen.",
+    cardTitle: "Dokumenti poti",
+    cardDescription:
+      "Potrditve, vavčerji, vstopnice, računi in zapiski — metapodatki in povezave (datoteke ostanejo pri tebi, mi jih ne shranjujemo).",
+    addButton: "Dodaj dokument",
+    typeLabel: "Vrsta dokumenta",
+    formatLabel: "Zapis vira",
+    titleLabel: "Naslov (obvezen)",
+    titlePlaceholder: "npr. Vstopnica – Bled, 12. 7.",
+    urlLabel: "Povezava do dokumenta (https, neobvezno)",
+    noteLabel: "Opomba (neobvezno)",
+    notePlaceholder: "npr. št. rezervacje, rok odpovedi …",
+    dayLabel: "Dan poti (neobvezno)",
+    formPrivacyNote:
+      "Shranimo samo metapodatke in povezavo — datoteka ostane pri tebi. Izvor: ročni vnos (vedno razkrit).",
+    saveButton: "Shrani",
+    loading: "Nalaganje dokumentov …",
+    emptyTitle: "Še ni nobenega dokumenta.",
+    emptyNote:
+      "Seznam dokumentov se izriše tudi brez signala (predpomnjen) — dodajanje in brisanje potrebujeta povezavo.",
+    dayMeta: (n: number) => `· dan ${n}`,
+    linkedToBooking: " · vezano na rezervacijo",
+    openDocSr: "Odpri dokument",
+    deleteAria: "Izbriši dokument",
+    privacyFooter:
+      "Privatnost deduje iz poti (javna/zasebna). Briše lahko samo avtor zapisa.",
+  },
+  en: {
+    typeLabels: {
+      booking_confirmation: "Booking confirmation",
+      voucher: "Voucher",
+      ticket: "Ticket",
+      receipt: "Receipt",
+      note: "Note",
+    } as Record<string, string>,
+    formatLabels: {
+      pdf: "PDF",
+      image: "Image",
+      text: "Text",
+      link: "Link",
+      none: "—",
+    } as Record<string, string>,
+    sourceLabels: {
+      USER: "manual entry",
+      IMPORTED: "from a document",
+    } as Record<string, string>,
+    errorTripNotFound: "Trip not found.",
+    errorLoad: "Documents could not be loaded.",
+    errorLoadOffline: "Documents could not be loaded (no signal?).",
+    errorTitleRequired: "A document title is required (2–160 characters).",
+    errorSave: "The document could not be saved.",
+    errorSaveOffline: "Saving failed (no signal?).",
+    errorDelete: "Deleting failed.",
+    errorDeleteOffline: "Deleting failed (no signal?).",
+    successSaved: "Document saved.",
+    cardTitle: "Trip documents",
+    cardDescription:
+      "Confirmations, vouchers, tickets, receipts and notes — metadata and links (the files stay with you, we never store them).",
+    addButton: "Add document",
+    typeLabel: "Document type",
+    formatLabel: "Source format",
+    titleLabel: "Title (required)",
+    titlePlaceholder: "e.g. Ticket – Bled, 12 July",
+    urlLabel: "Link to the document (https, optional)",
+    noteLabel: "Note (optional)",
+    notePlaceholder: "e.g. booking number, cancellation deadline …",
+    dayLabel: "Trip day (optional)",
+    formPrivacyNote:
+      "We only save metadata and the link — the file stays with you. Source: manual entry (always disclosed).",
+    saveButton: "Save",
+    loading: "Loading documents …",
+    emptyTitle: "No documents yet.",
+    emptyNote:
+      "The document list also renders without a signal (cached) — adding and deleting require a connection.",
+    dayMeta: (n: number) => `· day ${n}`,
+    linkedToBooking: " · linked to a reservation",
+    openDocSr: "Open document",
+    deleteAria: "Delete document",
+    privacyFooter:
+      "Privacy is inherited from the trip (public/private). Only the author of an entry can delete it.",
+  },
+} as const;
 
 /** Vrsta dokumenta → prikazna barva (iskrenost: barva IZPELJANA iz vrste). */
 const TYPE_BADGE_CLASS: Record<string, string> = {
@@ -96,15 +188,20 @@ const TYPE_BADGE_CLASS: Record<string, string> = {
   note: "bg-muted text-muted-foreground",
 };
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: "sl" | "en"): string {
   try {
-    return new Date(iso).toLocaleDateString("sl-SI");
+    return new Date(iso).toLocaleDateString(
+      locale === "en" ? "en-GB" : "sl-SI"
+    );
   } catch {
     return iso.slice(0, 10);
   }
 }
 
 export function TripDocumentsCard({ shareId }: { shareId: string }) {
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  const t = L[lang];
   const [docs, setDocs] = useState<DocumentRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -136,9 +233,7 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
       );
       if (!res.ok) {
         setError(
-          res.status === 404
-            ? "Potovanje ni najdeno."
-            : "Dokumentov ni bilo mogoče naložiti."
+          res.status === 404 ? t.errorTripNotFound : t.errorLoad
         );
         setDocs([]);
         return;
@@ -147,10 +242,10 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
       setDocs(data.documents ?? []);
       setError(null);
     } catch {
-      setError("Dokumentov ni bilo mogoče naložiti (brez signala?).");
+      setError(t.errorLoadOffline);
       setDocs([]);
     }
-  }, [shareId, clientId]);
+  }, [shareId, clientId, t]);
 
   useEffect(() => {
     void load();
@@ -158,7 +253,7 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
 
   async function addDocument() {
     if (!title.trim()) {
-      setError("Naslov dokumenta je obvezen (2–160 znakov).");
+      setError(t.errorTitleRequired);
       return;
     }
     setSaving(true);
@@ -185,7 +280,7 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
         document?: DocumentRow;
       };
       if (!res.ok || !data.success || !data.document) {
-        setError(data.error ?? "Dokumenta ni bilo mogoče shraniti.");
+        setError(data.error ?? t.errorSave);
         return;
       }
       setDocs((prev) => [...(prev ?? []), data.document as DocumentRow]);
@@ -194,10 +289,10 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
       setNote("");
       setDayIndex("");
       setFormOpen(false);
-      setSuccess("Dokument shranjen.");
+      setSuccess(t.successSaved);
       window.setTimeout(() => setSuccess(null), 3000);
     } catch {
-      setError("Shranjevanje ni uspelo (brez signala?).");
+      setError(t.errorSaveOffline);
     } finally {
       setSaving(false);
     }
@@ -214,12 +309,12 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
       });
       const data = (await res.json()) as { success?: boolean; error?: string };
       if (!res.ok || !data.success) {
-        setError(data.error ?? "Brisanje ni uspelo.");
+        setError(data.error ?? t.errorDelete);
         return;
       }
       setDocs((prev) => (prev ?? []).filter((d) => d.id !== id));
     } catch {
-      setError("Brisanje ni uspelo (brez signala?).");
+      setError(t.errorDeleteOffline);
     } finally {
       setDeleting(null);
     }
@@ -232,11 +327,10 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
           <div>
             <CardTitle className="flex items-center gap-2 text-lg">
               <FileText className="h-5 w-5 text-primary" aria-hidden />
-              Dokumenti poti
+              {t.cardTitle}
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Potrditve, vavčerji, vstopnice, računi in zapiski — metapodatki
-              in povezave (datoteke ostanejo pri tebi, mi jih ne shranjujemo).
+              {t.cardDescription}
             </p>
           </div>
           <Button
@@ -246,7 +340,7 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
             aria-expanded={formOpen}
           >
             <Plus className="h-4 w-4" aria-hidden />
-            Dodaj dokument
+            {t.addButton}
           </Button>
         </div>
       </CardHeader>
@@ -268,13 +362,13 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
           <div className="rounded-lg border border-border p-4 space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="doc-type">Vrsta dokumenta</Label>
+                <Label htmlFor="doc-type">{t.typeLabel}</Label>
                 <Select value={type} onValueChange={setType}>
                   <SelectTrigger id="doc-type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(TYPE_LABELS).map(([v, l]) => (
+                    {Object.entries(t.typeLabels).map(([v, l]) => (
                       <SelectItem key={v} value={v}>
                         {l}
                       </SelectItem>
@@ -283,13 +377,13 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="doc-format">Zapis vira</Label>
+                <Label htmlFor="doc-format">{t.formatLabel}</Label>
                 <Select value={format} onValueChange={setFormat}>
                   <SelectTrigger id="doc-format">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(FORMAT_LABELS)
+                    {Object.entries(t.formatLabels)
                       .filter(([v]) => v !== "none")
                       .map(([v, l]) => (
                         <SelectItem key={v} value={v}>
@@ -301,17 +395,17 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="doc-title">Naslov (obvezen)</Label>
+              <Label htmlFor="doc-title">{t.titleLabel}</Label>
               <Input
                 id="doc-title"
                 value={title}
                 maxLength={160}
-                placeholder="npr. Vstopnica – Bled, 12. 7."
+                placeholder={t.titlePlaceholder}
                 onChange={(e) => setTitle(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="doc-url">Povezava do dokumenta (https, neobvezno)</Label>
+              <Label htmlFor="doc-url">{t.urlLabel}</Label>
               <Input
                 id="doc-url"
                 value={url}
@@ -323,18 +417,18 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
             </div>
             <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
               <div className="space-y-1.5">
-                <Label htmlFor="doc-note">Opomba (neobvezno)</Label>
+                <Label htmlFor="doc-note">{t.noteLabel}</Label>
                 <Textarea
                   id="doc-note"
                   value={note}
                   maxLength={2000}
                   rows={2}
-                  placeholder="npr. št. rezervacje, rok odpovedi …"
+                  placeholder={t.notePlaceholder}
                   onChange={(e) => setNote(e.target.value)}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="doc-day">Dan poti (neobvezno)</Label>
+                <Label htmlFor="doc-day">{t.dayLabel}</Label>
                 <Input
                   id="doc-day"
                   value={dayIndex}
@@ -348,8 +442,7 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
             </div>
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs text-muted-foreground">
-                Shranimo samo metapodatke in povezavo — datoteka ostane pri
-                tebi. Izvor: ročni vnos (vedno razkrit).
+                {t.formPrivacyNote}
               </p>
               <Button
                 size="sm"
@@ -361,7 +454,7 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
                 ) : (
                   <FileText className="h-4 w-4" aria-hidden />
                 )}
-                Shrani
+                {t.saveButton}
               </Button>
             </div>
           </div>
@@ -370,17 +463,14 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
         {docs === null ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            Nalaganje dokumentov …
+            {t.loading}
           </div>
         ) : docs.length === 0 ? (
           <div className="flex items-start gap-2 rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
             <CloudOff className="mt-0.5 h-4 w-4" aria-hidden />
             <div>
-              <p>Še ni nobenega dokumenta.</p>
-              <p className="mt-1 text-xs">
-                Seznam dokumentov se izriše tudi brez signala (predpomnjen) —
-                dodajanje in brisanje potrebujeta povezavo.
-              </p>
+              <p>{t.emptyTitle}</p>
+              <p className="mt-1 text-xs">{t.emptyNote}</p>
             </div>
           </div>
         ) : (
@@ -398,17 +488,17 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
                           TYPE_BADGE_CLASS[d.type] ?? TYPE_BADGE_CLASS.note
                         }`}
                       >
-                        {TYPE_LABELS[d.type] ?? d.type}
+                        {t.typeLabels[d.type] ?? d.type}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
-                        {FORMAT_LABELS[d.format] ?? d.format} ·{" "}
-                        {d.source && SOURCE_LABELS[d.source]
-                          ? `(${SOURCE_LABELS[d.source]})`
+                        {t.formatLabels[d.format] ?? d.format} ·{" "}
+                        {d.source && t.sourceLabels[d.source]
+                          ? `(${t.sourceLabels[d.source]})`
                           : ""}
                       </span>
                       {d.dayIndex != null && (
                         <span className="text-[10px] text-muted-foreground">
-                          · dan {d.dayIndex + 1}
+                          {t.dayMeta(d.dayIndex + 1)}
                         </span>
                       )}
                     </div>
@@ -419,9 +509,9 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
                       </p>
                     )}
                     <p className="mt-1 text-[10px] text-muted-foreground/80">
-                      {formatDate(d.createdAt)}
+                      {formatDate(d.createdAt, lang)}
                       {d.authorName ? ` · ${d.authorName}` : ""}
-                      {d.bookingId ? " · vezano na rezervacijo" : ""}
+                      {d.bookingId ? t.linkedToBooking : ""}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
@@ -437,7 +527,7 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
                           rel="noopener noreferrer"
                         >
                           <ExternalLink className="h-4 w-4" aria-hidden />
-                          <span className="sr-only">Odpri dokument</span>
+                          <span className="sr-only">{t.openDocSr}</span>
                         </a>
                       </Button>
                     )}
@@ -447,7 +537,7 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
                         variant="ghost"
                         onClick={() => void deleteDocument(d.id)}
                         disabled={deleting === d.id}
-                        aria-label="Izbriši dokument"
+                        aria-label={t.deleteAria}
                       >
                         {deleting === d.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -463,10 +553,7 @@ export function TripDocumentsCard({ shareId }: { shareId: string }) {
           </ul>
         )}
 
-        <p className="text-xs text-muted-foreground">
-          Privatnost deduje iz poti (javna/zasebna). Briše lahko samo avtor
-          zapisa.
-        </p>
+        <p className="text-xs text-muted-foreground">{t.privacyFooter}</p>
       </CardContent>
     </Card>
   );

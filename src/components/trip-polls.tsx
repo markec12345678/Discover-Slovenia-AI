@@ -27,8 +27,117 @@ import {
 
 // TASK 8 / F3-B: hydration placeholder v L-pattern (SL/EN — D8-A §13
 // „Nalagam…" uhodi so trdi predpogoj za F3-E EN razširitev).
+// ISSUE #24 Sklop 1 (1.164.0): L-vzorec {sl,en} razširjen na celo komponento — prej SL-only (samo nalagalni placeholder)
+// (prejšnja per-ključ oblika placeholderja, iz katere je zrasel ta slovar:
+//   loadingPolls: { sl: "Nalagam ankete …", en: "Loading polls …" })
 const L = {
-  loadingPolls: { sl: "Nalagam ankete …", en: "Loading polls …" },
+  sl: {
+    loadingPolls: "Nalagam ankete …",
+    heading: "Skupinske ankete",
+    openCountLabel: (n: number) =>
+      `${n} ${slUnit(n, "odprta", "odprti", "odprte", "odprtih")}`,
+    allClosed: "vse zaključene",
+    noPolls: "še ni anket",
+    close: "Zapri",
+    newPoll: "Nova anketa",
+    description:
+      "Odločite se skupaj: postavite vprašanje (npr. „Kateri dan odpotujemo?“) in vsak član skupine odda en glas. Glas lahko prestavite, dokler je anketa odprta.",
+    questionPlaceholder: "Vprašanje za skupino (npr. Kateri dan odpotujemo?)",
+    questionAria: "Vprašanje ankete",
+    optionPlaceholder: (letter: string) => `Možnost ${letter}`,
+    optionAria: (letter: string) => `Možnost ${letter}`,
+    removeOptionAria: (letter: string) => `Odstrani možnost ${letter}`,
+    addOption: "Dodaj možnost",
+    namePlaceholder: "Tvoje ime (opcijsko — vidno ob anketi)",
+    nameAria: "Tvoje ime",
+    createPoll: "Ustvari anketo",
+    emptyPolls: "Še ni nobene ankete — postavi prvo vprašanje skupini!",
+    // Posamezna anketa (PollCard)
+    closedBadge: "Zaključena",
+    voteAria: (opt: string, count: number) =>
+      `Glasuj za: ${opt} (${count} ${slUnit(count, "glas", "glasa", "glasi", "glasov")})`,
+    votesCount: (n: number) =>
+      `${n} ${slUnit(n, "glas", "glasa", "glasi", "glasov")}`,
+    yourVoteCounted: " · tvoj glas je štet",
+    reopenPoll: "Znova odpri",
+    closePoll: "Zaključi",
+    delete: "Izbriši",
+    deleteAria: "Izbriši anketo",
+    // Toasti (validacija + optimistični tok)
+    errQuestionTitle: "Vprašanje ni ustrezno",
+    errQuestionDesc: () =>
+      `Vprašanje mora imeti med 2 in ${QUESTION_MAX} znakov.`,
+    errOptionsTitle: "Anketa potrebuje možnosti",
+    errOptionsDesc: () =>
+      `Vpiši vsaj ${OPTIONS_MIN} (največ ${OPTIONS_MAX}) neprazni možnosti.`,
+    errOptionTitle: "Možnost je predolga",
+    errOptionDesc: () =>
+      `Posamezna možnost je lahko dolga največ ${OPTION_MAX} znakov.`,
+    okCreatedTitle: "Anketa je ustvarjena",
+    okCreatedDesc: "Povezavo deli s skupino in glasujte skupaj!",
+    errCreateTitle: "Ankete ni bilo mogoče ustvariti",
+    errVoteTitle: "Glasa ni bilo mogoče oddati",
+    okClosedTitle: "Anketa je zaključena",
+    okClosedDesc: "Rezultati so vidni, glasovanje pa zaprto.",
+    okReopenedTitle: "Anketa je znova odprta",
+    okReopenedDesc: "Skupina lahko spet glasuje.",
+    errUpdateTitle: "Napaka pri posodabljanju ankete",
+    okDeletedTitle: "Anketa je izbrisana",
+    errDeleteTitle: "Ankete ni bilo mogoče izbrisati",
+    tryAgain: "Poskusi znova.",
+  },
+  en: {
+    loadingPolls: "Loading polls …",
+    heading: "Group polls",
+    openCountLabel: (n: number) => `${n} open`,
+    allClosed: "all closed",
+    noPolls: "no polls yet",
+    close: "Close",
+    newPoll: "New poll",
+    description:
+      "Decide together: ask a question (e.g. “Which day do we leave?”) and each group member casts one vote. You can change your vote while the poll is open.",
+    questionPlaceholder: "Question for the group (e.g. Which day do we leave?)",
+    questionAria: "Poll question",
+    optionPlaceholder: (letter: string) => `Option ${letter}`,
+    optionAria: (letter: string) => `Option ${letter}`,
+    removeOptionAria: (letter: string) => `Remove option ${letter}`,
+    addOption: "Add option",
+    namePlaceholder: "Your name (optional — shown with the poll)",
+    nameAria: "Your name",
+    createPoll: "Create poll",
+    emptyPolls: "No polls yet — ask the group your first question!",
+    // Posamezna anketa (PollCard)
+    closedBadge: "Closed",
+    voteAria: (opt: string, count: number) =>
+      `Vote for: ${opt} (${count} ${count === 1 ? "vote" : "votes"})`,
+    votesCount: (n: number) => `${n} ${n === 1 ? "vote" : "votes"}`,
+    yourVoteCounted: " · your vote is counted",
+    reopenPoll: "Reopen",
+    closePoll: "Close",
+    delete: "Delete",
+    deleteAria: "Delete poll",
+    // Toasti (validacija + optimistični tok)
+    errQuestionTitle: "Question is invalid",
+    errQuestionDesc: () =>
+      `The question must be between 2 and ${QUESTION_MAX} characters.`,
+    errOptionsTitle: "The poll needs options",
+    errOptionsDesc: () =>
+      `Enter at least ${OPTIONS_MIN} (at most ${OPTIONS_MAX}) non-empty options.`,
+    errOptionTitle: "Option is too long",
+    errOptionDesc: () => `Each option can be at most ${OPTION_MAX} characters.`,
+    okCreatedTitle: "Poll created",
+    okCreatedDesc: "Share the link with the group and vote together!",
+    errCreateTitle: "Could not create the poll",
+    errVoteTitle: "Could not cast your vote",
+    okClosedTitle: "Poll closed",
+    okClosedDesc: "Results stay visible, voting is closed.",
+    okReopenedTitle: "Poll reopened",
+    okReopenedDesc: "The group can vote again.",
+    errUpdateTitle: "Error updating the poll",
+    okDeletedTitle: "Poll deleted",
+    errDeleteTitle: "Could not delete the poll",
+    tryAgain: "Try again.",
+  },
 } as const;
 
 // ============================================================================
@@ -134,10 +243,62 @@ function slTimeAgo(iso: string, floorIso?: string): string {
   });
 }
 
-/** "3 glasovi" — pravilne slovenske oblike. */
-function votesLabel(n: number): string {
-  if (n === 0) return "Ni še glasov";
-  return `${n} ${slUnit(n, "glas", "glasa", "glasi", "glasov")}`;
+/** EN dvojnik slTimeAgo ("2 min ago") — isti varnostni strop, "en-GB" datumi. */
+function enTimeAgo(iso: string, floorIso?: string): string {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return "unknown";
+
+  // Sanity cap: anketa ne more biti starejša od potovanja (pokvarjeni podatki)
+  if (floorIso) {
+    const floor = Date.parse(floorIso);
+    if (!Number.isNaN(floor) && ms < floor) {
+      return new Date(ms).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    }
+  }
+
+  const seconds = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+  if (seconds < 45) return "just now";
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return `${minutes} min ago`;
+  }
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `${hours} h ago`;
+  }
+  const days = Math.floor(hours / 24);
+  if (days < 30) {
+    return `${days} ${days === 1 ? "day" : "days"} ago`;
+  }
+  return new Date(ms).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/** ISSUE #24 Sklop 1 (1.164.0): jezikovni dispenser — SL pot ostane
+ *  byte-identična (slTimeAgo), EN gre po enTimeAgo. */
+function timeAgo(
+  iso: string,
+  floorIso: string | undefined,
+  lang: "sl" | "en"
+): string {
+  return lang === "en" ? enTimeAgo(iso, floorIso) : slTimeAgo(iso, floorIso);
+}
+
+/** "3 glasovi" / "3 votes" — pravilne oblike po jeziku (SL dual/množina). */
+function votesLabel(n: number, lang: "sl" | "en" = "sl"): string {
+  if (n === 0)
+    return lang === "en" ? "No votes yet" : "Ni še glasov";
+  return lang === "en"
+    ? `${n} ${n === 1 ? "vote" : "votes"}`
+    : `${n} ${slUnit(n, "glas", "glasa", "glasi", "glasov")}`;
 }
 
 // ============================================================================
@@ -148,6 +309,7 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
   // TASK 8 / F3-B: jezik za L-pattern placeholder nalaganja (SL privzeto).
   const locale = useLocale();
   const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  const t = L[lang];
 
   const [clientId, setClientId] = useState<string>("");
   const [mounted, setMounted] = useState<boolean>(false);
@@ -224,24 +386,24 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
 
       if (q.length < 2 || q.length > QUESTION_MAX) {
         toast({
-          title: "Vprašanje ni ustrezno",
-          description: `Vprašanje mora imeti med 2 in ${QUESTION_MAX} znakov.`,
+          title: t.errQuestionTitle,
+          description: t.errQuestionDesc(),
           variant: "destructive",
         });
         return;
       }
       if (opts.length < OPTIONS_MIN || opts.length > OPTIONS_MAX) {
         toast({
-          title: "Anketa potrebuje možnosti",
-          description: `Vpiši vsaj ${OPTIONS_MIN} (največ ${OPTIONS_MAX}) neprazni možnosti.`,
+          title: t.errOptionsTitle,
+          description: t.errOptionsDesc(),
           variant: "destructive",
         });
         return;
       }
       if (opts.some((o) => o.length > OPTION_MAX)) {
         toast({
-          title: "Možnost je predolga",
-          description: `Posamezna možnost je lahko dolga največ ${OPTION_MAX} znakov.`,
+          title: t.errOptionTitle,
+          description: t.errOptionDesc(),
           variant: "destructive",
         });
         return;
@@ -281,13 +443,13 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
         saveAuthorName(authorName.trim());
 
         toast({
-          title: "Anketa je ustvarjena",
-          description: "Povezavo deli s skupino in glasujte skupaj!",
+          title: t.okCreatedTitle,
+          description: t.okCreatedDesc,
         });
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Poskusi znova.";
+        const message = err instanceof Error ? err.message : t.tryAgain;
         toast({
-          title: "Ankete ni bilo mogoče ustvariti",
+          title: t.errCreateTitle,
           description: message,
           variant: "destructive",
         });
@@ -295,7 +457,7 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
         setCreating(false);
       }
     },
-    [creating, shareId, clientId, question, options, authorName, toast]
+    [creating, shareId, clientId, question, options, authorName, toast, t]
   );
 
   // ========================================================================
@@ -365,9 +527,9 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
       } catch (err) {
         // Revert na prejšnje stanje
         setPolls((all) => all.map((p) => (p.id === pollId ? prev : p)));
-        const message = err instanceof Error ? err.message : "Poskusi znova.";
+        const message = err instanceof Error ? err.message : t.tryAgain;
         toast({
-          title: "Glasa ni bilo mogoče oddati",
+          title: t.errVoteTitle,
           description: message,
           variant: "destructive",
         });
@@ -379,7 +541,7 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
         });
       }
     },
-    [clientId, shareId, polls, votePending, toast]
+    [clientId, shareId, polls, votePending, toast, t]
   );
 
   // ========================================================================
@@ -407,15 +569,13 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
         const poll = d.poll as TripPollItem;
         setPolls((all) => all.map((p) => (p.id === pollId ? poll : p)));
         toast({
-          title: closed ? "Anketa je zaključena" : "Anketa je znova odprta",
-          description: closed
-            ? "Rezultati so vidni, glasovanje pa zaprto."
-            : "Skupina lahko spet glasuje.",
+          title: closed ? t.okClosedTitle : t.okReopenedTitle,
+          description: closed ? t.okClosedDesc : t.okReopenedDesc,
         });
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Poskusi znova.";
+        const message = err instanceof Error ? err.message : t.tryAgain;
         toast({
-          title: "Napaka pri posodabljanju ankete",
+          title: t.errUpdateTitle,
           description: message,
           variant: "destructive",
         });
@@ -423,7 +583,7 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
         setActionPending(null);
       }
     },
-    [clientId, actionPending, toast]
+    [clientId, actionPending, toast, t]
   );
 
   // ========================================================================
@@ -449,11 +609,11 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
           );
         }
         setPolls((all) => all.filter((p) => p.id !== pollId));
-        toast({ title: "Anketa je izbrisana" });
+        toast({ title: t.okDeletedTitle });
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Poskusi znova.";
+        const message = err instanceof Error ? err.message : t.tryAgain;
         toast({
-          title: "Ankete ni bilo mogoče izbrisati",
+          title: t.errDeleteTitle,
           description: message,
           variant: "destructive",
         });
@@ -461,7 +621,7 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
         setActionPending(null);
       }
     },
-    [clientId, actionPending, toast]
+    [clientId, actionPending, toast, t]
   );
 
   const openCount = useMemo(
@@ -478,13 +638,13 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Vote className="size-5 text-primary" aria-hidden="true" />
-            <h2 className="text-lg font-semibold">Skupinske ankete</h2>
+            <h2 className="text-lg font-semibold">{t.heading}</h2>
             <span className="text-sm text-muted-foreground">
               {openCount > 0
-                ? `${openCount} ${slUnit(openCount, "odprta", "odprti", "odprte", "odprtih")}`
+                ? t.openCountLabel(openCount)
                 : polls.length > 0
-                  ? "vse zaključene"
-                  : "še ni anket"}
+                  ? t.allClosed
+                  : t.noPolls}
             </span>
           </div>
           <Button
@@ -498,21 +658,17 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
           >
             {formOpen ? (
               <>
-                <X className="size-4" aria-hidden="true" /> Zapri
+                <X className="size-4" aria-hidden="true" /> {t.close}
               </>
             ) : (
               <>
-                <Plus className="size-4" aria-hidden="true" /> Nova anketa
+                <Plus className="size-4" aria-hidden="true" /> {t.newPoll}
               </>
             )}
           </Button>
         </div>
 
-        <p className="mb-4 text-sm text-muted-foreground">
-          Odločite se skupaj: postavite vprašanje (npr. &bdquo;Kateri dan
-          odpotujemo?&ldquo;) in vsak član skupine odda en glas. Glas lahko
-          prestavite, dokler je anketa odprta.
-        </p>
+        <p className="mb-4 text-sm text-muted-foreground">{t.description}</p>
 
         {/* === Obrazec za novo anketo === */}
         {formOpen && (
@@ -524,11 +680,11 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
             <Input
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Vprašanje za skupino (npr. Kateri dan odpotujemo?)"
+              placeholder={t.questionPlaceholder}
               required
               maxLength={QUESTION_MAX}
               minLength={2}
-              aria-label="Vprašanje ankete"
+              aria-label={t.questionAria}
               className="h-11"
               disabled={creating}
             />
@@ -549,9 +705,9 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
                         prev.map((o, j) => (j === i ? e.target.value : o))
                       )
                     }
-                    placeholder={`Možnost ${String.fromCharCode(65 + i)}`}
+                    placeholder={t.optionPlaceholder(String.fromCharCode(65 + i))}
                     maxLength={OPTION_MAX}
-                    aria-label={`Možnost ${String.fromCharCode(65 + i)}`}
+                    aria-label={t.optionAria(String.fromCharCode(65 + i))}
                     className="h-11"
                     disabled={creating}
                   />
@@ -563,7 +719,7 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
                       onClick={() =>
                         setOptions((prev) => prev.filter((_, j) => j !== i))
                       }
-                      aria-label={`Odstrani možnost ${String.fromCharCode(65 + i)}`}
+                      aria-label={t.removeOptionAria(String.fromCharCode(65 + i))}
                       disabled={creating}
                       className="size-9 shrink-0"
                     >
@@ -581,7 +737,7 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
                   disabled={creating}
                   className="gap-1.5"
                 >
-                  <Plus className="size-4" aria-hidden="true" /> Dodaj možnost
+                  <Plus className="size-4" aria-hidden="true" /> {t.addOption}
                 </Button>
               )}
             </div>
@@ -589,9 +745,9 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
             <Input
               value={authorName}
               onChange={(e) => setAuthorName(e.target.value)}
-              placeholder="Tvoje ime (opcijsko — vidno ob anketi)"
+              placeholder={t.namePlaceholder}
               maxLength={AUTHOR_NAME_MAX}
-              aria-label="Tvoje ime"
+              aria-label={t.nameAria}
               className="h-11"
               disabled={creating}
             />
@@ -609,7 +765,7 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
                 ) : (
                   <BarChart3 className="size-4" aria-hidden="true" />
                 )}
-                Ustvari anketo
+                {t.createPoll}
               </Button>
             </div>
           </form>
@@ -618,9 +774,7 @@ export function TripPolls({ shareId, initialPolls, createdAt }: TripPollsProps) 
         {/* === Seznam anket === */}
         {polls.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            {mounted
-              ? "Še ni nobene ankete — postavi prvo vprašanje skupini!"
-              : L.loadingPolls[lang]}
+            {mounted ? t.emptyPolls : t.loadingPolls}
           </p>
         ) : (
           <ul className="space-y-4" aria-live="polite">
@@ -679,6 +833,10 @@ function PollCard({
   onToggleClose,
   onDelete,
 }: PollCardProps) {
+  // ISSUE #24 Sklop 1 (1.164.0): besedila ankete po locale gledalca (L-vzorec).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  const t = L[lang];
   const maxCount = Math.max(1, ...poll.counts);
   const total = poll.total;
 
@@ -690,13 +848,13 @@ function PollCard({
         {poll.closed && (
           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
             <Lock className="size-3" aria-hidden="true" />
-            Zaključena
+            {t.closedBadge}
           </span>
         )}
       </div>
       <p className="mb-3 text-xs text-muted-foreground">
         {poll.authorName ? `${poll.authorName} · ` : ""}
-        {mounted ? slTimeAgo(poll.createdAt, tripCreatedAt) : ""}
+        {mounted ? timeAgo(poll.createdAt, tripCreatedAt, lang) : ""}
       </p>
 
       {/* Možnosti — klikljive vrstice z rezultati */}
@@ -715,7 +873,7 @@ function PollCard({
               onClick={() => onVote(i)}
               disabled={poll.closed || isPending}
               aria-pressed={isMyVote}
-              aria-label={`Glasuj za: ${opt} (${count} ${slUnit(count, "glas", "glasa", "glasi", "glasov")})`}
+              aria-label={t.voteAria(opt, count)}
               className={cn(
                 "relative flex w-full items-center gap-2.5 overflow-hidden rounded-lg border px-3 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-default",
                 !poll.closed &&
@@ -774,9 +932,7 @@ function PollCard({
                 >
                   {count}
                 </span>
-                <span className="sr-only">
-                  {count} {slUnit(count, "glas", "glasa", "glasi", "glasov")}
-                </span>
+                <span className="sr-only">{t.votesCount(count)}</span>
               </span>
             </button>
           );
@@ -786,8 +942,8 @@ function PollCard({
       {/* Noga: skupno + avtorska dejanja */}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground">
-          {votesLabel(total)}
-          {poll.myVote !== null && " · tvoj glas je štet"}
+          {votesLabel(total, lang)}
+          {poll.myVote !== null && t.yourVoteCounted}
         </span>
         {poll.isAuthor && (
           <span className="flex items-center gap-1.5">
@@ -804,7 +960,7 @@ function PollCard({
               ) : (
                 <Lock className="size-3.5" aria-hidden="true" />
               )}
-              {poll.closed ? "Znova odpri" : "Zaključi"}
+              {poll.closed ? t.reopenPoll : t.closePoll}
             </Button>
             <Button
               type="button"
@@ -812,7 +968,7 @@ function PollCard({
               size="sm"
               onClick={onDelete}
               disabled={actionPending}
-              aria-label="Izbriši anketo"
+              aria-label={t.deleteAria}
               className="h-8 gap-1.5 px-2.5 text-xs text-destructive hover:text-destructive"
             >
               {actionPending ? (
@@ -820,7 +976,7 @@ function PollCard({
               ) : (
                 <Trash2 className="size-3.5" aria-hidden="true" />
               )}
-              Izbriši
+              {t.delete}
             </Button>
           </span>
         )}

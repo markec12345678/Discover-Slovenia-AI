@@ -36,8 +36,127 @@ import {
 
 // TASK 8 / F3-B: hydration placeholder v L-pattern (SL/EN — D8-A §13
 // „Nalagam…" uhodi so trdi predpogoj za F3-E EN razširitev).
+// ISSUE #24 Sklop 1 (1.164.0): L-vzorec {sl,en} razširjen na celo komponento — prej SL-only (samo nalagalni placeholder)
+// (prejšnja per-ključ oblika placeholderja, iz katere je zrasel ta slovar:
+//   loadingDiary: { sl: "Nalagam dnevnik …", en: "Loading diary …" })
 const L = {
-  loadingDiary: { sl: "Nalagam dnevnik …", en: "Loading diary …" },
+  sl: {
+    loadingDiary: "Nalagam dnevnik …",
+    heading: "Potni dnevnik",
+    close: "Zapri",
+    addMemory: "Zapiši spomin",
+    cardIntro:
+      "Skupni dnevnik vašega potovanja: vsak član lahko zapiše spomin iz določenega dne, doda kraj in oceno. Ko se poslavlja od vas,",
+    cardPrintStrong: "natisnite stran",
+    cardOutro:
+      "(gumb zgoraj) — dnevnik je del PDF-ja, vaš papirnati spominskat. Zavestno brez fotografij: vaše slike ostanejo pri vas.",
+    dayLabel: "Dan",
+    selectDayAria: "Izberi dan",
+    generalOption: "Splošno (brez dneva)",
+    placeLabel: "Kraj",
+    optionalSuffix: "(opcijsko)",
+    placePlaceholder: "npr. Blejski otok",
+    ratingLabel: "Ocena",
+    clearRating: "Počisti",
+    memoryLabel: "Spomin",
+    memoryPlaceholder: "Kaj se je zgodilo, da si ga boš želel-a zapomniti?",
+    nameLabel: "Tvoje ime",
+    nameOptional: "(opcijsko — vidno ob vpisu)",
+    namePlaceholder: "npr. Ana",
+    entryHint: "Vpis lahko kasneje urejaš ali izbrišeš (isti brskalnik).",
+    saving: "Zapisujem…",
+    emptyDiary: "Dnevnik je še prazen — zapiši prvi spomin in povabi ostale.",
+    generalMemories: "Splošni spomini",
+    // Vnos (EntryCard)
+    anonymousAuthor: "Anonimni popotnik",
+    editMemoryAria: "Uredi spomin",
+    cancel: "Prekliči",
+    save: "Shrani",
+    edit: "Uredi",
+    delete: "Izbriši",
+    edited: "Urejeno",
+    // Zvezdice (Stars)
+    starsLabel: (n: number) =>
+      `Ocena: ${n} ${slUnit(n, "zvezdica", "zvezdici", "zvezdice", "zvezdic")}`,
+    noRating: "Brez ocene",
+    rateLabel: (n: number) =>
+      `Oceni z ${n} ${slUnit(n, "zvezdico", "zvezdicama", "zvezdicami", "zvezdicami")}`,
+    // Toasti (validacija + optimistični tok)
+    errTextTitle: "Spomin ni primeren",
+    errTextDesc: (n: number) =>
+      `Besedilo mora imeti med ${TEXT_MIN} in ${TEXT_MAX} znakov (dobljenih ${n}).`,
+    errPlaceTitle: "Kraj je predolg",
+    errPlaceDesc: () => `Kraj je lahko dolg največ ${PLACE_MAX} znakov.`,
+    errNameTitle: "Ime je predolgo",
+    errNameDesc: () => `Ime je lahko dolgo največ ${AUTHOR_NAME_MAX} znakov.`,
+    okSavedTitle: "Spomin je zapisan",
+    errSaveTitle: "Spomina ni bilo mogoče zapisati",
+    tryAgain: "Poskusi znova.",
+    errShortTitle: "Spomin je prekratek",
+    errShortDesc: () => `Vsaj ${TEXT_MIN} znakov.`,
+    okUpdatedTitle: "Spomin je posodobljen",
+    errEditTitle: "Urejanje ni uspelo",
+    okDeletedTitle: "Spomin je izbrisan",
+    errDeleteTitle: "Brisanje ni uspelo",
+  },
+  en: {
+    loadingDiary: "Loading diary …",
+    heading: "Travel diary",
+    close: "Close",
+    addMemory: "Add a memory",
+    cardIntro:
+      "Your trip's shared diary: every member can record a memory from a specific day, add a place and a rating. As your trip draws to a close,",
+    cardPrintStrong: "print the page",
+    cardOutro:
+      "(button above) — the diary is part of the PDF, your paper memory book. Deliberately no photos: your pictures stay with you.",
+    dayLabel: "Day",
+    selectDayAria: "Select day",
+    generalOption: "General (no day)",
+    placeLabel: "Place",
+    optionalSuffix: "(optional)",
+    placePlaceholder: "e.g. Bled Island",
+    ratingLabel: "Rating",
+    clearRating: "Clear",
+    memoryLabel: "Memory",
+    memoryPlaceholder: "What happened that you'll want to remember?",
+    nameLabel: "Your name",
+    nameOptional: "(optional — shown with your entry)",
+    namePlaceholder: "e.g. Ana",
+    entryHint: "You can edit or delete your entry later (same browser).",
+    saving: "Saving…",
+    emptyDiary:
+      "The diary is still empty — add the first memory and invite the others.",
+    generalMemories: "General entries",
+    // Vnos (EntryCard)
+    anonymousAuthor: "Anonymous traveller",
+    editMemoryAria: "Edit memory",
+    cancel: "Cancel",
+    save: "Save",
+    edit: "Edit",
+    delete: "Delete",
+    edited: "Edited",
+    // Zvezdice (Stars)
+    starsLabel: (n: number) => `Rating: ${n} ${n === 1 ? "star" : "stars"}`,
+    noRating: "No rating",
+    rateLabel: (n: number) => `Rate ${n} ${n === 1 ? "star" : "stars"}`,
+    // Toasti (validacija + optimistični tok)
+    errTextTitle: "Memory is invalid",
+    errTextDesc: (n: number) =>
+      `Text must be between ${TEXT_MIN} and ${TEXT_MAX} characters (got ${n}).`,
+    errPlaceTitle: "Place name is too long",
+    errPlaceDesc: () => `The place name can be at most ${PLACE_MAX} characters.`,
+    errNameTitle: "Name is too long",
+    errNameDesc: () => `The name can be at most ${AUTHOR_NAME_MAX} characters.`,
+    okSavedTitle: "Memory saved",
+    errSaveTitle: "Could not save the memory",
+    tryAgain: "Try again.",
+    errShortTitle: "Memory is too short",
+    errShortDesc: () => `At least ${TEXT_MIN} characters.`,
+    okUpdatedTitle: "Memory updated",
+    errEditTitle: "Editing failed",
+    okDeletedTitle: "Memory deleted",
+    errDeleteTitle: "Deleting failed",
+  },
 } as const;
 
 // ============================================================================
@@ -151,10 +270,62 @@ function slTimeAgo(iso: string, floorIso?: string): string {
   });
 }
 
-/** "3 spomini" — pravilne slovenske oblike. */
-function entriesLabel(n: number): string {
-  if (n === 0) return "še ni spominov";
-  return `${n} ${slUnit(n, "spomin", "spomina", "spomini", "spominov")}`;
+/** EN dvojnik slTimeAgo ("2 min ago") — isti varnostni strop, "en-GB" datumi. */
+function enTimeAgo(iso: string, floorIso?: string): string {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return "unknown";
+
+  // Sanity cap: vpis ne more biti starejši od potovanja
+  if (floorIso) {
+    const floor = Date.parse(floorIso);
+    if (!Number.isNaN(floor) && ms < floor) {
+      return new Date(ms).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    }
+  }
+
+  const seconds = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+  if (seconds < 45) return "just now";
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return `${minutes} min ago`;
+  }
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `${hours} h ago`;
+  }
+  const days = Math.floor(hours / 24);
+  if (days < 30) {
+    return `${days} ${days === 1 ? "day" : "days"} ago`;
+  }
+  return new Date(ms).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/** ISSUE #24 Sklop 1 (1.164.0): jezikovni dispenser — SL pot ostane
+ *  byte-identična (slTimeAgo), EN gre po enTimeAgo. */
+function timeAgo(
+  iso: string,
+  floorIso: string | undefined,
+  lang: "sl" | "en"
+): string {
+  return lang === "en" ? enTimeAgo(iso, floorIso) : slTimeAgo(iso, floorIso);
+}
+
+/** "3 spomini" / "3 memories" — pravilne oblike po jeziku (SL dual/množina). */
+function entriesLabel(n: number, lang: "sl" | "en" = "sl"): string {
+  if (n === 0)
+    return lang === "en" ? "no memories yet" : "še ni spominov";
+  return lang === "en"
+    ? `${n} ${n === 1 ? "memory" : "memories"}`
+    : `${n} ${slUnit(n, "spomin", "spomina", "spomini", "spominov")}`;
 }
 
 // ============================================================================
@@ -169,6 +340,10 @@ interface StarsProps {
 }
 
 function Stars({ value, onChange, size = "sm", ariaLabel }: StarsProps) {
+  // ISSUE #24 Sklop 1 (1.164.0): privzete aria oznake zvezdic po locale gledalca.
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  const t = L[lang];
   const interactive = onChange !== undefined;
   const cls = size === "md" ? "size-5" : "size-4";
   return (
@@ -179,8 +354,7 @@ function Stars({ value, onChange, size = "sm", ariaLabel }: StarsProps) {
       )}
       role={interactive ? "radiogroup" : "img"}
       aria-label={
-        ariaLabel ??
-        (value > 0 ? `Ocena: ${value} ${slUnit(value, "zvezdica", "zvezdici", "zvezdice", "zvezdic")}` : "Brez ocene")
+        ariaLabel ?? (value > 0 ? t.starsLabel(value) : t.noRating)
       }
     >
       {[1, 2, 3, 4, 5].map((i) => (
@@ -195,7 +369,7 @@ function Stars({ value, onChange, size = "sm", ariaLabel }: StarsProps) {
               "cursor-pointer hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             !interactive && "cursor-default"
           )}
-          aria-label={interactive ? `Oceni z ${i} ${slUnit(i, "zvezdico", "zvezdicama", "zvezdicami", "zvezdicami")}` : undefined}
+          aria-label={interactive ? t.rateLabel(i) : undefined}
           aria-checked={interactive ? value === i : undefined}
           role={interactive ? "radio" : undefined}
         >
@@ -235,6 +409,10 @@ function EntryCard({
   onSaveEdit,
   onDelete,
 }: EntryCardProps) {
+  // ISSUE #24 Sklop 1 (1.164.0): besedila vpisa po locale gledalca (L-vzorec).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  const t = L[lang];
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(entry.text);
   const [busy, setBusy] = useState(false);
@@ -265,15 +443,17 @@ function EntryCard({
       {/* Glava: avtor + čas + ocena */}
       <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
         <span className="font-medium text-foreground">
-          {entry.authorName || "Anonimni popotnik"}
+          {entry.authorName || t.anonymousAuthor}
         </span>
         <span className="text-muted-foreground" aria-hidden="true">·</span>
         <time
           className="text-muted-foreground"
           dateTime={entry.createdAt}
-          title={new Date(entry.createdAt).toLocaleString("sl-SI")}
+          title={new Date(entry.createdAt).toLocaleString(
+            lang === "en" ? "en-GB" : "sl-SI"
+          )}
         >
-          {slTimeAgo(entry.createdAt, tripCreatedAt)}
+          {timeAgo(entry.createdAt, tripCreatedAt, lang)}
         </time>
         {entry.rating !== null && entry.rating > 0 && (
           <Stars value={entry.rating} />
@@ -306,7 +486,7 @@ function EntryCard({
             maxLength={TEXT_MAX}
             rows={4}
             className="resize-y"
-            aria-label="Uredi spomin"
+            aria-label={t.editMemoryAria}
           />
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">
@@ -320,7 +500,7 @@ function EntryCard({
                 onClick={() => setEditing(false)}
                 disabled={busy}
               >
-                Prekliči
+                {t.cancel}
               </Button>
               <Button
                 type="button"
@@ -331,7 +511,7 @@ function EntryCard({
                 {busy ? (
                   <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  "Shrani"
+                  t.save
                 )}
               </Button>
             </div>
@@ -354,7 +534,7 @@ function EntryCard({
             disabled={pending}
             className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
           >
-            <Pencil className="size-3" aria-hidden="true" /> Uredi
+            <Pencil className="size-3" aria-hidden="true" /> {t.edit}
           </Button>
           <Button
             type="button"
@@ -364,7 +544,7 @@ function EntryCard({
             disabled={pending}
             className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-destructive"
           >
-            <Trash2 className="size-3" aria-hidden="true" /> Izbriši
+            <Trash2 className="size-3" aria-hidden="true" /> {t.delete}
           </Button>
         </div>
       )}
@@ -372,7 +552,7 @@ function EntryCard({
       {/* Urejeno-opomba (če se je besedilo spreminjalo) */}
       {entry.updatedAt !== entry.createdAt && !editing && (
         <p className="mt-1.5 text-xs text-muted-foreground">
-          Urejeno {slTimeAgo(entry.updatedAt, tripCreatedAt)}
+          {t.edited} {timeAgo(entry.updatedAt, tripCreatedAt, lang)}
         </p>
       )}
     </article>
@@ -393,6 +573,7 @@ export function TripDiary({
   // TASK 8 / F3-B: jezik za L-pattern placeholder nalaganja (SL privzeto).
   const locale = useLocale();
   const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  const t = L[lang];
 
   const [clientId, setClientId] = useState<string>("");
   const [mounted, setMounted] = useState<boolean>(false);
@@ -464,30 +645,30 @@ export function TripDiary({
       e.preventDefault();
       if (creating || !shareId || !clientId) return;
 
-      const t = text.trim();
+      const txt = text.trim();
       const p = place.trim();
       const a = authorName.trim();
 
-      if (t.length < TEXT_MIN || t.length > TEXT_MAX) {
+      if (txt.length < TEXT_MIN || txt.length > TEXT_MAX) {
         toast({
-          title: "Spomin ni primeren",
-          description: `Besedilo mora imeti med ${TEXT_MIN} in ${TEXT_MAX} znakov (dobljenih ${t.length}).`,
+          title: t.errTextTitle,
+          description: t.errTextDesc(txt.length),
           variant: "destructive",
         });
         return;
       }
       if (p.length > PLACE_MAX) {
         toast({
-          title: "Kraj je predolg",
-          description: `Kraj je lahko dolg največ ${PLACE_MAX} znakov.`,
+          title: t.errPlaceTitle,
+          description: t.errPlaceDesc(),
           variant: "destructive",
         });
         return;
       }
       if (a.length > AUTHOR_NAME_MAX) {
         toast({
-          title: "Ime je predolgo",
-          description: `Ime je lahko dolgo največ ${AUTHOR_NAME_MAX} znakov.`,
+          title: t.errNameTitle,
+          description: t.errNameDesc(),
           variant: "destructive",
         });
         return;
@@ -509,7 +690,7 @@ export function TripDiary({
         dayIndex,
         placeName: p || null,
         rating: rating > 0 ? rating : null,
-        text: t,
+        text: txt,
         authorName: a || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -527,7 +708,7 @@ export function TripDiary({
             dayIndex,
             placeName: p || undefined,
             rating: rating > 0 ? rating : undefined,
-            text: t,
+            text: txt,
             authorName: a || undefined,
             clientId,
           }),
@@ -550,7 +731,7 @@ export function TripDiary({
               : en
           )
         );
-        toast({ title: "Spomin je zapisan" });
+        toast({ title: t.okSavedTitle });
 
         // Počisti obrazec (ime ostane)
         setText("");
@@ -562,8 +743,8 @@ export function TripDiary({
         // Revert optimističnega vpisa
         setEntries((all) => all.filter((en) => en.id !== optimisticId));
         toast({
-          title: "Spomina ni bilo mogoče zapisati",
-          description: err instanceof Error ? err.message : "Poskusi znova.",
+          title: t.errSaveTitle,
+          description: err instanceof Error ? err.message : t.tryAgain,
           variant: "destructive",
         });
       } finally {
@@ -580,6 +761,7 @@ export function TripDiary({
       rating,
       dayValue,
       toast,
+      t,
     ]
   );
 
@@ -589,11 +771,11 @@ export function TripDiary({
   const saveEdit = useCallback(
     async (entryId: string, newText: string) => {
       if (!clientId || entryId.startsWith("tmp-")) return;
-      const t = newText.trim();
-      if (t.length < TEXT_MIN) {
+      const txt = newText.trim();
+      if (txt.length < TEXT_MIN) {
         toast({
-          title: "Spomin je prekratek",
-          description: `Vsaj ${TEXT_MIN} znakov.`,
+          title: t.errShortTitle,
+          description: t.errShortDesc(),
           variant: "destructive",
         });
         return;
@@ -603,13 +785,13 @@ export function TripDiary({
       const before = entries.find((e) => e.id === entryId)?.text;
       // Optimistična sprememba
       setEntries((all) =>
-        all.map((e) => (e.id === entryId ? { ...e, text: t } : e))
+        all.map((e) => (e.id === entryId ? { ...e, text: txt } : e))
       );
       try {
         const res = await fetch("/api/diary", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ entryId, text: t, clientId }),
+          body: JSON.stringify({ entryId, text: txt, clientId }),
         });
         const data = (await res.json().catch(() => null)) as {
           success?: unknown;
@@ -618,7 +800,7 @@ export function TripDiary({
         if (!res.ok || data?.success !== true) {
           throw new Error(data?.error ?? `HTTP ${res.status}`);
         }
-        toast({ title: "Spomin je posodobljen" });
+        toast({ title: t.okUpdatedTitle });
       } catch (err) {
         // Revert
         setEntries((all) =>
@@ -627,15 +809,15 @@ export function TripDiary({
           )
         );
         toast({
-          title: "Urejanje ni uspelo",
-          description: err instanceof Error ? err.message : "Poskusi znova.",
+          title: t.errEditTitle,
+          description: err instanceof Error ? err.message : t.tryAgain,
           variant: "destructive",
         });
       } finally {
         setActionPending(null);
       }
     },
-    [clientId, entries, toast]
+    [clientId, entries, toast, t]
   );
 
   // ========================================================================
@@ -661,20 +843,20 @@ export function TripDiary({
         if (!res.ok || data?.success !== true) {
           throw new Error(data?.error ?? `HTTP ${res.status}`);
         }
-        toast({ title: "Spomin je izbrisan" });
+        toast({ title: t.okDeletedTitle });
       } catch (err) {
         // Revert
         setEntries(snapshot);
         toast({
-          title: "Brisanje ni uspelo",
-          description: err instanceof Error ? err.message : "Poskusi znova.",
+          title: t.errDeleteTitle,
+          description: err instanceof Error ? err.message : t.tryAgain,
           variant: "destructive",
         });
       } finally {
         setActionPending(null);
       }
     },
-    [clientId, entries, toast]
+    [clientId, entries, toast, t]
   );
 
   // ========================================================================
@@ -693,7 +875,7 @@ export function TripDiary({
     });
 
     // Splošni vpisi (brez dneva) — zadnja skupina
-    const general = { key: null as number | null, label: "Splošni spomini", items: [] as DiaryEntry[] };
+    const general = { key: null as number | null, label: t.generalMemories, items: [] as DiaryEntry[] };
 
     for (const e of entries) {
       const g =
@@ -710,7 +892,7 @@ export function TripDiary({
       general.items.length > 0 ? [general] : [];
 
     return [...dayGroups, ...generalGroup];
-  }, [entries, dayLabels]);
+  }, [entries, dayLabels, t]);
 
   // Dnevnik se NATISNE (to je naš "photobook") — skriti so samo obrazec,
   // kontrole in interaktivne zvezdice (spodaj s print:hidden).
@@ -720,9 +902,9 @@ export function TripDiary({
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <BookOpen className="size-5 text-primary" aria-hidden="true" />
-            <h2 className="text-lg font-semibold">Potni dnevnik</h2>
+            <h2 className="text-lg font-semibold">{t.heading}</h2>
             <span className="text-sm text-muted-foreground">
-              {entriesLabel(entries.length)}
+              {entriesLabel(entries.length, lang)}
             </span>
           </div>
           <Button
@@ -736,24 +918,22 @@ export function TripDiary({
           >
             {formOpen ? (
               <>
-                <X className="size-4" aria-hidden="true" /> Zapri
+                <X className="size-4" aria-hidden="true" /> {t.close}
               </>
             ) : (
               <>
-                <Plus className="size-4" aria-hidden="true" /> Zapiši spomin
+                <Plus className="size-4" aria-hidden="true" /> {t.addMemory}
               </>
             )}
           </Button>
         </div>
 
         <p className="mb-4 text-sm text-muted-foreground">
-          Skupni dnevnik vašega potovanja: vsak član lahko zapiše spomin iz
-          določenega dne, doda kraj in oceno. Ko se poslavlja od vas,{" "}
+          {t.cardIntro}{" "}
           <strong className="font-medium text-foreground">
-            natisnite stran
+            {t.cardPrintStrong}
           </strong>{" "}
-          (gumb zgoraj) — dnevnik je del PDF-ja, vaš papirnati spominskat.
-          Zavestno brez fotografij: vaše slike ostanejo pri vas.
+          {t.cardOutro}
         </p>
 
         {/* === Obrazec za nov vpis === */}
@@ -771,18 +951,18 @@ export function TripDiary({
                     htmlFor="diary-day"
                     className="text-sm font-medium leading-none"
                   >
-                    Dan
+                    {t.dayLabel}
                   </label>
                   <Select
                     value={dayValue}
                     onValueChange={setDayValue}
                   >
-                    <SelectTrigger id="diary-day" aria-label="Izberi dan">
-                      <SelectValue placeholder="Splošno (brez dneva)" />
+                    <SelectTrigger id="diary-day" aria-label={t.selectDayAria}>
+                      <SelectValue placeholder={t.generalOption} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="general">
-                        Splošno (brez dneva)
+                        {t.generalOption}
                       </SelectItem>
                       {dayLabels.map((label, i) => (
                         <SelectItem key={i + 1} value={String(i + 1)}>
@@ -800,8 +980,10 @@ export function TripDiary({
                   htmlFor="diary-place"
                   className="text-sm font-medium leading-none"
                 >
-                  Kraj{" "}
-                  <span className="text-muted-foreground">(opcijsko)</span>
+                  {t.placeLabel}{" "}
+                  <span className="text-muted-foreground">
+                    {t.optionalSuffix}
+                  </span>
                 </label>
                 <div className="relative">
                   <MapPin
@@ -813,7 +995,7 @@ export function TripDiary({
                     value={place}
                     onChange={(e) => setPlace(e.target.value)}
                     maxLength={PLACE_MAX}
-                    placeholder="npr. Blejski otok"
+                    placeholder={t.placePlaceholder}
                     className="pl-9"
                   />
                 </div>
@@ -823,7 +1005,7 @@ export function TripDiary({
             {/* Ocena (opcijsko) */}
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium leading-none">
-                Ocena <span className="text-muted-foreground">(opcijsko)</span>
+                {t.ratingLabel} <span className="text-muted-foreground">{t.optionalSuffix}</span>
               </span>
               <Stars value={rating} onChange={setRating} size="md" />
               {rating > 0 && (
@@ -832,7 +1014,7 @@ export function TripDiary({
                   onClick={() => setRating(0)}
                   className="text-xs text-muted-foreground underline-offset-2 hover:underline"
                 >
-                  Počisti
+                  {t.clearRating}
                 </button>
               )}
             </div>
@@ -843,7 +1025,7 @@ export function TripDiary({
                 htmlFor="diary-text"
                 className="text-sm font-medium leading-none"
               >
-                Spomin{" "}
+                {t.memoryLabel}{" "}
                 <span className="text-xs font-normal text-muted-foreground">
                   ({text.length}/{TEXT_MAX})
                 </span>
@@ -855,7 +1037,7 @@ export function TripDiary({
                 maxLength={TEXT_MAX}
                 rows={4}
                 required
-                placeholder="Kaj se je zgodilo, da si ga boš želel-a zapomniti?"
+                placeholder={t.memoryPlaceholder}
                 className="resize-y"
               />
             </div>
@@ -866,9 +1048,9 @@ export function TripDiary({
                 htmlFor="diary-name"
                 className="text-sm font-medium leading-none"
               >
-                Tvoje ime{" "}
+                {t.nameLabel}{" "}
                 <span className="text-muted-foreground">
-                  (opcijsko — vidno ob vpisu)
+                  {t.nameOptional}
                 </span>
               </label>
               <Input
@@ -876,13 +1058,13 @@ export function TripDiary({
                 value={authorName}
                 onChange={(e) => setAuthorName(e.target.value)}
                 maxLength={AUTHOR_NAME_MAX}
-                placeholder="npr. Ana"
+                placeholder={t.namePlaceholder}
               />
             </div>
 
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs text-muted-foreground">
-                Vpis lahko kasneje urejaš ali izbrišeš (isti brskalnik).
+                {t.entryHint}
               </p>
               <Button type="submit" disabled={creating} className="gap-1.5">
                 {creating ? (
@@ -891,12 +1073,12 @@ export function TripDiary({
                       className="size-4 animate-spin"
                       aria-hidden="true"
                     />{" "}
-                    Zapisujem…
+                    {t.saving}
                   </>
                 ) : (
                   <>
-                    <NotebookPen className="size-4" aria-hidden="true" /> Zapiši
-                    spomin
+                    <NotebookPen className="size-4" aria-hidden="true" />{" "}
+                    {t.addMemory}
                   </>
                 )}
               </Button>
@@ -912,9 +1094,7 @@ export function TripDiary({
               aria-hidden="true"
             />
             <p className="text-sm text-muted-foreground">
-              {mounted
-                ? "Dnevnik je še prazen — zapiši prvi spomin in povabi ostale."
-                : L.loadingDiary[lang]}
+              {mounted ? t.emptyDiary : t.loadingDiary}
             </p>
           </div>
         ) : (
@@ -931,7 +1111,7 @@ export function TripDiary({
                   />
                   {group.label}
                   <span className="font-normal normal-case tracking-normal">
-                    ({entriesLabel(group.items.length)})
+                    ({entriesLabel(group.items.length, lang)})
                   </span>
                 </h3>
                 <div className="space-y-3">

@@ -55,6 +55,18 @@ const EN_DESTINATION_SUBROUTES = [
  */
 const EN_ADRIA_ROUTES = [/^\/vodici\/[a-z0-9-]+$/];
 
+/**
+ * ISSUE #24 Sklop 1 / P2-a (1.164.0): deljena pot je zdaj dvojezična —
+ * /pot/[shareId] (polna stran) in /pot/embed/[shareId] (blog-embed) sta
+ * na EN whitelisti. Prej je bila celotna /pot površina namerno SL-only
+ * (»skupnost — SL kanon«); benchmark 2026-10-02 je prepoznal, da je to
+ * NAJVIDNEJŠA površina za mednarodne obiskovalce (SI·HR·ME·AL regija —
+ * deljeno potovalno skupino pogosto sestavljajo tuji gostje). Vse
+ * komponente površine so zdaj L-vzorec {sl,en} (isti kanon kot
+ * TripPresence/journey-planner). EN URL: /en/pot/[shareId].
+ */
+const EN_POT_ROUTES = [/^\/pot\/[^/]+$/, /^\/pot\/embed\/[^/]+$/];
+
 /** Statične poti z EN različico (jedro lijaka + info/E-E-A-T strani). */
 export const EN_STATIC_ROUTES = new Set([
   "/",
@@ -109,6 +121,8 @@ export const EN_STATIC_ROUTES = new Set([
 export function isEnRoute(pathname: string): boolean {
   if (EN_STATIC_ROUTES.has(pathname)) return true;
   if (EN_ADRIA_ROUTES.some((re) => re.test(pathname))) return true;
+  // ISSUE #24 Sklop 1 (1.164.0): deljena pot — /pot/[shareId] + embed.
+  if (EN_POT_ROUTES.some((re) => re.test(pathname))) return true;
   return EN_DESTINATION_SUBROUTES.some((re) => re.test(pathname));
 }
 
@@ -126,7 +140,9 @@ export function isEnRoute(pathname: string): boolean {
 // Namerno ŠE VEDNO IZVEN (iskrena meja — proxy 308 na slovensko):
 //   L-vzorčne poti (/trznica, /dozivetja, /lokali, /dogodki, /potovanje,
 //   /na-poti, /moja-potovanja — inline SL/EN slovarji v komponentah), /vodici
-//   (vsebinska plast ADRIA-EN), /pot (skupnost — SL kanon).
+//   (vsebinska plast ADRIA-EN). OPOMBA #24 (1.164.0): /pot NI VEČ na tem
+//   seznamu — skupnostna površina je zdaj polno dvojezična (EN_POT_ROUTES
+//   v isEnRoute); IT/DE za /pot še vedno NE obstajata.
 // Uporabniki: src/proxy.ts (308 guard), language-switcher (vidnost),
 // hreflangForPath (alternati), sitemap-urls.ts (IT/DE URL-ji).
 // ============================================================================
@@ -180,7 +196,9 @@ export function isItDeRoute(pathname: string): boolean {
 // Oba jezika sta v benchmarku Alma (STB) naslednja po IT/DE.
 // Namerno ŠE VEDNO IZVEN (iskrena meja — proxy 308 na slovensko):
 //   L-vzorčne poti (/trznica, /dozivetja, /lokali, /dogodki, /potovanje,
-//   /na-poti, /moja-potovanja), /vodici, /pot.
+//   /na-poti, /moja-potovanja), /vodici. OPOMBA #24 (1.164.0): /pot NI VEČ
+//   na tem seznamu — skupnostna površina je zdaj dvojezična SL+EN
+//   (EN_POT_ROUTES v isEnRoute); FR/ES za /pot še vedno NE obstajata.
 // FAZA 2a (1.145.0): + /zemljevid (POI imena so jezikovno nevtralni viri
 // OSM/FSQ; UI T slovarji ×6; iskanje ima FR/ES razloge zadetkov) +
 // destinacijske pod-poti (/destinacija/* ×38 — overlayji slovenia-data-fr/-es

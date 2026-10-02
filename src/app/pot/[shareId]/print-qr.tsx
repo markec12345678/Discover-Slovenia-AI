@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale } from "next-intl";
 
 // ============================================================================
 // PRINT QR — QR koda deljive povezave, vidna SAMO ob tiskanju (/pot/[shareId])
@@ -26,6 +27,13 @@ import { useEffect, useState } from "react";
 /** Barva QR modulov — Triglav zelena (primarna barva; dovolj temna za scan). */
 const QR_DARK = "#2d6a3e";
 
+// ISSUE #24 Sklop 1 (1.164.0): L-vzorec {sl,en} — prej SL-only. Natpis v
+// tiskanem PDF sledi lokalu strani (/en/pot/[shareId] → EN).
+const L = {
+  sl: "Skeniraj za odpiranje na telefonu",
+  en: "Scan to open on your phone",
+} as const;
+
 interface PrintQrProps {
   shareId: string;
 }
@@ -38,6 +46,9 @@ interface GeneratedQr {
 }
 
 export function PrintQr({ shareId }: PrintQrProps) {
+  // ISSUE #24 Sklop 1 (1.164.0): jezik natpisa sledi lokalu strani (prej SL).
+  const locale = useLocale();
+  const t = L[locale === "en" ? "en" : "sl"];
   const [qr, setQr] = useState<GeneratedQr | null>(null);
 
   useEffect(() => {
@@ -79,7 +90,7 @@ export function PrintQr({ shareId }: PrintQrProps) {
         className="rounded-md border border-border bg-white"
       />
       <div className="text-left">
-        <p className="text-xs font-semibold">Skeniraj za odpiranje na telefonu</p>
+        <p className="text-xs font-semibold">{t}</p>
         <p className="text-[11px] text-muted-foreground">{qr.url}</p>
       </div>
     </div>

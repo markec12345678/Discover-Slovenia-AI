@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useLocale } from "next-intl";
 import {
   Bell,
   BellRing,
@@ -50,6 +51,70 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   return output;
 }
 
+// ISSUE #24 Sklop 1 (1.164.0): L-vzorec {sl,en} — prej SL-only
+const L = {
+  sl: {
+    errorIncompleteSubscription: "Brskalnik ni vrnil popolne naročnine",
+    errorSaveFallback: "Naročnine ni bilo mogoče shraniti",
+    errorEnableFallback: "Omogočanje opomnikov ni uspelo",
+    enabledTitle: "Dnevni opomniki so vklopljeni",
+    enabledDesc: (days: number) =>
+      `Vsak dan en namig za to potovanje (${days} dni).`,
+    enableFailedTitle: "Opomnikov ni bilo mogoče vklopiti",
+    disabledTitle: "Opomniki so izklopljeni",
+    disabledDesc: "Dnevnih namigov za to potovanje ne boš več prejemal.",
+    unsubscribeFailed: "Odjave ni bilo mogoče zaključiti — poskusi znova",
+    headingOn: "Dnevni opomniki so vklopljeni",
+    headingOff: "Ne zamudi ničesar na potovanju",
+    subscribedNote:
+      "Vsak dan do konca načrta ti pošljemo en namig — dogodek na tvoji destinaciji ali izkušnjo, ki jo še lahko rezerviraš. Obvestilo te vrne na ta načrt.",
+    defaultIntro: (days: number) =>
+      `Vklopi dnevne opomnike (${days} ${days === 1 ? "dan" : "dni"}): vsako jutro en namig — dogodek med tvojim obiskom ali izkušnja za rezervacijo. Brez neželene pošte, kadar koli izklopiš.`,
+    deniedPrefix:
+      "Obvestila so blokirana — v nastavitvah brskalnika (ikona ključavnice ob naslovu → ",
+    deniedNotifWord: "Obvestila",
+    deniedAllowWord: "Dovoli",
+    deniedSuffix: ") jih lahko znova omogočiš.",
+    enableAria: "Vklopi dnevne opomnike za to potovanje",
+    enabling: "Vklopim…",
+    enableButton: "Vklopi dnevne opomnike",
+    subscribedChip: "Vsak dan en namig",
+    disableAria: "Izklopi dnevne opomnike",
+    disableButton: "Izklopi opomnike",
+  },
+  en: {
+    errorIncompleteSubscription:
+      "The browser did not return a complete subscription",
+    errorSaveFallback: "The subscription could not be saved",
+    errorEnableFallback: "Enabling reminders failed",
+    enabledTitle: "Daily reminders are on",
+    enabledDesc: (days: number) =>
+      `One tip a day for this trip (${days} ${days === 1 ? "day" : "days"}).`,
+    enableFailedTitle: "Reminders could not be turned on",
+    disabledTitle: "Reminders are off",
+    disabledDesc: "You will no longer receive daily tips for this trip.",
+    unsubscribeFailed:
+      "Unsubscribing could not be completed — please try again",
+    headingOn: "Daily reminders are on",
+    headingOff: "Don't miss a thing on your trip",
+    subscribedNote:
+      "Every day until the end of the plan we'll send you one tip — an event at your destination or an experience you can still book. The notification brings you back to this plan.",
+    defaultIntro: (days: number) =>
+      `Turn on daily reminders (${days} ${days === 1 ? "day" : "days"}): one tip every morning — an event during your visit or an experience to book. No spam, turn them off any time.`,
+    deniedPrefix:
+      "Notifications are blocked — in your browser settings (padlock icon next to the address → ",
+    deniedNotifWord: "Notifications",
+    deniedAllowWord: "Allow",
+    deniedSuffix: ") you can turn them on again.",
+    enableAria: "Turn on daily reminders for this trip",
+    enabling: "Turning on…",
+    enableButton: "Turn on daily reminders",
+    subscribedChip: "One tip a day",
+    disableAria: "Turn off daily reminders",
+    disableButton: "Turn off reminders",
+  },
+} as const;
+
 interface TripPushCardProps {
   /** shareId deljenega načrta (pot v push payloadu). */
   shareId: string;
@@ -58,6 +123,9 @@ interface TripPushCardProps {
 }
 
 export function TripPushCard({ shareId, days }: TripPushCardProps) {
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  const t = L[lang];
   const { toast } = useToast();
   const [status, setStatus] = useState<TripPushStatus>("checking");
   const [inlineError, setInlineError] = useState<string | null>(null);
@@ -174,7 +242,7 @@ export function TripPushCard({ shareId, days }: TripPushCardProps) {
         keys?: { p256dh: string; auth: string };
       };
       if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
-        throw new Error("Brskalnik ni vrnil popolne naročnine");
+        throw new Error(t.errorIncompleteSubscription);
       }
 
       // 3. Shrani na strežnik — s TRIP kontekstom tega načrta.
@@ -194,30 +262,28 @@ export function TripPushCard({ shareId, days }: TripPushCardProps) {
       } | null;
       if (!res.ok || !data?.success) {
         await sub.unsubscribe().catch(() => undefined);
-        throw new Error(data?.error ?? "Naročnine ni bilo mogoče shraniti");
+        throw new Error(data?.error ?? t.errorSaveFallback);
       }
 
       setEndpoint(json.endpoint);
       setStatus("subscribed");
       localStorage.setItem(LS_TRIP_KEY, shareId);
       toast({
-        title: "Dnevni opomniki so vklopljeni",
-        description: `Vsak dan en namig za to potovanje (${reminderDays} dni).`,
+        title: t.enabledTitle,
+        description: t.enabledDesc(reminderDays),
       });
     } catch (err) {
       setStatus("default");
       const message =
-        err instanceof Error
-          ? err.message
-          : "Omogočanje opomnikov ni uspelo";
+        err instanceof Error ? err.message : t.errorEnableFallback;
       setInlineError(message);
       toast({
-        title: "Opomnikov ni bilo mogoče vklopiti",
+        title: t.enableFailedTitle,
         description: message,
         variant: "destructive",
       });
     }
-  }, [status, shareId, reminderDays, toast]);
+  }, [status, shareId, reminderDays, t, toast]);
 
   /** Izklopi (browser unsubscribe + server delete). */
   const handleDisable = useCallback(async () => {
@@ -243,14 +309,14 @@ export function TripPushCard({ shareId, days }: TripPushCardProps) {
       setEndpoint(null);
       setStatus("default");
       toast({
-        title: "Opomniki so izklopljeni",
-        description: "Dnevnih namigov za to potovanje ne boš več prejemal.",
+        title: t.disabledTitle,
+        description: t.disabledDesc,
       });
     } catch {
       setStatus("subscribed");
-      setInlineError("Odjave ni bilo mogoče zaključiti — poskusi znova");
+      setInlineError(t.unsubscribeFailed);
     }
-  }, [status, endpoint, toast]);
+  }, [status, endpoint, t, toast]);
 
   // =========================================================================
   // RENDER — kartica na dnu načrta
@@ -273,25 +339,12 @@ export function TripPushCard({ shareId, days }: TripPushCardProps) {
         </div>
         <div className="min-w-0 flex-1">
           <h2 id="trip-push-heading" className="text-lg font-bold">
-            {status === "subscribed"
-              ? "Dnevni opomniki so vklopljeni"
-              : "Ne zamudi ničesar na potovanju"}
+            {status === "subscribed" ? t.headingOn : t.headingOff}
           </h2>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            {status === "subscribed" ? (
-              <>
-                Vsak dan do konca načrta ti pošljemo en namig — dogodek na
-                tvoji destinaciji ali izkušnjo, ki jo še lahko rezerviraš.
-                Obvestilo te vrne na ta načrt.
-              </>
-            ) : (
-              <>
-                Vklopi dnevne opomnike ({reminderDays}{" "}
-                {reminderDays === 1 ? "dan" : "dni"}): vsako jutro en namig —
-                dogodek med tvojim obiskom ali izkušnja za rezervacijo. Brez
-                neželene pošte, kadar koli izklopiš.
-              </>
-            )}
+            {status === "subscribed"
+              ? t.subscribedNote
+              : t.defaultIntro(reminderDays)}
           </p>
 
           {status === "denied" && (
@@ -300,9 +353,9 @@ export function TripPushCard({ shareId, days }: TripPushCardProps) {
               className="mt-2 flex items-start gap-2 text-xs text-muted-foreground"
             >
               <BellOff className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-              Obvestila so blokirana — v nastavitvah brskalnika (ikona
-              ključavnice ob naslovu → <em>Obvestila</em> → <em>Dovoli</em>) jih
-              lahko znova omogočiš.
+              {t.deniedPrefix}
+              <em>{t.deniedNotifWord}</em> → <em>{t.deniedAllowWord}</em>
+              {t.deniedSuffix}
             </p>
           )}
 
@@ -325,21 +378,21 @@ export function TripPushCard({ shareId, days }: TripPushCardProps) {
                 className="h-11 gap-2"
                 onClick={handleEnable}
                 disabled={status === "subscribing" || status === "checking"}
-                aria-label="Vklopi dnevne opomnike za to potovanje"
+                aria-label={t.enableAria}
               >
                 {status === "subscribing" ? (
                   <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                 ) : (
                   <Bell className="size-4" aria-hidden="true" />
                 )}
-                {status === "subscribing" ? "Vklopim…" : "Vklopi dnevne opomnike"}
+                {status === "subscribing" ? t.enabling : t.enableButton}
               </Button>
             )}
             {(status === "subscribed" || status === "unsubscribing") && (
               <>
                 <span className="flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
                   <BellRing className="size-4" aria-hidden="true" />
-                  Vsak dan en namig
+                  {t.subscribedChip}
                 </span>
                 <Button
                   type="button"
@@ -348,12 +401,12 @@ export function TripPushCard({ shareId, days }: TripPushCardProps) {
                   className="h-11 px-3 text-xs text-muted-foreground hover:text-foreground"
                   onClick={handleDisable}
                   disabled={status === "unsubscribing"}
-                  aria-label="Izklopi dnevne opomnike"
+                  aria-label={t.disableAria}
                 >
                   {status === "unsubscribing" ? (
                     <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                   ) : null}
-                  Izklopi opomnike
+                  {t.disableButton}
                 </Button>
               </>
             )}

@@ -155,6 +155,161 @@ const MapView = dynamic(
 const votesStorageKey = (shareId: string) =>
   `discoverslovenia_votes_${shareId}`;
 
+// ISSUE #24 Sklop 1 (1.164.0): L-vzorec {sl,en} — prej SL-only (1.29.0
+// revizija #13 je celoten izpis deljene pote držala v slovenščini). SL
+// nizi so BAJTNO identični prejšnjim hardcoded izpisom (številni
+// source-contract testi jih assertingajo); EN je usklajen s slovarjem
+// planner.timeline v src/i18n/messages/en.json (»Day {day}«, »0 zig-zag«,
+// meal windows, »Start On-the-road« …).
+const L = {
+  sl: {
+    /** Zasilni naslov, kadar pot nima imena. */
+    nameFallback: "AI načrt potovanja po Sloveniji",
+    /** PDF izvoz — napake (toast). */
+    pdfUnavailable: "PDF ni na voljo",
+    pdfNotFound: "Pot ni javna ali ne obstaja — odpri kot lastnik.",
+    pdfError: (status: number) => `Napaka ${status} — poskusi znova.`,
+    pdfNetwork: "Preveri povezavo in poskusi znova.",
+    /** Glasovanje — napaka (role=alert). */
+    voteUnavailable: "Glasovanje trenutno ni na voljo — poskusi znova.",
+    /** TASK 28 live-sync banner. */
+    liveSyncUpdated: "Ta načrt je bil med tem posodobljen",
+    liveSyncServerVersion: (v: number) => ` (strežniška različica ${v})`,
+    refresh: "Osveži",
+    notNow: "Ne zdaj",
+    /** Hero značke. */
+    heroBadge: "Deljen AI itinerer",
+    dayUnit: (n: number) => (n === 1 ? " dan" : " dni"),
+    budgetTotal: "skupaj",
+    sourceAI: "AI načrt",
+    sourceDeterministic: "Načrt brez AI (deterministični motor)",
+    sourceTemplate: "Predloga načrta",
+    zigzagSummary: "Vsi dnevi: 0 cik-cak",
+    zigzagTitle:
+      "Deterministično preverjeno: zaporedje postankov se ne vrača čez že obiskano območje (ista preverba kot naš načrtovalni motor).",
+    viewUnit: (n: number) => (n === 1 ? " ogled" : " ogledov"),
+    createdLabel: "Ustvarjeno:",
+    /** Zemljevid. */
+    mapAria: "Zemljevid poti",
+    mapTitle: "Pot na zemljevidu",
+    stopsUnit: (n: number) => ` postankov`,
+    /** Dnevi. */
+    dayLabel: (n: number) => `Dan ${n}`,
+    daysAria: "Načrt po dnevih",
+    daysTitle: "Načrt po dnevih",
+    voteHint: "V glasovanju izberi aktivnosti, ki ti najbolj ugajajo — lastnik načrta vidi izbiro skupine.",
+    gmapsAria: (n: number) =>
+      `Odpri dan ${n} v Google Maps (navigacija po celotnem dnevu)`,
+    gmapsShort: (n: number) => `Odpri dan ${n} v Google Maps`,
+    zigzagBadge: "0 cik-cak",
+    /** Sekcije. */
+    eventsTitle: "Dogodki med tvojim obiskom",
+    recommendationsAria: "Priporočila",
+    recommendationsTitle: "Priporočila",
+    tipsAria: "Nasveti",
+    tipsTitle: "Nasveti za potovanje",
+    /** CTA vrstica. */
+    ctaTitle: "Všeč ta načrt?",
+    ctaText: "Sestavi svoj AI načrt potovanja po Sloveniji — proračun, interesi in vreme, vse na enem mestu.",
+    planYourTrip: "Načrtuj svoje potovanje",
+    startGoMode: "Zaženi Na poti",
+    startGoModeAria: "Zaženi Na poti s tem načrtom",
+    openInPlanner: "Odpri v načrtovalniku",
+    printAria: "Natisni načrt ali ga shrani kot PDF",
+    printButton: "Natisni / Shrani kot PDF",
+    downloadPdfAria: "Prenesi načrt kot PDF datoteko",
+    downloadPdf: "Prenesi PDF",
+    /** Deljenje. */
+    shareAria: "Deli načrt",
+    shareTitle: "Deli ta načrt s prijatelji",
+    shareText: "Povezavo pošlji sovažencem ali družini — pot se odpre na zemljevidu.",
+    shareDescription: (days: number, budget: number) =>
+      `${days}-dnevni AI načrt potovanja po Sloveniji (~€${budget})`,
+    seoFooter: "Predlog poti · pred obiskom preveri urnike in cene ·",
+    /** LocationCard. */
+    whyStop: "Zakaj ta postanek:",
+    mealLunchWindow: "kosilo 12–14 ✓",
+    mealDinnerWindow: "večerja 18–21 ✓",
+    mealLunchTitle:
+      "Obrok je v kanonskem razponu kosila (12:00–14:00) — urnik raste iz dejanskih voženj.",
+    mealDinnerTitle:
+      "Obrok je v kanonskem razponu večerje (18:00–21:00) — urnik raste iz dejanskih voženj.",
+    removeVoteAria: (name: string) => `Odstrani glas za ${name}`,
+    voteAria: (name: string) => `Glasuj za ${name}`,
+    removeVoteTitle: "Odstrani svoj glas",
+    voteTitle: "Glasuj za to aktivnost",
+  },
+  en: {
+    nameFallback: "AI travel plan around Slovenia",
+    pdfUnavailable: "PDF not available",
+    pdfNotFound:
+      "The trip is not public or does not exist — open it as the owner.",
+    pdfError: (status: number) => `Error ${status} — try again.`,
+    pdfNetwork: "Check your connection and try again.",
+    voteUnavailable: "Voting is not available right now — try again.",
+    liveSyncUpdated: "This itinerary has been updated in the meantime",
+    liveSyncServerVersion: (v: number) => ` (server version ${v})`,
+    refresh: "Refresh",
+    notNow: "Not now",
+    heroBadge: "Shared AI itinerary",
+    dayUnit: (n: number) => (n === 1 ? " day" : " days"),
+    budgetTotal: "total",
+    sourceAI: "AI itinerary",
+    sourceDeterministic: "Itinerary without AI (deterministic engine)",
+    sourceTemplate: "Itinerary template",
+    zigzagSummary: "All days: 0 zig-zag",
+    zigzagTitle:
+      "Deterministically verified: the order of stops never returns over an already-visited area (the same check our planning engine runs).",
+    viewUnit: (n: number) => (n === 1 ? " view" : " views"),
+    createdLabel: "Created:",
+    mapAria: "Route map",
+    mapTitle: "Route on the map",
+    stopsUnit: (n: number) => (n === 1 ? " stop" : " stops"),
+    dayLabel: (n: number) => `Day ${n}`,
+    daysAria: "Day-by-day itinerary",
+    daysTitle: "Day-by-day itinerary",
+    voteHint: "Vote for the activities you like best — the trip owner sees the group's choice.",
+    gmapsAria: (n: number) =>
+      `Open day ${n} in Google Maps (navigate the whole day)`,
+    gmapsShort: (n: number) => `Open day ${n} in Google Maps`,
+    zigzagBadge: "0 zig-zag",
+    eventsTitle: "Events during your visit",
+    recommendationsAria: "Recommendations",
+    recommendationsTitle: "Recommendations",
+    tipsAria: "Tips",
+    tipsTitle: "Travel tips",
+    ctaTitle: "Like this itinerary?",
+    ctaText: "Build your own AI travel plan around Slovenia — budget, interests and weather, all in one place.",
+    planYourTrip: "Plan your trip",
+    startGoMode: "Start On-the-road",
+    startGoModeAria: "Start On-the-road with this itinerary",
+    openInPlanner: "Open in the planner",
+    printAria: "Print the itinerary or save it as a PDF",
+    printButton: "Print / Save as PDF",
+    downloadPdfAria: "Download the itinerary as a PDF file",
+    downloadPdf: "Download PDF",
+    shareAria: "Share the itinerary",
+    shareTitle: "Share this itinerary with friends",
+    shareText:
+      "Send the link to travel companions or family — the trip opens on a map.",
+    shareDescription: (days: number, budget: number) =>
+      `${days}-day AI travel plan around Slovenia (~€${budget})`,
+    seoFooter:
+      "Itinerary suggestion · check schedules and prices before you go ·",
+    whyStop: "Why this stop:",
+    mealLunchWindow: "lunch 12–14 ✓",
+    mealDinnerWindow: "dinner 18–21 ✓",
+    mealLunchTitle:
+      "The meal sits in the canonical lunch window (12:00–14:00) — the schedule grows out of actual drives.",
+    mealDinnerTitle:
+      "The meal sits in the canonical dinner window (18:00–21:00) — the schedule grows out of actual drives.",
+    removeVoteAria: (name: string) => `Remove vote for ${name}`,
+    voteAria: (name: string) => `Vote for ${name}`,
+    removeVoteTitle: "Remove your vote",
+    voteTitle: "Vote for this activity",
+  },
+} as const;
+
 interface SharedTripProps {
   itinerary: Itinerary;
   shareId: string;
@@ -213,6 +368,11 @@ export function SharedTrip({
   baseUrl,
 }: SharedTripProps) {
   const setItinerary = useAppStore((s) => s.setItinerary);
+  // ISSUE #24 Sklop 1 (1.164.0): L-vzorec {sl,en} — prej SL-only (celoten
+  // izpis je bil slovenski, 1.29.0 revizija #13).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  const t = L[lang];
   // 1.140.1 (CLS na /pot poteh — glavni vzrok): pot izpeljemo DIREKTNO iz
   // itinerer-je PROPA (ista čista funkcija kot store::deriveRoute) — SSR
   // tako izriše odsek zemljevida ŽE v strežniškem HTML-ju. Prej sta
@@ -236,9 +396,9 @@ export function SharedTrip({
   // TASK 28 (Tier 1 #1): LIVE-SYNC — če je kdo medtem shranil novejšo
   // različico te poti (PATCH CAS poveča contentVersion), banner ponudi
   // „Osveži" (router.refresh() ponovno rendera strežniško komponento →
-  // initialVersion dohiti strežnik → banner se sam pobriše). Površina
-  // /pot je SL-only (1.29.0 #13) → nizi so slovenski, isti kanon kot
-  // ostali SharedTrip izpisi.
+  // initialVersion dohiti strežnik → banner se sam pobriše). ISSUE #24
+  // Sklop 1 (1.164.0): površina je dvojezična (prej SL-only, 1.29.0 #13)
+  // → nizi nosi L-vzorec zgoraj.
   const {
     stale: planStale,
     serverVersion: planServerVersion,
@@ -250,8 +410,10 @@ export function SharedTrip({
   });
 
   // TASK 88 — ŽIVO vreme po dnevih (Open-Meteo prek /api/weather način B,
-  // sidro = prvi geo-postanek dneva). Površina /pot/[shareId] je SL-only
-  // ( revizija 1.29.0 #13) — jezik čipa je prav tako sl. Statični posnetek
+  // sidro = prvi geo-postanek dneva). ISSUE #24 Sklop 1 (1.164.0): površina
+  // /pot je dvojezična, a vremenski čip/hook ostajata eksplicitno v SL
+  // (source-contract task88 „hook s SL jezikom na površini deljenega
+  // načrta“; prej revizija 1.29.0 #13 SL-only). Statični posnetek
   // day.weather ostane fallback (zastarel za starijše deljene načrte).
   const { chipFor, unavailable, notPublished, hasWindow } =
     useItineraryForecast(itinerary.days, itinerary.tripStartDate, "sl");
@@ -287,11 +449,8 @@ export function SharedTrip({
       );
       if (!r.ok) {
         toast({
-          title: "PDF ni na voljo",
-          description:
-            r.status === 404
-              ? "Pot ni javna ali ne obstaja — odpri kot lastnik."
-              : `Napaka ${r.status} — poskusi znova.`,
+          title: t.pdfUnavailable,
+          description: r.status === 404 ? t.pdfNotFound : t.pdfError(r.status),
           variant: "destructive",
         });
         return;
@@ -307,14 +466,14 @@ export function SharedTrip({
       URL.revokeObjectURL(url);
     } catch {
       toast({
-        title: "PDF ni na voljo",
-        description: "Preveri povezavo in poskusi znova.",
+        title: t.pdfUnavailable,
+        description: t.pdfNetwork,
         variant: "destructive",
       });
     } finally {
       setPdfBusy(false);
     }
-  }, [shareId, toast]);
+  }, [shareId, toast, t]);
 
   // Na mountu nastavi itinerer v store → MapView nariše barvno pot po dnevih
   useEffect(() => {
@@ -415,15 +574,15 @@ export function SharedTrip({
           persistVotedKeys(reverted);
           return reverted;
         });
-        setVoteError("Glasovanje trenutno ni na voljo — poskusi znova.");
+        setVoteError(t.voteUnavailable);
       } finally {
         setPendingKey(null);
       }
     },
-    [shareId, voterId, pendingKey, votedKeys, votes, persistVotedKeys]
+    [shareId, voterId, pendingKey, votedKeys, votes, persistVotedKeys, t]
   );
 
-  const title = name || "AI načrt potovanja po Sloveniji";
+  const title = name || t.nameFallback;
 
   // Varna vrednost skupnega proračuna (shranjen JSON lahko manjka polje)
   const totalBudget =
@@ -435,15 +594,20 @@ export function SharedTrip({
 
   const createdLabel = useMemo(() => {
     try {
-      return new Date(createdAt).toLocaleDateString("sl-SI", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
+      // ISSUE #24 Sklop 1 (1.164.0): datum ustvarjenosti sledi jeziku strani
+      // (sl-SI / en-GB — isti kanon kot review-section formatReviewDate).
+      return new Date(createdAt).toLocaleDateString(
+        lang === "en" ? "en-GB" : "sl-SI",
+        {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }
+      );
     } catch {
       return createdAt;
     }
-  }, [createdAt]);
+  }, [createdAt, lang]);
 
   // Vsa imena destinacij (za SocialShare)
   const destinationNames = useMemo(() => {
@@ -482,9 +646,9 @@ export function SharedTrip({
           <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-3 text-sm sm:px-6 lg:px-8">
             <RefreshCw className="size-4 shrink-0" aria-hidden="true" />
             <p className="min-w-0 flex-1">
-              Ta načrt je bil med tem posodobljen
+              {t.liveSyncUpdated}
               {typeof planServerVersion === "number"
-                ? ` (strežniška različica ${planServerVersion})`
+                ? t.liveSyncServerVersion(planServerVersion)
                 : ""}
               .
             </p>
@@ -494,14 +658,14 @@ export function SharedTrip({
               className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400 bg-white px-3 py-1.5 text-sm font-semibold text-amber-900 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:border-amber-600 dark:bg-amber-900 dark:text-amber-100 dark:hover:bg-amber-800"
             >
               <RefreshCw className="size-4" aria-hidden="true" />
-              Osveži
+              {t.refresh}
             </button>
             <button
               type="button"
               onClick={dismissPlanUpdate}
               className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-amber-800 underline-offset-2 transition-colors hover:bg-amber-100 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:text-amber-300 dark:hover:bg-amber-900/60"
             >
-              Ne zdaj
+              {t.notNow}
             </button>
           </div>
         </div>
@@ -512,7 +676,7 @@ export function SharedTrip({
         <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
           <Badge variant="secondary" className="mb-3 gap-1.5">
             <MapPin className="size-3.5" aria-hidden="true" />
-            Deljen AI itinerer
+            {t.heroBadge}
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
             {title}
@@ -522,11 +686,11 @@ export function SharedTrip({
             <Badge className="gap-1.5 bg-primary text-primary-foreground">
               <Calendar className="size-3.5" aria-hidden="true" />
               {itinerary.days.length}
-              {itinerary.days.length === 1 ? " dan" : " dni"}
+              {t.dayUnit(itinerary.days.length)}
             </Badge>
             <Badge variant="outline" className="gap-1.5">
               <Euro className="size-3.5" aria-hidden="true" />
-              ~€{totalBudget} skupaj
+              ~€{totalBudget} {t.budgetTotal}
             </Badge>
             {itinerary.tripStartDate && (
               <Badge variant="outline" className="gap-1.5 font-normal">
@@ -540,10 +704,10 @@ export function SharedTrip({
             <Badge variant="outline" className="gap-1.5">
               <Sparkles className="size-3.5" aria-hidden="true" />
               {itinerary.source === "ai"
-                ? "AI načrt"
+                ? t.sourceAI
                 : itinerary.source === "deterministic"
-                ? "Načrt brez AI (deterministični motor)"
-                : "Predloga načrta"}
+                ? t.sourceDeterministic
+                : t.sourceTemplate}
             </Badge>
             {/* W11-C: povzetek koherence — enoten dokaz čez celoten načrt.
                 Vidno TUDI v PDF (trditev kakovosti potuje z deljenim
@@ -552,19 +716,19 @@ export function SharedTrip({
               <Badge
                 variant="outline"
                 className="gap-1.5 border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-                title="Deterministično preverjeno: zaporedje postankov se ne vrača čez že obiskano območje (ista preverba kot naš načrtovalni motor)."
+                title={t.zigzagTitle}
               >
                 <Route className="size-3.5" aria-hidden="true" />
-                Vsi dnevi: 0 cik-cak
+                {t.zigzagSummary}
               </Badge>
             )}
             <Badge variant="outline" className="gap-1.5">
               <Eye className="size-3.5" aria-hidden="true" />
               {views}
-              {views === 1 ? " ogled" : " ogledov"}
+              {t.viewUnit(views)}
             </Badge>
             <span className="text-muted-foreground">
-              Ustvarjeno: {createdLabel}
+              {t.createdLabel} {createdLabel}
             </span>
           </div>
         </div>
@@ -575,13 +739,14 @@ export function SharedTrip({
         {routeByDay.length > 0 && (
           <section
             className="print-hide print:hidden mb-10"
-            aria-label="Zemljevid poti"
+            aria-label={t.mapAria}
           >
             <div className="mb-3 flex items-center gap-2">
               <Route className="size-5 text-primary" aria-hidden="true" />
-              <h2 className="text-xl font-bold sm:text-2xl">Pot na zemljevidu</h2>
+              <h2 className="text-xl font-bold sm:text-2xl">{t.mapTitle}</h2>
               <Badge variant="secondary" className="ml-1">
-                {routeCoords.length} postankov
+                {routeCoords.length}
+                {t.stopsUnit(routeCoords.length)}
               </Badge>
             </div>
             <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
@@ -613,7 +778,7 @@ export function SharedTrip({
                       style={{ backgroundColor: d.color }}
                       aria-hidden="true"
                     />
-                    Dan {d.day}
+                    {t.dayLabel(d.day)}
                   </span>
                 ))}
               </div>
@@ -622,9 +787,9 @@ export function SharedTrip({
         )}
 
         {/* === dnevi === */}
-        <section className="mb-10 space-y-8" aria-label="Načrt po dnevih">
+        <section className="mb-10 space-y-8" aria-label={t.daysAria}>
           <h2 className="text-xl font-bold sm:text-2xl">
-            Načrt po dnevih
+            {t.daysTitle}
           </h2>
 
           {/* Glasovanje skupine — razlaga za obiskovalce (ne tiska) */}
@@ -635,8 +800,7 @@ export function SharedTrip({
                   className="mt-0.5 size-4 shrink-0 text-primary"
                   aria-hidden="true"
                 />
-                V glasovanju izberi aktivnosti, ki ti najbolj ugajajo —
-                lastnik načrta vidi izbiro skupine.
+                {t.voteHint}
               </p>
               {voteError && (
                 <p
@@ -692,7 +856,7 @@ export function SharedTrip({
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="text-lg font-bold">
-                      Dan {day.day}
+                      {t.dayLabel(day.day)}
                       {dayISO && (
                         <span className="ml-2 text-sm font-normal text-muted-foreground">
                           {formatDayLabelSI(dayISO)}
@@ -720,10 +884,10 @@ export function SharedTrip({
                       {zigzag?.verifiable && zigzag.zigzagFree && (
                         <span
                           className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-                          title="Deterministično preverjeno: zaporedje postankov se ne vrača čez že obiskano območje (ista preverba kot naš načrtovalni motor)."
+                          title={t.zigzagTitle}
                         >
                           <Route className="size-3" aria-hidden="true" />
-                          0 cik-cak
+                          {t.zigzagBadge}
                         </span>
                       )}
                     </div>
@@ -755,8 +919,8 @@ export function SharedTrip({
                             })
                           }
                           className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-background px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          aria-label={`Odpri dan ${day.day} v Google Maps (navigacija po celotnem dnevu)`}
-                          title={`Odpri dan ${day.day} v Google Maps (navigacija po celotnem dnevu)`}
+                          aria-label={t.gmapsAria(day.day)}
+                          title={t.gmapsAria(day.day)}
                         >
                           <Navigation
                             className="size-3.5 text-primary"
@@ -764,7 +928,7 @@ export function SharedTrip({
                           />
                           <span className="hidden sm:inline">Google Maps</span>
                           <span className="sr-only sm:hidden">
-                            Odpri dan {day.day} v Google Maps
+                            {t.gmapsShort(day.day)}
                           </span>
                         </a>
                       ) : null;
@@ -794,7 +958,9 @@ export function SharedTrip({
                           }
                         : undefined;
                     // TASK 93: glava segmenta dneva (Jutro/Popoldan/Večer) —
-                    // ista lib kot planner; deljeni načrt je SL površina
+                    // ista lib kot planner. ISSUE #24 Sklop 1 (1.164.0):
+                    // površina je dvojezična, a glave segmentov ostajajo
+                    // v SL (source-contract task93 — lang="sl")
                     const { segment, showHeader } = segmentBoundaryAt(
                       day.locations,
                       idx
@@ -832,7 +998,7 @@ export function SharedTrip({
                             {ev.name}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {ev.location} · {formatEventDate(ev.date, ev.endDate)}
+                            {ev.location} · {formatEventDate(ev.date, ev.endDate, lang)}
                           </p>
                         </div>
                       </div>
@@ -855,9 +1021,12 @@ export function SharedTrip({
 
         {/* === Dogodki med tvojim obiskom === */}
         {/* events (prop) → fallback itinerary.events; se ne renderira, če prazno */}
+        {/* ISSUE #24 Sklop 1 (1.164.0): dogodki sledijo jeziku strani —
+            heading, ujemne oznake in datumi (EventsLang podpira "en"). */}
         <ItineraryEventsSection
           events={displayEvents}
-          title="Dogodki med tvojim obiskom"
+          title={t.eventsTitle}
+          lang={lang}
           variant="section"
           className="mb-10"
           tripStartDate={itinerary.tripStartDate}
@@ -867,10 +1036,10 @@ export function SharedTrip({
 
         {/* === Priporočila === */}
         {itinerary.recommendations?.length > 0 && (
-          <section className="mb-10" aria-label="Priporočila">
+          <section className="mb-10" aria-label={t.recommendationsAria}>
             <h2 className="mb-4 flex items-center gap-2 text-xl font-bold sm:text-2xl">
               <Sparkles className="size-5 text-primary" aria-hidden="true" />
-              Priporočila
+              {t.recommendationsTitle}
             </h2>
             <Card>
               <CardContent className="p-4 sm:p-6">
@@ -895,10 +1064,10 @@ export function SharedTrip({
 
         {/* === Nasveti === */}
         {itinerary.tips?.length > 0 && (
-          <section className="mb-10" aria-label="Nasveti">
+          <section className="mb-10" aria-label={t.tipsAria}>
             <h2 className="mb-4 flex items-center gap-2 text-xl font-bold sm:text-2xl">
               <Lightbulb className="size-5 text-primary" aria-hidden="true" />
-              Nasveti za potovanje
+              {t.tipsTitle}
             </h2>
             <Card className="border-primary/20 bg-primary/5">
               <CardContent className="p-4 sm:p-6">
@@ -938,17 +1107,16 @@ export function SharedTrip({
         {/* === CTA vrstica (ne tiska) === */}
         <section className="print-hide print:hidden mb-10 rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center sm:p-8">
           <h2 className="text-xl font-bold sm:text-2xl">
-            Všeč ta načrt?
+            {t.ctaTitle}
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground sm:text-base">
-            Sestavi svoj AI načrt potovanja po Sloveniji — proračun, interesi in
-            vreme, vse na enem mestu.
+            {t.ctaText}
           </p>
           <div className="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
             <Button asChild size="lg">
               <Link href="/nacrtuj">
                 <MapPin className="size-4 mr-2" aria-hidden="true" />
-                Načrtuj svoje potovanje
+                {t.planYourTrip}
               </Link>
             </Button>
             {/* ISSUE #8 §26 / F2-C: „Shrani kot svojo kopijo" — skupnostna
@@ -970,6 +1138,9 @@ export function SharedTrip({
               variant="outline"
               onClick={() => {
                 const view = buildItineraryGoView(itinerary, {
+                  // ISSUE #24 Sklop 1 (1.164.0): CTA nizi so dvojezični, a
+                  // Go zapis ostaja v SL — /na-poti je še vedno SL-only
+                  // površina (308), da vsebina ne meša jezikov.
                   lang: "sl",
                   name,
                 });
@@ -979,15 +1150,15 @@ export function SharedTrip({
                   router.push("/na-poti");
                 }
               }}
-              aria-label="Zaženi Na poti s tem načrtom"
+              aria-label={t.startGoModeAria}
             >
               <Footprints className="size-4 mr-2" aria-hidden="true" />
-              Zaženi Na poti
+              {t.startGoMode}
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link href={`/?odpri=${shareId}`}>
                 <Sparkles className="size-4 mr-2" aria-hidden="true" />
-                Odpri v načrtovalniku
+                {t.openInPlanner}
               </Link>
             </Button>
             {/* Natisni / Shrani kot PDF — danes + dogodki + packing lista */}
@@ -995,10 +1166,10 @@ export function SharedTrip({
               size="lg"
               variant="outline"
               onClick={() => window.print()}
-              aria-label="Natisni načrt ali ga shrani kot PDF"
+              aria-label={t.printAria}
             >
               <Printer className="size-4 mr-2" aria-hidden="true" />
-              Natisni / Shrani kot PDF
+              {t.printButton}
             </Button>
             {/* M8 (Issue #5 / T5-D): pravi PDF izvoz (pdf-lib, več strani,
                 č/š/ž) — brskalniški print ostaja offline rezerva. */}
@@ -1007,31 +1178,28 @@ export function SharedTrip({
               variant="outline"
               onClick={() => void downloadPdf()}
               disabled={pdfBusy}
-              aria-label="Prenesi načrt kot PDF datoteko"
+              aria-label={t.downloadPdfAria}
             >
               {pdfBusy ? (
                 <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
               ) : (
                 <Download className="size-4 mr-2" aria-hidden="true" />
               )}
-              Prenesi PDF
+              {t.downloadPdf}
             </Button>
           </div>
         </section>
 
         {/* === Deljenje (ne tiska) === */}
-        <section className="print-hide print:hidden mb-10" aria-label="Deli načrt">
+        <section className="print-hide print:hidden mb-10" aria-label={t.shareAria}>
           <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-border p-4 sm:flex-row sm:p-6">
             <div>
-              <p className="font-semibold">Deli ta načrt s prijatelji</p>
-              <p className="text-sm text-muted-foreground">
-                Povezavo pošlji sovažencem ali družini — pot se odpre na
-                zemljevidu.
-              </p>
+              <p className="font-semibold">{t.shareTitle}</p>
+              <p className="text-sm text-muted-foreground">{t.shareText}</p>
             </div>
             <SocialShare
               title={title}
-              description={`${itinerary.days.length}-dnevni AI načrt potovanja po Sloveniji (~€${totalBudget})`}
+              description={t.shareDescription(itinerary.days.length, totalBudget)}
               destinations={destinationNames}
               variant="inline"
             />
@@ -1057,7 +1225,7 @@ export function SharedTrip({
           <p>
             {/* FAZA 4-3: prej "vsi kraji preverjeni" — trditev brez dejanskega
                 postopka potrjevanja; pošteno sporočilo namesto nje */}
-            Predlog poti · pred obiskom preveri urnike in cene ·{" "}
+            {t.seoFooter}{" "}
             <Link
               href="/"
               className="font-medium text-primary hover:underline"
@@ -1081,6 +1249,11 @@ interface LocationCardProps {
 }
 
 function LocationCard({ visit, vote }: LocationCardProps) {
+  // ISSUE #24 Sklop 1 (1.164.0): L-vzorec {sl,en} — prej SL-only
+  // (isti L objekt kot SharedTrip zgoraj).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  const t = L[lang];
   // W11-C: obrok v kanonskem razponu (kosilo 12–14 / večerja 18–21) —
   // ista čista funkcija kot planner; žeton SAMO ob dokazu.
   const mealWindow = mealStopWindow(visit);
@@ -1112,7 +1285,7 @@ function LocationCard({ visit, vote }: LocationCardProps) {
               aria-hidden="true"
             />
             <span>
-              <span className="font-medium text-foreground/80">Zakaj ta postanek:</span>{" "}
+              <span className="font-medium text-foreground/80">{t.whyStop}</span>{" "}
               {visit.reason}
             </span>
           </p>
@@ -1143,13 +1316,11 @@ function LocationCard({ visit, vote }: LocationCardProps) {
             <Badge
               className="gap-1 border-emerald-300 bg-emerald-100 text-xs text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
               title={
-                mealWindow === "lunch"
-                  ? "Obrok je v kanonskem razponu kosila (12:00–14:00) — urnik raste iz dejanskih voženj."
-                  : "Obrok je v kanonskem razponu večerje (18:00–21:00) — urnik raste iz dejanskih voženj."
+                mealWindow === "lunch" ? t.mealLunchTitle : t.mealDinnerTitle
               }
             >
               <UtensilsCrossed className="size-3" aria-hidden="true" />
-              {mealWindow === "lunch" ? "kosilo 12–14 ✓" : "večerja 18–21 ✓"}
+              {mealWindow === "lunch" ? t.mealLunchWindow : t.mealDinnerWindow}
             </Badge>
           )}
 
@@ -1162,10 +1333,10 @@ function LocationCard({ visit, vote }: LocationCardProps) {
               aria-pressed={vote.voted}
               aria-label={
                 vote.voted
-                  ? `Odstrani glas za ${visit.destination_name}`
-                  : `Glasuj za ${visit.destination_name}`
+                  ? t.removeVoteAria(visit.destination_name)
+                  : t.voteAria(visit.destination_name)
               }
-              title={vote.voted ? "Odstrani svoj glas" : "Glasuj za to aktivnost"}
+              title={vote.voted ? t.removeVoteTitle : t.voteTitle}
               className={cn(
                 "print-hide print:hidden ml-auto inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
                 vote.voted

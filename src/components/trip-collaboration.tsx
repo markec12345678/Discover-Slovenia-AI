@@ -90,23 +90,170 @@ interface TripAggregate {
   collaborators?: CollaboratorRow[];
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  OWNER: "Lastnik",
-  EDITOR: "Urednik",
-  COMMENTER: "Komentator",
-  VIEWER: "Gledalec",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "čaka sprejem",
-  ACTIVE: "aktiven",
-  REVOKED: "odvzet",
-};
-
+// ISSUE #24 Sklop 1 (1.164.0): L-vzorec {sl,en} — prej SL-only
 // TASK 8 / F3-B: placeholder nalaganja zgodovine verzij v L-pattern (SL/EN —
 // D8-A §13 „Nalagam…" uhodi so trdi predpogoj za F3-E EN razširitev).
 const L = {
   loadingRevisions: { sl: "Nalagam zgodovino …", en: "Loading history …" },
+  httpError: {
+    sl: (status: number) => `Napaka ${status}`,
+    en: (status: number) => `Error ${status}`,
+  },
+  collabUnavailable: {
+    sl: (err: string) => `Sodelovanje trenutno ni na voljo: ${err}`,
+    en: (err: string) => `Collaboration is currently unavailable: ${err}`,
+  },
+  copyFailed: {
+    sl: "Kopiranje ni uspelo — povezavo prepiši ročno.",
+    en: "Copy failed — please copy the link manually.",
+  },
+  // Vloge/statusi sodelujočih (Record — indeksira se z dinamiko strežnika).
+  roleLabels: {
+    sl: {
+      OWNER: "Lastnik",
+      EDITOR: "Urednik",
+      COMMENTER: "Komentator",
+      VIEWER: "Gledalec",
+    } as Record<string, string>,
+    en: {
+      OWNER: "Owner",
+      EDITOR: "Editor",
+      COMMENTER: "Commenter",
+      VIEWER: "Viewer",
+    } as Record<string, string>,
+  },
+  statusLabels: {
+    sl: {
+      PENDING: "čaka sprejem",
+      ACTIVE: "aktiven",
+      REVOKED: "odvzet",
+    } as Record<string, string>,
+    en: {
+      PENDING: "pending acceptance",
+      ACTIVE: "active",
+      REVOKED: "revoked",
+    } as Record<string, string>,
+  },
+  inviteBannerTitle: {
+    sl: "Povabljen si k sodelovanju na tej poti",
+    en: "You're invited to collaborate on this trip",
+  },
+  inviteAcceptedPrefix: {
+    sl: "Vabilo sprejeto — tvoja vloga:",
+    en: "Invitation accepted — your role:",
+  },
+  inviteLoginPrefix: {
+    sl: "Za sprejem vabila se prijavi z računom popotnika — vloga na poti je vezana na račun,",
+    en: "To accept the invitation, sign in with a traveller account — the role on this trip is tied to your account,",
+  },
+  inviteLoginLink: { sl: "prijavi se", en: "sign in" },
+  acceptInvite: { sl: "Sprejmi vabilo", en: "Accept invitation" },
+  inviteRoleHint: {
+    sl: "Vloga se razkrije po sprejemu (klik na povezavo še ni sprejem).",
+    en: "The role is revealed once you accept (opening the link is not acceptance yet).",
+  },
+  sectionTitle: { sl: "Sodelovanje na poti", en: "Trip collaboration" },
+  privateLinkBadge: { sl: "Zasebna povezava", en: "Private link" },
+  nameLabel: { sl: "Ime poti", en: "Trip name" },
+  namePlaceholder: { sl: "Poletje na Bledu", en: "Summer at Lake Bled" },
+  saveName: { sl: "Shrani ime", en: "Save name" },
+  nameSaved: {
+    sl: (v: number) => `Ime shranjeno (različica ${v}).`,
+    en: (v: number) => `Name saved (version ${v}).`,
+  },
+  renameConflictPrefix: {
+    sl: "Pot je med tem spremenil nekdo drug (sočasno urejanje) —",
+    en: "Someone else changed the trip in the meantime (concurrent editing) —",
+  },
+  refresh: { sl: "osveži", en: "refresh" },
+  conflictSuffix: { sl: "in poskusi znova.", en: "and try again." },
+  casNote: {
+    sl: "Zaporedno urejanje je zaklenjeno z različico (iskren 409 ob konfliktu — nikoli tiho ne prepišemo tučih sprememb).",
+    en: "Sequential editing is version-locked (an honest 409 on conflict — we never silently overwrite someone else's changes).",
+  },
+  versionHistory: { sl: "Zgodovina verzij", en: "Version history" },
+  hide: { sl: "skrij", en: "hide" },
+  show: { sl: "pokaži", en: "show" },
+  tryAgain: { sl: "poskusi znova", en: "try again" },
+  noOlderRevisions: {
+    sl: (v: number) =>
+      `Še ni starejših različic — ta pot še ni bila urejena (trenutna v${v} je prva).`,
+    en: (v: number) =>
+      `No older versions yet — this trip has not been edited yet (current v${v} is the first).`,
+  },
+  restore: { sl: "Obnovi", en: "Restore" },
+  restoredNote: {
+    sl: "Obnovljeno — osvežujem pot…",
+    en: "Restored — refreshing the trip…",
+  },
+  restoreConflictPrefix: {
+    sl: "Pot je med tem spremenil nekdo drug —",
+    en: "Someone else changed the trip in the meantime —",
+  },
+  restoreNote: {
+    sl: "Obnovitev vrne staro vsebino kot NOVO različico (zdajšnja se arhivira) — zgodovina se nikoli ne izgubi. Zadnjih 20 različic se hrani.",
+    en: "Restoring brings the old content back as a NEW version (the current one is archived) — history is never lost. The last 20 versions are kept.",
+  },
+  inviteSectionTitle: { sl: "Povabi sodelujočega", en: "Invite a collaborator" },
+  roleLabel: { sl: "Vloga", en: "Role" },
+  roleEditorDesc: {
+    sl: "Urednik — ureja vsebino in ime",
+    en: "Editor — edits content and name",
+  },
+  roleCommenterDesc: {
+    sl: "Komentator — glasovi, komentarji, ankete, dnevnik",
+    en: "Commenter — votes, comments, polls, diary",
+  },
+  roleViewerDesc: {
+    sl: "Gledalec — vidi zasebno pot",
+    en: "Viewer — sees the private trip",
+  },
+  emailLabel: {
+    sl: "E-pošta (opcijsko — žeton se veže nanjo)",
+    en: "Email (optional — the token is bound to it)",
+  },
+  emailPlaceholder: { sl: "priatelj@primer.si", en: "friend@example.com" },
+  issueInvite: { sl: "Izdaj vabilo", en: "Create invitation" },
+  inviteLinkTitle: {
+    sl: "Povezava vabila (ročno deli):",
+    en: "Invitation link (share manually):",
+  },
+  copied: { sl: "Skopirano", en: "Copied" },
+  copy: { sl: "Kopiraj", en: "Copy" },
+  collaboratorsTitle: { sl: "Sodelujoči", en: "Collaborators" },
+  noCollaborators: {
+    sl: (own: string) =>
+      `Še nihče ni povabljen — ta pot je tvoja (lastništvo: žeton tega brskalnika ${own}).`,
+    en: (own: string) =>
+      `No one has been invited yet — this trip is yours (ownership: this browser's token ${own}).`,
+  },
+  ownershipAccount: { sl: "+ tvoj račun", en: "+ your account" },
+  ownershipClaim: {
+    sl: "ali račun po prevzemu",
+    en: "or the account after claiming",
+  },
+  inviteeNoEmail: {
+    sl: "Povabljeni brez e-pošte",
+    en: "Invitee without an email",
+  },
+  acceptedOn: {
+    sl: (d: string) => ` · sprejel ${d}`,
+    en: (d: string) => ` · accepted ${d}`,
+  },
+  invitedOn: {
+    sl: (d: string) => ` · povabljen ${d}`,
+    en: (d: string) => ` · invited ${d}`,
+  },
+  changeRoleAria: { sl: "Spremeni vlogo", en: "Change role" },
+  revokeAccess: { sl: "Odvzemi", en: "Revoke access" },
+  accessRevoked: { sl: "dostop odvzet", en: "access revoked" },
+  inviteAgain: { sl: "Povabi znova", en: "Invite again" },
+  publicLinkTitle: { sl: "Javna deljena povezava", en: "Public share link" },
+  publicLinkDesc: {
+    sl: "Izklopljena povezava pomeni: pot vidijo samo prijavljeni sodelujoči (ostali vidijo 404). Anonimni lastnik ne more izklopiti (žeton živi v brskalniku — zaklep).",
+    en: "When the link is off, only signed-in collaborators can see the trip (everyone else sees a 404). An anonymous owner cannot turn it off (the token lives in the browser — lock-in).",
+  },
+  publicLinkAria: { sl: "Javna povezava", en: "Public link" },
 } as const;
 
 function errText(e: unknown): string {
@@ -139,6 +286,8 @@ export function TripCollaboration({
   // verzij (SL privzeto — predpogoj za F3-E).
   const locale = useLocale();
   const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  // ISSUE #24 Sklop 1 (1.164.0): datumi {sl,en} — SL ostaja sl-SI.
+  const dateLocale = lang === "en" ? "en-GB" : "sl-SI";
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get("invite");
 
@@ -191,7 +340,7 @@ export function TripCollaboration({
         // 404 = zasebna pot brez vloge → tiho skrijemo panel (trak vabila
         // ostane — povabljeni še ni sprejel).
         setAgg(null);
-        setLoadError(r.status === 404 ? null : `Napaka ${r.status}`);
+        setLoadError(r.status === 404 ? null : L.httpError[lang](r.status));
         return;
       }
       const data = (await r.json()) as TripAggregate;
@@ -200,7 +349,7 @@ export function TripCollaboration({
     } catch (e) {
       setLoadError(errText(e));
     }
-  }, [shareId, editToken]);
+  }, [shareId, editToken, lang]);
 
   useEffect(() => {
     void load();
@@ -226,7 +375,7 @@ export function TripCollaboration({
       };
       if (!r.ok || !data.success) {
         setInviteState("error");
-        setActionError(data.error ?? `Napaka ${r.status}`);
+        setActionError(data.error ?? L.httpError[lang](r.status));
         return;
       }
       setInviteState("accepted");
@@ -238,7 +387,7 @@ export function TripCollaboration({
       setInviteState("error");
       setActionError(errText(e));
     }
-  }, [inviteToken, load]);
+  }, [inviteToken, load, lang]);
 
   // ── IZDAJA VABILA (lastnik) ───────────────────────────────────────────
   const issueInvite = useCallback(async () => {
@@ -267,7 +416,7 @@ export function TripCollaboration({
         error?: string;
       };
       if (!r.ok || !data.success) {
-        setActionError(data.error ?? `Napaka ${r.status}`);
+        setActionError(data.error ?? L.httpError[lang](r.status));
         return;
       }
       setInviteUrl(data.inviteUrl ?? null);
@@ -278,7 +427,7 @@ export function TripCollaboration({
     } finally {
       setBusy(false);
     }
-  }, [shareId, editToken, inviteRole, inviteEmail, load]);
+  }, [shareId, editToken, inviteRole, inviteEmail, load, lang]);
 
   // ── SPREMENBA VLOGE / ODVZEM (lastnik) ────────────────────────────────
   const patchCollaborator = useCallback(
@@ -292,7 +441,7 @@ export function TripCollaboration({
         );
         const data = (await r.json()) as { success?: boolean; error?: string };
         if (!r.ok || !data.success) {
-          setActionError(data.error ?? `Napaka ${r.status}`);
+          setActionError(data.error ?? L.httpError[lang](r.status));
           return;
         }
         void load();
@@ -302,7 +451,7 @@ export function TripCollaboration({
         setBusy(false);
       }
     },
-    [shareId, editToken, load]
+    [shareId, editToken, load, lang]
   );
 
   // ── ZGODOVINA REVIZIJ (§22, leneco nalaganje) ─────────────────────────
@@ -384,7 +533,7 @@ export function TripCollaboration({
           error?: string;
         };
         if (!r.ok || !data.success) {
-          setActionError(data.error ?? `Napaka ${r.status}`);
+          setActionError(data.error ?? L.httpError[lang](r.status));
           return;
         }
         void load();
@@ -394,7 +543,7 @@ export function TripCollaboration({
         setBusy(false);
       }
     },
-    [shareId, editToken, load]
+    [shareId, editToken, load, lang]
   );
 
   // ── PREIMENOVANJE s CAS (lastnik/urednik) ─────────────────────────────
@@ -431,7 +580,7 @@ export function TripCollaboration({
       }
       if (!r.ok || !data.success) {
         setRenameState("idle");
-        setActionError(data.error ?? `Napaka ${r.status}`);
+        setActionError(data.error ?? L.httpError[lang](r.status));
         return;
       }
       nameRef.current = trimmed;
@@ -441,7 +590,7 @@ export function TripCollaboration({
       setRenameState("idle");
       setActionError(errText(e));
     }
-  }, [agg, nameDraft, shareId, editToken, load]);
+  }, [agg, nameDraft, shareId, editToken, load, lang]);
 
   const copyInvite = useCallback(async () => {
     if (!inviteUrl) return;
@@ -452,9 +601,9 @@ export function TripCollaboration({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setActionError("Kopiranje ni uspelo — povezavo prepiši ročno.");
+      setActionError(L.copyFailed[lang]);
     }
-  }, [inviteUrl]);
+  }, [inviteUrl, lang]);
 
   const role = agg?.role ?? "NONE";
   const showPanel =
@@ -465,7 +614,7 @@ export function TripCollaboration({
       <Card>
         <CardContent className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
           <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>Sodelovanje trenutno ni na voljo: {loadError}</span>
+          <span>{L.collabUnavailable[lang](loadError)}</span>
         </CardContent>
       </Card>
     );
@@ -486,24 +635,25 @@ export function TripCollaboration({
             <div className="flex items-center gap-2">
               <UserPlus className="h-4 w-4 text-violet-700 dark:text-violet-400" aria-hidden="true" />
               <p className="text-sm font-semibold">
-                Povabljen si k sodelovanju na tej poti
+                {L.inviteBannerTitle[lang]}
               </p>
             </div>
             {inviteState === "accepted" ? (
               <p className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
                 <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-                Vabilo sprejeto — tvoja vloga:{" "}
-                <strong>{ROLE_LABELS[acceptedRole ?? ""] ?? acceptedRole}</strong>
+                {L.inviteAcceptedPrefix[lang]}{" "}
+                <strong>
+                  {L.roleLabels[lang][acceptedRole ?? ""] ?? acceptedRole}
+                </strong>
               </p>
             ) : !loggedIn ? (
               <p className="text-sm text-muted-foreground">
-                Za sprejem vabila se prijavi z računom popotnika — vloga na
-                poti je vezana na račun,{" "}
+                {L.inviteLoginPrefix[lang]}{" "}
                 <a
                   className="font-medium underline underline-offset-2"
                   href={`/prijava?next=/pot/${shareId}%3Finvite%3D${encodeURIComponent(inviteToken)}`}
                 >
-                  prijavi se
+                  {L.inviteLoginLink[lang]}
                 </a>
                 .
               </p>
@@ -513,10 +663,10 @@ export function TripCollaboration({
                   {inviteState === "accepting" ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                   ) : null}
-                  Sprejmi vabilo
+                  {L.acceptInvite[lang]}
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  Vloga se razkrije po sprejemu (klik na povezavo še ni sprejem).
+                  {L.inviteRoleHint[lang]}
                 </p>
               </div>
             )}
@@ -533,13 +683,13 @@ export function TripCollaboration({
           <CardHeader className="pb-3">
             <CardTitle className="flex flex-wrap items-center gap-2 text-base">
               <Users className="h-4 w-4" aria-hidden="true" />
-              Sodelovanje na poti
+              {L.sectionTitle[lang]}
               <Badge variant="secondary">
-                {ROLE_LABELS[role] ?? role}
+                {L.roleLabels[lang][role] ?? role}
               </Badge>
               {!agg.isPublic && (
                 <Badge className="border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                  Zasebna povezava
+                  {L.privateLinkBadge[lang]}
                 </Badge>
               )}
             </CardTitle>
@@ -554,7 +704,7 @@ export function TripCollaboration({
             {/* Preimenovanje (CAS) */}
             <div className="space-y-2">
               <Label htmlFor="trip-name" className="text-sm font-medium">
-                Ime poti
+                {L.nameLabel[lang]}
               </Label>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
@@ -565,7 +715,7 @@ export function TripCollaboration({
                     setNameDraft(e.target.value);
                     setRenameState("idle");
                   }}
-                  placeholder="Poletje na Bledu"
+                  placeholder={L.namePlaceholder[lang]}
                 />
                 <Button
                   onClick={saveName}
@@ -577,28 +727,27 @@ export function TripCollaboration({
                   {renameState === "saving" ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                   ) : null}
-                  Shrani ime
+                  {L.saveName[lang]}
                 </Button>
               </div>
               {renameState === "saved" && (
                 <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                  Ime shranjeno (različica {agg.version.contentVersion}).
+                  {L.nameSaved[lang](agg.version.contentVersion)}
                 </p>
               )}
               {renameState === "conflict" && (
                 <p className="flex flex-wrap items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
                   <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-                  Pot je med tem spremenil nekdo drug (sočasno urejanje) —
+                  {L.renameConflictPrefix[lang]}
                   <Button variant="outline" size="sm" onClick={() => void load()}>
                     <RefreshCw className="mr-1 h-3 w-3" aria-hidden="true" />
-                    osveži
+                    {L.refresh[lang]}
                   </Button>
-                  in poskusi znova.
+                  {L.conflictSuffix[lang]}
                 </p>
               )}
               <p className="text-xs text-muted-foreground">
-                Zaporedno urejanje je zaklenjeno z različico (iskren 409 ob
-                konfliktu — nikoli tiho ne prepišemo tučih sprememb).
+                {L.casNote[lang]}
               </p>
             </div>
 
@@ -615,12 +764,12 @@ export function TripCollaboration({
                 className="flex w-full flex-wrap items-center gap-2 text-left text-sm font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
               >
                 <History className="h-4 w-4" aria-hidden="true" />
-                Zgodovina verzij
+                {L.versionHistory[lang]}
                 <Badge variant="secondary" className="ml-1">
                   v{agg.version.contentVersion}
                 </Badge>
                 <span className="ml-auto text-xs font-normal text-muted-foreground">
-                  {revisionsOpen ? "skrij" : "pokaži"}
+                  {revisionsOpen ? L.hide[lang] : L.show[lang]}
                 </span>
               </button>
 
@@ -638,14 +787,13 @@ export function TripCollaboration({
                       {revisionsError}
                       <Button variant="outline" size="sm" onClick={() => void loadRevisions()}>
                         <RefreshCw className="mr-1 h-3 w-3" aria-hidden="true" />
-                        poskusi znova
+                        {L.tryAgain[lang]}
                       </Button>
                     </p>
                   )}
                   {revisions !== null && revisions.length === 0 && (
                     <p className="text-sm text-muted-foreground">
-                      Še ni starejših različic — ta pot še ni bila urejena
-                      (trenutna v{agg.version.contentVersion} je prva).
+                      {L.noOlderRevisions[lang](agg.version.contentVersion)}
                     </p>
                   )}
                   {revisions !== null && revisions.length > 0 && (
@@ -660,7 +808,7 @@ export function TripCollaboration({
                               v{r.version}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {new Date(r.createdAt).toLocaleString("sl-SI")}
+                              {new Date(r.createdAt).toLocaleString(dateLocale)}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               {(r.sizeBytes / 1024).toFixed(0)} KB
@@ -678,7 +826,7 @@ export function TripCollaboration({
                                 {restoringVersion === r.version ? (
                                   <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden="true" />
                                 ) : null}
-                                Obnovi
+                                {L.restore[lang]}
                               </Button>
                             </span>
                           </li>
@@ -686,24 +834,22 @@ export function TripCollaboration({
                       </ul>
                       {restoreState === "done" && (
                         <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                          Obnovljeno — osvežujem pot…
+                          {L.restoredNote[lang]}
                         </p>
                       )}
                       {restoreState === "conflict" && (
                         <p className="flex flex-wrap items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
                           <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-                          Pot je med tem spremenil nekdo drug —
+                          {L.restoreConflictPrefix[lang]}
                           <Button variant="outline" size="sm" onClick={() => void load()}>
                             <RefreshCw className="mr-1 h-3 w-3" aria-hidden="true" />
-                            osveži
+                            {L.refresh[lang]}
                           </Button>
-                          in poskusi znova.
+                          {L.conflictSuffix[lang]}
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground">
-                        Obnovitev vrne staro vsebino kot NOVO različico
-                        (zdajšnja se arhivira) — zgodovina se nikoli ne
-                        izgubi. Zadnjih 20 različic se hrani.
+                        {L.restoreNote[lang]}
                       </p>
                     </>
                   )}
@@ -716,12 +862,12 @@ export function TripCollaboration({
               <div className="space-y-3 border-t pt-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <UserPlus className="h-4 w-4" aria-hidden="true" />
-                  <p className="text-sm font-medium">Povabi sodelujočega</p>
+                  <p className="text-sm font-medium">{L.inviteSectionTitle[lang]}</p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                   <div className="space-y-1.5">
                     <Label htmlFor="invite-role" className="text-xs text-muted-foreground">
-                      Vloga
+                      {L.roleLabel[lang]}
                     </Label>
                     <Select value={inviteRole} onValueChange={setInviteRole}>
                       <SelectTrigger id="invite-role" className="w-full sm:w-40">
@@ -729,20 +875,20 @@ export function TripCollaboration({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="EDITOR">
-                          Urednik — ureja vsebino in ime
+                          {L.roleEditorDesc[lang]}
                         </SelectItem>
                         <SelectItem value="COMMENTER">
-                          Komentator — glasovi, komentarji, ankete, dnevnik
+                          {L.roleCommenterDesc[lang]}
                         </SelectItem>
                         <SelectItem value="VIEWER">
-                          Gledalec — vidi zasebno pot
+                          {L.roleViewerDesc[lang]}
                         </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="flex-1 space-y-1.5">
                     <Label htmlFor="invite-email" className="text-xs text-muted-foreground">
-                      E-pošta (opcijsko — žeton se veže nanjo)
+                      {L.emailLabel[lang]}
                     </Label>
                     <Input
                       id="invite-email"
@@ -750,14 +896,14 @@ export function TripCollaboration({
                       value={inviteEmail}
                       maxLength={254}
                       onChange={(e) => setInviteEmail(e.target.value)}
-                      placeholder="priatelj@primer.si"
+                      placeholder={L.emailPlaceholder[lang]}
                     />
                   </div>
                   <Button onClick={issueInvite} disabled={busy} className="shrink-0">
                     {busy ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                     ) : null}
-                    Izdaj vabilo
+                    {L.issueInvite[lang]}
                   </Button>
                 </div>
 
@@ -765,7 +911,7 @@ export function TripCollaboration({
                   <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
                     <p className="flex flex-wrap items-center gap-2 text-xs font-medium">
                       <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      Povezava vabila (ročno deli):
+                      {L.inviteLinkTitle[lang]}
                     </p>
                     <code className="block break-all rounded bg-background px-2 py-1 text-xs">
                       {inviteUrl}
@@ -777,7 +923,7 @@ export function TripCollaboration({
                         ) : (
                           <Copy className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
                         )}
-                        {copied ? "Skopirano" : "Kopiraj"}
+                        {copied ? L.copied[lang] : L.copy[lang]}
                       </Button>
                       {inviteNote && (
                         <span className="text-xs text-muted-foreground">
@@ -793,11 +939,14 @@ export function TripCollaboration({
             {/* Seznam sodelujočih (samo lastnik) */}
             {role === "OWNER" && (
               <div className="space-y-3 border-t pt-4">
-                <p className="text-sm font-medium">Sodelujoči</p>
+                <p className="text-sm font-medium">{L.collaboratorsTitle[lang]}</p>
                 {(!agg.collaborators || agg.collaborators.length === 0) && (
                   <p className="text-xs text-muted-foreground">
-                    Še nihče ni povabljen — ta pot je tvoja (lastništvo: žeton
-                    tega brskalnika {loggedIn ? "+ tvoj račun" : "ali račun po prevzemu"}).
+                    {L.noCollaborators[lang](
+                      loggedIn
+                        ? L.ownershipAccount[lang]
+                        : L.ownershipClaim[lang]
+                    )}
                   </p>
                 )}
                 <ul className="space-y-2">
@@ -808,17 +957,21 @@ export function TripCollaboration({
                     >
                       <div className="min-w-0 space-y-0.5">
                         <p className="truncate text-sm font-medium">
-                          {c.accountEmail ?? c.accountName ?? c.inviteEmail ?? "Povabljeni brez e-pošte"}
+                          {c.accountEmail ?? c.accountName ?? c.inviteEmail ?? L.inviteeNoEmail[lang]}
                         </p>
                         <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                           <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
-                            {ROLE_LABELS[c.role] ?? c.role}
+                            {L.roleLabels[lang][c.role] ?? c.role}
                           </Badge>
                           <span>
-                            {STATUS_LABELS[c.status] ?? c.status}
+                            {L.statusLabels[lang][c.status] ?? c.status}
                             {c.acceptedAt
-                              ? ` · sprejel ${new Date(c.acceptedAt).toLocaleDateString("sl-SI")}`
-                              : ` · povabljen ${new Date(c.createdAt).toLocaleDateString("sl-SI")}`}
+                              ? L.acceptedOn[lang](
+                                  new Date(c.acceptedAt).toLocaleDateString(dateLocale)
+                                )
+                              : L.invitedOn[lang](
+                                  new Date(c.createdAt).toLocaleDateString(dateLocale)
+                                )}
                           </span>
                         </p>
                       </div>
@@ -830,13 +983,13 @@ export function TripCollaboration({
                               void patchCollaborator(c.id, { role: v })
                             }
                           >
-                            <SelectTrigger className="h-9 w-40" aria-label="Spremeni vlogo">
+                            <SelectTrigger className="h-9 w-40" aria-label={L.changeRoleAria[lang]}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="EDITOR">Urednik</SelectItem>
-                              <SelectItem value="COMMENTER">Komentator</SelectItem>
-                              <SelectItem value="VIEWER">Gledalec</SelectItem>
+                              <SelectItem value="EDITOR">{L.roleLabels[lang].EDITOR}</SelectItem>
+                              <SelectItem value="COMMENTER">{L.roleLabels[lang].COMMENTER}</SelectItem>
+                              <SelectItem value="VIEWER">{L.roleLabels[lang].VIEWER}</SelectItem>
                             </SelectContent>
                           </Select>
                           <Button
@@ -847,14 +1000,14 @@ export function TripCollaboration({
                             }
                             disabled={busy}
                           >
-                            Odvzemi
+                            {L.revokeAccess[lang]}
                           </Button>
                         </div>
                       )}
                       {c.status === "REVOKED" && (
                         <div className="flex shrink-0 items-center gap-2">
                           <span className="text-xs text-muted-foreground">
-                            dostop odvzet
+                            {L.accessRevoked[lang]}
                           </span>
                           <Button
                             variant="outline"
@@ -864,7 +1017,7 @@ export function TripCollaboration({
                             }
                             disabled={busy}
                           >
-                            Povabi znova
+                            {L.inviteAgain[lang]}
                           </Button>
                         </div>
                       )}
@@ -881,19 +1034,17 @@ export function TripCollaboration({
                   <div className="min-w-0">
                     <p className="flex items-center gap-2 text-sm font-medium">
                       <Link2 className="h-4 w-4" aria-hidden="true" />
-                      Javna deljena povezava
+                      {L.publicLinkTitle[lang]}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Izklopljena povezava pomeni: pot vidijo samo prijavljeni
-                      sodelujoči (ostali vidijo 404). Anonimni lastnik ne more
-                      izklopiti (žeton živi v brskalniku — zaklep).
+                      {L.publicLinkDesc[lang]}
                     </p>
                   </div>
                   <Switch
                     checked={agg.isPublic}
                     onCheckedChange={(v) => void togglePublic(v)}
                     disabled={busy}
-                    aria-label="Javna povezava"
+                    aria-label={L.publicLinkAria[lang]}
                   />
                 </div>
               </div>

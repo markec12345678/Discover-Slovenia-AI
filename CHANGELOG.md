@@ -7,6 +7,59 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.164.0] — 2026-10-02 (#24 Sklop 1: /pot dvojezičnost + vodeni trak na načrtovalniku)
+
+### Dodano
+
+- **P2-a · SKUPNOSTNA POVRŠINA /pot JE ZDAJ DVOJEZIČNA ({sl,en}).** Izvršna
+  odločitev benchmarka Round 2, izvedena iskreno in v celoti: ker je bila
+  /pot namenjeno izven EN whitelist (P4-8 »nikoli mešanja jezikov« bi
+  samoten prevod TripSocial pustil mrtvo kodo), je implementacija odprla
+  **celotno površino** — `/en/pot/[shareId]` + `/en/pot/embed/[shareId]`
+  (EN_POT_ROUTES v `src/i18n/routing.ts`; proxy 308 varovala, jezikovni
+  switched in hreflang logika sledijo samodejno). Vseh 11 plošč je zdaj
+  L-vzorec {sl,en} po kanonu TripPresence: klepet z @AI (t.N ~120 nizov —
+  vključno EN prikaznim imenom svetovalca »AI Advisor«, DB ostaja
+  kanoničen SL), itinerer SharedTrip (~71), sodelovanje (~61), rezervacije
+  (~75), proračun (~43), dokumenti (~42), opomniki (~28), vodnik (~44),
+  dnevnik (~110), ankete (~132), PDF nogica. Skupaj **~740 dvojezičnih
+  nizov**, SL izhod byte-identičen (programsko potrjeno pri vsaki plošči).
+- **AI svetovalec v skupinskem klepetu odgovarja v jeziku površine** —
+  `POST /api/trip-comments/ai-reply` sprejme `locale` (strogo sl|en,
+  privzeto sl) in napaja 6-jezični deterministični pogon
+  (`answerChatQuestion`); vsa 4 JSON napaka je tudi dvojezična. Dogodki na
+  deljeni poti dobijo EN prekrivno plast (isti EVENTS_EN vir kot
+  /en/nacrtuj); oznake dni »Dan N« → »Day N« (sidra/URL-ji nespremenjeni);
+  metadata (naslov/opis/JSON-LD) zaveda locale; datumi EN v en-GB.
+- **P2-b · VODENI TRAK NA NAČRTOVALNIKU** — `GuidanceStrip
+  surface="planner"` na /nacrtuj (nad jedrom, ista deterministična jedrna
+  plast kot domov — ena resnica o stanju). Skriti: NEW_USER (first-run
+  kartica je domača pristojnost) in TRIP_BUILDING (primarna akcija bi bila
+  samopovezava; add-toast že ponuja ta korak). Vsa ostala stanja
+  (TRIP_READY, BOOKING_PENDING, Go Mode, COMPLETED …) se pokažejo iskreno;
+  telemetrija `guidance_shown`/`guidance_action_clicked` s površino
+  `planner` naredi KPI #24 merljiv.
+- **28 novih pogodbenih testov** (`issue24-s1-pot-en-planner-strip.test.ts`):
+  routing funkcionalno (EN sprejme /pot/[id]+embed, zavrne /pot, 3+
+  segmente; IT/DE/FR/ES ostanejo 308 — iskrena meja), vseh 11 plošč L-vzorec
+  + marker + jezikovni priklop, klepet-pipeline (AI_ADVISOR_NAME_EN,
+  locale passthrough, strog API varovalni oblok), RSC plašč + obe metadata,
+  trak na plannerju + domači trak nespremenjen. Regresija: **4.784 pass**
+  (+1 znana sandbox DB napaka issue7-g11 ④, CI-semantika — nespremenjena).
+
+### Omejitve (iskrene)
+
+- IT/DE/FR/ES za /pot še vedno ne obstajajo (308 na slovensko) — {sl,en}
+  je obseg benchmarka; širitev po enakem receptu, če bo povpraševanje.
+- Vremenski pas in jutro/popoldan/večer segmenti na deljeni poti ostajajo
+  SL (žepno pinani s strani task88/89/93 testov — zavedna odločitev,
+  dokumentirana za morebitno naslednjo fazo); CTA povezave vodijo na
+  slovenske poti (hrefs so kanonične, jezikovno nevtralne).
+- Strežniška sporočila o napakah API-jev plošč (data.error passthrough) so
+  še SL — naslovi toastov in splošni fallbacki so prevedeni.
+
+---
+
 ## [1.163.5] — 2026-10-02 (#24: UI/UX & WORKFLOW BENCHMARK ROUND 2 — analiza, načrt in dokazi)
 
 ### Dodano

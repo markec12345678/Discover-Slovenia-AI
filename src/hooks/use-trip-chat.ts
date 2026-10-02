@@ -85,8 +85,11 @@ export interface UseTripChatResult {
   pollNow: () => void;
   /** Obvesti prisotne v sobi (chat:signal) o novi vrstici. */
   emitChatSignal: (commentId?: string) => void;
-  /** Zahtevaj odgovor AI svetovalca (POST /api/trip-comments/ai-reply). */
-  askAi: (question: string) => Promise<TripChatItem>;
+  /** Zahtevaj odgovor AI svetovalca (POST /api/trip-comments/ai-reply).
+   *  ISSUE #24 Sklop 1 (1.164.0): neobvezen locale "en" (/en/pot) —
+   *  strežnik odgovori v EN; izpuščen ali karkoli drugega → SL (privzeto,
+   *  prej SL-only). */
+  askAi: (question: string, locale?: "sl" | "en") => Promise<TripChatItem>;
 }
 
 export function useTripChat(
@@ -251,13 +254,23 @@ export function useTripChat(
 
   // === AI svetovalec — odgovor izda strežnik (isti pogon kot /api/chat) ===
   const askAi = useCallback(
-    async (question: string): Promise<TripChatItem> => {
+    async (
+      question: string,
+      locale?: "sl" | "en"
+    ): Promise<TripChatItem> => {
       setAiPending(true);
       try {
         const res = await fetch("/api/trip-comments/ai-reply", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ shareId, question }),
+          // ISSUE #24 Sklop 1 (1.164.0): jezik odgovora sledi lokalu strani
+          // (prej brez locale — SL-only); "en" pošljemo izrecno, sicer
+          // izpustimo (strežniški default je SL).
+          body: JSON.stringify({
+            shareId,
+            question,
+            ...(locale === "en" ? { locale: "en" } : {}),
+          }),
         });
         const data: unknown = await res.json().catch(() => null);
         const d = data as
@@ -269,7 +282,14 @@ export function useTripChat(
           throw new Error(error);
         }
         const item = normalizeItem(d.comment);
-        if (!item) throw new Error("Neveljaven odgovor strežnika.");
+        // ISSUE #24 Sklop 1 (1.164.0): uporabniško-viden opis napake je
+        // jezikovno primeren lokalu strani (prej SL-only).
+        if (!item)
+          throw new Error(
+            locale === "en"
+              ? "Invalid server response."
+              : "Neveljaven odgovor strežnika."
+          );
         appendLocal(item);
         emitChatSignal(item.id);
         return item;

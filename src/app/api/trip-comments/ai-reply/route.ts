@@ -30,7 +30,9 @@ import { AI_ADVISOR_NAME, buildAiPayload, stripAiMention } from "@/lib/trip-chat
 // tale vstop z očistjenim vprašanjem. Vračanje: { success, comment } —
 // klient doda vrstico (in signalizira prisotnim prek chat:signal).
 //
-// Površina /pot je SL-only (P4-8 kanon) → odgovori so v slovenščini.
+// ISSUE #24 Sklop 1 (1.164.0): površina /pot je DVOJEZIČNA {sl,en} — jezik
+// odgovora (in napak) sledi lokalu STRANI, ki sprašuje (izrecen
+// body.locale "en"; vse ostalo, tudi izpuščena vrednost, je SL — privzeto).
 // ============================================================================
 
 const HOUR_MS = 60 * 60_000;
@@ -43,6 +45,8 @@ const QUESTION_MAX = 500;
 interface AiReplyBody {
   shareId?: unknown;
   question?: unknown;
+  /** ISSUE #24 Sklop 1 (1.164.0): jezik odgovora po površini ("en" | drugo). */
+  locale?: unknown;
 }
 
 export async function POST(request: Request) {
@@ -59,6 +63,10 @@ export async function POST(request: Request) {
   // STO (nikoli ne blokira odgovora).
   maybeRefreshStoIndex();
 
+  // ISSUE #24 Sklop 1 (1.164.0): jezik odgovora/napak sledi lokalu strani —
+  // default SL, dokler telo zahteve ne pove "en" (stroga validacija spodaj).
+  let reqLang: "sl" | "en" = "sl";
+
   try {
     const raw: unknown = await request.json().catch(() => null);
     const b = (raw ?? {}) as AiReplyBody;
@@ -69,9 +77,18 @@ export async function POST(request: Request) {
     const question =
       typeof b.question === "string" ? stripAiMention(b.question) : "";
 
+    // ISSUE #24 Sklop 1 (1.164.0): stroga validacija — SAMO "en" je EN,
+    // vse ostalo (tudi izpuščeno) je SL.
+    reqLang = b.locale === "en" ? "en" : "sl";
+
     if (!SHARE_ID_RE.test(shareId)) {
       return NextResponse.json(
-        { error: "Manjka ali neveljaven ID deljenega potovanja (shareId)" },
+        {
+          error:
+            reqLang === "en"
+              ? "Missing or invalid shared trip ID (shareId)"
+              : "Manjka ali neveljaven ID deljenega potovanja (shareId)",
+        },
         { status: 400 }
       );
     }
@@ -80,7 +97,9 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Vprašanje za AI svetovalca mora imeti med 2 in 500 znakov (po odstranitvi @AI).",
+            reqLang === "en"
+              ? "The question for the AI advisor must be between 2 and 500 characters (after removing @AI)."
+              : "Vprašanje za AI svetovalca mora imeti med 2 in 500 znakov (po odstranitvi @AI).",
         },
         { status: 400 }
       );
@@ -93,7 +112,12 @@ export async function POST(request: Request) {
     });
     if (!exists) {
       return NextResponse.json(
-        { error: "Deljeno potovanje ne obstaja" },
+        {
+          error:
+            reqLang === "en"
+              ? "Shared trip does not exist"
+              : "Deljeno potovanje ne obstaja",
+        },
         { status: 404 }
       );
     }
@@ -105,8 +129,10 @@ export async function POST(request: Request) {
       if (gate) return gate;
     }
 
-    // Deterministični odgovor — isti pogon kot /api/chat (SL-only površina).
-    const answer = await answerChatQuestion(question, "sl");
+    // Deterministični odgovor — isti pogon kot /api/chat. ISSUE #24 Sklop 1
+    // (1.164.0): jezik sledi lokalu strani (prej:
+    // answerChatQuestion(question, "sl") — SL-only).
+    const answer = await answerChatQuestion(question, reqLang);
 
     // Priloga: predlogi krajev (gumb "Dodaj v pot" — AI samo predlaga) +
     // citati uradnih virov STO. Kapice v buildAiPayload (kraji ≤ 8, viri ≤ 5).
@@ -151,7 +177,12 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[trip-chat-ai] POST napaka:", error);
     return NextResponse.json(
-      { error: "AI svetovalec trenutno ne more odgovoriti — poskusi znova." },
+      {
+        error:
+          reqLang === "en"
+            ? "The AI advisor cannot answer right now — try again."
+            : "AI svetovalec trenutno ne more odgovoriti — poskusi znova.",
+      },
       { status: 500 }
     );
   }

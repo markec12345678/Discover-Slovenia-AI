@@ -6,6 +6,7 @@ import { Navigation } from "@/components/sections/navigation";
 import { Footer } from "@/components/sections/footer";
 import { Chatbot } from "@/components/chatbot";
 import { ItineraryPlanner } from "@/components/sections/itinerary-planner";
+import { GuidanceStrip } from "@/components/guidance/guidance-strip";
 import { TravelStyleQuiz } from "@/components/travel-style-quiz";
 import { CommunityTrips } from "@/components/sections/community-trips";
 import { Reveal } from "@/components/reveal";
@@ -104,6 +105,25 @@ export default async function PlanPage() {
             </p>
           </div>
         </section>
+
+        {/* ISSUE #24 Sklop 1 / P2-b (1.164.0) — VODENI TRAK NA NAČRTOVALNIKU:
+            ista deterministična jedrina plast kot na domovi (ena resnica o
+            stanju — §33), tokrat na naj gostejši površini produkta. Skriti
+            stanji: NEW_USER (first-run onboarding je domača pristojnost —
+            first-run kartica živi na /, tam ga pokriva; uporabnik, ki je
+            prišel PRAV SEM, želi načrtovati, ne odkrivati) in TRIP_BUILDING
+            (primarna akcija tega stanja je »Načrtuj potovanje« → /nacrtuj —
+            SAMO-POVEZAVA na tej strani; add-toast že ponuja enak naslednji
+            korak na vseh površinah — matrika stanj vrstica TRIP_BUILDING).
+            Vsa ostala stanja (TRIP_READY/BOOKING_PENDING/Go Mode/kompletirano)
+            se pokažejo iskreno. Zero feature loss — obstoječi CTA-ji
+            načrtovalnika ostajajo. */}
+        <div className="mx-auto w-full max-w-6xl px-4 pt-2">
+          <GuidanceStrip
+            surface="planner"
+            hideStates={["NEW_USER", "TRIP_BUILDING"]}
+          />
+        </div>
 
         {/* Jedro: AI načrtovalec (ob mountu prevzame heroQuery iz sessionStorage) */}
         <ItineraryPlanner />

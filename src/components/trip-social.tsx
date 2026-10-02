@@ -13,6 +13,7 @@ import {
   Send,
   Sparkles,
 } from "lucide-react";
+import { useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,7 +30,12 @@ import {
 // W2 (Issue #15, 1.131.0): skupinski klepet z @AI — živost (polling + socket)
 import { useTripChat, type TripChatItem } from "@/hooks/use-trip-chat";
 // W2: čisti helperji @AI (omemba, rezervirano ime, JSON priloga)
-import { AI_ADVISOR_NAME, isAiMention, parseAiPayload } from "@/lib/trip-chat";
+import {
+  AI_ADVISOR_NAME,
+  AI_ADVISOR_NAME_EN,
+  isAiMention,
+  parseAiPayload,
+} from "@/lib/trip-chat";
 // W2: "Dodaj v pot" — isti dodajalni algoritem kot klepet "+"
 // (addChatPlaceToItinerary). MEJA (issue #17 §5): ta gumb piše SAMO v
 // DELJENO pot (kolaborativni dokument, CAS PATCH) — osebne zbirke
@@ -101,7 +107,8 @@ interface TripSocialProps {
 }
 
 // ============================================================================
-// Slovenski helperji (ednina / dvojina / množina) — /pot je SL-only (P4-8)
+// Slovenski helperji (ednina / dvojina / množina) — SL oblike NESPREMENJENE;
+// /pot je od 1.164.0 (#24 Sklop 1) dvojezična {sl,en} (prej SL-only, P4-8)
 // ============================================================================
 
 /** Slovenščina: 1 → ednina, 2 → dvojina, 3–4 → množina, 5+ → splošna množina. */
@@ -113,49 +120,70 @@ function slUnit(n: number, one: string, two: string, few: string, many: string):
   return many;
 }
 
-/** "pred 2 min", "pred 3 h" — kratke oznake za manj kot uro. */
-function slTimeAgo(iso: string, floorIso?: string): string {
+/** "pred 2 min", "pred 3 h" — kratke oznake za manj kot uro.
+ *  ISSUE #24 Sklop 1 (1.164.0): lang "en" → EN oblike ("just now",
+ *  "2 min ago", …); SL oblike so BYTE-IDENTIČNE (prej SL-only). */
+function slTimeAgo(iso: string, floorIso?: string, lang: "sl" | "en" = "sl"): string {
   const ms = Date.parse(iso);
-  if (Number.isNaN(ms)) return "neznano";
+  if (Number.isNaN(ms)) return lang === "en" ? "unknown" : "neznano";
 
   // Sanity cap: komentar ne more biti starejši od potovanja samega
   // (pokvarjeni podatki) — v tem primeru pokažemo absolutni datum.
   if (floorIso) {
     const floor = Date.parse(floorIso);
     if (!Number.isNaN(floor) && ms < floor) {
-      return new Date(ms).toLocaleDateString("sl-SI", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
+      return new Date(ms).toLocaleDateString(
+        lang === "en" ? "en-GB" : "sl-SI",
+        {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }
+      );
     }
   }
 
   const seconds = Math.max(0, Math.floor((Date.now() - ms) / 1000));
-  if (seconds < 45) return "pravkar";
+  if (seconds < 45) return lang === "en" ? "just now" : "pravkar";
 
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) {
-    return `pred ${minutes} ${slUnit(minutes, "minuto", "minutama", "minutami", "minutami")}`;
+    return lang === "en"
+      ? `${minutes} min ago`
+      : `pred ${minutes} ${slUnit(minutes, "minuto", "minutama", "minutami", "minutami")}`;
   }
 
   const hours = Math.floor(minutes / 60);
   if (hours < 24) {
-    return `pred ${hours} ${slUnit(hours, "uro", "urama", "urami", "urami")}`;
+    return lang === "en"
+      ? `${hours} h ago`
+      : `pred ${hours} ${slUnit(hours, "uro", "urama", "urami", "urami")}`;
   }
 
   const days = Math.floor(hours / 24);
   if (days < 30) {
-    return `pred ${days} ${slUnit(days, "dnem", "dnevoma", "dnevi", "dnevi")}`;
+    return lang === "en"
+      ? days === 1
+        ? "1 day ago"
+        : `${days} days ago`
+      : `pred ${days} ${slUnit(days, "dnem", "dnevoma", "dnevi", "dnevi")}`;
   }
 
   const months = Math.floor(days / 30);
   if (months < 12) {
-    return `pred ${months} ${slUnit(months, "mesecem", "mesecema", "meseci", "meseci")}`;
+    return lang === "en"
+      ? months === 1
+        ? "1 month ago"
+        : `${months} months ago`
+      : `pred ${months} ${slUnit(months, "mesecem", "mesecema", "meseci", "meseci")}`;
   }
 
   const years = Math.floor(days / 365);
-  return `pred ${years} ${slUnit(years, "letom", "letoma", "leti", "leti")}`;
+  return lang === "en"
+    ? years === 1
+      ? "1 year ago"
+      : `${years} years ago`
+    : `pred ${years} ${slUnit(years, "letom", "letoma", "leti", "leti")}`;
 }
 
 /** Barva avatarja iz imena (stabilna za isto ime). */
@@ -172,13 +200,175 @@ function nameInitial(name: string): string {
   return first.toUpperCase();
 }
 
-/** "X osebam je všeč" — dativne oblike. */
-function likesLabel(n: number): string {
-  if (n === 0) return "Ni še všečkov";
+/** "X osebam je všeč" — dativne oblike.
+ *  ISSUE #24 Sklop 1 (1.164.0): lang "en" → EN oblike ("1 person likes
+ *  this trip" / "X people like this trip"); SL nespremenjena (prej SL-only). */
+function likesLabel(n: number, lang: "sl" | "en" = "sl"): string {
+  if (n === 0) return lang === "en" ? "No likes yet" : "Ni še všečkov";
+  if (lang === "en") {
+    return n === 1 ? "1 person likes this trip" : `${n} people like this trip`;
+  }
   const people =
     n === 1 ? "1 osebi" : n === 2 ? "2 osebama" : `${n} osebam`;
   return `${people} je to potovanje všeč`;
 }
+
+// ISSUE #24 Sklop 1 (1.164.0): L-vzorec {sl,en} — prej SL-only. SL nizi so
+// BYTE-IDENTIČNI nekdanjim JSX literalom (izris /pot se ne spremeni); EN je
+// prikazna plast za /en/pot/[shareId] (isti kanon kot TripPresence).
+const L = {
+  sl: {
+    /** aria odseka (všečki + klepet). */
+    sectionAria: "Skupinski klepet in všečki",
+    /** Naslov odseka. */
+    heading: "Skupinski klepet",
+    /** Značka živosti — socket povezan. */
+    liveBadge: "v živo",
+    /** Značka živosti — samo polling (iskrenost: prazen prostor ne laže). */
+    pollingBadge: "osveževanje vsakih 6 s",
+    /** Števec sporočil (SL rabi dvojino — slUnit). */
+    messageCount: (n: number) =>
+      n === 0
+        ? "Ni sporočil"
+        : `${n} ${slUnit(n, "sporočilo", "sporočili", "sporočila", "sporočil")}`,
+    /** Gumb všečka. */
+    likeBtn: "Všeč mi",
+    likeAria: "Označi to potovanje z všeček",
+    unlikeAria: "Odstrani všeček s tega potovanja",
+    /** sr-only predpona pred likesLabel (za bralnike). */
+    likeCountSr: "Število všečkov: ",
+    /** @AI pas — vzorec W9 (povedano je točno to, kar se zgodi). */
+    aiHintLead: "Omeni",
+    aiHintAsk: "v sporočilu in vprašaj npr.",
+    aiHintExample: "»@AI kje lahko večerjamo v Bledu?«",
+    aiHintTail:
+      "— svetovalec odgovarja vsem v klepetu, iz podatkov platforme (deterministično, z viri). Predlagane kraje doda v pot tisti, ki ureja pot.",
+    /** Prazno stanje klepeta. */
+    emptyHeading: "Trenutno ni sporočil — bodi prvi!",
+    emptyDescLead:
+      "Deli mnenje, se dogovori za termin (»vidimo se ob 9h pred jezerom«) ali vprašaj",
+    emptyDescTail: "svetovalca.",
+    historyAria: "Zgodovina klepeta",
+    /** Značka AI vrstice (strežniška). */
+    aiBadge: "deterministično · iz podatkov platforme",
+    /** Indikator tipkanja AI. */
+    aiTyping: (name: string) => `${name} piše …`,
+    /** Predlog kraja (PlaceSuggestion). */
+    inTrip: "V poti",
+    addBtn: "Dodaj v pot",
+    addAria: (name: string) => `Dodaj ${name} v pot`,
+    sourceChip: "uradni vir",
+    suggestionsAria: "Predlogi krajev AI svetovalca",
+    sourcesHeading: "Uradni viri",
+    /** Toasti — všeček. */
+    likeErrorTitle: "Všečka ni bilo mogoče shraniti",
+    likeErrorDesc: "Preveri povezavo in poskusi znova.",
+    /** Toasti — validacija obrazca. */
+    nameValidationTitle: "Vpiši svoje ime",
+    nameValidationDesc: (max: number) =>
+      `Ime mora imeti med 1 in ${max} znakov.`,
+    textValidationTitle: "Sporočilo je prekratko ali predolgo",
+    textValidationDesc: (max: number) =>
+      `Sporočilo mora imeti med 2 in ${max} znakov.`,
+    /** Toasti — objava. */
+    postedTitle: "Sporočilo je objavljeno",
+    postedDesc: "Hvala, da deliš mnenje s skupino!",
+    aiErrorTitle: "AI svetovalec trenutno ne more odgovoriti",
+    tryAgain: "Poskusi znova.",
+    postErrorTitle: "Sporočila ni bilo mogoče objaviti",
+    /** Toasti — "Dodaj v pot" (CAS PATCH deljene poti). */
+    tripNotPublic: "Pot ni javna ali ne obstaja.",
+    readError: (status: number) => `Napaka ${status} pri branju poti.`,
+    tripUnreadable: "Pot ni bilo mogoče prebrati — poskusi znova.",
+    duplicateTitle: "Kraj je že v poti",
+    duplicateDesc: (name: string) => `${name} je že načrtovan.`,
+    addFailTitle: "Kraja ni bilo mogoče dodati",
+    notAStopDesc: "Uradni vir je članek, ne fizični postanek.",
+    noDaysDesc: "Pot nima dni, kamor bi dodali kraj.",
+    addedTitle: "Dodano v pot",
+    addedDesc: (name: string, day: number) =>
+      `${name} je dodan v dan ${day}. Osvežujem stran …`,
+    addCatchTitle: "Kraja ni bilo mogoče dodati v pot",
+    casConflictDesc: "Pot je bila med tem spremenjena — poskusi znova.",
+    /** Obrazec. */
+    namePlaceholder: "Tvoje ime",
+    nameAria: "Tvoje ime",
+    messagePlaceholder:
+      "Deli mnenje z družino in prijatelji … ali vprašaj @AI",
+    messageAria: "Sporočilo v skupinski klepet",
+    /** Gumb @AI — vstavi omembo v vnosno polje (prej JSX literal
+     *  aria-label="Vstavi omembo @AI svetovalca v sporočilo"). */
+    aiInsertAria: "Vstavi omembo @AI svetovalca v sporočilo",
+    aiInsertTitle: "Vstavi @AI — svetovalec bo odgovoril v klepetu",
+    sending: "Pošiljam…",
+    send: "Pošlji",
+  },
+  en: {
+    sectionAria: "Group chat and likes",
+    heading: "Group chat",
+    liveBadge: "live",
+    pollingBadge: "refreshing every 6 s",
+    messageCount: (n: number) =>
+      n === 0 ? "No messages" : n === 1 ? "1 message" : `${n} messages`,
+    likeBtn: "I like it",
+    likeAria: "Like this trip",
+    unlikeAria: "Remove like from this trip",
+    likeCountSr: "Like count: ",
+    aiHintLead: "Mention",
+    aiHintAsk: "in your message and ask e.g.",
+    aiHintExample: "“@AI where can we have dinner in Bled?”",
+    aiHintTail:
+      "— the advisor answers everyone in the chat, from platform data (deterministic, with sources). Suggested places are added to the trip by whoever is editing it.",
+    emptyHeading: "No messages yet — be the first!",
+    emptyDescLead:
+      "Share your thoughts, agree on a time (“see you at 9 by the lake”) or ask the",
+    emptyDescTail: "advisor.",
+    historyAria: "Chat history",
+    aiBadge: "deterministic · from platform data",
+    aiTyping: (name: string) => `${name} is typing …`,
+    inTrip: "In trip",
+    addBtn: "Add to trip",
+    addAria: (name: string) => `Add ${name} to trip`,
+    sourceChip: "official source",
+    suggestionsAria: "AI advisor place suggestions",
+    sourcesHeading: "Official sources",
+    likeErrorTitle: "Your like could not be saved",
+    likeErrorDesc: "Check your connection and try again.",
+    nameValidationTitle: "Enter your name",
+    nameValidationDesc: (max: number) =>
+      `Your name must be between 1 and ${max} characters.`,
+    textValidationTitle: "Message is too short or too long",
+    textValidationDesc: (max: number) =>
+      `Your message must be between 2 and ${max} characters.`,
+    postedTitle: "Message posted",
+    postedDesc: "Thanks for sharing your thoughts with the group!",
+    aiErrorTitle: "The AI advisor cannot answer right now",
+    tryAgain: "Try again.",
+    postErrorTitle: "Message could not be posted",
+    tripNotPublic: "Trip is not public or does not exist.",
+    readError: (status: number) => `Error ${status} reading the trip.`,
+    tripUnreadable: "Trip could not be read — try again.",
+    duplicateTitle: "Place is already in the trip",
+    duplicateDesc: (name: string) => `${name} is already in the itinerary.`,
+    addFailTitle: "Place could not be added",
+    notAStopDesc: "An official source is an article, not a physical stop.",
+    noDaysDesc: "The trip has no days to add a place to.",
+    addedTitle: "Added to trip",
+    addedDesc: (name: string, day: number) =>
+      `${name} was added to day ${day}. Refreshing the page …`,
+    addCatchTitle: "Place could not be added to the trip",
+    casConflictDesc: "The trip was changed in the meantime — try again.",
+    namePlaceholder: "Your name",
+    nameAria: "Your name",
+    messagePlaceholder:
+      "Share your thoughts with family and friends … or ask @AI",
+    messageAria: "Message to the group chat",
+    aiInsertAria: "Insert an @AI advisor mention into your message",
+    aiInsertTitle: "Insert @AI — the advisor will answer in the chat",
+    sending: "Sending…",
+    send: "Send",
+  },
+} as const;
 
 // ============================================================================
 // AI mehurček — odgovor svetovalca s predlogi krajev + viri
@@ -190,12 +380,16 @@ function PlaceSuggestion({
   added,
   pending,
   onAdd,
+  lang,
 }: {
   place: ChatPlace;
   added: boolean;
   pending: boolean;
   onAdd: (place: ChatPlace) => void;
+  /** ISSUE #24 Sklop 1 (1.164.0): jezik predstavitve ({sl,en} — prej SL-only). */
+  lang: "sl" | "en";
 }) {
+  const t = L[lang];
   // Isti čisti varovali kot klepet "+": T2 uradni vir (članek) ni fizični
   // postanek — predloga izrišemo, gumba NE (1.44 kanon).
   const isStop =
@@ -214,7 +408,7 @@ function PlaceSuggestion({
             aria-live="polite"
           >
             <Check className="size-3" aria-hidden="true" />
-            V poti
+            {t.inTrip}
           </span>
         ) : (
           <Button
@@ -224,19 +418,19 @@ function PlaceSuggestion({
             className="h-7 shrink-0 gap-1 px-2 text-[11px]"
             onClick={() => onAdd(place)}
             disabled={pending}
-            aria-label={`Dodaj ${place.name} v pot`}
+            aria-label={t.addAria(place.name)}
           >
             {pending ? (
               <Loader2 className="size-3 animate-spin" aria-hidden="true" />
             ) : (
               <Plus className="size-3" aria-hidden="true" />
             )}
-            Dodaj v pot
+            {t.addBtn}
           </Button>
         )
       ) : (
         <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
-          uradni vir
+          {t.sourceChip}
         </span>
       )}
     </li>
@@ -254,6 +448,12 @@ export function TripSocial({
   createdAt,
 }: TripSocialProps) {
   const { toast } = useToast();
+
+  // ISSUE #24 Sklop 1 (1.164.0): jezik UI sledi lokalu strani (/en/pot → EN,
+  // sicer SL — isti kanon kot TripPresence; prej SL-only).
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  const t = L[lang];
 
   // === Klepet (W2): vrstice kronološko + živost + AI vprašanje ===
   const {
@@ -377,14 +577,14 @@ export function TripSocial({
       setLiked(prevLiked);
       setLikes(prevLikes);
       toast({
-        title: "Všečka ni bilo mogoče shraniti",
-        description: "Preveri povezavo in poskusi znova.",
+        title: t.likeErrorTitle,
+        description: t.likeErrorDesc,
         variant: "destructive",
       });
     } finally {
       setLikePending(false);
     }
-  }, [shareId, clientId, likePending, liked, likes, toast]);
+  }, [shareId, clientId, likePending, liked, likes, toast, t]);
 
   // === @AI žeton — vstavi na položaj kazalca v vnosno polje ===
   const insertAiMention = useCallback(() => {
@@ -418,16 +618,16 @@ export function TripSocial({
 
       if (name.length < 1 || name.length > AUTHOR_NAME_MAX) {
         toast({
-          title: "Vpiši svoje ime",
-          description: `Ime mora imeti med 1 in ${AUTHOR_NAME_MAX} znakov.`,
+          title: t.nameValidationTitle,
+          description: t.nameValidationDesc(AUTHOR_NAME_MAX),
           variant: "destructive",
         });
         return;
       }
       if (body.length < 2 || body.length > COMMENT_TEXT_MAX) {
         toast({
-          title: "Sporočilo je prekratko ali predolgo",
-          description: `Sporočilo mora imeti med 2 in ${COMMENT_TEXT_MAX} znakov.`,
+          title: t.textValidationTitle,
+          description: t.textValidationDesc(COMMENT_TEXT_MAX),
           variant: "destructive",
         });
         return;
@@ -469,8 +669,8 @@ export function TripSocial({
 
         if (!wantsAi) {
           toast({
-            title: "Sporočilo je objavljeno",
-            description: "Hvala, da deliš mnenje s skupino!",
+            title: t.postedTitle,
+            description: t.postedDesc,
           });
           return;
         }
@@ -483,23 +683,23 @@ export function TripSocial({
           surface: "trip-chat",
         });
         try {
-          await askAi(body);
+          // ISSUE #24 Sklop 1 (1.164.0): jezik odgovora sledi lokalu strani
+          // (prej: await askAi(body) — SL-only).
+          await askAi(body, lang);
           // Odgovor se doda prek appendLocal znotraj askAi — mehurček je
           // povratna informacija, toast bi bil odvečen.
         } catch (err) {
-          const message =
-            err instanceof Error ? err.message : "Poskusi znova.";
+          const message = err instanceof Error ? err.message : t.tryAgain;
           toast({
-            title: "AI svetovalec trenutno ne more odgovoriti",
+            title: t.aiErrorTitle,
             description: message,
             variant: "destructive",
           });
         }
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Poskusi znova.";
+        const message = err instanceof Error ? err.message : t.tryAgain;
         toast({
-          title: "Sporočila ni bilo mogoče objaviti",
+          title: t.postErrorTitle,
           description: message,
           variant: "destructive",
         });
@@ -507,7 +707,7 @@ export function TripSocial({
         setSubmitting(false);
       }
     },
-    [submitting, shareId, authorName, text, toast, appendLocal, emitChatSignal, askAi]
+    [submitting, shareId, authorName, text, toast, appendLocal, emitChatSignal, askAi, t]
   );
 
   // === "Dodaj v pot" — isti dodajalni algoritem kot klepet "+" (čisti
@@ -535,9 +735,7 @@ export function TripSocial({
         );
         if (!r.ok) {
           throw new Error(
-            r.status === 404
-              ? "Pot ni javna ali ne obstaja."
-              : `Napaka ${r.status} pri branju poti.`
+            r.status === 404 ? t.tripNotPublic : t.readError(r.status)
           );
         }
         const data: unknown = await r.json().catch(() => null);
@@ -553,27 +751,27 @@ export function TripSocial({
           it.days.length === 0 ||
           typeof version !== "number"
         ) {
-          throw new Error("Pot ni bilo mogoče prebrati — poskusi znova.");
+          throw new Error(t.tripUnreadable);
         }
 
         // 2. Čisti dodajalni algoritem (identičen klepetu "+" na /nacrtuj).
-        const result = addChatPlaceToItinerary(it, place, { locale: "sl" });
+        //    ISSUE #24 Sklop 1 (1.164.0): jezik notesov sledi lokalu strani
+        //    (prej: addChatPlaceToItinerary(it, place, { locale: "sl" })).
+        const result = addChatPlaceToItinerary(it, place, { locale: lang });
         if (!result.ok) {
           if (result.reason === "duplicate") {
             setAddedPlaceIds((prev) => new Set(prev).add(place.id));
             toast({
-              title: "Kraj je že v poti",
-              description: `${place.name} je že načrtovan.`,
+              title: t.duplicateTitle,
+              description: t.duplicateDesc(place.name),
             });
             return;
           }
           // no-days / not-a-stop — iskrena meja brez ugibanja
           toast({
-            title: "Kraja ni bilo mogoče dodati",
+            title: t.addFailTitle,
             description:
-              result.reason === "not-a-stop"
-                ? "Uradni vir je članek, ne fizični postanek."
-                : "Pot nima dni, kamor bi dodali kraj.",
+              result.reason === "not-a-stop" ? t.notAStopDesc : t.noDaysDesc,
             variant: "destructive",
           });
           return;
@@ -599,19 +797,18 @@ export function TripSocial({
 
         setAddedPlaceIds((prev) => new Set(prev).add(place.id));
         toast({
-          title: "Dodano v pot",
-          description: `${place.name} je dodan v dan ${result.day}. Osvežujem stran …`,
+          title: t.addedTitle,
+          description: t.addedDesc(place.name, result.day),
         });
         // RSC stran /pot — celotna osvežitev pobere svežo vsebino (isti
         // vzorec kot obnova revizije v TripCollaboration).
         setTimeout(() => window.location.reload(), 900);
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Poskusi znova.";
+        const message = err instanceof Error ? err.message : t.tryAgain;
         toast({
-          title: "Kraja ni bilo mogoče dodati v pot",
+          title: t.addCatchTitle,
           description: message.includes("sočasno urejanje")
-            ? "Pot je bila med tem spremenjena — poskusi znova."
+            ? t.casConflictDesc
             : message,
           variant: "destructive",
         });
@@ -619,18 +816,17 @@ export function TripSocial({
         setAddingPlaceId(null);
       }
     },
-    [shareId, addingPlaceId, toast]
+    [shareId, addingPlaceId, toast, t]
   );
 
-  const messageCountLabel = useMemo(() => {
-    const n = comments.length;
-    if (n === 0) return "Ni sporočil";
-    return `${n} ${slUnit(n, "sporočilo", "sporočili", "sporočila", "sporočil")}`;
-  }, [comments.length]);
+  const messageCountLabel = useMemo(
+    () => t.messageCount(comments.length),
+    [comments.length, t]
+  );
 
   return (
     <section
-      aria-label="Skupinski klepet in všečki"
+      aria-label={t.sectionAria}
       className="print-hide print:hidden"
     >
       <Card className="border-border/60">
@@ -642,7 +838,7 @@ export function TripSocial({
                 className="size-5 text-primary"
                 aria-hidden="true"
               />
-              Skupinski klepet
+              {t.heading}
             </h2>
             <div className="flex items-center gap-2">
               {/* Iskren indikator živosti: socket je KOZMETIČNA pospešitev
@@ -662,10 +858,10 @@ export function TripSocial({
                       className="size-1.5 rounded-full bg-emerald-600 motion-safe:animate-pulse"
                       aria-hidden="true"
                     />
-                    v živo
+                    {t.liveBadge}
                   </>
                 ) : (
-                  "osveževanje vsakih 6 s"
+                  t.pollingBadge
                 )}
               </span>
               <span className="text-sm text-muted-foreground">
@@ -683,11 +879,7 @@ export function TripSocial({
               onClick={() => void toggleLike()}
               disabled={likePending}
               aria-pressed={liked}
-              aria-label={
-                liked
-                  ? "Odstrani všeček s tega potovanja"
-                  : "Označi to potovanje z všeček"
-              }
+              aria-label={liked ? t.unlikeAria : t.likeAria}
               className="group h-11 gap-2 px-5"
             >
               {likePending ? (
@@ -703,14 +895,14 @@ export function TripSocial({
                   aria-hidden="true"
                 />
               )}
-              Všeč mi
+              {t.likeBtn}
             </Button>
             <span
               className="text-sm text-muted-foreground"
               aria-live="polite"
             >
-              <span className="sr-only">Število všečkov: </span>
-              {likesLabel(likes)}
+              <span className="sr-only">{t.likeCountSr}</span>
+              {likesLabel(likes, lang)}
             </span>
           </div>
 
@@ -723,14 +915,11 @@ export function TripSocial({
               <Bot className="size-4" />
             </span>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Omeni <strong className="font-semibold text-foreground">@AI</strong> v
-              sporočilu in vprašaj npr.{" "}
-              <em className="italic">
-                »@AI kje lahko večerjamo v Bledu?«
-              </em>{" "}
-              — svetovalec odgovarja vsem v klepetu, iz podatkov platforme
-              (deterministično, z viri). Predlagane kraje doda v pot tisti, ki
-              ureja pot.
+              {t.aiHintLead}{" "}
+              <strong className="font-semibold text-foreground">@AI</strong>{" "}
+              {t.aiHintAsk}{" "}
+              <em className="italic">{t.aiHintExample}</em>{" "}
+              {t.aiHintTail}
             </p>
           </div>
 
@@ -738,7 +927,7 @@ export function TripSocial({
           <div
             ref={scrollRef}
             className="scroll-area-custom mt-4 max-h-96 space-y-4 overflow-y-auto pr-2"
-            aria-label="Zgodovina klepeta"
+            aria-label={t.historyAria}
           >
             {comments.length === 0 && !aiPending ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
@@ -747,11 +936,10 @@ export function TripSocial({
                   aria-hidden="true"
                 />
                 <p className="text-sm text-muted-foreground">
-                  Trenutno ni sporočil — bodi prvi!
+                  {t.emptyHeading}
                 </p>
                 <p className="max-w-md text-xs text-muted-foreground/70">
-                  Deli mnenje, se dogovori za termin (»vidimo se ob 9h pred
-                  jezerom«) ali vprašaj <strong>@AI</strong> svetovalca.
+                  {t.emptyDescLead} <strong>@AI</strong> {t.emptyDescTail}
                 </p>
               </div>
             ) : (
@@ -787,11 +975,13 @@ export function TripSocial({
                           {c.isAI ? (
                             <>
                               <span className="font-semibold text-primary">
-                                {AI_ADVISOR_NAME}
+                                {lang === "en"
+                                  ? AI_ADVISOR_NAME_EN
+                                  : AI_ADVISOR_NAME}
                               </span>
                               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
                                 <Sparkles className="size-2.5" aria-hidden="true" />
-                                deterministično · iz podatkov platforme
+                                {t.aiBadge}
                               </span>
                             </>
                           ) : (
@@ -801,7 +991,9 @@ export function TripSocial({
                             dateTime={c.createdAt}
                             className="text-xs text-muted-foreground"
                           >
-                            {mounted ? slTimeAgo(c.createdAt, createdAt) : "…"}
+                            {mounted
+                              ? slTimeAgo(c.createdAt, createdAt, lang)
+                              : "…"}
                           </time>
                         </p>
                         <p
@@ -817,7 +1009,7 @@ export function TripSocial({
                         {/* AI PREDLOGI KRAJEV — gumb "Dodaj v pot" (isti
                             kanon kot klepet "+"); AI samo predlaga. */}
                         {aiPayload && aiPayload.places.length > 0 ? (
-                          <ul className="mt-2 space-y-1.5" aria-label="Predlogi krajev AI svetovalca">
+                          <ul className="mt-2 space-y-1.5" aria-label={t.suggestionsAria}>
                             {aiPayload.places.map((place) => (
                               <PlaceSuggestion
                                 key={place.id}
@@ -825,6 +1017,7 @@ export function TripSocial({
                                 added={addedPlaceIds.has(place.id)}
                                 pending={addingPlaceId === place.id}
                                 onAdd={(p) => void addPlaceToTrip(p)}
+                                lang={lang}
                               />
                             ))}
                           </ul>
@@ -836,7 +1029,7 @@ export function TripSocial({
                           <div className="mt-2 border-t border-border/60 pt-2">
                             <p className="mb-1.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                               <Landmark className="size-3" aria-hidden="true" />
-                              Uradni viri
+                              {t.sourcesHeading}
                             </p>
                             <ul className="space-y-1.5">
                               {aiPayload.sources.map(
@@ -885,7 +1078,9 @@ export function TripSocial({
                       <span className="size-1.5 animate-bounce rounded-full bg-primary/60 [animation-delay:150ms]" />
                       <span className="size-1.5 animate-bounce rounded-full bg-primary/60 [animation-delay:300ms]" />
                       <span className="ml-1 text-xs text-muted-foreground">
-                        {AI_ADVISOR_NAME} piše …
+                        {t.aiTyping(
+                          lang === "en" ? AI_ADVISOR_NAME_EN : AI_ADVISOR_NAME
+                        )}
                       </span>
                     </div>
                   </li>
@@ -902,11 +1097,11 @@ export function TripSocial({
             <Input
               value={authorName}
               onChange={(e) => setAuthorName(e.target.value)}
-              placeholder="Tvoje ime"
+              placeholder={t.namePlaceholder}
               required
               maxLength={AUTHOR_NAME_MAX}
               autoComplete="name"
-              aria-label="Tvoje ime"
+              aria-label={t.nameAria}
               className="h-11"
               disabled={submitting}
             />
@@ -914,11 +1109,11 @@ export function TripSocial({
               ref={textareaRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Deli mnenje z družino in prijatelji … ali vprašaj @AI"
+              placeholder={t.messagePlaceholder}
               required
               maxLength={COMMENT_TEXT_MAX}
               rows={3}
-              aria-label="Sporočilo v skupinski klepet"
+              aria-label={t.messageAria}
               className="min-h-[88px] resize-y"
               disabled={submitting}
             />
@@ -931,8 +1126,8 @@ export function TripSocial({
                   className="h-8 gap-1.5 px-2.5 text-xs"
                   onClick={insertAiMention}
                   disabled={submitting}
-                  aria-label="Vstavi omembo @AI svetovalca v sporočilo"
-                  title="Vstavi @AI — svetovalec bo odgovoril v klepetu"
+                  aria-label={t.aiInsertAria}
+                  title={t.aiInsertTitle}
                 >
                   <Bot className="size-3.5 text-primary" aria-hidden="true" />
                   @AI
@@ -952,12 +1147,12 @@ export function TripSocial({
                       className="size-4 animate-spin"
                       aria-hidden="true"
                     />
-                    Pošiljam…
+                    {t.sending}
                   </>
                 ) : (
                   <>
                     <Send className="size-4" aria-hidden="true" />
-                    Pošlji
+                    {t.send}
                   </>
                 )}
               </Button>

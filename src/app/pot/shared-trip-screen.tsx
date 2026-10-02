@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
+import { getLocale } from "next-intl/server";
 import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { safeJsonLd } from "@/lib/security";
@@ -50,6 +51,41 @@ import type { Itinerary, PlannerInput } from "@/lib/types";
 // Validna dolžina shareId (hex, 10 znakov) — zavrnemo očitno neveljavne
 // zahteve brez DB klica.
 const SHARE_ID_RE = /^[a-z0-9]{1,32}$/;
+
+// ISSUE #24 Sklop 1 (1.164.0): L-vzorec {sl,en} — prej SL-only (1.29.0
+// revizija #13 je bila /pot namenoma slovenska površina). SL nizi so
+// BAJTNO identični prejšnjim izpisom (source-contract testi jih assertingajo);
+// EN je usklajen z besednjakom v src/i18n/messages/en.json (»AI travel
+// plan around Slovenia«, »Open the full itinerary« …).
+const L = {
+  sl: {
+    /** Zasilno ime pote, kadar lastnik ni podal imena. */
+    nameFallback: "AI načrt potovanja po Sloveniji",
+    /** Oznaka dneva za dnevnik (zapolnitev vrzeli v zaporedju). */
+    dayLabel: (n: number) => `Dan ${n}`,
+    /** Oznaka dneva za dnevnik: „Dan N — destinacije“. */
+    dayLabelDests: (n: number, dests: string) => `Dan ${n} — ${dests}`,
+    /** JSON-LD TouristTrip description. */
+    jsonLdDescription: (dayCount: number, totalBudget: number) =>
+      `${dayCount}-dnevni AI načrt potovanja po Sloveniji. Skupni proračun ~€${totalBudget}.`,
+    /** JSON-LD itinerary item name. */
+    jsonLdDayName: (n: number) => `Dan ${n}`,
+    /** Noga PDF izvoza (vidna SAMO ob tiskanju). */
+    printFooter: "Izvoženo z Discover Slovenia AI",
+    /** Atribucijski pas embeda — povezava na polno stran. */
+    openFullItinerary: "Odpri celoten načrt",
+  },
+  en: {
+    nameFallback: "AI travel plan around Slovenia",
+    dayLabel: (n: number) => `Day ${n}`,
+    dayLabelDests: (n: number, dests: string) => `Day ${n} — ${dests}`,
+    jsonLdDescription: (dayCount: number, totalBudget: number) =>
+      `${dayCount}-day AI travel plan around Slovenia. Total budget ~€${totalBudget}.`,
+    jsonLdDayName: (n: number) => `Day ${n}`,
+    printFooter: "Exported with Discover Slovenia AI",
+    openFullItinerary: "Open the full itinerary",
+  },
+} as const;
 
 interface ScreenProps {
   shareId: string;
@@ -145,6 +181,13 @@ export async function SharedTripScreen({
     if (!roleAtLeast(role, "VIEWER")) notFound();
   }
 
+  // ISSUE #24 Sklop 1 (1.164.0): /pot površina je dvojezična {sl,en} —
+  // jezik strani (getLocale) nosi vsa besedila tega zaslona in izbiro
+  // dogodkov (prej SL-only, 1.29.0 revizija #13).
+  const locale = await getLocale();
+  const lang = locale === "en" ? "en" : "sl";
+  const t = L[lang];
+
   // SEO-2: tiskalna noga z DEJANSKO povezavo (prej mrtva domena);
   // D7: v embed načinu ISTA baza nosi atribucijski pas (Discover Slovenia
   // AI + „Odpri celoten načrt“) — en vir resnice za origin.
@@ -166,7 +209,7 @@ export async function SharedTripScreen({
     console.error("[pot] views increment napaka:", e);
   }
 
-  const name = saved.name || "AI načrt potovanja po Sloveniji";
+  const name = saved.name || t.nameFallback;
   const totalBudget =
     typeof saved.itinerary.total_budget === "number"
       ? saved.itinerary.total_budget
@@ -180,10 +223,11 @@ export async function SharedTripScreen({
     saved.itinerary.days,
     6,
     tripWindowMs(saved.itinerary.tripStartDate, saved.itinerary.days.length),
-    // 1.29.0 (revizija #13): /pot stran je SL-only površina (celoten
-    // SharedTrip izpis je slovenski) → dogodki eksplicitno v SL; EN
-    // prekrivna plast se uporabi samo v plannerju (/en/nacrtuj).
-    "sl"
+    // 1.29.0 (revizija #13): /pot je bila SL-only površina → dogodki
+    // eksplicitno v SL. ISSUE #24 Sklop 1 (1.164.0) je površino odprl za
+    // EN — dogodki sledijo jeziku strani (lang iz getLocale; EN
+    // prekrivna plast EVENTS_EN, isti mehanizem kot /en/nacrtuj).
+    lang
   );
 
   // === Začetni glasovi (locationKey → število) — izhodišče za UI (7-b) ===
@@ -370,11 +414,11 @@ export async function SharedTripScreen({
         .slice(0, 3)
         .join(" → ");
       while (dayLabels.length < dayNum) {
-        dayLabels.push(`Dan ${dayLabels.length + 1}`);
+        dayLabels.push(t.dayLabel(dayLabels.length + 1));
       }
       dayLabels[dayNum - 1] = dests
-        ? `Dan ${dayNum} — ${dests}`
-        : `Dan ${dayNum}`;
+        ? t.dayLabelDests(dayNum, dests)
+        : t.dayLabel(dayNum);
     }
   }
 
@@ -410,14 +454,14 @@ export async function SharedTripScreen({
     "@context": "https://schema.org",
     "@type": "TouristTrip",
     name,
-    description: `${dayCount}-dnevni AI načrt potovanja po Sloveniji. Skupni proračun ~€${totalBudget}.`,
+    description: t.jsonLdDescription(dayCount, totalBudget),
     itinerary: {
       "@type": "ItemList",
       numberOfItems: dayCount,
       itemListElement: saved.itinerary.days.map((day, i) => ({
         "@type": "ListItem",
         position: i + 1,
-        name: `Dan ${day.day}`,
+        name: t.jsonLdDayName(day.day),
         item: (day.locations ?? [])
           .map((l) => l.destination_name)
           .filter(Boolean)
@@ -520,7 +564,7 @@ export async function SharedTripScreen({
             rel="noopener noreferrer"
             className="hover:underline"
           >
-            Odpri celoten načrt
+            {t.openFullItinerary}
           </a>
         </footer>
       ) : (
@@ -619,7 +663,7 @@ export async function SharedTripScreen({
             className="mt-6 hidden border-t border-border pt-3 text-center text-xs text-muted-foreground print:block"
             aria-hidden="true"
           >
-            Izvoženo z Discover Slovenia AI · {`${base}/pot/${shareId}`}
+            {t.printFooter} · {`${base}/pot/${shareId}`}
           </p>
 
           {/* === PRINT QR (FW2-A) — QR deljive povezave v PDF izhodu; UI za

@@ -17,8 +17,15 @@ import { isValidChatPlace } from "@/lib/chat-add-place";
 import type { ChatPlace } from "@/lib/geo-intent";
 import type { StoCitation } from "@/lib/rag/types";
 
-/** Prikazno ime AI svetovalca v skupinskem klepetu (SL-only površina /pot). */
+/** Prikazno ime AI svetovalca v skupinskem klepetu — kanonično (DB) ime;
+ *  /pot je od 1.164.0 (#24 Sklop 1) dvojezična {sl,en}: EN prikaz je
+ *  AI_ADVISOR_NAME_EN (samo prikazna preklop — DB ime ostaja tole). */
 export const AI_ADVISOR_NAME = "AI svetovalec";
+
+/** ISSUE #24 Sklop 1 (1.164.0): prikazno ime AI svetovalca na EN površini
+ *  (/en/pot/…). DB ostaja kanonično SL ime (rezervirana imena že vsebujejo
+ *  "ai advisor" — ponarejanje ni mogoče); to je SAMO prikazna preklop. */
+export const AI_ADVISOR_NAME_EN = "AI Advisor";
 
 /**
  * Rezervirana imena — uporabnik jih NE sme uporabiti kot authorName

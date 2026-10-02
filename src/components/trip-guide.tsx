@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale } from "next-intl";
 import {
   BookOpen,
@@ -120,9 +120,116 @@ function relativniCas(date: Date, locale: string): string {
   return rtf.format(Math.round(sekunde / (86_400 * 365)), "year");
 }
 
+// === Besedila (SL privzeto, EN po locale gledalca) ===
+// ISSUE #24 Sklop 1 (1.164.0): L-vzorec {sl,en} razširjen na celo komponento —
+// prej že dvojezično (isEn ternariji v useMemo L), zdaj kanonska oblika
+// L = { sl, en } po TripPresence (isti kanon kot ostale /pot komponente).
+const L = {
+  sl: {
+    badge: "Vodnik",
+    title: "Vodnik avtorja poti",
+    authorLabel: "Avtor",
+    updated: "posodobljen",
+    tipsHeading: "Avtorjevi nasveti",
+    verdictHeading: "Kaj bi storil drugače",
+    generalTip: "Splošno",
+    dayLabel: "Dan",
+    editButton: "Uredi vodnik",
+    // Lastniški CTA (ni vodnika)
+    ctaTitle: "To pot si ustvaril ti — napiši vodnik",
+    ctaDescription:
+      "Povej drugim, zakaj ta pot, svoje nasvete iz terena in kaj bi storil drugače. Iskrenost pomaga bolj kot popolnost.",
+    ctaButton: "Napiši vodnik",
+    // Obrazec
+    formTitleNew: "Napiši vodnik",
+    formTitleEdit: "Uredi vodnik",
+    formDescription: "Tvoj vodnik bo viden vsem, ki odprejo to povezavo.",
+    nameLabel: "Tvoje ime",
+    namePlaceholder: "npr. Ana",
+    introLabel: "Zakaj ta pot",
+    introPlaceholder: "npr. Hoteli smo jezera in lahke pohode z otroki…",
+    tipsLabel: "Nasveti (1–6)",
+    tipPlaceholder: "npr. Vintgar pridi do 9. ure — vrsta se zavleče",
+    addTip: "Dodaj nasvet",
+    verdictLabel: "Kaj bi storil drugače (neobvezno)",
+    verdictPlaceholder: "npr. Drugi postankov dneva 3 bi izpustil — preveč vožnje",
+    saveButton: "Objavi vodnik",
+    savingButton: "Objavljam…",
+    cancelButton: "Prekliči",
+    charCount: (n: number, max: number) => `${n}/${max}`,
+    removeTipAria: "Odstrani nasvet",
+    optionalBadge: "neobvezno",
+    daySelectAria: "Kateri dan",
+    // Validacija + toasti (prej isEn ternariji znotraj validate/submit)
+    vName: () => `Ime mora imeti 1–${AUTHOR_MAX} znakov.`,
+    vIntro: () => `Uvod mora imeti ${INTRO_MIN}–${INTRO_MAX} znakov.`,
+    vTipRequired: "Dodaj vsaj en nasvet.",
+    vTipLength: () => `Vsak nasvet mora imeti ${TIP_TEXT_MIN}–${TIP_TEXT_MAX} znakov.`,
+    vVerdict: () => `»Kaj bi storil drugače« je omejen na ${VERDICT_MAX} znakov.`,
+    errFormTitle: "Preveri obrazec",
+    errTokenTitle: "Manjka avtorski žeton",
+    errTokenDesc: "Povezavo odpri v brskalniku, kjer si pot shranil.",
+    errSaveTitle: "Vodnika ni bilo mogoče shraniti",
+    errSaveDesc: "Poskusi znova.",
+    errNetworkDesc: "Preveri povezavo.",
+    okTitle: "Vodnik objavljen",
+    okDesc: "Videl ga bo vsak, ki odpre to povezavo.",
+  },
+  en: {
+    badge: "Guide",
+    title: "Guide by the author",
+    authorLabel: "By",
+    updated: "updated",
+    tipsHeading: "Author's tips",
+    verdictHeading: "What I'd do differently",
+    generalTip: "General",
+    dayLabel: "Day",
+    editButton: "Edit guide",
+    // Lastniški CTA (ni vodnika)
+    ctaTitle: "You created this trip — write a guide",
+    ctaDescription:
+      "Tell others why this route, your tips from the field, and what you'd do differently. Honesty helps more than perfection.",
+    ctaButton: "Write a guide",
+    // Obrazec
+    formTitleNew: "Write a guide",
+    formTitleEdit: "Edit guide",
+    formDescription: "Your guide is shown to everyone who opens this link.",
+    nameLabel: "Your name",
+    namePlaceholder: "e.g. Ana",
+    introLabel: "Why this route",
+    introPlaceholder: "e.g. We wanted lakes and easy hikes with kids…",
+    tipsLabel: "Tips (1–6)",
+    tipPlaceholder: "e.g. Arrive at Vintgar before 9 AM — queue gets long",
+    addTip: "Add a tip",
+    verdictLabel: "What I'd do differently (optional)",
+    verdictPlaceholder: "e.g. I'd skip day 3's second stop — too much driving",
+    saveButton: "Publish guide",
+    savingButton: "Publishing…",
+    cancelButton: "Cancel",
+    charCount: (n: number, max: number) => `${n}/${max}`,
+    removeTipAria: "Remove tip",
+    optionalBadge: "optional",
+    daySelectAria: "Which day",
+    vName: () => `Name must be 1–${AUTHOR_MAX} characters.`,
+    vIntro: () => `Intro must be ${INTRO_MIN}–${INTRO_MAX} characters.`,
+    vTipRequired: "Add at least one tip.",
+    vTipLength: () => `Each tip must be ${TIP_TEXT_MIN}–${TIP_TEXT_MAX} characters.`,
+    vVerdict: () => `“What I'd do differently” is limited to ${VERDICT_MAX} characters.`,
+    errFormTitle: "Check the form",
+    errTokenTitle: "Missing author token",
+    errTokenDesc: "Open this link in the browser where you saved the trip.",
+    errSaveTitle: "Guide could not be saved",
+    errSaveDesc: "Try again.",
+    errNetworkDesc: "Check your connection.",
+    okTitle: "Guide published",
+    okDesc: "Everyone who opens this link will see it.",
+  },
+} as const;
+
 export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
   const locale = useLocale();
-  const isEn = locale === "en";
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  const t = L[lang];
   const { toast } = useToast();
 
   const days = Math.max(1, Math.min(dayCount, 14));
@@ -192,28 +299,20 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
   function validate(): string | null {
     const name = authorName.trim();
     if (name.length < 1 || name.length > AUTHOR_MAX)
-      return isEn
-        ? `Name must be 1–${AUTHOR_MAX} characters.`
-        : `Ime mora imeti 1–${AUTHOR_MAX} znakov.`;
+      return t.vName();
     const introTrim = intro.trim();
     if (introTrim.length < INTRO_MIN || introTrim.length > INTRO_MAX)
-      return isEn
-        ? `Intro must be ${INTRO_MIN}–${INTRO_MAX} characters.`
-        : `Uvod mora imeti ${INTRO_MIN}–${INTRO_MAX} znakov.`;
-    const valid = tips.filter((t) => t.text.trim().length > 0);
+      return t.vIntro();
+    const valid = tips.filter((tip) => tip.text.trim().length > 0);
     if (valid.length < 1)
-      return isEn ? "Add at least one tip." : "Dodaj vsaj en nasvet.";
-    for (const t of valid) {
-      const len = t.text.trim().length;
+      return t.vTipRequired;
+    for (const tip of valid) {
+      const len = tip.text.trim().length;
       if (len < TIP_TEXT_MIN || len > TIP_TEXT_MAX)
-        return isEn
-          ? `Each tip must be ${TIP_TEXT_MIN}–${TIP_TEXT_MAX} characters.`
-          : `Vsak nasvet mora imeti ${TIP_TEXT_MIN}–${TIP_TEXT_MAX} znakov.`;
+        return t.vTipLength();
     }
     if (verdict.trim().length > VERDICT_MAX)
-      return isEn
-        ? `“What I'd do differently” is limited to ${VERDICT_MAX} characters.`
-        : `»Kaj bi storil drugače« je omejen na ${VERDICT_MAX} znakov.`;
+      return t.vVerdict();
     return null;
   }
 
@@ -224,7 +323,7 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
     const localError = validate();
     if (localError) {
       toast({
-        title: isEn ? "Check the form" : "Preveri obrazec",
+        title: t.errFormTitle,
         description: localError,
         variant: "destructive",
       });
@@ -234,10 +333,8 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
     const editToken = getEditToken(shareId);
     if (!editToken) {
       toast({
-        title: isEn ? "Missing author token" : "Manjka avtorski žeton",
-        description: isEn
-          ? "Open this link in the browser where you saved the trip."
-          : "Povezavo odpri v brskalniku, kjer si pot shranil.",
+        title: t.errTokenTitle,
+        description: t.errTokenDesc,
         variant: "destructive",
       });
       return;
@@ -257,7 +354,7 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
           tips: tips
             .filter((t) => t.text.trim().length > 0)
             .map((t) => ({ day: t.day, text: t.text.trim() })),
-          lang: isEn ? "en" : "sl",
+          lang,
         }),
       });
 
@@ -269,10 +366,8 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
 
       if (!res.ok || !data?.success || !data.guide) {
         toast({
-          title: isEn
-            ? "Guide could not be saved"
-            : "Vodnika ni bilo mogoče shraniti",
-          description: data?.error ?? (isEn ? "Try again." : "Poskusi znova."),
+          title: t.errSaveTitle,
+          description: data?.error ?? t.errSaveDesc,
           variant: "destructive",
         });
         return;
@@ -291,74 +386,19 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
         is_new: wasNew,
       });
       toast({
-        title: isEn ? "Guide published" : "Vodnik objavljen",
-        description: isEn
-          ? "Everyone who opens this link will see it."
-          : "Videl ga bo vsak, ki odpre to povezavo.",
+        title: t.okTitle,
+        description: t.okDesc,
       });
     } catch {
       toast({
-        title: isEn ? "Guide could not be saved" : "Vodnika ni bilo mogoče shraniti",
-        description: isEn ? "Check your connection." : "Preveri povezavo.",
+        title: t.errSaveTitle,
+        description: t.errNetworkDesc,
         variant: "destructive",
       });
     } finally {
       setSaving(false);
     }
   };
-
-  // === Besedila (SL privzeto, EN po locale gledalca) ===
-  const L = useMemo(
-    () => ({
-      badge: isEn ? "Guide" : "Vodnik",
-      title: isEn ? "Guide by the author" : "Vodnik avtorja poti",
-      authorLabel: isEn ? "By" : "Avtor",
-      updated: isEn ? "updated" : "posodobljen",
-      tipsHeading: isEn ? "Author's tips" : "Avtorjevi nasveti",
-      verdictHeading: isEn ? "What I'd do differently" : "Kaj bi storil drugače",
-      generalTip: isEn ? "General" : "Splošno",
-      dayLabel: isEn ? "Day" : "Dan",
-      editButton: isEn ? "Edit guide" : "Uredi vodnik",
-      // Lastniški CTA (ni vodnika)
-      ctaTitle: isEn
-        ? "You created this trip — write a guide"
-        : "To pot si ustvaril ti — napiši vodnik",
-      ctaDescription: isEn
-        ? "Tell others why this route, your tips from the field, and what you'd do differently. Honesty helps more than perfection."
-        : "Povej drugim, zakaj ta pot, svoje nasvete iz terena in kaj bi storil drugače. Iskrenost pomaga bolj kot popolnost.",
-      ctaButton: isEn ? "Write a guide" : "Napiši vodnik",
-      // Obrazec
-      formTitleNew: isEn ? "Write a guide" : "Napiši vodnik",
-      formTitleEdit: isEn ? "Edit guide" : "Uredi vodnik",
-      formDescription: isEn
-        ? "Your guide is shown to everyone who opens this link."
-        : "Tvoj vodnik bo viden vsem, ki odprejo to povezavo.",
-      nameLabel: isEn ? "Your name" : "Tvoje ime",
-      namePlaceholder: isEn ? "e.g. Ana" : "npr. Ana",
-      introLabel: isEn ? "Why this route" : "Zakaj ta pot",
-      introPlaceholder: isEn
-        ? "e.g. We wanted lakes and easy hikes with kids…"
-        : "npr. Hoteli smo jezera in lahke pohode z otroki…",
-      tipsLabel: isEn ? "Tips (1–6)" : "Nasveti (1–6)",
-      tipPlaceholder: isEn
-        ? "e.g. Arrive at Vintgar before 9 AM — queue gets long"
-        : "npr. Vintgar pridi do 9. ure — vrsta se zavleče",
-      addTip: isEn ? "Add a tip" : "Dodaj nasvet",
-      verdictLabel: isEn
-        ? "What I'd do differently (optional)"
-        : "Kaj bi storil drugače (neobvezno)",
-      verdictPlaceholder: isEn
-        ? "e.g. I'd skip day 3's second stop — too much driving"
-        : "npr. Drugi postankov dneva 3 bi izpustil — preveč vožnje",
-      saveButton: isEn ? "Publish guide" : "Objavi vodnik",
-      savingButton: isEn ? "Publishing…" : "Objavljam…",
-      cancelButton: isEn ? "Cancel" : "Prekliči",
-      charCount: (n: number, max: number) => `${n}/${max}`,
-      removeTipAria: isEn ? "Remove tip" : "Odstrani nasvet",
-      optionalBadge: isEn ? "optional" : "neobvezno",
-    }),
-    [isEn]
-  );
 
   // === Način 3: ni vodnika in ta brskalnik ni lastnik → nič ===
   if (!guide && !isOwner) return null;
@@ -373,15 +413,15 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
               <BookOpen className="size-5" aria-hidden="true" />
             </div>
             <div>
-              <p className="font-semibold">{L.ctaTitle}</p>
+              <p className="font-semibold">{t.ctaTitle}</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {L.ctaDescription}
+                {t.ctaDescription}
               </p>
             </div>
           </div>
           <Button onClick={openForm} className="shrink-0">
             <Pencil className="size-4" aria-hidden="true" />
-            {L.ctaButton}
+            {t.ctaButton}
           </Button>
         </CardContent>
       </Card>
@@ -397,17 +437,17 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
           <div className="flex flex-wrap items-center gap-2">
             <Badge className="border-primary/30 text-primary" variant="outline">
               <BookOpen className="size-3" aria-hidden="true" />
-              {L.badge}
+              {t.badge}
             </Badge>
             {guide.lang === "en" ? (
               <Badge variant="secondary">EN</Badge>
             ) : null}
           </div>
-          <CardTitle className="text-lg leading-snug">{L.title}</CardTitle>
+          <CardTitle className="text-lg leading-snug">{t.title}</CardTitle>
           <CardDescription>
-            {L.authorLabel} <span className="font-medium text-foreground">{guide.authorName}</span>
+            {t.authorLabel} <span className="font-medium text-foreground">{guide.authorName}</span>
             {" · "}
-            {L.updated} {relativniCas(updated, locale)}
+            {t.updated} {relativniCas(updated, locale)}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -419,7 +459,7 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
             <div>
               <h4 className="mb-2.5 flex items-center gap-1.5 text-sm font-semibold">
                 <MessageSquareText className="size-4 text-primary" aria-hidden="true" />
-                {L.tipsHeading}
+                {t.tipsHeading}
               </h4>
               <ul className="space-y-2">
                 {guide.tips.map((tip, i) => (
@@ -433,14 +473,14 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
                         className="w-fit shrink-0 font-medium"
                       >
                         <CalendarDays className="size-3" aria-hidden="true" />
-                        {L.dayLabel} {tip.day}
+                        {t.dayLabel} {tip.day}
                       </Badge>
                     ) : (
                       <Badge
                         variant="outline"
                         className="w-fit shrink-0 text-muted-foreground"
                       >
-                        {L.generalTip}
+                        {t.generalTip}
                       </Badge>
                     )}
                     <span className="text-sm leading-relaxed text-foreground/90">
@@ -457,7 +497,7 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
             <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
               <h4 className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-amber-700 dark:text-amber-400">
                 <Lightbulb className="size-4" aria-hidden="true" />
-                {L.verdictHeading}
+                {t.verdictHeading}
               </h4>
               <p className="text-sm italic leading-relaxed text-foreground/90">
                 {guide.verdict}
@@ -469,7 +509,7 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
           <CardFooter className="print:hidden">
             <Button variant="outline" size="sm" onClick={openForm}>
               <Pencil className="size-4" aria-hidden="true" />
-              {L.editButton}
+              {t.editButton}
             </Button>
           </CardFooter>
         ) : null}
@@ -485,22 +525,22 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg leading-snug">
-          {guide ? L.formTitleEdit : L.formTitleNew}
+          {guide ? t.formTitleEdit : t.formTitleNew}
         </CardTitle>
-        <CardDescription>{L.formDescription}</CardDescription>
+        <CardDescription>{t.formDescription}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-5" noValidate>
           {/* Avtorsko ime */}
           <div className="space-y-1.5">
             <label htmlFor="guide-author" className="text-sm font-medium">
-              {L.nameLabel}
+              {t.nameLabel}
             </label>
             <Input
               id="guide-author"
               value={authorName}
               onChange={(e) => setAuthorName(e.target.value)}
-              placeholder={L.namePlaceholder}
+              placeholder={t.namePlaceholder}
               maxLength={AUTHOR_MAX}
               autoComplete="name"
               required
@@ -510,26 +550,26 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
           {/* Zakaj ta pot */}
           <div className="space-y-1.5">
             <label htmlFor="guide-intro" className="text-sm font-medium">
-              {L.introLabel}
+              {t.introLabel}
             </label>
             <Textarea
               id="guide-intro"
               value={intro}
               onChange={(e) => setIntro(e.target.value)}
-              placeholder={L.introPlaceholder}
+              placeholder={t.introPlaceholder}
               rows={3}
               maxLength={INTRO_MAX}
               required
             />
             <p className="text-right text-xs text-muted-foreground">
-              {L.charCount(introLen, INTRO_MAX)}
+              {t.charCount(introLen, INTRO_MAX)}
             </p>
           </div>
 
           {/* Nasveti */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">{L.tipsLabel}</span>
+              <span className="text-sm font-medium">{t.tipsLabel}</span>
               {tips.length < TIPS_MAX ? (
                 <Button
                   type="button"
@@ -538,7 +578,7 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
                   onClick={addTip}
                 >
                   <Plus className="size-4" aria-hidden="true" />
-                  {L.addTip}
+                  {t.addTip}
                 </Button>
               ) : null}
             </div>
@@ -558,16 +598,16 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
                   >
                     <SelectTrigger
                       className="w-full"
-                      aria-label={isEn ? "Which day" : "Kateri dan"}
+                      aria-label={t.daySelectAria}
                     >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">{L.generalTip}</SelectItem>
+                      <SelectItem value="none">{t.generalTip}</SelectItem>
                       {Array.from({ length: days }, (_, i) => i + 1).map(
                         (d) => (
                           <SelectItem key={d} value={String(d)}>
-                            {L.dayLabel} {d}
+                            {t.dayLabel} {d}
                           </SelectItem>
                         )
                       )}
@@ -577,7 +617,7 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
                 <Input
                   value={tip.text}
                   onChange={(e) => updateTip(index, { text: e.target.value })}
-                  placeholder={L.tipPlaceholder}
+                  placeholder={t.tipPlaceholder}
                   maxLength={TIP_TEXT_MAX}
                   className="flex-1"
                 />
@@ -587,7 +627,7 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
                   size="icon"
                   onClick={() => removeTip(index)}
                   disabled={tips.length <= 1}
-                  aria-label={L.removeTipAria}
+                  aria-label={t.removeTipAria}
                   className="shrink-0"
                 >
                   <X className="size-4" aria-hidden="true" />
@@ -600,22 +640,22 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
               <label htmlFor="guide-verdict" className="text-sm font-medium">
-                {L.verdictLabel}
+                {t.verdictLabel}
               </label>
               <Badge variant="outline" className="text-muted-foreground">
-                {L.optionalBadge}
+                {t.optionalBadge}
               </Badge>
             </div>
             <Textarea
               id="guide-verdict"
               value={verdict}
               onChange={(e) => setVerdict(e.target.value)}
-              placeholder={L.verdictPlaceholder}
+              placeholder={t.verdictPlaceholder}
               rows={2}
               maxLength={VERDICT_MAX}
             />
             <p className="text-right text-xs text-muted-foreground">
-              {L.charCount(verdictLen, VERDICT_MAX)}
+              {t.charCount(verdictLen, VERDICT_MAX)}
             </p>
           </div>
 
@@ -627,7 +667,7 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
               ) : (
                 <Save className="size-4" aria-hidden="true" />
               )}
-              {saving ? L.savingButton : L.saveButton}
+              {saving ? t.savingButton : t.saveButton}
             </Button>
             {guide ? (
               <Button
@@ -636,7 +676,7 @@ export function TripGuide({ shareId, dayCount, initialGuide }: TripGuideProps) {
                 onClick={() => setEditing(false)}
                 disabled={saving}
               >
-                {L.cancelButton}
+                {t.cancelButton}
               </Button>
             ) : null}
           </div>

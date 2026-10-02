@@ -23,6 +23,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocale } from "next-intl";
 import {
   Card,
   CardContent,
@@ -82,15 +83,118 @@ interface ExpenseRow {
   isAuthor: boolean;
 }
 
-function eur(n: number): string {
-  return `${Math.round(n).toLocaleString("sl-SI")} €`;
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  within: "Znotraj proračuna",
-  exceeded: "Čez proračun",
-  uncertain: "Ni mogoče dokazati",
-};
+// ISSUE #24 Sklop 1 (1.164.0): L-vzorec {sl,en} — prej SL-only
+const L = {
+  sl: {
+    /** Stanja proračuna (budgetValidation) — iskrene oznake. */
+    statusLabels: {
+      within: "Znotraj proračuna",
+      exceeded: "Čez proračun",
+      uncertain: "Ni mogoče dokazati",
+    } as Record<string, string>,
+    /** Znesek v EUR — celo število, ločilo tisočic sl-SI. */
+    eur: (n: number) => `${Math.round(n).toLocaleString("sl-SI")} €`,
+    errorStatus: (status: number) => `Napaka ${status}`,
+    loadErrorCatch: "Proračun trenutno ni dosegljiv.",
+    toastIncompleteTitle: "Dopolni strošek",
+    toastIncompleteDesc: "Oznaka in znesek (večji od 0) sta obvezna.",
+    toastNotSavedTitle: "Strošek ni shranjen",
+    toastNotSavedNetworkDesc: "Omrežje ali strežnik trenutno ni dosegljiv.",
+    toastSavedTitle: "Strošek zabeležen",
+    cardTitle: "Proračun poti",
+    groupPersonWord: (n: number | null) => (n === 1 ? "oseba" : "oseb"),
+    planEstimateTitle: "Načrt (ocena)",
+    planEstimateNote: "Ocena iz cen postankov v načrtu",
+    fromPriceNote: (n: number) =>
+      ` · ${n} ${n === 1 ? "cena je" : "cen je"} „od" (spodnja meja)`,
+    unknownCostNote: (n: number) =>
+      ` · ${n} ${n === 1 ? "postanek brez" : "postankov brez"} znane cene (NE seštevamo)`,
+    goalWord: "cilj",
+    reservedTitle: "Rezervirano",
+    bookedCountNote: (n: number) =>
+      `${n} ${n === 1 ? "zapis" : "zapisov"} · uporabniško potrjeno`,
+    bookedEmpty: "Še nič rezerviranega z zneskom",
+    paidTitle: "Plačano",
+    paidCountNote: (n: number) =>
+      `${n} ${n === 1 ? "zapis" : "zapisov"} · uporabniško zabeleženo`,
+    paidEmpty: "Še nič zabeleženega plačila",
+    perPersonNote: (n: number | null, booked: string, paid: string) =>
+      `Na osebo (${n ?? ""}): rezervirano ${booked} · plačano ${paid}. Ocena načrta NI deljena na osebo (pokriva postanke, ki so delno isti predmet rezervacij).`,
+    badgePaid: "plačano",
+    badgeBooked: "rezervirano",
+    dayPrefix: (dayIndex: number) => `Dan ${dayIndex + 1} · `,
+    deleteExpenseAria: "Izbriši strošek",
+    expenseLabel: "Strošek",
+    expensePlaceholder: "npr. rafting na Soči",
+    amountLabel: "Znesek (EUR)",
+    amountPlaceholder: "npr. 45",
+    kindLabel: "Vrsta",
+    kindBookedOption: "Rezervirano (zaveza)",
+    kindPaidOption: "Plačano",
+    /** Vodilni presledek je izvirno stanje (byte-identičen SL izpis). */
+    dayOptionalLabel: " Dan (opcijsko)",
+    dayNoneOption: "Brez dneva",
+    dayOption: (n: number) => `Dan ${n}`,
+    amountClaimNote:
+      "Znesek je tvoja trditev (ne providerjeva potrditev) — izpisano kot uporabniško zabeleženo.",
+    submitButton: "Zabeleži",
+    cancelButton: "Prekliči",
+    addExpenseButton: "Zabeleži strošek",
+  },
+  en: {
+    statusLabels: {
+      within: "Within budget",
+      exceeded: "Over budget",
+      uncertain: "Cannot be verified",
+    } as Record<string, string>,
+    eur: (n: number) => `${Math.round(n).toLocaleString("en-GB")} €`,
+    errorStatus: (status: number) => `Error ${status}`,
+    loadErrorCatch: "The budget is currently unavailable.",
+    toastIncompleteTitle: "Complete the expense",
+    toastIncompleteDesc: "Label and amount (greater than 0) are required.",
+    toastNotSavedTitle: "Expense not saved",
+    toastNotSavedNetworkDesc: "Network or server is currently unreachable.",
+    toastSavedTitle: "Expense logged",
+    cardTitle: "Trip budget",
+    groupPersonWord: (n: number | null) => (n === 1 ? "person" : "people"),
+    planEstimateTitle: "Plan (estimate)",
+    planEstimateNote: "Estimate from stop prices in the plan",
+    fromPriceNote: (n: number) =>
+      ` · ${n} ${n === 1 ? "price is" : "prices are"} "from" (lower bound)`,
+    unknownCostNote: (n: number) =>
+      ` · ${n} ${n === 1 ? "stop without" : "stops without"} a known price (NOT summed)`,
+    goalWord: "target",
+    reservedTitle: "Reserved",
+    bookedCountNote: (n: number) =>
+      `${n} ${n === 1 ? "record" : "records"} · user-confirmed`,
+    bookedEmpty: "Nothing reserved with an amount yet",
+    paidTitle: "Paid",
+    paidCountNote: (n: number) =>
+      `${n} ${n === 1 ? "record" : "records"} · user-recorded`,
+    paidEmpty: "No payments logged yet",
+    perPersonNote: (n: number | null, booked: string, paid: string) =>
+      `Per person (${n ?? ""}): reserved ${booked} · paid ${paid}. The plan estimate is NOT divided per person (it covers stops that partly overlap with reservations).`,
+    badgePaid: "paid",
+    badgeBooked: "reserved",
+    dayPrefix: (dayIndex: number) => `Day ${dayIndex + 1} · `,
+    deleteExpenseAria: "Delete expense",
+    expenseLabel: "Expense",
+    expensePlaceholder: "e.g. rafting on the Soča",
+    amountLabel: "Amount (EUR)",
+    amountPlaceholder: "e.g. 45",
+    kindLabel: "Type",
+    kindBookedOption: "Reserved (commitment)",
+    kindPaidOption: "Paid",
+    dayOptionalLabel: "Day (optional)",
+    dayNoneOption: "No day",
+    dayOption: (n: number) => `Day ${n}`,
+    amountClaimNote:
+      "The amount is your own claim (not a provider confirmation) — shown as user-recorded.",
+    submitButton: "Log",
+    cancelButton: "Cancel",
+    addExpenseButton: "Log an expense",
+  },
+} as const;
 
 export function TripBudgetCard({
   shareId,
@@ -99,6 +203,9 @@ export function TripBudgetCard({
   shareId: string;
   dayCount: number;
 }) {
+  const locale = useLocale();
+  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  const t = L[lang];
   const { toast } = useToast();
   const [budget, setBudget] = useState<BudgetSummary | null>(null);
   const [expenses, setExpenses] = useState<ExpenseRow[]>([]);
@@ -127,16 +234,16 @@ export function TripBudgetCard({
         setBudget(data.budget ?? null);
         setLoadError(null);
       } else if (aggRes.status !== 404) {
-        setLoadError(`Napaka ${aggRes.status}`);
+        setLoadError(t.errorStatus(aggRes.status));
       }
       if (expRes.ok) {
         const data = (await expRes.json()) as { expenses?: ExpenseRow[] };
         setExpenses(data.expenses ?? []);
       }
     } catch {
-      setLoadError("Proračun trenutno ni dosegljiv.");
+      setLoadError(t.loadErrorCatch);
     }
-  }, [shareId]);
+  }, [shareId, t]);
 
   useEffect(() => {
     const cid = getVoterId();
@@ -150,8 +257,8 @@ export function TripBudgetCard({
     const amt = Number(amount.replace(",", "."));
     if (!label.trim() || !Number.isFinite(amt) || amt <= 0) {
       toast({
-        title: "Dopolni strošek",
-        description: "Oznaka in znesek (večji od 0) sta obvezna.",
+        title: t.toastIncompleteTitle,
+        description: t.toastIncompleteDesc,
       });
       return;
     }
@@ -176,8 +283,8 @@ export function TripBudgetCard({
           error?: string;
         } | null;
         toast({
-          title: "Strošek ni shranjen",
-          description: data?.error ?? `Napaka ${res.status}`,
+          title: t.toastNotSavedTitle,
+          description: data?.error ?? t.errorStatus(res.status),
         });
         return;
       }
@@ -185,16 +292,16 @@ export function TripBudgetCard({
       setAmount("");
       setFormOpen(false);
       await load(clientId);
-      toast({ title: "Strošek zabeležen" });
+      toast({ title: t.toastSavedTitle });
     } catch {
       toast({
-        title: "Strošek ni shranjen",
-        description: "Omrežje ali strežnik trenutno ni dosegljiv.",
+        title: t.toastNotSavedTitle,
+        description: t.toastNotSavedNetworkDesc,
       });
     } finally {
       setBusy(false);
     }
-  }, [amount, clientId, dayIndex, kind, label, load, shareId, toast]);
+  }, [amount, clientId, dayIndex, kind, label, load, shareId, t, toast]);
 
   const removeExpense = useCallback(
     async (id: string) => {
@@ -238,11 +345,11 @@ export function TripBudgetCard({
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Wallet className="size-5 text-primary" aria-hidden />
-          Proračun poti
+          {t.cardTitle}
           {budget?.groupSize != null ? (
             <Badge variant="secondary" className="ml-1 font-normal">
               {budget.groupSize}{" "}
-              {budget.groupSize === 1 ? "oseba" : "oseb"}
+              {t.groupPersonWord(budget.groupSize)}
             </Badge>
           ) : null}
         </CardTitle>
@@ -254,19 +361,17 @@ export function TripBudgetCard({
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-1.5 text-sm font-medium">
                 <CalendarClock className="size-4 text-muted-foreground" aria-hidden />
-                Načrt (ocena)
+                {t.planEstimateTitle}
               </span>
               <span className="text-sm font-semibold">
-                ~{eur(p.stopsTotal)}
+                ~{t.eur(p.stopsTotal)}
               </span>
             </div>
             <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-              Ocena iz cen postankov v načrtu
-              {p.fromPriceCount > 0
-                ? ` · ${p.fromPriceCount} ${p.fromPriceCount === 1 ? "cena je" : "cen je"} „od" (spodnja meja)`
-                : ""}
+              {t.planEstimateNote}
+              {p.fromPriceCount > 0 ? t.fromPriceNote(p.fromPriceCount) : ""}
               {p.unknownCostStops > 0
-                ? ` · ${p.unknownCostStops} ${p.unknownCostStops === 1 ? "postanek brez" : "postankov brez"} znane cene (NE seštevamo)`
+                ? t.unknownCostNote(p.unknownCostStops)
                 : ""}
               .
             </p>
@@ -278,7 +383,8 @@ export function TripBudgetCard({
                   <CircleAlert className="size-4 text-amber-600" aria-hidden />
                 )}
                 <span className="text-xs font-medium">
-                  {STATUS_LABELS[p.status] ?? p.status} (cilj {eur(p.budget)})
+                  {t.statusLabels[p.status] ?? p.status} ({t.goalWord}{" "}
+                  {t.eur(p.budget)})
                 </span>
               </div>
             ) : null}
@@ -291,32 +397,32 @@ export function TripBudgetCard({
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-1.5 text-sm font-medium">
                 <Receipt className="size-4 text-violet-600" aria-hidden />
-                Rezervirano
+                {t.reservedTitle}
               </span>
               <span className="text-sm font-semibold">
-                {budget ? eur(budget.booked.amount) : "—"}
+                {budget ? t.eur(budget.booked.amount) : "—"}
               </span>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
               {budget && budget.booked.count > 0
-                ? `${budget.booked.count} ${budget.booked.count === 1 ? "zapis" : "zapisov"} · uporabniško potrjeno`
-                : "Še nič rezerviranega z zneskom"}
+                ? t.bookedCountNote(budget.booked.count)
+                : t.bookedEmpty}
             </p>
           </div>
           <div className="rounded-lg border p-3">
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-1.5 text-sm font-medium">
                 <Banknote className="size-4 text-emerald-600" aria-hidden />
-                Plačano
+                {t.paidTitle}
               </span>
               <span className="text-sm font-semibold">
-                {budget ? eur(budget.paid.amount) : "—"}
+                {budget ? t.eur(budget.paid.amount) : "—"}
               </span>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
               {budget && budget.paid.count > 0
-                ? `${budget.paid.count} ${budget.paid.count === 1 ? "zapis" : "zapisov"} · uporabniško zabeleženo`
-                : "Še nič zabeleženega plačila"}
+                ? t.paidCountNote(budget.paid.count)
+                : t.paidEmpty}
             </p>
           </div>
         </div>
@@ -325,10 +431,11 @@ export function TripBudgetCard({
         {budget?.perPerson ? (
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Info className="size-3.5 shrink-0" aria-hidden />
-            Na osebo ({budget.groupSize}): rezervirano{" "}
-            {eur(budget.perPerson.booked)} · plačano {eur(budget.perPerson.paid)}
-            . Ocena načrta NI deljena na osebo (pokriva postanke, ki so delno
-            isti predmet rezervacij).
+            {t.perPersonNote(
+              budget.groupSize,
+              t.eur(budget.perPerson.booked),
+              t.eur(budget.perPerson.paid)
+            )}
           </p>
         ) : null}
 
@@ -347,20 +454,20 @@ export function TripBudgetCard({
                         variant="outline"
                         className="mr-1.5 border-emerald-600/40 text-emerald-700"
                       >
-                        plačano
+                        {t.badgePaid}
                       </Badge>
                     ) : (
                       <Badge
                         variant="outline"
                         className="mr-1.5 border-violet-600/40 text-violet-700"
                       >
-                        rezervirano
+                        {t.badgeBooked}
                       </Badge>
                     )}
-                    {e.dayIndex != null ? `Dan ${e.dayIndex + 1} · ` : ""}
+                    {e.dayIndex != null ? t.dayPrefix(e.dayIndex) : ""}
                     {e.label}
                   </span>
-                  <span className="shrink-0 font-medium">{eur(e.amountEur)}</span>
+                  <span className="shrink-0 font-medium">{t.eur(e.amountEur)}</span>
                   {e.isAuthor ? (
                     <Button
                       variant="ghost"
@@ -368,7 +475,7 @@ export function TripBudgetCard({
                       className="size-6 shrink-0 text-muted-foreground hover:text-destructive"
                       onClick={() => void removeExpense(e.id)}
                       disabled={busy}
-                      aria-label="Izbriši strošek"
+                      aria-label={t.deleteExpenseAria}
                     >
                       <Trash2 className="size-3.5" aria-hidden />
                     </Button>
@@ -382,28 +489,28 @@ export function TripBudgetCard({
             <div className="space-y-2.5 rounded-lg border p-3">
               <div className="grid gap-2.5 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="expense-label">Strošek</Label>
+                  <Label htmlFor="expense-label">{t.expenseLabel}</Label>
                   <Input
                     id="expense-label"
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
-                    placeholder="npr. rafting na Soči"
+                    placeholder={t.expensePlaceholder}
                     maxLength={120}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="expense-amount">Znesek (EUR)</Label>
+                  <Label htmlFor="expense-amount">{t.amountLabel}</Label>
                   <Input
                     id="expense-amount"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     inputMode="decimal"
-                    placeholder="npr. 45"
+                    placeholder={t.amountPlaceholder}
                     maxLength={10}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Vrsta</Label>
+                  <Label>{t.kindLabel}</Label>
                   <Select
                     value={kind}
                     onValueChange={(v) => setKind(v as "booked" | "paid")}
@@ -412,14 +519,16 @@ export function TripBudgetCard({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="booked">Rezervirano (zaveza)</SelectItem>
-                      <SelectItem value="paid">Plačano</SelectItem>
+                      <SelectItem value="booked">
+                        {t.kindBookedOption}
+                      </SelectItem>
+                      <SelectItem value="paid">{t.kindPaidOption}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 {dayCount > 0 ? (
                   <div className="space-y-1.5">
-                    <Label> Dan (opcijsko)</Label>
+                    <Label>{t.dayOptionalLabel}</Label>
                     <Select
                       value={dayIndex}
                       onValueChange={(v) => setDayIndex(v)}
@@ -428,10 +537,10 @@ export function TripBudgetCard({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Brez dneva</SelectItem>
+                        <SelectItem value="none">{t.dayNoneOption}</SelectItem>
                         {Array.from({ length: Math.min(dayCount, 30) }, (_, i) => (
                           <SelectItem key={i} value={String(i)}>
-                            Dan {i + 1}
+                            {t.dayOption(i + 1)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -440,15 +549,14 @@ export function TripBudgetCard({
                 ) : null}
               </div>
               <p className="text-[11px] leading-snug text-muted-foreground">
-                Znesek je tvoja trditev (ne providerjeva potrditev) — izpisano
-                kot uporabniško zabeleženo.
+                {t.amountClaimNote}
               </p>
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => void addExpense()} disabled={busy}>
                   {busy ? (
                     <Loader2 className="size-4 animate-spin" aria-hidden />
                   ) : null}
-                  Zabeleži
+                  {t.submitButton}
                 </Button>
                 <Button
                   size="sm"
@@ -456,7 +564,7 @@ export function TripBudgetCard({
                   onClick={() => setFormOpen(false)}
                   disabled={busy}
                 >
-                  Prekliči
+                  {t.cancelButton}
                 </Button>
               </div>
             </div>
@@ -468,7 +576,7 @@ export function TripBudgetCard({
               className="gap-1.5"
             >
               <Plus className="size-4" aria-hidden />
-              Zabeleži strošek
+              {t.addExpenseButton}
             </Button>
           )}
         </div>

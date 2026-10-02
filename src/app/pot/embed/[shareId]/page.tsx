@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getLocale } from "next-intl/server";
 import { getSharedItinerary } from "../../shared-trip-screen";
 import { SharedTripScreen } from "../../shared-trip-screen";
 
@@ -27,10 +28,15 @@ export async function generateMetadata({
 }: EmbedPageProps): Promise<Metadata> {
   const { shareId } = await params;
   const saved = await getSharedItinerary(shareId);
+  // ISSUE #24 Sklop 1 (1.164.0): /pot/embed je dvojezična — metadata sledi
+  // jeziku strani (prej SL-only, 1.29.0 revizija #13). Kanonični URL
+  // OSTAJA na slovenski polni strani (/pot/${shareId}).
+  const locale = await getLocale();
+  const isEn = locale === "en";
 
   if (!saved) {
     return {
-      title: "Itinerer ne obstaja",
+      title: isEn ? "Itinerary does not exist" : "Itinerer ne obstaja",
       robots: { index: false, follow: false },
     };
   }
@@ -39,7 +45,7 @@ export async function generateMetadata({
     // Embed iframe nima vidnega naslova — metadata je le za deljilne kartice
     // ob neposrednem obisku (blogger debug); template v layoutu sam pripne
     // " | Discover Slovenia AI".
-    title: saved.name || "AI načrt potovanja",
+    title: saved.name || (isEn ? "AI travel plan" : "AI načrt potovanja"),
     robots: {
       // Embed pote NIKOLI ni samostojna indeksna enota: X-Robots-Tag
       // (pravilo /pot/:path* v next.config.ts) + meta robots + canonical
