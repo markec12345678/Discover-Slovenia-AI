@@ -95,6 +95,8 @@ const VALID_EVENTS = new Set([
   "packing_item_checked",
   // F6.2: nastavitev osebnega proračunskega cilja
   "budget_goal_set",
+  // ISSUE #24 Sklop 4 (1.166.0): izbor vrste vozila za oceno stroškov vožnje
+  "budget_vehicle_changed",
   // F7: shranjen/urejen skupnostni vodnik na deljeni poti
   "guide_saved",
   // F9 "Pogovor z načrtu": zastavljeno vprašanje o načrtu

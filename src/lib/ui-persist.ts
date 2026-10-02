@@ -169,3 +169,61 @@ export function setBudgetGoal(n: number | null): void {
   goalSnapshot = n;
   goalListeners.forEach((l) => l());
 }
+
+// ---------------------------------------------------------------------------
+// VRSTA VOZILA ZA OCENO VOŽNJE (ISSUE #24 Sklop 4, 1.166.0)
+// ---------------------------------------------------------------------------
+// Uporabnikova preferenca (bencin/dizel/hibrid/EV) za izračun stroškov
+// vožnje v proračunski plošči in kartici kvalitete. Per-device UI vrednost
+// brez PII — isti vzorec kot proračunski cilj: useSyncExternalStore s
+// stabilnim primitivnim snapshotom (string), strežniški snapshot = privzeta
+// vrednost ("petrol"), da sta SSR in prvi klient render usklajena.
+
+import type { VehicleKind } from "@/lib/types";
+
+const VEHICLE_KEY = "dsa_budget_vehicle";
+
+let vehicleRaw: string | null = null;
+let vehicleSnapshot: VehicleKind = "petrol";
+const vehicleListeners = new Set<() => void>();
+
+function parseVehicle(raw: string | null): VehicleKind {
+  return raw === "diesel" || raw === "hybrid" || raw === "ev" || raw === "petrol"
+    ? raw
+    : "petrol"; // neznan/pokvarjen zapis → privzeta vrsta (ne izmišljujemo)
+}
+
+/** useSyncExternalStore subscribe za vrsto vozila. */
+export function subscribeBudgetVehicle(cb: () => void): () => void {
+  vehicleListeners.add(cb);
+  return () => {
+    vehicleListeners.delete(cb);
+  };
+}
+
+/** Klient snapshot — primitiv (string), vedno stabilen po vrednosti. */
+export function getBudgetVehicleSnapshot(): VehicleKind {
+  if (typeof window === "undefined") return "petrol";
+  const raw = localStorage.getItem(VEHICLE_KEY);
+  if (raw === vehicleRaw) return vehicleSnapshot;
+  vehicleSnapshot = parseVehicle(raw);
+  vehicleRaw = raw;
+  return vehicleSnapshot;
+}
+
+/** Strežniški snapshot (SSR/hidracija) — vedno privzeti bencin. */
+export function getServerBudgetVehicleSnapshot(): VehicleKind {
+  return "petrol";
+}
+
+/** Nastavi vrsto vozila (write + emit; neveljavna vrednost se tiho zavrne). */
+export function setBudgetVehicle(v: VehicleKind): void {
+  try {
+    localStorage.setItem(VEHICLE_KEY, v);
+    vehicleRaw = v;
+  } catch {
+    // Zasebni način — vrednost živi naprej v spominu
+  }
+  vehicleSnapshot = v;
+  vehicleListeners.forEach((l) => l());
+}

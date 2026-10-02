@@ -534,6 +534,13 @@ export interface ItineraryQuality {
 export type RoutingMethod = "osrm" | "heuristic" | "mixed";
 
 /**
+ * ISSUE #24 Sklop 4 (1.166.0): vrsta vozila za oceno stroškov vožnje
+ * (Roadtrippers vzorec). Profili (poraba + cena enote) živijo v
+ * src/lib/trip-costs.ts (VEHICLE_PROFILES) — tukaj samo pogodba tipa.
+ */
+export type VehicleKind = "petrol" | "diesel" | "hybrid" | "ev";
+
+/**
  * F5.3 — ocena stroškov vožnje (deterministično, iz km poti):
  * gorivo (km × poraba × cena/l) + slovenska e-vinjeta (izbrana po dolžini
  * potovanja). Vse predpostavke so razkrite v UI ("Kako smo izračunali")
@@ -543,16 +550,28 @@ export type RoutingMethod = "osrm" | "heuristic" | "mixed";
 export interface DriveCosts {
   /** Skupni kilometri poti (realne ceste prek OSRM, kadar je bil indeks nog podan; sicer haversine × 1.3 — zaokroženo na 5) */
   km: number;
-  /** Ocenjena poraba goriva v litrih (zaokroženo na 1) */
+  /**
+   * Ocenjena količina energije (zaokroženo na 1): litri goriva za
+   * bencin/dizel/hibrid; za EV kWh elektrike — enoto določa `vehicle`
+   * (ISSUE #24 Sklop 4: polje ostaja imenovano fuelLiters zaradi združljivosti
+   * s shranjenimi načrti in 7 obstoječih porabnikov; UI enoto izpiše pošteno).
+   */
   fuelLiters: number;
-  /** Ocenjeni strošek goriva v EUR (zaokroženo) */
+  /** Ocenjeni strošek goriva oz. elektrike v EUR (zaokroženo) */
   fuelEur: number;
   /** Veljavnost vinjete v dnevih: 1, 10, 62 (dvomesečna) ali 365 (letna) */
   vignetteDays: 1 | 10 | 62 | 365;
   /** Cena izbrane vinjete v EUR (vozila do 3,5 t) */
   vignetteEur: number;
-  /** Skupaj gorivo + vinjeta (EUR) */
+  /** Skupaj gorivo/elektrika + vinjeta (EUR) */
   totalEur: number;
+  /**
+   * ISSUE #24 Sklop 4 (1.166.0): vrsta vozila, za katero velja količina/cena
+   * (poraba in cena enote po VEHICLE_PROFILES). ODSOTNO = privzeti bencin
+   * (vsa obstoječa shranjena nalaganja strežnika ostanejo veljavna brez
+   * spremembe). Postavi ga izključno driveCostsForVehicle (UI plast).
+   */
+  vehicle?: VehicleKind;
 }
 
 // ============================================================================

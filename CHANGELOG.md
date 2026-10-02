@@ -7,6 +7,82 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.166.0] — 2026-10-02 (#24 Sklop 4: Strošek goriva po vrsti vozila)
+
+### Dodano
+
+- **STROŠEK GORIVA PO VRSTI VOZILA (P3 backlog, Roadtrippers vzorec).**
+  Proračunska plošča (BudgetPanel — /nacrtuj in /pot/[shareId]) poleg vrstic
+  stroškov ponudi **izbiro vrste vozila: bencin · dizel · hibrid · EV**
+  (dostopen radiogroup z ikonami Fuel/Leaf/BatteryCharging, obeh jezikov {sl,en}).
+  Izbor je uporabnikova **per-device preferenca** (localStorage
+  `dsa_budget_vehicle`, hidracijsko varno prek useSyncExternalStore po istem
+  vzorcu kot proračunski cilj) — strežniški izračun in shranjeni načrti
+  ostanejo NETAKNJENI: nova čista funkcija `driveCostsForVehicle(base, vehicle)`
+  prešteje gorivo/elektriko nad **OBSTOJEČIMI km iz izvira** (OSRM razdalje se
+  ohranijo — vrsta vozila ne spreminja poti); vinjeta ostane pri vseh vrstah
+  (e-vinjeta je cestnina za vozila do 3,5 t, ne davek na gorivo — tudi EV jo
+  potrebuje na avtocestah).
+- **Profili vozil `VEHICLE_PROFILES`** (razkriti, vsak s svojim virom):
+  bencin 6,5 l/100 km × 1,60 €/l (IZPELJAN iz obstoječih F5.3 konstant —
+  bit-identiteta privzete slike), dizel 5,5 l/100 km × 1,50 €/l (regulirani
+  pas gov.si), hibrid 4,5 l/100 km (bencinska cena), EV 18 kWh/100 km
+  (vključno z izgubami polnjenja) × 0,40 €/kWh (ocena javnega polnjenja —
+  pas široko razkrit, elektrika je najbolj nestanovitna postavka).
+- **Kartica kvalitete (ItineraryQualityCard)** bere ISTO preferenco — obe
+  površini (/nacrtuj detalji in /pot) prikazujeta USKLAJENE številke; oznaka
+  metrike sledi vrsti vozila (EV: »Elektrika + avtocestna vinjeta« /
+  »Charging + motorway vignette«).
+- **Telemetrija `budget_vehicle_changed`** (props: `vehicle`, `km`,
+  `fuel_eur` — samo ob SPREMEMBI izbire, brez PII): pariteta klient union ↔
+  strežniška VALID_EVENTS allowlista ohranjena + dokumentirana v zlatem
+  kanonu `docs/ANALYTICS-EVENTS.md` (doseg vzorca merljiv po §7 benchmarka).
+
+### Spremenjeno
+
+- **Formula v razkrivnostnem pasu je PODATKOVNO USMERJENA** (obe plošči):
+  prej utrjeno besedilo »× 6,5 l/100 km × 1,60 €/l« je nadomeščeno z
+  interpolacijo profila izbranega vozila (`VEHICLE_PROFILES[vehicle]`) —
+  besedilo NIKOLI več ne more lagati o tem, s čim je bila številka izračunana;
+  EV doda pas negotovosti elektrike (doma ~0,16 €, javno polnjenje
+  ~0,30–0,55 €, hitro polnjenje do 0,79 €/kWh; izgube polnjenja vključene v
+  porabi).
+- `DriveCosts` dobi **opcionalno polje `vehicle`** (odsotno = privzeti
+  bencin): vsi obstoječi porabniki (itinerary-quality, plan-facts,
+  plan-check, PDF, skupni itinerer) in vsi shranjeni načrti ostanejo
+  veljavni brez spremembe; strežniški `computeTripDriveCosts` polja NE
+  nastavlja (0 sprememb baze/API).
+
+### Testi
+
+- 34 novih testov (`issue24-s4-fuel-vehicle.test.ts`): funkcionalno
+  VEHICLE_PROFILES (4 profili, bit-identiteta bencina s F5.3 konstantami,
+  pozitivnost, enote, type guard) + driveCostsForVehicle (matematika vseh
+  profilov, ohranitev km/vinjete, idempotentnost, robni km=0) + združljivost
+  (strežniški izračun brez `vehicle`; preštevanje bencina identično — 0
+  tveganja) + source-contract obe plošči (a11y radiogroup, persist vzorec,
+  ODSTRANJENA utrjena konstanta, EV pas SL+EN, telemetrija samo ob
+  spremembi, fail-closed brez ocene vožnje) + ui-persist (ključ, strežniški
+  snapshot = bencin, emit) + analitika pariteta (union + allowlista + zlati
+  kanon) + tipi (VehicleKind, opcionalno polje).
+- Regresija: `bun test` 4.851 pass + 1 znana sandbox DB napaka (issue7-g11 ④,
+  CI-semantika) · lint 0 · tsc 0.
+
+### Iskrenost (meje, dokumentirane)
+
+- Cene so **ocene z razkritimi viri** (gov.si/AMZS regulirani pasovi goriv,
+  javne cene polnjenja) — dejanska črpalka/polnilnica se razlikuje; vsaka
+  številka pove svoje predpostavke (načelo P11).
+- EV pas je najširši (0,16–0,79 €/kWh glede na način polnjenja) — ocena
+  0,40 €/kWh je sredina javnega polnjenja in je kot taka izrecno
+  razkrita v UI; pri izbiri EV to stoji ob številki.
+- Ocene veljajo za osebna vozila (kombilimuzine do 3,5 t); rezervoarji/
+  avtodomi/kampiranji niso pokriti (iskren izpust, ne izmišljeni profil).
+- Vrsta vozila je preferenca NAPRAVE (ne lastnost načrta) — vsak sodelujoči
+  na deljeni poti vidi svojo izbiro na svoji napravi; strežniška shranjena
+  ocena ostaja privzeti bencin (vir resnice nespremenjen).
+
+---
 ## [1.165.0] — 2026-10-02 (#24 Sklop 3: Zemljevid mojih potovanj)
 
 ### Dodano

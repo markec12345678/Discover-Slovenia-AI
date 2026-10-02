@@ -184,6 +184,10 @@ export type PlannerEventName =
   | "packing_item_checked"
   // F6.2: nastavitev osebnega proračunskega cilja v primerjavo z načrtom
   | "budget_goal_set"
+  // ISSUE #24 Sklop 4 (1.166.0): izbor vrste vozila za oceno stroškov vožnje
+  // (vehicle = bencin/dizel/hibrid/EV; km iz OSRM izvira, fuel_eur = nova
+  // ocena goriva/elektrike nad profilom — dosega Roadtrippers vzorca merljiv)
+  | "budget_vehicle_changed"
   // F7: shranjen/urejen skupnostni vodnik na deljeni poti (avtor = lastnik)
   | "guide_saved"
   // F9 "Pogovor z načrtom": zastavljeno vprašanje o načrtu (source

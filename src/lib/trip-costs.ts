@@ -1,7 +1,7 @@
 import { DESTINATIONS } from "@/lib/slovenia-data";
 import { legKey, type LegRouteIndex } from "@/lib/road-routing";
 import { ROAD_FACTOR, haversineKm } from "@/lib/geo-distance";
-import type { DriveCosts, Itinerary } from "@/lib/types";
+import type { DriveCosts, Itinerary, VehicleKind } from "@/lib/types";
 
 // ============================================================================
 // TRIP DRIVE COSTS (F5.3) — ocena stroškov vožnje: gorivo + e-vinjeta
@@ -55,6 +55,109 @@ export function pickVignetteDays(days: number): DriveCosts["vignetteDays"] {
   if (days <= 10) return 10;
   if (days <= 62) return 62;
   return 365;
+}
+
+// --- ISSUE #24 Sklop 4 (1.166.0): strošek goriva po vrsti vozila ------------
+//
+// Roadtrippers vzorec (benchmark Round 2, P3): ocena goriva glede na to,
+// s čim uporabnik dejansko vozi. Profili so RAZKRITI (vsak svoj vir + pas
+// negotovosti), izbor je uporabnikova PREFERENCA (localStorage, ne shranjen
+// podatek načrta) — strežniški izračun ostane na privzetem bencinu (0
+// sprememb baze/API za shranjene načrte), UI pa prešteje prikaz s čisto
+// funkcijo driveCostsForVehicle nad OBSTOJEČIMI km (OSRM km se ohranijo —
+// vrsta vozila ne spreminja poti).
+//
+// Vinjeta ostane pri VSEH vrstah: e-vinjeta je cestnina za vozila do 3,5 t,
+// ne davek na gorivo — tudi EV jo potrebuje na avtocestah.
+
+export interface VehicleProfile {
+  /** Poraba na 100 km: bencin/dizel/hibrid v litrih; EV v kWh (vključno z
+   *  izgubami polnjenja ~15 % — javno objavljene povprečne vrednosti). */
+  consumptionPer100: number;
+  /** Cena enote: €/l (regulirani gorivi) ali €/kWh (EV — najbolj nestanovitna,
+   *  pas je širše razkrit v UI). */
+  pricePerUnit: number;
+  /** Enota količine za prikaz: "l" ali "kWh". */
+  unit: "l" | "kWh";
+}
+
+/**
+ * Profili vozil — vrednosti ob implementaciji (okt 2026), vsaka s svojim
+ * virom; UI izpiše pas negotovosti (načelo: vsaka številka pove svoje
+ * predpostavke — cena na črpalki/polnilnici se razlikuje).
+ */
+export const VEHICLE_PROFILES: Record<VehicleKind, VehicleProfile> = {
+  /** Privzeti profil — IZVOŽENI stalnici (bit-identično F5.3 obnašanje). */
+  petrol: {
+    consumptionPer100: FUEL_CONSUMPTION_L_PER_100,
+    pricePerUnit: FUEL_PRICE_EUR_PER_L,
+    unit: "l",
+  },
+  /** Dizel: regulirana maloprodajna cena pas ~1,45–1,55 €/l (gov.si);
+   *  poraba tipičnega dizelskega kombilimuzina. */
+  diesel: {
+    consumptionPer100: 5.5,
+    pricePerUnit: 1.5,
+    unit: "l",
+  },
+  /** Poln hibrid (bencinski): poraba ~30 % nižja od enakovrednega bencinskega;
+   *  gorivo NMB-95 (ista regulirana cena kot bencin). */
+  hybrid: {
+    consumptionPer100: 4.5,
+    pricePerUnit: FUEL_PRICE_EUR_PER_L,
+    unit: "l",
+  },
+  /** EV: poraba vključuje izgube polnjenja; cena elektrike je ŠIRŠA — doma
+   *  ~0,16 €/kWh, javno AC ~0,30–0,55 €/kWh, hitro polnjenje do ~0,79 €/kWh.
+   *  Ocena 0,40 €/kWh = sredina javnega polnjenja; UI pas obvezno pokaže. */
+  ev: {
+    consumptionPer100: 18,
+    pricePerUnit: 0.4,
+    unit: "kWh",
+  },
+};
+
+/** Vrstni red možnosti v UI (stabilen). */
+export const VEHICLE_KINDS: readonly VehicleKind[] = [
+  "petrol",
+  "diesel",
+  "hybrid",
+  "ev",
+] as const;
+
+/** Type guard za vrednost iz localStorage/UI. */
+export function isVehicleKind(v: unknown): v is VehicleKind {
+  return v === "petrol" || v === "diesel" || v === "hybrid" || v === "ev";
+}
+
+/**
+ * Preštej stroške vožnje za izbrano vrsto vozila nad OBSTOJEČO oceno
+ * (ISSUE #24 Sklop 4). Čista deterministična funkcija:
+ *
+ *   količina = round(km ÷ 100 × poraba profila)
+ *   energija = round(količina × cena enote profila)
+ *   skupaj   = energija + vinjeta (nespremenjena — cestnina, ne gorivo)
+ *
+ * - km in vinjeta se PREPIŠETA iz izvira (OSRM/hevristika ostane poštena —
+ *   vrsta vozila ne spreminja poti ne cestnine);
+ * - za "petrol" je rezultat bit-identičen privzetemu izračunu (isti formuli
+ *   in konstanti) — sprememba profila je brez tveganja;
+ * - fuelLiters za EV nosi kWh (enota v profilu; UI jo izpiše pošteno).
+ */
+export function driveCostsForVehicle(
+  base: DriveCosts,
+  vehicle: VehicleKind
+): DriveCosts {
+  const profile = VEHICLE_PROFILES[vehicle];
+  const quantity = Math.round((base.km / 100) * profile.consumptionPer100);
+  const fuelEur = Math.round(quantity * profile.pricePerUnit);
+  return {
+    ...base,
+    vehicle,
+    fuelLiters: quantity,
+    fuelEur,
+    totalEur: fuelEur + base.vignetteEur,
+  };
 }
 
 // --- Čisti izračun ---------------------------------------------------------

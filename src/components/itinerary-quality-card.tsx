@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { useLocale } from "next-intl";
 import {
   Car,
@@ -27,9 +27,14 @@ import {
 import { INTEREST_LABELS_EN } from "@/lib/stop-insights";
 import {
   computeTripDriveCosts,
-  FUEL_CONSUMPTION_L_PER_100,
-  FUEL_PRICE_EUR_PER_L,
+  driveCostsForVehicle,
+  VEHICLE_PROFILES,
 } from "@/lib/trip-costs";
+import {
+  getBudgetVehicleSnapshot,
+  getServerBudgetVehicleSnapshot,
+  subscribeBudgetVehicle,
+} from "@/lib/ui-persist";
 import type { DriveCosts, Itinerary, PlannerInput } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -92,6 +97,11 @@ export function ItineraryQualityCard({
   const locale = useLocale();
   const isEn = locale === "en";
 
+  // ISSUE #24 Sklop 4 (1.166.0): vrsta vozila je deljena per-device
+  // preferenca (ista kot v proračunski plošči) — obe površini prikazujeta
+  // USKLAJENE številke. km ostanejo iz izvira (OSRM); prešteje se samo
+  // gorivo/elektrika nad profilom (čista funkcija).
+
   // Metrike: shranjene (API) ali izračunane na mestu uporabe (stari načrti) —
   // ista čista funkcija, enak rezultat.
   const quality = useMemo(
@@ -102,9 +112,18 @@ export function ItineraryQualityCard({
   // F5.3: stroški vožnje ( gorivo + e-vinjeta) — shranjeno ali izračun na
   // mestu uporabe ( ISTA čista funkcija kot v API); null → brez vrstice
   // ( ne izmišljujemo, če koordinate niso znane).
-  const driveCosts: DriveCosts | null = useMemo(
+  const baseDriveCosts: DriveCosts | null = useMemo(
     () => quality.driveCosts ?? computeTripDriveCosts(itinerary) ?? null,
     [quality, itinerary]
+  );
+  const vehicle = useSyncExternalStore(
+    subscribeBudgetVehicle,
+    getBudgetVehicleSnapshot,
+    getServerBudgetVehicleSnapshot
+  );
+  const driveCosts: DriveCosts | null = useMemo(
+    () => (baseDriveCosts ? driveCostsForVehicle(baseDriveCosts, vehicle) : null),
+    [baseDriveCosts, vehicle]
   );
 
   // Utemeljitev: AI (sanitizirana) ali deterministična sestava; za stare
@@ -225,6 +244,16 @@ export function ItineraryQualityCard({
               ? "dvomesečna"
               : "letna";
 
+  // ISSUE #24 Sklop 4 (1.166.0): profil izbrane vrste vozila — formula v
+  // razkrivnostnem pasu je PODATKOVNO USMERJENA (nikoli utrjena konstanta).
+  const vehicleProfile = VEHICLE_PROFILES[vehicle];
+  const consFmt = isEn
+    ? String(vehicleProfile.consumptionPer100)
+    : String(vehicleProfile.consumptionPer100).replace(".", ",");
+  const priceFmt = isEn
+    ? vehicleProfile.pricePerUnit.toFixed(2)
+    : vehicleProfile.pricePerUnit.toFixed(2).replace(".", ",");
+
   return (
     <Card className={cn("overflow-hidden", className)}>
       <CardContent className="space-y-4 p-4 sm:p-5">
@@ -271,15 +300,22 @@ export function ItineraryQualityCard({
               <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Fuel className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
                 <span className="truncate">
-                  {isEn ? "Fuel + motorway vignette" : "Gorivo + avtocestna vinjeta"}
+                  {/* ISSUE #24 Sklop 4: oznaka sledi vrsti vozila (EV = polnjenje) */}
+                  {vehicle === "ev"
+                    ? isEn
+                      ? "Charging + motorway vignette"
+                      : "Elektrika + avtocestna vinjeta"
+                    : isEn
+                      ? "Fuel + motorway vignette"
+                      : "Gorivo + avtocestna vinjeta"}
                 </span>
               </dt>
               <dd className="mt-1 flex items-baseline gap-1.5 text-sm font-semibold">
                 ≈ {driveCosts.totalEur} €
                 <span className="text-[11px] font-normal text-muted-foreground">
                   ({isEn
-                    ? `fuel ${driveCosts.fuelEur} € + ${vignetteLabel} vignette ${driveCosts.vignetteEur} €`
-                    : `gorivo ${driveCosts.fuelEur} € + ${vignetteLabel} vinjeta ${driveCosts.vignetteEur} €`})
+                    ? `${vehicle === "ev" ? "charging" : "fuel"} ${driveCosts.fuelEur} € + ${vignetteLabel} vignette ${driveCosts.vignetteEur} €`
+                    : `${vehicle === "ev" ? "elektrika" : "gorivo"} ${driveCosts.fuelEur} € + ${vignetteLabel} vinjeta ${driveCosts.vignetteEur} €`})
                 </span>
               </dd>
             </div>
@@ -331,7 +367,14 @@ export function ItineraryQualityCard({
             {driveCosts && (
               <p>
                 <span className="font-medium text-foreground/80">
-                  {isEn ? "Fuel + vignette" : "Gorivo + vinjeta"}:
+                  {isEn
+                    ? vehicle === "ev"
+                      ? "Electricity + vignette"
+                      : "Fuel + vignette"
+                    : vehicle === "ev"
+                      ? "Elektrika + vinjeta"
+                      : "Gorivo + vinjeta"}
+                  :
                 </span>{" "}
                 {isEn ? (
                   <>
@@ -341,9 +384,14 @@ export function ItineraryQualityCard({
                       : quality.routingMethod === "mixed"
                         ? " (mostly actual roads, OSRM)"
                         : ""}{" "}
-                    × {FUEL_CONSUMPTION_L_PER_100} l/100 km
-                    × {FUEL_PRICE_EUR_PER_L.toFixed(2)} €/l (regulated NMB-95
-                    price band, gov.si/AMZS) ≈ {driveCosts.fuelEur} €. E-vignette
+                    × {consFmt} {vehicleProfile.unit}/100 km
+                    × €{priceFmt}/{vehicleProfile.unit}
+                    {vehicle === "ev"
+                      ? " (public charging estimate; home ~€0.16, fast up to €0.79/kWh — charging losses included in consumption)"
+                      : vehicle === "petrol"
+                        ? " (regulated NMB-95 price band, gov.si/AMZS)"
+                        : " (published Slovenian price lists, gov.si/AMZS)"}{" "}
+                    ≈ {driveCosts.fuelEur} €. E-vignette
                     for vehicles up to 3.5 t: {vignetteLabel} {driveCosts.vignetteEur} €
                     (DARS/AMZS price list, valid for the whole trip length of{" "}
                     {driveCosts.vignetteDays === 1
@@ -361,9 +409,14 @@ export function ItineraryQualityCard({
                       : quality.routingMethod === "mixed"
                         ? " (večinoma realne ceste, OSRM)"
                         : ""}{" "}
-                    × {FUEL_CONSUMPTION_L_PER_100} l/100 km
-                    × {FUEL_PRICE_EUR_PER_L.toFixed(2)} €/l ( regulirana cena
-                    NMB-95, pas gov.si/AMZS) ≈ {driveCosts.fuelEur} €. E-vinjeta
+                    × {consFmt} {vehicleProfile.unit}/100 km
+                    × {priceFmt} €/{vehicleProfile.unit}
+                    {vehicle === "ev"
+                      ? " (ocena javnega polnjenja; doma ~0,16 €, hitro do 0,79 €/kWh — v porabi so izgube polnjenja)"
+                      : vehicle === "petrol"
+                        ? " (regulirana cena NMB-95, pas gov.si/AMZS)"
+                        : " (objavljeni slovenski ceniki, gov.si/AMZS)"}{" "}
+                    ≈ {driveCosts.fuelEur} €. E-vinjeta
                     za vozila do 3,5 t: {vignetteLabel} {driveCosts.vignetteEur} €
                     ( cenik DARS/AMZS; pokriva {driveCosts.vignetteDays === 1
                       ? "1 dan potovanja"

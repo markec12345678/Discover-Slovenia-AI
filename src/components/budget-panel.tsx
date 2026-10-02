@@ -3,12 +3,16 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { useLocale } from "next-intl";
 import {
+  BatteryCharging,
   Car,
   ChevronDown,
+  Fuel,
   Landmark,
+  Leaf,
   Minus,
   Plus,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,15 +24,24 @@ import {
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { computeItineraryQuality } from "@/lib/itinerary-quality";
-import { computeTripDriveCosts } from "@/lib/trip-costs";
+import {
+  computeTripDriveCosts,
+  driveCostsForVehicle,
+  VEHICLE_KINDS,
+  VEHICLE_PROFILES,
+} from "@/lib/trip-costs";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
 import {
   getBudgetGoalSnapshot,
+  getBudgetVehicleSnapshot,
   getServerBudgetGoalSnapshot,
+  getServerBudgetVehicleSnapshot,
   setBudgetGoal,
+  setBudgetVehicle,
   subscribeBudgetGoal,
+  subscribeBudgetVehicle,
 } from "@/lib/ui-persist";
-import type { DriveCosts, Itinerary, PlannerInput } from "@/lib/types";
+import type { DriveCosts, Itinerary, PlannerInput, VehicleKind } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -53,6 +66,31 @@ interface BudgetPanelProps {
   variant?: "card" | "section";
   className?: string;
 }
+
+/** ISSUE #24 Sklop 4 (1.166.0): možnosti vrste vozila — ikone + dvojezične
+ *  oznake (bencin/dizel/hibrid/EV); vrstni red po VEHICLE_KINDS. */
+const VEHICLE_OPTIONS: {
+  kind: VehicleKind;
+  sl: string;
+  en: string;
+  Icon: LucideIcon;
+}[] = VEHICLE_KINDS.map((kind) => ({
+  kind,
+  sl:
+    kind === "petrol" ? "Bencin"
+    : kind === "diesel" ? "Dizel"
+    : kind === "hybrid" ? "Hibrid"
+    : "Električni",
+  en:
+    kind === "petrol" ? "Petrol"
+    : kind === "diesel" ? "Diesel"
+    : kind === "hybrid" ? "Hybrid"
+    : "Electric",
+  Icon:
+    kind === "hybrid" ? Leaf
+    : kind === "ev" ? BatteryCharging
+    : Fuel, // bencin in dizel — črpalka (razlikuje oznaka)
+}));
 
 /** Minimalen input za computeItineraryQuality (shranjeni načrti brez inputa). */
 function fallbackInput(itinerary: Itinerary): PlannerInput {
@@ -80,9 +118,25 @@ export function BudgetPanel({
       computeItineraryQuality(itinerary, input ?? fallbackInput(itinerary)),
     [itinerary, input]
   );
-  const driveCosts: DriveCosts | null = useMemo(
+  // Izvorna ocena vožnje: shranjena (strežnik) ali čista fallback funkcija.
+  const baseDriveCosts: DriveCosts | null = useMemo(
     () => quality.driveCosts ?? computeTripDriveCosts(itinerary) ?? null,
     [quality, itinerary]
+  );
+
+  // ISSUE #24 Sklop 4 (1.166.0): uporabnikova vrsta vozila (bencin/dizel/
+  // hibrid/EV) — gorivo se prešteje nad OBSTOJEČIMI km (OSRM razdalje se
+  // ohranijo: vozilo ne spreminja poti); vinjeta je cestnina in ostane pri
+  // vseh vrstah. Preferenca je per-device (localStorage), strežniški načrt
+  // se NE spreminja.
+  const vehicle = useSyncExternalStore(
+    subscribeBudgetVehicle,
+    getBudgetVehicleSnapshot,
+    getServerBudgetVehicleSnapshot
+  );
+  const driveCosts: DriveCosts | null = useMemo(
+    () => (baseDriveCosts ? driveCostsForVehicle(baseDriveCosts, vehicle) : null),
+    [baseDriveCosts, vehicle]
   );
 
   const attractionsEur = Math.max(0, Math.round(quality.estimatedCost));
@@ -200,7 +254,14 @@ export function BudgetPanel({
         <li className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-muted-foreground">
             <Car className="size-3.5" aria-hidden="true" />
-            {isEn ? "Driving (fuel + vignette)" : "Vožnja (gorivo + vinjeta)"}
+            {/* ISSUE #24 Sklop 4: oznaka sledi vrsti vozila (EV = polnjenje) */}
+            {vehicle === "ev"
+              ? isEn
+                ? "Driving (charging + vignette)"
+                : "Vožnja (elektrika + vinjeta)"
+              : isEn
+                ? "Driving (fuel + vignette)"
+                : "Vožnja (gorivo + vinjeta)"}
           </span>
           <span className="font-medium tabular-nums">{numberFmt(driveEur)}</span>
         </li>
@@ -213,6 +274,57 @@ export function BudgetPanel({
       </li>
     </ul>
   );
+
+  // --- ISSUE #24 Sklop 4 (1.166.0): izbira vrste vozila za oceno vožnje ---
+  // Pošteno nad obstoječo formulo: izbor je PREFERENCA (localStorage), km iz
+  // OSRM ostanejo nespremenjeni, predpostavke profila so razkrite spodaj v
+  // „Kako smo izračunali“ (vsaka številka pove svoje predpostavke).
+  const vehiclePicker = baseDriveCosts ? (
+    <div className="mt-3 flex flex-wrap items-center gap-1.5">
+      <span
+        id="dsa-vehicle-label"
+        className="mr-0.5 text-xs text-muted-foreground"
+      >
+        {isEn ? "Vehicle:" : "Vozilo:"}
+      </span>
+      <div
+        role="radiogroup"
+        aria-labelledby="dsa-vehicle-label"
+        className="flex flex-wrap items-center gap-1.5"
+      >
+        {VEHICLE_OPTIONS.map(({ kind, sl, en, Icon }) => {
+          const active = vehicle === kind;
+          return (
+            <button
+              key={kind}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => {
+                if (kind === vehicle) return;
+                setBudgetVehicle(kind);
+                const next = driveCostsForVehicle(baseDriveCosts, kind);
+                trackPlannerEvent("budget_vehicle_changed", {
+                  vehicle: kind,
+                  km: baseDriveCosts.km,
+                  fuel_eur: next.fuelEur,
+                });
+              }}
+              className={cn(
+                "inline-flex min-h-9 items-center gap-1 rounded-md border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                active
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border/60 bg-card text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+              )}
+            >
+              <Icon className="size-3.5" aria-hidden="true" />
+              {isEn ? en : sl}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  ) : null;
 
   // --- Razdelitev na osebo ---
   const splitter = (
@@ -322,6 +434,16 @@ export function BudgetPanel({
   );
 
   // --- Iskrena razkrivnost ---
+  // ISSUE #24 Sklop 4: formula je PODATKOVNO USMERJENA (profil vozila po
+  // VEHICLE_PROFILES) — nikoli več utrjena konstanta v besedilu; EV doda
+  // pas negotovosti elektrike (najbolj nestanovitna postavka).
+  const vehicleProfile = VEHICLE_PROFILES[vehicle];
+  const consFmt = isEn
+    ? String(vehicleProfile.consumptionPer100)
+    : String(vehicleProfile.consumptionPer100).replace(".", ",");
+  const priceFmt = isEn
+    ? vehicleProfile.pricePerUnit.toFixed(2)
+    : vehicleProfile.pricePerUnit.toFixed(2).replace(".", ",");
   const howBlock = (
     <Collapsible open={howOpen} onOpenChange={setHowOpen}>
       <CollapsibleTrigger asChild>
@@ -346,8 +468,16 @@ export function BudgetPanel({
           {driveCosts && (
             <p>
               {isEn
-                ? `Driving: ${driveCosts.km} km × 6.5 l/100 km × €1.60/l + vignette (€${driveCosts.vignetteEur}) — published Slovenian price lists (AMZS/DARS).`
-                : `Vožnja: ${driveCosts.km} km × 6,5 l/100 km × 1,60 €/l + vinjeta (${driveCosts.vignetteEur} €) — objavljeni slovenski ceniki (AMZS/DARS).`}
+                ? `Driving: ${driveCosts.km} km × ${consFmt} ${vehicleProfile.unit}/100 km × €${priceFmt}/${vehicleProfile.unit} + vignette (€${driveCosts.vignetteEur}) — published Slovenian price lists (AMZS/DARS).${
+                    vehicle === "ev"
+                      ? " Charging losses are included in consumption; electricity varies the most: home ~€0.16, public ~€0.30–0.55, fast charging up to €0.79/kWh."
+                      : " Actual pump price varies."
+                  }`
+                : `Vožnja: ${driveCosts.km} km × ${consFmt} ${vehicleProfile.unit}/100 km × ${priceFmt} €/${vehicleProfile.unit} + vinjeta (${driveCosts.vignetteEur} €) — objavljeni slovenski ceniki (AMZS/DARS).${
+                    vehicle === "ev"
+                      ? " V porabi so izgube polnjenja; elektrika je najbolj nestanovitna: doma ~0,16 €, javno polnjenje ~0,30–0,55 €, hitro do 0,79 €/kWh."
+                      : " Dejanska črpalka se razlikuje."
+                  }`}
             </p>
           )}
           <p className="font-medium text-foreground/80">
@@ -369,6 +499,7 @@ export function BudgetPanel({
   const body = (
     <>
       {rows}
+      {vehiclePicker}
       {budgetStatusBlock && <div className="mt-3">{budgetStatusBlock}</div>}
       {splitter}
       {goalBlock}
