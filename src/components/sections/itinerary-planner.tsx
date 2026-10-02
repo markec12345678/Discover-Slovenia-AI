@@ -2140,6 +2140,15 @@ export function ItineraryPlanner() {
               version: upd.contentVersion,
             }),
           });
+          // ISSUE #22 REMAINING (1.163.2): uspešna POSODOBITEV na mestu je
+          // tudi uspešno shranjevanje — zapiši/osveži vnos v Moja potovanja
+          // (strežniško ime je kanon; fallback iz destinacij). Popravek
+          // vrzeli iz produkcijskega dokaza #22 (drugi klik Shrani po
+          // obnovitvi revizije prej ni zapisal ničesar).
+          addSavedTrip(
+            linked.shareId,
+            upd.name ?? deriveSavedTripName(itinerary)
+          );
           return;
         } catch (e) {
           // 409 (sočasno urejanje) / napaka → iskren padec v klasično pot:

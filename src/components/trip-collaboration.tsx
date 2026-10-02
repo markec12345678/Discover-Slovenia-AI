@@ -60,6 +60,10 @@ import {
   updateItinerary,
   type RevisionMeta,
 } from "@/lib/itinerary-share";
+import {
+  addSavedTrip,
+  deriveSavedTripName,
+} from "@/lib/my-trips-storage";
 
 type Role = "OWNER" | "EDITOR" | "COMMENTER" | "VIEWER" | "NONE";
 
@@ -334,11 +338,17 @@ export function TripCollaboration({
       setActionError(null);
       try {
         const content = await fetchTripRevisionContent(shareId, version);
-        await updateItinerary(
+        const upd = await updateItinerary(
           shareId,
           content,
           agg.version.contentVersion
         );
+        // 1.163.2 (#22 REMAINING): uspešna obnovitev (CAS posodobitev) je
+        // TUDI shranjevanje — zapiši/osveži vnos v Moja potovanja, da je
+        // pot pošteno vidna tudi po zamenjavi naprave/brskalnika in ni
+        // izpuščena iz prevzema ob prijavi (strežniško ime je kanon,
+        // fallback iz destinacij).
+        addSavedTrip(shareId, upd.name ?? deriveSavedTripName(content));
         setRestoreState("done");
         // RSC stran /pot/[shareId] — celotna osvežitev pobere svežo
         // vsebino + novo verzijo (pošteno in preprosto).

@@ -7,6 +7,38 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.163.2] — 2026-10-02 (#22 REMAINING: vrzel update-pot)
+
+### Popravljeno
+
+- **Vrzel »update-pot« iz produkcijskega dokaza #22 (REMAINING).** Načelo
+  »ob vsakem uspešnem shranjevanju zapiši shareId v Moja potovanja«
+  (glava `my-trips-storage.ts`) je kršili trije uspešni klici
+  `updateItinerary` (CAS PATCH — uspešen LE z urejevalno pravico na
+  napravi), ki so `return`ali BREZ `addSavedTrip`:
+  1. `itinerary-planner.tsx` — handleSaveShare POSODOBITEV veja (zdaj:
+     klic pred `return`, za `savedUpdatedToast`),
+  2. `trip-collaboration.tsx` — `restoreVersion` »drugi klik Shrani po
+     restore« (zdaj: pred `setRestoreState("done")`),
+  3. `trip-social.tsx` — skupinski klepet »Dodaj v pot« (zdaj: za uspešnim
+     CAS, pred telemetrijo).
+  Posledica prej: pot, posodobljena z druge naprave/brskalnika, po
+  shranitvi NI bila v Moja potovanja in je bila izpuščena iz prevzema ob
+  prijavi. Ime vnosa: strežniški kanon `upd.name` (vrača ga
+  `updateItinerary`) s fallbackom `deriveSavedTripName(itinerary)`;
+  `addSavedTrip` deduplicira (osveži `savedAt`/ime, brez dvojnih vrstic,
+  premik na vrh seznama). 15 novih testov
+  (`issue22b-my-trips-update-tracking.test.ts`): source-contract za vsa
+  tri mesta (natančna oblika klica, vrstni red pred return, uvozi) +
+  ZERO-LOSS varovalke (novi POST tok, issue4-wave5 CAS pogoji veje,
+  w2 skupinski-klepet signatura, meja #17 §5 — osebna zbirka postankov
+  nedotaknjena) + funkcionalna semantika (prazna naprava → vnos, dedup +
+  osveženo ime/čas, fallback ime, premik na vrh, različne poti se ne
+  deduplicirajo). Z vsemi šestimi mesti je seznam Moja potovanja zdaj
+  skladen z načelom ob vsakem uspešnem shranjevanju.
+
+---
+
 ## [1.163.1] — 2026-10-01 (#23 PRODUKCIJSKI DOKAZI)
 
 ### Dodano

@@ -79,8 +79,13 @@ pripravi pošteno dokumentirani v evidence README.
 **REMAINING (iskrene vrzeli, ne blokerji):**
 - Jutranja produkcijska slika ZAČNI DAN (seja pred 11:00) — logika je
   ista čista projekcija, utrjena s testi.
-- Opažena vrzel PRED #22: shranjevanje obnovljenega načrta (update-pot)
+- ~~Opažena vrzel PRED #22: shranjevanje obnovljenega načrta (update-pot)
   ne pokliče `addSavedTrip` → vnos v dai:my-trips je treba predhodno
-  sprožiti (prva shranitev ga zapiše). Zabeleženo; ne blokira #22.
+  sprožiti (prva shranitev ga zapiše).~~ **ZAPRTA v 1.163.2** — vsi trije
+  uspešni `updateItinerary` klici (planner POSODOBITEV veja,
+  `restoreVersion`, skupinski klepet „Dodaj v pot") zdaj zapišejo/osvežijo
+  vnos z imenom strežnika (`upd.name ?? deriveSavedTripName`); 15 testov
+  v `issue22b-my-trips-update-tracking.test.ts` (source-contract +
+  ZERO-LOSS varovalke + funkcionalna semantika).
 - Vreme 502 na Renderu (izven obsega #22, kot v #21).
 - Vercel deploy (kvota/GitHub App — priporočilo iz #21 ostaja).

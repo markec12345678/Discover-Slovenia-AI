@@ -42,6 +42,10 @@ import {
 import type { ChatPlace } from "@/lib/geo-intent";
 // W2: CAS posodobitev deljene poti na mestu (+ editToken iz localStorage)
 import { getEditToken, updateItinerary } from "@/lib/itinerary-share";
+import {
+  addSavedTrip,
+  deriveSavedTripName,
+} from "@/lib/my-trips-storage";
 import type { Itinerary } from "@/lib/types";
 import type { StoCitation } from "@/lib/rag/types";
 // W2: telemetrija skupinskega klepeta (isti vir kot planner dogodki)
@@ -576,7 +580,16 @@ export function TripSocial({
         }
 
         // 3. CAS posodobitev na mestu (409 = sočasno urejanje — iskreno).
-        await updateItinerary(shareId, result.itinerary, version);
+        const upd = await updateItinerary(shareId, result.itinerary, version);
+
+        // 1.163.2 (#22 REMAINING): uspešna CAS posodobitev pomeni, da je pot
+        // shranjena NA TEJ NAPRAVI (urejevalna pravica) → zapiši/osveži
+        // vnos v Moja potovanja (strežniško ime je kanon, fallback iz
+        // destinacij).
+        addSavedTrip(
+          shareId,
+          upd.name ?? deriveSavedTripName(result.itinerary)
+        );
 
         trackPlannerEvent("chat_group_place_added", {
           provenance: place.provenance,

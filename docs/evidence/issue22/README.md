@@ -42,6 +42,12 @@
    načrta (drugi klik Shrani po restore) ne pokliče `addSavedTrip` —
    opažena vrzel PRED #22 (isti vzorec kot update-pot, ki `return`a prej).
    Zabeležena v REMAINING; gumb in celoten tok sta dejanska koda.
+   > **Posodobitev (1.163.2):** vrzel je ZAPRTA — vsi uspešni klici
+   > `updateItinerary` (planner update veja, restoreVersion, skupinski
+   > klepet „Dodaj v pot") zdaj pokličejo `addSavedTrip` z imenom
+   > strežnika kot kanonom; zaklenjeno s testi v
+   > `src/lib/__tests__/issue22b-my-trips-update-tracking.test.ts`.
+   > Priprava 3 je od 1.163.2 naprej le še zgodovinski opis dokaza.
 
 ## Produkcijska dejstva (iskrena)
 
