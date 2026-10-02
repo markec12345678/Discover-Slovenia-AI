@@ -7,6 +7,58 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.167.0] — 2026-10-02 (#24 Sklop 5: Poštena delitev stroškov med potnike)
+
+### Dodano
+
+- **POŠTENA DELITEV STROŠKOV MED POTNIKE (P3 backlog, Wanderlog vzorec).**
+  Proračunska plošča (BudgetPanel — /nacrtuj in /pot/[shareId]) razdelilnik
+  »Razdelitev na osebo« prešteje POŠTENO: **cene atrakcij so ŽE na osebo**
+  (vsak potnik plača svoje vstopnike — NE delijo se; prejšnja diskrecija
+  `totalEur ÷ velikost skupine` je napačno delila tudi vstopnine in s tem
+  ZANIŽALA pravi strošek posameznika), **vožnja (gorivo/elektrika + vinjeta)
+  pa je strošek AVTA** in se deli med potnike v njem. Razčlenitev je vidna
+  v treh vrsticah: »Atrakcije (tvoji vstopniki — niso deljeni)« +
+  »Vožnja ÷ N potnikov (strošek avta)« + »Skupaj na osebo« ({sl,en}).
+- **Nova čista funkcija `splitTripCostsPerPerson(attractionsEur, driveEur,
+  travelers)`** v trip-costs.ts (+ izvoz `MAX_CAR_SHARERS = 12`): čista
+  deterministična delitev z defenzivnimi varovali (0/negativno/NaN → varno 1,
+  necelo → floor, nad 12 → stisnjeno, negativni zneski → 0, `driveEur = null`
+  → brez vožnje). Strežniški izračun `computeTripDriveCosts` ostaja BREZ
+  parametra potnikov — delitev je ČISTO klientni prikaz nad obstoječimi
+  številkami (0 sprememb baze/API za shranjene načrte; po varovalu benchmarka
+  NE gradimo knjigovodstva »kdo je kaj plačal« — to bi bil nov motor po §17).
+- **Število potnikov je persistirana preferenca** (localStorage
+  `dsa_budget_travelers`, 1–12, hidracijsko varno prek useSyncExternalStore —
+  isti vzorec kot vrsta vozila; null = privzeta velikost skupine NAČRTA).
+- **Kartica kvalitete (ItineraryQualityCard)** pri vožnji pokaže usklajen
+  namig »· ≈ X €/osebo« (SAMO pri > 1 potniku; ista čista funkcija = usklajene
+  številke obeh površin) + razlago souporabe v razkrivnostnem pasu (SL+EN).
+- **Razkrivnostni pas plošče** razloži ZAKAJ se vstopnine ne delijo in vožnja
+  se (»vsaka številka pove svoje predpostavke«); pri samem potniku je
+  besedilo trivialno (»vsi stroški v celoti tvoji«).
+- **Telemetrija `budget_travelers_changed`** (props: `travelers`,
+  `drive_per_person_eur`, `total_per_person_eur` — samo ob SPREMEMBI, brez
+  PII): pariteta klient union ↔ strežniška VALID_EVENTS + zlati kanon
+  `docs/ANALYTICS-EVENTS.md`.
+
+### Popravljeno
+
+- **Iskrenostna napaka razdelilnika (F6.2)**: prej je `perPerson` delil CEL
+  znesek (vstopnine + vožnja) z velikostjo skupine — vstopnine so cene na
+  osebo, torej je bil prikazani znesek na osebo PRENIZEK (npr. 4 potniki,
+  34 € vstopnin + 100 € vožnja: prej 33,5 €, pošteno 59 €).
+
+### Testi
+
+- 38 novih testov (`issue24-s5-cost-split`): funkcionalna matematika delitve
+  (vstopnine se NE delijo, vožnja se, N=1 identiteta, zaokroževanje,
+  defenzivni vhodi), združljivost (strežniški izračun kanon), pogodbene
+  vire vseh plasti (plošča, kartica, ui-persist, analitika pariteta) +
+  iskrenostne pinje (stara `totalEur / groupSize` diskrecija je ODSOTNA).
+
+---
+
 ## [1.166.0] — 2026-10-02 (#24 Sklop 4: Strošek goriva po vrsti vozila)
 
 ### Dodano

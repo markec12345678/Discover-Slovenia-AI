@@ -27,18 +27,24 @@ import { computeItineraryQuality } from "@/lib/itinerary-quality";
 import {
   computeTripDriveCosts,
   driveCostsForVehicle,
+  MAX_CAR_SHARERS,
+  splitTripCostsPerPerson,
   VEHICLE_KINDS,
   VEHICLE_PROFILES,
 } from "@/lib/trip-costs";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
 import {
   getBudgetGoalSnapshot,
+  getBudgetTravelersSnapshot,
   getBudgetVehicleSnapshot,
   getServerBudgetGoalSnapshot,
+  getServerBudgetTravelersSnapshot,
   getServerBudgetVehicleSnapshot,
   setBudgetGoal,
+  setBudgetTravelers,
   setBudgetVehicle,
   subscribeBudgetGoal,
+  subscribeBudgetTravelers,
   subscribeBudgetVehicle,
 } from "@/lib/ui-persist";
 import type { DriveCosts, Itinerary, PlannerInput, VehicleKind } from "@/lib/types";
@@ -143,10 +149,52 @@ export function BudgetPanel({
   const driveEur = driveCosts ? Math.round(driveCosts.totalEur) : 0;
   const totalEur = attractionsEur + driveEur;
 
-  // Velikost skupine: iz načrta (quality) + uporabnikova prilagoditev
-  const defaultGroup = Math.max(1, Math.min(12, quality.groupSize || 2));
-  const [groupSize, setGroupSize] = useState(defaultGroup);
+  // ISSUE #24 Sklop 5 (1.167.0): število potnikov je PERSISTIRANA
+  // preferenca (localStorage, isti vzorec kot vrsta vozila) — null = privzeta
+  // velikost skupine NAČRTA. Obe površini (plošča + kartica kvalitete)
+  // prikazujeta USKLAJENE številke iz iste čiste funkcije.
+  const defaultGroup = Math.max(
+    1,
+    Math.min(MAX_CAR_SHARERS, quality.groupSize || 2)
+  );
+  const savedTravelers = useSyncExternalStore(
+    subscribeBudgetTravelers,
+    getBudgetTravelersSnapshot,
+    getServerBudgetTravelersSnapshot
+  );
+  const groupSize = savedTravelers ?? defaultGroup;
   const [howOpen, setHowOpen] = useState(false);
+
+  // Poštena delitev na osebo (Wanderlog vzorec): atrakcije so cene NA
+  // OSEBO (vsak plača svoj vstopnik — NE delimo), vožnja (gorivo +
+  // vinjeta) pa je strošek avta in se deli med potnike v njem.
+  const split = useMemo(
+    () =>
+      splitTripCostsPerPerson(
+        attractionsEur,
+        driveCosts ? driveEur : null,
+        groupSize
+      ),
+    [attractionsEur, driveCosts, driveEur, groupSize]
+  );
+  const perPerson = split.totalPerPerson;
+
+  const setTravelers = (next: number) => {
+    if (next === groupSize) return;
+    setBudgetTravelers(next);
+    trackPlannerEvent("budget_travelers_changed", {
+      travelers: next,
+      drive_per_person_eur: Math.round(
+        (driveCosts ? driveEur : 0) / Math.max(1, next)
+      ),
+      total_per_person_eur:
+        splitTripCostsPerPerson(
+          attractionsEur,
+          driveCosts ? driveEur : null,
+          next
+        ).totalPerPerson,
+    });
+  };
 
   // Proračunski cilj — persistiran (zunanja shramba, hidracijsko varna)
   const goalValue = useSyncExternalStore(
@@ -155,9 +203,6 @@ export function BudgetPanel({
     getServerBudgetGoalSnapshot
   );
   const [goalDraft, setGoalDraft] = useState<string | null>(null);
-
-  const perPerson =
-    groupSize > 0 ? Math.round(totalEur / groupSize) : totalEur;
 
   const applyGoal = (raw: string) => {
     const n = Number(raw);
@@ -326,29 +371,36 @@ export function BudgetPanel({
     </div>
   ) : null;
 
-  // --- Razdelitev na osebo ---
+  // --- Razdelitev na osebo (ISSUE #24 Sklop 5: POŠTENA matematika) ---
+  // Wanderlog vzorec, iskrenostno: cene atrakcij so ŽE na osebo (vsak
+  // potnik plača svoj vstopnik — deljenje bi zanižalo pravi strošek),
+  // vožnja (gorivo/elektrika + vinjeta) pa je strošek AVTA, ki se deli
+  // med potnike v njem. Razčlenitev je vidna (brez skrite matematike).
   const splitter = (
-    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-card/50 p-3">
-      <div className="flex items-center gap-2">
-        <Users className="size-4 text-primary" aria-hidden="true" />
-        <span className="text-sm font-medium">
-          {isEn ? "Split per person" : "Razdelitev na osebo"}
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1" role="group" aria-label={isEn ? "Group size" : "Velikost skupine"}>
+    <div className="mt-4 rounded-lg border border-border/60 bg-card/50 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Users className="size-4 text-primary" aria-hidden="true" />
+          <span className="text-sm font-medium">
+            {isEn ? "Split per person" : "Razdelitev na osebo"}
+          </span>
+        </div>
+        <div className="flex items-center gap-1" role="group" aria-label={isEn ? "Travelers sharing the car" : "Potniki v avtu"}>
           <Button
             type="button"
             variant="outline"
             size="icon"
             className="size-7"
-            onClick={() => setGroupSize((g) => Math.max(1, g - 1))}
+            onClick={() => setTravelers(Math.max(1, groupSize - 1))}
             aria-label={isEn ? "Fewer people" : "Manj oseb"}
             disabled={groupSize <= 1}
           >
             <Minus className="size-3.5" />
           </Button>
-          <span className="w-8 text-center text-sm font-semibold tabular-nums">
+          <span
+            className="w-8 text-center text-sm font-semibold tabular-nums"
+            aria-live="polite"
+          >
             {groupSize}
           </span>
           <Button
@@ -356,20 +408,40 @@ export function BudgetPanel({
             variant="outline"
             size="icon"
             className="size-7"
-            onClick={() => setGroupSize((g) => Math.min(12, g + 1))}
+            onClick={() => setTravelers(Math.min(MAX_CAR_SHARERS, groupSize + 1))}
             aria-label={isEn ? "More people" : "Več oseb"}
-            disabled={groupSize >= 12}
+            disabled={groupSize >= MAX_CAR_SHARERS}
           >
             <Plus className="size-3.5" />
           </Button>
         </div>
-        <span className="text-sm">
-          <span className="font-bold tabular-nums">{numberFmt(perPerson)}</span>{" "}
-          <span className="text-muted-foreground">
-            {isEn ? "/ person" : "/ osebo"}
-          </span>
-        </span>
       </div>
+      <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+        <li className="flex items-center justify-between gap-2">
+          <span>
+            {isEn
+              ? "Activities (your own tickets — not shared)"
+              : "Atrakcije (tvoji vstopniki — niso deljeni)"}
+          </span>
+          <span className="tabular-nums">{numberFmt(split.attractionsPerPerson)}</span>
+        </li>
+        {driveCosts && (
+          <li className="flex items-center justify-between gap-2">
+            <span>
+              {isEn
+                ? `Driving ÷ ${groupSize} ${groupSize === 1 ? "traveler" : "travelers"} (shared car cost)`
+                : `Vožnja ÷ ${groupSize} ${groupSize === 1 ? "potnik" : groupSize === 2 ? "potnika" : "potnikov"} (strošek avta)`}
+            </span>
+            <span className="tabular-nums">{numberFmt(split.drivePerPerson)}</span>
+          </li>
+        )}
+        <li className="flex items-center justify-between gap-2 border-t border-border/60 pt-1 text-foreground">
+          <span className="font-semibold">
+            {isEn ? "Total per person" : "Skupaj na osebo"}
+          </span>
+          <span className="font-bold tabular-nums">{numberFmt(perPerson)}</span>
+        </li>
+      </ul>
     </div>
   );
 
@@ -484,6 +556,17 @@ export function BudgetPanel({
             {isEn
               ? "Not included (the plan contains no such items, so we don't guess): accommodation, meals, shopping."
               : "NI vključeno (načrt teh postavk ne vsebuje, zato ne ugibamo): nočitev, hrana, nakupi."}
+          </p>
+          {/* ISSUE #24 Sklop 5: poštena delitev — razloži, ZAKAJ se
+              atrakcije ne delijo (že cene na osebo), vožnja pa se. */}
+          <p className="border-t border-border/60 pt-1.5">
+            {isEn
+              ? groupSize === 1
+                ? "Per-person split: you are traveling alone, so all costs are yours in full."
+                : `Per-person split: activity prices are already per person (everyone pays their own tickets — NOT divided), while the car cost (fuel/charging + vignette) is shared among all ${groupSize} travelers.`
+              : groupSize === 1
+                ? "Delitev na osebo: potuješ sam, zato so vsi stroški v celoti tvoji."
+                : `Delitev na osebo: cene atrakcij so že na osebo (vsak plača svoje vstopnike — NE delimo), strošek avta (gorivo/elektrika + vinjeta) pa je skupen in se deli med vse ${groupSize} potnike.`}
           </p>
         </div>
       </CollapsibleContent>

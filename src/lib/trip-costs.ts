@@ -160,6 +160,66 @@ export function driveCostsForVehicle(
   };
 }
 
+// --- ISSUE #24 Sklop 5 (1.167.0): poštena delitev stroškov med potnike -------
+//
+// Wanderlog vzorec (benchmark Round 2, P3: »split med popotniki manjka«).
+// Iskrenostno načelo: CENE ATRAKCIJ so ŽE na osebo (vsak potnik plača svoj
+// vstopnik — deljenje z velikostjo skupine bi ZANIŽALO pravi strošek
+// posameznika), strošek VOŽNJE (gorivo/elektrika + vinjeta) pa je strošek
+// AVTA, ki ga potniki v tistem avtu delijo med seboj.
+//
+//   na osebo = atrakcije (celotne, na osebo) + vožnja ÷ število potnikov
+//
+// Varovalo po benchmarku: TripBudgetCard / proračunska plošča ostane
+// EDINI vir — NE gradimo knjigovodstva "kdo je kaj plačal" (nov podatkovni
+// model bi bil nov motor po §17); to je POŠTEN PRIKAZ obstoječe ocene.
+
+/** Zgornja meja potnikov v enem osebnem vozilu (enaka meji koračnika UI). */
+export const MAX_CAR_SHARERS = 12;
+
+/** Poštena delitev stroškov potovanja na posameznega potnika. */
+export interface SplitCostsPerPerson {
+  /** Atrakcije na osebo — cene vstopnikov so ŽE na osebo (NE delimo). */
+  attractionsPerPerson: number;
+  /** Vožnja na osebo — gorivo + vinjeta sta strošek avta (deljeno). */
+  drivePerPerson: number;
+  /** Skupaj na osebo: atrakcije + vožnja ÷ N. */
+  totalPerPerson: number;
+}
+
+/**
+ * Preštej pošteno delitev na osebo (ISSUE #24 Sklop 5). Čista
+ * deterministična funkcija:
+ *
+ *   atrakcijeNaOsebo = zaokroženi znesek atrakcij (NE deljen — cene
+ *                      lokacij so že na osebo)
+ *   vožnjaNaOsebo    = round(vožnja ÷ N) (gorivo + vinjeta sta skupni
+ *                      strošek avta; pri N = 1 identiteta)
+ *
+ * - `driveEur == null` → vozniške vrstice ni (0, brez izmišljanja);
+ * - število potnikov < 1 ali necelo → varno 1 oz. floor (defenzivno,
+ *   vhod iz localStorage/UI je nezaupanja vreden);
+ * - negativni zneski se prištejpajo na 0 (nepoznan ≠ dolg).
+ */
+export function splitTripCostsPerPerson(
+  attractionsEur: number,
+  driveEur: number | null,
+  travelers: number
+): SplitCostsPerPerson {
+  const n =
+    Number.isFinite(travelers) && travelers >= 1
+      ? Math.min(MAX_CAR_SHARERS, Math.floor(travelers))
+      : 1;
+  const attractions = Math.max(0, Math.round(attractionsEur));
+  const drive = driveEur == null ? 0 : Math.max(0, Math.round(driveEur));
+  const drivePerPerson = Math.round(drive / n);
+  return {
+    attractionsPerPerson: attractions,
+    drivePerPerson,
+    totalPerPerson: attractions + drivePerPerson,
+  };
+}
+
 // --- Čisti izračun ---------------------------------------------------------
 
 /**

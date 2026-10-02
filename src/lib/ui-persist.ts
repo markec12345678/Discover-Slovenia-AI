@@ -227,3 +227,80 @@ export function setBudgetVehicle(v: VehicleKind): void {
   vehicleSnapshot = v;
   vehicleListeners.forEach((l) => l());
 }
+
+// ---------------------------------------------------------------------------
+// ŠTEVILO POTNIKOV ZA DELITEV STROŠKOV (ISSUE #24 Sklop 5, 1.167.0)
+// ---------------------------------------------------------------------------
+// Uporabnikova preferenca (1–12) za pošteno delitev stroškov na osebo v
+// proračunski plošči in kartici kvalitete (Wanderlog vzorec): atrakcije
+// ostanejo na osebo (NE delimo), vožnja (gorivo + vinjeta) se deli med
+// potnike v avtu. Per-device UI vrednost brez PII — isti vzorec kot
+// proračunski cilj: number | null (null = uporabi privzeto velikost
+// skupine NAČRTA), strežniški snapshot = null (SSR/hidracija usklajena).
+
+import { MAX_CAR_SHARERS } from "@/lib/trip-costs";
+
+const TRAVELERS_KEY = "dsa_budget_travelers";
+
+let travelersRaw: string | null = null;
+let travelersSnapshot: number | null = null;
+const travelersListeners = new Set<() => void>();
+
+function parseTravelers(raw: string | null): number | null {
+  if (raw == null) return null;
+  const n = Number(raw);
+  // Omejitev 1–12 (isti razpon kot koračnik UI); izven → null = privzeto
+  // velikost skupine načrta (ne izmišljujemo).
+  if (!Number.isFinite(n) || n < 1 || n > MAX_CAR_SHARERS || n % 1 !== 0) {
+    return null;
+  }
+  return n;
+}
+
+/** useSyncExternalStore subscribe za število potnikov. */
+export function subscribeBudgetTravelers(cb: () => void): () => void {
+  travelersListeners.add(cb);
+  return () => {
+    travelersListeners.delete(cb);
+  };
+}
+
+/** Klient snapshot — primitiv (števka), vedno stabilen po vrednosti. */
+export function getBudgetTravelersSnapshot(): number | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(TRAVELERS_KEY);
+  if (raw === travelersRaw) return travelersSnapshot;
+  travelersSnapshot = parseTravelers(raw);
+  travelersRaw = raw;
+  return travelersSnapshot;
+}
+
+/** Strežniški snapshot (SSR/hidracija) — vedno brez nastavitve. */
+export function getServerBudgetTravelersSnapshot(): number | null {
+  return null;
+}
+
+/** Nastavi število potnikov (write + emit; neveljavno se tiho zavrne). */
+export function setBudgetTravelers(n: number | null): void {
+  const clean =
+    n !== null &&
+    Number.isFinite(n) &&
+    n >= 1 &&
+    n <= MAX_CAR_SHARERS &&
+    n % 1 === 0
+      ? n
+      : null;
+  try {
+    if (clean === null) {
+      localStorage.removeItem(TRAVELERS_KEY);
+      travelersRaw = null;
+    } else {
+      localStorage.setItem(TRAVELERS_KEY, String(clean));
+      travelersRaw = String(clean);
+    }
+  } catch {
+    // Zasebni način — vrednost živi naprej v spominu
+  }
+  travelersSnapshot = clean;
+  travelersListeners.forEach((l) => l());
+}

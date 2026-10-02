@@ -188,6 +188,10 @@ export type PlannerEventName =
   // (vehicle = bencin/dizel/hibrid/EV; km iz OSRM izvira, fuel_eur = nova
   // ocena goriva/elektrike nad profilom — dosega Roadtrippers vzorca merljiv)
   | "budget_vehicle_changed"
+  // ISSUE #24 Sklop 5 (1.167.0): sprememba števila potnikov za delitev
+  // stroškov (travelers = novo število; drive_per_person_eur in
+  // total_per_person_eur takoj pokažeta učinek — Wanderlog vzorec)
+  | "budget_travelers_changed"
   // F7: shranjen/urejen skupnostni vodnik na deljeni poti (avtor = lastnik)
   | "guide_saved"
   // F9 "Pogovor z načrtom": zastavljeno vprašanje o načrtu (source

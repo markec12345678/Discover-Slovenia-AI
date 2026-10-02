@@ -28,11 +28,15 @@ import { INTEREST_LABELS_EN } from "@/lib/stop-insights";
 import {
   computeTripDriveCosts,
   driveCostsForVehicle,
+  splitTripCostsPerPerson,
   VEHICLE_PROFILES,
 } from "@/lib/trip-costs";
 import {
+  getBudgetTravelersSnapshot,
   getBudgetVehicleSnapshot,
+  getServerBudgetTravelersSnapshot,
   getServerBudgetVehicleSnapshot,
+  subscribeBudgetTravelers,
   subscribeBudgetVehicle,
 } from "@/lib/ui-persist";
 import type { DriveCosts, Itinerary, PlannerInput } from "@/lib/types";
@@ -125,6 +129,22 @@ export function ItineraryQualityCard({
     () => (baseDriveCosts ? driveCostsForVehicle(baseDriveCosts, vehicle) : null),
     [baseDriveCosts, vehicle]
   );
+
+  // ISSUE #24 Sklop 5 (1.167.0): deljena preferenca števila potnikov (ista
+  // kot v proračunski plošči) — obe površini prikazujeta USKLAJENE
+  // številke: namig „≈ X € na osebo“ za vožnjo se prešteje z ISTE čiste
+  // funkcije splitTripCostsPerPerson. null = privzeta velikost skupine
+  // NAČRTA (strežniški snapshot null → hidracijsko varno).
+  const savedTravelers = useSyncExternalStore(
+    subscribeBudgetTravelers,
+    getBudgetTravelersSnapshot,
+    getServerBudgetTravelersSnapshot
+  );
+  const effectiveTravelers = savedTravelers ?? Math.max(1, quality.groupSize || 1);
+  const drivePerPersonEur = driveCosts
+    ? splitTripCostsPerPerson(0, driveCosts.totalEur, effectiveTravelers)
+        .drivePerPerson
+    : 0;
 
   // Utemeljitev: AI (sanitizirana) ali deterministična sestava; za stare
   // načrte brez rationale pade na prazno (ne izmišljujemo).
@@ -317,6 +337,15 @@ export function ItineraryQualityCard({
                     ? `${vehicle === "ev" ? "charging" : "fuel"} ${driveCosts.fuelEur} € + ${vignetteLabel} vignette ${driveCosts.vignetteEur} €`
                     : `${vehicle === "ev" ? "elektrika" : "gorivo"} ${driveCosts.fuelEur} € + ${vignetteLabel} vinjeta ${driveCosts.vignetteEur} €`})
                 </span>
+                {/* ISSUE #24 Sklop 5: usklajen namig na osebo (ista čista
+                    funkcija kot proračunska plošča; samo pri > 1 potniku) */}
+                {effectiveTravelers > 1 && (
+                  <span className="text-[11px] font-normal text-muted-foreground">
+                    {isEn
+                      ? `· ≈ €${drivePerPersonEur}/person`
+                      : `· ≈ ${drivePerPersonEur} €/osebo`}
+                  </span>
+                )}
               </dd>
             </div>
           )}
@@ -400,6 +429,9 @@ export function ItineraryQualityCard({
                     ). The vignette is only needed if you use motorways — local
                     roads are free and usually only minutes slower. Verify
                     current prices at evinjeta.dars.si before buying.
+                    {effectiveTravelers > 1
+                      ? ` When sharing the car among ${effectiveTravelers} travelers, the driving cost splits to ≈ €${drivePerPersonEur} per person (activity tickets are already per person and are NOT divided).`
+                      : ""}
                   </>
                 ) : (
                   <>
@@ -429,6 +461,9 @@ export function ItineraryQualityCard({
                     obcestne ceste so brezplačne in običajno le nekaj minut
                     počasnejše. Pred nakupom preveri aktualne cene na
                     evinjeta.dars.si.
+                    {effectiveTravelers > 1
+                      ? ` Pri souporabi avta med ${effectiveTravelers} potniki se strošek vožnje razdeli na ≈ ${drivePerPersonEur} € na osebo (vstopnine so že na osebo in se NE delijo).`
+                      : ""}
                   </>
                 )}
               </p>
