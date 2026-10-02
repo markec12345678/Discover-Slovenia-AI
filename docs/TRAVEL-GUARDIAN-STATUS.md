@@ -90,7 +90,7 @@ premice). Skupaj 19 dokazov.
 | privacy/security review | ✅ (docs/TRAVEL-GUARDIAN.md §5 — 0 analitike s pozicijo) |
 | accessibility review | ✅ (aria-live/status/alert, ≥44 px tipke — E7 testi) |
 | unit + integration + E2E/negativni | ✅ 81 testov (vključno negativnimi) |
-| production evidence | ✅ 19 dokazov (Render) |
+| production evidence | ✅ 20 dokazov (Render) |
 | architecture documentation | ✅ (docs/TRAVEL-GUARDIAN.md) |
 
 **REMAINING (iskrene vrzeli, ne blokerji):**
@@ -108,7 +108,11 @@ premice). Skupaj 19 dokazov.
   zapišejo/osvežijo vnos z imenom strežnika (`upd.name ??
   deriveSavedTripName`); 15 testov v
   `issue22b-my-trips-update-tracking.test.ts` (source-contract +
-  ZERO-LOSS varovalke + funkcionalna semantika).
+  ZERO-LOSS varovalke + funkcionalna semantika). **PRODUKCIJSKO DOKAZANO
+  (prod-20, Render 1.163.3, 2026-10-02):** izbrisan `dai:my-trips` →
+  drugi klik Shrani → `PATCH …/shared/1db4c64b98` 200 (posodobitev na
+  mestu, ne nov POST) → vnos se ponovno pojavi z istim shareId-jem →
+  kartica v gostovem /moja-potovanja.
 - ~~Vreme 502 na Renderu (izven obsega #22, kot v #21).~~ **ZAPRTA v
   1.163.3** — prehodna napaka vira (Open-Meteo); vsi trije načini ob
   ponovni preverbi vračajo 200 s svežimi podatki; NAČIN A utrjen z

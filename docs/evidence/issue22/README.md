@@ -1,10 +1,10 @@
-# ISSUE #22 — PRODUKCIJSKI DOKAZI (Render, 1.162.0 → 1.162.3)
+# ISSUE #22 — PRODUKCIJSKI DOKAZI (Render, 1.162.0 → 1.163.3)
 
 > Agent-browser na živi produkciji `https://i-feel-slovenia.onrender.com`
 > (mobilni viewport 390×844). Vsi prikazi so DEJANSKA koda proti DEJAVNIM
 > API-jem (FSQ pinovi, /api/journey/plan, /api/itinerary, /api/map/pins).
 > Izjeme (dokumentirane spodaj): GPS simulacija (ista poštena metoda kot
-> dokazi #21) in dve dokazni pripravi stanja naprave.
+> dokazi #21) in tri dokazne priprave stanja naprave.
 
 ## ZLATA POT #22 (vse slike v tej mapi)
 
@@ -44,6 +44,41 @@
 
 0 konzolnih napak, 0 page errorjev na /na-poti med vsemi tremi zajemi.
 
+## UPDATE-POT TOK — prod-20 (dodatek 2026-10-02, 1.163.2)
+
+> Zajeto na Render **1.163.3** (prva različica z varnimi 1.163.2), mobilni
+> 390×844, 10:28–10:30 UTC. Dokaz, da POSODOBITEV poti na mestu (PATCH,
+> CAS) zdaj zapiše/osveži vnos `dai:my-trips` — vrzel iz priprave 3, ki jo
+> je v 1.163.1 prej odpravljal ročni vnos. Edina dokazna priprava: izbris
+> ključev localStorage za simulacijo manjkajočega vnosa (dokumentiran
+> spodaj, priprava 5) — brez GPS simulacije, brez urejanja časa.
+>
+> Koraki (vsi proti živim API-jem):
+>
+> 1. `/nacrtuj` → želja »Vikend na Bledu z jezerom in sotesko« (start
+>    2026-10-02) → Generiraj → 3-dnevni načrt (Bohinj · Triglav · Reka
+>    Soča).
+> 2. Prvi klik Shrani → `POST /api/itinerary/save` 200 → vnos
+>    `dai:my-trips` zapisan (shareId c9a33cb5d5, obstoječe vedenje).
+> 3. Počisti CELOTEN localStorage → drugi klik Shrani → BREZ editTokena
+>    planner ISKRENO pade v klasično pot: NOVI `POST /api/itinerary/save`
+>    200 (save_inplace_fallback, po zasnovi) → nov shareId 1db4c64b98,
+>    vnos zapisan (POST pot je vedno sledila).
+> 4. **Scenarij vrzeli:** izbrisan SAMO ključ `dai:my-trips` (editToken
+>    `dsa_edit_token_1db4c64b98` OBSTOJA) → tretji klik Shrani →
+>    `PATCH /api/itinerary/shared/1db4c64b98` **200** (mrežni dnevnik —
+>    posodobitev na mestu, NE nov POST) → vnos se PONOVNO POJAVI z istim
+>    shareId-jem in kanonskim imenom: `[{shareId: "1db4c64b98", name:
+>    "Bohinj · Triglav · Reka Soča", savedAt: "2026-10-02T10:29:39Z"}]`.
+>    V 1.163.1 bi ta korak pustil `dai:my-trips` PRAZEN (veja je
+>    `return`ala pred `addSavedTrip` — priprava 3).
+> 5. `/moja-potovanja` (gostov pogled): kartica poti z [Nadaljuj na poti]
+>    [Odpri] — uporabniško viden izid (prod-20). 0 konzolnih napak.
+
+| # | Dokaz | Kaj kaže |
+|---|---|---|
+| prod-20 | update-flow-my-trips.png | Gostov pogled Moja potovanja po koraku 4: kartica »Nadaljuj na poti: Bohinj · Triglav · Reka Soča« + [Odpri] — vnos, ki ga je zapisal PATCH (posodobitev na mestu), ne prva shranitev |
+
 ## Dokazne priprave (pošteno razložene)
 
 1. **GPS simulacija** — JS override `watchPosition` (~10 km od cilja, ±12 m,
@@ -69,6 +104,11 @@
    cilja Bohinj, ±12 m, sveži časovni žigi vsake 2 s) — ISTA poštena metoda
    kot dokazi #21 in priprava 1. Izginotje jutranje kartice, Guardian ocena
    in razdalja so izračunani z DEJANSKO kodo iz simuliranih fiksov.
+5. **Izbris ključev localStorage v prod-20** — korak 3 (celoten
+   localStorage) in korak 4 (samo `dai:my-trips`) brišeta stanje naprave,
+   da nastopi scenarij manjkajočega vnosa (vrzel iz priprave 3). Vse
+   trije klici (2× POST, 1× PATCH) so šli proti ŽIVIM API-jem; načrt je
+   zgradil AI načrtovalnik; ime vnosa je zapisala produkcijska koda.
 
 ## Produkcijska dejstva (iskrena)
 

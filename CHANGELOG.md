@@ -11,6 +11,17 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ### Dodano
 
+- **UPDATE-POT tok produkcijsko dokazan (prod-20, dodatek po deployu
+  1.163.3).** Na Renderu (1.163.3, 10:28–10:30 UTC): izbrisan izključno
+  ključ `dai:my-trips` (editToken ohranjen — točno scenarij vrzeli iz
+  priprave 3) → drugi klik Shrani → `PATCH /api/itinerary/shared/…` 200
+  (posodobitev na mestu, NE nov POST — mrežni dnevnik) → vnos se ponovno
+  pojavi z istim shareId-jem in kanonskim imenom → kartica »Nadaljuj na
+  poti« v gostovem /moja-potovanja. Bonus opažanje: po popolnem izbrisu
+  localStorage (brez editTokena) planner iskreno pade v klasični POST
+  (save_inplace_fallback, po zasnovi) in vnos prav tako zapiše. 0 konzolnih
+  napak. Skupaj 20 dokazov (docs/evidence/issue22/README.md — nova sekcija
+  UPDATE-POT TOK + priprava 5).
 - **JUTRANJI ZAČNI DAN produkcijsko dokazan (prod-17/18/19).** Na Renderu
   (1.163.1, mobilni 390×844, 09:42–09:52 UTC — brskalnik sandboxa ima
   lokalni čas UTC, zato je bilo jutranje okno `hour < 11` po uri naprave
@@ -22,8 +33,8 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
   začel — programsko potrjeno); GPS aktivacija → kartica pravilno izgine
   (pogoj `!gpsActive`) in Guardian prevzame (🟠 iskren zamudni termin +
   ocena iz premice izrecno označena). 0 konzolnih napak, 0 page errorjev.
-  Skupaj 19 dokazov (docs/evidence/issue22/) — vseh 13 §26 dostavljivcev
-  #22 zdaj PRODUCTION VERIFIED (TRAVEL-GUARDIAN-STATUS.md posodobljen).
+  Vseh 13 §26 dostavljivcev #22 zdaj PRODUCTION VERIFIED
+  (TRAVEL-GUARDIAN-STATUS.md posodobljen).
 
 ### Popravljeno
 
