@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { Compass, Home, Search } from "lucide-react";
 
@@ -13,13 +14,18 @@ import { Compass, Home, Search } from "lucide-react";
 // kot pot/[shareId]/error.tsx (klientka detekcija, ker not-found teče izven
 // RSC prevajalske plasti za ne-lokalizirane/nezname poti).
 //
-// POLISH 1.173.0: dokument naslov (zavihek brskalnika) je prej ostal
-// generičen; POLISH 1.173.1: deklarativen <title> (React 19 dvigne v
-// <head> s prednostjo) — klientski efekt iz 1.173.0 je bil prostostno
-// prepoznen (Nextova metapodatkovna plast je naslov prepisala nazaj
-// po hidraciji). Deklarativni nosi tudi SSR (prva bemla iskalnikom).
+// POLISH 1.173.0/1.173.2: naslov zavihka (tab title). not-found.tsx NE MORE
+// izvoziti Next metadata (spec), layoutov statični naslov pa velja za vse
+// neznane poti. Ugotovitve produkcijske QA na <head>:
+//  • klientski efekt SAM (1.173.0) je izgubil tekmo — Nextova metapodatkovna
+//    plast ga je prepisala NAZAJ po hidraciji;
+//  • deklarativen <title> (1.173.1, React 19 hoisting) se je pripel ZA
+//    layoutovim — brskalnik upošteva PRVEGA <title> v <head> (opazovanih
+//    3: layout + 2 dvignjena).
+// Rešitev 1.173.2: efekt počisti VSE <title> in zapiše enega samega —
+// po definiciji ni konkurenta. Ob odhodu s 404 naš element odstranimo;
+// Nextov client router ob navigaciji v nov vdih vnese naslov nove rute.
 // ============================================================================
-
 const TITLE_SL = "404 — Te strani (še) ni na zemljevidu | Discover Slovenia AI";
 const TITLE_EN = "404 — This page is not on the map yet | Discover Slovenia AI";
 
@@ -28,10 +34,22 @@ export default function NotFound() {
     typeof window !== "undefined" &&
     window.location.pathname.startsWith("/en");
 
+  useEffect(() => {
+    const wanted = isEn ? TITLE_EN : TITLE_SL;
+    // Počisti VSE naslove (layout metadata + morebitni dvignjeni) —
+    // brskalnik upošteva prvega, morebitni konkurent pomeni neveljaven tab.
+    document.querySelectorAll("title").forEach((t) => t.remove());
+    const title = document.createElement("title");
+    title.textContent = wanted;
+    document.head.appendChild(title);
+    return () => {
+      // Ob odhodu s 404 (klientka navigacija) odstranimo svoj naslov —
+      // naslednja ruta prinese svojega (Next metadata ob renderu).
+      title.remove();
+    };
+  }, [isEn]);
+
   return (
-    <>
-      {/* React 19: dvignjen v <head>, povozi naslov plasti za to stran */}
-      <title>{isEn ? TITLE_EN : TITLE_SL}</title>
     <main
       role="main"
       className="flex min-h-[80vh] flex-col items-center justify-center gap-6 bg-background px-4 py-16 text-center"
@@ -71,6 +89,5 @@ export default function NotFound() {
         </div>
       </div>
     </main>
-    </>
   );
 }

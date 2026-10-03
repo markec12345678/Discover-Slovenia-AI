@@ -73,6 +73,26 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.173.2] — 2026-10-03 (POLIRNI KROG: 404 naslov — zmagovalna strategija po 2 QA krogih)
+
+### Popravljeno
+
+- **404 naslov zavihka — 3. (zmagovalna) iteracija**. QA na 1.173.1 je
+  pokazala, da se deklarativen `<title>` (React 19 hoisting) pripel ZA
+  layoutovim metapodatkovnim naslovom — brskalnik pa upošteva PRVEGA
+  `<title>` v `<head>` (v DOM-u so bili opazovani 3: layoutov + 2
+  dvignjena). Ker `not-found.tsx` po specifikaciji Next.js NE MORE izvoziti
+  metadata, efekt zdaj počisti VSE `<title>` elemente in zapiše enega
+  samega („404 — …", dvojezično) — po definiciji brez konkurenta. Cleanup
+  ob odhodu s 404 odstrani našega; naslednja ruta prinese svojega.
+
+### Testi
+
+- 404 test posodobljen na strategijo čiščenja (+ varovalki za cleanup).
+  Regresija: **5.045 pass**, lint 0, tsc 0.
+
+---
+
 ## [1.173.1] — 2026-10-03 (POLIRNI KROG, produkcijska QA najdeni popravki)
 
 ### Popravljeno
