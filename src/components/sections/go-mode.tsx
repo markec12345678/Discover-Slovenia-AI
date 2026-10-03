@@ -1330,6 +1330,11 @@ export function GoMode() {
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [nearbyUnavailable, setNearbyUnavailable] = useState(false);
   const [nearbyFeedback, setNearbyFeedback] = useState<GoStrings | null>(null);
+  // SKLOP 9 (1.171.0): opomba velja za OKNO, v katerem je nastala — ko se
+  // kartica prostega časa umakne (dodan kandidat BREZ termina je zdaj
+  // naslednji → meje ni), potrditev OSTANE vidna kot samostojna vrstica;
+  // ko se pokaže NOVO okno, stara opomba v kartici NE ugasne (ključ).
+  const [nearbyNoteKey, setNearbyNoteKey] = useState<string | null>(null);
 
   /** Ključ nalaganja: kategorija + groba pozicija (~100 m) + dolžina okna —
    *  refetch SAMO ob dejanski spremembi (nov fix < 100 m tika ne sproži). */
@@ -1422,10 +1427,11 @@ export function GoMode() {
    *  ne preureja obstoječih postankov; varnost okna (zanka ≤ okno − rezerva)
    *  je bila preverjena V filterNearbyCandidates PRED dodajanjem. */
   const addNearby = useCallback(
-    (fit: NearbyFit) => {
+    (fit: NearbyFit, windowKey: string | null) => {
       if (!record || !view) return;
       if (!canAddNearbyStops(record)) {
         setNearbyFeedback(GO_EDIT_LABELS.notPossibleV1);
+        setNearbyNoteKey(windowKey);
         return;
       }
       const beforeKey = view.next?.entry.key ?? null;
@@ -1454,13 +1460,16 @@ export function GoMode() {
       const isMid = newIndex !== -1 && newIndex < dayEntries.length - 1;
       // Sklop 8: en vir resnice (GO_EDIT_LABELS) — Sklop 9: pravo sporočilo
       // glede na DEJANSKI položaj vstavitve (sredina ne obljubljamo, če je
-      // padlo na konec — npr. prazen dan robni primer).
+      // padlo na konec — npr. prazen dan robni primer). Opomba je vezana na
+      // OKNO (windowKey): po umiku kartice živi naprej kot samostojna
+      // vrstica; v NOVEM oknu se ne prikaže (ni zastarela).
       setNearbyFeedback(
         goAll(
           isMid ? GO_EDIT_LABELS.addedMid : GO_EDIT_LABELS.added,
           fit.candidate.title
         )
       );
+      setNearbyNoteKey(windowKey);
       // Telemetrija (brez PII — samo položaj vstavitve, ne ime/geo kandidata):
       // meri, koliko dodajanj gre SREDI dneva (TripIt vzorec) vs. konec.
       trackPlannerEvent("nearby_stop_added", { position: isMid ? "mid" : "end" });
@@ -2072,14 +2081,38 @@ export function GoMode() {
           onCategorySelect={(cat) => {
             setNearbyCategory(cat);
             setNearbyFeedback(null);
+            setNearbyNoteKey(null);
           }}
           fits={nearbyFits}
           loading={nearbyLoading}
           unavailable={nearbyUnavailable}
           canAdd={record != null && canAddNearbyStops(record)}
-          note={nearbyFeedback}
-          onAdd={addNearby}
+          note={
+            nearbyNoteKey ===
+            (freeTime != null ? `${freeTime.endsAtHhmm}@${freeTime.minutes}` : null)
+              ? nearbyFeedback
+              : null
+          }
+          onAdd={(fit) =>
+            addNearby(
+              fit,
+              freeTime != null ? `${freeTime.endsAtHhmm}@${freeTime.minutes}` : null
+            )
+          }
         />
+      )}
+      {/* SKLOP 9: potrditev dodajanja OSTANE vidna, tudi ko se kartica
+          prostega časa iskreno umakne (dodan kandidat brez termina je
+          zdaj naslednji postanek → meje več ni) — sporočilo ne sme
+          izginiti skupaj s kartico, sicer uporabnik ne ve, ali je uspelo. */}
+      {nearbyFeedback && !freeTime && (
+        <p
+          role="status"
+          aria-live="polite"
+          className="rounded-lg border border-emerald-600/40 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-950 dark:text-emerald-200"
+        >
+          {t(nearbyFeedback)}
+        </p>
       )}
 
       {/* === TASK 102 — SHEMA DNEVA + ZEMLJEVID DNEVA (ISSUE #21 §10) ===

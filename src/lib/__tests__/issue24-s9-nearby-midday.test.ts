@@ -294,6 +294,23 @@ describe("ISSUE #24 Sklop 9 — ⑤ go-mode.tsx source contract", () => {
     expect(call).not.toContain("candidate.title");
     expect(call).not.toContain("candidate.lat");
   });
+
+  test("④ potrditev OSTANE vidna, ko kartica okna izgine (samostojna vrstica)", () => {
+    // Po uspešnem dodajanju kandidat BREZ termina postane naslednji postanek
+    // → meje več ni → kartica se iskreno umakne. Sporočilo ne sme izginiti
+    // z njo (sicer uporabnik ne ve, ali je uspelo).
+    expect(src).toContain("nearbyFeedback && !freeTime");
+    expect(src).toContain('role="status"');
+    expect(src).toContain('aria-live="polite"');
+  });
+
+  test("⑤ opomba je vezana na OKNO (novo okno = ne prikaže zastarele opombe)", () => {
+    expect(src).toContain("const [nearbyNoteKey, setNearbyNoteKey] = useState<string | null>(null)");
+    expect(src).toContain("setNearbyNoteKey(windowKey)");
+    // v kartico gre SAMO opomba, ki pripada TRENUTNEMU oknu
+    expect(src).toContain("nearbyNoteKey ===");
+    expect(src).toContain("addNearby(");
+  });
 });
 
 // ---------------------------------------------------------------------------

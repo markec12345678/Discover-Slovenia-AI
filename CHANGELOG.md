@@ -7,6 +7,28 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.172.1] — 2026-10-03 (#24 Sklop 9 popravka UX: potrditev dodajanja ostane vidna)
+
+### Popravljeno
+
+- **Potrditev nearby dodajanja NE izgine več s kartico prostega časa** (QA
+  produkcijski dokaz je odkril lukenj): po uspešnem dodajanju kandidat BREZ
+  termina postane naslednji postanek → meje več ni → kartica prostega časa
+  se iskreno umakne — a sporočilo »✓ … dodan pred naslednji postanek.« je
+  do zdaj izginilo SKUPAJ z njo (uporabnik ni vedel, ali je uspelo).
+  Zdaj: potrditev živi naprej kot SAMOSTOJNA vrstica na mestu kartice
+  (`role="status"` + `aria-live="polite"`), vezana na OKNO, v katerem je
+  nastala (`nearbyNoteKey`) — ko se pokaže novo okno, zastarela opomba v
+  kartici NE ugasne (nov okno = nova zgodba).
+
+### Testi
+
+- `issue24-s9-nearby-midday.test.ts` ⑤ dopolnjen (④⑤: samostojna vrstica
+  + vezava na okno) — skupaj 25 testov v datoteki; 5.022 skupno (5021 pass
+  + 1 znana sandbox DB).
+
+---
+
 ## [1.172.0] — 2026-10-03 (#24 Sklop 10: Prilagodljiva GPS natančnost — Polarsteps baterija)
 
 ### Dodano
