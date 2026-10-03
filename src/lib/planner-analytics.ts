@@ -196,6 +196,10 @@ export type PlannerEventName =
   // časa (position = mid = sredi dneva pred naslednjim postankom (TripIt
   // Nearby vzorec) | end = konec dneva; brez PII — ne ime ne geo kandidata)
   | "nearby_stop_added"
+  // ISSUE #24 Sklop 10 (1.172.0): preklop GPS natančnosti med odprtim
+  // zajemanjem (mode = high = polni GPS ob postanku | balanced = mrežni
+  // približki daleč stran — Polarsteps baterija; brez PII — brez razdalje)
+  | "gps_power_mode_changed"
   // F7: shranjen/urejen skupnostni vodnik na deljeni poti (avtor = lastnik)
   | "guide_saved"
   // F9 "Pogovor z načrtom": zastavljeno vprašanje o načrtu (source

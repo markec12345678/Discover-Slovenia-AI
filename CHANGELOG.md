@@ -7,6 +7,61 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.172.0] — 2026-10-03 (#24 Sklop 10: Prilagodljiva GPS natančnost — Polarsteps baterija)
+
+### Dodano
+
+- **PRILAGODLJIVA GPS NATANČNOST (baterija — Polarsteps <4 %/dan)**: Go Mode
+  ne poganja polnega GPS čipa VES DAN. Daleč od naslednjega postanka (> 2 km)
+  zajemanje preide v VARČNI način (`enableHighAccuracy: false` — mrežni/wifi
+  približki za razdaljo/smer); ko se uporabnik približa naslednjemu postanku
+  (≤ 2 km), se polna natančnost samodejno vrne — brez uporabnikovega posega.
+- **Nov čist modul `src/lib/journey/gps-power.ts`**: `resolveGpsPowerMode`
+  (deterministična preslikava razdalje → način; 0 omrežja/db/ure — kanon
+  #21/#22) + `GPS_POWER_LABELS` (6-jezični čip »varčni GPS« + razlaga).
+- **Varnostna geometrija (geofence prihodi NETAKNJENI — pogoj P3)**: prag
+  prihoda je ≤ 150 m + 75 m histereza; preklop na »high« je zagotovljen že
+  2 km pred pragom (≈ 5× najširši geofence; pri 50 km/h ~2,4 min vožnje za
+  ponovni prijem GPS). Lažni prihod iz grobe fiksacije je izključen z
+  obstoječo 8 s stabilnostjo: groba fiksacija, ki pokaže ≤ 2 km, TEGA
+  TRENUTKA preklopi način na »high« — prihod mora nato vzdržati 8 s v
+  natančnih fiksacijah znotraj praga; zmoto natančne fiksacije takoj
+  prevotnejo (iskreno »Približuješ se«, ne lažen ✓).
+- **`useGeolocation` podpira `opts.mode`**: preklop načina med vožnjo
+  PONOVNO ODPRE watch z novim `enableHighAccuracy` BREZ utripanja stanja
+  (status/položaj ostaneta — položaj se ne pobriše; `positionRef` zrcalo za
+  svežo vrednost ob preklopu) in BREZ ponastavitve proračuna ponovitve
+  (preklop ni napaka). Default brez možnosti = »high« (kompatibilnost z
+  obstoječimi klicniki/testi #21). Preostale možnosti (timeout 10 s,
+  maximumAge 30 s) so kanonske in se ne spreminjajo.
+- **Resolucija je ČISTA projekcija obstoječih podatkov** (view.next + živi
+  položaj prek `distanceToStopM` — isti vir resnice kot prihodi; 0 novih
+  virov). Fail-safe: NEZNANA razdalja → »high« (neznanje ne varčuje na račun
+  prihodov); dan BREZ odprtega postanka → »balanced« (prihoda ni, česar ne
+  moremo zamuditi).
+- **Iskren UI**: čip »varčni GPS« ob statusu (samo kadar je varčni način
+  dejaven — razkrije, zakaj je natančnost daleč stran groba) + en stavek
+  razlage (»natančen GPS se samodejno vklopi, ko se približaš naslednjemu
+  postanku«) — 6 jezikov (P4-8).
+- **Telemetrija `gps_power_mode_changed`** (3-plastna pariteta): samo ob
+  DEJANSKEM preklopu z odprtim zajemanjem; props SAMO `mode`
+  (`high`/`balanced`) — brez PII (razdalja je izpeljana iz lokacije in NE
+  gre ven).
+
+### Testi
+
+- NOV `issue24-s10-gps-power.test.ts` (25 testov): resolucija ×5 (mejni
+  primeri vključno s pragom 2000 m inkluzivno + fail-safe neznana razdalja),
+  varnostna geometrija ×4 (prekrivanje geofenca ≥ 5×, 8 s stabilnost
+  zaklenjena, matematika izključitve lažnega prihoda), source contract
+  use-geolocation ×5 (modeRef, restart brez brisanja položaja, proračun
+  ponovitve nedotaknjen, default high, kanonske možnosti), source contract
+  go-mode ×4 (resolucija iz view.next, makro-naloga prenosa, čip + razlaga),
+  telemetrija ×2 (samo preklop + brez PII), 3-plastna pariteta, oznake ×2.
+- Obstoječih 4.994 testov ostaja ZELENIH (zero feature loss — dokaz).
+
+---
+
 ## [1.171.0] — 2026-10-03 (#24 Sklop 9: Nearby dodajanje sredi dneva — TripIt Nearby vzorec)
 
 ### Dodano

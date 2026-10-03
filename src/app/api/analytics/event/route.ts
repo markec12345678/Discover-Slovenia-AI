@@ -101,6 +101,8 @@ const VALID_EVENTS = new Set([
   "budget_travelers_changed",
   // ISSUE #24 Sklop 9 (1.171.0): nearby kandidat dodan v pot iz prostega časa
   "nearby_stop_added",
+  // ISSUE #24 Sklop 10 (1.172.0): preklop GPS natančnosti (baterija)
+  "gps_power_mode_changed",
   // F7: shranjen/urejen skupnostni vodnik na deljeni poti
   "guide_saved",
   // F9 "Pogovor z načrtu": zastavljeno vprašanje o načrtu

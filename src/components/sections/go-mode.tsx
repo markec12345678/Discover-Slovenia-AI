@@ -90,9 +90,18 @@ import {
 import {
   ACCURACY_CLASS_LABELS,
   ARRIVAL_LABELS,
+  distanceToStopM,
   positionAgeMs,
   type ArrivalContext,
 } from "@/lib/journey/travel-state";
+// ISSUE #24 Sklop 10 (1.172.0): PRILAGODLJIVA GPS NATANČNOST (baterija —
+// Polarsteps <4 %/dan): čista resolucija načina iz razdalje do naslednjega
+// postanka (geofence prihodi ostanejo varni — »high« že 2 km pred pragom).
+import {
+  GPS_POWER_LABELS,
+  resolveGpsPowerMode,
+  type GpsPowerMode,
+} from "@/lib/journey/gps-power";
 import { STOP_GEO_LABELS, isNavigableGeo } from "@/lib/journey/resolve-stop-geo";
 import { plannerSessionId, trackPlannerEvent } from "@/lib/planner-analytics";
 import {
@@ -895,7 +904,12 @@ export function GoMode() {
   // samodejno po datumu). Preživi tick ure/geo — uporabnikova izbira je
   // stabilna, dokler jo ne resetira (gumb »Danes«).
   const [dayOverride, setDayOverride] = useState<number | null>(null);
-  const geo = useGeolocation();
+  // ISSUE #24 Sklop 10 (1.172.0) — način GPS natančnosti (state: hook ga
+  // bere prek opts.mode; sinhronizira se iz projekcije vie po makro-nalogi
+  // — pravilo react-hooks/set-state-in-effect, isti kanon kot hidracija).
+  // "high" je privzet (fail-safe dokler razdalje ne poznamo).
+  const [gpsPower, setGpsPower] = useState<GpsPowerMode>("high");
+  const geo = useGeolocation({ mode: gpsPower });
   // ISSUE #21 §10 (1.161.0) — WAKE LOCK (konkurenčna delta D1): dokler je
   // GPS watch aktiven, držimo zaslon prižgan (vodilči ga ob vožnji ugasne).
   // Iskreno: brez podpore nič ne obljubimo; brskalnik lahko odvzame (held).
@@ -947,6 +961,45 @@ export function GoMode() {
   useEffect(() => {
     arrivalRef.current = view?.arrivalContext ?? null;
   }, [view]);
+
+  // ----------------------------------------------------------------------
+  // ISSUE #24 SKLOP 10 (1.172.0) — PRILAGODLJIVA GPS NATANČNOST (baterija):
+  // resolucija je ČISTA projekcija obstoječih podatkov (view.next + živi
+  // položaj — 0 novih virov resnice). Daleč od postanka → »balanced«
+  // (mrežni približki), znotraj 2 km → »high« (geofence varnost). Ker hook
+  // živi NAD projekcijo vie (ta potrebuje geo.position — krožna odvisnost),
+  // se način prenaša prek stanja po makro-nalogi (setState v timeout
+  // callbacku — pravilo react-hooks/set-state-in-effect).
+  // ----------------------------------------------------------------------
+  const gpsPowerNext = useMemo<GpsPowerMode>(
+    () =>
+      view
+        ? resolveGpsPowerMode({
+            hasPendingStop: view.next != null,
+            distanceToNextStopM:
+              view.next != null
+                ? distanceToStopM(geo.position, view.next.geo)
+                : null,
+          })
+        : "high", // brez zapisa/pogleda → kanonsko (fail-safe)
+    [view, geo.position]
+  );
+  useEffect(() => {
+    if (gpsPowerNext === gpsPower) return;
+    const apply = setTimeout(() => setGpsPower(gpsPowerNext), 0);
+    return () => clearTimeout(apply);
+  }, [gpsPowerNext, gpsPower]);
+
+  // Telemetrija SAMO ob DEJANSKEM preklopu med odprtim zajemanjem (brez
+  // PII — samo način; brez razdalje, ki je izpeljana iz lokacije).
+  const gpsPowerPrevRef = useRef<GpsPowerMode>("high");
+  useEffect(() => {
+    if (gpsPowerPrevRef.current === gpsPower) return;
+    gpsPowerPrevRef.current = gpsPower;
+    if (geo.status === "active" || geo.status === "requesting") {
+      trackPlannerEvent("gps_power_mode_changed", { mode: gpsPower });
+    }
+  }, [gpsPower, geo.status]);
 
   // ----------------------------------------------------------------------
   // TASK 65 — VREME PRI NASLEDNJI POSTANKI (živi Open-Meteo prek
@@ -2070,6 +2123,15 @@ export function GoMode() {
                   · {t(ACCURACY_CLASS_LABELS[view.positionAccuracyClass])}
                 </span>
               )}
+              {/* ISSUE #24 Sklop 10 (1.172.0) — VARČNI GPS čip: iskreno
+                  razkrije, zakaj je natančnost daleč stran groba (baterija);
+                  polna natančnost se vrne SAMO pred postankom (brez laži
+                  o natančnosti, ki je ni). */}
+              {geo.status === "active" && gpsPower === "balanced" && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  · {t(GPS_POWER_LABELS.balanced)}
+                </span>
+              )}
               {/* ISSUE #21 §10 (1.161.0) — WAKE LOCK: prikaz SAMO kadar je
                   DEJANSKO pridržan (brez obljub, ki jih brskalnik lahko
                   prelomi — battery saver/vidnost ga odvzame). */}
@@ -2102,6 +2164,15 @@ export function GoMode() {
                 ? t(GO_LABELS.positionHint)
                 : t(GO_LABELS.noPosition)}
             </p>
+            {/* ISSUE #24 Sklop 10: razlaga varčnega načina (en stavek — kaj se
+                samodejno zgodi ob približevanju postanku; PWA honest UX). */}
+            {geo.status === "active" &&
+              geo.position &&
+              gpsPower === "balanced" && (
+                <p className="text-xs text-muted-foreground">
+                  {t(GPS_POWER_LABELS.balancedHint)}
+                </p>
+              )}
           </div>
           <div className="flex shrink-0 gap-2">
             {/* W7 — »kaj je v bližini«: destinacije okoli živega GPS

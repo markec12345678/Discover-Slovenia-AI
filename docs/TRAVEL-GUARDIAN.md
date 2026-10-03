@@ -83,7 +83,7 @@ time.start (TripEntry — SAMO realni vir) ─┘         │
 | Funkcija | Internet | GPS | Deluje offline? | Dokaz (koda) |
 |---|---|---|---|---|
 | Ogled shranjene poti + shema dneva | ✗ | ✗ | **DA** | `dai:go-trip` (go-persist) |
-| GPS pozicija + natančnost + stale | ✗ | ✓ | **DA** | use-geolocation (#21) |
+| GPS pozicija + natančnost + stale | ✗ | ✓ | **DA** | use-geolocation (#21; od 1.172.0 #24 Sklop 10 prilagodljiva natančnost: daleč > 2 km varčni način, ob postanku polni — geofence prihodi varni) |
 | Razdalja/smer (haversine) | ✗ | ✓ | **DA** | go-view `toCard` |
 | Arrival detekcija | ✗ | ✓ | **DA** | travel-state (#21) |
 | **Guardian: stanje dneva (🟢/🟠/🔴/⚪)** | ✗ | delno | **DA** (brez GPS: UNKNOWN iskreno) | trip-health.ts |

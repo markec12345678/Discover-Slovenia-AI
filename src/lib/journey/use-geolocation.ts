@@ -16,10 +16,21 @@
 //  - stop()/unmount počistita TUDI časovnik ponovitve (0 lukenj);
 //  - starost fiksacije (zastarelost) je čista izpeljava v travel-state.ts
 //    (positionAgeMs/isPositionStale) — hook samo nosi timestamp.
+//
+// ISSUE #24 Sklop 10 (1.172.0) — PRILAGODLJIVA NATANČNOST (baterija,
+// Polarsteps <4 %/dan): klicnik poda `mode` ("high" = enableHighAccuracy
+// true — kanonsko vedenje; "balanced" = mrežni približki daleč stran).
+// Sprememba načina PONOVNO ODPRE watch z novimi možnostmi BREZ utripanja
+// stanja (status/position ostaneta — samo izmenjava zajemanja) in BREZ
+// ponastavitve proračuna ponovitve (sprememba načina ni napaka). Geofence
+// prihodi ostanejo varni: resolucija načina (gps-power.ts) je čista
+// projekcija razdalje do naslednjega postanka — »high« je zagotovljen
+// že 2 km pred pragom prihoda (≤ 150 m + histereza).
 // ============================================================================
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import type { GpsPowerMode } from "./gps-power";
 import type { GoPosition } from "./go-view";
 
 export type GeoStatus =
@@ -32,6 +43,14 @@ export type GeoStatus =
 
 /** Zakasnitev samodejne ponovitve po prehodni napaki (ISSUE #21 §6). */
 const RETRY_DELAY_MS = 4_000;
+
+/** Možnosti hooka (ISSUE #24 Sklop 10 — prilagodljiva natančnost). */
+export interface UseGeolocationOptions {
+  /** Način zajemanja (default "high" — kanonsko vedenje, kompatibilnost
+   *  z obstoječimi klicniki/testi). Sprememba ponovno odpre watch z novim
+   *  enableHighAccuracy — brez izgube položaja in brez utripanja stanja. */
+  mode?: GpsPowerMode;
+}
 
 export interface UseGeolocationResult {
   position: GoPosition | null;
@@ -48,14 +67,26 @@ export interface UseGeolocationResult {
  * unmount. Večkraten start() brez učinka (en watch). Po prehodni napaki
  * (ne zavrnitvi) EN sam samodejni ponovni poskus po 4 s — nato iskreno
  * stanje error (gumb Vklopi GPS ostane edina pot naprej).
+ *
+ * ISSUE #24 Sklop 10 (1.172.0): `opts.mode` upravlja natančnost — glej
+ * glavo datoteke. Preklop načina med vožnjo je NEVIDEN uporabniku
+ * (status in položaj se ne brišejo; samo izmenjava zajemanja).
  */
-export function useGeolocation(): UseGeolocationResult {
+export function useGeolocation(
+  opts?: UseGeolocationOptions
+): UseGeolocationResult {
   const [position, setPosition] = useState<GoPosition | null>(null);
   const [status, setStatus] = useState<GeoStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retriedRef = useRef(false);
+  // Trenutni način zajemanja (ref — beginWatch bere ZVEK najnovejšega;
+  // default "high" ohranja kanonsko vedenje za obstoječe klicnike).
+  const modeRef = useRef<GpsPowerMode>(opts?.mode ?? "high");
+  // Zrcalo položaja (ref — preklop načina bere VEDNO svežo vrednost,
+  // brez tveganja zastarelega closure-a v efektku odvisnosti [opts?.mode]).
+  const positionRef = useRef<GoPosition | null>(null);
 
   const clearWatch = useCallback(() => {
     if (watchIdRef.current != null) {
@@ -75,33 +106,46 @@ export function useGeolocation(): UseGeolocationResult {
     }
   }, []);
 
-  const beginWatchRef = useRef<() => void>(() => {
+  const beginWatchRef = useRef<
+    (openOpts?: { keepActiveStatus?: boolean }) => void
+  >(() => {
     // nadomeščen v efektu (ref indirekcija — rekurzija v useCallback
     // bi ranila react-hooks/immutability); klic pred prvim efektom je
     // nemogoč (časovnik ponovitve ≥ 4 s po mountu).
   });
 
-  const beginWatch = useCallback(() => {
+  const beginWatch = useCallback(
+    (openOpts?: { keepActiveStatus?: boolean }) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       setStatus("unavailable");
       return;
     }
     if (watchIdRef.current != null) return; // že aktivno
-    setStatus("requesting");
+    // ISSUE #24 Sklop 10: preklop načina med ODPRTIM zajemanjem ne utripa
+    // statusa — če fiksacijo ŽE imamo (zrcalo ref, vedno sveže), status
+    // ostane "active" (iskreno: položaj je, samo izmenjava zajemanja);
+    // sicer "requesting" (prva fiksacija še prihaja — ročni zagon #21).
+    setStatus(
+      openOpts?.keepActiveStatus && positionRef.current != null
+        ? "active"
+        : "requesting"
+    );
     setErrorMessage(null);
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         // Uspešna fiksacija — ponovno odpre proračun ponovitve (naslednja
         // prehodna napaka spet dobi en sam poskus; §6 brez neskončne zanke).
         retriedRef.current = false;
-        setPosition({
+        const next: GoPosition = {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
           ...(Number.isFinite(pos.coords.accuracy)
             ? { accuracyM: pos.coords.accuracy }
             : {}),
           timestamp: pos.timestamp,
-        });
+        };
+        positionRef.current = next; // zrcalo (preklop načina — sveža vrednost)
+        setPosition(next);
         setStatus("active");
       },
       (err) => {
@@ -139,9 +183,18 @@ export function useGeolocation(): UseGeolocationResult {
         setStatus("error");
         setErrorMessage(err.message || String(err.code));
       },
-      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 }
+      // ISSUE #24 Sklop 10: enableHighAccuracy upravlja NAČIN (ref — vedno
+      // najnovejša vrednost ob odpiranju watcha; preostale možnosti so
+      // kanonske iz #21 in se NE spreminjajo med načinoma).
+      {
+        enableHighAccuracy: modeRef.current === "high",
+        timeout: 10_000,
+        maximumAge: 30_000,
+      }
     );
-  }, [clearRetryTimer]);
+    },
+    [clearRetryTimer]
+  );
 
   // Ref indirekcija: časovnik ponovitve vedno pokliče NAJNOVEJŠO instanco
   // beginWatch (identiteta prek refa — stabilna, brez rekurzije vClosure).
@@ -155,10 +208,33 @@ export function useGeolocation(): UseGeolocationResult {
     beginWatch();
   }, [beginWatch, clearRetryTimer]);
 
+  // ISSUE #24 Sklop 10 (1.172.0) — PREKLOP NAČINA MED VOŽNJO: če je watch
+  // odprt, ga tiho izmenjamo z novimi možnostmi (clearWatch + ponovni
+  // watchPosition). Status/položaj se NE brišejo (brez utripanja
+  // »Nastavljam fiksacijo« ob vsakem preklopu) in proračun ponovitve
+  // ostane (preklop ni napaka). Če preklop pride s čakajočim ponovnim
+  // poskusom, naslednji beginWatch pobere najnovejši način prek refa.
+  useEffect(() => {
+    const nextMode: GpsPowerMode = opts?.mode ?? "high";
+    if (modeRef.current === nextMode) return;
+    modeRef.current = nextMode;
+    if (watchIdRef.current != null) {
+      // Odprti watch zamenjamo takoj — položaj iz prejšnjega načina ostane
+      // veljaven (razdalje/smer tečejo naprej brez lukenj). Status in
+      // položaj se NE brišejo (beginWatch z zastavico ohrani "active", če
+      // fiksacijo že imamo — setState živi V beginWatch, ne v efektu).
+      clearWatch();
+      beginWatchRef.current({ keepActiveStatus: true });
+    }
+    // opts?.mode je v odvisnostih po vrednosti (niz) — učinek se sproži
+    // SAMO ob dejanski spremembi načina, ne ob vsakem izrisu.
+  }, [opts?.mode, clearWatch]);
+
   const stop = useCallback(() => {
     clearRetryTimer();
     retriedRef.current = false;
     clearWatch();
+    positionRef.current = null; // zrcalo čisto ob izklopu (isti kanon kot state)
     setStatus("idle");
     setPosition(null);
   }, [clearWatch, clearRetryTimer]);
