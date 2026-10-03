@@ -139,10 +139,13 @@ export function isEnRoute(pathname: string): boolean {
 // ukazni parser SL+EN+IT+DE, planner-audio, ICS izvoz, komponente).
 // Namerno ŠE VEDNO IZVEN (iskrena meja — proxy 308 na slovensko):
 //   L-vzorčne poti (/trznica, /dozivetja, /lokali, /dogodki, /potovanje,
-//   /na-poti, /moja-potovanja — inline SL/EN slovarji v komponentah), /vodici
+//   /moja-potovanja — inline SL/EN slovarji v komponentah), /vodici
 //   (vsebinska plast ADRIA-EN). OPOMBA #24 (1.164.0): /pot NI VEČ na tem
 //   seznamu — skupnostna površina je zdaj polno dvojezična (EN_POT_ROUTES
 //   v isEnRoute); IT/DE za /pot še vedno NE obstajata.
+// OPOMBA #24 Sklop 7 (1.169.0): /na-poti NI VEČ na tem seznamu — Go Mode
+//   je odprt za IT/DE (isti PL kanon prehodnega obdobja kot /nacrtuj:
+//   neprevedeni Go nizi dedijo EN — NIKOLI SL — P4-8: ne mešaj jezikov).
 // Uporabniki: src/proxy.ts (308 guard), language-switcher (vidnost),
 // hreflangForPath (alternati), sitemap-urls.ts (IT/DE URL-ji).
 // ============================================================================
@@ -164,6 +167,13 @@ export const ITDE_STATIC_ROUTES = new Set([
   // W1 faza 2b-2 (1.129.0): načrtovalnik — pogon (deterministični motor,
   // Q&A, pakirni seznam, hitre akcije, NL ukazi, izvozi) je 4-jezičen.
   "/nacrtuj",
+  // ISSUE #24 Sklop 7 (1.169.0): Go Mode — Now&Next sopotnik MED potovanjem
+  // je za tuje uporabnike najbolj uporabna ravno na telefonu na poti.
+  // Komponenta je L-vzorec {sl,en}; IT/DE uporabnik dobi EN površino
+  // (SL-first resolucija v go-mode.tsx/na-poti — PL prehodni kanon),
+  // NE pa več slovenske (prej: POJDI zavihek je IT/DE uporabnika pahnil
+  // na SL stran — dejanska kršitev P4-8).
+  "/na-poti",
 ]);
 
 /**
@@ -196,9 +206,12 @@ export function isItDeRoute(pathname: string): boolean {
 // Oba jezika sta v benchmarku Alma (STB) naslednja po IT/DE.
 // Namerno ŠE VEDNO IZVEN (iskrena meja — proxy 308 na slovensko):
 //   L-vzorčne poti (/trznica, /dozivetja, /lokali, /dogodki, /potovanje,
-//   /na-poti, /moja-potovanja), /vodici. OPOMBA #24 (1.164.0): /pot NI VEČ
-//   na tem seznamu — skupnostna površina je zdaj dvojezična SL+EN
+//   /moja-potovanja), /vodici. OPOMBA #24 (1.164.0): /pot NI VEČ na tem
+//   seznamu — skupnostna površina je zdaj dvojezična SL+EN
 //   (EN_POT_ROUTES v isEnRoute); FR/ES za /pot še vedno NE obstajata.
+// OPOMBA #24 Sklop 7 (1.169.0): /na-poti NI VEČ na tem seznamu — Go Mode
+//   je odprt za FR/ES (isti kanon kot IT/DE zgoraj: EN dedovanje Go nizov,
+//   nikoli SL — P4-8: ne mešaj jezikov).
 // FAZA 2a (1.145.0): + /zemljevid (POI imena so jezikovno nevtralni viri
 // OSM/FSQ; UI T slovarji ×6; iskanje ima FR/ES razloge zadetkov) +
 // destinacijske pod-poti (/destinacija/* ×38 — overlayji slovenia-data-fr/-es
@@ -229,6 +242,10 @@ export const FRES_STATIC_ROUTES = new Set([
   // W12 faza 2b (1.146.0): načrtovalnik — pogon (deterministični motor,
   // Q&A, pakirni seznam, hitre akcije, NL ukazi, izvozi) je 6-jezičen.
   "/nacrtuj",
+  // ISSUE #24 Sklop 7 (1.169.0): Go Mode — FR/ES po istem kanonu kot IT/DE
+  // (EN dedovanje Go nizov, nikoli SL; popravi POJDI zavihek, ki je FR/ES
+  // uporabnika prej pahnil na slovensko stran — P4-8).
+  "/na-poti",
 ]);
 
 /**

@@ -1141,16 +1141,17 @@ export function SharedTrip({
               variant="outline"
               onClick={() => {
                 const view = buildItineraryGoView(itinerary, {
-                  // ISSUE #24 Sklop 1 (1.164.0): CTA nizi so dvojezični, a
-                  // Go zapis ostaja v SL — /na-poti je še vedno SL-only
-                  // površina (308), da vsebina ne meša jezikov.
+                  // ISSUE #24 Sklop 7 (1.169.0): Go zapis je jezikovno
+                  // nevtralen ({sl,en} pari) — izbere ga GoMode po localu;
+                  // EN uporabnik zdaj pristane na /en/na-poti (prej SL stran
+                  // = mešanje jezikov, P4-8). Površina /pot je SL/EN.
                   lang: "sl",
                   name,
                 });
                 // ISSUE #4 §2 (val 2): Go Mode zapis veže na TO shranjeno
                 // pot (shareId) — premostitev nazaj na strežniški objekt.
                 if (saveItineraryGoTrip(view, { shareId })) {
-                  router.push("/na-poti");
+                  router.push(lang === "sl" ? "/na-poti" : "/en/na-poti");
                 }
               }}
               aria-label={t.startGoModeAria}

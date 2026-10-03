@@ -208,10 +208,20 @@
   "use strict";
 
   // --- Jezik: NEXT_LOCALE cookie (nastavi ga locale proxy) — default SL. ---
+  // ISSUE #24 Sklop 7 (1.169.0): cookie je lahko katerikoli javni jezik
+  // (sl/en/it/de/fr/es). Offline besedila imamo samo SL+EN — tuji locale
+  // pomeni EN besedila (PL prehodni kanon), Go povezava pa gre na
+  // uporabnikov /{locale}/na-poti (Go Mode je zdaj na vseh 6 whitelistah —
+  // nikoli nazaj na SL mešanje, P4-8).
   var LANG = "sl";
+  var GO_LOCALE = "sl";
   try {
     var m = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/);
-    if (m && decodeURIComponent(m[1]).trim().toLowerCase() === "en") LANG = "en";
+    var loc = m ? decodeURIComponent(m[1]).trim().toLowerCase() : "";
+    if (loc === "en" || loc === "it" || loc === "de" || loc === "fr" || loc === "es") {
+      LANG = "en";
+      GO_LOCALE = loc;
+    }
   } catch (e) { /* privatni način */ }
 
   var I18N = {
@@ -704,7 +714,10 @@
       });
       html += "</div>";
     });
-    var goHref = LANG === "en" ? "/en/na-poti" : "/na-poti";
+    // ISSUE #24 Sklop 7 (1.169.0): Go povezava po uporabnikovem localu
+    // (GO_LOCALE iz NEXT_LOCALE cookieja) — tuji uporabnik ostane v SVOJI
+    // URL poti (/it/na-poti …), vsebina Go Mode pa deduje EN (P4-8).
+    var goHref = GO_LOCALE === "sl" ? "/na-poti" : "/" + GO_LOCALE + "/na-poti";
     html += '<a class="btn btn-primary btn-go" href="' + goHref + '">' +
       esc(T.goOpen) + " →</a>";
     // §16 V2 + val 2 shareId: premostitev nazaj na shranjeno pot — tudi

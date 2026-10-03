@@ -7,6 +7,68 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.169.0] — 2026-10-02 (#24 Sklop 7: Go Mode i18n — odprt za vseh 6 jezikov, faza 1)
+
+### Dodano
+
+- **GO MODE (Now&Next sopotnik na /na-poti) je odprt za VSEH 6 jezikov
+  (sl/en/it/de/fr/es) — FAZA 1 vodovodarstvo z iskrenim EN-dedovanjem**
+  (analiza UI/UX benchmarka IMPROVE #3: »Go Mode i18n za it/de/fr/es —
+  trenutno dedijo EN, pošteno, a popolnjivo«). Prej je bil /na-poti SAMO na
+  SL in EN whitelistah — proxy je `/it/na-poti` (in de/fr/es) trajno
+  preusmeril (308) na SLOVENSKO stran, POJDI zavihek mobilne navigacije
+  (locale-zavedni Link) pa je IT/DE/FR/ES uporabnika pahnil v slovenščino —
+  dejanska kršitev invarianta P4-8 »nikoli ne mešaj jezikov«, ki jo ta
+  sklop popravi. Spremembe po plasteh:
+  - **routing.ts**: `/na-poti` dodan na ITDE_STATIC_ROUTES (W1) in
+    FRES_STATIC_ROUTES (W12) — vir resnice za proxy (nič več 308),
+    hreflang alternativi, sitemap URL-je (/it/na-poti … vseh 6) in
+    jezikovni preklopnik (meniji se samodejno prikažejo);
+  - **SL-first resolucija**: `na-poti/page.tsx` (2×: metadata + stran)
+    in `go-mode.tsx` (1× = en sam vir celotnega Go drevesa — lang se
+    propagira vsem podkomponentam prek propsov) obrnjena iz
+    `locale === "en" ? "en" : "sl"` v `locale === "sl" ? "sl" : "en"` —
+    slovenski uporabnik dobi SL, VSI tuji (en/it/de/fr/es) dedujejo EN
+    (PL prehodni kanon — enak kot planner W1/W12), NIKOLI SL;
+  - **vnosne točke**: planner (`/nacrtuj`, 6-jezična) pri »Zaženi Na
+    poti« zdaj potiska PO LOCALU — `/{locale}/na-poti` (prej so vsi tuji
+    prisiljeni na `/en/na-poti`); deljena pot (`/pot/[shareId]`,
+    dvojezična od Sklopa 1) — EN uporabnik ne pristane več na SL strani
+    (prej hardcoded `router.push("/na-poti")` kljub EN gumbu);
+    navigacija/noga/POJDI zavihek/hub Moja potovanja/profil že uporabljajo
+    locale-zavedni Link (avto-prefix, 0 sprememb);
+  - **offline.html**: NEXT_LOCALE piškotek prepozna VSEH 5 tujih jezikov
+    (en/it/de/fr/es — prej samo EN, IT piškotek je pomenil SL stran) →
+    besedila offline strani v EN (PL kanon), Go povezava pa v uporabnikovi
+    URL poti (`/it/na-poti` … GO_LOCALE);
+  - **sw.js**: GO_PAGE_PATHS razširjen na vseh 6 jezikovnih različic Go
+    strani — it/de/fr/es uporabniki dobio isto občutljivo offline
+    obravnavo (PLANS predpomnilnik, NE 400-vnosni SHELL); imena cache-a
+    NAMENOMA NE bumpana (varnost offline načrtov popotnikov).
+- **Iskrena meja (dokumentirana)**: Go Mode NIZI obstajajo samo v SL+EN —
+  it/de/fr/es uporabnik vidi EN površino. Go ZAPIS (dai:go-trip) je
+  jezikovno nevtralen (vsi nizi {sl,en} pari — `buildItineraryGoView`
+  piše oba neodvisno od opcije lang), zato izris po localu deluje brez
+  migracij. Celotni prevodi (~260 enot × 4 jeziki) so faza 2 po jezikih
+  (isti mejnik kot W1 → W12 za planner).
+
+### Testi
+
+- 12 novih testov (`issue24-s7-gomode-i18n.test.ts`): routing whiteliste
+  (vseh 6 + regresija, da /potovanje in /moja-potovanja OSTANEJO zaprta),
+  SL-first resolucija (source contract + odsotnost stare EN-first),
+  vnosne točke (planner template, shared-trip POPRAVEK EN mešanja,
+  Link-avto-prefix ×5 datotek), jezikovna nevtralnost zapisa (funkciorno),
+  offline (piškotek ×5, GO_LOCALE povezava, SW 6 poti).
+- Usklajeni obstoječi: w1-2b (isItDeRoute flip), w12 (FRES 11→12 poti,
+  sitemap 581→582/jezik + /fr|es/na-poti, planner push template),
+  task73 (offline GO_LOCALE vzorec, SW 6 poti, NOV dinamični test ⑩b:
+  IT piškotek → EN besedila + /it/na-poti povezava).
+- Regresija: 4944 pass + 1 znana sandbox DB (issue7-g11 ④ — CI zelen s
+  Postgresom); lint 0; tsc 0.
+
+---
+
 ## [1.168.0] — 2026-10-02 (#24 Sklop 6: PDF povzetek poti — »travel book lite«)
 
 ### Dodano

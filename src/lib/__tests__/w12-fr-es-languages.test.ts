@@ -105,8 +105,8 @@ describe("W12 faza 1+2a: routing — FR/ES javna jezika na svoji whitelisti", ()
     expect(routing.defaultLocale).toBe("sl");
   });
 
-  test("FRES_STATIC_ROUTES = 11 poti (jedro + svetovanje + zemljevid + načrtovalnik — faza 2b)", () => {
-    expect(FRES_STATIC_ROUTES.size).toBe(11);
+  test("FRES_STATIC_ROUTES = 12 poti (jedro + svetovanje + zemljevid + načrtovalnik + Go Mode — Sklop 7)", () => {
+    expect(FRES_STATIC_ROUTES.size).toBe(12);
     for (const p of FRES_PATHS) {
       expect(FRES_STATIC_ROUTES.has(p), `manjka "${p}"`).toBe(true);
     }
@@ -132,7 +132,6 @@ describe("W12 faza 1+2a: routing — FR/ES javna jezika na svoji whitelisti", ()
       "/lokali",
       "/dogodki",
       "/potovanje",
-      "/na-poti",
       "/vodici",
       "/vodici/jadranska-obala",
       "/pot/abc123",
@@ -279,18 +278,22 @@ describe("W12 faza 1+2a: SEO + sitemap (hreflang/og/števec)", () => {
     expect(ogLocaleFor("sl")).toBe("sl_SI");
   });
 
-  test("sitemap: FR/ES URL-ji = 11 statičnih + 570 destinacijskih = 581 na jezik (faza 2b)", () => {
+  test("sitemap: FR/ES URL-ji = 12 statičnih + 570 destinacijskih = 582 na jezik (Sklop 7)", () => {
     const urls = getAllSitemapUrls("https://example.com");
     const frPaths = urls.filter((u) => u.path === "/fr" || u.path.startsWith("/fr/"));
     const esPaths = urls.filter((u) => u.path === "/es" || u.path.startsWith("/es/"));
-    // 11 statičnih (9 + /zemljevid + /nacrtuj) + 38 destinacij × 15 pod-poti = 581
-    expect(frPaths.length).toBe(581);
-    expect(esPaths.length).toBe(581);
+    // 12 statičnih (9 + /zemljevid + /nacrtuj + /na-poti #24 Sklop 7)
+    // + 38 destinacij × 15 pod-poti = 582
+    expect(frPaths.length).toBe(582);
+    expect(esPaths.length).toBe(582);
     expect(frPaths.map((u) => u.path)).toContain("/fr/destinacije");
     expect(frPaths.map((u) => u.path)).toContain("/fr/zemljevid");
     // W12 faza 2b: planner v sitemapu
     expect(frPaths.map((u) => u.path)).toContain("/fr/nacrtuj");
     expect(esPaths.map((u) => u.path)).toContain("/es/nacrtuj");
+    // ISSUE #24 Sklop 7: Go Mode v FR/ES sitemapu
+    expect(frPaths.map((u) => u.path)).toContain("/fr/na-poti");
+    expect(esPaths.map((u) => u.path)).toContain("/es/na-poti");
     expect(esPaths.map((u) => u.path)).toContain("/es/primerjava");
     expect(esPaths.map((u) => u.path)).toContain("/es/destinacija/bled/things-to-do");
     expect(frPaths.map((u) => u.path)).toContain("/fr/destinacija/bled/guide/romanticni-pobeg");
@@ -755,8 +758,9 @@ describe("W12 faza 2b: izvozi + segmenti + dogodki (§38 EVENTS_EN dedovanje)", 
     const trust = source("src/components/planner-trust-line.tsx");
     expect(trust).toContain('"fr"');
     const planner = source("src/components/sections/itinerary-planner.tsx");
-    // Go Mode push fix: FR/ES → /en/na-poti (ne SL)
-    expect(planner).toContain('"/en/na-poti"');
+    // ISSUE #24 Sklop 7 (1.169.0): Go Mode push po localu — FR/ES →
+    // /fr|es/na-poti (Go Mode odprt za vseh 6; vsebina deduje EN, ne SL)
+    expect(planner).toContain('`/${lang}/na-poti`');
     const audio = source("src/components/itinerary-audio.tsx");
     expect(audio).toContain("Écouter");
     expect(audio).toContain("Escuchar");

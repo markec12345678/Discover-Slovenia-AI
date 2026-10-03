@@ -2051,9 +2051,10 @@ export function ItineraryPlanner() {
   function handleStartGoMode() {
     if (!itinerary) return;
     const view = buildItineraryGoView(itinerary, {
-      // W1-2b-2: Go pogled je SL/EN (L vzorec) — IT/DE dedejita EN
-      // (PL konvencija prehodnega obdobja; /en/na-poti je na EN whitelisti)
-      // W12-faza-2b: tudi FR/ES dedejita EN Go sopotnika (isti kanon)
+      // ISSUE #24 Sklop 7 (1.169.0): Go zapis je jezikovno nevtralen — vsi
+      // nizi so {sl,en} pari (lang opcija je neuporabljena ostankinja);
+      // izris izbere GoMode po localu: tuji uporabniki (en/it/de/fr/es)
+      // dedijo EN, nikoli SL (P4-8).
       lang: lang === "sl" ? "sl" : "en",
       name: deriveSavedTripName(itinerary),
     });
@@ -2064,10 +2065,11 @@ export function ItineraryPlanner() {
       persisted: saved,
     });
     if (saved) {
-      // W1-2b-2: jezikovno pravilna destinacija — SL → /na-poti, EN/IT/DE →
-      // /en/na-poti (EN whitelist; IT/DE dedejijo EN Go sopotnika)
-      // W12-faza-2b: FR/ES → EN pot (P4-8 precedens — Go pogled je SL/EN L-vzorec)
-      router.push(lang === "sl" ? "/na-poti" : "/en/na-poti");
+      // ISSUE #24 Sklop 7 (1.169.0): jezikovno pravilna destinacija po
+      // localu — SL → /na-poti, vsi tuji (en/it/de/fr/es) → /{locale}/na-poti
+      // (Go Mode je zdaj na vseh 6 whitelistah; Go zapis nosi {sl,en}
+      // para, GoMode izriše EN za tuje — nikoli SL — P4-8: ne mešaj).
+      router.push(lang === "sl" ? "/na-poti" : `/${lang}/na-poti`);
     } else {
       // Poln/zasebni localStorage — iskren toast (načrt NE more na napravo)
       toast({

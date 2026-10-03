@@ -207,8 +207,11 @@ function goRecord(lang: "sl" | "en", startDate?: string): Record<string, unknown
 describe("TASK 73: offline.html — Go Mode odsek (statična struktura)", () => {
   test("① bere PRAVilen ključ persistente (dai:go-trip) in povezuje obe lokali", () => {
     expect(OFFLINE_HTML).toContain('window.localStorage.getItem("dai:go-trip")');
-    // Lokalno-zavedna povezava (isti URL, kot ga gradi startGoMode).
-    expect(OFFLINE_HTML).toContain('LANG === "en" ? "/en/na-poti" : "/na-poti"');
+    // ISSUE #24 Sklop 7 (1.169.0): lokalno-zavedna povezava po GO_LOCALE
+    // (NEXT_LOCALE cookie ×6 — tuji uporabnik ostane v svoji URL poti).
+    expect(OFFLINE_HTML).toContain(
+      'GO_LOCALE === "sl" ? "/na-poti" : "/" + GO_LOCALE + "/na-poti"'
+    );
   });
 
   test("② vsi Go Mode elementi obstajajo v statičnem HTML (skripta ne crkne)", () => {
@@ -276,8 +279,14 @@ function dictKeys(langKey: string): string[] {
 // ---------------------------------------------------------------------------
 
 describe("TASK 73: sw.js — Go Mode routing v PLANS cache", () => {
-  test("⑤ /na-poti in /en/na-poti gresta v PLANS cache (ne v 400-vnosni SHELL)", () => {
-    expect(SW_JS).toContain('const GO_PAGE_PATHS = ["/na-poti", "/en/na-poti"]');
+  test("⑤ /na-poti vseh 6 jezikov gre v PLANS cache (ne v 400-vnosni SHELL)", () => {
+    // ISSUE #24 Sklop 7 (1.169.0): Go strani za vseh 6 jezikov (whiteliste).
+    expect(SW_JS).toContain('"/na-poti"');
+    expect(SW_JS).toContain('"/en/na-poti"');
+    expect(SW_JS).toContain('"/it/na-poti"');
+    expect(SW_JS).toContain('"/de/na-poti"');
+    expect(SW_JS).toContain('"/fr/na-poti"');
+    expect(SW_JS).toContain('"/es/na-poti"');
     expect(SW_JS).toContain(
       "const navCache = isSharePage || isGoPage ? PLANS_CACHE : SHELL_CACHE;"
     );
@@ -365,6 +374,25 @@ describe("TASK 73: offline.html — Go Mode odsek (izvedba skripte)", () => {
         expect(html).toContain("2× dan · 5 postankov");
         expect(html).toContain('href="/na-poti"');
         expect(els.get("t-go")!.textContent).toBe("Na poti — aktivno potovanje");
+      }
+    );
+  });
+
+  test("⑩b ISSUE #24 Sklop 7: IT piškotek — EN besedila (fallback), povezava /it/na-poti", async () => {
+    await runOfflineScript(
+      {
+        cookie: "NEXT_LOCALE=it",
+        localStorage: { "dai:go-trip": JSON.stringify(goRecord("en", "2026-09-21")) },
+      },
+      ({ els }) => {
+        const html = els.get("go-plan")!.innerHTML;
+        // Offline besedila imamo samo SL+EN — IT uporabnik dobi EN (PL kanon),
+        // NIKOLI SL (P4-8: ne mešaj — prej je IT piškotek pomenil SL stran).
+        expect(html).toContain("2× day · 5 stops");
+        expect(html).not.toContain("2× dan · 5 postankov");
+        expect(els.get("t-go")!.textContent).toBe("On the road — active journey");
+        // Go povezava pa ostane v uporabnikovi URL poti (/it/na-poti).
+        expect(html).toContain('href="/it/na-poti"');
       }
     );
   });

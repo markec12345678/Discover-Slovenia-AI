@@ -616,7 +616,8 @@ describe("W1-faza-2b-2: ROUTING — /nacrtuj odprt za IT/DE", () => {
     expect(routing.isItDeRoute("/trznica")).toBe(false);
     expect(routing.isItDeRoute("/potovanje")).toBe(false);
     expect(routing.isItDeRoute("/pot")).toBe(false);
-    expect(routing.isItDeRoute("/na-poti")).toBe(false);
+    // ISSUE #24 Sklop 7 (1.169.0): Go Mode je odprt za IT/DE (EN dedovanje)
+    expect(routing.isItDeRoute("/na-poti")).toBe(true);
     expect(routing.isLocaleRoute("/nacrtuj", "it")).toBe(true);
     expect(routing.isLocaleRoute("/nacrtuj", "de")).toBe(true);
   });

@@ -88,7 +88,17 @@ const SHARE_PAGE_PREFIX = "/pot/";
 // uporabnik brez signala. Vnosni format je identičen obstoječim (Response
 // za URL) → imena cache-a NAMENOMA ne bumpamo (bump bi ob aktivaciji SW
 // pobrisal že-shranjene offline načrte popotnikov).
-const GO_PAGE_PATHS = ["/na-poti", "/en/na-poti"];
+// ISSUE #24 Sklop 7 (1.169.0): vseh 6 jezikovnih različic Go strani
+// (Go Mode je zdaj na vseh whitelistah — it/de/fr/es uporabniki morajo
+// dobiti isto občutljivo offline obravnavo kot sl/en).
+const GO_PAGE_PATHS = [
+  "/na-poti",
+  "/en/na-poti",
+  "/it/na-poti",
+  "/de/na-poti",
+  "/fr/na-poti",
+  "/es/na-poti",
+];
 
 /** Ali je zahtevek OSM tile (Leaflet)? (a|b|c.)tile.openstreetmap.org */
 function isOsmTileHost(hostname) {

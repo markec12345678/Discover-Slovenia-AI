@@ -483,7 +483,11 @@ function NavButton({
 
 export function GoMode() {
   const locale = useLocale();
-  const lang: "sl" | "en" = locale === "en" ? "en" : "sl";
+  // ISSUE #24 Sklop 7 (1.169.0): SL-first resolucija — /na-poti je zdaj
+  // odprt za vseh 6 jezikov; it/de/fr/es dedijo EN Go Mode površino
+  // (L-vzorec {sl,en} + PL prehodni kanon), NIKOLI SL (P4-8: ne mešaj
+  // jezikov — prej je POJDI zavihek tuje uporabnike pahnil na SL stran).
+  const lang: "sl" | "en" = locale === "sl" ? "sl" : "en";
   const t = (o: { sl: string; en: string }) => o[lang];
 
   // Hidracijska varnost: localStorage + živa ura se naložita TEKOM mounta —

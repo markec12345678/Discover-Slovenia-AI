@@ -49,7 +49,9 @@ const L = {
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
-  const lang = locale === "en" ? "en" : "sl";
+  // ISSUE #24 Sklop 7 (1.169.0): SL-first resolucija — it/de/fr/es dedijo
+  // EN (PL prehodni kanon), NIKOLI SL (P4-8: ne mešaj jezikov).
+  const lang = locale === "sl" ? "sl" : "en";
   const base = await currentBaseUrl();
   return {
     title: L.metaTitle[lang],
@@ -63,7 +65,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function NaPotiPage() {
   const locale = await getLocale();
-  const lang = locale === "en" ? "en" : "sl";
+  // ISSUE #24 Sklop 7 (1.169.0): SL-first resolucija (isti kanon kot zgoraj).
+  const lang = locale === "sl" ? "sl" : "en";
   return (
     <>
       <div className="print:hidden">
