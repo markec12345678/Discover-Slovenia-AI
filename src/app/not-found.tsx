@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link";
 import { Compass, Home, Search } from "lucide-react";
 
 // ============================================================================
@@ -95,21 +94,26 @@ export default function NotFound() {
             ? "The link doesn't lead anywhere — but we can take you back to the right path."
             : "Povezava ne vodi nikamor — lahko pa te peljemo nazaj na pravo pot."}
         </p>
+        {/* POLISH 1.173.4: TRDI navigaciji (navadna <a>). Mehka navigacija
+            (next/link) iz globalne not-found meje v tej verziji Nexta NE
+            zamenja pogleda — URL se posodobi, 404 vsebina pa OSTANE
+            (produkcijsko dokazano na 1.173.3; reload prinese pravo stran).
+            Izhoda sta edini nalogo te strani — zato trdo. */}
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-          <Link
+          <a
             href={isEn ? "/en" : "/"}
             className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             <Home className="size-4" aria-hidden="true" />
             {isEn ? "Back to start" : "Nazaj na začetek"}
-          </Link>
-          <Link
+          </a>
+          <a
             href={isEn ? "/en/nacrtuj" : "/nacrtuj"}
             className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
           >
             <Search className="size-4" aria-hidden="true" />
             {isEn ? "Plan a trip" : "Načrtuj potovanje"}
-          </Link>
+          </a>
         </div>
       </div>
     </main>

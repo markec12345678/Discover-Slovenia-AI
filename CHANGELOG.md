@@ -73,6 +73,25 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.173.4] — 2026-10-03 (POLIRNI KROG: 404 izhoda delujejo — trda navigacija)
+
+### Popravljeno
+
+- **404 izhoda („Nazaj na začetek" / „Načrtuj potovanje") sta zdaj TRDI
+  navigaciji (navadna `<a>`).** Produkcijska QA na 1.173.3 je odkrila
+  predhodno napako: mehka navigacija (`next/link`) iz globalne not-found
+  meje v tej verziji Nexta NI zamenjala pogleda — URL se je posodobil,
+  404 vsebina pa je OSTALA (reload je prinesel pravo stran). Ker sta izhoda
+  edina nalogo te strani, trda navigacija (poln SSR vstop) obide čudnost
+  usmerjevalnika po zanesljivi poti.
+
+### Testi
+
+- NOVI test trdih navigacij (+ varovalki: brez `next/link` uvoza/brez
+  `<Link>` ostankov). Regresija: **5.046 pass** (+1), lint 0, tsc 0.
+
+---
+
 ## [1.173.3] — 2026-10-03 (POLIRNI KROG: 404 naslov — MutationObserver, dokončno)
 
 ### Popravljeno

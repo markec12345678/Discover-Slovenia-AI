@@ -230,6 +230,16 @@ describe("POLISH 1.173.0 ③ 404 naslov zavihka", () => {
     expect(NOT_FOUND_SRC).toContain('window.location.pathname.startsWith("/en")');
   });
 
+  test("POLISH 1.173.4: izhoda sta TRDI navigaciji (<a>, ne next/link)", () => {
+    // Mehka navigacija iz globalne not-found meje ni zamenjala pogleda
+    // (URL se posodobil, 404 vsebina je ostala — produkcijsko dokazano).
+    // Izhoda sta edina nalogo te strani — trda navigacija je zanesljiva.
+    expect(NOT_FOUND_SRC).toContain('<a\n            href={isEn ? "/en" : "/"}');
+    expect(NOT_FOUND_SRC).toContain('href={isEn ? "/en/nacrtuj" : "/nacrtuj"}');
+    expect(NOT_FOUND_SRC).not.toContain("</Link>");
+    expect(NOT_FOUND_SRC).not.toContain('from "next/link"');
+  });
+
   test("SITE_DESCRIPTION (seo.ts) je tikanje + aktualni obseg (38, Saranda)", () => {
     const seo = read("lib/seo.ts");
     expect(seo).toContain("Odkrij Slovenijo z AI-poganjanim");
