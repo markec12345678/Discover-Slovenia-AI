@@ -94,7 +94,7 @@ import {
   type ArrivalContext,
 } from "@/lib/journey/travel-state";
 import { STOP_GEO_LABELS, isNavigableGeo } from "@/lib/journey/resolve-stop-geo";
-import { plannerSessionId } from "@/lib/planner-analytics";
+import { plannerSessionId, trackPlannerEvent } from "@/lib/planner-analytics";
 import {
   CONFIRMATION_STATUS_LABELS,
 } from "@/lib/journey/booking";
@@ -1362,7 +1362,12 @@ export function GoMode() {
   }, [view, now, freeTime, nearbyCategory, nbLat, nbLng, nbMinutes, nbKey, dayStopCoords]);
 
   /** §9 E2E-8: dodaj kandidata v mojo pot (SAMO v2 zapis — čista projekcija
-   *  go-edit.ts + persistanca saveItineraryGoTrip; v1: iskrena opomba). */
+   *  go-edit.ts + persistanca saveItineraryGoTrip; v1: iskrena opomba).
+   *  ISSUE #24 Sklop 9 (1.171.0) — SREDI DNEVA (TripIt Nearby vzorec): kadar
+   *  obstaja naslednji postanek, kandidat iz prostega časa gre PRED NJEGA
+   *  (obišče se ZDAJ), sicer na konec dneva (staro vedenje). Vstavek nikoli
+   *  ne preureja obstoječih postankov; varnost okna (zanka ≤ okno − rezerva)
+   *  je bila preverjena V filterNearbyCandidates PRED dodajanjem. */
   const addNearby = useCallback(
     (fit: NearbyFit) => {
       if (!record || !view) return;
@@ -1370,6 +1375,7 @@ export function GoMode() {
         setNearbyFeedback(GO_EDIT_LABELS.notPossibleV1);
         return;
       }
+      const beforeKey = view.next?.entry.key ?? null;
       const updated = addNearbyStopToRecord(
         record,
         {
@@ -1379,14 +1385,32 @@ export function GoMode() {
           lng: fit.candidate.lng,
           category: fit.candidate.category,
         },
-        view.activeDayIndex
+        view.activeDayIndex,
+        { beforeKey }
       );
       if (!updated) return;
       const shareId = record.version === 2 ? record.shareId : undefined;
       if (!saveItineraryGoTrip(updated.view, { shareId })) return;
       setRecord(updated);
-      // Sklop 8: en vir resnice (GO_EDIT_LABELS.added) — prej inline dvojnik.
-      setNearbyFeedback(goAll(GO_EDIT_LABELS.added, fit.candidate.title));
+      // Kje je kandidat dejansko pristal? (beforeKey iz AKTIVNEGA dneva je
+      // vedno najden — a obrambno preverimo položaj v posodobljenem dnevu:
+      // zadnji mestec = konec dneva, sicer = sredi dneva pred naslednjim.)
+      const newKey = `nearby:${fit.candidate.key}`;
+      const dayEntries = updated.view.days[view.activeDayIndex]?.entries ?? [];
+      const newIndex = dayEntries.findIndex((e) => e.key === newKey);
+      const isMid = newIndex !== -1 && newIndex < dayEntries.length - 1;
+      // Sklop 8: en vir resnice (GO_EDIT_LABELS) — Sklop 9: pravo sporočilo
+      // glede na DEJANSKI položaj vstavitve (sredina ne obljubljamo, če je
+      // padlo na konec — npr. prazen dan robni primer).
+      setNearbyFeedback(
+        goAll(
+          isMid ? GO_EDIT_LABELS.addedMid : GO_EDIT_LABELS.added,
+          fit.candidate.title
+        )
+      );
+      // Telemetrija (brez PII — samo položaj vstavitve, ne ime/geo kandidata):
+      // meri, koliko dodajanj gre SREDI dneva (TripIt vzorec) vs. konec.
+      trackPlannerEvent("nearby_stop_added", { position: isMid ? "mid" : "end" });
     },
     [record, view]
   );

@@ -150,7 +150,7 @@ Vsak Guardian izpis nosi NAJŠIBKEJŠI veljavni člen (iskrenost).
 | Opozorilo + akcije | `/na-poti` — kartica ob 🟠/🔴 | Navigiraj / Preskoči / Preuredi / Odpri rezervacijo | ena odločitev naenkrat (§21), brez iskanja |
 | RECOVERY MODE | zložljiv del kartice 🟠/🔴 | razširi (kaj se je spremenilo / kaj velja / naslednji izvedljivi) | nadaljevanje brez rebuilda načrta |
 | ZAČNI DAN | `/na-poti` jutro (danes, <11:00, 0 opravljenih, GPS izklop) | povzetek dneva → [ZAČNI DAN] | GPS vklop (na dejanje) + skok na naslednji cilj |
-| PROST ČAS | `/na-poti` ko okno dejansko obstaja | [Znamenitosti][Hrana][Kava][Sprehod] | max 4 varni kandidati + [V mojo pot] (v2) |
+| PROST ČAS | `/na-poti` ko okno dejansko obstaja | [Znamenitosti][Hrana][Kava][Sprehod] | max 4 varni kandidati + [V mojo pot] (v2) — od 1.171.0 (#24 Sklop 9, TripIt Nearby) vstavek SREDI dneva (pred naslednji postanek), sicer konec dneva |
 | NADALJUJ NA POTI | `/moja-potovanja` — kartica poti | Nadaljuj na poti | pot prenos na napravo → `/na-poti` |
 | Zlata pot (end-to-end) | `/nacrtuj` → Načrtuj → shrani | Začni pot (obstoječe #21/K-7) | živi tok z Guardian slojem |
 

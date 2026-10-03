@@ -7,6 +7,49 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.171.0] — 2026-10-03 (#24 Sklop 9: Nearby dodajanje sredi dneva — TripIt Nearby vzorec)
+
+### Dodano
+
+- **NEARBY KANDIDAT IZ PROSTEGA ČASA SE DODA SREDI DNEVA (pred naslednji
+  postanek), ne na konec dneva** — TripIt Nearby vzorec (P3 backlog, zadnja
+  vrstica tabele razen GPS): prej je kandidat iz prostega časovnega okna
+  pristal NA KONCU dneva — po treh še neopravljenih postankih in večerji;
+  uporabnik ga pa obišče ZDAJ (v oknu pred terminom). `addNearbyStopToRecord`
+  dobi `beforeKey` (ključ naslednjega postanka) → ČIST VSTAVEK na trenutni
+  položaj v dnevu: `[a, b, c]` + pred `b` → `[a, nearby, b, c]`.
+- **ZERO reordering ostaja kanon** — vstavek NI preurejanje: vrstni red
+  obstoječih postankov ostane netaknjen v obeh primerih (sredina/konec);
+  stabilni ključ `nearby:{id}` + `savedAt` nespremenjena (#21 §19).
+- **Iskren fallback**: `beforeKey`, ki NI v dnevu (npr. naslednji postanek
+  je v drugem dnevu ali dan nima več postankov) → pošteno KONEC dneva —
+  enako vedenje kot prej (kompatibilnost; brez tihih zmig).
+- **Sporočilo uporabniku sledi DEJANSKEMU položaju** vstavitve: sredina →
+  »✓ {naslov} dodan pred naslednji postanek.« / »✓ {title} added before
+  your next stop.« (+ it/de/fr/es — 6-jezično, P4-8), konec → nespremenjeno
+  sporočilo o koncu dneva.
+- **Varnost okna OSTAJA** (§9/§10): zanka (vožnja tam + obisk + vožnja do
+  termina) ≤ okno − varnostna rezerva je preverjena v
+  `filterNearbyCandidates` PRED dodajanjem — Sklop 9 ne odpira okna širše;
+  `DEFAULT_FREE_TIME_CONFIG` vrednosti so testno zaklenjene.
+- **Telemetrija `nearby_stop_added`** (3-plastna pariteta: klientni union +
+  strežniški VALID_EVENTS + docs/ANALYTICS-EVENTS.md): props SAMO
+  `position` (`mid`/`end`) — brez PII (ne ime ne geo kandidata ne gresta
+  ven, kanon zasebnosti #22 §5).
+
+### Testi
+
+- NOV `issue24-s9-nearby-midday.test.ts` (23 testov): čisti delivec
+  `nearbyInsertIndex` (najden/null/ni-v-dnevu/prazen dan), vstavek sredi
+  dneva ×4 scenariji (prvi/sredina/zadnji/brez), fallback + drugi dan
+  nedotaknjen, pariteta zavrnitev (v1 + neveljavni vhodi tudi z beforeKey),
+  oznake addedMid ×6 jezikov (lastni prevodi, ne EN kopije), source
+  contract go-mode.tsx (beforeKey + isMid sporočilo + telemetrija brez
+  PII), 3-plastna analitična pariteta, zaklenjena varnostna konfiguracija.
+- Obstoječih 4.971 testov ostaja ZELENIH (zero feature loss — dokaz).
+
+---
+
 ## [1.170.0] — 2026-10-02 (#24 Sklop 8: Go Mode i18n — FAZA 2, polni prevodi IT/DE/FR/ES)
 
 ### Dodano

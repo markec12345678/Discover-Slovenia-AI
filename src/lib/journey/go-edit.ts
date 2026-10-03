@@ -12,6 +12,15 @@
 //    iskreno opombo + povezavo na zemljevid);
 //  - nov postanek se doda NA KONEC aktivnega dneva (vrstni red obstoječih
 //    postankov se NE spremeni — ZERO reordering brez uporabnikove odločitve);
+//  - ISSUE #24 Sklop 9 (1.171.0) — SREDI DNEVA (TripIt Nearby vzorec): kadar
+//    dodajanje pride iz PROSTEGA ČASOVNEGA OKNA, klicnik poda `beforeKey`
+//    (naslednji postanek s terminom) → kandidat se vstavi PRED NJEGA na
+//    trenutni položaj v dnevu (uporabnik ga obišče ZDAJ, ne čez tri postanke);
+//    vrstni red obstoječih postankov se TUDI TU ne spremeni (vstavek ≠
+//    preurejanje); `beforeKey`, ki NI v dnevu → pošten konec dneva;
+//    varnostna rezerva okna ostaja NESPREMENJENA (zanka ≤ okno, §9/§10 —
+//    free-time.ts filter pred dodajanjem ŽE matematično zagotavlja, da
+//    termin ostane dosegljiv);
 //  - ključ je unikaten (`nearby:{id}`) in vsebuje izvor — stabilni ključi
 //    #21 §19 (preurejanje načrta NE razveljavi napredka);
 //  - nov zapis nosi savedAt trenutka (ISTO semantiko kot save).
@@ -40,8 +49,22 @@ export interface NearbyAddCandidate {
 // GLAVNA FUNKCIJA
 // ---------------------------------------------------------------------------
 
+/** Možnosti dodajanja (ISSUE #24 Sklop 9 — sredi dneva, TripIt Nearby). */
+export interface NearbyAddOptions {
+  /** Ključ vnosa, PRED katerega se kandidat vstavi (naslednji postanek z
+   *  terminom iz prostega časa). null/undefined/ni v dnevu → konec dneva
+   *  (staro vedenje — kompatibilnost). Vstavek NE preureja obstoječih. */
+  beforeKey?: string | null;
+}
+
 /**
- * Doda nearby kandidata na konec aktivnega dneva (ČISTO — nov zapis).
+ * Doda nearby kandidata v aktivni dan (ČISTO — nov zapis).
+ *
+ *  - brez možnosti (ali `beforeKey` ni najden v dnevu): NA KONEC dneva
+   *    (vrstni red obstoječih se ne spremeni — kanon #22);
+ *  - z veljavnim `beforeKey` (Sklop 9): VSTAVI PRED ta vnos — kandidat iz
+   *    prostega časa se obišče ZDAJ (na trenutnem položaju v dnevu), ne
+   *    čez tri postanke; obstoječi vrstni red ostane NETAKNJEN.
  *
  * Vrne null, kadar dodajanje NI mogoče:
  *  - v1 zapis (kanonična pot — ne mutiramo izbire selectedIds);
@@ -51,7 +74,8 @@ export interface NearbyAddCandidate {
 export function addNearbyStopToRecord(
   record: GoTripRecord,
   candidate: NearbyAddCandidate,
-  activeDayIndex: number
+  activeDayIndex: number,
+  opts?: NearbyAddOptions
 ): GoTripRecordV2 | null {
   if (record.version !== 2) return null; // v1: iskrena zavrnitev (UX pove zakaj)
   if (!Number.isInteger(activeDayIndex) || activeDayIndex < 0) return null;
@@ -63,8 +87,12 @@ export function addNearbyStopToRecord(
   const entry = nearbyCandidateToEntry(candidate);
   const day = days[activeDayIndex];
 
+  const insertAt = nearbyInsertIndex(day.entries, opts?.beforeKey);
+  const newEntries = [...day.entries];
+  newEntries.splice(insertAt, 0, entry);
+
   const newDays = days.map((d, i) =>
-    i === activeDayIndex ? { ...d, entries: [...d.entries, entry] } : d
+    i === activeDayIndex ? { ...d, entries: newEntries } : d
   );
 
   return {
@@ -72,6 +100,21 @@ export function addNearbyStopToRecord(
     savedAt: new Date().toISOString(),
     view: { ...record.view, days: newDays },
   };
+}
+
+/**
+ * Indeks vstavitve v dnevu (ČISTO): ključ `beforeKey` najden v dnevu → njegov
+ * indeks (vstavek PRED njim); sicer (null/undefined/ni v dnevu/prazen dan)
+ * → dolžina dneva (konec — staro vedenje). Vojaško preprosto, brez
+ * preurejanja: obstoječi vrstni red ostane identičen v OBEH primerih.
+ */
+export function nearbyInsertIndex(
+  dayEntries: ReadonlyArray<{ key: string }>,
+  beforeKey: string | null | undefined
+): number {
+  if (beforeKey == null) return dayEntries.length;
+  const i = dayEntries.findIndex((e) => e.key === beforeKey);
+  return i === -1 ? dayEntries.length : i;
 }
 
 /** Ali zapis sploh dovoljuje dodajanje (v2 — za UX pogoj). */
@@ -129,6 +172,16 @@ export const GO_EDIT_LABELS = {
     de: (title: string) => `✓ ${title} am Ende des Tages hinzugefügt.`,
     fr: (title: string) => `✓ ${title} ajouté à la fin de la journée.`,
     es: (title: string) => `✓ ${title} añadido al final del día.`,
+  },
+  // ISSUE #24 Sklop 9 (1.171.0): dodajanje SREDI dneva (iz prostega časa —
+  // vstavek pred naslednji postanek; TripIt Nearby vzorec).
+  addedMid: {
+    sl: (title: string) => `✓ ${title} dodan pred naslednji postanek.`,
+    en: (title: string) => `✓ ${title} added before your next stop.`,
+    it: (title: string) => `✓ ${title} aggiunto prima della prossima tappa.`,
+    de: (title: string) => `✓ ${title} vor der nächsten Station hinzugefügt.`,
+    fr: (title: string) => `✓ ${title} ajouté avant le prochain arrêt.`,
+    es: (title: string) => `✓ ${title} añadido antes de la siguiente parada.`,
   },
   notPossibleV1: {
     sl: "Ta pot je kanonična (iz načrtovalnika potovanj) — dodajanje med potjo ni mogoče. Odpri lokacijo na zemljevidu.",

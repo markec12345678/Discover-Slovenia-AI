@@ -192,6 +192,10 @@ export type PlannerEventName =
   // stroškov (travelers = novo število; drive_per_person_eur in
   // total_per_person_eur takoj pokažeta učinek — Wanderlog vzorec)
   | "budget_travelers_changed"
+  // ISSUE #24 Sklop 9 (1.171.0): nearby kandidat dodan v pot iz prostega
+  // časa (position = mid = sredi dneva pred naslednjim postankom (TripIt
+  // Nearby vzorec) | end = konec dneva; brez PII — ne ime ne geo kandidata)
+  | "nearby_stop_added"
   // F7: shranjen/urejen skupnostni vodnik na deljeni poti (avtor = lastnik)
   | "guide_saved"
   // F9 "Pogovor z načrtom": zastavljeno vprašanje o načrtu (source

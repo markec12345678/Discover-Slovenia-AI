@@ -99,6 +99,8 @@ const VALID_EVENTS = new Set([
   "budget_vehicle_changed",
   // ISSUE #24 Sklop 5 (1.167.0): sprememba števila potnikov za delitev stroškov
   "budget_travelers_changed",
+  // ISSUE #24 Sklop 9 (1.171.0): nearby kandidat dodan v pot iz prostega časa
+  "nearby_stop_added",
   // F7: shranjen/urejen skupnostni vodnik na deljeni poti
   "guide_saved",
   // F9 "Pogovor z načrtu": zastavljeno vprašanje o načrtu
