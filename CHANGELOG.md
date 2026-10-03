@@ -7,6 +7,52 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.174.0] — 2026-10-03 (POLIRNI KROG: 2. raziskovalni obhod — UI primitivi govorijo jezik uporabnika)
+
+### Popravljeno
+
+- **UI primitivi: 12 hardcoded angleških nizov lokaliziranih (×6 jezikov).**
+  2. produkcijski QA obhod (desktop 1280×800, 25 strani + IT/DE/FR/ES
+  vzorčne točke + dialogi; Render 1.173.4) je potrdil čisto površino —
+  razen ene sistemske vrzeli: osnovni UI primitivi so bralnikom zaslonov
+  govorili ANGLEŠKO na vseh ne-angleških straneh (ista vrsta nekonzistence
+  kot nav.languageAria, popravljen 1.173.0):
+  - `dialog.tsx` sr-only **„Close"** (~25 dialog komponent — vsaka stran
+    z modalom: pametno iskanje, košarica, priljubljene, destinacijski
+    modal …);
+  - `sheet.tsx` sr-only **„Close"** (mobilni meni »Več« — edina navigacija
+    mobilnim uporabnikom; odkrit tudi v živi DOM produkcije);
+  - `carousel.tsx` **„Previous slide"/„Next slide"**;
+  - `sidebar.tsx` **„Toggle Sidebar" ×3** — sr-only + `aria-label` +
+    `title` (tooltip, ki je uporabniku VIDEN);
+  - `pagination.tsx` **„Go to previous/next page"** (aria) + vidno
+    **„Previous"/„Next"** (sm+);
+  - `breadcrumb.tsx`/`pagination.tsx` elipsi: dead sr-only
+    **„More"/„More pages"** ODSTRANJENA (elementa sta `aria-hidden` =
+    dekorativna za bralnike — sr-only otrok je bil mrtva koda, ki bi bila
+    napačno angleška, če bi bila kdaj slišana; primitiva ostajajo
+    RSC-prijemljiva brez client meje).
+- Nov **`UI_A11Y` slovar** (`src/components/ui/a11y-strings.ts`) — en sam
+  vir resnice: 10 ključev × 6 jezikov (sl/en/it/de/fr/es, usklajeno z
+  `routing.locales`), `uiA11yText(key, locale)` z neznanim locale → SL
+  fallback (isti kanon kot `pickWishlistLang`). `DialogContent`/
+  `SheetContent` dobita nov neobvezen prop **`closeLabel`** (izjema za
+  klicatelje z lastnim besedilom; privzeto lokalizirano).
+
+### Testi
+
+- NOVO `polish-1-174-0-round.test.ts` (**13 testov**): slovar popolne
+  mreže (10 ključev × 6 jezikov, brez praznih, usklajenost z routing),
+  resolve fallback, source contract vseh 5 spremenjenih primitivih
+  (useLocale + uiA11yText + closeLabel ??) in regresijske varovalke
+  (ni več „Close"/„Toggle Sidebar"/„Previous slide"/…). **TRAJNA
+  VAROVALKA ⑨**: noben .tsx v `src/components/ui` ne sme vsebovati
+  hardcoded angleških uporabniških nizov (regex pregled VSEH datotek v
+  mapi, tudi prihodnjih) — nov kanon: „vsak sr-only/aria/title niz UI
+  primitiva gre prek UI_A11Y".
+
+---
+
 ## [1.173.0] — 2026-10-03 (POLIRNI KROG: QA obhod žive aplikacije — 2 produksijska hrošča + ton SL + notranje povezovanje)
 
 ### Dodano

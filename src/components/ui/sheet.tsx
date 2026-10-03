@@ -3,8 +3,10 @@
 import * as React from "react"
 import * as SheetPrimitive from "@radix-ui/react-dialog"
 import { XIcon } from "lucide-react"
+import { useLocale } from "next-intl"
 
 import { cn } from "@/lib/utils"
+import { uiA11yText } from "@/components/ui/a11y-strings"
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -48,10 +50,17 @@ function SheetContent({
   className,
   children,
   side = "right",
+  closeLabel,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left"
+  /** POLISH 1.174.0: sr-only oznaka X gumba. Privzeto LOKALIZIRANO
+   *  (useLocale → UI_A11Y.close); prop je izjema za klicatelje. */
+  closeLabel?: string
 }) {
+  // POLISH 1.174.0: prej hardcoded „Close" — mobilni meni „Več" je edina
+  // navigacijska pot za mobilne uporabnike; bralniki so slišali angleščino.
+  const locale = useLocale()
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -74,7 +83,9 @@ function SheetContent({
         {children}
         <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
           <XIcon className="size-4" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">
+            {closeLabel ?? uiA11yText("close", locale)}
+          </span>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPortal>

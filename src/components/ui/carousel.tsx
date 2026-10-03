@@ -5,9 +5,11 @@ import useEmblaCarousel, {
   type UseEmblaCarouselType,
 } from "embla-carousel-react"
 import { ArrowLeft, ArrowRight } from "lucide-react"
+import { useLocale } from "next-intl"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { uiA11yText } from "@/components/ui/a11y-strings"
 
 type CarouselApi = UseEmblaCarouselType[1]
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>
@@ -178,6 +180,8 @@ function CarouselPrevious({
   ...props
 }: React.ComponentProps<typeof Button>) {
   const { orientation, scrollPrev, canScrollPrev } = useCarousel()
+  // POLISH 1.174.0: prej hardcoded „Previous slide" — vseh 6 jezikov.
+  const locale = useLocale()
 
   return (
     <Button
@@ -196,7 +200,9 @@ function CarouselPrevious({
       {...props}
     >
       <ArrowLeft />
-      <span className="sr-only">Previous slide</span>
+      <span className="sr-only">
+        {uiA11yText("previousSlide", locale)}
+      </span>
     </Button>
   )
 }
@@ -208,6 +214,8 @@ function CarouselNext({
   ...props
 }: React.ComponentProps<typeof Button>) {
   const { orientation, scrollNext, canScrollNext } = useCarousel()
+  // POLISH 1.174.0: prej hardcoded „Next slide" — vseh 6 jezikov.
+  const locale = useLocale()
 
   return (
     <Button
@@ -226,7 +234,9 @@ function CarouselNext({
       {...props}
     >
       <ArrowRight />
-      <span className="sr-only">Next slide</span>
+      <span className="sr-only">
+        {uiA11yText("nextSlide", locale)}
+      </span>
     </Button>
   )
 }

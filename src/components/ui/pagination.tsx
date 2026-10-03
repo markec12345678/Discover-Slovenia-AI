@@ -1,12 +1,16 @@
+"use client"
+
 import * as React from "react"
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   MoreHorizontalIcon,
 } from "lucide-react"
+import { useLocale } from "next-intl"
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
+import { uiA11yText } from "@/components/ui/a11y-strings"
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   return (
@@ -69,15 +73,20 @@ function PaginationPrevious({
   className,
   ...props
 }: React.ComponentProps<typeof PaginationLink>) {
+  // POLISH 1.174.0: prej hardcoded aria + vidno besedilo („Go to previous
+  // page"/„Previous“) — vseh 6 jezikov (vidno besedilo se vidi na sm+).
+  const locale = useLocale()
   return (
     <PaginationLink
-      aria-label="Go to previous page"
+      aria-label={uiA11yText("previousPage", locale)}
       size="default"
       className={cn("gap-1 px-2.5 sm:pl-2.5", className)}
       {...props}
     >
       <ChevronLeftIcon />
-      <span className="hidden sm:block">Previous</span>
+      <span className="hidden sm:block">
+        {uiA11yText("previous", locale)}
+      </span>
     </PaginationLink>
   )
 }
@@ -86,14 +95,18 @@ function PaginationNext({
   className,
   ...props
 }: React.ComponentProps<typeof PaginationLink>) {
+  // POLISH 1.174.0: prej hardcoded aria + vidno besedilo.
+  const locale = useLocale()
   return (
     <PaginationLink
-      aria-label="Go to next page"
+      aria-label={uiA11yText("nextPage", locale)}
       size="default"
       className={cn("gap-1 px-2.5 sm:pr-2.5", className)}
       {...props}
     >
-      <span className="hidden sm:block">Next</span>
+      <span className="hidden sm:block">
+        {uiA11yText("next", locale)}
+      </span>
       <ChevronRightIcon />
     </PaginationLink>
   )
@@ -111,7 +124,9 @@ function PaginationEllipsis({
       {...props}
     >
       <MoreHorizontalIcon className="size-4" />
-      <span className="sr-only">More pages</span>
+      {/* POLISH 1.174.0: sr-only „More pages" ODSTRANJEN — element je
+          aria-hidden (dekorativen za bralnike), sr-only otrok je bil
+          DEAD CODE (in bi bil napačno angleški, če bi bil slišan). */}
     </span>
   )
 }

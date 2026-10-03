@@ -93,7 +93,10 @@ function BreadcrumbEllipsis({
       {...props}
     >
       <MoreHorizontal className="size-4" />
-      <span className="sr-only">More</span>
+      {/* POLISH 1.174.0: sr-only „More" ODSTRANJEN — element je
+          aria-hidden + role="presentation" (dekorativen za bralnike),
+          zato je bil sr-only otrok DEAD CODE, ki ga nikoli nihče ni
+          slišal (in bi bil napačno angleški, če bi bil). */}
     </span>
   )
 }
