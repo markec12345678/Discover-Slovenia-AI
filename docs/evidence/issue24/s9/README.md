@@ -102,6 +102,7 @@ GPS 4,3 km stran od termina.
 
 ## Iskrena opomba
 
-Vercel je bil ob zaključku QA še na 1.172.0 (jedro obeh sklopov je že
-vam — popravka 1.172.1/1.172.2 sta dokazana na Renderu 1.172.2; znana
-zamuda brezplačnega paketa, enako kot Sklop 5/6/8 QA).
+Ob zaključku QA je bil Vercel še na 1.172.0 (jedro obeh sklopov že vseboval;
+popravka sta bila dokazana na Renderu 1.172.2) — znana zamuda brezplačnega
+paketa, enako kot Sklop 5/6/8 QA. Kasneje istega dne se je Vercel osvežil na
+**1.172.2** (health preverjen).

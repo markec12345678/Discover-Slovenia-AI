@@ -2,7 +2,8 @@
 
 **Datum:** 3. 10. 2026 · **Commit:** `4ab825a` (feat) — CI zelen
 **Produkcija:** Render `i-feel-slovenia.onrender.com` **1.172.2** +
-Vercel `i-feel-slovenia.vercel.app` 1.172.0 (jedro) — obe zdravi.
+Vercel `i-feel-slovenia.vercel.app` **1.172.2** (osvežil se po zaključku
+QA; v času dokazovanja 1.172.0 z jedrom funkcije) — obe zdravi, CI zelen.
 
 ## Kaj je bilo narejeno (Polarsteps <4 %/dan vzorec — predzadnja vrstica P3)
 
